@@ -467,7 +467,7 @@ vec4_visitor::opt_reduce_swizzle()
 
       /* Update sources' swizzles. */
       for (int i = 0; i < 3; i++) {
-         if (inst->src[i].file != GRF &&
+         if (inst->src[i].file != VGRF &&
              inst->src[i].file != ATTR &&
              inst->src[i].file != UNIFORM)
             continue;
@@ -912,7 +912,7 @@ vec4_visitor::opt_set_dependency_control()
           */
          for (int i = 0; i < 3; i++) {
             int reg = inst->src[i].nr + inst->src[i].reg_offset;
-            if (inst->src[i].file == GRF) {
+            if (inst->src[i].file == VGRF) {
                last_grf_write[reg] = NULL;
             } else if (inst->src[i].file == HW_REG) {
                memset(last_grf_write, 0, sizeof(last_grf_write));
@@ -931,7 +931,7 @@ vec4_visitor::opt_set_dependency_control()
           * against a previous one writing to its destination.
           */
          int reg = inst->dst.nr + inst->dst.reg_offset;
-         if (inst->dst.file == GRF) {
+         if (inst->dst.file == VGRF) {
             if (last_grf_write[reg] &&
                 !(inst->dst.writemask & grf_channels_written[reg])) {
                last_grf_write[reg]->no_dd_clear = true;
@@ -1045,9 +1045,9 @@ vec4_visitor::opt_register_coalesce()
       next_ip++;
 
       if (inst->opcode != BRW_OPCODE_MOV ||
-          (inst->dst.file != GRF && inst->dst.file != MRF) ||
+          (inst->dst.file != VGRF && inst->dst.file != MRF) ||
 	  inst->predicate ||
-	  inst->src[0].file != GRF ||
+	  inst->src[0].file != VGRF ||
 	  inst->dst.type != inst->src[0].type ||
 	  inst->src[0].abs || inst->src[0].negate || inst->src[0].reladdr)
 	 continue;
@@ -1110,7 +1110,7 @@ vec4_visitor::opt_register_coalesce()
 
                if (devinfo->gen == 6) {
                   /* gen6 math instructions must have the destination be
-                   * GRF, so no compute-to-MRF for them.
+                   * VGRF, so no compute-to-MRF for them.
                    */
                   if (scan_inst->is_math()) {
                      break;
@@ -1198,7 +1198,7 @@ vec4_visitor::opt_register_coalesce()
 	  */
          vec4_instruction *scan_inst = _scan_inst;
 	 while (scan_inst != inst) {
-	    if (scan_inst->dst.file == GRF &&
+	    if (scan_inst->dst.file == VGRF &&
                 scan_inst->dst.nr == inst->src[0].nr &&
 		scan_inst->dst.reg_offset == inst->src[0].reg_offset) {
                scan_inst->reswizzle(inst->dst.writemask,
@@ -1301,11 +1301,11 @@ vec4_visitor::split_virtual_grfs()
     * to split.
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      if (inst->dst.file == GRF && inst->regs_written > 1)
+      if (inst->dst.file == VGRF && inst->regs_written > 1)
          split_grf[inst->dst.nr] = false;
 
       for (int i = 0; i < 3; i++) {
-         if (inst->src[i].file == GRF && inst->regs_read(i) > 1)
+         if (inst->src[i].file == VGRF && inst->regs_read(i) > 1)
             split_grf[inst->src[i].nr] = false;
       }
    }
@@ -1327,14 +1327,14 @@ vec4_visitor::split_virtual_grfs()
    }
 
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      if (inst->dst.file == GRF && split_grf[inst->dst.nr] &&
+      if (inst->dst.file == VGRF && split_grf[inst->dst.nr] &&
           inst->dst.reg_offset != 0) {
          inst->dst.nr = (new_virtual_grf[inst->dst.nr] +
                           inst->dst.reg_offset - 1);
          inst->dst.reg_offset = 0;
       }
       for (int i = 0; i < 3; i++) {
-         if (inst->src[i].file == GRF && split_grf[inst->src[i].nr] &&
+         if (inst->src[i].file == VGRF && split_grf[inst->src[i].nr] &&
              inst->src[i].reg_offset != 0) {
             inst->src[i].nr = (new_virtual_grf[inst->src[i].nr] +
                                 inst->src[i].reg_offset - 1);
@@ -1378,7 +1378,7 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    fprintf(file, " ");
 
    switch (inst->dst.file) {
-   case GRF:
+   case VGRF:
       fprintf(file, "vgrf%d.%d", inst->dst.nr, inst->dst.reg_offset);
       break;
    case MRF:
@@ -1441,7 +1441,7 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       if (inst->src[i].abs)
          fprintf(file, "|");
       switch (inst->src[i].file) {
-      case GRF:
+      case VGRF:
          fprintf(file, "vgrf%d", inst->src[i].nr);
          break;
       case ATTR:
@@ -1509,7 +1509,7 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
 
       /* Don't print .0; and only VGRFs have reg_offsets and sizes */
       if (inst->src[i].reg_offset != 0 &&
-          inst->src[i].file == GRF &&
+          inst->src[i].file == VGRF &&
           alloc.sizes[inst->src[i].nr] != 1)
          fprintf(file, ".%d", inst->src[i].reg_offset);
 
@@ -1785,7 +1785,7 @@ vec4_visitor::convert_to_hw_regs()
          struct src_reg &src = inst->src[i];
          struct brw_reg reg;
          switch (src.file) {
-         case GRF:
+         case VGRF:
             reg = brw_vec8_grf(src.nr + src.reg_offset, 0);
             reg.type = src.type;
             reg.swizzle = src.swizzle;
@@ -1831,7 +1831,7 @@ vec4_visitor::convert_to_hw_regs()
       struct brw_reg reg;
 
       switch (inst->dst.file) {
-      case GRF:
+      case VGRF:
          reg = brw_vec8_grf(dst.nr + dst.reg_offset, 0);
          reg.type = dst.type;
          reg.writemask = dst.writemask;

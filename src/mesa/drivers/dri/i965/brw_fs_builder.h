@@ -179,7 +179,7 @@ namespace brw {
          assert(dispatch_width() <= 32);
 
          if (n > 0)
-            return dst_reg(GRF, shader->alloc.allocate(
+            return dst_reg(VGRF, shader->alloc.allocate(
                               DIV_ROUND_UP(n * type_sz(type) * dispatch_width(),
                                            REG_SIZE)),
                            type);
@@ -596,7 +596,7 @@ namespace brw {
       src_reg
       fix_3src_operand(const src_reg &src) const
       {
-         if (src.file == GRF || src.file == UNIFORM || src.stride > 1) {
+         if (src.file == VGRF || src.file == UNIFORM || src.stride > 1) {
             return src;
          } else {
             dst_reg expanded = vgrf(src.type);

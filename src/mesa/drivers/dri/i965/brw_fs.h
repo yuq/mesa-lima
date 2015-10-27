@@ -70,7 +70,7 @@ offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
    switch (reg.file) {
    case BAD_FILE:
       break;
-   case GRF:
+   case VGRF:
    case MRF:
    case HW_REG:
    case ATTR:

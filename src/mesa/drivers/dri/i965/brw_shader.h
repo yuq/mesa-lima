@@ -39,7 +39,7 @@
 #define MAX_VGRF_SIZE 16
 
 enum PACKED register_file {
-   GRF,
+   VGRF,
    MRF,
    IMM,
    HW_REG, /* a struct brw_reg */
@@ -61,7 +61,7 @@ struct backend_reg : public brw_reg
    bool is_accumulator() const;
    bool in_range(const backend_reg &r, unsigned n) const;
 
-   enum register_file file; /**< Register file: GRF, MRF, IMM. */
+   enum register_file file; /**< Register file: VGRF, MRF, IMM. */
 
    /**
     * Offset within the virtual register.

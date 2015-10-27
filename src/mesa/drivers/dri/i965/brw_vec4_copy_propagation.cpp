@@ -47,7 +47,7 @@ is_direct_copy(vec4_instruction *inst)
 {
    return (inst->opcode == BRW_OPCODE_MOV &&
 	   !inst->predicate &&
-	   inst->dst.file == GRF &&
+	   inst->dst.file == VGRF &&
 	   !inst->dst.reladdr &&
 	   !inst->src[0].reladdr &&
 	   (inst->dst.type == inst->src[0].type ||
@@ -70,8 +70,8 @@ is_channel_updated(vec4_instruction *inst, src_reg *values[4], int ch)
    const src_reg *src = values[ch];
 
    /* consider GRF only */
-   assert(inst->dst.file == GRF);
-   if (!src || src->file != GRF)
+   assert(inst->dst.file == VGRF);
+   if (!src || src->file != VGRF)
       return false;
 
    return (src->in_range(inst->dst, inst->regs_written) &&
@@ -292,7 +292,7 @@ try_copy_propagate(const struct brw_device_info *devinfo,
 
    /* Check that we can propagate that value */
    if (value.file != UNIFORM &&
-       value.file != GRF &&
+       value.file != VGRF &&
        value.file != ATTR)
       return false;
 
@@ -416,14 +416,14 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
       }
 
       /* For each source arg, see if each component comes from a copy
-       * from the same type file (IMM, GRF, UNIFORM), and try
+       * from the same type file (IMM, VGRF, UNIFORM), and try
        * optimizing out access to the copy result
        */
       for (int i = 2; i >= 0; i--) {
 	 /* Copied values end up in GRFs, and we don't track reladdr
 	  * accesses.
 	  */
-	 if (inst->src[i].file != GRF ||
+	 if (inst->src[i].file != VGRF ||
 	     inst->src[i].reladdr)
 	    continue;
 
@@ -472,7 +472,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
       }
 
       /* Track available source registers. */
-      if (inst->dst.file == GRF) {
+      if (inst->dst.file == VGRF) {
 	 const int reg =
             alloc.offsets[inst->dst.nr] + inst->dst.reg_offset;
 

@@ -143,7 +143,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
     * tracking to get the scaling factor.
     */
    if (devinfo->gen < 6 && is_rect) {
-      fs_reg dst = fs_reg(GRF, alloc.allocate(coord_components));
+      fs_reg dst = fs_reg(VGRF, alloc.allocate(coord_components));
       fs_reg src = coordinate;
       coordinate = dst;
 
@@ -581,7 +581,7 @@ fs_visitor::emit_interpolation_setup_gen6()
        * Thus we can do a single add(16) in SIMD8 or an add(32) in SIMD16 to
        * compute our pixel centers.
        */
-      fs_reg int_pixel_xy(GRF, alloc.allocate(dispatch_width / 8),
+      fs_reg int_pixel_xy(VGRF, alloc.allocate(dispatch_width / 8),
                           BRW_REGISTER_TYPE_UW);
 
       const fs_builder dbld = abld.exec_all().group(dispatch_width * 2, 0);
@@ -908,7 +908,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
     *    "The write data payload can be between 1 and 8 message phases long."
     */
    if (vue_map->slots_valid == 0) {
-      fs_reg payload = fs_reg(GRF, alloc.allocate(2), BRW_REGISTER_TYPE_UD);
+      fs_reg payload = fs_reg(VGRF, alloc.allocate(2), BRW_REGISTER_TYPE_UD);
       bld.exec_all().MOV(payload, fs_reg(retype(brw_vec8_grf(1, 0),
                                                 BRW_REGISTER_TYPE_UD)));
 
@@ -975,7 +975,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
             break;
          }
 
-         fs_reg zero(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+         fs_reg zero(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
          bld.MOV(zero, fs_reg(0u));
 
          sources[length++] = zero;
@@ -1027,7 +1027,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
              * temp register and use that for the payload.
              */
             for (int i = 0; i < 4; i++) {
-               fs_reg reg = fs_reg(GRF, alloc.allocate(1), outputs[varying].type);
+               fs_reg reg = fs_reg(VGRF, alloc.allocate(1), outputs[varying].type);
                fs_reg src = offset(this->outputs[varying], bld, i);
                set_saturate(true, bld.MOV(reg, src));
                sources[length++] = reg;
@@ -1053,7 +1053,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
       if (flush) {
          fs_reg *payload_sources =
             ralloc_array(mem_ctx, fs_reg, length + header_size);
-         fs_reg payload = fs_reg(GRF, alloc.allocate(length + header_size),
+         fs_reg payload = fs_reg(VGRF, alloc.allocate(length + header_size),
                                  BRW_REGISTER_TYPE_F);
          payload_sources[0] =
             fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
@@ -1091,7 +1091,7 @@ fs_visitor::emit_cs_terminate()
     * make sure it uses the appropriate register range.
     */
    struct brw_reg g0 = retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD);
-   fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+   fs_reg payload = fs_reg(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
    bld.group(8, 0).exec_all().MOV(payload, g0);
 
    /* Send a message to the thread spawner to terminate the thread. */
@@ -1108,7 +1108,7 @@ fs_visitor::emit_barrier()
    /* We are getting the barrier ID from the compute shader header */
    assert(stage == MESA_SHADER_COMPUTE);
 
-   fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+   fs_reg payload = fs_reg(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
 
    const fs_builder pbld = bld.exec_all().group(8, 0);
 

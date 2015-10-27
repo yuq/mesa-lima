@@ -35,7 +35,7 @@ using namespace brw;
 static void
 assign_reg(unsigned *reg_hw_locations, fs_reg *reg)
 {
-   if (reg->file == GRF) {
+   if (reg->file == VGRF) {
       reg->nr = reg_hw_locations[reg->nr] + reg->reg_offset;
       reg->reg_offset = 0;
    }
@@ -584,7 +584,7 @@ fs_visitor::assign_regs(bool allow_spilling)
        * that register and set it to the appropriate class.
        */
       if (compiler->fs_reg_sets[rsi].aligned_pairs_class >= 0 &&
-          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].file == GRF &&
+          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].file == VGRF &&
           this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].nr == i) {
          c = compiler->fs_reg_sets[rsi].aligned_pairs_class;
       }
@@ -644,11 +644,11 @@ fs_visitor::assign_regs(bool allow_spilling)
        * destination interfere.
        */
       foreach_block_and_inst(block, fs_inst, inst, cfg) {
-         if (inst->dst.file != GRF)
+         if (inst->dst.file != VGRF)
             continue;
 
          for (int i = 0; i < inst->sources; ++i) {
-            if (inst->src[i].file == GRF) {
+            if (inst->src[i].file == VGRF) {
                ra_add_node_interference(g, inst->dst.nr, inst->src[i].nr);
             }
          }
@@ -786,7 +786,7 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
     */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       for (unsigned int i = 0; i < inst->sources; i++) {
-	 if (inst->src[i].file == GRF) {
+	 if (inst->src[i].file == VGRF) {
             spill_costs[inst->src[i].nr] += loop_scale;
 
             /* Register spilling logic assumes full-width registers; smeared
@@ -802,7 +802,7 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
 	 }
       }
 
-      if (inst->dst.file == GRF) {
+      if (inst->dst.file == VGRF) {
          spill_costs[inst->dst.nr] += inst->regs_written * loop_scale;
 
          if (!inst->dst.is_contiguous()) {
@@ -821,13 +821,13 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
 	 break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
-	 if (inst->src[0].file == GRF)
+	 if (inst->src[0].file == VGRF)
             no_spill[inst->src[0].nr] = true;
 	 break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_READ:
       case SHADER_OPCODE_GEN7_SCRATCH_READ:
-	 if (inst->dst.file == GRF)
+	 if (inst->dst.file == VGRF)
             no_spill[inst->dst.nr] = true;
 	 break;
 
@@ -883,12 +883,12 @@ fs_visitor::spill_reg(int spill_reg)
     */
    foreach_block_and_inst (block, fs_inst, inst, cfg) {
       for (unsigned int i = 0; i < inst->sources; i++) {
-	 if (inst->src[i].file == GRF &&
+	 if (inst->src[i].file == VGRF &&
              inst->src[i].nr == spill_reg) {
             int regs_read = inst->regs_read(i);
             int subset_spill_offset = (spill_offset +
                                        REG_SIZE * inst->src[i].reg_offset);
-            fs_reg unspill_dst(GRF, alloc.allocate(regs_read));
+            fs_reg unspill_dst(VGRF, alloc.allocate(regs_read));
 
             inst->src[i].nr = unspill_dst.nr;
             inst->src[i].reg_offset = 0;
@@ -898,11 +898,11 @@ fs_visitor::spill_reg(int spill_reg)
 	 }
       }
 
-      if (inst->dst.file == GRF &&
+      if (inst->dst.file == VGRF &&
           inst->dst.nr == spill_reg) {
          int subset_spill_offset = (spill_offset +
                                     REG_SIZE * inst->dst.reg_offset);
-         fs_reg spill_src(GRF, alloc.allocate(inst->regs_written));
+         fs_reg spill_src(VGRF, alloc.allocate(inst->regs_written));
 
          inst->dst.nr = spill_src.nr;
          inst->dst.reg_offset = 0;

@@ -196,7 +196,7 @@ create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
          header_size = 0;
       }
 
-      assert(src.file == GRF);
+      assert(src.file == VGRF);
       payload = ralloc_array(bld.shader->mem_ctx, fs_reg, sources);
       for (int i = 0; i < header_size; i++) {
          payload[i] = src;
@@ -262,7 +262,7 @@ fs_visitor::opt_cse_local(bblock_t *block)
                                        .at(block, entry->generator->next);
                int written = entry->generator->regs_written;
 
-               entry->tmp = fs_reg(GRF, alloc.allocate(written),
+               entry->tmp = fs_reg(VGRF, alloc.allocate(written),
                                    entry->generator->dst.type);
 
                create_copy_instr(ibld, entry->generator, entry->tmp, false);
@@ -320,7 +320,7 @@ fs_visitor::opt_cse_local(bblock_t *block)
             /* Kill any AEB entries using registers that don't get reused any
              * more -- a sure sign they'll fail operands_match().
              */
-            if (src_reg->file == GRF && virtual_grf_end[src_reg->nr] < ip) {
+            if (src_reg->file == VGRF && virtual_grf_end[src_reg->nr] < ip) {
                entry->remove();
                ralloc_free(entry);
                break;

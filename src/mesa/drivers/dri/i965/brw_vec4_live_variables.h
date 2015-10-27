@@ -82,7 +82,7 @@ inline unsigned
 var_from_reg(const simple_allocator &alloc, const src_reg &reg,
              unsigned c = 0)
 {
-   assert(reg.file == GRF && reg.nr < alloc.count &&
+   assert(reg.file == VGRF && reg.nr < alloc.count &&
           reg.reg_offset < alloc.sizes[reg.nr] && c < 4);
    return (4 * (alloc.offsets[reg.nr] + reg.reg_offset) +
            BRW_GET_SWZ(reg.swizzle, c));
@@ -92,7 +92,7 @@ inline unsigned
 var_from_reg(const simple_allocator &alloc, const dst_reg &reg,
              unsigned c = 0)
 {
-   assert(reg.file == GRF && reg.nr < alloc.count &&
+   assert(reg.file == VGRF && reg.nr < alloc.count &&
           reg.reg_offset < alloc.sizes[reg.nr] && c < 4);
    return 4 * (alloc.offsets[reg.nr] + reg.reg_offset) + c;
 }

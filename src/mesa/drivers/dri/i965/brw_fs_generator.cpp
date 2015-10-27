@@ -37,7 +37,7 @@ static enum brw_reg_file
 brw_file_from_reg(fs_reg *reg)
 {
    switch (reg->file) {
-   case GRF:
+   case VGRF:
       return BRW_GENERAL_REGISTER_FILE;
    case MRF:
       return BRW_MESSAGE_REGISTER_FILE;
@@ -61,7 +61,7 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
    case MRF:
       assert((reg->nr & ~(1 << 7)) < BRW_MAX_MRF(gen));
       /* Fallthrough */
-   case GRF:
+   case VGRF:
       if (reg->stride == 0) {
          brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->nr, 0);
       } else if (inst->exec_size < 8) {

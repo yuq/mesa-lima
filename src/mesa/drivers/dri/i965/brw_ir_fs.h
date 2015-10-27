@@ -90,7 +90,7 @@ byte_offset(fs_reg reg, unsigned delta)
    switch (reg.file) {
    case BAD_FILE:
       break;
-   case GRF:
+   case VGRF:
    case ATTR:
       reg.reg_offset += delta / 32;
       break;
@@ -117,7 +117,7 @@ horiz_offset(fs_reg reg, unsigned delta)
        * horizontal offset should be a harmless no-op.
        */
       break;
-   case GRF:
+   case VGRF:
    case MRF:
    case ATTR:
       return byte_offset(reg, delta * reg.stride * type_sz(reg.type));
@@ -159,7 +159,7 @@ half(fs_reg reg, unsigned idx)
    case IMM:
       return reg;
 
-   case GRF:
+   case VGRF:
    case MRF:
       return horiz_offset(reg, 8 * idx);
 

@@ -583,7 +583,7 @@ fs_instruction_scheduler::count_reads_remaining(backend_instruction *be)
       if (is_src_duplicate(inst, i))
          continue;
 
-      if (inst->src[i].file == GRF) {
+      if (inst->src[i].file == VGRF) {
          reads_remaining[inst->src[i].nr]++;
       } else if (inst->src[i].file == HW_REG &&
                  inst->src[i].brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
@@ -660,7 +660,7 @@ fs_instruction_scheduler::update_register_pressure(backend_instruction *be)
    if (!reads_remaining)
       return;
 
-   if (inst->dst.file == GRF) {
+   if (inst->dst.file == VGRF) {
       written[inst->dst.nr] = true;
    }
 
@@ -668,7 +668,7 @@ fs_instruction_scheduler::update_register_pressure(backend_instruction *be)
       if (is_src_duplicate(inst, i))
           continue;
 
-      if (inst->src[i].file == GRF) {
+      if (inst->src[i].file == VGRF) {
          reads_remaining[inst->src[i].nr]--;
       } else if (inst->src[i].file == HW_REG &&
                  inst->src[i].brw_reg::file == BRW_GENERAL_REGISTER_FILE &&
@@ -685,7 +685,7 @@ fs_instruction_scheduler::get_register_pressure_benefit(backend_instruction *be)
    fs_inst *inst = (fs_inst *)be;
    int benefit = 0;
 
-   if (inst->dst.file == GRF) {
+   if (inst->dst.file == VGRF) {
       if (!BITSET_TEST(livein[block_idx], inst->dst.nr) &&
           !written[inst->dst.nr])
          benefit -= v->alloc.sizes[inst->dst.nr];
@@ -695,7 +695,7 @@ fs_instruction_scheduler::get_register_pressure_benefit(backend_instruction *be)
       if (is_src_duplicate(inst, i))
          continue;
 
-      if (inst->src[i].file == GRF &&
+      if (inst->src[i].file == VGRF &&
           !BITSET_TEST(liveout[block_idx], inst->src[i].nr) &&
           reads_remaining[inst->src[i].nr] == 1)
          benefit += v->alloc.sizes[inst->src[i].nr];
@@ -950,7 +950,7 @@ fs_instruction_scheduler::calculate_deps()
 
       /* read-after-write deps. */
       for (int i = 0; i < inst->sources; i++) {
-         if (inst->src[i].file == GRF) {
+         if (inst->src[i].file == VGRF) {
             if (post_reg_alloc) {
                for (int r = 0; r < inst->regs_read(i); r++)
                   add_dep(last_grf_write[inst->src[i].nr + r], n);
@@ -999,7 +999,7 @@ fs_instruction_scheduler::calculate_deps()
       }
 
       /* write-after-write deps. */
-      if (inst->dst.file == GRF) {
+      if (inst->dst.file == VGRF) {
          if (post_reg_alloc) {
             for (int r = 0; r < inst->regs_written; r++) {
                add_dep(last_grf_write[inst->dst.nr + r], n);
@@ -1076,7 +1076,7 @@ fs_instruction_scheduler::calculate_deps()
 
       /* write-after-read deps. */
       for (int i = 0; i < inst->sources; i++) {
-         if (inst->src[i].file == GRF) {
+         if (inst->src[i].file == VGRF) {
             if (post_reg_alloc) {
                for (int r = 0; r < inst->regs_read(i); r++)
                   add_dep(n, last_grf_write[inst->src[i].nr + r], 0);
@@ -1127,7 +1127,7 @@ fs_instruction_scheduler::calculate_deps()
       /* Update the things this instruction wrote, so earlier reads
        * can mark this as WAR dependency.
        */
-      if (inst->dst.file == GRF) {
+      if (inst->dst.file == VGRF) {
          if (post_reg_alloc) {
             for (int r = 0; r < inst->regs_written; r++)
                last_grf_write[inst->dst.nr + r] = n;
@@ -1215,7 +1215,7 @@ vec4_instruction_scheduler::calculate_deps()
 
       /* read-after-write deps. */
       for (int i = 0; i < 3; i++) {
-         if (inst->src[i].file == GRF) {
+         if (inst->src[i].file == VGRF) {
             for (unsigned j = 0; j < inst->regs_read(i); ++j)
                add_dep(last_grf_write[inst->src[i].nr + j], n);
          } else if (inst->src[i].file == HW_REG &&
@@ -1258,7 +1258,7 @@ vec4_instruction_scheduler::calculate_deps()
       }
 
       /* write-after-write deps. */
-      if (inst->dst.file == GRF) {
+      if (inst->dst.file == VGRF) {
          for (unsigned j = 0; j < inst->regs_written; ++j) {
             add_dep(last_grf_write[inst->dst.nr + j], n);
             last_grf_write[inst->dst.nr + j] = n;
@@ -1313,7 +1313,7 @@ vec4_instruction_scheduler::calculate_deps()
 
       /* write-after-read deps. */
       for (int i = 0; i < 3; i++) {
-         if (inst->src[i].file == GRF) {
+         if (inst->src[i].file == VGRF) {
             for (unsigned j = 0; j < inst->regs_read(i); ++j)
                add_dep(n, last_grf_write[inst->src[i].nr + j]);
          } else if (inst->src[i].file == HW_REG &&
@@ -1354,7 +1354,7 @@ vec4_instruction_scheduler::calculate_deps()
       /* Update the things this instruction wrote, so earlier reads
        * can mark this as WAR dependency.
        */
-      if (inst->dst.file == GRF) {
+      if (inst->dst.file == VGRF) {
          for (unsigned j = 0; j < inst->regs_written; ++j)
             last_grf_write[inst->dst.nr + j] = n;
       } else if (inst->dst.file == MRF) {

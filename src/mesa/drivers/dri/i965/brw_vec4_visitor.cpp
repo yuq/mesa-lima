@@ -632,7 +632,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type)
 {
    init();
 
-   this->file = GRF;
+   this->file = VGRF;
    this->nr = v->alloc.allocate(type_size_vec4(type));
 
    if (type->is_array() || type->is_record()) {
@@ -650,7 +650,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type, int size)
 
    init();
 
-   this->file = GRF;
+   this->file = VGRF;
    this->nr = v->alloc.allocate(type_size_vec4(type) * size);
 
    this->swizzle = BRW_SWIZZLE_NOOP;
@@ -662,7 +662,7 @@ dst_reg::dst_reg(class vec4_visitor *v, const struct glsl_type *type)
 {
    init();
 
-   this->file = GRF;
+   this->file = VGRF;
    this->nr = v->alloc.allocate(type_size_vec4(type));
 
    if (type->is_array() || type->is_record()) {
@@ -1642,7 +1642,7 @@ vec4_visitor::emit_resolve_reladdr(int scratch_loc[], bblock_t *block,
                                           *src.reladdr);
 
    /* Now handle scratch access on src */
-   if (src.file == GRF && scratch_loc[src.nr] != -1) {
+   if (src.file == VGRF && scratch_loc[src.nr] != -1) {
       dst_reg temp = dst_reg(this, glsl_type::vec4_type);
       emit_scratch_read(block, inst, temp, src, scratch_loc[src.nr]);
       src.nr = temp.nr;
@@ -1670,7 +1670,7 @@ vec4_visitor::move_grf_array_access_to_scratch()
     * scratch.
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      if (inst->dst.file == GRF && inst->dst.reladdr) {
+      if (inst->dst.file == VGRF && inst->dst.reladdr) {
          if (scratch_loc[inst->dst.nr] == -1) {
             scratch_loc[inst->dst.nr] = last_scratch;
             last_scratch += this->alloc.sizes[inst->dst.nr];
@@ -1679,7 +1679,7 @@ vec4_visitor::move_grf_array_access_to_scratch()
          for (src_reg *iter = inst->dst.reladdr;
               iter->reladdr;
               iter = iter->reladdr) {
-            if (iter->file == GRF && scratch_loc[iter->nr] == -1) {
+            if (iter->file == VGRF && scratch_loc[iter->nr] == -1) {
                scratch_loc[iter->nr] = last_scratch;
                last_scratch += this->alloc.sizes[iter->nr];
             }
@@ -1690,7 +1690,7 @@ vec4_visitor::move_grf_array_access_to_scratch()
          for (src_reg *iter = &inst->src[i];
               iter->reladdr;
               iter = iter->reladdr) {
-            if (iter->file == GRF && scratch_loc[iter->nr] == -1) {
+            if (iter->file == VGRF && scratch_loc[iter->nr] == -1) {
                scratch_loc[iter->nr] = last_scratch;
                last_scratch += this->alloc.sizes[iter->nr];
             }
@@ -1718,7 +1718,7 @@ vec4_visitor::move_grf_array_access_to_scratch()
       /* Now that we have handled any (possibly recursive) reladdr scratch
        * accesses for dst we can safely do the scratch write for dst itself
        */
-      if (inst->dst.file == GRF && scratch_loc[inst->dst.nr] != -1)
+      if (inst->dst.file == VGRF && scratch_loc[inst->dst.nr] != -1)
          emit_scratch_write(block, inst, scratch_loc[inst->dst.nr]);
 
       /* Now handle scratch access on any src. In this case, since inst->src[i]

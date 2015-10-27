@@ -162,7 +162,7 @@ vec4_visitor::nir_emit_impl(nir_function_impl *impl)
       unsigned array_elems =
          reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
 
-      nir_locals[reg->index] = dst_reg(GRF, alloc.allocate(array_elems));
+      nir_locals[reg->index] = dst_reg(VGRF, alloc.allocate(array_elems));
    }
 
    nir_ssa_values = ralloc_array(mem_ctx, dst_reg, impl->ssa_alloc);
@@ -291,7 +291,7 @@ dst_reg
 vec4_visitor::get_nir_dest(nir_dest dest)
 {
    if (dest.is_ssa) {
-      dst_reg dst = dst_reg(GRF, alloc.allocate(1));
+      dst_reg dst = dst_reg(VGRF, alloc.allocate(1));
       nir_ssa_values[dest.ssa.index] = dst;
       return dst;
    } else {
@@ -351,7 +351,7 @@ vec4_visitor::get_nir_src(nir_src src, unsigned num_components)
 void
 vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 {
-   dst_reg reg = dst_reg(GRF, alloc.allocate(1));
+   dst_reg reg = dst_reg(VGRF, alloc.allocate(1));
    reg.type =  BRW_REGISTER_TYPE_D;
 
    unsigned remaining = brw_writemask_for_size(instr->def.num_components);
@@ -1731,7 +1731,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 void
 vec4_visitor::nir_emit_undef(nir_ssa_undef_instr *instr)
 {
-   nir_ssa_values[instr->def.index] = dst_reg(GRF, alloc.allocate(1));
+   nir_ssa_values[instr->def.index] = dst_reg(VGRF, alloc.allocate(1));
 }
 
 }

@@ -268,7 +268,7 @@ fs_visitor::opt_combine_constants()
 
 
    /* Insert MOVs to load the constant values into GRFs. */
-   fs_reg reg(GRF, alloc.allocate(dispatch_width / 8));
+   fs_reg reg(VGRF, alloc.allocate(dispatch_width / 8));
    reg.stride = 0;
    for (int i = 0; i < table.len; i++) {
       struct imm *imm = &table.imm[i];
@@ -295,7 +295,7 @@ fs_visitor::opt_combine_constants()
    for (int i = 0; i < table.len; i++) {
       foreach_list_typed(reg_link, link, link, table.imm[i].uses) {
          fs_reg *reg = link->reg;
-         reg->file = GRF;
+         reg->file = VGRF;
          reg->nr = table.imm[i].nr;
          reg->subreg_offset = table.imm[i].subreg_offset;
          reg->stride = 0;

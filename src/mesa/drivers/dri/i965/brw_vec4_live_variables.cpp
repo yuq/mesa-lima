@@ -75,7 +75,7 @@ vec4_live_variables::setup_def_use()
 
 	 /* Set use[] for this instruction */
 	 for (unsigned int i = 0; i < 3; i++) {
-	    if (inst->src[i].file == GRF) {
+	    if (inst->src[i].file == VGRF) {
                for (unsigned j = 0; j < inst->regs_read(i); j++) {
                   for (int c = 0; c < 4; c++) {
                      const unsigned v =
@@ -97,7 +97,7 @@ vec4_live_variables::setup_def_use()
 	  * are the things that screen off preceding definitions of a
 	  * variable, and thus qualify for being in def[].
 	  */
-	 if (inst->dst.file == GRF &&
+	 if (inst->dst.file == VGRF &&
 	     (!inst->predicate || inst->opcode == BRW_OPCODE_SEL)) {
             for (unsigned i = 0; i < inst->regs_written; i++) {
                for (int c = 0; c < 4; c++) {
@@ -256,7 +256,7 @@ vec4_visitor::calculate_live_intervals()
    int ip = 0;
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       for (unsigned int i = 0; i < 3; i++) {
-	 if (inst->src[i].file == GRF) {
+	 if (inst->src[i].file == VGRF) {
             for (unsigned j = 0; j < inst->regs_read(i); j++) {
                for (int c = 0; c < 4; c++) {
                   const unsigned v =
@@ -268,7 +268,7 @@ vec4_visitor::calculate_live_intervals()
 	 }
       }
 
-      if (inst->dst.file == GRF) {
+      if (inst->dst.file == VGRF) {
          for (unsigned i = 0; i < inst->regs_written; i++) {
             for (int c = 0; c < 4; c++) {
                if (inst->dst.writemask & (1 << c)) {

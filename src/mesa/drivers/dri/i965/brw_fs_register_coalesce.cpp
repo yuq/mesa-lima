@@ -70,11 +70,11 @@ is_coalesce_candidate(const fs_visitor *v, const fs_inst *inst)
         inst->opcode != SHADER_OPCODE_LOAD_PAYLOAD) ||
        inst->is_partial_write() ||
        inst->saturate ||
-       inst->src[0].file != GRF ||
+       inst->src[0].file != VGRF ||
        inst->src[0].negate ||
        inst->src[0].abs ||
        !inst->src[0].is_contiguous() ||
-       inst->dst.file != GRF ||
+       inst->dst.file != VGRF ||
        inst->dst.type != inst->src[0].type) {
       return false;
    }
@@ -250,7 +250,7 @@ fs_visitor::register_coalesce()
       }
 
       foreach_block_and_inst(block, fs_inst, scan_inst, cfg) {
-         if (scan_inst->dst.file == GRF &&
+         if (scan_inst->dst.file == VGRF &&
              scan_inst->dst.nr == src_reg) {
             scan_inst->dst.nr = dst_reg;
             scan_inst->dst.reg_offset =
@@ -258,7 +258,7 @@ fs_visitor::register_coalesce()
          }
 
          for (int j = 0; j < scan_inst->sources; j++) {
-            if (scan_inst->src[j].file == GRF &&
+            if (scan_inst->src[j].file == VGRF &&
                 scan_inst->src[j].nr == src_reg) {
                scan_inst->src[j].nr = dst_reg;
                scan_inst->src[j].reg_offset =
