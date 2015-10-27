@@ -366,6 +366,32 @@ typedef struct {
 #define nir_foreach_variable(var, var_list) \
    foreach_list_typed(nir_variable, var, node, var_list)
 
+/**
+ * Returns the bits in the inputs_read, outputs_written, or
+ * system_values_read bitfield corresponding to this variable.
+ */
+static inline uint64_t
+nir_variable_get_io_mask(nir_variable *var, gl_shader_stage stage)
+{
+   assert(var->data.mode == nir_var_shader_in ||
+          var->data.mode == nir_var_shader_out ||
+          var->data.mode == nir_var_system_value);
+   assert(var->data.location >= 0);
+
+   const struct glsl_type *var_type = var->type;
+   if (stage == MESA_SHADER_GEOMETRY && var->data.mode == nir_var_shader_in) {
+      /* Most geometry shader inputs are per-vertex arrays */
+      if (var->data.location >= VARYING_SLOT_VAR0)
+         assert(glsl_type_is_array(var_type));
+
+      if (glsl_type_is_array(var_type))
+         var_type = glsl_get_array_element(var_type);
+   }
+
+   unsigned slots = glsl_count_attribute_slots(var_type);
+   return ((1ull << slots) - 1) << var->data.location;
+}
+
 typedef struct {
    struct exec_node node;
 
