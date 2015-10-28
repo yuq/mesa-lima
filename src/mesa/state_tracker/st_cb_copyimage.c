@@ -359,6 +359,7 @@ same_size_and_swizzle(const struct util_format_description *d1,
 
 static struct pipe_resource *
 create_texture(struct pipe_screen *screen, enum pipe_format format,
+               unsigned nr_samples,
                unsigned width, unsigned height, unsigned depth)
 {
    struct pipe_resource templ;
@@ -369,6 +370,7 @@ create_texture(struct pipe_screen *screen, enum pipe_format format,
    templ.height0 = height;
    templ.depth0 = 1;
    templ.array_size = depth;
+   templ.nr_samples = nr_samples;
    templ.usage = PIPE_USAGE_DEFAULT;
    templ.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
 
@@ -439,7 +441,8 @@ handle_complex_copy(struct pipe_context *pipe,
       /* Use the temporary texture. Src is converted to a canonical format,
        * then proceed the generic swizzled_copy.
        */
-      temp = create_texture(pipe->screen, canon_format, src_box->width,
+      temp = create_texture(pipe->screen, canon_format, src->nr_samples,
+                            src_box->width,
                             src_box->height, src_box->depth);
 
       u_box_3d(0, 0, 0, src_box->width, src_box->height, src_box->depth,
@@ -463,7 +466,8 @@ handle_complex_copy(struct pipe_context *pipe,
 
       /* Use the temporary texture. First, use the generic copy, but use
        * a canonical format in the destination. Then convert */
-      temp = create_texture(pipe->screen, canon_format, src_box->width,
+      temp = create_texture(pipe->screen, canon_format, dst->nr_samples,
+                            src_box->width,
                             src_box->height, src_box->depth);
 
       u_box_3d(0, 0, 0, src_box->width, src_box->height, src_box->depth,
