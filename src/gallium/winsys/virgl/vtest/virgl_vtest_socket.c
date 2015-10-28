@@ -62,7 +62,9 @@ static int virgl_block_read(int fd, void *buf, int size)
    do {
       ret = read(fd, ptr, left);
       if (ret <= 0) {
-         fprintf(stderr, "lost connection to rendering server on %d read %d %d\n", size, ret, errno);
+         fprintf(stderr,
+                 "lost connection to rendering server on %d read %d %d\n",
+                 size, ret, errno);
          abort();
          return ret < 0 ? -errno : 0;
       }
@@ -216,9 +218,11 @@ int virgl_vtest_send_transfer_cmd(struct virgl_vtest_winsys *vws,
 {
    uint32_t vtest_hdr[VTEST_HDR_SIZE];
    uint32_t cmd[VCMD_TRANSFER_HDR_SIZE];
-   bool is_put = (vcmd == VCMD_TRANSFER_PUT);
-   vtest_hdr[VTEST_CMD_LEN] = VCMD_TRANSFER_HDR_SIZE + (is_put ? (data_size + 3 / 4) : 0);
+   vtest_hdr[VTEST_CMD_LEN] = VCMD_TRANSFER_HDR_SIZE;
    vtest_hdr[VTEST_CMD_ID] = vcmd;
+
+   if (vcmd == VCMD_TRANSFER_PUT)
+      vtest_hdr[VTEST_CMD_LEN] += data_size + 3 / 4;
 
    cmd[0] = handle;
    cmd[1] = level;
@@ -248,7 +252,8 @@ int virgl_vtest_recv_transfer_get_data(struct virgl_vtest_winsys *vws,
                                        void *data,
                                        uint32_t data_size,
                                        uint32_t stride,
-                                       const struct pipe_box *box, uint32_t format)
+                                       const struct pipe_box *box,
+                                       uint32_t format)
 {
    void *line = malloc(stride);
    void *ptr = data;

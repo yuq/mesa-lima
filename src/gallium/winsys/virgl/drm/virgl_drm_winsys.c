@@ -66,7 +66,8 @@ static void virgl_hw_res_destroy(struct virgl_drm_winsys *qdws,
       FREE(res);
 }
 
-static boolean virgl_drm_resource_is_busy(struct virgl_drm_winsys *qdws, struct virgl_hw_res *res)
+static boolean virgl_drm_resource_is_busy(struct virgl_drm_winsys *qdws,
+                                          struct virgl_hw_res *res)
 {
    struct drm_virtgpu_3d_wait waitcmd;
    int ret;
@@ -159,17 +160,18 @@ static void virgl_drm_resource_reference(struct virgl_drm_winsys *qdws,
    *dres = sres;
 }
 
-static struct virgl_hw_res *virgl_drm_winsys_resource_create(struct virgl_winsys *qws,
-                                               enum pipe_texture_target target,
-                                               uint32_t format,
-                                               uint32_t bind,
-                                               uint32_t width,
-                                               uint32_t height,
-                                               uint32_t depth,
-                                               uint32_t array_size,
-                                               uint32_t last_level,
-                                               uint32_t nr_samples,
-                                               uint32_t size)
+static struct virgl_hw_res *
+virgl_drm_winsys_resource_create(struct virgl_winsys *qws,
+                                 enum pipe_texture_target target,
+                                 uint32_t format,
+                                 uint32_t bind,
+                                 uint32_t width,
+                                 uint32_t height,
+                                 uint32_t depth,
+                                 uint32_t array_size,
+                                 uint32_t last_level,
+                                 uint32_t nr_samples,
+                                 uint32_t size)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
    struct drm_virtgpu_resource_create createcmd;
@@ -214,7 +216,8 @@ static struct virgl_hw_res *virgl_drm_winsys_resource_create(struct virgl_winsys
 
 static inline int virgl_is_res_compat(struct virgl_drm_winsys *qdws,
                                       struct virgl_hw_res *res,
-                                      uint32_t size, uint32_t bind, uint32_t format)
+                                      uint32_t size, uint32_t bind,
+                                      uint32_t format)
 {
    if (res->bind != bind)
       return 0;
@@ -272,17 +275,18 @@ virgl_bo_transfer_get(struct virgl_winsys *vws,
    return drmIoctl(vdws->fd, DRM_IOCTL_VIRTGPU_TRANSFER_FROM_HOST, &fromhostcmd);
 }
 
-static struct virgl_hw_res *virgl_drm_winsys_resource_cache_create(struct virgl_winsys *qws,
-                                               enum pipe_texture_target target,
-                                               uint32_t format,
-                                               uint32_t bind,
-                                               uint32_t width,
-                                               uint32_t height,
-                                               uint32_t depth,
-                                               uint32_t array_size,
-                                               uint32_t last_level,
-                                               uint32_t nr_samples,
-                                               uint32_t size)
+static struct virgl_hw_res *
+virgl_drm_winsys_resource_cache_create(struct virgl_winsys *qws,
+                                       enum pipe_texture_target target,
+                                       uint32_t format,
+                                       uint32_t bind,
+                                       uint32_t width,
+                                       uint32_t height,
+                                       uint32_t depth,
+                                       uint32_t array_size,
+                                       uint32_t last_level,
+                                       uint32_t nr_samples,
+                                       uint32_t size)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
    struct virgl_hw_res *res, *curr_res;
@@ -355,8 +359,9 @@ alloc:
    return res;
 }
 
-static struct virgl_hw_res *virgl_drm_winsys_resource_create_handle(struct virgl_winsys *qws,
-                                                                struct winsys_handle *whandle)
+static struct virgl_hw_res *
+virgl_drm_winsys_resource_create_handle(struct virgl_winsys *qws,
+                                        struct winsys_handle *whandle)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
    struct drm_gem_open open_arg = {};
@@ -462,14 +467,15 @@ static boolean virgl_drm_winsys_resource_get_handle(struct virgl_winsys *qws,
 }
 
 static void virgl_drm_winsys_resource_unref(struct virgl_winsys *qws,
-                                          struct virgl_hw_res *hres)
+                                            struct virgl_hw_res *hres)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
 
    virgl_drm_resource_reference(qdws, &hres, NULL);
 }
 
-static void *virgl_drm_resource_map(struct virgl_winsys *qws, struct virgl_hw_res *res)
+static void *virgl_drm_resource_map(struct virgl_winsys *qws,
+                                    struct virgl_hw_res *res)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
    struct drm_virtgpu_map mmap_arg;
@@ -493,7 +499,8 @@ static void *virgl_drm_resource_map(struct virgl_winsys *qws, struct virgl_hw_re
 
 }
 
-static void virgl_drm_resource_wait(struct virgl_winsys *qws, struct virgl_hw_res *res)
+static void virgl_drm_resource_wait(struct virgl_winsys *qws,
+                                    struct virgl_hw_res *res)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
    struct drm_virtgpu_3d_wait waitcmd;
@@ -566,7 +573,8 @@ static boolean virgl_drm_lookup_res(struct virgl_drm_cmd_buf *cbuf,
 }
 
 static void virgl_drm_add_res(struct virgl_drm_winsys *qdws,
-                            struct virgl_drm_cmd_buf *cbuf, struct virgl_hw_res *res)
+                              struct virgl_drm_cmd_buf *cbuf,
+                              struct virgl_hw_res *res)
 {
    unsigned hash = res->res_handle & (sizeof(cbuf->is_handle_added)-1);
 
@@ -586,7 +594,7 @@ static void virgl_drm_add_res(struct virgl_drm_winsys *qdws,
 }
 
 static void virgl_drm_release_all_res(struct virgl_drm_winsys *qdws,
-                                    struct virgl_drm_cmd_buf *cbuf)
+                                      struct virgl_drm_cmd_buf *cbuf)
 {
    int i;
 
@@ -598,7 +606,8 @@ static void virgl_drm_release_all_res(struct virgl_drm_winsys *qdws,
 }
 
 static void virgl_drm_emit_res(struct virgl_winsys *qws,
-                             struct virgl_cmd_buf *_cbuf, struct virgl_hw_res *res, boolean write_buf)
+                               struct virgl_cmd_buf *_cbuf,
+                               struct virgl_hw_res *res, boolean write_buf)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
    struct virgl_drm_cmd_buf *cbuf = virgl_drm_cmd_buf(_cbuf);
@@ -612,8 +621,8 @@ static void virgl_drm_emit_res(struct virgl_winsys *qws,
 }
 
 static boolean virgl_drm_res_is_ref(struct virgl_winsys *qws,
-                               struct virgl_cmd_buf *_cbuf,
-                               struct virgl_hw_res *res)
+                                    struct virgl_cmd_buf *_cbuf,
+                                    struct virgl_hw_res *res)
 {
    if (!res->num_cs_references)
       return FALSE;
@@ -621,7 +630,8 @@ static boolean virgl_drm_res_is_ref(struct virgl_winsys *qws,
    return TRUE;
 }
 
-static int virgl_drm_winsys_submit_cmd(struct virgl_winsys *qws, struct virgl_cmd_buf *_cbuf)
+static int virgl_drm_winsys_submit_cmd(struct virgl_winsys *qws,
+                                       struct virgl_cmd_buf *_cbuf)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
    struct virgl_drm_cmd_buf *cbuf = virgl_drm_cmd_buf(_cbuf);
@@ -648,7 +658,8 @@ static int virgl_drm_winsys_submit_cmd(struct virgl_winsys *qws, struct virgl_cm
    return ret;
 }
 
-static int virgl_drm_get_caps(struct virgl_winsys *vws, struct virgl_drm_caps *caps)
+static int virgl_drm_get_caps(struct virgl_winsys *vws,
+                              struct virgl_drm_caps *caps)
 {
    struct virgl_drm_winsys *vdws = virgl_drm_winsys(vws);
    struct drm_virtgpu_get_caps args;

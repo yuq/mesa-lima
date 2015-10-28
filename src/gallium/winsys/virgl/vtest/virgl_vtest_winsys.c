@@ -30,8 +30,11 @@
 #include "virgl_vtest_winsys.h"
 #include "virgl_vtest_public.h"
 
-static void *virgl_vtest_resource_map(struct virgl_winsys *vws, struct virgl_hw_res *res);
-static void virgl_vtest_resource_unmap(struct virgl_winsys *vws, struct virgl_hw_res *res);
+static void *virgl_vtest_resource_map(struct virgl_winsys *vws,
+                                      struct virgl_hw_res *res);
+static void virgl_vtest_resource_unmap(struct virgl_winsys *vws,
+                                       struct virgl_hw_res *res);
+
 static inline boolean can_cache_resource(struct virgl_hw_res *res)
 {
    return res->cacheable == TRUE;
@@ -73,7 +76,8 @@ virgl_vtest_transfer_put(struct virgl_winsys *vws,
    void *ptr;
    uint32_t valid_stride;
 
-   size = vtest_get_transfer_size(res, box, stride, layer_stride, level, &valid_stride);
+   size = vtest_get_transfer_size(res, box, stride, layer_stride, level,
+                                  &valid_stride);
 
    virgl_vtest_send_transfer_cmd(vtws, VCMD_TRANSFER_PUT, res->res_handle,
                                  level, stride, layer_stride,
@@ -96,7 +100,8 @@ virgl_vtest_transfer_get(struct virgl_winsys *vws,
    void *ptr;
    uint32_t valid_stride;
 
-   size = vtest_get_transfer_size(res, box, stride, layer_stride, level, &valid_stride);
+   size = vtest_get_transfer_size(res, box, stride, layer_stride, level,
+                                  &valid_stride);
 
    virgl_vtest_send_transfer_cmd(vtws, VCMD_TRANSFER_GET, res->res_handle,
                                  level, stride, layer_stride,
@@ -104,7 +109,8 @@ virgl_vtest_transfer_get(struct virgl_winsys *vws,
 
 
    ptr = virgl_vtest_resource_map(vws, res);
-   virgl_vtest_recv_transfer_get_data(vtws, ptr + buf_offset, size, valid_stride, box, res->format);
+   virgl_vtest_recv_transfer_get_data(vtws, ptr + buf_offset, size,
+                                      valid_stride, box, res->format);
    virgl_vtest_resource_unmap(vws, res);
    return 0;
 }
@@ -196,18 +202,18 @@ static void virgl_vtest_resource_reference(struct virgl_vtest_winsys *vtws,
    *dres = sres;
 }
 
-static struct virgl_hw_res *virgl_vtest_winsys_resource_create(
-   struct virgl_winsys *vws,
-   enum pipe_texture_target target,
-   uint32_t format,
-   uint32_t bind,
-   uint32_t width,
-   uint32_t height,
-   uint32_t depth,
-   uint32_t array_size,
-   uint32_t last_level,
-   uint32_t nr_samples,
-   uint32_t size)
+static struct virgl_hw_res *
+virgl_vtest_winsys_resource_create(struct virgl_winsys *vws,
+                                   enum pipe_texture_target target,
+                                   uint32_t format,
+                                   uint32_t bind,
+                                   uint32_t width,
+                                   uint32_t height,
+                                   uint32_t depth,
+                                   uint32_t array_size,
+                                   uint32_t last_level,
+                                   uint32_t nr_samples,
+                                   uint32_t size)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
    struct virgl_hw_res *res;
@@ -218,12 +224,8 @@ static struct virgl_hw_res *virgl_vtest_winsys_resource_create(
       return NULL;
 
    if (bind & (VIRGL_BIND_DISPLAY_TARGET | VIRGL_BIND_SCANOUT)) {
-      res->dt = vtws->sws->displaytarget_create(vtws->sws,
-                                                bind,
-                                                format,
-                                                width,
-                                                height,
-                                                64,
+      res->dt = vtws->sws->displaytarget_create(vtws->sws, bind, format,
+                                                width, height, 64,
                                                 &res->stride);
 
    } else {
@@ -238,9 +240,9 @@ static struct virgl_hw_res *virgl_vtest_winsys_resource_create(
    res->format = format;
    res->height = height;
    res->width = width;
-   virgl_vtest_send_resource_create(vtws, handle, target, format, bind, width,
-                                    height, depth, array_size, last_level,
-                                    nr_samples);
+   virgl_vtest_send_resource_create(vtws, handle, target, format, bind,
+                                    width, height, depth, array_size,
+                                    last_level, nr_samples);
 
    res->res_handle = handle++;
    pipe_reference_init(&res->reference, 1);
@@ -254,7 +256,8 @@ static void virgl_vtest_winsys_resource_unref(struct virgl_winsys *vws,
    virgl_vtest_resource_reference(vtws, &hres, NULL);
 }
 
-static void *virgl_vtest_resource_map(struct virgl_winsys *vws, struct virgl_hw_res *res)
+static void *virgl_vtest_resource_map(struct virgl_winsys *vws,
+                                      struct virgl_hw_res *res)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
 
@@ -266,7 +269,8 @@ static void *virgl_vtest_resource_map(struct virgl_winsys *vws, struct virgl_hw_
    }
 }
 
-static void virgl_vtest_resource_unmap(struct virgl_winsys *vws, struct virgl_hw_res *res)
+static void virgl_vtest_resource_unmap(struct virgl_winsys *vws,
+                                       struct virgl_hw_res *res)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
    if (res->mapped)
@@ -276,7 +280,8 @@ static void virgl_vtest_resource_unmap(struct virgl_winsys *vws, struct virgl_hw
       vtws->sws->displaytarget_unmap(vtws->sws, res->dt);
 }
 
-static void virgl_vtest_resource_wait(struct virgl_winsys *vws, struct virgl_hw_res *res)
+static void virgl_vtest_resource_wait(struct virgl_winsys *vws,
+                                      struct virgl_hw_res *res)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
 
@@ -285,7 +290,8 @@ static void virgl_vtest_resource_wait(struct virgl_winsys *vws, struct virgl_hw_
 
 static inline int virgl_is_res_compat(struct virgl_vtest_winsys *vtws,
                                       struct virgl_hw_res *res,
-                                      uint32_t size, uint32_t bind, uint32_t format)
+                                      uint32_t size, uint32_t bind,
+                                      uint32_t format)
 {
    if (res->bind != bind)
       return 0;
@@ -303,17 +309,18 @@ static inline int virgl_is_res_compat(struct virgl_vtest_winsys *vtws,
    return 1;
 }
 
-static struct virgl_hw_res *virgl_vtest_winsys_resource_cache_create(struct virgl_winsys *vws,
-                                               enum pipe_texture_target target,
-                                               uint32_t format,
-                                               uint32_t bind,
-                                               uint32_t width,
-                                               uint32_t height,
-                                               uint32_t depth,
-                                               uint32_t array_size,
-                                               uint32_t last_level,
-                                               uint32_t nr_samples,
-                                               uint32_t size)
+static struct virgl_hw_res *
+virgl_vtest_winsys_resource_cache_create(struct virgl_winsys *vws,
+                                         enum pipe_texture_target target,
+                                         uint32_t format,
+                                         uint32_t bind,
+                                         uint32_t width,
+                                         uint32_t height,
+                                         uint32_t depth,
+                                         uint32_t array_size,
+                                         uint32_t last_level,
+                                         uint32_t nr_samples,
+                                         uint32_t size)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
    struct virgl_hw_res *res, *curr_res;
@@ -378,8 +385,8 @@ static struct virgl_hw_res *virgl_vtest_winsys_resource_cache_create(struct virg
 
 alloc:
    res = virgl_vtest_winsys_resource_create(vws, target, format, bind,
-                                           width, height, depth, array_size,
-                                           last_level, nr_samples, size);
+                                            width, height, depth, array_size,
+                                            last_level, nr_samples, size);
    if (bind == VIRGL_BIND_CONSTANT_BUFFER || bind == VIRGL_BIND_INDEX_BUFFER ||
        bind == VIRGL_BIND_VERTEX_BUFFER)
       res->cacheable = TRUE;
@@ -414,7 +421,7 @@ static void virgl_vtest_cmd_buf_destroy(struct virgl_cmd_buf *_cbuf)
 }
 
 static boolean virgl_vtest_lookup_res(struct virgl_vtest_cmd_buf *cbuf,
-                                    struct virgl_hw_res *res)
+                                      struct virgl_hw_res *res)
 {
    unsigned hash = res->res_handle & (sizeof(cbuf->is_handle_added)-1);
    int i;
@@ -447,7 +454,8 @@ static void virgl_vtest_release_all_res(struct virgl_vtest_winsys *vtws,
 }
 
 static void virgl_vtest_add_res(struct virgl_vtest_winsys *vtws,
-                            struct virgl_vtest_cmd_buf *cbuf, struct virgl_hw_res *res)
+                                struct virgl_vtest_cmd_buf *cbuf,
+                                struct virgl_hw_res *res)
 {
    unsigned hash = res->res_handle & (sizeof(cbuf->is_handle_added)-1);
 
@@ -465,7 +473,8 @@ static void virgl_vtest_add_res(struct virgl_vtest_winsys *vtws,
    cbuf->cres++;
 }
 
-static int virgl_vtest_winsys_submit_cmd(struct virgl_winsys *vws, struct virgl_cmd_buf *_cbuf)
+static int virgl_vtest_winsys_submit_cmd(struct virgl_winsys *vws,
+                                         struct virgl_cmd_buf *_cbuf)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
    struct virgl_vtest_cmd_buf *cbuf = virgl_vtest_cmd_buf(_cbuf);
@@ -482,7 +491,9 @@ static int virgl_vtest_winsys_submit_cmd(struct virgl_winsys *vws, struct virgl_
    return ret;
 }
 
-static void virgl_vtest_emit_res(struct virgl_winsys *vws, struct virgl_cmd_buf *_cbuf, struct virgl_hw_res *res, boolean write_buf)
+static void virgl_vtest_emit_res(struct virgl_winsys *vws,
+                                 struct virgl_cmd_buf *_cbuf,
+                                 struct virgl_hw_res *res, boolean write_buf)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
    struct virgl_vtest_cmd_buf *cbuf = virgl_vtest_cmd_buf(_cbuf);
@@ -504,7 +515,8 @@ static boolean virgl_vtest_res_is_ref(struct virgl_winsys *vws,
    return TRUE;
 }
 
-static int virgl_vtest_get_caps(struct virgl_winsys *vws, struct virgl_drm_caps *caps)
+static int virgl_vtest_get_caps(struct virgl_winsys *vws,
+                                struct virgl_drm_caps *caps)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
    return virgl_vtest_send_get_caps(vtws, caps);
@@ -575,7 +587,8 @@ static void virgl_vtest_flush_frontbuffer(struct virgl_winsys *vws,
 
    if (sub_box) {
       box = *sub_box;
-      offset = (res->stride * (box.y / util_format_get_blockheight(res->format))) + (box.x / util_format_get_blockwidth(res->format)) * util_format_get_blocksize(res->format);
+      offset = box.y / util_format_get_blockheight(res->format) * res->stride +
+               box.x / util_format_get_blockwidth(res->format) * util_format_get_blocksize(res->format);
    } else {
       box.z = layer;
       box.width = res->width;
@@ -591,10 +604,12 @@ static void virgl_vtest_flush_frontbuffer(struct virgl_winsys *vws,
    /* execute a transfer */
    virgl_vtest_send_transfer_cmd(vtws, VCMD_TRANSFER_GET, res->res_handle,
                                  level, res->stride, 0, &box, size);
-   virgl_vtest_recv_transfer_get_data(vtws, map + offset, size, valid_stride, &box, res->format);
+   virgl_vtest_recv_transfer_get_data(vtws, map + offset, size, valid_stride,
+                                      &box, res->format);
    vtws->sws->displaytarget_unmap(vtws->sws, res->dt);
 
-   vtws->sws->displaytarget_display(vtws->sws, res->dt, winsys_drawable_handle, sub_box);
+   vtws->sws->displaytarget_display(vtws->sws, res->dt, winsys_drawable_handle,
+                                    sub_box);
 }
 
 static void
