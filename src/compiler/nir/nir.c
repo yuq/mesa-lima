@@ -258,16 +258,11 @@ cf_init(nir_cf_node *node, nir_cf_node_type type)
 }
 
 nir_function_impl *
-nir_function_impl_create(nir_function *function)
+nir_function_impl_create_bare(nir_shader *shader)
 {
-   assert(function->impl == NULL);
+   nir_function_impl *impl = ralloc(shader, nir_function_impl);
 
-   void *mem_ctx = ralloc_parent(function);
-
-   nir_function_impl *impl = ralloc(mem_ctx, nir_function_impl);
-
-   function->impl = impl;
-   impl->function = function;
+   impl->function = NULL;
 
    cf_init(&impl->cf_node, nir_cf_node_function);
 
@@ -282,8 +277,8 @@ nir_function_impl_create(nir_function *function)
    impl->valid_metadata = nir_metadata_none;
 
    /* create start & end blocks */
-   nir_block *start_block = nir_block_create(mem_ctx);
-   nir_block *end_block = nir_block_create(mem_ctx);
+   nir_block *start_block = nir_block_create(shader);
+   nir_block *end_block = nir_block_create(shader);
    start_block->cf_node.parent = &impl->cf_node;
    end_block->cf_node.parent = &impl->cf_node;
    impl->end_block = end_block;
@@ -292,6 +287,19 @@ nir_function_impl_create(nir_function *function)
 
    start_block->successors[0] = end_block;
    _mesa_set_add(end_block->predecessors, start_block);
+   return impl;
+}
+
+nir_function_impl *
+nir_function_impl_create(nir_function *function)
+{
+   assert(function->impl == NULL);
+
+   nir_function_impl *impl = nir_function_impl_create_bare(function->shader);
+
+   function->impl = impl;
+   impl->function = function;
+
    return impl;
 }
 
