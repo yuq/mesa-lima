@@ -2511,12 +2511,20 @@ brw_send_indirect_message(struct brw_codegen *p,
                           struct brw_reg desc)
 {
    const struct brw_device_info *devinfo = p->devinfo;
-   struct brw_inst *send, *setup;
+   struct brw_inst *send;
+   int setup;
 
    assert(desc.type == BRW_REGISTER_TYPE_UD);
 
+   /* We hold on to the setup instruction (the SEND in the direct case, the OR
+    * in the indirect case) by its index in the instruction store.  The
+    * pointer returned by next_insn() may become invalid if emitting the SEND
+    * in the indirect case reallocs the store.
+    */
+
    if (desc.file == BRW_IMMEDIATE_VALUE) {
-      setup = send = next_insn(p, BRW_OPCODE_SEND);
+      setup = p->nr_insn;
+      send = next_insn(p, BRW_OPCODE_SEND);
       brw_set_src1(p, send, desc);
 
    } else {
@@ -2531,7 +2539,8 @@ brw_send_indirect_message(struct brw_codegen *p,
        * caller can specify additional descriptor bits with the usual
        * brw_set_*_message() helper functions.
        */
-      setup = brw_OR(p, addr, desc, brw_imm_ud(0));
+      setup = p->nr_insn;
+      brw_OR(p, addr, desc, brw_imm_ud(0));
 
       brw_pop_insn_state(p);
 
@@ -2543,7 +2552,7 @@ brw_send_indirect_message(struct brw_codegen *p,
    brw_set_src0(p, send, retype(payload, BRW_REGISTER_TYPE_UD));
    brw_inst_set_sfid(devinfo, send, sfid);
 
-   return setup;
+   return &p->store[setup];
 }
 
 static struct brw_inst *
