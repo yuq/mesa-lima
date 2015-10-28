@@ -532,7 +532,7 @@ static struct virgl_cmd_buf *virgl_drm_cmd_buf_create(struct virgl_winsys *qws)
 
 static void virgl_drm_cmd_buf_destroy(struct virgl_cmd_buf *_cbuf)
 {
-   struct virgl_drm_cmd_buf *cbuf = (struct virgl_drm_cmd_buf *)_cbuf;
+   struct virgl_drm_cmd_buf *cbuf = virgl_drm_cmd_buf(_cbuf);
 
    FREE(cbuf->res_hlist);
    FREE(cbuf->res_bo);
@@ -597,7 +597,7 @@ static void virgl_drm_emit_res(struct virgl_winsys *qws,
                              struct virgl_cmd_buf *_cbuf, struct virgl_hw_res *res, boolean write_buf)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
-   struct virgl_drm_cmd_buf *cbuf = (struct virgl_drm_cmd_buf *)_cbuf;
+   struct virgl_drm_cmd_buf *cbuf = virgl_drm_cmd_buf(_cbuf);
    boolean already_in_list = virgl_drm_lookup_res(cbuf, res);
 
    if (write_buf)
@@ -620,7 +620,7 @@ static boolean virgl_drm_res_is_ref(struct virgl_winsys *qws,
 static int virgl_drm_winsys_submit_cmd(struct virgl_winsys *qws, struct virgl_cmd_buf *_cbuf)
 {
    struct virgl_drm_winsys *qdws = virgl_drm_winsys(qws);
-   struct virgl_drm_cmd_buf *cbuf = (struct virgl_drm_cmd_buf *)_cbuf;
+   struct virgl_drm_cmd_buf *cbuf = virgl_drm_cmd_buf(_cbuf);
    struct drm_virtgpu_execbuffer eb;
    int ret;
 
@@ -690,7 +690,7 @@ static bool virgl_fence_wait(struct virgl_winsys *vws,
                              uint64_t timeout)
 {
    struct virgl_drm_winsys *vdws = virgl_drm_winsys(vws);
-   struct virgl_hw_res *res = (struct virgl_hw_res *)fence;
+   struct virgl_hw_res *res = virgl_hw_res(fence);
 
    if (timeout == 0)
       return virgl_drm_resource_is_busy(vdws, res);
@@ -715,7 +715,7 @@ static void virgl_fence_reference(struct virgl_winsys *vws,
 {
    struct virgl_drm_winsys *vdws = virgl_drm_winsys(vws);
    virgl_drm_resource_reference(vdws, (struct virgl_hw_res **)dst,
-                                (struct virgl_hw_res *)src);
+                                virgl_hw_res(src));
 }
 
 

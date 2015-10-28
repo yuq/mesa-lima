@@ -39,6 +39,8 @@
 #include "virgl/virgl_hw.h"
 #include "virgl/virgl_winsys.h"
 
+struct pipe_fence_handle;
+
 struct virgl_hw_res {
    struct pipe_reference reference;
    uint32_t res_handle;
@@ -87,10 +89,22 @@ struct virgl_drm_cmd_buf {
 
 };
 
+static inline struct virgl_hw_res *
+virgl_hw_res(struct pipe_fence_handle *f)
+{
+   return (struct virgl_hw_res *)f;
+}
+
 static inline struct virgl_drm_winsys *
 virgl_drm_winsys(struct virgl_winsys *iws)
 {
    return (struct virgl_drm_winsys *)iws;
+}
+
+static inline struct virgl_drm_cmd_buf *
+virgl_drm_cmd_buf(struct virgl_cmd_buf *cbuf)
+{
+   return (struct virgl_drm_cmd_buf *)cbuf;
 }
 
 #endif

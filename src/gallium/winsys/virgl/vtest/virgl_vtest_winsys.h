@@ -34,6 +34,9 @@
 #include "os/os_thread.h"
 
 #include "vtest_protocol.h"
+
+struct pipe_fence_handle;
+
 struct virgl_vtest_winsys {
    struct virgl_winsys base;
 
@@ -83,11 +86,24 @@ struct virgl_vtest_cmd_buf {
    unsigned                    reloc_indices_hashlist[512];
 };
 
+static inline struct virgl_hw_res *
+virgl_hw_res(struct pipe_fence_handle *f)
+{
+   return (struct virgl_hw_res *)f;
+}
+
 static inline struct virgl_vtest_winsys *
 virgl_vtest_winsys(struct virgl_winsys *iws)
 {
    return (struct virgl_vtest_winsys *)iws;
 }
+
+static inline struct virgl_vtest_cmd_buf *
+virgl_vtest_cmd_buf(struct virgl_cmd_buf *cbuf)
+{
+   return (struct virgl_vtest_cmd_buf *)cbuf;
+}
+
 
 int virgl_vtest_connect(struct virgl_vtest_winsys *vws);
 int virgl_vtest_send_get_caps(struct virgl_vtest_winsys *vws,

@@ -407,7 +407,7 @@ static struct virgl_cmd_buf *virgl_vtest_cmd_buf_create(struct virgl_winsys *vws
 
 static void virgl_vtest_cmd_buf_destroy(struct virgl_cmd_buf *_cbuf)
 {
-   struct virgl_vtest_cmd_buf *cbuf = (struct virgl_vtest_cmd_buf *)_cbuf;
+   struct virgl_vtest_cmd_buf *cbuf = virgl_vtest_cmd_buf(_cbuf);
 
    FREE(cbuf->res_bo);
    FREE(cbuf);
@@ -468,7 +468,7 @@ static void virgl_vtest_add_res(struct virgl_vtest_winsys *vtws,
 static int virgl_vtest_winsys_submit_cmd(struct virgl_winsys *vws, struct virgl_cmd_buf *_cbuf)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
-   struct virgl_vtest_cmd_buf *cbuf = (struct virgl_vtest_cmd_buf *)_cbuf;
+   struct virgl_vtest_cmd_buf *cbuf = virgl_vtest_cmd_buf(_cbuf);
    int ret;
 
    if (cbuf->base.cdw == 0)
@@ -485,7 +485,7 @@ static int virgl_vtest_winsys_submit_cmd(struct virgl_winsys *vws, struct virgl_
 static void virgl_vtest_emit_res(struct virgl_winsys *vws, struct virgl_cmd_buf *_cbuf, struct virgl_hw_res *res, boolean write_buf)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
-   struct virgl_vtest_cmd_buf *cbuf = (struct virgl_vtest_cmd_buf *)_cbuf;
+   struct virgl_vtest_cmd_buf *cbuf = virgl_vtest_cmd_buf(_cbuf);
    boolean already_in_list = virgl_vtest_lookup_res(cbuf, res);
 
    if (write_buf)
@@ -529,7 +529,7 @@ static bool virgl_fence_wait(struct virgl_winsys *vws,
                              uint64_t timeout)
 {
    struct virgl_vtest_winsys *vdws = virgl_vtest_winsys(vws);
-   struct virgl_hw_res *res = (struct virgl_hw_res *)fence;
+   struct virgl_hw_res *res = virgl_hw_res(fence);
 
    if (timeout == 0)
       return virgl_vtest_resource_is_busy(vdws, res);
@@ -554,7 +554,7 @@ static void virgl_fence_reference(struct virgl_winsys *vws,
 {
    struct virgl_vtest_winsys *vdws = virgl_vtest_winsys(vws);
    virgl_vtest_resource_reference(vdws, (struct virgl_hw_res **)dst,
-                                  (struct virgl_hw_res *)src);
+                                  virgl_hw_res(src));
 }
 
 static void virgl_vtest_flush_frontbuffer(struct virgl_winsys *vws,
