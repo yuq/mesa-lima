@@ -532,7 +532,6 @@ virgl_create_screen(struct virgl_winsys *vws)
       return NULL;
 
    screen->vws = vws;
-   screen->winsys = NULL;
    screen->base.get_name = virgl_get_name;
    screen->base.get_vendor = virgl_get_vendor;
    screen->base.get_param = virgl_get_param;
