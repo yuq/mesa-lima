@@ -55,6 +55,7 @@ static void virgl_hw_res_destroy(struct virgl_drm_winsys *qdws,
       if (res->ptr)
          os_munmap(res->ptr, res->size);
 
+      memset(&args, 0, sizeof(args));
       args.handle = res->bo_handle;
       drmIoctl(qdws->fd, DRM_IOCTL_GEM_CLOSE, &args);
       FREE(res);
@@ -65,6 +66,7 @@ static boolean virgl_drm_resource_is_busy(struct virgl_drm_winsys *qdws, struct 
    struct drm_virtgpu_3d_wait waitcmd;
    int ret;
 
+   memset(&waitcmd, 0, sizeof(waitcmd));
    waitcmd.handle = res->bo_handle;
    waitcmd.flags = VIRTGPU_WAIT_NOWAIT;
 
@@ -174,6 +176,7 @@ static struct virgl_hw_res *virgl_drm_winsys_resource_create(struct virgl_winsys
    if (!res)
       return NULL;
 
+   memset(&createcmd, 0, sizeof(createcmd));
    createcmd.target = target;
    createcmd.format = format;
    createcmd.bind = bind;
@@ -183,10 +186,8 @@ static struct virgl_hw_res *virgl_drm_winsys_resource_create(struct virgl_winsys
    createcmd.array_size = array_size;
    createcmd.last_level = last_level;
    createcmd.nr_samples = nr_samples;
-   createcmd.res_handle = 0;
    createcmd.stride = stride;
    createcmd.size = size;
-   createcmd.flags = 0;
 
    ret = drmIoctl(qdws->fd, DRM_IOCTL_VIRTGPU_RESOURCE_CREATE, &createcmd);
    if (ret != 0) {
@@ -237,6 +238,7 @@ virgl_bo_transfer_put(struct virgl_winsys *vws,
    struct drm_virtgpu_3d_transfer_to_host tohostcmd;
    int ret;
 
+   memset(&tohostcmd, 0, sizeof(tohostcmd));
    tohostcmd.bo_handle = res->bo_handle;
    tohostcmd.box = *(struct drm_virtgpu_3d_box *)box;
    tohostcmd.offset = buf_offset;
@@ -258,6 +260,7 @@ virgl_bo_transfer_get(struct virgl_winsys *vws,
    struct drm_virtgpu_3d_transfer_from_host fromhostcmd;
    int ret;
 
+   memset(&fromhostcmd, 0, sizeof(fromhostcmd));
    fromhostcmd.bo_handle = res->bo_handle;
    fromhostcmd.level = level;
    fromhostcmd.offset = buf_offset;
@@ -430,10 +433,10 @@ static boolean virgl_drm_winsys_resource_get_handle(struct virgl_winsys *qws,
 
    if (!res)
        return FALSE;
-   memset(&flink, 0, sizeof(flink));
 
    if (whandle->type == DRM_API_HANDLE_TYPE_SHARED) {
       if (!res->flinked) {
+         memset(&flink, 0, sizeof(flink));
          flink.handle = res->bo_handle;
 
          if (drmIoctl(qdws->fd, DRM_IOCTL_GEM_FLINK, &flink)) {
@@ -474,6 +477,7 @@ static void *virgl_drm_resource_map(struct virgl_winsys *qws, struct virgl_hw_re
    if (res->ptr)
       return res->ptr;
 
+   memset(&mmap_arg, 0, sizeof(mmap_arg));
    mmap_arg.handle = res->bo_handle;
    if (drmIoctl(qdws->fd, DRM_IOCTL_VIRTGPU_MAP, &mmap_arg))
       return NULL;
@@ -494,8 +498,8 @@ static void virgl_drm_resource_wait(struct virgl_winsys *qws, struct virgl_hw_re
    struct drm_virtgpu_3d_wait waitcmd;
    int ret;
 
+   memset(&waitcmd, 0, sizeof(waitcmd));
    waitcmd.handle = res->bo_handle;
-   waitcmd.flags = 0;
  again:
    ret = drmIoctl(qdws->fd, DRM_IOCTL_VIRTGPU_WAIT, &waitcmd);
    if (ret == -EAGAIN)
