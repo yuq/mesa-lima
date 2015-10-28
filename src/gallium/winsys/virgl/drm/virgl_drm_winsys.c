@@ -20,9 +20,6 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-/* TODO - remove this */
-#define _FILE_OFFSET_BITS 64
-
 #include "virgl_drm_winsys.h"
 #include "virgl_drm_public.h"
 #include "util/u_memory.h"

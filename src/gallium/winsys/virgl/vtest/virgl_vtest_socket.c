@@ -20,8 +20,6 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#define _FILE_OFFSET_BITS 64
-
 #include "virgl_vtest_winsys.h"
 #include "virgl_vtest_public.h"
 #include <sys/socket.h>
