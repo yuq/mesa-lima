@@ -195,7 +195,7 @@ static struct pipe_surface *virgl_create_surface(struct pipe_context *ctx,
                                                 struct pipe_resource *resource,
                                                 const struct pipe_surface *templ)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_surface *surf;
    struct virgl_resource *res = virgl_resource(resource);
    uint32_t handle;
@@ -230,7 +230,7 @@ static struct pipe_surface *virgl_create_surface(struct pipe_context *ctx,
 static void virgl_surface_destroy(struct pipe_context *ctx,
                                  struct pipe_surface *psurf)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_surface *surf = (struct virgl_surface *)psurf;
 
    pipe_resource_reference(&surf->base.texture, NULL);
@@ -241,7 +241,7 @@ static void virgl_surface_destroy(struct pipe_context *ctx,
 static void *virgl_create_blend_state(struct pipe_context *ctx,
                                               const struct pipe_blend_state *blend_state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle;
    handle = virgl_object_assign_handle();
 
@@ -253,7 +253,7 @@ static void *virgl_create_blend_state(struct pipe_context *ctx,
 static void virgl_bind_blend_state(struct pipe_context *ctx,
                                            void *blend_state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = (unsigned long)blend_state;
    virgl_encode_bind_object(vctx, handle, VIRGL_OBJECT_BLEND);
 }
@@ -261,7 +261,7 @@ static void virgl_bind_blend_state(struct pipe_context *ctx,
 static void virgl_delete_blend_state(struct pipe_context *ctx,
                                      void *blend_state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = (unsigned long)blend_state;
    virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_BLEND);
 }
@@ -269,7 +269,7 @@ static void virgl_delete_blend_state(struct pipe_context *ctx,
 static void *virgl_create_depth_stencil_alpha_state(struct pipe_context *ctx,
                                                    const struct pipe_depth_stencil_alpha_state *blend_state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle;
    handle = virgl_object_assign_handle();
 
@@ -280,7 +280,7 @@ static void *virgl_create_depth_stencil_alpha_state(struct pipe_context *ctx,
 static void virgl_bind_depth_stencil_alpha_state(struct pipe_context *ctx,
                                                 void *blend_state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = (unsigned long)blend_state;
    virgl_encode_bind_object(vctx, handle, VIRGL_OBJECT_DSA);
 }
@@ -288,7 +288,7 @@ static void virgl_bind_depth_stencil_alpha_state(struct pipe_context *ctx,
 static void virgl_delete_depth_stencil_alpha_state(struct pipe_context *ctx,
                                                   void *dsa_state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = (unsigned long)dsa_state;
    virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_DSA);
 }
@@ -296,7 +296,7 @@ static void virgl_delete_depth_stencil_alpha_state(struct pipe_context *ctx,
 static void *virgl_create_rasterizer_state(struct pipe_context *ctx,
                                                    const struct pipe_rasterizer_state *rs_state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle;
    handle = virgl_object_assign_handle();
 
@@ -307,7 +307,7 @@ static void *virgl_create_rasterizer_state(struct pipe_context *ctx,
 static void virgl_bind_rasterizer_state(struct pipe_context *ctx,
                                                 void *rs_state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = (unsigned long)rs_state;
 
    virgl_encode_bind_object(vctx, handle, VIRGL_OBJECT_RASTERIZER);
@@ -316,7 +316,7 @@ static void virgl_bind_rasterizer_state(struct pipe_context *ctx,
 static void virgl_delete_rasterizer_state(struct pipe_context *ctx,
                                          void *rs_state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = (unsigned long)rs_state;
    virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_RASTERIZER);
 }
@@ -324,7 +324,7 @@ static void virgl_delete_rasterizer_state(struct pipe_context *ctx,
 static void virgl_set_framebuffer_state(struct pipe_context *ctx,
                                                 const struct pipe_framebuffer_state *state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    vctx->framebuffer = *state;
    virgl_encoder_set_framebuffer_state(vctx, state);
@@ -336,7 +336,7 @@ static void virgl_set_viewport_states(struct pipe_context *ctx,
                                      unsigned num_viewports,
                                      const struct pipe_viewport_state *state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    virgl_encoder_set_viewport_states(vctx, start_slot, num_viewports, state);
 }
 
@@ -344,7 +344,7 @@ static void *virgl_create_vertex_elements_state(struct pipe_context *ctx,
                                                         unsigned num_elements,
                                                         const struct pipe_vertex_element *elements)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = virgl_object_assign_handle();
    virgl_encoder_create_vertex_elements(vctx, handle,
                                        num_elements, elements);
@@ -355,7 +355,7 @@ static void *virgl_create_vertex_elements_state(struct pipe_context *ctx,
 static void virgl_delete_vertex_elements_state(struct pipe_context *ctx,
                                               void *ve)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = (unsigned long)ve;
 
    virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_VERTEX_ELEMENTS);
@@ -364,7 +364,7 @@ static void virgl_delete_vertex_elements_state(struct pipe_context *ctx,
 static void virgl_bind_vertex_elements_state(struct pipe_context *ctx,
                                                      void *ve)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = (unsigned long)ve;
    virgl_encode_bind_object(vctx, handle, VIRGL_OBJECT_VERTEX_ELEMENTS);
 }
@@ -374,7 +374,7 @@ static void virgl_set_vertex_buffers(struct pipe_context *ctx,
                                     unsigned num_buffers,
                                     const struct pipe_vertex_buffer *buffers)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    util_set_vertex_buffers_count(vctx->vertex_buffer,
                                  &vctx->num_vertex_buffers,
@@ -385,7 +385,7 @@ static void virgl_set_vertex_buffers(struct pipe_context *ctx,
 
 static void virgl_hw_set_vertex_buffers(struct pipe_context *ctx)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    if (vctx->vertex_array_dirty) {
       virgl_encoder_set_vertex_buffers(vctx, vctx->num_vertex_buffers, vctx->vertex_buffer);
@@ -396,21 +396,21 @@ static void virgl_hw_set_vertex_buffers(struct pipe_context *ctx)
 static void virgl_set_stencil_ref(struct pipe_context *ctx,
                                  const struct pipe_stencil_ref *ref)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    virgl_encoder_set_stencil_ref(vctx, ref);
 }
 
 static void virgl_set_blend_color(struct pipe_context *ctx,
                                  const struct pipe_blend_color *color)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    virgl_encoder_set_blend_color(vctx, color);
 }
 
 static void virgl_set_index_buffer(struct pipe_context *ctx,
                                   const struct pipe_index_buffer *ib)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    if (ib) {
       pipe_resource_reference(&vctx->index_buffer.buffer, ib->buffer);
@@ -423,7 +423,7 @@ static void virgl_set_index_buffer(struct pipe_context *ctx,
 static void virgl_hw_set_index_buffer(struct pipe_context *ctx,
                                      struct pipe_index_buffer *ib)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    virgl_encoder_set_index_buffer(vctx, ib);
    virgl_attach_res_index_buffer(vctx);
 }
@@ -432,7 +432,7 @@ static void virgl_set_constant_buffer(struct pipe_context *ctx,
                                      uint shader, uint index,
                                      struct pipe_constant_buffer *buf)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    if (buf) {
       if (!buf->user_buffer){
@@ -459,7 +459,7 @@ void virgl_transfer_inline_write(struct pipe_context *ctx,
                                 unsigned stride,
                                 unsigned layer_stride)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_screen *vs = virgl_screen(ctx->screen);
    struct virgl_resource *grres = (struct virgl_resource *)res;
    struct virgl_buffer *vbuf = virgl_buffer(res);
@@ -480,7 +480,7 @@ static void *virgl_shader_encoder(struct pipe_context *ctx,
                                   const struct pipe_shader_state *shader,
                                   unsigned type)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle;
    struct tgsi_token *new_tokens;
    int ret;
@@ -525,7 +525,7 @@ virgl_delete_fs_state(struct pipe_context *ctx,
                      void *fs)
 {
    uint32_t handle = (unsigned long)fs;
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_SHADER);
 }
@@ -535,7 +535,7 @@ virgl_delete_gs_state(struct pipe_context *ctx,
                      void *gs)
 {
    uint32_t handle = (unsigned long)gs;
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_SHADER);
 }
@@ -545,7 +545,7 @@ virgl_delete_vs_state(struct pipe_context *ctx,
                      void *vs)
 {
    uint32_t handle = (unsigned long)vs;
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_SHADER);
 }
@@ -554,7 +554,7 @@ static void virgl_bind_vs_state(struct pipe_context *ctx,
                                         void *vss)
 {
    uint32_t handle = (unsigned long)vss;
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    virgl_encode_bind_shader(vctx, handle, PIPE_SHADER_VERTEX);
 }
@@ -563,7 +563,7 @@ static void virgl_bind_gs_state(struct pipe_context *ctx,
                                void *vss)
 {
    uint32_t handle = (unsigned long)vss;
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    virgl_encode_bind_shader(vctx, handle, PIPE_SHADER_GEOMETRY);
 }
@@ -573,7 +573,7 @@ static void virgl_bind_fs_state(struct pipe_context *ctx,
                                         void *vss)
 {
    uint32_t handle = (unsigned long)vss;
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    virgl_encode_bind_shader(vctx, handle, PIPE_SHADER_FRAGMENT);
 }
@@ -583,7 +583,7 @@ static void virgl_clear(struct pipe_context *ctx,
                                 const union pipe_color_union *color,
                                 double depth, unsigned stencil)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
 
    virgl_encode_clear(vctx, buffers, color, depth, stencil);
 }
@@ -591,7 +591,7 @@ static void virgl_clear(struct pipe_context *ctx,
 static void virgl_draw_vbo(struct pipe_context *ctx,
                                    const struct pipe_draw_info *dinfo)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_screen *rs = virgl_screen(ctx->screen);
    struct pipe_index_buffer ib = {};
    struct pipe_draw_info info = *dinfo;
@@ -645,7 +645,7 @@ static void virgl_flush_from_st(struct pipe_context *ctx,
                                struct pipe_fence_handle **fence,
                                enum pipe_flush_flags flags)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_screen *rs = virgl_screen(ctx->screen);
    struct virgl_buffer *buf, *tmp;
 
@@ -667,7 +667,7 @@ static struct pipe_sampler_view *virgl_create_sampler_view(struct pipe_context *
                                       struct pipe_resource *texture,
                                       const struct pipe_sampler_view *state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_sampler_view *grview = CALLOC_STRUCT(virgl_sampler_view);
    uint32_t handle;
    struct virgl_resource *res;
@@ -695,7 +695,7 @@ static void virgl_set_sampler_views(struct pipe_context *ctx,
                                    unsigned num_views,
                                    struct pipe_sampler_view **views)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    int i;
    uint32_t disable_mask = ~((1ull << num_views) - 1);
    struct virgl_textures_info *tinfo = &vctx->samplers[shader_type];
@@ -712,7 +712,7 @@ static void virgl_set_sampler_views(struct pipe_context *ctx,
    }
 
    for (i = 0; i < num_views; i++) {
-      struct virgl_sampler_view *grview = (struct virgl_sampler_view *)views[i];
+      struct virgl_sampler_view *grview = virgl_sampler_view(views[i]);
 
       if (views[i] == (struct pipe_sampler_view *)tinfo->views[i])
          continue;
@@ -735,8 +735,8 @@ static void virgl_set_sampler_views(struct pipe_context *ctx,
 static void virgl_destroy_sampler_view(struct pipe_context *ctx,
                                  struct pipe_sampler_view *view)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
-   struct virgl_sampler_view *grview = (struct virgl_sampler_view *)view;
+   struct virgl_context *vctx = virgl_context(ctx);
+   struct virgl_sampler_view *grview = virgl_sampler_view(view);
 
    virgl_encode_delete_object(vctx, grview->handle, VIRGL_OBJECT_SAMPLER_VIEW);
    pipe_resource_reference(&view->texture, NULL);
@@ -746,7 +746,7 @@ static void virgl_destroy_sampler_view(struct pipe_context *ctx,
 static void *virgl_create_sampler_state(struct pipe_context *ctx,
                                         const struct pipe_sampler_state *state)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle;
 
    handle = virgl_object_assign_handle();
@@ -758,7 +758,7 @@ static void *virgl_create_sampler_state(struct pipe_context *ctx,
 static void virgl_delete_sampler_state(struct pipe_context *ctx,
                                       void *ss)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handle = (unsigned long)ss;
 
    virgl_encode_delete_object(vctx, handle, VIRGL_OBJECT_SAMPLER_STATE);
@@ -769,7 +769,7 @@ static void virgl_bind_sampler_states(struct pipe_context *ctx,
                                      unsigned num_samplers,
                                      void **samplers)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    uint32_t handles[32];
    int i;
    for (i = 0; i < num_samplers; i++) {
@@ -781,7 +781,7 @@ static void virgl_bind_sampler_states(struct pipe_context *ctx,
 static void virgl_set_polygon_stipple(struct pipe_context *ctx,
                                      const struct pipe_poly_stipple *ps)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    virgl_encoder_set_polygon_stipple(vctx, ps);
 }
 
@@ -790,21 +790,21 @@ static void virgl_set_scissor_states(struct pipe_context *ctx,
                                     unsigned num_scissor,
                                    const struct pipe_scissor_state *ss)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    virgl_encoder_set_scissor_state(vctx, start_slot, num_scissor, ss);
 }
 
 static void virgl_set_sample_mask(struct pipe_context *ctx,
                                  unsigned sample_mask)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    virgl_encoder_set_sample_mask(vctx, sample_mask);
 }
 
 static void virgl_set_clip_state(struct pipe_context *ctx,
                                 const struct pipe_clip_state *clip)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    virgl_encoder_set_clip_state(vctx, clip);
 }
 
@@ -816,7 +816,7 @@ static void virgl_resource_copy_region(struct pipe_context *ctx,
                                       unsigned src_level,
                                       const struct pipe_box *src_box)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_resource *dres = (struct virgl_resource *)dst;
    struct virgl_resource *sres = (struct virgl_resource *)src;
 
@@ -836,7 +836,7 @@ virgl_flush_resource(struct pipe_context *pipe,
 static void virgl_blit(struct pipe_context *ctx,
                       const struct pipe_blit_info *blit)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_resource *dres = (struct virgl_resource *)blit->dst.resource;
    struct virgl_resource *sres = (struct virgl_resource *)blit->src.resource;
 
@@ -848,7 +848,7 @@ static void virgl_blit(struct pipe_context *ctx,
 static void
 virgl_context_destroy( struct pipe_context *ctx )
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_screen *rs = virgl_screen(ctx->screen);
 
    vctx->framebuffer.zsbuf = NULL;

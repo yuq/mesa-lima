@@ -42,7 +42,7 @@ static void virgl_render_condition(struct pipe_context *ctx,
                                   boolean condition,
                                   uint mode)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_query *query = (struct virgl_query *)q;
    uint32_t handle = 0;
    if (q)
@@ -53,7 +53,7 @@ static void virgl_render_condition(struct pipe_context *ctx,
 static struct pipe_query *virgl_create_query(struct pipe_context *ctx,
                                             unsigned query_type, unsigned index)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_query *query;
    uint32_t handle;
 
@@ -81,7 +81,7 @@ static struct pipe_query *virgl_create_query(struct pipe_context *ctx,
 static void virgl_destroy_query(struct pipe_context *ctx,
                         struct pipe_query *q)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_query *query = (struct virgl_query *)q;
 
    virgl_encode_delete_object(vctx, query->handle, VIRGL_OBJECT_QUERY);
@@ -93,7 +93,7 @@ static void virgl_destroy_query(struct pipe_context *ctx,
 static boolean virgl_begin_query(struct pipe_context *ctx,
                              struct pipe_query *q)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_query *query = (struct virgl_query *)q;
 
    query->buf->clean = FALSE;
@@ -104,7 +104,7 @@ static boolean virgl_begin_query(struct pipe_context *ctx,
 static void virgl_end_query(struct pipe_context *ctx,
                            struct pipe_query *q)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_query *query = (struct virgl_query *)q;
    struct pipe_box box;
 
@@ -122,7 +122,7 @@ static boolean virgl_get_query_result(struct pipe_context *ctx,
                                      boolean wait,
                                      union pipe_query_result *result)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_query *query = (struct virgl_query *)q;
    struct pipe_transfer *transfer;
    struct virgl_host_query_state *host_state;

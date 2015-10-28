@@ -124,7 +124,7 @@ static void *virgl_texture_transfer_map(struct pipe_context *ctx,
                                         const struct pipe_box *box,
                                         struct pipe_transfer **transfer)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_screen *vs = virgl_screen(ctx->screen);
    struct virgl_texture *vtex = (struct virgl_texture *)resource;
    enum pipe_format format = resource->format;
@@ -205,7 +205,7 @@ static void *virgl_texture_transfer_map(struct pipe_context *ctx,
 static void virgl_texture_transfer_unmap(struct pipe_context *ctx,
                                          struct pipe_transfer *transfer)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_transfer *trans = (struct virgl_transfer *)transfer;
    struct virgl_texture *vtex = (struct virgl_texture *)transfer->resource;
    uint32_t l_stride;

@@ -43,7 +43,7 @@ static void *virgl_buffer_transfer_map(struct pipe_context *ctx,
                                        const struct pipe_box *box,
                                        struct pipe_transfer **transfer)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_screen *vs = virgl_screen(ctx->screen);
    struct virgl_buffer *vbuf = virgl_buffer(resource);
    struct virgl_transfer *trans;
@@ -97,7 +97,7 @@ static void *virgl_buffer_transfer_map(struct pipe_context *ctx,
 static void virgl_buffer_transfer_unmap(struct pipe_context *ctx,
                                         struct pipe_transfer *transfer)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_transfer *trans = (struct virgl_transfer *)transfer;
    struct virgl_buffer *vbuf = virgl_buffer(transfer->resource);
 
@@ -119,7 +119,7 @@ static void virgl_buffer_transfer_flush_region(struct pipe_context *ctx,
                                                struct pipe_transfer *transfer,
                                                const struct pipe_box *box)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_buffer *vbuf = virgl_buffer(transfer->resource);
 
    if (!vbuf->on_list) {

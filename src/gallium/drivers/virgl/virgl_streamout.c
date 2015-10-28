@@ -32,7 +32,7 @@ static struct pipe_stream_output_target *virgl_create_so_target(
    unsigned buffer_offset,
    unsigned buffer_size)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_resource *res = (struct virgl_resource *)buffer;
    struct virgl_so_target *t = CALLOC_STRUCT(virgl_so_target);
    uint32_t handle;
@@ -55,8 +55,8 @@ static struct pipe_stream_output_target *virgl_create_so_target(
 static void virgl_destroy_so_target(struct pipe_context *ctx,
                                    struct pipe_stream_output_target *target)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
-   struct virgl_so_target *t = (struct virgl_so_target *)target;
+   struct virgl_context *vctx = virgl_context(ctx);
+   struct virgl_so_target *t = virgl_so_target(target);
 
    pipe_resource_reference(&t->base.buffer, NULL);
    virgl_encode_delete_object(vctx, t->handle, VIRGL_OBJECT_STREAMOUT_TARGET);
@@ -68,7 +68,7 @@ static void virgl_set_so_targets(struct pipe_context *ctx,
                                 struct pipe_stream_output_target **targets,
                                 const unsigned *offset)
 {
-   struct virgl_context *vctx = (struct virgl_context *)ctx;
+   struct virgl_context *vctx = virgl_context(ctx);
    int i;
    for (i = 0; i < num_targets; i++) {
       pipe_resource_reference(&vctx->so_targets[i].base.buffer, targets[i]->buffer);

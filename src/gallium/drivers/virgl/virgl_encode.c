@@ -825,7 +825,7 @@ int virgl_encoder_set_so_targets(struct virgl_context *ctx,
    virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_SET_STREAMOUT_TARGETS, 0, num_targets + 1));
    virgl_encoder_write_dword(ctx->cbuf, append_bitmask);
    for (i = 0; i < num_targets; i++) {
-      struct virgl_so_target *tg = (struct virgl_so_target *)targets[i];
+      struct virgl_so_target *tg = virgl_so_target(targets[i]);
       virgl_encoder_write_dword(ctx->cbuf, tg->handle);
    }
    return 0;

@@ -79,6 +79,23 @@ struct virgl_context {
    uint32_t hw_sub_ctx_id;
 };
 
+static inline struct virgl_sampler_view *
+virgl_sampler_view(struct pipe_sampler_view *view)
+{
+   return (struct virgl_sampler_view *)view;
+};
+
+static inline struct virgl_so_target *
+virgl_so_target(struct pipe_stream_output_target *target)
+{
+   return (struct virgl_so_target *)target;
+}
+
+static inline struct virgl_context *virgl_context(struct pipe_context *ctx)
+{
+   return (struct virgl_context *)ctx;
+}
+
 struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
                                           void *priv, unsigned flags);
 
