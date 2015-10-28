@@ -518,7 +518,7 @@ static struct virgl_cmd_buf *virgl_drm_cmd_buf_create(struct virgl_winsys *qws)
       FREE(cbuf);
       return NULL;
    }
-   cbuf->res_hlist = malloc(cbuf->nres * sizeof(uint32_t));
+   cbuf->res_hlist = MALLOC(cbuf->nres * sizeof(uint32_t));
    if (!cbuf->res_hlist) {
       FREE(cbuf->res_bo);
       FREE(cbuf);
