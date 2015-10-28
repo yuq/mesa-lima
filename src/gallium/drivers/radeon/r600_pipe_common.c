@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_format_s3tc.h"
 #include "util/u_upload_mgr.h"
+#include "os/os_time.h"
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
 #include "radeon/radeon_video.h"
@@ -39,6 +40,12 @@
 #ifndef HAVE_LLVM
 #define HAVE_LLVM 0
 #endif
+
+struct r600_multi_fence {
+	struct pipe_reference reference;
+	struct pipe_fence_handle *gfx;
+	struct pipe_fence_handle *sdma;
+};
 
 /*
  * pipe_context
@@ -174,16 +181,34 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 			       struct pipe_fence_handle **fence,
 			       unsigned flags)
 {
+	struct pipe_screen *screen = ctx->screen;
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	unsigned rflags = 0;
+	struct pipe_fence_handle *gfx_fence = NULL;
+	struct pipe_fence_handle *sdma_fence = NULL;
 
 	if (flags & PIPE_FLUSH_END_OF_FRAME)
 		rflags |= RADEON_FLUSH_END_OF_FRAME;
 
 	if (rctx->rings.dma.cs) {
-		rctx->rings.dma.flush(rctx, rflags, NULL);
+		rctx->rings.dma.flush(rctx, rflags, fence ? &sdma_fence : NULL);
 	}
-	rctx->rings.gfx.flush(rctx, rflags, fence);
+	rctx->rings.gfx.flush(rctx, rflags, fence ? &gfx_fence : NULL);
+
+	/* Both engines can signal out of order, so we need to keep both fences. */
+	if (gfx_fence || sdma_fence) {
+		struct r600_multi_fence *multi_fence =
+			CALLOC_STRUCT(r600_multi_fence);
+		if (!multi_fence)
+			return;
+
+		multi_fence->reference.count = 1;
+		multi_fence->gfx = gfx_fence;
+		multi_fence->sdma = sdma_fence;
+
+		screen->fence_reference(screen, fence, NULL);
+		*fence = (struct pipe_fence_handle*)multi_fence;
+	}
 }
 
 static void r600_flush_dma_ring(void *ctx, unsigned flags,
@@ -757,12 +782,19 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 }
 
 static void r600_fence_reference(struct pipe_screen *screen,
-				 struct pipe_fence_handle **ptr,
-				 struct pipe_fence_handle *fence)
+				 struct pipe_fence_handle **dst,
+				 struct pipe_fence_handle *src)
 {
-	struct radeon_winsys *rws = ((struct r600_common_screen*)screen)->ws;
+	struct radeon_winsys *ws = ((struct r600_common_screen*)screen)->ws;
+	struct r600_multi_fence **rdst = (struct r600_multi_fence **)dst;
+	struct r600_multi_fence *rsrc = (struct r600_multi_fence *)src;
 
-	rws->fence_reference(ptr, fence);
+	if (pipe_reference(&(*rdst)->reference, &rsrc->reference)) {
+		ws->fence_reference(&(*rdst)->gfx, NULL);
+		ws->fence_reference(&(*rdst)->sdma, NULL);
+		FREE(*rdst);
+	}
+        *rdst = rsrc;
 }
 
 static boolean r600_fence_finish(struct pipe_screen *screen,
@@ -770,8 +802,24 @@ static boolean r600_fence_finish(struct pipe_screen *screen,
 				 uint64_t timeout)
 {
 	struct radeon_winsys *rws = ((struct r600_common_screen*)screen)->ws;
+	struct r600_multi_fence *rfence = (struct r600_multi_fence *)fence;
+	int64_t abs_timeout = os_time_get_absolute_timeout(timeout);
 
-	return rws->fence_wait(rws, fence, timeout);
+	if (rfence->sdma) {
+		if (!rws->fence_wait(rws, rfence->sdma, timeout))
+			return false;
+
+		/* Recompute the timeout after waiting. */
+		if (timeout && timeout != PIPE_TIMEOUT_INFINITE) {
+			int64_t time = os_time_get_nano();
+			timeout = abs_timeout > time ? abs_timeout - time : 0;
+		}
+	}
+
+	if (!rfence->gfx)
+		return true;
+
+	return rws->fence_wait(rws, rfence->gfx, timeout);
 }
 
 static bool r600_interpret_tiling(struct r600_common_screen *rscreen,
