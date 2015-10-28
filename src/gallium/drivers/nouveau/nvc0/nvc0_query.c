@@ -28,6 +28,7 @@
 #include "nvc0/nvc0_query.h"
 #include "nvc0/nvc0_query_sw.h"
 #include "nvc0/nvc0_query_hw.h"
+#include "nvc0/nvc0_query_hw_metric.h"
 #include "nvc0/nvc0_query_hw_sm.h"
 
 static struct pipe_query *
@@ -188,7 +189,7 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
             count++;
          } else
          if (screen->base.class_3d < NVE4_3D_CLASS) {
-            count++;
+            count += 2;
          }
       }
    }
@@ -215,6 +216,17 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
          } else
          if (screen->base.class_3d < NVE4_3D_CLASS) {
             info->num_queries = NVC0_HW_SM_QUERY_COUNT;
+            return 1;
+         }
+      }
+   } else
+   if (id == NVC0_HW_METRIC_QUERY_GROUP) {
+      if (screen->compute) {
+         if (screen->base.class_3d < NVE4_3D_CLASS) {
+            info->name = "Performance metrics";
+            info->type = PIPE_DRIVER_QUERY_GROUP_TYPE_GPU;
+            info->max_active_queries = 1;
+            info->num_queries = NVC0_HW_METRIC_QUERY_COUNT;
             return 1;
          }
       }
