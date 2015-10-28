@@ -384,6 +384,7 @@ struct r600_common_context {
 	enum radeon_family		family;
 	enum chip_class			chip_class;
 	struct r600_rings		rings;
+	struct pipe_fence_handle	*last_sdma_fence;
 	unsigned			initial_gfx_cs_size;
 	unsigned			gpu_reset_counter;
 

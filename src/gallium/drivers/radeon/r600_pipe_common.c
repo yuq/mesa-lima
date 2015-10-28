@@ -192,13 +192,15 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct radeon_winsys_cs *cs = rctx->rings.dma.cs;
 
-	if (!cs->cdw) {
-		return;
-	}
+	if (!cs->cdw)
+		goto done;
 
 	rctx->rings.dma.flushing = true;
-	rctx->ws->cs_flush(cs, flags, fence, 0);
+	rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence, 0);
 	rctx->rings.dma.flushing = false;
+done:
+	if (fence)
+		rctx->ws->fence_reference(fence, rctx->last_sdma_fence);
 }
 
 static enum pipe_reset_status r600_get_reset_status(struct pipe_context *ctx)
@@ -297,6 +299,7 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 	if (rctx->allocator_so_filled_size) {
 		u_suballocator_destroy(rctx->allocator_so_filled_size);
 	}
+	rctx->ws->fence_reference(&rctx->last_sdma_fence, NULL);
 }
 
 void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r)
