@@ -1,5 +1,6 @@
 Intel's Open Source Vulkan Driver
 Vulkan API Version: 0.170.2
+SPIR-V Version: 32
 
 Intro
 =====
@@ -103,7 +104,7 @@ Supported Features:
   - Index buffers, instanced draw, indirect draw
   - Nested command buffers
   - Consumes SPIR-V (no GLSL "backdoor")
-  - Fragment and vertex shaders
+  - Fragment, vertex, and geometry shaders
   - Uniform buffers, sampled images, dynamic uniform buffers
   - Push constants (to the extent they're supported by SPIR-V v32)
   - Color, depth and stencil attachments
@@ -120,7 +121,7 @@ Unsupported Features:
    - Shader storage buffers
    - Shader specialization
    - Storage images
-   - Compute, tesselation, geometry stages
+   - Compute and tesselation stages
    - Sparse resources
    - MSAA
    - VkkSemaphore and VkEvent
