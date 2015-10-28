@@ -25,7 +25,7 @@
 
 #include "util/u_transfer.h"
 
-#include "virgl/drm/virgl_hw.h"
+#include "virgl_hw.h"
 
 #include "virgl_winsys.h"
 #include "pipe/p_screen.h"

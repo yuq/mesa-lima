@@ -29,7 +29,7 @@
 #include "util/list.h"
 #include "util/u_transfer.h"
 
-#include "virgl/drm/virgl_hw.h"
+#include "virgl_hw.h"
 #define VR_MAX_TEXTURE_2D_LEVELS 15
 
 struct virgl_screen;

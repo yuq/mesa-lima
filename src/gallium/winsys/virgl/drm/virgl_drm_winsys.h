@@ -36,7 +36,7 @@
 #include "pipe/p_context.h"
 #include "pipe/p_context.h"
 
-#include "virgl_hw.h"
+#include "virgl/virgl_hw.h"
 #include "virgl/virgl_winsys.h"
 
 struct virgl_drm_winsys;

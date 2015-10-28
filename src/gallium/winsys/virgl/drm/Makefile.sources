@@ -2,5 +2,4 @@ C_SOURCES := \
 	virgl_drm_public.h \
 	virgl_drm_winsys.c \
 	virgl_drm_winsys.h \
-	virgl_hw.h \
 	virtgpu_drm.h
