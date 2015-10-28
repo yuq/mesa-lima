@@ -40,7 +40,7 @@ struct virgl_screen {
 
 
 static inline struct virgl_screen *
-virgl_screen( struct pipe_screen *pipe )
+virgl_screen(struct pipe_screen *pipe)
 {
    return (struct virgl_screen *)pipe;
 }

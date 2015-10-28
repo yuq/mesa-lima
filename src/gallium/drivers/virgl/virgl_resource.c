@@ -54,7 +54,7 @@ bool virgl_res_needs_readback(struct virgl_context *vctx,
 static struct pipe_resource *virgl_resource_create(struct pipe_screen *screen,
                                                    const struct pipe_resource *templ)
 {
-    struct virgl_screen *vs = (struct virgl_screen *)screen;
+    struct virgl_screen *vs = virgl_screen(screen);
     if (templ->target == PIPE_BUFFER)
         return virgl_buffer_create(vs, templ);
     else
@@ -65,7 +65,7 @@ static struct pipe_resource *virgl_resource_from_handle(struct pipe_screen *scre
                                                         const struct pipe_resource *templ,
                                                         struct winsys_handle *whandle)
 {
-    struct virgl_screen *vs = (struct virgl_screen *)screen;
+    struct virgl_screen *vs = virgl_screen(screen);
     if (templ->target == PIPE_BUFFER)
         return NULL;
     else

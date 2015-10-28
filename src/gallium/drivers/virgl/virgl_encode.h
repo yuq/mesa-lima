@@ -29,6 +29,11 @@ struct virgl_surface {
    uint32_t handle;
 };
 
+static inline struct virgl_surface *virgl_surface(struct pipe_surface *surf)
+{
+   return (struct virgl_surface *)surf;
+}
+
 static inline void virgl_encoder_write_dword(struct virgl_cmd_buf *state,
                                             uint32_t dword)
 {

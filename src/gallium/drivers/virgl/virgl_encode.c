@@ -323,14 +323,14 @@ int virgl_encode_clear(struct virgl_context *ctx,
 int virgl_encoder_set_framebuffer_state(struct virgl_context *ctx,
                                        const struct pipe_framebuffer_state *state)
 {
-   struct virgl_surface *zsurf = (struct virgl_surface *)state->zsbuf;
+   struct virgl_surface *zsurf = virgl_surface(state->zsbuf);
    int i;
 
    virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_SET_FRAMEBUFFER_STATE, 0, VIRGL_SET_FRAMEBUFFER_STATE_SIZE(state->nr_cbufs)));
    virgl_encoder_write_dword(ctx->cbuf, state->nr_cbufs);
    virgl_encoder_write_dword(ctx->cbuf, zsurf ? zsurf->handle : 0);
    for (i = 0; i < state->nr_cbufs; i++) {
-      struct virgl_surface *surf = (struct virgl_surface *)state->cbufs[i];
+      struct virgl_surface *surf = virgl_surface(state->cbufs[i]);
       virgl_encoder_write_dword(ctx->cbuf, surf ? surf->handle : 0);
    }
 

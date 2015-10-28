@@ -231,7 +231,7 @@ static void virgl_surface_destroy(struct pipe_context *ctx,
                                  struct pipe_surface *psurf)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_surface *surf = (struct virgl_surface *)psurf;
+   struct virgl_surface *surf = virgl_surface(psurf);
 
    pipe_resource_reference(&surf->base.texture, NULL);
    virgl_encode_delete_object(vctx, surf->handle, VIRGL_OBJECT_SURFACE);
