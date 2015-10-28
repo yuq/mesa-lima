@@ -39,8 +39,6 @@
 #include "virgl/virgl_hw.h"
 #include "virgl/virgl_winsys.h"
 
-struct virgl_drm_winsys;
-
 struct virgl_hw_res {
    struct pipe_reference reference;
    uint32_t res_handle;
