@@ -32,8 +32,11 @@
  */
 
 typedef struct {
+   /* True if we are cloning an entire shader. */
+   bool global_clone;
+
    /* maps orig ptr -> cloned ptr: */
-   struct hash_table *ptr_table;
+   struct hash_table *remap_table;
 
    /* List of phi sources. */
    struct list_head phi_srcs;
@@ -43,28 +46,32 @@ typedef struct {
 } clone_state;
 
 static void
-init_clone_state(clone_state *state)
+init_clone_state(clone_state *state, bool global)
 {
-   state->ptr_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
-                                              _mesa_key_pointer_equal);
+   state->global_clone = global;
+   state->remap_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                                                _mesa_key_pointer_equal);
    list_inithead(&state->phi_srcs);
 }
 
 static void
 free_clone_state(clone_state *state)
 {
-   _mesa_hash_table_destroy(state->ptr_table, NULL);
+   _mesa_hash_table_destroy(state->remap_table, NULL);
 }
 
-static void *
-lookup_ptr(clone_state *state, const void *ptr)
+static inline void *
+_lookup_ptr(clone_state *state, const void *ptr, bool global)
 {
    struct hash_entry *entry;
 
    if (!ptr)
       return NULL;
 
-   entry = _mesa_hash_table_search(state->ptr_table, ptr);
+   if (!state->global_clone && global)
+      return (void *)ptr;
+
+   entry = _mesa_hash_table_search(state->remap_table, ptr);
    assert(entry && "Failed to find pointer!");
    if (!entry)
       return NULL;
@@ -73,9 +80,33 @@ lookup_ptr(clone_state *state, const void *ptr)
 }
 
 static void
-store_ptr(clone_state *state, void *nptr, const void *ptr)
+add_remap(clone_state *state, void *nptr, const void *ptr)
 {
-   _mesa_hash_table_insert(state->ptr_table, ptr, nptr);
+   _mesa_hash_table_insert(state->remap_table, ptr, nptr);
+}
+
+static void *
+remap_local(clone_state *state, const void *ptr)
+{
+   return _lookup_ptr(state, ptr, false);
+}
+
+static void *
+remap_global(clone_state *state, const void *ptr)
+{
+   return _lookup_ptr(state, ptr, true);
+}
+
+static nir_register *
+remap_reg(clone_state *state, const nir_register *reg)
+{
+   return _lookup_ptr(state, reg, reg->is_global);
+}
+
+static nir_variable *
+remap_var(clone_state *state, const nir_variable *var)
+{
+   return _lookup_ptr(state, var, var->data.mode != nir_var_local);
 }
 
 static nir_constant *
@@ -100,7 +131,7 @@ static nir_variable *
 clone_variable(clone_state *state, const nir_variable *var)
 {
    nir_variable *nvar = rzalloc(state->ns, nir_variable);
-   store_ptr(state, nvar, var);
+   add_remap(state, nvar, var);
 
    nvar->type = var->type;
    nvar->name = ralloc_strdup(nvar, var->name);
@@ -137,7 +168,7 @@ static nir_register *
 clone_register(clone_state *state, const nir_register *reg)
 {
    nir_register *nreg = rzalloc(state->ns, nir_register);
-   store_ptr(state, nreg, reg);
+   add_remap(state, nreg, reg);
 
    nreg->num_components = reg->num_components;
    nreg->num_array_elems = reg->num_array_elems;
@@ -172,9 +203,9 @@ __clone_src(clone_state *state, void *ninstr_or_if,
 {
    nsrc->is_ssa = src->is_ssa;
    if (src->is_ssa) {
-      nsrc->ssa = lookup_ptr(state, src->ssa);
+      nsrc->ssa = remap_local(state, src->ssa);
    } else {
-      nsrc->reg.reg = lookup_ptr(state, src->reg.reg);
+      nsrc->reg.reg = remap_reg(state, src->reg.reg);
       if (src->reg.indirect) {
          nsrc->reg.indirect = ralloc(ninstr_or_if, nir_src);
          __clone_src(state, ninstr_or_if, nsrc->reg.indirect, src->reg.indirect);
@@ -190,9 +221,9 @@ __clone_dst(clone_state *state, nir_instr *ninstr,
    ndst->is_ssa = dst->is_ssa;
    if (dst->is_ssa) {
       nir_ssa_dest_init(ninstr, ndst, dst->ssa.num_components, dst->ssa.name);
-      store_ptr(state, &ndst->ssa, &dst->ssa);
+      add_remap(state, &ndst->ssa, &dst->ssa);
    } else {
-      ndst->reg.reg = lookup_ptr(state, dst->reg.reg);
+      ndst->reg.reg = remap_reg(state, dst->reg.reg);
       if (dst->reg.indirect) {
          ndst->reg.indirect = ralloc(ninstr, nir_src);
          __clone_src(state, ninstr, ndst->reg.indirect, dst->reg.indirect);
@@ -208,7 +239,7 @@ static nir_deref_var *
 clone_deref_var(clone_state *state, const nir_deref_var *dvar,
                 nir_instr *ninstr)
 {
-   nir_variable *nvar = lookup_ptr(state, dvar->var);
+   nir_variable *nvar = remap_var(state, dvar->var);
    nir_deref_var *ndvar = nir_deref_var_create(ninstr, nvar);
 
    if (dvar->deref.child)
@@ -322,7 +353,7 @@ clone_load_const(clone_state *state, const nir_load_const_instr *lc)
 
    memcpy(&nlc->value, &lc->value, sizeof(nlc->value));
 
-   store_ptr(state, &nlc->def, &lc->def);
+   add_remap(state, &nlc->def, &lc->def);
 
    return nlc;
 }
@@ -333,7 +364,7 @@ clone_ssa_undef(clone_state *state, const nir_ssa_undef_instr *sa)
    nir_ssa_undef_instr *nsa =
       nir_ssa_undef_instr_create(state->ns, sa->def.num_components);
 
-   store_ptr(state, &nsa->def, &sa->def);
+   add_remap(state, &nsa->def, &sa->def);
 
    return nsa;
 }
@@ -423,7 +454,7 @@ clone_jump(clone_state *state, const nir_jump_instr *jmp)
 static nir_call_instr *
 clone_call(clone_state *state, const nir_call_instr *call)
 {
-   nir_function_overload *ncallee = lookup_ptr(state, call->callee);
+   nir_function_overload *ncallee = remap_global(state, call->callee);
    nir_call_instr *ncall = nir_call_instr_create(state->ns, ncallee);
 
    for (unsigned i = 0; i < ncall->num_params; i++)
@@ -476,7 +507,7 @@ clone_block(clone_state *state, struct exec_list *cf_list, const nir_block *blk)
    assert(exec_list_is_empty(&nblk->instr_list));
 
    /* We need this for phi sources */
-   store_ptr(state, nblk, blk);
+   add_remap(state, nblk, blk);
 
    nir_foreach_instr(blk, instr) {
       if (instr->type == nir_instr_type_phi) {
@@ -549,10 +580,9 @@ clone_cf_list(clone_state *state, struct exec_list *dst,
 }
 
 static nir_function_impl *
-clone_function_impl(clone_state *state, const nir_function_impl *fi,
-                    nir_function_overload *nfo)
+clone_function_impl(clone_state *state, const nir_function_impl *fi)
 {
-   nir_function_impl *nfi = nir_function_impl_create(nfo);
+   nir_function_impl *nfi = nir_function_impl_create_bare(state->ns);
 
    clone_var_list(state, &nfi->locals, &fi->locals);
    clone_reg_list(state, &nfi->registers, &fi->registers);
@@ -561,9 +591,9 @@ clone_function_impl(clone_state *state, const nir_function_impl *fi,
    nfi->num_params = fi->num_params;
    nfi->params = ralloc_array(state->ns, nir_variable *, fi->num_params);
    for (unsigned i = 0; i < fi->num_params; i++) {
-      nfi->params[i] = lookup_ptr(state, fi->params[i]);
+      nfi->params[i] = remap_local(state, fi->params[i]);
    }
-   nfi->return_var = lookup_ptr(state, fi->return_var);
+   nfi->return_var = remap_local(state, fi->return_var);
 
    assert(list_empty(&state->phi_srcs));
 
@@ -575,9 +605,9 @@ clone_function_impl(clone_state *state, const nir_function_impl *fi,
     * add it to the phi_srcs list and we fix it up here.
     */
    list_for_each_entry_safe(nir_phi_src, src, &state->phi_srcs, src.use_link) {
-      src->pred = lookup_ptr(state, src->pred);
+      src->pred = remap_local(state, src->pred);
       assert(src->src.is_ssa);
-      src->src.ssa = lookup_ptr(state, src->src.ssa);
+      src->src.ssa = remap_local(state, src->src.ssa);
 
       /* Remove from this list and place in the uses of the SSA def */
       list_del(&src->src.use_link);
@@ -591,6 +621,22 @@ clone_function_impl(clone_state *state, const nir_function_impl *fi,
    return nfi;
 }
 
+nir_function_impl *
+nir_function_impl_clone(const nir_function_impl *fi)
+{
+   clone_state state;
+   init_clone_state(&state, false);
+
+   /* We use the same shader */
+   state.ns = fi->overload->function->shader;
+
+   nir_function_impl *nfi = clone_function_impl(&state, fi);
+
+   free_clone_state(&state);
+
+   return nfi;
+}
+
 static nir_function_overload *
 clone_function_overload(clone_state *state, const nir_function_overload *fo,
                         nir_function *nfxn)
@@ -598,7 +644,7 @@ clone_function_overload(clone_state *state, const nir_function_overload *fo,
    nir_function_overload *nfo = nir_function_overload_create(nfxn);
 
    /* Needed for call instructions */
-   store_ptr(state, nfo, fo);
+   add_remap(state, nfo, fo);
 
    nfo->num_params = fo->num_params;
    nfo->params = ralloc_array(state->ns, nir_parameter, fo->num_params);
@@ -631,7 +677,7 @@ nir_shader *
 nir_shader_clone(void *mem_ctx, const nir_shader *s)
 {
    clone_state state;
-   init_clone_state(&state);
+   init_clone_state(&state, true);
 
    nir_shader *ns = nir_shader_create(mem_ctx, s->stage, s->options);
    state.ns = ns;
@@ -652,8 +698,9 @@ nir_shader_clone(void *mem_ctx, const nir_shader *s)
     * will have in the list.
     */
    nir_foreach_overload(s, fo) {
-      nir_function_overload *nfo = lookup_ptr(&state, fo);
-      clone_function_impl(&state, fo->impl, nfo);
+      nir_function_overload *nfo = remap_global(&state, fo);
+      nfo->impl = clone_function_impl(&state, fo->impl);
+      nfo->impl->overload = nfo;
    }
 
    clone_reg_list(&state, &ns->registers, &s->registers);
