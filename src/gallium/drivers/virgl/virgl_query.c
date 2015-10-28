@@ -37,13 +37,18 @@ struct virgl_query {
    unsigned result_gotten_sent;
 };
 
+static inline struct virgl_query *virgl_query(struct pipe_query *q)
+{
+   return (struct virgl_query *)q;
+}
+
 static void virgl_render_condition(struct pipe_context *ctx,
                                   struct pipe_query *q,
                                   boolean condition,
                                   uint mode)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_query *query = (struct virgl_query *)q;
+   struct virgl_query *query = virgl_query(q);
    uint32_t handle = 0;
    if (q)
       handle = query->handle;
@@ -82,7 +87,7 @@ static void virgl_destroy_query(struct pipe_context *ctx,
                         struct pipe_query *q)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_query *query = (struct virgl_query *)q;
+   struct virgl_query *query = virgl_query(q);
 
    virgl_encode_delete_object(vctx, query->handle, VIRGL_OBJECT_QUERY);
 
@@ -94,7 +99,7 @@ static boolean virgl_begin_query(struct pipe_context *ctx,
                              struct pipe_query *q)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_query *query = (struct virgl_query *)q;
+   struct virgl_query *query = virgl_query(q);
 
    query->buf->clean = FALSE;
    virgl_encoder_begin_query(vctx, query->handle);
@@ -105,7 +110,7 @@ static void virgl_end_query(struct pipe_context *ctx,
                            struct pipe_query *q)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_query *query = (struct virgl_query *)q;
+   struct virgl_query *query = virgl_query(q);
    struct pipe_box box;
 
    uint32_t qs = VIRGL_QUERY_STATE_WAIT_HOST;
@@ -123,7 +128,7 @@ static boolean virgl_get_query_result(struct pipe_context *ctx,
                                      union pipe_query_result *result)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_query *query = (struct virgl_query *)q;
+   struct virgl_query *query = virgl_query(q);
    struct pipe_transfer *transfer;
    struct virgl_host_query_state *host_state;
 
