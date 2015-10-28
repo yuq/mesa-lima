@@ -33,7 +33,7 @@ static struct pipe_stream_output_target *virgl_create_so_target(
    unsigned buffer_size)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_resource *res = (struct virgl_resource *)buffer;
+   struct virgl_resource *res = virgl_resource(buffer);
    struct virgl_so_target *t = CALLOC_STRUCT(virgl_so_target);
    uint32_t handle;
 

@@ -94,6 +94,16 @@ static inline struct virgl_buffer *virgl_buffer(struct pipe_resource *r)
    return (struct virgl_buffer *)r;
 }
 
+static inline struct virgl_texture *virgl_texture(struct pipe_resource *r)
+{
+   return (struct virgl_texture *)r;
+}
+
+static inline struct virgl_transfer *virgl_transfer(struct pipe_transfer *trans)
+{
+   return (struct virgl_transfer *)trans;
+}
+
 struct pipe_resource *virgl_buffer_create(struct virgl_screen *vs,
                                           const struct pipe_resource *templ);
 

@@ -126,7 +126,7 @@ static void *virgl_texture_transfer_map(struct pipe_context *ctx,
 {
    struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_screen *vs = virgl_screen(ctx->screen);
-   struct virgl_texture *vtex = (struct virgl_texture *)resource;
+   struct virgl_texture *vtex = virgl_texture(resource);
    enum pipe_format format = resource->format;
    struct virgl_transfer *trans;
    void *ptr;
@@ -206,8 +206,8 @@ static void virgl_texture_transfer_unmap(struct pipe_context *ctx,
                                          struct pipe_transfer *transfer)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_transfer *trans = (struct virgl_transfer *)transfer;
-   struct virgl_texture *vtex = (struct virgl_texture *)transfer->resource;
+   struct virgl_transfer *trans = virgl_transfer(transfer);
+   struct virgl_texture *vtex = virgl_texture(transfer->resource);
    uint32_t l_stride;
 
    if (transfer->resource->target != PIPE_TEXTURE_3D &&
@@ -281,7 +281,7 @@ static boolean virgl_texture_get_handle(struct pipe_screen *screen,
                                          struct winsys_handle *whandle)
 {
    struct virgl_screen *vs = virgl_screen(screen);
-   struct virgl_texture *vtex = (struct virgl_texture *)ptex;
+   struct virgl_texture *vtex = virgl_texture(ptex);
 
    return vs->vws->resource_get_handle(vs->vws, vtex->base.hw_res, vtex->stride[0], whandle);
 }
@@ -290,7 +290,7 @@ static void virgl_texture_destroy(struct pipe_screen *screen,
                                   struct pipe_resource *res)
 {
    struct virgl_screen *vs = virgl_screen(screen);
-   struct virgl_texture *vtex = (struct virgl_texture *)res;
+   struct virgl_texture *vtex = virgl_texture(res);
    vs->vws->resource_unref(vs->vws, vtex->base.hw_res);
    FREE(vtex);
 }

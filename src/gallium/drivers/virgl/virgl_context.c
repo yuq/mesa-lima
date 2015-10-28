@@ -88,14 +88,14 @@ static void virgl_attach_res_framebuffer(struct virgl_context *vctx)
 
    surf = vctx->framebuffer.zsbuf;
    if (surf) {
-      res = (struct virgl_resource *)surf->texture;
+      res = virgl_resource(surf->texture);
       if (res)
          vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
    }
    for (i = 0; i < vctx->framebuffer.nr_cbufs; i++) {
       surf = vctx->framebuffer.cbufs[i];
       if (surf) {
-         res = (struct virgl_resource *)surf->texture;
+         res = virgl_resource(surf->texture);
          if (res)
             vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
       }
@@ -114,7 +114,7 @@ static void virgl_attach_res_sampler_views(struct virgl_context *vctx,
       i = u_bit_scan(&remaining_mask);
       assert(tinfo->views[i]);
 
-      res = (struct virgl_resource *)tinfo->views[i]->base.texture;
+      res = virgl_resource(tinfo->views[i]->base.texture);
       if (res)
          vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
    }
@@ -127,7 +127,7 @@ static void virgl_attach_res_vertex_buffers(struct virgl_context *vctx)
    unsigned i;
 
    for (i = 0; i < vctx->num_vertex_buffers; i++) {
-      res = (struct virgl_resource *)vctx->vertex_buffer[i].buffer;
+      res = virgl_resource(vctx->vertex_buffer[i].buffer);
       if (res)
          vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
    }
@@ -138,7 +138,7 @@ static void virgl_attach_res_index_buffer(struct virgl_context *vctx)
    struct virgl_winsys *vws = virgl_screen(vctx->base.screen)->vws;
    struct virgl_resource *res;
 
-   res = (struct virgl_resource *)vctx->index_buffer.buffer;
+   res = virgl_resource(vctx->index_buffer.buffer);
    if (res)
       vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
 }
@@ -150,7 +150,7 @@ static void virgl_attach_res_so_targets(struct virgl_context *vctx)
    unsigned i;
 
    for (i = 0; i < vctx->num_so_targets; i++) {
-      res = (struct virgl_resource *)vctx->so_targets[i].base.buffer;
+      res = virgl_resource(vctx->so_targets[i].base.buffer);
       if (res)
          vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
    }
@@ -163,7 +163,7 @@ static void virgl_attach_res_uniform_buffers(struct virgl_context *vctx,
    struct virgl_resource *res;
    unsigned i;
    for (i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
-      res = (struct virgl_resource *)vctx->ubos[shader_type][i];
+      res = virgl_resource(vctx->ubos[shader_type][i]);
       if (res) {
          vws->emit_res(vws, vctx->cbuf, res->hw_res, FALSE);
       }
@@ -436,7 +436,7 @@ static void virgl_set_constant_buffer(struct pipe_context *ctx,
 
    if (buf) {
       if (!buf->user_buffer){
-         struct virgl_resource *res = (struct virgl_resource *)buf->buffer;
+         struct virgl_resource *res = virgl_resource(buf->buffer);
          virgl_encoder_set_uniform_buffer(vctx, shader, index, buf->buffer_offset,
                                           buf->buffer_size, res);
          pipe_resource_reference(&vctx->ubos[shader][index], buf->buffer);
@@ -461,7 +461,7 @@ void virgl_transfer_inline_write(struct pipe_context *ctx,
 {
    struct virgl_context *vctx = virgl_context(ctx);
    struct virgl_screen *vs = virgl_screen(ctx->screen);
-   struct virgl_resource *grres = (struct virgl_resource *)res;
+   struct virgl_resource *grres = virgl_resource(res);
    struct virgl_buffer *vbuf = virgl_buffer(res);
 
    grres->clean = FALSE;
@@ -675,7 +675,7 @@ static struct pipe_sampler_view *virgl_create_sampler_view(struct pipe_context *
    if (state == NULL)
       return NULL;
 
-   res = (struct virgl_resource *)texture;
+   res = virgl_resource(texture);
    handle = virgl_object_assign_handle();
    virgl_encode_sampler_view(vctx, handle, res, state);
 
@@ -817,8 +817,8 @@ static void virgl_resource_copy_region(struct pipe_context *ctx,
                                       const struct pipe_box *src_box)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_resource *dres = (struct virgl_resource *)dst;
-   struct virgl_resource *sres = (struct virgl_resource *)src;
+   struct virgl_resource *dres = virgl_resource(dst);
+   struct virgl_resource *sres = virgl_resource(src);
 
    dres->clean = FALSE;
    virgl_encode_resource_copy_region(vctx, dres,
@@ -837,8 +837,8 @@ static void virgl_blit(struct pipe_context *ctx,
                       const struct pipe_blit_info *blit)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_resource *dres = (struct virgl_resource *)blit->dst.resource;
-   struct virgl_resource *sres = (struct virgl_resource *)blit->src.resource;
+   struct virgl_resource *dres = virgl_resource(blit->dst.resource);
+   struct virgl_resource *sres = virgl_resource(blit->src.resource);
 
    dres->clean = FALSE;
    virgl_encode_blit(vctx, dres, sres,

@@ -98,7 +98,7 @@ static void virgl_buffer_transfer_unmap(struct pipe_context *ctx,
                                         struct pipe_transfer *transfer)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_transfer *trans = (struct virgl_transfer *)transfer;
+   struct virgl_transfer *trans = virgl_transfer(transfer);
    struct virgl_buffer *vbuf = virgl_buffer(transfer->resource);
 
    if (trans->base.usage & PIPE_TRANSFER_WRITE) {
