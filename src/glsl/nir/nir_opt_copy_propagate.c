@@ -256,7 +256,7 @@ copy_prop_block(nir_block *block, void *_state)
    return true;
 }
 
-bool
+static bool
 nir_copy_prop_impl(nir_function_impl *impl)
 {
    bool progress = false;
