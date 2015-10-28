@@ -394,8 +394,7 @@ static struct virgl_cmd_buf *virgl_vtest_cmd_buf_create(struct virgl_winsys *vws
       return NULL;
 
    cbuf->nres = 512;
-   cbuf->res_bo = (struct virgl_hw_res **)
-      CALLOC(cbuf->nres, sizeof(struct virgl_hw_buf*));
+   cbuf->res_bo = CALLOC(cbuf->nres, sizeof(struct virgl_hw_buf*));
    if (!cbuf->res_bo) {
       FREE(cbuf);
       return NULL;

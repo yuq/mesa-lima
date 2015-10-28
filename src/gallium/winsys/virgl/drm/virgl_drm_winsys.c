@@ -513,13 +513,12 @@ static struct virgl_cmd_buf *virgl_drm_cmd_buf_create(struct virgl_winsys *qws)
    cbuf->ws = qws;
 
    cbuf->nres = 512;
-   cbuf->res_bo = (struct virgl_hw_res **)
-      CALLOC(cbuf->nres, sizeof(struct virgl_hw_buf*));
+   cbuf->res_bo = CALLOC(cbuf->nres, sizeof(struct virgl_hw_buf*));
    if (!cbuf->res_bo) {
       FREE(cbuf);
       return NULL;
    }
-   cbuf->res_hlist = (uint32_t *)malloc(cbuf->nres * sizeof(uint32_t));
+   cbuf->res_hlist = malloc(cbuf->nres * sizeof(uint32_t));
    if (!cbuf->res_hlist) {
       FREE(cbuf->res_bo);
       FREE(cbuf);
