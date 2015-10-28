@@ -1696,6 +1696,8 @@ nir_function *nir_function_create(nir_shader *shader, const char *name);
 nir_function_overload *nir_function_overload_create(nir_function *func);
 
 nir_function_impl *nir_function_impl_create(nir_function_overload *func);
+/** creates a function_impl that isn't tied to any particular overload */
+nir_function_impl *nir_function_impl_create_bare(nir_shader *shader);
 
 nir_block *nir_block_create(nir_shader *shader);
 nir_if *nir_if_create(nir_shader *shader);
