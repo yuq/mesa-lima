@@ -236,7 +236,6 @@ virgl_bo_transfer_put(struct virgl_winsys *vws,
 {
    struct virgl_drm_winsys *vdws = virgl_drm_winsys(vws);
    struct drm_virtgpu_3d_transfer_to_host tohostcmd;
-   int ret;
 
    memset(&tohostcmd, 0, sizeof(tohostcmd));
    tohostcmd.bo_handle = res->bo_handle;
@@ -245,8 +244,7 @@ virgl_bo_transfer_put(struct virgl_winsys *vws,
    tohostcmd.level = level;
   // tohostcmd.stride = stride;
   // tohostcmd.layer_stride = stride;
-   ret = drmIoctl(vdws->fd, DRM_IOCTL_VIRTGPU_TRANSFER_TO_HOST, &tohostcmd);
-   return ret;
+   return drmIoctl(vdws->fd, DRM_IOCTL_VIRTGPU_TRANSFER_TO_HOST, &tohostcmd);
 }
 
 static int
@@ -258,7 +256,6 @@ virgl_bo_transfer_get(struct virgl_winsys *vws,
 {
    struct virgl_drm_winsys *vdws = virgl_drm_winsys(vws);
    struct drm_virtgpu_3d_transfer_from_host fromhostcmd;
-   int ret;
 
    memset(&fromhostcmd, 0, sizeof(fromhostcmd));
    fromhostcmd.bo_handle = res->bo_handle;
@@ -267,8 +264,7 @@ virgl_bo_transfer_get(struct virgl_winsys *vws,
   // fromhostcmd.stride = stride;
   // fromhostcmd.layer_stride = layer_stride;
    fromhostcmd.box = *(struct drm_virtgpu_3d_box *)box;
-   ret = drmIoctl(vdws->fd, DRM_IOCTL_VIRTGPU_TRANSFER_FROM_HOST, &fromhostcmd);
-   return ret;
+   return drmIoctl(vdws->fd, DRM_IOCTL_VIRTGPU_TRANSFER_FROM_HOST, &fromhostcmd);
 }
 
 static struct virgl_hw_res *virgl_drm_winsys_resource_cache_create(struct virgl_winsys *qws,
@@ -651,15 +647,13 @@ static int virgl_drm_get_caps(struct virgl_winsys *vws, struct virgl_drm_caps *c
 {
    struct virgl_drm_winsys *vdws = virgl_drm_winsys(vws);
    struct drm_virtgpu_get_caps args;
-   int ret;
 
    memset(&args, 0, sizeof(args));
 
    args.cap_set_id = 1;
    args.addr = (unsigned long)&caps->caps;
    args.size = sizeof(union virgl_caps);
-   ret = drmIoctl(vdws->fd, DRM_IOCTL_VIRTGPU_GET_CAPS, &args);
-   return ret;
+   return drmIoctl(vdws->fd, DRM_IOCTL_VIRTGPU_GET_CAPS, &args);
 }
 
 #define PTR_TO_UINT(x) ((unsigned)((intptr_t)(x)))
