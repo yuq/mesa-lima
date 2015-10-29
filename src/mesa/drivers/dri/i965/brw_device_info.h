@@ -49,7 +49,7 @@ struct brw_device_info
    bool has_resource_streamer;
 
    /**
-    * Quirks:
+    * \name Intel hardware quirks
     *  @{
     */
    bool has_negative_rhw_bug;
@@ -65,7 +65,7 @@ struct brw_device_info
    /** @} */
 
    /**
-    * GPU Limits:
+    * \name GPU hardware limits
     *  @{
     */
    /**
