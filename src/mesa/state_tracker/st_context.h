@@ -101,6 +101,7 @@ struct st_context
    boolean prefer_blit_based_texture_transfer;
    boolean force_persample_in_shader;
    boolean has_shareable_shaders;
+   boolean has_half_float_packing;
 
    /**
     * If a shader can be created when we get its source.

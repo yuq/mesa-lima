@@ -2163,15 +2163,20 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
       }
       break;
 
+   case ir_unop_pack_half_2x16:
+      emit_asm(ir, TGSI_OPCODE_PK2H, result_dst, op[0]);
+      break;
+   case ir_unop_unpack_half_2x16:
+      emit_asm(ir, TGSI_OPCODE_UP2H, result_dst, op[0]);
+      break;
+
    case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_unorm_2x16:
-   case ir_unop_pack_half_2x16:
    case ir_unop_pack_snorm_4x8:
    case ir_unop_pack_unorm_4x8:
 
    case ir_unop_unpack_snorm_2x16:
    case ir_unop_unpack_unorm_2x16:
-   case ir_unop_unpack_half_2x16:
    case ir_unop_unpack_half_2x16_split_x:
    case ir_unop_unpack_half_2x16_split_y:
    case ir_unop_unpack_snorm_4x8:
@@ -5853,13 +5858,14 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                                LOWER_PACK_SNORM_4x8 |
                                LOWER_UNPACK_SNORM_4x8 |
                                LOWER_UNPACK_UNORM_4x8 |
-                               LOWER_PACK_UNORM_4x8 |
-                               LOWER_PACK_HALF_2x16 |
-                               LOWER_UNPACK_HALF_2x16;
+                               LOWER_PACK_UNORM_4x8;
 
          if (ctx->Extensions.ARB_gpu_shader5)
             lower_inst |= LOWER_PACK_USE_BFI |
                           LOWER_PACK_USE_BFE;
+         if (!ctx->st->has_half_float_packing)
+            lower_inst |= LOWER_PACK_HALF_2x16 |
+                          LOWER_UNPACK_HALF_2x16;
 
          lower_packing_builtins(ir, lower_inst);
       }

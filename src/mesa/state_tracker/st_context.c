@@ -248,6 +248,8 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
           PIPE_QUIRK_TEXTURE_BORDER_COLOR_SWIZZLE_R600));
    st->has_time_elapsed =
       screen->get_param(screen, PIPE_CAP_QUERY_TIME_ELAPSED);
+   st->has_half_float_packing =
+      screen->get_param(screen, PIPE_CAP_TGSI_PACK_HALF_FLOAT);
 
    /* GL limits and extensions */
    st_init_limits(st->pipe->screen, &ctx->Const, &ctx->Extensions);
