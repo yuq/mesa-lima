@@ -75,7 +75,6 @@ VkResult anv_CreateRenderPass(
 
          if (att->format->has_stencil &&
              att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            assert(att->format->has_stencil);
             pass->has_stencil_clear_attachment = true;
          }
       }
