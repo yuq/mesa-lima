@@ -156,7 +156,7 @@ GL 4.3, GLSL 4.30:
   GL_ARB_copy_image                                    DONE (i965, nv50, nvc0, radeonsi)
   GL_KHR_debug                                         DONE (all drivers)
   GL_ARB_explicit_uniform_location                     DONE (all drivers that support GLSL)
-  GL_ARB_fragment_layer_viewport                       DONE (nv50, nvc0, r600, radeonsi, llvmpipe)
+  GL_ARB_fragment_layer_viewport                       DONE (i965, nv50, nvc0, r600, radeonsi, llvmpipe)
   GL_ARB_framebuffer_no_attachments                    DONE (i965)
   GL_ARB_internalformat_query2                         not started
   GL_ARB_invalidate_subdata                            DONE (all drivers)
