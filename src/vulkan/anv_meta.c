@@ -446,8 +446,8 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
    for (uint32_t i = 0; i < pass->attachment_count; i++) {
       const struct anv_render_pass_attachment *att = &pass->attachments[i];
 
-      if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-         if (anv_format_is_color(att->format)) {
+      if (anv_format_is_color(att->format)) {
+         if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
             instance_data[layer] = (struct clear_instance_data) {
                .vue_header = {
                   .RTAIndex = i,
@@ -458,14 +458,19 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
             };
             color_attachments[layer] = i;
             layer++;
-         } else if (att->format->depth_format) {
+         }
+      } else {
+         if (att->format->depth_format &&
+             att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
             assert(ds_attachment == VK_ATTACHMENT_UNUSED);
             ds_attachment = i;
             ds_clear_value = clear_values[ds_attachment].depthStencil;
          }
-      } else if (att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-         assert(att->format->has_stencil);
-         anv_finishme("stencil clear");
+
+         if (att->format->has_stencil &&
+             att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+            anv_finishme("stencil clear");
+         }
       }
    }
 
