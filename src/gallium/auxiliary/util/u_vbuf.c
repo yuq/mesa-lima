@@ -1004,9 +1004,11 @@ static boolean u_vbuf_need_minmax_index(const struct u_vbuf *mgr)
     * translated. Use bitmasks to get the info instead of looping over vertex
     * elements. */
    return (mgr->ve->used_vb_mask &
-           ((mgr->user_vb_mask | mgr->incompatible_vb_mask |
+           ((mgr->user_vb_mask |
+             mgr->incompatible_vb_mask |
              mgr->ve->incompatible_vb_mask_any) &
-            mgr->ve->noninstance_vb_mask_any & mgr->nonzero_stride_vb_mask)) != 0;
+            mgr->ve->noninstance_vb_mask_any &
+            mgr->nonzero_stride_vb_mask)) != 0;
 }
 
 static boolean u_vbuf_mapping_vertex_buffer_blocks(const struct u_vbuf *mgr)
@@ -1016,8 +1018,10 @@ static boolean u_vbuf_mapping_vertex_buffer_blocks(const struct u_vbuf *mgr)
     * We could query whether each buffer is busy, but that would
     * be way more costly than this. */
    return (mgr->ve->used_vb_mask &
-           (~mgr->user_vb_mask & ~mgr->incompatible_vb_mask &
-            mgr->ve->compatible_vb_mask_all & mgr->ve->noninstance_vb_mask_any &
+           (~mgr->user_vb_mask &
+            ~mgr->incompatible_vb_mask &
+            mgr->ve->compatible_vb_mask_all &
+            mgr->ve->noninstance_vb_mask_any &
             mgr->nonzero_stride_vb_mask)) != 0;
 }
 
