@@ -546,8 +546,24 @@ validate_draw_arrays(struct gl_context *ctx, const char *func,
     *
     * This is in contrast to the behaviour of desktop GL, where the extra
     * primitives are silently dropped from the transform feedback buffer.
+    *
+    * This text is removed in ES 3.2, presumably because it's not really
+    * implementable with geometry and tessellation shaders.  In fact,
+    * the OES_geometry_shader spec says:
+    *
+    *    "(13) Does this extension change how transform feedback operates
+    *     compared to unextended OpenGL ES 3.0 or 3.1?
+    *
+    *     RESOLVED: Yes. Because dynamic geometry amplification in a geometry
+    *     shader can make it difficult if not impossible to predict the amount
+    *     of geometry that may be generated in advance of executing the shader,
+    *     the draw-time error for transform feedback buffer overflow conditions
+    *     is removed and replaced with the GL behavior (primitives are not
+    *     written and the corresponding counter is not updated)..."
     */
-   if (_mesa_is_gles3(ctx) && _mesa_is_xfb_active_and_unpaused(ctx)) {
+   if (_mesa_is_gles3(ctx) && _mesa_is_xfb_active_and_unpaused(ctx) &&
+       !_mesa_has_OES_geometry_shader(ctx) &&
+       !_mesa_has_OES_tessellation_shader(ctx)) {
       size_t prim_count = vbo_count_tessellated_primitives(mode, count, 1);
       if (xfb_obj->GlesRemainingPrims < prim_count) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
