@@ -34,7 +34,7 @@
 #include "state_tracker/sw_winsys.h"
 #include "tgsi/tgsi_exec.h"
 
-#include "virgl.h"
+#include "virgl_screen.h"
 #include "virgl_resource.h"
 #include "virgl_public.h"
 #include "virgl_context.h"

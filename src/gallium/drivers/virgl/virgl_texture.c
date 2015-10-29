@@ -22,7 +22,7 @@
  */
 #include "util/u_memory.h"
 #include "util/u_format.h"
-#include "virgl.h"
+#include "virgl_screen.h"
 #include "virgl_resource.h"
 #include "virgl_context.h"
 

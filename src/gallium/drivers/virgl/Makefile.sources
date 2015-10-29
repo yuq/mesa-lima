@@ -4,7 +4,6 @@ C_SOURCES := \
 	virgl_context.h \
 	virgl_encode.c \
 	virgl_encode.h \
-	virgl.h \
 	virgl_hw.h \
 	virgl_protocol.h \
 	virgl_public.h \
@@ -12,6 +11,7 @@ C_SOURCES := \
 	virgl_resource.c \
 	virgl_resource.h \
 	virgl_screen.c \
+	virgl_screen.h \
 	virgl_streamout.c \
 	virgl_texture.c \
 	virgl_tgsi.c \

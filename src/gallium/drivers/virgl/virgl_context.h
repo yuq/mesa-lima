@@ -27,7 +27,7 @@
 #include "pipe/p_context.h"
 #include "virgl_protocol.h"
 
-#include "virgl.h"
+#include "virgl_screen.h"
 #include "util/u_slab.h"
 #include "util/list.h"
 #include "indices/u_primconvert.h"

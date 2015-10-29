@@ -46,7 +46,7 @@
 #include "virgl_context.h"
 
 #include "virgl_resource.h"
-#include "virgl.h"
+#include "virgl_screen.h"
 #include "state_tracker/sw_winsys.h"
  struct pipe_screen encscreen;
 
