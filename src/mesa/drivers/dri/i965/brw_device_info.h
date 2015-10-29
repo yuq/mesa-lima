@@ -25,6 +25,9 @@
 #pragma once
 #include <stdbool.h>
 
+/**
+ * Intel hardware information and quirks
+ */
 struct brw_device_info
 {
    int gen; /**< Generation number: 4, 5, 6, 7, ... */
@@ -66,6 +69,18 @@ struct brw_device_info
 
    /**
     * \name GPU hardware limits
+    *
+    * In general, you can find shader thread maximums by looking at the "Maximum
+    * Number of Threads" field in the Intel PRM description of the 3DSTATE_VS,
+    * 3DSTATE_GS, 3DSTATE_HS, 3DSTATE_DS, and 3DSTATE_PS commands. URB entry
+    * limits come from the "Number of URB Entries" field in the the
+    * 3DSTATE_URB_VS command and friends.
+    *
+    * These fields are used to calculate the scratch space to allocate.  The
+    * amount of scratch space can be larger without being harmful on modern
+    * GPUs, however, prior to Haswell, programming the maximum number of threads
+    * to greater than the hardware maximum would cause GPU performance to tank.
+    *
     *  @{
     */
    /**
@@ -78,18 +93,44 @@ struct brw_device_info
     * to change, so we program @max_cs_threads as the lower maximum.
     */
    unsigned num_slices;
-   unsigned max_vs_threads;
-   unsigned max_hs_threads;
-   unsigned max_ds_threads;
-   unsigned max_gs_threads;
+   unsigned max_vs_threads;   /**< Maximum Vertex Shader threads */
+   unsigned max_hs_threads;   /**< Maximum Hull Shader threads */
+   unsigned max_ds_threads;   /**< Maximum Domain Shader threads */
+   unsigned max_gs_threads;   /**< Maximum Geometry Shader threads. */
+   /**
+    * Theoretical maximum number of Pixel Shader threads.
+    *
+    * PSD means Pixel Shader Dispatcher. On modern Intel GPUs, hardware will
+    * automatically scale pixel shader thread count, based on a single value
+    * programmed into 3DSTATE_PS.
+    *
+    * To calculate the maximum number of threads for Gen8 beyond (which have
+    * multiple Pixel Shader Dispatchers):
+    *
+    * - Look up 3DSTATE_PS and find "Maximum Number of Threads Per PSD"
+    * - Usually there's only one PSD per subslice, so use the number of
+    *   subslices for number of PSDs.
+    * - For max_wm_threads, the total should be PSD threads * #PSDs.
+    */
    unsigned max_wm_threads;
+
+   /**
+    * Maximum Compute Shader threads.
+    *
+    * Thread count * number of EUs per subslice
+    */
    unsigned max_cs_threads;
 
    struct {
       /**
-       * Hardware default URB size.  The units this is expressed in are
-       * somewhat inconsistent: 512b units on Gen4-5, KB on Gen6-7, and KB
-       * times the slice count on Gen8+.
+       * Hardware default URB size.
+       *
+       * The units this is expressed in are somewhat inconsistent: 512b units
+       * on Gen4-5, KB on Gen6-7, and KB times the slice count on Gen8+.
+       *
+       * Look up "URB Size" in the "Device Attributes" page, and take the
+       * maximum.  Look up the slice count for each GT SKU on the same page.
+       * urb.size = URB Size (kbytes) / slice count
        */
       unsigned size;
       unsigned min_vs_entries;
