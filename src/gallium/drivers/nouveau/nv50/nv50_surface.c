@@ -220,10 +220,14 @@ nv50_resource_copy_region(struct pipe_context *pipe,
    nv04_resource(dst)->status |= NOUVEAU_BUFFER_STATUS_GPU_WRITING;
 
    if (m2mf) {
+      struct nv50_miptree *src_mt = nv50_miptree(src);
+      struct nv50_miptree *dst_mt = nv50_miptree(dst);
       struct nv50_m2mf_rect drect, srect;
       unsigned i;
-      unsigned nx = util_format_get_nblocksx(src->format, src_box->width);
-      unsigned ny = util_format_get_nblocksy(src->format, src_box->height);
+      unsigned nx = util_format_get_nblocksx(src->format, src_box->width)
+         << src_mt->ms_x;
+      unsigned ny = util_format_get_nblocksy(src->format, src_box->height)
+         << src_mt->ms_y;
 
       nv50_m2mf_rect_setup(&drect, dst, dst_level, dstx, dsty, dstz);
       nv50_m2mf_rect_setup(&srect, src, src_level,
@@ -232,15 +236,15 @@ nv50_resource_copy_region(struct pipe_context *pipe,
       for (i = 0; i < src_box->depth; ++i) {
          nv50_m2mf_transfer_rect(nv50, &drect, &srect, nx, ny);
 
-         if (nv50_miptree(dst)->layout_3d)
+         if (dst_mt->layout_3d)
             drect.z++;
          else
-            drect.base += nv50_miptree(dst)->layer_stride;
+            drect.base += dst_mt->layer_stride;
 
-         if (nv50_miptree(src)->layout_3d)
+         if (src_mt->layout_3d)
             srect.z++;
          else
-            srect.base += nv50_miptree(src)->layer_stride;
+            srect.base += src_mt->layer_stride;
       }
       return;
    }
