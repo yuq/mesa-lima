@@ -458,7 +458,11 @@ while DDY is allowed to be the same for the entire 2x2 quad.
 
 .. opcode:: PK2H - Pack Two 16-bit Floats
 
-  TBD
+This instruction replicates its result.
+
+.. math::
+
+  dst = f32\_to\_f16(src.x) | f32\_to\_f16(src.y) << 16
 
 
 .. opcode:: PK2US - Pack Two Unsigned 16-bit Scalars
@@ -615,7 +619,15 @@ This instruction replicates its result.
 
 .. opcode:: UP2H - Unpack Two 16-Bit Floats
 
-  TBD
+.. math::
+
+  dst.x = f16\_to\_f32(src0.x \& 0xffff)
+
+  dst.y = f16\_to\_f32(src0.x >> 16)
+
+  dst.z = f16\_to\_f32(src0.x \& 0xffff)
+
+  dst.w = f16\_to\_f32(src0.x >> 16)
 
 .. note::
 
