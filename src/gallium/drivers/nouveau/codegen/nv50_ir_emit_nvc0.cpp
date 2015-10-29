@@ -1030,7 +1030,10 @@ CodeEmitterNVC0::emitCVT(Instruction *i)
 
       // for 8/16 source types, the byte/word is in subOp. word 1 is
       // represented as 2.
-      code[1] |= i->subOp << 0x17;
+      if (!isFloatType(i->sType))
+         code[1] |= i->subOp << 0x17;
+      else
+         code[1] |= i->subOp << 0x18;
 
       if (sat)
          code[0] |= 0x20;

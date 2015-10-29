@@ -319,6 +319,10 @@ unsigned int Instruction::srcMask(unsigned int s) const
          x |= 2;
       return x;
    }
+   case TGSI_OPCODE_PK2H:
+      return 0x3;
+   case TGSI_OPCODE_UP2H:
+      return 0x1;
    default:
       break;
    }
@@ -452,6 +456,7 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_ATOMUMAX:
    case TGSI_OPCODE_UBFE:
    case TGSI_OPCODE_UMSB:
+   case TGSI_OPCODE_UP2H:
       return nv50_ir::TYPE_U32;
    case TGSI_OPCODE_I2F:
    case TGSI_OPCODE_I2D:
@@ -516,10 +521,12 @@ nv50_ir::DataType Instruction::inferDstType() const
    case TGSI_OPCODE_DSGE:
    case TGSI_OPCODE_DSLT:
    case TGSI_OPCODE_DSNE:
+   case TGSI_OPCODE_PK2H:
       return nv50_ir::TYPE_U32;
    case TGSI_OPCODE_I2F:
    case TGSI_OPCODE_U2F:
    case TGSI_OPCODE_D2F:
+   case TGSI_OPCODE_UP2H:
       return nv50_ir::TYPE_F32;
    case TGSI_OPCODE_I2D:
    case TGSI_OPCODE_U2D:
@@ -2806,6 +2813,21 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    case TGSI_OPCODE_U2F:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
          mkCvt(OP_CVT, dstTy, dst0[c], srcTy, fetchSrc(0, c));
+      break;
+   case TGSI_OPCODE_PK2H:
+      val0 = getScratch();
+      val1 = getScratch();
+      mkCvt(OP_CVT, TYPE_F16, val0, TYPE_F32, fetchSrc(0, 0));
+      mkCvt(OP_CVT, TYPE_F16, val1, TYPE_F32, fetchSrc(0, 1));
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
+         mkOp3(OP_INSBF, TYPE_U32, dst0[c], val1, mkImm(0x1010), val0);
+      break;
+   case TGSI_OPCODE_UP2H:
+      src0 = fetchSrc(0, 0);
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         geni = mkCvt(OP_CVT, TYPE_F32, dst0[c], TYPE_F16, src0);
+         geni->subOp = c & 1;
+      }
       break;
    case TGSI_OPCODE_EMIT:
       /* export the saved viewport index */
