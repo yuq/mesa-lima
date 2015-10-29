@@ -1045,14 +1045,34 @@ _vtn_block_load(struct vtn_builder *b, nir_intrinsic_op op,
    val->type = type->type;
    val->transposed = NULL;
    if (glsl_type_is_vector_or_scalar(type->type)) {
-      nir_ssa_def *res_index = nir_vulkan_resource_index(&b->nb, set, binding,
-                                                         mode, index);
       nir_intrinsic_instr *load = nir_intrinsic_instr_create(b->shader, op);
       load->num_components = glsl_get_vector_elements(type->type);
-      load->src[0] = nir_src_for_ssa(res_index);
       load->const_index[0] = offset;
-      if (indirect)
+
+      switch (op) {
+      case nir_intrinsic_load_ubo_indirect:
+      case nir_intrinsic_load_ssbo_indirect:
          load->src[1] = nir_src_for_ssa(indirect);
+         /* fall through */
+      case nir_intrinsic_load_ubo:
+      case nir_intrinsic_load_ssbo: {
+         nir_ssa_def *res_index = nir_vulkan_resource_index(&b->nb,
+                                                            set, binding,
+                                                            mode, index);
+         load->src[0] = nir_src_for_ssa(res_index);
+         break;
+      }
+
+      case nir_intrinsic_load_push_constant:
+         break; /* Nothing to do */
+      case nir_intrinsic_load_push_constant_indirect:
+         load->src[0] = nir_src_for_ssa(indirect);
+         break;
+
+      default:
+         unreachable("Invalid block load intrinsic");
+      }
+
       nir_ssa_dest_init(&load->instr, &load->dest, load->num_components, NULL);
       nir_builder_instr_insert(&b->nb, &load->instr);
       val->def = &load->dest.ssa;
@@ -1130,9 +1150,27 @@ vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
       }
    }
 
-   /* TODO SSBO's */
-   nir_intrinsic_op op = indirect ? nir_intrinsic_load_ubo_indirect
-                                  : nir_intrinsic_load_ubo;
+   nir_intrinsic_op op;
+   if (src->var->data.mode == nir_var_uniform) {
+      if (src->var->data.descriptor_set >= 0) {
+         /* UBO load */
+         assert(src->var->data.binding >= 0);
+
+         op = indirect ? nir_intrinsic_load_ubo_indirect
+                       : nir_intrinsic_load_ubo;
+      } else {
+         /* Push constant load */
+         assert(src->var->data.descriptor_set == -1 &&
+                src->var->data.binding == -1);
+
+         op = indirect ? nir_intrinsic_load_push_constant_indirect
+                       : nir_intrinsic_load_push_constant;
+      }
+   } else {
+      assert(src->var->data.mode == nir_var_shader_storage);
+      op = indirect ? nir_intrinsic_load_ssbo_indirect
+                    : nir_intrinsic_load_ssbo;
+   }
 
    return _vtn_block_load(b, op, set, binding, mode, index,
                           offset, indirect, type);
@@ -1236,6 +1274,54 @@ vtn_variable_copy(struct vtn_builder *b, nir_deref_var *src,
    }
 }
 
+/* Tries to compute the size of an interface block based on the strides and
+ * offsets that are provided to us in the SPIR-V source.
+ */
+static unsigned
+vtn_type_block_size(struct vtn_type *type)
+{
+   enum glsl_base_type base_type = glsl_get_base_type(type->type);
+   switch (base_type) {
+   case GLSL_TYPE_UINT:
+   case GLSL_TYPE_INT:
+   case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_DOUBLE: {
+      unsigned cols = type->row_major ? glsl_get_vector_elements(type->type) :
+                                        glsl_get_matrix_columns(type->type);
+      if (cols > 1) {
+         assert(type->stride > 0);
+         return type->stride * cols;
+      } else if (base_type == GLSL_TYPE_DOUBLE) {
+         return glsl_get_vector_elements(type->type) * 8;
+      } else {
+         return glsl_get_vector_elements(type->type) * 4;
+      }
+   }
+
+   case GLSL_TYPE_STRUCT:
+   case GLSL_TYPE_INTERFACE: {
+      unsigned size = 0;
+      unsigned num_fields = glsl_get_length(type->type);
+      for (unsigned f = 0; f < num_fields; f++) {
+         unsigned field_end = type->offsets[f] +
+                              vtn_type_block_size(type->members[f]);
+         size = MAX2(size, field_end);
+      }
+      return size;
+   }
+
+   case GLSL_TYPE_ARRAY:
+      assert(type->stride > 0);
+      assert(glsl_get_length(type->type) > 0);
+      return type->stride * glsl_get_length(type->type);
+
+   default:
+      assert(!"Invalid block type");
+      return 0;
+   }
+}
+
 static void
 vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
@@ -1275,6 +1361,17 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             var->data.mode = nir_var_uniform;
             var->data.read_only = true;
          }
+         break;
+      case SpvStorageClassPushConstant:
+         assert(interface_type && interface_type->block);
+         var->data.mode = nir_var_uniform;
+         var->data.read_only = true;
+         var->data.descriptor_set = -1;
+         var->data.binding = -1;
+
+         /* We have exactly one push constant block */
+         assert(b->shader->num_uniforms == 0);
+         b->shader->num_uniforms = vtn_type_block_size(type);
          break;
       case SpvStorageClassInput:
          var->data.mode = nir_var_shader_in;
