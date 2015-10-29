@@ -1246,29 +1246,35 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          vtn_value(b, w[1], vtn_value_type_type)->type;
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
 
-      nir_variable *var = ralloc(b->shader, nir_variable);
+      nir_variable *var = rzalloc(b->shader, nir_variable);
 
       var->type = type->type;
       var->name = ralloc_strdup(var, val->name);
 
-      bool builtin_block = false;
+      struct vtn_type *interface_type;
       if (type->block) {
-         var->interface_type = type->type;
-         builtin_block = type->builtin_block;
+         interface_type = type;
       } else if (glsl_type_is_array(type->type) &&
                  (type->array_element->block ||
                   type->array_element->buffer_block)) {
-         var->interface_type = type->array_element->type;
-         builtin_block = type->array_element->builtin_block;
+         interface_type = type->array_element;
       } else {
-         var->interface_type = NULL;
+         interface_type = NULL;
       }
+
+      if (interface_type)
+         var->interface_type = interface_type->type;
 
       switch ((SpvStorageClass)w[3]) {
       case SpvStorageClassUniform:
       case SpvStorageClassUniformConstant:
-         var->data.mode = nir_var_uniform;
-         var->data.read_only = true;
+         if (interface_type && interface_type->buffer_block) {
+            var->data.mode = nir_var_shader_storage;
+         } else {
+            /* UBO's and samplers */
+            var->data.mode = nir_var_uniform;
+            var->data.read_only = true;
+         }
          break;
       case SpvStorageClassInput:
          var->data.mode = nir_var_shader_in;
@@ -1321,17 +1327,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          }
       }
 
-      /* If this was a uniform block, then we're not going to actually use the
-       * variable (we're only going to use it to compute offsets), so don't
-       * declare it in the shader.
-       */
-      if (var->data.mode == nir_var_uniform && var->interface_type)
-         break;
-
-      /* Builtin blocks are lowered to individual variables during SPIR-V ->
-       * NIR, so don't declare them either.
-       */
-      if (builtin_block)
+      /* Interface variables aren't actually going to be referenced by the
+       * generated NIR, so we don't put them in the list */
+      if (interface_type)
          break;
 
       if (var->data.mode == nir_var_local) {
