@@ -1407,6 +1407,9 @@ void
 brw_compact_instructions(struct brw_codegen *p, int start_offset,
                          int num_annotations, struct annotation *annotation)
 {
+   if (unlikely(INTEL_DEBUG & DEBUG_NO_COMPACTION))
+      return;
+
    const struct brw_device_info *devinfo = p->devinfo;
    void *store = p->store + start_offset / 16;
    /* For an instruction at byte offset 16*i before compaction, this is the

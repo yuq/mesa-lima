@@ -74,6 +74,7 @@ static const struct debug_control debug_control[] = {
    { "spill_vec4",  DEBUG_SPILL_VEC4 },
    { "cs",          DEBUG_CS },
    { "hex",         DEBUG_HEX },
+   { "nocompact",   DEBUG_NO_COMPACTION },
    { NULL,    0 }
 };
 
