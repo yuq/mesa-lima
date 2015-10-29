@@ -77,10 +77,10 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 1, 0, 0, 0, 0, COMP, "DDX", TGSI_OPCODE_DDX },
    { 1, 1, 0, 0, 0, 0, COMP, "DDY", TGSI_OPCODE_DDY },
    { 0, 0, 0, 0, 0, 0, NONE, "KILL", TGSI_OPCODE_KILL },
-   { 1, 1, 0, 0, 0, 0, COMP, "PK2H", TGSI_OPCODE_PK2H },
-   { 1, 1, 0, 0, 0, 0, COMP, "PK2US", TGSI_OPCODE_PK2US },
-   { 1, 1, 0, 0, 0, 0, COMP, "PK4B", TGSI_OPCODE_PK4B },
-   { 1, 1, 0, 0, 0, 0, COMP, "PK4UB", TGSI_OPCODE_PK4UB },
+   { 1, 1, 0, 0, 0, 0, REPL, "PK2H", TGSI_OPCODE_PK2H },
+   { 1, 1, 0, 0, 0, 0, REPL, "PK2US", TGSI_OPCODE_PK2US },
+   { 1, 1, 0, 0, 0, 0, REPL, "PK4B", TGSI_OPCODE_PK4B },
+   { 1, 1, 0, 0, 0, 0, REPL, "PK4UB", TGSI_OPCODE_PK4UB },
    { 0, 1, 0, 0, 0, 1, NONE, "", 44 },      /* removed */
    { 1, 2, 0, 0, 0, 0, COMP, "SEQ", TGSI_OPCODE_SEQ },
    { 0, 1, 0, 0, 0, 1, NONE, "", 46 },      /* removed */
@@ -92,10 +92,10 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 2, 1, 0, 0, 0, OTHR, "TEX", TGSI_OPCODE_TEX },
    { 1, 4, 1, 0, 0, 0, OTHR, "TXD", TGSI_OPCODE_TXD },
    { 1, 2, 1, 0, 0, 0, OTHR, "TXP", TGSI_OPCODE_TXP },
-   { 1, 1, 0, 0, 0, 0, COMP, "UP2H", TGSI_OPCODE_UP2H },
-   { 1, 1, 0, 0, 0, 0, COMP, "UP2US", TGSI_OPCODE_UP2US },
-   { 1, 1, 0, 0, 0, 0, COMP, "UP4B", TGSI_OPCODE_UP4B },
-   { 1, 1, 0, 0, 0, 0, COMP, "UP4UB", TGSI_OPCODE_UP4UB },
+   { 1, 1, 0, 0, 0, 0, CHAN, "UP2H", TGSI_OPCODE_UP2H },
+   { 1, 1, 0, 0, 0, 0, CHAN, "UP2US", TGSI_OPCODE_UP2US },
+   { 1, 1, 0, 0, 0, 0, CHAN, "UP4B", TGSI_OPCODE_UP4B },
+   { 1, 1, 0, 0, 0, 0, CHAN, "UP4UB", TGSI_OPCODE_UP4UB },
    { 0, 1, 0, 0, 0, 1, NONE, "", 59 },      /* removed */
    { 0, 1, 0, 0, 0, 1, NONE, "", 60 },      /* removed */
    { 1, 1, 0, 0, 0, 0, COMP, "ARR", TGSI_OPCODE_ARR },
