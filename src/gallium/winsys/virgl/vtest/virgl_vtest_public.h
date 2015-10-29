@@ -24,6 +24,7 @@
 #define VIRGL_VTEST_PUBLIC_H
 
 struct virgl_winsys;
+struct sw_winsys;
 
 struct virgl_winsys *virgl_vtest_winsys_wrap(struct sw_winsys *sws);
 

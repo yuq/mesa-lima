@@ -23,9 +23,10 @@
 
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
-#include "virgl_resource.h"
 #include "virgl_context.h"
 #include "virgl_encode.h"
+#include "virgl_protocol.h"
+#include "virgl_resource.h"
 
 struct virgl_query {
    uint32_t handle;

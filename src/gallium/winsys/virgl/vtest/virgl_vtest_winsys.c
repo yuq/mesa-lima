@@ -21,13 +21,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include <stdio.h>
-#include "virgl_vtest_winsys.h"
-#include "virgl_vtest_public.h"
 #include "util/u_memory.h"
 #include "util/u_format.h"
 #include "util/u_inlines.h"
-#include "state_tracker/drm_driver.h"
 #include "os/os_time.h"
+#include "state_tracker/sw_winsys.h"
+
+#include "virgl_vtest_winsys.h"
+#include "virgl_vtest_public.h"
 
 static void *virgl_vtest_resource_map(struct virgl_winsys *vws, struct virgl_hw_res *res);
 static void virgl_vtest_resource_unmap(struct virgl_winsys *vws, struct virgl_hw_res *res);

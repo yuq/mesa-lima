@@ -36,19 +36,16 @@
 #include "util/u_upload_mgr.h"
 #include "util/u_blitter.h"
 #include "tgsi/tgsi_text.h"
+#include "indices/u_primconvert.h"
 
 #include "pipebuffer/pb_buffer.h"
 #include "state_tracker/graw.h"
-#include "state_tracker/drm_driver.h"
 
 #include "virgl_encode.h"
-
 #include "virgl_context.h"
-
+#include "virgl_protocol.h"
 #include "virgl_resource.h"
 #include "virgl_screen.h"
-#include "state_tracker/sw_winsys.h"
- struct pipe_screen encscreen;
 
 static uint32_t next_handle;
 uint32_t virgl_object_assign_handle(void)

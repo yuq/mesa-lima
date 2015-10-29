@@ -20,20 +20,25 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "virgl_drm_winsys.h"
-#include "virgl_drm_public.h"
-#include "util/u_memory.h"
-#include "util/u_format.h"
-#include "state_tracker/drm_driver.h"
+
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <sys/ioctl.h>
 
 #include "os/os_mman.h"
 #include "os/os_time.h"
-#include <sys/ioctl.h>
-#include <errno.h>
+#include "util/u_memory.h"
+#include "util/u_format.h"
+#include "util/u_hash_table.h"
+#include "util/u_inlines.h"
+#include "state_tracker/drm_driver.h"
+
 #include <xf86drm.h>
-#include <fcntl.h>
-#include <stdio.h>
 #include "virtgpu_drm.h"
+
+#include "virgl_drm_winsys.h"
+#include "virgl_drm_public.h"
 
 static inline boolean can_cache_resource(struct virgl_hw_res *res)
 {

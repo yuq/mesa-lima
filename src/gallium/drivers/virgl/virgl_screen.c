@@ -28,10 +28,7 @@
 #include "pipe/p_defines.h"
 #include "pipe/p_screen.h"
 #include "draw/draw_context.h"
-#include "vl/vl_decoder.h"
-#include "vl/vl_video_buffer.h"
 
-#include "state_tracker/sw_winsys.h"
 #include "tgsi/tgsi_exec.h"
 
 #include "virgl_screen.h"

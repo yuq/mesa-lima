@@ -20,8 +20,7 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "virgl_vtest_winsys.h"
-#include "virgl_vtest_public.h"
+
 #include <sys/socket.h>
 #include <errno.h>
 #include <stdio.h>
@@ -33,6 +32,9 @@
 #include <util/u_format.h>
 /* connect to remote socket */
 #define VTEST_SOCKET_NAME "/tmp/.virgl_test"
+
+#include "virgl_vtest_winsys.h"
+#include "virgl_vtest_public.h"
 
 /* block read/write routines */
 static int virgl_block_write(int fd, void *buf, int size)

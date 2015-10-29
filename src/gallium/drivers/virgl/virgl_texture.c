@@ -20,11 +20,13 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "util/u_memory.h"
 #include "util/u_format.h"
-#include "virgl_screen.h"
-#include "virgl_resource.h"
+#include "util/u_inlines.h"
+#include "util/u_memory.h"
+
 #include "virgl_context.h"
+#include "virgl_resource.h"
+#include "virgl_screen.h"
 
 static void virgl_copy_region_with_blit(struct pipe_context *pipe,
                                         struct pipe_resource *dst,

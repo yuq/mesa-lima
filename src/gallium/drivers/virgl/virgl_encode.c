@@ -25,10 +25,14 @@
 #include "util/u_memory.h"
 #include "util/u_math.h"
 #include "pipe/p_state.h"
-#include "virgl_encode.h"
-#include "virgl_resource.h"
 #include "tgsi/tgsi_dump.h"
 #include "tgsi/tgsi_parse.h"
+
+#include "virgl_context.h"
+#include "virgl_encode.h"
+#include "virgl_protocol.h"
+#include "virgl_resource.h"
+#include "virgl_screen.h"
 
 static int virgl_encoder_write_cmd_dword(struct virgl_context *ctx,
                                         uint32_t dword)

@@ -24,22 +24,14 @@
 #define VIRGL_DRM_WINSYS_H
 
 #include <stdint.h>
-#include "pipe/p_compiler.h"
-#include "drm.h"
-
 #include "os/os_thread.h"
+#include "pipe/p_state.h"
 #include "util/list.h"
-#include "util/u_inlines.h"
-#include "util/u_hash_table.h"
 
-#include "pipe/p_screen.h"
-#include "pipe/p_context.h"
-#include "pipe/p_context.h"
-
-#include "virgl/virgl_hw.h"
 #include "virgl/virgl_winsys.h"
 
 struct pipe_fence_handle;
+struct util_hash_table;
 
 struct virgl_hw_res {
    struct pipe_reference reference;

@@ -24,7 +24,7 @@
 #ifndef VIRGL_RESOURCE_H
 #define VIRGL_RESOURCE_H
 
-#include "util/u_inlines.h"
+#include "util/u_resource.h"
 #include "util/u_range.h"
 #include "util/list.h"
 #include "util/u_transfer.h"
@@ -32,8 +32,10 @@
 #include "virgl_hw.h"
 #define VR_MAX_TEXTURE_2D_LEVELS 15
 
+struct winsys_handle;
 struct virgl_screen;
 struct virgl_context;
+
 struct virgl_resource {
    struct u_resource u;
    struct virgl_hw_res *hw_res;

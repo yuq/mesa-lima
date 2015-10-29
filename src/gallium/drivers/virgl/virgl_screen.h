@@ -23,12 +23,9 @@
 #ifndef VIRGL_H
 #define VIRGL_H
 
-#include "util/u_transfer.h"
-
-#include "virgl_hw.h"
-
-#include "virgl_winsys.h"
 #include "pipe/p_screen.h"
+#include "virgl_winsys.h"
+
 struct virgl_screen {
    struct pipe_screen base;
    struct virgl_winsys *vws;

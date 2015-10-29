@@ -21,9 +21,11 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "util/u_inlines.h"
 #include "util/u_memory.h"
 #include "virgl_context.h"
 #include "virgl_resource.h"
+#include "virgl_screen.h"
 
 static void virgl_buffer_destroy(struct pipe_screen *screen,
                                  struct pipe_resource *buf)

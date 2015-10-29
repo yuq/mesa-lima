@@ -23,7 +23,17 @@
 #ifndef VIRGL_ENCODE_H
 #define VIRGL_ENCODE_H
 
-#include "virgl_context.h"
+#include "pipe/p_defines.h"
+#include "pipe/p_state.h"
+
+#include "virgl_winsys.h"
+
+struct tgsi_token;
+
+struct virgl_context;
+struct virgl_resource;
+struct virgl_sampler_view;
+
 struct virgl_surface {
    struct pipe_surface base;
    uint32_t handle;

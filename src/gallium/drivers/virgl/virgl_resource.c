@@ -21,8 +21,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "util/u_inlines.h"
-#include "virgl_resource.h"
 #include "virgl_context.h"
+#include "virgl_resource.h"
+#include "virgl_screen.h"
 
 bool virgl_res_needs_flush_wait(struct virgl_context *vctx,
                                 struct virgl_resource *res,

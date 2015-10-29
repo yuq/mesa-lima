@@ -20,10 +20,11 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "util/u_memory.h"
 #include "util/u_inlines.h"
+#include "util/u_memory.h"
 #include "virgl_context.h"
 #include "virgl_encode.h"
+#include "virgl_protocol.h"
 #include "virgl_resource.h"
 
 static struct pipe_stream_output_target *virgl_create_so_target(

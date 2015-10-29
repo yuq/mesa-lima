@@ -23,8 +23,11 @@
 #ifndef VIRGL_WINSYS_H
 #define VIRGL_WINSYS_H
 
-#include "pipe/p_compiler.h"
+#include "pipe/p_defines.h"
+#include "virgl_hw.h"
 
+struct pipe_box;
+struct pipe_fence_handle;
 struct winsys_handle;
 struct virgl_hw_res;
 

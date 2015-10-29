@@ -25,15 +25,13 @@
 
 #include "pipe/p_state.h"
 #include "pipe/p_context.h"
-#include "virgl_protocol.h"
-
-#include "virgl_screen.h"
 #include "util/u_slab.h"
 #include "util/list.h"
-#include "indices/u_primconvert.h"
 
-struct virgl_resource;
-struct virgl_buffer;
+struct pipe_screen;
+struct tgsi_token;
+struct u_upload_mgr;
+struct virgl_cmd_buf;
 
 struct virgl_sampler_view {
    struct pipe_sampler_view base;

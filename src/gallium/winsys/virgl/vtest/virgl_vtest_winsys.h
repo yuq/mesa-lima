@@ -27,15 +27,15 @@
 #include "pipe/p_compiler.h"
 #include "pipe/p_defines.h"
 #include "pipe/p_state.h"
-#include "state_tracker/sw_winsys.h"
-#include "virgl/virgl_hw.h"
-#include "virgl/virgl_winsys.h"
 #include "util/list.h"
 #include "os/os_thread.h"
 
+#include "virgl/virgl_winsys.h"
 #include "vtest_protocol.h"
 
 struct pipe_fence_handle;
+struct sw_winsys;
+struct sw_displaytarget;
 
 struct virgl_vtest_winsys {
    struct virgl_winsys base;
