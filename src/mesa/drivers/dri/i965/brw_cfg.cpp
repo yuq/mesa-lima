@@ -528,7 +528,9 @@ cfg_t::dump_domtree()
 {
    printf("digraph DominanceTree {\n");
    foreach_block(block, this) {
-      printf("\t%d -> %d\n", block->idom->num, block->num);
+      if (block->idom) {
+         printf("\t%d -> %d\n", block->idom->num, block->num);
+      }
    }
    printf("}\n");
 }
