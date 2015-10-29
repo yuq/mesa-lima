@@ -416,7 +416,7 @@ generate_gs_set_write_offset(struct brw_codegen *p,
           src1.file == BRW_IMMEDIATE_VALUE &&
           src1.type == BRW_REGISTER_TYPE_UD &&
           src1.dw1.ud <= USHRT_MAX);
-   if (src0.file == IMM) {
+   if (src0.file == BRW_IMMEDIATE_VALUE) {
       brw_MOV(p, suboffset(stride(dst, 2, 2, 1), 3),
               brw_imm_ud(src0.dw1.ud * src1.dw1.ud));
    } else {
