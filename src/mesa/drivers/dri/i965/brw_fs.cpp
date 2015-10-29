@@ -2642,8 +2642,9 @@ fs_visitor::emit_repclear_shader()
    int base_mrf = 1;
    int color_mrf = base_mrf + 2;
 
-   fs_inst *mov = bld.exec_all().MOV(vec4(brw_message_reg(color_mrf)),
-                                     fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F));
+   fs_inst *mov = bld.exec_all().group(4, 0)
+                     .MOV(brw_message_reg(color_mrf),
+                          fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F));
 
    fs_inst *write;
    if (key->nr_color_regions == 1) {
