@@ -27,6 +27,7 @@
  **************************************************************************/
 
 #include "pipe/p_screen.h"
+#include "state_tracker/drm_driver.h"
 #include "util/u_memory.h"
 #include "util/u_handle_table.h"
 #include "util/u_transfer.h"
@@ -112,6 +113,9 @@ vlVaMapBuffer(VADriverContextP ctx, VABufferID buf_id, void **pbuff)
    if (!buf)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
+   if (buf->export_refcount > 0)
+      return VA_STATUS_ERROR_INVALID_BUFFER;
+
    if (buf->derived_surface.resource) {
       *pbuff = pipe_buffer_map(drv->pipe, buf->derived_surface.resource,
                                PIPE_TRANSFER_WRITE,
@@ -144,6 +148,9 @@ vlVaUnmapBuffer(VADriverContextP ctx, VABufferID buf_id)
    if (!buf)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
+   if (buf->export_refcount > 0)
+      return VA_STATUS_ERROR_INVALID_BUFFER;
+
    if (buf->derived_surface.resource) {
      if (!buf->derived_surface.transfer)
         return VA_STATUS_ERROR_INVALID_BUFFER;
@@ -167,8 +174,12 @@ vlVaDestroyBuffer(VADriverContextP ctx, VABufferID buf_id)
    if (!buf)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
-   if (buf->derived_surface.resource)
+   if (buf->derived_surface.resource) {
+     if (buf->export_refcount > 0)
+       return VA_STATUS_ERROR_INVALID_BUFFER;
+
      pipe_resource_reference(&buf->derived_surface.resource, NULL);
+   }
 
    FREE(buf->data);
    FREE(buf);
@@ -193,6 +204,129 @@ vlVaBufferInfo(VADriverContextP ctx, VABufferID buf_id, VABufferType *type,
    *type = buf->type;
    *size = buf->size;
    *num_elements = buf->num_elements;
+
+   return VA_STATUS_SUCCESS;
+}
+
+VAStatus
+vlVaAcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id,
+                        VABufferInfo *out_buf_info)
+{
+   uint32_t i;
+   uint32_t mem_type;
+   vlVaBuffer *buf ;
+   struct pipe_screen *screen;
+
+   /* List of supported memory types, in preferred order. */
+   static const uint32_t mem_types[] = {
+      VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME,
+      0
+   };
+
+   if (!ctx)
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+   buf = handle_table_get(VL_VA_DRIVER(ctx)->htab, buf_id);
+
+   if (!buf)
+      return VA_STATUS_ERROR_INVALID_BUFFER;
+
+   /* Only VA surface|image like buffers are supported for now .*/
+   if (buf->type != VAImageBufferType)
+      return VA_STATUS_ERROR_UNSUPPORTED_BUFFERTYPE;
+
+   if (!out_buf_info)
+      return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+   if (!out_buf_info->mem_type)
+      mem_type = mem_types[0];
+   else {
+      mem_type = 0;
+      for (i = 0; mem_types[i] != 0; i++) {
+         if (out_buf_info->mem_type & mem_types[i]) {
+            mem_type = out_buf_info->mem_type;
+            break;
+         }
+      }
+      if (!mem_type)
+         return VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE;
+   }
+
+   if (!buf->derived_surface.resource)
+      return VA_STATUS_ERROR_INVALID_BUFFER;
+
+   screen = VL_VA_PSCREEN(ctx);
+
+   if (buf->derived_surface.fence) {
+      screen->fence_finish(screen, buf->derived_surface.fence, PIPE_TIMEOUT_INFINITE);
+      screen->fence_reference(screen, &buf->derived_surface.fence, NULL);
+   }
+
+   if (buf->export_refcount > 0) {
+      if (buf->export_state.mem_type != mem_type)
+         return VA_STATUS_ERROR_INVALID_PARAMETER;
+   } else {
+      VABufferInfo * const buf_info = &buf->export_state;
+
+      switch (mem_type) {
+      case VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME: {
+         struct winsys_handle whandle;
+
+         memset(&whandle, 0, sizeof(whandle));
+         whandle.type = DRM_API_HANDLE_TYPE_FD;
+
+         if (!screen->resource_get_handle(screen, buf->derived_surface.resource, &whandle))
+            return VA_STATUS_ERROR_INVALID_BUFFER;
+
+         buf_info->handle = (intptr_t)whandle.handle;
+         break;
+      default:
+         return VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE;
+      }
+   }
+
+   buf_info->type = buf->type;
+   buf_info->mem_type = mem_type;
+   buf_info->mem_size = buf->num_elements * buf->size;
+
+   }
+
+   buf->export_refcount++;
+
+   *out_buf_info = buf->export_state;
+
+   return VA_STATUS_SUCCESS;
+}
+
+VAStatus
+vlVaReleaseBufferHandle(VADriverContextP ctx, VABufferID buf_id)
+{
+   vlVaBuffer *buf;
+
+   if (!ctx)
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+   buf = handle_table_get(VL_VA_DRIVER(ctx)->htab, buf_id);
+
+   if (!buf)
+      return VA_STATUS_ERROR_INVALID_BUFFER;
+
+   if (buf->export_refcount == 0)
+      return VA_STATUS_ERROR_INVALID_BUFFER;
+
+   if (--buf->export_refcount == 0) {
+      VABufferInfo * const buf_info = &buf->export_state;
+
+      switch (buf_info->mem_type) {
+      case VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME:
+         close((intptr_t)buf_info->handle);
+         break;
+      default:
+         return VA_STATUS_ERROR_INVALID_BUFFER;
+      }
+
+      buf_info->mem_type = 0;
+   }
 
    return VA_STATUS_SUCCESS;
 }

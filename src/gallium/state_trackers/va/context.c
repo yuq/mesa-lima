@@ -87,7 +87,9 @@ static struct VADriverVTable vtable =
    &vlVaUnlockSurface,
    NULL, /* DEPRECATED VaGetSurfaceAttributes */
    &vlVaCreateSurfaces2,
-   &vlVaQuerySurfaceAttributes
+   &vlVaQuerySurfaceAttributes,
+   &vlVaAcquireBufferHandle,
+   &vlVaReleaseBufferHandle
 };
 
 static struct VADriverVTableVPP vtable_vpp =

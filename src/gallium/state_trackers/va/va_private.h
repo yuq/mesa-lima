@@ -34,6 +34,7 @@
 #include <va/va.h>
 #include <va/va_backend.h>
 #include <va/va_backend_vpp.h>
+#include <va/va_drmcommon.h>
 
 #include "pipe/p_video_enums.h"
 #include "pipe/p_video_codec.h"
@@ -238,6 +239,8 @@ typedef struct {
       struct pipe_transfer *transfer;
       struct pipe_fence_handle *fence;
    } derived_surface;
+   unsigned int export_refcount;
+   VABufferInfo export_state;
 } vlVaBuffer;
 
 typedef struct {
@@ -327,6 +330,9 @@ VAStatus vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format, unsigned
                              unsigned int num_attribs);
 VAStatus vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config, VASurfaceAttrib *attrib_list,
                                     unsigned int *num_attribs);
+
+VAStatus vlVaAcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id, VABufferInfo *out_buf_info);
+VAStatus vlVaReleaseBufferHandle(VADriverContextP ctx, VABufferID buf_id);
 
 VAStatus vlVaQueryVideoProcFilters(VADriverContextP ctx, VAContextID context, VAProcFilterType *filters,
                                    unsigned int *num_filters);
