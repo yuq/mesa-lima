@@ -684,6 +684,31 @@ struct pipe_compute_state
    unsigned req_input_mem; /**< Required size of the INPUT resource. */
 };
 
+/**
+ * Structure that contains a callback for debug messages from the driver back
+ * to the state tracker.
+ */
+struct pipe_debug_callback
+{
+   /**
+    * Callback for the driver to report debug/performance/etc information back
+    * to the state tracker.
+    *
+    * \param data       user-supplied data pointer
+    * \param id         message type identifier, if pointed value is 0, then a
+    *                   new id is assigned
+    * \param type       PIPE_DEBUG_TYPE_*
+    * \param format     printf-style format string
+    * \param args       args for format string
+    */
+   void (*debug_message)(void *data,
+                         unsigned *id,
+                         enum pipe_debug_type type,
+                         const char *fmt,
+                         va_list args);
+   void *data;
+};
+
 #ifdef __cplusplus
 }
 #endif

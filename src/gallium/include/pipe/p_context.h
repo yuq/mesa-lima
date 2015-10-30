@@ -45,6 +45,7 @@ struct pipe_blit_info;
 struct pipe_box;
 struct pipe_clip_state;
 struct pipe_constant_buffer;
+struct pipe_debug_callback;
 struct pipe_depth_stencil_alpha_state;
 struct pipe_draw_info;
 struct pipe_fence_handle;
@@ -237,6 +238,13 @@ struct pipe_context {
    void (*set_tess_state)(struct pipe_context *,
                           const float default_outer_level[4],
                           const float default_inner_level[2]);
+
+   /**
+    * Sets the debug callback. If the pointer is null, then no callback is
+    * set, otherwise a copy of the data should be made.
+    */
+   void (*set_debug_callback)(struct pipe_context *,
+                              const struct pipe_debug_callback *);
 
    /**
     * Bind an array of shader buffers that will be used by a shader.
