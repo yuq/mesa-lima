@@ -96,6 +96,7 @@ struct nv50_ir_prog_info
       uint32_t tlsSpace;  /* required local memory per thread */
       uint32_t *code;
       uint32_t codeSize;
+      uint32_t instructions;
       uint8_t sourceRep;  /* NV50_PROGRAM_IR */
       const void *source;
       void *relocData;

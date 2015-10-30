@@ -120,7 +120,7 @@ nvc0_compute_validate_program(struct nvc0_context *nvc0)
 
    if (!prog->translated) {
       prog->translated = nvc0_program_translate(
-         prog, nvc0->screen->base.device->chipset);
+         prog, nvc0->screen->base.device->chipset, &nvc0->base.debug);
       if (!prog->translated)
          return false;
    }

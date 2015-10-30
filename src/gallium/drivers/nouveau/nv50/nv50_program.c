@@ -318,7 +318,8 @@ nv50_program_create_strmout_state(const struct nv50_ir_prog_info *info,
 }
 
 bool
-nv50_program_translate(struct nv50_program *prog, uint16_t chipset)
+nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
+                       struct pipe_debug_callback *debug)
 {
    struct nv50_ir_prog_info *info;
    int ret;
@@ -405,6 +406,11 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset)
    if (prog->pipe.stream_output.num_outputs)
       prog->so = nv50_program_create_strmout_state(info,
                                                    &prog->pipe.stream_output);
+
+   pipe_debug_message(debug, SHADER_INFO,
+                      "type: %d, local: %d, gpr: %d, inst: %d, bytes: %d",
+                      prog->type, info->bin.tlsSpace, prog->max_gpr,
+                      info->bin.instructions, info->bin.codeSize);
 
 out:
    FREE(info);

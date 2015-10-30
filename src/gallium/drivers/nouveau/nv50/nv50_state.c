@@ -727,7 +727,8 @@ nv50_sp_state_create(struct pipe_context *pipe,
       prog->pipe.stream_output = cso->stream_output;
 
    prog->translated = nv50_program_translate(
-         prog, nv50_context(pipe)->screen->base.device->chipset);
+         prog, nv50_context(pipe)->screen->base.device->chipset,
+         &nouveau_context(pipe)->debug);
 
    return (void *)prog;
 }
