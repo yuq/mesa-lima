@@ -1702,7 +1702,8 @@ instruction_scheduler::run(cfg_t *cfg)
 void
 fs_visitor::schedule_instructions(instruction_scheduler_mode mode)
 {
-   calculate_live_intervals();
+   if (mode != SCHEDULE_POST)
+      calculate_live_intervals();
 
    int grf_count;
    if (mode == SCHEDULE_POST)
