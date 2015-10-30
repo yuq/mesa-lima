@@ -876,6 +876,30 @@ CodeEmitterNV50::emitPFETCH(const Instruction *i)
    emitFlagsRd(i);
 }
 
+static void
+interpApply(const InterpEntry *entry, uint32_t *code,
+      bool force_persample_interp, bool flatshade)
+{
+   int ipa = entry->ipa;
+   int encSize = entry->reg;
+   int loc = entry->loc;
+
+   if ((ipa & NV50_IR_INTERP_SAMPLE_MASK) == NV50_IR_INTERP_DEFAULT &&
+       (ipa & NV50_IR_INTERP_MODE_MASK) != NV50_IR_INTERP_FLAT) {
+      if (force_persample_interp) {
+         if (encSize == 8)
+            code[loc + 1] |= 1 << 16;
+         else
+            code[loc + 0] |= 1 << 24;
+      } else {
+         if (encSize == 8)
+            code[loc + 1] &= ~(1 << 16);
+         else
+            code[loc + 0] &= ~(1 << 24);
+      }
+   }
+}
+
 void
 CodeEmitterNV50::emitINTERP(const Instruction *i)
 {
@@ -904,6 +928,8 @@ CodeEmitterNV50::emitINTERP(const Instruction *i)
       code[0] |= 1;
       emitFlagsRd(i);
    }
+
+   addInterp(i->ipa, i->encSize, interpApply);
 }
 
 void

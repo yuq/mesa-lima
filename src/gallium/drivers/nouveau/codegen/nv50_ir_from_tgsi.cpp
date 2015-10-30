@@ -1125,7 +1125,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
          break;
       case TGSI_SEMANTIC_SAMPLEID:
       case TGSI_SEMANTIC_SAMPLEPOS:
-         info->io.sampleInterp = 1;
+         info->prop.fp.sampleInterp = 1;
          break;
       default:
          break;
@@ -1478,7 +1478,7 @@ Converter::translateInterpMode(const struct nv50_ir_varying *var, operation& op)
    op = (mode == NV50_IR_INTERP_PERSPECTIVE || mode == NV50_IR_INTERP_SC)
       ? OP_PINTERP : OP_LINTERP;
 
-   if (var->centroid || info->io.sampleInterp)
+   if (var->centroid || info->prop.fp.sampleInterp)
       mode |= NV50_IR_INTERP_CENTROID;
 
    return mode;

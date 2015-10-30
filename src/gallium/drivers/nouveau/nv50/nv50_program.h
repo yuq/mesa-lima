@@ -86,7 +86,7 @@ struct nv50_program {
       uint32_t interp; /* 0x1988 */
       uint32_t colors; /* 0x1904 */
       uint8_t has_samplemask;
-      uint8_t sample_interp;
+      uint8_t force_persample_interp;
    } fp;
 
    struct {
@@ -99,6 +99,7 @@ struct nv50_program {
    } gp;
 
    void *fixups; /* relocation records */
+   void *interps; /* interpolation records */
 
    struct nouveau_heap *mem;
 

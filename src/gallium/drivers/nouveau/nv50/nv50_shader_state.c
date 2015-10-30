@@ -168,11 +168,23 @@ nv50_fragprog_validate(struct nv50_context *nv50)
 {
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
    struct nv50_program *fp = nv50->fragprog;
+   struct pipe_rasterizer_state *rast = &nv50->rast->pipe;
 
-   fp->fp.sample_interp = nv50->min_samples > 1;
+   if (fp->fp.force_persample_interp != rast->force_persample_interp) {
+      /* Force the program to be reuploaded, which will trigger interp fixups
+       * to get applied
+       */
+      if (fp->mem)
+         nouveau_heap_free(&fp->mem);
+
+      fp->fp.force_persample_interp = rast->force_persample_interp;
+   }
+
+   if (fp->mem && !(nv50->dirty & (NV50_NEW_FRAGPROG | NV50_NEW_MIN_SAMPLES)))
+      return;
 
    if (!nv50_program_validate(nv50, fp))
-         return;
+      return;
    nv50_program_update_context_state(nv50, fp, 1);
 
    BEGIN_NV04(push, NV50_3D(FP_REG_ALLOC_TEMP), 1);

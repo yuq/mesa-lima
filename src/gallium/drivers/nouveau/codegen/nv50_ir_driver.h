@@ -144,6 +144,7 @@ struct nv50_ir_prog_info
          bool earlyFragTests;
          bool separateFragData;
          bool usesDiscard;
+         bool sampleInterp;      /* perform sample interp on all fp inputs */
       } fp;
       struct {
          uint32_t inputOffset; /* base address for user args */
@@ -168,7 +169,6 @@ struct nv50_ir_prog_info
       int8_t viewportId;         /* output index of ViewportIndex */
       uint8_t fragDepth;         /* output index of FragDepth */
       uint8_t sampleMask;        /* output index of SampleMask */
-      bool sampleInterp;         /* perform sample interp on all fp inputs */
       uint8_t backFaceColor[2];  /* input/output indices of back face colour */
       uint8_t globalAccess;      /* 1 for read, 2 for wr, 3 for rw */
       bool fp64;                 /* program uses fp64 math */

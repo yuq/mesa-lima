@@ -336,7 +336,6 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset)
    info->io.ucpCBSlot = 15;
    info->io.ucpBase = NV50_CB_AUX_UCP_OFFSET;
    info->io.genUserClip = prog->vp.clpd_nr;
-   info->io.sampleInterp = prog->fp.sample_interp;
 
    info->io.resInfoCBSlot = 15;
    info->io.suInfoBase = NV50_CB_AUX_TEX_MS_OFFSET;
@@ -374,6 +373,7 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset)
    prog->code = info->bin.code;
    prog->code_size = info->bin.codeSize;
    prog->fixups = info->bin.relocData;
+   prog->interps = info->bin.interpData;
    prog->max_gpr = MAX2(4, (info->bin.maxGPR >> 1) + 1);
    prog->tls_space = info->bin.tlsSpace;
 
@@ -456,6 +456,10 @@ nv50_program_upload_code(struct nv50_context *nv50, struct nv50_program *prog)
 
    if (prog->fixups)
       nv50_ir_relocate_code(prog->fixups, prog->code, prog->code_base, 0, 0);
+   if (prog->interps)
+      nv50_ir_change_interp(prog->interps, prog->code,
+                            prog->fp.force_persample_interp,
+                            false /* flatshade */);
 
    nv50_sifc_linear_u8(&nv50->base, nv50->screen->code,
                        (prog->type << NV50_CODE_BO_SIZE_LOG2) + prog->code_base,
