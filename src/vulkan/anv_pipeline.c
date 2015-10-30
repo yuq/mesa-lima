@@ -357,22 +357,12 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (nir == NULL)
       return NULL;
 
-   bool have_push_constants = false;
-   nir_foreach_variable(var, &nir->uniforms) {
-      const struct glsl_type *type = var->type;
-      if (glsl_type_is_array(type))
-         type = glsl_get_array_element(type);
-
-      if (!glsl_type_is_sampler(type)) {
-         have_push_constants = true;
-         break;
-      }
-   }
+   anv_nir_lower_push_constants(nir, is_scalar_shader_stage(compiler, stage));
 
    /* Figure out the number of parameters */
    prog_data->nr_params = 0;
 
-   if (have_push_constants) {
+   if (nir->num_uniforms > 0) {
       /* If the shader uses any push constants at all, we'll just give
        * them the maximum possible number
        */
@@ -394,7 +384,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
        * params array, it doesn't really matter what we put here.
        */
       struct anv_push_constants *null_data = NULL;
-      if (have_push_constants) {
+      if (nir->num_uniforms > 0) {
          /* Fill out the push constants section of the param array */
          for (unsigned i = 0; i < MAX_PUSH_CONSTANTS_SIZE / sizeof(float); i++)
             prog_data->param[i] = (const gl_constant_value *)

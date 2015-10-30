@@ -69,6 +69,7 @@ VULKAN_SOURCES =                                        \
 	anv_meta.c                                      \
 	anv_nir_apply_dynamic_offsets.c                 \
 	anv_nir_apply_pipeline_layout.c                 \
+	anv_nir_lower_push_constants.c                  \
 	anv_pass.c					\
 	anv_pipeline.c                                  \
 	anv_private.h                                   \
