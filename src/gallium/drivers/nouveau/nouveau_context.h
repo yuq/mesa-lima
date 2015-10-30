@@ -14,6 +14,7 @@ struct nouveau_context {
 
    struct nouveau_client *client;
    struct nouveau_pushbuf *pushbuf;
+   struct pipe_debug_callback debug;
 
    bool vbo_dirty;
 
@@ -62,6 +63,9 @@ nouveau_context(struct pipe_context *pipe)
 
 void
 nouveau_context_init_vdec(struct nouveau_context *);
+
+void
+nouveau_context_init(struct nouveau_context *);
 
 void
 nouveau_scratch_runout_release(struct nouveau_context *);

@@ -18,6 +18,7 @@
 
 #include "nouveau_winsys.h"
 #include "nouveau_screen.h"
+#include "nouveau_context.h"
 #include "nouveau_fence.h"
 #include "nouveau_mm.h"
 #include "nouveau_buffer.h"
@@ -237,4 +238,22 @@ nouveau_screen_fini(struct nouveau_screen *screen)
    nouveau_object_del(&screen->channel);
 
    nouveau_device_del(&screen->device);
+}
+
+static void
+nouveau_set_debug_callback(struct pipe_context *pipe,
+                           const struct pipe_debug_callback *cb)
+{
+   struct nouveau_context *context = nouveau_context(pipe);
+
+   if (cb)
+      context->debug = *cb;
+   else
+      memset(&context->debug, 0, sizeof(context->debug));
+}
+
+void
+nouveau_context_init(struct nouveau_context *context)
+{
+   context->pipe.set_debug_callback = nouveau_set_debug_callback;
 }
