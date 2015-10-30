@@ -929,8 +929,6 @@ generate_pull_constant_load(struct brw_codegen *p,
 			   2, /* mlen */
                            true, /* header_present */
 			   1 /* rlen */);
-
-   brw_mark_surface_used(&prog_data->base, surf_index);
 }
 
 static void
@@ -985,9 +983,6 @@ generate_pull_constant_load_gen7(struct brw_codegen *p,
                               inst->header_size != 0,
                               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
                               0);
-
-      brw_mark_surface_used(&prog_data->base, surf_index.dw1.ud);
-
    } else {
 
       struct brw_reg addr = vec1(retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD));
@@ -1017,10 +1012,6 @@ generate_pull_constant_load_gen7(struct brw_codegen *p,
                               inst->header_size != 0,
                               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
                               0);
-
-      /* visitor knows more than we do about the surface limit required,
-       * so has already done marking.
-       */
    }
 }
 

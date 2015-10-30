@@ -1745,14 +1745,16 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 				      int base_offset)
 {
    int reg_offset = base_offset + orig_src.reg_offset;
-   src_reg index = src_reg(prog_data->base.binding_table.pull_constants_start);
+   const unsigned index = prog_data->base.binding_table.pull_constants_start;
    src_reg offset = get_pull_constant_offset(block, inst, orig_src.reladdr,
                                              reg_offset);
 
    emit_pull_constant_load_reg(temp,
-                               index,
+                               src_reg(index),
                                offset,
                                block, inst);
+
+   brw_mark_surface_used(&prog_data->base, index);
 }
 
 /**
