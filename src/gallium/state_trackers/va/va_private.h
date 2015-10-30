@@ -46,7 +46,7 @@
 #define VL_VA_DRIVER(ctx) ((vlVaDriver *)ctx->pDriverData)
 #define VL_VA_PSCREEN(ctx) (VL_VA_DRIVER(ctx)->vscreen->pscreen)
 
-#define VL_VA_MAX_IMAGE_FORMATS 6
+#define VL_VA_MAX_IMAGE_FORMATS 9
 
 static inline enum pipe_video_chroma_format
 ChromaToPipe(int format)
@@ -59,13 +59,12 @@ ChromaToPipe(int format)
    case VA_RT_FORMAT_YUV444:
       return PIPE_VIDEO_CHROMA_FORMAT_444;
    default:
-      assert(0);
-      return PIPE_VIDEO_CHROMA_FORMAT_420;
+      return PIPE_VIDEO_CHROMA_FORMAT_NONE;
    }
 }
 
 static inline enum pipe_format
-YCbCrToPipe(unsigned format)
+VaFourccToPipeFormat(unsigned format)
 {
    switch(format) {
    case VA_FOURCC('N','V','1','2'):
@@ -80,9 +79,43 @@ YCbCrToPipe(unsigned format)
       return PIPE_FORMAT_UYVY;
    case VA_FOURCC('B','G','R','A'):
       return PIPE_FORMAT_B8G8R8A8_UNORM;
+   case VA_FOURCC('R','G','B','A'):
+      return PIPE_FORMAT_R8G8B8A8_UNORM;
+   case VA_FOURCC('B','G','R','X'):
+      return PIPE_FORMAT_B8G8R8X8_UNORM;
+   case VA_FOURCC('R','G','B','X'):
+      return PIPE_FORMAT_R8G8B8X8_UNORM;
    default:
       assert(0);
       return PIPE_FORMAT_NONE;
+   }
+}
+
+static inline unsigned
+PipeFormatToVaFourcc(enum pipe_format p_format)
+{
+   switch (p_format) {
+   case PIPE_FORMAT_NV12:
+      return VA_FOURCC('N','V','1','2');
+   case PIPE_FORMAT_IYUV:
+      return VA_FOURCC('I','4','2','0');
+   case PIPE_FORMAT_YV12:
+      return VA_FOURCC('Y','V','1','2');
+   case PIPE_FORMAT_UYVY:
+      return VA_FOURCC('U','Y','V','Y');
+   case PIPE_FORMAT_YUYV:
+      return VA_FOURCC('Y','U','Y','V');
+   case PIPE_FORMAT_B8G8R8A8_UNORM:
+      return VA_FOURCC('B','G','R','A');
+   case PIPE_FORMAT_R8G8B8A8_UNORM:
+      return VA_FOURCC('R','G','B','A');
+   case PIPE_FORMAT_B8G8R8X8_UNORM:
+      return VA_FOURCC('B','G','R','X');
+   case PIPE_FORMAT_R8G8B8X8_UNORM:
+      return VA_FOURCC('R','G','B','X');
+   default:
+      assert(0);
+      return -1;
    }
 }
 

@@ -37,14 +37,21 @@
 
 #include "va_private.h"
 
-static const VAImageFormat formats[VL_VA_MAX_IMAGE_FORMATS] =
+static const VAImageFormat formats[] =
 {
    {VA_FOURCC('N','V','1','2')},
    {VA_FOURCC('I','4','2','0')},
    {VA_FOURCC('Y','V','1','2')},
    {VA_FOURCC('Y','U','Y','V')},
    {VA_FOURCC('U','Y','V','Y')},
-   {VA_FOURCC('B','G','R','A')}
+   {.fourcc = VA_FOURCC('B','G','R','A'), .byte_order = VA_LSB_FIRST, 32, 32,
+    0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000},
+   {.fourcc = VA_FOURCC('R','G','B','A'), .byte_order = VA_LSB_FIRST, 32, 32,
+    0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000},
+   {.fourcc = VA_FOURCC('B','G','R','X'), .byte_order = VA_LSB_FIRST, 32, 24,
+    0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000},
+   {.fourcc = VA_FOURCC('R','G','B','X'), .byte_order = VA_LSB_FIRST, 32, 24,
+    0x000000ff, 0x0000ff00, 0x00ff0000, 0x00000000}
 };
 
 static void
@@ -72,6 +79,8 @@ vlVaQueryImageFormats(VADriverContextP ctx, VAImageFormat *format_list, int *num
    enum pipe_format format;
    int i;
 
+   STATIC_ASSERT(ARRAY_SIZE(formats) == VL_VA_MAX_IMAGE_FORMATS);
+
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
@@ -80,8 +89,8 @@ vlVaQueryImageFormats(VADriverContextP ctx, VAImageFormat *format_list, int *num
 
    *num_formats = 0;
    pscreen = VL_VA_PSCREEN(ctx);
-   for (i = 0; i < VL_VA_MAX_IMAGE_FORMATS; ++i) {
-      format = YCbCrToPipe(formats[i].fourcc);
+   for (i = 0; i < ARRAY_SIZE(formats); ++i) {
+      format = VaFourccToPipeFormat(formats[i].fourcc);
       if (pscreen->is_video_format_supported(pscreen, format,
           PIPE_VIDEO_PROFILE_UNKNOWN,
           PIPE_VIDEO_ENTRYPOINT_BITSTREAM))
@@ -149,6 +158,9 @@ vlVaCreateImage(VADriverContextP ctx, VAImageFormat *format, int width, int heig
       break;
 
    case VA_FOURCC('B','G','R','A'):
+   case VA_FOURCC('R','G','B','A'):
+   case VA_FOURCC('B','G','R','X'):
+   case VA_FOURCC('R','G','B','X'):
       img->num_planes = 1;
       img->pitches[0] = w * 4;
       img->offsets[0] = 0;
@@ -235,7 +247,7 @@ vlVaGetImage(VADriverContextP ctx, VASurfaceID surface, int x, int y,
    if (!img_buf)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
-   format = YCbCrToPipe(vaimage->format.fourcc);
+   format = VaFourccToPipeFormat(vaimage->format.fourcc);
    if (format == PIPE_FORMAT_NONE)
       return VA_STATUS_ERROR_OPERATION_FAILED;
 
@@ -330,7 +342,7 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
    if (!img_buf)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
-   format = YCbCrToPipe(vaimage->format.fourcc);
+   format = VaFourccToPipeFormat(vaimage->format.fourcc);
    if (format == PIPE_FORMAT_NONE)
       return VA_STATUS_ERROR_OPERATION_FAILED;
 
