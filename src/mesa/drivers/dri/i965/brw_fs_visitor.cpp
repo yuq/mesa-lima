@@ -1190,7 +1190,6 @@ fs_visitor::init()
    this->nir_ssa_values = NULL;
 
    memset(&this->payload, 0, sizeof(this->payload));
-   memset(this->outputs, 0, sizeof(this->outputs));
    memset(this->output_components, 0, sizeof(this->output_components));
    this->source_depth_to_render_target = false;
    this->runtime_check_aads_emit = false;

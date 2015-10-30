@@ -106,6 +106,9 @@ void
 vec4_visitor::nir_setup_system_values()
 {
    nir_system_values = ralloc_array(mem_ctx, dst_reg, SYSTEM_VALUE_MAX);
+   for (unsigned i = 0; i < SYSTEM_VALUE_MAX; i++) {
+      nir_system_values[i] = dst_reg();
+   }
 
    nir_foreach_overload(nir, overload) {
       assert(strcmp(overload->function->name, "main") == 0);
@@ -118,6 +121,9 @@ void
 vec4_visitor::nir_setup_inputs()
 {
    nir_inputs = ralloc_array(mem_ctx, src_reg, nir->num_inputs);
+   for (unsigned i = 0; i < nir->num_inputs; i++) {
+      nir_inputs[i] = dst_reg();
+   }
 
    nir_foreach_variable(var, &nir->inputs) {
       int offset = var->data.driver_location;
@@ -148,6 +154,9 @@ void
 vec4_visitor::nir_emit_impl(nir_function_impl *impl)
 {
    nir_locals = ralloc_array(mem_ctx, dst_reg, impl->reg_alloc);
+   for (unsigned i = 0; i < impl->reg_alloc; i++) {
+      nir_locals[i] = dst_reg();
+   }
 
    foreach_list_typed(nir_register, reg, node, &impl->registers) {
       unsigned array_elems =

@@ -262,6 +262,10 @@ void
 fs_visitor::nir_emit_system_values()
 {
    nir_system_values = ralloc_array(mem_ctx, fs_reg, SYSTEM_VALUE_MAX);
+   for (unsigned i = 0; i < SYSTEM_VALUE_MAX; i++) {
+      nir_system_values[i] = fs_reg();
+   }
+
    nir_foreach_overload(nir, overload) {
       assert(strcmp(overload->function->name, "main") == 0);
       assert(overload->impl);
@@ -272,7 +276,11 @@ fs_visitor::nir_emit_system_values()
 void
 fs_visitor::nir_emit_impl(nir_function_impl *impl)
 {
-   nir_locals = reralloc(mem_ctx, nir_locals, fs_reg, impl->reg_alloc);
+   nir_locals = ralloc_array(mem_ctx, fs_reg, impl->reg_alloc);
+   for (unsigned i = 0; i < impl->reg_alloc; i++) {
+      nir_locals[i] = fs_reg();
+   }
+
    foreach_list_typed(nir_register, reg, node, &impl->registers) {
       unsigned array_elems =
          reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
