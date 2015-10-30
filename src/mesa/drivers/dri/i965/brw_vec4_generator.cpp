@@ -955,8 +955,6 @@ generate_get_buffer_size(struct brw_codegen *p,
               inst->header_size > 0,
               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
               BRW_SAMPLER_RETURN_FORMAT_SINT32);
-
-   brw_mark_surface_used(&prog_data->base, surf_index.dw1.ud);
 }
 
 static void

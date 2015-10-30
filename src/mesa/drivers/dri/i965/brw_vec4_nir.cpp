@@ -427,15 +427,15 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       nir_const_value *const_uniform_block = nir_src_as_const_value(instr->src[0]);
       unsigned ssbo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
 
-      src_reg surf_index = src_reg(prog_data->base.binding_table.ssbo_start +
-                                   ssbo_index);
+      const unsigned index =
+         prog_data->base.binding_table.ssbo_start + ssbo_index;
       dst_reg result_dst = get_nir_dest(instr->dest);
       vec4_instruction *inst = new(mem_ctx)
          vec4_instruction(VS_OPCODE_GET_BUFFER_SIZE, result_dst);
 
       inst->base_mrf = 2;
       inst->mlen = 1; /* always at least one */
-      inst->src[1] = src_reg(surf_index);
+      inst->src[1] = src_reg(index);
 
       /* MRF for the first parameter */
       src_reg lod = src_reg(0);
@@ -444,6 +444,8 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       emit(MOV(dst_reg(MRF, param_base, glsl_type::int_type, writemask), lod));
 
       emit(inst);
+
+      brw_mark_surface_used(&prog_data->base, index);
       break;
    }
 
