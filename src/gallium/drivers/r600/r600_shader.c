@@ -162,10 +162,6 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 		goto error;
 	}
 
-    /* disable SB for geom shaders on R6xx/R7xx due to some mysterious gs piglit regressions with it enabled. */
-    if (rctx->b.chip_class <= R700) {
-	    use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_GEOMETRY);
-    }
 	/* disable SB for shaders using doubles */
 	use_sb &= !shader->shader.uses_doubles;
 
