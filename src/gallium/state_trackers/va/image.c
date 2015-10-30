@@ -184,10 +184,97 @@ vlVaCreateImage(VADriverContextP ctx, VAImageFormat *format, int width, int heig
 VAStatus
 vlVaDeriveImage(VADriverContextP ctx, VASurfaceID surface, VAImage *image)
 {
+   vlVaDriver *drv;
+   vlVaSurface *surf;
+   vlVaBuffer *img_buf;
+   VAImage *img;
+   struct pipe_surface **surfaces;
+   int w;
+   int h;
+   int i;
+
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-   return VA_STATUS_ERROR_UNIMPLEMENTED;
+   drv = VL_VA_DRIVER(ctx);
+
+   if (!drv)
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+   surf = handle_table_get(drv->htab, surface);
+
+   if (!surf || !surf->buffer || surf->buffer->interlaced)
+      return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   surfaces = surf->buffer->get_surfaces(surf->buffer);
+   if (!surfaces || !surfaces[0]->texture)
+      return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+   img = CALLOC(1, sizeof(VAImage));
+   if (!img)
+      return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+   img->format.fourcc = PipeFormatToVaFourcc(surf->buffer->buffer_format);
+   img->buf = VA_INVALID_ID;
+   img->width = surf->buffer->width;
+   img->height = surf->buffer->height;
+   img->num_palette_entries = 0;
+   img->entry_bytes = 0;
+   w = align(surf->buffer->width, 2);
+   h = align(surf->buffer->height, 2);
+
+   for (i = 0; i < ARRAY_SIZE(formats); ++i) {
+      if (img->format.fourcc == formats[i].fourcc) {
+         img->format = formats[i];
+         break;
+      }
+   }
+
+   switch (img->format.fourcc) {
+   case VA_FOURCC('U','Y','V','Y'):
+   case VA_FOURCC('Y','U','Y','V'):
+      img->num_planes = 1;
+      img->pitches[0] = w * 2;
+      img->offsets[0] = 0;
+      img->data_size  = w * h * 2;
+      break;
+
+   case VA_FOURCC('B','G','R','A'):
+   case VA_FOURCC('R','G','B','A'):
+   case VA_FOURCC('B','G','R','X'):
+   case VA_FOURCC('R','G','B','X'):
+      img->num_planes = 1;
+      img->pitches[0] = w * 4;
+      img->offsets[0] = 0;
+      img->data_size  = w * h * 4;
+      break;
+
+   default:
+      /* VaDeriveImage is designed for contiguous planes. */
+      FREE(img);
+      return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
+   }
+
+   img_buf = CALLOC(1, sizeof(vlVaBuffer));
+   if (!img_buf) {
+      FREE(img);
+      return VA_STATUS_ERROR_ALLOCATION_FAILED;
+   }
+
+   img->image_id = handle_table_add(drv->htab, img);
+
+   img_buf->type = VAImageBufferType;
+   img_buf->size = image->data_size;
+   img_buf->num_elements = 1;
+   img_buf->derived_surface.fence = surf->fence;
+
+   pipe_resource_reference(&img_buf->derived_surface.resource, surfaces[0]->texture);
+
+   img->buf = handle_table_add(VL_VA_DRIVER(ctx)->htab, img_buf);
+
+   *image = *img;
+
+   return VA_STATUS_SUCCESS;
 }
 
 VAStatus
@@ -342,7 +429,13 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
    if (!img_buf)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
+   if (img_buf->derived_surface.resource) {
+      /* Attempting to transfer derived image to surface */
+      return VA_STATUS_ERROR_UNIMPLEMENTED;
+   }
+
    format = VaFourccToPipeFormat(vaimage->format.fourcc);
+
    if (format == PIPE_FORMAT_NONE)
       return VA_STATUS_ERROR_OPERATION_FAILED;
 

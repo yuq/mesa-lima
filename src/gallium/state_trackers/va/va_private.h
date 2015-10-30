@@ -233,6 +233,11 @@ typedef struct {
    unsigned int size;
    unsigned int num_elements;
    void *data;
+   struct {
+      struct pipe_resource *resource;
+      struct pipe_transfer *transfer;
+      struct pipe_fence_handle *fence;
+   } derived_surface;
 } vlVaBuffer;
 
 typedef struct {
