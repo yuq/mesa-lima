@@ -39,13 +39,13 @@
 #define MAX_VGRF_SIZE 16
 
 enum PACKED register_file {
-   BAD_FILE,
    GRF,
    MRF,
    IMM,
    HW_REG, /* a struct brw_reg */
    ATTR,
    UNIFORM, /* prog_data->params[reg] */
+   BAD_FILE,
 };
 
 #ifdef __cplusplus
