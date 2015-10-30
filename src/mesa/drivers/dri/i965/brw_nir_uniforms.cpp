@@ -98,6 +98,8 @@ brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
       if (storage->type->is_image()) {
          brw_setup_image_uniform_values(stage, stage_prog_data,
                                         uniform_index, storage);
+         uniform_index +=
+            BRW_IMAGE_PARAM_SIZE * MAX2(storage->array_elements, 1);
       } else {
          gl_constant_value *components = storage->storage;
          unsigned vector_count = (MAX2(storage->array_elements, 1) *

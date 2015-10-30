@@ -1062,18 +1062,17 @@ fs_visitor::get_nir_image_deref(const nir_deref_var *deref)
    fs_reg image(UNIFORM, deref->var->data.driver_location,
                 BRW_REGISTER_TYPE_UD);
 
-   if (deref->deref.child) {
-      const nir_deref_array *deref_array =
-         nir_deref_as_array(deref->deref.child);
-      assert(deref->deref.child->deref_type == nir_deref_type_array &&
-             deref_array->deref.child == NULL);
-      const unsigned size = glsl_get_length(deref->var->type);
+   for (const nir_deref *tail = &deref->deref; tail->child;
+        tail = tail->child) {
+      const nir_deref_array *deref_array = nir_deref_as_array(tail->child);
+      assert(tail->child->deref_type == nir_deref_type_array);
+      const unsigned size = glsl_get_length(tail->type);
+      const unsigned element_size = type_size_scalar(deref_array->deref.type);
       const unsigned base = MIN2(deref_array->base_offset, size - 1);
-
-      image = offset(image, bld, base * BRW_IMAGE_PARAM_SIZE);
+      image = offset(image, bld, base * element_size);
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
-         fs_reg *tmp = new(mem_ctx) fs_reg(vgrf(glsl_type::int_type));
+         fs_reg tmp = vgrf(glsl_type::int_type);
 
          if (devinfo->gen == 7 && !devinfo->is_haswell) {
             /* IVB hangs when trying to access an invalid surface index with
@@ -1084,15 +1083,18 @@ fs_visitor::get_nir_image_deref(const nir_deref_var *deref)
              * of the possible outcomes of the hang.  Clamp the index to
              * prevent access outside of the array bounds.
              */
-            bld.emit_minmax(*tmp, retype(get_nir_src(deref_array->indirect),
-                                         BRW_REGISTER_TYPE_UD),
+            bld.emit_minmax(tmp, retype(get_nir_src(deref_array->indirect),
+                                        BRW_REGISTER_TYPE_UD),
                             fs_reg(size - base - 1), BRW_CONDITIONAL_L);
          } else {
-            bld.MOV(*tmp, get_nir_src(deref_array->indirect));
+            bld.MOV(tmp, get_nir_src(deref_array->indirect));
          }
 
-         bld.MUL(*tmp, *tmp, fs_reg(BRW_IMAGE_PARAM_SIZE));
-         image.reladdr = tmp;
+         bld.MUL(tmp, tmp, fs_reg(element_size));
+         if (image.reladdr)
+            bld.ADD(*image.reladdr, *image.reladdr, tmp);
+         else
+            image.reladdr = new(mem_ctx) fs_reg(tmp);
       }
    }
 
