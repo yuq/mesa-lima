@@ -33,6 +33,7 @@
 
 #include <va/va.h>
 #include <va/va_backend.h>
+#include <va/va_backend_vpp.h>
 
 #include "pipe/p_video_enums.h"
 #include "pipe/p_video_codec.h"
@@ -318,4 +319,11 @@ VAStatus vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format, unsigned
                              unsigned int num_attribs);
 VAStatus vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config, VASurfaceAttrib *attrib_list,
                                     unsigned int *num_attribs);
+
+VAStatus vlVaQueryVideoProcFilters(VADriverContextP ctx, VAContextID context, VAProcFilterType *filters,
+                                   unsigned int *num_filters);
+VAStatus vlVaQueryVideoProcFilterCaps(VADriverContextP ctx, VAContextID context, VAProcFilterType type,
+                                      void *filter_caps, unsigned int *num_filter_caps);
+VAStatus vlVaQueryVideoProcPipelineCaps(VADriverContextP ctx, VAContextID context, VABufferID *filters,
+                                        unsigned int num_filters, VAProcPipelineCaps *pipeline_cap);
 #endif //VA_PRIVATE_H

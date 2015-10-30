@@ -348,7 +348,8 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config,
     i = 0;
 
     if (config == PIPE_VIDEO_PROFILE_UNKNOWN) {
-       /* Assume VAEntrypointVideoProc for now. */
+       /* vlVaCreateConfig returns PIPE_VIDEO_PROFILE_UNKNOWN
+          only for VAEntrypointVideoProc. */
        attribs[i].type = VASurfaceAttribPixelFormat;
        attribs[i].value.type = VAGenericValueTypeInteger;
        attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
@@ -633,4 +634,99 @@ no_res:
       vlVaDestroySurfaces(ctx, surfaces, i);
 
    return VA_STATUS_ERROR_ALLOCATION_FAILED;
+}
+
+VAStatus
+vlVaQueryVideoProcFilters(VADriverContextP ctx, VAContextID context,
+                          VAProcFilterType *filters, unsigned int *num_filters)
+{
+   unsigned int num = 0;
+
+   if (!ctx)
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+   if (!num_filters || !filters)
+      return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+   filters[num++] = VAProcFilterNone;
+
+   *num_filters = num;
+
+   return VA_STATUS_SUCCESS;
+}
+
+VAStatus
+vlVaQueryVideoProcFilterCaps(VADriverContextP ctx, VAContextID context,
+                             VAProcFilterType type, void *filter_caps,
+                             unsigned int *num_filter_caps)
+{
+   unsigned int i;
+
+   if (!ctx)
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+   if (!filter_caps || !num_filter_caps)
+      return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+   i = 0;
+
+   switch (type) {
+   case VAProcFilterNone:
+      break;
+   case VAProcFilterNoiseReduction:
+   case VAProcFilterDeinterlacing:
+   case VAProcFilterSharpening:
+   case VAProcFilterColorBalance:
+   case VAProcFilterSkinToneEnhancement:
+      return VA_STATUS_ERROR_UNIMPLEMENTED;
+   default:
+      assert(0);
+   }
+
+   *num_filter_caps = i;
+
+   return VA_STATUS_SUCCESS;
+}
+
+static VAProcColorStandardType vpp_input_color_standards[VAProcColorStandardCount] = {
+   VAProcColorStandardBT601
+};
+
+static VAProcColorStandardType vpp_output_color_standards[VAProcColorStandardCount] = {
+   VAProcColorStandardBT601
+};
+
+VAStatus
+vlVaQueryVideoProcPipelineCaps(VADriverContextP ctx, VAContextID context,
+                               VABufferID *filters, unsigned int num_filters,
+                               VAProcPipelineCaps *pipeline_cap)
+{
+   unsigned int i = 0;
+
+   if (!ctx)
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+   if (!pipeline_cap)
+   return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+   if (num_filters && !filters)
+      return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+   pipeline_cap->pipeline_flags = 0;
+   pipeline_cap->filter_flags = 0;
+   pipeline_cap->num_forward_references = 0;
+   pipeline_cap->num_backward_references = 0;
+   pipeline_cap->num_input_color_standards = 1;
+   pipeline_cap->input_color_standards = vpp_input_color_standards;
+   pipeline_cap->num_output_color_standards = 1;
+   pipeline_cap->output_color_standards = vpp_output_color_standards;
+
+   for (i = 0; i < num_filters; i++) {
+      vlVaBuffer *buf = handle_table_get(VL_VA_DRIVER(ctx)->htab, filters[i]);
+
+      if (!buf || buf->type >= VABufferTypeMax)
+         return VA_STATUS_ERROR_INVALID_BUFFER;
+   }
+
+   return VA_STATUS_SUCCESS;
 }

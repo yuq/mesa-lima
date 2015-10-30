@@ -87,6 +87,14 @@ static struct VADriverVTable vtable =
    &vlVaQuerySurfaceAttributes
 };
 
+static struct VADriverVTableVPP vtable_vpp =
+{
+   1,
+   &vlVaQueryVideoProcFilters,
+   &vlVaQueryVideoProcFilterCaps,
+   &vlVaQueryVideoProcPipelineCaps
+};
+
 PUBLIC VAStatus
 VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
 {
@@ -122,6 +130,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
    ctx->version_major = 0;
    ctx->version_minor = 1;
    *ctx->vtable = vtable;
+   *ctx->vtable_vpp = vtable_vpp;
    ctx->max_profiles = PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH - PIPE_VIDEO_PROFILE_UNKNOWN;
    ctx->max_entrypoints = 1;
    ctx->max_attributes = 1;
@@ -151,11 +160,15 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
    struct pipe_video_codec templat = {};
    vlVaDriver *drv;
    vlVaContext *context;
+   int is_vpp;
 
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-   if (!(picture_width && picture_height))
+   is_vpp = config_id == PIPE_VIDEO_PROFILE_UNKNOWN && !picture_width &&
+            !picture_height && !flag && !render_targets && !num_render_targets;
+
+   if (!(picture_width && picture_height) && !is_vpp)
       return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
 
    drv = VL_VA_DRIVER(ctx);
@@ -163,52 +176,60 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
    if (!context)
       return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
-   templat.profile = config_id;
-   templat.entrypoint = PIPE_VIDEO_ENTRYPOINT_BITSTREAM;
-   templat.chroma_format = PIPE_VIDEO_CHROMA_FORMAT_420;
-   templat.width = picture_width;
-   templat.height = picture_height;
-   templat.max_references = num_render_targets;
-   templat.expect_chunked_decode = true;
+   if (is_vpp) {
+      context->decoder = NULL;
+      if (!drv->compositor.upload) {
+         FREE(context);
+         return VA_STATUS_ERROR_INVALID_CONTEXT;
+      }
+   } else {
+      templat.profile = config_id;
+      templat.entrypoint = PIPE_VIDEO_ENTRYPOINT_BITSTREAM;
+      templat.chroma_format = PIPE_VIDEO_CHROMA_FORMAT_420;
+      templat.width = picture_width;
+      templat.height = picture_height;
+      templat.max_references = num_render_targets;
+      templat.expect_chunked_decode = true;
 
-   if (u_reduce_video_profile(templat.profile) ==
-       PIPE_VIDEO_FORMAT_MPEG4_AVC)
-      templat.level = u_get_h264_level(templat.width, templat.height,
-                            &templat.max_references);
+      if (u_reduce_video_profile(templat.profile) ==
+        PIPE_VIDEO_FORMAT_MPEG4_AVC)
+        templat.level = u_get_h264_level(templat.width, templat.height,
+                             &templat.max_references);
 
-   context->decoder = drv->pipe->create_video_codec(drv->pipe, &templat);
-   if (!context->decoder) {
-      FREE(context);
-      return VA_STATUS_ERROR_ALLOCATION_FAILED;
-   }
+      context->decoder = drv->pipe->create_video_codec(drv->pipe, &templat);
+      if (!context->decoder) {
+         FREE(context);
+         return VA_STATUS_ERROR_ALLOCATION_FAILED;
+      }
 
-   if (u_reduce_video_profile(context->decoder->profile) ==
+      if (u_reduce_video_profile(context->decoder->profile) ==
          PIPE_VIDEO_FORMAT_MPEG4_AVC) {
-      context->desc.h264.pps = CALLOC_STRUCT(pipe_h264_pps);
-      if (!context->desc.h264.pps) {
-         FREE(context);
-         return VA_STATUS_ERROR_ALLOCATION_FAILED;
+         context->desc.h264.pps = CALLOC_STRUCT(pipe_h264_pps);
+         if (!context->desc.h264.pps) {
+            FREE(context);
+            return VA_STATUS_ERROR_ALLOCATION_FAILED;
+         }
+         context->desc.h264.pps->sps = CALLOC_STRUCT(pipe_h264_sps);
+         if (!context->desc.h264.pps->sps) {
+            FREE(context->desc.h264.pps);
+            FREE(context);
+            return VA_STATUS_ERROR_ALLOCATION_FAILED;
+         }
       }
-      context->desc.h264.pps->sps = CALLOC_STRUCT(pipe_h264_sps);
-      if (!context->desc.h264.pps->sps) {
-         FREE(context->desc.h264.pps);
-         FREE(context);
-         return VA_STATUS_ERROR_ALLOCATION_FAILED;
-      }
-   }
 
-   if (u_reduce_video_profile(context->decoder->profile) ==
-         PIPE_VIDEO_FORMAT_HEVC) {
-      context->desc.h265.pps = CALLOC_STRUCT(pipe_h265_pps);
-      if (!context->desc.h265.pps) {
-         FREE(context);
-         return VA_STATUS_ERROR_ALLOCATION_FAILED;
-      }
-      context->desc.h265.pps->sps = CALLOC_STRUCT(pipe_h265_sps);
-      if (!context->desc.h265.pps->sps) {
-         FREE(context->desc.h265.pps);
-         FREE(context);
-         return VA_STATUS_ERROR_ALLOCATION_FAILED;
+      if (u_reduce_video_profile(context->decoder->profile) ==
+            PIPE_VIDEO_FORMAT_HEVC) {
+         context->desc.h265.pps = CALLOC_STRUCT(pipe_h265_pps);
+         if (!context->desc.h265.pps) {
+            FREE(context);
+            return VA_STATUS_ERROR_ALLOCATION_FAILED;
+         }
+         context->desc.h265.pps->sps = CALLOC_STRUCT(pipe_h265_sps);
+         if (!context->desc.h265.pps->sps) {
+            FREE(context->desc.h265.pps);
+            FREE(context);
+            return VA_STATUS_ERROR_ALLOCATION_FAILED;
+         }
       }
    }
 
@@ -229,17 +250,20 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
 
    drv = VL_VA_DRIVER(ctx);
    context = handle_table_get(drv->htab, context_id);
-   if (u_reduce_video_profile(context->decoder->profile) ==
-         PIPE_VIDEO_FORMAT_MPEG4_AVC) {
-      FREE(context->desc.h264.pps->sps);
-      FREE(context->desc.h264.pps);
+
+   if (context->decoder) {
+      if (u_reduce_video_profile(context->decoder->profile) ==
+            PIPE_VIDEO_FORMAT_MPEG4_AVC) {
+         FREE(context->desc.h264.pps->sps);
+         FREE(context->desc.h264.pps);
+      }
+      if (u_reduce_video_profile(context->decoder->profile) ==
+            PIPE_VIDEO_FORMAT_HEVC) {
+         FREE(context->desc.h265.pps->sps);
+         FREE(context->desc.h265.pps);
+      }
+      context->decoder->destroy(context->decoder);
    }
-   if (u_reduce_video_profile(context->decoder->profile) ==
-         PIPE_VIDEO_FORMAT_HEVC) {
-      FREE(context->desc.h265.pps->sps);
-      FREE(context->desc.h265.pps);
-   }
-   context->decoder->destroy(context->decoder);
    FREE(context);
    handle_table_remove(drv->htab, context_id);
 
