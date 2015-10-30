@@ -2025,7 +2025,6 @@ fs_visitor::demote_pull_constants()
                                        pull_index);
             inst->src[i].reladdr = NULL;
             inst->src[i].stride = 1;
-            brw_mark_surface_used(prog_data, index);
          } else {
             const fs_builder ubld = ibld.exec_all().group(8, 0);
             fs_reg offset = fs_reg((unsigned)(pull_index * 4) & ~15);
@@ -2033,6 +2032,7 @@ fs_visitor::demote_pull_constants()
                       dst, fs_reg(index), offset);
             inst->src[i].set_smear(pull_index & 3);
          }
+         brw_mark_surface_used(prog_data, index);
 
          /* Rewrite the instruction to use the temporary VGRF. */
          inst->src[i].file = GRF;
