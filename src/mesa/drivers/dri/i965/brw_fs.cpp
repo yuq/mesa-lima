@@ -2012,7 +2012,7 @@ fs_visitor::demote_pull_constants()
 
          /* Set up the annotation tracking for new generated instructions. */
          const fs_builder ibld(this, block, inst);
-         fs_reg surf_index(stage_prog_data->binding_table.pull_constants_start);
+         const unsigned index = stage_prog_data->binding_table.pull_constants_start;
          fs_reg dst = vgrf(glsl_type::float_type);
 
          assert(inst->src[i].stride == 0);
@@ -2020,16 +2020,17 @@ fs_visitor::demote_pull_constants()
          /* Generate a pull load into dst. */
          if (inst->src[i].reladdr) {
             VARYING_PULL_CONSTANT_LOAD(ibld, dst,
-                                       surf_index,
+                                       fs_reg(index),
                                        *inst->src[i].reladdr,
                                        pull_index);
             inst->src[i].reladdr = NULL;
             inst->src[i].stride = 1;
+            brw_mark_surface_used(prog_data, index);
          } else {
             const fs_builder ubld = ibld.exec_all().group(8, 0);
             fs_reg offset = fs_reg((unsigned)(pull_index * 4) & ~15);
             ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
-                      dst, surf_index, offset);
+                      dst, fs_reg(index), offset);
             inst->src[i].set_smear(pull_index & 3);
          }
 

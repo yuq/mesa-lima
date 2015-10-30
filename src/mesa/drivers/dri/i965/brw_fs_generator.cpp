@@ -1349,8 +1349,6 @@ fs_generator::generate_varying_pull_constant_load(fs_inst *inst,
                            inst->header_size != 0,
                            simd_mode,
                            return_format);
-
-   brw_mark_surface_used(prog_data, surf_index);
 }
 
 void
@@ -1395,8 +1393,6 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
                               simd_mode,
                               0);
 
-      brw_mark_surface_used(prog_data, surf_index);
-
    } else {
 
       struct brw_reg addr = vec1(retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD));
@@ -1427,10 +1423,6 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
                               false /* header */,
                               simd_mode,
                               0);
-
-      /* visitor knows more than we do about the surface limit required,
-       * so has already done marking.
-       */
    }
 }
 

@@ -1827,8 +1827,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       fs_reg surf_index;
 
       if (const_index) {
-         surf_index = fs_reg(stage_prog_data->binding_table.ubo_start +
-                             const_index->u[0]);
+         const unsigned index = stage_prog_data->binding_table.ubo_start +
+                                const_index->u[0];
+         surf_index = fs_reg(index);
+         brw_mark_surface_used(prog_data, index);
       } else {
          /* The block index is not a constant. Evaluate the index expression
           * per-channel and add the base UBO index; we have to select a value
