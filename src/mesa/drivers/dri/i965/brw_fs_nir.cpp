@@ -2275,12 +2275,14 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                                   BRW_REGISTER_TYPE_UD);
       bld.LOAD_PAYLOAD(src_payload, &source, 1, 0);
 
-      fs_reg surf_index = fs_reg(prog_data->binding_table.ssbo_start + ssbo_index);
+      const unsigned index = prog_data->binding_table.ssbo_start + ssbo_index;
       fs_inst *inst = bld.emit(FS_OPCODE_GET_BUFFER_SIZE, dest,
-                               src_payload, surf_index);
+                               src_payload, fs_reg(index));
       inst->header_size = 0;
       inst->mlen = mlen;
       bld.emit(inst);
+
+      brw_mark_surface_used(prog_data, index);
       break;
    }
 

@@ -666,8 +666,6 @@ fs_generator::generate_get_buffer_size(fs_inst *inst,
               inst->header_size > 0,
               simd_mode,
               BRW_SAMPLER_RETURN_FORMAT_SINT32);
-
-   brw_mark_surface_used(prog_data, surf_index.dw1.ud);
 }
 
 void
