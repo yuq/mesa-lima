@@ -669,6 +669,20 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
    }
 }
 
+/**
+ * Find a program resource that points to given data.
+ */
+static struct gl_program_resource*
+program_resource_find_data(struct gl_shader_program *shProg, void *data)
+{
+   struct gl_program_resource *res = shProg->ProgramResourceList;
+   for (unsigned i = 0; i < shProg->NumProgramResourceList; i++, res++) {
+      if (res->Data == data)
+         return res;
+   }
+   return NULL;
+}
+
 /* Find a program resource with specific index in given interface.
  */
 struct gl_program_resource *
@@ -1066,8 +1080,18 @@ get_buffer_property(struct gl_shader_program *shProg,
          *val = RESOURCE_ATC(res)->NumUniforms;
          return 1;
       case GL_ACTIVE_VARIABLES:
-         for (unsigned i = 0; i < RESOURCE_ATC(res)->NumUniforms; i++)
-            *val++ = RESOURCE_ATC(res)->Uniforms[i];
+         for (unsigned i = 0; i < RESOURCE_ATC(res)->NumUniforms; i++) {
+            /* Active atomic buffer contains index to UniformStorage. Find
+             * out gl_program_resource via data pointer and then calculate
+             * index of that uniform.
+             */
+            unsigned idx = RESOURCE_ATC(res)->Uniforms[i];
+            struct gl_program_resource *uni =
+               program_resource_find_data(shProg,
+                                          &shProg->UniformStorage[idx]);
+            assert(uni);
+            *val++ = _mesa_program_resource_index(shProg, uni);
+         }
          return RESOURCE_ATC(res)->NumUniforms;
       }
    }
