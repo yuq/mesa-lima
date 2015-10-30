@@ -492,7 +492,7 @@ dri3_x11_connect(struct dri2_egl_display *dri2_dpy)
    dri3_query =
       xcb_dri3_query_version_reply(dri2_dpy->conn, dri3_query_cookie, &error);
    if (dri3_query == NULL || error != NULL) {
-      _eglLog(_EGL_WARNING, "DRI2: failed to query dri3 version");
+      _eglLog(_EGL_WARNING, "DRI3: failed to query the version");
       free(dri3_query);
       free(error);
       return EGL_FALSE;
@@ -503,7 +503,7 @@ dri3_x11_connect(struct dri2_egl_display *dri2_dpy)
       xcb_present_query_version_reply(dri2_dpy->conn,
                                       present_query_cookie, &error);
    if (present_query == NULL || error != NULL) {
-      _eglLog(_EGL_WARNING, "DRI2: failed to query Present version");
+      _eglLog(_EGL_WARNING, "DRI3: failed to query Present version");
       free(present_query);
       free(error);
       return EGL_FALSE;
@@ -520,10 +520,10 @@ dri3_x11_connect(struct dri2_egl_display *dri2_dpy)
    dri2_dpy->fd = loader_dri3_open(dri2_dpy->conn, screen->root, 0);
    if (dri2_dpy->fd < 0) {
       int conn_error = xcb_connection_has_error(dri2_dpy->conn);
-      _eglLog(_EGL_WARNING, "DRI2: Screen seem not DRI3 capable");
+      _eglLog(_EGL_WARNING, "DRI3: Screen seems not DRI3 capable");
 
       if (conn_error)
-         _eglLog(_EGL_WARNING, "DRI2: Failed to initialize DRI3");
+         _eglLog(_EGL_WARNING, "DRI3: Failed to initialize");
 
       return EGL_FALSE;
    }
@@ -532,7 +532,7 @@ dri3_x11_connect(struct dri2_egl_display *dri2_dpy)
 
    dri2_dpy->driver_name = loader_get_driver_for_fd(dri2_dpy->fd, 0);
    if (!dri2_dpy->driver_name) {
-      _eglLog(_EGL_WARNING, "DRI2: No driver found");
+      _eglLog(_EGL_WARNING, "DRI3: No driver found");
       close(dri2_dpy->fd);
       return EGL_FALSE;
    }

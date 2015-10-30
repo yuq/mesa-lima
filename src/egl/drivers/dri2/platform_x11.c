@@ -1280,7 +1280,7 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
    }
 
    if (xcb_connection_has_error(dri2_dpy->conn)) {
-      _eglLog(_EGL_WARNING, "DRI2: xcb_connect failed");
+      _eglLog(_EGL_WARNING, "DRI3: xcb_connect failed");
       goto cleanup_dpy;
    }
 
@@ -1331,6 +1331,8 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
     * initialization.
     */
    dri2_dpy->vtbl = &dri3_x11_display_vtbl;
+
+   _eglLog(_EGL_INFO, "Using DRI3");
 
    return EGL_TRUE;
 
@@ -1428,6 +1430,8 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
     * initialization.
     */
    dri2_dpy->vtbl = &dri2_x11_display_vtbl;
+
+   _eglLog(_EGL_INFO, "Using DRI2");
 
    return EGL_TRUE;
 

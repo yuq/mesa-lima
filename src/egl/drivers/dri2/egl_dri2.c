@@ -391,13 +391,13 @@ dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
    void *field;
 
    for (i = 0; extensions[i]; i++) {
-      _eglLog(_EGL_DEBUG, "DRI2: found extension `%s'", extensions[i]->name);
+      _eglLog(_EGL_DEBUG, "found extension `%s'", extensions[i]->name);
       for (j = 0; matches[j].name; j++) {
 	 if (strcmp(extensions[i]->name, matches[j].name) == 0 &&
 	     extensions[i]->version >= matches[j].version) {
 	    field = ((char *) dri2_dpy + matches[j].offset);
 	    *(const __DRIextension **) field = extensions[i];
-	    _eglLog(_EGL_INFO, "DRI2: found extension %s version %d",
+	    _eglLog(_EGL_INFO, "found extension %s version %d",
 		    extensions[i]->name, extensions[i]->version);
 	 }
       }
@@ -406,7 +406,7 @@ dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
    for (j = 0; matches[j].name; j++) {
       field = ((char *) dri2_dpy + matches[j].offset);
       if (*(const __DRIextension **) field == NULL) {
-	 _eglLog(_EGL_WARNING, "DRI2: did not find extension %s version %d",
+         _eglLog(_EGL_WARNING, "did not find extension %s version %d",
 		 matches[j].name, matches[j].version);
 	 ret = EGL_FALSE;
       }
