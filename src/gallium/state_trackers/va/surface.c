@@ -36,6 +36,7 @@
 #include "util/u_surface.h"
 
 #include "vl/vl_compositor.h"
+#include "vl/vl_video_buffer.h"
 #include "vl/vl_winsys.h"
 
 #include "va_private.h"
@@ -44,56 +45,8 @@ VAStatus
 vlVaCreateSurfaces(VADriverContextP ctx, int width, int height, int format,
                    int num_surfaces, VASurfaceID *surfaces)
 {
-   struct pipe_video_buffer templat = {};
-   struct pipe_screen *pscreen;
-   vlVaDriver *drv;
-   int i;
-
-   if (!ctx)
-      return VA_STATUS_ERROR_INVALID_CONTEXT;
-
-   if (!(width && height))
-      return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
-
-   drv = VL_VA_DRIVER(ctx);
-   pscreen = VL_VA_PSCREEN(ctx);
-
-   templat.buffer_format = pscreen->get_video_param
-   (
-      pscreen,
-      PIPE_VIDEO_PROFILE_UNKNOWN,
-      PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
-      PIPE_VIDEO_CAP_PREFERED_FORMAT
-   );
-   templat.chroma_format = ChromaToPipe(format);
-   templat.width = width;
-   templat.height = height;
-   templat.interlaced = pscreen->get_video_param
-   (
-      pscreen,
-      PIPE_VIDEO_PROFILE_UNKNOWN,
-      PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
-      PIPE_VIDEO_CAP_PREFERS_INTERLACED
-   );
-
-   for (i = 0; i < num_surfaces; ++i) {
-      vlVaSurface *surf = CALLOC(1, sizeof(vlVaSurface));
-      if (!surf)
-         goto no_res;
-
-      surf->templat = templat;
-      surf->buffer = drv->pipe->create_video_buffer(drv->pipe, &templat);
-      util_dynarray_init(&surf->subpics);
-      surfaces[i] = handle_table_add(drv->htab, surf);
-   }
-
-   return VA_STATUS_SUCCESS;
-
-no_res:
-   if (i)
-      vlVaDestroySurfaces(ctx, surfaces, i);
-
-   return VA_STATUS_ERROR_ALLOCATION_FAILED;
+   return vlVaCreateSurfaces2(ctx, format, width, height, surfaces, num_surfaces,
+                              NULL, 0);
 }
 
 VAStatus
@@ -348,4 +301,241 @@ vlVaUnlockSurface(VADriverContextP ctx, VASurfaceID surface)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    return VA_STATUS_ERROR_UNIMPLEMENTED;
+}
+
+VAStatus
+vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config,
+                           VASurfaceAttrib *attrib_list, unsigned int *num_attribs)
+{
+    vlVaDriver *drv;
+    VASurfaceAttrib *attribs;
+    struct pipe_screen *pscreen;
+    int i;
+
+    if (config == VA_INVALID_ID)
+        return VA_STATUS_ERROR_INVALID_CONFIG;
+
+    if (!attrib_list && !num_attribs)
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+    if (!attrib_list) {
+        *num_attribs = VASurfaceAttribCount;
+        return VA_STATUS_SUCCESS;
+    }
+
+    if (!ctx)
+       return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+    drv = VL_VA_DRIVER(ctx);
+
+    if (!drv)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+    pscreen = VL_VA_PSCREEN(ctx);
+
+    if (!pscreen)
+       return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+    attribs = CALLOC(VASurfaceAttribCount, sizeof(VASurfaceAttrib));
+
+    if (!attribs)
+        return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+    i = 0;
+
+    if (config == PIPE_VIDEO_PROFILE_UNKNOWN) {
+       /* Assume VAEntrypointVideoProc for now. */
+       attribs[i].type = VASurfaceAttribPixelFormat;
+       attribs[i].value.type = VAGenericValueTypeInteger;
+       attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+       attribs[i].value.value.i = VA_FOURCC_BGRA;
+       i++;
+
+       attribs[i].type = VASurfaceAttribPixelFormat;
+       attribs[i].value.type = VAGenericValueTypeInteger;
+       attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+       attribs[i].value.value.i = VA_FOURCC_RGBA;
+       i++;
+    } else {
+       /* Assume VAEntrypointVLD for now. */
+       attribs[i].type = VASurfaceAttribPixelFormat;
+       attribs[i].value.type = VAGenericValueTypeInteger;
+       attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+       attribs[i].value.value.i = VA_FOURCC_NV12;
+       i++;
+    }
+
+    attribs[i].type = VASurfaceAttribMemoryType;
+    attribs[i].value.type = VAGenericValueTypeInteger;
+    attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+    attribs[i].value.value.i = VA_SURFACE_ATTRIB_MEM_TYPE_VA;
+    i++;
+
+    attribs[i].type = VASurfaceAttribExternalBufferDescriptor;
+    attribs[i].value.type = VAGenericValueTypePointer;
+    attribs[i].flags = VA_SURFACE_ATTRIB_SETTABLE;
+    attribs[i].value.value.p = NULL; /* ignore */
+    i++;
+
+    attribs[i].type = VASurfaceAttribMaxWidth;
+    attribs[i].value.type = VAGenericValueTypeInteger;
+    attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+    attribs[i].value.value.i = vl_video_buffer_max_size(pscreen);
+    i++;
+
+    attribs[i].type = VASurfaceAttribMaxHeight;
+    attribs[i].value.type = VAGenericValueTypeInteger;
+    attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+    attribs[i].value.value.i = vl_video_buffer_max_size(pscreen);
+    i++;
+
+    if (i > *num_attribs) {
+        *num_attribs = i;
+        FREE(attribs);
+        return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+    }
+
+    *num_attribs = i;
+    memcpy(attrib_list, attribs, i * sizeof(VASurfaceAttrib));
+    FREE(attribs);
+
+    return VA_STATUS_SUCCESS;
+}
+
+VAStatus
+vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
+                    unsigned int width, unsigned int height,
+                    VASurfaceID *surfaces, unsigned int num_surfaces,
+                    VASurfaceAttrib *attrib_list, unsigned int num_attribs)
+{
+    vlVaDriver *drv;
+    VASurfaceAttribExternalBuffers *memory_attibute;
+    struct pipe_video_buffer templat;
+    struct pipe_screen *pscreen;
+    int i;
+    int memory_type;
+    int expected_fourcc;
+
+    if (!ctx)
+       return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+    if (!(width && height))
+       return VA_STATUS_ERROR_INVALID_IMAGE_FORMAT;
+
+    drv = VL_VA_DRIVER(ctx);
+
+    if (!drv)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+    pscreen = VL_VA_PSCREEN(ctx);
+
+    if (!pscreen)
+        return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+    /* Default. */
+    memory_attibute = NULL;
+    memory_type = VA_SURFACE_ATTRIB_MEM_TYPE_VA;
+    expected_fourcc = 0;
+
+    for (i = 0; i < num_attribs && attrib_list; i++) {
+        if ((attrib_list[i].type == VASurfaceAttribPixelFormat) &&
+            (attrib_list[i].flags & VA_SURFACE_ATTRIB_SETTABLE)) {
+            if (attrib_list[i].value.type != VAGenericValueTypeInteger)
+                return VA_STATUS_ERROR_INVALID_PARAMETER;
+            expected_fourcc = attrib_list[i].value.value.i;
+        }
+
+        if ((attrib_list[i].type == VASurfaceAttribMemoryType) &&
+            (attrib_list[i].flags & VA_SURFACE_ATTRIB_SETTABLE)) {
+
+            if (attrib_list[i].value.type != VAGenericValueTypeInteger)
+                return VA_STATUS_ERROR_INVALID_PARAMETER;
+
+            switch (attrib_list[i].value.value.i) {
+                case VA_SURFACE_ATTRIB_MEM_TYPE_VA:
+                   memory_type = attrib_list[i].value.value.i;
+                   break;
+                default:
+                   return VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE;
+            }
+        }
+
+        if ((attrib_list[i].type == VASurfaceAttribExternalBufferDescriptor) &&
+            (attrib_list[i].flags == VA_SURFACE_ATTRIB_SETTABLE)) {
+            if (attrib_list[i].value.type != VAGenericValueTypePointer)
+                return VA_STATUS_ERROR_INVALID_PARAMETER;
+            memory_attibute = (VASurfaceAttribExternalBuffers *)attrib_list[i].value.value.p;
+        }
+    }
+
+    if (VA_RT_FORMAT_YUV420 != format &&
+        VA_RT_FORMAT_YUV422 != format &&
+        VA_RT_FORMAT_YUV444 != format &&
+        VA_RT_FORMAT_RGB32  != format) {
+        return VA_STATUS_ERROR_UNSUPPORTED_RT_FORMAT;
+    }
+
+    switch (memory_type) {
+        case VA_SURFACE_ATTRIB_MEM_TYPE_VA:
+            break;
+        default:
+            assert(0);
+    }
+
+    memset(&templat, 0, sizeof(templat));
+
+    if (expected_fourcc) {
+       templat.buffer_format = VaFourccToPipeFormat(expected_fourcc);
+       templat.interlaced = 0;
+    } else {
+        templat.buffer_format = pscreen->get_video_param
+        (
+           pscreen,
+           PIPE_VIDEO_PROFILE_UNKNOWN,
+           PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+           PIPE_VIDEO_CAP_PREFERED_FORMAT
+        );
+        templat.interlaced = pscreen->get_video_param
+        (
+           pscreen,
+           PIPE_VIDEO_PROFILE_UNKNOWN,
+           PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+           PIPE_VIDEO_CAP_PREFERS_INTERLACED
+        );
+    }
+
+    templat.chroma_format = ChromaToPipe(format);
+
+    templat.width = width;
+    templat.height = height;
+
+    memset(surfaces, VA_INVALID_ID, num_surfaces * sizeof(VASurfaceID));
+
+    for (i = 0; i < num_surfaces; i++) {
+        vlVaSurface *surf = CALLOC(1, sizeof(vlVaSurface));
+        if (!surf)
+            goto no_res;
+
+        surf->templat = templat;
+
+        switch (memory_type) {
+            case VA_SURFACE_ATTRIB_MEM_TYPE_VA:
+                surf->buffer = drv->pipe->create_video_buffer(drv->pipe, &templat);
+                if (!surf->buffer)
+                    goto no_res;
+                util_dynarray_init(&surf->subpics);
+                surfaces[i] = handle_table_add(drv->htab, surf);
+                break;
+            default:
+                assert(0);
+        }
+    }
+
+    return VA_STATUS_SUCCESS;
+
+no_res:
+   if (i)
+      vlVaDestroySurfaces(ctx, surfaces, i);
+
+   return VA_STATUS_ERROR_ALLOCATION_FAILED;
 }

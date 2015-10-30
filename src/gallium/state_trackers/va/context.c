@@ -81,7 +81,10 @@ static struct VADriverVTable vtable =
    &vlVaSetDisplayAttributes,
    &vlVaBufferInfo,
    &vlVaLockSurface,
-   &vlVaUnlockSurface
+   &vlVaUnlockSurface,
+   NULL, /* DEPRECATED VaGetSurfaceAttributes */
+   &vlVaCreateSurfaces2,
+   &vlVaQuerySurfaceAttributes
 };
 
 PUBLIC VAStatus
