@@ -23,6 +23,7 @@
 #include "nouveau_screen.h"
 #include "nouveau_winsys.h"
 #include "nouveau_fence.h"
+#include "os/os_time.h"
 
 #ifdef PIPE_OS_UNIX
 #include <sched.h>
@@ -182,10 +183,11 @@ nouveau_fence_signalled(struct nouveau_fence *fence)
 }
 
 bool
-nouveau_fence_wait(struct nouveau_fence *fence)
+nouveau_fence_wait(struct nouveau_fence *fence, struct pipe_debug_callback *debug)
 {
    struct nouveau_screen *screen = fence->screen;
    uint32_t spins = 0;
+   int64_t start = 0;
 
    /* wtf, someone is waiting on a fence in flush_notify handler? */
    assert(fence->state != NOUVEAU_FENCE_STATE_EMITTING);
@@ -206,11 +208,19 @@ nouveau_fence_wait(struct nouveau_fence *fence)
    if (fence == screen->fence.current)
       nouveau_fence_next(screen);
 
+   if (debug && debug->debug_message)
+      start = os_time_get_nano();
+
    do {
       nouveau_fence_update(screen, false);
 
-      if (fence->state == NOUVEAU_FENCE_STATE_SIGNALLED)
+      if (fence->state == NOUVEAU_FENCE_STATE_SIGNALLED) {
+         if (debug && debug->debug_message)
+            pipe_debug_message(debug, PERF_INFO,
+                               "stalled %.3f ms waiting for fence",
+                               (os_time_get_nano() - start) / 1000000.f);
          return true;
+      }
       if (!spins)
          NOUVEAU_DRV_STAT(screen, any_non_kernel_fence_sync_count, 1);
       spins++;

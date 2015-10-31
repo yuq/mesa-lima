@@ -2,6 +2,7 @@
 #define __NOUVEAU_CONTEXT_H__
 
 #include "pipe/p_context.h"
+#include "pipe/p_state.h"
 #include <nouveau.h>
 
 #define NOUVEAU_MAX_SCRATCH_BUFS 4
