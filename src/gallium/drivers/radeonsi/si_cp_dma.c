@@ -107,6 +107,21 @@ static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 	}
 }
 
+static unsigned get_flush_flags(struct si_context *sctx, bool is_framebuffer)
+{
+	if (is_framebuffer)
+		return SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
+
+	return SI_CONTEXT_INV_TC_L1 |
+	       (sctx->b.chip_class == SI ? SI_CONTEXT_INV_TC_L2 : 0) |
+	       SI_CONTEXT_INV_KCACHE;
+}
+
+static unsigned get_tc_l2_flag(struct si_context *sctx, bool is_framebuffer)
+{
+	return is_framebuffer || sctx->b.chip_class == SI ? 0 : CIK_CP_DMA_USE_L2;
+}
+
 /* The max number of bytes to copy per packet. */
 #define CP_DMA_MAX_BYTE_COUNT ((1 << 21) - 8)
 
@@ -115,7 +130,8 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 			    bool is_framebuffer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
-	unsigned flush_flags, tc_l2_flag;
+	unsigned tc_l2_flag = get_tc_l2_flag(sctx, is_framebuffer);
+	unsigned flush_flags = get_flush_flags(sctx, is_framebuffer);
 
 	if (!size)
 		return;
@@ -139,19 +155,8 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 
 	uint64_t va = r600_resource(dst)->gpu_address + offset;
 
-	/* Flush the caches where the resource is bound. */
-	if (is_framebuffer) {
-		flush_flags = SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
-		tc_l2_flag = 0;
-	} else {
-		flush_flags = SI_CONTEXT_INV_TC_L1 |
-			      (sctx->b.chip_class == SI ? SI_CONTEXT_INV_TC_L2 : 0) |
-			      SI_CONTEXT_INV_KCACHE;
-		tc_l2_flag = sctx->b.chip_class == SI ? 0 : CIK_CP_DMA_USE_L2;
-	}
-
-	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
-			 flush_flags;
+	/* Flush the caches. */
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH | flush_flags;
 
 	while (size) {
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
@@ -195,7 +200,8 @@ void si_copy_buffer(struct si_context *sctx,
 		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
 		    bool is_framebuffer)
 {
-	unsigned flush_flags, tc_l2_flag;
+	unsigned tc_l2_flag = get_tc_l2_flag(sctx, is_framebuffer);
+	unsigned flush_flags = get_flush_flags(sctx, is_framebuffer);
 
 	if (!size)
 		return;
@@ -209,19 +215,8 @@ void si_copy_buffer(struct si_context *sctx,
 	dst_offset += r600_resource(dst)->gpu_address;
 	src_offset += r600_resource(src)->gpu_address;
 
-	/* Flush the caches where the resource is bound. */
-	if (is_framebuffer) {
-		flush_flags = SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
-		tc_l2_flag = 0;
-	} else {
-		flush_flags = SI_CONTEXT_INV_TC_L1 |
-			      (sctx->b.chip_class == SI ? SI_CONTEXT_INV_TC_L2 : 0) |
-			      SI_CONTEXT_INV_KCACHE;
-		tc_l2_flag = sctx->b.chip_class == SI ? 0 : CIK_CP_DMA_USE_L2;
-	}
-
-	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
-			 flush_flags;
+	/* Flush the caches. */
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH | flush_flags;
 
 	while (size) {
 		unsigned sync_flags = tc_l2_flag;
