@@ -148,6 +148,7 @@ wsw_dt_create(struct sw_winsys *ws,
               enum pipe_format format,
               unsigned width, unsigned height,
               unsigned alignment,
+              const void *front_private,
               unsigned *stride)
 {
    struct wrapper_sw_winsys *wsw = wrapper_sw_winsys(ws);

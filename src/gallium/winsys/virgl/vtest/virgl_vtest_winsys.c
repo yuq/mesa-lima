@@ -225,7 +225,7 @@ virgl_vtest_winsys_resource_create(struct virgl_winsys *vws,
 
    if (bind & (VIRGL_BIND_DISPLAY_TARGET | VIRGL_BIND_SCANOUT)) {
       res->dt = vtws->sws->displaytarget_create(vtws->sws, bind, format,
-                                                width, height, 64,
+                                                width, height, 64, NULL,
                                                 &res->stride);
 
    } else {
