@@ -372,7 +372,7 @@ CodeEmitterNV50::setSrcFileBits(const Instruction *i, int enc)
          mode |= 3 << (s * 2);
          break;
       default:
-	      ERROR("invalid file on source %i: %u\n", s, i->src(s).getFile());
+         ERROR("invalid file on source %i: %u\n", s, i->src(s).getFile());
          assert(0);
          break;
       }
