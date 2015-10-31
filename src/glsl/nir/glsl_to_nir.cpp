@@ -75,12 +75,12 @@ private:
    void add_instr(nir_instr *instr, unsigned num_components);
    nir_ssa_def *evaluate_rvalue(ir_rvalue *ir);
 
-   nir_alu_instr *emit(nir_op op, unsigned dest_size, nir_src *srcs);
-   nir_alu_instr *emit(nir_op op, unsigned dest_size, nir_src src1);
-   nir_alu_instr *emit(nir_op op, unsigned dest_size, nir_src src1,
-                       nir_src src2);
-   nir_alu_instr *emit(nir_op op, unsigned dest_size, nir_src src1,
-                       nir_src src2, nir_src src3);
+   nir_alu_instr *emit(nir_op op, unsigned dest_size, nir_ssa_def **srcs);
+   nir_alu_instr *emit(nir_op op, unsigned dest_size, nir_ssa_def *src1);
+   nir_alu_instr *emit(nir_op op, unsigned dest_size, nir_ssa_def *src1,
+                       nir_ssa_def *src2);
+   nir_alu_instr *emit(nir_op op, unsigned dest_size, nir_ssa_def *src1,
+                       nir_ssa_def *src2, nir_ssa_def *src3);
 
    bool supports_ints;
 
@@ -1203,38 +1203,38 @@ nir_visitor::evaluate_rvalue(ir_rvalue* ir)
 }
 
 nir_alu_instr *
-nir_visitor::emit(nir_op op, unsigned dest_size, nir_src *srcs)
+nir_visitor::emit(nir_op op, unsigned dest_size, nir_ssa_def **srcs)
 {
    nir_alu_instr *instr = nir_alu_instr_create(this->shader, op);
    for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++)
-      instr->src[i].src = srcs[i];
+      instr->src[i].src = nir_src_for_ssa(srcs[i]);
    instr->dest.write_mask = (1 << dest_size) - 1;
    add_instr(&instr->instr, dest_size);
    return instr;
 }
 
 nir_alu_instr *
-nir_visitor::emit(nir_op op, unsigned dest_size, nir_src src1)
+nir_visitor::emit(nir_op op, unsigned dest_size, nir_ssa_def *src1)
 {
    assert(nir_op_infos[op].num_inputs == 1);
    return emit(op, dest_size, &src1);
 }
 
 nir_alu_instr *
-nir_visitor::emit(nir_op op, unsigned dest_size, nir_src src1,
-                  nir_src src2)
+nir_visitor::emit(nir_op op, unsigned dest_size, nir_ssa_def *src1,
+                  nir_ssa_def *src2)
 {
    assert(nir_op_infos[op].num_inputs == 2);
-   nir_src srcs[] = { src1, src2 };
+   nir_ssa_def *srcs[] = { src1, src2 };
    return emit(op, dest_size, srcs);
 }
 
 nir_alu_instr *
-nir_visitor::emit(nir_op op, unsigned dest_size, nir_src src1,
-                  nir_src src2, nir_src src3)
+nir_visitor::emit(nir_op op, unsigned dest_size, nir_ssa_def *src1,
+                  nir_ssa_def *src2, nir_ssa_def *src3)
 {
    assert(nir_op_infos[op].num_inputs == 3);
-   nir_src srcs[] = { src1, src2, src3 };
+   nir_ssa_def *srcs[] = { src1, src2, src3 };
    return emit(op, dest_size, srcs);
 }
 
@@ -1362,9 +1362,9 @@ nir_visitor::visit(ir_expression *ir)
       break;
    }
 
-   nir_src srcs[4];
+   nir_ssa_def *srcs[4];
    for (unsigned i = 0; i < ir->get_num_operands(); i++)
-      srcs[i] = nir_src_for_ssa(evaluate_rvalue(ir->operands[i]));
+      srcs[i] = evaluate_rvalue(ir->operands[i]);
 
    glsl_base_type types[4];
    for (unsigned i = 0; i < ir->get_num_operands(); i++)
@@ -1915,7 +1915,7 @@ nir_visitor::visit(ir_swizzle *ir)
 {
    nir_alu_instr *instr = emit(supports_ints ? nir_op_imov : nir_op_fmov,
                                ir->type->vector_elements,
-                               nir_src_for_ssa(evaluate_rvalue(ir->val)));
+                               evaluate_rvalue(ir->val));
 
    unsigned swizzle[4] = { ir->mask.x, ir->mask.y, ir->mask.z, ir->mask.w };
    for (unsigned i = 0; i < ir->type->vector_elements; i++)
