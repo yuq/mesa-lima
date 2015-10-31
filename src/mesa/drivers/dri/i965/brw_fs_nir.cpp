@@ -2363,16 +2363,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
 
       if (has_indirect) {
-         /* Turn the byte offset into a dword offset. */
-         fs_reg base_offset = vgrf(glsl_type::int_type);
-         bld.SHR(base_offset, retype(get_nir_src(instr->src[1]),
-                                     BRW_REGISTER_TYPE_D),
-                 brw_imm_d(2));
+         fs_reg base_offset = retype(get_nir_src(instr->src[1]),
+                                     BRW_REGISTER_TYPE_D);
 
-         unsigned vec4_offset = instr->const_index[0] / 4;
+         unsigned vec4_offset = instr->const_index[0];
          for (int i = 0; i < instr->num_components; i++)
             VARYING_PULL_CONSTANT_LOAD(bld, offset(dest, bld, i), surf_index,
-                                       base_offset, vec4_offset + i);
+                                       base_offset, vec4_offset + i * 4);
       } else {
          fs_reg packed_consts = vgrf(glsl_type::float_type);
          packed_consts.type = dest.type;

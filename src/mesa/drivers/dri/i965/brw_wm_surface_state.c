@@ -404,7 +404,7 @@ brw_create_constant_surface(struct brw_context *brw,
 			    uint32_t *out_offset,
                             bool dword_pitch)
 {
-   uint32_t stride = dword_pitch ? 4 : 16;
+   uint32_t stride = dword_pitch ? 1 : 16;
    uint32_t elements = ALIGN(size, stride) / stride;
 
    brw->vtbl.emit_buffer_surface_state(brw, out_offset, bo, offset,
