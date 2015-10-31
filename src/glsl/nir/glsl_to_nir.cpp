@@ -87,7 +87,7 @@ private:
    nir_shader *shader;
    nir_function_impl *impl;
    exec_list *cf_node_list;
-   nir_instr *result; /* result of the expression tree last visited */
+   nir_ssa_def *result; /* result of the expression tree last visited */
 
    nir_deref_var *evaluate_deref(nir_instr *mem_ctx, ir_instruction *ir);
 
@@ -1174,7 +1174,11 @@ nir_visitor::add_instr(nir_instr *instr, unsigned num_components)
       nir_ssa_dest_init(instr, dest, num_components, NULL);
 
    nir_instr_insert_after_cf_list(this->cf_node_list, instr);
-   this->result = instr;
+
+   if (dest) {
+      assert(dest->is_ssa);
+      this->result = &dest->ssa;
+   }
 }
 
 nir_ssa_def *
@@ -1195,10 +1199,7 @@ nir_visitor::evaluate_rvalue(ir_rvalue* ir)
       add_instr(&load_instr->instr, ir->type->vector_elements);
    }
 
-   nir_dest *dest = get_instr_dest(this->result);
-   assert(dest->is_ssa);
-
-   return &dest->ssa;
+   return this->result;
 }
 
 nir_alu_instr *
