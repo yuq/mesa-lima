@@ -255,7 +255,7 @@ int virgl_vtest_recv_transfer_get_data(struct virgl_vtest_winsys *vws,
                                        const struct pipe_box *box,
                                        uint32_t format)
 {
-   void *line = malloc(stride);
+   void *line;
    void *ptr = data;
    int hblocks = util_format_get_nblocksy(format, box->height);
 
