@@ -27,6 +27,7 @@
 
 #include "glsl_to_nir.h"
 #include "nir_control_flow.h"
+#include "nir_builder.h"
 #include "ir_visitor.h"
 #include "ir_hierarchical_visitor.h"
 #include "ir.h"
@@ -86,7 +87,7 @@ private:
 
    nir_shader *shader;
    nir_function_impl *impl;
-   exec_list *cf_node_list;
+   nir_builder b;
    nir_ssa_def *result; /* result of the expression tree last visited */
 
    nir_deref_var *evaluate_deref(nir_instr *mem_ctx, ir_instruction *ir);
@@ -535,7 +536,8 @@ nir_visitor::visit(ir_function_signature *ir)
 
       this->is_global = false;
 
-      this->cf_node_list = &impl->body;
+      nir_builder_init(&b, impl);
+      b.cursor = nir_after_cf_list(&impl->body);
       visit_exec_list(&ir->body, this);
 
       this->is_global = true;
@@ -547,14 +549,12 @@ nir_visitor::visit(ir_function_signature *ir)
 void
 nir_visitor::visit(ir_loop *ir)
 {
-   exec_list *old_list = this->cf_node_list;
-
    nir_loop *loop = nir_loop_create(this->shader);
-   nir_cf_node_insert_end(old_list, &loop->cf_node);
-   this->cf_node_list = &loop->body;
-   visit_exec_list(&ir->body_instructions, this);
+   nir_builder_cf_insert(&b, &loop->cf_node);
 
-   this->cf_node_list = old_list;
+   b.cursor = nir_after_cf_list(&loop->body);
+   visit_exec_list(&ir->body_instructions, this);
+   b.cursor = nir_after_cf_node(&loop->cf_node);
 }
 
 void
@@ -563,19 +563,17 @@ nir_visitor::visit(ir_if *ir)
    nir_src condition =
       nir_src_for_ssa(evaluate_rvalue(ir->condition));
 
-   exec_list *old_list = this->cf_node_list;
-
    nir_if *if_stmt = nir_if_create(this->shader);
    if_stmt->condition = condition;
-   nir_cf_node_insert_end(old_list, &if_stmt->cf_node);
+   nir_builder_cf_insert(&b, &if_stmt->cf_node);
 
-   this->cf_node_list = &if_stmt->then_list;
+   b.cursor = nir_after_cf_list(&if_stmt->then_list);
    visit_exec_list(&ir->then_instructions, this);
 
-   this->cf_node_list = &if_stmt->else_list;
+   b.cursor = nir_after_cf_list(&if_stmt->else_list);
    visit_exec_list(&ir->else_instructions, this);
 
-   this->cf_node_list = old_list;
+   b.cursor = nir_after_cf_node(&if_stmt->cf_node);
 }
 
 void
@@ -597,7 +595,8 @@ nir_visitor::visit(ir_discard *ir)
    } else {
       discard = nir_intrinsic_instr_create(this->shader, nir_intrinsic_discard);
    }
-   nir_instr_insert_after_cf_list(this->cf_node_list, &discard->instr);
+
+   nir_builder_instr_insert(&b, &discard->instr);
 }
 
 void
@@ -606,7 +605,7 @@ nir_visitor::visit(ir_emit_vertex *ir)
    nir_intrinsic_instr *instr =
       nir_intrinsic_instr_create(this->shader, nir_intrinsic_emit_vertex);
    instr->const_index[0] = ir->stream_id();
-   nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(&b, &instr->instr);
 }
 
 void
@@ -615,7 +614,7 @@ nir_visitor::visit(ir_end_primitive *ir)
    nir_intrinsic_instr *instr =
       nir_intrinsic_instr_create(this->shader, nir_intrinsic_end_primitive);
    instr->const_index[0] = ir->stream_id();
-   nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(&b, &instr->instr);
 }
 
 void
@@ -634,7 +633,7 @@ nir_visitor::visit(ir_loop_jump *ir)
    }
 
    nir_jump_instr *instr = nir_jump_instr_create(this->shader, type);
-   nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(&b, &instr->instr);
 }
 
 void
@@ -649,7 +648,7 @@ nir_visitor::visit(ir_return *ir)
    }
 
    nir_jump_instr *instr = nir_jump_instr_create(this->shader, nir_jump_return);
-   nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(&b, &instr->instr);
 }
 
 void
@@ -748,7 +747,7 @@ nir_visitor::visit(ir_call *ir)
             (ir_dereference *) ir->actual_parameters.get_head();
          instr->variables[0] = evaluate_deref(&instr->instr, param);
          nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
-         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+         nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
       case nir_intrinsic_image_load:
@@ -765,8 +764,7 @@ nir_visitor::visit(ir_call *ir)
       case nir_intrinsic_image_size: {
          nir_ssa_undef_instr *instr_undef =
             nir_ssa_undef_instr_create(shader, 1);
-         nir_instr_insert_after_cf_list(this->cf_node_list,
-                                        &instr_undef->instr);
+         nir_builder_instr_insert(&b, &instr_undef->instr);
 
          /* Set the image variable dereference. */
          exec_node *param = ir->actual_parameters.get_head();
@@ -787,29 +785,25 @@ nir_visitor::visit(ir_call *ir)
 
          if (op == nir_intrinsic_image_size ||
              op == nir_intrinsic_image_samples) {
-            nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+            nir_builder_instr_insert(&b, &instr->instr);
             break;
          }
 
          /* Set the address argument, extending the coordinate vector to four
           * components.
           */
-         const nir_src src_addr =
-            nir_src_for_ssa(evaluate_rvalue((ir_dereference *)param));
-         nir_alu_instr *instr_addr = nir_alu_instr_create(shader, nir_op_vec4);
-         nir_ssa_dest_init(&instr_addr->instr, &instr_addr->dest.dest, 4, NULL);
+         nir_ssa_def *src_addr =
+            evaluate_rvalue((ir_dereference *)param);
+         nir_ssa_def *srcs[4];
 
          for (int i = 0; i < 4; i++) {
-            if (i < type->coordinate_components()) {
-               instr_addr->src[i].src = src_addr;
-               instr_addr->src[i].swizzle[0] = i;
-            } else {
-               instr_addr->src[i].src = nir_src_for_ssa(&instr_undef->def);
-            }
+            if (i < type->coordinate_components())
+               srcs[i] = nir_channel(&b, src_addr, i);
+            else
+               srcs[i] = &instr_undef->def;
          }
 
-         nir_instr_insert_after_cf_list(cf_node_list, &instr_addr->instr);
-         instr->src[0] = nir_src_for_ssa(&instr_addr->dest.dest.ssa);
+         instr->src[0] = nir_src_for_ssa(nir_vec(&b, srcs, 4));
          param = param->get_next();
 
          /* Set the sample argument, which is undefined for single-sample
@@ -835,7 +829,7 @@ nir_visitor::visit(ir_call *ir)
                nir_src_for_ssa(evaluate_rvalue((ir_dereference *)param));
             param = param->get_next();
          }
-         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+         nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
       case nir_intrinsic_memory_barrier:
@@ -844,11 +838,11 @@ nir_visitor::visit(ir_call *ir)
       case nir_intrinsic_memory_barrier_buffer:
       case nir_intrinsic_memory_barrier_image:
       case nir_intrinsic_memory_barrier_shared:
-         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+         nir_builder_instr_insert(&b, &instr->instr);
          break;
       case nir_intrinsic_shader_clock:
          nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
-         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+         nir_builder_instr_insert(&b, &instr->instr);
          break;
       case nir_intrinsic_store_ssbo: {
          exec_node *param = ir->actual_parameters.get_head();
@@ -882,7 +876,7 @@ nir_visitor::visit(ir_call *ir)
          instr->num_components = val->type->vector_elements;
 
          instr->src[1] = nir_src_for_ssa(evaluate_rvalue(block));
-         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+         nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
       case nir_intrinsic_load_ssbo: {
@@ -917,7 +911,7 @@ nir_visitor::visit(ir_call *ir)
          /* Insert the created nir instruction now since in the case of boolean
           * result we will need to emit another instruction after it
           */
-         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+         nir_builder_instr_insert(&b, &instr->instr);
 
          /*
           * In SSBO/UBO's, a true boolean value is any non-zero value, but we
@@ -925,26 +919,19 @@ nir_visitor::visit(ir_call *ir)
           * comparison.
           */
          if (type->base_type == GLSL_TYPE_BOOL) {
-            nir_load_const_instr *const_zero =
-               nir_load_const_instr_create(shader, 1);
-            const_zero->value.u[0] = 0;
-            nir_instr_insert_after_cf_list(this->cf_node_list,
-                                           &const_zero->instr);
-
             nir_alu_instr *load_ssbo_compare =
                nir_alu_instr_create(shader, nir_op_ine);
             load_ssbo_compare->src[0].src.is_ssa = true;
             load_ssbo_compare->src[0].src.ssa = &instr->dest.ssa;
-            load_ssbo_compare->src[1].src.is_ssa = true;
-            load_ssbo_compare->src[1].src.ssa = &const_zero->def;
+            load_ssbo_compare->src[1].src =
+               nir_src_for_ssa(nir_imm_int(&b, 0));
             for (unsigned i = 0; i < type->vector_elements; i++)
                load_ssbo_compare->src[1].swizzle[i] = 0;
             nir_ssa_dest_init(&load_ssbo_compare->instr,
                               &load_ssbo_compare->dest.dest,
                               type->vector_elements, NULL);
             load_ssbo_compare->dest.write_mask = (1 << type->vector_elements) - 1;
-            nir_instr_insert_after_cf_list(this->cf_node_list,
-                                           &load_ssbo_compare->instr);
+            nir_builder_instr_insert(&b, &load_ssbo_compare->instr);
             dest = &load_ssbo_compare->dest.dest;
          }
          break;
@@ -989,7 +976,7 @@ nir_visitor::visit(ir_call *ir)
          assert(ir->return_deref);
          nir_ssa_dest_init(&instr->instr, &instr->dest,
                            ir->return_deref->type->vector_elements, NULL);
-         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+         nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
       default:
@@ -1005,8 +992,7 @@ nir_visitor::visit(ir_call *ir)
             evaluate_deref(&store_instr->instr, ir->return_deref);
          store_instr->src[0] = nir_src_for_ssa(&dest->ssa);
 
-         nir_instr_insert_after_cf_list(this->cf_node_list,
-                                        &store_instr->instr);
+         nir_builder_instr_insert(&b, &store_instr->instr);
       }
 
       return;
@@ -1026,7 +1012,7 @@ nir_visitor::visit(ir_call *ir)
    }
 
    instr->return_deref = evaluate_deref(&instr->instr, ir->return_deref);
-   nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(&b, &instr->instr);
 }
 
 void
@@ -1046,10 +1032,11 @@ nir_visitor::visit(ir_assignment *ir)
       if (ir->condition) {
          nir_if *if_stmt = nir_if_create(this->shader);
          if_stmt->condition = nir_src_for_ssa(evaluate_rvalue(ir->condition));
-         nir_cf_node_insert_end(this->cf_node_list, &if_stmt->cf_node);
+         nir_builder_cf_insert(&b, &if_stmt->cf_node);
          nir_instr_insert_after_cf_list(&if_stmt->then_list, &copy->instr);
+         b.cursor = nir_after_cf_node(&if_stmt->cf_node);
       } else {
-         nir_instr_insert_after_cf_list(this->cf_node_list, &copy->instr);
+         nir_builder_instr_insert(&b, &copy->instr);
       }
       return;
    }
@@ -1058,7 +1045,7 @@ nir_visitor::visit(ir_assignment *ir)
 
    ir->lhs->accept(this);
    nir_deref_var *lhs_deref = this->deref_head;
-   nir_src src = nir_src_for_ssa(evaluate_rvalue(ir->rhs));
+   nir_ssa_def *src = evaluate_rvalue(ir->rhs);
 
    if (ir->write_mask != (1 << num_components) - 1 && ir->write_mask != 0) {
       /*
@@ -1074,42 +1061,25 @@ nir_visitor::visit(ir_assignment *ir)
       nir_ssa_dest_init(&load->instr, &load->dest, num_components, NULL);
       load->variables[0] = lhs_deref;
       ralloc_steal(load, load->variables[0]);
-      nir_instr_insert_after_cf_list(this->cf_node_list, &load->instr);
+      nir_builder_instr_insert(&b, &load->instr);
 
-      nir_op vec_op;
-      switch (ir->lhs->type->vector_elements) {
-         case 1: vec_op = nir_op_imov; break;
-         case 2: vec_op = nir_op_vec2; break;
-         case 3: vec_op = nir_op_vec3; break;
-         case 4: vec_op = nir_op_vec4; break;
-         default: unreachable("Invalid number of components"); break;
-      }
-      nir_alu_instr *vec = nir_alu_instr_create(this->shader, vec_op);
-      nir_ssa_dest_init(&vec->instr, &vec->dest.dest, num_components, NULL);
-      vec->dest.write_mask = (1 << num_components) - 1;
+      nir_ssa_def *srcs[4];
 
       unsigned component = 0;
       for (unsigned i = 0; i < ir->lhs->type->vector_elements; i++) {
          if (ir->write_mask & (1 << i)) {
-            vec->src[i].src = src;
-
             /* GLSL IR will give us the input to the write-masked assignment
              * in a single packed vector.  So, for example, if the
              * writemask is xzw, then we have to swizzle x -> x, y -> z,
              * and z -> w and get the y component from the load.
              */
-            vec->src[i].swizzle[0] = component++;
+            srcs[i] = nir_channel(&b, src, component++);
          } else {
-            vec->src[i].src.is_ssa = true;
-            vec->src[i].src.ssa = &load->dest.ssa;
-            vec->src[i].swizzle[0] = i;
+            srcs[i] = nir_channel(&b, &load->dest.ssa, i);
          }
       }
 
-      nir_instr_insert_after_cf_list(this->cf_node_list, &vec->instr);
-
-      src.is_ssa = true;
-      src.ssa = &vec->dest.dest.ssa;
+      src = nir_vec(&b, srcs, ir->lhs->type->vector_elements);
    }
 
    nir_intrinsic_instr *store =
@@ -1117,15 +1087,16 @@ nir_visitor::visit(ir_assignment *ir)
    store->num_components = ir->lhs->type->vector_elements;
    nir_deref *store_deref = nir_copy_deref(store, &lhs_deref->deref);
    store->variables[0] = nir_deref_as_var(store_deref);
-   store->src[0] = src;
+   store->src[0] = nir_src_for_ssa(src);
 
    if (ir->condition) {
       nir_if *if_stmt = nir_if_create(this->shader);
       if_stmt->condition = nir_src_for_ssa(evaluate_rvalue(ir->condition));
-      nir_cf_node_insert_end(this->cf_node_list, &if_stmt->cf_node);
+      nir_builder_cf_insert(&b, &if_stmt->cf_node);
       nir_instr_insert_after_cf_list(&if_stmt->then_list, &store->instr);
+      b.cursor = nir_after_cf_node(&if_stmt->cf_node);
    } else {
-      nir_instr_insert_after_cf_list(this->cf_node_list, &store->instr);
+      nir_builder_instr_insert(&b, &store->instr);
    }
 }
 
@@ -1173,7 +1144,7 @@ nir_visitor::add_instr(nir_instr *instr, unsigned num_components)
    if (dest)
       nir_ssa_dest_init(instr, dest, num_components, NULL);
 
-   nir_instr_insert_after_cf_list(this->cf_node_list, instr);
+   nir_builder_instr_insert(&b, instr);
 
    if (dest) {
       assert(dest->is_ssa);
@@ -1200,42 +1171,6 @@ nir_visitor::evaluate_rvalue(ir_rvalue* ir)
    }
 
    return this->result;
-}
-
-nir_alu_instr *
-nir_visitor::emit(nir_op op, unsigned dest_size, nir_ssa_def **srcs)
-{
-   nir_alu_instr *instr = nir_alu_instr_create(this->shader, op);
-   for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++)
-      instr->src[i].src = nir_src_for_ssa(srcs[i]);
-   instr->dest.write_mask = (1 << dest_size) - 1;
-   add_instr(&instr->instr, dest_size);
-   return instr;
-}
-
-nir_alu_instr *
-nir_visitor::emit(nir_op op, unsigned dest_size, nir_ssa_def *src1)
-{
-   assert(nir_op_infos[op].num_inputs == 1);
-   return emit(op, dest_size, &src1);
-}
-
-nir_alu_instr *
-nir_visitor::emit(nir_op op, unsigned dest_size, nir_ssa_def *src1,
-                  nir_ssa_def *src2)
-{
-   assert(nir_op_infos[op].num_inputs == 2);
-   nir_ssa_def *srcs[] = { src1, src2 };
-   return emit(op, dest_size, srcs);
-}
-
-nir_alu_instr *
-nir_visitor::emit(nir_op op, unsigned dest_size, nir_ssa_def *src1,
-                  nir_ssa_def *src2, nir_ssa_def *src3)
-{
-   assert(nir_op_infos[op].num_inputs == 3);
-   nir_ssa_def *srcs[] = { src1, src2, src3 };
-   return emit(op, dest_size, srcs);
 }
 
 void
@@ -1265,22 +1200,8 @@ nir_visitor::visit(ir_expression *ir)
        * a true boolean to be ~0. Fix this up with a != 0 comparison.
        */
 
-      if (ir->type->base_type == GLSL_TYPE_BOOL) {
-         nir_load_const_instr *const_zero = nir_load_const_instr_create(shader, 1);
-         const_zero->value.u[0] = 0;
-         nir_instr_insert_after_cf_list(this->cf_node_list, &const_zero->instr);
-
-         nir_alu_instr *compare = nir_alu_instr_create(shader, nir_op_ine);
-         compare->src[0].src.is_ssa = true;
-         compare->src[0].src.ssa = &load->dest.ssa;
-         compare->src[1].src.is_ssa = true;
-         compare->src[1].src.ssa = &const_zero->def;
-         for (unsigned i = 0; i < ir->type->vector_elements; i++)
-            compare->src[1].swizzle[i] = 0;
-         compare->dest.write_mask = (1 << ir->type->vector_elements) - 1;
-
-         add_instr(&compare->instr, ir->type->vector_elements);
-      }
+      if (ir->type->base_type == GLSL_TYPE_BOOL)
+         this->result = nir_ine(&b, &load->dest.ssa, nir_imm_int(&b, 0));
 
       return;
    }
@@ -1340,19 +1261,12 @@ nir_visitor::visit(ir_expression *ir)
       add_instr(&intrin->instr, deref->type->vector_elements);
 
       if (swizzle) {
-         nir_alu_instr *mov = nir_alu_instr_create(shader, nir_op_imov);
-         mov->dest.write_mask = (1 << swizzle->type->vector_elements) - 1;
-         mov->src[0].src.is_ssa = true;
-         mov->src[0].src.ssa = &intrin->dest.ssa;
+         unsigned swiz[4] = {
+            swizzle->mask.x, swizzle->mask.y, swizzle->mask.z, swizzle->mask.w
+         };
 
-         mov->src[0].swizzle[0] = swizzle->mask.x;
-         mov->src[0].swizzle[1] = swizzle->mask.y;
-         mov->src[0].swizzle[2] = swizzle->mask.z;
-         mov->src[0].swizzle[3] = swizzle->mask.w;
-         for (unsigned i = deref->type->vector_elements; i < 4; i++)
-            mov->src[0].swizzle[i] = 0;
-
-         add_instr(&mov->instr, swizzle->type->vector_elements);
+         result = nir_swizzle(&b, result, swiz,
+                              swizzle->type->vector_elements, false);
       }
 
       return;
@@ -1379,53 +1293,48 @@ nir_visitor::visit(ir_expression *ir)
    else
       out_type = GLSL_TYPE_FLOAT;
 
-   unsigned dest_size = ir->type->vector_elements;
-
-   nir_alu_instr *instr;
-   nir_op op;
-
    switch (ir->operation) {
-   case ir_unop_bit_not: emit(nir_op_inot, dest_size, srcs); break;
+   case ir_unop_bit_not: result = nir_inot(&b, srcs[0]); break;
    case ir_unop_logic_not:
-      emit(supports_ints ? nir_op_inot : nir_op_fnot, dest_size, srcs);
+      result = supports_ints ? nir_inot(&b, srcs[0]) : nir_fnot(&b, srcs[0]);
       break;
    case ir_unop_neg:
-      instr = emit(types[0] == GLSL_TYPE_FLOAT ? nir_op_fneg : nir_op_ineg,
-                   dest_size, srcs);
+      result = (types[0] == GLSL_TYPE_FLOAT) ? nir_fneg(&b, srcs[0])
+                                             : nir_ineg(&b, srcs[0]);
       break;
    case ir_unop_abs:
-      instr = emit(types[0] == GLSL_TYPE_FLOAT ? nir_op_fabs : nir_op_iabs,
-                   dest_size, srcs);
+      result = (types[0] == GLSL_TYPE_FLOAT) ? nir_fabs(&b, srcs[0])
+                                             : nir_iabs(&b, srcs[0]);
       break;
    case ir_unop_saturate:
       assert(types[0] == GLSL_TYPE_FLOAT);
-      instr = emit(nir_op_fsat, dest_size, srcs);
+      result = nir_fsat(&b, srcs[0]);
       break;
    case ir_unop_sign:
-      emit(types[0] == GLSL_TYPE_FLOAT ? nir_op_fsign : nir_op_isign,
-           dest_size, srcs);
+      result = (types[0] == GLSL_TYPE_FLOAT) ? nir_fsign(&b, srcs[0])
+                                             : nir_isign(&b, srcs[0]);
       break;
-   case ir_unop_rcp:  emit(nir_op_frcp, dest_size, srcs);  break;
-   case ir_unop_rsq:  emit(nir_op_frsq, dest_size, srcs);  break;
-   case ir_unop_sqrt: emit(nir_op_fsqrt, dest_size, srcs); break;
+   case ir_unop_rcp:  result = nir_frcp(&b, srcs[0]);  break;
+   case ir_unop_rsq:  result = nir_frsq(&b, srcs[0]);  break;
+   case ir_unop_sqrt: result = nir_fsqrt(&b, srcs[0]); break;
    case ir_unop_exp:  unreachable("ir_unop_exp should have been lowered");
    case ir_unop_log:  unreachable("ir_unop_log should have been lowered");
-   case ir_unop_exp2: emit(nir_op_fexp2, dest_size, srcs); break;
-   case ir_unop_log2: emit(nir_op_flog2, dest_size, srcs); break;
+   case ir_unop_exp2: result = nir_fexp2(&b, srcs[0]); break;
+   case ir_unop_log2: result = nir_flog2(&b, srcs[0]); break;
    case ir_unop_i2f:
-      emit(supports_ints ? nir_op_i2f : nir_op_fmov, dest_size, srcs);
+      result = supports_ints ? nir_i2f(&b, srcs[0]) : nir_fmov(&b, srcs[0]);
       break;
    case ir_unop_u2f:
-      emit(supports_ints ? nir_op_u2f : nir_op_fmov, dest_size, srcs);
+      result = supports_ints ? nir_u2f(&b, srcs[0]) : nir_fmov(&b, srcs[0]);
       break;
    case ir_unop_b2f:
-      emit(supports_ints ? nir_op_b2f : nir_op_fmov, dest_size, srcs);
+      result = supports_ints ? nir_b2f(&b, srcs[0]) : nir_fmov(&b, srcs[0]);
       break;
-   case ir_unop_f2i:  emit(nir_op_f2i, dest_size, srcs);   break;
-   case ir_unop_f2u:  emit(nir_op_f2u, dest_size, srcs);   break;
-   case ir_unop_f2b:  emit(nir_op_f2b, dest_size, srcs);   break;
-   case ir_unop_i2b:  emit(nir_op_i2b, dest_size, srcs);   break;
-   case ir_unop_b2i:  emit(nir_op_b2i, dest_size, srcs);   break;
+   case ir_unop_f2i:  result = nir_f2i(&b, srcs[0]);   break;
+   case ir_unop_f2u:  result = nir_f2u(&b, srcs[0]);   break;
+   case ir_unop_f2b:  result = nir_f2b(&b, srcs[0]);   break;
+   case ir_unop_i2b:  result = nir_i2b(&b, srcs[0]);   break;
+   case ir_unop_b2i:  result = nir_b2i(&b, srcs[0]);   break;
    case ir_unop_i2u:
    case ir_unop_u2i:
    case ir_unop_bitcast_i2f:
@@ -1434,132 +1343,132 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_bitcast_f2u:
    case ir_unop_subroutine_to_int:
       /* no-op */
-      emit(nir_op_imov, dest_size, srcs);
+      result = nir_imov(&b, srcs[0]);
       break;
    case ir_unop_any:
       switch (ir->operands[0]->type->vector_elements) {
       case 2:
-         emit(supports_ints ? nir_op_bany2 : nir_op_fany2,
-              dest_size, srcs);
+         result = supports_ints ? nir_bany2(&b, srcs[0])
+                                : nir_fany2(&b, srcs[0]);
          break;
       case 3:
-         emit(supports_ints ? nir_op_bany3 : nir_op_fany3,
-              dest_size, srcs);
+         result = supports_ints ? nir_bany3(&b, srcs[0])
+                                : nir_fany3(&b, srcs[0]);
          break;
       case 4:
-         emit(supports_ints ? nir_op_bany4 : nir_op_fany4,
-              dest_size, srcs);
+         result = supports_ints ? nir_bany4(&b, srcs[0])
+                                : nir_fany4(&b, srcs[0]);
          break;
       default:
          unreachable("not reached");
       }
       break;
-   case ir_unop_trunc: emit(nir_op_ftrunc, dest_size, srcs); break;
-   case ir_unop_ceil:  emit(nir_op_fceil,  dest_size, srcs); break;
-   case ir_unop_floor: emit(nir_op_ffloor, dest_size, srcs); break;
-   case ir_unop_fract: emit(nir_op_ffract, dest_size, srcs); break;
-   case ir_unop_round_even: emit(nir_op_fround_even, dest_size, srcs); break;
-   case ir_unop_sin:   emit(nir_op_fsin,   dest_size, srcs); break;
-   case ir_unop_cos:   emit(nir_op_fcos,   dest_size, srcs); break;
-   case ir_unop_dFdx:        emit(nir_op_fddx,        dest_size, srcs); break;
-   case ir_unop_dFdy:        emit(nir_op_fddy,        dest_size, srcs); break;
-   case ir_unop_dFdx_fine:   emit(nir_op_fddx_fine,   dest_size, srcs); break;
-   case ir_unop_dFdy_fine:   emit(nir_op_fddy_fine,   dest_size, srcs); break;
-   case ir_unop_dFdx_coarse: emit(nir_op_fddx_coarse, dest_size, srcs); break;
-   case ir_unop_dFdy_coarse: emit(nir_op_fddy_coarse, dest_size, srcs); break;
+   case ir_unop_trunc: result = nir_ftrunc(&b, srcs[0]); break;
+   case ir_unop_ceil:  result = nir_fceil(&b, srcs[0]); break;
+   case ir_unop_floor: result = nir_ffloor(&b, srcs[0]); break;
+   case ir_unop_fract: result = nir_ffract(&b, srcs[0]); break;
+   case ir_unop_round_even: result = nir_fround_even(&b, srcs[0]); break;
+   case ir_unop_sin:   result = nir_fsin(&b, srcs[0]); break;
+   case ir_unop_cos:   result = nir_fcos(&b, srcs[0]); break;
+   case ir_unop_dFdx:        result = nir_fddx(&b, srcs[0]); break;
+   case ir_unop_dFdy:        result = nir_fddy(&b, srcs[0]); break;
+   case ir_unop_dFdx_fine:   result = nir_fddx_fine(&b, srcs[0]); break;
+   case ir_unop_dFdy_fine:   result = nir_fddy_fine(&b, srcs[0]); break;
+   case ir_unop_dFdx_coarse: result = nir_fddx_coarse(&b, srcs[0]); break;
+   case ir_unop_dFdy_coarse: result = nir_fddy_coarse(&b, srcs[0]); break;
    case ir_unop_pack_snorm_2x16:
-      emit(nir_op_pack_snorm_2x16, dest_size, srcs);
+      result = nir_pack_snorm_2x16(&b, srcs[0]);
       break;
    case ir_unop_pack_snorm_4x8:
-      emit(nir_op_pack_snorm_4x8, dest_size, srcs);
+      result = nir_pack_snorm_4x8(&b, srcs[0]);
       break;
    case ir_unop_pack_unorm_2x16:
-      emit(nir_op_pack_unorm_2x16, dest_size, srcs);
+      result = nir_pack_unorm_2x16(&b, srcs[0]);
       break;
    case ir_unop_pack_unorm_4x8:
-      emit(nir_op_pack_unorm_4x8, dest_size, srcs);
+      result = nir_pack_unorm_4x8(&b, srcs[0]);
       break;
    case ir_unop_pack_half_2x16:
-      emit(nir_op_pack_half_2x16, dest_size, srcs);
+      result = nir_pack_half_2x16(&b, srcs[0]);
       break;
    case ir_unop_unpack_snorm_2x16:
-      emit(nir_op_unpack_snorm_2x16, dest_size, srcs);
+      result = nir_unpack_snorm_2x16(&b, srcs[0]);
       break;
    case ir_unop_unpack_snorm_4x8:
-      emit(nir_op_unpack_snorm_4x8, dest_size, srcs);
+      result = nir_unpack_snorm_4x8(&b, srcs[0]);
       break;
    case ir_unop_unpack_unorm_2x16:
-      emit(nir_op_unpack_unorm_2x16, dest_size, srcs);
+      result = nir_unpack_unorm_2x16(&b, srcs[0]);
       break;
    case ir_unop_unpack_unorm_4x8:
-      emit(nir_op_unpack_unorm_4x8, dest_size, srcs);
+      result = nir_unpack_unorm_4x8(&b, srcs[0]);
       break;
    case ir_unop_unpack_half_2x16:
-      emit(nir_op_unpack_half_2x16, dest_size, srcs);
+      result = nir_unpack_half_2x16(&b, srcs[0]);
       break;
    case ir_unop_unpack_half_2x16_split_x:
-      emit(nir_op_unpack_half_2x16_split_x, dest_size, srcs);
+      result = nir_unpack_half_2x16_split_x(&b, srcs[0]);
       break;
    case ir_unop_unpack_half_2x16_split_y:
-      emit(nir_op_unpack_half_2x16_split_y, dest_size, srcs);
+      result = nir_unpack_half_2x16_split_y(&b, srcs[0]);
       break;
    case ir_unop_bitfield_reverse:
-      emit(nir_op_bitfield_reverse, dest_size, srcs);
+      result = nir_bitfield_reverse(&b, srcs[0]);
       break;
    case ir_unop_bit_count:
-      emit(nir_op_bit_count, dest_size, srcs);
+      result = nir_bit_count(&b, srcs[0]);
       break;
    case ir_unop_find_msb:
       switch (types[0]) {
       case GLSL_TYPE_UINT:
-         emit(nir_op_ufind_msb, dest_size, srcs);
+         result = nir_ufind_msb(&b, srcs[0]);
          break;
       case GLSL_TYPE_INT:
-         emit(nir_op_ifind_msb, dest_size, srcs);
+         result = nir_ifind_msb(&b, srcs[0]);
          break;
       default:
          unreachable("Invalid type for findMSB()");
       }
       break;
    case ir_unop_find_lsb:
-      emit(nir_op_find_lsb,  dest_size, srcs);
+      result = nir_find_lsb(&b, srcs[0]);
       break;
 
    case ir_unop_noise:
       switch (ir->type->vector_elements) {
       case 1:
          switch (ir->operands[0]->type->vector_elements) {
-            case 1: emit(nir_op_fnoise1_1, dest_size, srcs); break;
-            case 2: emit(nir_op_fnoise1_2, dest_size, srcs); break;
-            case 3: emit(nir_op_fnoise1_3, dest_size, srcs); break;
-            case 4: emit(nir_op_fnoise1_4, dest_size, srcs); break;
+            case 1: result = nir_fnoise1_1(&b, srcs[0]); break;
+            case 2: result = nir_fnoise1_2(&b, srcs[0]); break;
+            case 3: result = nir_fnoise1_3(&b, srcs[0]); break;
+            case 4: result = nir_fnoise1_4(&b, srcs[0]); break;
             default: unreachable("not reached");
          }
          break;
       case 2:
          switch (ir->operands[0]->type->vector_elements) {
-            case 1: emit(nir_op_fnoise2_1, dest_size, srcs); break;
-            case 2: emit(nir_op_fnoise2_2, dest_size, srcs); break;
-            case 3: emit(nir_op_fnoise2_3, dest_size, srcs); break;
-            case 4: emit(nir_op_fnoise2_4, dest_size, srcs); break;
+            case 1: result = nir_fnoise2_1(&b, srcs[0]); break;
+            case 2: result = nir_fnoise2_2(&b, srcs[0]); break;
+            case 3: result = nir_fnoise2_3(&b, srcs[0]); break;
+            case 4: result = nir_fnoise2_4(&b, srcs[0]); break;
             default: unreachable("not reached");
          }
          break;
       case 3:
          switch (ir->operands[0]->type->vector_elements) {
-            case 1: emit(nir_op_fnoise3_1, dest_size, srcs); break;
-            case 2: emit(nir_op_fnoise3_2, dest_size, srcs); break;
-            case 3: emit(nir_op_fnoise3_3, dest_size, srcs); break;
-            case 4: emit(nir_op_fnoise3_4, dest_size, srcs); break;
+            case 1: result = nir_fnoise3_1(&b, srcs[0]); break;
+            case 2: result = nir_fnoise3_2(&b, srcs[0]); break;
+            case 3: result = nir_fnoise3_3(&b, srcs[0]); break;
+            case 4: result = nir_fnoise3_4(&b, srcs[0]); break;
             default: unreachable("not reached");
          }
          break;
       case 4:
          switch (ir->operands[0]->type->vector_elements) {
-            case 1: emit(nir_op_fnoise4_1, dest_size, srcs); break;
-            case 2: emit(nir_op_fnoise4_2, dest_size, srcs); break;
-            case 3: emit(nir_op_fnoise4_3, dest_size, srcs); break;
-            case 4: emit(nir_op_fnoise4_4, dest_size, srcs); break;
+            case 1: result = nir_fnoise4_1(&b, srcs[0]); break;
+            case 2: result = nir_fnoise4_2(&b, srcs[0]); break;
+            case 3: result = nir_fnoise4_3(&b, srcs[0]); break;
+            case 4: result = nir_fnoise4_4(&b, srcs[0]); break;
             default: unreachable("not reached");
          }
          break;
@@ -1578,234 +1487,167 @@ nir_visitor::visit(ir_expression *ir)
    }
 
    case ir_binop_add:
+      result = (out_type == GLSL_TYPE_FLOAT) ? nir_fadd(&b, srcs[0], srcs[1])
+                                             : nir_iadd(&b, srcs[0], srcs[1]);
+      break;
    case ir_binop_sub:
+      result = (out_type == GLSL_TYPE_FLOAT) ? nir_fsub(&b, srcs[0], srcs[1])
+                                             : nir_isub(&b, srcs[0], srcs[1]);
+      break;
    case ir_binop_mul:
+      result = (out_type == GLSL_TYPE_FLOAT) ? nir_fmul(&b, srcs[0], srcs[1])
+                                             : nir_imul(&b, srcs[0], srcs[1]);
+      break;
    case ir_binop_div:
+      if (out_type == GLSL_TYPE_FLOAT)
+         result = nir_fdiv(&b, srcs[0], srcs[1]);
+      else if (out_type == GLSL_TYPE_INT)
+         result = nir_idiv(&b, srcs[0], srcs[1]);
+      else
+         result = nir_udiv(&b, srcs[0], srcs[1]);
+      break;
    case ir_binop_mod:
+      result = (out_type == GLSL_TYPE_FLOAT) ? nir_fmod(&b, srcs[0], srcs[1])
+                                             : nir_umod(&b, srcs[0], srcs[1]);
+      break;
    case ir_binop_min:
+      if (out_type == GLSL_TYPE_FLOAT)
+         result = nir_fmin(&b, srcs[0], srcs[1]);
+      else if (out_type == GLSL_TYPE_INT)
+         result = nir_imin(&b, srcs[0], srcs[1]);
+      else
+         result = nir_umin(&b, srcs[0], srcs[1]);
+      break;
    case ir_binop_max:
-   case ir_binop_pow:
-   case ir_binop_bit_and:
-   case ir_binop_bit_or:
-   case ir_binop_bit_xor:
+      if (out_type == GLSL_TYPE_FLOAT)
+         result = nir_fmax(&b, srcs[0], srcs[1]);
+      else if (out_type == GLSL_TYPE_INT)
+         result = nir_imax(&b, srcs[0], srcs[1]);
+      else
+         result = nir_umax(&b, srcs[0], srcs[1]);
+      break;
+   case ir_binop_pow: result = nir_fpow(&b, srcs[0], srcs[1]); break;
+   case ir_binop_bit_and: result = nir_iand(&b, srcs[0], srcs[1]); break;
+   case ir_binop_bit_or: result = nir_ior(&b, srcs[0], srcs[1]); break;
+   case ir_binop_bit_xor: result = nir_ixor(&b, srcs[0], srcs[1]); break;
    case ir_binop_logic_and:
+      result = supports_ints ? nir_iand(&b, srcs[0], srcs[1])
+                             : nir_fand(&b, srcs[0], srcs[1]);
+      break;
    case ir_binop_logic_or:
-   case ir_binop_logic_xor:
-   case ir_binop_lshift:
+      result = supports_ints ? nir_ior(&b, srcs[0], srcs[1])
+                             : nir_for(&b, srcs[0], srcs[1]);
+      break;
+   case ir_binop_logic_xor: result = nir_ixor(&b, srcs[0], srcs[1]); break;
+      result = supports_ints ? nir_ior(&b, srcs[0], srcs[1])
+                             : nir_for(&b, srcs[0], srcs[1]);
+      break;
+   case ir_binop_lshift: result = nir_ishl(&b, srcs[0], srcs[1]); break;
    case ir_binop_rshift:
-      switch (ir->operation) {
-      case ir_binop_add:
-         if (out_type == GLSL_TYPE_FLOAT)
-            op = nir_op_fadd;
-         else
-            op = nir_op_iadd;
-         break;
-      case ir_binop_sub:
-         if (out_type == GLSL_TYPE_FLOAT)
-            op = nir_op_fsub;
-         else
-            op = nir_op_isub;
-         break;
-      case ir_binop_mul:
-         if (out_type == GLSL_TYPE_FLOAT)
-            op = nir_op_fmul;
-         else
-            op = nir_op_imul;
-         break;
-      case ir_binop_div:
-         if (out_type == GLSL_TYPE_FLOAT)
-            op = nir_op_fdiv;
-         else if (out_type == GLSL_TYPE_INT)
-            op = nir_op_idiv;
-         else
-            op = nir_op_udiv;
-         break;
-      case ir_binop_mod:
-         if (out_type == GLSL_TYPE_FLOAT)
-            op = nir_op_fmod;
-         else
-            op = nir_op_umod;
-         break;
-      case ir_binop_min:
-         if (out_type == GLSL_TYPE_FLOAT)
-            op = nir_op_fmin;
-         else if (out_type == GLSL_TYPE_INT)
-            op = nir_op_imin;
-         else
-            op = nir_op_umin;
-         break;
-      case ir_binop_max:
-         if (out_type == GLSL_TYPE_FLOAT)
-            op = nir_op_fmax;
-         else if (out_type == GLSL_TYPE_INT)
-            op = nir_op_imax;
-         else
-            op = nir_op_umax;
-         break;
-      case ir_binop_bit_and:
-         op = nir_op_iand;
-         break;
-      case ir_binop_bit_or:
-         op = nir_op_ior;
-         break;
-      case ir_binop_bit_xor:
-         op = nir_op_ixor;
-         break;
-      case ir_binop_logic_and:
-         if (supports_ints)
-            op = nir_op_iand;
-         else
-            op = nir_op_fand;
-         break;
-      case ir_binop_logic_or:
-         if (supports_ints)
-            op = nir_op_ior;
-         else
-            op = nir_op_for;
-         break;
-      case ir_binop_logic_xor:
-         if (supports_ints)
-            op = nir_op_ixor;
-         else
-            op = nir_op_fxor;
-         break;
-      case ir_binop_lshift:
-         op = nir_op_ishl;
-         break;
-      case ir_binop_rshift:
-         if (out_type == GLSL_TYPE_INT)
-            op = nir_op_ishr;
-         else
-            op = nir_op_ushr;
-         break;
-      case ir_binop_pow:
-         op = nir_op_fpow;
-         break;
-
-      default:
-         unreachable("not reached");
-      }
-
-      instr = emit(op, dest_size, srcs);
-
-      if (ir->operands[0]->type->vector_elements != 1 &&
-          ir->operands[1]->type->vector_elements == 1) {
-         for (unsigned i = 0; i < ir->operands[0]->type->vector_elements;
-              i++) {
-            instr->src[1].swizzle[i] = 0;
-         }
-      }
-
-      if (ir->operands[1]->type->vector_elements != 1 &&
-          ir->operands[0]->type->vector_elements == 1) {
-         for (unsigned i = 0; i < ir->operands[1]->type->vector_elements;
-              i++) {
-            instr->src[0].swizzle[i] = 0;
-         }
-      }
-
+      result = (out_type == GLSL_TYPE_INT) ? nir_ishr(&b, srcs[0], srcs[1])
+                                           : nir_ushr(&b, srcs[0], srcs[1]);
       break;
    case ir_binop_imul_high:
-      emit(out_type == GLSL_TYPE_UINT ? nir_op_umul_high : nir_op_imul_high,
-           dest_size, srcs);
+      result = (out_type == GLSL_TYPE_INT) ? nir_imul_high(&b, srcs[0], srcs[1])
+                                           : nir_umul_high(&b, srcs[0], srcs[1]);
       break;
-   case ir_binop_carry:  emit(nir_op_uadd_carry, dest_size, srcs);  break;
-   case ir_binop_borrow: emit(nir_op_usub_borrow, dest_size, srcs); break;
+   case ir_binop_carry:  result = nir_uadd_carry(&b, srcs[0], srcs[1]);  break;
+   case ir_binop_borrow: result = nir_usub_borrow(&b, srcs[0], srcs[1]); break;
    case ir_binop_less:
       if (supports_ints) {
          if (types[0] == GLSL_TYPE_FLOAT)
-            emit(nir_op_flt, dest_size, srcs);
+            result = nir_flt(&b, srcs[0], srcs[1]);
          else if (types[0] == GLSL_TYPE_INT)
-            emit(nir_op_ilt, dest_size, srcs);
+            result = nir_ilt(&b, srcs[0], srcs[1]);
          else
-            emit(nir_op_ult, dest_size, srcs);
+            result = nir_ult(&b, srcs[0], srcs[1]);
       } else {
-         emit(nir_op_slt, dest_size, srcs);
+         result = nir_slt(&b, srcs[0], srcs[1]);
       }
       break;
    case ir_binop_greater:
       if (supports_ints) {
          if (types[0] == GLSL_TYPE_FLOAT)
-            emit(nir_op_flt, dest_size, srcs[1], srcs[0]);
+            result = nir_flt(&b, srcs[1], srcs[0]);
          else if (types[0] == GLSL_TYPE_INT)
-            emit(nir_op_ilt, dest_size, srcs[1], srcs[0]);
+            result = nir_ilt(&b, srcs[1], srcs[0]);
          else
-            emit(nir_op_ult, dest_size, srcs[1], srcs[0]);
+            result = nir_ult(&b, srcs[1], srcs[0]);
       } else {
-         emit(nir_op_slt, dest_size, srcs[1], srcs[0]);
+         result = nir_slt(&b, srcs[1], srcs[0]);
       }
       break;
    case ir_binop_lequal:
       if (supports_ints) {
          if (types[0] == GLSL_TYPE_FLOAT)
-            emit(nir_op_fge, dest_size, srcs[1], srcs[0]);
+            result = nir_fge(&b, srcs[1], srcs[0]);
          else if (types[0] == GLSL_TYPE_INT)
-            emit(nir_op_ige, dest_size, srcs[1], srcs[0]);
+            result = nir_ige(&b, srcs[1], srcs[0]);
          else
-            emit(nir_op_uge, dest_size, srcs[1], srcs[0]);
+            result = nir_uge(&b, srcs[1], srcs[0]);
       } else {
-         emit(nir_op_slt, dest_size, srcs[1], srcs[0]);
+         result = nir_slt(&b, srcs[1], srcs[0]);
       }
       break;
    case ir_binop_gequal:
       if (supports_ints) {
          if (types[0] == GLSL_TYPE_FLOAT)
-            emit(nir_op_fge, dest_size, srcs);
+            result = nir_fge(&b, srcs[0], srcs[1]);
          else if (types[0] == GLSL_TYPE_INT)
-            emit(nir_op_ige, dest_size, srcs);
+            result = nir_ige(&b, srcs[0], srcs[1]);
          else
-            emit(nir_op_uge, dest_size, srcs);
+            result = nir_uge(&b, srcs[0], srcs[1]);
       } else {
-         emit(nir_op_slt, dest_size, srcs);
+         result = nir_slt(&b, srcs[0], srcs[1]);
       }
       break;
    case ir_binop_equal:
       if (supports_ints) {
          if (types[0] == GLSL_TYPE_FLOAT)
-            emit(nir_op_feq, dest_size, srcs);
+            result = nir_feq(&b, srcs[0], srcs[1]);
          else
-            emit(nir_op_ieq, dest_size, srcs);
+            result = nir_ieq(&b, srcs[0], srcs[1]);
       } else {
-         emit(nir_op_seq, dest_size, srcs);
+         result = nir_seq(&b, srcs[0], srcs[1]);
       }
       break;
    case ir_binop_nequal:
       if (supports_ints) {
          if (types[0] == GLSL_TYPE_FLOAT)
-            emit(nir_op_fne, dest_size, srcs);
+            result = nir_fne(&b, srcs[0], srcs[1]);
          else
-            emit(nir_op_ine, dest_size, srcs);
+            result = nir_ine(&b, srcs[0], srcs[1]);
       } else {
-         emit(nir_op_sne, dest_size, srcs);
+         result = nir_sne(&b, srcs[0], srcs[1]);
       }
       break;
    case ir_binop_all_equal:
       if (supports_ints) {
          if (types[0] == GLSL_TYPE_FLOAT) {
             switch (ir->operands[0]->type->vector_elements) {
-               case 1: emit(nir_op_feq, dest_size, srcs); break;
-               case 2: emit(nir_op_ball_fequal2, dest_size, srcs); break;
-               case 3: emit(nir_op_ball_fequal3, dest_size, srcs); break;
-               case 4: emit(nir_op_ball_fequal4, dest_size, srcs); break;
+               case 1: result = nir_feq(&b, srcs[0], srcs[1]); break;
+               case 2: result = nir_ball_fequal2(&b, srcs[0], srcs[1]); break;
+               case 3: result = nir_ball_fequal3(&b, srcs[0], srcs[1]); break;
+               case 4: result = nir_ball_fequal4(&b, srcs[0], srcs[1]); break;
                default:
                   unreachable("not reached");
             }
          } else {
             switch (ir->operands[0]->type->vector_elements) {
-               case 1: emit(nir_op_ieq, dest_size, srcs); break;
-               case 2: emit(nir_op_ball_iequal2, dest_size, srcs); break;
-               case 3: emit(nir_op_ball_iequal3, dest_size, srcs); break;
-               case 4: emit(nir_op_ball_iequal4, dest_size, srcs); break;
+               case 1: result = nir_ieq(&b, srcs[0], srcs[1]); break;
+               case 2: result = nir_ball_iequal2(&b, srcs[0], srcs[1]); break;
+               case 3: result = nir_ball_iequal3(&b, srcs[0], srcs[1]); break;
+               case 4: result = nir_ball_iequal4(&b, srcs[0], srcs[1]); break;
                default:
                   unreachable("not reached");
             }
          }
       } else {
          switch (ir->operands[0]->type->vector_elements) {
-            case 1: emit(nir_op_seq, dest_size, srcs); break;
-            case 2: emit(nir_op_fall_equal2, dest_size, srcs); break;
-            case 3: emit(nir_op_fall_equal3, dest_size, srcs); break;
-            case 4: emit(nir_op_fall_equal4, dest_size, srcs); break;
+            case 1: result = nir_seq(&b, srcs[0], srcs[1]); break;
+            case 2: result = nir_fall_equal2(&b, srcs[0], srcs[1]); break;
+            case 3: result = nir_fall_equal3(&b, srcs[0], srcs[1]); break;
+            case 4: result = nir_fall_equal4(&b, srcs[0], srcs[1]); break;
             default:
                unreachable("not reached");
          }
@@ -1815,29 +1657,29 @@ nir_visitor::visit(ir_expression *ir)
       if (supports_ints) {
          if (types[0] == GLSL_TYPE_FLOAT) {
             switch (ir->operands[0]->type->vector_elements) {
-               case 1: emit(nir_op_fne, dest_size, srcs); break;
-               case 2: emit(nir_op_bany_fnequal2, dest_size, srcs); break;
-               case 3: emit(nir_op_bany_fnequal3, dest_size, srcs); break;
-               case 4: emit(nir_op_bany_fnequal4, dest_size, srcs); break;
+               case 1: result = nir_fne(&b, srcs[0], srcs[1]); break;
+               case 2: result = nir_bany_fnequal2(&b, srcs[0], srcs[1]); break;
+               case 3: result = nir_bany_fnequal3(&b, srcs[0], srcs[1]); break;
+               case 4: result = nir_bany_fnequal4(&b, srcs[0], srcs[1]); break;
                default:
                   unreachable("not reached");
             }
          } else {
             switch (ir->operands[0]->type->vector_elements) {
-               case 1: emit(nir_op_ine, dest_size, srcs); break;
-               case 2: emit(nir_op_bany_inequal2, dest_size, srcs); break;
-               case 3: emit(nir_op_bany_inequal3, dest_size, srcs); break;
-               case 4: emit(nir_op_bany_inequal4, dest_size, srcs); break;
+               case 1: result = nir_ine(&b, srcs[0], srcs[1]); break;
+               case 2: result = nir_bany_inequal2(&b, srcs[0], srcs[1]); break;
+               case 3: result = nir_bany_inequal3(&b, srcs[0], srcs[1]); break;
+               case 4: result = nir_bany_inequal4(&b, srcs[0], srcs[1]); break;
                default:
                   unreachable("not reached");
             }
          }
       } else {
          switch (ir->operands[0]->type->vector_elements) {
-            case 1: emit(nir_op_sne, dest_size, srcs); break;
-            case 2: emit(nir_op_fany_nequal2, dest_size, srcs); break;
-            case 3: emit(nir_op_fany_nequal3, dest_size, srcs); break;
-            case 4: emit(nir_op_fany_nequal4, dest_size, srcs); break;
+            case 1: result = nir_sne(&b, srcs[0], srcs[1]); break;
+            case 2: result = nir_fany_nequal2(&b, srcs[0], srcs[1]); break;
+            case 3: result = nir_fany_nequal3(&b, srcs[0], srcs[1]); break;
+            case 4: result = nir_fany_nequal4(&b, srcs[0], srcs[1]); break;
             default:
                unreachable("not reached");
          }
@@ -1845,64 +1687,44 @@ nir_visitor::visit(ir_expression *ir)
       break;
    case ir_binop_dot:
       switch (ir->operands[0]->type->vector_elements) {
-         case 2: emit(nir_op_fdot2, dest_size, srcs); break;
-         case 3: emit(nir_op_fdot3, dest_size, srcs); break;
-         case 4: emit(nir_op_fdot4, dest_size, srcs); break;
+         case 2: result = nir_fdot2(&b, srcs[0], srcs[1]); break;
+         case 3: result = nir_fdot3(&b, srcs[0], srcs[1]); break;
+         case 4: result = nir_fdot4(&b, srcs[0], srcs[1]); break;
          default:
             unreachable("not reached");
       }
       break;
 
    case ir_binop_pack_half_2x16_split:
-         emit(nir_op_pack_half_2x16_split, dest_size, srcs);
+         result = nir_pack_half_2x16_split(&b, srcs[0], srcs[1]);
          break;
-   case ir_binop_bfm:   emit(nir_op_bfm, dest_size, srcs);   break;
-   case ir_binop_ldexp: emit(nir_op_ldexp, dest_size, srcs); break;
-   case ir_triop_fma:   emit(nir_op_ffma, dest_size, srcs);  break;
+   case ir_binop_bfm:   result = nir_bfm(&b, srcs[0], srcs[1]);   break;
+   case ir_binop_ldexp: result = nir_ldexp(&b, srcs[0], srcs[1]); break;
+   case ir_triop_fma:
+      result = nir_ffma(&b, srcs[0], srcs[1], srcs[2]);
+      break;
    case ir_triop_lrp:
-      instr = emit(nir_op_flrp, dest_size, srcs);
-      if (ir->operands[0]->type->vector_elements != 1 &&
-          ir->operands[2]->type->vector_elements == 1) {
-         for (unsigned i = 0; i < ir->operands[0]->type->vector_elements;
-              i++) {
-            instr->src[2].swizzle[i] = 0;
-         }
-      }
+      result = nir_flrp(&b, srcs[0], srcs[1], srcs[2]);
       break;
    case ir_triop_csel:
       if (supports_ints)
-         emit(nir_op_bcsel, dest_size, srcs);
+         result = nir_bcsel(&b, srcs[0], srcs[1], srcs[2]);
       else
-         emit(nir_op_fcsel, dest_size, srcs);
+         result = nir_fcsel(&b, srcs[0], srcs[1], srcs[2]);
       break;
    case ir_triop_bfi:
-      instr = emit(nir_op_bfi, dest_size, srcs);
-      for (unsigned i = 0; i < ir->operands[1]->type->vector_elements; i++) {
-         instr->src[0].swizzle[i] = 0;
-      }
+      result = nir_bfi(&b, srcs[0], srcs[1], srcs[2]);
       break;
    case ir_triop_bitfield_extract:
-      instr = emit(out_type == GLSL_TYPE_INT ? nir_op_ibitfield_extract :
-                   nir_op_ubitfield_extract, dest_size, srcs);
-      for (unsigned i = 0; i < ir->operands[0]->type->vector_elements; i++) {
-         instr->src[1].swizzle[i] = 0;
-         instr->src[2].swizzle[i] = 0;
-      }
+      result = (out_type == GLSL_TYPE_INT) ?
+         nir_ibitfield_extract(&b, srcs[0], srcs[1], srcs[2]) :
+         nir_ubitfield_extract(&b, srcs[0], srcs[1], srcs[2]);
       break;
    case ir_quadop_bitfield_insert:
-      instr = emit(nir_op_bitfield_insert, dest_size, srcs);
-      for (unsigned i = 0; i < ir->operands[0]->type->vector_elements; i++) {
-         instr->src[2].swizzle[i] = 0;
-         instr->src[3].swizzle[i] = 0;
-      }
+      result = nir_bitfield_insert(&b, srcs[0], srcs[1], srcs[2], srcs[3]);
       break;
    case ir_quadop_vector:
-      switch (ir->type->vector_elements) {
-         case 2: emit(nir_op_vec2, dest_size, srcs); break;
-         case 3: emit(nir_op_vec3, dest_size, srcs); break;
-         case 4: emit(nir_op_vec4, dest_size, srcs); break;
-         default: unreachable("not reached");
-      }
+      result = nir_vec(&b, srcs, ir->type->vector_elements);
       break;
 
    default:
@@ -1913,13 +1735,9 @@ nir_visitor::visit(ir_expression *ir)
 void
 nir_visitor::visit(ir_swizzle *ir)
 {
-   nir_alu_instr *instr = emit(supports_ints ? nir_op_imov : nir_op_fmov,
-                               ir->type->vector_elements,
-                               evaluate_rvalue(ir->val));
-
    unsigned swizzle[4] = { ir->mask.x, ir->mask.y, ir->mask.z, ir->mask.w };
-   for (unsigned i = 0; i < ir->type->vector_elements; i++)
-      instr->src[0].swizzle[i] = swizzle[i];
+   result = nir_swizzle(&b, evaluate_rvalue(ir->val), swizzle,
+                        ir->type->vector_elements, !supports_ints);
 }
 
 void
@@ -2184,5 +2002,5 @@ nir_visitor::visit(ir_barrier *ir)
 {
    nir_intrinsic_instr *instr =
       nir_intrinsic_instr_create(this->shader, nir_intrinsic_barrier);
-   nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(&b, &instr->instr);
 }
