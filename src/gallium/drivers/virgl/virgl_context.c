@@ -665,11 +665,15 @@ static struct pipe_sampler_view *virgl_create_sampler_view(struct pipe_context *
                                       const struct pipe_sampler_view *state)
 {
    struct virgl_context *vctx = virgl_context(ctx);
-   struct virgl_sampler_view *grview = CALLOC_STRUCT(virgl_sampler_view);
+   struct virgl_sampler_view *grview;
    uint32_t handle;
    struct virgl_resource *res;
 
    if (state == NULL)
+      return NULL;
+
+   grview = CALLOC_STRUCT(virgl_sampler_view);
+   if (!grview)
       return NULL;
 
    res = virgl_resource(texture);
