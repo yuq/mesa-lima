@@ -343,7 +343,7 @@ virgl_vtest_winsys_resource_cache_create(struct virgl_winsys *vws,
    while (curr != &vtws->delayed) {
       curr_res = LIST_ENTRY(struct virgl_hw_res, curr, head);
 
-      if (!res && (ret = virgl_is_res_compat(vtws, curr_res, size, bind, format) > 0))
+      if (!res && ((ret = virgl_is_res_compat(vtws, curr_res, size, bind, format)) > 0))
          res = curr_res;
       else if (os_time_timeout(curr_res->start, curr_res->end, now)) {
          LIST_DEL(&curr_res->head);
