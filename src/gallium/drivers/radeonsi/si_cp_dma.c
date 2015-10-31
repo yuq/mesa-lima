@@ -48,6 +48,7 @@ static void si_emit_cp_dma_copy_buffer(struct si_context *sctx,
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? S_411_CP_SYNC(1) : 0;
+	uint32_t wr_confirm = !(flags & R600_CP_DMA_SYNC) ? S_414_DISABLE_WR_CONFIRM(1) : 0;
 	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? S_414_RAW_WAIT(1) : 0;
 	uint32_t sel = flags & CIK_CP_DMA_USE_L2 ?
 			   S_411_SRC_SEL(V_411_SRC_ADDR_TC_L2) |
@@ -70,7 +71,7 @@ static void si_emit_cp_dma_copy_buffer(struct si_context *sctx,
 		radeon_emit(cs, sync_flag | ((src_va >> 32) & 0xffff)); /* CP_SYNC [31] | SRC_ADDR_HI [15:0] */
 		radeon_emit(cs, dst_va);			/* DST_ADDR_LO [31:0] */
 		radeon_emit(cs, (dst_va >> 32) & 0xffff);	/* DST_ADDR_HI [15:0] */
-		radeon_emit(cs, size | raw_wait);		/* COMMAND [29:22] | BYTE_COUNT [20:0] */
+		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
 	}
 }
 
@@ -81,6 +82,7 @@ static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? S_411_CP_SYNC(1) : 0;
+	uint32_t wr_confirm = !(flags & R600_CP_DMA_SYNC) ? S_414_DISABLE_WR_CONFIRM(1) : 0;
 	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? S_414_RAW_WAIT(1) : 0;
 	uint32_t dst_sel = flags & CIK_CP_DMA_USE_L2 ? S_411_DSL_SEL(V_411_DST_ADDR_TC_L2) : 0;
 
@@ -101,7 +103,7 @@ static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 		radeon_emit(cs, sync_flag | S_411_SRC_SEL(V_411_DATA)); /* CP_SYNC [31] | SRC_SEL[30:29] */
 		radeon_emit(cs, dst_va);			/* DST_ADDR_LO [31:0] */
 		radeon_emit(cs, (dst_va >> 32) & 0xffff);	/* DST_ADDR_HI [15:0] */
-		radeon_emit(cs, size | raw_wait);		/* COMMAND [29:22] | BYTE_COUNT [20:0] */
+		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
 	}
 }
 
