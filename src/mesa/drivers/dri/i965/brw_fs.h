@@ -174,6 +174,7 @@ public:
    void lower_uniform_pull_constant_loads();
    bool lower_load_payload();
    bool lower_pack();
+   bool lower_d2f();
    bool lower_logical_sends();
    bool lower_integer_multiplication();
    bool lower_minmax();
