@@ -420,8 +420,8 @@ nv50_program_upload_code(struct nv50_context *nv50, struct nv50_program *prog)
 
    switch (prog->type) {
    case PIPE_SHADER_VERTEX:   heap = nv50->screen->vp_code_heap; break;
-   case PIPE_SHADER_GEOMETRY: heap = nv50->screen->fp_code_heap; break;
-   case PIPE_SHADER_FRAGMENT: heap = nv50->screen->gp_code_heap; break;
+   case PIPE_SHADER_GEOMETRY: heap = nv50->screen->gp_code_heap; break;
+   case PIPE_SHADER_FRAGMENT: heap = nv50->screen->fp_code_heap; break;
    default:
       assert(!"invalid program type");
       return false;
