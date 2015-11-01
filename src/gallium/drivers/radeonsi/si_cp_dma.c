@@ -152,8 +152,10 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 		*flags |= R600_CP_DMA_SYNC;
 }
 
+/* Alignment for optimal performance. */
+#define CP_DMA_ALIGNMENT	32
 /* The max number of bytes to copy per packet. */
-#define CP_DMA_MAX_BYTE_COUNT ((1 << 21) - 8)
+#define CP_DMA_MAX_BYTE_COUNT	((1 << 21) - CP_DMA_ALIGNMENT)
 
 static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 			    unsigned offset, unsigned size, unsigned value,
@@ -209,11 +211,51 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		r600_resource(dst)->TC_L2_dirty = true;
 }
 
+/**
+ * Realign the CP DMA engine. This must be done after a copy with an unaligned
+ * size.
+ *
+ * \param size  Remaining size to the CP DMA alignment.
+ */
+static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size)
+{
+	uint64_t va;
+	unsigned dma_flags = 0;
+	unsigned scratch_size = CP_DMA_ALIGNMENT * 2;
+
+	assert(size < CP_DMA_ALIGNMENT);
+
+	/* Use the scratch buffer as the dummy buffer. The 3D engine should be
+	 * idle at this point.
+	 */
+	if (!sctx->scratch_buffer ||
+	    sctx->scratch_buffer->b.b.width0 < scratch_size) {
+		r600_resource_reference(&sctx->scratch_buffer, NULL);
+		sctx->scratch_buffer =
+			si_resource_create_custom(&sctx->screen->b.b,
+						  PIPE_USAGE_DEFAULT,
+						  scratch_size);
+		if (!sctx->scratch_buffer)
+			return;
+		sctx->emit_scratch_reloc = true;
+	}
+
+	si_cp_dma_prepare(sctx, &sctx->scratch_buffer->b.b,
+			  &sctx->scratch_buffer->b.b, size, size, &dma_flags);
+
+	va = sctx->scratch_buffer->gpu_address;
+	si_emit_cp_dma_copy_buffer(sctx, va, va + CP_DMA_ALIGNMENT, size,
+				   dma_flags);
+}
+
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
 		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
 		    bool is_framebuffer)
 {
+	uint64_t main_dst_offset, main_src_offset;
+	unsigned skipped_size = 0;
+	unsigned realign_size = 0;
 	unsigned tc_l2_flag = get_tc_l2_flag(sctx, is_framebuffer);
 	unsigned flush_flags = get_flush_flags(sctx, is_framebuffer);
 
@@ -229,21 +271,62 @@ void si_copy_buffer(struct si_context *sctx,
 	dst_offset += r600_resource(dst)->gpu_address;
 	src_offset += r600_resource(src)->gpu_address;
 
+	/* If the size is not aligned, we must add a dummy copy at the end
+	 * just to align the internal counter. Otherwise, the DMA engine
+	 * would slow down by an order of magnitude for following copies.
+	 */
+	if (size % CP_DMA_ALIGNMENT)
+		realign_size = CP_DMA_ALIGNMENT - (size % CP_DMA_ALIGNMENT);
+
+	/* If the copy begins unaligned, we must start copying from the next
+	 * aligned block and the skipped part should be copied after everything
+	 * else has been copied. Only the src alignment matters, not dst.
+	 */
+	if (src_offset % CP_DMA_ALIGNMENT) {
+		skipped_size = CP_DMA_ALIGNMENT - (src_offset % CP_DMA_ALIGNMENT);
+		/* The main part will be skipped if the size is too small. */
+		skipped_size = MIN2(skipped_size, size);
+		size -= skipped_size;
+	}
+
 	/* Flush the caches. */
 	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH | flush_flags;
+
+	/* This is the main part doing the copying. Src is always aligned. */
+	main_dst_offset = dst_offset + skipped_size;
+	main_src_offset = src_offset + skipped_size;
 
 	while (size) {
 		unsigned dma_flags = tc_l2_flag;
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
 
-		si_cp_dma_prepare(sctx, dst, src, byte_count, size, &dma_flags);
+		si_cp_dma_prepare(sctx, dst, src, byte_count,
+				  size + skipped_size + realign_size,
+				  &dma_flags);
 
-		si_emit_cp_dma_copy_buffer(sctx, dst_offset, src_offset, byte_count, dma_flags);
+		si_emit_cp_dma_copy_buffer(sctx, main_dst_offset, main_src_offset,
+					   byte_count, dma_flags);
 
 		size -= byte_count;
-		src_offset += byte_count;
-		dst_offset += byte_count;
+		main_src_offset += byte_count;
+		main_dst_offset += byte_count;
 	}
+
+	/* Copy the part we skipped because src wasn't aligned. */
+	if (skipped_size) {
+		unsigned dma_flags = tc_l2_flag;
+
+		si_cp_dma_prepare(sctx, dst, src, skipped_size,
+				  skipped_size + realign_size,
+				  &dma_flags);
+
+		si_emit_cp_dma_copy_buffer(sctx, dst_offset, src_offset,
+					   skipped_size, dma_flags);
+	}
+
+	/* Finally, realign the engine if the size wasn't aligned. */
+	if (realign_size)
+		si_cp_dma_realign_engine(sctx, realign_size);
 
 	/* Flush the caches again in case the 3D engine has been prefetching
 	 * the resource. */
