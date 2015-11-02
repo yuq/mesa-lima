@@ -89,39 +89,9 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
       brw_reg.abs = reg->abs;
       brw_reg.negate = reg->negate;
       break;
-   case IMM:
-      assert(reg->stride == ((reg->type == BRW_REGISTER_TYPE_V ||
-                              reg->type == BRW_REGISTER_TYPE_UV ||
-                              reg->type == BRW_REGISTER_TYPE_VF) ? 1 : 0));
-
-      switch (reg->type) {
-      case BRW_REGISTER_TYPE_F:
-	 brw_reg = brw_imm_f(reg->f);
-	 break;
-      case BRW_REGISTER_TYPE_D:
-	 brw_reg = brw_imm_d(reg->d);
-	 break;
-      case BRW_REGISTER_TYPE_UD:
-	 brw_reg = brw_imm_ud(reg->ud);
-	 break;
-      case BRW_REGISTER_TYPE_W:
-	 brw_reg = brw_imm_w(reg->d);
-	 break;
-      case BRW_REGISTER_TYPE_UW:
-	 brw_reg = brw_imm_uw(reg->ud);
-	 break;
-      case BRW_REGISTER_TYPE_VF:
-         brw_reg = brw_imm_vf(reg->ud);
-         break;
-      case BRW_REGISTER_TYPE_V:
-         brw_reg = brw_imm_v(reg->ud);
-         break;
-      default:
-	 unreachable("not reached");
-      }
-      break;
    case ARF:
    case FIXED_GRF:
+   case IMM:
       brw_reg = *static_cast<struct brw_reg *>(reg);
       break;
    case BAD_FILE:
