@@ -325,7 +325,7 @@ src_reg
 vec4_visitor::get_nir_src(const nir_src &src, unsigned num_components)
 {
    /* if type is not specified, default to signed int */
-   return get_nir_src(src, nir_type_int, num_components);
+   return get_nir_src(src, nir_type_int32, num_components);
 }
 
 src_reg
@@ -742,7 +742,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
 
       /* Get the arguments of the atomic intrinsic. */
-      src_reg offset = get_nir_src(instr->src[0], nir_type_int,
+      src_reg offset = get_nir_src(instr->src[0], nir_type_int32,
                                    instr->num_components);
       const src_reg surface = brw_imm_ud(surf_index);
       const src_reg src0 = (info->num_srcs >= 2
@@ -788,7 +788,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
           * from any live channel.
           */
          surf_index = src_reg(this, glsl_type::uint_type);
-         emit(ADD(dst_reg(surf_index), get_nir_src(instr->src[0], nir_type_int,
+         emit(ADD(dst_reg(surf_index), get_nir_src(instr->src[0], nir_type_int32,
                                                    instr->num_components),
                   brw_imm_ud(prog_data->base.binding_table.ubo_start)));
          surf_index = emit_uniformize(surf_index);
@@ -806,7 +806,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       if (const_offset) {
          offset = brw_imm_ud(const_offset->u32[0] & ~15);
       } else {
-         offset = get_nir_src(instr->src[1], nir_type_int, 1);
+         offset = get_nir_src(instr->src[1], nir_type_uint32, 1);
       }
 
       src_reg packed_consts = src_reg(this, glsl_type::vec4_type);
