@@ -428,6 +428,12 @@ fs_reg::fs_reg(struct brw_reg reg) :
    this->subreg_offset = 0;
    this->reladdr = NULL;
    this->stride = 1;
+   if (this->file == IMM &&
+       (this->type != BRW_REGISTER_TYPE_V &&
+        this->type != BRW_REGISTER_TYPE_UV &&
+        this->type != BRW_REGISTER_TYPE_VF)) {
+      this->stride = 0;
+   }
 }
 
 bool
