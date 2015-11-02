@@ -80,7 +80,18 @@ anv_physical_device_init(struct anv_physical_device *device,
                          "failed to get device info");
       goto fail;
    }
-   
+
+   if (device->info->gen == 7 &&
+       !device->info->is_haswell && !device->info->is_baytrail) {
+      fprintf(stderr, "WARNING: Ivy Bridge Vulkan support is incomplete");
+   } else if (device->info->gen == 8 && !device->info->is_cherryview) {
+      /* Briadwell is as fully supported as anything */
+   } else {
+      result = vk_errorf(VK_UNSUPPORTED,
+                         "Vulkan not yet supported on %s", device->name);
+      goto fail;
+   }
+
    if (anv_gem_get_aperture(fd, &device->aperture_size) == -1) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
                          "failed to get aperture size: %m");
@@ -206,7 +217,7 @@ VkResult anv_CreateInstance(
    instance->pfnAlloc = alloc_callbacks->pfnAlloc;
    instance->pfnFree = alloc_callbacks->pfnFree;
    instance->apiVersion = pCreateInfo->pAppInfo->apiVersion;
-   instance->physicalDeviceCount = 0;
+   instance->physicalDeviceCount = -1;
 
    _mesa_locale_init();
 
@@ -271,13 +282,16 @@ VkResult anv_EnumeratePhysicalDevices(
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
    VkResult result;
 
-   if (instance->physicalDeviceCount == 0) {
+   if (instance->physicalDeviceCount < 0) {
       result = anv_physical_device_init(&instance->physicalDevice,
                                         instance, "/dev/dri/renderD128");
-      if (result != VK_SUCCESS)
+      if (result == VK_UNSUPPORTED) {
+         instance->physicalDeviceCount = 0;
+      } else if (result == VK_SUCCESS) {
+         instance->physicalDeviceCount = 1;
+      } else {
          return result;
-
-      instance->physicalDeviceCount = 1;
+      }
    }
 
    /* pPhysicalDeviceCount is an out parameter if pPhysicalDevices is NULL;

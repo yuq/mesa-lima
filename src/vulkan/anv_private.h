@@ -437,7 +437,7 @@ struct anv_instance {
     PFN_vkAllocFunction                         pfnAlloc;
     PFN_vkFreeFunction                          pfnFree;
     uint32_t                                    apiVersion;
-    uint32_t                                    physicalDeviceCount;
+    int                                         physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
 
     struct anv_wsi_implementation *             wsi_impl[VK_PLATFORM_NUM_KHR];
