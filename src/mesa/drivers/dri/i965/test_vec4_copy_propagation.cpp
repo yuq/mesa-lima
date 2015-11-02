@@ -162,7 +162,7 @@ TEST_F(copy_propagation_test, test_swizzle_writemask)
                                                       SWIZZLE_X,
                                                       SWIZZLE_Z))));
 
-   v->emit(v->MOV(writemask(a, WRITEMASK_XYZ), src_reg(1.0f)));
+   v->emit(v->MOV(writemask(a, WRITEMASK_XYZ), brw_imm_f(1.0f)));
 
    vec4_instruction *test_mov =
       v->MOV(c, swizzle(src_reg(b), BRW_SWIZZLE4(SWIZZLE_W,

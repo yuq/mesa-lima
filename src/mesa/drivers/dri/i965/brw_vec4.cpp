@@ -71,51 +71,6 @@ src_reg::src_reg()
    init();
 }
 
-src_reg::src_reg(float f)
-{
-   init();
-
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_F;
-   this->f = f;
-}
-
-src_reg::src_reg(uint32_t u)
-{
-   init();
-
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_UD;
-   this->ud = u;
-}
-
-src_reg::src_reg(int32_t i)
-{
-   init();
-
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_D;
-   this->d = i;
-}
-
-src_reg::src_reg(uint8_t vf[4])
-{
-   init();
-
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_VF;
-   memcpy(&this->ud, vf, sizeof(unsigned));
-}
-
-src_reg::src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
-{
-   init();
-
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_VF;
-   this->ud = (vf0 <<  0) | (vf1 <<  8) | (vf2 << 16) | (vf3 << 24);
-}
-
 src_reg::src_reg(struct brw_reg reg) :
    backend_reg(reg)
 {
@@ -382,7 +337,9 @@ vec4_visitor::opt_vector_float()
 
       remaining_channels &= ~inst->dst.writemask;
       if (remaining_channels == 0) {
-         vec4_instruction *mov = MOV(inst->dst, imm);
+         unsigned vf;
+         memcpy(&vf, imm, sizeof(vf));
+         vec4_instruction *mov = MOV(inst->dst, brw_imm_vf(vf));
          mov->dst.type = BRW_REGISTER_TYPE_F;
          mov->dst.writemask = WRITEMASK_XYZW;
          inst->insert_after(block, mov);
@@ -657,13 +614,13 @@ vec4_visitor::opt_algebraic()
 	    inst->opcode = BRW_OPCODE_MOV;
 	    switch (inst->src[0].type) {
 	    case BRW_REGISTER_TYPE_F:
-	       inst->src[0] = src_reg(0.0f);
+	       inst->src[0] = brw_imm_f(0.0f);
 	       break;
 	    case BRW_REGISTER_TYPE_D:
-	       inst->src[0] = src_reg(0);
+	       inst->src[0] = brw_imm_d(0);
 	       break;
 	    case BRW_REGISTER_TYPE_UD:
-	       inst->src[0] = src_reg(0u);
+	       inst->src[0] = brw_imm_ud(0u);
 	       break;
 	    default:
 	       unreachable("not reached");
@@ -1232,7 +1189,7 @@ vec4_visitor::eliminate_find_live_channel()
       case SHADER_OPCODE_FIND_LIVE_CHANNEL:
          if (depth == 0) {
             inst->opcode = BRW_OPCODE_MOV;
-            inst->src[0] = src_reg(0);
+            inst->src[0] = brw_imm_d(0);
             inst->force_writemask_all = true;
             progress = true;
          }
@@ -1701,7 +1658,7 @@ vec4_visitor::emit_shader_time_end()
     */
    src_reg reset_end = shader_end_time;
    reset_end.swizzle = BRW_SWIZZLE_ZZZZ;
-   vec4_instruction *test = emit(AND(dst_null_d(), reset_end, src_reg(1u)));
+   vec4_instruction *test = emit(AND(dst_null_ud(), reset_end, brw_imm_ud(1u)));
    test->conditional_mod = BRW_CONDITIONAL_Z;
 
    emit(IF(BRW_PREDICATE_NORMAL));
@@ -1715,12 +1672,12 @@ vec4_visitor::emit_shader_time_end()
     * is 2 cycles.  Remove that overhead, so I can forget about that when
     * trying to determine the time taken for single instructions.
     */
-   emit(ADD(diff, src_reg(diff), src_reg(-2u)));
+   emit(ADD(diff, src_reg(diff), brw_imm_ud(-2u)));
 
    emit_shader_time_write(0, src_reg(diff));
-   emit_shader_time_write(1, src_reg(1u));
+   emit_shader_time_write(1, brw_imm_ud(1u));
    emit(BRW_OPCODE_ELSE);
-   emit_shader_time_write(2, src_reg(1u));
+   emit_shader_time_write(2, brw_imm_ud(1u));
    emit(BRW_OPCODE_ENDIF);
 }
 
@@ -1736,7 +1693,7 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 
    offset.type = BRW_REGISTER_TYPE_UD;
    int index = shader_time_index * 3 + shader_time_subindex;
-   emit(MOV(offset, src_reg(index * SHADER_TIME_STRIDE)));
+   emit(MOV(offset, brw_imm_d(index * SHADER_TIME_STRIDE)));
 
    time.type = BRW_REGISTER_TYPE_UD;
    emit(MOV(time, value));

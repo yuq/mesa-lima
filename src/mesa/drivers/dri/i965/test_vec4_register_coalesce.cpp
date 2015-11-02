@@ -135,7 +135,7 @@ TEST_F(register_coalesce_test, test_compute_to_mrf)
    m0.writemask = WRITEMASK_X;
    m0.type = BRW_REGISTER_TYPE_F;
 
-   vec4_instruction *mul = v->emit(v->MUL(temp, something, src_reg(1.0f)));
+   vec4_instruction *mul = v->emit(v->MUL(temp, something, brw_imm_f(1.0f)));
    v->emit(v->MOV(m0, src_reg(temp)));
 
    register_coalesce(v);
@@ -159,7 +159,7 @@ TEST_F(register_coalesce_test, test_multiple_use)
    m1.type = BRW_REGISTER_TYPE_F;
 
    src_reg src = src_reg(temp);
-   vec4_instruction *mul = v->emit(v->MUL(temp, something, src_reg(1.0f)));
+   vec4_instruction *mul = v->emit(v->MUL(temp, something, brw_imm_f(1.0f)));
    src.swizzle = BRW_SWIZZLE_XXXX;
    v->emit(v->MOV(m0, src));
    src.swizzle = BRW_SWIZZLE_XYZW;

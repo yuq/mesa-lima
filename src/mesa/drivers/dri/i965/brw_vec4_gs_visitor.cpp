@@ -153,7 +153,7 @@ vec4_gs_visitor::emit_prolog()
     */
    this->current_annotation = "clear r0.2";
    dst_reg r0(retype(brw_vec4_grf(0, 0), BRW_REGISTER_TYPE_UD));
-   vec4_instruction *inst = emit(GS_OPCODE_SET_DWORD_2, r0, 0u);
+   vec4_instruction *inst = emit(GS_OPCODE_SET_DWORD_2, r0, brw_imm_ud(0u));
    inst->force_writemask_all = true;
 
    /* Create a virtual register to hold the vertex count */
@@ -161,7 +161,7 @@ vec4_gs_visitor::emit_prolog()
 
    /* Initialize the vertex_count register to 0 */
    this->current_annotation = "initialize vertex_count";
-   inst = emit(MOV(dst_reg(this->vertex_count), 0u));
+   inst = emit(MOV(dst_reg(this->vertex_count), brw_imm_ud(0u)));
    inst->force_writemask_all = true;
 
    if (c->control_data_header_size_bits > 0) {
@@ -176,7 +176,7 @@ vec4_gs_visitor::emit_prolog()
        */
       if (c->control_data_header_size_bits <= 32) {
          this->current_annotation = "initialize control data bits";
-         inst = emit(MOV(dst_reg(this->control_data_bits), 0u));
+         inst = emit(MOV(dst_reg(this->control_data_bits), brw_imm_ud(0u)));
          inst->force_writemask_all = true;
       }
    }
@@ -274,7 +274,7 @@ vec4_gs_visitor::emit_urb_write_header(int mrf)
    vec4_instruction *inst = emit(MOV(mrf_reg, r0));
    inst->force_writemask_all = true;
    emit(GS_OPCODE_SET_WRITE_OFFSET, mrf_reg, this->vertex_count,
-        (uint32_t) gs_prog_data->output_vertex_size_hwords);
+        brw_imm_ud(gs_prog_data->output_vertex_size_hwords));
 }
 
 
@@ -354,11 +354,12 @@ vec4_gs_visitor::emit_control_data_bits()
    src_reg dword_index(this, glsl_type::uint_type);
    if (urb_write_flags) {
       src_reg prev_count(this, glsl_type::uint_type);
-      emit(ADD(dst_reg(prev_count), this->vertex_count, 0xffffffffu));
+      emit(ADD(dst_reg(prev_count), this->vertex_count,
+               brw_imm_ud(0xffffffffu)));
       unsigned log2_bits_per_vertex =
          _mesa_fls(c->control_data_bits_per_vertex);
       emit(SHR(dst_reg(dword_index), prev_count,
-               (uint32_t) (6 - log2_bits_per_vertex)));
+               brw_imm_ud(6 - log2_bits_per_vertex)));
    }
 
    /* Start building the URB write message.  The first MRF gets a copy of
@@ -375,8 +376,9 @@ vec4_gs_visitor::emit_control_data_bits()
        * the appropriate OWORD within the control data header.
        */
       src_reg per_slot_offset(this, glsl_type::uint_type);
-      emit(SHR(dst_reg(per_slot_offset), dword_index, 2u));
-      emit(GS_OPCODE_SET_WRITE_OFFSET, mrf_reg, per_slot_offset, 1u);
+      emit(SHR(dst_reg(per_slot_offset), dword_index, brw_imm_ud(2u)));
+      emit(GS_OPCODE_SET_WRITE_OFFSET, mrf_reg, per_slot_offset,
+           brw_imm_ud(1u));
    }
 
    if (urb_write_flags & BRW_URB_WRITE_USE_CHANNEL_MASKS) {
@@ -388,10 +390,10 @@ vec4_gs_visitor::emit_control_data_bits()
        * together.
        */
       src_reg channel(this, glsl_type::uint_type);
-      inst = emit(AND(dst_reg(channel), dword_index, 3u));
+      inst = emit(AND(dst_reg(channel), dword_index, brw_imm_ud(3u)));
       inst->force_writemask_all = true;
       src_reg one(this, glsl_type::uint_type);
-      inst = emit(MOV(dst_reg(one), 1u));
+      inst = emit(MOV(dst_reg(one), brw_imm_ud(1u)));
       inst->force_writemask_all = true;
       src_reg channel_mask(this, glsl_type::uint_type);
       inst = emit(SHL(dst_reg(channel_mask), one, channel));
@@ -441,11 +443,11 @@ vec4_gs_visitor::set_stream_control_data_bits(unsigned stream_id)
 
    /* reg::sid = stream_id */
    src_reg sid(this, glsl_type::uint_type);
-   emit(MOV(dst_reg(sid), stream_id));
+   emit(MOV(dst_reg(sid), brw_imm_ud(stream_id)));
 
    /* reg:shift_count = 2 * (vertex_count - 1) */
    src_reg shift_count(this, glsl_type::uint_type);
-   emit(SHL(dst_reg(shift_count), this->vertex_count, 1u));
+   emit(SHL(dst_reg(shift_count), this->vertex_count, brw_imm_ud(1u)));
 
    /* Note: we're relying on the fact that the GEN SHL instruction only pays
     * attention to the lower 5 bits of its second source argument, so on this
@@ -503,8 +505,8 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
        *     vertex_count & (32 / bits_per_vertex - 1) == 0
        */
       vec4_instruction *inst =
-         emit(AND(dst_null_d(), this->vertex_count,
-                  (uint32_t) (32 / c->control_data_bits_per_vertex - 1)));
+         emit(AND(dst_null_ud(), this->vertex_count,
+                  brw_imm_ud(32 / c->control_data_bits_per_vertex - 1)));
       inst->conditional_mod = BRW_CONDITIONAL_Z;
 
       emit(IF(BRW_PREDICATE_NORMAL));
@@ -512,7 +514,7 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
          /* If vertex_count is 0, then no control data bits have been
           * accumulated yet, so we skip emitting them.
           */
-         emit(CMP(dst_null_d(), this->vertex_count, 0u,
+         emit(CMP(dst_null_ud(), this->vertex_count, brw_imm_ud(0u),
                   BRW_CONDITIONAL_NEQ));
          emit(IF(BRW_PREDICATE_NORMAL));
          emit_control_data_bits();
@@ -525,7 +527,7 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
           * effect of any call to EndPrimitive() that the shader may have
           * made before outputting its first vertex.
           */
-         inst = emit(MOV(dst_reg(this->control_data_bits), 0u));
+         inst = emit(MOV(dst_reg(this->control_data_bits), brw_imm_ud(0u)));
          inst->force_writemask_all = true;
       }
       emit(BRW_OPCODE_ENDIF);
@@ -586,9 +588,9 @@ vec4_gs_visitor::gs_end_primitive()
 
    /* control_data_bits |= 1 << ((vertex_count - 1) % 32) */
    src_reg one(this, glsl_type::uint_type);
-   emit(MOV(dst_reg(one), 1u));
+   emit(MOV(dst_reg(one), brw_imm_ud(1u)));
    src_reg prev_count(this, glsl_type::uint_type);
-   emit(ADD(dst_reg(prev_count), this->vertex_count, 0xffffffffu));
+   emit(ADD(dst_reg(prev_count), this->vertex_count, brw_imm_ud(0xffffffffu)));
    src_reg mask(this, glsl_type::uint_type);
    /* Note: we're relying on the fact that the GEN SHL instruction only pays
     * attention to the lower 5 bits of its second source argument, so on this

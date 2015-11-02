@@ -71,7 +71,7 @@ namespace {
 
             bld.MOV(writemask(tmp, mask), src);
             if (n < 4)
-               bld.MOV(writemask(tmp, ~mask), 0);
+               bld.MOV(writemask(tmp, ~mask), brw_imm_d(0));
 
             return emit_stride(bld, src_reg(tmp), n, has_simd4x2 ? 1 : 4, 1);
          }
@@ -143,7 +143,7 @@ namespace brw {
             /* Emit the message send instruction. */
             const dst_reg dst = bld.vgrf(BRW_REGISTER_TYPE_UD, ret_sz);
             vec4_instruction *inst =
-               bld.emit(op, dst, src_reg(payload), usurface, arg);
+               bld.emit(op, dst, src_reg(payload), usurface, brw_imm_ud(arg));
             inst->mlen = sz;
             inst->regs_written = ret_sz;
             inst->header_size = header_sz;
@@ -235,7 +235,7 @@ namespace brw {
             const vec4_builder ubld = bld.exec_all();
             const dst_reg dst = bld.vgrf(BRW_REGISTER_TYPE_UD);
 
-            ubld.MOV(dst, src_reg(0));
+            ubld.MOV(dst, brw_imm_d(0));
 
             if (bld.shader->devinfo->gen == 7 &&
                 !bld.shader->devinfo->is_haswell) {
@@ -243,7 +243,7 @@ namespace brw {
                 * have no SIMD4x2 variant.  We only use the two X channels
                 * in that case, mask everything else out.
                 */
-               ubld.MOV(writemask(dst, WRITEMASK_W), src_reg(0x11));
+               ubld.MOV(writemask(dst, WRITEMASK_W), brw_imm_d(0x11));
             }
 
             return src_reg(dst);
