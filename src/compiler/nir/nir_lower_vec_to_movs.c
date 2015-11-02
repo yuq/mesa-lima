@@ -240,6 +240,7 @@ lower_vec_to_movs_block(nir_block *block, void *void_state)
          /* Since we insert multiple MOVs, we have a register destination. */
          nir_register *reg = nir_local_reg_create(impl);
          reg->num_components = vec->dest.dest.ssa.num_components;
+         reg->bit_size = vec->dest.dest.ssa.bit_size;
 
          nir_ssa_def_rewrite_uses(&vec->dest.dest.ssa, nir_src_for_reg(reg));
 
