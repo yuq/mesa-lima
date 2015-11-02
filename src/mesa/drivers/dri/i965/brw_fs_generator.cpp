@@ -111,6 +111,9 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
       case BRW_REGISTER_TYPE_VF:
          brw_reg = brw_imm_vf(reg->ud);
          break;
+      case BRW_REGISTER_TYPE_V:
+         brw_reg = brw_imm_v(reg->ud);
+         break;
       default:
 	 unreachable("not reached");
       }
