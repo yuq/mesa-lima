@@ -243,7 +243,7 @@ GLES3.2, GLSL ES 3.2
   GL_KHR_texture_compression_astc_ldr                  DONE (i965/gen9+)
   GL_OES_copy_image                                    not started (based on GL_ARB_copy_image, which is done for some drivers)
   GL_OES_draw_buffers_indexed                          not started
-  GL_OES_draw_elements_base_vertex                     not started (based on GL_ARB_draw_elements_base_vertex, which is done for all drivers)
+  GL_OES_draw_elements_base_vertex                     DONE (all drivers)
   GL_OES_geometry_shader                               not started (based on GL_ARB_geometry_shader4, which is done for all drivers)
   GL_OES_gpu_shader5                                   not started (based on parts of GL_ARB_gpu_shader5, which is done for some drivers)
   GL_OES_primitive_bounding box                        not started
