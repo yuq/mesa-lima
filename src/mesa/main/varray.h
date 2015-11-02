@@ -90,6 +90,13 @@ _mesa_attr_zero_aliases_vertex(struct gl_context *ctx)
                && !is_forward_compatible_context));
 }
 
+extern void
+_mesa_bind_vertex_buffer(struct gl_context *ctx,
+                         struct gl_vertex_array_object *vao,
+                         GLuint index,
+                         struct gl_buffer_object *vbo,
+                         GLintptr offset, GLsizei stride);
+
 extern void GLAPIENTRY
 _mesa_VertexPointer(GLint size, GLenum type, GLsizei stride,
                     const GLvoid *ptr);
