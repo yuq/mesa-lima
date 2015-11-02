@@ -454,8 +454,7 @@ fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
       tmp.subreg_offset = 2;
       tmp.stride = 2;
 
-      fs_inst *or_inst = bld.OR(tmp, g0, brw_imm_d(0x3f80));
-      or_inst->src[1].type = BRW_REGISTER_TYPE_UW;
+      bld.OR(tmp, g0, brw_imm_uw(0x3f80));
 
       tmp.type = BRW_REGISTER_TYPE_D;
       tmp.subreg_offset = 0;

@@ -561,16 +561,12 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    switch (type) {
    case BRW_REGISTER_TYPE_UD:
    case BRW_REGISTER_TYPE_D:
+   case BRW_REGISTER_TYPE_UW:
+   case BRW_REGISTER_TYPE_W:
    case BRW_REGISTER_TYPE_UQ:
    case BRW_REGISTER_TYPE_Q:
       /* Nothing to do. */
       return false;
-   case BRW_REGISTER_TYPE_UW:
-      sat_imm.ud = CLAMP(imm.ud, 0, USHRT_MAX);
-      break;
-   case BRW_REGISTER_TYPE_W:
-      sat_imm.d = CLAMP(imm.d, SHRT_MIN, SHRT_MAX);
-      break;
    case BRW_REGISTER_TYPE_F:
       sat_imm.f = CLAMP(imm.f, 0.0f, 1.0f);
       break;
