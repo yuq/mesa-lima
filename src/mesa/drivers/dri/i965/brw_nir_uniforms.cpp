@@ -104,6 +104,11 @@ brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
          unsigned vector_count = (MAX2(storage->array_elements, 1) *
                                   storage->type->matrix_columns);
          unsigned vector_size = storage->type->vector_elements;
+         unsigned max_vector_size = 4;
+         if (storage->type->base_type == GLSL_TYPE_DOUBLE) {
+            vector_size *= 2;
+            max_vector_size *= 2;
+         }
 
          for (unsigned s = 0; s < vector_count; s++) {
             unsigned i;
@@ -113,7 +118,7 @@ brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
 
             if (!is_scalar) {
                /* Pad out with zeros if needed (only needed for vec4) */
-               for (; i < 4; i++) {
+               for (; i < max_vector_size; i++) {
                   static const gl_constant_value zero = { 0.0 };
                   stage_prog_data->param[uniform_index++] = &zero;
                }
