@@ -1808,7 +1808,7 @@ vec4_visitor::convert_to_hw_regs()
          break;
 
       case MRF:
-         assert(((dst.nr + dst.reg_offset) & ~(1 << 7)) < BRW_MAX_MRF(devinfo->gen));
+         assert(((dst.nr + dst.reg_offset) & ~BRW_MRF_COMPR4) < BRW_MAX_MRF(devinfo->gen));
          reg = brw_message_reg(dst.nr + dst.reg_offset);
          reg.type = dst.type;
          reg.writemask = dst.writemask;

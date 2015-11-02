@@ -61,7 +61,7 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
 
    switch (reg->file) {
    case MRF:
-      assert((reg->nr & ~(1 << 7)) < BRW_MAX_MRF(gen));
+      assert((reg->nr & ~BRW_MRF_COMPR4) < BRW_MAX_MRF(gen));
       /* Fallthrough */
    case VGRF:
       if (reg->stride == 0) {

@@ -725,7 +725,7 @@ reg(FILE *file, unsigned _reg_file, unsigned _reg_nr)
 
    /* Clear the Compr4 instruction compression bit. */
    if (_reg_file == BRW_MESSAGE_REGISTER_FILE)
-      _reg_nr &= ~(1 << 7);
+      _reg_nr &= ~BRW_MRF_COMPR4;
 
    if (_reg_file == BRW_ARCHITECTURE_REGISTER_FILE) {
       switch (_reg_nr & 0xf0) {
@@ -1649,7 +1649,7 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
          if (brw_inst_qtr_control(devinfo, inst) == BRW_COMPRESSION_COMPRESSED &&
              opcode_descs[opcode].ndst > 0 &&
              brw_inst_dst_reg_file(devinfo, inst) == BRW_MESSAGE_REGISTER_FILE &&
-             brw_inst_dst_da_reg_nr(devinfo, inst) & (1 << 7)) {
+             brw_inst_dst_da_reg_nr(devinfo, inst) & BRW_MRF_COMPR4) {
             format(file, " compr4");
          } else {
             err |= control(file, "compression control", compr_ctrl,
