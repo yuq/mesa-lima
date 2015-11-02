@@ -68,7 +68,6 @@ brw_fast_clear_init(struct brw_context *brw)
    if (brw->fast_clear_state) {
       clear = brw->fast_clear_state;
       _mesa_BindVertexArray(clear->vao);
-      _mesa_BindBuffer(GL_ARRAY_BUFFER, clear->vbo);
       return true;
    }
 
@@ -79,9 +78,10 @@ brw_fast_clear_init(struct brw_context *brw)
    memset(clear, 0, sizeof *clear);
    _mesa_GenVertexArrays(1, &clear->vao);
    _mesa_BindVertexArray(clear->vao);
-   _mesa_GenBuffers(1, &clear->vbo);
-   _mesa_BindBuffer(GL_ARRAY_BUFFER, clear->vbo);
-   _mesa_VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+   _mesa_CreateBuffers(1, &clear->vbo);
+   _mesa_VertexArrayAttribFormat(clear->vao, 0, 2, GL_FLOAT, GL_FALSE, 0);
+   _mesa_VertexArrayVertexBuffer(clear->vao, 0, clear->vbo, 0,
+                                 sizeof(float) * 2);
    _mesa_EnableVertexAttribArray(0);
 
    return true;
@@ -168,6 +168,7 @@ static void
 brw_draw_rectlist(struct brw_context *brw, struct rect *rect, int num_instances)
 {
    struct gl_context *ctx = &brw->ctx;
+   struct brw_fast_clear_state *clear = brw->fast_clear_state;
    int start = 0, count = 3;
    struct _mesa_prim prim;
    float verts[6];
@@ -180,8 +181,8 @@ brw_draw_rectlist(struct brw_context *brw, struct rect *rect, int num_instances)
    verts[5] = rect->y0;
 
    /* upload new vertex data */
-   _mesa_BufferData(GL_ARRAY_BUFFER_ARB, sizeof(verts), verts,
-                    GL_DYNAMIC_DRAW_ARB);
+   _mesa_NamedBufferData(clear->vbo, sizeof(verts), verts,
+                         GL_DYNAMIC_DRAW);
 
    if (ctx->NewState)
       _mesa_update_state(ctx);
