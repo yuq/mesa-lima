@@ -165,8 +165,9 @@ struct rect {
 };
 
 static void
-brw_draw_rectlist(struct gl_context *ctx, struct rect *rect, int num_instances)
+brw_draw_rectlist(struct brw_context *brw, struct rect *rect, int num_instances)
 {
+   struct gl_context *ctx = &brw->ctx;
    int start = 0, count = 3;
    struct _mesa_prim prim;
    float verts[6];
@@ -694,7 +695,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       _mesa_meta_drawbuffers_from_bitfield(fast_clear_buffers);
       brw_bind_rep_write_shader(brw, (float *) fast_clear_color);
       set_fast_clear_op(brw, GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE);
-      brw_draw_rectlist(ctx, &fast_clear_rect, layers);
+      brw_draw_rectlist(brw, &fast_clear_rect, layers);
       set_fast_clear_op(brw, 0);
 
       /* Now set the mcs we cleared to INTEL_FAST_CLEAR_STATE_CLEAR so we'll
@@ -713,7 +714,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    if (rep_clear_buffers) {
       _mesa_meta_drawbuffers_from_bitfield(rep_clear_buffers);
       brw_bind_rep_write_shader(brw, ctx->Color.ClearColor.f);
-      brw_draw_rectlist(ctx, &clear_rect, layers);
+      brw_draw_rectlist(brw, &clear_rect, layers);
    }
 
  bail_to_meta:
@@ -818,7 +819,7 @@ brw_meta_resolve_color(struct brw_context *brw,
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
    get_resolve_rect(brw, mt, &rect);
 
-   brw_draw_rectlist(ctx, &rect, 1);
+   brw_draw_rectlist(brw, &rect, 1);
 
    set_fast_clear_op(brw, 0);
    use_rectlist(brw, false);
