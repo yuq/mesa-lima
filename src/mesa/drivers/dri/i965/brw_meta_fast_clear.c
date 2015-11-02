@@ -54,6 +54,8 @@
 #include "brw_blorp.h"
 
 struct brw_fast_clear_state {
+   struct gl_buffer_object *buf_obj;
+   struct gl_vertex_array_object *array_obj;
    GLuint vao;
    GLuint vbo;
    GLuint shader_prog;
@@ -64,6 +66,7 @@ static bool
 brw_fast_clear_init(struct brw_context *brw)
 {
    struct brw_fast_clear_state *clear;
+   struct gl_context *ctx = &brw->ctx;
 
    if (brw->fast_clear_state) {
       clear = brw->fast_clear_state;
@@ -79,10 +82,19 @@ brw_fast_clear_init(struct brw_context *brw)
    _mesa_GenVertexArrays(1, &clear->vao);
    _mesa_BindVertexArray(clear->vao);
    _mesa_CreateBuffers(1, &clear->vbo);
-   _mesa_VertexArrayAttribFormat(clear->vao, 0, 2, GL_FLOAT, GL_FALSE, 0);
-   _mesa_VertexArrayVertexBuffer(clear->vao, 0, clear->vbo, 0,
-                                 sizeof(float) * 2);
-   _mesa_EnableVertexAttribArray(0);
+
+   clear->buf_obj = _mesa_lookup_bufferobj(ctx, clear->vbo);
+   assert(clear->buf_obj != NULL);
+   clear->array_obj = _mesa_lookup_vao(ctx, clear->vao);
+   assert(clear->array_obj != NULL);
+
+   _mesa_update_array_format(ctx, clear->array_obj, VERT_ATTRIB_GENERIC(0),
+                             2, GL_FLOAT, GL_RGBA, GL_FALSE, GL_FALSE, GL_FALSE,
+                             0, true);
+   _mesa_bind_vertex_buffer(ctx, clear->array_obj, VERT_ATTRIB_GENERIC(0),
+                            clear->buf_obj, 0, sizeof(float) * 2);
+   _mesa_enable_vertex_array_attrib(ctx, clear->array_obj,
+                                    VERT_ATTRIB_GENERIC(0));
 
    return true;
 }
@@ -181,8 +193,8 @@ brw_draw_rectlist(struct brw_context *brw, struct rect *rect, int num_instances)
    verts[5] = rect->y0;
 
    /* upload new vertex data */
-   _mesa_NamedBufferData(clear->vbo, sizeof(verts), verts,
-                         GL_DYNAMIC_DRAW);
+   _mesa_buffer_data(ctx, clear->buf_obj, GL_NONE, sizeof(verts), verts,
+                     GL_DYNAMIC_DRAW, __func__);
 
    if (ctx->NewState)
       _mesa_update_state(ctx);
