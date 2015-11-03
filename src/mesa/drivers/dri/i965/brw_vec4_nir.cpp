@@ -1640,7 +1640,9 @@ void
 vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 {
    unsigned texture = instr->texture_index;
+   unsigned sampler = instr->sampler_index;
    src_reg texture_reg = brw_imm_ud(texture);
+   src_reg sampler_reg = brw_imm_ud(sampler);
    src_reg coordinate;
    const glsl_type *coord_type = NULL;
    src_reg shadow_comparitor;
@@ -1738,8 +1740,14 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          break;
       }
 
-      case nir_tex_src_sampler_offset:
-         break; /* Ignored for now */
+      case nir_tex_src_sampler_offset: {
+         /* Emit code to evaluate the actual indexing expression */
+         src_reg src = get_nir_src(instr->src[i].src, 1);
+         src_reg temp(this, glsl_type::uint_type);
+         emit(ADD(dst_reg(temp), src, brw_imm_ud(sampler)));
+         sampler_reg = emit_uniformize(temp);
+         break;
+      }
 
       case nir_tex_src_projector:
          unreachable("Should be lowered by do_lower_texture_projection");
@@ -1795,7 +1803,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
                 shadow_comparitor,
                 lod, lod2, sample_index,
                 constant_offset, offset_value,
-                mcs, is_cube_array, texture, texture_reg);
+                mcs, is_cube_array,
+                texture, texture_reg, sampler, sampler_reg);
 }
 
 void

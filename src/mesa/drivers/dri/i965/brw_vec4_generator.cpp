@@ -1675,7 +1675,7 @@ generate_code(struct brw_codegen *p,
       case SHADER_OPCODE_TG4:
       case SHADER_OPCODE_TG4_OFFSET:
       case SHADER_OPCODE_SAMPLEINFO:
-         generate_tex(p, prog_data, inst, dst, src[0], src[1], src[1]);
+         generate_tex(p, prog_data, inst, dst, src[0], src[1], src[2]);
          break;
 
       case VS_OPCODE_URB_WRITE:
