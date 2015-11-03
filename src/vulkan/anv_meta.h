@@ -40,13 +40,13 @@ struct anv_meta_saved_state {
 };
 
 void
-anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
-                    struct anv_meta_saved_state *state,
-                    uint32_t dynamic_state);
+anv_meta_save(struct anv_meta_saved_state *state,
+              const struct anv_cmd_buffer *cmd_buffer,
+              uint32_t dynamic_state);
 
 void
-anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
-                       const struct anv_meta_saved_state *state);
+anv_meta_restore(const struct anv_meta_saved_state *state,
+                 struct anv_cmd_buffer *cmd_buffer);
 
 #ifdef __cplusplus
 }

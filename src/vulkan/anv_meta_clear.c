@@ -140,8 +140,8 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
       }
    }
 
-   anv_cmd_buffer_save(cmd_buffer, &saved_state,
-                       (1 << VK_DYNAMIC_STATE_VIEWPORT));
+   anv_meta_save(&saved_state, cmd_buffer,
+                 (1 << VK_DYNAMIC_STATE_VIEWPORT));
    cmd_buffer->state.dynamic.viewport.count = 0;
 
    struct anv_subpass subpass = {
@@ -156,8 +156,7 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
    meta_emit_clear(cmd_buffer, pass->num_color_clear_attachments,
                    instance_data, ds_clear_value);
 
-   /* Restore API state */
-   anv_cmd_buffer_restore(cmd_buffer, &saved_state);
+   anv_meta_restore(&saved_state, cmd_buffer);
 }
 
 static nir_shader *
@@ -401,8 +400,8 @@ void anv_CmdClearColorImage(
    ANV_FROM_HANDLE(anv_image, image, _image);
    struct anv_meta_saved_state saved_state;
 
-   anv_cmd_buffer_save(cmd_buffer, &saved_state,
-                       (1 << VK_DYNAMIC_STATE_VIEWPORT));
+   anv_meta_save(&saved_state, cmd_buffer,
+                 (1 << VK_DYNAMIC_STATE_VIEWPORT));
    cmd_buffer->state.dynamic.viewport.count = 0;
 
    for (uint32_t r = 0; r < rangeCount; r++) {
@@ -514,8 +513,7 @@ void anv_CmdClearColorImage(
       }
    }
 
-   /* Restore API state */
-   anv_cmd_buffer_restore(cmd_buffer, &saved_state);
+   anv_meta_restore(&saved_state, cmd_buffer);
 }
 
 void anv_CmdClearDepthStencilImage(

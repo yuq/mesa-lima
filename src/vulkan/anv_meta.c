@@ -120,9 +120,9 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
 }
 
 void
-anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
-                    struct anv_meta_saved_state *state,
-                    uint32_t dynamic_state)
+anv_meta_save(struct anv_meta_saved_state *state,
+              const struct anv_cmd_buffer *cmd_buffer,
+              uint32_t dynamic_state)
 {
    state->old_pipeline = cmd_buffer->state.pipeline;
    state->old_descriptor_set0 = cmd_buffer->state.descriptors[0];
@@ -134,8 +134,8 @@ anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void
-anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
-                       const struct anv_meta_saved_state *state)
+anv_meta_restore(const struct anv_meta_saved_state *state,
+                 struct anv_cmd_buffer *cmd_buffer)
 {
    cmd_buffer->state.pipeline = state->old_pipeline;
    cmd_buffer->state.descriptors[0] = state->old_descriptor_set0;
@@ -434,8 +434,8 @@ static void
 meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
                   struct anv_meta_saved_state *saved_state)
 {
-   anv_cmd_buffer_save(cmd_buffer, saved_state,
-                       (1 << VK_DYNAMIC_STATE_VIEWPORT));
+   anv_meta_save(saved_state, cmd_buffer,
+                 (1 << VK_DYNAMIC_STATE_VIEWPORT));
 }
 
 struct blit_region {
@@ -625,7 +625,7 @@ static void
 meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_meta_saved_state *saved_state)
 {
-   anv_cmd_buffer_restore(cmd_buffer, saved_state);
+   anv_meta_restore(saved_state, cmd_buffer);
 }
 
 static VkFormat
