@@ -349,19 +349,19 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
       _mesa_BindVertexArray(*VAO);
 
       /* create vertex array buffer */
-      _mesa_GenBuffers(1, &VBO);
-      _mesa_BindBuffer(GL_ARRAY_BUFFER, VBO);
+      _mesa_CreateBuffers(1, &VBO);
       *buf_obj = _mesa_lookup_bufferobj(ctx, VBO);
 
       /* _mesa_lookup_bufferobj only returns NULL if name is 0.  If the object
        * does not yet exist (i.e., hasn't been bound) it will return a dummy
-       * object that you can't do anything with.
+       * object that you can't do anything with.  _mesa_CreateBuffers also
+       * makes the object exist.
        */
       assert(*buf_obj != NULL && (*buf_obj)->Name == VBO);
-      assert(*buf_obj == ctx->Array.ArrayBufferObj);
+      assert(*buf_obj != ctx->Array.ArrayBufferObj);
 
-      _mesa_BufferData(GL_ARRAY_BUFFER, 4 * sizeof(struct vertex), NULL,
-                       GL_DYNAMIC_DRAW);
+      _mesa_NamedBufferData(VBO, 4 * sizeof(struct vertex), NULL,
+                            GL_DYNAMIC_DRAW);
 
       assert((*buf_obj)->Size == 4 * sizeof(struct vertex));
 
@@ -369,16 +369,21 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
       if (use_generic_attributes) {
          assert(color_size == 0);
 
-         _mesa_VertexAttribPointer(0, vertex_size, GL_FLOAT, GL_FALSE,
-                                   sizeof(struct vertex), OFFSET(x));
+         _mesa_VertexArrayAttribFormat(*VAO, 0, vertex_size, GL_FLOAT,
+                                       GL_FALSE, OFFSET(x));
+         _mesa_VertexArrayVertexBuffer(*VAO, 0, VBO, 0,
+                                       sizeof(struct vertex));
          _mesa_EnableVertexAttribArray(0);
 
          if (texcoord_size > 0) {
-            _mesa_VertexAttribPointer(1, texcoord_size, GL_FLOAT, GL_FALSE,
-                                      sizeof(struct vertex), OFFSET(tex));
+            _mesa_VertexArrayAttribFormat(*VAO, 1, texcoord_size, GL_FLOAT,
+                                          GL_FALSE, OFFSET(tex));
+            _mesa_VertexArrayVertexBuffer(*VAO, 1, VBO, 0,
+                                          sizeof(struct vertex));
             _mesa_EnableVertexAttribArray(1);
          }
       } else {
+         _mesa_BindBuffer(GL_ARRAY_BUFFER, VBO);
          _mesa_VertexPointer(vertex_size, GL_FLOAT, sizeof(struct vertex),
                              OFFSET(x));
          _mesa_EnableClientState(GL_VERTEX_ARRAY);
@@ -394,16 +399,16 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
                                sizeof(struct vertex), OFFSET(r));
             _mesa_EnableClientState(GL_COLOR_ARRAY);
          }
-      }
 
-      /* Restore the old VBO.  This is done because we don't want the new VBO
-       * to be bound on exit.  It would be nicer to use DSA type functions,
-       * but there are no DSA functions to bind a VBO to a VAO for
-       * fixed-function vertex attributes.
-       */
-      {
-         struct save_state *save = &ctx->Meta->Save[ctx->Meta->SaveStackDepth - 1];
-         _mesa_BindBuffer(GL_ARRAY_BUFFER, save->ArrayBufferObj->Name);
+         /* Restore the old VBO.  This is done because we don't want the new VBO
+          * to be bound on exit.  It would be nicer to use DSA type functions,
+          * but there are no DSA functions to bind a VBO to a VAO for
+          * fixed-function vertex attributes.
+          */
+         {
+            struct save_state *save = &ctx->Meta->Save[ctx->Meta->SaveStackDepth - 1];
+            _mesa_BindBuffer(GL_ARRAY_BUFFER, save->ArrayBufferObj->Name);
+         }
       }
    } else {
       _mesa_BindVertexArray(*VAO);
