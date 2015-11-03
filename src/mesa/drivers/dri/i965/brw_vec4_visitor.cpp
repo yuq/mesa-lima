@@ -877,6 +877,8 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
                            src_reg offset_value,
                            src_reg mcs,
                            bool is_cube_array,
+                           uint32_t surface,
+                           src_reg surface_reg,
                            uint32_t sampler,
                            src_reg sampler_reg)
 {
@@ -936,7 +938,8 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    inst->dst.writemask = WRITEMASK_XYZW;
    inst->shadow_compare = shadow_comparitor.file != BAD_FILE;
 
-   inst->src[1] = sampler_reg;
+   inst->src[1] = surface_reg;
+   inst->src[2] = sampler_reg;
 
    /* MRF for the first parameter */
    int param_base = inst->base_mrf + inst->header_size;
@@ -1062,7 +1065,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    }
 
    if (devinfo->gen == 6 && op == ir_tg4) {
-      emit_gen6_gather_wa(key_tex->gen6_gather_wa[sampler], inst->dst);
+      emit_gen6_gather_wa(key_tex->gen6_gather_wa[surface], inst->dst);
    }
 
    swizzle_result(op, dest,
@@ -1100,7 +1103,8 @@ vec4_visitor::emit_gen6_gather_wa(uint8_t wa, dst_reg dst)
  * Set up the gather channel based on the swizzle, for gather4.
  */
 uint32_t
-vec4_visitor::gather_channel(unsigned gather_component, uint32_t sampler)
+vec4_visitor::gather_channel(unsigned gather_component,
+                             uint32_t surface, uint32_t sampler)
 {
    int swiz = GET_SWZ(key_tex->swizzles[sampler], gather_component);
    switch (swiz) {
@@ -1109,7 +1113,7 @@ vec4_visitor::gather_channel(unsigned gather_component, uint32_t sampler)
          /* gather4 sampler is broken for green channel on RG32F --
           * we must ask for blue instead.
           */
-         if (key_tex->gather_channel_quirk_mask & (1 << sampler))
+         if (key_tex->gather_channel_quirk_mask & (1 << surface))
             return 2;
          return 1;
       case SWIZZLE_Z: return 2;

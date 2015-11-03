@@ -1574,7 +1574,9 @@ glsl_type_for_nir_alu_type(nir_alu_type alu_type,
 void
 vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 {
+   unsigned texture = instr->texture_index;
    unsigned sampler = instr->sampler_index;
+   src_reg texture_reg = src_reg(texture);
    src_reg sampler_reg = src_reg(sampler);
    src_reg coordinate;
    const glsl_type *coord_type = NULL;
@@ -1655,8 +1657,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          sample_index = get_nir_src(instr->src[i].src, BRW_REGISTER_TYPE_D, 1);
          assert(coord_type != NULL);
          if (devinfo->gen >= 7 &&
-             key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
-            mcs = emit_mcs_fetch(coord_type, coordinate, sampler_reg);
+             key_tex->compressed_multisample_layout_mask & (1 << texture)) {
+            mcs = emit_mcs_fetch(coord_type, coordinate, texture_reg);
          } else {
             mcs = src_reg(0u);
          }
@@ -1668,13 +1670,12 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          offset_value = get_nir_src(instr->src[i].src, BRW_REGISTER_TYPE_D, 2);
          break;
 
-      case nir_tex_src_sampler_offset: {
-         /* The highest sampler which may be used by this operation is
+      case nir_tex_src_texture_offset: {
+         /* The highest texture which may be used by this operation is
           * the last element of the array. Mark it here, because the generator
           * doesn't have enough information to determine the bound.
           */
-         uint32_t array_size = instr->texture_array_size;
-         uint32_t max_used = sampler + array_size - 1;
+         uint32_t max_used = texture + instr->texture_array_size - 1;
          if (instr->op == nir_texop_tg4) {
             max_used += prog_data->base.binding_table.gather_texture_start;
          } else {
@@ -1683,6 +1684,15 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 
          brw_mark_surface_used(&prog_data->base, max_used);
 
+         /* Emit code to evaluate the actual indexing expression */
+         src_reg src = get_nir_src(instr->src[i].src, 1);
+         src_reg temp(this, glsl_type::uint_type);
+         emit(ADD(dst_reg(temp), src, src_reg(texture)));
+         texture_reg = emit_uniformize(temp);
+         break;
+      }
+
+      case nir_tex_src_sampler_offset: {
          /* Emit code to evaluate the actual indexing expression */
          src_reg src = get_nir_src(instr->src[i].src, 1);
          src_reg temp(this, glsl_type::uint_type);
@@ -1712,7 +1722,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 
    /* Stuff the channel select bits in the top of the texture offset */
    if (instr->op == nir_texop_tg4)
-      constant_offset |= gather_channel(instr->component, sampler) << 16;
+      constant_offset |= gather_channel(instr->component, texture, sampler) << 16;
 
    ir_texture_opcode op = ir_texture_opcode_for_nir_texop(instr->op);
 
@@ -1725,7 +1735,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
                 shadow_comparitor,
                 lod, lod2, sample_index,
                 constant_offset, offset_value,
-                mcs, is_cube_array, sampler, sampler_reg);
+                mcs, is_cube_array,
+                texture, texture_reg, sampler, sampler_reg);
 }
 
 void
