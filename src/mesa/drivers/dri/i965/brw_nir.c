@@ -178,9 +178,13 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
    this_progress;             \
 }))
 
-#define OPT(pass, ...) _OPT(                 \
-   this_progress = pass(nir ,##__VA_ARGS__); \
-   progress = progress || this_progress;     \
+#define OPT(pass, ...) _OPT(                   \
+   nir_metadata_set_validation_flag(nir);      \
+   this_progress = pass(nir ,##__VA_ARGS__);   \
+   if (this_progress) {                        \
+      progress = true;                         \
+      nir_metadata_check_validation_flag(nir); \
+   }                                           \
 )
 
 #define OPT_V(pass, ...) _OPT( \

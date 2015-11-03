@@ -1312,6 +1312,7 @@ typedef enum {
    nir_metadata_block_index = 0x1,
    nir_metadata_dominance = 0x2,
    nir_metadata_live_ssa_defs = 0x4,
+   nir_metadata_not_properly_reset = 0x8,
 } nir_metadata;
 
 typedef struct {
@@ -1891,8 +1892,12 @@ void nir_print_instr(const nir_instr *instr, FILE *fp);
 
 #ifdef DEBUG
 void nir_validate_shader(nir_shader *shader);
+void nir_metadata_set_validation_flag(nir_shader *shader);
+void nir_metadata_check_validation_flag(nir_shader *shader);
 #else
 static inline void nir_validate_shader(nir_shader *shader) { (void) shader; }
+static inline void nir_metadata_set_validation_flag(nir_shader *shader) { (void) shader; }
+static inline void nir_metadata_check_validation_flag(nir_shader *shader) { (void) shader; }
 #endif /* DEBUG */
 
 void nir_calc_dominance_impl(nir_function_impl *impl);
