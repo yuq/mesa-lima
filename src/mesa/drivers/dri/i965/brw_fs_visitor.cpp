@@ -198,12 +198,12 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
 /* Sample from the MCS surface attached to this multisample texture. */
 fs_reg
 fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
-                           const fs_reg &sampler)
+                           const fs_reg &texture)
 {
    const fs_reg dest = vgrf(glsl_type::uvec4_type);
    const fs_reg srcs[] = {
       coordinate, fs_reg(), fs_reg(), fs_reg(), fs_reg(), fs_reg(),
-      sampler, fs_reg(), fs_reg(components), fs_reg(0)
+      texture, texture, fs_reg(), fs_reg(components), fs_reg(0)
    };
    fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS_LOGICAL, dest, srcs,
                             ARRAY_SIZE(srcs));
@@ -228,6 +228,8 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                          int gather_component,
                          bool is_cube_array,
                          bool is_rect,
+                         uint32_t surface,
+                         fs_reg surface_reg,
                          uint32_t sampler,
                          fs_reg sampler_reg)
 {
@@ -273,7 +275,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
    fs_reg dst = vgrf(glsl_type::get_instance(dest_type->base_type, 4, 1));
    const fs_reg srcs[] = {
       coordinate, shadow_c, lod, lod2,
-      sample_index, mcs, sampler_reg, offset_value,
+      sample_index, mcs, surface_reg, sampler_reg, offset_value,
       fs_reg(coord_components), fs_reg(grad_components)
    };
    enum opcode opcode;
@@ -326,10 +328,10 @@ fs_visitor::emit_texture(ir_texture_opcode op,
 
    if (op == ir_tg4) {
       inst->offset |=
-         gather_channel(gather_component, sampler) << 16; /* M0.2:16-17 */
+         gather_channel(gather_component, surface, sampler) << 16; /* M0.2:16-17 */
 
       if (devinfo->gen == 6)
-         emit_gen6_gather_wa(key_tex->gen6_gather_wa[sampler], dst);
+         emit_gen6_gather_wa(key_tex->gen6_gather_wa[surface], dst);
    }
 
    /* fixup #layers for cube map arrays */
@@ -387,7 +389,7 @@ fs_visitor::emit_gen6_gather_wa(uint8_t wa, fs_reg dst)
  * Set up the gather channel based on the swizzle, for gather4.
  */
 uint32_t
-fs_visitor::gather_channel(int orig_chan, uint32_t sampler)
+fs_visitor::gather_channel(int orig_chan, uint32_t surface, uint32_t sampler)
 {
    int swiz = GET_SWZ(key_tex->swizzles[sampler], orig_chan);
    switch (swiz) {
@@ -396,7 +398,7 @@ fs_visitor::gather_channel(int orig_chan, uint32_t sampler)
          /* gather4 sampler is broken for green channel on RG32F --
           * we must ask for blue instead.
           */
-         if (key_tex->gather_channel_quirk_mask & (1 << sampler))
+         if (key_tex->gather_channel_quirk_mask & (1 << surface))
             return 2;
          return 1;
       case SWIZZLE_Z: return 2;

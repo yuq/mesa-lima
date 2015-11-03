@@ -2522,7 +2522,9 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
 void
 fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 {
+   unsigned texture = instr->texture_index;
    unsigned sampler = instr->sampler_index;
+   fs_reg texture_reg(texture);
    fs_reg sampler_reg(sampler);
 
    int gather_component = instr->component;
@@ -2590,9 +2592,9 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       case nir_tex_src_projector:
          unreachable("should be lowered");
 
-      case nir_tex_src_sampler_offset: {
-         /* Figure out the highest possible sampler index and mark it as used */
-         uint32_t max_used = sampler + instr->texture_array_size - 1;
+      case nir_tex_src_texture_offset: {
+         /* Figure out the highest possible texture index and mark it as used */
+         uint32_t max_used = texture + instr->texture_array_size - 1;
          if (instr->op == nir_texop_tg4 && devinfo->gen < 8) {
             max_used += stage_prog_data->binding_table.gather_texture_start;
          } else {
@@ -2600,6 +2602,14 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          }
          brw_mark_surface_used(prog_data, max_used);
 
+         /* Emit code to evaluate the actual indexing expression */
+         texture_reg = vgrf(glsl_type::uint_type);
+         bld.ADD(texture_reg, src, fs_reg(texture));
+         texture_reg = bld.emit_uniformize(texture_reg);
+         break;
+      }
+
+      case nir_tex_src_sampler_offset: {
          /* Emit code to evaluate the actual indexing expression */
          sampler_reg = vgrf(glsl_type::uint_type);
          bld.ADD(sampler_reg, src, fs_reg(sampler));
@@ -2614,8 +2624,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 
    if (instr->op == nir_texop_txf_ms) {
       if (devinfo->gen >= 7 &&
-          key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
-         mcs = emit_mcs_fetch(coordinate, instr->coord_components, sampler_reg);
+          key_tex->compressed_multisample_layout_mask & (1 << texture)) {
+         mcs = emit_mcs_fetch(coordinate, instr->coord_components, texture_reg);
       } else {
          mcs = fs_reg(0u);
       }
@@ -2652,7 +2662,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       fs_reg dst = retype(get_nir_dest(instr->dest), BRW_REGISTER_TYPE_D);
       fs_inst *inst = bld.emit(SHADER_OPCODE_SAMPLEINFO, dst,
                                bld.vgrf(BRW_REGISTER_TYPE_D, 1),
-                               sampler_reg);
+                               texture_reg, texture_reg);
       inst->mlen = 1;
       inst->header_size = 1;
       inst->base_mrf = -1;
@@ -2665,7 +2675,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
                 tex_offset, mcs, gather_component,
-                is_cube_array, is_rect, sampler, sampler_reg);
+                is_cube_array, is_rect,
+                texture, texture_reg, sampler, sampler_reg);
 
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;
