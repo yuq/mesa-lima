@@ -546,7 +546,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
    struct anv_pipeline_layout *layout;
-   uint32_t attachments, bias, state_offset;
+   uint32_t color_count, bias, state_offset;
 
    if (stage == VK_SHADER_STAGE_COMPUTE)
       layout = cmd_buffer->state.compute_pipeline->layout;
@@ -555,10 +555,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
    if (stage == VK_SHADER_STAGE_FRAGMENT) {
       bias = MAX_RTS;
-      attachments = subpass->color_count;
+      color_count = subpass->color_count;
    } else {
       bias = 0;
-      attachments = 0;
+      color_count = 0;
    }
 
    /* This is a little awkward: layout can be NULL but we still have to
@@ -566,7 +566,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
     * targets. */
    uint32_t surface_count = layout ? layout->stage[stage].surface_count : 0;
 
-   if (attachments + surface_count == 0)
+   if (color_count + surface_count == 0)
       return VK_SUCCESS;
 
    *bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer,
@@ -577,13 +577,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    if (bt_state->map == NULL)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
-   /* This is highly annoying.  The Vulkan spec puts the depth-stencil
-    * attachments in with the color attachments.  Unfortunately, thanks to
-    * other aspects of the API, we cana't really saparate them before this
-    * point.  Therefore, we have to walk all of the attachments but only
-    * put the color attachments into the binding table.
-    */
-   for (uint32_t a = 0; a < attachments; a++) {
+   for (uint32_t a = 0; a < color_count; a++) {
       const struct anv_image_view *iview =
          fb->attachments[subpass->color_attachments[a]];
 
