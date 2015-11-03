@@ -372,7 +372,7 @@ adjust_mip_level(const struct intel_mipmap_tree *mt,
 }
 
 static void
-prepare_vertex_data(void)
+prepare_vertex_data(GLuint vbo)
 {
    static const struct vertex verts[] = {
       { .x = -1.0f, .y = -1.0f },
@@ -380,7 +380,7 @@ prepare_vertex_data(void)
       { .x =  1.0f, .y =  1.0f },
       { .x = -1.0f, .y =  1.0f } };
 
-   _mesa_BufferSubData(GL_ARRAY_BUFFER_ARB, 0, sizeof(verts), verts);
+   _mesa_NamedBufferSubData(vbo, 0, sizeof(verts), verts);
 }
 
 static bool
@@ -460,7 +460,7 @@ brw_meta_stencil_blit(struct brw_context *brw,
    _mesa_Uniform1i(_mesa_GetUniformLocation(prog, "dst_num_samples"),
                    dst_mt->num_samples);
 
-   prepare_vertex_data();
+   prepare_vertex_data(ctx->Meta->Blit.VBO);
    _mesa_set_viewport(ctx, 0, dims.dst_x0, dims.dst_y0,
                       dims.dst_x1 - dims.dst_x0, dims.dst_y1 - dims.dst_y0);
    _mesa_ColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
