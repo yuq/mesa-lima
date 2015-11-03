@@ -160,7 +160,7 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
 }
 
 static nir_shader *
-build_nir_vertex_shader(bool attr_flat)
+build_nir_vertex_shader(void)
 {
    nir_builder b;
 
@@ -186,8 +186,7 @@ build_nir_vertex_shader(bool attr_flat)
    nir_variable *attr_out = nir_variable_create(b.shader, nir_var_shader_out,
                                                 attr_type, "v_attr");
    attr_out->data.location = VARYING_SLOT_VAR0;
-   attr_out->data.interpolation = attr_flat ? INTERP_QUALIFIER_FLAT :
-                                              INTERP_QUALIFIER_SMOOTH;
+   attr_out->data.interpolation = INTERP_QUALIFIER_FLAT;
    nir_copy_var(&b, attr_out, attr_in);
 
    return b.shader;
@@ -218,7 +217,7 @@ void
 anv_device_init_meta_clear_state(struct anv_device *device)
 {
    struct anv_shader_module vsm = {
-      .nir = build_nir_vertex_shader(true),
+      .nir = build_nir_vertex_shader(),
    };
 
    struct anv_shader_module fsm = {
