@@ -1673,7 +1673,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
           * the last element of the array. Mark it here, because the generator
           * doesn't have enough information to determine the bound.
           */
-         uint32_t array_size = instr->sampler_array_size;
+         uint32_t array_size = instr->texture_array_size;
          uint32_t max_used = sampler + array_size - 1;
          if (instr->op == nir_texop_tg4) {
             max_used += prog_data->base.binding_table.gather_texture_start;

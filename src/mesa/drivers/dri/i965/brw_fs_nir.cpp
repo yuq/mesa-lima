@@ -2592,7 +2592,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 
       case nir_tex_src_sampler_offset: {
          /* Figure out the highest possible sampler index and mark it as used */
-         uint32_t max_used = sampler + instr->sampler_array_size - 1;
+         uint32_t max_used = sampler + instr->texture_array_size - 1;
          if (instr->op == nir_texop_tg4 && devinfo->gen < 8) {
             max_used += stage_prog_data->binding_table.gather_texture_start;
          } else {

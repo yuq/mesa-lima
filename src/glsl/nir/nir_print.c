@@ -551,6 +551,9 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
       case nir_tex_src_ddy:
          fprintf(fp, "(ddy)");
          break;
+      case nir_tex_src_texture_offset:
+         fprintf(fp, "(texture_offset)");
+         break;
       case nir_tex_src_sampler_offset:
          fprintf(fp, "(sampler_offset)");
          break;
@@ -581,13 +584,18 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
       fprintf(fp, "%u (gather_component), ", instr->component);
    }
 
+   if (instr->texture) {
+      assert(instr->sampler);
+      fprintf(fp, " (texture)");
+   }
    if (instr->sampler) {
       print_deref(instr->sampler, state);
+      fprintf(fp, " (sampler)");
    } else {
-      fprintf(fp, "%u", instr->sampler_index);
+      assert(instr->texture == NULL);
+      fprintf(fp, "%u (texture) %u (sampler)",
+              instr->texture_index, instr->sampler_index);
    }
-
-   fprintf(fp, " (sampler)");
 }
 
 static void
