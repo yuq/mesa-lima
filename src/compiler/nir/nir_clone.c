@@ -357,10 +357,15 @@ clone_tex(clone_state *state, const nir_tex_instr *tex)
    ntex->is_new_style_shadow = tex->is_new_style_shadow;
    memcpy(ntex->const_offset, tex->const_offset, sizeof(ntex->const_offset));
    ntex->component = tex->component;
+
    ntex->texture_index = tex->texture_index;
-   ntex->texture_array_size = tex->texture_array_size;
    if (tex->texture)
       ntex->texture = clone_deref_var(state, tex->texture, &ntex->instr);
+   ntex->texture_array_size = tex->texture_array_size;
+
+   ntex->sampler_index = tex->sampler_index;
+   if (tex->sampler)
+      ntex->sampler = clone_deref_var(state, tex->sampler, &ntex->instr);
 
    return ntex;
 }

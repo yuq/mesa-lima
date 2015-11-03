@@ -136,10 +136,15 @@ constant_fold_intrinsic_instr(nir_intrinsic_instr *instr)
 static bool
 constant_fold_tex_instr(nir_tex_instr *instr)
 {
+   bool progress = false;
+
    if (instr->texture)
-      return constant_fold_deref(&instr->instr, instr->texture);
-   else
-      return false;
+      progress |= constant_fold_deref(&instr->instr, instr->texture);
+
+   if (instr->sampler)
+      progress |= constant_fold_deref(&instr->instr, instr->sampler);
+
+   return progress;
 }
 
 static bool

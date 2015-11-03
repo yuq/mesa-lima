@@ -610,6 +610,7 @@ ptn_tex(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src,
    instr->dest_type = nir_type_float;
    instr->is_shadow = prog_inst->TexShadow;
    instr->texture_index = prog_inst->TexSrcUnit;
+   instr->sampler_index = prog_inst->TexSrcUnit;
 
    switch (prog_inst->TexSrcTarget) {
    case TEXTURE_1D_INDEX:

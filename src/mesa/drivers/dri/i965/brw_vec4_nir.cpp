@@ -1738,6 +1738,9 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          break;
       }
 
+      case nir_tex_src_sampler_offset:
+         break; /* Ignored for now */
+
       case nir_tex_src_projector:
          unreachable("Should be lowered by do_lower_texture_projection");
 

@@ -94,6 +94,9 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
    if (instr->texture == NULL)
       return;
 
+   /* In GLSL, we only fill out the texture field.  The sampler is inferred */
+   assert(instr->sampler == NULL);
+
    instr->texture_index = 0;
    unsigned location = instr->texture->var->data.location;
    unsigned array_elements = 1;
@@ -106,7 +109,7 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
    if (indirect) {
       /* First, we have to resize the array of texture sources */
       nir_tex_src *new_srcs = rzalloc_array(instr, nir_tex_src,
-                                            instr->num_srcs + 1);
+                                            instr->num_srcs + 2);
 
       for (unsigned i = 0; i < instr->num_srcs; i++) {
          new_srcs[i].src_type = instr->src[i].src_type;
@@ -126,6 +129,12 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
                             &instr->src[instr->num_srcs - 1].src,
                             nir_src_for_ssa(indirect));
 
+      instr->src[instr->num_srcs].src_type = nir_tex_src_sampler_offset;
+      instr->num_srcs++;
+      nir_instr_rewrite_src(&instr->instr,
+                            &instr->src[instr->num_srcs - 1].src,
+                            nir_src_for_ssa(indirect));
+
       instr->texture_array_size = array_elements;
    }
 
@@ -137,6 +146,8 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
 
    instr->texture_index +=
       shader_program->UniformStorage[location].opaque[stage].index;
+
+   instr->sampler_index = instr->texture_index;
 
    instr->texture = NULL;
 }

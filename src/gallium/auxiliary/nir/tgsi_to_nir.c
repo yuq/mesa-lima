@@ -1310,6 +1310,7 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
 
    assert(tgsi_inst->Src[samp].Register.File == TGSI_FILE_SAMPLER);
    instr->texture_index = tgsi_inst->Src[samp].Register.Index;
+   instr->sampler_index = tgsi_inst->Src[samp].Register.Index;
 
    /* TODO if we supported any opc's which take an explicit SVIEW
     * src, we would use that here instead.  But for the "legacy"

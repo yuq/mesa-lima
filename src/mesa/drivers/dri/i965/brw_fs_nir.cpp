@@ -3024,6 +3024,9 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          break;
       }
 
+      case nir_tex_src_sampler_offset:
+         break; /* Ignored for now */
+
       default:
          unreachable("unknown texture source");
       }

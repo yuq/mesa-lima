@@ -291,11 +291,11 @@ nir_lower_tex_block(nir_block *block, void *void_state)
       /* mask of src coords to saturate (clamp): */
       unsigned sat_mask = 0;
 
-      if ((1 << tex->texture_index) & state->options->saturate_r)
+      if ((1 << tex->sampler_index) & state->options->saturate_r)
          sat_mask |= (1 << 2);    /* .z */
-      if ((1 << tex->texture_index) & state->options->saturate_t)
+      if ((1 << tex->sampler_index) & state->options->saturate_t)
          sat_mask |= (1 << 1);    /* .y */
-      if ((1 << tex->texture_index) & state->options->saturate_s)
+      if ((1 << tex->sampler_index) & state->options->saturate_s)
          sat_mask |= (1 << 0);    /* .x */
 
       /* If we are clamping any coords, we must lower projector first

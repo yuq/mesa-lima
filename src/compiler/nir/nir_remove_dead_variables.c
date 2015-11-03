@@ -58,6 +58,11 @@ add_var_use_tex(nir_tex_instr *instr, struct set *live)
       nir_variable *var = instr->texture->var;
       _mesa_set_add(live, var);
    }
+
+   if (instr->sampler != NULL) {
+      nir_variable *var = instr->sampler->var;
+      _mesa_set_add(live, var);
+   }
 }
 
 static bool

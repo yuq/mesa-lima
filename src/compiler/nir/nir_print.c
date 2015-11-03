@@ -625,6 +625,9 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
       case nir_tex_src_texture_offset:
          fprintf(fp, "(texture_offset)");
          break;
+      case nir_tex_src_sampler_offset:
+         fprintf(fp, "(sampler_offset)");
+         break;
 
       default:
          unreachable("Invalid texture source type");
@@ -654,11 +657,16 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
 
    if (instr->texture) {
       print_deref(instr->texture, state);
+      fprintf(fp, " (texture)");
+      if (instr->sampler) {
+         print_deref(instr->sampler, state);
+         fprintf(fp, " (sampler)");
+      }
    } else {
-      fprintf(fp, "%u", instr->texture_index);
+      assert(instr->sampler == NULL);
+      fprintf(fp, "%u (texture) %u (sampler)",
+              instr->texture_index, instr->sampler_index);
    }
-
-   fprintf(fp, " (texture)");
 }
 
 static void

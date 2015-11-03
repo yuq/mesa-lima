@@ -966,6 +966,7 @@ typedef enum {
    nir_tex_src_ddx,
    nir_tex_src_ddy,
    nir_tex_src_texture_offset, /* < dynamically uniform indirect offset */
+   nir_tex_src_sampler_offset, /* < dynamically uniform indirect offset */
    nir_num_tex_src_types
 } nir_tex_src_type;
 
@@ -1025,7 +1026,35 @@ typedef struct {
    /** The size of the texture array or 0 if it's not an array */
    unsigned texture_array_size;
 
-   nir_deref_var *texture; /* if this is NULL, use texture_index instead */
+   /** The texture deref
+    *
+    * If this is null, use texture_index instead.
+    */
+   nir_deref_var *texture;
+
+   /** The sampler index
+    *
+    * The following operations do not require a sampler and, as such, this
+    * field should be ignored:
+    *    - nir_texop_txf
+    *    - nir_texop_txf_ms
+    *    - nir_texop_txs
+    *    - nir_texop_lod
+    *    - nir_texop_tg4
+    *    - nir_texop_query_levels
+    *    - nir_texop_texture_samples
+    *    - nir_texop_samples_identical
+    *
+    * If this texture instruction has a nir_tex_src_sampler_offset source,
+    * then the sampler index is given by sampler_index + sampler_offset.
+    */
+   unsigned sampler_index;
+
+   /** The sampler deref
+    *
+    * If this is null, use sampler_index instead.
+    */
+   nir_deref_var *sampler;
 } nir_tex_instr;
 
 static inline unsigned

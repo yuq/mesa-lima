@@ -489,6 +489,8 @@ nir_tex_instr_create(nir_shader *shader, unsigned num_srcs)
    instr->texture_index = 0;
    instr->texture_array_size = 0;
    instr->texture = NULL;
+   instr->sampler_index = 0;
+   instr->sampler = NULL;
 
    return instr;
 }
@@ -1009,6 +1011,11 @@ visit_tex_src(nir_tex_instr *instr, nir_foreach_src_cb cb, void *state)
 
    if (instr->texture != NULL) {
       if (!visit_deref_src(instr->texture, cb, state))
+         return false;
+   }
+
+   if (instr->sampler != NULL) {
+      if (!visit_deref_src(instr->sampler, cb, state))
          return false;
    }
 
