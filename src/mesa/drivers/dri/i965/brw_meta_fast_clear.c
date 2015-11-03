@@ -57,7 +57,6 @@ struct brw_fast_clear_state {
    struct gl_buffer_object *buf_obj;
    struct gl_vertex_array_object *array_obj;
    GLuint vao;
-   GLuint vbo;
    GLuint shader_prog;
    GLint color_location;
 };
@@ -81,10 +80,11 @@ brw_fast_clear_init(struct brw_context *brw)
    memset(clear, 0, sizeof *clear);
    _mesa_GenVertexArrays(1, &clear->vao);
    _mesa_BindVertexArray(clear->vao);
-   _mesa_CreateBuffers(1, &clear->vbo);
 
-   clear->buf_obj = _mesa_lookup_bufferobj(ctx, clear->vbo);
-   assert(clear->buf_obj != NULL);
+   clear->buf_obj = ctx->Driver.NewBufferObject(ctx, 0xDEADBEEF);
+   if (clear->buf_obj == NULL)
+      return false;
+
    clear->array_obj = _mesa_lookup_vao(ctx, clear->vao);
    assert(clear->array_obj != NULL);
 
@@ -162,7 +162,7 @@ brw_meta_fast_clear_free(struct brw_context *brw)
    _mesa_make_current(&brw->ctx, NULL, NULL);
 
    _mesa_DeleteVertexArrays(1, &clear->vao);
-   _mesa_DeleteBuffers(1, &clear->vbo);
+   _mesa_reference_buffer_object(&brw->ctx, &clear->buf_obj, NULL);
    _mesa_DeleteProgram(clear->shader_prog);
    free(clear);
 
