@@ -56,8 +56,9 @@ remap_vs_attrs(nir_block *block, void *closure)
 }
 
 static void
-brw_nir_lower_inputs(const struct brw_device_info *devinfo,
-                     nir_shader *nir, bool is_scalar)
+brw_nir_lower_inputs(nir_shader *nir,
+                     const struct brw_device_info *devinfo,
+                     bool is_scalar)
 {
    switch (nir->stage) {
    case MESA_SHADER_VERTEX:
@@ -170,46 +171,49 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
    }
 }
 
+#define _OPT(do_pass) (({     \
+   bool this_progress = true; \
+   do_pass                    \
+   nir_validate_shader(nir);  \
+   this_progress;             \
+}))
+
+#define OPT(pass, ...) _OPT(                 \
+   this_progress = pass(nir ,##__VA_ARGS__); \
+   progress = progress || this_progress;     \
+)
+
+#define OPT_V(pass, ...) _OPT( \
+   pass(nir, ##__VA_ARGS__);   \
+)
+
 static void
 nir_optimize(nir_shader *nir, bool is_scalar)
 {
    bool progress;
    do {
       progress = false;
-      nir_lower_vars_to_ssa(nir);
-      nir_validate_shader(nir);
+      OPT_V(nir_lower_vars_to_ssa);
 
       if (is_scalar) {
-         nir_lower_alu_to_scalar(nir);
-         nir_validate_shader(nir);
+         OPT_V(nir_lower_alu_to_scalar);
       }
 
-      progress |= nir_copy_prop(nir);
-      nir_validate_shader(nir);
+      OPT(nir_copy_prop);
 
       if (is_scalar) {
-         nir_lower_phis_to_scalar(nir);
-         nir_validate_shader(nir);
+         OPT_V(nir_lower_phis_to_scalar);
       }
 
-      progress |= nir_copy_prop(nir);
-      nir_validate_shader(nir);
-      progress |= nir_opt_dce(nir);
-      nir_validate_shader(nir);
-      progress |= nir_opt_cse(nir);
-      nir_validate_shader(nir);
-      progress |= nir_opt_peephole_select(nir);
-      nir_validate_shader(nir);
-      progress |= nir_opt_algebraic(nir);
-      nir_validate_shader(nir);
-      progress |= nir_opt_constant_folding(nir);
-      nir_validate_shader(nir);
-      progress |= nir_opt_dead_cf(nir);
-      nir_validate_shader(nir);
-      progress |= nir_opt_remove_phis(nir);
-      nir_validate_shader(nir);
-      progress |= nir_opt_undef(nir);
-      nir_validate_shader(nir);
+      OPT(nir_copy_prop);
+      OPT(nir_opt_dce);
+      OPT(nir_opt_cse);
+      OPT(nir_opt_peephole_select);
+      OPT(nir_opt_algebraic);
+      OPT(nir_opt_constant_folding);
+      OPT(nir_opt_dead_cf);
+      OPT(nir_opt_remove_phis);
+      OPT(nir_opt_undef);
    } while (progress);
 }
 
@@ -228,6 +232,7 @@ brw_create_nir(struct brw_context *brw,
       .lower_txp = ~0,
    };
    bool debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
+   bool progress = false;
    nir_shader *nir;
 
    /* First, lower the GLSL IR or Mesa IR to NIR */
@@ -235,80 +240,63 @@ brw_create_nir(struct brw_context *brw,
       nir = glsl_to_nir(shader_prog, stage, options);
    } else {
       nir = prog_to_nir(prog, options);
-      nir_convert_to_ssa(nir); /* turn registers into SSA */
+      OPT_V(nir_convert_to_ssa); /* turn registers into SSA */
    }
    nir_validate_shader(nir);
 
    if (stage == MESA_SHADER_GEOMETRY) {
-      nir_lower_gs_intrinsics(nir);
-      nir_validate_shader(nir);
+      OPT(nir_lower_gs_intrinsics);
    }
 
-   nir_lower_global_vars_to_local(nir);
-   nir_validate_shader(nir);
+   OPT(nir_lower_global_vars_to_local);
 
-   nir_lower_tex(nir, &tex_options);
-   nir_validate_shader(nir);
+   OPT_V(nir_lower_tex, &tex_options);
 
-   nir_normalize_cubemap_coords(nir);
-   nir_validate_shader(nir);
+   OPT(nir_normalize_cubemap_coords);
 
-   nir_split_var_copies(nir);
-   nir_validate_shader(nir);
+   OPT(nir_split_var_copies);
 
    nir_optimize(nir, is_scalar);
 
    /* Lower a bunch of stuff */
-   nir_lower_var_copies(nir);
-   nir_validate_shader(nir);
+   OPT_V(nir_lower_var_copies);
 
    /* Get rid of split copies */
    nir_optimize(nir, is_scalar);
 
-   brw_nir_lower_inputs(devinfo, nir, is_scalar);
-   brw_nir_lower_outputs(nir, is_scalar);
+   OPT_V(brw_nir_lower_inputs, devinfo, is_scalar);
+   OPT_V(brw_nir_lower_outputs, is_scalar);
    nir_assign_var_locations(&nir->uniforms,
                             &nir->num_uniforms,
                             is_scalar ? type_size_scalar : type_size_vec4);
-   nir_lower_io(nir, -1, is_scalar ? type_size_scalar : type_size_vec4);
-   nir_validate_shader(nir);
+   OPT_V(nir_lower_io, -1, is_scalar ? type_size_scalar : type_size_vec4);
 
-   nir_remove_dead_variables(nir);
-   nir_validate_shader(nir);
+   OPT(nir_remove_dead_variables);
 
    if (shader_prog) {
-      nir_lower_samplers(nir, shader_prog);
-      nir_validate_shader(nir);
+      OPT_V(nir_lower_samplers, shader_prog);
    }
 
-   nir_lower_system_values(nir);
-   nir_validate_shader(nir);
+   OPT(nir_lower_system_values);
 
    if (shader_prog) {
-      nir_lower_atomics(nir, shader_prog);
-      nir_validate_shader(nir);
+      OPT_V(nir_lower_atomics, shader_prog);
    }
 
    nir_optimize(nir, is_scalar);
 
    if (brw->gen >= 6) {
       /* Try and fuse multiply-adds */
-      brw_nir_opt_peephole_ffma(nir);
-      nir_validate_shader(nir);
+      OPT(brw_nir_opt_peephole_ffma);
    }
 
-   nir_opt_algebraic_late(nir);
-   nir_validate_shader(nir);
+   OPT(nir_opt_algebraic_late);
 
-   nir_lower_locals_to_regs(nir);
-   nir_validate_shader(nir);
+   OPT(nir_lower_locals_to_regs);
 
-   nir_lower_to_source_mods(nir);
-   nir_validate_shader(nir);
-   nir_copy_prop(nir);
-   nir_validate_shader(nir);
-   nir_opt_dce(nir);
-   nir_validate_shader(nir);
+   OPT_V(nir_lower_to_source_mods);
+   OPT(nir_copy_prop);
+   OPT(nir_opt_dce);
 
    if (unlikely(debug_enabled)) {
       /* Re-index SSA defs so we print more sensible numbers. */
@@ -322,16 +310,15 @@ brw_create_nir(struct brw_context *brw,
       nir_print_shader(nir, stderr);
    }
 
-   nir_convert_from_ssa(nir, true);
-   nir_validate_shader(nir);
+   OPT_V(nir_convert_from_ssa, true);
 
    if (!is_scalar) {
-      nir_move_vec_src_uses_to_dest(nir);
-      nir_validate_shader(nir);
-
-      nir_lower_vec_to_movs(nir);
-      nir_validate_shader(nir);
+      OPT_V(nir_move_vec_src_uses_to_dest);
+      OPT(nir_lower_vec_to_movs);
    }
+
+   /* Needed only so that OPT and OPT_V can set it */
+   (void)progress;
 
    /* This is the last pass we run before we start emitting stuff.  It
     * determines when we need to insert boolean resolves on Gen <= 5.  We
