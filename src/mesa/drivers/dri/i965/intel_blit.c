@@ -406,11 +406,6 @@ can_fast_copy_blit(struct brw_context *brw,
    if (brw->gen < 9)
       return false;
 
-   if (src_buffer->handle == dst_buffer->handle &&
-       _mesa_regions_overlap(src_x, src_y, src_x + w, src_y + h,
-                             dst_x, dst_y, dst_x + w, dst_y + h))
-      return false;
-
    /* Enable fast copy blit only if the surfaces are Yf/Ys tiled.
     * FIXME: Based on performance data, remove this condition later to
     * enable for all types of surfaces.
