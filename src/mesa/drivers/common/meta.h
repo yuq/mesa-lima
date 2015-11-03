@@ -300,7 +300,7 @@ enum blit_msaa_shader {
 struct blit_state
 {
    GLuint VAO;
-   GLuint VBO;
+   struct gl_buffer_object *buf_obj;
    struct blit_shader_table shaders_with_depth;
    struct blit_shader_table shaders_without_depth;
    GLuint msaa_shaders[BLIT_MSAA_SHADER_COUNT];
@@ -322,7 +322,7 @@ struct fb_tex_blit_state
 struct clear_state
 {
    GLuint VAO;
-   GLuint VBO;
+   struct gl_buffer_object *buf_obj;
    GLuint ShaderProg;
    GLint ColorLocation;
    GLint LayerLocation;
@@ -339,7 +339,7 @@ struct clear_state
 struct copypix_state
 {
    GLuint VAO;
-   GLuint VBO;
+   struct gl_buffer_object *buf_obj;
 };
 
 
@@ -349,7 +349,7 @@ struct copypix_state
 struct drawpix_state
 {
    GLuint VAO;
-   GLuint VBO;
+   struct gl_buffer_object *buf_obj;
 
    GLuint StencilFP;  /**< Fragment program for drawing stencil images */
    GLuint DepthFP;  /**< Fragment program for drawing depth images */
@@ -362,7 +362,7 @@ struct drawpix_state
 struct bitmap_state
 {
    GLuint VAO;
-   GLuint VBO;
+   struct gl_buffer_object *buf_obj;
    struct temp_texture Tex;  /**< separate texture from other meta ops */
 };
 
@@ -372,7 +372,7 @@ struct bitmap_state
 struct gen_mipmap_state
 {
    GLuint VAO;
-   GLuint VBO;
+   struct gl_buffer_object *buf_obj;
    GLuint FBO;
    GLuint Sampler;
 
@@ -396,7 +396,8 @@ struct decompress_state
 {
    GLuint VAO;
    struct decompress_fbo_state byteFBO, floatFBO;
-   GLuint VBO, Sampler;
+   struct gl_buffer_object *buf_obj;
+   GLuint Sampler;
 
    struct blit_shader_table shaders;
 };
@@ -621,14 +622,14 @@ _mesa_meta_get_temp_depth_texture(struct gl_context *ctx);
 
 void
 _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
-                                GLuint *VAO, GLuint *VBO,
+                                GLuint *VAO, struct gl_buffer_object **buf_obj,
                                 bool use_generic_attributes,
                                 unsigned vertex_size, unsigned texcoord_size,
                                 unsigned color_size);
 
 void
 _mesa_meta_setup_ff_tnl_for_blit(struct gl_context *ctx,
-                                 GLuint *VAO, GLuint *VBO,
+                                 GLuint *VAO, struct gl_buffer_object **buf_obj,
                                  unsigned texcoord_size);
 
 void

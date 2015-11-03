@@ -316,7 +316,7 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
  *
  * \param VAO       Storage for vertex array object handle.  If 0, a new VAO
  *                  will be created.
- * \param VBO       Storage for vertex buffer object handle.  If 0, a new VBO
+ * \param buf_obj   Storage for vertex buffer object pointer.  If \c NULL, a new VBO
  *                  will be created.  The new VBO will have storage for 4
  *                  \c vertex structures.
  * \param use_generic_attributes  Should generic attributes 0 and 1 be used,
@@ -334,23 +334,36 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
  */
 void
 _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
-                                GLuint *VAO, GLuint *VBO,
+                                GLuint *VAO, struct gl_buffer_object **buf_obj,
                                 bool use_generic_attributes,
                                 unsigned vertex_size, unsigned texcoord_size,
                                 unsigned color_size)
 {
+   GLuint VBO;
+
    if (*VAO == 0) {
-      assert(*VBO == 0);
+      assert(*buf_obj == NULL);
 
       /* create vertex array object */
       _mesa_GenVertexArrays(1, VAO);
       _mesa_BindVertexArray(*VAO);
 
       /* create vertex array buffer */
-      _mesa_GenBuffers(1, VBO);
-      _mesa_BindBuffer(GL_ARRAY_BUFFER, *VBO);
+      _mesa_GenBuffers(1, &VBO);
+      _mesa_BindBuffer(GL_ARRAY_BUFFER, VBO);
+      *buf_obj = _mesa_lookup_bufferobj(ctx, VBO);
+
+      /* _mesa_lookup_bufferobj only returns NULL if name is 0.  If the object
+       * does not yet exist (i.e., hasn't been bound) it will return a dummy
+       * object that you can't do anything with.
+       */
+      assert(*buf_obj != NULL && (*buf_obj)->Name == VBO);
+      assert(*buf_obj == ctx->Array.ArrayBufferObj);
+
       _mesa_BufferData(GL_ARRAY_BUFFER, 4 * sizeof(struct vertex), NULL,
                        GL_DYNAMIC_DRAW);
+
+      assert((*buf_obj)->Size == 4 * sizeof(struct vertex));
 
       /* setup vertex arrays */
       if (use_generic_attributes) {
@@ -1501,10 +1514,11 @@ _mesa_meta_setup_drawpix_texture(struct gl_context *ctx,
 
 void
 _mesa_meta_setup_ff_tnl_for_blit(struct gl_context *ctx,
-                                 GLuint *VAO, GLuint *VBO,
+                                 GLuint *VAO, struct gl_buffer_object **buf_obj,
                                  unsigned texcoord_size)
 {
-   _mesa_meta_setup_vertex_objects(ctx, VAO, VBO, false, 2, texcoord_size, 0);
+   _mesa_meta_setup_vertex_objects(ctx, VAO, buf_obj, false, 2, texcoord_size,
+                                   0);
 
    /* setup projection matrix */
    _mesa_MatrixMode(GL_PROJECTION);
@@ -1549,7 +1563,7 @@ meta_glsl_clear_init(struct gl_context *ctx, struct clear_state *clear)
    GLuint vs, fs;
    bool has_integer_textures;
 
-   _mesa_meta_setup_vertex_objects(ctx, &clear->VAO, &clear->VBO, true,
+   _mesa_meta_setup_vertex_objects(ctx, &clear->VAO, &clear->buf_obj, true,
                                    3, 0, 0);
 
    if (clear->ShaderProg != 0)
@@ -1637,8 +1651,8 @@ meta_glsl_clear_cleanup(struct clear_state *clear)
       return;
    _mesa_DeleteVertexArrays(1, &clear->VAO);
    clear->VAO = 0;
-   _mesa_DeleteBuffers(1, &clear->VBO);
-   clear->VBO = 0;
+   _mesa_DeleteBuffers(1, &clear->buf_obj->Name);
+   clear->buf_obj = NULL;
    _mesa_DeleteProgram(clear->ShaderProg);
    clear->ShaderProg = 0;
 
@@ -1746,7 +1760,7 @@ meta_clear(struct gl_context *ctx, GLbitfield buffers, bool glsl)
       y1 = ((float) fb->_Ymax / fb->Height) * 2.0f - 1.0f;
       z = -invert_z(ctx->Depth.Clear);
    } else {
-      _mesa_meta_setup_vertex_objects(ctx, &clear->VAO, &clear->VBO, false,
+      _mesa_meta_setup_vertex_objects(ctx, &clear->VAO, &clear->buf_obj, false,
                                       3, 0, 4);
 
       x0 = (float) fb->_Xmin;
@@ -1830,7 +1844,8 @@ meta_clear(struct gl_context *ctx, GLbitfield buffers, bool glsl)
    }
 
    /* upload new vertex data */
-   _mesa_NamedBufferData(clear->VBO, sizeof(verts), verts, GL_DYNAMIC_DRAW);
+   _mesa_buffer_data(ctx, clear->buf_obj, GL_NONE, sizeof(verts), verts,
+                     GL_DYNAMIC_DRAW, __func__);
 
    /* draw quad(s) */
    if (fb->MaxNumLayers > 0) {
@@ -1876,7 +1891,7 @@ _mesa_meta_CopyPixels(struct gl_context *ctx, GLint srcX, GLint srcY,
                           MESA_META_VERTEX |
                           MESA_META_VIEWPORT));
 
-   _mesa_meta_setup_vertex_objects(ctx, &copypix->VAO, &copypix->VBO, false,
+   _mesa_meta_setup_vertex_objects(ctx, &copypix->VAO, &copypix->buf_obj, false,
                                    3, 2, 0);
 
    /* Silence valgrind warnings about reading uninitialized stack. */
@@ -1916,7 +1931,8 @@ _mesa_meta_CopyPixels(struct gl_context *ctx, GLint srcX, GLint srcY,
       verts[3].tex[1] = tex->Ttop;
 
       /* upload new vertex data */
-      _mesa_NamedBufferSubData(copypix->VBO, 0, sizeof(verts), verts);
+      _mesa_buffer_sub_data(ctx, copypix->buf_obj, 0, sizeof(verts), verts,
+                            __func__);
    }
 
    _mesa_set_enable(ctx, tex->Target, GL_TRUE);
@@ -1936,8 +1952,8 @@ meta_drawpix_cleanup(struct drawpix_state *drawpix)
       _mesa_DeleteVertexArrays(1, &drawpix->VAO);
       drawpix->VAO = 0;
 
-      _mesa_DeleteBuffers(1, &drawpix->VBO);
-      drawpix->VBO = 0;
+      _mesa_DeleteBuffers(1, &drawpix->buf_obj->Name);
+      drawpix->buf_obj = NULL;
    }
 
    if (drawpix->StencilFP != 0) {
@@ -2197,7 +2213,7 @@ _mesa_meta_DrawPixels(struct gl_context *ctx,
 
    newTex = _mesa_meta_alloc_texture(tex, width, height, texIntFormat);
 
-   _mesa_meta_setup_vertex_objects(ctx, &drawpix->VAO, &drawpix->VBO, false,
+   _mesa_meta_setup_vertex_objects(ctx, &drawpix->VAO, &drawpix->buf_obj, false,
                                    3, 2, 0);
 
    /* Silence valgrind warnings about reading uninitialized stack. */
@@ -2234,7 +2250,8 @@ _mesa_meta_DrawPixels(struct gl_context *ctx,
    }
 
    /* upload new vertex data */
-   _mesa_NamedBufferData(drawpix->VBO, sizeof(verts), verts, GL_DYNAMIC_DRAW);
+   _mesa_buffer_data(ctx, drawpix->buf_obj, GL_NONE, sizeof(verts), verts,
+                     GL_DYNAMIC_DRAW, __func__);
 
    /* set given unpack params */
    ctx->Unpack = *unpack;
@@ -2389,7 +2406,7 @@ _mesa_meta_Bitmap(struct gl_context *ctx,
                           MESA_META_VERTEX |
                           MESA_META_VIEWPORT));
 
-   _mesa_meta_setup_vertex_objects(ctx, &bitmap->VAO, &bitmap->VBO, false,
+   _mesa_meta_setup_vertex_objects(ctx, &bitmap->VAO, &bitmap->buf_obj, false,
                                    3, 2, 4);
 
    newTex = _mesa_meta_alloc_texture(tex, width, height, texIntFormat);
@@ -2435,7 +2452,8 @@ _mesa_meta_Bitmap(struct gl_context *ctx,
       }
 
       /* upload new vertex data */
-      _mesa_NamedBufferSubData(bitmap->VBO, 0, sizeof(verts), verts);
+      _mesa_buffer_sub_data(ctx, bitmap->buf_obj, 0, sizeof(verts), verts,
+                            __func__);
    }
 
    /* choose different foreground/background alpha values */
@@ -2971,7 +2989,7 @@ meta_decompress_cleanup(struct decompress_state *decompress)
 
    if (decompress->VAO != 0) {
       _mesa_DeleteVertexArrays(1, &decompress->VAO);
-      _mesa_DeleteBuffers(1, &decompress->VBO);
+      _mesa_DeleteBuffers(1, &decompress->buf_obj->Name);
    }
 
    if (decompress->Sampler != 0)
@@ -3091,12 +3109,14 @@ decompress_texture_image(struct gl_context *ctx,
    }
 
    if (use_glsl_version) {
-      _mesa_meta_setup_vertex_objects(ctx, &decompress->VAO, &decompress->VBO, true,
+      _mesa_meta_setup_vertex_objects(ctx, &decompress->VAO,
+                                      &decompress->buf_obj, true,
                                       2, 4, 0);
 
       _mesa_meta_setup_blit_shader(ctx, target, false, &decompress->shaders);
    } else {
-      _mesa_meta_setup_ff_tnl_for_blit(ctx, &decompress->VAO, &decompress->VBO, 3);
+      _mesa_meta_setup_ff_tnl_for_blit(ctx, &decompress->VAO,
+                                       &decompress->buf_obj, 3);
    }
 
    if (!decompress->Sampler) {
@@ -3140,7 +3160,8 @@ decompress_texture_image(struct gl_context *ctx,
    _mesa_set_viewport(ctx, 0, 0, 0, width, height);
 
    /* upload new vertex data */
-   _mesa_NamedBufferSubData(decompress->VBO, 0, sizeof(verts), verts);
+   _mesa_buffer_sub_data(ctx, decompress->buf_obj, 0, sizeof(verts), verts,
+                         __func__);
 
    /* setup texture state */
    _mesa_BindTexture(target, texObj->Name);
