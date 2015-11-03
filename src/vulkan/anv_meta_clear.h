@@ -30,6 +30,7 @@ extern "C" {
 struct anv_device;
 
 void anv_device_init_meta_clear_state(struct anv_device *device);
+void anv_device_finish_meta_clear_state(struct anv_device *device);
 
 #ifdef __cplusplus
 }

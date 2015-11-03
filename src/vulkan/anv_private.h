@@ -448,7 +448,8 @@ void anv_finish_wsi(struct anv_instance *instance);
 
 struct anv_meta_state {
    struct {
-      VkPipeline                                pipeline;
+      struct anv_pipeline *color_pipeline;
+      struct anv_pipeline *depth_pipeline;
    } clear;
 
    struct {

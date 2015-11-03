@@ -1303,9 +1303,7 @@ anv_device_init_meta(struct anv_device *device)
 void
 anv_device_finish_meta(struct anv_device *device)
 {
-   /* Clear */
-   anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.clear.pipeline);
+   anv_device_finish_meta_clear_state(device);
 
    /* Blit */
    anv_DestroyRenderPass(anv_device_to_handle(device),
