@@ -335,8 +335,8 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
                                          verts[3].tex);
 
          /* upload vertex data */
-         _mesa_BufferData(GL_ARRAY_BUFFER_ARB, sizeof(verts),
-                          verts, GL_DYNAMIC_DRAW_ARB);
+         _mesa_NamedBufferData(mipmap->VBO, sizeof(verts), verts,
+                               GL_DYNAMIC_DRAW);
 
          _mesa_meta_bind_fbo_image(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstImage, layer);
 

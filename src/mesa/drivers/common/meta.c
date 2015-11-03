@@ -1817,8 +1817,7 @@ meta_clear(struct gl_context *ctx, GLbitfield buffers, bool glsl)
    }
 
    /* upload new vertex data */
-   _mesa_BufferData(GL_ARRAY_BUFFER_ARB, sizeof(verts), verts,
-		       GL_DYNAMIC_DRAW_ARB);
+   _mesa_NamedBufferData(clear->VBO, sizeof(verts), verts, GL_DYNAMIC_DRAW);
 
    /* draw quad(s) */
    if (fb->MaxNumLayers > 0) {
@@ -1904,7 +1903,7 @@ _mesa_meta_CopyPixels(struct gl_context *ctx, GLint srcX, GLint srcY,
       verts[3].tex[1] = tex->Ttop;
 
       /* upload new vertex data */
-      _mesa_BufferSubData(GL_ARRAY_BUFFER_ARB, 0, sizeof(verts), verts);
+      _mesa_NamedBufferSubData(copypix->VBO, 0, sizeof(verts), verts);
    }
 
    _mesa_set_enable(ctx, tex->Target, GL_TRUE);
@@ -2222,8 +2221,7 @@ _mesa_meta_DrawPixels(struct gl_context *ctx,
    }
 
    /* upload new vertex data */
-   _mesa_BufferData(GL_ARRAY_BUFFER_ARB, sizeof(verts),
-                       verts, GL_DYNAMIC_DRAW_ARB);
+   _mesa_NamedBufferData(drawpix->VBO, sizeof(verts), verts, GL_DYNAMIC_DRAW);
 
    /* set given unpack params */
    ctx->Unpack = *unpack;
@@ -2423,7 +2421,7 @@ _mesa_meta_Bitmap(struct gl_context *ctx,
       }
 
       /* upload new vertex data */
-      _mesa_BufferSubData(GL_ARRAY_BUFFER_ARB, 0, sizeof(verts), verts);
+      _mesa_NamedBufferSubData(bitmap->VBO, 0, sizeof(verts), verts);
    }
 
    /* choose different foreground/background alpha values */
@@ -3128,7 +3126,7 @@ decompress_texture_image(struct gl_context *ctx,
    _mesa_set_viewport(ctx, 0, 0, 0, width, height);
 
    /* upload new vertex data */
-   _mesa_BufferSubData(GL_ARRAY_BUFFER_ARB, 0, sizeof(verts), verts);
+   _mesa_NamedBufferSubData(decompress->VBO, 0, sizeof(verts), verts);
 
    /* setup texture state */
    _mesa_BindTexture(target, texObj->Name);
