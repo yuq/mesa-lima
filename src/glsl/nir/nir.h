@@ -1002,9 +1002,6 @@ typedef struct {
    /* gather component selector */
    unsigned component : 2;
 
-   /* The descriptor set containing this texture */
-   unsigned sampler_set;
-
    /** The sampler index
     *
     * If this texture instruction has a nir_tex_src_sampler_offset source,
