@@ -55,8 +55,6 @@ static void si_destroy_context(struct pipe_context *context)
 
 	if (sctx->pstipple_sampler_state)
 		sctx->b.b.delete_sampler_state(&sctx->b.b, sctx->pstipple_sampler_state);
-	if (sctx->dummy_pixel_shader)
-		sctx->b.b.delete_fs_state(&sctx->b.b, sctx->dummy_pixel_shader);
 	if (sctx->fixed_func_tcs_shader.cso)
 		sctx->b.b.delete_tcs_state(&sctx->b.b, sctx->fixed_func_tcs_shader.cso);
 	if (sctx->custom_dsa_flush)
@@ -300,6 +298,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_GATHER_SM5:
 	case PIPE_CAP_TGSI_TXQS:
 	case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
+	case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
@@ -578,6 +577,33 @@ static bool si_initialize_pipe_config(struct si_screen *sscreen)
 	return true;
 }
 
+static bool si_init_gs_info(struct si_screen *sscreen)
+{
+	switch (sscreen->b.family) {
+	case CHIP_OLAND:
+	case CHIP_HAINAN:
+	case CHIP_KAVERI:
+	case CHIP_KABINI:
+	case CHIP_MULLINS:
+	case CHIP_ICELAND:
+	case CHIP_CARRIZO:
+	case CHIP_STONEY:
+		sscreen->gs_table_depth = 16;
+		return true;
+	case CHIP_TAHITI:
+	case CHIP_PITCAIRN:
+	case CHIP_VERDE:
+	case CHIP_BONAIRE:
+	case CHIP_HAWAII:
+	case CHIP_TONGA:
+	case CHIP_FIJI:
+		sscreen->gs_table_depth = 32;
+		return true;
+	default:
+		return false;
+	}
+}
+
 struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
@@ -595,7 +621,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->b.b.resource_create = r600_resource_create_common;
 
 	if (!r600_common_screen_init(&sscreen->b, ws) ||
-	    !si_initialize_pipe_config(sscreen)) {
+	    !si_initialize_pipe_config(sscreen) ||
+	    !si_init_gs_info(sscreen)) {
 		FREE(sscreen);
 		return NULL;
 	}

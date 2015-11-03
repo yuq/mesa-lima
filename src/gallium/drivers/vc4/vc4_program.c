@@ -738,6 +738,20 @@ ntq_emit_pack_unorm_4x8(struct vc4_compile *c, nir_alu_instr *instr)
                 vec4 = nir_instr_as_alu(instr->src[0].src.ssa->parent_instr);
         }
 
+        /* If the pack is replicating the same channel 4 times, use the 8888
+         * pack flag.  This is common for blending using the alpha
+         * channel.
+         */
+        if (instr->src[0].swizzle[0] == instr->src[0].swizzle[1] &&
+            instr->src[0].swizzle[0] == instr->src[0].swizzle[2] &&
+            instr->src[0].swizzle[0] == instr->src[0].swizzle[3]) {
+                struct qreg *dest = ntq_get_dest(c, &instr->dest.dest);
+                *dest = qir_PACK_8888_F(c,
+                                        ntq_get_src(c, instr->src[0].src,
+                                                    instr->src[0].swizzle[0]));
+                return;
+        }
+
         for (int i = 0; i < 4; i++) {
                 int swiz = instr->src[0].swizzle[i];
                 struct qreg src;
@@ -1040,6 +1054,26 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
                 *dest = ntq_emit_ubfe(c, src[0], src[1], src[2]);
                 break;
 
+        case nir_op_usadd_4x8:
+                *dest = qir_V8ADDS(c, src[0], src[1]);
+                break;
+
+        case nir_op_ussub_4x8:
+                *dest = qir_V8SUBS(c, src[0], src[1]);
+                break;
+
+        case nir_op_umin_4x8:
+                *dest = qir_V8MIN(c, src[0], src[1]);
+                break;
+
+        case nir_op_umax_4x8:
+                *dest = qir_V8MAX(c, src[0], src[1]);
+                break;
+
+        case nir_op_umul_unorm_4x8:
+                *dest = qir_V8MULD(c, src[0], src[1]);
+                break;
+
         default:
                 fprintf(stderr, "unknown NIR ALU inst: ");
                 nir_print_instr(&instr->instr, stderr);
@@ -1049,32 +1083,8 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
 }
 
 static void
-clip_distance_discard(struct vc4_compile *c)
-{
-        for (int i = 0; i < PIPE_MAX_CLIP_PLANES; i++) {
-                if (!(c->key->ucp_enables & (1 << i)))
-                        continue;
-
-                struct qreg dist =
-                        emit_fragment_varying(c,
-                                              VARYING_SLOT_CLIP_DIST0 + (i / 4),
-                                              i % 4);
-
-                qir_SF(c, dist);
-
-                if (c->discard.file == QFILE_NULL)
-                        c->discard = qir_uniform_ui(c, 0);
-
-                c->discard = qir_SEL_X_Y_NS(c, qir_uniform_ui(c, ~0),
-                                            c->discard);
-        }
-}
-
-static void
 emit_frag_end(struct vc4_compile *c)
 {
-        clip_distance_discard(c);
-
         struct qreg color;
         if (c->output_color_index != -1) {
                 color = c->outputs[c->output_color_index];
@@ -1190,45 +1200,6 @@ emit_stub_vpm_read(struct vc4_compile *c)
 }
 
 static void
-emit_ucp_clipdistance(struct vc4_compile *c)
-{
-        unsigned cv;
-        if (c->output_clipvertex_index != -1)
-                cv = c->output_clipvertex_index;
-        else if (c->output_position_index != -1)
-                cv = c->output_position_index;
-        else
-                return;
-
-        for (int plane = 0; plane < PIPE_MAX_CLIP_PLANES; plane++) {
-                if (!(c->key->ucp_enables & (1 << plane)))
-                        continue;
-
-                /* Pick the next outputs[] that hasn't been written to, since
-                 * there are no other program writes left to be processed at
-                 * this point.  If something had been declared but not written
-                 * (like a w component), we'll just smash over the top of it.
-                 */
-                uint32_t output_index = c->num_outputs++;
-                add_output(c, output_index,
-                           VARYING_SLOT_CLIP_DIST0 + plane / 4,
-                           plane % 4);
-
-
-                struct qreg dist = qir_uniform_f(c, 0.0);
-                for (int i = 0; i < 4; i++) {
-                        struct qreg pos_chan = c->outputs[cv + i];
-                        struct qreg ucp =
-                                qir_uniform(c, QUNIFORM_USER_CLIP_PLANE,
-                                            plane * 4 + i);
-                        dist = qir_FADD(c, dist, qir_FMUL(c, pos_chan, ucp));
-                }
-
-                c->outputs[output_index] = dist;
-        }
-}
-
-static void
 emit_vert_end(struct vc4_compile *c,
               struct vc4_varying_slot *fs_inputs,
               uint32_t num_fs_inputs)
@@ -1236,7 +1207,6 @@ emit_vert_end(struct vc4_compile *c,
         struct qreg rcp_w = qir_RCP(c, c->outputs[c->output_position_index + 3]);
 
         emit_stub_vpm_read(c);
-        emit_ucp_clipdistance(c);
 
         emit_scaled_viewport_write(c, rcp_w);
         emit_zs_write(c, rcp_w);
@@ -1391,9 +1361,6 @@ ntq_setup_outputs(struct vc4_compile *c)
                         case VARYING_SLOT_POS:
                                 c->output_position_index = loc;
                                 break;
-                        case VARYING_SLOT_CLIP_VERTEX:
-                                c->output_clipvertex_index = loc;
-                                break;
                         case VARYING_SLOT_PSIZ:
                                 c->output_point_size_index = loc;
                                 break;
@@ -1484,6 +1451,11 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
         case nir_intrinsic_load_uniform_indirect:
                 *dest = indirect_uniform_load(c, instr);
 
+                break;
+
+        case nir_intrinsic_load_user_clip_plane:
+                *dest = qir_uniform(c, QUNIFORM_USER_CLIP_PLANE,
+                                    instr->const_index[0]);
                 break;
 
         case nir_intrinsic_load_input:
@@ -1683,10 +1655,18 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         c->s = tgsi_to_nir(tokens, &nir_options);
         nir_opt_global_to_local(c->s);
         nir_convert_to_ssa(c->s);
+
         if (stage == QSTAGE_FRAG)
                 vc4_nir_lower_blend(c);
+
         if (c->fs_key && c->fs_key->light_twoside)
                 nir_lower_two_sided_color(c->s);
+
+        if (stage == QSTAGE_FRAG)
+                nir_lower_clip_fs(c->s, c->key->ucp_enables);
+        else
+                nir_lower_clip_vs(c->s, c->key->ucp_enables);
+
         vc4_nir_lower_io(c);
         nir_lower_idiv(c->s);
         nir_lower_load_const_to_scalar(c->s);

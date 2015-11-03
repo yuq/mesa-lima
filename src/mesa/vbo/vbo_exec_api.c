@@ -132,8 +132,7 @@ static void vbo_exec_wrap_buffers( struct vbo_exec_context *exec )
 static void
 vbo_exec_vtx_wrap(struct vbo_exec_context *exec)
 {
-   fi_type *data = exec->vtx.copied.buffer;
-   GLuint i;
+   unsigned numComponents;
 
    /* Run pipeline on current vertices, copy wrapped vertices
     * to exec->vtx.copied.
@@ -149,13 +148,12 @@ vbo_exec_vtx_wrap(struct vbo_exec_context *exec)
     */
    assert(exec->vtx.max_vert - exec->vtx.vert_count > exec->vtx.copied.nr);
 
-   for (i = 0 ; i < exec->vtx.copied.nr ; i++) {
-      memcpy( exec->vtx.buffer_ptr, data, 
-	      exec->vtx.vertex_size * sizeof(GLfloat));
-      exec->vtx.buffer_ptr += exec->vtx.vertex_size;
-      data += exec->vtx.vertex_size;
-      exec->vtx.vert_count++;
-   }
+   numComponents = exec->vtx.copied.nr * exec->vtx.vertex_size;
+   memcpy(exec->vtx.buffer_ptr,
+          exec->vtx.copied.buffer,
+          numComponents * sizeof(fi_type));
+   exec->vtx.buffer_ptr += numComponents;
+   exec->vtx.vert_count += exec->vtx.copied.nr;
 
    exec->vtx.copied.nr = 0;
 }

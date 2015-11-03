@@ -343,19 +343,15 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
    if (image->planar_format && image->planar_format->nplanes > 1) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
             "glEGLImageTargetRenderbufferStorage(planar buffers are not "
-               "supported as render targets.");
+               "supported as render targets.)");
       return;
    }
 
    /* __DRIimage is opaque to the core so it has to be checked here */
-   switch (image->format) {
-   case MESA_FORMAT_R8G8B8A8_UNORM:
+   if (!brw->format_supported_as_render_target[image->format]) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-            "glEGLImageTargetRenderbufferStorage(unsupported image format");
+            "glEGLImageTargetRenderbufferStorage(unsupported image format)");
       return;
-      break;
-   default:
-      break;
    }
 
    irb = intel_renderbuffer(rb);

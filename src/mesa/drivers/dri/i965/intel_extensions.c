@@ -287,6 +287,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_conditional_render_inverted = true;
       ctx->Extensions.ARB_draw_buffers_blend = true;
       ctx->Extensions.ARB_ES3_compatibility = true;
+      ctx->Extensions.ARB_fragment_layer_viewport = true;
       ctx->Extensions.ARB_sample_shading = true;
       ctx->Extensions.ARB_shading_language_420pack = true;
       ctx->Extensions.ARB_shading_language_packing = true;
@@ -324,6 +325,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_framebuffer_no_attachments = true;
       ctx->Extensions.ARB_gpu_shader5 = true;
       ctx->Extensions.ARB_shader_atomic_counters = true;
+      ctx->Extensions.ARB_shader_clock = true;
       ctx->Extensions.ARB_shader_image_load_store = true;
       ctx->Extensions.ARB_shader_image_size = true;
       ctx->Extensions.ARB_shader_texture_image_samples = true;
@@ -358,6 +360,7 @@ intelInitExtensions(struct gl_context *ctx)
    if (brw->gen >= 9) {
       ctx->Extensions.KHR_texture_compression_astc_ldr = true;
       ctx->Extensions.KHR_texture_compression_astc_hdr = true;
+      ctx->Extensions.ARB_shader_stencil_export = true;
    }
 
    if (ctx->API == API_OPENGL_CORE)

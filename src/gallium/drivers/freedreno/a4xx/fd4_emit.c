@@ -594,7 +594,7 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		ctx->prog.dirty = 0;
 	}
 
-	if ((dirty & FD_DIRTY_BLEND) && ctx->blend) {
+	if ((dirty & FD_DIRTY_BLEND)) {
 		struct fd4_blend_stateobj *blend = fd4_blend_stateobj(ctx->blend);
 		uint32_t i;
 

@@ -202,6 +202,9 @@ struct svga_shader_emitter_v10
    /* user clip plane constant slot indexes */
    unsigned clip_plane_const[PIPE_MAX_CLIP_PLANES];
 
+   unsigned num_output_writes;
+   boolean constant_color_output;
+
    boolean uses_flat_interp;
 
    /* For all shaders: const reg index for RECT coord scaling */
@@ -913,6 +916,8 @@ emit_dst_register(struct svga_shader_emitter_v10 *emit,
              */
             assert(sem_name == TGSI_SEMANTIC_COLOR);
             index = emit->info.output_semantic_index[index];
+
+            emit->num_output_writes++;
          }
       }
    }
@@ -3097,7 +3102,7 @@ emit_clip_distance_instructions(struct svga_shader_emitter_v10 *emit)
    unsigned i;
    unsigned clip_plane_enable = emit->key.clip_plane_enable;
    unsigned clip_dist_tmp_index = emit->clip_dist_tmp_index;
-   unsigned num_written_clipdist = emit->info.num_written_clipdistance;
+   int num_written_clipdist = emit->info.num_written_clipdistance;
 
    assert(emit->clip_dist_out_index != INVALID_INDEX);
    assert(emit->clip_dist_tmp_index != INVALID_INDEX);
@@ -3109,7 +3114,7 @@ emit_clip_distance_instructions(struct svga_shader_emitter_v10 *emit)
     */
    emit->clip_dist_tmp_index = INVALID_INDEX;
 
-   for (i = 0; i < 2 && num_written_clipdist; i++, num_written_clipdist-=4) {
+   for (i = 0; i < 2 && num_written_clipdist > 0; i++, num_written_clipdist-=4) {
 
       tmp_clip_dist_src = make_src_temp_reg(clip_dist_tmp_index + i);
 
@@ -5573,6 +5578,29 @@ emit_simple(struct svga_shader_emitter_v10 *emit,
 
 
 /**
+ * We only special case the MOV instruction to try to detect constant
+ * color writes in the fragment shader.
+ */
+static boolean
+emit_mov(struct svga_shader_emitter_v10 *emit,
+         const struct tgsi_full_instruction *inst)
+{
+   const struct tgsi_full_src_register *src = &inst->Src[0];
+   const struct tgsi_full_dst_register *dst = &inst->Dst[0];
+
+   if (emit->unit == PIPE_SHADER_FRAGMENT &&
+       dst->Register.File == TGSI_FILE_OUTPUT &&
+       dst->Register.Index == 0 &&
+       src->Register.File == TGSI_FILE_CONSTANT &&
+       !src->Register.Indirect) {
+      emit->constant_color_output = TRUE;
+   }
+
+   return emit_simple(emit, inst);
+}
+
+
+/**
  * Emit a simple VGPU10 instruction which writes to multiple dest registers,
  * where TGSI only uses one dest register.
  */
@@ -5652,7 +5680,6 @@ emit_vgpu10_instruction(struct svga_shader_emitter_v10 *emit,
    case TGSI_OPCODE_MAD:
    case TGSI_OPCODE_MAX:
    case TGSI_OPCODE_MIN:
-   case TGSI_OPCODE_MOV:
    case TGSI_OPCODE_MUL:
    case TGSI_OPCODE_NOP:
    case TGSI_OPCODE_NOT:
@@ -5677,7 +5704,8 @@ emit_vgpu10_instruction(struct svga_shader_emitter_v10 *emit,
       /* simple instructions */
       return emit_simple(emit, inst);
 
-
+   case TGSI_OPCODE_MOV:
+      return emit_mov(emit, inst);
    case TGSI_OPCODE_EMIT:
       return emit_vertex(emit, inst);
    case TGSI_OPCODE_ENDPRIM:
@@ -6761,6 +6789,13 @@ svga_tgsi_vgpu10_translate(struct svga_context *svga,
    }
 
    variant->pstipple_sampler_unit = emit->fs.pstipple_sampler_unit;
+
+   /* If there was exactly one write to a fragment shader output register
+    * and it came from a constant buffer, we know all fragments will have
+    * the same color (except for blending).
+    */
+   variant->constant_color_output =
+      emit->constant_color_output && emit->num_output_writes == 1;
 
    /** keep track in the variant if flat interpolation is used
     *  for any of the varyings.

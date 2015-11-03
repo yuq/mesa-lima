@@ -416,9 +416,10 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
          inst->src[arg].subreg_offset = offset % 32;
       }
       break;
-   default:
-      unreachable("Invalid register file");
-      break;
+
+   case MRF:
+   case IMM:
+      unreachable("not reached");
    }
 
    if (has_source_modifiers) {
@@ -608,6 +609,21 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
             inst->opcode = BRW_OPCODE_MOV;
             inst->src[0] = val;
             inst->src[0].fixed_hw_reg.dw1.f = 1.0f / inst->src[0].fixed_hw_reg.dw1.f;
+            progress = true;
+         }
+         break;
+
+      case SHADER_OPCODE_UNTYPED_ATOMIC:
+      case SHADER_OPCODE_UNTYPED_SURFACE_READ:
+      case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
+      case SHADER_OPCODE_TYPED_ATOMIC:
+      case SHADER_OPCODE_TYPED_SURFACE_READ:
+      case SHADER_OPCODE_TYPED_SURFACE_WRITE:
+         /* We only propagate into the surface argument of the
+          * instruction. Everything else goes through LOAD_PAYLOAD.
+          */
+         if (i == 1) {
+            inst->src[i] = val;
             progress = true;
          }
          break;

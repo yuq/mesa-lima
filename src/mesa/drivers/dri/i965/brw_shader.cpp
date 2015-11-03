@@ -298,6 +298,8 @@ brw_instruction_name(enum opcode op)
       return "fb_write";
    case FS_OPCODE_FB_WRITE_LOGICAL:
       return "fb_write_logical";
+   case FS_OPCODE_PACK_STENCIL_REF:
+      return "pack_stencil_ref";
    case FS_OPCODE_BLORP_FB_WRITE:
       return "blorp_fb_write";
    case FS_OPCODE_REP_FB_WRITE:
@@ -988,6 +990,20 @@ backend_instruction::has_side_effects() const
    }
 }
 
+bool
+backend_instruction::is_volatile() const
+{
+   switch (opcode) {
+   case SHADER_OPCODE_UNTYPED_SURFACE_READ:
+   case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
+   case SHADER_OPCODE_TYPED_SURFACE_READ:
+   case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
+      return true;
+   default:
+      return false;
+   }
+}
+
 #ifndef NDEBUG
 static bool
 inst_is_in_block(const bblock_t *block, const backend_instruction *inst)
@@ -1178,9 +1194,9 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
       stage_prog_data->binding_table.gather_texture_start = 0xd0d0d0d0;
    }
 
-   if (shader_prog && shader_prog->NumAtomicBuffers) {
+   if (shader && shader->NumAtomicBuffers) {
       stage_prog_data->binding_table.abo_start = next_binding_table_offset;
-      next_binding_table_offset += shader_prog->NumAtomicBuffers;
+      next_binding_table_offset += shader->NumAtomicBuffers;
    } else {
       stage_prog_data->binding_table.abo_start = 0xd0d0d0d0;
    }

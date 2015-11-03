@@ -73,8 +73,8 @@ public:
 
    Instruction *mkCvt(operation, DataType, Value *, DataType, Value *);
    CmpInstruction *mkCmp(operation, CondCode, DataType,
-			 Value *,
-			 DataType, Value *, Value *, Value * = NULL);
+                         Value *,
+                         DataType, Value *, Value *, Value * = NULL);
    TexInstruction *mkTex(operation, TexTarget,
                          uint16_t tic, uint16_t tsc,
                          const std::vector<Value *> &def,

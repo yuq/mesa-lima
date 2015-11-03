@@ -266,6 +266,7 @@ static void si_emit_cb_target_mask(struct si_context *sctx, struct r600_atom *at
 	 * Reproducible with Unigine Heaven 4.0 and drirc missing.
 	 */
 	if (blend->dual_src_blend &&
+	    sctx->ps_shader.cso &&
 	    (sctx->ps_shader.cso->ps_colors_written & 0x3) != 0x3)
 		mask = 0;
 
@@ -697,6 +698,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	rs->clamp_fragment_color = state->clamp_fragment_color;
 	rs->flatshade = state->flatshade;
 	rs->sprite_coord_enable = state->sprite_coord_enable;
+	rs->rasterizer_discard = state->rasterizer_discard;
 	rs->pa_sc_line_stipple = state->line_stipple_enable ?
 				S_028A0C_LINE_PATTERN(state->line_stipple_pattern) |
 				S_028A0C_REPEAT_COUNT(state->line_stipple_factor) : 0;
@@ -1924,8 +1926,21 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	surf->cb_color_info = color_info;
 	surf->cb_color_attrib = color_attrib;
 
-	if (sctx->b.chip_class >= VI)
-		surf->cb_dcc_control = S_028C78_OVERWRITE_COMBINER_DISABLE(1);
+	if (sctx->b.chip_class >= VI && rtex->dcc_buffer) {
+		unsigned max_uncompressed_block_size = 2;
+		uint64_t dcc_offset = rtex->surface.level[level].dcc_offset;
+
+		if (rtex->surface.nsamples > 1) {
+			if (rtex->surface.bpe == 1)
+				max_uncompressed_block_size = 0;
+			else if (rtex->surface.bpe == 2)
+				max_uncompressed_block_size = 1;
+		}
+
+		surf->cb_dcc_control = S_028C78_MAX_UNCOMPRESSED_BLOCK_SIZE(max_uncompressed_block_size) |
+		                       S_028C78_INDEPENDENT_64B_BLOCKS(1);
+		surf->cb_dcc_base = (rtex->dcc_buffer->gpu_address + dcc_offset) >> 8;
+	}
 
 	if (rtex->fmask.size) {
 		surf->cb_color_fmask = (offset + rtex->fmask.offset) >> 8;
@@ -2249,6 +2264,12 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 				RADEON_PRIO_CMASK);
 		}
 
+		if (tex->dcc_buffer && tex->dcc_buffer != &tex->resource) {
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+				tex->dcc_buffer, RADEON_USAGE_READWRITE,
+				RADEON_PRIO_DCC);
+		}
+
 		radeon_set_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C,
 					   sctx->b.chip_class >= VI ? 14 : 13);
 		radeon_emit(cs, cb->cb_color_base);	/* R_028C60_CB_COLOR0_BASE */
@@ -2266,7 +2287,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		radeon_emit(cs, tex->color_clear_value[1]);	/* R_028C90_CB_COLOR0_CLEAR_WORD1 */
 
 		if (sctx->b.chip_class >= VI)
-			radeon_emit(cs, 0);	/* R_028C94_CB_COLOR0_DCC_BASE */
+			radeon_emit(cs, cb->cb_dcc_base);	/* R_028C94_CB_COLOR0_DCC_BASE */
 	}
 	/* set CB_COLOR1_INFO for possible dual-src blending */
 	if (i == 1 && state->cbufs[0] &&
@@ -2633,8 +2654,18 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	view->state[4] = (S_008F20_DEPTH(depth - 1) | S_008F20_PITCH(pitch - 1));
 	view->state[5] = (S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
 			  S_008F24_LAST_ARRAY(last_layer));
-	view->state[6] = 0;
-	view->state[7] = 0;
+
+	if (tmp->dcc_buffer) {
+		uint64_t dcc_offset = surflevel[base_level].dcc_offset;
+		unsigned swap = r600_translate_colorswap(pipe_format);
+
+		view->state[6] = S_008F28_COMPRESSION_EN(1) | S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
+		view->state[7] = (tmp->dcc_buffer->gpu_address + dcc_offset) >> 8;
+		view->dcc_buffer = tmp->dcc_buffer;
+	} else {
+		view->state[6] = 0;
+		view->state[7] = 0;
+	}
 
 	/* Initialize the sampler view for FMASK. */
 	if (tmp->fmask.size) {
@@ -3262,7 +3293,7 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
 
 	/* FIXME calculate these values somehow ??? */
-	si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, 0x80);
+	si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
 	si_pm4_set_reg(pm4, R_028A58_VGT_ES_PER_GS, 0x40);
 	si_pm4_set_reg(pm4, R_028A5C_VGT_GS_PER_VS, 0x2);
 
@@ -3336,6 +3367,7 @@ static void si_init_config(struct si_context *sctx)
 		break;
 	case CHIP_KABINI:
 	case CHIP_MULLINS:
+	case CHIP_STONEY:
 		raster_config = 0x00000000;
 		raster_config_1 = 0x00000000;
 		break;
@@ -3406,7 +3438,8 @@ static void si_init_config(struct si_context *sctx)
 
 	if (sctx->b.chip_class >= VI) {
 		si_pm4_set_reg(pm4, R_028424_CB_DCC_CONTROL,
-			       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1));
+			       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
+			       S_028424_OVERWRITE_COMBINER_WATERMARK(4));
 		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
 		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
 	}

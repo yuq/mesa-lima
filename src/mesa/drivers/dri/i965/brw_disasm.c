@@ -252,7 +252,7 @@ static const char *const pred_inv[2] = {
    [1] = "-"
 };
 
-static const char *const pred_ctrl_align16[16] = {
+const char *const pred_ctrl_align16[16] = {
    [1] = "",
    [2] = ".x",
    [3] = ".y",
@@ -726,7 +726,7 @@ reg(FILE *file, unsigned _reg_file, unsigned _reg_nr)
       switch (_reg_nr & 0xf0) {
       case BRW_ARF_NULL:
          string(file, "null");
-         return -1;
+         break;
       case BRW_ARF_ADDRESS:
          format(file, "a%d", _reg_nr & 0x0f);
          break;
@@ -908,7 +908,6 @@ src_ia1(FILE *file,
         unsigned _addr_subreg_nr,
         unsigned _negate,
         unsigned __abs,
-        unsigned _addr_mode,
         unsigned _horiz_stride, unsigned _width, unsigned _vert_stride)
 {
    int err = 0;
@@ -1143,7 +1142,6 @@ src0(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
                         brw_inst_src0_ia_subreg_nr(devinfo, inst),
                         brw_inst_src0_negate(devinfo, inst),
                         brw_inst_src0_abs(devinfo, inst),
-                        brw_inst_src0_address_mode(devinfo, inst),
                         brw_inst_src0_hstride(devinfo, inst),
                         brw_inst_src0_width(devinfo, inst),
                         brw_inst_src0_vstride(devinfo, inst));
@@ -1200,7 +1198,6 @@ src1(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
                         brw_inst_src1_ia_subreg_nr(devinfo, inst),
                         brw_inst_src1_negate(devinfo, inst),
                         brw_inst_src1_abs(devinfo, inst),
-                        brw_inst_src1_address_mode(devinfo, inst),
                         brw_inst_src1_hstride(devinfo, inst),
                         brw_inst_src1_width(devinfo, inst),
                         brw_inst_src1_vstride(devinfo, inst));

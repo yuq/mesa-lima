@@ -193,7 +193,9 @@ vec4_visitor::nir_emit_if(nir_if *if_stmt)
    vec4_instruction *inst = emit(MOV(dst_null_d(), condition));
    inst->conditional_mod = BRW_CONDITIONAL_NZ;
 
-   emit(IF(BRW_PREDICATE_NORMAL));
+   /* We can just predicate based on the X channel, as the condition only
+    * goes on its own line */
+   emit(IF(BRW_PREDICATE_ALIGN16_REPLICATE_X));
 
    nir_emit_cf_list(&if_stmt->then_list);
 
@@ -806,6 +808,16 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
+   case nir_intrinsic_shader_clock: {
+      /* We cannot do anything if there is an event, so ignore it for now */
+      const src_reg shader_clock = get_timestamp();
+      const enum brw_reg_type type = brw_type_for_base_type(glsl_type::uvec2_type);
+
+      dest = get_nir_dest(instr->dest, type);
+      emit(MOV(dest, shader_clock));
+      break;
+   }
+
    default:
       unreachable("Unknown intrinsic");
    }
@@ -1144,26 +1156,10 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_ball_iequal3:
    case nir_op_ball_fequal4:
    case nir_op_ball_iequal4: {
-      dst_reg tmp = dst_reg(this, glsl_type::bool_type);
+      unsigned swiz =
+         brw_swizzle_for_size(nir_op_infos[instr->op].input_sizes[0]);
 
-      switch (instr->op) {
-      case nir_op_ball_fequal2:
-      case nir_op_ball_iequal2:
-         tmp.writemask = WRITEMASK_XY;
-         break;
-      case nir_op_ball_fequal3:
-      case nir_op_ball_iequal3:
-         tmp.writemask = WRITEMASK_XYZ;
-         break;
-      case nir_op_ball_fequal4:
-      case nir_op_ball_iequal4:
-         tmp.writemask = WRITEMASK_XYZW;
-         break;
-      default:
-         unreachable("not reached");
-      }
-
-      emit(CMP(tmp, op[0], op[1],
+      emit(CMP(dst_null_d(), swizzle(op[0], swiz), swizzle(op[1], swiz),
                brw_conditional_for_nir_comparison(instr->op)));
       emit(MOV(dst, src_reg(0)));
       inst = emit(MOV(dst, src_reg(~0)));
@@ -1177,26 +1173,10 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_bany_inequal3:
    case nir_op_bany_fnequal4:
    case nir_op_bany_inequal4: {
-      dst_reg tmp = dst_reg(this, glsl_type::bool_type);
+      unsigned swiz =
+         brw_swizzle_for_size(nir_op_infos[instr->op].input_sizes[0]);
 
-      switch (instr->op) {
-      case nir_op_bany_fnequal2:
-      case nir_op_bany_inequal2:
-         tmp.writemask = WRITEMASK_XY;
-         break;
-      case nir_op_bany_fnequal3:
-      case nir_op_bany_inequal3:
-         tmp.writemask = WRITEMASK_XYZ;
-         break;
-      case nir_op_bany_fnequal4:
-      case nir_op_bany_inequal4:
-         tmp.writemask = WRITEMASK_XYZW;
-         break;
-      default:
-         unreachable("not reached");
-      }
-
-      emit(CMP(tmp, op[0], op[1],
+      emit(CMP(dst_null_d(), swizzle(op[0], swiz), swizzle(op[1], swiz),
                brw_conditional_for_nir_comparison(instr->op)));
 
       emit(MOV(dst, src_reg(0)));
@@ -1321,26 +1301,18 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 
    case nir_op_ufind_msb:
    case nir_op_ifind_msb: {
-      src_reg temp = src_reg(this, glsl_type::uint_type);
-
-      inst = emit(FBH(dst_reg(temp), op[0]));
-      inst->dst.writemask = WRITEMASK_XYZW;
+      emit(FBH(retype(dst, BRW_REGISTER_TYPE_UD), op[0]));
 
       /* FBH counts from the MSB side, while GLSL's findMSB() wants the count
        * from the LSB side. If FBH didn't return an error (0xFFFFFFFF), then
        * subtract the result from 31 to convert the MSB count into an LSB count.
        */
+      src_reg src(dst);
+      emit(CMP(dst_null_d(), src, src_reg(-1), BRW_CONDITIONAL_NZ));
 
-      /* FBH only supports UD type for dst, so use a MOV to convert UD to D. */
-      temp.swizzle = BRW_SWIZZLE_NOOP;
-      emit(MOV(dst, temp));
-
-      src_reg src_tmp = src_reg(dst);
-      emit(CMP(dst_null_d(), src_tmp, src_reg(-1), BRW_CONDITIONAL_NZ));
-
-      src_tmp.negate = true;
-      inst = emit(ADD(dst, src_tmp, src_reg(31)));
+      inst = emit(ADD(dst, src, src_reg(31)));
       inst->predicate = BRW_PREDICATE_NORMAL;
+      inst->src[0].negate = true;
       break;
    }
 
@@ -1461,11 +1433,11 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_bany2:
    case nir_op_bany3:
    case nir_op_bany4: {
-      dst_reg tmp = dst_reg(this, glsl_type::bool_type);
-      tmp.writemask = brw_writemask_for_size(nir_op_infos[instr->op].input_sizes[0]);
+      unsigned swiz =
+         brw_swizzle_for_size(nir_op_infos[instr->op].input_sizes[0]);
 
-      emit(CMP(tmp, op[0], src_reg(0), BRW_CONDITIONAL_NZ));
-
+      emit(CMP(dst_null_d(), swizzle(op[0], swiz), src_reg(0),
+               BRW_CONDITIONAL_NZ));
       emit(MOV(dst, src_reg(0)));
       inst = emit(MOV(dst, src_reg(~0)));
       inst->predicate = BRW_PREDICATE_ALIGN16_ANY4H;

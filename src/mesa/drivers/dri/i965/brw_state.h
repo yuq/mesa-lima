@@ -49,6 +49,7 @@ extern const struct brw_tracked_state brw_clip_unit;
 extern const struct brw_tracked_state brw_vs_pull_constants;
 extern const struct brw_tracked_state brw_gs_pull_constants;
 extern const struct brw_tracked_state brw_wm_pull_constants;
+extern const struct brw_tracked_state brw_cs_pull_constants;
 extern const struct brw_tracked_state brw_constant_buffer;
 extern const struct brw_tracked_state brw_curbe_offsets;
 extern const struct brw_tracked_state brw_invariant_state;
@@ -220,7 +221,7 @@ bool brw_search_cache(struct brw_cache *cache,
 		      enum brw_cache_id cache_id,
 		      const void *key,
 		      GLuint key_size,
-		      uint32_t *inout_offset, void *out_aux);
+		      uint32_t *inout_offset, void *inout_aux);
 void brw_state_cache_check_size( struct brw_context *brw );
 
 void brw_init_caches( struct brw_context *brw );
@@ -345,7 +346,8 @@ calculate_attr_overrides(const struct brw_context *brw,
                          uint16_t *attr_overrides,
                          uint32_t *point_sprite_enables,
                          uint32_t *flat_enables,
-                         uint32_t *urb_entry_read_length);
+                         uint32_t *urb_entry_read_length,
+                         uint32_t *urb_entry_read_offset);
 
 /* gen6_surface_state.c */
 void gen6_init_vtable_surface_functions(struct brw_context *brw);

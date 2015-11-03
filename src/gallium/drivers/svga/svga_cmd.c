@@ -1016,6 +1016,8 @@ SVGA3D_BeginDrawPrimitives(struct svga_winsys_context *swc,
    *decls = declArray;
    *ranges = rangeArray;
 
+   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+
    return PIPE_OK;
 }
 

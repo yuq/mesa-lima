@@ -697,7 +697,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
    const fs_reg dst_depth = (payload.dest_depth_reg ?
                              fs_reg(brw_vec8_grf(payload.dest_depth_reg, 0)) :
                              fs_reg());
-   fs_reg src_depth;
+   fs_reg src_depth, src_stencil;
 
    if (source_depth_to_render_target) {
       if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
@@ -706,10 +706,14 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
          src_depth = fs_reg(brw_vec8_grf(payload.source_depth_reg, 0));
    }
 
+   if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL))
+      src_stencil = frag_stencil;
+
    const fs_reg sources[] = {
-      color0, color1, src0_alpha, src_depth, dst_depth, sample_mask,
-      fs_reg(components)
+      color0, color1, src0_alpha, src_depth, dst_depth, src_stencil,
+      sample_mask, fs_reg(components)
    };
+   assert(ARRAY_SIZE(sources) - 1 == FB_WRITE_LOGICAL_SRC_COMPONENTS);
    fs_inst *write = bld.emit(FS_OPCODE_FB_WRITE_LOGICAL, fs_reg(),
                              sources, ARRAY_SIZE(sources));
 
@@ -738,6 +742,16 @@ fs_visitor::emit_fb_writes()
        * for the second and third subspans.
        */
       no16("Missing support for simd16 depth writes on gen6\n");
+   }
+
+   if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL)) {
+      /* From the 'Render Target Write message' section of the docs:
+       * "Output Stencil is not supported with SIMD16 Render Target Write
+       * Messages."
+       *
+       * FINISHME: split 16 into 2 8s
+       */
+      no16("FINISHME: support 2 simd8 writes for gl_FragStencilRefARB\n");
    }
 
    if (do_dual_src) {

@@ -338,6 +338,7 @@ struct brw_wm_prog_data {
    } binding_table;
 
    uint8_t computed_depth_mode;
+   bool computed_stencil;
 
    bool early_fragment_tests;
    bool no_8;
@@ -443,9 +444,7 @@ struct brw_vue_map {
     * directly correspond to a gl_varying_slot, the value comes from
     * brw_varying_slot.
     *
-    * For slots that are not in use, the value is BRW_VARYING_SLOT_COUNT (this
-    * simplifies code that uses the value stored in slot_to_varying to
-    * create a bit mask).
+    * For slots that are not in use, the value is BRW_VARYING_SLOT_PAD.
     */
    signed char slot_to_varying[BRW_VARYING_SLOT_COUNT];
 
@@ -467,8 +466,8 @@ static inline GLuint brw_vue_slot_to_offset(GLuint slot)
  * Convert a vertex output (brw_varying_slot) into a byte offset within the
  * VUE.
  */
-static inline GLuint brw_varying_to_offset(struct brw_vue_map *vue_map,
-                                           GLuint varying)
+static inline
+GLuint brw_varying_to_offset(const struct brw_vue_map *vue_map, GLuint varying)
 {
    return brw_vue_slot_to_offset(vue_map->varying_to_slot[varying]);
 }

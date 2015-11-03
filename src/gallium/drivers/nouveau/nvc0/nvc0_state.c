@@ -212,9 +212,6 @@ nvc0_rasterizer_state_create(struct pipe_context *pipe,
      * always emit 16 commands, one for each scissor rectangle, here.
      */
 
-    SB_BEGIN_3D(so, SHADE_MODEL, 1);
-    SB_DATA    (so, cso->flatshade ? NVC0_3D_SHADE_MODEL_FLAT :
-                                     NVC0_3D_SHADE_MODEL_SMOOTH);
     SB_IMMED_3D(so, PROVOKING_VERTEX_LAST, !cso->flatshade_first);
     SB_IMMED_3D(so, VERTEX_TWO_SIDE_ENABLE, cso->light_twoside);
 
@@ -682,6 +679,9 @@ nvc0_sp_state_create(struct pipe_context *pipe,
 
    if (cso->stream_output.num_outputs)
       prog->pipe.stream_output = cso->stream_output;
+
+   prog->translated = nvc0_program_translate(
+      prog, nvc0_context(pipe)->screen->base.device->chipset);
 
    return (void *)prog;
 }

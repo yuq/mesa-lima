@@ -535,6 +535,7 @@ SVGA3D_vgpu10_Draw(struct svga_winsys_context *swc,
 
    SVGA3D_COPY_BASIC_2(vertexCount, startVertexLocation);
 
+   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
    swc->commit(swc);
    return PIPE_OK;
 }
@@ -550,6 +551,7 @@ SVGA3D_vgpu10_DrawIndexed(struct svga_winsys_context *swc,
    SVGA3D_COPY_BASIC_3(indexCount, startIndexLocation,
                        baseVertexLocation);
 
+   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
    swc->commit(swc);
    return PIPE_OK;
 }
@@ -566,6 +568,7 @@ SVGA3D_vgpu10_DrawInstanced(struct svga_winsys_context *swc,
    SVGA3D_COPY_BASIC_4(vertexCountPerInstance, instanceCount,
                        startVertexLocation, startInstanceLocation);
 
+   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
    swc->commit(swc);
    return PIPE_OK;
 }
@@ -584,6 +587,8 @@ SVGA3D_vgpu10_DrawIndexedInstanced(struct svga_winsys_context *swc,
                        startIndexLocation, baseVertexLocation,
                        startInstanceLocation);
 
+
+   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
    swc->commit(swc);
    return PIPE_OK;
 }
@@ -593,6 +598,7 @@ SVGA3D_vgpu10_DrawAuto(struct svga_winsys_context *swc)
 {
    SVGA3D_CREATE_COMMAND(DrawAuto, DRAW_AUTO);
 
+   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
    swc->commit(swc);
    return PIPE_OK;
 }

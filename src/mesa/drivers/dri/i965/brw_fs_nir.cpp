@@ -71,6 +71,14 @@ fs_visitor::nir_setup_inputs()
                                              var->data.origin_upper_left);
          emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
                                    input, reg), 0xF);
+      } else if (var->data.location == VARYING_SLOT_LAYER) {
+         struct brw_reg reg = suboffset(interp_reg(VARYING_SLOT_LAYER, 1), 3);
+         reg.type = BRW_REGISTER_TYPE_D;
+         bld.emit(FS_OPCODE_CINTERP, retype(input, BRW_REGISTER_TYPE_D), reg);
+      } else if (var->data.location == VARYING_SLOT_VIEWPORT) {
+         struct brw_reg reg = suboffset(interp_reg(VARYING_SLOT_VIEWPORT, 2), 3);
+         reg.type = BRW_REGISTER_TYPE_D;
+         bld.emit(FS_OPCODE_CINTERP, retype(input, BRW_REGISTER_TYPE_D), reg);
       } else {
          emit_general_interpolation(input, var->name, var->type,
                                     (glsl_interp_qualifier) var->data.interpolation,
@@ -114,6 +122,8 @@ fs_visitor::nir_setup_outputs()
             }
          } else if (var->data.location == FRAG_RESULT_DEPTH) {
             this->frag_depth = reg;
+         } else if (var->data.location == FRAG_RESULT_STENCIL) {
+            this->frag_stencil = reg;
          } else if (var->data.location == FRAG_RESULT_SAMPLE_MASK) {
             this->sample_mask = reg;
          } else {
@@ -896,12 +906,11 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
        * from the LSB side. If FBH didn't return an error (0xFFFFFFFF), then
        * subtract the result from 31 to convert the MSB count into an LSB count.
        */
-
       bld.CMP(bld.null_reg_d(), result, fs_reg(-1), BRW_CONDITIONAL_NZ);
-      fs_reg neg_result(result);
-      neg_result.negate = true;
-      inst = bld.ADD(result, neg_result, fs_reg(31));
+
+      inst = bld.ADD(result, result, fs_reg(31));
       inst->predicate = BRW_PREDICATE_NORMAL;
+      inst->src[0].negate = true;
       break;
    }
 
@@ -1322,6 +1331,15 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_shader_clock: {
+      /* We cannot do anything if there is an event, so ignore it for now */
+      fs_reg shader_clock = get_timestamp(bld);
+      const fs_reg srcs[] = { shader_clock.set_smear(0), shader_clock.set_smear(1) };
+
+      bld.LOAD_PAYLOAD(dest, srcs, ARRAY_SIZE(srcs), 0);
+      break;
+   }
+
    case nir_intrinsic_image_size: {
       /* Get the referenced image variable and type. */
       const nir_variable *var = instr->variables[0]->var;
@@ -1509,7 +1527,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          surf_index = vgrf(glsl_type::uint_type);
          bld.ADD(surf_index, get_nir_src(instr->src[0]),
                  fs_reg(stage_prog_data->binding_table.ssbo_start));
-         surf_index = bld.emit_uniformize(surf_index);
 
          /* Assume this may touch any UBO. It would be nice to provide
           * a tighter bound, but the array information is already lowered away.
@@ -1520,34 +1537,21 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
 
       /* Get the offset to read from */
-      fs_reg offset_reg = vgrf(glsl_type::uint_type);
-      unsigned const_offset_bytes = 0;
+      fs_reg offset_reg;
       if (has_indirect) {
-         bld.MOV(offset_reg, get_nir_src(instr->src[1]));
+         offset_reg = get_nir_src(instr->src[1]);
       } else {
-         const_offset_bytes = instr->const_index[0];
-         bld.MOV(offset_reg, fs_reg(const_offset_bytes));
+         offset_reg = fs_reg(instr->const_index[0]);
       }
 
       /* Read the vector */
-      for (int i = 0; i < instr->num_components; i++) {
-         fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
-                                                1 /* dims */, 1 /* size */,
-                                                BRW_PREDICATE_NONE);
-         read_result.type = dest.type;
-         bld.MOV(dest, read_result);
-         dest = offset(dest, bld, 1);
-
-         /* Vector components are stored contiguous in memory */
-         if (i < instr->num_components) {
-            if (!has_indirect) {
-               const_offset_bytes += 4;
-               bld.MOV(offset_reg, fs_reg(const_offset_bytes));
-            } else {
-               bld.ADD(offset_reg, offset_reg, brw_imm_ud(4));
-            }
-         }
-      }
+      fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
+                                             1 /* dims */,
+                                             instr->num_components,
+                                             BRW_PREDICATE_NONE);
+      read_result.type = dest.type;
+      for (int i = 0; i < instr->num_components; i++)
+         bld.MOV(offset(dest, bld, i), offset(read_result, bld, i));
 
       break;
    }
@@ -1765,21 +1769,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          surf_index = vgrf(glsl_type::uint_type);
          bld.ADD(surf_index, get_nir_src(instr->src[1]),
                   fs_reg(stage_prog_data->binding_table.ssbo_start));
-         surf_index = bld.emit_uniformize(surf_index);
 
          brw_mark_surface_used(prog_data,
                                stage_prog_data->binding_table.ssbo_start +
                                nir->info.num_ssbos - 1);
-      }
-
-      /* Offset */
-      fs_reg offset_reg = vgrf(glsl_type::uint_type);
-      unsigned const_offset_bytes = 0;
-      if (has_indirect) {
-         bld.MOV(offset_reg, get_nir_src(instr->src[2]));
-      } else {
-         const_offset_bytes = instr->const_index[0];
-         bld.MOV(offset_reg, fs_reg(const_offset_bytes));
       }
 
       /* Value */
@@ -1788,29 +1781,34 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       /* Writemask */
       unsigned writemask = instr->const_index[1];
 
-      /* Write each component present in the writemask */
-      unsigned skipped_channels = 0;
-      for (int i = 0; i < instr->num_components; i++) {
-         int component_mask = 1 << i;
-         if (writemask & component_mask) {
-            if (skipped_channels) {
-               if (!has_indirect) {
-                  const_offset_bytes += 4 * skipped_channels;
-                  bld.MOV(offset_reg, fs_reg(const_offset_bytes));
-               } else {
-                  bld.ADD(offset_reg, offset_reg,
-                           brw_imm_ud(4 * skipped_channels));
-               }
-               skipped_channels = 0;
-            }
+      /* Combine groups of consecutive enabled channels in one write
+       * message. We use ffs to find the first enabled channel and then ffs on
+       * the bit-inverse, down-shifted writemask to determine the length of
+       * the block of enabled bits.
+       */
+      while (writemask) {
+         unsigned first_component = ffs(writemask) - 1;
+         unsigned length = ffs(~(writemask >> first_component)) - 1;
+         fs_reg offset_reg;
 
-            emit_untyped_write(bld, surf_index, offset_reg,
-                               offset(val_reg, bld, i),
-                               1 /* dims */, 1 /* size */,
-                               BRW_PREDICATE_NONE);
+         if (!has_indirect) {
+            offset_reg = fs_reg(instr->const_index[0] + 4 * first_component);
+         } else {
+            offset_reg = vgrf(glsl_type::uint_type);
+            bld.ADD(offset_reg,
+                    retype(get_nir_src(instr->src[2]), BRW_REGISTER_TYPE_UD),
+                    fs_reg(4 * first_component));
          }
 
-         skipped_channels++;
+         emit_untyped_write(bld, surf_index, offset_reg,
+                            offset(val_reg, bld, first_component),
+                            1 /* dims */, length,
+                            BRW_PREDICATE_NONE);
+
+         /* Clear the bits in the writemask that we just wrote, then try
+          * again to see if more channels are left.
+          */
+         writemask &= (15 << (first_component + length));
       }
       break;
    }

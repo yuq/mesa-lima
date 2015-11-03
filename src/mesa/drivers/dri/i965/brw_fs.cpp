@@ -88,8 +88,6 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    case IMM:
    case UNIFORM:
       unreachable("Invalid destination register file");
-   default:
-      unreachable("Invalid register file");
    }
 
    this->writes_accumulator = false;
@@ -538,18 +536,6 @@ fs_visitor::get_timestamp(const fs_builder &bld)
     */
    bld.group(4, 0).exec_all().MOV(dst, ts);
 
-   /* The caller wants the low 32 bits of the timestamp.  Since it's running
-    * at the GPU clock rate of ~1.2ghz, it will roll over every ~3 seconds,
-    * which is plenty of time for our purposes.  It is identical across the
-    * EUs, but since it's tracking GPU core speed it will increment at a
-    * varying rate as render P-states change.
-    *
-    * The caller could also check if render P-states have changed (or anything
-    * else that might disrupt timing) by setting smear to 2 and checking if
-    * that field is != 0.
-    */
-   dst.set_smear(0);
-
    return dst;
 }
 
@@ -557,6 +543,14 @@ void
 fs_visitor::emit_shader_time_begin()
 {
    shader_start_time = get_timestamp(bld.annotate("shader time start"));
+
+   /* We want only the low 32 bits of the timestamp.  Since it's running
+    * at the GPU clock rate of ~1.2ghz, it will roll over every ~3 seconds,
+    * which is plenty of time for our purposes.  It is identical across the
+    * EUs, but since it's tracking GPU core speed it will increment at a
+    * varying rate as render P-states change.
+    */
+   shader_start_time.set_smear(0);
 }
 
 void
@@ -569,6 +563,15 @@ fs_visitor::emit_shader_time_end()
                               .exec_all().at(NULL, end);
 
    fs_reg shader_end_time = get_timestamp(ibld);
+
+   /* We only use the low 32 bits of the timestamp - see
+    * emit_shader_time_begin()).
+    *
+    * We could also check if render P-states have changed (or anything
+    * else that might disrupt timing) by setting smear to 2 and checking if
+    * that field is != 0.
+    */
+   shader_end_time.set_smear(0);
 
    /* Check that there weren't any timestamp reset events (assuming these
     * were the only two timestamp reads that happened).
@@ -700,10 +703,10 @@ fs_inst::components_read(unsigned i) const
       return 2;
 
    case FS_OPCODE_FB_WRITE_LOGICAL:
-      assert(src[6].file == IMM);
+      assert(src[FB_WRITE_LOGICAL_SRC_COMPONENTS].file == IMM);
       /* First/second FB write color. */
       if (i < 2)
-         return src[6].fixed_hw_reg.dw1.ud;
+         return src[FB_WRITE_LOGICAL_SRC_COMPONENTS].fixed_hw_reg.dw1.ud;
       else
          return 1;
 
@@ -841,9 +844,8 @@ fs_inst::regs_read(int arg) const
                           REG_SIZE);
    case MRF:
       unreachable("MRF registers are not allowed as sources");
-   default:
-      unreachable("Invalid register file");
    }
+   return 0;
 }
 
 bool
@@ -1283,9 +1285,9 @@ fs_visitor::emit_sampleid_setup()
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
 
    if (key->compute_sample_id) {
-      fs_reg t1 = vgrf(glsl_type::int_type);
-      fs_reg t2 = vgrf(glsl_type::int_type);
-      t2.type = BRW_REGISTER_TYPE_UW;
+      fs_reg t1(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_D);
+      t1.set_smear(0);
+      fs_reg t2(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_W);
 
       /* The PS will be run in MSDISPMODE_PERSAMPLE. For example with
        * 8x multisampling, subspan 0 will represent sample N (where N
@@ -1306,13 +1308,13 @@ fs_visitor::emit_sampleid_setup()
        * are sample 1 of subspan 0; the third group is sample 0 of
        * subspan 1, and finally sample 1 of subspan 1.
        */
-      abld.exec_all()
-          .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD)),
+      abld.exec_all().group(1, 0)
+          .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_D)),
                fs_reg(0xc0));
-      abld.exec_all().SHR(t1, t1, fs_reg(5));
+      abld.exec_all().group(1, 0).SHR(t1, t1, fs_reg(5));
 
       /* This works for both SIMD8 and SIMD16 */
-      abld.exec_all()
+      abld.exec_all().group(4, 0)
           .MOV(t2, brw_imm_v(key->persample_2x ? 0x1010 : 0x3210));
 
       /* This special instruction takes care of setting vstride=1,
@@ -1443,6 +1445,9 @@ fs_visitor::calculate_urb_setup()
             }
          }
       } else {
+         bool include_vue_header =
+            nir->info.inputs_read & (VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT);
+
          /* We have enough input varyings that the SF/SBE pipeline stage can't
           * arbitrarily rearrange them to suit our whim; we have to put them
           * in an order that matches the output of the previous pipeline stage
@@ -1452,15 +1457,14 @@ fs_visitor::calculate_urb_setup()
          brw_compute_vue_map(devinfo, &prev_stage_vue_map,
                              key->input_slots_valid,
                              nir->info.separate_shader);
-         int first_slot = 2 * BRW_SF_URB_ENTRY_READ_OFFSET;
+         int first_slot =
+            include_vue_header ? 0 : 2 * BRW_SF_URB_ENTRY_READ_OFFSET;
+
          assert(prev_stage_vue_map.num_slots <= first_slot + 32);
          for (int slot = first_slot; slot < prev_stage_vue_map.num_slots;
               slot++) {
             int varying = prev_stage_vue_map.slot_to_varying[slot];
-            /* Note that varying == BRW_VARYING_SLOT_COUNT when a slot is
-             * unused.
-             */
-            if (varying != BRW_VARYING_SLOT_COUNT &&
+            if (varying != BRW_VARYING_SLOT_PAD &&
                 (nir->info.inputs_read & BRW_FS_VARYING_INPUT_MASK &
                  BITFIELD64_BIT(varying))) {
                prog_data->urb_setup[varying] = slot - first_slot;
@@ -2615,7 +2619,7 @@ fs_visitor::eliminate_find_live_channel()
       case SHADER_OPCODE_FIND_LIVE_CHANNEL:
          if (depth == 0) {
             inst->opcode = BRW_OPCODE_MOV;
-            inst->src[0] = fs_reg(0);
+            inst->src[0] = fs_reg(0u);
             inst->sources = 1;
             inst->force_writemask_all = true;
             progress = true;
@@ -2643,8 +2647,9 @@ fs_visitor::emit_repclear_shader()
    fs_inst *mov;
 
    if (uniforms == 1) {
-      mov = bld.exec_all().MOV(vec4(brw_message_reg(color_mrf)),
-                               fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F));
+      mov = bld.exec_all().group(4, 0)
+               .MOV(brw_message_reg(color_mrf),
+                    fs_reg(UNIFORM, 0, BRW_REGISTER_TYPE_F));
    } else {
       struct brw_reg reg =
          brw_reg(BRW_GENERAL_REGISTER_FILE,
@@ -2653,8 +2658,8 @@ fs_visitor::emit_repclear_shader()
                  BRW_WIDTH_2,
                  BRW_HORIZONTAL_STRIDE_4, BRW_SWIZZLE_XYZW, WRITEMASK_XYZW);
 
-      mov = bld.exec_all().MOV(vec4(brw_message_reg(color_mrf)),
-                               fs_reg(reg));
+      mov = bld.exec_all().group(4, 0)
+               .MOV(vec4(brw_message_reg(color_mrf)), fs_reg(reg));
    }
 
    fs_inst *write;
@@ -3366,15 +3371,17 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
                             const brw_wm_prog_key *key,
                             const fs_visitor::thread_payload &payload)
 {
-   assert(inst->src[6].file == IMM);
+   assert(inst->src[FB_WRITE_LOGICAL_SRC_COMPONENTS].file == IMM);
    const brw_device_info *devinfo = bld.shader->devinfo;
-   const fs_reg &color0 = inst->src[0];
-   const fs_reg &color1 = inst->src[1];
-   const fs_reg &src0_alpha = inst->src[2];
-   const fs_reg &src_depth = inst->src[3];
-   const fs_reg &dst_depth = inst->src[4];
-   fs_reg sample_mask = inst->src[5];
-   const unsigned components = inst->src[6].fixed_hw_reg.dw1.ud;
+   const fs_reg &color0 = inst->src[FB_WRITE_LOGICAL_SRC_COLOR0];
+   const fs_reg &color1 = inst->src[FB_WRITE_LOGICAL_SRC_COLOR1];
+   const fs_reg &src0_alpha = inst->src[FB_WRITE_LOGICAL_SRC_SRC0_ALPHA];
+   const fs_reg &src_depth = inst->src[FB_WRITE_LOGICAL_SRC_SRC_DEPTH];
+   const fs_reg &dst_depth = inst->src[FB_WRITE_LOGICAL_SRC_DST_DEPTH];
+   const fs_reg &src_stencil = inst->src[FB_WRITE_LOGICAL_SRC_SRC_STENCIL];
+   fs_reg sample_mask = inst->src[FB_WRITE_LOGICAL_SRC_OMASK];
+   const unsigned components =
+      inst->src[FB_WRITE_LOGICAL_SRC_COMPONENTS].fixed_hw_reg.dw1.ud;
 
    /* We can potentially have a message length of up to 15, so we have to set
     * base_mrf to either 0 or 1 in order to fit in m0..m15.
@@ -3461,6 +3468,17 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
 
    if (dst_depth.file != BAD_FILE) {
       sources[length] = dst_depth;
+      length++;
+   }
+
+   if (src_stencil.file != BAD_FILE) {
+      assert(devinfo->gen >= 9);
+      assert(bld.dispatch_width() != 16);
+
+      sources[length] = bld.vgrf(BRW_REGISTER_TYPE_UD);
+      bld.exec_all().annotate("FB write OS")
+         .emit(FS_OPCODE_PACK_STENCIL_REF, sources[length],
+               retype(src_stencil, BRW_REGISTER_TYPE_UB));
       length++;
    }
 
@@ -4073,7 +4091,7 @@ fs_visitor::lower_logical_sends()
       case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_UNTYPED_SURFACE_READ,
-                                    fs_reg(0xffff));
+                                    fs_reg());
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
@@ -4202,10 +4220,12 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       /* Gen6 doesn't support SIMD16 depth writes but we cannot handle them
        * here.
        */
-      assert(devinfo->gen != 6 || inst->src[3].file == BAD_FILE ||
+      assert(devinfo->gen != 6 ||
+             inst->src[FB_WRITE_LOGICAL_SRC_SRC_DEPTH].file == BAD_FILE ||
              inst->exec_size == 8);
       /* Dual-source FB writes are unsupported in SIMD16 mode. */
-      return (inst->src[1].file != BAD_FILE ? 8 : inst->exec_size);
+      return (inst->src[FB_WRITE_LOGICAL_SRC_COLOR1].file != BAD_FILE ?
+              8 : inst->exec_size);
 
    case SHADER_OPCODE_TXD_LOGICAL:
       /* TXD is unsupported in SIMD16 mode. */
@@ -4499,9 +4519,8 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       if (inst->dst.fixed_hw_reg.subnr)
          fprintf(file, "+%d", inst->dst.fixed_hw_reg.subnr);
       break;
-   default:
-      fprintf(file, "???");
-      break;
+   case IMM:
+      unreachable("not reached");
    }
    fprintf(file, ":%s, ", brw_reg_type_letters(inst->dst.type));
 
@@ -4593,9 +4612,6 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
             fprintf(file, "+%d", inst->src[i].fixed_hw_reg.subnr);
          if (inst->src[i].fixed_hw_reg.abs)
             fprintf(file, "|");
-         break;
-      default:
-         fprintf(file, "???");
          break;
       }
       if (inst->src[i].abs)
@@ -4977,8 +4993,7 @@ fs_visitor::allocate_registers()
    if (failed)
       return;
 
-   if (!allocated_without_spills)
-      schedule_instructions(SCHEDULE_POST);
+   schedule_instructions(SCHEDULE_POST);
 
    if (last_scratch > 0)
       prog_data->total_scratch = brw_get_scratch_size(last_scratch);
@@ -5236,6 +5251,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
    prog_data->uses_omask =
       shader->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
    prog_data->computed_depth_mode = computed_depth_mode(shader);
+   prog_data->computed_stencil =
+      shader->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL);
 
    prog_data->early_fragment_tests = shader->info.fs.early_fragment_tests;
 

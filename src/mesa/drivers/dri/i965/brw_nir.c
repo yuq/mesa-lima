@@ -205,6 +205,9 @@ brw_create_nir(struct brw_context *brw,
    if (shader_prog) {
       nir_lower_samplers(nir, shader_prog);
       nir_validate_shader(nir);
+
+      nir_lower_atomics(nir, shader_prog);
+      nir_validate_shader(nir);
    }
 
    brw_postprocess_nir(nir, brw->intelScreen->devinfo, is_scalar);
@@ -276,9 +279,6 @@ brw_postprocess_nir(nir_shader *nir,
    nir_validate_shader(nir);
 
    nir_lower_system_values(nir);
-   nir_validate_shader(nir);
-
-   nir_lower_atomics(nir);
    nir_validate_shader(nir);
 
    nir_optimize(nir, is_scalar);

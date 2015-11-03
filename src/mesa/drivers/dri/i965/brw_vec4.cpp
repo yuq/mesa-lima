@@ -1370,9 +1370,10 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    vec4_instruction *inst = (vec4_instruction *)be_inst;
 
    if (inst->predicate) {
-      fprintf(file, "(%cf0.%d) ",
+      fprintf(file, "(%cf0.%d%s) ",
               inst->predicate_inverse ? '-' : '+',
-              inst->flag_subreg);
+              inst->flag_subreg,
+              pred_ctrl_align16[inst->predicate]);
    }
 
    fprintf(file, "%s", brw_instruction_name(inst->opcode));
@@ -1426,9 +1427,10 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    case BAD_FILE:
       fprintf(file, "(null)");
       break;
-   default:
-      fprintf(file, "???");
-      break;
+   case IMM:
+   case ATTR:
+   case UNIFORM:
+      unreachable("not reached");
    }
    if (inst->dst.writemask != WRITEMASK_XYZW) {
       fprintf(file, ".");
@@ -1520,9 +1522,8 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       case BAD_FILE:
          fprintf(file, "(null)");
          break;
-      default:
-         fprintf(file, "???");
-         break;
+      case MRF:
+         unreachable("not reached");
       }
 
       /* Don't print .0; and only VGRFs have reg_offsets and sizes */
@@ -1787,11 +1788,98 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
    emit(MOV(offset, src_reg(index * SHADER_TIME_STRIDE)));
 
    time.type = BRW_REGISTER_TYPE_UD;
-   emit(MOV(time, src_reg(value)));
+   emit(MOV(time, value));
 
    vec4_instruction *inst =
       emit(SHADER_OPCODE_SHADER_TIME_ADD, dst_reg(), src_reg(dst));
    inst->mlen = 2;
+}
+
+void
+vec4_visitor::convert_to_hw_regs()
+{
+   foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
+      for (int i = 0; i < 3; i++) {
+         struct src_reg &src = inst->src[i];
+         struct brw_reg reg;
+         switch (src.file) {
+         case GRF:
+            reg = brw_vec8_grf(src.reg + src.reg_offset, 0);
+            reg.type = src.type;
+            reg.dw1.bits.swizzle = src.swizzle;
+            reg.abs = src.abs;
+            reg.negate = src.negate;
+            break;
+
+         case IMM:
+            reg = brw_imm_reg(src.type);
+            reg.dw1.ud = src.fixed_hw_reg.dw1.ud;
+            break;
+
+         case UNIFORM:
+            reg = stride(brw_vec4_grf(prog_data->base.dispatch_grf_start_reg +
+                                      (src.reg + src.reg_offset) / 2,
+                                      ((src.reg + src.reg_offset) % 2) * 4),
+                         0, 4, 1);
+            reg.type = src.type;
+            reg.dw1.bits.swizzle = src.swizzle;
+            reg.abs = src.abs;
+            reg.negate = src.negate;
+
+            /* This should have been moved to pull constants. */
+            assert(!src.reladdr);
+            break;
+
+         case HW_REG:
+            assert(src.type == src.fixed_hw_reg.type);
+            continue;
+
+         case BAD_FILE:
+            /* Probably unused. */
+            reg = brw_null_reg();
+            break;
+
+         case MRF:
+         case ATTR:
+            unreachable("not reached");
+         }
+         src.fixed_hw_reg = reg;
+      }
+
+      dst_reg &dst = inst->dst;
+      struct brw_reg reg;
+
+      switch (inst->dst.file) {
+      case GRF:
+         reg = brw_vec8_grf(dst.reg + dst.reg_offset, 0);
+         reg.type = dst.type;
+         reg.dw1.bits.writemask = dst.writemask;
+         break;
+
+      case MRF:
+         assert(((dst.reg + dst.reg_offset) & ~(1 << 7)) < BRW_MAX_MRF(devinfo->gen));
+         reg = brw_message_reg(dst.reg + dst.reg_offset);
+         reg.type = dst.type;
+         reg.dw1.bits.writemask = dst.writemask;
+         break;
+
+      case HW_REG:
+         assert(dst.type == dst.fixed_hw_reg.type);
+         reg = dst.fixed_hw_reg;
+         break;
+
+      case BAD_FILE:
+         reg = brw_null_reg();
+         break;
+
+      case IMM:
+      case ATTR:
+      case UNIFORM:
+         unreachable("not reached");
+      }
+
+      dst.fixed_hw_reg = reg;
+   }
 }
 
 bool
@@ -1862,6 +1950,7 @@ vec4_visitor::run()
       OPT(dead_code_eliminate);
       OPT(dead_control_flow_eliminate, this);
       OPT(opt_copy_propagation);
+      OPT(opt_cmod_propagation);
       OPT(opt_cse);
       OPT(opt_algebraic);
       OPT(opt_register_coalesce);
@@ -1913,6 +2002,8 @@ vec4_visitor::run()
    opt_schedule_instructions();
 
    opt_set_dependency_control();
+
+   convert_to_hw_regs();
 
    if (last_scratch > 0) {
       prog_data->base.total_scratch =
@@ -2020,9 +2111,9 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
          return NULL;
       }
 
-      vec4_generator g(compiler, log_data, &prog_data->base,
-                       mem_ctx, INTEL_DEBUG & DEBUG_VS, "vertex", "VS");
-      assembly = g.generate_assembly(v.cfg, final_assembly_size, shader);
+      assembly = brw_vec4_generate_assembly(compiler, log_data, mem_ctx,
+                                            shader, &prog_data->base, v.cfg,
+                                            final_assembly_size);
    }
 
    return assembly;

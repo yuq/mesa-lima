@@ -30,6 +30,7 @@
 
 #include "nv50/nv50_stateobj.h"
 #include "nv50/nv50_context.h"
+#include "nv50/nv50_query_hw.h"
 
 #include "nv50/nv50_3d.xml.h"
 #include "nv50/nv50_texture.xml.h"
@@ -725,6 +726,9 @@ nv50_sp_state_create(struct pipe_context *pipe,
    if (cso->stream_output.num_outputs)
       prog->pipe.stream_output = cso->stream_output;
 
+   prog->translated = nv50_program_translate(
+         prog, nv50_context(pipe)->screen->base.device->chipset);
+
    return (void *)prog;
 }
 
@@ -1033,7 +1037,7 @@ nv50_so_target_create(struct pipe_context *pipe,
 
    if (nouveau_context(pipe)->screen->class_3d >= NVA0_3D_CLASS) {
       targ->pq = pipe->create_query(pipe,
-                                    NVA0_QUERY_STREAM_OUTPUT_BUFFER_OFFSET, 0);
+                                    NVA0_HW_QUERY_STREAM_OUTPUT_BUFFER_OFFSET, 0);
       if (!targ->pq) {
          FREE(targ);
          return NULL;
@@ -1054,6 +1058,24 @@ nv50_so_target_create(struct pipe_context *pipe,
    util_range_add(&buf->valid_buffer_range, offset, offset + size);
 
    return &targ->pipe;
+}
+
+static void
+nva0_so_target_save_offset(struct pipe_context *pipe,
+                           struct pipe_stream_output_target *ptarg,
+                           unsigned index, bool serialize)
+{
+   struct nv50_so_target *targ = nv50_so_target(ptarg);
+
+   if (serialize) {
+      struct nouveau_pushbuf *push = nv50_context(pipe)->base.pushbuf;
+      PUSH_SPACE(push, 2);
+      BEGIN_NV04(push, SUBC_3D(NV50_GRAPH_SERIALIZE), 1);
+      PUSH_DATA (push, 0);
+   }
+
+   nv50_query(targ->pq)->index = index;
+   pipe->end_query(pipe, targ->pq);
 }
 
 static void

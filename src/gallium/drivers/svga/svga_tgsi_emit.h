@@ -84,6 +84,9 @@ struct svga_shader_emitter
 
    int dynamic_branching_level;
 
+   unsigned num_output_writes;
+   boolean constant_color_output;
+
    boolean in_main_func;
 
    boolean created_common_immediate;

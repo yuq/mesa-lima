@@ -59,6 +59,11 @@
 #include "vc4/drm/vc4_drm_public.h"
 #endif
 
+#if GALLIUM_VIRGL
+#include "virgl/drm/virgl_drm_public.h"
+#include "virgl/virgl_public.h"
+#endif
+
 static char* driver_name = NULL;
 
 /* XXX: We need to teardown the winsys if *screen_create() fails. */
@@ -296,6 +301,33 @@ pipe_freedreno_create_screen(int fd)
 }
 #endif
 
+#if defined(GALLIUM_VIRGL)
+#if defined(DRI_TARGET)
+
+const __DRIextension **__driDriverGetExtensions_virtio_gpu(void);
+
+PUBLIC const __DRIextension **__driDriverGetExtensions_virtio_gpu(void)
+{
+   globalDriverAPI = &galliumdrm_driver_api;
+   return galliumdrm_driver_extensions;
+}
+#endif
+
+static struct pipe_screen *
+pipe_virgl_create_screen(int fd)
+{
+   struct virgl_winsys *vws;
+   struct pipe_screen *screen;
+
+   vws = virgl_drm_winsys_create(fd);
+   if (!vws)
+      return NULL;
+
+   screen = virgl_create_screen(vws);
+   return screen ? debug_screen_wrap(screen) : NULL;
+}
+#endif
+
 #if defined(GALLIUM_VC4)
 #if defined(DRI_TARGET)
 
@@ -385,6 +417,11 @@ dd_create_screen(int fd)
       return pipe_freedreno_create_screen(fd);
    else
 #endif
+#if defined(GALLIUM_VIRGL)
+   if ((strcmp(driver_name, "virtio_gpu") == 0))
+      return pipe_virgl_create_screen(fd);
+   else
+#endif
 #if defined(GALLIUM_VC4)
    if (strcmp(driver_name, "vc4") == 0)
       return pipe_vc4_create_screen(fd);
@@ -471,6 +508,11 @@ dd_configuration(enum drm_conf conf)
 #endif
 #if defined(GALLIUM_FREEDRENO)
    if ((strcmp(driver_name, "kgsl") == 0) || (strcmp(driver_name, "msm") == 0))
+      return configuration_query(conf);
+   else
+#endif
+#if defined(GALLIUM_VIRGL)
+   if ((strcmp(driver_name, "virtio_gpu") == 0))
       return configuration_query(conf);
    else
 #endif

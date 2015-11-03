@@ -913,20 +913,15 @@ enum opcode {
 
    /**
     * Same as FS_OPCODE_FB_WRITE but expects its arguments separately as
-    * individual sources instead of as a single payload blob:
-    *
-    * Source 0: [required] Color 0.
-    * Source 1: [optional] Color 1 (for dual source blend messages).
-    * Source 2: [optional] Src0 Alpha.
-    * Source 3: [optional] Source Depth (gl_FragDepth)
-    * Source 4: [optional (gen4-5)] Destination Depth passthrough from thread
-    * Source 5: [optional] Sample Mask (gl_SampleMask).
-    * Source 6: [required] Number of color components (as a UD immediate).
+    * individual sources instead of as a single payload blob. The
+    * position/ordering of the arguments are defined by the enum
+    * fb_write_logical_srcs.
     */
    FS_OPCODE_FB_WRITE_LOGICAL,
 
    FS_OPCODE_BLORP_FB_WRITE,
    FS_OPCODE_REP_FB_WRITE,
+   FS_OPCODE_PACK_STENCIL_REF,
    SHADER_OPCODE_RCP,
    SHADER_OPCODE_RSQ,
    SHADER_OPCODE_SQRT,
@@ -1330,6 +1325,17 @@ enum brw_urb_write_flags {
     */
    BRW_URB_WRITE_ALLOCATE_COMPLETE =
       BRW_URB_WRITE_ALLOCATE | BRW_URB_WRITE_COMPLETE,
+};
+
+enum fb_write_logical_srcs {
+   FB_WRITE_LOGICAL_SRC_COLOR0,      /* REQUIRED */
+   FB_WRITE_LOGICAL_SRC_COLOR1,      /* for dual source blend messages */
+   FB_WRITE_LOGICAL_SRC_SRC0_ALPHA,
+   FB_WRITE_LOGICAL_SRC_SRC_DEPTH,   /* gl_FragDepth */
+   FB_WRITE_LOGICAL_SRC_DST_DEPTH,   /* GEN4-5: passthrough from thread */
+   FB_WRITE_LOGICAL_SRC_SRC_STENCIL, /* gl_FragStencilRefARB */
+   FB_WRITE_LOGICAL_SRC_OMASK,       /* Sample Mask (gl_SampleMask) */
+   FB_WRITE_LOGICAL_SRC_COMPONENTS,  /* REQUIRED */
 };
 
 #ifdef __cplusplus

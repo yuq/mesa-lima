@@ -431,7 +431,7 @@ nvc0_hw_metric_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
             id = nvc0_hw_metric_get_next_query_id(queries, id);
             info->name = nvc0_hw_metric_names[id];
             info->query_type = NVC0_HW_METRIC_QUERY(id);
-            info->group_id = -1;
+            info->group_id = NVC0_HW_METRIC_QUERY_GROUP;
             return 1;
          }
       }

@@ -16,6 +16,7 @@
 #include "nv50/nv50_program.h"
 #include "nv50/nv50_resource.h"
 #include "nv50/nv50_transfer.h"
+#include "nv50/nv50_query.h"
 
 #include "nouveau_context.h"
 #include "nouveau_debug.h"
@@ -194,17 +195,6 @@ void nv50_default_kick_notify(struct nouveau_pushbuf *);
 
 /* nv50_draw.c */
 extern struct draw_stage *nv50_draw_render_stage(struct nv50_context *);
-
-/* nv50_query.c */
-void nv50_init_query_functions(struct nv50_context *);
-void nv50_query_pushbuf_submit(struct nouveau_pushbuf *, uint16_t method,
-                               struct pipe_query *, unsigned result_offset);
-void nv84_query_fifo_wait(struct nouveau_pushbuf *, struct pipe_query *);
-void nva0_so_target_save_offset(struct pipe_context *,
-                                struct pipe_stream_output_target *,
-                                unsigned index, bool seralize);
-
-#define NVA0_QUERY_STREAM_OUTPUT_BUFFER_OFFSET (PIPE_QUERY_TYPES + 0)
 
 /* nv50_shader_state.c */
 void nv50_vertprog_validate(struct nv50_context *);

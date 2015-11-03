@@ -225,10 +225,14 @@ nvc0_resource_copy_region(struct pipe_context *pipe,
    nv04_resource(dst)->status |= NOUVEAU_BUFFER_STATUS_GPU_WRITING;
 
    if (m2mf) {
+      struct nv50_miptree *src_mt = nv50_miptree(src);
+      struct nv50_miptree *dst_mt = nv50_miptree(dst);
       struct nv50_m2mf_rect drect, srect;
       unsigned i;
-      unsigned nx = util_format_get_nblocksx(src->format, src_box->width);
-      unsigned ny = util_format_get_nblocksy(src->format, src_box->height);
+      unsigned nx = util_format_get_nblocksx(src->format, src_box->width)
+         << src_mt->ms_x;
+      unsigned ny = util_format_get_nblocksy(src->format, src_box->height)
+         << src_mt->ms_y;
 
       nv50_m2mf_rect_setup(&drect, dst, dst_level, dstx, dsty, dstz);
       nv50_m2mf_rect_setup(&srect, src, src_level,
@@ -237,15 +241,15 @@ nvc0_resource_copy_region(struct pipe_context *pipe,
       for (i = 0; i < src_box->depth; ++i) {
          nvc0->m2mf_copy_rect(nvc0, &drect, &srect, nx, ny);
 
-         if (nv50_miptree(dst)->layout_3d)
+         if (dst_mt->layout_3d)
             drect.z++;
          else
-            drect.base += nv50_miptree(dst)->layer_stride;
+            drect.base += dst_mt->layer_stride;
 
-         if (nv50_miptree(src)->layout_3d)
+         if (src_mt->layout_3d)
             srect.z++;
          else
-            srect.base += nv50_miptree(src)->layer_stride;
+            srect.base += src_mt->layer_stride;
       }
       return;
    }
@@ -493,57 +497,57 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
                          unsigned dstx, unsigned dsty,
                          unsigned width, unsigned height)
 {
-	struct nvc0_context *nvc0 = nvc0_context(pipe);
-	struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-	struct nv50_miptree *mt = nv50_miptree(dst->texture);
-	struct nv50_surface *sf = nv50_surface(dst);
-	uint32_t mode = 0;
-	int unk = mt->base.base.target == PIPE_TEXTURE_2D;
-	unsigned z;
+   struct nvc0_context *nvc0 = nvc0_context(pipe);
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nv50_miptree *mt = nv50_miptree(dst->texture);
+   struct nv50_surface *sf = nv50_surface(dst);
+   uint32_t mode = 0;
+   int unk = mt->base.base.target == PIPE_TEXTURE_2D;
+   unsigned z;
 
-	if (!PUSH_SPACE(push, 32 + sf->depth))
-		return;
+   if (!PUSH_SPACE(push, 32 + sf->depth))
+      return;
 
-	PUSH_REFN (push, mt->base.bo, mt->base.domain | NOUVEAU_BO_WR);
+   PUSH_REFN (push, mt->base.bo, mt->base.domain | NOUVEAU_BO_WR);
 
-	if (clear_flags & PIPE_CLEAR_DEPTH) {
-		BEGIN_NVC0(push, NVC0_3D(CLEAR_DEPTH), 1);
-		PUSH_DATAf(push, depth);
-		mode |= NVC0_3D_CLEAR_BUFFERS_Z;
-	}
+   if (clear_flags & PIPE_CLEAR_DEPTH) {
+      BEGIN_NVC0(push, NVC0_3D(CLEAR_DEPTH), 1);
+      PUSH_DATAf(push, depth);
+      mode |= NVC0_3D_CLEAR_BUFFERS_Z;
+   }
 
-	if (clear_flags & PIPE_CLEAR_STENCIL) {
-		BEGIN_NVC0(push, NVC0_3D(CLEAR_STENCIL), 1);
-		PUSH_DATA (push, stencil & 0xff);
-		mode |= NVC0_3D_CLEAR_BUFFERS_S;
-	}
+   if (clear_flags & PIPE_CLEAR_STENCIL) {
+      BEGIN_NVC0(push, NVC0_3D(CLEAR_STENCIL), 1);
+      PUSH_DATA (push, stencil & 0xff);
+      mode |= NVC0_3D_CLEAR_BUFFERS_S;
+   }
 
-	BEGIN_NVC0(push, NVC0_3D(SCREEN_SCISSOR_HORIZ), 2);
-	PUSH_DATA (push, ( width << 16) | dstx);
-	PUSH_DATA (push, (height << 16) | dsty);
+   BEGIN_NVC0(push, NVC0_3D(SCREEN_SCISSOR_HORIZ), 2);
+   PUSH_DATA (push, ( width << 16) | dstx);
+   PUSH_DATA (push, (height << 16) | dsty);
 
-	BEGIN_NVC0(push, NVC0_3D(ZETA_ADDRESS_HIGH), 5);
-	PUSH_DATAh(push, mt->base.address + sf->offset);
-	PUSH_DATA (push, mt->base.address + sf->offset);
-	PUSH_DATA (push, nvc0_format_table[dst->format].rt);
-	PUSH_DATA (push, mt->level[sf->base.u.tex.level].tile_mode);
-	PUSH_DATA (push, mt->layer_stride >> 2);
-	BEGIN_NVC0(push, NVC0_3D(ZETA_ENABLE), 1);
-	PUSH_DATA (push, 1);
-	BEGIN_NVC0(push, NVC0_3D(ZETA_HORIZ), 3);
-	PUSH_DATA (push, sf->width);
-	PUSH_DATA (push, sf->height);
-	PUSH_DATA (push, (unk << 16) | (dst->u.tex.first_layer + sf->depth));
-	BEGIN_NVC0(push, NVC0_3D(ZETA_BASE_LAYER), 1);
-	PUSH_DATA (push, dst->u.tex.first_layer);
+   BEGIN_NVC0(push, NVC0_3D(ZETA_ADDRESS_HIGH), 5);
+   PUSH_DATAh(push, mt->base.address + sf->offset);
+   PUSH_DATA (push, mt->base.address + sf->offset);
+   PUSH_DATA (push, nvc0_format_table[dst->format].rt);
+   PUSH_DATA (push, mt->level[sf->base.u.tex.level].tile_mode);
+   PUSH_DATA (push, mt->layer_stride >> 2);
+   BEGIN_NVC0(push, NVC0_3D(ZETA_ENABLE), 1);
+   PUSH_DATA (push, 1);
+   BEGIN_NVC0(push, NVC0_3D(ZETA_HORIZ), 3);
+   PUSH_DATA (push, sf->width);
+   PUSH_DATA (push, sf->height);
+   PUSH_DATA (push, (unk << 16) | (dst->u.tex.first_layer + sf->depth));
+   BEGIN_NVC0(push, NVC0_3D(ZETA_BASE_LAYER), 1);
+   PUSH_DATA (push, dst->u.tex.first_layer);
 
-	BEGIN_NIC0(push, NVC0_3D(CLEAR_BUFFERS), sf->depth);
-	for (z = 0; z < sf->depth; ++z) {
-		PUSH_DATA (push, mode |
-			   (z << NVC0_3D_CLEAR_BUFFERS_LAYER__SHIFT));
-	}
+   BEGIN_NIC0(push, NVC0_3D(CLEAR_BUFFERS), sf->depth);
+   for (z = 0; z < sf->depth; ++z) {
+      PUSH_DATA (push, mode |
+                 (z << NVC0_3D_CLEAR_BUFFERS_LAYER__SHIFT));
+   }
 
-	nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
 }
 
 void

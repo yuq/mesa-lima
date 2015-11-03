@@ -38,6 +38,7 @@ struct nvc0_graph_state {
    uint32_t constant_elts;
    int32_t index_bias;
    uint16_t scissor;
+   bool flatshade;
    uint8_t patch_vertices;
    uint8_t vbo_mode; /* 0 = normal, 1 = translate, 3 = translate, forced */
    uint8_t num_vtxbufs;

@@ -181,6 +181,11 @@ static void si_set_sampler_view(struct si_context *sctx, unsigned shader,
 				rview->resource, RADEON_USAGE_READ,
 				r600_get_sampler_view_priority(rview->resource));
 
+		if (rview->dcc_buffer && rview->dcc_buffer != rview->resource)
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+				rview->dcc_buffer, RADEON_USAGE_READ,
+				RADEON_PRIO_DCC);
+
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(views->desc.list + slot*8, view_desc, 8*4);
 		views->desc.enabled_mask |= 1llu << slot;
@@ -229,7 +234,8 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 			} else {
 				samplers->depth_texture_mask &= ~(1 << slot);
 			}
-			if (rtex->cmask.size || rtex->fmask.size) {
+			if (rtex->cmask.size || rtex->fmask.size ||
+			    (rtex->dcc_buffer && rtex->dirty_level_mask)) {
 				samplers->compressed_colortex_mask |= 1 << slot;
 			} else {
 				samplers->compressed_colortex_mask &= ~(1 << slot);

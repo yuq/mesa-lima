@@ -171,6 +171,7 @@ typedef struct {
       unsigned read_only:1;
       unsigned centroid:1;
       unsigned sample:1;
+      unsigned patch:1;
       unsigned invariant:1;
 
       /**
@@ -313,7 +314,6 @@ typedef struct {
        * Location an atomic counter is stored at.
        */
       struct {
-         unsigned buffer_index;
          unsigned offset;
       } atomic;
 
@@ -2016,7 +2016,8 @@ void nir_lower_clip_fs(nir_shader *shader, unsigned ucp_enables);
 
 void nir_lower_two_sided_color(nir_shader *shader);
 
-void nir_lower_atomics(nir_shader *shader);
+void nir_lower_atomics(nir_shader *shader,
+                       const struct gl_shader_program *shader_program);
 void nir_lower_to_source_mods(nir_shader *shader);
 
 bool nir_lower_gs_intrinsics(nir_shader *shader);

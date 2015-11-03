@@ -42,6 +42,7 @@
 #define SI_BASE_VERTEX_UNKNOWN INT_MIN
 #define SI_RESTART_INDEX_UNKNOWN INT_MIN
 #define SI_NUM_SMOOTH_AA_SAMPLES 8
+#define SI_GS_PER_ES 128
 
 /* Instruction cache. */
 #define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
@@ -85,6 +86,7 @@ struct si_compute;
 
 struct si_screen {
 	struct r600_common_screen	b;
+	unsigned			gs_table_depth;
 };
 
 struct si_blend_color {
@@ -96,6 +98,7 @@ struct si_sampler_view {
 	struct pipe_sampler_view	base;
 	struct list_head		list;
 	struct r600_resource		*resource;
+	struct r600_resource		*dcc_buffer;
         /* [0..7] = image descriptor
          * [4..7] = buffer descriptor */
 	uint32_t			state[8];
@@ -203,9 +206,6 @@ struct si_context {
 	struct si_pm4_state		*init_config;
 	bool				init_config_has_vgt_flush;
 	struct si_pm4_state		*vgt_shader_config[4];
-	/* With rasterizer discard, there doesn't have to be a pixel shader.
-	 * In that case, we bind this one: */
-	void				*dummy_pixel_shader;
 
 	/* shaders */
 	struct si_shader_ctx_state	ps_shader;

@@ -360,6 +360,8 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "precompile", DBG_PRECOMPILE, "Compile one shader variant at shader creation." },
 	{ "nowc", DBG_NO_WC, "Disable GTT write combining" },
 	{ "check_vm", DBG_CHECK_VM, "Check VM faults and dump debug info." },
+	{ "nodcc", DBG_NO_DCC, "Disable DCC." },
+	{ "nodccclear", DBG_NO_DCC_CLEAR, "Disable DCC fast clear." },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
@@ -416,6 +418,7 @@ static const char* r600_get_chip_name(struct r600_common_screen *rscreen)
 	case CHIP_ICELAND: return "AMD ICELAND";
 	case CHIP_CARRIZO: return "AMD CARRIZO";
 	case CHIP_FIJI: return "AMD FIJI";
+	case CHIP_STONEY: return "AMD STONEY";
 	default: return "AMD unknown";
 	}
 }
@@ -540,6 +543,11 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 	case CHIP_ICELAND: return "iceland";
 	case CHIP_CARRIZO: return "carrizo";
 	case CHIP_FIJI: return "fiji";
+#if HAVE_LLVM <= 0x0307
+	case CHIP_STONEY: return "carrizo";
+#else
+	case CHIP_STONEY: return "stoney";
+#endif
 	default: return "";
 	}
 }

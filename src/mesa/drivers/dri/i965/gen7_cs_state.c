@@ -285,3 +285,34 @@ const struct brw_tracked_state gen7_cs_push_constants = {
    },
    .emit = gen7_upload_cs_push_constants,
 };
+
+/**
+ * Creates a new CS constant buffer reflecting the current CS program's
+ * constants, if needed by the CS program.
+ */
+static void
+brw_upload_cs_pull_constants(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->cs.base;
+
+   /* BRW_NEW_COMPUTE_PROGRAM */
+   struct brw_compute_program *cp =
+      (struct brw_compute_program *) brw->compute_program;
+
+   /* BRW_NEW_CS_PROG_DATA */
+   const struct brw_stage_prog_data *prog_data = &brw->cs.prog_data->base;
+
+   /* _NEW_PROGRAM_CONSTANTS */
+   brw_upload_pull_constants(brw, BRW_NEW_SURFACES, &cp->program.Base,
+                             stage_state, prog_data, true);
+}
+
+const struct brw_tracked_state brw_cs_pull_constants = {
+   .dirty = {
+      .mesa = _NEW_PROGRAM_CONSTANTS,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_COMPUTE_PROGRAM |
+             BRW_NEW_CS_PROG_DATA,
+   },
+   .emit = brw_upload_cs_pull_constants,
+};

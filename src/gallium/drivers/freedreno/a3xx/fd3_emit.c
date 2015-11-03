@@ -627,7 +627,7 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		ctx->prog.dirty = 0;
 	}
 
-	if ((dirty & (FD_DIRTY_BLEND | FD_DIRTY_FRAMEBUFFER)) && ctx->blend) {
+	if (dirty & (FD_DIRTY_BLEND | FD_DIRTY_FRAMEBUFFER)) {
 		struct fd3_blend_stateobj *blend = fd3_blend_stateobj(ctx->blend);
 		uint32_t i;
 

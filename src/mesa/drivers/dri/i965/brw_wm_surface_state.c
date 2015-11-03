@@ -1029,7 +1029,7 @@ const struct brw_tracked_state brw_cs_ubo_surfaces = {
 
 void
 brw_upload_abo_surfaces(struct brw_context *brw,
-			struct gl_shader_program *prog,
+                        struct gl_shader *shader,
                         struct brw_stage_state *stage_state,
                         struct brw_stage_prog_data *prog_data)
 {
@@ -1037,21 +1037,22 @@ brw_upload_abo_surfaces(struct brw_context *brw,
    uint32_t *surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.abo_start];
 
-   for (unsigned i = 0; i < prog->NumAtomicBuffers; i++) {
-      struct gl_atomic_buffer_binding *binding =
-         &ctx->AtomicBufferBindings[prog->AtomicBuffers[i].Binding];
-      struct intel_buffer_object *intel_bo =
-         intel_buffer_object(binding->BufferObject);
-      drm_intel_bo *bo = intel_bufferobj_buffer(
-         brw, intel_bo, binding->Offset, intel_bo->Base.Size - binding->Offset);
+   if (shader && shader->NumAtomicBuffers) {
+      for (unsigned i = 0; i < shader->NumAtomicBuffers; i++) {
+         struct gl_atomic_buffer_binding *binding =
+            &ctx->AtomicBufferBindings[shader->AtomicBuffers[i]->Binding];
+         struct intel_buffer_object *intel_bo =
+            intel_buffer_object(binding->BufferObject);
+         drm_intel_bo *bo = intel_bufferobj_buffer(
+            brw, intel_bo, binding->Offset, intel_bo->Base.Size - binding->Offset);
 
-      brw->vtbl.emit_buffer_surface_state(brw, &surf_offsets[i], bo,
-                                          binding->Offset, BRW_SURFACEFORMAT_RAW,
-                                          bo->size - binding->Offset, 1, true);
-   }
+         brw->vtbl.emit_buffer_surface_state(brw, &surf_offsets[i], bo,
+                                             binding->Offset, BRW_SURFACEFORMAT_RAW,
+                                             bo->size - binding->Offset, 1, true);
+      }
 
-   if (prog->NumAtomicBuffers)
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
+   }
 }
 
 static void
@@ -1063,8 +1064,8 @@ brw_upload_wm_abo_surfaces(struct brw_context *brw)
 
    if (prog) {
       /* BRW_NEW_FS_PROG_DATA */
-      brw_upload_abo_surfaces(brw, prog, &brw->wm.base,
-                              &brw->wm.prog_data->base);
+      brw_upload_abo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
+                              &brw->wm.base, &brw->wm.prog_data->base);
    }
 }
 
@@ -1088,8 +1089,8 @@ brw_upload_cs_abo_surfaces(struct brw_context *brw)
 
    if (prog) {
       /* BRW_NEW_CS_PROG_DATA */
-      brw_upload_abo_surfaces(brw, prog, &brw->cs.base,
-                              &brw->cs.prog_data->base);
+      brw_upload_abo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
+                              &brw->cs.base, &brw->cs.prog_data->base);
    }
 }
 

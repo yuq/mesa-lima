@@ -74,7 +74,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    }
 
    device->name = brw_get_device_name(device->chipset_id);
-   device->info = brw_get_device_info(device->chipset_id, -1);
+   device->info = brw_get_device_info(device->chipset_id);
    if (!device->info) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
                          "failed to get device info");

@@ -93,7 +93,8 @@ is_expression(const fs_visitor *v, const fs_inst *const inst)
    case SHADER_OPCODE_LOAD_PAYLOAD:
       return !inst->is_copy_payload(v->alloc);
    default:
-      return inst->is_send_from_grf() && !inst->has_side_effects();
+      return inst->is_send_from_grf() && !inst->has_side_effects() &&
+         !inst->is_volatile();
    }
 }
 

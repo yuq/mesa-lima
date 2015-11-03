@@ -1033,6 +1033,7 @@ img_filter_2d_linear_repeat_POT(const struct sp_sampler_view *sp_sview,
       
    addr.value = 0;
    addr.bits.level = args->level;
+   addr.bits.z = sp_sview->base.u.tex.first_layer;
 
    /* Can we fetch all four at once:
     */
@@ -1081,6 +1082,7 @@ img_filter_2d_nearest_repeat_POT(const struct sp_sampler_view *sp_sview,
 
    addr.value = 0;
    addr.bits.level = args->level;
+   addr.bits.z = sp_sview->base.u.tex.first_layer;
 
    out = get_texel_2d_no_border(sp_sview, addr, x0, y0);
    for (c = 0; c < TGSI_QUAD_SIZE; c++)
@@ -1111,6 +1113,7 @@ img_filter_2d_nearest_clamp_POT(const struct sp_sampler_view *sp_sview,
 
    addr.value = 0;
    addr.bits.level = args->level;
+   addr.bits.z = sp_sview->base.u.tex.first_layer;
 
    x0 = util_ifloor(u);
    if (x0 < 0) 
@@ -1154,7 +1157,8 @@ img_filter_1d_nearest(const struct sp_sampler_view *sp_sview,
 
    sp_samp->nearest_texcoord_s(args->s, width, args->offset[0], &x);
 
-   out = get_texel_2d(sp_sview, sp_samp, addr, x, 0);
+   out = get_texel_1d_array(sp_sview, sp_samp, addr, x,
+                            sp_sview->base.u.tex.first_layer);
    for (c = 0; c < TGSI_QUAD_SIZE; c++)
       rgba[TGSI_NUM_CHANNELS*c] = out[c];
 
@@ -1215,6 +1219,7 @@ img_filter_2d_nearest(const struct sp_sampler_view *sp_sview,
  
    addr.value = 0;
    addr.bits.level = args->level;
+   addr.bits.z = sp_sview->base.u.tex.first_layer;
 
    sp_samp->nearest_texcoord_s(args->s, width, args->offset[0], &x);
    sp_samp->nearest_texcoord_t(args->t, height, args->offset[1], &y);
@@ -1396,8 +1401,10 @@ img_filter_1d_linear(const struct sp_sampler_view *sp_sview,
 
    sp_samp->linear_texcoord_s(args->s, width, args->offset[0], &x0, &x1, &xw);
 
-   tx0 = get_texel_2d(sp_sview, sp_samp, addr, x0, 0);
-   tx1 = get_texel_2d(sp_sview, sp_samp, addr, x1, 0);
+   tx0 = get_texel_1d_array(sp_sview, sp_samp, addr, x0,
+                            sp_sview->base.u.tex.first_layer);
+   tx1 = get_texel_1d_array(sp_sview, sp_samp, addr, x1,
+                            sp_sview->base.u.tex.first_layer);
 
    /* interpolate R, G, B, A */
    for (c = 0; c < TGSI_QUAD_SIZE; c++)
@@ -1523,6 +1530,7 @@ img_filter_2d_linear(const struct sp_sampler_view *sp_sview,
 
    addr.value = 0;
    addr.bits.level = args->level;
+   addr.bits.z = sp_sview->base.u.tex.first_layer;
 
    sp_samp->linear_texcoord_s(args->s, width,  args->offset[0], &x0, &x1, &xw);
    sp_samp->linear_texcoord_t(args->t, height, args->offset[1], &y0, &y1, &yw);
@@ -3252,10 +3260,22 @@ sp_get_texels(const struct sp_sampler_view *sp_sview,
 
    switch (sp_sview->base.target) {
    case PIPE_BUFFER:
+      for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+         const int x = CLAMP(v_i[j] + offset[0] +
+                             sp_sview->base.u.buf.first_element,
+                             sp_sview->base.u.buf.first_element,
+                             sp_sview->base.u.buf.last_element);
+         tx = get_texel_2d_no_border(sp_sview, addr, x, 0);
+         for (c = 0; c < 4; c++) {
+            rgba[c][j] = tx[c];
+         }
+      }
+      break;
    case PIPE_TEXTURE_1D:
       for (j = 0; j < TGSI_QUAD_SIZE; j++) {
          const int x = CLAMP(v_i[j] + offset[0], 0, width - 1);
-         tx = get_texel_2d_no_border(sp_sview, addr, x, 0);
+         tx = get_texel_2d_no_border(sp_sview, addr, x,
+                                     sp_sview->base.u.tex.first_layer);
          for (c = 0; c < 4; c++) {
             rgba[c][j] = tx[c];
          }
@@ -3277,7 +3297,8 @@ sp_get_texels(const struct sp_sampler_view *sp_sview,
       for (j = 0; j < TGSI_QUAD_SIZE; j++) {
          const int x = CLAMP(v_i[j] + offset[0], 0, width - 1);
          const int y = CLAMP(v_j[j] + offset[1], 0, height - 1);
-         tx = get_texel_2d_no_border(sp_sview, addr, x, y);
+         tx = get_texel_3d_no_border(sp_sview, addr, x, y,
+                                     sp_sview->base.u.tex.first_layer);
          for (c = 0; c < 4; c++) {
             rgba[c][j] = tx[c];
          }
@@ -3307,6 +3328,7 @@ sp_get_texels(const struct sp_sampler_view *sp_sview,
       }
       break;
    case PIPE_TEXTURE_CUBE: /* TXF can't work on CUBE according to spec */
+   case PIPE_TEXTURE_CUBE_ARRAY:
    default:
       assert(!"Unknown or CUBE texture type in TXF processing\n");
       break;

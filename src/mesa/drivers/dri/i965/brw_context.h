@@ -501,8 +501,6 @@ struct brw_cache_item {
 };
 
 
-typedef void (*cache_aux_free_func)(const void *aux);
-
 struct brw_cache {
    struct brw_context *brw;
 
@@ -512,9 +510,6 @@ struct brw_cache {
 
    uint32_t next_offset;
    bool bo_used_by_gpu;
-
-   /** Optional functions for freeing other pointers attached to a prog_data. */
-   cache_aux_free_func aux_free[BRW_MAX_CACHE];
 };
 
 
@@ -1177,7 +1172,7 @@ struct brw_context
 
    int num_atoms[BRW_NUM_PIPELINES];
    const struct brw_tracked_state render_atoms[60];
-   const struct brw_tracked_state compute_atoms[8];
+   const struct brw_tracked_state compute_atoms[9];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {
@@ -1463,7 +1458,7 @@ void brw_upload_ubo_surfaces(struct brw_context *brw,
                              struct brw_stage_prog_data *prog_data,
                              bool dword_pitch);
 void brw_upload_abo_surfaces(struct brw_context *brw,
-                             struct gl_shader_program *prog,
+                             struct gl_shader *shader,
                              struct brw_stage_state *stage_state,
                              struct brw_stage_prog_data *prog_data);
 void brw_upload_image_surfaces(struct brw_context *brw,
@@ -1680,6 +1675,7 @@ struct opcode_desc {
 
 extern const struct opcode_desc opcode_descs[128];
 extern const char * const conditional_modifier[16];
+extern const char *const pred_ctrl_align16[16];
 
 void
 brw_emit_depthbuffer(struct brw_context *brw);

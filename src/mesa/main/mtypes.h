@@ -2292,6 +2292,7 @@ struct gl_shader
 
    struct exec_list *ir;
    struct exec_list *packed_varyings;
+   struct exec_list *fragdata_arrays;
    struct glsl_symbol_table *symbols;
 
    bool uses_builtin_functions;
@@ -2388,6 +2389,9 @@ struct gl_shader
     * ImageAccess arrays above.
     */
    GLuint NumImages;
+
+   struct gl_active_atomic_buffer **AtomicBuffers;
+   unsigned NumAtomicBuffers;
 
    /**
     * Whether early fragment tests are enabled as defined by
@@ -3680,6 +3684,7 @@ struct gl_extensions
    GLboolean ARB_seamless_cube_map;
    GLboolean ARB_shader_atomic_counters;
    GLboolean ARB_shader_bit_encoding;
+   GLboolean ARB_shader_clock;
    GLboolean ARB_shader_image_load_store;
    GLboolean ARB_shader_image_size;
    GLboolean ARB_shader_precision;
@@ -4501,7 +4506,7 @@ static inline bool
 _mesa_active_fragment_shader_has_atomic_ops(const struct gl_context *ctx)
 {
    return ctx->Shader._CurrentFragmentProgram != NULL &&
-      ctx->Shader._CurrentFragmentProgram->NumAtomicBuffers > 0;
+      ctx->Shader._CurrentFragmentProgram->_LinkedShaders[MESA_SHADER_FRAGMENT]->NumAtomicBuffers > 0;
 }
 
 #ifdef __cplusplus

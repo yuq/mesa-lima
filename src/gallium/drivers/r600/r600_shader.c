@@ -162,10 +162,6 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 		goto error;
 	}
 
-    /* disable SB for geom shaders on R6xx/R7xx due to some mysterious gs piglit regressions with it enabled. */
-    if (rctx->b.chip_class <= R700) {
-	    use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_GEOMETRY);
-    }
 	/* disable SB for shaders using doubles */
 	use_sb &= !shader->shader.uses_doubles;
 
@@ -1008,7 +1004,7 @@ static void tgsi_src(struct r600_shader_ctx *ctx,
 			(tgsi_src->Register.SwizzleX == tgsi_src->Register.SwizzleW)) {
 
 			index = tgsi_src->Register.Index * 4 + tgsi_src->Register.SwizzleX;
-			r600_bytecode_special_constants(ctx->literals[index], &r600_src->sel, &r600_src->neg);
+			r600_bytecode_special_constants(ctx->literals[index], &r600_src->sel, &r600_src->neg, r600_src->abs);
 			if (r600_src->sel != V_SQ_ALU_SRC_LITERAL)
 				return;
 		}

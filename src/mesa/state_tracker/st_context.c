@@ -44,6 +44,7 @@
 #include "st_cb_bufferobjects.h"
 #include "st_cb_clear.h"
 #include "st_cb_condrender.h"
+#include "st_cb_copyimage.h"
 #include "st_cb_drawpixels.h"
 #include "st_cb_rasterpos.h"
 #include "st_cb_drawtex.h"
@@ -430,6 +431,7 @@ void st_init_driver_functions(struct pipe_screen *screen,
    st_init_bufferobject_functions(functions);
    st_init_clear_functions(functions);
    st_init_bitmap_functions(functions);
+   st_init_copy_image_functions(functions);
    st_init_drawpixels_functions(functions);
    st_init_rasterpos_functions(functions);
 

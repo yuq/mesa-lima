@@ -306,6 +306,7 @@ nir_visitor::visit(ir_variable *ir)
    var->data.read_only = ir->data.read_only;
    var->data.centroid = ir->data.centroid;
    var->data.sample = ir->data.sample;
+   var->data.patch = ir->data.patch;
    var->data.invariant = ir->data.invariant;
    var->data.location = ir->data.location;
 
@@ -396,8 +397,6 @@ nir_visitor::visit(ir_variable *ir)
    var->data.index = ir->data.index;
    var->data.descriptor_set = 0;
    var->data.binding = ir->data.binding;
-   /* XXX Get rid of buffer_index */
-   var->data.atomic.buffer_index = ir->data.binding;
    var->data.atomic.offset = ir->data.atomic.offset;
    var->data.image.read_only = ir->data.image_read_only;
    var->data.image.write_only = ir->data.image_write_only;
@@ -722,6 +721,8 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_ssbo_atomic_exchange;
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_comp_swap_internal") == 0) {
          op = nir_intrinsic_ssbo_atomic_comp_swap;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_shader_clock") == 0) {
+         op = nir_intrinsic_shader_clock;
       } else {
          unreachable("not reached");
       }
@@ -824,6 +825,10 @@ nir_visitor::visit(ir_call *ir)
          break;
       }
       case nir_intrinsic_memory_barrier:
+         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+         break;
+      case nir_intrinsic_shader_clock:
+         nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
          nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
          break;
       case nir_intrinsic_store_ssbo: {

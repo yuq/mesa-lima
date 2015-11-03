@@ -390,14 +390,21 @@ namespace brw {
       src_reg
       emit_uniformize(const src_reg &src) const
       {
+         /* FIXME: We use a vector chan_index and dst to allow constant and
+          * copy propagration to move result all the way into the consuming
+          * instruction (typically a surface index or sampler index for a
+          * send). This uses 1 or 3 extra hw registers in 16 or 32 wide
+          * dispatch. Once we teach const/copy propagation about scalars we
+          * should go back to scalar destinations here.
+          */
          const fs_builder ubld = exec_all();
-         const dst_reg chan_index = component(vgrf(BRW_REGISTER_TYPE_UD), 0);
-         const dst_reg dst = component(vgrf(src.type), 0);
+         const dst_reg chan_index = vgrf(BRW_REGISTER_TYPE_UD);
+         const dst_reg dst = vgrf(src.type);
 
          ubld.emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, chan_index);
-         ubld.emit(SHADER_OPCODE_BROADCAST, dst, src, chan_index);
+         ubld.emit(SHADER_OPCODE_BROADCAST, dst, src, component(chan_index, 0));
 
-         return src_reg(dst);
+         return src_reg(component(dst, 0));
       }
 
       /**

@@ -223,6 +223,7 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	unsigned prim = info->mode;
 	unsigned primgroup_size = 128; /* recommended without a GS */
+	unsigned max_primgroup_in_wave = 2;
 
 	/* SWITCH_ON_EOP(0) is always preferable. */
 	bool wd_switch_on_eop = false;
@@ -246,13 +247,10 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		/* primgroup_size must be set to a multiple of NUM_PATCHES */
 		primgroup_size = (primgroup_size / num_patches) * num_patches;
 
-		/* SWITCH_ON_EOI must be set if PrimID is used.
-		 * If SWITCH_ON_EOI is set, PARTIAL_ES_WAVE must be set too. */
+		/* SWITCH_ON_EOI must be set if PrimID is used. */
 		if ((sctx->tcs_shader.cso && sctx->tcs_shader.cso->info.uses_primid) ||
-		    sctx->tes_shader.cso->info.uses_primid) {
+		    sctx->tes_shader.cso->info.uses_primid)
 			ia_switch_on_eoi = true;
-			partial_es_wave = true;
-		}
 
 		/* Bug with tessellation and GS on Bonaire and older 2 SE chips. */
 		if ((sctx->b.family == CHIP_TAHITI ||
@@ -269,10 +267,6 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		wd_switch_on_eop = true;
 	}
 
-	if (sctx->b.streamout.streamout_enabled ||
-	    sctx->b.streamout.prims_gen_query_enabled)
-		partial_vs_wave = true;
-
 	if (sctx->b.chip_class >= CIK) {
 		/* WD_SWITCH_ON_EOP has no effect on GPUs with less than
 		 * 4 shader engines. Set 1 to pass the assertion below.
@@ -282,7 +276,8 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		    prim == PIPE_PRIM_LINE_LOOP ||
 		    prim == PIPE_PRIM_TRIANGLE_FAN ||
 		    prim == PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY ||
-		    info->primitive_restart)
+		    info->primitive_restart ||
+		    info->count_from_stream_output)
 			wd_switch_on_eop = true;
 
 		/* Hawaii hangs if instancing is enabled and WD_SWITCH_ON_EOP is 0.
@@ -292,13 +287,33 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		    (info->indirect || info->instance_count > 1))
 			wd_switch_on_eop = true;
 
-		/* USE_OPAQUE doesn't work when WD_SWITCH_ON_EOP is 0. */
-		if (info->count_from_stream_output)
-			wd_switch_on_eop = true;
+		/* Required on CIK and later. */
+		if (sctx->b.screen->info.max_se > 2 && !wd_switch_on_eop)
+			ia_switch_on_eoi = true;
+
+		/* Required by Hawaii and, for some special cases, by VI. */
+		if (ia_switch_on_eoi &&
+		    (sctx->b.family == CHIP_HAWAII ||
+		     (sctx->b.chip_class == VI &&
+		      (sctx->gs_shader.cso || max_primgroup_in_wave != 2))))
+			partial_vs_wave = true;
+
+		/* Instancing bug on Bonaire. */
+		if (sctx->b.family == CHIP_BONAIRE && ia_switch_on_eoi &&
+		    (info->indirect || info->instance_count > 1))
+			partial_vs_wave = true;
 
 		/* If the WD switch is false, the IA switch must be false too. */
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
 	}
+
+	/* If SWITCH_ON_EOI is set, PARTIAL_ES_WAVE must be set too. */
+	if (ia_switch_on_eoi)
+		partial_es_wave = true;
+
+	/* GS requirement. */
+	if (SI_GS_PER_ES / primgroup_size >= sctx->screen->gs_table_depth - 3)
+		partial_es_wave = true;
 
 	/* Hw bug with single-primitive instances and SWITCH_ON_EOI
 	 * on multi-SE chips. */
@@ -308,18 +323,14 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	      u_prims_for_vertices(info->mode, info->count) <= 1)))
 		sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
 
-	/* Instancing bug on 2 SE chips. */
-	if (sctx->b.screen->info.max_se == 2 && ia_switch_on_eoi &&
-	    (info->indirect || info->instance_count > 1))
-		partial_vs_wave = true;
-
 	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
 		S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1) |
 		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0) |
-		S_028AA8_MAX_PRIMGRP_IN_WAVE(sctx->b.chip_class >= VI ? 2 : 0);
+		S_028AA8_MAX_PRIMGRP_IN_WAVE(sctx->b.chip_class >= VI ?
+					     max_primgroup_in_wave : 0);
 }
 
 static unsigned si_get_ls_hs_config(struct si_context *sctx,
@@ -636,6 +647,17 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 			         S_0085F0_CB5_DEST_BASE_ENA(1) |
 			         S_0085F0_CB6_DEST_BASE_ENA(1) |
 			         S_0085F0_CB7_DEST_BASE_ENA(1);
+
+		/* Necessary for DCC */
+		if (sctx->chip_class >= VI) {
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0) | compute);
+			radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_DATA_TS) |
+			                EVENT_INDEX(5));
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+		}
 	}
 	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB) {
 		cp_coher_cntl |= S_0085F0_DB_ACTION_ENA(1) |
@@ -728,6 +750,7 @@ static void si_get_draw_start_count(struct si_context *sctx,
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	struct pipe_index_buffer ib = {};
 	unsigned mask;
 
@@ -735,7 +758,11 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	    (info->indexed || !info->count_from_stream_output))
 		return;
 
-	if (!sctx->ps_shader.cso || !sctx->vs_shader.cso) {
+	if (!sctx->vs_shader.cso) {
+		assert(0);
+		return;
+	}
+	if (!sctx->ps_shader.cso && (!rs || !rs->rasterizer_discard)) {
 		assert(0);
 		return;
 	}

@@ -910,7 +910,7 @@ bool Source::scanSource()
       info->bin.tlsSpace += (scan.file_max[TGSI_FILE_TEMPORARY] + 1) * 16;
 
    if (info->io.genUserClip > 0) {
-      info->io.clipDistanceMask = (1 << info->io.genUserClip) - 1;
+      info->io.clipDistances = info->io.genUserClip;
 
       const unsigned int nOut = (info->io.genUserClip + 3) / 4;
 
@@ -919,7 +919,7 @@ bool Source::scanSource()
          info->out[i].id = i;
          info->out[i].sn = TGSI_SEMANTIC_CLIPDIST;
          info->out[i].si = n;
-         info->out[i].mask = info->io.clipDistanceMask >> (n * 4);
+         info->out[i].mask = ((1 << info->io.clipDistances) - 1) >> (n * 4);
       }
    }
 
@@ -968,6 +968,12 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
          info->prop.tp.outputPrim = PIPE_PRIM_POINTS;
       else
          info->prop.tp.outputPrim = PIPE_PRIM_TRIANGLES; /* anything but points */
+      break;
+   case TGSI_PROPERTY_NUM_CLIPDIST_ENABLED:
+      info->io.clipDistances = prop->u[0].Data;
+      break;
+   case TGSI_PROPERTY_NUM_CULLDIST_ENABLED:
+      info->io.cullDistances = prop->u[0].Data;
       break;
    default:
       INFO("unhandled TGSI property %d\n", prop->Property.PropertyName);
@@ -1054,7 +1060,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
                default:
                   break;
                }
-               if (decl->Interp.Location || info->io.sampleInterp)
+               if (decl->Interp.Location)
                   info->in[i].centroid = 1;
             }
 
@@ -1086,8 +1092,6 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
             clipVertexOutput = i;
             break;
          case TGSI_SEMANTIC_CLIPDIST:
-            info->io.clipDistanceMask |=
-               decl->Declaration.UsageMask << (si * 4);
             info->io.genUserClip = -1;
             break;
          case TGSI_SEMANTIC_SAMPLEMASK:
@@ -1118,6 +1122,10 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
          break;
       case TGSI_SEMANTIC_VERTEXID:
          info->io.vertexId = first;
+         break;
+      case TGSI_SEMANTIC_SAMPLEID:
+      case TGSI_SEMANTIC_SAMPLEPOS:
+         info->prop.fp.sampleInterp = 1;
          break;
       default:
          break;
@@ -1338,6 +1346,8 @@ private:
 
    void handleINTERP(Value *dst0[4]);
 
+   uint8_t translateInterpMode(const struct nv50_ir_varying *var,
+                               operation& op);
    Value *interpolate(tgsi::Instruction::SrcRegister, int c, Value *ptr);
 
    void insertConvergenceOps(BasicBlock *conv, BasicBlock *fork);
@@ -1451,8 +1461,8 @@ Converter::makeSym(uint tgsiFile, int fileIdx, int idx, int c, uint32_t address)
    return sym;
 }
 
-static inline uint8_t
-translateInterpMode(const struct nv50_ir_varying *var, operation& op)
+uint8_t
+Converter::translateInterpMode(const struct nv50_ir_varying *var, operation& op)
 {
    uint8_t mode = NV50_IR_INTERP_PERSPECTIVE;
 
@@ -1468,7 +1478,7 @@ translateInterpMode(const struct nv50_ir_varying *var, operation& op)
    op = (mode == NV50_IR_INTERP_PERSPECTIVE || mode == NV50_IR_INTERP_SC)
       ? OP_PINTERP : OP_LINTERP;
 
-   if (var->centroid)
+   if (var->centroid || info->prop.fp.sampleInterp)
       mode |= NV50_IR_INTERP_CENTROID;
 
    return mode;
@@ -1628,7 +1638,7 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
          // don't load masked inputs, won't be assigned a slot
          if (!ptr && !(info->in[idx].mask & (1 << swz)))
             return loadImm(NULL, swz == TGSI_SWIZZLE_W ? 1.0f : 0.0f);
-	 if (!ptr && info->in[idx].sn == TGSI_SEMANTIC_FACE)
+         if (!ptr && info->in[idx].sn == TGSI_SEMANTIC_FACE)
             return mkOp1v(OP_RDSV, TYPE_F32, getSSA(), mkSysVal(SV_FACE, 0));
          return interpolate(src, c, shiftAddress(ptr));
       } else

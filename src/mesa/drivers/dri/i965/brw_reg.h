@@ -205,7 +205,7 @@ enum PACKED brw_reg_type {
    /** @} */
 
    /** Immediates only: @{ */
-   BRW_REGISTER_TYPE_UV,
+   BRW_REGISTER_TYPE_UV, /* Gen6+ */
    BRW_REGISTER_TYPE_V,
    BRW_REGISTER_TYPE_VF,
    /** @} */

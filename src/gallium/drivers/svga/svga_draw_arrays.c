@@ -32,6 +32,7 @@
 #include "svga_draw.h"
 #include "svga_draw_private.h"
 #include "svga_context.h"
+#include "svga_shader.h"
 
 
 #define DBG 0
@@ -206,6 +207,32 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
    unsigned gen_prim, gen_size, gen_nr, gen_type;
    u_generate_func gen_func;
    enum pipe_error ret = PIPE_OK;
+   unsigned api_pv = hwtnl->api_pv;
+   struct svga_context *svga = hwtnl->svga;
+
+   if (svga->curr.rast->templ.flatshade &&
+       svga->state.hw_draw.fs->constant_color_output) {
+      /* The fragment color is a constant, not per-vertex so the whole
+       * primitive will be the same color (except for possible blending).
+       * We can ignore the current provoking vertex state and use whatever
+       * the hardware wants.
+       */
+      api_pv = hwtnl->hw_pv;
+
+      if (hwtnl->api_fillmode == PIPE_POLYGON_MODE_FILL) {
+         /* Do some simple primitive conversions to avoid index buffer
+          * generation below.  Note that polygons and quads are not directly
+          * supported by the svga device.  Also note, we can only do this
+          * for flat/constant-colored rendering because of provoking vertex.
+          */
+         if (prim == PIPE_PRIM_POLYGON) {
+            prim = PIPE_PRIM_TRIANGLE_FAN;
+         }
+         else if (prim == PIPE_PRIM_QUADS && count == 4) {
+            prim = PIPE_PRIM_TRIANGLE_FAN;
+         }
+      }
+   }
 
    if (hwtnl->api_fillmode != PIPE_POLYGON_MODE_FILL &&
        prim >= PIPE_PRIM_TRIANGLES) {
@@ -226,7 +253,7 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
                                    prim,
                                    start,
                                    count,
-                                   hwtnl->api_pv,
+                                   api_pv,
                                    hwtnl->hw_pv,
                                    &gen_prim, &gen_size, &gen_nr, &gen_func);
    }
