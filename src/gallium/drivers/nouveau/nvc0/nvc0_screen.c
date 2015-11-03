@@ -353,45 +353,42 @@ static int
 nvc0_screen_get_compute_param(struct pipe_screen *pscreen,
                               enum pipe_compute_cap param, void *data)
 {
-   uint64_t *data64 = (uint64_t *)data;
-   uint32_t *data32 = (uint32_t *)data;
    const uint16_t obj_class = nvc0_screen(pscreen)->compute->oclass;
+
+#define RET(x) do {                  \
+   if (data)                         \
+      memcpy(data, x, sizeof(x));    \
+   return sizeof(x);                 \
+} while (0)
 
    switch (param) {
    case PIPE_COMPUTE_CAP_GRID_DIMENSION:
-      data64[0] = 3;
-      return 8;
+      RET((uint64_t []) { 3 });
    case PIPE_COMPUTE_CAP_MAX_GRID_SIZE:
-      data64[0] = (obj_class >= NVE4_COMPUTE_CLASS) ? 0x7fffffff : 65535;
-      data64[1] = 65535;
-      data64[2] = 65535;
-      return 24;
+      if (obj_class >= NVE4_COMPUTE_CLASS) {
+         RET(((uint64_t []) { 0x7fffffff, 65535, 65535 }));
+      } else {
+         RET(((uint64_t []) { 65535, 65535, 65535 }));
+      }
    case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
-      data64[0] = 1024;
-      data64[1] = 1024;
-      data64[2] = 64;
-      return 24;
+      RET(((uint64_t []) { 1024, 1024, 64 }));
    case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
-      data64[0] = 1024;
-      return 8;
+      RET((uint64_t []) { 1024 });
    case PIPE_COMPUTE_CAP_MAX_GLOBAL_SIZE: /* g[] */
-      data64[0] = (uint64_t)1 << 40;
-      return 8;
+      RET((uint64_t []) { 1ULL << 40 });
    case PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE: /* s[] */
-      data64[0] = 48 << 10;
-      return 8;
+      RET((uint64_t []) { 48 << 10 });
    case PIPE_COMPUTE_CAP_MAX_PRIVATE_SIZE: /* l[] */
-      data64[0] = 512 << 10;
-      return 8;
+      RET((uint64_t []) { 512 << 10 });
    case PIPE_COMPUTE_CAP_MAX_INPUT_SIZE: /* c[], arbitrary limit */
-      data64[0] = 4096;
-      return 8;
+      RET((uint64_t []) { 4096 });
    case PIPE_COMPUTE_CAP_SUBGROUP_SIZE:
-      data32[0] = 32;
-      return 4;
+      RET((uint32_t []) { 32 });
    default:
       return 0;
    }
+
+#undef RET
 }
 
 static void
