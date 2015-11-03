@@ -1112,13 +1112,14 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
                        void *mem_ctx,
                        struct brw_gs_compile *c,
                        struct brw_gs_prog_data *prog_data,
-                       const nir_shader *shader)
+                       const nir_shader *shader,
+                       int shader_time_index)
    : backend_shader(compiler, log_data, mem_ctx, shader,
                     &prog_data->base.base),
      key(&c->key), gs_compile(c),
      prog_data(&prog_data->base.base), prog(NULL),
      dispatch_width(8),
-     shader_time_index(ST_GS),
+     shader_time_index(shader_time_index),
      bld(fs_builder(this, dispatch_width).at_end())
 {
    init();

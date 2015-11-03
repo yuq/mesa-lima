@@ -105,7 +105,8 @@ public:
               void *mem_ctx,
               struct brw_gs_compile *gs_compile,
               struct brw_gs_prog_data *prog_data,
-              const nir_shader *shader);
+              const nir_shader *shader,
+              int shader_time_index);
    void init();
    ~fs_visitor();
 
