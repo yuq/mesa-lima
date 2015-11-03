@@ -353,15 +353,8 @@ anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.dirty |= state->dynamic_flags;
 }
 
-struct vue_header {
-   uint32_t Reserved;
-   uint32_t RTAIndex;
-   uint32_t ViewportIndex;
-   float PointWidth;
-};
-
 struct clear_instance_data {
-   struct vue_header vue_header;
+   struct anv_vue_header vue_header;
    VkClearColorValue color;
 };
 
@@ -807,12 +800,12 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       float tex_coord[3];
    } *vb_data;
 
-   unsigned vb_size = sizeof(struct vue_header) + 3 * sizeof(*vb_data);
+   unsigned vb_size = sizeof(struct anv_vue_header) + 3 * sizeof(*vb_data);
 
    struct anv_state vb_state =
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, vb_size, 16);
-   memset(vb_state.map, 0, sizeof(struct vue_header));
-   vb_data = vb_state.map + sizeof(struct vue_header);
+   memset(vb_state.map, 0, sizeof(struct anv_vue_header));
+   vb_data = vb_state.map + sizeof(struct anv_vue_header);
 
    vb_data[0] = (struct blit_vb_data) {
       .pos = {
@@ -864,7 +857,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       },
       (VkDeviceSize[]) {
          0,
-         sizeof(struct vue_header),
+         sizeof(struct anv_vue_header),
       });
 
    VkDescriptorSet set;

@@ -672,6 +672,16 @@ struct anv_device_memory {
    void *                                       map;
 };
 
+/**
+ * Header for Vertex URB Entry (VUE)
+ */
+struct anv_vue_header {
+   uint32_t Reserved;
+   uint32_t RTAIndex; /* RenderTargetArrayIndex */
+   uint32_t ViewportIndex;
+   float PointWidth;
+};
+
 struct anv_descriptor_set_binding_layout {
    /* Number of array elements in this binding */
    uint16_t array_size;
