@@ -310,9 +310,9 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
 /**
  * Configure vertex buffer and vertex array objects for tests
  *
- * Regardless of whether a new VAO and new VBO are created, the objects
- * referenced by \c VAO and \c VBO will be bound into the GL state vector
- * when this function terminates.
+ * Regardless of whether a new VAO is created, the object referenced by \c VAO
+ * will be bound into the GL state vector when this function terminates.  The
+ * object referenced by \c VBO will \b not be bound.
  *
  * \param VAO       Storage for vertex array object handle.  If 0, a new VAO
  *                  will be created.
@@ -333,7 +333,8 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
  * Use \c texcoord_size instead.
  */
 void
-_mesa_meta_setup_vertex_objects(GLuint *VAO, GLuint *VBO,
+_mesa_meta_setup_vertex_objects(struct gl_context *ctx,
+                                GLuint *VAO, GLuint *VBO,
                                 bool use_generic_attributes,
                                 unsigned vertex_size, unsigned texcoord_size,
                                 unsigned color_size)
@@ -381,9 +382,18 @@ _mesa_meta_setup_vertex_objects(GLuint *VAO, GLuint *VBO,
             _mesa_EnableClientState(GL_COLOR_ARRAY);
          }
       }
+
+      /* Restore the old VBO.  This is done because we don't want the new VBO
+       * to be bound on exit.  It would be nicer to use DSA type functions,
+       * but there are no DSA functions to bind a VBO to a VAO for
+       * fixed-function vertex attributes.
+       */
+      {
+         struct save_state *save = &ctx->Meta->Save[ctx->Meta->SaveStackDepth - 1];
+         _mesa_BindBuffer(GL_ARRAY_BUFFER, save->ArrayBufferObj->Name);
+      }
    } else {
       _mesa_BindVertexArray(*VAO);
-      _mesa_BindBuffer(GL_ARRAY_BUFFER, *VBO);
    }
 }
 
@@ -1490,10 +1500,11 @@ _mesa_meta_setup_drawpix_texture(struct gl_context *ctx,
 }
 
 void
-_mesa_meta_setup_ff_tnl_for_blit(GLuint *VAO, GLuint *VBO,
+_mesa_meta_setup_ff_tnl_for_blit(struct gl_context *ctx,
+                                 GLuint *VAO, GLuint *VBO,
                                  unsigned texcoord_size)
 {
-   _mesa_meta_setup_vertex_objects(VAO, VBO, false, 2, texcoord_size, 0);
+   _mesa_meta_setup_vertex_objects(ctx, VAO, VBO, false, 2, texcoord_size, 0);
 
    /* setup projection matrix */
    _mesa_MatrixMode(GL_PROJECTION);
@@ -1538,7 +1549,8 @@ meta_glsl_clear_init(struct gl_context *ctx, struct clear_state *clear)
    GLuint vs, fs;
    bool has_integer_textures;
 
-   _mesa_meta_setup_vertex_objects(&clear->VAO, &clear->VBO, true, 3, 0, 0);
+   _mesa_meta_setup_vertex_objects(ctx, &clear->VAO, &clear->VBO, true,
+                                   3, 0, 0);
 
    if (clear->ShaderProg != 0)
       return;
@@ -1734,7 +1746,8 @@ meta_clear(struct gl_context *ctx, GLbitfield buffers, bool glsl)
       y1 = ((float) fb->_Ymax / fb->Height) * 2.0f - 1.0f;
       z = -invert_z(ctx->Depth.Clear);
    } else {
-      _mesa_meta_setup_vertex_objects(&clear->VAO, &clear->VBO, false, 3, 0, 4);
+      _mesa_meta_setup_vertex_objects(ctx, &clear->VAO, &clear->VBO, false,
+                                      3, 0, 4);
 
       x0 = (float) fb->_Xmin;
       y0 = (float) fb->_Ymin;
@@ -1863,7 +1876,7 @@ _mesa_meta_CopyPixels(struct gl_context *ctx, GLint srcX, GLint srcY,
                           MESA_META_VERTEX |
                           MESA_META_VIEWPORT));
 
-   _mesa_meta_setup_vertex_objects(&copypix->VAO, &copypix->VBO, false,
+   _mesa_meta_setup_vertex_objects(ctx, &copypix->VAO, &copypix->VBO, false,
                                    3, 2, 0);
 
    /* Silence valgrind warnings about reading uninitialized stack. */
@@ -2184,7 +2197,7 @@ _mesa_meta_DrawPixels(struct gl_context *ctx,
 
    newTex = _mesa_meta_alloc_texture(tex, width, height, texIntFormat);
 
-   _mesa_meta_setup_vertex_objects(&drawpix->VAO, &drawpix->VBO, false,
+   _mesa_meta_setup_vertex_objects(ctx, &drawpix->VAO, &drawpix->VBO, false,
                                    3, 2, 0);
 
    /* Silence valgrind warnings about reading uninitialized stack. */
@@ -2376,7 +2389,8 @@ _mesa_meta_Bitmap(struct gl_context *ctx,
                           MESA_META_VERTEX |
                           MESA_META_VIEWPORT));
 
-   _mesa_meta_setup_vertex_objects(&bitmap->VAO, &bitmap->VBO, false, 3, 2, 4);
+   _mesa_meta_setup_vertex_objects(ctx, &bitmap->VAO, &bitmap->VBO, false,
+                                   3, 2, 4);
 
    newTex = _mesa_meta_alloc_texture(tex, width, height, texIntFormat);
 
@@ -3077,12 +3091,12 @@ decompress_texture_image(struct gl_context *ctx,
    }
 
    if (use_glsl_version) {
-      _mesa_meta_setup_vertex_objects(&decompress->VAO, &decompress->VBO, true,
+      _mesa_meta_setup_vertex_objects(ctx, &decompress->VAO, &decompress->VBO, true,
                                       2, 4, 0);
 
       _mesa_meta_setup_blit_shader(ctx, target, false, &decompress->shaders);
    } else {
-      _mesa_meta_setup_ff_tnl_for_blit(&decompress->VAO, &decompress->VBO, 3);
+      _mesa_meta_setup_ff_tnl_for_blit(ctx, &decompress->VAO, &decompress->VBO, 3);
    }
 
    if (!decompress->Sampler) {

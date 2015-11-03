@@ -565,7 +565,7 @@ setup_glsl_blit_framebuffer(struct gl_context *ctx,
 
    texcoord_size = 2 + (src_rb->Depth > 1 ? 1 : 0);
 
-   _mesa_meta_setup_vertex_objects(&blit->VAO, &blit->VBO, true,
+   _mesa_meta_setup_vertex_objects(ctx, &blit->VAO, &blit->VBO, true,
                                    2, texcoord_size, 0);
 
    if (is_target_multisample && is_filter_scaled_resolve && is_scaled_blit) {
@@ -691,7 +691,8 @@ blitframebuffer_texture(struct gl_context *ctx,
                                   do_depth);
    }
    else {
-      _mesa_meta_setup_ff_tnl_for_blit(&ctx->Meta->Blit.VAO,
+      _mesa_meta_setup_ff_tnl_for_blit(ctx,
+                                       &ctx->Meta->Blit.VAO,
                                        &ctx->Meta->Blit.VBO,
                                        2);
    }

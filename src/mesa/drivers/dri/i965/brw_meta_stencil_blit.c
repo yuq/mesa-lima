@@ -286,7 +286,7 @@ setup_program(struct brw_context *brw, bool msaa_tex)
    char *fs_source;
    const struct sampler_and_fetch *sampler = &samplers[msaa_tex];
 
-   _mesa_meta_setup_vertex_objects(&blit->VAO, &blit->VBO, true, 2, 2, 0);
+   _mesa_meta_setup_vertex_objects(ctx, &blit->VAO, &blit->VBO, true, 2, 2, 0);
 
    GLuint *prog_id = &brw->meta_stencil_blit_programs[msaa_tex];
 
