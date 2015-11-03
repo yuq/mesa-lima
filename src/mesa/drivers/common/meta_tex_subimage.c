@@ -109,32 +109,24 @@ create_texture_for_pbo(struct gl_context *ctx,
 
       assert(create_pbo);
 
-      _mesa_GenBuffers(1, tmp_pbo);
-
-      /* We are not doing this inside meta_begin/end.  However, we know the
-       * client doesn't have the given target bound, so we can go ahead and
-       * squash it.  We'll set it back when we're done.
-       */
-      _mesa_BindBuffer(pbo_target, *tmp_pbo);
+      _mesa_CreateBuffers(1, tmp_pbo);
 
       /* In case of GL_PIXEL_PACK_BUFFER, pass null pointer for the pixel
-       * data to avoid unnecessary data copying in _mesa_BufferData().
+       * data to avoid unnecessary data copying in _mesa_NamedBufferData().
        */
       if (is_pixel_pack)
-         _mesa_BufferData(pbo_target,
-                          last_pixel - first_pixel,
-                          NULL,
-                          GL_STREAM_READ);
+         _mesa_NamedBufferData(*tmp_pbo,
+                               last_pixel - first_pixel,
+                               NULL,
+                               GL_STREAM_READ);
       else
-         _mesa_BufferData(pbo_target,
-                          last_pixel - first_pixel,
-                          (char *)pixels + first_pixel,
-                          GL_STREAM_DRAW);
+         _mesa_NamedBufferData(*tmp_pbo,
+                               last_pixel - first_pixel,
+                               (char *)pixels + first_pixel,
+                               GL_STREAM_DRAW);
 
-      buffer_obj = packing->BufferObj;
+      buffer_obj = _mesa_lookup_bufferobj(ctx, *tmp_pbo);
       first_pixel = 0;
-
-      _mesa_BindBuffer(pbo_target, 0);
    }
 
    _mesa_GenTextures(1, tmp_tex);
