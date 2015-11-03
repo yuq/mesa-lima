@@ -3776,7 +3776,8 @@ build_program_resource_list(struct gl_shader_program *shProg)
          continue;
 
       for (int j = MESA_SHADER_VERTEX; j < MESA_SHADER_STAGES; j++) {
-         if (!shProg->UniformStorage[i].opaque[j].active)
+         if (!shProg->UniformStorage[i].opaque[j].active ||
+             !shProg->UniformStorage[i].type->is_subroutine())
             continue;
 
          type = _mesa_shader_stage_to_subroutine_uniform((gl_shader_stage)j);
