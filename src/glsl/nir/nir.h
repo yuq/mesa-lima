@@ -1310,7 +1310,7 @@ typedef enum {
    nir_metadata_none = 0x0,
    nir_metadata_block_index = 0x1,
    nir_metadata_dominance = 0x2,
-   nir_metadata_live_variables = 0x4,
+   nir_metadata_live_ssa_defs = 0x4,
 } nir_metadata;
 
 typedef struct {
@@ -1986,7 +1986,7 @@ bool nir_lower_gs_intrinsics(nir_shader *shader);
 
 bool nir_normalize_cubemap_coords(nir_shader *shader);
 
-void nir_live_variables_impl(nir_function_impl *impl);
+void nir_live_ssa_defs_impl(nir_function_impl *impl);
 bool nir_ssa_defs_interfere(nir_ssa_def *a, nir_ssa_def *b);
 
 void nir_convert_to_ssa_impl(nir_function_impl *impl);

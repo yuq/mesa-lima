@@ -130,7 +130,7 @@ nir_remove_dead_variables(nir_shader *shader)
          if (remove_dead_vars(&overload->impl->locals, live)) {
             nir_metadata_preserve(overload->impl, nir_metadata_block_index |
                                                   nir_metadata_dominance |
-                                                  nir_metadata_live_variables);
+                                                  nir_metadata_live_ssa_defs);
             progress = true;
          }
       }
