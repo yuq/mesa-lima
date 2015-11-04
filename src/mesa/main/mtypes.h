@@ -2875,6 +2875,8 @@ struct gl_shader_compiler_options
     */
    GLboolean OptimizeForAOS;
 
+   GLboolean LowerBufferInterfaceBlocks; /**< Lower UBO and SSBO access to intrinsics. */
+
    const struct nir_shader_compiler_options *NirOptions;
 };
 

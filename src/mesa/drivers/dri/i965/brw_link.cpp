@@ -157,8 +157,6 @@ process_glsl_ir(gl_shader_stage stage,
                  _mesa_shader_stage_to_abbrev(shader->Stage));
    }
 
-   lower_ubo_reference(shader);
-
    bool progress;
    do {
       progress = false;

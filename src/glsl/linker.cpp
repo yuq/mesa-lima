@@ -4445,6 +4445,14 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    /* FINISHME: Assign fragment shader output locations. */
 
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (prog->_LinkedShaders[i] == NULL)
+	 continue;
+
+      if (ctx->Const.ShaderCompilerOptions[i].LowerBufferInterfaceBlocks)
+         lower_ubo_reference(prog->_LinkedShaders[i]);
+   }
+
 done:
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       free(shader_list[i]);

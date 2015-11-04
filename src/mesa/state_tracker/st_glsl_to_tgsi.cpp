@@ -5822,7 +5822,6 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                          (!ctx->Const.NativeIntegers ? INT_DIV_TO_MUL_RCP : 0) |
                          (options->EmitNoSat ? SAT_TO_CLAMP : 0));
 
-      lower_ubo_reference(prog->_LinkedShaders[i]);
       do_vec_index_to_cond_assign(ir);
       lower_vector_insert(ir, true);
       lower_quadop_vector(ir, false);

@@ -254,6 +254,7 @@ void st_init_limits(struct pipe_screen *screen,
                                       PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT);
 
       options->LowerClipDistance = true;
+      options->LowerBufferInterfaceBlocks = true;
    }
 
    c->LowerTessLevel = true;
