@@ -37,7 +37,7 @@ NIR_FILES = \
 	nir/nir_intrinsics.h \
 	nir/nir_instr_set.c \
 	nir/nir_instr_set.h \
-	nir/nir_live_variables.c \
+	nir/nir_liveness.c \
 	nir/nir_lower_alu_to_scalar.c \
 	nir/nir_lower_atomics.c \
 	nir/nir_lower_clip.c \
