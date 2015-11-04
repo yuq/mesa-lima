@@ -428,7 +428,7 @@ vc4_bo_alloc_shader(struct vc4_screen *screen, const void *data, uint32_t size)
         screen->bo_count++;
         screen->bo_size += bo->size;
         if (dump_stats) {
-                fprintf(stderr, "Allocated shader %dkb:\n", size / 1024);
+                fprintf(stderr, "Allocated shader %dkb:\n", bo->size / 1024);
                 vc4_bo_dump_stats(screen);
         }
 
