@@ -122,15 +122,16 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
 void
 anv_meta_save(struct anv_meta_saved_state *state,
               const struct anv_cmd_buffer *cmd_buffer,
-              uint32_t dynamic_state)
+              uint32_t dynamic_mask)
 {
    state->old_pipeline = cmd_buffer->state.pipeline;
    state->old_descriptor_set0 = cmd_buffer->state.descriptors[0];
    memcpy(state->old_vertex_bindings, cmd_buffer->state.vertex_bindings,
           sizeof(state->old_vertex_bindings));
-   state->dynamic_flags = dynamic_state;
+
+   state->dynamic_mask = dynamic_mask;
    anv_dynamic_state_copy(&state->dynamic, &cmd_buffer->state.dynamic,
-                          dynamic_state);
+                          dynamic_mask);
 }
 
 void
@@ -147,8 +148,8 @@ anv_meta_restore(const struct anv_meta_saved_state *state,
    cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_VERTEX_BIT;
 
    anv_dynamic_state_copy(&cmd_buffer->state.dynamic, &state->dynamic,
-                          state->dynamic_flags);
-   cmd_buffer->state.dirty |= state->dynamic_flags;
+                          state->dynamic_mask);
+   cmd_buffer->state.dirty |= state->dynamic_mask;
 }
 
 static VkImageViewType

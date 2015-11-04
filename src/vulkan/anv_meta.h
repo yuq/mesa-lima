@@ -35,14 +35,19 @@ struct anv_meta_saved_state {
    struct anv_vertex_binding old_vertex_bindings[ANV_META_VERTEX_BINDING_COUNT];
    struct anv_descriptor_set *old_descriptor_set0;
    struct anv_pipeline *old_pipeline;
-   uint32_t dynamic_flags;
+
+   /**
+    * Bitmask of (1 << VK_DYNAMIC_STATE_*). Defines the set of saved dynamic
+    * state.
+    */
+   uint32_t dynamic_mask;
    struct anv_dynamic_state dynamic;
 };
 
 void
 anv_meta_save(struct anv_meta_saved_state *state,
               const struct anv_cmd_buffer *cmd_buffer,
-              uint32_t dynamic_state);
+              uint32_t dynamic_mask);
 
 void
 anv_meta_restore(const struct anv_meta_saved_state *state,
