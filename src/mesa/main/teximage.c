@@ -5148,8 +5148,8 @@ _mesa_TextureBufferRange(GLuint texture, GLenum internalFormat, GLuint buffer,
                               bufObj, offset, size, "glTextureBufferRange");
 }
 
-static GLboolean
-is_renderable_texture_format(struct gl_context *ctx, GLenum internalformat)
+GLboolean
+_mesa_is_renderable_texture_format(struct gl_context *ctx, GLenum internalformat)
 {
    /* Everything that is allowed for renderbuffers,
     * except for a base format of GL_STENCIL_INDEX, unless supported.
@@ -5229,7 +5229,7 @@ texture_image_multisample(struct gl_context *ctx, GLuint dims,
       return;
    }
 
-   if (!is_renderable_texture_format(ctx, internalformat)) {
+   if (!_mesa_is_renderable_texture_format(ctx, internalformat)) {
       /* Page 172 of OpenGL ES 3.1 spec says:
        *   "An INVALID_ENUM error is generated if sizedinternalformat is not
        *   color-renderable, depth-renderable, or stencil-renderable (as

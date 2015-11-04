@@ -214,6 +214,9 @@ _mesa_legal_texture_base_format_for_target(struct gl_context *ctx,
                                            unsigned dimensions,
                                            const char *caller);
 
+GLboolean
+_mesa_is_renderable_texture_format(struct gl_context *ctx, GLenum internalformat);
+
 extern void
 _mesa_texture_sub_image(struct gl_context *ctx, GLuint dims,
                         struct gl_texture_object *texObj,
