@@ -93,3 +93,18 @@ TEST_F(vf_float_conversion_test, test_special_case_0)
    EXPECT_EQ(f2u(brw_vf_to_float(brw_float_to_vf(+0.0f))), f2u(+0.0f));
    EXPECT_EQ(f2u(brw_vf_to_float(brw_float_to_vf(-0.0f))), f2u(-0.0f));
 }
+
+TEST_F(vf_float_conversion_test, test_nonrepresentable_float_input)
+{
+   EXPECT_EQ(brw_float_to_vf(+32.0f), -1);
+   EXPECT_EQ(brw_float_to_vf(-32.0f), -1);
+
+   EXPECT_EQ(brw_float_to_vf(+16.5f), -1);
+   EXPECT_EQ(brw_float_to_vf(-16.5f), -1);
+
+   EXPECT_EQ(brw_float_to_vf(+8.25f), -1);
+   EXPECT_EQ(brw_float_to_vf(-8.25f), -1);
+
+   EXPECT_EQ(brw_float_to_vf(+4.125f), -1);
+   EXPECT_EQ(brw_float_to_vf(-4.125f), -1);
+}
