@@ -42,9 +42,9 @@ vc4_bo_dump_stats(struct vc4_screen *screen)
         struct vc4_bo_cache *cache = &screen->bo_cache;
 
         fprintf(stderr, "  BOs allocated:   %d\n", screen->bo_count);
-        fprintf(stderr, "  BOs size:        %dkb\n", screen->bo_size / 102);
+        fprintf(stderr, "  BOs size:        %dkb\n", screen->bo_size / 1024);
         fprintf(stderr, "  BOs cached:      %d\n", cache->bo_count);
-        fprintf(stderr, "  BOs cached size: %dkb\n", cache->bo_size / 102);
+        fprintf(stderr, "  BOs cached size: %dkb\n", cache->bo_size / 1024);
 
         if (!list_empty(&cache->time_list)) {
                 struct vc4_bo *first = LIST_ENTRY(struct vc4_bo,
