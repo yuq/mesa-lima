@@ -770,6 +770,22 @@ _mesa_VertexAttribLPointer(GLuint index, GLint size, GLenum type,
 }
 
 
+void
+_mesa_enable_vertex_array_attrib(struct gl_context *ctx,
+                                 struct gl_vertex_array_object *vao,
+                                 unsigned attrib)
+{
+   assert(attrib < ARRAY_SIZE(vao->VertexAttrib));
+
+   if (!vao->VertexAttrib[attrib].Enabled) {
+      /* was disabled, now being enabled */
+      FLUSH_VERTICES(ctx, _NEW_ARRAY);
+      vao->VertexAttrib[attrib].Enabled = GL_TRUE;
+      vao->_Enabled |= VERT_BIT(attrib);
+      vao->NewArrays |= VERT_BIT(attrib);
+   }
+}
+
 static void
 enable_vertex_array_attrib(struct gl_context *ctx,
                            struct gl_vertex_array_object *vao,
@@ -781,15 +797,7 @@ enable_vertex_array_attrib(struct gl_context *ctx,
       return;
    }
 
-   assert(VERT_ATTRIB_GENERIC(index) < ARRAY_SIZE(vao->VertexAttrib));
-
-   if (!vao->VertexAttrib[VERT_ATTRIB_GENERIC(index)].Enabled) {
-      /* was disabled, now being enabled */
-      FLUSH_VERTICES(ctx, _NEW_ARRAY);
-      vao->VertexAttrib[VERT_ATTRIB_GENERIC(index)].Enabled = GL_TRUE;
-      vao->_Enabled |= VERT_BIT_GENERIC(index);
-      vao->NewArrays |= VERT_BIT_GENERIC(index);
-   }
+   _mesa_enable_vertex_array_attrib(ctx, vao, VERT_ATTRIB_GENERIC(index));
 }
 
 
