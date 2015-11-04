@@ -339,8 +339,6 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
                                 unsigned vertex_size, unsigned texcoord_size,
                                 unsigned color_size)
 {
-   GLuint VBO;
-
    if (*VAO == 0) {
       struct gl_vertex_array_object *array_obj;
       assert(*buf_obj == NULL);
@@ -353,21 +351,12 @@ _mesa_meta_setup_vertex_objects(struct gl_context *ctx,
       assert(array_obj != NULL);
 
       /* create vertex array buffer */
-      _mesa_CreateBuffers(1, &VBO);
-      *buf_obj = _mesa_lookup_bufferobj(ctx, VBO);
-
-      /* _mesa_lookup_bufferobj only returns NULL if name is 0.  If the object
-       * does not yet exist (i.e., hasn't been bound) it will return a dummy
-       * object that you can't do anything with.  _mesa_CreateBuffers also
-       * makes the object exist.
-       */
-      assert(*buf_obj != NULL && (*buf_obj)->Name == VBO);
-      assert(*buf_obj != ctx->Array.ArrayBufferObj);
+      *buf_obj = ctx->Driver.NewBufferObject(ctx, 0xDEADBEEF);
+      if (*buf_obj == NULL)
+         return;
 
       _mesa_buffer_data(ctx, *buf_obj, GL_NONE, 4 * sizeof(struct vertex), NULL,
                         GL_DYNAMIC_DRAW, __func__);
-
-      assert((*buf_obj)->Size == 4 * sizeof(struct vertex));
 
       /* setup vertex arrays */
       if (use_generic_attributes) {
