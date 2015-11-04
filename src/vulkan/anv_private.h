@@ -1410,11 +1410,6 @@ struct anv_render_pass_attachment {
 struct anv_render_pass {
    uint32_t                                     attachment_count;
    uint32_t                                     subpass_count;
-
-   uint32_t                                     num_color_clear_attachments;
-   bool                                         has_depth_clear_attachment;
-   bool                                         has_stencil_clear_attachment;
-
    struct anv_render_pass_attachment *          attachments;
    struct anv_subpass                           subpasses[0];
 };

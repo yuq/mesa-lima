@@ -62,22 +62,6 @@ VkResult anv_CreateRenderPass(
       att->stencil_load_op = pCreateInfo->pAttachments[i].stencilLoadOp;
       // att->store_op = pCreateInfo->pAttachments[i].storeOp;
       // att->stencil_store_op = pCreateInfo->pAttachments[i].stencilStoreOp;
-
-      if (anv_format_is_color(att->format)) {
-         if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            ++pass->num_color_clear_attachments;
-         }
-      } else {
-         if (att->format->depth_format &&
-             att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            pass->has_depth_clear_attachment = true;
-         }
-
-         if (att->format->has_stencil &&
-             att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            pass->has_stencil_clear_attachment = true;
-         }
-      }
    }
 
    for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
