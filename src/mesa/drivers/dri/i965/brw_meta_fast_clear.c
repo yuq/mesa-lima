@@ -380,13 +380,43 @@ set_fast_clear_color(struct brw_context *brw,
                      struct intel_mipmap_tree *mt,
                      const union gl_color_union *color)
 {
+   union gl_color_union override_color = *color;
+
+   /* The sampler doesn't look at the format of the surface when the fast
+    * clear color is used so we need to implement luminance, intensity and
+    * missing components manually.
+    */
+   switch (_mesa_get_format_base_format(mt->format)) {
+   case GL_INTENSITY:
+      override_color.ui[3] = override_color.ui[0];
+      /* flow through */
+   case GL_LUMINANCE:
+   case GL_LUMINANCE_ALPHA:
+      override_color.ui[1] = override_color.ui[0];
+      override_color.ui[2] = override_color.ui[0];
+      break;
+   default:
+      for (int i = 0; i < 3; i++) {
+         if (!_mesa_format_has_color_component(mt->format, i))
+            override_color.ui[i] = 0;
+      }
+      break;
+   }
+
+   if (!_mesa_format_has_color_component(mt->format, 3)) {
+      if (_mesa_is_format_integer_color(mt->format))
+         override_color.ui[3] = 1;
+      else
+         override_color.f[3] = 1.0f;
+   }
+
    if (brw->gen >= 9) {
-      mt->gen9_fast_clear_color = *color;
+      mt->gen9_fast_clear_color = override_color;
    } else {
       mt->fast_clear_color_value = 0;
       for (int i = 0; i < 4; i++) {
          /* Testing for non-0 works for integer and float colors */
-         if (color->f[i] != 0.0f) {
+         if (override_color.f[i] != 0.0f) {
              mt->fast_clear_color_value |=
                 1 << (GEN7_SURFACE_CLEAR_COLOR_SHIFT + (3 - i));
          }
