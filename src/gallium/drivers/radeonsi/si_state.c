@@ -3946,6 +3946,14 @@ static void si_init_config(struct si_context *sctx)
 			raster_config_1 = 0x0000002e;
 		}
 		break;
+	case CHIP_POLARIS10:
+		raster_config = 0x16000012;
+		raster_config_1 = 0x0000002a;
+		break;
+	case CHIP_POLARIS11:
+		raster_config = 0x16000012;
+		raster_config_1 = 0x00000000;
+		break;
 	case CHIP_TONGA:
 		raster_config = 0x16000012;
 		raster_config_1 = 0x0000002a;

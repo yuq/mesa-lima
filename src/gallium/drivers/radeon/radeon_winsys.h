@@ -124,6 +124,8 @@ enum radeon_family {
     CHIP_CARRIZO,
     CHIP_FIJI,
     CHIP_STONEY,
+    CHIP_POLARIS10,
+    CHIP_POLARIS11,
     CHIP_LAST,
 };
 
