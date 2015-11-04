@@ -4451,6 +4451,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
       if (ctx->Const.ShaderCompilerOptions[i].LowerBufferInterfaceBlocks)
          lower_ubo_reference(prog->_LinkedShaders[i]);
+
+      lower_vector_derefs(prog->_LinkedShaders[i]);
    }
 
 done:

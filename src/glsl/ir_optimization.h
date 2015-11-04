@@ -129,6 +129,7 @@ void lower_packed_varyings(void *mem_ctx,
                            unsigned locations_used, ir_variable_mode mode,
                            unsigned gs_input_vertices, gl_shader *shader);
 bool lower_vector_insert(exec_list *instructions, bool lower_nonconstant_index);
+bool lower_vector_derefs(gl_shader *shader);
 void lower_named_interface_blocks(void *mem_ctx, gl_shader *shader);
 bool optimize_redundant_jumps(exec_list *instructions);
 bool optimize_split_arrays(exec_list *instructions, bool linked);
