@@ -124,7 +124,7 @@ bool lower_const_arrays_to_uniforms(exec_list *instructions);
 bool lower_clip_distance(gl_shader *shader);
 void lower_output_reads(unsigned stage, exec_list *instructions);
 bool lower_packing_builtins(exec_list *instructions, int op_mask);
-void lower_ubo_reference(struct gl_shader *shader, exec_list *instructions);
+void lower_ubo_reference(struct gl_shader *shader);
 void lower_packed_varyings(void *mem_ctx,
                            unsigned locations_used, ir_variable_mode mode,
                            unsigned gs_input_vertices, gl_shader *shader);

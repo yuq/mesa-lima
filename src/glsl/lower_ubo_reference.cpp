@@ -1270,7 +1270,7 @@ lower_ubo_reference_visitor::visit_enter(ir_call *ir)
 } /* unnamed namespace */
 
 void
-lower_ubo_reference(struct gl_shader *shader, exec_list *instructions)
+lower_ubo_reference(struct gl_shader *shader)
 {
    lower_ubo_reference_visitor v(shader);
 
@@ -1281,6 +1281,6 @@ lower_ubo_reference(struct gl_shader *shader, exec_list *instructions)
     */
    do {
       v.progress = false;
-      visit_list_elements(&v, instructions);
+      visit_list_elements(&v, shader->ir);
    } while (v.progress);
 }
