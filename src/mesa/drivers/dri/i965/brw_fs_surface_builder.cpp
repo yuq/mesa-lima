@@ -410,6 +410,7 @@ namespace {
           * reads want the array index to be at the Z component.
           */
          const bool array_index_at_z =
+            format != MESA_FORMAT_NONE &&
             !image_format_info::has_matching_typed_format(
                bld.shader->devinfo, format);
          const unsigned zero_dims =
