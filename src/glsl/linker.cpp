@@ -3799,11 +3799,6 @@ build_program_resource_list(struct gl_shader_program *shProg)
             return;
       }
    }
-
-   /* TODO - following extensions will require more resource types:
-    *
-    *    GL_ARB_shader_storage_buffer_object
-    */
 }
 
 /**
