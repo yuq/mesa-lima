@@ -983,6 +983,10 @@ nir_print_shader(nir_shader *shader, FILE *fp)
    if (shader->info.label)
       fprintf(fp, "label: %s\n", shader->info.label);
 
+   fprintf(fp, "inputs: %u\n", shader->num_inputs);
+   fprintf(fp, "outputs: %u\n", shader->num_outputs);
+   fprintf(fp, "uniforms: %u\n", shader->num_uniforms);
+
    nir_foreach_variable(var, &shader->uniforms) {
       print_var_decl(var, &state);
    }
