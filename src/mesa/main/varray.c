@@ -248,6 +248,52 @@ get_legal_types_mask(const struct gl_context *ctx)
 
 
 /**
+ * \param attrib         The index of the attribute array
+ * \param size           Components per element (1, 2, 3 or 4)
+ * \param type           Datatype of each component (GL_FLOAT, GL_INT, etc)
+ * \param format         Either GL_RGBA or GL_BGRA.
+ * \param normalized     Whether integer types are converted to floats in [-1, 1]
+ * \param integer        Integer-valued values (will not be normalized to [-1, 1])
+ * \param doubles        Double values not reduced to floats
+ * \param relativeOffset Offset of the first element relative to the binding
+ *                       offset.
+ * \param flush_verties  Should \c FLUSH_VERTICES be invoked before updating
+ *                       state?
+ */
+void
+_mesa_update_array_format(struct gl_context *ctx,
+                          struct gl_vertex_array_object *vao,
+                          GLuint attrib, GLint size, GLenum type,
+                          GLenum format, GLboolean normalized,
+                          GLboolean integer, GLboolean doubles,
+                          GLuint relativeOffset, bool flush_vertices)
+{
+   struct gl_vertex_attrib_array *const array = &vao->VertexAttrib[attrib];
+   GLint elementSize;
+
+   assert(size <= 4);
+
+   if (flush_vertices) {
+      FLUSH_VERTICES(ctx, 0);
+   }
+
+   elementSize = _mesa_bytes_per_vertex_attrib(size, type);
+   assert(elementSize != -1);
+
+   array->Size = size;
+   array->Type = type;
+   array->Format = format;
+   array->Normalized = normalized;
+   array->Integer = integer;
+   array->Doubles = doubles;
+   array->RelativeOffset = relativeOffset;
+   array->_ElementSize = elementSize;
+
+   vao->NewArrays |= VERT_BIT(attrib);
+   ctx->NewState |= _NEW_ARRAY;
+}
+
+/**
  * Does error checking and updates the format in an attrib array.
  *
  * Called by update_array() and VertexAttrib*Format().
@@ -274,9 +320,7 @@ update_array_format(struct gl_context *ctx,
                     GLboolean normalized, GLboolean integer, GLboolean doubles,
                     GLuint relativeOffset)
 {
-   struct gl_vertex_attrib_array *array;
    GLbitfield typeBit;
-   GLint elementSize;
    GLenum format = GL_RGBA;
 
    if (ctx->Array.LegalTypesMask == 0 || ctx->Array.LegalTypesMaskAPI != ctx->API) {
@@ -377,23 +421,9 @@ update_array_format(struct gl_context *ctx,
       return false;
    }
 
-   assert(size <= 4);
-
-   elementSize = _mesa_bytes_per_vertex_attrib(size, type);
-   assert(elementSize != -1);
-
-   array = &vao->VertexAttrib[attrib];
-   array->Size = size;
-   array->Type = type;
-   array->Format = format;
-   array->Normalized = normalized;
-   array->Integer = integer;
-   array->Doubles = doubles;
-   array->RelativeOffset = relativeOffset;
-   array->_ElementSize = elementSize;
-
-   vao->NewArrays |= VERT_BIT(attrib);
-   ctx->NewState |= _NEW_ARRAY;
+   _mesa_update_array_format(ctx, vao, attrib, size, type, format,
+                             normalized, integer, doubles, relativeOffset,
+                             false);
 
    return true;
 }
