@@ -492,9 +492,11 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
        (type.length == 1 || (type.length % 4 == 0)) &&
        cache) {
       const struct util_format_description *format_decompressed;
+      const struct util_format_description *flinear_desc;
       LLVMValueRef packed;
+      flinear_desc = util_format_description(util_format_linear(format_desc->format));
       packed = lp_build_fetch_cached_texels(gallivm,
-                                            format_desc,
+                                            flinear_desc,
                                             type.length,
                                             base_ptr,
                                             offset,
