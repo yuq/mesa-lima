@@ -40,15 +40,10 @@ void vf_float_conversion_test::SetUp() {
       int ebits = (vf >> 4) & 0x7;
       int mbits = vf & 0xf;
 
-      int e = ebits - 3;
+      float x = 1.0f + mbits / 16.0f;
+      int exp = ebits - 3;
 
-      float value = 1.0f;
-
-      value += mbits / 16.0f;
-
-      value *= exp2f(e);
-
-      vf_to_float[vf] = value;
+      vf_to_float[vf] = ldexpf(x, exp);
    }
 }
 
