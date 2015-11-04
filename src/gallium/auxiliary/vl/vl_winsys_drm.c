@@ -1,6 +1,6 @@
 /**************************************************************************
  *
- * Copyright 2009 Younes Manton.
+ * Copyright 2015 Advanced Micro Devices, Inc.
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -25,51 +25,53 @@
  *
  **************************************************************************/
 
-/*
- * Target makefiles directly refer to vl_winsys_dri.c to avoid DRI dependency
- */
+#include <assert.h>
 
-#ifndef vl_winsys_h
-#define vl_winsys_h
+#include "pipe/p_screen.h"
+#include "pipe-loader/pipe_loader.h"
+#include "state_tracker/drm_driver.h"
 
-#include <X11/Xlib.h>
-#include "pipe/p_defines.h"
-#include "pipe/p_format.h"
+#include "util/u_memory.h"
+#include "vl/vl_winsys.h"
 
-struct pipe_screen;
-struct pipe_surface;
-struct pipe_loader_device;
-
-struct vl_screen
+struct vl_screen*
+vl_drm_screen_create(int fd)
 {
-   struct pipe_screen *pscreen;
-   struct pipe_loader_device *dev;
-};
+   struct vl_screen *vscreen;
 
-struct vl_screen*
-vl_screen_create(Display *display, int screen);
+   vscreen = CALLOC_STRUCT(vl_screen);
+   if (!vscreen)
+      return NULL;
 
-void vl_screen_destroy(struct vl_screen *vscreen);
-
-struct pipe_resource*
-vl_screen_texture_from_drawable(struct vl_screen *vscreen, Drawable drawable);
-
-struct u_rect *
-vl_screen_get_dirty_area(struct vl_screen *vscreen);
-
-uint64_t
-vl_screen_get_timestamp(struct vl_screen *vscreen, Drawable drawable);
-
-void
-vl_screen_set_next_timestamp(struct vl_screen *vscreen, uint64_t stamp);
-
-void*
-vl_screen_get_private(struct vl_screen *vscreen);
-
-struct vl_screen*
-vl_drm_screen_create(int fd);
-
-void
-vl_drm_screen_destroy(struct vl_screen *vscreen);
-
+#if GALLIUM_STATIC_TARGETS
+   vscreen->pscreen = dd_create_screen(fd);
+#else
+   if (pipe_loader_drm_probe_fd(&vscreen->dev, dup(fd))) {
+      vscreen->pscreen =
+         pipe_loader_create_screen(vscreen->dev, PIPE_SEARCH_DIR);
+      if (!vscreen->pscreen)
+         pipe_loader_release(&vscreen->dev, 1);
+   }
 #endif
+
+   if (!vscreen->pscreen) {
+      FREE(vscreen);
+      return NULL;
+   }
+
+   return vscreen;
+}
+
+void
+vl_drm_screen_destroy(struct vl_screen *vscreen)
+{
+   assert(vscreen);
+
+   vscreen->pscreen->destroy(vscreen->pscreen);
+
+#if !GALLIUM_STATIC_TARGETS
+   pipe_loader_release(&vscreen->dev, 1);
+#endif
+
+   FREE(vscreen);
+}
