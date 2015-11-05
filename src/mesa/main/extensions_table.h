@@ -141,6 +141,7 @@ EXT(EXT_abgr                                , dummy_true                        
 EXT(EXT_bgra                                , dummy_true                             , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_blend_color                         , EXT_blend_color                        , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_blend_equation_separate             , EXT_blend_equation_separate            , GLL, GLC,  x ,  x , 2003)
+EXT(EXT_blend_func_extended                 , ARB_blend_func_extended                ,  x ,  x ,  x , ES2, 2015)
 EXT(EXT_blend_func_separate                 , EXT_blend_func_separate                , GLL,  x ,  x ,  x , 1999)
 EXT(EXT_buffer_storage                      , ARB_buffer_storage                     ,  x ,  x ,  x ,  31, 2015)
 EXT(EXT_discard_framebuffer                 , dummy_true                             ,  x ,  x , ES1, ES2, 2009)
