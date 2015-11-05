@@ -447,6 +447,7 @@ ConstantFolding::expr(Instruction *i,
 {
    struct Storage *const a = &imm0.reg, *const b = &imm1.reg;
    struct Storage res;
+   uint8_t fixSrc0Size = 0;
 
    memset(&res.data, 0, sizeof(res.data));
 
@@ -589,6 +590,18 @@ ConstantFolding::expr(Instruction *i,
       // the second argument will not be constant, but that can happen.
       res.data.u32 = a->data.u32 + b->data.u32;
       break;
+   case OP_MERGE:
+      switch (i->dType) {
+      case TYPE_U64:
+      case TYPE_S64:
+      case TYPE_F64:
+         res.data.u64 = (((uint64_t)b->data.u32) << 32) | a->data.u32;
+         fixSrc0Size = 8;
+         break;
+      default:
+         return;
+      }
+      break;
    default:
       return;
    }
@@ -602,6 +615,8 @@ ConstantFolding::expr(Instruction *i,
    i->setSrc(1, NULL);
 
    i->getSrc(0)->reg.data = res.data;
+   if (fixSrc0Size)
+      i->getSrc(0)->reg.size = fixSrc0Size;
 
    switch (i->op) {
    case OP_MAD:
