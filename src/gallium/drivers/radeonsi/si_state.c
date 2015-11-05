@@ -3444,6 +3444,9 @@ static void si_init_config(struct si_context *sctx)
 		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
 	}
 
+	if (sctx->b.family == CHIP_STONEY)
+		si_pm4_set_reg(pm4, R_028754_SX_PS_DOWNCONVERT, 0);
+
 	si_pm4_set_reg(pm4, R_028080_TA_BC_BASE_ADDR, border_color_va >> 8);
 	if (sctx->b.chip_class >= CIK)
 		si_pm4_set_reg(pm4, R_028084_TA_BC_BASE_ADDR_HI, border_color_va >> 40);
