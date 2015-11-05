@@ -310,9 +310,12 @@ CodeEmitterGM107::emitIMMD(int pos, int len, const ValueRef &ref)
    uint32_t val = imm->reg.data.u32;
 
    if (len == 19) {
-      if (isFloatType(insn->sType)) {
+      if (insn->sType == TYPE_F32 || insn->sType == TYPE_F16) {
          assert(!(val & 0x00000fff));
          val >>= 12;
+      } else if (insn->sType == TYPE_F64) {
+         assert(!(imm->reg.data.u64 & 0x00000fffffffffffULL));
+         val = imm->reg.data.u64 >> 44;
       }
       assert(!(val & 0xfff00000) || (val & 0xfff00000) == 0xfff00000);
       emitField( 56,   1, (val & 0x80000) >> 19);
