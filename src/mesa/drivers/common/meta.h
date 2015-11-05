@@ -655,13 +655,14 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
                              struct blit_shader_table *table);
 
 void
-_mesa_meta_glsl_blit_cleanup(struct blit_state *blit);
+_mesa_meta_glsl_blit_cleanup(struct gl_context *ctx, struct blit_state *blit);
 
 void
 _mesa_meta_blit_shader_table_cleanup(struct blit_shader_table *table);
 
 void
-_mesa_meta_glsl_generate_mipmap_cleanup(struct gen_mipmap_state *mipmap);
+_mesa_meta_glsl_generate_mipmap_cleanup(struct gl_context *ctx,
+                                        struct gen_mipmap_state *mipmap);
 
 void
 _mesa_meta_bind_fbo_image(GLenum target, GLenum attachment,

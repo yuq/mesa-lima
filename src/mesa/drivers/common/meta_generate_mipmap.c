@@ -120,14 +120,14 @@ fallback_required(struct gl_context *ctx, GLenum target,
 }
 
 void
-_mesa_meta_glsl_generate_mipmap_cleanup(struct gen_mipmap_state *mipmap)
+_mesa_meta_glsl_generate_mipmap_cleanup(struct gl_context *ctx,
+                                        struct gen_mipmap_state *mipmap)
 {
    if (mipmap->VAO == 0)
       return;
    _mesa_DeleteVertexArrays(1, &mipmap->VAO);
    mipmap->VAO = 0;
-   _mesa_DeleteBuffers(1, &mipmap->buf_obj->Name);
-   mipmap->buf_obj->Name = NULL;
+   _mesa_reference_buffer_object(ctx, &mipmap->buf_obj, NULL);
    _mesa_DeleteSamplers(1, &mipmap->Sampler);
    mipmap->Sampler = 0;
 

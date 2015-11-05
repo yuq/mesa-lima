@@ -95,9 +95,12 @@ static struct blit_shader *
 choose_blit_shader(GLenum target, struct blit_shader_table *table);
 
 static void cleanup_temp_texture(struct temp_texture *tex);
-static void meta_glsl_clear_cleanup(struct clear_state *clear);
-static void meta_decompress_cleanup(struct decompress_state *decompress);
-static void meta_drawpix_cleanup(struct drawpix_state *drawpix);
+static void meta_glsl_clear_cleanup(struct gl_context *ctx,
+                                    struct clear_state *clear);
+static void meta_decompress_cleanup(struct gl_context *ctx,
+                                    struct decompress_state *decompress);
+static void meta_drawpix_cleanup(struct gl_context *ctx,
+                                 struct drawpix_state *drawpix);
 
 void
 _mesa_meta_bind_fbo_image(GLenum fboTarget, GLenum attachment,
@@ -435,12 +438,12 @@ _mesa_meta_free(struct gl_context *ctx)
 {
    GET_CURRENT_CONTEXT(old_context);
    _mesa_make_current(ctx, NULL, NULL);
-   _mesa_meta_glsl_blit_cleanup(&ctx->Meta->Blit);
-   meta_glsl_clear_cleanup(&ctx->Meta->Clear);
-   _mesa_meta_glsl_generate_mipmap_cleanup(&ctx->Meta->Mipmap);
+   _mesa_meta_glsl_blit_cleanup(ctx, &ctx->Meta->Blit);
+   meta_glsl_clear_cleanup(ctx, &ctx->Meta->Clear);
+   _mesa_meta_glsl_generate_mipmap_cleanup(ctx, &ctx->Meta->Mipmap);
    cleanup_temp_texture(&ctx->Meta->TempTex);
-   meta_decompress_cleanup(&ctx->Meta->Decompress);
-   meta_drawpix_cleanup(&ctx->Meta->DrawPix);
+   meta_decompress_cleanup(ctx, &ctx->Meta->Decompress);
+   meta_drawpix_cleanup(ctx, &ctx->Meta->DrawPix);
    if (old_context)
       _mesa_make_current(old_context, old_context->WinSysDrawBuffer, old_context->WinSysReadBuffer);
    else
@@ -1649,14 +1652,13 @@ meta_glsl_clear_init(struct gl_context *ctx, struct clear_state *clear)
 }
 
 static void
-meta_glsl_clear_cleanup(struct clear_state *clear)
+meta_glsl_clear_cleanup(struct gl_context *ctx, struct clear_state *clear)
 {
    if (clear->VAO == 0)
       return;
    _mesa_DeleteVertexArrays(1, &clear->VAO);
    clear->VAO = 0;
-   _mesa_DeleteBuffers(1, &clear->buf_obj->Name);
-   clear->buf_obj = NULL;
+   _mesa_reference_buffer_object(ctx, &clear->buf_obj, NULL);
    _mesa_DeleteProgram(clear->ShaderProg);
    clear->ShaderProg = 0;
 
@@ -1950,14 +1952,13 @@ _mesa_meta_CopyPixels(struct gl_context *ctx, GLint srcX, GLint srcY,
 }
 
 static void
-meta_drawpix_cleanup(struct drawpix_state *drawpix)
+meta_drawpix_cleanup(struct gl_context *ctx, struct drawpix_state *drawpix)
 {
    if (drawpix->VAO != 0) {
       _mesa_DeleteVertexArrays(1, &drawpix->VAO);
       drawpix->VAO = 0;
 
-      _mesa_DeleteBuffers(1, &drawpix->buf_obj->Name);
-      drawpix->buf_obj = NULL;
+      _mesa_reference_buffer_object(ctx, &drawpix->buf_obj, NULL);
    }
 
    if (drawpix->StencilFP != 0) {
@@ -2986,14 +2987,15 @@ meta_decompress_fbo_cleanup(struct decompress_fbo_state *decompress_fbo)
 }
 
 static void
-meta_decompress_cleanup(struct decompress_state *decompress)
+meta_decompress_cleanup(struct gl_context *ctx,
+                        struct decompress_state *decompress)
 {
    meta_decompress_fbo_cleanup(&decompress->byteFBO);
    meta_decompress_fbo_cleanup(&decompress->floatFBO);
 
    if (decompress->VAO != 0) {
       _mesa_DeleteVertexArrays(1, &decompress->VAO);
-      _mesa_DeleteBuffers(1, &decompress->buf_obj->Name);
+      _mesa_reference_buffer_object(ctx, &decompress->buf_obj, NULL);
    }
 
    if (decompress->Sampler != 0)
@@ -3310,7 +3312,6 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
    if (drawtex->VAO == 0) {
       /* one-time setup */
       struct gl_vertex_array_object *array_obj;
-      GLuint VBO;
 
       /* create vertex array object */
       _mesa_GenVertexArrays(1, &drawtex->VAO);
@@ -3320,22 +3321,12 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
       assert(array_obj != NULL);
 
       /* create vertex array buffer */
-      _mesa_CreateBuffers(1, &VBO);
-      drawtex->buf_obj = _mesa_lookup_bufferobj(ctx, VBO);
-
-      /* _mesa_lookup_bufferobj only returns NULL if name is 0.  If the object
-       * does not yet exist (i.e., hasn't been bound) it will return a dummy
-       * object that you can't do anything with.
-       */
-      assert(drawtex->buf_obj != NULL && (drawtex->buf_obj)->Name == VBO);
-      assert(drawtex->buf_obj == ctx->Array.ArrayBufferObj);
+      drawtex->buf_obj = ctx->Driver.NewBufferObject(ctx, 0xDEADBEEF);
+      if (drawtex->buf_obj == NULL)
+         return;
 
       _mesa_buffer_data(ctx, drawtex->buf_obj, GL_NONE, sizeof(verts), verts,
                         GL_DYNAMIC_DRAW, __func__);
-
-      assert(drawtex->buf_obj->Size == sizeof(verts));
-
-      _mesa_BindBuffer(GL_ARRAY_BUFFER_ARB, VBO);
 
       /* setup vertex arrays */
       _mesa_update_array_format(ctx, array_obj, VERT_ATTRIB_POS,

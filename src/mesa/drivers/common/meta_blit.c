@@ -1006,13 +1006,12 @@ _mesa_meta_BlitFramebuffer(struct gl_context *ctx,
 }
 
 void
-_mesa_meta_glsl_blit_cleanup(struct blit_state *blit)
+_mesa_meta_glsl_blit_cleanup(struct gl_context *ctx, struct blit_state *blit)
 {
    if (blit->VAO) {
       _mesa_DeleteVertexArrays(1, &blit->VAO);
       blit->VAO = 0;
-      _mesa_DeleteBuffers(1, &blit->buf_obj->Name);
-      blit->buf_obj = NULL;
+      _mesa_reference_buffer_object(ctx, &blit->buf_obj, NULL);
    }
 
    _mesa_meta_blit_shader_table_cleanup(&blit->shaders_with_depth);
