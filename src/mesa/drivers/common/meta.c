@@ -3309,12 +3309,15 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
 
    if (drawtex->VAO == 0) {
       /* one-time setup */
-      GLint active_texture;
+      struct gl_vertex_array_object *array_obj;
       GLuint VBO;
 
       /* create vertex array object */
       _mesa_GenVertexArrays(1, &drawtex->VAO);
       _mesa_BindVertexArray(drawtex->VAO);
+
+      array_obj = _mesa_lookup_vao(ctx, drawtex->VAO);
+      assert(array_obj != NULL);
 
       /* create vertex array buffer */
       _mesa_CreateBuffers(1, &VBO);
@@ -3332,22 +3335,27 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
 
       assert(drawtex->buf_obj->Size == sizeof(verts));
 
-      /* client active texture is not part of the array object */
-      active_texture = ctx->Array.ActiveTexture;
-
       _mesa_BindBuffer(GL_ARRAY_BUFFER_ARB, VBO);
 
       /* setup vertex arrays */
-      _mesa_VertexPointer(3, GL_FLOAT, sizeof(struct vertex), OFFSET(x));
-      _mesa_EnableClientState(GL_VERTEX_ARRAY);
-      for (i = 0; i < ctx->Const.MaxTextureUnits; i++) {
-         _mesa_ClientActiveTexture(GL_TEXTURE0 + i);
-         _mesa_TexCoordPointer(2, GL_FLOAT, sizeof(struct vertex), OFFSET(st[i]));
-         _mesa_EnableClientState(GL_TEXTURE_COORD_ARRAY);
-      }
+      _mesa_update_array_format(ctx, array_obj, VERT_ATTRIB_POS,
+                                3, GL_FLOAT, GL_RGBA, GL_FALSE,
+                                GL_FALSE, GL_FALSE,
+                                offsetof(struct vertex, x), true);
+      _mesa_bind_vertex_buffer(ctx, array_obj, VERT_ATTRIB_POS,
+                               drawtex->buf_obj, 0, sizeof(struct vertex));
+      _mesa_enable_vertex_array_attrib(ctx, array_obj, VERT_ATTRIB_POS);
 
-      /* restore client active texture */
-      _mesa_ClientActiveTexture(GL_TEXTURE0 + active_texture);
+
+      for (i = 0; i < ctx->Const.MaxTextureUnits; i++) {
+         _mesa_update_array_format(ctx, array_obj, VERT_ATTRIB_TEX(i),
+                                   2, GL_FLOAT, GL_RGBA, GL_FALSE,
+                                   GL_FALSE, GL_FALSE,
+                                   offsetof(struct vertex, st[i]), true);
+         _mesa_bind_vertex_buffer(ctx, array_obj, VERT_ATTRIB_TEX(i),
+                                  drawtex->buf_obj, 0, sizeof(struct vertex));
+         _mesa_enable_vertex_array_attrib(ctx, array_obj, VERT_ATTRIB_TEX(i));
+      }
    }
    else {
       _mesa_BindVertexArray(drawtex->VAO);
