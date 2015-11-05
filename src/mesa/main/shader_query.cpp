@@ -1359,3 +1359,65 @@ _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
    if (length)
       *length = amount;
 }
+
+static bool
+validate_io(const struct gl_shader *input_stage,
+            const struct gl_shader *output_stage)
+{
+   assert(input_stage && output_stage);
+
+   /* For each output in a, find input in b and do any required checks. */
+   foreach_in_list(ir_instruction, out, input_stage->ir) {
+      ir_variable *out_var = out->as_variable();
+      if (!out_var || out_var->data.mode != ir_var_shader_out)
+         continue;
+
+      foreach_in_list(ir_instruction, in, output_stage->ir) {
+         ir_variable *in_var = in->as_variable();
+         if (!in_var || in_var->data.mode != ir_var_shader_in)
+            continue;
+
+         if (strcmp(in_var->name, out_var->name) == 0) {
+            /* From OpenGL ES 3.1 spec:
+             *     "When both shaders are in separate programs, mismatched
+             *     precision qualifiers will result in a program interface
+             *     mismatch that will result in program pipeline validation
+             *     failures, as described in section 7.4.1 (“Shader Interface
+             *     Matching”) of the OpenGL ES 3.1 Specification."
+             */
+            if (in_var->data.precision != out_var->data.precision)
+               return false;
+         }
+      }
+   }
+   return true;
+}
+
+/**
+ * Validate inputs against outputs in a program pipeline.
+ */
+extern "C" bool
+_mesa_validate_pipeline_io(struct gl_pipeline_object *pipeline)
+{
+   struct gl_shader_program **shProg =
+      (struct gl_shader_program **) pipeline->CurrentProgram;
+
+   /* Find first active stage in pipeline. */
+   unsigned idx, prev = 0;
+   for (idx = 0; idx < ARRAY_SIZE(pipeline->CurrentProgram); idx++) {
+      if (shProg[idx]) {
+         prev = idx;
+         break;
+      }
+   }
+
+   for (idx = prev + 1; idx < ARRAY_SIZE(pipeline->CurrentProgram); idx++) {
+      if (shProg[idx]) {
+         if (!validate_io(shProg[prev]->_LinkedShaders[prev],
+                          shProg[idx]->_LinkedShaders[idx]))
+            return false;
+         prev = idx;
+      }
+   }
+   return true;
+}
