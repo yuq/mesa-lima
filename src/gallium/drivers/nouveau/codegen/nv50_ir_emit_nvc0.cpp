@@ -323,6 +323,14 @@ CodeEmitterNVC0::setImmediate(const Instruction *i, const int s)
    assert(imm);
    u32 = imm->reg.data.u32;
 
+   if ((code[0] & 0xf) == 0x1) {
+      // double immediate
+      uint64_t u64 = imm->reg.data.u64;
+      assert(!(u64 & 0x00000fffffffffffULL));
+      assert(!(code[1] & 0xc000));
+      code[0] |= ((u64 >> 44) & 0x3f) << 26;
+      code[1] |= 0xc000 | (u64 >> 50);
+   } else
    if ((code[0] & 0xf) == 0x2) {
       // LIMM
       code[0] |= (u32 & 0x3f) << 26;
