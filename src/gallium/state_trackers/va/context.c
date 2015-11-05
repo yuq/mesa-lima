@@ -28,8 +28,6 @@
 
 #include "pipe/p_screen.h"
 #include "pipe/p_video_codec.h"
-#include "pipe-loader/pipe_loader.h"
-#include "state_tracker/drm_driver.h"
 #include "util/u_memory.h"
 #include "util/u_handle_table.h"
 #include "util/u_video.h"
@@ -133,32 +131,16 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
          return VA_STATUS_ERROR_INVALID_PARAMETER;
       }
 
-#if GALLIUM_STATIC_TARGETS
       drm_fd = drm_info->fd;
-#else
-      drm_fd = dup(drm_info->fd);
-#endif
 
       if (drm_fd < 0) {
          FREE(drv);
          return VA_STATUS_ERROR_INVALID_PARAMETER;
       }
 
-      drv->vscreen = CALLOC_STRUCT(vl_screen);
+      drv->vscreen = vl_drm_screen_create(drm_fd);
       if (!drv->vscreen)
          goto error_screen;
-
-#if GALLIUM_STATIC_TARGETS
-      drv->vscreen->pscreen = dd_create_screen(drm_fd);
-#else
-      if (pipe_loader_drm_probe_fd(&drv->vscreen->dev, drm_fd))
-         drv->vscreen->pscreen =
-           pipe_loader_create_screen(drv->vscreen->dev, PIPE_SEARCH_DIR);
-#endif
-
-      if (!drv->vscreen->pscreen)
-         goto error_pipe;
-
       }
       break;
    default:
@@ -203,7 +185,7 @@ error_pipe:
    if (ctx->display_type == VA_DISPLAY_GLX || ctx->display_type == VA_DISPLAY_X11)
       vl_screen_destroy(drv->vscreen);
    else
-      FREE(drv->vscreen);
+      vl_drm_screen_destroy(drv->vscreen);
 
 error_screen:
    FREE(drv);
@@ -343,7 +325,7 @@ vlVaTerminate(VADriverContextP ctx)
    if (ctx->display_type == VA_DISPLAY_GLX || ctx->display_type == VA_DISPLAY_X11)
       vl_screen_destroy(drv->vscreen);
    else
-      FREE(drv->vscreen);
+      vl_drm_screen_destroy(drv->vscreen);
    handle_table_destroy(drv->htab);
    FREE(drv);
 
