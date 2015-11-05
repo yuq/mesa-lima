@@ -3316,13 +3316,14 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
       _mesa_BindVertexArray(drawtex->VAO);
 
       /* create vertex array buffer */
-      _mesa_GenBuffers(1, &drawtex->VBO);
-      _mesa_BindBuffer(GL_ARRAY_BUFFER_ARB, drawtex->VBO);
-      _mesa_BufferData(GL_ARRAY_BUFFER_ARB, sizeof(verts),
-                          NULL, GL_DYNAMIC_DRAW_ARB);
+      _mesa_CreateBuffers(1, &drawtex->VBO);
+      _mesa_NamedBufferData(drawtex->VBO, sizeof(verts),
+                            NULL, GL_DYNAMIC_DRAW_ARB);
 
       /* client active texture is not part of the array object */
       active_texture = ctx->Array.ActiveTexture;
+
+      _mesa_BindBuffer(GL_ARRAY_BUFFER_ARB, drawtex->VBO);
 
       /* setup vertex arrays */
       _mesa_VertexPointer(3, GL_FLOAT, sizeof(struct vertex), OFFSET(x));
@@ -3338,7 +3339,6 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
    }
    else {
       _mesa_BindVertexArray(drawtex->VAO);
-      _mesa_BindBuffer(GL_ARRAY_BUFFER_ARB, drawtex->VBO);
    }
 
    /* vertex positions, texcoords */
@@ -3403,7 +3403,7 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
          verts[3].st[i][1] = t1;
       }
 
-      _mesa_BufferSubData(GL_ARRAY_BUFFER_ARB, 0, sizeof(verts), verts);
+      _mesa_NamedBufferSubData(drawtex->VBO, 0, sizeof(verts), verts);
    }
 
    _mesa_DrawArrays(GL_TRIANGLE_FAN, 0, 4);
