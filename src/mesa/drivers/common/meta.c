@@ -3310,20 +3310,32 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
    if (drawtex->VAO == 0) {
       /* one-time setup */
       GLint active_texture;
+      GLuint VBO;
 
       /* create vertex array object */
       _mesa_GenVertexArrays(1, &drawtex->VAO);
       _mesa_BindVertexArray(drawtex->VAO);
 
       /* create vertex array buffer */
-      _mesa_CreateBuffers(1, &drawtex->VBO);
-      _mesa_NamedBufferData(drawtex->VBO, sizeof(verts),
-                            NULL, GL_DYNAMIC_DRAW_ARB);
+      _mesa_CreateBuffers(1, &VBO);
+      drawtex->buf_obj = _mesa_lookup_bufferobj(ctx, VBO);
+
+      /* _mesa_lookup_bufferobj only returns NULL if name is 0.  If the object
+       * does not yet exist (i.e., hasn't been bound) it will return a dummy
+       * object that you can't do anything with.
+       */
+      assert(drawtex->buf_obj != NULL && (drawtex->buf_obj)->Name == VBO);
+      assert(drawtex->buf_obj == ctx->Array.ArrayBufferObj);
+
+      _mesa_buffer_data(ctx, drawtex->buf_obj, GL_NONE, sizeof(verts), verts,
+                        GL_DYNAMIC_DRAW, __func__);
+
+      assert(drawtex->buf_obj->Size == sizeof(verts));
 
       /* client active texture is not part of the array object */
       active_texture = ctx->Array.ActiveTexture;
 
-      _mesa_BindBuffer(GL_ARRAY_BUFFER_ARB, drawtex->VBO);
+      _mesa_BindBuffer(GL_ARRAY_BUFFER_ARB, VBO);
 
       /* setup vertex arrays */
       _mesa_VertexPointer(3, GL_FLOAT, sizeof(struct vertex), OFFSET(x));
@@ -3403,7 +3415,8 @@ _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
          verts[3].st[i][1] = t1;
       }
 
-      _mesa_NamedBufferSubData(drawtex->VBO, 0, sizeof(verts), verts);
+      _mesa_buffer_sub_data(ctx, drawtex->buf_obj, 0, sizeof(verts), verts,
+                            __func__);
    }
 
    _mesa_DrawArrays(GL_TRIANGLE_FAN, 0, 4);

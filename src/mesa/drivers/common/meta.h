@@ -408,7 +408,7 @@ struct decompress_state
 struct drawtex_state
 {
    GLuint VAO;
-   GLuint VBO;
+   struct gl_buffer_object *buf_obj;
 };
 
 #define MAX_META_OPS_DEPTH      8
