@@ -611,13 +611,14 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          bo_offset = desc->buffer_view->offset;
          break;
       case ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET: {
+         bo = desc->buffer->bo;
+         bo_offset = desc->buffer->offset + desc->offset;
+
          surface_state =
             anv_cmd_buffer_alloc_surface_state(cmd_buffer);
          anv_fill_buffer_surface_state(cmd_buffer->device, surface_state.map,
                                        anv_format_for_vk_format(VK_FORMAT_R32G32B32A32_SFLOAT),
-                                       desc->offset, desc->range);
-         bo = desc->buffer_view->bo;
-         bo_offset = desc->buffer_view->offset;
+                                       bo_offset, desc->range);
          break;
       }
       case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW:
