@@ -37,7 +37,7 @@ struct lp_sampler_static_state;
 /**
  * Whether texture cache is used for s3tc textures.
  */
-#define LP_USE_TEXTURE_CACHE 1
+#define LP_USE_TEXTURE_CACHE 0
 
 /**
  * Pure-LLVM texture sampling code generator.
