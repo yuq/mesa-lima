@@ -7194,6 +7194,8 @@ detect_conflicting_assignments(struct _mesa_glsl_parse_state *state,
 {
    bool gl_FragColor_assigned = false;
    bool gl_FragData_assigned = false;
+   bool gl_FragSecondaryColor_assigned = false;
+   bool gl_FragSecondaryData_assigned = false;
    bool user_defined_fs_output_assigned = false;
    ir_variable *user_defined_fs_output = NULL;
 
@@ -7211,6 +7213,10 @@ detect_conflicting_assignments(struct _mesa_glsl_parse_state *state,
          gl_FragColor_assigned = true;
       else if (strcmp(var->name, "gl_FragData") == 0)
          gl_FragData_assigned = true;
+	else if (strcmp(var->name, "gl_SecondaryFragColorEXT") == 0)
+         gl_FragSecondaryColor_assigned = true;
+	else if (strcmp(var->name, "gl_SecondaryFragDataEXT") == 0)
+         gl_FragSecondaryData_assigned = true;
       else if (!is_gl_identifier(var->name)) {
          if (state->stage == MESA_SHADER_FRAGMENT &&
              var->data.mode == ir_var_shader_out) {
@@ -7242,10 +7248,28 @@ detect_conflicting_assignments(struct _mesa_glsl_parse_state *state,
       _mesa_glsl_error(&loc, state, "fragment shader writes to both "
                        "`gl_FragColor' and `%s'",
                        user_defined_fs_output->name);
+   } else if (gl_FragSecondaryColor_assigned && gl_FragSecondaryData_assigned) {
+      _mesa_glsl_error(&loc, state, "fragment shader writes to both "
+                       "`gl_FragSecondaryColorEXT' and"
+                       " `gl_FragSecondaryDataEXT'");
+   } else if (gl_FragColor_assigned && gl_FragSecondaryData_assigned) {
+      _mesa_glsl_error(&loc, state, "fragment shader writes to both "
+                       "`gl_FragColor' and"
+                       " `gl_FragSecondaryDataEXT'");
+   } else if (gl_FragData_assigned && gl_FragSecondaryColor_assigned) {
+      _mesa_glsl_error(&loc, state, "fragment shader writes to both "
+                       "`gl_FragData' and"
+                       " `gl_FragSecondaryColorEXT'");
    } else if (gl_FragData_assigned && user_defined_fs_output_assigned) {
       _mesa_glsl_error(&loc, state, "fragment shader writes to both "
                        "`gl_FragData' and `%s'",
                        user_defined_fs_output->name);
+   }
+
+   if ((gl_FragSecondaryColor_assigned || gl_FragSecondaryData_assigned) &&
+       !state->EXT_blend_func_extended_enable) {
+      _mesa_glsl_error(&loc, state,
+                       "Dual source blending requires EXT_blend_func_extended");
    }
 }
 

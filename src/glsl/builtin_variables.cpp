@@ -377,6 +377,11 @@ private:
       return add_variable(name, type, ir_var_shader_out, slot);
    }
 
+   ir_variable *add_index_output(int slot, int index, const glsl_type *type, const char *name)
+   {
+      return add_index_variable(name, type, ir_var_shader_out, slot, index);
+   }
+
    ir_variable *add_system_value(int slot, const glsl_type *type,
                                  const char *name)
    {
@@ -385,6 +390,8 @@ private:
 
    ir_variable *add_variable(const char *name, const glsl_type *type,
                              enum ir_variable_mode mode, int slot);
+   ir_variable *add_index_variable(const char *name, const glsl_type *type,
+                             enum ir_variable_mode mode, int slot, int index);
    ir_variable *add_uniform(const glsl_type *type, const char *name);
    ir_variable *add_const(const char *name, int value);
    ir_variable *add_const_ivec3(const char *name, int x, int y, int z);
@@ -430,6 +437,46 @@ builtin_variable_generator::builtin_variable_generator(
 {
 }
 
+ir_variable *
+builtin_variable_generator::add_index_variable(const char *name,
+                                         const glsl_type *type,
+                                         enum ir_variable_mode mode, int slot, int index)
+{
+   ir_variable *var = new(symtab) ir_variable(type, name, mode);
+   var->data.how_declared = ir_var_declared_implicitly;
+
+   switch (var->data.mode) {
+   case ir_var_auto:
+   case ir_var_shader_in:
+   case ir_var_uniform:
+   case ir_var_system_value:
+      var->data.read_only = true;
+      break;
+   case ir_var_shader_out:
+   case ir_var_shader_storage:
+      break;
+   default:
+      /* The only variables that are added using this function should be
+       * uniforms, shader storage, shader inputs, and shader outputs, constants
+       * (which use ir_var_auto), and system values.
+       */
+      assert(0);
+      break;
+   }
+
+   var->data.location = slot;
+   var->data.explicit_location = (slot >= 0);
+   var->data.explicit_index = 1;
+   var->data.index = index;
+
+   /* Once the variable is created an initialized, add it to the symbol table
+    * and add the declaration to the IR stream.
+    */
+   instructions->push_tail(var);
+
+   symtab->add_variable(var);
+   return var;
+}
 
 ir_variable *
 builtin_variable_generator::add_variable(const char *name,
@@ -580,6 +627,14 @@ builtin_variable_generator::generate_constants()
       } else {
          add_const("gl_MaxVaryingVectors",
                    state->ctx->Const.MaxVarying);
+      }
+
+      /* EXT_blend_func_extended brings a built in constant
+       * for determining number of dual source draw buffers
+       */
+      if (state->EXT_blend_func_extended_enable) {
+         add_const("gl_MaxDualSourceDrawBuffersEXT",
+                   state->Const.MaxDualSourceDrawBuffers);
       }
    } else {
       add_const("gl_MaxVertexUniformComponents",
@@ -1015,6 +1070,19 @@ builtin_variable_generator::generate_fs_special_vars()
       add_output(FRAG_RESULT_COLOR, vec4_t, "gl_FragColor");
       add_output(FRAG_RESULT_DATA0,
                  array(vec4_t, state->Const.MaxDrawBuffers), "gl_FragData");
+   }
+
+   if (state->es_shader && state->language_version == 100 && state->EXT_blend_func_extended_enable) {
+      /* We make an assumption here that there will only ever be one dual-source draw buffer
+       * In case this assumption is ever proven to be false, make sure to assert here
+       * since we don't handle this case.
+       * In practice, this issue will never arise since no hardware will support it.
+       */
+      assert(state->Const.MaxDualSourceDrawBuffers <= 1);
+      add_index_output(FRAG_RESULT_DATA0, 1, vec4_t, "gl_SecondaryFragColorEXT");
+      add_index_output(FRAG_RESULT_DATA0, 1,
+                       array(vec4_t, state->Const.MaxDualSourceDrawBuffers),
+                       "gl_SecondaryFragDataEXT");
    }
 
    /* gl_FragDepth has always been in desktop GLSL, but did not appear in GLSL
