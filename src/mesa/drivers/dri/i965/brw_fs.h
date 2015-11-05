@@ -263,6 +263,14 @@ public:
                             nir_load_const_instr *instr);
    void nir_emit_undef(const brw::fs_builder &bld,
                        nir_ssa_undef_instr *instr);
+   void nir_emit_vs_intrinsic(const brw::fs_builder &bld,
+                              nir_intrinsic_instr *instr);
+   void nir_emit_gs_intrinsic(const brw::fs_builder &bld,
+                              nir_intrinsic_instr *instr);
+   void nir_emit_fs_intrinsic(const brw::fs_builder &bld,
+                              nir_intrinsic_instr *instr);
+   void nir_emit_cs_intrinsic(const brw::fs_builder &bld,
+                              nir_intrinsic_instr *instr);
    void nir_emit_intrinsic(const brw::fs_builder &bld,
                            nir_intrinsic_instr *instr);
    void nir_emit_ssbo_atomic(const brw::fs_builder &bld,
