@@ -479,8 +479,10 @@ suface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
    util_dynarray_init(&surface->subpics);
    surfaces[index] = handle_table_add(drv->htab, surface);
 
-   if (!surfaces[index])
+   if (!surfaces[index]) {
+      surface->buffer->destroy(surface->buffer);
       return VA_STATUS_ERROR_ALLOCATION_FAILED;
+   }
 
    return VA_STATUS_SUCCESS;
 }
@@ -612,15 +614,19 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
       switch (memory_type) {
       case VA_SURFACE_ATTRIB_MEM_TYPE_VA:
          surf->buffer = drv->pipe->create_video_buffer(drv->pipe, &templat);
-         if (!surf->buffer)
+         if (!surf->buffer) {
+            FREE(surf);
             goto no_res;
+         }
          util_dynarray_init(&surf->subpics);
          surfaces[i] = handle_table_add(drv->htab, surf);
          break;
       case VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME:
          vaStatus = suface_from_external_memory(ctx, surf, memory_attibute, i, surfaces, &templat);
-         if (vaStatus != VA_STATUS_SUCCESS)
+         if (vaStatus != VA_STATUS_SUCCESS) {
+            FREE(surf);
             goto no_res;
+         }
          break;
       default:
          assert(0);
