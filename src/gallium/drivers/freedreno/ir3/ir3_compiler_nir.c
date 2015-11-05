@@ -556,6 +556,10 @@ create_frag_coord(struct ir3_compile *ctx, unsigned comp)
 	}
 }
 
+/* NOTE: this creates the "TGSI" style fragface (ie. input slot
+ * VARYING_SLOT_FACE).  For NIR style nir_intrinsic_load_front_face
+ * we can just use the value from hw directly (since it is boolean)
+ */
 static struct ir3_instruction *
 create_frag_face(struct ir3_compile *ctx, unsigned comp)
 {
@@ -1224,7 +1228,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_vertex_id_zero_base:
 		if (!ctx->vertex_id) {
-			ctx->vertex_id = create_input(ctx->block, 0);
+			ctx->vertex_id = create_input(b, 0);
 			add_sysval_input(ctx, SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
 					ctx->vertex_id);
 		}
@@ -1232,7 +1236,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_instance_id:
 		if (!ctx->instance_id) {
-			ctx->instance_id = create_input(ctx->block, 0);
+			ctx->instance_id = create_input(b, 0);
 			add_sysval_input(ctx, SYSTEM_VALUE_INSTANCE_ID,
 					ctx->instance_id);
 		}
@@ -1243,6 +1247,14 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			unsigned n = idx * 4 + i;
 			dst[i] = create_driver_param(ctx, IR3_DP_UCP0_X + n);
 		}
+		break;
+	case nir_intrinsic_load_front_face:
+		if (!ctx->frag_face) {
+			ctx->so->frag_face = true;
+			ctx->frag_face = create_input(b, 0);
+			ctx->frag_face->regs[0]->flags |= IR3_REG_HALF;
+		}
+		dst[0] = ir3_ADD_S(b, ctx->frag_face, 0, create_immed(b, 1), 0);
 		break;
 	case nir_intrinsic_discard_if:
 	case nir_intrinsic_discard: {
