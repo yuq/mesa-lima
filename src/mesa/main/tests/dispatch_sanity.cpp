@@ -2421,6 +2421,11 @@ const struct function gles3_functions_possible[] = {
    { "glProgramUniform4uiEXT", 30, -1 },
    { "glProgramUniform4uivEXT", 30, -1 },
 
+   /* GL_EXT_blend_func_extended */
+   { "glBindFragDataLocationIndexedEXT", 30, -1 },
+   { "glGetFragDataIndexEXT", 30, -1 },
+   { "glBindFragDataLocationEXT", 30, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2508,6 +2513,9 @@ const struct function gles31_functions_possible[] = {
 
    /* GL_EXT_buffer_storage */
    { "glBufferStorageEXT", 31, -1 },
+
+   /* GL_EXT_blend_func_extended */
+   { "glGetProgramResourceLocationIndexEXT", 31, -1 },
 
    { NULL, 0, -1 },
  };
