@@ -203,12 +203,18 @@ _mesa_GetPointerv( GLenum pname, GLvoid **params )
 {
    GET_CURRENT_CONTEXT(ctx);
    const GLuint clientUnit = ctx->Array.ActiveTexture;
+   const char *callerstr;
+
+   if (_mesa_is_desktop_gl(ctx))
+      callerstr = "glGetPointerv";
+   else
+      callerstr = "glGetPointervKHR";
 
    if (!params)
       return;
 
    if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glGetPointerv %s\n", _mesa_enum_to_string(pname));
+      _mesa_debug(ctx, "%s %s\n", callerstr, _mesa_enum_to_string(pname));
 
    switch (pname) {
       case GL_VERTEX_ARRAY_POINTER:
@@ -280,7 +286,7 @@ _mesa_GetPointerv( GLenum pname, GLvoid **params )
    return;
 
 invalid_pname:
-   _mesa_error( ctx, GL_INVALID_ENUM, "glGetPointerv" );
+   _mesa_error( ctx, GL_INVALID_ENUM, "%s", callerstr);
    return;
 }
 
