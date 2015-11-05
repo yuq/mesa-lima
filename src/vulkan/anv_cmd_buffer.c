@@ -596,7 +596,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          cmd_buffer->state.descriptors[binding->set];
       struct anv_descriptor *desc = &set->descriptors[binding->offset];
 
-      const struct anv_state *surface_state;
+      struct anv_state surface_state;
       struct anv_bo *bo;
       uint32_t bo_offset;
 
@@ -606,31 +606,30 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          /* Nothing for us to do here */
          continue;
       case ANV_DESCRIPTOR_TYPE_BUFFER_VIEW:
-         surface_state = &desc->buffer_view->surface_state;
+         surface_state = desc->buffer_view->surface_state;
          bo = desc->buffer_view->bo;
          bo_offset = desc->buffer_view->offset;
          break;
       case ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET: {
-         struct anv_state state =
+         surface_state =
             anv_cmd_buffer_alloc_surface_state(cmd_buffer);
-         anv_fill_buffer_surface_state(cmd_buffer->device, state.map,
+         anv_fill_buffer_surface_state(cmd_buffer->device, surface_state.map,
                                        anv_format_for_vk_format(VK_FORMAT_R32G32B32A32_SFLOAT),
                                        desc->offset, desc->range);
-         surface_state = &state;
          bo = desc->buffer_view->bo;
          bo_offset = desc->buffer_view->offset;
          break;
       }
       case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW:
       case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER:
-         surface_state = &desc->image_view->nonrt_surface_state;
+         surface_state = desc->image_view->nonrt_surface_state;
          bo = desc->image_view->bo;
          bo_offset = desc->image_view->offset;
          break;
       }
 
-      bt_map[bias + s] = surface_state->offset + state_offset;
-      add_surface_state_reloc(cmd_buffer, *surface_state, bo, bo_offset);
+      bt_map[bias + s] = surface_state.offset + state_offset;
+      add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
    }
 
    return VK_SUCCESS;
