@@ -151,8 +151,9 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
 #if GALLIUM_STATIC_TARGETS
       drv->vscreen->pscreen = dd_create_screen(drm_fd);
 #else
-      if (pipe_loader_drm_probe_fd(&drv->dev, drm_fd))
-         drv->vscreen->pscreen = pipe_loader_create_screen(drv->dev, PIPE_SEARCH_DIR);
+      if (pipe_loader_drm_probe_fd(&drv->vscreen->dev, drm_fd))
+         drv->vscreen->pscreen =
+           pipe_loader_create_screen(drv->vscreen->dev, PIPE_SEARCH_DIR);
 #endif
 
       if (!drv->vscreen->pscreen)
