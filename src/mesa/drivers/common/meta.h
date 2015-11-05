@@ -156,7 +156,6 @@ struct save_state
 
    /** MESA_META_VERTEX */
    struct gl_vertex_array_object *VAO;
-   struct gl_buffer_object *ArrayBufferObj;
 
    /** MESA_META_VIEWPORT */
    GLfloat ViewportX, ViewportY, ViewportW, ViewportH;
