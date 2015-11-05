@@ -2116,6 +2116,41 @@ process_array_type(YYLTYPE *loc, const glsl_type *base,
    return array_type;
 }
 
+static bool
+precision_qualifier_allowed(const glsl_type *type)
+{
+   /* Precision qualifiers apply to floating point, integer and opaque
+    * types.
+    *
+    * Section 4.5.2 (Precision Qualifiers) of the GLSL 1.30 spec says:
+    *    "Any floating point or any integer declaration can have the type
+    *    preceded by one of these precision qualifiers [...] Literal
+    *    constants do not have precision qualifiers. Neither do Boolean
+    *    variables.
+    *
+    * Section 4.5 (Precision and Precision Qualifiers) of the GLSL 1.30
+    * spec also says:
+    *
+    *     "Precision qualifiers are added for code portability with OpenGL
+    *     ES, not for functionality. They have the same syntax as in OpenGL
+    *     ES."
+    *
+    * Section 8 (Built-In Functions) of the GLSL ES 1.00 spec says:
+    *
+    *     "uniform lowp sampler2D sampler;
+    *     highp vec2 coord;
+    *     ...
+    *     lowp vec4 col = texture2D (sampler, coord);
+    *                                            // texture2D returns lowp"
+    *
+    * From this, we infer that GLSL 1.30 (and later) should allow precision
+    * qualifiers on sampler types just like float and integer types.
+    */
+   return type->is_float()
+       || type->is_integer()
+       || type->is_record()
+       || type->contains_opaque();
+}
 
 const glsl_type *
 ast_type_specifier::glsl_type(const char **name,
@@ -3608,42 +3643,6 @@ validate_identifier(const char *identifier, YYLTYPE loc,
                          "identifier `%s' uses reserved `__' string",
                          identifier);
    }
-}
-
-static bool
-precision_qualifier_allowed(const glsl_type *type)
-{
-   /* Precision qualifiers apply to floating point, integer and opaque
-    * types.
-    *
-    * Section 4.5.2 (Precision Qualifiers) of the GLSL 1.30 spec says:
-    *    "Any floating point or any integer declaration can have the type
-    *    preceded by one of these precision qualifiers [...] Literal
-    *    constants do not have precision qualifiers. Neither do Boolean
-    *    variables.
-    *
-    * Section 4.5 (Precision and Precision Qualifiers) of the GLSL 1.30
-    * spec also says:
-    *
-    *     "Precision qualifiers are added for code portability with OpenGL
-    *     ES, not for functionality. They have the same syntax as in OpenGL
-    *     ES."
-    *
-    * Section 8 (Built-In Functions) of the GLSL ES 1.00 spec says:
-    *
-    *     "uniform lowp sampler2D sampler;
-    *     highp vec2 coord;
-    *     ...
-    *     lowp vec4 col = texture2D (sampler, coord);
-    *                                            // texture2D returns lowp"
-    *
-    * From this, we infer that GLSL 1.30 (and later) should allow precision
-    * qualifiers on sampler types just like float and integer types.
-    */
-   return type->is_float()
-       || type->is_integer()
-       || type->is_record()
-       || type->contains_opaque();
 }
 
 ir_rvalue *
