@@ -155,7 +155,7 @@ private:
    void checkSwapSrc01(Instruction *);
 
    bool isCSpaceLoad(Instruction *);
-   bool isImmd32Load(Instruction *);
+   bool isImmdLoad(Instruction *);
    bool isAttribOrSharedLoad(Instruction *);
 };
 
@@ -166,9 +166,10 @@ LoadPropagation::isCSpaceLoad(Instruction *ld)
 }
 
 bool
-LoadPropagation::isImmd32Load(Instruction *ld)
+LoadPropagation::isImmdLoad(Instruction *ld)
 {
-   if (!ld || (ld->op != OP_MOV) || (typeSizeof(ld->dType) != 4))
+   if (!ld || (ld->op != OP_MOV) ||
+       ((typeSizeof(ld->dType) != 4) && (typeSizeof(ld->dType) != 8)))
       return false;
    return ld->src(0).getFile() == FILE_IMMEDIATE;
 }
@@ -201,8 +202,8 @@ LoadPropagation::checkSwapSrc01(Instruction *insn)
       else
          return;
    } else
-   if (isImmd32Load(i0)) {
-      if (!isCSpaceLoad(i1) && !isImmd32Load(i1))
+   if (isImmdLoad(i0)) {
+      if (!isCSpaceLoad(i1) && !isImmdLoad(i1))
          insn->swapSources(0, 1);
       else
          return;
