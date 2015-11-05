@@ -449,7 +449,9 @@ void anv_finish_wsi(struct anv_instance *instance);
 struct anv_meta_state {
    struct {
       struct anv_pipeline *color_pipeline;
-      struct anv_pipeline *depth_pipeline;
+      struct anv_pipeline *depth_only_pipeline;
+      struct anv_pipeline *stencil_only_pipeline;
+      struct anv_pipeline *depthstencil_pipeline;
    } clear;
 
    struct {

@@ -33,8 +33,8 @@ struct color_clear_vattrs {
    VkClearColorValue color;
 };
 
-/** Vertex attributes for depth clears.  */
-struct depth_clear_vattrs {
+/** Vertex attributes for depthstencil clears.  */
+struct depthstencil_clear_vattrs {
    struct anv_vue_header vue_header;
    float position[2]; /*<< 3DPRIM_RECTLIST */
 };
@@ -45,7 +45,8 @@ meta_clear_begin(struct anv_meta_saved_state *saved_state,
 {
    anv_meta_save(saved_state, cmd_buffer,
                  (1 << VK_DYNAMIC_STATE_VIEWPORT) |
-                 (1 << VK_DYNAMIC_STATE_SCISSOR));
+                 (1 << VK_DYNAMIC_STATE_SCISSOR) |
+                 (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE));
 
    cmd_buffer->state.dynamic.viewport.count = 0;
    cmd_buffer->state.dynamic.scissor.count = 0;
@@ -412,11 +413,13 @@ build_depthstencil_shaders(struct nir_shader **out_vs,
    *out_fs = fs_b.shader;
 }
 
-static void
-init_depth_pipeline(struct anv_device *device)
+static struct anv_pipeline *
+create_depthstencil_pipeline(struct anv_device *device,
+                             VkImageAspectFlags aspects)
 {
    struct nir_shader *vs_nir;
    struct nir_shader *fs_nir;
+
    build_depthstencil_shaders(&vs_nir, &fs_nir);
 
    const VkPipelineVertexInputStateCreateInfo vi_state = {
@@ -425,7 +428,7 @@ init_depth_pipeline(struct anv_device *device)
       .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
          {
             .binding = 0,
-            .strideInBytes = sizeof(struct depth_clear_vattrs),
+            .strideInBytes = sizeof(struct depthstencil_clear_vattrs),
             .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
          },
       },
@@ -436,25 +439,32 @@ init_depth_pipeline(struct anv_device *device)
             .location = 0,
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_UINT,
-            .offsetInBytes = offsetof(struct depth_clear_vattrs, vue_header),
+            .offsetInBytes = offsetof(struct depthstencil_clear_vattrs, vue_header),
          },
          {
             /* Position */
             .location = 1,
             .binding = 0,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offsetInBytes = offsetof(struct depth_clear_vattrs, position),
+            .offsetInBytes = offsetof(struct depthstencil_clear_vattrs, position),
          },
       },
    };
 
    const VkPipelineDepthStencilStateCreateInfo ds_state = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-      .depthTestEnable = true,
+      .depthTestEnable = (aspects & VK_IMAGE_ASPECT_DEPTH_BIT),
       .depthCompareOp = VK_COMPARE_OP_ALWAYS,
-      .depthWriteEnable = true,
+      .depthWriteEnable = (aspects & VK_IMAGE_ASPECT_DEPTH_BIT),
       .depthBoundsTestEnable = false,
-      .stencilTestEnable = false,
+      .stencilTestEnable = (aspects & VK_IMAGE_ASPECT_STENCIL_BIT),
+      .front = {
+         .stencilPassOp = VK_STENCIL_OP_REPLACE,
+         .stencilCompareOp = VK_COMPARE_OP_ALWAYS,
+         .stencilWriteMask = UINT32_MAX,
+         .stencilReference = 0, /* dynamic */
+      },
+      .back = { 0 /* dont care */ },
    };
 
    const VkPipelineColorBlendStateCreateInfo cb_state = {
@@ -466,20 +476,21 @@ init_depth_pipeline(struct anv_device *device)
       .pAttachments = NULL,
    };
 
-   device->meta_state.clear.depth_pipeline =
-      create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
-                      &cb_state);
+   return create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
+                          &cb_state);
 }
 
 static void
-emit_load_depth_clear(struct anv_cmd_buffer *cmd_buffer,
-                      uint32_t attachment, float clear_value)
+emit_load_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
+                             uint32_t attachment,
+                             VkImageAspectFlags aspects,
+                             VkClearDepthStencilValue clear_value)
 {
    struct anv_device *device = cmd_buffer->device;
    VkCmdBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
 
-   const struct depth_clear_vattrs vertex_data[3] = {
+   const struct depthstencil_clear_vattrs vertex_data[3] = {
       {
          .vue_header = { 0 },
          .position = { 0.0, 0.0 },
@@ -518,8 +529,10 @@ emit_load_depth_clear(struct anv_cmd_buffer *cmd_buffer,
             .originY = 0,
             .width = fb->width,
             .height = fb->height,
-            .minDepth = clear_value,
-            .maxDepth = clear_value,
+
+            /* Ignored when clearing only stencil. */
+            .minDepth = clear_value.depth,
+            .maxDepth = clear_value.depth,
          },
       });
 
@@ -531,34 +544,72 @@ emit_load_depth_clear(struct anv_cmd_buffer *cmd_buffer,
          }
       });
 
+   if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
+      ANV_CALL(CmdSetStencilReference)(cmd_buffer_h, VK_STENCIL_FACE_FRONT_BIT,
+                                       clear_value.stencil);
+   }
+
    ANV_CALL(CmdBindVertexBuffers)(cmd_buffer_h, 0, 1,
       (VkBuffer[]) { anv_buffer_to_handle(&vertex_buffer) },
       (VkDeviceSize[]) { 0 });
 
-   if (cmd_buffer->state.pipeline != device->meta_state.clear.depth_pipeline) {
-      VkPipeline pipeline_h =
-         anv_pipeline_to_handle(device->meta_state.clear.depth_pipeline);
+   struct anv_pipeline *pipeline;
+   switch (aspects) {
+   case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
+      pipeline = device->meta_state.clear.depthstencil_pipeline;
+      break;
+   case VK_IMAGE_ASPECT_DEPTH_BIT:
+      pipeline = device->meta_state.clear.depth_only_pipeline;
+      break;
+   case VK_IMAGE_ASPECT_STENCIL_BIT:
+      pipeline = device->meta_state.clear.stencil_only_pipeline;
+      break;
+   default:
+      unreachable("expected depth or stencil aspect");
+   }
+
+   if (cmd_buffer->state.pipeline != pipeline) {
       ANV_CALL(CmdBindPipeline)(cmd_buffer_h, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                pipeline_h);
+                                anv_pipeline_to_handle(pipeline));
    }
 
    ANV_CALL(CmdDraw)(cmd_buffer_h, 3, 1, 0, 0);
+}
+
+static void
+init_depthstencil_pipelines(struct anv_device *device)
+{
+   device->meta_state.clear.depth_only_pipeline =
+      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+   device->meta_state.clear.stencil_only_pipeline =
+      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_STENCIL_BIT);
+
+   device->meta_state.clear.depthstencil_pipeline =
+      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_DEPTH_BIT |
+                                           VK_IMAGE_ASPECT_STENCIL_BIT);
 }
 
 void
 anv_device_init_meta_clear_state(struct anv_device *device)
 {
    init_color_pipeline(device);
-   init_depth_pipeline(device);
+   init_depthstencil_pipelines(device);
 }
 
 void
 anv_device_finish_meta_clear_state(struct anv_device *device)
 {
-   ANV_CALL(DestroyPipeline)(anv_device_to_handle(device),
+   VkDevice device_h = anv_device_to_handle(device);
+
+   ANV_CALL(DestroyPipeline)(device_h,
       anv_pipeline_to_handle(device->meta_state.clear.color_pipeline));
-   ANV_CALL(DestroyPipeline)(anv_device_to_handle(device),
-      anv_pipeline_to_handle(device->meta_state.clear.depth_pipeline));
+   ANV_CALL(DestroyPipeline)(device_h,
+      anv_pipeline_to_handle(device->meta_state.clear.depth_only_pipeline));
+   ANV_CALL(DestroyPipeline)(device_h,
+      anv_pipeline_to_handle(device->meta_state.clear.stencil_only_pipeline));
+   ANV_CALL(DestroyPipeline)(device_h,
+      anv_pipeline_to_handle(device->meta_state.clear.depthstencil_pipeline));
 }
 
 void
@@ -578,15 +629,20 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
             emit_load_color_clear(cmd_buffer, a, clear_values[a].color);
          }
       } else {
+         VkImageAspectFlags aspects = 0;
+
          if (att->format->depth_format &&
              att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            emit_load_depth_clear(cmd_buffer, a, clear_values[a].depthStencil.depth);
+            aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
          }
 
          if (att->format->has_stencil &&
              att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            anv_finishme("stencil load clear");
+            aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
          }
+
+         emit_load_depthstencil_clear(cmd_buffer, a, aspects,
+                                      clear_values[a].depthStencil);
       }
    }
 
