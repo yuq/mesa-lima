@@ -31,6 +31,7 @@
 #include "ir_visitor.h"
 #include "ir_hierarchical_visitor.h"
 #include "ir.h"
+#include "main/imports.h"
 
 /*
  * pass to lower GLSL IR to NIR
@@ -145,16 +146,10 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
 
    nir_lower_outputs_to_temporaries(shader);
 
-   /* TODO: Use _mesa_fls instead */
-   unsigned num_textures = 0;
-   for (unsigned i = 0; i < 8 * sizeof(sh->Program->SamplersUsed); i++)
-      if (sh->Program->SamplersUsed & (1 << i))
-         num_textures = i;
-
    shader->info.name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
    if (shader_prog->Label)
       shader->info.label = ralloc_strdup(shader, shader_prog->Label);
-   shader->info.num_textures = num_textures;
+   shader->info.num_textures = _mesa_fls(sh->Program->SamplersUsed);
    shader->info.num_ubos = sh->NumUniformBlocks;
    shader->info.num_abos = shader_prog->NumAtomicBuffers;
    shader->info.num_ssbos = sh->NumShaderStorageBlocks;
