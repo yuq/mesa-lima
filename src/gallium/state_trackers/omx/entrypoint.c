@@ -119,14 +119,13 @@ void omx_put_screen(void)
 {
    pipe_mutex_lock(omx_lock);
    if ((--omx_usecount) == 0) {
-      if (omx_render_node) {
-         vl_drm_screen_destroy(omx_screen);
-         close(drm_fd);
-      } else {
-         vl_screen_destroy(omx_screen);
-         XCloseDisplay(omx_display);
-      }
+      omx_screen->destroy(omx_screen);
       omx_screen = NULL;
+
+      if (omx_render_node)
+         close(drm_fd);
+      else
+         XCloseDisplay(omx_display);
    }
    pipe_mutex_unlock(omx_lock);
 }
