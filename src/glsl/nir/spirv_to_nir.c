@@ -1199,6 +1199,14 @@ static nir_ssa_def *vtn_vector_extract_dynamic(struct vtn_builder *b,
                                                nir_ssa_def *src,
                                                nir_ssa_def *index);
 
+static bool
+variable_is_external_block(nir_variable *var)
+{
+   return var->interface_type &&
+          (var->data.mode == nir_var_uniform ||
+           var->data.mode == nir_var_shader_storage);
+}
+
 static struct vtn_ssa_value *
 vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
                   struct vtn_type *src_type)
@@ -1206,7 +1214,7 @@ vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
    nir_deref *src_tail = get_deref_tail(src);
 
    struct vtn_ssa_value *val;
-   if (src->var->interface_type && src->var->data.mode == nir_var_uniform)
+   if (variable_is_external_block(src->var))
       val = vtn_block_load(b, src, src_type, src_tail);
    else
       val = _vtn_variable_load(b, src, src_tail);
@@ -1549,7 +1557,8 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
        * actually access the variable, so we need to keep around the original
        * type of the variable.
        */
-      if (base->var->interface_type && base->var->data.mode == nir_var_uniform)
+
+      if (variable_is_external_block(base->var))
          val->deref_type = vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
       else
          val->deref_type = deref_type;
