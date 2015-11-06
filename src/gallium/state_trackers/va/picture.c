@@ -65,7 +65,7 @@ vlVaBeginPicture(VADriverContextP ctx, VAContextID context_id, VASurfaceID rende
       if ((context->target->buffer_format != PIPE_FORMAT_B8G8R8A8_UNORM  &&
            context->target->buffer_format != PIPE_FORMAT_R8G8B8A8_UNORM) ||
            context->target->interlaced)
-          return VA_STATUS_ERROR_UNIMPLEMENTED;
+         return VA_STATUS_ERROR_UNIMPLEMENTED;
       return VA_STATUS_SUCCESS;
    }
 
@@ -717,60 +717,60 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
 static VAStatus
 handleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
-    struct u_rect src_rect;
-    struct u_rect dst_rect;
-    struct u_rect *dirty_area;
-    vlVaSurface *src_surface;
-    VAProcPipelineParameterBuffer *pipeline_param;
-    struct pipe_surface **surfaces;
-    struct pipe_screen *screen;
-    struct pipe_surface *psurf;
+   struct u_rect src_rect;
+   struct u_rect dst_rect;
+   struct u_rect *dirty_area;
+   vlVaSurface *src_surface;
+   VAProcPipelineParameterBuffer *pipeline_param;
+   struct pipe_surface **surfaces;
+   struct pipe_screen *screen;
+   struct pipe_surface *psurf;
 
-    if (!drv || !context)
-       return VA_STATUS_ERROR_INVALID_CONTEXT;
+   if (!drv || !context)
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-    if (!buf || !buf->data)
-       return VA_STATUS_ERROR_INVALID_BUFFER;
+   if (!buf || !buf->data)
+      return VA_STATUS_ERROR_INVALID_BUFFER;
 
-    if (!context->target)
-        return VA_STATUS_ERROR_INVALID_SURFACE;
+   if (!context->target)
+      return VA_STATUS_ERROR_INVALID_SURFACE;
 
-    pipeline_param = (VAProcPipelineParameterBuffer *)buf->data;
+   pipeline_param = (VAProcPipelineParameterBuffer *)buf->data;
 
-    src_surface = handle_table_get(drv->htab, pipeline_param->surface);
-    if (!src_surface || !src_surface->buffer)
-       return VA_STATUS_ERROR_INVALID_SURFACE;
+   src_surface = handle_table_get(drv->htab, pipeline_param->surface);
+   if (!src_surface || !src_surface->buffer)
+      return VA_STATUS_ERROR_INVALID_SURFACE;
 
-    surfaces = context->target->get_surfaces(context->target);
+   surfaces = context->target->get_surfaces(context->target);
 
-    if (!surfaces || !surfaces[0])
-        return VA_STATUS_ERROR_INVALID_SURFACE;
+   if (!surfaces || !surfaces[0])
+      return VA_STATUS_ERROR_INVALID_SURFACE;
 
-    screen = drv->pipe->screen;
+   screen = drv->pipe->screen;
 
-    psurf = surfaces[0];
+   psurf = surfaces[0];
 
-    src_rect.x0 = pipeline_param->surface_region->x;
-    src_rect.y0 = pipeline_param->surface_region->y;
-    src_rect.x1 = pipeline_param->surface_region->x + pipeline_param->surface_region->width;
-    src_rect.y1 = pipeline_param->surface_region->y + pipeline_param->surface_region->height;
+   src_rect.x0 = pipeline_param->surface_region->x;
+   src_rect.y0 = pipeline_param->surface_region->y;
+   src_rect.x1 = pipeline_param->surface_region->x + pipeline_param->surface_region->width;
+   src_rect.y1 = pipeline_param->surface_region->y + pipeline_param->surface_region->height;
 
-    dst_rect.x0 = pipeline_param->output_region->x;
-    dst_rect.y0 = pipeline_param->output_region->y;
-    dst_rect.x1 = pipeline_param->output_region->x + pipeline_param->output_region->width;
-    dst_rect.y1 = pipeline_param->output_region->y + pipeline_param->output_region->height;
+   dst_rect.x0 = pipeline_param->output_region->x;
+   dst_rect.y0 = pipeline_param->output_region->y;
+   dst_rect.x1 = pipeline_param->output_region->x + pipeline_param->output_region->width;
+   dst_rect.y1 = pipeline_param->output_region->y + pipeline_param->output_region->height;
 
-    dirty_area = vl_screen_get_dirty_area(drv->vscreen);
+   dirty_area = vl_screen_get_dirty_area(drv->vscreen);
 
-    vl_compositor_clear_layers(&drv->cstate);
-    vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, src_surface->buffer, &src_rect, NULL, VL_COMPOSITOR_WEAVE);
-    vl_compositor_set_layer_dst_area(&drv->cstate, 0, &dst_rect);
-    vl_compositor_render(&drv->cstate, &drv->compositor, psurf, dirty_area, true);
+   vl_compositor_clear_layers(&drv->cstate);
+   vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, src_surface->buffer, &src_rect, NULL, VL_COMPOSITOR_WEAVE);
+   vl_compositor_set_layer_dst_area(&drv->cstate, 0, &dst_rect);
+   vl_compositor_render(&drv->cstate, &drv->compositor, psurf, dirty_area, true);
 
-    screen->fence_reference(screen, &src_surface->fence, NULL);
-    drv->pipe->flush(drv->pipe, &src_surface->fence, 0);
+   screen->fence_reference(screen, &src_surface->fence, NULL);
+   drv->pipe->flush(drv->pipe, &src_surface->fence, 0);
 
-    return VA_STATUS_SUCCESS;
+   return VA_STATUS_SUCCESS;
 }
 
 VAStatus

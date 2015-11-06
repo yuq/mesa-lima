@@ -152,11 +152,11 @@ vlVaUnmapBuffer(VADriverContextP ctx, VABufferID buf_id)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
    if (buf->derived_surface.resource) {
-     if (!buf->derived_surface.transfer)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
+      if (!buf->derived_surface.transfer)
+         return VA_STATUS_ERROR_INVALID_BUFFER;
 
-     pipe_buffer_unmap(drv->pipe, buf->derived_surface.transfer);
-     buf->derived_surface.transfer = NULL;
+      pipe_buffer_unmap(drv->pipe, buf->derived_surface.transfer);
+      buf->derived_surface.transfer = NULL;
    }
 
    return VA_STATUS_SUCCESS;
@@ -175,10 +175,10 @@ vlVaDestroyBuffer(VADriverContextP ctx, VABufferID buf_id)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
    if (buf->derived_surface.resource) {
-     if (buf->export_refcount > 0)
-       return VA_STATUS_ERROR_INVALID_BUFFER;
+      if (buf->export_refcount > 0)
+         return VA_STATUS_ERROR_INVALID_BUFFER;
 
-     pipe_resource_reference(&buf->derived_surface.resource, NULL);
+      pipe_resource_reference(&buf->derived_surface.resource, NULL);
    }
 
    FREE(buf->data);

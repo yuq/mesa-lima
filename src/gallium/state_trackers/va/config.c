@@ -71,8 +71,8 @@ vlVaQueryConfigEntrypoints(VADriverContextP ctx, VAProfile profile,
    *num_entrypoints = 0;
 
    if (profile == VAProfileNone) {
-       entrypoint_list[(*num_entrypoints)++] = VAEntrypointVideoProc;
-       return VA_STATUS_SUCCESS;
+      entrypoint_list[(*num_entrypoints)++] = VAEntrypointVideoProc;
+      return VA_STATUS_SUCCESS;
    }
 
    p = ProfileToPipe(profile);
@@ -104,7 +104,7 @@ vlVaGetConfigAttributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint en
          value = VA_RT_FORMAT_YUV420;
          break;
       case VAConfigAttribRateControl:
-	 value = VA_RC_NONE;
+         value = VA_RC_NONE;
          break;
       default:
          value = VA_ATTRIB_NOT_SUPPORTED;
@@ -127,8 +127,8 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    if (profile == VAProfileNone && entrypoint == VAEntrypointVideoProc) {
-       *config_id = PIPE_VIDEO_PROFILE_UNKNOWN;
-       return VA_STATUS_SUCCESS;
+      *config_id = PIPE_VIDEO_PROFILE_UNKNOWN;
+      return VA_STATUS_SUCCESS;
    }
 
    p = ProfileToPipe(profile);
@@ -167,7 +167,7 @@ vlVaQueryConfigAttributes(VADriverContextP ctx, VAConfigID config_id, VAProfile 
 
    if (config_id == PIPE_VIDEO_PROFILE_UNKNOWN) {
       *entrypoint = VAEntrypointVideoProc;
-       *num_attribs = 0;
+      *num_attribs = 0;
       return VA_STATUS_SUCCESS;
    }
 
