@@ -280,15 +280,14 @@ vlVaAcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id,
 
          buf_info->handle = (intptr_t)whandle.handle;
          break;
+      }
       default:
          return VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE;
       }
-   }
 
-   buf_info->type = buf->type;
-   buf_info->mem_type = mem_type;
-   buf_info->mem_size = buf->num_elements * buf->size;
-
+      buf_info->type = buf->type;
+      buf_info->mem_type = mem_type;
+      buf_info->mem_size = buf->num_elements * buf->size;
    }
 
    buf->export_refcount++;
