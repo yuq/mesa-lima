@@ -1791,26 +1791,17 @@ void anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
          for (uint32_t j = 0; j < write->count; j++) {
-            if (write->pDescriptors[j].bufferView.handle) {
-               ANV_FROM_HANDLE(anv_buffer_view, bview,
-                               write->pDescriptors[j].bufferView);
+            assert(write->pDescriptors[j].bufferInfo.buffer.handle);
+            ANV_FROM_HANDLE(anv_buffer, buffer,
+                            write->pDescriptors[j].bufferInfo.buffer);
+            assert(buffer);
 
-               desc[j] = (struct anv_descriptor) {
-                  .type = ANV_DESCRIPTOR_TYPE_BUFFER_VIEW,
-                  .buffer_view = bview,
-               };
-            } else {
-               ANV_FROM_HANDLE(anv_buffer, buffer,
-                               write->pDescriptors[j].bufferInfo.buffer);
-               assert(buffer);
-
-               desc[j] = (struct anv_descriptor) {
-                  .type = ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET,
-                  .buffer = buffer,
-                  .offset = write->pDescriptors[j].bufferInfo.offset,
-                  .range = write->pDescriptors[j].bufferInfo.range,
-               };
-            }
+            desc[j] = (struct anv_descriptor) {
+               .type = ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET,
+               .buffer = buffer,
+               .offset = write->pDescriptors[j].bufferInfo.offset,
+               .range = write->pDescriptors[j].bufferInfo.range,
+            };
          }
 
       default:
