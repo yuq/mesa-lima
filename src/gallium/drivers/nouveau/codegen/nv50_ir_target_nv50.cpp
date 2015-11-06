@@ -343,7 +343,7 @@ TargetNV50::insnCanLoad(const Instruction *i, int s,
    }
 
    if (sf == FILE_IMMEDIATE)
-      return true;
+      return ldSize <= 4;
 
 
    // Check if memory access is encodable:
