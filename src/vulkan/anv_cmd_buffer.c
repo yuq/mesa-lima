@@ -548,6 +548,41 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
                       state.offset + dword * 4, bo, offset);
 }
 
+static void
+fill_descriptor_buffer_surface_state(struct anv_device *device, void *state,
+                                     VkShaderStage stage, VkDescriptorType type,
+                                     uint32_t offset, uint32_t range)
+{
+   VkFormat format;
+   uint32_t stride;
+
+   switch (type) {
+   case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+   case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      if (anv_is_scalar_shader_stage(device->instance->physicalDevice.compiler,
+                                     stage)) {
+         stride = 4;
+      } else {
+         stride = 16;
+      }
+      format = VK_FORMAT_R32G32B32A32_SFLOAT;
+      break;
+
+   case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+   case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+      stride = 1;
+      format = VK_FORMAT_UNDEFINED;
+      break;
+
+   default:
+      unreachable("Invalid descriptor type");
+   }
+
+   anv_fill_buffer_surface_state(device, state,
+                                 anv_format_for_vk_format(format),
+                                 offset, range, stride);
+}
+
 VkResult
 anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                   VkShaderStage stage, struct anv_state *bt_state)
@@ -623,9 +658,11 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
          surface_state =
             anv_cmd_buffer_alloc_surface_state(cmd_buffer);
-         anv_fill_buffer_surface_state(cmd_buffer->device, surface_state.map,
-                                       anv_format_for_vk_format(VK_FORMAT_R32G32B32A32_SFLOAT),
-                                       bo_offset, desc->range);
+
+         fill_descriptor_buffer_surface_state(cmd_buffer->device,
+                                              surface_state.map,
+                                              stage, desc->type,
+                                              bo_offset, desc->range);
          break;
       }
 

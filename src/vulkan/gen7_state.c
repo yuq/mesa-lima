@@ -31,14 +31,8 @@
 
 void
 gen7_fill_buffer_surface_state(void *state, const struct anv_format *format,
-                               uint32_t offset, uint32_t range)
+                               uint32_t offset, uint32_t range, uint32_t stride)
 {
-   /* This assumes RGBA float format. */
-
-   uint32_t stride = 16; /* Depends on whether accessing shader is simd8 or
-                          * vec4.  Will need one of each for buffers that are
-                          * used in both vec4 and simd8. */
-
    uint32_t num_elements = range / stride;
 
    struct GEN7_RENDER_SURFACE_STATE surface_state = {

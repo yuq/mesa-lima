@@ -1361,12 +1361,15 @@ gen8_image_view_init(struct anv_image_view *iview,
 
 void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
                                    const struct anv_format *format,
-                                   uint32_t offset, uint32_t range);
+                                   uint32_t offset, uint32_t range,
+                                   uint32_t stride);
 
 void gen7_fill_buffer_surface_state(void *state, const struct anv_format *format,
-                                    uint32_t offset, uint32_t range);
+                                    uint32_t offset, uint32_t range,
+                                    uint32_t stride);
 void gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
-                                    uint32_t offset, uint32_t range);
+                                    uint32_t offset, uint32_t range,
+                                    uint32_t stride);
 
 struct anv_sampler {
    uint32_t state[4];

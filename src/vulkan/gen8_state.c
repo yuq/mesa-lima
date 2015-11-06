@@ -31,10 +31,8 @@
 
 void
 gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
-                               uint32_t offset, uint32_t range)
+                               uint32_t offset, uint32_t range, uint32_t stride)
 {
-   /* This assumes RGBA float format. */
-   uint32_t stride = 4;
    uint32_t num_elements = range / stride;
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {

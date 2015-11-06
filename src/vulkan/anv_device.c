@@ -1415,14 +1415,14 @@ void anv_DestroyBuffer(
 void
 anv_fill_buffer_surface_state(struct anv_device *device, void *state,
                               const struct anv_format *format,
-                              uint32_t offset, uint32_t range)
+                              uint32_t offset, uint32_t range, uint32_t stride)
 {
    switch (device->info.gen) {
    case 7:
-      gen7_fill_buffer_surface_state(state, format, offset, range);
+      gen7_fill_buffer_surface_state(state, format, offset, range, stride);
       break;
    case 8:
-      gen8_fill_buffer_surface_state(state, format, offset, range);
+      gen8_fill_buffer_surface_state(state, format, offset, range, stride);
       break;
    default:
       unreachable("unsupported gen\n");
