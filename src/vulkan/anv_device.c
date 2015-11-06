@@ -1429,44 +1429,19 @@ anv_fill_buffer_surface_state(struct anv_device *device, void *state,
    }
 }
 
-VkResult
-anv_buffer_view_create(
-   struct anv_device *                          device,
-   const VkBufferViewCreateInfo*                pCreateInfo,
-   struct anv_buffer_view **                    bview_out)
+VkResult anv_CreateBufferView(
+    VkDevice                                    _device,
+    const VkBufferViewCreateInfo*               pCreateInfo,
+    VkBufferView*                               pView)
 {
-   ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
-   struct anv_buffer_view *bview;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
-
-   bview = anv_device_alloc(device, sizeof(*bview), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (bview == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   *bview = (struct anv_buffer_view) {
-      .bo = buffer->bo,
-      .offset = buffer->offset + pCreateInfo->offset,
-      .surface_state = anv_state_pool_alloc(&device->surface_state_pool, 64, 64),
-      .format = anv_format_for_vk_format(pCreateInfo->format),
-      .range = pCreateInfo->range,
-   };
-
-   *bview_out = bview;
-
-   return VK_SUCCESS;
+   stub_return(VK_UNSUPPORTED);
 }
 
 void anv_DestroyBufferView(
     VkDevice                                    _device,
     VkBufferView                                _bview)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_buffer_view, bview, _bview);
-
-   anv_state_pool_free(&device->surface_state_pool, bview->surface_state);
-   anv_device_free(device, bview);
+   stub();
 }
 
 void anv_DestroySampler(

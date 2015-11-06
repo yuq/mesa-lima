@@ -605,11 +605,6 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       case ANV_DESCRIPTOR_TYPE_SAMPLER:
          /* Nothing for us to do here */
          continue;
-      case ANV_DESCRIPTOR_TYPE_BUFFER_VIEW:
-         surface_state = desc->buffer_view->surface_state;
-         bo = desc->buffer_view->bo;
-         bo_offset = desc->buffer_view->offset;
-         break;
       case ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET: {
          bo = desc->buffer->bo;
          bo_offset = desc->buffer->offset + desc->offset;

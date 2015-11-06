@@ -726,7 +726,6 @@ struct anv_descriptor_set_layout {
 
 enum anv_descriptor_type {
    ANV_DESCRIPTOR_TYPE_EMPTY = 0,
-   ANV_DESCRIPTOR_TYPE_BUFFER_VIEW,
    ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET,
    ANV_DESCRIPTOR_TYPE_IMAGE_VIEW,
    ANV_DESCRIPTOR_TYPE_SAMPLER,
@@ -739,7 +738,6 @@ struct anv_descriptor {
    union {
       struct {
          union {
-            struct anv_buffer_view *buffer_view;
             struct anv_image_view *image_view;
          };
          struct anv_sampler *sampler;
@@ -1317,14 +1315,6 @@ struct anv_image {
    };
 };
 
-struct anv_buffer_view {
-   struct anv_state surface_state; /**< RENDER_SURFACE_STATE */
-   struct anv_bo *bo;
-   uint32_t offset; /**< Offset into bo. */
-   uint32_t range; /**< VkBufferViewCreateInfo::range */
-   const struct anv_format *format; /**< VkBufferViewCreateInfo::format */
-};
-
 struct anv_image_view {
    const struct anv_image *image; /**< VkImageViewCreateInfo::image */
    const struct anv_format *format; /**< VkImageViewCreateInfo::format */
@@ -1370,10 +1360,6 @@ gen8_image_view_init(struct anv_image_view *iview,
                      struct anv_device *device,
                      const VkImageViewCreateInfo* pCreateInfo,
                      struct anv_cmd_buffer *cmd_buffer);
-
-VkResult anv_buffer_view_create(struct anv_device *device,
-                                const VkBufferViewCreateInfo *pCreateInfo,
-                                struct anv_buffer_view **bview_out);
 
 void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
                                    const struct anv_format *format,
@@ -1482,7 +1468,6 @@ ANV_DEFINE_HANDLE_CASTS(anv_queue, VkQueue)
 
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_cmd_pool, VkCmdPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer, VkBuffer)
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer_view, VkBufferView);
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set, VkDescriptorSet)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set_layout, VkDescriptorSetLayout)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_device_memory, VkDeviceMemory)

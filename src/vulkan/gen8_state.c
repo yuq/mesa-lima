@@ -63,30 +63,6 @@ gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
    GEN8_RENDER_SURFACE_STATE_pack(NULL, state, &surface_state);
 }
 
-VkResult gen8_CreateBufferView(
-    VkDevice                                    _device,
-    const VkBufferViewCreateInfo*               pCreateInfo,
-    VkBufferView*                               pView)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_buffer_view *bview;
-   VkResult result;
-
-   result = anv_buffer_view_create(device, pCreateInfo, &bview);
-   if (result != VK_SUCCESS)
-      return result;
-
-   const struct anv_format *format =
-      anv_format_for_vk_format(pCreateInfo->format);
-
-   gen8_fill_buffer_surface_state(bview->surface_state.map, format,
-                                  bview->offset, pCreateInfo->range);
-
-   *pView = anv_buffer_view_to_handle(bview);
-
-   return VK_SUCCESS;
-}
-
 static const uint8_t anv_halign[] = {
     [4] = HALIGN4,
     [8] = HALIGN8,
