@@ -927,7 +927,6 @@ fs_instruction_scheduler::calculate_deps()
     * granular level.
     */
    schedule_node *last_fixed_grf_write = NULL;
-   int reg_width = v->dispatch_width / 8;
 
    /* The last instruction always needs to still be the last
     * instruction.  Either it's flow control (IF, ELSE, ENDIF, DO,
@@ -964,10 +963,7 @@ fs_instruction_scheduler::calculate_deps()
                     (inst->src[i].fixed_hw_reg.file ==
                      BRW_GENERAL_REGISTER_FILE)) {
             if (post_reg_alloc) {
-               int size = reg_width;
-               if (inst->src[i].fixed_hw_reg.vstride == BRW_VERTICAL_STRIDE_0)
-                  size = 1;
-               for (int r = 0; r < size; r++)
+               for (int r = 0; r < inst->regs_read(i); r++)
                   add_dep(last_grf_write[inst->src[i].fixed_hw_reg.nr + r], n);
             } else {
                add_dep(last_fixed_grf_write, n);
@@ -1031,7 +1027,7 @@ fs_instruction_scheduler::calculate_deps()
       } else if (inst->dst.file == HW_REG &&
                  inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
          if (post_reg_alloc) {
-            for (int r = 0; r < reg_width; r++)
+            for (int r = 0; r < inst->regs_written; r++)
                last_grf_write[inst->dst.fixed_hw_reg.nr + r] = n;
          } else {
             last_fixed_grf_write = n;
@@ -1093,10 +1089,7 @@ fs_instruction_scheduler::calculate_deps()
                     (inst->src[i].fixed_hw_reg.file ==
                      BRW_GENERAL_REGISTER_FILE)) {
             if (post_reg_alloc) {
-               int size = reg_width;
-               if (inst->src[i].fixed_hw_reg.vstride == BRW_VERTICAL_STRIDE_0)
-                  size = 1;
-               for (int r = 0; r < size; r++)
+               for (int r = 0; r < inst->regs_read(i); r++)
                   add_dep(n, last_grf_write[inst->src[i].fixed_hw_reg.nr + r], 0);
             } else {
                add_dep(n, last_fixed_grf_write, 0);
@@ -1159,7 +1152,7 @@ fs_instruction_scheduler::calculate_deps()
       } else if (inst->dst.file == HW_REG &&
                  inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
          if (post_reg_alloc) {
-            for (int r = 0; r < reg_width; r++)
+            for (int r = 0; r < inst->regs_written; r++)
                last_grf_write[inst->dst.fixed_hw_reg.nr + r] = n;
          } else {
             last_fixed_grf_write = n;
