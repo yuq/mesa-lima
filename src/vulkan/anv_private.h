@@ -430,6 +430,9 @@ struct anv_physical_device {
     struct brw_compiler *                       compiler;
 };
 
+bool anv_is_scalar_shader_stage(const struct brw_compiler *compiler,
+                                VkShaderStage stage);
+
 struct anv_instance {
     VK_LOADER_DATA                              _loader_data;
 

@@ -121,8 +121,9 @@ static const gl_shader_stage vk_shader_stage_to_mesa_stage[] = {
    [VK_SHADER_STAGE_COMPUTE] = MESA_SHADER_COMPUTE,
 };
 
-static bool
-is_scalar_shader_stage(const struct brw_compiler *compiler, VkShaderStage stage)
+bool
+anv_is_scalar_shader_stage(const struct brw_compiler *compiler,
+                           VkShaderStage stage)
 {
    switch (stage) {
    case VK_SHADER_STAGE_VERTEX:
@@ -187,7 +188,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
    assert(entrypoint != NULL);
 
    brw_preprocess_nir(nir, &device->info,
-                      is_scalar_shader_stage(compiler, vk_stage));
+                      anv_is_scalar_shader_stage(compiler, vk_stage));
 
    nir_shader_gather_info(nir, entrypoint);
 
@@ -357,7 +358,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (nir == NULL)
       return NULL;
 
-   anv_nir_lower_push_constants(nir, is_scalar_shader_stage(compiler, stage));
+   anv_nir_lower_push_constants(nir, anv_is_scalar_shader_stage(compiler, stage));
 
    /* Figure out the number of parameters */
    prog_data->nr_params = 0;
@@ -409,7 +410,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
 
    /* Finish the optimization and compilation process */
    brw_postprocess_nir(nir, &pipeline->device->info,
-                       is_scalar_shader_stage(compiler, stage));
+                       anv_is_scalar_shader_stage(compiler, stage));
 
    /* nir_lower_io will only handle the push constants; we need to set this
     * to the full number of possible uniforms.
