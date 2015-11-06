@@ -1777,6 +1777,13 @@ void anv_UpdateDescriptorSets(
                .offset = write->pDescriptors[j].bufferInfo.offset,
                .range = write->pDescriptors[j].bufferInfo.range,
             };
+
+            /* For buffers with dynamic offsets, we use the full possible
+             * range in the surface state and do the actual range-checking
+             * in the shader.
+             */
+            if (bind_layout->dynamic_offset_index >= 0)
+               desc[j].range = buffer->size - desc[j].offset;
          }
 
       default:

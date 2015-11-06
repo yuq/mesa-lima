@@ -487,19 +487,28 @@ void anv_CmdBindDescriptorSets(
       if (set_layout->dynamic_offset_count > 0) {
          VkShaderStage s;
          for_each_bit(s, set_layout->shader_stages) {
-            anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, s,
-                                                      dynamic_offsets);
-            uint32_t *offsets =
-               cmd_buffer->state.push_constants[s]->dynamic_offsets +
-               layout->set[firstSet + i].dynamic_offset_start;
+            anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, s, dynamic);
 
-            typed_memcpy(offsets, pDynamicOffsets + dynamic_slot,
-                         set_layout->dynamic_offset_count);
+            struct anv_push_constants *push =
+               cmd_buffer->state.push_constants[s];
 
+            unsigned d = layout->set[firstSet + i].dynamic_offset_start;
+            const uint32_t *offsets = pDynamicOffsets + dynamic_slot;
+            struct anv_descriptor *desc = set->descriptors;
+
+            for (unsigned b = 0; b < set_layout->binding_count; b++) {
+               if (set_layout->binding[b].dynamic_offset_index < 0)
+                  continue;
+
+               unsigned array_size = set_layout->binding[b].array_size;
+               for (unsigned j = 0; j < array_size; j++) {
+                  push->dynamic[d].offset = *(offsets++);
+                  push->dynamic[d].range = (desc++)->range;
+                  d++;
+               }
+            }
          }
          cmd_buffer->state.push_constants_dirty |= set_layout->shader_stages;
-
-         dynamic_slot += set_layout->dynamic_offset_count;
       }
    }
 }

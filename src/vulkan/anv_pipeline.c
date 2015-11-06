@@ -370,7 +370,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    }
 
    if (pipeline->layout && pipeline->layout->stage[stage].has_dynamic_offsets)
-      prog_data->nr_params += MAX_DYNAMIC_BUFFERS;
+      prog_data->nr_params += MAX_DYNAMIC_BUFFERS * 2;
 
    if (prog_data->nr_params > 0) {
       prog_data->param = (const gl_constant_value **)

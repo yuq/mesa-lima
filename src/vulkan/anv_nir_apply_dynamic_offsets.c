@@ -107,77 +107,100 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
 
       nir_intrinsic_instr *offset_load =
          nir_intrinsic_instr_create(state->shader, offset_load_op);
-      offset_load->num_components = 1;
-      offset_load->const_index[0] = state->indices_start + index;
+      offset_load->num_components = 2;
+      offset_load->const_index[0] = state->indices_start + index * 2;
 
       if (const_arr_idx) {
-         offset_load->const_index[1] = const_arr_idx->u[0];
+         offset_load->const_index[1] = const_arr_idx->u[0] * 2;
       } else {
          offset_load->const_index[1] = 0;
-         nir_src_copy(&offset_load->src[0], &res_intrin->src[0],
-                      &intrin->instr);
+         offset_load->src[0] = nir_src_for_ssa(
+            nir_imul(b, nir_ssa_for_src(b, res_intrin->src[0], 1),
+                     nir_imm_int(b, 2)));
       }
 
-      nir_ssa_dest_init(&offset_load->instr, &offset_load->dest, 1, NULL);
+      nir_ssa_dest_init(&offset_load->instr, &offset_load->dest, 2, NULL);
       nir_builder_instr_insert(b, &offset_load->instr);
 
-      nir_ssa_def *offset = &offset_load->dest.ssa;
+      /* We calculate the full offset and don't bother with the base
+       * offset.  We need the full offset for the predicate anyway.
+       */
+      nir_ssa_def *rel_offset = nir_imm_int(b, intrin->const_index[0]);
       if (indirect_src >= 0) {
          assert(intrin->src[indirect_src].is_ssa);
-         offset = nir_iadd(b, intrin->src[indirect_src].ssa, offset);
+         rel_offset = nir_iadd(b, intrin->src[indirect_src].ssa, rel_offset);
+      }
+      nir_ssa_def *global_offset = nir_iadd(b, rel_offset,
+                                            &offset_load->dest.ssa);
+
+      /* Now we replace the load/store intrinsic */
+
+      nir_intrinsic_op indirect_op;
+      switch (intrin->intrinsic) {
+      case nir_intrinsic_load_ubo:
+         indirect_op = nir_intrinsic_load_ubo_indirect;
+         break;
+      case nir_intrinsic_load_ssbo:
+         indirect_op = nir_intrinsic_load_ssbo_indirect;
+         break;
+      case nir_intrinsic_store_ssbo:
+         indirect_op = nir_intrinsic_store_ssbo_indirect;
+         break;
+      default:
+         unreachable("Invalid direct load/store intrinsic");
       }
 
-      /* Now we can modify the load/store intrinsic */
+      nir_intrinsic_instr *copy =
+         nir_intrinsic_instr_create(state->shader, indirect_op);
+      copy->num_components = intrin->num_components;
 
-      if (indirect_src < 0) {
-         /* The original intrinsic is not an indirect variant.  We need to
-          * create a new one and copy the old data over first.
-          */
+      /* The indirect is always the last source */
+      indirect_src = nir_intrinsic_infos[indirect_op].num_srcs - 1;
 
-         nir_intrinsic_op indirect_op;
-         switch (intrin->intrinsic) {
-         case nir_intrinsic_load_ubo:
-            indirect_op = nir_intrinsic_load_ubo_indirect;
-            break;
-         case nir_intrinsic_load_ssbo:
-            indirect_op = nir_intrinsic_load_ssbo_indirect;
-            break;
-         case nir_intrinsic_store_ssbo:
-            indirect_op = nir_intrinsic_store_ssbo_indirect;
-            break;
-         default:
-            unreachable("Invalid direct load/store intrinsic");
-         }
+      for (unsigned i = 0; i < (unsigned)indirect_src; i++)
+         nir_src_copy(&copy->src[i], &intrin->src[i], &copy->instr);
 
-         nir_intrinsic_instr *copy =
-            nir_intrinsic_instr_create(state->shader, indirect_op);
-         copy->num_components = intrin->num_components;
+      copy->src[indirect_src] = nir_src_for_ssa(global_offset);
+      nir_ssa_dest_init(&copy->instr, &copy->dest,
+                        intrin->dest.ssa.num_components,
+                        intrin->dest.ssa.name);
 
-         for (unsigned i = 0; i < 4; i++)
-            copy->const_index[i] = intrin->const_index[i];
+      /* In order to avoid out-of-bounds access, we predicate */
+      nir_ssa_def *pred = nir_fge(b, nir_channel(b, &offset_load->dest.ssa, 1),
+                                  rel_offset);
+      nir_if *if_stmt = nir_if_create(b->shader);
+      if_stmt->condition = nir_src_for_ssa(pred);
+      nir_cf_node_insert(b->cursor, &if_stmt->cf_node);
 
-         /* The indirect is always the last source */
-         indirect_src = nir_intrinsic_infos[intrin->intrinsic].num_srcs;
+      nir_instr_insert_after_cf_list(&if_stmt->then_list, &copy->instr);
 
-         for (unsigned i = 0; i < (unsigned)indirect_src; i++)
-            nir_src_copy(&copy->src[i], &intrin->src[i], &copy->instr);
+      if (indirect_op != nir_intrinsic_store_ssbo) {
+         /* It's a load, we need a phi node */
+         nir_phi_instr *phi = nir_phi_instr_create(b->shader);
+         nir_ssa_dest_init(&phi->instr, &phi->dest,
+                           intrin->num_components, NULL);
 
-         copy->src[indirect_src] = nir_src_for_ssa(offset);
-         nir_ssa_dest_init(&copy->instr, &copy->dest,
-                           intrin->dest.ssa.num_components,
-                           intrin->dest.ssa.name);
-         nir_builder_instr_insert(b, &copy->instr);
+         nir_phi_src *src1 = ralloc(phi, nir_phi_src);
+         struct exec_node *tnode = exec_list_get_tail(&if_stmt->then_list);
+         src1->pred = exec_node_data(nir_block, tnode, cf_node.node);
+         src1->src = nir_src_for_ssa(&copy->dest.ssa);
+         exec_list_push_tail(&phi->srcs, &src1->node);
+
+         b->cursor = nir_after_cf_list(&if_stmt->else_list);
+         nir_phi_src *src2 = ralloc(phi, nir_phi_src);
+         struct exec_node *enode = exec_list_get_tail(&if_stmt->else_list);
+         src2->pred = exec_node_data(nir_block, enode, cf_node.node);
+         src2->src = nir_src_for_ssa(nir_imm_int(b, 0));
+         exec_list_push_tail(&phi->srcs, &src2->node);
+
+         nir_instr_insert_after_cf(&if_stmt->cf_node, &phi->instr);
 
          assert(intrin->dest.is_ssa);
          nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
-                                  nir_src_for_ssa(&copy->dest.ssa));
-
-         nir_instr_remove(&intrin->instr);
-      } else {
-         /* It's already indirect, so we can just rewrite the one source */
-         nir_instr_rewrite_src(&intrin->instr, &intrin->src[indirect_src],
-                               nir_src_for_ssa(offset));
+                                  nir_src_for_ssa(&phi->dest.ssa));
       }
+
+      nir_instr_remove(&intrin->instr);
    }
 
    return true;
@@ -208,9 +231,12 @@ anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
    }
 
    struct anv_push_constants *null_data = NULL;
-   for (unsigned i = 0; i < MAX_DYNAMIC_BUFFERS; i++)
-      prog_data->param[i + shader->num_uniforms] =
-         (const gl_constant_value *)&null_data->dynamic_offsets[i];
+   for (unsigned i = 0; i < MAX_DYNAMIC_BUFFERS; i++) {
+      prog_data->param[i * 2 + shader->num_uniforms] =
+         (const gl_constant_value *)&null_data->dynamic[i].offset;
+      prog_data->param[i * 2 + 1 + shader->num_uniforms] =
+         (const gl_constant_value *)&null_data->dynamic[i].range;
+   }
 
-   shader->num_uniforms += MAX_DYNAMIC_BUFFERS;
+   shader->num_uniforms += MAX_DYNAMIC_BUFFERS * 2;
 }

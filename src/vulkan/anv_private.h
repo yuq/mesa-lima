@@ -852,8 +852,11 @@ struct anv_push_constants {
    uint32_t base_vertex;
    uint32_t base_instance;
 
-   /* Offsets for dynamically bound buffers */
-   uint32_t dynamic_offsets[MAX_DYNAMIC_BUFFERS];
+   /* Offsets and ranges for dynamically bound buffers */
+   struct {
+      uint32_t offset;
+      uint32_t range;
+   } dynamic[MAX_DYNAMIC_BUFFERS];
 
    /* Image data for image_load_store on pre-SKL */
    struct brw_image_param images[MAX_IMAGES];
