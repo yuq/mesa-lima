@@ -63,7 +63,7 @@ struct vl_screen
    struct pipe_loader_device *dev;
 };
 
-struct vl_screen*
+struct vl_screen *
 vl_dri2_screen_create(Display *display, int screen);
 
 struct vl_screen *
