@@ -751,6 +751,7 @@ struct anv_descriptor {
 };
 
 struct anv_descriptor_set {
+   const struct anv_descriptor_set_layout *layout;
    struct anv_descriptor descriptors[0];
 };
 

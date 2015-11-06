@@ -1646,6 +1646,8 @@ anv_descriptor_set_create(struct anv_device *device,
     */
    memset(set, 0, size);
 
+   set->layout = layout;
+
    /* Go through and fill out immutable samplers if we have any */
    struct anv_descriptor *desc = set->descriptors;
    for (uint32_t b = 0; b < layout->binding_count; b++) {
