@@ -29,20 +29,23 @@ enum si_blitter_op /* bitmask */
 {
 	SI_SAVE_TEXTURES      = 1,
 	SI_SAVE_FRAMEBUFFER   = 2,
-	SI_DISABLE_RENDER_COND = 4,
+	SI_SAVE_FRAGMENT_STATE = 4,
+	SI_DISABLE_RENDER_COND = 8,
 
-	SI_CLEAR         = 0,
+	SI_CLEAR         = SI_SAVE_FRAGMENT_STATE,
 
-	SI_CLEAR_SURFACE = SI_SAVE_FRAMEBUFFER,
+	SI_CLEAR_SURFACE = SI_SAVE_FRAMEBUFFER | SI_SAVE_FRAGMENT_STATE,
 
 	SI_COPY          = SI_SAVE_FRAMEBUFFER | SI_SAVE_TEXTURES |
+			   SI_SAVE_FRAGMENT_STATE | SI_DISABLE_RENDER_COND,
+
+	SI_BLIT          = SI_SAVE_FRAMEBUFFER | SI_SAVE_TEXTURES |
+			   SI_SAVE_FRAGMENT_STATE,
+
+	SI_DECOMPRESS    = SI_SAVE_FRAMEBUFFER | SI_SAVE_FRAGMENT_STATE |
 			   SI_DISABLE_RENDER_COND,
 
-	SI_BLIT          = SI_SAVE_FRAMEBUFFER | SI_SAVE_TEXTURES,
-
-	SI_DECOMPRESS    = SI_SAVE_FRAMEBUFFER | SI_DISABLE_RENDER_COND,
-
-	SI_COLOR_RESOLVE = SI_SAVE_FRAMEBUFFER
+	SI_COLOR_RESOLVE = SI_SAVE_FRAMEBUFFER | SI_SAVE_FRAGMENT_STATE
 };
 
 static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
@@ -51,22 +54,25 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 
 	r600_suspend_nontimer_queries(&sctx->b);
 
-	util_blitter_save_blend(sctx->blitter, sctx->queued.named.blend);
-	util_blitter_save_depth_stencil_alpha(sctx->blitter, sctx->queued.named.dsa);
-	util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref.state);
-	util_blitter_save_rasterizer(sctx->blitter, sctx->queued.named.rasterizer);
-	util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader.cso);
-	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader.cso);
+	util_blitter_save_vertex_buffer_slot(sctx->blitter, sctx->vertex_buffer);
+	util_blitter_save_vertex_elements(sctx->blitter, sctx->vertex_elements);
+	util_blitter_save_vertex_shader(sctx->blitter, sctx->vs_shader.cso);
 	util_blitter_save_tessctrl_shader(sctx->blitter, sctx->tcs_shader.cso);
 	util_blitter_save_tesseval_shader(sctx->blitter, sctx->tes_shader.cso);
-	util_blitter_save_vertex_shader(sctx->blitter, sctx->vs_shader.cso);
-	util_blitter_save_vertex_elements(sctx->blitter, sctx->vertex_elements);
-	util_blitter_save_sample_mask(sctx->blitter, sctx->sample_mask.sample_mask);
-	util_blitter_save_viewport(sctx->blitter, &sctx->viewports.states[0]);
-	util_blitter_save_scissor(sctx->blitter, &sctx->scissors.states[0]);
-	util_blitter_save_vertex_buffer_slot(sctx->blitter, sctx->vertex_buffer);
+	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader.cso);
 	util_blitter_save_so_targets(sctx->blitter, sctx->b.streamout.num_targets,
 				     (struct pipe_stream_output_target**)sctx->b.streamout.targets);
+	util_blitter_save_rasterizer(sctx->blitter, sctx->queued.named.rasterizer);
+
+	if (op & SI_SAVE_FRAGMENT_STATE) {
+		util_blitter_save_blend(sctx->blitter, sctx->queued.named.blend);
+		util_blitter_save_depth_stencil_alpha(sctx->blitter, sctx->queued.named.dsa);
+		util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref.state);
+		util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader.cso);
+		util_blitter_save_sample_mask(sctx->blitter, sctx->sample_mask.sample_mask);
+		util_blitter_save_viewport(sctx->blitter, &sctx->viewports.states[0]);
+		util_blitter_save_scissor(sctx->blitter, &sctx->scissors.states[0]);
+	}
 
 	if (op & SI_SAVE_FRAMEBUFFER)
 		util_blitter_save_framebuffer(sctx->blitter, &sctx->framebuffer.state);
