@@ -176,12 +176,14 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 
 	/* Fallback for unaligned clears. */
 	if (offset % 4 != 0 || size % 4 != 0) {
-		uint32_t *map = sctx->b.ws->buffer_map(r600_resource(dst)->cs_buf,
-						       sctx->b.rings.gfx.cs,
-						       PIPE_TRANSFER_WRITE);
-		size /= 4;
-		for (unsigned i = 0; i < size; i++)
-			*map++ = value;
+		uint8_t *map = sctx->b.ws->buffer_map(r600_resource(dst)->cs_buf,
+						      sctx->b.rings.gfx.cs,
+						      PIPE_TRANSFER_WRITE);
+		map += offset;
+		for (unsigned i = 0; i < size; i++) {
+			unsigned byte_within_dword = (offset + i) % 4;
+			*map++ = (value >> (byte_within_dword * 8)) & 0xff;
+		}
 		return;
 	}
 
