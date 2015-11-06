@@ -67,7 +67,7 @@ nvc0_2d_format(enum pipe_format format, bool dst, bool dst_src_equal)
    case 1:
       return NV50_SURFACE_FORMAT_R8_UNORM;
    case 2:
-      return NV50_SURFACE_FORMAT_R16_UNORM;
+      return NV50_SURFACE_FORMAT_RG8_UNORM;
    case 4:
       return NV50_SURFACE_FORMAT_BGRA8_UNORM;
    case 8:
