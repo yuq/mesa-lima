@@ -112,9 +112,9 @@ static unsigned get_flush_flags(struct si_context *sctx, bool is_framebuffer)
 	if (is_framebuffer)
 		return SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
 
-	return SI_CONTEXT_INV_TC_L1 |
-	       (sctx->b.chip_class == SI ? SI_CONTEXT_INV_TC_L2 : 0) |
-	       SI_CONTEXT_INV_KCACHE;
+	return SI_CONTEXT_INV_SMEM_L1 |
+	       SI_CONTEXT_INV_VMEM_L1 |
+	       (sctx->b.chip_class == SI ? SI_CONTEXT_INV_GLOBAL_L2 : 0);
 }
 
 static unsigned get_tc_l2_flag(struct si_context *sctx, bool is_framebuffer)

@@ -670,8 +670,8 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		 * VS_PARTIAL_FLUSH is required if the buffers are going to be
 		 * used as an input immediately.
 		 */
-		sctx->b.flags |= SI_CONTEXT_INV_KCACHE |
-				 SI_CONTEXT_INV_TC_L1 |
+		sctx->b.flags |= SI_CONTEXT_INV_SMEM_L1 |
+				 SI_CONTEXT_INV_VMEM_L1 |
 				 SI_CONTEXT_VS_PARTIAL_FLUSH;
 	}
 

@@ -253,10 +253,10 @@ static void si_launch_grid(
 	radeon_emit(cs, 0x80000000);
 	radeon_emit(cs, 0x80000000);
 
-	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2 |
+	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
+			 SI_CONTEXT_INV_GLOBAL_L2 |
 			 SI_CONTEXT_INV_ICACHE |
-			 SI_CONTEXT_INV_KCACHE |
+			 SI_CONTEXT_INV_SMEM_L1 |
 			 SI_CONTEXT_FLUSH_WITH_INV_L2 |
 			 SI_CONTEXT_FLAG_COMPUTE;
 	si_emit_cache_flush(sctx, NULL);
@@ -449,10 +449,10 @@ static void si_launch_grid(
 	si_pm4_free_state(sctx, pm4, ~0);
 
 	sctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH |
-			 SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2 |
+			 SI_CONTEXT_INV_VMEM_L1 |
+			 SI_CONTEXT_INV_GLOBAL_L2 |
 			 SI_CONTEXT_INV_ICACHE |
-			 SI_CONTEXT_INV_KCACHE |
+			 SI_CONTEXT_INV_SMEM_L1 |
 			 SI_CONTEXT_FLAG_COMPUTE;
 	si_emit_cache_flush(sctx, NULL);
 }

@@ -2125,8 +2125,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 * Flush all CB and DB caches here because all buffers can be used
 	 * for write by both TC (with shader image stores) and CB/DB.
 	 */
-	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2 |
+	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
+			 SI_CONTEXT_INV_GLOBAL_L2 |
 			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
 
 	/* Take the maximum of the old and new count. If the new count is lower,
@@ -3044,8 +3044,8 @@ static void si_texture_barrier(struct pipe_context *ctx)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
-	sctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
-			 SI_CONTEXT_INV_TC_L2 |
+	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
+			 SI_CONTEXT_INV_GLOBAL_L2 |
 			 SI_CONTEXT_FLUSH_AND_INV_CB;
 }
 

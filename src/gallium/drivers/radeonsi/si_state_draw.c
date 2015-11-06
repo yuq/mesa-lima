@@ -604,8 +604,6 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	}
 }
 
-#define BOTH_ICACHE_KCACHE (SI_CONTEXT_INV_ICACHE | SI_CONTEXT_INV_KCACHE)
-
 void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 {
 	struct r600_common_context *sctx = &si_ctx->b;
@@ -624,12 +622,12 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 
 	if (sctx->flags & SI_CONTEXT_INV_ICACHE)
 		cp_coher_cntl |= S_0085F0_SH_ICACHE_ACTION_ENA(1);
-	if (sctx->flags & SI_CONTEXT_INV_KCACHE)
+	if (sctx->flags & SI_CONTEXT_INV_SMEM_L1)
 		cp_coher_cntl |= S_0085F0_SH_KCACHE_ACTION_ENA(1);
 
-	if (sctx->flags & SI_CONTEXT_INV_TC_L1)
+	if (sctx->flags & SI_CONTEXT_INV_VMEM_L1)
 		cp_coher_cntl |= S_0085F0_TCL1_ACTION_ENA(1);
-	if (sctx->flags & SI_CONTEXT_INV_TC_L2) {
+	if (sctx->flags & SI_CONTEXT_INV_GLOBAL_L2) {
 		cp_coher_cntl |= S_0085F0_TC_ACTION_ENA(1);
 
 		/* TODO: this might not be needed. */
@@ -843,7 +841,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	/* VI reads index buffers through TC L2. */
 	if (info->indexed && sctx->b.chip_class <= CIK &&
 	    r600_resource(ib.buffer)->TC_L2_dirty) {
-		sctx->b.flags |= SI_CONTEXT_INV_TC_L2;
+		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
 		r600_resource(ib.buffer)->TC_L2_dirty = false;
 	}
 
