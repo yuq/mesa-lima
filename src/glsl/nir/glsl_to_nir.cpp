@@ -293,15 +293,6 @@ nir_visitor::visit(ir_variable *ir)
    var->type = ir->type;
    var->name = ralloc_strdup(var, ir->name);
 
-   if (ir->is_interface_instance() && ir->get_max_ifc_array_access() != NULL) {
-      unsigned size = ir->get_interface_type()->length;
-      var->max_ifc_array_access = ralloc_array(var, unsigned, size);
-      memcpy(var->max_ifc_array_access, ir->get_max_ifc_array_access(),
-             size * sizeof(unsigned));
-   } else {
-      var->max_ifc_array_access = NULL;
-   }
-
    var->data.read_only = ir->data.read_only;
    var->data.centroid = ir->data.centroid;
    var->data.sample = ir->data.sample;
