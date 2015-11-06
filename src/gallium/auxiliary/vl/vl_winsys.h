@@ -42,6 +42,23 @@ struct pipe_loader_device;
 
 struct vl_screen
 {
+   void (*destroy)(struct vl_screen *vscreen);
+
+   struct pipe_resource *
+   (*texture_from_drawable)(struct vl_screen *vscreen, void *drawable);
+
+   struct u_rect *
+   (*get_dirty_area)(struct vl_screen *vscreen);
+
+   uint64_t
+   (*get_timestamp)(struct vl_screen *vscreen, void *drawable);
+
+   void
+   (*set_next_timestamp)(struct vl_screen *vscreen, uint64_t stamp);
+
+   void *
+   (*get_private)(struct vl_screen *vscreen);
+
    struct pipe_screen *pscreen;
    struct pipe_loader_device *dev;
 };
