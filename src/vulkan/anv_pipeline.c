@@ -1230,9 +1230,9 @@ VkResult anv_CreatePipelineLayout(
       for (uint32_t set = 0; set < pCreateInfo->descriptorSetCount; set++) {
          struct anv_descriptor_set_layout *set_layout = l.set[set].layout;
 
-         unsigned set_offset = 0;
          for (uint32_t b = 0; b < set_layout->binding_count; b++) {
             unsigned array_size = set_layout->binding[b].array_size;
+            unsigned set_offset = set_layout->binding[b].descriptor_index;
 
             if (set_layout->binding[b].stage[s].surface_index >= 0) {
                assert(surface == l.set[set].stage[s].surface_start +
@@ -1253,8 +1253,6 @@ VkResult anv_CreatePipelineLayout(
                }
                sampler += array_size;
             }
-
-            set_offset += array_size;
          }
       }
    }

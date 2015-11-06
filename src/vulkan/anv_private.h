@@ -689,6 +689,9 @@ struct anv_descriptor_set_binding_layout {
    /* Number of array elements in this binding */
    uint16_t array_size;
 
+   /* Index into the flattend descriptor set */
+   uint16_t descriptor_index;
+
    /* Index into the dynamic state array for a dynamic buffer */
    int16_t dynamic_offset_index;
 

@@ -1529,6 +1529,7 @@ VkResult anv_CreateDescriptorSetLayout(
    for (uint32_t b = 0; b < pCreateInfo->count; b++) {
       uint32_t array_size = MAX2(1, pCreateInfo->pBinding[b].arraySize);
       set_layout->binding[b].array_size = array_size;
+      set_layout->binding[b].descriptor_index = set_layout->size;
       set_layout->size += array_size;
 
       switch (pCreateInfo->pBinding[b].descriptorType) {
