@@ -5964,8 +5964,19 @@ ast_process_structure_or_interface_block(exec_list *instructions,
          fields[i].sample = qual->flags.q.sample ? 1 : 0;
          fields[i].patch = qual->flags.q.patch ? 1 : 0;
 
-         /* Only save explicitly defined streams in block's field */
-         fields[i].stream = qual->flags.q.explicit_stream ? qual->stream : -1;
+         /* From Section 4.4.2.3 (Geometry Outputs) of the GLSL 4.50 spec:
+          *
+          *   "A block member may be declared with a stream identifier, but
+          *   the specified stream must match the stream associated with the
+          *   containing block."
+          */
+         if (qual->flags.q.explicit_stream &&
+             qual->stream != layout->stream) {
+            _mesa_glsl_error(&loc, state, "stream layout qualifier on "
+                             "interface block member `%s' does not match "
+                             "the interface block (%d vs %d)",
+                             fields[i].name, qual->stream, layout->stream);
+         }
 
          if (qual->flags.q.row_major || qual->flags.q.column_major) {
             if (!qual->flags.q.uniform && !qual->flags.q.buffer) {
@@ -6266,18 +6277,6 @@ ast_interface_block::hir(exec_list *instructions,
                                                &this->layout);
 
    state->struct_specifier_depth--;
-
-   for (unsigned i = 0; i < num_variables; i++) {
-      if (fields[i].stream != -1 &&
-          (unsigned) fields[i].stream != this->layout.stream) {
-         _mesa_glsl_error(&loc, state,
-                          "stream layout qualifier on "
-                          "interface block member `%s' does not match "
-                          "the interface block (%d vs %d)",
-                          fields[i].name, fields[i].stream,
-                          this->layout.stream);
-      }
-   }
 
    if (!redeclaring_per_vertex) {
       validate_identifier(this->block_name, loc, state);
