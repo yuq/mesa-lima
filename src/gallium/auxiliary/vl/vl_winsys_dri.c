@@ -171,7 +171,7 @@ vl_dri2_set_drawable(struct vl_dri_screen *scrn, Drawable drawable)
 }
 
 struct pipe_resource*
-vl_screen_texture_from_drawable(struct vl_screen *vscreen, Drawable drawable)
+vl_screen_texture_from_drawable(struct vl_screen *vscreen, void *drawable)
 {
    struct vl_dri_screen *scrn = (struct vl_dri_screen*)vscreen;
 
@@ -185,11 +185,12 @@ vl_screen_texture_from_drawable(struct vl_screen *vscreen, Drawable drawable)
 
    assert(scrn);
 
-   vl_dri2_set_drawable(scrn, drawable);
+   vl_dri2_set_drawable(scrn, (Drawable)drawable);
    reply = vl_dri2_get_flush_reply(scrn);
    if (!reply) {
       xcb_dri2_get_buffers_cookie_t cookie;
-      cookie = xcb_dri2_get_buffers_unchecked(scrn->conn, drawable, 1, 1, attachments);
+      cookie = xcb_dri2_get_buffers_unchecked(scrn->conn, (Drawable)drawable,
+                                              1, 1, attachments);
       reply = xcb_dri2_get_buffers_reply(scrn->conn, cookie, NULL);
    }
    if (!reply)
@@ -256,7 +257,7 @@ vl_screen_get_dirty_area(struct vl_screen *vscreen)
 }
 
 uint64_t
-vl_screen_get_timestamp(struct vl_screen *vscreen, Drawable drawable)
+vl_screen_get_timestamp(struct vl_screen *vscreen, void *drawable)
 {
    struct vl_dri_screen *scrn = (struct vl_dri_screen*)vscreen;
    xcb_dri2_get_msc_cookie_t cookie;
@@ -264,9 +265,9 @@ vl_screen_get_timestamp(struct vl_screen *vscreen, Drawable drawable)
 
    assert(scrn);
 
-   vl_dri2_set_drawable(scrn, drawable);
+   vl_dri2_set_drawable(scrn, (Drawable)drawable);
    if (!scrn->last_ust) {
-      cookie = xcb_dri2_get_msc_unchecked(scrn->conn, drawable);
+      cookie = xcb_dri2_get_msc_unchecked(scrn->conn, (Drawable)drawable);
       reply = xcb_dri2_get_msc_reply(scrn->conn, cookie, NULL);
 
       if (reply) {
@@ -397,6 +398,12 @@ vl_dri2_screen_create(Display *display, int screen)
    if (!scrn->base.pscreen)
       goto release_pipe;
 
+   scrn->base.destroy = vl_screen_destroy;
+   scrn->base.texture_from_drawable = vl_screen_texture_from_drawable;
+   scrn->base.get_dirty_area = vl_screen_get_dirty_area;
+   scrn->base.get_timestamp = vl_screen_get_timestamp;
+   scrn->base.set_next_timestamp = vl_screen_set_next_timestamp;
+   scrn->base.get_private = vl_screen_get_private;
    scrn->base.pscreen->flush_frontbuffer = vl_dri2_flush_frontbuffer;
    vl_compositor_reset_dirty_area(&scrn->dirty_areas[0]);
    vl_compositor_reset_dirty_area(&scrn->dirty_areas[1]);
