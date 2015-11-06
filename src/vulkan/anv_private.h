@@ -724,16 +724,8 @@ struct anv_descriptor_set_layout {
    struct anv_descriptor_set_binding_layout binding[0];
 };
 
-enum anv_descriptor_type {
-   ANV_DESCRIPTOR_TYPE_EMPTY = 0,
-   ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET,
-   ANV_DESCRIPTOR_TYPE_IMAGE_VIEW,
-   ANV_DESCRIPTOR_TYPE_SAMPLER,
-   ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER,
-};
-
 struct anv_descriptor {
-   enum anv_descriptor_type type;
+   VkDescriptorType type;
 
    union {
       struct {

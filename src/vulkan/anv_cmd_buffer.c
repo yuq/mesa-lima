@@ -610,11 +610,14 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       uint32_t bo_offset;
 
       switch (desc->type) {
-      case ANV_DESCRIPTOR_TYPE_EMPTY:
-      case ANV_DESCRIPTOR_TYPE_SAMPLER:
+      case VK_DESCRIPTOR_TYPE_SAMPLER:
          /* Nothing for us to do here */
          continue;
-      case ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET: {
+
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
          bo = desc->buffer->bo;
          bo_offset = desc->buffer->offset + desc->offset;
 
@@ -625,11 +628,19 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                        bo_offset, desc->range);
          break;
       }
-      case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW:
-      case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER:
+
+      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          surface_state = desc->image_view->nonrt_surface_state;
          bo = desc->image_view->bo;
          bo_offset = desc->image_view->offset;
+         break;
+
+      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+         assert(!"Unsupported descriptor type");
          break;
       }
 
@@ -669,13 +680,15 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
          cmd_buffer->state.descriptors[binding->set];
       struct anv_descriptor *desc = &set->descriptors[binding->offset];
 
-      if (desc->type != ANV_DESCRIPTOR_TYPE_SAMPLER &&
-          desc->type != ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER)
+      if (desc->type != VK_DESCRIPTOR_TYPE_SAMPLER &&
+          desc->type != VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
          continue;
 
       struct anv_sampler *sampler = desc->sampler;
 
-      /* FIXME: We shouldn't have to do this */
+      /* This can happen if we have an unfilled slot since TYPE_SAMPLER
+       * happens to be zero.
+       */
       if (sampler == NULL)
          continue;
 

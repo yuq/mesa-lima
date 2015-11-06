@@ -1715,7 +1715,7 @@ void anv_UpdateDescriptorSets(
                             write->pDescriptors[j].sampler);
 
             desc[j] = (struct anv_descriptor) {
-               .type = ANV_DESCRIPTOR_TYPE_SAMPLER,
+               .type = VK_DESCRIPTOR_TYPE_SAMPLER,
                .sampler = sampler,
             };
          }
@@ -1728,7 +1728,7 @@ void anv_UpdateDescriptorSets(
             ANV_FROM_HANDLE(anv_sampler, sampler,
                             write->pDescriptors[j].sampler);
 
-            desc[j].type = ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER;
+            desc[j].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             desc[j].image_view = iview;
 
             /* If this descriptor has an immutable sampler, we don't want
@@ -1746,7 +1746,7 @@ void anv_UpdateDescriptorSets(
                             write->pDescriptors[j].imageView);
 
             desc[j] = (struct anv_descriptor) {
-               .type = ANV_DESCRIPTOR_TYPE_IMAGE_VIEW,
+               .type = write->descriptorType,
                .image_view = iview,
             };
          }
@@ -1772,7 +1772,7 @@ void anv_UpdateDescriptorSets(
             assert(buffer);
 
             desc[j] = (struct anv_descriptor) {
-               .type = ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET,
+               .type = write->descriptorType,
                .buffer = buffer,
                .offset = write->pDescriptors[j].bufferInfo.offset,
                .range = write->pDescriptors[j].bufferInfo.range,
