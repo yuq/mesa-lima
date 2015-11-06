@@ -334,6 +334,9 @@ st_init_perfmon(struct st_context *st)
          c->Name = info.name;
          switch (info.type) {
             case PIPE_DRIVER_QUERY_TYPE_UINT64:
+            case PIPE_DRIVER_QUERY_TYPE_BYTES:
+            case PIPE_DRIVER_QUERY_TYPE_MICROSECONDS:
+            case PIPE_DRIVER_QUERY_TYPE_HZ:
                c->Minimum.u64 = 0;
                c->Maximum.u64 = info.max_value.u64 ? info.max_value.u64 : -1;
                c->Type = GL_UNSIGNED_INT64_AMD;
