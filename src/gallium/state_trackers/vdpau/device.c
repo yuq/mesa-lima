@@ -136,7 +136,7 @@ no_handle:
 no_resource:
    dev->context->destroy(dev->context);
 no_context:
-   vl_screen_destroy(dev->vscreen);
+   dev->vscreen->destroy(dev->vscreen);
 no_vscreen:
    FREE(dev);
 no_dev:
@@ -227,7 +227,7 @@ vlVdpDeviceFree(vlVdpDevice *dev)
    vl_compositor_cleanup(&dev->compositor);
    pipe_sampler_view_reference(&dev->dummy_sv, NULL);
    dev->context->destroy(dev->context);
-   vl_screen_destroy(dev->vscreen);
+   dev->vscreen->destroy(dev->vscreen);
    FREE(dev);
    vlDestroyHTAB();
 }
