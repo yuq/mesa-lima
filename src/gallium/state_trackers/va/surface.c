@@ -45,6 +45,11 @@
 
 #include <va/va_drmcommon.h>
 
+static const enum pipe_format vpp_surface_formats[] = {
+   PIPE_FORMAT_B8G8R8A8_UNORM, PIPE_FORMAT_R8G8B8A8_UNORM,
+   PIPE_FORMAT_B8G8R8X8_UNORM, PIPE_FORMAT_R8G8B8X8_UNORM
+};
+
 VAStatus
 vlVaCreateSurfaces(VADriverContextP ctx, int width, int height, int format,
                    int num_surfaces, VASurfaceID *surfaces)
@@ -314,7 +319,9 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config,
    vlVaDriver *drv;
    VASurfaceAttrib *attribs;
    struct pipe_screen *pscreen;
-   int i;
+   int i, j;
+
+   STATIC_ASSERT(ARRAY_SIZE(vpp_surface_formats) <= VL_VA_MAX_IMAGE_FORMATS);
 
    if (config == VA_INVALID_ID)
       return VA_STATUS_ERROR_INVALID_CONFIG;
@@ -323,7 +330,7 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config,
       return VA_STATUS_ERROR_INVALID_PARAMETER;
 
    if (!attrib_list) {
-      *num_attribs = VASurfaceAttribCount;
+      *num_attribs = VL_VA_MAX_IMAGE_FORMATS + VASurfaceAttribCount;
       return VA_STATUS_SUCCESS;
    }
 
@@ -340,27 +347,24 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config,
    if (!pscreen)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
-   attribs = CALLOC(VASurfaceAttribCount, sizeof(VASurfaceAttrib));
+   attribs = CALLOC(VL_VA_MAX_IMAGE_FORMATS + VASurfaceAttribCount,
+                    sizeof(VASurfaceAttrib));
 
    if (!attribs)
       return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
    i = 0;
 
+   /* vlVaCreateConfig returns PIPE_VIDEO_PROFILE_UNKNOWN
+    * only for VAEntrypointVideoProc. */
    if (config == PIPE_VIDEO_PROFILE_UNKNOWN) {
-      /* vlVaCreateConfig returns PIPE_VIDEO_PROFILE_UNKNOWN
-          only for VAEntrypointVideoProc. */
-      attribs[i].type = VASurfaceAttribPixelFormat;
-      attribs[i].value.type = VAGenericValueTypeInteger;
-      attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-      attribs[i].value.value.i = VA_FOURCC_BGRA;
-      i++;
-
-      attribs[i].type = VASurfaceAttribPixelFormat;
-      attribs[i].value.type = VAGenericValueTypeInteger;
-      attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
-      attribs[i].value.value.i = VA_FOURCC_RGBA;
-      i++;
+      for (j = 0; j < ARRAY_SIZE(vpp_surface_formats); ++j) {
+         attribs[i].type = VASurfaceAttribPixelFormat;
+         attribs[i].value.type = VAGenericValueTypeInteger;
+         attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;
+         attribs[i].value.value.i = PipeFormatToVaFourcc(vpp_surface_formats[j]);
+         i++;
+      }
    } else {
       /* Assume VAEntrypointVLD for now. */
       attribs[i].type = VASurfaceAttribPixelFormat;
