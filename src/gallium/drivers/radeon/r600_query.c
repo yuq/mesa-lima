@@ -1002,6 +1002,50 @@ err:
 	return;
 }
 
+static int r600_get_driver_query_info(struct pipe_screen *screen,
+				      unsigned index,
+				      struct pipe_driver_query_info *info)
+{
+	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+	struct pipe_driver_query_info list[] = {
+		{"num-compilations", R600_QUERY_NUM_COMPILATIONS, {0}, PIPE_DRIVER_QUERY_TYPE_UINT64,
+		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
+		{"num-shaders-created", R600_QUERY_NUM_SHADERS_CREATED, {0}, PIPE_DRIVER_QUERY_TYPE_UINT64,
+		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
+		{"draw-calls", R600_QUERY_DRAW_CALLS, {0}},
+		{"requested-VRAM", R600_QUERY_REQUESTED_VRAM, {rscreen->info.vram_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"requested-GTT", R600_QUERY_REQUESTED_GTT, {rscreen->info.gart_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"buffer-wait-time", R600_QUERY_BUFFER_WAIT_TIME, {0}, PIPE_DRIVER_QUERY_TYPE_MICROSECONDS,
+		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
+		{"num-cs-flushes", R600_QUERY_NUM_CS_FLUSHES, {0}},
+		{"num-bytes-moved", R600_QUERY_NUM_BYTES_MOVED, {0}, PIPE_DRIVER_QUERY_TYPE_BYTES,
+		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
+		{"VRAM-usage", R600_QUERY_VRAM_USAGE, {rscreen->info.vram_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"GTT-usage", R600_QUERY_GTT_USAGE, {rscreen->info.gart_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"GPU-load", R600_QUERY_GPU_LOAD, {100}},
+		{"temperature", R600_QUERY_GPU_TEMPERATURE, {125}},
+		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
+		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
+	};
+	unsigned num_queries;
+
+	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
+		num_queries = Elements(list);
+	else if (rscreen->info.drm_major == 3)
+		num_queries = Elements(list) - 3;
+	else
+		num_queries = Elements(list) - 4;
+
+	if (!info)
+		return num_queries;
+
+	if (index >= num_queries)
+		return 0;
+
+	*info = list[index];
+	return 1;
+}
+
 void r600_query_init(struct r600_common_context *rctx)
 {
 	rctx->b.create_query = r600_create_query;
@@ -1016,4 +1060,9 @@ void r600_query_init(struct r600_common_context *rctx)
 
 	LIST_INITHEAD(&rctx->active_nontimer_queries);
 	LIST_INITHEAD(&rctx->active_timer_queries);
+}
+
+void r600_init_screen_query_functions(struct r600_common_screen *rscreen)
+{
+	rscreen->b.get_driver_query_info = r600_get_driver_query_info;
 }

@@ -526,6 +526,7 @@ uint64_t r600_gpu_load_begin(struct r600_common_screen *rscreen);
 unsigned r600_gpu_load_end(struct r600_common_screen *rscreen, uint64_t begin);
 
 /* r600_query.c */
+void r600_init_screen_query_functions(struct r600_common_screen *rscreen);
 void r600_query_init(struct r600_common_context *rctx);
 void r600_suspend_nontimer_queries(struct r600_common_context *ctx);
 void r600_resume_nontimer_queries(struct r600_common_context *ctx);

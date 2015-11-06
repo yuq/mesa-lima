@@ -718,50 +718,6 @@ static uint64_t r600_get_timestamp(struct pipe_screen *screen)
 			rscreen->info.r600_clock_crystal_freq;
 }
 
-static int r600_get_driver_query_info(struct pipe_screen *screen,
-				      unsigned index,
-				      struct pipe_driver_query_info *info)
-{
-	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
-	struct pipe_driver_query_info list[] = {
-		{"num-compilations", R600_QUERY_NUM_COMPILATIONS, {0}, PIPE_DRIVER_QUERY_TYPE_UINT64,
-		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
-		{"num-shaders-created", R600_QUERY_NUM_SHADERS_CREATED, {0}, PIPE_DRIVER_QUERY_TYPE_UINT64,
-		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
-		{"draw-calls", R600_QUERY_DRAW_CALLS, {0}},
-		{"requested-VRAM", R600_QUERY_REQUESTED_VRAM, {rscreen->info.vram_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
-		{"requested-GTT", R600_QUERY_REQUESTED_GTT, {rscreen->info.gart_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
-		{"buffer-wait-time", R600_QUERY_BUFFER_WAIT_TIME, {0}, PIPE_DRIVER_QUERY_TYPE_MICROSECONDS,
-		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
-		{"num-cs-flushes", R600_QUERY_NUM_CS_FLUSHES, {0}},
-		{"num-bytes-moved", R600_QUERY_NUM_BYTES_MOVED, {0}, PIPE_DRIVER_QUERY_TYPE_BYTES,
-		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
-		{"VRAM-usage", R600_QUERY_VRAM_USAGE, {rscreen->info.vram_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
-		{"GTT-usage", R600_QUERY_GTT_USAGE, {rscreen->info.gart_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
-		{"GPU-load", R600_QUERY_GPU_LOAD, {100}},
-		{"temperature", R600_QUERY_GPU_TEMPERATURE, {125}},
-		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
-		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
-	};
-	unsigned num_queries;
-
-	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
-		num_queries = Elements(list);
-	else if (rscreen->info.drm_major == 3)
-		num_queries = Elements(list) - 3;
-	else
-		num_queries = Elements(list) - 4;
-
-	if (!info)
-		return num_queries;
-
-	if (index >= num_queries)
-		return 0;
-
-	*info = list[index];
-	return 1;
-}
-
 static void r600_fence_reference(struct pipe_screen *screen,
 				 struct pipe_fence_handle **dst,
 				 struct pipe_fence_handle *src)
@@ -949,7 +905,6 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->b.get_device_vendor = r600_get_device_vendor;
 	rscreen->b.get_compute_param = r600_get_compute_param;
 	rscreen->b.get_paramf = r600_get_paramf;
-	rscreen->b.get_driver_query_info = r600_get_driver_query_info;
 	rscreen->b.get_timestamp = r600_get_timestamp;
 	rscreen->b.fence_finish = r600_fence_finish;
 	rscreen->b.fence_reference = r600_fence_reference;
@@ -965,6 +920,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	}
 
 	r600_init_screen_texture_functions(rscreen);
+	r600_init_screen_query_functions(rscreen);
 
 	rscreen->ws = ws;
 	rscreen->family = rscreen->info.family;
