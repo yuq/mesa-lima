@@ -406,6 +406,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    prog_data->binding_table.size_bytes = 0;
    prog_data->binding_table.texture_start = bias;
    prog_data->binding_table.ubo_start = bias;
+   prog_data->binding_table.ssbo_start = bias;
    prog_data->binding_table.image_start = bias;
 
    /* Finish the optimization and compilation process */
