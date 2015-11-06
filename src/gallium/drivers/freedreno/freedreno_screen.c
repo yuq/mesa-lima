@@ -549,6 +549,7 @@ fd_screen_create(struct fd_device *dev)
 	case 220:
 		fd2_screen_init(pscreen);
 		break;
+	case 305:
 	case 307:
 	case 320:
 	case 330:
