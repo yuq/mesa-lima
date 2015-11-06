@@ -111,6 +111,11 @@ typedef struct nir_constant {
     */
    union nir_constant_data value;
 
+   /* we could get this from the var->type but makes clone *much* easier to
+    * not have to care about the type.
+    */
+   unsigned num_elements;
+
    /* Array elements / Structure Fields */
    struct nir_constant **elements;
 } nir_constant;

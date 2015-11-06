@@ -240,6 +240,8 @@ constant_copy(ir_constant *ir, void *mem_ctx)
 
    unsigned total_elems = ir->type->components();
    unsigned i;
+
+   ret->num_elements = 0;
    switch (ir->type->base_type) {
    case GLSL_TYPE_UINT:
       for (i = 0; i < total_elems; i++)
@@ -264,6 +266,8 @@ constant_copy(ir_constant *ir, void *mem_ctx)
    case GLSL_TYPE_STRUCT:
       ret->elements = ralloc_array(mem_ctx, nir_constant *,
                                    ir->type->length);
+      ret->num_elements = ir->type->length;
+
       i = 0;
       foreach_in_list(ir_constant, field, &ir->components) {
          ret->elements[i] = constant_copy(field, mem_ctx);
@@ -274,6 +278,7 @@ constant_copy(ir_constant *ir, void *mem_ctx)
    case GLSL_TYPE_ARRAY:
       ret->elements = ralloc_array(mem_ctx, nir_constant *,
                                    ir->type->length);
+      ret->num_elements = ir->type->length;
 
       for (i = 0; i < ir->type->length; i++)
          ret->elements[i] = constant_copy(ir->array_elements[i], mem_ctx);
