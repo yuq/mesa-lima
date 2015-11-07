@@ -2146,6 +2146,7 @@ CodeEmitterGM107::emitLD()
    emitPRED (0x3a);
    emitLDSTc(0x38);
    emitLDSTs(0x35, insn->dType);
+   emitField(0x34, 1, insn->src(0).getIndirect(0)->getSize() == 8);
    emitADDR (0x08, 0x14, 32, 0, insn->src(0));
    emitGPR  (0x00, insn->def(0));
 }
@@ -2176,6 +2177,7 @@ CodeEmitterGM107::emitST()
    emitPRED (0x3a);
    emitLDSTc(0x38);
    emitLDSTs(0x35, insn->dType);
+   emitField(0x34, 1, insn->src(0).getIndirect(0)->getSize() == 8);
    emitADDR (0x08, 0x14, 32, 0, insn->src(0));
    emitGPR  (0x00, insn->src(1));
 }
