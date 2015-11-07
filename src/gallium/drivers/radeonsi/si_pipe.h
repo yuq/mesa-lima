@@ -173,6 +173,7 @@ struct si_context {
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct si_shader_ctx_state	fixed_func_tcs_shader;
 	LLVMTargetMachineRef		tm;
+	bool				gfx_flush_in_progress;
 
 	/* Atoms (direct states). */
 	union si_state_atoms		atoms;

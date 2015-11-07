@@ -64,12 +64,18 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
 	struct radeon_winsys *ws = ctx->b.ws;
 
+	if (ctx->gfx_flush_in_progress)
+		return;
+
+	ctx->gfx_flush_in_progress = true;
+
 	if (cs->cdw == ctx->b.initial_gfx_cs_size &&
 	    (!fence || ctx->last_gfx_fence)) {
 		if (fence)
 			ws->fence_reference(fence, ctx->last_gfx_fence);
 		if (!(flags & RADEON_FLUSH_ASYNC))
 			ws->cs_sync_flush(cs);
+		ctx->gfx_flush_in_progress = false;
 		return;
 	}
 
@@ -123,6 +129,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		si_check_vm_faults(ctx);
 
 	si_begin_new_cs(ctx);
+	ctx->gfx_flush_in_progress = false;
 }
 
 void si_begin_new_cs(struct si_context *ctx)
