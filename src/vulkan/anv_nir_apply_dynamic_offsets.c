@@ -187,10 +187,13 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
          exec_list_push_tail(&phi->srcs, &src1->node);
 
          b->cursor = nir_after_cf_list(&if_stmt->else_list);
+         nir_ssa_def *zero = nir_build_imm(b, intrin->num_components,
+            (nir_const_value) { .u = { 0, 0, 0, 0 } });
+
          nir_phi_src *src2 = ralloc(phi, nir_phi_src);
          struct exec_node *enode = exec_list_get_tail(&if_stmt->else_list);
          src2->pred = exec_node_data(nir_block, enode, cf_node.node);
-         src2->src = nir_src_for_ssa(nir_imm_int(b, 0));
+         src2->src = nir_src_for_ssa(zero);
          exec_list_push_tail(&phi->srcs, &src2->node);
 
          nir_instr_insert_after_cf(&if_stmt->cf_node, &phi->instr);
