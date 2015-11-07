@@ -2374,6 +2374,17 @@ void nir_lower_two_sided_color(nir_shader *shader);
 
 void nir_lower_clamp_color_outputs(nir_shader *shader);
 
+typedef struct nir_lower_wpos_ytransform_options {
+   int state_tokens[5];
+   bool fs_coord_origin_upper_left :1;
+   bool fs_coord_origin_lower_left :1;
+   bool fs_coord_pixel_center_integer :1;
+   bool fs_coord_pixel_center_half_integer :1;
+} nir_lower_wpos_ytransform_options;
+
+bool nir_lower_wpos_ytransform(nir_shader *shader,
+                               const nir_lower_wpos_ytransform_options *options);
+
 void nir_lower_atomics(nir_shader *shader,
                        const struct gl_shader_program *shader_program);
 void nir_lower_to_source_mods(nir_shader *shader);
