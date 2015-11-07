@@ -134,17 +134,6 @@ static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
 
 void r600_preflush_suspend_features(struct r600_common_context *ctx)
 {
-	/* Disable render condition. */
-	ctx->saved_render_cond = NULL;
-	ctx->saved_render_cond_cond = FALSE;
-	ctx->saved_render_cond_mode = 0;
-	if (ctx->current_render_cond) {
-		ctx->saved_render_cond = ctx->current_render_cond;
-		ctx->saved_render_cond_cond = ctx->current_render_cond_cond;
-		ctx->saved_render_cond_mode = ctx->current_render_cond_mode;
-		ctx->b.render_condition(&ctx->b, NULL, FALSE, 0);
-	}
-
 	/* suspend queries */
 	ctx->queries_suspended_for_flush = false;
 	if (ctx->num_cs_dw_nontimer_queries_suspend) {
@@ -173,12 +162,11 @@ void r600_postflush_resume_features(struct r600_common_context *ctx)
 		r600_resume_timer_queries(ctx);
 	}
 
-	/* Re-enable render condition. */
-	if (ctx->saved_render_cond) {
-		ctx->b.render_condition(&ctx->b, ctx->saved_render_cond,
-					  ctx->saved_render_cond_cond,
-					  ctx->saved_render_cond_mode);
-	}
+	/* Re-emit PKT3_SET_PREDICATION. */
+	if (ctx->current_render_cond)
+		ctx->b.render_condition(&ctx->b, ctx->current_render_cond,
+					ctx->current_render_cond_cond,
+					ctx->current_render_cond_mode);
 }
 
 static void r600_flush_from_st(struct pipe_context *ctx,

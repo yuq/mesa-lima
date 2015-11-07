@@ -80,11 +80,6 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 		num_dw += ctx->b.streamout.num_dw_for_end;
 	}
 
-	/* Count in render_condition(NULL) at the end of CS. */
-	if (ctx->b.predicate_drawing) {
-		num_dw += 3;
-	}
-
 	/* SX_MISC */
 	if (ctx->b.chip_class == R600) {
 		num_dw += 3;

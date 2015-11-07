@@ -422,10 +422,6 @@ struct r600_common_context {
 	boolean				current_render_cond_cond;
 	bool				predicate_drawing;
 	bool				render_cond_force_off; /* for u_blitter */
-	/* For context flushing. */
-	struct pipe_query		*saved_render_cond;
-	boolean				saved_render_cond_cond;
-	unsigned			saved_render_cond_mode;
 
 	/* MSAA sample locations.
 	 * The first index is the sample index.
