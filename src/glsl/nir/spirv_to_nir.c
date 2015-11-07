@@ -1346,7 +1346,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       var->name = ralloc_strdup(var, val->name);
 
       struct vtn_type *interface_type;
-      if (type->block) {
+      if (type->block || type->buffer_block) {
          interface_type = type;
       } else if (glsl_type_is_array(type->type) &&
                  (type->array_element->block ||
