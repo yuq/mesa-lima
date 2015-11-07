@@ -1663,7 +1663,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 
 	/* Draw packets. */
 	if (!info.indirect) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_NUM_INSTANCES, 0, rctx->b.predicate_drawing);
+		cs->buf[cs->cdw++] = PKT3(PKT3_NUM_INSTANCES, 0, 0);
 		cs->buf[cs->cdw++] = info.instance_count;
 	}
 
@@ -1675,12 +1675,12 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		rctx->vgt_state.last_draw_was_indirect = true;
 		rctx->last_start_instance = -1;
 
-		cs->buf[cs->cdw++] = PKT3(EG_PKT3_SET_BASE, 2, rctx->b.predicate_drawing);
+		cs->buf[cs->cdw++] = PKT3(EG_PKT3_SET_BASE, 2, 0);
 		cs->buf[cs->cdw++] = EG_DRAW_INDEX_INDIRECT_PATCH_TABLE_BASE;
 		cs->buf[cs->cdw++] = va;
 		cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
 
-		cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
+		cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
 		cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
 							   (struct r600_resource*)info.indirect,
 							   RADEON_USAGE_READ,
@@ -1688,7 +1688,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	}
 
 	if (info.indexed) {
-		cs->buf[cs->cdw++] = PKT3(PKT3_INDEX_TYPE, 0, rctx->b.predicate_drawing);
+		cs->buf[cs->cdw++] = PKT3(PKT3_INDEX_TYPE, 0, 0);
 		cs->buf[cs->cdw++] = ib.index_size == 4 ?
 					(VGT_INDEX_32 | (R600_BIG_ENDIAN ? VGT_DMA_SWAP_32_BIT : 0)) :
 					(VGT_INDEX_16 | (R600_BIG_ENDIAN ? VGT_DMA_SWAP_16_BIT : 0));
@@ -1710,7 +1710,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
 				cs->buf[cs->cdw++] = info.count;
 				cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_DMA;
-				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
 				cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
 									   (struct r600_resource*)ib.buffer,
 									   RADEON_USAGE_READ,
@@ -1719,17 +1719,17 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 			else {
 				uint32_t max_size = (ib.buffer->width0 - ib.offset) / ib.index_size;
 
-				cs->buf[cs->cdw++] = PKT3(EG_PKT3_INDEX_BASE, 1, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = PKT3(EG_PKT3_INDEX_BASE, 1, 0);
 				cs->buf[cs->cdw++] = va;
 				cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
 
-				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
 				cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
 									   (struct r600_resource*)ib.buffer,
 									   RADEON_USAGE_READ,
                                                                            RADEON_PRIO_INDEX_BUFFER);
 
-				cs->buf[cs->cdw++] = PKT3(EG_PKT3_INDEX_BUFFER_SIZE, 0, rctx->b.predicate_drawing);
+				cs->buf[cs->cdw++] = PKT3(EG_PKT3_INDEX_BUFFER_SIZE, 0, 0);
 				cs->buf[cs->cdw++] = max_size;
 
 				cs->buf[cs->cdw++] = PKT3(EG_PKT3_DRAW_INDEX_INDIRECT, 1, rctx->b.predicate_drawing);
