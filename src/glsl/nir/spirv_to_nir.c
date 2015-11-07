@@ -1364,10 +1364,13 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       case SpvStorageClassUniformConstant:
          if (interface_type && interface_type->buffer_block) {
             var->data.mode = nir_var_shader_storage;
+            b->shader->info.num_ssbos++;
          } else {
             /* UBO's and samplers */
             var->data.mode = nir_var_uniform;
             var->data.read_only = true;
+            if (interface_type)
+               b->shader->info.num_ubos++;
          }
          break;
       case SpvStorageClassPushConstant:
