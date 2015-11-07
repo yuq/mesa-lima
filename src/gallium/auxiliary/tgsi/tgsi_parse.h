@@ -91,6 +91,7 @@ struct tgsi_full_instruction
    struct tgsi_instruction_predicate   Predicate;
    struct tgsi_instruction_label       Label;
    struct tgsi_instruction_texture     Texture;
+   struct tgsi_instruction_memory      Memory;
    struct tgsi_full_dst_register       Dst[TGSI_FULL_MAX_DST_REGISTERS];
    struct tgsi_full_src_register       Src[TGSI_FULL_MAX_SRC_REGISTERS];
    struct tgsi_texture_offset          TexOffsets[TGSI_FULL_MAX_TEX_OFFSETS];

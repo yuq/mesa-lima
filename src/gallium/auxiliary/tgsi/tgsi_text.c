@@ -1039,6 +1039,12 @@ parse_instruction(
       inst.Texture.Texture = TGSI_TEXTURE_UNKNOWN;
    }
 
+   if ((i >= TGSI_OPCODE_LOAD && i <= TGSI_OPCODE_ATOMIMAX) ||
+       i == TGSI_OPCODE_RESQ) {
+      inst.Instruction.Memory = 1;
+      inst.Memory.Qualifier = 0;
+   }
+
    /* Parse instruction operands.
     */
    for (i = 0; i < info->num_dst + info->num_src + info->is_tex; i++) {
@@ -1089,6 +1095,27 @@ parse_instruction(
          eat_opt_white( &cur );
    }
    inst.Texture.NumOffsets = i;
+
+   cur = ctx->cur;
+   eat_opt_white(&cur);
+   for (i = 0; inst.Instruction.Memory && *cur == ','; i++) {
+      uint j;
+      cur++;
+      eat_opt_white(&cur);
+      ctx->cur = cur;
+      for (j = 0; j < 3; j++) {
+         if (str_match_nocase_whole(&ctx->cur, tgsi_memory_names[j])) {
+            inst.Memory.Qualifier |= 1U << j;
+            break;
+         }
+      }
+      if (j == 3) {
+         report_error(ctx, "Expected memory qualifier");
+         return FALSE;
+      }
+      cur = ctx->cur;
+      eat_opt_white(&cur);
+   }
 
    cur = ctx->cur;
    eat_opt_white( &cur );

@@ -60,6 +60,7 @@ union tgsi_any_token {
    struct tgsi_instruction_predicate insn_predicate;
    struct tgsi_instruction_label insn_label;
    struct tgsi_instruction_texture insn_texture;
+   struct tgsi_instruction_memory insn_memory;
    struct tgsi_texture_offset insn_texture_offset;
    struct tgsi_src_register src;
    struct tgsi_ind_register ind;
@@ -1226,6 +1227,21 @@ ureg_emit_texture_offset(struct ureg_program *ureg,
    
 }
 
+void
+ureg_emit_memory(struct ureg_program *ureg,
+                 unsigned extended_token,
+                 unsigned qualifier)
+{
+   union tgsi_any_token *out, *insn;
+
+   out = get_tokens( ureg, DOMAIN_INSN, 1 );
+   insn = retrieve_token( ureg, DOMAIN_INSN, extended_token );
+
+   insn->insn.Memory = 1;
+
+   out[0].value = 0;
+   out[0].insn_memory.Qualifier = qualifier;
+}
 
 void
 ureg_fixup_insn_size(struct ureg_program *ureg,
@@ -1375,6 +1391,42 @@ ureg_label_insn(struct ureg_program *ureg,
       ureg_emit_src( ureg, src[i] );
 
    ureg_fixup_insn_size( ureg, insn.insn_token );
+}
+
+
+void
+ureg_memory_insn(struct ureg_program *ureg,
+                 unsigned opcode,
+                 const struct ureg_dst *dst,
+                 unsigned nr_dst,
+                 const struct ureg_src *src,
+                 unsigned nr_src,
+                 unsigned qualifier)
+{
+   struct ureg_emit_insn_result insn;
+   unsigned i;
+
+   insn = ureg_emit_insn(ureg,
+                         opcode,
+                         FALSE,
+                         FALSE,
+                         FALSE,
+                         TGSI_SWIZZLE_X,
+                         TGSI_SWIZZLE_Y,
+                         TGSI_SWIZZLE_Z,
+                         TGSI_SWIZZLE_W,
+                         nr_dst,
+                         nr_src);
+
+   ureg_emit_memory(ureg, insn.extended_token, qualifier);
+
+   for (i = 0; i < nr_dst; i++)
+      ureg_emit_dst(ureg, dst[i]);
+
+   for (i = 0; i < nr_src; i++)
+      ureg_emit_src(ureg, src[i]);
+
+   ureg_fixup_insn_size(ureg, insn.insn_token);
 }
 
 

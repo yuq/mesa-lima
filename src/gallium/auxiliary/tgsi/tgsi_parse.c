@@ -195,6 +195,10 @@ tgsi_parse_token(
          }
       }
 
+      if (inst->Instruction.Memory) {
+         next_token(ctx, &inst->Memory);
+      }
+
       assert( inst->Instruction.NumDstRegs <= TGSI_FULL_MAX_DST_REGISTERS );
 
       for (i = 0; i < inst->Instruction.NumDstRegs; i++) {

@@ -572,7 +572,8 @@ struct tgsi_instruction
    unsigned Predicate  : 1;  /* BOOL */
    unsigned Label      : 1;
    unsigned Texture    : 1;
-   unsigned Padding    : 2;
+   unsigned Memory     : 1;
+   unsigned Padding    : 1;
 };
 
 /*
@@ -727,6 +728,19 @@ struct tgsi_dst_register
    unsigned Dimension   : 1;  /* BOOL */
    int      Index       : 16; /* SINT */
    unsigned Padding     : 6;
+};
+
+#define TGSI_MEMORY_COHERENT (1 << 0)
+#define TGSI_MEMORY_RESTRICT (1 << 1)
+#define TGSI_MEMORY_VOLATILE (1 << 2)
+
+/**
+ * Specifies the type of memory access to do for the LOAD/STORE instruction.
+ */
+struct tgsi_instruction_memory
+{
+   unsigned Qualifier : 3;  /* TGSI_MEMORY_ */
+   unsigned Padding   : 29;
 };
 
 

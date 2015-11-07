@@ -208,6 +208,13 @@ const char *tgsi_immediate_type_names[4] =
    "FLT64"
 };
 
+const char *tgsi_memory_names[3] =
+{
+   "COHERENT",
+   "RESTRICT",
+   "VOLATILE",
+};
+
 
 static inline void
 tgsi_strings_check(void)

@@ -620,7 +620,8 @@ tgsi_default_instruction( void )
    instruction.NumSrcRegs = 1;
    instruction.Label = 0;
    instruction.Texture = 0;
-   instruction.Padding  = 0;
+   instruction.Memory = 0;
+   instruction.Padding = 0;
 
    return instruction;
 }
@@ -766,6 +767,34 @@ tgsi_build_instruction_texture(
    return instruction_texture;
 }
 
+static struct tgsi_instruction_memory
+tgsi_default_instruction_memory( void )
+{
+   struct tgsi_instruction_memory instruction_memory;
+
+   instruction_memory.Qualifier = 0;
+   instruction_memory.Padding = 0;
+
+   return instruction_memory;
+}
+
+static struct tgsi_instruction_memory
+tgsi_build_instruction_memory(
+   unsigned qualifier,
+   struct tgsi_token *prev_token,
+   struct tgsi_instruction *instruction,
+   struct tgsi_header *header )
+{
+   struct tgsi_instruction_memory instruction_memory;
+
+   instruction_memory.Qualifier = qualifier;
+   instruction_memory.Padding = 0;
+   instruction->Memory = 1;
+
+   instruction_grow( instruction, header );
+
+   return instruction_memory;
+}
 
 static struct tgsi_texture_offset
 tgsi_default_texture_offset( void )
@@ -1012,6 +1041,7 @@ tgsi_default_full_instruction( void )
    full_instruction.Predicate = tgsi_default_instruction_predicate();
    full_instruction.Label = tgsi_default_instruction_label();
    full_instruction.Texture = tgsi_default_instruction_texture();
+   full_instruction.Memory = tgsi_default_instruction_memory();
    for( i = 0;  i < TGSI_FULL_MAX_TEX_OFFSETS; i++ ) {
       full_instruction.TexOffsets[i] = tgsi_default_texture_offset();
    }
@@ -1123,6 +1153,24 @@ tgsi_build_full_instruction(
          prev_token = (struct tgsi_token *) texture_offset;
       }
    }
+
+   if (full_inst->Instruction.Memory) {
+      struct tgsi_instruction_memory *instruction_memory;
+
+      if( maxsize <= size )
+         return 0;
+      instruction_memory =
+         (struct  tgsi_instruction_memory *) &tokens[size];
+      size++;
+
+      *instruction_memory = tgsi_build_instruction_memory(
+         full_inst->Memory.Qualifier,
+         prev_token,
+         instruction,
+         header );
+      prev_token = (struct tgsi_token  *) instruction_memory;
+   }
+
    for( i = 0;  i <   full_inst->Instruction.NumDstRegs; i++ ) {
       const struct tgsi_full_dst_register *reg = &full_inst->Dst[i];
       struct tgsi_dst_register *dst_register;
