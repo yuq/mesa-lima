@@ -429,6 +429,8 @@ brw_instruction_name(enum opcode op)
       return "gen8_urb_write_simd8_masked_per_slot";
    case SHADER_OPCODE_URB_READ_SIMD8:
       return "urb_read_simd8";
+   case SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT:
+      return "urb_read_simd8_per_slot";
 
    case SHADER_OPCODE_FIND_LIVE_CHANNEL:
       return "find_live_channel";

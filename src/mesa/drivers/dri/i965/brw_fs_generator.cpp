@@ -387,6 +387,9 @@ fs_generator::generate_urb_read(fs_inst *inst,
    brw_inst_set_sfid(p->devinfo, send, BRW_SFID_URB);
    brw_inst_set_urb_opcode(p->devinfo, send, GEN8_URB_OPCODE_SIMD8_READ);
 
+   if (inst->opcode == SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT)
+      brw_inst_set_urb_per_slot_offset(p->devinfo, send, true);
+
    brw_inst_set_mlen(p->devinfo, send, inst->mlen);
    brw_inst_set_rlen(p->devinfo, send, inst->regs_written);
    brw_inst_set_header_present(p->devinfo, send, true);
@@ -2077,6 +2080,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 break;
 
       case SHADER_OPCODE_URB_READ_SIMD8:
+      case SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT:
          generate_urb_read(inst, dst, src[0]);
          break;
 

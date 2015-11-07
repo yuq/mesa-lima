@@ -1055,13 +1055,10 @@ enum opcode {
    SHADER_OPCODE_GEN7_SCRATCH_READ,
 
    /**
-    * Gen8+ SIMD8 URB Read message.
-    *
-    * Source 0: The header register, containing URB handles (g1).
-    *
-    * Currently only supports constant offsets, in inst->offset.
+    * Gen8+ SIMD8 URB Read messages.
     */
    SHADER_OPCODE_URB_READ_SIMD8,
+   SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT,
 
    SHADER_OPCODE_URB_WRITE_SIMD8,
    SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT,
