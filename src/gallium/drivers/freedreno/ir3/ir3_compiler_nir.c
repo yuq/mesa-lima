@@ -2163,8 +2163,14 @@ emit_instructions(struct ir3_compile *ctx)
 		setup_output(ctx, var);
 	}
 
-	/* Setup variables (which should only be arrays): */
+	/* Setup global variables (which should only be arrays): */
 	nir_foreach_variable(var, &ctx->s->globals) {
+		declare_var(ctx, var);
+	}
+
+	/* Setup local variables (which should only be arrays): */
+	/* NOTE: need to do something more clever when we support >1 fxn */
+	nir_foreach_variable(var, &fxn->locals) {
 		declare_var(ctx, var);
 	}
 
