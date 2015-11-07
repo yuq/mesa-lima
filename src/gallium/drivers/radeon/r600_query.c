@@ -307,7 +307,7 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 					struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
-	struct r600_query *query = (struct r600_query*)ctx->current_render_cond;
+	struct r600_query *query = (struct r600_query*)ctx->render_cond;
 	struct r600_query_buffer *qbuf;
 	uint32_t op;
 	bool flag_wait;
@@ -315,8 +315,8 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	if (!query)
 		return;
 
-	flag_wait = ctx->current_render_cond_mode == PIPE_RENDER_COND_WAIT ||
-		    ctx->current_render_cond_mode == PIPE_RENDER_COND_BY_REGION_WAIT;
+	flag_wait = ctx->render_cond_mode == PIPE_RENDER_COND_WAIT ||
+		    ctx->render_cond_mode == PIPE_RENDER_COND_BY_REGION_WAIT;
 
 	switch (query->type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
@@ -335,7 +335,7 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	}
 
 	/* if true then invert, see GL_ARB_conditional_render_inverted */
-	if (ctx->current_render_cond_cond)
+	if (ctx->render_cond_invert)
 		op |= PREDICATION_DRAW_NOT_VISIBLE; /* Draw if not visable/overflow */
 	else
 		op |= PREDICATION_DRAW_VISIBLE; /* Draw if visable/overflow */
@@ -831,9 +831,9 @@ static void r600_render_condition(struct pipe_context *ctx,
 	struct r600_query_buffer *qbuf;
 	struct r600_atom *atom = &rctx->render_cond_atom;
 
-	rctx->current_render_cond = query;
-	rctx->current_render_cond_cond = condition;
-	rctx->current_render_cond_mode = mode;
+	rctx->render_cond = query;
+	rctx->render_cond_invert = condition;
+	rctx->render_cond_mode = mode;
 
 	/* Compute the size of SET_PREDICATION packets. */
 	atom->num_dw = 0;

@@ -418,9 +418,9 @@ struct r600_common_context {
 
 	/* Render condition. */
 	struct r600_atom		render_cond_atom;
-	struct pipe_query		*current_render_cond;
-	unsigned			current_render_cond_mode;
-	boolean				current_render_cond_cond;
+	struct pipe_query		*render_cond;
+	unsigned			render_cond_mode;
+	boolean				render_cond_invert;
 	bool				render_cond_force_off; /* for u_blitter */
 
 	/* MSAA sample locations.
