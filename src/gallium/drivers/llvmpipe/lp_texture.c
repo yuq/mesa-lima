@@ -805,7 +805,7 @@ llvmpipe_init_screen_resource_funcs(struct pipe_screen *screen)
 #endif
 
    screen->resource_create = llvmpipe_resource_create;
-   screen->resource_create_front = llvmpipe_resource_create_front;
+/*   screen->resource_create_front = llvmpipe_resource_create_front; */
    screen->resource_destroy = llvmpipe_resource_destroy;
    screen->resource_from_handle = llvmpipe_resource_from_handle;
    screen->resource_get_handle = llvmpipe_resource_get_handle;
