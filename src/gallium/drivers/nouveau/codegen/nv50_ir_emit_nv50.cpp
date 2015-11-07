@@ -1125,7 +1125,10 @@ CodeEmitterNV50::emitIMUL(const Instruction *i)
 
    if (i->encSize == 8) {
       code[1] = (i->sType == TYPE_S16) ? (0x8000 | 0x4000) : 0x0000;
-      emitForm_MAD(i);
+      if (i->src(1).getFile() == FILE_IMMEDIATE)
+         emitForm_IMM(i);
+      else
+         emitForm_MAD(i);
    } else {
       if (i->sType == TYPE_S16)
          code[0] |= 0x8100;
@@ -1199,7 +1202,10 @@ CodeEmitterNV50::emitIMAD(const Instruction *i)
    code[1] |= neg1 << 27;
    code[1] |= neg2 << 26;
 
-   emitForm_MAD(i);
+   if (i->src(1).getFile() == FILE_IMMEDIATE)
+      emitForm_IMM(i);
+   else
+      emitForm_MAD(i);
 
    if (i->flagsSrc >= 0) {
       // add with carry from $cX
