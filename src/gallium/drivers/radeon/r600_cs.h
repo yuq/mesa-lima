@@ -50,21 +50,6 @@ static inline unsigned radeon_add_to_buffer_list(struct r600_common_context *rct
 						 enum radeon_bo_priority priority)
 {
 	assert(usage);
-
-	/* Make sure that all previous rings are flushed so that everything
-	 * looks serialized from the driver point of view.
-	 */
-	if (!ring->flushing) {
-		if (ring == &rctx->rings.gfx) {
-			if (rctx->rings.dma.cs) {
-				/* flush dma ring */
-				rctx->rings.dma.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
-			}
-		} else {
-			/* flush gfx ring */
-			rctx->rings.gfx.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
-		}
-	}
 	return rctx->ws->cs_add_buffer(ring->cs, rbo->cs_buf, usage,
 				      rbo->domains, priority) * 4;
 }

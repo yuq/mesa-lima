@@ -117,6 +117,10 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 
 void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw)
 {
+	/* Flush the GFX IB if it's not empty. */
+	if (ctx->rings.gfx.cs->cdw > ctx->initial_gfx_cs_size)
+		ctx->rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+
 	/* Flush if there's not enough space. */
 	if ((num_dw + ctx->rings.dma.cs->cdw) > ctx->rings.dma.cs->max_dw) {
 		ctx->rings.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);

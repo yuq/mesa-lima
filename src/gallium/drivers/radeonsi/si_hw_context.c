@@ -30,6 +30,11 @@
 void si_need_cs_space(struct si_context *ctx)
 {
 	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *dma = ctx->b.rings.dma.cs;
+
+	/* Flush the DMA IB if it's not empty. */
+	if (dma && dma->cdw)
+		ctx->b.rings.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 
 	/* There are two memory usage counters in the winsys for all buffers
 	 * that have been added (cs_add_buffer) and two counters in the pipe
