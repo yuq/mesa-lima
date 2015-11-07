@@ -221,13 +221,8 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct radeon_winsys_cs *cs = rctx->rings.dma.cs;
 
-	if (!cs->cdw)
-		goto done;
-
-	rctx->rings.dma.flushing = true;
-	rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence, 0);
-	rctx->rings.dma.flushing = false;
-done:
+	if (cs->cdw)
+		rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence, 0);
 	if (fence)
 		rctx->ws->fence_reference(fence, rctx->last_sdma_fence);
 }

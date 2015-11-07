@@ -73,8 +73,6 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		return;
 	}
 
-	ctx->b.rings.gfx.flushing = true;
-
 	r600_preflush_suspend_features(&ctx->b);
 
 	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
@@ -116,7 +114,6 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	/* Flush the CS. */
 	ws->cs_flush(cs, flags, &ctx->last_gfx_fence,
 		     ctx->screen->b.cs_count++);
-	ctx->b.rings.gfx.flushing = false;
 
 	if (fence)
 		ws->fence_reference(fence, ctx->last_gfx_fence);

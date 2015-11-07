@@ -256,8 +256,6 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 	if (cs->cdw == ctx->b.initial_gfx_cs_size && !fence)
 		return;
 
-	ctx->b.rings.gfx.flushing = true;
-
 	r600_preflush_suspend_features(&ctx->b);
 
 	/* flush the framebuffer cache */
@@ -283,7 +281,6 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 
 	/* Flush the CS. */
 	ctx->b.ws->cs_flush(cs, flags, fence, ctx->screen->b.cs_count++);
-	ctx->b.rings.gfx.flushing = false;
 
 	r600_begin_new_cs(ctx);
 }

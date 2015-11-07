@@ -365,7 +365,6 @@ struct r600_streamout {
 
 struct r600_ring {
 	struct radeon_winsys_cs		*cs;
-	bool				flushing;
 	void (*flush)(void *ctx, unsigned flags,
 		      struct pipe_fence_handle **fence);
 };
