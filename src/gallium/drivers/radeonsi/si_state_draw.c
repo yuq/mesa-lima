@@ -457,6 +457,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned sh_base_reg = sctx->shader_userdata.sh_base[PIPE_SHADER_VERTEX];
+	bool render_cond_bit = sctx->b.predicate_drawing && !sctx->b.render_cond_force_off;
 
 	if (info->count_from_stream_output) {
 		struct r600_so_target *t =
@@ -563,7 +564,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, PKT3(PKT3_INDEX_BUFFER_SIZE, 0, 0));
 			radeon_emit(cs, index_max_size);
 
-			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_INDIRECT, 3, sctx->b.predicate_drawing));
+			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_INDIRECT, 3, render_cond_bit));
 			radeon_emit(cs, info->indirect_offset);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
@@ -571,7 +572,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		} else {
 			index_va += info->start * ib->index_size;
 
-			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_2, 4, sctx->b.predicate_drawing));
+			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_2, 4, render_cond_bit));
 			radeon_emit(cs, index_max_size);
 			radeon_emit(cs, index_va);
 			radeon_emit(cs, (index_va >> 32UL) & 0xFF);
@@ -590,13 +591,13 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, indirect_va);
 			radeon_emit(cs, indirect_va >> 32);
 
-			radeon_emit(cs, PKT3(PKT3_DRAW_INDIRECT, 3, sctx->b.predicate_drawing));
+			radeon_emit(cs, PKT3(PKT3_DRAW_INDIRECT, 3, render_cond_bit));
 			radeon_emit(cs, info->indirect_offset);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_BASE_VERTEX * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, (sh_base_reg + SI_SGPR_START_INSTANCE * 4 - SI_SH_REG_OFFSET) >> 2);
 			radeon_emit(cs, V_0287F0_DI_SRC_SEL_AUTO_INDEX);
 		} else {
-			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_AUTO, 1, sctx->b.predicate_drawing));
+			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_AUTO, 1, render_cond_bit));
 			radeon_emit(cs, info->count);
 			radeon_emit(cs, V_0287F0_DI_SRC_SEL_AUTO_INDEX |
 				    S_0287F0_USE_OPAQUE(!!info->count_from_stream_output));

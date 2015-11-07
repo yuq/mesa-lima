@@ -86,17 +86,15 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 			sctx->samplers[PIPE_SHADER_FRAGMENT].views.views);
 	}
 
-	if ((op & SI_DISABLE_RENDER_COND) && sctx->b.current_render_cond) {
-		util_blitter_save_render_condition(sctx->blitter,
-                                                   sctx->b.current_render_cond,
-                                                   sctx->b.current_render_cond_cond,
-                                                   sctx->b.current_render_cond_mode);
-	}
+	if (op & SI_DISABLE_RENDER_COND)
+		sctx->b.render_cond_force_off = true;
 }
 
 static void si_blitter_end(struct pipe_context *ctx)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+
+	sctx->b.render_cond_force_off = false;
 	r600_resume_nontimer_queries(&sctx->b);
 }
 

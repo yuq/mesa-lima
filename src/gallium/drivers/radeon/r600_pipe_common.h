@@ -420,7 +420,8 @@ struct r600_common_context {
 	struct pipe_query		*current_render_cond;
 	unsigned			current_render_cond_mode;
 	boolean				current_render_cond_cond;
-	boolean				predicate_drawing;
+	bool				predicate_drawing;
+	bool				render_cond_force_off; /* for u_blitter */
 	/* For context flushing. */
 	struct pipe_query		*saved_render_cond;
 	boolean				saved_render_cond_cond;
