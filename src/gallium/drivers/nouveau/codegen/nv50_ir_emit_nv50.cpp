@@ -441,9 +441,9 @@ CodeEmitterNV50::setSrcFileBits(const Instruction *i, int enc)
       return;
 
    if ((mode & 3) == 1) {
-      const int pos = i->src(1).getFile() == FILE_IMMEDIATE ? 13 : 14;
+      const int pos = ((mode >> 2) & 3) == 3 ? 13 : 14;
 
-      switch (i->getSrc(0)->reg.type) {
+      switch (i->sType) {
       case TYPE_U8:
          break;
       case TYPE_U16:
