@@ -64,7 +64,7 @@ static void si_emit_cp_dma_copy_buffer(struct si_context *sctx,
 		radeon_emit(cs, src_va >> 32);		/* SRC_ADDR_HI [31:0] */
 		radeon_emit(cs, dst_va);		/* DST_ADDR_LO [31:0] */
 		radeon_emit(cs, dst_va >> 32);		/* DST_ADDR_HI [31:0] */
-		radeon_emit(cs, size | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
+		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
 	} else {
 		radeon_emit(cs, PKT3(PKT3_CP_DMA, 4, 0));
 		radeon_emit(cs, src_va);			/* SRC_ADDR_LO [31:0] */
@@ -96,7 +96,7 @@ static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 		radeon_emit(cs, 0);
 		radeon_emit(cs, dst_va);		/* DST_ADDR_LO [31:0] */
 		radeon_emit(cs, dst_va >> 32);		/* DST_ADDR_HI [15:0] */
-		radeon_emit(cs, size | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
+		radeon_emit(cs, size | wr_confirm | raw_wait);	/* COMMAND [29:22] | BYTE_COUNT [20:0] */
 	} else {
 		radeon_emit(cs, PKT3(PKT3_CP_DMA, 4, 0));
 		radeon_emit(cs, clear_value);		/* DATA [31:0] */
