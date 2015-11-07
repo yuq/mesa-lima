@@ -178,11 +178,11 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 		goto fail;
 	}
 
-	rctx->b.rings.gfx.cs = ws->cs_create(rctx->b.ctx, RING_GFX,
-					     r600_context_gfx_flush, rctx,
-					     rscreen->b.trace_bo ?
-						     rscreen->b.trace_bo->cs_buf : NULL);
-	rctx->b.rings.gfx.flush = r600_context_gfx_flush;
+	rctx->b.gfx.cs = ws->cs_create(rctx->b.ctx, RING_GFX,
+				       r600_context_gfx_flush, rctx,
+				       rscreen->b.trace_bo ?
+					       rscreen->b.trace_bo->cs_buf : NULL);
+	rctx->b.gfx.flush = r600_context_gfx_flush;
 
 	rctx->allocator_fetch_shader = u_suballocator_create(&rctx->b.b, 64 * 1024, 256,
 							     0, PIPE_USAGE_DEFAULT, FALSE);

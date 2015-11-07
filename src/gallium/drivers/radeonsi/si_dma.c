@@ -49,7 +49,7 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 				uint64_t src_offset,
 				uint64_t size)
 {
-	struct radeon_winsys_cs *cs = ctx->b.rings.dma.cs;
+	struct radeon_winsys_cs *cs = ctx->b.dma.cs;
 	unsigned i, ncopy, csize, max_csize, sub_cmd, shift;
 	struct r600_resource *rdst = (struct r600_resource*)dst;
 	struct r600_resource *rsrc = (struct r600_resource*)src;
@@ -78,9 +78,9 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 
 	r600_need_dma_space(&ctx->b, ncopy * 5);
 
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, rsrc, RADEON_USAGE_READ,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, rsrc, RADEON_USAGE_READ,
 			      RADEON_PRIO_SDMA_BUFFER);
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, rdst, RADEON_USAGE_WRITE,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, rdst, RADEON_USAGE_WRITE,
 			      RADEON_PRIO_SDMA_BUFFER);
 
 	for (i = 0; i < ncopy; i++) {
@@ -111,7 +111,7 @@ static void si_dma_copy_tile(struct si_context *ctx,
 			     unsigned pitch,
 			     unsigned bpp)
 {
-	struct radeon_winsys_cs *cs = ctx->b.rings.dma.cs;
+	struct radeon_winsys_cs *cs = ctx->b.dma.cs;
 	struct si_screen *sscreen = ctx->screen;
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
@@ -177,9 +177,9 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	ncopy = (size / SI_DMA_COPY_MAX_SIZE_DW) + !!(size % SI_DMA_COPY_MAX_SIZE_DW);
 	r600_need_dma_space(&ctx->b, ncopy * 9);
 
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, &rsrc->resource,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, &rsrc->resource,
 			      RADEON_USAGE_READ, RADEON_PRIO_SDMA_TEXTURE);
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, &rdst->resource,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, &rdst->resource,
 			      RADEON_USAGE_WRITE, RADEON_PRIO_SDMA_TEXTURE);
 
 	for (i = 0; i < ncopy; i++) {
@@ -221,7 +221,7 @@ void si_dma_copy(struct pipe_context *ctx,
 	unsigned src_x, src_y;
 	unsigned dst_x = dstx, dst_y = dsty, dst_z = dstz;
 
-	if (sctx->b.rings.dma.cs == NULL) {
+	if (sctx->b.dma.cs == NULL) {
 		goto fallback;
 	}
 

@@ -50,7 +50,7 @@ static void cik_sdma_do_copy_buffer(struct si_context *ctx,
 				    uint64_t src_offset,
 				    uint64_t size)
 {
-	struct radeon_winsys_cs *cs = ctx->b.rings.dma.cs;
+	struct radeon_winsys_cs *cs = ctx->b.dma.cs;
 	unsigned i, ncopy, csize;
 	struct r600_resource *rdst = (struct r600_resource*)dst;
 	struct r600_resource *rsrc = (struct r600_resource*)src;
@@ -61,9 +61,9 @@ static void cik_sdma_do_copy_buffer(struct si_context *ctx,
 	ncopy = (size + CIK_SDMA_COPY_MAX_SIZE - 1) / CIK_SDMA_COPY_MAX_SIZE;
 	r600_need_dma_space(&ctx->b, ncopy * 7);
 
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, rsrc, RADEON_USAGE_READ,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, rsrc, RADEON_USAGE_READ,
 			      RADEON_PRIO_SDMA_BUFFER);
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, rdst, RADEON_USAGE_WRITE,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, rdst, RADEON_USAGE_WRITE,
 			      RADEON_PRIO_SDMA_BUFFER);
 
 	for (i = 0; i < ncopy; i++) {
@@ -112,7 +112,7 @@ static void cik_sdma_copy_tile(struct si_context *ctx,
 			       unsigned pitch,
 			       unsigned bpe)
 {
-	struct radeon_winsys_cs *cs = ctx->b.rings.dma.cs;
+	struct radeon_winsys_cs *cs = ctx->b.dma.cs;
 	struct si_screen *sscreen = ctx->screen;
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
@@ -171,9 +171,9 @@ static void cik_sdma_copy_tile(struct si_context *ctx,
 	ncopy = (copy_height + cheight - 1) / cheight;
 	r600_need_dma_space(&ctx->b, ncopy * 12);
 
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, &rsrc->resource,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, &rsrc->resource,
 			      RADEON_USAGE_READ, RADEON_PRIO_SDMA_TEXTURE);
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, &rdst->resource,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.dma, &rdst->resource,
 			      RADEON_USAGE_WRITE, RADEON_PRIO_SDMA_TEXTURE);
 
 	copy_height = size * 4 / pitch;
@@ -224,7 +224,7 @@ void cik_sdma_copy(struct pipe_context *ctx,
 	unsigned copy_height, y_align;
 	unsigned dst_x = dstx, dst_y = dsty, dst_z = dstz;
 
-	if (sctx->b.rings.dma.cs == NULL) {
+	if (sctx->b.dma.cs == NULL) {
 		goto fallback;
 	}
 

@@ -527,7 +527,7 @@ static void r600_copy_buffer(struct pipe_context *ctx, struct pipe_resource *dst
 	 * Can we somehow flush the index buffer cache? Starting a new IB seems
 	 * to do the trick. */
 	if (rctx->b.chip_class <= R700)
-		rctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		rctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 }
 
 /**

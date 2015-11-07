@@ -937,7 +937,7 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 
 static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_shader *ps = sctx->ps_shader.current;
 	struct si_shader *vs = si_get_vs_state(sctx);
 	struct tgsi_shader_info *psinfo;
@@ -1009,7 +1009,7 @@ bcolor:
 
 static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_shader *ps = sctx->ps_shader.current;
 	unsigned input_ena;
 

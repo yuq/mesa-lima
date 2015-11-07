@@ -227,7 +227,7 @@ static void si_launch_grid(
 		uint32_t pc, const void *input)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
-	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_compute *program = sctx->cs_shader_state.program;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 	struct r600_resource *input_buffer = program->input_buffer;
@@ -274,7 +274,7 @@ static void si_launch_grid(
 	kernel_args_size = program->input_size + num_work_size_bytes + 8 /* For scratch va */;
 
 	kernel_args = sctx->b.ws->buffer_map(input_buffer->cs_buf,
-			sctx->b.rings.gfx.cs, PIPE_TRANSFER_WRITE);
+			sctx->b.gfx.cs, PIPE_TRANSFER_WRITE);
 	for (i = 0; i < 3; i++) {
 		kernel_args[i] = grid_layout[i];
 		kernel_args[i + 3] = grid_layout[i] * block_layout[i];
@@ -294,7 +294,7 @@ static void si_launch_grid(
 			    shader->scratch_bytes_per_wave *
 			    num_waves_for_scratch);
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 					  shader->scratch_bo,
 					  RADEON_USAGE_READWRITE,
 					  RADEON_PRIO_SCRATCH_BUFFER);
@@ -310,7 +310,7 @@ static void si_launch_grid(
 	kernel_args_va = input_buffer->gpu_address;
 	kernel_args_va += kernel_args_offset;
 
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, input_buffer,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, input_buffer,
 				  RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
 
 	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0, kernel_args_va);
@@ -338,7 +338,7 @@ static void si_launch_grid(
 		if (!buffer) {
 			continue;
 		}
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, buffer,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, buffer,
 					  RADEON_USAGE_READWRITE,
 					  RADEON_PRIO_COMPUTE_GLOBAL);
 	}
@@ -361,7 +361,7 @@ static void si_launch_grid(
 #if HAVE_LLVM >= 0x0306
 	shader_va += pc;
 #endif
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, shader->bo,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, shader->bo,
 				  RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 	si_pm4_set_reg(pm4, R_00B830_COMPUTE_PGM_LO, shader_va >> 8);
 	si_pm4_set_reg(pm4, R_00B834_COMPUTE_PGM_HI, shader_va >> 40);

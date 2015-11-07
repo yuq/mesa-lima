@@ -118,13 +118,13 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw)
 {
 	/* Flush the GFX IB if it's not empty. */
-	if (ctx->rings.gfx.cs->cdw > ctx->initial_gfx_cs_size)
-		ctx->rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+	if (ctx->gfx.cs->cdw > ctx->initial_gfx_cs_size)
+		ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 
 	/* Flush if there's not enough space. */
-	if ((num_dw + ctx->rings.dma.cs->cdw) > ctx->rings.dma.cs->max_dw) {
-		ctx->rings.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
-		assert((num_dw + ctx->rings.dma.cs->cdw) <= ctx->rings.dma.cs->max_dw);
+	if ((num_dw + ctx->dma.cs->cdw) > ctx->dma.cs->max_dw) {
+		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		assert((num_dw + ctx->dma.cs->cdw) <= ctx->dma.cs->max_dw);
 	}
 }
 
@@ -194,10 +194,10 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 	if (flags & PIPE_FLUSH_END_OF_FRAME)
 		rflags |= RADEON_FLUSH_END_OF_FRAME;
 
-	if (rctx->rings.dma.cs) {
-		rctx->rings.dma.flush(rctx, rflags, fence ? &sdma_fence : NULL);
+	if (rctx->dma.cs) {
+		rctx->dma.flush(rctx, rflags, fence ? &sdma_fence : NULL);
 	}
-	rctx->rings.gfx.flush(rctx, rflags, fence ? &gfx_fence : NULL);
+	rctx->gfx.flush(rctx, rflags, fence ? &gfx_fence : NULL);
 
 	/* Both engines can signal out of order, so we need to keep both fences. */
 	if (gfx_fence || sdma_fence) {
@@ -219,7 +219,7 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 				struct pipe_fence_handle **fence)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct radeon_winsys_cs *cs = rctx->rings.dma.cs;
+	struct radeon_winsys_cs *cs = rctx->dma.cs;
 
 	if (cs->cdw)
 		rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence, 0);
@@ -296,10 +296,10 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 		return false;
 
 	if (rscreen->info.r600_has_dma && !(rscreen->debug_flags & DBG_NO_ASYNC_DMA)) {
-		rctx->rings.dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
-							 r600_flush_dma_ring,
-							 rctx, NULL);
-		rctx->rings.dma.flush = r600_flush_dma_ring;
+		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
+						   r600_flush_dma_ring,
+						   rctx, NULL);
+		rctx->dma.flush = r600_flush_dma_ring;
 	}
 
 	return true;
@@ -307,10 +307,10 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 
 void r600_common_context_cleanup(struct r600_common_context *rctx)
 {
-	if (rctx->rings.gfx.cs)
-		rctx->ws->cs_destroy(rctx->rings.gfx.cs);
-	if (rctx->rings.dma.cs)
-		rctx->ws->cs_destroy(rctx->rings.dma.cs);
+	if (rctx->gfx.cs)
+		rctx->ws->cs_destroy(rctx->gfx.cs);
+	if (rctx->dma.cs)
+		rctx->ws->cs_destroy(rctx->dma.cs);
 	if (rctx->ctx)
 		rctx->ws->ctx_destroy(rctx->ctx);
 

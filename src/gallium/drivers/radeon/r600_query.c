@@ -172,7 +172,7 @@ static unsigned event_type_for_stream(struct r600_query *query)
 
 static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_query *query)
 {
-	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	uint64_t va;
 
 	r600_update_occlusion_query_state(ctx, query->type, 1);
@@ -225,7 +225,7 @@ static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_q
 	default:
 		assert(0);
 	}
-	r600_emit_reloc(ctx, &ctx->rings.gfx, query->buffer.buf, RADEON_USAGE_WRITE,
+	r600_emit_reloc(ctx, &ctx->gfx, query->buffer.buf, RADEON_USAGE_WRITE,
 			RADEON_PRIO_QUERY);
 
 	if (r600_is_timer_query(query->type))
@@ -236,7 +236,7 @@ static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_q
 
 static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_query *query)
 {
-	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	uint64_t va;
 
 	/* The queries which need begin already called this in begin_query. */
@@ -287,7 +287,7 @@ static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_que
 	default:
 		assert(0);
 	}
-	r600_emit_reloc(ctx, &ctx->rings.gfx, query->buffer.buf, RADEON_USAGE_WRITE,
+	r600_emit_reloc(ctx, &ctx->gfx, query->buffer.buf, RADEON_USAGE_WRITE,
 			RADEON_PRIO_QUERY);
 
 	query->buffer.results_end += query->result_size;
@@ -306,7 +306,7 @@ static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_que
 static void r600_emit_query_predication(struct r600_common_context *ctx, struct r600_query *query,
 					int operation, bool flag_wait)
 {
-	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	uint32_t op = PRED_OP(operation);
 
 	/* if true then invert, see GL_ARB_conditional_render_inverted */
@@ -343,7 +343,7 @@ static void r600_emit_query_predication(struct r600_common_context *ctx, struct 
 				radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
 				radeon_emit(cs, va + results_base);
 				radeon_emit(cs, op | (((va + results_base) >> 32) & 0xFF));
-				r600_emit_reloc(ctx, &ctx->rings.gfx, qbuf->buf, RADEON_USAGE_READ,
+				r600_emit_reloc(ctx, &ctx->gfx, qbuf->buf, RADEON_USAGE_READ,
 						RADEON_PRIO_QUERY);
 				results_base += query->result_size;
 	
@@ -939,7 +939,7 @@ void r600_resume_timer_queries(struct r600_common_context *ctx)
 /* Get backends mask */
 void r600_query_init_backend_mask(struct r600_common_context *ctx)
 {
-	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	struct r600_resource *buffer;
 	uint32_t *results;
 	unsigned num_backends = ctx->screen->info.r600_num_backends;
@@ -990,7 +990,7 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 		radeon_emit(cs, buffer->gpu_address);
 		radeon_emit(cs, buffer->gpu_address >> 32);
 
-		r600_emit_reloc(ctx, &ctx->rings.gfx, buffer,
+		r600_emit_reloc(ctx, &ctx->gfx, buffer,
                                 RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 
 		/* analyze results */

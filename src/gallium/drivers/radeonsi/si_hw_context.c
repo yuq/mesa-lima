@@ -29,22 +29,22 @@
 /* initialize */
 void si_need_cs_space(struct si_context *ctx)
 {
-	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
-	struct radeon_winsys_cs *dma = ctx->b.rings.dma.cs;
+	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
+	struct radeon_winsys_cs *dma = ctx->b.dma.cs;
 
 	/* Flush the DMA IB if it's not empty. */
 	if (dma && dma->cdw)
-		ctx->b.rings.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->b.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 
 	/* There are two memory usage counters in the winsys for all buffers
 	 * that have been added (cs_add_buffer) and two counters in the pipe
 	 * driver for those that haven't been added yet.
 	 */
-	if (unlikely(!ctx->b.ws->cs_memory_below_limit(ctx->b.rings.gfx.cs,
+	if (unlikely(!ctx->b.ws->cs_memory_below_limit(ctx->b.gfx.cs,
 						       ctx->b.vram, ctx->b.gtt))) {
 		ctx->b.gtt = 0;
 		ctx->b.vram = 0;
-		ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 		return;
 	}
 	ctx->b.gtt = 0;
@@ -54,14 +54,14 @@ void si_need_cs_space(struct si_context *ctx)
 	 * and just flush if there is not enough space left.
 	 */
 	if (unlikely(cs->cdw > cs->max_dw - 2048))
-		ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 }
 
 void si_context_gfx_flush(void *context, unsigned flags,
 			  struct pipe_fence_handle **fence)
 {
 	struct si_context *ctx = context;
-	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 	struct radeon_winsys *ws = ctx->b.ws;
 
 	if (ctx->gfx_flush_in_progress)
@@ -191,7 +191,7 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	r600_postflush_resume_features(&ctx->b);
 
-	ctx->b.initial_gfx_cs_size = ctx->b.rings.gfx.cs->cdw;
+	ctx->b.initial_gfx_cs_size = ctx->b.gfx.cs->cdw;
 
 	/* Invalidate various draw states so that they are emitted before
 	 * the first draw call. */

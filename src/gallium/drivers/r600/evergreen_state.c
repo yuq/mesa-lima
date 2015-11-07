@@ -871,7 +871,7 @@ evergreen_create_sampler_view(struct pipe_context *ctx,
 
 static void evergreen_emit_clip_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct pipe_clip_state *state = &rctx->clip_state.state;
 
 	radeon_set_context_reg_seq(cs, R_0285BC_PA_CL_UCP0_X, 6*4);
@@ -921,7 +921,7 @@ static void evergreen_set_scissor_states(struct pipe_context *ctx,
 
 static void evergreen_emit_scissor_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_scissor_state *rstate = &rctx->scissor;
 	struct pipe_scissor_state *state;
 	uint32_t dirty_mask;
@@ -1525,7 +1525,7 @@ static void evergreen_get_sample_position(struct pipe_context *ctx,
 static void evergreen_emit_msaa_state(struct r600_context *rctx, int nr_samples, int ps_iter_samples)
 {
 
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	unsigned max_dist = 0;
 
 	switch (nr_samples) {
@@ -1566,7 +1566,7 @@ static void evergreen_emit_msaa_state(struct r600_context *rctx, int nr_samples,
 
 static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct pipe_framebuffer_state *state = &rctx->framebuffer.state;
 	unsigned nr_cbufs = state->nr_cbufs;
 	unsigned i, tl, br;
@@ -1591,7 +1591,7 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 
 		tex = (struct r600_texture *)cb->base.texture;
 		reloc = radeon_add_to_buffer_list(&rctx->b,
-					      &rctx->b.rings.gfx,
+					      &rctx->b.gfx,
 					      (struct r600_resource*)cb->base.texture,
 					      RADEON_USAGE_READWRITE,
 					      tex->surface.nsamples > 1 ?
@@ -1599,7 +1599,7 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 						      RADEON_PRIO_COLOR_BUFFER);
 
 		if (tex->cmask_buffer && tex->cmask_buffer != &tex->resource) {
-			cmask_reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
+			cmask_reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
 				tex->cmask_buffer, RADEON_USAGE_READWRITE,
 				RADEON_PRIO_CMASK);
 		} else {
@@ -1645,7 +1645,7 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 
 		if (!rctx->keep_tiling_flags) {
 			unsigned reloc = radeon_add_to_buffer_list(&rctx->b,
-							       &rctx->b.rings.gfx,
+							       &rctx->b.gfx,
 							       (struct r600_resource*)state->cbufs[0]->texture,
 							       RADEON_USAGE_READWRITE,
 							       RADEON_PRIO_COLOR_BUFFER);
@@ -1668,7 +1668,7 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 	if (state->zsbuf) {
 		struct r600_surface *zb = (struct r600_surface*)state->zsbuf;
 		unsigned reloc = radeon_add_to_buffer_list(&rctx->b,
-						       &rctx->b.rings.gfx,
+						       &rctx->b.gfx,
 						       (struct r600_resource*)state->zsbuf->texture,
 						       RADEON_USAGE_READWRITE,
 						       zb->base.texture->nr_samples > 1 ?
@@ -1730,7 +1730,7 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 
 static void evergreen_emit_polygon_offset(struct r600_context *rctx, struct r600_atom *a)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_poly_offset_state *state = (struct r600_poly_offset_state*)a;
 	float offset_units = state->offset_units;
 	float offset_scale = state->offset_scale;
@@ -1757,7 +1757,7 @@ static void evergreen_emit_polygon_offset(struct r600_context *rctx, struct r600
 
 static void evergreen_emit_cb_misc_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_cb_misc_state *a = (struct r600_cb_misc_state*)atom;
 	unsigned fb_colormask = (1ULL << ((unsigned)a->nr_cbufs * 4)) - 1;
 	unsigned ps_colormask = (1ULL << ((unsigned)a->nr_ps_color_outputs * 4)) - 1;
@@ -1772,7 +1772,7 @@ static void evergreen_emit_cb_misc_state(struct r600_context *rctx, struct r600_
 
 static void evergreen_emit_db_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_db_state *a = (struct r600_db_state*)atom;
 
 	if (a->rsurf && a->rsurf->db_htile_surface) {
@@ -1783,7 +1783,7 @@ static void evergreen_emit_db_state(struct r600_context *rctx, struct r600_atom 
 		radeon_set_context_reg(cs, R_028ABC_DB_HTILE_SURFACE, a->rsurf->db_htile_surface);
 		radeon_set_context_reg(cs, R_028AC8_DB_PRELOAD_CONTROL, a->rsurf->db_preload_control);
 		radeon_set_context_reg(cs, R_028014_DB_HTILE_DATA_BASE, a->rsurf->db_htile_data_base);
-		reloc_idx = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rtex->htile_buffer,
+		reloc_idx = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rtex->htile_buffer,
 						  RADEON_USAGE_READWRITE, RADEON_PRIO_HTILE);
 		cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
 		cs->buf[cs->cdw++] = reloc_idx;
@@ -1795,7 +1795,7 @@ static void evergreen_emit_db_state(struct r600_context *rctx, struct r600_atom 
 
 static void evergreen_emit_db_misc_state(struct r600_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_db_misc_state *a = (struct r600_db_misc_state*)atom;
 	unsigned db_render_control = 0;
 	unsigned db_count_control = 0;
@@ -1862,7 +1862,7 @@ static void evergreen_emit_vertex_buffers(struct r600_context *rctx,
 					  unsigned resource_offset,
 					  unsigned pkt_flags)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	uint32_t dirty_mask = state->dirty_mask;
 
 	while (dirty_mask) {
@@ -1897,7 +1897,7 @@ static void evergreen_emit_vertex_buffers(struct r600_context *rctx,
 		radeon_emit(cs, 0xc0000000); /* RESOURCEi_WORD7 */
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0) | pkt_flags);
-		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rbuffer,
 						      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER));
 	}
 	state->dirty_mask = 0;
@@ -1921,7 +1921,7 @@ static void evergreen_emit_constant_buffers(struct r600_context *rctx,
 					    unsigned reg_alu_const_cache,
 					    unsigned pkt_flags)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	uint32_t dirty_mask = state->dirty_mask;
 
 	while (dirty_mask) {
@@ -1945,7 +1945,7 @@ static void evergreen_emit_constant_buffers(struct r600_context *rctx,
 		}
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0) | pkt_flags);
-		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rbuffer,
 						      RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER));
 
 		radeon_emit(cs, PKT3(PKT3_SET_RESOURCE, 8, 0) | pkt_flags);
@@ -1970,7 +1970,7 @@ static void evergreen_emit_constant_buffers(struct r600_context *rctx,
 			    S_03001C_TYPE(V_03001C_SQ_TEX_VTX_VALID_BUFFER));
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0) | pkt_flags);
-		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rbuffer,
 						      RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER));
 
 		dirty_mask &= ~(1 << buffer_index);
@@ -2018,7 +2018,7 @@ static void evergreen_emit_sampler_views(struct r600_context *rctx,
 					 struct r600_samplerview_state *state,
 					 unsigned resource_id_base, unsigned pkt_flags)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	uint32_t dirty_mask = state->dirty_mask;
 
 	while (dirty_mask) {
@@ -2033,7 +2033,7 @@ static void evergreen_emit_sampler_views(struct r600_context *rctx,
 		radeon_emit(cs, (resource_id_base + resource_index) * 8);
 		radeon_emit_array(cs, rview->tex_resource_words, 8);
 
-		reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rview->tex_resource,
+		reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rview->tex_resource,
 					      RADEON_USAGE_READ,
 					      r600_get_sampler_view_priority(rview->tex_resource));
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0) | pkt_flags);
@@ -2077,7 +2077,7 @@ static void evergreen_emit_sampler_states(struct r600_context *rctx,
 				unsigned border_index_reg,
 				unsigned pkt_flags)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	uint32_t dirty_mask = texinfo->states.dirty_mask;
 
 	while (dirty_mask) {
@@ -2130,14 +2130,14 @@ static void evergreen_emit_sample_mask(struct r600_context *rctx, struct r600_at
 	struct r600_sample_mask *s = (struct r600_sample_mask*)a;
 	uint8_t mask = s->sample_mask;
 
-	radeon_set_context_reg(rctx->b.rings.gfx.cs, R_028C3C_PA_SC_AA_MASK,
+	radeon_set_context_reg(rctx->b.gfx.cs, R_028C3C_PA_SC_AA_MASK,
 			       mask | (mask << 8) | (mask << 16) | (mask << 24));
 }
 
 static void cayman_emit_sample_mask(struct r600_context *rctx, struct r600_atom *a)
 {
 	struct r600_sample_mask *s = (struct r600_sample_mask*)a;
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	uint16_t mask = s->sample_mask;
 
 	radeon_set_context_reg_seq(cs, CM_R_028C38_PA_SC_AA_MASK_X0Y0_X1Y0, 2);
@@ -2147,21 +2147,21 @@ static void cayman_emit_sample_mask(struct r600_context *rctx, struct r600_atom 
 
 static void evergreen_emit_vertex_fetch_shader(struct r600_context *rctx, struct r600_atom *a)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_cso_state *state = (struct r600_cso_state*)a;
 	struct r600_fetch_shader *shader = (struct r600_fetch_shader*)state->cso;
 
 	radeon_set_context_reg(cs, R_0288A4_SQ_PGM_START_FS,
 			       (shader->buffer->gpu_address + shader->offset) >> 8);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, shader->buffer,
+	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, shader->buffer,
                                                   RADEON_USAGE_READ,
                                                   RADEON_PRIO_INTERNAL_SHADER));
 }
 
 static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_atom *a)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_shader_stages_state *state = (struct r600_shader_stages_state*)a;
 
 	uint32_t v = 0, v2 = 0, primid = 0;
@@ -2200,7 +2200,7 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 
 static void evergreen_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_gs_rings_state *state = (struct r600_gs_rings_state*)a;
 	struct r600_resource *rbuffer;
 
@@ -2213,7 +2213,7 @@ static void evergreen_emit_gs_rings(struct r600_context *rctx, struct r600_atom 
 		radeon_set_config_reg(cs, R_008C40_SQ_ESGS_RING_BASE,
 				rbuffer->gpu_address >> 8);
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rbuffer,
 						      RADEON_USAGE_READWRITE,
 						      RADEON_PRIO_RINGS_STREAMOUT));
 		radeon_set_config_reg(cs, R_008C44_SQ_ESGS_RING_SIZE,
@@ -2223,7 +2223,7 @@ static void evergreen_emit_gs_rings(struct r600_context *rctx, struct r600_atom 
 		radeon_set_config_reg(cs, R_008C48_SQ_GSVS_RING_BASE,
 				rbuffer->gpu_address >> 8);
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx, rbuffer,
 						      RADEON_USAGE_READWRITE,
 						      RADEON_PRIO_RINGS_STREAMOUT));
 		radeon_set_config_reg(cs, R_008C4C_SQ_GSVS_RING_SIZE,
@@ -3274,7 +3274,7 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 				unsigned pitch,
 				unsigned bpp)
 {
-	struct radeon_winsys_cs *cs = rctx->b.rings.dma.cs;
+	struct radeon_winsys_cs *cs = rctx->b.dma.cs;
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
 	unsigned array_mode, lbpp, pitch_tile_max, slice_tile_max, size;
@@ -3362,9 +3362,9 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 		}
 		size = (cheight * pitch) / 4;
 		/* emit reloc before writing cs so that cs is always in consistent state */
-		radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.dma, &rsrc->resource,
+		radeon_add_to_buffer_list(&rctx->b, &rctx->b.dma, &rsrc->resource,
 				      RADEON_USAGE_READ, RADEON_PRIO_SDMA_TEXTURE);
-		radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.dma, &rdst->resource,
+		radeon_add_to_buffer_list(&rctx->b, &rctx->b.dma, &rdst->resource,
 				      RADEON_USAGE_WRITE, RADEON_PRIO_SDMA_TEXTURE);
 		cs->buf[cs->cdw++] = DMA_PACKET(DMA_PACKET_COPY, sub_cmd, size);
 		cs->buf[cs->cdw++] = base >> 8;
@@ -3399,7 +3399,7 @@ static void evergreen_dma_copy(struct pipe_context *ctx,
 	unsigned src_x, src_y;
 	unsigned dst_x = dstx, dst_y = dsty, dst_z = dstz;
 
-	if (rctx->b.rings.dma.cs == NULL) {
+	if (rctx->b.dma.cs == NULL) {
 		goto fallback;
 	}
 

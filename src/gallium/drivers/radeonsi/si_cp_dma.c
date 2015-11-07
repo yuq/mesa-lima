@@ -46,7 +46,7 @@ static void si_emit_cp_dma_copy_buffer(struct si_context *sctx,
 				       uint64_t dst_va, uint64_t src_va,
 				       unsigned size, unsigned flags)
 {
-	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? S_411_CP_SYNC(1) : 0;
 	uint32_t wr_confirm = !(flags & R600_CP_DMA_SYNC) ? S_414_DISABLE_WR_CONFIRM(1) : 0;
 	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? S_414_RAW_WAIT(1) : 0;
@@ -80,7 +80,7 @@ static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 					uint64_t dst_va, unsigned size,
 					uint32_t clear_value, unsigned flags)
 {
-	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? S_411_CP_SYNC(1) : 0;
 	uint32_t wr_confirm = !(flags & R600_CP_DMA_SYNC) ? S_414_DISABLE_WR_CONFIRM(1) : 0;
 	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? S_414_RAW_WAIT(1) : 0;
@@ -129,11 +129,11 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 	si_need_cs_space(sctx);
 
 	/* This must be done after need_cs_space. */
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				  (struct r600_resource*)dst,
 				  RADEON_USAGE_WRITE, RADEON_PRIO_CP_DMA);
 	if (src)
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 					  (struct r600_resource*)src,
 					  RADEON_USAGE_READ, RADEON_PRIO_CP_DMA);
 
@@ -177,7 +177,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	/* Fallback for unaligned clears. */
 	if (offset % 4 != 0 || size % 4 != 0) {
 		uint8_t *map = sctx->b.ws->buffer_map(r600_resource(dst)->cs_buf,
-						      sctx->b.rings.gfx.cs,
+						      sctx->b.gfx.cs,
 						      PIPE_TRANSFER_WRITE);
 		map += offset;
 		for (unsigned i = 0; i < size; i++) {

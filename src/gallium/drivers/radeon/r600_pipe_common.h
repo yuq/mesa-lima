@@ -369,11 +369,6 @@ struct r600_ring {
 		      struct pipe_fence_handle **fence);
 };
 
-struct r600_rings {
-	struct r600_ring		gfx;
-	struct r600_ring		dma;
-};
-
 struct r600_common_context {
 	struct pipe_context b; /* base class */
 
@@ -382,7 +377,8 @@ struct r600_common_context {
 	struct radeon_winsys_ctx	*ctx;
 	enum radeon_family		family;
 	enum chip_class			chip_class;
-	struct r600_rings		rings;
+	struct r600_ring		gfx;
+	struct r600_ring		dma;
 	struct pipe_fence_handle	*last_sdma_fence;
 	unsigned			initial_gfx_cs_size;
 	unsigned			gpu_reset_counter;
