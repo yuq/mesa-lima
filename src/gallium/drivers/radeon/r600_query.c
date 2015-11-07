@@ -532,7 +532,7 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 		return;
 	case PIPE_QUERY_GPU_FINISHED:
-		rctx->rings.gfx.flush(rctx, RADEON_FLUSH_ASYNC, &rquery->fence);
+		ctx->flush(ctx, &rquery->fence, 0);
 		return;
 	case R600_QUERY_DRAW_CALLS:
 		rquery->end_result = rctx->num_draw_calls;
