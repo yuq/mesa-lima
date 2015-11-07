@@ -75,7 +75,7 @@ expandIntegerMUL(BuildUtil *bld, Instruction *mul)
    s[0] = mul->getSrc(0);
    s[1] = mul->getSrc(1);
 
-   if (isSignedType(mul->sType)) {
+   if (isSignedType(mul->sType) && highResult) {
       s[0] = bld->getSSA(fullSize);
       s[1] = bld->getSSA(fullSize);
       bld->mkOp1(OP_ABS, mul->sType, s[0], mul->getSrc(0));
