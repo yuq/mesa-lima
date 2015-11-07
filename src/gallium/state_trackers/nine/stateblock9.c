@@ -24,6 +24,7 @@
 #include "device9.h"
 #include "basetexture9.h"
 #include "nine_helpers.h"
+#include "vertexdeclaration9.h"
 
 #define DBG_CHANNEL DBG_STATEBLOCK
 
@@ -490,7 +491,10 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
         nine_state_copy_common(dst, src, src, TRUE, pool);
 
     if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
-        nine_bind(&dst->vdecl, src->vdecl);
+        NineDevice9_SetVertexDeclaration(This->base.device, (IDirect3DVertexDeclaration9 *)src->vdecl);
+
+    /* Recomputing it is needed if we changed vs but not vdecl */
+    dst->programmable_vs = dst->vs && !(dst->vdecl && dst->vdecl->position_t);
 
     /* Textures */
     if (src->changed.texture) {

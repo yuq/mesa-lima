@@ -367,14 +367,14 @@ prepare_vs(struct NineDevice9 *device, uint8_t shader_changed)
     uint32_t changed_group = 0;
     int has_key_changed = 0;
 
-    if (likely(vs))
+    if (likely(state->programmable_vs))
         has_key_changed = NineVertexShader9_UpdateKey(vs, state);
 
     if (!shader_changed && !has_key_changed)
         return 0;
 
     /* likely because we dislike FF */
-    if (likely(vs)) {
+    if (likely(state->programmable_vs)) {
         state->cso.vs = NineVertexShader9_GetVariant(vs);
     } else {
         vs = device->ff.vs;
@@ -567,7 +567,7 @@ update_vertex_elements(struct NineDevice9 *device)
     state->stream_usage_mask = 0;
     memset(vdecl_index_map, -1, 16);
     memset(used_streams, 0, device->caps.MaxStreams);
-    vs = device->state.vs ? device->state.vs : device->ff.vs;
+    vs = state->programmable_vs ? device->state.vs : device->ff.vs;
 
     if (vdecl) {
         for (n = 0; n < vs->num_inputs; ++n) {
@@ -761,7 +761,7 @@ update_textures_and_samplers(struct NineDevice9 *device)
         cso_single_sampler_done(device->cso, PIPE_SHADER_FRAGMENT);
 
     commit_samplers = FALSE;
-    sampler_mask = state->vs ? state->vs->sampler_mask : 0;
+    sampler_mask = state->programmable_vs ? state->vs->sampler_mask : 0;
     state->bound_samplers_mask_vs = 0;
     for (num_textures = 0, i = 0; i < NINE_MAX_SAMPLERS_VS; ++i) {
         const unsigned s = NINE_SAMPLER_VS(i);
@@ -854,7 +854,7 @@ commit_vs_constants(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
 
-    if (unlikely(!device->state.vs))
+    if (unlikely(!device->state.programmable_vs))
         pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb_vs_ff);
     else
         pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb_vs);
@@ -964,7 +964,7 @@ nine_update_state(struct NineDevice9 *device)
     validate_textures(device); /* may clobber state */
 
     /* ff_update may change VS/PS dirty bits */
-    if (unlikely(!state->vs || !state->ps))
+    if (unlikely(!state->programmable_vs || !state->ps))
         nine_ff_update(device);
     group = state->changed.group;
 
@@ -997,12 +997,12 @@ nine_update_state(struct NineDevice9 *device)
         if (group & (NINE_STATE_TEXTURE | NINE_STATE_SAMPLER))
             update_textures_and_samplers(device);
         if (device->prefer_user_constbuf) {
-            if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS)) && state->vs)
+            if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS)) && state->programmable_vs)
                 prepare_vs_constants_userbuf(device);
             if ((group & (NINE_STATE_PS_CONST | NINE_STATE_PS)) && state->ps)
                 prepare_ps_constants_userbuf(device);
         } else {
-            if ((group & NINE_STATE_VS_CONST) && state->vs)
+            if ((group & NINE_STATE_VS_CONST) && state->programmable_vs)
                 upload_constants(device, PIPE_SHADER_VERTEX);
             if ((group & NINE_STATE_PS_CONST) && state->ps)
                 upload_constants(device, PIPE_SHADER_FRAGMENT);

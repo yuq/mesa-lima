@@ -203,6 +203,9 @@ NineVertexDeclaration9_ctor( struct NineVertexDeclaration9 *This,
                                                      This->decls[i].UsageIndex);
         This->usage_map[i] = usage;
 
+        if (This->decls[i].Usage == D3DDECLUSAGE_POSITIONT)
+            This->position_t = TRUE;
+
         This->elems[i].src_offset = This->decls[i].Offset;
         This->elems[i].instance_divisor = 0;
         This->elems[i].vertex_buffer_index = This->decls[i].Stream;
