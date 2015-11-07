@@ -161,12 +161,6 @@ void r600_postflush_resume_features(struct r600_common_context *ctx)
 		r600_resume_nontimer_queries(ctx);
 		r600_resume_timer_queries(ctx);
 	}
-
-	/* Re-emit PKT3_SET_PREDICATION. */
-	if (ctx->current_render_cond)
-		ctx->b.render_condition(&ctx->b, ctx->current_render_cond,
-					ctx->current_render_cond_cond,
-					ctx->current_render_cond_mode);
 }
 
 static void r600_flush_from_st(struct pipe_context *ctx,

@@ -303,13 +303,36 @@ static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_que
 	r600_update_prims_generated_query_state(ctx, query->type, -1);
 }
 
-static void r600_emit_query_predication(struct r600_common_context *ctx, struct r600_query *query,
-					int operation, bool flag_wait)
+static void r600_emit_query_predication(struct r600_common_context *ctx,
+					struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct r600_query *query = (struct r600_query*)ctx->current_render_cond;
 	struct r600_query_buffer *qbuf;
-	unsigned count;
-	uint32_t op = PRED_OP(operation);
+	uint32_t op;
+	bool flag_wait;
+
+	if (!query)
+		return;
+
+	flag_wait = ctx->current_render_cond_mode == PIPE_RENDER_COND_WAIT ||
+		    ctx->current_render_cond_mode == PIPE_RENDER_COND_BY_REGION_WAIT;
+
+	switch (query->type) {
+	case PIPE_QUERY_OCCLUSION_COUNTER:
+	case PIPE_QUERY_OCCLUSION_PREDICATE:
+		op = PRED_OP(PREDICATION_OP_ZPASS);
+		break;
+	case PIPE_QUERY_PRIMITIVES_EMITTED:
+	case PIPE_QUERY_PRIMITIVES_GENERATED:
+	case PIPE_QUERY_SO_STATISTICS:
+	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
+		op = PRED_OP(PREDICATION_OP_PRIMCOUNT);
+		break;
+	default:
+		assert(0);
+		return;
+	}
 
 	/* if true then invert, see GL_ARB_conditional_render_inverted */
 	if (ctx->current_render_cond_cond)
@@ -317,13 +340,6 @@ static void r600_emit_query_predication(struct r600_common_context *ctx, struct 
 	else
 		op |= PREDICATION_DRAW_VISIBLE; /* Draw if visable/overflow */
 
-	/* Find how many results there are. */
-	count = 0;
-	for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous)
-		count += qbuf->results_end / query->result_size;
-	
-	ctx->need_gfx_cs_space(&ctx->b, 5 * count, TRUE);
-	
 	op |= flag_wait ? PREDICATION_HINT_WAIT : PREDICATION_HINT_NOWAIT_DRAW;
 	
 	/* emit predicate packets for all data blocks */
@@ -811,39 +827,21 @@ static void r600_render_condition(struct pipe_context *ctx,
 				  uint mode)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct r600_query *rquery = (struct r600_query *)query;
-	bool wait_flag = false;
+	struct r600_query *rquery = (struct r600_query*)query;
+	struct r600_query_buffer *qbuf;
+	struct r600_atom *atom = &rctx->render_cond_atom;
 
 	rctx->current_render_cond = query;
 	rctx->current_render_cond_cond = condition;
 	rctx->current_render_cond_mode = mode;
+	rctx->predicate_drawing = query != NULL;
 
-	if (query == NULL) {
-		rctx->predicate_drawing = false;
-		return;
-	}
+	/* Compute the size of SET_PREDICATION packets. */
+	atom->num_dw = 0;
+	for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
+		atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
 
-	if (mode == PIPE_RENDER_COND_WAIT ||
-	    mode == PIPE_RENDER_COND_BY_REGION_WAIT) {
-		wait_flag = true;
-	}
-
-	rctx->predicate_drawing = true;
-
-	switch (rquery->type) {
-	case PIPE_QUERY_OCCLUSION_COUNTER:
-	case PIPE_QUERY_OCCLUSION_PREDICATE:
-		r600_emit_query_predication(rctx, rquery, PREDICATION_OP_ZPASS, wait_flag);
-		break;
-	case PIPE_QUERY_PRIMITIVES_EMITTED:
-	case PIPE_QUERY_PRIMITIVES_GENERATED:
-	case PIPE_QUERY_SO_STATISTICS:
-	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
-		r600_emit_query_predication(rctx, rquery, PREDICATION_OP_PRIMCOUNT, wait_flag);
-		break;
-	default:
-		assert(0);
-	}
+	rctx->set_atom_dirty(rctx, atom, query != NULL);
 }
 
 static void r600_suspend_queries(struct r600_common_context *ctx,
@@ -1012,6 +1010,7 @@ void r600_query_init(struct r600_common_context *rctx)
 	rctx->b.begin_query = r600_begin_query;
 	rctx->b.end_query = r600_end_query;
 	rctx->b.get_query_result = r600_get_query_result;
+	rctx->render_cond_atom.emit = r600_emit_query_predication;
 
 	if (((struct r600_common_screen*)rctx->b.screen)->info.r600_num_backends > 0)
 	    rctx->b.render_condition = r600_render_condition;

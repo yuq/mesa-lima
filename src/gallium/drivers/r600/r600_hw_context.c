@@ -323,6 +323,7 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	}
 	r600_mark_atom_dirty(ctx, &ctx->vertex_shader.atom);
 	r600_mark_atom_dirty(ctx, &ctx->b.streamout.enable_atom);
+	r600_mark_atom_dirty(ctx, &ctx->b.render_cond_atom);
 
 	if (ctx->blend_state.cso)
 		r600_mark_atom_dirty(ctx, &ctx->blend_state.atom);

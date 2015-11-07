@@ -417,6 +417,7 @@ struct r600_common_context {
 	unsigned			num_draw_calls;
 
 	/* Render condition. */
+	struct r600_atom		render_cond_atom;
 	struct pipe_query		*current_render_cond;
 	unsigned			current_render_cond_mode;
 	boolean				current_render_cond_cond;
