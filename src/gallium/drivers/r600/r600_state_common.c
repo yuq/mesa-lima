@@ -1478,7 +1478,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	struct pipe_draw_info info = *dinfo;
 	struct pipe_index_buffer ib = {};
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
-	bool render_cond_bit = rctx->b.predicate_drawing && !rctx->b.render_cond_force_off;
+	bool render_cond_bit = rctx->b.current_render_cond && !rctx->b.render_cond_force_off;
 	uint64_t mask;
 
 	if (!info.indirect && !info.count && (info.indexed || !info.count_from_stream_output)) {

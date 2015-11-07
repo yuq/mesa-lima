@@ -834,7 +834,6 @@ static void r600_render_condition(struct pipe_context *ctx,
 	rctx->current_render_cond = query;
 	rctx->current_render_cond_cond = condition;
 	rctx->current_render_cond_mode = mode;
-	rctx->predicate_drawing = query != NULL;
 
 	/* Compute the size of SET_PREDICATION packets. */
 	atom->num_dw = 0;

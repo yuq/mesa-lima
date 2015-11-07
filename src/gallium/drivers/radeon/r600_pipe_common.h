@@ -421,7 +421,6 @@ struct r600_common_context {
 	struct pipe_query		*current_render_cond;
 	unsigned			current_render_cond_mode;
 	boolean				current_render_cond_cond;
-	bool				predicate_drawing;
 	bool				render_cond_force_off; /* for u_blitter */
 
 	/* MSAA sample locations.

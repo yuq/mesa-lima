@@ -457,7 +457,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned sh_base_reg = sctx->shader_userdata.sh_base[PIPE_SHADER_VERTEX];
-	bool render_cond_bit = sctx->b.predicate_drawing && !sctx->b.render_cond_force_off;
+	bool render_cond_bit = sctx->b.current_render_cond && !sctx->b.render_cond_force_off;
 
 	if (info->count_from_stream_output) {
 		struct r600_so_target *t =
