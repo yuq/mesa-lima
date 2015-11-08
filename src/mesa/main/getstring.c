@@ -274,10 +274,7 @@ _mesa_GetPointerv( GLenum pname, GLvoid **params )
          break;
       case GL_DEBUG_CALLBACK_FUNCTION_ARB:
       case GL_DEBUG_CALLBACK_USER_PARAM_ARB:
-         if (!_mesa_is_desktop_gl(ctx))
-            goto invalid_pname;
-         else
-            *params = _mesa_get_debug_state_ptr(ctx, pname);
+         *params = _mesa_get_debug_state_ptr(ctx, pname);
          break;
       default:
          goto invalid_pname;
