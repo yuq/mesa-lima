@@ -209,21 +209,6 @@ static void si_shader_es(struct si_shader *shader)
 		si_set_tesseval_regs(shader, pm4);
 }
 
-static unsigned si_gs_get_max_stream(struct si_shader *shader)
-{
-	struct pipe_stream_output_info *so = &shader->selector->so;
-	unsigned max_stream = 0, i;
-
-	if (so->num_outputs == 0)
-		return 0;
-
-	for (i = 0; i < so->num_outputs; i++) {
-		if (so->output[i].stream > max_stream)
-			max_stream = so->output[i].stream;
-	}
-	return max_stream;
-}
-
 static void si_shader_gs(struct si_shader *shader)
 {
 	unsigned gs_vert_itemsize = shader->selector->gsvs_vertex_size;
@@ -234,7 +219,7 @@ static void si_shader_gs(struct si_shader *shader)
 	struct si_pm4_state *pm4;
 	unsigned num_sgprs, num_user_sgprs;
 	uint64_t va;
-	unsigned max_stream = si_gs_get_max_stream(shader);
+	unsigned max_stream = shader->selector->max_gs_stream;
 
 	/* The GSVS_RING_ITEMSIZE register takes 15 bits */
 	assert(gsvs_itemsize < (1 << 15));
@@ -716,6 +701,11 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		sel->gsvs_vertex_size = sel->info.num_outputs * 16;
 		sel->max_gsvs_emit_size = sel->gsvs_vertex_size *
 					  sel->gs_max_out_vertices;
+
+		sel->max_gs_stream = 0;
+		for (i = 0; i < sel->so.num_outputs; i++)
+			sel->max_gs_stream = MAX2(sel->max_gs_stream,
+						  sel->so.output[i].stream);
 
 		for (i = 0; i < sel->info.num_inputs; i++) {
 			unsigned name = sel->info.input_semantic_name[i];
