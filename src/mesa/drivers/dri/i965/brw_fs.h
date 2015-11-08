@@ -303,7 +303,8 @@ public:
                        unsigned stream_id);
    void emit_gs_thread_end();
    void emit_gs_input_load(const fs_reg &dst, const nir_src &vertex_src,
-                           unsigned offset, unsigned num_components);
+                           const fs_reg &indirect_offset, unsigned imm_offset,
+                           unsigned num_components);
    void emit_cs_terminate();
    fs_reg *emit_cs_local_invocation_id_setup();
    fs_reg *emit_cs_work_group_id_setup();

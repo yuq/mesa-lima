@@ -1551,41 +1551,112 @@ fs_visitor::emit_gs_vertex(const nir_src &vertex_count_nir_src,
 void
 fs_visitor::emit_gs_input_load(const fs_reg &dst,
                                const nir_src &vertex_src,
-                               unsigned input_offset,
+                               const fs_reg &indirect_offset,
+                               unsigned imm_offset,
                                unsigned num_components)
 {
-   const brw_vue_prog_data *vue_prog_data = (const brw_vue_prog_data *) prog_data;
-   const unsigned vertex = nir_src_as_const_value(vertex_src)->u[0];
+   struct brw_gs_prog_data *gs_prog_data = (struct brw_gs_prog_data *) prog_data;
 
-   const unsigned array_stride = vue_prog_data->urb_read_length * 8;
+   /* Offset 0 is the VUE header, which contains VARYING_SLOT_LAYER [.y],
+    * VARYING_SLOT_VIEWPORT [.z], and VARYING_SLOT_PSIZ [.w].  Only
+    * gl_PointSize is available as a GS input, however, so it must be that.
+    */
+   const bool is_point_size =
+      indirect_offset.file == BAD_FILE && imm_offset == 0;
 
-   const bool pushed = 4 * input_offset < array_stride;
+   nir_const_value *vertex_const = nir_src_as_const_value(vertex_src);
+   const unsigned push_reg_count = gs_prog_data->base.urb_read_length * 8;
 
-   if (input_offset == 0) {
-      /* This is the VUE header, containing VARYING_SLOT_LAYER [.y],
-       * VARYING_SLOT_VIEWPORT [.z], and VARYING_SLOT_PSIZ [.w].
-       * Only gl_PointSize is available as a GS input, so they must
-       * be asking for that input.
-       */
-      if (pushed) {
-         bld.MOV(dst, fs_reg(ATTR, array_stride * vertex + 3, dst.type));
+   if (indirect_offset.file == BAD_FILE && vertex_const != NULL &&
+       4 * imm_offset < push_reg_count) {
+      imm_offset = 4 * imm_offset + vertex_const->u[0] * push_reg_count;
+      /* This input was pushed into registers. */
+      if (is_point_size) {
+         /* gl_PointSize comes in .w */
+         bld.MOV(dst, fs_reg(ATTR, imm_offset + 3, dst.type));
       } else {
-         fs_reg tmp = bld.vgrf(dst.type, 4);
-         fs_inst *inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp,
-                                  fs_reg(vertex), fs_reg(0));
-         inst->regs_written = 4;
-         bld.MOV(dst, offset(tmp, bld, 3));
+         for (unsigned i = 0; i < num_components; i++) {
+            bld.MOV(offset(dst, bld, i),
+                    fs_reg(ATTR, imm_offset + i, dst.type));
+         }
       }
    } else {
-      if (pushed) {
-         int index = vertex * array_stride + 4 * input_offset;
-         for (unsigned i = 0; i < num_components; i++) {
-            bld.MOV(offset(dst, bld, i), fs_reg(ATTR, index + i, dst.type));
-         }
+      /* Resort to the pull model.  Ensure the VUE handles are provided. */
+      gs_prog_data->base.include_vue_handles = true;
+
+      unsigned first_icp_handle = gs_prog_data->include_primitive_id ? 3 : 2;
+      fs_reg icp_handle;
+
+      if (vertex_const) {
+         /* The vertex index is constant; just select the proper URB handle. */
+         icp_handle =
+            retype(brw_vec8_grf(first_icp_handle + vertex_const->i[0], 0),
+                   BRW_REGISTER_TYPE_UD);
       } else {
-         fs_inst *inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst,
-                                  fs_reg(vertex), fs_reg(input_offset));
+         /* The vertex index is non-constant.  We need to use indirect
+          * addressing to fetch the proper URB handle.
+          *
+          * First, we start with the sequence <7, 6, 5, 4, 3, 2, 1, 0>
+          * indicating that channel <n> should read the handle from
+          * DWord <n>.  We convert that to bytes by multiplying by 4.
+          *
+          * Next, we convert the vertex index to bytes by multiplying
+          * by 32 (shifting by 5), and add the two together.  This is
+          * the final indirect byte offset.
+          */
+         fs_reg sequence = bld.vgrf(BRW_REGISTER_TYPE_W, 1);
+         fs_reg channel_offsets = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+         fs_reg vertex_offset_bytes = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+         fs_reg icp_offset_bytes = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+         icp_handle = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+
+         /* sequence = <7, 6, 5, 4, 3, 2, 1, 0> */
+         bld.MOV(sequence, fs_reg(brw_imm_v(0x76543210)));
+         /* channel_offsets = 4 * sequence = <28, 24, 20, 16, 12, 8, 4, 0> */
+         bld.SHL(channel_offsets, sequence, fs_reg(2u));
+         /* Convert vertex_index to bytes (multiply by 32) */
+         bld.SHL(vertex_offset_bytes,
+                 retype(get_nir_src(vertex_src), BRW_REGISTER_TYPE_UD),
+                 brw_imm_ud(5u));
+         bld.ADD(icp_offset_bytes, vertex_offset_bytes, channel_offsets);
+
+         /* Use first_icp_handle as the base offset.  There is one register
+          * of URB handles per vertex, so inform the register allocator that
+          * we might read up to nir->info.gs.vertices_in registers.
+          */
+         bld.emit(SHADER_OPCODE_MOV_INDIRECT, icp_handle,
+                  fs_reg(brw_vec8_grf(first_icp_handle, 0)),
+                  fs_reg(icp_offset_bytes),
+                  fs_reg(nir->info.gs.vertices_in * REG_SIZE));
+      }
+
+      fs_inst *inst;
+      if (indirect_offset.file == BAD_FILE) {
+         /* Constant indexing - use global offset. */
+         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, icp_handle);
+         inst->offset = imm_offset;
+         inst->base_mrf = -1;
+         inst->mlen = 1;
          inst->regs_written = num_components;
+      } else {
+         /* Indirect indexing - use per-slot offsets as well. */
+         const fs_reg srcs[] = { icp_handle, indirect_offset };
+         fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+         bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
+
+         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dst, payload);
+         inst->offset = imm_offset;
+         inst->base_mrf = -1;
+         inst->mlen = 2;
+         inst->regs_written = num_components;
+      }
+
+      if (is_point_size) {
+         /* Read the whole VUE header (because of alignment) and read .w. */
+         fs_reg tmp = bld.vgrf(dst.type, 4);
+         inst->dst = tmp;
+         inst->regs_written = 4;
+         bld.MOV(dst, offset(tmp, bld, 3));
       }
    }
 }
@@ -1626,6 +1697,7 @@ fs_visitor::nir_emit_gs_intrinsic(const fs_builder &bld,
                                   nir_intrinsic_instr *instr)
 {
    assert(stage == MESA_SHADER_GEOMETRY);
+   fs_reg indirect_offset;
 
    fs_reg dest;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
@@ -1644,9 +1716,11 @@ fs_visitor::nir_emit_gs_intrinsic(const fs_builder &bld,
       unreachable("load_input intrinsics are invalid for the GS stage");
 
    case nir_intrinsic_load_per_vertex_input_indirect:
-      assert(!"Not allowed");
+      indirect_offset = retype(get_nir_src(instr->src[1]), BRW_REGISTER_TYPE_D);
+      /* fallthrough */
    case nir_intrinsic_load_per_vertex_input:
-      emit_gs_input_load(dest, instr->src[0], instr->const_index[0],
+      emit_gs_input_load(dest, instr->src[0],
+                         indirect_offset, instr->const_index[0],
                          instr->num_components);
       break;
 

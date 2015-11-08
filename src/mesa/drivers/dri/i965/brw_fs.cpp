@@ -1689,24 +1689,7 @@ fs_visitor::assign_gs_urb_setup()
    first_non_payload_grf +=
       8 * vue_prog_data->urb_read_length * nir->info.gs.vertices_in;
 
-   const unsigned first_icp_handle = payload.num_regs -
-      (vue_prog_data->include_vue_handles ? nir->info.gs.vertices_in : 0);
-
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
-      /* Lower URB_READ_SIMD8 opcodes into real messages. */
-      if (inst->opcode == SHADER_OPCODE_URB_READ_SIMD8) {
-         assert(inst->src[0].file == IMM);
-         inst->src[0] = retype(brw_vec8_grf(first_icp_handle +
-                                            inst->src[0].ud,
-                                            0), BRW_REGISTER_TYPE_UD);
-         /* for now, assume constant - we can do per-slot offsets later */
-         assert(inst->src[1].file == IMM);
-         inst->offset = inst->src[1].ud;
-         inst->src[1] = fs_reg();
-         inst->mlen = 1;
-         inst->base_mrf = -1;
-      }
-
       /* Rewrite all ATTR file references to GRFs. */
       convert_attr_sources_to_hw_regs(inst);
    }
