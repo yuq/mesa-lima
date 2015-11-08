@@ -212,6 +212,10 @@ fd_setup_border_colors(struct fd_texture_stateobj *tex, void *ptr,
 				if (desc->layout == UTIL_FORMAT_LAYOUT_OTHER)
 					size = 16;
 
+				/* We fake RGTC as if it were RGBA8 */
+				if (desc->layout == UTIL_FORMAT_LAYOUT_RGTC)
+					size = 8;
+
 				if (chan->pure_integer && size > 16)
 					bcolor32[desc->swizzle[j] + 4] =
 							sampler->border_color.i[j];
