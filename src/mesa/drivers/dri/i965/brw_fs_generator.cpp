@@ -372,6 +372,36 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 }
 
 void
+fs_generator::generate_mov_indirect(fs_inst *inst,
+                                    struct brw_reg dst,
+                                    struct brw_reg reg,
+                                    struct brw_reg indirect_byte_offset)
+{
+   assert(indirect_byte_offset.type == BRW_REGISTER_TYPE_UD);
+   assert(indirect_byte_offset.file == BRW_GENERAL_REGISTER_FILE);
+
+   unsigned imm_byte_offset = reg.nr * REG_SIZE + reg.subnr;
+
+   /* We use VxH indirect addressing, clobbering a0.0 through a0.7. */
+   struct brw_reg addr = vec8(brw_address_reg(0));
+
+   /* The destination stride of an instruction (in bytes) must be greater
+    * than or equal to the size of the rest of the instruction.  Since the
+    * address register is of type UW, we can't use a D-type instruction.
+    * In order to get around this, re re-type to UW and use a stride.
+    */
+   indirect_byte_offset =
+      retype(spread(indirect_byte_offset, 2), BRW_REGISTER_TYPE_UW);
+
+   /* Prior to Broadwell, there are only 8 address registers. */
+   assert(inst->exec_size == 8 || devinfo->gen >= 8);
+
+   brw_MOV(p, addr, indirect_byte_offset);
+   brw_inst_set_mask_control(devinfo, brw_last_inst, BRW_MASK_DISABLE);
+   brw_MOV(p, dst, retype(brw_VxH_indirect(0, imm_byte_offset), dst.type));
+}
+
+void
 fs_generator::generate_urb_read(fs_inst *inst,
                                 struct brw_reg dst,
                                 struct brw_reg header)
@@ -2078,6 +2108,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 generate_scratch_read_gen7(inst, dst);
          fill_count++;
 	 break;
+
+      case SHADER_OPCODE_MOV_INDIRECT:
+         generate_mov_indirect(inst, dst, src[0], src[1]);
+         break;
 
       case SHADER_OPCODE_URB_READ_SIMD8:
       case SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT:

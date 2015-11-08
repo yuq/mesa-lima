@@ -527,6 +527,11 @@ private:
                                  struct brw_reg offset,
                                  struct brw_reg value);
 
+   void generate_mov_indirect(fs_inst *inst,
+                              struct brw_reg dst,
+                              struct brw_reg reg,
+                              struct brw_reg indirect_byte_offset);
+
    bool patch_discard_jumps_to_fb_writes();
 
    const struct brw_compiler *compiler;

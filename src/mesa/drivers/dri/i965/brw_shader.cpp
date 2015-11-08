@@ -554,6 +554,8 @@ brw_instruction_name(enum opcode op)
       return "barrier";
    case SHADER_OPCODE_MULH:
       return "mulh";
+   case SHADER_OPCODE_MOV_INDIRECT:
+      return "mov_indirect";
    }
 
    unreachable("not reached");

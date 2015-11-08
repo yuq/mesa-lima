@@ -1289,6 +1289,16 @@ enum opcode {
     * Calculate the high 32-bits of a 32x32 multiply.
     */
    SHADER_OPCODE_MULH,
+
+   /**
+    * A MOV that uses VxH indirect addressing.
+    *
+    * Source 0: A register to start from (HW_REG).
+    * Source 1: An indirect offset (in bytes, UD GRF).
+    * Source 2: The length of the region that could be accessed (in bytes,
+    *           UD immediate).
+    */
+   SHADER_OPCODE_MOV_INDIRECT,
 };
 
 enum brw_urb_write_flags {

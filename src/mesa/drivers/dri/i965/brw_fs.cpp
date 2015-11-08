@@ -840,6 +840,34 @@ fs_inst::regs_read(int arg) const
    case SHADER_OPCODE_BARRIER:
       return 1;
 
+   case SHADER_OPCODE_MOV_INDIRECT:
+      if (arg == 0) {
+         assert(src[2].file == IMM);
+         unsigned region_length = src[2].ud;
+
+         if (src[0].file == FIXED_GRF) {
+            /* If the start of the region is not register aligned, then
+             * there's some portion of the register that's technically
+             * unread at the beginning.
+             *
+             * However, the register allocator works in terms of whole
+             * registers, and does not use subnr.  It assumes that the
+             * read starts at the beginning of the register, and extends
+             * regs_read() whole registers beyond that.
+             *
+             * To compensate, we extend the region length to include this
+             * unread portion at the beginning.
+             */
+            if (src[0].subnr)
+               region_length += src[0].subnr * type_sz(src[0].type);
+
+            return DIV_ROUND_UP(region_length, REG_SIZE);
+         } else {
+            assert(!"Invalid register file");
+         }
+      }
+      break;
+
    default:
       if (is_tex() && arg == 0 && src[0].file == VGRF)
          return mlen;
