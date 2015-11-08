@@ -328,3 +328,45 @@ nir_lower_io(nir_shader *shader, nir_variable_mode mode,
          nir_lower_io_impl(overload->impl, mode, type_size);
    }
 }
+
+/**
+ * Return the indirect source for a load/store indirect intrinsic.
+ */
+nir_src *
+nir_get_io_indirect_src(nir_intrinsic_instr *instr)
+{
+   switch (instr->intrinsic) {
+   case nir_intrinsic_load_input_indirect:
+   case nir_intrinsic_load_output_indirect:
+   case nir_intrinsic_load_uniform_indirect:
+      return &instr->src[0];
+   case nir_intrinsic_load_per_vertex_input_indirect:
+   case nir_intrinsic_load_per_vertex_output_indirect:
+   case nir_intrinsic_store_output_indirect:
+      return &instr->src[1];
+   case nir_intrinsic_store_per_vertex_output_indirect:
+      return &instr->src[2];
+   default:
+      return NULL;
+   }
+}
+
+/**
+ * Return the vertex index source for a load/store per_vertex intrinsic.
+ */
+nir_src *
+nir_get_io_vertex_index_src(nir_intrinsic_instr *instr)
+{
+   switch (instr->intrinsic) {
+   case nir_intrinsic_load_per_vertex_input:
+   case nir_intrinsic_load_per_vertex_output:
+   case nir_intrinsic_load_per_vertex_input_indirect:
+   case nir_intrinsic_load_per_vertex_output_indirect:
+      return &instr->src[0];
+   case nir_intrinsic_store_per_vertex_output:
+   case nir_intrinsic_store_per_vertex_output_indirect:
+      return &instr->src[1];
+   default:
+      return NULL;
+   }
+}
