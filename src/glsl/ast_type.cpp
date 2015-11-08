@@ -467,3 +467,63 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
 
    return true;
 }
+
+bool
+ast_layout_expression::process_qualifier_constant(struct _mesa_glsl_parse_state *state,
+                                                  const char *qual_indentifier,
+                                                  unsigned *value,
+                                                  bool can_be_zero)
+{
+   int min_value = 0;
+   bool first_pass = true;
+   *value = 0;
+
+   if (!can_be_zero)
+      min_value = 1;
+
+   for (exec_node *node = layout_const_expressions.head;
+           !node->is_tail_sentinel(); node = node->next) {
+
+      exec_list dummy_instructions;
+      ast_node *const_expression = exec_node_data(ast_node, node, link);
+
+      ir_rvalue *const ir = const_expression->hir(&dummy_instructions, state);
+
+      ir_constant *const const_int = ir->constant_expression_value();
+      if (const_int == NULL || !const_int->type->is_integer()) {
+         YYLTYPE loc = const_expression->get_location();
+         _mesa_glsl_error(&loc, state, "%s must be an integral constant "
+                          "expression", qual_indentifier);
+         return false;
+      }
+
+      if (const_int->value.i[0] < min_value) {
+         YYLTYPE loc = const_expression->get_location();
+         _mesa_glsl_error(&loc, state, "%s layout qualifier is invalid "
+                          "(%d < %d)", qual_indentifier,
+                          const_int->value.i[0], min_value);
+         return false;
+      }
+
+      if (!first_pass && *value != const_int->value.u[0]) {
+         YYLTYPE loc = const_expression->get_location();
+         _mesa_glsl_error(&loc, state, "%s layout qualifier does not "
+		          "match previous declaration (%d vs %d)",
+                          qual_indentifier, *value, const_int->value.i[0]);
+         return false;
+      } else {
+         first_pass = false;
+         *value = const_int->value.u[0];
+      }
+
+      /* If the location is const (and we've verified that
+       * it is) then no instructions should have been emitted
+       * when we converted it to HIR. If they were emitted,
+       * then either the location isn't const after all, or
+       * we are emitting unnecessary instructions.
+       */
+      assert(dummy_instructions.is_empty());
+   }
+
+   return true;
+}

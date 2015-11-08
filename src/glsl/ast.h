@@ -350,6 +350,26 @@ public:
    exec_list array_dimensions;
 };
 
+class ast_layout_expression : public ast_node {
+public:
+   ast_layout_expression(const struct YYLTYPE &locp, ast_expression *expr)
+   {
+      set_location(locp);
+      layout_const_expressions.push_tail(&expr->link);
+   }
+
+   bool process_qualifier_constant(struct _mesa_glsl_parse_state *state,
+                                   const char *qual_indentifier,
+                                   unsigned *value, bool can_be_zero);
+
+   void merge_qualifier(ast_layout_expression *l_expr)
+   {
+      layout_const_expressions.append_list(&l_expr->layout_const_expressions);
+   }
+
+   exec_list layout_const_expressions;
+};
+
 /**
  * C-style aggregate initialization class
  *
