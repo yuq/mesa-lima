@@ -251,7 +251,7 @@ static void si_shader_gs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_028A68_VGT_GSVS_RING_OFFSET_3, gsvs_itemsize * ((max_stream >= 3) ? 3 : 1));
 
 	si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
-		       util_bitcount64(shader->selector->inputs_read) * (16 >> 2));
+		       shader->selector->esgs_itemsize / 4);
 	si_pm4_set_reg(pm4, R_028AB0_VGT_GSVS_RING_ITEMSIZE, gsvs_itemsize * (max_stream + 1));
 
 	si_pm4_set_reg(pm4, R_028B38_VGT_GS_MAX_VERT_OUT, gs_max_vert_out);
@@ -739,6 +739,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 					1llu << si_shader_io_get_unique_index(name, index);
 			}
 		}
+		sel->esgs_itemsize = util_last_bit64(sel->outputs_written) * 16;
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		for (i = 0; i < sel->info.num_outputs; i++) {
