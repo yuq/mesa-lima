@@ -165,6 +165,8 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	/* The CS initialization should be emitted before everything else. */
 	si_pm4_emit(ctx, ctx->init_config);
+	if (ctx->init_config_gs_rings)
+		si_pm4_emit(ctx, ctx->init_config_gs_rings);
 
 	ctx->framebuffer.dirty_cbufs = (1 << 8) - 1;
 	ctx->framebuffer.dirty_zsbuf = true;

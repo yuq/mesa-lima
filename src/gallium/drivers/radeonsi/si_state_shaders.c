@@ -33,6 +33,7 @@
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_ureg.h"
 #include "util/u_memory.h"
+#include "util/u_prim.h"
 #include "util/u_simple_shaders.h"
 
 static void si_set_tesseval_regs(struct si_shader *shader,
@@ -707,6 +708,9 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			sel->max_gs_stream = MAX2(sel->max_gs_stream,
 						  sel->so.output[i].stream);
 
+		sel->gs_input_verts_per_prim =
+			u_vertices_per_prim(sel->info.properties[TGSI_PROPERTY_GS_INPUT_PRIM]);
+
 		for (i = 0; i < sel->info.num_inputs; i++) {
 			unsigned name = sel->info.input_semantic_name[i];
 			unsigned index = sel->info.input_semantic_index[i];
@@ -723,6 +727,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 
 	case PIPE_SHADER_VERTEX:
 	case PIPE_SHADER_TESS_CTRL:
+	case PIPE_SHADER_TESS_EVAL:
 		for (i = 0; i < sel->info.num_outputs; i++) {
 			unsigned name = sel->info.output_semantic_name[i];
 			unsigned index = sel->info.output_semantic_index[i];
@@ -1069,6 +1074,7 @@ static void si_init_config_add_vgt_flush(struct si_context *sctx)
 	if (sctx->init_config_has_vgt_flush)
 		return;
 
+	/* VGT_FLUSH is required even if VGT is idle. It resets VGT pointers. */
 	si_pm4_cmd_begin(sctx->init_config, PKT3_EVENT_WRITE);
 	si_pm4_cmd_add(sctx->init_config, EVENT_TYPE(V_028A90_VGT_FLUSH) | EVENT_INDEX(0));
 	si_pm4_cmd_end(sctx->init_config, false);
@@ -1076,62 +1082,119 @@ static void si_init_config_add_vgt_flush(struct si_context *sctx)
 }
 
 /* Initialize state related to ESGS / GSVS ring buffers */
-static void si_init_gs_rings(struct si_context *sctx)
+static bool si_update_gs_ring_buffers(struct si_context *sctx)
 {
-	unsigned esgs_ring_size = 128 * 1024;
-	unsigned gsvs_ring_size = 60 * 1024 * 1024;
+	struct si_shader_selector *es =
+		sctx->tes_shader.cso ? sctx->tes_shader.cso : sctx->vs_shader.cso;
+	struct si_shader_selector *gs = sctx->gs_shader.cso;
+	struct si_pm4_state *pm4;
 
-	assert(!sctx->esgs_ring && !sctx->gsvs_ring);
+	/* Chip constants. */
+	unsigned num_se = sctx->screen->b.info.max_se;
+	unsigned wave_size = 64;
+	unsigned max_gs_waves = 32 * num_se; /* max 32 per SE on GCN */
+	unsigned gs_vertex_reuse = 16 * num_se; /* GS_VERTEX_REUSE register (per SE) */
+	unsigned alignment = 256 * num_se;
+	/* The maximum size is 63.999 MB per SE. */
+	unsigned max_size = ((unsigned)(63.999 * 1024 * 1024) & ~255) * num_se;
 
-	sctx->esgs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
-				       PIPE_USAGE_DEFAULT, esgs_ring_size);
-	if (!sctx->esgs_ring)
-		return;
+	/* Calculate the minimum size. */
+	unsigned min_esgs_ring_size = align(es->esgs_itemsize * gs_vertex_reuse *
+					    wave_size, alignment);
 
-	sctx->gsvs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
-					     PIPE_USAGE_DEFAULT, gsvs_ring_size);
-	if (!sctx->gsvs_ring) {
-		pipe_resource_reference(&sctx->esgs_ring, NULL);
-		return;
-	}
+	/* These are recommended sizes, not minimum sizes. */
+	unsigned esgs_ring_size = max_gs_waves * 2 * wave_size *
+				  es->esgs_itemsize * gs->gs_input_verts_per_prim;
+	unsigned gsvs_ring_size = max_gs_waves * 2 * wave_size *
+				  gs->max_gsvs_emit_size * (gs->max_gs_stream + 1);
 
-	si_init_config_add_vgt_flush(sctx);
+	min_esgs_ring_size = align(min_esgs_ring_size, alignment);
+	esgs_ring_size = align(esgs_ring_size, alignment);
+	gsvs_ring_size = align(gsvs_ring_size, alignment);
 
-	/* Append these registers to the init config state. */
-	if (sctx->b.chip_class >= CIK) {
-		if (sctx->b.chip_class >= VI) {
-			/* The maximum sizes are 63.999 MB on VI, because
-			 * the register fields only have 18 bits. */
-			assert(esgs_ring_size / 256 < (1 << 18));
-			assert(gsvs_ring_size / 256 < (1 << 18));
-		}
-		si_pm4_set_reg(sctx->init_config, R_030900_VGT_ESGS_RING_SIZE,
-			       esgs_ring_size / 256);
-		si_pm4_set_reg(sctx->init_config, R_030904_VGT_GSVS_RING_SIZE,
-			       gsvs_ring_size / 256);
-	} else {
-		si_pm4_set_reg(sctx->init_config, R_0088C8_VGT_ESGS_RING_SIZE,
-			       esgs_ring_size / 256);
-		si_pm4_set_reg(sctx->init_config, R_0088CC_VGT_GSVS_RING_SIZE,
-			       gsvs_ring_size / 256);
-	}
+	esgs_ring_size = CLAMP(esgs_ring_size, min_esgs_ring_size, max_size);
+	gsvs_ring_size = MIN2(gsvs_ring_size, max_size);
 
-	/* Flush the context to re-emit the init_config state.
-	 * This is done only once in a lifetime of a context.
+	/* Some rings don't have to be allocated if shaders don't use them.
+	 * (e.g. no varyings between ES and GS or GS and VS)
 	 */
-	si_pm4_upload_indirect_buffer(sctx, sctx->init_config);
+	bool update_esgs = esgs_ring_size &&
+			   (!sctx->esgs_ring ||
+			    sctx->esgs_ring->width0 < esgs_ring_size);
+	bool update_gsvs = gsvs_ring_size &&
+			   (!sctx->gsvs_ring ||
+			    sctx->gsvs_ring->width0 < gsvs_ring_size);
+
+	if (!update_esgs && !update_gsvs)
+		return true;
+
+	if (update_esgs) {
+		pipe_resource_reference(&sctx->esgs_ring, NULL);
+		sctx->esgs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
+						     PIPE_USAGE_DEFAULT,
+						     esgs_ring_size);
+		if (!sctx->esgs_ring)
+			return false;
+	}
+
+	if (update_gsvs) {
+		pipe_resource_reference(&sctx->gsvs_ring, NULL);
+		sctx->gsvs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
+						     PIPE_USAGE_DEFAULT,
+						     gsvs_ring_size);
+		if (!sctx->gsvs_ring)
+			return false;
+	}
+
+	/* Create the "init_config_gs_rings" state. */
+	pm4 = CALLOC_STRUCT(si_pm4_state);
+	if (!pm4)
+		return false;
+
+	if (sctx->b.chip_class >= CIK) {
+		if (sctx->esgs_ring)
+			si_pm4_set_reg(pm4, R_030900_VGT_ESGS_RING_SIZE,
+				       sctx->esgs_ring->width0 / 256);
+		if (sctx->gsvs_ring)
+			si_pm4_set_reg(pm4, R_030904_VGT_GSVS_RING_SIZE,
+				       sctx->gsvs_ring->width0 / 256);
+	} else {
+		if (sctx->esgs_ring)
+			si_pm4_set_reg(pm4, R_0088C8_VGT_ESGS_RING_SIZE,
+				       sctx->esgs_ring->width0 / 256);
+		if (sctx->gsvs_ring)
+			si_pm4_set_reg(pm4, R_0088CC_VGT_GSVS_RING_SIZE,
+				       sctx->gsvs_ring->width0 / 256);
+	}
+
+	/* Set the state. */
+	if (sctx->init_config_gs_rings)
+		si_pm4_free_state(sctx, sctx->init_config_gs_rings, ~0);
+	sctx->init_config_gs_rings = pm4;
+
+	if (!sctx->init_config_has_vgt_flush) {
+		si_init_config_add_vgt_flush(sctx);
+		si_pm4_upload_indirect_buffer(sctx, sctx->init_config);
+	}
+
+	/* Flush the context to re-emit both init_config states. */
 	sctx->b.initial_gfx_cs_size = 0; /* force flush */
 	si_context_gfx_flush(sctx, RADEON_FLUSH_ASYNC, NULL);
 
-	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_VERTEX, SI_RING_ESGS,
-			   sctx->esgs_ring, 0, esgs_ring_size,
-			   true, true, 4, 64, 0);
-	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_RING_ESGS,
-			   sctx->esgs_ring, 0, esgs_ring_size,
-			   false, false, 0, 0, 0);
-	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_VERTEX, SI_RING_GSVS,
-			   sctx->gsvs_ring, 0, gsvs_ring_size,
-			   false, false, 0, 0, 0);
+	/* Set ring bindings. */
+	if (sctx->esgs_ring) {
+		si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_VERTEX, SI_RING_ESGS,
+				   sctx->esgs_ring, 0, sctx->esgs_ring->width0,
+				   true, true, 4, 64, 0);
+		si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_RING_ESGS,
+				   sctx->esgs_ring, 0, sctx->esgs_ring->width0,
+				   false, false, 0, 0, 0);
+	}
+	if (sctx->gsvs_ring)
+		si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_VERTEX, SI_RING_GSVS,
+				   sctx->gsvs_ring, 0, sctx->gsvs_ring->width0,
+				   false, false, 0, 0, 0);
+	return true;
 }
 
 static void si_update_gsvs_ring_bindings(struct si_context *sctx)
@@ -1139,7 +1202,7 @@ static void si_update_gsvs_ring_bindings(struct si_context *sctx)
 	unsigned gsvs_itemsize = sctx->gs_shader.cso->max_gsvs_emit_size;
 	uint64_t offset;
 
-	if (gsvs_itemsize == sctx->last_gsvs_itemsize)
+	if (!sctx->gsvs_ring || gsvs_itemsize == sctx->last_gsvs_itemsize)
 		return;
 
 	sctx->last_gsvs_itemsize = gsvs_itemsize;
@@ -1500,11 +1563,8 @@ bool si_update_shaders(struct si_context *sctx)
 		si_pm4_bind_state(sctx, vs, sctx->gs_shader.current->gs_copy_shader->pm4);
 		si_update_so(sctx, sctx->gs_shader.cso);
 
-		if (!sctx->gsvs_ring) {
-			si_init_gs_rings(sctx);
-			if (!sctx->gsvs_ring)
-				return false;
-		}
+		if (!si_update_gs_ring_buffers(sctx))
+			return false;
 
 		si_update_gsvs_ring_bindings(sctx);
 	} else {
