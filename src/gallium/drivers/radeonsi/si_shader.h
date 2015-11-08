@@ -205,7 +205,8 @@ struct si_shader_selector {
 	unsigned	gs_output_prim;
 	unsigned	gs_max_out_vertices;
 	unsigned	gs_num_invocations;
-	unsigned	gsvs_itemsize;
+	unsigned	gsvs_vertex_size;
+	unsigned	max_gsvs_emit_size;
 
 	/* masks of "get_unique_index" bits */
 	uint64_t	inputs_read;

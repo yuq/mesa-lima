@@ -226,9 +226,9 @@ static unsigned si_gs_get_max_stream(struct si_shader *shader)
 
 static void si_shader_gs(struct si_shader *shader)
 {
-	unsigned gs_vert_itemsize = shader->selector->info.num_outputs * 16;
+	unsigned gs_vert_itemsize = shader->selector->gsvs_vertex_size;
 	unsigned gs_max_vert_out = shader->selector->gs_max_out_vertices;
-	unsigned gsvs_itemsize = (gs_vert_itemsize * gs_max_vert_out) >> 2;
+	unsigned gsvs_itemsize = shader->selector->max_gsvs_emit_size >> 2;
 	unsigned gs_num_invocations = shader->selector->gs_num_invocations;
 	unsigned cut_mode;
 	struct si_pm4_state *pm4;
@@ -713,8 +713,9 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			sel->info.properties[TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES];
 		sel->gs_num_invocations =
 			sel->info.properties[TGSI_PROPERTY_GS_INVOCATIONS];
-		sel->gsvs_itemsize = sel->info.num_outputs * 16 *
-				     sel->gs_max_out_vertices;
+		sel->gsvs_vertex_size = sel->info.num_outputs * 16;
+		sel->max_gsvs_emit_size = sel->gsvs_vertex_size *
+					  sel->gs_max_out_vertices;
 
 		for (i = 0; i < sel->info.num_inputs; i++) {
 			unsigned name = sel->info.input_semantic_name[i];
@@ -1144,7 +1145,7 @@ static void si_init_gs_rings(struct si_context *sctx)
 
 static void si_update_gs_rings(struct si_context *sctx)
 {
-	unsigned gsvs_itemsize = sctx->gs_shader.cso->gsvs_itemsize;
+	unsigned gsvs_itemsize = sctx->gs_shader.cso->max_gsvs_emit_size;
 	uint64_t offset;
 
 	if (gsvs_itemsize == sctx->last_gsvs_itemsize)
