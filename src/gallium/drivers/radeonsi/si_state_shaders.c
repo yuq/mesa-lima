@@ -1134,7 +1134,7 @@ static void si_init_gs_rings(struct si_context *sctx)
 			   false, false, 0, 0, 0);
 }
 
-static void si_update_gs_rings(struct si_context *sctx)
+static void si_update_gsvs_ring_bindings(struct si_context *sctx)
 {
 	unsigned gsvs_itemsize = sctx->gs_shader.cso->max_gsvs_emit_size;
 	uint64_t offset;
@@ -1506,7 +1506,7 @@ bool si_update_shaders(struct si_context *sctx)
 				return false;
 		}
 
-		si_update_gs_rings(sctx);
+		si_update_gsvs_ring_bindings(sctx);
 	} else {
 		si_pm4_bind_state(sctx, gs, NULL);
 		si_pm4_bind_state(sctx, es, NULL);
