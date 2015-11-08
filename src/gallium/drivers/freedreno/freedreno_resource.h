@@ -135,4 +135,6 @@ fd_resource_offset(struct fd_resource *rsc, unsigned level, unsigned layer)
 void fd_resource_screen_init(struct pipe_screen *pscreen);
 void fd_resource_context_init(struct pipe_context *pctx);
 
+bool fd_render_condition_check(struct pipe_context *pctx);
+
 #endif /* FREEDRENO_RESOURCE_H_ */

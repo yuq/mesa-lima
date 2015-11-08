@@ -671,7 +671,7 @@ fail:
 	return NULL;
 }
 
-static void fd_blitter_pipe_begin(struct fd_context *ctx);
+static void fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond);
 static void fd_blitter_pipe_end(struct fd_context *ctx);
 
 /**
@@ -693,7 +693,7 @@ fd_blitter_pipe_copy_region(struct fd_context *ctx,
 	if (!util_blitter_is_copy_supported(ctx->blitter, dst, src))
 		return false;
 
-	fd_blitter_pipe_begin(ctx);
+	fd_blitter_pipe_begin(ctx, false);
 	util_blitter_copy_texture(ctx->blitter,
 			dst, dst_level, dstx, dsty, dstz,
 			src, src_level, src_box);
@@ -735,6 +735,25 @@ fd_resource_copy_region(struct pipe_context *pctx,
 			src, src_level, src_box);
 }
 
+bool
+fd_render_condition_check(struct pipe_context *pctx)
+{
+	struct fd_context *ctx = fd_context(pctx);
+
+	if (!ctx->cond_query)
+		return true;
+
+	union pipe_query_result res = { 0 };
+	bool wait =
+		ctx->cond_mode != PIPE_RENDER_COND_NO_WAIT &&
+		ctx->cond_mode != PIPE_RENDER_COND_BY_REGION_NO_WAIT;
+
+	if (pctx->get_query_result(pctx, ctx->cond_query, wait, &res))
+			return (bool)res.u64 != ctx->cond_cond;
+
+	return true;
+}
+
 /**
  * Optimal hardware path for blitting pixels.
  * Scaling, format conversion, up- and downsampling (resolve) are allowed.
@@ -753,6 +772,9 @@ fd_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 		return;
 	}
 
+	if (info.render_condition_enable && !fd_render_condition_check(pctx))
+		return;
+
 	if (util_try_blit_via_copy_region(pctx, &info)) {
 		return; /* done */
 	}
@@ -769,13 +791,13 @@ fd_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 		return;
 	}
 
-	fd_blitter_pipe_begin(ctx);
+	fd_blitter_pipe_begin(ctx, info.render_condition_enable);
 	util_blitter_blit(ctx->blitter, &info);
 	fd_blitter_pipe_end(ctx);
 }
 
 static void
-fd_blitter_pipe_begin(struct fd_context *ctx)
+fd_blitter_pipe_begin(struct fd_context *ctx, bool render_cond)
 {
 	util_blitter_save_vertex_buffer_slot(ctx->blitter, ctx->vtx.vertexbuf.vb);
 	util_blitter_save_vertex_elements(ctx->blitter, ctx->vtx.vtx);
@@ -796,6 +818,9 @@ fd_blitter_pipe_begin(struct fd_context *ctx)
 			(void **)ctx->fragtex.samplers);
 	util_blitter_save_fragment_sampler_views(ctx->blitter,
 			ctx->fragtex.num_textures, ctx->fragtex.textures);
+	if (!render_cond)
+		util_blitter_save_render_condition(ctx->blitter,
+			ctx->cond_query, ctx->cond_cond, ctx->cond_mode);
 
 	fd_hw_query_set_stage(ctx, ctx->ring, FD_STAGE_BLIT);
 }
