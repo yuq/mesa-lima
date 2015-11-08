@@ -3864,9 +3864,42 @@ link_assign_subroutine_types(struct gl_shader_program *prog)
          sh->SubroutineFunctions[sh->NumSubroutineFunctions].types =
             ralloc_array(sh, const struct glsl_type *,
                          fn->num_subroutine_types);
+
+         /* From Section 4.4.4(Subroutine Function Layout Qualifiers) of the
+          * GLSL 4.5 spec:
+          *
+          *    "Each subroutine with an index qualifier in the shader must be
+          *    given a unique index, otherwise a compile or link error will be
+          *    generated."
+          */
+         for (unsigned j = 0; j < sh->NumSubroutineFunctions; j++) {
+            if (sh->SubroutineFunctions[j].index != -1 &&
+                sh->SubroutineFunctions[j].index == fn->subroutine_index) {
+               linker_error(prog, "each subroutine index qualifier in the "
+                            "shader must be unique\n");
+               return;
+            }
+         }
+         sh->SubroutineFunctions[sh->NumSubroutineFunctions].index =
+            fn->subroutine_index;
+
          for (int j = 0; j < fn->num_subroutine_types; j++)
             sh->SubroutineFunctions[sh->NumSubroutineFunctions].types[j] = fn->subroutine_types[j];
          sh->NumSubroutineFunctions++;
+      }
+
+      /* Assign index for subroutines without an explicit index*/
+      int index = 0;
+      for (unsigned j = 0; j < sh->NumSubroutineFunctions; j++) {
+         while (sh->SubroutineFunctions[j].index == -1) {
+            for (unsigned k = 0; k < sh->NumSubroutineFunctions; k++) {
+               if (sh->SubroutineFunctions[k].index == index)
+                  break;
+               else if (k == sh->NumSubroutineFunctions - 1)
+                  sh->SubroutineFunctions[j].index = index;
+            }
+            index++;
+         }
       }
    }
 }

@@ -1171,6 +1171,8 @@ public:
     */
    int num_subroutine_types;
    const struct glsl_type **subroutine_types;
+
+   int subroutine_index;
 };
 
 inline const char *ir_function_signature::function_name() const

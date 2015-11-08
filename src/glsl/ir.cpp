@@ -1846,6 +1846,7 @@ ir_function_signature::replace_parameters(exec_list *new_params)
 ir_function::ir_function(const char *name)
    : ir_instruction(ir_type_function)
 {
+   this->subroutine_index = -1;
    this->name = ralloc_strdup(this, name);
 }
 

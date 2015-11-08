@@ -38,13 +38,16 @@ ast_type_specifier::print(void) const
 }
 
 bool
-ast_fully_specified_type::has_qualifiers() const
+ast_fully_specified_type::has_qualifiers(_mesa_glsl_parse_state *state) const
 {
    /* 'subroutine' isnt a real qualifier. */
    ast_type_qualifier subroutine_only;
    subroutine_only.flags.i = 0;
    subroutine_only.flags.q.subroutine = 1;
    subroutine_only.flags.q.subroutine_def = 1;
+   if (state->has_explicit_uniform_location()) {
+      subroutine_only.flags.q.explicit_index = 1;
+   }
    return (this->qualifier.flags.i & ~subroutine_only.flags.i) != 0;
 }
 
@@ -173,6 +176,15 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
          this->max_vertices->merge_qualifier(q.max_vertices);
       } else {
          this->max_vertices = q.max_vertices;
+      }
+   }
+
+   if (q.flags.q.subroutine_def) {
+      if (this->flags.q.subroutine_def) {
+	 _mesa_glsl_error(loc, state,
+			  "conflicting subroutine qualifiers used");
+      } else {
+         this->subroutine_list = q.subroutine_list;
       }
    }
 

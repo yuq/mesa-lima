@@ -2193,6 +2193,7 @@ struct gl_ati_fragment_shader_state
 struct gl_subroutine_function
 {
    char *name;
+   int index;
    int num_compat_types;
    const struct glsl_type **types;
 };

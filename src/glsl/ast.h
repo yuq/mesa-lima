@@ -772,7 +772,7 @@ public:
 class ast_fully_specified_type : public ast_node {
 public:
    virtual void print(void) const;
-   bool has_qualifiers() const;
+   bool has_qualifiers(_mesa_glsl_parse_state *state) const;
 
    ast_fully_specified_type() : qualifier(), specifier(NULL)
    {
