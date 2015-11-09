@@ -59,6 +59,12 @@ vl_drm_screen_create(int fd)
       return NULL;
    }
 
+   vscreen->destroy = vl_drm_screen_destroy;
+   vscreen->texture_from_drawable = NULL;
+   vscreen->get_dirty_area = NULL;
+   vscreen->get_timestamp = NULL;
+   vscreen->set_next_timestamp = NULL;
+   vscreen->get_private = NULL;
    return vscreen;
 }
 
