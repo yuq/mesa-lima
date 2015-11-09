@@ -102,7 +102,6 @@ PUBLIC VAStatus
 VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
 {
    vlVaDriver *drv;
-   int drm_fd;
    struct drm_state *drm_info;
 
    if (!ctx)
@@ -126,19 +125,13 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
    case VA_DISPLAY_DRM:
    case VA_DISPLAY_DRM_RENDERNODES: {
       drm_info = (struct drm_state *) ctx->drm_state;
-      if (!drm_info) {
+
+      if (!drm_info || drm_info->fd < 0) {
          FREE(drv);
          return VA_STATUS_ERROR_INVALID_PARAMETER;
       }
 
-      drm_fd = drm_info->fd;
-
-      if (drm_fd < 0) {
-         FREE(drv);
-         return VA_STATUS_ERROR_INVALID_PARAMETER;
-      }
-
-      drv->vscreen = vl_drm_screen_create(drm_fd);
+      drv->vscreen = vl_drm_screen_create(drm_info->fd);
       if (!drv->vscreen)
          goto error_screen;
       }
