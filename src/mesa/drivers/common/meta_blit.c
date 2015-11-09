@@ -896,17 +896,17 @@ _mesa_meta_setup_sampler(struct gl_context *ctx,
 
    _mesa_GenSamplers(1, &sampler);
    _mesa_BindSampler(ctx->Texture.CurrentUnit, sampler);
+   _mesa_SamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, tex_filter);
+   _mesa_SamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, tex_filter);
+   _mesa_SamplerParameteri(sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+   _mesa_SamplerParameteri(sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
    /* Prepare src texture state */
    _mesa_BindTexture(target, texObj->Name);
-   _mesa_SamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, tex_filter);
-   _mesa_SamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, tex_filter);
    if (target != GL_TEXTURE_RECTANGLE_ARB) {
       _mesa_TexParameteri(target, GL_TEXTURE_BASE_LEVEL, srcLevel);
       _mesa_TexParameteri(target, GL_TEXTURE_MAX_LEVEL, srcLevel);
    }
-   _mesa_SamplerParameteri(sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-   _mesa_SamplerParameteri(sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
    return sampler;
 }
