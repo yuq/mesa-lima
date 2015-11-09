@@ -173,7 +173,7 @@ void ir_print_visitor::visit(ir_variable *ir)
    const char *const samp = (ir->data.sample) ? "sample " : "";
    const char *const patc = (ir->data.patch) ? "patch " : "";
    const char *const inv = (ir->data.invariant) ? "invariant " : "";
-   const char *const mode[] = { "", "uniform ", "shader_storage",
+   const char *const mode[] = { "", "uniform ", "shader_storage ",
                                 "shader_in ", "shader_out ",
                                 "in ", "out ", "inout ",
 			        "const_in ", "sys ", "temporary " };
