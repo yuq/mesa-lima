@@ -319,6 +319,7 @@ nvc0_clear_render_target(struct pipe_context *pipe,
       PUSH_DATA(push, dst->u.tex.first_layer + sf->depth);
       PUSH_DATA(push, mt->layer_stride >> 2);
       PUSH_DATA(push, dst->u.tex.first_layer);
+      IMMED_NVC0(push, NVC0_3D(MULTISAMPLE_MODE), mt->ms_mode);
    } else {
       if (res->base.target == PIPE_BUFFER) {
          PUSH_DATA(push, 262144);
@@ -334,6 +335,7 @@ nvc0_clear_render_target(struct pipe_context *pipe,
       PUSH_DATA(push, 0);
 
       IMMED_NVC0(push, NVC0_3D(ZETA_ENABLE), 0);
+      IMMED_NVC0(push, NVC0_3D(MULTISAMPLE_MODE), 0);
 
       /* tiled textures don't have to be fenced, they're not mapped directly */
       nvc0_resource_fence(res, NOUVEAU_BO_WR);
@@ -466,6 +468,7 @@ nvc0_clear_buffer(struct pipe_context *pipe,
    PUSH_DATA (push, 0);
 
    IMMED_NVC0(push, NVC0_3D(ZETA_ENABLE), 0);
+   IMMED_NVC0(push, NVC0_3D(MULTISAMPLE_MODE), 0);
 
    IMMED_NVC0(push, NVC0_3D(CLEAR_BUFFERS), 0x3c);
 
@@ -540,6 +543,7 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
    PUSH_DATA (push, (unk << 16) | (dst->u.tex.first_layer + sf->depth));
    BEGIN_NVC0(push, NVC0_3D(ZETA_BASE_LAYER), 1);
    PUSH_DATA (push, dst->u.tex.first_layer);
+   IMMED_NVC0(push, NVC0_3D(MULTISAMPLE_MODE), mt->ms_mode);
 
    BEGIN_NIC0(push, NVC0_3D(CLEAR_BUFFERS), sf->depth);
    for (z = 0; z < sf->depth; ++z) {
@@ -1541,5 +1545,6 @@ nvc0_init_surface_functions(struct nvc0_context *nvc0)
    pipe->flush_resource = nvc0_flush_resource;
    pipe->clear_render_target = nvc0_clear_render_target;
    pipe->clear_depth_stencil = nvc0_clear_depth_stencil;
+   pipe->clear_texture = nv50_clear_texture;
    pipe->clear_buffer = nvc0_clear_buffer;
 }
