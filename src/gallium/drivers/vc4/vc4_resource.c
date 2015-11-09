@@ -668,7 +668,7 @@ vc4_get_shadow_index_buffer(struct pipe_context *pctx,
         uint16_t *dst = data;
 
         struct pipe_transfer *src_transfer = NULL;
-        uint32_t *src;
+        const uint32_t *src;
         if (ib->user_buffer) {
                 src = ib->user_buffer;
         } else {
