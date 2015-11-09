@@ -169,6 +169,9 @@ stw_st_framebuffer_present_locked(HDC hdc,
    if (resource) {
       stw_framebuffer_present_locked(hdc, stwfb->fb, resource);
    }
+   else {
+      stw_framebuffer_release(stwfb->fb);
+   }
 
    return TRUE;
 }
