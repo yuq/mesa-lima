@@ -75,6 +75,8 @@ struct vl_dri_screen
 
 static const unsigned int attachments[1] = { XCB_DRI2_ATTACHMENT_BUFFER_BACK_LEFT };
 
+static void vl_dri2_screen_destroy(struct vl_screen *vscreen);
+
 static void
 vl_dri2_handle_stamps(struct vl_dri_screen* scrn,
                       uint32_t ust_hi, uint32_t ust_lo,
@@ -170,8 +172,8 @@ vl_dri2_set_drawable(struct vl_dri_screen *scrn, Drawable drawable)
    scrn->drawable = drawable;
 }
 
-struct pipe_resource*
-vl_screen_texture_from_drawable(struct vl_screen *vscreen, void *drawable)
+static struct pipe_resource *
+vl_dri2_screen_texture_from_drawable(struct vl_screen *vscreen, void *drawable)
 {
    struct vl_dri_screen *scrn = (struct vl_dri_screen*)vscreen;
 
@@ -248,16 +250,16 @@ vl_screen_texture_from_drawable(struct vl_screen *vscreen, void *drawable)
    return tex;
 }
 
-struct u_rect *
-vl_screen_get_dirty_area(struct vl_screen *vscreen)
+static struct u_rect *
+vl_dri2_screen_get_dirty_area(struct vl_screen *vscreen)
 {
    struct vl_dri_screen *scrn = (struct vl_dri_screen*)vscreen;
    assert(scrn);
    return &scrn->dirty_areas[scrn->current_buffer];
 }
 
-uint64_t
-vl_screen_get_timestamp(struct vl_screen *vscreen, void *drawable)
+static uint64_t
+vl_dri2_screen_get_timestamp(struct vl_screen *vscreen, void *drawable)
 {
    struct vl_dri_screen *scrn = (struct vl_dri_screen*)vscreen;
    xcb_dri2_get_msc_cookie_t cookie;
@@ -279,8 +281,8 @@ vl_screen_get_timestamp(struct vl_screen *vscreen, void *drawable)
    return scrn->last_ust;
 }
 
-void
-vl_screen_set_next_timestamp(struct vl_screen *vscreen, uint64_t stamp)
+static void
+vl_dri2_screen_set_next_timestamp(struct vl_screen *vscreen, uint64_t stamp)
 {
    struct vl_dri_screen *scrn = (struct vl_dri_screen*)vscreen;
    assert(scrn);
@@ -290,8 +292,8 @@ vl_screen_set_next_timestamp(struct vl_screen *vscreen, uint64_t stamp)
       scrn->next_msc = 0;
 }
 
-void*
-vl_screen_get_private(struct vl_screen *vscreen)
+static void *
+vl_dri2_screen_get_private(struct vl_screen *vscreen)
 {
    return vscreen;
 }
@@ -398,12 +400,12 @@ vl_dri2_screen_create(Display *display, int screen)
    if (!scrn->base.pscreen)
       goto release_pipe;
 
-   scrn->base.destroy = vl_screen_destroy;
-   scrn->base.texture_from_drawable = vl_screen_texture_from_drawable;
-   scrn->base.get_dirty_area = vl_screen_get_dirty_area;
-   scrn->base.get_timestamp = vl_screen_get_timestamp;
-   scrn->base.set_next_timestamp = vl_screen_set_next_timestamp;
-   scrn->base.get_private = vl_screen_get_private;
+   scrn->base.destroy = vl_dri2_screen_destroy;
+   scrn->base.texture_from_drawable = vl_dri2_screen_texture_from_drawable;
+   scrn->base.get_dirty_area = vl_dri2_screen_get_dirty_area;
+   scrn->base.get_timestamp = vl_dri2_screen_get_timestamp;
+   scrn->base.set_next_timestamp = vl_dri2_screen_set_next_timestamp;
+   scrn->base.get_private = vl_dri2_screen_get_private;
    scrn->base.pscreen->flush_frontbuffer = vl_dri2_flush_frontbuffer;
    vl_compositor_reset_dirty_area(&scrn->dirty_areas[0]);
    vl_compositor_reset_dirty_area(&scrn->dirty_areas[1]);
@@ -433,7 +435,8 @@ free_screen:
    return NULL;
 }
 
-void vl_screen_destroy(struct vl_screen *vscreen)
+static void
+vl_dri2_screen_destroy(struct vl_screen *vscreen)
 {
    struct vl_dri_screen *scrn = (struct vl_dri_screen*)vscreen;
 
