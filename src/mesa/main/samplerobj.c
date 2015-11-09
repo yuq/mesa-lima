@@ -509,6 +509,27 @@ set_sampler_wrap_r(struct gl_context *ctx, struct gl_sampler_object *samp,
    return INVALID_PARAM;
 }
 
+void
+_mesa_set_sampler_filters(struct gl_context *ctx,
+                          struct gl_sampler_object *samp,
+                          GLenum min_filter, GLenum mag_filter)
+{
+   assert(min_filter == GL_NEAREST ||
+          min_filter == GL_LINEAR ||
+          min_filter == GL_NEAREST_MIPMAP_NEAREST ||
+          min_filter == GL_LINEAR_MIPMAP_NEAREST ||
+          min_filter == GL_NEAREST_MIPMAP_LINEAR ||
+          min_filter == GL_LINEAR_MIPMAP_LINEAR);
+   assert(mag_filter == GL_NEAREST ||
+          mag_filter == GL_LINEAR);
+
+   if (samp->MinFilter == min_filter && samp->MagFilter == mag_filter)
+      return;
+
+   flush(ctx);
+   samp->MinFilter = min_filter;
+   samp->MagFilter = mag_filter;
+}
 
 static GLuint
 set_sampler_min_filter(struct gl_context *ctx, struct gl_sampler_object *samp,
