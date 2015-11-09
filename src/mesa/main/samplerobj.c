@@ -750,6 +750,16 @@ set_sampler_cube_map_seamless(struct gl_context *ctx,
    return GL_TRUE;
 }
 
+void
+_mesa_set_sampler_srgb_decode(struct gl_context *ctx,
+                              struct gl_sampler_object *samp, GLenum param)
+{
+   assert(param == GL_DECODE_EXT || param == GL_SKIP_DECODE_EXT);
+
+   flush(ctx);
+   samp->sRGBDecode = param;
+}
+
 static GLuint
 set_sampler_srgb_decode(struct gl_context *ctx,
                               struct gl_sampler_object *samp, GLenum param)

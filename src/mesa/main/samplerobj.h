@@ -89,6 +89,10 @@ _mesa_set_sampler_filters(struct gl_context *ctx,
                           struct gl_sampler_object *samp,
                           GLenum min_filter, GLenum mag_filter);
 
+extern void
+_mesa_set_sampler_srgb_decode(struct gl_context *ctx,
+                              struct gl_sampler_object *samp, GLenum param);
+
 void GLAPIENTRY
 _mesa_GenSamplers(GLsizei count, GLuint *samplers);
 void GLAPIENTRY
