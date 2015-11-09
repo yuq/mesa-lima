@@ -444,6 +444,22 @@ flush(struct gl_context *ctx)
    FLUSH_VERTICES(ctx, _NEW_TEXTURE);
 }
 
+void
+_mesa_set_sampler_wrap(struct gl_context *ctx, struct gl_sampler_object *samp,
+                       GLenum s, GLenum t, GLenum r)
+{
+   assert(validate_texture_wrap_mode(ctx, s));
+   assert(validate_texture_wrap_mode(ctx, t));
+   assert(validate_texture_wrap_mode(ctx, r));
+
+   if (samp->WrapS == s && samp->WrapT == t && samp->WrapR == r)
+      return;
+
+   flush(ctx);
+   samp->WrapS = s;
+   samp->WrapT = t;
+   samp->WrapR = r;
+}
 
 #define INVALID_PARAM 0x100
 #define INVALID_PNAME 0x101
