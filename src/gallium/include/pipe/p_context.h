@@ -380,6 +380,16 @@ struct pipe_context {
                                unsigned width, unsigned height);
 
    /**
+    * Clear the texture with the specified texel. Not guaranteed to be a
+    * renderable format. Data provided in the resource's format.
+    */
+   void (*clear_texture)(struct pipe_context *pipe,
+                         struct pipe_resource *res,
+                         unsigned level,
+                         const struct pipe_box *box,
+                         const void *data);
+
+   /**
     * Clear a buffer. Runs a memset over the specified region with the element
     * value passed in through clear_value of size clear_value_size.
     */

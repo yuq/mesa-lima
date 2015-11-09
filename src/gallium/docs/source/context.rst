@@ -227,6 +227,10 @@ is is also possible to only clear one or the other part). While it is only
 possible to clear one surface at a time (which can include several layers),
 this surface need not be bound to the framebuffer.
 
+``clear_texture`` clears a non-PIPE_BUFFER resource's specified level
+and bounding box with a clear value provided in that resource's native
+format.
+
 ``clear_buffer`` clears a PIPE_BUFFER resource with the specified clear value
 (which may be multiple bytes in length). Logically this is a memset with a
 multi-byte element value starting at offset bytes from resource start, going
