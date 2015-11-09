@@ -763,7 +763,7 @@ handleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, v
    dst_rect.x1 = pipeline_param->output_region->x + pipeline_param->output_region->width;
    dst_rect.y1 = pipeline_param->output_region->y + pipeline_param->output_region->height;
 
-   dirty_area = vl_screen_get_dirty_area(drv->vscreen);
+   dirty_area = drv->vscreen->get_dirty_area(drv->vscreen);
 
    vl_compositor_clear_layers(&drv->cstate);
    vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, src_surface->buffer, &src_rect, NULL, VL_COMPOSITOR_WEAVE);

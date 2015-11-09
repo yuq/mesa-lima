@@ -175,10 +175,7 @@ error_htab:
    drv->pipe->destroy(drv->pipe);
 
 error_pipe:
-   if (ctx->display_type == VA_DISPLAY_GLX || ctx->display_type == VA_DISPLAY_X11)
-      vl_screen_destroy(drv->vscreen);
-   else
-      vl_drm_screen_destroy(drv->vscreen);
+   drv->vscreen->destroy(drv->vscreen);
 
 error_screen:
    FREE(drv);
@@ -315,10 +312,7 @@ vlVaTerminate(VADriverContextP ctx)
    vl_compositor_cleanup_state(&drv->cstate);
    vl_compositor_cleanup(&drv->compositor);
    drv->pipe->destroy(drv->pipe);
-   if (ctx->display_type == VA_DISPLAY_GLX || ctx->display_type == VA_DISPLAY_X11)
-      vl_screen_destroy(drv->vscreen);
-   else
-      vl_drm_screen_destroy(drv->vscreen);
+   drv->vscreen->destroy(drv->vscreen);
    handle_table_destroy(drv->htab);
    FREE(drv);
 
