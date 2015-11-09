@@ -265,7 +265,7 @@ nine_pipe_context_clear(struct NineDevice9 *This)
 const enum pipe_format nine_d3d9_to_pipe_format_map[120] =
 {
    [D3DFMT_UNKNOWN]       = PIPE_FORMAT_NONE,
-   [D3DFMT_R8G8B8]        = PIPE_FORMAT_NONE,
+   [D3DFMT_R8G8B8]        = PIPE_FORMAT_R8G8B8_UNORM,
    [D3DFMT_A8R8G8B8]      = PIPE_FORMAT_B8G8R8A8_UNORM,
    [D3DFMT_X8R8G8B8]      = PIPE_FORMAT_B8G8R8X8_UNORM,
    [D3DFMT_R5G6B5]        = PIPE_FORMAT_B5G6R5_UNORM,
@@ -323,8 +323,8 @@ const enum pipe_format nine_d3d9_to_pipe_format_map[120] =
 const D3DFORMAT nine_pipe_to_d3d9_format_map[PIPE_FORMAT_COUNT] =
 {
    [PIPE_FORMAT_NONE]               = D3DFMT_UNKNOWN,
-
-/* [PIPE_FORMAT_B8G8R8_UNORM]       = D3DFMT_R8G8B8, */
+   /* TODO: rename PIPE_FORMAT_R8G8B8_UNORM to PIPE_FORMAT_B8G8R8_UNORM */
+   [PIPE_FORMAT_R8G8B8_UNORM]       = D3DFMT_R8G8B8,
    [PIPE_FORMAT_B8G8R8A8_UNORM]     = D3DFMT_A8R8G8B8,
    [PIPE_FORMAT_B8G8R8X8_UNORM]     = D3DFMT_X8R8G8B8,
    [PIPE_FORMAT_B5G6R5_UNORM]       = D3DFMT_R5G6B5,
