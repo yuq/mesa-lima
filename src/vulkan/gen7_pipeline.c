@@ -253,54 +253,66 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
 {
    struct anv_device *device = pipeline->device;
 
-   /* FIXME-GEN7: All render targets share blend state settings on gen7, we
-    * can't implement this.
-    */
-   const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[0];
-
    uint32_t num_dwords = GEN7_BLEND_STATE_length;
    pipeline->blend_state =
       anv_state_pool_alloc(&device->dynamic_state_pool, num_dwords * 4, 64);
 
-   struct GEN7_BLEND_STATE blend_state = {
-      .ColorBufferBlendEnable = a->blendEnable,
-      .IndependentAlphaBlendEnable = true, /* FIXME: yes? */
-      .AlphaBlendFunction = vk_to_gen_blend_op[a->blendOpAlpha],
+   if (info->pAttachments == NULL) {
+      struct GEN7_BLEND_STATE blend_state = {
+         .ColorBufferBlendEnable = false,
+         .WriteDisableAlpha = false,
+         .WriteDisableRed = false,
+         .WriteDisableGreen = false,
+         .WriteDisableBlue = false,
+      };
 
-      .SourceAlphaBlendFactor = vk_to_gen_blend[a->srcBlendAlpha],
-      .DestinationAlphaBlendFactor = vk_to_gen_blend[a->destBlendAlpha],
+      GEN7_BLEND_STATE_pack(NULL, pipeline->blend_state.map, &blend_state);
+   } else {
+      /* FIXME-GEN7: All render targets share blend state settings on gen7, we
+       * can't implement this.
+       */
+      const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[0];
 
-      .ColorBlendFunction = vk_to_gen_blend_op[a->blendOpColor],
-      .SourceBlendFactor = vk_to_gen_blend[a->srcBlendColor],
-      .DestinationBlendFactor = vk_to_gen_blend[a->destBlendColor],
-      .AlphaToCoverageEnable = info->alphaToCoverageEnable,
+      struct GEN7_BLEND_STATE blend_state = {
+         .ColorBufferBlendEnable = a->blendEnable,
+         .IndependentAlphaBlendEnable = true, /* FIXME: yes? */
+         .AlphaBlendFunction = vk_to_gen_blend_op[a->blendOpAlpha],
 
-#if 0
-   bool                                         AlphaToOneEnable;
-   bool                                         AlphaToCoverageDitherEnable;
-#endif
+         .SourceAlphaBlendFactor = vk_to_gen_blend[a->srcBlendAlpha],
+         .DestinationAlphaBlendFactor = vk_to_gen_blend[a->destBlendAlpha],
 
-      .WriteDisableAlpha = !(a->channelWriteMask & VK_CHANNEL_A_BIT),
-      .WriteDisableRed = !(a->channelWriteMask & VK_CHANNEL_R_BIT),
-      .WriteDisableGreen = !(a->channelWriteMask & VK_CHANNEL_G_BIT),
-      .WriteDisableBlue = !(a->channelWriteMask & VK_CHANNEL_B_BIT),
+         .ColorBlendFunction = vk_to_gen_blend_op[a->blendOpColor],
+         .SourceBlendFactor = vk_to_gen_blend[a->srcBlendColor],
+         .DestinationBlendFactor = vk_to_gen_blend[a->destBlendColor],
+         .AlphaToCoverageEnable = info->alphaToCoverageEnable,
 
-      .LogicOpEnable = info->logicOpEnable,
-      .LogicOpFunction = vk_to_gen_logic_op[info->logicOp],
+#     if 0
+         bool                                         AlphaToOneEnable;
+         bool                                         AlphaToCoverageDitherEnable;
+#     endif
 
-#if 0
-   bool                                         AlphaTestEnable;
-   uint32_t                                     AlphaTestFunction;
-   bool                                         ColorDitherEnable;
-   uint32_t                                     XDitherOffset;
-   uint32_t                                     YDitherOffset;
-   uint32_t                                     ColorClampRange;
-   bool                                         PreBlendColorClampEnable;
-   bool                                         PostBlendColorClampEnable;
-#endif
-   };
+         .WriteDisableAlpha = !(a->channelWriteMask & VK_CHANNEL_A_BIT),
+         .WriteDisableRed = !(a->channelWriteMask & VK_CHANNEL_R_BIT),
+         .WriteDisableGreen = !(a->channelWriteMask & VK_CHANNEL_G_BIT),
+         .WriteDisableBlue = !(a->channelWriteMask & VK_CHANNEL_B_BIT),
 
-   GEN7_BLEND_STATE_pack(NULL, pipeline->blend_state.map, &blend_state);
+         .LogicOpEnable = info->logicOpEnable,
+         .LogicOpFunction = vk_to_gen_logic_op[info->logicOp],
+
+#     if 0
+         bool                                         AlphaTestEnable;
+         uint32_t                                     AlphaTestFunction;
+         bool                                         ColorDitherEnable;
+         uint32_t                                     XDitherOffset;
+         uint32_t                                     YDitherOffset;
+         uint32_t                                     ColorClampRange;
+         bool                                         PreBlendColorClampEnable;
+         bool                                         PostBlendColorClampEnable;
+#     endif
+      };
+
+      GEN7_BLEND_STATE_pack(NULL, pipeline->blend_state.map, &blend_state);
+    }
 
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_BLEND_STATE_POINTERS,
                   .BlendStatePointer = pipeline->blend_state.offset);
