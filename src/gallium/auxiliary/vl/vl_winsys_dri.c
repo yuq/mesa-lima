@@ -306,7 +306,7 @@ get_xcb_screen(xcb_screen_iterator_t iter, int screen)
 }
 
 struct vl_screen*
-vl_screen_create(Display *display, int screen)
+vl_dri2_screen_create(Display *display, int screen)
 {
    struct vl_dri_screen *scrn;
    const xcb_query_extension_reply_t *extension;

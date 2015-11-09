@@ -118,7 +118,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
       return VA_STATUS_ERROR_UNIMPLEMENTED;
    case VA_DISPLAY_GLX:
    case VA_DISPLAY_X11:
-      drv->vscreen = vl_screen_create(ctx->native_dpy, ctx->x11_screen);
+      drv->vscreen = vl_dri2_screen_create(ctx->native_dpy, ctx->x11_screen);
       if (!drv->vscreen)
          goto error_screen;
       break;

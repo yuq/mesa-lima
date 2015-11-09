@@ -63,7 +63,7 @@ vdp_imp_device_create_x11(Display *display, int screen, VdpDevice *device,
 
    pipe_reference_init(&dev->reference, 1);
 
-   dev->vscreen = vl_screen_create(display, screen);
+   dev->vscreen = vl_dri2_screen_create(display, screen);
    if (!dev->vscreen) {
       ret = VDP_STATUS_RESOURCES;
       goto no_vscreen;

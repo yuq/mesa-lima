@@ -46,9 +46,6 @@ struct vl_screen
    struct pipe_loader_device *dev;
 };
 
-struct vl_screen*
-vl_screen_create(Display *display, int screen);
-
 void vl_screen_destroy(struct vl_screen *vscreen);
 
 struct pipe_resource*
@@ -67,6 +64,9 @@ void*
 vl_screen_get_private(struct vl_screen *vscreen);
 
 struct vl_screen*
+vl_dri2_screen_create(Display *display, int screen);
+
+struct vl_screen *
 vl_drm_screen_create(int fd);
 
 void

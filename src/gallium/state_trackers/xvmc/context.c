@@ -229,7 +229,7 @@ Status XvMCCreateContext(Display *dpy, XvPortID port, int surface_type_id,
       return BadAlloc;
 
    /* TODO: Reuse screen if process creates another context */
-   vscreen = vl_screen_create(dpy, scrn);
+   vscreen = vl_dri2_screen_create(dpy, scrn);
 
    if (!vscreen) {
       XVMC_MSG(XVMC_ERR, "[XvMC] Could not create VL screen.\n");
