@@ -703,8 +703,8 @@ blitframebuffer_texture(struct gl_context *ctx,
      printf("  srcTex %p  dstText %p\n", texObj, drawAtt->Texture);
    */
 
-   fb_tex_blit.sampler = _mesa_meta_setup_sampler(ctx, texObj, target, filter,
-                                                  srcLevel);
+   fb_tex_blit.samp_obj = _mesa_meta_setup_sampler(ctx, texObj, target, filter,
+                                                   srcLevel);
 
    /* Always do our blits with no net sRGB decode or encode.
     *
@@ -725,13 +725,12 @@ blitframebuffer_texture(struct gl_context *ctx,
    if (ctx->Extensions.EXT_texture_sRGB_decode) {
       if (_mesa_get_format_color_encoding(rb->Format) == GL_SRGB &&
           drawFb->Visual.sRGBCapable) {
-         _mesa_SamplerParameteri(fb_tex_blit.sampler,
-                                 GL_TEXTURE_SRGB_DECODE_EXT, GL_DECODE_EXT);
+         _mesa_set_sampler_srgb_decode(ctx, fb_tex_blit.samp_obj,
+                                       GL_DECODE_EXT);
          _mesa_set_framebuffer_srgb(ctx, GL_TRUE);
       } else {
-         _mesa_SamplerParameteri(fb_tex_blit.sampler,
-                                 GL_TEXTURE_SRGB_DECODE_EXT,
-                                 GL_SKIP_DECODE_EXT);
+         _mesa_set_sampler_srgb_decode(ctx, fb_tex_blit.samp_obj,
+                                       GL_SKIP_DECODE_EXT);
          /* set_framebuffer_srgb was set by _mesa_meta_begin(). */
       }
    }
@@ -840,7 +839,9 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
    }
 
    _mesa_BindSampler(ctx->Texture.CurrentUnit, blit->samplerSave);
-   _mesa_DeleteSamplers(1, &blit->sampler);
+   _mesa_DeleteSamplers(1, &blit->samp_obj->Name);
+   blit->samp_obj = NULL;
+
    if (blit->tempTex)
       _mesa_DeleteTextures(1, &blit->tempTex);
 }
@@ -884,22 +885,26 @@ _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
    return true;
 }
 
-GLuint
+struct gl_sampler_object *
 _mesa_meta_setup_sampler(struct gl_context *ctx,
                          const struct gl_texture_object *texObj,
                          GLenum target, GLenum filter, GLuint srcLevel)
 {
    GLuint sampler;
+   struct gl_sampler_object *samp_obj;
    GLenum tex_filter = (filter == GL_SCALED_RESOLVE_FASTEST_EXT ||
                         filter == GL_SCALED_RESOLVE_NICEST_EXT) ?
                        GL_NEAREST : filter;
 
    _mesa_GenSamplers(1, &sampler);
-   _mesa_BindSampler(ctx->Texture.CurrentUnit, sampler);
-   _mesa_SamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, tex_filter);
-   _mesa_SamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, tex_filter);
-   _mesa_SamplerParameteri(sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-   _mesa_SamplerParameteri(sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+   samp_obj = _mesa_lookup_samplerobj(ctx, sampler);
+   assert(samp_obj != NULL && samp_obj->Name == sampler);
+
+   _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, samp_obj);
+   _mesa_set_sampler_filters(ctx, samp_obj, tex_filter, tex_filter);
+   _mesa_set_sampler_wrap(ctx, samp_obj, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE,
+                          samp_obj->WrapR);
 
    /* Prepare src texture state */
    _mesa_BindTexture(target, texObj->Name);
@@ -908,7 +913,7 @@ _mesa_meta_setup_sampler(struct gl_context *ctx,
       _mesa_TexParameteri(target, GL_TEXTURE_MAX_LEVEL, srcLevel);
    }
 
-   return sampler;
+   return samp_obj;
 }
 
 /**

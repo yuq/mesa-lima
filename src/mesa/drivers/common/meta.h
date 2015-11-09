@@ -309,7 +309,8 @@ struct blit_state
 struct fb_tex_blit_state
 {
    GLint baseLevelSave, maxLevelSave;
-   GLuint sampler, samplerSave, stencilSamplingSave;
+   struct gl_sampler_object *samp_obj;
+   GLuint samplerSave, stencilSamplingSave;
    GLuint tempTex;
 };
 
@@ -465,7 +466,7 @@ _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
                                 struct gl_texture_object **texObj,
                                 GLenum *target);
 
-GLuint
+struct gl_sampler_object *
 _mesa_meta_setup_sampler(struct gl_context *ctx,
                          const struct gl_texture_object *texObj,
                          GLenum target, GLenum filter, GLuint srcLevel);
