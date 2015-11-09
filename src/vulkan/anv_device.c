@@ -83,7 +83,7 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    if (device->info->gen == 7 &&
        !device->info->is_haswell && !device->info->is_baytrail) {
-      fprintf(stderr, "WARNING: Ivy Bridge Vulkan support is incomplete");
+      fprintf(stderr, "WARNING: Ivy Bridge Vulkan support is incomplete\n");
    } else if (device->info->gen == 8 && !device->info->is_cherryview) {
       /* Briadwell is as fully supported as anything */
    } else {
