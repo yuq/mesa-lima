@@ -49,15 +49,11 @@ vl_drm_screen_create(int fd)
    if (pipe_loader_drm_probe_fd(&vscreen->dev, dup(fd))) {
       vscreen->pscreen =
          pipe_loader_create_screen(vscreen->dev, PIPE_SEARCH_DIR);
-      if (!vscreen->pscreen)
-         pipe_loader_release(&vscreen->dev, 1);
    }
 #endif
 
-   if (!vscreen->pscreen) {
-      FREE(vscreen);
-      return NULL;
-   }
+   if (!vscreen->pscreen)
+      goto error;
 
    vscreen->destroy = vl_drm_screen_destroy;
    vscreen->texture_from_drawable = NULL;
@@ -66,6 +62,14 @@ vl_drm_screen_create(int fd)
    vscreen->set_next_timestamp = NULL;
    vscreen->get_private = NULL;
    return vscreen;
+
+error:
+#if !GALLIUM_STATIC_TARGETS
+   if (vscreen->dev)
+      pipe_loader_release(&vscreen->dev, 1);
+#endif // !GALLIUM_STATIC_TARGETS
+   FREE(vscreen);
+   return NULL;
 }
 
 void
