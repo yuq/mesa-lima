@@ -86,7 +86,4 @@ vl_dri2_screen_create(Display *display, int screen);
 struct vl_screen *
 vl_drm_screen_create(int fd);
 
-void
-vl_drm_screen_destroy(struct vl_screen *vscreen);
-
 #endif

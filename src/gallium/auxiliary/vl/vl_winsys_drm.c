@@ -34,7 +34,10 @@
 #include "util/u_memory.h"
 #include "vl/vl_winsys.h"
 
-struct vl_screen*
+static void
+vl_drm_screen_destroy(struct vl_screen *vscreen);
+
+struct vl_screen *
 vl_drm_screen_create(int fd)
 {
    struct vl_screen *vscreen;
@@ -72,7 +75,7 @@ error:
    return NULL;
 }
 
-void
+static void
 vl_drm_screen_destroy(struct vl_screen *vscreen)
 {
    assert(vscreen);
