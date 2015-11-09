@@ -660,7 +660,6 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
       GLuint u, tgt;
 
       save->ActiveUnit = ctx->Texture.CurrentUnit;
-      save->ClientActiveUnit = ctx->Array.ActiveTexture;
       save->EnvMode = ctx->Texture.Unit[0].EnvMode;
 
       /* Disable all texture units */
@@ -693,7 +692,6 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
 
       /* set defaults for unit[0] */
       _mesa_ActiveTexture(GL_TEXTURE0);
-      _mesa_ClientActiveTexture(GL_TEXTURE0);
       _mesa_TexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
    }
 
@@ -1120,7 +1118,6 @@ _mesa_meta_end(struct gl_context *ctx)
 
       /* restore current unit state */
       _mesa_ActiveTexture(GL_TEXTURE0 + save->ActiveUnit);
-      _mesa_ClientActiveTexture(GL_TEXTURE0 + save->ClientActiveUnit);
    }
 
    if (state & MESA_META_TRANSFORM) {

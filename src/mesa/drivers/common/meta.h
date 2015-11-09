@@ -146,7 +146,6 @@ struct save_state
 
    /** MESA_META_TEXTURE */
    GLuint ActiveUnit;
-   GLuint ClientActiveUnit;
    /** for unit[0] only */
    struct gl_texture_object *CurrentTexture[NUM_TEXTURE_TARGETS];
    /** mask of TEXTURE_2D_BIT, etc */
