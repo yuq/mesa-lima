@@ -441,6 +441,10 @@ stw_make_current(HDC hdc, DHGLRC dhglrc)
       /* Bind the new framebuffer */
       ctx->hdc = hdc;
 
+      /* Note: when we call this function we will wind up in the
+       * stw_st_framebuffer_validate_locked() function which will incur
+       * a recursive fb->mutex lock.
+       */
       ret = stw_dev->stapi->make_current(stw_dev->stapi, ctx->st,
                                          fb->stfb, fb->stfb);
       stw_framebuffer_reference(&ctx->current_framebuffer, fb);
