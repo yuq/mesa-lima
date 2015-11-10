@@ -564,9 +564,10 @@ intelEmitCopyBlit(struct brw_context *brw,
                                            dst_offset, dst_pitch,
                                            dst_tiling, dst_tr_mode,
                                            w, h, cpp);
-   assert(use_fast_copy_blit ||
-          (src_tr_mode == INTEL_MIPTREE_TRMODE_NONE &&
-           dst_tr_mode == INTEL_MIPTREE_TRMODE_NONE));
+   if (!use_fast_copy_blit &&
+       (src_tr_mode != INTEL_MIPTREE_TRMODE_NONE ||
+        dst_tr_mode != INTEL_MIPTREE_TRMODE_NONE))
+      return false;
 
    if (use_fast_copy_blit) {
       /* When two sequential fast copy blits have different source surfaces,
