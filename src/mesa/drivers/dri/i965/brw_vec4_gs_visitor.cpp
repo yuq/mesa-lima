@@ -812,6 +812,12 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    /* Now that prog_data setup is done, we are ready to actually compile the
     * program.
     */
+   if (unlikely(INTEL_DEBUG & DEBUG_GS)) {
+      fprintf(stderr, "GS Input ");
+      brw_print_vue_map(stderr, &c.input_vue_map);
+      fprintf(stderr, "GS Output ");
+      brw_print_vue_map(stderr, &prog_data->base.vue_map);
+   }
 
    if (compiler->scalar_gs) {
       /* TODO: Support instanced GS.  We have basically no tests... */

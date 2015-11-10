@@ -458,6 +458,8 @@ struct brw_vue_map {
    int num_slots;
 };
 
+void brw_print_vue_map(FILE *fp, const struct brw_vue_map *vue_map);
+
 /**
  * Convert a VUE slot number into a byte offset within the VUE.
  */

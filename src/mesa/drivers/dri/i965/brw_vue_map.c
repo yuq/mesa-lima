@@ -178,3 +178,30 @@ brw_compute_vue_map(const struct brw_device_info *devinfo,
 
    vue_map->num_slots = separate ? slot + 1 : slot;
 }
+
+static const char *
+varying_name(brw_varying_slot slot)
+{
+   if (slot < VARYING_SLOT_MAX)
+      return gl_varying_slot_name(slot);
+
+   static const char *brw_names[] = {
+      [BRW_VARYING_SLOT_NDC - VARYING_SLOT_MAX] = "BRW_VARYING_SLOT_NDC",
+      [BRW_VARYING_SLOT_PAD - VARYING_SLOT_MAX] = "BRW_VARYING_SLOT_PAD",
+      [BRW_VARYING_SLOT_PNTC - VARYING_SLOT_MAX] = "BRW_VARYING_SLOT_PNTC",
+   };
+
+   return brw_names[slot - VARYING_SLOT_MAX];
+}
+
+void
+brw_print_vue_map(FILE *fp, const struct brw_vue_map *vue_map)
+{
+   fprintf(fp, "VUE map (%d slots, %s)\n",
+           vue_map->num_slots, vue_map->separate ? "SSO" : "non-SSO");
+   for (int i = 0; i < vue_map->num_slots; i++) {
+      fprintf(fp, "  [%d] %s\n", i,
+              varying_name(vue_map->slot_to_varying[i]));
+   }
+   fprintf(fp, "\n");
+}
