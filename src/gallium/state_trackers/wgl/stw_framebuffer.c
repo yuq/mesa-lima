@@ -230,11 +230,11 @@ stw_call_window_proc(int nCode, WPARAM wParam, LPARAM lParam)
       }
    }
    else if (pParams->message == WM_DESTROY) {
-      pipe_mutex_lock( stw_dev->fb_mutex );
+      stw_lock_framebuffers(stw_dev);
       fb = stw_framebuffer_from_hwnd_locked( pParams->hwnd );
       if (fb)
          stw_framebuffer_destroy_locked(fb);
-      pipe_mutex_unlock( stw_dev->fb_mutex );
+      stw_unlock_framebuffers(stw_dev);
    }
 
    return CallNextHookEx(tls_data->hCallWndProcHook, nCode, wParam, lParam);
@@ -304,10 +304,10 @@ stw_framebuffer_create(HDC hdc, int iPixelFormat)
     */
    pipe_mutex_lock( fb->mutex );
 
-   pipe_mutex_lock( stw_dev->fb_mutex );
+   stw_lock_framebuffers(stw_dev);
    fb->next = stw_dev->fb_head;
    stw_dev->fb_head = fb;
-   pipe_mutex_unlock( stw_dev->fb_mutex );
+   stw_unlock_framebuffers(stw_dev);
 
    return fb;
 }
@@ -328,12 +328,12 @@ stw_framebuffer_reference(struct stw_framebuffer **ptr,
    if (fb)
       fb->refcnt++;
    if (old_fb) {
-      pipe_mutex_lock(stw_dev->fb_mutex);
+      stw_lock_framebuffers(stw_dev);
 
       pipe_mutex_lock(old_fb->mutex);
       stw_framebuffer_destroy_locked(old_fb);
 
-      pipe_mutex_unlock(stw_dev->fb_mutex);
+      stw_unlock_framebuffers(stw_dev);
    }
 
    *ptr = fb;
@@ -372,7 +372,7 @@ stw_framebuffer_cleanup(void)
    if (!stw_dev)
       return;
 
-   pipe_mutex_lock( stw_dev->fb_mutex );
+   stw_lock_framebuffers(stw_dev);
 
    fb = stw_dev->fb_head;
    while (fb) {
@@ -385,7 +385,7 @@ stw_framebuffer_cleanup(void)
    }
    stw_dev->fb_head = NULL;
 
-   pipe_mutex_unlock( stw_dev->fb_mutex );
+   stw_unlock_framebuffers(stw_dev);
 }
 
 
@@ -419,9 +419,9 @@ stw_framebuffer_from_hdc(HDC hdc)
    if (!stw_dev)
       return NULL;
 
-   pipe_mutex_lock( stw_dev->fb_mutex );
+   stw_lock_framebuffers(stw_dev);
    fb = stw_framebuffer_from_hdc_locked(hdc);
-   pipe_mutex_unlock( stw_dev->fb_mutex );
+   stw_unlock_framebuffers(stw_dev);
 
    return fb;
 }
@@ -436,9 +436,9 @@ stw_framebuffer_from_hwnd(HWND hwnd)
 {
    struct stw_framebuffer *fb;
 
-   pipe_mutex_lock( stw_dev->fb_mutex );
+   stw_lock_framebuffers(stw_dev);
    fb = stw_framebuffer_from_hwnd_locked(hwnd);
-   pipe_mutex_unlock( stw_dev->fb_mutex );
+   stw_unlock_framebuffers(stw_dev);
 
    return fb;
 }

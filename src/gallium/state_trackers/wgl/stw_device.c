@@ -107,7 +107,7 @@ stw_init(const struct stw_winsys *stw_winsys)
    stw_dev->max_2d_length = 1 << (stw_dev->max_2d_levels - 1);
 
    InitializeCriticalSection(&stw_dev->ctx_mutex);
-   pipe_mutex_init( stw_dev->fb_mutex );
+   InitializeCriticalSection(&stw_dev->fb_mutex);
 
    stw_dev->ctx_table = handle_table_create();
    if (!stw_dev->ctx_table) {
@@ -169,7 +169,7 @@ stw_cleanup(void)
 
    stw_framebuffer_cleanup();
    
-   pipe_mutex_destroy( stw_dev->fb_mutex );
+   DeleteCriticalSection(&stw_dev->fb_mutex);
    DeleteCriticalSection(&stw_dev->ctx_mutex);
    
    FREE(stw_dev->smapi);

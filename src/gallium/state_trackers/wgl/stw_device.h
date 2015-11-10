@@ -68,7 +68,7 @@ struct stw_device
    CRITICAL_SECTION ctx_mutex;
    struct handle_table *ctx_table;
    
-   pipe_mutex fb_mutex;
+   CRITICAL_SECTION fb_mutex;
    struct stw_framebuffer *fb_head;
    
 #ifdef DEBUG
@@ -100,6 +100,20 @@ static inline void
 stw_unlock_contexts(struct stw_device *stw_dev)
 {
    LeaveCriticalSection(&stw_dev->ctx_mutex);
+}
+
+
+static inline void
+stw_lock_framebuffers(struct stw_device *stw_dev)
+{
+   EnterCriticalSection(&stw_dev->fb_mutex);
+}
+
+
+static inline void
+stw_unlock_framebuffers(struct stw_device *stw_dev)
+{
+   LeaveCriticalSection(&stw_dev->fb_mutex);
 }
 
 
