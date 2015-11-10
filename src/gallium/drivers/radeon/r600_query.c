@@ -1002,39 +1002,50 @@ err:
 	return;
 }
 
+#define X(name_, query_type_, type_, result_type_) \
+	{ \
+		.name = name_, \
+		.query_type = R600_QUERY_##query_type_, \
+		.type = PIPE_DRIVER_QUERY_TYPE_##type_, \
+		.result_type = PIPE_DRIVER_QUERY_RESULT_TYPE_##result_type_, \
+		.group_id = ~(unsigned)0 \
+	}
+
+static struct pipe_driver_query_info r600_driver_query_list[] = {
+	X("num-compilations",		NUM_COMPILATIONS,	UINT64, CUMULATIVE),
+	X("num-shaders-created",	NUM_SHADERS_CREATED,	UINT64, CUMULATIVE),
+	X("draw-calls",			DRAW_CALLS,		UINT64, CUMULATIVE),
+	X("requested-VRAM",		REQUESTED_VRAM,		BYTES, AVERAGE),
+	X("requested-GTT",		REQUESTED_GTT,		BYTES, AVERAGE),
+	X("buffer-wait-time",		BUFFER_WAIT_TIME,	MICROSECONDS, CUMULATIVE),
+	X("num-cs-flushes",		NUM_CS_FLUSHES,		UINT64, CUMULATIVE),
+	X("num-bytes-moved",		NUM_BYTES_MOVED,	BYTES, CUMULATIVE),
+	X("VRAM-usage",			VRAM_USAGE,		BYTES, AVERAGE),
+	X("GTT-usage",			GTT_USAGE,		BYTES, AVERAGE),
+	X("GPU-load",			GPU_LOAD,		UINT64, AVERAGE),
+	X("temperature",		GPU_TEMPERATURE,	UINT64, AVERAGE),
+	X("shader-clock",		CURRENT_GPU_SCLK,	HZ, AVERAGE),
+	X("memory-clock",		CURRENT_GPU_MCLK,	HZ, AVERAGE),
+};
+
+#undef X
+
+static unsigned r600_get_num_queries(struct r600_common_screen *rscreen)
+{
+	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
+		return Elements(r600_driver_query_list);
+	else if (rscreen->info.drm_major == 3)
+		return Elements(r600_driver_query_list) - 3;
+	else
+		return Elements(r600_driver_query_list) - 4;
+}
+
 static int r600_get_driver_query_info(struct pipe_screen *screen,
 				      unsigned index,
 				      struct pipe_driver_query_info *info)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
-	struct pipe_driver_query_info list[] = {
-		{"num-compilations", R600_QUERY_NUM_COMPILATIONS, {0}, PIPE_DRIVER_QUERY_TYPE_UINT64,
-		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
-		{"num-shaders-created", R600_QUERY_NUM_SHADERS_CREATED, {0}, PIPE_DRIVER_QUERY_TYPE_UINT64,
-		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
-		{"draw-calls", R600_QUERY_DRAW_CALLS, {0}},
-		{"requested-VRAM", R600_QUERY_REQUESTED_VRAM, {rscreen->info.vram_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
-		{"requested-GTT", R600_QUERY_REQUESTED_GTT, {rscreen->info.gart_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
-		{"buffer-wait-time", R600_QUERY_BUFFER_WAIT_TIME, {0}, PIPE_DRIVER_QUERY_TYPE_MICROSECONDS,
-		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
-		{"num-cs-flushes", R600_QUERY_NUM_CS_FLUSHES, {0}},
-		{"num-bytes-moved", R600_QUERY_NUM_BYTES_MOVED, {0}, PIPE_DRIVER_QUERY_TYPE_BYTES,
-		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
-		{"VRAM-usage", R600_QUERY_VRAM_USAGE, {rscreen->info.vram_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
-		{"GTT-usage", R600_QUERY_GTT_USAGE, {rscreen->info.gart_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
-		{"GPU-load", R600_QUERY_GPU_LOAD, {100}},
-		{"temperature", R600_QUERY_GPU_TEMPERATURE, {125}},
-		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
-		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
-	};
-	unsigned num_queries;
-
-	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
-		num_queries = Elements(list);
-	else if (rscreen->info.drm_major == 3)
-		num_queries = Elements(list) - 3;
-	else
-		num_queries = Elements(list) - 4;
+	unsigned num_queries = r600_get_num_queries(rscreen);
 
 	if (!info)
 		return num_queries;
@@ -1042,7 +1053,22 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 	if (index >= num_queries)
 		return 0;
 
-	*info = list[index];
+	*info = r600_driver_query_list[index];
+
+	switch (info->query_type) {
+	case R600_QUERY_REQUESTED_VRAM:
+	case R600_QUERY_VRAM_USAGE:
+		info->max_value.u64 = rscreen->info.vram_size;
+		break;
+	case R600_QUERY_REQUESTED_GTT:
+	case R600_QUERY_GTT_USAGE:
+		info->max_value.u64 = rscreen->info.gart_size;
+		break;
+	case R600_QUERY_GPU_TEMPERATURE:
+		info->max_value.u64 = 125;
+		break;
+	}
+
 	return 1;
 }
 
