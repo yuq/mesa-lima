@@ -55,6 +55,7 @@ stw_framebuffer_from_hwnd_locked(HWND hwnd)
    for (fb = stw_dev->fb_head; fb != NULL; fb = fb->next)
       if (fb->hWnd == hwnd) {
          stw_framebuffer_lock(fb);
+         assert(fb->mutex.RecursionCount == 1);
          return fb;
       }
 
