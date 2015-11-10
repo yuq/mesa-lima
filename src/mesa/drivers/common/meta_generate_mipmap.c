@@ -224,24 +224,26 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
    _mesa_BindTexture(target, texObj->Name);
 
    if (!mipmap->Sampler) {
+      struct gl_sampler_object *samp_obj;
+
       _mesa_GenSamplers(1, &mipmap->Sampler);
+
+      samp_obj = _mesa_lookup_samplerobj(ctx, mipmap->Sampler);
+      assert(samp_obj != NULL && samp_obj->Name == mipmap->Sampler);
+
       _mesa_BindSampler(ctx->Texture.CurrentUnit, mipmap->Sampler);
 
-      _mesa_SamplerParameteri(mipmap->Sampler,
-                              GL_TEXTURE_MIN_FILTER,
-                              GL_LINEAR_MIPMAP_LINEAR);
-      _mesa_SamplerParameteri(mipmap->Sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      _mesa_SamplerParameteri(mipmap->Sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      _mesa_SamplerParameteri(mipmap->Sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      _mesa_SamplerParameteri(mipmap->Sampler, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+      _mesa_set_sampler_filters(ctx, samp_obj, GL_LINEAR_MIPMAP_LINEAR,
+                                GL_LINEAR);
+      _mesa_set_sampler_wrap(ctx, samp_obj, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE,
+                             GL_CLAMP_TO_EDGE);
 
       /* We don't want to encode or decode sRGB values; treat them as linear.
        * This is not technically correct for GLES3 but we don't get any API
        * error at the moment.
        */
       if (ctx->Extensions.EXT_texture_sRGB_decode) {
-         _mesa_SamplerParameteri(mipmap->Sampler, GL_TEXTURE_SRGB_DECODE_EXT,
-               GL_SKIP_DECODE_EXT);
+         _mesa_set_sampler_srgb_decode(ctx, samp_obj, GL_SKIP_DECODE_EXT);
       }
    } else {
       _mesa_BindSampler(ctx->Texture.CurrentUnit, mipmap->Sampler);
