@@ -48,7 +48,6 @@ struct query_info {
    /* Ring of queries. If a query is busy, we use another slot. */
    struct pipe_query *query[NUM_QUERIES];
    unsigned head, tail;
-   unsigned num_queries;
 
    uint64_t last_time;
    uint64_t results_cumulative;
