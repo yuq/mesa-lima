@@ -117,6 +117,8 @@ nv50_screen(struct pipe_screen *screen)
 
 int nv50_screen_get_driver_query_info(struct pipe_screen *, unsigned,
                                       struct pipe_driver_query_info *);
+int nv50_screen_get_driver_query_group_info(struct pipe_screen *, unsigned,
+                                            struct pipe_driver_query_group_info *);
 
 bool nv50_blitter_create(struct nv50_screen *);
 void nv50_blitter_destroy(struct nv50_screen *);

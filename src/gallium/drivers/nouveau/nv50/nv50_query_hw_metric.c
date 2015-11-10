@@ -198,7 +198,7 @@ nv50_hw_metric_get_driver_query_info(struct nv50_screen *screen, unsigned id,
          if (screen->base.class_3d >= NV84_3D_CLASS) {
             info->name = nv50_hw_metric_names[id];
             info->query_type = NV50_HW_METRIC_QUERY(id);
-            info->group_id = -1;
+            info->group_id = NV50_HW_METRIC_QUERY_GROUP;
             return 1;
          }
       }
