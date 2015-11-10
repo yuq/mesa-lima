@@ -162,6 +162,7 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    info->max_value.u64 = 0;
    info->type = PIPE_DRIVER_QUERY_TYPE_UINT64;
    info->group_id = -1;
+   info->flags = 0;
 
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
    if (id < num_sw_queries)

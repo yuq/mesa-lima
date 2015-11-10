@@ -174,6 +174,7 @@ nv50_screen_get_driver_query_info(struct pipe_screen *pscreen,
    info->max_value.u64 = 0;
    info->type = PIPE_DRIVER_QUERY_TYPE_UINT64;
    info->group_id = -1;
+   info->flags = 0;
 
    return nv50_hw_get_driver_query_info(screen, id, info);
 }

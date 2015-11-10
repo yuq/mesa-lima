@@ -776,6 +776,16 @@ struct pipe_query_data_pipeline_statistics
 };
 
 /**
+ * For batch queries.
+ */
+union pipe_numeric_type_union
+{
+   uint64_t u64;
+   uint32_t u32;
+   float f;
+};
+
+/**
  * Query result (returned by pipe_context::get_query_result).
  */
 union pipe_query_result
@@ -811,6 +821,9 @@ union pipe_query_result
 
    /* PIPE_QUERY_PIPELINE_STATISTICS */
    struct pipe_query_data_pipeline_statistics pipeline_statistics;
+
+   /* batch queries */
+   union pipe_numeric_type_union batch[0];
 };
 
 union pipe_color_union
@@ -840,12 +853,13 @@ enum pipe_driver_query_result_type
    PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE = 1,
 };
 
-union pipe_numeric_type_union
-{
-   uint64_t u64;
-   uint32_t u32;
-   float f;
-};
+/**
+ * Some hardware requires some hardware-specific queries to be submitted
+ * as batched queries. The corresponding query objects are created using
+ * create_batch_query, and at most one such query may be active at
+ * any time.
+ */
+#define PIPE_DRIVER_QUERY_FLAG_BATCH     (1 << 0)
 
 struct pipe_driver_query_info
 {
@@ -855,6 +869,7 @@ struct pipe_driver_query_info
    enum pipe_driver_query_type type;
    enum pipe_driver_query_result_type result_type;
    unsigned group_id;
+   unsigned flags;
 };
 
 struct pipe_driver_query_group_info
