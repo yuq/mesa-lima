@@ -1286,14 +1286,22 @@ VkResult anv_WaitForFences(
     uint64_t                                    timeout)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   int64_t t = timeout;
-   int ret;
+
+   /* DRM_IOCTL_I915_GEM_WAIT uses a signed 64 bit timeout and is supposed
+    * to block indefinitely timeouts <= 0.  Unfortunately, this was broken
+    * for a couple of kernel releases.  Since there's no way to know
+    * whether or not the kernel we're using is one of the broken ones, the
+    * best we can do is to clamp the timeout to INT64_MAX.  This limits the
+    * maximum timeout from 584 years to 292 years - likely not a big deal.
+    */
+   if (timeout > INT64_MAX)
+      timeout = INT64_MAX;
 
    /* FIXME: handle !waitAll */
 
    for (uint32_t i = 0; i < fenceCount; i++) {
       ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
-      ret = anv_gem_wait(device, fence->bo.gem_handle, &t);
+      int ret = anv_gem_wait(device, fence->bo.gem_handle, &timeout);
       if (ret == -1 && errno == ETIME) {
          return VK_TIMEOUT;
       } else if (ret == -1) {
