@@ -4761,6 +4761,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
 
    fprintf(file, " ");
 
+   if (inst->force_writemask_all)
+      fprintf(file, "NoMask ");
+
    if (dispatch_width == 16 && inst->exec_size == 8) {
       if (inst->force_sechalf)
          fprintf(file, "2ndhalf ");

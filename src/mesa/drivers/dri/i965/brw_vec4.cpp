@@ -1552,6 +1552,9 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, ", ");
    }
 
+   if (inst->force_writemask_all)
+      fprintf(file, " NoMask");
+
    fprintf(file, "\n");
 }
 
