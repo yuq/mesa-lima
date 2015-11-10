@@ -137,11 +137,7 @@ _mesa_meta_glsl_generate_mipmap_cleanup(struct gl_context *ctx,
    _mesa_DeleteVertexArrays(1, &mipmap->VAO);
    mipmap->VAO = 0;
    _mesa_reference_buffer_object(ctx, &mipmap->buf_obj, NULL);
-
-   if (mipmap->samp_obj != NULL) {
-      _mesa_DeleteSamplers(1, &mipmap->samp_obj->Name);
-      mipmap->samp_obj = NULL;
-   }
+   _mesa_reference_sampler_object(ctx, &mipmap->samp_obj, NULL);
 
    if (mipmap->FBO != 0) {
       _mesa_DeleteFramebuffers(1, &mipmap->FBO);
@@ -227,12 +223,16 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
    _mesa_BindTexture(target, texObj->Name);
 
    if (mipmap->samp_obj == NULL) {
-      GLuint sampler;
-
-      _mesa_GenSamplers(1, &sampler);
-
-      mipmap->samp_obj = _mesa_lookup_samplerobj(ctx, sampler);
-      assert(mipmap->samp_obj != NULL && mipmap->samp_obj->Name == sampler);
+      mipmap->samp_obj =  ctx->Driver.NewSamplerObject(ctx, 0xDEADBEEF);
+      if (mipmap->samp_obj == NULL) {
+         /* This is a bit lazy.  Flag out of memory, and then don't bother to
+          * clean up.  Once out of memory is flagged, the only realistic next
+          * move is to destroy the context.  That will trigger all the right
+          * clean up.
+          */
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGenerateMipmap");
+         return;
+      }
 
       _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, mipmap->samp_obj);
 
