@@ -222,7 +222,7 @@ wglCreatePbufferARB(HDC hCurrentDC,
    fb->bPbuffer = TRUE;
    iDisplayablePixelFormat = fb->iDisplayablePixelFormat;
 
-   stw_framebuffer_release(fb);
+   stw_framebuffer_unlock(fb);
 
    /*
     * We need to set a displayable pixel format on the hidden window DC

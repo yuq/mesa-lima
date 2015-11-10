@@ -165,7 +165,7 @@ stw_create_context_attribs(HDC hdc, INT iLayerPlane, DHGLRC hShareContext,
    fb = stw_framebuffer_from_hdc( hdc );
    if (fb) {
       iPixelFormat = fb->iPixelFormat;
-      stw_framebuffer_release(fb);
+      stw_framebuffer_unlock(fb);
    } else {
       return 0;
    }
@@ -451,7 +451,7 @@ stw_make_current(HDC hdc, DHGLRC dhglrc)
 fail:
 
    if (fb) {
-      stw_framebuffer_release(fb);
+      stw_framebuffer_unlock(fb);
    }
 
    /* On failure, make the thread's current rendering context not current

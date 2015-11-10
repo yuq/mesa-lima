@@ -149,7 +149,7 @@ stw_st_framebuffer_validate(struct st_context_iface *stctx,
       pipe_resource_reference(&out[i], stwfb->textures[statts[i]]);
    }
 
-   stw_framebuffer_release(stwfb->fb);
+   stw_framebuffer_unlock(stwfb->fb);
 
    return TRUE;
 }
@@ -170,7 +170,7 @@ stw_st_framebuffer_present_locked(HDC hdc,
       stw_framebuffer_present_locked(hdc, stwfb->fb, resource);
    }
    else {
-      stw_framebuffer_release(stwfb->fb);
+      stw_framebuffer_unlock(stwfb->fb);
    }
 
    return TRUE;

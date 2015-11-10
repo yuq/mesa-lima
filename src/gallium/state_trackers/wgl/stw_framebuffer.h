@@ -113,7 +113,7 @@ struct stw_framebuffer
 /**
  * Create a new framebuffer object which will correspond to the given HDC.
  * 
- * This function will acquire stw_framebuffer::mutex. stw_framebuffer_release
+ * This function will acquire stw_framebuffer::mutex. stw_framebuffer_unlock
  * must be called when done 
  */
 struct stw_framebuffer *
@@ -126,7 +126,7 @@ stw_framebuffer_reference(struct stw_framebuffer **ptr,
 /**
  * Search a framebuffer with a matching HWND.
  * 
- * This function will acquire stw_framebuffer::mutex. stw_framebuffer_release
+ * This function will acquire stw_framebuffer::mutex. stw_framebuffer_unlock
  * must be called when done 
  */
 struct stw_framebuffer *
@@ -135,7 +135,7 @@ stw_framebuffer_from_hwnd(HWND hwnd);
 /**
  * Search a framebuffer with a matching HDC.
  * 
- * This function will acquire stw_framebuffer::mutex. stw_framebuffer_release
+ * This function will acquire stw_framebuffer::mutex. stw_framebuffer_unlock
  * must be called when done 
  */
 struct stw_framebuffer *
@@ -164,7 +164,7 @@ stw_framebuffer_lock(struct stw_framebuffer *fb)
  * in the meanwhile.
  */
 static inline void
-stw_framebuffer_release(struct stw_framebuffer *fb)
+stw_framebuffer_unlock(struct stw_framebuffer *fb)
 {
    assert(fb);
    LeaveCriticalSection(&fb->mutex);

@@ -77,7 +77,7 @@ stw_framebuffer_destroy_locked(struct stw_framebuffer *fb)
    /* check the reference count */
    fb->refcnt--;
    if (fb->refcnt) {
-      stw_framebuffer_release(fb);
+      stw_framebuffer_unlock(fb);
       return;
    }
 
@@ -95,7 +95,7 @@ stw_framebuffer_destroy_locked(struct stw_framebuffer *fb)
 
    stw_st_destroy_framebuffer_locked(fb->stfb);
 
-   stw_framebuffer_release(fb);
+   stw_framebuffer_unlock(fb);
 
    DeleteCriticalSection(&fb->mutex);
 
@@ -214,7 +214,7 @@ stw_call_window_proc(int nCode, WPARAM wParam, LPARAM lParam)
              * of the client area via GetClientRect.
              */
             stw_framebuffer_get_size(fb);
-            stw_framebuffer_release(fb);
+            stw_framebuffer_unlock(fb);
          }
       }
    }
@@ -456,7 +456,7 @@ DrvSetPixelFormat(HDC hdc, LONG iPixelFormat)
        */
       boolean bPbuffer = fb->bPbuffer;
 
-      stw_framebuffer_release( fb );
+      stw_framebuffer_unlock( fb );
 
       return bPbuffer;
    }
@@ -466,7 +466,7 @@ DrvSetPixelFormat(HDC hdc, LONG iPixelFormat)
       return FALSE;
    }
 
-   stw_framebuffer_release( fb );
+   stw_framebuffer_unlock( fb );
 
    /* Some applications mistakenly use the undocumented wglSetPixelFormat
     * function instead of SetPixelFormat, so we call SetPixelFormat here to
@@ -491,7 +491,7 @@ stw_pixelformat_get(HDC hdc)
    fb = stw_framebuffer_from_hdc(hdc);
    if (fb) {
       iPixelFormat = fb->iPixelFormat;
-      stw_framebuffer_release(fb);
+      stw_framebuffer_unlock(fb);
    }
 
    return iPixelFormat;
@@ -548,7 +548,7 @@ DrvPresentBuffers(HDC hdc, PGLPRESENTBUFFERSDATA data)
    stw_framebuffer_update(fb);
    stw_notify_current_locked(fb);
 
-   stw_framebuffer_release(fb);
+   stw_framebuffer_unlock(fb);
 
    return TRUE;
 }
@@ -577,7 +577,7 @@ stw_framebuffer_present_locked(HDC hdc,
       data.pPrivateData = (void *)res;
 
       stw_notify_current_locked(fb);
-      stw_framebuffer_release(fb);
+      stw_framebuffer_unlock(fb);
 
       return stw_dev->callbacks.wglCbPresentBuffers(hdc, &data);
    }
@@ -588,7 +588,7 @@ stw_framebuffer_present_locked(HDC hdc,
 
       stw_framebuffer_update(fb);
       stw_notify_current_locked(fb);
-      stw_framebuffer_release(fb);
+      stw_framebuffer_unlock(fb);
 
       return TRUE;
    }
@@ -609,7 +609,7 @@ DrvSwapBuffers(HDC hdc)
       return FALSE;
 
    if (!(fb->pfi->pfd.dwFlags & PFD_DOUBLEBUFFER)) {
-      stw_framebuffer_release(fb);
+      stw_framebuffer_unlock(fb);
       return TRUE;
    }
 
