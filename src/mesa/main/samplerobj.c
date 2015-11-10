@@ -270,6 +270,17 @@ _mesa_IsSampler(GLuint sampler)
    return sampObj != NULL;
 }
 
+void
+_mesa_bind_sampler(struct gl_context *ctx, GLuint unit,
+                   struct gl_sampler_object *sampObj)
+{
+   if (ctx->Texture.Unit[unit].Sampler != sampObj) {
+      FLUSH_VERTICES(ctx, _NEW_TEXTURE);
+   }
+
+   _mesa_reference_sampler_object(ctx, &ctx->Texture.Unit[unit].Sampler,
+                                  sampObj);
+}
 
 void GLAPIENTRY
 _mesa_BindSampler(GLuint unit, GLuint sampler)
@@ -297,13 +308,8 @@ _mesa_BindSampler(GLuint unit, GLuint sampler)
       }
    }
    
-   if (ctx->Texture.Unit[unit].Sampler != sampObj) {
-      FLUSH_VERTICES(ctx, _NEW_TEXTURE);
-   }
-
    /* bind new sampler */
-   _mesa_reference_sampler_object(ctx, &ctx->Texture.Unit[unit].Sampler,
-                                  sampObj);
+   _mesa_bind_sampler(ctx, unit, sampObj);
 }
 
 

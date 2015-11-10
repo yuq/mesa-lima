@@ -93,6 +93,10 @@ extern void
 _mesa_set_sampler_srgb_decode(struct gl_context *ctx,
                               struct gl_sampler_object *samp, GLenum param);
 
+extern void
+_mesa_bind_sampler(struct gl_context *ctx, GLuint unit,
+                   struct gl_sampler_object *sampObj);
+
 void GLAPIENTRY
 _mesa_GenSamplers(GLsizei count, GLuint *samplers);
 void GLAPIENTRY
