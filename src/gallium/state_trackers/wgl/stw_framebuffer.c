@@ -55,10 +55,10 @@ stw_framebuffer_from_hwnd_locked(HWND hwnd)
    for (fb = stw_dev->fb_head; fb != NULL; fb = fb->next)
       if (fb->hWnd == hwnd) {
          pipe_mutex_lock(fb->mutex);
-         break;
+         return fb;
       }
 
-   return fb;
+   return NULL;
 }
 
 
