@@ -70,7 +70,7 @@ DrvCopyContext(DHGLRC dhrcSource, DHGLRC dhrcDest, UINT fuMask)
    if (!stw_dev)
       return FALSE;
 
-   pipe_mutex_lock( stw_dev->ctx_mutex );
+   stw_lock_contexts(stw_dev);
 
    src = stw_lookup_context_locked( dhrcSource );
    dst = stw_lookup_context_locked( dhrcDest );
@@ -83,7 +83,7 @@ DrvCopyContext(DHGLRC dhrcSource, DHGLRC dhrcDest, UINT fuMask)
       (void) fuMask;
    }
 
-   pipe_mutex_unlock( stw_dev->ctx_mutex );
+   stw_unlock_contexts(stw_dev);
 
    return ret;
 }
@@ -99,7 +99,7 @@ DrvShareLists(DHGLRC dhglrc1, DHGLRC dhglrc2)
    if (!stw_dev)
       return FALSE;
 
-   pipe_mutex_lock( stw_dev->ctx_mutex );
+   stw_lock_contexts(stw_dev);
 
    ctx1 = stw_lookup_context_locked( dhglrc1 );
    ctx2 = stw_lookup_context_locked( dhglrc2 );
@@ -107,7 +107,7 @@ DrvShareLists(DHGLRC dhglrc1, DHGLRC dhglrc2)
    if (ctx1 && ctx2 && ctx2->st->share)
       ret = ctx2->st->share(ctx2->st, ctx1->st);
 
-   pipe_mutex_unlock( stw_dev->ctx_mutex );
+   stw_unlock_contexts(stw_dev);
 
    return ret;
 }
@@ -173,9 +173,9 @@ stw_create_context_attribs(HDC hdc, INT iLayerPlane, DHGLRC hShareContext,
    pfi = stw_pixelformat_get_info( iPixelFormat );
 
    if (hShareContext != 0) {
-      pipe_mutex_lock( stw_dev->ctx_mutex );
+      stw_lock_contexts(stw_dev);
       shareCtx = stw_lookup_context_locked( hShareContext );
-      pipe_mutex_unlock( stw_dev->ctx_mutex );
+      stw_unlock_contexts(stw_dev);
    }
 
    ctx = CALLOC_STRUCT( stw_context );
@@ -250,7 +250,7 @@ stw_create_context_attribs(HDC hdc, INT iLayerPlane, DHGLRC hShareContext,
       ctx->hud = hud_create(ctx->st->pipe, ctx->st->cso_context);
    }
 
-   pipe_mutex_lock( stw_dev->ctx_mutex );
+   stw_lock_contexts(stw_dev);
    if (handle) {
       /* We're replacing the context data for this handle. See the
        * wglCreateContextAttribsARB() function.
@@ -276,7 +276,8 @@ stw_create_context_attribs(HDC hdc, INT iLayerPlane, DHGLRC hShareContext,
 
    ctx->dhglrc = handle;
 
-   pipe_mutex_unlock( stw_dev->ctx_mutex );
+   stw_unlock_contexts(stw_dev);
+
    if (!ctx->dhglrc)
       goto no_hglrc;
 
@@ -303,10 +304,10 @@ DrvDeleteContext(DHGLRC dhglrc)
    if (!stw_dev)
       return FALSE;
 
-   pipe_mutex_lock( stw_dev->ctx_mutex );
+   stw_lock_contexts(stw_dev);
    ctx = stw_lookup_context_locked(dhglrc);
    handle_table_remove(stw_dev->ctx_table, dhglrc);
-   pipe_mutex_unlock( stw_dev->ctx_mutex );
+   stw_unlock_contexts(stw_dev);
 
    if (ctx) {
       struct stw_context *curctx = stw_current_context();
@@ -337,9 +338,9 @@ DrvReleaseContext(DHGLRC dhglrc)
    if (!stw_dev)
       return FALSE;
 
-   pipe_mutex_lock( stw_dev->ctx_mutex );
+   stw_lock_contexts(stw_dev);
    ctx = stw_lookup_context_locked( dhglrc );
-   pipe_mutex_unlock( stw_dev->ctx_mutex );
+   stw_unlock_contexts(stw_dev);
 
    if (!ctx)
       return FALSE;
@@ -408,9 +409,9 @@ stw_make_current(HDC hdc, DHGLRC dhglrc)
    }
 
    if (dhglrc) {
-      pipe_mutex_lock( stw_dev->ctx_mutex );
+      stw_lock_contexts(stw_dev);
       ctx = stw_lookup_context_locked( dhglrc );
-      pipe_mutex_unlock( stw_dev->ctx_mutex );
+      stw_unlock_contexts(stw_dev);
       if (!ctx) {
          goto fail;
       }
