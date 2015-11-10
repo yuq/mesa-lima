@@ -523,6 +523,8 @@ struct brw_tracked_state {
 enum shader_time_shader_type {
    ST_NONE,
    ST_VS,
+   ST_TCS,
+   ST_TES,
    ST_GS,
    ST_FS8,
    ST_FS16,
