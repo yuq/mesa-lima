@@ -315,7 +315,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       .count = 1,
       .pBinding = (VkDescriptorSetLayoutBinding[]) {
          {
-            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .arraySize = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = NULL
@@ -455,7 +455,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                struct anv_image *dest_image,
                struct anv_image_view *dest_iview,
                VkOffset3D dest_offset,
-               VkExtent3D dest_extent)
+               VkExtent3D dest_extent,
+               VkTexFilter blit_filter)
 {
    struct anv_device *device = cmd_buffer->device;
    VkDescriptorPool dummy_desc_pool = { .handle = 1 };
@@ -525,6 +526,14 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          sizeof(struct anv_vue_header),
       });
 
+   VkSampler sampler;
+   ANV_CALL(CreateSampler)(anv_device_to_handle(device),
+      &(VkSamplerCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+         .magFilter = blit_filter,
+         .minFilter = blit_filter,
+      }, &sampler);
+
    VkDescriptorSet set;
    anv_AllocDescriptorSets(anv_device_to_handle(device), dummy_desc_pool,
                            VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
@@ -538,11 +547,12 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
             .destBinding = 0,
             .destArrayElement = 0,
             .count = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .pDescriptors = (VkDescriptorInfo[]) {
                {
                   .imageView = anv_image_view_to_handle(src_iview),
-                  .imageLayout = VK_IMAGE_LAYOUT_GENERAL
+                  .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+                  .sampler = sampler,
                },
             }
          }
@@ -619,6 +629,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
     * descriptor sets, etc. has been used.  We are free to delete it.
     */
    anv_descriptor_set_destroy(device, anv_descriptor_set_from_handle(set));
+   anv_DestroySampler(anv_device_to_handle(device), sampler);
    anv_DestroyFramebuffer(anv_device_to_handle(device), fb);
 }
 
@@ -741,7 +752,8 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
                   anv_image_from_handle(dest_image),
                   &dest_iview,
                   (VkOffset3D) { 0, 0, 0 },
-                  (VkExtent3D) { width, height, 1 });
+                  (VkExtent3D) { width, height, 1 },
+                  VK_TEX_FILTER_NEAREST);
 
    anv_DestroyImage(vk_device, src_image);
    anv_DestroyImage(vk_device, dest_image);
@@ -915,7 +927,8 @@ void anv_CmdCopyImage(
                      pRegions[r].extent,
                      dest_image, &dest_iview,
                      dest_offset,
-                     pRegions[r].extent);
+                     pRegions[r].extent,
+                     VK_TEX_FILTER_NEAREST);
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1015,7 +1028,8 @@ void anv_CmdBlitImage(
                      pRegions[r].srcExtent,
                      dest_image, &dest_iview,
                      dest_offset,
-                     pRegions[r].destExtent);
+                     pRegions[r].destExtent,
+                     filter);
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1158,7 +1172,8 @@ void anv_CmdCopyBufferToImage(
                      dest_image,
                      &dest_iview,
                      dest_offset,
-                     pRegions[r].imageExtent);
+                     pRegions[r].imageExtent,
+                     VK_TEX_FILTER_NEAREST);
 
       anv_DestroyImage(vk_device, srcImage);
    }
@@ -1253,7 +1268,8 @@ void anv_CmdCopyImageToBuffer(
                      anv_image_from_handle(destImage),
                      &dest_iview,
                      (VkOffset3D) { 0, 0, 0 },
-                     pRegions[r].imageExtent);
+                     pRegions[r].imageExtent,
+                     VK_TEX_FILTER_NEAREST);
 
       anv_DestroyImage(vk_device, destImage);
    }
