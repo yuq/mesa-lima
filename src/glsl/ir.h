@@ -771,6 +771,19 @@ public:
       unsigned index:1;
 
       /**
+       * Precision qualifier.
+       *
+       * In desktop GLSL we do not care about precision qualifiers at all, in
+       * fact, the spec says that precision qualifiers are ignored.
+       *
+       * To make things easy, we make it so that this field is always
+       * GLSL_PRECISION_NONE on desktop shaders. This way all the variables
+       * have the same precision value and the checks we add in the compiler
+       * for this field will never break a desktop shader compile.
+       */
+      unsigned precision:2;
+
+      /**
        * \brief Layout qualifier for gl_FragDepth.
        *
        * This is not equal to \c ir_depth_layout_none if and only if this
