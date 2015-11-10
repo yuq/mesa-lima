@@ -848,8 +848,7 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
 
    _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, blit->samp_obj_save);
    _mesa_reference_sampler_object(ctx, &blit->samp_obj_save, NULL);
-   _mesa_DeleteSamplers(1, &blit->samp_obj->Name);
-   blit->samp_obj = NULL;
+   _mesa_reference_sampler_object(ctx, &blit->samp_obj, NULL);
 
    if (blit->tempTex)
       _mesa_DeleteTextures(1, &blit->tempTex);
@@ -899,16 +898,14 @@ _mesa_meta_setup_sampler(struct gl_context *ctx,
                          const struct gl_texture_object *texObj,
                          GLenum target, GLenum filter, GLuint srcLevel)
 {
-   GLuint sampler;
    struct gl_sampler_object *samp_obj;
    GLenum tex_filter = (filter == GL_SCALED_RESOLVE_FASTEST_EXT ||
                         filter == GL_SCALED_RESOLVE_NICEST_EXT) ?
                        GL_NEAREST : filter;
 
-   _mesa_GenSamplers(1, &sampler);
-
-   samp_obj = _mesa_lookup_samplerobj(ctx, sampler);
-   assert(samp_obj != NULL && samp_obj->Name == sampler);
+   samp_obj =  ctx->Driver.NewSamplerObject(ctx, 0xDEADBEEF);
+   if (samp_obj == NULL)
+      return NULL;
 
    _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, samp_obj);
    _mesa_set_sampler_filters(ctx, samp_obj, tex_filter, tex_filter);
