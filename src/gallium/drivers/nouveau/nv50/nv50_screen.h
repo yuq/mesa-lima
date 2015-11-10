@@ -95,6 +95,12 @@ struct nv50_screen {
       struct nouveau_bo *bo;
    } fence;
 
+   struct {
+      struct nv50_program *prog; /* compute state object to read MP counters */
+      struct nv50_hw_sm_query *mp_counter[4]; /* counter to query allocation */
+      uint8_t num_hw_sm_active;
+   } pm;
+
    struct nouveau_object *sync;
 
    struct nouveau_object *tesla;
@@ -108,6 +114,9 @@ nv50_screen(struct pipe_screen *screen)
 {
    return (struct nv50_screen *)screen;
 }
+
+int nv50_screen_get_driver_query_info(struct pipe_screen *, unsigned,
+                                      struct pipe_driver_query_info *);
 
 bool nv50_blitter_create(struct nv50_screen *);
 void nv50_blitter_destroy(struct nv50_screen *);

@@ -25,6 +25,7 @@
 
 #include "nv50/nv50_context.h"
 #include "nv50/nv50_query_hw.h"
+#include "nv50/nv50_query_hw_sm.h"
 #include "nv_object.xml.h"
 
 #define NV50_HW_QUERY_STATE_READY   0
@@ -41,7 +42,7 @@
 
 #define NV50_HW_QUERY_ALLOC_SPACE 256
 
-static bool
+bool
 nv50_hw_query_allocate(struct nv50_context *nv50, struct nv50_query *q,
                        int size)
 {
@@ -122,6 +123,9 @@ nv50_hw_begin_query(struct nv50_context *nv50, struct nv50_query *q)
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
    struct nv50_hw_query *hq = nv50_hw_query(q);
 
+   if (hq->funcs && hq->funcs->begin_query)
+      return hq->funcs->begin_query(nv50, hq);
+
    /* For occlusion queries we have to change the storage, because a previous
     * query might set the initial render condition to false even *after* we re-
     * initialized it to true.
@@ -193,6 +197,11 @@ nv50_hw_end_query(struct nv50_context *nv50, struct nv50_query *q)
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
    struct nv50_hw_query *hq = nv50_hw_query(q);
 
+   if (hq->funcs && hq->funcs->end_query) {
+      hq->funcs->end_query(nv50, hq);
+      return;
+   }
+
    hq->state = NV50_HW_QUERY_STATE_ENDED;
 
    switch (q->type) {
@@ -260,6 +269,9 @@ nv50_hw_get_query_result(struct nv50_context *nv50, struct nv50_query *q,
    uint8_t *res8 = (uint8_t *)result;
    uint64_t *data64 = (uint64_t *)hq->data;
    int i;
+
+   if (hq->funcs && hq->funcs->get_query_result)
+      return hq->funcs->get_query_result(nv50, hq, wait, result);
 
    if (hq->state != NV50_HW_QUERY_STATE_READY)
       nv50_hw_query_update(q);
@@ -331,6 +343,12 @@ nv50_hw_create_query(struct nv50_context *nv50, unsigned type, unsigned index)
    struct nv50_hw_query *hq;
    struct nv50_query *q;
 
+   hq = nv50_hw_sm_create_query(nv50, type);
+   if (hq) {
+      hq->base.funcs = &hw_query_funcs;
+      return (struct nv50_query *)hq;
+   }
+
    hq = CALLOC_STRUCT(nv50_hw_query);
    if (!hq)
       return NULL;
@@ -373,6 +391,20 @@ nv50_hw_create_query(struct nv50_context *nv50, unsigned type, unsigned index)
    }
 
    return q;
+}
+
+int
+nv50_hw_get_driver_query_info(struct nv50_screen *screen, unsigned id,
+                              struct pipe_driver_query_info *info)
+{
+   int num_hw_sm_queries = 0;
+
+   num_hw_sm_queries = nv50_hw_sm_get_driver_query_info(screen, 0, NULL);
+
+   if (!info)
+      return num_hw_sm_queries;
+
+   return nv50_hw_sm_get_driver_query_info(screen, id, info);
 }
 
 void

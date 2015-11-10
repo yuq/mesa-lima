@@ -789,6 +789,7 @@ nv50_screen_create(struct nouveau_device *dev)
    pscreen->get_shader_param = nv50_screen_get_shader_param;
    pscreen->get_paramf = nv50_screen_get_paramf;
    pscreen->get_compute_param = nv50_screen_get_compute_param;
+   pscreen->get_driver_query_info = nv50_screen_get_driver_query_info;
 
    nv50_screen_init_resource_functions(pscreen);
 

@@ -67,7 +67,8 @@
 /* compute bufctx (during launch_grid) */
 #define NV50_BIND_CP_GLOBAL   0
 #define NV50_BIND_CP_SCREEN   1
-#define NV50_BIND_CP_COUNT    2
+#define NV50_BIND_CP_QUERY    2
+#define NV50_BIND_CP_COUNT    3
 
 /* bufctx for other operations */
 #define NV50_BIND_2D          0

@@ -153,3 +153,26 @@ nv50_init_query_functions(struct nv50_context *nv50)
    pipe->get_query_result = nv50_get_query_result;
    pipe->render_condition = nv50_render_condition;
 }
+
+int
+nv50_screen_get_driver_query_info(struct pipe_screen *pscreen,
+                                  unsigned id,
+                                  struct pipe_driver_query_info *info)
+{
+   struct nv50_screen *screen = nv50_screen(pscreen);
+   int num_hw_queries = 0;
+
+   num_hw_queries = nv50_hw_get_driver_query_info(screen, 0, NULL);
+
+   if (!info)
+      return num_hw_queries;
+
+   /* Init default values. */
+   info->name = "this_is_not_the_query_you_are_looking_for";
+   info->query_type = 0xdeadd01d;
+   info->max_value.u64 = 0;
+   info->type = PIPE_DRIVER_QUERY_TYPE_UINT64;
+   info->group_id = -1;
+
+   return nv50_hw_get_driver_query_info(screen, id, info);
+}
