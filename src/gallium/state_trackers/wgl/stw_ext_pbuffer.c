@@ -35,6 +35,8 @@
 #include "pipe/p_defines.h"
 #include "pipe/p_screen.h"
 
+#include "util/u_debug.h"
+
 #include "stw_device.h"
 #include "stw_pixelformat.h"
 #include "stw_framebuffer.h"
