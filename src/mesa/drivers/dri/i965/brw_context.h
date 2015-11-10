@@ -1467,6 +1467,8 @@ void brw_upload_image_surfaces(struct brw_context *brw,
 /* brw_surface_formats.c */
 bool brw_render_target_supported(struct brw_context *brw,
                                  struct gl_renderbuffer *rb);
+bool brw_losslessly_compressible_format(struct brw_context *brw,
+                                        uint32_t brw_format);
 uint32_t brw_depth_format(struct brw_context *brw, mesa_format format);
 mesa_format brw_lower_mesa_image_format(const struct brw_device_info *devinfo,
                                         mesa_format format);
