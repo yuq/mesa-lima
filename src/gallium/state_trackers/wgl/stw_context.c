@@ -59,11 +59,9 @@ stw_current_context(void)
    return (struct stw_context *) ((st) ? st->st_manager_private : NULL);
 }
 
+
 BOOL APIENTRY
-DrvCopyContext(
-   DHGLRC dhrcSource,
-   DHGLRC dhrcDest,
-   UINT fuMask )
+DrvCopyContext(DHGLRC dhrcSource, DHGLRC dhrcDest, UINT fuMask)
 {
    struct stw_context *src;
    struct stw_context *dst;
@@ -73,11 +71,11 @@ DrvCopyContext(
       return FALSE;
 
    pipe_mutex_lock( stw_dev->ctx_mutex );
-   
+
    src = stw_lookup_context_locked( dhrcSource );
    dst = stw_lookup_context_locked( dhrcDest );
 
-   if (src && dst) { 
+   if (src && dst) {
       /* FIXME */
       assert(0);
       (void) src;
@@ -86,14 +84,13 @@ DrvCopyContext(
    }
 
    pipe_mutex_unlock( stw_dev->ctx_mutex );
-   
+
    return ret;
 }
 
+
 BOOL APIENTRY
-DrvShareLists(
-   DHGLRC dhglrc1,
-   DHGLRC dhglrc2 )
+DrvShareLists(DHGLRC dhglrc1, DHGLRC dhglrc2)
 {
    struct stw_context *ctx1;
    struct stw_context *ctx2;
@@ -103,7 +100,7 @@ DrvShareLists(
       return FALSE;
 
    pipe_mutex_lock( stw_dev->ctx_mutex );
-   
+
    ctx1 = stw_lookup_context_locked( dhglrc1 );
    ctx2 = stw_lookup_context_locked( dhglrc2 );
 
@@ -111,21 +108,20 @@ DrvShareLists(
       ret = ctx2->st->share(ctx2->st, ctx1->st);
 
    pipe_mutex_unlock( stw_dev->ctx_mutex );
-   
+
    return ret;
 }
 
+
 DHGLRC APIENTRY
-DrvCreateContext(
-   HDC hdc )
+DrvCreateContext(HDC hdc)
 {
    return DrvCreateLayerContext( hdc, 0 );
 }
 
+
 DHGLRC APIENTRY
-DrvCreateLayerContext(
-   HDC hdc,
-   INT iLayerPlane )
+DrvCreateLayerContext(HDC hdc, INT iLayerPlane)
 {
    return stw_create_context_attribs(hdc, iLayerPlane, 0, 1, 0, 0,
                                      WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
@@ -297,13 +293,13 @@ no_ctx:
    return 0;
 }
 
+
 BOOL APIENTRY
-DrvDeleteContext(
-   DHGLRC dhglrc )
+DrvDeleteContext(DHGLRC dhglrc)
 {
    struct stw_context *ctx ;
    BOOL ret = FALSE;
-   
+
    if (!stw_dev)
       return FALSE;
 
@@ -314,7 +310,7 @@ DrvDeleteContext(
 
    if (ctx) {
       struct stw_context *curctx = stw_current_context();
-      
+
       /* Unbind current if deleting current context. */
       if (curctx == ctx)
          stw_dev->stapi->make_current(stw_dev->stapi, NULL, NULL, NULL);
@@ -332,9 +328,9 @@ DrvDeleteContext(
    return ret;
 }
 
+
 BOOL APIENTRY
-DrvReleaseContext(
-   DHGLRC dhglrc )
+DrvReleaseContext(DHGLRC dhglrc)
 {
    struct stw_context *ctx;
 
@@ -347,7 +343,7 @@ DrvReleaseContext(
 
    if (!ctx)
       return FALSE;
-   
+
    /* The expectation is that ctx is the same context which is
     * current for this thread.  We should check that and return False
     * if not the case.
@@ -368,11 +364,12 @@ stw_get_current_context( void )
    struct stw_context *ctx;
 
    ctx = stw_current_context();
-   if(!ctx)
+   if (!ctx)
       return 0;
-   
+
    return ctx->dhglrc;
 }
+
 
 HDC
 stw_get_current_dc( void )
@@ -380,16 +377,15 @@ stw_get_current_dc( void )
    struct stw_context *ctx;
 
    ctx = stw_current_context();
-   if(!ctx)
+   if (!ctx)
       return NULL;
-   
+
    return ctx->hdc;
 }
 
+
 BOOL
-stw_make_current(
-   HDC hdc,
-   DHGLRC dhglrc )
+stw_make_current(HDC hdc, DHGLRC dhglrc)
 {
    struct stw_context *curctx = NULL;
    struct stw_context *ctx = NULL;
@@ -425,8 +421,9 @@ stw_make_current(
       }
       else {
          /* Applications should call SetPixelFormat before creating a context,
-          * but not all do, and the opengl32 runtime seems to use a default pixel
-          * format in some cases, so we must create a framebuffer for those here
+          * but not all do, and the opengl32 runtime seems to use a default
+          * pixel format in some cases, so we must create a framebuffer for
+          * those here.
           */
          int iPixelFormat = GetPixelFormat(hdc);
          if (iPixelFormat)
@@ -434,7 +431,7 @@ stw_make_current(
          if (!fb)
             goto fail;
       }
-   
+
       if (fb->iPixelFormat != ctx->iPixelFormat) {
          SetLastError(ERROR_INVALID_PIXEL_FORMAT);
          goto fail;
@@ -449,7 +446,7 @@ stw_make_current(
    } else {
       ret = stw_dev->stapi->make_current(stw_dev->stapi, NULL, NULL, NULL);
    }
-   
+
 fail:
 
    if (fb) {
@@ -457,7 +454,8 @@ fail:
    }
 
    /* On failure, make the thread's current rendering context not current
-    * before returning */
+    * before returning.
+    */
    if (!ret) {
       stw_dev->stapi->make_current(stw_dev->stapi, NULL, NULL, NULL);
       ctx = NULL;
@@ -482,6 +480,7 @@ stw_notify_current_locked( struct stw_framebuffer *fb )
 {
    p_atomic_inc(&fb->stfb->stamp);
 }
+
 
 /**
  * Although WGL allows different dispatch entrypoints per context
@@ -829,15 +828,13 @@ static const GLCLTPROCTABLE cpt =
    }
 };
 
+
 PGLCLTPROCTABLE APIENTRY
-DrvSetContext(
-   HDC hdc,
-   DHGLRC dhglrc,
-   PFN_SETPROCTABLE pfnSetProcTable )
+DrvSetContext(HDC hdc, DHGLRC dhglrc, PFN_SETPROCTABLE pfnSetProcTable)
 {
    PGLCLTPROCTABLE r = (PGLCLTPROCTABLE)&cpt;
 
-   if (!stw_make_current( hdc, dhglrc ))
+   if (!stw_make_current(hdc, dhglrc))
       r = NULL;
 
    return r;

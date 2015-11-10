@@ -116,14 +116,11 @@ struct stw_framebuffer
  * must be called when done 
  */
 struct stw_framebuffer *
-stw_framebuffer_create(
-   HDC hdc,
-   int iPixelFormat );
+stw_framebuffer_create(HDC hdc, int iPixelFormat);
 
 void
-stw_framebuffer_reference(
-   struct stw_framebuffer **ptr,
-   struct stw_framebuffer *fb);
+stw_framebuffer_reference(struct stw_framebuffer **ptr,
+                          struct stw_framebuffer *fb);
 
 /**
  * Search a framebuffer with a matching HWND.
@@ -132,8 +129,7 @@ stw_framebuffer_reference(
  * must be called when done 
  */
 struct stw_framebuffer *
-stw_framebuffer_from_hwnd(
-   HWND hwnd );
+stw_framebuffer_from_hwnd(HWND hwnd);
 
 /**
  * Search a framebuffer with a matching HDC.
@@ -142,8 +138,7 @@ stw_framebuffer_from_hwnd(
  * must be called when done 
  */
 struct stw_framebuffer *
-stw_framebuffer_from_hdc(
-   HDC hdc );
+stw_framebuffer_from_hdc(HDC hdc);
 
 BOOL
 stw_framebuffer_present_locked(HDC hdc,
@@ -151,8 +146,7 @@ stw_framebuffer_present_locked(HDC hdc,
                                struct pipe_resource *res);
 
 void
-stw_framebuffer_update(
-   struct stw_framebuffer *fb);
+stw_framebuffer_update(struct stw_framebuffer *fb);
 
 /**
  * Release stw_framebuffer::mutex lock. This framebuffer must not be accessed
@@ -160,8 +154,7 @@ stw_framebuffer_update(
  * in the meanwhile.
  */
 void
-stw_framebuffer_release(
-   struct stw_framebuffer *fb);
+stw_framebuffer_release(struct stw_framebuffer *fb);
 
 /**
  * Cleanup any existing framebuffers when exiting application.

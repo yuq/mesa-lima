@@ -46,8 +46,7 @@
  * stw_dev::fb_mutex global lock.
  */
 static inline struct stw_framebuffer *
-stw_framebuffer_from_hwnd_locked(
-   HWND hwnd )
+stw_framebuffer_from_hwnd_locked(HWND hwnd)
 {
    struct stw_framebuffer *fb;
 
@@ -118,7 +117,6 @@ stw_framebuffer_get_size(struct stw_framebuffer *fb)
    /*
     * Sanity checking.
     */
-
    assert(fb->hWnd);
    assert(fb->width && fb->height);
    assert(fb->client_rect.right  == fb->client_rect.left + fb->width);
@@ -127,7 +125,6 @@ stw_framebuffer_get_size(struct stw_framebuffer *fb)
    /*
     * Get the client area size.
     */
-
    if (!GetClientRect(fb->hWnd, &client_rect)) {
       return;
    }
@@ -145,7 +142,6 @@ stw_framebuffer_get_size(struct stw_framebuffer *fb)
        * preserve the current window size, until the window is restored or
        * maximized again.
        */
-
       return;
    }
 
@@ -377,8 +373,7 @@ stw_framebuffer_cleanup(void)
  * Given an hdc, return the corresponding stw_framebuffer.
  */
 static inline struct stw_framebuffer *
-stw_framebuffer_from_hdc_locked(
-   HDC hdc )
+stw_framebuffer_from_hdc_locked(HDC hdc)
 {
    HWND hwnd;
 
@@ -444,7 +439,7 @@ DrvSetPixelFormat(HDC hdc, LONG iPixelFormat)
    fb = stw_framebuffer_from_hdc_locked(hdc);
    if (fb) {
       /*
-       * SetPixelFormat must be called only once.  However ignore 
+       * SetPixelFormat must be called only once.  However ignore
        * pbuffers, for which the framebuffer object is created first.
        */
       boolean bPbuffer = fb->bPbuffer;
