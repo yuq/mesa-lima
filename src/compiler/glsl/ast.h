@@ -502,6 +502,12 @@ struct ast_type_qualifier {
 	  */
 	 unsigned explicit_index:1;
 
+	 /**
+	  * Flag set if GL_ARB_enhanced_layouts "component" layout
+	  * qualifier is used.
+	  */
+	 unsigned explicit_component:1;
+
          /**
           * Flag set if GL_ARB_shading_language_420pack "binding" layout
           * qualifier is used.
@@ -620,6 +626,14 @@ struct ast_type_qualifier {
     * This field is only valid if \c explicit_index is set.
     */
    ast_expression *index;
+
+   /**
+    * Component specified via GL_ARB_enhaced_layouts
+    *
+    * \note
+    * This field is only valid if \c explicit_component is set.
+    */
+   ast_expression *component;
 
    /** Maximum output vertices in GLSL 1.50 geometry shaders. */
    ast_layout_expression *max_vertices;

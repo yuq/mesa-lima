@@ -1497,6 +1497,17 @@ layout_qualifier_id:
          $$.location = $3;
       }
 
+      if (match_layout_qualifier("component", $1, state) == 0) {
+         if (!state->has_enhanced_layouts()) {
+            _mesa_glsl_error(& @1, state,
+                             "component qualifier requires "
+                             "GLSL 4.40 or ARB_enhanced_layouts");
+         } else {
+            $$.flags.q.explicit_component = 1;
+            $$.component = $3;
+         }
+      }
+
       if (match_layout_qualifier("index", $1, state) == 0) {
          if (state->es_shader && !state->EXT_blend_func_extended_enable) {
             _mesa_glsl_error(& @3, state, "index layout qualifier requires EXT_blend_func_extended");
