@@ -3346,10 +3346,42 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
 
    if (qual->flags.q.explicit_location) {
       apply_explicit_location(qual, var, state, loc);
+
+      if (qual->flags.q.explicit_component) {
+         unsigned qual_component;
+         if (process_qualifier_constant(state, loc, "component",
+                                        qual->component, &qual_component)) {
+            const glsl_type *type = var->type->without_array();
+            unsigned components = type->component_slots();
+
+            if (type->is_matrix() || type->is_record()) {
+               _mesa_glsl_error(loc, state, "component layout qualifier "
+                                "cannot be applied to a matrix, a structure, "
+                                "a block, or an array containing any of "
+                                "these.");
+            } else if (qual_component != 0 &&
+                (qual_component + components - 1) > 3) {
+               _mesa_glsl_error(loc, state, "component overflow (%u > 3)",
+                                (qual_component + components - 1));
+            } else if (qual_component == 1 && type->is_double()) {
+               /* We don't bother checking for 3 as it should be caught by the
+                * overflow check above.
+                */
+               _mesa_glsl_error(loc, state, "doubles cannot begin at "
+                                "component 1 or 3");
+            } else {
+               var->data.explicit_component = true;
+               var->data.location_frac = qual_component;
+            }
+         }
+      }
    } else if (qual->flags.q.explicit_index) {
       if (!qual->flags.q.subroutine_def)
          _mesa_glsl_error(loc, state,
                           "explicit index requires explicit location");
+   } else if (qual->flags.q.explicit_component) {
+      _mesa_glsl_error(loc, state,
+                       "explicit component requires explicit location");
    }
 
    if (qual->flags.q.explicit_binding) {
@@ -7005,6 +7037,12 @@ ast_interface_block::hir(exec_list *instructions,
    if (this->layout.flags.q.read_only && this->layout.flags.q.write_only) {
       _mesa_glsl_error(&loc, state,
                        "Interface block sets both readonly and writeonly");
+   }
+
+   if (this->layout.flags.q.explicit_component) {
+      _mesa_glsl_error(&loc, state, "component layout qualifier cannot be "
+                       "applied to a matrix, a structure, a block, or an "
+                       "array containing any of these.");
    }
 
    unsigned qual_stream;

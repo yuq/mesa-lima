@@ -703,6 +703,11 @@ public:
       unsigned explicit_binding:1;
 
       /**
+       * Was an initial component explicitly set in the shader?
+       */
+      unsigned explicit_component:1;
+
+      /**
        * Does this variable have an initializer?
        *
        * This is used by the linker to cross-validiate initializers of global
