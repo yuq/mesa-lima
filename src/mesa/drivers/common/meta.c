@@ -3129,7 +3129,6 @@ decompress_texture_image(struct gl_context *ctx,
          return true;
       }
 
-      _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, decompress->samp_obj);
       /* nearest filtering */
       _mesa_set_sampler_filters(ctx, decompress->samp_obj, GL_NEAREST, GL_NEAREST);
 
@@ -3137,10 +3136,9 @@ decompress_texture_image(struct gl_context *ctx,
       if (ctx->Extensions.EXT_texture_sRGB_decode) {
          _mesa_set_sampler_srgb_decode(ctx, decompress->samp_obj, GL_SKIP_DECODE_EXT);
       }
-
-   } else {
-      _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, decompress->samp_obj);
    }
+
+   _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, decompress->samp_obj);
 
    /* Silence valgrind warnings about reading uninitialized stack. */
    memset(verts, 0, sizeof(verts));

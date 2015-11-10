@@ -234,8 +234,6 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
          return;
       }
 
-      _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, mipmap->samp_obj);
-
       _mesa_set_sampler_filters(ctx, mipmap->samp_obj, GL_LINEAR_MIPMAP_LINEAR,
                                 GL_LINEAR);
       _mesa_set_sampler_wrap(ctx, mipmap->samp_obj, GL_CLAMP_TO_EDGE,
@@ -248,9 +246,9 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
       if (ctx->Extensions.EXT_texture_sRGB_decode) {
          _mesa_set_sampler_srgb_decode(ctx, mipmap->samp_obj, GL_SKIP_DECODE_EXT);
       }
-   } else {
-      _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, mipmap->samp_obj);
    }
+
+   _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, mipmap->samp_obj);
 
    assert(mipmap->FBO != 0);
    _mesa_BindFramebuffer(GL_FRAMEBUFFER_EXT, mipmap->FBO);
