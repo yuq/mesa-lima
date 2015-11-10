@@ -442,7 +442,7 @@ struct brw_vue_map {
     * additional processing is applied before storing them in the VUE), the
     * value is -1.
     */
-   signed char varying_to_slot[BRW_VARYING_SLOT_COUNT];
+   signed char varying_to_slot[VARYING_SLOT_TESS_MAX];
 
    /**
     * Map from VUE slot to gl_varying_slot value.  For slots that do not
@@ -451,12 +451,24 @@ struct brw_vue_map {
     *
     * For slots that are not in use, the value is BRW_VARYING_SLOT_PAD.
     */
-   signed char slot_to_varying[BRW_VARYING_SLOT_COUNT];
+   signed char slot_to_varying[VARYING_SLOT_TESS_MAX];
 
    /**
     * Total number of VUE slots in use
     */
    int num_slots;
+
+   /**
+    * Number of per-patch VUE slots. Only valid for tessellation control
+    * shader outputs and tessellation evaluation shader inputs.
+    */
+   int num_per_patch_slots;
+
+   /**
+    * Number of per-vertex VUE slots. Only valid for tessellation control
+    * shader outputs and tessellation evaluation shader inputs.
+    */
+   int num_per_vertex_slots;
 };
 
 void brw_print_vue_map(FILE *fp, const struct brw_vue_map *vue_map);
@@ -483,6 +495,10 @@ void brw_compute_vue_map(const struct brw_device_info *devinfo,
                          struct brw_vue_map *vue_map,
                          GLbitfield64 slots_valid,
                          bool separate_shader);
+
+void brw_compute_tess_vue_map(struct brw_vue_map *const vue_map,
+                              const GLbitfield64 slots_valid,
+                              const GLbitfield is_patch);
 
 enum shader_dispatch_mode {
    DISPATCH_MODE_4X1_SINGLE = 0,
