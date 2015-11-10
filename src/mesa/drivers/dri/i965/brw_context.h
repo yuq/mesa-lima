@@ -1704,6 +1704,12 @@ brw_vertex_program_const(const struct gl_vertex_program *p)
    return (const struct brw_vertex_program *) p;
 }
 
+static inline struct brw_tess_eval_program *
+brw_tess_eval_program(struct gl_tess_eval_program *p)
+{
+   return (struct brw_tess_eval_program *) p;
+}
+
 static inline struct brw_geometry_program *
 brw_geometry_program(struct gl_geometry_program *p)
 {

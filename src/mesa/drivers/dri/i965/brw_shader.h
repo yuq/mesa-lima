@@ -273,6 +273,9 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
 bool brw_vs_precompile(struct gl_context *ctx,
                        struct gl_shader_program *shader_prog,
                        struct gl_program *prog);
+bool brw_tes_precompile(struct gl_context *ctx,
+                        struct gl_shader_program *shader_prog,
+                        struct gl_program *prog);
 bool brw_gs_precompile(struct gl_context *ctx,
                        struct gl_shader_program *shader_prog,
                        struct gl_program *prog);

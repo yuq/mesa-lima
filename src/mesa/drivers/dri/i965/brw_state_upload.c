@@ -678,6 +678,7 @@ brw_upload_programs(struct brw_context *brw,
 {
    if (pipeline == BRW_RENDER_PIPELINE) {
       brw_upload_vs_prog(brw);
+      brw_upload_tes_prog(brw);
 
       if (brw->gen < 6)
          brw_upload_ff_gs_prog(brw);
@@ -691,6 +692,8 @@ brw_upload_programs(struct brw_context *brw,
       bool old_separate = brw->vue_map_geom_out.separate;
       if (brw->geometry_program)
          brw->vue_map_geom_out = brw->gs.prog_data->base.vue_map;
+      else if (brw->tess_eval_program)
+         brw->vue_map_geom_out = brw->tes.prog_data->base.vue_map;
       else
          brw->vue_map_geom_out = brw->vs.prog_data->base.vue_map;
 

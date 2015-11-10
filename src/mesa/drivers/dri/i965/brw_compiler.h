@@ -191,6 +191,14 @@ struct brw_vs_prog_key {
    struct brw_sampler_prog_key_data tex;
 };
 
+/** The program key for Tessellation Evaluation Shaders. */
+struct brw_tes_prog_key
+{
+   unsigned program_string_id;
+
+   struct brw_sampler_prog_key_data tex;
+};
+
 /** The program key for Geometry Shaders. */
 struct brw_gs_prog_key
 {
@@ -667,6 +675,22 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str);
+
+/**
+ * Compile a tessellation evaluation shader.
+ *
+ * Returns the final assembly and the program's size.
+ */
+const unsigned *
+brw_compile_tes(const struct brw_compiler *compiler, void *log_data,
+                void *mem_ctx,
+                const struct brw_tes_prog_key *key,
+                struct brw_tes_prog_data *prog_data,
+                const struct nir_shader *shader,
+                struct gl_shader_program *shader_prog,
+                int shader_time_index,
+                unsigned *final_assembly_size,
+                char **error_str);
 
 /**
  * Compile a vertex shader.

@@ -1686,6 +1686,21 @@ fs_visitor::assign_vs_urb_setup()
 }
 
 void
+fs_visitor::assign_tes_urb_setup()
+{
+   assert(stage == MESA_SHADER_TESS_EVAL);
+
+   brw_vue_prog_data *vue_prog_data = (brw_vue_prog_data *) prog_data;
+
+   first_non_payload_grf += 8 * vue_prog_data->urb_read_length;
+
+   /* Rewrite all ATTR file references to HW_REGs. */
+   foreach_block_and_inst(block, fs_inst, inst, cfg) {
+      convert_attr_sources_to_hw_regs(inst);
+   }
+}
+
+void
 fs_visitor::assign_gs_urb_setup()
 {
    assert(stage == MESA_SHADER_GEOMETRY);
@@ -5224,6 +5239,40 @@ fs_visitor::run_vs(gl_clip_plane *clip_planes)
 
    assign_curb_setup();
    assign_vs_urb_setup();
+
+   fixup_3src_null_dest();
+   allocate_registers();
+
+   return !failed;
+}
+
+bool
+fs_visitor::run_tes()
+{
+   assert(stage == MESA_SHADER_TESS_EVAL);
+
+   /* R0: thread header, R1-3: gl_TessCoord.xyz, R4: URB handles */
+   payload.num_regs = 5;
+
+   if (shader_time_index >= 0)
+      emit_shader_time_begin();
+
+   emit_nir_code();
+
+   if (failed)
+      return false;
+
+   emit_urb_writes();
+
+   if (shader_time_index >= 0)
+      emit_shader_time_end();
+
+   calculate_cfg();
+
+   optimize();
+
+   assign_curb_setup();
+   assign_tes_urb_setup();
 
    fixup_3src_null_dest();
    allocate_registers();

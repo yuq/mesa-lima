@@ -700,7 +700,10 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
    fs_reg sources[8];
    fs_reg urb_handle;
 
-   urb_handle = fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
+   if (stage == MESA_SHADER_TESS_EVAL)
+      urb_handle = fs_reg(retype(brw_vec8_grf(4, 0), BRW_REGISTER_TYPE_UD));
+   else
+      urb_handle = fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
 
    /* If we don't have any valid slots to write, just do a minimal urb write
     * send to terminate the shader.  This includes 1 slot of undefined data,
@@ -934,9 +937,11 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
                        struct gl_program *prog,
                        const nir_shader *shader,
                        unsigned dispatch_width,
-                       int shader_time_index)
+                       int shader_time_index,
+                       const struct brw_vue_map *input_vue_map)
    : backend_shader(compiler, log_data, mem_ctx, shader, prog_data),
      key(key), gs_compile(NULL), prog_data(prog_data), prog(prog),
+     input_vue_map(input_vue_map),
      dispatch_width(dispatch_width),
      shader_time_index(shader_time_index),
      bld(fs_builder(this, dispatch_width).at_end())
@@ -971,6 +976,9 @@ fs_visitor::init()
       break;
    case MESA_SHADER_VERTEX:
       key_tex = &((const brw_vs_prog_key *) key)->tex;
+      break;
+   case MESA_SHADER_TESS_EVAL:
+      key_tex = &((const brw_tes_prog_key *) key)->tex;
       break;
    case MESA_SHADER_GEOMETRY:
       key_tex = &((const brw_gs_prog_key *) key)->tex;
