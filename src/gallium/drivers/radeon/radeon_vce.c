@@ -406,7 +406,8 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 		enc->use_vm = true;
 	if ((rscreen->info.drm_major > 2) || (rscreen->info.drm_minor >= 42))
 		enc->use_vui = true;
-	if (rscreen->info.family >= CHIP_TONGA)
+	if (rscreen->info.family >= CHIP_TONGA &&
+             rscreen->info.family != CHIP_STONEY)
 		enc->dual_pipe = true;
 	/* TODO enable B frame with dual instance */
 	if ((rscreen->info.family >= CHIP_TONGA) &&
