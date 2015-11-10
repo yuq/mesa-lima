@@ -2433,16 +2433,28 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       fs_reg source = fs_reg(0);
 
       int mlen = 1 * reg_width;
+
+      /* A resinfo's sampler message is used to get the buffer size.
+       * The SIMD8's writeback message consists of four registers and
+       * SIMD16's writeback message consists of 8 destination registers
+       * (two per each component), although we are only interested on the
+       * first component, where resinfo returns the buffer size for
+       * SURFTYPE_BUFFER.
+       */
+      int regs_written = 4 * mlen;
       fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
                                   BRW_REGISTER_TYPE_UD);
       bld.LOAD_PAYLOAD(src_payload, &source, 1, 0);
-
+      fs_reg buffer_size = fs_reg(GRF, alloc.allocate(regs_written),
+                                  BRW_REGISTER_TYPE_UD);
       const unsigned index = prog_data->binding_table.ssbo_start + ssbo_index;
-      fs_inst *inst = bld.emit(FS_OPCODE_GET_BUFFER_SIZE, dest,
+      fs_inst *inst = bld.emit(FS_OPCODE_GET_BUFFER_SIZE, buffer_size,
                                src_payload, fs_reg(index));
       inst->header_size = 0;
       inst->mlen = mlen;
+      inst->regs_written = regs_written;
       bld.emit(inst);
+      bld.MOV(retype(dest, buffer_size.type), buffer_size);
 
       brw_mark_surface_used(prog_data, index);
       break;
