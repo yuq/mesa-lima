@@ -965,15 +965,39 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
    }
 
    case GL_COLOR_COMPONENTS:
-      /* @TODO */
+      /* The ARB_internalformat_query2 spec says:
+       *
+       *     "- COLOR_COMPONENTS: If the internal format contains any color
+       *     components (R, G, B, or A), TRUE is returned in <params>.
+       *     If the internal format is unsupported or contains no color
+       *     components, FALSE is returned."
+       */
+      if (_mesa_is_color_format(internalformat))
+         buffer[0] = GL_TRUE;
       break;
 
    case GL_DEPTH_COMPONENTS:
-      /* @TODO */
+      /* The ARB_internalformat_query2 spec says:
+       *
+       *     "- DEPTH_COMPONENTS: If the internal format contains a depth
+       *     component (D), TRUE is returned in <params>. If the internal format
+       *     is unsupported or contains no depth component, FALSE is returned."
+       */
+      if (_mesa_is_depth_format(internalformat) ||
+          _mesa_is_depthstencil_format(internalformat))
+         buffer[0] = GL_TRUE;
       break;
 
    case GL_STENCIL_COMPONENTS:
-      /* @TODO */
+      /* The ARB_internalformat_query2 spec says:
+       *
+       *     "- STENCIL_COMPONENTS: If the internal format contains a stencil
+       *     component (S), TRUE is returned in <params>. If the internal format
+       *     is unsupported or contains no stencil component, FALSE is returned.
+       */
+      if (_mesa_is_stencil_format(internalformat) ||
+          _mesa_is_depthstencil_format(internalformat))
+         buffer[0] = GL_TRUE;
       break;
 
    case GL_COLOR_RENDERABLE:
