@@ -3132,10 +3132,8 @@ decompress_texture_image(struct gl_context *ctx,
       /* nearest filtering */
       _mesa_set_sampler_filters(ctx, decompress->samp_obj, GL_NEAREST, GL_NEAREST);
 
-      /* No sRGB decode or encode.*/
-      if (ctx->Extensions.EXT_texture_sRGB_decode) {
-         _mesa_set_sampler_srgb_decode(ctx, decompress->samp_obj, GL_SKIP_DECODE_EXT);
-      }
+      /* We don't want to encode or decode sRGB values; treat them as linear. */
+      _mesa_set_sampler_srgb_decode(ctx, decompress->samp_obj, GL_SKIP_DECODE_EXT);
    }
 
    _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, decompress->samp_obj);

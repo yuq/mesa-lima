@@ -239,13 +239,8 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
       _mesa_set_sampler_wrap(ctx, mipmap->samp_obj, GL_CLAMP_TO_EDGE,
                              GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
-      /* We don't want to encode or decode sRGB values; treat them as linear.
-       * This is not technically correct for GLES3 but we don't get any API
-       * error at the moment.
-       */
-      if (ctx->Extensions.EXT_texture_sRGB_decode) {
-         _mesa_set_sampler_srgb_decode(ctx, mipmap->samp_obj, GL_SKIP_DECODE_EXT);
-      }
+      /* We don't want to encode or decode sRGB values; treat them as linear. */
+      _mesa_set_sampler_srgb_decode(ctx, mipmap->samp_obj, GL_SKIP_DECODE_EXT);
    }
 
    _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, mipmap->samp_obj);
