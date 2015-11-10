@@ -70,7 +70,7 @@ lower_push_constants_block(nir_block *block, void *void_state)
             for (unsigned i = 0; i < intrin->num_components; i++)
                mov->src[0].swizzle[i] = i + shift;
             mov->dest.write_mask = (1 << intrin->num_components) - 1;
-            nir_ssa_dest_init(&intrin->instr, &intrin->dest,
+            nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
                               intrin->num_components, NULL);
 
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
@@ -79,6 +79,7 @@ lower_push_constants_block(nir_block *block, void *void_state)
 
             /* Stomp the number of components to 4 */
             intrin->num_components = 4;
+            intrin->dest.ssa.num_components = 4;
          }
       }
    }
