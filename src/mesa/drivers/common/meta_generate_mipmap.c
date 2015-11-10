@@ -137,8 +137,11 @@ _mesa_meta_glsl_generate_mipmap_cleanup(struct gl_context *ctx,
    _mesa_DeleteVertexArrays(1, &mipmap->VAO);
    mipmap->VAO = 0;
    _mesa_reference_buffer_object(ctx, &mipmap->buf_obj, NULL);
-   _mesa_DeleteSamplers(1, &mipmap->Sampler);
-   mipmap->Sampler = 0;
+
+   if (mipmap->samp_obj != NULL) {
+      _mesa_DeleteSamplers(1, &mipmap->samp_obj->Name);
+      mipmap->samp_obj = NULL;
+   }
 
    if (mipmap->FBO != 0) {
       _mesa_DeleteFramebuffers(1, &mipmap->FBO);
@@ -223,30 +226,30 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
     */
    _mesa_BindTexture(target, texObj->Name);
 
-   if (!mipmap->Sampler) {
-      struct gl_sampler_object *samp_obj;
+   if (mipmap->samp_obj == NULL) {
+      GLuint sampler;
 
-      _mesa_GenSamplers(1, &mipmap->Sampler);
+      _mesa_GenSamplers(1, &sampler);
 
-      samp_obj = _mesa_lookup_samplerobj(ctx, mipmap->Sampler);
-      assert(samp_obj != NULL && samp_obj->Name == mipmap->Sampler);
+      mipmap->samp_obj = _mesa_lookup_samplerobj(ctx, sampler);
+      assert(mipmap->samp_obj != NULL && mipmap->samp_obj->Name == sampler);
 
-      _mesa_BindSampler(ctx->Texture.CurrentUnit, mipmap->Sampler);
+      _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, mipmap->samp_obj);
 
-      _mesa_set_sampler_filters(ctx, samp_obj, GL_LINEAR_MIPMAP_LINEAR,
+      _mesa_set_sampler_filters(ctx, mipmap->samp_obj, GL_LINEAR_MIPMAP_LINEAR,
                                 GL_LINEAR);
-      _mesa_set_sampler_wrap(ctx, samp_obj, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE,
-                             GL_CLAMP_TO_EDGE);
+      _mesa_set_sampler_wrap(ctx, mipmap->samp_obj, GL_CLAMP_TO_EDGE,
+                             GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
       /* We don't want to encode or decode sRGB values; treat them as linear.
        * This is not technically correct for GLES3 but we don't get any API
        * error at the moment.
        */
       if (ctx->Extensions.EXT_texture_sRGB_decode) {
-         _mesa_set_sampler_srgb_decode(ctx, samp_obj, GL_SKIP_DECODE_EXT);
+         _mesa_set_sampler_srgb_decode(ctx, mipmap->samp_obj, GL_SKIP_DECODE_EXT);
       }
    } else {
-      _mesa_BindSampler(ctx->Texture.CurrentUnit, mipmap->Sampler);
+      _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, mipmap->samp_obj);
    }
 
    assert(mipmap->FBO != 0);
