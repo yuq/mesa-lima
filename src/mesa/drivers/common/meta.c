@@ -3114,15 +3114,20 @@ decompress_texture_image(struct gl_context *ctx,
    }
 
    if (!decompress->Sampler) {
+      struct gl_sampler_object *samp_obj;
+
       _mesa_GenSamplers(1, &decompress->Sampler);
+
+      samp_obj = _mesa_lookup_samplerobj(ctx, decompress->Sampler);
+      assert(samp_obj != NULL && samp_obj->Name == decompress->Sampler);
+
       _mesa_BindSampler(ctx->Texture.CurrentUnit, decompress->Sampler);
       /* nearest filtering */
-      _mesa_SamplerParameteri(decompress->Sampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-      _mesa_SamplerParameteri(decompress->Sampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      _mesa_set_sampler_filters(ctx, samp_obj, GL_NEAREST, GL_NEAREST);
+
       /* No sRGB decode or encode.*/
       if (ctx->Extensions.EXT_texture_sRGB_decode) {
-         _mesa_SamplerParameteri(decompress->Sampler, GL_TEXTURE_SRGB_DECODE_EXT,
-                             GL_SKIP_DECODE_EXT);
+         _mesa_set_sampler_srgb_decode(ctx, samp_obj, GL_SKIP_DECODE_EXT);
       }
 
    } else {
