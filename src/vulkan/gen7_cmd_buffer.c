@@ -269,7 +269,7 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       bool enable_bias = cmd_buffer->state.dynamic.depth_bias.bias != 0.0f ||
          cmd_buffer->state.dynamic.depth_bias.slope_scaled != 0.0f;
 
-      uint32_t sf_dw[GEN8_3DSTATE_SF_length];
+      uint32_t sf_dw[GEN7_3DSTATE_SF_length];
       struct GEN7_3DSTATE_SF sf = {
          GEN7_3DSTATE_SF_header,
          .LineWidth = cmd_buffer->state.dynamic.line_width,
