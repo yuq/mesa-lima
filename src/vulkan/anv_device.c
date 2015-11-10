@@ -1297,11 +1297,13 @@ VkResult anv_WaitForFences(
    if (timeout > INT64_MAX)
       timeout = INT64_MAX;
 
+   int64_t t = timeout;
+
    /* FIXME: handle !waitAll */
 
    for (uint32_t i = 0; i < fenceCount; i++) {
       ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
-      int ret = anv_gem_wait(device, fence->bo.gem_handle, &timeout);
+      int ret = anv_gem_wait(device, fence->bo.gem_handle, &t);
       if (ret == -1 && errno == ETIME) {
          return VK_TIMEOUT;
       } else if (ret == -1) {
