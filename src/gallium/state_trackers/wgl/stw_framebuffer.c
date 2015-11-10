@@ -54,7 +54,7 @@ stw_framebuffer_from_hwnd_locked(HWND hwnd)
 
    for (fb = stw_dev->fb_head; fb != NULL; fb = fb->next)
       if (fb->hWnd == hwnd) {
-         pipe_mutex_lock(fb->mutex);
+         stw_framebuffer_lock(fb);
          return fb;
       }
 
@@ -77,7 +77,7 @@ stw_framebuffer_destroy_locked(struct stw_framebuffer *fb)
    /* check the reference count */
    fb->refcnt--;
    if (fb->refcnt) {
-      pipe_mutex_unlock( fb->mutex );
+      stw_framebuffer_release(fb);
       return;
    }
 
@@ -95,22 +95,11 @@ stw_framebuffer_destroy_locked(struct stw_framebuffer *fb)
 
    stw_st_destroy_framebuffer_locked(fb->stfb);
 
-   pipe_mutex_unlock( fb->mutex );
+   stw_framebuffer_release(fb);
 
-   pipe_mutex_destroy( fb->mutex );
+   DeleteCriticalSection(&fb->mutex);
 
    FREE( fb );
-}
-
-
-/**
- * Unlock the given stw_framebuffer object.
- */
-void
-stw_framebuffer_release(struct stw_framebuffer *fb)
-{
-   assert(fb);
-   pipe_mutex_unlock( fb->mutex );
 }
 
 
@@ -296,13 +285,13 @@ stw_framebuffer_create(HDC hdc, int iPixelFormat)
 
    stw_framebuffer_get_size(fb);
 
-   pipe_mutex_init( fb->mutex );
+   InitializeCriticalSection(&fb->mutex);
 
    /* This is the only case where we lock the stw_framebuffer::mutex before
     * stw_dev::fb_mutex, since no other thread can know about this framebuffer
     * and we must prevent any other thread from destroying it before we return.
     */
-   pipe_mutex_lock( fb->mutex );
+   stw_framebuffer_lock(fb);
 
    stw_lock_framebuffers(stw_dev);
    fb->next = stw_dev->fb_head;
@@ -330,7 +319,7 @@ stw_framebuffer_reference(struct stw_framebuffer **ptr,
    if (old_fb) {
       stw_lock_framebuffers(stw_dev);
 
-      pipe_mutex_lock(old_fb->mutex);
+      stw_framebuffer_lock(old_fb);
       stw_framebuffer_destroy_locked(old_fb);
 
       stw_unlock_framebuffers(stw_dev);
@@ -378,7 +367,7 @@ stw_framebuffer_cleanup(void)
    while (fb) {
       next = fb->next;
 
-      pipe_mutex_lock(fb->mutex);
+      stw_framebuffer_lock(fb);
       stw_framebuffer_destroy_locked(fb);
 
       fb = next;

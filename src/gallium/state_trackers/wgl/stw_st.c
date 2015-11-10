@@ -136,7 +136,7 @@ stw_st_framebuffer_validate(struct st_context_iface *stctx,
    for (i = 0; i < count; i++)
       statt_mask |= 1 << statts[i];
 
-   pipe_mutex_lock(stwfb->fb->mutex);
+   stw_framebuffer_lock(stwfb->fb);
 
    if (stwfb->fb->must_resize || (statt_mask & ~stwfb->texture_mask)) {
       stw_st_framebuffer_validate_locked(&stwfb->base,
@@ -185,7 +185,7 @@ stw_st_framebuffer_flush_front(struct st_context_iface *stctx,
    boolean ret;
    HDC hDC;
 
-   pipe_mutex_lock(stwfb->fb->mutex);
+   stw_framebuffer_lock(stwfb->fb);
 
    /* We must not cache HDCs anywhere, as they can be invalidated by the
     * application, or screen resolution changes. */

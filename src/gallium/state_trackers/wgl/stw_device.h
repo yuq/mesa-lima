@@ -30,7 +30,6 @@
 
 
 #include "pipe/p_compiler.h"
-#include "os/os_thread.h"
 #include "util/u_handle_table.h"
 #include "stw_icd.h"
 #include "stw_pixelformat.h"
