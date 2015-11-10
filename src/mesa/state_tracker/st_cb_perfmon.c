@@ -65,27 +65,6 @@ find_query_type(struct pipe_screen *screen, const char *name)
    return type;
 }
 
-/**
- * Return TRUE if the underlying driver expose GPU counters.
- */
-static bool
-has_gpu_counters(struct pipe_screen *screen)
-{
-   int num_groups, gid;
-
-   num_groups = screen->get_driver_query_group_info(screen, 0, NULL);
-   for (gid = 0; gid < num_groups; gid++) {
-      struct pipe_driver_query_group_info group_info;
-
-      if (!screen->get_driver_query_group_info(screen, gid, &group_info))
-         continue;
-
-      if (group_info.type == PIPE_DRIVER_QUERY_GROUP_TYPE_GPU)
-         return true;
-   }
-   return false;
-}
-
 static bool
 init_perf_monitor(struct gl_context *ctx, struct gl_perf_monitor_object *m)
 {
@@ -313,12 +292,6 @@ st_init_perfmon(struct st_context *st)
    if (!screen->get_driver_query_info || !screen->get_driver_query_group_info)
       return false;
 
-   if (!has_gpu_counters(screen)) {
-      /* According to the spec, GL_AMD_performance_monitor must only
-       * expose GPU counters. */
-      return false;
-   }
-
    /* Get the number of available queries. */
    num_counters = screen->get_driver_query_info(screen, 0, NULL);
    if (!num_counters)
@@ -337,9 +310,6 @@ st_init_perfmon(struct st_context *st)
       struct gl_perf_monitor_counter *counters = NULL;
 
       if (!screen->get_driver_query_group_info(screen, gid, &group_info))
-         continue;
-
-      if (group_info.type != PIPE_DRIVER_QUERY_GROUP_TYPE_GPU)
          continue;
 
       g->Name = group_info.name;

@@ -200,7 +200,6 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
    if (id == NVC0_HW_SM_QUERY_GROUP) {
       if (screen->compute) {
          info->name = "MP counters";
-         info->type = PIPE_DRIVER_QUERY_GROUP_TYPE_GPU;
 
          /* Because we can't expose the number of hardware counters needed for
           * each different query, we don't want to allow more than one active
@@ -224,7 +223,6 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
       if (screen->compute) {
          if (screen->base.class_3d < NVE4_3D_CLASS) {
             info->name = "Performance metrics";
-            info->type = PIPE_DRIVER_QUERY_GROUP_TYPE_GPU;
             info->max_active_queries = 1;
             info->num_queries = NVC0_HW_METRIC_QUERY_COUNT;
             return 1;
@@ -234,7 +232,6 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
    else if (id == NVC0_SW_QUERY_DRV_STAT_GROUP) {
       info->name = "Driver statistics";
-      info->type = PIPE_DRIVER_QUERY_GROUP_TYPE_CPU;
       info->max_active_queries = NVC0_SW_QUERY_DRV_STAT_COUNT;
       info->num_queries = NVC0_SW_QUERY_DRV_STAT_COUNT;
       return 1;
@@ -245,7 +242,6 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
    info->name = "this_is_not_the_query_group_you_are_looking_for";
    info->max_active_queries = 0;
    info->num_queries = 0;
-   info->type = 0;
    return 0;
 }
 

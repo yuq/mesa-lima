@@ -829,12 +829,6 @@ enum pipe_driver_query_type
    PIPE_DRIVER_QUERY_TYPE_HZ           = 6,
 };
 
-enum pipe_driver_query_group_type
-{
-   PIPE_DRIVER_QUERY_GROUP_TYPE_CPU = 0,
-   PIPE_DRIVER_QUERY_GROUP_TYPE_GPU = 1,
-};
-
 /* Whether an average value per frame or a cumulative value should be
  * displayed.
  */
@@ -864,7 +858,6 @@ struct pipe_driver_query_info
 struct pipe_driver_query_group_info
 {
    const char *name;
-   enum pipe_driver_query_group_type type;
    unsigned max_active_queries;
    unsigned num_queries;
 };
