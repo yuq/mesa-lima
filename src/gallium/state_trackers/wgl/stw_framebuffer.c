@@ -44,6 +44,8 @@
 /**
  * Search the framebuffer with the matching HWND while holding the
  * stw_dev::fb_mutex global lock.
+ * If a stw_framebuffer is found, lock it and return the pointer.
+ * Else, return NULL.
  */
 static inline struct stw_framebuffer *
 stw_framebuffer_from_hwnd_locked(HWND hwnd)
@@ -61,9 +63,11 @@ stw_framebuffer_from_hwnd_locked(HWND hwnd)
 
 
 /**
- * Destroy this framebuffer. Both stw_dev::fb_mutex and stw_framebuffer::mutex
- * must be held, by this order.  If there are still references to the
- * framebuffer, nothing will happen.
+ * Decrement the reference count on the given stw_framebuffer object.
+ * If the reference count hits zero, destroy the object.
+ *
+ * Note: Both stw_dev::fb_mutex and stw_framebuffer::mutex must already
+ * be locked.
  */
 static void
 stw_framebuffer_destroy_locked(struct stw_framebuffer *fb)
@@ -77,6 +81,7 @@ stw_framebuffer_destroy_locked(struct stw_framebuffer *fb)
       return;
    }
 
+   /* remove this stw_framebuffer from the device's linked list */
    link = &stw_dev->fb_head;
    while (*link != fb)
       link = &(*link)->next;
@@ -98,6 +103,9 @@ stw_framebuffer_destroy_locked(struct stw_framebuffer *fb)
 }
 
 
+/**
+ * Unlock the given stw_framebuffer object.
+ */
 void
 stw_framebuffer_release(struct stw_framebuffer *fb)
 {
@@ -106,6 +114,10 @@ stw_framebuffer_release(struct stw_framebuffer *fb)
 }
 
 
+/**
+ * Query the size of the given framebuffer's on-screen window and update
+ * the stw_framebuffer's width/height.
+ */
 static void
 stw_framebuffer_get_size(struct stw_framebuffer *fb)
 {
@@ -229,6 +241,11 @@ stw_call_window_proc(int nCode, WPARAM wParam, LPARAM lParam)
 }
 
 
+/**
+ * Create a new stw_framebuffer object which corresponds to the given
+ * HDC/window.  If successful, we return the new stw_framebuffer object
+ * with its mutex locked.
+ */
 struct stw_framebuffer *
 stw_framebuffer_create(HDC hdc, int iPixelFormat)
 {
@@ -343,6 +360,9 @@ stw_framebuffer_update(struct stw_framebuffer *fb)
 }
 
 
+/**
+ * Try to free all stw_framebuffer objects associated with the device.
+ */
 void
 stw_framebuffer_cleanup(void)
 {
@@ -371,6 +391,7 @@ stw_framebuffer_cleanup(void)
 
 /**
  * Given an hdc, return the corresponding stw_framebuffer.
+ * The returned stw_framebuffer will have its mutex locked.
  */
 static inline struct stw_framebuffer *
 stw_framebuffer_from_hdc_locked(HDC hdc)
@@ -387,7 +408,8 @@ stw_framebuffer_from_hdc_locked(HDC hdc)
 
 
 /**
- * Given an hdc, return the corresponding stw_framebuffer.
+ * Given an HDC, return the corresponding stw_framebuffer.
+ * The returned stw_framebuffer will have its mutex locked.
  */
 struct stw_framebuffer *
 stw_framebuffer_from_hdc(HDC hdc)
@@ -406,7 +428,8 @@ stw_framebuffer_from_hdc(HDC hdc)
 
 
 /**
- * Given an hdc, return the corresponding stw_framebuffer.
+ * Given an HWND, return the corresponding stw_framebuffer.
+ * The returned stw_framebuffer will have its mutex locked.
  */
 struct stw_framebuffer *
 stw_framebuffer_from_hwnd(HWND hwnd)
@@ -545,7 +568,8 @@ DrvPresentBuffers(HDC hdc, PGLPRESENTBUFFERSDATA data)
 /**
  * Queue a composition.
  *
- * It will drop the lock on success.
+ * The stw_framebuffer object must have its mutex locked.  The mutex will
+ * be unlocked here before returning.
  */
 BOOL
 stw_framebuffer_present_locked(HDC hdc,
