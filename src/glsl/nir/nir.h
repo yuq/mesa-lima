@@ -1994,7 +1994,7 @@ typedef struct nir_lower_tex_options {
    unsigned saturate_r;
 } nir_lower_tex_options;
 
-void nir_lower_tex(nir_shader *shader,
+bool nir_lower_tex(nir_shader *shader,
                    const nir_lower_tex_options *options);
 
 void nir_lower_idiv(nir_shader *shader);

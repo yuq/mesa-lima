@@ -260,7 +260,7 @@ brw_preprocess_nir(nir_shader *nir, bool is_scalar)
       .lower_txp = ~0,
    };
 
-   OPT_V(nir_lower_tex, &tex_options);
+   OPT(nir_lower_tex, &tex_options);
    OPT(nir_normalize_cubemap_coords);
 
    OPT(nir_lower_global_vars_to_local);

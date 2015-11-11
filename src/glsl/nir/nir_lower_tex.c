@@ -41,6 +41,7 @@
 typedef struct {
    nir_builder b;
    const nir_lower_tex_options *options;
+   bool progress;
 } lower_tex_state;
 
 static void
@@ -239,15 +240,21 @@ nir_lower_tex_block(nir_block *block, void *void_state)
       /* If we are clamping any coords, we must lower projector first
        * as clamping happens *after* projection:
        */
-      if (lower_txp || sat_mask)
+      if (lower_txp || sat_mask) {
          project_src(b, tex);
+         state->progress = true;
+      }
 
       if ((tex->sampler_dim == GLSL_SAMPLER_DIM_RECT) &&
-          state->options->lower_rect)
+          state->options->lower_rect) {
          lower_rect(b, tex);
+         state->progress = true;
+      }
 
-      if (sat_mask)
+      if (sat_mask) {
          saturate_src(b, tex, sat_mask);
+         state->progress = true;
+      }
    }
 
    return true;
@@ -264,13 +271,17 @@ nir_lower_tex_impl(nir_function_impl *impl, lower_tex_state *state)
                                nir_metadata_dominance);
 }
 
-void
+bool
 nir_lower_tex(nir_shader *shader, const nir_lower_tex_options *options)
 {
    lower_tex_state state;
    state.options = options;
+   state.progress = false;
+
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
          nir_lower_tex_impl(overload->impl, &state);
    }
+
+   return state.progress;
 }
