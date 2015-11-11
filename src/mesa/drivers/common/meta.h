@@ -392,7 +392,7 @@ struct decompress_state
    GLuint VAO;
    struct decompress_fbo_state byteFBO, floatFBO;
    struct gl_buffer_object *buf_obj;
-   GLuint Sampler;
+   struct gl_sampler_object *samp_obj;
 
    struct blit_shader_table shaders;
 };

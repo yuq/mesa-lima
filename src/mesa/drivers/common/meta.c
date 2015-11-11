@@ -2986,8 +2986,8 @@ meta_decompress_cleanup(struct gl_context *ctx,
       _mesa_reference_buffer_object(ctx, &decompress->buf_obj, NULL);
    }
 
-   if (decompress->Sampler != 0)
-      _mesa_DeleteSamplers(1, &decompress->Sampler);
+   if (decompress->samp_obj != NULL)
+      _mesa_DeleteSamplers(1, &decompress->samp_obj->Name);
 
    memset(decompress, 0, sizeof(*decompress));
 }
@@ -3113,25 +3113,25 @@ decompress_texture_image(struct gl_context *ctx,
                                        &decompress->buf_obj, 3);
    }
 
-   if (!decompress->Sampler) {
-      struct gl_sampler_object *samp_obj;
+   if (decompress->samp_obj == NULL) {
+      GLuint sampler;
 
-      _mesa_GenSamplers(1, &decompress->Sampler);
+      _mesa_GenSamplers(1, &sampler);
 
-      samp_obj = _mesa_lookup_samplerobj(ctx, decompress->Sampler);
-      assert(samp_obj != NULL && samp_obj->Name == decompress->Sampler);
+      decompress->samp_obj = _mesa_lookup_samplerobj(ctx, sampler);
+      assert(decompress->samp_obj != NULL && decompress->samp_obj->Name == sampler);
 
-      _mesa_BindSampler(ctx->Texture.CurrentUnit, decompress->Sampler);
+      _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, decompress->samp_obj);
       /* nearest filtering */
-      _mesa_set_sampler_filters(ctx, samp_obj, GL_NEAREST, GL_NEAREST);
+      _mesa_set_sampler_filters(ctx, decompress->samp_obj, GL_NEAREST, GL_NEAREST);
 
       /* No sRGB decode or encode.*/
       if (ctx->Extensions.EXT_texture_sRGB_decode) {
-         _mesa_set_sampler_srgb_decode(ctx, samp_obj, GL_SKIP_DECODE_EXT);
+         _mesa_set_sampler_srgb_decode(ctx, decompress->samp_obj, GL_SKIP_DECODE_EXT);
       }
 
    } else {
-      _mesa_BindSampler(ctx->Texture.CurrentUnit, decompress->Sampler);
+      _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, decompress->samp_obj);
    }
 
    /* Silence valgrind warnings about reading uninitialized stack. */
