@@ -699,6 +699,17 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
       break;
    }
 
+   /* Stomp the resinfo output type to UINT32.  On gens 4-5, the output type
+    * is set as part of the message descriptor.  On gen4, the PRM seems to
+    * allow UINT32 and FLOAT32 (i965 PRM, Vol. 4 Section 4.8.1.1), but on
+    * later gens UINT32 is required.  Once you hit Sandy Bridge, the bit is
+    * gone from the message descriptor entirely and you just get UINT32 all
+    * the time regasrdless.  Since we can really only do non-UINT32 on gen4,
+    * just stomp it to UINT32 all the time.
+    */
+   if (inst->opcode == SHADER_OPCODE_TXS)
+      return_format = BRW_SAMPLER_RETURN_FORMAT_UINT32;
+
    switch (inst->exec_size) {
    case 8:
       simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD8;
