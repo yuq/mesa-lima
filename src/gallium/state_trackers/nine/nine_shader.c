@@ -852,7 +852,12 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
             /* the address register (vs only) must be
              * assigned before use */
             assert(!ureg_dst_is_undef(tx->regs.a0));
-            ureg_ARR(ureg, tx->regs.address, ureg_src(tx->regs.a0));
+            /* Round to lowest for vs1.1 (contrary to the doc), else
+             * round to nearest */
+            if (tx->version.major < 2 && tx->version.minor < 2)
+                ureg_ARL(ureg, tx->regs.address, ureg_src(tx->regs.a0));
+            else
+                ureg_ARR(ureg, tx->regs.address, ureg_src(tx->regs.a0));
             src = ureg_src(tx->regs.address);
         } else {
             if (tx->version.major < 2 && tx->version.minor < 4) {
@@ -1538,25 +1543,6 @@ DECL_SPECIAL(CALLNZ)
     tx_endcond(tx);
     ureg_ENDIF(ureg);
     return D3D_OK;
-}
-
-DECL_SPECIAL(MOV_vs1x)
-{
-    if (tx->insn.dst[0].file == D3DSPR_ADDR) {
-        /* Implementation note: We don't write directly
-         * to the addr register, but to an intermediate
-         * float register.
-         * Contrary to the doc, when writing to ADDR here,
-         * the rounding is not to nearest, but to lowest
-         * (wine test).
-         * Since we use ARR next, substract 0.5. */
-        ureg_SUB(tx->ureg,
-                 tx_dst_param(tx, &tx->insn.dst[0]),
-                 tx_src_param(tx, &tx->insn.src[0]),
-                 ureg_imm1f(tx->ureg, 0.5f));
-        return D3D_OK;
-    }
-    return NineTranslateInstruction_Generic(tx);
 }
 
 DECL_SPECIAL(LOOP)
@@ -2733,8 +2719,7 @@ DECL_SPECIAL(COMMENT)
 struct sm1_op_info inst_table[] =
 {
     _OPI(NOP, NOP, V(0,0), V(3,0), V(0,0), V(3,0), 0, 0, NULL), /* 0 */
-    _OPI(MOV, MOV, V(0,0), V(1,1), V(0,0), V(0,0), 1, 1, SPECIAL(MOV_vs1x)),
-    _OPI(MOV, MOV, V(2,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL),
+    _OPI(MOV, MOV, V(0,0), V(3,0), V(0,0), V(3,0), 1, 1, NULL),
     _OPI(ADD, ADD, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 2 */
     _OPI(SUB, SUB, V(0,0), V(3,0), V(0,0), V(3,0), 1, 2, NULL), /* 3 */
     _OPI(MAD, MAD, V(0,0), V(3,0), V(0,0), V(3,0), 1, 3, NULL), /* 4 */
