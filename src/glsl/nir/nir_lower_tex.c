@@ -134,6 +134,7 @@ get_texture_size(nir_builder *b, nir_tex_instr *tex)
    txs->op = nir_texop_txs;
    txs->sampler_dim = GLSL_SAMPLER_DIM_RECT;
    txs->sampler_index = tex->sampler_index;
+   txs->dest_type = nir_type_int;
 
    /* only single src, the lod: */
    txs->src[0].src = nir_src_for_ssa(nir_imm_int(b, 0));
