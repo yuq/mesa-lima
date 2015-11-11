@@ -310,7 +310,8 @@ struct fb_tex_blit_state
 {
    GLint baseLevelSave, maxLevelSave;
    struct gl_sampler_object *samp_obj;
-   GLuint samplerSave, stencilSamplingSave;
+   struct gl_sampler_object *samp_obj_save;
+   GLuint stencilSamplingSave;
    GLuint tempTex;
 };
 

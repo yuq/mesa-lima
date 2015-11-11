@@ -810,9 +810,17 @@ void
 _mesa_meta_fb_tex_blit_begin(const struct gl_context *ctx,
                              struct fb_tex_blit_state *blit)
 {
-   blit->samplerSave =
-      ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler ?
-      ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler->Name : 0;
+   /* None of the existing callers preinitialize fb_tex_blit_state to zeros,
+    * and both use stack variables.  If samp_obj_save is not NULL,
+    * _mesa_reference_sampler_object will try to dereference it.  Leaving
+    * random garbage in samp_obj_save can only lead to crashes.
+    *
+    * Since the state isn't persistent across calls, we won't catch ref
+    * counting problems.
+    */
+   blit->samp_obj_save = NULL;
+   _mesa_reference_sampler_object(ctx, &blit->samp_obj_save,
+                                  ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler);
    blit->tempTex = 0;
 }
 
@@ -838,7 +846,8 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
       }
    }
 
-   _mesa_BindSampler(ctx->Texture.CurrentUnit, blit->samplerSave);
+   _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, blit->samp_obj_save);
+   _mesa_reference_sampler_object(ctx, &blit->samp_obj_save, NULL);
    _mesa_DeleteSamplers(1, &blit->samp_obj->Name);
    blit->samp_obj = NULL;
 
