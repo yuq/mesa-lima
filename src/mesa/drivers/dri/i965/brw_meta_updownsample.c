@@ -55,13 +55,12 @@ brw_get_rb_for_slice(struct brw_context *brw,
    struct gl_renderbuffer *rb;
    struct intel_renderbuffer *irb;
 
-   /* This turns the GenRenderbuffers name into an actual struct
+   /* This turns the CreateRenderbuffers name into an actual struct
     * intel_renderbuffer.
     */
-   _mesa_GenRenderbuffers(1, &rbo);
-   _mesa_BindRenderbuffer(GL_RENDERBUFFER, rbo);
+   _mesa_CreateRenderbuffers(1, &rbo);
 
-   rb = ctx->CurrentRenderbuffer;
+   rb = _mesa_lookup_renderbuffer(ctx, rbo);
    irb = intel_renderbuffer(rb);
 
    rb->Format = mt->format;
