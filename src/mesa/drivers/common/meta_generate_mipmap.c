@@ -185,7 +185,7 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
                                       ctx->Extensions.ARB_fragment_shader;
    GLenum faceTarget;
    GLuint dstLevel;
-   GLuint samplerSave;
+   struct gl_sampler_object *samp_obj_save = NULL;
    GLint swizzle[4];
    GLboolean swizzleSaved = GL_FALSE;
 
@@ -216,8 +216,8 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
       _mesa_set_enable(ctx, target, GL_TRUE);
    }
 
-   samplerSave = ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler ?
-      ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler->Name : 0;
+   _mesa_reference_sampler_object(ctx, &samp_obj_save,
+                                  ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler);
 
    /* We may have been called from glGenerateTextureMipmap with CurrentUnit
     * still set to 0, so we don't know when we can skip binding the texture.
@@ -375,7 +375,8 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
 
    _mesa_lock_texture(ctx, texObj); /* relock */
 
-   _mesa_BindSampler(ctx->Texture.CurrentUnit, samplerSave);
+   _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, samp_obj_save);
+   _mesa_reference_sampler_object(ctx, &samp_obj_save, NULL);
 
    _mesa_meta_end(ctx);
 
