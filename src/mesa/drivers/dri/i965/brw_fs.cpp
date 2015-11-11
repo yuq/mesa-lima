@@ -43,6 +43,7 @@
 #include "brw_wm.h"
 #include "brw_fs.h"
 #include "brw_cs.h"
+#include "brw_nir.h"
 #include "brw_vec4_gs_visitor.h"
 #include "brw_cfg.h"
 #include "brw_dead_control_flow.h"
@@ -5430,13 +5431,16 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                const struct brw_wm_prog_key *key,
                struct brw_wm_prog_data *prog_data,
-               const nir_shader *shader,
+               const nir_shader *src_shader,
                struct gl_program *prog,
                int shader_time_index8, int shader_time_index16,
                bool use_rep_send,
                unsigned *final_assembly_size,
                char **error_str)
 {
+   nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_postprocess_nir(shader, compiler->devinfo, true);
+
    /* key->alpha_test_func means simulating alpha testing via discards,
     * so the shader definitely kills pixels.
     */
@@ -5589,11 +5593,14 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                const struct brw_cs_prog_key *key,
                struct brw_cs_prog_data *prog_data,
-               const nir_shader *shader,
+               const nir_shader *src_shader,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str)
 {
+   nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_postprocess_nir(shader, compiler->devinfo, true);
+
    prog_data->local_size[0] = shader->info.cs.local_size[0];
    prog_data->local_size[1] = shader->info.cs.local_size[1];
    prog_data->local_size[2] = shader->info.cs.local_size[2];

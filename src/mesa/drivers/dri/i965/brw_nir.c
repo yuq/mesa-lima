@@ -412,7 +412,6 @@ brw_create_nir(struct brw_context *brw,
 
    nir = brw_preprocess_nir(nir, is_scalar);
    nir = brw_lower_nir(nir, devinfo, shader_prog, is_scalar);
-   nir = brw_postprocess_nir(nir, devinfo, is_scalar);
 
    return nir;
 }

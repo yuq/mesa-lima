@@ -1931,13 +1931,17 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                const struct brw_vs_prog_key *key,
                struct brw_vs_prog_data *prog_data,
-               const nir_shader *shader,
+               const nir_shader *src_shader,
                gl_clip_plane *clip_planes,
                bool use_legacy_snorm_formula,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str)
 {
+   nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_postprocess_nir(shader, compiler->devinfo,
+                                compiler->scalar_stage[MESA_SHADER_VERTEX]);
+
    const unsigned *assembly = NULL;
 
    unsigned nr_attributes = _mesa_bitcount_64(prog_data->inputs_read);

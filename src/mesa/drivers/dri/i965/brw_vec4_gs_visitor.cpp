@@ -30,6 +30,7 @@
 #include "brw_vec4_gs_visitor.h"
 #include "gen6_gs_visitor.h"
 #include "brw_fs.h"
+#include "brw_nir.h"
 
 namespace brw {
 
@@ -606,7 +607,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                const struct brw_gs_prog_key *key,
                struct brw_gs_prog_data *prog_data,
-               const nir_shader *shader,
+               const nir_shader *src_shader,
                struct gl_shader_program *shader_prog,
                int shader_time_index,
                unsigned *final_assembly_size,
@@ -615,6 +616,10 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    struct brw_gs_compile c;
    memset(&c, 0, sizeof(c));
    c.key = *key;
+
+   nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_postprocess_nir(shader, compiler->devinfo,
+                                compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
 
    prog_data->include_primitive_id =
       (shader->info.inputs_read & VARYING_BIT_PRIMITIVE_ID) != 0;
