@@ -502,7 +502,7 @@ gen7_graphics_pipeline_create(
          /* This in the next dword on HSW. */
          .ControlDataFormat                     = gs_prog_data->control_data_format,
          .ControlDataHeaderSize                 = gs_prog_data->control_data_header_size_hwords,
-         .InstanceControl                       = gs_prog_data->invocations - 1,
+         .InstanceControl                       = MAX2(gs_prog_data->invocations, 1) - 1,
          .DispatchMode                          = gs_prog_data->base.dispatch_mode,
          .GSStatisticsEnable                    = true,
          .IncludePrimitiveID                    = gs_prog_data->include_primitive_id,
