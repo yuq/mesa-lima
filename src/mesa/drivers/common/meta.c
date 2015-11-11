@@ -848,8 +848,6 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
 
       save->DrawBufferName = ctx->DrawBuffer->Name;
       save->ReadBufferName = ctx->ReadBuffer->Name;
-      save->RenderbufferName = (ctx->CurrentRenderbuffer ?
-                                ctx->CurrentRenderbuffer->Name : 0);
    }
 }
 
@@ -1240,10 +1238,6 @@ _mesa_meta_end(struct gl_context *ctx)
 
    if (ctx->ReadBuffer->Name != save->ReadBufferName)
       _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, save->ReadBufferName);
-
-   if (!ctx->CurrentRenderbuffer ||
-       ctx->CurrentRenderbuffer->Name != save->RenderbufferName)
-      _mesa_BindRenderbuffer(GL_RENDERBUFFER, save->RenderbufferName);
 
    if (state & MESA_META_DRAW_BUFFERS) {
       _mesa_drawbuffers(ctx, ctx->DrawBuffer, ctx->Const.MaxDrawBuffers,
