@@ -2986,8 +2986,7 @@ meta_decompress_cleanup(struct gl_context *ctx,
       _mesa_reference_buffer_object(ctx, &decompress->buf_obj, NULL);
    }
 
-   if (decompress->samp_obj != NULL)
-      _mesa_DeleteSamplers(1, &decompress->samp_obj->Name);
+   _mesa_reference_sampler_object(ctx, &decompress->samp_obj, NULL);
 
    memset(decompress, 0, sizeof(*decompress));
 }
@@ -3114,12 +3113,21 @@ decompress_texture_image(struct gl_context *ctx,
    }
 
    if (decompress->samp_obj == NULL) {
-      GLuint sampler;
+      decompress->samp_obj =  ctx->Driver.NewSamplerObject(ctx, 0xDEADBEEF);
+      if (decompress->samp_obj == NULL) {
+         _mesa_meta_end(ctx);
 
-      _mesa_GenSamplers(1, &sampler);
-
-      decompress->samp_obj = _mesa_lookup_samplerobj(ctx, sampler);
-      assert(decompress->samp_obj != NULL && decompress->samp_obj->Name == sampler);
+         /* This is a bit lazy.  Flag out of memory, and then don't bother to
+          * clean up.  Once out of memory is flagged, the only realistic next
+          * move is to destroy the context.  That will trigger all the right
+          * clean up.
+          *
+          * Returning true prevents other GetTexImage methods from attempting
+          * anything since they will likely fail too.
+          */
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGetTexImage");
+         return true;
+      }
 
       _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, decompress->samp_obj);
       /* nearest filtering */
