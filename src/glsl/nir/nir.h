@@ -1890,6 +1890,8 @@ void nir_index_blocks(nir_function_impl *impl);
 void nir_print_shader(nir_shader *shader, FILE *fp);
 void nir_print_instr(const nir_instr *instr, FILE *fp);
 
+nir_shader * nir_shader_clone(void *mem_ctx, const nir_shader *s);
+
 #ifdef DEBUG
 void nir_validate_shader(nir_shader *shader);
 void nir_metadata_set_validation_flag(nir_shader *shader);
