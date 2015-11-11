@@ -1472,8 +1472,7 @@ vec4_visitor::get_pull_constant_offset(bblock_t * block, vec4_instruction *inst,
       src_reg index = src_reg(this, glsl_type::int_type);
 
       emit_before(block, inst, ADD(dst_reg(index), *reladdr,
-                                   brw_imm_d(reg_offset)));
-      emit_before(block, inst, MUL(dst_reg(index), index, brw_imm_d(16)));
+                                   brw_imm_d(reg_offset * 16)));
 
       return index;
    } else if (devinfo->gen >= 8) {

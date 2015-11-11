@@ -2052,11 +2052,9 @@ fs_visitor::demote_pull_constants()
 
          /* Generate a pull load into dst. */
          if (inst->src[i].reladdr) {
-            fs_reg indirect = ibld.vgrf(BRW_REGISTER_TYPE_D);
-            ibld.MUL(indirect, *inst->src[i].reladdr, brw_imm_d(4));
             VARYING_PULL_CONSTANT_LOAD(ibld, dst,
                                        brw_imm_ud(index),
-                                       indirect,
+                                       *inst->src[i].reladdr,
                                        pull_index * 4);
             inst->src[i].reladdr = NULL;
             inst->src[i].stride = 1;

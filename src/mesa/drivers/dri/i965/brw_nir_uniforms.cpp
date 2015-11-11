@@ -34,8 +34,7 @@ brw_nir_setup_glsl_builtin_uniform(nir_variable *var,
    const nir_state_slot *const slots = var->state_slots;
    assert(var->state_slots != NULL);
 
-   unsigned uniform_index = is_scalar ? var->data.driver_location :
-                                        var->data.driver_location * 4;
+   unsigned uniform_index = var->data.driver_location / 4;
    for (unsigned int i = 0; i < var->num_state_slots; i++) {
       /* This state reference has already been setup by ir_to_mesa, but we'll
        * get the same index back here.
@@ -81,8 +80,7 @@ brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
     * order we'd walk the type, so walk the list of storage and find anything
     * with our name, or the prefix of a component that starts with our name.
     */
-   unsigned uniform_index = is_scalar ? var->data.driver_location :
-                                        var->data.driver_location * 4;
+   unsigned uniform_index = var->data.driver_location / 4;
    for (unsigned u = 0; u < shader_prog->NumUniformStorage; u++) {
       struct gl_uniform_storage *storage = &shader_prog->UniformStorage[u];
 

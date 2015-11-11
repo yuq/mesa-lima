@@ -117,7 +117,7 @@ vec4_visitor::nir_setup_system_values()
 void
 vec4_visitor::nir_setup_uniforms()
 {
-   uniforms = nir->num_uniforms;
+   uniforms = nir->num_uniforms / 16;
 
    nir_foreach_variable(var, &nir->uniforms) {
       /* UBO's and atomics don't take up space in the uniform file */
@@ -125,7 +125,7 @@ vec4_visitor::nir_setup_uniforms()
          continue;
 
       if (type_size_vec4(var->type) > 0)
-         uniform_size[var->data.driver_location] = type_size_vec4(var->type);
+         uniform_size[var->data.driver_location / 16] = type_size_vec4(var->type);
    }
 }
 
@@ -677,10 +677,14 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       has_indirect = true;
       /* fallthrough */
    case nir_intrinsic_load_uniform: {
+      /* Offsets are in bytes but they should always be multiples of 16 */
+      assert(instr->const_index[0] % 16 == 0);
+      assert(instr->const_index[1] % 16 == 0);
+
       dest = get_nir_dest(instr->dest);
 
-      src = src_reg(dst_reg(UNIFORM, instr->const_index[0]));
-      src.reg_offset = instr->const_index[1];
+      src = src_reg(dst_reg(UNIFORM, instr->const_index[0] / 16));
+      src.reg_offset = instr->const_index[1] / 16;
 
       if (has_indirect) {
          src_reg tmp = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_D, 1);

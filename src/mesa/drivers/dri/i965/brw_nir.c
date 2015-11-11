@@ -166,6 +166,32 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
    }
 }
 
+static int
+type_size_scalar_bytes(const struct glsl_type *type)
+{
+   return type_size_scalar(type) * 4;
+}
+
+static int
+type_size_vec4_bytes(const struct glsl_type *type)
+{
+   return type_size_vec4(type) * 16;
+}
+
+static void
+brw_nir_lower_uniforms(nir_shader *nir, bool is_scalar)
+{
+   if (is_scalar) {
+      nir_assign_var_locations(&nir->uniforms, &nir->num_uniforms,
+                               type_size_scalar_bytes);
+      nir_lower_io(nir, nir_var_uniform, type_size_scalar_bytes);
+   } else {
+      nir_assign_var_locations(&nir->uniforms, &nir->num_uniforms,
+                               type_size_vec4_bytes);
+      nir_lower_io(nir, nir_var_uniform, type_size_vec4_bytes);
+   }
+}
+
 #include "util/debug.h"
 
 static bool
@@ -295,9 +321,7 @@ brw_lower_nir(nir_shader *nir,
 
    OPT_V(brw_nir_lower_inputs, devinfo, is_scalar);
    OPT_V(brw_nir_lower_outputs, is_scalar);
-   nir_assign_var_locations(&nir->uniforms,
-                            &nir->num_uniforms,
-                            is_scalar ? type_size_scalar : type_size_vec4);
+   OPT_V(brw_nir_lower_uniforms, is_scalar);
    OPT_V(nir_lower_io, nir_var_all, is_scalar ? type_size_scalar : type_size_vec4);
 
    if (shader_prog) {
