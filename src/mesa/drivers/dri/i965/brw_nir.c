@@ -238,42 +238,32 @@ nir_optimize(nir_shader *nir, bool is_scalar)
    return nir;
 }
 
+/* Does some simple lowering and runs the standard suite of optimizations
+ *
+ * This is intended to be called more-or-less directly after you get the
+ * shader out of GLSL or some other source.  While it is geared towards i965,
+ * it is not at all generator-specific except for the is_scalar flag.  Even
+ * there, it is safe to call with is_scalar = false for a shader that is
+ * intended for the FS backend as long as nir_optimize is called again with
+ * is_scalar = true to scalarize everything prior to code gen.
+ */
 nir_shader *
-brw_create_nir(struct brw_context *brw,
-               const struct gl_shader_program *shader_prog,
-               const struct gl_program *prog,
-               gl_shader_stage stage,
-               bool is_scalar)
+brw_preprocess_nir(nir_shader *nir, bool is_scalar)
 {
-   struct gl_context *ctx = &brw->ctx;
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
-   const nir_shader_compiler_options *options =
-      ctx->Const.ShaderCompilerOptions[stage].NirOptions;
+   bool progress; /* Written by OPT and OPT_V */
+   (void)progress;
+
+   if (nir->stage == MESA_SHADER_GEOMETRY)
+      OPT(nir_lower_gs_intrinsics);
+
    static const nir_lower_tex_options tex_options = {
       .lower_txp = ~0,
    };
-   bool debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
-   bool progress = false;
-   nir_shader *nir;
-
-   /* First, lower the GLSL IR or Mesa IR to NIR */
-   if (shader_prog) {
-      nir = glsl_to_nir(shader_prog, stage, options);
-   } else {
-      nir = prog_to_nir(prog, options);
-      OPT_V(nir_convert_to_ssa); /* turn registers into SSA */
-   }
-   nir_validate_shader(nir);
-
-   if (stage == MESA_SHADER_GEOMETRY) {
-      OPT(nir_lower_gs_intrinsics);
-   }
-
-   OPT(nir_lower_global_vars_to_local);
 
    OPT_V(nir_lower_tex, &tex_options);
-
    OPT(nir_normalize_cubemap_coords);
+
+   OPT(nir_lower_global_vars_to_local);
 
    OPT(nir_split_var_copies);
 
@@ -285,14 +275,33 @@ brw_create_nir(struct brw_context *brw,
    /* Get rid of split copies */
    nir = nir_optimize(nir, is_scalar);
 
+   OPT(nir_remove_dead_variables);
+
+   return nir;
+}
+
+/* Lowers inputs, outputs, uniforms, and samplers for i965
+ *
+ * This function does all of the standard lowering prior to post-processing.
+ * The lowering done is highly gen, stage, and backend-specific.  The
+ * shader_prog parameter is optional and is used only for lowering sampler
+ * derefs and atomics for GLSL shaders.
+ */
+nir_shader *
+brw_lower_nir(nir_shader *nir,
+              const struct brw_device_info *devinfo,
+              const struct gl_shader_program *shader_prog,
+              bool is_scalar)
+{
+   bool progress; /* Written by OPT and OPT_V */
+   (void)progress;
+
    OPT_V(brw_nir_lower_inputs, devinfo, is_scalar);
    OPT_V(brw_nir_lower_outputs, is_scalar);
    nir_assign_var_locations(&nir->uniforms,
                             &nir->num_uniforms,
                             is_scalar ? type_size_scalar : type_size_vec4);
    OPT_V(nir_lower_io, nir_var_all, is_scalar ? type_size_scalar : type_size_vec4);
-
-   OPT(nir_remove_dead_variables);
 
    if (shader_prog) {
       OPT_V(nir_lower_samplers, shader_prog);
@@ -304,9 +313,28 @@ brw_create_nir(struct brw_context *brw,
       OPT_V(nir_lower_atomics, shader_prog);
    }
 
-   nir = nir_optimize(nir, is_scalar);
+   return nir_optimize(nir, is_scalar);
+}
 
-   if (brw->gen >= 6) {
+/* Prepare the given shader for codegen
+ *
+ * This function is intended to be called right before going into the actual
+ * backend and is highly backend-specific.  Also, once this function has been
+ * called on a shader, it will no longer be in SSA form so most optimizations
+ * will not work.
+ */
+nir_shader *
+brw_postprocess_nir(nir_shader *nir,
+                    const struct brw_device_info *devinfo,
+                    bool is_scalar)
+{
+   bool debug_enabled =
+      (INTEL_DEBUG & intel_debug_flag_for_shader_stage(nir->stage));
+
+   bool progress; /* Written by OPT and OPT_V */
+   (void)progress;
+
+   if (devinfo->gen >= 6) {
       /* Try and fuse multiply-adds */
       OPT(brw_nir_opt_peephole_ffma);
    }
@@ -327,7 +355,7 @@ brw_create_nir(struct brw_context *brw,
       }
 
       fprintf(stderr, "NIR (SSA form) for %s shader:\n",
-              _mesa_shader_stage_to_string(stage));
+              _mesa_shader_stage_to_string(nir->stage));
       nir_print_shader(nir, stderr);
    }
 
@@ -338,24 +366,53 @@ brw_create_nir(struct brw_context *brw,
       OPT(nir_lower_vec_to_movs);
    }
 
-   /* Needed only so that OPT and OPT_V can set it */
-   (void)progress;
-
    /* This is the last pass we run before we start emitting stuff.  It
     * determines when we need to insert boolean resolves on Gen <= 5.  We
     * run it last because it stashes data in instr->pass_flags and we don't
     * want that to be squashed by other NIR passes.
     */
-   if (brw->gen <= 5)
+   if (devinfo->gen <= 5)
       brw_nir_analyze_boolean_resolves(nir);
 
    nir_sweep(nir);
 
    if (unlikely(debug_enabled)) {
       fprintf(stderr, "NIR (final form) for %s shader:\n",
-              _mesa_shader_stage_to_string(stage));
+              _mesa_shader_stage_to_string(nir->stage));
       nir_print_shader(nir, stderr);
    }
+
+   return nir;
+}
+
+nir_shader *
+brw_create_nir(struct brw_context *brw,
+               const struct gl_shader_program *shader_prog,
+               const struct gl_program *prog,
+               gl_shader_stage stage,
+               bool is_scalar)
+{
+   struct gl_context *ctx = &brw->ctx;
+   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
+   const nir_shader_compiler_options *options =
+      ctx->Const.ShaderCompilerOptions[stage].NirOptions;
+   bool progress;
+   nir_shader *nir;
+
+   /* First, lower the GLSL IR or Mesa IR to NIR */
+   if (shader_prog) {
+      nir = glsl_to_nir(shader_prog, stage, options);
+   } else {
+      nir = prog_to_nir(prog, options);
+      OPT_V(nir_convert_to_ssa); /* turn registers into SSA */
+   }
+   nir_validate_shader(nir);
+
+   (void)progress;
+
+   nir = brw_preprocess_nir(nir, is_scalar);
+   nir = brw_lower_nir(nir, devinfo, shader_prog, is_scalar);
+   nir = brw_postprocess_nir(nir, devinfo, is_scalar);
 
    return nir;
 }

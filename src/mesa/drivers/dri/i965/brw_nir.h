@@ -81,6 +81,15 @@ nir_shader *brw_create_nir(struct brw_context *brw,
                            gl_shader_stage stage,
                            bool is_scalar);
 
+nir_shader *brw_preprocess_nir(nir_shader *nir, bool is_scalar);
+nir_shader *brw_lower_nir(nir_shader *nir,
+                          const struct brw_device_info *devinfo,
+                          const struct gl_shader_program *shader_prog,
+                          bool is_scalar);
+nir_shader *brw_postprocess_nir(nir_shader *nir,
+                                const struct brw_device_info *devinfo,
+                                bool is_scalar);
+
 enum brw_reg_type brw_type_for_nir_type(nir_alu_type type);
 
 enum glsl_base_type brw_glsl_base_type_for_nir_type(nir_alu_type type);
