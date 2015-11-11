@@ -380,6 +380,19 @@ gen7_graphics_pipeline_create(
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_DS, .DSFunctionEnable = false);
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_STREAMOUT, .SOFunctionEnable = false);
 
+   /* From the IVB PRM Vol. 2, Part 1, Section 3.2.1:
+    *
+    *    "A PIPE_CONTROL with Post-Sync Operation set to 1h and a depth stall
+    *    needs to be sent just prior to any 3DSTATE_VS, 3DSTATE_URB_VS,
+    *    3DSTATE_CONSTANT_VS, 3DSTATE_BINDING_TABLE_POINTER_VS,
+    *    3DSTATE_SAMPLER_STATE_POINTER_VS command.  Only one PIPE_CONTROL
+    *    needs to be sent before any combination of VS associated 3DSTATE."
+    */
+   anv_batch_emit(&pipeline->batch, GEN7_PIPE_CONTROL,
+                  .DepthStallEnable = true,
+                  .PostSyncOperation = WriteImmediateData,
+                  .Address = { &device->workaround_bo, 0 });
+
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS,
                   .ConstantBufferOffset = 0,
                   .ConstantBufferSize = 4);

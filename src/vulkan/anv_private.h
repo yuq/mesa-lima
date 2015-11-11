@@ -497,6 +497,8 @@ struct anv_device {
     struct anv_block_pool                       surface_state_block_pool;
     struct anv_state_pool                       surface_state_pool;
 
+    struct anv_bo                               workaround_bo;
+
     struct anv_meta_state                       meta_state;
 
     struct anv_state                            border_colors;

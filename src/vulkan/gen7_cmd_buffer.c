@@ -287,6 +287,24 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
    }
 
+   if (cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_VERTEX_BIT ||
+       cmd_buffer->state.push_constants_dirty & VK_SHADER_STAGE_VERTEX_BIT) {
+      /* From the IVB PRM Vol. 2, Part 1, Section 3.2.1:
+       *
+       *    "A PIPE_CONTROL with Post-Sync Operation set to 1h and a depth
+       *    stall needs to be sent just prior to any 3DSTATE_VS,
+       *    3DSTATE_URB_VS, 3DSTATE_CONSTANT_VS,
+       *    3DSTATE_BINDING_TABLE_POINTER_VS,
+       *    3DSTATE_SAMPLER_STATE_POINTER_VS command.  Only one
+       *    PIPE_CONTROL needs to be sent before any combination of VS
+       *    associated 3DSTATE."
+       */
+      anv_batch_emit(&cmd_buffer->batch, GEN7_PIPE_CONTROL,
+                     .DepthStallEnable = true,
+                     .PostSyncOperation = WriteImmediateData,
+                     .Address = { &cmd_buffer->device->workaround_bo, 0 });
+   }
+
    if (cmd_buffer->state.descriptors_dirty)
       anv_flush_descriptor_sets(cmd_buffer);
 

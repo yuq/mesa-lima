@@ -667,6 +667,8 @@ VkResult anv_CreateDevice(
    anv_state_pool_init(&device->surface_state_pool,
                        &device->surface_state_block_pool);
 
+   anv_bo_init_new(&device->workaround_bo, device, 1024);
+
    anv_block_pool_init(&device->scratch_block_pool, device, 0x10000);
 
    device->info = *physical_device->info;
@@ -704,6 +706,9 @@ void anv_DestroyDevice(
     */
    anv_state_pool_free(&device->dynamic_state_pool, device->border_colors);
 #endif
+
+   anv_gem_munmap(device->workaround_bo.map, device->workaround_bo.size);
+   anv_gem_close(device, device->workaround_bo.gem_handle);
 
    anv_bo_pool_finish(&device->batch_bo_pool);
    anv_state_pool_finish(&device->dynamic_state_pool);
