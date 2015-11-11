@@ -25,6 +25,7 @@
 
 #include "nv50/nv50_context.h"
 #include "nv50/nv50_query_hw.h"
+#include "nv50/nv50_query_hw_metric.h"
 #include "nv50/nv50_query_hw_sm.h"
 #include "nv_object.xml.h"
 
@@ -349,6 +350,12 @@ nv50_hw_create_query(struct nv50_context *nv50, unsigned type, unsigned index)
       return (struct nv50_query *)hq;
    }
 
+   hq = nv50_hw_metric_create_query(nv50, type);
+   if (hq) {
+      hq->base.funcs = &hw_query_funcs;
+      return (struct nv50_query *)hq;
+   }
+
    hq = CALLOC_STRUCT(nv50_hw_query);
    if (!hq)
       return NULL;
@@ -397,14 +404,20 @@ int
 nv50_hw_get_driver_query_info(struct nv50_screen *screen, unsigned id,
                               struct pipe_driver_query_info *info)
 {
-   int num_hw_sm_queries = 0;
+   int num_hw_sm_queries = 0, num_hw_metric_queries = 0;
 
    num_hw_sm_queries = nv50_hw_sm_get_driver_query_info(screen, 0, NULL);
+   num_hw_metric_queries =
+      nv50_hw_metric_get_driver_query_info(screen, 0, NULL);
 
    if (!info)
-      return num_hw_sm_queries;
+      return num_hw_sm_queries + num_hw_metric_queries;
 
-   return nv50_hw_sm_get_driver_query_info(screen, id, info);
+   if (id < num_hw_sm_queries)
+      return nv50_hw_sm_get_driver_query_info(screen, id, info);
+
+   return nv50_hw_metric_get_driver_query_info(screen,
+                                               id - num_hw_sm_queries, info);
 }
 
 void

@@ -77,6 +77,8 @@ NV50_C_SOURCES := \
 	nv50/nv50_query.h \
 	nv50/nv50_query_hw.c \
 	nv50/nv50_query_hw.h \
+	nv50/nv50_query_hw_metric.c \
+	nv50/nv50_query_hw_metric.h \
 	nv50/nv50_query_hw_sm.c \
 	nv50/nv50_query_hw_sm.h \
 	nv50/nv50_resource.c \
