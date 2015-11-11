@@ -31,7 +31,7 @@
 #define SI_SH_REG_OFFSET                     0x0000B000
 #define SI_SH_REG_END                        0x0000C000
 #define CIK_UCONFIG_REG_OFFSET               0x00030000
-#define CIK_UCONFIG_REG_END                  0x00031000
+#define CIK_UCONFIG_REG_END                  0x00038000
 
 #define PKT_TYPE_S(x)                   (((x) & 0x3) << 30)
 #define PKT_COUNT_S(x)                  (((x) & 0x3FFF) << 16)

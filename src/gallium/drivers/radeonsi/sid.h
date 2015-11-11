@@ -32,7 +32,7 @@
 #define SI_CONTEXT_REG_OFFSET                0x00028000
 #define SI_CONTEXT_REG_END                   0x00029000
 #define CIK_UCONFIG_REG_OFFSET               0x00030000
-#define CIK_UCONFIG_REG_END                  0x00031000
+#define CIK_UCONFIG_REG_END                  0x00038000
 
 #define EVENT_TYPE_CACHE_FLUSH                  0x6
 #define EVENT_TYPE_PS_PARTIAL_FLUSH            0x10
