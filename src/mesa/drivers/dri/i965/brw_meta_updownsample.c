@@ -45,7 +45,7 @@
  *
  * Clobbers the current renderbuffer binding (ctx->CurrentRenderbuffer).
  */
-GLuint
+struct gl_renderbuffer *
 brw_get_rb_for_slice(struct brw_context *brw,
                      struct intel_mipmap_tree *mt,
                      unsigned level, unsigned layer, bool flat)
@@ -88,7 +88,7 @@ brw_get_rb_for_slice(struct brw_context *brw,
 
    intel_miptree_reference(&irb->mt, mt);
 
-   return rbo;
+   return rb;
 }
 
 /**
@@ -100,7 +100,9 @@ brw_meta_updownsample(struct brw_context *brw,
                       struct intel_mipmap_tree *dst_mt)
 {
    struct gl_context *ctx = &brw->ctx;
-   GLuint fbos[2], src_rbo, dst_rbo, src_fbo, dst_fbo;
+   GLuint fbos[2], src_fbo, dst_fbo;
+   struct gl_renderbuffer *src_rb;
+   struct gl_renderbuffer *dst_rb;
    GLenum drawbuffer;
    GLbitfield attachment, blit_bit;
 
@@ -119,19 +121,19 @@ brw_meta_updownsample(struct brw_context *brw,
 
    _mesa_meta_begin(ctx, MESA_META_ALL);
    _mesa_GenFramebuffers(2, fbos);
-   src_rbo = brw_get_rb_for_slice(brw, src_mt, 0, 0, false);
-   dst_rbo = brw_get_rb_for_slice(brw, dst_mt, 0, 0, false);
+   src_rb = brw_get_rb_for_slice(brw, src_mt, 0, 0, false);
+   dst_rb = brw_get_rb_for_slice(brw, dst_mt, 0, 0, false);
    src_fbo = fbos[0];
    dst_fbo = fbos[1];
 
    _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, src_fbo);
    _mesa_FramebufferRenderbuffer(GL_READ_FRAMEBUFFER, attachment,
-                                 GL_RENDERBUFFER, src_rbo);
+                                 GL_RENDERBUFFER, src_rb->Name);
    _mesa_ReadBuffer(drawbuffer);
 
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_fbo);
    _mesa_FramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, attachment,
-                                 GL_RENDERBUFFER, dst_rbo);
+                                 GL_RENDERBUFFER, dst_rb->Name);
    _mesa_DrawBuffer(drawbuffer);
 
    _mesa_BlitFramebuffer(0, 0,
@@ -140,8 +142,8 @@ brw_meta_updownsample(struct brw_context *brw,
                          dst_mt->logical_width0, dst_mt->logical_height0,
                          blit_bit, GL_NEAREST);
 
-   _mesa_DeleteRenderbuffers(1, &src_rbo);
-   _mesa_DeleteRenderbuffers(1, &dst_rbo);
+   _mesa_DeleteRenderbuffers(1, &src_rb->Name);
+   _mesa_DeleteRenderbuffers(1, &dst_rb->Name);
    _mesa_DeleteFramebuffers(2, fbos);
 
    _mesa_meta_end(ctx);

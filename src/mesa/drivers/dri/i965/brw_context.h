@@ -1368,9 +1368,10 @@ GLboolean brwCreateContext(gl_api api,
 /*======================================================================
  * brw_misc_state.c
  */
-GLuint brw_get_rb_for_slice(struct brw_context *brw,
-                            struct intel_mipmap_tree *mt,
-                            unsigned level, unsigned layer, bool flat);
+struct gl_renderbuffer *brw_get_rb_for_slice(struct brw_context *brw,
+                                             struct intel_mipmap_tree *mt,
+                                             unsigned level, unsigned layer,
+                                             bool flat);
 
 void brw_meta_updownsample(struct brw_context *brw,
                            struct intel_mipmap_tree *src,
