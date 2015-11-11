@@ -127,7 +127,10 @@
 #define		COPY_DATA_SRC_SEL(x)		((x) & 0xf)
 #define			COPY_DATA_REG		0
 #define			COPY_DATA_MEM		1
+#define                 COPY_DATA_PERF          4
+#define                 COPY_DATA_IMM           5
 #define		COPY_DATA_DST_SEL(x)		(((x) & 0xf) << 8)
+#define		COPY_DATA_COUNT_SEL		(1 << 16)
 #define		COPY_DATA_WR_CONFIRM		(1 << 20)
 #define PKT3_SURFACE_SYNC                      0x43 /* deprecated on CIK, use ACQUIRE_MEM */
 #define PKT3_ME_INITIALIZE                     0x44 /* not on CIK */
