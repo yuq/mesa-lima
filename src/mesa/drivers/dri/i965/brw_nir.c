@@ -416,6 +416,33 @@ brw_create_nir(struct brw_context *brw,
    return nir;
 }
 
+nir_shader *
+brw_nir_apply_sampler_key(nir_shader *nir,
+                          const struct brw_device_info *devinfo,
+                          const struct brw_sampler_prog_key_data *key_tex,
+                          bool is_scalar)
+{
+   nir_lower_tex_options tex_options = { 0 };
+
+   /* Iron Lake and prior require lowering of all rectangle textures */
+   if (devinfo->gen < 6)
+      tex_options.lower_rect = true;
+
+   /* Prior to Broadwell, our hardware can't actually do GL_CLAMP */
+   if (devinfo->gen < 8) {
+      tex_options.saturate_s = key_tex->gl_clamp_mask[0];
+      tex_options.saturate_t = key_tex->gl_clamp_mask[1];
+      tex_options.saturate_r = key_tex->gl_clamp_mask[2];
+   }
+
+   if (nir_lower_tex(nir, &tex_options)) {
+      nir_validate_shader(nir);
+      nir = nir_optimize(nir, is_scalar);
+   }
+
+   return nir;
+}
+
 enum brw_reg_type
 brw_type_for_nir_type(nir_alu_type type)
 {

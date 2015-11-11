@@ -5439,6 +5439,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                char **error_str)
 {
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
+                                      true);
    shader = brw_postprocess_nir(shader, compiler->devinfo, true);
 
    /* key->alpha_test_func means simulating alpha testing via discards,
@@ -5599,6 +5601,8 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                char **error_str)
 {
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
+                                      true);
    shader = brw_postprocess_nir(shader, compiler->devinfo, true);
 
    prog_data->local_size[0] = shader->info.cs.local_size[0];

@@ -79,122 +79,6 @@ fs_visitor::emit_vs_system_value(int location)
    return reg;
 }
 
-fs_reg
-fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
-                             bool is_rect, uint32_t sampler)
-{
-   bool needs_gl_clamp = true;
-   fs_reg scale_x, scale_y;
-
-   /* The 965 requires the EU to do the normalization of GL rectangle
-    * texture coordinates.  We use the program parameter state
-    * tracking to get the scaling factor.
-    */
-   if (is_rect &&
-       (devinfo->gen < 6 ||
-        (devinfo->gen >= 6 && (key_tex->gl_clamp_mask[0] & (1 << sampler) ||
-                               key_tex->gl_clamp_mask[1] & (1 << sampler))))) {
-      struct gl_program_parameter_list *params = prog->Parameters;
-
-
-      /* FINISHME: We're failing to recompile our programs when the sampler is
-       * updated.  This only matters for the texture rectangle scale
-       * parameters (pre-gen6, or gen6+ with GL_CLAMP).
-       */
-      int tokens[STATE_LENGTH] = {
-	 STATE_INTERNAL,
-	 STATE_TEXRECT_SCALE,
-	 prog->SamplerUnits[sampler],
-	 0,
-	 0
-      };
-
-      no16("rectangle scale uniform setup not supported on SIMD16\n");
-      if (dispatch_width == 16) {
-	 return coordinate;
-      }
-
-      GLuint index = _mesa_add_state_reference(params,
-					       (gl_state_index *)tokens);
-      /* Try to find existing copies of the texrect scale uniforms. */
-      for (unsigned i = 0; i < uniforms; i++) {
-         if (stage_prog_data->param[i] ==
-             &prog->Parameters->ParameterValues[index][0]) {
-            scale_x = fs_reg(UNIFORM, i);
-            scale_y = fs_reg(UNIFORM, i + 1);
-            break;
-         }
-      }
-
-      /* If we didn't already set them up, do so now. */
-      if (scale_x.file == BAD_FILE) {
-         scale_x = fs_reg(UNIFORM, uniforms);
-         scale_y = fs_reg(UNIFORM, uniforms + 1);
-
-         stage_prog_data->param[uniforms++] =
-            &prog->Parameters->ParameterValues[index][0];
-         stage_prog_data->param[uniforms++] =
-            &prog->Parameters->ParameterValues[index][1];
-      }
-   }
-
-   /* The 965 requires the EU to do the normalization of GL rectangle
-    * texture coordinates.  We use the program parameter state
-    * tracking to get the scaling factor.
-    */
-   if (devinfo->gen < 6 && is_rect) {
-      fs_reg dst = fs_reg(VGRF, alloc.allocate(coord_components));
-      fs_reg src = coordinate;
-      coordinate = dst;
-
-      bld.MUL(dst, src, scale_x);
-      dst = offset(dst, bld, 1);
-      src = offset(src, bld, 1);
-      bld.MUL(dst, src, scale_y);
-   } else if (is_rect) {
-      /* On gen6+, the sampler handles the rectangle coordinates
-       * natively, without needing rescaling.  But that means we have
-       * to do GL_CLAMP clamping at the [0, width], [0, height] scale,
-       * not [0, 1] like the default case below.
-       */
-      needs_gl_clamp = false;
-
-      for (int i = 0; i < 2; i++) {
-	 if (key_tex->gl_clamp_mask[i] & (1 << sampler)) {
-	    fs_reg chan = coordinate;
-	    chan = offset(chan, bld, i);
-
-            set_condmod(BRW_CONDITIONAL_GE,
-                        bld.emit(BRW_OPCODE_SEL, chan, chan, brw_imm_f(0.0f)));
-
-	    /* Our parameter comes in as 1.0/width or 1.0/height,
-	     * because that's what people normally want for doing
-	     * texture rectangle handling.  We need width or height
-	     * for clamping, but we don't care enough to make a new
-	     * parameter type, so just invert back.
-	     */
-	    fs_reg limit = vgrf(glsl_type::float_type);
-            bld.MOV(limit, i == 0 ? scale_x : scale_y);
-            bld.emit(SHADER_OPCODE_RCP, limit, limit);
-
-            set_condmod(BRW_CONDITIONAL_L,
-                        bld.emit(BRW_OPCODE_SEL, chan, chan, limit));
-	 }
-      }
-   }
-
-   if (coord_components > 0 && needs_gl_clamp) {
-      for (int i = 0; i < MIN2(coord_components, 3); i++) {
-	 if (key_tex->gl_clamp_mask[i] & (1 << sampler)) {
-	    fs_reg chan = coordinate;
-	    chan = offset(chan, bld, i);
-            set_saturate(true, bld.MOV(chan, chan));
-	 }
-      }
-   }
-   return coordinate;
-}
-
 /* Sample from the MCS surface attached to this multisample texture. */
 fs_reg
 fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
@@ -227,7 +111,6 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                          fs_reg mcs,
                          int gather_component,
                          bool is_cube_array,
-                         bool is_rect,
                          uint32_t sampler,
                          fs_reg sampler_reg)
 {
@@ -277,14 +160,6 @@ fs_visitor::emit_texture(ir_texture_opcode op,
 
       this->result = dst;
       return;
-   }
-
-   if (coordinate.file != BAD_FILE) {
-      /* FINISHME: Texture coordinate rescaling doesn't work with non-constant
-       * samplers.  This should only be a problem with GL_CLAMP on Gen7.
-       */
-      coordinate = rescale_texcoord(coordinate, coord_components, is_rect,
-                                    sampler);
    }
 
    /* Writemasking doesn't eliminate channels on SIMD8 texture

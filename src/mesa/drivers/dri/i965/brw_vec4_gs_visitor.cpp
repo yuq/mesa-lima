@@ -618,6 +618,8 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    c.key = *key;
 
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
+                                      compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
    shader = brw_postprocess_nir(shader, compiler->devinfo,
                                 compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
 

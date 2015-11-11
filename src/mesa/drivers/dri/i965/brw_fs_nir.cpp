@@ -2654,8 +2654,6 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 
    int gather_component = instr->component;
 
-   bool is_rect = instr->sampler_dim == GLSL_SAMPLER_DIM_RECT;
-
    bool is_cube_array = instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
                         instr->is_array;
 
@@ -2795,7 +2793,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
                 tex_offset, mcs, gather_component,
-                is_cube_array, is_rect, sampler, sampler_reg);
+                is_cube_array, sampler, sampler_reg);
 
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;
