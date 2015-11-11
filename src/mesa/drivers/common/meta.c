@@ -3017,7 +3017,7 @@ decompress_texture_image(struct gl_context *ctx,
    GLenum rbFormat;
    GLenum faceTarget;
    struct vertex verts[4];
-   GLuint samplerSave;
+   struct gl_sampler_object *samp_obj_save = NULL;
    GLenum status;
    const bool use_glsl_version = ctx->Extensions.ARB_vertex_shader &&
                                       ctx->Extensions.ARB_fragment_shader;
@@ -3067,8 +3067,8 @@ decompress_texture_image(struct gl_context *ctx,
    _mesa_meta_begin(ctx, MESA_META_ALL & ~(MESA_META_PIXEL_STORE |
                                            MESA_META_DRAW_BUFFERS));
 
-   samplerSave = ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler ?
-         ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler->Name : 0;
+   _mesa_reference_sampler_object(ctx, &samp_obj_save,
+                                  ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler);
 
    /* Create/bind FBO/renderbuffer */
    if (decompress_fbo->FBO == 0) {
@@ -3223,7 +3223,8 @@ decompress_texture_image(struct gl_context *ctx,
    if (!use_glsl_version)
       _mesa_set_enable(ctx, target, GL_FALSE);
 
-   _mesa_BindSampler(ctx->Texture.CurrentUnit, samplerSave);
+   _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, samp_obj_save);
+   _mesa_reference_sampler_object(ctx, &samp_obj_save, NULL);
 
    _mesa_meta_end(ctx);
 
