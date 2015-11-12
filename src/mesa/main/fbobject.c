@@ -3413,8 +3413,27 @@ void
 _mesa_framebuffer_renderbuffer(struct gl_context *ctx,
                                struct gl_framebuffer *fb,
                                GLenum attachment,
-                               struct gl_renderbuffer *rb,
-                               const char *func)
+                               struct gl_renderbuffer *rb)
+{
+   assert(!_mesa_is_winsys_fbo(fb));
+
+   FLUSH_VERTICES(ctx, _NEW_BUFFERS);
+
+   assert(ctx->Driver.FramebufferRenderbuffer);
+   ctx->Driver.FramebufferRenderbuffer(ctx, fb, attachment, rb);
+
+   /* Some subsequent GL commands may depend on the framebuffer's visual
+    * after the binding is updated.  Update visual info now.
+    */
+   _mesa_update_framebuffer_visual(ctx, fb);
+}
+
+static void
+framebuffer_renderbuffer(struct gl_context *ctx,
+                         struct gl_framebuffer *fb,
+                         GLenum attachment,
+                         struct gl_renderbuffer *rb,
+                         const char *func)
 {
    struct gl_renderbuffer_attachment *att;
 
@@ -3444,17 +3463,8 @@ _mesa_framebuffer_renderbuffer(struct gl_context *ctx,
       }
    }
 
-   FLUSH_VERTICES(ctx, _NEW_BUFFERS);
-
-   assert(ctx->Driver.FramebufferRenderbuffer);
-   ctx->Driver.FramebufferRenderbuffer(ctx, fb, attachment, rb);
-
-   /* Some subsequent GL commands may depend on the framebuffer's visual
-    * after the binding is updated.  Update visual info now.
-    */
-   _mesa_update_framebuffer_visual(ctx, fb);
+   _mesa_framebuffer_renderbuffer(ctx, fb, attachment, rb);
 }
-
 
 void GLAPIENTRY
 _mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
@@ -3491,8 +3501,8 @@ _mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
       rb = NULL;
    }
 
-   _mesa_framebuffer_renderbuffer(ctx, fb, attachment, rb,
-                                  "glFramebufferRenderbuffer");
+   framebuffer_renderbuffer(ctx, fb, attachment, rb,
+                            "glFramebufferRenderbuffer");
 }
 
 
@@ -3528,8 +3538,8 @@ _mesa_NamedFramebufferRenderbuffer(GLuint framebuffer, GLenum attachment,
       rb = NULL;
    }
 
-   _mesa_framebuffer_renderbuffer(ctx, fb, attachment, rb,
-                                  "glNamedFramebufferRenderbuffer");
+   framebuffer_renderbuffer(ctx, fb, attachment, rb,
+                            "glNamedFramebufferRenderbuffer");
 }
 
 
