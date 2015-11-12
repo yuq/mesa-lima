@@ -6055,16 +6055,16 @@ ast_type_specifier::hir(exec_list *instructions,
  * stored in \c *fields_ret.
  */
 unsigned
-ast_process_structure_or_interface_block(exec_list *instructions,
-                                         struct _mesa_glsl_parse_state *state,
-                                         exec_list *declarations,
-                                         YYLTYPE &loc,
-                                         glsl_struct_field **fields_ret,
-                                         bool is_interface,
-                                         enum glsl_matrix_layout matrix_layout,
-                                         bool allow_reserved_names,
-                                         ir_variable_mode var_mode,
-                                         ast_type_qualifier *layout)
+ast_process_struct_or_iface_block_members(exec_list *instructions,
+                                          struct _mesa_glsl_parse_state *state,
+                                          exec_list *declarations,
+                                          YYLTYPE &loc,
+                                          glsl_struct_field **fields_ret,
+                                          bool is_interface,
+                                          enum glsl_matrix_layout matrix_layout,
+                                          bool allow_reserved_names,
+                                          ir_variable_mode var_mode,
+                                          ast_type_qualifier *layout)
 {
    unsigned decl_count = 0;
 
@@ -6329,16 +6329,16 @@ ast_struct_specifier::hir(exec_list *instructions,
 
    glsl_struct_field *fields;
    unsigned decl_count =
-      ast_process_structure_or_interface_block(instructions,
-                                               state,
-                                               &this->declarations,
-                                               loc,
-                                               &fields,
-                                               false,
-                                               GLSL_MATRIX_LAYOUT_INHERITED,
-                                               false /* allow_reserved_names */,
-                                               ir_var_auto,
-                                               NULL);
+      ast_process_struct_or_iface_block_members(instructions,
+                                                state,
+                                                &this->declarations,
+                                                loc,
+                                                &fields,
+                                                false,
+                                                GLSL_MATRIX_LAYOUT_INHERITED,
+                                                false /* allow_reserved_names */,
+                                                ir_var_auto,
+                                                NULL);
 
    validate_identifier(this->name, loc, state);
 
@@ -6493,16 +6493,16 @@ ast_interface_block::hir(exec_list *instructions,
    }
 
    unsigned int num_variables =
-      ast_process_structure_or_interface_block(&declared_variables,
-                                               state,
-                                               &this->declarations,
-                                               loc,
-                                               &fields,
-                                               true,
-                                               matrix_layout,
-                                               redeclaring_per_vertex,
-                                               var_mode,
-                                               &this->layout);
+      ast_process_struct_or_iface_block_members(&declared_variables,
+                                                state,
+                                                &this->declarations,
+                                                loc,
+                                                &fields,
+                                                true,
+                                                matrix_layout,
+                                                redeclaring_per_vertex,
+                                                var_mode,
+                                                &this->layout);
 
    state->struct_specifier_depth--;
 
