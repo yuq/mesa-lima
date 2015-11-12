@@ -2938,6 +2938,216 @@ validate_array_dimensions(const glsl_type *t,
 }
 
 static void
+apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
+                                   ir_variable *var,
+                                   struct _mesa_glsl_parse_state *state,
+                                   YYLTYPE *loc)
+{
+   if (var->name != NULL && strcmp(var->name, "gl_FragCoord") == 0) {
+
+      /* Section 4.3.8.1, page 39 of GLSL 1.50 spec says:
+       *
+       *    "Within any shader, the first redeclarations of gl_FragCoord
+       *     must appear before any use of gl_FragCoord."
+       *
+       * Generate a compiler error if above condition is not met by the
+       * fragment shader.
+       */
+      ir_variable *earlier = state->symbols->get_variable("gl_FragCoord");
+      if (earlier != NULL &&
+          earlier->data.used &&
+          !state->fs_redeclares_gl_fragcoord) {
+         _mesa_glsl_error(loc, state,
+                          "gl_FragCoord used before its first redeclaration "
+                          "in fragment shader");
+      }
+
+      /* Make sure all gl_FragCoord redeclarations specify the same layout
+       * qualifiers.
+       */
+      if (is_conflicting_fragcoord_redeclaration(state, qual)) {
+         const char *const qual_string =
+            get_layout_qualifier_string(qual->flags.q.origin_upper_left,
+                                        qual->flags.q.pixel_center_integer);
+
+         const char *const state_string =
+            get_layout_qualifier_string(state->fs_origin_upper_left,
+                                        state->fs_pixel_center_integer);
+
+         _mesa_glsl_error(loc, state,
+                          "gl_FragCoord redeclared with different layout "
+                          "qualifiers (%s) and (%s) ",
+                          state_string,
+                          qual_string);
+      }
+      state->fs_origin_upper_left = qual->flags.q.origin_upper_left;
+      state->fs_pixel_center_integer = qual->flags.q.pixel_center_integer;
+      state->fs_redeclares_gl_fragcoord_with_no_layout_qualifiers =
+         !qual->flags.q.origin_upper_left && !qual->flags.q.pixel_center_integer;
+      state->fs_redeclares_gl_fragcoord =
+         state->fs_origin_upper_left ||
+         state->fs_pixel_center_integer ||
+         state->fs_redeclares_gl_fragcoord_with_no_layout_qualifiers;
+   }
+
+   var->data.pixel_center_integer = qual->flags.q.pixel_center_integer;
+   var->data.origin_upper_left = qual->flags.q.origin_upper_left;
+   if ((qual->flags.q.origin_upper_left || qual->flags.q.pixel_center_integer)
+       && (strcmp(var->name, "gl_FragCoord") != 0)) {
+      const char *const qual_string = (qual->flags.q.origin_upper_left)
+         ? "origin_upper_left" : "pixel_center_integer";
+
+      _mesa_glsl_error(loc, state,
+		       "layout qualifier `%s' can only be applied to "
+		       "fragment shader input `gl_FragCoord'",
+		       qual_string);
+   }
+
+   if (qual->flags.q.explicit_location) {
+      validate_explicit_location(qual, var, state, loc);
+   } else if (qual->flags.q.explicit_index) {
+      _mesa_glsl_error(loc, state, "explicit index requires explicit location");
+   }
+
+   if (qual->flags.q.explicit_binding &&
+       validate_binding_qualifier(state, loc, var->type, qual)) {
+      var->data.explicit_binding = true;
+      var->data.binding = qual->binding;
+   }
+
+   if (state->stage == MESA_SHADER_GEOMETRY &&
+       qual->flags.q.out && qual->flags.q.stream) {
+      var->data.stream = qual->stream;
+   }
+
+   if (var->type->contains_atomic()) {
+      if (var->data.mode == ir_var_uniform) {
+         if (var->data.explicit_binding) {
+            unsigned *offset =
+               &state->atomic_counter_offsets[var->data.binding];
+
+            if (*offset % ATOMIC_COUNTER_SIZE)
+               _mesa_glsl_error(loc, state,
+                                "misaligned atomic counter offset");
+
+            var->data.atomic.offset = *offset;
+            *offset += var->type->atomic_size();
+
+         } else {
+            _mesa_glsl_error(loc, state,
+                             "atomic counters require explicit binding point");
+         }
+      } else if (var->data.mode != ir_var_function_in) {
+         _mesa_glsl_error(loc, state, "atomic counters may only be declared as "
+                          "function parameters or uniform-qualified "
+                          "global variables");
+      }
+   }
+
+   /* Is the 'layout' keyword used with parameters that allow relaxed checking.
+    * Many implementations of GL_ARB_fragment_coord_conventions_enable and some
+    * implementations (only Mesa?) GL_ARB_explicit_attrib_location_enable
+    * allowed the layout qualifier to be used with 'varying' and 'attribute'.
+    * These extensions and all following extensions that add the 'layout'
+    * keyword have been modified to require the use of 'in' or 'out'.
+    *
+    * The following extension do not allow the deprecated keywords:
+    *
+    *    GL_AMD_conservative_depth
+    *    GL_ARB_conservative_depth
+    *    GL_ARB_gpu_shader5
+    *    GL_ARB_separate_shader_objects
+    *    GL_ARB_tessellation_shader
+    *    GL_ARB_transform_feedback3
+    *    GL_ARB_uniform_buffer_object
+    *
+    * It is unknown whether GL_EXT_shader_image_load_store or GL_NV_gpu_shader5
+    * allow layout with the deprecated keywords.
+    */
+   const bool relaxed_layout_qualifier_checking =
+      state->ARB_fragment_coord_conventions_enable;
+
+   const bool uses_deprecated_qualifier = qual->flags.q.attribute
+      || qual->flags.q.varying;
+   if (qual->has_layout() && uses_deprecated_qualifier) {
+      if (relaxed_layout_qualifier_checking) {
+         _mesa_glsl_warning(loc, state,
+                            "`layout' qualifier may not be used with "
+                            "`attribute' or `varying'");
+      } else {
+         _mesa_glsl_error(loc, state,
+                          "`layout' qualifier may not be used with "
+                          "`attribute' or `varying'");
+      }
+   }
+
+   /* Layout qualifiers for gl_FragDepth, which are enabled by extension
+    * AMD_conservative_depth.
+    */
+   int depth_layout_count = qual->flags.q.depth_any
+      + qual->flags.q.depth_greater
+      + qual->flags.q.depth_less
+      + qual->flags.q.depth_unchanged;
+   if (depth_layout_count > 0
+       && !state->AMD_conservative_depth_enable
+       && !state->ARB_conservative_depth_enable) {
+       _mesa_glsl_error(loc, state,
+                        "extension GL_AMD_conservative_depth or "
+                        "GL_ARB_conservative_depth must be enabled "
+                        "to use depth layout qualifiers");
+   } else if (depth_layout_count > 0
+              && strcmp(var->name, "gl_FragDepth") != 0) {
+       _mesa_glsl_error(loc, state,
+                        "depth layout qualifiers can be applied only to "
+                        "gl_FragDepth");
+   } else if (depth_layout_count > 1
+              && strcmp(var->name, "gl_FragDepth") == 0) {
+      _mesa_glsl_error(loc, state,
+                       "at most one depth layout qualifier can be applied to "
+                       "gl_FragDepth");
+   }
+   if (qual->flags.q.depth_any)
+      var->data.depth_layout = ir_depth_layout_any;
+   else if (qual->flags.q.depth_greater)
+      var->data.depth_layout = ir_depth_layout_greater;
+   else if (qual->flags.q.depth_less)
+      var->data.depth_layout = ir_depth_layout_less;
+   else if (qual->flags.q.depth_unchanged)
+       var->data.depth_layout = ir_depth_layout_unchanged;
+   else
+       var->data.depth_layout = ir_depth_layout_none;
+
+   if (qual->flags.q.std140 ||
+       qual->flags.q.std430 ||
+       qual->flags.q.packed ||
+       qual->flags.q.shared) {
+      _mesa_glsl_error(loc, state,
+                       "uniform and shader storage block layout qualifiers "
+                       "std140, std430, packed, and shared can only be "
+                       "applied to uniform or shader storage blocks, not "
+                       "members");
+   }
+
+   if (qual->flags.q.row_major || qual->flags.q.column_major) {
+      validate_matrix_layout_for_type(state, loc, var->type, var);
+   }
+
+   /* From section 4.4.1.3 of the GLSL 4.50 specification (Fragment Shader
+    * Inputs):
+    *
+    *  "Fragment shaders also allow the following layout qualifier on in only
+    *   (not with variable declarations)
+    *     layout-qualifier-id
+    *        early_fragment_tests
+    *   [...]"
+    */
+   if (qual->flags.q.early_fragment_tests) {
+      _mesa_glsl_error(loc, state, "early_fragment_tests layout qualifier only "
+                       "valid in fragment shader input layout declaration.");
+   }
+}
+
+static void
 apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
                                  ir_variable *var,
                                  struct _mesa_glsl_parse_state *state,
@@ -2989,11 +3199,6 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
    if (state->es_shader) {
       var->data.precision =
          select_gles_precision(qual->precision, var->type, state, loc);
-   }
-
-   if (state->stage == MESA_SHADER_GEOMETRY &&
-       qual->flags.q.out && qual->flags.q.stream) {
-      var->data.stream = qual->stream;
    }
 
    if (qual->flags.q.patch)
@@ -3135,102 +3340,6 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
       interpret_interpolation_qualifier(qual, (ir_variable_mode) var->data.mode,
                                         state, loc);
 
-   var->data.pixel_center_integer = qual->flags.q.pixel_center_integer;
-   var->data.origin_upper_left = qual->flags.q.origin_upper_left;
-   if ((qual->flags.q.origin_upper_left || qual->flags.q.pixel_center_integer)
-       && (strcmp(var->name, "gl_FragCoord") != 0)) {
-      const char *const qual_string = (qual->flags.q.origin_upper_left)
-         ? "origin_upper_left" : "pixel_center_integer";
-
-      _mesa_glsl_error(loc, state,
-		       "layout qualifier `%s' can only be applied to "
-		       "fragment shader input `gl_FragCoord'",
-		       qual_string);
-   }
-
-   if (var->name != NULL && strcmp(var->name, "gl_FragCoord") == 0) {
-
-      /* Section 4.3.8.1, page 39 of GLSL 1.50 spec says:
-       *
-       *    "Within any shader, the first redeclarations of gl_FragCoord
-       *     must appear before any use of gl_FragCoord."
-       *
-       * Generate a compiler error if above condition is not met by the
-       * fragment shader.
-       */
-      ir_variable *earlier = state->symbols->get_variable("gl_FragCoord");
-      if (earlier != NULL &&
-          earlier->data.used &&
-          !state->fs_redeclares_gl_fragcoord) {
-         _mesa_glsl_error(loc, state,
-                          "gl_FragCoord used before its first redeclaration "
-                          "in fragment shader");
-      }
-
-      /* Make sure all gl_FragCoord redeclarations specify the same layout
-       * qualifiers.
-       */
-      if (is_conflicting_fragcoord_redeclaration(state, qual)) {
-         const char *const qual_string =
-            get_layout_qualifier_string(qual->flags.q.origin_upper_left,
-                                        qual->flags.q.pixel_center_integer);
-
-         const char *const state_string =
-            get_layout_qualifier_string(state->fs_origin_upper_left,
-                                        state->fs_pixel_center_integer);
-
-         _mesa_glsl_error(loc, state,
-                          "gl_FragCoord redeclared with different layout "
-                          "qualifiers (%s) and (%s) ",
-                          state_string,
-                          qual_string);
-      }
-      state->fs_origin_upper_left = qual->flags.q.origin_upper_left;
-      state->fs_pixel_center_integer = qual->flags.q.pixel_center_integer;
-      state->fs_redeclares_gl_fragcoord_with_no_layout_qualifiers =
-         !qual->flags.q.origin_upper_left && !qual->flags.q.pixel_center_integer;
-      state->fs_redeclares_gl_fragcoord =
-         state->fs_origin_upper_left ||
-         state->fs_pixel_center_integer ||
-         state->fs_redeclares_gl_fragcoord_with_no_layout_qualifiers;
-   }
-
-   if (qual->flags.q.explicit_location) {
-      validate_explicit_location(qual, var, state, loc);
-   } else if (qual->flags.q.explicit_index) {
-      _mesa_glsl_error(loc, state, "explicit index requires explicit location");
-   }
-
-   if (qual->flags.q.explicit_binding &&
-       validate_binding_qualifier(state, loc, var->type, qual)) {
-      var->data.explicit_binding = true;
-      var->data.binding = qual->binding;
-   }
-
-   if (var->type->contains_atomic()) {
-      if (var->data.mode == ir_var_uniform) {
-         if (var->data.explicit_binding) {
-            unsigned *offset =
-               &state->atomic_counter_offsets[var->data.binding];
-
-            if (*offset % ATOMIC_COUNTER_SIZE)
-               _mesa_glsl_error(loc, state,
-                                "misaligned atomic counter offset");
-
-            var->data.atomic.offset = *offset;
-            *offset += var->type->atomic_size();
-
-         } else {
-            _mesa_glsl_error(loc, state,
-                             "atomic counters require explicit binding point");
-         }
-      } else if (var->data.mode != ir_var_function_in) {
-         _mesa_glsl_error(loc, state, "atomic counters may only be declared as "
-                          "function parameters or uniform-qualified "
-                          "global variables");
-      }
-   }
-
    /* Does the declaration use the deprecated 'attribute' or 'varying'
     * keywords?
     */
@@ -3266,114 +3375,13 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
                        "`out' or `varying' variables between shader stages");
    }
 
-
-   /* Is the 'layout' keyword used with parameters that allow relaxed checking.
-    * Many implementations of GL_ARB_fragment_coord_conventions_enable and some
-    * implementations (only Mesa?) GL_ARB_explicit_attrib_location_enable
-    * allowed the layout qualifier to be used with 'varying' and 'attribute'.
-    * These extensions and all following extensions that add the 'layout'
-    * keyword have been modified to require the use of 'in' or 'out'.
-    *
-    * The following extension do not allow the deprecated keywords:
-    *
-    *    GL_AMD_conservative_depth
-    *    GL_ARB_conservative_depth
-    *    GL_ARB_gpu_shader5
-    *    GL_ARB_separate_shader_objects
-    *    GL_ARB_tessellation_shader
-    *    GL_ARB_transform_feedback3
-    *    GL_ARB_uniform_buffer_object
-    *
-    * It is unknown whether GL_EXT_shader_image_load_store or GL_NV_gpu_shader5
-    * allow layout with the deprecated keywords.
-    */
-   const bool relaxed_layout_qualifier_checking =
-      state->ARB_fragment_coord_conventions_enable;
-
-   if (qual->has_layout() && uses_deprecated_qualifier) {
-      if (relaxed_layout_qualifier_checking) {
-         _mesa_glsl_warning(loc, state,
-                            "`layout' qualifier may not be used with "
-                            "`attribute' or `varying'");
-      } else {
-         _mesa_glsl_error(loc, state,
-                          "`layout' qualifier may not be used with "
-                          "`attribute' or `varying'");
-      }
-   }
-
-   /* Layout qualifiers for gl_FragDepth, which are enabled by extension
-    * AMD_conservative_depth.
-    */
-   int depth_layout_count = qual->flags.q.depth_any
-      + qual->flags.q.depth_greater
-      + qual->flags.q.depth_less
-      + qual->flags.q.depth_unchanged;
-   if (depth_layout_count > 0
-       && !state->AMD_conservative_depth_enable
-       && !state->ARB_conservative_depth_enable) {
-       _mesa_glsl_error(loc, state,
-                        "extension GL_AMD_conservative_depth or "
-                        "GL_ARB_conservative_depth must be enabled "
-                        "to use depth layout qualifiers");
-   } else if (depth_layout_count > 0
-              && strcmp(var->name, "gl_FragDepth") != 0) {
-       _mesa_glsl_error(loc, state,
-                        "depth layout qualifiers can be applied only to "
-                        "gl_FragDepth");
-   } else if (depth_layout_count > 1
-              && strcmp(var->name, "gl_FragDepth") == 0) {
-      _mesa_glsl_error(loc, state,
-                       "at most one depth layout qualifier can be applied to "
-                       "gl_FragDepth");
-   }
-   if (qual->flags.q.depth_any)
-      var->data.depth_layout = ir_depth_layout_any;
-   else if (qual->flags.q.depth_greater)
-      var->data.depth_layout = ir_depth_layout_greater;
-   else if (qual->flags.q.depth_less)
-      var->data.depth_layout = ir_depth_layout_less;
-   else if (qual->flags.q.depth_unchanged)
-       var->data.depth_layout = ir_depth_layout_unchanged;
-   else
-       var->data.depth_layout = ir_depth_layout_none;
-
-   if (qual->flags.q.std140 ||
-       qual->flags.q.std430 ||
-       qual->flags.q.packed ||
-       qual->flags.q.shared) {
-      _mesa_glsl_error(loc, state,
-                       "uniform and shader storage block layout qualifiers "
-                       "std140, std430, packed, and shared can only be "
-                       "applied to uniform or shader storage blocks, not "
-                       "members");
-   }
-
    if (qual->flags.q.shared_storage && state->stage != MESA_SHADER_COMPUTE) {
       _mesa_glsl_error(loc, state,
                        "the shared storage qualifiers can only be used with "
                        "compute shaders");
    }
 
-   if (qual->flags.q.row_major || qual->flags.q.column_major) {
-      validate_matrix_layout_for_type(state, loc, var->type, var);
-   }
-
    apply_image_qualifier_to_variable(qual, var, state, loc);
-
-   /* From section 4.4.1.3 of the GLSL 4.50 specification (Fragment Shader
-    * Inputs):
-    *
-    *  "Fragment shaders also allow the following layout qualifier on in only
-    *   (not with variable declarations)
-    *     layout-qualifier-id
-    *        early_fragment_tests
-    *   [...]"
-    */
-   if (qual->flags.q.early_fragment_tests) {
-      _mesa_glsl_error(loc, state, "early_fragment_tests layout qualifier only "
-                       "valid in fragment shader input layout declaration.");
-   }
 }
 
 /**
@@ -4187,6 +4195,8 @@ ast_declarator_list::hir(exec_list *instructions,
 
       apply_type_qualifier_to_variable(& this->type->qualifier, var, state,
 				       & loc, false);
+      apply_layout_qualifier_to_variable(&this->type->qualifier, var, state,
+                                         &loc);
 
       if (this->type->qualifier.flags.q.invariant) {
          if (!is_varying_var(var, state->stage)) {
