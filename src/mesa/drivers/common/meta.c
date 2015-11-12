@@ -61,6 +61,7 @@
 #include "main/polygon.h"
 #include "main/queryobj.h"
 #include "main/readpix.h"
+#include "main/renderbuffer.h"
 #include "main/scissor.h"
 #include "main/shaderapi.h"
 #include "main/shaderobj.h"
@@ -2962,7 +2963,7 @@ meta_decompress_fbo_cleanup(struct decompress_fbo_state *decompress_fbo)
 {
    if (decompress_fbo->FBO != 0) {
       _mesa_DeleteFramebuffers(1, &decompress_fbo->FBO);
-      _mesa_DeleteRenderbuffers(1, &decompress_fbo->rb->Name);
+      _mesa_reference_renderbuffer(&decompress_fbo->rb, NULL);
    }
 
    memset(decompress_fbo, 0, sizeof(*decompress_fbo));
@@ -3065,12 +3066,13 @@ decompress_texture_image(struct gl_context *ctx,
 
    /* Create/bind FBO/renderbuffer */
    if (decompress_fbo->FBO == 0) {
-      GLuint RBO;
+      decompress_fbo->rb = ctx->Driver.NewRenderbuffer(ctx, 0xDEADBEEF);
+      if (decompress_fbo->rb == NULL) {
+         _mesa_meta_end(ctx);
+         return false;
+      }
 
-      _mesa_CreateRenderbuffers(1, &RBO);
-
-      decompress_fbo->rb = _mesa_lookup_renderbuffer(ctx, RBO);
-      assert(decompress_fbo->rb != NULL && decompress_fbo->rb->Name == RBO);
+      decompress_fbo->rb->RefCount = 1;
 
       _mesa_GenFramebuffers(1, &decompress_fbo->FBO);
       _mesa_BindFramebuffer(GL_FRAMEBUFFER_EXT, decompress_fbo->FBO);
