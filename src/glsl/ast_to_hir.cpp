@@ -6068,14 +6068,6 @@ ast_process_structure_or_interface_block(exec_list *instructions,
 {
    unsigned decl_count = 0;
 
-   /* For blocks that accept memory qualifiers (i.e. shader storage), verify
-    * that we don't have incompatible qualifiers
-    */
-   if (layout && layout->flags.q.read_only && layout->flags.q.write_only) {
-      _mesa_glsl_error(&loc, state,
-                       "Interface block sets both readonly and writeonly");
-   }
-
    /* Make an initial pass over the list of fields to determine how
     * many there are.  Each element in this list is an ast_declarator_list.
     * This means that we actually need to count the number of elements in the
@@ -6491,6 +6483,14 @@ ast_interface_block::hir(exec_list *instructions,
     * specifiers will be disallowed.
     */
    state->struct_specifier_depth++;
+
+   /* For blocks that accept memory qualifiers (i.e. shader storage), verify
+    * that we don't have incompatible qualifiers
+    */
+   if (this->layout.flags.q.read_only && this->layout.flags.q.write_only) {
+      _mesa_glsl_error(&loc, state,
+                       "Interface block sets both readonly and writeonly");
+   }
 
    unsigned int num_variables =
       ast_process_structure_or_interface_block(&declared_variables,
