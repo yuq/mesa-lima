@@ -6058,7 +6058,6 @@ unsigned
 ast_process_struct_or_iface_block_members(exec_list *instructions,
                                           struct _mesa_glsl_parse_state *state,
                                           exec_list *declarations,
-                                          YYLTYPE &loc,
                                           glsl_struct_field **fields_ret,
                                           bool is_interface,
                                           enum glsl_matrix_layout matrix_layout,
@@ -6088,6 +6087,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
    unsigned i = 0;
    foreach_list_typed (ast_declarator_list, decl_list, link, declarations) {
       const char *type_name;
+      YYLTYPE loc = decl_list->get_location();
 
       decl_list->type->specifier->hir(instructions, state);
 
@@ -6117,7 +6117,6 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
       assert(decl_type);
 
       if (is_interface && decl_type->contains_opaque()) {
-         YYLTYPE loc = decl_list->get_location();
          _mesa_glsl_error(&loc, state,
                           "uniform/buffer in non-default interface block contains "
                           "opaque variable");
@@ -6129,7 +6128,6 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
           *    "Members of structures cannot be declared as atomic counter
           *     types."
           */
-         YYLTYPE loc = decl_list->get_location();
          _mesa_glsl_error(&loc, state, "atomic counter in structure, "
                           "shader storage block or uniform block");
       }
@@ -6139,7 +6137,6 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
           * FINISHME: Request clarification from Khronos and add
           * FINISHME: spec quotation here.
           */
-         YYLTYPE loc = decl_list->get_location();
          _mesa_glsl_error(&loc, state,
                           "image in structure, shader storage block or "
                           "uniform block");
@@ -6160,7 +6157,6 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
       }
 
       if (qual->flags.q.constant) {
-         YYLTYPE loc = decl_list->get_location();
          _mesa_glsl_error(&loc, state,
                           "const storage qualifier cannot be applied "
                           "to struct or interface block members");
@@ -6208,6 +6204,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
 
       foreach_list_typed (ast_declaration, decl, link,
                           &decl_list->declarations) {
+         YYLTYPE loc = decl->get_location();
+
          if (!allow_reserved_names)
             validate_identifier(decl->identifier, loc, state);
 
@@ -6330,7 +6328,6 @@ ast_struct_specifier::hir(exec_list *instructions,
       ast_process_struct_or_iface_block_members(instructions,
                                                 state,
                                                 &this->declarations,
-                                                loc,
                                                 &fields,
                                                 false,
                                                 GLSL_MATRIX_LAYOUT_INHERITED,
@@ -6494,7 +6491,6 @@ ast_interface_block::hir(exec_list *instructions,
       ast_process_struct_or_iface_block_members(&declared_variables,
                                                 state,
                                                 &this->declarations,
-                                                loc,
                                                 &fields,
                                                 true,
                                                 matrix_layout,
