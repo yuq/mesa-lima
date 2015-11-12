@@ -90,6 +90,7 @@ struct backend_reg : private brw_reg
    using brw_reg::width;
    using brw_reg::hstride;
 
+   using brw_reg::df;
    using brw_reg::f;
    using brw_reg::d;
    using brw_reg::ud;

@@ -254,6 +254,7 @@ struct brw_reg {
          unsigned pad1:1;
       };
 
+      double df;
       float f;
       int   d;
       unsigned ud;
@@ -543,6 +544,14 @@ brw_imm_reg(enum brw_reg_type type)
 }
 
 /** Construct float immediate register */
+static inline struct brw_reg
+brw_imm_df(double df)
+{
+   struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_DF);
+   imm.df = df;
+   return imm;
+}
+
 static inline struct brw_reg
 brw_imm_f(float f)
 {
