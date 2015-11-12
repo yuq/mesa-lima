@@ -22,6 +22,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "r600_query.h"
 #include "r600_cs.h"
 #include "util/u_memory.h"
 

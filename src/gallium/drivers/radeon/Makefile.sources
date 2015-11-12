@@ -7,6 +7,7 @@ C_SOURCES := \
 	r600_pipe_common.c \
 	r600_pipe_common.h \
 	r600_query.c \
+	r600_query.h \
 	r600_streamout.c \
 	r600_texture.c \
 	radeon_uvd.c \
