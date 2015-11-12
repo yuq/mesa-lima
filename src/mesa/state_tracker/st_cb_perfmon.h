@@ -44,6 +44,20 @@ struct st_perf_counter_object
 };
 
 /**
+ * Extra data per counter, supplementing gl_perf_monitor_counter with
+ * driver-specific information.
+ */
+struct st_perf_monitor_counter
+{
+   unsigned query_type;
+};
+
+struct st_perf_monitor_group
+{
+   struct st_perf_monitor_counter *counters;
+};
+
+/**
  * Cast wrapper
  */
 static inline struct st_perf_monitor_object *
