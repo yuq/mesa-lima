@@ -1043,6 +1043,31 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
    }
 }
 
+/* Returns true if this texture operation queries something about the texture
+ * rather than actually sampling it.
+ */
+static inline bool
+nir_tex_instr_is_query(nir_tex_instr *instr)
+{
+   switch (instr->op) {
+   case nir_texop_txs:
+   case nir_texop_lod:
+   case nir_texop_texture_samples:
+   case nir_texop_query_levels:
+      return true;
+   case nir_texop_tex:
+   case nir_texop_txb:
+   case nir_texop_txl:
+   case nir_texop_txd:
+   case nir_texop_txf:
+   case nir_texop_txf_ms:
+   case nir_texop_tg4:
+      return false;
+   default:
+      unreachable("Invalid texture opcode");
+   }
+}
+
 static inline unsigned
 nir_tex_instr_src_size(nir_tex_instr *instr, unsigned src)
 {
