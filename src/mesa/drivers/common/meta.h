@@ -380,7 +380,8 @@ struct gen_mipmap_state
  */
 struct decompress_fbo_state
 {
-   GLuint FBO, RBO;
+   struct gl_renderbuffer *rb;
+   GLuint FBO;
    GLint Width, Height;
 };
 

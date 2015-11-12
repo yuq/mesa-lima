@@ -2962,7 +2962,7 @@ meta_decompress_fbo_cleanup(struct decompress_fbo_state *decompress_fbo)
 {
    if (decompress_fbo->FBO != 0) {
       _mesa_DeleteFramebuffers(1, &decompress_fbo->FBO);
-      _mesa_DeleteRenderbuffers(1, &decompress_fbo->RBO);
+      _mesa_DeleteRenderbuffers(1, &decompress_fbo->rb->Name);
    }
 
    memset(decompress_fbo, 0, sizeof(*decompress_fbo));
@@ -3065,14 +3065,19 @@ decompress_texture_image(struct gl_context *ctx,
 
    /* Create/bind FBO/renderbuffer */
    if (decompress_fbo->FBO == 0) {
-      _mesa_CreateRenderbuffers(1, &decompress_fbo->RBO);
+      GLuint RBO;
+
+      _mesa_CreateRenderbuffers(1, &RBO);
+
+      decompress_fbo->rb = _mesa_lookup_renderbuffer(ctx, RBO);
+      assert(decompress_fbo->rb != NULL && decompress_fbo->rb->Name == RBO);
 
       _mesa_GenFramebuffers(1, &decompress_fbo->FBO);
       _mesa_BindFramebuffer(GL_FRAMEBUFFER_EXT, decompress_fbo->FBO);
       _mesa_FramebufferRenderbuffer(GL_FRAMEBUFFER_EXT,
                                        GL_COLOR_ATTACHMENT0_EXT,
                                        GL_RENDERBUFFER_EXT,
-                                       decompress_fbo->RBO);
+                                       decompress_fbo->rb->Name);
    }
    else {
       _mesa_BindFramebuffer(GL_FRAMEBUFFER_EXT, decompress_fbo->FBO);
@@ -3080,7 +3085,7 @@ decompress_texture_image(struct gl_context *ctx,
 
    /* alloc dest surface */
    if (width > decompress_fbo->Width || height > decompress_fbo->Height) {
-      _mesa_NamedRenderbufferStorage(decompress_fbo->RBO, rbFormat,
+      _mesa_NamedRenderbufferStorage(decompress_fbo->rb->Name, rbFormat,
                                      width, height);
       status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
       if (status != GL_FRAMEBUFFER_COMPLETE) {
