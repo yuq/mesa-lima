@@ -5,3 +5,4 @@
 /wayland-drm-protocol.c
 /wayland-drm-client-protocol.h
 /anv_icd.json
+/isl_format_layout.c

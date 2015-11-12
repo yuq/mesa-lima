@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -264,6 +266,74 @@ enum isl_format {
    /* Hardware doesn't understand this out-of-band value */
    ISL_FORMAT_UNSUPPORTED =                             UINT16_MAX,
 };
+
+enum isl_base_type {
+   ISL_VOID,
+   ISL_RAW,
+   ISL_UNORM,
+   ISL_SNORM,
+   ISL_UFLOAT,
+   ISL_SFLOAT,
+   ISL_UFIXED,
+   ISL_SFIXED,
+   ISL_UINT,
+   ISL_SINT,
+   ISL_USCALED,
+   ISL_SSCALED,
+};
+
+enum isl_colorspace {
+   ISL_COLORSPACE_NONE = 0,
+   ISL_COLORSPACE_LINEAR,
+   ISL_COLORSPACE_SRGB,
+   ISL_COLORSPACE_YUV,
+};
+
+/**
+ * Texture compression mode
+ */
+enum isl_txc {
+   ISL_TXC_NONE = 0,
+   ISL_TXC_DXT1,
+   ISL_TXC_DXT3,
+   ISL_TXC_DXT5,
+   ISL_TXC_FXT1,
+   ISL_TXC_RGTC1,
+   ISL_TXC_RGTC2,
+   ISL_TXC_BPTC,
+   ISL_TXC_ETC1,
+   ISL_TXC_ETC2,
+};
+
+struct isl_channel_layout {
+   enum isl_base_type type;
+   uint8_t bits; /**< Size in bits */
+};
+
+struct isl_format_layout {
+   enum isl_format format;
+
+   uint16_t bpb; /**< Bits per block */
+   uint8_t bs; /**< Block size, in bytes, rounded towards 0 */
+   uint8_t bw; /**< Block width, in pixels */
+   uint8_t bh; /**< Block height, in pixels */
+   uint8_t bd; /**< Block depth, in pixels */
+
+   struct {
+      struct isl_channel_layout r; /**< Red channel */
+      struct isl_channel_layout g; /**< Green channel */
+      struct isl_channel_layout b; /**< Blue channel */
+      struct isl_channel_layout a; /**< Alpha channel */
+      struct isl_channel_layout l; /**< Luminance channel */
+      struct isl_channel_layout i; /**< Intensity channel */
+      struct isl_channel_layout p; /**< Palette channel */
+   } channels;
+
+   enum isl_colorspace colorspace;
+   enum isl_txc txc;
+};
+
+extern const struct isl_format_layout isl_format_layouts[];
 
 #ifdef __cplusplus
 }

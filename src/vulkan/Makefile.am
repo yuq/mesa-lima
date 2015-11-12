@@ -83,11 +83,13 @@ VULKAN_SOURCES =                                        \
 	gen8_pipeline.c					\
 	gen7_state.c					\
 	gen7_cmd_buffer.c				\
-	gen7_pipeline.c
+	gen7_pipeline.c                                 \
+	isl_format_layout.c
 
 BUILT_SOURCES =                                         \
 	anv_entrypoints.h                               \
-	anv_entrypoints.c
+	anv_entrypoints.c                               \
+	isl_format_layout.c
 
 if HAVE_EGL_PLATFORM_WAYLAND
 BUILT_SOURCES += \
@@ -116,6 +118,11 @@ anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 
 anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< code > $@
+
+isl_format_layout.c: isl_format_layout_gen.bash \
+                     isl_format_layout.csv
+	$(AM_V_GEN)$(srcdir)/isl_format_layout_gen.bash \
+	    <$(srcdir)/isl_format_layout.csv >$@
 
 CLEANFILES = $(BUILT_SOURCES)
 
