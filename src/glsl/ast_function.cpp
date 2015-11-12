@@ -368,8 +368,8 @@ fix_parameter(void *mem_ctx, ir_rvalue *actual, const glsl_type *formal_type,
 
    ir_rvalue *lhs = actual;
    if (expr != NULL && expr->operation == ir_binop_vector_extract) {
-      lhs == new(mem_ctx) ir_dereference_array(expr->operands[0]->clone(mem_ctx, NULL),
-                                               expr->operands[1]->clone(mem_ctx, NULL));
+      lhs = new(mem_ctx) ir_dereference_array(expr->operands[0]->clone(mem_ctx, NULL),
+                                              expr->operands[1]->clone(mem_ctx, NULL));
    }
 
    ir_assignment *const assignment_2 = new(mem_ctx) ir_assignment(lhs, rhs);
