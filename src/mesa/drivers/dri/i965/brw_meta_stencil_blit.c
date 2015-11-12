@@ -442,8 +442,8 @@ brw_meta_stencil_blit(struct brw_context *brw,
    adjust_tiling(&dims, dst_mt->num_samples);
 
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
-   _mesa_FramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                 GL_RENDERBUFFER, rb->Name);
+   _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, GL_COLOR_ATTACHMENT0,
+                                  rb);
    _mesa_DrawBuffer(GL_COLOR_ATTACHMENT0);
    ctx->DrawBuffer->_Status = GL_FRAMEBUFFER_COMPLETE;
 
@@ -546,8 +546,8 @@ brw_meta_stencil_updownsample(struct brw_context *brw,
    rb = brw_get_rb_for_slice(brw, src, 0, 0, false);
 
    _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
-   _mesa_FramebufferRenderbuffer(GL_READ_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
-                                 GL_RENDERBUFFER, rb->Name);
+   _mesa_framebuffer_renderbuffer(ctx, ctx->ReadBuffer, GL_STENCIL_ATTACHMENT,
+                                  rb);
 
    brw_meta_stencil_blit(brw, dst, 0, 0, &dims);
    brw_emit_mi_flush(brw);

@@ -127,13 +127,11 @@ brw_meta_updownsample(struct brw_context *brw,
    dst_fbo = fbos[1];
 
    _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, src_fbo);
-   _mesa_FramebufferRenderbuffer(GL_READ_FRAMEBUFFER, attachment,
-                                 GL_RENDERBUFFER, src_rb->Name);
+   _mesa_framebuffer_renderbuffer(ctx, ctx->ReadBuffer, attachment, src_rb);
    _mesa_ReadBuffer(drawbuffer);
 
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_fbo);
-   _mesa_FramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, attachment,
-                                 GL_RENDERBUFFER, dst_rb->Name);
+   _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, attachment, dst_rb);
    _mesa_DrawBuffer(drawbuffer);
 
    _mesa_BlitFramebuffer(0, 0,
