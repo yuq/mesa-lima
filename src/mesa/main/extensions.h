@@ -75,7 +75,9 @@ struct mesa_extension {
    /** Year the extension was proposed or approved.  Used to sort the 
     * extension string chronologically. */
    uint16_t year;
-} extern const _mesa_extension_table[];
+};
+
+extern const struct mesa_extension _mesa_extension_table[];
 
 
 /* Generate enums for the functions below */
