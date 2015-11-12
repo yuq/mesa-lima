@@ -672,7 +672,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMicroTiled(
     if (flags.czDispCompatible)
     {
         *pBaseAlign  = PowTwoAlign(*pBaseAlign, 4096);                         //Base address MOD 4096 = 0
-        *pPitchAlign = PowTwoAlign(*pPitchAlign, 512 >> (BITS_TO_BYTES(bpp))); //(8 lines * pitch * bytes per pixel) MOD 4096 = 0
+        *pPitchAlign = PowTwoAlign(*pPitchAlign, 512 / (BITS_TO_BYTES(bpp))); //(8 lines * pitch * bytes per pixel) MOD 4096 = 0
     }
     // end Carrizo workaround for 1D tilling
 
