@@ -303,11 +303,18 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 				       struct r600_query_hw *query,
 				       struct r600_resource *buffer,
 				       uint64_t va);
+static void r600_query_hw_add_result(struct r600_common_context *ctx,
+				     struct r600_query_hw *, void *buffer,
+				     union pipe_query_result *result);
+static void r600_query_hw_clear_result(struct r600_query_hw *,
+				       union pipe_query_result *);
 
 static struct r600_query_hw_ops query_hw_default_hw_ops = {
 	.prepare_buffer = r600_query_hw_prepare_buffer,
 	.emit_start = r600_query_hw_do_emit_start,
 	.emit_stop = r600_query_hw_do_emit_stop,
+	.clear_result = r600_query_hw_clear_result,
+	.add_result = r600_query_hw_add_result,
 };
 
 static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
@@ -696,7 +703,7 @@ static void r600_query_hw_end(struct r600_common_context *rctx,
 		LIST_DELINIT(&query->list);
 }
 
-static unsigned r600_query_read_result(char *map, unsigned start_index, unsigned end_index,
+static unsigned r600_query_read_result(void *map, unsigned start_index, unsigned end_index,
 				       bool test_status_bit)
 {
 	uint32_t *current_result = (uint32_t*)map;
@@ -714,47 +721,36 @@ static unsigned r600_query_read_result(char *map, unsigned start_index, unsigned
 	return 0;
 }
 
-static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
-					    struct r600_query_hw *query,
-					    struct r600_query_buffer *qbuf,
-					    boolean wait,
-					    union pipe_query_result *result)
+static void r600_query_hw_add_result(struct r600_common_context *ctx,
+				     struct r600_query_hw *query,
+				     void *buffer,
+				     union pipe_query_result *result)
 {
-	unsigned results_base = 0;
-	char *map;
-
-	map = r600_buffer_map_sync_with_rings(ctx, qbuf->buf,
-						PIPE_TRANSFER_READ |
-						(wait ? 0 : PIPE_TRANSFER_DONTBLOCK));
-	if (!map)
-		return FALSE;
-
-	/* count all results across all data blocks */
 	switch (query->b.type) {
-	case PIPE_QUERY_OCCLUSION_COUNTER:
-		while (results_base != qbuf->results_end) {
+	case PIPE_QUERY_OCCLUSION_COUNTER: {
+		unsigned results_base = 0;
+		while (results_base != query->result_size) {
 			result->u64 +=
-				r600_query_read_result(map + results_base, 0, 2, true);
+				r600_query_read_result(buffer + results_base, 0, 2, true);
 			results_base += 16;
 		}
 		break;
-	case PIPE_QUERY_OCCLUSION_PREDICATE:
-		while (results_base != qbuf->results_end) {
+	}
+	case PIPE_QUERY_OCCLUSION_PREDICATE: {
+		unsigned results_base = 0;
+		while (results_base != query->result_size) {
 			result->b = result->b ||
-				r600_query_read_result(map + results_base, 0, 2, true) != 0;
+				r600_query_read_result(buffer + results_base, 0, 2, true) != 0;
 			results_base += 16;
 		}
 		break;
+	}
 	case PIPE_QUERY_TIME_ELAPSED:
-		while (results_base != qbuf->results_end) {
-			result->u64 +=
-				r600_query_read_result(map + results_base, 0, 2, false);
-			results_base += query->result_size;
-		}
+		result->u64 += r600_query_read_result(buffer, 0, 2, false);
 		break;
 	case PIPE_QUERY_TIMESTAMP:
 	{
-		uint32_t *current_result = (uint32_t*)map;
+		uint32_t *current_result = (uint32_t*)buffer;
 		result->u64 = (uint64_t)current_result[0] |
 			      (uint64_t)current_result[1] << 32;
 		break;
@@ -766,84 +762,64 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 		 *    u64 PrimitiveStorageNeeded;
 		 * }
 		 * We only need NumPrimitivesWritten here. */
-		while (results_base != qbuf->results_end) {
-			result->u64 +=
-				r600_query_read_result(map + results_base, 2, 6, true);
-			results_base += query->result_size;
-		}
+		result->u64 += r600_query_read_result(buffer, 2, 6, true);
 		break;
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
 		/* Here we read PrimitiveStorageNeeded. */
-		while (results_base != qbuf->results_end) {
-			result->u64 +=
-				r600_query_read_result(map + results_base, 0, 4, true);
-			results_base += query->result_size;
-		}
+		result->u64 += r600_query_read_result(buffer, 0, 4, true);
 		break;
 	case PIPE_QUERY_SO_STATISTICS:
-		while (results_base != qbuf->results_end) {
-			result->so_statistics.num_primitives_written +=
-				r600_query_read_result(map + results_base, 2, 6, true);
-			result->so_statistics.primitives_storage_needed +=
-				r600_query_read_result(map + results_base, 0, 4, true);
-			results_base += query->result_size;
-		}
+		result->so_statistics.num_primitives_written +=
+			r600_query_read_result(buffer, 2, 6, true);
+		result->so_statistics.primitives_storage_needed +=
+			r600_query_read_result(buffer, 0, 4, true);
 		break;
 	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
-		while (results_base != qbuf->results_end) {
-			result->b = result->b ||
-				r600_query_read_result(map + results_base, 2, 6, true) !=
-				r600_query_read_result(map + results_base, 0, 4, true);
-			results_base += query->result_size;
-		}
+		result->b = result->b ||
+			r600_query_read_result(buffer, 2, 6, true) !=
+			r600_query_read_result(buffer, 0, 4, true);
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		if (ctx->chip_class >= EVERGREEN) {
-			while (results_base != qbuf->results_end) {
-				result->pipeline_statistics.ps_invocations +=
-					r600_query_read_result(map + results_base, 0, 22, false);
-				result->pipeline_statistics.c_primitives +=
-					r600_query_read_result(map + results_base, 2, 24, false);
-				result->pipeline_statistics.c_invocations +=
-					r600_query_read_result(map + results_base, 4, 26, false);
-				result->pipeline_statistics.vs_invocations +=
-					r600_query_read_result(map + results_base, 6, 28, false);
-				result->pipeline_statistics.gs_invocations +=
-					r600_query_read_result(map + results_base, 8, 30, false);
-				result->pipeline_statistics.gs_primitives +=
-					r600_query_read_result(map + results_base, 10, 32, false);
-				result->pipeline_statistics.ia_primitives +=
-					r600_query_read_result(map + results_base, 12, 34, false);
-				result->pipeline_statistics.ia_vertices +=
-					r600_query_read_result(map + results_base, 14, 36, false);
-				result->pipeline_statistics.hs_invocations +=
-					r600_query_read_result(map + results_base, 16, 38, false);
-				result->pipeline_statistics.ds_invocations +=
-					r600_query_read_result(map + results_base, 18, 40, false);
-				result->pipeline_statistics.cs_invocations +=
-					r600_query_read_result(map + results_base, 20, 42, false);
-				results_base += query->result_size;
-			}
+			result->pipeline_statistics.ps_invocations +=
+				r600_query_read_result(buffer, 0, 22, false);
+			result->pipeline_statistics.c_primitives +=
+				r600_query_read_result(buffer, 2, 24, false);
+			result->pipeline_statistics.c_invocations +=
+				r600_query_read_result(buffer, 4, 26, false);
+			result->pipeline_statistics.vs_invocations +=
+				r600_query_read_result(buffer, 6, 28, false);
+			result->pipeline_statistics.gs_invocations +=
+				r600_query_read_result(buffer, 8, 30, false);
+			result->pipeline_statistics.gs_primitives +=
+				r600_query_read_result(buffer, 10, 32, false);
+			result->pipeline_statistics.ia_primitives +=
+				r600_query_read_result(buffer, 12, 34, false);
+			result->pipeline_statistics.ia_vertices +=
+				r600_query_read_result(buffer, 14, 36, false);
+			result->pipeline_statistics.hs_invocations +=
+				r600_query_read_result(buffer, 16, 38, false);
+			result->pipeline_statistics.ds_invocations +=
+				r600_query_read_result(buffer, 18, 40, false);
+			result->pipeline_statistics.cs_invocations +=
+				r600_query_read_result(buffer, 20, 42, false);
 		} else {
-			while (results_base != qbuf->results_end) {
-				result->pipeline_statistics.ps_invocations +=
-					r600_query_read_result(map + results_base, 0, 16, false);
-				result->pipeline_statistics.c_primitives +=
-					r600_query_read_result(map + results_base, 2, 18, false);
-				result->pipeline_statistics.c_invocations +=
-					r600_query_read_result(map + results_base, 4, 20, false);
-				result->pipeline_statistics.vs_invocations +=
-					r600_query_read_result(map + results_base, 6, 22, false);
-				result->pipeline_statistics.gs_invocations +=
-					r600_query_read_result(map + results_base, 8, 24, false);
-				result->pipeline_statistics.gs_primitives +=
-					r600_query_read_result(map + results_base, 10, 26, false);
-				result->pipeline_statistics.ia_primitives +=
-					r600_query_read_result(map + results_base, 12, 28, false);
-				result->pipeline_statistics.ia_vertices +=
-					r600_query_read_result(map + results_base, 14, 30, false);
-				results_base += query->result_size;
-			}
+			result->pipeline_statistics.ps_invocations +=
+				r600_query_read_result(buffer, 0, 16, false);
+			result->pipeline_statistics.c_primitives +=
+				r600_query_read_result(buffer, 2, 18, false);
+			result->pipeline_statistics.c_invocations +=
+				r600_query_read_result(buffer, 4, 20, false);
+			result->pipeline_statistics.vs_invocations +=
+				r600_query_read_result(buffer, 6, 22, false);
+			result->pipeline_statistics.gs_invocations +=
+				r600_query_read_result(buffer, 8, 24, false);
+			result->pipeline_statistics.gs_primitives +=
+				r600_query_read_result(buffer, 10, 26, false);
+			result->pipeline_statistics.ia_primitives +=
+				r600_query_read_result(buffer, 12, 28, false);
+			result->pipeline_statistics.ia_vertices +=
+				r600_query_read_result(buffer, 14, 30, false);
 		}
 #if 0 /* for testing */
 		printf("Pipeline stats: IA verts=%llu, IA prims=%llu, VS=%llu, HS=%llu, "
@@ -865,8 +841,6 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 	default:
 		assert(0);
 	}
-
-	return TRUE;
 }
 
 static boolean r600_get_query_result(struct pipe_context *ctx,
@@ -879,6 +853,12 @@ static boolean r600_get_query_result(struct pipe_context *ctx,
 	return rquery->ops->get_result(rctx, rquery, wait, result);
 }
 
+static void r600_query_hw_clear_result(struct r600_query_hw *query,
+				       union pipe_query_result *result)
+{
+	util_query_clear_result(result, query->b.type);
+}
+
 static boolean r600_query_hw_get_result(struct r600_common_context *rctx,
 					struct r600_query *rquery,
 					boolean wait, union pipe_query_result *result)
@@ -886,11 +866,22 @@ static boolean r600_query_hw_get_result(struct r600_common_context *rctx,
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
 	struct r600_query_buffer *qbuf;
 
-	util_query_clear_result(result, rquery->type);
+	query->ops->clear_result(query, result);
 
 	for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
-		if (!r600_get_query_buffer_result(rctx, query, qbuf, wait, result)) {
+		unsigned results_base = 0;
+		void *map;
+
+		map = r600_buffer_map_sync_with_rings(rctx, qbuf->buf,
+						      PIPE_TRANSFER_READ |
+						      (wait ? 0 : PIPE_TRANSFER_DONTBLOCK));
+		if (!map)
 			return FALSE;
+
+		while (results_base != qbuf->results_end) {
+			query->ops->add_result(rctx, query, map + results_base,
+					       result);
+			results_base += query->result_size;
 		}
 	}
 
