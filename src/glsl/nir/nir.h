@@ -2019,6 +2019,19 @@ typedef struct nir_lower_tex_options {
    unsigned saturate_s;
    unsigned saturate_t;
    unsigned saturate_r;
+
+   /* Bitmask of samplers that need swizzling.
+    *
+    * If (swizzle_result & (1 << sampler_index)), then the swizzle in
+    * swizzles[sampler_index] is applied to the result of the texturing
+    * operation.
+    */
+   unsigned swizzle_result;
+
+   /* A swizzle for each sampler.  Values 0-3 represent x, y, z, or w swizzles
+    * while 4 and 5 represent 0 and 1 respectively.
+    */
+   uint8_t swizzles[32][4];
 } nir_lower_tex_options;
 
 bool nir_lower_tex(nir_shader *shader,
