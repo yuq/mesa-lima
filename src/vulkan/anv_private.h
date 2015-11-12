@@ -808,7 +808,7 @@ struct anv_buffer {
 
    /* Set when bound */
    struct anv_bo *                              bo;
-   VkDeviceSize                                 offset;   
+   VkDeviceSize                                 offset;
 };
 
 enum anv_cmd_dirty_bits {
