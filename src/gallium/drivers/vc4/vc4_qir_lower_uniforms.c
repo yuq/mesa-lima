@@ -22,14 +22,10 @@
  */
 
 /**
- * @file vc4_opt_algebraic.c
+ * @file vc4_qir_lower_uniforms.c
  *
- * This is the optimization pass for miscellaneous changes to instructions
- * where we can simplify the operation by some knowledge about the specific
- * operations.
- *
- * Mostly this will be a matter of turning things into MOVs so that they can
- * later be copy-propagated out.
+ * This is the pre-code-generation pass for fixing up instructions that try to
+ * read from multiple uniform values.
  */
 
 #include "vc4_qir.h"
