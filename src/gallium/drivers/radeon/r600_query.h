@@ -111,7 +111,8 @@ struct r600_query_hw {
 	 * this can be one or two numbers, or it could even be a size of a structure. */
 	unsigned result_size;
 	/* The number of dwords for begin_query or end_query. */
-	unsigned num_cs_dw;
+	unsigned num_cs_dw_begin;
+	unsigned num_cs_dw_end;
 	/* Linked list of queries */
 	struct list_head list;
 	/* For transform feedback: which stream the query is for */

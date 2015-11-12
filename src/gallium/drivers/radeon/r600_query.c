@@ -337,16 +337,18 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		query->result_size = 16 * rctx->max_db;
-		query->num_cs_dw = 6;
+		query->num_cs_dw_begin = 6;
+		query->num_cs_dw_end = 6;
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		query->result_size = 16;
-		query->num_cs_dw = 8;
+		query->num_cs_dw_begin = 8;
+		query->num_cs_dw_end = 8;
 		query->flags = R600_QUERY_HW_FLAG_TIMER;
 		break;
 	case PIPE_QUERY_TIMESTAMP:
 		query->result_size = 8;
-		query->num_cs_dw = 8;
+		query->num_cs_dw_end = 8;
 		query->flags = R600_QUERY_HW_FLAG_TIMER |
 			       R600_QUERY_HW_FLAG_NO_START;
 		break;
@@ -356,13 +358,15 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
 		/* NumPrimitivesWritten, PrimitiveStorageNeeded. */
 		query->result_size = 32;
-		query->num_cs_dw = 6;
+		query->num_cs_dw_begin = 6;
+		query->num_cs_dw_end = 6;
 		query->stream = index;
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		/* 11 values on EG, 8 on R600. */
 		query->result_size = (rctx->chip_class >= EVERGREEN ? 11 : 8) * 16;
-		query->num_cs_dw = 6;
+		query->num_cs_dw_begin = 6;
+		query->num_cs_dw_end = 6;
 		break;
 	default:
 		assert(0);
@@ -460,7 +464,9 @@ static void r600_query_hw_emit_start(struct r600_common_context *ctx,
 
 	r600_update_occlusion_query_state(ctx, query->b.type, 1);
 	r600_update_prims_generated_query_state(ctx, query->b.type, 1);
-	ctx->need_gfx_cs_space(&ctx->b, query->num_cs_dw * 2, TRUE);
+
+	ctx->need_gfx_cs_space(&ctx->b, query->num_cs_dw_begin + query->num_cs_dw_end,
+			       TRUE);
 
 	/* Get a new query buffer if needed. */
 	if (query->buffer.results_end + query->result_size > query->buffer.buf->b.b.width0) {
@@ -477,10 +483,9 @@ static void r600_query_hw_emit_start(struct r600_common_context *ctx,
 	query->ops->emit_start(ctx, query, query->buffer.buf, va);
 
 	if (query->flags & R600_QUERY_HW_FLAG_TIMER)
-		ctx->num_cs_dw_timer_queries_suspend += query->num_cs_dw;
+		ctx->num_cs_dw_timer_queries_suspend += query->num_cs_dw_end;
 	else
-		ctx->num_cs_dw_nontimer_queries_suspend += query->num_cs_dw;
-
+		ctx->num_cs_dw_nontimer_queries_suspend += query->num_cs_dw_end;
 }
 
 static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
@@ -541,7 +546,7 @@ static void r600_query_hw_emit_stop(struct r600_common_context *ctx,
 
 	/* The queries which need begin already called this in begin_query. */
 	if (query->flags & R600_QUERY_HW_FLAG_NO_START) {
-		ctx->need_gfx_cs_space(&ctx->b, query->num_cs_dw, FALSE);
+		ctx->need_gfx_cs_space(&ctx->b, query->num_cs_dw_end, FALSE);
 	}
 
 	/* emit end query */
@@ -553,9 +558,9 @@ static void r600_query_hw_emit_stop(struct r600_common_context *ctx,
 
 	if (!(query->flags & R600_QUERY_HW_FLAG_NO_START)) {
 		if (query->flags & R600_QUERY_HW_FLAG_TIMER)
-			ctx->num_cs_dw_timer_queries_suspend -= query->num_cs_dw;
+			ctx->num_cs_dw_timer_queries_suspend -= query->num_cs_dw_end;
 		else
-			ctx->num_cs_dw_nontimer_queries_suspend -= query->num_cs_dw;
+			ctx->num_cs_dw_nontimer_queries_suspend -= query->num_cs_dw_end;
 	}
 
 	r600_update_occlusion_query_state(ctx, query->b.type, -1);
@@ -952,14 +957,14 @@ static unsigned r600_queries_num_cs_dw_for_resuming(struct r600_common_context *
 
 	LIST_FOR_EACH_ENTRY(query, query_list, list) {
 		/* begin + end */
-		num_dw += query->num_cs_dw * 2;
+		num_dw += query->num_cs_dw_begin + query->num_cs_dw_end;
 
 		/* Workaround for the fact that
 		 * num_cs_dw_nontimer_queries_suspend is incremented for every
 		 * resumed query, which raises the bar in need_cs_space for
 		 * queries about to be resumed.
 		 */
-		num_dw += query->num_cs_dw;
+		num_dw += query->num_cs_dw_end;
 	}
 	/* primitives generated query */
 	num_dw += ctx->streamout.enable_atom.num_dw;
