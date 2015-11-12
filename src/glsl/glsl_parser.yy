@@ -1652,6 +1652,11 @@ interface_block_layout_qualifier:
       memset(& $$, 0, sizeof($$));
       $$.flags.q.packed = 1;
    }
+   | SHARED
+   {
+      memset(& $$, 0, sizeof($$));
+      $$.flags.q.shared = 1;
+   }
    ;
 
 subroutine_qualifier:
