@@ -42,15 +42,14 @@ init_perf_monitor(struct gl_context *ctx, struct gl_perf_monitor_object *m)
    struct st_context *st = st_context(ctx);
    struct st_perf_monitor_object *stm = st_perf_monitor_object(m);
    struct pipe_context *pipe = st->pipe;
+   unsigned num_active_counters = 0;
    int gid, cid;
 
    st_flush_bitmap_cache(st);
 
-   /* Create a query for each active counter. */
+   /* Determine the number of active counters. */
    for (gid = 0; gid < ctx->PerfMonitor.NumGroups; gid++) {
       const struct gl_perf_monitor_group *g = &ctx->PerfMonitor.Groups[gid];
-      const struct st_perf_monitor_group *stg = &st->perfmon[gid];
-      BITSET_WORD tmp;
 
       if (m->ActiveGroups[gid] > g->MaxActiveCounters) {
          /* Maximum number of counters reached. Cannot start the session. */
@@ -61,19 +60,32 @@ init_perf_monitor(struct gl_context *ctx, struct gl_perf_monitor_object *m)
          return false;
       }
 
+      num_active_counters += m->ActiveGroups[gid];
+   }
+
+   if (!num_active_counters)
+      return true;
+
+   stm->active_counters = CALLOC(num_active_counters,
+                                 sizeof(*stm->active_counters));
+   if (!stm->active_counters)
+      return false;
+
+   /* Create a query for each active counter. */
+   for (gid = 0; gid < ctx->PerfMonitor.NumGroups; gid++) {
+      const struct gl_perf_monitor_group *g = &ctx->PerfMonitor.Groups[gid];
+      const struct st_perf_monitor_group *stg = &st->perfmon[gid];
+      BITSET_WORD tmp;
+
       BITSET_FOREACH_SET(cid, tmp, m->ActiveCounters[gid], g->NumCounters) {
          const struct st_perf_monitor_counter *stc = &stg->counters[cid];
-         struct st_perf_counter_object *cntr;
-
-         cntr = CALLOC_STRUCT(st_perf_counter_object);
-         if (!cntr)
-            return false;
+         struct st_perf_counter_object *cntr =
+            &stm->active_counters[stm->num_active_counters];
 
          cntr->query    = pipe->create_query(pipe, stc->query_type, 0);
          cntr->id       = cid;
          cntr->group_id = gid;
-
-         list_addtail(&cntr->list, &stm->active_counters);
+         ++stm->num_active_counters;
       }
    }
    return true;
@@ -83,24 +95,24 @@ static void
 reset_perf_monitor(struct st_perf_monitor_object *stm,
                    struct pipe_context *pipe)
 {
-   struct st_perf_counter_object *cntr, *tmp;
+   unsigned i;
 
-   LIST_FOR_EACH_ENTRY_SAFE(cntr, tmp, &stm->active_counters, list) {
-      if (cntr->query)
-         pipe->destroy_query(pipe, cntr->query);
-      list_del(&cntr->list);
-      free(cntr);
+   for (i = 0; i < stm->num_active_counters; ++i) {
+      struct pipe_query *query = stm->active_counters[i].query;
+      if (query)
+         pipe->destroy_query(pipe, query);
    }
+   FREE(stm->active_counters);
+   stm->active_counters = NULL;
+   stm->num_active_counters = 0;
 }
 
 static struct gl_perf_monitor_object *
 st_NewPerfMonitor(struct gl_context *ctx)
 {
    struct st_perf_monitor_object *stq = ST_CALLOC_STRUCT(st_perf_monitor_object);
-   if (stq) {
-      list_inithead(&stq->active_counters);
+   if (stq)
       return &stq->base;
-   }
    return NULL;
 }
 
@@ -119,9 +131,9 @@ st_BeginPerfMonitor(struct gl_context *ctx, struct gl_perf_monitor_object *m)
 {
    struct st_perf_monitor_object *stm = st_perf_monitor_object(m);
    struct pipe_context *pipe = st_context(ctx)->pipe;
-   struct st_perf_counter_object *cntr;
+   unsigned i;
 
-   if (LIST_IS_EMPTY(&stm->active_counters)) {
+   if (!stm->num_active_counters) {
       /* Create a query for each active counter before starting
        * a new monitoring session. */
       if (!init_perf_monitor(ctx, m))
@@ -129,8 +141,9 @@ st_BeginPerfMonitor(struct gl_context *ctx, struct gl_perf_monitor_object *m)
    }
 
    /* Start the query for each active counter. */
-   LIST_FOR_EACH_ENTRY(cntr, &stm->active_counters, list) {
-      if (!pipe->begin_query(pipe, cntr->query))
+   for (i = 0; i < stm->num_active_counters; ++i) {
+      struct pipe_query *query = stm->active_counters[i].query;
+      if (!pipe->begin_query(pipe, query))
           goto fail;
    }
    return true;
@@ -146,11 +159,13 @@ st_EndPerfMonitor(struct gl_context *ctx, struct gl_perf_monitor_object *m)
 {
    struct st_perf_monitor_object *stm = st_perf_monitor_object(m);
    struct pipe_context *pipe = st_context(ctx)->pipe;
-   struct st_perf_counter_object *cntr;
+   unsigned i;
 
    /* Stop the query for each active counter. */
-   LIST_FOR_EACH_ENTRY(cntr, &stm->active_counters, list)
-      pipe->end_query(pipe, cntr->query);
+   for (i = 0; i < stm->num_active_counters; ++i) {
+      struct pipe_query *query = stm->active_counters[i].query;
+      pipe->end_query(pipe, query);
+   }
 }
 
 static void
@@ -174,16 +189,17 @@ st_IsPerfMonitorResultAvailable(struct gl_context *ctx,
 {
    struct st_perf_monitor_object *stm = st_perf_monitor_object(m);
    struct pipe_context *pipe = st_context(ctx)->pipe;
-   struct st_perf_counter_object *cntr;
+   unsigned i;
 
-   if (LIST_IS_EMPTY(&stm->active_counters))
+   if (!stm->num_active_counters)
       return false;
 
    /* The result of a monitoring session is only available if the query of
     * each active counter is idle. */
-   LIST_FOR_EACH_ENTRY(cntr, &stm->active_counters, list) {
+   for (i = 0; i < stm->num_active_counters; ++i) {
+      struct pipe_query *query = stm->active_counters[i].query;
       union pipe_query_result result;
-      if (!pipe->get_query_result(pipe, cntr->query, FALSE, &result)) {
+      if (!pipe->get_query_result(pipe, query, FALSE, &result)) {
          /* The query is busy. */
          return false;
       }
@@ -200,7 +216,7 @@ st_GetPerfMonitorResult(struct gl_context *ctx,
 {
    struct st_perf_monitor_object *stm = st_perf_monitor_object(m);
    struct pipe_context *pipe = st_context(ctx)->pipe;
-   struct st_perf_counter_object *cntr;
+   unsigned i;
 
    /* Copy data to the supplied array (data).
     *
@@ -210,7 +226,8 @@ st_GetPerfMonitorResult(struct gl_context *ctx,
    GLsizei offset = 0;
 
    /* Read query results for each active counter. */
-   LIST_FOR_EACH_ENTRY(cntr, &stm->active_counters, list) {
+   for (i = 0; i < stm->num_active_counters; ++i) {
+      struct st_perf_counter_object *cntr = &stm->active_counters[i];
       union pipe_query_result result = { 0 };
       int gid, cid;
       GLenum type;

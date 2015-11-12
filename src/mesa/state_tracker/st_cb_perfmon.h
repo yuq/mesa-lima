@@ -26,21 +26,21 @@
 
 #include "util/list.h"
 
+struct st_perf_counter_object
+{
+   struct pipe_query *query;
+   int id;
+   int group_id;
+};
+
 /**
  * Subclass of gl_perf_monitor_object
  */
 struct st_perf_monitor_object
 {
    struct gl_perf_monitor_object base;
-   struct list_head active_counters;
-};
-
-struct st_perf_counter_object
-{
-   struct list_head list;
-   struct pipe_query *query;
-   int id;
-   int group_id;
+   unsigned num_active_counters;
+   struct st_perf_counter_object *active_counters;
 };
 
 /**
