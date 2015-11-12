@@ -1868,6 +1868,8 @@ void nir_ssa_dest_init(nir_instr *instr, nir_dest *dest,
 void nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
                       unsigned num_components, const char *name);
 void nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src);
+void nir_ssa_def_rewrite_uses_after(nir_ssa_def *def, nir_src new_src,
+                                    nir_instr *after_me);
 
 /* visits basic blocks in source-code order */
 typedef bool (*nir_foreach_block_cb)(nir_block *block, void *state);
