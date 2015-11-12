@@ -25,7 +25,13 @@
 #include "brw_surface_formats.h"
 
 #define fmt(__vk_fmt, __hw_fmt, ...) \
-   [__vk_fmt] = { .vk_format = __vk_fmt, .name = #__vk_fmt, .surface_format = __hw_fmt, .bw = 1, .bh = 1, .bd = 1, __VA_ARGS__ }
+   [__vk_fmt] = { \
+      .vk_format = __vk_fmt, \
+      .name = #__vk_fmt, \
+      .surface_format = __hw_fmt, \
+      .bw = 1, .bh = 1, .bd = 1, \
+      __VA_ARGS__ \
+   }
 
 static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_UNDEFINED,               ISL_FORMAT_RAW,                    .bs = 1,   .num_channels = 1),
