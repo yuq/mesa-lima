@@ -1614,11 +1614,12 @@ fs_visitor::convert_attr_sources_to_hw_regs(fs_inst *inst)
                    inst->src[i].nr +
                    inst->src[i].reg_offset;
 
+         unsigned width = inst->src[i].stride == 0 ? 1 : inst->exec_size;
          struct brw_reg reg =
             stride(byte_offset(retype(brw_vec8_grf(grf, 0), inst->src[i].type),
                                inst->src[i].subreg_offset),
                    inst->exec_size * inst->src[i].stride,
-                   inst->exec_size, inst->src[i].stride);
+                   width, inst->src[i].stride);
          reg.abs = inst->src[i].abs;
          reg.negate = inst->src[i].negate;
 
