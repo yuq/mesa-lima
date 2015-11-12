@@ -6102,74 +6102,114 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
       const glsl_type *decl_type =
          decl_list->type->glsl_type(& type_name, state);
 
+      const struct ast_type_qualifier *const qual =
+         &decl_list->type->qualifier;
+
+      /* From section 4.3.9 of the GLSL 4.40 spec:
+       *
+       *    "[In interface blocks] opaque types are not allowed."
+       *
+       * It should be impossible for decl_type to be NULL here.  Cases that
+       * might naturally lead to decl_type being NULL, especially for the
+       * is_interface case, will have resulted in compilation having
+       * already halted due to a syntax error.
+       */
+      assert(decl_type);
+
+      if (is_interface && decl_type->contains_opaque()) {
+         YYLTYPE loc = decl_list->get_location();
+         _mesa_glsl_error(&loc, state,
+                          "uniform/buffer in non-default interface block contains "
+                          "opaque variable");
+      }
+
+      if (decl_type->contains_atomic()) {
+         /* From section 4.1.7.3 of the GLSL 4.40 spec:
+          *
+          *    "Members of structures cannot be declared as atomic counter
+          *     types."
+          */
+         YYLTYPE loc = decl_list->get_location();
+         _mesa_glsl_error(&loc, state, "atomic counter in structure, "
+                          "shader storage block or uniform block");
+      }
+
+      if (decl_type->contains_image()) {
+         /* FINISHME: Same problem as with atomic counters.
+          * FINISHME: Request clarification from Khronos and add
+          * FINISHME: spec quotation here.
+          */
+         YYLTYPE loc = decl_list->get_location();
+         _mesa_glsl_error(&loc, state,
+                          "image in structure, shader storage block or "
+                          "uniform block");
+      }
+
+      if (qual->flags.q.explicit_binding)
+         validate_binding_qualifier(state, &loc, decl_type, qual);
+
+      if (qual->flags.q.std140 ||
+          qual->flags.q.std430 ||
+          qual->flags.q.packed ||
+          qual->flags.q.shared) {
+         _mesa_glsl_error(&loc, state,
+                          "uniform/shader storage block layout qualifiers "
+                          "std140, std430, packed, and shared can only be "
+                          "applied to uniform/shader storage blocks, not "
+                          "members");
+      }
+
+      if (qual->flags.q.constant) {
+         YYLTYPE loc = decl_list->get_location();
+         _mesa_glsl_error(&loc, state,
+                          "const storage qualifier cannot be applied "
+                          "to struct or interface block members");
+      }
+
+      /* From Section 4.4.2.3 (Geometry Outputs) of the GLSL 4.50 spec:
+       *
+       *   "A block member may be declared with a stream identifier, but
+       *   the specified stream must match the stream associated with the
+       *   containing block."
+       */
+      if (qual->flags.q.explicit_stream &&
+          qual->stream != layout->stream) {
+         _mesa_glsl_error(&loc, state, "stream layout qualifier on interface "
+                          "block member does not match the interface block "
+                          "(%d vs %d)", qual->stream, layout->stream);
+      }
+
+      if (qual->flags.q.uniform && qual->has_interpolation()) {
+         _mesa_glsl_error(&loc, state,
+                          "interpolation qualifiers cannot be used "
+                          "with uniform interface blocks");
+      }
+
+      if ((qual->flags.q.uniform || !is_interface) &&
+          qual->has_auxiliary_storage()) {
+         _mesa_glsl_error(&loc, state,
+                          "auxiliary storage qualifiers cannot be used "
+                          "in uniform blocks or structures.");
+      }
+
+      if (qual->flags.q.row_major || qual->flags.q.column_major) {
+         if (!qual->flags.q.uniform && !qual->flags.q.buffer) {
+            _mesa_glsl_error(&loc, state,
+                             "row_major and column_major can only be "
+                             "applied to interface blocks");
+         } else
+            validate_matrix_layout_for_type(state, &loc, decl_type, NULL);
+      }
+
+      if (qual->flags.q.read_only && qual->flags.q.write_only) {
+         _mesa_glsl_error(&loc, state, "buffer variable can't be both "
+                          "readonly and writeonly.");
+      }
+
       foreach_list_typed (ast_declaration, decl, link,
                           &decl_list->declarations) {
          if (!allow_reserved_names)
             validate_identifier(decl->identifier, loc, state);
-
-         /* From section 4.3.9 of the GLSL 4.40 spec:
-          *
-          *    "[In interface blocks] opaque types are not allowed."
-          *
-          * It should be impossible for decl_type to be NULL here.  Cases that
-          * might naturally lead to decl_type being NULL, especially for the
-          * is_interface case, will have resulted in compilation having
-          * already halted due to a syntax error.
-          */
-         assert(decl_type);
-
-         if (is_interface && decl_type->contains_opaque()) {
-            YYLTYPE loc = decl_list->get_location();
-            _mesa_glsl_error(&loc, state,
-                             "uniform/buffer in non-default interface block contains "
-                             "opaque variable");
-         }
-
-         if (decl_type->contains_atomic()) {
-            /* From section 4.1.7.3 of the GLSL 4.40 spec:
-             *
-             *    "Members of structures cannot be declared as atomic counter
-             *     types."
-             */
-            YYLTYPE loc = decl_list->get_location();
-            _mesa_glsl_error(&loc, state, "atomic counter in structure, "
-                             "shader storage block or uniform block");
-         }
-
-         if (decl_type->contains_image()) {
-            /* FINISHME: Same problem as with atomic counters.
-             * FINISHME: Request clarification from Khronos and add
-             * FINISHME: spec quotation here.
-             */
-            YYLTYPE loc = decl_list->get_location();
-            _mesa_glsl_error(&loc, state,
-                             "image in structure, shader storage block or "
-                             "uniform block");
-         }
-
-         const struct ast_type_qualifier *const qual =
-            & decl_list->type->qualifier;
-
-         if (qual->flags.q.explicit_binding)
-            validate_binding_qualifier(state, &loc, decl_type, qual);
-
-         if (qual->flags.q.std140 ||
-             qual->flags.q.std430 ||
-             qual->flags.q.packed ||
-             qual->flags.q.shared) {
-            _mesa_glsl_error(&loc, state,
-                             "uniform/shader storage block layout qualifiers "
-                             "std140, std430, packed, and shared can only be "
-                             "applied to uniform/shader storage blocks, not "
-                             "members");
-         }
-
-         if (qual->flags.q.constant) {
-            YYLTYPE loc = decl_list->get_location();
-            _mesa_glsl_error(&loc, state,
-                             "const storage qualifier cannot be applied "
-                             "to struct or interface block members");
-         }
 
          const struct glsl_type *field_type =
             process_array_type(&loc, decl_type, decl->array_specifier, state);
@@ -6183,42 +6223,6 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          fields[i].sample = qual->flags.q.sample ? 1 : 0;
          fields[i].patch = qual->flags.q.patch ? 1 : 0;
          fields[i].precision = qual->precision;
-
-         /* From Section 4.4.2.3 (Geometry Outputs) of the GLSL 4.50 spec:
-          *
-          *   "A block member may be declared with a stream identifier, but
-          *   the specified stream must match the stream associated with the
-          *   containing block."
-          */
-         if (qual->flags.q.explicit_stream &&
-             qual->stream != layout->stream) {
-            _mesa_glsl_error(&loc, state, "stream layout qualifier on "
-                             "interface block member `%s' does not match "
-                             "the interface block (%d vs %d)",
-                             fields[i].name, qual->stream, layout->stream);
-         }
-
-         if (qual->flags.q.row_major || qual->flags.q.column_major) {
-            if (!qual->flags.q.uniform && !qual->flags.q.buffer) {
-               _mesa_glsl_error(&loc, state,
-                                "row_major and column_major can only be "
-                                "applied to interface blocks");
-            } else
-               validate_matrix_layout_for_type(state, &loc, field_type, NULL);
-         }
-
-         if (qual->flags.q.uniform && qual->has_interpolation()) {
-            _mesa_glsl_error(&loc, state,
-                             "interpolation qualifiers cannot be used "
-                             "with uniform interface blocks");
-         }
-
-         if ((qual->flags.q.uniform || !is_interface) &&
-             qual->has_auxiliary_storage()) {
-            _mesa_glsl_error(&loc, state,
-                             "auxiliary storage qualifiers cannot be used "
-                             "in uniform blocks or structures.");
-         }
 
          /* Propogate row- / column-major information down the fields of the
           * structure or interface block.  Structures need this data because
@@ -6249,12 +6253,6 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
           * be defined inside shader storage buffer objects
           */
          if (layout && var_mode == ir_var_shader_storage) {
-            if (qual->flags.q.read_only && qual->flags.q.write_only) {
-               _mesa_glsl_error(&loc, state,
-                                "buffer variable `%s' can't be "
-                                "readonly and writeonly.", fields[i].name);
-            }
-
             /* For readonly and writeonly qualifiers the field definition,
              * if set, overwrites the layout qualifier.
              */
