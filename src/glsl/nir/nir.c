@@ -1312,19 +1312,11 @@ nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src)
 {
    assert(!new_src.is_ssa || def != new_src.ssa);
 
-   nir_foreach_use_safe(def, use_src) {
-      nir_instr *src_parent_instr = use_src->parent_instr;
-      list_del(&use_src->use_link);
-      nir_src_copy(use_src, &new_src, src_parent_instr);
-      src_add_all_uses(use_src, src_parent_instr, NULL);
-   }
+   nir_foreach_use_safe(def, use_src)
+      nir_instr_rewrite_src(use_src->parent_instr, use_src, new_src);
 
-   nir_foreach_if_use_safe(def, use_src) {
-      nir_if *src_parent_if = use_src->parent_if;
-      list_del(&use_src->use_link);
-      nir_src_copy(use_src, &new_src, src_parent_if);
-      src_add_all_uses(use_src, NULL, src_parent_if);
-   }
+   nir_foreach_if_use_safe(def, use_src)
+      nir_if_rewrite_condition(use_src->parent_if, new_src);
 }
 
 
