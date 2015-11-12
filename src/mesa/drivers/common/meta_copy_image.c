@@ -241,10 +241,8 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
       _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, attachment,
                                 src_view_tex_image, src_z);
    } else {
-      _mesa_FramebufferRenderbuffer(GL_READ_FRAMEBUFFER,
-                                    attachment,
-                                    GL_RENDERBUFFER,
-                                    src_renderbuffer->Name);
+      _mesa_framebuffer_renderbuffer(ctx, ctx->ReadBuffer, attachment,
+                                     src_renderbuffer);
    }
 
    status = _mesa_CheckFramebufferStatus(GL_READ_FRAMEBUFFER);
@@ -252,10 +250,8 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
       goto meta_end;
 
    if (dst_renderbuffer) {
-      _mesa_FramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,
-                                    attachment,
-                                    GL_RENDERBUFFER,
-                                    dst_renderbuffer->Name);
+      _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, attachment,
+                                     dst_renderbuffer);
    } else {
       _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, attachment,
                                 dst_tex_image, dst_z);

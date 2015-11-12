@@ -3074,10 +3074,8 @@ decompress_texture_image(struct gl_context *ctx,
 
       _mesa_GenFramebuffers(1, &decompress_fbo->FBO);
       _mesa_BindFramebuffer(GL_FRAMEBUFFER_EXT, decompress_fbo->FBO);
-      _mesa_FramebufferRenderbuffer(GL_FRAMEBUFFER_EXT,
-                                       GL_COLOR_ATTACHMENT0_EXT,
-                                       GL_RENDERBUFFER_EXT,
-                                       decompress_fbo->rb->Name);
+      _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, GL_COLOR_ATTACHMENT0,
+                                     decompress_fbo->rb);
    }
    else {
       _mesa_BindFramebuffer(GL_FRAMEBUFFER_EXT, decompress_fbo->FBO);
@@ -3085,8 +3083,8 @@ decompress_texture_image(struct gl_context *ctx,
 
    /* alloc dest surface */
    if (width > decompress_fbo->Width || height > decompress_fbo->Height) {
-      _mesa_NamedRenderbufferStorage(decompress_fbo->rb->Name, rbFormat,
-                                     width, height);
+      _mesa_renderbuffer_storage(ctx, decompress_fbo->rb, rbFormat,
+                                 width, height, 0);
       status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
       if (status != GL_FRAMEBUFFER_COMPLETE) {
          /* If the framebuffer isn't complete then we'll leave
