@@ -57,6 +57,7 @@
 #include "main/blend.h"
 #include "main/varray.h"
 #include "main/shaderapi.h"
+#include "main/renderbuffer.h"
 #include "util/ralloc.h"
 
 #include "drivers/common/meta.h"
@@ -475,7 +476,7 @@ error:
    _mesa_meta_fb_tex_blit_end(ctx, target, &blit);
    _mesa_meta_end(ctx);
 
-   _mesa_DeleteRenderbuffers(1, &rb->Name);
+   _mesa_reference_renderbuffer(&rb, NULL);
    _mesa_DeleteFramebuffers(1, &fbo);
 }
 
@@ -552,6 +553,6 @@ brw_meta_stencil_updownsample(struct brw_context *brw,
    brw_meta_stencil_blit(brw, dst, 0, 0, &dims);
    brw_emit_mi_flush(brw);
 
-   _mesa_DeleteRenderbuffers(1, &rb->Name);
+   _mesa_reference_renderbuffer(&rb, NULL);
    _mesa_DeleteFramebuffers(1, &fbo);
 }

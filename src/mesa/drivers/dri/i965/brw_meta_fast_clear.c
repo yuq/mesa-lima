@@ -36,6 +36,7 @@
 #include "main/varray.h"
 #include "main/uniforms.h"
 #include "main/fbobject.h"
+#include "main/renderbuffer.h"
 #include "main/texobj.h"
 
 #include "main/api_validate.h"
@@ -881,7 +882,7 @@ brw_meta_resolve_color(struct brw_context *brw,
    set_fast_clear_op(brw, 0);
    use_rectlist(brw, false);
 
-   _mesa_DeleteRenderbuffers(1, &rb->Name);
+   _mesa_reference_renderbuffer(&rb, NULL);
    _mesa_DeleteFramebuffers(1, &fbo);
 
    _mesa_meta_end(ctx);

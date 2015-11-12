@@ -29,6 +29,7 @@
 #include "main/buffers.h"
 #include "main/enums.h"
 #include "main/fbobject.h"
+#include "main/renderbuffer.h"
 
 #include "drivers/common/meta.h"
 
@@ -51,18 +52,10 @@ brw_get_rb_for_slice(struct brw_context *brw,
                      unsigned level, unsigned layer, bool flat)
 {
    struct gl_context *ctx = &brw->ctx;
-   GLuint rbo;
-   struct gl_renderbuffer *rb;
-   struct intel_renderbuffer *irb;
+   struct gl_renderbuffer *rb = ctx->Driver.NewRenderbuffer(ctx, 0xDEADBEEF);
+   struct intel_renderbuffer *irb = intel_renderbuffer(rb);
 
-   /* This turns the CreateRenderbuffers name into an actual struct
-    * intel_renderbuffer.
-    */
-   _mesa_CreateRenderbuffers(1, &rbo);
-
-   rb = _mesa_lookup_renderbuffer(ctx, rbo);
-   irb = intel_renderbuffer(rb);
-
+   rb->RefCount = 1;
    rb->Format = mt->format;
    rb->_BaseFormat = _mesa_get_format_base_format(mt->format);
 
@@ -140,8 +133,8 @@ brw_meta_updownsample(struct brw_context *brw,
                          dst_mt->logical_width0, dst_mt->logical_height0,
                          blit_bit, GL_NEAREST);
 
-   _mesa_DeleteRenderbuffers(1, &src_rb->Name);
-   _mesa_DeleteRenderbuffers(1, &dst_rb->Name);
+   _mesa_reference_renderbuffer(&src_rb, NULL);
+   _mesa_reference_renderbuffer(&dst_rb, NULL);
    _mesa_DeleteFramebuffers(2, fbos);
 
    _mesa_meta_end(ctx);
