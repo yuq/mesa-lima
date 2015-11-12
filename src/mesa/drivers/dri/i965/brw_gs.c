@@ -87,7 +87,8 @@ brw_codegen_gs_prog(struct brw_context *brw,
    prog_data.base.base.nr_image_params = gs->NumImages;
 
    brw_nir_setup_glsl_uniforms(gp->program.Base.nir, prog, &gp->program.Base,
-                               &prog_data.base.base, compiler->scalar_gs);
+                               &prog_data.base.base,
+                               compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
 
    GLbitfield64 outputs_written = gp->program.Base.OutputsWritten;
 

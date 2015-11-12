@@ -525,7 +525,7 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxImageUniforms =
          BRW_MAX_IMAGES;
       ctx->Const.Program[MESA_SHADER_VERTEX].MaxImageUniforms =
-         (brw->intelScreen->compiler->scalar_vs ? BRW_MAX_IMAGES : 0);
+         (brw->intelScreen->compiler->scalar_stage[MESA_SHADER_VERTEX] ? BRW_MAX_IMAGES : 0);
       ctx->Const.Program[MESA_SHADER_COMPUTE].MaxImageUniforms =
          BRW_MAX_IMAGES;
       ctx->Const.MaxImageUnits = MAX_IMAGE_UNITS;

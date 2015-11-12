@@ -126,6 +126,7 @@ brwProgramStringNotify(struct gl_context *ctx,
 		       struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct brw_compiler *compiler = brw->intelScreen->compiler;
 
    switch (target) {
    case GL_FRAGMENT_PROGRAM_ARB: {
@@ -165,7 +166,7 @@ brwProgramStringNotify(struct gl_context *ctx,
       brw_add_texrect_params(prog);
 
       prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX,
-                                 brw->intelScreen->compiler->scalar_vs);
+                                 compiler->scalar_stage[MESA_SHADER_VERTEX]);
 
       brw_vs_precompile(ctx, NULL, prog);
       break;

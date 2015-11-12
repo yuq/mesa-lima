@@ -66,12 +66,14 @@ brw_lower_packing_builtins(struct brw_context *brw,
                            gl_shader_stage shader_type,
                            exec_list *ir)
 {
+   const struct brw_compiler *compiler = brw->intelScreen->compiler;
+
    int ops = LOWER_PACK_SNORM_2x16
            | LOWER_UNPACK_SNORM_2x16
            | LOWER_PACK_UNORM_2x16
            | LOWER_UNPACK_UNORM_2x16;
 
-   if (is_scalar_shader_stage(brw->intelScreen->compiler, shader_type)) {
+   if (compiler->scalar_stage[shader_type]) {
       ops |= LOWER_UNPACK_UNORM_4x8
            | LOWER_UNPACK_SNORM_4x8
            | LOWER_PACK_UNORM_4x8
@@ -84,7 +86,7 @@ brw_lower_packing_builtins(struct brw_context *brw,
        * lowering is needed. For SOA code, the Half2x16 ops must be
        * scalarized.
        */
-      if (is_scalar_shader_stage(brw->intelScreen->compiler, shader_type)) {
+      if (compiler->scalar_stage[shader_type]) {
          ops |= LOWER_PACK_HALF_2x16_TO_SPLIT
              |  LOWER_UNPACK_HALF_2x16_TO_SPLIT;
       }
@@ -103,6 +105,7 @@ process_glsl_ir(gl_shader_stage stage,
                 struct gl_shader *shader)
 {
    struct gl_context *ctx = &brw->ctx;
+   const struct brw_compiler *compiler = brw->intelScreen->compiler;
    const struct gl_shader_compiler_options *options =
       &ctx->Const.ShaderCompilerOptions[shader->Stage];
 
@@ -161,7 +164,7 @@ process_glsl_ir(gl_shader_stage stage,
    do {
       progress = false;
 
-      if (is_scalar_shader_stage(brw->intelScreen->compiler, shader->Stage)) {
+      if (compiler->scalar_stage[shader->Stage]) {
          brw_do_channel_expressions(shader->ir);
          brw_do_vector_splitting(shader->ir);
       }
@@ -252,7 +255,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       brw_add_texrect_params(prog);
 
       prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
-                                 is_scalar_shader_stage(compiler, stage));
+                                 compiler->scalar_stage[stage]);
 
       _mesa_reference_program(ctx, &prog, NULL);
    }

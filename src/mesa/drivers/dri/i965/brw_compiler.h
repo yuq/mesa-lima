@@ -89,8 +89,7 @@ struct brw_compiler {
    void (*shader_debug_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
    void (*shader_perf_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
 
-   bool scalar_vs;
-   bool scalar_gs;
+   bool scalar_stage[MESA_SHADER_STAGES];
    struct gl_shader_compiler_options glsl_compiler_options[MESA_SHADER_STAGES];
 };
 

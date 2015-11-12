@@ -72,22 +72,6 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
    va_end(args);
 }
 
-bool
-is_scalar_shader_stage(const struct brw_compiler *compiler, int stage)
-{
-   switch (stage) {
-   case MESA_SHADER_FRAGMENT:
-   case MESA_SHADER_COMPUTE:
-      return true;
-   case MESA_SHADER_GEOMETRY:
-      return compiler->scalar_gs;
-   case MESA_SHADER_VERTEX:
-      return compiler->scalar_vs;
-   default:
-      return false;
-   }
-}
-
 struct brw_compiler *
 brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 {
@@ -100,11 +84,12 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    brw_fs_alloc_reg_sets(compiler);
    brw_vec4_alloc_reg_set(compiler);
 
-   if (devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS))
-      compiler->scalar_vs = true;
-
-   if (devinfo->gen >= 8 && brw_env_var_as_boolean("INTEL_SCALAR_GS", false))
-      compiler->scalar_gs = true;
+   compiler->scalar_stage[MESA_SHADER_VERTEX] =
+      devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS);
+   compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
+      devinfo->gen >= 8 && brw_env_var_as_boolean("INTEL_SCALAR_GS", false);
+   compiler->scalar_stage[MESA_SHADER_FRAGMENT] = true;
+   compiler->scalar_stage[MESA_SHADER_COMPUTE] = true;
 
    nir_shader_compiler_options *nir_options =
       rzalloc(compiler, nir_shader_compiler_options);
@@ -137,7 +122,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       compiler->glsl_compiler_options[i].EmitNoIndirectUniform = false;
       compiler->glsl_compiler_options[i].LowerClipDistance = true;
 
-      bool is_scalar = is_scalar_shader_stage(compiler, i);
+      bool is_scalar = compiler->scalar_stage[i];
 
       compiler->glsl_compiler_options[i].EmitNoIndirectOutput = is_scalar;
       compiler->glsl_compiler_options[i].EmitNoIndirectTemp = is_scalar;

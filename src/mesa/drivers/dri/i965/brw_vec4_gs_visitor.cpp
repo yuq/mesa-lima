@@ -819,7 +819,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
       brw_print_vue_map(stderr, &prog_data->base.vue_map);
    }
 
-   if (compiler->scalar_gs) {
+   if (compiler->scalar_stage[MESA_SHADER_GEOMETRY]) {
       /* TODO: Support instanced GS.  We have basically no tests... */
       assert(prog_data->invocations == 1);
 
