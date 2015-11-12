@@ -31,6 +31,7 @@ struct st_perf_counter_object
    struct pipe_query *query;
    int id;
    int group_id;
+   unsigned batch_index;
 };
 
 /**
@@ -41,6 +42,9 @@ struct st_perf_monitor_object
    struct gl_perf_monitor_object base;
    unsigned num_active_counters;
    struct st_perf_counter_object *active_counters;
+
+   struct pipe_query *batch_query;
+   union pipe_query_result *batch_result;
 };
 
 /**
@@ -50,11 +54,13 @@ struct st_perf_monitor_object
 struct st_perf_monitor_counter
 {
    unsigned query_type;
+   unsigned flags;
 };
 
 struct st_perf_monitor_group
 {
    struct st_perf_monitor_counter *counters;
+   bool has_batch;
 };
 
 /**
