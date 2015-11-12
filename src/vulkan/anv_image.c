@@ -152,8 +152,12 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    const struct anv_tile_info *tile_info =
        &anv_tile_info_table[tile_mode];
 
-   const uint32_t i = MAX(4, format->bw); /* FINISHME: Stop hardcoding subimage alignment */
-   const uint32_t j = MAX(4, format->bh); /* FINISHME: Stop hardcoding subimage alignment */
+   const uint32_t bs = format->isl_layout->bs;
+   const uint32_t bw = format->isl_layout->bw;
+   const uint32_t bh = format->isl_layout->bh;
+
+   const uint32_t i = MAX(4, bw); /* FINISHME: Stop hardcoding subimage alignment */
+   const uint32_t j = MAX(4, bh); /* FINISHME: Stop hardcoding subimage alignment */
    assert(i == 4 || i == 8 || i == 16);
    assert(j == 4 || j == 8 || j == 16);
 
@@ -187,8 +191,8 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
           * Views >> Common Surface Formats >> Surface Layout >> 2D Surfaces >>
           * Surface Arrays >> For All Surface Other Than Separate Stencil Buffer:
           */
-         assert(format->bh == 1 || format->bh == 4);
-         qpitch = (h0 + h1 + 11 * j) / format->bh;
+         assert(bh ==1 || bh == 4);
+         qpitch = (h0 + h1 + 11 * j) / bh;
          mt_width = MAX(w0, w1 + w2);
          mt_height = array_size * qpitch;
       }
@@ -228,8 +232,7 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
     */
    assert(anv_is_aligned(qpitch, j));
 
-   uint32_t stride = align_u32(mt_width * format->bs / format->bw,
-                               tile_info->width);
+   uint32_t stride = align_u32(mt_width * bs / bw, tile_info->width);
    if (create_info->stride > 0)
       stride = create_info->stride;
 
@@ -237,7 +240,7 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    * Views >> Common Surface Formats >> Surface Padding Requirements >>
    * Sampling Engine Surfaces >> Buffer Padding Requirements:
    */
-   const uint32_t mem_rows = align_u32(mt_height / format->bh, 2 * format->bh);
+   const uint32_t mem_rows = align_u32(mt_height / bh, 2 * bh);
    const uint32_t size = stride * align_u32(mem_rows, tile_info->height);
    const uint32_t offset = align_u32(*inout_image_size,
                                      tile_info->surface_alignment);
@@ -499,14 +502,16 @@ anv_validate_CreateImageView(VkDevice _device,
       assert(!image->format->has_stencil);
       assert(!view_format_info->depth_format);
       assert(!view_format_info->has_stencil);
-      assert(view_format_info->bs == image->format->bs);
+      assert(view_format_info->isl_layout->bs ==
+             image->format->isl_layout->bs);
    } else if (subresource->aspectMask & ds_flags) {
       assert((subresource->aspectMask & ~ds_flags) == 0);
 
       if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
          assert(image->format->depth_format);
          assert(view_format_info->depth_format);
-         assert(view_format_info->bs == image->format->bs);
+         assert(view_format_info->isl_layout->bs ==
+                image->format->isl_layout->bs);
       }
 
       if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL) {

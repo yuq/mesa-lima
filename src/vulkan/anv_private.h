@@ -1209,10 +1209,7 @@ struct anv_format {
    const VkFormat vk_format;
    const char *name;
    enum isl_format surface_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
-   uint8_t bs; /**< Block size (in bytes) of anv_format::surface_format. */
-   uint8_t bw; /**< Block width of anv_format::surface_format. */
-   uint8_t bh; /**< Block height of anv_format::surface_format. */
-   uint8_t bd; /**< Block depth of anv_format::surface_format. */
+   const struct isl_format_layout *isl_layout;
    uint8_t num_channels;
    uint16_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
    bool has_stencil;
