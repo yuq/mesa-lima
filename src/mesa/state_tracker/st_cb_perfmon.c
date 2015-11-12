@@ -50,6 +50,7 @@ init_perf_monitor(struct gl_context *ctx, struct gl_perf_monitor_object *m)
    for (gid = 0; gid < ctx->PerfMonitor.NumGroups; gid++) {
       const struct gl_perf_monitor_group *g = &ctx->PerfMonitor.Groups[gid];
       const struct st_perf_monitor_group *stg = &st->perfmon[gid];
+      BITSET_WORD tmp;
 
       if (m->ActiveGroups[gid] > g->MaxActiveCounters) {
          /* Maximum number of counters reached. Cannot start the session. */
@@ -60,13 +61,9 @@ init_perf_monitor(struct gl_context *ctx, struct gl_perf_monitor_object *m)
          return false;
       }
 
-      for (cid = 0; cid < g->NumCounters; cid++) {
-         const struct gl_perf_monitor_counter *c = &g->Counters[cid];
+      BITSET_FOREACH_SET(cid, tmp, m->ActiveCounters[gid], g->NumCounters) {
          const struct st_perf_monitor_counter *stc = &stg->counters[cid];
          struct st_perf_counter_object *cntr;
-
-         if (!BITSET_TEST(m->ActiveCounters[gid], cid))
-            continue;
 
          cntr = CALLOC_STRUCT(st_perf_counter_object);
          if (!cntr)
