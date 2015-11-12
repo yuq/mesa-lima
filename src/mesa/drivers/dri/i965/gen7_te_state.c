@@ -29,19 +29,39 @@
 static void
 upload_te_state(struct brw_context *brw)
 {
-   /* Disable the TE */
-   BEGIN_BATCH(4);
-   OUT_BATCH(_3DSTATE_TE << 16 | (4 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
+   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   bool active = brw->tess_eval_program;
+   if (active)
+      assert(brw->tess_ctrl_program);
+
+   const struct brw_tes_prog_data *tes_prog_data = brw->tes.prog_data;
+
+   if (active) {
+      BEGIN_BATCH(4);
+      OUT_BATCH(_3DSTATE_TE << 16 | (4 - 2));
+      OUT_BATCH((tes_prog_data->partitioning << GEN7_TE_PARTITIONING_SHIFT) |
+                (tes_prog_data->output_topology << GEN7_TE_OUTPUT_TOPOLOGY_SHIFT) |
+                (tes_prog_data->domain << GEN7_TE_DOMAIN_SHIFT) |
+                GEN7_TE_ENABLE);
+      OUT_BATCH_F(63.0);
+      OUT_BATCH_F(64.0);
+      ADVANCE_BATCH();
+   } else {
+      BEGIN_BATCH(4);
+      OUT_BATCH(_3DSTATE_TE << 16 | (4 - 2));
+      OUT_BATCH(0);
+      OUT_BATCH_F(0);
+      OUT_BATCH_F(0);
+      ADVANCE_BATCH();
+   }
 }
 
 const struct brw_tracked_state gen7_te_state = {
    .dirty = {
       .mesa  = 0,
-      .brw   = BRW_NEW_CONTEXT,
+      .brw   = BRW_NEW_CONTEXT |
+               BRW_NEW_TES_PROG_DATA |
+               BRW_NEW_TESS_EVAL_PROGRAM,
    },
    .emit = upload_te_state,
 };
