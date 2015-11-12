@@ -1590,17 +1590,6 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
                                  nir_tex_instr_dest_size(instr));
    dst_reg dest = get_nir_dest(instr->dest, instr->dest_type);
 
-   /* When tg4 is used with the degenerate ZERO/ONE swizzles, don't bother
-    * emitting anything other than setting up the constant result.
-    */
-   if (instr->op == nir_texop_tg4) {
-      int swiz = GET_SWZ(key_tex->swizzles[sampler], instr->component);
-      if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
-         emit(MOV(dest, brw_imm_f(swiz == SWIZZLE_ONE ? 1.0f : 0.0f)));
-         return;
-      }
-   }
-
    /* Load the texture operation sources */
    for (unsigned i = 0; i < instr->num_srcs; i++) {
       switch (instr->src[i].src_type) {
@@ -1716,8 +1705,17 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
    }
 
    /* Stuff the channel select bits in the top of the texture offset */
-   if (instr->op == nir_texop_tg4)
-      constant_offset |= gather_channel(instr->component, sampler) << 16;
+   if (instr->op == nir_texop_tg4) {
+      if (instr->component == 1 &&
+          (key_tex->gather_channel_quirk_mask & (1 << sampler))) {
+         /* gather4 sampler is broken for green channel on RG32F --
+          * we must ask for blue instead.
+          */
+         constant_offset |= 2 << 16;
+      } else {
+         constant_offset |= instr->component << 16;
+      }
+   }
 
    ir_texture_opcode op = ir_texture_opcode_for_nir_texop(instr->op);
 

@@ -920,8 +920,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
       unreachable("Unrecognized tex op");
    }
 
-   vec4_instruction *inst = new(mem_ctx) vec4_instruction(
-      opcode, dst_reg(this, dest_type));
+   vec4_instruction *inst = new(mem_ctx) vec4_instruction(opcode, dest);
 
    inst->offset = constant_offset;
 
@@ -1072,8 +1071,13 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
       emit_gen6_gather_wa(key_tex->gen6_gather_wa[sampler], inst->dst);
    }
 
-   swizzle_result(op, dest,
-                  src_reg(inst->dst), sampler, dest_type);
+   if (op == ir_query_levels) {
+      /* # levels is in .w */
+      src_reg swizzled(dest);
+      swizzled.swizzle = BRW_SWIZZLE4(SWIZZLE_W, SWIZZLE_W,
+                                      SWIZZLE_W, SWIZZLE_W);
+      emit(MOV(dest, swizzled));
+   }
 }
 
 /**
@@ -1100,87 +1104,6 @@ vec4_visitor::emit_gen6_gather_wa(uint8_t wa, dst_reg dst)
        */
       emit(SHL(dst, src_reg(dst), brw_imm_d(32 - width)));
       emit(ASR(dst, src_reg(dst), brw_imm_d(32 - width)));
-   }
-}
-
-/**
- * Set up the gather channel based on the swizzle, for gather4.
- */
-uint32_t
-vec4_visitor::gather_channel(unsigned gather_component, uint32_t sampler)
-{
-   int swiz = GET_SWZ(key_tex->swizzles[sampler], gather_component);
-   switch (swiz) {
-      case SWIZZLE_X: return 0;
-      case SWIZZLE_Y:
-         /* gather4 sampler is broken for green channel on RG32F --
-          * we must ask for blue instead.
-          */
-         if (key_tex->gather_channel_quirk_mask & (1 << sampler))
-            return 2;
-         return 1;
-      case SWIZZLE_Z: return 2;
-      case SWIZZLE_W: return 3;
-      default:
-         unreachable("Not reached"); /* zero, one swizzles handled already */
-   }
-}
-
-void
-vec4_visitor::swizzle_result(ir_texture_opcode op, dst_reg dest,
-                             src_reg orig_val, uint32_t sampler,
-                             const glsl_type *dest_type)
-{
-   int s = key_tex->swizzles[sampler];
-
-   dst_reg swizzled_result = dest;
-
-   if (op == ir_query_levels) {
-      /* # levels is in .w */
-      orig_val.swizzle = BRW_SWIZZLE4(SWIZZLE_W, SWIZZLE_W, SWIZZLE_W, SWIZZLE_W);
-      emit(MOV(swizzled_result, orig_val));
-      return;
-   }
-
-   if (op == ir_txs || dest_type == glsl_type::float_type
-			|| s == SWIZZLE_NOOP || op == ir_tg4) {
-      emit(MOV(swizzled_result, orig_val));
-      return;
-   }
-
-
-   int zero_mask = 0, one_mask = 0, copy_mask = 0;
-   int swizzle[4] = {0};
-
-   for (int i = 0; i < 4; i++) {
-      switch (GET_SWZ(s, i)) {
-      case SWIZZLE_ZERO:
-	 zero_mask |= (1 << i);
-	 break;
-      case SWIZZLE_ONE:
-	 one_mask |= (1 << i);
-	 break;
-      default:
-	 copy_mask |= (1 << i);
-	 swizzle[i] = GET_SWZ(s, i);
-	 break;
-      }
-   }
-
-   if (copy_mask) {
-      orig_val.swizzle = BRW_SWIZZLE4(swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
-      swizzled_result.writemask = copy_mask;
-      emit(MOV(swizzled_result, orig_val));
-   }
-
-   if (zero_mask) {
-      swizzled_result.writemask = zero_mask;
-      emit(MOV(swizzled_result, brw_imm_f(0.0f)));
-   }
-
-   if (one_mask) {
-      swizzled_result.writemask = one_mask;
-      emit(MOV(swizzled_result, brw_imm_f(1.0f)));
    }
 }
 

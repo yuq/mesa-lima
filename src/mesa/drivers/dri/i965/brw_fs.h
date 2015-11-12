@@ -116,10 +116,6 @@ public:
    void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
    void compute_clip_distance(gl_clip_plane *clip_planes);
 
-   uint32_t gather_channel(int orig_chan, uint32_t sampler);
-   void swizzle_result(ir_texture_opcode op, int dest_components,
-                       fs_reg orig_val, uint32_t sampler);
-
    fs_inst *get_instruction_generating_reg(fs_inst *start,
 					   fs_inst *end,
 					   const fs_reg &reg);

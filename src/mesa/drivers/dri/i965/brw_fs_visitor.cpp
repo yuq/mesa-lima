@@ -116,24 +116,6 @@ fs_visitor::emit_texture(ir_texture_opcode op,
 {
    fs_inst *inst = NULL;
 
-   if (op == ir_tg4) {
-      /* When tg4 is used with the degenerate ZERO/ONE swizzles, don't bother
-       * emitting anything other than setting up the constant result.
-       */
-      int swiz = GET_SWZ(key_tex->swizzles[sampler], gather_component);
-      if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
-
-         fs_reg res = vgrf(glsl_type::vec4_type);
-         this->result = res;
-
-         for (int i=0; i<4; i++) {
-            bld.MOV(res, brw_imm_f(swiz == SWIZZLE_ZERO ? 0.0f : 1.0f));
-            res = offset(res, bld, 1);
-         }
-         return;
-      }
-   }
-
    if (op == ir_query_levels) {
       /* textureQueryLevels() is implemented in terms of TXS so we need to
        * pass a valid LOD argument.
@@ -220,8 +202,15 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       inst->offset = offset_value.ud;
 
    if (op == ir_tg4) {
-      inst->offset |=
-         gather_channel(gather_component, sampler) << 16; /* M0.2:16-17 */
+      if (gather_component == 1 &&
+          key_tex->gather_channel_quirk_mask & (1 << sampler)) {
+         /* gather4 sampler is broken for green channel on RG32F --
+          * we must ask for blue instead.
+          */
+         inst->offset |= 2 << 16;
+      } else {
+         inst->offset |= gather_component << 16;
+      }
 
       if (devinfo->gen == 6)
          emit_gen6_gather_wa(key_tex->gen6_gather_wa[sampler], dst);
@@ -245,7 +234,12 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       bld.LOAD_PAYLOAD(dst, fixed_payload, components, 0);
    }
 
-   swizzle_result(op, dest_type->vector_elements, dst, sampler);
+   if (op == ir_query_levels) {
+      /* # levels is in .w */
+      dst = offset(dst, bld, 3);
+   }
+
+   this->result = dst;
 }
 
 /**
@@ -275,75 +269,6 @@ fs_visitor::emit_gen6_gather_wa(uint8_t wa, fs_reg dst)
       }
 
       dst = offset(dst, bld, 1);
-   }
-}
-
-/**
- * Set up the gather channel based on the swizzle, for gather4.
- */
-uint32_t
-fs_visitor::gather_channel(int orig_chan, uint32_t sampler)
-{
-   int swiz = GET_SWZ(key_tex->swizzles[sampler], orig_chan);
-   switch (swiz) {
-      case SWIZZLE_X: return 0;
-      case SWIZZLE_Y:
-         /* gather4 sampler is broken for green channel on RG32F --
-          * we must ask for blue instead.
-          */
-         if (key_tex->gather_channel_quirk_mask & (1 << sampler))
-            return 2;
-         return 1;
-      case SWIZZLE_Z: return 2;
-      case SWIZZLE_W: return 3;
-      default:
-         unreachable("Not reached"); /* zero, one swizzles handled already */
-   }
-}
-
-/**
- * Swizzle the result of a texture result.  This is necessary for
- * EXT_texture_swizzle as well as DEPTH_TEXTURE_MODE for shadow comparisons.
- */
-void
-fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
-                           fs_reg orig_val, uint32_t sampler)
-{
-   if (op == ir_query_levels) {
-      /* # levels is in .w */
-      this->result = offset(orig_val, bld, 3);
-      return;
-   }
-
-   this->result = orig_val;
-
-   /* txs,lod don't actually sample the texture, so swizzling the result
-    * makes no sense.
-    */
-   if (op == ir_txs || op == ir_lod || op == ir_tg4)
-      return;
-
-   if (dest_components == 1) {
-      /* Ignore DEPTH_TEXTURE_MODE swizzling. */
-   } else if (key_tex->swizzles[sampler] != SWIZZLE_NOOP) {
-      fs_reg swizzled_result = vgrf(glsl_type::vec4_type);
-      swizzled_result.type = orig_val.type;
-
-      for (int i = 0; i < 4; i++) {
-	 int swiz = GET_SWZ(key_tex->swizzles[sampler], i);
-	 fs_reg l = swizzled_result;
-	 l = offset(l, bld, i);
-
-	 if (swiz == SWIZZLE_ZERO) {
-            bld.MOV(l, brw_imm_f(0.0f));
-	 } else if (swiz == SWIZZLE_ONE) {
-            bld.MOV(l, brw_imm_f(1.0f));
-	 } else {
-            bld.MOV(l, offset(orig_val, bld,
-                                  GET_SWZ(key_tex->swizzles[sampler], i)));
-	 }
-      }
-      this->result = swizzled_result;
    }
 }
 
