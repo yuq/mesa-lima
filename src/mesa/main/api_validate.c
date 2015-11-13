@@ -710,6 +710,20 @@ valid_draw_indirect(struct gl_context *ctx,
       return GL_FALSE;
    }
 
+   /* From OpenGL ES 3.1 spec. section 10.5:
+    *     "An INVALID_OPERATION error is generated if zero is bound to
+    *     VERTEX_ARRAY_BINDING, DRAW_INDIRECT_BUFFER or to any enabled
+    *     vertex array."
+    *
+    * Here we check that for each enabled vertex array we have a vertex
+    * buffer bound.
+    */
+   if (_mesa_is_gles31(ctx) &&
+       ctx->Array.VAO->_Enabled != ctx->Array.VAO->VertexAttribBufferMask) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(No VBO bound)", name);
+      return GL_FALSE;
+   }
+
    if (!_mesa_valid_prim_mode(ctx, mode, name))
       return GL_FALSE;
 

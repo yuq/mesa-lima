@@ -1419,6 +1419,9 @@ struct gl_vertex_array_object
    /** Vertex buffer bindings */
    struct gl_vertex_buffer_binding VertexBinding[VERT_ATTRIB_MAX];
 
+   /** Mask indicating which vertex arrays have vertex buffer associated. */
+   GLbitfield64 VertexAttribBufferMask;
+
    /** Mask of VERT_BIT_* values indicating which arrays are enabled */
    GLbitfield64 _Enabled;
 
