@@ -245,7 +245,7 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
                                      src_renderbuffer);
    }
 
-   status = _mesa_CheckFramebufferStatus(GL_READ_FRAMEBUFFER);
+   status = _mesa_check_framebuffer_status(ctx, ctx->ReadBuffer);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto meta_end;
 
@@ -257,7 +257,7 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
                                            dst_tex_image, dst_z);
    }
 
-   status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+   status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto meta_end;
 

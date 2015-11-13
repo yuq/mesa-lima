@@ -243,7 +243,7 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
                                         GL_COLOR_ATTACHMENT0,
                                         pbo_tex_image, 0);
    /* If this passes on the first layer it should pass on the others */
-   status = _mesa_CheckFramebufferStatus(GL_READ_FRAMEBUFFER);
+   status = _mesa_check_framebuffer_status(ctx, ctx->ReadBuffer);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto fail;
 
@@ -251,7 +251,7 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
                                         GL_COLOR_ATTACHMENT0,
                                         tex_image, zoffset);
    /* If this passes on the first layer it should pass on the others */
-   status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+   status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto fail;
 
@@ -385,7 +385,7 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
                                            GL_COLOR_ATTACHMENT0,
                                            tex_image, zoffset);
       /* If this passes on the first layer it should pass on the others */
-      status = _mesa_CheckFramebufferStatus(GL_READ_FRAMEBUFFER);
+      status = _mesa_check_framebuffer_status(ctx, ctx->ReadBuffer);
       if (status != GL_FRAMEBUFFER_COMPLETE)
          goto fail;
    } else {
@@ -397,7 +397,7 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
                                         GL_COLOR_ATTACHMENT0,
                                         pbo_tex_image, 0);
    /* If this passes on the first layer it should pass on the others */
-   status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+   status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto fail;
 

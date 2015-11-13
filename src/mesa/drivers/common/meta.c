@@ -2821,7 +2821,7 @@ copytexsubimage_using_blit_framebuffer(struct gl_context *ctx, GLuint dims,
       _mesa_DrawBuffer(GL_COLOR_ATTACHMENT0);
    }
 
-   status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+   status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto out;
 
@@ -3068,7 +3068,7 @@ decompress_texture_image(struct gl_context *ctx,
    if (width > decompress_fbo->Width || height > decompress_fbo->Height) {
       _mesa_renderbuffer_storage(ctx, decompress_fbo->rb, rbFormat,
                                  width, height, 0);
-      status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+      status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
       if (status != GL_FRAMEBUFFER_COMPLETE) {
          /* If the framebuffer isn't complete then we'll leave
           * decompress_fbo->Width as zero so that it will fail again next time
@@ -3419,7 +3419,7 @@ cleartexsubimage_color(struct gl_context *ctx,
                                         GL_COLOR_ATTACHMENT0,
                                         texImage, zoffset);
 
-   status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+   status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       return false;
 
@@ -3472,7 +3472,7 @@ cleartexsubimage_depth_stencil(struct gl_context *ctx,
                                            GL_STENCIL_ATTACHMENT,
                                            texImage, zoffset);
 
-   status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+   status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       return false;
 

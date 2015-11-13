@@ -116,7 +116,7 @@ fallback_required(struct gl_context *ctx, GLenum target,
    _mesa_meta_framebuffer_texture_image(ctx, ctx->DrawBuffer,
                                         GL_COLOR_ATTACHMENT0, baseImage, 0);
 
-   status = _mesa_CheckFramebufferStatus(fbo_target);
+   status = _mesa_check_framebuffer_status(ctx, ctx->DrawBuffer);
 
    _mesa_BindFramebuffer(fbo_target, fboSave);
 
@@ -360,7 +360,7 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
                                               layer);
 
          /* sanity check */
-         if (_mesa_CheckFramebufferStatus(GL_FRAMEBUFFER) !=
+         if (_mesa_check_framebuffer_status(ctx, ctx->DrawBuffer) !=
              GL_FRAMEBUFFER_COMPLETE) {
             _mesa_problem(ctx, "Unexpected incomplete framebuffer in "
                           "_mesa_meta_GenerateMipmap()");
