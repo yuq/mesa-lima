@@ -316,6 +316,17 @@ struct isl_device {
    uint8_t gen;
 };
 
+struct isl_extent2d {
+   uint32_t width;
+   uint32_t height;
+};
+
+struct isl_extent3d {
+   uint32_t width;
+   uint32_t height;
+   uint32_t depth;
+};
+
 struct isl_channel_layout {
    enum isl_base_type type;
    uint8_t bits; /**< Size in bits */
