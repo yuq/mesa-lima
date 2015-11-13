@@ -23,11 +23,69 @@
 
 #include <assert.h>
 
+#include "mesa/main/imports.h"
+
 #include "isl.h"
+
+/**
+ * Log base 2, rounding towards zero.
+ */
+static inline uint32_t
+isl_log2u(uint32_t n)
+{
+   assert(n != 0);
+   return 31 - __builtin_clz(n);
+}
 
 void
 isl_device_init(struct isl_device *dev, uint8_t gen10x)
 {
    assert(gen10x % 5 == 0);
    dev->gen = gen10x;
+}
+
+/**
+ * The returned extent's units are (width=bytes, height=rows).
+ */
+void
+isl_tiling_get_extent(const struct isl_device *dev,
+                      enum isl_tiling tiling,
+                      uint32_t cpp,
+                      struct isl_extent2d *e)
+{
+   static const struct isl_extent2d legacy_extents[] = {
+      [ISL_TILING_LINEAR]  = {   1,   1 },
+      [ISL_TILING_X]       = { 512,   8 },
+      [ISL_TILING_Y]       = { 128,  32 },
+      [ISL_TILING_W]       = { 128,  32 },
+   };
+
+   static const struct isl_extent2d yf_extents[] = {
+      /*cpp*/
+      /* 1*/ [0] = {   64, 64 },
+      /* 2*/ [1] = {  128, 32 },
+      /* 4*/ [2] = {  128, 32 },
+      /* 8*/ [3] = {  256, 16 },
+      /*16*/ [4] = {  256, 16 },
+   };
+
+   assert(cpp > 0);
+
+   switch (tiling) {
+   case ISL_TILING_LINEAR:
+   case ISL_TILING_X:
+   case ISL_TILING_Y:
+   case ISL_TILING_W:
+      *e = legacy_extents[tiling];
+      return;
+   case ISL_TILING_Yf:
+   case ISL_TILING_Ys:
+      assert(_mesa_is_pow_two(cpp));
+      *e = yf_extents[isl_log2u(cpp)];
+      if (tiling == ISL_TILING_Ys) {
+         e->width *= 4;
+         e->height *= 4;
+      }
+      return;
+   }
 }

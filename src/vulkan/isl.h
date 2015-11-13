@@ -36,6 +36,19 @@ extern "C" {
 #endif
 
 /**
+ * WARNING: These values differ from the hardware enum values, which are
+ * unstable across hardware generations.
+ */
+enum isl_tiling {
+   ISL_TILING_LINEAR,
+   ISL_TILING_W,
+   ISL_TILING_X,
+   ISL_TILING_Y, /**< Legacy Y tiling */
+   ISL_TILING_Yf,
+   ISL_TILING_Ys,
+};
+
+/**
  * Hardware enumeration SURFACE_FORMAT.
  *
  * For the official list, see Broadwell PRM: Volume 2b: Command Reference:
@@ -357,6 +370,12 @@ struct isl_format_layout {
 
 void
 isl_device_init(struct isl_device *dev, uint8_t gen10x);
+
+void
+isl_tiling_get_extent(const struct isl_device *dev,
+                      enum isl_tiling tiling,
+                      uint32_t cpp,
+                      struct isl_extent2d *e);
 
 extern const struct isl_format_layout isl_format_layouts[];
 
