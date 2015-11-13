@@ -35,6 +35,8 @@
 extern "C" {
 #endif
 
+struct brw_device_info;
+
 /**
  * WARNING: These values differ from the hardware enum values, which are
  * unstable across hardware generations.
@@ -320,13 +322,7 @@ enum isl_txc {
 };
 
 struct isl_device {
-   /**
-    * @brief Hardware generation, 10x.
-    *
-    * For example, gen is 70 for Ivybridge and Baytrail; gen is 75 for
-    * Haswell.
-    */
-   uint8_t gen;
+   const struct brw_device_info *info;
 };
 
 struct isl_extent2d {
@@ -369,7 +365,8 @@ struct isl_format_layout {
 };
 
 void
-isl_device_init(struct isl_device *dev, uint8_t gen10x);
+isl_device_init(struct isl_device *dev,
+                const struct brw_device_info *info);
 
 void
 isl_tiling_get_extent(const struct isl_device *dev,

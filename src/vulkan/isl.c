@@ -38,10 +38,10 @@ isl_log2u(uint32_t n)
 }
 
 void
-isl_device_init(struct isl_device *dev, uint8_t gen10x)
+isl_device_init(struct isl_device *dev,
+                const struct brw_device_info *info)
 {
-   assert(gen10x % 5 == 0);
-   dev->gen = gen10x;
+   dev->info = info;
 }
 
 /**
