@@ -6133,8 +6133,11 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                           "uniform block");
       }
 
-      if (qual->flags.q.explicit_binding)
-         validate_binding_qualifier(state, &loc, decl_type, qual);
+      if (qual->flags.q.explicit_binding) {
+         _mesa_glsl_error(&loc, state,
+                          "binding layout qualifier cannot be applied "
+                          "to struct or interface block members");
+      }
 
       if (qual->flags.q.std140 ||
           qual->flags.q.std430 ||
