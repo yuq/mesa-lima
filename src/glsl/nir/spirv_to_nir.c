@@ -1266,6 +1266,7 @@ static bool
 variable_is_external_block(nir_variable *var)
 {
    return var->interface_type &&
+          glsl_type_is_struct(var->interface_type) &&
           (var->data.mode == nir_var_uniform ||
            var->data.mode == nir_var_shader_storage);
 }
@@ -1393,6 +1394,14 @@ vtn_type_block_size(struct vtn_type *type)
    }
 }
 
+static bool
+is_interface_type(struct vtn_type *type)
+{
+   return type->block || type->buffer_block ||
+          glsl_type_is_sampler(type->type) ||
+          glsl_type_is_image(type->type);
+}
+
 static void
 vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
@@ -1409,11 +1418,10 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       var->name = ralloc_strdup(var, val->name);
 
       struct vtn_type *interface_type;
-      if (type->block || type->buffer_block) {
+      if (is_interface_type(type)) {
          interface_type = type;
       } else if (glsl_type_is_array(type->type) &&
-                 (type->array_element->block ||
-                  type->array_element->buffer_block)) {
+                 is_interface_type(type->array_element)) {
          interface_type = type->array_element;
       } else {
          interface_type = NULL;
@@ -1432,8 +1440,17 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             /* UBO's and samplers */
             var->data.mode = nir_var_uniform;
             var->data.read_only = true;
-            if (interface_type)
-               b->shader->info.num_ubos++;
+            if (interface_type) {
+               if (glsl_type_is_image(interface_type->type)) {
+                  b->shader->info.num_images++;
+                  var->data.image.format = interface_type->image_format;
+               } else if (glsl_type_is_sampler(interface_type->type)) {
+                  b->shader->info.num_textures++;
+               } else {
+                  assert(glsl_type_is_struct(interface_type->type));
+                  b->shader->info.num_ubos++;
+               }
+            }
          }
          break;
       case SpvStorageClassPushConstant:
@@ -1498,9 +1515,10 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          }
       }
 
-      /* Interface variables aren't actually going to be referenced by the
-       * generated NIR, so we don't put them in the list */
-      if (interface_type)
+      /* Interface block variables aren't actually going to be referenced
+       * by the generated NIR, so we don't put them in the list
+       */
+      if (interface_type && glsl_type_is_struct(interface_type->type))
          break;
 
       if (var->data.mode == nir_var_local) {
@@ -1648,7 +1666,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       struct vtn_type *src_type =
          vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
 
-      if (glsl_get_base_type(src_type->type) == GLSL_TYPE_SAMPLER) {
+      if (src->var->interface_type &&
+          (glsl_type_is_sampler(src->var->interface_type) ||
+           glsl_type_is_image(src->var->interface_type))) {
          vtn_push_value(b, w[2], vtn_value_type_deref)->deref = src;
          return;
       }
