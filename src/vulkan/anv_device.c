@@ -56,6 +56,7 @@ anv_physical_device_init(struct anv_physical_device *device,
 {
    VkResult result;
    int fd;
+   uint32_t gen10x;
 
    fd = open(path, O_RDWR | O_CLOEXEC);
    if (fd < 0)
@@ -80,6 +81,10 @@ anv_physical_device_init(struct anv_physical_device *device,
                          "failed to get device info");
       goto fail;
    }
+
+   gen10x = 10 * device->info->gen;
+   if (device->info->is_haswell)
+      gen10x += 5;
 
    if (device->info->gen == 7 &&
        !device->info->is_haswell && !device->info->is_baytrail) {
@@ -127,6 +132,8 @@ anv_physical_device_init(struct anv_physical_device *device,
    }
    device->compiler->shader_debug_log = compiler_debug_log;
    device->compiler->shader_perf_log = compiler_perf_log;
+
+   isl_device_init(&device->isl_dev, gen10x);
 
    return VK_SUCCESS;
 
@@ -672,6 +679,7 @@ VkResult anv_CreateDevice(
    anv_block_pool_init(&device->scratch_block_pool, device, 0x10000);
 
    device->info = *physical_device->info;
+   device->isl_dev = physical_device->isl_dev;
 
    anv_queue_init(device, &device->queue);
 

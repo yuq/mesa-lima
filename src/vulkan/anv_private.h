@@ -428,6 +428,7 @@ struct anv_physical_device {
     const struct brw_device_info *              info;
     uint64_t                                    aperture_size;
     struct brw_compiler *                       compiler;
+    struct isl_device                           isl_dev;
 };
 
 bool anv_is_scalar_shader_stage(const struct brw_compiler *compiler,
@@ -485,6 +486,7 @@ struct anv_device {
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
     struct brw_device_info                      info;
+    struct isl_device                           isl_dev;
     int                                         context_id;
     int                                         fd;
 
