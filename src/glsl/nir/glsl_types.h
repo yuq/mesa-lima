@@ -244,6 +244,8 @@ struct glsl_type {
                                                 bool array,
                                                 glsl_base_type type);
 
+   static const glsl_type *get_image_instance(enum glsl_sampler_dim dim,
+                                              bool array, glsl_base_type type);
 
    /**
     * Get the instance of an array type

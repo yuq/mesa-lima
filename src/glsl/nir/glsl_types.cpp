@@ -713,6 +713,93 @@ glsl_type::get_sampler_instance(enum glsl_sampler_dim dim,
 }
 
 const glsl_type *
+glsl_type::get_image_instance(enum glsl_sampler_dim dim,
+                              bool array, glsl_base_type type)
+{
+   switch (type) {
+   case GLSL_TYPE_FLOAT:
+      switch (dim) {
+      case GLSL_SAMPLER_DIM_1D:
+         return (array ? image1DArray_type : image1D_type);
+      case GLSL_SAMPLER_DIM_2D:
+         return (array ? image2DArray_type : image2D_type);
+      case GLSL_SAMPLER_DIM_3D:
+         return image3D_type;
+      case GLSL_SAMPLER_DIM_CUBE:
+         return (array ? imageCubeArray_type : imageCube_type);
+      case GLSL_SAMPLER_DIM_RECT:
+         if (array)
+            return error_type;
+         else
+            return image2DRect_type;
+      case GLSL_SAMPLER_DIM_BUF:
+         if (array)
+            return error_type;
+         else
+            return imageBuffer_type;
+      case GLSL_SAMPLER_DIM_MS:
+         return (array ? image2DMSArray_type : image2DMS_type);
+      case GLSL_SAMPLER_DIM_EXTERNAL:
+         return error_type;
+      }
+   case GLSL_TYPE_INT:
+      switch (dim) {
+      case GLSL_SAMPLER_DIM_1D:
+         return (array ? iimage1DArray_type : iimage1D_type);
+      case GLSL_SAMPLER_DIM_2D:
+         return (array ? iimage2DArray_type : iimage2D_type);
+      case GLSL_SAMPLER_DIM_3D:
+         if (array)
+            return error_type;
+         return iimage3D_type;
+      case GLSL_SAMPLER_DIM_CUBE:
+         return (array ? iimageCubeArray_type : iimageCube_type);
+      case GLSL_SAMPLER_DIM_RECT:
+         if (array)
+            return error_type;
+         return iimage2DRect_type;
+      case GLSL_SAMPLER_DIM_BUF:
+         if (array)
+            return error_type;
+         return iimageBuffer_type;
+      case GLSL_SAMPLER_DIM_MS:
+         return (array ? iimage2DMSArray_type : iimage2DMS_type);
+      case GLSL_SAMPLER_DIM_EXTERNAL:
+         return error_type;
+      }
+   case GLSL_TYPE_UINT:
+      switch (dim) {
+      case GLSL_SAMPLER_DIM_1D:
+         return (array ? uimage1DArray_type : uimage1D_type);
+      case GLSL_SAMPLER_DIM_2D:
+         return (array ? uimage2DArray_type : uimage2D_type);
+      case GLSL_SAMPLER_DIM_3D:
+         if (array)
+            return error_type;
+         return uimage3D_type;
+      case GLSL_SAMPLER_DIM_CUBE:
+         return (array ? uimageCubeArray_type : uimageCube_type);
+      case GLSL_SAMPLER_DIM_RECT:
+         if (array)
+            return error_type;
+         return uimage2DRect_type;
+      case GLSL_SAMPLER_DIM_BUF:
+         if (array)
+            return error_type;
+         return uimageBuffer_type;
+      case GLSL_SAMPLER_DIM_MS:
+         return (array ? uimage2DMSArray_type : uimage2DMS_type);
+      case GLSL_SAMPLER_DIM_EXTERNAL:
+         return error_type;
+      }
+   default:
+      return error_type;
+   }
+
+   unreachable("switch statement above should be complete");
+}
+
+const glsl_type *
 glsl_type::get_array_instance(const glsl_type *base, unsigned array_size)
 {
    /* Generate a name using the base type pointer in the key.  This is
