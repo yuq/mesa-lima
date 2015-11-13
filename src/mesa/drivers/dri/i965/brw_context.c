@@ -391,6 +391,7 @@ brw_initialize_context_constants(struct brw_context *brw)
            ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits);
 
    ctx->Const.MaxUniformBufferBindings = num_stages * BRW_MAX_UBO;
+   ctx->Const.MaxCombinedUniformBlocks = num_stages * BRW_MAX_UBO;
    ctx->Const.MaxCombinedAtomicBuffers = num_stages * BRW_MAX_ABO;
    ctx->Const.MaxCombinedShaderStorageBlocks = num_stages * BRW_MAX_SSBO;
    ctx->Const.MaxShaderStorageBufferBindings = num_stages * BRW_MAX_SSBO;
