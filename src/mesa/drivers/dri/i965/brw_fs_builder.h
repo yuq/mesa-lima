@@ -224,12 +224,13 @@ namespace brw {
       src_reg
       sample_mask_reg() const
       {
-         const bool uses_kill =
-            (shader->stage == MESA_SHADER_FRAGMENT &&
-             ((brw_wm_prog_data *)shader->stage_prog_data)->uses_kill);
-         return (shader->stage != MESA_SHADER_FRAGMENT ? src_reg(0xffff) :
-                 uses_kill ? brw_flag_reg(0, 1) :
-                 retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD));
+         if (shader->stage != MESA_SHADER_FRAGMENT) {
+            return src_reg(0xffff);
+         } else if (((brw_wm_prog_data *)shader->stage_prog_data)->uses_kill) {
+            return brw_flag_reg(0, 1);
+         } else {
+            return retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD);
+         }
       }
 
       /**
