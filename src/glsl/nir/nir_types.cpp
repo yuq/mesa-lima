@@ -133,14 +133,14 @@ glsl_get_struct_elem_name(const struct glsl_type *type, unsigned index)
 glsl_sampler_dim
 glsl_get_sampler_dim(const struct glsl_type *type)
 {
-   assert(glsl_type_is_sampler(type));
+   assert(glsl_type_is_sampler(type) || glsl_type_is_image(type));
    return (glsl_sampler_dim)type->sampler_dimensionality;
 }
 
 glsl_base_type
 glsl_get_sampler_result_type(const struct glsl_type *type)
 {
-   assert(glsl_type_is_sampler(type));
+   assert(glsl_type_is_sampler(type) || glsl_type_is_image(type));
    return (glsl_base_type)type->sampler_type;
 }
 
@@ -200,6 +200,12 @@ glsl_type_is_sampler(const struct glsl_type *type)
 }
 
 bool
+glsl_type_is_image(const struct glsl_type *type)
+{
+   return type->is_image();
+}
+
+bool
 glsl_sampler_type_is_shadow(const struct glsl_type *type)
 {
    assert(glsl_type_is_sampler(type));
@@ -209,7 +215,7 @@ glsl_sampler_type_is_shadow(const struct glsl_type *type)
 bool
 glsl_sampler_type_is_array(const struct glsl_type *type)
 {
-   assert(glsl_type_is_sampler(type));
+   assert(glsl_type_is_sampler(type) || glsl_type_is_image(type));
    return type->sampler_array;
 }
 
@@ -287,6 +293,13 @@ glsl_sampler_type(enum glsl_sampler_dim dim, bool is_shadow, bool is_array,
                   enum glsl_base_type base_type)
 {
    return glsl_type::get_sampler_instance(dim, is_shadow, is_array, base_type);
+}
+
+const struct glsl_type *
+glsl_image_type(enum glsl_sampler_dim dim, bool is_array,
+                enum glsl_base_type base_type)
+{
+   return glsl_type::get_image_instance(dim, is_array, base_type);
 }
 
 const glsl_type *
