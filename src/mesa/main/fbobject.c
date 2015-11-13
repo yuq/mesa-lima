@@ -2471,7 +2471,6 @@ static void
 bind_framebuffer(GLenum target, GLuint framebuffer, bool allow_user_names)
 {
    struct gl_framebuffer *newDrawFb, *newReadFb;
-   struct gl_framebuffer *oldDrawFb, *oldReadFb;
    GLboolean bindReadBuf, bindDrawBuf;
    GET_CURRENT_CONTEXT(ctx);
 
@@ -2525,18 +2524,23 @@ bind_framebuffer(GLenum target, GLuint framebuffer, bool allow_user_names)
       newReadFb = ctx->WinSysReadBuffer;
    }
 
+   _mesa_bind_framebuffers(ctx,
+                           bindDrawBuf ? newDrawFb : ctx->DrawBuffer,
+                           bindReadBuf ? newReadFb : ctx->ReadBuffer);
+}
+
+void
+_mesa_bind_framebuffers(struct gl_context *ctx,
+                        struct gl_framebuffer *newDrawFb,
+                        struct gl_framebuffer *newReadFb)
+{
+   struct gl_framebuffer *const oldDrawFb = ctx->DrawBuffer;
+   struct gl_framebuffer *const oldReadFb = ctx->ReadBuffer;
+   const bool bindDrawBuf = oldDrawFb != newDrawFb;
+   const bool bindReadBuf = oldReadFb != newReadFb;
+
    assert(newDrawFb);
    assert(newDrawFb != &DummyFramebuffer);
-
-   /* save pointers to current/old framebuffers */
-   oldDrawFb = ctx->DrawBuffer;
-   oldReadFb = ctx->ReadBuffer;
-
-   /* check if really changing bindings */
-   if (oldDrawFb == newDrawFb)
-      bindDrawBuf = GL_FALSE;
-   if (oldReadFb == newReadFb)
-      bindReadBuf = GL_FALSE;
 
    /*
     * OK, now bind the new Draw/Read framebuffers, if they're changing.
@@ -2573,7 +2577,12 @@ bind_framebuffer(GLenum target, GLuint framebuffer, bool allow_user_names)
    }
 
    if ((bindDrawBuf || bindReadBuf) && ctx->Driver.BindFramebuffer) {
-      ctx->Driver.BindFramebuffer(ctx, target, newDrawFb, newReadFb);
+      /* The few classic drivers that actually hook this function really only
+       * want to know if the draw framebuffer changed.
+       */
+      ctx->Driver.BindFramebuffer(ctx,
+                                  bindDrawBuf ? GL_FRAMEBUFFER : GL_READ_FRAMEBUFFER,
+                                  newDrawFb, newReadFb);
    }
 }
 
