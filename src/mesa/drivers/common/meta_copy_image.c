@@ -210,7 +210,7 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
    /* We really only need to stash the bound framebuffers and scissor. */
    _mesa_meta_begin(ctx, MESA_META_SCISSOR);
 
-   _mesa_GenFramebuffers(2, fbos);
+   _mesa_CreateFramebuffers(2, fbos);
    _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[1]);
 

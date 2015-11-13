@@ -110,7 +110,7 @@ fallback_required(struct gl_context *ctx, GLenum target,
     * Test that we can actually render in the texture's format.
     */
    if (!mipmap->FBO)
-      _mesa_GenFramebuffers(1, &mipmap->FBO);
+      _mesa_CreateFramebuffers(1, &mipmap->FBO);
    _mesa_BindFramebuffer(fbo_target, mipmap->FBO);
 
    _mesa_meta_framebuffer_texture_image(ctx, ctx->DrawBuffer,

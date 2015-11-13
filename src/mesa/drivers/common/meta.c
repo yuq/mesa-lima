@@ -2794,7 +2794,7 @@ copytexsubimage_using_blit_framebuffer(struct gl_context *ctx, GLuint dims,
 
    _mesa_meta_begin(ctx, MESA_META_ALL & ~MESA_META_DRAW_BUFFERS);
 
-   _mesa_GenFramebuffers(1, &fbo);
+   _mesa_CreateFramebuffers(1, &fbo);
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
 
    if (rb->_BaseFormat == GL_DEPTH_STENCIL ||
@@ -3054,7 +3054,7 @@ decompress_texture_image(struct gl_context *ctx,
 
       decompress_fbo->rb->RefCount = 1;
 
-      _mesa_GenFramebuffers(1, &decompress_fbo->FBO);
+      _mesa_CreateFramebuffers(1, &decompress_fbo->FBO);
       _mesa_BindFramebuffer(GL_FRAMEBUFFER_EXT, decompress_fbo->FBO);
       _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, GL_COLOR_ATTACHMENT0,
                                      decompress_fbo->rb);
@@ -3512,7 +3512,7 @@ cleartexsubimage_for_zoffset(struct gl_context *ctx,
    GLuint fbo;
    bool success;
 
-   _mesa_GenFramebuffers(1, &fbo);
+   _mesa_CreateFramebuffers(1, &fbo);
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
 
    switch(texImage->_BaseFormat) {

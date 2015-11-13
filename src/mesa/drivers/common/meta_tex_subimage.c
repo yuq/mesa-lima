@@ -225,7 +225,7 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
    _mesa_meta_begin(ctx, ~(MESA_META_PIXEL_TRANSFER |
                            MESA_META_PIXEL_STORE));
 
-   _mesa_GenFramebuffers(2, fbos);
+   _mesa_CreateFramebuffers(2, fbos);
    _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[1]);
 
@@ -363,7 +363,7 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    if (ctx->Extensions.ARB_color_buffer_float)
       _mesa_ClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
 
-   _mesa_GenFramebuffers(2, fbos);
+   _mesa_CreateFramebuffers(2, fbos);
 
    if (tex_image && tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
       assert(depth == 1);
