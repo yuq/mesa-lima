@@ -164,6 +164,14 @@ public:
    ir_call *ssbo_store(ir_rvalue *deref, ir_rvalue *offset,
                        unsigned write_mask);
 
+   enum {
+      ubo_load_access,
+      ssbo_load_access,
+      ssbo_store_access,
+      ssbo_unsized_array_length_access,
+      ssbo_atomic_access,
+   } buffer_access_type;
+
    void emit_access(bool is_write, ir_dereference *deref,
                     ir_variable *base_offset, unsigned int deref_offset,
                     bool row_major, int matrix_columns,
@@ -191,7 +199,6 @@ public:
    struct gl_uniform_buffer_variable *ubo_var;
    ir_rvalue *uniform_block;
    bool progress;
-   bool is_shader_storage;
 };
 
 /**
@@ -341,10 +348,9 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
                            deref, &nonconst_block_index);
 
    /* Locate the block by interface name */
-   this->is_shader_storage = var->is_in_shader_storage_block();
    unsigned num_blocks;
    struct gl_uniform_block **blocks;
-   if (this->is_shader_storage) {
+   if (this->buffer_access_type != ubo_load_access) {
       num_blocks = shader->NumShaderStorageBlocks;
       blocks = shader->ShaderStorageBlocks;
    } else {
@@ -553,6 +559,10 @@ lower_ubo_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
    bool row_major;
    int matrix_columns;
    unsigned packing = var->get_interface_type()->interface_packing;
+
+   this->buffer_access_type =
+      var->is_in_shader_storage_block() ?
+      ssbo_load_access : ubo_load_access;
 
    /* Compute the offset to the start if the dereference as well as other
     * information we need to configure the write
@@ -797,7 +807,7 @@ lower_ubo_reference_visitor::emit_access(bool is_write,
       if (is_write)
          base_ir->insert_after(ssbo_store(deref, offset, write_mask));
       else {
-         if (!this->is_shader_storage) {
+         if (this->buffer_access_type == ubo_load_access) {
              base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
                                            ubo_load(deref->type, offset)));
          } else {
@@ -864,7 +874,7 @@ lower_ubo_reference_visitor::emit_access(bool is_write,
 
             base_ir->insert_after(ssbo_store(swizzle(deref, i, 1), chan_offset, 1));
          } else {
-            if (!this->is_shader_storage) {
+            if (this->buffer_access_type == ubo_load_access) {
                base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
                                              ubo_load(deref_type, chan_offset),
                                              (1U << i)));
@@ -892,6 +902,8 @@ lower_ubo_reference_visitor::write_to_memory(ir_dereference *deref,
    bool row_major;
    int matrix_columns;
    unsigned packing = var->get_interface_type()->interface_packing;
+
+   this->buffer_access_type = ssbo_store_access;
 
    /* Compute the offset to the start if the dereference as well as other
     * information we need to configure the write
@@ -1069,6 +1081,8 @@ lower_ubo_reference_visitor::process_ssbo_unsized_array_length(ir_rvalue **rvalu
    int matrix_columns;
    unsigned packing = var->get_interface_type()->interface_packing;
    int unsized_array_stride = calculate_unsized_array_stride(deref, packing);
+
+   this->buffer_access_type = ssbo_unsized_array_length_access;
 
    /* Compute the offset to the start if the dereference as well as other
     * information we need to calculate the length.
@@ -1299,6 +1313,8 @@ lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
    bool row_major;
    int matrix_columns;
    unsigned packing = var->get_interface_type()->interface_packing;
+
+   this->buffer_access_type = ssbo_atomic_access;
 
    setup_for_load_or_store(var, deref,
                            &offset, &const_offset,
