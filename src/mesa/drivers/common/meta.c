@@ -2785,6 +2785,7 @@ copytexsubimage_using_blit_framebuffer(struct gl_context *ctx, GLuint dims,
                                        GLsizei width, GLsizei height)
 {
    GLuint fbo;
+   struct gl_framebuffer *drawFb;
    bool success = false;
    GLbitfield mask;
    GLenum status;
@@ -2795,7 +2796,10 @@ copytexsubimage_using_blit_framebuffer(struct gl_context *ctx, GLuint dims,
    _mesa_meta_begin(ctx, MESA_META_ALL & ~MESA_META_DRAW_BUFFERS);
 
    _mesa_CreateFramebuffers(1, &fbo);
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+   drawFb = _mesa_lookup_framebuffer(ctx, fbo);
+   assert(drawFb != NULL && drawFb->Name == fbo);
+
+   _mesa_bind_framebuffers(ctx, drawFb, ctx->ReadBuffer);
 
    if (rb->_BaseFormat == GL_DEPTH_STENCIL ||
        rb->_BaseFormat == GL_DEPTH_COMPONENT) {
@@ -3510,10 +3514,15 @@ cleartexsubimage_for_zoffset(struct gl_context *ctx,
                              const GLvoid *clearValue)
 {
    GLuint fbo;
+   struct gl_framebuffer *drawFb;
    bool success;
 
    _mesa_CreateFramebuffers(1, &fbo);
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+
+   drawFb = _mesa_lookup_framebuffer(ctx, fbo);
+   assert(drawFb != NULL && drawFb->Name == fbo);
+
+   _mesa_bind_framebuffers(ctx, drawFb, ctx->ReadBuffer);
 
    switch(texImage->_BaseFormat) {
    case GL_DEPTH_STENCIL:

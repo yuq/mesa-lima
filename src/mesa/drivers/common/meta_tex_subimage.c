@@ -30,6 +30,7 @@
 #include "buffers.h"
 #include "clear.h"
 #include "fbobject.h"
+#include "framebuffer.h"
 #include "glformats.h"
 #include "glheader.h"
 #include "image.h"
@@ -179,6 +180,8 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
 {
    struct gl_buffer_object *pbo = NULL;
    GLuint pbo_tex = 0, fbos[2] = { 0, 0 };
+   struct gl_framebuffer *readFb;
+   struct gl_framebuffer *drawFb;
    int image_height;
    struct gl_texture_image *pbo_tex_image;
    GLenum status;
@@ -226,8 +229,14 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
                            MESA_META_PIXEL_STORE));
 
    _mesa_CreateFramebuffers(2, fbos);
-   _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[1]);
+
+   readFb = _mesa_lookup_framebuffer(ctx, fbos[0]);
+   assert(readFb != NULL && readFb->Name == fbos[0]);
+
+   drawFb = _mesa_lookup_framebuffer(ctx, fbos[1]);
+   assert(drawFb != NULL && drawFb->Name == fbos[1]);
+
+   _mesa_bind_framebuffers(ctx, drawFb, tex_image ? readFb : ctx->ReadBuffer);
 
    if (tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
       assert(depth == 1);
@@ -301,6 +310,8 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
 {
    struct gl_buffer_object *pbo = NULL;
    GLuint pbo_tex = 0, fbos[2] = { 0, 0 };
+   struct gl_framebuffer *readFb;
+   struct gl_framebuffer *drawFb;
    int image_height;
    struct gl_texture_image *pbo_tex_image;
    struct gl_renderbuffer *rb = NULL;
@@ -365,6 +376,12 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
 
    _mesa_CreateFramebuffers(2, fbos);
 
+   readFb = _mesa_lookup_framebuffer(ctx, fbos[0]);
+   assert(readFb != NULL && readFb->Name == fbos[0]);
+
+   drawFb = _mesa_lookup_framebuffer(ctx, fbos[1]);
+   assert(drawFb != NULL && drawFb->Name == fbos[1]);
+
    if (tex_image && tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
       assert(depth == 1);
       assert(zoffset == 0);
@@ -379,8 +396,8 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
     * we're doing a ReadPixels and we should just use whatever framebuffer
     * the client has bound.
     */
+   _mesa_bind_framebuffers(ctx, drawFb, tex_image ? readFb : ctx->ReadBuffer);
    if (tex_image) {
-      _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
       _mesa_meta_framebuffer_texture_image(ctx, ctx->ReadBuffer,
                                            GL_COLOR_ATTACHMENT0,
                                            tex_image, zoffset);
@@ -392,7 +409,6 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
       assert(depth == 1);
    }
 
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[1]);
    _mesa_meta_framebuffer_texture_image(ctx, ctx->DrawBuffer,
                                         GL_COLOR_ATTACHMENT0,
                                         pbo_tex_image, 0);

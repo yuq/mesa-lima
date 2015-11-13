@@ -167,6 +167,8 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
    GLuint src_view_texture = 0;
    struct gl_texture_image *src_view_tex_image;
    GLuint fbos[2];
+   struct gl_framebuffer *readFb;
+   struct gl_framebuffer *drawFb;
    bool success = false;
    GLbitfield mask;
    GLenum status, attachment;
@@ -211,8 +213,13 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
    _mesa_meta_begin(ctx, MESA_META_SCISSOR);
 
    _mesa_CreateFramebuffers(2, fbos);
-   _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[1]);
+   readFb = _mesa_lookup_framebuffer(ctx, fbos[0]);
+   assert(readFb != NULL && readFb->Name == fbos[0]);
+
+   drawFb = _mesa_lookup_framebuffer(ctx, fbos[1]);
+   assert(drawFb != NULL && drawFb->Name == fbos[1]);
+
+   _mesa_bind_framebuffers(ctx, drawFb, readFb);
 
    switch (_mesa_get_format_base_format(src_format)) {
    case GL_DEPTH_COMPONENT:
