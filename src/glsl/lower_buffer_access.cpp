@@ -213,4 +213,94 @@ lower_buffer_access::emit_access(void *mem_ctx,
    }
 }
 
+/**
+ * Determine if a thing being dereferenced is row-major
+ *
+ * There is some trickery here.
+ *
+ * If the thing being dereferenced is a member of uniform block \b without an
+ * instance name, then the name of the \c ir_variable is the field name of an
+ * interface type.  If this field is row-major, then the thing referenced is
+ * row-major.
+ *
+ * If the thing being dereferenced is a member of uniform block \b with an
+ * instance name, then the last dereference in the tree will be an
+ * \c ir_dereference_record.  If that record field is row-major, then the
+ * thing referenced is row-major.
+ */
+bool
+lower_buffer_access::is_dereferenced_thing_row_major(const ir_rvalue *deref)
+{
+   bool matrix = false;
+   const ir_rvalue *ir = deref;
+
+   while (true) {
+      matrix = matrix || ir->type->without_array()->is_matrix();
+
+      switch (ir->ir_type) {
+      case ir_type_dereference_array: {
+         const ir_dereference_array *const array_deref =
+            (const ir_dereference_array *) ir;
+
+         ir = array_deref->array;
+         break;
+      }
+
+      case ir_type_dereference_record: {
+         const ir_dereference_record *const record_deref =
+            (const ir_dereference_record *) ir;
+
+         ir = record_deref->record;
+
+         const int idx = ir->type->field_index(record_deref->field);
+         assert(idx >= 0);
+
+         const enum glsl_matrix_layout matrix_layout =
+            glsl_matrix_layout(ir->type->fields.structure[idx].matrix_layout);
+
+         switch (matrix_layout) {
+         case GLSL_MATRIX_LAYOUT_INHERITED:
+            break;
+         case GLSL_MATRIX_LAYOUT_COLUMN_MAJOR:
+            return false;
+         case GLSL_MATRIX_LAYOUT_ROW_MAJOR:
+            return matrix || deref->type->without_array()->is_record();
+         }
+
+         break;
+      }
+
+      case ir_type_dereference_variable: {
+         const ir_dereference_variable *const var_deref =
+            (const ir_dereference_variable *) ir;
+
+         const enum glsl_matrix_layout matrix_layout =
+            glsl_matrix_layout(var_deref->var->data.matrix_layout);
+
+         switch (matrix_layout) {
+         case GLSL_MATRIX_LAYOUT_INHERITED:
+            assert(!matrix);
+            return false;
+         case GLSL_MATRIX_LAYOUT_COLUMN_MAJOR:
+            return false;
+         case GLSL_MATRIX_LAYOUT_ROW_MAJOR:
+            return matrix || deref->type->without_array()->is_record();
+         }
+
+         unreachable("invalid matrix layout");
+         break;
+      }
+
+      default:
+         return false;
+      }
+   }
+
+   /* The tree must have ended with a dereference that wasn't an
+    * ir_dereference_variable.  That is invalid, and it should be impossible.
+    */
+   unreachable("invalid dereference tree");
+   return false;
+}
+
 } /* namespace lower_buffer_access */

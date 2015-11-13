@@ -51,6 +51,8 @@ public:
                     ir_variable *base_offset, unsigned int deref_offset,
                     bool row_major, int matrix_columns,
                     unsigned int packing, unsigned int write_mask);
+
+   bool is_dereferenced_thing_row_major(const ir_rvalue *deref);
 };
 
 } /* namespace lower_buffer_access */
