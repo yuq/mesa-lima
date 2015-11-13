@@ -1476,13 +1476,7 @@ layout_qualifier_id:
          }
 
          $$.flags.q.explicit_index = 1;
-
-         if ($3 >= 0) {
-            $$.index = $3;
-         } else {
-            _mesa_glsl_error(& @3, state, "invalid index %d specified", $3);
-            YYERROR;
-         }
+         $$.index = $3;
       }
 
       if ((state->has_420pack() ||
