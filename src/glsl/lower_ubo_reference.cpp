@@ -33,9 +33,8 @@
  * their own.
  */
 
-#include "ir.h"
+#include "lower_buffer_access.h"
 #include "ir_builder.h"
-#include "ir_rvalue_visitor.h"
 #include "main/macros.h"
 #include "glsl_parser_extras.h"
 
@@ -132,7 +131,8 @@ is_dereferenced_thing_row_major(const ir_rvalue *deref)
 }
 
 namespace {
-class lower_ubo_reference_visitor : public ir_rvalue_enter_visitor {
+class lower_ubo_reference_visitor :
+      public lower_buffer_access::lower_buffer_access {
 public:
    lower_ubo_reference_visitor(struct gl_shader *shader)
    : shader(shader)
@@ -172,13 +172,9 @@ public:
       ssbo_atomic_access,
    } buffer_access_type;
 
-   void insert_buffer_access(ir_dereference *deref, const glsl_type *type,
-                             ir_rvalue *offset, unsigned mask, int channel);
-
-   void emit_access(bool is_write, ir_dereference *deref,
-                    ir_variable *base_offset, unsigned int deref_offset,
-                    bool row_major, int matrix_columns,
-                    unsigned packing, unsigned write_mask);
+   void insert_buffer_access(void *mem_ctx, ir_dereference *deref,
+                             const glsl_type *type, ir_rvalue *offset,
+                             unsigned mask, int channel);
 
    ir_visitor_status visit_enter(class ir_expression *);
    ir_expression *calculate_ssbo_unsized_array_length(ir_expression *expr);
@@ -592,7 +588,7 @@ lower_ubo_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
    base_ir->insert_before(assign(load_offset, offset));
 
    deref = new(mem_ctx) ir_dereference_variable(load_var);
-   emit_access(false, deref, load_offset, const_offset,
+   emit_access(mem_ctx, false, deref, load_offset, const_offset,
                row_major, matrix_columns, packing, 0);
    *rvalue = deref;
 
@@ -695,7 +691,8 @@ lower_ubo_reference_visitor::ssbo_load(const struct glsl_type *type,
 }
 
 void
-lower_ubo_reference_visitor::insert_buffer_access(ir_dereference *deref,
+lower_ubo_reference_visitor::insert_buffer_access(void *mem_ctx,
+                                                  ir_dereference *deref,
                                                   const glsl_type *type,
                                                   ir_rvalue *offset,
                                                   unsigned mask,
@@ -726,176 +723,6 @@ lower_ubo_reference_visitor::insert_buffer_access(ir_dereference *deref,
       break;
    default:
       unreachable("invalid buffer_access_type in insert_buffer_access");
-   }
-}
-
-static inline int
-writemask_for_size(unsigned n)
-{
-   return ((1 << n) - 1);
-}
-
-/**
- * Takes a deref and recursively calls itself to break the deref down to the
- * point that the reads or writes generated are contiguous scalars or vectors.
- */
-void
-lower_ubo_reference_visitor::emit_access(bool is_write,
-                                         ir_dereference *deref,
-                                         ir_variable *base_offset,
-                                         unsigned int deref_offset,
-                                         bool row_major,
-                                         int matrix_columns,
-                                         unsigned packing,
-                                         unsigned write_mask)
-{
-   if (deref->type->is_record()) {
-      unsigned int field_offset = 0;
-
-      for (unsigned i = 0; i < deref->type->length; i++) {
-         const struct glsl_struct_field *field =
-            &deref->type->fields.structure[i];
-         ir_dereference *field_deref =
-            new(mem_ctx) ir_dereference_record(deref->clone(mem_ctx, NULL),
-                                               field->name);
-
-         field_offset =
-            glsl_align(field_offset,
-                       field->type->std140_base_alignment(row_major));
-
-         emit_access(is_write, field_deref, base_offset,
-                     deref_offset + field_offset,
-                     row_major, 1, packing,
-                     writemask_for_size(field_deref->type->vector_elements));
-
-         field_offset += field->type->std140_size(row_major);
-      }
-      return;
-   }
-
-   if (deref->type->is_array()) {
-      unsigned array_stride = packing == GLSL_INTERFACE_PACKING_STD430 ?
-         deref->type->fields.array->std430_array_stride(row_major) :
-         glsl_align(deref->type->fields.array->std140_size(row_major), 16);
-
-      for (unsigned i = 0; i < deref->type->length; i++) {
-         ir_constant *element = new(mem_ctx) ir_constant(i);
-         ir_dereference *element_deref =
-            new(mem_ctx) ir_dereference_array(deref->clone(mem_ctx, NULL),
-                                              element);
-         emit_access(is_write, element_deref, base_offset,
-                     deref_offset + i * array_stride,
-                     row_major, 1, packing,
-                     writemask_for_size(element_deref->type->vector_elements));
-      }
-      return;
-   }
-
-   if (deref->type->is_matrix()) {
-      for (unsigned i = 0; i < deref->type->matrix_columns; i++) {
-         ir_constant *col = new(mem_ctx) ir_constant(i);
-         ir_dereference *col_deref =
-            new(mem_ctx) ir_dereference_array(deref->clone(mem_ctx, NULL), col);
-
-         if (row_major) {
-            /* For a row-major matrix, the next column starts at the next
-             * element.
-             */
-            int size_mul = deref->type->is_double() ? 8 : 4;
-            emit_access(is_write, col_deref, base_offset,
-                        deref_offset + i * size_mul,
-                        row_major, deref->type->matrix_columns, packing,
-                        writemask_for_size(col_deref->type->vector_elements));
-         } else {
-            int size_mul;
-
-            /* std430 doesn't round up vec2 size to a vec4 size */
-            if (packing == GLSL_INTERFACE_PACKING_STD430 &&
-                deref->type->vector_elements == 2 &&
-                !deref->type->is_double()) {
-               size_mul = 8;
-            } else {
-               /* std140 always rounds the stride of arrays (and matrices) to a
-                * vec4, so matrices are always 16 between columns/rows. With
-                * doubles, they will be 32 apart when there are more than 2 rows.
-                *
-                * For both std140 and std430, if the member is a
-                * three-'component vector with components consuming N basic
-                * machine units, the base alignment is 4N. For vec4, base
-                * alignment is 4N.
-                */
-               size_mul = (deref->type->is_double() &&
-                           deref->type->vector_elements > 2) ? 32 : 16;
-            }
-
-            emit_access(is_write, col_deref, base_offset,
-                        deref_offset + i * size_mul,
-                        row_major, deref->type->matrix_columns, packing,
-                        writemask_for_size(col_deref->type->vector_elements));
-         }
-      }
-      return;
-   }
-
-   assert(deref->type->is_scalar() || deref->type->is_vector());
-
-   if (!row_major) {
-      ir_rvalue *offset =
-         add(base_offset, new(mem_ctx) ir_constant(deref_offset));
-      unsigned mask =
-         is_write ? write_mask : (1 << deref->type->vector_elements) - 1;
-      insert_buffer_access(deref, deref->type, offset, mask, -1);
-   } else {
-      unsigned N = deref->type->is_double() ? 8 : 4;
-
-      /* We're dereffing a column out of a row-major matrix, so we
-       * gather the vector from each stored row.
-      */
-      assert(deref->type->base_type == GLSL_TYPE_FLOAT ||
-             deref->type->base_type == GLSL_TYPE_DOUBLE);
-      /* Matrices, row_major or not, are stored as if they were
-       * arrays of vectors of the appropriate size in std140.
-       * Arrays have their strides rounded up to a vec4, so the
-       * matrix stride is always 16. However a double matrix may either be 16
-       * or 32 depending on the number of columns.
-       */
-      assert(matrix_columns <= 4);
-      unsigned matrix_stride = 0;
-      /* Matrix stride for std430 mat2xY matrices are not rounded up to
-       * vec4 size. From OpenGL 4.3 spec, section 7.6.2.2 "Standard Uniform
-       * Block Layout":
-       *
-       * "2. If the member is a two- or four-component vector with components
-       * consuming N basic machine units, the base alignment is 2N or 4N,
-       * respectively." [...]
-       * "4. If the member is an array of scalars or vectors, the base alignment
-       * and array stride are set to match the base alignment of a single array
-       * element, according to rules (1), (2), and (3), and rounded up to the
-       * base alignment of a vec4." [...]
-       * "7. If the member is a row-major matrix with C columns and R rows, the
-       * matrix is stored identically to an array of R row vectors with C
-       * components each, according to rule (4)." [...]
-       * "When using the std430 storage layout, shader storage blocks will be
-       * laid out in buffer storage identically to uniform and shader storage
-       * blocks using the std140 layout, except that the base alignment and
-       * stride of arrays of scalars and vectors in rule 4 and of structures in
-       * rule 9 are not rounded up a multiple of the base alignment of a vec4."
-       */
-      if (packing == GLSL_INTERFACE_PACKING_STD430 && matrix_columns == 2)
-         matrix_stride = 2 * N;
-      else
-         matrix_stride = glsl_align(matrix_columns * N, 16);
-
-      const glsl_type *deref_type = deref->type->base_type == GLSL_TYPE_FLOAT ?
-         glsl_type::float_type : glsl_type::double_type;
-
-      for (unsigned i = 0; i < deref->type->vector_elements; i++) {
-         ir_rvalue *chan_offset =
-            add(base_offset,
-                new(mem_ctx) ir_constant(deref_offset + i * matrix_stride));
-         if (!is_write || ((1U << i) & write_mask))
-            insert_buffer_access(deref, deref_type, chan_offset, (1U << i), i);
-      }
    }
 }
 
@@ -932,7 +759,7 @@ lower_ubo_reference_visitor::write_to_memory(ir_dereference *deref,
    base_ir->insert_before(assign(write_offset, offset));
 
    deref = new(mem_ctx) ir_dereference_variable(write_var);
-   emit_access(true, deref, write_offset, const_offset,
+   emit_access(mem_ctx, true, deref, write_offset, const_offset,
                row_major, matrix_columns, packing, write_mask);
 }
 

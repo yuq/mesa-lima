@@ -156,6 +156,8 @@ LIBGLSL_FILES = \
 	loop_analysis.h \
 	loop_controls.cpp \
 	loop_unroll.cpp \
+	lower_buffer_access.cpp \
+	lower_buffer_access.h \
 	lower_clip_distance.cpp \
 	lower_const_arrays_to_uniforms.cpp \
 	lower_discard.cpp \
