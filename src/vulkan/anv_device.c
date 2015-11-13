@@ -115,7 +115,7 @@ anv_physical_device_init(struct anv_physical_device *device,
                          "non-llc gpu");
       goto fail;
    }
-   
+
    close(fd);
 
    brw_process_intel_debug_variable();
@@ -129,7 +129,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->compiler->shader_perf_log = compiler_perf_log;
 
    return VK_SUCCESS;
-   
+
 fail:
    close(fd);
    return result;
@@ -647,7 +647,7 @@ VkResult anv_CreateDevice(
    device->fd = open(physical_device->path, O_RDWR | O_CLOEXEC);
    if (device->fd == -1)
       goto fail_device;
-      
+
    device->context_id = anv_gem_create_context(device);
    if (device->context_id == -1)
       goto fail_fd;
@@ -1020,7 +1020,7 @@ VkResult anv_MapMemory(
    mem->map_size = size;
 
    *ppData = mem->map;
-   
+
    return VK_SUCCESS;
 }
 
