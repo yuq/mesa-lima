@@ -436,7 +436,7 @@ brw_meta_stencil_blit(struct brw_context *brw,
    assert(ctx->Extensions.ARB_texture_stencil8 == false);
    ctx->Extensions.ARB_texture_stencil8 = true;
 
-   _mesa_GenFramebuffers(1, &fbo);
+   _mesa_CreateFramebuffers(1, &fbo);
    /* Force the surface to be configured for level zero. */
    rb = brw_get_rb_for_slice(brw, dst_mt, 0, dst_layer, true);
    adjust_msaa(&dims, dst_mt->num_samples);
@@ -543,7 +543,7 @@ brw_meta_stencil_updownsample(struct brw_context *brw,
    brw_emit_mi_flush(brw);
    _mesa_meta_begin(ctx, MESA_META_ALL);
 
-   _mesa_GenFramebuffers(1, &fbo);
+   _mesa_CreateFramebuffers(1, &fbo);
    rb = brw_get_rb_for_slice(brw, src, 0, 0, false);
 
    _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbo);

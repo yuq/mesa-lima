@@ -113,7 +113,7 @@ brw_meta_updownsample(struct brw_context *brw,
    brw_emit_mi_flush(brw);
 
    _mesa_meta_begin(ctx, MESA_META_ALL);
-   _mesa_GenFramebuffers(2, fbos);
+   _mesa_CreateFramebuffers(2, fbos);
    src_rb = brw_get_rb_for_slice(brw, src_mt, 0, 0, false);
    dst_rb = brw_get_rb_for_slice(brw, dst_mt, 0, 0, false);
    src_fbo = fbos[0];

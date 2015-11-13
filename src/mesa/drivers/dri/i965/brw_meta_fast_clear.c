@@ -856,7 +856,7 @@ brw_meta_resolve_color(struct brw_context *brw,
 
    _mesa_meta_begin(ctx, MESA_META_ALL);
 
-   _mesa_GenFramebuffers(1, &fbo);
+   _mesa_CreateFramebuffers(1, &fbo);
    rb = brw_get_rb_for_slice(brw, mt, 0, 0, false);
 
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
