@@ -102,6 +102,9 @@ struct vtn_type {
     */
    bool builtin_block;
 
+   /* Image format for image_load_store type images */
+   unsigned image_format;
+
    /* for arrays and matrices, the array stride */
    unsigned stride;
 

@@ -409,6 +409,56 @@ type_decoration_cb(struct vtn_builder *b,
    }
 }
 
+static unsigned
+translate_image_format(SpvImageFormat format)
+{
+   switch (format) {
+   case SpvImageFormatUnknown:      return 0;      /* GL_NONE */
+   case SpvImageFormatRgba32f:      return 0x8814; /* GL_RGBA32F */
+   case SpvImageFormatRgba16f:      return 0x881A; /* GL_RGBA16F */
+   case SpvImageFormatR32f:         return 0x822E; /* GL_R32F */
+   case SpvImageFormatRgba8:        return 0x8058; /* GL_RGBA8 */
+   case SpvImageFormatRgba8Snorm:   return 0x8F97; /* GL_RGBA8_SNORM */
+   case SpvImageFormatRg32f:        return 0x8230; /* GL_RG32F */
+   case SpvImageFormatRg16f:        return 0x822F; /* GL_RG16F */
+   case SpvImageFormatR11fG11fB10f: return 0x8C3A; /* GL_R11F_G11F_B10F */
+   case SpvImageFormatR16f:         return 0x822D; /* GL_R16F */
+   case SpvImageFormatRgba16:       return 0x805B; /* GL_RGBA16 */
+   case SpvImageFormatRgb10A2:      return 0x8059; /* GL_RGB10_A2 */
+   case SpvImageFormatRg16:         return 0x822C; /* GL_RG16 */
+   case SpvImageFormatRg8:          return 0x822B; /* GL_RG8 */
+   case SpvImageFormatR16:          return 0x822A; /* GL_R16 */
+   case SpvImageFormatR8:           return 0x8229; /* GL_R8 */
+   case SpvImageFormatRgba16Snorm:  return 0x8F9B; /* GL_RGBA16_SNORM */
+   case SpvImageFormatRg16Snorm:    return 0x8F99; /* GL_RG16_SNORM */
+   case SpvImageFormatRg8Snorm:     return 0x8F95; /* GL_RG8_SNORM */
+   case SpvImageFormatR16Snorm:     return 0x8F98; /* GL_R16_SNORM */
+   case SpvImageFormatR8Snorm:      return 0x8F94; /* GL_R8_SNORM */
+   case SpvImageFormatRgba32i:      return 0x8D82; /* GL_RGBA32I */
+   case SpvImageFormatRgba16i:      return 0x8D88; /* GL_RGBA16I */
+   case SpvImageFormatRgba8i:       return 0x8D8E; /* GL_RGBA8I */
+   case SpvImageFormatR32i:         return 0x8235; /* GL_R32I */
+   case SpvImageFormatRg32i:        return 0x823B; /* GL_RG32I */
+   case SpvImageFormatRg16i:        return 0x8239; /* GL_RG16I */
+   case SpvImageFormatRg8i:         return 0x8237; /* GL_RG8I */
+   case SpvImageFormatR16i:         return 0x8233; /* GL_R16I */
+   case SpvImageFormatR8i:          return 0x8231; /* GL_R8I */
+   case SpvImageFormatRgba32ui:     return 0x8D70; /* GL_RGBA32UI */
+   case SpvImageFormatRgba16ui:     return 0x8D76; /* GL_RGBA16UI */
+   case SpvImageFormatRgba8ui:      return 0x8D7C; /* GL_RGBA8UI */
+   case SpvImageFormatR32ui:        return 0x8236; /* GL_R32UI */
+   case SpvImageFormatRgb10a2ui:    return 0x906F; /* GL_RGB10_A2UI */
+   case SpvImageFormatRg32ui:       return 0x823C; /* GL_RG32UI */
+   case SpvImageFormatRg16ui:       return 0x823A; /* GL_RG16UI */
+   case SpvImageFormatRg8ui:        return 0x8238; /* GL_RG8UI */
+   case SpvImageFormatR16ui:        return 0x823A; /* GL_RG16UI */
+   case SpvImageFormatR8ui:         return 0x8232; /* GL_R8UI */
+   default:
+      assert(!"Invalid image format");
+      return 0;
+   }
+}
+
 static void
 vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
                 const uint32_t *w, unsigned count)
@@ -542,12 +592,25 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
       bool is_shadow = w[4];
       bool is_array = w[5];
+      bool multisampled = w[6];
+      unsigned sampled = w[7];
+      SpvImageFormat format = w[8];
 
-      assert(w[6] == 0 && "FIXME: Handl multi-sampled textures");
-      assert(w[7] == 1 && "FIXME: Add support for non-sampled images");
+      assert(!multisampled && "FIXME: Handl multi-sampled textures");
 
-      val->type->type = glsl_sampler_type(dim, is_shadow, is_array,
-                                          glsl_get_base_type(sampled_type));
+      val->type->image_format = translate_image_format(format);
+
+      if (sampled == 1) {
+         val->type->type = glsl_sampler_type(dim, is_shadow, is_array,
+                                             glsl_get_base_type(sampled_type));
+      } else if (sampled == 2) {
+         assert(format);
+         assert(!is_shadow);
+         val->type->type = glsl_image_type(dim, is_array,
+                                           glsl_get_base_type(sampled_type));
+      } else {
+         assert(!"We need to know if the image will be sampled");
+      }
       break;
    }
 
