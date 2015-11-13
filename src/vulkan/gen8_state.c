@@ -162,13 +162,22 @@ gen8_image_view_init(struct anv_image_view *iview,
       [VK_CHANNEL_SWIZZLE_A]                    = SCS_ALPHA
    };
 
+   static const uint8_t isl_to_gen_tiling[] = {
+      [ISL_TILING_LINEAR]  = LINEAR,
+      [ISL_TILING_X]       = XMAJOR,
+      [ISL_TILING_Y]       = YMAJOR,
+      [ISL_TILING_Yf]      = YMAJOR,
+      [ISL_TILING_Ys]      = YMAJOR,
+      [ISL_TILING_W]       = WMAJOR,
+   };
+
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = image->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
       .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
-      .TileMode = surface->tile_mode,
+      .TileMode = isl_to_gen_tiling[surface->tiling],
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,

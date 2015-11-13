@@ -299,8 +299,8 @@ x11_create_swapchain(struct anv_wsi_implementation *impl,
 
       anv_image_create(anv_device_to_handle(device),
          &(struct anv_image_create_info) {
-            .force_tile_mode = true,
-            .tile_mode = XMAJOR,
+            .force_tiling = true,
+            .tiling = ISL_TILING_X,
             .stride = 0,
             .vk_info =
          &(VkImageCreateInfo) {

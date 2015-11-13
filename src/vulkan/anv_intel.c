@@ -68,8 +68,8 @@ VkResult anv_CreateDmaBufImageINTEL(
 
    anv_image_create(_device,
       &(struct anv_image_create_info) {
-         .force_tile_mode = true,
-         .tile_mode = XMAJOR,
+         .force_tiling = true,
+         .tiling = ISL_TILING_X,
          .stride = pCreateInfo->strideInBytes,
          .vk_info =
       &(VkImageCreateInfo) {

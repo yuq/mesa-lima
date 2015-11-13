@@ -80,9 +80,6 @@ static const struct anv_surf_type_limits {
 };
 
 static const struct anv_tile_info {
-   uint32_t width;
-   uint32_t height;
-
    /**
     * Alignment for RENDER_SURFACE_STATE.SurfaceBaseAddress.
     *
@@ -96,17 +93,19 @@ static const struct anv_tile_info {
     */
    uint32_t surface_alignment;
 } anv_tile_info_table[] = {
-   [LINEAR] = {   1,  1,   64 },
-   [XMAJOR] = { 512,  8, 4096 },
-   [YMAJOR] = { 128, 32, 4096 },
-   [WMAJOR] = { 128, 32, 4096 },
+   [ISL_TILING_LINEAR]  = {   64 },
+   [ISL_TILING_X]       = { 4096 },
+   [ISL_TILING_Y]       = { 4096 },
+   [ISL_TILING_Yf]      = { 4096 },
+   [ISL_TILING_Ys]      = { 4096 },
+   [ISL_TILING_W]       = { 4096 },
 };
 
-static uint8_t
-anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
+static enum isl_tiling
+anv_image_choose_tiling(const struct anv_image_create_info *anv_info)
 {
-   if (anv_info->force_tile_mode)
-      return anv_info->tile_mode;
+   if (anv_info->force_tiling)
+      return anv_info->tiling;
 
    /* The Sandybridge PRM says that the stencil buffer "is supported
     * only in Tile W memory".
@@ -115,16 +114,16 @@ anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
    switch (anv_info->vk_info->tiling) {
    case VK_IMAGE_TILING_LINEAR:
       assert(anv_info->vk_info->format != VK_FORMAT_S8_UINT);
-      return LINEAR;
+      return ISL_TILING_LINEAR;
    case VK_IMAGE_TILING_OPTIMAL:
       if (unlikely(anv_info->vk_info->format == VK_FORMAT_S8_UINT)) {
-         return WMAJOR;
+         return ISL_TILING_W;
       } else {
-         return YMAJOR;
+         return ISL_TILING_Y;
       }
    default:
       assert(!"bad VKImageTiling");
-      return LINEAR;
+      return ISL_TILING_LINEAR;
    }
 }
 
@@ -134,7 +133,8 @@ anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
  * struct anv_image_create_info.
  */
 static VkResult
-anv_image_make_surface(const struct anv_image_create_info *create_info,
+anv_image_make_surface(const struct anv_device *dev,
+                       const struct anv_image_create_info *create_info,
                        const struct anv_format *format,
                        uint64_t *inout_image_size,
                        uint32_t *inout_image_alignment,
@@ -147,14 +147,17 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    const VkExtent3D *restrict extent = &create_info->vk_info->extent;
    const uint32_t levels = create_info->vk_info->mipLevels;
    const uint32_t array_size = create_info->vk_info->arraySize;
-   const uint8_t tile_mode = anv_image_choose_tile_mode(create_info);
+   const enum isl_tiling tiling = anv_image_choose_tiling(create_info);
 
    const struct anv_tile_info *tile_info =
-       &anv_tile_info_table[tile_mode];
+       &anv_tile_info_table[tiling];
 
    const uint32_t bs = format->isl_layout->bs;
    const uint32_t bw = format->isl_layout->bw;
    const uint32_t bh = format->isl_layout->bh;
+
+   struct isl_extent2d tile_extent;
+   isl_tiling_get_extent(&dev->isl_dev, tiling, bs, &tile_extent);
 
    const uint32_t i = MAX(4, bw); /* FINISHME: Stop hardcoding subimage alignment */
    const uint32_t j = MAX(4, bh); /* FINISHME: Stop hardcoding subimage alignment */
@@ -232,7 +235,7 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
     */
    assert(anv_is_aligned(qpitch, j));
 
-   uint32_t stride = align_u32(mt_width * bs / bw, tile_info->width);
+   uint32_t stride = align_u32(mt_width * bs / bw, tile_extent.width);
    if (create_info->stride > 0)
       stride = create_info->stride;
 
@@ -241,7 +244,7 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    * Sampling Engine Surfaces >> Buffer Padding Requirements:
    */
    const uint32_t mem_rows = align_u32(mt_height / bh, 2 * bh);
-   const uint32_t size = stride * align_u32(mem_rows, tile_info->height);
+   const uint32_t size = stride * align_u32(mem_rows, tile_extent.height);
    const uint32_t offset = align_u32(*inout_image_size,
                                      tile_info->surface_alignment);
 
@@ -252,7 +255,7 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    *out_surface = (struct anv_surface) {
       .offset = offset,
       .stride = stride,
-      .tile_mode = tile_mode,
+      .tiling = tiling,
       .qpitch = qpitch,
       .h_align = i,
       .v_align = j,
@@ -337,14 +340,14 @@ anv_image_create(VkDevice _device,
    }
 
    if (likely(anv_format_is_color(image->format))) {
-      r = anv_image_make_surface(create_info, image->format,
+      r = anv_image_make_surface(device, create_info, image->format,
                                  &image->size, &image->alignment,
                                  &image->color_surface);
       if (r != VK_SUCCESS)
          goto fail;
    } else {
       if (image->format->depth_format) {
-         r = anv_image_make_surface(create_info, image->format,
+         r = anv_image_make_surface(device, create_info, image->format,
                                     &image->size, &image->alignment,
                                     &image->depth_surface);
          if (r != VK_SUCCESS)
@@ -352,7 +355,7 @@ anv_image_create(VkDevice _device,
       }
 
       if (image->format->has_stencil) {
-         r = anv_image_make_surface(create_info, anv_format_s8_uint,
+         r = anv_image_make_surface(device, create_info, anv_format_s8_uint,
                                     &image->size, &image->alignment,
                                     &image->stencil_surface);
          if (r != VK_SUCCESS)

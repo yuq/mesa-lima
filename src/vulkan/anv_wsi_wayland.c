@@ -547,8 +547,8 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
    VkImage vk_image;
    result = anv_image_create(vk_device,
       &(struct anv_image_create_info) {
-         .force_tile_mode = true,
-         .tile_mode = XMAJOR,
+         .force_tiling = true,
+         .tiling = ISL_TILING_X,
          .stride = 0,
          .vk_info =
       &(VkImageCreateInfo) {

@@ -1272,7 +1272,7 @@ struct anv_surface {
    uint8_t v_align; /**< RENDER_SURFACE_STATE.SurfaceVerticalAlignment */
    /** \} */
 
-   uint8_t tile_mode; /**< RENDER_SURFACE_STATE.TileMode */
+   enum isl_tiling tiling;
 };
 
 struct anv_image {
@@ -1333,8 +1333,8 @@ struct anv_image_view {
 
 struct anv_image_create_info {
    const VkImageCreateInfo *vk_info;
-   bool force_tile_mode;
-   uint8_t tile_mode;
+   bool force_tiling;
+   enum isl_tiling tiling;
    uint32_t stride;
 };
 

@@ -219,8 +219,9 @@ gen7_image_view_init(struct anv_image_view *iview,
       /* From bspec (DevSNB, DevIVB): "Set Tile Walk to TILEWALK_XMAJOR if
        * Tiled Surface is False."
        */
-      .TiledSurface = surface->tile_mode > LINEAR,
-      .TileWalk = surface->tile_mode == YMAJOR ? TILEWALK_YMAJOR : TILEWALK_XMAJOR,
+      .TiledSurface = surface->tiling != ISL_TILING_LINEAR,
+      .TileWalk = surface->tiling == ISL_TILING_Y ?
+                  TILEWALK_YMAJOR : TILEWALK_XMAJOR,
 
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
