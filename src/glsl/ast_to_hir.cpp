@@ -6245,19 +6245,16 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             /* For readonly and writeonly qualifiers the field definition,
              * if set, overwrites the layout qualifier.
              */
-            bool read_only = layout->flags.q.read_only;
-            bool write_only = layout->flags.q.write_only;
-
             if (qual->flags.q.read_only) {
-               read_only = true;
-               write_only = false;
+               fields[i].image_read_only = true;
+               fields[i].image_write_only = false;
             } else if (qual->flags.q.write_only) {
-               read_only = false;
-               write_only = true;
+               fields[i].image_read_only = false;
+               fields[i].image_write_only = true;
+            } else {
+               fields[i].image_read_only = layout->flags.q.read_only;
+               fields[i].image_write_only = layout->flags.q.write_only;
             }
-
-            fields[i].image_read_only = read_only;
-            fields[i].image_write_only = write_only;
 
             /* For other qualifiers, we set the flag if either the layout
              * qualifier or the field qualifier are set
