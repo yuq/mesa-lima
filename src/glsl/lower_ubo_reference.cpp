@@ -172,6 +172,9 @@ public:
       ssbo_atomic_access,
    } buffer_access_type;
 
+   void insert_buffer_access(ir_dereference *deref, const glsl_type *type,
+                             ir_rvalue *offset, unsigned mask, int channel);
+
    void emit_access(bool is_write, ir_dereference *deref,
                     ir_variable *base_offset, unsigned int deref_offset,
                     bool row_major, int matrix_columns,
@@ -691,6 +694,41 @@ lower_ubo_reference_visitor::ssbo_load(const struct glsl_type *type,
    return new(mem_ctx) ir_call(sig, deref_result, &call_params);
 }
 
+void
+lower_ubo_reference_visitor::insert_buffer_access(ir_dereference *deref,
+                                                  const glsl_type *type,
+                                                  ir_rvalue *offset,
+                                                  unsigned mask,
+                                                  int channel)
+{
+   switch (this->buffer_access_type) {
+   case ubo_load_access:
+      base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
+                                    ubo_load(type, offset),
+                                    mask));
+      break;
+   case ssbo_load_access: {
+      ir_call *load_ssbo = ssbo_load(type, offset);
+      base_ir->insert_before(load_ssbo);
+      ir_rvalue *value = load_ssbo->return_deref->as_rvalue()->clone(mem_ctx, NULL);
+      ir_assignment *assignment =
+         assign(deref->clone(mem_ctx, NULL), value, mask);
+      base_ir->insert_before(assignment);
+      break;
+   }
+   case ssbo_store_access:
+      if (channel >= 0) {
+         base_ir->insert_after(ssbo_store(swizzle(deref, channel, 1),
+                                          offset, 1));
+      } else {
+         base_ir->insert_after(ssbo_store(deref, offset, mask));
+      }
+      break;
+   default:
+      unreachable("invalid buffer_access_type in insert_buffer_access");
+   }
+}
+
 static inline int
 writemask_for_size(unsigned n)
 {
@@ -804,19 +842,9 @@ lower_ubo_reference_visitor::emit_access(bool is_write,
    if (!row_major) {
       ir_rvalue *offset =
          add(base_offset, new(mem_ctx) ir_constant(deref_offset));
-      if (is_write)
-         base_ir->insert_after(ssbo_store(deref, offset, write_mask));
-      else {
-         if (this->buffer_access_type == ubo_load_access) {
-             base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
-                                           ubo_load(deref->type, offset)));
-         } else {
-            ir_call *load_ssbo = ssbo_load(deref->type, offset);
-            base_ir->insert_before(load_ssbo);
-            ir_rvalue *value = load_ssbo->return_deref->as_rvalue()->clone(mem_ctx, NULL);
-            base_ir->insert_before(assign(deref->clone(mem_ctx, NULL), value));
-         }
-      }
+      unsigned mask =
+         is_write ? write_mask : (1 << deref->type->vector_elements) - 1;
+      insert_buffer_access(deref, deref->type, offset, mask, -1);
    } else {
       unsigned N = deref->type->is_double() ? 8 : 4;
 
@@ -865,28 +893,8 @@ lower_ubo_reference_visitor::emit_access(bool is_write,
          ir_rvalue *chan_offset =
             add(base_offset,
                 new(mem_ctx) ir_constant(deref_offset + i * matrix_stride));
-         if (is_write) {
-            /* If the component is not in the writemask, then don't
-             * store any value.
-             */
-            if (!((1 << i) & write_mask))
-               continue;
-
-            base_ir->insert_after(ssbo_store(swizzle(deref, i, 1), chan_offset, 1));
-         } else {
-            if (this->buffer_access_type == ubo_load_access) {
-               base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
-                                             ubo_load(deref_type, chan_offset),
-                                             (1U << i)));
-            } else {
-               ir_call *load_ssbo = ssbo_load(deref_type, chan_offset);
-               base_ir->insert_before(load_ssbo);
-               ir_rvalue *value = load_ssbo->return_deref->as_rvalue()->clone(mem_ctx, NULL);
-               base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
-                                             value,
-                                             (1U << i)));
-            }
-         }
+         if (!is_write || ((1U << i) & write_mask))
+            insert_buffer_access(deref, deref_type, chan_offset, (1U << i), i);
       }
    }
 }
