@@ -3283,6 +3283,7 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 
 static void si_init_config(struct si_context *sctx)
 {
+	struct si_screen *sscreen = sctx->screen;
 	unsigned num_rb = MIN2(sctx->screen->b.info.r600_num_backends, 16);
 	unsigned rb_mask = sctx->screen->b.info.si_backend_enabled_mask;
 	unsigned raster_config, raster_config_1;
@@ -3353,9 +3354,14 @@ static void si_init_config(struct si_context *sctx)
 		raster_config_1 = 0x0000002e;
 		break;
 	case CHIP_FIJI:
-		/* Fiji should be same as Hawaii, but that causes corruption in some cases */
-		raster_config = 0x16000012; /* 0x3a00161a */
-		raster_config_1 = 0x0000002a; /* 0x0000002e */
+		if (sscreen->b.info.cik_macrotile_mode_array[0] == 0x000000e8) {
+			/* old kernels with old tiling config */
+			raster_config = 0x16000012;
+			raster_config_1 = 0x0000002a;
+		} else {
+			raster_config = 0x3a00161a;
+			raster_config_1 = 0x0000002e;
+		}
 		break;
 	case CHIP_TONGA:
 		raster_config = 0x16000012;
