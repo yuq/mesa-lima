@@ -2650,10 +2650,10 @@ interpret_interpolation_qualifier(const struct ast_type_qualifier *qual,
 
 
 static void
-validate_explicit_location(const struct ast_type_qualifier *qual,
-                           ir_variable *var,
-                           struct _mesa_glsl_parse_state *state,
-                           YYLTYPE *loc)
+apply_explicit_location(const struct ast_type_qualifier *qual,
+                        ir_variable *var,
+                        struct _mesa_glsl_parse_state *state,
+                        YYLTYPE *loc)
 {
    bool fail = false;
 
@@ -2995,7 +2995,7 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
    }
 
    if (qual->flags.q.explicit_location) {
-      validate_explicit_location(qual, var, state, loc);
+      apply_explicit_location(qual, var, state, loc);
    } else if (qual->flags.q.explicit_index) {
       _mesa_glsl_error(loc, state, "explicit index requires explicit location");
    }
