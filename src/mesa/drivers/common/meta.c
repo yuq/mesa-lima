@@ -48,6 +48,7 @@
 #include "main/feedback.h"
 #include "main/formats.h"
 #include "main/format_unpack.h"
+#include "main/framebuffer.h"
 #include "main/glformats.h"
 #include "main/image.h"
 #include "main/macros.h"
@@ -825,8 +826,8 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
       if (ctx->RasterDiscard)
          _mesa_set_enable(ctx, GL_RASTERIZER_DISCARD, GL_FALSE);
 
-      save->DrawBufferName = ctx->DrawBuffer->Name;
-      save->ReadBufferName = ctx->ReadBuffer->Name;
+      _mesa_reference_framebuffer(&save->DrawBuffer, ctx->DrawBuffer);
+      _mesa_reference_framebuffer(&save->ReadBuffer, ctx->ReadBuffer);
    }
 }
 
@@ -1212,11 +1213,9 @@ _mesa_meta_end(struct gl_context *ctx)
    if (save->TransformFeedbackNeedsResume)
       _mesa_ResumeTransformFeedback();
 
-   if (ctx->DrawBuffer->Name != save->DrawBufferName)
-      _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, save->DrawBufferName);
-
-   if (ctx->ReadBuffer->Name != save->ReadBufferName)
-      _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, save->ReadBufferName);
+   _mesa_bind_framebuffers(ctx, save->DrawBuffer, save->ReadBuffer);
+   _mesa_reference_framebuffer(&save->DrawBuffer, NULL);
+   _mesa_reference_framebuffer(&save->ReadBuffer, NULL);
 
    if (state & MESA_META_DRAW_BUFFERS) {
       _mesa_drawbuffers(ctx, ctx->DrawBuffer, ctx->Const.MaxDrawBuffers,
