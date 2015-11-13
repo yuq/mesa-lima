@@ -23,12 +23,8 @@
 
 #include "brw_cfg.h"
 #include "brw_eu.h"
-#include "brw_context.h"
 #include "intel_debug.h"
 #include "intel_asm_annotation.h"
-#include "program/prog_print.h"
-#include "program/prog_instruction.h"
-#include "main/macros.h"
 #include "glsl/nir/nir.h"
 
 void
