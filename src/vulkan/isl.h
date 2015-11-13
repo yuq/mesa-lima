@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -305,6 +306,16 @@ enum isl_txc {
    ISL_TXC_ETC2,
 };
 
+struct isl_device {
+   /**
+    * @brief Hardware generation, 10x.
+    *
+    * For example, gen is 70 for Ivybridge and Baytrail; gen is 75 for
+    * Haswell.
+    */
+   uint8_t gen;
+};
+
 struct isl_channel_layout {
    enum isl_base_type type;
    uint8_t bits; /**< Size in bits */
@@ -332,6 +343,9 @@ struct isl_format_layout {
    enum isl_colorspace colorspace;
    enum isl_txc txc;
 };
+
+void
+isl_device_init(struct isl_device *dev, uint8_t gen10x);
 
 extern const struct isl_format_layout isl_format_layouts[];
 

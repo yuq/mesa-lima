@@ -84,6 +84,7 @@ VULKAN_SOURCES =                                        \
 	gen7_state.c					\
 	gen7_cmd_buffer.c				\
 	gen7_pipeline.c                                 \
+	isl.c                                           \
 	isl_format_layout.c
 
 BUILT_SOURCES =                                         \
