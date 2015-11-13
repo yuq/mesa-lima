@@ -1514,15 +1514,8 @@ layout_qualifier_id:
          if (match_layout_qualifier("stream", $1, state) == 0 &&
              state->check_explicit_attrib_stream_allowed(& @3)) {
             $$.flags.q.stream = 1;
-
-            if ($3 < 0) {
-               _mesa_glsl_error(& @3, state,
-                                "invalid stream %d specified", $3);
-               YYERROR;
-            } else {
-               $$.flags.q.explicit_stream = 1;
-               $$.stream = $3;
-            }
+            $$.flags.q.explicit_stream = 1;
+            $$.stream = $3;
          }
       }
 

@@ -3034,7 +3034,11 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
 
    if (state->stage == MESA_SHADER_GEOMETRY &&
        qual->flags.q.out && qual->flags.q.stream) {
-      var->data.stream = qual->stream;
+      unsigned qual_stream;
+      if (process_qualifier_constant(state, loc, "stream", qual->stream,
+                                     &qual_stream)) {
+         var->data.stream = qual_stream;
+      }
    }
 
    if (var->type->contains_atomic()) {
@@ -6080,7 +6084,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                           enum glsl_matrix_layout matrix_layout,
                                           bool allow_reserved_names,
                                           ir_variable_mode var_mode,
-                                          ast_type_qualifier *layout)
+                                          ast_type_qualifier *layout,
+                                          unsigned block_stream)
 {
    unsigned decl_count = 0;
 
@@ -6188,11 +6193,16 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
        *   the specified stream must match the stream associated with the
        *   containing block."
        */
-      if (qual->flags.q.explicit_stream &&
-          qual->stream != layout->stream) {
-         _mesa_glsl_error(&loc, state, "stream layout qualifier on interface "
-                          "block member does not match the interface block "
-                          "(%d vs %d)", qual->stream, layout->stream);
+      if (qual->flags.q.explicit_stream) {
+         unsigned qual_stream;
+         if (process_qualifier_constant(state, &loc, "stream",
+                                        qual->stream, &qual_stream) &&
+             qual_stream != block_stream) {
+            _mesa_glsl_error(&loc, state, "stream layout qualifier on "
+                             "interface block member does not match "
+                             "the interface block (%d vs %d)", qual->stream,
+                             block_stream);
+         }
       }
 
       if (qual->flags.q.uniform && qual->has_interpolation()) {
@@ -6350,7 +6360,8 @@ ast_struct_specifier::hir(exec_list *instructions,
                                                 GLSL_MATRIX_LAYOUT_INHERITED,
                                                 false /* allow_reserved_names */,
                                                 ir_var_auto,
-                                                NULL);
+                                                NULL,
+                                                0 /* for interface only */);
 
    validate_identifier(this->name, loc, state);
 
@@ -6504,6 +6515,16 @@ ast_interface_block::hir(exec_list *instructions,
                        "Interface block sets both readonly and writeonly");
    }
 
+   unsigned qual_stream;
+   if (!process_qualifier_constant(state, &loc, "stream", this->layout.stream,
+                                   &qual_stream)) {
+      /* If the stream qualifier is invalid it doesn't make sense to continue
+       * on and try to compare stream layouts on member variables against it
+       * so just return early.
+       */
+      return NULL;
+   }
+
    unsigned int num_variables =
       ast_process_struct_or_iface_block_members(&declared_variables,
                                                 state,
@@ -6513,7 +6534,8 @@ ast_interface_block::hir(exec_list *instructions,
                                                 matrix_layout,
                                                 redeclaring_per_vertex,
                                                 var_mode,
-                                                &this->layout);
+                                                &this->layout,
+                                                qual_stream);
 
    state->struct_specifier_depth--;
 
@@ -6859,7 +6881,7 @@ ast_interface_block::hir(exec_list *instructions,
          var->data.explicit_binding = this->layout.flags.q.explicit_binding;
          var->data.binding = this->layout.binding;
 
-         var->data.stream = this->layout.stream;
+         var->data.stream = qual_stream;
 
          state->symbols->add_variable(var);
          instructions->push_tail(var);
@@ -6879,7 +6901,7 @@ ast_interface_block::hir(exec_list *instructions,
          var->data.centroid = fields[i].centroid;
          var->data.sample = fields[i].sample;
          var->data.patch = fields[i].patch;
-         var->data.stream = this->layout.stream;
+         var->data.stream = qual_stream;
          var->init_interface_type(block_type);
 
          if (var_mode == ir_var_shader_in || var_mode == ir_var_uniform)
