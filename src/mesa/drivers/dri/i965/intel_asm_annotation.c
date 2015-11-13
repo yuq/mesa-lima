@@ -185,6 +185,8 @@ annotation_insert_error(struct annotation_info *annotation, unsigned offset,
    if (!annotation_array_ensure_space(annotation))
       return;
 
+   assume(annotation->ann_count > 0);
+
    for (int i = 0; i < annotation->ann_count; i++) {
       struct annotation *cur = &annotation->ann[i];
       struct annotation *next = &annotation->ann[i + 1];
@@ -205,8 +207,6 @@ annotation_insert_error(struct annotation_info *annotation, unsigned offset,
       }
       break;
    }
-
-   assume(ann != NULL);
 
    if (ann->error)
       ralloc_strcat(&ann->error, error);
