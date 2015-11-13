@@ -39,7 +39,7 @@ cat(struct string *dest, const struct string src)
 {
    dest->str = realloc(dest->str, dest->len + src.len + 1);
    memcpy(dest->str + dest->len, src.str, src.len);
-   dest->str[dest->len + src.len + 1] = '\0';
+   dest->str[dest->len + src.len] = '\0';
    dest->len = dest->len + src.len;
 }
 #define CAT(dest, src) cat(&dest, (struct string){src, strlen(src)})
