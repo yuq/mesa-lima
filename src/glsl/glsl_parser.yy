@@ -1466,13 +1466,7 @@ layout_qualifier_id:
                                "GL_ARB_explicit_attrib_location layout "
                                "identifier `%s' used", $1);
          }
-
-         if ($3 >= 0) {
-            $$.location = $3;
-         } else {
-             _mesa_glsl_error(& @3, state, "invalid location %d specified", $3);
-             YYERROR;
-         }
+         $$.location = $3;
       }
 
       if (match_layout_qualifier("index", $1, state) == 0) {

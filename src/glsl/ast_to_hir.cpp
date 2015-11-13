@@ -2674,13 +2674,19 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
 {
    bool fail = false;
 
+   unsigned qual_location;
+   if (!process_qualifier_constant(state, loc, "location", qual->location,
+                                   &qual_location)) {
+      return;
+   }
+
    /* Checks for GL_ARB_explicit_uniform_location. */
    if (qual->flags.q.uniform) {
       if (!state->check_explicit_uniform_location_allowed(loc, var))
          return;
 
       const struct gl_context *const ctx = state->ctx;
-      unsigned max_loc = qual->location + var->type->uniform_locations() - 1;
+      unsigned max_loc = qual_location + var->type->uniform_locations() - 1;
 
       if (max_loc >= ctx->Const.MaxUserAssignableUniformLocations) {
          _mesa_glsl_error(loc, state, "location(s) consumed by uniform %s "
@@ -2690,7 +2696,7 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
       }
 
       var->data.explicit_location = true;
-      var->data.location = qual->location;
+      var->data.location = qual_location;
       return;
    }
 
@@ -2775,23 +2781,23 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
       switch (state->stage) {
       case MESA_SHADER_VERTEX:
          var->data.location = (var->data.mode == ir_var_shader_in)
-            ? (qual->location + VERT_ATTRIB_GENERIC0)
-            : (qual->location + VARYING_SLOT_VAR0);
+            ? (qual_location + VERT_ATTRIB_GENERIC0)
+            : (qual_location + VARYING_SLOT_VAR0);
          break;
 
       case MESA_SHADER_TESS_CTRL:
       case MESA_SHADER_TESS_EVAL:
       case MESA_SHADER_GEOMETRY:
          if (var->data.patch)
-            var->data.location = qual->location + VARYING_SLOT_PATCH0;
+            var->data.location = qual_location + VARYING_SLOT_PATCH0;
          else
-            var->data.location = qual->location + VARYING_SLOT_VAR0;
+            var->data.location = qual_location + VARYING_SLOT_VAR0;
          break;
 
       case MESA_SHADER_FRAGMENT:
          var->data.location = (var->data.mode == ir_var_shader_out)
-            ? (qual->location + FRAG_RESULT_DATA0)
-            : (qual->location + VARYING_SLOT_VAR0);
+            ? (qual_location + FRAG_RESULT_DATA0)
+            : (qual_location + VARYING_SLOT_VAR0);
          break;
       case MESA_SHADER_COMPUTE:
          assert(!"Unexpected shader type");
