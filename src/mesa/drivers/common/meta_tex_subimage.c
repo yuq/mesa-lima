@@ -239,15 +239,17 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
       yoffset = 0;
    }
 
-   _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                             pbo_tex_image, 0);
+   _mesa_meta_framebuffer_texture_image(ctx, ctx->ReadBuffer,
+                                        GL_COLOR_ATTACHMENT0,
+                                        pbo_tex_image, 0);
    /* If this passes on the first layer it should pass on the others */
    status = _mesa_CheckFramebufferStatus(GL_READ_FRAMEBUFFER);
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto fail;
 
-   _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                             tex_image, zoffset);
+   _mesa_meta_framebuffer_texture_image(ctx, ctx->DrawBuffer,
+                                        GL_COLOR_ATTACHMENT0,
+                                        tex_image, zoffset);
    /* If this passes on the first layer it should pass on the others */
    status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
    if (status != GL_FRAMEBUFFER_COMPLETE)
@@ -263,8 +265,9 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
       goto fail;
 
    for (z = 1; z < depth; z++) {
-      _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                tex_image, zoffset + z);
+      _mesa_meta_framebuffer_texture_image(ctx, ctx->DrawBuffer,
+                                           GL_COLOR_ATTACHMENT0,
+                                           tex_image, zoffset + z);
 
       _mesa_update_state(ctx);
 
@@ -378,8 +381,9 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
     */
    if (tex_image) {
       _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbos[0]);
-      _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                tex_image, zoffset);
+      _mesa_meta_framebuffer_texture_image(ctx, ctx->ReadBuffer,
+                                           GL_COLOR_ATTACHMENT0,
+                                           tex_image, zoffset);
       /* If this passes on the first layer it should pass on the others */
       status = _mesa_CheckFramebufferStatus(GL_READ_FRAMEBUFFER);
       if (status != GL_FRAMEBUFFER_COMPLETE)
@@ -389,8 +393,9 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    }
 
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[1]);
-   _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                             pbo_tex_image, 0);
+   _mesa_meta_framebuffer_texture_image(ctx, ctx->DrawBuffer,
+                                        GL_COLOR_ATTACHMENT0,
+                                        pbo_tex_image, 0);
    /* If this passes on the first layer it should pass on the others */
    status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
    if (status != GL_FRAMEBUFFER_COMPLETE)
@@ -427,8 +432,9 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    }
 
    for (z = 1; z < depth; z++) {
-      _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                                tex_image, zoffset + z);
+      _mesa_meta_framebuffer_texture_image(ctx, ctx->ReadBuffer,
+                                           GL_COLOR_ATTACHMENT0,
+                                           tex_image, zoffset + z);
 
       _mesa_update_state(ctx);
 

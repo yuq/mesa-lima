@@ -661,7 +661,10 @@ _mesa_meta_glsl_generate_mipmap_cleanup(struct gl_context *ctx,
                                         struct gen_mipmap_state *mipmap);
 
 void
-_mesa_meta_bind_fbo_image(GLenum target, GLenum attachment,
-                          struct gl_texture_image *texImage, GLuint layer);
+_mesa_meta_framebuffer_texture_image(struct gl_context *ctx,
+                                     struct gl_framebuffer *fb,
+                                     GLenum attachment,
+                                     struct gl_texture_image *texImage,
+                                     GLuint layer);
 
 #endif /* META_H */

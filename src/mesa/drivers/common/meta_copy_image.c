@@ -238,8 +238,8 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
       /* Prefer the tex image because, even if we have a renderbuffer, we may
        * have had to wrap it in a texture view.
        */
-      _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, attachment,
-                                src_view_tex_image, src_z);
+      _mesa_meta_framebuffer_texture_image(ctx, ctx->ReadBuffer, attachment,
+                                           src_view_tex_image, src_z);
    } else {
       _mesa_framebuffer_renderbuffer(ctx, ctx->ReadBuffer, attachment,
                                      src_renderbuffer);
@@ -253,8 +253,8 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
       _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, attachment,
                                      dst_renderbuffer);
    } else {
-      _mesa_meta_bind_fbo_image(GL_DRAW_FRAMEBUFFER, attachment,
-                                dst_tex_image, dst_z);
+      _mesa_meta_framebuffer_texture_image(ctx, ctx->DrawBuffer, attachment,
+                                           dst_tex_image, dst_z);
    }
 
    status = _mesa_CheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);

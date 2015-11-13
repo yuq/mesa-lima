@@ -113,7 +113,8 @@ fallback_required(struct gl_context *ctx, GLenum target,
       _mesa_GenFramebuffers(1, &mipmap->FBO);
    _mesa_BindFramebuffer(fbo_target, mipmap->FBO);
 
-   _mesa_meta_bind_fbo_image(fbo_target, GL_COLOR_ATTACHMENT0, baseImage, 0);
+   _mesa_meta_framebuffer_texture_image(ctx, ctx->DrawBuffer,
+                                        GL_COLOR_ATTACHMENT0, baseImage, 0);
 
    status = _mesa_CheckFramebufferStatus(fbo_target);
 
@@ -354,7 +355,9 @@ _mesa_meta_GenerateMipmap(struct gl_context *ctx, GLenum target,
          _mesa_buffer_data(ctx, mipmap->buf_obj, GL_NONE, sizeof(verts), verts,
                            GL_DYNAMIC_DRAW, __func__);
 
-         _mesa_meta_bind_fbo_image(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, dstImage, layer);
+         _mesa_meta_framebuffer_texture_image(ctx, ctx->DrawBuffer,
+                                              GL_COLOR_ATTACHMENT0, dstImage,
+                                              layer);
 
          /* sanity check */
          if (_mesa_CheckFramebufferStatus(GL_FRAMEBUFFER) !=
