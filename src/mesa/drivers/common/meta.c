@@ -112,28 +112,12 @@ _mesa_meta_framebuffer_texture_image(struct gl_context *ctx,
 {
    struct gl_texture_object *texObj = texImage->TexObject;
    int level = texImage->Level;
-   GLenum texTarget = texObj->Target;
+   const GLenum texTarget = texObj->Target == GL_TEXTURE_CUBE_MAP
+      ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + texImage->Face
+      : texObj->Target;
 
-   switch (texTarget) {
-   case GL_TEXTURE_1D:
-      _mesa_framebuffer_texture(ctx, fb, attachment, texObj, texTarget,
-                                level, layer, false, __func__);
-      break;
-   case GL_TEXTURE_1D_ARRAY:
-   case GL_TEXTURE_2D_ARRAY:
-   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-   case GL_TEXTURE_CUBE_MAP_ARRAY:
-   case GL_TEXTURE_3D:
-      _mesa_framebuffer_texture(ctx, fb, attachment, texObj, texTarget,
-                                level, layer, false, __func__);
-      break;
-   default: /* 2D / cube */
-      if (texTarget == GL_TEXTURE_CUBE_MAP)
-         texTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X + texImage->Face;
-
-      _mesa_framebuffer_texture(ctx, fb, attachment, texObj, texTarget,
-                                level, layer, false, __func__);
-   }
+   _mesa_framebuffer_texture(ctx, fb, attachment, texObj, texTarget,
+                             level, layer, false, __func__);
 }
 
 GLuint
