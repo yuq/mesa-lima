@@ -2804,7 +2804,10 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
          break;
       }
 
-      if (qual->flags.q.explicit_index) {
+      unsigned qual_index;
+      if (qual->flags.q.explicit_index &&
+          process_qualifier_constant(state, loc, "index", qual->index,
+                                     &qual_index)) {
          /* From the GLSL 4.30 specification, section 4.4.2 (Output
           * Layout Qualifiers):
           *
@@ -2814,12 +2817,12 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
           * Older specifications don't mandate a behavior; we take
           * this as a clarification and always generate the error.
           */
-         if (qual->index < 0 || qual->index > 1) {
+         if (qual_index > 1) {
             _mesa_glsl_error(loc, state,
                              "explicit index may only be 0 or 1");
          } else {
             var->data.explicit_index = true;
-            var->data.index = qual->index;
+            var->data.index = qual_index;
          }
       }
    }
