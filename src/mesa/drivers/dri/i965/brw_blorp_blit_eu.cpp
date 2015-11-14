@@ -85,7 +85,7 @@ brw_blorp_eu_emitter::emit_texture_lookup(const struct brw_reg &dst,
                                           unsigned msg_length)
 {
    fs_inst *inst = new (mem_ctx) fs_inst(op, 16, dst, brw_message_reg(base_mrf),
-                                         fs_reg(0u));
+                                         fs_reg(0u), fs_reg(0u));
 
    inst->base_mrf = base_mrf;
    inst->mlen = msg_length;

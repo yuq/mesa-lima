@@ -116,7 +116,7 @@ public:
    void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
    void compute_clip_distance(gl_clip_plane *clip_planes);
 
-   uint32_t gather_channel(int orig_chan, uint32_t sampler);
+   uint32_t gather_channel(int orig_chan, uint32_t surface, uint32_t sampler);
    void swizzle_result(ir_texture_opcode op, int dest_components,
                        fs_reg orig_val, uint32_t sampler);
 
@@ -231,6 +231,8 @@ public:
                      int gather_component,
                      bool is_cube_array,
                      bool is_rect,
+                     uint32_t surface,
+                     fs_reg surface_reg,
                      uint32_t sampler,
                      fs_reg sampler_reg);
    fs_reg emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
@@ -462,6 +464,7 @@ private:
    void generate_linterp(fs_inst *inst, struct brw_reg dst,
 			 struct brw_reg *src);
    void generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src,
+                     struct brw_reg surface_index,
                      struct brw_reg sampler_index);
    void generate_get_buffer_size(fs_inst *inst, struct brw_reg dst,
                                  struct brw_reg src,

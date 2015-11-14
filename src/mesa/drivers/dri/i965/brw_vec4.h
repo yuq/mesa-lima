@@ -273,9 +273,11 @@ public:
                      src_reg offset_value,
                      src_reg mcs,
                      bool is_cube_array,
+                     uint32_t surface, src_reg surface_reg,
                      uint32_t sampler, src_reg sampler_reg);
 
-   uint32_t gather_channel(unsigned gather_component, uint32_t sampler);
+   uint32_t gather_channel(unsigned gather_component,
+                           uint32_t surface, uint32_t sampler);
    src_reg emit_mcs_fetch(const glsl_type *coordinate_type, src_reg coordinate,
                           src_reg sampler);
    void emit_gen6_gather_wa(uint8_t wa, dst_reg dst);
