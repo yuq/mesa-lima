@@ -1689,7 +1689,6 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpCopyMemorySized:
    case SpvOpArrayLength:
-   case SpvOpImageTexelPointer:
    default:
       unreachable("Unhandled opcode");
    }
@@ -1911,6 +1910,163 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    nir_builder_instr_insert(&b->nb, &instr->instr);
 }
 
+static nir_ssa_def *
+get_image_coord(struct vtn_builder *b, uint32_t value)
+{
+   struct vtn_ssa_value *coord = vtn_ssa_value(b, value);
+
+   /* The image_load_store intrinsics assume a 4-dim coordinate */
+   unsigned dim = glsl_get_vector_elements(coord->type);
+   unsigned swizzle[4];
+   for (unsigned i = 0; i < 4; i++)
+      swizzle[i] = MIN2(i, dim - 1);
+
+   return nir_swizzle(&b->nb, coord->def, swizzle, 4, false);
+}
+
+static void
+vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
+                 const uint32_t *w, unsigned count)
+{
+   /* Just get this one out of the way */
+   if (opcode == SpvOpImageTexelPointer) {
+      struct vtn_value *val =
+         vtn_push_value(b, w[2], vtn_value_type_image_pointer);
+      val->image = ralloc(b, struct vtn_image_pointer);
+
+      val->image->deref = vtn_value(b, w[3], vtn_value_type_deref)->deref;
+      val->image->coord = get_image_coord(b, w[4]);
+      val->image->sample = vtn_ssa_value(b, w[5])->def;
+      return;
+   }
+
+   struct vtn_image_pointer image;
+
+   switch (opcode) {
+   case SpvOpAtomicExchange:
+   case SpvOpAtomicCompareExchange:
+   case SpvOpAtomicCompareExchangeWeak:
+   case SpvOpAtomicIIncrement:
+   case SpvOpAtomicIDecrement:
+   case SpvOpAtomicIAdd:
+   case SpvOpAtomicISub:
+   case SpvOpAtomicSMin:
+   case SpvOpAtomicUMin:
+   case SpvOpAtomicSMax:
+   case SpvOpAtomicUMax:
+   case SpvOpAtomicAnd:
+   case SpvOpAtomicOr:
+   case SpvOpAtomicXor:
+      image = *vtn_value(b, w[3], vtn_value_type_image_pointer)->image;
+      break;
+
+   case SpvOpImageRead:
+      image.deref = vtn_value(b, w[3], vtn_value_type_deref)->deref;
+      image.coord = get_image_coord(b, w[4]);
+
+      if (count > 5 && (w[5] & SpvImageOperandsSampleMask)) {
+         assert(w[5] == SpvImageOperandsSampleMask);
+         image.sample = vtn_ssa_value(b, w[6])->def;
+      } else {
+         image.sample = nir_ssa_undef(&b->nb, 1);
+      }
+      break;
+
+   case SpvOpImageWrite:
+      image.deref = vtn_value(b, w[1], vtn_value_type_deref)->deref;
+      image.coord = get_image_coord(b, w[2]);
+
+      /* texel = w[3] */
+
+      if (count > 4 && (w[4] & SpvImageOperandsSampleMask)) {
+         assert(w[4] == SpvImageOperandsSampleMask);
+         image.sample = vtn_ssa_value(b, w[5])->def;
+      } else {
+         image.sample = nir_ssa_undef(&b->nb, 1);
+      }
+
+   default:
+      unreachable("Invalid image opcode");
+   }
+
+   nir_intrinsic_op op;
+   switch (opcode) {
+#define OP(S, N) case SpvOp##S: op = nir_intrinsic_image_##N; break;
+   OP(ImageRead,              load)
+   OP(ImageWrite,             store)
+   OP(AtomicExchange,         atomic_exchange)
+   OP(AtomicCompareExchange,  atomic_comp_swap)
+   OP(AtomicIIncrement,       atomic_add)
+   OP(AtomicIDecrement,       atomic_add)
+   OP(AtomicIAdd,             atomic_add)
+   OP(AtomicISub,             atomic_add)
+   OP(AtomicSMin,             atomic_min)
+   OP(AtomicUMin,             atomic_min)
+   OP(AtomicSMax,             atomic_max)
+   OP(AtomicUMax,             atomic_max)
+   OP(AtomicAnd,              atomic_and)
+   OP(AtomicOr,               atomic_or)
+   OP(AtomicXor,              atomic_xor)
+#undef OP
+   default:
+      unreachable("Invalid image opcode");
+   }
+
+   nir_intrinsic_instr *intrin = nir_intrinsic_instr_create(b->shader, op);
+   intrin->variables[0] =
+      nir_deref_as_var(nir_copy_deref(&intrin->instr, &image.deref->deref));
+   intrin->src[0] = nir_src_for_ssa(image.coord);
+   intrin->src[1] = nir_src_for_ssa(image.sample);
+
+   switch (opcode) {
+   case SpvOpImageRead:
+      break;
+   case SpvOpImageWrite:
+      intrin->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[3])->def);
+      break;
+   case SpvOpAtomicIIncrement:
+      intrin->src[2] = nir_src_for_ssa(nir_imm_int(&b->nb, 1));
+      break;
+   case SpvOpAtomicIDecrement:
+      intrin->src[2] = nir_src_for_ssa(nir_imm_int(&b->nb, -1));
+      break;
+
+   case SpvOpAtomicExchange:
+   case SpvOpAtomicIAdd:
+   case SpvOpAtomicSMin:
+   case SpvOpAtomicUMin:
+   case SpvOpAtomicSMax:
+   case SpvOpAtomicUMax:
+   case SpvOpAtomicAnd:
+   case SpvOpAtomicOr:
+   case SpvOpAtomicXor:
+      intrin->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[6])->def);
+      break;
+
+   case SpvOpAtomicCompareExchange:
+      intrin->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[7])->def);
+      intrin->src[3] = nir_src_for_ssa(vtn_ssa_value(b, w[6])->def);
+      break;
+
+   case SpvOpAtomicISub:
+      intrin->src[2] = nir_src_for_ssa(nir_ineg(&b->nb, vtn_ssa_value(b, w[6])->def));
+      break;
+
+   default:
+      unreachable("Invalid image opcode");
+   }
+
+   if (opcode != SpvOpImageWrite) {
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
+      struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
+      nir_ssa_dest_init(&intrin->instr, &intrin->dest,
+                        glsl_get_vector_elements(type->type), NULL);
+      val->ssa = vtn_create_ssa_value(b, type->type);
+      val->ssa->def = &intrin->dest.ssa;
+   }
+
+   nir_builder_instr_insert(&b->nb, &intrin->instr);
+}
 
 static nir_alu_instr *
 create_vec(void *mem_ctx, unsigned num_components)
@@ -3076,7 +3232,6 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpAccessChain:
    case SpvOpInBoundsAccessChain:
    case SpvOpArrayLength:
-   case SpvOpImageTexelPointer:
       vtn_handle_variables(b, opcode, w, count);
       break;
 
@@ -3102,6 +3257,34 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpImageQuerySamples:
       vtn_handle_texture(b, opcode, w, count);
       break;
+
+   case SpvOpImageRead:
+   case SpvOpImageWrite:
+   case SpvOpImageTexelPointer:
+      vtn_handle_image(b, opcode, w, count);
+      break;
+
+   case SpvOpAtomicExchange:
+   case SpvOpAtomicCompareExchange:
+   case SpvOpAtomicCompareExchangeWeak:
+   case SpvOpAtomicIIncrement:
+   case SpvOpAtomicIDecrement:
+   case SpvOpAtomicIAdd:
+   case SpvOpAtomicISub:
+   case SpvOpAtomicSMin:
+   case SpvOpAtomicUMin:
+   case SpvOpAtomicSMax:
+   case SpvOpAtomicUMax:
+   case SpvOpAtomicAnd:
+   case SpvOpAtomicOr:
+   case SpvOpAtomicXor: {
+      struct vtn_value *pointer = vtn_untyped_value(b, w[3]);
+      if (pointer->value_type == vtn_value_type_image_pointer) {
+         vtn_handle_image(b, opcode, w, count);
+      } else {
+         assert(!"Atomic buffers not yet implemented");
+      }
+   }
 
    case SpvOpSNegate:
    case SpvOpFNegate:

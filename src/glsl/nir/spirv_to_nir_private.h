@@ -45,6 +45,7 @@ enum vtn_value_type {
    vtn_value_type_block,
    vtn_value_type_ssa,
    vtn_value_type_extension,
+   vtn_value_type_image_pointer,
 };
 
 struct vtn_block {
@@ -120,6 +121,12 @@ struct vtn_type {
    SpvBuiltIn builtin;
 };
 
+struct vtn_image_pointer {
+   nir_deref_var *deref;
+   nir_ssa_def *coord;
+   nir_ssa_def *sample;
+};
+
 struct vtn_value {
    enum vtn_value_type value_type;
    const char *name;
@@ -136,6 +143,7 @@ struct vtn_value {
          nir_deref_var *deref;
          struct vtn_type *deref_type;
       };
+      struct vtn_image_pointer *image;
       struct vtn_function *func;
       struct vtn_block *block;
       struct vtn_ssa_value *ssa;
