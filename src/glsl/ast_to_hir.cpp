@@ -2536,22 +2536,23 @@ validate_stream_qualifier(YYLTYPE *loc, struct _mesa_glsl_parse_state *state,
    return true;
 }
 
-static bool
-validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
-                           YYLTYPE *loc,
-                           const glsl_type *type,
-                           const ast_type_qualifier *qual)
+static void
+apply_explicit_binding(struct _mesa_glsl_parse_state *state,
+                       YYLTYPE *loc,
+                       ir_variable *var,
+                       const glsl_type *type,
+                       const ast_type_qualifier *qual)
 {
    if (!qual->flags.q.uniform && !qual->flags.q.buffer) {
       _mesa_glsl_error(loc, state,
                        "the \"binding\" qualifier only applies to uniforms and "
                        "shader storage buffer objects");
-      return false;
+      return;
    }
 
    if (qual->binding < 0) {
       _mesa_glsl_error(loc, state, "binding values must be >= 0");
-      return false;
+      return;
    }
 
    const struct gl_context *const ctx = state->ctx;
@@ -2576,7 +2577,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                           "the maximum number of UBO binding points (%d)",
                           qual->binding, elements,
                           ctx->Const.MaxUniformBufferBindings);
-         return false;
+         return;
       }
 
       /* SSBOs. From page 67 of the GLSL 4.30 specification:
@@ -2594,7 +2595,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                           "the maximum number of SSBO binding points (%d)",
                           qual->binding, elements,
                           ctx->Const.MaxShaderStorageBufferBindings);
-         return false;
+         return;
       }
    } else if (base_type->is_sampler()) {
       /* Samplers.  From page 63 of the GLSL 4.20 specification:
@@ -2611,7 +2612,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                           "exceeds the maximum number of texture image units "
                           "(%d)", qual->binding, elements, limit);
 
-         return false;
+         return;
       }
    } else if (base_type->contains_atomic()) {
       assert(ctx->Const.MaxAtomicBufferBindings <= MAX_COMBINED_ATOMIC_BUFFERS);
@@ -2621,7 +2622,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                           "(%d)", qual->binding,
                           ctx->Const.MaxAtomicBufferBindings);
 
-         return false;
+         return;
       }
    } else if (state->is_version(420, 310) && base_type->is_image()) {
       assert(ctx->Const.MaxImageUnits <= MAX_IMAGE_UNITS);
@@ -2629,17 +2630,20 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
          _mesa_glsl_error(loc, state, "Image binding %d exceeds the "
                           " maximum number of image units (%d)", max_index,
                           ctx->Const.MaxImageUnits);
-         return false;
+         return;
       }
 
    } else {
       _mesa_glsl_error(loc, state,
                        "the \"binding\" qualifier only applies to uniform "
                        "blocks, opaque variables, or arrays thereof");
-      return false;
+      return;
    }
 
-   return true;
+   var->data.explicit_binding = true;
+   var->data.binding = qual->binding;
+
+   return;
 }
 
 
@@ -3041,10 +3045,8 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
       _mesa_glsl_error(loc, state, "explicit index requires explicit location");
    }
 
-   if (qual->flags.q.explicit_binding &&
-       validate_binding_qualifier(state, loc, var->type, qual)) {
-      var->data.explicit_binding = true;
-      var->data.binding = qual->binding;
+   if (qual->flags.q.explicit_binding) {
+      apply_explicit_binding(state, loc, var, var->type, qual);
    }
 
    if (state->stage == MESA_SHADER_GEOMETRY &&
@@ -6694,8 +6696,6 @@ ast_interface_block::hir(exec_list *instructions,
                                         num_variables,
                                         packing,
                                         this->block_name);
-   if (this->layout.flags.q.explicit_binding)
-      validate_binding_qualifier(state, &loc, block_type, &this->layout);
 
    if (!state->symbols->add_interface(block_type->name, block_type, var_mode)) {
       YYLTYPE loc = this->get_location();
@@ -6826,10 +6826,6 @@ ast_interface_block::hir(exec_list *instructions,
                              "not allowed");
          }
 
-         if (this->layout.flags.q.explicit_binding)
-            validate_binding_qualifier(state, &loc, block_array_type,
-                                       &this->layout);
-
          var = new(state) ir_variable(block_array_type,
                                       this->instance_name,
                                       var_mode);
@@ -6891,12 +6887,10 @@ ast_interface_block::hir(exec_list *instructions,
          earlier->reinit_interface_type(block_type);
          delete var;
       } else {
-         /* Propagate the "binding" keyword into this UBO's fields;
-          * the UBO declaration itself doesn't get an ir_variable unless it
-          * has an instance name.  This is ugly.
-          */
-         var->data.explicit_binding = this->layout.flags.q.explicit_binding;
-         var->data.binding = this->layout.binding;
+         if (this->layout.flags.q.explicit_binding) {
+            apply_explicit_binding(state, &loc, var,
+                                   var->get_interface_type(), &this->layout);
+         }
 
          var->data.stream = qual_stream;
 
@@ -6975,8 +6969,10 @@ ast_interface_block::hir(exec_list *instructions,
           * The UBO declaration itself doesn't get an ir_variable unless it
           * has an instance name.  This is ugly.
           */
-         var->data.explicit_binding = this->layout.flags.q.explicit_binding;
-         var->data.binding = this->layout.binding;
+         if (this->layout.flags.q.explicit_binding) {
+            apply_explicit_binding(state, &loc, var,
+                                   var->get_interface_type(), &this->layout);
+         }
 
          if (var->type->is_unsized_array()) {
             if (var->is_in_shader_storage_block()) {
