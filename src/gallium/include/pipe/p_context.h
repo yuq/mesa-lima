@@ -45,6 +45,7 @@ struct pipe_blit_info;
 struct pipe_box;
 struct pipe_clip_state;
 struct pipe_constant_buffer;
+struct pipe_debug_callback;
 struct pipe_depth_stencil_alpha_state;
 struct pipe_draw_info;
 struct pipe_fence_handle;
@@ -239,6 +240,13 @@ struct pipe_context {
                           const float default_inner_level[2]);
 
    /**
+    * Sets the debug callback. If the pointer is null, then no callback is
+    * set, otherwise a copy of the data should be made.
+    */
+   void (*set_debug_callback)(struct pipe_context *,
+                              const struct pipe_debug_callback *);
+
+   /**
     * Bind an array of shader buffers that will be used by a shader.
     * Any buffers that were previously bound to the specified range
     * will be unbound.
@@ -370,6 +378,16 @@ struct pipe_context {
                                unsigned stencil,
                                unsigned dstx, unsigned dsty,
                                unsigned width, unsigned height);
+
+   /**
+    * Clear the texture with the specified texel. Not guaranteed to be a
+    * renderable format. Data provided in the resource's format.
+    */
+   void (*clear_texture)(struct pipe_context *pipe,
+                         struct pipe_resource *res,
+                         unsigned level,
+                         const struct pipe_box *box,
+                         const void *data);
 
    /**
     * Clear a buffer. Runs a memset over the specified region with the element

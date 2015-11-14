@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_format_s3tc.h"
 #include "util/u_upload_mgr.h"
+#include "os/os_time.h"
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
 #include "radeon/radeon_video.h"
@@ -39,6 +40,12 @@
 #ifndef HAVE_LLVM
 #define HAVE_LLVM 0
 #endif
+
+struct r600_multi_fence {
+	struct pipe_reference reference;
+	struct pipe_fence_handle *gfx;
+	struct pipe_fence_handle *sdma;
+};
 
 /*
  * pipe_context
@@ -110,10 +117,14 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 
 void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw)
 {
+	/* Flush the GFX IB if it's not empty. */
+	if (ctx->gfx.cs->cdw > ctx->initial_gfx_cs_size)
+		ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+
 	/* Flush if there's not enough space. */
-	if ((num_dw + ctx->rings.dma.cs->cdw) > ctx->rings.dma.cs->max_dw) {
-		ctx->rings.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
-		assert((num_dw + ctx->rings.dma.cs->cdw) <= ctx->rings.dma.cs->max_dw);
+	if ((num_dw + ctx->dma.cs->cdw) > ctx->dma.cs->max_dw) {
+		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		assert((num_dw + ctx->dma.cs->cdw) <= ctx->dma.cs->max_dw);
 	}
 }
 
@@ -123,17 +134,6 @@ static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
 
 void r600_preflush_suspend_features(struct r600_common_context *ctx)
 {
-	/* Disable render condition. */
-	ctx->saved_render_cond = NULL;
-	ctx->saved_render_cond_cond = FALSE;
-	ctx->saved_render_cond_mode = 0;
-	if (ctx->current_render_cond) {
-		ctx->saved_render_cond = ctx->current_render_cond;
-		ctx->saved_render_cond_cond = ctx->current_render_cond_cond;
-		ctx->saved_render_cond_mode = ctx->current_render_cond_mode;
-		ctx->b.render_condition(&ctx->b, NULL, FALSE, 0);
-	}
-
 	/* suspend queries */
 	ctx->queries_suspended_for_flush = false;
 	if (ctx->num_cs_dw_nontimer_queries_suspend) {
@@ -161,44 +161,52 @@ void r600_postflush_resume_features(struct r600_common_context *ctx)
 		r600_resume_nontimer_queries(ctx);
 		r600_resume_timer_queries(ctx);
 	}
-
-	/* Re-enable render condition. */
-	if (ctx->saved_render_cond) {
-		ctx->b.render_condition(&ctx->b, ctx->saved_render_cond,
-					  ctx->saved_render_cond_cond,
-					  ctx->saved_render_cond_mode);
-	}
 }
 
 static void r600_flush_from_st(struct pipe_context *ctx,
 			       struct pipe_fence_handle **fence,
 			       unsigned flags)
 {
+	struct pipe_screen *screen = ctx->screen;
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	unsigned rflags = 0;
+	struct pipe_fence_handle *gfx_fence = NULL;
+	struct pipe_fence_handle *sdma_fence = NULL;
 
 	if (flags & PIPE_FLUSH_END_OF_FRAME)
 		rflags |= RADEON_FLUSH_END_OF_FRAME;
 
-	if (rctx->rings.dma.cs) {
-		rctx->rings.dma.flush(rctx, rflags, NULL);
+	if (rctx->dma.cs) {
+		rctx->dma.flush(rctx, rflags, fence ? &sdma_fence : NULL);
 	}
-	rctx->rings.gfx.flush(rctx, rflags, fence);
+	rctx->gfx.flush(rctx, rflags, fence ? &gfx_fence : NULL);
+
+	/* Both engines can signal out of order, so we need to keep both fences. */
+	if (gfx_fence || sdma_fence) {
+		struct r600_multi_fence *multi_fence =
+			CALLOC_STRUCT(r600_multi_fence);
+		if (!multi_fence)
+			return;
+
+		multi_fence->reference.count = 1;
+		multi_fence->gfx = gfx_fence;
+		multi_fence->sdma = sdma_fence;
+
+		screen->fence_reference(screen, fence, NULL);
+		*fence = (struct pipe_fence_handle*)multi_fence;
+	}
 }
 
 static void r600_flush_dma_ring(void *ctx, unsigned flags,
 				struct pipe_fence_handle **fence)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct radeon_winsys_cs *cs = rctx->rings.dma.cs;
+	struct radeon_winsys_cs *cs = rctx->dma.cs;
 
-	if (!cs->cdw) {
-		return;
-	}
-
-	rctx->rings.dma.flushing = true;
-	rctx->ws->cs_flush(cs, flags, fence, 0);
-	rctx->rings.dma.flushing = false;
+	if (cs->cdw)
+		rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence, 0);
+	if (fence)
+		rctx->ws->fence_reference(fence, rctx->last_sdma_fence);
 }
 
 static enum pipe_reset_status r600_get_reset_status(struct pipe_context *ctx)
@@ -270,10 +278,10 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 		return false;
 
 	if (rscreen->info.r600_has_dma && !(rscreen->debug_flags & DBG_NO_ASYNC_DMA)) {
-		rctx->rings.dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
-							 r600_flush_dma_ring,
-							 rctx, NULL);
-		rctx->rings.dma.flush = r600_flush_dma_ring;
+		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
+						   r600_flush_dma_ring,
+						   rctx, NULL);
+		rctx->dma.flush = r600_flush_dma_ring;
 	}
 
 	return true;
@@ -281,10 +289,10 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 
 void r600_common_context_cleanup(struct r600_common_context *rctx)
 {
-	if (rctx->rings.gfx.cs)
-		rctx->ws->cs_destroy(rctx->rings.gfx.cs);
-	if (rctx->rings.dma.cs)
-		rctx->ws->cs_destroy(rctx->rings.dma.cs);
+	if (rctx->gfx.cs)
+		rctx->ws->cs_destroy(rctx->gfx.cs);
+	if (rctx->dma.cs)
+		rctx->ws->cs_destroy(rctx->dma.cs);
 	if (rctx->ctx)
 		rctx->ws->ctx_destroy(rctx->ctx);
 
@@ -297,6 +305,7 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 	if (rctx->allocator_so_filled_size) {
 		u_suballocator_destroy(rctx->allocator_so_filled_size);
 	}
+	rctx->ws->fence_reference(&rctx->last_sdma_fence, NULL);
 }
 
 void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r)
@@ -754,12 +763,19 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 }
 
 static void r600_fence_reference(struct pipe_screen *screen,
-				 struct pipe_fence_handle **ptr,
-				 struct pipe_fence_handle *fence)
+				 struct pipe_fence_handle **dst,
+				 struct pipe_fence_handle *src)
 {
-	struct radeon_winsys *rws = ((struct r600_common_screen*)screen)->ws;
+	struct radeon_winsys *ws = ((struct r600_common_screen*)screen)->ws;
+	struct r600_multi_fence **rdst = (struct r600_multi_fence **)dst;
+	struct r600_multi_fence *rsrc = (struct r600_multi_fence *)src;
 
-	rws->fence_reference(ptr, fence);
+	if (pipe_reference(&(*rdst)->reference, &rsrc->reference)) {
+		ws->fence_reference(&(*rdst)->gfx, NULL);
+		ws->fence_reference(&(*rdst)->sdma, NULL);
+		FREE(*rdst);
+	}
+        *rdst = rsrc;
 }
 
 static boolean r600_fence_finish(struct pipe_screen *screen,
@@ -767,8 +783,24 @@ static boolean r600_fence_finish(struct pipe_screen *screen,
 				 uint64_t timeout)
 {
 	struct radeon_winsys *rws = ((struct r600_common_screen*)screen)->ws;
+	struct r600_multi_fence *rfence = (struct r600_multi_fence *)fence;
+	int64_t abs_timeout = os_time_get_absolute_timeout(timeout);
 
-	return rws->fence_wait(rws, fence, timeout);
+	if (rfence->sdma) {
+		if (!rws->fence_wait(rws, rfence->sdma, timeout))
+			return false;
+
+		/* Recompute the timeout after waiting. */
+		if (timeout && timeout != PIPE_TIMEOUT_INFINITE) {
+			int64_t time = os_time_get_nano();
+			timeout = abs_timeout > time ? abs_timeout - time : 0;
+		}
+	}
+
+	if (!rfence->gfx)
+		return true;
+
+	return rws->fence_wait(rws, rfence->gfx, timeout);
 }
 
 static bool r600_interpret_tiling(struct r600_common_screen *rscreen,

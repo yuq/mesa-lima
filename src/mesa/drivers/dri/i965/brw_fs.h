@@ -70,9 +70,10 @@ offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
    switch (reg.file) {
    case BAD_FILE:
       break;
-   case GRF:
+   case ARF:
+   case FIXED_GRF:
    case MRF:
-   case HW_REG:
+   case VGRF:
    case ATTR:
       return byte_offset(reg,
                          delta * reg.component_size(bld.dispatch_width()));
@@ -105,7 +106,8 @@ public:
               void *mem_ctx,
               struct brw_gs_compile *gs_compile,
               struct brw_gs_prog_data *prog_data,
-              const nir_shader *shader);
+              const nir_shader *shader,
+              int shader_time_index);
    void init();
    ~fs_visitor();
 
@@ -131,18 +133,22 @@ public:
 
    bool run_fs(bool do_rep_send);
    bool run_vs(gl_clip_plane *clip_planes);
+   bool run_gs();
    bool run_cs();
    void optimize();
    void allocate_registers();
    void setup_payload_gen4();
    void setup_payload_gen6();
    void setup_vs_payload();
+   void setup_gs_payload();
    void setup_cs_payload();
    void fixup_3src_null_dest();
    void assign_curb_setup();
    void calculate_urb_setup();
    void assign_urb_setup();
+   void convert_attr_sources_to_hw_regs(fs_inst *inst);
    void assign_vs_urb_setup();
+   void assign_gs_urb_setup();
    bool assign_regs(bool allow_spilling);
    void assign_regs_trivial();
    void calculate_payload_ranges(int payload_node_count,
@@ -258,6 +264,14 @@ public:
                             nir_load_const_instr *instr);
    void nir_emit_undef(const brw::fs_builder &bld,
                        nir_ssa_undef_instr *instr);
+   void nir_emit_vs_intrinsic(const brw::fs_builder &bld,
+                              nir_intrinsic_instr *instr);
+   void nir_emit_gs_intrinsic(const brw::fs_builder &bld,
+                              nir_intrinsic_instr *instr);
+   void nir_emit_fs_intrinsic(const brw::fs_builder &bld,
+                              nir_intrinsic_instr *instr);
+   void nir_emit_cs_intrinsic(const brw::fs_builder &bld,
+                              nir_intrinsic_instr *instr);
    void nir_emit_intrinsic(const brw::fs_builder &bld,
                            nir_intrinsic_instr *instr);
    void nir_emit_ssbo_atomic(const brw::fs_builder &bld,
@@ -280,7 +294,16 @@ public:
                                  fs_reg color1, fs_reg color2,
                                  fs_reg src0_alpha, unsigned components);
    void emit_fb_writes();
-   void emit_urb_writes();
+   void emit_urb_writes(const fs_reg &gs_vertex_count = fs_reg());
+   void set_gs_stream_control_data_bits(const fs_reg &vertex_count,
+                                        unsigned stream_id);
+   void emit_gs_control_data_bits(const fs_reg &vertex_count);
+   void emit_gs_end_primitive(const nir_src &vertex_count_nir_src);
+   void emit_gs_vertex(const nir_src &vertex_count_nir_src,
+                       unsigned stream_id);
+   void emit_gs_thread_end();
+   void emit_gs_input_load(const fs_reg &dst, const nir_src &vertex_src,
+                           unsigned offset, unsigned num_components);
    void emit_cs_terminate();
    fs_reg *emit_cs_local_invocation_id_setup();
    fs_reg *emit_cs_work_group_id_setup();
@@ -388,6 +411,8 @@ public:
    fs_reg delta_xy[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
    fs_reg shader_start_time;
    fs_reg userplane[MAX_CLIP_PLANES];
+   fs_reg final_gs_vertex_count;
+   fs_reg control_data_bits;
 
    unsigned grf_used;
    bool spilled_any_registers;

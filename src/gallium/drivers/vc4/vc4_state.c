@@ -420,6 +420,23 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
         cso->width = framebuffer->width;
         cso->height = framebuffer->height;
 
+        /* If we're binding to uninitialized buffers, no need to load their
+         * contents before drawing..
+         */
+        if (cso->cbufs[0]) {
+                struct vc4_resource *rsc =
+                        vc4_resource(cso->cbufs[0]->texture);
+                if (!rsc->writes)
+                        vc4->cleared |= PIPE_CLEAR_COLOR0;
+        }
+
+        if (cso->zsbuf) {
+                struct vc4_resource *rsc =
+                        vc4_resource(cso->zsbuf->texture);
+                if (!rsc->writes)
+                        vc4->cleared |= PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL;
+        }
+
         /* Nonzero texture mipmap levels are laid out as if they were in
          * power-of-two-sized spaces.  The renderbuffer config infers its
          * stride from the width parameter, so we need to configure our
@@ -583,6 +600,10 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                 tmpl.last_level = cso->u.tex.last_level - cso->u.tex.first_level;
 
                 prsc = vc4_resource_create(pctx->screen, &tmpl);
+                if (!prsc) {
+                        free(so);
+                        return NULL;
+                }
                 rsc = vc4_resource(prsc);
                 clone = vc4_resource(prsc);
                 clone->shadow_parent = &shadow_parent->base.b;

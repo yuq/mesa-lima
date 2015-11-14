@@ -110,6 +110,7 @@ union si_state_atoms {
 	struct {
 		/* The order matters. */
 		struct r600_atom *cache_flush;
+		struct r600_atom *render_cond;
 		struct r600_atom *streamout_begin;
 		struct r600_atom *streamout_enable; /* must be after streamout_begin */
 		struct r600_atom *framebuffer;

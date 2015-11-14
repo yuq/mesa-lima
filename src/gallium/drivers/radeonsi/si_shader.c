@@ -164,49 +164,6 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 }
 
 /**
- * Given a semantic name and index of a parameter and a mask of used parameters
- * (inputs or outputs), return the index of the parameter in the list of all
- * used parameters.
- *
- * For example, assume this list of parameters:
- *   POSITION, PSIZE, GENERIC0, GENERIC2
- * which has the mask:
- *   11000000000101
- * Then:
- *   querying POSITION returns 0,
- *   querying PSIZE returns 1,
- *   querying GENERIC0 returns 2,
- *   querying GENERIC2 returns 3.
- *
- * Which can be used as an offset to a parameter buffer in units of vec4s.
- */
-static int get_param_index(unsigned semantic_name, unsigned index,
-			   uint64_t mask)
-{
-	unsigned unique_index = si_shader_io_get_unique_index(semantic_name, index);
-	int i, param_index = 0;
-
-	/* If not present... */
-	if (!((1llu << unique_index) & mask))
-		return -1;
-
-	for (i = 0; mask; i++) {
-		uint64_t bit = 1llu << i;
-
-		if (bit & mask) {
-			if (i == unique_index)
-				return param_index;
-
-			mask &= ~bit;
-			param_index++;
-		}
-	}
-
-	assert(!"unreachable");
-	return -1;
-}
-
-/**
  * Get the value of a shader input parameter and extract a bitfield.
  */
 static LLVMValueRef unpack_param(struct si_shader_context *si_shader_ctx,
@@ -775,6 +732,7 @@ static LLVMValueRef fetch_input_gs(
 	struct tgsi_shader_info *info = &shader->selector->info;
 	unsigned semantic_name = info->input_semantic_name[reg->Register.Index];
 	unsigned semantic_index = info->input_semantic_index[reg->Register.Index];
+	unsigned param;
 
 	if (swizzle != ~0 && semantic_name == TGSI_SEMANTIC_PRIMID)
 		return get_primitive_id(bld_base, swizzle);
@@ -805,12 +763,10 @@ static LLVMValueRef fetch_input_gs(
 						   vtx_offset_param),
 				      4);
 
+	param = si_shader_io_get_unique_index(semantic_name, semantic_index);
 	args[0] = si_shader_ctx->esgs_ring;
 	args[1] = vtx_offset;
-	args[2] = lp_build_const_int32(gallivm,
-				       (get_param_index(semantic_name, semantic_index,
-							shader->selector->inputs_read) * 4 +
-					swizzle) * 256);
+	args[2] = lp_build_const_int32(gallivm, (param * 4 + swizzle) * 256);
 	args[3] = uint->zero;
 	args[4] = uint->one;  /* OFFEN */
 	args[5] = uint->zero; /* IDXEN */
@@ -2016,9 +1972,6 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context * bld_base)
 	LLVMTypeRef i32 = LLVMInt32TypeInContext(gallivm->context);
 	LLVMValueRef soffset = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 					    si_shader_ctx->param_es2gs_offset);
-	uint64_t enabled_outputs = si_shader_ctx->type == TGSI_PROCESSOR_TESS_EVAL ?
-					   es->key.tes.es_enabled_outputs :
-					   es->key.vs.es_enabled_outputs;
 	unsigned chan;
 	int i;
 
@@ -2031,11 +1984,8 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context * bld_base)
 		    info->output_semantic_name[i] == TGSI_SEMANTIC_LAYER)
 			continue;
 
-		param_index = get_param_index(info->output_semantic_name[i],
-					      info->output_semantic_index[i],
-					      enabled_outputs);
-		if (param_index < 0)
-			continue;
+		param_index = si_shader_io_get_unique_index(info->output_semantic_name[i],
+							    info->output_semantic_index[i]);
 
 		for (chan = 0; chan < 4; chan++) {
 			LLVMValueRef out_val = LLVMBuildLoad(gallivm->builder, out_ptr[chan], "");
@@ -4023,10 +3973,6 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 			fprintf(f, !i ? "%u" : ", %u",
 				key->vs.instance_divisors[i]);
 		fprintf(f, "}\n");
-
-		if (key->vs.as_es)
-			fprintf(f, "  es_enabled_outputs = 0x%"PRIx64"\n",
-				key->vs.es_enabled_outputs);
 		fprintf(f, "  as_es = %u\n", key->vs.as_es);
 		fprintf(f, "  as_ls = %u\n", key->vs.as_ls);
 		fprintf(f, "  export_prim_id = %u\n", key->vs.export_prim_id);
@@ -4037,9 +3983,6 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
-		if (key->tes.as_es)
-			fprintf(f, "  es_enabled_outputs = 0x%"PRIx64"\n",
-				key->tes.es_enabled_outputs);
 		fprintf(f, "  as_es = %u\n", key->tes.as_es);
 		fprintf(f, "  export_prim_id = %u\n", key->tes.export_prim_id);
 		break;

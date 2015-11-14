@@ -634,6 +634,7 @@ enum pipe_cap
    PIPE_CAP_FORCE_PERSAMPLE_INTERP,
    PIPE_CAP_SHAREABLE_SHADERS,
    PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS,
+   PIPE_CAP_CLEAR_TEXTURE,
 };
 
 #define PIPE_QUIRK_TEXTURE_BORDER_COLOR_SWIZZLE_NV50 (1 << 0)
@@ -867,6 +868,18 @@ struct pipe_driver_query_group_info
    unsigned max_active_queries;
    unsigned num_queries;
 };
+
+enum pipe_debug_type
+{
+   PIPE_DEBUG_TYPE_OUT_OF_MEMORY = 1,
+   PIPE_DEBUG_TYPE_ERROR,
+   PIPE_DEBUG_TYPE_SHADER_INFO,
+   PIPE_DEBUG_TYPE_PERF_INFO,
+   PIPE_DEBUG_TYPE_INFO,
+   PIPE_DEBUG_TYPE_FALLBACK,
+   PIPE_DEBUG_TYPE_CONFORMANCE,
+};
+
 
 #ifdef __cplusplus
 }

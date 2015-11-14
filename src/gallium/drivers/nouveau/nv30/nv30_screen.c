@@ -173,6 +173,7 @@ nv30_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
    case PIPE_CAP_SHAREABLE_SHADERS:
    case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
+   case PIPE_CAP_CLEAR_TEXTURE:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
@@ -353,7 +354,7 @@ nv30_screen_fence_emit(struct pipe_screen *pscreen, uint32_t *sequence)
 
    *sequence = ++screen->base.fence.sequence;
 
-   assert(PUSH_AVAIL(push) >= 3);
+   assert(PUSH_AVAIL(push) + push->rsvd_kick >= 3);
    PUSH_DATA (push, NV30_3D_FENCE_OFFSET |
               (2 /* size */ << 18) | (7 /* subchan */ << 13));
    PUSH_DATA (push, 0);
@@ -383,7 +384,7 @@ nv30_screen_destroy(struct pipe_screen *pscreen)
        * _current_ one, and remove both.
        */
       nouveau_fence_ref(screen->base.fence.current, &current);
-      nouveau_fence_wait(current);
+      nouveau_fence_wait(current, NULL);
       nouveau_fence_ref(NULL, &current);
       nouveau_fence_ref(NULL, &screen->base.fence.current);
    }

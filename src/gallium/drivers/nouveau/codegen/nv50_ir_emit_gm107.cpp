@@ -244,6 +244,7 @@ CodeEmitterGM107::emitSYS(int pos, const Value *val)
    case SV_LANEID         : id = 0x00; break;
    case SV_VERTEX_COUNT   : id = 0x10; break;
    case SV_INVOCATION_ID  : id = 0x11; break;
+   case SV_THREAD_KILL    : id = 0x13; break;
    case SV_INVOCATION_INFO: id = 0x1d; break;
    default:
       assert(!"invalid system value");
@@ -310,9 +311,12 @@ CodeEmitterGM107::emitIMMD(int pos, int len, const ValueRef &ref)
    uint32_t val = imm->reg.data.u32;
 
    if (len == 19) {
-      if (isFloatType(insn->sType)) {
+      if (insn->sType == TYPE_F32 || insn->sType == TYPE_F16) {
          assert(!(val & 0x00000fff));
          val >>= 12;
+      } else if (insn->sType == TYPE_F64) {
+         assert(!(imm->reg.data.u64 & 0x00000fffffffffffULL));
+         val = imm->reg.data.u64 >> 44;
       }
       assert(!(val & 0xfff00000) || (val & 0xfff00000) == 0xfff00000);
       emitField( 56,   1, (val & 0x80000) >> 19);

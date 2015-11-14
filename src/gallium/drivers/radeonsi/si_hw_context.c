@@ -29,17 +29,22 @@
 /* initialize */
 void si_need_cs_space(struct si_context *ctx)
 {
-	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
+	struct radeon_winsys_cs *dma = ctx->b.dma.cs;
+
+	/* Flush the DMA IB if it's not empty. */
+	if (dma && dma->cdw)
+		ctx->b.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 
 	/* There are two memory usage counters in the winsys for all buffers
 	 * that have been added (cs_add_buffer) and two counters in the pipe
 	 * driver for those that haven't been added yet.
 	 */
-	if (unlikely(!ctx->b.ws->cs_memory_below_limit(ctx->b.rings.gfx.cs,
+	if (unlikely(!ctx->b.ws->cs_memory_below_limit(ctx->b.gfx.cs,
 						       ctx->b.vram, ctx->b.gtt))) {
 		ctx->b.gtt = 0;
 		ctx->b.vram = 0;
-		ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 		return;
 	}
 	ctx->b.gtt = 0;
@@ -49,15 +54,20 @@ void si_need_cs_space(struct si_context *ctx)
 	 * and just flush if there is not enough space left.
 	 */
 	if (unlikely(cs->cdw > cs->max_dw - 2048))
-		ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 }
 
 void si_context_gfx_flush(void *context, unsigned flags,
 			  struct pipe_fence_handle **fence)
 {
 	struct si_context *ctx = context;
-	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 	struct radeon_winsys *ws = ctx->b.ws;
+
+	if (ctx->gfx_flush_in_progress)
+		return;
+
+	ctx->gfx_flush_in_progress = true;
 
 	if (cs->cdw == ctx->b.initial_gfx_cs_size &&
 	    (!fence || ctx->last_gfx_fence)) {
@@ -65,16 +75,15 @@ void si_context_gfx_flush(void *context, unsigned flags,
 			ws->fence_reference(fence, ctx->last_gfx_fence);
 		if (!(flags & RADEON_FLUSH_ASYNC))
 			ws->cs_sync_flush(cs);
+		ctx->gfx_flush_in_progress = false;
 		return;
 	}
-
-	ctx->b.rings.gfx.flushing = true;
 
 	r600_preflush_suspend_features(&ctx->b);
 
 	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
-			SI_CONTEXT_INV_TC_L1 |
-			SI_CONTEXT_INV_TC_L2 |
+			SI_CONTEXT_INV_VMEM_L1 |
+			SI_CONTEXT_INV_GLOBAL_L2 |
 			/* this is probably not needed anymore */
 			SI_CONTEXT_PS_PARTIAL_FLUSH;
 	si_emit_cache_flush(ctx, NULL);
@@ -111,7 +120,6 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	/* Flush the CS. */
 	ws->cs_flush(cs, flags, &ctx->last_gfx_fence,
 		     ctx->screen->b.cs_count++);
-	ctx->b.rings.gfx.flushing = false;
 
 	if (fence)
 		ws->fence_reference(fence, ctx->last_gfx_fence);
@@ -121,6 +129,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		si_check_vm_faults(ctx);
 
 	si_begin_new_cs(ctx);
+	ctx->gfx_flush_in_progress = false;
 }
 
 void si_begin_new_cs(struct si_context *ctx)
@@ -144,9 +153,9 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	/* Flush read caches at the beginning of CS. */
 	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
-			SI_CONTEXT_INV_TC_L1 |
-			SI_CONTEXT_INV_TC_L2 |
-			SI_CONTEXT_INV_KCACHE |
+			SI_CONTEXT_INV_VMEM_L1 |
+			SI_CONTEXT_INV_GLOBAL_L2 |
+			SI_CONTEXT_INV_SMEM_L1 |
 			SI_CONTEXT_INV_ICACHE;
 
 	/* set all valid group as dirty so they get reemited on
@@ -156,6 +165,8 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	/* The CS initialization should be emitted before everything else. */
 	si_pm4_emit(ctx, ctx->init_config);
+	if (ctx->init_config_gs_rings)
+		si_pm4_emit(ctx, ctx->init_config_gs_rings);
 
 	ctx->framebuffer.dirty_cbufs = (1 << 8) - 1;
 	ctx->framebuffer.dirty_zsbuf = true;
@@ -173,6 +184,7 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_mark_atom_dirty(ctx, &ctx->spi_map);
 	si_mark_atom_dirty(ctx, &ctx->spi_ps_input);
 	si_mark_atom_dirty(ctx, &ctx->b.streamout.enable_atom);
+	si_mark_atom_dirty(ctx, &ctx->b.render_cond_atom);
 	si_all_descriptors_begin_new_cs(ctx);
 
 	ctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
@@ -182,7 +194,7 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	r600_postflush_resume_features(&ctx->b);
 
-	ctx->b.initial_gfx_cs_size = ctx->b.rings.gfx.cs->cdw;
+	ctx->b.initial_gfx_cs_size = ctx->b.gfx.cs->cdw;
 
 	/* Invalidate various draw states so that they are emitted before
 	 * the first draw call. */

@@ -179,7 +179,7 @@ namespace brw {
          assert(dispatch_width() <= 32);
 
          if (n > 0)
-            return dst_reg(GRF, shader->alloc.allocate(
+            return dst_reg(VGRF, shader->alloc.allocate(
                               DIV_ROUND_UP(n * type_sz(type) * dispatch_width(),
                                            REG_SIZE)),
                            type);
@@ -224,12 +224,13 @@ namespace brw {
       src_reg
       sample_mask_reg() const
       {
-         const bool uses_kill =
-            (shader->stage == MESA_SHADER_FRAGMENT &&
-             ((brw_wm_prog_data *)shader->stage_prog_data)->uses_kill);
-         return (shader->stage != MESA_SHADER_FRAGMENT ? src_reg(0xffff) :
-                 uses_kill ? brw_flag_reg(0, 1) :
-                 retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD));
+         if (shader->stage != MESA_SHADER_FRAGMENT) {
+            return src_reg(0xffff);
+         } else if (((brw_wm_prog_data *)shader->stage_prog_data)->uses_kill) {
+            return brw_flag_reg(0, 1);
+         } else {
+            return retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD);
+         }
       }
 
       /**
@@ -595,7 +596,7 @@ namespace brw {
       src_reg
       fix_3src_operand(const src_reg &src) const
       {
-         if (src.file == GRF || src.file == UNIFORM || src.stride > 1) {
+         if (src.file == VGRF || src.file == UNIFORM || src.stride > 1) {
             return src;
          } else {
             dst_reg expanded = vgrf(src.type);

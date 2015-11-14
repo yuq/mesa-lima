@@ -681,7 +681,8 @@ nvc0_sp_state_create(struct pipe_context *pipe,
       prog->pipe.stream_output = cso->stream_output;
 
    prog->translated = nvc0_program_translate(
-      prog, nvc0_context(pipe)->screen->base.device->chipset);
+      prog, nvc0_context(pipe)->screen->base.device->chipset,
+      &nouveau_context(pipe)->debug);
 
    return (void *)prog;
 }

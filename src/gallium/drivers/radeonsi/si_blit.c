@@ -29,20 +29,23 @@ enum si_blitter_op /* bitmask */
 {
 	SI_SAVE_TEXTURES      = 1,
 	SI_SAVE_FRAMEBUFFER   = 2,
-	SI_DISABLE_RENDER_COND = 4,
+	SI_SAVE_FRAGMENT_STATE = 4,
+	SI_DISABLE_RENDER_COND = 8,
 
-	SI_CLEAR         = 0,
+	SI_CLEAR         = SI_SAVE_FRAGMENT_STATE,
 
-	SI_CLEAR_SURFACE = SI_SAVE_FRAMEBUFFER,
+	SI_CLEAR_SURFACE = SI_SAVE_FRAMEBUFFER | SI_SAVE_FRAGMENT_STATE,
 
 	SI_COPY          = SI_SAVE_FRAMEBUFFER | SI_SAVE_TEXTURES |
+			   SI_SAVE_FRAGMENT_STATE | SI_DISABLE_RENDER_COND,
+
+	SI_BLIT          = SI_SAVE_FRAMEBUFFER | SI_SAVE_TEXTURES |
+			   SI_SAVE_FRAGMENT_STATE,
+
+	SI_DECOMPRESS    = SI_SAVE_FRAMEBUFFER | SI_SAVE_FRAGMENT_STATE |
 			   SI_DISABLE_RENDER_COND,
 
-	SI_BLIT          = SI_SAVE_FRAMEBUFFER | SI_SAVE_TEXTURES,
-
-	SI_DECOMPRESS    = SI_SAVE_FRAMEBUFFER | SI_DISABLE_RENDER_COND,
-
-	SI_COLOR_RESOLVE = SI_SAVE_FRAMEBUFFER
+	SI_COLOR_RESOLVE = SI_SAVE_FRAMEBUFFER | SI_SAVE_FRAGMENT_STATE
 };
 
 static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
@@ -51,22 +54,25 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 
 	r600_suspend_nontimer_queries(&sctx->b);
 
-	util_blitter_save_blend(sctx->blitter, sctx->queued.named.blend);
-	util_blitter_save_depth_stencil_alpha(sctx->blitter, sctx->queued.named.dsa);
-	util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref.state);
-	util_blitter_save_rasterizer(sctx->blitter, sctx->queued.named.rasterizer);
-	util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader.cso);
-	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader.cso);
+	util_blitter_save_vertex_buffer_slot(sctx->blitter, sctx->vertex_buffer);
+	util_blitter_save_vertex_elements(sctx->blitter, sctx->vertex_elements);
+	util_blitter_save_vertex_shader(sctx->blitter, sctx->vs_shader.cso);
 	util_blitter_save_tessctrl_shader(sctx->blitter, sctx->tcs_shader.cso);
 	util_blitter_save_tesseval_shader(sctx->blitter, sctx->tes_shader.cso);
-	util_blitter_save_vertex_shader(sctx->blitter, sctx->vs_shader.cso);
-	util_blitter_save_vertex_elements(sctx->blitter, sctx->vertex_elements);
-	util_blitter_save_sample_mask(sctx->blitter, sctx->sample_mask.sample_mask);
-	util_blitter_save_viewport(sctx->blitter, &sctx->viewports.states[0]);
-	util_blitter_save_scissor(sctx->blitter, &sctx->scissors.states[0]);
-	util_blitter_save_vertex_buffer_slot(sctx->blitter, sctx->vertex_buffer);
+	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader.cso);
 	util_blitter_save_so_targets(sctx->blitter, sctx->b.streamout.num_targets,
 				     (struct pipe_stream_output_target**)sctx->b.streamout.targets);
+	util_blitter_save_rasterizer(sctx->blitter, sctx->queued.named.rasterizer);
+
+	if (op & SI_SAVE_FRAGMENT_STATE) {
+		util_blitter_save_blend(sctx->blitter, sctx->queued.named.blend);
+		util_blitter_save_depth_stencil_alpha(sctx->blitter, sctx->queued.named.dsa);
+		util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref.state);
+		util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader.cso);
+		util_blitter_save_sample_mask(sctx->blitter, sctx->sample_mask.sample_mask);
+		util_blitter_save_viewport(sctx->blitter, &sctx->viewports.states[0]);
+		util_blitter_save_scissor(sctx->blitter, &sctx->scissors.states[0]);
+	}
 
 	if (op & SI_SAVE_FRAMEBUFFER)
 		util_blitter_save_framebuffer(sctx->blitter, &sctx->framebuffer.state);
@@ -80,17 +86,15 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 			sctx->samplers[PIPE_SHADER_FRAGMENT].views.views);
 	}
 
-	if ((op & SI_DISABLE_RENDER_COND) && sctx->b.current_render_cond) {
-		util_blitter_save_render_condition(sctx->blitter,
-                                                   sctx->b.current_render_cond,
-                                                   sctx->b.current_render_cond_cond,
-                                                   sctx->b.current_render_cond_mode);
-	}
+	if (op & SI_DISABLE_RENDER_COND)
+		sctx->b.render_cond_force_off = true;
 }
 
 static void si_blitter_end(struct pipe_context *ctx)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+
+	sctx->b.render_cond_force_off = false;
 	r600_resume_nontimer_queries(&sctx->b);
 }
 
@@ -731,9 +735,69 @@ static void si_flush_resource(struct pipe_context *ctx,
 	}
 }
 
+static void si_pipe_clear_buffer(struct pipe_context *ctx,
+				 struct pipe_resource *dst,
+				 unsigned offset, unsigned size,
+				 const void *clear_value_ptr,
+				 int clear_value_size)
+{
+	struct si_context *sctx = (struct si_context*)ctx;
+	uint32_t dword_value;
+	unsigned i;
+
+	assert(offset % clear_value_size == 0);
+	assert(size % clear_value_size == 0);
+
+	if (clear_value_size > 4) {
+		const uint32_t *u32 = clear_value_ptr;
+		bool clear_dword_duplicated = true;
+
+		/* See if we can lower large fills to dword fills. */
+		for (i = 1; i < clear_value_size / 4; i++)
+			if (u32[0] != u32[i]) {
+				clear_dword_duplicated = false;
+				break;
+			}
+
+		if (!clear_dword_duplicated) {
+			/* Use transform feedback for 64-bit, 96-bit, and
+			 * 128-bit fills.
+			 */
+			union pipe_color_union clear_value;
+
+			memcpy(&clear_value, clear_value_ptr, clear_value_size);
+			si_blitter_begin(ctx, SI_DISABLE_RENDER_COND);
+			util_blitter_clear_buffer(sctx->blitter, dst, offset,
+						  size, clear_value_size / 4,
+						  &clear_value);
+			si_blitter_end(ctx);
+			return;
+		}
+	}
+
+	/* Expand the clear value to a dword. */
+	switch (clear_value_size) {
+	case 1:
+		dword_value = *(uint8_t*)clear_value_ptr;
+		dword_value |= (dword_value << 8) |
+			       (dword_value << 16) |
+			       (dword_value << 24);
+		break;
+	case 2:
+		dword_value = *(uint16_t*)clear_value_ptr;
+		dword_value |= dword_value << 16;
+		break;
+	default:
+		dword_value = *(uint32_t*)clear_value_ptr;
+	}
+
+	sctx->b.clear_buffer(ctx, dst, offset, size, dword_value, false);
+}
+
 void si_init_blit_functions(struct si_context *sctx)
 {
 	sctx->b.b.clear = si_clear;
+	sctx->b.b.clear_buffer = si_pipe_clear_buffer;
 	sctx->b.b.clear_render_target = si_clear_render_target;
 	sctx->b.b.clear_depth_stencil = si_clear_depth_stencil;
 	sctx->b.b.resource_copy_region = si_resource_copy_region;

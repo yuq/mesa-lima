@@ -56,7 +56,8 @@ remap_vs_attrs(nir_block *block, void *closure)
 }
 
 static void
-brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
+brw_nir_lower_inputs(const struct brw_device_info *devinfo,
+                     nir_shader *nir, bool is_scalar)
 {
    switch (nir->stage) {
    case MESA_SHADER_VERTEX:
@@ -90,11 +91,43 @@ brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
          }
       }
       break;
-   case MESA_SHADER_GEOMETRY:
-      foreach_list_typed(nir_variable, var, node, &nir->inputs) {
-         var->data.driver_location = var->data.location;
+   case MESA_SHADER_GEOMETRY: {
+      if (!is_scalar) {
+         foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+            var->data.driver_location = var->data.location;
+         }
+      } else {
+         /* The GLSL linker will have already matched up GS inputs and
+          * the outputs of prior stages.  The driver does extend VS outputs
+          * in some cases, but only for legacy OpenGL or Gen4-5 hardware,
+          * neither of which offer geometry shader support.  So we can
+          * safely ignore that.
+          *
+          * For SSO pipelines, we use a fixed VUE map layout based on variable
+          * locations, so we can rely on rendezvous-by-location to make this
+          * work.
+          *
+          * However, we need to ignore VARYING_SLOT_PRIMITIVE_ID, as it's not
+          * written by previous stages and shows up via payload magic.
+          */
+         struct brw_vue_map input_vue_map;
+         GLbitfield64 inputs_read =
+            nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
+         brw_compute_vue_map(devinfo, &input_vue_map, inputs_read,
+                             nir->info.separate_shader);
+
+         /* Start with the slot for the variable's base. */
+         foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+            assert(input_vue_map.varying_to_slot[var->data.location] != -1);
+            var->data.driver_location =
+               input_vue_map.varying_to_slot[var->data.location];
+         }
+
+         /* Inputs are stored in vec4 slots, so use type_size_vec4(). */
+         nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
       }
       break;
+   }
    case MESA_SHADER_FRAGMENT:
       assert(is_scalar);
       nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
@@ -117,7 +150,8 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
    case MESA_SHADER_GEOMETRY:
       if (is_scalar) {
          nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
-                                  type_size_scalar);
+                                  type_size_vec4_times_4);
+         nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4);
       } else {
          nir_foreach_variable(var, &nir->outputs)
             var->data.driver_location = var->data.location;
@@ -187,6 +221,7 @@ brw_create_nir(struct brw_context *brw,
                bool is_scalar)
 {
    struct gl_context *ctx = &brw->ctx;
+   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    const nir_shader_compiler_options *options =
       ctx->Const.ShaderCompilerOptions[stage].NirOptions;
    nir_shader *nir;
@@ -267,7 +302,7 @@ brw_postprocess_nir(nir_shader *nir,
    bool debug_enabled =
       (INTEL_DEBUG & intel_debug_flag_for_shader_stage(nir->stage));
 
-   brw_nir_lower_inputs(nir, is_scalar);
+   brw_nir_lower_inputs(devinfo, nir, is_scalar);
    brw_nir_lower_outputs(nir, is_scalar);
    nir_assign_var_locations(&nir->uniforms,
                             &nir->num_uniforms,
@@ -285,7 +320,7 @@ brw_postprocess_nir(nir_shader *nir,
 
    if (devinfo->gen >= 6) {
       /* Try and fuse multiply-adds */
-      nir_opt_peephole_ffma(nir);
+      brw_nir_opt_peephole_ffma(nir);
       nir_validate_shader(nir);
    }
 

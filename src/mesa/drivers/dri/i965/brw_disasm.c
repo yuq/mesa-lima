@@ -34,6 +34,7 @@
 
 const struct opcode_desc opcode_descs[128] = {
    [BRW_OPCODE_MOV]      = { .name = "mov",     .nsrc = 1, .ndst = 1 },
+   [BRW_OPCODE_MOVI]     = { .name = "movi",    .nsrc = 2, .ndst = 1 },
    [BRW_OPCODE_FRC]      = { .name = "frc",     .nsrc = 1, .ndst = 1 },
    [BRW_OPCODE_RNDU]     = { .name = "rndu",    .nsrc = 1, .ndst = 1 },
    [BRW_OPCODE_RNDD]     = { .name = "rndd",    .nsrc = 1, .ndst = 1 },
@@ -83,23 +84,26 @@ const struct opcode_desc opcode_descs[128] = {
 
    [BRW_OPCODE_SEND]     = { .name = "send",    .nsrc = 1, .ndst = 1 },
    [BRW_OPCODE_SENDC]    = { .name = "sendc",   .nsrc = 1, .ndst = 1 },
+   [BRW_OPCODE_SENDS]    = { .name = "sends",   .nsrc = 2, .ndst = 1 },
+   [BRW_OPCODE_SENDSC]   = { .name = "sendsc",  .nsrc = 2, .ndst = 1 },
+   [BRW_OPCODE_ILLEGAL]  = { .name = "illegal", .nsrc = 0, .ndst = 0 },
    [BRW_OPCODE_NOP]      = { .name = "nop",     .nsrc = 0, .ndst = 0 },
    [BRW_OPCODE_NENOP]    = { .name = "nenop",   .nsrc = 0, .ndst = 0 },
    [BRW_OPCODE_JMPI]     = { .name = "jmpi",    .nsrc = 0, .ndst = 0 },
-   [BRW_OPCODE_IF]       = { .name = "if",      .nsrc = 2, .ndst = 0 },
-   [BRW_OPCODE_IFF]      = { .name = "iff",     .nsrc = 2, .ndst = 1 },
-   [BRW_OPCODE_WHILE]    = { .name = "while",   .nsrc = 2, .ndst = 0 },
-   [BRW_OPCODE_ELSE]     = { .name = "else",    .nsrc = 2, .ndst = 0 },
-   [BRW_OPCODE_BREAK]    = { .name = "break",   .nsrc = 2, .ndst = 0 },
-   [BRW_OPCODE_CONTINUE] = { .name = "cont",    .nsrc = 1, .ndst = 0 },
-   [BRW_OPCODE_HALT]     = { .name = "halt",    .nsrc = 1, .ndst = 0 },
-   [BRW_OPCODE_MSAVE]    = { .name = "msave",   .nsrc = 1, .ndst = 1 },
-   [BRW_OPCODE_PUSH]     = { .name = "push",    .nsrc = 1, .ndst = 1 },
-   [BRW_OPCODE_MRESTORE] = { .name = "mrest",   .nsrc = 1, .ndst = 1 },
-   [BRW_OPCODE_POP]      = { .name = "pop",     .nsrc = 2, .ndst = 0 },
+   [BRW_OPCODE_IF]       = { .name = "if",      .nsrc = 0, .ndst = 0 },
+   [BRW_OPCODE_IFF]      = { .name = "iff",     .nsrc = 0, .ndst = 0 },
+   [BRW_OPCODE_WHILE]    = { .name = "while",   .nsrc = 0, .ndst = 0 },
+   [BRW_OPCODE_ELSE]     = { .name = "else",    .nsrc = 0, .ndst = 0 },
+   [BRW_OPCODE_BREAK]    = { .name = "break",   .nsrc = 0, .ndst = 0 },
+   [BRW_OPCODE_CONTINUE] = { .name = "cont",    .nsrc = 0, .ndst = 0 },
+   [BRW_OPCODE_HALT]     = { .name = "halt",    .nsrc = 0, .ndst = 0 },
+   // [BRW_OPCODE_MSAVE]    = { .name = "msave",   .nsrc = 1, .ndst = 1 },
+   // [BRW_OPCODE_PUSH]     = { .name = "push",    .nsrc = 1, .ndst = 1 },
+   // [BRW_OPCODE_MREST]    = { .name = "mrest",   .nsrc = 1, .ndst = 1 },
+   // [BRW_OPCODE_POP]      = { .name = "pop",     .nsrc = 2, .ndst = 0 },
    [BRW_OPCODE_WAIT]     = { .name = "wait",    .nsrc = 1, .ndst = 0 },
    [BRW_OPCODE_DO]       = { .name = "do",      .nsrc = 0, .ndst = 0 },
-   [BRW_OPCODE_ENDIF]    = { .name = "endif",   .nsrc = 2, .ndst = 0 },
+   [BRW_OPCODE_ENDIF]    = { .name = "endif",   .nsrc = 0, .ndst = 0 },
 };
 
 static bool
@@ -137,8 +141,8 @@ has_branch_ctrl(const struct brw_device_info *devinfo, enum opcode opcode)
       return false;
 
    return opcode == BRW_OPCODE_IF ||
-          opcode == BRW_OPCODE_ELSE ||
-          opcode == BRW_OPCODE_GOTO;
+          opcode == BRW_OPCODE_ELSE;
+          /* opcode == BRW_OPCODE_GOTO; */
 }
 
 static bool
@@ -622,6 +626,7 @@ static const char *const gen5_sampler_msg_type[] = {
    [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO]   = "gather4_po",
    [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO_C] = "gather4_po_c",
    [HSW_SAMPLER_MESSAGE_SAMPLE_DERIV_COMPARE] = "sample_d_c",
+   [GEN9_SAMPLER_MESSAGE_SAMPLE_LD2DMS_W]     = "ld2dms_w",
    [GEN7_SAMPLER_MESSAGE_SAMPLE_LD_MCS]       = "ld_mcs",
    [GEN7_SAMPLER_MESSAGE_SAMPLE_LD2DMS]       = "ld2dms",
    [GEN7_SAMPLER_MESSAGE_SAMPLE_LD2DSS]       = "ld2dss",
@@ -720,7 +725,7 @@ reg(FILE *file, unsigned _reg_file, unsigned _reg_nr)
 
    /* Clear the Compr4 instruction compression bit. */
    if (_reg_file == BRW_MESSAGE_REGISTER_FILE)
-      _reg_nr &= ~(1 << 7);
+      _reg_nr &= ~BRW_MRF_COMPR4;
 
    if (_reg_file == BRW_ARCHITECTURE_REGISTER_FILE) {
       switch (_reg_nr & 0xf0) {
@@ -1644,7 +1649,7 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
          if (brw_inst_qtr_control(devinfo, inst) == BRW_COMPRESSION_COMPRESSED &&
              opcode_descs[opcode].ndst > 0 &&
              brw_inst_dst_reg_file(devinfo, inst) == BRW_MESSAGE_REGISTER_FILE &&
-             brw_inst_dst_da_reg_nr(devinfo, inst) & (1 << 7)) {
+             brw_inst_dst_da_reg_nr(devinfo, inst) & BRW_MRF_COMPR4) {
             format(file, " compr4");
          } else {
             err |= control(file, "compression control", compr_ctrl,

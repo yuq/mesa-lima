@@ -50,6 +50,8 @@ static void si_destroy_context(struct pipe_context *context)
 	sctx->b.ws->fence_reference(&sctx->last_gfx_fence, NULL);
 
 	si_pm4_free_state(sctx, sctx->init_config, ~0);
+	if (sctx->init_config_gs_rings)
+		si_pm4_free_state(sctx, sctx->init_config_gs_rings, ~0);
 	for (i = 0; i < Elements(sctx->vgt_shader_config); i++)
 		si_pm4_delete_state(sctx, vgt_shader_config, sctx->vgt_shader_config[i]);
 
@@ -139,10 +141,10 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		sctx->b.b.create_video_buffer = vl_video_buffer_create;
 	}
 
-	sctx->b.rings.gfx.cs = ws->cs_create(sctx->b.ctx, RING_GFX, si_context_gfx_flush,
-					     sctx, sscreen->b.trace_bo ?
-						sscreen->b.trace_bo->cs_buf : NULL);
-	sctx->b.rings.gfx.flush = si_context_gfx_flush;
+	sctx->b.gfx.cs = ws->cs_create(sctx->b.ctx, RING_GFX, si_context_gfx_flush,
+				       sctx, sscreen->b.trace_bo ?
+					       sscreen->b.trace_bo->cs_buf : NULL);
+	sctx->b.gfx.flush = si_context_gfx_flush;
 
 	/* Border colors. */
 	sctx->border_color_table = malloc(SI_MAX_BORDER_COLORS *
@@ -337,6 +339,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_FAKE_SW_MSAA:
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_VERTEXID_NOBASE:
+	case PIPE_CAP_CLEAR_TEXTURE:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:

@@ -314,8 +314,7 @@ get_fast_clear_rect(struct gl_framebuffer *fb,
 }
 
 static void
-get_buffer_rect(struct brw_context *brw, struct gl_framebuffer *fb,
-                struct intel_renderbuffer *irb, struct rect *rect)
+get_buffer_rect(const struct gl_framebuffer *fb, struct rect *rect)
 {
    rect->x0 = fb->_Xmin;
    rect->x1 = fb->_Xmax;
@@ -526,15 +525,17 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       case REP_CLEAR:
          rep_clear_buffers |= 1 << index;
-         get_buffer_rect(brw, fb, irb, &clear_rect);
+         get_buffer_rect(fb, &clear_rect);
          break;
 
       case PLAIN_CLEAR:
          plain_clear_buffers |= 1 << index;
-         get_buffer_rect(brw, fb, irb, &clear_rect);
+         get_buffer_rect(fb, &clear_rect);
          continue;
       }
    }
+
+   assert((fast_clear_buffers & rep_clear_buffers) == 0);
 
    if (!(fast_clear_buffers | rep_clear_buffers)) {
       if (plain_clear_buffers)

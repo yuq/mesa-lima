@@ -224,7 +224,8 @@ void nvc0_default_kick_notify(struct nouveau_pushbuf *);
 extern struct draw_stage *nvc0_draw_render_stage(struct nvc0_context *);
 
 /* nvc0_program.c */
-bool nvc0_program_translate(struct nvc0_program *, uint16_t chipset);
+bool nvc0_program_translate(struct nvc0_program *, uint16_t chipset,
+                            struct pipe_debug_callback *);
 bool nvc0_program_upload_code(struct nvc0_context *, struct nvc0_program *);
 void nvc0_program_destroy(struct nvc0_context *, struct nvc0_program *);
 void nvc0_program_library_upload(struct nvc0_context *);

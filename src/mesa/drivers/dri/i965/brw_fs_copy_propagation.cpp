@@ -154,7 +154,7 @@ fs_copy_prop_dataflow::setup_initial_values()
    /* Initialize the COPY and KILL sets. */
    foreach_block (block, cfg) {
       foreach_inst_in_block(fs_inst, inst, block) {
-         if (inst->dst.file != GRF)
+         if (inst->dst.file != VGRF)
             continue;
 
          /* Mark ACP entries which are killed by this instruction. */
@@ -278,20 +278,20 @@ is_logic_op(enum opcode opcode)
 bool
 fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
 {
-   if (inst->src[arg].file != GRF)
+   if (inst->src[arg].file != VGRF)
       return false;
 
    if (entry->src.file == IMM)
       return false;
-   assert(entry->src.file == GRF || entry->src.file == UNIFORM ||
+   assert(entry->src.file == VGRF || entry->src.file == UNIFORM ||
           entry->src.file == ATTR);
 
    if (entry->opcode == SHADER_OPCODE_LOAD_PAYLOAD &&
        inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD)
       return false;
 
-   assert(entry->dst.file == GRF);
-   if (inst->src[arg].reg != entry->dst.reg)
+   assert(entry->dst.file == VGRF);
+   if (inst->src[arg].nr != entry->dst.nr)
       return false;
 
    /* Bail if inst is reading a range that isn't contained in the range
@@ -369,8 +369,8 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
       switch(inst->opcode) {
       case BRW_OPCODE_SEL:
          if (inst->src[1].file != IMM ||
-             inst->src[1].fixed_hw_reg.dw1.f < 0.0 ||
-             inst->src[1].fixed_hw_reg.dw1.f > 1.0) {
+             inst->src[1].f < 0.0 ||
+             inst->src[1].f > 1.0) {
             return false;
          }
          break;
@@ -380,19 +380,20 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    }
 
    inst->src[arg].file = entry->src.file;
-   inst->src[arg].reg = entry->src.reg;
+   inst->src[arg].nr = entry->src.nr;
    inst->src[arg].stride *= entry->src.stride;
    inst->saturate = inst->saturate || entry->saturate;
 
    switch (entry->src.file) {
    case UNIFORM:
    case BAD_FILE:
-   case HW_REG:
+   case ARF:
+   case FIXED_GRF:
       inst->src[arg].reg_offset = entry->src.reg_offset;
       inst->src[arg].subreg_offset = entry->src.subreg_offset;
       break;
    case ATTR:
-   case GRF:
+   case VGRF:
       {
          /* In this case, we'll just leave the width alone.  The source
           * register could have different widths depending on how it is
@@ -456,11 +457,11 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       return false;
 
    for (int i = inst->sources - 1; i >= 0; i--) {
-      if (inst->src[i].file != GRF)
+      if (inst->src[i].file != VGRF)
          continue;
 
-      assert(entry->dst.file == GRF);
-      if (inst->src[i].reg != entry->dst.reg)
+      assert(entry->dst.file == VGRF);
+      if (inst->src[i].nr != entry->dst.nr)
          continue;
 
       /* Bail if inst is reading a range that isn't contained in the range
@@ -477,14 +478,14 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
 
       if (inst->src[i].abs) {
          if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-             !brw_abs_immediate(val.type, &val.fixed_hw_reg)) {
+             !brw_abs_immediate(val.type, &val)) {
             continue;
          }
       }
 
       if (inst->src[i].negate) {
          if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-             !brw_negate_immediate(val.type, &val.fixed_hw_reg)) {
+             !brw_negate_immediate(val.type, &val)) {
             continue;
          }
       }
@@ -605,10 +606,10 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
           * anyway.
           */
          assert(i == 0);
-         if (inst->src[0].fixed_hw_reg.dw1.f != 0.0f) {
+         if (inst->src[0].f != 0.0f) {
             inst->opcode = BRW_OPCODE_MOV;
             inst->src[0] = val;
-            inst->src[0].fixed_hw_reg.dw1.f = 1.0f / inst->src[0].fixed_hw_reg.dw1.f;
+            inst->src[0].f = 1.0f / inst->src[0].f;
             progress = true;
          }
          break;
@@ -652,9 +653,9 @@ static bool
 can_propagate_from(fs_inst *inst)
 {
    return (inst->opcode == BRW_OPCODE_MOV &&
-           inst->dst.file == GRF &&
-           ((inst->src[0].file == GRF &&
-             (inst->src[0].reg != inst->dst.reg ||
+           inst->dst.file == VGRF &&
+           ((inst->src[0].file == VGRF &&
+             (inst->src[0].nr != inst->dst.nr ||
               inst->src[0].reg_offset != inst->dst.reg_offset)) ||
             inst->src[0].file == ATTR ||
             inst->src[0].file == UNIFORM ||
@@ -675,10 +676,10 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
    foreach_inst_in_block(fs_inst, inst, block) {
       /* Try propagating into this instruction. */
       for (int i = 0; i < inst->sources; i++) {
-         if (inst->src[i].file != GRF)
+         if (inst->src[i].file != VGRF)
             continue;
 
-         foreach_in_list(acp_entry, entry, &acp[inst->src[i].reg % ACP_HASH_SIZE]) {
+         foreach_in_list(acp_entry, entry, &acp[inst->src[i].nr % ACP_HASH_SIZE]) {
             if (try_constant_propagate(inst, entry))
                progress = true;
 
@@ -688,8 +689,8 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
       }
 
       /* kill the destination from the ACP */
-      if (inst->dst.file == GRF) {
-	 foreach_in_list_safe(acp_entry, entry, &acp[inst->dst.reg % ACP_HASH_SIZE]) {
+      if (inst->dst.file == VGRF) {
+         foreach_in_list_safe(acp_entry, entry, &acp[inst->dst.nr % ACP_HASH_SIZE]) {
 	    if (inst->overwrites_reg(entry->dst)) {
 	       entry->remove();
 	    }
@@ -716,14 +717,14 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
          entry->regs_written = inst->regs_written;
          entry->opcode = inst->opcode;
          entry->saturate = inst->saturate;
-	 acp[entry->dst.reg % ACP_HASH_SIZE].push_tail(entry);
+         acp[entry->dst.nr % ACP_HASH_SIZE].push_tail(entry);
       } else if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD &&
-                 inst->dst.file == GRF) {
+                 inst->dst.file == VGRF) {
          int offset = 0;
          for (int i = 0; i < inst->sources; i++) {
             int effective_width = i < inst->header_size ? 8 : inst->exec_size;
             int regs_written = effective_width / 8;
-            if (inst->src[i].file == GRF) {
+            if (inst->src[i].file == VGRF) {
                acp_entry *entry = ralloc(copy_prop_ctx, acp_entry);
                entry->dst = inst->dst;
                entry->dst.reg_offset = offset;
@@ -731,7 +732,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                entry->regs_written = regs_written;
                entry->opcode = inst->opcode;
                if (!entry->dst.equals(inst->src[i])) {
-                  acp[entry->dst.reg % ACP_HASH_SIZE].push_tail(entry);
+                  acp[entry->dst.nr % ACP_HASH_SIZE].push_tail(entry);
                } else {
                   ralloc_free(entry);
                }
@@ -774,7 +775,7 @@ fs_visitor::opt_copy_propagate()
       for (int i = 0; i < dataflow.num_acp; i++) {
          if (BITSET_TEST(dataflow.bd[block->num].livein, i)) {
             struct acp_entry *entry = dataflow.acp[i];
-            in_acp[entry->dst.reg % ACP_HASH_SIZE].push_tail(entry);
+            in_acp[entry->dst.nr % ACP_HASH_SIZE].push_tail(entry);
          }
       }
 

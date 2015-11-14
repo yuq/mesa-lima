@@ -613,15 +613,19 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & FD_DIRTY_BLEND_COLOR) {
 		struct pipe_blend_color *bcolor = &ctx->blend_color;
-		OUT_PKT0(ring, REG_A4XX_RB_BLEND_RED, 4);
-		OUT_RING(ring, A4XX_RB_BLEND_RED_UINT(bcolor->color[0] * 255.0) |
+		OUT_PKT0(ring, REG_A4XX_RB_BLEND_RED, 8);
+		OUT_RING(ring, A4XX_RB_BLEND_RED_UINT(bcolor->color[0] * 65535.0) |
 				A4XX_RB_BLEND_RED_FLOAT(bcolor->color[0]));
-		OUT_RING(ring, A4XX_RB_BLEND_GREEN_UINT(bcolor->color[1] * 255.0) |
+		OUT_RING(ring, A4XX_RB_BLEND_RED_F32(bcolor->color[0]));
+		OUT_RING(ring, A4XX_RB_BLEND_GREEN_UINT(bcolor->color[1] * 65535.0) |
 				A4XX_RB_BLEND_GREEN_FLOAT(bcolor->color[1]));
-		OUT_RING(ring, A4XX_RB_BLEND_BLUE_UINT(bcolor->color[2] * 255.0) |
+		OUT_RING(ring, A4XX_RB_BLEND_GREEN_F32(bcolor->color[1]));
+		OUT_RING(ring, A4XX_RB_BLEND_BLUE_UINT(bcolor->color[2] * 65535.0) |
 				A4XX_RB_BLEND_BLUE_FLOAT(bcolor->color[2]));
-		OUT_RING(ring, A4XX_RB_BLEND_ALPHA_UINT(bcolor->color[3] * 255.0) |
+		OUT_RING(ring, A4XX_RB_BLEND_BLUE_F32(bcolor->color[2]));
+		OUT_RING(ring, A4XX_RB_BLEND_ALPHA_UINT(bcolor->color[3] * 65535.0) |
 				A4XX_RB_BLEND_ALPHA_FLOAT(bcolor->color[3]));
+		OUT_RING(ring, A4XX_RB_BLEND_ALPHA_F32(bcolor->color[3]));
 	}
 
 	if (dirty & FD_DIRTY_VERTTEX) {
@@ -699,15 +703,6 @@ fd4_emit_restore(struct fd_context *ctx)
 	OUT_PKT0(ring, REG_A4XX_UNKNOWN_20EF, 1);
 	OUT_RING(ring, 0x00000000);
 
-	OUT_PKT0(ring, REG_A4XX_UNKNOWN_20F0, 1);
-	OUT_RING(ring, 0x00000000);
-
-	OUT_PKT0(ring, REG_A4XX_UNKNOWN_20F1, 1);
-	OUT_RING(ring, 0x00000000);
-
-	OUT_PKT0(ring, REG_A4XX_UNKNOWN_20F2, 1);
-	OUT_RING(ring, 0x00000000);
-
 	OUT_PKT0(ring, REG_A4XX_RB_BLEND_RED, 4);
 	OUT_RING(ring, A4XX_RB_BLEND_RED_UINT(0) |
 			A4XX_RB_BLEND_RED_FLOAT(0.0));
@@ -717,9 +712,6 @@ fd4_emit_restore(struct fd_context *ctx)
 			A4XX_RB_BLEND_BLUE_FLOAT(0.0));
 	OUT_RING(ring, A4XX_RB_BLEND_ALPHA_UINT(0x7fff) |
 			A4XX_RB_BLEND_ALPHA_FLOAT(1.0));
-
-	OUT_PKT0(ring, REG_A4XX_UNKNOWN_20F7, 1);
-	OUT_RING(ring, 0x3f800000);
 
 	OUT_PKT0(ring, REG_A4XX_UNKNOWN_2152, 1);
 	OUT_RING(ring, 0x00000000);

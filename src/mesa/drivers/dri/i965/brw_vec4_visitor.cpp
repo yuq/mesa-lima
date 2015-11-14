@@ -237,8 +237,6 @@ vec4_visitor::CMP(dst_reg dst, src_reg src0, src_reg src1,
     * type to match src0 so we can compact the instruction.
     */
    dst.type = src0.type;
-   if (dst.file == HW_REG)
-      dst.fixed_hw_reg.type = dst.type;
 
    resolve_ud_negate(&src0);
    resolve_ud_negate(&src1);
@@ -635,8 +633,8 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type)
 {
    init();
 
-   this->file = GRF;
-   this->reg = v->alloc.allocate(type_size_vec4(type));
+   this->file = VGRF;
+   this->nr = v->alloc.allocate(type_size_vec4(type));
 
    if (type->is_array() || type->is_record()) {
       this->swizzle = BRW_SWIZZLE_NOOP;
@@ -653,8 +651,8 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type, int size)
 
    init();
 
-   this->file = GRF;
-   this->reg = v->alloc.allocate(type_size_vec4(type) * size);
+   this->file = VGRF;
+   this->nr = v->alloc.allocate(type_size_vec4(type) * size);
 
    this->swizzle = BRW_SWIZZLE_NOOP;
 
@@ -665,8 +663,8 @@ dst_reg::dst_reg(class vec4_visitor *v, const struct glsl_type *type)
 {
    init();
 
-   this->file = GRF;
-   this->reg = v->alloc.allocate(type_size_vec4(type));
+   this->file = VGRF;
+   this->nr = v->alloc.allocate(type_size_vec4(type));
 
    if (type->is_array() || type->is_record()) {
       this->writemask = WRITEMASK_XYZW;
@@ -864,7 +862,7 @@ vec4_visitor::is_high_sampler(src_reg sampler)
    if (devinfo->gen < 8 && !devinfo->is_haswell)
       return false;
 
-   return sampler.file != IMM || sampler.fixed_hw_reg.dw1.ud >= 16;
+   return sampler.file != IMM || sampler.ud >= 16;
 }
 
 void
@@ -901,7 +899,8 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    case ir_txl: opcode = SHADER_OPCODE_TXL; break;
    case ir_txd: opcode = SHADER_OPCODE_TXD; break;
    case ir_txf: opcode = SHADER_OPCODE_TXF; break;
-   case ir_txf_ms: opcode = SHADER_OPCODE_TXF_CMS; break;
+   case ir_txf_ms: opcode = (devinfo->gen >= 9 ? SHADER_OPCODE_TXF_CMS_W :
+                             SHADER_OPCODE_TXF_CMS); break;
    case ir_txs: opcode = SHADER_OPCODE_TXS; break;
    case ir_tg4: opcode = offset_value.file != BAD_FILE
                          ? SHADER_OPCODE_TG4_OFFSET : SHADER_OPCODE_TG4; break;
@@ -993,7 +992,16 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
       } else if (op == ir_txf_ms) {
          emit(MOV(dst_reg(MRF, param_base + 1, sample_index.type, WRITEMASK_X),
                   sample_index));
-         if (devinfo->gen >= 7) {
+         if (opcode == SHADER_OPCODE_TXF_CMS_W) {
+            /* MCS data is stored in the first two channels of ‘mcs’, but we
+             * need to get it into the .y and .z channels of the second vec4
+             * of params.
+             */
+            mcs.swizzle = BRW_SWIZZLE4(0, 0, 1, 1);
+            emit(MOV(dst_reg(MRF, param_base + 1,
+                             glsl_type::uint_type, WRITEMASK_YZ),
+                     mcs));
+         } else if (devinfo->gen >= 7) {
             /* MCS data is in the first channel of `mcs`, but we need to get it into
              * the .y channel of the second vec4 of params, so replicate .x across
              * the whole vec4 and then mask off everything except .y
@@ -1184,24 +1192,27 @@ vec4_visitor::gs_end_primitive()
 
 void
 vec4_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
-                                  dst_reg dst, src_reg offset,
+                                  dst_reg dst, src_reg surf_offset,
                                   src_reg src0, src_reg src1)
 {
-   unsigned mlen = 0;
+   unsigned mlen = 1 + (src0.file != BAD_FILE) + (src1.file != BAD_FILE);
+   src_reg src_payload(this, glsl_type::uint_type, mlen);
+   dst_reg payload(src_payload);
+   payload.writemask = WRITEMASK_X;
 
    /* Set the atomic operation offset. */
-   emit(MOV(brw_writemask(brw_uvec_mrf(8, mlen, 0), WRITEMASK_X), offset));
-   mlen++;
+   emit(MOV(offset(payload, 0), surf_offset));
+   unsigned i = 1;
 
    /* Set the atomic operation arguments. */
    if (src0.file != BAD_FILE) {
-      emit(MOV(brw_writemask(brw_uvec_mrf(8, mlen, 0), WRITEMASK_X), src0));
-      mlen++;
+      emit(MOV(offset(payload, i), src0));
+      i++;
    }
 
    if (src1.file != BAD_FILE) {
-      emit(MOV(brw_writemask(brw_uvec_mrf(8, mlen, 0), WRITEMASK_X), src1));
-      mlen++;
+      emit(MOV(offset(payload, i), src1));
+      i++;
    }
 
    /* Emit the instruction.  Note that this maps to the normal SIMD8
@@ -1209,24 +1220,27 @@ vec4_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
     * unused channels will be masked out.
     */
    vec4_instruction *inst = emit(SHADER_OPCODE_UNTYPED_ATOMIC, dst,
-                                 brw_message_reg(0),
+                                 src_payload,
                                  src_reg(surf_index), src_reg(atomic_op));
    inst->mlen = mlen;
 }
 
 void
 vec4_visitor::emit_untyped_surface_read(unsigned surf_index, dst_reg dst,
-                                        src_reg offset)
+                                        src_reg surf_offset)
 {
+   dst_reg offset(this, glsl_type::uint_type);
+   offset.writemask = WRITEMASK_X;
+
    /* Set the surface read offset. */
-   emit(MOV(brw_writemask(brw_uvec_mrf(8, 0, 0), WRITEMASK_X), offset));
+   emit(MOV(offset, surf_offset));
 
    /* Emit the instruction.  Note that this maps to the normal SIMD8
     * untyped surface read message, but that's OK because unused
     * channels will be masked out.
     */
    vec4_instruction *inst = emit(SHADER_OPCODE_UNTYPED_SURFACE_READ, dst,
-                                 brw_message_reg(0),
+                                 src_reg(offset),
                                  src_reg(surf_index), src_reg(1));
    inst->mlen = 1;
 }
@@ -1602,7 +1616,7 @@ vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
    inst->insert_after(block, write);
 
    inst->dst.file = temp.file;
-   inst->dst.reg = temp.reg;
+   inst->dst.nr = temp.nr;
    inst->dst.reg_offset = temp.reg_offset;
    inst->dst.reladdr = NULL;
 }
@@ -1629,10 +1643,10 @@ vec4_visitor::emit_resolve_reladdr(int scratch_loc[], bblock_t *block,
                                           *src.reladdr);
 
    /* Now handle scratch access on src */
-   if (src.file == GRF && scratch_loc[src.reg] != -1) {
+   if (src.file == VGRF && scratch_loc[src.nr] != -1) {
       dst_reg temp = dst_reg(this, glsl_type::vec4_type);
-      emit_scratch_read(block, inst, temp, src, scratch_loc[src.reg]);
-      src.reg = temp.reg;
+      emit_scratch_read(block, inst, temp, src, scratch_loc[src.nr]);
+      src.nr = temp.nr;
       src.reg_offset = temp.reg_offset;
       src.reladdr = NULL;
    }
@@ -1657,18 +1671,18 @@ vec4_visitor::move_grf_array_access_to_scratch()
     * scratch.
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      if (inst->dst.file == GRF && inst->dst.reladdr) {
-         if (scratch_loc[inst->dst.reg] == -1) {
-            scratch_loc[inst->dst.reg] = last_scratch;
-            last_scratch += this->alloc.sizes[inst->dst.reg];
+      if (inst->dst.file == VGRF && inst->dst.reladdr) {
+         if (scratch_loc[inst->dst.nr] == -1) {
+            scratch_loc[inst->dst.nr] = last_scratch;
+            last_scratch += this->alloc.sizes[inst->dst.nr];
          }
 
          for (src_reg *iter = inst->dst.reladdr;
               iter->reladdr;
               iter = iter->reladdr) {
-            if (iter->file == GRF && scratch_loc[iter->reg] == -1) {
-               scratch_loc[iter->reg] = last_scratch;
-               last_scratch += this->alloc.sizes[iter->reg];
+            if (iter->file == VGRF && scratch_loc[iter->nr] == -1) {
+               scratch_loc[iter->nr] = last_scratch;
+               last_scratch += this->alloc.sizes[iter->nr];
             }
          }
       }
@@ -1677,9 +1691,9 @@ vec4_visitor::move_grf_array_access_to_scratch()
          for (src_reg *iter = &inst->src[i];
               iter->reladdr;
               iter = iter->reladdr) {
-            if (iter->file == GRF && scratch_loc[iter->reg] == -1) {
-               scratch_loc[iter->reg] = last_scratch;
-               last_scratch += this->alloc.sizes[iter->reg];
+            if (iter->file == VGRF && scratch_loc[iter->nr] == -1) {
+               scratch_loc[iter->nr] = last_scratch;
+               last_scratch += this->alloc.sizes[iter->nr];
             }
          }
       }
@@ -1705,8 +1719,8 @@ vec4_visitor::move_grf_array_access_to_scratch()
       /* Now that we have handled any (possibly recursive) reladdr scratch
        * accesses for dst we can safely do the scratch write for dst itself
        */
-      if (inst->dst.file == GRF && scratch_loc[inst->dst.reg] != -1)
-         emit_scratch_write(block, inst, scratch_loc[inst->dst.reg]);
+      if (inst->dst.file == VGRF && scratch_loc[inst->dst.nr] != -1)
+         emit_scratch_write(block, inst, scratch_loc[inst->dst.nr]);
 
       /* Now handle scratch access on any src. In this case, since inst->src[i]
        * already is a src_reg, we can just call emit_resolve_reladdr with
@@ -1730,14 +1744,16 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 				      int base_offset)
 {
    int reg_offset = base_offset + orig_src.reg_offset;
-   src_reg index = src_reg(prog_data->base.binding_table.pull_constants_start);
+   const unsigned index = prog_data->base.binding_table.pull_constants_start;
    src_reg offset = get_pull_constant_offset(block, inst, orig_src.reladdr,
                                              reg_offset);
 
    emit_pull_constant_load_reg(temp,
-                               index,
+                               src_reg(index),
                                offset,
                                block, inst);
+
+   brw_mark_surface_used(&prog_data->base, index);
 }
 
 /**
@@ -1773,7 +1789,7 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
             if (inst->src[i].file != UNIFORM || !inst->src[i].reladdr)
                continue;
 
-            int uniform = inst->src[i].reg;
+            int uniform = inst->src[i].nr;
 
             if (inst->src[i].reladdr->reladdr)
                nested_reladdr = true;  /* will need another pass */
@@ -1804,7 +1820,7 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
                                     pull_constant_loc[uniform]);
 
             inst->src[i].file = temp.file;
-            inst->src[i].reg = temp.reg;
+            inst->src[i].nr = temp.nr;
             inst->src[i].reg_offset = temp.reg_offset;
             inst->src[i].reladdr = NULL;
          }

@@ -365,14 +365,8 @@ struct r600_streamout {
 
 struct r600_ring {
 	struct radeon_winsys_cs		*cs;
-	bool				flushing;
 	void (*flush)(void *ctx, unsigned flags,
 		      struct pipe_fence_handle **fence);
-};
-
-struct r600_rings {
-	struct r600_ring		gfx;
-	struct r600_ring		dma;
 };
 
 struct r600_common_context {
@@ -383,7 +377,9 @@ struct r600_common_context {
 	struct radeon_winsys_ctx	*ctx;
 	enum radeon_family		family;
 	enum chip_class			chip_class;
-	struct r600_rings		rings;
+	struct r600_ring		gfx;
+	struct r600_ring		dma;
+	struct pipe_fence_handle	*last_sdma_fence;
 	unsigned			initial_gfx_cs_size;
 	unsigned			gpu_reset_counter;
 
@@ -421,14 +417,11 @@ struct r600_common_context {
 	unsigned			num_draw_calls;
 
 	/* Render condition. */
-	struct pipe_query		*current_render_cond;
-	unsigned			current_render_cond_mode;
-	boolean				current_render_cond_cond;
-	boolean				predicate_drawing;
-	/* For context flushing. */
-	struct pipe_query		*saved_render_cond;
-	boolean				saved_render_cond_cond;
-	unsigned			saved_render_cond_mode;
+	struct r600_atom		render_cond_atom;
+	struct pipe_query		*render_cond;
+	unsigned			render_cond_mode;
+	boolean				render_cond_invert;
+	bool				render_cond_force_off; /* for u_blitter */
 
 	/* MSAA sample locations.
 	 * The first index is the sample index.

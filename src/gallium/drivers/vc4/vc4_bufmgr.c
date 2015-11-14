@@ -37,14 +37,17 @@
 static bool dump_stats = false;
 
 static void
+vc4_bo_cache_free_all(struct vc4_bo_cache *cache);
+
+static void
 vc4_bo_dump_stats(struct vc4_screen *screen)
 {
         struct vc4_bo_cache *cache = &screen->bo_cache;
 
         fprintf(stderr, "  BOs allocated:   %d\n", screen->bo_count);
-        fprintf(stderr, "  BOs size:        %dkb\n", screen->bo_size / 102);
+        fprintf(stderr, "  BOs size:        %dkb\n", screen->bo_size / 1024);
         fprintf(stderr, "  BOs cached:      %d\n", cache->bo_count);
-        fprintf(stderr, "  BOs cached size: %dkb\n", cache->bo_size / 102);
+        fprintf(stderr, "  BOs cached size: %dkb\n", cache->bo_size / 1024);
 
         if (!list_empty(&cache->time_list)) {
                 struct vc4_bo *first = LIST_ENTRY(struct vc4_bo,
@@ -136,6 +139,8 @@ vc4_bo_alloc(struct vc4_screen *screen, uint32_t size, const char *name)
         bo->name = name;
         bo->private = true;
 
+        bool cleared_and_retried = false;
+retry:
         if (!using_vc4_simulator) {
                 struct drm_vc4_create_bo create;
                 memset(&create, 0, sizeof(create));
@@ -157,8 +162,15 @@ vc4_bo_alloc(struct vc4_screen *screen, uint32_t size, const char *name)
                 assert(create.size >= size);
         }
         if (ret != 0) {
-                fprintf(stderr, "create ioctl failure\n");
-                abort();
+                if (!list_empty(&screen->bo_cache.time_list) &&
+                    !cleared_and_retried) {
+                        cleared_and_retried = true;
+                        vc4_bo_cache_free_all(&screen->bo_cache);
+                        goto retry;
+                }
+
+                free(bo);
+                return NULL;
         }
 
         screen->bo_count++;
@@ -246,6 +258,18 @@ free_stale_bos(struct vc4_screen *screen, time_t time)
                 fprintf(stderr, "Freed stale BOs:\n");
                 vc4_bo_dump_stats(screen);
         }
+}
+
+static void
+vc4_bo_cache_free_all(struct vc4_bo_cache *cache)
+{
+        pipe_mutex_lock(cache->lock);
+        list_for_each_entry_safe(struct vc4_bo, bo, &cache->time_list,
+                                 time_list) {
+                vc4_bo_remove_from_cache(cache, bo);
+                vc4_bo_free(bo);
+        }
+        pipe_mutex_unlock(cache->lock);
 }
 
 void
@@ -428,7 +452,7 @@ vc4_bo_alloc_shader(struct vc4_screen *screen, const void *data, uint32_t size)
         screen->bo_count++;
         screen->bo_size += bo->size;
         if (dump_stats) {
-                fprintf(stderr, "Allocated shader %dkb:\n", size / 1024);
+                fprintf(stderr, "Allocated shader %dkb:\n", bo->size / 1024);
                 vc4_bo_dump_stats(screen);
         }
 
@@ -600,11 +624,7 @@ vc4_bufmgr_destroy(struct pipe_screen *pscreen)
         struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_bo_cache *cache = &screen->bo_cache;
 
-        list_for_each_entry_safe(struct vc4_bo, bo, &cache->time_list,
-                                 time_list) {
-                vc4_bo_remove_from_cache(cache, bo);
-                vc4_bo_free(bo);
-        }
+        vc4_bo_cache_free_all(cache);
 
         if (dump_stats) {
                 fprintf(stderr, "BO stats after screen destroy:\n");

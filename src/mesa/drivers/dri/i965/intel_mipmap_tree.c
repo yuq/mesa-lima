@@ -416,9 +416,13 @@ intel_miptree_create_layout(struct brw_context *brw,
             width0 = ALIGN(width0, 2) * 4;
             height0 = ALIGN(height0, 2) * 2;
             break;
+         case 16:
+            width0 = ALIGN(width0, 2) * 4;
+            height0 = ALIGN(height0, 2) * 4;
+            break;
          default:
-            /* num_samples should already have been quantized to 0, 1, 2, 4, or
-             * 8.
+            /* num_samples should already have been quantized to 0, 1, 2, 4, 8
+             * or 16.
              */
             unreachable("not reached");
          }
@@ -1422,6 +1426,12 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
        * for each sample, plus 8 padding bits).
        */
       format = MESA_FORMAT_R_UINT32;
+      break;
+   case 16:
+      /* 64 bits/pixel are required for MCS data when using 16x MSAA (4 bits
+       * for each sample).
+       */
+      format = MESA_FORMAT_RG_UINT32;
       break;
    default:
       unreachable("Unrecognized sample count in intel_miptree_alloc_mcs");

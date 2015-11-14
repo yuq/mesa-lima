@@ -172,7 +172,7 @@ static unsigned event_type_for_stream(struct r600_query *query)
 
 static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_query *query)
 {
-	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	uint64_t va;
 
 	r600_update_occlusion_query_state(ctx, query->type, 1);
@@ -225,7 +225,7 @@ static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_q
 	default:
 		assert(0);
 	}
-	r600_emit_reloc(ctx, &ctx->rings.gfx, query->buffer.buf, RADEON_USAGE_WRITE,
+	r600_emit_reloc(ctx, &ctx->gfx, query->buffer.buf, RADEON_USAGE_WRITE,
 			RADEON_PRIO_QUERY);
 
 	if (r600_is_timer_query(query->type))
@@ -236,7 +236,7 @@ static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_q
 
 static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_query *query)
 {
-	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	uint64_t va;
 
 	/* The queries which need begin already called this in begin_query. */
@@ -287,7 +287,7 @@ static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_que
 	default:
 		assert(0);
 	}
-	r600_emit_reloc(ctx, &ctx->rings.gfx, query->buffer.buf, RADEON_USAGE_WRITE,
+	r600_emit_reloc(ctx, &ctx->gfx, query->buffer.buf, RADEON_USAGE_WRITE,
 			RADEON_PRIO_QUERY);
 
 	query->buffer.results_end += query->result_size;
@@ -303,53 +303,60 @@ static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_que
 	r600_update_prims_generated_query_state(ctx, query->type, -1);
 }
 
-static void r600_emit_query_predication(struct r600_common_context *ctx, struct r600_query *query,
-					int operation, bool flag_wait)
+static void r600_emit_query_predication(struct r600_common_context *ctx,
+					struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
-	uint32_t op = PRED_OP(operation);
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct r600_query *query = (struct r600_query*)ctx->render_cond;
+	struct r600_query_buffer *qbuf;
+	uint32_t op;
+	bool flag_wait;
+
+	if (!query)
+		return;
+
+	flag_wait = ctx->render_cond_mode == PIPE_RENDER_COND_WAIT ||
+		    ctx->render_cond_mode == PIPE_RENDER_COND_BY_REGION_WAIT;
+
+	switch (query->type) {
+	case PIPE_QUERY_OCCLUSION_COUNTER:
+	case PIPE_QUERY_OCCLUSION_PREDICATE:
+		op = PRED_OP(PREDICATION_OP_ZPASS);
+		break;
+	case PIPE_QUERY_PRIMITIVES_EMITTED:
+	case PIPE_QUERY_PRIMITIVES_GENERATED:
+	case PIPE_QUERY_SO_STATISTICS:
+	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
+		op = PRED_OP(PREDICATION_OP_PRIMCOUNT);
+		break;
+	default:
+		assert(0);
+		return;
+	}
 
 	/* if true then invert, see GL_ARB_conditional_render_inverted */
-	if (ctx->current_render_cond_cond)
+	if (ctx->render_cond_invert)
 		op |= PREDICATION_DRAW_NOT_VISIBLE; /* Draw if not visable/overflow */
 	else
 		op |= PREDICATION_DRAW_VISIBLE; /* Draw if visable/overflow */
 
-	if (operation == PREDICATION_OP_CLEAR) {
-		ctx->need_gfx_cs_space(&ctx->b, 3, FALSE);
+	op |= flag_wait ? PREDICATION_HINT_WAIT : PREDICATION_HINT_NOWAIT_DRAW;
+	
+	/* emit predicate packets for all data blocks */
+	for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
+		unsigned results_base = 0;
+		uint64_t va = qbuf->buf->gpu_address;
 
-		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
-		radeon_emit(cs, 0);
-		radeon_emit(cs, PRED_OP(PREDICATION_OP_CLEAR));
-	} else {
-		struct r600_query_buffer *qbuf;
-		unsigned count;
-		/* Find how many results there are. */
-		count = 0;
-		for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
-			count += qbuf->results_end / query->result_size;
-		}
-	
-		ctx->need_gfx_cs_space(&ctx->b, 5 * count, TRUE);
-	
-		op |= flag_wait ? PREDICATION_HINT_WAIT : PREDICATION_HINT_NOWAIT_DRAW;
-	
-		/* emit predicate packets for all data blocks */
-		for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
-			unsigned results_base = 0;
-			uint64_t va = qbuf->buf->gpu_address;
-	
-			while (results_base < qbuf->results_end) {
-				radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
-				radeon_emit(cs, va + results_base);
-				radeon_emit(cs, op | (((va + results_base) >> 32) & 0xFF));
-				r600_emit_reloc(ctx, &ctx->rings.gfx, qbuf->buf, RADEON_USAGE_READ,
-						RADEON_PRIO_QUERY);
-				results_base += query->result_size;
-	
-				/* set CONTINUE bit for all packets except the first */
-				op |= PREDICATION_CONTINUE;
-			}
+		while (results_base < qbuf->results_end) {
+			radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
+			radeon_emit(cs, va + results_base);
+			radeon_emit(cs, op | (((va + results_base) >> 32) & 0xFF));
+			r600_emit_reloc(ctx, &ctx->gfx, qbuf->buf, RADEON_USAGE_READ,
+					RADEON_PRIO_QUERY);
+			results_base += query->result_size;
+
+			/* set CONTINUE bit for all packets except the first */
+			op |= PREDICATION_CONTINUE;
 		}
 	}
 }
@@ -532,7 +539,7 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 		return;
 	case PIPE_QUERY_GPU_FINISHED:
-		rctx->rings.gfx.flush(rctx, RADEON_FLUSH_ASYNC, &rquery->fence);
+		ctx->flush(ctx, &rquery->fence, 0);
 		return;
 	case R600_QUERY_DRAW_CALLS:
 		rquery->end_result = rctx->num_draw_calls;
@@ -820,42 +827,20 @@ static void r600_render_condition(struct pipe_context *ctx,
 				  uint mode)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct r600_query *rquery = (struct r600_query *)query;
-	bool wait_flag = false;
+	struct r600_query *rquery = (struct r600_query*)query;
+	struct r600_query_buffer *qbuf;
+	struct r600_atom *atom = &rctx->render_cond_atom;
 
-	rctx->current_render_cond = query;
-	rctx->current_render_cond_cond = condition;
-	rctx->current_render_cond_mode = mode;
+	rctx->render_cond = query;
+	rctx->render_cond_invert = condition;
+	rctx->render_cond_mode = mode;
 
-	if (query == NULL) {
-		if (rctx->predicate_drawing) {
-			rctx->predicate_drawing = false;
-			r600_emit_query_predication(rctx, NULL, PREDICATION_OP_CLEAR, false);
-		}
-		return;
-	}
+	/* Compute the size of SET_PREDICATION packets. */
+	atom->num_dw = 0;
+	for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
+		atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
 
-	if (mode == PIPE_RENDER_COND_WAIT ||
-	    mode == PIPE_RENDER_COND_BY_REGION_WAIT) {
-		wait_flag = true;
-	}
-
-	rctx->predicate_drawing = true;
-
-	switch (rquery->type) {
-	case PIPE_QUERY_OCCLUSION_COUNTER:
-	case PIPE_QUERY_OCCLUSION_PREDICATE:
-		r600_emit_query_predication(rctx, rquery, PREDICATION_OP_ZPASS, wait_flag);
-		break;
-	case PIPE_QUERY_PRIMITIVES_EMITTED:
-	case PIPE_QUERY_PRIMITIVES_GENERATED:
-	case PIPE_QUERY_SO_STATISTICS:
-	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
-		r600_emit_query_predication(rctx, rquery, PREDICATION_OP_PRIMCOUNT, wait_flag);
-		break;
-	default:
-		assert(0);
-	}
+	rctx->set_atom_dirty(rctx, atom, query != NULL);
 }
 
 static void r600_suspend_queries(struct r600_common_context *ctx,
@@ -939,7 +924,7 @@ void r600_resume_timer_queries(struct r600_common_context *ctx)
 /* Get backends mask */
 void r600_query_init_backend_mask(struct r600_common_context *ctx)
 {
-	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	struct r600_resource *buffer;
 	uint32_t *results;
 	unsigned num_backends = ctx->screen->info.r600_num_backends;
@@ -990,7 +975,7 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 		radeon_emit(cs, buffer->gpu_address);
 		radeon_emit(cs, buffer->gpu_address >> 32);
 
-		r600_emit_reloc(ctx, &ctx->rings.gfx, buffer,
+		r600_emit_reloc(ctx, &ctx->gfx, buffer,
                                 RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 
 		/* analyze results */
@@ -1024,6 +1009,7 @@ void r600_query_init(struct r600_common_context *rctx)
 	rctx->b.begin_query = r600_begin_query;
 	rctx->b.end_query = r600_end_query;
 	rctx->b.get_query_result = r600_get_query_result;
+	rctx->render_cond_atom.emit = r600_emit_query_predication;
 
 	if (((struct r600_common_screen*)rctx->b.screen)->info.r600_num_backends > 0)
 	    rctx->b.render_condition = r600_render_condition;

@@ -2672,6 +2672,7 @@ emit_temporaries_declaration(struct svga_shader_emitter_v10 *emit)
    }
    else if (emit->unit == PIPE_SHADER_FRAGMENT) {
       if (emit->key.fs.alpha_func != SVGA3D_CMP_ALWAYS ||
+          emit->key.fs.white_fragments ||
           emit->key.fs.write_color0_to_n_cbufs > 1) {
          /* Allocate a temp to hold the output color */
          emit->fs.color_tmp_index = total_temps;
@@ -6369,8 +6370,11 @@ emit_alpha_test_instructions(struct svga_shader_emitter_v10 *emit,
    emit_src_register(emit, &tmp_src_x);
    end_emit_instruction(emit);
 
-   /* If we don't need to broadcast the color below, emit final color here */
-   if (emit->key.fs.write_color0_to_n_cbufs <= 1) {
+   /* If we don't need to broadcast the color below or set fragments to
+    * white, emit final color here.
+    */
+   if (emit->key.fs.write_color0_to_n_cbufs <= 1 &&
+       !emit->key.fs.white_fragments) {
       /* MOV output.color, tempcolor */
       emit_instruction_op1(emit, VGPU10_OPCODE_MOV, &color_dst,
                            &color_src, FALSE);     /* XXX saturate? */
@@ -6381,9 +6385,27 @@ emit_alpha_test_instructions(struct svga_shader_emitter_v10 *emit,
 
 
 /**
+ * When we need to emit white for all fragments (for emulating XOR logicop
+ * mode), this function copies white into the temporary color output register.
+ */
+static void
+emit_set_color_white(struct svga_shader_emitter_v10 *emit,
+                     unsigned fs_color_tmp_index)
+{
+   struct tgsi_full_dst_register color_dst =
+      make_dst_temp_reg(fs_color_tmp_index);
+   struct tgsi_full_src_register white =
+      make_immediate_reg_float(emit, 1.0f);
+
+   emit_instruction_op1(emit, VGPU10_OPCODE_MOV, &color_dst, &white, FALSE);
+}
+
+
+/**
  * Emit instructions for writing a single color output to multiple
  * color buffers.
- * This is used when the TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS
+ * This is used when the TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS (or
+ * when key.fs.white_fragments is true).
  * property is set and the number of render targets is greater than one.
  * \param fs_color_tmp_index  index of the temp register that holds the
  *                            color to broadcast.
@@ -6398,7 +6420,6 @@ emit_broadcast_color_instructions(struct svga_shader_emitter_v10 *emit,
       make_src_temp_reg(fs_color_tmp_index);
 
    assert(emit->unit == PIPE_SHADER_FRAGMENT);
-   assert(n > 1);
 
    for (i = 0; i < n; i++) {
       unsigned output_reg = emit->fs.color_out_index[i];
@@ -6440,7 +6461,11 @@ emit_post_helpers(struct svga_shader_emitter_v10 *emit)
       if (emit->key.fs.alpha_func != SVGA3D_CMP_ALWAYS) {
          emit_alpha_test_instructions(emit, fs_color_tmp_index);
       }
-      if (emit->key.fs.write_color0_to_n_cbufs > 1) {
+      if (emit->key.fs.white_fragments) {
+         emit_set_color_white(emit, fs_color_tmp_index);
+      }
+      if (emit->key.fs.write_color0_to_n_cbufs > 1 ||
+          emit->key.fs.white_fragments) {
          emit_broadcast_color_instructions(emit, fs_color_tmp_index);
       }
    }

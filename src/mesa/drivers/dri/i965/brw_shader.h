@@ -38,38 +38,18 @@
 #define MAX_SAMPLER_MESSAGE_SIZE 11
 #define MAX_VGRF_SIZE 16
 
-enum PACKED register_file {
-   BAD_FILE,
-   GRF,
-   MRF,
-   IMM,
-   HW_REG, /* a struct brw_reg */
-   ATTR,
-   UNIFORM, /* prog_data->params[reg] */
-};
-
-struct backend_reg
-{
 #ifdef __cplusplus
+struct backend_reg : public brw_reg
+{
+   backend_reg() {}
+   backend_reg(struct brw_reg reg) : brw_reg(reg) {}
+
    bool is_zero() const;
    bool is_one() const;
    bool is_negative_one() const;
    bool is_null() const;
    bool is_accumulator() const;
    bool in_range(const backend_reg &r, unsigned n) const;
-#endif
-
-   enum register_file file; /**< Register file: GRF, MRF, IMM. */
-   enum brw_reg_type type;  /**< Register type: BRW_REGISTER_TYPE_* */
-
-   /**
-    * Register number.
-    *
-    * For GRF, it's a virtual register number until register allocation.
-    *
-    * For MRF, it's the hardware register.
-    */
-   uint16_t reg;
 
    /**
     * Offset within the virtual register.
@@ -81,12 +61,8 @@ struct backend_reg
     * For uniforms, this is in units of 1 float.
     */
    uint16_t reg_offset;
-
-   struct brw_reg fixed_hw_reg;
-
-   bool negate;
-   bool abs;
 };
+#endif
 
 struct cfg_t;
 struct bblock_t;
@@ -274,6 +250,7 @@ bool brw_cs_precompile(struct gl_context *ctx,
 
 int type_size_scalar(const struct glsl_type *type);
 int type_size_vec4(const struct glsl_type *type);
+int type_size_vec4_times_4(const struct glsl_type *type);
 
 bool is_scalar_shader_stage(const struct brw_compiler *compiler, int stage);
 

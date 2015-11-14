@@ -39,7 +39,7 @@ public:
 
    void init();
 
-   src_reg(register_file file, int reg, const glsl_type *type);
+   src_reg(enum brw_reg_file file, int nr, const glsl_type *type);
    src_reg();
    src_reg(float f);
    src_reg(uint32_t u);
@@ -55,22 +55,21 @@ public:
 
    explicit src_reg(const dst_reg &reg);
 
-   unsigned swizzle; /**< BRW_SWIZZLE_XYZW macros from brw_reg.h. */
-
    src_reg *reladdr;
 };
 
 static inline src_reg
 retype(src_reg reg, enum brw_reg_type type)
 {
-   reg.fixed_hw_reg.type = reg.type = type;
+   reg.type = type;
    return reg;
 }
 
 static inline src_reg
 offset(src_reg reg, unsigned delta)
 {
-   assert(delta == 0 || (reg.file != HW_REG && reg.file != IMM));
+   assert(delta == 0 ||
+          (reg.file != ARF && reg.file != FIXED_GRF && reg.file != IMM));
    reg.reg_offset += delta;
    return reg;
 }
@@ -82,7 +81,6 @@ offset(src_reg reg, unsigned delta)
 static inline src_reg
 swizzle(src_reg reg, unsigned swizzle)
 {
-   assert(reg.file != HW_REG);
    reg.swizzle = brw_compose_swizzle(swizzle, reg.swizzle);
    return reg;
 }
@@ -90,7 +88,7 @@ swizzle(src_reg reg, unsigned swizzle)
 static inline src_reg
 negate(src_reg reg)
 {
-   assert(reg.file != HW_REG && reg.file != IMM);
+   assert(reg.file != IMM);
    reg.negate = !reg.negate;
    return reg;
 }
@@ -110,10 +108,10 @@ public:
    void init();
 
    dst_reg();
-   dst_reg(register_file file, int reg);
-   dst_reg(register_file file, int reg, const glsl_type *type,
+   dst_reg(enum brw_reg_file file, int nr);
+   dst_reg(enum brw_reg_file file, int nr, const glsl_type *type,
            unsigned writemask);
-   dst_reg(register_file file, int reg, brw_reg_type type,
+   dst_reg(enum brw_reg_file file, int nr, brw_reg_type type,
            unsigned writemask);
    dst_reg(struct brw_reg reg);
    dst_reg(class vec4_visitor *v, const struct glsl_type *type);
@@ -122,22 +120,21 @@ public:
 
    bool equals(const dst_reg &r) const;
 
-   unsigned writemask; /**< Bitfield of WRITEMASK_[XYZW] */
-
    src_reg *reladdr;
 };
 
 static inline dst_reg
 retype(dst_reg reg, enum brw_reg_type type)
 {
-   reg.fixed_hw_reg.type = reg.type = type;
+   reg.type = type;
    return reg;
 }
 
 static inline dst_reg
 offset(dst_reg reg, unsigned delta)
 {
-   assert(delta == 0 || (reg.file != HW_REG && reg.file != IMM));
+   assert(delta == 0 ||
+          (reg.file != ARF && reg.file != FIXED_GRF && reg.file != IMM));
    reg.reg_offset += delta;
    return reg;
 }
@@ -145,7 +142,7 @@ offset(dst_reg reg, unsigned delta)
 static inline dst_reg
 writemask(dst_reg reg, unsigned mask)
 {
-   assert(reg.file != HW_REG && reg.file != IMM);
+   assert(reg.file != IMM);
    assert((reg.writemask & mask) != 0);
    reg.writemask &= mask;
    return reg;

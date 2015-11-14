@@ -155,7 +155,7 @@ private:
    void checkSwapSrc01(Instruction *);
 
    bool isCSpaceLoad(Instruction *);
-   bool isImmd32Load(Instruction *);
+   bool isImmdLoad(Instruction *);
    bool isAttribOrSharedLoad(Instruction *);
 };
 
@@ -166,9 +166,10 @@ LoadPropagation::isCSpaceLoad(Instruction *ld)
 }
 
 bool
-LoadPropagation::isImmd32Load(Instruction *ld)
+LoadPropagation::isImmdLoad(Instruction *ld)
 {
-   if (!ld || (ld->op != OP_MOV) || (typeSizeof(ld->dType) != 4))
+   if (!ld || (ld->op != OP_MOV) ||
+       ((typeSizeof(ld->dType) != 4) && (typeSizeof(ld->dType) != 8)))
       return false;
    return ld->src(0).getFile() == FILE_IMMEDIATE;
 }
@@ -201,8 +202,8 @@ LoadPropagation::checkSwapSrc01(Instruction *insn)
       else
          return;
    } else
-   if (isImmd32Load(i0)) {
-      if (!isCSpaceLoad(i1) && !isImmd32Load(i1))
+   if (isImmdLoad(i0)) {
+      if (!isCSpaceLoad(i1) && !isImmdLoad(i1))
          insn->swapSources(0, 1);
       else
          return;
@@ -447,6 +448,7 @@ ConstantFolding::expr(Instruction *i,
 {
    struct Storage *const a = &imm0.reg, *const b = &imm1.reg;
    struct Storage res;
+   DataType type = i->dType;
 
    memset(&res.data, 0, sizeof(res.data));
 
@@ -588,6 +590,18 @@ ConstantFolding::expr(Instruction *i,
       // The two arguments to pfetch are logically added together. Normally
       // the second argument will not be constant, but that can happen.
       res.data.u32 = a->data.u32 + b->data.u32;
+      type = TYPE_U32;
+      break;
+   case OP_MERGE:
+      switch (i->dType) {
+      case TYPE_U64:
+      case TYPE_S64:
+      case TYPE_F64:
+         res.data.u64 = (((uint64_t)b->data.u32) << 32) | a->data.u32;
+         break;
+      default:
+         return;
+      }
       break;
    default:
       return;
@@ -602,6 +616,8 @@ ConstantFolding::expr(Instruction *i,
    i->setSrc(1, NULL);
 
    i->getSrc(0)->reg.data = res.data;
+   i->getSrc(0)->reg.type = type;
+   i->getSrc(0)->reg.size = typeSizeof(type);
 
    switch (i->op) {
    case OP_MAD:
@@ -1148,6 +1164,11 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
 #define CASE(type, dst, fmin, fmax, imin, imax, umin, umax) \
    case type: \
       switch (i->sType) { \
+      case TYPE_F64: \
+         res.data.dst = util_iround(i->saturate ? \
+                                    CLAMP(imm0.reg.data.f64, fmin, fmax) : \
+                                    imm0.reg.data.f64); \
+         break; \
       case TYPE_F32: \
          res.data.dst = util_iround(i->saturate ? \
                                     CLAMP(imm0.reg.data.f32, fmin, fmax) : \
@@ -1185,6 +1206,11 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
       CASE(TYPE_S32, s32, INT32_MIN, INT32_MAX, INT32_MIN, INT32_MAX, 0, INT32_MAX);
       case TYPE_F32:
          switch (i->sType) {
+         case TYPE_F64:
+            res.data.f32 = i->saturate ?
+               CLAMP(imm0.reg.data.f64, 0.0f, 1.0f) :
+               imm0.reg.data.f64;
+            break;
          case TYPE_F32:
             res.data.f32 = i->saturate ?
                CLAMP(imm0.reg.data.f32, 0.0f, 1.0f) :
@@ -1198,6 +1224,27 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
             return;
          }
          i->setSrc(0, bld.mkImm(res.data.f32));
+         break;
+      case TYPE_F64:
+         switch (i->sType) {
+         case TYPE_F64:
+            res.data.f64 = i->saturate ?
+               CLAMP(imm0.reg.data.f64, 0.0f, 1.0f) :
+               imm0.reg.data.f64;
+            break;
+         case TYPE_F32:
+            res.data.f64 = i->saturate ?
+               CLAMP(imm0.reg.data.f32, 0.0f, 1.0f) :
+               imm0.reg.data.f32;
+            break;
+         case TYPE_U16: res.data.f64 = (double) imm0.reg.data.u16; break;
+         case TYPE_U32: res.data.f64 = (double) imm0.reg.data.u32; break;
+         case TYPE_S16: res.data.f64 = (double) imm0.reg.data.s16; break;
+         case TYPE_S32: res.data.f64 = (double) imm0.reg.data.s32; break;
+         default:
+            return;
+         }
+         i->setSrc(0, bld.mkImm(res.data.f64));
          break;
       default:
          return;

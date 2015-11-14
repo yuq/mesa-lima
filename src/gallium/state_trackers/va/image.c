@@ -447,8 +447,8 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
       tmp_buf = drv->pipe->create_video_buffer(drv->pipe, &surf->templat);
 
       if (!tmp_buf) {
-          surf->templat.buffer_format = old_surf_format;
-          return VA_STATUS_ERROR_ALLOCATION_FAILED;
+         surf->templat.buffer_format = old_surf_format;
+         return VA_STATUS_ERROR_ALLOCATION_FAILED;
       }
 
       surf->buffer->destroy(surf->buffer);

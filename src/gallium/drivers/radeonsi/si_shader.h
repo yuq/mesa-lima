@@ -26,14 +26,15 @@
  *      Christian König <christian.koenig@amd.com>
  */
 
-/* How linking tessellation shader inputs and outputs works.
+/* How linking shader inputs and outputs between vertex, tessellation, and
+ * geometry shaders works.
  *
  * Inputs and outputs between shaders are stored in a buffer. This buffer
  * lives in LDS (typical case for tessellation), but it can also live
- * in memory. Each input or output has a fixed location within a vertex.
+ * in memory (ESGS). Each input or output has a fixed location within a vertex.
  * The highest used input or output determines the stride between vertices.
  *
- * Since tessellation is only enabled in the OpenGL core profile,
+ * Since GS and tessellation are only possible in the OpenGL core profile,
  * only these semantics are valid for per-vertex data:
  *
  *   Name             Location
@@ -57,13 +58,11 @@
  * That's how independent shaders agree on input and output locations.
  * The si_shader_io_get_unique_index function assigns the locations.
  *
- * Other required information for calculating the input and output addresses
- * like the vertex stride, the patch stride, and the offsets where per-vertex
- * and per-patch data start, is passed to the shader via user data SGPRs.
- * The offsets and strides are calculated at draw time and aren't available
- * at compile time.
- *
- * The same approach should be used for linking ES->GS in the future.
+ * For tessellation, other required information for calculating the input and
+ * output addresses like the vertex stride, the patch stride, and the offsets
+ * where per-vertex and per-patch data start, is passed to the shader via
+ * user data SGPRs. The offsets and strides are calculated at draw time and
+ * aren't available at compile time.
  */
 
 #ifndef SI_SHADER_H
@@ -202,13 +201,16 @@ struct si_shader_selector {
 	bool		forces_persample_interp_for_persp;
 	bool		forces_persample_interp_for_linear;
 
+	unsigned	esgs_itemsize;
+	unsigned	gs_input_verts_per_prim;
 	unsigned	gs_output_prim;
 	unsigned	gs_max_out_vertices;
 	unsigned	gs_num_invocations;
-	unsigned	gsvs_itemsize;
+	unsigned	max_gs_stream; /* count - 1 */
+	unsigned	gsvs_vertex_size;
+	unsigned	max_gsvs_emit_size;
 
 	/* masks of "get_unique_index" bits */
-	uint64_t	inputs_read;
 	uint64_t	outputs_written;
 	uint32_t	patch_outputs_written;
 	uint32_t	ps_colors_written;
@@ -241,7 +243,6 @@ union si_shader_key {
 		/* Mask of "get_unique_index" bits - which outputs are read
 		 * by the next stage (needed by ES).
 		 * This describes how outputs are laid out in memory. */
-		uint64_t	es_enabled_outputs;
 		unsigned	as_es:1; /* export shader */
 		unsigned	as_ls:1; /* local shader */
 		unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
@@ -253,7 +254,6 @@ union si_shader_key {
 		/* Mask of "get_unique_index" bits - which outputs are read
 		 * by the next stage (needed by ES).
 		 * This describes how outputs are laid out in memory. */
-		uint64_t	es_enabled_outputs;
 		unsigned	as_es:1; /* export shader */
 		unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
 	} tes; /* tessellation evaluation shader */

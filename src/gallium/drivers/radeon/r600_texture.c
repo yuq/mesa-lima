@@ -1324,7 +1324,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 {
 	int i;
 
-	if (rctx->current_render_cond)
+	if (rctx->render_cond)
 		return;
 
 	for (i = 0; i < fb->nr_cbufs; i++) {

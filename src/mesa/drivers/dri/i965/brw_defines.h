@@ -79,7 +79,9 @@
 #define _3DPRIM_LINESTRIP_BF      0x13
 #define _3DPRIM_LINESTRIP_CONT_BF 0x14
 #define _3DPRIM_TRIFAN_NOSTIPPLE  0x16
-#endif
+#define _3DPRIM_PATCHLIST(n) ({ assert(n > 0 && n <= 32); 0x20 + (n - 1); })
+
+#endif /* bdw_pack.h */
 
 /* We use this offset to be able to pass native primitive types in struct
  * _mesa_prim::mode.  Native primitive types are BRW_PRIM_OFFSET +
@@ -840,43 +842,62 @@ enum PACKED brw_horizontal_stride {
 
 enum opcode {
    /* These are the actual hardware opcodes. */
+   BRW_OPCODE_ILLEGAL = 0,
    BRW_OPCODE_MOV =	1,
    BRW_OPCODE_SEL =	2,
+   BRW_OPCODE_MOVI =	3,   /**< G45+ */
    BRW_OPCODE_NOT =	4,
    BRW_OPCODE_AND =	5,
    BRW_OPCODE_OR =	6,
    BRW_OPCODE_XOR =	7,
    BRW_OPCODE_SHR =	8,
    BRW_OPCODE_SHL =	9,
+   // BRW_OPCODE_DIM =	10,  /**< Gen7.5 only */ /* Reused */
+   // BRW_OPCODE_SMOV =	10,  /**< Gen8+       */ /* Reused */
+   /* Reserved - 11 */
    BRW_OPCODE_ASR =	12,
+   /* Reserved - 13-15 */
    BRW_OPCODE_CMP =	16,
    BRW_OPCODE_CMPN =	17,
    BRW_OPCODE_CSEL =	18,  /**< Gen8+ */
    BRW_OPCODE_F32TO16 = 19,  /**< Gen7 only */
    BRW_OPCODE_F16TO32 = 20,  /**< Gen7 only */
+   /* Reserved - 21-22 */
    BRW_OPCODE_BFREV =	23,  /**< Gen7+ */
    BRW_OPCODE_BFE =	24,  /**< Gen7+ */
    BRW_OPCODE_BFI1 =	25,  /**< Gen7+ */
    BRW_OPCODE_BFI2 =	26,  /**< Gen7+ */
+   /* Reserved - 27-31 */
    BRW_OPCODE_JMPI =	32,
+   // BRW_OPCODE_BRD =	33,  /**< Gen7+ */
    BRW_OPCODE_IF =	34,
-   BRW_OPCODE_IFF =	35,  /**< Pre-Gen6 */
+   BRW_OPCODE_IFF =	35,  /**< Pre-Gen6    */ /* Reused */
+   // BRW_OPCODE_BRC =	35,  /**< Gen7+       */ /* Reused */
    BRW_OPCODE_ELSE =	36,
    BRW_OPCODE_ENDIF =	37,
-   BRW_OPCODE_DO =	38,
+   BRW_OPCODE_DO =	38,  /**< Pre-Gen6    */ /* Reused */
+   // BRW_OPCODE_CASE =	38,  /**< Gen6 only   */ /* Reused */
    BRW_OPCODE_WHILE =	39,
    BRW_OPCODE_BREAK =	40,
    BRW_OPCODE_CONTINUE = 41,
    BRW_OPCODE_HALT =	42,
-   BRW_OPCODE_MSAVE =	44,  /**< Pre-Gen6 */
-   BRW_OPCODE_MRESTORE = 45, /**< Pre-Gen6 */
-   BRW_OPCODE_PUSH =	46,  /**< Pre-Gen6 */
-   BRW_OPCODE_GOTO =	46,  /**< Gen8+    */
-   BRW_OPCODE_POP =	47,  /**< Pre-Gen6 */
+   // BRW_OPCODE_CALLA =	43,  /**< Gen7.5+     */
+   // BRW_OPCODE_MSAVE =	44,  /**< Pre-Gen6    */ /* Reused */
+   // BRW_OPCODE_CALL =	44,  /**< Gen6+       */ /* Reused */
+   // BRW_OPCODE_MREST =	45,  /**< Pre-Gen6    */ /* Reused */
+   // BRW_OPCODE_RET =	45,  /**< Gen6+       */ /* Reused */
+   // BRW_OPCODE_PUSH =	46,  /**< Pre-Gen6    */ /* Reused */
+   // BRW_OPCODE_FORK =	46,  /**< Gen6 only   */ /* Reused */
+   // BRW_OPCODE_GOTO =	46,  /**< Gen8+       */ /* Reused */
+   // BRW_OPCODE_POP =	47,  /**< Pre-Gen6    */
    BRW_OPCODE_WAIT =	48,
    BRW_OPCODE_SEND =	49,
    BRW_OPCODE_SENDC =	50,
+   BRW_OPCODE_SENDS =	51,  /**< Gen9+ */
+   BRW_OPCODE_SENDSC =	52,  /**< Gen9+ */
+   /* Reserved 53-55 */
    BRW_OPCODE_MATH =	56,  /**< Gen6+ */
+   /* Reserved 57-63 */
    BRW_OPCODE_ADD =	64,
    BRW_OPCODE_MUL =	65,
    BRW_OPCODE_AVG =	66,
@@ -895,16 +916,21 @@ enum opcode {
    BRW_OPCODE_SUBB =	79,  /**< Gen7+ */
    BRW_OPCODE_SAD2 =	80,
    BRW_OPCODE_SADA2 =	81,
+   /* Reserved 82-83 */
    BRW_OPCODE_DP4 =	84,
    BRW_OPCODE_DPH =	85,
    BRW_OPCODE_DP3 =	86,
    BRW_OPCODE_DP2 =	87,
+   /* Reserved 88 */
    BRW_OPCODE_LINE =	89,
    BRW_OPCODE_PLN =	90,  /**< G45+ */
    BRW_OPCODE_MAD =	91,  /**< Gen6+ */
    BRW_OPCODE_LRP =	92,  /**< Gen6+ */
+   // BRW_OPCODE_MADM =	93,  /**< Gen8+ */
+   /* Reserved 94-124 */
    BRW_OPCODE_NENOP =	125, /**< G45 only */
    BRW_OPCODE_NOP =	126,
+   /* Reserved 127 */
 
    /* These are compiler backend opcodes that get translated into other
     * instructions.
@@ -966,6 +992,8 @@ enum opcode {
    FS_OPCODE_TXB_LOGICAL,
    SHADER_OPCODE_TXF_CMS,
    SHADER_OPCODE_TXF_CMS_LOGICAL,
+   SHADER_OPCODE_TXF_CMS_W,
+   SHADER_OPCODE_TXF_CMS_W_LOGICAL,
    SHADER_OPCODE_TXF_UMS,
    SHADER_OPCODE_TXF_UMS_LOGICAL,
    SHADER_OPCODE_TXF_MCS,
@@ -1029,13 +1057,10 @@ enum opcode {
    SHADER_OPCODE_GEN7_SCRATCH_READ,
 
    /**
-    * Gen8+ SIMD8 URB Read message.
-    *
-    * Source 0: The header register, containing URB handles (g1).
-    *
-    * Currently only supports constant offsets, in inst->offset.
+    * Gen8+ SIMD8 URB Read messages.
     */
    SHADER_OPCODE_URB_READ_SIMD8,
+   SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT,
 
    SHADER_OPCODE_URB_WRITE_SIMD8,
    SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT,
@@ -1373,10 +1398,23 @@ enum PACKED brw_predicate {
    BRW_PREDICATE_ALIGN16_ALL4H       =  7,
 };
 
-#define BRW_ARCHITECTURE_REGISTER_FILE    0
-#define BRW_GENERAL_REGISTER_FILE         1
-#define BRW_MESSAGE_REGISTER_FILE         2
-#define BRW_IMMEDIATE_VALUE               3
+enum PACKED brw_reg_file {
+   BRW_ARCHITECTURE_REGISTER_FILE = 0,
+   BRW_GENERAL_REGISTER_FILE      = 1,
+   BRW_MESSAGE_REGISTER_FILE      = 2,
+   BRW_IMMEDIATE_VALUE            = 3,
+
+   ARF = BRW_ARCHITECTURE_REGISTER_FILE,
+   FIXED_GRF = BRW_GENERAL_REGISTER_FILE,
+   MRF = BRW_MESSAGE_REGISTER_FILE,
+   IMM = BRW_IMMEDIATE_VALUE,
+
+   /* These are not hardware values */
+   VGRF,
+   ATTR,
+   UNIFORM, /* prog_data->params[reg] */
+   BAD_FILE,
+};
 
 #define BRW_HW_REG_TYPE_UD  0
 #define BRW_HW_REG_TYPE_D   1
@@ -1541,6 +1579,7 @@ enum brw_message_target {
 #define GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO   17
 #define GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO_C 18
 #define HSW_SAMPLER_MESSAGE_SAMPLE_DERIV_COMPARE 20
+#define GEN9_SAMPLER_MESSAGE_SAMPLE_LD2DMS_W     28
 #define GEN7_SAMPLER_MESSAGE_SAMPLE_LD_MCS       29
 #define GEN7_SAMPLER_MESSAGE_SAMPLE_LD2DMS       30
 #define GEN7_SAMPLER_MESSAGE_SAMPLE_LD2DSS       31

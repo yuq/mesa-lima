@@ -87,18 +87,16 @@ static void r600_blitter_begin(struct pipe_context *ctx, enum r600_blitter_op op
 			(struct pipe_sampler_view**)rctx->samplers[PIPE_SHADER_FRAGMENT].views.views);
 	}
 
-	if ((op & R600_DISABLE_RENDER_COND) && rctx->b.current_render_cond) {
-           util_blitter_save_render_condition(rctx->blitter,
-                                              rctx->b.current_render_cond,
-                                              rctx->b.current_render_cond_cond,
-                                              rctx->b.current_render_cond_mode);
-        }
+	if (op & R600_DISABLE_RENDER_COND)
+		rctx->b.render_cond_force_off = true;
 }
 
 static void r600_blitter_end(struct pipe_context *ctx)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
-        r600_resume_nontimer_queries(&rctx->b);
+
+	rctx->b.render_cond_force_off = false;
+	r600_resume_nontimer_queries(&rctx->b);
 }
 
 static unsigned u_max_sample(struct pipe_resource *r)
@@ -527,7 +525,7 @@ static void r600_copy_buffer(struct pipe_context *ctx, struct pipe_resource *dst
 	 * Can we somehow flush the index buffer cache? Starting a new IB seems
 	 * to do the trick. */
 	if (rctx->b.chip_class <= R700)
-		rctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		rctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 }
 
 /**
@@ -604,6 +602,7 @@ static void r600_clear_buffer(struct pipe_context *ctx, struct pipe_resource *ds
 	} else {
 		uint32_t *map = r600_buffer_map_sync_with_rings(&rctx->b, r600_resource(dst),
 								 PIPE_TRANSFER_WRITE);
+		map += offset / 4;
 		size /= 4;
 		for (unsigned i = 0; i < size; i++)
 			*map++ = value;

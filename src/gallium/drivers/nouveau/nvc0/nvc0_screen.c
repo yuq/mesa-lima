@@ -182,11 +182,12 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
    case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
    case PIPE_CAP_SHAREABLE_SHADERS:
+   case PIPE_CAP_CLEAR_TEXTURE:
       return 1;
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
       return (class_3d >= NVE4_3D_CLASS) ? 1 : 0;
    case PIPE_CAP_COMPUTE:
-      return (class_3d == NVE4_3D_CLASS) ? 1 : 0;
+      return (class_3d <= NVE4_3D_CLASS) ? 1 : 0;
    case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
       return nouveau_screen(pscreen)->vram_domain & NOUVEAU_BO_VRAM ? 1 : 0;
 
@@ -245,7 +246,7 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
          return 0;
       break;
    case PIPE_SHADER_COMPUTE:
-      if (class_3d != NVE4_3D_CLASS)
+      if (class_3d > NVE4_3D_CLASS)
          return 0;
       break;
    default:
@@ -415,7 +416,7 @@ nvc0_screen_destroy(struct pipe_screen *pscreen)
        * _current_ one, and remove both.
        */
       nouveau_fence_ref(screen->base.fence.current, &current);
-      nouveau_fence_wait(current);
+      nouveau_fence_wait(current, NULL);
       nouveau_fence_ref(NULL, &current);
       nouveau_fence_ref(NULL, &screen->base.fence.current);
    }
@@ -547,7 +548,7 @@ nvc0_screen_fence_emit(struct pipe_screen *pscreen, u32 *sequence)
    /* we need to do it after possible flush in MARK_RING */
    *sequence = ++screen->base.fence.sequence;
 
-   assert(PUSH_AVAIL(push) >= 5);
+   assert(PUSH_AVAIL(push) + push->rsvd_kick >= 5);
    PUSH_DATA (push, NVC0_FIFO_PKHDR_SQ(NVC0_3D(QUERY_ADDRESS_HIGH), 4));
    PUSH_DATAh(push, screen->fence.bo->offset);
    PUSH_DATA (push, screen->fence.bo->offset);

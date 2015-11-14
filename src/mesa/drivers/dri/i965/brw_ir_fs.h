@@ -41,9 +41,9 @@ public:
    explicit fs_reg(uint32_t u);
    explicit fs_reg(uint8_t vf[4]);
    explicit fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3);
-   fs_reg(struct brw_reg fixed_hw_reg);
-   fs_reg(enum register_file file, int reg);
-   fs_reg(enum register_file file, int reg, enum brw_reg_type type);
+   fs_reg(struct brw_reg reg);
+   fs_reg(enum brw_reg_file file, int nr);
+   fs_reg(enum brw_reg_file file, int nr, enum brw_reg_type type);
 
    bool equals(const fs_reg &r) const;
    bool is_contiguous() const;
@@ -72,7 +72,7 @@ public:
 static inline fs_reg
 negate(fs_reg reg)
 {
-   assert(reg.file != HW_REG && reg.file != IMM);
+   assert(reg.file != IMM);
    reg.negate = !reg.negate;
    return reg;
 }
@@ -80,7 +80,7 @@ negate(fs_reg reg)
 static inline fs_reg
 retype(fs_reg reg, enum brw_reg_type type)
 {
-   reg.fixed_hw_reg.type = reg.type = type;
+   reg.type = type;
    return reg;
 }
 
@@ -90,15 +90,16 @@ byte_offset(fs_reg reg, unsigned delta)
    switch (reg.file) {
    case BAD_FILE:
       break;
-   case GRF:
+   case VGRF:
    case ATTR:
       reg.reg_offset += delta / 32;
       break;
    case MRF:
-      reg.reg += delta / 32;
+      reg.nr += delta / 32;
       break;
+   case ARF:
+   case FIXED_GRF:
    case IMM:
-   case HW_REG:
    case UNIFORM:
       assert(delta == 0);
    }
@@ -117,11 +118,12 @@ horiz_offset(fs_reg reg, unsigned delta)
        * horizontal offset should be a harmless no-op.
        */
       break;
-   case GRF:
+   case VGRF:
    case MRF:
    case ATTR:
       return byte_offset(reg, delta * reg.stride * type_sz(reg.type));
-   case HW_REG:
+   case ARF:
+   case FIXED_GRF:
       assert(delta == 0);
    }
    return reg;
@@ -159,12 +161,13 @@ half(fs_reg reg, unsigned idx)
    case IMM:
       return reg;
 
-   case GRF:
+   case VGRF:
    case MRF:
       return horiz_offset(reg, 8 * idx);
 
+   case ARF:
+   case FIXED_GRF:
    case ATTR:
-   case HW_REG:
       unreachable("Cannot take half of this register type");
    }
    return reg;

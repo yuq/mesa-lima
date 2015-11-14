@@ -117,7 +117,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 
 	util_memcpy_cpu_to_le32(ptr, desc->list, list_size);
 
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, desc->buffer,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
 			      RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 
 	desc->list_dirty = false;
@@ -152,14 +152,14 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 		if (!rview->resource)
 			continue;
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      rview->resource, RADEON_USAGE_READ,
 				      r600_get_sampler_view_priority(rview->resource));
 	}
 
 	if (!views->desc.buffer)
 		return;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, views->desc.buffer,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, views->desc.buffer,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_DESCRIPTORS);
 }
 
@@ -177,12 +177,12 @@ static void si_set_sampler_view(struct si_context *sctx, unsigned shader,
 			(struct si_sampler_view*)view;
 
 		if (rview->resource)
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				rview->resource, RADEON_USAGE_READ,
 				r600_get_sampler_view_priority(rview->resource));
 
 		if (rview->dcc_buffer && rview->dcc_buffer != rview->resource)
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				rview->dcc_buffer, RADEON_USAGE_READ,
 				RADEON_PRIO_DCC);
 
@@ -264,7 +264,7 @@ static void si_sampler_states_begin_new_cs(struct si_context *sctx,
 {
 	if (!states->desc.buffer)
 		return;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, states->desc.buffer,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, states->desc.buffer,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_DESCRIPTORS);
 }
 
@@ -334,14 +334,14 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 	while (mask) {
 		int i = u_bit_scan64(&mask);
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource*)buffers->buffers[i],
 				      buffers->shader_usage, buffers->priority);
 	}
 
 	if (!buffers->desc.buffer)
 		return;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 			      buffers->desc.buffer, RADEON_USAGE_READWRITE,
 			      RADEON_PRIO_DESCRIPTORS);
 }
@@ -362,14 +362,14 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 		if (!sctx->vertex_buffer[vb].buffer)
 			continue;
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource*)sctx->vertex_buffer[vb].buffer,
 				      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 	}
 
 	if (!desc->buffer)
 		return;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 			      desc->buffer, RADEON_USAGE_READ,
 			      RADEON_PRIO_DESCRIPTORS);
 }
@@ -396,7 +396,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	if (!desc->buffer)
 		return false;
 
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 			      desc->buffer, RADEON_USAGE_READ,
 			      RADEON_PRIO_DESCRIPTORS);
 
@@ -440,7 +440,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		desc[3] = sctx->vertex_elements->rsrc_word3[i];
 
 		if (!bound[ve->vertex_buffer_index]) {
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 					      (struct r600_resource*)vb->buffer,
 					      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 			bound[ve->vertex_buffer_index] = true;
@@ -525,7 +525,7 @@ static void si_set_constant_buffer(struct pipe_context *ctx, uint shader, uint s
 			  S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32);
 
 		buffers->buffers[slot] = buffer;
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource*)buffer,
 				      buffers->shader_usage, buffers->priority);
 		buffers->desc.enabled_mask |= 1llu << slot;
@@ -620,7 +620,7 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			  S_008F0C_ADD_TID_ENABLE(add_tid);
 
 		pipe_resource_reference(&buffers->buffers[slot], buffer);
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource*)buffer,
 				      buffers->shader_usage, buffers->priority);
 		buffers->desc.enabled_mask |= 1llu << slot;
@@ -670,8 +670,8 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		 * VS_PARTIAL_FLUSH is required if the buffers are going to be
 		 * used as an input immediately.
 		 */
-		sctx->b.flags |= SI_CONTEXT_INV_KCACHE |
-				 SI_CONTEXT_INV_TC_L1 |
+		sctx->b.flags |= SI_CONTEXT_INV_SMEM_L1 |
+				 SI_CONTEXT_INV_VMEM_L1 |
 				 SI_CONTEXT_VS_PARTIAL_FLUSH;
 	}
 
@@ -710,7 +710,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 			/* Set the resource. */
 			pipe_resource_reference(&buffers->buffers[bufidx],
 						buffer);
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 					      (struct r600_resource*)buffer,
 					      buffers->shader_usage, buffers->priority);
 			buffers->desc.enabled_mask |= 1llu << bufidx;
@@ -809,7 +809,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 							    old_va, buf);
 				buffers->desc.list_dirty = true;
 
-				radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+				radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 						      rbuffer, buffers->shader_usage,
 						      buffers->priority);
 
@@ -838,7 +838,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 							    old_va, buf);
 				buffers->desc.list_dirty = true;
 
-				radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+				radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 						      rbuffer, buffers->shader_usage,
 						      buffers->priority);
 			}
@@ -863,7 +863,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 							    old_va, buf);
 				views->desc.list_dirty = true;
 
-				radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
+				radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 						      rbuffer, RADEON_USAGE_READ,
 						      RADEON_PRIO_SAMPLER_BUFFER);
 			}
@@ -948,7 +948,7 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 				   struct si_descriptors *desc,
 				   unsigned sh_base, bool keep_dirty)
 {
-	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	uint64_t va;
 
 	if (!desc->pointer_dirty || !desc->buffer)

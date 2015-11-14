@@ -401,15 +401,18 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
    case nir_intrinsic_load_var: {
       const struct glsl_type *type =
          nir_deref_tail(&instr->variables[0]->deref)->type;
-      assert(glsl_type_is_vector_or_scalar(type));
+      assert(glsl_type_is_vector_or_scalar(type) ||
+             (instr->variables[0]->var->data.mode == nir_var_uniform &&
+              glsl_get_base_type(type) == GLSL_TYPE_SUBROUTINE));
       assert(instr->num_components == glsl_get_vector_elements(type));
-      assert(instr->variables[0]->var->data.mode != nir_var_shader_out);
       break;
    }
    case nir_intrinsic_store_var: {
       const struct glsl_type *type =
          nir_deref_tail(&instr->variables[0]->deref)->type;
-      assert(glsl_type_is_vector_or_scalar(type));
+      assert(glsl_type_is_vector_or_scalar(type) ||
+             (instr->variables[0]->var->data.mode == nir_var_uniform &&
+              glsl_get_base_type(type) == GLSL_TYPE_SUBROUTINE));
       assert(instr->num_components == glsl_get_vector_elements(type));
       assert(instr->variables[0]->var->data.mode != nir_var_shader_in &&
              instr->variables[0]->var->data.mode != nir_var_uniform &&
@@ -422,7 +425,6 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
       assert(instr->variables[0]->var->data.mode != nir_var_shader_in &&
              instr->variables[0]->var->data.mode != nir_var_uniform &&
              instr->variables[0]->var->data.mode != nir_var_shader_storage);
-      assert(instr->variables[1]->var->data.mode != nir_var_shader_out);
       break;
    default:
       break;

@@ -95,6 +95,7 @@ const char *tgsi_semantic_names[TGSI_SEMANTIC_COUNT] =
    "TESSOUTER",
    "TESSINNER",
    "VERTICESIN",
+   "HELPER_INVOCATION",
 };
 
 const char *tgsi_texture_names[TGSI_TEXTURE_COUNT] =

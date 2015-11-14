@@ -373,6 +373,7 @@ Program::emitBinary(struct nv50_ir_prog_info *info)
    if (!code)
       return false;
    emit->setCodeLocation(code, binSize);
+   info->bin.instructions = 0;
 
    for (ArrayList::Iterator fi = allFuncs.iterator(); !fi.end(); fi.next()) {
       Function *fn = reinterpret_cast<Function *>(fi.get());
@@ -382,6 +383,7 @@ Program::emitBinary(struct nv50_ir_prog_info *info)
       for (int b = 0; b < fn->bbCount; ++b) {
          for (Instruction *i = fn->bbArray[b]->getEntry(); i; i = i->next) {
             emit->emitInstruction(i);
+            info->bin.instructions++;
             if (i->sType == TYPE_F64 || i->dType == TYPE_F64)
                info->io.fp64 = true;
          }

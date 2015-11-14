@@ -62,7 +62,7 @@ opt_cmod_propagation_local(bblock_t *block)
            inst->opcode != BRW_OPCODE_MOV) ||
           inst->predicate != BRW_PREDICATE_NONE ||
           !inst->dst.is_null() ||
-          inst->src[0].file != GRF ||
+          inst->src[0].file != VGRF ||
           inst->src[0].abs)
          continue;
 

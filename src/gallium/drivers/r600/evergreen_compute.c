@@ -346,7 +346,7 @@ static void evergreen_emit_direct_dispatch(
 		const uint *block_layout, const uint *grid_layout)
 {
 	int i;
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_pipe_compute *shader = rctx->cs_shader_state.shader;
 	unsigned num_waves;
 	unsigned num_pipes = rctx->screen->b.info.r600_max_pipes;
@@ -417,12 +417,12 @@ static void evergreen_emit_direct_dispatch(
 static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 		const uint *grid_layout)
 {
-	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 	unsigned i;
 
 	/* make sure that the gfx ring is only one active */
-	if (ctx->b.rings.dma.cs && ctx->b.rings.dma.cs->cdw) {
-		ctx->b.rings.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+	if (ctx->b.dma.cs && ctx->b.dma.cs->cdw) {
+		ctx->b.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 	}
 
 	/* Initialize all the compute-related registers.
@@ -439,7 +439,7 @@ static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 	/* XXX support more than 8 colorbuffers (the offsets are not a multiple of 0x3C for CB8-11) */
 	for (i = 0; i < 8 && i < ctx->framebuffer.state.nr_cbufs; i++) {
 		struct r600_surface *cb = (struct r600_surface*)ctx->framebuffer.state.cbufs[i];
-		unsigned reloc = radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.gfx,
+		unsigned reloc = radeon_add_to_buffer_list(&ctx->b, &ctx->b.gfx,
 						       (struct r600_resource*)cb->base.texture,
 						       RADEON_USAGE_READWRITE,
 						       RADEON_PRIO_SHADER_RW_BUFFER);
@@ -538,7 +538,7 @@ void evergreen_emit_cs_shader(
 	struct r600_cs_shader_state *state =
 					(struct r600_cs_shader_state*)atom;
 	struct r600_pipe_compute *shader = state->shader;
-	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	uint64_t va;
 	struct r600_resource *code_bo;
 	unsigned ngpr, nstack;
@@ -564,7 +564,7 @@ void evergreen_emit_cs_shader(
 	radeon_emit(cs, 0);	/* R_0288D8_SQ_PGM_RESOURCES_LS_2 */
 
 	radeon_emit(cs, PKT3C(PKT3_NOP, 0, 0));
-	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
+	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
 					      code_bo, RADEON_USAGE_READ,
 					      RADEON_PRIO_USER_SHADER));
 }

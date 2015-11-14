@@ -815,6 +815,13 @@
 #define     V_02880C_EXPORT_DB_FOUR16                  0x01
 #define     V_02880C_EXPORT_DB_TWO                     0x02
 #define   S_02880C_ALPHA_TO_MASK_DISABLE(x)            (((x) & 0x1) << 12)
+#define   S_02880C_CONSERVATIVE_Z_EXPORT(x)            (((x) & 0x03) << 16)
+#define   G_02880C_CONSERVATIVE_Z_EXPORT(x)            (((x) >> 16) & 0x03)
+#define   C_02880C_CONSERVATIVE_Z_EXPORT               0xFFFCFFFF
+#define     V_02880C_EXPORT_ANY_Z                      0
+#define     V_02880C_EXPORT_LESS_THAN_Z                1
+#define     V_02880C_EXPORT_GREATER_THAN_Z             2
+#define     V_02880C_EXPORT_RESERVED                   3
 
 #define R_028A00_PA_SU_POINT_SIZE                    0x028A00
 #define   S_028A00_HEIGHT(x)                           (((x) & 0xFFFF) << 0)
@@ -1497,6 +1504,7 @@
 #define   S_028878_UNCACHED_FIRST_INST(x)              (((x) & 0x1) << 28)
 #define   G_028878_UNCACHED_FIRST_INST(x)              (((x) >> 28) & 0x1)
 #define   C_028878_UNCACHED_FIRST_INST                 0xEFFFFFFF
+#define R_02887C_SQ_PGM_RESOURCES_2_GS                 0x02887C
 
 #define R_028890_SQ_PGM_RESOURCES_ES                 0x028890
 #define   S_028890_NUM_GPRS(x)                         (((x) & 0xFF) << 0)
@@ -1511,6 +1519,7 @@
 #define   S_028890_UNCACHED_FIRST_INST(x)              (((x) & 0x1) << 28)
 #define   G_028890_UNCACHED_FIRST_INST(x)              (((x) >> 28) & 0x1)
 #define   C_028890_UNCACHED_FIRST_INST                 0xEFFFFFFF
+#define R_028894_SQ_PGM_RESOURCES_2_ES                 0x028894
 
 #define R_028864_SQ_PGM_RESOURCES_2_VS               0x028864
 #define   S_028864_SINGLE_ROUND(x)                     (((x) & 0x3) << 0)

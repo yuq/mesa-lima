@@ -143,7 +143,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
     * tracking to get the scaling factor.
     */
    if (devinfo->gen < 6 && is_rect) {
-      fs_reg dst = fs_reg(GRF, alloc.allocate(coord_components));
+      fs_reg dst = fs_reg(VGRF, alloc.allocate(coord_components));
       fs_reg src = coordinate;
       coordinate = dst;
 
@@ -208,8 +208,8 @@ fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
    fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS_LOGICAL, dest, srcs,
                             ARRAY_SIZE(srcs));
 
-   /* We only care about one reg of response, but the sampler always writes
-    * 4/8.
+   /* We only care about one or two regs of response, but the sampler always
+    * writes 4/8.
     */
    inst->regs_written = 4 * dispatch_width / 8;
 
@@ -295,7 +295,10 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       opcode = SHADER_OPCODE_TXF_LOGICAL;
       break;
    case ir_txf_ms:
-      opcode = SHADER_OPCODE_TXF_CMS_LOGICAL;
+      if ((key_tex->msaa_16 & (1 << sampler)))
+         opcode = SHADER_OPCODE_TXF_CMS_W_LOGICAL;
+      else
+         opcode = SHADER_OPCODE_TXF_CMS_LOGICAL;
       break;
    case ir_txs:
    case ir_query_levels:
@@ -319,7 +322,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       inst->shadow_compare = true;
 
    if (offset_value.file == IMM)
-      inst->offset = offset_value.fixed_hw_reg.dw1.ud;
+      inst->offset = offset_value.ud;
 
    if (op == ir_tg4) {
       inst->offset |=
@@ -578,7 +581,7 @@ fs_visitor::emit_interpolation_setup_gen6()
        * Thus we can do a single add(16) in SIMD8 or an add(32) in SIMD16 to
        * compute our pixel centers.
        */
-      fs_reg int_pixel_xy(GRF, alloc.allocate(dispatch_width / 8),
+      fs_reg int_pixel_xy(VGRF, alloc.allocate(dispatch_width / 8),
                           BRW_REGISTER_TYPE_UW);
 
       const fs_builder dbld = abld.exec_all().group(dispatch_width * 2, 0);
@@ -873,14 +876,14 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 
       abld.MUL(output, outputs[clip_vertex], u);
       for (int j = 1; j < 4; j++) {
-         u.reg = userplane[i].reg + j;
+         u.nr = userplane[i].nr + j;
          abld.MAD(output, output, offset(outputs[clip_vertex], bld, j), u);
       }
    }
 }
 
 void
-fs_visitor::emit_urb_writes()
+fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
 {
    int slot, urb_offset, length;
    int starting_urb_offset = 0;
@@ -905,7 +908,7 @@ fs_visitor::emit_urb_writes()
     *    "The write data payload can be between 1 and 8 message phases long."
     */
    if (vue_map->slots_valid == 0) {
-      fs_reg payload = fs_reg(GRF, alloc.allocate(2), BRW_REGISTER_TYPE_UD);
+      fs_reg payload = fs_reg(VGRF, alloc.allocate(2), BRW_REGISTER_TYPE_UD);
       bld.exec_all().MOV(payload, fs_reg(retype(brw_vec8_grf(1, 0),
                                                 BRW_REGISTER_TYPE_UD)));
 
@@ -916,9 +919,13 @@ fs_visitor::emit_urb_writes()
       return;
    }
 
+   opcode opcode = SHADER_OPCODE_URB_WRITE_SIMD8;
+   int header_size = 1;
+   fs_reg per_slot_offsets;
+
    if (stage == MESA_SHADER_GEOMETRY) {
       const struct brw_gs_prog_data *gs_prog_data =
-         (const struct brw_gs_prog_data *) prog_data;
+         (const struct brw_gs_prog_data *) this->prog_data;
 
       /* We need to increment the Global Offset to skip over the control data
        * header and the extra "Vertex Count" field (1 HWord) at the beginning
@@ -927,6 +934,27 @@ fs_visitor::emit_urb_writes()
       starting_urb_offset = 2 * gs_prog_data->control_data_header_size_hwords;
       if (gs_prog_data->static_vertex_count == -1)
          starting_urb_offset += 2;
+
+      /* We also need to use per-slot offsets.  The per-slot offset is the
+       * Vertex Count.  SIMD8 mode processes 8 different primitives at a
+       * time; each may output a different number of vertices.
+       */
+      opcode = SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT;
+      header_size++;
+
+      /* The URB offset is in 128-bit units, so we need to multiply by 2 */
+      const int output_vertex_size_owords =
+         gs_prog_data->output_vertex_size_hwords * 2;
+
+      fs_reg offset;
+      if (gs_vertex_count.file == IMM) {
+         per_slot_offsets = fs_reg(output_vertex_size_owords *
+                                   gs_vertex_count.ud);
+      } else {
+         per_slot_offsets = vgrf(glsl_type::int_type);
+         bld.MUL(per_slot_offsets, gs_vertex_count,
+                 fs_reg(output_vertex_size_owords));
+      }
    }
 
    length = 0;
@@ -947,7 +975,7 @@ fs_visitor::emit_urb_writes()
             break;
          }
 
-         fs_reg zero(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+         fs_reg zero(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
          bld.MOV(zero, fs_reg(0u));
 
          sources[length++] = zero;
@@ -999,7 +1027,7 @@ fs_visitor::emit_urb_writes()
              * temp register and use that for the payload.
              */
             for (int i = 0; i < 4; i++) {
-               fs_reg reg = fs_reg(GRF, alloc.allocate(1), outputs[varying].type);
+               fs_reg reg = fs_reg(VGRF, alloc.allocate(1), outputs[varying].type);
                fs_reg src = offset(this->outputs[varying], bld, i);
                set_saturate(true, bld.MOV(reg, src));
                sources[length++] = reg;
@@ -1023,19 +1051,25 @@ fs_visitor::emit_urb_writes()
       if (length == 8 || last)
          flush = true;
       if (flush) {
-         fs_reg *payload_sources = ralloc_array(mem_ctx, fs_reg, length + 1);
-         fs_reg payload = fs_reg(GRF, alloc.allocate(length + 1),
+         fs_reg *payload_sources =
+            ralloc_array(mem_ctx, fs_reg, length + header_size);
+         fs_reg payload = fs_reg(VGRF, alloc.allocate(length + header_size),
                                  BRW_REGISTER_TYPE_F);
          payload_sources[0] =
             fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
 
-         memcpy(&payload_sources[1], sources, length * sizeof sources[0]);
-         abld.LOAD_PAYLOAD(payload, payload_sources, length + 1, 1);
+         if (opcode == SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT)
+            payload_sources[1] = per_slot_offsets;
 
-         fs_inst *inst =
-            abld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
+         memcpy(&payload_sources[header_size], sources,
+                length * sizeof sources[0]);
+
+         abld.LOAD_PAYLOAD(payload, payload_sources, length + header_size,
+                           header_size);
+
+         fs_inst *inst = abld.emit(opcode, reg_undef, payload);
          inst->eot = last && stage == MESA_SHADER_VERTEX;
-         inst->mlen = length + 1;
+         inst->mlen = length + header_size;
          inst->offset = urb_offset;
          urb_offset = starting_urb_offset + slot + 1;
          length = 0;
@@ -1057,7 +1091,7 @@ fs_visitor::emit_cs_terminate()
     * make sure it uses the appropriate register range.
     */
    struct brw_reg g0 = retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD);
-   fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+   fs_reg payload = fs_reg(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
    bld.group(8, 0).exec_all().MOV(payload, g0);
 
    /* Send a message to the thread spawner to terminate the thread. */
@@ -1074,7 +1108,7 @@ fs_visitor::emit_barrier()
    /* We are getting the barrier ID from the compute shader header */
    assert(stage == MESA_SHADER_COMPUTE);
 
-   fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+   fs_reg payload = fs_reg(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
 
    const fs_builder pbld = bld.exec_all().group(8, 0);
 
@@ -1112,13 +1146,14 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
                        void *mem_ctx,
                        struct brw_gs_compile *c,
                        struct brw_gs_prog_data *prog_data,
-                       const nir_shader *shader)
+                       const nir_shader *shader,
+                       int shader_time_index)
    : backend_shader(compiler, log_data, mem_ctx, shader,
                     &prog_data->base.base),
      key(&c->key), gs_compile(c),
      prog_data(&prog_data->base.base), prog(NULL),
      dispatch_width(8),
-     shader_time_index(ST_GS),
+     shader_time_index(shader_time_index),
      bld(fs_builder(this, dispatch_width).at_end())
 {
    init();
@@ -1155,7 +1190,6 @@ fs_visitor::init()
    this->nir_ssa_values = NULL;
 
    memset(&this->payload, 0, sizeof(this->payload));
-   memset(this->outputs, 0, sizeof(this->outputs));
    memset(this->output_components, 0, sizeof(this->output_components));
    this->source_depth_to_render_target = false;
    this->runtime_check_aads_emit = false;

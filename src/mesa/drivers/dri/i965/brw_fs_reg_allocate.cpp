@@ -35,8 +35,8 @@ using namespace brw;
 static void
 assign_reg(unsigned *reg_hw_locations, fs_reg *reg)
 {
-   if (reg->file == GRF) {
-      reg->reg = reg_hw_locations[reg->reg] + reg->reg_offset;
+   if (reg->file == VGRF) {
+      reg->nr = reg_hw_locations[reg->nr] + reg->reg_offset;
       reg->reg_offset = 0;
    }
 }
@@ -366,14 +366,13 @@ void fs_visitor::calculate_payload_ranges(int payload_node_count,
       else
          use_ip = ip;
 
-      /* Note that UNIFORM args have been turned into FIXED_HW_REG by
+      /* Note that UNIFORM args have been turned into FIXED_GRF by
        * assign_curbe_setup(), and interpolation uses fixed hardware regs from
        * the start (see interp_reg()).
        */
       for (int i = 0; i < inst->sources; i++) {
-         if (inst->src[i].file == HW_REG &&
-             inst->src[i].fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
-            int node_nr = inst->src[i].fixed_hw_reg.nr;
+         if (inst->src[i].file == FIXED_GRF) {
+            int node_nr = inst->src[i].nr;
             if (node_nr >= payload_node_count)
                continue;
 
@@ -489,10 +488,10 @@ get_used_mrfs(fs_visitor *v, bool *mrf_used)
 
    foreach_block_and_inst(block, fs_inst, inst, v->cfg) {
       if (inst->dst.file == MRF) {
-         int reg = inst->dst.reg & ~BRW_MRF_COMPR4;
+         int reg = inst->dst.nr & ~BRW_MRF_COMPR4;
          mrf_used[reg] = true;
          if (reg_width == 2) {
-            if (inst->dst.reg & BRW_MRF_COMPR4) {
+            if (inst->dst.nr & BRW_MRF_COMPR4) {
                mrf_used[reg + 4] = true;
             } else {
                mrf_used[reg + 1] = true;
@@ -584,8 +583,8 @@ fs_visitor::assign_regs(bool allow_spilling)
        * that register and set it to the appropriate class.
        */
       if (compiler->fs_reg_sets[rsi].aligned_pairs_class >= 0 &&
-          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].file == GRF &&
-          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].reg == i) {
+          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].file == VGRF &&
+          this->delta_xy[BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC].nr == i) {
          c = compiler->fs_reg_sets[rsi].aligned_pairs_class;
       }
 
@@ -616,7 +615,7 @@ fs_visitor::assign_regs(bool allow_spilling)
           * highest register that works.
           */
          if (inst->eot) {
-            int size = alloc.sizes[inst->src[0].reg];
+            int size = alloc.sizes[inst->src[0].nr];
             int reg = compiler->fs_reg_sets[rsi].class_to_ra_reg_range[size] - 1;
 
             /* If something happened to spill, we want to push the EOT send
@@ -625,7 +624,7 @@ fs_visitor::assign_regs(bool allow_spilling)
              */
             reg -= BRW_MAX_MRF(devinfo->gen) - first_used_mrf;
 
-            ra_set_node_reg(g, inst->src[0].reg, reg);
+            ra_set_node_reg(g, inst->src[0].nr, reg);
             break;
          }
       }
@@ -644,12 +643,12 @@ fs_visitor::assign_regs(bool allow_spilling)
        * destination interfere.
        */
       foreach_block_and_inst(block, fs_inst, inst, cfg) {
-         if (inst->dst.file != GRF)
+         if (inst->dst.file != VGRF)
             continue;
 
          for (int i = 0; i < inst->sources; ++i) {
-            if (inst->src[i].file == GRF) {
-               ra_add_node_interference(g, inst->dst.reg, inst->src[i].reg);
+            if (inst->src[i].file == VGRF) {
+               ra_add_node_interference(g, inst->dst.nr, inst->src[i].nr);
             }
          }
       }
@@ -786,8 +785,8 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
     */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       for (unsigned int i = 0; i < inst->sources; i++) {
-	 if (inst->src[i].file == GRF) {
-	    spill_costs[inst->src[i].reg] += loop_scale;
+	 if (inst->src[i].file == VGRF) {
+            spill_costs[inst->src[i].nr] += loop_scale;
 
             /* Register spilling logic assumes full-width registers; smeared
              * registers have a width of 1 so if we try to spill them we'll
@@ -797,16 +796,16 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
              * register pressure anyhow.
              */
             if (!inst->src[i].is_contiguous()) {
-               no_spill[inst->src[i].reg] = true;
+               no_spill[inst->src[i].nr] = true;
             }
 	 }
       }
 
-      if (inst->dst.file == GRF) {
-	 spill_costs[inst->dst.reg] += inst->regs_written * loop_scale;
+      if (inst->dst.file == VGRF) {
+         spill_costs[inst->dst.nr] += inst->regs_written * loop_scale;
 
          if (!inst->dst.is_contiguous()) {
-            no_spill[inst->dst.reg] = true;
+            no_spill[inst->dst.nr] = true;
          }
       }
 
@@ -821,14 +820,14 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
 	 break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
-	 if (inst->src[0].file == GRF)
-	    no_spill[inst->src[0].reg] = true;
+	 if (inst->src[0].file == VGRF)
+            no_spill[inst->src[0].nr] = true;
 	 break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_READ:
       case SHADER_OPCODE_GEN7_SCRATCH_READ:
-	 if (inst->dst.file == GRF)
-	    no_spill[inst->dst.reg] = true;
+	 if (inst->dst.file == VGRF)
+            no_spill[inst->dst.nr] = true;
 	 break;
 
       default:
@@ -883,14 +882,14 @@ fs_visitor::spill_reg(int spill_reg)
     */
    foreach_block_and_inst (block, fs_inst, inst, cfg) {
       for (unsigned int i = 0; i < inst->sources; i++) {
-	 if (inst->src[i].file == GRF &&
-	     inst->src[i].reg == spill_reg) {
+	 if (inst->src[i].file == VGRF &&
+             inst->src[i].nr == spill_reg) {
             int regs_read = inst->regs_read(i);
             int subset_spill_offset = (spill_offset +
                                        REG_SIZE * inst->src[i].reg_offset);
-            fs_reg unspill_dst(GRF, alloc.allocate(regs_read));
+            fs_reg unspill_dst(VGRF, alloc.allocate(regs_read));
 
-            inst->src[i].reg = unspill_dst.reg;
+            inst->src[i].nr = unspill_dst.nr;
             inst->src[i].reg_offset = 0;
 
             emit_unspill(block, inst, unspill_dst, subset_spill_offset,
@@ -898,13 +897,13 @@ fs_visitor::spill_reg(int spill_reg)
 	 }
       }
 
-      if (inst->dst.file == GRF &&
-	  inst->dst.reg == spill_reg) {
+      if (inst->dst.file == VGRF &&
+          inst->dst.nr == spill_reg) {
          int subset_spill_offset = (spill_offset +
                                     REG_SIZE * inst->dst.reg_offset);
-         fs_reg spill_src(GRF, alloc.allocate(inst->regs_written));
+         fs_reg spill_src(VGRF, alloc.allocate(inst->regs_written));
 
-         inst->dst.reg = spill_src.reg;
+         inst->dst.nr = spill_src.nr;
          inst->dst.reg_offset = 0;
 
          /* If we're immediately spilling the register, we should not use

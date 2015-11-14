@@ -34,11 +34,11 @@ boolean r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
 					struct radeon_winsys_cs_handle *buf,
 					enum radeon_bo_usage usage)
 {
-	if (ctx->ws->cs_is_buffer_referenced(ctx->rings.gfx.cs, buf, usage)) {
+	if (ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, buf, usage)) {
 		return TRUE;
 	}
-	if (ctx->rings.dma.cs && ctx->rings.dma.cs->cdw &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->rings.dma.cs, buf, usage)) {
+	if (ctx->dma.cs && ctx->dma.cs->cdw &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs, buf, usage)) {
 		return TRUE;
 	}
 	return FALSE;
@@ -60,26 +60,26 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 		rusage = RADEON_USAGE_WRITE;
 	}
 
-	if (ctx->rings.gfx.cs->cdw != ctx->initial_gfx_cs_size &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->rings.gfx.cs,
+	if (ctx->gfx.cs->cdw != ctx->initial_gfx_cs_size &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs,
 					     resource->cs_buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
-			ctx->rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+			ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 			return NULL;
 		} else {
-			ctx->rings.gfx.flush(ctx, 0, NULL);
+			ctx->gfx.flush(ctx, 0, NULL);
 			busy = true;
 		}
 	}
-	if (ctx->rings.dma.cs &&
-	    ctx->rings.dma.cs->cdw &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->rings.dma.cs,
+	if (ctx->dma.cs &&
+	    ctx->dma.cs->cdw &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs,
 					     resource->cs_buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
-			ctx->rings.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+			ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 			return NULL;
 		} else {
-			ctx->rings.dma.flush(ctx, 0, NULL);
+			ctx->dma.flush(ctx, 0, NULL);
 			busy = true;
 		}
 	}
@@ -90,9 +90,9 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 		} else {
 			/* We will be wait for the GPU. Wait for any offloaded
 			 * CS flush to complete to avoid busy-waiting in the winsys. */
-			ctx->ws->cs_sync_flush(ctx->rings.gfx.cs);
-			if (ctx->rings.dma.cs)
-				ctx->ws->cs_sync_flush(ctx->rings.dma.cs);
+			ctx->ws->cs_sync_flush(ctx->gfx.cs);
+			if (ctx->dma.cs)
+				ctx->ws->cs_sync_flush(ctx->dma.cs);
 		}
 	}
 
@@ -240,7 +240,7 @@ static bool r600_can_dma_copy_buffer(struct r600_common_context *rctx,
 	bool dword_aligned = !(dstx % 4) && !(srcx % 4) && !(size % 4);
 
 	return rctx->screen->has_cp_dma ||
-	       (dword_aligned && (rctx->rings.dma.cs ||
+	       (dword_aligned && (rctx->dma.cs ||
 				  rctx->screen->has_streamout));
 
 }

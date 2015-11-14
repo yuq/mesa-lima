@@ -106,6 +106,9 @@ void
 vec4_visitor::nir_setup_system_values()
 {
    nir_system_values = ralloc_array(mem_ctx, dst_reg, SYSTEM_VALUE_MAX);
+   for (unsigned i = 0; i < SYSTEM_VALUE_MAX; i++) {
+      nir_system_values[i] = dst_reg();
+   }
 
    nir_foreach_overload(nir, overload) {
       assert(strcmp(overload->function->name, "main") == 0);
@@ -118,6 +121,9 @@ void
 vec4_visitor::nir_setup_inputs()
 {
    nir_inputs = ralloc_array(mem_ctx, src_reg, nir->num_inputs);
+   for (unsigned i = 0; i < nir->num_inputs; i++) {
+      nir_inputs[i] = dst_reg();
+   }
 
    nir_foreach_variable(var, &nir->inputs) {
       int offset = var->data.driver_location;
@@ -148,12 +154,15 @@ void
 vec4_visitor::nir_emit_impl(nir_function_impl *impl)
 {
    nir_locals = ralloc_array(mem_ctx, dst_reg, impl->reg_alloc);
+   for (unsigned i = 0; i < impl->reg_alloc; i++) {
+      nir_locals[i] = dst_reg();
+   }
 
    foreach_list_typed(nir_register, reg, node, &impl->registers) {
       unsigned array_elems =
          reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
 
-      nir_locals[reg->index] = dst_reg(GRF, alloc.allocate(array_elems));
+      nir_locals[reg->index] = dst_reg(VGRF, alloc.allocate(array_elems));
    }
 
    nir_ssa_values = ralloc_array(mem_ctx, dst_reg, impl->ssa_alloc);
@@ -282,7 +291,7 @@ dst_reg
 vec4_visitor::get_nir_dest(nir_dest dest)
 {
    if (dest.is_ssa) {
-      dst_reg dst = dst_reg(GRF, alloc.allocate(1));
+      dst_reg dst = dst_reg(VGRF, alloc.allocate(1));
       nir_ssa_values[dest.ssa.index] = dst;
       return dst;
    } else {
@@ -342,7 +351,7 @@ vec4_visitor::get_nir_src(nir_src src, unsigned num_components)
 void
 vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 {
-   dst_reg reg = dst_reg(GRF, alloc.allocate(1));
+   dst_reg reg = dst_reg(VGRF, alloc.allocate(1));
    reg.type =  BRW_REGISTER_TYPE_D;
 
    unsigned remaining = brw_writemask_for_size(instr->def.num_components);
@@ -427,15 +436,15 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       nir_const_value *const_uniform_block = nir_src_as_const_value(instr->src[0]);
       unsigned ssbo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
 
-      src_reg surf_index = src_reg(prog_data->base.binding_table.ssbo_start +
-                                   ssbo_index);
+      const unsigned index =
+         prog_data->base.binding_table.ssbo_start + ssbo_index;
       dst_reg result_dst = get_nir_dest(instr->dest);
       vec4_instruction *inst = new(mem_ctx)
          vec4_instruction(VS_OPCODE_GET_BUFFER_SIZE, result_dst);
 
       inst->base_mrf = 2;
       inst->mlen = 1; /* always at least one */
-      inst->src[1] = src_reg(surf_index);
+      inst->src[1] = src_reg(index);
 
       /* MRF for the first parameter */
       src_reg lod = src_reg(0);
@@ -444,6 +453,8 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       emit(MOV(dst_reg(MRF, param_base, glsl_type::int_type, writemask), lod));
 
       emit(inst);
+
+      brw_mark_surface_used(&prog_data->base, index);
       break;
    }
 
@@ -749,8 +760,10 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          /* The block index is a constant, so just emit the binding table entry
           * as an immediate.
           */
-         surf_index = src_reg(prog_data->base.binding_table.ubo_start +
-                              const_block_index->u[0]);
+         const unsigned index = prog_data->base.binding_table.ubo_start +
+                                const_block_index->u[0];
+         surf_index = src_reg(index);
+         brw_mark_surface_used(&prog_data->base, index);
       } else {
          /* The block index is not a constant. Evaluate the index expression
           * per-channel and add the base UBO index; we have to select a value
@@ -1407,7 +1420,23 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_bcsel:
       emit(CMP(dst_null_d(), op[0], src_reg(0), BRW_CONDITIONAL_NZ));
       inst = emit(BRW_OPCODE_SEL, dst, op[1], op[2]);
-      inst->predicate = BRW_PREDICATE_NORMAL;
+      switch (dst.writemask) {
+      case WRITEMASK_X:
+         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_X;
+         break;
+      case WRITEMASK_Y:
+         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Y;
+         break;
+      case WRITEMASK_Z:
+         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Z;
+         break;
+      case WRITEMASK_W:
+         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_W;
+         break;
+      default:
+         inst->predicate = BRW_PREDICATE_NORMAL;
+         break;
+      }
       break;
 
    case nir_op_fdot_replicated2:
@@ -1708,7 +1737,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 void
 vec4_visitor::nir_emit_undef(nir_ssa_undef_instr *instr)
 {
-   nir_ssa_values[instr->def.index] = dst_reg(GRF, alloc.allocate(1));
+   nir_ssa_values[instr->def.index] = dst_reg(VGRF, alloc.allocate(1));
 }
 
 }

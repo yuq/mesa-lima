@@ -533,7 +533,6 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          fields[i].centroid = 0;
          fields[i].sample = 0;
          fields[i].matrix_layout = 2;
-         fields[i].stream = -1;
       }
 
       struct member_decoration_ctx ctx = {

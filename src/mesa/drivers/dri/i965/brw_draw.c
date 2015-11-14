@@ -111,9 +111,16 @@ brw_set_prim(struct brw_context *brw, const struct _mesa_prim *prim)
 static void
 gen6_set_prim(struct brw_context *brw, const struct _mesa_prim *prim)
 {
+   const struct gl_context *ctx = &brw->ctx;
+   uint32_t hw_prim;
+
    DBG("PRIM: %s\n", _mesa_enum_to_string(prim->mode));
 
-   const uint32_t hw_prim = get_hw_prim_for_gl_prim(prim->mode);
+   if (prim->mode == GL_PATCHES)
+      hw_prim = _3DPRIM_PATCHLIST(ctx->TessCtrlProgram.patch_vertices);
+   else
+      hw_prim = get_hw_prim_for_gl_prim(prim->mode);
+
    if (hw_prim != brw->primitive) {
       brw->primitive = hw_prim;
       brw->ctx.NewDriverState |= BRW_NEW_PRIMITIVE;

@@ -78,7 +78,7 @@ gen7_surface_msaa_bits(unsigned num_samples, enum intel_msaa_layout layout)
 {
    uint32_t ss4 = 0;
 
-   assert(num_samples <= 8);
+   assert(num_samples <= 16);
 
    /* The SURFACE_MULTISAMPLECOUNT_X enums are simply log2(num_samples) << 3. */
    ss4 |= (ffs(MAX2(num_samples, 1)) - 1) << 3;

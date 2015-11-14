@@ -91,6 +91,17 @@ BARRIER(memory_barrier)
  */
 INTRINSIC(shader_clock, 0, ARR(), true, 1, 0, 0, NIR_INTRINSIC_CAN_ELIMINATE)
 
+/*
+ * Memory barrier with semantics analogous to the compute shader
+ * groupMemoryBarrier(), memoryBarrierAtomicCounter(), memoryBarrierBuffer(),
+ * memoryBarrierImage() and memoryBarrierShared() GLSL intrinsics.
+ */
+BARRIER(group_memory_barrier)
+BARRIER(memory_barrier_atomic_counter)
+BARRIER(memory_barrier_buffer)
+BARRIER(memory_barrier_image)
+BARRIER(memory_barrier_shared)
+
 /** A conditional discard, with a single boolean source. */
 INTRINSIC(discard_if, 1, ARR(1), false, 0, 0, 0, 0)
 
@@ -264,6 +275,8 @@ LOAD(ubo, 1, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 LOAD(input, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 LOAD(per_vertex_input, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 LOAD(ssbo, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE)
+LOAD(output, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE)
+LOAD(per_vertex_output, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE)
 LOAD(push_constant, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 /*
@@ -282,6 +295,7 @@ LOAD(push_constant, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDE
              false, 0, 0, 1 + extra_indices, flags)
 
 STORE(output, 0, 0, 0, 0)
+STORE(per_vertex_output, 1, 1, 0, 0)
 STORE(ssbo, 1, 1, 1, 0)
 
 LAST_INTRINSIC(store_ssbo_indirect)

@@ -66,4 +66,10 @@ vl_screen_set_next_timestamp(struct vl_screen *vscreen, uint64_t stamp);
 void*
 vl_screen_get_private(struct vl_screen *vscreen);
 
+struct vl_screen*
+vl_drm_screen_create(int fd);
+
+void
+vl_drm_screen_destroy(struct vl_screen *vscreen);
+
 #endif

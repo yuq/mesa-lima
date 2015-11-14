@@ -144,7 +144,7 @@ namespace brw {
          assert(dispatch_width() <= 32);
 
          if (n > 0)
-            return retype(dst_reg(GRF, shader->alloc.allocate(
+            return retype(dst_reg(VGRF, shader->alloc.allocate(
                                      n * DIV_ROUND_UP(type_sz(type), 4))),
                            type);
          else

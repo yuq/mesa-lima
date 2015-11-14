@@ -152,11 +152,11 @@ vlVaUnmapBuffer(VADriverContextP ctx, VABufferID buf_id)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
    if (buf->derived_surface.resource) {
-     if (!buf->derived_surface.transfer)
-        return VA_STATUS_ERROR_INVALID_BUFFER;
+      if (!buf->derived_surface.transfer)
+         return VA_STATUS_ERROR_INVALID_BUFFER;
 
-     pipe_buffer_unmap(drv->pipe, buf->derived_surface.transfer);
-     buf->derived_surface.transfer = NULL;
+      pipe_buffer_unmap(drv->pipe, buf->derived_surface.transfer);
+      buf->derived_surface.transfer = NULL;
    }
 
    return VA_STATUS_SUCCESS;
@@ -175,10 +175,10 @@ vlVaDestroyBuffer(VADriverContextP ctx, VABufferID buf_id)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
    if (buf->derived_surface.resource) {
-     if (buf->export_refcount > 0)
-       return VA_STATUS_ERROR_INVALID_BUFFER;
+      if (buf->export_refcount > 0)
+         return VA_STATUS_ERROR_INVALID_BUFFER;
 
-     pipe_resource_reference(&buf->derived_surface.resource, NULL);
+      pipe_resource_reference(&buf->derived_surface.resource, NULL);
    }
 
    FREE(buf->data);
@@ -280,15 +280,14 @@ vlVaAcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id,
 
          buf_info->handle = (intptr_t)whandle.handle;
          break;
+      }
       default:
          return VA_STATUS_ERROR_UNSUPPORTED_MEMORY_TYPE;
       }
-   }
 
-   buf_info->type = buf->type;
-   buf_info->mem_type = mem_type;
-   buf_info->mem_size = buf->num_elements * buf->size;
-
+      buf_info->type = buf->type;
+      buf_info->mem_type = mem_type;
+      buf_info->mem_size = buf->num_elements * buf->size;
    }
 
    buf->export_refcount++;

@@ -128,6 +128,8 @@ _mesa_meta_glsl_generate_mipmap_cleanup(struct gen_mipmap_state *mipmap)
    mipmap->VAO = 0;
    _mesa_DeleteBuffers(1, &mipmap->VBO);
    mipmap->VBO = 0;
+   _mesa_DeleteSamplers(1, &mipmap->Sampler);
+   mipmap->Sampler = 0;
 
    _mesa_meta_blit_shader_table_cleanup(&mipmap->shaders);
 }

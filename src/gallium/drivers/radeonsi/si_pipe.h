@@ -46,15 +46,12 @@
 
 /* Instruction cache. */
 #define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
-/* Cache used by scalar memory (SMEM) instructions. They also use TC
- * as a second level cache, which isn't flushed by this.
- * Other names: constant cache, data cache, DCACHE */
-#define SI_CONTEXT_INV_KCACHE		(R600_CONTEXT_PRIVATE_FLAG << 1)
-/* Caches used by vector memory (VMEM) instructions.
- * L1 can optionally be bypassed (GLC=1) and can only be used by shaders.
- * L2 is used by shaders and can be used by other blocks (CP, sDMA). */
-#define SI_CONTEXT_INV_TC_L1		(R600_CONTEXT_PRIVATE_FLAG << 2)
-#define SI_CONTEXT_INV_TC_L2		(R600_CONTEXT_PRIVATE_FLAG << 3)
+/* SMEM L1, other names: KCACHE, constant cache, DCACHE, data cache */
+#define SI_CONTEXT_INV_SMEM_L1		(R600_CONTEXT_PRIVATE_FLAG << 1)
+/* VMEM L1 can optionally be bypassed (GLC=1). Other names: TC L1 */
+#define SI_CONTEXT_INV_VMEM_L1		(R600_CONTEXT_PRIVATE_FLAG << 2)
+/* Used by everything except CB/DB, can be bypassed (SLC=1). Other names: TC L2 */
+#define SI_CONTEXT_INV_GLOBAL_L2	(R600_CONTEXT_PRIVATE_FLAG << 3)
 /* Framebuffer caches. */
 #define SI_CONTEXT_FLUSH_AND_INV_CB_META (R600_CONTEXT_PRIVATE_FLAG << 4)
 #define SI_CONTEXT_FLUSH_AND_INV_DB_META (R600_CONTEXT_PRIVATE_FLAG << 5)
@@ -176,6 +173,7 @@ struct si_context {
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct si_shader_ctx_state	fixed_func_tcs_shader;
 	LLVMTargetMachineRef		tm;
+	bool				gfx_flush_in_progress;
 
 	/* Atoms (direct states). */
 	union si_state_atoms		atoms;
@@ -204,6 +202,7 @@ struct si_context {
 
 	/* Precomputed states. */
 	struct si_pm4_state		*init_config;
+	struct si_pm4_state		*init_config_gs_rings;
 	bool				init_config_has_vgt_flush;
 	struct si_pm4_state		*vgt_shader_config[4];
 

@@ -150,6 +150,8 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
          compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
 
       compiler->glsl_compiler_options[i].NirOptions = nir_options;
+
+      compiler->glsl_compiler_options[i].LowerBufferInterfaceBlocks = true;
    }
 
    return compiler;
@@ -291,7 +293,7 @@ const char *
 brw_instruction_name(enum opcode op)
 {
    switch (op) {
-   case BRW_OPCODE_MOV ... BRW_OPCODE_NOP:
+   case BRW_OPCODE_ILLEGAL ... BRW_OPCODE_NOP:
       assert(opcode_descs[op].name);
       return opcode_descs[op].name;
    case FS_OPCODE_FB_WRITE:
@@ -354,6 +356,10 @@ brw_instruction_name(enum opcode op)
       return "txf_cms";
    case SHADER_OPCODE_TXF_CMS_LOGICAL:
       return "txf_cms_logical";
+   case SHADER_OPCODE_TXF_CMS_W:
+      return "txf_cms_w";
+   case SHADER_OPCODE_TXF_CMS_W_LOGICAL:
+      return "txf_cms_w_logical";
    case SHADER_OPCODE_TXF_UMS:
       return "txf_ums";
    case SHADER_OPCODE_TXF_UMS_LOGICAL:
@@ -426,6 +432,8 @@ brw_instruction_name(enum opcode op)
       return "gen8_urb_write_simd8_masked_per_slot";
    case SHADER_OPCODE_URB_READ_SIMD8:
       return "urb_read_simd8";
+   case SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT:
+      return "urb_read_simd8_per_slot";
 
    case SHADER_OPCODE_FIND_LIVE_CHANNEL:
       return "find_live_channel";
@@ -561,7 +569,7 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
       unsigned ud;
       int d;
       float f;
-   } imm = { reg->dw1.ud }, sat_imm = { 0 };
+   } imm = { reg->ud }, sat_imm = { 0 };
 
    switch (type) {
    case BRW_REGISTER_TYPE_UD:
@@ -592,7 +600,7 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    }
 
    if (imm.ud != sat_imm.ud) {
-      reg->dw1.ud = sat_imm.ud;
+      reg->ud = sat_imm.ud;
       return true;
    }
    return false;
@@ -604,17 +612,17 @@ brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    switch (type) {
    case BRW_REGISTER_TYPE_D:
    case BRW_REGISTER_TYPE_UD:
-      reg->dw1.d = -reg->dw1.d;
+      reg->d = -reg->d;
       return true;
    case BRW_REGISTER_TYPE_W:
    case BRW_REGISTER_TYPE_UW:
-      reg->dw1.d = -(int16_t)reg->dw1.ud;
+      reg->d = -(int16_t)reg->ud;
       return true;
    case BRW_REGISTER_TYPE_F:
-      reg->dw1.f = -reg->dw1.f;
+      reg->f = -reg->f;
       return true;
    case BRW_REGISTER_TYPE_VF:
-      reg->dw1.ud ^= 0x80808080;
+      reg->ud ^= 0x80808080;
       return true;
    case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_B:
@@ -638,16 +646,16 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
 {
    switch (type) {
    case BRW_REGISTER_TYPE_D:
-      reg->dw1.d = abs(reg->dw1.d);
+      reg->d = abs(reg->d);
       return true;
    case BRW_REGISTER_TYPE_W:
-      reg->dw1.d = abs((int16_t)reg->dw1.ud);
+      reg->d = abs((int16_t)reg->ud);
       return true;
    case BRW_REGISTER_TYPE_F:
-      reg->dw1.f = fabsf(reg->dw1.f);
+      reg->f = fabsf(reg->f);
       return true;
    case BRW_REGISTER_TYPE_VF:
-      reg->dw1.ud &= ~0x80808080;
+      reg->ud &= ~0x80808080;
       return true;
    case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_B:
@@ -697,7 +705,7 @@ backend_reg::is_zero() const
    if (file != IMM)
       return false;
 
-   return fixed_hw_reg.dw1.d == 0;
+   return d == 0;
 }
 
 bool
@@ -707,8 +715,8 @@ backend_reg::is_one() const
       return false;
 
    return type == BRW_REGISTER_TYPE_F
-          ? fixed_hw_reg.dw1.f == 1.0
-          : fixed_hw_reg.dw1.d == 1;
+          ? f == 1.0
+          : d == 1;
 }
 
 bool
@@ -719,9 +727,9 @@ backend_reg::is_negative_one() const
 
    switch (type) {
    case BRW_REGISTER_TYPE_F:
-      return fixed_hw_reg.dw1.f == -1.0;
+      return f == -1.0;
    case BRW_REGISTER_TYPE_D:
-      return fixed_hw_reg.dw1.d == -1;
+      return d == -1;
    default:
       return false;
    }
@@ -730,25 +738,21 @@ backend_reg::is_negative_one() const
 bool
 backend_reg::is_null() const
 {
-   return file == HW_REG &&
-          fixed_hw_reg.file == BRW_ARCHITECTURE_REGISTER_FILE &&
-          fixed_hw_reg.nr == BRW_ARF_NULL;
+   return file == ARF && nr == BRW_ARF_NULL;
 }
 
 
 bool
 backend_reg::is_accumulator() const
 {
-   return file == HW_REG &&
-          fixed_hw_reg.file == BRW_ARCHITECTURE_REGISTER_FILE &&
-          fixed_hw_reg.nr == BRW_ARF_ACCUMULATOR;
+   return file == ARF && nr == BRW_ARF_ACCUMULATOR;
 }
 
 bool
 backend_reg::in_range(const backend_reg &r, unsigned n) const
 {
    return (file == r.file &&
-           reg == r.reg &&
+           nr == r.nr &&
            reg_offset >= r.reg_offset &&
            reg_offset < r.reg_offset + n);
 }
@@ -779,7 +783,7 @@ backend_instruction::is_commutative() const
 bool
 backend_instruction::is_3src() const
 {
-   return opcode < ARRAY_SIZE(opcode_descs) && opcode_descs[opcode].nsrc == 3;
+   return ::is_3src(opcode);
 }
 
 bool
@@ -790,6 +794,7 @@ backend_instruction::is_tex() const
            opcode == SHADER_OPCODE_TXD ||
            opcode == SHADER_OPCODE_TXF ||
            opcode == SHADER_OPCODE_TXF_CMS ||
+           opcode == SHADER_OPCODE_TXF_CMS_W ||
            opcode == SHADER_OPCODE_TXF_UMS ||
            opcode == SHADER_OPCODE_TXF_MCS ||
            opcode == SHADER_OPCODE_TXL ||

@@ -178,11 +178,11 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 		goto fail;
 	}
 
-	rctx->b.rings.gfx.cs = ws->cs_create(rctx->b.ctx, RING_GFX,
-					     r600_context_gfx_flush, rctx,
-					     rscreen->b.trace_bo ?
-						     rscreen->b.trace_bo->cs_buf : NULL);
-	rctx->b.rings.gfx.flush = r600_context_gfx_flush;
+	rctx->b.gfx.cs = ws->cs_create(rctx->b.ctx, RING_GFX,
+				       r600_context_gfx_flush, rctx,
+				       rscreen->b.trace_bo ?
+					       rscreen->b.trace_bo->cs_buf : NULL);
+	rctx->b.gfx.flush = r600_context_gfx_flush;
 
 	rctx->allocator_fetch_shader = u_suballocator_create(&rctx->b.b, 64 * 1024, 256,
 							     0, PIPE_USAGE_DEFAULT, FALSE);
@@ -323,6 +323,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_GATHER_SM5:
 	case PIPE_CAP_TEXTURE_QUERY_LOD:
 	case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
+	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 		return family >= CHIP_CEDAR ? 1 : 0;
 	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
 		return family >= CHIP_CEDAR ? 4 : 0;
@@ -338,13 +339,13 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEX_COLOR_CLAMPED:
 	case PIPE_CAP_USER_VERTEX_BUFFERS:
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
-	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
 	case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
 	case PIPE_CAP_SHAREABLE_SHADERS:
 	case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
+	case PIPE_CAP_CLEAR_TEXTURE:
 		return 0;
 
 	/* Stream output. */

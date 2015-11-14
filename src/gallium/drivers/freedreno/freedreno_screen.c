@@ -239,6 +239,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
 	case PIPE_CAP_SHAREABLE_SHADERS:
 	case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
+	case PIPE_CAP_CLEAR_TEXTURE:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:
@@ -549,6 +550,7 @@ fd_screen_create(struct fd_device *dev)
 	case 220:
 		fd2_screen_init(pscreen);
 		break;
+	case 305:
 	case 307:
 	case 320:
 	case 330:

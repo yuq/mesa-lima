@@ -306,6 +306,7 @@ nv50_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
    }
    nv50->base.pushbuf->kick_notify = nv50_default_kick_notify;
 
+   nouveau_context_init(&nv50->base);
    nv50_init_query_functions(nv50);
    nv50_init_surface_functions(nv50);
    nv50_init_state_functions(nv50);
