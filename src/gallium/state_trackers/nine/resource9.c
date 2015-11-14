@@ -34,7 +34,6 @@
 
 #define DBG_CHANNEL DBG_RESOURCE
 
-
 HRESULT
 NineResource9_ctor( struct NineResource9 *This,
                     struct NineUnknownParams *pParams,
@@ -117,9 +116,10 @@ NineResource9_SetPrivateData( struct NineResource9 *This,
     enum pipe_error err;
     struct pheader *header;
     const void *user_data = pData;
+    char guid_str[64];
 
-    DBG("This=%p refguid=%p pData=%p SizeOfData=%u Flags=%x\n",
-        This, refguid, pData, SizeOfData, Flags);
+    DBG("This=%p GUID=%s pData=%p SizeOfData=%u Flags=%x\n",
+        This, GUID_sprintf(guid_str, refguid), pData, SizeOfData, Flags);
 
     if (Flags & D3DSPD_IUNKNOWN)
         user_assert(SizeOfData == sizeof(IUnknown *), D3DERR_INVALIDCALL);
@@ -162,9 +162,10 @@ NineResource9_GetPrivateData( struct NineResource9 *This,
 {
     struct pheader *header;
     DWORD sizeofdata;
+    char guid_str[64];
 
-    DBG("This=%p refguid=%p pData=%p pSizeOfData=%p\n",
-        This, refguid, pData, pSizeOfData);
+    DBG("This=%p GUID=%s pData=%p pSizeOfData=%p\n",
+        This, GUID_sprintf(guid_str, refguid), pData, pSizeOfData);
 
     header = util_hash_table_get(This->pdata, refguid);
     if (!header) { return D3DERR_NOTFOUND; }
@@ -191,8 +192,9 @@ NineResource9_FreePrivateData( struct NineResource9 *This,
                                REFGUID refguid )
 {
     struct pheader *header;
+    char guid_str[64];
 
-    DBG("This=%p refguid=%p\n", This, refguid);
+    DBG("This=%p GUID=%s\n", This, GUID_sprintf(guid_str, refguid));
 
     header = util_hash_table_get(This->pdata, refguid);
     if (!header)
