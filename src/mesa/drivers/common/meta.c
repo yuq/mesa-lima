@@ -2945,8 +2945,8 @@ _mesa_meta_CopyTexSubImage(struct gl_context *ctx, GLuint dims,
 static void
 meta_decompress_fbo_cleanup(struct decompress_fbo_state *decompress_fbo)
 {
-   if (decompress_fbo->FBO != 0) {
-      _mesa_DeleteFramebuffers(1, &decompress_fbo->FBO);
+   if (decompress_fbo->fb != NULL) {
+      _mesa_DeleteFramebuffers(1, &decompress_fbo->fb->Name);
       _mesa_reference_renderbuffer(&decompress_fbo->rb, NULL);
    }
 
@@ -3049,7 +3049,9 @@ decompress_texture_image(struct gl_context *ctx,
                                   ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler);
 
    /* Create/bind FBO/renderbuffer */
-   if (decompress_fbo->FBO == 0) {
+   if (decompress_fbo->fb == NULL) {
+      GLuint FBO;
+
       decompress_fbo->rb = ctx->Driver.NewRenderbuffer(ctx, 0xDEADBEEF);
       if (decompress_fbo->rb == NULL) {
          _mesa_meta_end(ctx);
@@ -3058,13 +3060,16 @@ decompress_texture_image(struct gl_context *ctx,
 
       decompress_fbo->rb->RefCount = 1;
 
-      _mesa_CreateFramebuffers(1, &decompress_fbo->FBO);
-      _mesa_BindFramebuffer(GL_FRAMEBUFFER_EXT, decompress_fbo->FBO);
+      _mesa_CreateFramebuffers(1, &FBO);
+      decompress_fbo->fb = _mesa_lookup_framebuffer(ctx, FBO);
+      assert(decompress_fbo->fb != NULL && decompress_fbo->fb->Name == FBO);
+
+      _mesa_bind_framebuffers(ctx, decompress_fbo->fb, decompress_fbo->fb);
       _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, GL_COLOR_ATTACHMENT0,
                                      decompress_fbo->rb);
    }
    else {
-      _mesa_BindFramebuffer(GL_FRAMEBUFFER_EXT, decompress_fbo->FBO);
+      _mesa_bind_framebuffers(ctx, decompress_fbo->fb, decompress_fbo->fb);
    }
 
    /* alloc dest surface */
