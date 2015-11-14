@@ -244,7 +244,8 @@ void anv_DestroyPipeline(
 
    anv_reloc_list_finish(&pipeline->batch_relocs, pipeline->device);
    anv_state_stream_finish(&pipeline->program_stream);
-   anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
+   if (pipeline->blend_state.map)
+      anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
    anv_device_free(pipeline->device, pipeline);
 }
 

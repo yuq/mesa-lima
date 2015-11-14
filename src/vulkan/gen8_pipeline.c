@@ -598,6 +598,8 @@ VkResult gen8_compute_pipeline_create(
    pipeline->device = device;
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
 
+   pipeline->blend_state.map = NULL;
+
    result = anv_reloc_list_init(&pipeline->batch_relocs, device);
    if (result != VK_SUCCESS) {
       anv_device_free(device, pipeline);
