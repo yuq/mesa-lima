@@ -369,7 +369,7 @@ struct gen_mipmap_state
 {
    GLuint VAO;
    struct gl_buffer_object *buf_obj;
-   GLuint FBO;
+   struct gl_framebuffer *fb;
    struct gl_sampler_object *samp_obj;
 
    struct blit_shader_table shaders;
