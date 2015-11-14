@@ -1160,51 +1160,48 @@ _vtn_block_load(struct vtn_builder *b, nir_intrinsic_op op,
    return val;
 }
 
-static struct vtn_ssa_value *
-vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
-               struct vtn_type *type, nir_deref *src_tail)
+static void
+vtn_block_get_offset(struct vtn_builder *b, nir_deref_var *src,
+                     struct vtn_type **type, nir_deref *src_tail,
+                     nir_ssa_def **index,
+                     unsigned *offset, nir_ssa_def **indirect)
 {
-   unsigned set = src->var->data.descriptor_set;
-   unsigned binding = src->var->data.binding;
-   nir_variable_mode mode = src->var->data.mode;
-
    nir_deref *deref = &src->deref;
 
-   nir_ssa_def *index;
    if (deref->child->deref_type == nir_deref_type_array) {
       deref = deref->child;
-      type = type->array_element;
+      *type = (*type)->array_element;
       nir_deref_array *deref_array = nir_deref_as_array(deref);
-      index = nir_imm_int(&b->nb, deref_array->base_offset);
+      *index = nir_imm_int(&b->nb, deref_array->base_offset);
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect)
-         index = nir_iadd(&b->nb, index, deref_array->indirect.ssa);
+         *index = nir_iadd(&b->nb, *index, deref_array->indirect.ssa);
    } else {
-      index = nir_imm_int(&b->nb, 0);
+      *index = nir_imm_int(&b->nb, 0);
    }
 
-   unsigned offset = 0;
-   nir_ssa_def *indirect = NULL;
+   *offset = 0;
+   *indirect = NULL;
    while (deref != src_tail) {
       deref = deref->child;
       switch (deref->deref_type) {
       case nir_deref_type_array: {
          nir_deref_array *deref_array = nir_deref_as_array(deref);
          if (deref_array->deref_array_type == nir_deref_array_type_direct) {
-            offset += type->stride * deref_array->base_offset;
+            *offset += (*type)->stride * deref_array->base_offset;
          } else {
-            nir_ssa_def *offset = nir_imul(&b->nb, deref_array->indirect.ssa,
-                                           nir_imm_int(&b->nb, type->stride));
-            indirect = indirect ? nir_iadd(&b->nb, indirect, offset) : offset;
+            nir_ssa_def *off = nir_imul(&b->nb, deref_array->indirect.ssa,
+                                        nir_imm_int(&b->nb, (*type)->stride));
+            *indirect = *indirect ? nir_iadd(&b->nb, *indirect, off) : off;
          }
-         type = type->array_element;
+         *type = (*type)->array_element;
          break;
       }
 
       case nir_deref_type_struct: {
          nir_deref_struct *deref_struct = nir_deref_as_struct(deref);
-         offset += type->offsets[deref_struct->index];
-         type = type->members[deref_struct->index];
+         *offset += (*type)->offsets[deref_struct->index];
+         *type = (*type)->members[deref_struct->index];
          break;
       }
 
@@ -1212,6 +1209,16 @@ vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
          unreachable("unknown deref type");
       }
    }
+}
+
+static struct vtn_ssa_value *
+vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
+               struct vtn_type *type, nir_deref *src_tail)
+{
+   nir_ssa_def *index;
+   unsigned offset;
+   nir_ssa_def *indirect;
+   vtn_block_get_offset(b, src, &type, src_tail, &index, &offset, &indirect);
 
    nir_intrinsic_op op;
    if (src->var->data.mode == nir_var_uniform) {
@@ -1235,8 +1242,9 @@ vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
                     : nir_intrinsic_load_ssbo;
    }
 
-   return _vtn_block_load(b, op, set, binding, mode, index,
-                          offset, indirect, type);
+   return _vtn_block_load(b, op, src->var->data.descriptor_set,
+                          src->var->data.binding, src->var->data.mode,
+                          index, offset, indirect, type);
 }
 
 /*
