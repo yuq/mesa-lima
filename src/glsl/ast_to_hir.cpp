@@ -2522,6 +2522,21 @@ process_qualifier_constant(struct _mesa_glsl_parse_state *state,
 }
 
 static bool
+validate_stream_qualifier(YYLTYPE *loc, struct _mesa_glsl_parse_state *state,
+                          unsigned stream)
+{
+   if (stream >= state->ctx->Const.MaxVertexStreams) {
+      _mesa_glsl_error(loc, state,
+                       "invalid stream specified %d is larger than "
+                       "MAX_VERTEX_STREAMS - 1 (%d).",
+                       stream, state->ctx->Const.MaxVertexStreams - 1);
+      return false;
+   }
+
+   return true;
+}
+
+static bool
 validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                            YYLTYPE *loc,
                            const glsl_type *type,
@@ -3036,7 +3051,8 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
        qual->flags.q.out && qual->flags.q.stream) {
       unsigned qual_stream;
       if (process_qualifier_constant(state, loc, "stream", qual->stream,
-                                     &qual_stream)) {
+                                     &qual_stream) &&
+          validate_stream_qualifier(loc, state, qual_stream)) {
          var->data.stream = qual_stream;
       }
    }
@@ -6517,7 +6533,8 @@ ast_interface_block::hir(exec_list *instructions,
 
    unsigned qual_stream;
    if (!process_qualifier_constant(state, &loc, "stream", this->layout.stream,
-                                   &qual_stream)) {
+                                   &qual_stream) ||
+       !validate_stream_qualifier(&loc, state, qual_stream)) {
       /* If the stream qualifier is invalid it doesn't make sense to continue
        * on and try to compare stream layouts on member variables against it
        * so just return early.

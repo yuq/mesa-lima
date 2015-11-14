@@ -190,20 +190,6 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 
    if (state->stage == MESA_SHADER_GEOMETRY &&
        state->has_explicit_attrib_stream()) {
-      if (q.flags.q.stream && q.stream >= state->ctx->Const.MaxVertexStreams) {
-         _mesa_glsl_error(loc, state,
-                          "`stream' value is larger than MAX_VERTEX_STREAMS - 1 "
-                          "(%d > %d)",
-                          q.stream, state->ctx->Const.MaxVertexStreams - 1);
-      }
-      if (this->flags.q.explicit_stream &&
-          this->stream >= state->ctx->Const.MaxVertexStreams) {
-         _mesa_glsl_error(loc, state,
-                          "`stream' value is larger than MAX_VERTEX_STREAMS - 1 "
-                          "(%d > %d)",
-                          this->stream, state->ctx->Const.MaxVertexStreams - 1);
-      }
-
       if (!this->flags.q.explicit_stream) {
          if (q.flags.q.stream) {
             this->flags.q.stream = 1;
