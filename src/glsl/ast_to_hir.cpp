@@ -2505,6 +2505,23 @@ validate_matrix_layout_for_type(struct _mesa_glsl_parse_state *state,
 }
 
 static bool
+process_qualifier_constant(struct _mesa_glsl_parse_state *state,
+                           YYLTYPE *loc,
+                           const char *qual_indentifier,
+                           int qual_value,
+                           unsigned *value)
+{
+   if (qual_value < 0) {
+      _mesa_glsl_error(loc, state, "%s layout qualifier is invalid (%d < 0)",
+                       qual_indentifier, qual_value);
+      return false;
+   }
+
+   *value = (unsigned) qual_value;
+   return true;
+}
+
+static bool
 validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
                            YYLTYPE *loc,
                            const glsl_type *type,
