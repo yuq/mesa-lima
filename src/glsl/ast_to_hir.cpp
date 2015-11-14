@@ -2550,14 +2550,15 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
       return;
    }
 
-   if (qual->binding < 0) {
-      _mesa_glsl_error(loc, state, "binding values must be >= 0");
+   unsigned qual_binding;
+   if (!process_qualifier_constant(state, loc, "binding", qual->binding,
+                                   &qual_binding)) {
       return;
    }
 
    const struct gl_context *const ctx = state->ctx;
    unsigned elements = type->is_array() ? type->arrays_of_arrays_size() : 1;
-   unsigned max_index = qual->binding + elements - 1;
+   unsigned max_index = qual_binding + elements - 1;
    const glsl_type *base_type = type->without_array();
 
    if (base_type->is_interface()) {
@@ -2573,9 +2574,9 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
        */
       if (qual->flags.q.uniform &&
          max_index >= ctx->Const.MaxUniformBufferBindings) {
-         _mesa_glsl_error(loc, state, "layout(binding = %d) for %d UBOs exceeds "
+         _mesa_glsl_error(loc, state, "layout(binding = %u) for %d UBOs exceeds "
                           "the maximum number of UBO binding points (%d)",
-                          qual->binding, elements,
+                          qual_binding, elements,
                           ctx->Const.MaxUniformBufferBindings);
          return;
       }
@@ -2591,9 +2592,9 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
        */
       if (qual->flags.q.buffer &&
          max_index >= ctx->Const.MaxShaderStorageBufferBindings) {
-         _mesa_glsl_error(loc, state, "layout(binding = %d) for %d SSBOs exceeds "
+         _mesa_glsl_error(loc, state, "layout(binding = %u) for %d SSBOs exceeds "
                           "the maximum number of SSBO binding points (%d)",
-                          qual->binding, elements,
+                          qual_binding, elements,
                           ctx->Const.MaxShaderStorageBufferBindings);
          return;
       }
@@ -2610,16 +2611,16 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
       if (max_index >= limit) {
          _mesa_glsl_error(loc, state, "layout(binding = %d) for %d samplers "
                           "exceeds the maximum number of texture image units "
-                          "(%d)", qual->binding, elements, limit);
+                          "(%u)", qual_binding, elements, limit);
 
          return;
       }
    } else if (base_type->contains_atomic()) {
       assert(ctx->Const.MaxAtomicBufferBindings <= MAX_COMBINED_ATOMIC_BUFFERS);
-      if (unsigned(qual->binding) >= ctx->Const.MaxAtomicBufferBindings) {
+      if (qual_binding >= ctx->Const.MaxAtomicBufferBindings) {
          _mesa_glsl_error(loc, state, "layout(binding = %d) exceeds the "
                           " maximum number of atomic counter buffer bindings"
-                          "(%d)", qual->binding,
+                          "(%u)", qual_binding,
                           ctx->Const.MaxAtomicBufferBindings);
 
          return;
@@ -2641,7 +2642,7 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
    }
 
    var->data.explicit_binding = true;
-   var->data.binding = qual->binding;
+   var->data.binding = qual_binding;
 
    return;
 }
