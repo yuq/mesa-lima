@@ -2508,16 +2508,40 @@ static bool
 process_qualifier_constant(struct _mesa_glsl_parse_state *state,
                            YYLTYPE *loc,
                            const char *qual_indentifier,
-                           int qual_value,
+                           ast_expression *const_expression,
                            unsigned *value)
 {
-   if (qual_value < 0) {
-      _mesa_glsl_error(loc, state, "%s layout qualifier is invalid (%d < 0)",
-                       qual_indentifier, qual_value);
+   exec_list dummy_instructions;
+
+   if (const_expression == NULL) {
+      *value = 0;
+      return true;
+   }
+
+   ir_rvalue *const ir = const_expression->hir(&dummy_instructions, state);
+
+   ir_constant *const const_int = ir->constant_expression_value();
+   if (const_int == NULL || !const_int->type->is_integer()) {
+      _mesa_glsl_error(loc, state, "%s must be an integral constant "
+                       "expression", qual_indentifier);
       return false;
    }
 
-   *value = (unsigned) qual_value;
+   if (const_int->value.i[0] < 0) {
+      _mesa_glsl_error(loc, state, "%s layout qualifier is invalid (%d < 0)",
+                       qual_indentifier, const_int->value.u[0]);
+      return false;
+   }
+
+   /* If the location is const (and we've verified that
+    * it is) then no instructions should have been emitted
+    * when we converted it to HIR. If they were emitted,
+    * then either the location isn't const after all, or
+    * we are emitting unnecessary instructions.
+    */
+   assert(dummy_instructions.is_empty());
+
+   *value = const_int->value.u[0];
    return true;
 }
 
@@ -3845,7 +3869,17 @@ handle_tess_ctrl_shader_output_decl(struct _mesa_glsl_parse_state *state,
    unsigned num_vertices = 0;
 
    if (state->tcs_output_vertices_specified) {
-      num_vertices = state->out_qualifier->vertices;
+      if (!state->out_qualifier->vertices->
+             process_qualifier_constant(state, "vertices",
+                                        &num_vertices, false)) {
+         return;
+      }
+
+      if (num_vertices > state->Const.MaxPatchVertices) {
+         _mesa_glsl_error(&loc, state, "vertices (%d) exceeds "
+                          "GL_MAX_PATCH_VERTICES", num_vertices);
+         return;
+      }
    }
 
    if (!var->type->is_array() && !var->data.patch) {
@@ -4079,9 +4113,18 @@ ast_declarator_list::hir(exec_list *instructions,
     */
    if (decl_type && decl_type->contains_atomic()) {
       if (type->qualifier.flags.q.explicit_binding &&
-          type->qualifier.flags.q.explicit_offset)
-         state->atomic_counter_offsets[type->qualifier.binding] =
-            type->qualifier.offset;
+          type->qualifier.flags.q.explicit_offset) {
+         unsigned qual_binding;
+         unsigned qual_offset;
+         if (process_qualifier_constant(state, &loc, "binding",
+                                        type->qualifier.binding,
+                                        &qual_binding)
+             && process_qualifier_constant(state, &loc, "offset",
+                                        type->qualifier.offset,
+                                        &qual_offset)) {
+            state->atomic_counter_offsets[qual_binding] = qual_offset;
+         }
+      }
    }
 
    if (this->declarations.is_empty()) {
@@ -7055,22 +7098,18 @@ ast_tcs_output_layout::hir(exec_list *instructions,
 {
    YYLTYPE loc = this->get_location();
 
-   /* If any tessellation control output layout declaration preceded this
-    * one, make sure it was consistent with this one.
-    */
-   if (state->tcs_output_vertices_specified &&
-       state->out_qualifier->vertices != this->vertices) {
-      _mesa_glsl_error(&loc, state,
-		       "tessellation control shader output layout does not "
-		       "match previous declaration");
-      return NULL;
+   unsigned num_vertices;
+   if (!state->out_qualifier->vertices->
+          process_qualifier_constant(state, "vertices", &num_vertices,
+                                     false)) {
+      /* return here to stop cascading incorrect error messages */
+     return NULL;
    }
 
    /* If any shader outputs occurred before this declaration and specified an
     * array size, make sure the size they specified is consistent with the
     * primitive type.
     */
-   unsigned num_vertices = this->vertices;
    if (state->tcs_output_size != 0 && state->tcs_output_size != num_vertices) {
       _mesa_glsl_error(&loc, state,
 		       "this tessellation control shader output layout "
@@ -7178,20 +7217,6 @@ ast_cs_input_layout::hir(exec_list *instructions,
 {
    YYLTYPE loc = this->get_location();
 
-   /* If any compute input layout declaration preceded this one, make sure it
-    * was consistent with this one.
-    */
-   if (state->cs_input_local_size_specified) {
-      for (int i = 0; i < 3; i++) {
-         if (state->cs_input_local_size[i] != this->local_size[i]) {
-            _mesa_glsl_error(&loc, state,
-                             "compute shader input layout does not match"
-                             " previous declaration");
-            return NULL;
-         }
-      }
-   }
-
    /* From the ARB_compute_shader specification:
     *
     *     If the local size of the shader in any dimension is greater
@@ -7204,15 +7229,30 @@ ast_cs_input_layout::hir(exec_list *instructions,
     * report it at compile time as well.
     */
    GLuint64 total_invocations = 1;
+   unsigned qual_local_size[3];
    for (int i = 0; i < 3; i++) {
-      if (this->local_size[i] > state->ctx->Const.MaxComputeWorkGroupSize[i]) {
+
+      char *local_size_str = ralloc_asprintf(NULL, "invalid local_size_%c",
+                                             'x' + i);
+      /* Infer a local_size of 1 for unspecified dimensions */
+      if (this->local_size[i] == NULL) {
+         qual_local_size[i] = 1;
+      } else if (!this->local_size[i]->
+             process_qualifier_constant(state, local_size_str,
+                                        &qual_local_size[i], false)) {
+         ralloc_free(local_size_str);
+         return NULL;
+      }
+      ralloc_free(local_size_str);
+
+      if (qual_local_size[i] > state->ctx->Const.MaxComputeWorkGroupSize[i]) {
          _mesa_glsl_error(&loc, state,
                           "local_size_%c exceeds MAX_COMPUTE_WORK_GROUP_SIZE"
                           " (%d)", 'x' + i,
                           state->ctx->Const.MaxComputeWorkGroupSize[i]);
          break;
       }
-      total_invocations *= this->local_size[i];
+      total_invocations *= qual_local_size[i];
       if (total_invocations >
           state->ctx->Const.MaxComputeWorkGroupInvocations) {
          _mesa_glsl_error(&loc, state,
@@ -7223,9 +7263,23 @@ ast_cs_input_layout::hir(exec_list *instructions,
       }
    }
 
+   /* If any compute input layout declaration preceded this one, make sure it
+    * was consistent with this one.
+    */
+   if (state->cs_input_local_size_specified) {
+      for (int i = 0; i < 3; i++) {
+         if (state->cs_input_local_size[i] != qual_local_size[i]) {
+            _mesa_glsl_error(&loc, state,
+                             "compute shader input layout does not match"
+                             " previous declaration");
+            return NULL;
+         }
+      }
+   }
+
    state->cs_input_local_size_specified = true;
    for (int i = 0; i < 3; i++)
-      state->cs_input_local_size[i] = this->local_size[i];
+      state->cs_input_local_size[i] = qual_local_size[i];
 
    /* We may now declare the built-in constant gl_WorkGroupSize (see
     * builtin_variable_generator::generate_constants() for why we didn't
@@ -7240,7 +7294,7 @@ ast_cs_input_layout::hir(exec_list *instructions,
    ir_constant_data data;
    memset(&data, 0, sizeof(data));
    for (int i = 0; i < 3; i++)
-      data.u[i] = this->local_size[i];
+      data.u[i] = qual_local_size[i];
    var->constant_value = new(var) ir_constant(glsl_type::uvec3_type, &data);
    var->constant_initializer =
       new(var) ir_constant(glsl_type::uvec3_type, &data);
