@@ -489,7 +489,7 @@ nv50_program_destroy(struct nv50_context *nv50, struct nv50_program *p)
    FREE(p->code);
 
    FREE(p->fixups);
-
+   FREE(p->interps);
    FREE(p->so);
 
    memset(p, 0, sizeof(*p));
