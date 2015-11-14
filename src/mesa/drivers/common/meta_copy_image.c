@@ -30,6 +30,7 @@
 #include "teximage.h"
 #include "texobj.h"
 #include "fbobject.h"
+#include "framebuffer.h"
 #include "buffers.h"
 #include "state.h"
 #include "mtypes.h"
@@ -166,7 +167,6 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
    GLint src_internal_format, dst_internal_format;
    GLuint src_view_texture = 0;
    struct gl_texture_image *src_view_tex_image;
-   GLuint fbos[2];
    struct gl_framebuffer *readFb;
    struct gl_framebuffer *drawFb;
    bool success = false;
@@ -212,12 +212,13 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
    /* We really only need to stash the bound framebuffers and scissor. */
    _mesa_meta_begin(ctx, MESA_META_SCISSOR);
 
-   _mesa_CreateFramebuffers(2, fbos);
-   readFb = _mesa_lookup_framebuffer(ctx, fbos[0]);
-   assert(readFb != NULL && readFb->Name == fbos[0]);
+   readFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   if (readFb == NULL)
+      goto meta_end;
 
-   drawFb = _mesa_lookup_framebuffer(ctx, fbos[1]);
-   assert(drawFb != NULL && drawFb->Name == fbos[1]);
+   drawFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   if (drawFb == NULL)
+      goto meta_end;
 
    _mesa_bind_framebuffers(ctx, drawFb, readFb);
 
@@ -288,7 +289,8 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
    success = true;
 
 meta_end:
-   _mesa_DeleteFramebuffers(2, fbos);
+   _mesa_reference_framebuffer(&readFb, NULL);
+   _mesa_reference_framebuffer(&drawFb, NULL);
    _mesa_meta_end(ctx);
 
 cleanup:

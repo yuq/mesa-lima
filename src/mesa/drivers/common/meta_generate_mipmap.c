@@ -101,11 +101,12 @@ fallback_required(struct gl_context *ctx, GLenum target,
     * Test that we can actually render in the texture's format.
     */
    if (mipmap->fb == NULL) {
-      GLuint FBO;
-
-      _mesa_CreateFramebuffers(1, &FBO);
-      mipmap->fb = _mesa_lookup_framebuffer(ctx, FBO);
-      assert(mipmap->fb != NULL && mipmap->fb->Name == FBO);
+      mipmap->fb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+      if (mipmap->fb == NULL) {
+         _mesa_perf_debug(ctx, MESA_DEBUG_SEVERITY_HIGH,
+                          "glGenerateMipmap() ran out of memory\n");
+         return true;
+      }
    }
 
    _mesa_meta_framebuffer_texture_image(ctx, mipmap->fb,
@@ -131,11 +132,7 @@ _mesa_meta_glsl_generate_mipmap_cleanup(struct gl_context *ctx,
    mipmap->VAO = 0;
    _mesa_reference_buffer_object(ctx, &mipmap->buf_obj, NULL);
    _mesa_reference_sampler_object(ctx, &mipmap->samp_obj, NULL);
-
-   if (mipmap->fb != NULL) {
-      _mesa_DeleteFramebuffers(1, &mipmap->fb->Name);
-      mipmap->fb = NULL;
-   }
+   _mesa_reference_framebuffer(&mipmap->fb, NULL);
 
    _mesa_meta_blit_shader_table_cleanup(&mipmap->shaders);
 }

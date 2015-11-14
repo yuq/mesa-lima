@@ -179,9 +179,9 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
                            const struct gl_pixelstore_attrib *packing)
 {
    struct gl_buffer_object *pbo = NULL;
-   GLuint pbo_tex = 0, fbos[2] = { 0, 0 };
-   struct gl_framebuffer *readFb;
-   struct gl_framebuffer *drawFb;
+   GLuint pbo_tex = 0;
+   struct gl_framebuffer *readFb = NULL;
+   struct gl_framebuffer *drawFb = NULL;
    int image_height;
    struct gl_texture_image *pbo_tex_image;
    GLenum status;
@@ -228,13 +228,13 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
    _mesa_meta_begin(ctx, ~(MESA_META_PIXEL_TRANSFER |
                            MESA_META_PIXEL_STORE));
 
-   _mesa_CreateFramebuffers(2, fbos);
+   readFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   if (readFb == NULL)
+      goto fail;
 
-   readFb = _mesa_lookup_framebuffer(ctx, fbos[0]);
-   assert(readFb != NULL && readFb->Name == fbos[0]);
-
-   drawFb = _mesa_lookup_framebuffer(ctx, fbos[1]);
-   assert(drawFb != NULL && drawFb->Name == fbos[1]);
+   drawFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   if (drawFb == NULL)
+      goto fail;
 
    _mesa_bind_framebuffers(ctx, drawFb, tex_image ? readFb : ctx->ReadBuffer);
 
@@ -291,7 +291,8 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
    success = true;
 
 fail:
-   _mesa_DeleteFramebuffers(2, fbos);
+   _mesa_reference_framebuffer(&readFb, NULL);
+   _mesa_reference_framebuffer(&drawFb, NULL);
    _mesa_DeleteTextures(1, &pbo_tex);
    _mesa_reference_buffer_object(ctx, &pbo, NULL);
 
@@ -309,7 +310,7 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
                               const struct gl_pixelstore_attrib *packing)
 {
    struct gl_buffer_object *pbo = NULL;
-   GLuint pbo_tex = 0, fbos[2] = { 0, 0 };
+   GLuint pbo_tex = 0;
    struct gl_framebuffer *readFb;
    struct gl_framebuffer *drawFb;
    int image_height;
@@ -374,13 +375,13 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    if (ctx->Extensions.ARB_color_buffer_float)
       _mesa_ClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
 
-   _mesa_CreateFramebuffers(2, fbos);
+   readFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   if (readFb == NULL)
+      goto fail;
 
-   readFb = _mesa_lookup_framebuffer(ctx, fbos[0]);
-   assert(readFb != NULL && readFb->Name == fbos[0]);
-
-   drawFb = _mesa_lookup_framebuffer(ctx, fbos[1]);
-   assert(drawFb != NULL && drawFb->Name == fbos[1]);
+   drawFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   if (drawFb == NULL)
+      goto fail;
 
    if (tex_image && tex_image->TexObject->Target == GL_TEXTURE_1D_ARRAY) {
       assert(depth == 1);
@@ -474,7 +475,8 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
    success = true;
 
 fail:
-   _mesa_DeleteFramebuffers(2, fbos);
+   _mesa_reference_framebuffer(&drawFb, NULL);
+   _mesa_reference_framebuffer(&readFb, NULL);
    _mesa_DeleteTextures(1, &pbo_tex);
    _mesa_reference_buffer_object(ctx, &pbo, NULL);
 
