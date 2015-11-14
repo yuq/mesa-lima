@@ -75,44 +75,6 @@
  * Mesa's Driver Functions
  ***************************************/
 
-static size_t
-brw_query_samples_for_format(struct gl_context *ctx, GLenum target,
-                             GLenum internalFormat, int samples[16])
-{
-   struct brw_context *brw = brw_context(ctx);
-
-   (void) target;
-
-   switch (brw->gen) {
-   case 9:
-      samples[0] = 16;
-      samples[1] = 8;
-      samples[2] = 4;
-      samples[3] = 2;
-      return 4;
-
-   case 8:
-      samples[0] = 8;
-      samples[1] = 4;
-      samples[2] = 2;
-      return 3;
-
-   case 7:
-      samples[0] = 8;
-      samples[1] = 4;
-      return 2;
-
-   case 6:
-      samples[0] = 4;
-      return 1;
-
-   default:
-      assert(brw->gen < 6);
-      samples[0] = 1;
-      return 1;
-   }
-}
-
 const char *const brw_vendor_string = "Intel Open Source Technology Center";
 
 const char *
