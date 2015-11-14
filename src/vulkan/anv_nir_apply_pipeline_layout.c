@@ -55,6 +55,30 @@ get_surface_index(unsigned set, unsigned binding,
    return surface_index;
 }
 
+static uint32_t
+get_sampler_index(unsigned set, unsigned binding, nir_texop tex_op,
+                  struct apply_pipeline_layout_state *state)
+{
+   assert(set < state->layout->num_sets);
+   struct anv_descriptor_set_layout *set_layout =
+      state->layout->set[set].layout;
+
+   assert(binding < set_layout->binding_count);
+
+   if (set_layout->binding[binding].stage[state->stage].sampler_index < 0) {
+      assert(tex_op == nir_texop_txf);
+      return 0;
+   }
+
+   uint32_t sampler_index =
+      state->layout->set[set].stage[state->stage].sampler_start +
+      set_layout->binding[binding].stage[state->stage].sampler_index;
+
+   assert(sampler_index < state->layout->stage[state->stage].sampler_count);
+
+   return sampler_index;
+}
+
 static void
 lower_res_index_intrinsic(nir_intrinsic_instr *intrin,
                           struct apply_pipeline_layout_state *state)
@@ -85,22 +109,15 @@ lower_res_index_intrinsic(nir_intrinsic_instr *intrin,
 }
 
 static void
-lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
+lower_tex_deref(nir_tex_instr *tex, nir_deref_var *deref,
+                unsigned *const_index, nir_tex_src_type src_type,
+                struct apply_pipeline_layout_state *state)
 {
-   /* No one should have come by and lowered it already */
-   assert(tex->sampler);
+   if (deref->deref.child) {
+      assert(deref->deref.child->deref_type == nir_deref_type_array);
+      nir_deref_array *deref_array = nir_deref_as_array(deref->deref.child);
 
-   unsigned set = tex->sampler->var->data.descriptor_set;
-   unsigned binding = tex->sampler->var->data.binding;
-
-   tex->sampler_index = get_surface_index(set, binding, state);
-
-   if (tex->sampler->deref.child) {
-      assert(tex->sampler->deref.child->deref_type == nir_deref_type_array);
-      nir_deref_array *deref_array =
-         nir_deref_as_array(tex->sampler->deref.child);
-
-      tex->sampler_index += deref_array->base_offset;
+      *const_index += deref_array->base_offset;
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          nir_tex_src *new_srcs = rzalloc_array(tex, nir_tex_src,
@@ -117,13 +134,52 @@ lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
          /* Now we can go ahead and move the source over to being a
           * first-class texture source.
           */
-         tex->src[tex->num_srcs].src_type = nir_tex_src_sampler_offset;
+         tex->src[tex->num_srcs].src_type = src_type;
          tex->num_srcs++;
-         nir_instr_move_src(&tex->instr, &tex->src[tex->num_srcs - 1].src,
-                            &deref_array->indirect);
+         assert(deref_array->indirect.is_ssa);
+         nir_instr_rewrite_src(&tex->instr, &tex->src[tex->num_srcs - 1].src,
+                               deref_array->indirect);
       }
    }
+}
 
+static void
+cleanup_tex_deref(nir_tex_instr *tex, nir_deref_var *deref)
+{
+   if (deref->deref.child == NULL)
+      return;
+
+   nir_deref_array *deref_array = nir_deref_as_array(deref->deref.child);
+
+   if (deref_array->deref_array_type != nir_deref_array_type_indirect)
+      return;
+
+   nir_instr_rewrite_src(&tex->instr, &deref_array->indirect, NIR_SRC_INIT);
+}
+
+static void
+lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
+{
+   /* No one should have come by and lowered it already */
+   assert(tex->sampler);
+
+   nir_deref_var *tex_deref = tex->texture ? tex->texture : tex->sampler;
+   tex->texture_index =
+      get_surface_index(tex_deref->var->data.descriptor_set,
+                        tex_deref->var->data.binding, state);
+   lower_tex_deref(tex, tex_deref, &tex->texture_index,
+                   nir_tex_src_texture_offset, state);
+
+   tex->sampler_index =
+      get_sampler_index(tex->sampler->var->data.descriptor_set,
+                        tex->sampler->var->data.binding, tex->op, state);
+   lower_tex_deref(tex, tex->sampler, &tex->sampler_index,
+                   nir_tex_src_sampler_offset, state);
+
+   if (tex->texture)
+      cleanup_tex_deref(tex, tex->texture);
+   cleanup_tex_deref(tex, tex->sampler);
+   tex->texture = NULL;
    tex->sampler = NULL;
 }
 
