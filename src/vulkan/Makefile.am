@@ -92,7 +92,18 @@ VULKAN_SOURCES =                                        \
 	anv_wsi.c					\
 	anv_wsi_x11.c					\
 	isl.c                                           \
-	isl_format_layout.c
+	isl_format_layout.c                             \
+	isl_gen4.c                                      \
+	isl_gen4.h                                      \
+	isl_gen6.c                                      \
+	isl_gen6.h                                      \
+	isl_gen7.c                                      \
+	isl_gen7.h                                      \
+	isl_gen8.c                                      \
+	isl_gen8.h                                      \
+	isl_gen9.c                                      \
+	isl_gen9.h                                      \
+	$(NULL)
 
 BUILT_SOURCES =                                         \
 	anv_entrypoints.h                               \

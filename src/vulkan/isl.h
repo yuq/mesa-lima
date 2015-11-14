@@ -24,12 +24,46 @@
 /**
  * @file
  * @brief Intel Surface Layout
+ *
+ * Header Layout
+ * =============
+ *
+ * The header is ordered as:
+ *    - forward declarations
+ *    - macros that may be overridden at compile-time for specific gens
+ *    - enums and constants
+ *    - structs and unions
+ *    - functions
+ *
+ *
+ * Surface Units
+ * =============
+ *
+ * Some symbol names have a unit suffix.
+ *
+ *    - px: logical pixels
+ *    - sa: physical surface samples
+ *    - el: physical surface elements
+ *    - sa_rows: rows of physical surface samples
+ *    - el_rows: rows of physical surface elements
+ *
+ * The Broadwell PRM [1] defines a surface element as follows:
+ *
+ *    An element is defined as a pixel in uncompresed surface formats, and as
+ *    a compression block in compressed surface formats. For
+ *    MSFMT_DEPTH_STENCIL type multisampled surfaces, an element is a sample.
+ *
+ * [1]: Broadwell PRM >> Volume 2d: Command Reference: Structures >>
+ *      RENDER_SURFACE_STATE Surface Vertical Alignment (p325)
  */
 
 #pragma once
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "util/macros.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,21 +71,23 @@ extern "C" {
 
 struct brw_device_info;
 
+#ifndef ISL_DEV_GEN
 /**
- * WARNING: These values differ from the hardware enum values, which are
- * unstable across hardware generations.
+ * @brief Get the hardware generation of isl_device.
  *
- * Note that legacy Y tiling is ISL_TILING_Y0 instead of ISL_TILING_Y, to
- * clearly distinguish it from Yf and Ys.
+ * You can define this as a compile-time constant in the CFLAGS. For example,
+ * `gcc -DISL_DEV_GEN(dev)=9 ...`.
  */
-enum isl_tiling {
-   ISL_TILING_LINEAR,
-   ISL_TILING_W,
-   ISL_TILING_X,
-   ISL_TILING_Y0, /**< Legacy Y tiling */
-   ISL_TILING_Yf,
-   ISL_TILING_Ys,
-};
+#define ISL_DEV_GEN(__dev) ((__dev)->info->gen)
+#endif
+
+#ifndef ISL_DEV_USE_SEPARATE_STENCIL
+/**
+ * You can define this as a compile-time constant in the CFLAGS. For example,
+ * `gcc -DISL_DEV_USE_SEPARATE_STENCIL(dev)=1 ...`.
+ */
+#define ISL_DEV_USE_SEPARATE_STENCIL(__dev) ((__dev)->use_separate_stencil)
+#endif
 
 /**
  * Hardware enumeration SURFACE_FORMAT.
@@ -286,6 +322,9 @@ enum isl_format {
    ISL_FORMAT_UNSUPPORTED =                             UINT16_MAX,
 };
 
+/**
+ * Numerical base type for channels of isl_format.
+ */
 enum isl_base_type {
    ISL_VOID,
    ISL_RAW,
@@ -301,6 +340,9 @@ enum isl_base_type {
    ISL_SSCALED,
 };
 
+/**
+ * Colorspace of isl_format.
+ */
 enum isl_colorspace {
    ISL_COLORSPACE_NONE = 0,
    ISL_COLORSPACE_LINEAR,
@@ -309,7 +351,7 @@ enum isl_colorspace {
 };
 
 /**
- * Texture compression mode
+ * Texture compression mode of isl_format.
  */
 enum isl_txc {
    ISL_TXC_NONE = 0,
@@ -324,19 +366,203 @@ enum isl_txc {
    ISL_TXC_ETC2,
 };
 
+/**
+ * @brief Hardware tile mode
+ *
+ * WARNING: These values differ from the hardware enum values, which are
+ * unstable across hardware generations.
+ *
+ * Note that legacy Y tiling is ISL_TILING_Y0 instead of ISL_TILING_Y, to
+ * clearly distinguish it from Yf and Ys.
+ */
+enum isl_tiling {
+   ISL_TILING_LINEAR = 0,
+   ISL_TILING_W,
+   ISL_TILING_X,
+   ISL_TILING_Y0, /**< Legacy Y tiling */
+   ISL_TILING_Yf,
+   ISL_TILING_Ys,
+};
+
+/**
+ * @defgroup Tiling Flags
+ * @{
+ */
+typedef uint32_t isl_tiling_flags_t;
+#define ISL_TILING_LINEAR_BIT             (1u << ISL_TILING_LINEAR)
+#define ISL_TILING_W_BIT                  (1u << ISL_TILING_W)
+#define ISL_TILING_X_BIT                  (1u << ISL_TILING_X)
+#define ISL_TILING_Y0_BIT                 (1u << ISL_TILING_Y0)
+#define ISL_TILING_Yf_BIT                 (1u << ISL_TILING_Yf)
+#define ISL_TILING_Ys_BIT                 (1u << ISL_TILING_Ys)
+#define ISL_TILING_ANY_MASK               (~0u)
+#define ISL_TILING_NON_LINEAR_MASK        (~ISL_TILING_LINEAR_BIT)
+
+/** Any Y tiling, including legacy Y tiling. */
+#define ISL_TILING_ANY_Y_MASK             (ISL_TILING_Y0_BIT | \
+                                           ISL_TILING_Yf_BIT | \
+                                           ISL_TILING_Ys_BIT)
+
+/** The Skylake BSpec refers to Yf and Ys as "standard tiling formats". */
+#define ISL_TILING_STD_Y_MASK             (ISL_TILING_Yf_BIT | \
+                                           ISL_TILING_Ys_BIT)
+/** @} */
+
+/**
+ * @brief Logical dimension of surface.
+ *
+ * Note: There is no dimension for cube map surfaces. ISL interprets cube maps
+ * as 2D array surfaces.
+ */
+enum isl_surf_dim {
+   ISL_SURF_DIM_1D,
+   ISL_SURF_DIM_2D,
+   ISL_SURF_DIM_3D,
+};
+
+/**
+ * @brief Physical layout of the surface's dimensions.
+ */
+enum isl_dim_layout {
+   /**
+    * For details, see the G35 PRM >> Volume 1: Graphics Core >> Section
+    * 6.17.3: 2D Surfaces.
+    *
+    * On many gens, 1D surfaces share the same layout as 2D surfaces.  From
+    * the G35 PRM >> Volume 1: Graphics Core >> Section 6.17.2: 1D Surfaces:
+    *
+    *    One-dimensional surfaces are identical to 2D surfaces with height of
+    *    one.
+    */
+   ISL_DIM_LAYOUT_GEN4_2D,
+
+   /**
+    * For details, see the G35 PRM >> Volume 1: Graphics Core >> Section
+    * 6.17.5: 3D Surfaces.
+    */
+   ISL_DIM_LAYOUT_GEN4_3D,
+
+   /**
+    * For details, see the Skylake BSpec >> Memory Views >> Common Surface
+    * Formats >> Surface Layout and Tiling >> » 1D Surfaces.
+    */
+   ISL_DIM_LAYOUT_GEN9_1D,
+};
+
+/* TODO(chadv): Explain */
+enum isl_array_pitch_span {
+   ISL_ARRAY_PITCH_SPAN_FULL,
+   ISL_ARRAY_PITCH_SPAN_COMPACT,
+};
+
+/**
+ * @defgroup Surface Usage
+ * @{
+ */
+typedef uint64_t isl_surf_usage_flags_t;
+#define ISL_SURF_USAGE_RENDER_TARGET_BIT       (1u << 0)
+#define ISL_SURF_USAGE_DEPTH_BIT               (1u << 1)
+#define ISL_SURF_USAGE_STENCIL_BIT             (1u << 2)
+#define ISL_SURF_USAGE_TEXTURE_BIT             (1u << 3)
+#define ISL_SURF_USAGE_CUBE_BIT                (1u << 4)
+#define ISL_SURF_USAGE_DISABLE_AUX_BIT         (1u << 5)
+#define ISL_SURF_USAGE_DISPLAY_BIT             (1u << 6)
+#define ISL_SURF_USAGE_DISPLAY_ROTATE_90_BIT   (1u << 7)
+#define ISL_SURF_USAGE_DISPLAY_ROTATE_180_BIT  (1u << 8)
+#define ISL_SURF_USAGE_DISPLAY_ROTATE_270_BIT  (1u << 9)
+#define ISL_SURF_USAGE_DISPLAY_FLIP_X_BIT      (1u << 10)
+#define ISL_SURF_USAGE_DISPLAY_FLIP_Y_BIT      (1u << 11)
+/** @} */
+
+/**
+ * @brief Multisample Format
+ */
+enum isl_msaa_layout {
+   /**
+    * @brief Suface is single-sampled.
+    */
+   ISL_MSAA_LAYOUT_NONE,
+
+   /**
+    * @brief [SNB+] Interleaved Multisample Format
+    *
+    * In this format, multiple samples are interleaved into each cacheline.
+    * In other words, the sample index is swizzled into the low 6 bits of the
+    * surface's virtual address space.
+    *
+    * For example, suppose the surface is legacy Y tiled, is 4x multisampled,
+    * and its pixel format is 32bpp. Then the first cacheline is arranged
+    * thus:
+    *
+    *    (0,0,0) (0,1,0)   (0,0,1) (1,0,1)
+    *    (1,0,0) (1,1,0)   (0,1,1) (1,1,1)
+    *
+    *    (0,0,2) (1,0,2)   (0,0,3) (1,0,3)
+    *    (0,1,2) (1,1,2)   (0,1,3) (1,1,3)
+    *
+    * The hardware docs refer to this format with multiple terms.  In
+    * Sandybridge, this is the only multisample format; so no term is used.
+    * The Ivybridge docs refer to surfaces in this format as IMS (Interleaved
+    * Multisample Surface). Later hardware docs additionally refer to this
+    * format as MSFMT_DEPTH_STENCIL (because the format is deprecated for
+    * color surfaces).
+    *
+    * See the Sandybridge PRM, Volume 4, Part 1, Section 2.7 "Multisampled
+    * Surface Behavior".
+    *
+    * See the Ivybridge PRM, Volume 1, Part 1, Section 6.18.4.1 "Interleaved
+    * Multisampled Surfaces".
+    */
+   ISL_MSAA_LAYOUT_INTERLEAVED,
+
+   /**
+    * @brief [IVB+] Array Multisample Format
+    *
+    * In this format, the surface's physical layout resembles that of a
+    * 2D array surface.
+    *
+    * Suppose the multisample surface's logical extent is (w, h) and its
+    * sample count is N. Then surface's physical extent is the same as
+    * a singlesample 2D surface whose logical extent is (w, h) and array
+    * length is N.  Array slice `i` contains the pixel values for sample
+    * index `i`.
+    *
+    * The Ivybridge docs refer to surfaces in this format as UMS
+    * (Uncompressed Multsample Layout) and CMS (Compressed Multisample
+    * Surface). The Broadwell docs additionally refer to this format as
+    * MSFMT_MSS (MSS=Multisample Surface Storage).
+    *
+    * See the Broadwell PRM, Volume 5 "Memory Views", Section "Uncompressed
+    * Multisample Surfaces".
+    *
+    * See the Broadwell PRM, Volume 5 "Memory Views", Section "Compressed
+    * Multisample Surfaces".
+    */
+   ISL_MSAA_LAYOUT_ARRAY,
+};
+
+
 struct isl_device {
    const struct brw_device_info *info;
+   bool use_separate_stencil;
 };
 
 struct isl_extent2d {
-   uint32_t width;
-   uint32_t height;
+   union { uint32_t w, width; };
+   union { uint32_t h, height; };
 };
 
 struct isl_extent3d {
-   uint32_t width;
-   uint32_t height;
-   uint32_t depth;
+   union { uint32_t w, width; };
+   union { uint32_t h, height; };
+   union { uint32_t d, depth; };
+};
+
+struct isl_extent4d {
+   union { uint32_t w, width; };
+   union { uint32_t h, height; };
+   union { uint32_t d, depth; };
+   union { uint32_t a, array_len; };
 };
 
 struct isl_channel_layout {
@@ -367,17 +593,319 @@ struct isl_format_layout {
    enum isl_txc txc;
 };
 
+struct isl_tile_info {
+   enum isl_tiling tiling;
+   uint32_t width; /**< in bytes */
+   uint32_t height; /**< in rows of memory */
+   uint32_t size; /**< in bytes */
+};
+
+/**
+ * @brief Input to surface initialization
+ *
+ * @invariant width >= 1
+ * @invariant height >= 1
+ * @invariant depth >= 1
+ * @invariant levels >= 1
+ * @invariant samples >= 1
+ * @invariant array_len >= 1
+ *
+ * @invariant if 1D then height == 1 and depth == 1 and samples == 1
+ * @invariant if 2D then depth == 1
+ * @invariant if 3D then array_len == 1 and samples == 1
+ */
+struct isl_surf_init_info {
+   enum isl_surf_dim dim;
+   enum isl_format format;
+
+   uint32_t width;
+   uint32_t height;
+   uint32_t depth;
+   uint32_t levels;
+   uint32_t array_len;
+   uint32_t samples;
+
+   /** Lower bound for isl_surf::alignment, in bytes. */
+   uint32_t min_alignment;
+
+   /** Lower bound for isl_surf::pitch, in bytes. */
+   uint32_t min_pitch;
+
+   isl_surf_usage_flags_t usage;
+
+   /** Flags that alter how ISL selects isl_surf::tiling.  */
+   isl_tiling_flags_t tiling_flags;
+};
+
+struct isl_surf {
+   enum isl_surf_dim dim;
+   enum isl_dim_layout dim_layout;
+   enum isl_msaa_layout msaa_layout;
+   enum isl_tiling tiling;
+   enum isl_format format;
+
+   /**
+    * Alignment of the upper-left sample of each LOD, in units of surface
+    * elements.
+    */
+   struct isl_extent3d lod_alignment_el;
+
+   /**
+    * Logical extent of the surface's base level, in units of pixels.  This is
+    * identical to the extent defined in isl_surf_init_info.
+    */
+   struct isl_extent4d logical_level0_px;
+
+   /**
+    * Physical extent of the surface's base level, in units of pixels.
+    *
+    * Consider isl_dim_layout as an operator that transforms a logical surface
+    * layout to a physical surface layout. Then
+    *
+    *    logical_layout := (isl_surf::dim, isl_surf::logical_level0_px)
+    *    isl_surf::phys_level0_sa := isl_surf::dim_layout * logical_layout
+    */
+   struct isl_extent4d phys_level0_sa;
+
+   uint32_t levels;
+   uint32_t samples;
+
+   /** Total size of the surface, in bytes. */
+   uint32_t size;
+
+   /** Required alignment for the surface's base address. */
+   uint32_t alignment;
+
+   /**
+    * Pitch between vertically adjacent samples, in bytes.
+    */
+   uint32_t row_pitch;
+
+   /**
+    * Pitch between physical array slices, in rows of surface elements.
+    */
+   uint32_t array_pitch_el_rows;
+
+   enum isl_array_pitch_span array_pitch_span;
+
+   /** Copy of isl_surf_init_info::usage. */
+   isl_surf_usage_flags_t usage;
+};
+
+extern const struct isl_format_layout isl_format_layouts[];
+
 void
 isl_device_init(struct isl_device *dev,
                 const struct brw_device_info *info);
 
+static inline const struct isl_format_layout * ATTRIBUTE_CONST
+isl_format_get_layout(enum isl_format fmt)
+{
+   return &isl_format_layouts[fmt];
+}
+
+bool
+isl_format_has_sint_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+
+static inline bool
+isl_format_is_compressed(enum isl_format fmt)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(fmt);
+
+   return fmtl->txc != ISL_TXC_NONE;
+}
+
+static inline bool
+isl_format_has_bc_compression(enum isl_format fmt)
+{
+   switch (isl_format_get_layout(fmt)->txc) {
+   case ISL_TXC_DXT1:
+   case ISL_TXC_DXT3:
+   case ISL_TXC_DXT5:
+      return true;
+   case ISL_TXC_NONE:
+   case ISL_TXC_FXT1:
+   case ISL_TXC_RGTC1:
+   case ISL_TXC_RGTC2:
+   case ISL_TXC_BPTC:
+   case ISL_TXC_ETC1:
+   case ISL_TXC_ETC2:
+      return false;
+   }
+
+   unreachable("bad texture compression mode");
+   return false;
+}
+
+static inline bool
+isl_format_is_yuv(enum isl_format fmt)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(fmt);
+
+   return fmtl->colorspace == ISL_COLORSPACE_YUV;
+}
+
+static inline bool
+isl_format_block_is_1x1x1(enum isl_format fmt)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(fmt);
+
+   return fmtl->bw == 1 && fmtl->bh == 1 && fmtl->bd == 1;
+}
+
+static inline bool
+isl_tiling_is_std_y(enum isl_tiling tiling)
+{
+   return (1u << tiling) & ISL_TILING_STD_Y_MASK;
+}
+
+bool
+isl_tiling_get_info(const struct isl_device *dev,
+                    enum isl_tiling tiling,
+                    uint32_t format_block_size,
+                    struct isl_tile_info *info);
+
 void
 isl_tiling_get_extent(const struct isl_device *dev,
                       enum isl_tiling tiling,
-                      uint32_t cpp,
+                      uint32_t format_block_size,
                       struct isl_extent2d *e);
+bool
+isl_surf_choose_tiling(const struct isl_device *dev,
+                       const struct isl_surf_init_info *restrict info,
+                       enum isl_tiling *tiling);
 
-extern const struct isl_format_layout isl_format_layouts[];
+static inline bool
+isl_surf_usage_is_display(isl_surf_usage_flags_t usage)
+{
+   return usage & ISL_SURF_USAGE_DISPLAY_BIT;
+}
+
+static inline bool
+isl_surf_usage_is_depth(isl_surf_usage_flags_t usage)
+{
+   return usage & ISL_SURF_USAGE_DEPTH_BIT;
+}
+
+static inline bool
+isl_surf_usage_is_stencil(isl_surf_usage_flags_t usage)
+{
+   return usage & ISL_SURF_USAGE_STENCIL_BIT;
+}
+
+static inline bool
+isl_surf_usage_is_depth_and_stencil(isl_surf_usage_flags_t usage)
+{
+   return (usage & ISL_SURF_USAGE_DEPTH_BIT) &&
+          (usage & ISL_SURF_USAGE_STENCIL_BIT);
+}
+
+static inline bool
+isl_surf_usage_is_depth_or_stencil(isl_surf_usage_flags_t usage)
+{
+   return usage & (ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_STENCIL_BIT);
+}
+
+static inline bool
+isl_surf_info_is_z16(const struct isl_surf_init_info *info)
+{
+   return (info->usage & ISL_SURF_USAGE_DEPTH_BIT) &&
+          (info->format == ISL_FORMAT_R16_UNORM);
+}
+
+static inline bool
+isl_surf_info_is_z32_float(const struct isl_surf_init_info *info)
+{
+   return (info->usage & ISL_SURF_USAGE_DEPTH_BIT) &&
+          (info->format == ISL_FORMAT_R32_FLOAT);
+}
+
+static inline struct isl_extent2d
+isl_extent2d(uint32_t width, uint32_t height)
+{
+   return (struct isl_extent2d) { .w = width, .h = height };
+}
+
+static inline struct isl_extent3d
+isl_extent3d(uint32_t width, uint32_t height, uint32_t depth)
+{
+   return (struct isl_extent3d) { .w = width, .h = height, .d = depth };
+}
+
+static inline struct isl_extent4d
+isl_extent4d(uint32_t width, uint32_t height, uint32_t depth,
+             uint32_t array_len)
+{
+   return (struct isl_extent4d) {
+      .w = width,
+      .h = height,
+      .d = depth,
+      .a = array_len,
+   };
+}
+
+#define isl_surf_init(dev, surf, ...) \
+   isl_surf_init_s((dev), (surf), \
+                   &(struct isl_surf_init_info) {  __VA_ARGS__ });
+
+bool
+isl_surf_init_s(const struct isl_device *dev,
+                struct isl_surf *surf,
+                const struct isl_surf_init_info *restrict info);
+
+/**
+ * Alignment of the upper-left sample of each LOD, in units of surface
+ * elements.
+ */
+static inline struct isl_extent3d
+isl_surf_get_lod_alignment_el(const struct isl_surf *surf)
+{
+   return surf->lod_alignment_el;
+}
+
+/**
+ * Alignment of the upper-left sample of each LOD, in units of surface
+ * samples.
+ */
+static inline struct isl_extent3d
+isl_surf_get_lod_alignment_sa(const struct isl_surf *surf)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
+
+   return (struct isl_extent3d) {
+      .w = fmtl->bw * surf->lod_alignment_el.w,
+      .h = fmtl->bh * surf->lod_alignment_el.h,
+      .d = fmtl->bd * surf->lod_alignment_el.d,
+   };
+}
+
+/**
+ * Pitch between physical array slices, in rows of surface elements.
+ */
+static inline uint32_t
+isl_surf_get_array_pitch_el_rows(const struct isl_surf *surf)
+{
+   return surf->array_pitch_el_rows;
+}
+
+/**
+ * Pitch between physical array slices, in rows of surface samples.
+ */
+static inline uint32_t
+isl_surf_get_array_pitch_sa_rows(const struct isl_surf *surf)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
+   return fmtl->bh * isl_surf_get_array_pitch_el_rows(surf);
+}
+
+/**
+ * Pitch between physical array slices, in bytes.
+ */
+static inline uint32_t
+isl_surf_get_array_pitch(const struct isl_surf *surf)
+{
+   return isl_surf_get_array_pitch_sa_rows(surf) * surf->row_pitch;
+}
 
 #ifdef __cplusplus
 }
