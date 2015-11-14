@@ -679,6 +679,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
          assert(!"Unsupported descriptor type");
          break;
+
+      default:
+         assert(!"Invalid descriptor type");
+         continue;
       }
 
       bt_map[bias + s] = surface_state.offset + state_offset;
