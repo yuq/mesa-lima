@@ -250,6 +250,57 @@ emit_system_values_block(nir_block *block, void *void_visitor)
             *reg = *v->emit_cs_work_group_id_setup();
          break;
 
+      case nir_intrinsic_load_helper_invocation:
+         assert(v->stage == MESA_SHADER_FRAGMENT);
+         reg = &v->nir_system_values[SYSTEM_VALUE_HELPER_INVOCATION];
+         if (reg->file == BAD_FILE) {
+            const fs_builder abld =
+               v->bld.annotate("gl_HelperInvocation", NULL);
+
+            /* On Gen6+ (gl_HelperInvocation is only exposed on Gen7+) the
+             * pixel mask is in g1.7 of the thread payload.
+             *
+             * We move the per-channel pixel enable bit to the low bit of each
+             * channel by shifting the byte containing the pixel mask by the
+             * vector immediate 0x76543210UV.
+             *
+             * The region of <1,8,0> reads only 1 byte (the pixel masks for
+             * subspans 0 and 1) in SIMD8 and an additional byte (the pixel
+             * masks for 2 and 3) in SIMD16.
+             */
+            fs_reg shifted = abld.vgrf(BRW_REGISTER_TYPE_UW, 1);
+            abld.SHR(shifted,
+                     stride(byte_offset(retype(brw_vec1_grf(1, 0),
+                                               BRW_REGISTER_TYPE_UB), 28),
+                            1, 8, 0),
+                     brw_imm_uv(0x76543210));
+
+            /* A set bit in the pixel mask means the channel is enabled, but
+             * that is the opposite of gl_HelperInvocation so we need to invert
+             * the mask.
+             *
+             * The negate source-modifier bit of logical instructions on Gen8+
+             * performs 1's complement negation, so we can use that instead of
+             * a NOT instruction.
+             */
+            fs_reg inverted = negate(shifted);
+            if (v->devinfo->gen < 8) {
+               inverted = abld.vgrf(BRW_REGISTER_TYPE_UW);
+               abld.NOT(inverted, shifted);
+            }
+
+            /* We then resolve the 0/1 result to 0/~0 boolean values by ANDing
+             * with 1 and negating.
+             */
+            fs_reg anded = abld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+            abld.AND(anded, inverted, brw_imm_uw(1));
+
+            fs_reg dst = abld.vgrf(BRW_REGISTER_TYPE_D, 1);
+            abld.MOV(dst, negate(retype(anded, BRW_REGISTER_TYPE_D)));
+            *reg = dst;
+         }
+         break;
+
       default:
          break;
       }
@@ -1776,6 +1827,7 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       break;
    }
 
+   case nir_intrinsic_load_helper_invocation:
    case nir_intrinsic_load_sample_mask_in:
    case nir_intrinsic_load_sample_id: {
       gl_system_value sv = nir_system_value_from_intrinsic(instr->intrinsic);
