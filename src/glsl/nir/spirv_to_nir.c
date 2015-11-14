@@ -1305,6 +1305,65 @@ vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
    return val;
 }
 
+static void
+_vtn_block_store(struct vtn_builder *b, nir_intrinsic_op op,
+                 struct vtn_ssa_value *src, unsigned set, unsigned binding,
+                 nir_variable_mode mode, nir_ssa_def *index, unsigned offset,
+                 nir_ssa_def *indirect, struct vtn_type *type)
+{
+   assert(src->type == type->type);
+   if (glsl_type_is_vector_or_scalar(type->type)) {
+      nir_intrinsic_instr *store = nir_intrinsic_instr_create(b->shader, op);
+      store->num_components = glsl_get_vector_elements(type->type);
+      store->const_index[0] = offset;
+      store->const_index[1] = (1 << store->num_components) - 1;
+      store->src[0] = nir_src_for_ssa(src->def);
+
+      nir_ssa_def *res_index = nir_vulkan_resource_index(&b->nb,
+                                                         set, binding,
+                                                         mode, index);
+      store->src[1] = nir_src_for_ssa(res_index);
+
+      if (op == nir_intrinsic_store_ssbo_indirect)
+         store->src[2] = nir_src_for_ssa(indirect);
+
+      nir_builder_instr_insert(&b->nb, &store->instr);
+   } else {
+      unsigned elems = glsl_get_length(type->type);
+      if (glsl_type_is_struct(type->type)) {
+         for (unsigned i = 0; i < elems; i++) {
+            _vtn_block_store(b, op, src->elems[i], set, binding, mode,
+                             index, offset + type->offsets[i], indirect,
+                             type->members[i]);
+         }
+      } else {
+         for (unsigned i = 0; i < elems; i++) {
+            _vtn_block_store(b, op, src->elems[i], set, binding, mode,
+                             index, offset + i * type->stride, indirect,
+                             type->array_element);
+         }
+      }
+   }
+}
+
+static void
+vtn_block_store(struct vtn_builder *b, struct vtn_ssa_value *src,
+                nir_deref_var *dest, struct vtn_type *type,
+                nir_deref *dest_tail)
+{
+   nir_ssa_def *index;
+   unsigned offset;
+   nir_ssa_def *indirect;
+   vtn_block_get_offset(b, dest, &type, dest_tail, &index, &offset, &indirect);
+
+   nir_intrinsic_op op = indirect ? nir_intrinsic_store_ssbo_indirect
+                                  : nir_intrinsic_store_ssbo;
+
+   return _vtn_block_store(b, op, src, dest->var->data.descriptor_set,
+                           dest->var->data.binding, dest->var->data.mode,
+                           index, offset, indirect, type);
+}
+
 static nir_ssa_def * vtn_vector_insert(struct vtn_builder *b,
                                        nir_ssa_def *src, nir_ssa_def *insert,
                                        unsigned index);
@@ -1318,19 +1377,24 @@ vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                    nir_deref_var *dest, struct vtn_type *dest_type)
 {
    nir_deref *dest_tail = get_deref_tail(dest);
-   if (dest_tail->child) {
-      struct vtn_ssa_value *val = _vtn_variable_load(b, dest, dest_tail);
-      nir_deref_array *deref = nir_deref_as_array(dest_tail->child);
-      assert(deref->deref.child == NULL);
-      if (deref->deref_array_type == nir_deref_array_type_direct)
-         val->def = vtn_vector_insert(b, val->def, src->def,
-                                      deref->base_offset);
-      else
-         val->def = vtn_vector_insert_dynamic(b, val->def, src->def,
-                                              deref->indirect.ssa);
-      _vtn_variable_store(b, dest, dest_tail, val);
+   if (variable_is_external_block(dest->var)) {
+      assert(dest->var->data.mode == nir_var_shader_storage);
+      vtn_block_store(b, src, dest, dest_type, dest_tail);
    } else {
-      _vtn_variable_store(b, dest, dest_tail, src);
+      if (dest_tail->child) {
+         struct vtn_ssa_value *val = _vtn_variable_load(b, dest, dest_tail);
+         nir_deref_array *deref = nir_deref_as_array(dest_tail->child);
+         assert(deref->deref.child == NULL);
+         if (deref->deref_array_type == nir_deref_array_type_direct)
+            val->def = vtn_vector_insert(b, val->def, src->def,
+                                         deref->base_offset);
+         else
+            val->def = vtn_vector_insert_dynamic(b, val->def, src->def,
+                                                 deref->indirect.ssa);
+         _vtn_variable_store(b, dest, dest_tail, val);
+      } else {
+         _vtn_variable_store(b, dest, dest_tail, src);
+      }
    }
 }
 
