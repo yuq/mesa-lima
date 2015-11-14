@@ -141,8 +141,9 @@ NineResource9_SetPrivateData( struct NineResource9 *This,
 
     header->size = SizeOfData;
     memcpy(header->data, user_data, header->size);
+    memcpy(&header->guid, refguid, sizeof(header->guid));
 
-    err = util_hash_table_set(This->pdata, refguid, header);
+    err = util_hash_table_set(This->pdata, &header->guid, header);
     if (err == PIPE_OK) {
         if (header->unknown) { IUnknown_AddRef(*(IUnknown **)header->data); }
         return D3D_OK;
