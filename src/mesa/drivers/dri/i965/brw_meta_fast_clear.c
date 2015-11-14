@@ -849,6 +849,7 @@ brw_meta_resolve_color(struct brw_context *brw,
 {
    struct gl_context *ctx = &brw->ctx;
    GLuint fbo;
+   struct gl_framebuffer *drawFb;
    struct gl_renderbuffer *rb;
    struct rect rect;
 
@@ -857,9 +858,13 @@ brw_meta_resolve_color(struct brw_context *brw,
    _mesa_meta_begin(ctx, MESA_META_ALL);
 
    _mesa_CreateFramebuffers(1, &fbo);
+
+   drawFb = _mesa_lookup_framebuffer(ctx, fbo);
+   assert(drawFb != NULL && drawFb->Name == fbo);
+
    rb = brw_get_rb_for_slice(brw, mt, 0, 0, false);
 
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+   _mesa_bind_framebuffers(ctx, drawFb, ctx->ReadBuffer);
    _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, GL_COLOR_ATTACHMENT0,
                                   rb);
    _mesa_DrawBuffer(GL_COLOR_ATTACHMENT0);

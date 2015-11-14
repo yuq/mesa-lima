@@ -425,6 +425,7 @@ brw_meta_stencil_blit(struct brw_context *brw,
    struct blit_dims dims = *orig_dims;
    struct fb_tex_blit_state blit;
    GLuint prog, fbo;
+   struct gl_framebuffer *drawFb;
    struct gl_renderbuffer *rb;
    GLenum target;
 
@@ -437,12 +438,15 @@ brw_meta_stencil_blit(struct brw_context *brw,
    ctx->Extensions.ARB_texture_stencil8 = true;
 
    _mesa_CreateFramebuffers(1, &fbo);
+   drawFb = _mesa_lookup_framebuffer(ctx, fbo);
+   assert(drawFb != NULL && drawFb->Name == fbo);
+
    /* Force the surface to be configured for level zero. */
    rb = brw_get_rb_for_slice(brw, dst_mt, 0, dst_layer, true);
    adjust_msaa(&dims, dst_mt->num_samples);
    adjust_tiling(&dims, dst_mt->num_samples);
 
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+   _mesa_bind_framebuffers(ctx, drawFb, ctx->ReadBuffer);
    _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, GL_COLOR_ATTACHMENT0,
                                   rb);
    _mesa_DrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -535,6 +539,7 @@ brw_meta_stencil_updownsample(struct brw_context *brw,
       .dst_x1 = dst->logical_width0, .dst_y1 = dst->logical_height0,
       .mirror_x = 0, .mirror_y = 0 };
    GLuint fbo;
+   struct gl_framebuffer *readFb;
    struct gl_renderbuffer *rb;
 
    if (dst->stencil_mt)
@@ -544,9 +549,12 @@ brw_meta_stencil_updownsample(struct brw_context *brw,
    _mesa_meta_begin(ctx, MESA_META_ALL);
 
    _mesa_CreateFramebuffers(1, &fbo);
+   readFb = _mesa_lookup_framebuffer(ctx, fbo);
+   assert(readFb != NULL && readFb->Name == fbo);
+
    rb = brw_get_rb_for_slice(brw, src, 0, 0, false);
 
-   _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+   _mesa_bind_framebuffers(ctx, ctx->DrawBuffer, readFb);
    _mesa_framebuffer_renderbuffer(ctx, ctx->ReadBuffer, GL_STENCIL_ATTACHMENT,
                                   rb);
 

@@ -93,7 +93,9 @@ brw_meta_updownsample(struct brw_context *brw,
                       struct intel_mipmap_tree *dst_mt)
 {
    struct gl_context *ctx = &brw->ctx;
-   GLuint fbos[2], src_fbo, dst_fbo;
+   GLuint fbos[2];
+   struct gl_framebuffer *src_fb;
+   struct gl_framebuffer *dst_fb;
    struct gl_renderbuffer *src_rb;
    struct gl_renderbuffer *dst_rb;
    GLenum drawbuffer;
@@ -116,14 +118,16 @@ brw_meta_updownsample(struct brw_context *brw,
    _mesa_CreateFramebuffers(2, fbos);
    src_rb = brw_get_rb_for_slice(brw, src_mt, 0, 0, false);
    dst_rb = brw_get_rb_for_slice(brw, dst_mt, 0, 0, false);
-   src_fbo = fbos[0];
-   dst_fbo = fbos[1];
+   src_fb = _mesa_lookup_framebuffer(ctx, fbos[0]);
+   dst_fb = _mesa_lookup_framebuffer(ctx, fbos[1]);
 
-   _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, src_fbo);
+   assert(src_fb != NULL && src_fb->Name == fbos[0]);
+   assert(dst_fb != NULL && dst_fb->Name == fbos[1]);
+
+   _mesa_bind_framebuffers(ctx, dst_fb, src_fb);
    _mesa_framebuffer_renderbuffer(ctx, ctx->ReadBuffer, attachment, src_rb);
    _mesa_ReadBuffer(drawbuffer);
 
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_fbo);
    _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, attachment, dst_rb);
    _mesa_DrawBuffer(drawbuffer);
 
