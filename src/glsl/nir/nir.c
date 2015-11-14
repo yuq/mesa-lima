@@ -1577,6 +1577,8 @@ nir_intrinsic_from_system_value(gl_system_value val)
       return nir_intrinsic_load_tess_level_inner;
    case SYSTEM_VALUE_VERTICES_IN:
       return nir_intrinsic_load_patch_vertices_in;
+   case SYSTEM_VALUE_HELPER_INVOCATION:
+      return nir_intrinsic_load_helper_invocation;
    default:
       unreachable("system value does not directly correspond to intrinsic");
    }
@@ -1620,6 +1622,8 @@ nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
       return SYSTEM_VALUE_TESS_LEVEL_INNER;
    case nir_intrinsic_load_patch_vertices_in:
       return SYSTEM_VALUE_VERTICES_IN;
+   case nir_intrinsic_load_helper_invocation:
+      return SYSTEM_VALUE_HELPER_INVOCATION;
    default:
       unreachable("intrinsic doesn't produce a system value");
    }
