@@ -330,6 +330,23 @@ is_multiple_vertices(gl_shader_stage stage, ir_variable *var)
    return false;
 }
 
+/**
+ * Return true if \p var is a GLSL built-in array that controls fixed-function
+ * aspects of the pipeline.  These have to be used as a whole.
+ */
+static bool
+is_fixed_function_array(ir_variable *var)
+{
+   switch (var->data.location) {
+   case VARYING_SLOT_TESS_LEVEL_OUTER:
+   case VARYING_SLOT_TESS_LEVEL_INNER:
+   case VARYING_SLOT_CLIP_DIST0:
+      return true;
+   default:
+      return false;
+   }
+}
+
 ir_visitor_status
 ir_set_program_inouts_visitor::visit_enter(ir_dereference_array *ir)
 {
@@ -362,9 +379,12 @@ ir_set_program_inouts_visitor::visit_enter(ir_dereference_array *ir)
    } else if (ir_dereference_variable * const deref_var =
               ir->array->as_dereference_variable()) {
       /* ir => foo[i], where foo is a variable. */
-      if (is_multiple_vertices(this->shader_stage, deref_var->var)) {
-         /* foo is a geometry or tessellation shader input, so i is
-          * the vertex, and we're accessing the entire input.
+      if (is_multiple_vertices(this->shader_stage, deref_var->var) ||
+          is_fixed_function_array(deref_var->var)) {
+         /* In the first case, foo is a geometry or tessellation shader input,
+          * so i is the vertex, and we're accessing the entire input.  In the
+          * second case, foo is a GLSL built-in array that controls
+          * fixed-function hardware, which is consumed as a whole.
           */
          mark_whole_variable(deref_var->var);
          /* We've now taken care of foo, but i might contain a subexpression
