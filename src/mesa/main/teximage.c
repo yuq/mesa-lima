@@ -1266,7 +1266,7 @@ compressedteximage_only_format(const struct gl_context *ctx, GLenum format)
 /**
  * Return true if the format doesn't support online compression.
  */
-static bool
+bool
 _mesa_format_no_online_compression(const struct gl_context *ctx, GLenum format)
 {
    return _mesa_is_astc_format(format) ||

@@ -214,6 +214,9 @@ _mesa_legal_texture_base_format_for_target(struct gl_context *ctx,
                                            unsigned dimensions,
                                            const char *caller);
 
+bool
+_mesa_format_no_online_compression(const struct gl_context *ctx, GLenum format);
+
 GLboolean
 _mesa_is_renderable_texture_format(struct gl_context *ctx, GLenum internalformat);
 
