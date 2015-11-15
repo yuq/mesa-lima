@@ -300,7 +300,8 @@ hash_table_insert(struct hash_table *ht, uint32_t hash,
        * required to avoid memory leaks, perform a search
        * before inserting.
        */
-      if (entry->hash == hash &&
+      if (!entry_is_deleted(ht, entry) &&
+          entry->hash == hash &&
           ht->key_equals_function(key, entry->key)) {
          entry->key = key;
          entry->data = data;
