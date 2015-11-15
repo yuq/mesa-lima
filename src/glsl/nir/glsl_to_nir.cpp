@@ -1533,9 +1533,9 @@ nir_visitor::visit(ir_expression *ir)
       result = supports_ints ? nir_ior(&b, srcs[0], srcs[1])
                              : nir_for(&b, srcs[0], srcs[1]);
       break;
-   case ir_binop_logic_xor: result = nir_ixor(&b, srcs[0], srcs[1]); break;
-      result = supports_ints ? nir_ior(&b, srcs[0], srcs[1])
-                             : nir_for(&b, srcs[0], srcs[1]);
+   case ir_binop_logic_xor:
+      result = supports_ints ? nir_ixor(&b, srcs[0], srcs[1])
+                             : nir_fxor(&b, srcs[0], srcs[1]);
       break;
    case ir_binop_lshift: result = nir_ishl(&b, srcs[0], srcs[1]); break;
    case ir_binop_rshift:
