@@ -2670,7 +2670,7 @@ assign_attribute_or_color_locations(void *mem_ctx,
          return false;
       }
 
-      const unsigned slots = var->type->count_attribute_slots(target_index == MESA_SHADER_VERTEX);
+      const unsigned slots = var->count_attribute_slots(target_index == MESA_SHADER_VERTEX);
 
       /* If the variable is not a built-in and has a location statically
        * assigned in the shader (presumably via a layout qualifier), make sure
@@ -2782,7 +2782,7 @@ assign_attribute_or_color_locations(void *mem_ctx,
                    */
                   for (unsigned i = 0; i < assigned_attr; i++) {
                      unsigned assigned_slots =
-                        assigned[i]->type->count_attribute_slots(false);
+                        assigned[i]->count_attribute_slots(false);
                      unsigned assig_attr =
                         assigned[i]->data.location - generic_base;
                      unsigned assigned_use_mask = (1 << assigned_slots) - 1;
@@ -3233,7 +3233,7 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
                ir_variable *var = node->as_variable();
                if (var && var->data.mode == ir_var_shader_out)
                   /* since there are no double fs outputs - pass false */
-                  fragment_outputs += var->type->count_attribute_slots(false);
+                  fragment_outputs += var->count_attribute_slots(false);
             }
          }
       }

@@ -1618,6 +1618,13 @@ ir_variable::get_extension_warning() const
       ? NULL : warn_extension_table[this->data.warn_extension_index];
 }
 
+unsigned
+ir_variable::count_attribute_slots(bool is_vertex_stage) const
+{
+   bool is_vs_input = is_vertex_stage && this->data.mode == ir_var_shader_in;
+   return this->type->count_attribute_slots(is_vs_input);
+}
+
 ir_function_signature::ir_function_signature(const glsl_type *return_type,
                                              builtin_available_predicate b)
    : ir_instruction(ir_type_function_signature),

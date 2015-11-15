@@ -553,6 +553,8 @@ public:
       return this->u.max_ifc_array_access;
    }
 
+   unsigned count_attribute_slots(bool is_vertex_stage) const;
+
    inline unsigned get_num_state_slots() const
    {
       assert(!this->is_interface_instance()
