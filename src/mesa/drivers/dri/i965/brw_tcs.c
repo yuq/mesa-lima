@@ -214,7 +214,8 @@ brw_codegen_tcs_prog(struct brw_context *brw,
       prog_data.base.base.nr_image_params = tcs->NumImages;
 
       brw_nir_setup_glsl_uniforms(nir, shader_prog, &tcp->program.Base,
-                                  &prog_data.base.base, false);
+                                  &prog_data.base.base,
+                                  compiler->scalar_stage[MESA_SHADER_TESS_CTRL]);
    } else {
       /* Upload the Patch URB Header as the first two uniforms.
        * Do the annoying scrambling so the shader doesn't have to.

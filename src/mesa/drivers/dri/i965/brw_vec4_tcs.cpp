@@ -29,6 +29,7 @@
 
 #include "brw_nir.h"
 #include "brw_vec4_tcs.h"
+#include "brw_fs.h"
 
 namespace brw {
 
@@ -452,7 +453,10 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    brw_nir_lower_tcs_outputs(nir, &vue_prog_data->vue_map);
    nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
 
-   prog_data->instances = DIV_ROUND_UP(nir->info.tcs.vertices_out, 2);
+   if (is_scalar)
+      prog_data->instances = DIV_ROUND_UP(nir->info.tcs.vertices_out, 8);
+   else
+      prog_data->instances = DIV_ROUND_UP(nir->info.tcs.vertices_out, 2);
 
    /* Compute URB entry size.  The maximum allowed URB entry size is 32k.
     * That divides up as follows:
@@ -493,20 +497,49 @@ brw_compile_tcs(const struct brw_compiler *compiler,
       brw_print_vue_map(stderr, &vue_prog_data->vue_map);
    }
 
-   vec4_tcs_visitor v(compiler, log_data, key, prog_data,
-                      nir, mem_ctx, shader_time_index, &input_vue_map);
-   if (!v.run()) {
-      if (error_str)
-         *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
-      return NULL;
+   if (is_scalar) {
+      fs_visitor v(compiler, log_data, mem_ctx, (void *) key,
+                   &prog_data->base.base, NULL, nir, 8,
+                   shader_time_index, &input_vue_map);
+      if (!v.run_tcs_single_patch()) {
+         if (error_str)
+            *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
+         return NULL;
+      }
+
+      prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
+
+      fs_generator g(compiler, log_data, mem_ctx, (void *) key,
+                     &prog_data->base.base, v.promoted_constants, false,
+                     MESA_SHADER_TESS_CTRL);
+      if (unlikely(INTEL_DEBUG & DEBUG_TCS)) {
+         g.enable_debug(ralloc_asprintf(mem_ctx,
+                                        "%s tessellation control shader %s",
+                                        nir->info.label ? nir->info.label
+                                                        : "unnamed",
+                                        nir->info.name));
+      }
+
+      g.generate_code(v.cfg, 8);
+
+      return g.get_assembly(final_assembly_size);
+   } else {
+      vec4_tcs_visitor v(compiler, log_data, key, prog_data,
+                         nir, mem_ctx, shader_time_index, &input_vue_map);
+      if (!v.run()) {
+         if (error_str)
+            *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
+         return NULL;
+      }
+
+      if (unlikely(INTEL_DEBUG & DEBUG_TCS))
+         v.dump_instructions();
+
+
+      return brw_vec4_generate_assembly(compiler, log_data, mem_ctx, nir,
+                                        &prog_data->base, v.cfg,
+                                        final_assembly_size);
    }
-
-   if (unlikely(INTEL_DEBUG & DEBUG_TCS))
-      v.dump_instructions();
-
-   return brw_vec4_generate_assembly(compiler, log_data, mem_ctx, nir,
-                                     &prog_data->base, v.cfg,
-                                     final_assembly_size);
 }
 
 

@@ -1758,6 +1758,19 @@ fs_visitor::assign_vs_urb_setup()
 }
 
 void
+fs_visitor::assign_tcs_single_patch_urb_setup()
+{
+   assert(stage == MESA_SHADER_TESS_CTRL);
+
+   brw_vue_prog_data *vue_prog_data = (brw_vue_prog_data *) prog_data;
+
+   /* Rewrite all ATTR file references to HW_REGs. */
+   foreach_block_and_inst(block, fs_inst, inst, cfg) {
+      convert_attr_sources_to_hw_regs(inst);
+   }
+}
+
+void
 fs_visitor::assign_tes_urb_setup()
 {
    assert(stage == MESA_SHADER_TESS_EVAL);
@@ -5466,6 +5479,88 @@ fs_visitor::run_vs(gl_clip_plane *clip_planes)
 
    assign_curb_setup();
    assign_vs_urb_setup();
+
+   fixup_3src_null_dest();
+   allocate_registers();
+
+   return !failed;
+}
+
+bool
+fs_visitor::run_tcs_single_patch()
+{
+   assert(stage == MESA_SHADER_TESS_CTRL);
+
+   struct brw_tcs_prog_data *tcs_prog_data =
+      (struct brw_tcs_prog_data *) prog_data;
+
+   /* r1-r4 contain the ICP handles. */
+   payload.num_regs = 5;
+
+   if (shader_time_index >= 0)
+      emit_shader_time_begin();
+
+   /* Initialize gl_InvocationID */
+   fs_reg channels_uw = bld.vgrf(BRW_REGISTER_TYPE_UW);
+   fs_reg channels_ud = bld.vgrf(BRW_REGISTER_TYPE_UD);
+   bld.MOV(channels_uw, fs_reg(brw_imm_uv(0x76543210)));
+   bld.MOV(channels_ud, channels_uw);
+
+   if (tcs_prog_data->instances == 1) {
+      invocation_id = channels_ud;
+   } else {
+      invocation_id = bld.vgrf(BRW_REGISTER_TYPE_UD);
+
+      /* Get instance number from g0.2 bits 23:17, and multiply it by 8. */
+      fs_reg t = bld.vgrf(BRW_REGISTER_TYPE_UD);
+      fs_reg instance_times_8 = bld.vgrf(BRW_REGISTER_TYPE_UD);
+      bld.AND(t, fs_reg(retype(brw_vec1_grf(0, 2), BRW_REGISTER_TYPE_UD)),
+              brw_imm_ud(INTEL_MASK(23, 17)));
+      bld.SHR(instance_times_8, t, brw_imm_ud(17 - 3));
+
+      bld.ADD(invocation_id, instance_times_8, channels_ud);
+   }
+
+   /* Fix the disptach mask */
+   if (nir->info.tcs.vertices_out % 8) {
+      bld.CMP(bld.null_reg_ud(), invocation_id,
+              brw_imm_ud(nir->info.tcs.vertices_out), BRW_CONDITIONAL_L);
+      bld.IF(BRW_PREDICATE_NORMAL);
+   }
+
+   emit_nir_code();
+
+   if (nir->info.tcs.vertices_out % 8) {
+      bld.emit(BRW_OPCODE_ENDIF);
+   }
+
+   /* Emit EOT write; set TR DS Cache bit */
+   fs_reg srcs[3] = {
+      fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD)),
+      fs_reg(brw_imm_ud(WRITEMASK_X << 16)),
+      fs_reg(brw_imm_ud(0)),
+   };
+   fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 3);
+   bld.LOAD_PAYLOAD(payload, srcs, 3, 2);
+
+   fs_inst *inst = bld.emit(SHADER_OPCODE_URB_WRITE_SIMD8_MASKED,
+                            bld.null_reg_ud(), payload);
+   inst->mlen = 3;
+   inst->base_mrf = -1;
+   inst->eot = true;
+
+   if (shader_time_index >= 0)
+      emit_shader_time_end();
+
+   if (failed)
+      return false;
+
+   calculate_cfg();
+
+   optimize();
+
+   assign_curb_setup();
+   assign_tcs_single_patch_urb_setup();
 
    fixup_3src_null_dest();
    allocate_registers();

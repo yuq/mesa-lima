@@ -152,7 +152,8 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 
    compiler->scalar_stage[MESA_SHADER_VERTEX] =
       devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS);
-   compiler->scalar_stage[MESA_SHADER_TESS_CTRL] = false;
+   compiler->scalar_stage[MESA_SHADER_TESS_CTRL] =
+      devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_TCS", false);
    compiler->scalar_stage[MESA_SHADER_TESS_EVAL] =
       devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_TES", true);
    compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
@@ -194,6 +195,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 
    compiler->glsl_compiler_options[MESA_SHADER_TESS_CTRL].EmitNoIndirectInput = false;
    compiler->glsl_compiler_options[MESA_SHADER_TESS_EVAL].EmitNoIndirectInput = false;
+   compiler->glsl_compiler_options[MESA_SHADER_TESS_CTRL].EmitNoIndirectOutput = false;
 
    if (compiler->scalar_stage[MESA_SHADER_GEOMETRY])
       compiler->glsl_compiler_options[MESA_SHADER_GEOMETRY].EmitNoIndirectInput = false;

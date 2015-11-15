@@ -1015,6 +1015,9 @@ fs_visitor::init()
    case MESA_SHADER_VERTEX:
       key_tex = &((const brw_vs_prog_key *) key)->tex;
       break;
+   case MESA_SHADER_TESS_CTRL:
+      key_tex = &((const brw_tcs_prog_key *) key)->tex;
+      break;
    case MESA_SHADER_TESS_EVAL:
       key_tex = &((const brw_tes_prog_key *) key)->tex;
       break;

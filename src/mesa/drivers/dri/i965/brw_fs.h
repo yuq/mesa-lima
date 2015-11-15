@@ -110,6 +110,7 @@ public:
 
    bool run_fs(bool do_rep_send);
    bool run_vs(gl_clip_plane *clip_planes);
+   bool run_tcs_single_patch();
    bool run_tes();
    bool run_gs();
    bool run_cs();
@@ -126,6 +127,7 @@ public:
    void assign_urb_setup();
    void convert_attr_sources_to_hw_regs(fs_inst *inst);
    void assign_vs_urb_setup();
+   void assign_tcs_single_patch_urb_setup();
    void assign_tes_urb_setup();
    void assign_gs_urb_setup();
    bool assign_regs(bool allow_spilling);
@@ -250,6 +252,8 @@ public:
                        nir_ssa_undef_instr *instr);
    void nir_emit_vs_intrinsic(const brw::fs_builder &bld,
                               nir_intrinsic_instr *instr);
+   void nir_emit_tcs_intrinsic(const brw::fs_builder &bld,
+                               nir_intrinsic_instr *instr);
    void nir_emit_gs_intrinsic(const brw::fs_builder &bld,
                               nir_intrinsic_instr *instr);
    void nir_emit_fs_intrinsic(const brw::fs_builder &bld,
@@ -405,6 +409,7 @@ public:
    fs_reg userplane[MAX_CLIP_PLANES];
    fs_reg final_gs_vertex_count;
    fs_reg control_data_bits;
+   fs_reg invocation_id;
 
    unsigned grf_used;
    bool spilled_any_registers;
