@@ -260,4 +260,5 @@ nvc0_init_query_functions(struct nvc0_context *nvc0)
    pipe->end_query = nvc0_end_query;
    pipe->get_query_result = nvc0_get_query_result;
    pipe->render_condition = nvc0_render_condition;
+   nvc0->cond_condmode = NVC0_3D_COND_MODE_ALWAYS;
 }

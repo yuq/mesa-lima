@@ -152,6 +152,7 @@ nv50_init_query_functions(struct nv50_context *nv50)
    pipe->end_query = nv50_end_query;
    pipe->get_query_result = nv50_get_query_result;
    pipe->render_condition = nv50_render_condition;
+   nv50->cond_condmode = NV50_3D_COND_MODE_ALWAYS;
 }
 
 int

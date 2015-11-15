@@ -339,11 +339,17 @@ nv50_clear_render_target(struct pipe_context *pipe,
    PUSH_DATA (push, (width << 16) | dstx);
    PUSH_DATA (push, (height << 16) | dsty);
 
+   BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
+   PUSH_DATA (push, NV50_3D_COND_MODE_ALWAYS);
+
    BEGIN_NI04(push, NV50_3D(CLEAR_BUFFERS), sf->depth);
    for (z = 0; z < sf->depth; ++z) {
       PUSH_DATA (push, 0x3c |
                  (z << NV50_3D_CLEAR_BUFFERS_LAYER__SHIFT));
    }
+
+   BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
+   PUSH_DATA (push, nv50->cond_condmode);
 
    nv50->dirty |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
 }
@@ -415,11 +421,17 @@ nv50_clear_depth_stencil(struct pipe_context *pipe,
    PUSH_DATA (push, (width << 16) | dstx);
    PUSH_DATA (push, (height << 16) | dsty);
 
+   BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
+   PUSH_DATA (push, NV50_3D_COND_MODE_ALWAYS);
+
    BEGIN_NI04(push, NV50_3D(CLEAR_BUFFERS), sf->depth);
    for (z = 0; z < sf->depth; ++z) {
       PUSH_DATA (push, mode |
                  (z << NV50_3D_CLEAR_BUFFERS_LAYER__SHIFT));
    }
+
+   BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
+   PUSH_DATA (push, nv50->cond_condmode);
 
    nv50->dirty |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
 }
@@ -673,6 +685,9 @@ nv50_clear_buffer(struct pipe_context *pipe,
    PUSH_DATA (push, (width << 16));
    PUSH_DATA (push, (height << 16));
 
+   BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
+   PUSH_DATA (push, NV50_3D_COND_MODE_ALWAYS);
+
    BEGIN_NI04(push, NV50_3D(CLEAR_BUFFERS), 1);
    PUSH_DATA (push, 0x3c);
 
@@ -689,6 +704,9 @@ nv50_clear_buffer(struct pipe_context *pipe,
       BEGIN_NI04(push, NV50_3D(CLEAR_BUFFERS), 1);
       PUSH_DATA (push, 0x3c);
    }
+
+   BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
+   PUSH_DATA (push, nv50->cond_condmode);
 
    nouveau_fence_ref(nv50->screen->base.fence.current, &buf->fence);
    nouveau_fence_ref(nv50->screen->base.fence.current, &buf->fence_wr);
