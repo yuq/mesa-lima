@@ -1621,6 +1621,24 @@ ir_variable::get_extension_warning() const
 unsigned
 ir_variable::count_attribute_slots(bool is_vertex_stage) const
 {
+   /* GLSL contains several built-in arrays that control fixed-function
+    * hardware, and are somewhat special.  Clip distances and tessellation
+    * factors are exposed as float[] arrays, but typically are packed
+    * tightly.  We want to expose these as taking a single varying slot
+    * and let drivers handle laying them out appropriately.
+    *
+    * Skip this override if the arrays were lowered to vectors.
+    */
+   if (type->without_array()->is_scalar() &&
+       (data.mode == ir_var_shader_in || data.mode == ir_var_shader_out) &&
+       (data.location == VARYING_SLOT_CLIP_DIST0 ||
+        data.location == VARYING_SLOT_CULL_DIST0 ||
+        data.location == VARYING_SLOT_TESS_LEVEL_OUTER ||
+        data.location == VARYING_SLOT_TESS_LEVEL_INNER)) {
+      return type->length / 4;
+   }
+
+   /* For normal variables, simply consult the type. */
    bool is_vs_input = is_vertex_stage && this->data.mode == ir_var_shader_in;
    return this->type->count_attribute_slots(is_vs_input);
 }
