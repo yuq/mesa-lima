@@ -46,6 +46,7 @@ enum vtn_value_type {
    vtn_value_type_ssa,
    vtn_value_type_extension,
    vtn_value_type_image_pointer,
+   vtn_value_type_sampled_image,
 };
 
 struct vtn_block {
@@ -127,6 +128,11 @@ struct vtn_image_pointer {
    nir_ssa_def *sample;
 };
 
+struct vtn_sampled_image {
+   nir_deref_var *image; /* Image or array of images */
+   nir_deref_var *sampler; /* Sampler */
+};
+
 struct vtn_value {
    enum vtn_value_type value_type;
    const char *name;
@@ -144,6 +150,7 @@ struct vtn_value {
          struct vtn_type *deref_type;
       };
       struct vtn_image_pointer *image;
+      struct vtn_sampled_image *sampled_image;
       struct vtn_function *func;
       struct vtn_block *block;
       struct vtn_ssa_value *ssa;

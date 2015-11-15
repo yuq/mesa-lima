@@ -617,6 +617,19 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       val->type = vtn_value(b, w[2], vtn_value_type_type)->type;
       break;
 
+   case SpvOpTypeSampler:
+      /* The actual sampler type here doesn't really matter.  It gets
+       * thrown away the moment you combine it with an image.  What really
+       * matters is that it's a sampler type as opposed to an integer type
+       * so the backend knows what to do.
+       *
+       * TODO: Eventually we should consider adding a "bare sampler" type
+       * to glsl_types.
+       */
+      val->type->type = glsl_sampler_type(GLSL_SAMPLER_DIM_2D, false, false,
+                                          GLSL_TYPE_FLOAT);
+      break;
+
    case SpvOpTypeRuntimeArray:
    case SpvOpTypeOpaque:
    case SpvOpTypeEvent:
@@ -1603,12 +1616,26 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpAccessChain:
    case SpvOpInBoundsAccessChain: {
-      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
-      nir_deref_var *base = vtn_value(b, w[3], vtn_value_type_deref)->deref;
-      val->deref = nir_deref_as_var(nir_copy_deref(b, &base->deref));
+      nir_deref_var *base;
+      struct vtn_value *base_val = vtn_untyped_value(b, w[3]);
+      if (base_val->value_type == vtn_value_type_sampled_image) {
+         /* This is rather insane.  SPIR-V allows you to use OpSampledImage
+          * to combine an array of images with a single sampler to get an
+          * array of sampled images that all share the same sampler.
+          * Fortunately, this means that we can more-or-less ignore the
+          * sampler when crawling the access chain, but it does leave us
+          * with this rather awkward little special-case.
+          */
+         base = base_val->sampled_image->image;
+      } else {
+         assert(base_val->value_type == vtn_value_type_deref);
+         base = base_val->deref;
+      }
+
+      nir_deref_var *deref = nir_deref_as_var(nir_copy_deref(b, &base->deref));
       struct vtn_type *deref_type = vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
 
-      nir_deref *tail = &val->deref->deref;
+      nir_deref *tail = &deref->deref;
       while (tail->child)
          tail = tail->child;
 
@@ -1679,29 +1706,29 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                                               b->shader->info.gs.vertices_in);
 
                /* The first non-var deref should be an array deref. */
-               assert(val->deref->deref.child->deref_type ==
+               assert(deref->deref.child->deref_type ==
                       nir_deref_type_array);
-               per_vertex_deref = nir_deref_as_array(val->deref->deref.child);
+               per_vertex_deref = nir_deref_as_array(deref->deref.child);
             }
 
             nir_variable *builtin = get_builtin_variable(b,
                                                          base->var->data.mode,
                                                          builtin_type,
                                                          deref_type->builtin);
-            val->deref = nir_deref_var_create(b, builtin);
+            deref = nir_deref_var_create(b, builtin);
 
             if (per_vertex_deref) {
                /* Since deref chains start at the variable, we can just
                 * steal that link and use it.
                 */
-               val->deref->deref.child = &per_vertex_deref->deref;
+               deref->deref.child = &per_vertex_deref->deref;
                per_vertex_deref->deref.child = NULL;
                per_vertex_deref->deref.type =
                   glsl_get_array_element(builtin_type);
 
                tail = &per_vertex_deref->deref;
             } else {
-               tail = &val->deref->deref;
+               tail = &deref->deref;
             }
          } else {
             tail = tail->child;
@@ -1712,12 +1739,20 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
        * actually access the variable, so we need to keep around the original
        * type of the variable.
        */
-
       if (variable_is_external_block(base->var))
-         val->deref_type = vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
-      else
-         val->deref_type = deref_type;
+         deref_type = vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
 
+      if (base_val->value_type == vtn_value_type_sampled_image) {
+         struct vtn_value *val =
+            vtn_push_value(b, w[2], vtn_value_type_sampled_image);
+         val->sampled_image = ralloc(b, struct vtn_sampled_image);
+         val->sampled_image->image = deref;
+         val->sampled_image->sampler = base_val->sampled_image->sampler;
+      } else {
+         struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
+         val->deref = deref;
+         val->deref_type = deref_type;
+      }
 
       break;
    }
@@ -1822,8 +1857,28 @@ static void
 vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
                    const uint32_t *w, unsigned count)
 {
+   if (opcode == SpvOpSampledImage) {
+      struct vtn_value *val =
+         vtn_push_value(b, w[2], vtn_value_type_sampled_image);
+      val->sampled_image = ralloc(b, struct vtn_sampled_image);
+      val->sampled_image->image =
+         vtn_value(b, w[3], vtn_value_type_deref)->deref;
+      val->sampled_image->sampler =
+         vtn_value(b, w[4], vtn_value_type_deref)->deref;
+      return;
+   }
+
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-   nir_deref_var *sampler = vtn_value(b, w[3], vtn_value_type_deref)->deref;
+
+   struct vtn_sampled_image sampled;
+   struct vtn_value *sampled_val = vtn_untyped_value(b, w[3]);
+   if (sampled_val->value_type == vtn_value_type_sampled_image) {
+      sampled = *sampled_val->sampled_image;
+   } else {
+      assert(sampled_val->value_type == vtn_value_type_deref);
+      sampled.image = NULL;
+      sampled.sampler = sampled_val->deref;
+   }
 
    nir_tex_src srcs[8]; /* 8 should be enough */
    nir_tex_src *p = srcs;
@@ -1954,7 +2009,8 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
 
    nir_tex_instr *instr = nir_tex_instr_create(b->shader, p - srcs);
 
-   const struct glsl_type *sampler_type = nir_deref_tail(&sampler->deref)->type;
+   const struct glsl_type *sampler_type =
+      nir_deref_tail(&sampled.sampler->deref)->type;
    instr->sampler_dim = glsl_get_sampler_dim(sampler_type);
 
    switch (glsl_get_sampler_result_type(sampler_type)) {
@@ -1972,7 +2028,14 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    instr->is_array = glsl_sampler_type_is_array(sampler_type);
    instr->is_shadow = glsl_sampler_type_is_shadow(sampler_type);
 
-   instr->sampler = nir_deref_as_var(nir_copy_deref(instr, &sampler->deref));
+   instr->sampler =
+      nir_deref_as_var(nir_copy_deref(instr, &sampled.sampler->deref));
+   if (sampled.image) {
+      instr->texture =
+         nir_deref_as_var(nir_copy_deref(instr, &sampled.image->deref));
+   } else {
+      instr->texture = NULL;
+   }
 
    nir_ssa_dest_init(&instr->instr, &instr->dest, 4, NULL);
    val->ssa = vtn_create_ssa_value(b, glsl_vector_type(GLSL_TYPE_FLOAT, 4));
@@ -3310,6 +3373,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       vtn_handle_function_call(b, opcode, w, count);
       break;
 
+   case SpvOpSampledImage:
    case SpvOpImageSampleImplicitLod:
    case SpvOpImageSampleExplicitLod:
    case SpvOpImageSampleDrefImplicitLod:
