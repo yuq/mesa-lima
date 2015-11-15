@@ -1314,8 +1314,10 @@ nine_state_clear(struct nine_state *state, const boolean device)
     nine_bind(&state->vs, NULL);
     nine_bind(&state->ps, NULL);
     nine_bind(&state->vdecl, NULL);
-    for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)
+    for (i = 0; i < PIPE_MAX_ATTRIBS; ++i) {
         nine_bind(&state->stream[i], NULL);
+        pipe_resource_reference(&state->vtxbuf[i].buffer, NULL);
+    }
     nine_bind(&state->idxbuf, NULL);
     for (i = 0; i < NINE_MAX_SAMPLERS; ++i) {
         if (device &&
