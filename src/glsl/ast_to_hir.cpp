@@ -6603,6 +6603,8 @@ ast_interface_block::hir(exec_list *instructions,
                earlier_per_vertex->fields.structure[j].sample;
             fields[i].patch =
                earlier_per_vertex->fields.structure[j].patch;
+            fields[i].precision =
+               earlier_per_vertex->fields.structure[j].precision;
          }
       }
 
