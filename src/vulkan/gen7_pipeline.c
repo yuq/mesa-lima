@@ -29,6 +29,8 @@
 
 #include "anv_private.h"
 
+#include "gen7_pack.h"
+
 static void
 gen7_emit_vertex_input(struct anv_pipeline *pipeline,
                        const VkPipelineVertexInputStateCreateInfo *info)
@@ -92,8 +94,8 @@ static const uint32_t vk_to_gen_fillmode[] = {
 };
 
 static const uint32_t vk_to_gen_front_face[] = {
-   [VK_FRONT_FACE_CCW]                          = CounterClockwise,
-   [VK_FRONT_FACE_CW]                           = Clockwise
+   [VK_FRONT_FACE_CCW]                          = 1,
+   [VK_FRONT_FACE_CW]                           = 0
 };
 
 static void
@@ -575,9 +577,9 @@ gen7_graphics_pipeline_create(
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_WM,
       .StatisticsEnable                         = true,
       .ThreadDispatchEnable                     = true,
-      .LineEndCapAntialiasingRegionWidth        = _05pixels,
-      .LineAntialiasingRegionWidth              = _10pixels,
-      .EarlyDepthStencilControl                 = NORMAL,
+      .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */
+      .LineAntialiasingRegionWidth              = 1, /* 1.0 pixels */
+      .EarlyDepthStencilControl                 = EDSC_NORMAL,
       .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT,
       .PixelShaderComputedDepthMode             = wm_prog_data->computed_depth_mode,
       .BarycentricInterpolationMode             = wm_prog_data->barycentric_interp_modes);

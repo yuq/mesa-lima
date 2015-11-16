@@ -29,6 +29,8 @@
 
 #include "anv_private.h"
 
+#include "gen7_pack.h"
+
 static void
 gen7_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -283,7 +285,7 @@ emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
       }
    }
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SCISSOR_STATE_POINTERS,
+   anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_SCISSOR_STATE_POINTERS,
                   .ScissorRectPointer = scissor_state.offset);
 }
 

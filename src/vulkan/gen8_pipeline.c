@@ -29,6 +29,8 @@
 
 #include "anv_private.h"
 
+#include "gen8_pack.h"
+
 static void
 emit_vertex_input(struct anv_pipeline *pipeline,
                   const VkPipelineVertexInputStateCreateInfo *info)

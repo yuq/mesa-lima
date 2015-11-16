@@ -31,6 +31,8 @@
 #include "mesa/main/git_sha1.h"
 #include "util/strtod.h"
 
+#include "gen7_pack.h"
+
 struct anv_dispatch_table dtable;
 
 static void

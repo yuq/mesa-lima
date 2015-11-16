@@ -627,11 +627,6 @@ __gen_combine_address(struct anv_batch *batch, void *location,
    }
 }
 
-#include "gen7_pack.h"
-#include "gen75_pack.h"
-#undef GEN8_3DSTATE_MULTISAMPLE
-#include "gen8_pack.h"
-
 #define anv_batch_emit(batch, cmd, ...) do {                            \
       void *__dst = anv_batch_emit_dwords(batch, cmd ## _length);       \
       struct cmd __template = {                                         \
@@ -664,11 +659,11 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       VG(VALGRIND_CHECK_MEM_IS_DEFINED(dw, ARRAY_SIZE(dwords0) * 4));\
    } while (0)
 
-static const struct GEN7_MEMORY_OBJECT_CONTROL_STATE GEN7_MOCS = {
-   .GraphicsDataTypeGFDT                        = 0,
-   .LLCCacheabilityControlLLCCC                 = 0,
-   .L3CacheabilityControlL3CC                   = 1
-};
+#define GEN7_MOCS (struct GEN7_MEMORY_OBJECT_CONTROL_STATE) {  \
+   .GraphicsDataTypeGFDT                        = 0,           \
+   .LLCCacheabilityControlLLCCC                 = 0,           \
+   .L3CacheabilityControlL3CC                   = 1,           \
+}
 
 #define GEN8_MOCS {                                     \
       .MemoryTypeLLCeLLCCacheabilityControl = WB,       \
@@ -923,7 +918,7 @@ struct anv_cmd_state {
    struct anv_framebuffer *                     framebuffer;
    struct anv_render_pass *                     pass;
    struct anv_subpass *                         subpass;
-   uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
+   uint32_t                                     state_vf[2];
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set *                  descriptors[MAX_SETS];
    struct anv_push_constants *                  push_constants[VK_SHADER_STAGE_NUM];
@@ -1150,15 +1145,15 @@ struct anv_pipeline {
    uint32_t                                     cs_right_mask;
 
    struct {
-      uint32_t                                  sf[GEN7_3DSTATE_SF_length];
-      uint32_t                                  depth_stencil_state[GEN7_DEPTH_STENCIL_STATE_length];
+      uint32_t                                  sf[7];
+      uint32_t                                  depth_stencil_state[3];
    } gen7;
 
    struct {
-      uint32_t                                  sf[GEN8_3DSTATE_SF_length];
-      uint32_t                                  vf[GEN8_3DSTATE_VF_length];
-      uint32_t                                  raster[GEN8_3DSTATE_RASTER_length];
-      uint32_t                                  wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
+      uint32_t                                  sf[4];
+      uint32_t                                  vf[2];
+      uint32_t                                  raster[5];
+      uint32_t                                  wm_depth_stencil[3];
    } gen8;
 };
 

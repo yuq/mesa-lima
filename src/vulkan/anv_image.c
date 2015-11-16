@@ -29,6 +29,11 @@
 
 #include "anv_private.h"
 
+/* FIXME: We shouldn't be using the actual hardware enum values here.  They
+ * change across gens.  Once we get that fixed, this include needs to go.
+ */
+#include "gen8_pack.h"
+
 static const uint8_t anv_halign[] = {
     [4] = HALIGN4,
     [8] = HALIGN8,

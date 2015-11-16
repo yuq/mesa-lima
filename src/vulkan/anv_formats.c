@@ -24,6 +24,8 @@
 #include "anv_private.h"
 #include "brw_surface_formats.h"
 
+#include "gen7_pack.h"
+
 #define fmt(__vk_fmt, __hw_fmt, ...) \
    [__vk_fmt] = { \
       .vk_format = __vk_fmt, \

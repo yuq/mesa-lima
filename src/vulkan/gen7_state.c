@@ -29,6 +29,8 @@
 
 #include "anv_private.h"
 
+#include "gen7_pack.h"
+
 void
 gen7_fill_buffer_surface_state(void *state, const struct anv_format *format,
                                uint32_t offset, uint32_t range, uint32_t stride)
@@ -272,7 +274,7 @@ gen7_image_view_init(struct anv_image_view *iview,
       iview->color_rt_surface_state =
          gen7_alloc_surface_state(device, cmd_buffer);
 
-      surface_state.RenderCacheReadWriteMode = WriteOnlyCache;
+      surface_state.RenderCacheReadWriteMode = 0; /* Write only */
 
       /* For render target surfaces, the hardware interprets field MIPCount/LOD as
        * LOD. The Broadwell PRM says:

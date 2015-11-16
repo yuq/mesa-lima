@@ -29,6 +29,8 @@
 
 #include "anv_private.h"
 
+#include "gen8_pack.h"
+
 void
 gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
                                uint32_t offset, uint32_t range, uint32_t stride)

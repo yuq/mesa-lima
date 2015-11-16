@@ -29,6 +29,8 @@
 
 #include "anv_private.h"
 
+#include "gen8_pack.h"
+
 static void
 gen8_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -94,14 +96,14 @@ emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
          .YMaxViewPort = vp->originY + vp->height - 1,
       };
 
-      struct GEN7_CC_VIEWPORT cc_viewport = {
+      struct GEN8_CC_VIEWPORT cc_viewport = {
          .MinimumDepth = vp->minDepth,
          .MaximumDepth = vp->maxDepth
       };
 
       GEN8_SF_CLIP_VIEWPORT_pack(NULL, sf_clip_state.map + i * 64,
                                  &sf_clip_viewport);
-      GEN7_CC_VIEWPORT_pack(NULL, cc_state.map + i * 32, &cc_viewport);
+      GEN8_CC_VIEWPORT_pack(NULL, cc_state.map + i * 32, &cc_viewport);
    }
 
    anv_batch_emit(&cmd_buffer->batch,

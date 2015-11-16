@@ -29,6 +29,9 @@
 
 #include "anv_private.h"
 
+#include "gen7_pack.h"
+#include "gen8_pack.h"
+
 /** \file anv_batch_chain.c
  *
  * This file contains functions related to anv_cmd_buffer as a data
