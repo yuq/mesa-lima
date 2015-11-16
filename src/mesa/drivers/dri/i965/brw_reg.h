@@ -618,9 +618,6 @@ static inline struct brw_reg
 brw_imm_v(unsigned v)
 {
    struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_V);
-   imm.vstride = BRW_VERTICAL_STRIDE_0;
-   imm.width = BRW_WIDTH_8;
-   imm.hstride = BRW_HORIZONTAL_STRIDE_1;
    imm.ud = v;
    return imm;
 }
@@ -630,9 +627,6 @@ static inline struct brw_reg
 brw_imm_vf(unsigned v)
 {
    struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_VF);
-   imm.vstride = BRW_VERTICAL_STRIDE_0;
-   imm.width = BRW_WIDTH_4;
-   imm.hstride = BRW_HORIZONTAL_STRIDE_1;
    imm.ud = v;
    return imm;
 }
