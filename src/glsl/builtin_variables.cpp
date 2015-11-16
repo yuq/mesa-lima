@@ -327,6 +327,7 @@ per_vertex_accumulator::add_field(int slot, const glsl_type *type,
    this->fields[this->num_fields].centroid = 0;
    this->fields[this->num_fields].sample = 0;
    this->fields[this->num_fields].patch = 0;
+   this->fields[this->num_fields].precision = GLSL_PRECISION_NONE;
    this->num_fields++;
 }
 
