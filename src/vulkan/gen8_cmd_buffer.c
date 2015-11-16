@@ -64,6 +64,75 @@ gen8_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
+emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
+                    uint32_t count, const VkViewport *viewports)
+{
+   struct anv_state sf_clip_state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 64, 64);
+   struct anv_state cc_state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 8, 32);
+
+   for (uint32_t i = 0; i < count; i++) {
+      const VkViewport *vp = &viewports[i];
+
+      /* The gen7 state struct has just the matrix and guardband fields, the
+       * gen8 struct adds the min/max viewport fields. */
+      struct GEN8_SF_CLIP_VIEWPORT sf_clip_viewport = {
+         .ViewportMatrixElementm00 = vp->width / 2,
+         .ViewportMatrixElementm11 = vp->height / 2,
+         .ViewportMatrixElementm22 = (vp->maxDepth - vp->minDepth) / 2,
+         .ViewportMatrixElementm30 = vp->originX + vp->width / 2,
+         .ViewportMatrixElementm31 = vp->originY + vp->height / 2,
+         .ViewportMatrixElementm32 = (vp->maxDepth + vp->minDepth) / 2,
+         .XMinClipGuardband = -1.0f,
+         .XMaxClipGuardband = 1.0f,
+         .YMinClipGuardband = -1.0f,
+         .YMaxClipGuardband = 1.0f,
+         .XMinViewPort = vp->originX,
+         .XMaxViewPort = vp->originX + vp->width - 1,
+         .YMinViewPort = vp->originY,
+         .YMaxViewPort = vp->originY + vp->height - 1,
+      };
+
+      struct GEN7_CC_VIEWPORT cc_viewport = {
+         .MinimumDepth = vp->minDepth,
+         .MaximumDepth = vp->maxDepth
+      };
+
+      GEN8_SF_CLIP_VIEWPORT_pack(NULL, sf_clip_state.map + i * 64,
+                                 &sf_clip_viewport);
+      GEN7_CC_VIEWPORT_pack(NULL, cc_state.map + i * 32, &cc_viewport);
+   }
+
+   anv_batch_emit(&cmd_buffer->batch,
+                  GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
+                  .CCViewportPointer = cc_state.offset);
+   anv_batch_emit(&cmd_buffer->batch,
+                  GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
+                  .SFClipViewportPointer = sf_clip_state.offset);
+}
+
+void
+gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
+{
+   if (cmd_buffer->state.dynamic.viewport.count > 0) {
+      emit_viewport_state(cmd_buffer, cmd_buffer->state.dynamic.viewport.count,
+                          cmd_buffer->state.dynamic.viewport.viewports);
+   } else {
+      /* If viewport count is 0, this is taken to mean "use the default" */
+      emit_viewport_state(cmd_buffer, 1,
+                          &(VkViewport) {
+                             .originX = 0.0f,
+                             .originY = 0.0f,
+                             .width = cmd_buffer->state.framebuffer->width,
+                             .height = cmd_buffer->state.framebuffer->height,
+                             .minDepth = 0.0f,
+                             .maxDepth = 1.0f,
+                          });
+   }
+}
+
+static void
 gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
@@ -116,16 +185,16 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (cmd_buffer->state.descriptors_dirty)
-      anv_flush_descriptor_sets(cmd_buffer);
+      gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
 
    if (cmd_buffer->state.push_constants_dirty)
       gen8_cmd_buffer_flush_push_constants(cmd_buffer);
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
-      anv_cmd_buffer_emit_viewport(cmd_buffer);
+      gen8_cmd_buffer_emit_viewport(cmd_buffer);
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_SCISSOR)
-      anv_cmd_buffer_emit_scissor(cmd_buffer);
+      gen7_cmd_buffer_emit_scissor(cmd_buffer);
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)) {

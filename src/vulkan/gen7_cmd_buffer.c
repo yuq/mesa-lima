@@ -148,6 +148,164 @@ gen7_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
                   .TextureCacheInvalidationEnable = true);
 }
 
+static VkResult
+flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, VkShaderStage stage)
+{
+   struct anv_state surfaces = { 0, }, samplers = { 0, };
+   VkResult result;
+
+   result = anv_cmd_buffer_emit_samplers(cmd_buffer, stage, &samplers);
+   if (result != VK_SUCCESS)
+      return result;
+   result = anv_cmd_buffer_emit_binding_table(cmd_buffer, stage, &surfaces);
+   if (result != VK_SUCCESS)
+      return result;
+
+   static const uint32_t sampler_state_opcodes[] = {
+      [VK_SHADER_STAGE_VERTEX]                  = 43,
+      [VK_SHADER_STAGE_TESS_CONTROL]            = 44, /* HS */
+      [VK_SHADER_STAGE_TESS_EVALUATION]         = 45, /* DS */
+      [VK_SHADER_STAGE_GEOMETRY]                = 46,
+      [VK_SHADER_STAGE_FRAGMENT]                = 47,
+      [VK_SHADER_STAGE_COMPUTE]                 = 0,
+   };
+
+   static const uint32_t binding_table_opcodes[] = {
+      [VK_SHADER_STAGE_VERTEX]                  = 38,
+      [VK_SHADER_STAGE_TESS_CONTROL]            = 39,
+      [VK_SHADER_STAGE_TESS_EVALUATION]         = 40,
+      [VK_SHADER_STAGE_GEOMETRY]                = 41,
+      [VK_SHADER_STAGE_FRAGMENT]                = 42,
+      [VK_SHADER_STAGE_COMPUTE]                 = 0,
+   };
+
+   if (samplers.alloc_size > 0) {
+      anv_batch_emit(&cmd_buffer->batch,
+                     GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS,
+                     ._3DCommandSubOpcode  = sampler_state_opcodes[stage],
+                     .PointertoVSSamplerState = samplers.offset);
+   }
+
+   if (surfaces.alloc_size > 0) {
+      anv_batch_emit(&cmd_buffer->batch,
+                     GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS,
+                     ._3DCommandSubOpcode  = binding_table_opcodes[stage],
+                     .PointertoVSBindingTable = surfaces.offset);
+   }
+
+   return VK_SUCCESS;
+}
+
+void
+gen7_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
+{
+   VkShaderStage s;
+   VkShaderStageFlags dirty = cmd_buffer->state.descriptors_dirty &
+                              cmd_buffer->state.pipeline->active_stages;
+
+   VkResult result = VK_SUCCESS;
+   for_each_bit(s, dirty) {
+      result = flush_descriptor_set(cmd_buffer, s);
+      if (result != VK_SUCCESS)
+         break;
+   }
+
+   if (result != VK_SUCCESS) {
+      assert(result == VK_ERROR_OUT_OF_DEVICE_MEMORY);
+
+      result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
+      assert(result == VK_SUCCESS);
+
+      /* Re-emit state base addresses so we get the new surface state base
+       * address before we start emitting binding tables etc.
+       */
+      anv_cmd_buffer_emit_state_base_address(cmd_buffer);
+
+      /* Re-emit all active binding tables */
+      for_each_bit(s, cmd_buffer->state.pipeline->active_stages) {
+         result = flush_descriptor_set(cmd_buffer, s);
+
+         /* It had better succeed this time */
+         assert(result == VK_SUCCESS);
+      }
+   }
+
+   cmd_buffer->state.descriptors_dirty &= ~cmd_buffer->state.pipeline->active_stages;
+}
+
+static inline int64_t
+clamp_int64(int64_t x, int64_t min, int64_t max)
+{
+   if (x < min)
+      return min;
+   else if (x < max)
+      return x;
+   else
+      return max;
+}
+
+static void
+emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
+                   uint32_t count, const VkRect2D *scissors)
+{
+   struct anv_state scissor_state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 32, 32);
+
+   for (uint32_t i = 0; i < count; i++) {
+      const VkRect2D *s = &scissors[i];
+
+      /* Since xmax and ymax are inclusive, we have to have xmax < xmin or
+       * ymax < ymin for empty clips.  In case clip x, y, width height are all
+       * 0, the clamps below produce 0 for xmin, ymin, xmax, ymax, which isn't
+       * what we want. Just special case empty clips and produce a canonical
+       * empty clip. */
+      static const struct GEN7_SCISSOR_RECT empty_scissor = {
+         .ScissorRectangleYMin = 1,
+         .ScissorRectangleXMin = 1,
+         .ScissorRectangleYMax = 0,
+         .ScissorRectangleXMax = 0
+      };
+
+      const int max = 0xffff;
+      struct GEN7_SCISSOR_RECT scissor = {
+         /* Do this math using int64_t so overflow gets clamped correctly. */
+         .ScissorRectangleYMin = clamp_int64(s->offset.y, 0, max),
+         .ScissorRectangleXMin = clamp_int64(s->offset.x, 0, max),
+         .ScissorRectangleYMax = clamp_int64((uint64_t) s->offset.y + s->extent.height - 1, 0, max),
+         .ScissorRectangleXMax = clamp_int64((uint64_t) s->offset.x + s->extent.width - 1, 0, max)
+      };
+
+      if (s->extent.width <= 0 || s->extent.height <= 0) {
+         GEN7_SCISSOR_RECT_pack(NULL, scissor_state.map + i * 32,
+                                &empty_scissor);
+      } else {
+         GEN7_SCISSOR_RECT_pack(NULL, scissor_state.map + i * 32, &scissor);
+      }
+   }
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SCISSOR_STATE_POINTERS,
+                  .ScissorRectPointer = scissor_state.offset);
+}
+
+void
+gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
+{
+   if (cmd_buffer->state.dynamic.scissor.count > 0) {
+      emit_scissor_state(cmd_buffer, cmd_buffer->state.dynamic.scissor.count,
+                         cmd_buffer->state.dynamic.scissor.scissors);
+   } else {
+      /* Emit a default scissor based on the currently bound framebuffer */
+      emit_scissor_state(cmd_buffer, 1,
+                         &(VkRect2D) {
+                            .offset = { .x = 0, .y = 0, },
+                            .extent = {
+                               .width = cmd_buffer->state.framebuffer->width,
+                               .height = cmd_buffer->state.framebuffer->height,
+                            },
+                         });
+   }
+}
+
 static const uint32_t vk_to_gen_index_type[] = {
    [VK_INDEX_TYPE_UINT16]                       = INDEX_WORD,
    [VK_INDEX_TYPE_UINT32]                       = INDEX_DWORD,
@@ -306,16 +464,20 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (cmd_buffer->state.descriptors_dirty)
-      anv_flush_descriptor_sets(cmd_buffer);
+      gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
 
    if (cmd_buffer->state.push_constants_dirty)
       gen7_cmd_buffer_flush_push_constants(cmd_buffer);
 
+   /* We use the gen8 state here because it only contains the additional
+    * min/max fields and, since they occur at the end of the packet and
+    * don't change the stride, they work on gen7 too.
+    */
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
-      anv_cmd_buffer_emit_viewport(cmd_buffer);
+      gen8_cmd_buffer_emit_viewport(cmd_buffer);
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_SCISSOR)
-      anv_cmd_buffer_emit_scissor(cmd_buffer);
+      gen7_cmd_buffer_emit_scissor(cmd_buffer);
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH |

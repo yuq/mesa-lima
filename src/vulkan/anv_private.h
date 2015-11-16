@@ -1022,7 +1022,7 @@ VkResult anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                            unsigned stage, struct anv_state *bt_state);
 VkResult anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
                                       unsigned stage, struct anv_state *state);
-void anv_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer);
+void gen7_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_state anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
                                              uint32_t *a, uint32_t dwords,
@@ -1047,8 +1047,8 @@ anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
 VkResult
 anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer);
 
-void anv_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer);
-void anv_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer);
+void gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer);
+void gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer);
 
 void gen7_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 void gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
