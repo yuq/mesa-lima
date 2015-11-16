@@ -47,6 +47,7 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct fd4_emit *emit)
 {
 	const struct pipe_draw_info *info = emit->info;
+	enum pc_di_primtype primtype = ctx->primtypes[info->mode];
 
 	if (!(fd4_emit_get_vp(emit) && fd4_emit_get_fp(emit)))
 		return;
@@ -64,7 +65,14 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_RING(ring, info->primitive_restart ? /* PC_RESTART_INDEX */
 			info->restart_index : 0xffffffff);
 
+	/* points + psize -> spritelist: */
+	if (ctx->rasterizer->point_size_per_vertex &&
+			fd4_emit_get_vp(emit)->writes_psize &&
+			(info->mode == PIPE_PRIM_POINTS))
+		primtype = DI_PT_POINTLIST_PSIZE;
+
 	fd4_draw_emit(ctx, ring,
+			primtype,
 			emit->key.binning_pass ? IGNORE_VISIBILITY : USE_VISIBILITY,
 			info);
 }
