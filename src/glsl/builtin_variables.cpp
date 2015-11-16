@@ -1187,6 +1187,7 @@ builtin_variable_generator::generate_varyings()
          var->data.centroid = fields[i].centroid;
          var->data.sample = fields[i].sample;
          var->data.patch = fields[i].patch;
+         var->data.precision = fields[i].precision;
          var->init_interface_type(per_vertex_out_type);
       }
    }
