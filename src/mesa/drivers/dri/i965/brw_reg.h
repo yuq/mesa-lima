@@ -622,6 +622,15 @@ brw_imm_v(unsigned v)
    return imm;
 }
 
+/** Construct vector of eight unsigned half-byte values */
+static inline struct brw_reg
+brw_imm_uv(unsigned uv)
+{
+   struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_UV);
+   imm.ud = uv;
+   return imm;
+}
+
 /** Construct vector of four 8-bit float values */
 static inline struct brw_reg
 brw_imm_vf(unsigned v)
