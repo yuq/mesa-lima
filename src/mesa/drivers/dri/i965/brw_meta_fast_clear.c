@@ -447,6 +447,13 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       if (brw->gen < 7)
          clear_type = REP_CLEAR;
 
+      /* Certain formats have unresolved issues with sampling from the MCS
+       * buffer on Gen9. This disables fast clears altogether for MSRTs until
+       * we can figure out what's going on.
+       */
+      if (brw->gen >= 9 && irb->mt->num_samples > 1)
+         clear_type = REP_CLEAR;
+
       if (irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_NO_MCS)
          clear_type = REP_CLEAR;
 
