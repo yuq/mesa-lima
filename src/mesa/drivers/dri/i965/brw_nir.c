@@ -171,11 +171,26 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
    }
 }
 
-#define _OPT(do_pass) (({     \
-   bool this_progress = true; \
-   do_pass                    \
-   nir_validate_shader(nir);  \
-   this_progress;             \
+static bool
+should_clone_nir()
+{
+   static int should_clone = -1;
+   if (should_clone < 1)
+      should_clone = brw_env_var_as_boolean("NIR_TEST_CLONE", false);
+
+   return should_clone;
+}
+
+#define _OPT(do_pass) (({                                            \
+   bool this_progress = true;                                        \
+   do_pass                                                           \
+   nir_validate_shader(nir);                                         \
+   if (should_clone_nir()) {                                         \
+      nir_shader *clone = nir_shader_clone(ralloc_parent(nir), nir); \
+      ralloc_free(nir);                                              \
+      nir = clone;                                                   \
+   }                                                                 \
+   this_progress;                                                    \
 }))
 
 #define OPT(pass, ...) _OPT(                   \
@@ -191,7 +206,7 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
    pass(nir, ##__VA_ARGS__);   \
 )
 
-static void
+static nir_shader *
 nir_optimize(nir_shader *nir, bool is_scalar)
 {
    bool progress;
@@ -219,6 +234,8 @@ nir_optimize(nir_shader *nir, bool is_scalar)
       OPT(nir_opt_remove_phis);
       OPT(nir_opt_undef);
    } while (progress);
+
+   return nir;
 }
 
 nir_shader *
@@ -260,13 +277,13 @@ brw_create_nir(struct brw_context *brw,
 
    OPT(nir_split_var_copies);
 
-   nir_optimize(nir, is_scalar);
+   nir = nir_optimize(nir, is_scalar);
 
    /* Lower a bunch of stuff */
    OPT_V(nir_lower_var_copies);
 
    /* Get rid of split copies */
-   nir_optimize(nir, is_scalar);
+   nir = nir_optimize(nir, is_scalar);
 
    OPT_V(brw_nir_lower_inputs, devinfo, is_scalar);
    OPT_V(brw_nir_lower_outputs, is_scalar);
@@ -287,7 +304,7 @@ brw_create_nir(struct brw_context *brw,
       OPT_V(nir_lower_atomics, shader_prog);
    }
 
-   nir_optimize(nir, is_scalar);
+   nir = nir_optimize(nir, is_scalar);
 
    if (brw->gen >= 6) {
       /* Try and fuse multiply-adds */
