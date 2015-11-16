@@ -163,7 +163,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	perpatch_output_offset = output_patch0_offset + pervertex_output_patch_size;
 
 	lds_size = output_patch0_offset + output_patch_size * *num_patches;
-	ls_rsrc2 = ls->current->ls_rsrc2;
+	ls_rsrc2 = ls->current->rsrc2;
 
 	if (sctx->b.chip_class >= CIK) {
 		assert(lds_size <= 65536);
@@ -178,7 +178,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	if (sctx->b.chip_class == CIK && sctx->b.family != CHIP_HAWAII)
 		radeon_set_sh_reg(cs, R_00B52C_SPI_SHADER_PGM_RSRC2_LS, ls_rsrc2);
 	radeon_set_sh_reg_seq(cs, R_00B528_SPI_SHADER_PGM_RSRC1_LS, 2);
-	radeon_emit(cs, ls->current->ls_rsrc1);
+	radeon_emit(cs, ls->current->rsrc1);
 	radeon_emit(cs, ls_rsrc2);
 
 	/* Compute userdata SGPRs. */
