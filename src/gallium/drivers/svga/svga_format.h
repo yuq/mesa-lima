@@ -93,4 +93,8 @@ SVGA3dSurfaceFormat
 svga_typeless_format(SVGA3dSurfaceFormat format);
 
 
+SVGA3dSurfaceFormat
+svga_sampler_format(SVGA3dSurfaceFormat format);
+
+
 #endif /* SVGA_FORMAT_H_ */

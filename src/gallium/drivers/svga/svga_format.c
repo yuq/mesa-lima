@@ -2098,3 +2098,26 @@ svga_typeless_format(SVGA3dSurfaceFormat format)
       return format;
    }
 }
+
+
+/**
+ * Given a surface format, return the corresponding format to use for
+ * a texture sampler.  In most cases, it's the format unchanged, but there
+ * are some special cases.
+ */
+SVGA3dSurfaceFormat
+svga_sampler_format(SVGA3dSurfaceFormat format)
+{
+   switch (format) {
+   case SVGA3D_D16_UNORM:
+      return SVGA3D_R16_UNORM;
+   case SVGA3D_D24_UNORM_S8_UINT:
+      return SVGA3D_R24_UNORM_X8_TYPELESS;
+   case SVGA3D_D32_FLOAT:
+      return SVGA3D_R32_FLOAT;
+   case SVGA3D_D32_FLOAT_S8X24_UINT:
+      return SVGA3D_R32_FLOAT_X8X24_TYPELESS;
+   default:
+      return format;
+   }
+}

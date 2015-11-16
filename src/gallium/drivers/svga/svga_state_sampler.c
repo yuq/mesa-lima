@@ -108,6 +108,9 @@ svga_validate_pipe_sampler_view(struct svga_context *svga,
                                      PIPE_BIND_SAMPLER_VIEW);
       assert(format != SVGA3D_FORMAT_INVALID);
 
+      /* Convert the format to a sampler-friendly format, if needed */
+      format = svga_sampler_format(format);
+
       if (texture->target == PIPE_BUFFER) {
          viewDesc.buffer.firstElement = sv->base.u.buf.first_element;
          viewDesc.buffer.numElements = (sv->base.u.buf.last_element -
