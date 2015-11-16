@@ -166,7 +166,9 @@ struct ir3_shader_variant {
 	} outputs[16 + 2];  /* +POSITION +PSIZE */
 	bool writes_pos, writes_psize;
 
-	/* vertices/inputs: */
+	/* attributes (VS) / varyings (FS):
+	 * Note that sysval's should come *after* normal inputs.
+	 */
 	unsigned inputs_count;
 	struct {
 		uint8_t slot;
@@ -229,7 +231,7 @@ struct ir3_shader {
 
 	struct ir3_compiler *compiler;
 
-	struct pipe_context *pctx;
+	struct pipe_context *pctx;    /* TODO replace w/ pipe_screen */
 	const struct tgsi_token *tokens;
 	struct pipe_stream_output_info stream_output;
 
