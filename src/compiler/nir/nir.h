@@ -345,6 +345,9 @@ typedef struct nir_register {
    unsigned num_components; /** < number of vector components */
    unsigned num_array_elems; /** < size of array (0 for no array) */
 
+   /* The bit-size of each channel; must be one of 8, 16, 32, or 64 */
+   uint8_t bit_size;
+
    /** generic register index. */
    unsigned index;
 
@@ -452,6 +455,9 @@ typedef struct nir_ssa_def {
    struct list_head if_uses;
 
    uint8_t num_components;
+
+   /* The bit-size of each channel; must be one of 8, 16, 32, or 64 */
+   uint8_t bit_size;
 } nir_ssa_def;
 
 struct nir_src;

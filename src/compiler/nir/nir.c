@@ -70,6 +70,7 @@ reg_create(void *mem_ctx, struct exec_list *list)
    list_inithead(&reg->if_uses);
 
    reg->num_components = 0;
+   reg->bit_size = 32;
    reg->num_array_elems = 0;
    reg->is_packed = false;
    reg->name = NULL;
@@ -1325,6 +1326,7 @@ nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
    list_inithead(&def->uses);
    list_inithead(&def->if_uses);
    def->num_components = num_components;
+   def->bit_size = 32; /* FIXME: Add an input paremeter or guess? */
 
    if (instr->block) {
       nir_function_impl *impl =
