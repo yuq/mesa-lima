@@ -167,6 +167,10 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
       shader_prog->TransformFeedback.NumVarying > 0;
 
    switch (stage) {
+   case MESA_SHADER_TESS_CTRL:
+      shader->info.tcs.vertices_out = shader_prog->TessCtrl.VerticesOut;
+      break;
+
    case MESA_SHADER_GEOMETRY:
       shader->info.gs.vertices_in = shader_prog->Geom.VerticesIn;
       shader->info.gs.output_primitive = sh->Geom.OutputType;

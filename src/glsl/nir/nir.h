@@ -1544,6 +1544,11 @@ typedef struct nir_shader_info {
       struct {
          unsigned local_size[3];
       } cs;
+
+      struct {
+         /** The number of vertices in the TCS output patch. */
+         unsigned vertices_out;
+      } tcs;
    };
 } nir_shader_info;
 
