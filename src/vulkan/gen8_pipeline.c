@@ -83,12 +83,6 @@ emit_ia_state(struct anv_pipeline *pipeline,
               const VkPipelineInputAssemblyStateCreateInfo *info,
               const struct anv_graphics_pipeline_create_info *extra)
 {
-   struct GEN8_3DSTATE_VF vf = {
-      GEN8_3DSTATE_VF_header,
-      .IndexedDrawCutIndexEnable = pipeline->primitive_restart
-   };
-   GEN8_3DSTATE_VF_pack(NULL, pipeline->gen8.vf, &vf);
-
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF_TOPOLOGY,
                   .PrimitiveTopologyType = pipeline->topology);
 }

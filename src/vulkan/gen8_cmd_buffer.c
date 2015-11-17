@@ -283,8 +283,10 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_INDEX_BUFFER)) {
-      anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->state.state_vf, pipeline->gen8.vf);
+      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VF,
+         .IndexedDrawCutIndexEnable = pipeline->primitive_restart,
+         .CutIndex = cmd_buffer->state.restart_index,
+      );
    }
 
    cmd_buffer->state.vb_dirty &= ~vb_emit;
@@ -396,19 +398,20 @@ void gen8_CmdBindIndexBuffer(
       [VK_INDEX_TYPE_UINT32]                    = INDEX_DWORD,
    };
 
-   struct GEN8_3DSTATE_VF vf = {
-      GEN8_3DSTATE_VF_header,
-      .CutIndex = (indexType == VK_INDEX_TYPE_UINT16) ? UINT16_MAX : UINT32_MAX,
+   static const uint32_t restart_index_for_type[] = {
+      [VK_INDEX_TYPE_UINT16]                    = UINT16_MAX,
+      [VK_INDEX_TYPE_UINT32]                    = UINT32_MAX,
    };
-   GEN8_3DSTATE_VF_pack(NULL, cmd_buffer->state.state_vf, &vf);
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
+   cmd_buffer->state.restart_index = restart_index_for_type[indexType];
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_INDEX_BUFFER,
                   .IndexFormat = vk_to_gen_index_type[indexType],
                   .MemoryObjectControlState = GEN8_MOCS,
                   .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
                   .BufferSize = buffer->size - offset);
+
+   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
 }
 
 static VkResult

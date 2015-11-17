@@ -918,7 +918,7 @@ struct anv_cmd_state {
    struct anv_framebuffer *                     framebuffer;
    struct anv_render_pass *                     pass;
    struct anv_subpass *                         subpass;
-   uint32_t                                     state_vf[2];
+   uint32_t                                     restart_index;
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set *                  descriptors[MAX_SETS];
    struct anv_push_constants *                  push_constants[VK_SHADER_STAGE_NUM];
@@ -1151,7 +1151,6 @@ struct anv_pipeline {
 
    struct {
       uint32_t                                  sf[4];
-      uint32_t                                  vf[2];
       uint32_t                                  raster[5];
       uint32_t                                  wm_depth_stencil[3];
    } gen8;

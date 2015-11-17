@@ -113,7 +113,6 @@ anv_dynamic_state_copy(struct anv_dynamic_state *dest,
 static void
 anv_cmd_state_init(struct anv_cmd_state *state)
 {
-   memset(&state->state_vf, 0, sizeof(state->state_vf));
    memset(&state->descriptors, 0, sizeof(state->descriptors));
    memset(&state->push_constants, 0, sizeof(state->push_constants));
 
@@ -122,6 +121,7 @@ anv_cmd_state_init(struct anv_cmd_state *state)
    state->descriptors_dirty = 0;
    state->push_constants_dirty = 0;
    state->pipeline = NULL;
+   state->restart_index = UINT32_MAX;
    state->dynamic = default_dynamic_state;
 
    state->gen7.index_buffer = NULL;
