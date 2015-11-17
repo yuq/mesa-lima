@@ -274,6 +274,16 @@ static struct fd4_format formats[PIPE_FORMAT_COUNT] = {
 	_T(DXT3_SRGBA, DXT3, NONE, WZYX),
 	_T(DXT5_RGBA,  DXT5, NONE, WZYX),
 	_T(DXT5_SRGBA, DXT5, NONE, WZYX),
+
+	/* faked */
+	_T(RGTC1_UNORM, 8_8_8_8_UNORM, NONE, WZYX),
+	_T(RGTC1_SNORM, 8_8_8_8_SNORM, NONE, WZYX),
+	_T(RGTC2_UNORM, 8_8_8_8_UNORM, NONE, WZYX),
+	_T(RGTC2_SNORM, 8_8_8_8_SNORM, NONE, WZYX),
+	_T(LATC1_UNORM, 8_8_8_8_UNORM, NONE, WZYX),
+	_T(LATC1_SNORM, 8_8_8_8_SNORM, NONE, WZYX),
+	_T(LATC2_UNORM, 8_8_8_8_UNORM, NONE, WZYX),
+	_T(LATC2_SNORM, 8_8_8_8_SNORM, NONE, WZYX),
 };
 
 /* convert pipe format to vertex buffer format: */
@@ -316,6 +326,8 @@ fd4_pipe2fetchsize(enum pipe_format format)
 {
 	if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
 		format = PIPE_FORMAT_Z32_FLOAT;
+	else if (util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_RGTC)
+		format = PIPE_FORMAT_R8G8B8A8_UNORM;
 
 	switch (util_format_get_blocksizebits(format) / util_format_get_blockwidth(format)) {
 	case 8:   return TFETCH4_1_BYTE;
@@ -329,6 +341,14 @@ fd4_pipe2fetchsize(enum pipe_format format)
 				util_format_get_blocksizebits(format));
 		return TFETCH4_1_BYTE;
 	}
+}
+
+unsigned
+fd4_pipe2nblocksx(enum pipe_format format, unsigned width)
+{
+	if (util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_RGTC)
+		format = PIPE_FORMAT_R8G8B8A8_UNORM;
+	return util_format_get_nblocksx(format, width);
 }
 
 /* we need to special case a bit the depth/stencil restore, because we are
