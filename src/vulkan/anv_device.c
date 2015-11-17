@@ -83,8 +83,9 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
-   if (device->info->gen == 7 &&
-       !device->info->is_haswell && !device->info->is_baytrail) {
+   if (device->info->is_haswell) {
+      fprintf(stderr, "WARNING: Haswell Vulkan support is incomplete\n");
+   } else if (device->info->gen == 7 && !device->info->is_baytrail) {
       fprintf(stderr, "WARNING: Ivy Bridge Vulkan support is incomplete\n");
    } else if (device->info->gen == 8 && !device->info->is_cherryview) {
       /* Briadwell is as fully supported as anything */
@@ -1439,7 +1440,10 @@ anv_fill_buffer_surface_state(struct anv_device *device, void *state,
 {
    switch (device->info.gen) {
    case 7:
-      gen7_fill_buffer_surface_state(state, format, offset, range, stride);
+      if (device->info.is_haswell)
+         gen75_fill_buffer_surface_state(state, format, offset, range, stride);
+      else
+         gen7_fill_buffer_surface_state(state, format, offset, range, stride);
       break;
    case 8:
       gen8_fill_buffer_surface_state(state, format, offset, range, stride);

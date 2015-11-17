@@ -30,29 +30,37 @@
 #include "anv_private.h"
 
 #include "gen7_pack.h"
+#include "gen75_pack.h"
 
-void
-gen7_fill_buffer_surface_state(void *state, const struct anv_format *format,
-                               uint32_t offset, uint32_t range, uint32_t stride)
+GENX_FUNC(GEN7, GEN75) void
+genX(fill_buffer_surface_state)(void *state, const struct anv_format *format,
+                                uint32_t offset, uint32_t range,
+                                uint32_t stride)
 {
    uint32_t num_elements = range / stride;
 
-   struct GEN7_RENDER_SURFACE_STATE surface_state = {
+   struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType                              = SURFTYPE_BUFFER,
       .SurfaceFormat                            = format->surface_format,
       .SurfaceVerticalAlignment                 = VALIGN_4,
       .SurfaceHorizontalAlignment               = HALIGN_4,
       .TiledSurface                             = false,
       .RenderCacheReadWriteMode                 = false,
-      .SurfaceObjectControlState                = GEN7_MOCS,
+      .SurfaceObjectControlState                = GENX(MOCS),
       .Height                                   = (num_elements >> 7) & 0x3fff,
       .Width                                    = num_elements & 0x7f,
       .Depth                                    = (num_elements >> 21) & 0x3f,
       .SurfacePitch                             = stride - 1,
+#  if (ANV_IS_HASWELL)
+      .ShaderChannelSelectR                     = SCS_RED,
+      .ShaderChannelSelectG                     = SCS_GREEN,
+      .ShaderChannelSelectB                     = SCS_BLUE,
+      .ShaderChannelSelectA                     = SCS_ALPHA,
+#  endif
       .SurfaceBaseAddress                       = { NULL, offset },
    };
 
-   GEN7_RENDER_SURFACE_STATE_pack(NULL, state, &surface_state);
+   GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &surface_state);
 }
 
 static const uint32_t vk_to_gen_tex_filter[] = {
@@ -86,8 +94,8 @@ static const uint32_t vk_to_gen_compare_op[] = {
 };
 
 static struct anv_state
-gen7_alloc_surface_state(struct anv_device *device,
-                         struct anv_cmd_buffer *cmd_buffer)
+alloc_surface_state(struct anv_device *device,
+                    struct anv_cmd_buffer *cmd_buffer)
 {
       if (cmd_buffer) {
          return anv_cmd_buffer_alloc_surface_state(cmd_buffer);
@@ -96,7 +104,7 @@ gen7_alloc_surface_state(struct anv_device *device,
       }
 }
 
-VkResult gen7_CreateSampler(
+VkResult genX(CreateSampler)(
     VkDevice                                    _device,
     const VkSamplerCreateInfo*                  pCreateInfo,
     VkSampler*                                  pSampler)
@@ -174,11 +182,20 @@ static const uint8_t anv_valign[] = {
     [4] = VALIGN_4,
 };
 
-void
-gen7_image_view_init(struct anv_image_view *iview,
-                     struct anv_device *device,
-                     const VkImageViewCreateInfo* pCreateInfo,
-                     struct anv_cmd_buffer *cmd_buffer)
+static const uint32_t vk_to_gen_swizzle[] = {
+   [VK_CHANNEL_SWIZZLE_ZERO]                 = SCS_ZERO,
+   [VK_CHANNEL_SWIZZLE_ONE]                  = SCS_ONE,
+   [VK_CHANNEL_SWIZZLE_R]                    = SCS_RED,
+   [VK_CHANNEL_SWIZZLE_G]                    = SCS_GREEN,
+   [VK_CHANNEL_SWIZZLE_B]                    = SCS_BLUE,
+   [VK_CHANNEL_SWIZZLE_A]                    = SCS_ALPHA
+};
+
+GENX_FUNC(GEN7, GEN75) void
+genX(image_view_init)(struct anv_image_view *iview,
+                      struct anv_device *device,
+                      const VkImageViewCreateInfo* pCreateInfo,
+                      struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
 
@@ -211,7 +228,7 @@ gen7_image_view_init(struct anv_image_view *iview,
       depth = image->extent.depth;
    }
 
-   struct GEN7_RENDER_SURFACE_STATE surface_state = {
+   struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = image->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format->surface_format,
@@ -239,23 +256,29 @@ gen7_image_view_init(struct anv_image_view *iview,
       .XOffset = 0,
       .YOffset = 0,
 
-      .SurfaceObjectControlState = GEN7_MOCS,
+      .SurfaceObjectControlState = GENX(MOCS),
 
       .MIPCountLOD = 0, /* TEMPLATE */
       .SurfaceMinLOD = 0, /* TEMPLATE */
 
       .MCSEnable = false,
+#  if (ANV_IS_HASWELL)
+      .ShaderChannelSelectR = vk_to_gen_swizzle[pCreateInfo->channels.r],
+      .ShaderChannelSelectG = vk_to_gen_swizzle[pCreateInfo->channels.g],
+      .ShaderChannelSelectB = vk_to_gen_swizzle[pCreateInfo->channels.b],
+      .ShaderChannelSelectA = vk_to_gen_swizzle[pCreateInfo->channels.a],
+#  else /* XXX: Seriously? */
       .RedClearColor = 0,
       .GreenClearColor = 0,
       .BlueClearColor = 0,
       .AlphaClearColor = 0,
+#  endif
       .ResourceMinLOD = 0.0,
       .SurfaceBaseAddress = { NULL, iview->offset },
    };
 
    if (image->needs_nonrt_surface_state) {
-      iview->nonrt_surface_state =
-         gen7_alloc_surface_state(device, cmd_buffer);
+      iview->nonrt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       surface_state.RenderCacheReadWriteMode = false;
 
@@ -266,13 +289,12 @@ gen7_image_view_init(struct anv_image_view *iview,
       surface_state.SurfaceMinLOD = range->baseMipLevel;
       surface_state.MIPCountLOD = range->mipLevels - 1;
 
-      GEN7_RENDER_SURFACE_STATE_pack(NULL, iview->nonrt_surface_state.map,
-                                     &surface_state);
+      GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->nonrt_surface_state.map,
+                                      &surface_state);
    }
 
    if (image->needs_color_rt_surface_state) {
-      iview->color_rt_surface_state =
-         gen7_alloc_surface_state(device, cmd_buffer);
+      iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       surface_state.RenderCacheReadWriteMode = 0; /* Write only */
 
@@ -285,7 +307,7 @@ gen7_image_view_init(struct anv_image_view *iview,
       surface_state.MIPCountLOD = range->baseMipLevel;
       surface_state.SurfaceMinLOD = 0;
 
-      GEN7_RENDER_SURFACE_STATE_pack(NULL, iview->color_rt_surface_state.map,
-                                     &surface_state);
+      GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->color_rt_surface_state.map,
+                                      &surface_state);
    }
 }

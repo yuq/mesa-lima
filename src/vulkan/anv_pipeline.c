@@ -1087,7 +1087,10 @@ anv_graphics_pipeline_create(
 
    switch (device->info.gen) {
    case 7:
-      return gen7_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
+      if (device->info.is_haswell)
+         return gen75_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
+      else
+         return gen7_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
    case 8:
       return gen8_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
    default:
@@ -1129,7 +1132,10 @@ static VkResult anv_compute_pipeline_create(
 
    switch (device->info.gen) {
    case 7:
-      return gen7_compute_pipeline_create(_device, pCreateInfo, pPipeline);
+      if (device->info.is_haswell)
+         return gen75_compute_pipeline_create(_device, pCreateInfo, pPipeline);
+      else
+         return gen7_compute_pipeline_create(_device, pCreateInfo, pPipeline);
    case 8:
       return gen8_compute_pipeline_create(_device, pCreateInfo, pPipeline);
    default:

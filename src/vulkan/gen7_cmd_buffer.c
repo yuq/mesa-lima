@@ -30,9 +30,10 @@
 #include "anv_private.h"
 
 #include "gen7_pack.h"
+#include "gen75_pack.h"
 
 static void
-gen7_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
+cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
    static const uint32_t push_constant_opcodes[] = {
       [VK_SHADER_STAGE_VERTEX]                  = 21,
@@ -65,9 +66,8 @@ gen7_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.push_constants_dirty &= ~flushed;
 }
 
-
-void
-gen7_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
+GENX_FUNC(GEN7, GEN7) void
+genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_device *device = cmd_buffer->device;
    struct anv_bo *scratch_bo = NULL;
@@ -198,8 +198,8 @@ flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, VkShaderStage stage)
    return VK_SUCCESS;
 }
 
-void
-gen7_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
+GENX_FUNC(GEN7, GEN7) void
+genX(cmd_buffer_flush_descriptor_sets)(struct anv_cmd_buffer *cmd_buffer)
 {
    VkShaderStage s;
    VkShaderStageFlags dirty = cmd_buffer->state.descriptors_dirty &
@@ -289,8 +289,8 @@ emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
                   .ScissorRectPointer = scissor_state.offset);
 }
 
-void
-gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
+GENX_FUNC(GEN7, GEN7) void
+genX(cmd_buffer_emit_scissor)(struct anv_cmd_buffer *cmd_buffer)
 {
    if (cmd_buffer->state.dynamic.scissor.count > 0) {
       emit_scissor_state(cmd_buffer, cmd_buffer->state.dynamic.scissor.count,
@@ -313,7 +313,12 @@ static const uint32_t vk_to_gen_index_type[] = {
    [VK_INDEX_TYPE_UINT32]                       = INDEX_DWORD,
 };
 
-void gen7_CmdBindIndexBuffer(
+static const uint32_t restart_index_for_type[] = {
+   [VK_INDEX_TYPE_UINT16]                    = UINT16_MAX,
+   [VK_INDEX_TYPE_UINT32]                    = UINT32_MAX,
+};
+
+void genX(CmdBindIndexBuffer)(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
@@ -323,13 +328,15 @@ void gen7_CmdBindIndexBuffer(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
+   if (ANV_IS_HASWELL)
+      cmd_buffer->state.restart_index = restart_index_for_type[indexType];
    cmd_buffer->state.gen7.index_buffer = buffer;
    cmd_buffer->state.gen7.index_type = vk_to_gen_index_type[indexType];
    cmd_buffer->state.gen7.index_offset = offset;
 }
 
 static VkResult
-gen7_flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
+flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_device *device = cmd_buffer->device;
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
@@ -366,7 +373,7 @@ gen7_flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
-gen7_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
+cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    VkResult result;
@@ -385,7 +392,7 @@ gen7_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
    if ((cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
        (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)) {
       /* FIXME: figure out descriptors for gen7 */
-      result = gen7_flush_compute_descriptor_set(cmd_buffer);
+      result = flush_compute_descriptor_set(cmd_buffer);
       assert(result == VK_SUCCESS);
       cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE;
    }
@@ -394,7 +401,7 @@ gen7_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
-gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
+cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
    uint32_t *p;
@@ -469,7 +476,7 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
 
    if (cmd_buffer->state.push_constants_dirty)
-      gen7_cmd_buffer_flush_push_constants(cmd_buffer);
+      cmd_buffer_flush_push_constants(cmd_buffer);
 
    /* We use the gen8 state here because it only contains the additional
     * min/max fields and, since they occur at the end of the packet and
@@ -564,6 +571,12 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       struct anv_buffer *buffer = cmd_buffer->state.gen7.index_buffer;
       uint32_t offset = cmd_buffer->state.gen7.index_offset;
 
+      if (ANV_IS_HASWELL) {
+         anv_batch_emit(&cmd_buffer->batch, GEN75_3DSTATE_VF,
+                        .IndexedDrawCutIndexEnable = pipeline->primitive_restart,
+                        .CutIndex = cmd_buffer->state.restart_index);
+      }
+
       anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_INDEX_BUFFER,
                      .CutIndexEnable = pipeline->primitive_restart,
                      .IndexFormat = cmd_buffer->state.gen7.index_type,
@@ -576,7 +589,7 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.dirty = 0;
 }
 
-void gen7_CmdDraw(
+void genX(CmdDraw)(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    vertexCount,
     uint32_t                                    instanceCount,
@@ -586,7 +599,7 @@ void gen7_CmdDraw(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
 
-   gen7_cmd_buffer_flush_state(cmd_buffer);
+   cmd_buffer_flush_state(cmd_buffer);
 
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DPRIMITIVE,
                   .VertexAccessType = SEQUENTIAL,
@@ -598,7 +611,7 @@ void gen7_CmdDraw(
                   .BaseVertexLocation = 0);
 }
 
-void gen7_CmdDrawIndexed(
+void genX(CmdDrawIndexed)(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    indexCount,
     uint32_t                                    instanceCount,
@@ -609,7 +622,7 @@ void gen7_CmdDrawIndexed(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
 
-   gen7_cmd_buffer_flush_state(cmd_buffer);
+   cmd_buffer_flush_state(cmd_buffer);
 
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DPRIMITIVE,
                   .VertexAccessType = RANDOM,
@@ -646,7 +659,7 @@ gen7_batch_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
 #define GEN7_3DPRIM_START_INSTANCE      0x243C
 #define GEN7_3DPRIM_BASE_VERTEX         0x2440
 
-void gen7_CmdDrawIndirect(
+void genX(CmdDrawIndirect)(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
@@ -659,7 +672,7 @@ void gen7_CmdDrawIndirect(
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
-   gen7_cmd_buffer_flush_state(cmd_buffer);
+   cmd_buffer_flush_state(cmd_buffer);
 
    gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
    gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
@@ -673,7 +686,7 @@ void gen7_CmdDrawIndirect(
                   .PrimitiveTopologyType = pipeline->topology);
 }
 
-void gen7_CmdDrawIndexedIndirect(
+void genX(CmdDrawIndexedIndirect)(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
@@ -686,7 +699,7 @@ void gen7_CmdDrawIndexedIndirect(
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
-   gen7_cmd_buffer_flush_state(cmd_buffer);
+   cmd_buffer_flush_state(cmd_buffer);
 
    gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
    gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
@@ -700,7 +713,7 @@ void gen7_CmdDrawIndexedIndirect(
                   .PrimitiveTopologyType = pipeline->topology);
 }
 
-void gen7_CmdDispatch(
+void genX(CmdDispatch)(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
@@ -710,7 +723,7 @@ void gen7_CmdDispatch(
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
 
-   gen7_cmd_buffer_flush_compute_state(cmd_buffer);
+   cmd_buffer_flush_compute_state(cmd_buffer);
 
    anv_batch_emit(&cmd_buffer->batch, GEN7_GPGPU_WALKER,
                   .SIMDSize = prog_data->simd_size / 16,
@@ -730,7 +743,7 @@ void gen7_CmdDispatch(
 #define GPGPU_DISPATCHDIMY 0x2504
 #define GPGPU_DISPATCHDIMZ 0x2508
 
-void gen7_CmdDispatchIndirect(
+void genX(CmdDispatchIndirect)(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset)
@@ -742,7 +755,7 @@ void gen7_CmdDispatchIndirect(
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
-   gen7_cmd_buffer_flush_compute_state(cmd_buffer);
+   cmd_buffer_flush_compute_state(cmd_buffer);
 
    gen7_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMX, bo, bo_offset);
    gen7_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
@@ -760,7 +773,7 @@ void gen7_CmdDispatchIndirect(
    anv_batch_emit(&cmd_buffer->batch, GEN7_MEDIA_STATE_FLUSH);
 }
 
-void gen7_CmdPipelineBarrier(
+void genX(CmdPipelineBarrier)(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        destStageMask,
@@ -772,7 +785,7 @@ void gen7_CmdPipelineBarrier(
 }
 
 static void
-gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
+cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_image_view *iview =
@@ -854,14 +867,14 @@ gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_CLEAR_PARAMS);
 }
 
-void
-gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
-                             struct anv_subpass *subpass)
+GENX_FUNC(GEN7, GEN7) void
+genX(cmd_buffer_begin_subpass)(struct anv_cmd_buffer *cmd_buffer,
+                               struct anv_subpass *subpass)
 {
    cmd_buffer->state.subpass = subpass;
    cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
 
-   gen7_cmd_buffer_emit_depth_stencil(cmd_buffer);
+   cmd_buffer_emit_depth_stencil(cmd_buffer);
 }
 
 static void
@@ -890,7 +903,7 @@ begin_render_pass(struct anv_cmd_buffer *cmd_buffer,
                                     pRenderPassBegin->pClearValues);
 }
 
-void gen7_CmdBeginRenderPass(
+void genX(CmdBeginRenderPass)(
     VkCmdBuffer                                 cmdBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
     VkRenderPassContents                        contents)
@@ -903,7 +916,7 @@ void gen7_CmdBeginRenderPass(
    gen7_cmd_buffer_begin_subpass(cmd_buffer, pass->subpasses);
 }
 
-void gen7_CmdNextSubpass(
+void genX(CmdNextSubpass)(
     VkCmdBuffer                                 cmdBuffer,
     VkRenderPassContents                        contents)
 {
@@ -914,7 +927,7 @@ void gen7_CmdNextSubpass(
    gen7_cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->state.subpass + 1);
 }
 
-void gen7_CmdEndRenderPass(
+void genX(CmdEndRenderPass)(
     VkCmdBuffer                                 cmdBuffer)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);

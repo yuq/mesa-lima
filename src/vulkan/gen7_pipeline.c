@@ -30,6 +30,7 @@
 #include "anv_private.h"
 
 #include "gen7_pack.h"
+#include "gen75_pack.h"
 
 static void
 gen7_emit_vertex_input(struct anv_pipeline *pipeline,
@@ -341,8 +342,8 @@ scratch_space(const struct brw_stage_prog_data *prog_data)
    return ffs(prog_data->total_scratch / 1024);
 }
 
-VkResult
-gen7_graphics_pipeline_create(
+GENX_FUNC(GEN7, GEN75) VkResult
+genX(graphics_pipeline_create)(
     VkDevice                                    _device,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
     const struct anv_graphics_pipeline_create_info *extra,
@@ -478,9 +479,9 @@ gen7_graphics_pipeline_create(
 #endif
 
    if (pipeline->vs_vec4 == NO_KERNEL || (extra && extra->disable_vs))
-      anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_VS, .VSFunctionEnable = false);
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), .VSFunctionEnable = false);
    else
-      anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_VS,
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS),
          .KernelStartPointer                    = pipeline->vs_vec4,
          .ScratchSpaceBaseOffset                = pipeline->scratch_start[VK_SHADER_STAGE_VERTEX],
          .PerThreadScratchSpace                 = scratch_space(&vue_prog_data->base),
@@ -497,12 +498,12 @@ gen7_graphics_pipeline_create(
    const struct brw_gs_prog_data *gs_prog_data = &pipeline->gs_prog_data;
 
    if (pipeline->gs_vec4 == NO_KERNEL || (extra && extra->disable_vs)) {
-      anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_GS, .GSEnable = false);
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), .GSEnable = false);
    } else {
       urb_offset = 1;
       urb_length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - urb_offset;
 
-      anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_GS,
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS),
          .KernelStartPointer                    = pipeline->gs_vec4,
          .ScratchSpaceBasePointer               = pipeline->scratch_start[VK_SHADER_STAGE_GEOMETRY],
          .PerThreadScratchSpace                 = scratch_space(&gs_prog_data->base.base),
@@ -521,7 +522,11 @@ gen7_graphics_pipeline_create(
          .DispatchMode                          = gs_prog_data->base.dispatch_mode,
          .GSStatisticsEnable                    = true,
          .IncludePrimitiveID                    = gs_prog_data->include_primitive_id,
+#     if (ANV_IS_HASWELL)
+         .ReorderMode                           = REORDER_TRAILING,
+#     else
          .ReorderEnable                         = true,
+#     endif
          .GSEnable                              = true);
    }
 
@@ -539,7 +544,7 @@ gen7_graphics_pipeline_create(
       .VertexURBEntryReadOffset                 = urb_offset,
       .PointSpriteTextureCoordinateOrigin       = UPPERLEFT);
 
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_PS,
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
       .KernelStartPointer0                      = pipeline->ps_ksp0,
       .ScratchSpaceBasePointer                  = pipeline->scratch_start[VK_SHADER_STAGE_FRAGMENT],
       .PerThreadScratchSpace                    = scratch_space(&wm_prog_data->base),
@@ -589,7 +594,8 @@ gen7_graphics_pipeline_create(
    return VK_SUCCESS;
 }
 
-VkResult gen7_compute_pipeline_create(
+GENX_FUNC(GEN7, GEN75) VkResult
+genX(compute_pipeline_create)(
     VkDevice                                    _device,
     const VkComputePipelineCreateInfo*          pCreateInfo,
     VkPipeline*                                 pPipeline)

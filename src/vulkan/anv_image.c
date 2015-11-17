@@ -565,7 +565,10 @@ anv_image_view_init(struct anv_image_view *iview,
 
    switch (device->info.gen) {
    case 7:
-      gen7_image_view_init(iview, device, pCreateInfo, cmd_buffer);
+      if (device->info.is_haswell)
+         gen75_image_view_init(iview, device, pCreateInfo, cmd_buffer);
+      else
+         gen7_image_view_init(iview, device, pCreateInfo, cmd_buffer);
       break;
    case 8:
       gen8_image_view_init(iview, device, pCreateInfo, cmd_buffer);

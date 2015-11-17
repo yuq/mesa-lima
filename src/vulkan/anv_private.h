@@ -677,6 +677,11 @@ __gen_combine_address(struct anv_batch *batch, void *location,
    .L3CacheabilityControlL3CC                   = 1,           \
 }
 
+#define GEN75_MOCS (struct GEN75_MEMORY_OBJECT_CONTROL_STATE) {  \
+   .LLCeLLCCacheabilityControlLLCCC             = 0,           \
+   .L3CacheabilityControlL3CC                   = 1,           \
+}
+
 #define GEN8_MOCS {                                     \
       .MemoryTypeLLCeLLCCacheabilityControl = WB,       \
       .TargetCache = L3DefertoPATforLLCeLLCselection,   \
@@ -1199,6 +1204,12 @@ gen7_graphics_pipeline_create(VkDevice _device,
                               VkPipeline *pPipeline);
 
 VkResult
+gen75_graphics_pipeline_create(VkDevice _device,
+                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                               const struct anv_graphics_pipeline_create_info *extra,
+                               VkPipeline *pPipeline);
+
+VkResult
 gen8_graphics_pipeline_create(VkDevice _device,
                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
                               const struct anv_graphics_pipeline_create_info *extra,
@@ -1207,6 +1218,10 @@ VkResult
 gen7_compute_pipeline_create(VkDevice _device,
                              const VkComputePipelineCreateInfo *pCreateInfo,
                              VkPipeline *pPipeline);
+VkResult
+gen75_compute_pipeline_create(VkDevice _device,
+                              const VkComputePipelineCreateInfo *pCreateInfo,
+                              VkPipeline *pPipeline);
 
 VkResult
 gen8_compute_pipeline_create(VkDevice _device,
@@ -1364,6 +1379,12 @@ gen7_image_view_init(struct anv_image_view *iview,
                      struct anv_cmd_buffer *cmd_buffer);
 
 void
+gen75_image_view_init(struct anv_image_view *iview,
+                      struct anv_device *device,
+                      const VkImageViewCreateInfo* pCreateInfo,
+                      struct anv_cmd_buffer *cmd_buffer);
+
+void
 gen8_image_view_init(struct anv_image_view *iview,
                      struct anv_device *device,
                      const VkImageViewCreateInfo* pCreateInfo,
@@ -1377,6 +1398,9 @@ void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
 void gen7_fill_buffer_surface_state(void *state, const struct anv_format *format,
                                     uint32_t offset, uint32_t range,
                                     uint32_t stride);
+void gen75_fill_buffer_surface_state(void *state, const struct anv_format *format,
+                                     uint32_t offset, uint32_t range,
+                                     uint32_t stride);
 void gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
                                     uint32_t offset, uint32_t range,
                                     uint32_t stride);

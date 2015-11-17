@@ -34,6 +34,12 @@ lib_LTLIBRARIES = libvulkan.la
 
 check_LTLIBRARIES = libvulkan-test.la
 
+PER_GEN_LIBS = \
+   libanv-gen7.la \
+   libanv-gen75.la
+
+noinst_LTLIBRARIES = $(PER_GEN_LIBS)
+
 # The gallium includes are for the util/u_math.h include from main/macros.h
 
 AM_CPPFLAGS = \
@@ -81,9 +87,6 @@ VULKAN_SOURCES =                                        \
 	gen8_state.c					\
 	gen8_cmd_buffer.c				\
 	gen8_pipeline.c					\
-	gen7_state.c					\
-	gen7_cmd_buffer.c				\
-	gen7_pipeline.c                                 \
 	isl.c                                           \
 	isl_format_layout.c
 
@@ -91,6 +94,18 @@ BUILT_SOURCES =                                         \
 	anv_entrypoints.h                               \
 	anv_entrypoints.c                               \
 	isl_format_layout.c
+
+libanv_gen7_la_SOURCES =                                \
+	gen7_cmd_buffer.c				\
+	gen7_pipeline.c                                 \
+	gen7_state.c
+libanv_gen7_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=70
+
+libanv_gen75_la_SOURCES =                               \
+	gen7_cmd_buffer.c				\
+	gen7_pipeline.c                                 \
+	gen7_state.c
+libanv_gen75_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=75
 
 if HAVE_EGL_PLATFORM_WAYLAND
 BUILT_SOURCES += \
@@ -131,7 +146,8 @@ libvulkan_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	../mesa/libmesa.la \
 	../mesa/drivers/dri/common/libdri_test_stubs.la \
-	-lpthread -ldl -lstdc++
+	-lpthread -ldl -lstdc++ \
+        $(PER_GEN_LIBS)
 
 # Libvulkan with dummy gem. Used for unit tests.
 
