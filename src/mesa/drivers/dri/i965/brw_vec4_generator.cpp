@@ -865,6 +865,46 @@ generate_tcs_output_urb_offsets(struct brw_codegen *p,
 }
 
 static void
+generate_tes_create_input_read_header(struct brw_codegen *p,
+                                      struct brw_reg dst)
+{
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+
+   /* Initialize the register to 0 */
+   brw_MOV(p, dst, brw_imm_ud(0));
+
+   /* Enable all the channels in m0.5 bits 15:8 */
+   brw_MOV(p, get_element_ud(dst, 5), brw_imm_ud(0xff00));
+
+   /* Copy g1.3 (the patch URB handle) to m0.0 and m0.1.  For safety,
+    * mask out irrelevant "Reserved" bits, as they're not marked MBZ.
+    */
+   brw_AND(p, vec2(get_element_ud(dst, 0)),
+           retype(brw_vec1_grf(1, 3), BRW_REGISTER_TYPE_UD),
+           brw_imm_ud(0x1fff));
+   brw_pop_insn_state(p);
+}
+
+static void
+generate_tes_add_indirect_urb_offset(struct brw_codegen *p,
+                                     struct brw_reg dst,
+                                     struct brw_reg header,
+                                     struct brw_reg offset)
+{
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+
+   brw_MOV(p, dst, header);
+   /* m0.3-0.4: 128-bit-granular offsets into the URB from the handles */
+   brw_MOV(p, vec2(get_element_ud(dst, 3)), stride(offset, 4, 1, 0));
+
+   brw_pop_insn_state(p);
+}
+
+static void
 generate_vec4_urb_read(struct brw_codegen *p,
                        vec4_instruction *inst,
                        struct brw_reg dst,
@@ -887,6 +927,15 @@ generate_vec4_urb_read(struct brw_codegen *p,
    brw_inst_set_urb_per_slot_offset(devinfo, send, 1);
 
    brw_inst_set_urb_global_offset(devinfo, send, inst->offset);
+}
+
+static void
+generate_tes_get_primitive_id(struct brw_codegen *p, struct brw_reg dst)
+{
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+   brw_MOV(p, dst, retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_D));
+   brw_pop_insn_state(p);
 }
 
 static void
@@ -1778,6 +1827,18 @@ generate_code(struct brw_codegen *p,
 
       case TCS_OPCODE_CREATE_BARRIER_HEADER:
          generate_tcs_create_barrier_header(p, prog_data, dst);
+         break;
+
+      case TES_OPCODE_CREATE_INPUT_READ_HEADER:
+         generate_tes_create_input_read_header(p, dst);
+         break;
+
+      case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:
+         generate_tes_add_indirect_urb_offset(p, dst, src[0], src[1]);
+         break;
+
+      case TES_OPCODE_GET_PRIMITIVE_ID:
+         generate_tes_get_primitive_id(p, dst);
          break;
 
       case SHADER_OPCODE_BARRIER:

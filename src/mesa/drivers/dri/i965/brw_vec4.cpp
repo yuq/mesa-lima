@@ -189,6 +189,7 @@ vec4_instruction::has_source_and_destination_hazard() const
    switch (opcode) {
    case TCS_OPCODE_SET_INPUT_URB_OFFSETS:
    case TCS_OPCODE_SET_OUTPUT_URB_OFFSETS:
+   case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:
       return true;
    default:
       return false;

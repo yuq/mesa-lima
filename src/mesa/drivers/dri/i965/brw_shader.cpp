@@ -26,6 +26,7 @@
 #include "brw_eu.h"
 #include "brw_fs.h"
 #include "brw_nir.h"
+#include "brw_vec4_tes.h"
 #include "glsl/glsl_parser_extras.h"
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
@@ -86,7 +87,8 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    compiler->scalar_stage[MESA_SHADER_VERTEX] =
       devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS);
    compiler->scalar_stage[MESA_SHADER_TESS_CTRL] = false;
-   compiler->scalar_stage[MESA_SHADER_TESS_EVAL] = true;
+   compiler->scalar_stage[MESA_SHADER_TESS_EVAL] =
+      devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_TES", true);
    compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
       devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", false);
    compiler->scalar_stage[MESA_SHADER_FRAGMENT] = true;
@@ -566,6 +568,12 @@ brw_instruction_name(enum opcode op)
       return "tcs_get_primitive_id";
    case TCS_OPCODE_CREATE_BARRIER_HEADER:
       return "tcs_create_barrier_header";
+   case TES_OPCODE_CREATE_INPUT_READ_HEADER:
+      return "tes_create_input_read_header";
+   case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:
+      return "tes_add_indirect_urb_offset";
+   case TES_OPCODE_GET_PRIMITIVE_ID:
+      return "tes_get_primitive_id";
    }
 
    unreachable("not reached");
@@ -1400,6 +1408,19 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
       return g.get_assembly(final_assembly_size);
    } else {
-      unreachable("XXX: vec4 tessellation evalation shaders not merged yet.");
+      brw::vec4_tes_visitor v(compiler, log_data, key, prog_data,
+			      nir, mem_ctx, shader_time_index);
+      if (!v.run()) {
+	 if (error_str)
+	    *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
+	 return NULL;
+      }
+
+      if (unlikely(INTEL_DEBUG & DEBUG_TES))
+	 v.dump_instructions();
+
+      return brw_vec4_generate_assembly(compiler, log_data, mem_ctx, nir,
+					&prog_data->base, v.cfg,
+					final_assembly_size);
    }
 }
