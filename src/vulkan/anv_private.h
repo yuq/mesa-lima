@@ -814,6 +814,9 @@ struct anv_descriptor_set_binding_layout {
 
       /* Index into the sampler table for the associated sampler */
       int16_t sampler_index;
+
+      /* Index into the image table for the associated image */
+      int16_t image_index;
    } stage[MESA_SHADER_STAGES];
 
    /* Immutable samplers (or NULL if no immutable samplers) */
@@ -894,6 +897,7 @@ struct anv_pipeline_layout {
       struct {
          uint32_t surface_start;
          uint32_t sampler_start;
+         uint32_t image_start;
       } stage[MESA_SHADER_STAGES];
    } set[MAX_SETS];
 
@@ -905,6 +909,7 @@ struct anv_pipeline_layout {
       struct anv_pipeline_binding *surface_to_descriptor;
       uint32_t sampler_count;
       struct anv_pipeline_binding *sampler_to_descriptor;
+      uint32_t image_count;
    } stage[MESA_SHADER_STAGES];
 
    struct anv_pipeline_binding entries[0];

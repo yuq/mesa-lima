@@ -79,6 +79,7 @@ VkResult anv_CreateDescriptorSetLayout(
 
    uint32_t sampler_count[MESA_SHADER_STAGES] = { 0, };
    uint32_t surface_count[MESA_SHADER_STAGES] = { 0, };
+   uint32_t image_count[MESA_SHADER_STAGES] = { 0, };
    uint32_t dynamic_offset_count = 0;
 
    for (uint32_t j = 0; j < pCreateInfo->bindingCount; j++) {
@@ -130,6 +131,13 @@ VkResult anv_CreateDescriptorSetLayout(
          break;
       default:
          break;
+      }
+
+      if (binding->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+         for_each_bit(s, binding->stageFlags) {
+            set_layout->binding[b].stage[s].image_index = image_count[s];
+            image_count[s] += binding->descriptorCount;
+         }
       }
 
       if (binding->pImmutableSamplers) {
@@ -199,6 +207,7 @@ VkResult anv_CreatePipelineLayout(
       for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++) {
          l.set[set].stage[s].surface_start = l.stage[s].surface_count;
          l.set[set].stage[s].sampler_start = l.stage[s].sampler_count;
+         l.set[set].stage[s].image_start = l.stage[s].image_count;
 
          for (uint32_t b = 0; b < set_layout->binding_count; b++) {
             unsigned array_size = set_layout->binding[b].array_size;
@@ -212,13 +221,19 @@ VkResult anv_CreatePipelineLayout(
 
             if (set_layout->binding[b].stage[s].sampler_index >= 0)
                l.stage[s].sampler_count += array_size;
+
+            if (set_layout->binding[b].stage[s].image_index >= 0)
+               l.stage[s].image_count += array_size;
          }
       }
    }
 
    unsigned num_bindings = 0;
-   for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++)
-      num_bindings += l.stage[s].surface_count + l.stage[s].sampler_count;
+   for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++) {
+      num_bindings += l.stage[s].surface_count +
+                      l.stage[s].sampler_count +
+                      l.stage[s].image_count;
+   }
 
    size_t size = sizeof(*layout) + num_bindings * sizeof(layout->entries[0]);
 
@@ -234,6 +249,7 @@ VkResult anv_CreatePipelineLayout(
       entry += l.stage[s].surface_count;
       l.stage[s].sampler_to_descriptor = entry;
       entry += l.stage[s].sampler_count;
+      entry += l.stage[s].image_count;
 
       int surface = 0;
       int sampler = 0;
