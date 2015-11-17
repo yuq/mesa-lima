@@ -678,6 +678,7 @@ brw_upload_programs(struct brw_context *brw,
 {
    if (pipeline == BRW_RENDER_PIPELINE) {
       brw_upload_vs_prog(brw);
+      brw_upload_tcs_prog(brw);
       brw_upload_tes_prog(brw);
 
       if (brw->gen < 6)

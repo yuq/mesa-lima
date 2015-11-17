@@ -85,6 +85,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 
    compiler->scalar_stage[MESA_SHADER_VERTEX] =
       devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS);
+   compiler->scalar_stage[MESA_SHADER_TESS_CTRL] = false;
    compiler->scalar_stage[MESA_SHADER_TESS_EVAL] = true;
    compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
       devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", false);
@@ -137,6 +138,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       compiler->glsl_compiler_options[i].LowerBufferInterfaceBlocks = true;
    }
 
+   compiler->glsl_compiler_options[MESA_SHADER_TESS_CTRL].EmitNoIndirectInput = false;
    compiler->glsl_compiler_options[MESA_SHADER_TESS_EVAL].EmitNoIndirectInput = false;
 
    if (compiler->scalar_stage[MESA_SHADER_GEOMETRY])
@@ -549,6 +551,21 @@ brw_instruction_name(enum opcode op)
       return "mulh";
    case SHADER_OPCODE_MOV_INDIRECT:
       return "mov_indirect";
+
+   case VEC4_OPCODE_URB_READ:
+      return "urb_read";
+   case TCS_OPCODE_GET_INSTANCE_ID:
+      return "tcs_get_instance_id";
+   case TCS_OPCODE_URB_WRITE:
+      return "tcs_urb_write";
+   case TCS_OPCODE_SET_INPUT_URB_OFFSETS:
+      return "tcs_set_input_urb_offsets";
+   case TCS_OPCODE_SET_OUTPUT_URB_OFFSETS:
+      return "tcs_set_output_urb_offsets";
+   case TCS_OPCODE_GET_PRIMITIVE_ID:
+      return "tcs_get_primitive_id";
+   case TCS_OPCODE_CREATE_BARRIER_HEADER:
+      return "tcs_create_barrier_header";
    }
 
    unreachable("not reached");

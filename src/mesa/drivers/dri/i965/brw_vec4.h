@@ -342,6 +342,7 @@ public:
                        unsigned num_components = 4);
    src_reg get_nir_src(nir_src src,
                        unsigned num_components = 4);
+   src_reg get_indirect_offset(nir_intrinsic_instr *instr);
 
    virtual dst_reg *make_reg_for_system_value(int location,
                                               const glsl_type *type) = 0;

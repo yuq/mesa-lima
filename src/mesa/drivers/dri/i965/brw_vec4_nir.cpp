@@ -327,6 +327,24 @@ vec4_visitor::get_nir_src(nir_src src, unsigned num_components)
    return get_nir_src(src, nir_type_int, num_components);
 }
 
+src_reg
+vec4_visitor::get_indirect_offset(nir_intrinsic_instr *instr)
+{
+   nir_src *offset_src = nir_get_io_offset_src(instr);
+   nir_const_value *const_value = nir_src_as_const_value(*offset_src);
+
+   if (const_value) {
+      /* The only constant offset we should find is 0.  brw_nir.c's
+       * add_const_offset_to_base() will fold other constant offsets
+       * into instr->const_index[0].
+       */
+      assert(const_value->u[0] == 0);
+      return src_reg();
+   }
+
+   return get_nir_src(*offset_src, BRW_REGISTER_TYPE_UD, 1);
+}
+
 void
 vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 {
@@ -650,7 +668,10 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
    case nir_intrinsic_load_vertex_id_zero_base:
    case nir_intrinsic_load_base_vertex:
-   case nir_intrinsic_load_instance_id: {
+   case nir_intrinsic_load_instance_id:
+   case nir_intrinsic_load_invocation_id:
+   case nir_intrinsic_load_tess_level_inner:
+   case nir_intrinsic_load_tess_level_outer: {
       gl_system_value sv = nir_system_value_from_intrinsic(instr->intrinsic);
       src_reg val = src_reg(nir_system_values[sv]);
       assert(val.file != BAD_FILE);

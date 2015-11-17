@@ -714,6 +714,220 @@ generate_gs_set_primitive_id(struct brw_codegen *p, struct brw_reg dst)
 }
 
 static void
+generate_tcs_get_instance_id(struct brw_codegen *p, struct brw_reg dst)
+{
+   /* "Instance Count" comes as part of the payload in r0.2 bits 23:17.
+    *
+    * Since we operate in SIMD4x2 mode, we need run half as many threads
+    * as necessary.  So we assign (2i + 1, 2i) as the thread counts.  We
+    * shift right by one less to accomplish the multiplication by two.
+    */
+   dst = retype(dst, BRW_REGISTER_TYPE_UD);
+   struct brw_reg r0(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
+
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+
+   const int mask = INTEL_MASK(23, 17);
+   const int shift = 17;
+
+   brw_AND(p, get_element_ud(dst, 0), get_element_ud(r0, 2), brw_imm_ud(mask));
+   brw_SHR(p, get_element_ud(dst, 0), get_element_ud(dst, 0),
+           brw_imm_ud(shift - 1));
+   brw_ADD(p, get_element_ud(dst, 4), get_element_ud(dst, 0), brw_imm_ud(1));
+
+   brw_pop_insn_state(p);
+}
+
+static void
+generate_tcs_urb_write(struct brw_codegen *p,
+                       vec4_instruction *inst,
+                       struct brw_reg urb_header)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+
+   brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
+   brw_set_dest(p, send, brw_null_reg());
+   brw_set_src0(p, send, urb_header);
+
+   brw_set_message_descriptor(p, send, BRW_SFID_URB,
+                              inst->mlen /* mlen */, 0 /* rlen */,
+                              true /* header */, false /* eot */);
+   brw_inst_set_urb_opcode(devinfo, send, BRW_URB_OPCODE_WRITE_OWORD);
+   brw_inst_set_urb_global_offset(devinfo, send, inst->offset);
+   brw_inst_set_urb_per_slot_offset(devinfo, send, 1);
+   brw_inst_set_urb_swizzle_control(devinfo, send, BRW_URB_SWIZZLE_INTERLEAVE);
+
+   /* what happens to swizzles? */
+}
+
+
+static void
+generate_tcs_input_urb_offsets(struct brw_codegen *p,
+                               struct brw_reg dst,
+                               struct brw_reg vertex,
+                               struct brw_reg offset)
+{
+   /* Generates an URB read/write message header for HS/DS operation.
+    * Inputs are a vertex index, and a byte offset from the beginning of
+    * the vertex. */
+
+   /* If `vertex` is not an immediate, we clobber a0.0 */
+
+   assert(vertex.file == BRW_IMMEDIATE_VALUE || vertex.file == BRW_GENERAL_REGISTER_FILE);
+   assert(vertex.type == BRW_REGISTER_TYPE_UD || vertex.type == BRW_REGISTER_TYPE_D);
+
+   assert(dst.file == BRW_GENERAL_REGISTER_FILE);
+
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+   brw_MOV(p, dst, brw_imm_ud(0));
+
+   /* m0.5 bits 8-15 are channel enables */
+   brw_MOV(p, get_element_ud(dst, 5), brw_imm_ud(0xff00));
+
+   /* m0.0-0.1: URB handles */
+   if (vertex.file == BRW_IMMEDIATE_VALUE) {
+      uint32_t vertex_index = vertex.ud;
+      struct brw_reg index_reg = brw_vec1_grf(
+            1 + (vertex_index >> 3), vertex_index & 7);
+
+      brw_MOV(p, vec2(get_element_ud(dst, 0)),
+              retype(index_reg, BRW_REGISTER_TYPE_UD));
+   } else {
+      /* Use indirect addressing.  ICP Handles are DWords (single channels
+       * of a register) and start at g1.0.
+       *
+       * In order to start our region at g1.0, we add 8 to the vertex index,
+       * effectively skipping over the 8 channels in g0.0.  This gives us a
+       * DWord offset to the ICP Handle.
+       *
+       * Indirect addressing works in terms of bytes, so we then multiply
+       * the DWord offset by 4 (by shifting left by 2).
+       */
+      struct brw_reg addr = brw_address_reg(0);
+
+      /* bottom half: m0.0 = g[1.0 + vertex.0]UD */
+      brw_ADD(p, addr, get_element_ud(vertex, 0), brw_imm_uw(0x8));
+      brw_SHL(p, addr, addr, brw_imm_ud(2));
+      brw_MOV(p, get_element_ud(dst, 0), deref_1ud(brw_indirect(0, 0), 0));
+
+      /* top half: m0.1 = g[1.0 + vertex.4]UD */
+      brw_ADD(p, addr, get_element_ud(vertex, 4), brw_imm_uw(0x8));
+      brw_SHL(p, addr, addr, brw_imm_ud(2));
+      brw_MOV(p, get_element_ud(dst, 1), deref_1ud(brw_indirect(0, 0), 0));
+   }
+
+   /* m0.3-0.4: 128bit-granular offsets into the URB from the handles */
+   if (offset.file != ARF)
+      brw_MOV(p, vec2(get_element_ud(dst, 3)), stride(offset, 4, 1, 0));
+
+   brw_pop_insn_state(p);
+}
+
+
+static void
+generate_tcs_output_urb_offsets(struct brw_codegen *p,
+                                struct brw_reg dst,
+                                struct brw_reg write_mask,
+                                struct brw_reg offset)
+{
+   /* Generates an URB read/write message header for HS/DS operation, for the patch URB entry. */
+   assert(dst.file == BRW_GENERAL_REGISTER_FILE || dst.file == BRW_MESSAGE_REGISTER_FILE);
+
+   assert(write_mask.file == BRW_IMMEDIATE_VALUE);
+   assert(write_mask.type == BRW_REGISTER_TYPE_UD);
+
+   brw_push_insn_state(p);
+
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+   brw_MOV(p, dst, brw_imm_ud(0));
+
+   unsigned mask = write_mask.ud;
+
+   /* m0.5 bits 15:12 and 11:8 are channel enables */
+   brw_MOV(p, get_element_ud(dst, 5), brw_imm_ud((mask << 8) | (mask << 12)));
+
+   /* HS patch URB handle is delivered in r0.0 */
+   struct brw_reg urb_handle = brw_vec1_grf(0, 0);
+
+   /* m0.0-0.1: URB handles */
+   brw_MOV(p, vec2(get_element_ud(dst, 0)),
+           retype(urb_handle, BRW_REGISTER_TYPE_UD));
+
+   /* m0.3-0.4: 128bit-granular offsets into the URB from the handles */
+   if (offset.file != ARF)
+      brw_MOV(p, vec2(get_element_ud(dst, 3)), stride(offset, 4, 1, 0));
+
+   brw_pop_insn_state(p);
+}
+
+static void
+generate_vec4_urb_read(struct brw_codegen *p,
+                       vec4_instruction *inst,
+                       struct brw_reg dst,
+                       struct brw_reg header)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+
+   assert(header.file == BRW_GENERAL_REGISTER_FILE);
+   assert(header.type == BRW_REGISTER_TYPE_UD);
+
+   brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
+   brw_set_dest(p, send, dst);
+   brw_set_src0(p, send, header);
+
+   brw_set_message_descriptor(p, send, BRW_SFID_URB,
+                              1 /* mlen */, 1 /* rlen */,
+                              true /* header */, false /* eot */);
+   brw_inst_set_urb_opcode(devinfo, send, BRW_URB_OPCODE_READ_OWORD);
+   brw_inst_set_urb_swizzle_control(devinfo, send, BRW_URB_SWIZZLE_INTERLEAVE);
+   brw_inst_set_urb_per_slot_offset(devinfo, send, 1);
+
+   brw_inst_set_urb_global_offset(devinfo, send, inst->offset);
+}
+
+static void
+generate_tcs_get_primitive_id(struct brw_codegen *p, struct brw_reg dst)
+{
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+   brw_MOV(p, dst, retype(brw_vec1_grf(0, 1), BRW_REGISTER_TYPE_UD));
+   brw_pop_insn_state(p);
+}
+
+static void
+generate_tcs_create_barrier_header(struct brw_codegen *p,
+                                   struct brw_vue_prog_data *prog_data,
+                                   struct brw_reg dst)
+{
+   struct brw_reg m0_2 = get_element_ud(dst, 2);
+   unsigned instances = ((struct brw_tcs_prog_data *) prog_data)->instances;
+
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+
+   /* Zero the message header */
+   brw_MOV(p, retype(dst, BRW_REGISTER_TYPE_UD), brw_imm_ud(0u));
+
+   /* Copy "Barrier ID" from DW0 bits 16:13 */
+   brw_AND(p, m0_2,
+           retype(brw_vec1_grf(0, 2), BRW_REGISTER_TYPE_UD),
+           brw_imm_ud(0x1e000));
+
+   /* Shift it into place */
+   brw_SHL(p, m0_2, get_element_ud(dst, 2), brw_imm_ud(11));
+
+   /* Set the Barrier Count and the enable bit */
+   brw_OR(p, m0_2, m0_2, brw_imm_ud(instances << 9 | (1 << 15)));
+
+   brw_pop_insn_state(p);
+}
+
+static void
 generate_oword_dual_block_offsets(struct brw_codegen *p,
                                   struct brw_reg m1,
                                   struct brw_reg index)
@@ -1537,6 +1751,39 @@ generate_code(struct brw_codegen *p,
          brw_set_default_access_mode(p, BRW_ALIGN_16);
          break;
       }
+
+      case TCS_OPCODE_URB_WRITE:
+         generate_tcs_urb_write(p, inst, src[0]);
+         break;
+
+      case VEC4_OPCODE_URB_READ:
+         generate_vec4_urb_read(p, inst, dst, src[0]);
+         break;
+
+      case TCS_OPCODE_SET_INPUT_URB_OFFSETS:
+         generate_tcs_input_urb_offsets(p, dst, src[0], src[1]);
+         break;
+
+      case TCS_OPCODE_SET_OUTPUT_URB_OFFSETS:
+         generate_tcs_output_urb_offsets(p, dst, src[0], src[1]);
+         break;
+
+      case TCS_OPCODE_GET_INSTANCE_ID:
+         generate_tcs_get_instance_id(p, dst);
+         break;
+
+      case TCS_OPCODE_GET_PRIMITIVE_ID:
+         generate_tcs_get_primitive_id(p, dst);
+         break;
+
+      case TCS_OPCODE_CREATE_BARRIER_HEADER:
+         generate_tcs_create_barrier_header(p, prog_data, dst);
+         break;
+
+      case SHADER_OPCODE_BARRIER:
+         brw_barrier(p, src[0]);
+         brw_WAIT(p);
+         break;
 
       default:
          unreachable("Unsupported opcode");
