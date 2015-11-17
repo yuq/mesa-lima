@@ -298,9 +298,9 @@ brw_lower_nir(nir_shader *nir,
 
    OPT_V(brw_nir_lower_inputs, devinfo, is_scalar);
    OPT_V(brw_nir_lower_outputs, is_scalar);
-   nir_assign_var_locations(&nir->uniforms,
-                            &nir->num_uniforms,
-                            is_scalar ? type_size_scalar : type_size_vec4);
+   //nir_assign_var_locations(&nir->uniforms,
+   //                         &nir->num_uniforms,
+   //                         is_scalar ? type_size_scalar : type_size_vec4);
    OPT_V(nir_lower_io, nir_var_all, is_scalar ? type_size_scalar : type_size_vec4);
 
    if (shader_prog) {
