@@ -723,7 +723,7 @@ lower_ubo_reference_visitor::check_for_ssbo_store(ir_assignment *ir)
       return;
 
    ir_variable *var = ir->lhs->variable_referenced();
-   if (!var || !var->is_in_buffer_block())
+   if (!var || !var->is_in_shader_storage_block())
       return;
 
    /* We have a write to a buffer variable, so declare a temporary and rewrite
