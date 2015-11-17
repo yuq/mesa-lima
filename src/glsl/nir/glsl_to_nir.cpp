@@ -1067,6 +1067,7 @@ nir_visitor::visit(ir_call *ir)
          nir_intrinsic_instr *store_instr =
             nir_intrinsic_instr_create(shader, nir_intrinsic_store_var);
          store_instr->num_components = ir->return_deref->type->vector_elements;
+         store_instr->const_index[0] = (1 << store_instr->num_components) - 1;
 
          store_instr->variables[0] =
             evaluate_deref(&store_instr->instr, ir->return_deref);
@@ -1165,6 +1166,7 @@ nir_visitor::visit(ir_assignment *ir)
    nir_intrinsic_instr *store =
       nir_intrinsic_instr_create(this->shader, nir_intrinsic_store_var);
    store->num_components = ir->lhs->type->vector_elements;
+   store->const_index[0] = (1 << store->num_components) - 1;
    nir_deref *store_deref = nir_copy_deref(store, &lhs_deref->deref);
    store->variables[0] = nir_deref_as_var(store_deref);
    store->src[0] = nir_src_for_ssa(src);

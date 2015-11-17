@@ -261,6 +261,9 @@ nir_lower_io_block(nir_block *block, void *void_state)
          store->const_index[0] =
             intrin->variables[0]->var->data.driver_location;
 
+         /* Copy the writemask */
+         store->const_index[1] = intrin->const_index[0];
+
          if (per_vertex)
             store->src[1] = nir_src_for_ssa(vertex_index);
 

@@ -1321,6 +1321,10 @@ emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	case nir_deref_array_type_direct:
 		/* direct access does not require anything special: */
 		for (int i = 0; i < intr->num_components; i++) {
+			/* ttn doesn't generate partial writemasks */
+			assert(intr->const_index[0] ==
+			       (1 << intr->num_components) - 1);
+
 			unsigned n = darr->base_offset * 4 + i;
 			compile_assert(ctx, n < arr->length);
 			arr->arr[n] = src[i];
@@ -1333,6 +1337,10 @@ emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		struct ir3_instruction *addr =
 				get_addr(ctx, get_src(ctx, &darr->indirect)[0]);
 		for (int i = 0; i < intr->num_components; i++) {
+			/* ttn doesn't generate partial writemasks */
+			assert(intr->const_index[0] ==
+			       (1 << intr->num_components) - 1);
+
 			struct ir3_instruction *store;
 			unsigned n = darr->base_offset * 4 + i;
 			compile_assert(ctx, n < arr->length);

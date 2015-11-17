@@ -99,7 +99,8 @@ rewrite_emit_vertex(nir_intrinsic_instr *intrin, struct state *state)
 
    /* Increment the vertex count by 1 */
    nir_store_var(b, state->vertex_count_var,
-                 nir_iadd(b, count, nir_imm_int(b, 1)));
+                 nir_iadd(b, count, nir_imm_int(b, 1)),
+                 0x1); /* .x */
 
    nir_instr_remove(&intrin->instr);
 

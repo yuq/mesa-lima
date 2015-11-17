@@ -1903,6 +1903,7 @@ ttn_emit_instruction(struct ttn_compile *c)
                                            &tgsi_dst->Indirect : NULL;
 
       store->num_components = 4;
+      store->const_index[0] = 0xf;
       store->variables[0] = ttn_array_deref(c, store, var, offset, indirect);
       store->src[0] = nir_src_for_reg(dest.dest.reg.reg);
 
