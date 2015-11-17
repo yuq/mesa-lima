@@ -474,7 +474,7 @@ nir_load_const_instr_create(nir_shader *shader, unsigned num_components)
    nir_load_const_instr *instr = ralloc(shader, nir_load_const_instr);
    instr_init(&instr->instr, nir_instr_type_load_const);
 
-   nir_ssa_def_init(&instr->instr, &instr->def, num_components, NULL);
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, 32, NULL);
 
    return instr;
 }
@@ -563,7 +563,7 @@ nir_ssa_undef_instr_create(nir_shader *shader, unsigned num_components)
    nir_ssa_undef_instr *instr = ralloc(shader, nir_ssa_undef_instr);
    instr_init(&instr->instr, nir_instr_type_ssa_undef);
 
-   nir_ssa_def_init(&instr->instr, &instr->def, num_components, NULL);
+   nir_ssa_def_init(&instr->instr, &instr->def, num_components, 32, NULL);
 
    return instr;
 }
@@ -1319,14 +1319,15 @@ nir_instr_rewrite_dest(nir_instr *instr, nir_dest *dest, nir_dest new_dest)
 
 void
 nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
-                 unsigned num_components, const char *name)
+                 unsigned num_components,
+                 unsigned bit_size, const char *name)
 {
    def->name = name;
    def->parent_instr = instr;
    list_inithead(&def->uses);
    list_inithead(&def->if_uses);
    def->num_components = num_components;
-   def->bit_size = 32; /* FIXME: Add an input paremeter or guess? */
+   def->bit_size = bit_size;
 
    if (instr->block) {
       nir_function_impl *impl =
@@ -1340,10 +1341,11 @@ nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
 
 void
 nir_ssa_dest_init(nir_instr *instr, nir_dest *dest,
-                 unsigned num_components, const char *name)
+                 unsigned num_components, unsigned bit_size,
+                 const char *name)
 {
    dest->is_ssa = true;
-   nir_ssa_def_init(instr, &dest->ssa, num_components, name);
+   nir_ssa_def_init(instr, &dest->ssa, num_components, bit_size, name);
 }
 
 void

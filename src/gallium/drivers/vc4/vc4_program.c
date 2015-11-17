@@ -118,7 +118,7 @@ nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
         intr->const_index[0] = (VC4_NIR_STATE_UNIFORM_OFFSET + contents) * 4;
         intr->num_components = 1;
         intr->src[0] = nir_src_for_ssa(nir_imm_int(b, 0));
-        nir_ssa_dest_init(&intr->instr, &intr->dest, 1, NULL);
+        nir_ssa_dest_init(&intr->instr, &intr->dest, 1, 32, NULL);
         nir_builder_instr_insert(b, &intr->instr);
         return &intr->dest.ssa;
 }

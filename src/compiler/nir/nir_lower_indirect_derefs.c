@@ -75,8 +75,9 @@ emit_indirect_load_store(nir_builder *b, nir_intrinsic_instr *orig_instr,
       if (src == NULL) {
          /* We're a load.  We need to insert a phi node */
          nir_phi_instr *phi = nir_phi_instr_create(b->shader);
+         unsigned bit_size = then_dest->bit_size;
          nir_ssa_dest_init(&phi->instr, &phi->dest,
-                           then_dest->num_components, NULL);
+                           then_dest->num_components, bit_size, NULL);
 
          nir_phi_src *src0 = ralloc(phi, nir_phi_src);
          src0->pred = nir_cf_node_as_block(nir_if_last_then_node(if_stmt));
@@ -125,8 +126,9 @@ emit_load_store(nir_builder *b, nir_intrinsic_instr *orig_instr,
       load->num_components = orig_instr->num_components;
       load->variables[0] =
          nir_deref_as_var(nir_copy_deref(load, &deref->deref));
+      unsigned bit_size = orig_instr->dest.ssa.bit_size;
       nir_ssa_dest_init(&load->instr, &load->dest,
-                        load->num_components, NULL);
+                        load->num_components, bit_size, NULL);
       nir_builder_instr_insert(b, &load->instr);
       *dest = &load->dest.ssa;
    } else {

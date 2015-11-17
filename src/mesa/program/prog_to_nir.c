@@ -142,7 +142,7 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
       load->num_components = 4;
       load->variables[0] = nir_deref_var_create(load, c->input_vars[prog_src->Index]);
 
-      nir_ssa_dest_init(&load->instr, &load->dest, 4, NULL);
+      nir_ssa_dest_init(&load->instr, &load->dest, 4, 32, NULL);
       nir_builder_instr_insert(b, &load->instr);
 
       src.src = nir_src_for_ssa(&load->dest.ssa);
@@ -171,7 +171,7 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
 
          nir_intrinsic_instr *load =
             nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_var);
-         nir_ssa_dest_init(&load->instr, &load->dest, 4, NULL);
+         nir_ssa_dest_init(&load->instr, &load->dest, 4, 32, NULL);
          load->num_components = 4;
 
          load->variables[0] = nir_deref_var_create(load, c->parameters);
@@ -246,7 +246,7 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
          } else {
             assert(swizzle != SWIZZLE_NIL);
             nir_alu_instr *mov = nir_alu_instr_create(b->shader, nir_op_fmov);
-            nir_ssa_dest_init(&mov->instr, &mov->dest.dest, 1, NULL);
+            nir_ssa_dest_init(&mov->instr, &mov->dest.dest, 1, 32, NULL);
             mov->dest.write_mask = 0x1;
             mov->src[0] = src;
             mov->src[0].swizzle[0] = swizzle;
@@ -676,7 +676,7 @@ ptn_tex(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src,
 
    assert(src_number == num_srcs);
 
-   nir_ssa_dest_init(&instr->instr, &instr->dest, 4, NULL);
+   nir_ssa_dest_init(&instr->instr, &instr->dest, 4, 32, NULL);
    nir_builder_instr_insert(b, &instr->instr);
 
    /* Resolve the writemask on the texture op. */
@@ -974,7 +974,7 @@ setup_registers_and_variables(struct ptn_compile *c)
                nir_intrinsic_instr_create(shader, nir_intrinsic_load_var);
             load_x->num_components = 1;
             load_x->variables[0] = nir_deref_var_create(load_x, var);
-            nir_ssa_dest_init(&load_x->instr, &load_x->dest, 1, NULL);
+            nir_ssa_dest_init(&load_x->instr, &load_x->dest, 1, 32, NULL);
             nir_builder_instr_insert(b, &load_x->instr);
 
             nir_ssa_def *f001 = nir_vec4(b, &load_x->dest.ssa, nir_imm_float(b, 0.0),

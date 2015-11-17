@@ -164,6 +164,25 @@ nir_build_alu(nir_builder *build, nir_op op, nir_ssa_def *src0,
    }
    assert(num_components != 0);
 
+   /* Figure out the bitwidth based on the source bitwidth if the instruction
+    * is variable-width.
+    */
+   unsigned bit_size = nir_alu_type_get_type_size(op_info->output_type);
+   if (bit_size == 0) {
+      for (unsigned i = 0; i < op_info->num_inputs; i++) {
+         unsigned src_bit_size = instr->src[i].src.ssa->bit_size;
+         if (nir_alu_type_get_type_size(op_info->input_types[i]) == 0) {
+            if (bit_size)
+               assert(src_bit_size == bit_size);
+            else
+               bit_size = src_bit_size;
+         } else {
+            assert(src_bit_size ==
+               nir_alu_type_get_type_size(op_info->input_types[i]));
+         }
+      }
+   }
+
    /* Make sure we don't swizzle from outside of our source vector (like if a
     * scalar value was passed into a multiply with a vector).
     */
@@ -173,7 +192,8 @@ nir_build_alu(nir_builder *build, nir_op op, nir_ssa_def *src0,
       }
    }
 
-   nir_ssa_dest_init(&instr->instr, &instr->dest.dest, num_components, NULL);
+   nir_ssa_dest_init(&instr->instr, &instr->dest.dest, num_components,
+                     bit_size, NULL);
    instr->dest.write_mask = (1 << num_components) - 1;
 
    nir_builder_instr_insert(build, &instr->instr);
@@ -238,7 +258,8 @@ static inline nir_ssa_def *
 nir_fmov_alu(nir_builder *build, nir_alu_src src, unsigned num_components)
 {
    nir_alu_instr *mov = nir_alu_instr_create(build->shader, nir_op_fmov);
-   nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components, NULL);
+   nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components,
+                     nir_src_bit_size(src.src), NULL);
    mov->dest.write_mask = (1 << num_components) - 1;
    mov->src[0] = src;
    nir_builder_instr_insert(build, &mov->instr);
@@ -250,7 +271,8 @@ static inline nir_ssa_def *
 nir_imov_alu(nir_builder *build, nir_alu_src src, unsigned num_components)
 {
    nir_alu_instr *mov = nir_alu_instr_create(build->shader, nir_op_imov);
-   nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components, NULL);
+   nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components,
+                     nir_src_bit_size(src.src), NULL);
    mov->dest.write_mask = (1 << num_components) - 1;
    mov->src[0] = src;
    nir_builder_instr_insert(build, &mov->instr);
@@ -329,7 +351,8 @@ nir_load_var(nir_builder *build, nir_variable *var)
       nir_intrinsic_instr_create(build->shader, nir_intrinsic_load_var);
    load->num_components = num_components;
    load->variables[0] = nir_deref_var_create(load, var);
-   nir_ssa_dest_init(&load->instr, &load->dest, num_components, NULL);
+   nir_ssa_dest_init(&load->instr, &load->dest, num_components,
+                     glsl_get_bit_size(glsl_get_base_type(var->type)), NULL);
    nir_builder_instr_insert(build, &load->instr);
    return &load->dest.ssa;
 }
@@ -356,7 +379,7 @@ nir_load_system_value(nir_builder *build, nir_intrinsic_op op, int index)
    load->num_components = nir_intrinsic_infos[op].dest_components;
    load->const_index[0] = index;
    nir_ssa_dest_init(&load->instr, &load->dest,
-                     nir_intrinsic_infos[op].dest_components, NULL);
+                     nir_intrinsic_infos[op].dest_components, 32, NULL);
    nir_builder_instr_insert(build, &load->instr);
    return &load->dest.ssa;
 }

@@ -31,9 +31,11 @@
  */
 
 static void
-nir_alu_ssa_dest_init(nir_alu_instr *instr, unsigned num_components)
+nir_alu_ssa_dest_init(nir_alu_instr *instr, unsigned num_components,
+                      unsigned bit_size)
 {
-   nir_ssa_dest_init(&instr->instr, &instr->dest.dest, num_components, NULL);
+   nir_ssa_dest_init(&instr->instr, &instr->dest.dest, num_components,
+                     bit_size, NULL);
    instr->dest.write_mask = (1 << num_components) - 1;
 }
 
@@ -46,7 +48,7 @@ lower_reduction(nir_alu_instr *instr, nir_op chan_op, nir_op merge_op,
    nir_ssa_def *last = NULL;
    for (unsigned i = 0; i < num_components; i++) {
       nir_alu_instr *chan = nir_alu_instr_create(builder->shader, chan_op);
-      nir_alu_ssa_dest_init(chan, 1);
+      nir_alu_ssa_dest_init(chan, 1, instr->dest.dest.ssa.bit_size);
       nir_alu_src_copy(&chan->src[0], &instr->src[0], chan);
       chan->src[0].swizzle[0] = chan->src[0].swizzle[i];
       if (nir_op_infos[chan_op].num_inputs > 1) {
@@ -220,7 +222,7 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
             lower->src[i].swizzle[j] = instr->src[i].swizzle[src_chan];
       }
 
-      nir_alu_ssa_dest_init(lower, 1);
+      nir_alu_ssa_dest_init(lower, 1, instr->dest.dest.ssa.bit_size);
       lower->dest.saturate = instr->dest.saturate;
       comps[chan] = &lower->dest.dest.ssa;
 

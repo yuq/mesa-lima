@@ -169,7 +169,7 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
          mul->src[1].src.is_ssa = true;
          mul->src[1].src.ssa = &load_const->def;
          mul->dest.write_mask = 1;
-         nir_ssa_dest_init(&mul->instr, &mul->dest.dest, 1, NULL);
+         nir_ssa_dest_init(&mul->instr, &mul->dest.dest, 1, 32, NULL);
          nir_instr_insert_before(instr, &mul->instr);
 
          src.reg.indirect->is_ssa = true;
@@ -187,7 +187,7 @@ get_deref_reg_src(nir_deref_var *deref, nir_instr *instr,
             add->src[0].src = *src.reg.indirect;
             nir_src_copy(&add->src[1].src, &deref_array->indirect, add);
             add->dest.write_mask = 1;
-            nir_ssa_dest_init(&add->instr, &add->dest.dest, 1, NULL);
+            nir_ssa_dest_init(&add->instr, &add->dest.dest, 1, 32, NULL);
             nir_instr_insert_before(instr, &add->instr);
 
             src.reg.indirect->is_ssa = true;
@@ -221,7 +221,8 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
          mov->dest.write_mask = (1 << intrin->num_components) - 1;
          if (intrin->dest.is_ssa) {
             nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
-                              intrin->num_components, NULL);
+                              intrin->num_components,
+                              intrin->dest.ssa.bit_size, NULL);
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
                                      nir_src_for_ssa(&mov->dest.dest.ssa));
          } else {

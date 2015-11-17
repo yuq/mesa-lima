@@ -650,7 +650,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
 
             mov->dest.write_mask = (1 << intrin->num_components) - 1;
             nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
-                              intrin->num_components, NULL);
+                              intrin->num_components,
+                              intrin->dest.ssa.bit_size, NULL);
 
             nir_instr_insert_before(&intrin->instr, &mov->instr);
             nir_instr_remove(&intrin->instr);
@@ -808,6 +809,8 @@ insert_phi_nodes(struct lower_variables_state *state)
       if (!node->lower_to_ssa)
          continue;
 
+      unsigned bit_size = glsl_get_bit_size(glsl_get_base_type(node->type));
+
       w_start = w_end = 0;
       iter_count++;
 
@@ -839,7 +842,8 @@ insert_phi_nodes(struct lower_variables_state *state)
             if (has_already[next->index] < iter_count) {
                nir_phi_instr *phi = nir_phi_instr_create(state->shader);
                nir_ssa_dest_init(&phi->instr, &phi->dest,
-                                 glsl_get_vector_elements(node->type), NULL);
+                                 glsl_get_vector_elements(node->type),
+                                 bit_size, NULL);
                nir_instr_insert_before_block(next, &phi->instr);
 
                _mesa_hash_table_insert(state->phi_table, phi, node);
@@ -932,7 +936,9 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
          nir_load_const_instr *load =
             nir_deref_get_const_initializer_load(state.shader, deref);
          nir_ssa_def_init(&load->instr, &load->def,
-                          glsl_get_vector_elements(node->type), NULL);
+                          glsl_get_vector_elements(node->type),
+                          glsl_get_bit_size(glsl_get_base_type(node->type)),
+                          NULL);
          nir_instr_insert_before_cf_list(&impl->body, &load->instr);
          def_stack_push(node, &load->def, &state);
       }

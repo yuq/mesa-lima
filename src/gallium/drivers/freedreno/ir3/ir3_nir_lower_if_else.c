@@ -290,7 +290,7 @@ lower_if_else_block(nir_block *block, void *void_state)
 		}
 
 		nir_ssa_dest_init(&sel->instr, &sel->dest.dest,
-				phi->dest.ssa.num_components, phi->dest.ssa.name);
+				phi->dest.ssa.num_components, 32, phi->dest.ssa.name);
 		sel->dest.write_mask = (1 << phi->dest.ssa.num_components) - 1;
 
 		nir_ssa_def_rewrite_uses(&phi->dest.ssa,

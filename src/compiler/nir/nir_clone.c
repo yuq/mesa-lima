@@ -220,7 +220,8 @@ __clone_dst(clone_state *state, nir_instr *ninstr,
 {
    ndst->is_ssa = dst->is_ssa;
    if (dst->is_ssa) {
-      nir_ssa_dest_init(ninstr, ndst, dst->ssa.num_components, dst->ssa.name);
+      nir_ssa_dest_init(ninstr, ndst, dst->ssa.num_components,
+                        dst->ssa.bit_size, dst->ssa.name);
       add_remap(state, &ndst->ssa, &dst->ssa);
    } else {
       ndst->reg.reg = remap_reg(state, dst->reg.reg);

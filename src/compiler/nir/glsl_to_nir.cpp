@@ -718,7 +718,7 @@ nir_visitor::visit(ir_call *ir)
          ir_dereference *param =
             (ir_dereference *) ir->actual_parameters.get_head();
          instr->variables[0] = evaluate_deref(&instr->instr, param);
-         nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
+         nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
@@ -752,7 +752,7 @@ nir_visitor::visit(ir_call *ir)
             const nir_intrinsic_info *info =
                     &nir_intrinsic_infos[instr->intrinsic];
             nir_ssa_dest_init(&instr->instr, &instr->dest,
-                              info->dest_components, NULL);
+                              info->dest_components, 32, NULL);
          }
 
          if (op == nir_intrinsic_image_size ||
@@ -813,7 +813,7 @@ nir_visitor::visit(ir_call *ir)
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       case nir_intrinsic_shader_clock:
-         nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
+         nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       case nir_intrinsic_store_ssbo: {
@@ -854,7 +854,7 @@ nir_visitor::visit(ir_call *ir)
 
          /* Setup destination register */
          nir_ssa_dest_init(&instr->instr, &instr->dest,
-                           type->vector_elements, NULL);
+                           type->vector_elements, 32, NULL);
 
          /* Insert the created nir instruction now since in the case of boolean
           * result we will need to emit another instruction after it
@@ -877,7 +877,7 @@ nir_visitor::visit(ir_call *ir)
                load_ssbo_compare->src[1].swizzle[i] = 0;
             nir_ssa_dest_init(&load_ssbo_compare->instr,
                               &load_ssbo_compare->dest.dest,
-                              type->vector_elements, NULL);
+                              type->vector_elements, 32, NULL);
             load_ssbo_compare->dest.write_mask = (1 << type->vector_elements) - 1;
             nir_builder_instr_insert(&b, &load_ssbo_compare->instr);
             dest = &load_ssbo_compare->dest.dest;
@@ -923,7 +923,7 @@ nir_visitor::visit(ir_call *ir)
          /* Atomic result */
          assert(ir->return_deref);
          nir_ssa_dest_init(&instr->instr, &instr->dest,
-                           ir->return_deref->type->vector_elements, NULL);
+                           ir->return_deref->type->vector_elements, 32, NULL);
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
@@ -938,8 +938,9 @@ nir_visitor::visit(ir_call *ir)
          instr->num_components = type->vector_elements;
 
          /* Setup destination register */
+         unsigned bit_size = glsl_get_bit_size(type->base_type);
          nir_ssa_dest_init(&instr->instr, &instr->dest,
-                           type->vector_elements, NULL);
+                           type->vector_elements, bit_size, NULL);
 
          nir_builder_instr_insert(&b, &instr->instr);
          break;
@@ -1000,8 +1001,10 @@ nir_visitor::visit(ir_call *ir)
 
          /* Atomic result */
          assert(ir->return_deref);
+         unsigned bit_size = glsl_get_bit_size(ir->return_deref->type->base_type);
          nir_ssa_dest_init(&instr->instr, &instr->dest,
-                           ir->return_deref->type->vector_elements, NULL);
+                           ir->return_deref->type->vector_elements,
+                           bit_size, NULL);
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
@@ -1150,7 +1153,7 @@ nir_visitor::add_instr(nir_instr *instr, unsigned num_components)
    nir_dest *dest = get_instr_dest(instr);
 
    if (dest)
-      nir_ssa_dest_init(instr, dest, num_components, NULL);
+      nir_ssa_dest_init(instr, dest, num_components, 32, NULL);
 
    nir_builder_instr_insert(&b, instr);
 
@@ -1190,6 +1193,7 @@ nir_visitor::visit(ir_expression *ir)
       nir_intrinsic_instr *load =
          nir_intrinsic_instr_create(this->shader, nir_intrinsic_load_ubo);
       load->num_components = ir->type->vector_elements;
+      load->dest.ssa.bit_size = glsl_get_bit_size(ir->type->base_type);
       load->src[0] = nir_src_for_ssa(evaluate_rvalue(ir->operands[0]));
       load->src[1] = nir_src_for_ssa(evaluate_rvalue(ir->operands[1]));
       add_instr(&load->instr, ir->type->vector_elements);

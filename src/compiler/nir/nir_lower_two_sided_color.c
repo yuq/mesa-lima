@@ -74,7 +74,7 @@ load_input(nir_builder *b, nir_variable *in)
    load->num_components = 4;
    nir_intrinsic_set_base(load, in->data.driver_location);
    load->src[0] = nir_src_for_ssa(nir_imm_int(b, 0));
-   nir_ssa_dest_init(&load->instr, &load->dest, 4, NULL);
+   nir_ssa_dest_init(&load->instr, &load->dest, 4, 32, NULL);
    nir_builder_instr_insert(b, &load->instr);
 
    return &load->dest.ssa;
