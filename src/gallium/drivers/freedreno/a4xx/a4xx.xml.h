@@ -13,8 +13,8 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2015-05-20 20:03:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10755 bytes, from 2015-09-14 20:46:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14968 bytes, from 2015-05-20 20:12:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  67771 bytes, from 2015-09-14 20:46:55)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  63914 bytes, from 2015-10-27 17:13:16)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  68291 bytes, from 2015-11-17 16:39:59)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  64038 bytes, from 2015-11-17 16:37:36)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2015 by the following authors:
@@ -192,6 +192,9 @@ enum a4xx_tex_fmt {
 	TFMT4_32_32_32_32_FLOAT = 63,
 	TFMT4_9_9_9_E5_FLOAT = 32,
 	TFMT4_11_11_10_FLOAT = 37,
+	TFMT4_DXT1 = 86,
+	TFMT4_DXT3 = 87,
+	TFMT4_DXT5 = 88,
 	TFMT4_ATC_RGB = 100,
 	TFMT4_ATC_RGBA_EXPLICIT = 101,
 	TFMT4_ATC_RGBA_INTERPOLATED = 102,
