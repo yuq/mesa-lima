@@ -474,6 +474,7 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
          node->set->reg = nir_local_reg_create(state->impl);
          node->set->reg->name = def->name;
          node->set->reg->num_components = def->num_components;
+         node->set->reg->bit_size = def->bit_size;
          node->set->reg->num_array_elems = 0;
       }
 
@@ -491,6 +492,7 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
       reg = nir_local_reg_create(state->impl);
       reg->name = def->name;
       reg->num_components = def->num_components;
+      reg->bit_size = def->bit_size;
       reg->num_array_elems = 0;
    }
 
