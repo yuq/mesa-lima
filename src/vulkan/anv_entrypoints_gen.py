@@ -91,7 +91,7 @@ if opt_header:
     print "   };\n"
     print "};\n"
 
-    print "void anv_set_dispatch_gen(uint32_t gen);\n"
+    print "void anv_set_dispatch_devinfo(const struct brw_device_info *info);\n"
 
     for type, name, args, num, h in entrypoints:
         print "%s anv_%s%s;" % (type, name, args)
@@ -193,12 +193,12 @@ determine_validate(void)
       enable_validate = atoi(s);
 }
 
-static uint32_t dispatch_gen;
+static const struct brw_device_info *dispatch_devinfo;
 
 void
-anv_set_dispatch_gen(uint32_t gen)
+anv_set_dispatch_devinfo(const struct brw_device_info *devinfo)
 {
-   dispatch_gen = gen;   
+   dispatch_devinfo = devinfo;
 }
 
 void * __attribute__ ((noinline))
@@ -207,7 +207,12 @@ anv_resolve_entrypoint(uint32_t index)
    if (enable_validate && validate_layer.entrypoints[index])
       return validate_layer.entrypoints[index];
 
-   switch (dispatch_gen) {
+   if (dispatch_devinfo == NULL) {
+      assert(anv_layer.entrypoints[index]);
+      return anv_layer.entrypoints[index];
+   }
+
+   switch (dispatch_devinfo->gen) {
    case 8:
       if (gen8_layer.entrypoints[index])
          return gen8_layer.entrypoints[index];

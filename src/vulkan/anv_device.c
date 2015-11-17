@@ -637,7 +637,7 @@ VkResult anv_CreateDevice(
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
-   anv_set_dispatch_gen(physical_device->info->gen);
+   anv_set_dispatch_devinfo(physical_device->info);
 
    device = anv_instance_alloc(instance, sizeof(*device), 8,
                                VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
