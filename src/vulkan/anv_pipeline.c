@@ -338,7 +338,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    anv_nir_apply_dynamic_offsets(pipeline, nir, prog_data);
 
    /* Apply the actual pipeline layout to UBOs, SSBOs, and textures */
-   anv_nir_apply_pipeline_layout(nir, pipeline->layout);
+   if (pipeline->layout)
+      anv_nir_apply_pipeline_layout(nir, pipeline->layout);
 
    /* All binding table offsets provided by apply_pipeline_layout() are
     * relative to the start of the bindint table (plus MAX_RTS for VS).
