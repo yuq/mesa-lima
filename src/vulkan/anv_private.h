@@ -50,6 +50,7 @@
 #include <vulkan/vk_ext_khr_device_swapchain.h>
 
 #include "anv_entrypoints.h"
+#include "anv_gen_macros.h"
 #include "brw_context.h"
 #include "isl.h"
 
@@ -627,24 +628,35 @@ __gen_combine_address(struct anv_batch *batch, void *location,
    }
 }
 
-#define anv_batch_emit(batch, cmd, ...) do {                            \
-      void *__dst = anv_batch_emit_dwords(batch, cmd ## _length);       \
-      struct cmd __template = {                                         \
-         cmd ## _header,                                                \
-         __VA_ARGS__                                                    \
-      };                                                                \
-      cmd ## _pack(batch, __dst, &__template);                          \
-      VG(VALGRIND_CHECK_MEM_IS_DEFINED(__dst, cmd ## _length * 4));     \
+/* Wrapper macros needed to work around preprocessor argument issues.  In
+ * particular, arguments don't get pre-evaluated if they are concatenated.
+ * This means that, if you pass GENX(3DSTATE_PS) into the emit macro, the
+ * GENX macro won't get evaluated if the emit macro contains "cmd ## foo".
+ * We can work around this easily enough with these helpers.
+ */
+#define __anv_cmd_length(cmd) cmd ## _length
+#define __anv_cmd_length_bias(cmd) cmd ## _length_bias
+#define __anv_cmd_header(cmd) cmd ## _header
+#define __anv_cmd_pack(cmd) cmd ## _pack
+
+#define anv_batch_emit(batch, cmd, ...) do {                               \
+      void *__dst = anv_batch_emit_dwords(batch, __anv_cmd_length(cmd));   \
+      struct cmd __template = {                                            \
+         __anv_cmd_header(cmd),                                            \
+         __VA_ARGS__                                                       \
+      };                                                                   \
+      __anv_cmd_pack(cmd)(batch, __dst, &__template);                      \
+      VG(VALGRIND_CHECK_MEM_IS_DEFINED(__dst, __anv_cmd_length(cmd) * 4)); \
    } while (0)
 
 #define anv_batch_emitn(batch, n, cmd, ...) ({          \
       void *__dst = anv_batch_emit_dwords(batch, n);    \
       struct cmd __template = {                         \
-         cmd ## _header,                                \
-        .DwordLength = n - cmd ## _length_bias,         \
+         __anv_cmd_header(cmd),                         \
+        .DwordLength = n - __anv_cmd_length_bias(cmd),  \
          __VA_ARGS__                                    \
       };                                                \
-      cmd ## _pack(batch, __dst, &__template);          \
+      __anv_cmd_pack(cmd)(batch, __dst, &__template);   \
       __dst;                                            \
    })
 
