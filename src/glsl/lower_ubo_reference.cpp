@@ -52,26 +52,25 @@ public:
    void handle_rvalue(ir_rvalue **rvalue);
    ir_visitor_status visit_enter(ir_assignment *ir);
 
-   void setup_for_load_or_store(ir_variable *var,
+   void setup_for_load_or_store(void *mem_ctx,
+                                ir_variable *var,
                                 ir_rvalue *deref,
                                 ir_rvalue **offset,
                                 unsigned *const_offset,
                                 bool *row_major,
                                 int *matrix_columns,
                                 unsigned packing);
-   ir_expression *ubo_load(const struct glsl_type *type,
+   ir_expression *ubo_load(void *mem_ctx, const struct glsl_type *type,
 			   ir_rvalue *offset);
-   ir_call *ssbo_load(const struct glsl_type *type,
+   ir_call *ssbo_load(void *mem_ctx, const struct glsl_type *type,
                       ir_rvalue *offset);
 
    bool check_for_buffer_array_copy(ir_assignment *ir);
    bool check_for_buffer_struct_copy(ir_assignment *ir);
    void check_for_ssbo_store(ir_assignment *ir);
-   void write_to_memory(ir_dereference *deref,
-                        ir_variable *var,
-                        ir_variable *write_var,
-                        unsigned write_mask);
-   ir_call *ssbo_store(ir_rvalue *deref, ir_rvalue *offset,
+   void write_to_memory(void *mem_ctx, ir_dereference *deref, ir_variable *var,
+                        ir_variable *write_var, unsigned write_mask);
+   ir_call *ssbo_store(void *mem_ctx, ir_rvalue *deref, ir_rvalue *offset,
                        unsigned write_mask);
 
    enum {
@@ -94,7 +93,7 @@ public:
    ir_expression *process_ssbo_unsized_array_length(ir_rvalue **,
                                                     ir_dereference *,
                                                     ir_variable *);
-   ir_expression *emit_ssbo_get_buffer_size();
+   ir_expression *emit_ssbo_get_buffer_size(void *mem_ctx);
 
    unsigned calculate_unsized_array_stride(ir_dereference *deref,
                                            unsigned packing);
@@ -103,7 +102,6 @@ public:
    ir_call *check_for_ssbo_atomic_intrinsic(ir_call *ir);
    ir_visitor_status visit_enter(ir_call *ir);
 
-   void *mem_ctx;
    struct gl_shader *shader;
    struct gl_uniform_buffer_variable *ubo_var;
    ir_rvalue *uniform_block;
@@ -242,7 +240,8 @@ interface_field_name(void *mem_ctx, char *base_name, ir_rvalue *d,
 }
 
 void
-lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
+lower_ubo_reference_visitor::setup_for_load_or_store(void *mem_ctx,
+                                                     ir_variable *var,
                                                      ir_rvalue *deref,
                                                      ir_rvalue **offset,
                                                      unsigned *const_offset,
@@ -307,7 +306,7 @@ lower_ubo_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
    if (!var || !var->is_in_buffer_block())
       return;
 
-   mem_ctx = ralloc_parent(shader->ir);
+   void *mem_ctx = ralloc_parent(shader->ir);
 
    ir_rvalue *offset = NULL;
    unsigned const_offset;
@@ -322,7 +321,7 @@ lower_ubo_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
    /* Compute the offset to the start if the dereference as well as other
     * information we need to configure the write
     */
-   setup_for_load_or_store(var, deref,
+   setup_for_load_or_store(mem_ctx, var, deref,
                            &offset, &const_offset,
                            &row_major, &matrix_columns,
                            packing);
@@ -352,7 +351,8 @@ lower_ubo_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
 }
 
 ir_expression *
-lower_ubo_reference_visitor::ubo_load(const glsl_type *type,
+lower_ubo_reference_visitor::ubo_load(void *mem_ctx,
+                                      const glsl_type *type,
 				      ir_rvalue *offset)
 {
    ir_rvalue *block_ref = this->uniform_block->clone(mem_ctx, NULL);
@@ -371,7 +371,8 @@ shader_storage_buffer_object(const _mesa_glsl_parse_state *state)
 }
 
 ir_call *
-lower_ubo_reference_visitor::ssbo_store(ir_rvalue *deref,
+lower_ubo_reference_visitor::ssbo_store(void *mem_ctx,
+                                        ir_rvalue *deref,
                                         ir_rvalue *offset,
                                         unsigned write_mask)
 {
@@ -411,7 +412,8 @@ lower_ubo_reference_visitor::ssbo_store(ir_rvalue *deref,
 }
 
 ir_call *
-lower_ubo_reference_visitor::ssbo_load(const struct glsl_type *type,
+lower_ubo_reference_visitor::ssbo_load(void *mem_ctx,
+                                       const struct glsl_type *type,
                                        ir_rvalue *offset)
 {
    exec_list sig_params;
@@ -457,11 +459,11 @@ lower_ubo_reference_visitor::insert_buffer_access(void *mem_ctx,
    switch (this->buffer_access_type) {
    case ubo_load_access:
       base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
-                                    ubo_load(type, offset),
+                                    ubo_load(mem_ctx, type, offset),
                                     mask));
       break;
    case ssbo_load_access: {
-      ir_call *load_ssbo = ssbo_load(type, offset);
+      ir_call *load_ssbo = ssbo_load(mem_ctx, type, offset);
       base_ir->insert_before(load_ssbo);
       ir_rvalue *value = load_ssbo->return_deref->as_rvalue()->clone(mem_ctx, NULL);
       ir_assignment *assignment =
@@ -471,10 +473,11 @@ lower_ubo_reference_visitor::insert_buffer_access(void *mem_ctx,
    }
    case ssbo_store_access:
       if (channel >= 0) {
-         base_ir->insert_after(ssbo_store(swizzle(deref, channel, 1),
+         base_ir->insert_after(ssbo_store(mem_ctx,
+                                          swizzle(deref, channel, 1),
                                           offset, 1));
       } else {
-         base_ir->insert_after(ssbo_store(deref, offset, mask));
+         base_ir->insert_after(ssbo_store(mem_ctx, deref, offset, mask));
       }
       break;
    default:
@@ -483,7 +486,8 @@ lower_ubo_reference_visitor::insert_buffer_access(void *mem_ctx,
 }
 
 void
-lower_ubo_reference_visitor::write_to_memory(ir_dereference *deref,
+lower_ubo_reference_visitor::write_to_memory(void *mem_ctx,
+                                             ir_dereference *deref,
                                              ir_variable *var,
                                              ir_variable *write_var,
                                              unsigned write_mask)
@@ -499,7 +503,7 @@ lower_ubo_reference_visitor::write_to_memory(ir_dereference *deref,
    /* Compute the offset to the start if the dereference as well as other
     * information we need to configure the write
     */
-   setup_for_load_or_store(var, deref,
+   setup_for_load_or_store(mem_ctx, var, deref,
                            &offset, &const_offset,
                            &row_major, &matrix_columns,
                            packing);
@@ -590,7 +594,7 @@ lower_ubo_reference_visitor::check_ssbo_unsized_array_length_assignment(ir_assig
 }
 
 ir_expression *
-lower_ubo_reference_visitor::emit_ssbo_get_buffer_size()
+lower_ubo_reference_visitor::emit_ssbo_get_buffer_size(void *mem_ctx)
 {
    ir_rvalue *block_ref = this->uniform_block->clone(mem_ctx, NULL);
    return new(mem_ctx) ir_expression(ir_unop_get_buffer_size,
@@ -664,7 +668,7 @@ lower_ubo_reference_visitor::process_ssbo_unsized_array_length(ir_rvalue **rvalu
                                                                ir_dereference *deref,
                                                                ir_variable *var)
 {
-   mem_ctx = ralloc_parent(*rvalue);
+   void *mem_ctx = ralloc_parent(*rvalue);
 
    ir_rvalue *base_offset = NULL;
    unsigned const_offset;
@@ -678,14 +682,14 @@ lower_ubo_reference_visitor::process_ssbo_unsized_array_length(ir_rvalue **rvalu
    /* Compute the offset to the start if the dereference as well as other
     * information we need to calculate the length.
     */
-   setup_for_load_or_store(var, deref,
+   setup_for_load_or_store(mem_ctx, var, deref,
                            &base_offset, &const_offset,
                            &row_major, &matrix_columns,
                            packing);
    /* array.length() =
     *  max((buffer_object_size - offset_of_array) / stride_of_array, 0)
     */
-   ir_expression *buffer_size = emit_ssbo_get_buffer_size();
+   ir_expression *buffer_size = emit_ssbo_get_buffer_size(mem_ctx);
 
    ir_expression *offset_of_array = new(mem_ctx)
       ir_expression(ir_binop_add, base_offset,
@@ -725,7 +729,7 @@ lower_ubo_reference_visitor::check_for_ssbo_store(ir_assignment *ir)
    /* We have a write to a buffer variable, so declare a temporary and rewrite
     * the assignment so that the temporary is the LHS.
     */
-   mem_ctx = ralloc_parent(shader->ir);
+   void *mem_ctx = ralloc_parent(shader->ir);
 
    const glsl_type *type = rvalue->type;
    ir_variable *write_var = new(mem_ctx) ir_variable(type,
@@ -735,7 +739,7 @@ lower_ubo_reference_visitor::check_for_ssbo_store(ir_assignment *ir)
    ir->lhs = new(mem_ctx) ir_dereference_variable(write_var);
 
    /* Now we have to write the value assigned to the temporary back to memory */
-   write_to_memory(deref, var, write_var, ir->write_mask);
+   write_to_memory(mem_ctx, deref, var, write_var, ir->write_mask);
    progress = true;
 }
 
@@ -778,7 +782,7 @@ lower_ubo_reference_visitor::check_for_buffer_array_copy(ir_assignment *ir)
       return false;
 
    assert(lhs_deref->type->length == rhs_deref->type->length);
-   mem_ctx = ralloc_parent(shader->ir);
+   void *mem_ctx = ralloc_parent(shader->ir);
 
    for (unsigned i = 0; i < lhs_deref->type->length; i++) {
       ir_dereference *lhs_i =
@@ -826,7 +830,7 @@ lower_ubo_reference_visitor::check_for_buffer_struct_copy(ir_assignment *ir)
       return false;
 
    assert(lhs_deref->type->record_compare(rhs_deref->type));
-   mem_ctx = ralloc_parent(shader->ir);
+   void *mem_ctx = ralloc_parent(shader->ir);
 
    for (unsigned i = 0; i < lhs_deref->type->length; i++) {
       const char *field_name = lhs_deref->type->fields.structure[i].name;
@@ -897,7 +901,7 @@ lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
    /* Compute the offset to the start if the dereference and the
     * block index
     */
-   mem_ctx = ralloc_parent(shader->ir);
+   void *mem_ctx = ralloc_parent(shader->ir);
 
    ir_rvalue *offset = NULL;
    unsigned const_offset;
@@ -907,7 +911,7 @@ lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
 
    this->buffer_access_type = ssbo_atomic_access;
 
-   setup_for_load_or_store(var, deref,
+   setup_for_load_or_store(mem_ctx, var, deref,
                            &offset, &const_offset,
                            &row_major, &matrix_columns,
                            packing);
