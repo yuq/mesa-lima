@@ -773,7 +773,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    if (compiler->devinfo->gen == 6)
       max_output_size_bytes = GEN6_MAX_GS_URB_ENTRY_SIZE_BYTES;
    if (output_size_bytes > max_output_size_bytes)
-      return false;
+      return NULL;
 
 
    /* URB entry sizes are stored as a multiple of 64 bytes in gen7+ and
