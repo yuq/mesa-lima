@@ -3603,6 +3603,12 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
       assert(devinfo->gen >= 9);
       assert(bld.dispatch_width() != 16);
 
+      /* XXX: src_stencil is only available on gen9+. dst_depth is never
+       * available on gen9+. As such it's impossible to have both enabled at the
+       * same time and therefore length cannot overrun the array.
+       */
+      assert(length < 15);
+
       sources[length] = bld.vgrf(BRW_REGISTER_TYPE_UD);
       bld.exec_all().annotate("FB write OS")
          .emit(FS_OPCODE_PACK_STENCIL_REF, sources[length],
