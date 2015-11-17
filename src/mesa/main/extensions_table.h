@@ -176,7 +176,7 @@ EXT(EXT_rescale_normal                      , dummy_true                        
 EXT(EXT_secondary_color                     , dummy_true                             , GLL,  x ,  x ,  x , 1999)
 EXT(EXT_separate_shader_objects             , dummy_true                             ,  x ,  x ,  x , ES2, 2013)
 EXT(EXT_separate_specular_color             , dummy_true                             , GLL,  x ,  x ,  x , 1997)
-EXT(EXT_shader_integer_mix                  , EXT_shader_integer_mix                 , GLL, GLC, ES1,  30, 2013)
+EXT(EXT_shader_integer_mix                  , EXT_shader_integer_mix                 , GLL, GLC,  x ,  30, 2013)
 EXT(EXT_shadow_funcs                        , ARB_shadow                             , GLL,  x ,  x ,  x , 2002)
 EXT(EXT_stencil_two_side                    , EXT_stencil_two_side                   , GLL,  x ,  x ,  x , 2001)
 EXT(EXT_stencil_wrap                        , dummy_true                             , GLL,  x ,  x ,  x , 2002)
