@@ -41,4 +41,8 @@ extern void GLAPIENTRY
 _mesa_GetInternalformativ(GLenum target, GLenum internalformat,
                           GLenum pname, GLsizei bufSize, GLint *params);
 
+extern void GLAPIENTRY
+_mesa_GetInternalformati64v(GLenum target, GLenum internalformat,
+                            GLenum pname, GLsizei bufSize, GLint64 *params);
+
 #endif /* FORMATQUERY_H */
