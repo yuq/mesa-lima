@@ -252,6 +252,28 @@ static struct fd4_format formats[PIPE_FORMAT_COUNT] = {
 	VT(R32G32B32A32_FLOAT,   32_32_32_32_FLOAT, R32G32B32A32_FLOAT, WZYX),
 	_T(R32G32B32X32_FLOAT,   32_32_32_32_FLOAT, R32G32B32A32_FLOAT, WZYX),
 	V_(R32G32B32A32_FIXED,   32_32_32_32_FIXED, NONE,               WZYX),
+
+	/* compressed */
+	_T(ETC1_RGB8, ETC1, NONE, WZYX),
+	_T(ETC2_RGB8, ETC2_RGB8, NONE, WZYX),
+	_T(ETC2_SRGB8, ETC2_RGB8, NONE, WZYX),
+	_T(ETC2_RGB8A1, ETC2_RGB8A1, NONE, WZYX),
+	_T(ETC2_SRGB8A1, ETC2_RGB8A1, NONE, WZYX),
+	_T(ETC2_RGBA8, ETC2_RGBA8, NONE, WZYX),
+	_T(ETC2_SRGBA8, ETC2_RGBA8, NONE, WZYX),
+	_T(ETC2_R11_UNORM, ETC2_R11_UNORM, NONE, WZYX),
+	_T(ETC2_R11_SNORM, ETC2_R11_SNORM, NONE, WZYX),
+	_T(ETC2_RG11_UNORM, ETC2_RG11_UNORM, NONE, WZYX),
+	_T(ETC2_RG11_SNORM, ETC2_RG11_SNORM, NONE, WZYX),
+
+	_T(DXT1_RGB,   DXT1, NONE, WZYX),
+	_T(DXT1_SRGB,  DXT1, NONE, WZYX),
+	_T(DXT1_RGBA,  DXT1, NONE, WZYX),
+	_T(DXT1_SRGBA, DXT1, NONE, WZYX),
+	_T(DXT3_RGBA,  DXT3, NONE, WZYX),
+	_T(DXT3_SRGBA, DXT3, NONE, WZYX),
+	_T(DXT5_RGBA,  DXT5, NONE, WZYX),
+	_T(DXT5_SRGBA, DXT5, NONE, WZYX),
 };
 
 /* convert pipe format to vertex buffer format: */
@@ -295,7 +317,7 @@ fd4_pipe2fetchsize(enum pipe_format format)
 	if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
 		format = PIPE_FORMAT_Z32_FLOAT;
 
-	switch (util_format_get_blocksizebits(format)) {
+	switch (util_format_get_blocksizebits(format) / util_format_get_blockwidth(format)) {
 	case 8:   return TFETCH4_1_BYTE;
 	case 16:  return TFETCH4_2_BYTE;
 	case 32:  return TFETCH4_4_BYTE;
