@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <stdio.h>
 #include "brw_device_info.h"
 #include "main/mtypes.h"
 
