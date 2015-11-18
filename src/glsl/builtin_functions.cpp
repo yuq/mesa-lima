@@ -5243,8 +5243,8 @@ builtin_builder::_image_size_prototype(const glsl_type *image_type,
 
 ir_function_signature *
 builtin_builder::_image_samples_prototype(const glsl_type *image_type,
-                                          unsigned num_arguments,
-                                          unsigned flags)
+                                          unsigned /* num_arguments */,
+                                          unsigned /* flags */)
 {
    ir_variable *image = in_var(image_type, "image");
    ir_function_signature *sig =
