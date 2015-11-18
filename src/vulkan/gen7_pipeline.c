@@ -227,27 +227,26 @@ gen7_emit_ds_state(struct anv_pipeline *pipeline,
    bool has_stencil = false;  /* enable if subpass has stencil? */
 
    struct GEN7_DEPTH_STENCIL_STATE state = {
+      .DepthTestEnable = info->depthTestEnable,
+      .DepthBufferWriteEnable = info->depthWriteEnable,
+      .DepthTestFunction = vk_to_gen_compare_op[info->depthCompareOp],
+      .DoubleSidedStencilEnable = true,
+
       /* Is this what we need to do? */
       .StencilBufferWriteEnable = has_stencil,
 
       .StencilTestEnable = info->stencilTestEnable,
-      .StencilTestFunction = vk_to_gen_compare_op[info->front.stencilCompareOp],
       .StencilFailOp = vk_to_gen_stencil_op[info->front.stencilFailOp],
-      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.stencilDepthFailOp],
       .StencilPassDepthPassOp = vk_to_gen_stencil_op[info->front.stencilPassOp],
+      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.stencilDepthFailOp],
+      .StencilTestFunction = vk_to_gen_compare_op[info->front.stencilCompareOp],
 
-      .DoubleSidedStencilEnable = true,
-
-      .BackFaceStencilTestFunction = vk_to_gen_compare_op[info->back.stencilCompareOp],
       .BackfaceStencilFailOp = vk_to_gen_stencil_op[info->back.stencilFailOp],
-      .BackfaceStencilPassDepthFailOp = vk_to_gen_stencil_op[info->back.stencilDepthFailOp],
       .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info->back.stencilPassOp],
-
-      .DepthTestEnable = info->depthTestEnable,
-      .DepthTestFunction = vk_to_gen_compare_op[info->depthCompareOp],
-      .DepthBufferWriteEnable = info->depthWriteEnable,
+      .BackfaceStencilPassDepthFailOp = vk_to_gen_stencil_op[info->back.stencilDepthFailOp],
+      .BackFaceStencilTestFunction = vk_to_gen_compare_op[info->back.stencilCompareOp],
    };
-   
+
    GEN7_DEPTH_STENCIL_STATE_pack(NULL, &pipeline->gen7.depth_stencil_state, &state);
 }
 
