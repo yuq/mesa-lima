@@ -1624,6 +1624,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	case nir_texop_tg4:
 	case nir_texop_query_levels:
 	case nir_texop_texture_samples:
+	case nir_texop_samples_identical:
 		compile_error(ctx, "Unhandled NIR tex type: %d\n", tex->op);
 		return;
 	}
@@ -1889,6 +1890,8 @@ emit_instr(struct ir3_compile *ctx, nir_instr *instr)
 		case nir_texop_query_levels:
 			emit_tex_query_levels(ctx, tex);
 			break;
+		case nir_texop_samples_identical:
+			unreachable("nir_texop_samples_identical");
 		default:
 			emit_tex(ctx, tex);
 			break;

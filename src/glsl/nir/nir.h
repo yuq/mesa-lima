@@ -956,6 +956,9 @@ typedef enum {
    nir_texop_tg4,                /**< Texture gather */
    nir_texop_query_levels,       /**< Texture levels query */
    nir_texop_texture_samples,    /**< Texture samples query */
+   nir_texop_samples_identical,  /**< Query whether all samples are definitely
+                                  * identical.
+                                  */
 } nir_texop;
 
 typedef struct {
@@ -1029,6 +1032,7 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
 
    case nir_texop_texture_samples:
    case nir_texop_query_levels:
+   case nir_texop_samples_identical:
       return 1;
 
    default:

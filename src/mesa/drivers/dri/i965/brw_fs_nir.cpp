@@ -2733,6 +2733,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       inst->base_mrf = -1;
       return;
    }
+   case nir_texop_samples_identical: op = ir_samples_identical; break;
    default:
       unreachable("unknown texture opcode");
    }

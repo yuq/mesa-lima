@@ -1545,6 +1545,7 @@ ir_texture_opcode_for_nir_texop(nir_texop texop)
    case nir_texop_txf_ms: op = ir_txf_ms; break;
    case nir_texop_txl: op = ir_txl; break;
    case nir_texop_txs: op = ir_txs; break;
+   case nir_texop_samples_identical: op = ir_samples_identical; break;
    default:
       unreachable("unknown texture opcode");
    }

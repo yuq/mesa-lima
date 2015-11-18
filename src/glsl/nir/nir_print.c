@@ -512,7 +512,9 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
    case nir_texop_texture_samples:
       fprintf(fp, "texture_samples ");
       break;
-
+   case nir_texop_samples_identical:
+      fprintf(fp, "samples_identical ");
+      break;
    default:
       unreachable("Invalid texture operation");
       break;
