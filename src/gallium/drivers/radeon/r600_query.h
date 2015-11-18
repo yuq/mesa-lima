@@ -33,6 +33,7 @@
 
 struct r600_common_context;
 struct r600_query;
+struct r600_query_hw;
 struct r600_resource;
 
 #define R600_QUERY_DRAW_CALLS		(PIPE_QUERY_DRIVER_SPECIFIC + 0)
@@ -67,6 +68,23 @@ struct r600_query {
 	unsigned type;
 };
 
+enum {
+	R600_QUERY_HW_FLAG_NO_START = (1 << 0),
+	R600_QUERY_HW_FLAG_TIMER = (1 << 1),
+};
+
+struct r600_query_hw_ops {
+	void (*prepare_buffer)(struct r600_common_context *,
+			       struct r600_query_hw *,
+			       struct r600_resource *);
+	void (*emit_start)(struct r600_common_context *,
+			   struct r600_query_hw *,
+			   struct r600_resource *buffer, uint64_t va);
+	void (*emit_stop)(struct r600_common_context *,
+			  struct r600_query_hw *,
+			  struct r600_resource *buffer, uint64_t va);
+};
+
 struct r600_query_buffer {
 	/* The buffer where query results are stored. */
 	struct r600_resource		*buf;
@@ -80,6 +98,8 @@ struct r600_query_buffer {
 
 struct r600_query_hw {
 	struct r600_query b;
+	struct r600_query_hw_ops *ops;
+	unsigned flags;
 
 	/* The query buffer and how many results are in it. */
 	struct r600_query_buffer buffer;
