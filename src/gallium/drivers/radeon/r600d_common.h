@@ -53,8 +53,16 @@
 #define		STRMOUT_SELECT_BUFFER(x)	(((x) & 0x3) << 8)
 #define PKT3_WAIT_REG_MEM                      0x3C
 #define		WAIT_REG_MEM_EQUAL		3
+#define         WAIT_REG_MEM_MEM_SPACE(x)       (((x) & 0x3) << 4)
 #define PKT3_EVENT_WRITE                       0x46
 #define PKT3_EVENT_WRITE_EOP                   0x47
+#define         EOP_DATA_SEL(x)                         ((x) << 29)
+		/* 0 - discard
+		 * 1 - send low 32bit data
+		 * 2 - send 64bit data
+		 * 3 - send 64bit GPU counter value
+		 * 4 - send 64bit sys counter value
+		 */
 #define PKT3_SET_CONFIG_REG		       0x68
 #define PKT3_SET_CONTEXT_REG		       0x69
 #define PKT3_STRMOUT_BASE_UPDATE	       0x72 /* r700 only */
