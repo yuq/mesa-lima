@@ -580,6 +580,9 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
    case BRW_REGISTER_TYPE_F:
       reg->f = fabsf(reg->f);
       return true;
+   case BRW_REGISTER_TYPE_DF:
+      reg->df = fabs(reg->df);
+      return true;
    case BRW_REGISTER_TYPE_VF:
       reg->ud &= ~0x80808080;
       return true;
@@ -598,9 +601,8 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
       assert(!"unimplemented: abs V immediate");
    case BRW_REGISTER_TYPE_Q:
       assert(!"unimplemented: abs Q immediate");
-   case BRW_REGISTER_TYPE_DF:
    case BRW_REGISTER_TYPE_HF:
-      assert(!"unimplemented: abs DF/HF immediate");
+      assert(!"unimplemented: abs HF immediate");
    }
 
    return false;
