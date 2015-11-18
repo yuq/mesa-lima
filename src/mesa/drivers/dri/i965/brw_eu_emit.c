@@ -2617,17 +2617,27 @@ brw_find_next_block_end(struct brw_codegen *p, int start_offset)
    void *store = p->store;
    const struct brw_device_info *devinfo = p->devinfo;
 
+   int depth = 0;
+
    for (offset = next_offset(devinfo, store, start_offset);
         offset < p->next_insn_offset;
         offset = next_offset(devinfo, store, offset)) {
       brw_inst *insn = store + offset;
 
       switch (brw_inst_opcode(devinfo, insn)) {
+      case BRW_OPCODE_IF:
+         depth++;
+         break;
       case BRW_OPCODE_ENDIF:
+         if (depth == 0)
+            return offset;
+         depth--;
+         break;
       case BRW_OPCODE_ELSE:
       case BRW_OPCODE_WHILE:
       case BRW_OPCODE_HALT:
-	 return offset;
+         if (depth == 0)
+            return offset;
       }
    }
 
