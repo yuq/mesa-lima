@@ -527,6 +527,9 @@ brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    case BRW_REGISTER_TYPE_VF:
       reg->ud ^= 0x80808080;
       return true;
+   case BRW_REGISTER_TYPE_DF:
+      reg->df = -reg->df;
+      return true;
    case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_B:
       unreachable("no UB/B immediates");
@@ -536,9 +539,8 @@ brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    case BRW_REGISTER_TYPE_UQ:
    case BRW_REGISTER_TYPE_Q:
       assert(!"unimplemented: negate UQ/Q immediate");
-   case BRW_REGISTER_TYPE_DF:
    case BRW_REGISTER_TYPE_HF:
-      assert(!"unimplemented: negate DF/HF immediate");
+      assert(!"unimplemented: negate HF immediate");
    }
 
    return false;
