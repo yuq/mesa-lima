@@ -259,6 +259,26 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       lod = brw_imm_ud(0u);
    }
 
+   if (op == ir_samples_identical) {
+      fs_reg dst = vgrf(glsl_type::get_instance(dest_type->base_type, 1, 1));
+
+      /* If mcs is an immediate value, it means there is no MCS.  In that case
+       * just return false.
+       */
+      if (mcs.file == BRW_IMMEDIATE_VALUE) {
+         bld.MOV(dst, brw_imm_ud(0u));
+      } else if ((key_tex->msaa_16 & (1 << sampler))) {
+         fs_reg tmp = vgrf(glsl_type::uint_type);
+         bld.OR(tmp, mcs, offset(mcs, bld, 1));
+         bld.CMP(dst, tmp, brw_imm_ud(0u), BRW_CONDITIONAL_EQ);
+      } else {
+         bld.CMP(dst, mcs, brw_imm_ud(0u), BRW_CONDITIONAL_EQ);
+      }
+
+      this->result = dst;
+      return;
+   }
+
    if (coordinate.file != BAD_FILE) {
       /* FINISHME: Texture coordinate rescaling doesn't work with non-constant
        * samplers.  This should only be a problem with GL_CLAMP on Gen7.

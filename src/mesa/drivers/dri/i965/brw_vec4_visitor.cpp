@@ -909,6 +909,13 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
       unreachable("TXB is not valid for vertex shaders.");
    case ir_lod:
       unreachable("LOD is not valid for vertex shaders.");
+   case ir_samples_identical: {
+      /* There are some challenges implementing this for vec4, and it seems
+       * unlikely to be used anyway.  For now, just return false ways.
+       */
+      emit(MOV(dest, brw_imm_ud(0u)));
+      return;
+   }
    default:
       unreachable("Unrecognized tex op");
    }

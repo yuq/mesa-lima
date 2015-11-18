@@ -1615,6 +1615,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          switch (instr->op) {
          case nir_texop_txf:
          case nir_texop_txf_ms:
+         case nir_texop_samples_identical:
             coordinate = get_nir_src(instr->src[i].src, BRW_REGISTER_TYPE_D,
                                      src_size);
             coord_type = glsl_type::ivec(src_size);
@@ -1695,7 +1696,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
       }
    }
 
-   if (instr->op == nir_texop_txf_ms) {
+   if (instr->op == nir_texop_txf_ms ||
+       instr->op == nir_texop_samples_identical) {
       assert(coord_type != NULL);
       if (devinfo->gen >= 7 &&
           key_tex->compressed_multisample_layout_mask & (1 << sampler)) {

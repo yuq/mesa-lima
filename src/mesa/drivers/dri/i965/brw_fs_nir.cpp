@@ -2625,6 +2625,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          switch (instr->op) {
          case nir_texop_txf:
          case nir_texop_txf_ms:
+         case nir_texop_samples_identical:
             coordinate = retype(src, BRW_REGISTER_TYPE_D);
             break;
          default:
@@ -2687,7 +2688,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       }
    }
 
-   if (instr->op == nir_texop_txf_ms) {
+   if (instr->op == nir_texop_txf_ms ||
+       instr->op == nir_texop_samples_identical) {
       if (devinfo->gen >= 7 &&
           key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
          mcs = emit_mcs_fetch(coordinate, instr->coord_components, sampler_reg);
