@@ -1873,20 +1873,24 @@ vec4_visitor::convert_to_hw_regs()
          struct src_reg &src = inst->src[i];
          struct brw_reg reg;
          switch (src.file) {
-         case VGRF:
-            reg = byte_offset(brw_vec8_grf(src.nr, 0), src.offset);
+         case VGRF: {
+            const unsigned type_size = type_sz(src.type);
+            const unsigned width = REG_SIZE / 2 / MAX2(4, type_size);
+            reg = byte_offset(brw_vecn_grf(width, src.nr, 0), src.offset);
             reg.type = src.type;
             reg.swizzle = src.swizzle;
             reg.abs = src.abs;
             reg.negate = src.negate;
             break;
+         }
 
-         case UNIFORM:
+         case UNIFORM: {
+            const unsigned width = REG_SIZE / 2 / MAX2(4, type_sz(src.type));
             reg = stride(byte_offset(brw_vec4_grf(
                                         prog_data->base.dispatch_grf_start_reg +
                                         src.nr / 2, src.nr % 2 * 4),
                                      src.offset),
-                         0, 4, 1);
+                         0, width, 1);
             reg.type = src.type;
             reg.swizzle = src.swizzle;
             reg.abs = src.abs;
@@ -1895,6 +1899,7 @@ vec4_visitor::convert_to_hw_regs()
             /* This should have been moved to pull constants. */
             assert(!src.reladdr);
             break;
+         }
 
          case ARF:
          case FIXED_GRF:
