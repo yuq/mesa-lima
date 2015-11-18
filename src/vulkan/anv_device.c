@@ -1759,7 +1759,7 @@ void anv_UpdateDescriptorSets(
              * to stomp on it.
              */
             if (sampler)
-               desc->sampler = sampler;
+               desc[j].sampler = sampler;
          }
          break;
 
