@@ -27,6 +27,7 @@ AM_CPPFLAGS += -DHAVE_SHARED_GLAPI
 main_test_SOURCES +=			\
 	dispatch_sanity.cpp		\
 	mesa_formats.cpp			\
+	mesa_extensions.cpp			\
 	program_state_string.cpp
 
 main_test_LDADD += \
