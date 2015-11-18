@@ -838,6 +838,7 @@ enum anv_cmd_dirty_bits {
    ANV_CMD_DIRTY_DYNAMIC_ALL                       = (1 << 9) - 1,
    ANV_CMD_DIRTY_PIPELINE                          = 1 << 9,
    ANV_CMD_DIRTY_INDEX_BUFFER                      = 1 << 10,
+   ANV_CMD_DIRTY_RENDER_TARGETS                    = 1 << 11,
 };
 typedef uint32_t anv_cmd_dirty_mask_t;
 

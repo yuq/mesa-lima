@@ -531,14 +531,16 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_RENDER_TARGETS |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
       uint32_t depth_stencil_dw[GEN7_DEPTH_STENCIL_STATE_length];
 
+      const struct anv_image_view *iview =
+         anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
+
       struct GEN7_DEPTH_STENCIL_STATE depth_stencil = {
-         /* Is this what we need to do? */
-         .StencilBufferWriteEnable =
-            cmd_buffer->state.dynamic.stencil_write_mask.front != 0,
+         .StencilBufferWriteEnable = iview && iview->format->has_stencil,
 
          .StencilTestMask =
             cmd_buffer->state.dynamic.stencil_compare_mask.front & 0xff,
@@ -920,7 +922,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
    /* Emit 3DSTATE_DEPTH_BUFFER */
    if (has_depth) {
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DEPTH_BUFFER,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER),
          .SurfaceType = SURFTYPE_2D,
          .DepthWriteEnable = iview->format->depth_format,
          .StencilWriteEnable = has_stencil,
@@ -936,7 +938,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .LOD = 0,
          .Depth = 1 - 1,
          .MinimumArrayElement = 0,
-         .DepthBufferObjectControlState = GEN7_MOCS,
+         .DepthBufferObjectControlState = GENX(MOCS),
          .RenderTargetViewExtent = 1 - 1);
    } else {
       /* Even when no depth buffer is present, the hardware requires that
@@ -956,7 +958,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
        * actual framebuffer's width and height, even when neither depth buffer
        * nor stencil buffer is present.
        */
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DEPTH_BUFFER,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER),
          .SurfaceType = SURFTYPE_2D,
          .SurfaceFormat = D16_UNORM,
          .Width = fb->width - 1,
@@ -966,8 +968,11 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
    /* Emit 3DSTATE_STENCIL_BUFFER */
    if (has_stencil) {
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER,
-         .StencilBufferObjectControlState = GEN7_MOCS,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER),
+#     if (ANV_IS_HASWELL)
+         .StencilBufferEnable = true,
+#     endif
+         .StencilBufferObjectControlState = GENX(MOCS),
 
          /* Stencil buffers have strange pitch. The PRM says:
           *
@@ -997,6 +1002,7 @@ genX(cmd_buffer_begin_subpass)(struct anv_cmd_buffer *cmd_buffer,
 {
    cmd_buffer->state.subpass = subpass;
    cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
+   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
 }

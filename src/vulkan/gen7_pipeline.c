@@ -224,16 +224,11 @@ gen7_emit_ds_state(struct anv_pipeline *pipeline,
       return;
    }
 
-   bool has_stencil = false;  /* enable if subpass has stencil? */
-
    struct GEN7_DEPTH_STENCIL_STATE state = {
       .DepthTestEnable = info->depthTestEnable,
       .DepthBufferWriteEnable = info->depthWriteEnable,
       .DepthTestFunction = vk_to_gen_compare_op[info->depthCompareOp],
       .DoubleSidedStencilEnable = true,
-
-      /* Is this what we need to do? */
-      .StencilBufferWriteEnable = has_stencil,
 
       .StencilTestEnable = info->stencilTestEnable,
       .StencilFailOp = vk_to_gen_stencil_op[info->front.stencilFailOp],
