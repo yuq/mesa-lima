@@ -118,7 +118,17 @@ struct r600_query_hw {
 	unsigned stream;
 };
 
+boolean r600_query_hw_init(struct r600_common_context *rctx,
+			   struct r600_query_hw *query);
 void r600_query_hw_destroy(struct r600_common_context *rctx,
 			   struct r600_query *rquery);
+boolean r600_query_hw_begin(struct r600_common_context *rctx,
+			    struct r600_query *rquery);
+void r600_query_hw_end(struct r600_common_context *rctx,
+		       struct r600_query *rquery);
+boolean r600_query_hw_get_result(struct r600_common_context *rctx,
+				 struct r600_query *rquery,
+				 boolean wait,
+				 union pipe_query_result *result);
 
 #endif /* R600_QUERY_H */

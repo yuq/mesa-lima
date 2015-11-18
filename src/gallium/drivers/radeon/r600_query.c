@@ -282,12 +282,6 @@ static void r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 	}
 }
 
-static boolean r600_query_hw_begin(struct r600_common_context *, struct r600_query *);
-static void r600_query_hw_end(struct r600_common_context *, struct r600_query *);
-static boolean r600_query_hw_get_result(struct r600_common_context *,
-					struct r600_query *, boolean wait,
-					union pipe_query_result *result);
-
 static struct r600_query_ops query_hw_ops = {
 	.destroy = r600_query_hw_destroy,
 	.begin = r600_query_hw_begin,
@@ -316,6 +310,16 @@ static struct r600_query_hw_ops query_hw_default_hw_ops = {
 	.clear_result = r600_query_hw_clear_result,
 	.add_result = r600_query_hw_add_result,
 };
+
+boolean r600_query_hw_init(struct r600_common_context *rctx,
+			   struct r600_query_hw *query)
+{
+	query->buffer.buf = r600_new_query_buffer(rctx, query);
+	if (!query->buffer.buf)
+		return FALSE;
+
+	return TRUE;
+}
 
 static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 					       unsigned query_type,
@@ -366,8 +370,7 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 		return NULL;
 	}
 
-	query->buffer.buf = r600_new_query_buffer(rctx, query);
-	if (!query->buffer.buf) {
+	if (!r600_query_hw_init(rctx, query)) {
 		FREE(query);
 		return NULL;
 	}
@@ -646,8 +649,8 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 	return rquery->ops->begin(rctx, rquery);
 }
 
-static boolean r600_query_hw_begin(struct r600_common_context *rctx,
-				   struct r600_query *rquery)
+boolean r600_query_hw_begin(struct r600_common_context *rctx,
+			    struct r600_query *rquery)
 {
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
 	struct r600_query_buffer *prev = query->buffer.previous;
@@ -692,7 +695,7 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 	rquery->ops->end(rctx, rquery);
 }
 
-static void r600_query_hw_end(struct r600_common_context *rctx,
+void r600_query_hw_end(struct r600_common_context *rctx,
 			      struct r600_query *rquery)
 {
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
@@ -859,9 +862,9 @@ static void r600_query_hw_clear_result(struct r600_query_hw *query,
 	util_query_clear_result(result, query->b.type);
 }
 
-static boolean r600_query_hw_get_result(struct r600_common_context *rctx,
-					struct r600_query *rquery,
-					boolean wait, union pipe_query_result *result)
+boolean r600_query_hw_get_result(struct r600_common_context *rctx,
+				 struct r600_query *rquery,
+				 boolean wait, union pipe_query_result *result)
 {
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
 	struct r600_query_buffer *qbuf;
