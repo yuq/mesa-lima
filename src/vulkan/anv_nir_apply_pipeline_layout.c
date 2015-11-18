@@ -82,6 +82,29 @@ get_sampler_index(unsigned set, unsigned binding, nir_texop tex_op,
    return sampler_index;
 }
 
+static uint32_t
+get_image_index(unsigned set, unsigned binding,
+                struct apply_pipeline_layout_state *state)
+{
+   assert(set < state->layout->num_sets);
+   struct anv_descriptor_set_layout *set_layout =
+      state->layout->set[set].layout;
+
+   assert(binding < set_layout->binding_count);
+
+   gl_shader_stage stage = state->shader->stage;
+
+   assert(set_layout->binding[binding].stage[stage].image_index >= 0);
+
+   uint32_t image_index =
+      state->layout->set[set].stage[stage].image_start +
+      set_layout->binding[binding].stage[stage].image_index;
+
+   assert(image_index < state->layout->stage[stage].image_count);
+
+   return image_index;
+}
+
 static void
 lower_res_index_intrinsic(nir_intrinsic_instr *intrin,
                           struct apply_pipeline_layout_state *state)
@@ -214,8 +237,23 @@ apply_pipeline_layout_block(nir_block *block, void *void_state)
    return true;
 }
 
+static void
+setup_vec4_uniform_value(const gl_constant_value **params,
+                         const gl_constant_value *values,
+                         unsigned n)
+{
+   static const gl_constant_value zero = { 0 };
+
+   for (unsigned i = 0; i < n; ++i)
+      params[i] = &values[i];
+
+   for (unsigned i = n; i < 4; ++i)
+      params[i] = &zero;
+}
+
 bool
 anv_nir_apply_pipeline_layout(nir_shader *shader,
+                              struct brw_stage_prog_data *prog_data,
                               const struct anv_pipeline_layout *layout)
 {
    struct apply_pipeline_layout_state state = {
@@ -230,6 +268,48 @@ anv_nir_apply_pipeline_layout(nir_shader *shader,
          nir_metadata_preserve(overload->impl, nir_metadata_block_index |
                                                nir_metadata_dominance);
       }
+   }
+
+   if (layout->stage[shader->stage].image_count > 0) {
+      nir_foreach_variable(var, &shader->uniforms) {
+         if (glsl_type_is_image(var->type) ||
+             (glsl_type_is_array(var->type) &&
+              glsl_type_is_image(glsl_get_array_element(var->type)))) {
+            /* Images are represented as uniform push constants and the actual
+             * information required for reading/writing to/from the image is
+             * storred in the uniform.
+             */
+            unsigned image_index = get_image_index(var->data.descriptor_set,
+                                                   var->data.binding, &state);
+
+            var->data.driver_location = shader->num_uniforms +
+                                        image_index * BRW_IMAGE_PARAM_SIZE;
+         }
+      }
+
+      struct anv_push_constants *null_data = NULL;
+      const gl_constant_value **param = prog_data->param + shader->num_uniforms;
+      const struct brw_image_param *image_param = null_data->images;
+      for (uint32_t i = 0; i < layout->stage[shader->stage].image_count; i++) {
+         setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
+            (const gl_constant_value *)&image_param->surface_idx, 1);
+         setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_OFFSET_OFFSET,
+            (const gl_constant_value *)image_param->offset, 2);
+         setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SIZE_OFFSET,
+            (const gl_constant_value *)image_param->size, 3);
+         setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_STRIDE_OFFSET,
+            (const gl_constant_value *)image_param->stride, 4);
+         setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_TILING_OFFSET,
+            (const gl_constant_value *)image_param->tiling, 3);
+         setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SWIZZLING_OFFSET,
+            (const gl_constant_value *)image_param->swizzling, 2);
+
+         param += BRW_IMAGE_PARAM_SIZE;
+         image_param ++;
+      }
+
+      shader->num_uniforms += layout->stage[shader->stage].image_count *
+                              BRW_IMAGE_PARAM_SIZE;
    }
 
    return state.progress;

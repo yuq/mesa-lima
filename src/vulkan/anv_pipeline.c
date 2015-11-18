@@ -315,6 +315,10 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (pipeline->layout && pipeline->layout->stage[stage].has_dynamic_offsets)
       prog_data->nr_params += MAX_DYNAMIC_BUFFERS * 2;
 
+   if (pipeline->layout && pipeline->layout->stage[stage].image_count > 0)
+      prog_data->nr_params += pipeline->layout->stage[stage].image_count *
+                              BRW_IMAGE_PARAM_SIZE;
+
    if (prog_data->nr_params > 0) {
       /* XXX: I think we're leaking this */
       prog_data->param = (const gl_constant_value **)
@@ -339,7 +343,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
 
    /* Apply the actual pipeline layout to UBOs, SSBOs, and textures */
    if (pipeline->layout)
-      anv_nir_apply_pipeline_layout(nir, pipeline->layout);
+      anv_nir_apply_pipeline_layout(nir, prog_data, pipeline->layout);
 
    /* All binding table offsets provided by apply_pipeline_layout() are
     * relative to the start of the bindint table (plus MAX_RTS for VS).

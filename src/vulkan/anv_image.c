@@ -592,3 +592,12 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
        return NULL;
    }
 }
+
+void
+anv_image_view_fill_image_param(struct anv_device *device,
+                                struct anv_image_view *view,
+                                struct brw_image_param *param)
+{
+   memset(param, 0, sizeof *param);
+   anv_finishme("Actually fill out brw_image_param");
+}

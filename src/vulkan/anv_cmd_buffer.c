@@ -668,6 +668,16 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    if (layout == NULL)
       goto out;
 
+   if (layout->stage[stage].image_count > 0) {
+      VkResult result =
+         anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, images);
+      if (result != VK_SUCCESS)
+         return result;
+
+      cmd_buffer->state.push_constants_dirty |= 1 << stage;
+   }
+
+   uint32_t image = 0;
    for (uint32_t s = 0; s < layout->stage[stage].surface_count; s++) {
       struct anv_pipeline_binding *binding =
          &layout->stage[stage].surface_to_descriptor[s];
@@ -713,7 +723,20 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          bo_offset = desc->image_view->offset;
          break;
 
-      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
+         surface_state = desc->image_view->storage_surface_state;
+         bo = desc->image_view->bo;
+         bo_offset = desc->image_view->offset;
+
+         struct brw_image_param *image_param =
+            &cmd_buffer->state.push_constants[stage]->images[image++];
+
+         anv_image_view_fill_image_param(cmd_buffer->device, desc->image_view,
+                                         image_param);
+         image_param->surface_idx = bias + s;
+         break;
+      }
+
       case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
          assert(!"Unsupported descriptor type");
@@ -727,6 +750,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       bt_map[bias + s] = surface_state.offset + state_offset;
       add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
    }
+   assert(image == layout->stage[stage].image_count);
 
  out:
    if (!cmd_buffer->device->info.has_llc)
