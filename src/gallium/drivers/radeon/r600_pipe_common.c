@@ -27,6 +27,7 @@
 #include "r600_pipe_common.h"
 #include "r600_cs.h"
 #include "tgsi/tgsi_parse.h"
+#include "util/list.h"
 #include "util/u_draw_quad.h"
 #include "util/u_memory.h"
 #include "util/u_format_s3tc.h"
@@ -135,12 +136,10 @@ static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
 void r600_preflush_suspend_features(struct r600_common_context *ctx)
 {
 	/* suspend queries */
-	ctx->queries_suspended_for_flush = false;
-	if (ctx->num_cs_dw_nontimer_queries_suspend) {
+	if (!LIST_IS_EMPTY(&ctx->active_nontimer_queries))
 		r600_suspend_nontimer_queries(ctx);
+	if (!LIST_IS_EMPTY(&ctx->active_timer_queries))
 		r600_suspend_timer_queries(ctx);
-		ctx->queries_suspended_for_flush = true;
-	}
 
 	ctx->streamout.suspended = false;
 	if (ctx->streamout.begin_emitted) {
@@ -157,10 +156,10 @@ void r600_postflush_resume_features(struct r600_common_context *ctx)
 	}
 
 	/* resume queries */
-	if (ctx->queries_suspended_for_flush) {
-		r600_resume_nontimer_queries(ctx);
+	if (!LIST_IS_EMPTY(&ctx->active_timer_queries))
 		r600_resume_timer_queries(ctx);
-	}
+	if (!LIST_IS_EMPTY(&ctx->active_nontimer_queries))
+		r600_resume_nontimer_queries(ctx);
 }
 
 static void r600_flush_from_st(struct pipe_context *ctx,

@@ -393,8 +393,6 @@ struct r600_common_context {
 	struct list_head		active_timer_queries;
 	unsigned			num_cs_dw_nontimer_queries_suspend;
 	unsigned			num_cs_dw_timer_queries_suspend;
-	/* If queries have been suspended. */
-	bool				queries_suspended_for_flush;
 	/* Additional hardware info. */
 	unsigned			backend_mask;
 	unsigned			max_db; /* for OQ */
