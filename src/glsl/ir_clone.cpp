@@ -223,6 +223,7 @@ ir_texture::clone(void *mem_ctx, struct hash_table *ht) const
    case ir_lod:
    case ir_query_levels:
    case ir_texture_samples:
+   case ir_samples_identical:
       break;
    case ir_txb:
       new_tex->lod_info.bias = this->lod_info.bias->clone(mem_ctx, ht);

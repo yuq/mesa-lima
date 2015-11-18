@@ -1965,6 +1965,7 @@ enum ir_texture_opcode {
    ir_tg4,		/**< Texture gather */
    ir_query_levels,     /**< Texture levels query */
    ir_texture_samples,  /**< Texture samples query */
+   ir_samples_identical, /**< Query whether all samples are definitely identical. */
 };
 
 
@@ -1991,6 +1992,7 @@ enum ir_texture_opcode {
  * (lod <type> <sampler> <coordinate>)
  * (tg4 <type> <sampler> <coordinate> <offset> <component>)
  * (query_levels <type> <sampler>)
+ * (samples_identical <sampler> <coordinate>)
  */
 class ir_texture : public ir_rvalue {
 public:

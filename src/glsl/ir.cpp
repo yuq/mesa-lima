@@ -1421,7 +1421,7 @@ ir_dereference::is_lvalue() const
 }
 
 
-static const char * const tex_opcode_strs[] = { "tex", "txb", "txl", "txd", "txf", "txf_ms", "txs", "lod", "tg4", "query_levels", "texture_samples" };
+static const char * const tex_opcode_strs[] = { "tex", "txb", "txl", "txd", "txf", "txf_ms", "txs", "lod", "tg4", "query_levels", "texture_samples", "samples_identical" };
 
 const char *ir_texture::opcode_string()
 {
@@ -1455,6 +1455,10 @@ ir_texture::set_sampler(ir_dereference *sampler, const glsl_type *type)
    } else if (this->op == ir_lod) {
       assert(type->vector_elements == 2);
       assert(type->base_type == GLSL_TYPE_FLOAT);
+   } else if (this->op == ir_samples_identical) {
+      assert(type == glsl_type::bool_type);
+      assert(sampler->type->base_type == GLSL_TYPE_SAMPLER);
+      assert(sampler->type->sampler_dimensionality == GLSL_SAMPLER_DIM_MS);
    } else {
       assert(sampler->type->sampler_type == (int) type->base_type);
       if (sampler->type->sampler_shadow)
