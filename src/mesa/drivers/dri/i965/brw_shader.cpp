@@ -666,7 +666,17 @@ backend_reg::is_zero() const
    if (file != IMM)
       return false;
 
-   return d == 0;
+   switch (type) {
+   case BRW_REGISTER_TYPE_F:
+      return f == 0;
+   case BRW_REGISTER_TYPE_DF:
+      return df == 0;
+   case BRW_REGISTER_TYPE_D:
+   case BRW_REGISTER_TYPE_UD:
+      return d == 0;
+   default:
+      return false;
+   }
 }
 
 bool
@@ -675,9 +685,17 @@ backend_reg::is_one() const
    if (file != IMM)
       return false;
 
-   return type == BRW_REGISTER_TYPE_F
-          ? f == 1.0
-          : d == 1;
+   switch (type) {
+   case BRW_REGISTER_TYPE_F:
+      return f == 1.0f;
+   case BRW_REGISTER_TYPE_DF:
+      return df == 1.0;
+   case BRW_REGISTER_TYPE_D:
+   case BRW_REGISTER_TYPE_UD:
+      return d == 1;
+   default:
+      return false;
+   }
 }
 
 bool
@@ -689,6 +707,8 @@ backend_reg::is_negative_one() const
    switch (type) {
    case BRW_REGISTER_TYPE_F:
       return f == -1.0;
+   case BRW_REGISTER_TYPE_DF:
+      return df == -1.0;
    case BRW_REGISTER_TYPE_D:
       return d == -1;
    default:
