@@ -91,9 +91,6 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
       .DynamicStateBaseAddress                  = { &device->dynamic_state_block_pool.bo, 0 },
       .DynamicStateMemoryObjectControlState     = GEN7_MOCS,
       .DynamicStateBaseAddressModifyEnable      = true,
-      .DynamicStateAccessUpperBound             = { &device->dynamic_state_block_pool.bo,
-                                                    device->dynamic_state_block_pool.bo.size },
-      .DynamicStateAccessUpperBoundModifyEnable = true,
 
       .IndirectObjectBaseAddress                = { NULL, 0 },
       .IndirectObjectMemoryObjectControlState   = GEN7_MOCS,
