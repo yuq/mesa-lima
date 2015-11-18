@@ -1654,14 +1654,6 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 
       case nir_tex_src_ms_index: {
          sample_index = get_nir_src(instr->src[i].src, BRW_REGISTER_TYPE_D, 1);
-         assert(coord_type != NULL);
-         if (devinfo->gen >= 7 &&
-             key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
-            mcs = emit_mcs_fetch(coord_type, coordinate, sampler_reg);
-         } else {
-            mcs = brw_imm_ud(0u);
-         }
-         mcs = retype(mcs, BRW_REGISTER_TYPE_UD);
          break;
       }
 
@@ -1700,6 +1692,16 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 
       default:
          unreachable("unknown texture source");
+      }
+   }
+
+   if (instr->op == nir_texop_txf_ms) {
+      assert(coord_type != NULL);
+      if (devinfo->gen >= 7 &&
+          key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
+         mcs = emit_mcs_fetch(coord_type, coordinate, sampler_reg);
+      } else {
+         mcs = brw_imm_ud(0u);
       }
    }
 
