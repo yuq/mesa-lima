@@ -31,6 +31,7 @@
 #include "glsl/ir_optimization.h"
 #include "glsl/glsl_parser_extras.h"
 #include "main/shaderapi.h"
+#include "util/debug.h"
 
 static void
 shader_debug_log_mesa(void *data, const char *fmt, ...)
@@ -87,7 +88,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    compiler->scalar_stage[MESA_SHADER_VERTEX] =
       devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS);
    compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
-      devinfo->gen >= 8 && brw_env_var_as_boolean("INTEL_SCALAR_GS", false);
+      devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", false);
    compiler->scalar_stage[MESA_SHADER_FRAGMENT] = true;
    compiler->scalar_stage[MESA_SHADER_COMPUTE] = true;
 

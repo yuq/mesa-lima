@@ -171,12 +171,14 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
    }
 }
 
+#include "util/debug.h"
+
 static bool
 should_clone_nir()
 {
    static int should_clone = -1;
    if (should_clone < 1)
-      should_clone = brw_env_var_as_boolean("NIR_TEST_CLONE", false);
+      should_clone = env_var_as_boolean("NIR_TEST_CLONE", false);
 
    return should_clone;
 }
