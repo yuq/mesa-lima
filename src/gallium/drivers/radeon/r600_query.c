@@ -26,7 +26,6 @@
 #include "r600_cs.h"
 #include "util/u_memory.h"
 
-
 struct r600_query_buffer {
 	/* The buffer where query results are stored. */
 	struct r600_resource			*buf;
@@ -39,6 +38,8 @@ struct r600_query_buffer {
 };
 
 struct r600_query {
+	struct r600_query_ops *ops;
+
 	/* The query buffer and how many results are in it. */
 	struct r600_query_buffer		buffer;
 	/* The type of query */
@@ -59,6 +60,19 @@ struct r600_query {
 	unsigned stream;
 };
 
+static void r600_do_destroy_query(struct r600_common_context *, struct r600_query *);
+static boolean r600_do_begin_query(struct r600_common_context *, struct r600_query *);
+static void r600_do_end_query(struct r600_common_context *, struct r600_query *);
+static boolean r600_do_get_query_result(struct r600_common_context *,
+					struct r600_query *, boolean wait,
+					union pipe_query_result *result);
+
+static struct r600_query_ops legacy_query_ops = {
+	.destroy = r600_do_destroy_query,
+	.begin = r600_do_begin_query,
+	.end = r600_do_end_query,
+	.get_result = r600_do_get_query_result,
+};
 
 static bool r600_is_timer_query(unsigned type)
 {
@@ -373,13 +387,13 @@ static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned q
 		return NULL;
 
 	query->type = query_type;
+	query->ops = &legacy_query_ops;
 
 	switch (query_type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		query->result_size = 16 * rctx->max_db;
 		query->num_cs_dw = 6;
-		break;
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		query->result_size = 16;
@@ -440,7 +454,15 @@ static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned q
 
 static void r600_destroy_query(struct pipe_context *ctx, struct pipe_query *query)
 {
-	struct r600_query *rquery = (struct r600_query*)query;
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct r600_query *rquery = (struct r600_query *)query;
+
+	rquery->ops->destroy(rctx, rquery);
+}
+
+static void r600_do_destroy_query(struct r600_common_context *rctx,
+				  struct r600_query *rquery)
+{
 	struct r600_query_buffer *prev = rquery->buffer.previous;
 
 	/* Release all query buffers. */
@@ -452,7 +474,7 @@ static void r600_destroy_query(struct pipe_context *ctx, struct pipe_query *quer
 	}
 
 	pipe_resource_reference((struct pipe_resource**)&rquery->buffer.buf, NULL);
-	FREE(query);
+	FREE(rquery);
 }
 
 static boolean r600_begin_query(struct pipe_context *ctx,
@@ -460,6 +482,13 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_query *rquery = (struct r600_query *)query;
+
+	return rquery->ops->begin(rctx, rquery);
+}
+
+static boolean r600_do_begin_query(struct r600_common_context *rctx,
+				   struct r600_query *rquery)
+{
 	struct r600_query_buffer *prev = rquery->buffer.previous;
 
 	if (!r600_query_needs_begin(rquery->type)) {
@@ -535,12 +564,18 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_query *rquery = (struct r600_query *)query;
 
+	rquery->ops->end(rctx, rquery);
+}
+
+static void r600_do_end_query(struct r600_common_context *rctx,
+			      struct r600_query *rquery)
+{
 	/* Non-GPU queries. */
 	switch (rquery->type) {
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 		return;
 	case PIPE_QUERY_GPU_FINISHED:
-		ctx->flush(ctx, &rquery->fence, 0);
+		rctx->b.flush(&rctx->b, &rquery->fence, 0);
 		return;
 	case R600_QUERY_DRAW_CALLS:
 		rquery->end_result = rctx->num_draw_calls;
@@ -799,11 +834,19 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 }
 
 static boolean r600_get_query_result(struct pipe_context *ctx,
-					struct pipe_query *query,
-					boolean wait, union pipe_query_result *result)
+				     struct pipe_query *query, boolean wait,
+				     union pipe_query_result *result)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_query *rquery = (struct r600_query *)query;
+
+	return rquery->ops->get_result(rctx, rquery, wait, result);
+}
+
+static boolean r600_do_get_query_result(struct r600_common_context *rctx,
+					struct r600_query *rquery,
+					boolean wait, union pipe_query_result *result)
+{
 	struct r600_query_buffer *qbuf;
 
 	util_query_clear_result(result, rquery->type);

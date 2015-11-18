@@ -30,6 +30,9 @@
 
 #include "pipe/p_defines.h"
 
+struct r600_common_context;
+struct r600_query;
+
 #define R600_QUERY_DRAW_CALLS		(PIPE_QUERY_DRIVER_SPECIFIC + 0)
 #define R600_QUERY_REQUESTED_VRAM	(PIPE_QUERY_DRIVER_SPECIFIC + 1)
 #define R600_QUERY_REQUESTED_GTT	(PIPE_QUERY_DRIVER_SPECIFIC + 2)
@@ -45,5 +48,14 @@
 #define R600_QUERY_NUM_COMPILATIONS	(PIPE_QUERY_DRIVER_SPECIFIC + 12)
 #define R600_QUERY_NUM_SHADERS_CREATED	(PIPE_QUERY_DRIVER_SPECIFIC + 13)
 #define R600_QUERY_FIRST_PERFCOUNTER	(PIPE_QUERY_DRIVER_SPECIFIC + 100)
+
+struct r600_query_ops {
+	void (*destroy)(struct r600_common_context *, struct r600_query *);
+	boolean (*begin)(struct r600_common_context *, struct r600_query *);
+	void (*end)(struct r600_common_context *, struct r600_query *);
+	boolean (*get_result)(struct r600_common_context *,
+			      struct r600_query *, boolean wait,
+			      union pipe_query_result *result);
+};
 
 #endif /* R600_QUERY_H */
