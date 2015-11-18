@@ -26,35 +26,6 @@
 #include "r600_cs.h"
 #include "util/u_memory.h"
 
-struct r600_query_buffer {
-	/* The buffer where query results are stored. */
-	struct r600_resource			*buf;
-	/* Offset of the next free result after current query data */
-	unsigned				results_end;
-	/* If a query buffer is full, a new buffer is created and the old one
-	 * is put in here. When we calculate the result, we sum up the samples
-	 * from all buffers. */
-	struct r600_query_buffer		*previous;
-};
-
-struct r600_query {
-	struct r600_query_ops *ops;
-
-	/* The query buffer and how many results are in it. */
-	struct r600_query_buffer		buffer;
-	/* The type of query */
-	unsigned				type;
-	/* Size of the result in memory for both begin_query and end_query,
-	 * this can be one or two numbers, or it could even be a size of a structure. */
-	unsigned				result_size;
-	/* The number of dwords for begin_query or end_query. */
-	unsigned				num_cs_dw;
-	/* linked list of queries */
-	struct list_head			list;
-	/* For transform feedback: which stream the query is for */
-	unsigned stream;
-};
-
 /* Queries without buffer handling or suspend/resume. */
 struct r600_query_sw {
 	struct r600_query b;
@@ -240,19 +211,23 @@ static struct pipe_query *r600_query_sw_create(struct pipe_context *ctx,
 	return (struct pipe_query *)query;
 }
 
-static void r600_do_destroy_query(struct r600_common_context *, struct r600_query *);
-static boolean r600_do_begin_query(struct r600_common_context *, struct r600_query *);
-static void r600_do_end_query(struct r600_common_context *, struct r600_query *);
-static boolean r600_do_get_query_result(struct r600_common_context *,
-					struct r600_query *, boolean wait,
-					union pipe_query_result *result);
+void r600_query_hw_destroy(struct r600_common_context *rctx,
+			   struct r600_query *rquery)
+{
+	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
+	struct r600_query_buffer *prev = query->buffer.previous;
 
-static struct r600_query_ops legacy_query_ops = {
-	.destroy = r600_do_destroy_query,
-	.begin = r600_do_begin_query,
-	.end = r600_do_end_query,
-	.get_result = r600_do_get_query_result,
-};
+	/* Release all query buffers. */
+	while (prev) {
+		struct r600_query_buffer *qbuf = prev;
+		prev = prev->previous;
+		pipe_resource_reference((struct pipe_resource**)&qbuf->buf, NULL);
+		FREE(qbuf);
+	}
+
+	pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
+	FREE(rquery);
+}
 
 static bool r600_is_timer_query(unsigned type)
 {
@@ -313,6 +288,73 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 	return buf;
 }
 
+static boolean r600_query_hw_begin(struct r600_common_context *, struct r600_query *);
+static void r600_query_hw_end(struct r600_common_context *, struct r600_query *);
+static boolean r600_query_hw_get_result(struct r600_common_context *,
+					struct r600_query *, boolean wait,
+					union pipe_query_result *result);
+
+static struct r600_query_ops query_hw_ops = {
+	.destroy = r600_query_hw_destroy,
+	.begin = r600_query_hw_begin,
+	.end = r600_query_hw_end,
+	.get_result = r600_query_hw_get_result,
+};
+
+static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
+					       unsigned query_type,
+					       unsigned index)
+{
+	struct r600_query_hw *query = CALLOC_STRUCT(r600_query_hw);
+	if (!query)
+		return NULL;
+
+	query->b.type = query_type;
+	query->b.ops = &query_hw_ops;
+
+	switch (query_type) {
+	case PIPE_QUERY_OCCLUSION_COUNTER:
+	case PIPE_QUERY_OCCLUSION_PREDICATE:
+		query->result_size = 16 * rctx->max_db;
+		query->num_cs_dw = 6;
+		break;
+	case PIPE_QUERY_TIME_ELAPSED:
+		query->result_size = 16;
+		query->num_cs_dw = 8;
+		break;
+	case PIPE_QUERY_TIMESTAMP:
+		query->result_size = 8;
+		query->num_cs_dw = 8;
+		break;
+	case PIPE_QUERY_PRIMITIVES_EMITTED:
+	case PIPE_QUERY_PRIMITIVES_GENERATED:
+	case PIPE_QUERY_SO_STATISTICS:
+	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
+		/* NumPrimitivesWritten, PrimitiveStorageNeeded. */
+		query->result_size = 32;
+		query->num_cs_dw = 6;
+		query->stream = index;
+		break;
+	case PIPE_QUERY_PIPELINE_STATISTICS:
+		/* 11 values on EG, 8 on R600. */
+		query->result_size = (rctx->chip_class >= EVERGREEN ? 11 : 8) * 16;
+		query->num_cs_dw = 6;
+		break;
+	default:
+		assert(0);
+		FREE(query);
+		return NULL;
+	}
+
+	query->buffer.buf = r600_new_query_buffer(rctx, query_type);
+	if (!query->buffer.buf) {
+		FREE(query);
+		return NULL;
+	}
+
+	return (struct pipe_query *)query;
+}
+
 static void r600_update_occlusion_query_state(struct r600_common_context *rctx,
 					      unsigned type, int diff)
 {
@@ -332,7 +374,7 @@ static void r600_update_occlusion_query_state(struct r600_common_context *rctx,
 	}
 }
 
-static unsigned event_type_for_stream(struct r600_query *query)
+static unsigned event_type_for_stream(struct r600_query_hw *query)
 {
 	switch (query->stream) {
 	default:
@@ -343,20 +385,21 @@ static unsigned event_type_for_stream(struct r600_query *query)
 	}
 }
 
-static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_query *query)
+static void r600_emit_query_begin(struct r600_common_context *ctx,
+				  struct r600_query_hw *query)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	uint64_t va;
 
-	r600_update_occlusion_query_state(ctx, query->type, 1);
-	r600_update_prims_generated_query_state(ctx, query->type, 1);
+	r600_update_occlusion_query_state(ctx, query->b.type, 1);
+	r600_update_prims_generated_query_state(ctx, query->b.type, 1);
 	ctx->need_gfx_cs_space(&ctx->b, query->num_cs_dw * 2, TRUE);
 
 	/* Get a new query buffer if needed. */
 	if (query->buffer.results_end + query->result_size > query->buffer.buf->b.b.width0) {
 		struct r600_query_buffer *qbuf = MALLOC_STRUCT(r600_query_buffer);
 		*qbuf = query->buffer;
-		query->buffer.buf = r600_new_query_buffer(ctx, query->type);
+		query->buffer.buf = r600_new_query_buffer(ctx, query->b.type);
 		query->buffer.results_end = 0;
 		query->buffer.previous = qbuf;
 	}
@@ -364,7 +407,7 @@ static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_q
 	/* emit begin query */
 	va = query->buffer.buf->gpu_address + query->buffer.results_end;
 
-	switch (query->type) {
+	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
@@ -401,26 +444,27 @@ static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_q
 	r600_emit_reloc(ctx, &ctx->gfx, query->buffer.buf, RADEON_USAGE_WRITE,
 			RADEON_PRIO_QUERY);
 
-	if (r600_is_timer_query(query->type))
+	if (r600_is_timer_query(query->b.type))
 		ctx->num_cs_dw_timer_queries_suspend += query->num_cs_dw;
 	else
 		ctx->num_cs_dw_nontimer_queries_suspend += query->num_cs_dw;
 }
 
-static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_query *query)
+static void r600_emit_query_end(struct r600_common_context *ctx,
+				struct r600_query_hw *query)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	uint64_t va;
 
 	/* The queries which need begin already called this in begin_query. */
-	if (!r600_query_needs_begin(query->type)) {
+	if (!r600_query_needs_begin(query->b.type)) {
 		ctx->need_gfx_cs_space(&ctx->b, query->num_cs_dw, FALSE);
 	}
 
 	va = query->buffer.buf->gpu_address;
 
 	/* emit end query */
-	switch (query->type) {
+	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		va += query->buffer.results_end + 8;
@@ -465,22 +509,22 @@ static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_que
 
 	query->buffer.results_end += query->result_size;
 
-	if (r600_query_needs_begin(query->type)) {
-		if (r600_is_timer_query(query->type))
+	if (r600_query_needs_begin(query->b.type)) {
+		if (r600_is_timer_query(query->b.type))
 			ctx->num_cs_dw_timer_queries_suspend -= query->num_cs_dw;
 		else
 			ctx->num_cs_dw_nontimer_queries_suspend -= query->num_cs_dw;
 	}
 
-	r600_update_occlusion_query_state(ctx, query->type, -1);
-	r600_update_prims_generated_query_state(ctx, query->type, -1);
+	r600_update_occlusion_query_state(ctx, query->b.type, -1);
+	r600_update_prims_generated_query_state(ctx, query->b.type, -1);
 }
 
 static void r600_emit_query_predication(struct r600_common_context *ctx,
 					struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
-	struct r600_query *query = (struct r600_query*)ctx->render_cond;
+	struct r600_query_hw *query = (struct r600_query_hw *)ctx->render_cond;
 	struct r600_query_buffer *qbuf;
 	uint32_t op;
 	bool flag_wait;
@@ -491,7 +535,7 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	flag_wait = ctx->render_cond_mode == PIPE_RENDER_COND_WAIT ||
 		    ctx->render_cond_mode == PIPE_RENDER_COND_BY_REGION_WAIT;
 
-	switch (query->type) {
+	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		op = PRED_OP(PREDICATION_OP_ZPASS);
@@ -537,61 +581,13 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned query_type, unsigned index)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct r600_query *query;
 
 	if (query_type == PIPE_QUERY_TIMESTAMP_DISJOINT ||
 	    query_type == PIPE_QUERY_GPU_FINISHED ||
 	    query_type >= PIPE_QUERY_DRIVER_SPECIFIC)
 		return r600_query_sw_create(ctx, query_type);
 
-	query = CALLOC_STRUCT(r600_query);
-	if (query == NULL)
-		return NULL;
-
-	query->type = query_type;
-	query->ops = &legacy_query_ops;
-
-	switch (query_type) {
-	case PIPE_QUERY_OCCLUSION_COUNTER:
-	case PIPE_QUERY_OCCLUSION_PREDICATE:
-		query->result_size = 16 * rctx->max_db;
-		query->num_cs_dw = 6;
-		break;
-	case PIPE_QUERY_TIME_ELAPSED:
-		query->result_size = 16;
-		query->num_cs_dw = 8;
-		break;
-	case PIPE_QUERY_TIMESTAMP:
-		query->result_size = 8;
-		query->num_cs_dw = 8;
-		break;
-	case PIPE_QUERY_PRIMITIVES_EMITTED:
-	case PIPE_QUERY_PRIMITIVES_GENERATED:
-	case PIPE_QUERY_SO_STATISTICS:
-	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
-		/* NumPrimitivesWritten, PrimitiveStorageNeeded. */
-		query->result_size = 32;
-		query->num_cs_dw = 6;
-		query->stream = index;
-		break;
-	case PIPE_QUERY_PIPELINE_STATISTICS:
-		/* 11 values on EG, 8 on R600. */
-		query->result_size = (rctx->chip_class >= EVERGREEN ? 11 : 8) * 16;
-		query->num_cs_dw = 6;
-		break;
-	default:
-		assert(0);
-		FREE(query);
-		return NULL;
-	}
-
-	query->buffer.buf = r600_new_query_buffer(rctx, query_type);
-	if (!query->buffer.buf) {
-		FREE(query);
-		return NULL;
-	}
-
-	return (struct pipe_query*)query;
+	return r600_query_hw_create(rctx, query_type, index);
 }
 
 static void r600_destroy_query(struct pipe_context *ctx, struct pipe_query *query)
@@ -600,23 +596,6 @@ static void r600_destroy_query(struct pipe_context *ctx, struct pipe_query *quer
 	struct r600_query *rquery = (struct r600_query *)query;
 
 	rquery->ops->destroy(rctx, rquery);
-}
-
-static void r600_do_destroy_query(struct r600_common_context *rctx,
-				  struct r600_query *rquery)
-{
-	struct r600_query_buffer *prev = rquery->buffer.previous;
-
-	/* Release all query buffers. */
-	while (prev) {
-		struct r600_query_buffer *qbuf = prev;
-		prev = prev->previous;
-		pipe_resource_reference((struct pipe_resource**)&qbuf->buf, NULL);
-		FREE(qbuf);
-	}
-
-	pipe_resource_reference((struct pipe_resource**)&rquery->buffer.buf, NULL);
-	FREE(rquery);
 }
 
 static boolean r600_begin_query(struct pipe_context *ctx,
@@ -628,10 +607,11 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 	return rquery->ops->begin(rctx, rquery);
 }
 
-static boolean r600_do_begin_query(struct r600_common_context *rctx,
+static boolean r600_query_hw_begin(struct r600_common_context *rctx,
 				   struct r600_query *rquery)
 {
-	struct r600_query_buffer *prev = rquery->buffer.previous;
+	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
+	struct r600_query_buffer *prev = query->buffer.previous;
 
 	if (!r600_query_needs_begin(rquery->type)) {
 		assert(0);
@@ -647,21 +627,21 @@ static boolean r600_do_begin_query(struct r600_common_context *rctx,
 	}
 
 	/* Obtain a new buffer if the current one can't be mapped without a stall. */
-	if (r600_rings_is_buffer_referenced(rctx, rquery->buffer.buf->cs_buf, RADEON_USAGE_READWRITE) ||
-	    !rctx->ws->buffer_wait(rquery->buffer.buf->buf, 0, RADEON_USAGE_READWRITE)) {
-		pipe_resource_reference((struct pipe_resource**)&rquery->buffer.buf, NULL);
-		rquery->buffer.buf = r600_new_query_buffer(rctx, rquery->type);
+	if (r600_rings_is_buffer_referenced(rctx, query->buffer.buf->cs_buf, RADEON_USAGE_READWRITE) ||
+	    !rctx->ws->buffer_wait(query->buffer.buf->buf, 0, RADEON_USAGE_READWRITE)) {
+		pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
+		query->buffer.buf = r600_new_query_buffer(rctx, rquery->type);
 	}
 
-	rquery->buffer.results_end = 0;
-	rquery->buffer.previous = NULL;
+	query->buffer.results_end = 0;
+	query->buffer.previous = NULL;
 
-	r600_emit_query_begin(rctx, rquery);
+	r600_emit_query_begin(rctx, query);
 
 	if (r600_is_timer_query(rquery->type))
-		LIST_ADDTAIL(&rquery->list, &rctx->active_timer_queries);
+		LIST_ADDTAIL(&query->list, &rctx->active_timer_queries);
 	else
-		LIST_ADDTAIL(&rquery->list, &rctx->active_nontimer_queries);
+		LIST_ADDTAIL(&query->list, &rctx->active_nontimer_queries);
    return true;
 }
 
@@ -673,13 +653,15 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 	rquery->ops->end(rctx, rquery);
 }
 
-static void r600_do_end_query(struct r600_common_context *rctx,
+static void r600_query_hw_end(struct r600_common_context *rctx,
 			      struct r600_query *rquery)
 {
-	r600_emit_query_end(rctx, rquery);
+	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
+
+	r600_emit_query_end(rctx, query);
 
 	if (r600_query_needs_begin(rquery->type))
-		LIST_DELINIT(&rquery->list);
+		LIST_DELINIT(&query->list);
 }
 
 static unsigned r600_query_read_result(char *map, unsigned start_index, unsigned end_index,
@@ -701,7 +683,7 @@ static unsigned r600_query_read_result(char *map, unsigned start_index, unsigned
 }
 
 static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
-					    struct r600_query *query,
+					    struct r600_query_hw *query,
 					    struct r600_query_buffer *qbuf,
 					    boolean wait,
 					    union pipe_query_result *result)
@@ -716,7 +698,7 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 		return FALSE;
 
 	/* count all results across all data blocks */
-	switch (query->type) {
+	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 		while (results_base != qbuf->results_end) {
 			result->u64 +=
@@ -865,16 +847,17 @@ static boolean r600_get_query_result(struct pipe_context *ctx,
 	return rquery->ops->get_result(rctx, rquery, wait, result);
 }
 
-static boolean r600_do_get_query_result(struct r600_common_context *rctx,
+static boolean r600_query_hw_get_result(struct r600_common_context *rctx,
 					struct r600_query *rquery,
 					boolean wait, union pipe_query_result *result)
 {
+	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
 	struct r600_query_buffer *qbuf;
 
 	util_query_clear_result(result, rquery->type);
 
-	for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous) {
-		if (!r600_get_query_buffer_result(rctx, rquery, qbuf, wait, result)) {
+	for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
+		if (!r600_get_query_buffer_result(rctx, query, qbuf, wait, result)) {
 			return FALSE;
 		}
 	}
@@ -893,7 +876,7 @@ static void r600_render_condition(struct pipe_context *ctx,
 				  uint mode)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct r600_query *rquery = (struct r600_query*)query;
+	struct r600_query_hw *rquery = (struct r600_query_hw *)query;
 	struct r600_query_buffer *qbuf;
 	struct r600_atom *atom = &rctx->render_cond_atom;
 
@@ -903,8 +886,10 @@ static void r600_render_condition(struct pipe_context *ctx,
 
 	/* Compute the size of SET_PREDICATION packets. */
 	atom->num_dw = 0;
-	for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
-		atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
+	if (query) {
+		for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
+			atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
+	}
 
 	rctx->set_atom_dirty(rctx, atom, query != NULL);
 }
@@ -913,7 +898,7 @@ static void r600_suspend_queries(struct r600_common_context *ctx,
 				 struct list_head *query_list,
 				 unsigned *num_cs_dw_queries_suspend)
 {
-	struct r600_query *query;
+	struct r600_query_hw *query;
 
 	LIST_FOR_EACH_ENTRY(query, query_list, list) {
 		r600_emit_query_end(ctx, query);
@@ -936,7 +921,7 @@ void r600_suspend_timer_queries(struct r600_common_context *ctx)
 static unsigned r600_queries_num_cs_dw_for_resuming(struct r600_common_context *ctx,
 						    struct list_head *query_list)
 {
-	struct r600_query *query;
+	struct r600_query_hw *query;
 	unsigned num_dw = 0;
 
 	LIST_FOR_EACH_ENTRY(query, query_list, list) {
@@ -962,7 +947,7 @@ static void r600_resume_queries(struct r600_common_context *ctx,
 				struct list_head *query_list,
 				unsigned *num_cs_dw_queries_suspend)
 {
-	struct r600_query *query;
+	struct r600_query_hw *query;
 	unsigned num_cs_dw = r600_queries_num_cs_dw_for_resuming(ctx, query_list);
 
 	assert(*num_cs_dw_queries_suspend == 0);

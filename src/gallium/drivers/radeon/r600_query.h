@@ -29,9 +29,11 @@
 #define R600_QUERY_H
 
 #include "pipe/p_defines.h"
+#include "util/list.h"
 
 struct r600_common_context;
 struct r600_query;
+struct r600_resource;
 
 #define R600_QUERY_DRAW_CALLS		(PIPE_QUERY_DRIVER_SPECIFIC + 0)
 #define R600_QUERY_REQUESTED_VRAM	(PIPE_QUERY_DRIVER_SPECIFIC + 1)
@@ -57,5 +59,42 @@ struct r600_query_ops {
 			      struct r600_query *, boolean wait,
 			      union pipe_query_result *result);
 };
+
+struct r600_query {
+	struct r600_query_ops *ops;
+
+	/* The type of query */
+	unsigned type;
+};
+
+struct r600_query_buffer {
+	/* The buffer where query results are stored. */
+	struct r600_resource		*buf;
+	/* Offset of the next free result after current query data */
+	unsigned			results_end;
+	/* If a query buffer is full, a new buffer is created and the old one
+	 * is put in here. When we calculate the result, we sum up the samples
+	 * from all buffers. */
+	struct r600_query_buffer	*previous;
+};
+
+struct r600_query_hw {
+	struct r600_query b;
+
+	/* The query buffer and how many results are in it. */
+	struct r600_query_buffer buffer;
+	/* Size of the result in memory for both begin_query and end_query,
+	 * this can be one or two numbers, or it could even be a size of a structure. */
+	unsigned result_size;
+	/* The number of dwords for begin_query or end_query. */
+	unsigned num_cs_dw;
+	/* Linked list of queries */
+	struct list_head list;
+	/* For transform feedback: which stream the query is for */
+	unsigned stream;
+};
+
+void r600_query_hw_destroy(struct r600_common_context *rctx,
+			   struct r600_query *rquery);
 
 #endif /* R600_QUERY_H */
