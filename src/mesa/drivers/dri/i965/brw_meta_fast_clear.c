@@ -50,6 +50,7 @@
 #include "brw_defines.h"
 #include "brw_context.h"
 #include "brw_draw.h"
+#include "brw_state.h"
 #include "intel_fbo.h"
 #include "intel_batchbuffer.h"
 
@@ -573,11 +574,17 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       if (brw->gen < 7)
          clear_type = REP_CLEAR;
 
-      /* Certain formats have unresolved issues with sampling from the MCS
-       * buffer on Gen9. This disables fast clears altogether for MSRTs until
-       * we can figure out what's going on.
+      /* If we're mapping the render format to a different format than the
+       * format we use for texturing then it is a bit questionable whether it
+       * should be possible to use a fast clear. Although we only actually
+       * render using a renderable format, without the override workaround it
+       * wouldn't be possible to have a non-renderable surface in a fast clear
+       * state so the hardware probably legitimately doesn't need to support
+       * this case. At least on Gen9 this really does seem to cause problems.
        */
-      if (brw->gen >= 9 && irb->mt->num_samples > 1)
+      if (brw->gen >= 9 &&
+          brw_format_for_mesa_format(irb->mt->format) !=
+          brw->render_target_format[irb->mt->format])
          clear_type = REP_CLEAR;
 
       if (irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_NO_MCS)
