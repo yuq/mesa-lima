@@ -405,42 +405,15 @@ brw_nir_lower_uniforms(nir_shader *nir, bool is_scalar)
    }
 }
 
-#include "util/debug.h"
+#define OPT(pass, ...) ({                                  \
+   bool this_progress = false;                             \
+   NIR_PASS(this_progress, nir, pass, ##__VA_ARGS__);      \
+   if (this_progress)                                      \
+      progress = true;                                     \
+   this_progress;                                          \
+})
 
-static bool
-should_clone_nir()
-{
-   static int should_clone = -1;
-   if (should_clone < 1)
-      should_clone = env_var_as_boolean("NIR_TEST_CLONE", false);
-
-   return should_clone;
-}
-
-#define _OPT(do_pass) (({                                            \
-   bool this_progress = true;                                        \
-   do_pass                                                           \
-   nir_validate_shader(nir);                                         \
-   if (should_clone_nir()) {                                         \
-      nir_shader *clone = nir_shader_clone(ralloc_parent(nir), nir); \
-      ralloc_free(nir);                                              \
-      nir = clone;                                                   \
-   }                                                                 \
-   this_progress;                                                    \
-}))
-
-#define OPT(pass, ...) _OPT(                   \
-   nir_metadata_set_validation_flag(nir);      \
-   this_progress = pass(nir ,##__VA_ARGS__);   \
-   if (this_progress) {                        \
-      progress = true;                         \
-      nir_metadata_check_validation_flag(nir); \
-   }                                           \
-)
-
-#define OPT_V(pass, ...) _OPT( \
-   pass(nir, ##__VA_ARGS__);   \
-)
+#define OPT_V(pass, ...) NIR_PASS_V(nir, pass, ##__VA_ARGS__)
 
 static nir_shader *
 nir_optimize(nir_shader *nir, bool is_scalar)
