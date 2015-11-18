@@ -66,6 +66,7 @@ VULKAN_SOURCES =                                        \
 	anv_allocator.c                                 \
 	anv_cmd_buffer.c                                \
 	anv_batch_chain.c                               \
+	anv_descriptor_set.c                            \
 	anv_device.c                                    \
         anv_dump.c                                      \
 	anv_entrypoints.c                               \
