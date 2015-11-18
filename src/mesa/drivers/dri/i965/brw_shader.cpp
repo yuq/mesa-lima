@@ -476,7 +476,19 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
       unsigned ud;
       int d;
       float f;
-   } imm = { reg->ud }, sat_imm = { 0 };
+      double df;
+   } imm, sat_imm = { 0 };
+
+   const unsigned size = type_sz(type);
+
+   /* We want to either do a 32-bit or 64-bit data copy, the type is otherwise
+    * irrelevant, so just check the size of the type and copy from/to an
+    * appropriately sized field.
+    */
+   if (size < 8)
+      imm.ud = reg->ud;
+   else
+      imm.df = reg->df;
 
    switch (type) {
    case BRW_REGISTER_TYPE_UD:
@@ -490,6 +502,9 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    case BRW_REGISTER_TYPE_F:
       sat_imm.f = CLAMP(imm.f, 0.0f, 1.0f);
       break;
+   case BRW_REGISTER_TYPE_DF:
+      sat_imm.df = CLAMP(imm.df, 0.0, 1.0);
+      break;
    case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_B:
       unreachable("no UB/B immediates");
@@ -497,14 +512,20 @@ brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    case BRW_REGISTER_TYPE_UV:
    case BRW_REGISTER_TYPE_VF:
       unreachable("unimplemented: saturate vector immediate");
-   case BRW_REGISTER_TYPE_DF:
    case BRW_REGISTER_TYPE_HF:
-      unreachable("unimplemented: saturate DF/HF immediate");
+      unreachable("unimplemented: saturate HF immediate");
    }
 
-   if (imm.ud != sat_imm.ud) {
-      reg->ud = sat_imm.ud;
-      return true;
+   if (size < 8) {
+      if (imm.ud != sat_imm.ud) {
+         reg->ud = sat_imm.ud;
+         return true;
+      }
+   } else {
+      if (imm.df != sat_imm.df) {
+         reg->df = sat_imm.df;
+         return true;
+      }
    }
    return false;
 }
