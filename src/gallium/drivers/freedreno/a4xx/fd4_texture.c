@@ -124,6 +124,7 @@ fd4_sampler_state_create(struct pipe_context *pctx,
 
 	so->texsamp1 =
 //		COND(miplinear, A4XX_TEX_SAMP_1_MIPFILTER_LINEAR_FAR) |
+		COND(!cso->seamless_cube_map, A4XX_TEX_SAMP_1_CUBEMAPSEAMLESSFILTOFF) |
 		COND(!cso->normalized_coords, A4XX_TEX_SAMP_1_UNNORM_COORDS);
 
 	if (cso->min_mip_filter != PIPE_TEX_MIPFILTER_NONE) {
