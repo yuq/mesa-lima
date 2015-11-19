@@ -25,18 +25,20 @@ EXTRA_DIST = SConscript
 
 noinst_LTLIBRARIES = libloader.la libloader_dri3_helper.la
 
-libloader_la_CPPFLAGS = \
+AM_CPPFLAGS = \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src \
 	$(VISIBILITY_CFLAGS) \
+	$(LIBDRM_CFLAGS) \
 	$(LIBUDEV_CFLAGS)
 
 libloader_la_SOURCES = $(LOADER_C_FILES)
 libloader_la_LIBADD =
 
 if HAVE_DRICOMMON
-libloader_la_CPPFLAGS += \
+libloader_la_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
 	-I$(top_srcdir)/src/mesa/drivers/dri/common/ \
 	-I$(top_builddir)/src/mesa/drivers/dri/common/ \
 	-I$(top_srcdir)/src/mesa/ \
@@ -49,20 +51,11 @@ libloader_la_CPPFLAGS += \
 endif
 
 if HAVE_LIBDRM
-libloader_la_CPPFLAGS += \
-	$(LIBDRM_CFLAGS)
-
 libloader_la_LIBADD += \
 	$(LIBDRM_LIBS)
 endif
 
 if HAVE_DRI3
-libloader_dri3_helper_la_CPPFLAGS = \
-	$(DEFINES) \
-	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src \
-	$(LIBDRM_CFLAGS)
-
 libloader_dri3_helper_la_SOURCES = \
 	loader_dri3_helper.c \
 	loader_dri3_helper.h
