@@ -2741,6 +2741,12 @@ static inline uint32_t A4XX_TEX_SAMP_0_ANISO(enum a4xx_tex_aniso val)
 {
 	return ((val) << A4XX_TEX_SAMP_0_ANISO__SHIFT) & A4XX_TEX_SAMP_0_ANISO__MASK;
 }
+#define A4XX_TEX_SAMP_0_LOD_BIAS__MASK				0xfff80000
+#define A4XX_TEX_SAMP_0_LOD_BIAS__SHIFT				19
+static inline uint32_t A4XX_TEX_SAMP_0_LOD_BIAS(float val)
+{
+	return ((((int32_t)(val * 256.0))) << A4XX_TEX_SAMP_0_LOD_BIAS__SHIFT) & A4XX_TEX_SAMP_0_LOD_BIAS__MASK;
+}
 
 #define REG_A4XX_TEX_SAMP_1					0x00000001
 #define A4XX_TEX_SAMP_1_COMPARE_FUNC__MASK			0x0000000e
