@@ -98,11 +98,13 @@ struct hud_context {
    } text, bg, whitelines;
 };
 
+#ifdef PIPE_OS_UNIX
 static void
 signal_visible_handler(int sig, siginfo_t *siginfo, void *context)
 {
    huds_visible = !huds_visible;
 }
+#endif
 
 static void
 hud_draw_colored_prims(struct hud_context *hud, unsigned prim,
@@ -1137,8 +1139,10 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
    unsigned i;
    const char *env = debug_get_option("GALLIUM_HUD", NULL);
    unsigned signo = debug_get_num_option("GALLIUM_HUD_TOGGLE_SIGNAL", 0);
+#ifdef PIPE_OS_UNIX
    static boolean sig_handled = FALSE;
    struct sigaction action = {};
+#endif
    huds_visible = debug_get_bool_option("GALLIUM_HUD_VISIBLE", TRUE);
 
    if (!env || !*env)
@@ -1283,6 +1287,7 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
    LIST_INITHEAD(&hud->pane_list);
 
    /* setup sig handler once for all hud contexts */
+#ifdef PIPE_OS_UNIX
    if (!sig_handled && signo != 0) {
       action.sa_sigaction = &signal_visible_handler;
       action.sa_flags = SA_SIGINFO;
@@ -1295,6 +1300,7 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
 
       sig_handled = TRUE;
    }
+#endif
 
    hud_parse_env_var(hud, env);
    return hud;
