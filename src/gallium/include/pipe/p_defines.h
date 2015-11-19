@@ -861,6 +861,9 @@ enum pipe_driver_query_result_type
  */
 #define PIPE_DRIVER_QUERY_FLAG_BATCH     (1 << 0)
 
+/* Do not list this query in the HUD. */
+#define PIPE_DRIVER_QUERY_FLAG_DONT_LIST (1 << 1)
+
 struct pipe_driver_query_info
 {
    const char *name;
