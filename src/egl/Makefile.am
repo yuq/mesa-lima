@@ -119,7 +119,10 @@ egl_HEADERS = \
 	$(top_srcdir)/include/EGL/eglmesaext.h \
 	$(top_srcdir)/include/EGL/eglplatform.h
 
+TESTS = egl-symbols-check
+
 EXTRA_DIST = \
+	egl-symbols-check \
 	SConscript \
 	drivers/haiku \
 	docs \
