@@ -66,7 +66,6 @@ nv50_vertprog_assign_slots(struct nv50_ir_prog_info *info)
       case TGSI_SEMANTIC_VERTEXID:
          prog->vp.attrs[2] |= NV50_3D_VP_GP_BUILTIN_ATTR_EN_VERTEX_ID;
          prog->vp.attrs[2] |= NV50_3D_VP_GP_BUILTIN_ATTR_EN_VERTEX_ID_DRAW_ARRAYS_ADD_START;
-         prog->vp.vertexid = 1;
          continue;
       default:
          break;
@@ -382,6 +381,8 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
    prog->interps = info->bin.interpData;
    prog->max_gpr = MAX2(4, (info->bin.maxGPR >> 1) + 1);
    prog->tls_space = info->bin.tlsSpace;
+
+   prog->vp.need_vertex_id = info->io.vertexId < PIPE_MAX_SHADER_INPUTS;
 
    if (prog->type == PIPE_SHADER_FRAGMENT) {
       if (info->prop.fp.writesDepth) {

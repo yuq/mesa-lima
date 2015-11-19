@@ -76,9 +76,9 @@ struct nv50_program {
       ubyte psiz;        /* output slot of point size */
       ubyte bfc[2];      /* indices into varying for FFC (FP) or BFC (VP) */
       ubyte edgeflag;
-      ubyte vertexid;
       ubyte clpd[2];     /* output slot of clip distance[i]'s 1st component */
       ubyte clpd_nr;
+      bool need_vertex_id;
    } vp;
 
    struct {
