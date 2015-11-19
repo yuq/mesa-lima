@@ -429,6 +429,8 @@ svga_buffer_upload_flush(struct svga_context *svga,
 
          assert(box->x <= sbuf->b.b.width0);
          assert(box->x + box->w <= sbuf->b.b.width0);
+
+         svga->hud.num_bytes_uploaded += box->w;
       }
    }
    else {
@@ -454,6 +456,8 @@ svga_buffer_upload_flush(struct svga_context *svga,
 
          assert(box->x <= sbuf->b.b.width0);
          assert(box->x + box->w <= sbuf->b.b.width0);
+
+         svga->hud.num_bytes_uploaded += box->w;
       }
    }
 

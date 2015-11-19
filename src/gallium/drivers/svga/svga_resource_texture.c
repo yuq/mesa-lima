@@ -380,6 +380,12 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       break;
    }
 
+   if (usage & PIPE_TRANSFER_WRITE) {
+      /* record texture upload for HUD */
+      svga->hud.num_bytes_uploaded +=
+         nblocksx * nblocksy * d * util_format_get_blocksize(texture->format);
+   }
+
    if (!use_direct_map) {
       /* Use a DMA buffer */
       st->hw_nblocksy = nblocksy;
