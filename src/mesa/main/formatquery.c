@@ -1023,6 +1023,9 @@ void GLAPIENTRY
 _mesa_GetInternalformati64v(GLenum target, GLenum internalformat,
                             GLenum pname, GLsizei bufSize, GLint64 *params)
 {
+   GLint params32[16];
+   unsigned i;
+
    GET_CURRENT_CONTEXT(ctx);
 
    ASSERT_OUTSIDE_BEGIN_END(ctx);
@@ -1032,5 +1035,8 @@ _mesa_GetInternalformati64v(GLenum target, GLenum internalformat,
       return;
    }
 
-   _mesa_debug(ctx, "glGetInternalformati64v() not implemented");
+   _mesa_GetInternalformativ(target, internalformat, pname, bufSize, params32);
+
+   for (i = 0; i < bufSize; i++)
+      params[i] = params32[i];
 }
