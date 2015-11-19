@@ -23,7 +23,7 @@ include Makefile.sources
 
 EXTRA_DIST = SConscript
 
-noinst_LTLIBRARIES = libloader.la libloader_dri3_helper.la
+noinst_LTLIBRARIES = libloader.la
 
 AM_CPPFLAGS = \
 	$(DEFINES) \
@@ -57,6 +57,8 @@ libloader_la_LIBADD += \
 endif
 
 if HAVE_DRI3
+noinst_LTLIBRARIES += libloader_dri3_helper.la
+
 libloader_dri3_helper_la_SOURCES = \
 	loader_dri3_helper.c \
 	loader_dri3_helper.h
