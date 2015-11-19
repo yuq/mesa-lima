@@ -134,10 +134,11 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
       return false;
 
    /* We can't handle copying from RGBX or BGRX because the tiled_memcpy
-    * function doesn't set the last channel to 1.
+    * function doesn't set the last channel to 1. Note this checks BaseFormat
+    * rather than TexFormat in case the RGBX format is being simulated with an
+    * RGBA format.
     */
-   if (rb->Format == MESA_FORMAT_B8G8R8X8_UNORM ||
-       rb->Format == MESA_FORMAT_R8G8B8X8_UNORM)
+   if (rb->_BaseFormat == GL_RGB)
       return false;
 
    if (!intel_get_memcpy(rb->Format, format, type, &mem_copy, &cpp,
