@@ -547,6 +547,8 @@ int r600_get_perfcounter_info(struct r600_common_screen *screen,
 	info->result_type = PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE;
 	info->group_id = base_gid + sub / block->num_selectors;
 	info->flags = PIPE_DRIVER_QUERY_FLAG_BATCH;
+	if (sub > 0 && sub + 1 < block->num_selectors * block->num_groups)
+		info->flags |= PIPE_DRIVER_QUERY_FLAG_DONT_LIST;
 	return 1;
 }
 
