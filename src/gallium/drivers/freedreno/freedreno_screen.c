@@ -179,6 +179,8 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
 	case PIPE_CAP_FAKE_SW_MSAA:
 	case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
+	case PIPE_CAP_DEPTH_CLIP_DISABLE:
+	case PIPE_CAP_CLIP_HALFZ:
 		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
@@ -191,10 +193,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		if (is_a3xx(screen)) return 8192;
 		if (is_a4xx(screen)) return 16383;
 		return 0;
-
-	case PIPE_CAP_DEPTH_CLIP_DISABLE:
-	case PIPE_CAP_CLIP_HALFZ:
-		return is_a3xx(screen);
 
 	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
 	case PIPE_CAP_CUBE_MAP_ARRAY:
