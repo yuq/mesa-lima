@@ -30,6 +30,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src \
 	$(VISIBILITY_CFLAGS) \
+	$(XCB_DRI3_CFLAGS) \
 	$(LIBDRM_CFLAGS) \
 	$(LIBUDEV_CFLAGS)
 
