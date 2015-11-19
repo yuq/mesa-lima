@@ -487,7 +487,7 @@ nv50_draw_arrays(struct nv50_context *nv50,
       BEGIN_NV04(push, NV50_3D(VB_ELEMENT_BASE), 1);
       PUSH_DATA (push, 0);
       if (nv50->screen->base.class_3d >= NV84_3D_CLASS) {
-         BEGIN_NV04(push, SUBC_3D(NV84_3D_VERTEX_ID_BASE), 1);
+         BEGIN_NV04(push, NV84_3D(VERTEX_ID_BASE), 1);
          PUSH_DATA (push, 0);
       }
       nv50->state.index_bias = 0;
@@ -613,7 +613,7 @@ nv50_draw_elements(struct nv50_context *nv50, bool shorten,
       BEGIN_NV04(push, NV50_3D(VB_ELEMENT_BASE), 1);
       PUSH_DATA (push, index_bias);
       if (nv50->screen->base.class_3d >= NV84_3D_CLASS) {
-         BEGIN_NV04(push, SUBC_3D(NV84_3D_VERTEX_ID_BASE), 1);
+         BEGIN_NV04(push, NV84_3D(VERTEX_ID_BASE), 1);
          PUSH_DATA (push, index_bias);
       }
       nv50->state.index_bias = index_bias;
