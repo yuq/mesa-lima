@@ -154,7 +154,7 @@ enum a4xx_vtx_fmt {
 
 enum a4xx_tex_fmt {
 	TFMT4_5_6_5_UNORM = 11,
-	TFMT4_5_5_5_1_UNORM = 10,
+	TFMT4_5_5_5_1_UNORM = 9,
 	TFMT4_4_4_4_4_UNORM = 8,
 	TFMT4_X8Z24_UNORM = 71,
 	TFMT4_10_10_10_2_UNORM = 33,
