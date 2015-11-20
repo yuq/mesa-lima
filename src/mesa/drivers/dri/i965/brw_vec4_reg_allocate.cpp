@@ -221,6 +221,19 @@ vec4_visitor::reg_allocate()
       }
    }
 
+   /* Certain instructions can't safely use the same register for their
+    * sources and destination.  Add interference.
+    */
+   foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
+      if (inst->dst.file == VGRF && inst->has_source_and_destination_hazard()) {
+         for (unsigned i = 0; i < 3; i++) {
+            if (inst->src[i].file == VGRF) {
+               ra_add_node_interference(g, inst->dst.nr, inst->src[i].nr);
+            }
+         }
+      }
+   }
+
    setup_payload_interference(g, first_payload_node, node_count);
 
    if (!ra_allocate(g)) {

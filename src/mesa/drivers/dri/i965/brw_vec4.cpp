@@ -161,6 +161,35 @@ vec4_instruction::is_send_from_grf()
    }
 }
 
+/**
+ * Returns true if this instruction's sources and destinations cannot
+ * safely be the same register.
+ *
+ * In most cases, a register can be written over safely by the same
+ * instruction that is its last use.  For a single instruction, the
+ * sources are dereferenced before writing of the destination starts
+ * (naturally).
+ *
+ * However, there are a few cases where this can be problematic:
+ *
+ * - Virtual opcodes that translate to multiple instructions in the
+ *   code generator: if src == dst and one instruction writes the
+ *   destination before a later instruction reads the source, then
+ *   src will have been clobbered.
+ *
+ * The register allocator uses this information to set up conflicts between
+ * GRF sources and the destination.
+ */
+bool
+vec4_instruction::has_source_and_destination_hazard() const
+{
+   switch (opcode) {
+   /* Most opcodes in the vec4 world use MRFs. */
+   default:
+      return false;
+   }
+}
+
 unsigned
 vec4_instruction::regs_read(unsigned arg) const
 {

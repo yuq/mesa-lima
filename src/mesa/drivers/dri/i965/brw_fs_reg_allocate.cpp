@@ -597,6 +597,19 @@ fs_visitor::assign_regs(bool allow_spilling)
       }
    }
 
+   /* Certain instructions can't safely use the same register for their
+    * sources and destination.  Add interference.
+    */
+   foreach_block_and_inst(block, fs_inst, inst, cfg) {
+      if (inst->dst.file == VGRF && inst->has_source_and_destination_hazard()) {
+         for (unsigned i = 0; i < 3; i++) {
+            if (inst->src[i].file == VGRF) {
+               ra_add_node_interference(g, inst->dst.nr, inst->src[i].nr);
+            }
+         }
+      }
+   }
+
    setup_payload_interference(g, payload_node_count, first_payload_node);
    if (devinfo->gen >= 7) {
       int first_used_mrf = BRW_MAX_MRF(devinfo->gen);

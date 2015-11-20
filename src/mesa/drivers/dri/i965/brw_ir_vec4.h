@@ -169,6 +169,7 @@ public:
    void reswizzle(int dst_writemask, int swizzle);
    bool can_do_source_mods(const struct brw_device_info *devinfo);
    bool can_change_types() const;
+   bool has_source_and_destination_hazard() const;
 
    bool reads_flag()
    {
