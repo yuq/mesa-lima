@@ -186,24 +186,25 @@ vtn_handle_extension(struct vtn_builder *b, SpvOp opcode,
 static void
 _foreach_decoration_helper(struct vtn_builder *b,
                            struct vtn_value *base_value,
-                           int member,
+                           int parent_member,
                            struct vtn_value *value,
                            vtn_decoration_foreach_cb cb, void *data)
 {
-   int new_member = member;
-
    for (struct vtn_decoration *dec = value->decoration; dec; dec = dec->next) {
-      if (dec->member >= 0) {
-         assert(member == -1);
-         new_member = dec->member;
+      int member;
+      if (dec->member < 0) {
+         member = parent_member;
+      } else {
+         assert(parent_member == -1);
+         member = dec->member;
       }
 
       if (dec->group) {
          assert(dec->group->value_type == vtn_value_type_decoration_group);
-         _foreach_decoration_helper(b, base_value, new_member, dec->group,
+         _foreach_decoration_helper(b, base_value, member, dec->group,
                                     cb, data);
       } else {
-         cb(b, base_value, new_member, dec, data);
+         cb(b, base_value, member, dec, data);
       }
    }
 }
