@@ -40,13 +40,50 @@
 struct pipe_loader_sw_device {
    struct pipe_loader_device base;
    const struct sw_driver_descriptor *dd;
+#ifndef GALLIUM_STATIC_TARGETS
    struct util_dl_library *lib;
+#endif
    struct sw_winsys *ws;
 };
 
 #define pipe_loader_sw_device(dev) ((struct pipe_loader_sw_device *)dev)
 
 static const struct pipe_loader_ops pipe_loader_sw_ops;
+
+#ifdef GALLIUM_STATIC_TARGETS
+static const struct sw_driver_descriptor driver_descriptors = {
+   .create_screen = sw_screen_create,
+   .winsys = {
+#ifdef HAVE_PIPE_LOADER_DRI
+      {
+         .name = "dri",
+         .create_winsys = dri_create_sw_winsys,
+      },
+#endif
+#ifdef HAVE_PIPE_LOADER_KMS
+      {
+         .name = "kms_dri",
+         .create_winsys = kms_dri_create_winsys,
+      },
+#endif
+/**
+ * XXX: Do not include these two for non autotools builds.
+ * They don't have neither opencl nor nine, where these are used.
+ */
+#ifndef DROP_PIPE_LOADER_MISC
+      {
+         .name = "null",
+         .create_winsys = null_sw_create,
+      },
+      {
+         .name = "wrapped",
+         .create_winsys = wrapper_sw_winsys_wrap_pipe_screen,
+      },
+#endif
+      { 0 },
+   }
+};
+#endif
 
 static bool
 pipe_loader_sw_probe_init_common(struct pipe_loader_sw_device *sdev)
@@ -55,6 +92,11 @@ pipe_loader_sw_probe_init_common(struct pipe_loader_sw_device *sdev)
    sdev->base.driver_name = "swrast";
    sdev->base.ops = &pipe_loader_sw_ops;
 
+#ifdef GALLIUM_STATIC_TARGETS
+   sdev->dd = &driver_descriptors;
+   if (!sdev->dd)
+      return false;
+#else
    sdev->lib = pipe_loader_find_module(&sdev->base, PIPE_SEARCH_DIR);
    if (!sdev->lib)
       return false;
@@ -67,6 +109,7 @@ pipe_loader_sw_probe_init_common(struct pipe_loader_sw_device *sdev)
       sdev->lib = NULL;
       return false;
    }
+#endif
 
    return true;
 }
@@ -74,8 +117,10 @@ pipe_loader_sw_probe_init_common(struct pipe_loader_sw_device *sdev)
 static void
 pipe_loader_sw_probe_teardown_common(struct pipe_loader_sw_device *sdev)
 {
+#ifndef GALLIUM_STATIC_TARGETS
    if (sdev->lib)
       util_dl_close(sdev->lib);
+#endif
 }
 
 #ifdef HAVE_PIPE_LOADER_DRI
@@ -222,8 +267,10 @@ pipe_loader_sw_release(struct pipe_loader_device **dev)
 {
    struct pipe_loader_sw_device *sdev = pipe_loader_sw_device(*dev);
 
+#ifndef GALLIUM_STATIC_TARGETS
    if (sdev->lib)
       util_dl_close(sdev->lib);
+#endif
 
    FREE(sdev);
    *dev = NULL;
