@@ -122,7 +122,7 @@ vec4_visitor::nir_setup_inputs()
 {
    nir_inputs = ralloc_array(mem_ctx, src_reg, nir->num_inputs);
    for (unsigned i = 0; i < nir->num_inputs; i++) {
-      nir_inputs[i] = dst_reg();
+      nir_inputs[i] = src_reg();
    }
 
    nir_foreach_variable(var, &nir->inputs) {
