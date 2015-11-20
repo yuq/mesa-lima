@@ -185,10 +185,10 @@ public:
    fs_reg *emit_frontfacing_interpolation();
    fs_reg *emit_samplepos_setup();
    fs_reg *emit_sampleid_setup();
-   void emit_general_interpolation(fs_reg attr, const char *name,
+   void emit_general_interpolation(fs_reg *attr, const char *name,
                                    const glsl_type *type,
                                    glsl_interp_qualifier interpolation_mode,
-                                   int location, bool mod_centroid,
+                                   int *location, bool mod_centroid,
                                    bool mod_sample);
    fs_reg *emit_vs_system_value(int location);
    void emit_interpolation_setup_gen4();

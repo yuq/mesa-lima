@@ -76,9 +76,10 @@ fs_visitor::nir_setup_inputs()
          reg.type = BRW_REGISTER_TYPE_D;
          bld.emit(FS_OPCODE_CINTERP, retype(input, BRW_REGISTER_TYPE_D), reg);
       } else {
-         emit_general_interpolation(input, var->name, var->type,
+         int location = var->data.location;
+         emit_general_interpolation(&input, var->name, var->type,
                                     (glsl_interp_qualifier) var->data.interpolation,
-                                    var->data.location, var->data.centroid,
+                                    &location, var->data.centroid,
                                     var->data.sample);
       }
    }
