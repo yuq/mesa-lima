@@ -507,10 +507,15 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
+   case SpvOpTypeRuntimeArray:
    case SpvOpTypeArray: {
       struct vtn_type *array_element =
          vtn_value(b, w[2], vtn_value_type_type)->type;
-      val->type->type = glsl_array_type(array_element->type, w[3]);
+
+      /* A length of 0 is used to denote unsized arrays */
+      unsigned length = (opcode == SpvOpTypeArray) ? w[3] : 0;
+
+      val->type->type = glsl_array_type(array_element->type, length);
       val->type->array_element = array_element;
       val->type->stride = 0;
       break;
@@ -630,7 +635,6 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
                                           GLSL_TYPE_FLOAT);
       break;
 
-   case SpvOpTypeRuntimeArray:
    case SpvOpTypeOpaque:
    case SpvOpTypeEvent:
    case SpvOpTypeDeviceEvent:
