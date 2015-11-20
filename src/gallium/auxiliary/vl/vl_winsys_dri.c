@@ -402,12 +402,8 @@ vl_dri2_screen_create(Display *display, int screen)
    if (authenticate == NULL || !authenticate->authenticated)
       goto free_authenticate;
 
-#if GALLIUM_STATIC_TARGETS
-   scrn->base.pscreen = dd_create_screen(fd);
-#else
    if (pipe_loader_drm_probe_fd(&scrn->base.dev, fd))
       scrn->base.pscreen = pipe_loader_create_screen(scrn->base.dev);
-#endif // GALLIUM_STATIC_TARGETS
 
    if (!scrn->base.pscreen)
       goto release_pipe;
@@ -430,10 +426,8 @@ vl_dri2_screen_create(Display *display, int screen)
    return &scrn->base;
 
 release_pipe:
-#if !GALLIUM_STATIC_TARGETS
    if (scrn->base.dev)
       pipe_loader_release(&scrn->base.dev, 1);
-#endif // !GALLIUM_STATIC_TARGETS
 free_authenticate:
    free(authenticate);
 free_connect:
@@ -462,8 +456,6 @@ vl_dri2_screen_destroy(struct vl_screen *vscreen)
 
    vl_dri2_destroy_drawable(scrn);
    scrn->base.pscreen->destroy(scrn->base.pscreen);
-#if !GALLIUM_STATIC_TARGETS
    pipe_loader_release(&scrn->base.dev, 1);
-#endif // !GALLIUM_STATIC_TARGETS
    FREE(scrn);
 }

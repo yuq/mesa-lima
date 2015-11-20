@@ -46,12 +46,8 @@ vl_drm_screen_create(int fd)
    if (!vscreen)
       return NULL;
 
-#if GALLIUM_STATIC_TARGETS
-   vscreen->pscreen = dd_create_screen(fd);
-#else
    if (pipe_loader_drm_probe_fd(&vscreen->dev, dup(fd)))
       vscreen->pscreen = pipe_loader_create_screen(vscreen->dev);
-#endif
 
    if (!vscreen->pscreen)
       goto error;
@@ -65,10 +61,9 @@ vl_drm_screen_create(int fd)
    return vscreen;
 
 error:
-#if !GALLIUM_STATIC_TARGETS
    if (vscreen->dev)
       pipe_loader_release(&vscreen->dev, 1);
-#endif // !GALLIUM_STATIC_TARGETS
+
    FREE(vscreen);
    return NULL;
 }
@@ -79,10 +74,6 @@ vl_drm_screen_destroy(struct vl_screen *vscreen)
    assert(vscreen);
 
    vscreen->pscreen->destroy(vscreen->pscreen);
-
-#if !GALLIUM_STATIC_TARGETS
    pipe_loader_release(&vscreen->dev, 1);
-#endif
-
    FREE(vscreen);
 }
