@@ -481,7 +481,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       .tex_coord = {
          (float)(src_offset.x + src_extent.width) / (float)src_iview->extent.width,
          (float)(src_offset.y + src_extent.height) / (float)src_iview->extent.height,
-         (float)(src_offset.z + src_extent.depth) / (float)src_iview->extent.depth,
+         (float)src_offset.z / (float)src_iview->extent.depth,
       },
    };
 
@@ -493,7 +493,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       .tex_coord = {
          (float)src_offset.x / (float)src_iview->extent.width,
          (float)(src_offset.y + src_extent.height) / (float)src_iview->extent.height,
-         (float)(src_offset.z + src_extent.depth) / (float)src_iview->extent.depth,
+         (float)src_offset.z / (float)src_iview->extent.depth,
       },
    };
 
