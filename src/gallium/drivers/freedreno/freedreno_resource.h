@@ -73,6 +73,7 @@ struct fd_resource {
 	struct u_resource base;
 	struct fd_bo *bo;
 	uint32_t cpp;
+	enum pipe_format internal_format;
 	bool layer_first;        /* see above description */
 	uint32_t layer_size;
 	struct fd_resource_slice slices[MAX_MIP_LEVELS];

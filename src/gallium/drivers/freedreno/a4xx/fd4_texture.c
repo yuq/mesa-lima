@@ -240,7 +240,7 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	so->texconst2 =
 		A4XX_TEX_CONST_2_FETCHSIZE(fd4_pipe2fetchsize(cso->format)) |
 		A4XX_TEX_CONST_2_PITCH(
-			fd4_pipe2nblocksx(
+			util_format_get_nblocksx(
 				cso->format, rsc->slices[lvl].pitch) * rsc->cpp);
 
 	switch (prsc->target) {

@@ -388,7 +388,8 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 
 		buf = trans->staging;
 		offset = 0;
-	} else if (util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_RGTC) {
+	} else if (rsc->internal_format != format &&
+			   util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_RGTC) {
 		assert(trans->base.box.depth == 1);
 
 		trans->base.stride = util_format_get_stride(
@@ -574,9 +575,10 @@ fd_resource_create(struct pipe_screen *pscreen,
 
 	if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
 		format = PIPE_FORMAT_Z32_FLOAT;
-	else if (util_format_description(format)->layout ==
-			 UTIL_FORMAT_LAYOUT_RGTC)
+	else if (fd_screen(pscreen)->gpu_id < 400 &&
+			 util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_RGTC)
 		format = PIPE_FORMAT_R8G8B8A8_UNORM;
+	rsc->internal_format = format;
 	rsc->cpp = util_format_get_blocksize(format);
 
 	assert(rsc->cpp);
