@@ -2608,7 +2608,12 @@ emit_fetch_texels( struct lp_build_tgsi_soa_context *bld,
    params.type = bld->bld_base.base.type;
    params.sample_key = sample_key;
    params.texture_index = unit;
-   params.sampler_index = unit;
+   /*
+    * sampler not actually used, set to 0 so it won't exceed PIPE_MAX_SAMPLERS
+    * and trigger some assertions with d3d10 where the sampler view number
+    * can exceed this.
+    */
+   params.sampler_index = 0;
    params.context_ptr = bld->context_ptr;
    params.thread_data_ptr = bld->thread_data_ptr;
    params.coords = coords;
