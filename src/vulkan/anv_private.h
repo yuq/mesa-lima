@@ -100,6 +100,19 @@ anv_minify(uint32_t n, uint32_t levels)
       return MAX(n >> levels, 1);
 }
 
+static inline float
+anv_clamp_f(float f, float min, float max)
+{
+   assert(min < max);
+
+   if (f > max)
+      return max;
+   else if (f < min)
+      return min;
+   else
+      return f;
+}
+
 static inline bool
 anv_clear_mask(uint32_t *inout_mask, uint32_t clear_mask)
 {
