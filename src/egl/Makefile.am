@@ -57,7 +57,9 @@ dri2_backend_FILES += drivers/dri2/platform_x11.c
 
 if HAVE_DRI3
 dri3_backend_FILES += \
-	drivers/dri2/platform_x11_dri3.c
+	drivers/dri2/platform_x11_dri3.c \
+	drivers/dri2/platform_x11_dri3.h
+
 libEGL_la_LIBADD += $(top_builddir)/src/loader/libloader_dri3_helper.la
 endif
 endif
