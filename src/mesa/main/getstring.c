@@ -121,7 +121,7 @@ _mesa_GetString( GLenum name )
    assert(ctx->Driver.GetString);
    {
       /* Give the driver the chance to handle this query */
-      const GLubyte *str = (*ctx->Driver.GetString)(ctx, name);
+      const GLubyte *str = ctx->Driver.GetString(ctx, name);
       if (str)
          return str;
    }
