@@ -242,7 +242,7 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 		pipe_buffer_create(ctx->b.screen, PIPE_BIND_CUSTOM,
 				   PIPE_USAGE_STAGING, buf_size);
 
-	if (query->ops->prepare_buffer)
+	if (query->flags & R600_QUERY_HW_FLAG_PREDICATE)
 		query->ops->prepare_buffer(ctx, query, buf);
 
 	return buf;
@@ -251,15 +251,11 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 static void r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 					 struct r600_query_hw *query,
 					 struct r600_resource *buffer)
- {
-	uint32_t *results;
-
-	if (query->b.type == PIPE_QUERY_TIME_ELAPSED ||
-	    query->b.type == PIPE_QUERY_TIMESTAMP)
-		return;
-
-	results = r600_buffer_map_sync_with_rings(ctx, buffer,
-						  PIPE_TRANSFER_WRITE);
+{
+	/* Callers ensure that the buffer is currently unused by the GPU. */
+	uint32_t *results = ctx->ws->buffer_map(buffer->cs_buf, NULL,
+						PIPE_TRANSFER_WRITE |
+						PIPE_TRANSFER_UNSYNCHRONIZED);
 
 	memset(results, 0, buffer->b.b.width0);
 
@@ -339,6 +335,7 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 		query->result_size = 16 * rctx->max_db;
 		query->num_cs_dw_begin = 6;
 		query->num_cs_dw_end = 6;
+		query->flags |= R600_QUERY_HW_FLAG_PREDICATE;
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		query->result_size = 16;
@@ -361,6 +358,7 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 		query->num_cs_dw_begin = 6;
 		query->num_cs_dw_end = 6;
 		query->stream = index;
+		query->flags |= R600_QUERY_HW_FLAG_PREDICATE;
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		/* 11 values on EG, 8 on R600. */
@@ -667,11 +665,15 @@ static void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
 		FREE(qbuf);
 	}
 
-	/* Obtain a new buffer if the current one can't be mapped without a stall. */
-	if (r600_rings_is_buffer_referenced(rctx, query->buffer.buf->cs_buf, RADEON_USAGE_READWRITE) ||
-	    !rctx->ws->buffer_wait(query->buffer.buf->buf, 0, RADEON_USAGE_READWRITE)) {
-		pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
-		query->buffer.buf = r600_new_query_buffer(rctx, query);
+	if (query->flags & R600_QUERY_HW_FLAG_PREDICATE) {
+		/* Obtain a new buffer if the current one can't be mapped without a stall. */
+		if (r600_rings_is_buffer_referenced(rctx, query->buffer.buf->cs_buf, RADEON_USAGE_READWRITE) ||
+		    !rctx->ws->buffer_wait(query->buffer.buf->buf, 0, RADEON_USAGE_READWRITE)) {
+			pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
+			query->buffer.buf = r600_new_query_buffer(rctx, query);
+		} else {
+			query->ops->prepare_buffer(rctx, query, query->buffer.buf);
+		}
 	}
 
 	query->buffer.results_end = 0;

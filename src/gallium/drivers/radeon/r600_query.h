@@ -71,6 +71,7 @@ struct r600_query {
 enum {
 	R600_QUERY_HW_FLAG_NO_START = (1 << 0),
 	R600_QUERY_HW_FLAG_TIMER = (1 << 1),
+	R600_QUERY_HW_FLAG_PREDICATE = (1 << 2),
 };
 
 struct r600_query_hw_ops {
