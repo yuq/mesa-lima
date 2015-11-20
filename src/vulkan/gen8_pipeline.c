@@ -204,6 +204,12 @@ emit_cb_state(struct anv_pipeline *pipeline,
    for (uint32_t i = 0; i < info->attachmentCount; i++) {
       const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[i];
 
+      if (a->srcBlendColor != a->srcBlendAlpha ||
+          a->destBlendColor != a->destBlendAlpha ||
+          a->blendOpColor != a->blendOpAlpha) {
+         blend_state.IndependentAlphaBlendEnable = true;
+      }
+
       blend_state.Entry[i] = (struct GEN8_BLEND_STATE_ENTRY) {
          .LogicOpEnable = info->logicOpEnable,
          .LogicOpFunction = vk_to_gen_logic_op[info->logicOp],
