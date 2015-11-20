@@ -626,11 +626,24 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		uint32_t i;
 
 		for (i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
+			enum pipe_format format = pipe_surface_format(
+					ctx->framebuffer.cbufs[i]);
+			bool has_alpha = util_format_has_alpha(format);
+			uint32_t control = blend->rb_mrt[i].control;
+			uint32_t blend_control = blend->rb_mrt[i].blend_control_alpha;
+
+			if (has_alpha) {
+				blend_control |= blend->rb_mrt[i].blend_control_rgb;
+			} else {
+				blend_control |= blend->rb_mrt[i].blend_control_no_alpha_rgb;
+				control &= ~A4XX_RB_MRT_CONTROL_BLEND2;
+			}
+
 			OUT_PKT0(ring, REG_A4XX_RB_MRT_CONTROL(i), 1);
-			OUT_RING(ring, blend->rb_mrt[i].control);
+			OUT_RING(ring, control);
 
 			OUT_PKT0(ring, REG_A4XX_RB_MRT_BLEND_CONTROL(i), 1);
-			OUT_RING(ring, blend->rb_mrt[i].blend_control);
+			OUT_RING(ring, blend_control);
 		}
 
 		OUT_PKT0(ring, REG_A4XX_RB_FS_OUTPUT, 1);
