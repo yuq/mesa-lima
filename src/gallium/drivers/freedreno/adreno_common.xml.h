@@ -119,6 +119,25 @@ enum adreno_rb_copy_control_mode {
 	RB_COPY_DEPTH_STENCIL = 5,
 };
 
+enum a3xx_rop_code {
+	ROP_CLEAR = 0,
+	ROP_NOR = 1,
+	ROP_AND_INVERTED = 2,
+	ROP_COPY_INVERTED = 3,
+	ROP_AND_REVERSE = 4,
+	ROP_INVERT = 5,
+	ROP_XOR = 6,
+	ROP_NAND = 7,
+	ROP_AND = 8,
+	ROP_EQUIV = 9,
+	ROP_NOOP = 10,
+	ROP_OR_INVERTED = 11,
+	ROP_COPY = 12,
+	ROP_OR_REVERSE = 13,
+	ROP_OR = 14,
+	ROP_SET = 15,
+};
+
 enum a3xx_render_mode {
 	RB_RENDERING_PASS = 0,
 	RB_TILING_PASS = 1,

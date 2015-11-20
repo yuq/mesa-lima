@@ -60,12 +60,12 @@ fd4_blend_state_create(struct pipe_context *pctx,
 		const struct pipe_blend_state *cso)
 {
 	struct fd4_blend_stateobj *so;
-//	enum a3xx_rop_code rop = ROP_COPY;
+	enum a3xx_rop_code rop = ROP_COPY;
 	bool reads_dest = false;
 	unsigned i, mrt_blend = 0;
 
 	if (cso->logicop_enable) {
-//		rop = cso->logicop_func;  /* maps 1:1 */
+		rop = cso->logicop_func;  /* maps 1:1 */
 
 		switch (cso->logicop_func) {
 		case PIPE_LOGICOP_NOR:
@@ -116,7 +116,8 @@ fd4_blend_state_create(struct pipe_context *pctx,
 
 
 		so->rb_mrt[i].control =
-				0xc00 | /* XXX ROP_CODE ?? */
+				A4XX_RB_MRT_CONTROL_ROP_CODE(rop) |
+				COND(cso->logicop_enable, A4XX_RB_MRT_CONTROL_ROP_ENABLE) |
 				A4XX_RB_MRT_CONTROL_COMPONENT_ENABLE(rt->colormask);
 
 		if (rt->blend_enable) {
@@ -127,8 +128,10 @@ fd4_blend_state_create(struct pipe_context *pctx,
 			mrt_blend |= (1 << i);
 		}
 
-		if (reads_dest)
+		if (reads_dest) {
 			so->rb_mrt[i].control |= A4XX_RB_MRT_CONTROL_READ_DEST_ENABLE;
+			mrt_blend |= (1 << i);
+		}
 
 		if (cso->dither)
 			so->rb_mrt[i].buf_info |= A4XX_RB_MRT_BUF_INFO_DITHER_MODE(DITHER_ALWAYS);

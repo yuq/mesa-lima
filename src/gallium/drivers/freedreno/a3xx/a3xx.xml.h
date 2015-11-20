@@ -262,25 +262,6 @@ enum a3xx_sp_perfcounter_select {
 	SP_ALU_ACTIVE_CYCLES = 29,
 };
 
-enum a3xx_rop_code {
-	ROP_CLEAR = 0,
-	ROP_NOR = 1,
-	ROP_AND_INVERTED = 2,
-	ROP_COPY_INVERTED = 3,
-	ROP_AND_REVERSE = 4,
-	ROP_INVERT = 5,
-	ROP_XOR = 6,
-	ROP_NAND = 7,
-	ROP_AND = 8,
-	ROP_EQUIV = 9,
-	ROP_NOOP = 10,
-	ROP_OR_INVERTED = 11,
-	ROP_COPY = 12,
-	ROP_OR_REVERSE = 13,
-	ROP_OR = 14,
-	ROP_SET = 15,
-};
-
 enum a3xx_rb_blend_opcode {
 	BLEND_DST_PLUS_SRC = 0,
 	BLEND_SRC_MINUS_DST = 1,

@@ -271,8 +271,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 		mrt_comp[i] = (buffers & (PIPE_CLEAR_COLOR0 << i)) ? 0xf : 0x0;
 
 		OUT_PKT0(ring, REG_A4XX_RB_MRT_CONTROL(i), 1);
-		OUT_RING(ring, A4XX_RB_MRT_CONTROL_FASTCLEAR |
-				A4XX_RB_MRT_CONTROL_B11 |
+		OUT_RING(ring, A4XX_RB_MRT_CONTROL_ROP_CODE(ROP_COPY) |
 				A4XX_RB_MRT_CONTROL_COMPONENT_ENABLE(0xf));
 
 		OUT_PKT0(ring, REG_A4XX_RB_MRT_BLEND_CONTROL(i), 1);
