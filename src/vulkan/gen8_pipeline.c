@@ -229,6 +229,23 @@ emit_cb_state(struct anv_pipeline *pipeline,
          .WriteDisableGreen = !(a->channelWriteMask & VK_CHANNEL_G_BIT),
          .WriteDisableBlue = !(a->channelWriteMask & VK_CHANNEL_B_BIT),
       };
+
+      /* Our hardware applies the blend factor prior to the blend function
+       * regardless of what function is used.  Technically, this means the
+       * hardware can do MORE than GL or Vulkan specify.  However, it also
+       * means that, for MIN and MAX, we have to stomp the blend factor to
+       * ONE to make it a no-op.
+       */
+      if (a->blendOpColor == VK_BLEND_OP_MIN ||
+          a->blendOpColor == VK_BLEND_OP_MAX) {
+         blend_state.Entry[i].SourceBlendFactor = BLENDFACTOR_ONE;
+         blend_state.Entry[i].DestinationBlendFactor = BLENDFACTOR_ONE;
+      }
+      if (a->blendOpAlpha == VK_BLEND_OP_MIN ||
+          a->blendOpAlpha == VK_BLEND_OP_MAX) {
+         blend_state.Entry[i].SourceAlphaBlendFactor = BLENDFACTOR_ONE;
+         blend_state.Entry[i].DestinationAlphaBlendFactor = BLENDFACTOR_ONE;
+      }
    }
 
    GEN8_BLEND_STATE_pack(NULL, pipeline->blend_state.map, &blend_state);
