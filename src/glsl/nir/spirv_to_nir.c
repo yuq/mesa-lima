@@ -141,6 +141,11 @@ vtn_foreach_instruction(struct vtn_builder *b, const uint32_t *start,
       unsigned count = w[0] >> SpvWordCountShift;
       assert(count >= 1 && w + count <= end);
 
+      if (opcode == SpvOpNop) {
+         w++;
+         continue;
+      }
+
       if (!handler(b, opcode, w, count))
          return w;
 
