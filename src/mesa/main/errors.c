@@ -1142,7 +1142,6 @@ _mesa_PushDebugGroup(GLenum source, GLuint id, GLsizei length,
    const char *callerstr;
    struct gl_debug_state *debug;
    struct gl_debug_message *emptySlot;
-   GLuint ret;
 
    if (_mesa_is_desktop_gl(ctx))
       callerstr = "glPushDebugGroup";
