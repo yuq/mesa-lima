@@ -654,16 +654,10 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 	return rquery->ops->begin(rctx, rquery);
 }
 
-boolean r600_query_hw_begin(struct r600_common_context *rctx,
-			    struct r600_query *rquery)
+static void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
+					struct r600_query_hw *query)
 {
-	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
 	struct r600_query_buffer *prev = query->buffer.previous;
-
-	if (query->flags & R600_QUERY_HW_FLAG_NO_START) {
-		assert(0);
-		return false;
-	}
 
 	/* Discard the old query buffers. */
 	while (prev) {
@@ -682,6 +676,19 @@ boolean r600_query_hw_begin(struct r600_common_context *rctx,
 
 	query->buffer.results_end = 0;
 	query->buffer.previous = NULL;
+}
+
+boolean r600_query_hw_begin(struct r600_common_context *rctx,
+			    struct r600_query *rquery)
+{
+	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
+
+	if (query->flags & R600_QUERY_HW_FLAG_NO_START) {
+		assert(0);
+		return false;
+	}
+
+	r600_query_hw_reset_buffers(rctx, query);
 
 	r600_query_hw_emit_start(rctx, query);
 
@@ -704,6 +711,9 @@ void r600_query_hw_end(struct r600_common_context *rctx,
 			      struct r600_query *rquery)
 {
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
+
+	if (query->flags & R600_QUERY_HW_FLAG_NO_START)
+		r600_query_hw_reset_buffers(rctx, query);
 
 	r600_query_hw_emit_stop(rctx, query);
 
