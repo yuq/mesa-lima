@@ -198,6 +198,7 @@ emit_cb_state(struct anv_pipeline *pipeline,
 
    struct GEN8_BLEND_STATE blend_state = {
       .AlphaToCoverageEnable = info->alphaToCoverageEnable,
+      .AlphaToOneEnable = info->alphaToOneEnable,
    };
 
    for (uint32_t i = 0; i < info->attachmentCount; i++) {
@@ -208,8 +209,9 @@ emit_cb_state(struct anv_pipeline *pipeline,
          .LogicOpFunction = vk_to_gen_logic_op[info->logicOp],
          .ColorBufferBlendEnable = a->blendEnable,
          .PreBlendSourceOnlyClampEnable = false,
-         .PreBlendColorClampEnable = false,
-         .PostBlendColorClampEnable = false,
+         .ColorClampRange = COLORCLAMP_RTFORMAT,
+         .PreBlendColorClampEnable = true,
+         .PostBlendColorClampEnable = true,
          .SourceBlendFactor = vk_to_gen_blend[a->srcBlendColor],
          .DestinationBlendFactor = vk_to_gen_blend[a->destBlendColor],
          .ColorBlendFunction = vk_to_gen_blend_op[a->blendOpColor],
