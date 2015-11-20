@@ -1552,19 +1552,12 @@ compressed_tex_size(GLsizei width, GLsizei height, GLsizei depth,
  * \param ctx             GL context
  * \param target          Texture target
  * \param internalFormat  Internal format of the texture image
- * \param dimensions      Dimensionality at the caller.  This is \b not used
- *                        in the validation.  It is only used when logging
- *                        error messages.
- * \param caller          Base name of the calling function (e.g.,
- *                        "glTexImage" or "glTexStorage").
  *
  * \returns true if the combination is legal, false otherwise.
  */
 bool
 _mesa_legal_texture_base_format_for_target(struct gl_context *ctx,
-                                           GLenum target, GLenum internalFormat,
-                                           unsigned dimensions,
-                                           const char *caller)
+                                           GLenum target, GLenum internalFormat)
 {
    if (_mesa_base_tex_format(ctx, internalFormat) == GL_DEPTH_COMPONENT
        || _mesa_base_tex_format(ctx, internalFormat) == GL_DEPTH_STENCIL
@@ -1603,9 +1596,6 @@ _mesa_legal_texture_base_format_for_target(struct gl_context *ctx,
           !((target == GL_TEXTURE_CUBE_MAP_ARRAY ||
              target == GL_PROXY_TEXTURE_CUBE_MAP_ARRAY) &&
             ctx->Extensions.ARB_texture_cube_map_array)) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "%s%dD(bad target for depth texture)",
-                     caller, dimensions);
          return false;
       }
    }
@@ -1849,9 +1839,11 @@ texture_error_check( struct gl_context *ctx,
    }
 
    /* additional checks for depth textures */
-   if (!_mesa_legal_texture_base_format_for_target(ctx, target, internalFormat,
-                                                   dimensions, "glTexImage"))
+   if (!_mesa_legal_texture_base_format_for_target(ctx, target, internalFormat)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glTexImage%dD(bad target for texture)", dimensions);
       return GL_TRUE;
+   }
 
    /* additional checks for compressed textures */
    if (_mesa_is_compressed_format(ctx, internalFormat)) {

@@ -210,9 +210,7 @@ _mesa_validate_texbuffer_format(const struct gl_context *ctx,
 bool
 _mesa_legal_texture_base_format_for_target(struct gl_context *ctx,
                                            GLenum target,
-                                           GLenum internalFormat,
-                                           unsigned dimensions,
-                                           const char *caller);
+                                           GLenum internalFormat);
 
 bool
 _mesa_format_no_online_compression(const struct gl_context *ctx, GLenum format);
