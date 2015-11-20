@@ -356,7 +356,7 @@ generate_gs_urb_write_allocate(struct brw_codegen *p, vec4_instruction *inst)
 
    /* We pass the temporary passed in src0 as the writeback register */
    brw_urb_WRITE(p,
-                 inst->src[0], /* dest */
+                 inst->src[0].as_brw_reg(), /* dest */
                  inst->base_mrf, /* starting mrf reg nr */
                  src,
                  BRW_URB_WRITE_ALLOCATE_COMPLETE,
@@ -369,8 +369,8 @@ generate_gs_urb_write_allocate(struct brw_codegen *p, vec4_instruction *inst)
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   brw_MOV(p, get_element_ud(inst->dst, 0),
-           get_element_ud(inst->src[0], 0));
+   brw_MOV(p, get_element_ud(inst->dst.as_brw_reg(), 0),
+           get_element_ud(inst->src[0].as_brw_reg(), 0));
    brw_pop_insn_state(p);
 }
 
@@ -1059,9 +1059,9 @@ generate_code(struct brw_codegen *p,
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < 3; i++) {
-         src[i] = inst->src[i];
+         src[i] = inst->src[i].as_brw_reg();
       }
-      dst = inst->dst;
+      dst = inst->dst.as_brw_reg();
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);

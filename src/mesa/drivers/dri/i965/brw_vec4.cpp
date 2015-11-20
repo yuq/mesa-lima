@@ -583,7 +583,8 @@ vec4_visitor::opt_algebraic()
             if (inst->dst.type != inst->src[0].type)
                assert(!"unimplemented: saturate mixed types");
 
-            if (brw_saturate_immediate(inst->dst.type, &inst->src[0])) {
+            if (brw_saturate_immediate(inst->dst.type,
+                                       &inst->src[0].as_brw_reg())) {
                inst->saturate = false;
                progress = true;
             }
@@ -1765,7 +1766,7 @@ vec4_visitor::convert_to_hw_regs()
 
       case ARF:
       case FIXED_GRF:
-         reg = dst;
+         reg = dst.as_brw_reg();
          break;
 
       case BAD_FILE:

@@ -92,7 +92,7 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
    case ARF:
    case FIXED_GRF:
    case IMM:
-      brw_reg = *static_cast<struct brw_reg *>(reg);
+      brw_reg = reg->as_brw_reg();
       break;
    case BAD_FILE:
       /* Probably unused. */

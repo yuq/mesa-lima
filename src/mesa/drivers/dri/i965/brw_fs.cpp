@@ -2037,7 +2037,8 @@ fs_visitor::opt_algebraic()
             if (inst->dst.type != inst->src[0].type)
                assert(!"unimplemented: saturate mixed types");
 
-            if (brw_saturate_immediate(inst->dst.type, &inst->src[0])) {
+            if (brw_saturate_immediate(inst->dst.type,
+                                       &inst->src[0].as_brw_reg())) {
                inst->saturate = false;
                progress = true;
             }
