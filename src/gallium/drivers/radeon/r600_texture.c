@@ -336,7 +336,7 @@ void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 		out->slice_tile_max -= 1;
 
 	out->tile_mode_index = fmask.tiling_index[0];
-	out->pitch = fmask.level[0].nblk_x;
+	out->pitch_in_pixels = fmask.level[0].nblk_x;
 	out->bank_height = fmask.bankh;
 	out->alignment = MAX2(256, fmask.bo_alignment);
 	out->size = fmask.bo_size;
@@ -608,10 +608,10 @@ r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 		(rtex->surface.flags & RADEON_SURF_SCANOUT) != 0);
 
 	if (rtex->fmask.size)
-		fprintf(f, "  FMask: offset=%u, size=%u, alignment=%u, pitch=%u, "
+		fprintf(f, "  FMask: offset=%u, size=%u, alignment=%u, pitch_in_pixels=%u, "
 			"bankh=%u, slice_tile_max=%u, tile_mode_index=%u\n",
 			rtex->fmask.offset, rtex->fmask.size, rtex->fmask.alignment,
-			rtex->fmask.pitch, rtex->fmask.bank_height,
+			rtex->fmask.pitch_in_pixels, rtex->fmask.bank_height,
 			rtex->fmask.slice_tile_max, rtex->fmask.tile_mode_index);
 
 	if (rtex->cmask.size)

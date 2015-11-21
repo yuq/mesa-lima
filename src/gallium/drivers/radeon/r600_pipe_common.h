@@ -172,7 +172,7 @@ struct r600_fmask_info {
 	unsigned offset;
 	unsigned size;
 	unsigned alignment;
-	unsigned pitch;
+	unsigned pitch_in_pixels;
 	unsigned bank_height;
 	unsigned slice_tile_max;
 	unsigned tile_mode_index;

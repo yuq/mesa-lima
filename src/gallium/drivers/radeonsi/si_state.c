@@ -1912,7 +1912,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 				color_attrib |= S_028C74_FMASK_BANK_HEIGHT(fmask_bankh);
 			}
 			if (sctx->b.chip_class >= CIK) {
-				color_pitch |= S_028C64_FMASK_TILE_MAX(rtex->fmask.pitch / 8 - 1);
+				color_pitch |= S_028C64_FMASK_TILE_MAX(rtex->fmask.pitch_in_pixels / 8 - 1);
 			}
 		}
 	}
@@ -2701,7 +2701,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 				       S_008F1C_TYPE(si_tex_dim(texture->target,
 								state->target, 0));
 		view->fmask_state[4] = S_008F20_DEPTH(depth - 1) |
-				       S_008F20_PITCH(tmp->fmask.pitch - 1);
+				       S_008F20_PITCH(tmp->fmask.pitch_in_pixels - 1);
 		view->fmask_state[5] = S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
 				       S_008F24_LAST_ARRAY(last_layer);
 		view->fmask_state[6] = 0;
