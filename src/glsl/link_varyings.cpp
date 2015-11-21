@@ -896,8 +896,10 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
 {
    assert(producer_var != NULL || consumer_var != NULL);
 
-   if ((producer_var && !producer_var->data.is_unmatched_generic_inout)
-       || (consumer_var && !consumer_var->data.is_unmatched_generic_inout)) {
+   if ((producer_var && (!producer_var->data.is_unmatched_generic_inout ||
+       producer_var->data.explicit_location)) ||
+       (consumer_var && (!consumer_var->data.is_unmatched_generic_inout ||
+       consumer_var->data.explicit_location))) {
       /* Either a location already exists for this variable (since it is part
        * of fixed functionality), or it has already been recorded as part of a
        * previous match.

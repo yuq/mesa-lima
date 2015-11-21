@@ -631,20 +631,12 @@ link_invalidate_variable_locations(exec_list *ir)
 
       /* ir_variable::is_unmatched_generic_inout is used by the linker while
        * connecting outputs from one stage to inputs of the next stage.
-       *
-       * There are two implicit assumptions here.  First, we assume that any
-       * built-in variable (i.e., non-generic in or out) will have
-       * explicit_location set.  Second, we assume that any generic in or out
-       * will not have explicit_location set.
-       *
-       * This second assumption will only be valid until
-       * GL_ARB_separate_shader_objects is supported.  When that extension is
-       * implemented, this function will need some modifications.
        */
-      if (!var->data.explicit_location) {
-         var->data.is_unmatched_generic_inout = 1;
-      } else {
+      if (var->data.explicit_location &&
+          var->data.location < VARYING_SLOT_VAR0) {
          var->data.is_unmatched_generic_inout = 0;
+      } else {
+         var->data.is_unmatched_generic_inout = 1;
       }
    }
 }
@@ -2421,6 +2413,7 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
 	 continue;
 
       if (var->data.explicit_location) {
+         var->data.is_unmatched_generic_inout = 0;
 	 if ((var->data.location >= (int)(max_index + generic_base))
 	     || (var->data.location < 0)) {
 	    linker_error(prog,
@@ -2690,6 +2683,61 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
    return true;
 }
 
+/**
+ * Match explicit locations of outputs to inputs and deactivate the
+ * unmatch flag if found so we don't optimise them away.
+ */
+void
+match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
+                                 gl_shader *producer,
+                                 gl_shader *consumer)
+{
+   glsl_symbol_table parameters;
+   ir_variable *explicit_locations[MAX_VARYING] = { NULL };
+
+   /* Find all shader outputs in the "producer" stage.
+    */
+   foreach_in_list(ir_instruction, node, producer->ir) {
+      ir_variable *const var = node->as_variable();
+
+      if ((var == NULL) || (var->data.mode != ir_var_shader_out))
+         continue;
+
+      /* Mark output as matched if separate shader with no linked consumer */
+      if (consumer == NULL)
+         var->data.is_unmatched_generic_inout = 0;
+
+      if (var->data.explicit_location &&
+          var->data.location >= VARYING_SLOT_VAR0) {
+         const unsigned idx = var->data.location - VARYING_SLOT_VAR0;
+         if (explicit_locations[idx] == NULL)
+            explicit_locations[idx] = var;
+      }
+   }
+
+   /* Match inputs to outputs */
+   foreach_in_list(ir_instruction, node, consumer->ir) {
+      ir_variable *const input = node->as_variable();
+
+      if ((input == NULL) || (input->data.mode != ir_var_shader_in))
+         continue;
+
+      /* Mark input as matched if separate shader with no linked producer */
+      if (producer == NULL)
+         input->data.is_unmatched_generic_inout = 0;
+
+      ir_variable *output = NULL;
+      if (input->data.explicit_location
+          && input->data.location >= VARYING_SLOT_VAR0) {
+         output = explicit_locations[input->data.location - VARYING_SLOT_VAR0];
+
+         if (output != NULL){
+            input->data.is_unmatched_generic_inout = 0;
+            output->data.is_unmatched_generic_inout = 0;
+         }
+      }
+   }
+}
 
 /**
  * Demote shader inputs and outputs that are not used in other stages
@@ -4256,6 +4304,16 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       if (prog->_LinkedShaders[i] != NULL) {
          link_invalidate_variable_locations(prog->_LinkedShaders[i]->ir);
       }
+   }
+
+   prev = first;
+   for (unsigned i = prev + 1; i <= MESA_SHADER_FRAGMENT; i++) {
+      if (prog->_LinkedShaders[i] == NULL)
+         continue;
+
+      match_explicit_outputs_to_inputs(prog, prog->_LinkedShaders[prev],
+                                       prog->_LinkedShaders[i]);
+      prev = i;
    }
 
    if (!assign_attribute_or_color_locations(prog, &ctx->Const,
