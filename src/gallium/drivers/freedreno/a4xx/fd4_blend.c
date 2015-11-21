@@ -137,7 +137,8 @@ fd4_blend_state_create(struct pipe_context *pctx,
 			so->rb_mrt[i].buf_info |= A4XX_RB_MRT_BUF_INFO_DITHER_MODE(DITHER_ALWAYS);
 	}
 
-	so->rb_fs_output = A4XX_RB_FS_OUTPUT_ENABLE_BLEND(mrt_blend);
+	so->rb_fs_output = A4XX_RB_FS_OUTPUT_ENABLE_BLEND(mrt_blend) |
+		COND(cso->independent_blend_enable, A4XX_RB_FS_OUTPUT_INDEPENDENT_BLEND);
 
 	return so;
 }
