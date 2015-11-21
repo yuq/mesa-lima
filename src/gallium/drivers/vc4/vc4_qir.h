@@ -122,6 +122,7 @@ enum qop {
         QOP_TLB_Z_WRITE,
         QOP_TLB_COLOR_WRITE,
         QOP_TLB_COLOR_READ,
+        QOP_MS_MASK,
         QOP_VARY_ADD_C,
 
         QOP_FRAG_X,
@@ -397,6 +398,7 @@ struct vc4_compile {
         uint32_t output_position_index;
         uint32_t output_color_index;
         uint32_t output_point_size_index;
+        uint32_t output_sample_mask_index;
 
         struct qreg undef;
         enum qstage stage;
@@ -620,6 +622,7 @@ QIR_NODST_1(TLB_COLOR_WRITE)
 QIR_NODST_1(TLB_Z_WRITE)
 QIR_NODST_1(TLB_DISCARD_SETUP)
 QIR_NODST_1(TLB_STENCIL_SETUP)
+QIR_NODST_1(MS_MASK)
 
 static inline struct qreg
 qir_UNPACK_8_F(struct vc4_compile *c, struct qreg src, int i)

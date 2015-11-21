@@ -87,6 +87,7 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_TLB_Z_WRITE] = { "tlb_z", 0, 1, true },
         [QOP_TLB_COLOR_WRITE] = { "tlb_color", 0, 1, true },
         [QOP_TLB_COLOR_READ] = { "tlb_color_read", 1, 0 },
+        [QOP_MS_MASK] = { "ms_mask", 0, 1, true },
         [QOP_VARY_ADD_C] = { "vary_add_c", 1, 1 },
 
         [QOP_FRAG_X] = { "frag_x", 1, 0 },
@@ -399,6 +400,7 @@ qir_compile_init(void)
         c->output_position_index = -1;
         c->output_color_index = -1;
         c->output_point_size_index = -1;
+        c->output_sample_mask_index = -1;
 
         c->def_ht = _mesa_hash_table_create(c, _mesa_hash_pointer,
                                             _mesa_key_pointer_equal);

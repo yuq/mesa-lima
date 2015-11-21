@@ -1109,6 +1109,10 @@ emit_frag_end(struct vc4_compile *c)
                 }
         }
 
+        if (c->output_sample_mask_index != -1) {
+                qir_MS_MASK(c, c->outputs[c->output_sample_mask_index]);
+        }
+
         if (c->fs_key->depth_enabled) {
                 struct qreg z;
                 if (c->output_position_index != -1) {
@@ -1358,6 +1362,9 @@ ntq_setup_outputs(struct vc4_compile *c)
                                 break;
                         case FRAG_RESULT_DEPTH:
                                 c->output_position_index = loc;
+                                break;
+                        case FRAG_RESULT_SAMPLE_MASK:
+                                c->output_sample_mask_index = loc;
                                 break;
                         }
                 } else {
