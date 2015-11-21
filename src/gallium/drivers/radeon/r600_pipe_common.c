@@ -344,7 +344,6 @@ void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resour
 static const struct debug_named_value common_debug_options[] = {
 	/* logging */
 	{ "tex", DBG_TEX, "Print texture info" },
-	{ "texmip", DBG_TEXMIP, "Print texture info (mipmapped only)" },
 	{ "compute", DBG_COMPUTE, "Print compute info" },
 	{ "vm", DBG_VM, "Print virtual addresses when creating resources" },
 	{ "trace_cs", DBG_TRACE_CS, "Trace cs and write rlockup_<csid>.c file with faulty cs" },

@@ -56,7 +56,7 @@
 /* Debug flags. */
 /* logging */
 #define DBG_TEX			(1 << 0)
-#define DBG_TEXMIP		(1 << 1)
+/* gap - reuse */
 #define DBG_COMPUTE		(1 << 2)
 #define DBG_VM			(1 << 3)
 #define DBG_TRACE_CS		(1 << 4)

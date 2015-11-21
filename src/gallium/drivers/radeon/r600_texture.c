@@ -678,8 +678,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 			base->nr_samples ? base->nr_samples : 1, util_format_short_name(base->format));
 	}
 
-	if (rscreen->debug_flags & DBG_TEX ||
-	    (rtex->resource.b.b.last_level > 0 && rscreen->debug_flags & DBG_TEXMIP)) {
+	if (rscreen->debug_flags & DBG_TEX) {
 		printf("Texture: npix_x=%u, npix_y=%u, npix_z=%u, blk_w=%u, "
 		       "blk_h=%u, blk_d=%u, array_size=%u, last_level=%u, "
 		       "bpe=%u, nsamples=%u, flags=0x%x, %s\n",
