@@ -303,6 +303,36 @@ static struct fd4_format formats[PIPE_FORMAT_COUNT] = {
 	_T(LATC1_SNORM, RGTC1_SNORM, NONE, WZYX),
 	_T(LATC2_UNORM, RGTC2_UNORM, NONE, WZYX),
 	_T(LATC2_SNORM, RGTC2_SNORM, NONE, WZYX),
+
+	_T(ASTC_4x4,   ASTC_4x4,   NONE, WZYX),
+	_T(ASTC_5x4,   ASTC_5x4,   NONE, WZYX),
+	_T(ASTC_5x5,   ASTC_5x5,   NONE, WZYX),
+	_T(ASTC_6x5,   ASTC_6x5,   NONE, WZYX),
+	_T(ASTC_6x6,   ASTC_6x6,   NONE, WZYX),
+	_T(ASTC_8x5,   ASTC_8x5,   NONE, WZYX),
+	_T(ASTC_8x6,   ASTC_8x6,   NONE, WZYX),
+	_T(ASTC_8x8,   ASTC_8x8,   NONE, WZYX),
+	_T(ASTC_10x5,  ASTC_10x5,  NONE, WZYX),
+	_T(ASTC_10x6,  ASTC_10x6,  NONE, WZYX),
+	_T(ASTC_10x8,  ASTC_10x8,  NONE, WZYX),
+	_T(ASTC_10x10, ASTC_10x10, NONE, WZYX),
+	_T(ASTC_12x10, ASTC_12x10, NONE, WZYX),
+	_T(ASTC_12x12, ASTC_12x12, NONE, WZYX),
+
+	_T(ASTC_4x4_SRGB,   ASTC_4x4,   NONE, WZYX),
+	_T(ASTC_5x4_SRGB,   ASTC_5x4,   NONE, WZYX),
+	_T(ASTC_5x5_SRGB,   ASTC_5x5,   NONE, WZYX),
+	_T(ASTC_6x5_SRGB,   ASTC_6x5,   NONE, WZYX),
+	_T(ASTC_6x6_SRGB,   ASTC_6x6,   NONE, WZYX),
+	_T(ASTC_8x5_SRGB,   ASTC_8x5,   NONE, WZYX),
+	_T(ASTC_8x6_SRGB,   ASTC_8x6,   NONE, WZYX),
+	_T(ASTC_8x8_SRGB,   ASTC_8x8,   NONE, WZYX),
+	_T(ASTC_10x5_SRGB,  ASTC_10x5,  NONE, WZYX),
+	_T(ASTC_10x6_SRGB,  ASTC_10x6,  NONE, WZYX),
+	_T(ASTC_10x8_SRGB,  ASTC_10x8,  NONE, WZYX),
+	_T(ASTC_10x10_SRGB, ASTC_10x10, NONE, WZYX),
+	_T(ASTC_12x10_SRGB, ASTC_12x10, NONE, WZYX),
+	_T(ASTC_12x12_SRGB, ASTC_12x12, NONE, WZYX),
 };
 
 /* convert pipe format to vertex buffer format: */
@@ -345,6 +375,9 @@ fd4_pipe2fetchsize(enum pipe_format format)
 {
 	if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
 		format = PIPE_FORMAT_Z32_FLOAT;
+
+	if (util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_ASTC)
+		return TFETCH4_16_BYTE;
 
 	switch (util_format_get_blocksizebits(format) / util_format_get_blockwidth(format)) {
 	case 8:   return TFETCH4_1_BYTE;
