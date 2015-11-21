@@ -4139,11 +4139,18 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    if (!prog->LinkStatus)
       goto done;
 
-   unsigned prev;
+   unsigned first, last, prev;
 
-   for (prev = 0; prev <= MESA_SHADER_FRAGMENT; prev++) {
-      if (prog->_LinkedShaders[prev] != NULL)
-         break;
+   first = MESA_SHADER_STAGES;
+   last = 0;
+
+   /* Determine first and last stage. */
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (!prog->_LinkedShaders[i])
+         continue;
+      if (first == MESA_SHADER_STAGES)
+         first = i;
+      last = i;
    }
 
    check_explicit_uniform_locations(ctx, prog);
@@ -4157,6 +4164,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    /* Validate the inputs of each stage with the output of the preceding
     * stage.
     */
+   prev = first;
    for (unsigned i = prev + 1; i <= MESA_SHADER_FRAGMENT; i++) {
       if (prog->_LinkedShaders[i] == NULL)
          continue;
@@ -4258,20 +4266,6 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    if (!assign_attribute_or_color_locations(prog, &ctx->Const,
                                             MESA_SHADER_FRAGMENT)) {
       goto done;
-   }
-
-   unsigned first, last;
-
-   first = MESA_SHADER_STAGES;
-   last = 0;
-
-   /* Determine first and last stage. */
-   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      if (!prog->_LinkedShaders[i])
-         continue;
-      if (first == MESA_SHADER_STAGES)
-         first = i;
-      last = i;
    }
 
    if (num_tfeedback_decls != 0) {
