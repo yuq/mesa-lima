@@ -183,7 +183,9 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
-		return is_a3xx(screen) ? 16 : 0;
+		if (is_a3xx(screen)) return 16;
+		if (is_a4xx(screen)) return 32;
+		return 0;
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 		/* I think 32k on a4xx.. and we could possibly emulate more
 		 * by pretending 2d/rect textures and splitting high bits

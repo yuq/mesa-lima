@@ -212,8 +212,7 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 {
 	struct fd4_pipe_sampler_view *so = CALLOC_STRUCT(fd4_pipe_sampler_view);
 	struct fd_resource *rsc = fd_resource(prsc);
-	unsigned lvl = fd_sampler_first_level(cso);
-	unsigned miplevels = fd_sampler_last_level(cso) - lvl;
+	unsigned lvl;
 	uint32_t sz2 = 0;
 
 	if (!so)
@@ -228,21 +227,38 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	so->texconst0 =
 		A4XX_TEX_CONST_0_TYPE(tex_type(prsc->target)) |
 		A4XX_TEX_CONST_0_FMT(fd4_pipe2tex(cso->format)) |
-		A4XX_TEX_CONST_0_MIPLVLS(miplevels) |
 		fd4_tex_swiz(cso->format, cso->swizzle_r, cso->swizzle_g,
 				cso->swizzle_b, cso->swizzle_a);
 
 	if (util_format_is_srgb(cso->format))
 		so->texconst0 |= A4XX_TEX_CONST_0_SRGB;
 
-	so->texconst1 =
-		A4XX_TEX_CONST_1_WIDTH(u_minify(prsc->width0, lvl)) |
-		A4XX_TEX_CONST_1_HEIGHT(u_minify(prsc->height0, lvl));
-	so->texconst2 =
-		A4XX_TEX_CONST_2_FETCHSIZE(fd4_pipe2fetchsize(cso->format)) |
-		A4XX_TEX_CONST_2_PITCH(
-			util_format_get_nblocksx(
-				cso->format, rsc->slices[lvl].pitch) * rsc->cpp);
+	if (prsc->target == PIPE_BUFFER) {
+		unsigned elements = cso->u.buf.last_element -
+			cso->u.buf.first_element + 1;
+		lvl = 0;
+		so->texconst1 =
+			A4XX_TEX_CONST_1_WIDTH(elements) |
+			A4XX_TEX_CONST_1_HEIGHT(1);
+		so->texconst2 =
+			A4XX_TEX_CONST_2_FETCHSIZE(fd4_pipe2fetchsize(cso->format)) |
+			A4XX_TEX_CONST_2_PITCH(elements * rsc->cpp);
+	} else {
+		unsigned miplevels;
+
+		lvl = fd_sampler_first_level(cso);
+		miplevels = fd_sampler_last_level(cso) - lvl;
+
+		so->texconst0 |= A4XX_TEX_CONST_0_MIPLVLS(miplevels);
+		so->texconst1 =
+			A4XX_TEX_CONST_1_WIDTH(u_minify(prsc->width0, lvl)) |
+			A4XX_TEX_CONST_1_HEIGHT(u_minify(prsc->height0, lvl));
+		so->texconst2 =
+			A4XX_TEX_CONST_2_FETCHSIZE(fd4_pipe2fetchsize(cso->format)) |
+			A4XX_TEX_CONST_2_PITCH(
+					util_format_get_nblocksx(
+							cso->format, rsc->slices[lvl].pitch) * rsc->cpp);
+	}
 
 	switch (prsc->target) {
 	case PIPE_TEXTURE_1D_ARRAY:
