@@ -214,6 +214,7 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	struct fd_resource *rsc = fd_resource(prsc);
 	unsigned lvl = fd_sampler_first_level(cso);
 	unsigned miplevels = fd_sampler_last_level(cso) - lvl;
+	uint32_t sz2 = 0;
 
 	if (!so)
 		return NULL;
@@ -259,7 +260,10 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	case PIPE_TEXTURE_3D:
 		so->texconst3 =
 			A4XX_TEX_CONST_3_DEPTH(u_minify(prsc->depth0, lvl)) |
-			A4XX_TEX_CONST_3_LAYERSZ(rsc->slices[0].size0);
+			A4XX_TEX_CONST_3_LAYERSZ(rsc->slices[lvl].size0);
+		while (lvl < cso->u.tex.last_level && sz2 != rsc->slices[lvl+1].size0)
+			sz2 = rsc->slices[++lvl].size0;
+		so->texconst4 = A4XX_TEX_CONST_4_LAYERSZ(sz2);
 		break;
 	default:
 		so->texconst3 = 0x00000000;
