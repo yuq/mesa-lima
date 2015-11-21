@@ -95,16 +95,9 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    tex->src[0].src = nir_src_for_ssa(nir_load_var(&b, tex_pos_in));
    tex->dest_type = nir_type_float; /* TODO */
 
-   switch (tex_dim) {
-   case GLSL_SAMPLER_DIM_2D:
-      tex->coord_components = 2;
-      break;
-   case GLSL_SAMPLER_DIM_3D:
-      tex->coord_components = 3;
-      break;
-   default:
-      assert(!"Unsupported texture dimension");
-   }
+   if (tex_dim == GLSL_SAMPLER_DIM_2D)
+      tex->is_array = true;
+   tex->coord_components = 3;
 
    tex->sampler = nir_deref_var_create(tex, sampler);
 
