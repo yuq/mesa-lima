@@ -629,20 +629,22 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
             emit_load_color_clear(cmd_buffer, a, clear_values[a].color);
          }
       } else {
-         VkImageAspectFlags aspects = 0;
+         VkImageAspectFlags clear_aspects = 0;
 
          if (att->format->depth_format &&
              att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
+            clear_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
          }
 
          if (att->format->has_stencil &&
              att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            clear_aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
          }
 
-         emit_load_depthstencil_clear(cmd_buffer, a, aspects,
-                                      clear_values[a].depthStencil);
+         if (clear_aspects) {
+            emit_load_depthstencil_clear(cmd_buffer, a, clear_aspects,
+                                         clear_values[a].depthStencil);
+         }
       }
    }
 
