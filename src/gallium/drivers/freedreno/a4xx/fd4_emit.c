@@ -568,8 +568,9 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	 */
 	if (emit->info) {
 		const struct pipe_draw_info *info = emit->info;
-		uint32_t val = fd4_rasterizer_stateobj(ctx->rasterizer)
-				->pc_prim_vtx_cntl;
+		struct fd4_rasterizer_stateobj *rast =
+			fd4_rasterizer_stateobj(ctx->rasterizer);
+		uint32_t val = rast->pc_prim_vtx_cntl;
 
 		if (info->indexed && info->primitive_restart)
 			val |= A4XX_PC_PRIM_VTX_CNTL_PRIMITIVE_RESTART;
@@ -585,7 +586,7 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 		OUT_PKT0(ring, REG_A4XX_PC_PRIM_VTX_CNTL, 2);
 		OUT_RING(ring, val);
-		OUT_RING(ring, 0x12);     /* XXX UNKNOWN_21C5 */
+		OUT_RING(ring, rast->pc_prim_vtx_cntl2);
 	}
 
 	if (dirty & FD_DIRTY_SCISSOR) {
