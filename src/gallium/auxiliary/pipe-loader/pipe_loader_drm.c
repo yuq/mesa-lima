@@ -94,6 +94,18 @@ static const struct drm_driver_descriptor driver_descriptors[] = {
         .create_screen = pipe_i915_create_screen,
         .configuration = configuration_query,
     },
+#ifdef USE_VC4_SIMULATOR
+    /* VC4 simulator and ILO (i965) are mutually exclusive (error at
+     * configure). As the latter is unconditionally added, keep this one above
+     * it.
+     */
+    {
+        .name = "i965",
+        .driver_name = "vc4",
+        .create_screen = pipe_vc4_create_screen,
+        .configuration = configuration_query,
+    },
+#endif
     {
         .name = "i965",
         .driver_name = "i915",
@@ -154,14 +166,6 @@ static const struct drm_driver_descriptor driver_descriptors[] = {
         .create_screen = pipe_vc4_create_screen,
         .configuration = configuration_query,
     },
-#ifdef USE_VC4_SIMULATOR
-    {
-        .name = "i965",
-        .driver_name = "vc4",
-        .create_screen = pipe_vc4_create_screen,
-        .configuration = configuration_query,
-    },
-#endif
 };
 #endif
 
