@@ -619,6 +619,32 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_meta_saved_state saved_state;
 
+   /* Figure out whether or not we actually need to clear anything to avoid
+    * trashing state when clearing is a no-op.
+    */
+   bool needs_clear = false;
+   for (uint32_t a = 0; a < pass->attachment_count; ++a) {
+      struct anv_render_pass_attachment *att = &pass->attachments[a];
+
+      if (anv_format_is_color(att->format)) {
+         if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+            needs_clear = true;
+            break;
+         }
+      } else {
+         if ((att->format->depth_format &&
+              att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) ||
+             (att->format->has_stencil &&
+              att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR)) {
+            needs_clear = true;
+            break;
+         }
+      }
+   }
+
+   if (!needs_clear)
+      return;
+
    meta_clear_begin(&saved_state, cmd_buffer);
 
    for (uint32_t a = 0; a < pass->attachment_count; ++a) {
