@@ -599,9 +599,44 @@ r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 		rtex->surface.array_size, rtex->surface.last_level,
 		rtex->surface.bpe, rtex->surface.nsamples,
 		rtex->surface.flags, util_format_short_name(rtex->resource.b.b.format));
-	for (i = 0; i <= rtex->surface.last_level; i++) {
-		fprintf(f, "  L %i: offset=%"PRIu64", slice_size=%"PRIu64", npix_x=%u, "
-			"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
+
+	fprintf(f, "  Layout: size=%"PRIu64", alignment=%"PRIu64", bankw=%u, "
+		"bankh=%u, nbanks=%u, mtilea=%u, tilesplit=%u, pipeconfig=%u, scanout=%u\n",
+		rtex->surface.bo_size, rtex->surface.bo_alignment, rtex->surface.bankw,
+		rtex->surface.bankh, rtex->surface.num_banks, rtex->surface.mtilea,
+		rtex->surface.tile_split, rtex->surface.pipe_config,
+		(rtex->surface.flags & RADEON_SURF_SCANOUT) != 0);
+
+	if (rtex->fmask.size)
+		fprintf(f, "  FMask: offset=%u, size=%u, alignment=%u, pitch=%u, "
+			"bankh=%u, slice_tile_max=%u, tile_mode_index=%u\n",
+			rtex->fmask.offset, rtex->fmask.size, rtex->fmask.alignment,
+			rtex->fmask.pitch, rtex->fmask.bank_height,
+			rtex->fmask.slice_tile_max, rtex->fmask.tile_mode_index);
+
+	if (rtex->cmask.size)
+		fprintf(f, "  CMask: offset=%u, size=%u, alignment=%u, "
+			"slice_tile_max=%u\n",
+			rtex->cmask.offset, rtex->cmask.size, rtex->cmask.alignment,
+			rtex->cmask.slice_tile_max);
+
+	if (rtex->htile_buffer)
+		fprintf(f, "  HTile: size=%u, alignment=%u\n",
+			rtex->htile_buffer->b.b.width0,
+			rtex->htile_buffer->buf->alignment);
+
+	if (rtex->dcc_buffer) {
+		fprintf(f, "  DCC: size=%u, alignment=%u\n",
+			rtex->dcc_buffer->b.b.width0,
+			rtex->dcc_buffer->buf->alignment);
+		for (i = 0; i <= rtex->surface.last_level; i++)
+			fprintf(f, "  DCCLevel[%i]: offset=%"PRIu64"\n",
+				i, rtex->surface.level[i].dcc_offset);
+	}
+
+	for (i = 0; i <= rtex->surface.last_level; i++)
+		fprintf(f, "  Level[%i]: offset=%"PRIu64", slice_size=%"PRIu64", "
+			"npix_x=%u, npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
 			"nblk_z=%u, pitch_bytes=%u, mode=%u\n",
 			i, rtex->surface.level[i].offset,
 			rtex->surface.level[i].slice_size,
@@ -613,10 +648,13 @@ r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->surface.level[i].nblk_z,
 			rtex->surface.level[i].pitch_bytes,
 			rtex->surface.level[i].mode);
-	}
+
 	if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
 		for (i = 0; i <= rtex->surface.last_level; i++) {
-			fprintf(f, "  S %i: offset=%"PRIu64", slice_size=%"PRIu64", npix_x=%u, "
+			fprintf(f, "  StencilLayout: tilesplit=%u\n",
+				rtex->surface.stencil_tile_split);
+			fprintf(f, "  StencilLevel[%i]: offset=%"PRIu64", "
+				"slice_size=%"PRIu64", npix_x=%u, "
 				"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
 				"nblk_z=%u, pitch_bytes=%u, mode=%u\n",
 				i, rtex->surface.stencil_level[i].offset,
