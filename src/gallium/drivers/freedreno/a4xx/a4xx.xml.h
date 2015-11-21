@@ -2864,7 +2864,7 @@ static inline uint32_t A4XX_TEX_CONST_1_HEIGHT(uint32_t val)
 {
 	return ((val) << A4XX_TEX_CONST_1_HEIGHT__SHIFT) & A4XX_TEX_CONST_1_HEIGHT__MASK;
 }
-#define A4XX_TEX_CONST_1_WIDTH__MASK				0x1fff8000
+#define A4XX_TEX_CONST_1_WIDTH__MASK				0x3fff8000
 #define A4XX_TEX_CONST_1_WIDTH__SHIFT				15
 static inline uint32_t A4XX_TEX_CONST_1_WIDTH(uint32_t val)
 {
