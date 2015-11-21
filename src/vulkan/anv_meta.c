@@ -869,7 +869,7 @@ void anv_CmdCopyImage(
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .mipLevels = 1,
                .baseArrayLayer = pRegions[r].srcSubresource.arrayLayer,
-               .arraySize = 1
+               .arraySize = pRegions[r].destSubresource.arraySize,
             },
          },
          cmd_buffer);
@@ -880,48 +880,59 @@ void anv_CmdCopyImage(
          .z = 0,
       };
 
-      const uint32_t dest_array_slice =
+      unsigned num_slices;
+      if (src_image->type == VK_IMAGE_TYPE_3D) {
+         assert(pRegions[r].srcSubresource.arraySize == 1 &&
+                pRegions[r].destSubresource.arraySize == 1);
+         num_slices = pRegions[r].extent.depth;
+      } else {
+         assert(pRegions[r].srcSubresource.arraySize ==
+                pRegions[r].destSubresource.arraySize);
+         assert(pRegions[r].extent.depth == 1);
+         num_slices = pRegions[r].destSubresource.arraySize;
+      }
+
+      const uint32_t dest_base_array_slice =
          meta_blit_get_dest_view_base_array_slice(dest_image,
                                                   &pRegions[r].destSubresource,
                                                   &pRegions[r].destOffset);
 
-      if (pRegions[r].srcSubresource.arraySize > 1)
-         anv_finishme("FINISHME: copy multiple array layers");
+      for (unsigned slice = 0; slice < num_slices; slice++) {
+         VkOffset3D src_offset = pRegions[r].srcOffset;
+         src_offset.z += slice;
 
-      if (pRegions[r].extent.depth > 1)
-         anv_finishme("FINISHME: copy multiple depth layers");
-
-      struct anv_image_view dest_iview;
-      anv_image_view_init(&dest_iview, cmd_buffer->device,
-         &(VkImageViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = destImage,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = dest_image->format->vk_format,
-            .channels = {
-               VK_CHANNEL_SWIZZLE_R,
-               VK_CHANNEL_SWIZZLE_G,
-               VK_CHANNEL_SWIZZLE_B,
-               VK_CHANNEL_SWIZZLE_A
+         struct anv_image_view dest_iview;
+         anv_image_view_init(&dest_iview, cmd_buffer->device,
+            &(VkImageViewCreateInfo) {
+               .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+               .image = destImage,
+               .viewType = VK_IMAGE_VIEW_TYPE_2D,
+               .format = dest_image->format->vk_format,
+               .channels = {
+                  VK_CHANNEL_SWIZZLE_R,
+                  VK_CHANNEL_SWIZZLE_G,
+                  VK_CHANNEL_SWIZZLE_B,
+                  VK_CHANNEL_SWIZZLE_A
+               },
+               .subresourceRange = {
+                  .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                  .baseMipLevel = pRegions[r].destSubresource.mipLevel,
+                  .mipLevels = 1,
+                  .baseArrayLayer = dest_base_array_slice + slice,
+                  .arraySize = 1
+               },
             },
-            .subresourceRange = {
-               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-               .baseMipLevel = pRegions[r].destSubresource.mipLevel,
-               .mipLevels = 1,
-               .baseArrayLayer = dest_array_slice,
-               .arraySize = 1
-            },
-         },
-         cmd_buffer);
+            cmd_buffer);
 
-      meta_emit_blit(cmd_buffer,
-                     src_image, &src_iview,
-                     pRegions[r].srcOffset,
-                     pRegions[r].extent,
-                     dest_image, &dest_iview,
-                     dest_offset,
-                     pRegions[r].extent,
-                     VK_TEX_FILTER_NEAREST);
+         meta_emit_blit(cmd_buffer,
+                        src_image, &src_iview,
+                        src_offset,
+                        pRegions[r].extent,
+                        dest_image, &dest_iview,
+                        dest_offset,
+                        pRegions[r].extent,
+                        VK_TEX_FILTER_NEAREST);
+      }
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1028,9 +1039,10 @@ void anv_CmdBlitImage(
    meta_finish_blit(cmd_buffer, &saved_state);
 }
 
-static VkImage
+static struct anv_image *
 make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
                       VkImageUsageFlags usage,
+                      VkImageType image_type,
                       const VkBufferImageCopy *copy)
 {
    ANV_FROM_HANDLE(anv_buffer, buffer, vk_buffer);
@@ -1066,7 +1078,7 @@ make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
    image->bo = buffer->bo;
    image->offset = buffer->offset + copy->bufferOffset;
 
-   return anv_image_to_handle(image);
+   return image;
 }
 
 void anv_CmdCopyBufferToImage(
@@ -1094,81 +1106,102 @@ void anv_CmdCopyBufferToImage(
          proxy_aspect = VK_IMAGE_ASPECT_COLOR;
       }
 
-      VkImage srcImage = make_image_for_buffer(vk_device, srcBuffer,
-            proxy_format, VK_IMAGE_USAGE_SAMPLED_BIT, &pRegions[r]);
+      struct anv_image *src_image =
+         make_image_for_buffer(vk_device, srcBuffer, proxy_format,
+                               VK_IMAGE_USAGE_SAMPLED_BIT,
+                               dest_image->type, &pRegions[r]);
 
-      struct anv_image_view src_iview;
-      anv_image_view_init(&src_iview, cmd_buffer->device,
-         &(VkImageViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = srcImage,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = proxy_format,
-            .channels = {
-               VK_CHANNEL_SWIZZLE_R,
-               VK_CHANNEL_SWIZZLE_G,
-               VK_CHANNEL_SWIZZLE_B,
-               VK_CHANNEL_SWIZZLE_A
-            },
-            .subresourceRange = {
-               .aspectMask = 1 << proxy_aspect,
-               .baseMipLevel = 0,
-               .mipLevels = 1,
-               .baseArrayLayer = 0,
-               .arraySize = 1
-            },
-         },
-         cmd_buffer);
-
-      const VkOffset3D dest_offset = {
-         .x = pRegions[r].imageOffset.x,
-         .y = pRegions[r].imageOffset.y,
-         .z = 0,
-      };
-
-      const uint32_t dest_array_slice =
+      const uint32_t dest_base_array_slice =
          meta_blit_get_dest_view_base_array_slice(dest_image,
                                                   &pRegions[r].imageSubresource,
                                                   &pRegions[r].imageOffset);
 
-      if (pRegions[r].imageExtent.depth > 1)
-         anv_finishme("FINISHME: copy multiple depth layers");
+      unsigned num_slices;
+      if (dest_image->type == VK_IMAGE_TYPE_3D) {
+         assert(pRegions[r].imageSubresource.arraySize == 1);
+         num_slices = pRegions[r].imageExtent.depth;
+      } else {
+         assert(pRegions[r].imageExtent.depth == 1);
+         num_slices = pRegions[r].imageSubresource.arraySize;
+      }
 
-      struct anv_image_view dest_iview;
-      anv_image_view_init(&dest_iview, cmd_buffer->device,
-         &(VkImageViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = anv_image_to_handle(dest_image),
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = proxy_format,
-            .channels = {
-               VK_CHANNEL_SWIZZLE_R,
-               VK_CHANNEL_SWIZZLE_G,
-               VK_CHANNEL_SWIZZLE_B,
-               VK_CHANNEL_SWIZZLE_A
+      for (unsigned slice = 0; slice < num_slices; slice++) {
+         struct anv_image_view src_iview;
+         anv_image_view_init(&src_iview, cmd_buffer->device,
+            &(VkImageViewCreateInfo) {
+               .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+               .image = anv_image_to_handle(src_image),
+               .viewType = VK_IMAGE_VIEW_TYPE_2D,
+               .format = proxy_format,
+               .channels = {
+                  VK_CHANNEL_SWIZZLE_R,
+                  VK_CHANNEL_SWIZZLE_G,
+                  VK_CHANNEL_SWIZZLE_B,
+                  VK_CHANNEL_SWIZZLE_A
+               },
+               .subresourceRange = {
+                  .aspectMask = 1 << proxy_aspect,
+                  .baseMipLevel = 0,
+                  .mipLevels = 1,
+                  .baseArrayLayer = 0,
+                  .arraySize = 1,
+               },
             },
-            .subresourceRange = {
-               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-               .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
-               .mipLevels = 1,
-               .baseArrayLayer = dest_array_slice,
-               .arraySize = 1
+            cmd_buffer);
+
+         struct anv_image_view dest_iview;
+         anv_image_view_init(&dest_iview, cmd_buffer->device,
+            &(VkImageViewCreateInfo) {
+               .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+               .image = anv_image_to_handle(dest_image),
+               .viewType = VK_IMAGE_VIEW_TYPE_2D,
+               .format = proxy_format,
+               .channels = {
+                  VK_CHANNEL_SWIZZLE_R,
+                  VK_CHANNEL_SWIZZLE_G,
+                  VK_CHANNEL_SWIZZLE_B,
+                  VK_CHANNEL_SWIZZLE_A
+               },
+               .subresourceRange = {
+                  .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                  .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
+                  .mipLevels = 1,
+                  .baseArrayLayer = dest_base_array_slice + slice,
+                  .arraySize = 1
+               },
             },
-         },
-         cmd_buffer);
+            cmd_buffer);
 
-      meta_emit_blit(cmd_buffer,
-                     anv_image_from_handle(srcImage),
-                     &src_iview,
-                     (VkOffset3D) { 0, 0, 0 },
-                     pRegions[r].imageExtent,
-                     dest_image,
-                     &dest_iview,
-                     dest_offset,
-                     pRegions[r].imageExtent,
-                     VK_TEX_FILTER_NEAREST);
+         VkOffset3D src_offset = { 0, 0, slice };
 
-      anv_DestroyImage(vk_device, srcImage);
+         const VkOffset3D dest_offset = {
+            .x = pRegions[r].imageOffset.x,
+            .y = pRegions[r].imageOffset.y,
+            .z = 0,
+         };
+
+         meta_emit_blit(cmd_buffer,
+                        src_image,
+                        &src_iview,
+                        src_offset,
+                        pRegions[r].imageExtent,
+                        dest_image,
+                        &dest_iview,
+                        dest_offset,
+                        pRegions[r].imageExtent,
+                        VK_TEX_FILTER_NEAREST);
+
+         /* Once we've done the blit, all of the actual information about
+          * the image is embedded in the command buffer so we can just
+          * increment the offset directly in the image effectively
+          * re-binding it to different backing memory.
+          */
+         /* XXX: Insert a real CPP */
+         src_image->offset += src_image->extent.width *
+                              src_image->extent.height * 4;
+      }
+
+      anv_DestroyImage(vk_device, anv_image_to_handle(src_image));
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1193,12 +1226,6 @@ void anv_CmdCopyImageToBuffer(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      if (pRegions[r].imageSubresource.arraySize > 1)
-         anv_finishme("FINISHME: copy multiple array layers");
-
-      if (pRegions[r].imageExtent.depth > 1)
-         anv_finishme("FINISHME: copy multiple depth layers");
-
       struct anv_image_view src_iview;
       anv_image_view_init(&src_iview, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
@@ -1217,7 +1244,7 @@ void anv_CmdCopyImageToBuffer(
                .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
                .mipLevels = 1,
                .baseArrayLayer = pRegions[r].imageSubresource.arrayLayer,
-               .arraySize = 1
+               .arraySize = pRegions[r].imageSubresource.arraySize,
             },
          },
          cmd_buffer);
@@ -1227,44 +1254,69 @@ void anv_CmdCopyImageToBuffer(
          dest_format = VK_FORMAT_R8_UINT;
       }
 
-      VkImage destImage = make_image_for_buffer(vk_device, destBuffer,
-            dest_format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &pRegions[r]);
+      struct anv_image *dest_image =
+         make_image_for_buffer(vk_device, destBuffer, dest_format,
+                               VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                               src_image->type, &pRegions[r]);
 
-      struct anv_image_view dest_iview;
-      anv_image_view_init(&dest_iview, cmd_buffer->device,
-         &(VkImageViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = destImage,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = dest_format,
-            .channels = {
-               VK_CHANNEL_SWIZZLE_R,
-               VK_CHANNEL_SWIZZLE_G,
-               VK_CHANNEL_SWIZZLE_B,
-               VK_CHANNEL_SWIZZLE_A
+      unsigned num_slices;
+      if (src_image->type == VK_IMAGE_TYPE_3D) {
+         assert(pRegions[r].imageSubresource.arraySize == 1);
+         num_slices = pRegions[r].imageExtent.depth;
+      } else {
+         assert(pRegions[r].imageExtent.depth == 1);
+         num_slices = pRegions[r].imageSubresource.arraySize;
+      }
+
+      for (unsigned slice = 0; slice < num_slices; slice++) {
+         VkOffset3D src_offset = pRegions[r].imageOffset;
+         src_offset.z += slice;
+
+         struct anv_image_view dest_iview;
+         anv_image_view_init(&dest_iview, cmd_buffer->device,
+            &(VkImageViewCreateInfo) {
+               .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+               .image = anv_image_to_handle(dest_image),
+               .viewType = VK_IMAGE_VIEW_TYPE_2D,
+               .format = dest_format,
+               .channels = {
+                  VK_CHANNEL_SWIZZLE_R,
+                  VK_CHANNEL_SWIZZLE_G,
+                  VK_CHANNEL_SWIZZLE_B,
+                  VK_CHANNEL_SWIZZLE_A
+               },
+               .subresourceRange = {
+                  .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                  .baseMipLevel = 0,
+                  .mipLevels = 1,
+                  .baseArrayLayer = 0,
+                  .arraySize = 1
+               },
             },
-            .subresourceRange = {
-               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-               .baseMipLevel = 0,
-               .mipLevels = 1,
-               .baseArrayLayer = 0,
-               .arraySize = 1
-            },
-         },
-         cmd_buffer);
+            cmd_buffer);
 
-      meta_emit_blit(cmd_buffer,
-                     anv_image_from_handle(srcImage),
-                     &src_iview,
-                     pRegions[r].imageOffset,
-                     pRegions[r].imageExtent,
-                     anv_image_from_handle(destImage),
-                     &dest_iview,
-                     (VkOffset3D) { 0, 0, 0 },
-                     pRegions[r].imageExtent,
-                     VK_TEX_FILTER_NEAREST);
+         meta_emit_blit(cmd_buffer,
+                        anv_image_from_handle(srcImage),
+                        &src_iview,
+                        src_offset,
+                        pRegions[r].imageExtent,
+                        dest_image,
+                        &dest_iview,
+                        (VkOffset3D) { 0, 0, 0 },
+                        pRegions[r].imageExtent,
+                        VK_TEX_FILTER_NEAREST);
 
-      anv_DestroyImage(vk_device, destImage);
+         /* Once we've done the blit, all of the actual information about
+          * the image is embedded in the command buffer so we can just
+          * increment the offset directly in the image effectively
+          * re-binding it to different backing memory.
+          */
+         /* XXX: Insert a real CPP */
+         dest_image->offset += dest_image->extent.width *
+                               dest_image->extent.height * 4;
+      }
+
+      anv_DestroyImage(vk_device, anv_image_to_handle(dest_image));
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
