@@ -42,7 +42,7 @@
 struct backend_reg : public brw_reg
 {
    backend_reg() {}
-   backend_reg(struct brw_reg reg) : brw_reg(reg) {}
+   backend_reg(const struct brw_reg &reg) : brw_reg(reg) {}
 
    bool equals(const backend_reg &r) const;
 

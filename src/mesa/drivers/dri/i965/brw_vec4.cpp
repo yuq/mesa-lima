@@ -79,9 +79,8 @@ src_reg::src_reg(struct brw_reg reg) :
 }
 
 src_reg::src_reg(const dst_reg &reg) :
-   backend_reg(static_cast<struct brw_reg>(reg))
+   backend_reg(reg)
 {
-   this->reg_offset = reg.reg_offset;
    this->reladdr = reg.reladdr;
    this->swizzle = brw_swizzle_for_mask(reg.writemask);
 }
@@ -137,9 +136,8 @@ dst_reg::dst_reg(struct brw_reg reg) :
 }
 
 dst_reg::dst_reg(const src_reg &reg) :
-   backend_reg(static_cast<struct brw_reg>(reg))
+   backend_reg(reg)
 {
-   this->reg_offset = reg.reg_offset;
    this->writemask = brw_mask_for_swizzle(reg.swizzle);
    this->reladdr = reg.reladdr;
 }
