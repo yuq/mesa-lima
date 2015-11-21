@@ -121,6 +121,9 @@ enum vc4_packet {
 #define VC4_PACKET_TILE_COORDINATES_SIZE				3
 #define VC4_PACKET_GEM_HANDLES_SIZE					9
 
+/* Number of multisamples supported. */
+#define VC4_MAX_SAMPLES							4
+
 #define VC4_MASK(high, low) (((1 << ((high) - (low) + 1)) - 1) << (low))
 /* Using the GNU statement expression extension */
 #define VC4_SET_FIELD(value, field)                                       \

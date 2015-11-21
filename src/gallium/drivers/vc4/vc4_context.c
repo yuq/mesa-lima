@@ -245,6 +245,8 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 
         vc4_debug |= saved_shaderdb_flag;
 
+        vc4->sample_mask = (1 << VC4_MAX_SAMPLES) - 1;
+
         return &vc4->base;
 
 fail:

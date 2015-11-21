@@ -79,7 +79,7 @@ static void
 vc4_set_sample_mask(struct pipe_context *pctx, unsigned sample_mask)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        vc4->sample_mask = (uint16_t)sample_mask;
+        vc4->sample_mask = sample_mask & ((1 << VC4_MAX_SAMPLES) - 1);
         vc4->dirty |= VC4_DIRTY_SAMPLE_MASK;
 }
 

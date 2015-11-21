@@ -247,6 +247,7 @@ enum quniform_contents {
         QUNIFORM_STENCIL,
 
         QUNIFORM_ALPHA_REF,
+        QUNIFORM_SAMPLE_MASK,
 };
 
 struct vc4_varying_slot {

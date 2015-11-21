@@ -1462,6 +1462,10 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                                     instr->const_index[0]);
                 break;
 
+        case nir_intrinsic_load_sample_mask_in:
+                *dest = qir_uniform(c, QUNIFORM_SAMPLE_MASK, 0);
+                break;
+
         case nir_intrinsic_load_input:
                 assert(instr->num_components == 1);
                 if (instr->const_index[0] == VC4_NIR_TLB_COLOR_READ_INPUT) {
