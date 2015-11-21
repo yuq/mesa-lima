@@ -182,6 +182,10 @@ struct r600_cmask_info {
 	unsigned offset;
 	unsigned size;
 	unsigned alignment;
+	unsigned pitch;
+	unsigned height;
+	unsigned xalign;
+	unsigned yalign;
 	unsigned slice_tile_max;
 	unsigned base_address_reg;
 };
