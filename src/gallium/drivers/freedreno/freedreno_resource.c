@@ -551,7 +551,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 	struct fd_resource *rsc = CALLOC_STRUCT(fd_resource);
 	struct pipe_resource *prsc = &rsc->base.b;
 	enum pipe_format format = tmpl->format;
-	uint32_t size;
+	uint32_t size, alignment;
 
 	DBG("target=%d, format=%s, %ux%ux%u, array_size=%u, last_level=%u, "
 			"nr_samples=%u, usage=%u, bind=%x, flags=%x",
@@ -583,6 +583,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 
 	assert(rsc->cpp);
 
+	alignment = slice_alignment(pscreen, tmpl);
 	if (is_a4xx(fd_screen(pscreen))) {
 		switch (tmpl->target) {
 		case PIPE_TEXTURE_3D:
@@ -590,11 +591,12 @@ fd_resource_create(struct pipe_screen *pscreen,
 			break;
 		default:
 			rsc->layer_first = true;
+			alignment = 1;
 			break;
 		}
 	}
 
-	size = setup_slices(rsc, slice_alignment(pscreen, tmpl), format);
+	size = setup_slices(rsc, alignment, format);
 
 	if (rsc->layer_first) {
 		rsc->layer_size = align(size, 4096);
