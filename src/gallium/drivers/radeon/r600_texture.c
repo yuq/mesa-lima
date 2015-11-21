@@ -568,6 +568,11 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 	pipe_interleave_bytes = rscreen->tiling_info.group_bytes;
 	base_align = num_pipes * pipe_interleave_bytes;
 
+	rtex->htile.pitch = width;
+	rtex->htile.height = height;
+	rtex->htile.xalign = cl_width * 8;
+	rtex->htile.yalign = cl_height * 8;
+
 	return (util_max_layer(&rtex->resource.b.b, 0) + 1) *
 		align(slice_bytes, base_align);
 }
@@ -630,9 +635,11 @@ r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->cmask.yalign, rtex->cmask.slice_tile_max);
 
 	if (rtex->htile_buffer)
-		fprintf(f, "  HTile: size=%u, alignment=%u\n",
+		fprintf(f, "  HTile: size=%u, alignment=%u, pitch=%u, height=%u, "
+			"xalign=%u, yalign=%u\n",
 			rtex->htile_buffer->b.b.width0,
-			rtex->htile_buffer->buf->alignment);
+			rtex->htile_buffer->buf->alignment, rtex->htile.pitch,
+			rtex->htile.height, rtex->htile.xalign, rtex->htile.yalign);
 
 	if (rtex->dcc_buffer) {
 		fprintf(f, "  DCC: size=%u, alignment=%u\n",

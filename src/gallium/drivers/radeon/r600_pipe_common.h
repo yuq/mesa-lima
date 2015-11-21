@@ -190,6 +190,13 @@ struct r600_cmask_info {
 	unsigned base_address_reg;
 };
 
+struct r600_htile_info {
+	unsigned pitch;
+	unsigned height;
+	unsigned xalign;
+	unsigned yalign;
+};
+
 struct r600_texture {
 	struct r600_resource		resource;
 
@@ -210,6 +217,7 @@ struct r600_texture {
 	unsigned			color_clear_value[2];
 
 	/* Depth buffer compression and fast clear. */
+	struct r600_htile_info		htile;
 	struct r600_resource		*htile_buffer;
 	bool				depth_cleared; /* if it was cleared at least once */
 	float				depth_clear_value;
