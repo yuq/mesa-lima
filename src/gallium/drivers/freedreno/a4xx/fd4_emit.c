@@ -498,11 +498,16 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RINGP(ring, val, &fd4_context(ctx)->rbrc_patches);
 	}
 
-	if (dirty & FD_DIRTY_ZSA) {
+	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_FRAMEBUFFER)) {
 		struct fd4_zsa_stateobj *zsa = fd4_zsa_stateobj(ctx->zsa);
+		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+		uint32_t rb_alpha_control = zsa->rb_alpha_control;
+
+		if (util_format_is_pure_integer(pipe_surface_format(pfb->cbufs[0])))
+			rb_alpha_control &= ~A4XX_RB_ALPHA_CONTROL_ALPHA_TEST;
 
 		OUT_PKT0(ring, REG_A4XX_RB_ALPHA_CONTROL, 1);
-		OUT_RING(ring, zsa->rb_alpha_control);
+		OUT_RING(ring, rb_alpha_control);
 
 		OUT_PKT0(ring, REG_A4XX_RB_STENCIL_CONTROL, 2);
 		OUT_RING(ring, zsa->rb_stencil_control);
@@ -629,9 +634,15 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		for (i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
 			enum pipe_format format = pipe_surface_format(
 					ctx->framebuffer.cbufs[i]);
+			bool is_int = util_format_is_pure_integer(format);
 			bool has_alpha = util_format_has_alpha(format);
 			uint32_t control = blend->rb_mrt[i].control;
 			uint32_t blend_control = blend->rb_mrt[i].blend_control_alpha;
+
+			if (is_int) {
+				control &= A4XX_RB_MRT_CONTROL_COMPONENT_ENABLE__MASK;
+				control |= A4XX_RB_MRT_CONTROL_ROP_CODE(ROP_COPY);
+			}
 
 			if (has_alpha) {
 				blend_control |= blend->rb_mrt[i].blend_control_rgb;
