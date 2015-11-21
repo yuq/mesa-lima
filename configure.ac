@@ -2173,7 +2173,9 @@ if test -n "$with_gallium_drivers"; then
             gallium_require_drm_loader
 
             PKG_CHECK_MODULES([SIMPENROSE], [simpenrose],
-                              [USE_VC4_SIMULATOR=yes], [USE_VC4_SIMULATOR=no])
+                              [USE_VC4_SIMULATOR=yes;
+                               DEFINES="$DEFINES -DUSE_VC4_SIMULATOR"],
+                              [USE_VC4_SIMULATOR=no])
             ;;
         xvirgl)
             HAVE_GALLIUM_VIRGL=yes
