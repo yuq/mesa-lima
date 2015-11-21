@@ -190,7 +190,6 @@ struct r600_texture {
 	struct r600_resource		resource;
 
 	unsigned			size;
-	unsigned			pitch_override;
 	bool				is_depth;
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
 	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */

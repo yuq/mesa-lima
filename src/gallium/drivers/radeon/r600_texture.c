@@ -606,7 +606,6 @@ r600_texture_create_object(struct pipe_screen *screen,
 	resource->b.vtbl = &r600_texture_vtbl;
 	pipe_reference_init(&resource->b.b.reference, 1);
 	resource->b.b.screen = screen;
-	rtex->pitch_override = pitch_in_bytes_override;
 
 	/* don't include stencil-only formats which we don't support for rendering */
 	rtex->is_depth = util_format_has_depth(util_format_description(rtex->resource.b.b.format));
