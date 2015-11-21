@@ -72,6 +72,20 @@ vc4_emit_state(struct pipe_context *pctx)
         }
 
         if (vc4->dirty & (VC4_DIRTY_RASTERIZER | VC4_DIRTY_ZSA)) {
+                uint8_t ez_enable_mask_out = ~0;
+
+                /* HW-2905: If the RCL ends up doing a full-res load when
+                 * multisampling, then early Z tracking may end up with values
+                 * from the previous tile due to a HW bug.  Disable it to
+                 * avoid that.
+                 *
+                 * We should be able to skip this when the Z is cleared, but I
+                 * was seeing bad rendering on glxgears -samples 4 even in
+                 * that case.
+                 */
+                if (vc4->msaa)
+                        ez_enable_mask_out &= ~VC4_CONFIG_BITS_EARLY_Z;
+
                 cl_u8(&bcl, VC4_PACKET_CONFIGURATION_BITS);
                 cl_u8(&bcl,
                       vc4->rasterizer->config_bits[0] |
@@ -80,8 +94,8 @@ vc4_emit_state(struct pipe_context *pctx)
                       vc4->rasterizer->config_bits[1] |
                       vc4->zsa->config_bits[1]);
                 cl_u8(&bcl,
-                      vc4->rasterizer->config_bits[2] |
-                      vc4->zsa->config_bits[2]);
+                      (vc4->rasterizer->config_bits[2] |
+                       vc4->zsa->config_bits[2]) & ez_enable_mask_out);
         }
 
         if (vc4->dirty & VC4_DIRTY_RASTERIZER) {
