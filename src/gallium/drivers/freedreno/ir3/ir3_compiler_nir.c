@@ -1547,10 +1547,10 @@ tex_info(nir_tex_instr *tex, unsigned *flagsp, unsigned *coordsp)
 		unreachable("bad sampler_dim");
 	}
 
-	if (tex->is_shadow)
+	if (tex->is_shadow && tex->op != nir_texop_lod)
 		flags |= IR3_INSTR_S;
 
-	if (tex->is_array)
+	if (tex->is_array && tex->op != nir_texop_lod)
 		flags |= IR3_INSTR_A;
 
 	*flagsp = flags;
@@ -1618,9 +1618,9 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	case nir_texop_txl:      opc = OPC_SAML;     break;
 	case nir_texop_txd:      opc = OPC_SAMGQ;    break;
 	case nir_texop_txf:      opc = OPC_ISAML;    break;
+	case nir_texop_lod:      opc = OPC_GETLOD;   break;
 	case nir_texop_txf_ms:
 	case nir_texop_txs:
-	case nir_texop_lod:
 	case nir_texop_tg4:
 	case nir_texop_query_levels:
 	case nir_texop_texture_samples:
@@ -1666,10 +1666,10 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		src0[nsrc0++] = create_immed(b, fui(0.5));
 	}
 
-	if (tex->is_shadow)
+	if (tex->is_shadow && tex->op != nir_texop_lod)
 		src0[nsrc0++] = compare;
 
-	if (tex->is_array)
+	if (tex->is_array && tex->op != nir_texop_lod)
 		src0[nsrc0++] = coord[coords];
 
 	if (has_proj) {
@@ -1726,12 +1726,26 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		unreachable("bad dest_type");
 	}
 
+	if (opc == OPC_GETLOD)
+		type = TYPE_U32;
+
 	sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_XYZW,
 			flags, tex->sampler_index, tex->sampler_index,
 			create_collect(b, src0, nsrc0),
 			create_collect(b, src1, nsrc1));
 
 	split_dest(b, dst, sam, 4);
+
+	/* GETLOD returns results in 4.8 fixed point */
+	if (opc == OPC_GETLOD) {
+		struct ir3_instruction *factor = create_immed(b, fui(1.0 / 256));
+
+		compile_assert(ctx, tex->dest_type == nir_type_float);
+		for (i = 0; i < 2; i++) {
+			dst[i] = ir3_MUL_F(b, ir3_COV(b, dst[i], TYPE_U32, TYPE_F32), 0,
+							   factor, 0);
+		}
+	}
 }
 
 static void
