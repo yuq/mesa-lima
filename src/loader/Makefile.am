@@ -34,12 +34,12 @@ AM_CPPFLAGS = \
 	$(LIBDRM_CFLAGS) \
 	$(LIBUDEV_CFLAGS)
 
+libloader_la_CPPFLAGS = $(AM_CPPFLAGS)
 libloader_la_SOURCES = $(LOADER_C_FILES)
 libloader_la_LIBADD =
 
 if HAVE_DRICOMMON
-libloader_la_CPPFLAGS = \
-	$(AM_CPPFLAGS) \
+libloader_la_CPPFLAGS += \
 	-I$(top_srcdir)/src/mesa/drivers/dri/common/ \
 	-I$(top_builddir)/src/mesa/drivers/dri/common/ \
 	-I$(top_srcdir)/src/mesa/ \
