@@ -212,7 +212,7 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 {
 	struct fd4_pipe_sampler_view *so = CALLOC_STRUCT(fd4_pipe_sampler_view);
 	struct fd_resource *rsc = fd_resource(prsc);
-	unsigned lvl;
+	unsigned lvl, layers;
 	uint32_t sz2 = 0;
 
 	if (!so)
@@ -225,7 +225,7 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	so->base.context = pctx;
 
 	so->texconst0 =
-		A4XX_TEX_CONST_0_TYPE(tex_type(prsc->target)) |
+		A4XX_TEX_CONST_0_TYPE(tex_type(cso->target)) |
 		A4XX_TEX_CONST_0_FMT(fd4_pipe2tex(cso->format)) |
 		fd4_tex_swiz(cso->format, cso->swizzle_r, cso->swizzle_g,
 				cso->swizzle_b, cso->swizzle_a);
@@ -233,7 +233,7 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	if (util_format_is_srgb(cso->format))
 		so->texconst0 |= A4XX_TEX_CONST_0_SRGB;
 
-	if (prsc->target == PIPE_BUFFER) {
+	if (cso->target == PIPE_BUFFER) {
 		unsigned elements = cso->u.buf.last_element -
 			cso->u.buf.first_element + 1;
 		lvl = 0;
@@ -248,6 +248,7 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 
 		lvl = fd_sampler_first_level(cso);
 		miplevels = fd_sampler_last_level(cso) - lvl;
+		layers = cso->u.tex.last_layer - cso->u.tex.first_layer + 1;
 
 		so->texconst0 |= A4XX_TEX_CONST_0_MIPLVLS(miplevels);
 		so->texconst1 =
@@ -260,17 +261,17 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 							cso->format, rsc->slices[lvl].pitch) * rsc->cpp);
 	}
 
-	switch (prsc->target) {
+	switch (cso->target) {
 	case PIPE_TEXTURE_1D_ARRAY:
 	case PIPE_TEXTURE_2D_ARRAY:
 		so->texconst3 =
-			A4XX_TEX_CONST_3_DEPTH(prsc->array_size) |
+			A4XX_TEX_CONST_3_DEPTH(layers) |
 			A4XX_TEX_CONST_3_LAYERSZ(rsc->layer_size);
 		break;
 	case PIPE_TEXTURE_CUBE:
 	case PIPE_TEXTURE_CUBE_ARRAY:
 		so->texconst3 =
-			A4XX_TEX_CONST_3_DEPTH(prsc->array_size / 6) |
+			A4XX_TEX_CONST_3_DEPTH(layers / 6) |
 			A4XX_TEX_CONST_3_LAYERSZ(rsc->layer_size);
 		break;
 	case PIPE_TEXTURE_3D:

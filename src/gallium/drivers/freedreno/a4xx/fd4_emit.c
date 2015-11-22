@@ -200,7 +200,8 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 					offset = view->base.u.buf.first_element *
 						util_format_get_blocksize(view->base.format);
 				} else {
-					offset = fd_resource_offset(rsc, start, 0);
+					offset = fd_resource_offset(
+							rsc, start, view->base.u.tex.first_layer);
 				}
 				OUT_RELOC(ring, rsc->bo, offset, view->texconst4, 0);
 			} else {
