@@ -147,8 +147,7 @@ dst_reg::dst_reg(const src_reg &reg) :
 bool
 dst_reg::equals(const dst_reg &r) const
 {
-   return (memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
-           reg_offset == r.reg_offset &&
+   return (this->backend_reg::equals(r) &&
            (reladdr == r.reladdr ||
             (reladdr && r.reladdr && reladdr->equals(*r.reladdr))));
 }
@@ -285,8 +284,7 @@ vec4_visitor::implied_mrf_writes(vec4_instruction *inst)
 bool
 src_reg::equals(const src_reg &r) const
 {
-   return (memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
-	   reg_offset == r.reg_offset &&
+   return (this->backend_reg::equals(r) &&
 	   !reladdr && !r.reladdr);
 }
 

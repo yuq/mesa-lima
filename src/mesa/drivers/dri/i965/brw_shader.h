@@ -44,6 +44,8 @@ struct backend_reg : public brw_reg
    backend_reg() {}
    backend_reg(struct brw_reg reg) : brw_reg(reg) {}
 
+   bool equals(const backend_reg &r) const;
+
    bool is_zero() const;
    bool is_one() const;
    bool is_negative_one() const;

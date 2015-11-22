@@ -393,8 +393,7 @@ fs_reg::fs_reg(struct brw_reg reg) :
 bool
 fs_reg::equals(const fs_reg &r) const
 {
-   return (memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
-           reg_offset == r.reg_offset &&
+   return (this->backend_reg::equals(r) &&
            subreg_offset == r.subreg_offset &&
            !reladdr && !r.reladdr &&
            stride == r.stride);
