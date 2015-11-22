@@ -42,9 +42,17 @@ vc4_get_blit_surface(struct pipe_context *pctx,
 }
 
 static bool
+is_tile_unaligned(unsigned size, unsigned tile_size)
+{
+        return size & (tile_size - 1);
+}
+
+static bool
 vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
+        int tile_width = 64;
+        int tile_height = 64;
 
         if (util_format_is_depth_or_stencil(info->dst.resource->format))
                 return false;
@@ -52,10 +60,17 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         if ((info->mask & PIPE_MASK_RGBA) == 0)
                 return false;
 
-        if (info->dst.box.x != 0 || info->dst.box.y != 0 ||
-            info->src.box.x != 0 || info->src.box.y != 0 ||
+        if (info->dst.box.x != info->src.box.x ||
+            info->src.box.y != info->src.box.y ||
             info->dst.box.width != info->src.box.width ||
             info->dst.box.height != info->src.box.height) {
+                return false;
+        }
+
+        if (is_tile_unaligned(info->dst.box.x, tile_width) ||
+            is_tile_unaligned(info->dst.box.y, tile_height) ||
+            is_tile_unaligned(info->dst.box.width, tile_width) ||
+            is_tile_unaligned(info->dst.box.height, tile_height)) {
                 return false;
         }
 
@@ -73,12 +88,13 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         pipe_surface_reference(&vc4->color_write, dst_surf);
         pipe_surface_reference(&vc4->zs_read, NULL);
         pipe_surface_reference(&vc4->zs_write, NULL);
-        vc4->draw_min_x = 0;
-        vc4->draw_min_y = 0;
-        vc4->draw_max_x = dst_surf->width;
-        vc4->draw_max_y = dst_surf->height;
+        vc4->draw_min_x = info->dst.box.x;
+        vc4->draw_min_y = info->dst.box.y;
+        vc4->draw_max_x = info->dst.box.x + info->dst.box.width;
+        vc4->draw_max_y = info->dst.box.y + info->dst.box.height;
         vc4->draw_width = dst_surf->width;
         vc4->draw_height = dst_surf->height;
+
         vc4->needs_flush = true;
         vc4_job_submit(vc4);
 
