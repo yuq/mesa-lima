@@ -1344,7 +1344,7 @@ brw_blorp_blit_program::single_to_blend()
  * count_trailing_one_bits(7) == 3
  * count_trailing_one_bits(11) == 2
  */
-inline int count_trailing_one_bits(unsigned value)
+static inline int count_trailing_one_bits(unsigned value)
 {
 #ifdef HAVE___BUILTIN_CTZ
    return __builtin_ctz(~value);
