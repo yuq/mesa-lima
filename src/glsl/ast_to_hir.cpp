@@ -6962,8 +6962,8 @@ ast_interface_block::hir(exec_list *instructions,
          delete var;
       } else {
          if (this->layout.flags.q.explicit_binding) {
-            apply_explicit_binding(state, &loc, var,
-                                   var->get_interface_type(), &this->layout);
+            apply_explicit_binding(state, &loc, var, var->type,
+                                   &this->layout);
          }
 
          var->data.stream = qual_stream;
