@@ -243,6 +243,8 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 		so->texconst2 =
 			A4XX_TEX_CONST_2_FETCHSIZE(fd4_pipe2fetchsize(cso->format)) |
 			A4XX_TEX_CONST_2_PITCH(elements * rsc->cpp);
+		so->offset = cso->u.buf.first_element *
+			util_format_get_blocksize(cso->format);
 	} else {
 		unsigned miplevels;
 
@@ -259,6 +261,7 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 			A4XX_TEX_CONST_2_PITCH(
 					util_format_get_nblocksx(
 							cso->format, rsc->slices[lvl].pitch) * rsc->cpp);
+		so->offset = fd_resource_offset(rsc, lvl, cso->u.tex.first_layer);
 	}
 
 	switch (cso->target) {

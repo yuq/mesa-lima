@@ -181,9 +181,7 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS) |
 				CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
 		for (i = 0; i < tex->num_textures; i++) {
-			static const struct fd4_pipe_sampler_view dummy_view = {
-				.base.target = PIPE_TEXTURE_1D,
-			};
+			static const struct fd4_pipe_sampler_view dummy_view = {};
 			const struct fd4_pipe_sampler_view *view = tex->textures[i] ?
 					fd4_pipe_sampler_view(tex->textures[i]) :
 					&dummy_view;
@@ -194,16 +192,7 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_RING(ring, view->texconst3);
 			if (view->base.texture) {
 				struct fd_resource *rsc = fd_resource(view->base.texture);
-				unsigned start = fd_sampler_first_level(&view->base);
-				uint32_t offset;
-				if (rsc->base.b.target == PIPE_BUFFER) {
-					offset = view->base.u.buf.first_element *
-						util_format_get_blocksize(view->base.format);
-				} else {
-					offset = fd_resource_offset(
-							rsc, start, view->base.u.tex.first_layer);
-				}
-				OUT_RELOC(ring, rsc->bo, offset, view->texconst4, 0);
+				OUT_RELOC(ring, rsc->bo, view->offset, view->texconst4, 0);
 			} else {
 				OUT_RING(ring, 0x00000000);
 			}
