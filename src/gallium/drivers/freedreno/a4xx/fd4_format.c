@@ -250,11 +250,11 @@ static struct fd4_format formats[PIPE_FORMAT_COUNT] = {
 	_T(L32A32_SINT,    32_32_SINT,  NONE,        WZYX),
 
 	/* 96-bit */
-	V_(R32G32B32_UINT,    32_32_32_UINT,  NONE, WZYX),
-	V_(R32G32B32_SINT,    32_32_32_SINT,  NONE, WZYX),
+	VT(R32G32B32_UINT,    32_32_32_UINT,  NONE, WZYX),
+	VT(R32G32B32_SINT,    32_32_32_SINT,  NONE, WZYX),
 	V_(R32G32B32_USCALED, 32_32_32_UINT,  NONE, WZYX),
 	V_(R32G32B32_SSCALED, 32_32_32_SINT,  NONE, WZYX),
-	V_(R32G32B32_FLOAT,   32_32_32_FLOAT, NONE, WZYX),
+	VT(R32G32B32_FLOAT,   32_32_32_FLOAT, NONE, WZYX),
 	V_(R32G32B32_FIXED,   32_32_32_FIXED, NONE, WZYX),
 
 	/* 128-bit */
@@ -384,6 +384,7 @@ fd4_pipe2fetchsize(enum pipe_format format)
 	case 16:  return TFETCH4_2_BYTE;
 	case 32:  return TFETCH4_4_BYTE;
 	case 64:  return TFETCH4_8_BYTE;
+	case 96:  return TFETCH4_1_BYTE; /* Does this matter? */
 	case 128: return TFETCH4_16_BYTE;
 	default:
 		debug_printf("Unknown block size for format %s: %d\n",
