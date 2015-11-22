@@ -1177,6 +1177,33 @@ emit_alu(struct ir3_compile *ctx, nir_alu_instr *alu)
 		dst[0] = ir3_SEL_B32(b, src[1], 0, ir3_b2n(b, src[0]), 0, src[2], 0);
 		break;
 
+	case nir_op_bit_count:
+		dst[0] = ir3_CBITS_B(b, src[0], 0);
+		break;
+	case nir_op_ifind_msb: {
+		struct ir3_instruction *cmp;
+		dst[0] = ir3_CLZ_S(b, src[0], 0);
+		cmp = ir3_CMPS_S(b, dst[0], 0, create_immed(b, 0), 0);
+		cmp->cat2.condition = IR3_COND_GE;
+		dst[0] = ir3_SEL_B32(b,
+				ir3_SUB_U(b, create_immed(b, 31), 0, dst[0], 0), 0,
+				cmp, 0, dst[0], 0);
+		break;
+	}
+	case nir_op_ufind_msb:
+		dst[0] = ir3_CLZ_B(b, src[0], 0);
+		dst[0] = ir3_SEL_B32(b,
+				ir3_SUB_U(b, create_immed(b, 31), 0, dst[0], 0), 0,
+				src[0], 0, dst[0], 0);
+		break;
+	case nir_op_find_lsb:
+		dst[0] = ir3_BFREV_B(b, src[0], 0);
+		dst[0] = ir3_CLZ_B(b, dst[0], 0);
+		break;
+	case nir_op_bitfield_reverse:
+		dst[0] = ir3_BFREV_B(b, src[0], 0);
+		break;
+
 	default:
 		compile_error(ctx, "Unhandled ALU op: %s\n",
 				nir_op_infos[alu->op].name);
