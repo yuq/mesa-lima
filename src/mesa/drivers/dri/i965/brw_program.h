@@ -30,6 +30,8 @@
 extern "C" {
 #endif
 
+struct brw_context;
+
 void brw_setup_tex_for_precompile(struct brw_context *brw,
                                   struct brw_sampler_prog_key_data *tex,
                                   struct gl_program *prog);

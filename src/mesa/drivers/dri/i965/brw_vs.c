@@ -39,6 +39,7 @@
 #include "program/prog_print.h"
 #include "program/prog_parameter.h"
 #include "brw_nir.h"
+#include "brw_program.h"
 
 #include "util/ralloc.h"
 

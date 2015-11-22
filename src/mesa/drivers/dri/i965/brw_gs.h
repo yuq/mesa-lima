@@ -27,7 +27,6 @@
 #include <stdbool.h>
 
 #include "brw_context.h"
-#include "brw_program.h"
 
 #ifdef __cplusplus
 extern "C" {

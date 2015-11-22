@@ -36,6 +36,7 @@
 #include "program/program.h"
 #include "intel_mipmap_tree.h"
 #include "brw_nir.h"
+#include "brw_program.h"
 
 #include "util/ralloc.h"
 

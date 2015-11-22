@@ -28,6 +28,7 @@
 #include "brw_fs.h"
 #include "brw_cfg.h"
 #include "brw_nir.h"
+#include "brw_program.h"
 #include "glsl/ir_optimization.h"
 #include "glsl/glsl_parser_extras.h"
 #include "main/shaderapi.h"

@@ -41,6 +41,7 @@
 #include "util/ralloc.h"
 #include "glsl/ir.h"
 
+#include "brw_program.h"
 #include "brw_context.h"
 #include "brw_shader.h"
 #include "brw_nir.h"

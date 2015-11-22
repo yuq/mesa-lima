@@ -31,6 +31,7 @@
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
 #include "brw_nir.h"
+#include "brw_program.h"
 
 static void
 assign_cs_binding_table_offsets(const struct brw_device_info *devinfo,

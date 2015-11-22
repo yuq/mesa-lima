@@ -51,6 +51,7 @@
 #include "brw_wm.h"
 #include "brw_gs.h"
 #include "brw_cs.h"
+#include "brw_program.h"
 
 #define FILE_DEBUG_FLAG DEBUG_STATE
 

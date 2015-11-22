@@ -28,7 +28,6 @@
 #include "brw_shader.h"
 #include "main/compiler.h"
 #include "program/hash_table.h"
-#include "brw_program.h"
 
 #ifdef __cplusplus
 #include "brw_ir_vec4.h"
