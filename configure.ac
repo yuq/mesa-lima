@@ -767,6 +767,11 @@ linux*)
     dri3_default=no
     ;;
 esac
+
+if test "x$enable_dri" = xno; then
+    dri3_default=no
+fi
+
 AC_ARG_ENABLE([dri3],
     [AS_HELP_STRING([--enable-dri3],
         [enable DRI3 @<:@default=auto@:>@])],
