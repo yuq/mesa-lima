@@ -22,6 +22,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "util/u_blit.h"
 #include "util/u_memory.h"
 #include "util/u_format.h"
 #include "util/u_inlines.h"
@@ -72,11 +73,18 @@ vc4_resource_transfer_unmap(struct pipe_context *pctx,
 {
         struct vc4_context *vc4 = vc4_context(pctx);
         struct vc4_transfer *trans = vc4_transfer(ptrans);
-        struct pipe_resource *prsc = ptrans->resource;
-        struct vc4_resource *rsc = vc4_resource(prsc);
-        struct vc4_resource_slice *slice = &rsc->slices[ptrans->level];
 
         if (trans->map) {
+                struct vc4_resource *rsc;
+                struct vc4_resource_slice *slice;
+                if (trans->ss_resource) {
+                        rsc = vc4_resource(trans->ss_resource);
+                        slice = &rsc->slices[0];
+                } else {
+                        rsc = vc4_resource(ptrans->resource);
+                        slice = &rsc->slices[ptrans->level];
+                }
+
                 if (ptrans->usage & PIPE_TRANSFER_WRITE) {
                         vc4_store_tiled_image(rsc->bo->map + slice->offset +
                                               ptrans->box.z * rsc->cube_map_stride,
@@ -88,8 +96,50 @@ vc4_resource_transfer_unmap(struct pipe_context *pctx,
                 free(trans->map);
         }
 
+        if (trans->ss_resource && (ptrans->usage & PIPE_TRANSFER_WRITE)) {
+                struct pipe_blit_info blit;
+                memset(&blit, 0, sizeof(blit));
+
+                blit.src.resource = trans->ss_resource;
+                blit.src.format = trans->ss_resource->format;
+                blit.src.box.width = trans->ss_box.width;
+                blit.src.box.height = trans->ss_box.height;
+                blit.src.box.depth = 1;
+
+                blit.dst.resource = ptrans->resource;
+                blit.dst.format = ptrans->resource->format;
+                blit.dst.level = ptrans->level;
+                blit.dst.box = trans->ss_box;
+
+                blit.mask = util_format_get_mask(ptrans->resource->format);
+                blit.filter = PIPE_TEX_FILTER_NEAREST;
+
+                pctx->blit(pctx, &blit);
+                vc4_flush(pctx);
+
+                pipe_resource_reference(&trans->ss_resource, NULL);
+        }
+
         pipe_resource_reference(&ptrans->resource, NULL);
         util_slab_free(&vc4->transfer_pool, ptrans);
+}
+
+static struct pipe_resource *
+vc4_get_temp_resource(struct pipe_context *pctx,
+                      struct pipe_resource *prsc,
+                      const struct pipe_box *box)
+{
+        struct pipe_resource temp_setup;
+
+        memset(&temp_setup, 0, sizeof(temp_setup));
+        temp_setup.target = prsc->target;
+        temp_setup.format = prsc->format;
+        temp_setup.width0 = box->width;
+        temp_setup.height0 = box->height;
+        temp_setup.depth0 = 1;
+        temp_setup.array_size = 1;
+
+        return pctx->screen->resource_create(pctx->screen, &temp_setup);
 }
 
 static void *
@@ -101,7 +151,6 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
 {
         struct vc4_context *vc4 = vc4_context(pctx);
         struct vc4_resource *rsc = vc4_resource(prsc);
-        struct vc4_resource_slice *slice = &rsc->slices[level];
         struct vc4_transfer *trans;
         struct pipe_transfer *ptrans;
         enum pipe_format format = prsc->format;
@@ -155,6 +204,50 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
         ptrans->usage = usage;
         ptrans->box = *box;
 
+        /* If the resource is multisampled, we need to resolve to single
+         * sample.  This seems like it should be handled at a higher layer.
+         */
+        if (prsc->nr_samples) {
+                trans->ss_resource = vc4_get_temp_resource(pctx, prsc, box);
+                if (!trans->ss_resource)
+                        goto fail;
+                assert(!trans->ss_resource->nr_samples);
+
+                /* The ptrans->box gets modified for tile alignment, so save
+                 * the original box for unmap time.
+                 */
+                trans->ss_box = *box;
+
+                if (usage & PIPE_TRANSFER_READ) {
+                        struct pipe_blit_info blit;
+                        memset(&blit, 0, sizeof(blit));
+
+                        blit.src.resource = ptrans->resource;
+                        blit.src.format = ptrans->resource->format;
+                        blit.src.level = ptrans->level;
+                        blit.src.box = trans->ss_box;
+
+                        blit.dst.resource = trans->ss_resource;
+                        blit.dst.format = trans->ss_resource->format;
+                        blit.dst.box.width = trans->ss_box.width;
+                        blit.dst.box.height = trans->ss_box.height;
+                        blit.dst.box.depth = 1;
+
+                        blit.mask = util_format_get_mask(prsc->format);
+                        blit.filter = PIPE_TEX_FILTER_NEAREST;
+
+                        pctx->blit(pctx, &blit);
+                        vc4_flush(pctx);
+                }
+
+                /* The rest of the mapping process should use our temporary. */
+                prsc = trans->ss_resource;
+                rsc = vc4_resource(prsc);
+                ptrans->box.x = 0;
+                ptrans->box.y = 0;
+                ptrans->box.z = 0;
+        }
+
         /* Note that the current kernel implementation is synchronous, so no
          * need to do syncing stuff here yet.
          */
@@ -170,6 +263,7 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
 
         *pptrans = ptrans;
 
+        struct vc4_resource_slice *slice = &rsc->slices[level];
         if (rsc->tiled) {
                 uint32_t utile_w = vc4_utile_width(rsc->cpp);
                 uint32_t utile_h = vc4_utile_height(rsc->cpp);
@@ -203,7 +297,7 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                     ptrans->box.height != orig_height) {
                         vc4_load_tiled_image(trans->map, ptrans->stride,
                                              buf + slice->offset +
-                                             box->z * rsc->cube_map_stride,
+                                             ptrans->box.z * rsc->cube_map_stride,
                                              slice->stride,
                                              slice->tiling, rsc->cpp,
                                              &ptrans->box);
@@ -216,9 +310,9 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                 ptrans->layer_stride = ptrans->stride;
 
                 return buf + slice->offset +
-                        box->y / util_format_get_blockheight(format) * ptrans->stride +
-                        box->x / util_format_get_blockwidth(format) * rsc->cpp +
-                        box->z * rsc->cube_map_stride;
+                        ptrans->box.y / util_format_get_blockheight(format) * ptrans->stride +
+                        ptrans->box.x / util_format_get_blockwidth(format) * rsc->cpp +
+                        ptrans->box.z * rsc->cube_map_stride;
         }
 
 
