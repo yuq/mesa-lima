@@ -223,7 +223,7 @@ pipe_freedreno_create_screen(int fd)
 #include "virgl/drm/virgl_drm_public.h"
 #include "virgl/virgl_public.h"
 
-static struct pipe_screen *
+struct pipe_screen *
 pipe_virgl_create_screen(int fd)
 {
    struct virgl_winsys *vws;
