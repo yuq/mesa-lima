@@ -1663,7 +1663,7 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_POPC] = nir_op_bit_count,
    [TGSI_OPCODE_LSB] = nir_op_find_lsb,
    [TGSI_OPCODE_IMSB] = nir_op_ifind_msb,
-   [TGSI_OPCODE_UMSB] = nir_op_ifind_msb, /* XXX: signed vs unsigned */
+   [TGSI_OPCODE_UMSB] = nir_op_ufind_msb,
 
    [TGSI_OPCODE_INTERP_CENTROID] = 0, /* XXX */
    [TGSI_OPCODE_INTERP_SAMPLE] = 0, /* XXX */
