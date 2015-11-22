@@ -177,6 +177,12 @@ vc4_simulator_flush(struct vc4_context *vc4, struct drm_vc4_submit_cl *args)
         if (ret)
                 return ret;
 
+        if (vc4_debug & VC4_DEBUG_CL) {
+                fprintf(stderr, "RCL:\n");
+                vc4_dump_cl(screen->simulator_mem_base + exec.ct1ca,
+                            exec.ct1ea - exec.ct1ca, true);
+        }
+
         if (exec.ct0ca != exec.ct0ea) {
                 int bfc = simpenrose_do_binning(exec.ct0ca, exec.ct0ea);
                 if (bfc != 1) {
