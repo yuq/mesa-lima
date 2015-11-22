@@ -613,7 +613,7 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, A4XX_GRAS_CL_VPORT_ZSCALE_0(ctx->viewport.scale[2]));
 	}
 
-	if (dirty & FD_DIRTY_PROG) {
+	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER)) {
 		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 		fd4_program_emit(ring, emit, pfb->nr_cbufs, pfb->cbufs);
 	}
