@@ -32,7 +32,6 @@
 #include "brw_state.h"
 
 #include "brw_blorp.h"
-#include "gen6_blorp.h"
 
 /**
  * \name Constants for BLORP VBO

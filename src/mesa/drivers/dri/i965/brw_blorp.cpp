@@ -28,8 +28,6 @@
 #include "brw_blorp.h"
 #include "brw_defines.h"
 #include "brw_state.h"
-#include "gen6_blorp.h"
-#include "gen7_blorp.h"
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 

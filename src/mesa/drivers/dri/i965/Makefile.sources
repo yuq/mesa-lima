@@ -162,7 +162,6 @@ i965_FILES = \
 	brw_wm_state.c \
 	brw_wm_surface_state.c \
 	gen6_blorp.cpp \
-	gen6_blorp.h \
 	gen6_cc.c \
 	gen6_clip_state.c \
 	gen6_depth_state.c \
@@ -180,7 +179,6 @@ i965_FILES = \
 	gen6_vs_state.c \
 	gen6_wm_state.c \
 	gen7_blorp.cpp \
-	gen7_blorp.h \
 	gen7_cs_state.c \
 	gen7_disable.c \
 	gen7_gs_state.c \
