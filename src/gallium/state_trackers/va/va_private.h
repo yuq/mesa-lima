@@ -349,5 +349,6 @@ void vlVaHandleIQMatrixBufferMPEG12(vlVaContext *context, vlVaBuffer *buf);
 void vlVaHandlePictureParameterBufferH264(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
 void vlVaHandleIQMatrixBufferH264(vlVaContext *context, vlVaBuffer *buf);
 void vlVaHandleSliceParameterBufferH264(vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandlePictureParameterBufferVC1(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
 
 #endif //VA_PRIVATE_H
