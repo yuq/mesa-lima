@@ -41,12 +41,16 @@ struct vl_screen *
 vl_drm_screen_create(int fd)
 {
    struct vl_screen *vscreen;
+   int new_fd = -1;
 
    vscreen = CALLOC_STRUCT(vl_screen);
    if (!vscreen)
       return NULL;
 
-   if (pipe_loader_drm_probe_fd(&vscreen->dev, dup(fd)))
+   if (fd < 0 || (new_fd = dup(fd)) < 0)
+      goto error;
+
+   if (pipe_loader_drm_probe_fd(&vscreen->dev, new_fd))
       vscreen->pscreen = pipe_loader_create_screen(vscreen->dev);
 
    if (!vscreen->pscreen)
@@ -63,6 +67,8 @@ vl_drm_screen_create(int fd)
 error:
    if (vscreen->dev)
       pipe_loader_release(&vscreen->dev, 1);
+   else
+      close(new_fd);
 
    FREE(vscreen);
    return NULL;
