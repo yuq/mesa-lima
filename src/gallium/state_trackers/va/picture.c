@@ -89,7 +89,6 @@ vlVaGetReferenceFrame(vlVaDriver *drv, VASurfaceID surface_id,
 static void
 handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
-   VAPictureParameterBufferH264 *h264;
    VAPictureParameterBufferVC1 * vc1;
    VAPictureParameterBufferMPEG4 *mpeg4;
    VAPictureParameterBufferHEVC *hevc;
@@ -105,65 +104,7 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
       break;
 
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-      assert(buf->size >= sizeof(VAPictureParameterBufferH264) && buf->num_elements == 1);
-      h264 = buf->data;
-      /*CurrPic*/
-      context->desc.h264.field_order_cnt[0] = h264->CurrPic.TopFieldOrderCnt;
-      context->desc.h264.field_order_cnt[1] = h264->CurrPic.BottomFieldOrderCnt;
-      /*ReferenceFrames[16]*/
-      /*picture_width_in_mbs_minus1*/
-      /*picture_height_in_mbs_minus1*/
-      /*bit_depth_luma_minus8*/
-      /*bit_depth_chroma_minus8*/
-      context->desc.h264.num_ref_frames = h264->num_ref_frames;
-      /*chroma_format_idc*/
-      /*residual_colour_transform_flag*/
-      /*gaps_in_frame_num_value_allowed_flag*/
-      context->desc.h264.pps->sps->frame_mbs_only_flag =
-         h264->seq_fields.bits.frame_mbs_only_flag;
-      context->desc.h264.pps->sps->mb_adaptive_frame_field_flag =
-         h264->seq_fields.bits.mb_adaptive_frame_field_flag;
-      context->desc.h264.pps->sps->direct_8x8_inference_flag =
-         h264->seq_fields.bits.direct_8x8_inference_flag;
-      /*MinLumaBiPredSize8x8*/
-      context->desc.h264.pps->sps->log2_max_frame_num_minus4 =
-         h264->seq_fields.bits.log2_max_frame_num_minus4;
-      context->desc.h264.pps->sps->pic_order_cnt_type =
-         h264->seq_fields.bits.pic_order_cnt_type;
-      context->desc.h264.pps->sps->log2_max_pic_order_cnt_lsb_minus4 =
-         h264->seq_fields.bits.log2_max_pic_order_cnt_lsb_minus4;
-      context->desc.h264.pps->sps->delta_pic_order_always_zero_flag =
-         h264->seq_fields.bits.delta_pic_order_always_zero_flag;
-      /*num_slice_groups_minus1*/
-      /*slice_group_map_type*/
-      /*slice_group_change_rate_minus1*/
-      context->desc.h264.pps->pic_init_qp_minus26 =
-         h264->pic_init_qp_minus26;
-      /*pic_init_qs_minus26*/
-      context->desc.h264.pps->chroma_qp_index_offset =
-         h264->chroma_qp_index_offset;
-      context->desc.h264.pps->second_chroma_qp_index_offset =
-         h264->second_chroma_qp_index_offset;
-      context->desc.h264.pps->entropy_coding_mode_flag =
-         h264->pic_fields.bits.entropy_coding_mode_flag;
-      context->desc.h264.pps->weighted_pred_flag =
-         h264->pic_fields.bits.weighted_pred_flag;
-      context->desc.h264.pps->weighted_bipred_idc =
-         h264->pic_fields.bits.weighted_bipred_idc;
-      context->desc.h264.pps->transform_8x8_mode_flag =
-         h264->pic_fields.bits.transform_8x8_mode_flag;
-      context->desc.h264.field_pic_flag =
-         h264->pic_fields.bits.field_pic_flag;
-      context->desc.h264.pps->constrained_intra_pred_flag =
-         h264->pic_fields.bits.constrained_intra_pred_flag;
-      context->desc.h264.pps->bottom_field_pic_order_in_frame_present_flag =
-         h264->pic_fields.bits.pic_order_present_flag;
-      context->desc.h264.pps->deblocking_filter_control_present_flag =
-         h264->pic_fields.bits.deblocking_filter_control_present_flag;
-      context->desc.h264.pps->redundant_pic_cnt_present_flag =
-         h264->pic_fields.bits.redundant_pic_cnt_present_flag;
-      /*reference_pic_flag*/
-      context->desc.h264.frame_num = h264->frame_num;
+      vlVaHandlePictureParameterBufferH264(drv, context, buf);
       break;
 
    case PIPE_VIDEO_FORMAT_VC1:
@@ -428,7 +369,6 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
 static void
 handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
-   VAIQMatrixBufferH264 *h264;
    VAIQMatrixBufferMPEG4 *mpeg4;
    VAIQMatrixBufferHEVC *h265;
 
@@ -438,10 +378,7 @@ handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
       break;
 
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-      assert(buf->size >= sizeof(VAIQMatrixBufferH264) && buf->num_elements == 1);
-      h264 = buf->data;
-      memcpy(&context->desc.h264.pps->ScalingList4x4, h264->ScalingList4x4, 6 * 16);
-      memcpy(&context->desc.h264.pps->ScalingList8x8, h264->ScalingList8x8, 2 * 64);
+      vlVaHandleIQMatrixBufferH264(context, buf);
       break;
 
    case PIPE_VIDEO_FORMAT_HEVC:
@@ -478,19 +415,14 @@ handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
 static void
 handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
-   VASliceParameterBufferH264 *h264;
    VASliceParameterBufferMPEG4 *mpeg4;
    VASliceParameterBufferHEVC *h265;
 
    switch (u_reduce_video_profile(context->decoder->profile)) {
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-      assert(buf->size >= sizeof(VASliceParameterBufferH264) && buf->num_elements == 1);
-      h264 = buf->data;
-      context->desc.h264.num_ref_idx_l0_active_minus1 =
-         h264->num_ref_idx_l0_active_minus1;
-      context->desc.h264.num_ref_idx_l1_active_minus1 =
-         h264->num_ref_idx_l1_active_minus1;
+      vlVaHandleSliceParameterBufferH264(context, buf);
       break;
+
    case PIPE_VIDEO_FORMAT_MPEG4:
       assert(buf->size >= sizeof(VASliceParameterBufferMPEG4) && buf->num_elements == 1);
       mpeg4 = buf->data;

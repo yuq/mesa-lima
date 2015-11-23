@@ -346,5 +346,8 @@ VAStatus vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContex
 void vlVaGetReferenceFrame(vlVaDriver *drv, VASurfaceID surface_id, struct pipe_video_buffer **ref_frame);
 void vlVaHandlePictureParameterBufferMPEG12(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
 void vlVaHandleIQMatrixBufferMPEG12(vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandlePictureParameterBufferH264(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleIQMatrixBufferH264(vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleSliceParameterBufferH264(vlVaContext *context, vlVaBuffer *buf);
 
 #endif //VA_PRIVATE_H

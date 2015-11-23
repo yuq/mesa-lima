@@ -6,6 +6,7 @@ C_SOURCES := \
 	image.c \
 	picture.c \
 	picture_mpeg12.c \
+	picture_h264.c \
 	postproc.c \
 	subpicture.c \
 	surface.c \
