@@ -89,8 +89,6 @@ include $(top_srcdir)/src/gallium/drivers/svga/Automake.inc
 
 include $(top_srcdir)/src/gallium/drivers/freedreno/Automake.inc
 
-include $(top_srcdir)/src/gallium/drivers/vc4/Automake.inc
-
 include $(top_srcdir)/src/gallium/drivers/softpipe/Automake.inc
 include $(top_srcdir)/src/gallium/drivers/llvmpipe/Automake.inc
 
