@@ -1276,6 +1276,19 @@ static void update_gs_block_state(struct r600_context *rctx, unsigned enable)
 	}
 }
 
+static void r600_update_clip_state(struct r600_context *rctx,
+				   struct r600_pipe_shader *current)
+{
+	if (current->pa_cl_vs_out_cntl != rctx->clip_misc_state.pa_cl_vs_out_cntl ||
+	    current->shader.clip_dist_write != rctx->clip_misc_state.clip_dist_write ||
+	    current->shader.vs_position_window_space != rctx->clip_misc_state.clip_disable) {
+				rctx->clip_misc_state.pa_cl_vs_out_cntl = current->pa_cl_vs_out_cntl;
+				rctx->clip_misc_state.clip_dist_write = current->shader.clip_dist_write;
+				rctx->clip_misc_state.clip_disable = current->shader.vs_position_window_space;
+				r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
+	}
+}
+
 static bool r600_update_derived_state(struct r600_context *rctx)
 {
 	struct pipe_context * ctx = (struct pipe_context*)rctx;
@@ -1318,14 +1331,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 			update_shader_atom(ctx, &rctx->geometry_shader, rctx->gs_shader->current);
 			update_shader_atom(ctx, &rctx->vertex_shader, rctx->gs_shader->current->gs_copy_shader);
 			/* Update clip misc state. */
-			if (rctx->gs_shader->current->gs_copy_shader->pa_cl_vs_out_cntl != rctx->clip_misc_state.pa_cl_vs_out_cntl ||
-					rctx->gs_shader->current->gs_copy_shader->shader.clip_dist_write != rctx->clip_misc_state.clip_dist_write ||
-					rctx->clip_misc_state.clip_disable != rctx->gs_shader->current->shader.vs_position_window_space) {
-				rctx->clip_misc_state.pa_cl_vs_out_cntl = rctx->gs_shader->current->gs_copy_shader->pa_cl_vs_out_cntl;
-				rctx->clip_misc_state.clip_dist_write = rctx->gs_shader->current->gs_copy_shader->shader.clip_dist_write;
-				rctx->clip_misc_state.clip_disable = rctx->gs_shader->current->shader.vs_position_window_space;
-				r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
-			}
+			r600_update_clip_state(rctx, rctx->gs_shader->current->gs_copy_shader);
 			rctx->b.streamout.enabled_stream_buffers_mask = rctx->gs_shader->current->gs_copy_shader->enabled_stream_buffers_mask;
 		}
 
@@ -1353,14 +1359,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 			update_shader_atom(ctx, &rctx->vertex_shader, rctx->vs_shader->current);
 
 			/* Update clip misc state. */
-			if (rctx->vs_shader->current->pa_cl_vs_out_cntl != rctx->clip_misc_state.pa_cl_vs_out_cntl ||
-					rctx->vs_shader->current->shader.clip_dist_write != rctx->clip_misc_state.clip_dist_write ||
-					rctx->clip_misc_state.clip_disable != rctx->vs_shader->current->shader.vs_position_window_space) {
-				rctx->clip_misc_state.pa_cl_vs_out_cntl = rctx->vs_shader->current->pa_cl_vs_out_cntl;
-				rctx->clip_misc_state.clip_dist_write = rctx->vs_shader->current->shader.clip_dist_write;
-				rctx->clip_misc_state.clip_disable = rctx->vs_shader->current->shader.vs_position_window_space;
-				r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
-			}
+			r600_update_clip_state(rctx, rctx->vs_shader->current);
 			rctx->b.streamout.enabled_stream_buffers_mask = rctx->vs_shader->current->enabled_stream_buffers_mask;
 		}
 	}
