@@ -2501,7 +2501,6 @@
 #define CM_R_0286FC_SPI_LDS_MGMT                     0x286fc
 #define   S_0286FC_NUM_PS_LDS(x)                     ((x) & 0xff)
 #define   S_0286FC_NUM_LS_LDS(x)                     ((x) & 0xff) << 8
-#define CM_R_0288E8_SQ_LDS_ALLOC                     0x000288E8
 
 #define CM_R_028804_DB_EQAA                          0x00028804
 #define   S_028804_MAX_ANCHOR_SAMPLES(x)		(((x) & 0x7) << 0)

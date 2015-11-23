@@ -402,7 +402,7 @@ static void evergreen_emit_direct_dispatch(
 		assert(lds_size <= 8160);
 	}
 
-	radeon_compute_set_context_reg(cs, CM_R_0288E8_SQ_LDS_ALLOC,
+	radeon_compute_set_context_reg(cs, R_0288E8_SQ_LDS_ALLOC,
 					lds_size | (num_waves << 14));
 
 	/* Dispatch packet */
