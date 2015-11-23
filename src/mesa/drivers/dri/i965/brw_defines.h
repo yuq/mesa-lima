@@ -1720,6 +1720,19 @@ enum brw_message_target {
 #define HSW_DATAPORT_DC_PORT1_ATOMIC_COUNTER_OP_SIMD4X2             12
 #define HSW_DATAPORT_DC_PORT1_TYPED_SURFACE_WRITE                   13
 
+/* Dataport special binding table indices: */
+#define BRW_BTI_STATELESS                255
+#define GEN7_BTI_SLM                     254
+/* Note that on Gen8+ BTI 255 was redefined to be IA-coherent according to the
+ * hardware spec, however because the DRM sets bit 4 of HDC_CHICKEN0 on BDW,
+ * CHV and at least some pre-production steppings of SKL due to
+ * WaForceEnableNonCoherent, HDC memory access may have been overridden by the
+ * kernel to be non-coherent (matching the behavior of the same BTI on
+ * pre-Gen8 hardware) and BTI 255 may actually be an alias for BTI 253.
+ */
+#define GEN8_BTI_STATELESS_IA_COHERENT   255
+#define GEN8_BTI_STATELESS_NON_COHERENT  253
+
 /* dataport atomic operations. */
 #define BRW_AOP_AND                   1
 #define BRW_AOP_OR                    2
