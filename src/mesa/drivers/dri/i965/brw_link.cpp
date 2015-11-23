@@ -198,7 +198,7 @@ process_glsl_ir(gl_shader_stage stage,
    }
 }
 
-GLboolean
+extern "C" GLboolean
 brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
    struct brw_context *brw = brw_context(ctx);

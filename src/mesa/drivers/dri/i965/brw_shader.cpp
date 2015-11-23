@@ -144,7 +144,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    return compiler;
 }
 
-struct gl_shader *
+extern "C" struct gl_shader *
 brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
 {
    struct brw_shader *shader;
@@ -160,7 +160,7 @@ brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
    return &shader->base;
 }
 
-void
+extern "C" void
 brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
                       unsigned surf_index)
 {
