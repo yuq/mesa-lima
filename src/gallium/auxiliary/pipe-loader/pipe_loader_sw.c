@@ -222,7 +222,7 @@ pipe_loader_sw_probe(struct pipe_loader_device **devs, int ndev)
 {
    int i = 1;
 
-   if (i < ndev) {
+   if (i <= ndev) {
       if (!pipe_loader_sw_probe_null(devs)) {
          i--;
       }
