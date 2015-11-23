@@ -392,7 +392,7 @@ vl_dri2_screen_create(Display *display, int screen)
       goto free_connect;
 
    if (drmGetMagic(fd, &magic))
-      goto free_connect;
+      goto close_fd;
 
    authenticate_cookie = xcb_dri2_authenticate_unchecked(scrn->conn,
                                                          get_xcb_screen(s, screen)->root,
@@ -402,7 +402,7 @@ vl_dri2_screen_create(Display *display, int screen)
    if (authenticate == NULL || !authenticate->authenticated)
       goto free_authenticate;
 
-   if (pipe_loader_drm_probe_fd(&scrn->base.dev, dup(fd)))
+   if (pipe_loader_drm_probe_fd(&scrn->base.dev, fd))
       scrn->base.pscreen = pipe_loader_create_screen(scrn->base.dev);
 
    if (!scrn->base.pscreen)
@@ -428,8 +428,11 @@ vl_dri2_screen_create(Display *display, int screen)
 release_pipe:
    if (scrn->base.dev)
       pipe_loader_release(&scrn->base.dev, 1);
+   fd = -1;
 free_authenticate:
    free(authenticate);
+close_fd:
+   close(fd);
 free_connect:
    free(connect);
 free_query:
