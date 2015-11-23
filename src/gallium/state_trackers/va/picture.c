@@ -722,7 +722,6 @@ handleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, v
 {
    struct u_rect src_rect;
    struct u_rect dst_rect;
-   struct u_rect *dirty_area;
    vlVaSurface *src_surface;
    VAProcPipelineParameterBuffer *pipeline_param;
    struct pipe_surface **surfaces;
@@ -763,12 +762,10 @@ handleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, v
    dst_rect.x1 = pipeline_param->output_region->x + pipeline_param->output_region->width;
    dst_rect.y1 = pipeline_param->output_region->y + pipeline_param->output_region->height;
 
-   dirty_area = drv->vscreen->get_dirty_area(drv->vscreen);
-
    vl_compositor_clear_layers(&drv->cstate);
    vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, src_surface->buffer, &src_rect, NULL, VL_COMPOSITOR_WEAVE);
    vl_compositor_set_layer_dst_area(&drv->cstate, 0, &dst_rect);
-   vl_compositor_render(&drv->cstate, &drv->compositor, psurf, dirty_area, true);
+   vl_compositor_render(&drv->cstate, &drv->compositor, psurf, NULL, false);
 
    screen->fence_reference(screen, &src_surface->fence, NULL);
    drv->pipe->flush(drv->pipe, &src_surface->fence, 0);
