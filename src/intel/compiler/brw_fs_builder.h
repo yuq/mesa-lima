@@ -567,7 +567,6 @@ namespace brw {
       ALU1(BFREV)
       ALU1(CBIT)
       ALU2(CMPN)
-      ALU3(CSEL)
       ALU1(DIM)
       ALU2(DP2)
       ALU2(DP3)
@@ -640,6 +639,27 @@ namespace brw {
       IF(brw_predicate predicate) const
       {
          return set_predicate(predicate, emit(BRW_OPCODE_IF));
+      }
+
+      /**
+       * CSEL: dst = src2 <op> 0.0f ? src0 : src1
+       */
+      instruction *
+      CSEL(const dst_reg &dst, const src_reg &src0, const src_reg &src1,
+           const src_reg &src2, brw_conditional_mod condition) const
+      {
+         /* CSEL only operates on floats, so we can't do integer </<=/>=/>
+          * comparisons.  Zero/non-zero (== and !=) comparisons almost work.
+          * 0x80000000 fails because it is -0.0, and -0.0 == 0.0.
+          */
+         assert(src2.type == BRW_REGISTER_TYPE_F);
+
+         return set_condmod(condition,
+                            emit(BRW_OPCODE_CSEL,
+                                 retype(dst, BRW_REGISTER_TYPE_F),
+                                 retype(src0, BRW_REGISTER_TYPE_F),
+                                 retype(src1, BRW_REGISTER_TYPE_F),
+                                 src2));
       }
 
       /**

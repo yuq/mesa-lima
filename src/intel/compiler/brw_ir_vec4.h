@@ -329,6 +329,7 @@ public:
    bool writes_flag()
    {
       return (conditional_mod && (opcode != BRW_OPCODE_SEL &&
+                                  opcode != BRW_OPCODE_CSEL &&
                                   opcode != BRW_OPCODE_IF &&
                                   opcode != BRW_OPCODE_WHILE));
    }

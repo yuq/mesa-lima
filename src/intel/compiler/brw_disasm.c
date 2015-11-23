@@ -1508,6 +1508,7 @@ brw_disassemble_inst(FILE *file, const struct gen_device_info *devinfo,
        */
       if (brw_inst_cond_modifier(devinfo, inst) &&
           (devinfo->gen < 6 || (opcode != BRW_OPCODE_SEL &&
+                                opcode != BRW_OPCODE_CSEL &&
                                 opcode != BRW_OPCODE_IF &&
                                 opcode != BRW_OPCODE_WHILE))) {
          format(file, ".f%"PRIu64,

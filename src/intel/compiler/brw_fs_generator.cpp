@@ -1975,6 +1975,12 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case BRW_OPCODE_SEL:
 	 brw_SEL(p, dst, src[0], src[1]);
 	 break;
+      case BRW_OPCODE_CSEL:
+         assert(devinfo->gen >= 8);
+         if (devinfo->gen < 10)
+            brw_set_default_access_mode(p, BRW_ALIGN_16);
+         brw_CSEL(p, dst, src[0], src[1], src[2]);
+         break;
       case BRW_OPCODE_BFREV:
          assert(devinfo->gen >= 7);
          brw_BFREV(p, retype(dst, BRW_REGISTER_TYPE_UD),

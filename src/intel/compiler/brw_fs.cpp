@@ -945,6 +945,7 @@ unsigned
 fs_inst::flags_written() const
 {
    if ((conditional_mod && (opcode != BRW_OPCODE_SEL &&
+                            opcode != BRW_OPCODE_CSEL &&
                             opcode != BRW_OPCODE_IF &&
                             opcode != BRW_OPCODE_WHILE)) ||
        opcode == FS_OPCODE_MOV_DISPATCH_TO_FLAGS ||
@@ -5578,6 +5579,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       fprintf(file, "%s", conditional_modifier[inst->conditional_mod]);
       if (!inst->predicate &&
           (devinfo->gen < 5 || (inst->opcode != BRW_OPCODE_SEL &&
+                                inst->opcode != BRW_OPCODE_CSEL &&
                                 inst->opcode != BRW_OPCODE_IF &&
                                 inst->opcode != BRW_OPCODE_WHILE))) {
          fprintf(file, ".f%d.%d", inst->flag_subreg / 2,
