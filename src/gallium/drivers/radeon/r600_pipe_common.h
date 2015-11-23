@@ -558,6 +558,7 @@ void r600_texture_get_cmask_info(struct r600_common_screen *rscreen,
 bool r600_init_flushed_depth_texture(struct pipe_context *ctx,
 				     struct pipe_resource *texture,
 				     struct r600_texture **staging);
+void r600_print_texture_info(struct r600_texture *rtex, FILE *f);
 struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 					const struct pipe_resource *templ);
 struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,

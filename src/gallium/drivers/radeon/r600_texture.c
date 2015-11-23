@@ -598,8 +598,7 @@ static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 	}
 }
 
-static void
-r600_print_texture_info(struct r600_texture *rtex, FILE *f)
+void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 {
 	int i;
 

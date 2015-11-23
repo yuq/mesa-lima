@@ -528,6 +528,30 @@ static void si_dump_last_bo_list(struct si_context *sctx, FILE *f)
 	sctx->last_bo_list = NULL;
 }
 
+static void si_dump_framebuffer(struct si_context *sctx, FILE *f)
+{
+	struct pipe_framebuffer_state *state = &sctx->framebuffer.state;
+	struct r600_texture *rtex;
+	int i;
+
+	for (i = 0; i < state->nr_cbufs; i++) {
+		if (!state->cbufs[i])
+			continue;
+
+		rtex = (struct r600_texture*)state->cbufs[i]->texture;
+		fprintf(f, COLOR_YELLOW "Color buffer %i:" COLOR_RESET "\n", i);
+		r600_print_texture_info(rtex, f);
+		fprintf(f, "\n");
+	}
+
+	if (state->zsbuf) {
+		rtex = (struct r600_texture*)state->zsbuf->texture;
+		fprintf(f, COLOR_YELLOW "Depth-stencil buffer:" COLOR_RESET "\n");
+		r600_print_texture_info(rtex, f);
+		fprintf(f, "\n");
+	}
+}
+
 static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 				unsigned flags)
 {
@@ -536,6 +560,7 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	if (flags & PIPE_DEBUG_DEVICE_IS_HUNG)
 		si_dump_debug_registers(sctx, f);
 
+	si_dump_framebuffer(sctx, f);
 	si_dump_shader(&sctx->vs_shader, "Vertex", f);
 	si_dump_shader(&sctx->tcs_shader, "Tessellation control", f);
 	si_dump_shader(&sctx->tes_shader, "Tessellation evaluation", f);
