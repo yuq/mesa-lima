@@ -25,6 +25,7 @@
  *
  */
 
+#include "brw_eu.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
 #include "glsl/nir/glsl_types.h"
