@@ -137,7 +137,7 @@ pipe_loader_sw_probe_dri(struct pipe_loader_device **devs, struct drisw_loader_f
    if (!pipe_loader_sw_probe_init_common(sdev))
       goto fail;
 
-   for (i = 0; sdev->dd->winsys; i++) {
+   for (i = 0; sdev->dd->winsys[i].name; i++) {
       if (strcmp(sdev->dd->winsys[i].name, "dri") == 0) {
          sdev->ws = sdev->dd->winsys[i].create_winsys(drisw_lf);
          break;
@@ -169,7 +169,7 @@ pipe_loader_sw_probe_kms(struct pipe_loader_device **devs, int fd)
    if (!pipe_loader_sw_probe_init_common(sdev))
       goto fail;
 
-   for (i = 0; sdev->dd->winsys; i++) {
+   for (i = 0; sdev->dd->winsys[i].name; i++) {
       if (strcmp(sdev->dd->winsys[i].name, "kms_dri") == 0) {
          sdev->ws = sdev->dd->winsys[i].create_winsys(fd);
          break;
@@ -200,7 +200,7 @@ pipe_loader_sw_probe_null(struct pipe_loader_device **devs)
    if (!pipe_loader_sw_probe_init_common(sdev))
       goto fail;
 
-   for (i = 0; sdev->dd->winsys; i++) {
+   for (i = 0; sdev->dd->winsys[i].name; i++) {
       if (strcmp(sdev->dd->winsys[i].name, "null") == 0) {
          sdev->ws = sdev->dd->winsys[i].create_winsys();
          break;
@@ -245,7 +245,7 @@ pipe_loader_sw_probe_wrapped(struct pipe_loader_device **dev,
    if (!pipe_loader_sw_probe_init_common(sdev))
       goto fail;
 
-   for (i = 0; sdev->dd->winsys; i++) {
+   for (i = 0; sdev->dd->winsys[i].name; i++) {
       if (strcmp(sdev->dd->winsys[i].name, "wrapped") == 0) {
          sdev->ws = sdev->dd->winsys[i].create_winsys(screen);
          break;
