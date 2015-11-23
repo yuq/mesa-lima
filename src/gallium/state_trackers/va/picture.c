@@ -358,19 +358,19 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
    format = u_reduce_video_profile(context->decoder->profile);
    switch (format) {
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-         if (bufHasStartcode(buf, 0x000001, 24))
-            break;
+      if (bufHasStartcode(buf, 0x000001, 24))
+         break;
 
-         buffers[num_buffers] = (void *const)&start_code_h264;
-         sizes[num_buffers++] = sizeof(start_code_h264);
+      buffers[num_buffers] = (void *const)&start_code_h264;
+      sizes[num_buffers++] = sizeof(start_code_h264);
       break;
    case PIPE_VIDEO_FORMAT_HEVC:
       if (bufHasStartcode(buf, 0x000001, 24))
          break;
 
-         buffers[num_buffers] = (void *const)&start_code_h265;
-         sizes[num_buffers++] = sizeof(start_code_h265);
-         break;
+      buffers[num_buffers] = (void *const)&start_code_h265;
+      sizes[num_buffers++] = sizeof(start_code_h265);
+      break;
    case PIPE_VIDEO_FORMAT_VC1:
       if (bufHasStartcode(buf, 0x0000010d, 32) ||
           bufHasStartcode(buf, 0x0000010c, 32) ||
