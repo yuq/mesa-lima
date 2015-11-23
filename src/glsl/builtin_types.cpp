@@ -112,7 +112,7 @@ static const struct glsl_struct_field gl_FogParameters_fields[] = {
    glsl_struct_field(glsl_type::float_type, "scale"),
 };
 
-#include "builtin_type_macros.h"
+#include "compiler/builtin_type_macros.h"
 /** @} */
 
 /**

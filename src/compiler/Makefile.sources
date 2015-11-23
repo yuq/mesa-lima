@@ -1,0 +1,2 @@
+LIBCOMPILER_FILES = \
+	builtin_type_macros.h

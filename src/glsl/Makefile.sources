@@ -20,7 +20,6 @@ NIR_GENERATED_FILES = \
 NIR_FILES = \
 	nir/glsl_types.cpp \
 	nir/glsl_types.h \
-	nir/builtin_type_macros.h \
 	nir/nir.c \
 	nir/nir.h \
 	nir/nir_array.h \

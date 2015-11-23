@@ -1754,5 +1754,5 @@ glsl_type::coordinate_components() const
 
 #define STRUCT_TYPE(NAME)
 
-#include "builtin_type_macros.h"
+#include "compiler/builtin_type_macros.h"
 /** @} */
