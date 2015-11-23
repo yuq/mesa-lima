@@ -340,4 +340,8 @@ VAStatus vlVaQueryVideoProcFilterCaps(VADriverContextP ctx, VAContextID context,
                                       void *filter_caps, unsigned int *num_filter_caps);
 VAStatus vlVaQueryVideoProcPipelineCaps(VADriverContextP ctx, VAContextID context, VABufferID *filters,
                                         unsigned int num_filters, VAProcPipelineCaps *pipeline_cap);
+
+// internal functions
+VAStatus vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+
 #endif //VA_PRIVATE_H
