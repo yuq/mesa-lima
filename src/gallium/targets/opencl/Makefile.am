@@ -20,7 +20,7 @@ lib@OPENCL_LIBNAME@_la_LIBADD = \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(ELF_LIB) \
-	-ldl \
+	$(DLOPEN_LIBS) \
 	-lclangCodeGen \
 	-lclangFrontendTool \
 	-lclangFrontend \
