@@ -350,5 +350,9 @@ void vlVaHandlePictureParameterBufferH264(vlVaDriver *drv, vlVaContext *context,
 void vlVaHandleIQMatrixBufferH264(vlVaContext *context, vlVaBuffer *buf);
 void vlVaHandleSliceParameterBufferH264(vlVaContext *context, vlVaBuffer *buf);
 void vlVaHandlePictureParameterBufferVC1(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandlePictureParameterBufferMPEG4(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleIQMatrixBufferMPEG4(vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleSliceParameterBufferMPEG4(vlVaContext *context, vlVaBuffer *buf);
+void vlVaDecoderFixMPEG4Startcode(vlVaContext *context);
 
 #endif //VA_PRIVATE_H
