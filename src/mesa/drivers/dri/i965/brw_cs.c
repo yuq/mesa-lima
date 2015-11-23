@@ -32,6 +32,7 @@
 #include "intel_batchbuffer.h"
 #include "brw_nir.h"
 #include "brw_program.h"
+#include "glsl/ir_uniform.h"
 
 void
 brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *prog_data,

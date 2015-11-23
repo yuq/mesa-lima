@@ -24,11 +24,9 @@
 #include <assert.h>
 
 #include "intel_batchbuffer.h"
-#include "intel_fbo.h"
 #include "intel_mipmap_tree.h"
 
 #include "brw_context.h"
-#include "brw_defines.h"
 #include "brw_state.h"
 
 #include "brw_blorp.h"

@@ -23,6 +23,7 @@
 #include "glsl/glsl_parser_extras.h"
 #include "brw_vec4.h"
 #include "brw_cfg.h"
+#include "brw_eu.h"
 #include "brw_program.h"
 
 using namespace brw;

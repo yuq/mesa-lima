@@ -37,10 +37,8 @@
  * behavior we want for the results of texture lookups, but probably not for
  */
 
-#include "main/core.h"
-#include "brw_context.h"
+#include "main/imports.h"
 #include "glsl/ir.h"
-#include "glsl/ir_visitor.h"
 #include "glsl/ir_rvalue_visitor.h"
 #include "glsl/nir/glsl_types.h"
 #include "util/hash_table.h"

@@ -23,7 +23,6 @@
 
 #include "brw_nir.h"
 #include "brw_shader.h"
-#include "glsl/glsl_parser_extras.h"
 #include "glsl/nir/glsl_to_nir.h"
 #include "program/prog_to_nir.h"
 

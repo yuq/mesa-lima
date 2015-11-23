@@ -26,7 +26,6 @@
 #include "intel_fbo.h"
 
 #include "brw_blorp.h"
-#include "brw_defines.h"
 #include "brw_state.h"
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP

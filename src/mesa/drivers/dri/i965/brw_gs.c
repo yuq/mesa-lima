@@ -34,6 +34,7 @@
 #include "brw_ff_gs.h"
 #include "brw_nir.h"
 #include "brw_program.h"
+#include "glsl/ir_uniform.h"
 
 static void
 assign_gs_binding_table_offsets(const struct brw_device_info *devinfo,

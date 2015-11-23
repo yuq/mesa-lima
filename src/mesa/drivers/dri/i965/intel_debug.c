@@ -31,7 +31,6 @@
 
 #include "brw_context.h"
 #include "intel_debug.h"
-#include "utils.h"
 #include "util/u_atomic.h" /* for p_atomic_cmpxchg */
 #include "util/debug.h"
 

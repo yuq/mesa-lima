@@ -40,7 +40,6 @@
  */
 
 
-#include "main/compiler.h"
 #include "brw_context.h"
 
 static inline void

@@ -28,19 +28,9 @@
  * from the LIR.
  */
 
-#include <sys/types.h>
-
-#include "util/hash_table.h"
 #include "main/macros.h"
-#include "main/shaderobj.h"
-#include "main/fbobject.h"
-#include "program/prog_parameter.h"
-#include "program/prog_print.h"
-#include "util/register_allocate.h"
-#include "program/hash_table.h"
 #include "brw_context.h"
 #include "brw_eu.h"
-#include "brw_wm.h"
 #include "brw_fs.h"
 #include "brw_cs.h"
 #include "brw_nir.h"
@@ -48,10 +38,7 @@
 #include "brw_cfg.h"
 #include "brw_program.h"
 #include "brw_dead_control_flow.h"
-#include "main/uniforms.h"
-#include "brw_fs_live_variables.h"
 #include "glsl/nir/glsl_types.h"
-#include "program/sampler.h"
 
 using namespace brw;
 

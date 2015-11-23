@@ -23,7 +23,6 @@
 
 #include "main/teximage.h"
 #include "main/fbobject.h"
-#include "main/renderbuffer.h"
 
 #include "intel_fbo.h"
 

@@ -20,13 +20,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#include "main/context.h"
 #include "main/mtypes.h"
 
 #include "brw_context.h"
 #include "brw_state.h"
 #include "brw_defines.h"
-#include "brw_wm.h"
 
 struct surface_format_info {
    bool exists;

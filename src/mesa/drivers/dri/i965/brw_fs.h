@@ -30,28 +30,8 @@
 #include "brw_shader.h"
 #include "brw_ir_fs.h"
 #include "brw_fs_builder.h"
-
-extern "C" {
-
-#include <sys/types.h>
-
-#include "main/macros.h"
-#include "main/shaderobj.h"
-#include "main/uniforms.h"
-#include "program/prog_parameter.h"
-#include "program/prog_print.h"
-#include "program/prog_optimize.h"
-#include "util/register_allocate.h"
-#include "program/hash_table.h"
-#include "brw_context.h"
-#include "brw_eu.h"
-#include "brw_wm.h"
-#include "intel_asm_annotation.h"
-}
-#include "glsl/nir/glsl_types.h"
 #include "glsl/ir.h"
 #include "glsl/nir/nir.h"
-#include "program/sampler.h"
 
 struct bblock_t;
 namespace {

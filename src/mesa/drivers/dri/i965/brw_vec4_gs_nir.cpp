@@ -21,7 +21,6 @@
  * IN THE SOFTWARE.
  */
 
-#include "brw_nir.h"
 #include "brw_vec4_gs_visitor.h"
 
 namespace brw {

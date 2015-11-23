@@ -28,8 +28,7 @@
 #include "brw_eu.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
-#include "glsl/nir/glsl_types.h"
-#include "glsl/ir_optimization.h"
+#include "util/register_allocate.h"
 
 using namespace brw;
 

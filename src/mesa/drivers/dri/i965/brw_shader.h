@@ -21,19 +21,16 @@
  * IN THE SOFTWARE.
  */
 
+#pragma once
+
 #include <stdint.h>
 #include "brw_reg.h"
 #include "brw_defines.h"
 #include "brw_context.h"
-#include "main/compiler.h"
-#include "glsl/ir.h"
-#include "program/prog_parameter.h"
 
 #ifdef __cplusplus
 #include "brw_ir_allocator.h"
 #endif
-
-#pragma once
 
 #define MAX_SAMPLER_MESSAGE_SIZE 11
 #define MAX_VGRF_SIZE 16

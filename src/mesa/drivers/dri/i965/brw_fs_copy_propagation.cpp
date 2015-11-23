@@ -37,6 +37,7 @@
 #include "util/bitset.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
+#include "brw_eu.h"
 
 namespace { /* avoid conflict with opt_copy_propagation_elements */
 struct acp_entry : public exec_node {

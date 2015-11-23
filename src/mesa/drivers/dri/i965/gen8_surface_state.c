@@ -27,6 +27,7 @@
 #include "main/texformat.h"
 #include "main/teximage.h"
 #include "program/prog_parameter.h"
+#include "program/prog_instruction.h"
 
 #include "intel_mipmap_tree.h"
 #include "intel_batchbuffer.h"

@@ -36,6 +36,7 @@
 #include "main/samplerobj.h"
 #include "main/shaderimage.h"
 #include "program/prog_parameter.h"
+#include "program/prog_instruction.h"
 #include "main/framebuffer.h"
 
 #include "intel_mipmap_tree.h"

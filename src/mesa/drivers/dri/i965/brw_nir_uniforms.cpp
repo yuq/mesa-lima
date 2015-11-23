@@ -23,7 +23,6 @@
 
 #include "brw_shader.h"
 #include "brw_nir.h"
-#include "glsl/ir.h"
 #include "glsl/ir_uniform.h"
 
 static void

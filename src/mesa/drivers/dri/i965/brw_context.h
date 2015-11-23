@@ -34,15 +34,11 @@
 #define BRWCONTEXT_INC
 
 #include <stdbool.h>
-#include <string.h>
-#include "main/imports.h"
 #include "main/macros.h"
-#include "main/mm.h"
 #include "main/mtypes.h"
 #include "brw_structs.h"
 #include "brw_compiler.h"
 #include "intel_aub.h"
-#include "program/prog_parameter.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,9 +46,7 @@ extern "C" {
         #define virtual virt
 #endif
 
-#include <drm.h>
 #include <intel_bufmgr.h>
-#include <i915_drm.h>
 #ifdef __cplusplus
 	#undef virtual
 }

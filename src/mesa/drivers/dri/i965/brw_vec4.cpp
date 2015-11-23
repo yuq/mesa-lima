@@ -28,14 +28,7 @@
 #include "brw_nir.h"
 #include "brw_vec4_live_variables.h"
 #include "brw_dead_control_flow.h"
-
-extern "C" {
-#include "main/macros.h"
-#include "main/shaderobj.h"
-#include "program/prog_print.h"
 #include "program/prog_parameter.h"
-}
-#include "main/context.h"
 
 #define MAX_INSTRUCTION (1 << 30)
 

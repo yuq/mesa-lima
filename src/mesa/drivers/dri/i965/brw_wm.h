@@ -35,7 +35,6 @@
 
 #include <stdbool.h>
 
-#include "program/prog_instruction.h"
 #include "brw_context.h"
 #include "brw_eu.h"
 

@@ -27,8 +27,6 @@
 
 #include "brw_context.h"
 #include "intel_batchbuffer.h"
-#include "intel_reg.h"
-#include "utils.h"
 
 /**
  * Test if we can use MI_LOAD_REGISTER_MEM from an untrusted batchbuffer.

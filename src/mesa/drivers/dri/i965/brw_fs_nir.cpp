@@ -22,13 +22,9 @@
  */
 
 #include "glsl/ir.h"
-#include "glsl/ir_optimization.h"
-#include "glsl/nir/glsl_to_nir.h"
 #include "main/shaderimage.h"
-#include "program/prog_to_nir.h"
 #include "brw_fs.h"
 #include "brw_fs_surface_builder.h"
-#include "brw_vec4_gs_visitor.h"
 #include "brw_nir.h"
 #include "brw_program.h"
 

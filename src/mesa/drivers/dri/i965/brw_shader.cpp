@@ -21,16 +21,13 @@
  * IN THE SOFTWARE.
  */
 
-#include "main/macros.h"
 #include "brw_context.h"
-#include "brw_vs.h"
-#include "brw_gs.h"
-#include "brw_fs.h"
 #include "brw_cfg.h"
+#include "brw_eu.h"
 #include "brw_nir.h"
-#include "glsl/ir_optimization.h"
 #include "glsl/glsl_parser_extras.h"
-#include "main/shaderapi.h"
+#include "main/shaderobj.h"
+#include "main/uniforms.h"
 #include "util/debug.h"
 
 static void

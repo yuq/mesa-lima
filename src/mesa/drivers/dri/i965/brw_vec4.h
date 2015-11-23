@@ -24,23 +24,11 @@
 #ifndef BRW_VEC4_H
 #define BRW_VEC4_H
 
-#include <stdint.h>
 #include "brw_shader.h"
-#include "main/compiler.h"
-#include "program/hash_table.h"
+#include "brw_program.h"
 
 #ifdef __cplusplus
 #include "brw_ir_vec4.h"
-
-extern "C" {
-#endif
-
-#include "brw_context.h"
-#include "brw_eu.h"
-#include "intel_asm_annotation.h"
-
-#ifdef __cplusplus
-}; /* extern "C" */
 #endif
 
 #include "glsl/ir.h"

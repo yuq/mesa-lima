@@ -25,7 +25,6 @@
 
 #include <stdint.h>
 
-#include "brw_context.h"
 #include "brw_reg.h"
 #include "intel_mipmap_tree.h"
 

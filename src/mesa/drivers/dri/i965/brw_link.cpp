@@ -21,17 +21,16 @@
  * IN THE SOFTWARE.
  */
 
-#include "main/macros.h"
 #include "brw_context.h"
-#include "brw_vs.h"
-#include "brw_gs.h"
+#include "brw_shader.h"
 #include "brw_fs.h"
-#include "brw_cfg.h"
 #include "brw_nir.h"
 #include "brw_program.h"
 #include "glsl/ir_optimization.h"
 #include "glsl/glsl_parser_extras.h"
+#include "program/program.h"
 #include "main/shaderapi.h"
+#include "main/uniforms.h"
 
 /**
  * Performs a compile of the shader stages even when we don't know

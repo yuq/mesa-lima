@@ -31,8 +31,6 @@
 
 #include <pthread.h>
 #include "main/imports.h"
-#include "main/enums.h"
-#include "main/shaderobj.h"
 #include "program/prog_parameter.h"
 #include "program/prog_print.h"
 #include "program/program.h"
@@ -45,7 +43,6 @@
 #include "brw_context.h"
 #include "brw_shader.h"
 #include "brw_nir.h"
-#include "brw_wm.h"
 #include "intel_batchbuffer.h"
 
 static unsigned

@@ -27,8 +27,6 @@
  * native instructions.
  */
 
-#include "main/macros.h"
-#include "brw_context.h"
 #include "brw_eu.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
