@@ -21,7 +21,6 @@
  * IN THE SOFTWARE.
  */
 
-#include "main/glheader.h"
 #include "main/bufferobj.h"
 #include "main/context.h"
 #include "main/enums.h"

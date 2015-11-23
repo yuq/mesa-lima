@@ -24,7 +24,6 @@
 #include <sys/errno.h>
 
 #include "main/condrender.h"
-#include "main/glheader.h"
 #include "main/mtypes.h"
 #include "main/state.h"
 #include "brw_context.h"
