@@ -315,6 +315,8 @@ void brw_oword_block_read(struct brw_codegen *p,
 			  uint32_t offset,
 			  uint32_t bind_table_index);
 
+unsigned brw_scratch_surface_idx(const struct brw_codegen *p);
+
 void brw_oword_block_read_scratch(struct brw_codegen *p,
 				  struct brw_reg dest,
 				  struct brw_reg mrf,

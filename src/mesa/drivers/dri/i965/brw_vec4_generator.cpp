@@ -802,7 +802,7 @@ generate_scratch_read(struct brw_codegen *p,
    if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(devinfo, send, inst->base_mrf);
    brw_set_dp_read_message(p, send,
-			   255, /* binding table index: stateless access */
+                           brw_scratch_surface_idx(p),
 			   BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
 			   msg_type,
 			   BRW_DATAPORT_READ_TARGET_RENDER_CACHE,
@@ -875,7 +875,7 @@ generate_scratch_write(struct brw_codegen *p,
    if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
    brw_set_dp_write_message(p, send,
-			    255, /* binding table index: stateless access */
+                            brw_scratch_surface_idx(p),
 			    BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
 			    msg_type,
 			    3, /* mlen */
