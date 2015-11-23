@@ -31,6 +31,7 @@
 #include "pipe/p_state.h"
 
 #include "target-helpers/drm_helper.h"
+#include "target-helpers/sw_helper.h"
 #include "state_tracker/drm_driver.h"
 
 #include "d3dadapter/d3dadapter9.h"
