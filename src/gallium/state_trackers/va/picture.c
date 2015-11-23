@@ -75,9 +75,9 @@ vlVaBeginPicture(VADriverContextP ctx, VAContextID context_id, VASurfaceID rende
    return VA_STATUS_SUCCESS;
 }
 
-static void
-getReferenceFrame(vlVaDriver *drv, VASurfaceID surface_id,
-                  struct pipe_video_buffer **ref_frame)
+void
+vlVaGetReferenceFrame(vlVaDriver *drv, VASurfaceID surface_id,
+                      struct pipe_video_buffer **ref_frame)
 {
    vlVaSurface *surf = handle_table_get(drv->htab, surface_id);
    if (surf)
@@ -89,7 +89,6 @@ getReferenceFrame(vlVaDriver *drv, VASurfaceID surface_id,
 static void
 handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
-   VAPictureParameterBufferMPEG2 *mpeg2;
    VAPictureParameterBufferH264 *h264;
    VAPictureParameterBufferVC1 * vc1;
    VAPictureParameterBufferMPEG4 *mpeg4;
@@ -102,36 +101,7 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
 
    switch (u_reduce_video_profile(context->decoder->profile)) {
    case PIPE_VIDEO_FORMAT_MPEG12:
-      assert(buf->size >= sizeof(VAPictureParameterBufferMPEG2) && buf->num_elements == 1);
-      mpeg2 = buf->data;
-      /*horizontal_size;*/
-      /*vertical_size;*/
-      getReferenceFrame(drv, mpeg2->forward_reference_picture, &context->desc.mpeg12.ref[0]);
-      getReferenceFrame(drv, mpeg2->backward_reference_picture, &context->desc.mpeg12.ref[1]);
-      context->desc.mpeg12.picture_coding_type = mpeg2->picture_coding_type;
-      context->desc.mpeg12.f_code[0][0] = ((mpeg2->f_code >> 12) & 0xf) - 1;
-      context->desc.mpeg12.f_code[0][1] = ((mpeg2->f_code >> 8) & 0xf) - 1;
-      context->desc.mpeg12.f_code[1][0] = ((mpeg2->f_code >> 4) & 0xf) - 1;
-      context->desc.mpeg12.f_code[1][1] = (mpeg2->f_code & 0xf) - 1;
-      context->desc.mpeg12.intra_dc_precision =
-         mpeg2->picture_coding_extension.bits.intra_dc_precision;
-      context->desc.mpeg12.picture_structure =
-         mpeg2->picture_coding_extension.bits.picture_structure;
-      context->desc.mpeg12.top_field_first =
-         mpeg2->picture_coding_extension.bits.top_field_first;
-      context->desc.mpeg12.frame_pred_frame_dct =
-         mpeg2->picture_coding_extension.bits.frame_pred_frame_dct;
-      context->desc.mpeg12.concealment_motion_vectors =
-         mpeg2->picture_coding_extension.bits.concealment_motion_vectors;
-      context->desc.mpeg12.q_scale_type =
-         mpeg2->picture_coding_extension.bits.q_scale_type;
-      context->desc.mpeg12.intra_vlc_format =
-         mpeg2->picture_coding_extension.bits.intra_vlc_format;
-      context->desc.mpeg12.alternate_scan =
-         mpeg2->picture_coding_extension.bits.alternate_scan;
-      /*repeat_first_field*/
-      /*progressive_frame*/
-      /*is_first_field*/
+      vlVaHandlePictureParameterBufferMPEG12(drv, context, buf);
       break;
 
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
@@ -199,8 +169,8 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
    case PIPE_VIDEO_FORMAT_VC1:
       assert(buf->size >= sizeof(VAPictureParameterBufferVC1) && buf->num_elements == 1);
       vc1 = buf->data;
-      getReferenceFrame(drv, vc1->forward_reference_picture, &context->desc.vc1.ref[0]);
-      getReferenceFrame(drv, vc1->backward_reference_picture, &context->desc.vc1.ref[1]);
+      vlVaGetReferenceFrame(drv, vc1->forward_reference_picture, &context->desc.vc1.ref[0]);
+      vlVaGetReferenceFrame(drv, vc1->backward_reference_picture, &context->desc.vc1.ref[1]);
       context->desc.vc1.picture_type = vc1->picture_fields.bits.picture_type;
       context->desc.vc1.frame_coding_mode = vc1->picture_fields.bits.frame_coding_mode;
       context->desc.vc1.postprocflag = vc1->post_processing != 0;
@@ -433,7 +403,7 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
          if (index == 0x7F)
             continue;
 
-         getReferenceFrame(drv, hevc->ReferenceFrames[i].picture_id, &context->desc.h265.ref[i]);
+         vlVaGetReferenceFrame(drv, hevc->ReferenceFrames[i].picture_id, &context->desc.h265.ref[i]);
 
          if ((hevc->ReferenceFrames[i].flags & VA_PICTURE_HEVC_RPS_ST_CURR_BEFORE) && (iBefore < 8)) {
             context->desc.h265.RefPicSetStCurrBefore[iBefore++] = i;
@@ -458,24 +428,13 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
 static void
 handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
-   VAIQMatrixBufferMPEG2 *mpeg2;
    VAIQMatrixBufferH264 *h264;
    VAIQMatrixBufferMPEG4 *mpeg4;
    VAIQMatrixBufferHEVC *h265;
 
    switch (u_reduce_video_profile(context->decoder->profile)) {
    case PIPE_VIDEO_FORMAT_MPEG12:
-      assert(buf->size >= sizeof(VAIQMatrixBufferMPEG2) && buf->num_elements == 1);
-      mpeg2 = buf->data;
-      if (mpeg2->load_intra_quantiser_matrix)
-         context->desc.mpeg12.intra_matrix = mpeg2->intra_quantiser_matrix;
-      else
-         context->desc.mpeg12.intra_matrix = NULL;
-
-      if (mpeg2->load_non_intra_quantiser_matrix)
-         context->desc.mpeg12.non_intra_matrix = mpeg2->non_intra_quantiser_matrix;
-      else
-         context->desc.mpeg12.non_intra_matrix = NULL;
+      vlVaHandleIQMatrixBufferMPEG12(context, buf);
       break;
 
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:

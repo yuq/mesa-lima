@@ -5,6 +5,7 @@ C_SOURCES := \
 	display.c \
 	image.c \
 	picture.c \
+	picture_mpeg12.c \
 	postproc.c \
 	subpicture.c \
 	surface.c \
