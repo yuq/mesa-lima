@@ -27,6 +27,8 @@
 #include "nv50/nv50_context.h"
 #include "nv50/nv50_query.h"
 #include "nv50/nv50_query_hw.h"
+#include "nv50/nv50_query_hw_metric.h"
+#include "nv50/nv50_query_hw_sm.h"
 
 static struct pipe_query *
 nv50_create_query(struct pipe_context *pipe, unsigned type, unsigned index)
@@ -152,4 +154,79 @@ nv50_init_query_functions(struct nv50_context *nv50)
    pipe->end_query = nv50_end_query;
    pipe->get_query_result = nv50_get_query_result;
    pipe->render_condition = nv50_render_condition;
+   nv50->cond_condmode = NV50_3D_COND_MODE_ALWAYS;
+}
+
+int
+nv50_screen_get_driver_query_info(struct pipe_screen *pscreen,
+                                  unsigned id,
+                                  struct pipe_driver_query_info *info)
+{
+   struct nv50_screen *screen = nv50_screen(pscreen);
+   int num_hw_queries = 0;
+
+   num_hw_queries = nv50_hw_get_driver_query_info(screen, 0, NULL);
+
+   if (!info)
+      return num_hw_queries;
+
+   /* Init default values. */
+   info->name = "this_is_not_the_query_you_are_looking_for";
+   info->query_type = 0xdeadd01d;
+   info->max_value.u64 = 0;
+   info->type = PIPE_DRIVER_QUERY_TYPE_UINT64;
+   info->group_id = -1;
+   info->flags = 0;
+
+   return nv50_hw_get_driver_query_info(screen, id, info);
+}
+
+int
+nv50_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
+                                        unsigned id,
+                                        struct pipe_driver_query_group_info *info)
+{
+   struct nv50_screen *screen = nv50_screen(pscreen);
+   int count = 0;
+
+   if (screen->compute)
+      if (screen->base.class_3d >= NV84_3D_CLASS)
+         count += 2;
+
+   if (!info)
+      return count;
+
+   if (id == NV50_HW_SM_QUERY_GROUP) {
+      if (screen->compute) {
+         if (screen->base.class_3d >= NV84_3D_CLASS) {
+            info->name = "MP counters";
+
+            /* Because we can't expose the number of hardware counters needed
+             * for each different query, we don't want to allow more than one
+             * active query simultaneously to avoid failure when the maximum
+             * number of counters is reached. Note that these groups of GPU
+             * counters are currently only used by AMD_performance_monitor.
+             */
+            info->max_active_queries = 1;
+            info->num_queries = NV50_HW_SM_QUERY_COUNT;
+            return 1;
+         }
+      }
+   } else
+   if (id == NV50_HW_METRIC_QUERY_GROUP) {
+      if (screen->compute) {
+         if (screen->base.class_3d >= NV84_3D_CLASS) {
+            info->name = "Performance metrics";
+            info->max_active_queries = 1;
+            info->num_queries = NV50_HW_METRIC_QUERY_COUNT;
+            return 1;
+         }
+      }
+   }
+
+   /* user asked for info about non-existing query group */
+   info->name = "this_is_not_the_query_group_you_are_looking_for";
+   info->max_active_queries = 0;
+   info->num_queries = 0;
+   return 0;
 }

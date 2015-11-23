@@ -116,6 +116,25 @@ struct pipe_context {
                                        unsigned query_type,
                                        unsigned index );
 
+   /**
+    * Create a query object that queries all given query types simultaneously.
+    *
+    * This can only be used for those query types for which
+    * get_driver_query_info indicates that it must be used. Only one batch
+    * query object may be active at a time.
+    *
+    * There may be additional constraints on which query types can be used
+    * together, in particular those that are implied by
+    * get_driver_query_group_info.
+    *
+    * \param num_queries the number of query types
+    * \param query_types array of \p num_queries query types
+    * \return a query object, or NULL on error.
+    */
+   struct pipe_query *(*create_batch_query)( struct pipe_context *pipe,
+                                             unsigned num_queries,
+                                             unsigned *query_types );
+
    void (*destroy_query)(struct pipe_context *pipe,
                          struct pipe_query *q);
 

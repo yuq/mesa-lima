@@ -34,7 +34,10 @@
 #include "util/u_memory.h"
 #include "vl/vl_winsys.h"
 
-struct vl_screen*
+static void
+vl_drm_screen_destroy(struct vl_screen *vscreen);
+
+struct vl_screen *
 vl_drm_screen_create(int fd)
 {
    struct vl_screen *vscreen;
@@ -43,35 +46,34 @@ vl_drm_screen_create(int fd)
    if (!vscreen)
       return NULL;
 
-#if GALLIUM_STATIC_TARGETS
-   vscreen->pscreen = dd_create_screen(fd);
-#else
-   if (pipe_loader_drm_probe_fd(&vscreen->dev, dup(fd))) {
-      vscreen->pscreen =
-         pipe_loader_create_screen(vscreen->dev, PIPE_SEARCH_DIR);
-      if (!vscreen->pscreen)
-         pipe_loader_release(&vscreen->dev, 1);
-   }
-#endif
+   if (pipe_loader_drm_probe_fd(&vscreen->dev, dup(fd)))
+      vscreen->pscreen = pipe_loader_create_screen(vscreen->dev);
 
-   if (!vscreen->pscreen) {
-      FREE(vscreen);
-      return NULL;
-   }
+   if (!vscreen->pscreen)
+      goto error;
 
+   vscreen->destroy = vl_drm_screen_destroy;
+   vscreen->texture_from_drawable = NULL;
+   vscreen->get_dirty_area = NULL;
+   vscreen->get_timestamp = NULL;
+   vscreen->set_next_timestamp = NULL;
+   vscreen->get_private = NULL;
    return vscreen;
+
+error:
+   if (vscreen->dev)
+      pipe_loader_release(&vscreen->dev, 1);
+
+   FREE(vscreen);
+   return NULL;
 }
 
-void
+static void
 vl_drm_screen_destroy(struct vl_screen *vscreen)
 {
    assert(vscreen);
 
    vscreen->pscreen->destroy(vscreen->pscreen);
-
-#if !GALLIUM_STATIC_TARGETS
    pipe_loader_release(&vscreen->dev, 1);
-#endif
-
    FREE(vscreen);
 }

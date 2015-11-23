@@ -76,9 +76,9 @@ struct nv50_program {
       ubyte psiz;        /* output slot of point size */
       ubyte bfc[2];      /* indices into varying for FFC (FP) or BFC (VP) */
       ubyte edgeflag;
-      ubyte vertexid;
       ubyte clpd[2];     /* output slot of clip distance[i]'s 1st component */
       ubyte clpd_nr;
+      bool need_vertex_id;
    } vp;
 
    struct {
@@ -97,6 +97,13 @@ struct nv50_program {
       uint8_t has_viewport;
       ubyte viewportid; /* hw value of viewport index output */
    } gp;
+
+   struct {
+      uint32_t lmem_size; /* local memory (TGSI PRIVATE resource) size */
+      uint32_t smem_size; /* shared memory (TGSI LOCAL resource) size */
+      void *syms;
+      unsigned num_syms;
+   } cp;
 
    void *fixups; /* relocation records */
    void *interps; /* interpolation records */

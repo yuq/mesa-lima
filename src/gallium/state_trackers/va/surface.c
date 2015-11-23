@@ -229,6 +229,7 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
    struct pipe_screen *screen;
    struct pipe_resource *tex;
    struct pipe_surface surf_templ, *surf_draw;
+   struct vl_screen *vscreen;
    struct u_rect src_rect, *dirty_area;
    struct u_rect dst_rect = {destx, destx + destw, desty, desty + desth};
    VAStatus status;
@@ -242,17 +243,18 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
    screen = drv->pipe->screen;
+   vscreen = drv->vscreen;
 
    if(surf->fence) {
       screen->fence_finish(screen, surf->fence, PIPE_TIMEOUT_INFINITE);
       screen->fence_reference(screen, &surf->fence, NULL);
    }
 
-   tex = vl_screen_texture_from_drawable(drv->vscreen, (Drawable)draw);
+   tex = vscreen->texture_from_drawable(vscreen, draw);
    if (!tex)
       return VA_STATUS_ERROR_INVALID_DISPLAY;
 
-   dirty_area = vl_screen_get_dirty_area(drv->vscreen);
+   dirty_area = vscreen->get_dirty_area(vscreen);
 
    memset(&surf_templ, 0, sizeof(surf_templ));
    surf_templ.format = tex->format;
@@ -276,11 +278,8 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
    if (status)
       return status;
 
-   screen->flush_frontbuffer
-   (
-      screen, tex, 0, 0,
-      vl_screen_get_private(drv->vscreen), NULL
-   );
+   screen->flush_frontbuffer(screen, tex, 0, 0,
+                             vscreen->get_private(vscreen), NULL);
 
    screen->fence_reference(screen, &surf->fence, NULL);
    drv->pipe->flush(drv->pipe, &surf->fence, 0);

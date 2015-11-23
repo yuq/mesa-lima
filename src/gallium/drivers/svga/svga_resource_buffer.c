@@ -80,6 +80,11 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    uint8_t *map;
    int64_t begin = os_time_get();
 
+   assert(box->y == 0);
+   assert(box->z == 0);
+   assert(box->height == 1);
+   assert(box->depth == 1);
+
    transfer = CALLOC_STRUCT(pipe_transfer);
    if (transfer == NULL) {
       return NULL;

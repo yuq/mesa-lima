@@ -359,6 +359,10 @@ struct fd_context {
 	struct fd_streamout_stateobj streamout;
 	struct pipe_clip_state ucp;
 
+	struct pipe_query *cond_query;
+	bool cond_cond; /* inverted rendering condition */
+	uint cond_mode;
+
 	/* GMEM/tile handling fxns: */
 	void (*emit_tile_init)(struct fd_context *ctx);
 	void (*emit_tile_prep)(struct fd_context *ctx, struct fd_tile *tile);

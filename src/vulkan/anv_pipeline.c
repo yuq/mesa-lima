@@ -125,17 +125,7 @@ bool
 anv_is_scalar_shader_stage(const struct brw_compiler *compiler,
                            VkShaderStage stage)
 {
-   switch (stage) {
-   case VK_SHADER_STAGE_VERTEX:
-      return compiler->scalar_vs;
-   case VK_SHADER_STAGE_GEOMETRY:
-      return false;
-   case VK_SHADER_STAGE_FRAGMENT:
-   case VK_SHADER_STAGE_COMPUTE:
-      return true;
-   default:
-      unreachable("Unsupported shader stage");
-   }
+   return compiler->scalar_stage[vk_shader_stage_to_mesa_stage[stage]];
 }
 
 /* Eventually, this will become part of anv_CreateShader.  Unfortunately,
@@ -187,8 +177,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
    }
    assert(entrypoint != NULL);
 
-   brw_preprocess_nir(nir, &device->info,
-                      anv_is_scalar_shader_stage(compiler, vk_stage));
+   nir = brw_preprocess_nir(nir, compiler->scalar_stage[stage]);
 
    nir_shader_gather_info(nir, entrypoint);
 
@@ -411,7 +400,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    prog_data->binding_table.image_start = bias;
 
    /* Finish the optimization and compilation process */
-   brw_postprocess_nir(nir, &pipeline->device->info,
+   nir = brw_lower_nir(nir, &pipeline->device->info, NULL,
                        anv_is_scalar_shader_stage(compiler, stage));
 
    /* nir_lower_io will only handle the push constants; we need to set this

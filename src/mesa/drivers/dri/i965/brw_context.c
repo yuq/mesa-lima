@@ -322,64 +322,82 @@ static void
 brw_initialize_context_constants(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
+   const struct brw_compiler *compiler = brw->intelScreen->compiler;
+
+   const bool stage_exists[MESA_SHADER_STAGES] = {
+      [MESA_SHADER_VERTEX] = true,
+      [MESA_SHADER_TESS_CTRL] = false,
+      [MESA_SHADER_TESS_EVAL] = false,
+      [MESA_SHADER_GEOMETRY] = brw->gen >= 6,
+      [MESA_SHADER_FRAGMENT] = true,
+      [MESA_SHADER_COMPUTE] = _mesa_extension_override_enables.ARB_compute_shader,
+   };
+
+   unsigned num_stages = 0;
+   for (int i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (stage_exists[i])
+         num_stages++;
+   }
 
    unsigned max_samplers =
       brw->gen >= 8 || brw->is_haswell ? BRW_MAX_TEX_UNIT : 16;
 
+   ctx->Const.MaxDualSourceDrawBuffers = 1;
+   ctx->Const.MaxDrawBuffers = BRW_MAX_DRAW_BUFFERS;
+   ctx->Const.MaxCombinedShaderOutputResources =
+      MAX_IMAGE_UNITS + BRW_MAX_DRAW_BUFFERS;
+
    ctx->Const.QueryCounterBits.Timestamp = 36;
 
+   ctx->Const.MaxTextureCoordUnits = 8; /* Mesa limit */
+   ctx->Const.MaxImageUnits = MAX_IMAGE_UNITS;
+   ctx->Const.MaxRenderbufferSize = 8192;
+   ctx->Const.MaxTextureLevels = MIN2(14 /* 8192 */, MAX_TEXTURE_LEVELS);
+   ctx->Const.Max3DTextureLevels = 12; /* 2048 */
+   ctx->Const.MaxCubeTextureLevels = 14; /* 8192 */
+   ctx->Const.MaxArrayTextureLayers = brw->gen >= 7 ? 2048 : 512;
+   ctx->Const.MaxTextureMbytes = 1536;
+   ctx->Const.MaxTextureRectSize = 1 << 12;
+   ctx->Const.MaxTextureMaxAnisotropy = 16.0;
    ctx->Const.StripTextureBorder = true;
+   if (brw->gen >= 7)
+      ctx->Const.MaxProgramTextureGatherComponents = 4;
+   else if (brw->gen == 6)
+      ctx->Const.MaxProgramTextureGatherComponents = 1;
 
    ctx->Const.MaxUniformBlockSize = 65536;
+
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_program_constants *prog = &ctx->Const.Program[i];
+
+      if (!stage_exists[i])
+         continue;
+
+      prog->MaxTextureImageUnits = max_samplers;
+
       prog->MaxUniformBlocks = BRW_MAX_UBO;
       prog->MaxCombinedUniformComponents =
          prog->MaxUniformComponents +
          ctx->Const.MaxUniformBlockSize / 4 * prog->MaxUniformBlocks;
+
+      prog->MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
+      prog->MaxAtomicBuffers = BRW_MAX_ABO;
+      prog->MaxImageUniforms = compiler->scalar_stage[i] ? BRW_MAX_IMAGES : 0;
+      prog->MaxShaderStorageBlocks = BRW_MAX_SSBO;
    }
 
-   ctx->Const.MaxDualSourceDrawBuffers = 1;
-   ctx->Const.MaxDrawBuffers = BRW_MAX_DRAW_BUFFERS;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits = max_samplers;
-   ctx->Const.MaxTextureCoordUnits = 8; /* Mesa limit */
    ctx->Const.MaxTextureUnits =
       MIN2(ctx->Const.MaxTextureCoordUnits,
            ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits);
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits = max_samplers;
-   if (brw->gen >= 6)
-      ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits = max_samplers;
-   else
-      ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits = 0;
-   if (_mesa_extension_override_enables.ARB_compute_shader) {
-      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = BRW_MAX_TEX_UNIT;
-      ctx->Const.MaxUniformBufferBindings += BRW_MAX_UBO;
-   } else {
-      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = 0;
-   }
-   ctx->Const.MaxCombinedTextureImageUnits =
-      ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits +
-      ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits +
-      ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits +
-      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
 
-   ctx->Const.MaxTextureLevels = 14; /* 8192 */
-   if (ctx->Const.MaxTextureLevels > MAX_TEXTURE_LEVELS)
-      ctx->Const.MaxTextureLevels = MAX_TEXTURE_LEVELS;
-   ctx->Const.Max3DTextureLevels = 12; /* 2048 */
-   ctx->Const.MaxCubeTextureLevels = 14; /* 8192 */
-   ctx->Const.MaxTextureMbytes = 1536;
+   ctx->Const.MaxUniformBufferBindings = num_stages * BRW_MAX_UBO;
+   ctx->Const.MaxCombinedUniformBlocks = num_stages * BRW_MAX_UBO;
+   ctx->Const.MaxCombinedAtomicBuffers = num_stages * BRW_MAX_ABO;
+   ctx->Const.MaxCombinedShaderStorageBlocks = num_stages * BRW_MAX_SSBO;
+   ctx->Const.MaxShaderStorageBufferBindings = num_stages * BRW_MAX_SSBO;
+   ctx->Const.MaxCombinedTextureImageUnits = num_stages * max_samplers;
+   ctx->Const.MaxCombinedImageUniforms = num_stages * BRW_MAX_IMAGES;
 
-   if (brw->gen >= 7)
-      ctx->Const.MaxArrayTextureLayers = 2048;
-   else
-      ctx->Const.MaxArrayTextureLayers = 512;
-
-   ctx->Const.MaxTextureRectSize = 1 << 12;
-
-   ctx->Const.MaxTextureMaxAnisotropy = 16.0;
-
-   ctx->Const.MaxRenderbufferSize = 8192;
 
    /* Hardware only supports a limited number of transform feedback buffers.
     * So we need to override the Mesa default (which is based only on software
@@ -427,6 +445,7 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxColorTextureSamples = max_samples;
    ctx->Const.MaxDepthTextureSamples = max_samples;
    ctx->Const.MaxIntegerSamples = max_samples;
+   ctx->Const.MaxImageSamples = 0;
 
    /* gen6_set_sample_maps() sets SampleMap{2,4,8}x variables which are used
     * to map indices of rectangular grid to sample numbers within a pixel.
@@ -435,11 +454,6 @@ brw_initialize_context_constants(struct brw_context *brw)
     * gen6_set_sample_maps() definition.
     */
    gen6_set_sample_maps(ctx);
-
-   if (brw->gen >= 7)
-      ctx->Const.MaxProgramTextureGatherComponents = 4;
-   else if (brw->gen == 6)
-      ctx->Const.MaxProgramTextureGatherComponents = 1;
 
    ctx->Const.MinLineWidth = 1.0;
    ctx->Const.MinLineWidthAA = 1.0;
@@ -511,30 +525,6 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.Program[MESA_SHADER_VERTEX].HighInt = ctx->Const.Program[MESA_SHADER_VERTEX].LowInt;
    ctx->Const.Program[MESA_SHADER_VERTEX].MediumInt = ctx->Const.Program[MESA_SHADER_VERTEX].LowInt;
 
-   if (brw->gen >= 7) {
-      ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
-      ctx->Const.Program[MESA_SHADER_VERTEX].MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
-      ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
-      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
-      ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers = BRW_MAX_ABO;
-      ctx->Const.Program[MESA_SHADER_VERTEX].MaxAtomicBuffers = BRW_MAX_ABO;
-      ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers = BRW_MAX_ABO;
-      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxAtomicBuffers = BRW_MAX_ABO;
-      ctx->Const.MaxCombinedAtomicBuffers = 3 * BRW_MAX_ABO;
-
-      ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxImageUniforms =
-         BRW_MAX_IMAGES;
-      ctx->Const.Program[MESA_SHADER_VERTEX].MaxImageUniforms =
-         (brw->intelScreen->compiler->scalar_vs ? BRW_MAX_IMAGES : 0);
-      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxImageUniforms =
-         BRW_MAX_IMAGES;
-      ctx->Const.MaxImageUnits = MAX_IMAGE_UNITS;
-      ctx->Const.MaxCombinedShaderOutputResources =
-         MAX_IMAGE_UNITS + BRW_MAX_DRAW_BUFFERS;
-      ctx->Const.MaxImageSamples = 0;
-      ctx->Const.MaxCombinedImageUniforms = 3 * BRW_MAX_IMAGES;
-   }
-
    /* Gen6 converts quads to polygon in beginning of 3D pipeline,
     * but we're not sure how it's actually done for vertex order,
     * that affect provoking vertex decision. Always use last vertex
@@ -585,21 +575,6 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.ShaderStorageBufferOffsetAlignment = 64;
    ctx->Const.TextureBufferOffsetAlignment = 16;
    ctx->Const.MaxTextureBufferSize = 128 * 1024 * 1024;
-
-   /* FIXME: Tessellation stages are not yet supported in i965, so
-    * MaxCombinedShaderStorageBlocks doesn't take them into account.
-    */
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks = BRW_MAX_SSBO;
-   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxShaderStorageBlocks = BRW_MAX_SSBO;
-   ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxShaderStorageBlocks = 0;
-   ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxShaderStorageBlocks = 0;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks = BRW_MAX_SSBO;
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxShaderStorageBlocks = BRW_MAX_SSBO;
-   ctx->Const.MaxCombinedShaderStorageBlocks = BRW_MAX_SSBO * 3;
-   ctx->Const.MaxShaderStorageBufferBindings = BRW_MAX_SSBO * 3;
-
-   if (_mesa_extension_override_enables.ARB_compute_shader)
-      ctx->Const.MaxShaderStorageBufferBindings += BRW_MAX_SSBO;
 
    if (brw->gen >= 6) {
       ctx->Const.MaxVarying = 32;

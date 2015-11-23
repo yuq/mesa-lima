@@ -89,39 +89,9 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
       brw_reg.abs = reg->abs;
       brw_reg.negate = reg->negate;
       break;
-   case IMM:
-      assert(reg->stride == ((reg->type == BRW_REGISTER_TYPE_V ||
-                              reg->type == BRW_REGISTER_TYPE_UV ||
-                              reg->type == BRW_REGISTER_TYPE_VF) ? 1 : 0));
-
-      switch (reg->type) {
-      case BRW_REGISTER_TYPE_F:
-	 brw_reg = brw_imm_f(reg->f);
-	 break;
-      case BRW_REGISTER_TYPE_D:
-	 brw_reg = brw_imm_d(reg->d);
-	 break;
-      case BRW_REGISTER_TYPE_UD:
-	 brw_reg = brw_imm_ud(reg->ud);
-	 break;
-      case BRW_REGISTER_TYPE_W:
-	 brw_reg = brw_imm_w(reg->d);
-	 break;
-      case BRW_REGISTER_TYPE_UW:
-	 brw_reg = brw_imm_uw(reg->ud);
-	 break;
-      case BRW_REGISTER_TYPE_VF:
-         brw_reg = brw_imm_vf(reg->ud);
-         break;
-      case BRW_REGISTER_TYPE_V:
-         brw_reg = brw_imm_v(reg->ud);
-         break;
-      default:
-	 unreachable("not reached");
-      }
-      break;
    case ARF:
    case FIXED_GRF:
+   case IMM:
       brw_reg = *static_cast<struct brw_reg *>(reg);
       break;
    case BAD_FILE:
@@ -369,6 +339,36 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
       brw_land_fwd_jump(p, jmp);
       fire_fb_write(inst, payload, implied_header, inst->mlen);
    }
+}
+
+void
+fs_generator::generate_mov_indirect(fs_inst *inst,
+                                    struct brw_reg dst,
+                                    struct brw_reg reg,
+                                    struct brw_reg indirect_byte_offset)
+{
+   assert(indirect_byte_offset.type == BRW_REGISTER_TYPE_UD);
+   assert(indirect_byte_offset.file == BRW_GENERAL_REGISTER_FILE);
+
+   unsigned imm_byte_offset = reg.nr * REG_SIZE + reg.subnr;
+
+   /* We use VxH indirect addressing, clobbering a0.0 through a0.7. */
+   struct brw_reg addr = vec8(brw_address_reg(0));
+
+   /* The destination stride of an instruction (in bytes) must be greater
+    * than or equal to the size of the rest of the instruction.  Since the
+    * address register is of type UW, we can't use a D-type instruction.
+    * In order to get around this, re re-type to UW and use a stride.
+    */
+   indirect_byte_offset =
+      retype(spread(indirect_byte_offset, 2), BRW_REGISTER_TYPE_UW);
+
+   /* Prior to Broadwell, there are only 8 address registers. */
+   assert(inst->exec_size == 8 || devinfo->gen >= 8);
+
+   brw_MOV(p, addr, indirect_byte_offset);
+   brw_inst_set_mask_control(devinfo, brw_last_inst, BRW_MASK_DISABLE);
+   brw_MOV(p, dst, retype(brw_VxH_indirect(0, imm_byte_offset), dst.type));
 }
 
 void
@@ -699,6 +699,17 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
       return_format = BRW_SAMPLER_RETURN_FORMAT_FLOAT32;
       break;
    }
+
+   /* Stomp the resinfo output type to UINT32.  On gens 4-5, the output type
+    * is set as part of the message descriptor.  On gen4, the PRM seems to
+    * allow UINT32 and FLOAT32 (i965 PRM, Vol. 4 Section 4.8.1.1), but on
+    * later gens UINT32 is required.  Once you hit Sandy Bridge, the bit is
+    * gone from the message descriptor entirely and you just get UINT32 all
+    * the time regasrdless.  Since we can really only do non-UINT32 on gen4,
+    * just stomp it to UINT32 all the time.
+    */
+   if (inst->opcode == SHADER_OPCODE_TXS)
+      return_format = BRW_SAMPLER_RETURN_FORMAT_UINT32;
 
    switch (inst->exec_size) {
    case 8:
@@ -2086,6 +2097,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 generate_scratch_read_gen7(inst, dst);
          fill_count++;
 	 break;
+
+      case SHADER_OPCODE_MOV_INDIRECT:
+         generate_mov_indirect(inst, dst, src[0], src[1]);
+         break;
 
       case SHADER_OPCODE_URB_READ_SIMD8:
       case SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT:

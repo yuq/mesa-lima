@@ -484,7 +484,7 @@ namespace brw {
             const dst_reg x_times_one_minus_a = vgrf(dst.type);
 
             MUL(y_times_a, y, a);
-            ADD(one_minus_a, negate(a), src_reg(1.0f));
+            ADD(one_minus_a, negate(a), brw_imm_f(1.0f));
             MUL(x_times_one_minus_a, x, src_reg(one_minus_a));
             return ADD(dst, src_reg(x_times_one_minus_a), src_reg(y_times_a));
          }

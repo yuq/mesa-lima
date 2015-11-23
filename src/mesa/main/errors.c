@@ -978,9 +978,13 @@ _mesa_DebugMessageInsert(GLenum source, GLenum type, GLuint id,
                          GLenum severity, GLint length,
                          const GLchar *buf)
 {
-   const char *callerstr = "glDebugMessageInsert";
-
    GET_CURRENT_CONTEXT(ctx);
+   const char *callerstr;
+
+   if (_mesa_is_desktop_gl(ctx))
+      callerstr = "glDebugMessageInsert";
+   else
+      callerstr = "glDebugMessageInsertKHR";
 
    if (!validate_params(ctx, INSERT, callerstr, source, type, severity))
       return; /* GL_INVALID_ENUM */
@@ -1004,15 +1008,21 @@ _mesa_GetDebugMessageLog(GLuint count, GLsizei logSize, GLenum *sources,
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_debug_state *debug;
+   const char *callerstr;
    GLuint ret;
+
+   if (_mesa_is_desktop_gl(ctx))
+      callerstr = "glGetDebugMessageLog";
+   else
+      callerstr = "glGetDebugMessageLogKHR";
 
    if (!messageLog)
       logSize = 0;
 
    if (logSize < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "glGetDebugMessageLog(logSize=%d : logSize must not be"
-                  " negative)", logSize);
+                  "%s(logSize=%d : logSize must not be negative)",
+                  callerstr, logSize);
       return 0;
    }
 
@@ -1066,8 +1076,13 @@ _mesa_DebugMessageControl(GLenum gl_source, GLenum gl_type,
    enum mesa_debug_source source = gl_enum_to_debug_source(gl_source);
    enum mesa_debug_type type = gl_enum_to_debug_type(gl_type);
    enum mesa_debug_severity severity = gl_enum_to_debug_severity(gl_severity);
-   const char *callerstr = "glDebugMessageControl";
+   const char *callerstr;
    struct gl_debug_state *debug;
+
+   if (_mesa_is_desktop_gl(ctx))
+      callerstr = "glDebugMessageControl";
+   else
+      callerstr = "glDebugMessageControlKHR";
 
    if (count < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
@@ -1124,9 +1139,14 @@ _mesa_PushDebugGroup(GLenum source, GLuint id, GLsizei length,
                      const GLchar *message)
 {
    GET_CURRENT_CONTEXT(ctx);
-   const char *callerstr = "glPushDebugGroup";
+   const char *callerstr;
    struct gl_debug_state *debug;
    struct gl_debug_message *emptySlot;
+
+   if (_mesa_is_desktop_gl(ctx))
+      callerstr = "glPushDebugGroup";
+   else
+      callerstr = "glPushDebugGroupKHR";
 
    switch(source) {
    case GL_DEBUG_SOURCE_APPLICATION:
@@ -1176,9 +1196,14 @@ void GLAPIENTRY
 _mesa_PopDebugGroup(void)
 {
    GET_CURRENT_CONTEXT(ctx);
-   const char *callerstr = "glPopDebugGroup";
+   const char *callerstr;
    struct gl_debug_state *debug;
    struct gl_debug_message *gdmessage, msg;
+
+   if (_mesa_is_desktop_gl(ctx))
+      callerstr = "glPopDebugGroup";
+   else
+      callerstr = "glPopDebugGroupKHR";
 
    debug = _mesa_lock_debug_state(ctx);
    if (!debug)

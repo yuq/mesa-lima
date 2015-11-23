@@ -1421,12 +1421,11 @@ ir_dereference::is_lvalue() const
 }
 
 
-static const char * const tex_opcode_strs[] = { "tex", "txb", "txl", "txd", "txf", "txf_ms", "txs", "lod", "tg4", "query_levels", "texture_samples" };
+static const char * const tex_opcode_strs[] = { "tex", "txb", "txl", "txd", "txf", "txf_ms", "txs", "lod", "tg4", "query_levels", "texture_samples", "samples_identical" };
 
 const char *ir_texture::opcode_string()
 {
-   assert((unsigned int) op <=
-	  sizeof(tex_opcode_strs) / sizeof(tex_opcode_strs[0]));
+   assert((unsigned int) op < ARRAY_SIZE(tex_opcode_strs));
    return tex_opcode_strs[op];
 }
 
@@ -1456,6 +1455,10 @@ ir_texture::set_sampler(ir_dereference *sampler, const glsl_type *type)
    } else if (this->op == ir_lod) {
       assert(type->vector_elements == 2);
       assert(type->base_type == GLSL_TYPE_FLOAT);
+   } else if (this->op == ir_samples_identical) {
+      assert(type == glsl_type::bool_type);
+      assert(sampler->type->base_type == GLSL_TYPE_SAMPLER);
+      assert(sampler->type->sampler_dimensionality == GLSL_SAMPLER_DIM_MS);
    } else {
       assert(sampler->type->sampler_type == (int) type->base_type);
       if (sampler->type->sampler_shadow)
@@ -1676,6 +1679,7 @@ ir_variable::ir_variable(const struct glsl_type *type, const char *name,
    this->data.interpolation = INTERP_QUALIFIER_NONE;
    this->data.max_array_access = 0;
    this->data.atomic.offset = 0;
+   this->data.precision = GLSL_PRECISION_NONE;
    this->data.image_read_only = false;
    this->data.image_write_only = false;
    this->data.image_coherent = false;
@@ -1842,6 +1846,7 @@ ir_function_signature::replace_parameters(exec_list *new_params)
 ir_function::ir_function(const char *name)
    : ir_instruction(ir_type_function)
 {
+   this->subroutine_index = -1;
    this->name = ralloc_strdup(this, name);
 }
 

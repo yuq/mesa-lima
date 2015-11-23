@@ -792,6 +792,35 @@ nv50_gp_state_bind(struct pipe_context *pipe, void *hwcso)
     nv50->dirty |= NV50_NEW_GMTYPROG;
 }
 
+static void *
+nv50_cp_state_create(struct pipe_context *pipe,
+                     const struct pipe_compute_state *cso)
+{
+   struct nv50_program *prog;
+
+   prog = CALLOC_STRUCT(nv50_program);
+   if (!prog)
+      return NULL;
+   prog->type = PIPE_SHADER_COMPUTE;
+
+   prog->cp.smem_size = cso->req_local_mem;
+   prog->cp.lmem_size = cso->req_private_mem;
+   prog->parm_size = cso->req_input_mem;
+
+   prog->pipe.tokens = tgsi_dup_tokens((const struct tgsi_token *)cso->prog);
+
+   return (void *)prog;
+}
+
+static void
+nv50_cp_state_bind(struct pipe_context *pipe, void *hwcso)
+{
+   struct nv50_context *nv50 = nv50_context(pipe);
+
+   nv50->compprog = hwcso;
+   nv50->dirty_cp |= NV50_NEW_CP_PROGRAM;
+}
+
 static void
 nv50_set_constant_buffer(struct pipe_context *pipe, uint shader, uint index,
                          struct pipe_constant_buffer *cb)
@@ -1134,6 +1163,70 @@ nv50_set_stream_output_targets(struct pipe_context *pipe,
       nv50->dirty |= NV50_NEW_STRMOUT;
 }
 
+static void
+nv50_set_compute_resources(struct pipe_context *pipe,
+                           unsigned start, unsigned nr,
+                           struct pipe_surface **resources)
+{
+   /* TODO: bind surfaces */
+}
+
+static inline void
+nv50_set_global_handle(uint32_t *phandle, struct pipe_resource *res)
+{
+   struct nv04_resource *buf = nv04_resource(res);
+   if (buf) {
+      uint64_t limit = (buf->address + buf->base.width0) - 1;
+      if (limit < (1ULL << 32)) {
+         *phandle = (uint32_t)buf->address;
+      } else {
+         NOUVEAU_ERR("Cannot map into TGSI_RESOURCE_GLOBAL: "
+                     "resource not contained within 32-bit address space !\n");
+         *phandle = 0;
+      }
+   } else {
+      *phandle = 0;
+   }
+}
+
+static void
+nv50_set_global_bindings(struct pipe_context *pipe,
+                         unsigned start, unsigned nr,
+                         struct pipe_resource **resources,
+                         uint32_t **handles)
+{
+   struct nv50_context *nv50 = nv50_context(pipe);
+   struct pipe_resource **ptr;
+   unsigned i;
+   const unsigned end = start + nr;
+
+   if (nv50->global_residents.size <= (end * sizeof(struct pipe_resource *))) {
+      const unsigned old_size = nv50->global_residents.size;
+      const unsigned req_size = end * sizeof(struct pipe_resource *);
+      util_dynarray_resize(&nv50->global_residents, req_size);
+      memset((uint8_t *)nv50->global_residents.data + old_size, 0,
+             req_size - old_size);
+   }
+
+   if (resources) {
+      ptr = util_dynarray_element(
+         &nv50->global_residents, struct pipe_resource *, start);
+      for (i = 0; i < nr; ++i) {
+         pipe_resource_reference(&ptr[i], resources[i]);
+         nv50_set_global_handle(handles[i], resources[i]);
+      }
+   } else {
+      ptr = util_dynarray_element(
+         &nv50->global_residents, struct pipe_resource *, start);
+      for (i = 0; i < nr; ++i)
+         pipe_resource_reference(&ptr[i], NULL);
+   }
+
+   nouveau_bufctx_reset(nv50->bufctx_cp, NV50_BIND_CP_GLOBAL);
+
+   nv50->dirty_cp = NV50_NEW_CP_GLOBALS;
+}
+
 void
 nv50_init_state_functions(struct nv50_context *nv50)
 {
@@ -1162,12 +1255,15 @@ nv50_init_state_functions(struct nv50_context *nv50)
    pipe->create_vs_state = nv50_vp_state_create;
    pipe->create_fs_state = nv50_fp_state_create;
    pipe->create_gs_state = nv50_gp_state_create;
+   pipe->create_compute_state = nv50_cp_state_create;
    pipe->bind_vs_state = nv50_vp_state_bind;
    pipe->bind_fs_state = nv50_fp_state_bind;
    pipe->bind_gs_state = nv50_gp_state_bind;
+   pipe->bind_compute_state = nv50_cp_state_bind;
    pipe->delete_vs_state = nv50_sp_state_delete;
    pipe->delete_fs_state = nv50_sp_state_delete;
    pipe->delete_gs_state = nv50_sp_state_delete;
+   pipe->delete_compute_state = nv50_sp_state_delete;
 
    pipe->set_blend_color = nv50_set_blend_color;
    pipe->set_stencil_ref = nv50_set_stencil_ref;
@@ -1190,6 +1286,9 @@ nv50_init_state_functions(struct nv50_context *nv50)
    pipe->create_stream_output_target = nv50_so_target_create;
    pipe->stream_output_target_destroy = nv50_so_target_destroy;
    pipe->set_stream_output_targets = nv50_set_stream_output_targets;
+
+   pipe->set_global_binding = nv50_set_global_bindings;
+   pipe->set_compute_resources = nv50_set_compute_resources;
 
    nv50->sample_mask = ~0;
    nv50->min_samples = 1;

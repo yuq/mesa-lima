@@ -39,6 +39,7 @@
 #include "util/u_inlines.h"
 #include "util/u_box.h"
 #include "pipe/p_context.h"
+#include "pipe-loader/pipe_loader.h"
 #include "state_tracker/drisw_api.h"
 #include "state_tracker/st_context.h"
 
@@ -382,7 +383,7 @@ drisw_init_screen(__DRIscreen * sPriv)
 {
    const __DRIconfig **configs;
    struct dri_screen *screen;
-   struct pipe_screen *pscreen;
+   struct pipe_screen *pscreen = NULL;
 
    screen = CALLOC_STRUCT(dri_screen);
    if (!screen)
@@ -396,8 +397,11 @@ drisw_init_screen(__DRIscreen * sPriv)
    sPriv->driverPrivate = (void *)screen;
    sPriv->extensions = drisw_screen_extensions;
 
-   pscreen = drisw_create_screen(&drisw_lf);
-   /* dri_init_screen_helper checks pscreen for us */
+   if (pipe_loader_sw_probe_dri(&screen->dev, &drisw_lf))
+      pscreen = pipe_loader_create_screen(screen->dev);
+
+   if (!pscreen)
+      goto fail;
 
    configs = dri_init_screen_helper(screen, pscreen, "swrast");
    if (!configs)
@@ -406,6 +410,8 @@ drisw_init_screen(__DRIscreen * sPriv)
    return configs;
 fail:
    dri_destroy_screen_helper(screen);
+   if (screen->dev)
+      pipe_loader_release(&screen->dev, 1);
    FREE(screen);
    return NULL;
 }

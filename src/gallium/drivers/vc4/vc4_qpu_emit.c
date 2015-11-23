@@ -311,6 +311,8 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QOP_SEL_X_0_ZC:
                 case QOP_SEL_X_0_NS:
                 case QOP_SEL_X_0_NC:
+                case QOP_SEL_X_0_CS:
+                case QOP_SEL_X_0_CC:
                         queue(c, qpu_a_MOV(dst, src[0]) | unpack);
                         set_last_cond_add(c, qinst->op - QOP_SEL_X_0_ZS +
                                           QPU_COND_ZS);
@@ -324,6 +326,8 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QOP_SEL_X_Y_ZC:
                 case QOP_SEL_X_Y_NS:
                 case QOP_SEL_X_Y_NC:
+                case QOP_SEL_X_Y_CS:
+                case QOP_SEL_X_Y_CC:
                         queue(c, qpu_a_MOV(dst, src[0]));
                         if (qinst->src[0].pack)
                                 *(last_inst(c)) |= unpack;

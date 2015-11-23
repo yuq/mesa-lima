@@ -694,7 +694,7 @@ brw_inst_bits(const brw_inst *inst, unsigned high, unsigned low)
    high %= 64;
    low %= 64;
 
-   const uint64_t mask = (1ull << (high - low + 1)) - 1;
+   const uint64_t mask = (~0ull >> (64 - (high - low + 1)));
 
    return (inst->data[word] >> low) & mask;
 }
@@ -713,7 +713,7 @@ brw_inst_set_bits(brw_inst *inst, unsigned high, unsigned low, uint64_t value)
    high %= 64;
    low %= 64;
 
-   const uint64_t mask = ((1ull << (high - low + 1)) - 1) << low;
+   const uint64_t mask = (~0ull >> (64 - (high - low + 1))) << low;
 
    /* Make sure the supplied value actually fits in the given bitfield. */
    assert((value & (mask >> low)) == value);

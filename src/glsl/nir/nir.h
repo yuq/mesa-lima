@@ -82,6 +82,7 @@ typedef struct {
 } nir_state_slot;
 
 typedef enum {
+   nir_var_all = -1,
    nir_var_shader_in,
    nir_var_shader_out,
    nir_var_global,
@@ -110,6 +111,11 @@ typedef struct nir_constant {
     * scalars, vectors, or matrices.
     */
    union nir_constant_data value;
+
+   /* we could get this from the var->type but makes clone *much* easier to
+    * not have to care about the type.
+    */
+   unsigned num_elements;
 
    /* Array elements / Structure Fields */
    struct nir_constant **elements;
@@ -146,19 +152,6 @@ typedef struct {
     * Declared name of the variable
     */
    char *name;
-
-   /**
-    * For variables which satisfy the is_interface_instance() predicate, this
-    * points to an array of integers such that if the ith member of the
-    * interface block is an array, max_ifc_array_access[i] is the maximum
-    * array element of that member that has been accessed.  If the ith member
-    * of the interface block is not an array, max_ifc_array_access[i] is
-    * unused.
-    *
-    * For variables whose type is not an interface block, this pointer is
-    * NULL.
-    */
-   unsigned *max_ifc_array_access;
 
    struct nir_variable_data {
 
@@ -654,7 +647,7 @@ typedef enum {
    nir_type_invalid = 0, /* Not a valid type */
    nir_type_float,
    nir_type_int,
-   nir_type_unsigned,
+   nir_type_uint,
    nir_type_bool
 } nir_alu_type;
 
@@ -977,6 +970,9 @@ typedef enum {
    nir_texop_tg4,                /**< Texture gather */
    nir_texop_query_levels,       /**< Texture levels query */
    nir_texop_texture_samples,    /**< Texture samples query */
+   nir_texop_samples_identical,  /**< Query whether all samples are definitely
+                                  * identical.
+                                  */
 } nir_texop;
 
 typedef struct {
@@ -1069,6 +1065,7 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
 
    case nir_texop_texture_samples:
    case nir_texop_query_levels:
+   case nir_texop_samples_identical:
       return 1;
 
    default:
@@ -1076,6 +1073,31 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
          return 1;
 
       return 4;
+   }
+}
+
+/* Returns true if this texture operation queries something about the texture
+ * rather than actually sampling it.
+ */
+static inline bool
+nir_tex_instr_is_query(nir_tex_instr *instr)
+{
+   switch (instr->op) {
+   case nir_texop_txs:
+   case nir_texop_lod:
+   case nir_texop_texture_samples:
+   case nir_texop_query_levels:
+      return true;
+   case nir_texop_tex:
+   case nir_texop_txb:
+   case nir_texop_txl:
+   case nir_texop_txd:
+   case nir_texop_txf:
+   case nir_texop_txf_ms:
+   case nir_texop_tg4:
+      return false;
+   default:
+      unreachable("Invalid texture opcode");
    }
 }
 
@@ -1353,6 +1375,7 @@ typedef enum {
    nir_metadata_block_index = 0x1,
    nir_metadata_dominance = 0x2,
    nir_metadata_live_ssa_defs = 0x4,
+   nir_metadata_not_properly_reset = 0x8,
 } nir_metadata;
 
 typedef struct {
@@ -1578,6 +1601,11 @@ typedef struct nir_shader_info {
       struct {
          unsigned local_size[3];
       } cs;
+
+      struct {
+         /** The number of vertices in the TCS output patch. */
+         unsigned vertices_out;
+      } tcs;
    };
 } nir_shader_info;
 
@@ -1910,6 +1938,8 @@ void nir_ssa_dest_init(nir_instr *instr, nir_dest *dest,
 void nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
                       unsigned num_components, const char *name);
 void nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src);
+void nir_ssa_def_rewrite_uses_after(nir_ssa_def *def, nir_src new_src,
+                                    nir_instr *after_me);
 
 /* visits basic blocks in source-code order */
 typedef bool (*nir_foreach_block_cb)(nir_block *block, void *state);
@@ -1937,10 +1967,16 @@ void nir_index_blocks(nir_function_impl *impl);
 void nir_print_shader(nir_shader *shader, FILE *fp);
 void nir_print_instr(const nir_instr *instr, FILE *fp);
 
+nir_shader * nir_shader_clone(void *mem_ctx, const nir_shader *s);
+
 #ifdef DEBUG
 void nir_validate_shader(nir_shader *shader);
+void nir_metadata_set_validation_flag(nir_shader *shader);
+void nir_metadata_check_validation_flag(nir_shader *shader);
 #else
 static inline void nir_validate_shader(nir_shader *shader) { (void) shader; }
+static inline void nir_metadata_set_validation_flag(nir_shader *shader) { (void) shader; }
+static inline void nir_metadata_check_validation_flag(nir_shader *shader) { (void) shader; }
 #endif /* DEBUG */
 
 void nir_calc_dominance_impl(nir_function_impl *impl);
@@ -2032,9 +2068,22 @@ typedef struct nir_lower_tex_options {
    unsigned saturate_s;
    unsigned saturate_t;
    unsigned saturate_r;
+
+   /* Bitmask of samplers that need swizzling.
+    *
+    * If (swizzle_result & (1 << sampler_index)), then the swizzle in
+    * swizzles[sampler_index] is applied to the result of the texturing
+    * operation.
+    */
+   unsigned swizzle_result;
+
+   /* A swizzle for each sampler.  Values 0-3 represent x, y, z, or w swizzles
+    * while 4 and 5 represent 0 and 1 respectively.
+    */
+   uint8_t swizzles[32][4];
 } nir_lower_tex_options;
 
-void nir_lower_tex(nir_shader *shader,
+bool nir_lower_tex(nir_shader *shader,
                    const nir_lower_tex_options *options);
 
 void nir_lower_idiv(nir_shader *shader);

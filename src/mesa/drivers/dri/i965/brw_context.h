@@ -523,6 +523,8 @@ struct brw_tracked_state {
 enum shader_time_shader_type {
    ST_NONE,
    ST_VS,
+   ST_TCS,
+   ST_TES,
    ST_GS,
    ST_FS8,
    ST_FS16,
@@ -1465,6 +1467,8 @@ void brw_upload_image_surfaces(struct brw_context *brw,
 /* brw_surface_formats.c */
 bool brw_render_target_supported(struct brw_context *brw,
                                  struct gl_renderbuffer *rb);
+bool brw_losslessly_compressible_format(struct brw_context *brw,
+                                        uint32_t brw_format);
 uint32_t brw_depth_format(struct brw_context *brw, mesa_format format);
 mesa_format brw_lower_mesa_image_format(const struct brw_device_info *devinfo,
                                         mesa_format format);

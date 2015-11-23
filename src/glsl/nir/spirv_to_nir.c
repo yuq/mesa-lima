@@ -2026,7 +2026,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    switch (glsl_get_sampler_result_type(sampler_type)) {
    case GLSL_TYPE_FLOAT:   instr->dest_type = nir_type_float;     break;
    case GLSL_TYPE_INT:     instr->dest_type = nir_type_int;       break;
-   case GLSL_TYPE_UINT:    instr->dest_type = nir_type_unsigned;  break;
+   case GLSL_TYPE_UINT:    instr->dest_type = nir_type_uint;  break;
    case GLSL_TYPE_BOOL:    instr->dest_type = nir_type_bool;      break;
    default:
       unreachable("Invalid base type for sampler result");

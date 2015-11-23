@@ -456,9 +456,6 @@ trace_screen_create(struct pipe_screen *screen)
 {
    struct trace_screen *tr_scr;
 
-   if(!screen)
-      goto error1;
-
    if (!trace_enabled())
       goto error1;
 

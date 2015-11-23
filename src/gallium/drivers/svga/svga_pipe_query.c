@@ -731,6 +731,7 @@ svga_create_query(struct pipe_context *pipe,
    case SVGA_QUERY_MAP_BUFFER_TIME:
    case SVGA_QUERY_NUM_SURFACE_VIEWS:
    case SVGA_QUERY_NUM_RESOURCES_MAPPED:
+   case SVGA_QUERY_NUM_BYTES_UPLOADED:
       break;
    default:
       assert(!"unexpected query type in svga_create_query()");
@@ -797,6 +798,7 @@ svga_destroy_query(struct pipe_context *pipe, struct pipe_query *q)
    case SVGA_QUERY_MAP_BUFFER_TIME:
    case SVGA_QUERY_NUM_SURFACE_VIEWS:
    case SVGA_QUERY_NUM_RESOURCES_MAPPED:
+   case SVGA_QUERY_NUM_BYTES_UPLOADED:
       /* nothing */
       break;
    default:
@@ -875,6 +877,9 @@ svga_begin_query(struct pipe_context *pipe, struct pipe_query *q)
       break;
    case SVGA_QUERY_NUM_RESOURCES_MAPPED:
       sq->begin_count = svga->hud.num_resources_mapped;
+      break;
+   case SVGA_QUERY_NUM_BYTES_UPLOADED:
+      sq->begin_count = svga->hud.num_bytes_uploaded;
       break;
    case SVGA_QUERY_MEMORY_USED:
    case SVGA_QUERY_NUM_SHADERS:
@@ -965,6 +970,9 @@ svga_end_query(struct pipe_context *pipe, struct pipe_query *q)
       break;
    case SVGA_QUERY_NUM_RESOURCES_MAPPED:
       sq->end_count = svga->hud.num_resources_mapped;
+      break;
+   case SVGA_QUERY_NUM_BYTES_UPLOADED:
+      sq->end_count = svga->hud.num_bytes_uploaded;
       break;
    case SVGA_QUERY_MEMORY_USED:
    case SVGA_QUERY_NUM_SHADERS:
@@ -1061,6 +1069,7 @@ svga_get_query_result(struct pipe_context *pipe,
    case SVGA_QUERY_NUM_FLUSHES:
    case SVGA_QUERY_NUM_VALIDATIONS:
    case SVGA_QUERY_NUM_RESOURCES_MAPPED:
+   case SVGA_QUERY_NUM_BYTES_UPLOADED:
    case SVGA_QUERY_MAP_BUFFER_TIME:
       vresult->u64 = sq->end_count - sq->begin_count;
       break;

@@ -78,6 +78,7 @@ is_expression(const fs_visitor *v, const fs_inst *const inst)
    case FS_OPCODE_LINTERP:
    case SHADER_OPCODE_FIND_LIVE_CHANNEL:
    case SHADER_OPCODE_BROADCAST:
+   case SHADER_OPCODE_MOV_INDIRECT:
       return true;
    case SHADER_OPCODE_RCP:
    case SHADER_OPCODE_RSQ:
@@ -209,6 +210,8 @@ create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
       copy = bld.LOAD_PAYLOAD(inst->dst, payload, sources, header_size);
    } else {
       copy = bld.MOV(inst->dst, src);
+      copy->force_sechalf = inst->force_sechalf;
+      copy->force_writemask_all = inst->force_writemask_all;
       copy->src[0].negate = negate;
    }
    assert(copy->regs_written == written);

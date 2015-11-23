@@ -102,7 +102,6 @@ PUBLIC VAStatus
 VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
 {
    vlVaDriver *drv;
-   int drm_fd;
    struct drm_state *drm_info;
 
    if (!ctx)
@@ -119,26 +118,20 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
       return VA_STATUS_ERROR_UNIMPLEMENTED;
    case VA_DISPLAY_GLX:
    case VA_DISPLAY_X11:
-      drv->vscreen = vl_screen_create(ctx->native_dpy, ctx->x11_screen);
+      drv->vscreen = vl_dri2_screen_create(ctx->native_dpy, ctx->x11_screen);
       if (!drv->vscreen)
          goto error_screen;
       break;
    case VA_DISPLAY_DRM:
    case VA_DISPLAY_DRM_RENDERNODES: {
       drm_info = (struct drm_state *) ctx->drm_state;
-      if (!drm_info) {
+
+      if (!drm_info || drm_info->fd < 0) {
          FREE(drv);
          return VA_STATUS_ERROR_INVALID_PARAMETER;
       }
 
-      drm_fd = drm_info->fd;
-
-      if (drm_fd < 0) {
-         FREE(drv);
-         return VA_STATUS_ERROR_INVALID_PARAMETER;
-      }
-
-      drv->vscreen = vl_drm_screen_create(drm_fd);
+      drv->vscreen = vl_drm_screen_create(drm_info->fd);
       if (!drv->vscreen)
          goto error_screen;
       }
@@ -182,10 +175,7 @@ error_htab:
    drv->pipe->destroy(drv->pipe);
 
 error_pipe:
-   if (ctx->display_type == VA_DISPLAY_GLX || ctx->display_type == VA_DISPLAY_X11)
-      vl_screen_destroy(drv->vscreen);
-   else
-      vl_drm_screen_destroy(drv->vscreen);
+   drv->vscreen->destroy(drv->vscreen);
 
 error_screen:
    FREE(drv);
@@ -322,10 +312,7 @@ vlVaTerminate(VADriverContextP ctx)
    vl_compositor_cleanup_state(&drv->cstate);
    vl_compositor_cleanup(&drv->compositor);
    drv->pipe->destroy(drv->pipe);
-   if (ctx->display_type == VA_DISPLAY_GLX || ctx->display_type == VA_DISPLAY_X11)
-      vl_screen_destroy(drv->vscreen);
-   else
-      vl_drm_screen_destroy(drv->vscreen);
+   drv->vscreen->destroy(drv->vscreen);
    handle_table_destroy(drv->htab);
    FREE(drv);
 

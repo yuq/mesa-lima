@@ -65,7 +65,7 @@ gen6_gs_visitor::emit_prolog()
                                  (prog_data->vue_map.num_slots + 1) *
                                  nir->info.gs.vertices_out);
    this->vertex_output_offset = src_reg(this, glsl_type::uint_type);
-   emit(MOV(dst_reg(this->vertex_output_offset), src_reg(0u)));
+   emit(MOV(dst_reg(this->vertex_output_offset), brw_imm_ud(0u)));
 
    /* MRF 1 will be the header for all messages (FF_SYNC and URB_WRITES),
     * so initialize it once to R0.
@@ -87,13 +87,13 @@ gen6_gs_visitor::emit_prolog()
     * headers.
     */
    this->first_vertex = src_reg(this, glsl_type::uint_type);
-   emit(MOV(dst_reg(this->first_vertex), URB_WRITE_PRIM_START));
+   emit(MOV(dst_reg(this->first_vertex), brw_imm_ud(URB_WRITE_PRIM_START)));
 
    /* The FF_SYNC message requires to know the number of primitives generated,
     * so keep a counter for this.
     */
    this->prim_count = src_reg(this, glsl_type::uint_type);
-   emit(MOV(dst_reg(this->prim_count), 0u));
+   emit(MOV(dst_reg(this->prim_count), brw_imm_ud(0u)));
 
    if (gs_prog_data->gen6_xfb_enabled) {
       /* Create a virtual register to hold destination indices in SOL */
@@ -170,7 +170,7 @@ gen6_gs_visitor::gs_emit_vertex(int stream_id)
       }
 
       emit(ADD(dst_reg(this->vertex_output_offset),
-               this->vertex_output_offset, 1u));
+               this->vertex_output_offset, brw_imm_ud(1u)));
    }
 
    /* Now buffer flags for this vertex */
@@ -181,9 +181,9 @@ gen6_gs_visitor::gs_emit_vertex(int stream_id)
       /* If we are outputting points, then every vertex has PrimStart and
        * PrimEnd set.
        */
-      emit(MOV(dst, (_3DPRIM_POINTLIST << URB_WRITE_PRIM_TYPE_SHIFT) |
-               URB_WRITE_PRIM_START | URB_WRITE_PRIM_END));
-      emit(ADD(dst_reg(this->prim_count), this->prim_count, 1u));
+      emit(MOV(dst, brw_imm_d((_3DPRIM_POINTLIST << URB_WRITE_PRIM_TYPE_SHIFT) |
+                              URB_WRITE_PRIM_START | URB_WRITE_PRIM_END)));
+      emit(ADD(dst_reg(this->prim_count), this->prim_count, brw_imm_ud(1u)));
    } else {
       /* Otherwise, we can only set the PrimStart flag, which we have stored
        * in the first_vertex register. We will have to wait until we execute
@@ -191,11 +191,12 @@ gen6_gs_visitor::gs_emit_vertex(int stream_id)
        * vertex.
        */
       emit(OR(dst, this->first_vertex,
-              (gs_prog_data->output_topology << URB_WRITE_PRIM_TYPE_SHIFT)));
-      emit(MOV(dst_reg(this->first_vertex), 0u));
+              brw_imm_ud(gs_prog_data->output_topology <<
+                         URB_WRITE_PRIM_TYPE_SHIFT)));
+      emit(MOV(dst_reg(this->first_vertex), brw_imm_ud(0u)));
    }
    emit(ADD(dst_reg(this->vertex_output_offset),
-            this->vertex_output_offset, 1u));
+            this->vertex_output_offset, brw_imm_ud(1u)));
 }
 
 void
@@ -218,10 +219,10 @@ gen6_gs_visitor::gs_end_primitive()
     * below).
     */
    unsigned num_output_vertices = nir->info.gs.vertices_out;
-   emit(CMP(dst_null_d(), this->vertex_count, src_reg(num_output_vertices + 1),
-            BRW_CONDITIONAL_L));
-   vec4_instruction *inst = emit(CMP(dst_null_d(),
-                                     this->vertex_count, 0u,
+   emit(CMP(dst_null_ud(), this->vertex_count,
+            brw_imm_ud(num_output_vertices + 1), BRW_CONDITIONAL_L));
+   vec4_instruction *inst = emit(CMP(dst_null_ud(),
+                                     this->vertex_count, brw_imm_ud(0u),
                                      BRW_CONDITIONAL_NEQ));
    inst->predicate = BRW_PREDICATE_NORMAL;
    emit(IF(BRW_PREDICATE_NORMAL));
@@ -231,19 +232,19 @@ gen6_gs_visitor::gs_end_primitive()
        * vertex.
        */
       src_reg offset(this, glsl_type::uint_type);
-      emit(ADD(dst_reg(offset), this->vertex_output_offset, src_reg(-1)));
+      emit(ADD(dst_reg(offset), this->vertex_output_offset, brw_imm_d(-1)));
 
       src_reg dst(this->vertex_output);
       dst.reladdr = ralloc(mem_ctx, src_reg);
       memcpy(dst.reladdr, &offset, sizeof(src_reg));
 
-      emit(OR(dst_reg(dst), dst, URB_WRITE_PRIM_END));
-      emit(ADD(dst_reg(this->prim_count), this->prim_count, 1u));
+      emit(OR(dst_reg(dst), dst, brw_imm_d(URB_WRITE_PRIM_END)));
+      emit(ADD(dst_reg(this->prim_count), this->prim_count, brw_imm_ud(1u)));
 
       /* Set the first vertex flag to indicate that the next vertex will start
        * a primitive.
        */
-      emit(MOV(dst_reg(this->first_vertex), URB_WRITE_PRIM_START));
+      emit(MOV(dst_reg(this->first_vertex), brw_imm_d(URB_WRITE_PRIM_START)));
    }
    emit(BRW_OPCODE_ENDIF);
 }
@@ -262,7 +263,8 @@ gen6_gs_visitor::emit_urb_write_header(int mrf)
     */
    src_reg flags_offset(this, glsl_type::uint_type);
    emit(ADD(dst_reg(flags_offset),
-            this->vertex_output_offset, src_reg(prog_data->vue_map.num_slots)));
+            this->vertex_output_offset,
+            brw_imm_d(prog_data->vue_map.num_slots)));
 
    src_reg flags_data(this->vertex_output);
    flags_data.reladdr = ralloc(mem_ctx, src_reg);
@@ -321,7 +323,7 @@ gen6_gs_visitor::emit_thread_end()
     * points because in the point case we set PrimEnd on all vertices.
     */
    if (nir->info.gs.output_primitive != GL_POINTS) {
-      emit(CMP(dst_null_d(), this->first_vertex, 0u, BRW_CONDITIONAL_Z));
+      emit(CMP(dst_null_ud(), this->first_vertex, brw_imm_ud(0u), BRW_CONDITIONAL_Z));
       emit(IF(BRW_PREDICATE_NORMAL));
       gs_end_primitive();
       emit(BRW_OPCODE_ENDIF);
@@ -347,7 +349,7 @@ gen6_gs_visitor::emit_thread_end()
    int max_usable_mrf = FIRST_SPILL_MRF(devinfo->gen);
 
    /* Issue the FF_SYNC message and obtain the initial VUE handle. */
-   emit(CMP(dst_null_d(), this->vertex_count, 0u, BRW_CONDITIONAL_G));
+   emit(CMP(dst_null_ud(), this->vertex_count, brw_imm_ud(0u), BRW_CONDITIONAL_G));
    emit(IF(BRW_PREDICATE_NORMAL));
    {
       this->current_annotation = "gen6 thread end: ff_sync";
@@ -364,15 +366,15 @@ gen6_gs_visitor::emit_thread_end()
                      dst_reg(this->temp), this->prim_count, this->svbi);
       } else {
          inst = emit(GS_OPCODE_FF_SYNC,
-                     dst_reg(this->temp), this->prim_count, src_reg(0u));
+                     dst_reg(this->temp), this->prim_count, brw_imm_ud(0u));
       }
       inst->base_mrf = base_mrf;
 
       /* Loop over all buffered vertices and emit URB write messages */
       this->current_annotation = "gen6 thread end: urb writes init";
       src_reg vertex(this, glsl_type::uint_type);
-      emit(MOV(dst_reg(vertex), 0u));
-      emit(MOV(dst_reg(this->vertex_output_offset), 0u));
+      emit(MOV(dst_reg(vertex), brw_imm_ud(0u)));
+      emit(MOV(dst_reg(this->vertex_output_offset), brw_imm_ud(0u)));
 
       this->current_annotation = "gen6 thread end: urb writes";
       emit(BRW_OPCODE_DO);
@@ -416,7 +418,7 @@ gen6_gs_visitor::emit_thread_end()
 
                mrf++;
                emit(ADD(dst_reg(this->vertex_output_offset),
-                        this->vertex_output_offset, 1u));
+                        this->vertex_output_offset, brw_imm_ud(1u)));
 
                /* If this was max_usable_mrf, we can't fit anything more into
                 * this URB WRITE. Same if we reached the max. message length.
@@ -437,9 +439,9 @@ gen6_gs_visitor::emit_thread_end()
           * writing the next vertex.
           */
          emit(ADD(dst_reg(this->vertex_output_offset),
-                  this->vertex_output_offset, 1u));
+                  this->vertex_output_offset, brw_imm_ud(1u)));
 
-         emit(ADD(dst_reg(vertex), vertex, 1u));
+         emit(ADD(dst_reg(vertex), vertex, brw_imm_ud(1u)));
       }
       emit(BRW_OPCODE_WHILE);
 
@@ -468,8 +470,8 @@ gen6_gs_visitor::emit_thread_end()
    if (gs_prog_data->gen6_xfb_enabled) {
       /* When emitting EOT, set SONumPrimsWritten Increment Value. */
       src_reg data(this, glsl_type::uint_type);
-      emit(AND(dst_reg(data), this->sol_prim_written, src_reg(0xffffu)));
-      emit(SHL(dst_reg(data), data, src_reg(16u)));
+      emit(AND(dst_reg(data), this->sol_prim_written, brw_imm_ud(0xffffu)));
+      emit(SHL(dst_reg(data), data, brw_imm_ud(16u)));
       emit(GS_OPCODE_SET_DWORD_2, dst_reg(MRF, base_mrf), data);
    }
 
@@ -588,8 +590,8 @@ gen6_gs_visitor::xfb_write()
 
    this->current_annotation = "gen6 thread end: svb writes init";
 
-   emit(MOV(dst_reg(this->vertex_output_offset), 0u));
-   emit(MOV(dst_reg(this->sol_prim_written), 0u));
+   emit(MOV(dst_reg(this->vertex_output_offset), brw_imm_ud(0u)));
+   emit(MOV(dst_reg(this->sol_prim_written), brw_imm_ud(0u)));
 
    /* Check that at least one primitive can be written
     *
@@ -600,7 +602,7 @@ gen6_gs_visitor::xfb_write()
     * transform feedback is in interleaved or separate attribs mode.
     */
    src_reg sol_temp(this, glsl_type::uvec4_type);
-   emit(ADD(dst_reg(sol_temp), this->svbi, src_reg(num_verts)));
+   emit(ADD(dst_reg(sol_temp), this->svbi, brw_imm_ud(num_verts)));
 
    /* Compare SVBI calculated number with the maximum value, which is
     * in R1.4 (previously saved in this->max_svbi) for gen6.
@@ -623,7 +625,7 @@ gen6_gs_visitor::xfb_write()
 
    /* Write transform feedback data for all processed vertices. */
    for (int i = 0; i < (int)nir->info.gs.vertices_out; i++) {
-      emit(MOV(dst_reg(sol_temp), i));
+      emit(MOV(dst_reg(sol_temp), brw_imm_d(i)));
       emit(CMP(dst_null_d(), sol_temp, this->vertex_count,
                BRW_CONDITIONAL_L));
       emit(IF(BRW_PREDICATE_NORMAL));
@@ -644,8 +646,8 @@ gen6_gs_visitor::xfb_program(unsigned vertex, unsigned num_verts)
    /* Check for buffer overflow: we need room to write the complete primitive
     * (all vertices). Otherwise, avoid writing any vertices for it
     */
-   emit(ADD(dst_reg(sol_temp), this->sol_prim_written, 1u));
-   emit(MUL(dst_reg(sol_temp), sol_temp, src_reg(num_verts)));
+   emit(ADD(dst_reg(sol_temp), this->sol_prim_written, brw_imm_ud(1u)));
+   emit(MUL(dst_reg(sol_temp), sol_temp, brw_imm_ud(num_verts)));
    emit(ADD(dst_reg(sol_temp), sol_temp, this->svbi));
    emit(CMP(dst_null_d(), sol_temp, this->max_svbi, BRW_CONDITIONAL_LE));
    emit(IF(BRW_PREDICATE_NORMAL));
@@ -683,7 +685,7 @@ gen6_gs_visitor::xfb_program(unsigned vertex, unsigned num_verts)
          src_reg data(this->vertex_output);
          data.reladdr = ralloc(mem_ctx, src_reg);
          int offset = get_vertex_output_offset_for_varying(vertex, varying);
-         emit(MOV(dst_reg(this->vertex_output_offset), offset));
+         emit(MOV(dst_reg(this->vertex_output_offset), brw_imm_d(offset)));
          memcpy(data.reladdr, &this->vertex_output_offset, sizeof(src_reg));
          data.type = output_reg[varying].type;
 
@@ -710,9 +712,9 @@ gen6_gs_visitor::xfb_program(unsigned vertex, unsigned num_verts)
              */
             emit(ADD(dst_reg(this->destination_indices),
                      this->destination_indices,
-                     src_reg(num_verts)));
+                     brw_imm_ud(num_verts)));
             emit(ADD(dst_reg(this->sol_prim_written),
-                     this->sol_prim_written, 1u));
+                     this->sol_prim_written, brw_imm_ud(1u)));
          }
 
       }

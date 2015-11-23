@@ -81,7 +81,9 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_RING(ring, info->primitive_restart ? /* PC_RESTART_INDEX */
 			info->restart_index : 0xffffffff);
 
+	/* points + psize -> spritelist: */
 	if (ctx->rasterizer->point_size_per_vertex &&
+			fd3_emit_get_vp(emit)->writes_psize &&
 			(info->mode == PIPE_PRIM_POINTS))
 		primtype = DI_PT_POINTLIST_PSIZE;
 

@@ -13,8 +13,8 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2015-05-20 20:03:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10755 bytes, from 2015-09-14 20:46:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14968 bytes, from 2015-05-20 20:12:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  67771 bytes, from 2015-09-14 20:46:55)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  63914 bytes, from 2015-10-27 17:13:16)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  68291 bytes, from 2015-11-17 16:39:59)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  64038 bytes, from 2015-11-17 16:37:36)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2015 by the following authors:
@@ -111,10 +111,14 @@ enum a3xx_vtx_fmt {
 	VFMT_8_8_SNORM = 53,
 	VFMT_8_8_8_SNORM = 54,
 	VFMT_8_8_8_8_SNORM = 55,
-	VFMT_10_10_10_2_UINT = 60,
-	VFMT_10_10_10_2_UNORM = 61,
-	VFMT_10_10_10_2_SINT = 62,
-	VFMT_10_10_10_2_SNORM = 63,
+	VFMT_10_10_10_2_UINT = 56,
+	VFMT_10_10_10_2_UNORM = 57,
+	VFMT_10_10_10_2_SINT = 58,
+	VFMT_10_10_10_2_SNORM = 59,
+	VFMT_2_10_10_10_UINT = 60,
+	VFMT_2_10_10_10_UNORM = 61,
+	VFMT_2_10_10_10_SINT = 62,
+	VFMT_2_10_10_10_SNORM = 63,
 };
 
 enum a3xx_tex_fmt {
@@ -138,10 +142,12 @@ enum a3xx_tex_fmt {
 	TFMT_DXT1 = 36,
 	TFMT_DXT3 = 37,
 	TFMT_DXT5 = 38,
+	TFMT_2_10_10_10_UNORM = 40,
 	TFMT_10_10_10_2_UNORM = 41,
 	TFMT_9_9_9_E5_FLOAT = 42,
 	TFMT_11_11_10_FLOAT = 43,
 	TFMT_A8_UNORM = 44,
+	TFMT_L8_UNORM = 45,
 	TFMT_L8_A8_UNORM = 47,
 	TFMT_8_UNORM = 48,
 	TFMT_8_8_UNORM = 49,
@@ -183,6 +189,8 @@ enum a3xx_tex_fmt {
 	TFMT_32_SINT = 92,
 	TFMT_32_32_SINT = 93,
 	TFMT_32_32_32_32_SINT = 95,
+	TFMT_2_10_10_10_UINT = 96,
+	TFMT_10_10_10_2_UINT = 97,
 	TFMT_ETC2_RG11_SNORM = 112,
 	TFMT_ETC2_RG11_UNORM = 113,
 	TFMT_ETC2_R11_SNORM = 114,
@@ -215,6 +223,9 @@ enum a3xx_color_fmt {
 	RB_R8_UINT = 14,
 	RB_R8_SINT = 15,
 	RB_R10G10B10A2_UNORM = 16,
+	RB_A2R10G10B10_UNORM = 17,
+	RB_R10G10B10A2_UINT = 18,
+	RB_A2R10G10B10_UINT = 19,
 	RB_A8_UNORM = 20,
 	RB_R8_UNORM = 21,
 	RB_R16_FLOAT = 24,
@@ -249,25 +260,6 @@ enum a3xx_sp_perfcounter_select {
 	SP_FS_FULL_ALU_INSTRUCTIONS = 14,
 	SP0_ICL1_MISSES = 26,
 	SP_ALU_ACTIVE_CYCLES = 29,
-};
-
-enum a3xx_rop_code {
-	ROP_CLEAR = 0,
-	ROP_NOR = 1,
-	ROP_AND_INVERTED = 2,
-	ROP_COPY_INVERTED = 3,
-	ROP_AND_REVERSE = 4,
-	ROP_INVERT = 5,
-	ROP_XOR = 6,
-	ROP_NAND = 7,
-	ROP_AND = 8,
-	ROP_EQUIV = 9,
-	ROP_NOOP = 10,
-	ROP_OR_INVERTED = 11,
-	ROP_COPY = 12,
-	ROP_OR_REVERSE = 13,
-	ROP_OR = 14,
-	ROP_SET = 15,
 };
 
 enum a3xx_rb_blend_opcode {
@@ -1620,11 +1612,23 @@ static inline uint32_t A3XX_VFD_CONTROL_0_STRMFETCHINSTRCNT(uint32_t val)
 }
 
 #define REG_A3XX_VFD_CONTROL_1					0x00002241
-#define A3XX_VFD_CONTROL_1_MAXSTORAGE__MASK			0x0000ffff
+#define A3XX_VFD_CONTROL_1_MAXSTORAGE__MASK			0x0000000f
 #define A3XX_VFD_CONTROL_1_MAXSTORAGE__SHIFT			0
 static inline uint32_t A3XX_VFD_CONTROL_1_MAXSTORAGE(uint32_t val)
 {
 	return ((val) << A3XX_VFD_CONTROL_1_MAXSTORAGE__SHIFT) & A3XX_VFD_CONTROL_1_MAXSTORAGE__MASK;
+}
+#define A3XX_VFD_CONTROL_1_MAXTHRESHOLD__MASK			0x000000f0
+#define A3XX_VFD_CONTROL_1_MAXTHRESHOLD__SHIFT			4
+static inline uint32_t A3XX_VFD_CONTROL_1_MAXTHRESHOLD(uint32_t val)
+{
+	return ((val) << A3XX_VFD_CONTROL_1_MAXTHRESHOLD__SHIFT) & A3XX_VFD_CONTROL_1_MAXTHRESHOLD__MASK;
+}
+#define A3XX_VFD_CONTROL_1_MINTHRESHOLD__MASK			0x00000f00
+#define A3XX_VFD_CONTROL_1_MINTHRESHOLD__SHIFT			8
+static inline uint32_t A3XX_VFD_CONTROL_1_MINTHRESHOLD(uint32_t val)
+{
+	return ((val) << A3XX_VFD_CONTROL_1_MINTHRESHOLD__SHIFT) & A3XX_VFD_CONTROL_1_MINTHRESHOLD__MASK;
 }
 #define A3XX_VFD_CONTROL_1_REGID4VTX__MASK			0x00ff0000
 #define A3XX_VFD_CONTROL_1_REGID4VTX__SHIFT			16

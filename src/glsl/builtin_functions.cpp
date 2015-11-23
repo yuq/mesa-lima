@@ -290,6 +290,20 @@ texture_multisample_array(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+texture_samples_identical(const _mesa_glsl_parse_state *state)
+{
+   return texture_multisample(state) &&
+          state->EXT_shader_samples_identical_enable;
+}
+
+static bool
+texture_samples_identical_array(const _mesa_glsl_parse_state *state)
+{
+   return texture_multisample_array(state) &&
+          state->EXT_shader_samples_identical_enable;
+}
+
+static bool
 fs_texture_cube_map_array(const _mesa_glsl_parse_state *state)
 {
    return state->stage == MESA_SHADER_FRAGMENT &&
@@ -724,6 +738,7 @@ private:
 
    BA2(textureQueryLod);
    B1(textureQueryLevels);
+   BA2(textureSamplesIdentical);
    B1(dFdx);
    B1(dFdy);
    B1(fwidth);
@@ -2210,6 +2225,16 @@ builtin_builder::create_builtins()
 
                 NULL);
 
+   add_function("textureSamplesIdenticalEXT",
+                _textureSamplesIdentical(texture_samples_identical, glsl_type::sampler2DMS_type,  glsl_type::ivec2_type),
+                _textureSamplesIdentical(texture_samples_identical, glsl_type::isampler2DMS_type, glsl_type::ivec2_type),
+                _textureSamplesIdentical(texture_samples_identical, glsl_type::usampler2DMS_type, glsl_type::ivec2_type),
+
+                _textureSamplesIdentical(texture_samples_identical_array, glsl_type::sampler2DMSArray_type,  glsl_type::ivec3_type),
+                _textureSamplesIdentical(texture_samples_identical_array, glsl_type::isampler2DMSArray_type, glsl_type::ivec3_type),
+                _textureSamplesIdentical(texture_samples_identical_array, glsl_type::usampler2DMSArray_type, glsl_type::ivec3_type),
+                NULL);
+
    add_function("texture1D",
                 _texture(ir_tex, v110,         glsl_type::vec4_type,  glsl_type::sampler1D_type, glsl_type::float_type),
                 _texture(ir_txb, v110_fs_only, glsl_type::vec4_type,  glsl_type::sampler1D_type, glsl_type::float_type),
@@ -3573,7 +3598,16 @@ builtin_builder::_isinf(builtin_available_predicate avail, const glsl_type *type
 
    ir_constant_data infinities;
    for (int i = 0; i < type->vector_elements; i++) {
-      infinities.f[i] = INFINITY;
+      switch (type->base_type) {
+      case GLSL_TYPE_FLOAT:
+         infinities.f[i] = INFINITY;
+         break;
+      case GLSL_TYPE_DOUBLE:
+         infinities.d[i] = INFINITY;
+         break;
+      default:
+         unreachable("unknown type");
+      }
    }
 
    body.emit(ret(equal(abs(x), imm(type, infinities))));
@@ -4675,6 +4709,25 @@ builtin_builder::_textureQueryLevels(const glsl_type *sampler_type)
    return sig;
 }
 
+ir_function_signature *
+builtin_builder::_textureSamplesIdentical(builtin_available_predicate avail,
+                                          const glsl_type *sampler_type,
+                                          const glsl_type *coord_type)
+{
+   ir_variable *s = in_var(sampler_type, "sampler");
+   ir_variable *P = in_var(coord_type, "P");
+   const glsl_type *return_type = glsl_type::bool_type;
+   MAKE_SIG(return_type, avail, 2, s, P);
+
+   ir_texture *tex = new(mem_ctx) ir_texture(ir_samples_identical);
+   tex->coordinate = var_ref(P);
+   tex->set_sampler(var_ref(s), return_type);
+
+   body.emit(ret(tex));
+
+   return sig;
+}
+
 UNOP(dFdx, ir_unop_dFdx, fs_oes_derivatives)
 UNOP(dFdxCoarse, ir_unop_dFdx_coarse, fs_derivative_control)
 UNOP(dFdxFine, ir_unop_dFdx_fine, fs_derivative_control)
@@ -5243,8 +5296,8 @@ builtin_builder::_image_size_prototype(const glsl_type *image_type,
 
 ir_function_signature *
 builtin_builder::_image_samples_prototype(const glsl_type *image_type,
-                                          unsigned num_arguments,
-                                          unsigned flags)
+                                          unsigned /* num_arguments */,
+                                          unsigned /* flags */)
 {
    ir_variable *image = in_var(image_type, "image");
    ir_function_signature *sig =

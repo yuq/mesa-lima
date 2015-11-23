@@ -1291,6 +1291,16 @@ enum opcode {
     * Calculate the high 32-bits of a 32x32 multiply.
     */
    SHADER_OPCODE_MULH,
+
+   /**
+    * A MOV that uses VxH indirect addressing.
+    *
+    * Source 0: A register to start from (HW_REG).
+    * Source 1: An indirect offset (in bytes, UD GRF).
+    * Source 2: The length of the region that could be accessed (in bytes,
+    *           UD immediate).
+    */
+   SHADER_OPCODE_MOV_INDIRECT,
 };
 
 enum brw_urb_write_flags {
@@ -1930,8 +1940,14 @@ enum brw_message_target {
 
 /* Gen7 "GS URB Entry Allocation Size" is a U9-1 field, so the maximum gs_size
  * is 2^9, or 512.  It's counted in multiples of 64 bytes.
+ *
+ * Identical for VS, DS, and HS.
  */
 #define GEN7_MAX_GS_URB_ENTRY_SIZE_BYTES                (512*64)
+#define GEN7_MAX_DS_URB_ENTRY_SIZE_BYTES                (512*64)
+#define GEN7_MAX_HS_URB_ENTRY_SIZE_BYTES                (512*64)
+#define GEN7_MAX_VS_URB_ENTRY_SIZE_BYTES                (512*64)
+
 /* Gen6 "GS URB Entry Allocation Size" is defined as a number of 1024-bit
  * (128 bytes) URB rows and the maximum allowed value is 5 rows.
  */

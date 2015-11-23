@@ -34,6 +34,7 @@ struct brw_surface_format_info {
    int input_vb;
    int streamed_output_vb;
    int color_processing;
+   int lossless_compression;
    const char *name;
 };
 

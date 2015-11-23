@@ -8,8 +8,19 @@
 
 #define NVA0_HW_QUERY_STREAM_OUTPUT_BUFFER_OFFSET (PIPE_QUERY_TYPES + 0)
 
+struct nv50_hw_query;
+
+struct nv50_hw_query_funcs {
+   void (*destroy_query)(struct nv50_context *, struct nv50_hw_query *);
+   boolean (*begin_query)(struct nv50_context *, struct nv50_hw_query *);
+   void (*end_query)(struct nv50_context *, struct nv50_hw_query *);
+   boolean (*get_query_result)(struct nv50_context *, struct nv50_hw_query *,
+                               boolean, union pipe_query_result *);
+};
+
 struct nv50_hw_query {
    struct nv50_query base;
+   const struct nv50_hw_query_funcs *funcs;
    uint32_t *data;
    uint32_t sequence;
    struct nouveau_bo *bo;
@@ -31,6 +42,11 @@ nv50_hw_query(struct nv50_query *q)
 
 struct nv50_query *
 nv50_hw_create_query(struct nv50_context *, unsigned, unsigned);
+int
+nv50_hw_get_driver_query_info(struct nv50_screen *, unsigned,
+                              struct pipe_driver_query_info *);
+bool
+nv50_hw_query_allocate(struct nv50_context *, struct nv50_query *, int);
 void
 nv50_hw_query_pushbuf_submit(struct nouveau_pushbuf *, uint16_t,
                              struct nv50_query *, unsigned);

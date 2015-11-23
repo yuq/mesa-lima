@@ -1177,6 +1177,33 @@ emit_alu(struct ir3_compile *ctx, nir_alu_instr *alu)
 		dst[0] = ir3_SEL_B32(b, src[1], 0, ir3_b2n(b, src[0]), 0, src[2], 0);
 		break;
 
+	case nir_op_bit_count:
+		dst[0] = ir3_CBITS_B(b, src[0], 0);
+		break;
+	case nir_op_ifind_msb: {
+		struct ir3_instruction *cmp;
+		dst[0] = ir3_CLZ_S(b, src[0], 0);
+		cmp = ir3_CMPS_S(b, dst[0], 0, create_immed(b, 0), 0);
+		cmp->cat2.condition = IR3_COND_GE;
+		dst[0] = ir3_SEL_B32(b,
+				ir3_SUB_U(b, create_immed(b, 31), 0, dst[0], 0), 0,
+				cmp, 0, dst[0], 0);
+		break;
+	}
+	case nir_op_ufind_msb:
+		dst[0] = ir3_CLZ_B(b, src[0], 0);
+		dst[0] = ir3_SEL_B32(b,
+				ir3_SUB_U(b, create_immed(b, 31), 0, dst[0], 0), 0,
+				src[0], 0, dst[0], 0);
+		break;
+	case nir_op_find_lsb:
+		dst[0] = ir3_BFREV_B(b, src[0], 0);
+		dst[0] = ir3_CLZ_B(b, dst[0], 0);
+		break;
+	case nir_op_bitfield_reverse:
+		dst[0] = ir3_BFREV_B(b, src[0], 0);
+		break;
+
 	default:
 		compile_error(ctx, "Unhandled ALU op: %s\n",
 				nir_op_infos[alu->op].name);
@@ -1547,10 +1574,10 @@ tex_info(nir_tex_instr *tex, unsigned *flagsp, unsigned *coordsp)
 		unreachable("bad sampler_dim");
 	}
 
-	if (tex->is_shadow)
+	if (tex->is_shadow && tex->op != nir_texop_lod)
 		flags |= IR3_INSTR_S;
 
-	if (tex->is_array)
+	if (tex->is_array && tex->op != nir_texop_lod)
 		flags |= IR3_INSTR_A;
 
 	*flagsp = flags;
@@ -1618,12 +1645,13 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	case nir_texop_txl:      opc = OPC_SAML;     break;
 	case nir_texop_txd:      opc = OPC_SAMGQ;    break;
 	case nir_texop_txf:      opc = OPC_ISAML;    break;
+	case nir_texop_lod:      opc = OPC_GETLOD;   break;
 	case nir_texop_txf_ms:
 	case nir_texop_txs:
-	case nir_texop_lod:
 	case nir_texop_tg4:
 	case nir_texop_query_levels:
 	case nir_texop_texture_samples:
+	case nir_texop_samples_identical:
 		compile_error(ctx, "Unhandled NIR tex type: %d\n", tex->op);
 		return;
 	}
@@ -1665,10 +1693,10 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		src0[nsrc0++] = create_immed(b, fui(0.5));
 	}
 
-	if (tex->is_shadow)
+	if (tex->is_shadow && tex->op != nir_texop_lod)
 		src0[nsrc0++] = compare;
 
-	if (tex->is_array)
+	if (tex->is_array && tex->op != nir_texop_lod)
 		src0[nsrc0++] = coord[coords];
 
 	if (has_proj) {
@@ -1717,7 +1745,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	case nir_type_int:
 		type = TYPE_S32;
 		break;
-	case nir_type_unsigned:
+	case nir_type_uint:
 	case nir_type_bool:
 		type = TYPE_U32;
 		break;
@@ -1725,12 +1753,26 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		unreachable("bad dest_type");
 	}
 
+	if (opc == OPC_GETLOD)
+		type = TYPE_U32;
+
 	sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_XYZW,
 			flags, tex->sampler_index, tex->sampler_index,
 			create_collect(b, src0, nsrc0),
 			create_collect(b, src1, nsrc1));
 
 	split_dest(b, dst, sam, 4);
+
+	/* GETLOD returns results in 4.8 fixed point */
+	if (opc == OPC_GETLOD) {
+		struct ir3_instruction *factor = create_immed(b, fui(1.0 / 256));
+
+		compile_assert(ctx, tex->dest_type == nir_type_float);
+		for (i = 0; i < 2; i++) {
+			dst[i] = ir3_MUL_F(b, ir3_COV(b, dst[i], TYPE_U32, TYPE_F32), 0,
+							   factor, 0);
+		}
+	}
 }
 
 static void
@@ -1889,6 +1931,8 @@ emit_instr(struct ir3_compile *ctx, nir_instr *instr)
 		case nir_texop_query_levels:
 			emit_tex_query_levels(ctx, tex);
 			break;
+		case nir_texop_samples_identical:
+			unreachable("nir_texop_samples_identical");
 		default:
 			emit_tex(ctx, tex);
 			break;

@@ -31,6 +31,7 @@
 #include "ir_visitor.h"
 #include "ir_hierarchical_visitor.h"
 #include "ir.h"
+#include "main/imports.h"
 
 /*
  * pass to lower GLSL IR to NIR
@@ -147,16 +148,10 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
 
    nir_lower_outputs_to_temporaries(shader);
 
-   /* TODO: Use _mesa_fls instead */
-   unsigned num_textures = 0;
-   for (unsigned i = 0; i < 8 * sizeof(sh->Program->SamplersUsed); i++)
-      if (sh->Program->SamplersUsed & (1 << i))
-         num_textures = i;
-
    shader->info.name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
    if (shader_prog->Label)
       shader->info.label = ralloc_strdup(shader, shader_prog->Label);
-   shader->info.num_textures = num_textures;
+   shader->info.num_textures = _mesa_fls(sh->Program->SamplersUsed);
    shader->info.num_ubos = sh->NumUniformBlocks;
    shader->info.num_abos = shader_prog->NumAtomicBuffers;
    shader->info.num_ssbos = sh->NumShaderStorageBlocks;
@@ -174,6 +169,10 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
       shader_prog->TransformFeedback.NumVarying > 0;
 
    switch (stage) {
+   case MESA_SHADER_TESS_CTRL:
+      shader->info.tcs.vertices_out = shader_prog->TessCtrl.VerticesOut;
+      break;
+
    case MESA_SHADER_GEOMETRY:
       shader->info.gs.vertices_in = shader_prog->Geom.VerticesIn;
       shader->info.gs.output_primitive = sh->Geom.OutputType;
@@ -244,6 +243,8 @@ constant_copy(ir_constant *ir, void *mem_ctx)
 
    unsigned total_elems = ir->type->components();
    unsigned i;
+
+   ret->num_elements = 0;
    switch (ir->type->base_type) {
    case GLSL_TYPE_UINT:
       for (i = 0; i < total_elems; i++)
@@ -268,6 +269,8 @@ constant_copy(ir_constant *ir, void *mem_ctx)
    case GLSL_TYPE_STRUCT:
       ret->elements = ralloc_array(mem_ctx, nir_constant *,
                                    ir->type->length);
+      ret->num_elements = ir->type->length;
+
       i = 0;
       foreach_in_list(ir_constant, field, &ir->components) {
          ret->elements[i] = constant_copy(field, mem_ctx);
@@ -278,6 +281,7 @@ constant_copy(ir_constant *ir, void *mem_ctx)
    case GLSL_TYPE_ARRAY:
       ret->elements = ralloc_array(mem_ctx, nir_constant *,
                                    ir->type->length);
+      ret->num_elements = ir->type->length;
 
       for (i = 0; i < ir->type->length; i++)
          ret->elements[i] = constant_copy(ir->array_elements[i], mem_ctx);
@@ -296,15 +300,6 @@ nir_visitor::visit(ir_variable *ir)
    nir_variable *var = ralloc(shader, nir_variable);
    var->type = ir->type;
    var->name = ralloc_strdup(var, ir->name);
-
-   if (ir->is_interface_instance() && ir->get_max_ifc_array_access() != NULL) {
-      unsigned size = ir->get_interface_type()->length;
-      var->max_ifc_array_access = ralloc_array(var, unsigned, size);
-      memcpy(var->max_ifc_array_access, ir->get_max_ifc_array_access(),
-             size * sizeof(unsigned));
-   } else {
-      var->max_ifc_array_access = NULL;
-   }
 
    var->data.read_only = ir->data.read_only;
    var->data.centroid = ir->data.centroid;
@@ -1543,9 +1538,9 @@ nir_visitor::visit(ir_expression *ir)
       result = supports_ints ? nir_ior(&b, srcs[0], srcs[1])
                              : nir_for(&b, srcs[0], srcs[1]);
       break;
-   case ir_binop_logic_xor: result = nir_ixor(&b, srcs[0], srcs[1]); break;
-      result = supports_ints ? nir_ior(&b, srcs[0], srcs[1])
-                             : nir_for(&b, srcs[0], srcs[1]);
+   case ir_binop_logic_xor:
+      result = supports_ints ? nir_ixor(&b, srcs[0], srcs[1])
+                             : nir_fxor(&b, srcs[0], srcs[1]);
       break;
    case ir_binop_lshift: result = nir_ishl(&b, srcs[0], srcs[1]); break;
    case ir_binop_rshift:
@@ -1808,6 +1803,11 @@ nir_visitor::visit(ir_texture *ir)
       num_srcs = 0;
       break;
 
+   case ir_samples_identical:
+      op = nir_texop_samples_identical;
+      num_srcs = 1; /* coordinate */
+      break;
+
    default:
       unreachable("not reached");
    }
@@ -1835,8 +1835,9 @@ nir_visitor::visit(ir_texture *ir)
    case GLSL_TYPE_INT:
       instr->dest_type = nir_type_int;
       break;
+   case GLSL_TYPE_BOOL:
    case GLSL_TYPE_UINT:
-      instr->dest_type = nir_type_unsigned;
+      instr->dest_type = nir_type_uint;
       break;
    default:
       unreachable("not reached");

@@ -53,17 +53,17 @@ static const struct vgpu10_format_entry format_conversion_table[] =
    { PIPE_FORMAT_A8R8G8B8_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_X8R8G8B8_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_B5G5R5A1_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_B5G5R5A1_UNORM,       0 },
-   { PIPE_FORMAT_B4G4R4A4_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_A4R4G4B4,             0 },
+   { PIPE_FORMAT_B4G4R4A4_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_B5G6R5_UNORM,          SVGA3D_FORMAT_INVALID,      SVGA3D_B5G6R5_UNORM,         0 },
    { PIPE_FORMAT_R10G10B10A2_UNORM,     SVGA3D_R10G10B10A2_UNORM,   SVGA3D_R10G10B10A2_UNORM,    0 },
-   { PIPE_FORMAT_L8_UNORM,              SVGA3D_FORMAT_INVALID,      SVGA3D_LUMINANCE8,           0 },
+   { PIPE_FORMAT_L8_UNORM,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_A8_UNORM,              SVGA3D_FORMAT_INVALID,      SVGA3D_A8_UNORM,             0 },
    { PIPE_FORMAT_I8_UNORM,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_L8A8_UNORM,            SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_L16_UNORM,             SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_UYVY,                  SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_YUYV,                  SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
-   { PIPE_FORMAT_Z16_UNORM,             SVGA3D_FORMAT_INVALID,      SVGA3D_Z_D16,                0 },
+   { PIPE_FORMAT_Z16_UNORM,             SVGA3D_FORMAT_INVALID,      SVGA3D_D16_UNORM,            0 },
    { PIPE_FORMAT_Z32_UNORM,             SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_Z32_FLOAT,             SVGA3D_FORMAT_INVALID,      SVGA3D_D32_FLOAT,            0 },
    { PIPE_FORMAT_Z24_UNORM_S8_UINT,     SVGA3D_FORMAT_INVALID,      SVGA3D_D24_UNORM_S8_UINT,    0 },
@@ -152,14 +152,14 @@ static const struct vgpu10_format_entry format_conversion_table[] =
    { PIPE_FORMAT_A8R8G8B8_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_X8R8G8B8_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_R8G8B8A8_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_R8G8B8A8_UNORM_SRGB,  0 },
-   { PIPE_FORMAT_DXT1_RGB,              SVGA3D_FORMAT_INVALID,      SVGA3D_DXT1,                 0 },
-   { PIPE_FORMAT_DXT1_RGBA,             SVGA3D_FORMAT_INVALID,      SVGA3D_DXT1,                 0 },
-   { PIPE_FORMAT_DXT3_RGBA,             SVGA3D_FORMAT_INVALID,      SVGA3D_DXT3,                 0 },
-   { PIPE_FORMAT_DXT5_RGBA,             SVGA3D_FORMAT_INVALID,      SVGA3D_DXT5,                 0 },
-   { PIPE_FORMAT_DXT1_SRGB,             SVGA3D_FORMAT_INVALID,      SVGA3D_DXT1,                 0 },
-   { PIPE_FORMAT_DXT1_SRGBA,            SVGA3D_FORMAT_INVALID,      SVGA3D_DXT1,                 0 },
-   { PIPE_FORMAT_DXT3_SRGBA,            SVGA3D_FORMAT_INVALID,      SVGA3D_DXT3,                 0 },
-   { PIPE_FORMAT_DXT5_SRGBA,            SVGA3D_FORMAT_INVALID,      SVGA3D_DXT5,                 0 },
+   { PIPE_FORMAT_DXT1_RGB,              SVGA3D_FORMAT_INVALID,      SVGA3D_BC1_UNORM,            0 },
+   { PIPE_FORMAT_DXT1_RGBA,             SVGA3D_FORMAT_INVALID,      SVGA3D_BC1_UNORM,            0 },
+   { PIPE_FORMAT_DXT3_RGBA,             SVGA3D_FORMAT_INVALID,      SVGA3D_BC2_UNORM,            0 },
+   { PIPE_FORMAT_DXT5_RGBA,             SVGA3D_FORMAT_INVALID,      SVGA3D_BC3_UNORM,            0 },
+   { PIPE_FORMAT_DXT1_SRGB,             SVGA3D_FORMAT_INVALID,      SVGA3D_BC1_UNORM_SRGB,       0 },
+   { PIPE_FORMAT_DXT1_SRGBA,            SVGA3D_FORMAT_INVALID,      SVGA3D_BC1_UNORM_SRGB,       0 },
+   { PIPE_FORMAT_DXT3_SRGBA,            SVGA3D_FORMAT_INVALID,      SVGA3D_BC2_UNORM_SRGB,       0 },
+   { PIPE_FORMAT_DXT5_SRGBA,            SVGA3D_FORMAT_INVALID,      SVGA3D_BC3_UNORM_SRGB,       0 },
    { PIPE_FORMAT_RGTC1_UNORM,           SVGA3D_FORMAT_INVALID,      SVGA3D_BC4_UNORM,            0 },
    { PIPE_FORMAT_RGTC1_SNORM,           SVGA3D_FORMAT_INVALID,      SVGA3D_BC4_SNORM,            0 },
    { PIPE_FORMAT_RGTC2_UNORM,           SVGA3D_FORMAT_INVALID,      SVGA3D_BC5_UNORM,            0 },
@@ -326,6 +326,34 @@ static const struct vgpu10_format_entry format_conversion_table[] =
    { PIPE_FORMAT_ETC2_R11_SNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_ETC2_RG11_UNORM,       SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_ETC2_RG11_SNORM,       SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_4x4,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_5x4,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_5x5,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_6x5,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_6x6,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_8x5,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_8x6,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_8x8,              SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_10x5,             SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_10x6,             SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_10x8,             SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_10x10,            SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_12x10,            SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_12x12,            SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_4x4_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_5x4_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_5x5_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_6x5_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_6x6_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_8x5_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_8x6_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_8x8_SRGB,         SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_10x5_SRGB,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_10x6_SRGB,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_10x8_SRGB,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_10x10_SRGB,       SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_12x10_SRGB,       SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_ASTC_12x12_SRGB,       SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
 };
 
 
@@ -472,7 +500,7 @@ struct format_cap {
  * PIPE_FORMAT_Z24_UNORM_S8_UINT is converted to SVGA3D_D24_UNORM_S8_UINT
  * for rendering but converted to SVGA3D_R24_UNORM_X8_TYPELESS for sampling.
  * If we want to query if a format supports both rendering and sampling the
- * host will tell us no for both SVGA3D_D24_UNORM_S8_UINT and
+ * host will tell us no for SVGA3D_D24_UNORM_S8_UINT, SVGA3D_D16_UNORM and
  * SVGA3D_R24_UNORM_X8_TYPELESS.  So we override the host query for those
  * formats and report that both can do rendering and sampling.
  */
@@ -1410,27 +1438,50 @@ static const struct format_cap format_cap_table[] = {
    },
    {
       "SVGA3D_BC1_TYPELESS",
-      SVGA3D_BC1_TYPELESS, 0, 0, 0, 0, 0
+      SVGA3D_BC1_TYPELESS,
+      SVGA3D_DEVCAP_DXFMT_BC1_TYPELESS,
+      4, 4, 8,
+      SVGA3DFORMAT_OP_TEXTURE |
+      SVGA3DFORMAT_OP_CUBETEXTURE
    },
    {
       "SVGA3D_BC1_UNORM_SRGB",
-      SVGA3D_BC1_UNORM_SRGB, 0, 0, 0, 0, 0
+      SVGA3D_BC1_UNORM_SRGB,
+      SVGA3D_DEVCAP_DXFMT_BC1_UNORM_SRGB,
+      4, 4, 8,
+      SVGA3DFORMAT_OP_TEXTURE |
+      SVGA3DFORMAT_OP_CUBETEXTURE
    },
    {
       "SVGA3D_BC2_TYPELESS",
-      SVGA3D_BC2_TYPELESS, 0, 0, 0, 0, 0
+      SVGA3D_BC2_TYPELESS,
+      SVGA3D_DEVCAP_DXFMT_BC2_TYPELESS,
+      4, 4, 16,
+      SVGA3DFORMAT_OP_TEXTURE |
+      SVGA3DFORMAT_OP_CUBETEXTURE
    },
    {
       "SVGA3D_BC2_UNORM_SRGB",
-      SVGA3D_BC2_UNORM_SRGB, 0, 0, 0, 0, 0
+      SVGA3D_BC2_UNORM_SRGB,
+      SVGA3D_DEVCAP_DXFMT_BC2_UNORM_SRGB,
+      4, 4, 16,
+      SVGA3DFORMAT_OP_TEXTURE |
+      SVGA3DFORMAT_OP_CUBETEXTURE
    },
    {
       "SVGA3D_BC3_TYPELESS",
-      SVGA3D_BC3_TYPELESS, 0, 0, 0, 0, 0
+      SVGA3D_BC3_TYPELESS,
+      SVGA3D_DEVCAP_DXFMT_BC3_TYPELESS,
+      4, 4, 16,
+      SVGA3DFORMAT_OP_TEXTURE |
+      SVGA3DFORMAT_OP_CUBETEXTURE
    },
    {
       "SVGA3D_BC3_UNORM_SRGB",
-      SVGA3D_BC3_UNORM_SRGB, 0, 0, 0, 0, 0
+      SVGA3D_BC3_UNORM_SRGB,
+      4, 4, 16,
+      SVGA3DFORMAT_OP_TEXTURE |
+      SVGA3DFORMAT_OP_CUBETEXTURE
    },
    {
       "SVGA3D_BC4_TYPELESS",
@@ -1671,7 +1722,7 @@ static const struct format_cap format_cap_table[] = {
    {
       "SVGA3D_D16_UNORM",
       SVGA3D_D16_UNORM,
-      SVGA3D_DEVCAP_DXFMT_D16_UNORM,
+      0, /*SVGA3D_DEVCAP_DXFMT_D16_UNORM*/
       1, 1, 2,
       SVGA3DFORMAT_OP_TEXTURE |
       SVGA3DFORMAT_OP_CUBETEXTURE |
@@ -1690,15 +1741,27 @@ static const struct format_cap format_cap_table[] = {
    },
    {
       "SVGA3D_BC1_UNORM",
-      SVGA3D_BC1_UNORM, 0, 0, 0, 0, 0
+      SVGA3D_BC1_UNORM,
+      SVGA3D_DEVCAP_DXFMT_BC1_UNORM,
+      4, 4, 8,
+      SVGA3DFORMAT_OP_TEXTURE |
+      SVGA3DFORMAT_OP_CUBETEXTURE
    },
    {
       "SVGA3D_BC2_UNORM",
-      SVGA3D_BC2_UNORM, 0, 0, 0, 0, 0
+      SVGA3D_BC2_UNORM,
+      SVGA3D_DEVCAP_DXFMT_BC2_UNORM,
+      4, 4, 16,
+      SVGA3DFORMAT_OP_TEXTURE |
+      SVGA3DFORMAT_OP_CUBETEXTURE
    },
    {
       "SVGA3D_BC3_UNORM",
-      SVGA3D_BC3_UNORM, 0, 0, 0, 0, 0
+      SVGA3D_BC3_UNORM,
+      SVGA3D_DEVCAP_DXFMT_BC3_UNORM,
+      4, 4, 16,
+      SVGA3DFORMAT_OP_TEXTURE |
+      SVGA3DFORMAT_OP_CUBETEXTURE
    },
    {
       "SVGA3D_B5G6R5_UNORM",
@@ -2053,6 +2116,7 @@ svga_typeless_format(SVGA3dSurfaceFormat format)
    case SVGA3D_R8G8_UINT:
    case SVGA3D_R8G8_SINT:
       return SVGA3D_R8G8_TYPELESS;
+   case SVGA3D_D16_UNORM:
    case SVGA3D_R16_UNORM:
    case SVGA3D_R16_UINT:
    case SVGA3D_R16_SNORM:
@@ -2070,6 +2134,15 @@ svga_typeless_format(SVGA3dSurfaceFormat format)
    case SVGA3D_B8G8R8X8_UNORM_SRGB:
    case SVGA3D_B8G8R8X8_UNORM:
       return SVGA3D_B8G8R8X8_TYPELESS;
+   case SVGA3D_BC1_UNORM:
+   case SVGA3D_BC1_UNORM_SRGB:
+      return SVGA3D_BC1_TYPELESS;
+   case SVGA3D_BC2_UNORM:
+   case SVGA3D_BC2_UNORM_SRGB:
+      return SVGA3D_BC2_TYPELESS;
+   case SVGA3D_BC3_UNORM:
+   case SVGA3D_BC3_UNORM_SRGB:
+      return SVGA3D_BC3_TYPELESS;
    case SVGA3D_BC4_UNORM:
    case SVGA3D_BC4_SNORM:
       return SVGA3D_BC4_TYPELESS;
@@ -2079,22 +2152,37 @@ svga_typeless_format(SVGA3dSurfaceFormat format)
 
    /* Special cases (no corresponding _TYPELESS formats) */
    case SVGA3D_A8_UNORM:
-   case SVGA3D_A4R4G4B4:
    case SVGA3D_B5G5R5A1_UNORM:
    case SVGA3D_B5G6R5_UNORM:
-   case SVGA3D_DXT1:
-   case SVGA3D_DXT2:
-   case SVGA3D_DXT3:
-   case SVGA3D_DXT4:
-   case SVGA3D_DXT5:
    case SVGA3D_R11G11B10_FLOAT:
    case SVGA3D_R9G9B9E5_SHAREDEXP:
-   case SVGA3D_Z_D32:
-   case SVGA3D_Z_D16:
       return format;
    default:
       debug_printf("Unexpected format %s in %s\n",
                    svga_format_name(format), __FUNCTION__);
+      return format;
+   }
+}
+
+
+/**
+ * Given a surface format, return the corresponding format to use for
+ * a texture sampler.  In most cases, it's the format unchanged, but there
+ * are some special cases.
+ */
+SVGA3dSurfaceFormat
+svga_sampler_format(SVGA3dSurfaceFormat format)
+{
+   switch (format) {
+   case SVGA3D_D16_UNORM:
+      return SVGA3D_R16_UNORM;
+   case SVGA3D_D24_UNORM_S8_UINT:
+      return SVGA3D_R24_UNORM_X8_TYPELESS;
+   case SVGA3D_D32_FLOAT:
+      return SVGA3D_R32_FLOAT;
+   case SVGA3D_D32_FLOAT_S8X24_UINT:
+      return SVGA3D_R32_FLOAT_X8X24_TYPELESS;
+   default:
       return format;
    }
 }

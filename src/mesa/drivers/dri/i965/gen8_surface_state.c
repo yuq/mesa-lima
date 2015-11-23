@@ -187,7 +187,13 @@ gen8_emit_fast_clear_color(struct brw_context *brw,
                            struct intel_mipmap_tree *mt,
                            uint32_t *surf)
 {
-   surf[7] |= mt->fast_clear_color_value;
+   if (brw->gen >= 9) {
+      surf[12] = mt->gen9_fast_clear_color.ui[0];
+      surf[13] = mt->gen9_fast_clear_color.ui[1];
+      surf[14] = mt->gen9_fast_clear_color.ui[2];
+      surf[15] = mt->gen9_fast_clear_color.ui[3];
+   } else
+      surf[7] |= mt->fast_clear_color_value;
 }
 
 static void
@@ -208,6 +214,7 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
    int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
    unsigned tiling_mode, pitch;
    const unsigned tr_mode = surface_tiling_resource_mode(mt->tr_mode);
+   const uint32_t surf_type = translate_tex_target(target);
 
    if (mt->format == MESA_FORMAT_S_UINT8) {
       tiling_mode = GEN8_SURFACE_TILING_W;
@@ -231,9 +238,14 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
        */
       if (brw->gen >= 9 || mt->num_samples == 1)
          assert(mt->halign == 16);
+
+      if (brw->gen >= 9) {
+         assert(mt->num_samples > 1 ||
+                brw_losslessly_compressible_format(brw, surf_type));
+      }
+
    }
 
-   const uint32_t surf_type = translate_tex_target(target);
    uint32_t *surf = allocate_surface_state(brw, surf_offset, surf_index);
 
    surf[0] = SET_FIELD(surf_type, BRW_SURFACE_TYPE) |

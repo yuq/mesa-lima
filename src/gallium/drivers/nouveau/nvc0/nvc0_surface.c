@@ -341,11 +341,15 @@ nvc0_clear_render_target(struct pipe_context *pipe,
       nvc0_resource_fence(res, NOUVEAU_BO_WR);
    }
 
+   IMMED_NVC0(push, NVC0_3D(COND_MODE), NVC0_3D_COND_MODE_ALWAYS);
+
    BEGIN_NIC0(push, NVC0_3D(CLEAR_BUFFERS), sf->depth);
    for (z = 0; z < sf->depth; ++z) {
       PUSH_DATA (push, 0x3c |
                  (z << NVC0_3D_CLEAR_BUFFERS_LAYER__SHIFT));
    }
+
+   IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
    nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
 }
@@ -470,6 +474,8 @@ nvc0_clear_buffer(struct pipe_context *pipe,
    IMMED_NVC0(push, NVC0_3D(ZETA_ENABLE), 0);
    IMMED_NVC0(push, NVC0_3D(MULTISAMPLE_MODE), 0);
 
+   IMMED_NVC0(push, NVC0_3D(COND_MODE), NVC0_3D_COND_MODE_ALWAYS);
+
    IMMED_NVC0(push, NVC0_3D(CLEAR_BUFFERS), 0x3c);
 
    if (width * height != elements) {
@@ -485,6 +491,8 @@ nvc0_clear_buffer(struct pipe_context *pipe,
 
       IMMED_NVC0(push, NVC0_3D(CLEAR_BUFFERS), 0x3c);
    }
+
+   IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
    nouveau_fence_ref(nvc0->screen->base.fence.current, &buf->fence);
    nouveau_fence_ref(nvc0->screen->base.fence.current, &buf->fence_wr);
@@ -545,11 +553,15 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
    PUSH_DATA (push, dst->u.tex.first_layer);
    IMMED_NVC0(push, NVC0_3D(MULTISAMPLE_MODE), mt->ms_mode);
 
+   IMMED_NVC0(push, NVC0_3D(COND_MODE), NVC0_3D_COND_MODE_ALWAYS);
+
    BEGIN_NIC0(push, NVC0_3D(CLEAR_BUFFERS), sf->depth);
    for (z = 0; z < sf->depth; ++z) {
       PUSH_DATA (push, mode |
                  (z << NVC0_3D_CLEAR_BUFFERS_LAYER__SHIFT));
    }
+
+   IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
    nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
 }

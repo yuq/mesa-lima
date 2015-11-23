@@ -116,10 +116,6 @@ public:
    void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
    void compute_clip_distance(gl_clip_plane *clip_planes);
 
-   uint32_t gather_channel(int orig_chan, uint32_t surface, uint32_t sampler);
-   void swizzle_result(ir_texture_opcode op, int dest_components,
-                       fs_reg orig_val, uint32_t sampler);
-
    fs_inst *get_instruction_generating_reg(fs_inst *start,
 					   fs_inst *end,
 					   const fs_reg &reg);
@@ -218,8 +214,6 @@ public:
    void emit_interpolation_setup_gen4();
    void emit_interpolation_setup_gen6();
    void compute_sample_position(fs_reg dst, fs_reg int_sample_pos);
-   fs_reg rescale_texcoord(fs_reg coordinate, int coord_components,
-                           bool is_rect, uint32_t sampler);
    void emit_texture(ir_texture_opcode op,
                      const glsl_type *dest_type,
                      fs_reg coordinate, int components,
@@ -230,7 +224,6 @@ public:
                      fs_reg mcs,
                      int gather_component,
                      bool is_cube_array,
-                     bool is_rect,
                      uint32_t surface,
                      fs_reg surface_reg,
                      uint32_t sampler,
@@ -305,7 +298,8 @@ public:
                        unsigned stream_id);
    void emit_gs_thread_end();
    void emit_gs_input_load(const fs_reg &dst, const nir_src &vertex_src,
-                           unsigned offset, unsigned num_components);
+                           const fs_reg &indirect_offset, unsigned imm_offset,
+                           unsigned num_components);
    void emit_cs_terminate();
    fs_reg *emit_cs_local_invocation_id_setup();
    fs_reg *emit_cs_work_group_id_setup();
@@ -529,6 +523,11 @@ private:
                                  struct brw_reg payload,
                                  struct brw_reg offset,
                                  struct brw_reg value);
+
+   void generate_mov_indirect(fs_inst *inst,
+                              struct brw_reg dst,
+                              struct brw_reg reg,
+                              struct brw_reg indirect_byte_offset);
 
    bool patch_discard_jumps_to_fb_writes();
 

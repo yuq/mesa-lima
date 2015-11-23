@@ -113,6 +113,7 @@ nv50_context_unreference_resources(struct nv50_context *nv50)
 
    nouveau_bufctx_del(&nv50->bufctx_3d);
    nouveau_bufctx_del(&nv50->bufctx);
+   nouveau_bufctx_del(&nv50->bufctx_cp);
 
    util_unreference_framebuffer_state(&nv50->framebuffer);
 
@@ -131,6 +132,14 @@ nv50_context_unreference_resources(struct nv50_context *nv50)
          if (!nv50->constbuf[s][i].user)
             pipe_resource_reference(&nv50->constbuf[s][i].u.buf, NULL);
    }
+
+   for (i = 0; i < nv50->global_residents.size / sizeof(struct pipe_resource *);
+        ++i) {
+      struct pipe_resource **res = util_dynarray_element(
+         &nv50->global_residents, struct pipe_resource *, i);
+      pipe_resource_reference(res, NULL);
+   }
+   util_dynarray_fini(&nv50->global_residents);
 }
 
 static void
@@ -159,9 +168,10 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
                                  int ref)
 {
    struct nv50_context *nv50 = nv50_context(&ctx->pipe);
+   unsigned bind = res->bind ? res->bind : PIPE_BIND_VERTEX_BUFFER;
    unsigned s, i;
 
-   if (res->bind & PIPE_BIND_RENDER_TARGET) {
+   if (bind & PIPE_BIND_RENDER_TARGET) {
       assert(nv50->framebuffer.nr_cbufs <= PIPE_MAX_COLOR_BUFS);
       for (i = 0; i < nv50->framebuffer.nr_cbufs; ++i) {
          if (nv50->framebuffer.cbufs[i] &&
@@ -173,7 +183,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
          }
       }
    }
-   if (res->bind & PIPE_BIND_DEPTH_STENCIL) {
+   if (bind & PIPE_BIND_DEPTH_STENCIL) {
       if (nv50->framebuffer.zsbuf &&
           nv50->framebuffer.zsbuf->texture == res) {
          nv50->dirty |= NV50_NEW_FRAMEBUFFER;
@@ -183,11 +193,11 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
       }
    }
 
-   if (res->bind & (PIPE_BIND_VERTEX_BUFFER |
-                    PIPE_BIND_INDEX_BUFFER |
-                    PIPE_BIND_CONSTANT_BUFFER |
-                    PIPE_BIND_STREAM_OUTPUT |
-                    PIPE_BIND_SAMPLER_VIEW)) {
+   if (bind & (PIPE_BIND_VERTEX_BUFFER |
+               PIPE_BIND_INDEX_BUFFER |
+               PIPE_BIND_CONSTANT_BUFFER |
+               PIPE_BIND_STREAM_OUTPUT |
+               PIPE_BIND_SAMPLER_VIEW)) {
 
       assert(nv50->num_vtxbufs <= PIPE_MAX_ATTRIBS);
       for (i = 0; i < nv50->num_vtxbufs; ++i) {
@@ -263,10 +273,13 @@ nv50_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
    nv50->base.pushbuf = screen->base.pushbuf;
    nv50->base.client = screen->base.client;
 
-   ret = nouveau_bufctx_new(screen->base.client, NV50_BIND_COUNT,
-                            &nv50->bufctx_3d);
+   ret = nouveau_bufctx_new(screen->base.client, 2, &nv50->bufctx);
    if (!ret)
-      ret = nouveau_bufctx_new(screen->base.client, 2, &nv50->bufctx);
+      ret = nouveau_bufctx_new(screen->base.client, NV50_BIND_3D_COUNT,
+                               &nv50->bufctx_3d);
+   if (!ret)
+      ret = nouveau_bufctx_new(screen->base.client, NV50_BIND_CP_COUNT,
+                               &nv50->bufctx_cp);
    if (ret)
       goto out_err;
 
@@ -290,6 +303,7 @@ nv50_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
 
    pipe->draw_vbo = nv50_draw_vbo;
    pipe->clear = nv50_clear;
+   pipe->launch_grid = nv50_launch_grid;
 
    pipe->flush = nv50_flush;
    pipe->texture_barrier = nv50_texture_barrier;
@@ -335,19 +349,30 @@ nv50_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
    BCTX_REFN_bo(nv50->bufctx_3d, SCREEN, flags, screen->uniforms);
    BCTX_REFN_bo(nv50->bufctx_3d, SCREEN, flags, screen->txc);
    BCTX_REFN_bo(nv50->bufctx_3d, SCREEN, flags, screen->stack_bo);
+   if (screen->compute) {
+      BCTX_REFN_bo(nv50->bufctx_cp, CP_SCREEN, flags, screen->code);
+      BCTX_REFN_bo(nv50->bufctx_cp, CP_SCREEN, flags, screen->txc);
+      BCTX_REFN_bo(nv50->bufctx_cp, CP_SCREEN, flags, screen->stack_bo);
+   }
 
    flags = NOUVEAU_BO_GART | NOUVEAU_BO_WR;
 
    BCTX_REFN_bo(nv50->bufctx_3d, SCREEN, flags, screen->fence.bo);
    BCTX_REFN_bo(nv50->bufctx, FENCE, flags, screen->fence.bo);
+   if (screen->compute)
+      BCTX_REFN_bo(nv50->bufctx_cp, CP_SCREEN, flags, screen->fence.bo);
 
    nv50->base.scratch.bo_size = 2 << 20;
+
+   util_dynarray_init(&nv50->global_residents);
 
    return pipe;
 
 out_err:
    if (nv50->bufctx_3d)
       nouveau_bufctx_del(&nv50->bufctx_3d);
+   if (nv50->bufctx_cp)
+      nouveau_bufctx_del(&nv50->bufctx_cp);
    if (nv50->bufctx)
       nouveau_bufctx_del(&nv50->bufctx);
    FREE(nv50->blit);

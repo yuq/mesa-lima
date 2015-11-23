@@ -1014,14 +1014,15 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
       struct nvc0_program *prog = CALLOC_STRUCT(nvc0_program);
       prog->type = PIPE_SHADER_COMPUTE;
       prog->translated = true;
-      prog->num_gprs = 14;
       prog->parm_size = 12;
       if (is_nve4) {
          prog->code = (uint32_t *)nve4_read_hw_sm_counters_code;
          prog->code_size = sizeof(nve4_read_hw_sm_counters_code);
+         prog->num_gprs = 14;
       } else {
          prog->code = (uint32_t *)nvc0_read_hw_sm_counters_code;
          prog->code_size = sizeof(nvc0_read_hw_sm_counters_code);
+         prog->num_gprs = 12;
       }
       screen->pm.prog = prog;
    }

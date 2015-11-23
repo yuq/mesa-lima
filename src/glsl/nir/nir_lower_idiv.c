@@ -52,10 +52,8 @@ convert_instr(nir_builder *bld, nir_alu_instr *alu)
 
    bld->cursor = nir_before_instr(&alu->instr);
 
-   numer = nir_ssa_for_src(bld, alu->src[0].src,
-                           nir_ssa_alu_instr_src_components(alu, 0));
-   denom = nir_ssa_for_src(bld, alu->src[1].src,
-                           nir_ssa_alu_instr_src_components(alu, 1));
+   numer = nir_ssa_for_alu_src(bld, alu, 0);
+   denom = nir_ssa_for_alu_src(bld, alu, 1);
 
    if (is_signed) {
       af = nir_i2f(bld, numer);
@@ -96,7 +94,7 @@ convert_instr(nir_builder *bld, nir_alu_instr *alu)
    r = nir_imul(bld, q, b);
    r = nir_isub(bld, a, r);
 
-   r = nir_ige(bld, r, b);
+   r = nir_uge(bld, r, b);
    r = nir_b2i(bld, r);
 
    q = nir_iadd(bld, q, r);

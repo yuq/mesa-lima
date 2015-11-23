@@ -27,6 +27,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/gallium/drivers \
 	-I$(top_srcdir)/src/gallium/winsys \
+	$(GALLIUM_PIPE_LOADER_DEFINES) \
 	$(LIBDRM_CFLAGS) \
 	$(VISIBILITY_CFLAGS) \
 	-DGALLIUM_RBUG \
@@ -208,6 +209,10 @@ AM_CPPFLAGS += -DGALLIUM_LLVMPIPE
 pipe_swrast_la_LIBADD += \
 	$(top_builddir)/src/gallium/drivers/llvmpipe/libllvmpipe.la
 endif
+
+pipe_swrast_la_LIBADD += \
+	$(GALLIUM_PIPE_LOADER_WINSYS_LIBS)
+
 endif
 
 EXTRA_DIST = pipe.sym

@@ -209,13 +209,19 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 					fd3_pipe_sampler_view(tex->textures[i]) :
 					&dummy_view;
 			struct fd_resource *rsc = fd_resource(view->base.texture);
-			unsigned start = fd_sampler_first_level(&view->base);
-			unsigned end   = fd_sampler_last_level(&view->base);;
+			if (rsc && rsc->base.b.target == PIPE_BUFFER) {
+				OUT_RELOC(ring, rsc->bo, view->base.u.buf.first_element *
+						  util_format_get_blocksize(view->base.format), 0, 0);
+				j = 1;
+			} else {
+				unsigned start = fd_sampler_first_level(&view->base);
+				unsigned end   = fd_sampler_last_level(&view->base);;
 
-			for (j = 0; j < (end - start + 1); j++) {
-				struct fd_resource_slice *slice =
+				for (j = 0; j < (end - start + 1); j++) {
+					struct fd_resource_slice *slice =
 						fd_resource_slice(rsc, j + start);
-				OUT_RELOC(ring, rsc->bo, slice->offset, 0, 0);
+					OUT_RELOC(ring, rsc->bo, slice->offset, 0, 0);
+				}
 			}
 
 			/* pad the remaining entries w/ null: */
@@ -350,7 +356,10 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	unsigned instance_regid = regid(63, 0);
 	unsigned vtxcnt_regid = regid(63, 0);
 
+	/* Note that sysvals come *after* normal inputs: */
 	for (i = 0; i < vp->inputs_count; i++) {
+		if (!vp->inputs[i].compmask)
+			continue;
 		if (vp->inputs[i].sysval) {
 			switch(vp->inputs[i].slot) {
 			case SYSTEM_VALUE_BASE_VERTEX:
@@ -369,17 +378,10 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 				unreachable("invalid system value");
 				break;
 			}
-		} else if (i < vtx->vtx->num_elements && vp->inputs[i].compmask) {
+		} else if (i < vtx->vtx->num_elements) {
 			last = i;
 		}
 	}
-
-	/* hw doesn't like to be configured for zero vbo's, it seems: */
-	if ((vtx->vtx->num_elements == 0) &&
-			(vertex_regid == regid(63, 0)) &&
-			(instance_regid == regid(63, 0)) &&
-			(vtxcnt_regid == regid(63, 0)))
-		return;
 
 	for (i = 0, j = 0; i <= last; i++) {
 		assert(!vp->inputs[i].sysval);
@@ -422,6 +424,38 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 			total_in += vp->inputs[i].ncomp;
 			j++;
 		}
+	}
+
+	/* hw doesn't like to be configured for zero vbo's, it seems: */
+	if (last < 0) {
+		/* just recycle the shader bo, we just need to point to *something*
+		 * valid:
+		 */
+		struct fd_bo *dummy_vbo = vp->bo;
+		bool switchnext = (vertex_regid != regid(63, 0)) ||
+				(instance_regid != regid(63, 0)) ||
+				(vtxcnt_regid != regid(63, 0));
+
+		OUT_PKT0(ring, REG_A3XX_VFD_FETCH(0), 2);
+		OUT_RING(ring, A3XX_VFD_FETCH_INSTR_0_FETCHSIZE(0) |
+				A3XX_VFD_FETCH_INSTR_0_BUFSTRIDE(0) |
+				COND(switchnext, A3XX_VFD_FETCH_INSTR_0_SWITCHNEXT) |
+				A3XX_VFD_FETCH_INSTR_0_INDEXCODE(0) |
+				A3XX_VFD_FETCH_INSTR_0_STEPRATE(1));
+		OUT_RELOC(ring, dummy_vbo, 0, 0, 0);
+
+		OUT_PKT0(ring, REG_A3XX_VFD_DECODE_INSTR(0), 1);
+		OUT_RING(ring, A3XX_VFD_DECODE_INSTR_CONSTFILL |
+				A3XX_VFD_DECODE_INSTR_WRITEMASK(0x1) |
+				A3XX_VFD_DECODE_INSTR_FORMAT(VFMT_8_UNORM) |
+				A3XX_VFD_DECODE_INSTR_SWAP(XYZW) |
+				A3XX_VFD_DECODE_INSTR_REGID(regid(0,0)) |
+				A3XX_VFD_DECODE_INSTR_SHIFTCNT(1) |
+				A3XX_VFD_DECODE_INSTR_LASTCOMPVALID |
+				COND(switchnext, A3XX_VFD_DECODE_INSTR_SWITCHNEXT));
+
+		total_in = 1;
+		j = 1;
 	}
 
 	OUT_PKT0(ring, REG_A3XX_VFD_CONTROL_0, 2);

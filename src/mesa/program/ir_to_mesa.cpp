@@ -1920,6 +1920,8 @@ ir_to_mesa_visitor::visit(ir_texture *ir)
    case ir_query_levels:
       assert(!"Unexpected ir_query_levels opcode");
       break;
+   case ir_samples_identical:
+      unreachable("Unexpected ir_samples_identical opcode");
    case ir_texture_samples:
       unreachable("Unexpected ir_texture_samples opcode");
    }

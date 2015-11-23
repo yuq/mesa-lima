@@ -43,6 +43,7 @@
 #include "brw_wm.h"
 #include "brw_fs.h"
 #include "brw_cs.h"
+#include "brw_nir.h"
 #include "brw_vec4_gs_visitor.h"
 #include "brw_cfg.h"
 #include "brw_dead_control_flow.h"
@@ -186,7 +187,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
     * the redundant ones.
     */
    fs_reg vec4_offset = vgrf(glsl_type::int_type);
-   bld.ADD(vec4_offset, varying_offset, fs_reg(const_offset & ~3));
+   bld.ADD(vec4_offset, varying_offset, brw_imm_ud(const_offset & ~3));
 
    int scale = 1;
    if (devinfo->gen == 4 && bld.dispatch_width() == 8) {
@@ -374,54 +375,6 @@ fs_reg::fs_reg()
    this->file = BAD_FILE;
 }
 
-/** Immediate value constructor. */
-fs_reg::fs_reg(float f)
-{
-   init();
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_F;
-   this->stride = 0;
-   this->f = f;
-}
-
-/** Immediate value constructor. */
-fs_reg::fs_reg(int32_t i)
-{
-   init();
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_D;
-   this->stride = 0;
-   this->d = i;
-}
-
-/** Immediate value constructor. */
-fs_reg::fs_reg(uint32_t u)
-{
-   init();
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_UD;
-   this->stride = 0;
-   this->ud = u;
-}
-
-/** Vector float immediate value constructor. */
-fs_reg::fs_reg(uint8_t vf[4])
-{
-   init();
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_VF;
-   memcpy(&this->ud, vf, sizeof(unsigned));
-}
-
-/** Vector float immediate value constructor. */
-fs_reg::fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
-{
-   init();
-   this->file = IMM;
-   this->type = BRW_REGISTER_TYPE_VF;
-   this->ud = (vf0 <<  0) | (vf1 <<  8) | (vf2 << 16) | (vf3 << 24);
-}
-
 fs_reg::fs_reg(struct brw_reg reg) :
    backend_reg(reg)
 {
@@ -591,7 +544,7 @@ fs_visitor::emit_shader_time_end()
    fs_reg reset = shader_end_time;
    reset.set_smear(2);
    set_condmod(BRW_CONDITIONAL_Z,
-               ibld.AND(ibld.null_reg_ud(), reset, fs_reg(1u)));
+               ibld.AND(ibld.null_reg_ud(), reset, brw_imm_ud(1u)));
    ibld.IF(BRW_PREDICATE_NORMAL);
 
    fs_reg start = shader_start_time;
@@ -606,11 +559,11 @@ fs_visitor::emit_shader_time_end()
     * is 2 cycles.  Remove that overhead, so I can forget about that when
     * trying to determine the time taken for single instructions.
     */
-   cbld.ADD(diff, diff, fs_reg(-2u));
+   cbld.ADD(diff, diff, brw_imm_ud(-2u));
    SHADER_TIME_ADD(cbld, 0, diff);
-   SHADER_TIME_ADD(cbld, 1, fs_reg(1u));
+   SHADER_TIME_ADD(cbld, 1, brw_imm_ud(1u));
    ibld.emit(BRW_OPCODE_ELSE);
-   SHADER_TIME_ADD(cbld, 2, fs_reg(1u));
+   SHADER_TIME_ADD(cbld, 2, brw_imm_ud(1u));
    ibld.emit(BRW_OPCODE_ENDIF);
 }
 
@@ -620,7 +573,7 @@ fs_visitor::SHADER_TIME_ADD(const fs_builder &bld,
                             fs_reg value)
 {
    int index = shader_time_index * 3 + shader_time_subindex;
-   fs_reg offset = fs_reg(index * SHADER_TIME_STRIDE);
+   struct brw_reg offset = brw_imm_d(index * SHADER_TIME_STRIDE);
 
    fs_reg payload;
    if (dispatch_width == 8)
@@ -841,6 +794,34 @@ fs_inst::regs_read(int arg) const
    case SHADER_OPCODE_BARRIER:
       return 1;
 
+   case SHADER_OPCODE_MOV_INDIRECT:
+      if (arg == 0) {
+         assert(src[2].file == IMM);
+         unsigned region_length = src[2].ud;
+
+         if (src[0].file == FIXED_GRF) {
+            /* If the start of the region is not register aligned, then
+             * there's some portion of the register that's technically
+             * unread at the beginning.
+             *
+             * However, the register allocator works in terms of whole
+             * registers, and does not use subnr.  It assumes that the
+             * read starts at the beginning of the register, and extends
+             * regs_read() whole registers beyond that.
+             *
+             * To compensate, we extend the region length to include this
+             * unread portion at the beginning.
+             */
+            if (src[0].subnr)
+               region_length += src[0].subnr * type_sz(src[0].type);
+
+            return DIV_ROUND_UP(region_length, REG_SIZE);
+         } else {
+            assert(!"Invalid register file");
+         }
+      }
+      break;
+
    default:
       if (is_tex() && arg == 0 && src[0].file == VGRF)
          return mlen;
@@ -1005,7 +986,7 @@ fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
    if (pixel_center_integer) {
       bld.MOV(wpos, this->pixel_x);
    } else {
-      bld.ADD(wpos, this->pixel_x, fs_reg(0.5f));
+      bld.ADD(wpos, this->pixel_x, brw_imm_f(0.5f));
    }
    wpos = offset(wpos, bld, 1);
 
@@ -1021,7 +1002,7 @@ fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
 	 offset += key->drawable_height - 1.0f;
       }
 
-      bld.ADD(wpos, pixel_y, fs_reg(offset));
+      bld.ADD(wpos, pixel_y, brw_imm_f(offset));
    }
    wpos = offset(wpos, bld, 1);
 
@@ -1198,7 +1179,7 @@ fs_visitor::emit_frontfacing_interpolation()
       fs_reg g0 = fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_W));
       g0.negate = true;
 
-      bld.ASR(*reg, g0, fs_reg(15));
+      bld.ASR(*reg, g0, brw_imm_d(15));
    } else {
       /* Bit 31 of g1.6 is 0 if the polygon is front facing. We want to create
        * a boolean result from this (1/true or 0/false).
@@ -1213,7 +1194,7 @@ fs_visitor::emit_frontfacing_interpolation()
       fs_reg g1_6 = fs_reg(retype(brw_vec1_grf(1, 6), BRW_REGISTER_TYPE_D));
       g1_6.negate = true;
 
-      bld.ASR(*reg, g1_6, fs_reg(31));
+      bld.ASR(*reg, g1_6, brw_imm_d(31));
    }
 
    return reg;
@@ -1230,7 +1211,7 @@ fs_visitor::compute_sample_position(fs_reg dst, fs_reg int_sample_pos)
       /* Convert int_sample_pos to floating point */
       bld.MOV(dst, int_sample_pos);
       /* Scale to the range [0, 1] */
-      bld.MUL(dst, dst, fs_reg(1 / 16.0f));
+      bld.MUL(dst, dst, brw_imm_f(1 / 16.0f));
    }
    else {
       /* From ARB_sample_shading specification:
@@ -1238,7 +1219,7 @@ fs_visitor::compute_sample_position(fs_reg dst, fs_reg int_sample_pos)
        *  rasterization is disabled, gl_SamplePosition will always be
        *  (0.5, 0.5).
        */
-      bld.MOV(dst, fs_reg(0.5f));
+      bld.MOV(dst, brw_imm_f(0.5f));
    }
 }
 
@@ -1333,8 +1314,8 @@ fs_visitor::emit_sampleid_setup()
 
       abld.exec_all().group(1, 0)
           .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_D)),
-               fs_reg(sspi_mask));
-      abld.exec_all().group(1, 0).SHR(t1, t1, fs_reg(5));
+               brw_imm_ud(sspi_mask));
+      abld.exec_all().group(1, 0).SHR(t1, t1, brw_imm_d(5));
 
       /* This works for both SIMD8 and SIMD16 */
       abld.exec_all().group(4, 0)
@@ -1349,7 +1330,7 @@ fs_visitor::emit_sampleid_setup()
        * "When rendering to a non-multisample buffer, or if multisample
        *  rasterization is disabled, gl_SampleID will always be zero."
        */
-      abld.MOV(*reg, fs_reg(0));
+      abld.MOV(*reg, brw_imm_d(0));
    }
 
    return reg;
@@ -1662,24 +1643,7 @@ fs_visitor::assign_gs_urb_setup()
    first_non_payload_grf +=
       8 * vue_prog_data->urb_read_length * nir->info.gs.vertices_in;
 
-   const unsigned first_icp_handle = payload.num_regs -
-      (vue_prog_data->include_vue_handles ? nir->info.gs.vertices_in : 0);
-
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
-      /* Lower URB_READ_SIMD8 opcodes into real messages. */
-      if (inst->opcode == SHADER_OPCODE_URB_READ_SIMD8) {
-         assert(inst->src[0].file == IMM);
-         inst->src[0] = retype(brw_vec8_grf(first_icp_handle +
-                                            inst->src[0].ud,
-                                            0), BRW_REGISTER_TYPE_UD);
-         /* for now, assume constant - we can do per-slot offsets later */
-         assert(inst->src[1].file == IMM);
-         inst->offset = inst->src[1].ud;
-         inst->src[1] = fs_reg();
-         inst->mlen = 1;
-         inst->base_mrf = -1;
-      }
-
       /* Rewrite all ATTR file references to GRFs. */
       convert_attr_sources_to_hw_regs(inst);
    }
@@ -2037,16 +2001,16 @@ fs_visitor::demote_pull_constants()
          /* Generate a pull load into dst. */
          if (inst->src[i].reladdr) {
             VARYING_PULL_CONSTANT_LOAD(ibld, dst,
-                                       fs_reg(index),
+                                       brw_imm_ud(index),
                                        *inst->src[i].reladdr,
                                        pull_index);
             inst->src[i].reladdr = NULL;
             inst->src[i].stride = 1;
          } else {
             const fs_builder ubld = ibld.exec_all().group(8, 0);
-            fs_reg offset = fs_reg((unsigned)(pull_index * 4) & ~15);
+            struct brw_reg offset = brw_imm_ud((unsigned)(pull_index * 4) & ~15);
             ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
-                      dst, fs_reg(index), offset);
+                      dst, brw_imm_ud(index), offset);
             inst->src[i].set_smear(pull_index & 3);
          }
          brw_mark_surface_used(prog_data, index);
@@ -2738,7 +2702,7 @@ fs_visitor::eliminate_find_live_channel()
       case SHADER_OPCODE_FIND_LIVE_CHANNEL:
          if (depth == 0) {
             inst->opcode = BRW_OPCODE_MOV;
-            inst->src[0] = fs_reg(0u);
+            inst->src[0] = brw_imm_ud(0u);
             inst->sources = 1;
             inst->force_writemask_all = true;
             progress = true;
@@ -3591,6 +3555,12 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
       assert(devinfo->gen >= 9);
       assert(bld.dispatch_width() != 16);
 
+      /* XXX: src_stencil is only available on gen9+. dst_depth is never
+       * available on gen9+. As such it's impossible to have both enabled at the
+       * same time and therefore length cannot overrun the array.
+       */
+      assert(length < 15);
+
       sources[length] = bld.vgrf(BRW_REGISTER_TYPE_UD);
       bld.exec_all().annotate("FB write OS")
          .emit(FS_OPCODE_PACK_STENCIL_REF, sources[length],
@@ -3660,7 +3630,7 @@ lower_sampler_logical_send_gen4(const fs_builder &bld, fs_inst *inst, opcode op,
        (has_lod || shadow_c.file != BAD_FILE ||
         (op == SHADER_OPCODE_TEX && bld.dispatch_width() == 8))) {
       for (unsigned i = coord_components; i < 3; i++)
-         bld.MOV(offset(msg_end, bld, i), fs_reg(0.0f));
+         bld.MOV(offset(msg_end, bld, i), brw_imm_f(0.0f));
 
       msg_end = offset(msg_end, bld, 3 - coord_components);
    }
@@ -3717,7 +3687,7 @@ lower_sampler_logical_send_gen4(const fs_builder &bld, fs_inst *inst, opcode op,
          /* There's no plain shadow compare message, so we use shadow
           * compare with a bias of 0.0.
           */
-         bld.MOV(msg_end, fs_reg(0.0f));
+         bld.MOV(msg_end, brw_imm_f(0.0f));
          msg_end = offset(msg_end, bld, 1);
       }
 
@@ -3813,7 +3783,7 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
    case SHADER_OPCODE_TXF_CMS:
       msg_lod = offset(msg_coords, bld, 3);
       /* lod */
-      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), fs_reg(0u));
+      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), brw_imm_ud(0u));
       /* sample index */
       bld.MOV(retype(offset(msg_lod, bld, 1), BRW_REGISTER_TYPE_UD), sample_index);
       msg_end = offset(msg_lod, bld, 2);
@@ -3896,7 +3866,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
    if (bld.shader->stage != MESA_SHADER_FRAGMENT &&
        op == SHADER_OPCODE_TEX) {
       op = SHADER_OPCODE_TXL;
-      lod = fs_reg(0.0f);
+      lod = brw_imm_f(0.0f);
    }
 
    /* Set up the LOD info */
@@ -4110,7 +4080,7 @@ emit_surface_header(const fs_builder &bld, const fs_reg &sample_mask)
 {
    fs_builder ubld = bld.exec_all().group(8, 0);
    const fs_reg dst = ubld.vgrf(BRW_REGISTER_TYPE_UD);
-   ubld.MOV(dst, fs_reg(0));
+   ubld.MOV(dst, brw_imm_d(0));
    ubld.MOV(component(dst, 7), sample_mask);
    return dst;
 }
@@ -4252,7 +4222,7 @@ fs_visitor::lower_logical_sends()
       case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_TYPED_SURFACE_READ,
-                                    fs_reg(0xffff));
+                                    brw_imm_d(0xffff));
          break;
 
       case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
@@ -4677,6 +4647,8 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    case IMM:
       unreachable("not reached");
    }
+   if (inst->dst.stride != 1)
+      fprintf(file, "<%u>", inst->dst.stride);
    fprintf(file, ":%s, ", brw_reg_type_letters(inst->dst.type));
 
    for (int i = 0; i < inst->sources; i++) {
@@ -4764,6 +4736,16 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "|");
 
       if (inst->src[i].file != IMM) {
+         unsigned stride;
+         if (inst->src[i].file == ARF || inst->src[i].file == FIXED_GRF) {
+            unsigned hstride = inst->src[i].hstride;
+            stride = (hstride == 0 ? 0 : (1 << (hstride - 1)));
+         } else {
+            stride = inst->src[i].stride;
+         }
+         if (stride != 1)
+            fprintf(file, "<%u>", stride);
+
          fprintf(file, ":%s", brw_reg_type_letters(inst->src[i].type));
       }
 
@@ -5241,7 +5223,7 @@ fs_visitor::run_gs()
        */
       if (gs_compile->control_data_header_size_bits <= 32) {
          const fs_builder abld = bld.annotate("initialize control data bits");
-         abld.MOV(this->control_data_bits, fs_reg(0u));
+         abld.MOV(this->control_data_bits, brw_imm_ud(0u));
       }
    }
 
@@ -5474,13 +5456,18 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                const struct brw_wm_prog_key *key,
                struct brw_wm_prog_data *prog_data,
-               const nir_shader *shader,
+               const nir_shader *src_shader,
                struct gl_program *prog,
                int shader_time_index8, int shader_time_index16,
                bool use_rep_send,
                unsigned *final_assembly_size,
                char **error_str)
 {
+   nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
+                                      true);
+   shader = brw_postprocess_nir(shader, compiler->devinfo, true);
+
    /* key->alpha_test_func means simulating alpha testing via discards,
     * so the shader definitely kills pixels.
     */
@@ -5633,11 +5620,16 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                const struct brw_cs_prog_key *key,
                struct brw_cs_prog_data *prog_data,
-               const nir_shader *shader,
+               const nir_shader *src_shader,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str)
 {
+   nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
+                                      true);
+   shader = brw_postprocess_nir(shader, compiler->devinfo, true);
+
    prog_data->local_size[0] = shader->info.cs.local_size[0];
    prog_data->local_size[1] = shader->info.cs.local_size[1];
    prog_data->local_size[2] = shader->info.cs.local_size[2];

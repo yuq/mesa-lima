@@ -509,8 +509,8 @@ vc4_nir_lower_blend_instr(struct vc4_compile *c, nir_builder *b,
         nir_ssa_def *dst_vec4 = nir_unpack_unorm_4x8(b, packed_dst_color);
         nir_ssa_def *src_color[4], *unpacked_dst_color[4];
         for (unsigned i = 0; i < 4; i++) {
-                src_color[i] = nir_swizzle(b, intr->src[0].ssa, &i, 1, false);
-                unpacked_dst_color[i] = nir_swizzle(b, dst_vec4, &i, 1, false);
+                src_color[i] = nir_channel(b, intr->src[0].ssa, i);
+                unpacked_dst_color[i] = nir_channel(b, dst_vec4, i);
         }
 
         vc4_nir_emit_alpha_test_discard(c, b, src_color[3]);

@@ -2193,6 +2193,7 @@ struct gl_ati_fragment_shader_state
 struct gl_subroutine_function
 {
    char *name;
+   int index;
    int num_compat_types;
    const struct glsl_type **types;
 };
@@ -3766,6 +3767,7 @@ struct gl_extensions
    GLboolean EXT_polygon_offset_clamp;
    GLboolean EXT_provoking_vertex;
    GLboolean EXT_shader_integer_mix;
+   GLboolean EXT_shader_samples_identical;
    GLboolean EXT_stencil_two_side;
    GLboolean EXT_texture_array;
    GLboolean EXT_texture_compression_latc;

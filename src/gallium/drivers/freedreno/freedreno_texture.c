@@ -197,33 +197,15 @@ fd_setup_border_colors(struct fd_texture_stateobj *tex, void *ptr,
 					continue;
 
 				const struct util_format_channel_description *chan =
-						&desc->channel[desc->swizzle[j]];
-				int size = chan->size;
-
-				/* The Z16 texture format we use seems to look in the
-				 * 32-bit border color slots
-				 */
-				if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS)
-					size = 32;
-
-				/* Formats like R11G11B10 or RGB9_E5 don't specify
-				 * per-channel sizes properly.
-				 */
-				if (desc->layout == UTIL_FORMAT_LAYOUT_OTHER)
-					size = 16;
-
-				if (chan->pure_integer && size > 16)
-					bcolor32[desc->swizzle[j] + 4] =
-							sampler->border_color.i[j];
-				else if (size > 16)
-					bcolor32[desc->swizzle[j]] =
-							fui(sampler->border_color.f[j]);
-				else if (chan->pure_integer)
-					bcolor[desc->swizzle[j] + 8] =
-							sampler->border_color.i[j];
-				else
+					&desc->channel[desc->swizzle[j]];
+				if (chan->pure_integer) {
+					bcolor32[desc->swizzle[j] + 4] = sampler->border_color.i[j];
+					bcolor[desc->swizzle[j] + 8] = sampler->border_color.i[j];
+				} else {
+					bcolor32[desc->swizzle[j]] = fui(sampler->border_color.f[j]);
 					bcolor[desc->swizzle[j]] =
-							util_float_to_half(sampler->border_color.f[j]);
+						util_float_to_half(sampler->border_color.f[j]);
+				}
 			}
 		}
 	}

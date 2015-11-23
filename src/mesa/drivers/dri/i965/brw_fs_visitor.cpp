@@ -79,122 +79,6 @@ fs_visitor::emit_vs_system_value(int location)
    return reg;
 }
 
-fs_reg
-fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
-                             bool is_rect, uint32_t sampler)
-{
-   bool needs_gl_clamp = true;
-   fs_reg scale_x, scale_y;
-
-   /* The 965 requires the EU to do the normalization of GL rectangle
-    * texture coordinates.  We use the program parameter state
-    * tracking to get the scaling factor.
-    */
-   if (is_rect &&
-       (devinfo->gen < 6 ||
-        (devinfo->gen >= 6 && (key_tex->gl_clamp_mask[0] & (1 << sampler) ||
-                               key_tex->gl_clamp_mask[1] & (1 << sampler))))) {
-      struct gl_program_parameter_list *params = prog->Parameters;
-
-
-      /* FINISHME: We're failing to recompile our programs when the sampler is
-       * updated.  This only matters for the texture rectangle scale
-       * parameters (pre-gen6, or gen6+ with GL_CLAMP).
-       */
-      int tokens[STATE_LENGTH] = {
-	 STATE_INTERNAL,
-	 STATE_TEXRECT_SCALE,
-	 prog->SamplerUnits[sampler],
-	 0,
-	 0
-      };
-
-      no16("rectangle scale uniform setup not supported on SIMD16\n");
-      if (dispatch_width == 16) {
-	 return coordinate;
-      }
-
-      GLuint index = _mesa_add_state_reference(params,
-					       (gl_state_index *)tokens);
-      /* Try to find existing copies of the texrect scale uniforms. */
-      for (unsigned i = 0; i < uniforms; i++) {
-         if (stage_prog_data->param[i] ==
-             &prog->Parameters->ParameterValues[index][0]) {
-            scale_x = fs_reg(UNIFORM, i);
-            scale_y = fs_reg(UNIFORM, i + 1);
-            break;
-         }
-      }
-
-      /* If we didn't already set them up, do so now. */
-      if (scale_x.file == BAD_FILE) {
-         scale_x = fs_reg(UNIFORM, uniforms);
-         scale_y = fs_reg(UNIFORM, uniforms + 1);
-
-         stage_prog_data->param[uniforms++] =
-            &prog->Parameters->ParameterValues[index][0];
-         stage_prog_data->param[uniforms++] =
-            &prog->Parameters->ParameterValues[index][1];
-      }
-   }
-
-   /* The 965 requires the EU to do the normalization of GL rectangle
-    * texture coordinates.  We use the program parameter state
-    * tracking to get the scaling factor.
-    */
-   if (devinfo->gen < 6 && is_rect) {
-      fs_reg dst = fs_reg(VGRF, alloc.allocate(coord_components));
-      fs_reg src = coordinate;
-      coordinate = dst;
-
-      bld.MUL(dst, src, scale_x);
-      dst = offset(dst, bld, 1);
-      src = offset(src, bld, 1);
-      bld.MUL(dst, src, scale_y);
-   } else if (is_rect) {
-      /* On gen6+, the sampler handles the rectangle coordinates
-       * natively, without needing rescaling.  But that means we have
-       * to do GL_CLAMP clamping at the [0, width], [0, height] scale,
-       * not [0, 1] like the default case below.
-       */
-      needs_gl_clamp = false;
-
-      for (int i = 0; i < 2; i++) {
-	 if (key_tex->gl_clamp_mask[i] & (1 << sampler)) {
-	    fs_reg chan = coordinate;
-	    chan = offset(chan, bld, i);
-
-            set_condmod(BRW_CONDITIONAL_GE,
-                        bld.emit(BRW_OPCODE_SEL, chan, chan, fs_reg(0.0f)));
-
-	    /* Our parameter comes in as 1.0/width or 1.0/height,
-	     * because that's what people normally want for doing
-	     * texture rectangle handling.  We need width or height
-	     * for clamping, but we don't care enough to make a new
-	     * parameter type, so just invert back.
-	     */
-	    fs_reg limit = vgrf(glsl_type::float_type);
-            bld.MOV(limit, i == 0 ? scale_x : scale_y);
-            bld.emit(SHADER_OPCODE_RCP, limit, limit);
-
-            set_condmod(BRW_CONDITIONAL_L,
-                        bld.emit(BRW_OPCODE_SEL, chan, chan, limit));
-	 }
-      }
-   }
-
-   if (coord_components > 0 && needs_gl_clamp) {
-      for (int i = 0; i < MIN2(coord_components, 3); i++) {
-	 if (key_tex->gl_clamp_mask[i] & (1 << sampler)) {
-	    fs_reg chan = coordinate;
-	    chan = offset(chan, bld, i);
-            set_saturate(true, bld.MOV(chan, chan));
-	 }
-      }
-   }
-   return coordinate;
-}
-
 /* Sample from the MCS surface attached to this multisample texture. */
 fs_reg
 fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
@@ -203,7 +87,7 @@ fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
    const fs_reg dest = vgrf(glsl_type::uvec4_type);
    const fs_reg srcs[] = {
       coordinate, fs_reg(), fs_reg(), fs_reg(), fs_reg(), fs_reg(),
-      texture, texture, fs_reg(), fs_reg(components), fs_reg(0)
+      texture, texture, fs_reg(), brw_imm_ud(components), brw_imm_d(0)
    };
    fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS_LOGICAL, dest, srcs,
                             ARRAY_SIZE(srcs));
@@ -227,7 +111,6 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                          fs_reg mcs,
                          int gather_component,
                          bool is_cube_array,
-                         bool is_rect,
                          uint32_t surface,
                          fs_reg surface_reg,
                          uint32_t sampler,
@@ -235,38 +118,32 @@ fs_visitor::emit_texture(ir_texture_opcode op,
 {
    fs_inst *inst = NULL;
 
-   if (op == ir_tg4) {
-      /* When tg4 is used with the degenerate ZERO/ONE swizzles, don't bother
-       * emitting anything other than setting up the constant result.
-       */
-      int swiz = GET_SWZ(key_tex->swizzles[sampler], gather_component);
-      if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
-
-         fs_reg res = vgrf(glsl_type::vec4_type);
-         this->result = res;
-
-         for (int i=0; i<4; i++) {
-            bld.MOV(res, fs_reg(swiz == SWIZZLE_ZERO ? 0.0f : 1.0f));
-            res = offset(res, bld, 1);
-         }
-         return;
-      }
-   }
-
    if (op == ir_query_levels) {
       /* textureQueryLevels() is implemented in terms of TXS so we need to
        * pass a valid LOD argument.
        */
       assert(lod.file == BAD_FILE);
-      lod = fs_reg(0u);
+      lod = brw_imm_ud(0u);
    }
 
-   if (coordinate.file != BAD_FILE) {
-      /* FINISHME: Texture coordinate rescaling doesn't work with non-constant
-       * samplers.  This should only be a problem with GL_CLAMP on Gen7.
+   if (op == ir_samples_identical) {
+      fs_reg dst = vgrf(glsl_type::get_instance(dest_type->base_type, 1, 1));
+
+      /* If mcs is an immediate value, it means there is no MCS.  In that case
+       * just return false.
        */
-      coordinate = rescale_texcoord(coordinate, coord_components, is_rect,
-                                    sampler);
+      if (mcs.file == BRW_IMMEDIATE_VALUE) {
+         bld.MOV(dst, brw_imm_ud(0u));
+      } else if ((key_tex->msaa_16 & (1 << sampler))) {
+         fs_reg tmp = vgrf(glsl_type::uint_type);
+         bld.OR(tmp, mcs, offset(mcs, bld, 1));
+         bld.CMP(dst, tmp, brw_imm_ud(0u), BRW_CONDITIONAL_EQ);
+      } else {
+         bld.CMP(dst, mcs, brw_imm_ud(0u), BRW_CONDITIONAL_EQ);
+      }
+
+      this->result = dst;
+      return;
    }
 
    /* Writemasking doesn't eliminate channels on SIMD8 texture
@@ -276,7 +153,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
    const fs_reg srcs[] = {
       coordinate, shadow_c, lod, lod2,
       sample_index, mcs, surface_reg, sampler_reg, offset_value,
-      fs_reg(coord_components), fs_reg(grad_components)
+      brw_imm_d(coord_components), brw_imm_d(grad_components)
    };
    enum opcode opcode;
 
@@ -327,8 +204,15 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       inst->offset = offset_value.ud;
 
    if (op == ir_tg4) {
-      inst->offset |=
-         gather_channel(gather_component, surface, sampler) << 16; /* M0.2:16-17 */
+      if (gather_component == 1 &&
+          key_tex->gather_channel_quirk_mask & (1 << surface)) {
+         /* gather4 sampler is broken for green channel on RG32F --
+          * we must ask for blue instead.
+          */
+         inst->offset |= 2 << 16;
+      } else {
+         inst->offset |= gather_component << 16;
+      }
 
       if (devinfo->gen == 6)
          emit_gen6_gather_wa(key_tex->gen6_gather_wa[surface], dst);
@@ -338,7 +222,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
    if (op == ir_txs && is_cube_array) {
       fs_reg depth = offset(dst, bld, 2);
       fs_reg fixed_depth = vgrf(glsl_type::int_type);
-      bld.emit(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, fs_reg(6));
+      bld.emit(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, brw_imm_d(6));
 
       fs_reg *fixed_payload = ralloc_array(mem_ctx, fs_reg, inst->regs_written);
       int components = inst->regs_written / (inst->exec_size / 8);
@@ -352,7 +236,12 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       bld.LOAD_PAYLOAD(dst, fixed_payload, components, 0);
    }
 
-   swizzle_result(op, dest_type->vector_elements, dst, sampler);
+   if (op == ir_query_levels) {
+      /* # levels is in .w */
+      dst = offset(dst, bld, 3);
+   }
+
+   this->result = dst;
 }
 
 /**
@@ -369,7 +258,7 @@ fs_visitor::emit_gen6_gather_wa(uint8_t wa, fs_reg dst)
    for (int i = 0; i < 4; i++) {
       fs_reg dst_f = retype(dst, BRW_REGISTER_TYPE_F);
       /* Convert from UNORM to UINT */
-      bld.MUL(dst_f, dst_f, fs_reg((float)((1 << width) - 1)));
+      bld.MUL(dst_f, dst_f, brw_imm_f((1 << width) - 1));
       bld.MOV(dst, dst_f);
 
       if (wa & WA_SIGN) {
@@ -377,80 +266,11 @@ fs_visitor::emit_gen6_gather_wa(uint8_t wa, fs_reg dst)
           * shifting the sign bit into place, then shifting back
           * preserving sign.
           */
-         bld.SHL(dst, dst, fs_reg(32 - width));
-         bld.ASR(dst, dst, fs_reg(32 - width));
+         bld.SHL(dst, dst, brw_imm_d(32 - width));
+         bld.ASR(dst, dst, brw_imm_d(32 - width));
       }
 
       dst = offset(dst, bld, 1);
-   }
-}
-
-/**
- * Set up the gather channel based on the swizzle, for gather4.
- */
-uint32_t
-fs_visitor::gather_channel(int orig_chan, uint32_t surface, uint32_t sampler)
-{
-   int swiz = GET_SWZ(key_tex->swizzles[sampler], orig_chan);
-   switch (swiz) {
-      case SWIZZLE_X: return 0;
-      case SWIZZLE_Y:
-         /* gather4 sampler is broken for green channel on RG32F --
-          * we must ask for blue instead.
-          */
-         if (key_tex->gather_channel_quirk_mask & (1 << surface))
-            return 2;
-         return 1;
-      case SWIZZLE_Z: return 2;
-      case SWIZZLE_W: return 3;
-      default:
-         unreachable("Not reached"); /* zero, one swizzles handled already */
-   }
-}
-
-/**
- * Swizzle the result of a texture result.  This is necessary for
- * EXT_texture_swizzle as well as DEPTH_TEXTURE_MODE for shadow comparisons.
- */
-void
-fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
-                           fs_reg orig_val, uint32_t sampler)
-{
-   if (op == ir_query_levels) {
-      /* # levels is in .w */
-      this->result = offset(orig_val, bld, 3);
-      return;
-   }
-
-   this->result = orig_val;
-
-   /* txs,lod don't actually sample the texture, so swizzling the result
-    * makes no sense.
-    */
-   if (op == ir_txs || op == ir_lod || op == ir_tg4)
-      return;
-
-   if (dest_components == 1) {
-      /* Ignore DEPTH_TEXTURE_MODE swizzling. */
-   } else if (key_tex->swizzles[sampler] != SWIZZLE_NOOP) {
-      fs_reg swizzled_result = vgrf(glsl_type::vec4_type);
-      swizzled_result.type = orig_val.type;
-
-      for (int i = 0; i < 4; i++) {
-	 int swiz = GET_SWZ(key_tex->swizzles[sampler], i);
-	 fs_reg l = swizzled_result;
-	 l = offset(l, bld, i);
-
-	 if (swiz == SWIZZLE_ZERO) {
-            bld.MOV(l, fs_reg(0.0f));
-	 } else if (swiz == SWIZZLE_ONE) {
-            bld.MOV(l, fs_reg(1.0f));
-	 } else {
-            bld.MOV(l, offset(orig_val, bld,
-                                  GET_SWZ(key_tex->swizzles[sampler], i)));
-	 }
-      }
-      this->result = swizzled_result;
    }
 }
 
@@ -464,7 +284,7 @@ fs_visitor::emit_dummy_fs()
    const float color[4] = { 1.0, 0.0, 1.0, 0.0 };
    for (int i = 0; i < 4; i++) {
       bld.MOV(fs_reg(MRF, 2 + i * reg_width, BRW_REGISTER_TYPE_F),
-              fs_reg(color[i]));
+              brw_imm_f(color[i]));
    }
 
    fs_inst *write;
@@ -683,7 +503,7 @@ fs_visitor::emit_alpha_test()
       fs_reg color = offset(outputs[0], bld, 3);
 
       /* f0.1 &= func(color, ref) */
-      cmp = abld.CMP(bld.null_reg_f(), color, fs_reg(key->alpha_test_ref),
+      cmp = abld.CMP(bld.null_reg_f(), color, brw_imm_f(key->alpha_test_ref),
                      cond_for_alpha_func(key->alpha_test_func));
    }
    cmp->predicate = BRW_PREDICATE_NORMAL;
@@ -716,7 +536,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
 
    const fs_reg sources[] = {
       color0, color1, src0_alpha, src_depth, dst_depth, src_stencil,
-      sample_mask, fs_reg(components)
+      sample_mask, brw_imm_ud(components)
    };
    assert(ARRAY_SIZE(sources) - 1 == FB_WRITE_LOGICAL_SRC_COMPONENTS);
    fs_inst *write = bld.emit(FS_OPCODE_FB_WRITE_LOGICAL, fs_reg(),
@@ -950,12 +770,12 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
 
       fs_reg offset;
       if (gs_vertex_count.file == IMM) {
-         per_slot_offsets = fs_reg(output_vertex_size_owords *
-                                   gs_vertex_count.ud);
+         per_slot_offsets = brw_imm_ud(output_vertex_size_owords *
+                                       gs_vertex_count.ud);
       } else {
          per_slot_offsets = vgrf(glsl_type::int_type);
          bld.MUL(per_slot_offsets, gs_vertex_count,
-                 fs_reg(output_vertex_size_owords));
+                 brw_imm_ud(output_vertex_size_owords));
       }
    }
 
@@ -978,7 +798,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
          }
 
          fs_reg zero(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
-         bld.MOV(zero, fs_reg(0u));
+         bld.MOV(zero, brw_imm_ud(0u));
 
          sources[length++] = zero;
          if (vue_map->slots_valid & VARYING_BIT_LAYER)
@@ -1038,7 +858,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
             for (unsigned i = 0; i < output_components[varying]; i++)
                sources[length++] = offset(this->outputs[varying], bld, i);
             for (unsigned i = output_components[varying]; i < 4; i++)
-               sources[length++] = fs_reg(0);
+               sources[length++] = brw_imm_d(0);
          }
          break;
       }
@@ -1115,11 +935,11 @@ fs_visitor::emit_barrier()
    const fs_builder pbld = bld.exec_all().group(8, 0);
 
    /* Clear the message payload */
-   pbld.MOV(payload, fs_reg(0u));
+   pbld.MOV(payload, brw_imm_ud(0u));
 
    /* Copy bits 27:24 of r0.2 (barrier id) to the message payload reg.2 */
    fs_reg r0_2 = fs_reg(retype(brw_vec1_grf(0, 2), BRW_REGISTER_TYPE_UD));
-   pbld.AND(component(payload, 2), r0_2, fs_reg(0x0f000000u));
+   pbld.AND(component(payload, 2), r0_2, brw_imm_ud(0x0f000000u));
 
    /* Emit a gateway "barrier" message using the payload we set up, followed
     * by a wait instruction.

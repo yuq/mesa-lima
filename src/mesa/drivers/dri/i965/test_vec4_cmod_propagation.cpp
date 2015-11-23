@@ -145,7 +145,7 @@ TEST_F(cmod_propagation_test, basic)
    dst_reg dest = dst_reg(v, glsl_type::float_type);
    src_reg src0 = src_reg(v, glsl_type::float_type);
    src_reg src1 = src_reg(v, glsl_type::float_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    dst_reg dest_null = bld.null_reg_f();
    dest_null.writemask = WRITEMASK_X;
 
@@ -181,7 +181,7 @@ TEST_F(cmod_propagation_test, basic_different_dst_writemask)
    dst_reg dest = dst_reg(v, glsl_type::float_type);
    src_reg src0 = src_reg(v, glsl_type::float_type);
    src_reg src1 = src_reg(v, glsl_type::float_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    dst_reg dest_null = bld.null_reg_f();
 
    bld.ADD(dest, src0, src1);
@@ -217,8 +217,8 @@ TEST_F(cmod_propagation_test, andz_one)
    const vec4_builder bld = vec4_builder(v).at_end();
    dst_reg dest = dst_reg(v, glsl_type::int_type);
    src_reg src0 = src_reg(v, glsl_type::float_type);
-   src_reg zero(0.0f);
-   src_reg one(1);
+   src_reg zero(brw_imm_f(0.0f));
+   src_reg one(brw_imm_d(1));
 
    bld.CMP(retype(dest, BRW_REGISTER_TYPE_F), src0, zero, BRW_CONDITIONAL_L);
    set_condmod(BRW_CONDITIONAL_Z,
@@ -253,7 +253,7 @@ TEST_F(cmod_propagation_test, non_cmod_instruction)
    const vec4_builder bld = vec4_builder(v).at_end();
    dst_reg dest = dst_reg(v, glsl_type::uint_type);
    src_reg src0 = src_reg(v, glsl_type::uint_type);
-   src_reg zero(0u);
+   src_reg zero(brw_imm_ud(0u));
    bld.FBL(dest, src0);
    bld.CMP(bld.null_reg_ud(), src_reg(dest), zero, BRW_CONDITIONAL_GE);
 
@@ -288,7 +288,7 @@ TEST_F(cmod_propagation_test, intervening_flag_write)
    src_reg src0 = src_reg(v, glsl_type::float_type);
    src_reg src1 = src_reg(v, glsl_type::float_type);
    src_reg src2 = src_reg(v, glsl_type::float_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    bld.ADD(dest, src0, src1);
    bld.CMP(bld.null_reg_f(), src2, zero, BRW_CONDITIONAL_GE);
    bld.CMP(bld.null_reg_f(), src_reg(dest), zero, BRW_CONDITIONAL_GE);
@@ -328,7 +328,7 @@ TEST_F(cmod_propagation_test, intervening_flag_read)
    src_reg src0 = src_reg(v, glsl_type::float_type);
    src_reg src1 = src_reg(v, glsl_type::float_type);
    src_reg src2 = src_reg(v, glsl_type::float_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    bld.ADD(dest0, src0, src1);
    set_predicate(BRW_PREDICATE_NORMAL, bld.SEL(dest1, src2, zero));
    bld.CMP(bld.null_reg_f(), src_reg(dest0), zero, BRW_CONDITIONAL_GE);
@@ -367,7 +367,7 @@ TEST_F(cmod_propagation_test, intervening_dest_write)
    src_reg src0 = src_reg(v, glsl_type::float_type);
    src_reg src1 = src_reg(v, glsl_type::float_type);
    src_reg src2 = src_reg(v, glsl_type::vec2_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    bld.ADD(offset(dest, 2), src0, src1);
    bld.emit(SHADER_OPCODE_TEX, dest, src2)
       ->regs_written = 4;
@@ -409,7 +409,7 @@ TEST_F(cmod_propagation_test, intervening_flag_read_same_value)
    src_reg src0 = src_reg(v, glsl_type::float_type);
    src_reg src1 = src_reg(v, glsl_type::float_type);
    src_reg src2 = src_reg(v, glsl_type::float_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    dst_reg dest_null = bld.null_reg_f();
    dest_null.writemask = WRITEMASK_X;
 
@@ -449,7 +449,7 @@ TEST_F(cmod_propagation_test, negate)
    dst_reg dest = dst_reg(v, glsl_type::float_type);
    src_reg src0 = src_reg(v, glsl_type::float_type);
    src_reg src1 = src_reg(v, glsl_type::float_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    bld.ADD(dest, src0, src1);
    src_reg tmp_src = src_reg(dest);
    tmp_src.negate = true;
@@ -521,7 +521,7 @@ TEST_F(cmod_propagation_test, different_types_cmod_with_zero)
    dst_reg dest = dst_reg(v, glsl_type::int_type);
    src_reg src0 = src_reg(v, glsl_type::int_type);
    src_reg src1 = src_reg(v, glsl_type::int_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    bld.ADD(dest, src0, src1);
    bld.CMP(bld.null_reg_f(), retype(src_reg(dest), BRW_REGISTER_TYPE_F), zero,
            BRW_CONDITIONAL_GE);
@@ -555,8 +555,8 @@ TEST_F(cmod_propagation_test, andnz_non_one)
    const vec4_builder bld = vec4_builder(v).at_end();
    dst_reg dest = dst_reg(v, glsl_type::int_type);
    src_reg src0 = src_reg(v, glsl_type::float_type);
-   src_reg zero(0.0f);
-   src_reg nonone(38);
+   src_reg zero(brw_imm_f(0.0f));
+   src_reg nonone(brw_imm_d(38));
 
    bld.CMP(retype(dest, BRW_REGISTER_TYPE_F), src0, zero, BRW_CONDITIONAL_L);
    set_condmod(BRW_CONDITIONAL_NZ,
@@ -594,7 +594,7 @@ TEST_F(cmod_propagation_test, basic_vec4)
    dst_reg dest = dst_reg(v, glsl_type::vec4_type);
    src_reg src0 = src_reg(v, glsl_type::vec4_type);
    src_reg src1 = src_reg(v, glsl_type::vec4_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
 
    bld.MUL(dest, src0, src1);
    bld.CMP(bld.null_reg_f(), src_reg(dest), zero, BRW_CONDITIONAL_NZ);
@@ -628,7 +628,7 @@ TEST_F(cmod_propagation_test, basic_vec4_different_dst_writemask)
    dest.writemask = WRITEMASK_X;
    src_reg src0 = src_reg(v, glsl_type::vec4_type);
    src_reg src1 = src_reg(v, glsl_type::vec4_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    dst_reg dest_null = bld.null_reg_f();
 
    bld.MUL(dest, src0, src1);
@@ -668,7 +668,7 @@ TEST_F(cmod_propagation_test, mad_one_component_vec4)
    src_reg src2 = src_reg(v, glsl_type::vec4_type);
    src0.swizzle = src1.swizzle = src2.swizzle = BRW_SWIZZLE_XXXX;
    src2.negate = true;
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    src_reg tmp(dest);
    tmp.swizzle = BRW_SWIZZLE_XXXX;
    dst_reg dest_null = bld.null_reg_f();
@@ -710,7 +710,7 @@ TEST_F(cmod_propagation_test, mad_more_one_component_vec4)
    src_reg src2 = src_reg(v, glsl_type::vec4_type);
    src0.swizzle = src1.swizzle = src2.swizzle = BRW_SWIZZLE_XXXX;
    src2.negate = true;
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    src_reg tmp(dest);
    tmp.swizzle = BRW_SWIZZLE_XXXX;
    dst_reg dest_null = bld.null_reg_f();
@@ -751,7 +751,7 @@ TEST_F(cmod_propagation_test, cmp_mov_vec4)
    src_reg src0 = src_reg(v, glsl_type::ivec4_type);
    src0.swizzle = BRW_SWIZZLE_XXXX;
    src0.file = UNIFORM;
-   src_reg nonone = retype(src_reg(16), BRW_REGISTER_TYPE_D);
+   src_reg nonone = retype(brw_imm_d(16), BRW_REGISTER_TYPE_D);
    src_reg mov_src = src_reg(dest);
    mov_src.swizzle = BRW_SWIZZLE_XXXX;
    dst_reg dest_null = bld.null_reg_d();
@@ -790,7 +790,7 @@ TEST_F(cmod_propagation_test, mul_cmp_different_channels_vec4)
    dst_reg dest = dst_reg(v, glsl_type::vec4_type);
    src_reg src0 = src_reg(v, glsl_type::vec4_type);
    src_reg src1 = src_reg(v, glsl_type::vec4_type);
-   src_reg zero(0.0f);
+   src_reg zero(brw_imm_f(0.0f));
    src_reg cmp_src = src_reg(dest);
    cmp_src.swizzle = BRW_SWIZZLE4(0,1,3,2);
 

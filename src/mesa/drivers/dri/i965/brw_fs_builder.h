@@ -225,7 +225,7 @@ namespace brw {
       sample_mask_reg() const
       {
          if (shader->stage != MESA_SHADER_FRAGMENT) {
-            return src_reg(0xffff);
+            return brw_imm_d(0xffff);
          } else if (((brw_wm_prog_data *)shader->stage_prog_data)->uses_kill) {
             return brw_flag_reg(0, 1);
          } else {
@@ -548,7 +548,7 @@ namespace brw {
             const dst_reg x_times_one_minus_a = vgrf(dst.type);
 
             MUL(y_times_a, y, a);
-            ADD(one_minus_a, negate(a), src_reg(1.0f));
+            ADD(one_minus_a, negate(a), brw_imm_f(1.0f));
             MUL(x_times_one_minus_a, x, src_reg(one_minus_a));
             return ADD(dst, src_reg(x_times_one_minus_a), src_reg(y_times_a));
          }

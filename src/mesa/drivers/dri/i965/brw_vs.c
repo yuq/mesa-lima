@@ -48,6 +48,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
                     struct brw_vertex_program *vp,
                     struct brw_vs_prog_key *key)
 {
+   const struct brw_compiler *compiler = brw->intelScreen->compiler;
    GLuint program_size;
    const GLuint *program;
    struct brw_vs_prog_data prog_data;
@@ -79,7 +80,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
     * by the state cache.
     */
    int param_count = vp->program.Base.nir->num_uniforms;
-   if (!brw->intelScreen->compiler->scalar_vs)
+   if (!compiler->scalar_stage[MESA_SHADER_VERTEX])
       param_count *= 4;
 
    if (vs)
@@ -102,7 +103,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    if (prog) {
       brw_nir_setup_glsl_uniforms(vp->program.Base.nir, prog, &vp->program.Base,
                                   &prog_data.base.base,
-                                  brw->intelScreen->compiler->scalar_vs);
+                                  compiler->scalar_stage[MESA_SHADER_VERTEX]);
    } else {
       brw_nir_setup_arb_uniforms(vp->program.Base.nir, &vp->program.Base,
                                  &prog_data.base.base);
@@ -173,7 +174,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    /* Emit GEN4 code.
     */
    char *error_str;
-   program = brw_compile_vs(brw->intelScreen->compiler, brw, mem_ctx, key,
+   program = brw_compile_vs(compiler, brw, mem_ctx, key,
                             &prog_data, vp->program.Base.nir,
                             brw_select_clip_planes(&brw->ctx),
                             !_mesa_is_gles3(&brw->ctx),

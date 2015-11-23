@@ -84,7 +84,7 @@ vc4_nir_unpack_16u(nir_builder *b, nir_ssa_def *src, unsigned chan)
 static nir_ssa_def *
 vc4_nir_unpack_8f(nir_builder *b, nir_ssa_def *src, unsigned chan)
 {
-        return nir_swizzle(b, nir_unpack_unorm_4x8(b, src), &chan, 1, false);
+        return nir_channel(b, nir_unpack_unorm_4x8(b, src), chan);
 }
 
 static nir_ssa_def *
@@ -326,9 +326,8 @@ vc4_nir_lower_output(struct vc4_compile *c, nir_builder *b,
                 intr_comp->const_index[0] = intr->const_index[0] * 4 + i;
 
                 assert(intr->src[0].is_ssa);
-                intr_comp->src[0] = nir_src_for_ssa(nir_swizzle(b,
-                                                                intr->src[0].ssa,
-                                                                &i, 1, false));
+                intr_comp->src[0] =
+                        nir_src_for_ssa(nir_channel(b, intr->src[0].ssa, i));
                 nir_builder_instr_insert(b, &intr_comp->instr);
         }
 

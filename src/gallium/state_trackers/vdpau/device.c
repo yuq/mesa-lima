@@ -63,7 +63,7 @@ vdp_imp_device_create_x11(Display *display, int screen, VdpDevice *device,
 
    pipe_reference_init(&dev->reference, 1);
 
-   dev->vscreen = vl_screen_create(display, screen);
+   dev->vscreen = vl_dri2_screen_create(display, screen);
    if (!dev->vscreen) {
       ret = VDP_STATUS_RESOURCES;
       goto no_vscreen;
@@ -136,7 +136,7 @@ no_handle:
 no_resource:
    dev->context->destroy(dev->context);
 no_context:
-   vl_screen_destroy(dev->vscreen);
+   dev->vscreen->destroy(dev->vscreen);
 no_vscreen:
    FREE(dev);
 no_dev:
@@ -227,7 +227,7 @@ vlVdpDeviceFree(vlVdpDevice *dev)
    vl_compositor_cleanup(&dev->compositor);
    pipe_sampler_view_reference(&dev->dummy_sv, NULL);
    dev->context->destroy(dev->context);
-   vl_screen_destroy(dev->vscreen);
+   dev->vscreen->destroy(dev->vscreen);
    FREE(dev);
    vlDestroyHTAB();
 }

@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <stdio.h>
 #include "brw_device_info.h"
 #include "main/mtypes.h"
 
@@ -89,8 +90,7 @@ struct brw_compiler {
    void (*shader_debug_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
    void (*shader_perf_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
 
-   bool scalar_vs;
-   bool scalar_gs;
+   bool scalar_stage[MESA_SHADER_STAGES];
    struct gl_shader_compiler_options glsl_compiler_options[MESA_SHADER_STAGES];
 };
 
@@ -492,6 +492,34 @@ enum shader_dispatch_mode {
    DISPATCH_MODE_4X2_DUAL_OBJECT = 2,
    DISPATCH_MODE_SIMD8 = 3,
 };
+
+/**
+ * @defgroup Tessellator parameter enumerations.
+ *
+ * These correspond to the hardware values in 3DSTATE_TE, and are provided
+ * as part of the tessellation evaluation shader.
+ *
+ * @{
+ */
+enum brw_tess_partitioning {
+   BRW_TESS_PARTITIONING_INTEGER         = 0,
+   BRW_TESS_PARTITIONING_ODD_FRACTIONAL  = 1,
+   BRW_TESS_PARTITIONING_EVEN_FRACTIONAL = 2,
+};
+
+enum brw_tess_output_topology {
+   BRW_TESS_OUTPUT_TOPOLOGY_POINT   = 0,
+   BRW_TESS_OUTPUT_TOPOLOGY_LINE    = 1,
+   BRW_TESS_OUTPUT_TOPOLOGY_TRI_CW  = 2,
+   BRW_TESS_OUTPUT_TOPOLOGY_TRI_CCW = 3,
+};
+
+enum brw_tess_domain {
+   BRW_TESS_DOMAIN_QUAD    = 0,
+   BRW_TESS_DOMAIN_TRI     = 1,
+   BRW_TESS_DOMAIN_ISOLINE = 2,
+};
+/** @} */
 
 struct brw_vue_prog_data {
    struct brw_stage_prog_data base;

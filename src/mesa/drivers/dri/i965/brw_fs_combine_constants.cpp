@@ -279,7 +279,7 @@ fs_visitor::opt_combine_constants()
                       imm->block->last_non_control_flow_inst()->next);
       const fs_builder ibld = bld.at(imm->block, n).exec_all().group(1, 0);
 
-      ibld.MOV(reg, fs_reg(imm->val));
+      ibld.MOV(reg, brw_imm_f(imm->val));
       imm->nr = reg.nr;
       imm->subreg_offset = reg.subreg_offset;
 

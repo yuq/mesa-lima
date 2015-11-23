@@ -75,7 +75,9 @@ brw_codegen_gs_prog(struct brw_context *brw,
     * every uniform is a float which gets padded to the size of a vec4.
     */
    struct gl_shader *gs = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
-   int param_count = gp->program.Base.nir->num_uniforms * 4;
+   int param_count = gp->program.Base.nir->num_uniforms;
+   if (!compiler->scalar_stage[MESA_SHADER_GEOMETRY])
+      param_count *= 4;
 
    prog_data.base.base.param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
@@ -87,7 +89,8 @@ brw_codegen_gs_prog(struct brw_context *brw,
    prog_data.base.base.nr_image_params = gs->NumImages;
 
    brw_nir_setup_glsl_uniforms(gp->program.Base.nir, prog, &gp->program.Base,
-                               &prog_data.base.base, compiler->scalar_gs);
+                               &prog_data.base.base,
+                               compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
 
    GLbitfield64 outputs_written = gp->program.Base.OutputsWritten;
 

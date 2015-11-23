@@ -55,9 +55,14 @@ static bool is_move(nir_alu_instr *instr)
 
 static bool is_vec(nir_alu_instr *instr)
 {
-   for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++)
+   for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
       if (!instr->src[i].src.is_ssa)
          return false;
+
+      /* we handle modifiers in a separate pass */
+      if (instr->src[i].abs || instr->src[i].negate)
+         return false;
+   }
 
    return instr->op == nir_op_vec2 ||
           instr->op == nir_op_vec3 ||

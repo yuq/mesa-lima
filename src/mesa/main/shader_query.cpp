@@ -661,6 +661,13 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
    switch (res->Type) {
    case GL_ATOMIC_COUNTER_BUFFER:
       return RESOURCE_ATC(res) - shProg->AtomicBuffers;
+   case GL_VERTEX_SUBROUTINE:
+   case GL_GEOMETRY_SUBROUTINE:
+   case GL_FRAGMENT_SUBROUTINE:
+   case GL_COMPUTE_SUBROUTINE:
+   case GL_TESS_CONTROL_SUBROUTINE:
+   case GL_TESS_EVALUATION_SUBROUTINE:
+      return RESOURCE_SUB(res)->index;
    case GL_UNIFORM_BLOCK:
    case GL_SHADER_STORAGE_BLOCK:
    case GL_TRANSFORM_FEEDBACK_VARYING:
@@ -1413,9 +1420,19 @@ _mesa_validate_pipeline_io(struct gl_pipeline_object *pipeline)
 
    for (idx = prev + 1; idx < ARRAY_SIZE(pipeline->CurrentProgram); idx++) {
       if (shProg[idx]) {
-         if (!validate_io(shProg[prev]->_LinkedShaders[prev],
-                          shProg[idx]->_LinkedShaders[idx]))
-            return false;
+         /* Since we now only validate precision, we can skip this step for
+          * desktop GLSL shaders, there precision qualifier is ignored.
+          *
+          * From OpenGL 4.50 Shading Language spec, section 4.7:
+          *     "For the purposes of determining if an output from one shader
+          *     stage matches an input of the next stage, the precision
+          *     qualifier need not match."
+          */
+         if (shProg[prev]->IsES || shProg[idx]->IsES) {
+            if (!validate_io(shProg[prev]->_LinkedShaders[prev],
+                             shProg[idx]->_LinkedShaders[idx]))
+               return false;
+         }
          prev = idx;
       }
    }

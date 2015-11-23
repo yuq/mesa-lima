@@ -126,6 +126,7 @@ brwProgramStringNotify(struct gl_context *ctx,
 		       struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct brw_compiler *compiler = brw->intelScreen->compiler;
 
    switch (target) {
    case GL_FRAGMENT_PROGRAM_ARB: {
@@ -165,7 +166,7 @@ brwProgramStringNotify(struct gl_context *ctx,
       brw_add_texrect_params(prog);
 
       prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX,
-                                 brw->intelScreen->compiler->scalar_vs);
+                                 compiler->scalar_stage[MESA_SHADER_VERTEX]);
 
       brw_vs_precompile(ctx, NULL, prog);
       break;
@@ -343,6 +344,8 @@ brw_report_shader_time(struct brw_context *brw)
 
       switch (type) {
       case ST_VS:
+      case ST_TCS:
+      case ST_TES:
       case ST_GS:
       case ST_FS8:
       case ST_FS16:
@@ -369,6 +372,8 @@ brw_report_shader_time(struct brw_context *brw)
 
       switch (type) {
       case ST_VS:
+      case ST_TCS:
+      case ST_TES:
       case ST_GS:
       case ST_FS8:
       case ST_FS16:
@@ -406,6 +411,12 @@ brw_report_shader_time(struct brw_context *brw)
       case ST_VS:
          stage = "vs";
          break;
+      case ST_TCS:
+         stage = "tcs";
+         break;
+      case ST_TES:
+         stage = "tes";
+         break;
       case ST_GS:
          stage = "gs";
          break;
@@ -429,6 +440,8 @@ brw_report_shader_time(struct brw_context *brw)
 
    fprintf(stderr, "\n");
    print_shader_time_line("total", "vs", 0, total_by_type[ST_VS], total);
+   print_shader_time_line("total", "tcs", 0, total_by_type[ST_TCS], total);
+   print_shader_time_line("total", "tes", 0, total_by_type[ST_TES], total);
    print_shader_time_line("total", "gs", 0, total_by_type[ST_GS], total);
    print_shader_time_line("total", "fs8", 0, total_by_type[ST_FS8], total);
    print_shader_time_line("total", "fs16", 0, total_by_type[ST_FS16], total);

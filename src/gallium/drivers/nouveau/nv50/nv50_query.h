@@ -28,6 +28,12 @@ nv50_query(struct pipe_query *pipe)
    return (struct nv50_query *)pipe;
 }
 
+/*
+ * Driver queries groups:
+ */
+#define NV50_HW_SM_QUERY_GROUP       0
+#define NV50_HW_METRIC_QUERY_GROUP   1
+
 void nv50_init_query_functions(struct nv50_context *);
 
 #endif

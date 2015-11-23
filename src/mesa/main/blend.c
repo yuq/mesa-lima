@@ -67,7 +67,7 @@ legal_src_factor(const struct gl_context *ctx, GLenum factor)
    case GL_SRC1_ALPHA:
    case GL_ONE_MINUS_SRC1_COLOR:
    case GL_ONE_MINUS_SRC1_ALPHA:
-      return _mesa_is_desktop_gl(ctx)
+      return ctx->API != API_OPENGLES
          && ctx->Extensions.ARB_blend_func_extended;
    default:
       return GL_FALSE;
@@ -100,14 +100,14 @@ legal_dst_factor(const struct gl_context *ctx, GLenum factor)
    case GL_ONE_MINUS_CONSTANT_ALPHA:
       return _mesa_is_desktop_gl(ctx) || ctx->API == API_OPENGLES2;
    case GL_SRC_ALPHA_SATURATE:
-      return (_mesa_is_desktop_gl(ctx)
+      return (ctx->API != API_OPENGLES
               && ctx->Extensions.ARB_blend_func_extended)
          || _mesa_is_gles3(ctx);
    case GL_SRC1_COLOR:
    case GL_SRC1_ALPHA:
    case GL_ONE_MINUS_SRC1_COLOR:
    case GL_ONE_MINUS_SRC1_ALPHA:
-      return _mesa_is_desktop_gl(ctx)
+      return ctx->API != API_OPENGLES
          && ctx->Extensions.ARB_blend_func_extended;
    default:
       return GL_FALSE;
@@ -404,7 +404,7 @@ _mesa_BlendEquation( GLenum mode )
    ctx->Color._BlendEquationPerBuffer = GL_FALSE;
 
    if (ctx->Driver.BlendEquationSeparate)
-      (*ctx->Driver.BlendEquationSeparate)( ctx, mode, mode );
+      ctx->Driver.BlendEquationSeparate(ctx, mode, mode);
 }
 
 
@@ -582,7 +582,7 @@ _mesa_BlendColor( GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha )
    ctx->Color.BlendColor[3] = CLAMP(tmp[3], 0.0F, 1.0F);
 
    if (ctx->Driver.BlendColor)
-      (*ctx->Driver.BlendColor)(ctx, ctx->Color.BlendColor);
+      ctx->Driver.BlendColor(ctx, ctx->Color.BlendColor);
 }
 
 
