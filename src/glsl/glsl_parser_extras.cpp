@@ -874,7 +874,7 @@ void
 _mesa_ast_process_interface_block(YYLTYPE *locp,
                                   _mesa_glsl_parse_state *state,
                                   ast_interface_block *const block,
-                                  const struct ast_type_qualifier q)
+                                  const struct ast_type_qualifier &q)
 {
    if (q.flags.q.buffer) {
       if (!state->has_shader_storage_buffer_objects()) {
