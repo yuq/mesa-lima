@@ -251,6 +251,7 @@ vec4_instruction::can_do_writemask(const struct brw_device_info *devinfo)
    case TES_OPCODE_CREATE_INPUT_READ_HEADER:
    case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:
    case VEC4_OPCODE_URB_READ:
+   case SHADER_OPCODE_MOV_INDIRECT:
       return false;
    default:
       /* The MATH instruction on Gen6 only executes in align1 mode, which does
