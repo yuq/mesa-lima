@@ -870,7 +870,7 @@ fs_inst::regs_read(int arg) const
              * unread portion at the beginning.
              */
             if (src[0].subnr)
-               region_length += src[0].subnr * type_sz(src[0].type);
+               region_length += src[0].subnr;
 
             return DIV_ROUND_UP(region_length, REG_SIZE);
          } else {
