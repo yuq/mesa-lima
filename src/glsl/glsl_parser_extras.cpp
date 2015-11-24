@@ -1086,7 +1086,7 @@ void
 ast_compound_statement::print(void) const
 {
    printf("{\n");
-   
+
    foreach_list_typed(ast_node, ast, link, &this->statements) {
       ast->print();
    }
@@ -1412,7 +1412,6 @@ ast_selection_statement::print(void) const
       printf("else ");
       else_statement->print();
    }
-   
 }
 
 

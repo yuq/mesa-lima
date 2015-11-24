@@ -1824,7 +1824,7 @@ ast_expression::do_hir(exec_list *instructions,
        * tree.  This particular use must be at location specified in the grammar
        * as 'variable_identifier'.
        */
-      ir_variable *var = 
+      ir_variable *var =
          state->symbols->get_variable(this->primary_expression.identifier);
 
       if (var != NULL) {
@@ -5557,8 +5557,8 @@ ast_switch_statement::hir(exec_list *instructions,
 
    /* From page 66 (page 55 of the PDF) of the GLSL 1.50 spec:
     *
-    *    "The type of init-expression in a switch statement must be a 
-    *     scalar integer." 
+    *    "The type of init-expression in a switch statement must be a
+    *     scalar integer."
     */
    if (!test_expression->type->is_scalar() ||
        !test_expression->type->is_integer()) {

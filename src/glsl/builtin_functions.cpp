@@ -1336,7 +1336,7 @@ builtin_builder::create_builtins()
                 _smoothstep(fp64, glsl_type::dvec3_type,  glsl_type::dvec3_type),
                 _smoothstep(fp64, glsl_type::dvec4_type,  glsl_type::dvec4_type),
                 NULL);
- 
+
    FD130(isnan)
    FD130(isinf)
 
@@ -1373,7 +1373,7 @@ builtin_builder::create_builtins()
    FD(distance)
    FD(dot)
 
-   add_function("cross", _cross(always_available, glsl_type::vec3_type), 
+   add_function("cross", _cross(always_available, glsl_type::vec3_type),
                 _cross(fp64, glsl_type::dvec3_type), NULL);
 
    FD(normalize)
