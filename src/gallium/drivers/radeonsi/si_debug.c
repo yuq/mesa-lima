@@ -312,9 +312,10 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
  * \param trace_id	the last trace ID that is known to have been reached
  *			and executed by the CP, typically read from a buffer
  */
-static void si_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id)
+static void si_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
+			const char *name)
 {
-	fprintf(f, "------------------ IB begin ------------------\n");
+	fprintf(f, "------------------ %s begin ------------------\n", name);
 
 	while (num_dw > 0) {
 		unsigned type = PKT_TYPE_G(ib[0]);
@@ -337,11 +338,12 @@ static void si_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id)
 		}
 	}
 
-	fprintf(f, "------------------- IB end -------------------\n");
+	fprintf(f, "------------------- %s end -------------------\n", name);
 	if (num_dw < 0) {
 		printf("Packet ends after the end of IB.\n");
 		exit(0);
 	}
+	fprintf(f, "\n");
 }
 
 static void si_dump_mmapped_reg(struct si_context *sctx, FILE *f,
@@ -413,8 +415,17 @@ static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 			last_trace_id = *map;
 	}
 
+	if (sctx->init_config)
+		si_parse_ib(f, sctx->init_config->pm4, sctx->init_config->ndw,
+			    -1, "IB2: Init config");
+
+	if (sctx->init_config_gs_rings)
+		si_parse_ib(f, sctx->init_config_gs_rings->pm4,
+			    sctx->init_config_gs_rings->ndw,
+			    -1, "IB2: Init GS rings");
+
 	si_parse_ib(f, sctx->last_ib, sctx->last_ib_dw_size,
-		    last_trace_id);
+		    last_trace_id, "IB");
 	free(sctx->last_ib); /* dump only once */
 	sctx->last_ib = NULL;
 	r600_resource_reference(&sctx->last_trace_buf, NULL);
