@@ -215,6 +215,33 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       }
    }
 
+   /* If FRAMEBUFFER_SRGB is used on Gen9+ then we need to resolve any of the
+    * single-sampled color renderbuffers because the CCS buffer isn't
+    * supported for SRGB formats. This only matters if FRAMEBUFFER_SRGB is
+    * enabled because otherwise the surface state will be programmed with the
+    * linear equivalent format anyway.
+    */
+   if (brw->gen >= 9 && ctx->Color.sRGBEnabled) {
+      struct gl_framebuffer *fb = ctx->DrawBuffer;
+      for (int i = 0; i < fb->_NumColorDrawBuffers; i++) {
+         struct gl_renderbuffer *rb = fb->_ColorDrawBuffers[i];
+
+         if (rb == NULL)
+            continue;
+
+         struct intel_renderbuffer *irb = intel_renderbuffer(rb);
+         struct intel_mipmap_tree *mt = irb->mt;
+
+         if (mt == NULL ||
+             mt->num_samples > 1 ||
+             _mesa_get_srgb_format_linear(mt->format) == mt->format)
+               continue;
+
+         intel_miptree_resolve_color(brw, mt);
+         brw_render_cache_set_check_flush(brw, mt->bo);
+      }
+   }
+
    _mesa_lock_context_textures(ctx);
 }
 
