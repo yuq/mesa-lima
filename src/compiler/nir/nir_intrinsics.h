@@ -293,6 +293,10 @@ SYSTEM_VALUE(helper_invocation, 1, 0, xx, xx, xx)
  * of the start of the variable being loaded and and the offset source is a
  * offset into that variable.
  *
+ * Uniform load operations have a second "range" index that specifies the
+ * range (starting at base) of the data from which we are loading.  If
+ * const_index[1] == 0, then the range is unknown.
+ *
  * Some load operations such as UBO/SSBO load and per_vertex loads take an
  * additional source to specify which UBO/SSBO/vertex to load from.
  *
@@ -306,7 +310,7 @@ SYSTEM_VALUE(helper_invocation, 1, 0, xx, xx, xx)
    INTRINSIC(load_##name, srcs, ARR(1, 1, 1, 1), true, 0, 0, num_indices, idx0, idx1, idx2, flags)
 
 /* src[] = { offset }. const_index[] = { base } */
-LOAD(uniform, 1, 1, BASE, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(uniform, 1, 2, BASE, RANGE, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { buffer_index, offset }. No const_index */
 LOAD(ubo, 2, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { offset }. const_index[] = { base } */

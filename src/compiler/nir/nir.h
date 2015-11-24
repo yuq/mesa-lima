@@ -965,6 +965,12 @@ typedef enum {
     */
    NIR_INTRINSIC_UCP_ID = 4,
 
+   /**
+    * The amount of data, starting from BASE, that this instruction may
+    * access.  This is used to provide bounds if the offset is not constant.
+    */
+   NIR_INTRINSIC_RANGE = 5,
+
    NIR_INTRINSIC_NUM_INDEX_FLAGS,
 
 } nir_intrinsic_index_flag;
@@ -1028,6 +1034,7 @@ INTRINSIC_IDX_ACCESSORS(write_mask, WRMASK, unsigned)
 INTRINSIC_IDX_ACCESSORS(base, BASE, int)
 INTRINSIC_IDX_ACCESSORS(stream_id, STREAM_ID, unsigned)
 INTRINSIC_IDX_ACCESSORS(ucp_id, UCP_ID, unsigned)
+INTRINSIC_IDX_ACCESSORS(range, RANGE, unsigned)
 
 /**
  * \group texture information
