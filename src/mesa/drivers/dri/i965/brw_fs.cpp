@@ -1963,8 +1963,8 @@ fs_visitor::assign_constant_locations()
          if (inst->src[i].file != UNIFORM)
             continue;
 
-         if (inst->src[i].reladdr) {
-            int uniform = inst->src[i].nr;
+         if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0) {
+            int uniform = inst->src[0].nr;
 
             /* If this array isn't already present in the pull constant buffer,
              * add it.
@@ -2046,49 +2046,63 @@ fs_visitor::assign_constant_locations()
 void
 fs_visitor::demote_pull_constants()
 {
-   foreach_block_and_inst (block, fs_inst, inst, cfg) {
+   const unsigned index = stage_prog_data->binding_table.pull_constants_start;
+
+   foreach_block_and_inst_safe (block, fs_inst, inst, cfg) {
+      /* Set up the annotation tracking for new generated instructions. */
+      const fs_builder ibld(this, block, inst);
+
       for (int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file != UNIFORM)
 	    continue;
 
-         int pull_index;
+         /* We'll handle this case later */
+         if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0)
+            continue;
+
          unsigned location = inst->src[i].nr + inst->src[i].reg_offset;
-         if (location >= uniforms) /* Out of bounds access */
-            pull_index = -1;
-         else
-            pull_index = pull_constant_loc[location];
+         if (location >= uniforms)
+            continue; /* Out of bounds access */
+
+         int pull_index = pull_constant_loc[location];
 
          if (pull_index == -1)
 	    continue;
 
-         /* Set up the annotation tracking for new generated instructions. */
-         const fs_builder ibld(this, block, inst);
-         const unsigned index = stage_prog_data->binding_table.pull_constants_start;
-         fs_reg dst = vgrf(glsl_type::float_type);
-
          assert(inst->src[i].stride == 0);
 
-         /* Generate a pull load into dst. */
-         if (inst->src[i].reladdr) {
-            VARYING_PULL_CONSTANT_LOAD(ibld, dst,
-                                       brw_imm_ud(index),
-                                       *inst->src[i].reladdr,
-                                       pull_index * 4);
-            inst->src[i].reladdr = NULL;
-            inst->src[i].stride = 1;
-         } else {
-            const fs_builder ubld = ibld.exec_all().group(8, 0);
-            struct brw_reg offset = brw_imm_ud((unsigned)(pull_index * 4) & ~15);
-            ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
-                      dst, brw_imm_ud(index), offset);
-            inst->src[i].set_smear(pull_index & 3);
-         }
-         brw_mark_surface_used(prog_data, index);
+         fs_reg dst = vgrf(glsl_type::float_type);
+         const fs_builder ubld = ibld.exec_all().group(8, 0);
+         struct brw_reg offset = brw_imm_ud((unsigned)(pull_index * 4) & ~15);
+         ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
+                   dst, brw_imm_ud(index), offset);
 
          /* Rewrite the instruction to use the temporary VGRF. */
          inst->src[i].file = VGRF;
          inst->src[i].nr = dst.nr;
          inst->src[i].reg_offset = 0;
+         inst->src[i].set_smear(pull_index & 3);
+
+         brw_mark_surface_used(prog_data, index);
+      }
+
+      if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT &&
+          inst->src[0].file == UNIFORM) {
+
+         unsigned location = inst->src[0].nr + inst->src[0].reg_offset;
+         if (location >= uniforms)
+            continue; /* Out of bounds access */
+
+         int pull_index = pull_constant_loc[location];
+         assert(pull_index >= 0); /* This had better be pull */
+
+         VARYING_PULL_CONSTANT_LOAD(ibld, inst->dst,
+                                    brw_imm_ud(index),
+                                    inst->src[1],
+                                    pull_index * 4);
+         inst->remove(block);
+
+         brw_mark_surface_used(prog_data, index);
       }
    }
    invalidate_live_intervals();

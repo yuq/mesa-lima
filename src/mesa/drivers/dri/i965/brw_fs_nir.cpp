@@ -1266,6 +1266,8 @@ fs_visitor::get_nir_image_deref(const nir_deref_var *deref)
 {
    fs_reg image(UNIFORM, deref->var->data.driver_location / 4,
                 BRW_REGISTER_TYPE_UD);
+   fs_reg indirect;
+   unsigned indirect_max = 0;
 
    for (const nir_deref *tail = &deref->deref; tail->child;
         tail = tail->child) {
@@ -1277,7 +1279,7 @@ fs_visitor::get_nir_image_deref(const nir_deref_var *deref)
       image = offset(image, bld, base * element_size);
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
-         fs_reg tmp = vgrf(glsl_type::int_type);
+         fs_reg tmp = vgrf(glsl_type::uint_type);
 
          if (devinfo->gen == 7 && !devinfo->is_haswell) {
             /* IVB hangs when trying to access an invalid surface index with
@@ -1295,15 +1297,31 @@ fs_visitor::get_nir_image_deref(const nir_deref_var *deref)
             bld.MOV(tmp, get_nir_src(deref_array->indirect));
          }
 
+         indirect_max += element_size * (tail->type->length - 1);
+
          bld.MUL(tmp, tmp, brw_imm_ud(element_size * 4));
-         if (image.reladdr)
-            bld.ADD(*image.reladdr, *image.reladdr, tmp);
-         else
-            image.reladdr = new(mem_ctx) fs_reg(tmp);
+         if (indirect.file == BAD_FILE) {
+            indirect = tmp;
+         } else {
+            bld.ADD(indirect, indirect, tmp);
+         }
       }
    }
 
-   return image;
+   if (indirect.file == BAD_FILE) {
+      return image;
+   } else {
+      /* Emit a pile of MOVs to load the uniform into a temporary.  The
+       * dead-code elimination pass will get rid of what we don't use.
+       */
+      fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UD, BRW_IMAGE_PARAM_SIZE);
+      for (unsigned j = 0; j < BRW_IMAGE_PARAM_SIZE; j++) {
+         bld.emit(SHADER_OPCODE_MOV_INDIRECT,
+                  offset(tmp, bld, j), offset(image, bld, j),
+                  indirect, brw_imm_ud((indirect_max + 1) * 4));
+      }
+      return tmp;
+   }
 }
 
 void
@@ -2678,13 +2696,28 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          /* Offsets are in bytes but they should always be multiples of 4 */
          assert(const_offset->u32[0] % 4 == 0);
          src.reg_offset = const_offset->u32[0] / 4;
-      } else {
-         src.reladdr = new(mem_ctx) fs_reg(retype(get_nir_src(instr->src[0]),
-                                                  BRW_REGISTER_TYPE_UD));
-      }
 
-      for (unsigned j = 0; j < instr->num_components; j++) {
-         bld.MOV(offset(dest, bld, j), offset(src, bld, j));
+         for (unsigned j = 0; j < instr->num_components; j++) {
+            bld.MOV(offset(dest, bld, j), offset(src, bld, j));
+         }
+      } else {
+         fs_reg indirect = retype(get_nir_src(instr->src[0]),
+                                  BRW_REGISTER_TYPE_UD);
+
+         /* We need to pass a size to the MOV_INDIRECT but we don't want it to
+          * go past the end of the uniform.  In order to keep the n'th
+          * component from running past, we subtract off the size of all but
+          * one component of the vector.
+          */
+         assert(instr->const_index[1] >= instr->num_components * 4);
+         unsigned read_size = instr->const_index[1] -
+                              (instr->num_components - 1) * 4;
+
+         for (unsigned j = 0; j < instr->num_components; j++) {
+            bld.emit(SHADER_OPCODE_MOV_INDIRECT,
+                     offset(dest, bld, j), offset(src, bld, j),
+                     indirect, brw_imm_ud(read_size));
+         }
       }
       break;
    }
