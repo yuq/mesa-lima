@@ -505,7 +505,20 @@ fast_clear_attachments(struct brw_context *brw,
                        uint32_t fast_clear_buffers,
                        struct rect fast_clear_rect)
 {
+   struct gl_context *ctx = &brw->ctx;
+   const bool srgb_enabled = ctx->Color.sRGBEnabled;
+
    assert(brw->gen >= 9);
+
+   /* Make sure the GL_FRAMEBUFFER_SRGB is disabled during fast clear so that
+    * the surface state will always be uploaded with a linear buffer. SRGB
+    * buffers are not supported on Gen9 because they are not marked as
+    * losslessly compressible. This shouldn't matter for the fast clear
+    * because the color is not written to the framebuffer yet so the hardware
+    * doesn't need to do any SRGB conversion.
+    */
+   if (srgb_enabled)
+      _mesa_set_framebuffer_srgb(ctx, GL_FALSE);
 
    brw_bind_rep_write_shader(brw, (float *) fast_clear_color);
 
@@ -533,6 +546,9 @@ fast_clear_attachments(struct brw_context *brw,
    }
 
    set_fast_clear_op(brw, 0);
+
+   if (srgb_enabled)
+      _mesa_set_framebuffer_srgb(ctx, GL_TRUE);
 }
 
 bool
