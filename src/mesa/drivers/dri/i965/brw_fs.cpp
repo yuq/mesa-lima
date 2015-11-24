@@ -853,7 +853,10 @@ fs_inst::regs_read(int arg) const
          assert(src[2].file == IMM);
          unsigned region_length = src[2].ud;
 
-         if (src[0].file == FIXED_GRF) {
+         if (src[0].file == UNIFORM) {
+            assert(region_length % 4 == 0);
+            return region_length / 4;
+         } else if (src[0].file == FIXED_GRF) {
             /* If the start of the region is not register aligned, then
              * there's some portion of the register that's technically
              * unread at the beginning.
