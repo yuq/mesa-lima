@@ -168,7 +168,8 @@ public:
                                  ir_variable_mode mode,
                                  unsigned gs_input_vertices,
                                  exec_list *out_instructions,
-                                 exec_list *out_variables);
+                                 exec_list *out_variables,
+                                 bool disable_varying_packing);
 
    void run(struct gl_shader *shader);
 
@@ -231,6 +232,8 @@ private:
     * Exec list into which the visitor should insert any new variables.
     */
    exec_list *out_variables;
+
+   bool disable_varying_packing;
 };
 
 } /* anonymous namespace */
@@ -238,7 +241,7 @@ private:
 lower_packed_varyings_visitor::lower_packed_varyings_visitor(
       void *mem_ctx, unsigned locations_used, ir_variable_mode mode,
       unsigned gs_input_vertices, exec_list *out_instructions,
-      exec_list *out_variables)
+      exec_list *out_variables, bool disable_varying_packing)
    : mem_ctx(mem_ctx),
      locations_used(locations_used),
      packed_varyings((ir_variable **)
@@ -247,7 +250,8 @@ lower_packed_varyings_visitor::lower_packed_varyings_visitor(
      mode(mode),
      gs_input_vertices(gs_input_vertices),
      out_instructions(out_instructions),
-     out_variables(out_variables)
+     out_variables(out_variables),
+     disable_varying_packing(disable_varying_packing)
 {
 }
 
@@ -656,6 +660,9 @@ lower_packed_varyings_visitor::needs_lowering(ir_variable *var)
    if (var->data.explicit_location)
       return false;
 
+   if (disable_varying_packing)
+      return false;
+
    const glsl_type *type = var->type->without_array();
    if (type->vector_elements == 4 && !type->is_double())
       return false;
@@ -709,7 +716,7 @@ lower_packed_varyings_gs_splicer::visit_leave(ir_emit_vertex *ev)
 void
 lower_packed_varyings(void *mem_ctx, unsigned locations_used,
                       ir_variable_mode mode, unsigned gs_input_vertices,
-                      gl_shader *shader)
+                      gl_shader *shader, bool disable_varying_packing)
 {
    exec_list *instructions = shader->ir;
    ir_function *main_func = shader->symbols->get_function("main");
@@ -720,7 +727,8 @@ lower_packed_varyings(void *mem_ctx, unsigned locations_used,
    lower_packed_varyings_visitor visitor(mem_ctx, locations_used, mode,
                                          gs_input_vertices,
                                          &new_instructions,
-                                         &new_variables);
+                                         &new_variables,
+                                         disable_varying_packing);
    visitor.run(shader);
    if (mode == ir_var_shader_out) {
       if (shader->Stage == MESA_SHADER_GEOMETRY) {

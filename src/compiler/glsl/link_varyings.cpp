@@ -1784,15 +1784,15 @@ assign_varying_locations(struct gl_context *ctx,
                                               ir_var_shader_in);
    }
 
-   if (!disable_varying_packing) {
-      if (producer) {
-         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
-                               0, producer);
-      }
-      if (consumer) {
-         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
-                               consumer_vertices, consumer);
-      }
+   if (producer) {
+      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
+                            0, producer, disable_varying_packing);
+   }
+
+   if (consumer) {
+      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
+                            consumer_vertices, consumer,
+                            disable_varying_packing);
    }
 
    return true;
