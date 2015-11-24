@@ -1938,13 +1938,11 @@ fs_visitor::assign_constant_locations()
    if (dispatch_width != min_dispatch_width)
       return;
 
-   unsigned int num_pull_constants = 0;
-
-   pull_constant_loc = ralloc_array(mem_ctx, int, uniforms);
-   memset(pull_constant_loc, -1, sizeof(pull_constant_loc[0]) * uniforms);
-
    bool is_live[uniforms];
    memset(is_live, 0, sizeof(is_live));
+
+   bool needs_pull[uniforms];
+   memset(needs_pull, 0, sizeof(needs_pull));
 
    /* First, we walk through the instructions and do two things:
     *
@@ -1961,20 +1959,15 @@ fs_visitor::assign_constant_locations()
          if (inst->src[i].file != UNIFORM)
             continue;
 
-         if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0) {
-            int uniform = inst->src[0].nr;
+         int constant_nr = inst->src[i].nr + inst->src[i].reg_offset;
 
-            /* If this array isn't already present in the pull constant buffer,
-             * add it.
-             */
-            if (pull_constant_loc[uniform] == -1) {
-               assert(param_size[uniform]);
-               for (int j = 0; j < param_size[uniform]; j++)
-                  pull_constant_loc[uniform + j] = num_pull_constants++;
+         if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0) {
+            for (unsigned j = 0; j < inst->src[2].ud / 4; j++) {
+               is_live[constant_nr + j] = true;
+               needs_pull[constant_nr + j] = true;
             }
          } else {
             /* Mark the the one accessed uniform as live */
-            int constant_nr = inst->src[i].nr + inst->src[i].reg_offset;
             if (constant_nr >= 0 && constant_nr < (int) uniforms)
                is_live[constant_nr] = true;
          }
@@ -1991,26 +1984,23 @@ fs_visitor::assign_constant_locations()
     */
    unsigned int max_push_components = 16 * 8;
    unsigned int num_push_constants = 0;
+   unsigned int num_pull_constants = 0;
 
    push_constant_loc = ralloc_array(mem_ctx, int, uniforms);
+   pull_constant_loc = ralloc_array(mem_ctx, int, uniforms);
 
    for (unsigned int i = 0; i < uniforms; i++) {
-      if (!is_live[i] || pull_constant_loc[i] != -1) {
-         /* This UNIFORM register is either dead, or has already been demoted
-          * to a pull const.  Mark it as no longer living in the param[] array.
-          */
-         push_constant_loc[i] = -1;
-         continue;
-      }
+      push_constant_loc[i] = -1;
+      pull_constant_loc[i] = -1;
 
-      if (num_push_constants < max_push_components) {
-         /* Retain as a push constant.  Record the location in the params[]
-          * array.
-          */
+      if (!is_live[i])
+         continue;
+
+      if (!needs_pull[i] && num_push_constants < max_push_components) {
+         /* Retain as a push constant */
          push_constant_loc[i] = num_push_constants++;
       } else {
-         /* Demote to a pull constant. */
-         push_constant_loc[i] = -1;
+         /* We have to pull it */
          pull_constant_loc[i] = num_pull_constants++;
       }
    }
