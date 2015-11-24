@@ -4423,6 +4423,10 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
       return 8;
 
+   case SHADER_OPCODE_MOV_INDIRECT:
+      /* Prior to Broadwell, we only have 8 address subregisters */
+      return devinfo->gen < 8 ? 8 : inst->exec_size;
+
    default:
       return inst->exec_size;
    }
