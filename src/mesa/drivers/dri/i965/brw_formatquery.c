@@ -24,7 +24,7 @@
 #include "brw_context.h"
 #include "main/formatquery.h"
 
-size_t
+static size_t
 brw_query_samples_for_format(struct gl_context *ctx, GLenum target,
                              GLenum internalFormat, int samples[16])
 {
@@ -73,6 +73,20 @@ brw_query_internal_format(struct gl_context *ctx, GLenum target,
    assert(params != NULL);
 
    switch (pname) {
+   case GL_SAMPLES:
+      brw_query_samples_for_format(ctx, target, internalFormat, params);
+      break;
+
+   case GL_NUM_SAMPLE_COUNTS: {
+      size_t num_samples;
+      GLint dummy_buffer[16];
+
+      num_samples = brw_query_samples_for_format(ctx, target, internalFormat,
+                                                 dummy_buffer);
+      params[0] = (GLint) num_samples;
+      break;
+   }
+
    default:
       /* By default, we call the driver hook's fallback function from the frontend,
        * which has generic implementation for all pnames.
