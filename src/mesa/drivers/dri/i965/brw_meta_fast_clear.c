@@ -41,6 +41,8 @@
 #include "main/api_validate.h"
 #include "main/state.h"
 
+#include "util/format_srgb.h"
+
 #include "vbo/vbo_context.h"
 
 #include "drivers/common/meta.h"
@@ -422,6 +424,15 @@ set_fast_clear_color(struct brw_context *brw,
          override_color.ui[3] = 1;
       else
          override_color.f[3] = 1.0f;
+   }
+
+   /* Handle linear→SRGB conversion */
+   if (brw->ctx.Color.sRGBEnabled &&
+       _mesa_get_srgb_format_linear(mt->format) != mt->format) {
+      for (int i = 0; i < 3; i++) {
+         override_color.f[i] =
+            util_format_linear_to_srgb_float(override_color.f[i]);
+      }
    }
 
    if (brw->gen >= 9) {
