@@ -28,15 +28,15 @@
 #ifndef _GBM_H_
 #define _GBM_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #define __GBM__ 1
 
 #include <stddef.h>
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 /**
  * \file gbm.h
