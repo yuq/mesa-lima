@@ -366,7 +366,6 @@ fs_generator::generate_mov_indirect(fs_inst *inst,
    assert(inst->exec_size == 8 || devinfo->gen >= 8);
 
    brw_MOV(p, addr, indirect_byte_offset);
-   brw_inst_set_mask_control(devinfo, brw_last_inst, BRW_MASK_DISABLE);
    brw_MOV(p, dst, retype(brw_VxH_indirect(0, imm_byte_offset), dst.type));
 }
 
