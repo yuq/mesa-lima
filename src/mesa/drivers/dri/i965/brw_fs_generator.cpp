@@ -351,22 +351,71 @@ fs_generator::generate_mov_indirect(fs_inst *inst,
 
    unsigned imm_byte_offset = reg.nr * REG_SIZE + reg.subnr;
 
-   /* We use VxH indirect addressing, clobbering a0.0 through a0.7. */
-   struct brw_reg addr = vec8(brw_address_reg(0));
+   if (indirect_byte_offset.file == BRW_IMMEDIATE_VALUE) {
+      imm_byte_offset += indirect_byte_offset.ud;
 
-   /* The destination stride of an instruction (in bytes) must be greater
-    * than or equal to the size of the rest of the instruction.  Since the
-    * address register is of type UW, we can't use a D-type instruction.
-    * In order to get around this, re re-type to UW and use a stride.
-    */
-   indirect_byte_offset =
-      retype(spread(indirect_byte_offset, 2), BRW_REGISTER_TYPE_UW);
+      reg.nr = imm_byte_offset / REG_SIZE;
+      reg.subnr = imm_byte_offset % REG_SIZE;
+      brw_MOV(p, dst, reg);
+   } else {
+      /* Prior to Broadwell, there are only 8 address registers. */
+      assert(inst->exec_size == 8 || devinfo->gen >= 8);
 
-   /* Prior to Broadwell, there are only 8 address registers. */
-   assert(inst->exec_size == 8 || devinfo->gen >= 8);
+      /* We use VxH indirect addressing, clobbering a0.0 through a0.7. */
+      struct brw_reg addr = vec8(brw_address_reg(0));
 
-   brw_MOV(p, addr, indirect_byte_offset);
-   brw_MOV(p, dst, retype(brw_VxH_indirect(0, imm_byte_offset), dst.type));
+      /* The destination stride of an instruction (in bytes) must be greater
+       * than or equal to the size of the rest of the instruction.  Since the
+       * address register is of type UW, we can't use a D-type instruction.
+       * In order to get around this, re retype to UW and use a stride.
+       */
+      indirect_byte_offset =
+         retype(spread(indirect_byte_offset, 2), BRW_REGISTER_TYPE_UW);
+
+      struct brw_reg ind_src;
+      if (devinfo->gen < 8) {
+         /* From the Haswell PRM section "Register Region Restrictions":
+          *
+          *    "The lower bits of the AddressImmediate must not overflow to
+          *    change the register address.  The lower 5 bits of Address
+          *    Immediate when added to lower 5 bits of address register gives
+          *    the sub-register offset. The upper bits of Address Immediate
+          *    when added to upper bits of address register gives the register
+          *    address. Any overflow from sub-register offset is dropped."
+          *
+          * This restriction is only listed in the Haswell PRM but emperical
+          * testing indicates that it applies on all older generations and is
+          * lifted on Broadwell.
+          *
+          * Since the indirect may cause us to cross a register boundary, this
+          * makes the base offset almost useless.  We could try and do
+          * something clever where we use a actual base offset if
+          * base_offset % 32 == 0 but that would mean we were generating
+          * different code depending on the base offset.  Instead, for the
+          * sake of consistency, we'll just do the add ourselves.
+          */
+         brw_ADD(p, addr, indirect_byte_offset, brw_imm_uw(imm_byte_offset));
+         ind_src = brw_VxH_indirect(0, 0);
+      } else {
+         brw_MOV(p, addr, indirect_byte_offset);
+         ind_src = brw_VxH_indirect(0, imm_byte_offset);
+      }
+
+      brw_inst *mov = brw_MOV(p, dst, retype(ind_src, dst.type));
+
+      if (devinfo->gen == 6 && dst.file == BRW_MESSAGE_REGISTER_FILE &&
+          !inst->get_next()->is_tail_sentinel() &&
+          ((fs_inst *)inst->get_next())->mlen > 0) {
+         /* From the Sandybridge PRM:
+          *
+          *    "[Errata: DevSNB(SNB)] If MRF register is updated by any
+          *    instruction that “indexed/indirect” source AND is followed by a
+          *    send, the instruction requires a “Switch”. This is to avoid
+          *    race condition where send may dispatch before MRF is updated."
+          */
+         brw_inst_set_thread_control(devinfo, mov, BRW_THREAD_SWITCH);
+      }
+   }
 }
 
 void
