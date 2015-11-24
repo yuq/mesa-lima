@@ -774,7 +774,7 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
          const uint32_t surf_index = render_target_start + i;
 
 	 if (intel_renderbuffer(fb->_ColorDrawBuffers[i])) {
-            surf_offset[surf_index] = 
+            surf_offset[surf_index] =
                brw->vtbl.update_renderbuffer_surface(
                   brw, fb->_ColorDrawBuffers[i],
                   _mesa_geometric_layers(fb) > 0, i, surf_index);

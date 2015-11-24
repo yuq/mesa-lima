@@ -194,7 +194,7 @@ gen8_upload_ps_state(struct brw_context *brw,
 
    const unsigned sampler_count =
       DIV_ROUND_UP(CLAMP(stage_state->sampler_count, 0, 16), 4);
-   dw3 |= SET_FIELD(sampler_count, GEN7_PS_SAMPLER_COUNT); 
+   dw3 |= SET_FIELD(sampler_count, GEN7_PS_SAMPLER_COUNT);
 
    /* BRW_NEW_FS_PROG_DATA */
    dw3 |=

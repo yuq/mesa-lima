@@ -295,7 +295,7 @@ setup_program(struct brw_context *brw, bool msaa_tex)
       _mesa_UseProgram(*prog_id);
       return *prog_id;
    }
-  
+
    fs_source = ralloc_asprintf(NULL, fs_tmpl, sampler->sampler,
                                sampler->fetch);
    _mesa_meta_compile_and_link_program(ctx, vs_source, fs_source,
@@ -307,7 +307,7 @@ setup_program(struct brw_context *brw, bool msaa_tex)
 }
 
 /**
- * Samples in stencil buffer are interleaved, and unfortunately the data port 
+ * Samples in stencil buffer are interleaved, and unfortunately the data port
  * does not support it as render target. Therefore the surface is set up as
  * single sampled and the program handles the interleaving.
  * In case of single sampled stencil, the render buffer is adjusted with

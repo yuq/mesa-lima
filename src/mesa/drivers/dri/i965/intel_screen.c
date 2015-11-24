@@ -394,7 +394,7 @@ intel_create_image_from_name(__DRIscreen *screen,
        return NULL;
     }
 
-    return image;	
+    return image;
 }
 
 static __DRIimage *
@@ -529,7 +529,6 @@ intel_create_image(__DRIscreen *screen,
    if (image == NULL)
       return NULL;
 
-   
    cpp = _mesa_get_format_bytes(image->format);
    image->bo = drm_intel_bo_alloc_tiled(intelScreen->bufmgr, "image",
                                         width, height, cpp, &tiling,
