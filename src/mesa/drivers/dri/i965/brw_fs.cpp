@@ -375,7 +375,7 @@ fs_reg::fs_reg()
    this->file = BAD_FILE;
 }
 
-fs_reg::fs_reg(struct brw_reg reg) :
+fs_reg::fs_reg(struct ::brw_reg reg) :
    backend_reg(reg)
 {
    this->reg_offset = 0;

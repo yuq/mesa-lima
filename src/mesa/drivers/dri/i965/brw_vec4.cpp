@@ -71,7 +71,7 @@ src_reg::src_reg()
    init();
 }
 
-src_reg::src_reg(struct brw_reg reg) :
+src_reg::src_reg(struct ::brw_reg reg) :
    backend_reg(reg)
 {
    this->reg_offset = 0;
@@ -128,7 +128,7 @@ dst_reg::dst_reg(enum brw_reg_file file, int nr, brw_reg_type type,
    this->writemask = writemask;
 }
 
-dst_reg::dst_reg(struct brw_reg reg) :
+dst_reg::dst_reg(struct ::brw_reg reg) :
    backend_reg(reg)
 {
    this->reg_offset = 0;

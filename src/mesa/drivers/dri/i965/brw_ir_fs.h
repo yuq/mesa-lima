@@ -36,7 +36,7 @@ public:
    void init();
 
    fs_reg();
-   fs_reg(struct brw_reg reg);
+   fs_reg(struct ::brw_reg reg);
    fs_reg(enum brw_reg_file file, int nr);
    fs_reg(enum brw_reg_file file, int nr, enum brw_reg_type type);
 
