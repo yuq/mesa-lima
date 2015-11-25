@@ -104,6 +104,12 @@ CLEANFILES = $(BUILT_SOURCES)
 
 EXTRA_DIST = \
 	brw_oa_hsw.xml \
+	brw_oa_bdw.xml \
+	brw_oa_chv.xml \
+	brw_oa_sklgt2.xml \
+	brw_oa_sklgt3.xml \
+	brw_oa_sklgt4.xml \
+	brw_oa_bxt.xml \
 	brw_oa.py
 
 # Note: we avoid using a multi target rule here and outputting both the

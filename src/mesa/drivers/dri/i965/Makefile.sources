@@ -160,4 +160,16 @@ i965_gen10_FILES = \
 
 i965_oa_GENERATED_FILES = \
 	brw_oa_hsw.h \
-	brw_oa_hsw.c
+	brw_oa_hsw.c \
+	brw_oa_bdw.h \
+	brw_oa_bdw.c \
+	brw_oa_chv.h \
+	brw_oa_chv.c \
+	brw_oa_sklgt2.h \
+	brw_oa_sklgt2.c \
+	brw_oa_sklgt3.h \
+	brw_oa_sklgt3.c \
+	brw_oa_sklgt4.h \
+	brw_oa_sklgt4.c \
+	brw_oa_bxt.h \
+	brw_oa_bxt.c
