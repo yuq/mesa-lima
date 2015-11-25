@@ -34,7 +34,7 @@
 #include "util/ralloc.h"
 #include "util/set.h"
 #include "util/bitset.h"
-#include "nir_types.h"
+#include "compiler/nir_types.h"
 #include "compiler/shader_enums.h"
 #include <stdio.h>
 

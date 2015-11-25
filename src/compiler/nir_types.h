@@ -28,10 +28,11 @@
 #pragma once
 
 #include <stdio.h>
+#include <stdbool.h>
 
 /* C wrapper around compiler/glsl_types.h */
 
-#include "compiler/glsl_types.h"
+#include "glsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {
