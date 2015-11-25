@@ -179,15 +179,6 @@ fs_visitor::nir_setup_uniforms()
       return;
 
    uniforms = nir->num_uniforms / 4;
-
-   nir_foreach_variable(var, &nir->uniforms) {
-      /* UBO's and atomics don't take up space in the uniform file */
-      if (var->interface_type != NULL || var->type->contains_atomic())
-         continue;
-
-      if (type_size_scalar(var->type) > 0)
-         param_size[var->data.driver_location / 4] = type_size_scalar(var->type);
-   }
 }
 
 static bool

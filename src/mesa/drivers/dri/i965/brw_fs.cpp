@@ -1024,7 +1024,6 @@ fs_visitor::import_uniforms(fs_visitor *v)
    this->push_constant_loc = v->push_constant_loc;
    this->pull_constant_loc = v->pull_constant_loc;
    this->uniforms = v->uniforms;
-   this->param_size = v->param_size;
 }
 
 fs_reg *

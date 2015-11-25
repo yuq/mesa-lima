@@ -1069,9 +1069,6 @@ fs_visitor::init()
 
    this->spilled_any_registers = false;
    this->do_dual_src = false;
-
-   if (dispatch_width == 8)
-      this->param_size = rzalloc_array(mem_ctx, int, stage_prog_data->nr_params);
 }
 
 fs_visitor::~fs_visitor()

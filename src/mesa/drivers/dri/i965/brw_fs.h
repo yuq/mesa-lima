@@ -326,8 +326,6 @@ public:
 
    const struct brw_vue_map *input_vue_map;
 
-   int *param_size;
-
    int *virtual_grf_start;
    int *virtual_grf_end;
    brw::fs_live_variables *live_intervals;
