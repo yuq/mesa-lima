@@ -677,14 +677,13 @@ void si_init_perfcounters(struct si_screen *screen)
 				instances = 2;
 		}
 
-		if (!r600_perfcounters_add_block(&screen->b, pc,
-						 block->b->name,
-						 block->b->flags,
-						 block->b->num_counters,
-						 block->selectors,
-						 instances,
-						 block))
-			goto error;
+		r600_perfcounters_add_block(&screen->b, pc,
+					    block->b->name,
+					    block->b->flags,
+					    block->b->num_counters,
+					    block->selectors,
+					    instances,
+					    block);
 	}
 
 	screen->b.perfcounters = pc;

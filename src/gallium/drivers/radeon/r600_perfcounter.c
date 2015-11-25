@@ -427,6 +427,89 @@ error:
 	return NULL;
 }
 
+static boolean r600_init_block_names(struct r600_common_screen *screen,
+				     struct r600_perfcounter_block *block)
+{
+	unsigned i, j, k;
+	unsigned groups_shader = 1, groups_se = 1, groups_instance = 1;
+	unsigned namelen;
+	char *groupname;
+	char *p;
+
+	if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS)
+		groups_instance = block->num_instances;
+	if (block->flags & R600_PC_BLOCK_SE_GROUPS)
+		groups_se = screen->info.max_se;
+	if (block->flags & R600_PC_BLOCK_SHADER)
+		groups_shader = ARRAY_SIZE(r600_pc_shader_suffix);
+
+	namelen = strlen(block->basename);
+	block->group_name_stride = namelen + 1;
+	if (block->flags & R600_PC_BLOCK_SHADER)
+		block->group_name_stride += 3;
+	if (block->flags & R600_PC_BLOCK_SE_GROUPS) {
+		assert(groups_se <= 10);
+		block->group_name_stride += 1;
+
+		if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS)
+			block->group_name_stride += 1;
+	}
+	if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS) {
+		assert(groups_instance <= 100);
+		block->group_name_stride += 2;
+	}
+
+	block->group_names = MALLOC(block->num_groups * block->group_name_stride);
+	if (!block->group_names)
+		return FALSE;
+
+	groupname = block->group_names;
+	for (i = 0; i < groups_shader; ++i) {
+		unsigned shaderlen = strlen(r600_pc_shader_suffix[i]);
+		for (j = 0; j < groups_se; ++j) {
+			for (k = 0; k < groups_instance; ++k) {
+				strcpy(groupname, block->basename);
+				p = groupname + namelen;
+
+				if (block->flags & R600_PC_BLOCK_SHADER) {
+					strcpy(p, r600_pc_shader_suffix[i]);
+					p += shaderlen;
+				}
+
+				if (block->flags & R600_PC_BLOCK_SE_GROUPS) {
+					p += sprintf(p, "%d", j);
+					if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS)
+						*p++ = '_';
+				}
+
+				if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS)
+					p += sprintf(p, "%d", k);
+
+				groupname += block->group_name_stride;
+			}
+		}
+	}
+
+	assert(block->num_selectors <= 1000);
+	block->selector_name_stride = block->group_name_stride + 4;
+	block->selector_names = MALLOC(block->num_groups * block->num_selectors *
+				       block->selector_name_stride);
+	if (!block->selector_names)
+		return FALSE;
+
+	groupname = block->group_names;
+	p = block->selector_names;
+	for (i = 0; i < block->num_groups; ++i) {
+		for (j = 0; j < block->num_selectors; ++j) {
+			sprintf(p, "%s_%03d", groupname, j);
+			p += block->selector_name_stride;
+		}
+		groupname += block->group_name_stride;
+	}
+
+	return TRUE;
+}
+
 int r600_get_perfcounter_info(struct r600_common_screen *screen,
 			      unsigned index,
 			      struct pipe_driver_query_info *info)
@@ -453,6 +536,10 @@ int r600_get_perfcounter_info(struct r600_common_screen *screen,
 	if (!block)
 		return 0;
 
+	if (!block->selector_names) {
+		if (!r600_init_block_names(screen, block))
+			return 0;
+	}
 	info->name = block->selector_names + sub * block->selector_name_stride;
 	info->query_type = R600_QUERY_FIRST_PERFCOUNTER + index;
 	info->max_value.u64 = 0;
@@ -479,6 +566,11 @@ int r600_get_perfcounter_group_info(struct r600_common_screen *screen,
 	block = lookup_group(pc, &index);
 	if (!block)
 		return 0;
+
+	if (!block->group_names) {
+		if (!r600_init_block_names(screen, block))
+			return 0;
+	}
 	info->name = block->group_names + index * block->group_name_stride;
 	info->num_queries = block->num_selectors;
 	info->max_active_queries = block->num_counters;
@@ -504,18 +596,13 @@ boolean r600_perfcounters_init(struct r600_perfcounters *pc,
 	return TRUE;
 }
 
-boolean r600_perfcounters_add_block(struct r600_common_screen *rscreen,
-				    struct r600_perfcounters *pc,
-				    const char *name, unsigned flags,
-				    unsigned counters, unsigned selectors,
-				    unsigned instances, void *data)
+void r600_perfcounters_add_block(struct r600_common_screen *rscreen,
+				 struct r600_perfcounters *pc,
+				 const char *name, unsigned flags,
+				 unsigned counters, unsigned selectors,
+				 unsigned instances, void *data)
 {
 	struct r600_perfcounter_block *block = &pc->blocks[pc->num_blocks];
-	unsigned i, j, k;
-	unsigned groups_shader = 1, groups_se = 1, groups_instance = 1;
-	unsigned namelen;
-	char *groupname;
-	char *p;
 
 	assert(counters <= R600_QUERY_MAX_COUNTERS);
 
@@ -532,95 +619,18 @@ boolean r600_perfcounters_add_block(struct r600_common_screen *rscreen,
 		block->flags |= R600_PC_BLOCK_INSTANCE_GROUPS;
 
 	if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS) {
-		groups_instance = block->num_instances;
-		block->num_groups = groups_instance;
+		block->num_groups = block->num_instances;
 	} else {
 		block->num_groups = 1;
 	}
 
-	if (block->flags & R600_PC_BLOCK_SE_GROUPS) {
-		groups_se = rscreen->info.max_se;
-		block->num_groups *= groups_se;
-	}
-
-	if (block->flags & R600_PC_BLOCK_SHADER) {
-		groups_shader = ARRAY_SIZE(r600_pc_shader_suffix);
-		block->num_groups *= groups_shader;
-	}
-
-	namelen = strlen(name);
-	block->group_name_stride = namelen + 1;
+	if (block->flags & R600_PC_BLOCK_SE_GROUPS)
+		block->num_groups *= rscreen->info.max_se;
 	if (block->flags & R600_PC_BLOCK_SHADER)
-		block->group_name_stride += 3;
-	if (block->flags & R600_PC_BLOCK_SE_GROUPS) {
-		assert(groups_se <= 10);
-		block->group_name_stride += 1;
-
-		if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS)
-			block->group_name_stride += 1;
-	}
-	if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS) {
-		assert(groups_instance <= 100);
-		block->group_name_stride += 2;
-	}
-
-	block->group_names = MALLOC(block->num_groups * block->group_name_stride);
-	if (!block->group_names)
-		goto error;
-
-	groupname = block->group_names;
-	for (i = 0; i < groups_shader; ++i) {
-		unsigned shaderlen = strlen(r600_pc_shader_suffix[i]);
-		for (j = 0; j < groups_se; ++j) {
-			for (k = 0; k < groups_instance; ++k) {
-				strcpy(groupname, name);
-				p = groupname + namelen;
-
-				if (block->flags & R600_PC_BLOCK_SHADER) {
-					strcpy(p, r600_pc_shader_suffix[i]);
-					p += shaderlen;
-				}
-
-				if (block->flags & R600_PC_BLOCK_SE_GROUPS) {
-					p += sprintf(p, "%d", j);
-					if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS)
-						*p++ = '_';
-				}
-
-				if (block->flags & R600_PC_BLOCK_INSTANCE_GROUPS)
-					p += sprintf(p, "%d", k);
-
-				groupname += block->group_name_stride;
-			}
-		}
-	}
-
-	assert(selectors <= 1000);
-	block->selector_name_stride = block->group_name_stride + 4;
-	block->selector_names = MALLOC(block->num_groups * selectors *
-				       block->selector_name_stride);
-	if (!block->selector_names)
-		goto error_groupnames;
-
-	groupname = block->group_names;
-	p = block->selector_names;
-	for (i = 0; i < block->num_groups; ++i) {
-		for (j = 0; j < selectors; ++j) {
-			sprintf(p, "%s_%03d", groupname, j);
-			p += block->selector_name_stride;
-		}
-		groupname += block->group_name_stride;
-	}
+		block->num_groups *= ARRAY_SIZE(r600_pc_shader_suffix);
 
 	++pc->num_blocks;
 	pc->num_groups += block->num_groups;
-
-	return TRUE;
-
-error_groupnames:
-	FREE(block->group_names);
-error:
-	return FALSE;
 }
 
 void r600_perfcounters_do_destroy(struct r600_perfcounters *pc)

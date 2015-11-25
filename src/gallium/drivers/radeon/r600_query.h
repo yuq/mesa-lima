@@ -247,11 +247,11 @@ int r600_get_perfcounter_group_info(struct r600_common_screen *,
 				    struct pipe_driver_query_group_info *info);
 
 boolean r600_perfcounters_init(struct r600_perfcounters *, unsigned num_blocks);
-boolean r600_perfcounters_add_block(struct r600_common_screen *,
-				    struct r600_perfcounters *,
-				    const char *name, unsigned flags,
-				    unsigned counters, unsigned selectors,
-				    unsigned instances, void *data);
+void r600_perfcounters_add_block(struct r600_common_screen *,
+				 struct r600_perfcounters *,
+				 const char *name, unsigned flags,
+				 unsigned counters, unsigned selectors,
+				 unsigned instances, void *data);
 void r600_perfcounters_do_destroy(struct r600_perfcounters *);
 
 #endif /* R600_QUERY_H */
