@@ -754,7 +754,8 @@ svga_destroy_query(struct pipe_context *pipe, struct pipe_query *q)
    struct svga_query *sq;
 
    if (q == NULL) {
-      return destroy_gb_query_obj(svga);
+      destroy_gb_query_obj(svga);
+      return;
    }
 
    sq = svga_query(q);
