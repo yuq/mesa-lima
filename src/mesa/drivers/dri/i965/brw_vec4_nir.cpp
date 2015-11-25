@@ -369,22 +369,17 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    dst_reg dest;
    src_reg src;
 
-   bool has_indirect = false;
-
    switch (instr->intrinsic) {
 
-   case nir_intrinsic_load_input_indirect:
-      has_indirect = true;
-      /* fallthrough */
    case nir_intrinsic_load_input: {
-      int offset = instr->const_index[0];
-      src = src_reg(ATTR, offset, glsl_type::uvec4_type);
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
 
-      if (has_indirect) {
-         dest.reladdr = new(mem_ctx) src_reg(get_nir_src(instr->src[0],
-                                                         BRW_REGISTER_TYPE_D,
-                                                         1));
-      }
+      /* We set EmitNoIndirectInput for VS */
+      assert(const_offset);
+
+      src = src_reg(ATTR, instr->const_index[0] + const_offset->u[0],
+                    glsl_type::uvec4_type);
+
       dest = get_nir_dest(instr->dest, src.type);
       dest.writemask = brw_writemask_for_size(instr->num_components);
 
@@ -392,11 +387,11 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_store_output_indirect:
-      unreachable("nir_lower_outputs_to_temporaries should prevent this");
-
    case nir_intrinsic_store_output: {
-      int varying = instr->const_index[0];
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
+      assert(const_offset);
+
+      int varying = instr->const_index[0] + const_offset->u[0];
 
       src = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_F,
                         instr->num_components);
@@ -431,9 +426,6 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_store_ssbo_indirect:
-      has_indirect = true;
-      /* fallthrough */
    case nir_intrinsic_store_ssbo: {
       assert(devinfo->gen >= 7);
 
@@ -458,20 +450,19 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       }
 
       /* Offset */
-      src_reg offset_reg = src_reg(this, glsl_type::uint_type);
-      unsigned const_offset_bytes = 0;
-      if (has_indirect) {
-         emit(MOV(dst_reg(offset_reg), get_nir_src(instr->src[2], 1)));
+      src_reg offset_reg;
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[2]);
+      if (const_offset) {
+         offset_reg = brw_imm_ud(const_offset->u[0]);
       } else {
-         const_offset_bytes = instr->const_index[0];
-         emit(MOV(dst_reg(offset_reg), brw_imm_ud(const_offset_bytes)));
+         offset_reg = get_nir_src(instr->src[2], 1);
       }
 
       /* Value */
       src_reg val_reg = get_nir_src(instr->src[0], 4);
 
       /* Writemask */
-      unsigned write_mask = instr->const_index[1];
+      unsigned write_mask = instr->const_index[0];
 
       /* IvyBridge does not have a native SIMD4x2 untyped write message so untyped
        * writes will use SIMD8 mode. In order to hide this and keep symmetry across
@@ -537,9 +528,8 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                 * write at to skip the channels we skipped, if any.
                 */
                if (skipped_channels > 0) {
-                  if (!has_indirect) {
-                     const_offset_bytes += 4 * skipped_channels;
-                     offset_reg = brw_imm_ud(const_offset_bytes);
+                  if (offset_reg.file == IMM) {
+                     offset_reg.ud += 4 * skipped_channels;
                   } else {
                      emit(ADD(dst_reg(offset_reg), offset_reg,
                               brw_imm_ud(4 * skipped_channels)));
@@ -574,9 +564,6 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_ssbo_indirect:
-      has_indirect = true;
-      /* fallthrough */
    case nir_intrinsic_load_ssbo: {
       assert(devinfo->gen >= 7);
 
@@ -604,13 +591,12 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                                nir->info.num_ssbos - 1);
       }
 
-      src_reg offset_reg = src_reg(this, glsl_type::uint_type);
-      unsigned const_offset_bytes = 0;
-      if (has_indirect) {
-         emit(MOV(dst_reg(offset_reg), get_nir_src(instr->src[1], 1)));
+      src_reg offset_reg;
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
+      if (const_offset) {
+         offset_reg = brw_imm_ud(const_offset->u[0]);
       } else {
-         const_offset_bytes = instr->const_index[0];
-         emit(MOV(dst_reg(offset_reg), brw_imm_ud((const_offset_bytes))));
+         offset_reg = get_nir_src(instr->src[1], 1);
       }
 
       /* Read the vector */
@@ -673,20 +659,21 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_uniform_indirect:
-      has_indirect = true;
-      /* fallthrough */
    case nir_intrinsic_load_uniform: {
       /* Offsets are in bytes but they should always be multiples of 16 */
       assert(instr->const_index[0] % 16 == 0);
-      assert(instr->const_index[1] % 16 == 0);
 
       dest = get_nir_dest(instr->dest);
 
       src = src_reg(dst_reg(UNIFORM, instr->const_index[0] / 16));
-      src.reg_offset = instr->const_index[1] / 16;
+      src.type = dest.type;
 
-      if (has_indirect) {
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
+      if (const_offset) {
+         /* Offsets are in bytes but they should always be multiples of 16 */
+         assert(const_offset->u[0] % 16 == 0);
+         src.reg_offset = const_offset->u[0] / 16;
+      } else {
          src_reg tmp = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_D, 1);
          src.reladdr = new(mem_ctx) src_reg(tmp);
       }
@@ -724,9 +711,6 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
-   case nir_intrinsic_load_ubo_indirect:
-      has_indirect = true;
-      /* fallthrough */
    case nir_intrinsic_load_ubo: {
       nir_const_value *const_block_index = nir_src_as_const_value(instr->src[0]);
       src_reg surf_index;
@@ -760,11 +744,10 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                                nir->info.num_ubos - 1);
       }
 
-      unsigned const_offset = instr->const_index[0];
       src_reg offset;
-
-      if (!has_indirect)  {
-         offset = brw_imm_ud(const_offset & ~15);
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
+      if (const_offset) {
+         offset = brw_imm_ud(const_offset->u[0] & ~15);
       } else {
          offset = get_nir_src(instr->src[1], nir_type_int, 1);
       }
@@ -778,10 +761,12 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                                   NULL, NULL /* before_block/inst */);
 
       packed_consts.swizzle = brw_swizzle_for_size(instr->num_components);
-      packed_consts.swizzle += BRW_SWIZZLE4(const_offset % 16 / 4,
-                                            const_offset % 16 / 4,
-                                            const_offset % 16 / 4,
-                                            const_offset % 16 / 4);
+      if (const_offset) {
+         packed_consts.swizzle += BRW_SWIZZLE4(const_offset->u[0] % 16 / 4,
+                                               const_offset->u[0] % 16 / 4,
+                                               const_offset->u[0] % 16 / 4,
+                                               const_offset->u[0] % 16 / 4);
+      }
 
       emit(MOV(dest, packed_consts));
       break;

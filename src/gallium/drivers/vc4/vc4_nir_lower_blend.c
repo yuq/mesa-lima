@@ -61,6 +61,7 @@ vc4_nir_get_dst_color(nir_builder *b, int sample)
                                            nir_intrinsic_load_input);
         load->num_components = 1;
         load->const_index[0] = VC4_NIR_TLB_COLOR_READ_INPUT + sample;
+        load->src[0] = nir_src_for_ssa(nir_imm_int(b, 0));
         nir_ssa_dest_init(&load->instr, &load->dest, 1, NULL);
         nir_builder_instr_insert(b, &load->instr);
         return &load->dest.ssa;
@@ -612,6 +613,7 @@ vc4_nir_store_sample_mask(struct vc4_compile *c, nir_builder *b,
         intr->const_index[0] = sample_mask->data.location;
 
         intr->src[0] = nir_src_for_ssa(val);
+        intr->src[1] = nir_src_for_ssa(nir_imm_int(b, 0));
         nir_builder_instr_insert(b, &intr->instr);
 }
 

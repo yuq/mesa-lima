@@ -444,7 +444,7 @@ struct vc4_compile {
 /* Special offset for nir_load_uniform values to get a QUNIFORM_*
  * state-dependent value.
  */
-#define VC4_NIR_STATE_UNIFORM_OFFSET		2000000000
+#define VC4_NIR_STATE_UNIFORM_OFFSET		1000000000
 
 struct vc4_compile *qir_compile_init(void);
 void qir_compile_destroy(struct vc4_compile *c);

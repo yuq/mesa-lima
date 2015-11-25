@@ -24,21 +24,24 @@
 #include "brw_nir.h"
 #include "brw_shader.h"
 #include "glsl/nir/glsl_to_nir.h"
+#include "glsl/nir/nir_builder.h"
 #include "program/prog_to_nir.h"
 
-static bool
-remap_vs_attrs(nir_block *block, void *closure)
-{
-   GLbitfield64 inputs_read = *((GLbitfield64 *) closure);
+struct remap_vs_attrs_state {
+   nir_builder b;
+   uint64_t inputs_read;
+};
 
-   nir_foreach_instr(block, instr) {
+static bool
+remap_vs_attrs(nir_block *block, void *void_state)
+{
+   struct remap_vs_attrs_state *state = void_state;
+
+   nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
 
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-
-      /* We set EmitNoIndirect for VS inputs, so there are no indirects. */
-      assert(intrin->intrinsic != nir_intrinsic_load_input_indirect);
 
       if (intrin->intrinsic == nir_intrinsic_load_input) {
          /* Attributes come in a contiguous block, ordered by their
@@ -46,9 +49,24 @@ remap_vs_attrs(nir_block *block, void *closure)
           * number for an attribute by masking out the enabled attributes
           * before it and counting the bits.
           */
-         int attr = intrin->const_index[0];
-         int slot = _mesa_bitcount_64(inputs_read & BITFIELD64_MASK(attr));
+         nir_const_value *const_offset = nir_src_as_const_value(intrin->src[0]);
+
+         /* We set EmitNoIndirect for VS inputs, so there are no indirects. */
+         assert(const_offset);
+
+         int attr = intrin->const_index[0] + const_offset->u[0];
+         int slot = _mesa_bitcount_64(state->inputs_read &
+                                      BITFIELD64_MASK(attr));
+
+         /* The NIR -> FS pass will just add the base and offset together, so
+          * there's no reason to keep them separate.  Just put it all in
+          * const_index[0] and set the offset src[0] to load_const(0).
+          */
          intrin->const_index[0] = 4 * slot;
+
+         state->b.cursor = nir_before_instr(&intrin->instr);
+         nir_instr_rewrite_src(&intrin->instr, &intrin->src[0],
+                               nir_src_for_ssa(nir_imm_int(&state->b, 0)));
       }
    }
    return true;
@@ -79,10 +97,17 @@ brw_nir_lower_inputs(nir_shader *nir,
           * key->inputs_read since the two are identical aside from Gen4-5
           * edge flag differences.
           */
-         GLbitfield64 inputs_read = nir->info.inputs_read;
+         struct remap_vs_attrs_state remap_state = {
+            .inputs_read = nir->info.inputs_read,
+         };
+
+         /* This pass needs actual constants */
+         nir_opt_constant_folding(nir);
+
          nir_foreach_overload(nir, overload) {
             if (overload->impl) {
-               nir_foreach_block(overload->impl, remap_vs_attrs, &inputs_read);
+               nir_builder_init(&remap_state.b, overload->impl);
+               nir_foreach_block(overload->impl, remap_vs_attrs, &remap_state);
             }
          }
       }

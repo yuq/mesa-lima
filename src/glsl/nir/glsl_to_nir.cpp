@@ -885,24 +885,12 @@ nir_visitor::visit(ir_call *ir)
          ir_constant *write_mask = ((ir_instruction *)param)->as_constant();
          assert(write_mask);
 
-         /* Check if we need the indirect version */
-         ir_constant *const_offset = offset->as_constant();
-         if (!const_offset) {
-            op = nir_intrinsic_store_ssbo_indirect;
-            ralloc_free(instr);
-            instr = nir_intrinsic_instr_create(shader, op);
-            instr->src[2] = nir_src_for_ssa(evaluate_rvalue(offset));
-            instr->const_index[0] = 0;
-         } else {
-            instr->const_index[0] = const_offset->value.u[0];
-         }
-
-         instr->const_index[1] = write_mask->value.u[0];
-
          instr->src[0] = nir_src_for_ssa(evaluate_rvalue(val));
+         instr->src[1] = nir_src_for_ssa(evaluate_rvalue(block));
+         instr->src[2] = nir_src_for_ssa(evaluate_rvalue(offset));
+         instr->const_index[0] = write_mask->value.u[0];
          instr->num_components = val->type->vector_elements;
 
-         instr->src[1] = nir_src_for_ssa(evaluate_rvalue(block));
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       }
@@ -913,20 +901,8 @@ nir_visitor::visit(ir_call *ir)
          param = param->get_next();
          ir_rvalue *offset = ((ir_instruction *)param)->as_rvalue();
 
-         /* Check if we need the indirect version */
-         ir_constant *const_offset = offset->as_constant();
-         if (!const_offset) {
-            op = nir_intrinsic_load_ssbo_indirect;
-            ralloc_free(instr);
-            instr = nir_intrinsic_instr_create(shader, op);
-            instr->src[1] = nir_src_for_ssa(evaluate_rvalue(offset));
-            instr->const_index[0] = 0;
-            dest = &instr->dest;
-         } else {
-            instr->const_index[0] = const_offset->value.u[0];
-         }
-
          instr->src[0] = nir_src_for_ssa(evaluate_rvalue(block));
+         instr->src[1] = nir_src_for_ssa(evaluate_rvalue(offset));
 
          const glsl_type *type = ir->return_deref->var->type;
          instr->num_components = type->vector_elements;
@@ -1010,18 +986,8 @@ nir_visitor::visit(ir_call *ir)
          exec_node *param = ir->actual_parameters.get_head();
          ir_rvalue *offset = ((ir_instruction *)param)->as_rvalue();
 
-         /* Check if we need the indirect version */
-         ir_constant *const_offset = offset->as_constant();
-         if (!const_offset) {
-            op = nir_intrinsic_load_shared_indirect;
-            ralloc_free(instr);
-            instr = nir_intrinsic_instr_create(shader, op);
-            instr->src[0] = nir_src_for_ssa(evaluate_rvalue(offset));
-            instr->const_index[0] = 0;
-            dest = &instr->dest;
-         } else {
-            instr->const_index[0] = const_offset->value.u[0];
-         }
+         instr->const_index[0] = 0;
+         instr->src[0] = nir_src_for_ssa(evaluate_rvalue(offset));
 
          const glsl_type *type = ir->return_deref->var->type;
          instr->num_components = type->vector_elements;
@@ -1044,17 +1010,8 @@ nir_visitor::visit(ir_call *ir)
          ir_constant *write_mask = ((ir_instruction *)param)->as_constant();
          assert(write_mask);
 
-         /* Check if we need the indirect version */
-         ir_constant *const_offset = offset->as_constant();
-         if (!const_offset) {
-            op = nir_intrinsic_store_shared_indirect;
-            ralloc_free(instr);
-            instr = nir_intrinsic_instr_create(shader, op);
-            instr->src[1] = nir_src_for_ssa(evaluate_rvalue(offset));
-            instr->const_index[0] = 0;
-         } else {
-            instr->const_index[0] = const_offset->value.u[0];
-         }
+         instr->const_index[0] = 0;
+         instr->src[1] = nir_src_for_ssa(evaluate_rvalue(offset));
 
          instr->const_index[1] = write_mask->value.u[0];
 
@@ -1303,20 +1260,11 @@ nir_visitor::visit(ir_expression *ir)
    /* Some special cases */
    switch (ir->operation) {
    case ir_binop_ubo_load: {
-      ir_constant *const_index = ir->operands[1]->as_constant();
-
-      nir_intrinsic_op op;
-      if (const_index) {
-         op = nir_intrinsic_load_ubo;
-      } else {
-         op = nir_intrinsic_load_ubo_indirect;
-      }
-      nir_intrinsic_instr *load = nir_intrinsic_instr_create(this->shader, op);
+      nir_intrinsic_instr *load =
+         nir_intrinsic_instr_create(this->shader, nir_intrinsic_load_ubo);
       load->num_components = ir->type->vector_elements;
-      load->const_index[0] = const_index ? const_index->value.u[0] : 0; /* base offset */
       load->src[0] = nir_src_for_ssa(evaluate_rvalue(ir->operands[0]));
-      if (!const_index)
-         load->src[1] = nir_src_for_ssa(evaluate_rvalue(ir->operands[1]));
+      load->src[1] = nir_src_for_ssa(evaluate_rvalue(ir->operands[1]));
       add_instr(&load->instr, ir->type->vector_elements);
 
       /*
