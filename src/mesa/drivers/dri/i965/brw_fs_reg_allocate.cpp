@@ -723,8 +723,15 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
                               .at(block, inst);
 
    for (int i = 0; i < count / reg_size; i++) {
-      /* The gen7 descriptor-based offset is 12 bits of HWORD units. */
-      bool gen7_read = devinfo->gen >= 7 && spill_offset < (1 << 12) * REG_SIZE;
+      /* The Gen7 descriptor-based offset is 12 bits of HWORD units.  Because
+       * the Gen7-style scratch block read is hardwired to BTI 255, on Gen9+
+       * it would cause the DC to do an IA-coherent read, what largely
+       * outweighs the slight advantage from not having to provide the address
+       * as part of the message header, so we're better off using plain old
+       * oword block reads.
+       */
+      bool gen7_read = (devinfo->gen >= 7 && devinfo->gen < 9 &&
+                        spill_offset < (1 << 12) * REG_SIZE);
       fs_inst *unspill_inst = ibld.emit(gen7_read ?
                                         SHADER_OPCODE_GEN7_SCRATCH_READ :
                                         SHADER_OPCODE_GEN4_SCRATCH_READ,
