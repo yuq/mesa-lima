@@ -86,9 +86,6 @@ VULKAN_SOURCES =                                        \
 	anv_util.c                                      \
 	anv_wsi.c					\
 	anv_wsi_x11.c					\
-	gen8_state.c					\
-	gen8_cmd_buffer.c				\
-	gen8_pipeline.c					\
 	isl.c                                           \
 	isl_format_layout.c
 
@@ -111,8 +108,11 @@ libanv_gen75_la_SOURCES =                               \
 	gen7_state.c
 libanv_gen75_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=75
 
-libanv_gen8_la_SOURCES =                               \
-	genX_cmd_buffer.c
+libanv_gen8_la_SOURCES =                               	\
+	genX_cmd_buffer.c				\
+	gen8_cmd_buffer.c				\
+	gen8_pipeline.c					\
+	gen8_state.c
 libanv_gen8_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=80
 
 if HAVE_EGL_PLATFORM_WAYLAND
