@@ -822,8 +822,8 @@ union pipe_query_result
    /* PIPE_QUERY_PIPELINE_STATISTICS */
    struct pipe_query_data_pipeline_statistics pipeline_statistics;
 
-   /* batch queries */
-   union pipe_numeric_type_union batch[0];
+   /* batch queries (variable length) */
+   union pipe_numeric_type_union batch[1];
 };
 
 union pipe_color_union
