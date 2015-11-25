@@ -256,8 +256,6 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
                       &ctx->Extensions, &st->options, ctx->Mesa_DXTn);
 
    if (st_have_perfmon(st)) {
-      /* GL_AMD_performance_monitor is only enabled when the underlying
-       * driver expose GPU hardware performance counters. */
       ctx->Extensions.AMD_performance_monitor = GL_TRUE;
    }
 
