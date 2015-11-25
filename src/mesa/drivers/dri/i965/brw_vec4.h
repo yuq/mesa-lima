@@ -314,7 +314,6 @@ public:
    bool is_high_sampler(src_reg sampler);
 
    virtual void emit_nir_code();
-   virtual void nir_setup_inputs();
    virtual void nir_setup_uniforms();
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
    virtual void nir_setup_system_values();
@@ -347,7 +346,6 @@ public:
 
    dst_reg *nir_locals;
    dst_reg *nir_ssa_values;
-   src_reg *nir_inputs;
    dst_reg *nir_system_values;
 
 protected:

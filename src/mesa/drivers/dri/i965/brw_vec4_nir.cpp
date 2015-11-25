@@ -35,9 +35,6 @@ namespace brw {
 void
 vec4_visitor::emit_nir_code()
 {
-   if (nir->num_inputs > 0)
-      nir_setup_inputs();
-
    if (nir->num_uniforms > 0)
       nir_setup_uniforms();
 
@@ -114,24 +111,6 @@ vec4_visitor::nir_setup_system_values()
       assert(strcmp(overload->function->name, "main") == 0);
       assert(overload->impl);
       nir_foreach_block(overload->impl, setup_system_values_block, this);
-   }
-}
-
-void
-vec4_visitor::nir_setup_inputs()
-{
-   nir_inputs = ralloc_array(mem_ctx, src_reg, nir->num_inputs);
-   for (unsigned i = 0; i < nir->num_inputs; i++) {
-      nir_inputs[i] = src_reg();
-   }
-
-   nir_foreach_variable(var, &nir->inputs) {
-      int offset = var->data.driver_location;
-      unsigned size = type_size_vec4(var->type);
-      for (unsigned i = 0; i < size; i++) {
-         src_reg src = src_reg(ATTR, var->data.location + i, var->type);
-         nir_inputs[offset + i] = src;
-      }
    }
 }
 
@@ -399,7 +378,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       /* fallthrough */
    case nir_intrinsic_load_input: {
       int offset = instr->const_index[0];
-      src = nir_inputs[offset];
+      src = src_reg(ATTR, offset, glsl_type::uvec4_type);
 
       if (has_indirect) {
          dest.reladdr = new(mem_ctx) src_reg(get_nir_src(instr->src[0],

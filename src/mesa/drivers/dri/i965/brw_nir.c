@@ -61,13 +61,6 @@ brw_nir_lower_inputs(nir_shader *nir,
 {
    switch (nir->stage) {
    case MESA_SHADER_VERTEX:
-      /* For now, leave the vec4 backend doing the old method. */
-      if (!is_scalar) {
-         nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
-                                  type_size_vec4);
-         break;
-      }
-
       /* Start with the location of the variable's base. */
       foreach_list_typed(nir_variable, var, node, &nir->inputs) {
          var->data.driver_location = var->data.location;
@@ -79,15 +72,18 @@ brw_nir_lower_inputs(nir_shader *nir,
        */
       nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
 
-      /* Finally, translate VERT_ATTRIB_* values into the actual registers.
-       *
-       * Note that we can use nir->info.inputs_read instead of key->inputs_read
-       * since the two are identical aside from Gen4-5 edge flag differences.
-       */
-      GLbitfield64 inputs_read = nir->info.inputs_read;
-      nir_foreach_overload(nir, overload) {
-         if (overload->impl) {
-            nir_foreach_block(overload->impl, remap_vs_attrs, &inputs_read);
+      if (is_scalar) {
+         /* Finally, translate VERT_ATTRIB_* values into the actual registers.
+          *
+          * Note that we can use nir->info.inputs_read instead of
+          * key->inputs_read since the two are identical aside from Gen4-5
+          * edge flag differences.
+          */
+         GLbitfield64 inputs_read = nir->info.inputs_read;
+         nir_foreach_overload(nir, overload) {
+            if (overload->impl) {
+               nir_foreach_block(overload->impl, remap_vs_attrs, &inputs_read);
+            }
          }
       }
       break;
