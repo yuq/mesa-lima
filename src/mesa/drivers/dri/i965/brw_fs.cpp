@@ -433,7 +433,6 @@ fs_reg::fs_reg(struct ::brw_reg reg) :
 {
    this->reg_offset = 0;
    this->subreg_offset = 0;
-   this->reladdr = NULL;
    this->stride = 1;
    if (this->file == IMM &&
        (this->type != BRW_REGISTER_TYPE_V &&
@@ -448,7 +447,6 @@ fs_reg::equals(const fs_reg &r) const
 {
    return (this->backend_reg::equals(r) &&
            subreg_offset == r.subreg_offset &&
-           !reladdr && !r.reladdr &&
            stride == r.stride);
 }
 
@@ -4783,9 +4781,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          break;
       case UNIFORM:
          fprintf(file, "u%d", inst->src[i].nr + inst->src[i].reg_offset);
-         if (inst->src[i].reladdr) {
-            fprintf(file, "+reladdr");
-         } else if (inst->src[i].subreg_offset) {
+         if (inst->src[i].subreg_offset) {
             fprintf(file, "+%d.%d", inst->src[i].reg_offset,
                     inst->src[i].subreg_offset);
          }
@@ -4896,7 +4892,6 @@ fs_visitor::get_instruction_generating_reg(fs_inst *start,
 {
    if (end == start ||
        end->is_partial_write() ||
-       reg.reladdr ||
        !reg.equals(end->dst)) {
       return NULL;
    } else {
