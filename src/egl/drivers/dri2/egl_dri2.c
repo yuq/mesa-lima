@@ -1549,9 +1549,9 @@ dri2_bind_tex_image(_EGLDriver *drv,
       assert(!"Unexpected texture target in dri2_bind_tex_image()");
    }
 
-   (*dri2_dpy->tex_buffer->setTexBuffer2)(dri2_ctx->dri_context,
-                                          target, format,
-                                          dri_drawable);
+   dri2_dpy->tex_buffer->setTexBuffer2(dri2_ctx->dri_context,
+                                       target, format,
+                                       dri_drawable);
 
    return EGL_TRUE;
 }
@@ -1582,9 +1582,8 @@ dri2_release_tex_image(_EGLDriver *drv,
 
    if (dri2_dpy->tex_buffer->base.version >= 3 &&
        dri2_dpy->tex_buffer->releaseTexBuffer != NULL) {
-      (*dri2_dpy->tex_buffer->releaseTexBuffer)(dri2_ctx->dri_context,
-                                                target,
-                                                dri_drawable);
+      dri2_dpy->tex_buffer->releaseTexBuffer(dri2_ctx->dri_context,
+                                             target, dri_drawable);
    }
 
    return EGL_TRUE;

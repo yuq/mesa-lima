@@ -114,7 +114,7 @@ resize_callback(struct wl_egl_window *wl_win, void *data)
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
 
-   (*dri2_dpy->flush->invalidate)(dri2_surf->dri_drawable);
+   dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
 }
 
 static void
@@ -174,8 +174,8 @@ dri2_wl_create_surface(_EGLDriver *drv, _EGLDisplay *disp,
                                 dri2_surf->base.GLColorspace);
 
    dri2_surf->dri_drawable = 
-      (*dri2_dpy->dri2->createNewDrawable)(dri2_dpy->dri_screen, config,
-                                           dri2_surf);
+      dri2_dpy->dri2->createNewDrawable(dri2_dpy->dri_screen, config,
+                                        dri2_surf);
    if (dri2_surf->dri_drawable == NULL) {
       _eglError(EGL_BAD_ALLOC, "dri2->createNewDrawable");
       goto cleanup_surf;
@@ -236,7 +236,7 @@ dri2_wl_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 
    (void) drv;
 
-   (*dri2_dpy->core->destroyDrawable)(dri2_surf->dri_drawable);
+   dri2_dpy->core->destroyDrawable(dri2_surf->dri_drawable);
 
    for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
       if (dri2_surf->color_buffers[i].wl_buffer)
@@ -770,7 +770,7 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
    }
 
    dri2_flush_drawable_for_swapbuffers(disp, draw);
-   (*dri2_dpy->flush->invalidate)(dri2_surf->dri_drawable);
+   dri2_dpy->flush->invalidate(dri2_surf->dri_drawable);
 
    wl_surface_commit(dri2_surf->wl_win->surface);
 
@@ -1753,8 +1753,8 @@ dri2_wl_swrast_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
                                 dri2_surf->base.GLColorspace);
 
    dri2_surf->dri_drawable =
-      (*dri2_dpy->swrast->createNewDrawable)(dri2_dpy->dri_screen,
-                                             config, dri2_surf);
+      dri2_dpy->swrast->createNewDrawable(dri2_dpy->dri_screen,
+                                          config, dri2_surf);
    if (dri2_surf->dri_drawable == NULL) {
       _eglError(EGL_BAD_ALLOC, "swrast->createNewDrawable");
       goto cleanup_surf;
