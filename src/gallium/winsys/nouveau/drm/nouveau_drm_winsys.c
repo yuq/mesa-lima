@@ -27,7 +27,7 @@ bool nouveau_drm_screen_unref(struct nouveau_screen *screen)
 	ret = --screen->refcount;
 	assert(ret >= 0);
 	if (ret == 0)
-		util_hash_table_remove(fd_tab, intptr_to_pointer(screen->device->fd));
+		util_hash_table_remove(fd_tab, intptr_to_pointer(screen->drm->fd));
 	pipe_mutex_unlock(nouveau_screen_mutex);
 	return ret == 0;
 }
