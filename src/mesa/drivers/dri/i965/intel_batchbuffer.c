@@ -106,6 +106,32 @@ intel_batchbuffer_free(struct brw_context *brw)
    drm_intel_bo_unreference(brw->batch.bo);
 }
 
+void
+intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
+                                enum brw_gpu_ring ring)
+{
+   /* If we're switching rings, implicitly flush the batch. */
+   if (unlikely(ring != brw->batch.ring) && brw->batch.ring != UNKNOWN_RING &&
+       brw->gen >= 6) {
+      intel_batchbuffer_flush(brw);
+   }
+
+#ifdef DEBUG
+   assert(sz < BATCH_SZ - BATCH_RESERVED);
+#endif
+   if (intel_batchbuffer_space(brw) < sz)
+      intel_batchbuffer_flush(brw);
+
+   enum brw_gpu_ring prev_ring = brw->batch.ring;
+   /* The intel_batchbuffer_flush() calls above might have changed
+    * brw->batch.ring to UNKNOWN_RING, so we need to set it here at the end.
+    */
+   brw->batch.ring = ring;
+
+   if (unlikely(prev_ring == UNKNOWN_RING && ring == RENDER_RING))
+      intel_batchbuffer_emit_render_ring_prelude(brw);
+}
+
 static void
 do_batch_dump(struct brw_context *brw)
 {
