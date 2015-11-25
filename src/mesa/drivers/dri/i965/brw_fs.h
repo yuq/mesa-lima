@@ -313,8 +313,6 @@ public:
    struct brw_stage_prog_data *prog_data;
    struct gl_program *prog;
 
-   int *param_size;
-
    int *virtual_grf_start;
    int *virtual_grf_end;
    brw::fs_live_variables *live_intervals;
