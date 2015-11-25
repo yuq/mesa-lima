@@ -86,6 +86,32 @@ fs_visitor::nir_setup_inputs()
 }
 
 void
+fs_visitor::nir_setup_single_output_varying(fs_reg *reg,
+                                            const glsl_type *type,
+                                            unsigned *location)
+{
+   if (type->is_array() || type->is_matrix()) {
+      const struct glsl_type *elem_type = glsl_get_array_element(type);
+      const unsigned length = glsl_get_length(type);
+
+      for (unsigned i = 0; i < length; i++) {
+         nir_setup_single_output_varying(reg, elem_type, location);
+      }
+   } else if (type->is_record()) {
+      for (unsigned i = 0; i < type->length; i++) {
+         const struct glsl_type *field_type = type->fields.structure[i].type;
+         nir_setup_single_output_varying(reg, field_type, location);
+      }
+   } else {
+      assert(type->is_scalar() || type->is_vector());
+      this->outputs[*location] = *reg;
+      this->output_components[*location] = type->vector_elements;
+      *reg = offset(*reg, bld, 4);
+      (*location)++;
+   }
+}
+
+void
 fs_visitor::nir_setup_outputs()
 {
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
@@ -95,17 +121,13 @@ fs_visitor::nir_setup_outputs()
    nir_foreach_variable(var, &nir->outputs) {
       fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
 
-      int vector_elements = var->type->without_array()->vector_elements;
-
       switch (stage) {
       case MESA_SHADER_VERTEX:
-      case MESA_SHADER_GEOMETRY:
-         for (int i = 0; i < type_size_vec4(var->type); i++) {
-            int output = var->data.location + i;
-            this->outputs[output] = offset(reg, bld, 4 * i);
-            this->output_components[output] = vector_elements;
-         }
+      case MESA_SHADER_GEOMETRY: {
+         unsigned location = var->data.location;
+         nir_setup_single_output_varying(&reg, var->type, &location);
          break;
+      }
       case MESA_SHADER_FRAGMENT:
          if (var->data.index > 0) {
             assert(var->data.location == FRAG_RESULT_DATA0);
@@ -125,6 +147,8 @@ fs_visitor::nir_setup_outputs()
          } else if (var->data.location == FRAG_RESULT_SAMPLE_MASK) {
             this->sample_mask = reg;
          } else {
+            int vector_elements = var->type->without_array()->vector_elements;
+
             /* gl_FragData or a user-defined FS output */
             assert(var->data.location >= FRAG_RESULT_DATA0 &&
                    var->data.location < FRAG_RESULT_DATA0+BRW_MAX_DRAW_BUFFERS);

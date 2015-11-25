@@ -223,6 +223,8 @@ public:
 
    void emit_nir_code();
    void nir_setup_inputs();
+   void nir_setup_single_output_varying(fs_reg *reg, const glsl_type *type,
+                                        unsigned *location);
    void nir_setup_outputs();
    void nir_setup_uniforms();
    void nir_emit_system_values();
