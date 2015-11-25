@@ -278,8 +278,6 @@ public:
 
    src_reg get_scratch_offset(bblock_t *block, vec4_instruction *inst,
 			      src_reg *reladdr, int reg_offset);
-   src_reg get_pull_constant_offset(bblock_t *block, vec4_instruction *inst,
-				    src_reg *reladdr, int reg_offset);
    void emit_scratch_read(bblock_t *block, vec4_instruction *inst,
 			  dst_reg dst,
 			  src_reg orig_src,

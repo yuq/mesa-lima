@@ -1410,27 +1410,6 @@ vec4_visitor::get_scratch_offset(bblock_t *block, vec4_instruction *inst,
    }
 }
 
-src_reg
-vec4_visitor::get_pull_constant_offset(bblock_t * block, vec4_instruction *inst,
-				       src_reg *reladdr, int reg_offset)
-{
-   if (reladdr) {
-      src_reg index = src_reg(this, glsl_type::int_type);
-
-      emit_before(block, inst, ADD(dst_reg(index), *reladdr,
-                                   brw_imm_d(reg_offset * 16)));
-
-      return index;
-   } else if (devinfo->gen >= 8) {
-      /* Store the offset in a GRF so we can send-from-GRF. */
-      src_reg offset = src_reg(this, glsl_type::int_type);
-      emit_before(block, inst, MOV(dst_reg(offset), brw_imm_d(reg_offset * 16)));
-      return offset;
-   } else {
-      return brw_imm_d(reg_offset * 16);
-   }
-}
-
 /**
  * Emits an instruction before @inst to load the value named by @orig_src
  * from scratch space at @base_offset to @temp.
@@ -1612,8 +1591,20 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 {
    int reg_offset = base_offset + orig_src.reg_offset;
    const unsigned index = prog_data->base.binding_table.pull_constants_start;
-   src_reg offset = get_pull_constant_offset(block, inst, orig_src.reladdr,
-                                             reg_offset);
+
+   src_reg offset;
+   if (orig_src.reladdr) {
+      offset = src_reg(this, glsl_type::int_type);
+
+      emit_before(block, inst, ADD(dst_reg(offset), *orig_src.reladdr,
+                                   brw_imm_d(reg_offset * 16)));
+   } else if (devinfo->gen >= 8) {
+      /* Store the offset in a GRF so we can send-from-GRF. */
+      offset = src_reg(this, glsl_type::int_type);
+      emit_before(block, inst, MOV(dst_reg(offset), brw_imm_d(reg_offset * 16)));
+   } else {
+      offset = brw_imm_d(reg_offset * 16);
+   }
 
    emit_pull_constant_load_reg(temp,
                                brw_imm_ud(index),
