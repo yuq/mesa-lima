@@ -170,7 +170,7 @@ _mesa_valid_prim_mode(struct gl_context *ctx, GLenum mode, const char *name)
       return GL_FALSE;
    }
 
-   /* From the ARB_geometry_shader4 spec:
+   /* From the OpenGL 4.5 specification, section 11.3.1:
     *
     * The error INVALID_OPERATION is generated if Begin, or any command that
     * implicitly calls Begin, is called when a geometry shader is active and:

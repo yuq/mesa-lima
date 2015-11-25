@@ -3400,7 +3400,7 @@ struct gl_constants
     */
    GLuint MaxUserAssignableUniformLocations;
 
-   /** GL_ARB_geometry_shader4 */
+   /** geometry shader */
    GLuint MaxGeometryOutputVertices;
    GLuint MaxGeometryTotalOutputComponents;
 
@@ -3685,7 +3685,6 @@ struct gl_extensions
    GLboolean ARB_enhanced_layouts;
    GLboolean ARB_explicit_attrib_location;
    GLboolean ARB_explicit_uniform_location;
-   GLboolean ARB_geometry_shader4;
    GLboolean ARB_gpu_shader5;
    GLboolean ARB_gpu_shader_fp64;
    GLboolean ARB_half_float_vertex;
