@@ -603,6 +603,17 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
           brw->render_target_format[irb->mt->format])
          clear_type = REP_CLEAR;
 
+      /* Gen9 doesn't support fast clear on single-sampled SRGB buffers. When
+       * GL_FRAMEBUFFER_SRGB is enabled any color renderbuffers will be
+       * resolved in intel_update_state. In that case it's pointless to do a
+       * fast clear because it's very likely to be immediately resolved.
+       */
+      if (brw->gen >= 9 &&
+          irb->mt->num_samples <= 1 &&
+          brw->ctx.Color.sRGBEnabled &&
+          _mesa_get_srgb_format_linear(irb->mt->format) != irb->mt->format)
+         clear_type = REP_CLEAR;
+
       if (irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_NO_MCS)
          clear_type = REP_CLEAR;
 
