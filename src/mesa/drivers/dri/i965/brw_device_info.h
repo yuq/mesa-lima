@@ -68,6 +68,11 @@ struct brw_device_info
     * GPU Limits:
     *  @{
     */
+   /**
+    * Total number of slices present on the device whether or not they've been
+    * fused off.
+    */
+   unsigned num_slices;
    unsigned max_vs_threads;
    unsigned max_hs_threads;
    unsigned max_ds_threads;
