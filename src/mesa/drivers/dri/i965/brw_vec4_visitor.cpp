@@ -1587,16 +1587,16 @@ vec4_visitor::move_grf_array_access_to_scratch()
 void
 vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 				      dst_reg temp, src_reg orig_src,
-				      int base_offset)
+                                      int base_offset, src_reg indirect)
 {
    int reg_offset = base_offset + orig_src.reg_offset;
    const unsigned index = prog_data->base.binding_table.pull_constants_start;
 
    src_reg offset;
-   if (orig_src.reladdr) {
+   if (indirect.file != BAD_FILE) {
       offset = src_reg(this, glsl_type::uint_type);
 
-      emit_before(block, inst, ADD(dst_reg(offset), *orig_src.reladdr,
+      emit_before(block, inst, ADD(dst_reg(offset), indirect,
                                    brw_imm_ud(reg_offset * 16)));
    } else if (devinfo->gen >= 8) {
       /* Store the offset in a GRF so we can send-from-GRF. */
@@ -1631,59 +1631,55 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
 {
    int pull_constant_loc[this->uniforms];
    memset(pull_constant_loc, -1, sizeof(pull_constant_loc));
-   bool nested_reladdr;
 
-   /* Walk through and find array access of uniforms.  Put a copy of that
-    * uniform in the pull constant buffer.
-    *
-    * Note that we don't move constant-indexed accesses to arrays.  No
-    * testing has been done of the performance impact of this choice.
+   /* First, walk through the instructions and determine which things need to
+    * be pulled.  We mark something as needing to be pulled by setting
+    * pull_constant_loc to 0.
     */
-   do {
-      nested_reladdr = false;
+   foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
+      /* We only care about MOV_INDIRECT of a uniform */
+      if (inst->opcode != SHADER_OPCODE_MOV_INDIRECT ||
+          inst->src[0].file != UNIFORM)
+         continue;
 
-      foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
-         for (int i = 0 ; i < 3; i++) {
-            if (inst->src[i].file != UNIFORM || !inst->src[i].reladdr)
-               continue;
+      int uniform_nr = inst->src[0].nr + inst->src[0].reg_offset;
 
-            int uniform = inst->src[i].nr;
+      for (unsigned j = 0; j < DIV_ROUND_UP(inst->src[2].ud, 16); j++)
+         pull_constant_loc[uniform_nr + j] = 0;
+   }
 
-            if (inst->src[i].reladdr->reladdr)
-               nested_reladdr = true;  /* will need another pass */
+   /* Next, we walk the list of uniforms and assign real pull constant
+    * locations and set their corresponding entries in pull_param.
+    */
+   for (int j = 0; j < this->uniforms; j++) {
+      if (pull_constant_loc[j] < 0)
+         continue;
 
-            /* If this array isn't already present in the pull constant buffer,
-             * add it.
-             */
-            if (pull_constant_loc[uniform] == -1) {
-               const gl_constant_value **values =
-                  &stage_prog_data->param[uniform * 4];
+      pull_constant_loc[j] = stage_prog_data->nr_pull_params / 4;
 
-               pull_constant_loc[uniform] = stage_prog_data->nr_pull_params / 4;
-
-               assert(uniform < uniform_array_size);
-               for (int j = 0; j < uniform_size[uniform] * 4; j++) {
-                  stage_prog_data->pull_param[stage_prog_data->nr_pull_params++]
-                     = values[j];
-               }
-            }
-
-            /* Set up the annotation tracking for new generated instructions. */
-            base_ir = inst->ir;
-            current_annotation = inst->annotation;
-
-            dst_reg temp = dst_reg(this, glsl_type::vec4_type);
-
-            emit_pull_constant_load(block, inst, temp, inst->src[i],
-                                    pull_constant_loc[uniform]);
-
-            inst->src[i].file = temp.file;
-            inst->src[i].nr = temp.nr;
-            inst->src[i].reg_offset = temp.reg_offset;
-            inst->src[i].reladdr = NULL;
-         }
+      for (int i = 0; i < 4; i++) {
+         stage_prog_data->pull_param[stage_prog_data->nr_pull_params++]
+            = stage_prog_data->param[j * 4 + i];
       }
-   } while (nested_reladdr);
+   }
+
+   /* Finally, we can walk through the instructions and lower MOV_INDIRECT
+    * instructions to actual uniform pulls.
+    */
+   foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
+      /* We only care about MOV_INDIRECT of a uniform */
+      if (inst->opcode != SHADER_OPCODE_MOV_INDIRECT ||
+          inst->src[0].file != UNIFORM)
+         continue;
+
+      int uniform_nr = inst->src[0].nr + inst->src[0].reg_offset;
+
+      assert(inst->src[0].swizzle == BRW_SWIZZLE_NOOP);
+
+      emit_pull_constant_load(block, inst, inst->dst, inst->src[0],
+                              pull_constant_loc[uniform_nr], inst->src[1]);
+      inst->remove(block);
+   }
 
    /* Now there are no accesses of the UNIFORM file with a reladdr, so
     * no need to track them as larger-than-vec4 objects.  This will be

@@ -794,7 +794,7 @@ vec4_visitor::move_push_constants_to_pull_constants()
 	 dst_reg temp = dst_reg(this, glsl_type::vec4_type);
 
 	 emit_pull_constant_load(block, inst, temp, inst->src[i],
-				 pull_constant_loc[uniform]);
+				 pull_constant_loc[uniform], src_reg());
 
 	 inst->src[i].file = temp.file;
          inst->src[i].nr = temp.nr;

@@ -708,12 +708,14 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          /* Offsets are in bytes but they should always be multiples of 16 */
          assert(const_offset->u32[0] % 16 == 0);
          src.reg_offset = const_offset->u32[0] / 16;
-      } else {
-         src_reg tmp = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_UD, 1);
-         src.reladdr = new(mem_ctx) src_reg(tmp);
-      }
 
-      emit(MOV(dest, src));
+         emit(MOV(dest, src));
+      } else {
+         src_reg indirect = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_UD, 1);
+
+         emit(SHADER_OPCODE_MOV_INDIRECT, dest, src,
+              indirect, brw_imm_ud(instr->const_index[1]));
+      }
       break;
    }
 

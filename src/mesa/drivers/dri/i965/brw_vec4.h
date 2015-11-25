@@ -287,7 +287,8 @@ public:
    void emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 				dst_reg dst,
 				src_reg orig_src,
-				int base_offset);
+                                int base_offset,
+                                src_reg indirect);
    void emit_pull_constant_load_reg(dst_reg dst,
                                     src_reg surf_index,
                                     src_reg offset,
