@@ -565,7 +565,7 @@ nvc0_hw_metric_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
    uint16_t class_3d = screen->base.class_3d;
    int count = 0;
 
-   if (screen->base.device->drm_version >= 0x01000101) {
+   if (screen->base.drm->version >= 0x01000101) {
       if (screen->compute) {
          if (screen->base.class_3d == NVE4_3D_CLASS) {
             count += NVE4_HW_METRIC_QUERY_COUNT;

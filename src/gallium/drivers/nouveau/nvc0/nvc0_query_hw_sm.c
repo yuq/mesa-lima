@@ -1121,7 +1121,7 @@ nvc0_hw_sm_create_query(struct nvc0_context *nvc0, unsigned type)
    struct nvc0_hw_query *hq;
    unsigned space;
 
-   if (nvc0->screen->base.device->drm_version < 0x01000101)
+   if (nvc0->screen->base.drm->version < 0x01000101)
       return NULL;
 
    if ((type < NVE4_HW_SM_QUERY(0) || type > NVE4_HW_SM_QUERY_LAST) &&
@@ -1216,7 +1216,7 @@ nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
 {
    int count = 0;
 
-   if (screen->base.device->drm_version >= 0x01000101) {
+   if (screen->base.drm->version >= 0x01000101) {
       if (screen->compute) {
          if (screen->base.class_3d == NVE4_3D_CLASS) {
             count += NVE4_HW_SM_QUERY_COUNT;

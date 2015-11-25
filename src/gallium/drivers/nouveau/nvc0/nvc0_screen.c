@@ -688,7 +688,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    screen->base.base.is_video_format_supported = nouveau_vp3_screen_video_supported;
 
    flags = NOUVEAU_BO_GART | NOUVEAU_BO_MAP;
-   if (dev->drm_version >= 0x01000202)
+   if (screen->base.drm->version >= 0x01000202)
       flags |= NOUVEAU_BO_COHERENT;
 
    ret = nouveau_bo_new(dev, flags, 0, 4096, NULL, &screen->fence.bo);
@@ -812,10 +812,11 @@ nvc0_screen_create(struct nouveau_device *dev)
       PUSH_DATA (push, 0x17);
    }
 
-   IMMED_NVC0(push, NVC0_3D(ZETA_COMP_ENABLE), dev->drm_version >= 0x01000101);
+   IMMED_NVC0(push, NVC0_3D(ZETA_COMP_ENABLE),
+                    screen->base.drm->version >= 0x01000101);
    BEGIN_NVC0(push, NVC0_3D(RT_COMP_ENABLE(0)), 8);
    for (i = 0; i < 8; ++i)
-           PUSH_DATA(push, dev->drm_version >= 0x01000101);
+           PUSH_DATA(push, screen->base.drm->version >= 0x01000101);
 
    BEGIN_NVC0(push, NVC0_3D(RT_CONTROL), 1);
    PUSH_DATA (push, 1);
@@ -911,7 +912,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATAh(push, screen->uniform_bo->offset + (5 << 16) + (6 << 9));
    PUSH_DATA (push, screen->uniform_bo->offset + (5 << 16) + (6 << 9));
 
-   if (dev->drm_version >= 0x01000101) {
+   if (screen->base.drm->version >= 0x01000101) {
       ret = nouveau_getparam(dev, NOUVEAU_GETPARAM_GRAPH_UNITS, &value);
       if (ret) {
          NOUVEAU_ERR("NOUVEAU_GETPARAM_GRAPH_UNITS failed.\n");

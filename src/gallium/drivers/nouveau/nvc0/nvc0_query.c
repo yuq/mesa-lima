@@ -184,7 +184,7 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
    count++;
 #endif
 
-   if (screen->base.device->drm_version >= 0x01000101) {
+   if (screen->base.drm->version >= 0x01000101) {
       if (screen->compute) {
          if (screen->base.class_3d == NVE4_3D_CLASS) {
             count += 2;
