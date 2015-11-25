@@ -1,5 +1,4 @@
 #!/usr/bin/python2
-# -*- Mode: Python; py-indent-offset: 8 -*-
 
 # (C) Copyright Zack Rusin 2005. All Rights Reserved.
 # Copyright (C) 2015 Intel Corporation
