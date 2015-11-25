@@ -81,6 +81,11 @@ struct brw_device_info
    unsigned max_cs_threads;
 
    struct {
+      /**
+       * Hardware default URB size.  The units this is expressed in are
+       * somewhat inconsistent: 512b units on Gen4-5, KB on Gen6-7, and KB
+       * times the slice count on Gen8+.
+       */
       unsigned size;
       unsigned min_vs_entries;
       unsigned max_vs_entries;

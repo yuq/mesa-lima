@@ -1026,7 +1026,13 @@ struct brw_context
       GLuint clip_start;
       GLuint sf_start;
       GLuint cs_start;
-      GLuint size; /* Hardware URB size, in KB. */
+      /**
+       * URB size in the current configuration.  The units this is expressed
+       * in are somewhat inconsistent, see brw_device_info::urb::size.
+       *
+       * FINISHME: Represent the URB size consistently in KB on all platforms.
+       */
+      GLuint size;
 
       /* True if the most recently sent _3DSTATE_URB message allocated
        * URB space for the GS.
