@@ -174,7 +174,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
     * CSE can later notice that those loads are all the same and eliminate
     * the redundant ones.
     */
-   fs_reg vec4_offset = vgrf(glsl_type::int_type);
+   fs_reg vec4_offset = vgrf(glsl_type::uint_type);
    bld.ADD(vec4_offset, varying_offset, brw_imm_ud(const_offset & ~0xf));
 
    int scale = 1;

@@ -2679,7 +2679,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          assert(const_offset->u32[0] % 4 == 0);
          src.reg_offset = const_offset->u32[0] / 4;
       } else {
-         src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
+         src.reladdr = new(mem_ctx) fs_reg(retype(get_nir_src(instr->src[0]),
+                                                  BRW_REGISTER_TYPE_UD));
       }
 
       for (unsigned j = 0; j < instr->num_components; j++) {
@@ -2718,7 +2719,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
       if (const_offset == NULL) {
          fs_reg base_offset = retype(get_nir_src(instr->src[1]),
-                                     BRW_REGISTER_TYPE_D);
+                                     BRW_REGISTER_TYPE_UD);
 
          for (int i = 0; i < instr->num_components; i++)
             VARYING_PULL_CONSTANT_LOAD(bld, offset(dest, bld, i), surf_index,
