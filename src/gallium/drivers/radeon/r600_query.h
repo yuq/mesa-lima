@@ -31,7 +31,11 @@
 #include "pipe/p_defines.h"
 #include "util/list.h"
 
+struct pipe_context;
+struct pipe_query;
+
 struct r600_common_context;
+struct r600_common_screen;
 struct r600_query;
 struct r600_query_hw;
 struct r600_resource;
@@ -132,5 +136,122 @@ boolean r600_query_hw_get_result(struct r600_common_context *rctx,
 				 struct r600_query *rquery,
 				 boolean wait,
 				 union pipe_query_result *result);
+
+/* Performance counters */
+enum {
+	/* This block is part of the shader engine */
+	R600_PC_BLOCK_SE = (1 << 0),
+
+	/* Expose per-instance groups instead of summing all instances (within
+	 * an SE). */
+	R600_PC_BLOCK_INSTANCE_GROUPS = (1 << 1),
+
+	/* Expose per-SE groups instead of summing instances across SEs. */
+	R600_PC_BLOCK_SE_GROUPS = (1 << 2),
+
+	/* Shader block */
+	R600_PC_BLOCK_SHADER = (1 << 3),
+
+	/* Non-shader block with perfcounters windowed by shaders. */
+	R600_PC_BLOCK_SHADER_WINDOWED = (1 << 4),
+};
+
+/* Shader enable bits. Chosen to coincide with SQ_PERFCOUNTER_CTRL values */
+enum {
+	R600_PC_SHADER_PS = (1 << 0),
+	R600_PC_SHADER_VS = (1 << 1),
+	R600_PC_SHADER_GS = (1 << 2),
+	R600_PC_SHADER_ES = (1 << 3),
+	R600_PC_SHADER_HS = (1 << 4),
+	R600_PC_SHADER_LS = (1 << 5),
+	R600_PC_SHADER_CS = (1 << 6),
+
+	R600_PC_SHADER_ALL = R600_PC_SHADER_PS | R600_PC_SHADER_VS |
+			     R600_PC_SHADER_GS | R600_PC_SHADER_ES |
+			     R600_PC_SHADER_HS | R600_PC_SHADER_LS |
+			     R600_PC_SHADER_CS,
+
+	R600_PC_SHADER_WINDOWING = (1 << 31),
+};
+
+/* Describes a hardware block with performance counters. Multiple instances of
+ * each block, possibly per-SE, may exist on the chip. Depending on the block
+ * and on the user's configuration, we either
+ *  (a) expose every instance as a performance counter group,
+ *  (b) expose a single performance counter group that reports the sum over all
+ *      instances, or
+ *  (c) expose one performance counter group per instance, but summed over all
+ *      shader engines.
+ */
+struct r600_perfcounter_block {
+	const char *basename;
+	unsigned flags;
+	unsigned num_counters;
+	unsigned num_selectors;
+	unsigned num_instances;
+
+	unsigned num_groups;
+	char *group_names;
+	unsigned group_name_stride;
+
+	char *selector_names;
+	unsigned selector_name_stride;
+
+	void *data;
+};
+
+struct r600_perfcounters {
+	unsigned num_groups;
+	unsigned num_blocks;
+	struct r600_perfcounter_block *blocks;
+
+	unsigned num_start_cs_dwords;
+	unsigned num_stop_cs_dwords;
+	unsigned num_instance_cs_dwords;
+	unsigned num_shaders_cs_dwords;
+
+	void (*get_size)(struct r600_perfcounter_block *,
+			 unsigned count, unsigned *selectors,
+			 unsigned *num_select_dw, unsigned *num_read_dw);
+
+	void (*emit_instance)(struct r600_common_context *,
+			      int se, int instance);
+	void (*emit_shaders)(struct r600_common_context *, unsigned shaders);
+	void (*emit_select)(struct r600_common_context *,
+			    struct r600_perfcounter_block *,
+			    unsigned count, unsigned *selectors);
+	void (*emit_start)(struct r600_common_context *,
+			  struct r600_resource *buffer, uint64_t va);
+	void (*emit_stop)(struct r600_common_context *,
+			  struct r600_resource *buffer, uint64_t va);
+	void (*emit_read)(struct r600_common_context *,
+			  struct r600_perfcounter_block *,
+			  unsigned count, unsigned *selectors,
+			  struct r600_resource *buffer, uint64_t va);
+
+	void (*cleanup)(struct r600_common_screen *);
+
+	boolean separate_se;
+	boolean separate_instance;
+};
+
+struct pipe_query *r600_create_batch_query(struct pipe_context *ctx,
+					   unsigned num_queries,
+					   unsigned *query_types);
+
+int r600_get_perfcounter_info(struct r600_common_screen *,
+			      unsigned index,
+			      struct pipe_driver_query_info *info);
+int r600_get_perfcounter_group_info(struct r600_common_screen *,
+				    unsigned index,
+				    struct pipe_driver_query_group_info *info);
+
+boolean r600_perfcounters_init(struct r600_perfcounters *, unsigned num_blocks);
+boolean r600_perfcounters_add_block(struct r600_common_screen *,
+				    struct r600_perfcounters *,
+				    const char *name, unsigned flags,
+				    unsigned counters, unsigned selectors,
+				    unsigned instances, void *data);
+void r600_perfcounters_do_destroy(struct r600_perfcounters *);
 
 #endif /* R600_QUERY_H */

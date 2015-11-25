@@ -90,6 +90,7 @@
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
 struct r600_common_context;
+struct r600_perfcounters;
 
 struct radeon_shader_reloc {
 	char *name;
@@ -300,6 +301,9 @@ struct r600_common_screen {
 	volatile unsigned		gpu_load_stop_thread; /* bool */
 
 	char				renderer_string[64];
+
+	/* Performance counters. */
+	struct r600_perfcounters	*perfcounters;
 };
 
 /* This encapsulates a state or an operation which can emitted into the GPU
@@ -507,6 +511,9 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw);
 void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen);
 uint64_t r600_gpu_load_begin(struct r600_common_screen *rscreen);
 unsigned r600_gpu_load_end(struct r600_common_screen *rscreen, uint64_t begin);
+
+/* r600_perfcounters.c */
+void r600_perfcounters_destroy(struct r600_common_screen *rscreen);
 
 /* r600_query.c */
 void r600_init_screen_query_functions(struct r600_common_screen *rscreen);

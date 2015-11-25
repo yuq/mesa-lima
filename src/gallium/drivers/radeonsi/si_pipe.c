@@ -630,6 +630,9 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		return NULL;
 	}
 
+	if (!debug_get_bool_option("RADEON_DISABLE_PERFCOUNTERS", FALSE))
+		si_init_perfcounters(sscreen);
+
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
 
