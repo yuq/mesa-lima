@@ -272,8 +272,17 @@ _mesa_lookup_prim_by_nr(GLuint nr)
         if value > 0xffffffff:
             return
 
-        if name.endswith('_BIT'):
-            priority += 100
+        # We don't want bitfields in the enum-to-string table --
+        # individual bits have so many names, it's pointless.  Note
+        # that we check for power-of-two, since some getters have
+        # "_BITS" in their name, but none have a power-of-two enum
+        # number.
+        if not (value & (value - 1)) and '_BIT' in name:
+            return
+
+        # Also drop the GL_*_ATTRIB_BITS bitmasks.
+        if value == 0xffffffff:
+                return
 
         if value in self.enum_table:
             (n, p) = self.enum_table[value]
@@ -488,12 +497,6 @@ _mesa_lookup_prim_by_nr(GLuint nr)
         for enum in xml.findall('enums/enum'):
             name = enum.get('name')
             value = int(enum.get('value'), base=16)
-
-            if name == 'GL_ALL_ATTRIB_BITS':
-                # Khronos XML defines this one as 0xffffffff, but Mesa
-                # has always had the original definition of
-                # 0x000fffff.
-                value = 0x000fffff
 
             # If the same name ever maps to multiple values, that can
             # confuse us.  GL_ACTIVE_PROGRAM_EXT is OK to lose because

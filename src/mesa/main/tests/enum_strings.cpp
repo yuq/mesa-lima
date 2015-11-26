@@ -58,6 +58,11 @@ const struct enum_info everything[] = {
    /* A core enum, that should take precedence over a _BIT. */
    { 0x0100, "GL_ACCUM" },
 
+   /* An enum with "_BIT" that shouldn't get stripped out when we drop most
+    * "*_BIT" enums.
+    */
+   { 0x0d55, "GL_ALPHA_BITS" },
+
    /* An EXT-only extension that we never expect to see show up in ARB/core.
     */
    { 0x8062, "GL_REPLACE_EXT" },
@@ -78,23 +83,17 @@ const struct enum_info everything[] = {
     */
    { 0x850a, "GL_MODELVIEW1_ARB" },
 
-   /* This should be included, but it's value collides with GL_HINT_BIT.  The
-    * generator script picks GL_HINT_BIT because it prefers names that lack an
-    * extension suffix.
-    */
-/*   { 0x8000, "GL_ABGR_EXT" }, */
-   { 0x8000, "GL_HINT_BIT" },
+   /* An EXT-only enum that should take precedence over a _BIT. */
+   { 0x8000, "GL_ABGR_EXT" },
 
    /* An unusually-large enum */
    { 0x19262, "GL_RASTER_POSITION_UNCLIPPED_IBM" },
 
-   /* A bitmask masquerading as an enum */
-   { 0x00080000, "GL_SCISSOR_BIT" },
-
-   /* A bitfield where Mesa uses a different value from Khronos. */
-   { 0x000fffff, "GL_ALL_ATTRIB_BITS" },
-
-   /* A bitfield in the table, where we fail to return its string anyway! */
+   /* Bitfields like GL_SCISSOR_BIT and GL_ALL_ATTRIB_BITS should not appear
+    * in the table.
+    */
+   { 0x00080000, "0x80000" },
+   { 0x000fffff, "0xfffff" },
    { (int)0xffffffff, "0xffffffff" },
 
    { 0, NULL }
