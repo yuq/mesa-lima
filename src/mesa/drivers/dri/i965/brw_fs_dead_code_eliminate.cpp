@@ -109,6 +109,10 @@ fs_visitor::dead_code_eliminate()
             BITSET_CLEAR(flag_live, inst->flag_subreg);
          }
 
+         /* Don't mark dead instructions' sources as live */
+         if (inst->opcode == BRW_OPCODE_NOP)
+            continue;
+
          for (int i = 0; i < inst->sources; i++) {
             if (inst->src[i].file == VGRF) {
                int var = live_intervals->var_from_reg(inst->src[i]);

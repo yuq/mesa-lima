@@ -150,6 +150,10 @@ vec4_visitor::dead_code_eliminate()
                BITSET_CLEAR(flag_live, c);
          }
 
+         /* Don't mark dead instructions' sources as live */
+         if (inst->opcode == BRW_OPCODE_NOP)
+            continue;
+
          for (int i = 0; i < 3; i++) {
             if (inst->src[i].file == VGRF) {
                for (unsigned j = 0; j < inst->regs_read(i); j++) {
