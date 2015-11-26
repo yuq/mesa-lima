@@ -41,6 +41,12 @@
 #define GET_BITS(data, high, low) ((data & INTEL_MASK((high), (low))) >> (low))
 #define GET_FIELD(word, field) (((word)  & field ## _MASK) >> field ## _SHIFT)
 
+/**
+ * For use with masked MMIO registers where the upper 16 bits control which
+ * of the lower bits are committed to the register.
+ */
+#define REG_MASK(value) ((value) << 16)
+
 #ifndef BRW_DEFINES_H
 #define BRW_DEFINES_H
 

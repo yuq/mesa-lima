@@ -387,7 +387,7 @@ brw_upload_initial_gpu_state(struct brw_context *brw)
       BEGIN_BATCH(3);
       OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
       OUT_BATCH(GEN7_CACHE_MODE_1);
-      OUT_BATCH((GEN9_PARTIAL_RESOLVE_DISABLE_IN_VC << 16) |
+      OUT_BATCH(REG_MASK(GEN9_PARTIAL_RESOLVE_DISABLE_IN_VC) |
                 GEN9_PARTIAL_RESOLVE_DISABLE_IN_VC);
       ADVANCE_BATCH();
    }

@@ -268,7 +268,7 @@ setup_l3_config(struct brw_context *brw, const struct brw_l3_config *cfg)
          OUT_BATCH(HSW_SCRATCH1);
          OUT_BATCH(has_dc ? 0 : HSW_SCRATCH1_L3_ATOMIC_DISABLE);
          OUT_BATCH(HSW_ROW_CHICKEN3);
-         OUT_BATCH(HSW_ROW_CHICKEN3_L3_ATOMIC_DISABLE << 16 |
+         OUT_BATCH(REG_MASK(HSW_ROW_CHICKEN3_L3_ATOMIC_DISABLE) |
                    (has_dc ? 0 : HSW_ROW_CHICKEN3_L3_ATOMIC_DISABLE));
          ADVANCE_BATCH();
       }
