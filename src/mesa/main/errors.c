@@ -922,9 +922,9 @@ validate_params(struct gl_context *ctx, unsigned caller,
    case GL_DEBUG_TYPE_PORTABILITY_ARB:
    case GL_DEBUG_TYPE_OTHER_ARB:
    case GL_DEBUG_TYPE_MARKER:
-      break;
    case GL_DEBUG_TYPE_PUSH_GROUP:
    case GL_DEBUG_TYPE_POP_GROUP:
+      break;
    case GL_DONT_CARE:
       if (caller == CONTROL)
          break;
