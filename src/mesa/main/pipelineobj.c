@@ -928,8 +928,11 @@ _mesa_ValidateProgramPipeline(GLuint pipeline)
       return;
    }
 
-   _mesa_validate_program_pipeline(ctx, pipe,
-                                   (ctx->_Shader->Name == pipe->Name));
+   /* ValidateProgramPipeline should not throw errors when pipeline validation
+    * fails and should instead only update the validation status. We pass
+    * false for IsBound to avoid an error being thrown.
+    */
+   _mesa_validate_program_pipeline(ctx, pipe, false);
 
    /* Validate inputs against outputs, this cannot be done during linking
     * since programs have been linked separately from each other.
