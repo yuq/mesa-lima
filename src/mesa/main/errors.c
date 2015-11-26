@@ -98,7 +98,7 @@ struct gl_debug_state
 
    struct gl_debug_group *Groups[MAX_DEBUG_GROUP_STACK_DEPTH];
    struct gl_debug_message GroupMessages[MAX_DEBUG_GROUP_STACK_DEPTH];
-   GLint GroupStackDepth;
+   GLint CurrentGroup; // GroupStackDepth - 1
 
    struct gl_debug_log Log;
 };
@@ -422,7 +422,7 @@ debug_create(void)
 static bool
 debug_is_group_read_only(const struct gl_debug_state *debug)
 {
-   const GLint gstack = debug->GroupStackDepth;
+   const GLint gstack = debug->CurrentGroup;
    return (gstack > 0 && debug->Groups[gstack] == debug->Groups[gstack - 1]);
 }
 
@@ -432,7 +432,7 @@ debug_is_group_read_only(const struct gl_debug_state *debug)
 static bool
 debug_make_group_writable(struct gl_debug_state *debug)
 {
-   const GLint gstack = debug->GroupStackDepth;
+   const GLint gstack = debug->CurrentGroup;
    const struct gl_debug_group *src = debug->Groups[gstack];
    struct gl_debug_group *dst;
    int s, t;
@@ -472,7 +472,7 @@ debug_make_group_writable(struct gl_debug_state *debug)
 static void
 debug_clear_group(struct gl_debug_state *debug)
 {
-   const GLint gstack = debug->GroupStackDepth;
+   const GLint gstack = debug->CurrentGroup;
 
    if (!debug_is_group_read_only(debug)) {
       struct gl_debug_group *grp = debug->Groups[gstack];
@@ -496,9 +496,9 @@ debug_clear_group(struct gl_debug_state *debug)
 static void
 debug_destroy(struct gl_debug_state *debug)
 {
-   while (debug->GroupStackDepth > 0) {
+   while (debug->CurrentGroup > 0) {
       debug_clear_group(debug);
-      debug->GroupStackDepth--;
+      debug->CurrentGroup--;
    }
 
    debug_clear_group(debug);
@@ -514,7 +514,7 @@ debug_set_message_enable(struct gl_debug_state *debug,
                          enum mesa_debug_type type,
                          GLuint id, GLboolean enabled)
 {
-   const GLint gstack = debug->GroupStackDepth;
+   const GLint gstack = debug->CurrentGroup;
    struct gl_debug_namespace *ns;
 
    debug_make_group_writable(debug);
@@ -541,7 +541,7 @@ debug_set_message_enable_all(struct gl_debug_state *debug,
                              enum mesa_debug_severity severity,
                              GLboolean enabled)
 {
-   const GLint gstack = debug->GroupStackDepth;
+   const GLint gstack = debug->CurrentGroup;
    int s, t, smax, tmax;
 
    if (source == MESA_DEBUG_SOURCE_COUNT) {
@@ -579,7 +579,7 @@ debug_is_message_enabled(const struct gl_debug_state *debug,
                          GLuint id,
                          enum mesa_debug_severity severity)
 {
-   const GLint gstack = debug->GroupStackDepth;
+   const GLint gstack = debug->CurrentGroup;
    struct gl_debug_group *grp = debug->Groups[gstack];
    struct gl_debug_namespace *nspace = &grp->Namespaces[source][type];
 
@@ -657,24 +657,24 @@ debug_delete_messages(struct gl_debug_state *debug, int count)
 static struct gl_debug_message *
 debug_get_group_message(struct gl_debug_state *debug)
 {
-   return &debug->GroupMessages[debug->GroupStackDepth];
+   return &debug->GroupMessages[debug->CurrentGroup];
 }
 
 static void
 debug_push_group(struct gl_debug_state *debug)
 {
-   const GLint gstack = debug->GroupStackDepth;
+   const GLint gstack = debug->CurrentGroup;
 
    /* just point to the previous stack */
    debug->Groups[gstack + 1] = debug->Groups[gstack];
-   debug->GroupStackDepth++;
+   debug->CurrentGroup++;
 }
 
 static void
 debug_pop_group(struct gl_debug_state *debug)
 {
    debug_clear_group(debug);
-   debug->GroupStackDepth--;
+   debug->CurrentGroup--;
 }
 
 
@@ -775,7 +775,7 @@ _mesa_get_debug_state_int(struct gl_context *ctx, GLenum pname)
          debug->Log.Messages[debug->Log.NextMessage].length : 0;
       break;
    case GL_DEBUG_GROUP_STACK_DEPTH:
-      val = debug->GroupStackDepth;
+      val = debug->CurrentGroup;
       break;
    default:
       assert(!"unknown debug output param");
@@ -1167,7 +1167,7 @@ _mesa_PushDebugGroup(GLenum source, GLuint id, GLsizei length,
    if (!debug)
       return;
 
-   if (debug->GroupStackDepth >= MAX_DEBUG_GROUP_STACK_DEPTH-1) {
+   if (debug->CurrentGroup >= MAX_DEBUG_GROUP_STACK_DEPTH-1) {
       _mesa_unlock_debug_state(ctx);
       _mesa_error(ctx, GL_STACK_OVERFLOW, "%s", callerstr);
       return;
@@ -1209,7 +1209,7 @@ _mesa_PopDebugGroup(void)
    if (!debug)
       return;
 
-   if (debug->GroupStackDepth <= 0) {
+   if (debug->CurrentGroup <= 0) {
       _mesa_unlock_debug_state(ctx);
       _mesa_error(ctx, GL_STACK_UNDERFLOW, "%s", callerstr);
       return;
