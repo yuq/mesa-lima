@@ -701,6 +701,20 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       .AgeforQUADLRU = 0                                \
    }
 
+/* Skylake: MOCS is now an index into an array of 62 different caching
+ * configurations programmed by the kernel.
+ */
+
+#define GEN9_MOCS {                                     \
+      /* TC=LLC/eLLC, LeCC=WB, LRUM=3, L3CC=WB */       \
+      .IndextoMOCSTables                           = 2  \
+   }
+
+#define GEN9_MOCS_PTE {                                 \
+      /* TC=LLC/eLLC, LeCC=WB, LRUM=3, L3CC=WB */       \
+      .IndextoMOCSTables                           = 1  \
+   }
+
 struct anv_device_memory {
    struct anv_bo                                bo;
    VkDeviceSize                                 map_size;
@@ -1079,6 +1093,7 @@ void gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer);
 void gen7_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 void gen75_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 void gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
+void gen9_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 
@@ -1086,6 +1101,8 @@ void gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                    struct anv_subpass *subpass);
 
 void gen8_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                                   struct anv_subpass *subpass);
+void gen9_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                    struct anv_subpass *subpass);
 
 void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
@@ -1184,7 +1201,7 @@ struct anv_pipeline {
    struct {
       uint32_t                                  sf[4];
       uint32_t                                  raster[5];
-      uint32_t                                  wm_depth_stencil[3];
+      uint32_t                                  wm_depth_stencil[4];
    } gen8;
 };
 
@@ -1230,6 +1247,11 @@ gen8_graphics_pipeline_create(VkDevice _device,
                               const struct anv_graphics_pipeline_create_info *extra,
                               VkPipeline *pPipeline);
 VkResult
+gen9_graphics_pipeline_create(VkDevice _device,
+                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                              const struct anv_graphics_pipeline_create_info *extra,
+                              VkPipeline *pPipeline);
+VkResult
 gen7_compute_pipeline_create(VkDevice _device,
                              const VkComputePipelineCreateInfo *pCreateInfo,
                              VkPipeline *pPipeline);
@@ -1240,6 +1262,10 @@ gen75_compute_pipeline_create(VkDevice _device,
 
 VkResult
 gen8_compute_pipeline_create(VkDevice _device,
+                             const VkComputePipelineCreateInfo *pCreateInfo,
+                             VkPipeline *pPipeline);
+VkResult
+gen9_compute_pipeline_create(VkDevice _device,
                              const VkComputePipelineCreateInfo *pCreateInfo,
                              VkPipeline *pPipeline);
 
@@ -1405,6 +1431,12 @@ gen8_image_view_init(struct anv_image_view *iview,
                      const VkImageViewCreateInfo* pCreateInfo,
                      struct anv_cmd_buffer *cmd_buffer);
 
+void
+gen9_image_view_init(struct anv_image_view *iview,
+                     struct anv_device *device,
+                     const VkImageViewCreateInfo* pCreateInfo,
+                     struct anv_cmd_buffer *cmd_buffer);
+
 void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
                                    const struct anv_format *format,
                                    uint32_t offset, uint32_t range,
@@ -1417,6 +1449,9 @@ void gen75_fill_buffer_surface_state(void *state, const struct anv_format *forma
                                      uint32_t offset, uint32_t range,
                                      uint32_t stride);
 void gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
+                                    uint32_t offset, uint32_t range,
+                                    uint32_t stride);
+void gen9_fill_buffer_surface_state(void *state, const struct anv_format *format,
                                     uint32_t offset, uint32_t range,
                                     uint32_t stride);
 

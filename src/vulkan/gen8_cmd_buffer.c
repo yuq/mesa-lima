@@ -30,9 +30,10 @@
 #include "anv_private.h"
 
 #include "gen8_pack.h"
+#include "gen9_pack.h"
 
 static void
-gen8_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
+cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
    static const uint32_t push_constant_opcodes[] = {
       [VK_SHADER_STAGE_VERTEX]                  = 21,
@@ -52,7 +53,7 @@ gen8_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
       if (state.offset == 0)
          continue;
 
-      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_CONSTANT_VS,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
                      ._3DCommandSubOpcode = push_constant_opcodes[stage],
                      .ConstantBody = {
                         .PointerToConstantBuffer0 = { .offset = state.offset },
@@ -65,6 +66,7 @@ gen8_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.push_constants_dirty &= ~flushed;
 }
 
+#if ANV_GEN == 8
 static void
 emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
                     uint32_t count, const VkViewport *viewports)
@@ -79,7 +81,7 @@ emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
 
       /* The gen7 state struct has just the matrix and guardband fields, the
        * gen8 struct adds the min/max viewport fields. */
-      struct GEN8_SF_CLIP_VIEWPORT sf_clip_viewport = {
+      struct GENX(SF_CLIP_VIEWPORT) sf_clip_viewport = {
          .ViewportMatrixElementm00 = vp->width / 2,
          .ViewportMatrixElementm11 = vp->height / 2,
          .ViewportMatrixElementm22 = (vp->maxDepth - vp->minDepth) / 2,
@@ -96,21 +98,21 @@ emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
          .YMaxViewPort = vp->originY + vp->height - 1,
       };
 
-      struct GEN8_CC_VIEWPORT cc_viewport = {
+      struct GENX(CC_VIEWPORT) cc_viewport = {
          .MinimumDepth = vp->minDepth,
          .MaximumDepth = vp->maxDepth
       };
 
-      GEN8_SF_CLIP_VIEWPORT_pack(NULL, sf_clip_state.map + i * 64,
+      GENX(SF_CLIP_VIEWPORT_pack)(NULL, sf_clip_state.map + i * 64,
                                  &sf_clip_viewport);
-      GEN8_CC_VIEWPORT_pack(NULL, cc_state.map + i * 32, &cc_viewport);
+      GENX(CC_VIEWPORT_pack)(NULL, cc_state.map + i * 32, &cc_viewport);
    }
 
    anv_batch_emit(&cmd_buffer->batch,
-                  GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
+                  GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC),
                   .CCViewportPointer = cc_state.offset);
    anv_batch_emit(&cmd_buffer->batch,
-                  GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
+                  GENX(3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP),
                   .SFClipViewportPointer = sf_clip_state.offset);
 }
 
@@ -133,9 +135,10 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
                           });
    }
 }
+#endif
 
 static void
-gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
+cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
    uint32_t *p;
@@ -145,7 +148,10 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    assert((pipeline->active_stages & VK_SHADER_STAGE_COMPUTE_BIT) == 0);
 
    if (cmd_buffer->state.current_pipeline != _3D) {
-      anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
+#if ANV_GEN >= 9
+                     .MaskBits = 3,
+#endif
                      .PipelineSelection = _3D);
       cmd_buffer->state.current_pipeline = _3D;
    }
@@ -155,22 +161,22 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       const uint32_t num_dwords = 1 + num_buffers * 4;
 
       p = anv_batch_emitn(&cmd_buffer->batch, num_dwords,
-                          GEN8_3DSTATE_VERTEX_BUFFERS);
+                          GENX(3DSTATE_VERTEX_BUFFERS));
       uint32_t vb, i = 0;
       for_each_bit(vb, vb_emit) {
          struct anv_buffer *buffer = cmd_buffer->state.vertex_bindings[vb].buffer;
          uint32_t offset = cmd_buffer->state.vertex_bindings[vb].offset;
 
-         struct GEN8_VERTEX_BUFFER_STATE state = {
+         struct GENX(VERTEX_BUFFER_STATE) state = {
             .VertexBufferIndex = vb,
-            .MemoryObjectControlState = GEN8_MOCS,
+            .MemoryObjectControlState = GENX(MOCS),
             .AddressModifyEnable = true,
             .BufferPitch = pipeline->binding_stride[vb],
             .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
             .BufferSize = buffer->size - offset
          };
 
-         GEN8_VERTEX_BUFFER_STATE_pack(&cmd_buffer->batch, &p[1 + i * 4], &state);
+         GENX(VERTEX_BUFFER_STATE_pack)(&cmd_buffer->batch, &p[1 + i * 4], &state);
          i++;
       }
    }
@@ -186,11 +192,23 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
    }
 
-   if (cmd_buffer->state.descriptors_dirty)
-      gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
+#if ANV_GEN >= 9
+   /* On SKL+ the new constants don't take effect until the next corresponding
+    * 3DSTATE_BINDING_TABLE_POINTER_* command is parsed so we need to ensure
+    * that is sent. As it is, we re-emit binding tables but we could hold on
+    * to the offset of the most recent binding table and only re-emit the
+    * 3DSTATE_BINDING_TABLE_POINTER_* command.
+    */
+   cmd_buffer->state.descriptors_dirty |=
+      cmd_buffer->state.push_constants_dirty &
+      cmd_buffer->state.pipeline->active_stages;
+#endif
 
    if (cmd_buffer->state.push_constants_dirty)
-      gen8_cmd_buffer_flush_push_constants(cmd_buffer);
+      cmd_buffer_flush_push_constants(cmd_buffer);
+
+   if (cmd_buffer->state.descriptors_dirty)
+      gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
       gen8_cmd_buffer_emit_viewport(cmd_buffer);
@@ -200,12 +218,13 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)) {
-      uint32_t sf_dw[GEN8_3DSTATE_SF_length];
-      struct GEN8_3DSTATE_SF sf = {
-         GEN8_3DSTATE_SF_header,
+      uint32_t sf_dw[GENX(3DSTATE_SF_length)];
+      struct GENX(3DSTATE_SF) sf = {
+         GENX(3DSTATE_SF_header),
          .LineWidth = cmd_buffer->state.dynamic.line_width,
       };
-      GEN8_3DSTATE_SF_pack(NULL, sf_dw, &sf);
+      GENX(3DSTATE_SF_pack)(NULL, sf_dw, &sf);
+      /* FIXME: gen9.fs */
       anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen8.sf);
    }
 
@@ -214,9 +233,9 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       bool enable_bias = cmd_buffer->state.dynamic.depth_bias.bias != 0.0f ||
          cmd_buffer->state.dynamic.depth_bias.slope_scaled != 0.0f;
 
-      uint32_t raster_dw[GEN8_3DSTATE_RASTER_length];
-      struct GEN8_3DSTATE_RASTER raster = {
-         GEN8_3DSTATE_RASTER_header,
+      uint32_t raster_dw[GENX(3DSTATE_RASTER_length)];
+      struct GENX(3DSTATE_RASTER) raster = {
+         GENX(3DSTATE_RASTER_header),
          .GlobalDepthOffsetEnableSolid = enable_bias,
          .GlobalDepthOffsetEnableWireframe = enable_bias,
          .GlobalDepthOffsetEnablePoint = enable_bias,
@@ -224,11 +243,17 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
          .GlobalDepthOffsetScale = cmd_buffer->state.dynamic.depth_bias.slope_scaled,
          .GlobalDepthOffsetClamp = cmd_buffer->state.dynamic.depth_bias.clamp
       };
-      GEN8_3DSTATE_RASTER_pack(NULL, raster_dw, &raster);
+      GENX(3DSTATE_RASTER_pack)(NULL, raster_dw, &raster);
       anv_batch_emit_merge(&cmd_buffer->batch, raster_dw,
                            pipeline->gen8.raster);
    }
 
+   /* Stencil reference values were moves from COLOR_CALC_STATE in gen8 to
+    * 3DSTATE_WM_DEPTH_STENCIL in gen9. That means the dirty bits gets split
+    * across different state packets for gen8 and gen9. We handle that by
+    * using a big old #if switch here.
+    */
+#if ANV_GEN == 8
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       struct anv_state cc_state =
@@ -280,10 +305,55 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_merge(&cmd_buffer->batch, wm_depth_stencil_dw,
                            pipeline->gen8.wm_depth_stencil);
    }
+#else
+   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS) {
+      struct anv_state cc_state =
+         anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
+                                            GEN9_COLOR_CALC_STATE_length, 64);
+      struct GEN9_COLOR_CALC_STATE cc = {
+         .BlendConstantColorRed = cmd_buffer->state.dynamic.blend_constants[0],
+         .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
+         .BlendConstantColorBlue = cmd_buffer->state.dynamic.blend_constants[2],
+         .BlendConstantColorAlpha = cmd_buffer->state.dynamic.blend_constants[3],
+      };
+      GEN9_COLOR_CALC_STATE_pack(NULL, cc_state.map, &cc);
+
+      anv_batch_emit(&cmd_buffer->batch,
+                     GEN9_3DSTATE_CC_STATE_POINTERS,
+                     .ColorCalcStatePointer = cc_state.offset,
+                     .ColorCalcStatePointerValid = true);
+   }
+
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
+                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK |
+                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
+      uint32_t dwords[GEN9_3DSTATE_WM_DEPTH_STENCIL_length];
+      struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
+      struct GEN9_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
+         GEN9_3DSTATE_WM_DEPTH_STENCIL_header,
+
+         .StencilBufferWriteEnable = d->stencil_write_mask.front != 0,
+
+         .StencilTestMask = d->stencil_compare_mask.front & 0xff,
+         .StencilWriteMask = d->stencil_write_mask.front & 0xff,
+
+         .BackfaceStencilTestMask = d->stencil_compare_mask.back & 0xff,
+         .BackfaceStencilWriteMask = d->stencil_write_mask.back & 0xff,
+
+         .StencilReferenceValue = d->stencil_reference.front,
+         .BackfaceStencilReferenceValue = d->stencil_reference.back
+      };
+      GEN9_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, dwords, &wm_depth_stencil);
+
+      anv_batch_emit_merge(&cmd_buffer->batch, dwords,
+                           pipeline->gen8.wm_depth_stencil);
+   }
+#endif
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_INDEX_BUFFER)) {
-      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VF,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_VF),
          .IndexedDrawCutIndexEnable = pipeline->primitive_restart,
          .CutIndex = cmd_buffer->state.restart_index,
       );
@@ -293,7 +363,7 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.dirty = 0;
 }
 
-void gen8_CmdDraw(
+void genX(CmdDraw)(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    vertexCount,
     uint32_t                                    instanceCount,
@@ -302,9 +372,9 @@ void gen8_CmdDraw(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
-   gen8_cmd_buffer_flush_state(cmd_buffer);
+   cmd_buffer_flush_state(cmd_buffer);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DPRIMITIVE,
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
                   .VertexAccessType = SEQUENTIAL,
                   .VertexCountPerInstance = vertexCount,
                   .StartVertexLocation = firstVertex,
@@ -313,7 +383,7 @@ void gen8_CmdDraw(
                   .BaseVertexLocation = 0);
 }
 
-void gen8_CmdDrawIndexed(
+void genX(CmdDrawIndexed)(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    indexCount,
     uint32_t                                    instanceCount,
@@ -323,9 +393,9 @@ void gen8_CmdDrawIndexed(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
-   gen8_cmd_buffer_flush_state(cmd_buffer);
+   cmd_buffer_flush_state(cmd_buffer);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DPRIMITIVE,
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
                   .VertexAccessType = RANDOM,
                   .VertexCountPerInstance = indexCount,
                   .StartVertexLocation = firstIndex,
@@ -338,7 +408,7 @@ static void
 emit_lrm(struct anv_batch *batch,
          uint32_t reg, struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit(batch, GEN8_MI_LOAD_REGISTER_MEM,
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM),
                   .RegisterAddress = reg,
                   .MemoryAddress = { bo, offset });
 }
@@ -346,7 +416,7 @@ emit_lrm(struct anv_batch *batch,
 static void
 emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
 {
-   anv_batch_emit(batch, GEN8_MI_LOAD_REGISTER_IMM,
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM),
                   .RegisterOffset = reg,
                   .DataDWord = imm);
 }
@@ -359,7 +429,7 @@ emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
 #define GEN7_3DPRIM_START_INSTANCE      0x243C
 #define GEN7_3DPRIM_BASE_VERTEX         0x2440
 
-void gen8_CmdDrawIndirect(
+void genX(CmdDrawIndirect)(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
@@ -371,7 +441,7 @@ void gen8_CmdDrawIndirect(
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
-   gen8_cmd_buffer_flush_state(cmd_buffer);
+   cmd_buffer_flush_state(cmd_buffer);
 
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
@@ -379,12 +449,12 @@ void gen8_CmdDrawIndirect(
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 12);
    emit_lri(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, 0);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DPRIMITIVE,
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
                   .IndirectParameterEnable = true,
                   .VertexAccessType = SEQUENTIAL);
 }
 
-void gen8_CmdBindIndexBuffer(
+void genX(CmdBindIndexBuffer)(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
@@ -405,9 +475,9 @@ void gen8_CmdBindIndexBuffer(
 
    cmd_buffer->state.restart_index = restart_index_for_type[indexType];
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_INDEX_BUFFER,
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_INDEX_BUFFER),
                   .IndexFormat = vk_to_gen_index_type[indexType],
-                  .MemoryObjectControlState = GEN8_MOCS,
+                  .MemoryObjectControlState = GENX(MOCS),
                   .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
                   .BufferSize = buffer->size - offset);
 
@@ -415,7 +485,7 @@ void gen8_CmdBindIndexBuffer(
 }
 
 static VkResult
-gen8_flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
+flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_device *device = cmd_buffer->device;
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
@@ -431,7 +501,7 @@ gen8_flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    if (result != VK_SUCCESS)
       return result;
 
-   struct GEN8_INTERFACE_DESCRIPTOR_DATA desc = {
+   struct GENX(INTERFACE_DESCRIPTOR_DATA) desc = {
       .KernelStartPointer = pipeline->cs_simd,
       .KernelStartPointerHigh = 0,
       .BindingTablePointer = surfaces.offset,
@@ -441,13 +511,13 @@ gen8_flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
       .NumberofThreadsinGPGPUThreadGroup = 0 /* FIXME: Really? */
    };
 
-   uint32_t size = GEN8_INTERFACE_DESCRIPTOR_DATA_length * sizeof(uint32_t);
+   uint32_t size = GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
    struct anv_state state =
       anv_state_pool_alloc(&device->dynamic_state_pool, size, 64);
 
-   GEN8_INTERFACE_DESCRIPTOR_DATA_pack(NULL, state.map, &desc);
+   GENX(INTERFACE_DESCRIPTOR_DATA_pack)(NULL, state.map, &desc);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_MEDIA_INTERFACE_DESCRIPTOR_LOAD,
+   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_INTERFACE_DESCRIPTOR_LOAD),
                   .InterfaceDescriptorTotalLength = size,
                   .InterfaceDescriptorDataStartAddress = state.offset);
 
@@ -455,7 +525,7 @@ gen8_flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
-gen8_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
+cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    VkResult result;
@@ -463,7 +533,10 @@ gen8_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
    assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
 
    if (cmd_buffer->state.current_pipeline != GPGPU) {
-      anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
+#if ANV_GEN >= 9
+                     .MaskBits = 3,
+#endif
                      .PipelineSelection = GPGPU);
       cmd_buffer->state.current_pipeline = GPGPU;
    }
@@ -473,7 +546,7 @@ gen8_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
 
    if ((cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
        (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)) {
-      result = gen8_flush_compute_descriptor_set(cmd_buffer);
+      result = flush_compute_descriptor_set(cmd_buffer);
       assert(result == VK_SUCCESS);
       cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE;
    }
@@ -481,7 +554,7 @@ gen8_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.compute_dirty = 0;
 }
 
-void gen8_CmdDrawIndexedIndirect(
+void genX(CmdDrawIndexedIndirect)(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
@@ -493,7 +566,7 @@ void gen8_CmdDrawIndexedIndirect(
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
-   gen8_cmd_buffer_flush_state(cmd_buffer);
+   cmd_buffer_flush_state(cmd_buffer);
 
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
@@ -501,12 +574,12 @@ void gen8_CmdDrawIndexedIndirect(
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, bo, bo_offset + 12);
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 16);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DPRIMITIVE,
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
                   .IndirectParameterEnable = true,
                   .VertexAccessType = RANDOM);
 }
 
-void gen8_CmdDispatch(
+void genX(CmdDispatch)(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
@@ -516,9 +589,9 @@ void gen8_CmdDispatch(
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
 
-   gen8_cmd_buffer_flush_compute_state(cmd_buffer);
+   cmd_buffer_flush_compute_state(cmd_buffer);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_GPGPU_WALKER,
+   anv_batch_emit(&cmd_buffer->batch, GENX(GPGPU_WALKER),
                   .SIMDSize = prog_data->simd_size / 16,
                   .ThreadDepthCounterMaximum = 0,
                   .ThreadHeightCounterMaximum = 0,
@@ -529,14 +602,14 @@ void gen8_CmdDispatch(
                   .RightExecutionMask = pipeline->cs_right_mask,
                   .BottomExecutionMask = 0xffffffff);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_MEDIA_STATE_FLUSH);
+   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH));
 }
 
 #define GPGPU_DISPATCHDIMX 0x2500
 #define GPGPU_DISPATCHDIMY 0x2504
 #define GPGPU_DISPATCHDIMZ 0x2508
 
-void gen8_CmdDispatchIndirect(
+void genX(CmdDispatchIndirect)(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset)
@@ -548,13 +621,13 @@ void gen8_CmdDispatchIndirect(
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
-   gen8_cmd_buffer_flush_compute_state(cmd_buffer);
+   cmd_buffer_flush_compute_state(cmd_buffer);
 
    emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMX, bo, bo_offset);
    emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
    emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_GPGPU_WALKER,
+   anv_batch_emit(&cmd_buffer->batch, GENX(GPGPU_WALKER),
                   .IndirectParameterEnable = true,
                   .SIMDSize = prog_data->simd_size / 16,
                   .ThreadDepthCounterMaximum = 0,
@@ -563,11 +636,11 @@ void gen8_CmdDispatchIndirect(
                   .RightExecutionMask = pipeline->cs_right_mask,
                   .BottomExecutionMask = 0xffffffff);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_MEDIA_STATE_FLUSH);
+   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH));
 }
 
 static void
-gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
+cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_image_view *iview =
@@ -581,7 +654,7 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
    /* Emit 3DSTATE_DEPTH_BUFFER */
    if (has_depth) {
-      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DEPTH_BUFFER,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER),
          .SurfaceType = SURFTYPE_2D,
          .DepthWriteEnable = iview->format->depth_format,
          .StencilWriteEnable = has_stencil,
@@ -597,7 +670,7 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .LOD = 0,
          .Depth = 1 - 1,
          .MinimumArrayElement = 0,
-         .DepthBufferObjectControlState = GEN8_MOCS,
+         .DepthBufferObjectControlState = GENX(MOCS),
          .RenderTargetViewExtent = 1 - 1,
          .SurfaceQPitch = image->depth_surface.qpitch >> 2);
    } else {
@@ -618,7 +691,7 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
        * actual framebuffer's width and height, even when neither depth buffer
        * nor stencil buffer is present.
        */
-      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DEPTH_BUFFER,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER),
          .SurfaceType = SURFTYPE_2D,
          .SurfaceFormat = D16_UNORM,
          .Width = fb->width - 1,
@@ -628,9 +701,9 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
    /* Emit 3DSTATE_STENCIL_BUFFER */
    if (has_stencil) {
-      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_STENCIL_BUFFER,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER),
          .StencilBufferEnable = true,
-         .StencilBufferObjectControlState = GEN8_MOCS,
+         .StencilBufferObjectControlState = GENX(MOCS),
 
          /* Stencil buffers have strange pitch. The PRM says:
           *
@@ -645,28 +718,28 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          },
          .SurfaceQPitch = image->stencil_surface.stride >> 2);
    } else {
-      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_STENCIL_BUFFER);
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER));
    }
 
    /* Disable hierarchial depth buffers. */
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_HIER_DEPTH_BUFFER);
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER));
 
    /* Clear the clear params. */
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_CLEAR_PARAMS);
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS));
 }
 
 void
-gen8_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
-                             struct anv_subpass *subpass)
+genX(cmd_buffer_begin_subpass)(struct anv_cmd_buffer *cmd_buffer,
+                               struct anv_subpass *subpass)
 {
    cmd_buffer->state.subpass = subpass;
 
    cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
 
-   gen8_cmd_buffer_emit_depth_stencil(cmd_buffer);
+   cmd_buffer_emit_depth_stencil(cmd_buffer);
 }
 
-void gen8_CmdBeginRenderPass(
+void genX(CmdBeginRenderPass)(
     VkCmdBuffer                                 cmdBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
     VkRenderPassContents                        contents)
@@ -680,7 +753,7 @@ void gen8_CmdBeginRenderPass(
 
    const VkRect2D *render_area = &pRenderPassBegin->renderArea;
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DRAWING_RECTANGLE,
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DRAWING_RECTANGLE),
                   .ClippedDrawingRectangleYMin = render_area->offset.y,
                   .ClippedDrawingRectangleXMin = render_area->offset.x,
                   .ClippedDrawingRectangleYMax =
@@ -693,10 +766,10 @@ void gen8_CmdBeginRenderPass(
    anv_cmd_buffer_clear_attachments(cmd_buffer, pass,
                                     pRenderPassBegin->pClearValues);
 
-   gen8_cmd_buffer_begin_subpass(cmd_buffer, pass->subpasses);
+   genX(cmd_buffer_begin_subpass)(cmd_buffer, pass->subpasses);
 }
 
-void gen8_CmdNextSubpass(
+void genX(CmdNextSubpass)(
     VkCmdBuffer                                 cmdBuffer,
     VkRenderPassContents                        contents)
 {
@@ -704,10 +777,10 @@ void gen8_CmdNextSubpass(
 
    assert(cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
 
-   gen8_cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->state.subpass + 1);
+   genX(cmd_buffer_begin_subpass)(cmd_buffer, cmd_buffer->state.subpass + 1);
 }
 
-void gen8_CmdEndRenderPass(
+void genX(CmdEndRenderPass)(
     VkCmdBuffer                                 cmdBuffer)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
@@ -717,7 +790,7 @@ void gen8_CmdEndRenderPass(
     * Eventually, we should do flushing based on image format transitions
     * or something of that nature.
     */
-   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                   .PostSyncOperation = NoWrite,
                   .RenderTargetCacheFlushEnable = true,
                   .InstructionCacheInvalidateEnable = true,
@@ -731,13 +804,13 @@ static void
 emit_ps_depth_count(struct anv_batch *batch,
                     struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit(batch, GEN8_PIPE_CONTROL,
+   anv_batch_emit(batch, GENX(PIPE_CONTROL),
                   .DestinationAddressType = DAT_PPGTT,
                   .PostSyncOperation = WritePSDepthCount,
                   .Address = { bo, offset });  /* FIXME: This is only lower 32 bits */
 }
 
-void gen8_CmdBeginQuery(
+void genX(CmdBeginQuery)(
     VkCmdBuffer                                 cmdBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot,
@@ -758,7 +831,7 @@ void gen8_CmdBeginQuery(
    }
 }
 
-void gen8_CmdEndQuery(
+void genX(CmdEndQuery)(
     VkCmdBuffer                                 cmdBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot)
@@ -780,7 +853,7 @@ void gen8_CmdEndQuery(
 
 #define TIMESTAMP 0x2358
 
-void gen8_CmdWriteTimestamp(
+void genX(CmdWriteTimestamp)(
     VkCmdBuffer                                 cmdBuffer,
     VkTimestampType                             timestampType,
     VkBuffer                                    destBuffer,
@@ -792,16 +865,16 @@ void gen8_CmdWriteTimestamp(
 
    switch (timestampType) {
    case VK_TIMESTAMP_TYPE_TOP:
-      anv_batch_emit(&cmd_buffer->batch, GEN8_MI_STORE_REGISTER_MEM,
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                      .RegisterAddress = TIMESTAMP,
                      .MemoryAddress = { bo, buffer->offset + destOffset });
-      anv_batch_emit(&cmd_buffer->batch, GEN8_MI_STORE_REGISTER_MEM,
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                      .RegisterAddress = TIMESTAMP + 4,
                      .MemoryAddress = { bo, buffer->offset + destOffset + 4 });
       break;
 
    case VK_TIMESTAMP_TYPE_BOTTOM:
-      anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                      .DestinationAddressType = DAT_PPGTT,
                      .PostSyncOperation = WriteTimestamp,
                      .Address = /* FIXME: This is only lower 32 bits */
@@ -849,15 +922,15 @@ static void
 emit_load_alu_reg_u64(struct anv_batch *batch, uint32_t reg,
                       struct anv_bo *bo, uint32_t offset)
 {
-   anv_batch_emit(batch, GEN8_MI_LOAD_REGISTER_MEM,
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM),
                   .RegisterAddress = reg,
                   .MemoryAddress = { bo, offset });
-   anv_batch_emit(batch, GEN8_MI_LOAD_REGISTER_MEM,
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM),
                   .RegisterAddress = reg + 4,
                   .MemoryAddress = { bo, offset + 4 });
 }
 
-void gen8_CmdCopyQueryPoolResults(
+void genX(CmdCopyQueryPoolResults)(
     VkCmdBuffer                                 cmdBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
@@ -882,7 +955,7 @@ void gen8_CmdCopyQueryPoolResults(
 
    /* FIXME: If we're not waiting, should we just do this on the CPU? */
    if (flags & VK_QUERY_RESULT_WAIT_BIT)
-      anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                      .CommandStreamerStallEnable = true,
                      .StallAtPixelScoreboard = true);
 
@@ -896,19 +969,19 @@ void gen8_CmdCopyQueryPoolResults(
 
       /* FIXME: We need to clamp the result for 32 bit. */
 
-      uint32_t *dw = anv_batch_emitn(&cmd_buffer->batch, 5, GEN8_MI_MATH);
+      uint32_t *dw = anv_batch_emitn(&cmd_buffer->batch, 5, GENX(MI_MATH));
       dw[1] = alu(OPCODE_LOAD, OPERAND_SRCA, OPERAND_R1);
       dw[2] = alu(OPCODE_LOAD, OPERAND_SRCB, OPERAND_R0);
       dw[3] = alu(OPCODE_SUB, 0, 0);
       dw[4] = alu(OPCODE_STORE, OPERAND_R2, OPERAND_ACCU);
 
-      anv_batch_emit(&cmd_buffer->batch, GEN8_MI_STORE_REGISTER_MEM,
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                      .RegisterAddress = CS_GPR(2),
                      /* FIXME: This is only lower 32 bits */
                      .MemoryAddress = { buffer->bo, dst_offset });
 
       if (flags & VK_QUERY_RESULT_64_BIT)
-         anv_batch_emit(&cmd_buffer->batch, GEN8_MI_STORE_REGISTER_MEM,
+         anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                         .RegisterAddress = CS_GPR(2) + 4,
                         /* FIXME: This is only lower 32 bits */
                         .MemoryAddress = { buffer->bo, dst_offset + 4 });

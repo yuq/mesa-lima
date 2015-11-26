@@ -573,6 +573,9 @@ anv_image_view_init(struct anv_image_view *iview,
    case 8:
       gen8_image_view_init(iview, device, pCreateInfo, cmd_buffer);
       break;
+   case 9:
+      gen9_image_view_init(iview, device, pCreateInfo, cmd_buffer);
+      break;
    default:
       unreachable("unsupported gen\n");
    }

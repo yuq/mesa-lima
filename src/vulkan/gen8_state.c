@@ -30,14 +30,15 @@
 #include "anv_private.h"
 
 #include "gen8_pack.h"
+#include "gen9_pack.h"
 
 void
-gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
-                               uint32_t offset, uint32_t range, uint32_t stride)
+genX(fill_buffer_surface_state)(void *state, const struct anv_format *format,
+                                uint32_t offset, uint32_t range, uint32_t stride)
 {
    uint32_t num_elements = range / stride;
 
-   struct GEN8_RENDER_SURFACE_STATE surface_state = {
+   struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = SURFTYPE_BUFFER,
       .SurfaceArray = false,
       .SurfaceFormat = format->surface_format,
@@ -46,7 +47,7 @@ gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
       .TileMode = LINEAR,
       .SamplerL2BypassModeDisable = true,
       .RenderCacheReadWriteMode = WriteOnlyCache,
-      .MemoryObjectControlState = GEN8_MOCS,
+      .MemoryObjectControlState = GENX(MOCS),
       .Height = ((num_elements - 1) >> 7) & 0x3fff,
       .Width = (num_elements - 1) & 0x7f,
       .Depth = ((num_elements - 1) >> 21) & 0x3f,
@@ -60,7 +61,7 @@ gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
       .SurfaceBaseAddress = { NULL, offset },
    };
 
-   GEN8_RENDER_SURFACE_STATE_pack(NULL, state, &surface_state);
+   GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &surface_state);
 }
 
 static const uint8_t anv_halign[] = {
@@ -76,8 +77,8 @@ static const uint8_t anv_valign[] = {
 };
 
 static struct anv_state
-gen8_alloc_surface_state(struct anv_device *device,
-                         struct anv_cmd_buffer *cmd_buffer)
+alloc_surface_state(struct anv_device *device,
+                    struct anv_cmd_buffer *cmd_buffer)
 {
       if (cmd_buffer) {
          return anv_cmd_buffer_alloc_surface_state(cmd_buffer);
@@ -87,10 +88,10 @@ gen8_alloc_surface_state(struct anv_device *device,
 }
 
 void
-gen8_image_view_init(struct anv_image_view *iview,
-                     struct anv_device *device,
-                     const VkImageViewCreateInfo* pCreateInfo,
-                     struct anv_cmd_buffer *cmd_buffer)
+genX(image_view_init)(struct anv_image_view *iview,
+                      struct anv_device *device,
+                      const VkImageViewCreateInfo* pCreateInfo,
+                      struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
 
@@ -173,7 +174,7 @@ gen8_image_view_init(struct anv_image_view *iview,
       [ISL_TILING_W]       = WMAJOR,
    };
 
-   struct GEN8_RENDER_SURFACE_STATE surface_state = {
+   struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = image->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
@@ -184,7 +185,7 @@ gen8_image_view_init(struct anv_image_view *iview,
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,
       .RenderCacheReadWriteMode = WriteOnlyCache,
-      .MemoryObjectControlState = GEN8_MOCS,
+      .MemoryObjectControlState = GENX(MOCS),
 
       /* The driver sets BaseMipLevel in SAMPLER_STATE, not here in
        * RENDER_SURFACE_STATE. The Broadwell PRM says "it is illegal to have
@@ -221,7 +222,7 @@ gen8_image_view_init(struct anv_image_view *iview,
 
    if (image->needs_nonrt_surface_state) {
       iview->nonrt_surface_state =
-         gen8_alloc_surface_state(device, cmd_buffer);
+         alloc_surface_state(device, cmd_buffer);
 
       /* For non render target surfaces, the hardware interprets field
        * MIPCount/LOD as MIPCount.  The range of levels accessible by the
@@ -230,13 +231,13 @@ gen8_image_view_init(struct anv_image_view *iview,
       surface_state.SurfaceMinLOD = range->baseMipLevel;
       surface_state.MIPCountLOD = range->mipLevels - 1;
 
-      GEN8_RENDER_SURFACE_STATE_pack(NULL, iview->nonrt_surface_state.map,
-                                     &surface_state);
+      GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->nonrt_surface_state.map,
+                                      &surface_state);
    }
 
    if (image->needs_color_rt_surface_state) {
       iview->color_rt_surface_state =
-         gen8_alloc_surface_state(device, cmd_buffer);
+         alloc_surface_state(device, cmd_buffer);
 
       /* For render target surfaces, the hardware interprets field
        * MIPCount/LOD as LOD. The Broadwell PRM says:
@@ -247,12 +248,12 @@ gen8_image_view_init(struct anv_image_view *iview,
       surface_state.MIPCountLOD = range->baseMipLevel;
       surface_state.SurfaceMinLOD = 0;
 
-      GEN8_RENDER_SURFACE_STATE_pack(NULL, iview->color_rt_surface_state.map,
-                                     &surface_state);
+      GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->color_rt_surface_state.map,
+                                      &surface_state);
    }
 }
 
-VkResult gen8_CreateSampler(
+VkResult genX(CreateSampler)(
     VkDevice                                    _device,
     const VkSamplerCreateInfo*                  pCreateInfo,
     VkSampler*                                  pSampler)
@@ -308,11 +309,13 @@ VkResult gen8_CreateSampler(
       max_anisotropy = RATIO21;
    }
 
-   struct GEN8_SAMPLER_STATE sampler_state = {
+   struct GENX(SAMPLER_STATE) sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
       .LODPreClampMode = 0,
+#if ANV_GEN == 8
       .BaseMipLevel = 0.0,
+#endif
       .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipMode],
       .MagModeFilter = mag_filter,
       .MinModeFilter = min_filter,
@@ -345,7 +348,7 @@ VkResult gen8_CreateSampler(
       .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeW],
    };
 
-   GEN8_SAMPLER_STATE_pack(NULL, sampler->state, &sampler_state);
+   GENX(SAMPLER_STATE_pack)(NULL, sampler->state, &sampler_state);
 
    *pSampler = anv_sampler_to_handle(sampler);
 

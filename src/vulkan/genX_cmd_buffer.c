@@ -26,7 +26,9 @@
 
 #include "anv_private.h"
 
-#if (ANV_GEN == 8)
+#if (ANV_GEN == 9)
+#  include "gen9_pack.h"
+#elif (ANV_GEN == 8)
 #  include "gen8_pack.h"
 #elif (ANV_IS_HASWELL)
 #  include "gen75_pack.h"

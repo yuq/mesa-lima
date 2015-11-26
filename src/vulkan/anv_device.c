@@ -87,8 +87,10 @@ anv_physical_device_init(struct anv_physical_device *device,
       fprintf(stderr, "WARNING: Haswell Vulkan support is incomplete\n");
    } else if (device->info->gen == 7 && !device->info->is_baytrail) {
       fprintf(stderr, "WARNING: Ivy Bridge Vulkan support is incomplete\n");
+   } else if (device->info->gen == 9) {
+      fprintf(stderr, "WARNING: Skylake Vulkan support is incomplete\n");
    } else if (device->info->gen == 8 && !device->info->is_cherryview) {
-      /* Briadwell is as fully supported as anything */
+      /* Broadwell is as fully supported as anything */
    } else {
       result = vk_errorf(VK_UNSUPPORTED,
                          "Vulkan not yet supported on %s", device->name);
@@ -1447,6 +1449,9 @@ anv_fill_buffer_surface_state(struct anv_device *device, void *state,
       break;
    case 8:
       gen8_fill_buffer_surface_state(state, format, offset, range, stride);
+      break;
+   case 9:
+      gen9_fill_buffer_surface_state(state, format, offset, range, stride);
       break;
    default:
       unreachable("unsupported gen\n");

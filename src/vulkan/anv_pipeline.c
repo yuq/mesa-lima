@@ -1082,6 +1082,8 @@ anv_graphics_pipeline_create(
          return gen7_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
    case 8:
       return gen8_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
+   case 9:
+      return gen9_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
    default:
       unreachable("unsupported gen\n");
    }
@@ -1127,6 +1129,8 @@ static VkResult anv_compute_pipeline_create(
          return gen7_compute_pipeline_create(_device, pCreateInfo, pPipeline);
    case 8:
       return gen8_compute_pipeline_create(_device, pCreateInfo, pPipeline);
+   case 9:
+      return gen9_compute_pipeline_create(_device, pCreateInfo, pPipeline);
    default:
       unreachable("unsupported gen\n");
    }

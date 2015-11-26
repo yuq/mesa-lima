@@ -250,6 +250,8 @@ anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
          return gen7_cmd_buffer_emit_state_base_address(cmd_buffer);
    case 8:
       return gen8_cmd_buffer_emit_state_base_address(cmd_buffer);
+   case 9:
+      return gen9_cmd_buffer_emit_state_base_address(cmd_buffer);
    default:
       unreachable("unsupported gen\n");
    }
@@ -787,6 +789,9 @@ anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
       break;
    case 8:
       gen8_cmd_buffer_begin_subpass(cmd_buffer, subpass);
+      break;
+   case 9:
+      gen9_cmd_buffer_begin_subpass(cmd_buffer, subpass);
       break;
    default:
       unreachable("unsupported gen\n");

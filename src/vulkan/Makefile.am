@@ -37,7 +37,8 @@ check_LTLIBRARIES = libvulkan-test.la
 PER_GEN_LIBS = \
    libanv-gen7.la \
    libanv-gen75.la \
-   libanv-gen8.la
+   libanv-gen8.la \
+   libanv-gen9.la
 
 noinst_LTLIBRARIES = $(PER_GEN_LIBS)
 
@@ -114,6 +115,13 @@ libanv_gen8_la_SOURCES =                               	\
 	gen8_pipeline.c					\
 	gen8_state.c
 libanv_gen8_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=80
+
+libanv_gen9_la_SOURCES =                               	\
+	genX_cmd_buffer.c				\
+	gen8_cmd_buffer.c				\
+	gen8_pipeline.c					\
+	gen8_state.c
+libanv_gen9_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=90
 
 if HAVE_EGL_PLATFORM_WAYLAND
 BUILT_SOURCES += \
