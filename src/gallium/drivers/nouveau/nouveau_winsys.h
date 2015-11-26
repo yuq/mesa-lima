@@ -79,13 +79,13 @@ nouveau_screen_transfer_flags(unsigned pipe)
    return flags;
 }
 
-extern struct pipe_screen *
+extern struct nouveau_screen *
 nv30_screen_create(struct nouveau_device *);
 
-extern struct pipe_screen *
+extern struct nouveau_screen *
 nv50_screen_create(struct nouveau_device *);
 
-extern struct pipe_screen *
+extern struct nouveau_screen *
 nvc0_screen_create(struct nouveau_device *);
 
 #endif

@@ -752,7 +752,7 @@ int nv50_tls_realloc(struct nv50_screen *screen, unsigned tls_space)
    return 1;
 }
 
-struct pipe_screen *
+struct nouveau_screen *
 nv50_screen_create(struct nouveau_device *dev)
 {
    struct nv50_screen *screen;
@@ -966,7 +966,7 @@ nv50_screen_create(struct nouveau_device *dev)
 
    nouveau_fence_new(&screen->base, &screen->base.fence.current, false);
 
-   return pscreen;
+   return &screen->base;
 
 fail:
    nv50_screen_destroy(pscreen);

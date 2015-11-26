@@ -417,7 +417,7 @@ nv30_screen_destroy(struct pipe_screen *pscreen)
       return NULL;                                    \
    } while(0)
 
-struct pipe_screen *
+struct nouveau_screen *
 nv30_screen_create(struct nouveau_device *dev)
 {
    struct nv30_screen *screen = CALLOC_STRUCT(nv30_screen);
@@ -693,5 +693,5 @@ nv30_screen_create(struct nouveau_device *dev)
    nouveau_pushbuf_kick(push, push->channel);
 
    nouveau_fence_new(&screen->base, &screen->base.fence.current, false);
-   return pscreen;
+   return &screen->base;
 }

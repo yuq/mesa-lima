@@ -622,7 +622,7 @@ nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
       return NULL;                                    \
    } while(0)
 
-struct pipe_screen *
+struct nouveau_screen *
 nvc0_screen_create(struct nouveau_device *dev)
 {
    struct nvc0_screen *screen;
@@ -1063,7 +1063,7 @@ nvc0_screen_create(struct nouveau_device *dev)
 
    nouveau_fence_new(&screen->base, &screen->base.fence.current, false);
 
-   return pscreen;
+   return &screen->base;
 
 fail:
    nvc0_screen_destroy(pscreen);

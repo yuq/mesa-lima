@@ -58,7 +58,7 @@ PUBLIC struct pipe_screen *
 nouveau_drm_screen_create(int fd)
 {
 	struct nouveau_device *dev = NULL;
-	struct pipe_screen *(*init)(struct nouveau_device *);
+	struct nouveau_screen *(*init)(struct nouveau_device *);
 	struct nouveau_screen *screen;
 	int ret, dupfd = -1;
 
@@ -116,7 +116,7 @@ nouveau_drm_screen_create(int fd)
 		goto err;
 	}
 
-	screen = (struct nouveau_screen*)init(dev);
+	screen = init(dev);
 	if (!screen)
 		goto err;
 
