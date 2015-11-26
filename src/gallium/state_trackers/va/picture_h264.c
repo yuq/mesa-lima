@@ -26,6 +26,7 @@
  *
  **************************************************************************/
 
+#include "util/u_video.h"
 #include "va_private.h"
 
 void vlVaHandlePictureParameterBufferH264(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
@@ -90,6 +91,9 @@ void vlVaHandlePictureParameterBufferH264(vlVaDriver *drv, vlVaContext *context,
       h264->pic_fields.bits.redundant_pic_cnt_present_flag;
    /*reference_pic_flag*/
    context->desc.h264.frame_num = h264->frame_num;
+
+   if (!context->decoder && context->desc.h264.num_ref_frames > 0)
+      context->templat.max_references = MIN2(context->desc.h264.num_ref_frames, 16);
 }
 
 void vlVaHandleIQMatrixBufferH264(vlVaContext *context, vlVaBuffer *buf)

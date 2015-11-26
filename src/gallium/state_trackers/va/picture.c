@@ -59,14 +59,17 @@ vlVaBeginPicture(VADriverContextP ctx, VAContextID context_id, VASurfaceID rende
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
    context->target = surf->buffer;
+
    if (!context->decoder) {
       /* VPP */
-      if ((context->target->buffer_format != PIPE_FORMAT_B8G8R8A8_UNORM  &&
+      if (context->templat.profile == PIPE_VIDEO_PROFILE_UNKNOWN &&
+         ((context->target->buffer_format != PIPE_FORMAT_B8G8R8A8_UNORM  &&
            context->target->buffer_format != PIPE_FORMAT_R8G8B8A8_UNORM  &&
            context->target->buffer_format != PIPE_FORMAT_B8G8R8X8_UNORM  &&
            context->target->buffer_format != PIPE_FORMAT_R8G8B8X8_UNORM) ||
-           context->target->interlaced)
+           context->target->interlaced))
          return VA_STATUS_ERROR_UNIMPLEMENTED;
+
       return VA_STATUS_SUCCESS;
    }
 
@@ -86,13 +89,14 @@ vlVaGetReferenceFrame(vlVaDriver *drv, VASurfaceID surface_id,
       *ref_frame = NULL;
 }
 
-static void
+static VAStatus
 handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
    VAPictureParameterBufferHEVC *hevc;
    unsigned int i;
+   VAStatus vaStatus = VA_STATUS_SUCCESS;
 
-   switch (u_reduce_video_profile(context->decoder->profile)) {
+   switch (u_reduce_video_profile(context->templat.profile)) {
    case PIPE_VIDEO_FORMAT_MPEG12:
       vlVaHandlePictureParameterBufferMPEG12(drv, context, buf);
       break;
@@ -263,6 +267,31 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
    default:
       break;
    }
+
+   /* Create the decoder once max_references is known. */
+   if (!context->decoder) {
+      if (!context->target)
+         return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+      if (context->templat.max_references == 0)
+         return VA_STATUS_ERROR_INVALID_BUFFER;
+
+      if (u_reduce_video_profile(context->templat.profile) ==
+          PIPE_VIDEO_FORMAT_MPEG4_AVC)
+         context->templat.level = u_get_h264_level(context->templat.width,
+            context->templat.height, &context->templat.max_references);
+
+      context->decoder = drv->pipe->create_video_codec(drv->pipe,
+         &context->templat);
+
+      if (!context->decoder)
+         return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+      context->decoder->begin_frame(context->decoder, context->target,
+         &context->desc.base);
+   }
+
+   return vaStatus;
 }
 
 static void
@@ -270,7 +299,7 @@ handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
    VAIQMatrixBufferHEVC *h265;
 
-   switch (u_reduce_video_profile(context->decoder->profile)) {
+   switch (u_reduce_video_profile(context->templat.profile)) {
    case PIPE_VIDEO_FORMAT_MPEG12:
       vlVaHandleIQMatrixBufferMPEG12(context, buf);
       break;
@@ -304,7 +333,7 @@ handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
    VASliceParameterBufferHEVC *h265;
 
-   switch (u_reduce_video_profile(context->decoder->profile)) {
+   switch (u_reduce_video_profile(context->templat.profile)) {
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
       vlVaHandleSliceParameterBufferH264(context, buf);
       break;
@@ -356,7 +385,7 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
    static const uint8_t start_code_h265[] = { 0x00, 0x00, 0x01 };
    static const uint8_t start_code_vc1[] = { 0x00, 0x00, 0x01, 0x0d };
 
-   format = u_reduce_video_profile(context->decoder->profile);
+   format = u_reduce_video_profile(context->templat.profile);
    switch (format) {
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
       if (bufHasStartcode(buf, 0x000001, 24))
@@ -428,7 +457,7 @@ vlVaRenderPicture(VADriverContextP ctx, VAContextID context_id, VABufferID *buff
 
       switch (buf->type) {
       case VAPictureParameterBufferType:
-         handlePictureParameterBuffer(drv, context, buf);
+         vaStatus = handlePictureParameterBuffer(drv, context, buf);
          break;
 
       case VAIQMatrixBufferType:
@@ -472,6 +501,9 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    if (!context->decoder) {
+      if (context->templat.profile != PIPE_VIDEO_PROFILE_UNKNOWN)
+         return VA_STATUS_ERROR_INVALID_CONTEXT;
+
       /* VPP */
       return VA_STATUS_SUCCESS;
    }

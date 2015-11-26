@@ -215,7 +215,7 @@ typedef struct {
 } vlVaSubpicture;
 
 typedef struct {
-   struct pipe_video_codec *decoder;
+   struct pipe_video_codec templat, *decoder;
    struct pipe_video_buffer *target;
    union {
       struct pipe_picture_desc base;
