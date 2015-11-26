@@ -185,20 +185,9 @@ _mesa_lookup_prim_by_nr(GLuint nr)
         if name in ['GL_NEXT_BUFFER_NV',
                     # Mesa was choosing GL_LINES for this, which wasn't great.
                     'GL_TRUE',
-                    # Old names for things where Mesa was using the new names.
-                    'GL_VERTEX_PROGRAM_POINT_SIZE',
-                    'GL_MAX_VARYING_FLOATS',
-                    'GL_CLIP_PLANE0',
-                    'GL_CLIP_PLANE1',
-                    'GL_CLIP_PLANE2',
-                    'GL_CLIP_PLANE3',
-                    'GL_CLIP_PLANE4',
-                    'GL_CLIP_PLANE5',
-                    'GL_MAX_CLIP_PLANES',
+                    # We're blacklisting 4.3, so also blacklist this
+                    # to keep the 4.3/ARB_ssbo name for it.
                     'GL_MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS',
-                    'GL_FOG_COORDINATE',
-                    'GL_CURRENT_FOG_COORDINATE',
-                    'GL_COMPARE_R_TO_TEXTURE',
                     # GL 2.0 name when Mesa was using GLES 1.0.
                     'GL_BLEND_EQUATION_RGB',
                     # GL3.x compat names that Mesa was missing.
@@ -518,15 +507,17 @@ _mesa_lookup_prim_by_nr(GLuint nr)
                                 'GL_ES_VERSION_3_1']:
                 continue
 
-            # Give priority to the older versions of various symbol
-            # names, since Mesa tended to have the older ones.
+            # When an enum gets renamed in a newer version (generally
+            # because of some generalization of the functionality),
+            # prefer the newer name.  Also, prefer desktop GL names to
+            # ES.
             m = re.match('GL_VERSION_([0-9])_([0-9])', feature_name)
             if m:
-                feature_prio = int(m.group(1) + m.group(2))
+                feature_prio = 100 - int(m.group(1) + m.group(2))
             else:
                 m = re.match('GL_ES_VERSION_([0-9])_([0-9])', feature_name)
                 if m:
-                    feature_prio = int(m.group(1) + m.group(2))
+                    feature_prio = 200 - int(m.group(1) + m.group(2))
                 else:
                     feature_prio = 200
 
