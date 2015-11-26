@@ -243,8 +243,9 @@ debug_namespace_init(struct gl_debug_namespace *ns)
    make_empty_list(&ns->Elements);
 
    /* Enable all the messages with severity HIGH or MEDIUM by default */
-   ns->DefaultState = (1 << MESA_DEBUG_SEVERITY_HIGH) |
-                      (1 << MESA_DEBUG_SEVERITY_MEDIUM);
+   ns->DefaultState = (1 << MESA_DEBUG_SEVERITY_MEDIUM ) |
+                      (1 << MESA_DEBUG_SEVERITY_HIGH) |
+                      (1 << MESA_DEBUG_SEVERITY_NOTIFICATION);
 }
 
 static void
