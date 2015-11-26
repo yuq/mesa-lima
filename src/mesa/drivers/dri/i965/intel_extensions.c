@@ -333,6 +333,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_shader_image_load_store = true;
       ctx->Extensions.ARB_shader_image_size = true;
       ctx->Extensions.ARB_shader_texture_image_samples = true;
+      ctx->Extensions.ARB_tessellation_shader = true;
       ctx->Extensions.ARB_texture_compression_bptc = true;
       ctx->Extensions.ARB_texture_view = true;
       ctx->Extensions.ARB_shader_storage_buffer_object = true;
@@ -362,7 +363,6 @@ intelInitExtensions(struct gl_context *ctx)
 
    if (brw->gen >= 8) {
       ctx->Extensions.ARB_stencil_texturing = true;
-      ctx->Extensions.ARB_tessellation_shader = true;
    }
 
    if (brw->gen >= 9) {
