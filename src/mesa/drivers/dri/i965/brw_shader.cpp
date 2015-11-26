@@ -568,6 +568,10 @@ brw_instruction_name(enum opcode op)
       return "tcs_get_primitive_id";
    case TCS_OPCODE_CREATE_BARRIER_HEADER:
       return "tcs_create_barrier_header";
+   case TCS_OPCODE_SRC0_010_IS_ZERO:
+      return "tcs_src0<0,1,0>_is_zero";
+   case TCS_OPCODE_RELEASE_INPUT:
+      return "tcs_release_input";
    case TES_OPCODE_CREATE_INPUT_READ_HEADER:
       return "tes_create_input_read_header";
    case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:
@@ -1009,6 +1013,7 @@ backend_instruction::has_side_effects() const
    case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
    case FS_OPCODE_FB_WRITE:
    case SHADER_OPCODE_BARRIER:
+   case TCS_OPCODE_RELEASE_INPUT:
       return true;
    default:
       return false;

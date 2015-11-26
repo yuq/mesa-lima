@@ -933,6 +933,42 @@ generate_vec4_urb_read(struct brw_codegen *p,
 }
 
 static void
+generate_tcs_release_input(struct brw_codegen *p,
+                           struct brw_reg header,
+                           struct brw_reg vertex,
+                           struct brw_reg is_unpaired)
+{
+   const struct brw_device_info *devinfo = p->devinfo;
+
+   assert(vertex.file == BRW_IMMEDIATE_VALUE);
+   assert(vertex.type == BRW_REGISTER_TYPE_UD);
+
+   /* m0.0-0.1: URB handles */
+   struct brw_reg urb_handles =
+      retype(brw_vec2_grf(1 + (vertex.ud >> 3), vertex.ud & 7),
+             BRW_REGISTER_TYPE_UD);
+
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+   brw_MOV(p, header, brw_imm_ud(0));
+   brw_MOV(p, vec2(get_element_ud(header, 0)), urb_handles);
+   brw_pop_insn_state(p);
+
+   brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
+   brw_set_dest(p, send, brw_null_reg());
+   brw_set_src0(p, send, header);
+   brw_set_message_descriptor(p, send, BRW_SFID_URB,
+                              1 /* mlen */, 0 /* rlen */,
+                              true /* header */, false /* eot */);
+   brw_inst_set_urb_opcode(devinfo, send, BRW_URB_OPCODE_READ_OWORD);
+   brw_inst_set_urb_complete(devinfo, send, 1);
+   brw_inst_set_urb_swizzle_control(devinfo, send, is_unpaired.ud ?
+                                    BRW_URB_SWIZZLE_NONE :
+                                    BRW_URB_SWIZZLE_INTERLEAVE);
+}
+
+static void
 generate_tes_get_primitive_id(struct brw_codegen *p, struct brw_reg dst)
 {
    brw_push_insn_state(p);
@@ -1844,6 +1880,16 @@ generate_code(struct brw_codegen *p,
 
       case TES_OPCODE_GET_PRIMITIVE_ID:
          generate_tes_get_primitive_id(p, dst);
+         break;
+
+      case TCS_OPCODE_SRC0_010_IS_ZERO:
+         /* If src_reg had stride like fs_reg, we wouldn't need this. */
+         brw_MOV(p, brw_null_reg(), stride(src[0], 0, 1, 0));
+         brw_inst_set_cond_modifier(devinfo, brw_last_inst, BRW_CONDITIONAL_Z);
+         break;
+
+      case TCS_OPCODE_RELEASE_INPUT:
+         generate_tcs_release_input(p, dst, src[0], src[1]);
          break;
 
       case SHADER_OPCODE_BARRIER:

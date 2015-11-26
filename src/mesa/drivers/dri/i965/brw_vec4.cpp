@@ -157,6 +157,7 @@ vec4_instruction::is_send_from_grf()
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
    case VEC4_OPCODE_URB_READ:
    case TCS_OPCODE_URB_WRITE:
+   case TCS_OPCODE_RELEASE_INPUT:
    case SHADER_OPCODE_BARRIER:
       return true;
    default:
