@@ -326,7 +326,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 			A4XX_SP_VS_CTRL_REG1_INITIALOUTSTANDING(s[VS].v->total_in));
 	OUT_RING(ring, A4XX_SP_VS_PARAM_REG_POSREGID(pos_regid) |
 			A4XX_SP_VS_PARAM_REG_PSIZEREGID(psize_regid) |
-			A4XX_SP_VS_PARAM_REG_TOTALVSOUTVAR(align(s[FS].v->total_in, 4) / 4));
+			A4XX_SP_VS_PARAM_REG_TOTALVSOUTVAR(s[FS].v->varying_in));
 
 	for (i = 0, j = -1; (i < 16) && (j < (int)s[FS].v->inputs_count); i++) {
 		uint32_t reg = 0;

@@ -264,7 +264,7 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 			A3XX_SP_VS_CTRL_REG1_CONSTFOOTPRINT(MAX2(vp->constlen + 1, 0)));
 	OUT_RING(ring, A3XX_SP_VS_PARAM_REG_POSREGID(pos_regid) |
 			A3XX_SP_VS_PARAM_REG_PSIZEREGID(psize_regid) |
-			A3XX_SP_VS_PARAM_REG_TOTALVSOUTVAR(align(fp->total_in, 4) / 4));
+			A3XX_SP_VS_PARAM_REG_TOTALVSOUTVAR(fp->varying_in));
 
 	for (i = 0, j = -1; (i < 8) && (j < (int)fp->inputs_count); i++) {
 		uint32_t reg = 0;

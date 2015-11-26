@@ -96,9 +96,6 @@ struct ir3_compile {
 	 */
 	struct hash_table *block_ht;
 
-	/* for calculating input/output positions/linkages: */
-	unsigned next_inloc;
-
 	/* a4xx (at least patchlevel 0) cannot seem to flat-interpolate
 	 * so we need to use ldlv.u32 to load the varying directly:
 	 */
@@ -235,7 +232,6 @@ compile_init(struct ir3_compiler *compiler,
 	ctx->compiler = compiler;
 	ctx->ir = so->ir;
 	ctx->so = so;
-	ctx->next_inloc = 8;
 	ctx->def_ht = _mesa_hash_table_create(ctx,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
 	ctx->var_ht = _mesa_hash_table_create(ctx,
@@ -722,11 +718,12 @@ create_input(struct ir3_block *block, unsigned n)
 }
 
 static struct ir3_instruction *
-create_frag_input(struct ir3_compile *ctx, unsigned n, bool use_ldlv)
+create_frag_input(struct ir3_compile *ctx, bool use_ldlv)
 {
 	struct ir3_block *block = ctx->block;
 	struct ir3_instruction *instr;
-	struct ir3_instruction *inloc = create_immed(block, n);
+	/* actual inloc is assigned and fixed up later: */
+	struct ir3_instruction *inloc = create_immed(block, 0);
 
 	if (use_ldlv) {
 		instr = ir3_LDLV(block, inloc, 0, create_immed(block, 1), 0);
@@ -2185,8 +2182,6 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 
 	so->inputs[n].slot = slot;
 	so->inputs[n].compmask = (1 << ncomp) - 1;
-	so->inputs[n].inloc = ctx->next_inloc;
-	so->inputs[n].interpolate = INTERP_QUALIFIER_NONE;
 	so->inputs_count = MAX2(so->inputs_count, n + 1);
 	so->inputs[n].interpolate = in->data.interpolation;
 
@@ -2231,8 +2226,7 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 
 				so->inputs[n].bary = true;
 
-				instr = create_frag_input(ctx,
-						so->inputs[n].inloc + i - 8, use_ldlv);
+				instr = create_frag_input(ctx, use_ldlv);
 			}
 
 			ctx->ir->inputs[idx] = instr;
@@ -2247,7 +2241,6 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 	}
 
 	if (so->inputs[n].bary || (ctx->so->type == SHADER_VERTEX)) {
-		ctx->next_inloc += ncomp;
 		so->total_in += ncomp;
 	}
 }
@@ -2471,7 +2464,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	struct ir3_compile *ctx;
 	struct ir3 *ir;
 	struct ir3_instruction **inputs;
-	unsigned i, j, actual_in;
+	unsigned i, j, actual_in, inloc;
 	int ret = 0, max_bary;
 
 	assert(!so->ir);
@@ -2591,13 +2584,6 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 		ir3_print(ir);
 	}
 
-	ir3_legalize(ir, &so->has_samp, &max_bary);
-
-	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
-		printf("AFTER LEGALIZE:\n");
-		ir3_print(ir);
-	}
-
 	/* fixup input/outputs: */
 	for (i = 0; i < so->outputs_count; i++) {
 		so->outputs[i].regid = ir->outputs[i*4]->regs[0]->num;
@@ -2611,32 +2597,46 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 
 	/* Note that some or all channels of an input may be unused: */
 	actual_in = 0;
+	inloc = 0;
 	for (i = 0; i < so->inputs_count; i++) {
 		unsigned j, regid = ~0, compmask = 0;
 		so->inputs[i].ncomp = 0;
+		so->inputs[i].inloc = inloc + 8;
 		for (j = 0; j < 4; j++) {
 			struct ir3_instruction *in = inputs[(i*4) + j];
-			if (in) {
+			if (in && !(in->flags & IR3_INSTR_UNUSED)) {
 				compmask |= (1 << j);
 				regid = in->regs[0]->num - j;
 				actual_in++;
 				so->inputs[i].ncomp++;
+				if ((so->type == SHADER_FRAGMENT) && so->inputs[i].bary) {
+					/* assign inloc: */
+					assert(in->regs[1]->flags & IR3_REG_IMMED);
+					in->regs[1]->iim_val = inloc++;
+				}
 			}
 		}
+		if ((so->type == SHADER_FRAGMENT) && compmask && so->inputs[i].bary)
+			so->varying_in++;
 		so->inputs[i].regid = regid;
 		so->inputs[i].compmask = compmask;
 	}
 
-	/* fragment shader always gets full vec4's even if it doesn't
-	 * fetch all components, but vertex shader we need to update
-	 * with the actual number of components fetch, otherwise thing
-	 * will hang due to mismaptch between VFD_DECODE's and
-	 * TOTALATTRTOVS
+	/* We need to do legalize after (for frag shader's) the "bary.f"
+	 * offsets (inloc) have been assigned.
 	 */
+	ir3_legalize(ir, &so->has_samp, &max_bary);
+
+	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
+		printf("AFTER LEGALIZE:\n");
+		ir3_print(ir);
+	}
+
+	/* Note that actual_in counts inputs that are not bary.f'd for FS: */
 	if (so->type == SHADER_VERTEX)
 		so->total_in = actual_in;
 	else
-		so->total_in = align(max_bary + 1, 4);
+		so->total_in = max_bary + 1;
 
 out:
 	if (ret) {
