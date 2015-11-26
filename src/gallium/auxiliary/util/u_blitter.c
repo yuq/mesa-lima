@@ -1929,11 +1929,19 @@ void util_blitter_clear_depth_stencil(struct blitter_context *blitter,
    pipe->set_framebuffer_state(pipe, &fb_state);
    pipe->set_sample_mask(pipe, ~0);
 
-   blitter_set_common_draw_rect_state(ctx, FALSE, FALSE);
    blitter_set_dst_dimensions(ctx, dstsurf->width, dstsurf->height);
-   blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height,
-                           (float) depth,
-                           UTIL_BLITTER_ATTRIB_NONE, NULL);
+
+   unsigned num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
+   if (num_layers > 1 && ctx->has_layered) {
+      blitter_set_common_draw_rect_state(ctx, FALSE, TRUE);
+      blitter_draw(ctx, dstx, dsty, dstx+width, dsty+height, (float) depth, num_layers);
+   }
+   else {
+      blitter_set_common_draw_rect_state(ctx, FALSE, FALSE);
+      blitter->draw_rectangle(blitter, dstx, dsty, dstx+width, dsty+height,
+                              (float) depth,
+                              UTIL_BLITTER_ATTRIB_NONE, NULL);
+   }
 
    blitter_restore_vertex_states(ctx);
    blitter_restore_fragment_states(ctx);
