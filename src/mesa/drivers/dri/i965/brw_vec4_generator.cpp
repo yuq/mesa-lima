@@ -716,6 +716,9 @@ generate_gs_set_primitive_id(struct brw_codegen *p, struct brw_reg dst)
 static void
 generate_tcs_get_instance_id(struct brw_codegen *p, struct brw_reg dst)
 {
+   const struct brw_device_info *devinfo = p->devinfo;
+   const bool ivb = devinfo->is_ivybridge || devinfo->is_baytrail;
+
    /* "Instance Count" comes as part of the payload in r0.2 bits 23:17.
     *
     * Since we operate in SIMD4x2 mode, we need run half as many threads
@@ -728,8 +731,8 @@ generate_tcs_get_instance_id(struct brw_codegen *p, struct brw_reg dst)
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
 
-   const int mask = INTEL_MASK(23, 17);
-   const int shift = 17;
+   const int mask = ivb ? INTEL_MASK(22, 16) : INTEL_MASK(23, 17);
+   const int shift = ivb ? 16 : 17;
 
    brw_AND(p, get_element_ud(dst, 0), get_element_ud(r0, 2), brw_imm_ud(mask));
    brw_SHR(p, get_element_ud(dst, 0), get_element_ud(dst, 0),
