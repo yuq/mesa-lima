@@ -38,20 +38,11 @@
 #include "texobj.h"
 #include "hash.h"
 
-/**
- * Implements glGenerateMipmap and glGenerateTextureMipmap.
- * Generates all the mipmap levels below the base level.
- */
-void
-_mesa_generate_texture_mipmap(struct gl_context *ctx,
-                              struct gl_texture_object *texObj, GLenum target,
-                              bool dsa)
+bool
+_mesa_is_valid_generate_texture_mipmap_target(struct gl_context *ctx,
+                                              GLenum target)
 {
-   struct gl_texture_image *srcImage;
    GLboolean error;
-   const char *suffix = dsa ? "Texture" : "";
-
-   FLUSH_VERTICES(ctx, 0);
 
    switch (target) {
    case GL_TEXTURE_1D:
@@ -81,7 +72,24 @@ _mesa_generate_texture_mipmap(struct gl_context *ctx,
       error = GL_TRUE;
    }
 
-   if (error) {
+   return (error != GL_TRUE);
+}
+
+/**
+ * Implements glGenerateMipmap and glGenerateTextureMipmap.
+ * Generates all the mipmap levels below the base level.
+ */
+void
+_mesa_generate_texture_mipmap(struct gl_context *ctx,
+                              struct gl_texture_object *texObj, GLenum target,
+                              bool dsa)
+{
+   struct gl_texture_image *srcImage;
+   const char *suffix = dsa ? "Texture" : "";
+
+   FLUSH_VERTICES(ctx, 0);
+
+   if (!_mesa_is_valid_generate_texture_mipmap_target(ctx, target)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glGenerate%sMipmap(target=%s)",
                   suffix, _mesa_enum_to_string(target));
       return;
