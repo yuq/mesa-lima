@@ -94,9 +94,7 @@ const struct enum_info everything[] = {
    /* A bitfield where Mesa uses a different value from Khronos. */
    { 0x000fffff, "GL_ALL_ATTRIB_BITS" },
 
-   /* A bitfield in the table where Mesa uses a different name from Khronos,
-    * and we fail to return its string anyway!
-    */
+   /* A bitfield in the table, where we fail to return its string anyway! */
    { (int)0xffffffff, "0xffffffff" },
 
    { 0, NULL }
