@@ -775,7 +775,7 @@ _mesa_get_debug_state_int(struct gl_context *ctx, GLenum pname)
          debug->Log.Messages[debug->Log.NextMessage].length : 0;
       break;
    case GL_DEBUG_GROUP_STACK_DEPTH:
-      val = debug->CurrentGroup;
+      val = debug->CurrentGroup + 1;
       break;
    default:
       assert(!"unknown debug output param");
