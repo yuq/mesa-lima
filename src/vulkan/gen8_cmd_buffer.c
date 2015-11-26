@@ -248,7 +248,7 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                            pipeline->gen8.raster);
    }
 
-   /* Stencil reference values were moves from COLOR_CALC_STATE in gen8 to
+   /* Stencil reference values moved from COLOR_CALC_STATE in gen8 to
     * 3DSTATE_WM_DEPTH_STENCIL in gen9. That means the dirty bits gets split
     * across different state packets for gen8 and gen9. We handle that by
     * using a big old #if switch here.
@@ -347,7 +347,7 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       GEN9_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, dwords, &wm_depth_stencil);
 
       anv_batch_emit_merge(&cmd_buffer->batch, dwords,
-                           pipeline->gen8.wm_depth_stencil);
+                           pipeline->gen9.wm_depth_stencil);
    }
 #endif
 

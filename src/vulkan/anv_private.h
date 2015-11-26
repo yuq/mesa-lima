@@ -677,7 +677,7 @@ __gen_combine_address(struct anv_batch *batch, void *location,
    do {                                                                 \
       uint32_t *dw;                                                     \
                                                                         \
-      assert(ARRAY_SIZE(dwords0) == ARRAY_SIZE(dwords1));               \
+      static_assert(ARRAY_SIZE(dwords0) == ARRAY_SIZE(dwords1), "mismatch merge"); \
       dw = anv_batch_emit_dwords((batch), ARRAY_SIZE(dwords0));         \
       for (uint32_t i = 0; i < ARRAY_SIZE(dwords0); i++)                \
          dw[i] = (dwords0)[i] | (dwords1)[i];                           \
@@ -1201,8 +1201,12 @@ struct anv_pipeline {
    struct {
       uint32_t                                  sf[4];
       uint32_t                                  raster[5];
-      uint32_t                                  wm_depth_stencil[4];
+      uint32_t                                  wm_depth_stencil[3];
    } gen8;
+
+   struct {
+      uint32_t                                  wm_depth_stencil[4];
+   } gen9;
 };
 
 struct anv_graphics_pipeline_create_info {

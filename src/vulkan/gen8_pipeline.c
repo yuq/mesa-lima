@@ -290,13 +290,17 @@ static void
 emit_ds_state(struct anv_pipeline *pipeline,
               const VkPipelineDepthStencilStateCreateInfo *info)
 {
+   uint32_t *dw = ANV_GEN == 8 ?
+      pipeline->gen8.wm_depth_stencil : pipeline->gen9.wm_depth_stencil;
+
    if (info == NULL) {
       /* We're going to OR this together with the dynamic state.  We need
        * to make sure it's initialized to something useful.
        */
-      /* FIXME: gen9 wm_depth_stencil */
       memset(pipeline->gen8.wm_depth_stencil, 0,
              sizeof(pipeline->gen8.wm_depth_stencil));
+      memset(pipeline->gen9.wm_depth_stencil, 0,
+             sizeof(pipeline->gen9.wm_depth_stencil));
       return;
    }
 
@@ -319,7 +323,7 @@ emit_ds_state(struct anv_pipeline *pipeline,
       .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.stencilCompareOp],
    };
 
-   GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, pipeline->gen8.wm_depth_stencil, &wm_depth_stencil);
+   GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, dw, &wm_depth_stencil);
 }
 
 VkResult
