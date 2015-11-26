@@ -479,24 +479,27 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 		 */
 		/* figure out VARYING_INTERP / VARYING_PS_REPL register values: */
 		for (j = -1; (j = ir3_next_varying(s[FS].v, j)) < (int)s[FS].v->inputs_count; ) {
+			/* NOTE: varyings are packed, so if compmask is 0xb
+			 * then first, third, and fourth component occupy
+			 * three consecutive varying slots:
+			 */
+			unsigned compmask = s[FS].v->inputs[j].compmask;
 
 			/* TODO might be cleaner to just +8 in SP_VS_VPC_DST_REG
 			 * instead.. rather than -8 everywhere else..
 			 */
 			uint32_t inloc = s[FS].v->inputs[j].inloc - 8;
 
-			/* currently assuming varyings aligned to 4 (not
-			 * packed):
-			 */
-			debug_assert((inloc % 4) == 0);
-
 			if ((s[FS].v->inputs[j].interpolate == INTERP_QUALIFIER_FLAT) ||
 					(s[FS].v->inputs[j].rasterflat && emit->rasterflat)) {
 				uint32_t loc = inloc;
 
-				for (i = 0; i < 4; i++, loc++) {
-					vinterp[loc / 16] |= 1 << ((loc % 16) * 2);
-					//flatshade[loc / 32] |= 1 << (loc % 32);
+				for (i = 0; i < 4; i++) {
+					if (compmask & (1 << i)) {
+						vinterp[loc / 16] |= 1 << ((loc % 16) * 2);
+						//flatshade[loc / 32] |= 1 << (loc % 32);
+						loc++;
+					}
 				}
 			}
 
@@ -509,10 +512,31 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 				 * interpolation bits for .zw such that they become .01
 				 */
 				if (emit->sprite_coord_enable & texmask) {
-					vpsrepl[inloc / 16] |= (emit->sprite_coord_mode ? 0x0d : 0x09)
-						<< ((inloc % 16) * 2);
-					vinterp[(inloc + 2) / 16] |= 2 << (((inloc + 2) % 16) * 2);
-					vinterp[(inloc + 3) / 16] |= 3 << (((inloc + 3) % 16) * 2);
+					/* mask is two 2-bit fields, where:
+					 *   '01' -> S
+					 *   '10' -> T
+					 *   '11' -> 1 - T  (flip mode)
+					 */
+					unsigned mask = emit->sprite_coord_mode ? 0b1101 : 0b1001;
+					uint32_t loc = inloc;
+					if (compmask & 0x1) {
+						vpsrepl[loc / 16] |= ((mask >> 0) & 0x3) << ((loc % 16) * 2);
+						loc++;
+					}
+					if (compmask & 0x2) {
+						vpsrepl[loc / 16] |= ((mask >> 2) & 0x3) << ((loc % 16) * 2);
+						loc++;
+					}
+					if (compmask & 0x4) {
+						/* .z <- 0.0f */
+						vinterp[loc / 16] |= 0b10 << ((loc % 16) * 2);
+						loc++;
+					}
+					if (compmask & 0x8) {
+						/* .w <- 1.0f */
+						vinterp[loc / 16] |= 0b11 << ((loc % 16) * 2);
+						loc++;
+					}
 				}
 			}
 		}
