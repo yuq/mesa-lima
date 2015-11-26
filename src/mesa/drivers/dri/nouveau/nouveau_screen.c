@@ -108,8 +108,6 @@ nouveau_init_screen2(__DRIscreen *dri_screen)
 		goto fail;
 	}
 
-	screen->drm->nvif = false;
-
 	ret = nouveau_device_new(&screen->drm->client, NV_DEVICE,
 				 &(struct nv_device_v0) {
 					.device = ~0ULL,

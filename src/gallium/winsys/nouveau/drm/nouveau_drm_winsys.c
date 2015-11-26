@@ -97,8 +97,6 @@ nouveau_drm_screen_create(int fd)
 	if (ret)
 		goto err;
 
-	drm->nvif = false;
-
 	ret = nouveau_device_new(&drm->client, NV_DEVICE,
 				 &(struct nv_device_v0) {
 					.device = ~0ULL,
