@@ -888,6 +888,59 @@ brw_conditional_for_nir_comparison(nir_op op)
    }
 }
 
+bool
+vec4_visitor::optimize_predicate(nir_alu_instr *instr,
+                                 enum brw_predicate *predicate)
+{
+   if (!instr->src[0].src.is_ssa ||
+       instr->src[0].src.ssa->parent_instr->type != nir_instr_type_alu)
+      return false;
+
+   nir_alu_instr *cmp_instr =
+      nir_instr_as_alu(instr->src[0].src.ssa->parent_instr);
+
+   switch (cmp_instr->op) {
+   case nir_op_bany_fnequal2:
+   case nir_op_bany_inequal2:
+   case nir_op_bany_fnequal3:
+   case nir_op_bany_inequal3:
+   case nir_op_bany_fnequal4:
+   case nir_op_bany_inequal4:
+      *predicate = BRW_PREDICATE_ALIGN16_ANY4H;
+      break;
+   case nir_op_ball_fequal2:
+   case nir_op_ball_iequal2:
+   case nir_op_ball_fequal3:
+   case nir_op_ball_iequal3:
+   case nir_op_ball_fequal4:
+   case nir_op_ball_iequal4:
+      *predicate = BRW_PREDICATE_ALIGN16_ALL4H;
+      break;
+   default:
+      return false;
+   }
+
+   unsigned size_swizzle =
+      brw_swizzle_for_size(nir_op_infos[cmp_instr->op].input_sizes[0]);
+
+   src_reg op[2];
+   assert(nir_op_infos[cmp_instr->op].num_inputs == 2);
+   for (unsigned i = 0; i < 2; i++) {
+      op[i] = get_nir_src(cmp_instr->src[i].src,
+                          nir_op_infos[cmp_instr->op].input_types[i], 4);
+      unsigned base_swizzle =
+         brw_swizzle_for_nir_swizzle(cmp_instr->src[i].swizzle);
+      op[i].swizzle = brw_compose_swizzle(size_swizzle, base_swizzle);
+      op[i].abs = cmp_instr->src[i].abs;
+      op[i].negate = cmp_instr->src[i].negate;
+   }
+
+   emit(CMP(dst_null_d(), op[0], op[1],
+            brw_conditional_for_nir_comparison(cmp_instr->op)));
+
+   return true;
+}
+
 void
 vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 {
@@ -1378,25 +1431,29 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_bcsel:
-      emit(CMP(dst_null_d(), op[0], brw_imm_d(0), BRW_CONDITIONAL_NZ));
-      inst = emit(BRW_OPCODE_SEL, dst, op[1], op[2]);
-      switch (dst.writemask) {
-      case WRITEMASK_X:
-         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_X;
-         break;
-      case WRITEMASK_Y:
-         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Y;
-         break;
-      case WRITEMASK_Z:
-         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Z;
-         break;
-      case WRITEMASK_W:
-         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_W;
-         break;
-      default:
-         inst->predicate = BRW_PREDICATE_NORMAL;
-         break;
+      enum brw_predicate predicate;
+      if (!optimize_predicate(instr, &predicate)) {
+         emit(CMP(dst_null_d(), op[0], brw_imm_d(0), BRW_CONDITIONAL_NZ));
+         switch (dst.writemask) {
+         case WRITEMASK_X:
+            predicate = BRW_PREDICATE_ALIGN16_REPLICATE_X;
+            break;
+         case WRITEMASK_Y:
+            predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Y;
+            break;
+         case WRITEMASK_Z:
+            predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Z;
+            break;
+         case WRITEMASK_W:
+            predicate = BRW_PREDICATE_ALIGN16_REPLICATE_W;
+            break;
+         default:
+            predicate = BRW_PREDICATE_NORMAL;
+            break;
+         }
       }
+      inst = emit(BRW_OPCODE_SEL, dst, op[1], op[2]);
+      inst->predicate = predicate;
       break;
 
    case nir_op_fdot_replicated2:

@@ -313,6 +313,8 @@ public:
 
    bool is_high_sampler(src_reg sampler);
 
+   bool optimize_predicate(nir_alu_instr *instr, enum brw_predicate *predicate);
+
    virtual void emit_nir_code();
    virtual void nir_setup_uniforms();
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
