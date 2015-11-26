@@ -1599,6 +1599,8 @@ SpillCodeInserter::spill(Instruction *defi, Value *slot, LValue *lval)
       st = new_Instruction(func, OP_CVT, ty);
       st->setDef(0, slot);
       st->setSrc(0, lval);
+      if (lval->reg.file == FILE_FLAGS)
+         st->flagsSrc = 0;
    }
    defi->bb->insertAfter(defi, st);
 }
@@ -1640,6 +1642,8 @@ SpillCodeInserter::unspill(Instruction *usei, LValue *lval, Value *slot)
    }
    ld->setDef(0, lval);
    ld->setSrc(0, slot);
+   if (lval->reg.file == FILE_FLAGS)
+      ld->flagsDef = 0;
 
    usei->bb->insertBefore(usei, ld);
    return lval;

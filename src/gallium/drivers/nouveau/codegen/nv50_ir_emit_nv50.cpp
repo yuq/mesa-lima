@@ -756,10 +756,10 @@ CodeEmitterNV50::emitMOV(const Instruction *i)
    assert(sf == FILE_GPR || df == FILE_GPR);
 
    if (sf == FILE_FLAGS) {
+      assert(i->flagsSrc >= 0);
       code[0] = 0x00000001;
       code[1] = 0x20000000;
       defId(i->def(0), 2);
-      srcId(i->src(0), 12);
       emitFlagsRd(i);
    } else
    if (sf == FILE_ADDRESS) {
@@ -770,11 +770,12 @@ CodeEmitterNV50::emitMOV(const Instruction *i)
       emitFlagsRd(i);
    } else
    if (df == FILE_FLAGS) {
+      assert(i->flagsDef >= 0);
       code[0] = 0x00000001;
       code[1] = 0xa0000000;
-      defId(i->def(0), 4);
       srcId(i->src(0), 9);
       emitFlagsRd(i);
+      emitFlagsWr(i);
    } else
    if (sf == FILE_IMMEDIATE) {
       code[0] = 0x10008001;
