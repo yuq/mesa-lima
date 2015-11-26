@@ -198,6 +198,8 @@ struct brw_tcs_prog_key
 
    GLenum tes_primitive_mode;
 
+   unsigned input_vertices;
+
    struct brw_sampler_prog_key_data tex;
 };
 

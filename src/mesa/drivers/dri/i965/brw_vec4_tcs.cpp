@@ -257,7 +257,8 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
            get_nir_dest(instr->dest, BRW_REGISTER_TYPE_UD));
       break;
    case nir_intrinsic_load_patch_vertices_in:
-      unreachable("XXX: gl_PatchVerticesIn not implemented yet.");
+      emit(MOV(get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D),
+               brw_imm_d(key->input_vertices)));
       break;
    case nir_intrinsic_load_per_vertex_input: {
       src_reg indirect_offset = get_indirect_offset(instr);

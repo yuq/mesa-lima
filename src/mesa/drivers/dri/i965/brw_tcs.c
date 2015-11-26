@@ -65,6 +65,8 @@ brw_tcs_debug_recompile(struct brw_context *brw,
       return;
    }
 
+   found |= key_debug(brw, "input vertices", old_key->input_vertices,
+                      key->input_vertices);
    found |= key_debug(brw, "TES primitive mode", old_key->tes_primitive_mode,
                       key->tes_primitive_mode);
    found |= brw_debug_recompile_sampler_key(brw, &old_key->tex, &key->tex);
@@ -188,6 +190,7 @@ brw_upload_tcs_prog(struct brw_context *brw)
 
    if (!brw_state_dirty(brw,
                         _NEW_TEXTURE,
+                        BRW_NEW_PATCH_PRIMITIVE |
                         BRW_NEW_TESS_CTRL_PROGRAM |
                         BRW_NEW_TESS_EVAL_PROGRAM))
       return;
@@ -206,6 +209,8 @@ brw_upload_tcs_prog(struct brw_context *brw)
    memset(&key, 0, sizeof(key));
 
    key.program_string_id = tcp->id;
+
+   key.input_vertices = ctx->TessCtrlProgram.patch_vertices;
 
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
@@ -250,6 +255,9 @@ brw_tcs_precompile(struct gl_context *ctx,
 
    key.program_string_id = btcp->id;
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
+
+   /* Guess that the input and output patches have the same dimensionality. */
+   key.input_vertices = shader_prog->TessCtrl.VerticesOut;
 
    key.tes_primitive_mode = GL_TRIANGLES;
 
