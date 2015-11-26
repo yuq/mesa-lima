@@ -960,8 +960,22 @@ error:
 
 
 static GLboolean
-validate_length(struct gl_context *ctx, const char *callerstr, GLsizei length)
+validate_length(struct gl_context *ctx, const char *callerstr, GLsizei length,
+                const GLchar *buf)
 {
+
+   if (length < 0) {
+      GLsizei len = strlen(buf);
+
+      if (len >= MAX_DEBUG_MESSAGE_LENGTH) {
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                    "%s(null terminated string length=%d, is not less than "
+                    "GL_MAX_DEBUG_MESSAGE_LENGTH=%d)", callerstr, len,
+                    MAX_DEBUG_MESSAGE_LENGTH);
+         return GL_FALSE;
+      }
+   }
+
    if (length >= MAX_DEBUG_MESSAGE_LENGTH) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                  "%s(length=%d, which is not less than "
@@ -992,7 +1006,7 @@ _mesa_DebugMessageInsert(GLenum source, GLenum type, GLuint id,
 
    if (length < 0)
       length = strlen(buf);
-   if (!validate_length(ctx, callerstr, length))
+   if (!validate_length(ctx, callerstr, length, buf))
       return; /* GL_INVALID_VALUE */
 
    log_msg(ctx, gl_enum_to_debug_source(source),
@@ -1161,7 +1175,7 @@ _mesa_PushDebugGroup(GLenum source, GLuint id, GLsizei length,
 
    if (length < 0)
       length = strlen(message);
-   if (!validate_length(ctx, callerstr, length))
+   if (!validate_length(ctx, callerstr, length, message))
       return; /* GL_INVALID_VALUE */
 
    debug = _mesa_lock_debug_state(ctx);
