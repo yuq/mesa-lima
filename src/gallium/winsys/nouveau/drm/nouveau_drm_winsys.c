@@ -59,7 +59,7 @@ nouveau_drm_screen_create(int fd)
 {
 	struct nouveau_device *dev = NULL;
 	struct nouveau_screen *(*init)(struct nouveau_device *);
-	struct nouveau_screen *screen;
+	struct nouveau_screen *screen = NULL;
 	int ret, dupfd = -1;
 
 	pipe_mutex_lock(nouveau_screen_mutex);
@@ -117,7 +117,7 @@ nouveau_drm_screen_create(int fd)
 	}
 
 	screen = init(dev);
-	if (!screen)
+	if (!screen || !screen->base.context_create)
 		goto err;
 
 	/* Use dupfd in hash table, to avoid errors if the original fd gets
@@ -130,10 +130,14 @@ nouveau_drm_screen_create(int fd)
 	return &screen->base;
 
 err:
-	if (dev)
-		nouveau_device_del(&dev);
-	else if (dupfd >= 0)
-		close(dupfd);
+	if (screen) {
+		screen->base.destroy(&screen->base);
+	} else {
+		if (dev)
+			nouveau_device_del(&dev);
+		else if (dupfd >= 0)
+			close(dupfd);
+	}
 	pipe_mutex_unlock(nouveau_screen_mutex);
 	return NULL;
 }

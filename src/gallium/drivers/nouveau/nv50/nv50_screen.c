@@ -767,6 +767,7 @@ nv50_screen_create(struct nouveau_device *dev)
    if (!screen)
       return NULL;
    pscreen = &screen->base.base;
+   pscreen->destroy = nv50_screen_destroy;
 
    ret = nouveau_screen_init(&screen->base, dev);
    if (ret) {
@@ -787,7 +788,6 @@ nv50_screen_create(struct nouveau_device *dev)
 
    chan = screen->base.channel;
 
-   pscreen->destroy = nv50_screen_destroy;
    pscreen->context_create = nv50_create;
    pscreen->is_format_supported = nv50_screen_is_format_supported;
    pscreen->get_param = nv50_screen_get_param;
@@ -969,8 +969,8 @@ nv50_screen_create(struct nouveau_device *dev)
    return &screen->base;
 
 fail:
-   nv50_screen_destroy(pscreen);
-   return NULL;
+   screen->base.base.context_create = NULL;
+   return &screen->base;
 }
 
 int

@@ -618,8 +618,7 @@ nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
 #define FAIL_SCREEN_INIT(str, err)                    \
    do {                                               \
       NOUVEAU_ERR(str, err);                          \
-      nvc0_screen_destroy(pscreen);                   \
-      return NULL;                                    \
+      goto fail;                                      \
    } while(0)
 
 struct nouveau_screen *
@@ -651,6 +650,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    if (!screen)
       return NULL;
    pscreen = &screen->base.base;
+   pscreen->destroy = nvc0_screen_destroy;
 
    ret = nouveau_screen_init(&screen->base, dev);
    if (ret) {
@@ -673,7 +673,6 @@ nvc0_screen_create(struct nouveau_device *dev)
       screen->base.vidmem_bindings = 0;
    }
 
-   pscreen->destroy = nvc0_screen_destroy;
    pscreen->context_create = nvc0_create;
    pscreen->is_format_supported = nvc0_screen_is_format_supported;
    pscreen->get_param = nvc0_screen_get_param;
@@ -1066,8 +1065,8 @@ nvc0_screen_create(struct nouveau_device *dev)
    return &screen->base;
 
 fail:
-   nvc0_screen_destroy(pscreen);
-   return NULL;
+   screen->base.base.context_create = NULL;
+   return &screen->base;
 }
 
 int
