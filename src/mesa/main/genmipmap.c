@@ -75,6 +75,16 @@ _mesa_is_valid_generate_texture_mipmap_target(struct gl_context *ctx,
    return (error != GL_TRUE);
 }
 
+bool
+_mesa_is_valid_generate_texture_mipmap_internalformat(struct gl_context *ctx,
+                                                      GLenum internalformat)
+{
+   return (!_mesa_is_enum_format_integer(internalformat) &&
+           !_mesa_is_depthstencil_format(internalformat) &&
+           !_mesa_is_astc_format(internalformat) &&
+           !_mesa_is_stencil_format(internalformat));
+}
+
 /**
  * Implements glGenerateMipmap and glGenerateTextureMipmap.
  * Generates all the mipmap levels below the base level.
@@ -117,10 +127,8 @@ _mesa_generate_texture_mipmap(struct gl_context *ctx,
       return;
    }
 
-   if (_mesa_is_enum_format_integer(srcImage->InternalFormat) ||
-       _mesa_is_depthstencil_format(srcImage->InternalFormat) ||
-       _mesa_is_astc_format(srcImage->InternalFormat) ||
-       _mesa_is_stencil_format(srcImage->InternalFormat)) {
+   if (!_mesa_is_valid_generate_texture_mipmap_internalformat(ctx,
+                                                              srcImage->InternalFormat)) {
       _mesa_unlock_texture(ctx, texObj);
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glGenerate%sMipmap(invalid internal format)", suffix);
