@@ -246,7 +246,7 @@ instr_eligibility(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
 
 		for (unsigned i = 0; i < ir->baryfs_count; i++) {
 			struct ir3_instruction *baryf = ir->baryfs[i];
-			if (baryf->depth == DEPTH_UNUSED)
+			if (baryf->flags & IR3_INSTR_UNUSED)
 				continue;
 			if (!is_scheduled(baryf)) {
 				notes->blocked_kill = true;
