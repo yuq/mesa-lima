@@ -76,6 +76,8 @@ struct gl_debug_message
    enum mesa_debug_type type;
    GLuint id;
    enum mesa_debug_severity severity;
+   /* length as given by the user - if message was explicitly null terminated,
+    * length can be negative */
    GLsizei length;
    GLcharARB *message;
 };
@@ -211,14 +213,19 @@ debug_message_store(struct gl_debug_message *msg,
                     enum mesa_debug_severity severity,
                     GLsizei len, const char *buf)
 {
+   GLsizei length = len;
+
    assert(!msg->message && !msg->length);
 
-   msg->message = malloc(len+1);
-   if (msg->message) {
-      (void) strncpy(msg->message, buf, (size_t)len);
-      msg->message[len] = '\0';
+   if (length < 0)
+      length = strlen(buf);
 
-      msg->length = len+1;
+   msg->message = malloc(length+1);
+   if (msg->message) {
+      (void) strncpy(msg->message, buf, (size_t)length);
+      msg->message[length] = '\0';
+
+      msg->length = len;
       msg->source = source;
       msg->type = type;
       msg->id = id;
@@ -229,7 +236,7 @@ debug_message_store(struct gl_debug_message *msg,
 
       /* malloc failed! */
       msg->message = out_of_memory;
-      msg->length = strlen(out_of_memory)+1;
+      msg->length = -1;
       msg->source = MESA_DEBUG_SOURCE_OTHER;
       msg->type = MESA_DEBUG_TYPE_ERROR;
       msg->id = oom_msg_id;
@@ -607,7 +614,7 @@ debug_log_message(struct gl_debug_state *debug,
    GLint nextEmpty;
    struct gl_debug_message *emptySlot;
 
-   assert(len >= 0 && len < MAX_DEBUG_MESSAGE_LENGTH);
+   assert(len < MAX_DEBUG_MESSAGE_LENGTH);
 
    if (log->NumMessages == MAX_DEBUG_LOGGED_MESSAGES)
       return;
@@ -1004,8 +1011,6 @@ _mesa_DebugMessageInsert(GLenum source, GLenum type, GLuint id,
    if (!validate_params(ctx, INSERT, callerstr, source, type, severity))
       return; /* GL_INVALID_ENUM */
 
-   if (length < 0)
-      length = strlen(buf);
    if (!validate_length(ctx, callerstr, length, buf))
       return; /* GL_INVALID_VALUE */
 
@@ -1047,23 +1052,28 @@ _mesa_GetDebugMessageLog(GLuint count, GLsizei logSize, GLenum *sources,
 
    for (ret = 0; ret < count; ret++) {
       const struct gl_debug_message *msg = debug_fetch_message(debug);
+      GLsizei len;
 
       if (!msg)
          break;
 
-      if (logSize < msg->length && messageLog != NULL)
+      len = msg->length;
+      if (len < 0)
+         len = strlen(msg->message);
+
+      if (logSize < len+1 && messageLog != NULL)
          break;
 
       if (messageLog) {
-         assert(msg->message[msg->length-1] == '\0');
-         (void) strncpy(messageLog, msg->message, (size_t)msg->length);
+         assert(msg->message[len] == '\0');
+         (void) strncpy(messageLog, msg->message, (size_t)len+1);
 
-         messageLog += msg->length;
-         logSize -= msg->length;
+         messageLog += len+1;
+         logSize -= len+1;
       }
 
       if (lengths)
-         *lengths++ = msg->length;
+         *lengths++ = len+1;
       if (severities)
          *severities++ = debug_severity_enums[msg->severity];
       if (sources)
@@ -1173,8 +1183,6 @@ _mesa_PushDebugGroup(GLenum source, GLuint id, GLsizei length,
       return;
    }
 
-   if (length < 0)
-      length = strlen(message);
    if (!validate_length(ctx, callerstr, length, message))
       return; /* GL_INVALID_VALUE */
 
