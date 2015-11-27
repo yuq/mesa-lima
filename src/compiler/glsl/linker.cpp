@@ -988,6 +988,13 @@ cross_validate_globals(struct gl_shader_program *prog,
 		     return;
 	       }
 
+	       if (var->data.location_frac != existing->data.location_frac) {
+		     linker_error(prog, "explicit components for %s "
+				  "`%s' have differing values\n",
+				  mode_string(var), var->name);
+		     return;
+	       }
+
 	       existing->data.location = var->data.location;
 	       existing->data.explicit_location = true;
 	    } else {
