@@ -1599,20 +1599,19 @@ _mesa_log(const char *fmtString, ...)
  * \param ctx GL context.
  * \param type The namespace to which this message belongs.
  * \param id The message ID within the given namespace.
- * \param msg The message to output. Need not be null-terminated.
- * \param len The length of 'msg'. If negative, 'msg' must be null-terminated.
+ * \param msg The message to output. Must be null-terminated.
  */
 void
-_mesa_shader_debug( struct gl_context *ctx, GLenum type, GLuint *id,
-                    const char *msg, int len )
+_mesa_shader_debug(struct gl_context *ctx, GLenum type, GLuint *id,
+                   const char *msg)
 {
    enum mesa_debug_source source = MESA_DEBUG_SOURCE_SHADER_COMPILER;
    enum mesa_debug_severity severity = MESA_DEBUG_SEVERITY_HIGH;
+   int len;
 
    debug_get_id(id);
 
-   if (len < 0)
-      len = strlen(msg);
+   len = strlen(msg);
 
    /* Truncate the message if necessary. */
    if (len >= MAX_DEBUG_MESSAGE_LENGTH)
