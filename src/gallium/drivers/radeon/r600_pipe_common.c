@@ -136,8 +136,12 @@ static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
 void r600_preflush_suspend_features(struct r600_common_context *ctx)
 {
 	/* suspend queries */
-	if (!LIST_IS_EMPTY(&ctx->active_nontimer_queries))
+	if (ctx->num_cs_dw_nontimer_queries_suspend) {
+		/* Since non-timer queries are suspended during blits,
+		 * we have to guard against double-suspends. */
 		r600_suspend_nontimer_queries(ctx);
+		ctx->nontimer_queries_suspended_by_flush = true;
+	}
 	if (!LIST_IS_EMPTY(&ctx->active_timer_queries))
 		r600_suspend_timer_queries(ctx);
 
@@ -158,8 +162,10 @@ void r600_postflush_resume_features(struct r600_common_context *ctx)
 	/* resume queries */
 	if (!LIST_IS_EMPTY(&ctx->active_timer_queries))
 		r600_resume_timer_queries(ctx);
-	if (!LIST_IS_EMPTY(&ctx->active_nontimer_queries))
+	if (ctx->nontimer_queries_suspended_by_flush) {
+		ctx->nontimer_queries_suspended_by_flush = false;
 		r600_resume_nontimer_queries(ctx);
+	}
 }
 
 static void r600_flush_from_st(struct pipe_context *ctx,

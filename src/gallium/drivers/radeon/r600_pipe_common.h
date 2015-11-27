@@ -396,6 +396,7 @@ struct r600_common_context {
 	struct list_head		active_nontimer_queries;
 	struct list_head		active_timer_queries;
 	unsigned			num_cs_dw_nontimer_queries_suspend;
+	bool				nontimer_queries_suspended_by_flush;
 	unsigned			num_cs_dw_timer_queries_suspend;
 	/* Additional hardware info. */
 	unsigned			backend_mask;
