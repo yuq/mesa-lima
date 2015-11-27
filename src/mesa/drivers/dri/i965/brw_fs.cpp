@@ -2231,9 +2231,16 @@ fs_visitor::lower_constant_loads()
          if (pull_index == -1)
 	    continue;
 
+         const unsigned index = stage_prog_data->binding_table.pull_constants_start;
+         fs_reg dst;
+
+         if (type_sz(inst->src[i].type) <= 4)
+            dst = vgrf(glsl_type::float_type);
+         else
+            dst = vgrf(glsl_type::double_type);
+
          assert(inst->src[i].stride == 0);
 
-         fs_reg dst = vgrf(glsl_type::float_type);
          const fs_builder ubld = ibld.exec_all().group(8, 0);
          struct brw_reg offset = brw_imm_ud((unsigned)(pull_index * 4) & ~15);
          ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
