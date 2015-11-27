@@ -2571,6 +2571,12 @@ struct gl_shader_variable
    int location;
 
    /**
+    * Specifies the first component the variable is stored in as per
+    * ARB_enhanced_layouts.
+    */
+   unsigned component:2;
+
+   /**
     * Output index for dual source blending.
     *
     * \note

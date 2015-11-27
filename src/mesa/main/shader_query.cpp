@@ -1216,6 +1216,15 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       default:
          goto invalid_operation;
       }
+   case GL_LOCATION_COMPONENT:
+      switch (res->Type) {
+      case GL_PROGRAM_INPUT:
+      case GL_PROGRAM_OUTPUT:
+         *val = RESOURCE_VAR(res)->component;
+         return 1;
+      default:
+         goto invalid_operation;
+      }
    case GL_LOCATION_INDEX:
       if (res->Type != GL_PROGRAM_OUTPUT)
          goto invalid_operation;

@@ -3570,6 +3570,7 @@ create_shader_variable(struct gl_shader_program *shProg,
    }
 
    out->type = type;
+   out->component = in->data.location_frac;
    out->index = in->data.index;
    out->patch = in->data.patch;
    out->mode = in->data.mode;
