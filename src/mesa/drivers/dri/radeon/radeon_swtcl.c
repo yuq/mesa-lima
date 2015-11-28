@@ -417,9 +417,9 @@ static GLboolean radeon_run_render( struct gl_context *ctx,
    tnl_render_func *tab = TAG(render_tab_verts);
    GLuint i;
 
-   if (rmesa->radeon.swtcl.RenderIndex != 0 ||   
+   if (rmesa->radeon.swtcl.RenderIndex != 0 ||
        !radeon_dma_validate_render( ctx, VB ))
-      return GL_TRUE;		
+      return GL_TRUE;
 
    radeon_prepare_render(&rmesa->radeon);
    if (rmesa->radeon.NewGLState)
