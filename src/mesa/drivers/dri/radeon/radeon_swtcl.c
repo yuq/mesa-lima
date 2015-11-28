@@ -414,7 +414,7 @@ static GLboolean radeon_run_render( struct gl_context *ctx,
    r100ContextPtr rmesa = R100_CONTEXT(ctx);
    TNLcontext *tnl = TNL_CONTEXT(ctx);
    struct vertex_buffer *VB = &tnl->vb;
-   tnl_render_func *tab = TAG(render_tab_verts);
+   const tnl_render_func *tab = TAG(render_tab_verts);
    GLuint i;
 
    if (rmesa->radeon.swtcl.RenderIndex != 0 ||
