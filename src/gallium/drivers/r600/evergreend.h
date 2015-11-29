@@ -492,8 +492,8 @@
 #define   C_028B6C_BUFFER_ACCESS_MODE                                 0xFFFFFDFF
 #define     V_028B6C_PATCH_MAJOR                                    0x00
 #define     V_028B6C_TF_MAJOR                                       0x01
-#define   S_028B6C_NUM_DS_WAVES_PER_SIMD                              (((x) & 0xf) << 10)
-#define   G_028B6C_NUM_DS_WAVES_PER_SIMD                              (((x) >> 10) & 0xF)
+#define   S_028B6C_NUM_DS_WAVES_PER_SIMD(x)                           (((x) & 0xf) << 10)
+#define   G_028B6C_NUM_DS_WAVES_PER_SIMD(x)                           (((x) >> 10) & 0xF)
 #define   C_028B6C_NUM_DS_WAVES_PER_SIMD                              0xFFFFC3FF
 
 #define R_028B74_VGT_DISPATCH_INITIATOR              0x028B74
@@ -2159,7 +2159,7 @@
 #define   G_028B64_HS_TOTAL_OUTPUT(x)                                 (((x) >> 0) & 0x1FFF)
 #define   C_028B64_HS_TOTAL_OUTPUT                                    0xFFFFE000
 #define   S_028B64_LS_HS_TOTAL_OUTPUT(x)                              (((x) & 0x1FFF) << 13)
-#define   C_028B64_LS_HS_TOTAL_OUTPUT(x)                              (((x) >> 13) & 0x1FFF)
+#define   G_028B64_LS_HS_TOTAL_OUTPUT(x)                              (((x) >> 13) & 0x1FFF)
 #define   C_028B64_LS_HS_TOTAL_OUTPUT                                 0xFC001FFF
 #define R_028B68_VGT_HS_PATCH_CONST                  0x00028B68
 #define   S_028B68_SIZE(x)                                            (((x) & 0x1FFF) << 0)
