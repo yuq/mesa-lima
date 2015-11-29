@@ -281,6 +281,7 @@ handleIQMatrixBuffer(vlVaContext *context, vlVaBuffer *buf)
 
    case PIPE_VIDEO_FORMAT_MPEG4:
       vlVaHandleIQMatrixBufferMPEG4(context, buf);
+      break;
 
    case PIPE_VIDEO_FORMAT_HEVC:
       assert(buf->size >= sizeof(VAIQMatrixBufferH264) && buf->num_elements == 1);
