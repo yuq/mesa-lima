@@ -2084,7 +2084,8 @@ RegAlloc::InsertConstraintsPass::texConstraintNVC0(TexInstruction *tex)
 {
    int n, s;
 
-   textureMask(tex);
+   if (isTextureOp(tex->op))
+      textureMask(tex);
 
    if (tex->op == OP_TXQ) {
       s = tex->srcCount(0xff);
