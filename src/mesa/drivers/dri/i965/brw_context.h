@@ -414,7 +414,7 @@ struct brw_ff_gs_prog_data {
 #define BRW_MAX_DRAW_BUFFERS 8
 
 /** Max number of UBOs in a shader */
-#define BRW_MAX_UBO 12
+#define BRW_MAX_UBO 14
 
 /** Max number of SSBOs in a shader */
 #define BRW_MAX_SSBO 12
