@@ -38,7 +38,7 @@
 
 #include "tgsi/tgsi_scan.h"
 
-#define R600_NUM_ATOMS 45
+#define R600_NUM_ATOMS 51
 
 #define R600_MAX_VIEWPORTS 16
 

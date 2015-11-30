@@ -1978,13 +1978,22 @@ static void evergreen_emit_constant_buffers(struct r600_context *rctx,
 	state->dirty_mask = 0;
 }
 
+/* VS constants can be in VS/ES (same space) or LS if tess is enabled */
 static void evergreen_emit_vs_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX],
-					EG_FETCH_CONSTANTS_OFFSET_VS,
-					R_028180_ALU_CONST_BUFFER_SIZE_VS_0,
-					R_028980_ALU_CONST_CACHE_VS_0,
-					0 /* PKT3 flags */);
+	if (rctx->vs_shader->current->shader.vs_as_ls) {
+		evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX],
+						EG_FETCH_CONSTANTS_OFFSET_LS,
+						R_028FC0_ALU_CONST_BUFFER_SIZE_LS_0,
+						R_028F40_ALU_CONST_CACHE_LS_0,
+						0 /* PKT3 flags */);
+	} else {
+		evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX],
+						EG_FETCH_CONSTANTS_OFFSET_VS,
+						R_028180_ALU_CONST_BUFFER_SIZE_VS_0,
+						R_028980_ALU_CONST_CACHE_VS_0,
+						0 /* PKT3 flags */);
+	}
 }
 
 static void evergreen_emit_gs_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
@@ -2012,6 +2021,29 @@ static void evergreen_emit_cs_constant_buffers(struct r600_context *rctx, struct
 					R_028FC0_ALU_CONST_BUFFER_SIZE_LS_0,
 					R_028F40_ALU_CONST_CACHE_LS_0,
 					RADEON_CP_PACKET3_COMPUTE_MODE);
+}
+
+/* tes constants can be emitted to VS or ES - which are common */
+static void evergreen_emit_tes_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
+{
+	if (!rctx->tes_shader)
+		return;
+	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_TESS_EVAL],
+					EG_FETCH_CONSTANTS_OFFSET_VS,
+					R_028180_ALU_CONST_BUFFER_SIZE_VS_0,
+					R_028980_ALU_CONST_CACHE_VS_0,
+					0);
+}
+
+static void evergreen_emit_tcs_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
+{
+	if (!rctx->tes_shader)
+		return;
+	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_TESS_CTRL],
+					EG_FETCH_CONSTANTS_OFFSET_HS,
+					R_028F80_ALU_CONST_BUFFER_SIZE_HS_0,
+					R_028F00_ALU_CONST_CACHE_HS_0,
+					0);
 }
 
 static void evergreen_emit_sampler_views(struct r600_context *rctx,
@@ -2049,14 +2081,31 @@ static void evergreen_emit_sampler_views(struct r600_context *rctx,
 
 static void evergreen_emit_vs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views,
-	                             EG_FETCH_CONSTANTS_OFFSET_VS + R600_MAX_CONST_BUFFERS, 0);
+	if (rctx->vs_shader->current->shader.vs_as_ls) {
+		evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views,
+					     EG_FETCH_CONSTANTS_OFFSET_LS + R600_MAX_CONST_BUFFERS, 0);
+	} else {
+		evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views,
+					     EG_FETCH_CONSTANTS_OFFSET_VS + R600_MAX_CONST_BUFFERS, 0);
+	}
 }
 
 static void evergreen_emit_gs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
 	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].views,
 	                             EG_FETCH_CONSTANTS_OFFSET_GS + R600_MAX_CONST_BUFFERS, 0);
+}
+
+static void evergreen_emit_tcs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
+{
+	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_TESS_CTRL].views,
+	                             EG_FETCH_CONSTANTS_OFFSET_HS + R600_MAX_CONST_BUFFERS, 0);
+}
+
+static void evergreen_emit_tes_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
+{
+	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_TESS_EVAL].views,
+	                             EG_FETCH_CONSTANTS_OFFSET_VS + R600_MAX_CONST_BUFFERS, 0);
 }
 
 static void evergreen_emit_ps_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
@@ -2102,14 +2151,31 @@ static void evergreen_emit_sampler_states(struct r600_context *rctx,
 
 static void evergreen_emit_vs_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_VERTEX], 18,
-	                              R_00A414_TD_VS_SAMPLER0_BORDER_INDEX, 0);
+	if (rctx->vs_shader->current->shader.vs_as_ls) {
+		evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_VERTEX], 72,
+					      R_00A450_TD_LS_SAMPLER0_BORDER_COLOR_INDEX, 0);
+	} else {
+		evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_VERTEX], 18,
+					      R_00A414_TD_VS_SAMPLER0_BORDER_INDEX, 0);
+	}
 }
 
 static void evergreen_emit_gs_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
 {
 	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY], 36,
 	                              R_00A428_TD_GS_SAMPLER0_BORDER_INDEX, 0);
+}
+
+static void evergreen_emit_tcs_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
+{
+	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_TESS_CTRL], 54,
+	                              R_00A43C_TD_HS_SAMPLER0_BORDER_COLOR_INDEX, 0);
+}
+
+static void evergreen_emit_tes_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
+{
+	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_TESS_EVAL], 18,
+				      R_00A414_TD_VS_SAMPLER0_BORDER_INDEX, 0);
 }
 
 static void evergreen_emit_ps_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
@@ -3537,12 +3603,16 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX].atom, id++, evergreen_emit_vs_constant_buffers, 0);
 	r600_init_atom(rctx, &rctx->constbuf_state[PIPE_SHADER_GEOMETRY].atom, id++, evergreen_emit_gs_constant_buffers, 0);
 	r600_init_atom(rctx, &rctx->constbuf_state[PIPE_SHADER_FRAGMENT].atom, id++, evergreen_emit_ps_constant_buffers, 0);
+	r600_init_atom(rctx, &rctx->constbuf_state[PIPE_SHADER_TESS_CTRL].atom, id++, evergreen_emit_tcs_constant_buffers, 0);
+	r600_init_atom(rctx, &rctx->constbuf_state[PIPE_SHADER_TESS_EVAL].atom, id++, evergreen_emit_tes_constant_buffers, 0);
 	r600_init_atom(rctx, &rctx->constbuf_state[PIPE_SHADER_COMPUTE].atom, id++, evergreen_emit_cs_constant_buffers, 0);
 	/* shader program */
 	r600_init_atom(rctx, &rctx->cs_shader_state.atom, id++, evergreen_emit_cs_shader, 0);
 	/* sampler */
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].states.atom, id++, evergreen_emit_vs_sampler_states, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].states.atom, id++, evergreen_emit_gs_sampler_states, 0);
+	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_TESS_CTRL].states.atom, id++, evergreen_emit_tcs_sampler_states, 0);
+	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_TESS_EVAL].states.atom, id++, evergreen_emit_tes_sampler_states, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT].states.atom, id++, evergreen_emit_ps_sampler_states, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_COMPUTE].states.atom, id++, evergreen_emit_cs_sampler_states, 0);
 	/* resources */
@@ -3550,6 +3620,8 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->cs_vertex_buffer_state.atom, id++, evergreen_cs_emit_vertex_buffers, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views.atom, id++, evergreen_emit_vs_sampler_views, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].views.atom, id++, evergreen_emit_gs_sampler_views, 0);
+	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_TESS_CTRL].views.atom, id++, evergreen_emit_tcs_sampler_views, 0);
+	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_TESS_EVAL].views.atom, id++, evergreen_emit_tes_sampler_views, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT].views.atom, id++, evergreen_emit_ps_sampler_views, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_COMPUTE].views.atom, id++, evergreen_emit_cs_sampler_views, 0);
 
