@@ -409,7 +409,7 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                                   ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)) {
 
       bool enable_bias = cmd_buffer->state.dynamic.depth_bias.bias != 0.0f ||
-         cmd_buffer->state.dynamic.depth_bias.slope_scaled != 0.0f;
+         cmd_buffer->state.dynamic.depth_bias.slope != 0.0f;
 
       uint32_t sf_dw[GEN7_3DSTATE_SF_length];
       struct GEN7_3DSTATE_SF sf = {
@@ -419,7 +419,7 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
          .GlobalDepthOffsetEnableWireframe = enable_bias,
          .GlobalDepthOffsetEnablePoint = enable_bias,
          .GlobalDepthOffsetConstant = cmd_buffer->state.dynamic.depth_bias.bias,
-         .GlobalDepthOffsetScale = cmd_buffer->state.dynamic.depth_bias.slope_scaled,
+         .GlobalDepthOffsetScale = cmd_buffer->state.dynamic.depth_bias.slope,
          .GlobalDepthOffsetClamp = cmd_buffer->state.dynamic.depth_bias.clamp
       };
       GEN7_3DSTATE_SF_pack(NULL, sf_dw, &sf);

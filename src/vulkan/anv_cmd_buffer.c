@@ -50,7 +50,7 @@ const struct anv_dynamic_state default_dynamic_state = {
    .depth_bias = {
       .bias = 0.0f,
       .clamp = 0.0f,
-      .slope_scaled = 0.0f,
+      .slope = 0.0f,
    },
    .blend_constants = { 0.0f, 0.0f, 0.0f, 0.0f },
    .depth_bounds = {
@@ -380,27 +380,27 @@ void anv_CmdSetLineWidth(
 
 void anv_CmdSetDepthBias(
     VkCommandBuffer                             commandBuffer,
-    float                                       depthBias,
+    float                                       depthBiasConstantFactor,
     float                                       depthBiasClamp,
-    float                                       slopeScaledDepthBias)
+    float                                       depthBiasSlopeFactor)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
-   cmd_buffer->state.dynamic.depth_bias.bias = depthBias;
+   cmd_buffer->state.dynamic.depth_bias.bias = depthBiasConstantFactor;
    cmd_buffer->state.dynamic.depth_bias.clamp = depthBiasClamp;
-   cmd_buffer->state.dynamic.depth_bias.slope_scaled = slopeScaledDepthBias;
+   cmd_buffer->state.dynamic.depth_bias.slope = depthBiasSlopeFactor;
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS;
 }
 
 void anv_CmdSetBlendConstants(
     VkCommandBuffer                             commandBuffer,
-    const float                                 blendConst[4])
+    const float                                 blendConstants[4])
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    memcpy(cmd_buffer->state.dynamic.blend_constants,
-          blendConst, sizeof(float) * 4);
+          blendConstants, sizeof(float) * 4);
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS;
 }
@@ -421,14 +421,14 @@ void anv_CmdSetDepthBounds(
 void anv_CmdSetStencilCompareMask(
     VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
-    uint32_t                                    stencilCompareMask)
+    uint32_t                                    compareMask)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
-      cmd_buffer->state.dynamic.stencil_compare_mask.front = stencilCompareMask;
+      cmd_buffer->state.dynamic.stencil_compare_mask.front = compareMask;
    if (faceMask & VK_STENCIL_FACE_BACK_BIT)
-      cmd_buffer->state.dynamic.stencil_compare_mask.back = stencilCompareMask;
+      cmd_buffer->state.dynamic.stencil_compare_mask.back = compareMask;
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK;
 }
@@ -436,14 +436,14 @@ void anv_CmdSetStencilCompareMask(
 void anv_CmdSetStencilWriteMask(
     VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
-    uint32_t                                    stencilWriteMask)
+    uint32_t                                    writeMask)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
-      cmd_buffer->state.dynamic.stencil_write_mask.front = stencilWriteMask;
+      cmd_buffer->state.dynamic.stencil_write_mask.front = writeMask;
    if (faceMask & VK_STENCIL_FACE_BACK_BIT)
-      cmd_buffer->state.dynamic.stencil_write_mask.back = stencilWriteMask;
+      cmd_buffer->state.dynamic.stencil_write_mask.back = writeMask;
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK;
 }
@@ -451,14 +451,14 @@ void anv_CmdSetStencilWriteMask(
 void anv_CmdSetStencilReference(
     VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
-    uint32_t                                    stencilReference)
+    uint32_t                                    reference)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
-      cmd_buffer->state.dynamic.stencil_reference.front = stencilReference;
+      cmd_buffer->state.dynamic.stencil_reference.front = reference;
    if (faceMask & VK_STENCIL_FACE_BACK_BIT)
-      cmd_buffer->state.dynamic.stencil_reference.back = stencilReference;
+      cmd_buffer->state.dynamic.stencil_reference.back = reference;
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE;
 }

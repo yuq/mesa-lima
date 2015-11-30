@@ -459,10 +459,10 @@ create_depthstencil_pipeline(struct anv_device *device,
       .depthBoundsTestEnable = false,
       .stencilTestEnable = (aspects & VK_IMAGE_ASPECT_STENCIL_BIT),
       .front = {
-         .stencilPassOp = VK_STENCIL_OP_REPLACE,
-         .stencilCompareOp = VK_COMPARE_OP_ALWAYS,
-         .stencilWriteMask = UINT32_MAX,
-         .stencilReference = 0, /* dynamic */
+         .passOp = VK_STENCIL_OP_REPLACE,
+         .compareOp = VK_COMPARE_OP_ALWAYS,
+         .writeMask = UINT32_MAX,
+         .reference = 0, /* dynamic */
       },
       .back = { 0 /* dont care */ },
    };

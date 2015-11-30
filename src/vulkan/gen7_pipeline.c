@@ -231,15 +231,15 @@ gen7_emit_ds_state(struct anv_pipeline *pipeline,
       .DoubleSidedStencilEnable = true,
 
       .StencilTestEnable = info->stencilTestEnable,
-      .StencilFailOp = vk_to_gen_stencil_op[info->front.stencilFailOp],
-      .StencilPassDepthPassOp = vk_to_gen_stencil_op[info->front.stencilPassOp],
-      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.stencilDepthFailOp],
-      .StencilTestFunction = vk_to_gen_compare_op[info->front.stencilCompareOp],
+      .StencilFailOp = vk_to_gen_stencil_op[info->front.failOp],
+      .StencilPassDepthPassOp = vk_to_gen_stencil_op[info->front.passOp],
+      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.depthFailOp],
+      .StencilTestFunction = vk_to_gen_compare_op[info->front.compareOp],
 
-      .BackfaceStencilFailOp = vk_to_gen_stencil_op[info->back.stencilFailOp],
-      .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info->back.stencilPassOp],
-      .BackfaceStencilPassDepthFailOp = vk_to_gen_stencil_op[info->back.stencilDepthFailOp],
-      .BackFaceStencilTestFunction = vk_to_gen_compare_op[info->back.stencilCompareOp],
+      .BackfaceStencilFailOp = vk_to_gen_stencil_op[info->back.failOp],
+      .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info->back.passOp],
+      .BackfaceStencilPassDepthFailOp = vk_to_gen_stencil_op[info->back.depthFailOp],
+      .BackFaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
    };
 
    GEN7_DEPTH_STENCIL_STATE_pack(NULL, &pipeline->gen7.depth_stencil_state, &state);

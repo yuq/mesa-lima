@@ -849,16 +849,17 @@ anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
 
    if (states & (1 << VK_DYNAMIC_STATE_DEPTH_BIAS)) {
       assert(pCreateInfo->pRasterState);
-      dynamic->depth_bias.bias = pCreateInfo->pRasterState->depthBias;
+      dynamic->depth_bias.bias =
+         pCreateInfo->pRasterState->depthBiasConstantFactor;
       dynamic->depth_bias.clamp = pCreateInfo->pRasterState->depthBiasClamp;
-      dynamic->depth_bias.slope_scaled =
-         pCreateInfo->pRasterState->slopeScaledDepthBias;
+      dynamic->depth_bias.slope =
+         pCreateInfo->pRasterState->depthBiasSlopeFactor;
    }
 
    if (states & (1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS)) {
       assert(pCreateInfo->pColorBlendState);
       typed_memcpy(dynamic->blend_constants,
-                   pCreateInfo->pColorBlendState->blendConst, 4);
+                   pCreateInfo->pColorBlendState->blendConstants, 4);
    }
 
    /* If there is no depthstencil attachment, then don't read
@@ -884,25 +885,25 @@ anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
       if (states & (1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK)) {
          assert(pCreateInfo->pDepthStencilState);
          dynamic->stencil_compare_mask.front =
-            pCreateInfo->pDepthStencilState->front.stencilCompareMask;
+            pCreateInfo->pDepthStencilState->front.compareMask;
          dynamic->stencil_compare_mask.back =
-            pCreateInfo->pDepthStencilState->back.stencilCompareMask;
+            pCreateInfo->pDepthStencilState->back.compareMask;
       }
 
       if (states & (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK)) {
          assert(pCreateInfo->pDepthStencilState);
          dynamic->stencil_write_mask.front =
-            pCreateInfo->pDepthStencilState->front.stencilWriteMask;
+            pCreateInfo->pDepthStencilState->front.writeMask;
          dynamic->stencil_write_mask.back =
-            pCreateInfo->pDepthStencilState->back.stencilWriteMask;
+            pCreateInfo->pDepthStencilState->back.writeMask;
       }
 
       if (states & (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE)) {
          assert(pCreateInfo->pDepthStencilState);
          dynamic->stencil_reference.front =
-            pCreateInfo->pDepthStencilState->front.stencilReference;
+            pCreateInfo->pDepthStencilState->front.reference;
          dynamic->stencil_reference.back =
-            pCreateInfo->pDepthStencilState->back.stencilReference;
+            pCreateInfo->pDepthStencilState->back.reference;
       }
    }
 

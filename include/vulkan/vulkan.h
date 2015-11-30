@@ -1640,9 +1640,9 @@ typedef struct {
     VkCullModeFlags                             cullMode;
     VkFrontFace                                 frontFace;
     VkBool32                                    depthBiasEnable;
-    float                                       depthBias;
+    float                                       depthBiasConstantFactor;
     float                                       depthBiasClamp;
-    float                                       slopeScaledDepthBias;
+    float                                       depthBiasSlopeFactor;
     float                                       lineWidth;
 } VkPipelineRasterStateCreateInfo;
 
@@ -1655,14 +1655,14 @@ typedef struct {
     const VkSampleMask*                         pSampleMask;
 } VkPipelineMultisampleStateCreateInfo;
 
-typedef struct {
-    VkStencilOp                                 stencilFailOp;
-    VkStencilOp                                 stencilPassOp;
-    VkStencilOp                                 stencilDepthFailOp;
-    VkCompareOp                                 stencilCompareOp;
-    uint32_t                                    stencilCompareMask;
-    uint32_t                                    stencilWriteMask;
-    uint32_t                                    stencilReference;
+typedef struct VkStencilOpState {
+    VkStencilOp                                 failOp;
+    VkStencilOp                                 passOp;
+    VkStencilOp                                 depthFailOp;
+    VkCompareOp                                 compareOp;
+    uint32_t                                    compareMask;
+    uint32_t                                    writeMask;
+    uint32_t                                    reference;
 } VkStencilOpState;
 
 typedef struct {
@@ -1699,7 +1699,7 @@ typedef struct {
     VkLogicOp                                   logicOp;
     uint32_t                                    attachmentCount;
     const VkPipelineColorBlendAttachmentState*  pAttachments;
-    float                                       blendConst[4];
+    float                                       blendConstants[4];
 } VkPipelineColorBlendStateCreateInfo;
 
 typedef struct {
@@ -2168,12 +2168,12 @@ typedef void (VKAPI_PTR *PFN_vkCmdBindPipeline)(VkCommandBuffer commandBuffer, V
 typedef void (VKAPI_PTR *PFN_vkCmdSetViewport)(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports);
 typedef void (VKAPI_PTR *PFN_vkCmdSetScissor)(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors);
 typedef void (VKAPI_PTR *PFN_vkCmdSetLineWidth)(VkCommandBuffer commandBuffer, float lineWidth);
-typedef void (VKAPI_PTR *PFN_vkCmdSetDepthBias)(VkCommandBuffer commandBuffer, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
-typedef void (VKAPI_PTR *PFN_vkCmdSetBlendConstants)(VkCommandBuffer commandBuffer, const float blendConst[4]);
+typedef void (VKAPI_PTR *PFN_vkCmdSetDepthBias)(VkCommandBuffer commandBuffer, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor);
+typedef void (VKAPI_PTR *PFN_vkCmdSetBlendConstants)(VkCommandBuffer commandBuffer, const float blendConstants[4]);
 typedef void (VKAPI_PTR *PFN_vkCmdSetDepthBounds)(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds);
-typedef void (VKAPI_PTR *PFN_vkCmdSetStencilCompareMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
-typedef void (VKAPI_PTR *PFN_vkCmdSetStencilWriteMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask);
-typedef void (VKAPI_PTR *PFN_vkCmdSetStencilReference)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference);
+typedef void (VKAPI_PTR *PFN_vkCmdSetStencilCompareMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t compareMask);
+typedef void (VKAPI_PTR *PFN_vkCmdSetStencilWriteMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t writeMask);
+typedef void (VKAPI_PTR *PFN_vkCmdSetStencilReference)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t reference);
 typedef void (VKAPI_PTR *PFN_vkCmdBindDescriptorSets)(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets);
 typedef void (VKAPI_PTR *PFN_vkCmdBindIndexBuffer)(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
 typedef void (VKAPI_PTR *PFN_vkCmdBindVertexBuffers)(VkCommandBuffer commandBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets);
@@ -2722,13 +2722,13 @@ VKAPI_ATTR void VKAPI_CALL vkCmdSetLineWidth(
 
 VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBias(
     VkCommandBuffer                             commandBuffer,
-    float                                       depthBias,
+    float                                       depthBiasConstantFactor,
     float                                       depthBiasClamp,
-    float                                       slopeScaledDepthBias);
+    float                                       depthBiasSlopeFactor);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdSetBlendConstants(
     VkCommandBuffer                             commandBuffer,
-    const float                                 blendConst[4]);
+    const float                                 blendConstants[4]);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBounds(
     VkCommandBuffer                             commandBuffer,
@@ -2738,17 +2738,17 @@ VKAPI_ATTR void VKAPI_CALL vkCmdSetDepthBounds(
 VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilCompareMask(
     VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
-    uint32_t                                    stencilCompareMask);
+    uint32_t                                    compareMask);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilWriteMask(
     VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
-    uint32_t                                    stencilWriteMask);
+    uint32_t                                    writeMask);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdSetStencilReference(
     VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
-    uint32_t                                    stencilReference);
+    uint32_t                                    reference);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(
     VkCommandBuffer                             commandBuffer,

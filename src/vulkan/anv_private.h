@@ -917,7 +917,7 @@ struct anv_dynamic_state {
    struct {
       float                                     bias;
       float                                     clamp;
-      float                                     slope_scaled;
+      float                                     slope;
    } depth_bias;
 
    float                                        blend_constants[4];
