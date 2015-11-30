@@ -1430,6 +1430,8 @@ _mesa_base_format_has_channel(GLenum base_format, GLenum pname)
    case GL_TEXTURE_RED_TYPE:
    case GL_RENDERBUFFER_RED_SIZE_EXT:
    case GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE:
+   case GL_INTERNALFORMAT_RED_SIZE:
+   case GL_INTERNALFORMAT_RED_TYPE:
       if (base_format == GL_RED ||
 	  base_format == GL_RG ||
 	  base_format == GL_RGB ||
@@ -1441,6 +1443,8 @@ _mesa_base_format_has_channel(GLenum base_format, GLenum pname)
    case GL_TEXTURE_GREEN_TYPE:
    case GL_RENDERBUFFER_GREEN_SIZE_EXT:
    case GL_FRAMEBUFFER_ATTACHMENT_GREEN_SIZE:
+   case GL_INTERNALFORMAT_GREEN_SIZE:
+   case GL_INTERNALFORMAT_GREEN_TYPE:
       if (base_format == GL_RG ||
 	  base_format == GL_RGB ||
 	  base_format == GL_RGBA) {
@@ -1451,6 +1455,8 @@ _mesa_base_format_has_channel(GLenum base_format, GLenum pname)
    case GL_TEXTURE_BLUE_TYPE:
    case GL_RENDERBUFFER_BLUE_SIZE_EXT:
    case GL_FRAMEBUFFER_ATTACHMENT_BLUE_SIZE:
+   case GL_INTERNALFORMAT_BLUE_SIZE:
+   case GL_INTERNALFORMAT_BLUE_TYPE:
       if (base_format == GL_RGB ||
 	  base_format == GL_RGBA) {
 	 return GL_TRUE;
@@ -1460,6 +1466,8 @@ _mesa_base_format_has_channel(GLenum base_format, GLenum pname)
    case GL_TEXTURE_ALPHA_TYPE:
    case GL_RENDERBUFFER_ALPHA_SIZE_EXT:
    case GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE:
+   case GL_INTERNALFORMAT_ALPHA_SIZE:
+   case GL_INTERNALFORMAT_ALPHA_TYPE:
       if (base_format == GL_RGBA ||
 	  base_format == GL_ALPHA ||
 	  base_format == GL_LUMINANCE_ALPHA) {
@@ -1483,6 +1491,8 @@ _mesa_base_format_has_channel(GLenum base_format, GLenum pname)
    case GL_TEXTURE_DEPTH_TYPE:
    case GL_RENDERBUFFER_DEPTH_SIZE_EXT:
    case GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE:
+   case GL_INTERNALFORMAT_DEPTH_SIZE:
+   case GL_INTERNALFORMAT_DEPTH_TYPE:
       if (base_format == GL_DEPTH_STENCIL ||
 	  base_format == GL_DEPTH_COMPONENT) {
 	 return GL_TRUE;
@@ -1490,6 +1500,8 @@ _mesa_base_format_has_channel(GLenum base_format, GLenum pname)
       return GL_FALSE;
    case GL_RENDERBUFFER_STENCIL_SIZE_EXT:
    case GL_FRAMEBUFFER_ATTACHMENT_STENCIL_SIZE:
+   case GL_INTERNALFORMAT_STENCIL_SIZE:
+   case GL_INTERNALFORMAT_STENCIL_TYPE:
       if (base_format == GL_DEPTH_STENCIL ||
 	  base_format == GL_STENCIL_INDEX) {
 	 return GL_TRUE;
