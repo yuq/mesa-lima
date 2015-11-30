@@ -536,10 +536,12 @@ struct bc_fetch {
 
 	unsigned src_gpr:7;
 	unsigned src_rel:1;
+	unsigned src_rel_global:1; /* for GDS ops */
 	unsigned src_sel[4];
 
 	unsigned dst_gpr:7;
 	unsigned dst_rel:1;
+	unsigned dst_rel_global:1; /* for GDS ops */
 	unsigned dst_sel[4];
 
 	unsigned alt_const:1;
@@ -573,6 +575,7 @@ struct bc_fetch {
 	unsigned endian_swap:2;
 	unsigned mega_fetch:1;
 
+	unsigned src2_gpr:7; /* for GDS */
 	void set_op(unsigned op) { this->op = op; op_ptr = r600_isa_fetch(op); }
 };
 
@@ -739,6 +742,7 @@ private:
 	int decode_cf_mem(unsigned &i, bc_cf &bc);
 
 	int decode_fetch_vtx(unsigned &i, bc_fetch &bc);
+	int decode_fetch_gds(unsigned &i, bc_fetch &bc);
 };
 
 // bytecode format definition

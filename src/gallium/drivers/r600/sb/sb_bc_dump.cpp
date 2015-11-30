@@ -425,23 +425,26 @@ bc_dump::bc_dump(shader& s, bytecode* bc)  :
 void bc_dump::dump(fetch_node& n) {
 	sb_ostringstream s;
 	static const char * fetch_type[] = {"VERTEX", "INSTANCE", ""};
+	unsigned gds = n.bc.op_ptr->flags & FF_GDS;
 
 	s << n.bc.op_ptr->name;
 	fill_to(s, 20);
 
-	s << "R";
-	print_sel(s, n.bc.dst_gpr, n.bc.dst_rel, INDEX_LOOP, 0);
-	s << ".";
-	for (int k = 0; k < 4; ++k)
-		s << chans[n.bc.dst_sel[k]];
-	s << ", ";
+	if (!gds) {
+		s << "R";
+		print_sel(s, n.bc.dst_gpr, n.bc.dst_rel, INDEX_LOOP, 0);
+		s << ".";
+		for (int k = 0; k < 4; ++k)
+			s << chans[n.bc.dst_sel[k]];
+		s << ", ";
+	}
 
 	s << "R";
 	print_sel(s, n.bc.src_gpr, n.bc.src_rel, INDEX_LOOP, 0);
 	s << ".";
 
 	unsigned vtx = n.bc.op_ptr->flags & FF_VTX;
-	unsigned num_src_comp = vtx ? ctx.is_cayman() ? 2 : 1 : 4;
+	unsigned num_src_comp = gds ? 3 : vtx ? ctx.is_cayman() ? 2 : 1 : 4;
 
 	for (unsigned k = 0; k < num_src_comp; ++k)
 		s << chans[n.bc.src_sel[k]];
@@ -450,9 +453,12 @@ void bc_dump::dump(fetch_node& n) {
 		s << " + " << n.bc.offset[0] << "b ";
 	}
 
-	s << ",   RID:" << n.bc.resource_id;
+	if (!gds)
+		s << ",   RID:" << n.bc.resource_id;
 
-	if (vtx) {
+	if (gds) {
+
+	} else if (vtx) {
 		s << "  " << fetch_type[n.bc.fetch_type];
 		if (!ctx.is_cayman() && n.bc.mega_fetch_count)
 			s << " MFC:" << n.bc.mega_fetch_count;

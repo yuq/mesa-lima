@@ -373,7 +373,20 @@ int bc_decoder::decode_fetch(unsigned & i, bc_fetch& bc) {
 
 	unsigned fetch_opcode = dw0 & 0x1F;
 
-	bc.set_op(r600_isa_fetch_by_opcode(ctx.isa, fetch_opcode));
+	if (fetch_opcode == 2) { // MEM_INST_MEM
+		unsigned mem_op = (dw0 >> 8) & 0x7;
+		unsigned gds_op;
+		if (mem_op == 4) {
+			gds_op = (dw1 >> 9) & 0x1f;
+			fetch_opcode = FETCH_OP_GDS_ADD + gds_op;
+		} else if (mem_op == 5)
+			fetch_opcode = FETCH_OP_TF_WRITE;
+		bc.set_op(fetch_opcode);
+	} else
+		bc.set_op(r600_isa_fetch_by_opcode(ctx.isa, fetch_opcode));
+
+	if (bc.op_ptr->flags & FF_GDS)
+		return decode_fetch_gds(i, bc);
 
 	if (bc.op_ptr->flags & FF_VTX)
 		return decode_fetch_vtx(i, bc);
@@ -436,6 +449,38 @@ int bc_decoder::decode_fetch(unsigned & i, bc_fetch& bc) {
 	bc.src_sel[3] = w2.get_SRC_SEL_W();
 
 	i += 4;
+	return r;
+}
+
+int bc_decoder::decode_fetch_gds(unsigned & i, bc_fetch& bc) {
+	int r = 0;
+	uint32_t dw0 = dw[i];
+	uint32_t dw1 = dw[i+1];
+	uint32_t dw2 = dw[i+2];
+	uint32_t tmp;
+	/* GDS instructions align to 4 words boundaries */
+	i+= 4;
+	assert(i <= ndw);
+
+	MEM_GDS_WORD0_EGCM w0(dw0);
+	bc.src_gpr = w0.get_SRC_GPR();
+	tmp = w0.get_SRC_REL_MODE();
+	bc.src_rel_global = (tmp == 2);
+	bc.src_sel[0] = w0.get_SRC_SEL_X();
+	bc.src_sel[1] = w0.get_SRC_SEL_Y();
+	bc.src_sel[2] = w0.get_SRC_SEL_Z();
+
+	MEM_GDS_WORD1_EGCM w1(dw1);
+	bc.dst_gpr = w1.get_DST_GPR();
+	tmp = w1.get_DST_REL_MODE();
+	bc.dst_rel_global = (tmp == 2);
+	bc.src2_gpr = w1.get_SRC_GPR();
+
+	MEM_GDS_WORD2_EGCM w2(dw2);
+	bc.dst_sel[0] = w2.get_DST_SEL_X();
+	bc.dst_sel[1] = w2.get_DST_SEL_Y();
+	bc.dst_sel[2] = w2.get_DST_SEL_Z();
+	bc.dst_sel[3] = w2.get_DST_SEL_W();
 	return r;
 }
 
