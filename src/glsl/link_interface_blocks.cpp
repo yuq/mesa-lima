@@ -166,9 +166,19 @@ public:
     */
    ir_variable *lookup(ir_variable *var)
    {
-      const struct hash_entry *entry =
-         _mesa_hash_table_search(ht, var->get_interface_type()->name);
-      return entry ? (ir_variable *) entry->data : NULL;
+      if (var->data.explicit_location &&
+          var->data.location >= VARYING_SLOT_VAR0) {
+         char location_str[11];
+         snprintf(location_str, 11, "%d", var->data.location);
+
+         const struct hash_entry *entry =
+            _mesa_hash_table_search(ht, location_str);
+         return entry ? (ir_variable *) entry->data : NULL;
+      } else {
+         const struct hash_entry *entry =
+            _mesa_hash_table_search(ht, var->get_interface_type()->name);
+         return entry ? (ir_variable *) entry->data : NULL;
+      }
    }
 
    /**
@@ -176,7 +186,19 @@ public:
     */
    void store(ir_variable *var)
    {
-      _mesa_hash_table_insert(ht, var->get_interface_type()->name, var);
+      if (var->data.explicit_location &&
+          var->data.location >= VARYING_SLOT_VAR0) {
+         /* If explicit location is given then lookup the variable by location.
+          * We turn the location into a string and use this as the hash key
+          * rather than the name. Note: We allocate enough space for a 32-bit
+          * unsigned location value which is overkill but future proof.
+          */
+         char location_str[11];
+         snprintf(location_str, 11, "%d", var->data.location);
+         _mesa_hash_table_insert(ht, ralloc_strdup(mem_ctx, location_str), var);
+      } else {
+         _mesa_hash_table_insert(ht, var->get_interface_type()->name, var);
+      }
    }
 
 private:
