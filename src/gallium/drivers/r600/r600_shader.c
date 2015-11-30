@@ -666,6 +666,101 @@ static int select_twoside_color(struct r600_shader_ctx *ctx, int front, int back
 	return 0;
 }
 
+/* execute a single slot ALU calculation */
+static int single_alu_op2(struct r600_shader_ctx *ctx, int op,
+			  int dst_sel, int dst_chan,
+			  int src0_sel, unsigned src0_chan_val,
+			  int src1_sel, unsigned src1_chan_val)
+{
+	struct r600_bytecode_alu alu;
+	int r, i;
+
+	if (ctx->bc->chip_class == CAYMAN && op == ALU_OP2_MULLO_INT) {
+		for (i = 0; i < 4; i++) {
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = op;
+			alu.src[0].sel = src0_sel;
+			if (src0_sel == V_SQ_ALU_SRC_LITERAL)
+				alu.src[0].value = src0_chan_val;
+			else
+				alu.src[0].chan = src0_chan_val;
+			alu.src[1].sel = src1_sel;
+			if (src1_sel == V_SQ_ALU_SRC_LITERAL)
+				alu.src[1].value = src1_chan_val;
+			else
+				alu.src[1].chan = src1_chan_val;
+			alu.dst.sel = dst_sel;
+			alu.dst.chan = i;
+			alu.dst.write = i == dst_chan;
+			alu.last = (i == 3);
+			r = r600_bytecode_add_alu(ctx->bc, &alu);
+			if (r)
+				return r;
+		}
+		return 0;
+	}
+
+	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+	alu.op = op;
+	alu.src[0].sel = src0_sel;
+	if (src0_sel == V_SQ_ALU_SRC_LITERAL)
+		alu.src[0].value = src0_chan_val;
+	else
+		alu.src[0].chan = src0_chan_val;
+	alu.src[1].sel = src1_sel;
+	if (src1_sel == V_SQ_ALU_SRC_LITERAL)
+		alu.src[1].value = src1_chan_val;
+	else
+		alu.src[1].chan = src1_chan_val;
+	alu.dst.sel = dst_sel;
+	alu.dst.chan = dst_chan;
+	alu.dst.write = 1;
+	alu.last = 1;
+	r = r600_bytecode_add_alu(ctx->bc, &alu);
+	if (r)
+		return r;
+	return 0;
+}
+
+/* execute a single slot ALU calculation */
+static int single_alu_op3(struct r600_shader_ctx *ctx, int op,
+			  int dst_sel, int dst_chan,
+			  int src0_sel, unsigned src0_chan_val,
+			  int src1_sel, unsigned src1_chan_val,
+			  int src2_sel, unsigned src2_chan_val)
+{
+	struct r600_bytecode_alu alu;
+	int r;
+
+	/* validate this for other ops */
+	assert(op == ALU_OP3_MULADD_UINT24);
+	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+	alu.op = op;
+	alu.src[0].sel = src0_sel;
+	if (src0_sel == V_SQ_ALU_SRC_LITERAL)
+		alu.src[0].value = src0_chan_val;
+	else
+		alu.src[0].chan = src0_chan_val;
+	alu.src[1].sel = src1_sel;
+	if (src1_sel == V_SQ_ALU_SRC_LITERAL)
+		alu.src[1].value = src1_chan_val;
+	else
+		alu.src[1].chan = src1_chan_val;
+	alu.src[2].sel = src2_sel;
+	if (src2_sel == V_SQ_ALU_SRC_LITERAL)
+		alu.src[2].value = src2_chan_val;
+	else
+		alu.src[2].chan = src2_chan_val;
+	alu.dst.sel = dst_sel;
+	alu.dst.chan = dst_chan;
+	alu.is_op3 = 1;
+	alu.last = 1;
+	r = r600_bytecode_add_alu(ctx->bc, &alu);
+	if (r)
+		return r;
+	return 0;
+}
+
 static inline int get_address_file_reg(struct r600_shader_ctx *ctx, int index)
 {
 	return index > 0 ? ctx->bc->index_reg[index - 1] : ctx->bc->ar_reg;
