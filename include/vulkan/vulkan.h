@@ -68,7 +68,7 @@ VK_DEFINE_HANDLE(VkInstance)
 VK_DEFINE_HANDLE(VkPhysicalDevice)
 VK_DEFINE_HANDLE(VkDevice)
 VK_DEFINE_HANDLE(VkQueue)
-VK_DEFINE_HANDLE(VkCmdBuffer)
+VK_DEFINE_HANDLE(VkCommandBuffer)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkFence)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDeviceMemory)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkBuffer)
@@ -89,7 +89,7 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSampler)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDescriptorPool)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDescriptorSet)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkFramebuffer)
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCmdPool)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCommandPool)
 
 #define VK_LOD_CLAMP_NONE                 1000.0f
 #define VK_REMAINING_MIP_LEVELS           (~0U)
@@ -140,7 +140,7 @@ typedef enum {
     VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO = 6,
     VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO = 7,
     VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO = 8,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO = 9,
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_CREATE_INFO = 9,
     VK_STRUCTURE_TYPE_EVENT_CREATE_INFO = 10,
     VK_STRUCTURE_TYPE_FENCE_CREATE_INFO = 11,
     VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO = 12,
@@ -159,7 +159,7 @@ typedef enum {
     VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO = 25,
     VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO = 26,
     VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO = 27,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO = 28,
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO = 28,
     VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO = 29,
     VK_STRUCTURE_TYPE_MEMORY_BARRIER = 30,
     VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER = 31,
@@ -175,7 +175,7 @@ typedef enum {
     VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION = 41,
     VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY = 42,
     VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO = 43,
-    VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO = 44,
+    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO = 44,
     VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO = 45,
     VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO = 46,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -765,14 +765,14 @@ typedef enum VkPipelineBindPoint {
     VK_PIPELINE_BIND_POINT_MAX_ENUM = 0x7FFFFFFF
 } VkPipelineBindPoint;
 
-typedef enum {
-    VK_CMD_BUFFER_LEVEL_PRIMARY = 0,
-    VK_CMD_BUFFER_LEVEL_SECONDARY = 1,
-    VK_CMD_BUFFER_LEVEL_BEGIN_RANGE = VK_CMD_BUFFER_LEVEL_PRIMARY,
-    VK_CMD_BUFFER_LEVEL_END_RANGE = VK_CMD_BUFFER_LEVEL_SECONDARY,
-    VK_CMD_BUFFER_LEVEL_NUM = (VK_CMD_BUFFER_LEVEL_SECONDARY - VK_CMD_BUFFER_LEVEL_PRIMARY + 1),
-    VK_CMD_BUFFER_LEVEL_MAX_ENUM = 0x7FFFFFFF
-} VkCmdBufferLevel;
+typedef enum VkCommandBufferLevel {
+    VK_COMMAND_BUFFER_LEVEL_PRIMARY = 0,
+    VK_COMMAND_BUFFER_LEVEL_SECONDARY = 1,
+    VK_COMMAND_BUFFER_LEVEL_BEGIN_RANGE = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    VK_COMMAND_BUFFER_LEVEL_END_RANGE = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+    VK_COMMAND_BUFFER_LEVEL_RANGE_SIZE = (VK_COMMAND_BUFFER_LEVEL_SECONDARY - VK_COMMAND_BUFFER_LEVEL_PRIMARY + 1),
+    VK_COMMAND_BUFFER_LEVEL_MAX_ENUM = 0x7FFFFFFF
+} VkCommandBufferLevel;
 
 typedef enum VkIndexType {
     VK_INDEX_TYPE_UINT16 = 0,
@@ -792,14 +792,14 @@ typedef enum {
     VK_TIMESTAMP_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkTimestampType;
 
-typedef enum {
-    VK_RENDER_PASS_CONTENTS_INLINE = 0,
-    VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS = 1,
-    VK_RENDER_PASS_CONTENTS_BEGIN_RANGE = VK_RENDER_PASS_CONTENTS_INLINE,
-    VK_RENDER_PASS_CONTENTS_END_RANGE = VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS,
-    VK_RENDER_PASS_CONTENTS_NUM = (VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS - VK_RENDER_PASS_CONTENTS_INLINE + 1),
-    VK_RENDER_PASS_CONTENTS_MAX_ENUM = 0x7FFFFFFF
-} VkRenderPassContents;
+typedef enum VkSubpassContents {
+    VK_SUBPASS_CONTENTS_INLINE = 0,
+    VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS = 1,
+    VK_SUBPASS_CONTENTS_BEGIN_RANGE = VK_SUBPASS_CONTENTS_INLINE,
+    VK_SUBPASS_CONTENTS_END_RANGE = VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS,
+    VK_SUBPASS_CONTENTS_RANGE_SIZE = (VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS - VK_SUBPASS_CONTENTS_INLINE + 1),
+    VK_SUBPASS_CONTENTS_MAX_ENUM = 0x7FFFFFFF
+} VkSubpassContents;
 
 
 typedef enum VkFormatFeatureFlagBits {
@@ -1033,17 +1033,17 @@ typedef enum {
 } VkMemoryInputFlagBits;
 typedef VkFlags VkMemoryInputFlags;
 
-typedef enum {
-    VK_CMD_POOL_CREATE_TRANSIENT_BIT = 0x00000001,
-    VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT = 0x00000002,
-} VkCmdPoolCreateFlagBits;
-typedef VkFlags VkCmdPoolCreateFlags;
+typedef enum VkCommandPoolCreateFlagBits {
+    VK_COMMAND_POOL_CREATE_TRANSIENT_BIT = 0x00000001,
+    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT = 0x00000002,
+} VkCommandPoolCreateFlagBits;
+typedef VkFlags VkCommandPoolCreateFlags;
 
-typedef enum {
-    VK_CMD_POOL_RESET_RELEASE_RESOURCES_BIT = 0x00000001,
-} VkCmdPoolResetFlagBits;
-typedef VkFlags VkCmdPoolResetFlags;
-typedef VkFlags VkCmdBufferCreateFlags;
+typedef enum VkCommandPoolResetFlagBits {
+    VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT = 0x00000001,
+} VkCommandPoolResetFlagBits;
+typedef VkFlags VkCommandPoolResetFlags;
+typedef VkFlags VkCommandBufferCreateFlags;
 
 typedef enum {
     VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT = 0x00000001,
@@ -1051,13 +1051,13 @@ typedef enum {
     VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT = 0x00000004,
     VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT = 0x00000008,
     VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT = 0x00000010,
-} VkCmdBufferOptimizeFlagBits;
-typedef VkFlags VkCmdBufferOptimizeFlags;
+} VkCommandBufferOptimizeFlagBits;
+typedef VkFlags VkCommandBufferOptimizeFlags;
 
-typedef enum {
-    VK_CMD_BUFFER_RESET_RELEASE_RESOURCES_BIT = 0x00000001,
-} VkCmdBufferResetFlagBits;
-typedef VkFlags VkCmdBufferResetFlags;
+typedef enum VkCommandBufferResetFlagBits {
+    VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT = 0x00000001,
+} VkCommandBufferResetFlagBits;
+typedef VkFlags VkCommandBufferResetFlags;
 
 typedef enum {
     VK_STENCIL_FACE_NONE = 0,
@@ -1914,25 +1914,25 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    queueFamilyIndex;
-    VkCmdPoolCreateFlags                        flags;
-} VkCmdPoolCreateInfo;
+    VkCommandPoolCreateFlags                    flags;
+} VkCommandPoolCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkCmdPool                                   cmdPool;
-    VkCmdBufferLevel                            level;
-    VkCmdBufferCreateFlags                      flags;
-} VkCmdBufferCreateInfo;
+    VkCommandPool                               commandPool;
+    VkCommandBufferLevel                        level;
+    VkCommandBufferCreateFlags                  flags;
+} VkCommandBufferCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkCmdBufferOptimizeFlags                    flags;
+    VkCommandBufferOptimizeFlags                    flags;
     VkRenderPass                                renderPass;
     uint32_t                                    subpass;
     VkFramebuffer                               framebuffer;
-} VkCmdBufferBeginInfo;
+} VkCommandBufferBeginInfo;
 
 typedef struct {
     VkDeviceSize                                srcOffset;
@@ -2024,26 +2024,26 @@ typedef struct {
     VkDeviceSize                                size;
 } VkBufferMemoryBarrier;
 
-typedef struct {
+typedef struct VkDispatchIndirectCommand {
     uint32_t                                    x;
     uint32_t                                    y;
     uint32_t                                    z;
-} VkDispatchIndirectCmd;
+} VkDispatchIndirectCommand;
 
-typedef struct {
+typedef struct VkDrawIndexedIndirectCommand {
     uint32_t                                    indexCount;
     uint32_t                                    instanceCount;
     uint32_t                                    firstIndex;
     int32_t                                     vertexOffset;
     uint32_t                                    firstInstance;
-} VkDrawIndexedIndirectCmd;
+} VkDrawIndexedIndirectCommand;
 
-typedef struct {
+typedef struct VkDrawIndirectCommand {
     uint32_t                                    vertexCount;
     uint32_t                                    instanceCount;
     uint32_t                                    firstVertex;
     uint32_t                                    firstInstance;
-} VkDrawIndirectCmd;
+} VkDrawIndirectCommand;
 
 typedef struct {
     VkStructureType                             sType;
@@ -2084,7 +2084,7 @@ typedef VkResult (VKAPI *PFN_vkEnumerateDeviceExtensionProperties)(VkPhysicalDev
 typedef VkResult (VKAPI *PFN_vkEnumerateInstanceLayerProperties)(uint32_t* pCount, VkLayerProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkEnumerateDeviceLayerProperties)(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkLayerProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue);
-typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
+typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
 typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkDeviceMemory* pMem);
@@ -2158,59 +2158,59 @@ typedef void (VKAPI *PFN_vkDestroyFramebuffer)(VkDevice device, VkFramebuffer fr
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef void (VKAPI *PFN_vkDestroyRenderPass)(VkDevice device, VkRenderPass renderPass);
 typedef VkResult (VKAPI *PFN_vkGetRenderAreaGranularity)(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity);
-typedef VkResult (VKAPI *PFN_vkCreateCommandPool)(VkDevice device, const VkCmdPoolCreateInfo* pCreateInfo, VkCmdPool* pCmdPool);
-typedef void (VKAPI *PFN_vkDestroyCommandPool)(VkDevice device, VkCmdPool cmdPool);
-typedef VkResult (VKAPI *PFN_vkResetCommandPool)(VkDevice device, VkCmdPool cmdPool, VkCmdPoolResetFlags flags);
-typedef VkResult (VKAPI *PFN_vkCreateCommandBuffer)(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer);
-typedef void (VKAPI *PFN_vkDestroyCommandBuffer)(VkDevice device, VkCmdBuffer commandBuffer);
-typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo);
-typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCmdBuffer cmdBuffer);
-typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer, VkCmdBufferResetFlags flags);
-typedef void (VKAPI *PFN_vkCmdBindPipeline)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline);
-typedef void (VKAPI *PFN_vkCmdSetViewport)(VkCmdBuffer cmdBuffer, uint32_t viewportCount, const VkViewport* pViewports);
-typedef void (VKAPI *PFN_vkCmdSetScissor)(VkCmdBuffer cmdBuffer, uint32_t scissorCount, const VkRect2D* pScissors);
-typedef void (VKAPI *PFN_vkCmdSetLineWidth)(VkCmdBuffer cmdBuffer, float lineWidth);
-typedef void (VKAPI *PFN_vkCmdSetDepthBias)(VkCmdBuffer cmdBuffer, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
-typedef void (VKAPI *PFN_vkCmdSetBlendConstants)(VkCmdBuffer cmdBuffer, const float blendConst[4]);
-typedef void (VKAPI *PFN_vkCmdSetDepthBounds)(VkCmdBuffer cmdBuffer, float minDepthBounds, float maxDepthBounds);
-typedef void (VKAPI *PFN_vkCmdSetStencilCompareMask)(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
-typedef void (VKAPI *PFN_vkCmdSetStencilWriteMask)(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask);
-typedef void (VKAPI *PFN_vkCmdSetStencilReference)(VkCmdBuffer cmdBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference);
-typedef void (VKAPI *PFN_vkCmdBindDescriptorSets)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets);
-typedef void (VKAPI *PFN_vkCmdBindIndexBuffer)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
-typedef void (VKAPI *PFN_vkCmdBindVertexBuffers)(VkCmdBuffer cmdBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets);
-typedef void (VKAPI *PFN_vkCmdDraw)(VkCmdBuffer cmdBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
-typedef void (VKAPI *PFN_vkCmdDrawIndexed)(VkCmdBuffer cmdBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
-typedef void (VKAPI *PFN_vkCmdDrawIndirect)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride);
-typedef void (VKAPI *PFN_vkCmdDrawIndexedIndirect)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride);
-typedef void (VKAPI *PFN_vkCmdDispatch)(VkCmdBuffer cmdBuffer, uint32_t x, uint32_t y, uint32_t z);
-typedef void (VKAPI *PFN_vkCmdDispatchIndirect)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset);
-typedef void (VKAPI *PFN_vkCmdCopyBuffer)(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkBuffer destBuffer, uint32_t regionCount, const VkBufferCopy* pRegions);
-typedef void (VKAPI *PFN_vkCmdCopyImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageCopy* pRegions);
-typedef void (VKAPI *PFN_vkCmdBlitImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageBlit* pRegions, VkTexFilter filter);
-typedef void (VKAPI *PFN_vkCmdCopyBufferToImage)(VkCmdBuffer cmdBuffer, VkBuffer srcBuffer, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions);
-typedef void (VKAPI *PFN_vkCmdCopyImageToBuffer)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer destBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions);
-typedef void (VKAPI *PFN_vkCmdUpdateBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData);
-typedef void (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data);
-typedef void (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
-typedef void (VKAPI *PFN_vkCmdClearDepthStencilImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearDepthStencilValue* pDepthStencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
-typedef void (VKAPI *PFN_vkCmdClearColorAttachment)(VkCmdBuffer cmdBuffer, uint32_t colorAttachment, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rectCount, const VkRect3D* pRects);
-typedef void (VKAPI *PFN_vkCmdClearDepthStencilAttachment)(VkCmdBuffer cmdBuffer, VkImageAspectFlags aspectMask, VkImageLayout imageLayout, const VkClearDepthStencilValue* pDepthStencil, uint32_t rectCount, const VkRect3D* pRects);
-typedef void (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
-typedef void (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
-typedef void (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
-typedef void (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
-typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, VkBool32 byRegion, uint32_t memBarrierCount, const void* const* ppMemBarriers);
-typedef void (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
-typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
-typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
-typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset);
-typedef void (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize destStride, VkQueryResultFlags flags);
-typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCmdBuffer cmdBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t start, uint32_t length, const void* values);
-typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents);
-typedef void (VKAPI *PFN_vkCmdNextSubpass)(VkCmdBuffer cmdBuffer, VkRenderPassContents contents);
-typedef void (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer);
-typedef void (VKAPI *PFN_vkCmdExecuteCommands)(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers);
+typedef VkResult (VKAPI *PFN_vkCreateCommandPool)(VkDevice device, const VkCommandPoolCreateInfo* pCreateInfo, VkCommandPool* pCommandPool);
+typedef void (VKAPI *PFN_vkDestroyCommandPool)(VkDevice device, VkCommandPool commandPool);
+typedef VkResult (VKAPI *PFN_vkResetCommandPool)(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags);
+typedef VkResult (VKAPI *PFN_vkCreateCommandBuffer)(VkDevice device, const VkCommandBufferCreateInfo* pCreateInfo, VkCommandBuffer* pCommandBuffer);
+typedef void (VKAPI *PFN_vkDestroyCommandBuffer)(VkDevice device, VkCommandBuffer commandBuffer);
+typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo* pBeginInfo);
+typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCommandBuffer commandBuffer);
+typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags);
+typedef void (VKAPI *PFN_vkCmdBindPipeline)(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline);
+typedef void (VKAPI *PFN_vkCmdSetViewport)(VkCommandBuffer commandBuffer, uint32_t viewportCount, const VkViewport* pViewports);
+typedef void (VKAPI *PFN_vkCmdSetScissor)(VkCommandBuffer commandBuffer, uint32_t scissorCount, const VkRect2D* pScissors);
+typedef void (VKAPI *PFN_vkCmdSetLineWidth)(VkCommandBuffer commandBuffer, float lineWidth);
+typedef void (VKAPI *PFN_vkCmdSetDepthBias)(VkCommandBuffer commandBuffer, float depthBias, float depthBiasClamp, float slopeScaledDepthBias);
+typedef void (VKAPI *PFN_vkCmdSetBlendConstants)(VkCommandBuffer commandBuffer, const float blendConst[4]);
+typedef void (VKAPI *PFN_vkCmdSetDepthBounds)(VkCommandBuffer commandBuffer, float minDepthBounds, float maxDepthBounds);
+typedef void (VKAPI *PFN_vkCmdSetStencilCompareMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilCompareMask);
+typedef void (VKAPI *PFN_vkCmdSetStencilWriteMask)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilWriteMask);
+typedef void (VKAPI *PFN_vkCmdSetStencilReference)(VkCommandBuffer commandBuffer, VkStencilFaceFlags faceMask, uint32_t stencilReference);
+typedef void (VKAPI *PFN_vkCmdBindDescriptorSets)(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets);
+typedef void (VKAPI *PFN_vkCmdBindIndexBuffer)(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
+typedef void (VKAPI *PFN_vkCmdBindVertexBuffers)(VkCommandBuffer commandBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets);
+typedef void (VKAPI *PFN_vkCmdDraw)(VkCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
+typedef void (VKAPI *PFN_vkCmdDrawIndexed)(VkCommandBuffer commandBuffer, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
+typedef void (VKAPI *PFN_vkCmdDrawIndirect)(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride);
+typedef void (VKAPI *PFN_vkCmdDrawIndexedIndirect)(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset, uint32_t count, uint32_t stride);
+typedef void (VKAPI *PFN_vkCmdDispatch)(VkCommandBuffer commandBuffer, uint32_t x, uint32_t y, uint32_t z);
+typedef void (VKAPI *PFN_vkCmdDispatchIndirect)(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset);
+typedef void (VKAPI *PFN_vkCmdCopyBuffer)(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer destBuffer, uint32_t regionCount, const VkBufferCopy* pRegions);
+typedef void (VKAPI *PFN_vkCmdCopyImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageCopy* pRegions);
+typedef void (VKAPI *PFN_vkCmdBlitImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageBlit* pRegions, VkTexFilter filter);
+typedef void (VKAPI *PFN_vkCmdCopyBufferToImage)(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions);
+typedef void (VKAPI *PFN_vkCmdCopyImageToBuffer)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer destBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions);
+typedef void (VKAPI *PFN_vkCmdUpdateBuffer)(VkCommandBuffer commandBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData);
+typedef void (VKAPI *PFN_vkCmdFillBuffer)(VkCommandBuffer commandBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data);
+typedef void (VKAPI *PFN_vkCmdClearColorImage)(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
+typedef void (VKAPI *PFN_vkCmdClearDepthStencilImage)(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, const VkClearDepthStencilValue* pDepthStencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
+typedef void (VKAPI *PFN_vkCmdClearColorAttachment)(VkCommandBuffer commandBuffer, uint32_t colorAttachment, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rectCount, const VkRect3D* pRects);
+typedef void (VKAPI *PFN_vkCmdClearDepthStencilAttachment)(VkCommandBuffer commandBuffer, VkImageAspectFlags aspectMask, VkImageLayout imageLayout, const VkClearDepthStencilValue* pDepthStencil, uint32_t rectCount, const VkRect3D* pRects);
+typedef void (VKAPI *PFN_vkCmdResolveImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
+typedef void (VKAPI *PFN_vkCmdSetEvent)(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask);
+typedef void (VKAPI *PFN_vkCmdResetEvent)(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask);
+typedef void (VKAPI *PFN_vkCmdWaitEvents)(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
+typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, VkBool32 byRegion, uint32_t memBarrierCount, const void* const* ppMemBarriers);
+typedef void (VKAPI *PFN_vkCmdBeginQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
+typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t slot);
+typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
+typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCommandBuffer commandBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset);
+typedef void (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize destStride, VkQueryResultFlags flags);
+typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCommandBuffer commandBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t start, uint32_t length, const void* values);
+typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents);
+typedef void (VKAPI *PFN_vkCmdNextSubpass)(VkCommandBuffer commandBuffer, VkSubpassContents contents);
+typedef void (VKAPI *PFN_vkCmdEndRenderPass)(VkCommandBuffer commandBuffer);
+typedef void (VKAPI *PFN_vkCmdExecuteCommands)(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, const VkCommandBuffer* pCommandBuffers);
 
 #ifdef VK_PROTOTYPES
 VkResult VKAPI vkCreateInstance(
@@ -2300,8 +2300,8 @@ VkResult VKAPI vkGetDeviceQueue(
 
 VkResult VKAPI vkQueueSubmit(
     VkQueue                                     queue,
-    uint32_t                                    cmdBufferCount,
-    const VkCmdBuffer*                          pCmdBuffers,
+    uint32_t                                    commandBufferCount,
+    const VkCommandBuffer*                      pCommandBuffers,
     VkFence                                     fence);
 
 VkResult VKAPI vkQueueWaitIdle(
@@ -2671,89 +2671,89 @@ VkResult VKAPI vkGetRenderAreaGranularity(
 
 VkResult VKAPI vkCreateCommandPool(
     VkDevice                                    device,
-    const VkCmdPoolCreateInfo*                  pCreateInfo,
-    VkCmdPool*                                  pCmdPool);
+    const VkCommandPoolCreateInfo*              pCreateInfo,
+    VkCommandPool*                              pCommandPool);
 
 void VKAPI vkDestroyCommandPool(
     VkDevice                                    device,
-    VkCmdPool                                   cmdPool);
+    VkCommandPool                               commandPool);
 
 VkResult VKAPI vkResetCommandPool(
     VkDevice                                    device,
-    VkCmdPool                                   cmdPool,
-    VkCmdPoolResetFlags                         flags);
+    VkCommandPool                               commandPool,
+    VkCommandPoolResetFlags                     flags);
 
 VkResult VKAPI vkCreateCommandBuffer(
     VkDevice                                    device,
-    const VkCmdBufferCreateInfo*                pCreateInfo,
-    VkCmdBuffer*                                pCmdBuffer);
+    const VkCommandBufferCreateInfo*            pCreateInfo,
+    VkCommandBuffer*                            pCommandBuffer);
 
 void VKAPI vkDestroyCommandBuffer(
     VkDevice                                    device,
-    VkCmdBuffer                                 commandBuffer);
+    VkCommandBuffer                             commandBuffer);
 
 VkResult VKAPI vkBeginCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer,
-    const VkCmdBufferBeginInfo*                 pBeginInfo);
+    VkCommandBuffer                             commandBuffer,
+    const VkCommandBufferBeginInfo*             pBeginInfo);
 
 VkResult VKAPI vkEndCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer);
+    VkCommandBuffer                             commandBuffer);
 
 VkResult VKAPI vkResetCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer,
-    VkCmdBufferResetFlags                       flags);
+    VkCommandBuffer                             commandBuffer,
+    VkCommandBufferResetFlags                   flags);
 
 void VKAPI vkCmdBindPipeline(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
     VkPipeline                                  pipeline);
 
 void VKAPI vkCmdSetViewport(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    viewportCount,
     const VkViewport*                           pViewports);
 
 void VKAPI vkCmdSetScissor(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    scissorCount,
     const VkRect2D*                             pScissors);
 
 void VKAPI vkCmdSetLineWidth(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     float                                       lineWidth);
 
 void VKAPI vkCmdSetDepthBias(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     float                                       depthBias,
     float                                       depthBiasClamp,
     float                                       slopeScaledDepthBias);
 
 void VKAPI vkCmdSetBlendConstants(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     const float                                 blendConst[4]);
 
 void VKAPI vkCmdSetDepthBounds(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     float                                       minDepthBounds,
     float                                       maxDepthBounds);
 
 void VKAPI vkCmdSetStencilCompareMask(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
     uint32_t                                    stencilCompareMask);
 
 void VKAPI vkCmdSetStencilWriteMask(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
     uint32_t                                    stencilWriteMask);
 
 void VKAPI vkCmdSetStencilReference(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
     uint32_t                                    stencilReference);
 
 void VKAPI vkCmdBindDescriptorSets(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
     VkPipelineLayout                            layout,
     uint32_t                                    firstSet,
@@ -2763,27 +2763,27 @@ void VKAPI vkCmdBindDescriptorSets(
     const uint32_t*                             pDynamicOffsets);
 
 void VKAPI vkCmdBindIndexBuffer(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    buffer,
     VkDeviceSize                                offset,
     VkIndexType                                 indexType);
 
 void VKAPI vkCmdBindVertexBuffers(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
     const VkBuffer*                             pBuffers,
     const VkDeviceSize*                         pOffsets);
 
 void VKAPI vkCmdDraw(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    vertexCount,
     uint32_t                                    instanceCount,
     uint32_t                                    firstVertex,
     uint32_t                                    firstInstance);
 
 void VKAPI vkCmdDrawIndexed(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    indexCount,
     uint32_t                                    instanceCount,
     uint32_t                                    firstIndex,
@@ -2791,39 +2791,39 @@ void VKAPI vkCmdDrawIndexed(
     uint32_t                                    firstInstance);
 
 void VKAPI vkCmdDrawIndirect(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    buffer,
     VkDeviceSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride);
 
 void VKAPI vkCmdDrawIndexedIndirect(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    buffer,
     VkDeviceSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride);
 
 void VKAPI vkCmdDispatch(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
     uint32_t                                    z);
 
 void VKAPI vkCmdDispatchIndirect(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    buffer,
     VkDeviceSize                                offset);
 
 void VKAPI vkCmdCopyBuffer(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    srcBuffer,
     VkBuffer                                    destBuffer,
     uint32_t                                    regionCount,
     const VkBufferCopy*                         pRegions);
 
 void VKAPI vkCmdCopyImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
     VkImage                                     destImage,
@@ -2832,7 +2832,7 @@ void VKAPI vkCmdCopyImage(
     const VkImageCopy*                          pRegions);
 
 void VKAPI vkCmdBlitImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
     VkImage                                     destImage,
@@ -2842,7 +2842,7 @@ void VKAPI vkCmdBlitImage(
     VkTexFilter                                 filter);
 
 void VKAPI vkCmdCopyBufferToImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    srcBuffer,
     VkImage                                     destImage,
     VkImageLayout                               destImageLayout,
@@ -2850,7 +2850,7 @@ void VKAPI vkCmdCopyBufferToImage(
     const VkBufferImageCopy*                    pRegions);
 
 void VKAPI vkCmdCopyImageToBuffer(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
     VkBuffer                                    destBuffer,
@@ -2858,21 +2858,21 @@ void VKAPI vkCmdCopyImageToBuffer(
     const VkBufferImageCopy*                    pRegions);
 
 void VKAPI vkCmdUpdateBuffer(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
     VkDeviceSize                                dataSize,
     const uint32_t*                             pData);
 
 void VKAPI vkCmdFillBuffer(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
     VkDeviceSize                                fillSize,
     uint32_t                                    data);
 
 void VKAPI vkCmdClearColorImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
     const VkClearColorValue*                    pColor,
@@ -2880,7 +2880,7 @@ void VKAPI vkCmdClearColorImage(
     const VkImageSubresourceRange*              pRanges);
 
 void VKAPI vkCmdClearDepthStencilImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
     const VkClearDepthStencilValue*             pDepthStencil,
@@ -2888,7 +2888,7 @@ void VKAPI vkCmdClearDepthStencilImage(
     const VkImageSubresourceRange*              pRanges);
 
 void VKAPI vkCmdClearColorAttachment(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    colorAttachment,
     VkImageLayout                               imageLayout,
     const VkClearColorValue*                    pColor,
@@ -2896,7 +2896,7 @@ void VKAPI vkCmdClearColorAttachment(
     const VkRect3D*                             pRects);
 
 void VKAPI vkCmdClearDepthStencilAttachment(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImageAspectFlags                          aspectMask,
     VkImageLayout                               imageLayout,
     const VkClearDepthStencilValue*             pDepthStencil,
@@ -2904,7 +2904,7 @@ void VKAPI vkCmdClearDepthStencilAttachment(
     const VkRect3D*                             pRects);
 
 void VKAPI vkCmdResolveImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
     VkImage                                     destImage,
@@ -2913,17 +2913,17 @@ void VKAPI vkCmdResolveImage(
     const VkImageResolve*                       pRegions);
 
 void VKAPI vkCmdSetEvent(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkEvent                                     event,
     VkPipelineStageFlags                        stageMask);
 
 void VKAPI vkCmdResetEvent(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkEvent                                     event,
     VkPipelineStageFlags                        stageMask);
 
 void VKAPI vkCmdWaitEvents(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
     VkPipelineStageFlags                        srcStageMask,
@@ -2932,7 +2932,7 @@ void VKAPI vkCmdWaitEvents(
     const void* const*                          ppMemBarriers);
 
 void VKAPI vkCmdPipelineBarrier(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        destStageMask,
     VkBool32                                    byRegion,
@@ -2940,30 +2940,30 @@ void VKAPI vkCmdPipelineBarrier(
     const void* const*                          ppMemBarriers);
 
 void VKAPI vkCmdBeginQuery(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot,
     VkQueryControlFlags                         flags);
 
 void VKAPI vkCmdEndQuery(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    slot);
 
 void VKAPI vkCmdResetQueryPool(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount);
 
 void VKAPI vkCmdWriteTimestamp(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkTimestampType                             timestampType,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset);
 
 void VKAPI vkCmdCopyQueryPoolResults(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
@@ -2973,7 +2973,7 @@ void VKAPI vkCmdCopyQueryPoolResults(
     VkQueryResultFlags                          flags);
 
 void VKAPI vkCmdPushConstants(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineLayout                            layout,
     VkShaderStageFlags                          stageFlags,
     uint32_t                                    start,
@@ -2981,21 +2981,21 @@ void VKAPI vkCmdPushConstants(
     const void*                                 values);
 
 void VKAPI vkCmdBeginRenderPass(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
-    VkRenderPassContents                        contents);
+    VkSubpassContents                           contents);
 
 void VKAPI vkCmdNextSubpass(
-    VkCmdBuffer                                 cmdBuffer,
-    VkRenderPassContents                        contents);
+    VkCommandBuffer                             commandBuffer,
+    VkSubpassContents                           contents);
 
 void VKAPI vkCmdEndRenderPass(
-    VkCmdBuffer                                 cmdBuffer);
+    VkCommandBuffer                             commandBuffer);
 
 void VKAPI vkCmdExecuteCommands(
-    VkCmdBuffer                                 cmdBuffer,
-    uint32_t                                    cmdBuffersCount,
-    const VkCmdBuffer*                          pCmdBuffers);
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    commandBuffersCount,
+    const VkCommandBuffer*                      pCommandBuffers);
 #endif
 
 #ifdef __cplusplus

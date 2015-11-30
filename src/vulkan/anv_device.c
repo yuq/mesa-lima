@@ -812,8 +812,8 @@ VkResult anv_GetDeviceQueue(
 
 VkResult anv_QueueSubmit(
     VkQueue                                     _queue,
-    uint32_t                                    cmdBufferCount,
-    const VkCmdBuffer*                          pCmdBuffers,
+    uint32_t                                    commandBufferCount,
+    const VkCommandBuffer*                      pCommandBuffers,
     VkFence                                     _fence)
 {
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
@@ -821,10 +821,10 @@ VkResult anv_QueueSubmit(
    struct anv_device *device = queue->device;
    int ret;
 
-   for (uint32_t i = 0; i < cmdBufferCount; i++) {
-      ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, pCmdBuffers[i]);
+   for (uint32_t i = 0; i < commandBufferCount; i++) {
+      ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, pCommandBuffers[i]);
 
-      assert(cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
+      assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
       ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
       if (ret != 0) {
@@ -1526,21 +1526,21 @@ void anv_DestroyFramebuffer(
 }
 
 void vkCmdDbgMarkerBegin(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     const char*                                 pMarker)
    __attribute__ ((visibility ("default")));
 
 void vkCmdDbgMarkerEnd(
-   VkCmdBuffer                              cmdBuffer)
+   VkCommandBuffer                              commandBuffer)
    __attribute__ ((visibility ("default")));
 
 void vkCmdDbgMarkerBegin(
-    VkCmdBuffer                              cmdBuffer,
+    VkCommandBuffer                              commandBuffer,
     const char*                                 pMarker)
 {
 }
 
 void vkCmdDbgMarkerEnd(
-    VkCmdBuffer                              cmdBuffer)
+    VkCommandBuffer                              commandBuffer)
 {
 }

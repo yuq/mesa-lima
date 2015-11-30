@@ -235,12 +235,12 @@ static const uint32_t restart_index_for_type[] = {
 };
 
 void genX(CmdBindIndexBuffer)(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
     VkIndexType                                 indexType)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
@@ -508,13 +508,13 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 }
 
 void genX(CmdDraw)(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    vertexCount,
     uint32_t                                    instanceCount,
     uint32_t                                    firstVertex,
     uint32_t                                    firstInstance)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
 
    cmd_buffer_flush_state(cmd_buffer);
@@ -530,14 +530,14 @@ void genX(CmdDraw)(
 }
 
 void genX(CmdDrawIndexed)(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    indexCount,
     uint32_t                                    instanceCount,
     uint32_t                                    firstIndex,
     int32_t                                     vertexOffset,
     uint32_t                                    firstInstance)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
 
    cmd_buffer_flush_state(cmd_buffer);
@@ -578,13 +578,13 @@ gen7_batch_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
 #define GEN7_3DPRIM_BASE_VERTEX         0x2440
 
 void genX(CmdDrawIndirect)(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
    struct anv_bo *bo = buffer->bo;
@@ -605,13 +605,13 @@ void genX(CmdDrawIndirect)(
 }
 
 void genX(CmdDrawIndexedIndirect)(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
     uint32_t                                    count,
     uint32_t                                    stride)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
    struct anv_bo *bo = buffer->bo;
@@ -632,12 +632,12 @@ void genX(CmdDrawIndexedIndirect)(
 }
 
 void genX(CmdDispatch)(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
     uint32_t                                    z)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
 
@@ -662,11 +662,11 @@ void genX(CmdDispatch)(
 #define GPGPU_DISPATCHDIMZ 0x2508
 
 void genX(CmdDispatchIndirect)(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
@@ -815,11 +815,11 @@ begin_render_pass(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void genX(CmdBeginRenderPass)(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     const VkRenderPassBeginInfo*                pRenderPassBegin,
-    VkRenderPassContents                        contents)
+    VkSubpassContents                           contents)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_render_pass, pass, pRenderPassBegin->renderPass);
 
    begin_render_pass(cmd_buffer, pRenderPassBegin);
@@ -828,20 +828,20 @@ void genX(CmdBeginRenderPass)(
 }
 
 void genX(CmdNextSubpass)(
-    VkCmdBuffer                                 cmdBuffer,
-    VkRenderPassContents                        contents)
+    VkCommandBuffer                             commandBuffer,
+    VkSubpassContents                           contents)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
-   assert(cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
+   assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
    gen7_cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->state.subpass + 1);
 }
 
 void genX(CmdEndRenderPass)(
-    VkCmdBuffer                                 cmdBuffer)
+    VkCommandBuffer                             commandBuffer)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    /* Emit a flushing pipe control at the end of a pass.  This is kind of a
     * hack but it ensures that render targets always actually get written.

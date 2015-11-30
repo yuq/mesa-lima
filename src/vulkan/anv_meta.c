@@ -575,7 +575,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          },
          .clearValueCount = 0,
          .pClearValues = NULL,
-      }, VK_RENDER_PASS_CONTENTS_INLINE);
+      }, VK_SUBPASS_CONTENTS_INLINE);
 
    VkPipeline pipeline;
 
@@ -753,13 +753,13 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void anv_CmdCopyBuffer(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    srcBuffer,
     VkBuffer                                    destBuffer,
     uint32_t                                    regionCount,
     const VkBufferCopy*                         pRegions)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_buffer, src_buffer, srcBuffer);
    ANV_FROM_HANDLE(anv_buffer, dest_buffer, destBuffer);
 
@@ -831,7 +831,7 @@ void anv_CmdCopyBuffer(
 }
 
 void anv_CmdCopyImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
     VkImage                                     destImage,
@@ -839,7 +839,7 @@ void anv_CmdCopyImage(
     uint32_t                                    regionCount,
     const VkImageCopy*                          pRegions)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
 
@@ -939,7 +939,7 @@ void anv_CmdCopyImage(
 }
 
 void anv_CmdBlitImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
     VkImage                                     destImage,
@@ -949,7 +949,7 @@ void anv_CmdBlitImage(
     VkTexFilter                                 filter)
 
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
 
@@ -1082,14 +1082,14 @@ make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
 }
 
 void anv_CmdCopyBufferToImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    srcBuffer,
     VkImage                                     destImage,
     VkImageLayout                               destImageLayout,
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    const VkFormat orig_format = dest_image->format->vk_format;
@@ -1208,14 +1208,14 @@ void anv_CmdCopyBufferToImage(
 }
 
 void anv_CmdCopyImageToBuffer(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
     VkBuffer                                    destBuffer,
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    struct anv_meta_saved_state saved_state;
@@ -1323,7 +1323,7 @@ void anv_CmdCopyImageToBuffer(
 }
 
 void anv_CmdUpdateBuffer(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
     VkDeviceSize                                dataSize,
@@ -1333,7 +1333,7 @@ void anv_CmdUpdateBuffer(
 }
 
 void anv_CmdFillBuffer(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
     VkDeviceSize                                fillSize,
@@ -1343,7 +1343,7 @@ void anv_CmdFillBuffer(
 }
 
 void anv_CmdResolveImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
     VkImage                                     destImage,

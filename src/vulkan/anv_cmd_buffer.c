@@ -162,11 +162,11 @@ anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
 
 VkResult anv_CreateCommandBuffer(
     VkDevice                                    _device,
-    const VkCmdBufferCreateInfo*                pCreateInfo,
-    VkCmdBuffer*                                pCmdBuffer)
+    const VkCommandBufferCreateInfo*            pCreateInfo,
+    VkCommandBuffer*                            pCommandBuffer)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_cmd_pool, pool, pCreateInfo->cmdPool);
+   ANV_FROM_HANDLE(anv_cmd_pool, pool, pCreateInfo->commandPool);
    struct anv_cmd_buffer *cmd_buffer;
    VkResult result;
 
@@ -201,7 +201,7 @@ VkResult anv_CreateCommandBuffer(
       list_inithead(&cmd_buffer->pool_link);
    }
 
-   *pCmdBuffer = anv_cmd_buffer_to_handle(cmd_buffer);
+   *pCommandBuffer = anv_cmd_buffer_to_handle(cmd_buffer);
 
    return VK_SUCCESS;
 
@@ -212,7 +212,7 @@ VkResult anv_CreateCommandBuffer(
 
 void anv_DestroyCommandBuffer(
     VkDevice                                    _device,
-    VkCmdBuffer                                 _cmd_buffer)
+    VkCommandBuffer                             _cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, _cmd_buffer);
@@ -227,10 +227,10 @@ void anv_DestroyCommandBuffer(
 }
 
 VkResult anv_ResetCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer,
-    VkCmdBufferResetFlags                       flags)
+    VkCommandBuffer                             commandBuffer,
+    VkCommandBufferResetFlags                   flags)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
 
@@ -258,16 +258,16 @@ anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
 }
 
 VkResult anv_BeginCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer,
-    const VkCmdBufferBeginInfo*                 pBeginInfo)
+    VkCommandBuffer                             commandBuffer,
+    const VkCommandBufferBeginInfo*             pBeginInfo)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
 
    cmd_buffer->opt_flags = pBeginInfo->flags;
 
-   if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_SECONDARY) {
+   if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
       cmd_buffer->state.framebuffer =
          anv_framebuffer_from_handle(pBeginInfo->framebuffer);
       cmd_buffer->state.pass =
@@ -286,14 +286,14 @@ VkResult anv_BeginCommandBuffer(
 }
 
 VkResult anv_EndCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer)
+    VkCommandBuffer                             commandBuffer)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_device *device = cmd_buffer->device;
 
    anv_cmd_buffer_end_batch_buffer(cmd_buffer);
 
-   if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY) {
+   if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
       /* The algorithm used to compute the validate list is not threadsafe as
        * it uses the bo->index field.  We have to lock the device around it.
        * Fortunately, the chances for contention here are probably very low.
@@ -307,11 +307,11 @@ VkResult anv_EndCommandBuffer(
 }
 
 void anv_CmdBindPipeline(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
     VkPipeline                                  _pipeline)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_pipeline, pipeline, _pipeline);
 
    switch (pipelineBindPoint) {
@@ -341,11 +341,11 @@ void anv_CmdBindPipeline(
 }
 
 void anv_CmdSetViewport(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    viewportCount,
     const VkViewport*                           pViewports)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    cmd_buffer->state.dynamic.viewport.count = viewportCount;
    memcpy(cmd_buffer->state.dynamic.viewport.viewports,
@@ -355,11 +355,11 @@ void anv_CmdSetViewport(
 }
 
 void anv_CmdSetScissor(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    scissorCount,
     const VkRect2D*                             pScissors)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    cmd_buffer->state.dynamic.scissor.count = scissorCount;
    memcpy(cmd_buffer->state.dynamic.scissor.scissors,
@@ -369,22 +369,22 @@ void anv_CmdSetScissor(
 }
 
 void anv_CmdSetLineWidth(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     float                                       lineWidth)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    cmd_buffer->state.dynamic.line_width = lineWidth;
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH;
 }
 
 void anv_CmdSetDepthBias(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     float                                       depthBias,
     float                                       depthBiasClamp,
     float                                       slopeScaledDepthBias)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    cmd_buffer->state.dynamic.depth_bias.bias = depthBias;
    cmd_buffer->state.dynamic.depth_bias.clamp = depthBiasClamp;
@@ -394,10 +394,10 @@ void anv_CmdSetDepthBias(
 }
 
 void anv_CmdSetBlendConstants(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     const float                                 blendConst[4])
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    memcpy(cmd_buffer->state.dynamic.blend_constants,
           blendConst, sizeof(float) * 4);
@@ -406,11 +406,11 @@ void anv_CmdSetBlendConstants(
 }
 
 void anv_CmdSetDepthBounds(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     float                                       minDepthBounds,
     float                                       maxDepthBounds)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    cmd_buffer->state.dynamic.depth_bounds.min = minDepthBounds;
    cmd_buffer->state.dynamic.depth_bounds.max = maxDepthBounds;
@@ -419,11 +419,11 @@ void anv_CmdSetDepthBounds(
 }
 
 void anv_CmdSetStencilCompareMask(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
     uint32_t                                    stencilCompareMask)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
       cmd_buffer->state.dynamic.stencil_compare_mask.front = stencilCompareMask;
@@ -434,11 +434,11 @@ void anv_CmdSetStencilCompareMask(
 }
 
 void anv_CmdSetStencilWriteMask(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
     uint32_t                                    stencilWriteMask)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
       cmd_buffer->state.dynamic.stencil_write_mask.front = stencilWriteMask;
@@ -449,11 +449,11 @@ void anv_CmdSetStencilWriteMask(
 }
 
 void anv_CmdSetStencilReference(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkStencilFaceFlags                          faceMask,
     uint32_t                                    stencilReference)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
       cmd_buffer->state.dynamic.stencil_reference.front = stencilReference;
@@ -464,7 +464,7 @@ void anv_CmdSetStencilReference(
 }
 
 void anv_CmdBindDescriptorSets(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
     VkPipelineLayout                            _layout,
     uint32_t                                    firstSet,
@@ -473,7 +473,7 @@ void anv_CmdBindDescriptorSets(
     uint32_t                                    dynamicOffsetCount,
     const uint32_t*                             pDynamicOffsets)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, _layout);
    struct anv_descriptor_set_layout *set_layout;
 
@@ -519,13 +519,13 @@ void anv_CmdBindDescriptorSets(
 }
 
 void anv_CmdBindVertexBuffers(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    startBinding,
     uint32_t                                    bindingCount,
     const VkBuffer*                             pBuffers,
     const VkDeviceSize*                         pOffsets)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_vertex_binding *vb = cmd_buffer->state.vertex_bindings;
 
    /* We have to defer setting up vertex buffer since we need the buffer
@@ -799,7 +799,7 @@ anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void anv_CmdSetEvent(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkEvent                                     event,
     VkPipelineStageFlags                        stageMask)
 {
@@ -807,7 +807,7 @@ void anv_CmdSetEvent(
 }
 
 void anv_CmdResetEvent(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkEvent                                     event,
     VkPipelineStageFlags                        stageMask)
 {
@@ -815,7 +815,7 @@ void anv_CmdResetEvent(
 }
 
 void anv_CmdWaitEvents(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
     VkPipelineStageFlags                        srcStageMask,
@@ -855,14 +855,14 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void anv_CmdPushConstants(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineLayout                            layout,
     VkShaderStageFlags                          stageFlags,
     uint32_t                                    start,
     uint32_t                                    length,
     const void*                                 values)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    VkShaderStage stage;
 
    for_each_bit(stage, stageFlags) {
@@ -876,20 +876,20 @@ void anv_CmdPushConstants(
 }
 
 void anv_CmdExecuteCommands(
-    VkCmdBuffer                                 cmdBuffer,
-    uint32_t                                    cmdBuffersCount,
-    const VkCmdBuffer*                          pCmdBuffers)
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    commandBuffersCount,
+    const VkCommandBuffer*                      pCmdBuffers)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, primary, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, primary, commandBuffer);
 
-   assert(primary->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
+   assert(primary->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
    anv_assert(primary->state.subpass == &primary->state.pass->subpasses[0]);
 
-   for (uint32_t i = 0; i < cmdBuffersCount; i++) {
+   for (uint32_t i = 0; i < commandBuffersCount; i++) {
       ANV_FROM_HANDLE(anv_cmd_buffer, secondary, pCmdBuffers[i]);
 
-      assert(secondary->level == VK_CMD_BUFFER_LEVEL_SECONDARY);
+      assert(secondary->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY);
 
       anv_cmd_buffer_add_secondary(primary, secondary);
    }
@@ -897,8 +897,8 @@ void anv_CmdExecuteCommands(
 
 VkResult anv_CreateCommandPool(
     VkDevice                                    _device,
-    const VkCmdPoolCreateInfo*                  pCreateInfo,
-    VkCmdPool*                                  pCmdPool)
+    const VkCommandPoolCreateInfo*              pCreateInfo,
+    VkCommandPool*                              pCmdPool)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_cmd_pool *pool;
@@ -917,22 +917,22 @@ VkResult anv_CreateCommandPool(
 
 void anv_DestroyCommandPool(
     VkDevice                                    _device,
-    VkCmdPool                                   cmdPool)
+    VkCommandPool                               commandPool)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_cmd_pool, pool, cmdPool);
+   ANV_FROM_HANDLE(anv_cmd_pool, pool, commandPool);
 
-   anv_ResetCommandPool(_device, cmdPool, 0);
+   anv_ResetCommandPool(_device, commandPool, 0);
 
    anv_device_free(device, pool);
 }
 
 VkResult anv_ResetCommandPool(
     VkDevice                                    device,
-    VkCmdPool                                   cmdPool,
-    VkCmdPoolResetFlags                         flags)
+    VkCommandPool                               commandPool,
+    VkCommandPoolResetFlags                     flags)
 {
-   ANV_FROM_HANDLE(anv_cmd_pool, pool, cmdPool);
+   ANV_FROM_HANDLE(anv_cmd_pool, pool, commandPool);
 
    list_for_each_entry_safe(struct anv_cmd_buffer, cmd_buffer,
                             &pool->cmd_buffers, pool_link) {

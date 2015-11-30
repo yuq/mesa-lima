@@ -641,7 +641,7 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_batch_bo *batch_bo = anv_cmd_buffer_current_batch_bo(cmd_buffer);
 
-   if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY) {
+   if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
       anv_batch_emit(&cmd_buffer->batch, GEN7_MI_BATCH_BUFFER_END);
 
       /* Round batch up to an even number of dwords. */
@@ -653,7 +653,7 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
 
    anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
 
-   if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_SECONDARY) {
+   if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
       /* If this is a secondary command buffer, we need to determine the
        * mode in which it will be executed with vkExecuteCommands.  We
        * determine this statically here so that this stays in sync with the

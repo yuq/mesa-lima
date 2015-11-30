@@ -311,7 +311,7 @@ emit_load_color_clear(struct anv_cmd_buffer *cmd_buffer,
                       VkClearColorValue clear_value)
 {
    struct anv_device *device = cmd_buffer->device;
-   VkCmdBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
+   VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    VkPipeline pipeline_h =
       anv_pipeline_to_handle(device->meta_state.clear.color_pipeline);
@@ -487,7 +487,7 @@ emit_load_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
                              VkClearDepthStencilValue clear_value)
 {
    struct anv_device *device = cmd_buffer->device;
-   VkCmdBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
+   VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
 
    const struct depthstencil_clear_vattrs vertex_data[3] = {
@@ -678,14 +678,14 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void anv_CmdClearColorImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     _image,
     VkImageLayout                               imageLayout,
     const VkClearColorValue*                    pColor,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_image, image, _image);
    struct anv_meta_saved_state saved_state;
 
@@ -783,7 +783,7 @@ void anv_CmdClearColorImage(
                   .pClearValues = (VkClearValue[]) {
                      { .color = *pColor },
                   },
-               }, VK_RENDER_PASS_CONTENTS_INLINE);
+               }, VK_SUBPASS_CONTENTS_INLINE);
 
             ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
          }
@@ -794,7 +794,7 @@ void anv_CmdClearColorImage(
 }
 
 void anv_CmdClearDepthStencilImage(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
     const VkClearDepthStencilValue*             pDepthStencil,
@@ -805,7 +805,7 @@ void anv_CmdClearDepthStencilImage(
 }
 
 void anv_CmdClearColorAttachment(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     uint32_t                                    colorAttachment,
     VkImageLayout                               imageLayout,
     const VkClearColorValue*                    pColor,
@@ -816,7 +816,7 @@ void anv_CmdClearColorAttachment(
 }
 
 void anv_CmdClearDepthStencilAttachment(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkImageAspectFlags                          aspectMask,
     VkImageLayout                               imageLayout,
     const VkClearDepthStencilValue*             pDepthStencil,

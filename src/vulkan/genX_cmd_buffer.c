@@ -139,14 +139,14 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
 }
 
 void genX(CmdPipelineBarrier)(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        destStageMask,
     VkBool32                                    byRegion,
     uint32_t                                    memBarrierCount,
     const void* const*                          ppMemBarriers)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    uint32_t b, *dw;
 
    struct GENX(PIPE_CONTROL) cmd = {

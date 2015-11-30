@@ -72,28 +72,28 @@ anv_dump_image_to_ppm(struct anv_device *device,
    result = anv_BindImageMemory(vk_device, copy_image, memory, 0);
    assert(result == VK_SUCCESS);
 
-   VkCmdPool cmdPool;
+   VkCommandPool commandPool;
    result = anv_CreateCommandPool(vk_device,
-      &(VkCmdPoolCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
+      &(VkCommandPoolCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
          .queueFamilyIndex = 0,
          .flags = 0,
-      }, &cmdPool);
+      }, &commandPool);
    assert(result == VK_SUCCESS);
 
-   VkCmdBuffer cmd;
+   VkCommandBuffer cmd;
    result = anv_CreateCommandBuffer(vk_device,
-      &(VkCmdBufferCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO,
-         .cmdPool = cmdPool,
-         .level = VK_CMD_BUFFER_LEVEL_PRIMARY,
+      &(VkCommandBufferCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_CREATE_INFO,
+         .commandPool = commandPool,
+         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
          .flags = 0,
       }, &cmd);
    assert(result == VK_SUCCESS);
 
    result = anv_BeginCommandBuffer(cmd,
-      &(VkCmdBufferBeginInfo) {
-         .sType = VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO,
+      &(VkCommandBufferBeginInfo) {
+         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
          .flags = VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
       });
    assert(result == VK_SUCCESS);
@@ -169,7 +169,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
    assert(result == VK_SUCCESS);
 
    anv_DestroyFence(vk_device, fence);
-   anv_DestroyCommandPool(vk_device, cmdPool);
+   anv_DestroyCommandPool(vk_device, commandPool);
 
    uint8_t *map;
    result = anv_MapMemory(vk_device, memory, 0, reqs.size, 0, (void **)&map);

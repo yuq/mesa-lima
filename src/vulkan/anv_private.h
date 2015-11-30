@@ -1044,8 +1044,8 @@ struct anv_cmd_buffer {
    struct anv_state_stream                      surface_state_stream;
    struct anv_state_stream                      dynamic_state_stream;
 
-   VkCmdBufferOptimizeFlags                     opt_flags;
-   VkCmdBufferLevel                             level;
+   VkCommandBufferOptimizeFlags                 opt_flags;
+   VkCommandBufferLevel                         level;
 
    struct anv_cmd_state                         state;
 };
@@ -1549,13 +1549,13 @@ void anv_dump_image_to_ppm(struct anv_device *device,
 #define ANV_FROM_HANDLE(__anv_type, __name, __handle) \
    struct __anv_type *__name = __anv_type ## _from_handle(__handle)
 
-ANV_DEFINE_HANDLE_CASTS(anv_cmd_buffer, VkCmdBuffer)
+ANV_DEFINE_HANDLE_CASTS(anv_cmd_buffer, VkCommandBuffer)
 ANV_DEFINE_HANDLE_CASTS(anv_device, VkDevice)
 ANV_DEFINE_HANDLE_CASTS(anv_instance, VkInstance)
 ANV_DEFINE_HANDLE_CASTS(anv_physical_device, VkPhysicalDevice)
 ANV_DEFINE_HANDLE_CASTS(anv_queue, VkQueue)
 
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_cmd_pool, VkCmdPool)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_cmd_pool, VkCommandPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer, VkBuffer)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set, VkDescriptorSet)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set_layout, VkDescriptorSetLayout)

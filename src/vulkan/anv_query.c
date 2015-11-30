@@ -142,7 +142,7 @@ VkResult anv_GetQueryPoolResults(
 }
 
 void anv_CmdResetQueryPool(
-    VkCmdBuffer                                 cmdBuffer,
+    VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount)
