@@ -1319,9 +1319,12 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 
 	update_gs_block_state(rctx, rctx->gs_shader != NULL);
 
-	if (rctx->gs_shader) {
+	if (rctx->gs_shader)
 		SELECT_SHADER_OR_FAIL(gs);
 
+	SELECT_SHADER_OR_FAIL(vs);
+
+	if (rctx->gs_shader) {
 		if (!rctx->shader_stages.geom_enable) {
 			rctx->shader_stages.geom_enable = true;
 			r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
@@ -1336,8 +1339,6 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 			rctx->b.streamout.enabled_stream_buffers_mask = rctx->gs_shader->current->gs_copy_shader->enabled_stream_buffers_mask;
 		}
 
-		SELECT_SHADER_OR_FAIL(vs);
-
 		/* vs_shader is used as ES */
 		if (unlikely(vs_dirty || rctx->hw_shader_stages[R600_HW_STAGE_ES].shader != rctx->vs_shader->current)) {
 			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_ES], rctx->vs_shader->current);
@@ -1349,8 +1350,6 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 			rctx->shader_stages.geom_enable = false;
 			r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 		}
-
-		SELECT_SHADER_OR_FAIL(vs);
 
 		if (unlikely(vs_dirty || rctx->hw_shader_stages[R600_HW_STAGE_VS].shader != rctx->vs_shader->current)) {
 			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_VS], rctx->vs_shader->current);
