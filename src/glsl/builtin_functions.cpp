@@ -550,6 +550,7 @@ private:
    ir_variable *in_var(const glsl_type *type, const char *name);
    ir_variable *out_var(const glsl_type *type, const char *name);
    ir_constant *imm(float f, unsigned vector_elements=1);
+   ir_constant *imm(bool b, unsigned vector_elements=1);
    ir_constant *imm(int i, unsigned vector_elements=1);
    ir_constant *imm(unsigned u, unsigned vector_elements=1);
    ir_constant *imm(double d, unsigned vector_elements=1);
@@ -3012,6 +3013,12 @@ builtin_builder::out_var(const glsl_type *type, const char *name)
 }
 
 ir_constant *
+builtin_builder::imm(bool b, unsigned vector_elements)
+{
+   return new(mem_ctx) ir_constant(b, vector_elements);
+}
+
+ir_constant *
 builtin_builder::imm(float f, unsigned vector_elements)
 {
    return new(mem_ctx) ir_constant(f, vector_elements);
@@ -4370,7 +4377,13 @@ builtin_builder::_notEqual(builtin_available_predicate avail,
 ir_function_signature *
 builtin_builder::_any(const glsl_type *type)
 {
-   return unop(always_available, ir_unop_any, glsl_type::bool_type, type);
+   ir_variable *v = in_var(type, "v");
+   MAKE_SIG(glsl_type::bool_type, always_available, 1, v);
+
+   const unsigned vec_elem = v->type->vector_elements;
+   body.emit(ret(expr(ir_binop_any_nequal, v, imm(false, vec_elem))));
+
+   return sig;
 }
 
 ir_function_signature *
