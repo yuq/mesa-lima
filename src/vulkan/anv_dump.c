@@ -103,10 +103,10 @@ anv_dump_image_to_ppm(struct anv_device *device,
       copy_image, VK_IMAGE_LAYOUT_GENERAL, 1,
       &(VkImageBlit) {
          .srcSubresource = {
-            .aspect = VK_IMAGE_ASPECT_COLOR,
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .mipLevel = miplevel,
-            .arrayLayer = array_layer,
-            .arraySize = 1,
+            .baseArrayLayer = array_layer,
+            .layerCount = 1,
          },
          .srcOffset = (VkOffset3D) { 0, 0, 0 },
          .srcExtent = (VkExtent3D) {
@@ -114,14 +114,14 @@ anv_dump_image_to_ppm(struct anv_device *device,
             extent.height,
             1
          },
-         .destSubresource = {
-            .aspect = VK_IMAGE_ASPECT_COLOR,
+         .dstSubresource = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .mipLevel = 0,
-            .arrayLayer = 0,
-            .arraySize = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
          },
-         .destOffset = (VkOffset3D) { 0, 0, 0 },
-         .destExtent = (VkExtent3D) {
+         .dstOffset = (VkOffset3D) { 0, 0, 0 },
+         .dstExtent = (VkExtent3D) {
             extent.width,
             extent.height,
             1

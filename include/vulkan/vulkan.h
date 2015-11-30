@@ -1932,73 +1932,80 @@ typedef struct {
     VkFramebuffer                               framebuffer;
 } VkCommandBufferBeginInfo;
 
-typedef struct {
+typedef struct VkBufferCopy {
     VkDeviceSize                                srcOffset;
-    VkDeviceSize                                destOffset;
-    VkDeviceSize                                copySize;
+    VkDeviceSize                                dstOffset;
+    VkDeviceSize                                size;
 } VkBufferCopy;
 
-typedef struct {
-    VkImageAspect                               aspect;
+typedef struct VkImageSubresourceLayers {
+    VkImageAspectFlags                          aspectMask;
     uint32_t                                    mipLevel;
-    uint32_t                                    arrayLayer;
-    uint32_t                                    arraySize;
-} VkImageSubresourceCopy;
+    uint32_t                                    baseArrayLayer;
+    uint32_t                                    layerCount;
+} VkImageSubresourceLayers;
 
-typedef struct {
-    VkImageSubresourceCopy                      srcSubresource;
+typedef struct VkImageCopy {
+    VkImageSubresourceLayers                    srcSubresource;
     VkOffset3D                                  srcOffset;
-    VkImageSubresourceCopy                      destSubresource;
-    VkOffset3D                                  destOffset;
+    VkImageSubresourceLayers                    dstSubresource;
+    VkOffset3D                                  dstOffset;
     VkExtent3D                                  extent;
 } VkImageCopy;
 
-typedef struct {
-    VkImageSubresourceCopy                      srcSubresource;
+typedef struct VkImageBlit {
+    VkImageSubresourceLayers                    srcSubresource;
     VkOffset3D                                  srcOffset;
     VkExtent3D                                  srcExtent;
-    VkImageSubresourceCopy                      destSubresource;
-    VkOffset3D                                  destOffset;
-    VkExtent3D                                  destExtent;
+    VkImageSubresourceLayers                    dstSubresource;
+    VkOffset3D                                  dstOffset;
+    VkExtent3D                                  dstExtent;
 } VkImageBlit;
 
-typedef struct {
+typedef struct VkBufferImageCopy {
     VkDeviceSize                                bufferOffset;
     uint32_t                                    bufferRowLength;
     uint32_t                                    bufferImageHeight;
-    VkImageSubresourceCopy                      imageSubresource;
+    VkImageSubresourceLayers                    imageSubresource;
     VkOffset3D                                  imageOffset;
     VkExtent3D                                  imageExtent;
 } VkBufferImageCopy;
 
-typedef union {
+typedef union VkClearColorValue {
     float                                       float32[4];
     int32_t                                     int32[4];
     uint32_t                                    uint32[4];
 } VkClearColorValue;
 
-typedef struct {
+typedef struct VkClearDepthStencilValue {
     float                                       depth;
     uint32_t                                    stencil;
 } VkClearDepthStencilValue;
 
-typedef struct {
-    VkOffset3D                                  offset;
-    VkExtent3D                                  extent;
-} VkRect3D;
-
-typedef struct {
-    VkImageSubresourceCopy                      srcSubresource;
-    VkOffset3D                                  srcOffset;
-    VkImageSubresourceCopy                      destSubresource;
-    VkOffset3D                                  destOffset;
-    VkExtent3D                                  extent;
-} VkImageResolve;
-
-typedef union {
+typedef union VkClearValue {
     VkClearColorValue                           color;
     VkClearDepthStencilValue                    depthStencil;
 } VkClearValue;
+
+typedef struct VkClearAttachment {
+    VkImageAspectFlags                          aspectMask;
+    uint32_t                                    colorAttachment;
+    VkClearValue                                clearValue;
+} VkClearAttachment;
+
+typedef struct VkClearRect {
+    VkRect2D                                    rect;
+    uint32_t                                    baseArrayLayer;
+    uint32_t                                    layerCount;
+} VkClearRect;
+
+typedef struct VkImageResolve {
+    VkImageSubresourceLayers                    srcSubresource;
+    VkOffset3D                                  srcOffset;
+    VkImageSubresourceLayers                    dstSubresource;
+    VkOffset3D                                  dstOffset;
+    VkExtent3D                                  extent;
+} VkImageResolve;
 
 typedef struct {
     VkStructureType                             sType;
@@ -2192,9 +2199,8 @@ typedef void (VKAPI_PTR *PFN_vkCmdUpdateBuffer)(VkCommandBuffer commandBuffer, V
 typedef void (VKAPI_PTR *PFN_vkCmdFillBuffer)(VkCommandBuffer commandBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data);
 typedef void (VKAPI_PTR *PFN_vkCmdClearColorImage)(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
 typedef void (VKAPI_PTR *PFN_vkCmdClearDepthStencilImage)(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout imageLayout, const VkClearDepthStencilValue* pDepthStencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
-typedef void (VKAPI_PTR *PFN_vkCmdClearColorAttachment)(VkCommandBuffer commandBuffer, uint32_t colorAttachment, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rectCount, const VkRect3D* pRects);
-typedef void (VKAPI_PTR *PFN_vkCmdClearDepthStencilAttachment)(VkCommandBuffer commandBuffer, VkImageAspectFlags aspectMask, VkImageLayout imageLayout, const VkClearDepthStencilValue* pDepthStencil, uint32_t rectCount, const VkRect3D* pRects);
-typedef void (VKAPI_PTR *PFN_vkCmdResolveImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
+typedef void (VKAPI_PTR *PFN_vkCmdClearAttachments)(VkCommandBuffer commandBuffer, uint32_t attachmentCount, const VkClearAttachment* pAttachments, uint32_t rectCount, const VkClearRect* pRects);
+typedef void (VKAPI_PTR *PFN_vkCmdResolveImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
 typedef void (VKAPI_PTR *PFN_vkCmdSetEvent)(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask);
 typedef void (VKAPI_PTR *PFN_vkCmdResetEvent)(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask);
 typedef void (VKAPI_PTR *PFN_vkCmdWaitEvents)(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
@@ -2816,7 +2822,7 @@ VKAPI_ATTR void VKAPI_CALL vkCmdDispatchIndirect(
 VKAPI_ATTR void VKAPI_CALL vkCmdCopyBuffer(
     VkCommandBuffer                             commandBuffer,
     VkBuffer                                    srcBuffer,
-    VkBuffer                                    destBuffer,
+    VkBuffer                                    dstBuffer,
     uint32_t                                    regionCount,
     const VkBufferCopy*                         pRegions);
 
@@ -2824,8 +2830,8 @@ VKAPI_ATTR void VKAPI_CALL vkCmdCopyImage(
     VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
-    VkImage                                     destImage,
-    VkImageLayout                               destImageLayout,
+    VkImage                                     dstImage,
+    VkImageLayout                               dstImageLayout,
     uint32_t                                    regionCount,
     const VkImageCopy*                          pRegions);
 
@@ -2833,8 +2839,8 @@ VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
     VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
-    VkImage                                     destImage,
-    VkImageLayout                               destImageLayout,
+    VkImage                                     dstImage,
+    VkImageLayout                               dstImageLayout,
     uint32_t                                    regionCount,
     const VkImageBlit*                          pRegions,
     VkTexFilter                                 filter);
@@ -2842,8 +2848,8 @@ VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
 VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
     VkCommandBuffer                             commandBuffer,
     VkBuffer                                    srcBuffer,
-    VkImage                                     destImage,
-    VkImageLayout                               destImageLayout,
+    VkImage                                     dstImage,
+    VkImageLayout                               dstImageLayout,
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions);
 
@@ -2851,22 +2857,22 @@ VKAPI_ATTR void VKAPI_CALL vkCmdCopyImageToBuffer(
     VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
-    VkBuffer                                    destBuffer,
+    VkBuffer                                    dstBuffer,
     uint32_t                                    regionCount,
     const VkBufferImageCopy*                    pRegions);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdUpdateBuffer(
     VkCommandBuffer                             commandBuffer,
-    VkBuffer                                    destBuffer,
-    VkDeviceSize                                destOffset,
+    VkBuffer                                    dstBuffer,
+    VkDeviceSize                                dstOffset,
     VkDeviceSize                                dataSize,
     const uint32_t*                             pData);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdFillBuffer(
     VkCommandBuffer                             commandBuffer,
-    VkBuffer                                    destBuffer,
-    VkDeviceSize                                destOffset,
-    VkDeviceSize                                fillSize,
+    VkBuffer                                    dstBuffer,
+    VkDeviceSize                                dstOffset,
+    VkDeviceSize                                size,
     uint32_t                                    data);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdClearColorImage(
@@ -2885,28 +2891,19 @@ VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilImage(
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges);
 
-VKAPI_ATTR void VKAPI_CALL vkCmdClearColorAttachment(
+VKAPI_ATTR void VKAPI_CALL vkCmdClearAttachments(
     VkCommandBuffer                             commandBuffer,
-    uint32_t                                    colorAttachment,
-    VkImageLayout                               imageLayout,
-    const VkClearColorValue*                    pColor,
+    uint32_t                                    attachmentCount,
+    const VkClearAttachment*                    pAttachments,
     uint32_t                                    rectCount,
-    const VkRect3D*                             pRects);
-
-VKAPI_ATTR void VKAPI_CALL vkCmdClearDepthStencilAttachment(
-    VkCommandBuffer                             commandBuffer,
-    VkImageAspectFlags                          aspectMask,
-    VkImageLayout                               imageLayout,
-    const VkClearDepthStencilValue*             pDepthStencil,
-    uint32_t                                    rectCount,
-    const VkRect3D*                             pRects);
+    const VkClearRect*                          pRects);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdResolveImage(
     VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
     VkImageLayout                               srcImageLayout,
-    VkImage                                     destImage,
-    VkImageLayout                               destImageLayout,
+    VkImage                                     dstImage,
+    VkImageLayout                               dstImageLayout,
     uint32_t                                    regionCount,
     const VkImageResolve*                       pRegions);
 

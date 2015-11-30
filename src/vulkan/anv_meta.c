@@ -163,13 +163,13 @@ meta_blit_get_src_image_view_type(const struct anv_image *src_image)
 
 static uint32_t
 meta_blit_get_dest_view_base_array_slice(const struct anv_image *dest_image,
-                                         const VkImageSubresourceCopy *dest_subresource,
+                                         const VkImageSubresourceLayers *dest_subresource,
                                          const VkOffset3D *dest_offset)
 {
    switch (dest_image->type) {
    case VK_IMAGE_TYPE_1D:
    case VK_IMAGE_TYPE_2D:
-      return dest_subresource->arrayLayer;
+      return dest_subresource->baseArrayLayer;
    case VK_IMAGE_TYPE_3D:
       /* HACK: Vulkan does not allow attaching a 3D image to a framebuffer,
        * but meta does it anyway. When doing so, we translate the
@@ -757,8 +757,8 @@ void anv_CmdCopyBuffer(
 
    for (unsigned r = 0; r < regionCount; r++) {
       uint64_t src_offset = src_buffer->offset + pRegions[r].srcOffset;
-      uint64_t dest_offset = dest_buffer->offset + pRegions[r].destOffset;
-      uint64_t copy_size = pRegions[r].copySize;
+      uint64_t dest_offset = dest_buffer->offset + pRegions[r].dstOffset;
+      uint64_t copy_size = pRegions[r].size;
 
       /* First, we compute the biggest format that can be used with the
        * given offsets and size.
@@ -775,10 +775,10 @@ void anv_CmdCopyBuffer(
          bs = MIN2(bs, 1 << fs);
       assert(dest_offset % bs == 0);
 
-      fs = ffs(pRegions[r].copySize) - 1;
+      fs = ffs(pRegions[r].size) - 1;
       if (fs != -1)
          bs = MIN2(bs, 1 << fs);
-      assert(pRegions[r].copySize % bs == 0);
+      assert(pRegions[r].size % bs == 0);
 
       VkFormat copy_format = vk_format_for_size(bs);
 
@@ -847,37 +847,37 @@ void anv_CmdCopyImage(
             .viewType = src_iview_type,
             .format = src_image->format->vk_format,
             .subresourceRange = {
-               .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
+               .aspectMask = pRegions[r].srcSubresource.aspectMask,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .mipLevels = 1,
-               .baseArrayLayer = pRegions[r].srcSubresource.arrayLayer,
-               .arraySize = pRegions[r].destSubresource.arraySize,
+               .baseArrayLayer = pRegions[r].srcSubresource.baseArrayLayer,
+               .arraySize = pRegions[r].dstSubresource.layerCount,
             },
          },
          cmd_buffer);
 
       const VkOffset3D dest_offset = {
-         .x = pRegions[r].destOffset.x,
-         .y = pRegions[r].destOffset.y,
+         .x = pRegions[r].dstOffset.x,
+         .y = pRegions[r].dstOffset.y,
          .z = 0,
       };
 
       unsigned num_slices;
       if (src_image->type == VK_IMAGE_TYPE_3D) {
-         assert(pRegions[r].srcSubresource.arraySize == 1 &&
-                pRegions[r].destSubresource.arraySize == 1);
+         assert(pRegions[r].srcSubresource.layerCount == 1 &&
+                pRegions[r].dstSubresource.layerCount == 1);
          num_slices = pRegions[r].extent.depth;
       } else {
-         assert(pRegions[r].srcSubresource.arraySize ==
-                pRegions[r].destSubresource.arraySize);
+         assert(pRegions[r].srcSubresource.layerCount ==
+                pRegions[r].dstSubresource.layerCount);
          assert(pRegions[r].extent.depth == 1);
-         num_slices = pRegions[r].destSubresource.arraySize;
+         num_slices = pRegions[r].dstSubresource.layerCount;
       }
 
       const uint32_t dest_base_array_slice =
          meta_blit_get_dest_view_base_array_slice(dest_image,
-                                                  &pRegions[r].destSubresource,
-                                                  &pRegions[r].destOffset);
+                                                  &pRegions[r].dstSubresource,
+                                                  &pRegions[r].dstOffset);
 
       for (unsigned slice = 0; slice < num_slices; slice++) {
          VkOffset3D src_offset = pRegions[r].srcOffset;
@@ -892,7 +892,7 @@ void anv_CmdCopyImage(
                .format = dest_image->format->vk_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                  .baseMipLevel = pRegions[r].destSubresource.mipLevel,
+                  .baseMipLevel = pRegions[r].dstSubresource.mipLevel,
                   .mipLevels = 1,
                   .baseArrayLayer = dest_base_array_slice + slice,
                   .arraySize = 1
@@ -947,30 +947,30 @@ void anv_CmdBlitImage(
             .viewType = src_iview_type,
             .format = src_image->format->vk_format,
             .subresourceRange = {
-               .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
+               .aspectMask = pRegions[r].srcSubresource.aspectMask,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .mipLevels = 1,
-               .baseArrayLayer = pRegions[r].srcSubresource.arrayLayer,
+               .baseArrayLayer = pRegions[r].srcSubresource.baseArrayLayer,
                .arraySize = 1
             },
          },
          cmd_buffer);
 
       const VkOffset3D dest_offset = {
-         .x = pRegions[r].destOffset.x,
-         .y = pRegions[r].destOffset.y,
+         .x = pRegions[r].dstOffset.x,
+         .y = pRegions[r].dstOffset.y,
          .z = 0,
       };
 
       const uint32_t dest_array_slice =
          meta_blit_get_dest_view_base_array_slice(dest_image,
-                                                  &pRegions[r].destSubresource,
-                                                  &pRegions[r].destOffset);
+                                                  &pRegions[r].dstSubresource,
+                                                  &pRegions[r].dstOffset);
 
-      if (pRegions[r].srcSubresource.arraySize > 1)
+      if (pRegions[r].srcSubresource.layerCount > 1)
          anv_finishme("FINISHME: copy multiple array layers");
 
-      if (pRegions[r].destExtent.depth > 1)
+      if (pRegions[r].dstExtent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
 
       struct anv_image_view dest_iview;
@@ -982,7 +982,7 @@ void anv_CmdBlitImage(
             .format = dest_image->format->vk_format,
             .subresourceRange = {
                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-               .baseMipLevel = pRegions[r].destSubresource.mipLevel,
+               .baseMipLevel = pRegions[r].dstSubresource.mipLevel,
                .mipLevels = 1,
                .baseArrayLayer = dest_array_slice,
                .arraySize = 1
@@ -996,7 +996,7 @@ void anv_CmdBlitImage(
                      pRegions[r].srcExtent,
                      dest_image, &dest_iview,
                      dest_offset,
-                     pRegions[r].destExtent,
+                     pRegions[r].dstExtent,
                      filter);
    }
 
@@ -1063,11 +1063,11 @@ void anv_CmdCopyBufferToImage(
 
    for (unsigned r = 0; r < regionCount; r++) {
       VkFormat proxy_format = orig_format;
-      VkImageAspect proxy_aspect = pRegions[r].imageSubresource.aspect;
+      VkImageAspectFlags proxy_aspect = pRegions[r].imageSubresource.aspectMask;
 
       if (orig_format == VK_FORMAT_S8_UINT) {
          proxy_format = VK_FORMAT_R8_UINT;
-         proxy_aspect = VK_IMAGE_ASPECT_COLOR;
+         proxy_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
       }
 
       struct anv_image *src_image =
@@ -1082,11 +1082,11 @@ void anv_CmdCopyBufferToImage(
 
       unsigned num_slices;
       if (dest_image->type == VK_IMAGE_TYPE_3D) {
-         assert(pRegions[r].imageSubresource.arraySize == 1);
+         assert(pRegions[r].imageSubresource.layerCount == 1);
          num_slices = pRegions[r].imageExtent.depth;
       } else {
          assert(pRegions[r].imageExtent.depth == 1);
-         num_slices = pRegions[r].imageSubresource.arraySize;
+         num_slices = pRegions[r].imageSubresource.layerCount;
       }
 
       for (unsigned slice = 0; slice < num_slices; slice++) {
@@ -1098,7 +1098,7 @@ void anv_CmdCopyBufferToImage(
                .viewType = VK_IMAGE_VIEW_TYPE_2D,
                .format = proxy_format,
                .subresourceRange = {
-                  .aspectMask = 1 << proxy_aspect,
+                  .aspectMask = proxy_aspect,
                   .baseMipLevel = 0,
                   .mipLevels = 1,
                   .baseArrayLayer = 0,
@@ -1186,11 +1186,11 @@ void anv_CmdCopyImageToBuffer(
             .viewType = src_iview_type,
             .format = src_image->format->vk_format,
             .subresourceRange = {
-               .aspectMask = 1 << pRegions[r].imageSubresource.aspect,
+               .aspectMask = pRegions[r].imageSubresource.aspectMask,
                .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
                .mipLevels = 1,
-               .baseArrayLayer = pRegions[r].imageSubresource.arrayLayer,
-               .arraySize = pRegions[r].imageSubresource.arraySize,
+               .baseArrayLayer = pRegions[r].imageSubresource.baseArrayLayer,
+               .arraySize = pRegions[r].imageSubresource.layerCount,
             },
          },
          cmd_buffer);
@@ -1207,11 +1207,11 @@ void anv_CmdCopyImageToBuffer(
 
       unsigned num_slices;
       if (src_image->type == VK_IMAGE_TYPE_3D) {
-         assert(pRegions[r].imageSubresource.arraySize == 1);
+         assert(pRegions[r].imageSubresource.layerCount == 1);
          num_slices = pRegions[r].imageExtent.depth;
       } else {
          assert(pRegions[r].imageExtent.depth == 1);
-         num_slices = pRegions[r].imageSubresource.arraySize;
+         num_slices = pRegions[r].imageSubresource.layerCount;
       }
 
       for (unsigned slice = 0; slice < num_slices; slice++) {
