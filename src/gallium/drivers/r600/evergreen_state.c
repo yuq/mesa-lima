@@ -2349,6 +2349,7 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 			v |= S_028B54_ES_EN(V_028B54_ES_STAGE_DS);
 	}
 
+	radeon_set_context_reg(cs, R_028AB8_VGT_VTX_CNT_EN, v ? 1 : 0 );
 	radeon_set_context_reg(cs, R_028B54_VGT_SHADER_STAGES_EN, v);
 	radeon_set_context_reg(cs, R_028A40_VGT_GS_MODE, v2);
 	radeon_set_context_reg(cs, R_028A84_VGT_PRIMITIVEID_EN, primid);
@@ -3227,7 +3228,6 @@ void evergreen_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader
 
 	/* VGT_GS_MODE is written by evergreen_emit_shader_stages */
 
-	r600_store_context_reg(cb, R_028AB8_VGT_VTX_CNT_EN, 1);
 
 	r600_store_context_reg(cb, R_028B38_VGT_GS_MAX_VERT_OUT,
 			       S_028B38_MAX_VERT_OUT(shader->selector->gs_max_out_vertices));
@@ -3750,7 +3750,7 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_add_atom(rctx, &rctx->b.streamout.enable_atom, id++);
 	for (i = 0; i < EG_NUM_HW_STAGES; i++)
 		r600_init_atom(rctx, &rctx->hw_shader_stages[i].atom, id++, r600_emit_shader, 0);
-	r600_init_atom(rctx, &rctx->shader_stages.atom, id++, evergreen_emit_shader_stages, 12);
+	r600_init_atom(rctx, &rctx->shader_stages.atom, id++, evergreen_emit_shader_stages, 15);
 	r600_init_atom(rctx, &rctx->gs_rings.atom, id++, evergreen_emit_gs_rings, 26);
 
 	rctx->b.b.create_blend_state = evergreen_create_blend_state;
