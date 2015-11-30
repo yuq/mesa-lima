@@ -87,6 +87,24 @@ alloc_surface_state(struct anv_device *device,
       }
 }
 
+static const uint32_t vk_to_gen_swizzle_map[] = {
+   [VK_COMPONENT_SWIZZLE_ZERO]                 = SCS_ZERO,
+   [VK_COMPONENT_SWIZZLE_ONE]                  = SCS_ONE,
+   [VK_COMPONENT_SWIZZLE_R]                    = SCS_RED,
+   [VK_COMPONENT_SWIZZLE_G]                    = SCS_GREEN,
+   [VK_COMPONENT_SWIZZLE_B]                    = SCS_BLUE,
+   [VK_COMPONENT_SWIZZLE_A]                    = SCS_ALPHA
+};
+
+static uint32_t
+vk_to_gen_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component)
+{
+   if (swizzle == VK_COMPONENT_SWIZZLE_IDENTITY)
+      return vk_to_gen_swizzle_map[component];
+   else
+      return vk_to_gen_swizzle_map[swizzle];
+}
+
 void
 genX(image_view_init)(struct anv_image_view *iview,
                       struct anv_device *device,
@@ -156,15 +174,6 @@ genX(image_view_init)(struct anv_image_view *iview,
       unreachable(!"bad VkImageType");
    }
 
-   static const uint32_t vk_to_gen_swizzle[] = {
-      [VK_CHANNEL_SWIZZLE_ZERO]                 = SCS_ZERO,
-      [VK_CHANNEL_SWIZZLE_ONE]                  = SCS_ONE,
-      [VK_CHANNEL_SWIZZLE_R]                    = SCS_RED,
-      [VK_CHANNEL_SWIZZLE_G]                    = SCS_GREEN,
-      [VK_CHANNEL_SWIZZLE_B]                    = SCS_BLUE,
-      [VK_CHANNEL_SWIZZLE_A]                    = SCS_ALPHA
-   };
-
    static const uint8_t isl_to_gen_tiling[] = {
       [ISL_TILING_LINEAR]  = LINEAR,
       [ISL_TILING_X]       = XMAJOR,
@@ -212,10 +221,14 @@ genX(image_view_init)(struct anv_image_view *iview,
       .GreenClearColor = 0,
       .BlueClearColor = 0,
       .AlphaClearColor = 0,
-      .ShaderChannelSelectRed = vk_to_gen_swizzle[pCreateInfo->channels.r],
-      .ShaderChannelSelectGreen = vk_to_gen_swizzle[pCreateInfo->channels.g],
-      .ShaderChannelSelectBlue = vk_to_gen_swizzle[pCreateInfo->channels.b],
-      .ShaderChannelSelectAlpha = vk_to_gen_swizzle[pCreateInfo->channels.a],
+      .ShaderChannelSelectRed = vk_to_gen_swizzle(pCreateInfo->components.r,
+                                                  VK_COMPONENT_SWIZZLE_R),
+      .ShaderChannelSelectGreen = vk_to_gen_swizzle(pCreateInfo->components.g,
+                                                    VK_COMPONENT_SWIZZLE_G),
+      .ShaderChannelSelectBlue = vk_to_gen_swizzle(pCreateInfo->components.b,
+                                                   VK_COMPONENT_SWIZZLE_B),
+      .ShaderChannelSelectAlpha = vk_to_gen_swizzle(pCreateInfo->components.a,
+                                                    VK_COMPONENT_SWIZZLE_A),
       .ResourceMinLOD = 0.0,
       .SurfaceBaseAddress = { NULL, iview->offset },
    };

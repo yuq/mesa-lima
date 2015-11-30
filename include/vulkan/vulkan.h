@@ -467,18 +467,19 @@ typedef enum VkImageViewType {
     VK_IMAGE_VIEW_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkImageViewType;
 
-typedef enum {
-    VK_CHANNEL_SWIZZLE_ZERO = 0,
-    VK_CHANNEL_SWIZZLE_ONE = 1,
-    VK_CHANNEL_SWIZZLE_R = 2,
-    VK_CHANNEL_SWIZZLE_G = 3,
-    VK_CHANNEL_SWIZZLE_B = 4,
-    VK_CHANNEL_SWIZZLE_A = 5,
-    VK_CHANNEL_SWIZZLE_BEGIN_RANGE = VK_CHANNEL_SWIZZLE_ZERO,
-    VK_CHANNEL_SWIZZLE_END_RANGE = VK_CHANNEL_SWIZZLE_A,
-    VK_CHANNEL_SWIZZLE_NUM = (VK_CHANNEL_SWIZZLE_A - VK_CHANNEL_SWIZZLE_ZERO + 1),
-    VK_CHANNEL_SWIZZLE_MAX_ENUM = 0x7FFFFFFF
-} VkChannelSwizzle;
+typedef enum VkComponentSwizzle {
+    VK_COMPONENT_SWIZZLE_IDENTITY = 0,
+    VK_COMPONENT_SWIZZLE_ZERO = 1,
+    VK_COMPONENT_SWIZZLE_ONE = 2,
+    VK_COMPONENT_SWIZZLE_R = 3,
+    VK_COMPONENT_SWIZZLE_G = 4,
+    VK_COMPONENT_SWIZZLE_B = 5,
+    VK_COMPONENT_SWIZZLE_A = 6,
+    VK_COMPONENT_SWIZZLE_BEGIN_RANGE = VK_COMPONENT_SWIZZLE_IDENTITY,
+    VK_COMPONENT_SWIZZLE_END_RANGE = VK_COMPONENT_SWIZZLE_A,
+    VK_COMPONENT_SWIZZLE_RANGE_SIZE = (VK_COMPONENT_SWIZZLE_A - VK_COMPONENT_SWIZZLE_IDENTITY + 1),
+    VK_COMPONENT_SWIZZLE_MAX_ENUM = 0x7FFFFFFF
+} VkComponentSwizzle;
 
 typedef enum {
     VK_SHADER_STAGE_VERTEX = 0,
@@ -1493,12 +1494,12 @@ typedef struct {
     VkDeviceSize                                depthPitch;
 } VkSubresourceLayout;
 
-typedef struct {
-    VkChannelSwizzle                            r;
-    VkChannelSwizzle                            g;
-    VkChannelSwizzle                            b;
-    VkChannelSwizzle                            a;
-} VkChannelMapping;
+typedef struct VkComponentMapping {
+    VkComponentSwizzle                          r;
+    VkComponentSwizzle                          g;
+    VkComponentSwizzle                          b;
+    VkComponentSwizzle                          a;
+} VkComponentMapping;
 
 typedef struct {
     VkImageAspectFlags                          aspectMask;
@@ -1514,7 +1515,7 @@ typedef struct {
     VkImage                                     image;
     VkImageViewType                             viewType;
     VkFormat                                    format;
-    VkChannelMapping                            channels;
+    VkComponentMapping                          components;
     VkImageSubresourceRange                     subresourceRange;
     VkImageViewCreateFlags                      flags;
 } VkImageViewCreateInfo;

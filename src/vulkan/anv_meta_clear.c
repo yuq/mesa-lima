@@ -701,12 +701,6 @@ void anv_CmdClearColorImage(
                   .image = _image,
                   .viewType = VK_IMAGE_VIEW_TYPE_2D,
                   .format = image->format->vk_format,
-                  .channels = {
-                     VK_CHANNEL_SWIZZLE_R,
-                     VK_CHANNEL_SWIZZLE_G,
-                     VK_CHANNEL_SWIZZLE_B,
-                     VK_CHANNEL_SWIZZLE_A
-                  },
                   .subresourceRange = {
                      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                      .baseMipLevel = pRanges[r].baseMipLevel + l,

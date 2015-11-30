@@ -474,14 +474,14 @@ anv_validate_CreateImageView(VkDevice _device,
    view_format_info = anv_format_for_vk_format(pCreateInfo->format);
 
    /* Validate channel swizzles. */
-   assert(pCreateInfo->channels.r >= VK_CHANNEL_SWIZZLE_BEGIN_RANGE);
-   assert(pCreateInfo->channels.r <= VK_CHANNEL_SWIZZLE_END_RANGE);
-   assert(pCreateInfo->channels.g >= VK_CHANNEL_SWIZZLE_BEGIN_RANGE);
-   assert(pCreateInfo->channels.g <= VK_CHANNEL_SWIZZLE_END_RANGE);
-   assert(pCreateInfo->channels.b >= VK_CHANNEL_SWIZZLE_BEGIN_RANGE);
-   assert(pCreateInfo->channels.b <= VK_CHANNEL_SWIZZLE_END_RANGE);
-   assert(pCreateInfo->channels.a >= VK_CHANNEL_SWIZZLE_BEGIN_RANGE);
-   assert(pCreateInfo->channels.a <= VK_CHANNEL_SWIZZLE_END_RANGE);
+   assert(pCreateInfo->components.r >= VK_COMPONENT_SWIZZLE_BEGIN_RANGE);
+   assert(pCreateInfo->components.r <= VK_COMPONENT_SWIZZLE_END_RANGE);
+   assert(pCreateInfo->components.g >= VK_COMPONENT_SWIZZLE_BEGIN_RANGE);
+   assert(pCreateInfo->components.g <= VK_COMPONENT_SWIZZLE_END_RANGE);
+   assert(pCreateInfo->components.b >= VK_COMPONENT_SWIZZLE_BEGIN_RANGE);
+   assert(pCreateInfo->components.b <= VK_COMPONENT_SWIZZLE_END_RANGE);
+   assert(pCreateInfo->components.a >= VK_COMPONENT_SWIZZLE_BEGIN_RANGE);
+   assert(pCreateInfo->components.a <= VK_COMPONENT_SWIZZLE_END_RANGE);
 
    /* Validate subresource. */
    assert(subresource->aspectMask != 0);

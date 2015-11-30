@@ -698,12 +698,6 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
          .image = src_image,
          .viewType = VK_IMAGE_VIEW_TYPE_2D,
          .format = copy_format,
-         .channels = {
-            VK_CHANNEL_SWIZZLE_R,
-            VK_CHANNEL_SWIZZLE_G,
-            VK_CHANNEL_SWIZZLE_B,
-            VK_CHANNEL_SWIZZLE_A
-         },
          .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0,
@@ -721,12 +715,6 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
          .image = dest_image,
          .viewType = VK_IMAGE_VIEW_TYPE_2D,
          .format = copy_format,
-         .channels = {
-            .r = VK_CHANNEL_SWIZZLE_R,
-            .g = VK_CHANNEL_SWIZZLE_G,
-            .b = VK_CHANNEL_SWIZZLE_B,
-            .a = VK_CHANNEL_SWIZZLE_A,
-         },
          .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0,
@@ -858,12 +846,6 @@ void anv_CmdCopyImage(
             .image = srcImage,
             .viewType = src_iview_type,
             .format = src_image->format->vk_format,
-            .channels = {
-               VK_CHANNEL_SWIZZLE_R,
-               VK_CHANNEL_SWIZZLE_G,
-               VK_CHANNEL_SWIZZLE_B,
-               VK_CHANNEL_SWIZZLE_A
-            },
             .subresourceRange = {
                .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
@@ -908,12 +890,6 @@ void anv_CmdCopyImage(
                .image = destImage,
                .viewType = VK_IMAGE_VIEW_TYPE_2D,
                .format = dest_image->format->vk_format,
-               .channels = {
-                  VK_CHANNEL_SWIZZLE_R,
-                  VK_CHANNEL_SWIZZLE_G,
-                  VK_CHANNEL_SWIZZLE_B,
-                  VK_CHANNEL_SWIZZLE_A
-               },
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = pRegions[r].destSubresource.mipLevel,
@@ -970,12 +946,6 @@ void anv_CmdBlitImage(
             .image = srcImage,
             .viewType = src_iview_type,
             .format = src_image->format->vk_format,
-            .channels = {
-               VK_CHANNEL_SWIZZLE_R,
-               VK_CHANNEL_SWIZZLE_G,
-               VK_CHANNEL_SWIZZLE_B,
-               VK_CHANNEL_SWIZZLE_A
-            },
             .subresourceRange = {
                .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
@@ -1010,12 +980,6 @@ void anv_CmdBlitImage(
             .image = destImage,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = dest_image->format->vk_format,
-            .channels = {
-               VK_CHANNEL_SWIZZLE_R,
-               VK_CHANNEL_SWIZZLE_G,
-               VK_CHANNEL_SWIZZLE_B,
-               VK_CHANNEL_SWIZZLE_A
-            },
             .subresourceRange = {
                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                .baseMipLevel = pRegions[r].destSubresource.mipLevel,
@@ -1133,12 +1097,6 @@ void anv_CmdCopyBufferToImage(
                .image = anv_image_to_handle(src_image),
                .viewType = VK_IMAGE_VIEW_TYPE_2D,
                .format = proxy_format,
-               .channels = {
-                  VK_CHANNEL_SWIZZLE_R,
-                  VK_CHANNEL_SWIZZLE_G,
-                  VK_CHANNEL_SWIZZLE_B,
-                  VK_CHANNEL_SWIZZLE_A
-               },
                .subresourceRange = {
                   .aspectMask = 1 << proxy_aspect,
                   .baseMipLevel = 0,
@@ -1156,12 +1114,6 @@ void anv_CmdCopyBufferToImage(
                .image = anv_image_to_handle(dest_image),
                .viewType = VK_IMAGE_VIEW_TYPE_2D,
                .format = proxy_format,
-               .channels = {
-                  VK_CHANNEL_SWIZZLE_R,
-                  VK_CHANNEL_SWIZZLE_G,
-                  VK_CHANNEL_SWIZZLE_B,
-                  VK_CHANNEL_SWIZZLE_A
-               },
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
@@ -1233,12 +1185,6 @@ void anv_CmdCopyImageToBuffer(
             .image = srcImage,
             .viewType = src_iview_type,
             .format = src_image->format->vk_format,
-            .channels = {
-               VK_CHANNEL_SWIZZLE_R,
-               VK_CHANNEL_SWIZZLE_G,
-               VK_CHANNEL_SWIZZLE_B,
-               VK_CHANNEL_SWIZZLE_A
-            },
             .subresourceRange = {
                .aspectMask = 1 << pRegions[r].imageSubresource.aspect,
                .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
@@ -1279,12 +1225,6 @@ void anv_CmdCopyImageToBuffer(
                .image = anv_image_to_handle(dest_image),
                .viewType = VK_IMAGE_VIEW_TYPE_2D,
                .format = dest_format,
-               .channels = {
-                  VK_CHANNEL_SWIZZLE_R,
-                  VK_CHANNEL_SWIZZLE_G,
-                  VK_CHANNEL_SWIZZLE_B,
-                  VK_CHANNEL_SWIZZLE_A
-               },
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = 0,

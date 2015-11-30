@@ -182,14 +182,23 @@ static const uint8_t anv_valign[] = {
     [4] = VALIGN_4,
 };
 
-static const uint32_t vk_to_gen_swizzle[] = {
-   [VK_CHANNEL_SWIZZLE_ZERO]                 = SCS_ZERO,
-   [VK_CHANNEL_SWIZZLE_ONE]                  = SCS_ONE,
-   [VK_CHANNEL_SWIZZLE_R]                    = SCS_RED,
-   [VK_CHANNEL_SWIZZLE_G]                    = SCS_GREEN,
-   [VK_CHANNEL_SWIZZLE_B]                    = SCS_BLUE,
-   [VK_CHANNEL_SWIZZLE_A]                    = SCS_ALPHA
+static const uint32_t vk_to_gen_swizzle_map[] = {
+   [VK_COMPONENT_SWIZZLE_ZERO]                 = SCS_ZERO,
+   [VK_COMPONENT_SWIZZLE_ONE]                  = SCS_ONE,
+   [VK_COMPONENT_SWIZZLE_R]                    = SCS_RED,
+   [VK_COMPONENT_SWIZZLE_G]                    = SCS_GREEN,
+   [VK_COMPONENT_SWIZZLE_B]                    = SCS_BLUE,
+   [VK_COMPONENT_SWIZZLE_A]                    = SCS_ALPHA
 };
+
+static uint32_t
+vk_to_gen_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component)
+{
+   if (swizzle == VK_COMPONENT_SWIZZLE_IDENTITY)
+      return vk_to_gen_swizzle_map[component];
+   else
+      return vk_to_gen_swizzle_map[swizzle];
+}
 
 GENX_FUNC(GEN7, GEN75) void
 genX(image_view_init)(struct anv_image_view *iview,
@@ -263,10 +272,14 @@ genX(image_view_init)(struct anv_image_view *iview,
 
       .MCSEnable = false,
 #  if (ANV_IS_HASWELL)
-      .ShaderChannelSelectR = vk_to_gen_swizzle[pCreateInfo->channels.r],
-      .ShaderChannelSelectG = vk_to_gen_swizzle[pCreateInfo->channels.g],
-      .ShaderChannelSelectB = vk_to_gen_swizzle[pCreateInfo->channels.b],
-      .ShaderChannelSelectA = vk_to_gen_swizzle[pCreateInfo->channels.a],
+      .ShaderChannelSelectR = vk_to_gen_swizzle(pCreateInfo->components.r,
+                                                VK_COMPONENT_SWIZZLE_R),
+      .ShaderChannelSelectG = vk_to_gen_swizzle(pCreateInfo->components.g,
+                                                VK_COMPONENT_SWIZZLE_G),
+      .ShaderChannelSelectB = vk_to_gen_swizzle(pCreateInfo->components.b,
+                                                VK_COMPONENT_SWIZZLE_B),
+      .ShaderChannelSelectA = vk_to_gen_swizzle(pCreateInfo->components.a,
+                                                VK_COMPONENT_SWIZZLE_A),
 #  else /* XXX: Seriously? */
       .RedClearColor = 0,
       .GreenClearColor = 0,
