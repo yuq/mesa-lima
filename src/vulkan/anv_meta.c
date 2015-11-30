@@ -269,12 +269,12 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          {
             .binding = 0,
             .strideInBytes = 0,
-            .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
          },
          {
             .binding = 1,
             .strideInBytes = 5 * sizeof(float),
-            .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
          },
       },
       .attributeCount = 3,
@@ -359,9 +359,9 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
          .depthClipEnable = true,
          .rasterizerDiscardEnable = false,
-         .fillMode = VK_FILL_MODE_SOLID,
+         .polygonMode = VK_POLYGON_MODE_FILL,
          .cullMode = VK_CULL_MODE_NONE,
-         .frontFace = VK_FRONT_FACE_CCW
+         .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE
       },
       .pMultisampleState = &(VkPipelineMultisampleStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,

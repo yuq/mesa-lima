@@ -494,14 +494,14 @@ typedef enum {
     VK_SHADER_STAGE_MAX_ENUM = 0x7FFFFFFF
 } VkShaderStage;
 
-typedef enum {
-    VK_VERTEX_INPUT_STEP_RATE_VERTEX = 0,
-    VK_VERTEX_INPUT_STEP_RATE_INSTANCE = 1,
-    VK_VERTEX_INPUT_STEP_RATE_BEGIN_RANGE = VK_VERTEX_INPUT_STEP_RATE_VERTEX,
-    VK_VERTEX_INPUT_STEP_RATE_END_RANGE = VK_VERTEX_INPUT_STEP_RATE_INSTANCE,
-    VK_VERTEX_INPUT_STEP_RATE_NUM = (VK_VERTEX_INPUT_STEP_RATE_INSTANCE - VK_VERTEX_INPUT_STEP_RATE_VERTEX + 1),
-    VK_VERTEX_INPUT_STEP_RATE_MAX_ENUM = 0x7FFFFFFF
-} VkVertexInputStepRate;
+typedef enum VkVertexInputRate {
+    VK_VERTEX_INPUT_RATE_VERTEX = 0,
+    VK_VERTEX_INPUT_RATE_INSTANCE = 1,
+    VK_VERTEX_INPUT_RATE_BEGIN_RANGE = VK_VERTEX_INPUT_RATE_VERTEX,
+    VK_VERTEX_INPUT_RATE_END_RANGE = VK_VERTEX_INPUT_RATE_INSTANCE,
+    VK_VERTEX_INPUT_RATE_RANGE_SIZE = (VK_VERTEX_INPUT_RATE_INSTANCE - VK_VERTEX_INPUT_RATE_VERTEX + 1),
+    VK_VERTEX_INPUT_RATE_MAX_ENUM = 0x7FFFFFFF
+} VkVertexInputRate;
 
 typedef enum VkPrimitiveTopology {
     VK_PRIMITIVE_TOPOLOGY_POINT_LIST = 0,
@@ -521,33 +521,22 @@ typedef enum VkPrimitiveTopology {
     VK_PRIMITIVE_TOPOLOGY_MAX_ENUM = 0x7FFFFFFF
 } VkPrimitiveTopology;
 
-typedef enum {
-    VK_FILL_MODE_POINTS = 0,
-    VK_FILL_MODE_WIREFRAME = 1,
-    VK_FILL_MODE_SOLID = 2,
-    VK_FILL_MODE_BEGIN_RANGE = VK_FILL_MODE_POINTS,
-    VK_FILL_MODE_END_RANGE = VK_FILL_MODE_SOLID,
-    VK_FILL_MODE_NUM = (VK_FILL_MODE_SOLID - VK_FILL_MODE_POINTS + 1),
-    VK_FILL_MODE_MAX_ENUM = 0x7FFFFFFF
-} VkFillMode;
+typedef enum VkPolygonMode {
+    VK_POLYGON_MODE_FILL = 0,
+    VK_POLYGON_MODE_LINE = 1,
+    VK_POLYGON_MODE_POINT = 2,
+    VK_POLYGON_MODE_BEGIN_RANGE = VK_POLYGON_MODE_FILL,
+    VK_POLYGON_MODE_END_RANGE = VK_POLYGON_MODE_POINT,
+    VK_POLYGON_MODE_RANGE_SIZE = (VK_POLYGON_MODE_POINT - VK_POLYGON_MODE_FILL + 1),
+    VK_POLYGON_MODE_MAX_ENUM = 0x7FFFFFFF
+} VkPolygonMode;
 
-typedef enum {
-    VK_CULL_MODE_NONE = 0,
-    VK_CULL_MODE_FRONT = 1,
-    VK_CULL_MODE_BACK = 2,
-    VK_CULL_MODE_FRONT_AND_BACK = 3,
-    VK_CULL_MODE_BEGIN_RANGE = VK_CULL_MODE_NONE,
-    VK_CULL_MODE_END_RANGE = VK_CULL_MODE_FRONT_AND_BACK,
-    VK_CULL_MODE_NUM = (VK_CULL_MODE_FRONT_AND_BACK - VK_CULL_MODE_NONE + 1),
-    VK_CULL_MODE_MAX_ENUM = 0x7FFFFFFF
-} VkCullMode;
-
-typedef enum {
-    VK_FRONT_FACE_CCW = 0,
-    VK_FRONT_FACE_CW = 1,
-    VK_FRONT_FACE_BEGIN_RANGE = VK_FRONT_FACE_CCW,
-    VK_FRONT_FACE_END_RANGE = VK_FRONT_FACE_CW,
-    VK_FRONT_FACE_NUM = (VK_FRONT_FACE_CW - VK_FRONT_FACE_CCW + 1),
+typedef enum VkFrontFace {
+    VK_FRONT_FACE_COUNTER_CLOCKWISE = 0,
+    VK_FRONT_FACE_CLOCKWISE = 1,
+    VK_FRONT_FACE_BEGIN_RANGE = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+    VK_FRONT_FACE_END_RANGE = VK_FRONT_FACE_CLOCKWISE,
+    VK_FRONT_FACE_RANGE_SIZE = (VK_FRONT_FACE_CLOCKWISE - VK_FRONT_FACE_COUNTER_CLOCKWISE + 1),
     VK_FRONT_FACE_MAX_ENUM = 0x7FFFFFFF
 } VkFrontFace;
 
@@ -979,6 +968,14 @@ typedef enum VkShaderStageFlagBits {
     VK_SHADER_STAGE_ALL_GRAPHICS = 0x1F,
     VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
 } VkShaderStageFlagBits;
+
+typedef enum VkCullModeFlagBits {
+    VK_CULL_MODE_NONE = 0,
+    VK_CULL_MODE_FRONT_BIT = 0x00000001,
+    VK_CULL_MODE_BACK_BIT = 0x00000002,
+    VK_CULL_MODE_FRONT_AND_BACK = 0x3,
+} VkCullModeFlagBits;
+typedef VkFlags VkCullModeFlags;
 typedef VkFlags VkShaderStageFlags;
 
 typedef enum VkAttachmentDescriptionFlagBits {
@@ -1569,7 +1566,7 @@ typedef struct {
 typedef struct {
     uint32_t                                    binding;
     uint32_t                                    strideInBytes;
-    VkVertexInputStepRate                       stepRate;
+    VkVertexInputRate                           inputRate;
 } VkVertexInputBindingDescription;
 
 typedef struct {
@@ -1639,8 +1636,8 @@ typedef struct {
     const void*                                 pNext;
     VkBool32                                    depthClipEnable;
     VkBool32                                    rasterizerDiscardEnable;
-    VkFillMode                                  fillMode;
-    VkCullMode                                  cullMode;
+    VkPolygonMode                               polygonMode;
+    VkCullModeFlags                             cullMode;
     VkFrontFace                                 frontFace;
     VkBool32                                    depthBiasEnable;
     float                                       depthBias;

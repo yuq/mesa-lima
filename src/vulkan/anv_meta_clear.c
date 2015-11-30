@@ -177,9 +177,9 @@ create_pipeline(struct anv_device *device,
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
             .depthClipEnable = false,
             .rasterizerDiscardEnable = false,
-            .fillMode = VK_FILL_MODE_SOLID,
+            .polygonMode = VK_POLYGON_MODE_FILL,
             .cullMode = VK_CULL_MODE_NONE,
-            .frontFace = VK_FRONT_FACE_CCW,
+            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
             .depthBiasEnable = false,
             .depthClipEnable = false,
          },
@@ -246,7 +246,7 @@ init_color_pipeline(struct anv_device *device)
          {
             .binding = 0,
             .strideInBytes = sizeof(struct color_clear_vattrs),
-            .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
          },
       },
       .attributeCount = 3,
@@ -429,7 +429,7 @@ create_depthstencil_pipeline(struct anv_device *device,
          {
             .binding = 0,
             .strideInBytes = sizeof(struct depthstencil_clear_vattrs),
-            .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
          },
       },
       .attributeCount = 2,

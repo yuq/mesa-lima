@@ -1043,12 +1043,12 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
       /* Step rate is programmed per vertex element (attribute), not
        * binding. Set up a map of which bindings step per instance, for
        * reference by vertex element setup. */
-      switch (desc->stepRate) {
+      switch (desc->inputRate) {
       default:
-      case VK_VERTEX_INPUT_STEP_RATE_VERTEX:
+      case VK_VERTEX_INPUT_RATE_VERTEX:
          pipeline->instancing_enable[desc->binding] = false;
          break;
-      case VK_VERTEX_INPUT_STEP_RATE_INSTANCE:
+      case VK_VERTEX_INPUT_RATE_INSTANCE:
          pipeline->instancing_enable[desc->binding] = true;
          break;
       }

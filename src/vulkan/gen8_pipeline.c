@@ -97,20 +97,20 @@ emit_rs_state(struct anv_pipeline *pipeline,
 {
    static const uint32_t vk_to_gen_cullmode[] = {
       [VK_CULL_MODE_NONE]                       = CULLMODE_NONE,
-      [VK_CULL_MODE_FRONT]                      = CULLMODE_FRONT,
-      [VK_CULL_MODE_BACK]                       = CULLMODE_BACK,
+      [VK_CULL_MODE_FRONT_BIT]                  = CULLMODE_FRONT,
+      [VK_CULL_MODE_BACK_BIT]                   = CULLMODE_BACK,
       [VK_CULL_MODE_FRONT_AND_BACK]             = CULLMODE_BOTH
    };
 
    static const uint32_t vk_to_gen_fillmode[] = {
-      [VK_FILL_MODE_POINTS]                     = RASTER_POINT,
-      [VK_FILL_MODE_WIREFRAME]                  = RASTER_WIREFRAME,
-      [VK_FILL_MODE_SOLID]                      = RASTER_SOLID
+      [VK_POLYGON_MODE_FILL]                    = RASTER_SOLID,
+      [VK_POLYGON_MODE_LINE]                    = RASTER_WIREFRAME,
+      [VK_POLYGON_MODE_POINT]                   = RASTER_POINT,
    };
 
    static const uint32_t vk_to_gen_front_face[] = {
-      [VK_FRONT_FACE_CCW]                       = CounterClockwise,
-      [VK_FRONT_FACE_CW]                        = Clockwise
+      [VK_FRONT_FACE_COUNTER_CLOCKWISE]         = 1,
+      [VK_FRONT_FACE_CLOCKWISE]                 = 0
    };
 
    struct GENX(3DSTATE_SF) sf = {
@@ -131,8 +131,8 @@ emit_rs_state(struct anv_pipeline *pipeline,
       GENX(3DSTATE_RASTER_header),
       .FrontWinding = vk_to_gen_front_face[info->frontFace],
       .CullMode = vk_to_gen_cullmode[info->cullMode],
-      .FrontFaceFillMode = vk_to_gen_fillmode[info->fillMode],
-      .BackFaceFillMode = vk_to_gen_fillmode[info->fillMode],
+      .FrontFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
+      .BackFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
       .ScissorRectangleEnable = !(extra && extra->disable_scissor),
 #if ANV_GEN == 8
       .ViewportZClipTestEnable = info->depthClipEnable

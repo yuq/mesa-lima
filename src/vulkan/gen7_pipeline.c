@@ -83,20 +83,20 @@ gen7_emit_vertex_input(struct anv_pipeline *pipeline,
 
 static const uint32_t vk_to_gen_cullmode[] = {
    [VK_CULL_MODE_NONE]                          = CULLMODE_NONE,
-   [VK_CULL_MODE_FRONT]                         = CULLMODE_FRONT,
-   [VK_CULL_MODE_BACK]                          = CULLMODE_BACK,
+   [VK_CULL_MODE_FRONT_BIT]                     = CULLMODE_FRONT,
+   [VK_CULL_MODE_BACK_BIT]                      = CULLMODE_BACK,
    [VK_CULL_MODE_FRONT_AND_BACK]                = CULLMODE_BOTH
 };
 
 static const uint32_t vk_to_gen_fillmode[] = {
-   [VK_FILL_MODE_POINTS]                        = RASTER_POINT,
-   [VK_FILL_MODE_WIREFRAME]                     = RASTER_WIREFRAME,
-   [VK_FILL_MODE_SOLID]                         = RASTER_SOLID
+   [VK_POLYGON_MODE_FILL]                       = RASTER_SOLID,
+   [VK_POLYGON_MODE_LINE]                       = RASTER_WIREFRAME,
+   [VK_POLYGON_MODE_POINT]                      = RASTER_POINT,
 };
 
 static const uint32_t vk_to_gen_front_face[] = {
-   [VK_FRONT_FACE_CCW]                          = 1,
-   [VK_FRONT_FACE_CW]                           = 0
+   [VK_FRONT_FACE_COUNTER_CLOCKWISE]            = 1,
+   [VK_FRONT_FACE_CLOCKWISE]                    = 0
 };
 
 static void
@@ -113,8 +113,8 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
       /* LegacyGlobalDepthBiasEnable */
 
       .StatisticsEnable                         = true,
-      .FrontFaceFillMode                        = vk_to_gen_fillmode[info->fillMode],
-      .BackFaceFillMode                         = vk_to_gen_fillmode[info->fillMode],
+      .FrontFaceFillMode                        = vk_to_gen_fillmode[info->polygonMode],
+      .BackFaceFillMode                         = vk_to_gen_fillmode[info->polygonMode],
       .ViewTransformEnable                      = !(extra && extra->disable_viewport),
       .FrontWinding                             = vk_to_gen_front_face[info->frontFace],
       /* bool                                         AntiAliasingEnable; */
