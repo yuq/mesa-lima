@@ -1336,7 +1336,7 @@ VkResult anv_CreateSemaphore(
     const VkSemaphoreCreateInfo*                pCreateInfo,
     VkSemaphore*                                pSemaphore)
 {
-   pSemaphore->handle = 1;
+   *pSemaphore = (VkSemaphore)1;
    stub_return(VK_SUCCESS);
 }
 

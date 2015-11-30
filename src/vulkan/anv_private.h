@@ -1537,13 +1537,13 @@ void anv_dump_image_to_ppm(struct anv_device *device,
    static inline struct __anv_type *                                       \
    __anv_type ## _from_handle(__VkType _handle)                            \
    {                                                                       \
-      return (struct __anv_type *) _handle.handle;                         \
+      return (struct __anv_type *)(uintptr_t) _handle;                     \
    }                                                                       \
                                                                            \
    static inline __VkType                                                  \
    __anv_type ## _to_handle(struct __anv_type *_obj)                       \
    {                                                                       \
-      return (__VkType) { .handle = (uint64_t) _obj };                     \
+      return (__VkType)(uintptr_t) _obj;                                   \
    }
 
 #define ANV_FROM_HANDLE(__anv_type, __name, __handle) \

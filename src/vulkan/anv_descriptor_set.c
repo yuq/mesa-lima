@@ -286,7 +286,7 @@ VkResult anv_CreateDescriptorPool(
     VkDescriptorPool*                           pDescriptorPool)
 {
    anv_finishme("VkDescriptorPool is a stub");
-   pDescriptorPool->handle = 1;
+   *pDescriptorPool = (VkDescriptorPool)1;
    return VK_SUCCESS;
 }
 
@@ -466,7 +466,7 @@ void anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
          for (uint32_t j = 0; j < write->count; j++) {
-            assert(write->pDescriptors[j].bufferInfo.buffer.handle);
+            assert(write->pDescriptors[j].bufferInfo.buffer);
             ANV_FROM_HANDLE(anv_buffer, buffer,
                             write->pDescriptors[j].bufferInfo.buffer);
             assert(buffer);

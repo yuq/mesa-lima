@@ -335,7 +335,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       }, {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
          .stage = VK_SHADER_STAGE_FRAGMENT,
-         .shader = {0}, /* TEMPLATE VALUE! FILL ME IN! */
+         .shader = VK_NULL_HANDLE, /* TEMPLATE VALUE! FILL ME IN! */
          .pSpecializationInfo = NULL
       },
    };
@@ -452,7 +452,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                VkTexFilter blit_filter)
 {
    struct anv_device *device = cmd_buffer->device;
-   VkDescriptorPool dummy_desc_pool = { .handle = 1 };
+   VkDescriptorPool dummy_desc_pool = (VkDescriptorPool)1;
 
    struct blit_vb_data {
       float pos[2];

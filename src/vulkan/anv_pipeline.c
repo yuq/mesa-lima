@@ -189,7 +189,7 @@ VkResult anv_CreatePipelineCache(
     const VkPipelineCacheCreateInfo*            pCreateInfo,
     VkPipelineCache*                            pPipelineCache)
 {
-   pPipelineCache->handle = 1;
+   *pPipelineCache = (VkPipelineCache)1;
 
    stub_return(VK_SUCCESS);
 }
