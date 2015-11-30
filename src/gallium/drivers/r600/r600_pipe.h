@@ -330,6 +330,9 @@ struct r600_pipe_shader_selector {
 	unsigned	gs_max_out_vertices;
 	unsigned	gs_num_invocations;
 
+	/* TCS/VS */
+	uint64_t        lds_patch_outputs_written_mask;
+	uint64_t        lds_outputs_written_mask;
 	unsigned	nr_ps_max_color_exports;
 };
 

@@ -855,6 +855,7 @@ static void *r600_create_shader_state(struct pipe_context *ctx,
 			       unsigned pipe_shader_type)
 {
 	struct r600_pipe_shader_selector *sel = CALLOC_STRUCT(r600_pipe_shader_selector);
+	int i;
 
 	sel->type = pipe_shader_type;
 	sel->tokens = tgsi_dup_tokens(state->tokens);
@@ -869,6 +870,30 @@ static void *r600_create_shader_state(struct pipe_context *ctx,
 			sel->info.properties[TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES];
 		sel->gs_num_invocations =
 			sel->info.properties[TGSI_PROPERTY_GS_INVOCATIONS];
+		break;
+	case PIPE_SHADER_VERTEX:
+	case PIPE_SHADER_TESS_CTRL:
+		sel->lds_patch_outputs_written_mask = 0;
+		sel->lds_outputs_written_mask = 0;
+
+		for (i = 0; i < sel->info.num_outputs; i++) {
+			unsigned name = sel->info.output_semantic_name[i];
+			unsigned index = sel->info.output_semantic_index[i];
+
+			switch (name) {
+			case TGSI_SEMANTIC_TESSINNER:
+			case TGSI_SEMANTIC_TESSOUTER:
+			case TGSI_SEMANTIC_PATCH:
+				sel->lds_patch_outputs_written_mask |=
+					1llu << r600_get_lds_unique_index(name, index);
+				break;
+			default:
+				sel->lds_outputs_written_mask |=
+					1llu << r600_get_lds_unique_index(name, index);
+			}
+		}
+		break;
+	default:
 		break;
 	}
 
