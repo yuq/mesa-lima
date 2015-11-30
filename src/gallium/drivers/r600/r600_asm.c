@@ -237,7 +237,7 @@ int r600_bytecode_add_output(struct r600_bytecode *bc,
 /* alu instructions that can ony exits once per group */
 static int is_alu_once_inst(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
 {
-	return r600_isa_alu(alu->op)->flags & (AF_KILL | AF_PRED);
+	return r600_isa_alu(alu->op)->flags & (AF_KILL | AF_PRED) || alu->is_lds_idx_op || alu->op == ALU_OP0_GROUP_BARRIER;
 }
 
 static int is_alu_reduction_inst(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
