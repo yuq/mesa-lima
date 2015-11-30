@@ -2415,6 +2415,71 @@ static int r600_fetch_tess_io_info(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+static int emit_lds_vs_writes(struct r600_shader_ctx *ctx)
+{
+	int i, j, r;
+	int temp_reg;
+
+	/* fetch tcs input values into input_vals */
+	ctx->tess_input_info = r600_get_temp(ctx);
+	ctx->tess_output_info = 0;
+	r = r600_fetch_tess_io_info(ctx);
+	if (r)
+		return r;
+
+	temp_reg = r600_get_temp(ctx);
+	/* dst reg contains LDS address stride * idx */
+	/* MUL vertexID, vertex_dw_stride */
+	r = single_alu_op2(ctx, ALU_OP2_MUL_UINT24,
+			   temp_reg, 0,
+			   ctx->tess_input_info, 1,
+			   0, 1); /* rel id in r0.y? */
+	if (r)
+		return r;
+
+	for (i = 0; i < ctx->shader->noutput; i++) {
+		struct r600_bytecode_alu alu;
+		int param = r600_get_lds_unique_index(ctx->shader->output[i].name, ctx->shader->output[i].sid);
+
+		if (param) {
+			r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+					   temp_reg, 1,
+					   temp_reg, 0,
+					   V_SQ_ALU_SRC_LITERAL, param * 16);
+			if (r)
+				return r;
+		}
+
+		r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+				   temp_reg, 2,
+				   temp_reg, param ? 1 : 0,
+				   V_SQ_ALU_SRC_LITERAL, 8);
+		if (r)
+			return r;
+
+
+		for (j = 0; j < 2; j++) {
+			int chan = (j == 1) ? 2 : (param ? 1 : 0);
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = LDS_OP3_LDS_WRITE_REL;
+			alu.src[0].sel = temp_reg;
+			alu.src[0].chan = chan;
+			alu.src[1].sel = ctx->shader->output[i].gpr;
+			alu.src[1].chan = j * 2;
+			alu.src[2].sel = ctx->shader->output[i].gpr;
+			alu.src[2].chan = (j * 2) + 1;
+			alu.last = 1;
+			alu.dst.chan = 0;
+			alu.lds_idx = 1;
+			alu.is_lds_idx_op = true;
+			r = r600_bytecode_add_alu(ctx->bc, &alu);
+			if (r)
+				return r;
+		}
+	}
+	return 0;
+}
+
 static int r600_shader_from_tgsi(struct r600_context *rctx,
 				 struct r600_pipe_shader *pipeshader,
 				 union r600_shader_key key)
@@ -2435,6 +2500,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	bool use_llvm = false;
 	bool indirect_gprs;
 	bool ring_outputs = false;
+	bool lds_outputs = false;
 	bool lds_inputs = false;
 	bool pos_emitted = false;
 
@@ -2467,12 +2533,15 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		shader->vs_as_ls = key.vs.as_ls;
 		if (shader->vs_as_es)
 			ring_outputs = true;
+		if (shader->vs_as_ls)
+			lds_outputs = true;
 		break;
 	case TGSI_PROCESSOR_GEOMETRY:
 		ring_outputs = true;
 		break;
 	case TGSI_PROCESSOR_TESS_CTRL:
 		shader->tcs_prim_mode = key.tcs.prim_mode;
+		lds_outputs = true;
 		lds_inputs = true;
 		break;
 	case TGSI_PROCESSOR_TESS_EVAL:
@@ -2917,7 +2986,12 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	pipeshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 	convert_edgeflag_to_int(&ctx);
 
-	if (ring_outputs) {
+	if (lds_outputs) {
+		if (ctx.type == TGSI_PROCESSOR_VERTEX) {
+			if (ctx.shader->noutput)
+				emit_lds_vs_writes(&ctx);
+		}
+	} else if (ring_outputs) {
 		if (shader->vs_as_es || shader->tes_as_es) {
 			ctx.gs_export_gpr_tregs[0] = r600_get_temp(&ctx);
 			ctx.gs_export_gpr_tregs[1] = -1;
