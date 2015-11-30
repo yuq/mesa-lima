@@ -268,6 +268,24 @@ static int alu_uses_rel(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
 	return 0;
 }
 
+static int is_lds_read(int sel)
+{
+  return sel == EG_V_SQ_ALU_SRC_LDS_OQ_A_POP || sel == EG_V_SQ_ALU_SRC_LDS_OQ_B_POP;
+}
+
+static int alu_uses_lds(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
+{
+	unsigned num_src = r600_bytecode_get_num_operands(bc, alu);
+	unsigned src;
+
+	for (src = 0; src < num_src; ++src) {
+		if (is_lds_read(alu->src[src].sel)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int is_alu_64bit_inst(struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
 {
 	const struct alu_op_info *op = r600_isa_alu(alu->op);
@@ -787,6 +805,8 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 				}
 				have_rel = 1;
 			}
+			if (alu_uses_lds(bc, prev[i]))
+				return 0;
 
 			num_once_inst += is_alu_once_inst(bc, prev[i]);
 		}
@@ -800,7 +820,7 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 		} else if (prev[i] && slots[i]) {
 			if (max_slots == 5 && result[4] == NULL && prev[4] == NULL && slots[4] == NULL) {
 				/* Trans unit is still free try to use it. */
-				if (is_alu_any_unit_inst(bc, slots[i])) {
+				if (is_alu_any_unit_inst(bc, slots[i]) && !alu_uses_lds(bc, slots[i])) {
 					result[i] = prev[i];
 					result[4] = slots[i];
 				} else if (is_alu_any_unit_inst(bc, prev[i])) {
