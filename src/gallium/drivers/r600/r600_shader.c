@@ -598,6 +598,11 @@ static int select_twoside_color(struct r600_shader_ctx *ctx, int front, int back
 	return 0;
 }
 
+static inline int get_address_file_reg(struct r600_shader_ctx *ctx, int index)
+{
+	return index > 0 ? ctx->bc->index_reg[index - 1] : ctx->bc->ar_reg;
+}
+
 static int vs_add_primid_output(struct r600_shader_ctx *ctx, int prim_id_sid)
 {
 	int i;
@@ -7188,7 +7193,7 @@ static int tgsi_eg_arl(struct r600_shader_ctx *ctx)
 	struct r600_bytecode_alu alu;
 	int r;
 	int i, lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
-	unsigned reg = inst->Dst[0].Register.Index > 0 ? ctx->bc->index_reg[inst->Dst[0].Register.Index - 1] : ctx->bc->ar_reg;
+	unsigned reg = get_address_file_reg(ctx, inst->Dst[0].Register.Index);
 
 	assert(inst->Dst[0].Register.Index < 3);
 	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
