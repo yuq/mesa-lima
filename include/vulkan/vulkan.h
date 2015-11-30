@@ -544,10 +544,10 @@ typedef enum VkCompareOp {
     VK_COMPARE_OP_NEVER = 0,
     VK_COMPARE_OP_LESS = 1,
     VK_COMPARE_OP_EQUAL = 2,
-    VK_COMPARE_OP_LESS_EQUAL = 3,
+    VK_COMPARE_OP_LESS_OR_EQUAL = 3,
     VK_COMPARE_OP_GREATER = 4,
     VK_COMPARE_OP_NOT_EQUAL = 5,
-    VK_COMPARE_OP_GREATER_EQUAL = 6,
+    VK_COMPARE_OP_GREATER_OR_EQUAL = 6,
     VK_COMPARE_OP_ALWAYS = 7,
     VK_COMPARE_OP_BEGIN_RANGE = VK_COMPARE_OP_NEVER,
     VK_COMPARE_OP_END_RANGE = VK_COMPARE_OP_ALWAYS,
@@ -559,14 +559,14 @@ typedef enum VkStencilOp {
     VK_STENCIL_OP_KEEP = 0,
     VK_STENCIL_OP_ZERO = 1,
     VK_STENCIL_OP_REPLACE = 2,
-    VK_STENCIL_OP_INC_CLAMP = 3,
-    VK_STENCIL_OP_DEC_CLAMP = 4,
+    VK_STENCIL_OP_INCREMENT_AND_CLAMP = 3,
+    VK_STENCIL_OP_DECREMENT_AND_CLAMP = 4,
     VK_STENCIL_OP_INVERT = 5,
-    VK_STENCIL_OP_INC_WRAP = 6,
-    VK_STENCIL_OP_DEC_WRAP = 7,
+    VK_STENCIL_OP_INCREMENT_AND_WRAP = 6,
+    VK_STENCIL_OP_DECREMENT_AND_WRAP = 7,
     VK_STENCIL_OP_BEGIN_RANGE = VK_STENCIL_OP_KEEP,
-    VK_STENCIL_OP_END_RANGE = VK_STENCIL_OP_DEC_WRAP,
-    VK_STENCIL_OP_RANGE_SIZE = (VK_STENCIL_OP_DEC_WRAP - VK_STENCIL_OP_KEEP + 1),
+    VK_STENCIL_OP_END_RANGE = VK_STENCIL_OP_DECREMENT_AND_WRAP,
+    VK_STENCIL_OP_RANGE_SIZE = (VK_STENCIL_OP_DECREMENT_AND_WRAP - VK_STENCIL_OP_KEEP + 1),
     VK_STENCIL_OP_MAX_ENUM = 0x7FFFFFFF
 } VkStencilOp;
 
@@ -576,11 +576,11 @@ typedef enum VkLogicOp {
     VK_LOGIC_OP_AND_REVERSE = 2,
     VK_LOGIC_OP_COPY = 3,
     VK_LOGIC_OP_AND_INVERTED = 4,
-    VK_LOGIC_OP_NOOP = 5,
+    VK_LOGIC_OP_NO_OP = 5,
     VK_LOGIC_OP_XOR = 6,
     VK_LOGIC_OP_OR = 7,
     VK_LOGIC_OP_NOR = 8,
-    VK_LOGIC_OP_EQUIV = 9,
+    VK_LOGIC_OP_EQUIVALENT = 9,
     VK_LOGIC_OP_INVERT = 10,
     VK_LOGIC_OP_OR_REVERSE = 11,
     VK_LOGIC_OP_COPY_INVERTED = 12,
@@ -594,30 +594,30 @@ typedef enum VkLogicOp {
 } VkLogicOp;
 
 typedef enum VkBlendFactor {
-    VK_BLEND_ZERO = 0,
-    VK_BLEND_ONE = 1,
-    VK_BLEND_SRC_COLOR = 2,
-    VK_BLEND_ONE_MINUS_SRC_COLOR = 3,
-    VK_BLEND_DEST_COLOR = 4,
-    VK_BLEND_ONE_MINUS_DEST_COLOR = 5,
-    VK_BLEND_SRC_ALPHA = 6,
-    VK_BLEND_ONE_MINUS_SRC_ALPHA = 7,
-    VK_BLEND_DEST_ALPHA = 8,
-    VK_BLEND_ONE_MINUS_DEST_ALPHA = 9,
-    VK_BLEND_CONSTANT_COLOR = 10,
-    VK_BLEND_ONE_MINUS_CONSTANT_COLOR = 11,
-    VK_BLEND_CONSTANT_ALPHA = 12,
-    VK_BLEND_ONE_MINUS_CONSTANT_ALPHA = 13,
-    VK_BLEND_SRC_ALPHA_SATURATE = 14,
-    VK_BLEND_SRC1_COLOR = 15,
-    VK_BLEND_ONE_MINUS_SRC1_COLOR = 16,
-    VK_BLEND_SRC1_ALPHA = 17,
-    VK_BLEND_ONE_MINUS_SRC1_ALPHA = 18,
-    VK_BLEND_BEGIN_RANGE = VK_BLEND_ZERO,
-    VK_BLEND_END_RANGE = VK_BLEND_ONE_MINUS_SRC1_ALPHA,
-    VK_BLEND_RANGE_SIZE = (VK_BLEND_ONE_MINUS_SRC1_ALPHA - VK_BLEND_ZERO + 1),
-    VK_BLEND_MAX_ENUM = 0x7FFFFFFF
-} VkBlend;
+    VK_BLEND_FACTOR_ZERO = 0,
+    VK_BLEND_FACTOR_ONE = 1,
+    VK_BLEND_FACTOR_SRC_COLOR = 2,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR = 3,
+    VK_BLEND_FACTOR_DST_COLOR = 4,
+    VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR = 5,
+    VK_BLEND_FACTOR_SRC_ALPHA = 6,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA = 7,
+    VK_BLEND_FACTOR_DST_ALPHA = 8,
+    VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA = 9,
+    VK_BLEND_FACTOR_CONSTANT_COLOR = 10,
+    VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR = 11,
+    VK_BLEND_FACTOR_CONSTANT_ALPHA = 12,
+    VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA = 13,
+    VK_BLEND_FACTOR_SRC_ALPHA_SATURATE = 14,
+    VK_BLEND_FACTOR_SRC1_COLOR = 15,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR = 16,
+    VK_BLEND_FACTOR_SRC1_ALPHA = 17,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA = 18,
+    VK_BLEND_FACTOR_BEGIN_RANGE = VK_BLEND_FACTOR_ZERO,
+    VK_BLEND_FACTOR_END_RANGE = VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA,
+    VK_BLEND_FACTOR_RANGE_SIZE = (VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA - VK_BLEND_FACTOR_ZERO + 1),
+    VK_BLEND_FACTOR_MAX_ENUM = 0x7FFFFFFF
+} VkBlendFactor;
 
 typedef enum VkBlendOp {
     VK_BLEND_OP_ADD = 0,
@@ -1681,12 +1681,12 @@ typedef struct {
 
 typedef struct {
     VkBool32                                    blendEnable;
-    VkBlend                                     srcBlendColor;
-    VkBlend                                     destBlendColor;
-    VkBlendOp                                   blendOpColor;
-    VkBlend                                     srcBlendAlpha;
-    VkBlend                                     destBlendAlpha;
-    VkBlendOp                                   blendOpAlpha;
+    VkBlendFactor                               srcColorBlendFactor;
+    VkBlendFactor                               dstColorBlendFactor;
+    VkBlendOp                                   colorBlendOp;
+    VkBlendFactor                               srcAlphaBlendFactor;
+    VkBlendFactor                               dstAlphaBlendFactor;
+    VkBlendOp                                   alphaBlendOp;
     VkChannelFlags                              channelWriteMask;
 } VkPipelineColorBlendAttachmentState;
 

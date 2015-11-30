@@ -86,10 +86,10 @@ static const uint32_t vk_to_gen_compare_op[] = {
    [VK_COMPARE_OP_NEVER]                        = PREFILTEROPNEVER,
    [VK_COMPARE_OP_LESS]                         = PREFILTEROPLESS,
    [VK_COMPARE_OP_EQUAL]                        = PREFILTEROPEQUAL,
-   [VK_COMPARE_OP_LESS_EQUAL]                   = PREFILTEROPLEQUAL,
+   [VK_COMPARE_OP_LESS_OR_EQUAL]                = PREFILTEROPLEQUAL,
    [VK_COMPARE_OP_GREATER]                      = PREFILTEROPGREATER,
    [VK_COMPARE_OP_NOT_EQUAL]                    = PREFILTEROPNOTEQUAL,
-   [VK_COMPARE_OP_GREATER_EQUAL]                = PREFILTEROPGEQUAL,
+   [VK_COMPARE_OP_GREATER_OR_EQUAL]             = PREFILTEROPGEQUAL,
    [VK_COMPARE_OP_ALWAYS]                       = PREFILTEROPALWAYS,
 };
 

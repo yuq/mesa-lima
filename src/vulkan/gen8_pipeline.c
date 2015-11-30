@@ -158,11 +158,11 @@ emit_cb_state(struct anv_pipeline *pipeline,
       [VK_LOGIC_OP_AND]                         = LOGICOP_AND,
       [VK_LOGIC_OP_AND_REVERSE]                 = LOGICOP_AND_REVERSE,
       [VK_LOGIC_OP_AND_INVERTED]                = LOGICOP_AND_INVERTED,
-      [VK_LOGIC_OP_NOOP]                        = LOGICOP_NOOP,
+      [VK_LOGIC_OP_NO_OP]                       = LOGICOP_NOOP,
       [VK_LOGIC_OP_XOR]                         = LOGICOP_XOR,
       [VK_LOGIC_OP_OR]                          = LOGICOP_OR,
       [VK_LOGIC_OP_NOR]                         = LOGICOP_NOR,
-      [VK_LOGIC_OP_EQUIV]                       = LOGICOP_EQUIV,
+      [VK_LOGIC_OP_EQUIVALENT]                  = LOGICOP_EQUIV,
       [VK_LOGIC_OP_INVERT]                      = LOGICOP_INVERT,
       [VK_LOGIC_OP_OR_REVERSE]                  = LOGICOP_OR_REVERSE,
       [VK_LOGIC_OP_COPY_INVERTED]               = LOGICOP_COPY_INVERTED,
@@ -172,25 +172,25 @@ emit_cb_state(struct anv_pipeline *pipeline,
    };
 
    static const uint32_t vk_to_gen_blend[] = {
-      [VK_BLEND_ZERO]                           = BLENDFACTOR_ZERO,
-      [VK_BLEND_ONE]                            = BLENDFACTOR_ONE,
-      [VK_BLEND_SRC_COLOR]                      = BLENDFACTOR_SRC_COLOR,
-      [VK_BLEND_ONE_MINUS_SRC_COLOR]            = BLENDFACTOR_INV_SRC_COLOR,
-      [VK_BLEND_DEST_COLOR]                     = BLENDFACTOR_DST_COLOR,
-      [VK_BLEND_ONE_MINUS_DEST_COLOR]           = BLENDFACTOR_INV_DST_COLOR,
-      [VK_BLEND_SRC_ALPHA]                      = BLENDFACTOR_SRC_ALPHA,
-      [VK_BLEND_ONE_MINUS_SRC_ALPHA]            = BLENDFACTOR_INV_SRC_ALPHA,
-      [VK_BLEND_DEST_ALPHA]                     = BLENDFACTOR_DST_ALPHA,
-      [VK_BLEND_ONE_MINUS_DEST_ALPHA]           = BLENDFACTOR_INV_DST_ALPHA,
-      [VK_BLEND_CONSTANT_COLOR]                 = BLENDFACTOR_CONST_COLOR,
-      [VK_BLEND_ONE_MINUS_CONSTANT_COLOR]       = BLENDFACTOR_INV_CONST_COLOR,
-      [VK_BLEND_CONSTANT_ALPHA]                 = BLENDFACTOR_CONST_ALPHA,
-      [VK_BLEND_ONE_MINUS_CONSTANT_ALPHA]       = BLENDFACTOR_INV_CONST_ALPHA,
-      [VK_BLEND_SRC_ALPHA_SATURATE]             = BLENDFACTOR_SRC_ALPHA_SATURATE,
-      [VK_BLEND_SRC1_COLOR]                     = BLENDFACTOR_SRC1_COLOR,
-      [VK_BLEND_ONE_MINUS_SRC1_COLOR]           = BLENDFACTOR_INV_SRC1_COLOR,
-      [VK_BLEND_SRC1_ALPHA]                     = BLENDFACTOR_SRC1_ALPHA,
-      [VK_BLEND_ONE_MINUS_SRC1_ALPHA]           = BLENDFACTOR_INV_SRC1_ALPHA,
+      [VK_BLEND_FACTOR_ZERO]                    = BLENDFACTOR_ZERO,
+      [VK_BLEND_FACTOR_ONE]                     = BLENDFACTOR_ONE,
+      [VK_BLEND_FACTOR_SRC_COLOR]               = BLENDFACTOR_SRC_COLOR,
+      [VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR]     = BLENDFACTOR_INV_SRC_COLOR,
+      [VK_BLEND_FACTOR_DST_COLOR]               = BLENDFACTOR_DST_COLOR,
+      [VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR]     = BLENDFACTOR_INV_DST_COLOR,
+      [VK_BLEND_FACTOR_SRC_ALPHA]               = BLENDFACTOR_SRC_ALPHA,
+      [VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA]     = BLENDFACTOR_INV_SRC_ALPHA,
+      [VK_BLEND_FACTOR_DST_ALPHA]               = BLENDFACTOR_DST_ALPHA,
+      [VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA]     = BLENDFACTOR_INV_DST_ALPHA,
+      [VK_BLEND_FACTOR_CONSTANT_COLOR]          = BLENDFACTOR_CONST_COLOR,
+      [VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR]= BLENDFACTOR_INV_CONST_COLOR,
+      [VK_BLEND_FACTOR_CONSTANT_ALPHA]          = BLENDFACTOR_CONST_ALPHA,
+      [VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA]= BLENDFACTOR_INV_CONST_ALPHA,
+      [VK_BLEND_FACTOR_SRC_ALPHA_SATURATE]      = BLENDFACTOR_SRC_ALPHA_SATURATE,
+      [VK_BLEND_FACTOR_SRC1_COLOR]              = BLENDFACTOR_SRC1_COLOR,
+      [VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR]    = BLENDFACTOR_INV_SRC1_COLOR,
+      [VK_BLEND_FACTOR_SRC1_ALPHA]              = BLENDFACTOR_SRC1_ALPHA,
+      [VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA]    = BLENDFACTOR_INV_SRC1_ALPHA,
    };
 
    static const uint32_t vk_to_gen_blend_op[] = {
@@ -213,9 +213,9 @@ emit_cb_state(struct anv_pipeline *pipeline,
    for (uint32_t i = 0; i < info->attachmentCount; i++) {
       const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[i];
 
-      if (a->srcBlendColor != a->srcBlendAlpha ||
-          a->destBlendColor != a->destBlendAlpha ||
-          a->blendOpColor != a->blendOpAlpha) {
+      if (a->srcColorBlendFactor != a->srcAlphaBlendFactor ||
+          a->dstColorBlendFactor != a->dstAlphaBlendFactor ||
+          a->colorBlendOp != a->alphaBlendOp) {
          blend_state.IndependentAlphaBlendEnable = true;
       }
 
@@ -227,12 +227,12 @@ emit_cb_state(struct anv_pipeline *pipeline,
          .ColorClampRange = COLORCLAMP_RTFORMAT,
          .PreBlendColorClampEnable = true,
          .PostBlendColorClampEnable = true,
-         .SourceBlendFactor = vk_to_gen_blend[a->srcBlendColor],
-         .DestinationBlendFactor = vk_to_gen_blend[a->destBlendColor],
-         .ColorBlendFunction = vk_to_gen_blend_op[a->blendOpColor],
-         .SourceAlphaBlendFactor = vk_to_gen_blend[a->srcBlendAlpha],
-         .DestinationAlphaBlendFactor = vk_to_gen_blend[a->destBlendAlpha],
-         .AlphaBlendFunction = vk_to_gen_blend_op[a->blendOpAlpha],
+         .SourceBlendFactor = vk_to_gen_blend[a->srcColorBlendFactor],
+         .DestinationBlendFactor = vk_to_gen_blend[a->dstColorBlendFactor],
+         .ColorBlendFunction = vk_to_gen_blend_op[a->colorBlendOp],
+         .SourceAlphaBlendFactor = vk_to_gen_blend[a->srcAlphaBlendFactor],
+         .DestinationAlphaBlendFactor = vk_to_gen_blend[a->dstAlphaBlendFactor],
+         .AlphaBlendFunction = vk_to_gen_blend_op[a->alphaBlendOp],
          .WriteDisableAlpha = !(a->channelWriteMask & VK_CHANNEL_A_BIT),
          .WriteDisableRed = !(a->channelWriteMask & VK_CHANNEL_R_BIT),
          .WriteDisableGreen = !(a->channelWriteMask & VK_CHANNEL_G_BIT),
@@ -245,13 +245,13 @@ emit_cb_state(struct anv_pipeline *pipeline,
        * means that, for MIN and MAX, we have to stomp the blend factor to
        * ONE to make it a no-op.
        */
-      if (a->blendOpColor == VK_BLEND_OP_MIN ||
-          a->blendOpColor == VK_BLEND_OP_MAX) {
+      if (a->colorBlendOp == VK_BLEND_OP_MIN ||
+          a->colorBlendOp == VK_BLEND_OP_MAX) {
          blend_state.Entry[i].SourceBlendFactor = BLENDFACTOR_ONE;
          blend_state.Entry[i].DestinationBlendFactor = BLENDFACTOR_ONE;
       }
-      if (a->blendOpAlpha == VK_BLEND_OP_MIN ||
-          a->blendOpAlpha == VK_BLEND_OP_MAX) {
+      if (a->alphaBlendOp == VK_BLEND_OP_MIN ||
+          a->alphaBlendOp == VK_BLEND_OP_MAX) {
          blend_state.Entry[i].SourceAlphaBlendFactor = BLENDFACTOR_ONE;
          blend_state.Entry[i].DestinationAlphaBlendFactor = BLENDFACTOR_ONE;
       }
@@ -265,25 +265,25 @@ emit_cb_state(struct anv_pipeline *pipeline,
 }
 
 static const uint32_t vk_to_gen_compare_op[] = {
-   [VK_COMPARE_OP_NEVER]                        = COMPAREFUNCTION_NEVER,
-   [VK_COMPARE_OP_LESS]                         = COMPAREFUNCTION_LESS,
-   [VK_COMPARE_OP_EQUAL]                        = COMPAREFUNCTION_EQUAL,
-   [VK_COMPARE_OP_LESS_EQUAL]                   = COMPAREFUNCTION_LEQUAL,
-   [VK_COMPARE_OP_GREATER]                      = COMPAREFUNCTION_GREATER,
-   [VK_COMPARE_OP_NOT_EQUAL]                    = COMPAREFUNCTION_NOTEQUAL,
-   [VK_COMPARE_OP_GREATER_EQUAL]                = COMPAREFUNCTION_GEQUAL,
-   [VK_COMPARE_OP_ALWAYS]                       = COMPAREFUNCTION_ALWAYS,
+   [VK_COMPARE_OP_NEVER]                        = PREFILTEROPNEVER,
+   [VK_COMPARE_OP_LESS]                         = PREFILTEROPLESS,
+   [VK_COMPARE_OP_EQUAL]                        = PREFILTEROPEQUAL,
+   [VK_COMPARE_OP_LESS_OR_EQUAL]                = PREFILTEROPLEQUAL,
+   [VK_COMPARE_OP_GREATER]                      = PREFILTEROPGREATER,
+   [VK_COMPARE_OP_NOT_EQUAL]                    = PREFILTEROPNOTEQUAL,
+   [VK_COMPARE_OP_GREATER_OR_EQUAL]             = PREFILTEROPGEQUAL,
+   [VK_COMPARE_OP_ALWAYS]                       = PREFILTEROPALWAYS,
 };
 
 static const uint32_t vk_to_gen_stencil_op[] = {
    [VK_STENCIL_OP_KEEP]                         = STENCILOP_KEEP,
    [VK_STENCIL_OP_ZERO]                         = STENCILOP_ZERO,
    [VK_STENCIL_OP_REPLACE]                      = STENCILOP_REPLACE,
-   [VK_STENCIL_OP_INC_CLAMP]                    = STENCILOP_INCRSAT,
-   [VK_STENCIL_OP_DEC_CLAMP]                    = STENCILOP_DECRSAT,
+   [VK_STENCIL_OP_INCREMENT_AND_CLAMP]          = STENCILOP_INCRSAT,
+   [VK_STENCIL_OP_DECREMENT_AND_CLAMP]          = STENCILOP_DECRSAT,
    [VK_STENCIL_OP_INVERT]                       = STENCILOP_INVERT,
-   [VK_STENCIL_OP_INC_WRAP]                     = STENCILOP_INCR,
-   [VK_STENCIL_OP_DEC_WRAP]                     = STENCILOP_DECR,
+   [VK_STENCIL_OP_INCREMENT_AND_WRAP]           = STENCILOP_INCR,
+   [VK_STENCIL_OP_DECREMENT_AND_WRAP]           = STENCILOP_DECR,
 };
 
 static void
