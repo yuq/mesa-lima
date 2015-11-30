@@ -60,11 +60,32 @@ issued in the w slot as well.
 The compiler must issue the source argument to slots z, y, and x
 */
 
+/* Contents of r0 on entry to various shaders
+
+ VS - .x = VertexID
+      .y = RelVertexID (??)
+      .w = InstanceID
+
+ GS - r0.xyw, r1.xyz = per-vertex offsets
+      r0.z = PrimitiveID
+
+ TCS - .x = PatchID
+       .y = RelPatchID (??)
+       .z = InvocationID
+       .w = tess factor base.
+
+ TES - .x = TessCoord.x
+     - .y = TessCoord.y
+     - .z = RelPatchID (??)
+     - .w = PrimitiveID
+
+ PS - face_gpr.z = SampleMask
+      face_gpr.w = SampleID
+*/
 #define R600_SHADER_BUFFER_INFO_SEL (512 + R600_BUFFER_INFO_OFFSET / 16)
 static int r600_shader_from_tgsi(struct r600_context *rctx,
 				 struct r600_pipe_shader *pipeshader,
 				 union r600_shader_key key);
-
 
 static void r600_add_gpr_array(struct r600_shader *ps, int start_gpr,
                            int size, unsigned comp_mask) {
@@ -355,6 +376,8 @@ static int tgsi_fetch_rel_const(struct r600_shader_ctx *ctx,
 static void r600_bytecode_src(struct r600_bytecode_alu_src *bc_src,
 			const struct r600_shader_src *shader_src,
 			unsigned chan);
+static int do_lds_fetch_values(struct r600_shader_ctx *ctx, unsigned temp_reg,
+			       unsigned dst_reg);
 
 static int tgsi_last_instruction(unsigned writemask)
 {
@@ -964,6 +987,73 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 			break;
 		else if (d->Semantic.Name == TGSI_SEMANTIC_INVOCATIONID)
 			break;
+		else if (d->Semantic.Name == TGSI_SEMANTIC_TESSINNER ||
+			 d->Semantic.Name == TGSI_SEMANTIC_TESSOUTER) {
+			int param = r600_get_lds_unique_index(d->Semantic.Name, 0);
+			int dreg = d->Semantic.Name == TGSI_SEMANTIC_TESSINNER ? 3 : 2;
+			unsigned temp_reg = r600_get_temp(ctx);
+
+			r = get_lds_offset0(ctx, 2, temp_reg, true);
+			if (r)
+				return r;
+
+			r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+					   temp_reg, 0,
+					   temp_reg, 0,
+					   V_SQ_ALU_SRC_LITERAL, param * 16);
+			if (r)
+				return r;
+
+			do_lds_fetch_values(ctx, temp_reg, dreg);
+		}
+		else if (d->Semantic.Name == TGSI_SEMANTIC_TESSCOORD) {
+			/* MOV r1.x, r0.x;
+			   MOV r1.y, r0.y;
+			*/
+			for (i = 0; i < 2; i++) {
+				struct r600_bytecode_alu alu;
+				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+				alu.op = ALU_OP1_MOV;
+				alu.src[0].sel = 0;
+				alu.src[0].chan = 0 + i;
+				alu.dst.sel = 1;
+				alu.dst.chan = 0 + i;
+				alu.dst.write = 1;
+				alu.last = (i == 1) ? 1 : 0;
+				if ((r = r600_bytecode_add_alu(ctx->bc, &alu)))
+					return r;
+			}
+			/* ADD r1.z, 1.0f, -r0.x */
+			struct r600_bytecode_alu alu;
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = ALU_OP2_ADD;
+			alu.src[0].sel = V_SQ_ALU_SRC_1;
+			alu.src[1].sel = 1;
+			alu.src[1].chan = 0;
+			alu.src[1].neg = 1;
+			alu.dst.sel = 1;
+			alu.dst.chan = 2;
+			alu.dst.write = 1;
+			alu.last = 1;
+			if ((r = r600_bytecode_add_alu(ctx->bc, &alu)))
+				return r;
+
+			/* ADD r1.z, r1.z, -r1.y */
+			alu.op = ALU_OP2_ADD;
+			alu.src[0].sel = 1;
+			alu.src[0].chan = 2;
+			alu.src[1].sel = 1;
+			alu.src[1].chan = 1;
+			alu.src[1].neg = 1;
+			alu.dst.sel = 1;
+			alu.dst.chan = 2;
+			alu.dst.write = 1;
+			alu.last = 1;
+			if ((r = r600_bytecode_add_alu(ctx->bc, &alu)))
+				return r;
+			break;
+		}
+		break;
 	default:
 		R600_ERR("unsupported file %d declaration\n", d->Declaration.File);
 		return -EINVAL;
@@ -1243,12 +1333,50 @@ static void tgsi_src(struct r600_shader_ctx *ctx,
 			r600_src->swizzle[2] = 0;
 			r600_src->swizzle[3] = 0;
 			r600_src->sel = 0;
-		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_INVOCATIONID) {
+		} else if (ctx->type != TGSI_PROCESSOR_TESS_CTRL && ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_INVOCATIONID) {
 			r600_src->swizzle[0] = 3;
 			r600_src->swizzle[1] = 3;
 			r600_src->swizzle[2] = 3;
 			r600_src->swizzle[3] = 3;
 			r600_src->sel = 1;
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_INVOCATIONID) {
+			r600_src->swizzle[0] = 2;
+			r600_src->swizzle[1] = 2;
+			r600_src->swizzle[2] = 2;
+			r600_src->swizzle[3] = 2;
+			r600_src->sel = 0;
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_TESSCOORD) {
+			r600_src->sel = 1;
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_TESSINNER) {
+			r600_src->sel = 3;
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_TESSOUTER) {
+			r600_src->sel = 2;
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_VERTICESIN) {
+			if (ctx->type == TGSI_PROCESSOR_TESS_CTRL) {
+				r600_src->sel = ctx->tess_input_info;
+				r600_src->swizzle[0] = 2;
+				r600_src->swizzle[1] = 2;
+				r600_src->swizzle[2] = 2;
+				r600_src->swizzle[3] = 2;
+			} else {
+				r600_src->sel = ctx->tess_input_info;
+				r600_src->swizzle[0] = 3;
+				r600_src->swizzle[1] = 3;
+				r600_src->swizzle[2] = 3;
+				r600_src->swizzle[3] = 3;
+			}
+		} else if (ctx->type == TGSI_PROCESSOR_TESS_CTRL && ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_PRIMID) {
+			r600_src->sel = 0;
+			r600_src->swizzle[0] = 0;
+			r600_src->swizzle[1] = 0;
+			r600_src->swizzle[2] = 0;
+			r600_src->swizzle[3] = 0;
+		} else if (ctx->type == TGSI_PROCESSOR_TESS_EVAL && ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_PRIMID) {
+			r600_src->sel = 0;
+			r600_src->swizzle[0] = 3;
+			r600_src->swizzle[1] = 3;
+			r600_src->swizzle[2] = 3;
+			r600_src->swizzle[3] = 3;
 		}
 	} else {
 		if (tgsi_src->Register.Indirect)
@@ -2881,6 +3009,24 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
 		/* FIXME 1 would be enough in some cases (3 or less input vertices) */
 		ctx.file_offset[TGSI_FILE_INPUT] = 2;
+	}
+	if (ctx.type == TGSI_PROCESSOR_TESS_CTRL)
+		ctx.file_offset[TGSI_FILE_INPUT] = 1;
+	if (ctx.type == TGSI_PROCESSOR_TESS_EVAL) {
+		bool add_tesscoord = false, add_tess_inout = false;
+		ctx.file_offset[TGSI_FILE_INPUT] = 1;
+		for (i = 0; i < PIPE_MAX_SHADER_INPUTS; i++) {
+			/* if we have tesscoord save one reg */
+			if (ctx.info.system_value_semantic_name[i] == TGSI_SEMANTIC_TESSCOORD)
+				add_tesscoord = true;
+			if (ctx.info.system_value_semantic_name[i] == TGSI_SEMANTIC_TESSINNER ||
+			    ctx.info.system_value_semantic_name[i] == TGSI_SEMANTIC_TESSOUTER)
+				add_tess_inout = true;
+		}
+		if (add_tesscoord || add_tess_inout)
+			ctx.file_offset[TGSI_FILE_INPUT]++;
+		if (add_tess_inout)
+			ctx.file_offset[TGSI_FILE_INPUT]+=2;
 	}
 	ctx.use_llvm = use_llvm;
 
