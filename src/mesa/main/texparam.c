@@ -1202,9 +1202,9 @@ _mesa_TextureParameterIuiv(GLuint texture, GLenum pname, const GLuint *params)
    _mesa_texture_parameterIuiv(ctx, texObj, pname, params, true);
 }
 
-static GLboolean
-legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target,
-                                     bool dsa)
+GLboolean
+_mesa_legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target,
+                                           bool dsa)
 {
    /* Common targets for desktop GL and GLES 3.1. */
    switch (target) {
@@ -1578,7 +1578,7 @@ valid_tex_level_parameteriv_target(struct gl_context *ctx, GLenum target,
                                    bool dsa)
 {
    const char *suffix = dsa ? "ture" : "";
-   if (!legal_get_tex_level_parameter_target(ctx, target, dsa)) {
+   if (!_mesa_legal_get_tex_level_parameter_target(ctx, target, dsa)) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glGetTex%sLevelParameter[if]v(target=%s)", suffix,
                   _mesa_enum_to_string(target));

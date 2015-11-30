@@ -65,6 +65,10 @@ _mesa_texture_parameterIuiv(struct gl_context *ctx,
                             struct gl_texture_object *texObj,
                             GLenum pname, const GLuint *params, bool dsa);
 
+GLboolean
+_mesa_legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target,
+                                           bool dsa);
+
 /*@}*/
 
 /**
