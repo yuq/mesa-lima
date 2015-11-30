@@ -330,6 +330,8 @@ struct r600_shader_ctx {
 	int					gs_export_gpr_tregs[4];
 	const struct pipe_stream_output_info	*gs_stream_output_info;
 	unsigned				enabled_stream_buffers_mask;
+	unsigned                                tess_input_info; /* temp with tess input offsets */
+	unsigned                                tess_output_info; /* temp with tess input offsets */
 };
 
 struct r600_shader_tgsi_instruction {
@@ -2048,6 +2050,78 @@ static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, const struct pipe_st
 	return 0;
 }
 
+
+static int r600_fetch_tess_io_info(struct r600_shader_ctx *ctx)
+{
+	int r;
+	struct r600_bytecode_vtx vtx;
+	int temp_val = ctx->temp_reg;
+	/* need to store the TCS output somewhere */
+	r = single_alu_op2(ctx, ALU_OP1_MOV,
+			   temp_val, 0,
+			   V_SQ_ALU_SRC_LITERAL, 0,
+			   0, 0);
+	if (r)
+		return r;
+
+	/* used by VS/TCS */
+	if (ctx->tess_input_info) {
+		/* fetch tcs input values into resv space */
+		memset(&vtx, 0, sizeof(struct r600_bytecode_vtx));
+		vtx.op = FETCH_OP_VFETCH;
+		vtx.buffer_id = R600_LDS_INFO_CONST_BUFFER;
+		vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
+		vtx.mega_fetch_count = 16;
+		vtx.data_format = FMT_32_32_32_32;
+		vtx.num_format_all = 2;
+		vtx.format_comp_all = 1;
+		vtx.use_const_fields = 0;
+		vtx.endian = r600_endian_swap(32);
+		vtx.srf_mode_all = 1;
+		vtx.offset = 0;
+		vtx.dst_gpr = ctx->tess_input_info;
+		vtx.dst_sel_x = 0;
+		vtx.dst_sel_y = 1;
+		vtx.dst_sel_z = 2;
+		vtx.dst_sel_w = 3;
+		vtx.src_gpr = temp_val;
+		vtx.src_sel_x = 0;
+
+		r = r600_bytecode_add_vtx(ctx->bc, &vtx);
+		if (r)
+			return r;
+	}
+
+	/* used by TCS/TES */
+	if (ctx->tess_output_info) {
+		/* fetch tcs output values into resv space */
+		memset(&vtx, 0, sizeof(struct r600_bytecode_vtx));
+		vtx.op = FETCH_OP_VFETCH;
+		vtx.buffer_id = R600_LDS_INFO_CONST_BUFFER;
+		vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
+		vtx.mega_fetch_count = 16;
+		vtx.data_format = FMT_32_32_32_32;
+		vtx.num_format_all = 2;
+		vtx.format_comp_all = 1;
+		vtx.use_const_fields = 0;
+		vtx.endian = r600_endian_swap(32);
+		vtx.srf_mode_all = 1;
+		vtx.offset = 16;
+		vtx.dst_gpr = ctx->tess_output_info;
+		vtx.dst_sel_x = 0;
+		vtx.dst_sel_y = 1;
+		vtx.dst_sel_z = 2;
+		vtx.dst_sel_w = 3;
+		vtx.src_gpr = temp_val;
+		vtx.src_sel_x = 0;
+
+		r = r600_bytecode_add_vtx(ctx->bc, &vtx);
+		if (r)
+			return r;
+	}
+	return 0;
+}
+
 static int r600_shader_from_tgsi(struct r600_context *rctx,
 				 struct r600_pipe_shader *pipeshader,
 				 union r600_shader_key key)
@@ -2211,7 +2285,15 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.bc->index_reg[0] = ctx.bc->ar_reg + 1;
 	ctx.bc->index_reg[1] = ctx.bc->ar_reg + 2;
 
-	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
+	if (ctx.type == TGSI_PROCESSOR_TESS_CTRL) {
+		ctx.tess_input_info = ctx.bc->ar_reg + 3;
+		ctx.tess_output_info = ctx.bc->ar_reg + 4;
+		ctx.temp_reg = ctx.bc->ar_reg + 5;
+	} else if (ctx.type == TGSI_PROCESSOR_TESS_EVAL) {
+		ctx.tess_input_info = 0;
+		ctx.tess_output_info = ctx.bc->ar_reg + 3;
+		ctx.temp_reg = ctx.bc->ar_reg + 4;
+	} else if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
 		ctx.gs_export_gpr_tregs[0] = ctx.bc->ar_reg + 3;
 		ctx.gs_export_gpr_tregs[1] = ctx.bc->ar_reg + 4;
 		ctx.gs_export_gpr_tregs[2] = ctx.bc->ar_reg + 5;
@@ -2248,6 +2330,9 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 
 	if (shader->vs_as_gs_a)
 		vs_add_primid_output(&ctx, key.vs.prim_id_out);
+
+	if (ctx.type == TGSI_PROCESSOR_TESS_EVAL)
+		r600_fetch_tess_io_info(&ctx);
 
 	while (!tgsi_parse_end_of_tokens(&ctx.parse)) {
 		tgsi_parse_token(&ctx.parse);
@@ -2424,6 +2509,10 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 					return r;
 			}
 		}
+
+		if (ctx.type == TGSI_PROCESSOR_TESS_CTRL)
+			r600_fetch_tess_io_info(&ctx);
+
 		if (shader->two_side && ctx.colors_used) {
 			if ((r = process_twoside_color_inputs(&ctx)))
 				return r;
