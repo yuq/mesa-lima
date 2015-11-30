@@ -354,6 +354,18 @@ static void r600_bytecode_src(struct r600_bytecode_alu_src *bc_src,
 			const struct r600_shader_src *shader_src,
 			unsigned chan);
 
+static int tgsi_last_instruction(unsigned writemask)
+{
+	int i, lasti = 0;
+
+	for (i = 0; i < 4; i++) {
+		if (writemask & (1 << i)) {
+			lasti = i;
+		}
+	}
+	return lasti;
+}
+
 static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *i = &ctx->parse.FullToken.FullInstruction;
@@ -659,6 +671,11 @@ static inline int get_address_file_reg(struct r600_shader_ctx *ctx, int index)
 	return index > 0 ? ctx->bc->index_reg[index - 1] : ctx->bc->ar_reg;
 }
 
+static int r600_get_temp(struct r600_shader_ctx *ctx)
+{
+	return ctx->temp_reg + ctx->max_driver_temp_used++;
+}
+
 static int vs_add_primid_output(struct r600_shader_ctx *ctx, int prim_id_sid)
 {
 	int i;
@@ -824,11 +841,6 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 		return -EINVAL;
 	}
 	return 0;
-}
-
-static int r600_get_temp(struct r600_shader_ctx *ctx)
-{
-	return ctx->temp_reg + ctx->max_driver_temp_used++;
 }
 
 static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_offset)
@@ -2766,20 +2778,6 @@ static void tgsi_dst(struct r600_shader_ctx *ctx,
 		r600_dst->clamp = 1;
 	}
 }
-
-static int tgsi_last_instruction(unsigned writemask)
-{
-	int i, lasti = 0;
-
-	for (i = 0; i < 4; i++) {
-		if (writemask & (1 << i)) {
-			lasti = i;
-		}
-	}
-	return lasti;
-}
-
-
 
 static int tgsi_op2_64_params(struct r600_shader_ctx *ctx, bool singledest, bool swap)
 {
