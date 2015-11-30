@@ -2480,6 +2480,90 @@ static int emit_lds_vs_writes(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+static int r600_store_tcs_output(struct r600_shader_ctx *ctx)
+{
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	const struct tgsi_full_dst_register *dst = &inst->Dst[0];
+	int i, r, lasti;
+	int temp_reg = r600_get_temp(ctx);
+	struct r600_bytecode_alu alu;
+	unsigned write_mask = dst->Register.WriteMask;
+
+	if (inst->Dst[0].Register.File != TGSI_FILE_OUTPUT)
+		return 0;
+
+	r = get_lds_offset0(ctx, 1, temp_reg, dst->Register.Dimension ? false : true);
+	if (r)
+		return r;
+
+	/* the base address is now in temp.x */
+	r = r600_get_byte_address(ctx, temp_reg,
+				  &inst->Dst[0], NULL, ctx->tess_output_info, 1);
+	if (r)
+		return r;
+
+	/* LDS write */
+	lasti = tgsi_last_instruction(write_mask);
+	for (i = 1; i <= lasti; i++) {
+
+		if (!(write_mask & (1 << i)))
+			continue;
+		r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+				   temp_reg, i,
+				   temp_reg, 0,
+				   V_SQ_ALU_SRC_LITERAL, 4 * i);
+		if (r)
+			return r;
+	}
+
+	for (i = 0; i <= lasti; i++) {
+		if (!(write_mask & (1 << i)))
+			continue;
+
+		if ((i == 0 && ((write_mask & 3) == 3)) ||
+		    (i == 2 && ((write_mask & 0xc) == 0xc))) {
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = LDS_OP3_LDS_WRITE_REL;
+			alu.src[0].sel = temp_reg;
+			alu.src[0].chan = i;
+
+			alu.src[1].sel = dst->Register.Index;
+			alu.src[1].sel += ctx->file_offset[dst->Register.File];
+			alu.src[1].chan = i;
+
+			alu.src[2].sel = dst->Register.Index;
+			alu.src[2].sel += ctx->file_offset[dst->Register.File];
+			alu.src[2].chan = i + 1;
+			alu.lds_idx = 1;
+			alu.dst.chan = 0;
+			alu.last = 1;
+			alu.is_lds_idx_op = true;
+			r = r600_bytecode_add_alu(ctx->bc, &alu);
+			if (r)
+				return r;
+			i += 1;
+			continue;
+		}
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = LDS_OP2_LDS_WRITE;
+		alu.src[0].sel = temp_reg;
+		alu.src[0].chan = i;
+
+		alu.src[1].sel = dst->Register.Index;
+		alu.src[1].sel += ctx->file_offset[dst->Register.File];
+		alu.src[1].chan = i;
+
+		alu.src[2].sel = V_SQ_ALU_SRC_0;
+		alu.dst.chan = 0;
+		alu.last = 1;
+		alu.is_lds_idx_op = true;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+	return 0;
+}
+
 static int r600_shader_from_tgsi(struct r600_context *rctx,
 				 struct r600_pipe_shader *pipeshader,
 				 union r600_shader_key key)
@@ -2916,6 +3000,12 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 				r = ctx.inst_info->process(&ctx);
 				if (r)
 					goto out_err;
+
+				if (ctx.type == TGSI_PROCESSOR_TESS_CTRL) {
+					r = r600_store_tcs_output(&ctx);
+					if (r)
+						goto out_err;
+				}
 				break;
 			default:
 				break;
@@ -3330,11 +3420,17 @@ static void tgsi_dst(struct r600_shader_ctx *ctx,
 	r600_dst->sel += ctx->file_offset[tgsi_dst->Register.File];
 	r600_dst->chan = swizzle;
 	r600_dst->write = 1;
-	if (tgsi_dst->Register.Indirect)
-		r600_dst->rel = V_SQ_REL_RELATIVE;
 	if (inst->Instruction.Saturate) {
 		r600_dst->clamp = 1;
 	}
+	if (ctx->type == TGSI_PROCESSOR_TESS_CTRL) {
+		if (tgsi_dst->Register.File == TGSI_FILE_OUTPUT) {
+			return;
+		}
+	}
+	if (tgsi_dst->Register.Indirect)
+		r600_dst->rel = V_SQ_REL_RELATIVE;
+
 }
 
 static int tgsi_op2_64_params(struct r600_shader_ctx *ctx, bool singledest, bool swap)
