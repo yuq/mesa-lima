@@ -3677,6 +3677,7 @@ static void evergreen_set_tess_state(struct pipe_context *ctx,
 
 	memcpy(rctx->tess_state, default_outer_level, sizeof(float) * 4);
 	memcpy(rctx->tess_state+4, default_inner_level, sizeof(float) * 2);
+	rctx->tess_state_dirty = true;
 }
 
 void evergreen_init_state_functions(struct r600_context *rctx)
@@ -3769,4 +3770,154 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	rctx->b.dma_copy = evergreen_dma_copy;
 
 	evergreen_init_compute_state_functions(rctx);
+}
+
+/**
+ * This calculates the LDS size for tessellation shaders (VS, TCS, TES).
+ *
+ * The information about LDS and other non-compile-time parameters is then
+ * written to the const buffer.
+
+ * const buffer contains -
+ * uint32_t input_patch_size
+ * uint32_t input_vertex_size
+ * uint32_t num_tcs_input_cp
+ * uint32_t num_tcs_output_cp;
+ * uint32_t output_patch_size
+ * uint32_t output_vertex_size
+ * uint32_t output_patch0_offset
+ * uint32_t perpatch_output_offset
+ * and the same constbuf is bound to LS/HS/VS(ES).
+ */
+void evergreen_setup_tess_constants(struct r600_context *rctx, const struct pipe_draw_info *info, unsigned *num_patches)
+{
+	struct pipe_constant_buffer constbuf = {0};
+	struct r600_pipe_shader_selector *tcs = rctx->tcs_shader ? rctx->tcs_shader : rctx->tes_shader;
+	struct r600_pipe_shader_selector *ls = rctx->vs_shader;
+	unsigned num_tcs_input_cp = info->vertices_per_patch;
+	unsigned num_tcs_outputs;
+	unsigned num_tcs_output_cp;
+	unsigned num_tcs_patch_outputs;
+	unsigned num_tcs_inputs;
+	unsigned input_vertex_size, output_vertex_size;
+	unsigned input_patch_size, pervertex_output_patch_size, output_patch_size;
+	unsigned output_patch0_offset, perpatch_output_offset, lds_size;
+	uint32_t values[16];
+	unsigned num_waves;
+	unsigned num_pipes = rctx->screen->b.info.r600_max_pipes;
+	unsigned wave_divisor = (16 * num_pipes);
+
+	*num_patches = 1;
+
+	if (!rctx->tes_shader) {
+		rctx->lds_alloc = 0;
+		rctx->b.b.set_constant_buffer(&rctx->b.b, PIPE_SHADER_VERTEX,
+					      R600_LDS_INFO_CONST_BUFFER, NULL);
+		rctx->b.b.set_constant_buffer(&rctx->b.b, PIPE_SHADER_TESS_CTRL,
+					      R600_LDS_INFO_CONST_BUFFER, NULL);
+		rctx->b.b.set_constant_buffer(&rctx->b.b, PIPE_SHADER_TESS_EVAL,
+					      R600_LDS_INFO_CONST_BUFFER, NULL);
+		return;
+	}
+
+	if (rctx->lds_alloc != 0 &&
+	    rctx->last_ls == ls &&
+	    !rctx->tess_state_dirty &&
+	    rctx->last_num_tcs_input_cp == num_tcs_input_cp &&
+	    rctx->last_tcs == tcs)
+		return;
+
+	num_tcs_inputs = util_last_bit64(ls->lds_outputs_written_mask);
+
+	if (rctx->tcs_shader) {
+		num_tcs_outputs = util_last_bit64(tcs->lds_outputs_written_mask);
+		num_tcs_output_cp = tcs->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT];
+		num_tcs_patch_outputs = util_last_bit64(tcs->lds_patch_outputs_written_mask);
+	} else {
+		num_tcs_outputs = num_tcs_inputs;
+		num_tcs_output_cp = num_tcs_input_cp;
+		num_tcs_patch_outputs = 2; /* TESSINNER + TESSOUTER */
+	}
+
+	/* size in bytes */
+	input_vertex_size = num_tcs_inputs * 16;
+	output_vertex_size = num_tcs_outputs * 16;
+
+	input_patch_size = num_tcs_input_cp * input_vertex_size;
+
+	pervertex_output_patch_size = num_tcs_output_cp * output_vertex_size;
+	output_patch_size = pervertex_output_patch_size + num_tcs_patch_outputs * 16;
+
+	output_patch0_offset = rctx->tcs_shader ? input_patch_size * *num_patches : 0;
+	perpatch_output_offset = output_patch0_offset + pervertex_output_patch_size;
+
+	lds_size = output_patch0_offset + output_patch_size * *num_patches;
+
+	values[0] = input_patch_size;
+	values[1] = input_vertex_size;
+	values[2] = num_tcs_input_cp;
+	values[3] = num_tcs_output_cp;
+
+	values[4] = output_patch_size;
+	values[5] = output_vertex_size;
+	values[6] = output_patch0_offset;
+	values[7] = perpatch_output_offset;
+
+	/* docs say HS_NUM_WAVES - CEIL((LS_HS_CONFIG.NUM_PATCHES *
+	   LS_HS_CONFIG.HS_NUM_OUTPUT_CP) / (NUM_GOOD_PIPES * 16)) */
+	num_waves = ceilf((float)(*num_patches * num_tcs_output_cp) / (float)wave_divisor);
+
+	rctx->lds_alloc = (lds_size | (num_waves << 14));
+
+	memcpy(&values[8], rctx->tess_state, 6 * sizeof(float));
+	values[14] = 0;
+	values[15] = 0;
+
+	rctx->tess_state_dirty = false;
+	rctx->last_ls = ls;
+	rctx->last_tcs = tcs;
+	rctx->last_num_tcs_input_cp = num_tcs_input_cp;
+
+	constbuf.user_buffer = values;
+	constbuf.buffer_size = 16 * 4;
+
+	rctx->b.b.set_constant_buffer(&rctx->b.b, PIPE_SHADER_VERTEX,
+				      R600_LDS_INFO_CONST_BUFFER, &constbuf);
+	rctx->b.b.set_constant_buffer(&rctx->b.b, PIPE_SHADER_TESS_CTRL,
+				      R600_LDS_INFO_CONST_BUFFER, &constbuf);
+	rctx->b.b.set_constant_buffer(&rctx->b.b, PIPE_SHADER_TESS_EVAL,
+				      R600_LDS_INFO_CONST_BUFFER, &constbuf);
+	pipe_resource_reference(&constbuf.buffer, NULL);
+}
+
+uint32_t evergreen_get_ls_hs_config(struct r600_context *rctx,
+				    const struct pipe_draw_info *info,
+				    unsigned num_patches)
+{
+	unsigned num_output_cp;
+
+	if (!rctx->tes_shader)
+		return 0;
+
+	num_output_cp = rctx->tcs_shader ?
+		rctx->tcs_shader->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
+		info->vertices_per_patch;
+
+	return S_028B58_NUM_PATCHES(num_patches) |
+		S_028B58_HS_NUM_INPUT_CP(info->vertices_per_patch) |
+		S_028B58_HS_NUM_OUTPUT_CP(num_output_cp);
+}
+
+void evergreen_set_ls_hs_config(struct r600_context *rctx,
+				struct radeon_winsys_cs *cs,
+				uint32_t ls_hs_config)
+{
+	radeon_set_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG, ls_hs_config);
+}
+
+void evergreen_set_lds_alloc(struct r600_context *rctx,
+			     struct radeon_winsys_cs *cs,
+			     uint32_t lds_alloc)
+{
+	radeon_set_context_reg(cs, R_0288E8_SQ_LDS_ALLOC, lds_alloc);
 }

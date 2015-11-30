@@ -1612,6 +1612,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	bool render_cond_bit = rctx->b.render_cond && !rctx->b.render_cond_force_off;
 	uint64_t mask;
+	unsigned num_patches;
 
 	if (!info.indirect && !info.count && (info.indexed || !info.count_from_stream_output)) {
 		return;
@@ -1717,6 +1718,9 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 	}
 
+	if (rctx->b.chip_class >= EVERGREEN)
+		evergreen_setup_tess_constants(rctx, &info, &num_patches);
+
 	/* Emit states. */
 	r600_need_cs_space(rctx, ib.user_buffer ? 5 : 0, TRUE);
 	r600_flush_emit(rctx);
@@ -1748,6 +1752,14 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				       S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 				       S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
 				       S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1));
+	}
+
+	if (rctx->b.chip_class >= EVERGREEN) {
+		uint32_t ls_hs_config = evergreen_get_ls_hs_config(rctx, &info,
+								   num_patches);
+
+		evergreen_set_ls_hs_config(rctx, cs, ls_hs_config);
+		evergreen_set_lds_alloc(rctx, cs, rctx->lds_alloc);
 	}
 
 	/* On R6xx, CULL_FRONT=1 culls all points, lines, and rectangles,

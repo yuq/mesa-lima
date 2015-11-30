@@ -59,11 +59,11 @@
 
 /* the number of CS dwords for flushing and drawing */
 #define R600_MAX_FLUSH_CS_DWORDS	16
-#define R600_MAX_DRAW_CS_DWORDS		52
+#define R600_MAX_DRAW_CS_DWORDS		58
 #define R600_TRACE_CS_DWORDS		7
 
 #define R600_MAX_USER_CONST_BUFFERS 13
-#define R600_MAX_DRIVER_CONST_BUFFERS 2
+#define R600_MAX_DRIVER_CONST_BUFFERS 3
 #define R600_MAX_CONST_BUFFERS (R600_MAX_USER_CONST_BUFFERS + R600_MAX_DRIVER_CONST_BUFFERS)
 
 /* start driver buffers after user buffers */
@@ -71,7 +71,12 @@
 #define R600_UCP_SIZE (4*4*8)
 #define R600_BUFFER_INFO_OFFSET (R600_UCP_SIZE)
 
-#define R600_GS_RING_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 1)
+#define R600_LDS_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 1)
+/*
+ * Note GS doesn't use a constant buffer binding, just a resource index,
+ * so it's fine to have it exist at index 16.
+ */
+#define R600_GS_RING_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 2)
 /* Currently R600_MAX_CONST_BUFFERS just fits on the hw, which has a limit
  * of 16 const buffers.
  * UCP/SAMPLE_POSITIONS are never accessed by same shader stage so they can use the same id.
@@ -525,6 +530,11 @@ struct r600_context {
 	struct r600_isa		*isa;
 	float sample_positions[4 * 16];
 	float tess_state[8];
+	bool tess_state_dirty;
+	struct r600_pipe_shader_selector *last_ls;
+	struct r600_pipe_shader_selector *last_tcs;
+	unsigned last_num_tcs_input_cp;
+	unsigned lds_alloc;
 };
 
 static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
@@ -702,6 +712,18 @@ void evergreen_dma_copy_buffer(struct r600_context *rctx,
 			       uint64_t dst_offset,
 			       uint64_t src_offset,
 			       uint64_t size);
+void evergreen_setup_tess_constants(struct r600_context *rctx,
+				    const struct pipe_draw_info *info,
+				    unsigned *num_patches);
+uint32_t evergreen_get_ls_hs_config(struct r600_context *rctx,
+				    const struct pipe_draw_info *info,
+				    unsigned num_patches);
+void evergreen_set_ls_hs_config(struct r600_context *rctx,
+				struct radeon_winsys_cs *cs,
+				uint32_t ls_hs_config);
+void evergreen_set_lds_alloc(struct r600_context *rctx,
+			     struct radeon_winsys_cs *cs,
+			     uint32_t lds_alloc);
 
 /* r600_state_common.c */
 void r600_init_common_state_functions(struct r600_context *rctx);
