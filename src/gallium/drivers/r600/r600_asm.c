@@ -37,6 +37,11 @@
 #define NUM_OF_CYCLES 3
 #define NUM_OF_COMPONENTS 4
 
+static inline bool alu_writes(struct r600_bytecode_alu *alu)
+{
+	return alu->dst.write || alu->is_op3;
+}
+
 static inline unsigned int r600_bytecode_get_num_operands(
 		struct r600_bytecode *bc, struct r600_bytecode_alu *alu)
 {
@@ -581,7 +586,7 @@ static int replace_gpr_with_pv_ps(struct r600_bytecode *bc,
 		return r;
 
 	for (i = 0; i < max_slots; ++i) {
-		if (prev[i] && (prev[i]->dst.write || prev[i]->is_op3) && !prev[i]->dst.rel) {
+		if (prev[i] && alu_writes(prev[i]) && !prev[i]->dst.rel) {
 
 			if (is_alu_64bit_inst(bc, prev[i])) {
 				gpr[i] = -1;
@@ -789,8 +794,8 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 					result[4] = slots[i];
 				} else if (is_alu_any_unit_inst(bc, prev[i])) {
 					if (slots[i]->dst.sel == prev[i]->dst.sel &&
-						(slots[i]->dst.write == 1 || slots[i]->is_op3) &&
-						(prev[i]->dst.write == 1 || prev[i]->is_op3))
+					    alu_writes(slots[i]) &&
+					    alu_writes(prev[i]))
 						return 0;
 
 					result[i] = slots[i];
@@ -805,8 +810,8 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 			if (max_slots == 5 && slots[i] && prev[4] &&
 					slots[i]->dst.sel == prev[4]->dst.sel &&
 					slots[i]->dst.chan == prev[4]->dst.chan &&
-					(slots[i]->dst.write == 1 || slots[i]->is_op3) &&
-					(prev[4]->dst.write == 1 || prev[4]->is_op3))
+					alu_writes(slots[i]) &&
+					alu_writes(prev[4]))
 				return 0;
 
 			result[i] = slots[i];
@@ -846,7 +851,7 @@ static int merge_inst_groups(struct r600_bytecode *bc, struct r600_bytecode_alu 
 				continue;
 
 			for (j = 0; j < max_slots; ++j) {
-				if (!prev[j] || !(prev[j]->dst.write || prev[j]->is_op3))
+				if (!prev[j] || !alu_writes(prev[j]))
 					continue;
 
 				/* If it's relative then we can't determin which gpr is really used. */
@@ -1790,7 +1795,7 @@ static int print_dst(struct r600_bytecode_alu *alu)
 		reg_char = 'T';
 	}
 
-	if (alu->dst.write || alu->is_op3) {
+	if (alu_writes(alu)) {
 		o += fprintf(stderr, "%c", reg_char);
 		o += print_sel(alu->dst.sel, alu->dst.rel, alu->index_mode, 0);
 	} else {
