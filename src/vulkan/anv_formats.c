@@ -260,10 +260,10 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
       if (physical_device->info->gen >= 8) {
          tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-         tiled |= VK_FORMAT_FEATURE_BLIT_SOURCE_BIT;
+         tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT;
       }
       if (format->depth_format) {
-         tiled |= VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT;
+         tiled |= VK_FORMAT_FEATURE_BLIT_DST_BIT;
       }
    } else {
       /* The surface_formats table only contains color formats */
@@ -273,13 +273,13 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
 
       if (info->sampling <= gen) {
          flags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
-                 VK_FORMAT_FEATURE_BLIT_SOURCE_BIT;
+                 VK_FORMAT_FEATURE_BLIT_SRC_BIT;
          linear |= flags;
          tiled |= flags;
       }
       if (info->render_target <= gen) {
          flags = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
-                 VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT;
+                 VK_FORMAT_FEATURE_BLIT_DST_BIT;
          linear |= flags;
          tiled |= flags;
       }
@@ -387,19 +387,19 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       break;
    }
 
-   if (usage & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT) {
+   if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
       /* Meta implements transfers by sampling from the source image. */
       if (!(format_feature_flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
          goto unsupported;
       }
    }
 
-   if (usage & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) {
+   if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
       if (format->has_stencil) {
          /* Not yet implemented because copying to a W-tiled surface is crazy
           * hard.
           */
-         anv_finishme("support VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT for "
+         anv_finishme("support VK_IMAGE_USAGE_TRANSFER_DST_BIT for "
                       "stencil format");
          goto unsupported;
       }

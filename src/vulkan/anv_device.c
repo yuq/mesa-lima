@@ -533,7 +533,7 @@ VkResult anv_GetPhysicalDeviceQueueFamilyProperties(
    *pQueueFamilyProperties = (VkQueueFamilyProperties) {
       .queueFlags = VK_QUEUE_GRAPHICS_BIT |
                     VK_QUEUE_COMPUTE_BIT |
-                    VK_QUEUE_DMA_BIT,
+                    VK_QUEUE_TRANSFER_BIT,
       .queueCount = 1,
       .supportsTimestamps = true,
    };

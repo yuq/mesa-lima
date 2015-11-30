@@ -82,7 +82,7 @@ x11_get_surface_properties(struct anv_wsi_implementation *impl,
    props->currentTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
    props->maxImageArraySize = 1;
    props->supportedUsageFlags =
-      VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
+      VK_IMAGE_USAGE_TRANSFER_DST_BIT |
       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
    return VK_SUCCESS;

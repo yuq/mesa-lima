@@ -316,20 +316,6 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
                   .BlendStatePointer = pipeline->blend_state.offset);
 }
 
-static const uint32_t vk_to_gen_primitive_type[] = {
-   [VK_PRIMITIVE_TOPOLOGY_POINT_LIST]           = _3DPRIM_POINTLIST,
-   [VK_PRIMITIVE_TOPOLOGY_LINE_LIST]            = _3DPRIM_LINELIST,
-   [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP]           = _3DPRIM_LINESTRIP,
-   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST]        = _3DPRIM_TRILIST,
-   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP]       = _3DPRIM_TRISTRIP,
-   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN]         = _3DPRIM_TRIFAN,
-   [VK_PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ]        = _3DPRIM_LINELIST_ADJ,
-   [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ]       = _3DPRIM_LINESTRIP_ADJ,
-   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ]    = _3DPRIM_TRILIST_ADJ,
-   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ]   = _3DPRIM_TRISTRIP_ADJ,
-   [VK_PRIMITIVE_TOPOLOGY_PATCH]                = _3DPRIM_PATCHLIST_1
-};
-
 static inline uint32_t
 scratch_space(const struct brw_stage_prog_data *prog_data)
 {

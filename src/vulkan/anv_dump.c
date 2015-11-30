@@ -52,7 +52,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
          .arraySize = 1,
          .samples = 1,
          .tiling = VK_IMAGE_TILING_LINEAR,
-         .usage = VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT,
+         .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
          .flags = 0,
       }, &copy_image);
    assert(result == VK_SUCCESS);

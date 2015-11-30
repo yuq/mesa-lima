@@ -274,12 +274,12 @@ anv_image_get_full_usage(const VkImageCreateInfo *info)
 {
    VkImageUsageFlags usage = info->usage;
 
-   if (usage & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT) {
+   if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
       /* Meta will transfer from the image by binding it as a texture. */
       usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
    }
 
-   if (usage & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) {
+   if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
       /* Meta will transfer to the image by binding it as a color attachment,
        * even if the image format is not a color format.
        */
