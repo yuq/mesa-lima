@@ -1129,44 +1129,23 @@ nir_visitor::visit(ir_assignment *ir)
    nir_ssa_def *src = evaluate_rvalue(ir->rhs);
 
    if (ir->write_mask != (1 << num_components) - 1 && ir->write_mask != 0) {
-      /*
-       * We have no good way to update only part of a variable, so just load
-       * the LHS and do a vec operation to combine the old with the new, and
-       * then store it
-       * back into the LHS. Copy propagation should get rid of the mess.
+      /* GLSL IR will give us the input to the write-masked assignment in a
+       * single packed vector.  So, for example, if the writemask is xzw, then
+       * we have to swizzle x -> x, y -> z, and z -> w and get the y component
+       * from the load.
        */
-
-      nir_intrinsic_instr *load =
-         nir_intrinsic_instr_create(this->shader, nir_intrinsic_load_var);
-      load->num_components = ir->lhs->type->vector_elements;
-      nir_ssa_dest_init(&load->instr, &load->dest, num_components, NULL);
-      load->variables[0] = lhs_deref;
-      ralloc_steal(load, load->variables[0]);
-      nir_builder_instr_insert(&b, &load->instr);
-
-      nir_ssa_def *srcs[4];
-
+      unsigned swiz[4];
       unsigned component = 0;
-      for (unsigned i = 0; i < ir->lhs->type->vector_elements; i++) {
-         if (ir->write_mask & (1 << i)) {
-            /* GLSL IR will give us the input to the write-masked assignment
-             * in a single packed vector.  So, for example, if the
-             * writemask is xzw, then we have to swizzle x -> x, y -> z,
-             * and z -> w and get the y component from the load.
-             */
-            srcs[i] = nir_channel(&b, src, component++);
-         } else {
-            srcs[i] = nir_channel(&b, &load->dest.ssa, i);
-         }
+      for (unsigned i = 0; i < 4; i++) {
+         swiz[i] = ir->write_mask & (1 << i) ? component++ : 0;
       }
-
-      src = nir_vec(&b, srcs, ir->lhs->type->vector_elements);
+      src = nir_swizzle(&b, src, swiz, num_components, !supports_ints);
    }
 
    nir_intrinsic_instr *store =
       nir_intrinsic_instr_create(this->shader, nir_intrinsic_store_var);
    store->num_components = ir->lhs->type->vector_elements;
-   store->const_index[0] = (1 << store->num_components) - 1;
+   store->const_index[0] = ir->write_mask;
    nir_deref *store_deref = nir_copy_deref(store, &lhs_deref->deref);
    store->variables[0] = nir_deref_as_var(store_deref);
    store->src[0] = nir_src_for_ssa(src);
