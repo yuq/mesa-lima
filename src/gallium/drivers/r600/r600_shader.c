@@ -209,6 +209,15 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 
 	/* Build state. */
 	switch (shader->shader.processor_type) {
+	case TGSI_PROCESSOR_TESS_CTRL:
+		evergreen_update_hs_state(ctx, shader);
+		break;
+	case TGSI_PROCESSOR_TESS_EVAL:
+		if (key.tes.as_es)
+			evergreen_update_es_state(ctx, shader);
+		else
+			evergreen_update_vs_state(ctx, shader);
+		break;
 	case TGSI_PROCESSOR_GEOMETRY:
 		if (rctx->b.chip_class >= EVERGREEN) {
 			evergreen_update_gs_state(ctx, shader);
@@ -221,7 +230,9 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 	case TGSI_PROCESSOR_VERTEX:
 		export_shader = key.vs.as_es;
 		if (rctx->b.chip_class >= EVERGREEN) {
-			if (export_shader)
+			if (key.vs.as_ls)
+				evergreen_update_ls_state(ctx, shader);
+			else if (key.vs.as_es)
 				evergreen_update_es_state(ctx, shader);
 			else
 				evergreen_update_vs_state(ctx, shader);
