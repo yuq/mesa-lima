@@ -1419,6 +1419,277 @@ static int tgsi_split_gs_inputs(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+
+/* Tessellation shaders pass outputs to the next shader using LDS.
+ *
+ * LS outputs = TCS(HS) inputs
+ * TCS(HS) outputs = TES(DS) inputs
+ *
+ * The LDS layout is:
+ * - TCS inputs for patch 0
+ * - TCS inputs for patch 1
+ * - TCS inputs for patch 2		= get_tcs_in_current_patch_offset (if RelPatchID==2)
+ * - ...
+ * - TCS outputs for patch 0            = get_tcs_out_patch0_offset
+ * - Per-patch TCS outputs for patch 0  = get_tcs_out_patch0_patch_data_offset
+ * - TCS outputs for patch 1
+ * - Per-patch TCS outputs for patch 1
+ * - TCS outputs for patch 2            = get_tcs_out_current_patch_offset (if RelPatchID==2)
+ * - Per-patch TCS outputs for patch 2  = get_tcs_out_current_patch_data_offset (if RelPatchID==2)
+ * - ...
+ *
+ * All three shaders VS(LS), TCS, TES share the same LDS space.
+ */
+/* this will return with the dw address in temp_reg.x */
+static int r600_get_byte_address(struct r600_shader_ctx *ctx, int temp_reg,
+				 const struct tgsi_full_dst_register *dst,
+				 const struct tgsi_full_src_register *src,
+				 int stride_bytes_reg, int stride_bytes_chan)
+{
+	struct tgsi_full_dst_register reg;
+	ubyte *name, *index, *array_first;
+	int r;
+	int param;
+	struct tgsi_shader_info *info = &ctx->info;
+	/* Set the register description. The address computation is the same
+	 * for sources and destinations. */
+	if (src) {
+		reg.Register.File = src->Register.File;
+		reg.Register.Index = src->Register.Index;
+		reg.Register.Indirect = src->Register.Indirect;
+		reg.Register.Dimension = src->Register.Dimension;
+		reg.Indirect = src->Indirect;
+		reg.Dimension = src->Dimension;
+		reg.DimIndirect = src->DimIndirect;
+	} else
+		reg = *dst;
+
+	/* If the register is 2-dimensional (e.g. an array of vertices
+	 * in a primitive), calculate the base address of the vertex. */
+	if (reg.Register.Dimension) {
+		int sel, chan;
+		if (reg.Dimension.Indirect) {
+			unsigned addr_reg;
+			assert (reg.DimIndirect.File == TGSI_FILE_ADDRESS);
+
+			addr_reg = get_address_file_reg(ctx, reg.DimIndirect.Index);
+			/* pull the value from index_reg */
+			sel = addr_reg;
+			chan = 0;
+		} else {
+			sel = V_SQ_ALU_SRC_LITERAL;
+			chan = reg.Dimension.Index;
+		}
+
+		r = single_alu_op3(ctx, ALU_OP3_MULADD_UINT24,
+				   temp_reg, 0,
+				   stride_bytes_reg, stride_bytes_chan,
+				   sel, chan,
+				   temp_reg, 0);
+		if (r)
+			return r;
+	}
+
+	if (reg.Register.File == TGSI_FILE_INPUT) {
+		name = info->input_semantic_name;
+		index = info->input_semantic_index;
+		array_first = info->input_array_first;
+	} else if (reg.Register.File == TGSI_FILE_OUTPUT) {
+		name = info->output_semantic_name;
+		index = info->output_semantic_index;
+		array_first = info->output_array_first;
+	} else {
+		assert(0);
+		return -1;
+	}
+	if (reg.Register.Indirect) {
+		int addr_reg;
+		int first;
+		/* Add the relative address of the element. */
+		if (reg.Indirect.ArrayID)
+			first = array_first[reg.Indirect.ArrayID];
+		else
+			first = reg.Register.Index;
+
+		addr_reg = get_address_file_reg(ctx, reg.Indirect.Index);
+
+		/* pull the value from index_reg */
+		r = single_alu_op3(ctx, ALU_OP3_MULADD_UINT24,
+				   temp_reg, 0,
+				   V_SQ_ALU_SRC_LITERAL, 16,
+				   addr_reg, 0,
+				   temp_reg, 0);
+		if (r)
+			return r;
+
+		param = r600_get_lds_unique_index(name[first],
+						  index[first]);
+
+	} else {
+		param = r600_get_lds_unique_index(name[reg.Register.Index],
+						  index[reg.Register.Index]);
+	}
+
+	/* add to base_addr - passed in temp_reg.x */
+	if (param) {
+		r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+				   temp_reg, 0,
+				   temp_reg, 0,
+				   V_SQ_ALU_SRC_LITERAL, param * 16);
+		if (r)
+			return r;
+
+	}
+	return 0;
+}
+
+static int do_lds_fetch_values(struct r600_shader_ctx *ctx, unsigned temp_reg,
+			       unsigned dst_reg)
+{
+	struct r600_bytecode_alu alu;
+	int r, i;
+
+	if ((ctx->bc->cf_last->ndw>>1) >= 0x60)
+		ctx->bc->force_add_cf = 1;
+	for (i = 1; i < 4; i++) {
+		r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+				   temp_reg, i,
+				   temp_reg, 0,
+				   V_SQ_ALU_SRC_LITERAL, 4 * i);
+	}
+	for (i = 0; i < 4; i++) {
+		/* emit an LDS_READ_RET */
+		memset(&alu, 0, sizeof(alu));
+		alu.op = LDS_OP1_LDS_READ_RET;
+		alu.src[0].sel = temp_reg;
+		alu.src[0].chan = i;
+		alu.src[1].sel = V_SQ_ALU_SRC_0;
+		alu.src[2].sel = V_SQ_ALU_SRC_0;
+		alu.dst.chan = 0;
+		alu.is_lds_idx_op = true;
+		alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+	for (i = 0; i < 4; i++) {
+		/* then read from LDS_OQ_A_POP */
+		memset(&alu, 0, sizeof(alu));
+
+		alu.op = ALU_OP1_MOV;
+		alu.src[0].sel = EG_V_SQ_ALU_SRC_LDS_OQ_A_POP;
+		alu.src[0].chan = 0;
+		alu.dst.sel = dst_reg;
+		alu.dst.chan = i;
+		alu.dst.write = 1;
+		alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+	return 0;
+}
+
+static int fetch_tes_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_register *src, unsigned int dst_reg)
+{
+	int r;
+	unsigned temp_reg = r600_get_temp(ctx);
+
+	r = get_lds_offset0(ctx, 2, temp_reg,
+			    src->Register.Dimension ? false : true);
+	if (r)
+		return r;
+
+	/* the base address is now in temp.x */
+	r = r600_get_byte_address(ctx, temp_reg,
+				  NULL, src, ctx->tess_output_info, 1);
+	if (r)
+		return r;
+
+	r = do_lds_fetch_values(ctx, temp_reg, dst_reg);
+	if (r)
+		return r;
+	return 0;
+}
+
+static int fetch_tcs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_register *src, unsigned int dst_reg)
+{
+	int r;
+	unsigned temp_reg = r600_get_temp(ctx);
+
+	/* t.x = ips * r0.y */
+	r = single_alu_op2(ctx, ALU_OP2_MUL_UINT24,
+			   temp_reg, 0,
+			   ctx->tess_input_info, 0,
+			   0, 1);
+
+	if (r)
+		return r;
+
+	/* the base address is now in temp.x */
+	r = r600_get_byte_address(ctx, temp_reg,
+				  NULL, src, ctx->tess_input_info, 1);
+	if (r)
+		return r;
+
+	r = do_lds_fetch_values(ctx, temp_reg, dst_reg);
+	if (r)
+		return r;
+	return 0;
+}
+
+static int fetch_tcs_output(struct r600_shader_ctx *ctx, struct tgsi_full_src_register *src, unsigned int dst_reg)
+{
+	int r;
+	unsigned temp_reg = r600_get_temp(ctx);
+
+	r = get_lds_offset0(ctx, 1, temp_reg,
+			    src->Register.Dimension ? false : true);
+	if (r)
+		return r;
+	/* the base address is now in temp.x */
+	r = r600_get_byte_address(ctx, temp_reg,
+				  NULL, src,
+				  ctx->tess_output_info, 1);
+	if (r)
+		return r;
+
+	r = do_lds_fetch_values(ctx, temp_reg, dst_reg);
+	if (r)
+		return r;
+	return 0;
+}
+
+static int tgsi_split_lds_inputs(struct r600_shader_ctx *ctx)
+{
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	int i;
+
+	for (i = 0; i < inst->Instruction.NumSrcRegs; i++) {
+		struct tgsi_full_src_register *src = &inst->Src[i];
+
+		if (ctx->type == TGSI_PROCESSOR_TESS_EVAL && src->Register.File == TGSI_FILE_INPUT) {
+			int treg = r600_get_temp(ctx);
+			fetch_tes_input(ctx, src, treg);
+			ctx->src[i].sel = treg;
+			ctx->src[i].rel = 0;
+		}
+		if (ctx->type == TGSI_PROCESSOR_TESS_CTRL && src->Register.File == TGSI_FILE_INPUT) {
+			int treg = r600_get_temp(ctx);
+			fetch_tcs_input(ctx, src, treg);
+			ctx->src[i].sel = treg;
+			ctx->src[i].rel = 0;
+		}
+		if (ctx->type == TGSI_PROCESSOR_TESS_CTRL && src->Register.File == TGSI_FILE_OUTPUT) {
+			int treg = r600_get_temp(ctx);
+			fetch_tcs_output(ctx, src, treg);
+			ctx->src[i].sel = treg;
+			ctx->src[i].rel = 0;
+		}
+	}
+	return 0;
+}
+
 static int tgsi_split_constant(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
@@ -2164,6 +2435,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	bool use_llvm = false;
 	bool indirect_gprs;
 	bool ring_outputs = false;
+	bool lds_inputs = false;
 	bool pos_emitted = false;
 
 #ifdef R600_USE_LLVM
@@ -2201,9 +2473,11 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		break;
 	case TGSI_PROCESSOR_TESS_CTRL:
 		shader->tcs_prim_mode = key.tcs.prim_mode;
+		lds_inputs = true;
 		break;
 	case TGSI_PROCESSOR_TESS_EVAL:
 		shader->tes_as_es = key.tes.as_es;
+		lds_inputs = true;
 		if (shader->tes_as_es)
 			ring_outputs = true;
 		break;
@@ -2557,9 +2831,13 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 					goto out_err;
 				if ((r = tgsi_split_literal_constant(&ctx)))
 					goto out_err;
-				if (ctx.type == TGSI_PROCESSOR_GEOMETRY)
+				if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
 					if ((r = tgsi_split_gs_inputs(&ctx)))
 						goto out_err;
+				} else if (lds_inputs) {
+					if ((r = tgsi_split_lds_inputs(&ctx)))
+						goto out_err;
+				}
 				if (ctx.bc->chip_class == CAYMAN)
 					ctx.inst_info = &cm_shader_tgsi_instruction[opcode];
 				else if (ctx.bc->chip_class >= EVERGREEN)
