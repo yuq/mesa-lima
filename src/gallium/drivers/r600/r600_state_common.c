@@ -893,6 +893,18 @@ static void *r600_create_gs_state(struct pipe_context *ctx,
 	return r600_create_shader_state(ctx, state, PIPE_SHADER_GEOMETRY);
 }
 
+static void *r600_create_tcs_state(struct pipe_context *ctx,
+					 const struct pipe_shader_state *state)
+{
+	return r600_create_shader_state(ctx, state, PIPE_SHADER_TESS_CTRL);
+}
+
+static void *r600_create_tes_state(struct pipe_context *ctx,
+					 const struct pipe_shader_state *state)
+{
+	return r600_create_shader_state(ctx, state, PIPE_SHADER_TESS_EVAL);
+}
+
 static void r600_bind_ps_state(struct pipe_context *ctx, void *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
@@ -923,6 +935,24 @@ static void r600_bind_gs_state(struct pipe_context *ctx, void *state)
 	if (!state)
 		return;
 	rctx->b.streamout.stride_in_dw = rctx->gs_shader->so.stride;
+}
+
+static void r600_bind_tcs_state(struct pipe_context *ctx, void *state)
+{
+	struct r600_context *rctx = (struct r600_context *)ctx;
+
+	rctx->tcs_shader = (struct r600_pipe_shader_selector *)state;
+}
+
+static void r600_bind_tes_state(struct pipe_context *ctx, void *state)
+{
+	struct r600_context *rctx = (struct r600_context *)ctx;
+
+	rctx->tes_shader = (struct r600_pipe_shader_selector *)state;
+
+	if (!state)
+		return;
+	rctx->b.streamout.stride_in_dw = rctx->tes_shader->so.stride;
 }
 
 static void r600_delete_shader_selector(struct pipe_context *ctx,
@@ -978,6 +1008,29 @@ static void r600_delete_gs_state(struct pipe_context *ctx, void *state)
 	r600_delete_shader_selector(ctx, sel);
 }
 
+static void r600_delete_tcs_state(struct pipe_context *ctx, void *state)
+{
+	struct r600_context *rctx = (struct r600_context *)ctx;
+	struct r600_pipe_shader_selector *sel = (struct r600_pipe_shader_selector *)state;
+
+	if (rctx->tcs_shader == sel) {
+		rctx->tcs_shader = NULL;
+	}
+
+	r600_delete_shader_selector(ctx, sel);
+}
+
+static void r600_delete_tes_state(struct pipe_context *ctx, void *state)
+{
+	struct r600_context *rctx = (struct r600_context *)ctx;
+	struct r600_pipe_shader_selector *sel = (struct r600_pipe_shader_selector *)state;
+
+	if (rctx->tes_shader == sel) {
+		rctx->tes_shader = NULL;
+	}
+
+	r600_delete_shader_selector(ctx, sel);
+}
 
 void r600_constant_buffers_dirty(struct r600_context *rctx, struct r600_constbuf_state *state)
 {
@@ -2674,6 +2727,8 @@ void r600_init_common_state_functions(struct r600_context *rctx)
 	rctx->b.b.create_fs_state = r600_create_ps_state;
 	rctx->b.b.create_vs_state = r600_create_vs_state;
 	rctx->b.b.create_gs_state = r600_create_gs_state;
+	rctx->b.b.create_tcs_state = r600_create_tcs_state;
+	rctx->b.b.create_tes_state = r600_create_tes_state;
 	rctx->b.b.create_vertex_elements_state = r600_create_vertex_fetch_shader;
 	rctx->b.b.bind_blend_state = r600_bind_blend_state;
 	rctx->b.b.bind_depth_stencil_alpha_state = r600_bind_dsa_state;
@@ -2683,6 +2738,8 @@ void r600_init_common_state_functions(struct r600_context *rctx)
 	rctx->b.b.bind_vertex_elements_state = r600_bind_vertex_elements;
 	rctx->b.b.bind_vs_state = r600_bind_vs_state;
 	rctx->b.b.bind_gs_state = r600_bind_gs_state;
+	rctx->b.b.bind_tcs_state = r600_bind_tcs_state;
+	rctx->b.b.bind_tes_state = r600_bind_tes_state;
 	rctx->b.b.delete_blend_state = r600_delete_blend_state;
 	rctx->b.b.delete_depth_stencil_alpha_state = r600_delete_dsa_state;
 	rctx->b.b.delete_fs_state = r600_delete_ps_state;
@@ -2691,6 +2748,8 @@ void r600_init_common_state_functions(struct r600_context *rctx)
 	rctx->b.b.delete_vertex_elements_state = r600_delete_vertex_elements;
 	rctx->b.b.delete_vs_state = r600_delete_vs_state;
 	rctx->b.b.delete_gs_state = r600_delete_gs_state;
+	rctx->b.b.delete_tcs_state = r600_delete_tcs_state;
+	rctx->b.b.delete_tes_state = r600_delete_tes_state;
 	rctx->b.b.set_blend_color = r600_set_blend_color;
 	rctx->b.b.set_clip_state = r600_set_clip_state;
 	rctx->b.b.set_constant_buffer = r600_set_constant_buffer;
