@@ -840,6 +840,21 @@ static int vs_add_primid_output(struct r600_shader_ctx *ctx, int prim_id_sid)
 	return 0;
 }
 
+static int tgsi_barrier(struct r600_shader_ctx *ctx)
+{
+	struct r600_bytecode_alu alu;
+	int r;
+
+	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+	alu.op = ctx->inst_info->op;
+	alu.last = 1;
+
+	r = r600_bytecode_add_alu(ctx->bc, &alu);
+	if (r)
+		return r;
+	return 0;
+}
+
 static int tgsi_declaration(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_declaration *d = &ctx->parse.FullToken.FullDeclaration;
@@ -9273,7 +9288,7 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_MFENCE]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_LFENCE]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_SFENCE]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_BARRIER]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_BARRIER]	= { ALU_OP0_GROUP_BARRIER, tgsi_barrier},
 	[TGSI_OPCODE_ATOMUADD]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_ATOMXCHG]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_ATOMCAS]	= { ALU_OP0_NOP, tgsi_unsupported},
@@ -9495,7 +9510,7 @@ static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_MFENCE]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_LFENCE]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_SFENCE]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_BARRIER]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_BARRIER]	= { ALU_OP0_GROUP_BARRIER, tgsi_barrier},
 	[TGSI_OPCODE_ATOMUADD]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_ATOMXCHG]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_ATOMCAS]	= { ALU_OP0_NOP, tgsi_unsupported},
