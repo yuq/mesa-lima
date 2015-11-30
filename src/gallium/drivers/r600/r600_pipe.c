@@ -343,7 +343,6 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_USER_VERTEX_BUFFERS:
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_VERTEXID_NOBASE:
-	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
 	case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
 	case PIPE_CAP_SHAREABLE_SHADERS:
@@ -351,6 +350,11 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_CLEAR_TEXTURE:
 		return 0;
 
+	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
+		if (family >= CHIP_CEDAR)
+			return 30;
+		else
+			return 0;
 	/* Stream output. */
 	case PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS:
 		return rscreen->b.has_streamout ? 4 : 0;
@@ -446,6 +450,10 @@ static int r600_get_shader_param(struct pipe_screen* pscreen, unsigned shader, e
 		if (rscreen->b.info.drm_minor >= 37)
 			break;
 		return 0;
+	case PIPE_SHADER_TESS_CTRL:
+	case PIPE_SHADER_TESS_EVAL:
+		if (rscreen->b.family >= CHIP_CEDAR)
+			break;
 	default:
 		/* XXX: support tessellation on Evergreen */
 		return 0;
