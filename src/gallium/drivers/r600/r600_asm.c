@@ -1714,9 +1714,11 @@ int r600_bytecode_build(struct r600_bytecode *bc)
 					r = r600_bytecode_alu_build(bc, alu, addr);
 					break;
 				case R700:
-				case EVERGREEN: /* eg alu is same encoding as r700 */
-				case CAYMAN:
 					r = r700_bytecode_alu_build(bc, alu, addr);
+					break;
+				case EVERGREEN:
+				case CAYMAN:
+					r = eg_bytecode_alu_build(bc, alu, addr);
 					break;
 				default:
 					R600_ERR("unknown chip class %d.\n", bc->chip_class);
@@ -1904,6 +1906,28 @@ static int print_src(struct r600_bytecode_alu *alu, unsigned idx)
 		need_sel = 0;
 		need_chan = 0;
 		switch (sel) {
+		case EG_V_SQ_ALU_SRC_LDS_DIRECT_A:
+			o += fprintf(stderr, "LDS_A[0x%08X]", src->value);
+			break;
+		case EG_V_SQ_ALU_SRC_LDS_DIRECT_B:
+			o += fprintf(stderr, "LDS_B[0x%08X]", src->value);
+			break;
+		case EG_V_SQ_ALU_SRC_LDS_OQ_A:
+			o += fprintf(stderr, "LDS_OQ_A");
+			need_chan = 1;
+			break;
+		case EG_V_SQ_ALU_SRC_LDS_OQ_B:
+			o += fprintf(stderr, "LDS_OQ_B");
+			need_chan = 1;
+			break;
+		case EG_V_SQ_ALU_SRC_LDS_OQ_A_POP:
+			o += fprintf(stderr, "LDS_OQ_A_POP");
+			need_chan = 1;
+			break;
+		case EG_V_SQ_ALU_SRC_LDS_OQ_B_POP:
+			o += fprintf(stderr, "LDS_OQ_B_POP");
+			need_chan = 1;
+			break;
 		case V_SQ_ALU_SRC_PS:
 			o += fprintf(stderr, "PS");
 			break;

@@ -52,6 +52,7 @@ struct r600_bytecode_alu {
 	unsigned			op;
 	unsigned			last;
 	unsigned			is_op3;
+	unsigned			is_lds_idx_op;
 	unsigned			execute_mask;
 	unsigned			update_pred;
 	unsigned			pred_sel;
@@ -59,6 +60,7 @@ struct r600_bytecode_alu {
 	unsigned			bank_swizzle_force;
 	unsigned			omod;
 	unsigned                        index_mode;
+	unsigned                        lds_idx;
 };
 
 struct r600_bytecode_tex {
@@ -253,6 +255,8 @@ struct r600_bytecode {
 int eg_bytecode_cf_build(struct r600_bytecode *bc, struct r600_bytecode_cf *cf);
 int egcm_load_index_reg(struct r600_bytecode *bc, unsigned id, bool inside_alu_clause);
 int eg_bytecode_gds_build(struct r600_bytecode *bc, struct r600_bytecode_gds *gds, unsigned id);
+int eg_bytecode_alu_build(struct r600_bytecode *bc,
+			  struct r600_bytecode_alu *alu, unsigned id);
 /* r600_asm.c */
 void r600_bytecode_init(struct r600_bytecode *bc,
 			enum chip_class chip_class,
