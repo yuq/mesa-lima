@@ -1294,6 +1294,11 @@ static void r600_update_clip_state(struct r600_context *rctx,
 			return false;					\
 	} while(0)
 
+#define SET_NULL_SHADER(hw) do {						\
+		if (rctx->hw_shader_stages[(hw)].shader)	\
+			update_shader_atom(ctx, &rctx->hw_shader_stages[(hw)], NULL); \
+	} while (0)
+
 static bool r600_update_derived_state(struct r600_context *rctx)
 {
 	struct pipe_context * ctx = (struct pipe_context*)rctx;
@@ -1346,8 +1351,8 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	} else {
 		if (unlikely(rctx->hw_shader_stages[R600_HW_STAGE_GS].shader)) {
-			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_GS], NULL);
-			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_ES], NULL);
+			SET_NULL_SHADER(R600_HW_STAGE_GS);
+			SET_NULL_SHADER(R600_HW_STAGE_ES);
 			rctx->shader_stages.geom_enable = false;
 			r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 		}
