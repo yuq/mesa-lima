@@ -161,6 +161,13 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 		R600_ERR("translation from TGSI failed !\n");
 		goto error;
 	}
+	if (shader->shader.processor_type == TGSI_PROCESSOR_VERTEX) {
+		/* only disable for vertex shaders in tess paths */
+		if (key.vs.as_ls)
+			use_sb = 0;
+	}
+	use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_TESS_CTRL);
+	use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_TESS_EVAL);
 
 	/* disable SB for shaders using doubles */
 	use_sb &= !shader->shader.uses_doubles;
