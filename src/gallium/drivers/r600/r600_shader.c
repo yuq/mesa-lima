@@ -2564,6 +2564,168 @@ static int r600_store_tcs_output(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+static int r600_tess_factor_read(struct r600_shader_ctx *ctx,
+				 int output_idx)
+{
+	int param;
+	unsigned temp_reg = r600_get_temp(ctx);
+	unsigned name = ctx->shader->output[output_idx].name;
+	int dreg = ctx->shader->output[output_idx].gpr;
+	int r;
+
+	param = r600_get_lds_unique_index(name, 0);
+	r = get_lds_offset0(ctx, 1, temp_reg, true);
+	if (r)
+		return r;
+
+	r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+			   temp_reg, 0,
+			   temp_reg, 0,
+			   V_SQ_ALU_SRC_LITERAL, param * 16);
+	if (r)
+		return r;
+
+	do_lds_fetch_values(ctx, temp_reg, dreg);
+	return 0;
+}
+
+static int r600_emit_tess_factor(struct r600_shader_ctx *ctx)
+{
+	int i;
+	int stride, outer_comps, inner_comps;
+	int tessinner_idx = -1, tessouter_idx = -1;
+	int r;
+	int temp_reg = r600_get_temp(ctx);
+	int treg[3] = {-1, -1, -1};
+	struct r600_bytecode_alu alu;
+	struct r600_bytecode_cf *cf_jump, *cf_pop;
+
+	/* only execute factor emission for invocation 0 */
+	/* PRED_SETE_INT __, R0.x, 0 */
+	memset(&alu, 0, sizeof(alu));
+	alu.op = ALU_OP2_PRED_SETE_INT;
+	alu.src[0].chan = 2;
+	alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
+	alu.execute_mask = 1;
+	alu.update_pred = 1;
+	alu.last = 1;
+	r600_bytecode_add_alu_type(ctx->bc, &alu, CF_OP_ALU_PUSH_BEFORE);
+
+	r600_bytecode_add_cfinst(ctx->bc, CF_OP_JUMP);
+	cf_jump = ctx->bc->cf_last;
+
+	treg[0] = r600_get_temp(ctx);
+	switch (ctx->shader->tcs_prim_mode) {
+	case PIPE_PRIM_LINES:
+		stride = 8; /* 2 dwords, 1 vec2 store */
+		outer_comps = 2;
+		inner_comps = 0;
+		break;
+	case PIPE_PRIM_TRIANGLES:
+		stride = 16; /* 4 dwords, 1 vec4 store */
+		outer_comps = 3;
+		inner_comps = 1;
+		treg[1] = r600_get_temp(ctx);
+		break;
+	case PIPE_PRIM_QUADS:
+		stride = 24; /* 6 dwords, 2 stores (vec4 + vec2) */
+		outer_comps = 4;
+		inner_comps = 2;
+		treg[1] = r600_get_temp(ctx);
+		treg[2] = r600_get_temp(ctx);
+		break;
+	default:
+		assert(0);
+		return -1;
+	}
+
+	/* R0 is InvocationID, RelPatchID, PatchID, tf_base */
+	/* TF_WRITE takes index in R.x, value in R.y */
+	for (i = 0; i < ctx->shader->noutput; i++) {
+		if (ctx->shader->output[i].name == TGSI_SEMANTIC_TESSINNER)
+			tessinner_idx = i;
+		if (ctx->shader->output[i].name == TGSI_SEMANTIC_TESSOUTER)
+			tessouter_idx = i;
+	}
+
+	if (tessouter_idx == -1)
+		return -1;
+
+	if (tessinner_idx == -1 && inner_comps)
+		return -1;
+
+	if (tessouter_idx != -1) {
+		r = r600_tess_factor_read(ctx, tessouter_idx);
+		if (r)
+			return r;
+	}
+
+	if (tessinner_idx != -1) {
+		r = r600_tess_factor_read(ctx, tessinner_idx);
+		if (r)
+			return r;
+	}
+
+	/* r.x = tf_base(r0.w) + relpatchid(r0.y) * tf_stride */
+	/* r.x = relpatchid(r0.y) * tf_stride */
+
+	/* multiply incoming r0.y * stride - t.x = r0.y * stride */
+	/* add incoming r0.w to it: t.x = t.x + r0.w */
+	r = single_alu_op3(ctx, ALU_OP3_MULADD_UINT24,
+			   temp_reg, 0,
+			   0, 1,
+			   V_SQ_ALU_SRC_LITERAL, stride,
+			   0, 3);
+	if (r)
+		return r;
+
+	for (i = 0; i < outer_comps + inner_comps; i++) {
+		int out_idx = i >= outer_comps ? tessinner_idx : tessouter_idx;
+		int out_comp = i >= outer_comps ? i - outer_comps : i;
+
+		r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+				   treg[i / 2], (2 * (i % 2)),
+				   temp_reg, 0,
+				   V_SQ_ALU_SRC_LITERAL, 4 * i);
+		if (r)
+			return r;
+		r = single_alu_op2(ctx, ALU_OP1_MOV,
+				   treg[i / 2], 1 + (2 * (i%2)),
+				   ctx->shader->output[out_idx].gpr, out_comp,
+				   0, 0);
+		if (r)
+			return r;
+	}
+	for (i = 0; i < outer_comps + inner_comps; i++) {
+		struct r600_bytecode_gds gds;
+
+		memset(&gds, 0, sizeof(struct r600_bytecode_gds));
+		gds.src_gpr = treg[i / 2];
+		gds.src_sel_x = 2 * (i % 2);
+		gds.src_sel_y = 1 + (2 * (i % 2));
+		gds.src_sel_z = 4;
+		gds.dst_sel_x = 7;
+		gds.dst_sel_y = 7;
+		gds.dst_sel_z = 7;
+		gds.dst_sel_w = 7;
+		gds.op = FETCH_OP_TF_WRITE;
+		r = r600_bytecode_add_gds(ctx->bc, &gds);
+		if (r)
+			return r;
+	}
+
+	// Patch up jump label
+	r600_bytecode_add_cfinst(ctx->bc, CF_OP_POP);
+	cf_pop = ctx->bc->cf_last;
+
+	cf_jump->cf_addr = cf_pop->id + 2;
+	cf_jump->pop_count = 1;
+	cf_pop->cf_addr = cf_pop->id + 2;
+	cf_pop->pop_count = 1;
+
+	return 0;
+}
+
 static int r600_shader_from_tgsi(struct r600_context *rctx,
 				 struct r600_pipe_shader *pipeshader,
 				 union r600_shader_key key)
@@ -3076,6 +3238,9 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	pipeshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 	convert_edgeflag_to_int(&ctx);
 
+	if (ctx.type == TGSI_PROCESSOR_TESS_CTRL)
+		r600_emit_tess_factor(&ctx);
+
 	if (lds_outputs) {
 		if (ctx.type == TGSI_PROCESSOR_VERTEX) {
 			if (ctx.shader->noutput)
@@ -3341,7 +3506,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 				last = r600_isa_cf(ctx.bc->cf_last->op);
 
 			/* alu clause instructions don't have EOP bit, so add NOP */
-			if (!last || last->flags & CF_ALU || ctx.bc->cf_last->op == CF_OP_LOOP_END || ctx.bc->cf_last->op == CF_OP_CALL_FS)
+			if (!last || last->flags & CF_ALU || ctx.bc->cf_last->op == CF_OP_LOOP_END || ctx.bc->cf_last->op == CF_OP_CALL_FS || ctx.bc->cf_last->op == CF_OP_POP || ctx.bc->cf_last->op == CF_OP_GDS)
 				r600_bytecode_add_cfinst(ctx.bc, CF_OP_NOP);
 
 			ctx.bc->cf_last->end_of_program = 1;
