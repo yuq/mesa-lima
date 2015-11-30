@@ -1417,24 +1417,6 @@ nir_visitor::visit(ir_expression *ir)
       /* no-op */
       result = nir_imov(&b, srcs[0]);
       break;
-   case ir_unop_any:
-      switch (ir->operands[0]->type->vector_elements) {
-      case 2:
-         result = supports_ints ? nir_bany2(&b, srcs[0])
-                                : nir_fany2(&b, srcs[0]);
-         break;
-      case 3:
-         result = supports_ints ? nir_bany3(&b, srcs[0])
-                                : nir_fany3(&b, srcs[0]);
-         break;
-      case 4:
-         result = supports_ints ? nir_bany4(&b, srcs[0])
-                                : nir_fany4(&b, srcs[0]);
-         break;
-      default:
-         unreachable("not reached");
-      }
-      break;
    case ir_unop_trunc: result = nir_ftrunc(&b, srcs[0]); break;
    case ir_unop_ceil:  result = nir_fceil(&b, srcs[0]); break;
    case ir_unop_floor: result = nir_ffloor(&b, srcs[0]); break;
