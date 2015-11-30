@@ -568,6 +568,44 @@ static int r600_spi_sid(struct r600_shader_io * io)
 	return index;
 };
 
+/* we need this to get a common lds index for vs/tcs/tes input/outputs */
+int r600_get_lds_unique_index(unsigned semantic_name, unsigned index)
+{
+	switch (semantic_name) {
+	case TGSI_SEMANTIC_POSITION:
+		return 0;
+	case TGSI_SEMANTIC_PSIZE:
+		return 1;
+	case TGSI_SEMANTIC_CLIPDIST:
+		assert(index <= 1);
+		return 2 + index;
+	case TGSI_SEMANTIC_GENERIC:
+		if (index <= 63-4)
+			return 4 + index - 9;
+		else
+			/* same explanation as in the default statement,
+			 * the only user hitting this is st/nine.
+			 */
+			return 0;
+
+	/* patch indices are completely separate and thus start from 0 */
+	case TGSI_SEMANTIC_TESSOUTER:
+		return 0;
+	case TGSI_SEMANTIC_TESSINNER:
+		return 1;
+	case TGSI_SEMANTIC_PATCH:
+		return 2 + index;
+
+	default:
+		/* Don't fail here. The result of this function is only used
+		 * for LS, TCS, TES, and GS, where legacy GL semantics can't
+		 * occur, but this function is called for all vertex shaders
+		 * before it's known whether LS will be compiled or not.
+		 */
+		return 0;
+	}
+}
+
 /* turn input into interpolate on EG */
 static int evergreen_interp_input(struct r600_shader_ctx *ctx, int index)
 {
