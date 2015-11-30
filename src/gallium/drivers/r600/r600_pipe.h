@@ -521,6 +521,7 @@ struct r600_context {
 	void				*sb_context;
 	struct r600_isa		*isa;
 	float sample_positions[4 * 16];
+	float tess_state[8];
 };
 
 static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,

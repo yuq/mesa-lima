@@ -3605,6 +3605,16 @@ fallback:
 				  src, src_level, src_box);
 }
 
+static void evergreen_set_tess_state(struct pipe_context *ctx,
+				     const float default_outer_level[4],
+				     const float default_inner_level[2])
+{
+	struct r600_context *rctx = (struct r600_context *)ctx;
+
+	memcpy(rctx->tess_state, default_outer_level, sizeof(float) * 4);
+	memcpy(rctx->tess_state+4, default_inner_level, sizeof(float) * 2);
+}
+
 void evergreen_init_state_functions(struct r600_context *rctx)
 {
 	unsigned id = 1;
@@ -3687,7 +3697,7 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	rctx->b.b.set_polygon_stipple = evergreen_set_polygon_stipple;
 	rctx->b.b.set_min_samples = evergreen_set_min_samples;
 	rctx->b.b.set_scissor_states = evergreen_set_scissor_states;
-
+	rctx->b.b.set_tess_state = evergreen_set_tess_state;
 	if (rctx->b.chip_class == EVERGREEN)
                 rctx->b.b.get_sample_position = evergreen_get_sample_position;
         else
