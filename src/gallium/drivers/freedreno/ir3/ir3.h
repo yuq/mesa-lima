@@ -255,6 +255,10 @@ struct ir3_instruction {
 		};
 	};
 
+	/* used for per-pass extra instruction data.
+	 */
+	void *data;
+
 	/* Used during CP and RA stages.  For fanin and shader inputs/
 	 * outputs where we need a sequence of consecutive registers,
 	 * keep track of each src instructions left (ie 'n-1') and right
