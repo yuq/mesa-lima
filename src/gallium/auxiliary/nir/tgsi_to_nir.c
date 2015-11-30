@@ -1069,7 +1069,9 @@ ttn_kill(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 static void
 ttn_kill_if(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 {
-   nir_ssa_def *cmp = nir_bany4(b, nir_flt(b, src[0], nir_imm_float(b, 0.0)));
+   nir_ssa_def *cmp = nir_bany_inequal4(b, nir_flt(b, src[0],
+                                                   nir_imm_float(b, 0.0)),
+                                        nir_imm_int(b, 0));
    nir_intrinsic_instr *discard =
       nir_intrinsic_instr_create(b->shader, nir_intrinsic_discard_if);
    discard->src[0] = nir_src_for_ssa(cmp);

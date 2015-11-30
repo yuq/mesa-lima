@@ -109,9 +109,6 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
          uint8_t resolve_status;
          nir_alu_instr *alu = nir_instr_as_alu(instr);
          switch (alu->op) {
-         case nir_op_bany2:
-         case nir_op_bany3:
-         case nir_op_bany4:
          case nir_op_ball_fequal2:
          case nir_op_ball_iequal2:
          case nir_op_ball_fequal3:

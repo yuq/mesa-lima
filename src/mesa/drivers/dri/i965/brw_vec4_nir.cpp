@@ -1419,20 +1419,6 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
-   case nir_op_bany2:
-   case nir_op_bany3:
-   case nir_op_bany4: {
-      unsigned swiz =
-         brw_swizzle_for_size(nir_op_infos[instr->op].input_sizes[0]);
-
-      emit(CMP(dst_null_d(), swizzle(op[0], swiz), brw_imm_d(0),
-               BRW_CONDITIONAL_NZ));
-      emit(MOV(dst, brw_imm_d(0)));
-      inst = emit(MOV(dst, brw_imm_d(~0)));
-      inst->predicate = BRW_PREDICATE_ALIGN16_ANY4H;
-      break;
-   }
-
    case nir_op_fabs:
    case nir_op_iabs:
    case nir_op_fneg:
