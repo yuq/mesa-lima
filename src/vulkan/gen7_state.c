@@ -191,7 +191,7 @@ static const uint32_t vk_to_gen_swizzle_map[] = {
    [VK_COMPONENT_SWIZZLE_A]                    = SCS_ALPHA
 };
 
-static uint32_t
+static inline uint32_t
 vk_to_gen_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component)
 {
    if (swizzle == VK_COMPONENT_SWIZZLE_IDENTITY)
