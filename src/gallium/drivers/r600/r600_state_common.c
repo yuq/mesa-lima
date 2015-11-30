@@ -1300,6 +1300,8 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 	bool ps_dirty = false, vs_dirty = false, gs_dirty = false;
 	bool blend_disable;
 	bool need_buf_const;
+	struct r600_pipe_shader *clip_so_current = NULL;
+
 	if (!rctx->blitter->running) {
 		unsigned i;
 
@@ -1334,9 +1336,8 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		if (unlikely(rctx->hw_shader_stages[R600_HW_STAGE_GS].shader != rctx->gs_shader->current)) {
 			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_GS], rctx->gs_shader->current);
 			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_VS], rctx->gs_shader->current->gs_copy_shader);
-			/* Update clip misc state. */
-			r600_update_clip_state(rctx, rctx->gs_shader->current->gs_copy_shader);
-			rctx->b.streamout.enabled_stream_buffers_mask = rctx->gs_shader->current->gs_copy_shader->enabled_stream_buffers_mask;
+
+			clip_so_current = rctx->gs_shader->current->gs_copy_shader;
 		}
 
 		/* vs_shader is used as ES */
@@ -1354,10 +1355,14 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		if (unlikely(vs_dirty || rctx->hw_shader_stages[R600_HW_STAGE_VS].shader != rctx->vs_shader->current)) {
 			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_VS], rctx->vs_shader->current);
 
-			/* Update clip misc state. */
-			r600_update_clip_state(rctx, rctx->vs_shader->current);
-			rctx->b.streamout.enabled_stream_buffers_mask = rctx->vs_shader->current->enabled_stream_buffers_mask;
+			clip_so_current = rctx->vs_shader->current;
 		}
+	}
+
+	/* Update clip misc state. */
+	if (clip_so_current) {
+		r600_update_clip_state(rctx, clip_so_current);
+		rctx->b.streamout.enabled_stream_buffers_mask = clip_so_current->enabled_stream_buffers_mask;
 	}
 
 	if (unlikely(ps_dirty || rctx->hw_shader_stages[R600_HW_STAGE_PS].shader != rctx->ps_shader->current ||
