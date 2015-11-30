@@ -2230,7 +2230,7 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_shader_stages_state *state = (struct r600_shader_stages_state*)a;
 
-	uint32_t v = 0, v2 = 0, primid = 0;
+	uint32_t v = 0, v2 = 0, primid = 0, tf_param = 0;
 
 	if (rctx->vs_shader->current->shader.vs_as_gs_a) {
 		v2 = S_028A40_MODE(V_028A40_GS_SCENARIO_A);
@@ -2248,9 +2248,11 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 			cut_val = V_028A40_GS_CUT_512;
 		else
 			cut_val = V_028A40_GS_CUT_1024;
-		v = S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
-			S_028B54_GS_EN(1) |
-			S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
+
+		v = S_028B54_GS_EN(1) |
+		    S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
+		if (!rctx->tes_shader)
+			v |= S_028B54_ES_EN(V_028B54_ES_STAGE_REAL);
 
 		v2 = S_028A40_MODE(V_028A40_GS_SCENARIO_G) |
 			S_028A40_CUT_MODE(cut_val);
@@ -2259,9 +2261,71 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 			primid = 1;
 	}
 
+	if (rctx->tes_shader) {
+		uint32_t type, partitioning, topology;
+		struct tgsi_shader_info *info = &rctx->tes_shader->current->selector->info;
+		unsigned tes_prim_mode = info->properties[TGSI_PROPERTY_TES_PRIM_MODE];
+		unsigned tes_spacing = info->properties[TGSI_PROPERTY_TES_SPACING];
+		bool tes_vertex_order_cw = info->properties[TGSI_PROPERTY_TES_VERTEX_ORDER_CW];
+		bool tes_point_mode = info->properties[TGSI_PROPERTY_TES_POINT_MODE];
+		switch (tes_prim_mode) {
+		case PIPE_PRIM_LINES:
+			type = V_028B6C_TESS_ISOLINE;
+			break;
+		case PIPE_PRIM_TRIANGLES:
+			type = V_028B6C_TESS_TRIANGLE;
+			break;
+		case PIPE_PRIM_QUADS:
+			type = V_028B6C_TESS_QUAD;
+			break;
+		default:
+			assert(0);
+			return;
+		}
+
+		switch (tes_spacing) {
+		case PIPE_TESS_SPACING_FRACTIONAL_ODD:
+			partitioning = V_028B6C_PART_FRAC_ODD;
+			break;
+		case PIPE_TESS_SPACING_FRACTIONAL_EVEN:
+			partitioning = V_028B6C_PART_FRAC_EVEN;
+			break;
+		case PIPE_TESS_SPACING_EQUAL:
+			partitioning = V_028B6C_PART_INTEGER;
+			break;
+		default:
+			assert(0);
+			return;
+		}
+
+		if (tes_point_mode)
+			topology = V_028B6C_OUTPUT_POINT;
+		else if (tes_prim_mode == PIPE_PRIM_LINES)
+			topology = V_028B6C_OUTPUT_LINE;
+		else if (tes_vertex_order_cw)
+			/* XXX follow radeonsi and invert */
+			topology = V_028B6C_OUTPUT_TRIANGLE_CCW;
+		else
+			topology = V_028B6C_OUTPUT_TRIANGLE_CW;
+
+		tf_param = S_028B6C_TYPE(type) |
+			S_028B6C_PARTITIONING(partitioning) |
+			S_028B6C_TOPOLOGY(topology);
+	}
+
+	if (rctx->tes_shader) {
+		v |= S_028B54_LS_EN(V_028B54_LS_STAGE_ON) |
+		     S_028B54_HS_EN(1);
+		if (!state->geom_enable)
+			v |= S_028B54_VS_EN(V_028B54_VS_STAGE_DS);
+		else
+			v |= S_028B54_ES_EN(V_028B54_ES_STAGE_DS);
+	}
+
 	radeon_set_context_reg(cs, R_028B54_VGT_SHADER_STAGES_EN, v);
 	radeon_set_context_reg(cs, R_028A40_VGT_GS_MODE, v2);
 	radeon_set_context_reg(cs, R_028A84_VGT_PRIMITIVEID_EN, primid);
+	radeon_set_context_reg(cs, R_028B6C_VGT_TF_PARAM, tf_param);
 }
 
 static void evergreen_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)
@@ -3685,7 +3749,7 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_add_atom(rctx, &rctx->b.streamout.enable_atom, id++);
 	for (i = 0; i < EG_NUM_HW_STAGES; i++)
 		r600_init_atom(rctx, &rctx->hw_shader_stages[i].atom, id++, r600_emit_shader, 0);
-	r600_init_atom(rctx, &rctx->shader_stages.atom, id++, evergreen_emit_shader_stages, 6);
+	r600_init_atom(rctx, &rctx->shader_stages.atom, id++, evergreen_emit_shader_stages, 12);
 	r600_init_atom(rctx, &rctx->gs_rings.atom, id++, evergreen_emit_gs_rings, 26);
 
 	rctx->b.b.create_blend_state = evergreen_create_blend_state;
