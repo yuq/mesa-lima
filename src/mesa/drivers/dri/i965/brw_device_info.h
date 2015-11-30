@@ -80,6 +80,7 @@ struct brw_device_info
       unsigned min_vs_entries;
       unsigned max_vs_entries;
       unsigned max_hs_entries;
+      unsigned min_ds_entries;
       unsigned max_ds_entries;
       unsigned max_gs_entries;
    } urb;

@@ -123,6 +123,7 @@ static const struct brw_device_info brw_device_info_ivb_gt1 = {
       .min_vs_entries = 32,
       .max_vs_entries = 512,
       .max_hs_entries = 32,
+      .min_ds_entries = 10,
       .max_ds_entries = 288,
       .max_gs_entries = 192,
    },
@@ -142,6 +143,7 @@ static const struct brw_device_info brw_device_info_ivb_gt2 = {
       .min_vs_entries = 32,
       .max_vs_entries = 704,
       .max_hs_entries = 64,
+      .min_ds_entries = 10,
       .max_ds_entries = 448,
       .max_gs_entries = 320,
    },
@@ -162,6 +164,7 @@ static const struct brw_device_info brw_device_info_byt = {
       .min_vs_entries = 32,
       .max_vs_entries = 512,
       .max_hs_entries = 32,
+      .min_ds_entries = 10,
       .max_ds_entries = 288,
       .max_gs_entries = 192,
    },
@@ -186,6 +189,7 @@ static const struct brw_device_info brw_device_info_hsw_gt1 = {
       .min_vs_entries = 32,
       .max_vs_entries = 640,
       .max_hs_entries = 64,
+      .min_ds_entries = 10,
       .max_ds_entries = 384,
       .max_gs_entries = 256,
    },
@@ -204,6 +208,7 @@ static const struct brw_device_info brw_device_info_hsw_gt2 = {
       .min_vs_entries = 64,
       .max_vs_entries = 1664,
       .max_hs_entries = 128,
+      .min_ds_entries = 10,
       .max_ds_entries = 960,
       .max_gs_entries = 640,
    },
@@ -222,6 +227,7 @@ static const struct brw_device_info brw_device_info_hsw_gt3 = {
       .min_vs_entries = 64,
       .max_vs_entries = 1664,
       .max_hs_entries = 128,
+      .min_ds_entries = 10,
       .max_ds_entries = 960,
       .max_gs_entries = 640,
    },
@@ -249,6 +255,7 @@ static const struct brw_device_info brw_device_info_bdw_gt1 = {
       .min_vs_entries = 64,
       .max_vs_entries = 2560,
       .max_hs_entries = 504,
+      .min_ds_entries = 34,
       .max_ds_entries = 1536,
       .max_gs_entries = 960,
    }
@@ -262,6 +269,7 @@ static const struct brw_device_info brw_device_info_bdw_gt2 = {
       .min_vs_entries = 64,
       .max_vs_entries = 2560,
       .max_hs_entries = 504,
+      .min_ds_entries = 34,
       .max_ds_entries = 1536,
       .max_gs_entries = 960,
    }
@@ -275,6 +283,7 @@ static const struct brw_device_info brw_device_info_bdw_gt3 = {
       .min_vs_entries = 64,
       .max_vs_entries = 2560,
       .max_hs_entries = 504,
+      .min_ds_entries = 34,
       .max_ds_entries = 1536,
       .max_gs_entries = 960,
    }
@@ -294,6 +303,7 @@ static const struct brw_device_info brw_device_info_chv = {
       .min_vs_entries = 34,
       .max_vs_entries = 640,
       .max_hs_entries = 80,
+      .min_ds_entries = 34,
       .max_ds_entries = 384,
       .max_gs_entries = 256,
    }
@@ -318,6 +328,7 @@ static const struct brw_device_info brw_device_info_chv = {
       .min_vs_entries = 64,                         \
       .max_vs_entries = 1856,                       \
       .max_hs_entries = 672,                        \
+      .min_ds_entries = 34,                         \
       .max_ds_entries = 1120,                       \
       .max_gs_entries = 640,                        \
    }
