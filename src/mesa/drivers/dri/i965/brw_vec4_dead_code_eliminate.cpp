@@ -71,13 +71,13 @@ vec4_visitor::dead_code_eliminate()
    BITSET_WORD *live = ralloc_array(NULL, BITSET_WORD, BITSET_WORDS(num_vars));
    BITSET_WORD *flag_live = ralloc_array(NULL, BITSET_WORD, 1);
 
-   foreach_block(block, cfg) {
+   foreach_block_reverse_safe(block, cfg) {
       memcpy(live, live_intervals->block_data[block->num].liveout,
              sizeof(BITSET_WORD) * BITSET_WORDS(num_vars));
       memcpy(flag_live, live_intervals->block_data[block->num].flag_liveout,
              sizeof(BITSET_WORD));
 
-      foreach_inst_in_block_reverse(vec4_instruction, inst, block) {
+      foreach_inst_in_block_reverse_safe(vec4_instruction, inst, block) {
          if ((inst->dst.file == VGRF && !inst->has_side_effects()) ||
              (inst->dst.is_null() && inst->writes_flag())){
             bool result_live[4] = { false };
@@ -115,7 +115,7 @@ vec4_visitor::dead_code_eliminate()
                         inst->dst = dst_reg(retype(brw_null_reg(), inst->dst.type));
                      } else {
                         inst->opcode = BRW_OPCODE_NOP;
-                        continue;
+                        break;
                      }
                   }
                }
@@ -130,7 +130,6 @@ vec4_visitor::dead_code_eliminate()
             if (!combined_live) {
                inst->opcode = BRW_OPCODE_NOP;
                progress = true;
-               continue;
             }
          }
 
@@ -150,9 +149,10 @@ vec4_visitor::dead_code_eliminate()
                BITSET_CLEAR(flag_live, c);
          }
 
-         /* Don't mark dead instructions' sources as live */
-         if (inst->opcode == BRW_OPCODE_NOP)
+         if (inst->opcode == BRW_OPCODE_NOP) {
+            inst->remove(block);
             continue;
+         }
 
          for (int i = 0; i < 3; i++) {
             if (inst->src[i].file == VGRF) {
@@ -176,15 +176,8 @@ vec4_visitor::dead_code_eliminate()
    ralloc_free(live);
    ralloc_free(flag_live);
 
-   if (progress) {
-      foreach_block_and_inst_safe(block, backend_instruction, inst, cfg) {
-         if (inst->opcode == BRW_OPCODE_NOP) {
-            inst->remove(block);
-         }
-      }
-
+   if (progress)
       invalidate_live_intervals();
-   }
 
    return progress;
 }
