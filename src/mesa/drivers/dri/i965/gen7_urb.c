@@ -193,11 +193,11 @@ gen7_upload_urb(struct brw_context *brw)
 
    /* VS has a lower limit on the number of URB entries */
    unsigned vs_chunks =
-      ALIGN(brw->urb.min_vs_entries * vs_entry_size_bytes, chunk_size_bytes) /
-      chunk_size_bytes;
+      DIV_ROUND_UP(brw->urb.min_vs_entries * vs_entry_size_bytes,
+                   chunk_size_bytes);
    unsigned vs_wants =
-      ALIGN(brw->urb.max_vs_entries * vs_entry_size_bytes,
-            chunk_size_bytes) / chunk_size_bytes - vs_chunks;
+      DIV_ROUND_UP(brw->urb.max_vs_entries * vs_entry_size_bytes,
+                   chunk_size_bytes) - vs_chunks;
 
    unsigned gs_chunks = 0;
    unsigned gs_wants = 0;
@@ -210,11 +210,10 @@ gen7_upload_urb(struct brw_context *brw)
        *
        * (2) We can't allocate less than nr_gs_entries_granularity.
        */
-      gs_chunks = ALIGN(MAX2(gs_granularity, 2) * gs_entry_size_bytes,
-                        chunk_size_bytes) / chunk_size_bytes;
-      gs_wants =
-         ALIGN(brw->urb.max_gs_entries * gs_entry_size_bytes,
-               chunk_size_bytes) / chunk_size_bytes - gs_chunks;
+      gs_chunks = DIV_ROUND_UP(MAX2(gs_granularity, 2) * gs_entry_size_bytes,
+                               chunk_size_bytes);
+      gs_wants = DIV_ROUND_UP(brw->urb.max_gs_entries * gs_entry_size_bytes,
+                              chunk_size_bytes) - gs_chunks;
    }
 
    /* There should always be enough URB space to satisfy the minimum
