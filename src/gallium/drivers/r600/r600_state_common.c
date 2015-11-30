@@ -1294,6 +1294,26 @@ static void r600_update_clip_state(struct r600_context *rctx,
 			return false;					\
 	} while(0)
 
+#define UPDATE_SHADER(hw, sw) do {					\
+		if (sw##_dirty || (rctx->hw_shader_stages[(hw)].shader != rctx->sw##_shader->current)) \
+			update_shader_atom(ctx, &rctx->hw_shader_stages[(hw)], rctx->sw##_shader->current); \
+	} while(0)
+
+#define UPDATE_SHADER_CLIP(hw, sw) do {					\
+		if (sw##_dirty || (rctx->hw_shader_stages[(hw)].shader != rctx->sw##_shader->current)) { \
+			update_shader_atom(ctx, &rctx->hw_shader_stages[(hw)], rctx->sw##_shader->current); \
+			clip_so_current = rctx->sw##_shader->current;   \
+		}                                                       \
+	} while(0)
+
+#define UPDATE_SHADER_GS(hw, hw2, sw) do {				\
+		if (sw##_dirty || (rctx->hw_shader_stages[(hw)].shader != rctx->sw##_shader->current)) { \
+			update_shader_atom(ctx, &rctx->hw_shader_stages[(hw)], rctx->sw##_shader->current); \
+			update_shader_atom(ctx, &rctx->hw_shader_stages[(hw2)], rctx->sw##_shader->current->gs_copy_shader); \
+			clip_so_current = rctx->sw##_shader->current->gs_copy_shader; \
+		}                                                       \
+	} while(0)
+
 #define SET_NULL_SHADER(hw) do {						\
 		if (rctx->hw_shader_stages[(hw)].shader)	\
 			update_shader_atom(ctx, &rctx->hw_shader_stages[(hw)], NULL); \
@@ -1338,17 +1358,11 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 
 		/* gs_shader provides GS and VS (copy shader) */
-		if (unlikely(rctx->hw_shader_stages[R600_HW_STAGE_GS].shader != rctx->gs_shader->current)) {
-			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_GS], rctx->gs_shader->current);
-			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_VS], rctx->gs_shader->current->gs_copy_shader);
-
-			clip_so_current = rctx->gs_shader->current->gs_copy_shader;
-		}
+		UPDATE_SHADER_GS(R600_HW_STAGE_GS, R600_HW_STAGE_VS, gs);
 
 		/* vs_shader is used as ES */
-		if (unlikely(vs_dirty || rctx->hw_shader_stages[R600_HW_STAGE_ES].shader != rctx->vs_shader->current)) {
-			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_ES], rctx->vs_shader->current);
-		}
+		UPDATE_SHADER(R600_HW_STAGE_ES, vs);
+
 	} else {
 		if (unlikely(rctx->hw_shader_stages[R600_HW_STAGE_GS].shader)) {
 			SET_NULL_SHADER(R600_HW_STAGE_GS);
@@ -1357,11 +1371,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 			r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 		}
 
-		if (unlikely(vs_dirty || rctx->hw_shader_stages[R600_HW_STAGE_VS].shader != rctx->vs_shader->current)) {
-			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_VS], rctx->vs_shader->current);
-
-			clip_so_current = rctx->vs_shader->current;
-		}
+		UPDATE_SHADER_CLIP(R600_HW_STAGE_VS, vs);
 	}
 
 	/* Update clip misc state. */
@@ -1399,8 +1409,8 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 
 		r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
-		update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_PS], rctx->ps_shader->current);
 	}
+	UPDATE_SHADER(R600_HW_STAGE_PS, ps);
 
 	if (rctx->b.chip_class >= EVERGREEN) {
 		evergreen_update_db_shader_control(rctx);
