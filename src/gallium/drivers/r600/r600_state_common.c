@@ -1354,12 +1354,19 @@ static void update_gs_block_state(struct r600_context *rctx, unsigned enable)
 		if (enable) {
 			r600_set_constant_buffer(&rctx->b.b, PIPE_SHADER_GEOMETRY,
 					R600_GS_RING_CONST_BUFFER, &rctx->gs_rings.esgs_ring);
-			r600_set_constant_buffer(&rctx->b.b, PIPE_SHADER_VERTEX,
-					R600_GS_RING_CONST_BUFFER, &rctx->gs_rings.gsvs_ring);
+			if (rctx->tes_shader) {
+				r600_set_constant_buffer(&rctx->b.b, PIPE_SHADER_TESS_EVAL,
+							 R600_GS_RING_CONST_BUFFER, &rctx->gs_rings.gsvs_ring);
+			} else {
+				r600_set_constant_buffer(&rctx->b.b, PIPE_SHADER_VERTEX,
+							 R600_GS_RING_CONST_BUFFER, &rctx->gs_rings.gsvs_ring);
+			}
 		} else {
 			r600_set_constant_buffer(&rctx->b.b, PIPE_SHADER_GEOMETRY,
 					R600_GS_RING_CONST_BUFFER, NULL);
 			r600_set_constant_buffer(&rctx->b.b, PIPE_SHADER_VERTEX,
+					R600_GS_RING_CONST_BUFFER, NULL);
+			r600_set_constant_buffer(&rctx->b.b, PIPE_SHADER_TESS_EVAL,
 					R600_GS_RING_CONST_BUFFER, NULL);
 		}
 	}
