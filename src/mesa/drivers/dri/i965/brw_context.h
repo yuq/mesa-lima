@@ -1344,7 +1344,7 @@ struct brw_context
    bool draw_aux_buffer_disabled[MAX_DRAW_BUFFERS];
 
    __DRIcontext *driContext;
-   struct intel_screen *intelScreen;
+   struct intel_screen *screen;
 };
 
 /*======================================================================
@@ -1361,7 +1361,7 @@ extern void intelInitClearFuncs(struct dd_function_table *functions);
 extern const char *const brw_vendor_string;
 
 extern const char *
-brw_get_renderer_string(const struct intel_screen *intelScreen);
+brw_get_renderer_string(const struct intel_screen *screen);
 
 enum {
    DRI_CONF_BO_REUSE_DISABLED,

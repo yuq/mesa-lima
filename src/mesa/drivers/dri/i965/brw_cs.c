@@ -84,7 +84,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
       prog_data.base.total_shared = prog->Comp.SharedSize;
    }
 
-   assign_cs_binding_table_offsets(brw->intelScreen->devinfo, prog,
+   assign_cs_binding_table_offsets(brw->screen->devinfo, prog,
                                    &cp->program.Base, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
@@ -124,7 +124,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
       st_index = brw_get_shader_time_index(brw, prog, &cp->program.Base, ST_CS);
 
    char *error_str;
-   program = brw_compile_cs(brw->intelScreen->compiler, brw, mem_ctx,
+   program = brw_compile_cs(brw->screen->compiler, brw, mem_ctx,
                             key, &prog_data, cp->program.Base.nir,
                             st_index, &program_size, &error_str);
    if (program == NULL) {
@@ -148,7 +148,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
       }
    }
 
-   const unsigned subslices = MAX2(brw->intelScreen->subslice_total, 1);
+   const unsigned subslices = MAX2(brw->screen->subslice_total, 1);
 
    /* WaCSScratchSize:hsw
     *

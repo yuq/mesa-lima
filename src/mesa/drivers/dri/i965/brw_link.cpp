@@ -92,7 +92,7 @@ process_glsl_ir(gl_shader_stage stage,
                 struct gl_linked_shader *shader)
 {
    struct gl_context *ctx = &brw->ctx;
-   const struct brw_compiler *compiler = brw->intelScreen->compiler;
+   const struct brw_compiler *compiler = brw->screen->compiler;
    const struct gl_shader_compiler_options *options =
       &ctx->Const.ShaderCompilerOptions[shader->Stage];
 
@@ -210,7 +210,7 @@ extern "C" GLboolean
 brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
    struct brw_context *brw = brw_context(ctx);
-   const struct brw_compiler *compiler = brw->intelScreen->compiler;
+   const struct brw_compiler *compiler = brw->screen->compiler;
    unsigned int stage;
 
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {

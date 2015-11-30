@@ -97,7 +97,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    if (!prog)
       prog_data.base.use_alt_mode = true;
 
-   assign_fs_binding_table_offsets(brw->intelScreen->devinfo, prog,
+   assign_fs_binding_table_offsets(brw->screen->devinfo, prog,
                                    &fp->program.Base, key, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
@@ -142,7 +142,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    }
 
    char *error_str = NULL;
-   program = brw_compile_fs(brw->intelScreen->compiler, brw, mem_ctx,
+   program = brw_compile_fs(brw->screen->compiler, brw, mem_ctx,
                             key, &prog_data, fp->program.Base.nir,
                             &fp->program.Base, st_index8, st_index16,
                             true, brw->use_rep_send,

@@ -97,7 +97,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
                     struct brw_geometry_program *gp,
                     struct brw_gs_prog_key *key)
 {
-   struct brw_compiler *compiler = brw->intelScreen->compiler;
+   struct brw_compiler *compiler = brw->screen->compiler;
    struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_prog_data prog_data;
    bool start_busy = false;
@@ -105,7 +105,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
-   assign_gs_binding_table_offsets(brw->intelScreen->devinfo, prog,
+   assign_gs_binding_table_offsets(brw->screen->devinfo, prog,
                                    &gp->program.Base, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
@@ -139,7 +139,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
       ((1 << gp->program.Base.CullDistanceArraySize) - 1) <<
       gp->program.Base.ClipDistanceArraySize;
 
-   brw_compute_vue_map(brw->intelScreen->devinfo,
+   brw_compute_vue_map(brw->screen->devinfo,
                        &prog_data.base.vue_map, outputs_written,
                        prog->SeparateShader);
 
@@ -159,7 +159,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    unsigned program_size;
    char *error_str;
    const unsigned *program =
-      brw_compile_gs(brw->intelScreen->compiler, brw, mem_ctx, key,
+      brw_compile_gs(brw->screen->compiler, brw, mem_ctx, key,
                      &prog_data, gs->Program->nir, prog,
                      st_index, &program_size, &error_str);
    if (program == NULL) {

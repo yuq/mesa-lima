@@ -384,7 +384,7 @@ intel_image_target_texture_2d(struct gl_context *ctx, GLenum target,
 {
    struct brw_context *brw = brw_context(ctx);
    struct intel_mipmap_tree *mt;
-   __DRIscreen *dri_screen = brw->intelScreen->driScrnPriv;
+   __DRIscreen *dri_screen = brw->screen->driScrnPriv;
    __DRIimage *image;
 
    image = dri_screen->dri2.image->lookupEGLImage(dri_screen, image_handle,

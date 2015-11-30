@@ -88,7 +88,7 @@ brw_create_nir(struct brw_context *brw,
 
    (void)progress;
 
-   nir = brw_preprocess_nir(brw->intelScreen->compiler, nir);
+   nir = brw_preprocess_nir(brw->screen->compiler, nir);
 
    if (stage == MESA_SHADER_FRAGMENT) {
       static const struct nir_lower_wpos_ytransform_options wpos_options = {
@@ -133,7 +133,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
    case GL_VERTEX_PROGRAM_ARB: {
       struct brw_vertex_program *prog = CALLOC_STRUCT(brw_vertex_program);
       if (prog) {
-	 prog->id = get_new_program_id(brw->intelScreen);
+	 prog->id = get_new_program_id(brw->screen);
 
 	 return _mesa_init_gl_program(&prog->program.Base, target, id);
       }
@@ -144,7 +144,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
    case GL_FRAGMENT_PROGRAM_ARB: {
       struct brw_fragment_program *prog = CALLOC_STRUCT(brw_fragment_program);
       if (prog) {
-	 prog->id = get_new_program_id(brw->intelScreen);
+	 prog->id = get_new_program_id(brw->screen);
 
 	 return _mesa_init_gl_program(&prog->program.Base, target, id);
       }
@@ -155,7 +155,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
    case GL_GEOMETRY_PROGRAM_NV: {
       struct brw_geometry_program *prog = CALLOC_STRUCT(brw_geometry_program);
       if (prog) {
-         prog->id = get_new_program_id(brw->intelScreen);
+         prog->id = get_new_program_id(brw->screen);
 
          return _mesa_init_gl_program(&prog->program.Base, target, id);
       } else {
@@ -166,7 +166,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
    case GL_TESS_CONTROL_PROGRAM_NV: {
       struct brw_tess_ctrl_program *prog = CALLOC_STRUCT(brw_tess_ctrl_program);
       if (prog) {
-         prog->id = get_new_program_id(brw->intelScreen);
+         prog->id = get_new_program_id(brw->screen);
 
          return _mesa_init_gl_program(&prog->program.Base, target, id);
       } else {
@@ -177,7 +177,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
    case GL_TESS_EVALUATION_PROGRAM_NV: {
       struct brw_tess_eval_program *prog = CALLOC_STRUCT(brw_tess_eval_program);
       if (prog) {
-         prog->id = get_new_program_id(brw->intelScreen);
+         prog->id = get_new_program_id(brw->screen);
 
          return _mesa_init_gl_program(&prog->program.Base, target, id);
       } else {
@@ -188,7 +188,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
    case GL_COMPUTE_PROGRAM_NV: {
       struct brw_compute_program *prog = CALLOC_STRUCT(brw_compute_program);
       if (prog) {
-         prog->id = get_new_program_id(brw->intelScreen);
+         prog->id = get_new_program_id(brw->screen);
 
          return _mesa_init_gl_program(&prog->program.Base, target, id);
       } else {
@@ -214,7 +214,7 @@ brwProgramStringNotify(struct gl_context *ctx,
 		       struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
-   const struct brw_compiler *compiler = brw->intelScreen->compiler;
+   const struct brw_compiler *compiler = brw->screen->compiler;
 
    switch (target) {
    case GL_FRAGMENT_PROGRAM_ARB: {
@@ -225,7 +225,7 @@ brwProgramStringNotify(struct gl_context *ctx,
 
       if (newFP == curFP)
 	 brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;
-      newFP->id = get_new_program_id(brw->intelScreen);
+      newFP->id = get_new_program_id(brw->screen);
 
       brw_add_texrect_params(prog);
 
@@ -245,7 +245,7 @@ brwProgramStringNotify(struct gl_context *ctx,
       if (newVP->program.IsPositionInvariant) {
 	 _mesa_insert_mvp_code(ctx, &newVP->program);
       }
-      newVP->id = get_new_program_id(brw->intelScreen);
+      newVP->id = get_new_program_id(brw->screen);
 
       /* Also tell tnl about it:
        */

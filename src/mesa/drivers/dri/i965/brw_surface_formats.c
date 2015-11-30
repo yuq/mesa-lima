@@ -288,7 +288,7 @@ brw_format_for_mesa_format(mesa_format mesa_format)
 void
 brw_init_surface_formats(struct brw_context *brw)
 {
-   const struct gen_device_info *devinfo = brw->intelScreen->devinfo;
+   const struct gen_device_info *devinfo = brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    int gen;
    mesa_format format;

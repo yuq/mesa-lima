@@ -282,7 +282,7 @@ intel_alloc_private_renderbuffer_storage(struct gl_context * ctx, struct gl_rend
                                          GLuint width, GLuint height)
 {
    struct brw_context *brw = brw_context(ctx);
-   struct intel_screen *screen = brw->intelScreen;
+   struct intel_screen *screen = brw->screen;
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
 
    assert(rb->Format != MESA_FORMAT_NONE);
@@ -332,7 +332,7 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
 {
    struct brw_context *brw = brw_context(ctx);
    struct intel_renderbuffer *irb;
-   __DRIscreen *dri_screen = brw->intelScreen->driScrnPriv;
+   __DRIscreen *dri_screen = brw->screen->driScrnPriv;
    __DRIimage *image;
 
    image = dri_screen->dri2.image->lookupEGLImage(dri_screen, image_handle,

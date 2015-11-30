@@ -139,7 +139,7 @@ do_batch_dump(struct brw_context *brw)
    struct intel_batchbuffer *batch = &brw->batch;
    int ret;
 
-   decode = drm_intel_decode_context_alloc(brw->intelScreen->deviceID);
+   decode = drm_intel_decode_context_alloc(brw->screen->deviceID);
    if (!decode)
       return;
 
@@ -305,7 +305,7 @@ throttle(struct brw_context *brw)
    }
 
    if (brw->need_flush_throttle) {
-      __DRIscreen *dri_screen = brw->intelScreen->driScrnPriv;
+      __DRIscreen *dri_screen = brw->screen->driScrnPriv;
       drmCommandNone(dri_screen->fd, DRM_I915_GEM_THROTTLE);
       brw->need_flush_throttle = false;
    }
@@ -336,7 +336,7 @@ do_flush_locked(struct brw_context *brw)
       }
    }
 
-   if (!brw->intelScreen->no_hw) {
+   if (!brw->screen->no_hw) {
       int flags;
 
       if (brw->gen >= 6 && batch->ring == BLT_RING) {

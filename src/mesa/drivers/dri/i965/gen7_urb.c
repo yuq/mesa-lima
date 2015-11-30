@@ -202,7 +202,7 @@ void
 gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
                 bool gs_present, bool tess_present)
 {
-   const struct gen_device_info *devinfo = brw->intelScreen->devinfo;
+   const struct gen_device_info *devinfo = brw->screen->devinfo;
    const int push_size_kB =
       (brw->gen >= 8 || (brw->is_haswell && brw->gt == 3)) ? 32 : 16;
 

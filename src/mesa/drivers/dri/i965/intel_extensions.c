@@ -323,7 +323,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.OES_depth_texture_cube_map = true;
       ctx->Extensions.OES_sample_variables = true;
 
-      ctx->Extensions.ARB_timer_query = brw->intelScreen->hw_has_timestamp;
+      ctx->Extensions.ARB_timer_query = brw->screen->hw_has_timestamp;
 
       /* Only enable this in core profile because other parts of Mesa behave
        * slightly differently when the extension is enabled.
@@ -364,14 +364,14 @@ intelInitExtensions(struct gl_context *ctx)
          ctx->Extensions.ARB_transform_feedback3 = true;
          ctx->Extensions.ARB_transform_feedback_instanced = true;
 
-         if ((brw->gen >= 8 || brw->intelScreen->cmd_parser_version >= 5) &&
+         if ((brw->gen >= 8 || brw->screen->cmd_parser_version >= 5) &&
              ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) {
             ctx->Extensions.ARB_compute_shader = true;
             ctx->Extensions.ARB_ES3_1_compatibility =
                brw->gen >= 8 || brw->is_haswell;
          }
 
-         if (brw->intelScreen->cmd_parser_version >= 2)
+         if (brw->screen->cmd_parser_version >= 2)
             brw->predicate.supported = true;
       }
    }
@@ -385,7 +385,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_robust_buffer_access_behavior = true;
    }
 
-   if (brw->intelScreen->has_mi_math_and_lrr) {
+   if (brw->screen->has_mi_math_and_lrr) {
       ctx->Extensions.ARB_query_buffer_object = true;
    }
 

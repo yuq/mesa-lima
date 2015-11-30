@@ -403,7 +403,7 @@ intel_create_image_from_name(__DRIscreen *dri_screen,
 			     int width, int height, int format,
 			     int name, int pitch, void *loaderPrivate)
 {
-    struct intel_screen *intelScreen = dri_screen->driverPrivate;
+    struct intel_screen *screen = dri_screen->driverPrivate;
     __DRIimage *image;
     int cpp;
 
@@ -419,7 +419,7 @@ intel_create_image_from_name(__DRIscreen *dri_screen,
     image->width = width;
     image->height = height;
     image->pitch = pitch * cpp;
-    image->bo = drm_intel_bo_gem_create_from_name(intelScreen->bufmgr, "image",
+    image->bo = drm_intel_bo_gem_create_from_name(screen->bufmgr, "image",
                                                   name);
     if (!image->bo) {
        free(image);
@@ -542,7 +542,7 @@ intel_create_image(__DRIscreen *dri_screen,
 		   void *loaderPrivate)
 {
    __DRIimage *image;
-   struct intel_screen *intelScreen = dri_screen->driverPrivate;
+   struct intel_screen *screen = dri_screen->driverPrivate;
    uint32_t tiling;
    int cpp;
    unsigned long pitch;
@@ -562,7 +562,7 @@ intel_create_image(__DRIscreen *dri_screen,
       return NULL;
 
    cpp = _mesa_get_format_bytes(image->format);
-   image->bo = drm_intel_bo_alloc_tiled(intelScreen->bufmgr, "image",
+   image->bo = drm_intel_bo_alloc_tiled(screen->bufmgr, "image",
                                         width, height, cpp, &tiling,
                                         &pitch, 0);
    if (image->bo == NULL) {
@@ -698,7 +698,7 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
                             int *fds, int num_fds, int *strides, int *offsets,
                             void *loaderPrivate)
 {
-   struct intel_screen *intelScreen = dri_screen->driverPrivate;
+   struct intel_screen *screen = dri_screen->driverPrivate;
    struct intel_image_format *f;
    __DRIimage *image;
    int i, index;
@@ -740,7 +740,7 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
          size = end;
    }
 
-   image->bo = drm_intel_bo_gem_create_from_prime(intelScreen->bufmgr,
+   image->bo = drm_intel_bo_gem_create_from_prime(screen->bufmgr,
                                                   fds[0], size);
    if (image->bo == NULL) {
       free(image);
@@ -867,7 +867,7 @@ static int
 brw_query_renderer_integer(__DRIscreen *dri_screen,
                            int param, unsigned int *value)
 {
-   const struct intel_screen *const intelScreen =
+   const struct intel_screen *const screen =
       (struct intel_screen *) dri_screen->driverPrivate;
 
    switch (param) {
@@ -875,7 +875,7 @@ brw_query_renderer_integer(__DRIscreen *dri_screen,
       value[0] = 0x8086;
       return 0;
    case __DRI2_RENDERER_DEVICE_ID:
-      value[0] = intelScreen->deviceID;
+      value[0] = screen->deviceID;
       return 0;
    case __DRI2_RENDERER_ACCELERATED:
       value[0] = 1;
@@ -922,7 +922,7 @@ static int
 brw_query_renderer_string(__DRIscreen *dri_screen,
                           int param, const char **value)
 {
-   const struct intel_screen *intelScreen =
+   const struct intel_screen *screen =
       (struct intel_screen *) dri_screen->driverPrivate;
 
    switch (param) {
@@ -930,7 +930,7 @@ brw_query_renderer_string(__DRIscreen *dri_screen,
       value[0] = brw_vendor_string;
       return 0;
    case __DRI2_RENDERER_DEVICE_ID:
-      value[0] = brw_get_renderer_string(intelScreen);
+      value[0] = brw_get_renderer_string(screen);
       return 0;
    default:
       break;
@@ -950,7 +950,7 @@ static const __DRIrobustnessExtension dri2Robustness = {
    .base = { __DRI2_ROBUSTNESS, 1 }
 };
 
-static const __DRIextension *intelScreenExtensions[] = {
+static const __DRIextension *screenExtensions[] = {
     &intelTexBufferExtension.base,
     &intelFenceExtension.base,
     &intelFlushExtension.base,
@@ -1011,12 +1011,12 @@ intel_get_integer(struct intel_screen *screen, int param)
 static void
 intelDestroyScreen(__DRIscreen * sPriv)
 {
-   struct intel_screen *intelScreen = sPriv->driverPrivate;
+   struct intel_screen *screen = sPriv->driverPrivate;
 
-   dri_bufmgr_destroy(intelScreen->bufmgr);
-   driDestroyOptionInfo(&intelScreen->optionCache);
+   dri_bufmgr_destroy(screen->bufmgr);
+   driDestroyOptionInfo(&screen->optionCache);
 
-   ralloc_free(intelScreen);
+   ralloc_free(screen);
    sPriv->driverPrivate = NULL;
 }
 
@@ -1134,21 +1134,21 @@ intelDestroyBuffer(__DRIdrawable * driDrawPriv)
 }
 
 static void
-intel_detect_sseu(struct intel_screen *intelScreen)
+intel_detect_sseu(struct intel_screen *screen)
 {
-   assert(intelScreen->devinfo->gen >= 8);
+   assert(screen->devinfo->gen >= 8);
    int ret;
 
-   intelScreen->subslice_total = -1;
-   intelScreen->eu_total = -1;
+   screen->subslice_total = -1;
+   screen->eu_total = -1;
 
-   ret = intel_get_param(intelScreen, I915_PARAM_SUBSLICE_TOTAL,
-                         &intelScreen->subslice_total);
+   ret = intel_get_param(screen, I915_PARAM_SUBSLICE_TOTAL,
+                         &screen->subslice_total);
    if (ret < 0 && ret != -EINVAL)
       goto err_out;
 
-   ret = intel_get_param(intelScreen,
-                         I915_PARAM_EU_TOTAL, &intelScreen->eu_total);
+   ret = intel_get_param(screen,
+                         I915_PARAM_EU_TOTAL, &screen->eu_total);
    if (ret < 0 && ret != -EINVAL)
       goto err_out;
 
@@ -1156,35 +1156,35 @@ intel_detect_sseu(struct intel_screen *intelScreen)
     * and we have to use conservative numbers for GPGPU on many platforms, but
     * otherwise, things will just work.
     */
-   if (intelScreen->subslice_total < 1 || intelScreen->eu_total < 1)
+   if (screen->subslice_total < 1 || screen->eu_total < 1)
       _mesa_warning(NULL,
                     "Kernel 4.1 required to properly query GPU properties.\n");
 
    return;
 
 err_out:
-   intelScreen->subslice_total = -1;
-   intelScreen->eu_total = -1;
+   screen->subslice_total = -1;
+   screen->eu_total = -1;
    _mesa_warning(NULL, "Failed to query GPU properties (%s).\n", strerror(-ret));
 }
 
 static bool
-intel_init_bufmgr(struct intel_screen *intelScreen)
+intel_init_bufmgr(struct intel_screen *screen)
 {
-   __DRIscreen *dri_screen = intelScreen->driScrnPriv;
+   __DRIscreen *dri_screen = screen->driScrnPriv;
 
-   intelScreen->no_hw = getenv("INTEL_NO_HW") != NULL;
+   screen->no_hw = getenv("INTEL_NO_HW") != NULL;
 
-   intelScreen->bufmgr = intel_bufmgr_gem_init(dri_screen->fd, BATCH_SZ);
-   if (intelScreen->bufmgr == NULL) {
+   screen->bufmgr = intel_bufmgr_gem_init(dri_screen->fd, BATCH_SZ);
+   if (screen->bufmgr == NULL) {
       fprintf(stderr, "[%s:%u] Error initializing buffer manager.\n",
 	      __func__, __LINE__);
       return false;
    }
 
-   drm_intel_bufmgr_gem_enable_fenced_relocs(intelScreen->bufmgr);
+   drm_intel_bufmgr_gem_enable_fenced_relocs(screen->bufmgr);
 
-   if (!intel_get_boolean(intelScreen, I915_PARAM_HAS_RELAXED_DELTA)) {
+   if (!intel_get_boolean(screen, I915_PARAM_HAS_RELAXED_DELTA)) {
       fprintf(stderr, "[%s: %u] Kernel 2.6.39 required.\n", __func__, __LINE__);
       return false;
    }
@@ -1540,7 +1540,7 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
 static const
 __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
 {
-   struct intel_screen *intelScreen;
+   struct intel_screen *screen;
 
    if (dri_screen->image.loader) {
    } else if (dri_screen->dri2.loader->base.version <= 2 ||
@@ -1552,43 +1552,43 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    }
 
    /* Allocate the private area */
-   intelScreen = rzalloc(NULL, struct intel_screen);
-   if (!intelScreen) {
+   screen = rzalloc(NULL, struct intel_screen);
+   if (!screen) {
       fprintf(stderr, "\nERROR!  Allocating private area failed\n");
       return false;
    }
    /* parse information in __driConfigOptions */
-   driParseOptionInfo(&intelScreen->optionCache, brw_config_options.xml);
+   driParseOptionInfo(&screen->optionCache, brw_config_options.xml);
 
-   intelScreen->driScrnPriv = dri_screen;
-   dri_screen->driverPrivate = (void *) intelScreen;
+   screen->driScrnPriv = dri_screen;
+   dri_screen->driverPrivate = (void *) screen;
 
-   if (!intel_init_bufmgr(intelScreen))
+   if (!intel_init_bufmgr(screen))
        return false;
 
-   intelScreen->deviceID = drm_intel_bufmgr_gem_get_devid(intelScreen->bufmgr);
-   intelScreen->devinfo = gen_get_device_info(intelScreen->deviceID);
-   if (!intelScreen->devinfo)
+   screen->deviceID = drm_intel_bufmgr_gem_get_devid(screen->bufmgr);
+   screen->devinfo = gen_get_device_info(screen->deviceID);
+   if (!screen->devinfo)
       return false;
 
    brw_process_intel_debug_variable();
 
    if (INTEL_DEBUG & DEBUG_BUFMGR)
-      dri_bufmgr_set_debug(intelScreen->bufmgr, true);
+      dri_bufmgr_set_debug(screen->bufmgr, true);
 
-   if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && intelScreen->devinfo->gen < 7) {
+   if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && screen->devinfo->gen < 7) {
       fprintf(stderr,
               "shader_time debugging requires gen7 (Ivybridge) or better.\n");
       INTEL_DEBUG &= ~DEBUG_SHADER_TIME;
    }
 
    if (INTEL_DEBUG & DEBUG_AUB)
-      drm_intel_bufmgr_gem_set_aub_dump(intelScreen->bufmgr, true);
+      drm_intel_bufmgr_gem_set_aub_dump(screen->bufmgr, true);
 
 #ifndef I915_PARAM_MMAP_GTT_VERSION
 #define I915_PARAM_MMAP_GTT_VERSION 40 /* XXX delete me with new libdrm */
 #endif
-   if (intel_get_integer(intelScreen, I915_PARAM_MMAP_GTT_VERSION) >= 1) {
+   if (intel_get_integer(screen, I915_PARAM_MMAP_GTT_VERSION) >= 1) {
       /* Theorectically unlimited! At least for individual objects...
        *
        * Currently the entire (global) address space for all GTT maps is
@@ -1604,7 +1604,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
        * objects of the current maximum allocable size before running out
        * of mmap space.
        */
-      intelScreen->max_gtt_map_object_size = UINT64_MAX;
+      screen->max_gtt_map_object_size = UINT64_MAX;
    } else {
       /* Estimate the size of the mappable aperture into the GTT.  There's an
        * ioctl to get the whole GTT size, but not one to get the mappable subset.
@@ -1619,30 +1619,30 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
        * taken up by things like the framebuffer and the ringbuffer and such, so
        * be more conservative.
        */
-      intelScreen->max_gtt_map_object_size = gtt_size / 4;
+      screen->max_gtt_map_object_size = gtt_size / 4;
    }
 
-   intelScreen->hw_has_swizzling = intel_detect_swizzling(intelScreen);
-   intelScreen->hw_has_timestamp = intel_detect_timestamp(intelScreen);
+   screen->hw_has_swizzling = intel_detect_swizzling(screen);
+   screen->hw_has_timestamp = intel_detect_timestamp(screen);
 
    /* GENs prior to 8 do not support EU/Subslice info */
-   if (intelScreen->devinfo->gen >= 8) {
-      intel_detect_sseu(intelScreen);
-   } else if (intelScreen->devinfo->gen == 7) {
-      intelScreen->subslice_total = 1 << (intelScreen->devinfo->gt - 1);
+   if (screen->devinfo->gen >= 8) {
+      intel_detect_sseu(screen);
+   } else if (screen->devinfo->gen == 7) {
+      screen->subslice_total = 1 << (screen->devinfo->gt - 1);
    }
 
    const char *force_msaa = getenv("INTEL_FORCE_MSAA");
    if (force_msaa) {
-      intelScreen->winsys_msaa_samples_override =
-         intel_quantize_num_samples(intelScreen, atoi(force_msaa));
+      screen->winsys_msaa_samples_override =
+         intel_quantize_num_samples(screen, atoi(force_msaa));
       printf("Forcing winsys sample count to %d\n",
-             intelScreen->winsys_msaa_samples_override);
+             screen->winsys_msaa_samples_override);
    } else {
-      intelScreen->winsys_msaa_samples_override = -1;
+      screen->winsys_msaa_samples_override = -1;
    }
 
-   set_max_gl_versions(intelScreen);
+   set_max_gl_versions(screen);
 
    /* Notification of GPU resets requires hardware contexts and a kernel new
     * enough to support DRM_IOCTL_I915_GET_RESET_STATS.  If the ioctl is
@@ -1653,41 +1653,41 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
     *
     * Don't even try on pre-Gen6, since we don't attempt to use contexts there.
     */
-   if (intelScreen->devinfo->gen >= 6) {
+   if (screen->devinfo->gen >= 6) {
       struct drm_i915_reset_stats stats;
       memset(&stats, 0, sizeof(stats));
 
       const int ret = drmIoctl(dri_screen->fd, DRM_IOCTL_I915_GET_RESET_STATS, &stats);
 
-      intelScreen->has_context_reset_notification =
+      screen->has_context_reset_notification =
          (ret != -1 || errno != EINVAL);
    }
 
-   if (intel_get_param(intelScreen, I915_PARAM_CMD_PARSER_VERSION,
-                       &intelScreen->cmd_parser_version) < 0) {
-      intelScreen->cmd_parser_version = 0;
+   if (intel_get_param(screen, I915_PARAM_CMD_PARSER_VERSION,
+                       &screen->cmd_parser_version) < 0) {
+      screen->cmd_parser_version = 0;
    }
 
    /* Haswell requires command parser version 6 in order to write to the
     * MI_MATH GPR registers, and version 7 in order to use
     * MI_LOAD_REGISTER_REG (which all users of MI_MATH use).
     */
-   intelScreen->has_mi_math_and_lrr = intelScreen->devinfo->gen >= 8 ||
-                                      (intelScreen->devinfo->is_haswell &&
-                                       intelScreen->cmd_parser_version >= 7);
+   screen->has_mi_math_and_lrr = screen->devinfo->gen >= 8 ||
+                                      (screen->devinfo->is_haswell &&
+                                       screen->cmd_parser_version >= 7);
 
-   dri_screen->extensions = !intelScreen->has_context_reset_notification
-      ? intelScreenExtensions : intelRobustScreenExtensions;
+   dri_screen->extensions = !screen->has_context_reset_notification
+      ? screenExtensions : intelRobustScreenExtensions;
 
-   intelScreen->compiler = brw_compiler_create(intelScreen,
-                                               intelScreen->devinfo);
-   intelScreen->compiler->shader_debug_log = shader_debug_log_mesa;
-   intelScreen->compiler->shader_perf_log = shader_perf_log_mesa;
-   intelScreen->program_id = 1;
+   screen->compiler = brw_compiler_create(screen,
+                                               screen->devinfo);
+   screen->compiler->shader_debug_log = shader_debug_log_mesa;
+   screen->compiler->shader_perf_log = shader_perf_log_mesa;
+   screen->program_id = 1;
 
-   if (intelScreen->devinfo->has_resource_streamer) {
-      intelScreen->has_resource_streamer =
-        intel_get_boolean(intelScreen, I915_PARAM_HAS_RESOURCE_STREAMER);
+   if (screen->devinfo->has_resource_streamer) {
+      screen->has_resource_streamer =
+        intel_get_boolean(screen, I915_PARAM_HAS_RESOURCE_STREAMER);
    }
 
    return (const __DRIconfig**) intel_screen_make_configs(dri_screen);
@@ -1704,7 +1704,7 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
 		    int width, int height)
 {
    struct intel_buffer *intelBuffer;
-   struct intel_screen *intelScreen = dri_screen->driverPrivate;
+   struct intel_screen *screen = dri_screen->driverPrivate;
 
    assert(attachment == __DRI_BUFFER_FRONT_LEFT ||
           attachment == __DRI_BUFFER_BACK_LEFT);
@@ -1717,7 +1717,7 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
    uint32_t tiling = I915_TILING_X;
    unsigned long pitch;
    int cpp = format / 8;
-   intelBuffer->bo = drm_intel_bo_alloc_tiled(intelScreen->bufmgr,
+   intelBuffer->bo = drm_intel_bo_alloc_tiled(screen->bufmgr,
                                               "intelAllocateBuffer",
                                               width,
                                               height,

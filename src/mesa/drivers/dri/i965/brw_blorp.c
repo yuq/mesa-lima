@@ -66,7 +66,7 @@ brw_blorp_init(struct brw_context *brw)
 {
    blorp_init(&brw->blorp, brw, &brw->isl_dev);
 
-   brw->blorp.compiler = brw->intelScreen->compiler;
+   brw->blorp.compiler = brw->screen->compiler;
 
    switch (brw->gen) {
    case 6:

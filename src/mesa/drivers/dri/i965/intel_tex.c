@@ -71,7 +71,7 @@ intel_alloc_texture_image_buffer(struct gl_context *ctx,
 
    /* Quantize sample count */
    if (image->NumSamples) {
-      image->NumSamples = intel_quantize_num_samples(brw->intelScreen, image->NumSamples);
+      image->NumSamples = intel_quantize_num_samples(brw->screen, image->NumSamples);
       if (!image->NumSamples)
          return false;
    }
@@ -128,7 +128,7 @@ intel_alloc_texture_storage(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct intel_texture_object *intel_texobj = intel_texture_object(texobj);
    struct gl_texture_image *first_image = texobj->Image[0][0];
-   int num_samples = intel_quantize_num_samples(brw->intelScreen,
+   int num_samples = intel_quantize_num_samples(brw->screen,
                                                 first_image->NumSamples);
    const int numFaces = _mesa_num_tex_faces(texobj->Target);
    int face;

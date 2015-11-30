@@ -80,9 +80,9 @@
 const char *const brw_vendor_string = "Intel Open Source Technology Center";
 
 static const char *
-get_bsw_model(const struct intel_screen *intelScreen)
+get_bsw_model(const struct intel_screen *screen)
 {
-   switch (intelScreen->eu_total) {
+   switch (screen->eu_total) {
    case 16:
       return "405";
    case 12:
@@ -93,13 +93,13 @@ get_bsw_model(const struct intel_screen *intelScreen)
 }
 
 const char *
-brw_get_renderer_string(const struct intel_screen *intelScreen)
+brw_get_renderer_string(const struct intel_screen *screen)
 {
    const char *chipset;
    static char buffer[128];
    char *bsw = NULL;
 
-   switch (intelScreen->deviceID) {
+   switch (screen->deviceID) {
 #undef CHIPSET
 #define CHIPSET(id, symbol, str) case id: chipset = str; break;
 #include "pci_ids/i965_pci_ids.h"
@@ -109,11 +109,11 @@ brw_get_renderer_string(const struct intel_screen *intelScreen)
    }
 
    /* Braswell branding is funny, so we have to fix it up here */
-   if (intelScreen->deviceID == 0x22B1) {
+   if (screen->deviceID == 0x22B1) {
       bsw = strdup(chipset);
       char *needle = strstr(bsw, "XXX");
       if (needle) {
-         memcpy(needle, get_bsw_model(intelScreen), 3);
+         memcpy(needle, get_bsw_model(screen), 3);
          chipset = bsw;
       }
    }
@@ -134,7 +134,7 @@ intel_get_string(struct gl_context * ctx, GLenum name)
 
    case GL_RENDERER:
       return
-         (GLubyte *) brw_get_renderer_string(brw->intelScreen);
+         (GLubyte *) brw_get_renderer_string(brw->screen);
 
    default:
       return NULL;
@@ -164,7 +164,7 @@ intel_update_framebuffer(struct gl_context *ctx,
    /* Quantize the derived default number of samples
     */
    fb->DefaultGeometry._NumSamples =
-      intel_quantize_num_samples(brw->intelScreen,
+      intel_quantize_num_samples(brw->screen,
                                  fb->DefaultGeometry.NumSamples);
 }
 
@@ -207,7 +207,7 @@ intel_texture_view_requires_resolve(struct brw_context *brw,
 
    const uint32_t brw_format = brw_format_for_mesa_format(intel_tex->_Format);
 
-   if (isl_format_supports_lossless_compression(brw->intelScreen->devinfo,
+   if (isl_format_supports_lossless_compression(brw->screen->devinfo,
                                                 brw_format))
       return false;
 
@@ -366,7 +366,7 @@ intel_flush_front(struct gl_context *ctx)
    struct brw_context *brw = brw_context(ctx);
    __DRIcontext *driContext = brw->driContext;
    __DRIdrawable *driDrawable = driContext->driDrawablePriv;
-   __DRIscreen *const dri_screen = brw->intelScreen->driScrnPriv;
+   __DRIscreen *const dri_screen = brw->screen->driScrnPriv;
 
    if (brw->front_buffer_dirty && _mesa_is_winsys_fbo(ctx->DrawBuffer)) {
       if (flushFront(dri_screen) && driDrawable &&
@@ -463,7 +463,7 @@ brw_init_driver_functions(struct brw_context *brw,
 
    functions->NewTransformFeedback = brw_new_transform_feedback;
    functions->DeleteTransformFeedback = brw_delete_transform_feedback;
-   if (brw->intelScreen->has_mi_math_and_lrr) {
+   if (brw->screen->has_mi_math_and_lrr) {
       functions->BeginTransformFeedback = hsw_begin_transform_feedback;
       functions->EndTransformFeedback = hsw_end_transform_feedback;
       functions->PauseTransformFeedback = hsw_pause_transform_feedback;
@@ -488,7 +488,7 @@ static void
 brw_initialize_context_constants(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   const struct brw_compiler *compiler = brw->intelScreen->compiler;
+   const struct brw_compiler *compiler = brw->screen->compiler;
 
    const bool stage_exists[MESA_SHADER_STAGES] = {
       [MESA_SHADER_VERTEX] = true,
@@ -591,10 +591,10 @@ brw_initialize_context_constants(struct brw_context *brw)
       BRW_MAX_SOL_BINDINGS / BRW_MAX_SOL_BUFFERS;
 
    ctx->Const.AlwaysUseGetTransformFeedbackVertexCount =
-      !brw->intelScreen->has_mi_math_and_lrr;
+      !brw->screen->has_mi_math_and_lrr;
 
    int max_samples;
-   const int *msaa_modes = intel_supported_msaa_modes(brw->intelScreen);
+   const int *msaa_modes = intel_supported_msaa_modes(brw->screen);
    const int clamp_max_samples =
       driQueryOptioni(&brw->optionCache, "clamp_max_samples");
 
@@ -768,7 +768,7 @@ brw_initialize_context_constants(struct brw_context *brw)
    /* We want the GLSL compiler to emit code that uses condition codes */
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
       ctx->Const.ShaderCompilerOptions[i] =
-         brw->intelScreen->compiler->glsl_compiler_options[i];
+         brw->screen->compiler->glsl_compiler_options[i];
    }
 
    if (brw->gen >= 7) {
@@ -805,7 +805,7 @@ static void
 brw_initialize_cs_context_constants(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   const struct intel_screen *screen = brw->intelScreen;
+   const struct intel_screen *screen = brw->screen;
    const struct gen_device_info *devinfo = screen->devinfo;
 
    /* FINISHME: Do this for all platforms that the kernel supports */
@@ -852,7 +852,7 @@ brw_process_driconf_options(struct brw_context *brw)
    struct gl_context *ctx = &brw->ctx;
 
    driOptionCache *options = &brw->optionCache;
-   driParseConfigFiles(options, &brw->intelScreen->optionCache,
+   driParseConfigFiles(options, &brw->screen->optionCache,
                        brw->driContext->driScreenPriv->myNum, "i965");
 
    int bo_reuse_mode = driQueryOptioni(options, "bo_reuse");
@@ -889,7 +889,7 @@ brw_process_driconf_options(struct brw_context *brw)
    brw->precompile = driQueryOptionb(&brw->optionCache, "shader_precompile");
 
    if (driQueryOptionb(&brw->optionCache, "precise_trig"))
-      brw->intelScreen->compiler->precise_trig = true;
+      brw->screen->compiler->precise_trig = true;
 
    ctx->Const.ForceGLSLExtensionsWarn =
       driQueryOptionb(options, "force_glsl_extensions_warn");
@@ -945,7 +945,7 @@ brwCreateContext(gl_api api,
 
    driContextPriv->driverPrivate = brw;
    brw->driContext = driContextPriv;
-   brw->intelScreen = screen;
+   brw->screen = screen;
    brw->bufmgr = screen->bufmgr;
 
    brw->gen = devinfo->gen;
@@ -1442,7 +1442,7 @@ void
 intel_update_renderbuffers(__DRIcontext *context, __DRIdrawable *drawable)
 {
    struct brw_context *brw = context->driverPrivate;
-   __DRIscreen *dri_screen = brw->intelScreen->driScrnPriv;
+   __DRIscreen *dri_screen = brw->screen->driScrnPriv;
 
    /* Set this up front, so that in case our buffers get invalidated
     * while we're getting new buffers, we don't clobber the stamp and
@@ -1516,7 +1516,7 @@ intel_query_dri2_buffers(struct brw_context *brw,
                          __DRIbuffer **buffers,
                          int *buffer_count)
 {
-   __DRIscreen *dri_screen = brw->intelScreen->driScrnPriv;
+   __DRIscreen *dri_screen = brw->screen->driScrnPriv;
    struct gl_framebuffer *fb = drawable->driverPrivate;
    int i = 0;
    unsigned attachments[8];
@@ -1713,7 +1713,7 @@ static void
 intel_update_image_buffers(struct brw_context *brw, __DRIdrawable *drawable)
 {
    struct gl_framebuffer *fb = drawable->driverPrivate;
-   __DRIscreen *dri_screen = brw->intelScreen->driScrnPriv;
+   __DRIscreen *dri_screen = brw->screen->driScrnPriv;
    struct intel_renderbuffer *front_rb;
    struct intel_renderbuffer *back_rb;
    struct __DRIimageList images;
