@@ -61,6 +61,7 @@ static struct r600_bytecode_cf *r600_bytecode_cf(void)
 	LIST_INITHEAD(&cf->alu);
 	LIST_INITHEAD(&cf->vtx);
 	LIST_INITHEAD(&cf->tex);
+	LIST_INITHEAD(&cf->gds);
 	return cf;
 }
 
@@ -92,6 +93,16 @@ static struct r600_bytecode_tex *r600_bytecode_tex(void)
 		return NULL;
 	LIST_INITHEAD(&tex->list);
 	return tex;
+}
+
+static struct r600_bytecode_gds *r600_bytecode_gds(void)
+{
+	struct r600_bytecode_gds *gds = CALLOC_STRUCT(r600_bytecode_gds);
+
+	if (gds == NULL)
+		return NULL;
+	LIST_INITHEAD(&gds->list);
+	return gds;
 }
 
 static unsigned stack_entry_size(enum radeon_family chip) {
@@ -1412,6 +1423,33 @@ int r600_bytecode_add_tex(struct r600_bytecode *bc, const struct r600_bytecode_t
 	return 0;
 }
 
+int r600_bytecode_add_gds(struct r600_bytecode *bc, const struct r600_bytecode_gds *gds)
+{
+	struct r600_bytecode_gds *ngds = r600_bytecode_gds();
+	int r;
+
+	if (ngds == NULL)
+		return -ENOMEM;
+	memcpy(ngds, gds, sizeof(struct r600_bytecode_gds));
+
+	if (bc->cf_last == NULL ||
+	    bc->cf_last->op != CF_OP_GDS ||
+	    bc->force_add_cf) {
+		r = r600_bytecode_add_cf(bc);
+		if (r) {
+			free(ngds);
+			return r;
+		}
+		bc->cf_last->op = CF_OP_GDS;
+	}
+
+	LIST_ADDTAIL(&ngds->list, &bc->cf_last->gds);
+	bc->cf_last->ndw += 4; /* each GDS uses 4 dwords */
+	if ((bc->cf_last->ndw / 4) >= r600_bytecode_num_tex_and_vtx_instructions(bc))
+		bc->force_add_cf = 1;
+	return 0;
+}
+
 int r600_bytecode_add_cfinst(struct r600_bytecode *bc, unsigned op)
 {
 	int r;
@@ -1623,6 +1661,7 @@ int r600_bytecode_build(struct r600_bytecode *bc)
 	struct r600_bytecode_alu *alu;
 	struct r600_bytecode_vtx *vtx;
 	struct r600_bytecode_tex *tex;
+	struct r600_bytecode_gds *gds;
 	uint32_t literal[4];
 	unsigned nliteral;
 	unsigned addr;
@@ -1701,6 +1740,14 @@ int r600_bytecode_build(struct r600_bytecode *bc)
 					return r;
 				addr += 4;
 			}
+		} else if (cf->op == CF_OP_GDS) {
+			assert(bc->chip_class >= EVERGREEN);
+			LIST_FOR_EACH_ENTRY(gds, &cf->gds, list) {
+				r = eg_bytecode_gds_build(bc, gds, addr);
+				if (r)
+					return r;
+				addr += 4;
+			}
 		} else if (cf->op == CF_OP_TEX) {
 			LIST_FOR_EACH_ENTRY(vtx, &cf->vtx, list) {
 				assert(bc->chip_class >= EVERGREEN);
@@ -1731,6 +1778,7 @@ void r600_bytecode_clear(struct r600_bytecode *bc)
 		struct r600_bytecode_alu *alu = NULL, *next_alu;
 		struct r600_bytecode_tex *tex = NULL, *next_tex;
 		struct r600_bytecode_tex *vtx = NULL, *next_vtx;
+		struct r600_bytecode_gds *gds = NULL, *next_gds;
 
 		LIST_FOR_EACH_ENTRY_SAFE(alu, next_alu, &cf->alu, list) {
 			free(alu);
@@ -1749,6 +1797,12 @@ void r600_bytecode_clear(struct r600_bytecode *bc)
 		}
 
 		LIST_INITHEAD(&cf->vtx);
+
+		LIST_FOR_EACH_ENTRY_SAFE(gds, next_gds, &cf->gds, list) {
+			free(gds);
+		}
+
+		LIST_INITHEAD(&cf->gds);
 
 		free(cf);
 	}
@@ -1911,6 +1965,7 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 	struct r600_bytecode_alu *alu = NULL;
 	struct r600_bytecode_vtx *vtx = NULL;
 	struct r600_bytecode_tex *tex = NULL;
+	struct r600_bytecode_gds *gds = NULL;
 
 	unsigned i, id, ngr = 0, last;
 	uint32_t literal[4];
@@ -2192,6 +2247,33 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 			fprintf(stderr, "COMP:%d ", vtx->format_comp_all);
 			fprintf(stderr, "MODE:%d)\n", vtx->srf_mode_all);
 
+			id += 4;
+		}
+
+		LIST_FOR_EACH_ENTRY(gds, &cf->gds, list) {
+			int o = 0;
+			o += fprintf(stderr, " %04d %08X %08X %08X   ", id, bc->bytecode[id],
+					bc->bytecode[id + 1], bc->bytecode[id + 2]);
+
+			o += fprintf(stderr, "%s ", r600_isa_fetch(gds->op)->name);
+
+			if (gds->op != FETCH_OP_TF_WRITE) {
+				o += fprintf(stderr, "R%d.", gds->dst_gpr);
+				o += print_swizzle(gds->dst_sel_x);
+				o += print_swizzle(gds->dst_sel_y);
+				o += print_swizzle(gds->dst_sel_z);
+				o += print_swizzle(gds->dst_sel_w);
+			}
+
+			o += fprintf(stderr, ", R%d.", gds->src_gpr);
+			o += print_swizzle(gds->src_sel_x);
+			o += print_swizzle(gds->src_sel_y);
+			o += print_swizzle(gds->src_sel_z);
+
+			if (gds->op != FETCH_OP_TF_WRITE) {
+				o += fprintf(stderr, ", R%d.", gds->src_gpr2);
+			}
+			fprintf(stderr, "\n");
 			id += 4;
 		}
 	}

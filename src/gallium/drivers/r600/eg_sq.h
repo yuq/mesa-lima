@@ -514,6 +514,27 @@
 #define   G_SQ_TEX_WORD2_SRC_SEL_W(x)                                (((x) >> 29) & 0x7)
 #define   C_SQ_TEX_WORD2_SRC_SEL_W                                   0x1FFFFFFF
 
+#define P_SQ_MEM_GDS_WORD0
+#define   S_SQ_MEM_GDS_WORD0_MEM_INST(x)                             (((x) & 0x1f) << 0)
+#define   S_SQ_MEM_GDS_WORD0_MEM_OP(x)                               (((x) & 0x7) << 8)
+#define   S_SQ_MEM_GDS_WORD0_SRC_GPR(x)                              (((x) & 0x7f) << 11)
+#define   S_SQ_MEM_GDS_WORD0_SRC_REL(x)                              (((x) & 0x3) << 18)
+#define   S_SQ_MEM_GDS_WORD0_SRC_SEL_X(x)                            (((x) & 0x7) << 20)
+#define   S_SQ_MEM_GDS_WORD0_SRC_SEL_Y(x)                            (((x) & 0x7) << 23)
+#define   S_SQ_MEM_GDS_WORD0_SRC_SEL_Z(x)                            (((x) & 0x7) << 26)
+
+#define P_SQ_MEM_GDS_WORD1
+#define   S_SQ_MEM_GDS_WORD1_DST_GPR(x)                              (((x) & 0x7f) << 0)
+#define   S_SQ_MEM_GDS_WORD1_DST_REL(x)                              (((x) & 0x3) << 7)
+#define   S_SQ_MEM_GDS_WORD1_GDS_OP(x)                               (((x) & 0x3f) << 9)
+#define   S_SQ_MEM_GDS_WORD1_SRC_GPR(x)                              (((x) & 0x7f) << 16)
+
+#define P_SQ_MEM_GDS_WORD2
+#define   S_SQ_MEM_GDS_WORD2_DST_SEL_X(x)                            (((x) & 0x7) << 0)
+#define   S_SQ_MEM_GDS_WORD2_DST_SEL_Y(x)                            (((x) & 0x7) << 3)
+#define   S_SQ_MEM_GDS_WORD2_DST_SEL_Z(x)                            (((x) & 0x7) << 6)
+#define   S_SQ_MEM_GDS_WORD2_DST_SEL_W(x)                            (((x) & 0x7) << 9)
+
 #define V_SQ_CF_COND_ACTIVE                             0x00
 #define V_SQ_CF_COND_FALSE                              0x01
 #define V_SQ_CF_COND_BOOL                               0x02

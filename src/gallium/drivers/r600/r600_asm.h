@@ -115,6 +115,24 @@ struct r600_bytecode_vtx {
 	unsigned			buffer_index_mode;
 };
 
+struct r600_bytecode_gds {
+	struct list_head		list;
+	unsigned			op;
+	unsigned                        gds_op;
+	unsigned			src_gpr;
+	unsigned			src_rel;
+	unsigned			src_sel_x;
+	unsigned			src_sel_y;
+	unsigned			src_sel_z;
+	unsigned			src_gpr2;
+	unsigned			dst_gpr;
+	unsigned			dst_rel;
+	unsigned			dst_sel_x;
+	unsigned			dst_sel_y;
+	unsigned			dst_sel_z;
+	unsigned			dst_sel_w;
+};
+
 struct r600_bytecode_output {
 	unsigned			array_base;
 	unsigned			array_size;
@@ -159,6 +177,7 @@ struct r600_bytecode_cf {
 	struct list_head		alu;
 	struct list_head		tex;
 	struct list_head		vtx;
+	struct list_head		gds;
 	struct r600_bytecode_output		output;
 	struct r600_bytecode_alu		*curr_bs_head;
 	struct r600_bytecode_alu		*prev_bs_head;
@@ -233,7 +252,7 @@ struct r600_bytecode {
 /* eg_asm.c */
 int eg_bytecode_cf_build(struct r600_bytecode *bc, struct r600_bytecode_cf *cf);
 int egcm_load_index_reg(struct r600_bytecode *bc, unsigned id, bool inside_alu_clause);
-
+int eg_bytecode_gds_build(struct r600_bytecode *bc, struct r600_bytecode_gds *gds, unsigned id);
 /* r600_asm.c */
 void r600_bytecode_init(struct r600_bytecode *bc,
 			enum chip_class chip_class,
@@ -246,6 +265,8 @@ int r600_bytecode_add_vtx(struct r600_bytecode *bc,
 		const struct r600_bytecode_vtx *vtx);
 int r600_bytecode_add_tex(struct r600_bytecode *bc,
 		const struct r600_bytecode_tex *tex);
+int r600_bytecode_add_gds(struct r600_bytecode *bc,
+		const struct r600_bytecode_gds *gds);
 int r600_bytecode_add_output(struct r600_bytecode *bc,
 		const struct r600_bytecode_output *output);
 int r600_bytecode_build(struct r600_bytecode *bc);
