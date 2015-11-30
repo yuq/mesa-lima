@@ -1909,12 +1909,22 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	shader->processor_type = ctx.type;
 	ctx.bc->type = shader->processor_type;
 
-	if (ctx.type == TGSI_PROCESSOR_VERTEX) {
+	switch (ctx.type) {
+	case TGSI_PROCESSOR_VERTEX:
 		shader->vs_as_gs_a = key.vs.as_gs_a;
 		shader->vs_as_es = key.vs.as_es;
+		if (shader->vs_as_es)
+			ring_outputs = true;
+		break;
+	case TGSI_PROCESSOR_GEOMETRY:
+		ring_outputs = true;
+		break;
+	case TGSI_PROCESSOR_FRAGMENT:
+		shader->two_side = key.ps.color_two_side;
+		break;
+	default:
+		break;
 	}
-
-	ring_outputs = shader->vs_as_es || ctx.type == TGSI_PROCESSOR_GEOMETRY;
 
 	if (shader->vs_as_es) {
 		ctx.gs_for_vs = &rctx->gs_shader->current->shader;
@@ -1936,8 +1946,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	shader->nr_ps_color_exports = 0;
 	shader->nr_ps_max_color_exports = 0;
 
-	if (ctx.type == TGSI_PROCESSOR_FRAGMENT)
-		shader->two_side = key.ps.color_two_side;
 
 	/* register allocations */
 	/* Values [0,127] correspond to GPR[0..127].
