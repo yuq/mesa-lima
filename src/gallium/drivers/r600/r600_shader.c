@@ -763,6 +763,28 @@ static int single_alu_op3(struct r600_shader_ctx *ctx, int op,
 	return 0;
 }
 
+/* put it in temp_reg.x */
+static int get_lds_offset0(struct r600_shader_ctx *ctx,
+			   int rel_patch_chan,
+			   int temp_reg, bool is_patch_var)
+{
+	int r;
+
+	/* MUL temp.x, patch_stride (input_vals.x), rel_patch_id (r0.y (tcs)) */
+	/* ADD
+	   Dimension - patch0_offset (input_vals.z),
+	   Non-dim - patch0_data_offset (input_vals.w)
+	*/
+	r = single_alu_op3(ctx, ALU_OP3_MULADD_UINT24,
+			   temp_reg, 0,
+			   ctx->tess_output_info, 0,
+			   0, rel_patch_chan,
+			   ctx->tess_output_info, is_patch_var ? 3 : 2);
+	if (r)
+		return r;
+	return 0;
+}
+
 static inline int get_address_file_reg(struct r600_shader_ctx *ctx, int index)
 {
 	return index > 0 ? ctx->bc->index_reg[index - 1] : ctx->bc->ar_reg;
