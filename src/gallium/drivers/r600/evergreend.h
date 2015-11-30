@@ -2146,14 +2146,14 @@
 #define   C_028B5C_SIZE                                               0xFFFFFF00
 #define   S_028B5C_PATCH_CP_SIZE(x)                                   (((x) & 0x1FFF) << 8)
 #define   G_028B5C_PATCH_CP_SIZE(x)                                   (((x) >> 8) & 0x1FFF)
-#define   C_028B5C_PATCH_CP_SIZE                                      0xFFFE00FF
+#define   C_028B5C_PATCH_CP_SIZE                                      0xFFE000FF
 #define R_028B60_VGT_HS_SIZE                         0x00028B60
 #define   S_028B60_SIZE(x)                                            (((x) & 0xFF) << 0)
 #define   G_028B60_SIZE(x)                                            (((x) >> 0) & 0xFF)
 #define   C_028B60_SIZE                                               0xFFFFFF00
 #define   S_028B60_PATCH_CP_SIZE(x)                                   (((x) & 0x1FFF) << 8)
 #define   G_028B60_PATCH_CP_SIZE(x)                                   (((x) >> 8) & 0x1FFF)
-#define   C_028B60_PATCH_CP_SIZE                                      0xFFFE00FF
+#define   C_028B60_PATCH_CP_SIZE                                      0xFFE000FF
 #define R_028B64_VGT_LS_HS_ALLOC                     0x00028B64
 #define   S_028B64_HS_TOTAL_OUTPUT(x)                                 (((x) & 0x1FFF) << 0)
 #define   G_028B64_HS_TOTAL_OUTPUT(x)                                 (((x) >> 0) & 0x1FFF)
