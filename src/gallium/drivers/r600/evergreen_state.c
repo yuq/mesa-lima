@@ -3186,6 +3186,31 @@ void evergreen_update_vs_state(struct pipe_context *ctx, struct r600_pipe_shader
 		S_02881C_USE_VTX_RENDER_TARGET_INDX(rshader->vs_out_layer);
 }
 
+void evergreen_update_hs_state(struct pipe_context *ctx, struct r600_pipe_shader *shader)
+{
+	struct r600_command_buffer *cb = &shader->command_buffer;
+	struct r600_shader *rshader = &shader->shader;
+
+	r600_init_command_buffer(cb, 32);
+	r600_store_context_reg(cb, R_0288BC_SQ_PGM_RESOURCES_HS,
+			       S_0288BC_NUM_GPRS(rshader->bc.ngpr) |
+			       S_0288BC_STACK_SIZE(rshader->bc.nstack));
+	r600_store_context_reg(cb, R_0288B8_SQ_PGM_START_HS,
+			       shader->bo->gpu_address >> 8);
+}
+
+void evergreen_update_ls_state(struct pipe_context *ctx, struct r600_pipe_shader *shader)
+{
+	struct r600_command_buffer *cb = &shader->command_buffer;
+	struct r600_shader *rshader = &shader->shader;
+
+	r600_init_command_buffer(cb, 32);
+	r600_store_context_reg(cb, R_0288D4_SQ_PGM_RESOURCES_LS,
+			       S_0288D4_NUM_GPRS(rshader->bc.ngpr) |
+			       S_0288D4_STACK_SIZE(rshader->bc.nstack));
+	r600_store_context_reg(cb, R_0288D0_SQ_PGM_START_LS,
+			       shader->bo->gpu_address >> 8);
+}
 void *evergreen_create_resolve_blend(struct r600_context *rctx)
 {
 	struct pipe_blend_state blend;

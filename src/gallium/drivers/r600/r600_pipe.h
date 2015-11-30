@@ -603,6 +603,8 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 void evergreen_update_es_state(struct pipe_context *ctx, struct r600_pipe_shader *shader);
 void evergreen_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader *shader);
 void evergreen_update_vs_state(struct pipe_context *ctx, struct r600_pipe_shader *shader);
+void evergreen_update_ls_state(struct pipe_context *ctx, struct r600_pipe_shader *shader);
+void evergreen_update_hs_state(struct pipe_context *ctx, struct r600_pipe_shader *shader);
 void *evergreen_create_db_flush_dsa(struct r600_context *rctx);
 void *evergreen_create_resolve_blend(struct r600_context *rctx);
 void *evergreen_create_decompress_blend(struct r600_context *rctx);
