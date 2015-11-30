@@ -1411,6 +1411,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 {
 	struct pipe_context * ctx = (struct pipe_context*)rctx;
 	bool ps_dirty = false, vs_dirty = false, gs_dirty = false;
+	bool tcs_dirty = false, tes_dirty = false;
 	bool blend_disable;
 	bool need_buf_const;
 	struct r600_pipe_shader *clip_so_current = NULL;
@@ -1432,10 +1433,24 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 
 	SELECT_SHADER_OR_FAIL(ps);
 
+	r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
+
 	update_gs_block_state(rctx, rctx->gs_shader != NULL);
 
 	if (rctx->gs_shader)
 		SELECT_SHADER_OR_FAIL(gs);
+
+	/* Hull Shader */
+	if (rctx->tcs_shader) {
+		SELECT_SHADER_OR_FAIL(tcs);
+
+		UPDATE_SHADER(EG_HW_STAGE_HS, tcs);
+	} else
+		SET_NULL_SHADER(EG_HW_STAGE_HS);
+
+	if (rctx->tes_shader) {
+		SELECT_SHADER_OR_FAIL(tes);
+	}
 
 	SELECT_SHADER_OR_FAIL(vs);
 
@@ -1449,8 +1464,16 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		UPDATE_SHADER_GS(R600_HW_STAGE_GS, R600_HW_STAGE_VS, gs);
 
 		/* vs_shader is used as ES */
-		UPDATE_SHADER(R600_HW_STAGE_ES, vs);
 
+		if (rctx->tes_shader) {
+			/* VS goes to LS, TES goes to ES */
+			UPDATE_SHADER(R600_HW_STAGE_ES, tes);
+			UPDATE_SHADER(EG_HW_STAGE_LS, vs);
+               } else {
+			/* vs_shader is used as ES */
+			UPDATE_SHADER(R600_HW_STAGE_ES, vs);
+			SET_NULL_SHADER(EG_HW_STAGE_LS);
+		}
 	} else {
 		if (unlikely(rctx->hw_shader_stages[R600_HW_STAGE_GS].shader)) {
 			SET_NULL_SHADER(R600_HW_STAGE_GS);
@@ -1459,7 +1482,14 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 			r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 		}
 
-		UPDATE_SHADER_CLIP(R600_HW_STAGE_VS, vs);
+		if (rctx->tes_shader) {
+			/* if TES is loaded and no geometry, TES runs on hw VS, VS runs on hw LS */
+			UPDATE_SHADER_CLIP(R600_HW_STAGE_VS, tes);
+			UPDATE_SHADER(EG_HW_STAGE_LS, vs);
+		} else {
+			SET_NULL_SHADER(EG_HW_STAGE_LS);
+			UPDATE_SHADER_CLIP(R600_HW_STAGE_VS, vs);
+		}
 	}
 
 	/* Update clip misc state. */
