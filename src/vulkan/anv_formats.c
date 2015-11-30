@@ -227,17 +227,17 @@ anv_format_for_vk_format(VkFormat format)
 
 // Format capabilities
 
-VkResult anv_validate_GetPhysicalDeviceFormatProperties(
+void anv_validate_GetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    _format,
     VkFormatProperties*                         pFormatProperties)
 {
    const struct anv_format *format = anv_format_for_vk_format(_format);
    fprintf(stderr, "vkGetFormatProperties(%s)\n", format->name);
-   return anv_GetPhysicalDeviceFormatProperties(physicalDevice, _format, pFormatProperties);
+   anv_GetPhysicalDeviceFormatProperties(physicalDevice, _format, pFormatProperties);
 }
 
-static VkResult
+static void
 anv_physical_device_get_format_properties(struct anv_physical_device *physical_device,
                                           const struct anv_format *format,
                                           VkFormatProperties *out_properties)
@@ -296,32 +296,25 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    out_properties->optimalTilingFeatures = tiled;
    out_properties->bufferFeatures = 0; /* FINISHME */
 
-   return VK_SUCCESS;
+   return;
 
  unsupported:
    out_properties->linearTilingFeatures = 0;
    out_properties->optimalTilingFeatures = 0;
-
-   return VK_SUCCESS;
 }
 
 
-VkResult anv_GetPhysicalDeviceFormatProperties(
+void anv_GetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkFormatProperties*                         pFormatProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
-   VkResult result;
 
-   result = anv_physical_device_get_format_properties(
+   anv_physical_device_get_format_properties(
                physical_device,
                anv_format_for_vk_format(format),
                pFormatProperties);
-   if (result != VK_SUCCESS)
-      return vk_error(result);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_GetPhysicalDeviceImageFormatProperties(
@@ -340,12 +333,9 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
    VkExtent3D maxExtent;
    uint32_t maxMipLevels;
    uint32_t maxArraySize;
-   VkResult result;
 
-   result = anv_physical_device_get_format_properties(physical_device, format,
-                                                      &format_props);
-   if (result != VK_SUCCESS)
-      return vk_error(result);
+   anv_physical_device_get_format_properties(physical_device, format,
+                                             &format_props);
 
    /* Extract the VkFormatFeatureFlags that are relevant for the queried
     * tiling.
@@ -453,7 +443,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       .maxResourceSize = UINT32_MAX,
    };
 
-    return VK_SUCCESS;
+   return VK_SUCCESS;
 
 unsupported:
    *pImageFormatProperties = (VkImageFormatProperties) {
@@ -467,7 +457,7 @@ unsupported:
    return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceSparseImageFormatProperties(
+void anv_GetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
@@ -479,6 +469,4 @@ VkResult anv_GetPhysicalDeviceSparseImageFormatProperties(
 {
    /* Sparse images are not yet supported. */
    *pNumProperties = 0;
-
-   return VK_SUCCESS;
 }

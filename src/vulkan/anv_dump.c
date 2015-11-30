@@ -58,7 +58,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
    assert(result == VK_SUCCESS);
 
    VkMemoryRequirements reqs;
-   result = anv_GetImageMemoryRequirements(vk_device, copy_image, &reqs);
+   anv_GetImageMemoryRequirements(vk_device, copy_image, &reqs);
 
    VkDeviceMemory memory;
    result = anv_AllocMemory(vk_device,
@@ -176,13 +176,12 @@ anv_dump_image_to_ppm(struct anv_device *device,
    assert(result == VK_SUCCESS);
 
    VkSubresourceLayout layout;
-   result = anv_GetImageSubresourceLayout(vk_device, copy_image,
+   anv_GetImageSubresourceLayout(vk_device, copy_image,
       &(VkImageSubresource) {
          .aspect = VK_IMAGE_ASPECT_COLOR,
          .mipLevel = 0,
          .arrayLayer = 0,
       }, &layout);
-   assert(result == VK_SUCCESS);
 
    map += layout.offset;
 

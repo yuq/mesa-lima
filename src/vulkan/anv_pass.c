@@ -133,12 +133,10 @@ void anv_DestroyRenderPass(
    anv_device_free(device, pass);
 }
 
-VkResult anv_GetRenderAreaGranularity(
+void anv_GetRenderAreaGranularity(
     VkDevice                                    device,
     VkRenderPass                                renderPass,
     VkExtent2D*                                 pGranularity)
 {
    *pGranularity = (VkExtent2D) { 1, 1 };
-
-   return VK_SUCCESS;
 }

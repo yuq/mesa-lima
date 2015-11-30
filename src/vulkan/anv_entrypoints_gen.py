@@ -27,7 +27,7 @@ import fileinput, re, sys
 # Each function typedef in the vulkan.h header is all on one line and matches
 # this regepx. We hope that won't change.
 
-p = re.compile('typedef ([^ ]*) *\(VKAPI \*PFN_vk([^(]*)\)(.*);')
+p = re.compile('typedef ([^ ]*) *\(VKAPI_PTR \*PFN_vk([^(]*)\)(.*);')
 
 entrypoints = []
 

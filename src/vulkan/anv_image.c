@@ -422,7 +422,7 @@ anv_surface_get_subresource_layout(struct anv_image *image,
       layout->size = surface->stride * image->extent.height;
 }
 
-VkResult anv_GetImageSubresourceLayout(
+void anv_GetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     _image,
     const VkImageSubresource*                   pSubresource,
@@ -444,10 +444,8 @@ VkResult anv_GetImageSubresourceLayout(
                                          pSubresource, pLayout);
       break;
    default:
-      return vk_error(VK_UNSUPPORTED);
+      assert(!"Invalid image aspect");
    }
-
-   return VK_SUCCESS;
 }
 
 VkResult

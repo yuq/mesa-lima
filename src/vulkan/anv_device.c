@@ -330,7 +330,7 @@ VkResult anv_EnumeratePhysicalDevices(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceFeatures(
+void anv_GetPhysicalDeviceFeatures(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceFeatures*                   pFeatures)
 {
@@ -378,11 +378,9 @@ VkResult anv_GetPhysicalDeviceFeatures(
       .shaderInt16                              = false,
       .alphaToOne                               = true,
    };
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceProperties(
+void anv_GetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceProperties*                 pProperties)
 {
@@ -514,18 +512,16 @@ VkResult anv_GetPhysicalDeviceProperties(
    strcpy(pProperties->deviceName, pdevice->name);
    snprintf((char *)pProperties->pipelineCacheUUID, VK_UUID_LENGTH,
             "anv-%s", MESA_GIT_SHA1 + 4);
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceQueueFamilyProperties(
+void anv_GetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pCount,
     VkQueueFamilyProperties*                    pQueueFamilyProperties)
 {
    if (pQueueFamilyProperties == NULL) {
       *pCount = 1;
-      return VK_SUCCESS;
+      return;
    }
 
    assert(*pCount >= 1);
@@ -537,11 +533,9 @@ VkResult anv_GetPhysicalDeviceQueueFamilyProperties(
       .queueCount = 1,
       .supportsTimestamps = true,
    };
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceMemoryProperties(
+void anv_GetPhysicalDeviceMemoryProperties(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceMemoryProperties*           pMemoryProperties)
 {
@@ -565,8 +559,6 @@ VkResult anv_GetPhysicalDeviceMemoryProperties(
       .size = heap_size,
       .flags = VK_MEMORY_HEAP_HOST_LOCAL_BIT,
    };
-
-   return VK_SUCCESS;
 }
 
 PFN_vkVoidFunction anv_GetInstanceProcAddr(
@@ -795,7 +787,7 @@ VkResult anv_EnumerateDeviceLayerProperties(
    return vk_error(VK_ERROR_LAYER_NOT_PRESENT);
 }
 
-VkResult anv_GetDeviceQueue(
+void anv_GetDeviceQueue(
     VkDevice                                    _device,
     uint32_t                                    queueNodeIndex,
     uint32_t                                    queueIndex,
@@ -806,8 +798,6 @@ VkResult anv_GetDeviceQueue(
    assert(queueIndex == 0);
 
    *pQueue = anv_queue_to_handle(&device->queue);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_QueueSubmit(
@@ -1059,7 +1049,7 @@ VkResult anv_InvalidateMappedMemoryRanges(
    return anv_FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
 }
 
-VkResult anv_GetBufferMemoryRequirements(
+void anv_GetBufferMemoryRequirements(
     VkDevice                                    device,
     VkBuffer                                    _buffer,
     VkMemoryRequirements*                       pMemoryRequirements)
@@ -1079,11 +1069,9 @@ VkResult anv_GetBufferMemoryRequirements(
 
    pMemoryRequirements->size = buffer->size;
    pMemoryRequirements->alignment = 16;
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_GetImageMemoryRequirements(
+void anv_GetImageMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     _image,
     VkMemoryRequirements*                       pMemoryRequirements)
@@ -1103,26 +1091,23 @@ VkResult anv_GetImageMemoryRequirements(
 
    pMemoryRequirements->size = image->size;
    pMemoryRequirements->alignment = image->alignment;
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_GetImageSparseMemoryRequirements(
+void anv_GetImageSparseMemoryRequirements(
     VkDevice                                    device,
     VkImage                                     image,
     uint32_t*                                   pNumRequirements,
     VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
 {
-   return vk_error(VK_UNSUPPORTED);
+   stub();
 }
 
-VkResult anv_GetDeviceMemoryCommitment(
+void anv_GetDeviceMemoryCommitment(
     VkDevice                                    device,
     VkDeviceMemory                              memory,
     VkDeviceSize*                               pCommittedMemoryInBytes)
 {
    *pCommittedMemoryInBytes = 0;
-   stub_return(VK_SUCCESS);
 }
 
 VkResult anv_BindBufferMemory(
