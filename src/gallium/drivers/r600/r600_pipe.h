@@ -81,6 +81,17 @@
  */
 #define R600_MAX_CONST_BUFFER_SIZE (4096 * sizeof(float[4]))
 
+/* HW stages */
+#define R600_HW_STAGE_PS 0
+#define R600_HW_STAGE_VS 1
+#define R600_HW_STAGE_GS 2
+#define R600_HW_STAGE_ES 3
+#define EG_HW_STAGE_LS 4
+#define EG_HW_STAGE_HS 5
+
+#define R600_NUM_HW_STAGES 4
+#define EG_NUM_HW_STAGES 6
+
 #ifdef PIPE_ARCH_BIG_ENDIAN
 #define R600_BIG_ENDIAN 1
 #else
