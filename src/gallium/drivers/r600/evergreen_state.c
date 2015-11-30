@@ -2861,6 +2861,11 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_config_reg(cb, R_008E2C_SQ_LDS_RESOURCE_MGMT,
 			      S_008E2C_NUM_PS_LDS(0x1000) | S_008E2C_NUM_LS_LDS(0x1000));
 
+	r600_store_config_reg_seq(cb, R_008E20_SQ_STATIC_THREAD_MGMT1, 3);
+	r600_store_value(cb, 0xffffffff);
+	r600_store_value(cb, 0xffffffff);
+	r600_store_value(cb, 0xfffffffe);
+
 	r600_store_config_reg(cb, R_009100_SPI_CONFIG_CNTL, 0);
 	r600_store_config_reg(cb, R_00913C_SPI_CONFIG_CNTL_1, S_00913C_VTX_DONE_DELAY(4));
 
