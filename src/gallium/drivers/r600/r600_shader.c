@@ -869,7 +869,8 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 			ctx->shader->output[i].interpolate = d->Interp.Interpolate;
 			ctx->shader->output[i].write_mask = d->Declaration.UsageMask;
 			if (ctx->type == TGSI_PROCESSOR_VERTEX ||
-			    ctx->type == TGSI_PROCESSOR_GEOMETRY) {
+			    ctx->type == TGSI_PROCESSOR_GEOMETRY ||
+			    ctx->type == TGSI_PROCESSOR_TESS_EVAL) {
 				ctx->shader->output[i].spi_sid = r600_spi_sid(&ctx->shader->output[i]);
 				switch (d->Semantic.Name) {
 				case TGSI_SEMANTIC_CLIPDIST:
@@ -3231,10 +3232,15 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	}
 
 	/* Add stream outputs. */
-	if (!ring_outputs && ctx.type == TGSI_PROCESSOR_VERTEX &&
-	    so.num_outputs && !use_llvm)
-		emit_streamout(&ctx, &so, -1, NULL);
-
+	if (!use_llvm && so.num_outputs) {
+		bool emit = false;
+		if (!lds_outputs && !ring_outputs && ctx.type == TGSI_PROCESSOR_VERTEX)
+			emit = true;
+		if (!ring_outputs && ctx.type == TGSI_PROCESSOR_TESS_EVAL)
+			emit = true;
+		if (emit)
+			emit_streamout(&ctx, &so, -1, NULL);
+	}
 	pipeshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 	convert_edgeflag_to_int(&ctx);
 
@@ -3272,6 +3278,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			output[j].op = CF_OP_EXPORT;
 			switch (ctx.type) {
 			case TGSI_PROCESSOR_VERTEX:
+			case TGSI_PROCESSOR_TESS_EVAL:
 				switch (shader->output[i].name) {
 				case TGSI_SEMANTIC_POSITION:
 					output[j].array_base = 60;
@@ -3415,6 +3422,8 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 					goto out_err;
 				}
 				break;
+			case TGSI_PROCESSOR_TESS_CTRL:
+				break;
 			default:
 				R600_ERR("unsupported processor type %d\n", ctx.type);
 				r = -EINVAL;
@@ -3428,7 +3437,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		}
 
 		/* add fake position export */
-		if (ctx.type == TGSI_PROCESSOR_VERTEX && pos_emitted == false) {
+		if ((ctx.type == TGSI_PROCESSOR_VERTEX || ctx.type == TGSI_PROCESSOR_TESS_EVAL) && pos_emitted == false) {
 			memset(&output[j], 0, sizeof(struct r600_bytecode_output));
 			output[j].gpr = 0;
 			output[j].elem_size = 3;
@@ -3444,7 +3453,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		}
 
 		/* add fake param output for vertex shader if no param is exported */
-		if (ctx.type == TGSI_PROCESSOR_VERTEX && next_param_base == 0) {
+		if ((ctx.type == TGSI_PROCESSOR_VERTEX || ctx.type == TGSI_PROCESSOR_TESS_EVAL) && next_param_base == 0) {
 			memset(&output[j], 0, sizeof(struct r600_bytecode_output));
 			output[j].gpr = 0;
 			output[j].elem_size = 3;
