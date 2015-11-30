@@ -4392,20 +4392,8 @@ builtin_builder::_all(const glsl_type *type)
    ir_variable *v = in_var(type, "v");
    MAKE_SIG(glsl_type::bool_type, always_available, 1, v);
 
-   switch (type->vector_elements) {
-   case 2:
-      body.emit(ret(logic_and(swizzle_x(v), swizzle_y(v))));
-      break;
-   case 3:
-      body.emit(ret(logic_and(logic_and(swizzle_x(v), swizzle_y(v)),
-                              swizzle_z(v))));
-      break;
-   case 4:
-      body.emit(ret(logic_and(logic_and(logic_and(swizzle_x(v), swizzle_y(v)),
-                                        swizzle_z(v)),
-                              swizzle_w(v))));
-      break;
-   }
+   const unsigned vec_elem = v->type->vector_elements;
+   body.emit(ret(expr(ir_binop_all_equal, v, imm(true, vec_elem))));
 
    return sig;
 }
