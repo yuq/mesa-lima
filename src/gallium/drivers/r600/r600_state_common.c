@@ -1624,6 +1624,13 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	}
 
+	if (rctx->b.chip_class == EVERGREEN) {
+		if (!evergreen_adjust_gprs(rctx)) {
+			/* discard rendering */
+			return false;
+		}
+	}
+
 	blend_disable = (rctx->dual_src_blend &&
 			rctx->ps_shader->current->nr_ps_color_outputs < 2);
 

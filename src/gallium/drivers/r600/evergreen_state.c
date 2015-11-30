@@ -869,6 +869,33 @@ evergreen_create_sampler_view(struct pipe_context *ctx,
 						    tex->width0, tex->height0, 0);
 }
 
+static void evergreen_emit_config_state(struct r600_context *rctx, struct r600_atom *atom)
+{
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	struct r600_config_state *a = (struct r600_config_state*)atom;
+
+	radeon_set_config_reg_seq(cs, R_008C04_SQ_GPR_RESOURCE_MGMT_1, 3);
+	if (a->dyn_gpr_enabled) {
+		radeon_emit(cs, S_008C04_NUM_CLAUSE_TEMP_GPRS(rctx->r6xx_num_clause_temp_gprs));
+		radeon_emit(cs, 0);
+		radeon_emit(cs, 0);
+	} else {
+		radeon_emit(cs, a->sq_gpr_resource_mgmt_1);
+		radeon_emit(cs, a->sq_gpr_resource_mgmt_2);
+		radeon_emit(cs, a->sq_gpr_resource_mgmt_3);
+	}
+	radeon_set_config_reg(cs, R_008D8C_SQ_DYN_GPR_CNTL_PS_FLUSH_REQ, (a->dyn_gpr_enabled << 8));
+	if (a->dyn_gpr_enabled) {
+		radeon_set_context_reg(cs, R_028838_SQ_DYN_GPR_RESOURCE_LIMIT_1,
+				       S_028838_PS_GPRS(0x1e) |
+				       S_028838_VS_GPRS(0x1e) |
+				       S_028838_GS_GPRS(0x1e) |
+				       S_028838_ES_GPRS(0x1e) |
+				       S_028838_HS_GPRS(0x1e) |
+				       S_028838_LS_GPRS(0x1e)); /* workaround for hw issues with dyn gpr - must set all limits to 240 instead of 0, 0x1e == 240 / 8*/
+	}
+}
+
 static void evergreen_emit_clip_state(struct r600_context *rctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
@@ -2553,10 +2580,10 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0 + (128 * 4), 0x01000FFF);
 }
 
-void evergreen_init_common_regs(struct r600_command_buffer *cb,
-	enum chip_class ctx_chip_class,
-	enum radeon_family ctx_family,
-	int ctx_drm_minor)
+void evergreen_init_common_regs(struct r600_context *rctx, struct r600_command_buffer *cb,
+				enum chip_class ctx_chip_class,
+				enum radeon_family ctx_family,
+				int ctx_drm_minor)
 {
 	int ps_prio;
 	int vs_prio;
@@ -2567,31 +2594,23 @@ void evergreen_init_common_regs(struct r600_command_buffer *cb,
 	int cs_prio;
 	int ls_prio;
 
-	int num_ps_gprs;
-	int num_vs_gprs;
-	int num_gs_gprs;
-	int num_es_gprs;
-	int num_hs_gprs;
-	int num_ls_gprs;
-	int num_temp_gprs;
-
 	unsigned tmp;
 
 	ps_prio = 0;
 	vs_prio = 1;
 	gs_prio = 2;
 	es_prio = 3;
-	hs_prio = 0;
-	ls_prio = 0;
+	hs_prio = 3;
+	ls_prio = 3;
 	cs_prio = 0;
 
-	num_ps_gprs = 93;
-	num_vs_gprs = 46;
-	num_temp_gprs = 4;
-	num_gs_gprs = 31;
-	num_es_gprs = 31;
-	num_hs_gprs = 23;
-	num_ls_gprs = 23;
+	rctx->default_gprs[R600_HW_STAGE_PS] = 93;
+	rctx->default_gprs[R600_HW_STAGE_VS] = 46;
+	rctx->r6xx_num_clause_temp_gprs = 4;
+	rctx->default_gprs[R600_HW_STAGE_GS] = 31;
+	rctx->default_gprs[R600_HW_STAGE_ES] = 31;
+	rctx->default_gprs[EG_HW_STAGE_HS] = 23;
+	rctx->default_gprs[EG_HW_STAGE_LS] = 23;
 
 	tmp = 0;
 	switch (ctx_family) {
@@ -2614,40 +2633,12 @@ void evergreen_init_common_regs(struct r600_command_buffer *cb,
 	tmp |= S_008C00_GS_PRIO(gs_prio);
 	tmp |= S_008C00_ES_PRIO(es_prio);
 
-	/* enable dynamic GPR resource management */
-	if (ctx_drm_minor >= 7) {
-		r600_store_config_reg_seq(cb, R_008C00_SQ_CONFIG, 2);
-		r600_store_value(cb, tmp); /* R_008C00_SQ_CONFIG */
-		/* always set temp clauses */
-		r600_store_value(cb, S_008C04_NUM_CLAUSE_TEMP_GPRS(num_temp_gprs)); /* R_008C04_SQ_GPR_RESOURCE_MGMT_1 */
-		r600_store_config_reg_seq(cb, R_008C10_SQ_GLOBAL_GPR_RESOURCE_MGMT_1, 2);
-		r600_store_value(cb, 0); /* R_008C10_SQ_GLOBAL_GPR_RESOURCE_MGMT_1 */
-		r600_store_value(cb, 0); /* R_008C14_SQ_GLOBAL_GPR_RESOURCE_MGMT_2 */
-		r600_store_config_reg(cb, R_008D8C_SQ_DYN_GPR_CNTL_PS_FLUSH_REQ, (1 << 8));
-		r600_store_context_reg(cb, R_028838_SQ_DYN_GPR_RESOURCE_LIMIT_1,
-					S_028838_PS_GPRS(0x1e) |
-					S_028838_VS_GPRS(0x1e) |
-					S_028838_GS_GPRS(0x1e) |
-					S_028838_ES_GPRS(0x1e) |
-					S_028838_HS_GPRS(0x1e) |
-					S_028838_LS_GPRS(0x1e)); /* workaround for hw issues with dyn gpr - must set all limits to 240 instead of 0, 0x1e == 240 / 8*/
-	} else {
-		r600_store_config_reg_seq(cb, R_008C00_SQ_CONFIG, 4);
-		r600_store_value(cb, tmp); /* R_008C00_SQ_CONFIG */
+	r600_store_config_reg_seq(cb, R_008C00_SQ_CONFIG, 1);
+	r600_store_value(cb, tmp); /* R_008C00_SQ_CONFIG */
 
-		tmp = S_008C04_NUM_PS_GPRS(num_ps_gprs);
-		tmp |= S_008C04_NUM_VS_GPRS(num_vs_gprs);
-		tmp |= S_008C04_NUM_CLAUSE_TEMP_GPRS(num_temp_gprs);
-		r600_store_value(cb, tmp); /* R_008C04_SQ_GPR_RESOURCE_MGMT_1 */
-
-		tmp = S_008C08_NUM_GS_GPRS(num_gs_gprs);
-		tmp |= S_008C08_NUM_ES_GPRS(num_es_gprs);
-		r600_store_value(cb, tmp); /* R_008C08_SQ_GPR_RESOURCE_MGMT_2 */
-
-		tmp = S_008C0C_NUM_HS_GPRS(num_hs_gprs);
-		tmp |= S_008C0C_NUM_HS_GPRS(num_ls_gprs);
-		r600_store_value(cb, tmp); /* R_008C0C_SQ_GPR_RESOURCE_MGMT_3 */
-	}
+	r600_store_config_reg_seq(cb, R_008C10_SQ_GLOBAL_GPR_RESOURCE_MGMT_1, 2);
+	r600_store_value(cb, 0); /* R_008C10_SQ_GLOBAL_GPR_RESOURCE_MGMT_1 */
+	r600_store_value(cb, 0); /* R_008C14_SQ_GLOBAL_GPR_RESOURCE_MGMT_2 */
 
 	/* The cs checker requires this register to be set. */
 	r600_store_context_reg(cb, R_028800_DB_DEPTH_CONTROL, 0);
@@ -2694,7 +2685,7 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_value(cb, PKT3(PKT3_EVENT_WRITE, 0, 0));
 	r600_store_value(cb, EVENT_TYPE(EVENT_TYPE_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 
-	evergreen_init_common_regs(cb, rctx->b.chip_class,
+	evergreen_init_common_regs(rctx, cb, rctx->b.chip_class,
 				   rctx->b.family, rctx->screen->b.info.drm_minor);
 
 	family = rctx->b.family;
@@ -3693,7 +3684,11 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	 * or piglit regression).
 	 * !!!
 	 */
-
+	if (rctx->b.chip_class == EVERGREEN) {
+		r600_init_atom(rctx, &rctx->config_state.atom, id++, evergreen_emit_config_state, 11);
+		if (rctx->screen->b.info.drm_minor >= 7)
+			rctx->config_state.dyn_gpr_enabled = true;
+	}
 	r600_init_atom(rctx, &rctx->framebuffer.atom, id++, evergreen_emit_framebuffer_state, 0);
 	/* shader const */
 	r600_init_atom(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX].atom, id++, evergreen_emit_vs_constant_buffers, 0);
@@ -3920,4 +3915,123 @@ void evergreen_set_lds_alloc(struct r600_context *rctx,
 			     uint32_t lds_alloc)
 {
 	radeon_set_context_reg(cs, R_0288E8_SQ_LDS_ALLOC, lds_alloc);
+}
+
+/* on evergreen if you are running tessellation you need to disable dynamic
+   GPRs to workaround a hardware bug.*/
+bool evergreen_adjust_gprs(struct r600_context *rctx)
+{
+	unsigned num_gprs[EG_NUM_HW_STAGES];
+	unsigned def_gprs[EG_NUM_HW_STAGES];
+	unsigned cur_gprs[EG_NUM_HW_STAGES];
+	unsigned new_gprs[EG_NUM_HW_STAGES];
+	unsigned def_num_clause_temp_gprs = rctx->r6xx_num_clause_temp_gprs;
+	unsigned max_gprs;
+	unsigned i;
+	unsigned total_gprs;
+	unsigned tmp[3];
+	bool rework = false, set_default = false, set_dirty = false;
+	max_gprs = 0;
+	for (i = 0; i < EG_NUM_HW_STAGES; i++) {
+		def_gprs[i] = rctx->default_gprs[i];
+		max_gprs += def_gprs[i];
+	}
+	max_gprs += def_num_clause_temp_gprs * 2;
+
+	/* if we have no TESS and dyn gpr is enabled then do nothing. */
+	if (!rctx->hw_shader_stages[EG_HW_STAGE_HS].shader || rctx->screen->b.info.drm_minor < 7) {
+		if (rctx->config_state.dyn_gpr_enabled)
+			return true;
+
+		/* transition back to dyn gpr enabled state */
+		rctx->config_state.dyn_gpr_enabled = true;
+		r600_mark_atom_dirty(rctx, &rctx->config_state.atom);
+		rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE;
+		return true;
+	}
+
+
+	/* gather required shader gprs */
+	for (i = 0; i < EG_NUM_HW_STAGES; i++) {
+		if (rctx->hw_shader_stages[i].shader)
+			num_gprs[i] = rctx->hw_shader_stages[i].shader->shader.bc.ngpr;
+		else
+			num_gprs[i] = 0;
+	}
+
+	cur_gprs[R600_HW_STAGE_PS] = G_008C04_NUM_PS_GPRS(rctx->config_state.sq_gpr_resource_mgmt_1);
+	cur_gprs[R600_HW_STAGE_VS] = G_008C04_NUM_VS_GPRS(rctx->config_state.sq_gpr_resource_mgmt_1);
+	cur_gprs[R600_HW_STAGE_GS] = G_008C08_NUM_GS_GPRS(rctx->config_state.sq_gpr_resource_mgmt_2);
+	cur_gprs[R600_HW_STAGE_ES] = G_008C08_NUM_ES_GPRS(rctx->config_state.sq_gpr_resource_mgmt_2);
+	cur_gprs[EG_HW_STAGE_LS] = G_008C0C_NUM_LS_GPRS(rctx->config_state.sq_gpr_resource_mgmt_3);
+	cur_gprs[EG_HW_STAGE_HS] = G_008C0C_NUM_HS_GPRS(rctx->config_state.sq_gpr_resource_mgmt_3);
+
+	total_gprs = 0;
+	for (i = 0; i < EG_NUM_HW_STAGES; i++)	{
+		new_gprs[i] = num_gprs[i];
+		total_gprs += num_gprs[i];
+	}
+
+	if (total_gprs > (max_gprs - (2 * def_num_clause_temp_gprs)))
+		return false;
+
+	for (i = 0; i < EG_NUM_HW_STAGES; i++) {
+		if (new_gprs[i] > cur_gprs[i]) {
+			rework = true;
+			break;
+		}
+	}
+
+	if (rctx->config_state.dyn_gpr_enabled) {
+		set_dirty = true;
+		rctx->config_state.dyn_gpr_enabled = false;
+	}
+
+	if (rework) {
+		set_default = true;
+		for (i = 0; i < EG_NUM_HW_STAGES; i++) {
+			if (new_gprs[i] > def_gprs[i])
+				set_default = false;
+		}
+
+		if (set_default) {
+			for (i = 0; i < EG_NUM_HW_STAGES; i++) {
+				new_gprs[i] = def_gprs[i];
+			}
+		} else {
+			unsigned ps_value = max_gprs;
+
+			ps_value -= (def_num_clause_temp_gprs * 2);
+			for (i = R600_HW_STAGE_VS; i < EG_NUM_HW_STAGES; i++)
+				ps_value -= new_gprs[i];
+
+			new_gprs[R600_HW_STAGE_PS] = ps_value;
+		}
+
+		tmp[0] = S_008C04_NUM_PS_GPRS(new_gprs[R600_HW_STAGE_PS]) |
+			S_008C04_NUM_VS_GPRS(new_gprs[R600_HW_STAGE_VS]) |
+			S_008C04_NUM_CLAUSE_TEMP_GPRS(def_num_clause_temp_gprs);
+
+		tmp[1] = S_008C08_NUM_ES_GPRS(new_gprs[R600_HW_STAGE_ES]) |
+			S_008C08_NUM_GS_GPRS(new_gprs[R600_HW_STAGE_GS]);
+
+		tmp[2] = S_008C0C_NUM_HS_GPRS(new_gprs[EG_HW_STAGE_HS]) |
+			S_008C0C_NUM_LS_GPRS(new_gprs[EG_HW_STAGE_LS]);
+
+		if (rctx->config_state.sq_gpr_resource_mgmt_1 != tmp[0] ||
+		    rctx->config_state.sq_gpr_resource_mgmt_2 != tmp[1] ||
+		    rctx->config_state.sq_gpr_resource_mgmt_3 != tmp[2]) {
+			rctx->config_state.sq_gpr_resource_mgmt_1 = tmp[0];
+			rctx->config_state.sq_gpr_resource_mgmt_2 = tmp[1];
+			rctx->config_state.sq_gpr_resource_mgmt_3 = tmp[2];
+			set_dirty = true;
+		}
+	}
+
+
+	if (set_dirty) {
+		r600_mark_atom_dirty(rctx, &rctx->config_state.atom);
+		rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE;
+	}
+	return true;
 }

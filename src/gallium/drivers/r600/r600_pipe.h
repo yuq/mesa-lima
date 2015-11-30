@@ -38,7 +38,7 @@
 
 #include "tgsi/tgsi_scan.h"
 
-#define R600_NUM_ATOMS 51
+#define R600_NUM_ATOMS 52
 
 #define R600_MAX_VIEWPORTS 16
 
@@ -206,6 +206,8 @@ struct r600_config_state {
 	struct r600_atom atom;
 	unsigned sq_gpr_resource_mgmt_1;
 	unsigned sq_gpr_resource_mgmt_2;
+	unsigned sq_gpr_resource_mgmt_3;
+	bool dyn_gpr_enabled;
 };
 
 struct r600_stencil_ref
@@ -441,6 +443,7 @@ struct r600_context {
 	boolean				has_vertex_cache;
 	boolean				keep_tiling_flags;
 	unsigned			default_gprs[EG_NUM_HW_STAGES];
+	unsigned                        current_gprs[EG_NUM_HW_STAGES];
 	unsigned			r6xx_num_clause_temp_gprs;
 
 	/* Miscellaneous state objects. */
@@ -608,7 +611,8 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 				     const struct pipe_sampler_view *state,
 				     unsigned width0, unsigned height0,
 				     unsigned force_level);
-void evergreen_init_common_regs(struct r600_command_buffer *cb,
+void evergreen_init_common_regs(struct r600_context *ctx,
+				struct r600_command_buffer *cb,
 				enum chip_class ctx_chip_class,
 				enum radeon_family ctx_family,
 				int ctx_drm_minor);
@@ -639,7 +643,7 @@ void evergreen_init_color_surface(struct r600_context *rctx,
 void evergreen_init_color_surface_rat(struct r600_context *rctx,
 					struct r600_surface *surf);
 void evergreen_update_db_shader_control(struct r600_context * rctx);
-
+bool evergreen_adjust_gprs(struct r600_context *rctx);
 /* r600_blit.c */
 void r600_init_blit_functions(struct r600_context *rctx);
 void r600_decompress_depth_textures(struct r600_context *rctx,
