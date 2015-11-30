@@ -748,7 +748,6 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
       const int output_vertex_size_owords =
          gs_prog_data->output_vertex_size_hwords * 2;
 
-      fs_reg offset;
       if (gs_vertex_count.file == IMM) {
          per_slot_offsets = brw_imm_ud(output_vertex_size_owords *
                                        gs_vertex_count.ud);
