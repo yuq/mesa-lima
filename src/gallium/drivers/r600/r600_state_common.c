@@ -35,6 +35,7 @@
 #include "util/u_math.h"
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_scan.h"
+#include "tgsi/tgsi_ureg.h"
 
 void r600_init_command_buffer(struct r600_command_buffer *cb, unsigned num_dw)
 {
@@ -1376,6 +1377,35 @@ static void r600_update_clip_state(struct r600_context *rctx,
 				r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
 	}
 }
+
+static void r600_generate_fixed_func_tcs(struct r600_context *rctx)
+{
+	struct ureg_src const0, const1;
+	struct ureg_dst tessouter, tessinner;
+	struct ureg_program *ureg = ureg_create(TGSI_PROCESSOR_TESS_CTRL);
+
+	if (!ureg)
+		return; /* if we get here, we're screwed */
+
+	assert(!rctx->fixed_func_tcs_shader);
+
+	ureg_DECL_constant2D(ureg, 0, 3, R600_LDS_INFO_CONST_BUFFER);
+	const0 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 2),
+				    R600_LDS_INFO_CONST_BUFFER);
+	const1 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 3),
+				    R600_LDS_INFO_CONST_BUFFER);
+
+	tessouter = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSOUTER, 0);
+	tessinner = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSINNER, 0);
+
+	ureg_MOV(ureg, tessouter, const0);
+	ureg_MOV(ureg, tessinner, const1);
+	ureg_END(ureg);
+
+	rctx->fixed_func_tcs_shader =
+		ureg_create_shader_and_destroy(ureg, &rctx->b.b);
+}
+
 #define SELECT_SHADER_OR_FAIL(x) do {					\
 		r600_shader_select(ctx, rctx->x##_shader, &x##_dirty);	\
 		if (unlikely(!rctx->x##_shader->current))		\
@@ -1411,7 +1441,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 {
 	struct pipe_context * ctx = (struct pipe_context*)rctx;
 	bool ps_dirty = false, vs_dirty = false, gs_dirty = false;
-	bool tcs_dirty = false, tes_dirty = false;
+	bool tcs_dirty = false, tes_dirty = false, fixed_func_tcs_dirty = false;
 	bool blend_disable;
 	bool need_buf_const;
 	struct r600_pipe_shader *clip_so_current = NULL;
@@ -1445,6 +1475,16 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		SELECT_SHADER_OR_FAIL(tcs);
 
 		UPDATE_SHADER(EG_HW_STAGE_HS, tcs);
+	} else if (rctx->tes_shader) {
+		if (!rctx->fixed_func_tcs_shader) {
+			r600_generate_fixed_func_tcs(rctx);
+			if (!rctx->fixed_func_tcs_shader)
+				return false;
+
+		}
+		SELECT_SHADER_OR_FAIL(fixed_func_tcs);
+
+		UPDATE_SHADER(EG_HW_STAGE_HS, fixed_func_tcs);
 	} else
 		SET_NULL_SHADER(EG_HW_STAGE_HS);
 

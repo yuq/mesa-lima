@@ -76,6 +76,9 @@ static void r600_destroy_context(struct pipe_context *context)
 	pipe_resource_reference((struct pipe_resource**)&rctx->dummy_cmask, NULL);
 	pipe_resource_reference((struct pipe_resource**)&rctx->dummy_fmask, NULL);
 
+	if (rctx->fixed_func_tcs_shader)
+		rctx->b.b.delete_tcs_state(&rctx->b.b, rctx->fixed_func_tcs_shader);
+
 	if (rctx->dummy_pixel_shader) {
 		rctx->b.b.delete_fs_state(&rctx->b.b, rctx->dummy_pixel_shader);
 	}
