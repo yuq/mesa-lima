@@ -3496,7 +3496,7 @@ fallback:
 void evergreen_init_state_functions(struct r600_context *rctx)
 {
 	unsigned id = 1;
-
+	unsigned i;
 	/* !!!
 	 *  To avoid GPU lockup registers must be emited in a specific order
 	 * (no kidding ...). The order below is important and have been
@@ -3555,10 +3555,8 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_add_atom(rctx, &rctx->b.render_cond_atom, id++);
 	r600_add_atom(rctx, &rctx->b.streamout.begin_atom, id++);
 	r600_add_atom(rctx, &rctx->b.streamout.enable_atom, id++);
-	r600_init_atom(rctx, &rctx->vertex_shader.atom, id++, r600_emit_shader, 23);
-	r600_init_atom(rctx, &rctx->pixel_shader.atom, id++, r600_emit_shader, 0);
-	r600_init_atom(rctx, &rctx->geometry_shader.atom, id++, r600_emit_shader, 0);
-	r600_init_atom(rctx, &rctx->export_shader.atom, id++, r600_emit_shader, 0);
+	for (i = 0; i < EG_NUM_HW_STAGES; i++)
+		r600_init_atom(rctx, &rctx->hw_shader_stages[i].atom, id++, r600_emit_shader, 0);
 	r600_init_atom(rctx, &rctx->shader_stages.atom, id++, evergreen_emit_shader_stages, 6);
 	r600_init_atom(rctx, &rctx->gs_rings.atom, id++, evergreen_emit_gs_rings, 26);
 

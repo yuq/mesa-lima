@@ -300,7 +300,7 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	r600_mark_atom_dirty(ctx, &ctx->db_misc_state.atom);
 	r600_mark_atom_dirty(ctx, &ctx->db_state.atom);
 	r600_mark_atom_dirty(ctx, &ctx->framebuffer.atom);
-	r600_mark_atom_dirty(ctx, &ctx->pixel_shader.atom);
+	r600_mark_atom_dirty(ctx, &ctx->hw_shader_stages[R600_HW_STAGE_PS].atom);
 	r600_mark_atom_dirty(ctx, &ctx->poly_offset_state.atom);
 	r600_mark_atom_dirty(ctx, &ctx->vgt_state.atom);
 	r600_mark_atom_dirty(ctx, &ctx->sample_mask.atom);
@@ -315,13 +315,13 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	}
 	r600_mark_atom_dirty(ctx, &ctx->stencil_ref.atom);
 	r600_mark_atom_dirty(ctx, &ctx->vertex_fetch_shader.atom);
-	r600_mark_atom_dirty(ctx, &ctx->export_shader.atom);
+	r600_mark_atom_dirty(ctx, &ctx->hw_shader_stages[R600_HW_STAGE_ES].atom);
 	r600_mark_atom_dirty(ctx, &ctx->shader_stages.atom);
 	if (ctx->gs_shader) {
-		r600_mark_atom_dirty(ctx, &ctx->geometry_shader.atom);
+		r600_mark_atom_dirty(ctx, &ctx->hw_shader_stages[R600_HW_STAGE_GS].atom);
 		r600_mark_atom_dirty(ctx, &ctx->gs_rings.atom);
 	}
-	r600_mark_atom_dirty(ctx, &ctx->vertex_shader.atom);
+	r600_mark_atom_dirty(ctx, &ctx->hw_shader_stages[R600_HW_STAGE_VS].atom);
 	r600_mark_atom_dirty(ctx, &ctx->b.streamout.enable_atom);
 	r600_mark_atom_dirty(ctx, &ctx->b.render_cond_atom);
 

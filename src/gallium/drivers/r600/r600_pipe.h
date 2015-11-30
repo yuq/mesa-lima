@@ -38,7 +38,7 @@
 
 #include "tgsi/tgsi_scan.h"
 
-#define R600_NUM_ATOMS 43
+#define R600_NUM_ATOMS 45
 
 #define R600_MAX_VIEWPORTS 16
 
@@ -481,10 +481,7 @@ struct r600_context {
 	struct r600_viewport_state	viewport;
 	/* Shaders and shader resources. */
 	struct r600_cso_state		vertex_fetch_shader;
-	struct r600_shader_state	vertex_shader;
-	struct r600_shader_state	pixel_shader;
-	struct r600_shader_state	geometry_shader;
-	struct r600_shader_state	export_shader;
+	struct r600_shader_state        hw_shader_stages[EG_NUM_HW_STAGES];
 	struct r600_cs_shader_state	cs_shader_state;
 	struct r600_shader_stages_state shader_stages;
 	struct r600_gs_rings_state	gs_rings;

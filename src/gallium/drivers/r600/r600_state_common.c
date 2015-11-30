@@ -1327,9 +1327,9 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 
 		/* gs_shader provides GS and VS (copy shader) */
-		if (unlikely(rctx->geometry_shader.shader != rctx->gs_shader->current)) {
-			update_shader_atom(ctx, &rctx->geometry_shader, rctx->gs_shader->current);
-			update_shader_atom(ctx, &rctx->vertex_shader, rctx->gs_shader->current->gs_copy_shader);
+		if (unlikely(rctx->hw_shader_stages[R600_HW_STAGE_GS].shader != rctx->gs_shader->current)) {
+			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_GS], rctx->gs_shader->current);
+			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_VS], rctx->gs_shader->current->gs_copy_shader);
 			/* Update clip misc state. */
 			r600_update_clip_state(rctx, rctx->gs_shader->current->gs_copy_shader);
 			rctx->b.streamout.enabled_stream_buffers_mask = rctx->gs_shader->current->gs_copy_shader->enabled_stream_buffers_mask;
@@ -1340,13 +1340,13 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 			return false;
 
 		/* vs_shader is used as ES */
-		if (unlikely(vs_dirty || rctx->export_shader.shader != rctx->vs_shader->current)) {
-			update_shader_atom(ctx, &rctx->export_shader, rctx->vs_shader->current);
+		if (unlikely(vs_dirty || rctx->hw_shader_stages[R600_HW_STAGE_ES].shader != rctx->vs_shader->current)) {
+			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_ES], rctx->vs_shader->current);
 		}
 	} else {
-		if (unlikely(rctx->geometry_shader.shader)) {
-			update_shader_atom(ctx, &rctx->geometry_shader, NULL);
-			update_shader_atom(ctx, &rctx->export_shader, NULL);
+		if (unlikely(rctx->hw_shader_stages[R600_HW_STAGE_GS].shader)) {
+			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_GS], NULL);
+			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_ES], NULL);
 			rctx->shader_stages.geom_enable = false;
 			r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 		}
@@ -1355,8 +1355,8 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		if (unlikely(!rctx->vs_shader->current))
 			return false;
 
-		if (unlikely(vs_dirty || rctx->vertex_shader.shader != rctx->vs_shader->current)) {
-			update_shader_atom(ctx, &rctx->vertex_shader, rctx->vs_shader->current);
+		if (unlikely(vs_dirty || rctx->hw_shader_stages[R600_HW_STAGE_VS].shader != rctx->vs_shader->current)) {
+			update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_VS], rctx->vs_shader->current);
 
 			/* Update clip misc state. */
 			r600_update_clip_state(rctx, rctx->vs_shader->current);
@@ -1364,8 +1364,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	}
 
-
-	if (unlikely(ps_dirty || rctx->pixel_shader.shader != rctx->ps_shader->current ||
+	if (unlikely(ps_dirty || rctx->hw_shader_stages[R600_HW_STAGE_PS].shader != rctx->ps_shader->current ||
 		rctx->rasterizer->sprite_coord_enable != rctx->ps_shader->current->sprite_coord_enable ||
 		rctx->rasterizer->flatshade != rctx->ps_shader->current->flatshade)) {
 
@@ -1394,7 +1393,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 
 		r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
-		update_shader_atom(ctx, &rctx->pixel_shader, rctx->ps_shader->current);
+		update_shader_atom(ctx, &rctx->hw_shader_stages[R600_HW_STAGE_PS], rctx->ps_shader->current);
 	}
 
 	if (rctx->b.chip_class >= EVERGREEN) {
