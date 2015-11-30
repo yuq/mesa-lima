@@ -280,6 +280,28 @@ static void print_src(sb_ostream &s, bc_alu &alu, unsigned idx)
 		need_sel = 0;
 		need_chan = 0;
 		switch (sel) {
+		case ALU_SRC_LDS_OQ_A:
+			s << "LDS_OQ_A";
+			need_chan = 1;
+			break;
+		case ALU_SRC_LDS_OQ_B:
+			s << "LDS_OQ_B";
+			need_chan = 1;
+			break;
+		case ALU_SRC_LDS_OQ_A_POP:
+			s << "LDS_OQ_A_POP";
+			need_chan = 1;
+			break;
+		case ALU_SRC_LDS_OQ_B_POP:
+			s << "LDS_OQ_B_POP";
+			need_chan = 1;
+			break;
+		case ALU_SRC_LDS_DIRECT_A:
+			s << "LDS_A["; s.print_zw_hex(src->value.u, 8); s << "]";
+			break;
+		case ALU_SRC_LDS_DIRECT_B:
+			s << "LDS_B["; s.print_zw_hex(src->value.u, 8); s << "]";
+			break;
 		case ALU_SRC_PS:
 			s << "PS";
 			break;
@@ -361,6 +383,10 @@ void bc_dump::dump(alu_node& n) {
 				" Unknown MOVA_INT dest" };
 			s << mova_str[std::min(n.bc.dst_gpr, 4u)];  // CM_V_SQ_MOVA_DST_AR_*
 		}
+	}
+
+	if (n.bc.lds_idx_offset) {
+		s << " IDX_OFFSET:" << n.bc.lds_idx_offset;
 	}
 
 	sblog << s.str() << "\n";

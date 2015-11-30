@@ -518,6 +518,8 @@ struct bc_alu {
 
 	unsigned slot:3;
 
+	unsigned lds_idx_offset:6;
+
 	alu_op_flags slot_flags;
 
 	void set_op(unsigned op) {

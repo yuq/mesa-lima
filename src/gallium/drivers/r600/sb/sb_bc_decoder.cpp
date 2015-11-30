@@ -310,16 +310,53 @@ int bc_decoder::decode_alu(unsigned & i, bc_alu& bc) {
 		ALU_WORD1_OP3_ALL w1(dw1);
 		bc.set_op(r600_isa_alu_by_opcode(ctx.isa, w1.get_ALU_INST(), 1));
 
-		bc.bank_swizzle = w1.get_BANK_SWIZZLE();
-		bc.clamp = w1.get_CLAMP();
-		bc.dst_chan = w1.get_DST_CHAN();
-		bc.dst_gpr = w1.get_DST_GPR();
-		bc.dst_rel = w1.get_DST_REL();
+		if (bc.op == ALU_OP3_LDS_IDX_OP) {
+			ALU_WORD0_LDS_IDX_OP_EGCM iw0(dw0);
+			ALU_WORD1_LDS_IDX_OP_EGCM iw1(dw1);
+			bc.index_mode = iw0.get_INDEX_MODE();
+			bc.last = iw0.get_LAST();
+			bc.pred_sel = iw0.get_PRED_SEL();
+			bc.src[0].chan = iw0.get_SRC0_CHAN();
+			bc.src[0].sel = iw0.get_SRC0_SEL();
+			bc.src[0].rel = iw0.get_SRC0_REL();
 
-		bc.src[2].chan = w1.get_SRC2_CHAN();
-		bc.src[2].sel = w1.get_SRC2_SEL();
-		bc.src[2].neg = w1.get_SRC2_NEG();
-		bc.src[2].rel = w1.get_SRC2_REL();
+			bc.src[1].chan = iw0.get_SRC1_CHAN();
+			bc.src[1].sel = iw0.get_SRC1_SEL();
+			bc.src[1].rel = iw0.get_SRC1_REL();
+
+			bc.bank_swizzle = iw1.get_BANK_SWIZZLE();
+			bc.src[2].chan = iw1.get_SRC2_CHAN();
+			bc.src[2].sel = iw1.get_SRC2_SEL();
+			bc.src[2].rel = iw1.get_SRC2_REL();
+			bc.dst_chan = iw1.get_DST_CHAN();
+			// TODO: clean up
+			for (size_t k = 0; k < sizeof(alu_op_table) / sizeof(alu_op_table[0]); k++) {
+				if (((alu_op_table[k].opcode[1] >> 8) & 0xff) == iw1.get_LDS_OP()) {
+					bc.op_ptr = &alu_op_table[k];
+					bc.op = k;
+					break;
+				}
+			}
+			bc.lds_idx_offset =
+				(iw0.get_IDX_OFFSET_4() << 4) |
+				(iw0.get_IDX_OFFSET_5() << 5) |
+				(iw1.get_IDX_OFFSET_1() << 1) |
+				(iw1.get_IDX_OFFSET_0() << 0) |
+				(iw1.get_IDX_OFFSET_2() << 2) |
+				(iw1.get_IDX_OFFSET_3() << 3);
+		}
+		else {
+			bc.bank_swizzle = w1.get_BANK_SWIZZLE();
+			bc.clamp = w1.get_CLAMP();
+			bc.dst_chan = w1.get_DST_CHAN();
+			bc.dst_gpr = w1.get_DST_GPR();
+			bc.dst_rel = w1.get_DST_REL();
+
+			bc.src[2].chan = w1.get_SRC2_CHAN();
+			bc.src[2].sel = w1.get_SRC2_SEL();
+			bc.src[2].neg = w1.get_SRC2_NEG();
+			bc.src[2].rel = w1.get_SRC2_REL();
+		}
 
 	} else { // op2
 		if (ctx.is_r600()) {
