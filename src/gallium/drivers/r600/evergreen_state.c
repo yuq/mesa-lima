@@ -2332,7 +2332,7 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 	struct r600_command_buffer *cb = &rctx->start_cs_cmd;
 	int tmp, i;
 
-	r600_init_command_buffer(cb, 326);
+	r600_init_command_buffer(cb, 336);
 
 	/* This must be first. */
 	r600_store_value(cb, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
@@ -2366,9 +2366,9 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_context_reg_seq(cb, R_028A10_VGT_OUTPUT_PATH_CNTL, 13);
 	r600_store_value(cb, 0); /* R_028A10_VGT_OUTPUT_PATH_CNTL */
 	r600_store_value(cb, 0); /* R_028A14_VGT_HOS_CNTL */
-	r600_store_value(cb, 0); /* R_028A18_VGT_HOS_MAX_TESS_LEVEL */
-	r600_store_value(cb, 0); /* R_028A1C_VGT_HOS_MIN_TESS_LEVEL */
-	r600_store_value(cb, 0); /* R_028A20_VGT_HOS_REUSE_DEPTH */
+	r600_store_value(cb, fui(64)); /* R_028A18_VGT_HOS_MAX_TESS_LEVEL */
+	r600_store_value(cb, fui(0)); /* R_028A1C_VGT_HOS_MIN_TESS_LEVEL */
+	r600_store_value(cb, 16); /* R_028A20_VGT_HOS_REUSE_DEPTH */
 	r600_store_value(cb, 0); /* R_028A24_VGT_GROUP_PRIM_TYPE */
 	r600_store_value(cb, 0); /* R_028A28_VGT_GROUP_FIRST_DECR */
 	r600_store_value(cb, 0); /* R_028A2C_VGT_GROUP_DECR */
@@ -2477,11 +2477,16 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_context_reg_seq(cb, R_0286E4_SPI_PS_IN_CONTROL_2, 2);
 	r600_store_value(cb, 0); /* R_0286E4_SPI_PS_IN_CONTROL_2 */
 	r600_store_value(cb, 0); /* R_0286E8_SPI_COMPUTE_INPUT_CNTL */
-	r600_store_context_reg(cb, R_028B54_VGT_SHADER_STAGES_EN, 0);
 
+	r600_store_context_reg_seq(cb, R_028B54_VGT_SHADER_STAGES_EN, 2);
+	r600_store_value(cb, 0); /* R028B54_VGT_SHADER_STAGES_EN */
+	r600_store_value(cb, 0); /* R028B58_VGT_LS_HS_CONFIG */
+	r600_store_context_reg(cb, R_028B6C_VGT_TF_PARAM, 0);
 	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0, 0x01000FFF);
 	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0 + (32 * 4), 0x01000FFF);
 	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0 + (64 * 4), 0x01000FFF);
+	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0 + (96 * 4), 0x01000FFF);
+	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0 + (128 * 4), 0x01000FFF);
 }
 
 void evergreen_init_common_regs(struct r600_command_buffer *cb,
@@ -2614,7 +2619,7 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 		return;
 	}
 
-	r600_init_command_buffer(cb, 330);
+	r600_init_command_buffer(cb, 342);
 
 	/* This must be first. */
 	r600_store_value(cb, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
@@ -2821,9 +2826,9 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_context_reg_seq(cb, R_028A10_VGT_OUTPUT_PATH_CNTL, 13);
 	r600_store_value(cb, 0); /* R_028A10_VGT_OUTPUT_PATH_CNTL */
 	r600_store_value(cb, 0); /* R_028A14_VGT_HOS_CNTL */
-	r600_store_value(cb, 0); /* R_028A18_VGT_HOS_MAX_TESS_LEVEL */
-	r600_store_value(cb, 0); /* R_028A1C_VGT_HOS_MIN_TESS_LEVEL */
-	r600_store_value(cb, 0); /* R_028A20_VGT_HOS_REUSE_DEPTH */
+	r600_store_value(cb, fui(64)); /* R_028A18_VGT_HOS_MAX_TESS_LEVEL */
+	r600_store_value(cb, fui(1.0)); /* R_028A1C_VGT_HOS_MIN_TESS_LEVEL */
+	r600_store_value(cb, 16); /* R_028A20_VGT_HOS_REUSE_DEPTH */
 	r600_store_value(cb, 0); /* R_028A24_VGT_GROUP_PRIM_TYPE */
 	r600_store_value(cb, 0); /* R_028A28_VGT_GROUP_FIRST_DECR */
 	r600_store_value(cb, 0); /* R_028A2C_VGT_GROUP_DECR */
@@ -2927,11 +2932,27 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_value(cb, 0); /* R_0288E8_SQ_LDS_ALLOC */
 	r600_store_value(cb, 0); /* R_0288EC_SQ_LDS_ALLOC_PS */
 
-	r600_store_context_reg(cb, R_028B54_VGT_SHADER_STAGES_EN, 0);
+	if (rctx->b.family == CHIP_CAICOS) {
+		r600_store_context_reg_seq(cb, R_028B54_VGT_SHADER_STAGES_EN, 2);
+		r600_store_value(cb, 0); /* R028B54_VGT_SHADER_STAGES_EN */
+		r600_store_value(cb, 0); /* R028B58_VGT_LS_HS_CONFIG */
+		r600_store_context_reg(cb, R_028B6C_VGT_TF_PARAM, 0);
+	} else {
+		r600_store_context_reg_seq(cb, R_028B54_VGT_SHADER_STAGES_EN, 7);
+		r600_store_value(cb, 0); /* R028B54_VGT_SHADER_STAGES_EN */
+		r600_store_value(cb, 0); /* R028B58_VGT_LS_HS_CONFIG */
+		r600_store_value(cb, 0); /* R028B5C_VGT_LS_SIZE */
+		r600_store_value(cb, 0); /* R028B60_VGT_HS_SIZE */
+		r600_store_value(cb, 0); /* R028B64_VGT_LS_HS_ALLOC */
+		r600_store_value(cb, 0); /* R028B68_VGT_HS_PATCH_CONST */
+		r600_store_value(cb, 0); /* R028B68_VGT_TF_PARAM */
+	}
 
 	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0, 0x01000FFF);
 	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0 + (32 * 4), 0x01000FFF);
 	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0 + (64 * 4), 0x01000FFF);
+	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0 + (96 * 4), 0x01000FFF);
+	eg_store_loop_const(cb, R_03A200_SQ_LOOP_CONST_0 + (128 * 4), 0x01000FFF);
 }
 
 void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader *shader)
