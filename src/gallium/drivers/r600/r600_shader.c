@@ -393,10 +393,16 @@ static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 		   case TGSI_FILE_CONSTANT:
 			   break;
 		   case TGSI_FILE_INPUT:
-			   if (ctx->type == TGSI_PROCESSOR_GEOMETRY)
+			   if (ctx->type == TGSI_PROCESSOR_GEOMETRY ||
+			       ctx->type == TGSI_PROCESSOR_TESS_CTRL ||
+			       ctx->type == TGSI_PROCESSOR_TESS_EVAL)
+				   break;
+		   case TGSI_FILE_OUTPUT:
+			   if (ctx->type == TGSI_PROCESSOR_TESS_CTRL)
 				   break;
 		   default:
-			   R600_ERR("unsupported src %d (dimension %d)\n", j,
+			   R600_ERR("unsupported src %d (file %d, dimension %d)\n", j,
+				    i->Src[j].Register.File,
 				    i->Src[j].Register.Dimension);
 			   return -EINVAL;
 		   }
@@ -404,6 +410,8 @@ static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 	}
 	for (j = 0; j < i->Instruction.NumDstRegs; j++) {
 		if (i->Dst[j].Register.Dimension) {
+			if (ctx->type == TGSI_PROCESSOR_TESS_CTRL)
+				continue;
 			R600_ERR("unsupported dst (dimension)\n");
 			return -EINVAL;
 		}
