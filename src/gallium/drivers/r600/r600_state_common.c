@@ -743,7 +743,10 @@ static inline union r600_shader_key r600_shader_selector_key(struct pipe_context
 
 	switch (sel->type) {
 	case PIPE_SHADER_VERTEX: {
-		key.vs.as_es = (rctx->gs_shader != NULL);
+		key.vs.as_ls = (rctx->tes_shader != NULL);
+		if (!key.vs.as_ls)
+			key.vs.as_es = (rctx->gs_shader != NULL);
+
 		if (rctx->ps_shader->current->shader.gs_prim_id_input && !rctx->gs_shader) {
 			key.vs.as_gs_a = true;
 			key.vs.prim_id_out = rctx->ps_shader->current->shader.input[rctx->ps_shader->current->shader.ps_prim_id_input].spi_sid;
@@ -763,6 +766,12 @@ static inline union r600_shader_key r600_shader_selector_key(struct pipe_context
 			key.ps.nr_cbufs = 2;
 		break;
 	}
+	case PIPE_SHADER_TESS_EVAL:
+		key.tes.as_es = (rctx->gs_shader != NULL);
+		break;
+	case PIPE_SHADER_TESS_CTRL:
+		key.tcs.prim_mode = rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+		break;
 	default:
 		assert(0);
 	}

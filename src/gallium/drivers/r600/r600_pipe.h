@@ -500,6 +500,10 @@ struct r600_context {
 	struct r600_pipe_shader_selector *ps_shader;
 	struct r600_pipe_shader_selector *vs_shader;
 	struct r600_pipe_shader_selector *gs_shader;
+
+	struct r600_pipe_shader_selector *tcs_shader;
+	struct r600_pipe_shader_selector *tes_shader;
+
 	struct r600_rasterizer_state	*rasterizer;
 	bool				alpha_to_one;
 	bool				force_blend_disable;

@@ -321,6 +321,10 @@ void r600_begin_new_cs(struct r600_context *ctx)
 		r600_mark_atom_dirty(ctx, &ctx->hw_shader_stages[R600_HW_STAGE_GS].atom);
 		r600_mark_atom_dirty(ctx, &ctx->gs_rings.atom);
 	}
+	if (ctx->tes_shader) {
+		r600_mark_atom_dirty(ctx, &ctx->hw_shader_stages[EG_HW_STAGE_HS].atom);
+		r600_mark_atom_dirty(ctx, &ctx->hw_shader_stages[EG_HW_STAGE_LS].atom);
+	}
 	r600_mark_atom_dirty(ctx, &ctx->hw_shader_stages[R600_HW_STAGE_VS].atom);
 	r600_mark_atom_dirty(ctx, &ctx->b.streamout.enable_atom);
 	r600_mark_atom_dirty(ctx, &ctx->b.render_cond_atom);

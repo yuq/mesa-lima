@@ -1933,11 +1933,20 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	case TGSI_PROCESSOR_VERTEX:
 		shader->vs_as_gs_a = key.vs.as_gs_a;
 		shader->vs_as_es = key.vs.as_es;
+		shader->vs_as_ls = key.vs.as_ls;
 		if (shader->vs_as_es)
 			ring_outputs = true;
 		break;
 	case TGSI_PROCESSOR_GEOMETRY:
 		ring_outputs = true;
+		break;
+	case TGSI_PROCESSOR_TESS_CTRL:
+		shader->tcs_prim_mode = key.tcs.prim_mode;
+		break;
+	case TGSI_PROCESSOR_TESS_EVAL:
+		shader->tes_as_es = key.tes.as_es;
+		if (shader->tes_as_es)
+			ring_outputs = true;
 		break;
 	case TGSI_PROCESSOR_FRAGMENT:
 		shader->two_side = key.ps.color_two_side;
@@ -1946,7 +1955,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		break;
 	}
 
-	if (shader->vs_as_es) {
+	if (shader->vs_as_es || shader->tes_as_es) {
 		ctx.gs_for_vs = &rctx->gs_shader->current->shader;
 	} else {
 		ctx.gs_for_vs = NULL;
@@ -2357,7 +2366,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	convert_edgeflag_to_int(&ctx);
 
 	if (ring_outputs) {
-		if (shader->vs_as_es) {
+		if (shader->vs_as_es || shader->tes_as_es) {
 			ctx.gs_export_gpr_tregs[0] = r600_get_temp(&ctx);
 			ctx.gs_export_gpr_tregs[1] = -1;
 			ctx.gs_export_gpr_tregs[2] = -1;
