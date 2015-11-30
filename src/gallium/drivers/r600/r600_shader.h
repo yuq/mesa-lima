@@ -62,8 +62,8 @@ struct r600_shader {
 	unsigned		ninput;
 	unsigned		noutput;
 	unsigned		nlds;
-	struct r600_shader_io	input[40];
-	struct r600_shader_io	output[40];
+	struct r600_shader_io	input[64];
+	struct r600_shader_io	output[64];
 	boolean			uses_kill;
 	boolean			fs_write_all;
 	boolean			two_side;
