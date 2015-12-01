@@ -468,7 +468,7 @@ void anv_CmdBindDescriptorSets(
     VkPipelineBindPoint                         pipelineBindPoint,
     VkPipelineLayout                            _layout,
     uint32_t                                    firstSet,
-    uint32_t                                    setCount,
+    uint32_t                                    descriptorSetCount,
     const VkDescriptorSet*                      pDescriptorSets,
     uint32_t                                    dynamicOffsetCount,
     const uint32_t*                             pDynamicOffsets)
@@ -477,10 +477,10 @@ void anv_CmdBindDescriptorSets(
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, _layout);
    struct anv_descriptor_set_layout *set_layout;
 
-   assert(firstSet + setCount < MAX_SETS);
+   assert(firstSet + descriptorSetCount < MAX_SETS);
 
    uint32_t dynamic_slot = 0;
-   for (uint32_t i = 0; i < setCount; i++) {
+   for (uint32_t i = 0; i < descriptorSetCount; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
       set_layout = layout->set[firstSet + i].layout;
 
@@ -858,9 +858,9 @@ void anv_CmdPushConstants(
     VkCommandBuffer                             commandBuffer,
     VkPipelineLayout                            layout,
     VkShaderStageFlags                          stageFlags,
-    uint32_t                                    start,
-    uint32_t                                    length,
-    const void*                                 values)
+    uint32_t                                    offset,
+    uint32_t                                    size,
+    const void*                                 pValues)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    VkShaderStage stage;
@@ -868,8 +868,8 @@ void anv_CmdPushConstants(
    for_each_bit(stage, stageFlags) {
       anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, client_data);
 
-      memcpy(cmd_buffer->state.push_constants[stage]->client_data + start,
-             values, length);
+      memcpy(cmd_buffer->state.push_constants[stage]->client_data + offset,
+             pValues, size);
    }
 
    cmd_buffer->state.push_constants_dirty |= stageFlags;

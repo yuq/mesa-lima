@@ -433,7 +433,7 @@ void genX(CmdDrawIndirect)(
     VkCommandBuffer                             commandBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
-    uint32_t                                    count,
+    uint32_t                                    drawCount,
     uint32_t                                    stride)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
@@ -558,7 +558,7 @@ void genX(CmdDrawIndexedIndirect)(
     VkCommandBuffer                             commandBuffer,
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset,
-    uint32_t                                    count,
+    uint32_t                                    drawCount,
     uint32_t                                    stride)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
@@ -813,7 +813,7 @@ emit_ps_depth_count(struct anv_batch *batch,
 void genX(CmdBeginQuery)(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    slot,
+    uint32_t                                    entry,
     VkQueryControlFlags                         flags)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
@@ -822,7 +822,7 @@ void genX(CmdBeginQuery)(
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
       emit_ps_depth_count(&cmd_buffer->batch, &pool->bo,
-                                    slot * sizeof(struct anv_query_pool_slot));
+                          entry * sizeof(struct anv_query_pool_slot));
       break;
 
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
@@ -834,7 +834,7 @@ void genX(CmdBeginQuery)(
 void genX(CmdEndQuery)(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    slot)
+    uint32_t                                    entry)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
@@ -842,7 +842,7 @@ void genX(CmdEndQuery)(
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
       emit_ps_depth_count(&cmd_buffer->batch, &pool->bo,
-                          slot * sizeof(struct anv_query_pool_slot) + 8);
+                          entry * sizeof(struct anv_query_pool_slot) + 8);
       break;
 
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
