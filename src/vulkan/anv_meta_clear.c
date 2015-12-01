@@ -728,7 +728,6 @@ void anv_CmdClearColorImage(
                   .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
                   .attachmentCount = 1,
                   .pAttachments = &(VkAttachmentDescription) {
-                     .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
                      .format = iview.format->vk_format,
                      .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -737,7 +736,6 @@ void anv_CmdClearColorImage(
                   },
                   .subpassCount = 1,
                   .pSubpasses = &(VkSubpassDescription) {
-                     .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION,
                      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
                      .inputCount = 0,
                      .colorCount = 1,

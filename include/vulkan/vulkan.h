@@ -1927,8 +1927,6 @@ typedef struct VkFramebufferCreateInfo {
 } VkFramebufferCreateInfo;
 
 typedef struct VkAttachmentDescription {
-    VkStructureType                             sType;
-    const void*                                 pNext;
     VkAttachmentDescriptionFlags                flags;
     VkFormat                                    format;
     uint32_t                                    samples;
@@ -1946,8 +1944,6 @@ typedef struct VkAttachmentReference {
 } VkAttachmentReference;
 
 typedef struct VkSubpassDescription {
-    VkStructureType                             sType;
-    const void*                                 pNext;
     VkSubpassDescriptionFlags                   flags;
     VkPipelineBindPoint                         pipelineBindPoint;
     uint32_t                                    inputCount;
@@ -1961,8 +1957,6 @@ typedef struct VkSubpassDescription {
 } VkSubpassDescription;
 
 typedef struct VkSubpassDependency {
-    VkStructureType                             sType;
-    const void*                                 pNext;
     uint32_t                                    srcSubpass;
     uint32_t                                    destSubpass;
     VkPipelineStageFlags                        srcStageMask;

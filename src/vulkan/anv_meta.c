@@ -190,7 +190,6 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
          .attachmentCount = 1,
          .pAttachments = &(VkAttachmentDescription) {
-            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
             .format = VK_FORMAT_UNDEFINED, /* Our shaders don't care */
             .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -199,7 +198,6 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          },
          .subpassCount = 1,
          .pSubpasses = &(VkSubpassDescription) {
-            .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION,
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
             .inputCount = 0,
             .colorCount = 1,
