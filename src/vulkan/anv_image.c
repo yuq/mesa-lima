@@ -151,7 +151,7 @@ anv_image_make_surface(const struct anv_device *dev,
 
    const VkExtent3D *restrict extent = &create_info->vk_info->extent;
    const uint32_t levels = create_info->vk_info->mipLevels;
-   const uint32_t array_size = create_info->vk_info->arraySize;
+   const uint32_t array_size = create_info->vk_info->arrayLayers;
    const enum isl_tiling tiling = anv_image_choose_tiling(create_info);
 
    const struct anv_tile_info *tile_info =
@@ -303,7 +303,7 @@ anv_image_create(VkDevice _device,
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
 
    anv_assert(pCreateInfo->mipLevels > 0);
-   anv_assert(pCreateInfo->arraySize > 0);
+   anv_assert(pCreateInfo->arrayLayers > 0);
    anv_assert(pCreateInfo->samples == 1);
    anv_assert(pCreateInfo->extent.width > 0);
    anv_assert(pCreateInfo->extent.height > 0);
@@ -331,7 +331,7 @@ anv_image_create(VkDevice _device,
    image->extent = pCreateInfo->extent;
    image->format = anv_format_for_vk_format(pCreateInfo->format);
    image->levels = pCreateInfo->mipLevels;
-   image->array_size = pCreateInfo->arraySize;
+   image->array_size = pCreateInfo->arrayLayers;
    image->usage = anv_image_get_full_usage(pCreateInfo);
    image->surface_type = surf_type;
 
@@ -487,17 +487,17 @@ anv_validate_CreateImageView(VkDevice _device,
 
    /* Validate subresource. */
    assert(subresource->aspectMask != 0);
-   assert(subresource->mipLevels > 0);
-   assert(subresource->arraySize > 0);
+   assert(subresource->levelCount > 0);
+   assert(subresource->layerCount > 0);
    assert(subresource->baseMipLevel < image->levels);
-   assert(subresource->baseMipLevel + subresource->mipLevels <= image->levels);
+   assert(subresource->baseMipLevel + subresource->levelCount <= image->levels);
    assert(subresource->baseArrayLayer < image->array_size);
-   assert(subresource->baseArrayLayer + subresource->arraySize <= image->array_size);
+   assert(subresource->baseArrayLayer + subresource->layerCount <= image->array_size);
    assert(pView);
 
    if (view_info->is_cube) {
       assert(subresource->baseArrayLayer % 6 == 0);
-      assert(subresource->arraySize % 6 == 0);
+      assert(subresource->layerCount % 6 == 0);
    }
 
    const VkImageAspectFlags ds_flags = VK_IMAGE_ASPECT_DEPTH_BIT
@@ -543,7 +543,7 @@ anv_image_view_init(struct anv_image_view *iview,
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
 
-   assert(range->arraySize > 0);
+   assert(range->layerCount > 0);
    assert(range->baseMipLevel < image->levels);
    assert(image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
                           VK_IMAGE_USAGE_STORAGE_BIT |
@@ -555,10 +555,10 @@ anv_image_view_init(struct anv_image_view *iview,
       unreachable("bad VkImageType");
    case VK_IMAGE_TYPE_1D:
    case VK_IMAGE_TYPE_2D:
-      assert(range->baseArrayLayer + range->arraySize - 1 <= image->array_size);
+      assert(range->baseArrayLayer + range->layerCount - 1 <= image->array_size);
       break;
    case VK_IMAGE_TYPE_3D:
-      assert(range->baseArrayLayer + range->arraySize - 1
+      assert(range->baseArrayLayer + range->layerCount - 1
              <= anv_minify(image->extent.depth, range->baseMipLevel));
       break;
    }

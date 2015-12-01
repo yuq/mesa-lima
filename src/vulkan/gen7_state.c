@@ -231,8 +231,8 @@ genX(image_view_init)(struct anv_image_view *iview,
    };
 
    uint32_t depth = 1;
-   if (range->arraySize > 1) {
-      depth = range->arraySize;
+   if (range->layerCount > 1) {
+      depth = range->layerCount;
    } else if (image->extent.depth > 1) {
       depth = image->extent.depth;
    }
@@ -300,7 +300,7 @@ genX(image_view_init)(struct anv_image_view *iview,
        * sampler engine is [SurfaceMinLOD, SurfaceMinLOD + MIPCountLOD].
        */
       surface_state.SurfaceMinLOD = range->baseMipLevel;
-      surface_state.MIPCountLOD = range->mipLevels - 1;
+      surface_state.MIPCountLOD = range->levelCount - 1;
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->nonrt_surface_state.map,
                                       &surface_state);

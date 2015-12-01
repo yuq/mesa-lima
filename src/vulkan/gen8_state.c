@@ -145,7 +145,7 @@ genX(image_view_init)(struct anv_image_view *iview,
        *    example, if Minimum Array Element is set to 1024 on a 2D surface,
        *    the range of this field is reduced to [0,1023].
        */
-      depth = range->arraySize;
+      depth = range->layerCount;
 
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
        *
@@ -242,7 +242,7 @@ genX(image_view_init)(struct anv_image_view *iview,
        * sampler engine is [SurfaceMinLOD, SurfaceMinLOD + MIPCountLOD].
        */
       surface_state.SurfaceMinLOD = range->baseMipLevel;
-      surface_state.MIPCountLOD = range->mipLevels - 1;
+      surface_state.MIPCountLOD = range->levelCount - 1;
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->nonrt_surface_state.map,
                                       &surface_state);

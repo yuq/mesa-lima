@@ -313,7 +313,7 @@ x11_create_swapchain(struct anv_wsi_implementation *impl,
                .depth = 1
             },
             .mipLevels = 1,
-            .arraySize = 1,
+            .arrayLayers = 1,
             .samples = 1,
             /* FIXME: Need a way to use X tiling to allow scanout */
             .tiling = VK_IMAGE_TILING_OPTIMAL,

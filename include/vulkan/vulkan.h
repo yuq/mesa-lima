@@ -1172,7 +1172,7 @@ typedef struct VkExtent3D {
 typedef struct VkImageFormatProperties {
     VkExtent3D                                  maxExtent;
     uint32_t                                    maxMipLevels;
-    uint32_t                                    maxArraySize;
+    uint32_t                                    maxArrayLayers;
     VkSampleCountFlags                          sampleCounts;
     VkDeviceSize                                maxResourceSize;
 } VkImageFormatProperties;
@@ -1363,7 +1363,7 @@ typedef struct {
 typedef struct VkMappedMemoryRange {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkDeviceMemory                              mem;
+    VkDeviceMemory                              memory;
     VkDeviceSize                                offset;
     VkDeviceSize                                size;
 } VkMappedMemoryRange;
@@ -1473,7 +1473,7 @@ typedef struct VkQueryPoolCreateInfo {
     const void*                                 pNext;
     VkQueryPoolCreateFlags                      flags;
     VkQueryType                                 queryType;
-    uint32_t                                    slots;
+    uint32_t                                    entryCount;
     VkQueryPipelineStatisticFlags               pipelineStatistics;
 } VkQueryPoolCreateInfo;
 
@@ -1484,7 +1484,7 @@ typedef struct VkBufferCreateInfo {
     VkDeviceSize                                size;
     VkBufferUsageFlags                          usage;
     VkSharingMode                               sharingMode;
-    uint32_t                                    queueFamilyCount;
+    uint32_t                                    queueFamilyIndexCount;
     const uint32_t*                             pQueueFamilyIndices;
 } VkBufferCreateInfo;
 
@@ -1506,12 +1506,12 @@ typedef struct VkImageCreateInfo {
     VkFormat                                    format;
     VkExtent3D                                  extent;
     uint32_t                                    mipLevels;
-    uint32_t                                    arraySize;
+    uint32_t                                    arrayLayers;
     uint32_t                                    samples;
     VkImageTiling                               tiling;
     VkImageUsageFlags                           usage;
     VkSharingMode                               sharingMode;
-    uint32_t                                    queueFamilyCount;
+    uint32_t                                    queueFamilyIndexCount;
     const uint32_t*                             pQueueFamilyIndices;
     VkImageLayout                               initialLayout;
 } VkImageCreateInfo;
@@ -1533,9 +1533,9 @@ typedef struct VkComponentMapping {
 typedef struct VkImageSubresourceRange {
     VkImageAspectFlags                          aspectMask;
     uint32_t                                    baseMipLevel;
-    uint32_t                                    mipLevels;
+    uint32_t                                    levelCount;
     uint32_t                                    baseArrayLayer;
-    uint32_t                                    arraySize;
+    uint32_t                                    layerCount;
 } VkImageSubresourceRange;
 
 typedef struct VkImageViewCreateInfo {
@@ -1570,9 +1570,8 @@ typedef struct VkPipelineCacheCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPipelineCacheCreateFlags                  flags;
-    size_t                                      initialSize;
-    const void*                                 initialData;
-    size_t                                      maxSize;
+    size_t                                      initialDataSize;
+    const void*                                 pInitialData;
 } VkPipelineCacheCreateInfo;
 
 typedef struct VkSpecializationMapEntry {
@@ -1962,8 +1961,8 @@ typedef struct VkRenderPassCreateInfo {
 typedef struct VkCommandPoolCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    queueFamilyIndex;
     VkCommandPoolCreateFlags                    flags;
+    uint32_t                                    queueFamilyIndex;
 } VkCommandPoolCreateInfo;
 
 typedef struct {

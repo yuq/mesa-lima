@@ -432,7 +432,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
    *pImageFormatProperties = (VkImageFormatProperties) {
       .maxExtent = maxExtent,
       .maxMipLevels = maxMipLevels,
-      .maxArraySize = maxArraySize,
+      .maxArrayLayers = maxArraySize,
 
       /* FINISHME: Support multisampling */
       .sampleCounts = VK_SAMPLE_COUNT_1_BIT,
@@ -449,7 +449,7 @@ unsupported:
    *pImageFormatProperties = (VkImageFormatProperties) {
       .maxExtent = { 0, 0, 0 },
       .maxMipLevels = 0,
-      .maxArraySize = 0,
+      .maxArrayLayers = 0,
       .sampleCounts = 0,
       .maxResourceSize = 0,
    };

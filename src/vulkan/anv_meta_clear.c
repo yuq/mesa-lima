@@ -690,8 +690,8 @@ void anv_CmdClearColorImage(
    meta_clear_begin(&saved_state, cmd_buffer);
 
    for (uint32_t r = 0; r < rangeCount; r++) {
-      for (uint32_t l = 0; l < pRanges[r].mipLevels; l++) {
-         for (uint32_t s = 0; s < pRanges[r].arraySize; s++) {
+      for (uint32_t l = 0; l < pRanges[r].levelCount; l++) {
+         for (uint32_t s = 0; s < pRanges[r].layerCount; s++) {
             struct anv_image_view iview;
             anv_image_view_init(&iview, cmd_buffer->device,
                &(VkImageViewCreateInfo) {
@@ -702,9 +702,9 @@ void anv_CmdClearColorImage(
                   .subresourceRange = {
                      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                      .baseMipLevel = pRanges[r].baseMipLevel + l,
-                     .mipLevels = 1,
+                     .levelCount = 1,
                      .baseArrayLayer = pRanges[r].baseArrayLayer + s,
-                     .arraySize = 1
+                     .layerCount = 1
                   },
                },
                cmd_buffer);

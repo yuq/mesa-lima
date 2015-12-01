@@ -55,7 +55,7 @@ VkResult anv_CreateQueryPool(
    if (pool == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   size = pCreateInfo->slots * sizeof(struct anv_query_pool_slot);
+   size = pCreateInfo->entryCount * sizeof(struct anv_query_pool_slot);
    result = anv_bo_init_new(&pool->bo, device, size);
    if (result != VK_SUCCESS)
       goto fail;

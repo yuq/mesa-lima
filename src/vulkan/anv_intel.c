@@ -78,7 +78,7 @@ VkResult anv_CreateDmaBufImageINTEL(
          .format = pCreateInfo->format,
          .extent = pCreateInfo->extent,
          .mipLevels = 1,
-         .arraySize = 1,
+         .arrayLayers = 1,
          .samples = 1,
          /* FIXME: Need a way to use X tiling to allow scanout */
          .tiling = VK_IMAGE_TILING_OPTIMAL,

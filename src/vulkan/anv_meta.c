@@ -674,7 +674,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
          .depth = 1,
       },
       .mipLevels = 1,
-      .arraySize = 1,
+      .arrayLayers = 1,
       .samples = 1,
       .tiling = VK_IMAGE_TILING_LINEAR,
       .usage = 0,
@@ -707,9 +707,9 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
          .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0,
-            .mipLevels = 1,
+            .levelCount = 1,
             .baseArrayLayer = 0,
-            .arraySize = 1
+            .layerCount = 1
          },
       },
       cmd_buffer);
@@ -724,9 +724,9 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
          .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0,
-            .mipLevels = 1,
+            .levelCount = 1,
             .baseArrayLayer = 0,
-            .arraySize = 1,
+            .layerCount = 1,
          },
       },
       cmd_buffer);
@@ -855,9 +855,9 @@ void anv_CmdCopyImage(
             .subresourceRange = {
                .aspectMask = pRegions[r].srcSubresource.aspectMask,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
-               .mipLevels = 1,
+               .levelCount = 1,
                .baseArrayLayer = pRegions[r].srcSubresource.baseArrayLayer,
-               .arraySize = pRegions[r].dstSubresource.layerCount,
+               .layerCount = pRegions[r].dstSubresource.layerCount,
             },
          },
          cmd_buffer);
@@ -899,9 +899,9 @@ void anv_CmdCopyImage(
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = pRegions[r].dstSubresource.mipLevel,
-                  .mipLevels = 1,
+                  .levelCount = 1,
                   .baseArrayLayer = dest_base_array_slice + slice,
-                  .arraySize = 1
+                  .layerCount = 1
                },
             },
             cmd_buffer);
@@ -955,9 +955,9 @@ void anv_CmdBlitImage(
             .subresourceRange = {
                .aspectMask = pRegions[r].srcSubresource.aspectMask,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
-               .mipLevels = 1,
+               .levelCount = 1,
                .baseArrayLayer = pRegions[r].srcSubresource.baseArrayLayer,
-               .arraySize = 1
+               .layerCount = 1
             },
          },
          cmd_buffer);
@@ -989,9 +989,9 @@ void anv_CmdBlitImage(
             .subresourceRange = {
                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                .baseMipLevel = pRegions[r].dstSubresource.mipLevel,
-               .mipLevels = 1,
+               .levelCount = 1,
                .baseArrayLayer = dest_array_slice,
-               .arraySize = 1
+               .layerCount = 1
             },
          },
          cmd_buffer);
@@ -1032,7 +1032,7 @@ make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
          .format = format,
          .extent = extent,
          .mipLevels = 1,
-         .arraySize = 1,
+         .arrayLayers = 1,
          .samples = 1,
          .tiling = VK_IMAGE_TILING_LINEAR,
          .usage = usage,
@@ -1106,9 +1106,9 @@ void anv_CmdCopyBufferToImage(
                .subresourceRange = {
                   .aspectMask = proxy_aspect,
                   .baseMipLevel = 0,
-                  .mipLevels = 1,
+                  .levelCount = 1,
                   .baseArrayLayer = 0,
-                  .arraySize = 1,
+                  .layerCount = 1,
                },
             },
             cmd_buffer);
@@ -1123,9 +1123,9 @@ void anv_CmdCopyBufferToImage(
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
-                  .mipLevels = 1,
+                  .levelCount = 1,
                   .baseArrayLayer = dest_base_array_slice + slice,
-                  .arraySize = 1
+                  .layerCount = 1
                },
             },
             cmd_buffer);
@@ -1194,9 +1194,9 @@ void anv_CmdCopyImageToBuffer(
             .subresourceRange = {
                .aspectMask = pRegions[r].imageSubresource.aspectMask,
                .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
-               .mipLevels = 1,
+               .levelCount = 1,
                .baseArrayLayer = pRegions[r].imageSubresource.baseArrayLayer,
-               .arraySize = pRegions[r].imageSubresource.layerCount,
+               .layerCount = pRegions[r].imageSubresource.layerCount,
             },
          },
          cmd_buffer);
@@ -1234,9 +1234,9 @@ void anv_CmdCopyImageToBuffer(
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = 0,
-                  .mipLevels = 1,
+                  .levelCount = 1,
                   .baseArrayLayer = 0,
-                  .arraySize = 1
+                  .layerCount = 1
                },
             },
             cmd_buffer);
