@@ -194,28 +194,28 @@ void genX(CmdPipelineBarrier)(
     * the app asks for.  One of these days we may make this a bit better
     * but right now that's all the hardware allows for in most areas.
     */
-   VkMemoryOutputFlags out_flags = 0;
-   VkMemoryInputFlags in_flags = 0;
+   VkAccessFlags src_flags = 0;
+   VkAccessFlags dst_flags = 0;
 
    for (uint32_t i = 0; i < memBarrierCount; i++) {
       const struct anv_common *common = ppMemBarriers[i];
       switch (common->sType) {
       case VK_STRUCTURE_TYPE_MEMORY_BARRIER: {
          ANV_COMMON_TO_STRUCT(VkMemoryBarrier, barrier, common);
-         out_flags |= barrier->outputMask;
-         in_flags |= barrier->inputMask;
+         src_flags |= barrier->srcAccessMask;
+         dst_flags |= barrier->dstAccessMask;
          break;
       }
       case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER: {
          ANV_COMMON_TO_STRUCT(VkBufferMemoryBarrier, barrier, common);
-         out_flags |= barrier->outputMask;
-         in_flags |= barrier->inputMask;
+         src_flags |= barrier->srcAccessMask;
+         dst_flags |= barrier->dstAccessMask;
          break;
       }
       case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER: {
          ANV_COMMON_TO_STRUCT(VkImageMemoryBarrier, barrier, common);
-         out_flags |= barrier->outputMask;
-         in_flags |= barrier->inputMask;
+         src_flags |= barrier->srcAccessMask;
+         dst_flags |= barrier->dstAccessMask;
          break;
       }
       default:
@@ -223,50 +223,57 @@ void genX(CmdPipelineBarrier)(
       }
    }
 
-   for_each_bit(b, out_flags) {
-      switch ((VkMemoryOutputFlags)(1 << b)) {
-      case VK_MEMORY_OUTPUT_HOST_WRITE_BIT:
+   for_each_bit(b, dst_flags) {
+      switch ((VkAccessFlagBits)(1 << b)) {
+      case VK_ACCESS_HOST_WRITE_BIT:
          break; /* FIXME: Little-core systems */
-      case VK_MEMORY_OUTPUT_SHADER_WRITE_BIT:
+      case VK_ACCESS_SHADER_WRITE_BIT:
          cmd.DCFlushEnable = true;
          break;
-      case VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT:
+      case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
          cmd.RenderTargetCacheFlushEnable = true;
          break;
-      case VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT:
+      case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
          cmd.DepthCacheFlushEnable = true;
          break;
-      case VK_MEMORY_OUTPUT_TRANSFER_BIT:
+      case VK_ACCESS_TRANSFER_WRITE_BIT:
          cmd.RenderTargetCacheFlushEnable = true;
          cmd.DepthCacheFlushEnable = true;
          break;
       default:
-         unreachable("Invalid memory output flag");
+         assert(!"Not a write bit");
       }
    }
 
-   for_each_bit(b, out_flags) {
-      switch ((VkMemoryInputFlags)(1 << b)) {
-      case VK_MEMORY_INPUT_HOST_READ_BIT:
+   for_each_bit(b, src_flags) {
+      switch ((VkAccessFlagBits)(1 << b)) {
+      case VK_ACCESS_HOST_READ_BIT:
          break; /* FIXME: Little-core systems */
-      case VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT:
-      case VK_MEMORY_INPUT_INDEX_FETCH_BIT:
-      case VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT:
+      case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
+      case VK_ACCESS_INDEX_READ_BIT:
+      case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
          cmd.VFCacheInvalidationEnable = true;
          break;
-      case VK_MEMORY_INPUT_UNIFORM_READ_BIT:
+      case VK_ACCESS_UNIFORM_READ_BIT:
          cmd.ConstantCacheInvalidationEnable = true;
          /* fallthrough */
-      case VK_MEMORY_INPUT_SHADER_READ_BIT:
+      case VK_ACCESS_SHADER_READ_BIT:
          cmd.DCFlushEnable = true;
          cmd.TextureCacheInvalidationEnable = true;
          break;
-      case VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT:
-      case VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT:
-         break; /* XXX: Hunh? */
-      case VK_MEMORY_INPUT_TRANSFER_BIT:
+      case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:
          cmd.TextureCacheInvalidationEnable = true;
          break;
+      case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT:
+         cmd.DCFlushEnable = true;
+         break;
+      case VK_ACCESS_TRANSFER_READ_BIT:
+         cmd.TextureCacheInvalidationEnable = true;
+         break;
+      case VK_ACCESS_MEMORY_READ_BIT:
+         break; /* XXX: What is this? */
+      default:
+         assert(!"Not a read bit");
       }
    }
 
