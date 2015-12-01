@@ -4303,8 +4303,8 @@ compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
 
    if ((GLint) format != texImage->InternalFormat) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(format=0x%x)",
-                  callerName, format);
+                  "%s(format=%s)",
+                  callerName, _mesa_enum_to_string(format));
       return GL_TRUE;
    }
 
