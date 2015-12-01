@@ -16,6 +16,7 @@ addons:
       - libxcb-dri2-0-dev
       - libx11-xcb-dev
       - llvm-3.4-dev
+      - scons
 
 env:
   global:
@@ -32,6 +33,9 @@ env:
     - LIBXCB_VERSION=libxcb-1.11
     - LIBXSHMFENCE_VERSION=libxshmfence-1.2
     - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
+  matrix:
+    - BUILD=make
+    - BUILD=scons
 
 install:
   - export PATH="/usr/lib/ccache:$PATH"
@@ -84,9 +88,14 @@ install:
 # with "undefined reference to `clock_gettime'" and "undefined
 # reference to `setupterm'" in llvmpipe.
 script:
-  - ./autogen.sh --enable-debug
-    --disable-gallium-llvm
-    --with-egl-platforms=x11,drm
-    --with-dri-drivers=i915,i965,radeon,r200,swrast,nouveau
-    --with-gallium-drivers=svga,swrast,vc4,virgl
-  - make && make check
+  - if test "x$BUILD" = xmake; then
+      ./autogen.sh --enable-debug
+        --disable-gallium-llvm
+        --with-egl-platforms=x11,drm
+        --with-dri-drivers=i915,i965,radeon,r200,swrast,nouveau
+        --with-gallium-drivers=svga,swrast,vc4,virgl
+        ;
+      make && make check;
+    elif test x$BUILD = xscons; then
+      scons;
+    fi
