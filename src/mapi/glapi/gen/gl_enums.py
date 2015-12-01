@@ -156,14 +156,21 @@ _mesa_lookup_prim_by_nr(GLuint nr)
         print '# define LONGSTRING'
         print '#endif'
         print ''
-        print 'LONGSTRING static const char enum_string_table[] = '
+        print 'LONGSTRING static const char enum_string_table[] = {'
+        # We express the very long concatenation of enum strings as an array
+        # of characters rather than as a string literal to work-around MSVC's
+        # 65535 character limit.
         for enum in sorted_enum_values:
             (name, pri) = self.enum_table[enum]
-            print '   "%s\\0"' % (name)
+            print "  ",
+            for ch in name:
+                print "'%c'," % ch,
+            print "'\\0',"
+
             string_offsets[ enum ] = i
             i += len(name) + 1
 
-        print '   ;'
+        print '};'
         print ''
 
 
