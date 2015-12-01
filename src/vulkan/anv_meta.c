@@ -303,11 +303,12 @@ anv_device_init_meta_blit_state(struct anv_device *device)
 
    VkDescriptorSetLayoutCreateInfo ds_layout_info = {
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-      .count = 1,
+      .bindingCount = 1,
       .pBinding = (VkDescriptorSetLayoutBinding[]) {
          {
+            .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .arraySize = 1,
+            .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = NULL
          },
@@ -319,7 +320,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    anv_CreatePipelineLayout(anv_device_to_handle(device),
       &(VkPipelineLayoutCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-         .descriptorSetCount = 1,
+         .setLayoutCount = 1,
          .pSetLayouts = &device->meta_state.blit.ds_layout,
       },
       &device->meta_state.blit.pipeline_layout);
@@ -529,24 +530,28 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       }, &sampler);
 
    VkDescriptorSet set;
-   anv_AllocDescriptorSets(anv_device_to_handle(device), dummy_desc_pool,
-                           VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
-                           1, &device->meta_state.blit.ds_layout, &set);
+   anv_AllocateDescriptorSets(anv_device_to_handle(device),
+      &(VkDescriptorSetAllocateInfo) {
+         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+         .descriptorPool = dummy_desc_pool,
+         .setLayoutCount = 1,
+         .pSetLayouts = &device->meta_state.blit.ds_layout
+      }, &set);
    anv_UpdateDescriptorSets(anv_device_to_handle(device),
       1, /* writeCount */
       (VkWriteDescriptorSet[]) {
          {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .destSet = set,
-            .destBinding = 0,
-            .destArrayElement = 0,
-            .count = 1,
+            .dstSet = set,
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pDescriptors = (VkDescriptorInfo[]) {
+            .pImageInfo = (VkDescriptorImageInfo[]) {
                {
+                  .sampler = sampler,
                   .imageView = anv_image_view_to_handle(src_iview),
                   .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-                  .sampler = sampler,
                },
             }
          }

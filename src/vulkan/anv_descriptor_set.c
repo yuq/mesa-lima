@@ -44,14 +44,16 @@ VkResult anv_CreateDescriptorSetLayout(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
 
+   uint32_t max_binding = 0;
    uint32_t immutable_sampler_count = 0;
-   for (uint32_t b = 0; b < pCreateInfo->count; b++) {
-      if (pCreateInfo->pBinding[b].pImmutableSamplers)
-         immutable_sampler_count += pCreateInfo->pBinding[b].arraySize;
+   for (uint32_t j = 0; j < pCreateInfo->bindingCount; j++) {
+      max_binding = MAX2(max_binding, pCreateInfo->pBinding[j].binding); 
+      if (pCreateInfo->pBinding[j].pImmutableSamplers)
+         immutable_sampler_count += pCreateInfo->pBinding[j].descriptorCount;
    }
 
    size_t size = sizeof(struct anv_descriptor_set_layout) +
-                 pCreateInfo->count * sizeof(set_layout->binding[0]) +
+                 (max_binding + 1) * sizeof(set_layout->binding[0]) +
                  immutable_sampler_count * sizeof(struct anv_sampler *);
 
    set_layout = anv_device_alloc(device, size, 8,
@@ -61,15 +63,15 @@ VkResult anv_CreateDescriptorSetLayout(
 
    /* We just allocate all the samplers at the end of the struct */
    struct anv_sampler **samplers =
-      (struct anv_sampler **)&set_layout->binding[pCreateInfo->count];
+      (struct anv_sampler **)&set_layout->binding[max_binding + 1];
 
-   set_layout->binding_count = pCreateInfo->count;
+   set_layout->binding_count = max_binding + 1;
    set_layout->shader_stages = 0;
    set_layout->size = 0;
 
    /* Initialize all binding_layout entries to -1 */
    memset(set_layout->binding, -1,
-          pCreateInfo->count * sizeof(set_layout->binding[0]));
+          (max_binding + 1) * sizeof(set_layout->binding[0]));
 
    /* Initialize all samplers to 0 */
    memset(samplers, 0, immutable_sampler_count * sizeof(*samplers));
@@ -78,25 +80,28 @@ VkResult anv_CreateDescriptorSetLayout(
    uint32_t surface_count[VK_SHADER_STAGE_NUM] = { 0, };
    uint32_t dynamic_offset_count = 0;
 
-   for (uint32_t b = 0; b < pCreateInfo->count; b++) {
-      uint32_t array_size = MAX2(1, pCreateInfo->pBinding[b].arraySize);
-      set_layout->binding[b].array_size = array_size;
-      set_layout->binding[b].descriptor_index = set_layout->size;
-      set_layout->size += array_size;
+   for (uint32_t j = 0; j < pCreateInfo->bindingCount; j++) {
+      const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBinding[j];
+      uint32_t b = binding->binding;
 
-      switch (pCreateInfo->pBinding[b].descriptorType) {
+      assert(binding->descriptorCount > 0);
+      set_layout->binding[b].array_size = binding->descriptorCount;
+      set_layout->binding[b].descriptor_index = set_layout->size;
+      set_layout->size += binding->descriptorCount;
+
+      switch (binding->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-         for_each_bit(s, pCreateInfo->pBinding[b].stageFlags) {
+         for_each_bit(s, binding->stageFlags) {
             set_layout->binding[b].stage[s].sampler_index = sampler_count[s];
-            sampler_count[s] += array_size;
+            sampler_count[s] += binding->descriptorCount;
          }
          break;
       default:
          break;
       }
 
-      switch (pCreateInfo->pBinding[b].descriptorType) {
+      switch (binding->descriptorType) {
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
@@ -107,37 +112,37 @@ VkResult anv_CreateDescriptorSetLayout(
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-         for_each_bit(s, pCreateInfo->pBinding[b].stageFlags) {
+         for_each_bit(s, binding->stageFlags) {
             set_layout->binding[b].stage[s].surface_index = surface_count[s];
-            surface_count[s] += array_size;
+            surface_count[s] += binding->descriptorCount;
          }
          break;
       default:
          break;
       }
 
-      switch (pCreateInfo->pBinding[b].descriptorType) {
+      switch (binding->descriptorType) {
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
          set_layout->binding[b].dynamic_offset_index = dynamic_offset_count;
-         dynamic_offset_count += array_size;
+         dynamic_offset_count += binding->descriptorCount;
          break;
       default:
          break;
       }
 
-      if (pCreateInfo->pBinding[b].pImmutableSamplers) {
+      if (binding->pImmutableSamplers) {
          set_layout->binding[b].immutable_samplers = samplers;
-         samplers += array_size;
+         samplers += binding->descriptorCount;
 
-         for (uint32_t i = 0; i < array_size; i++)
+         for (uint32_t i = 0; i < binding->descriptorCount; i++)
             set_layout->binding[b].immutable_samplers[i] =
-               anv_sampler_from_handle(pCreateInfo->pBinding[b].pImmutableSamplers[i]);
+               anv_sampler_from_handle(binding->pImmutableSamplers[i]);
       } else {
          set_layout->binding[b].immutable_samplers = NULL;
       }
 
-      set_layout->shader_stages |= pCreateInfo->pBinding[b].stageFlags;
+      set_layout->shader_stages |= binding->stageFlags;
    }
 
    set_layout->dynamic_offset_count = dynamic_offset_count;
@@ -172,12 +177,12 @@ VkResult anv_CreatePipelineLayout(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO);
 
-   l.num_sets = pCreateInfo->descriptorSetCount;
+   l.num_sets = pCreateInfo->setLayoutCount;
 
    unsigned dynamic_offset_count = 0;
 
    memset(l.stage, 0, sizeof(l.stage));
-   for (uint32_t set = 0; set < pCreateInfo->descriptorSetCount; set++) {
+   for (uint32_t set = 0; set < pCreateInfo->setLayoutCount; set++) {
       ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout,
                       pCreateInfo->pSetLayouts[set]);
       l.set[set].layout = set_layout;
@@ -228,7 +233,7 @@ VkResult anv_CreatePipelineLayout(
 
       int surface = 0;
       int sampler = 0;
-      for (uint32_t set = 0; set < pCreateInfo->descriptorSetCount; set++) {
+      for (uint32_t set = 0; set < pCreateInfo->setLayoutCount; set++) {
          struct anv_descriptor_set_layout *set_layout = l.set[set].layout;
 
          for (uint32_t b = 0; b < set_layout->binding_count; b++) {
@@ -299,7 +304,8 @@ void anv_DestroyDescriptorPool(
 
 VkResult anv_ResetDescriptorPool(
     VkDevice                                    device,
-    VkDescriptorPool                            descriptorPool)
+    VkDescriptorPool                            descriptorPool,
+    VkDescriptorPoolResetFlags                  flags)
 {
    anv_finishme("VkDescriptorPool is a stub: free the pool's descriptor sets");
    return VK_SUCCESS;
@@ -346,12 +352,9 @@ anv_descriptor_set_destroy(struct anv_device *device,
    anv_device_free(device, set);
 }
 
-VkResult anv_AllocDescriptorSets(
+VkResult anv_AllocateDescriptorSets(
     VkDevice                                    _device,
-    VkDescriptorPool                            descriptorPool,
-    VkDescriptorSetUsage                        setUsage,
-    uint32_t                                    count,
-    const VkDescriptorSetLayout*                pSetLayouts,
+    const VkDescriptorSetAllocateInfo*          pAllocateInfo,
     VkDescriptorSet*                            pDescriptorSets)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -360,8 +363,9 @@ VkResult anv_AllocDescriptorSets(
    struct anv_descriptor_set *set;
    uint32_t i;
 
-   for (i = 0; i < count; i++) {
-      ANV_FROM_HANDLE(anv_descriptor_set_layout, layout, pSetLayouts[i]);
+   for (i = 0; i < pAllocateInfo->setLayoutCount; i++) {
+      ANV_FROM_HANDLE(anv_descriptor_set_layout, layout,
+                      pAllocateInfo->pSetLayouts[i]);
 
       result = anv_descriptor_set_create(device, layout, &set);
       if (result != VK_SUCCESS)
@@ -371,7 +375,8 @@ VkResult anv_AllocDescriptorSets(
    }
 
    if (result != VK_SUCCESS)
-      anv_FreeDescriptorSets(_device, descriptorPool, i, pDescriptorSets);
+      anv_FreeDescriptorSets(_device, pAllocateInfo->descriptorPool,
+                             i, pDescriptorSets);
 
    return result;
 }
@@ -395,24 +400,24 @@ VkResult anv_FreeDescriptorSets(
 
 void anv_UpdateDescriptorSets(
     VkDevice                                    device,
-    uint32_t                                    writeCount,
+    uint32_t                                    descriptorWriteCount,
     const VkWriteDescriptorSet*                 pDescriptorWrites,
-    uint32_t                                    copyCount,
+    uint32_t                                    descriptorCopyCount,
     const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
-   for (uint32_t i = 0; i < writeCount; i++) {
+   for (uint32_t i = 0; i < descriptorWriteCount; i++) {
       const VkWriteDescriptorSet *write = &pDescriptorWrites[i];
-      ANV_FROM_HANDLE(anv_descriptor_set, set, write->destSet);
+      ANV_FROM_HANDLE(anv_descriptor_set, set, write->dstSet);
       const struct anv_descriptor_set_binding_layout *bind_layout =
-         &set->layout->binding[write->destBinding];
+         &set->layout->binding[write->dstBinding];
       struct anv_descriptor *desc =
          &set->descriptors[bind_layout->descriptor_index];
 
       switch (write->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
-         for (uint32_t j = 0; j < write->count; j++) {
+         for (uint32_t j = 0; j < write->descriptorCount; j++) {
             ANV_FROM_HANDLE(anv_sampler, sampler,
-                            write->pDescriptors[j].sampler);
+                            write->pImageInfo[j].sampler);
 
             desc[j] = (struct anv_descriptor) {
                .type = VK_DESCRIPTOR_TYPE_SAMPLER,
@@ -422,11 +427,11 @@ void anv_UpdateDescriptorSets(
          break;
 
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-         for (uint32_t j = 0; j < write->count; j++) {
+         for (uint32_t j = 0; j < write->descriptorCount; j++) {
             ANV_FROM_HANDLE(anv_image_view, iview,
-                            write->pDescriptors[j].imageView);
+                            write->pImageInfo[j].imageView);
             ANV_FROM_HANDLE(anv_sampler, sampler,
-                            write->pDescriptors[j].sampler);
+                            write->pImageInfo[j].sampler);
 
             desc[j].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             desc[j].image_view = iview;
@@ -441,9 +446,9 @@ void anv_UpdateDescriptorSets(
 
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-         for (uint32_t j = 0; j < write->count; j++) {
+         for (uint32_t j = 0; j < write->descriptorCount; j++) {
             ANV_FROM_HANDLE(anv_image_view, iview,
-                            write->pDescriptors[j].imageView);
+                            write->pImageInfo[j].imageView);
 
             desc[j] = (struct anv_descriptor) {
                .type = write->descriptorType,
@@ -465,17 +470,16 @@ void anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-         for (uint32_t j = 0; j < write->count; j++) {
-            assert(write->pDescriptors[j].bufferInfo.buffer);
-            ANV_FROM_HANDLE(anv_buffer, buffer,
-                            write->pDescriptors[j].bufferInfo.buffer);
+         for (uint32_t j = 0; j < write->descriptorCount; j++) {
+            assert(write->pBufferInfo[j].buffer);
+            ANV_FROM_HANDLE(anv_buffer, buffer, write->pBufferInfo[j].buffer);
             assert(buffer);
 
             desc[j] = (struct anv_descriptor) {
                .type = write->descriptorType,
                .buffer = buffer,
-               .offset = write->pDescriptors[j].bufferInfo.offset,
-               .range = write->pDescriptors[j].bufferInfo.range,
+               .offset = write->pBufferInfo[j].offset,
+               .range = write->pBufferInfo[j].range,
             };
 
             /* For buffers with dynamic offsets, we use the full possible
@@ -491,12 +495,12 @@ void anv_UpdateDescriptorSets(
       }
    }
 
-   for (uint32_t i = 0; i < copyCount; i++) {
+   for (uint32_t i = 0; i < descriptorCopyCount; i++) {
       const VkCopyDescriptorSet *copy = &pDescriptorCopies[i];
-      ANV_FROM_HANDLE(anv_descriptor_set, src, copy->destSet);
-      ANV_FROM_HANDLE(anv_descriptor_set, dest, copy->destSet);
-      for (uint32_t j = 0; j < copy->count; j++) {
-         dest->descriptors[copy->destBinding + j] =
+      ANV_FROM_HANDLE(anv_descriptor_set, src, copy->dstSet);
+      ANV_FROM_HANDLE(anv_descriptor_set, dest, copy->dstSet);
+      for (uint32_t j = 0; j < copy->descriptorCount; j++) {
+         dest->descriptors[copy->dstBinding + j] =
             src->descriptors[copy->srcBinding + j];
       }
    }
