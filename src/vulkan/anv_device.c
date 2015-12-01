@@ -1140,29 +1140,11 @@ VkResult anv_BindImageMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_QueueBindSparseBufferMemory(
+VkResult anv_QueueBindSparse(
     VkQueue                                     queue,
-    VkBuffer                                    buffer,
-    uint32_t                                    numBindings,
-    const VkSparseMemoryBindInfo*               pBindInfo)
-{
-   stub_return(VK_UNSUPPORTED);
-}
-
-VkResult anv_QueueBindSparseImageOpaqueMemory(
-    VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    numBindings,
-    const VkSparseMemoryBindInfo*               pBindInfo)
-{
-   stub_return(VK_UNSUPPORTED);
-}
-
-VkResult anv_QueueBindSparseImageMemory(
-    VkQueue                                     queue,
-    VkImage                                     image,
-    uint32_t                                    numBindings,
-    const VkSparseImageMemoryBindInfo*          pBindInfo)
+    uint32_t                                    bindInfoCount,
+    const VkBindSparseInfo*                     pBindInfo,
+    VkFence                                     fence)
 {
    stub_return(VK_UNSUPPORTED);
 }
