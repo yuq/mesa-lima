@@ -87,10 +87,14 @@ anv_physical_device_init(struct anv_physical_device *device,
       fprintf(stderr, "WARNING: Haswell Vulkan support is incomplete\n");
    } else if (device->info->gen == 7 && !device->info->is_baytrail) {
       fprintf(stderr, "WARNING: Ivy Bridge Vulkan support is incomplete\n");
-   } else if (device->info->gen == 9) {
+   } else if (device->info->gen == 7 && device->info->is_baytrail) {
+      fprintf(stderr, "WARNING: Bay Trail Vulkan support is incomplete\n");
+   } else if (device->info->gen == 9 && !device->info->is_broxton) {
       fprintf(stderr, "WARNING: Skylake Vulkan support is incomplete\n");
-   } else if (device->info->gen == 8 && !device->info->is_cherryview) {
-      /* Broadwell is as fully supported as anything */
+   } else if (device->info->gen == 9 && device->info->is_broxton) {
+      fprintf(stderr, "WARNING: Broxton Vulkan support is incomplete\n");
+   } else if (device->info->gen == 8) {
+      /* Broadwell/Cherryview is as fully supported as anything */
    } else {
       result = vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
                          "Vulkan not yet supported on %s", device->name);
@@ -112,12 +116,6 @@ anv_physical_device_init(struct anv_physical_device *device,
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXECBUF2)) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
                          "kernel missing execbuf2");
-      goto fail;
-   }
-
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_LLC)) {
-      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
-                         "non-llc gpu");
       goto fail;
    }
 
