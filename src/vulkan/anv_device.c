@@ -725,17 +725,17 @@ void anv_DestroyDevice(
 
 VkResult anv_EnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkExtensionProperties*                      pProperties)
 {
    if (pProperties == NULL) {
-      *pCount = ARRAY_SIZE(global_extensions);
+      *pPropertyCount = ARRAY_SIZE(global_extensions);
       return VK_SUCCESS;
    }
 
-   assert(*pCount >= ARRAY_SIZE(global_extensions));
+   assert(*pPropertyCount >= ARRAY_SIZE(global_extensions));
 
-   *pCount = ARRAY_SIZE(global_extensions);
+   *pPropertyCount = ARRAY_SIZE(global_extensions);
    memcpy(pProperties, global_extensions, sizeof(global_extensions));
 
    return VK_SUCCESS;
@@ -744,28 +744,28 @@ VkResult anv_EnumerateInstanceExtensionProperties(
 VkResult anv_EnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkExtensionProperties*                      pProperties)
 {
    if (pProperties == NULL) {
-      *pCount = ARRAY_SIZE(device_extensions);
+      *pPropertyCount = ARRAY_SIZE(device_extensions);
       return VK_SUCCESS;
    }
 
-   assert(*pCount >= ARRAY_SIZE(device_extensions));
+   assert(*pPropertyCount >= ARRAY_SIZE(device_extensions));
 
-   *pCount = ARRAY_SIZE(device_extensions);
+   *pPropertyCount = ARRAY_SIZE(device_extensions);
    memcpy(pProperties, device_extensions, sizeof(device_extensions));
 
    return VK_SUCCESS;
 }
 
 VkResult anv_EnumerateInstanceLayerProperties(
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkLayerProperties*                          pProperties)
 {
    if (pProperties == NULL) {
-      *pCount = 0;
+      *pPropertyCount = 0;
       return VK_SUCCESS;
    }
 
@@ -775,11 +775,11 @@ VkResult anv_EnumerateInstanceLayerProperties(
 
 VkResult anv_EnumerateDeviceLayerProperties(
     VkPhysicalDevice                            physicalDevice,
-    uint32_t*                                   pCount,
+    uint32_t*                                   pPropertyCount,
     VkLayerProperties*                          pProperties)
 {
    if (pProperties == NULL) {
-      *pCount = 0;
+      *pPropertyCount = 0;
       return VK_SUCCESS;
    }
 
