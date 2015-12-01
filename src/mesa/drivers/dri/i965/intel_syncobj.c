@@ -248,7 +248,7 @@ intel_dri_create_fence(__DRIcontext *ctx)
 }
 
 static void
-intel_dri_destroy_fence(__DRIscreen *screen, void *driver_fence)
+intel_dri_destroy_fence(__DRIscreen *dri_screen, void *driver_fence)
 {
    struct brw_fence *fence = driver_fence;
 

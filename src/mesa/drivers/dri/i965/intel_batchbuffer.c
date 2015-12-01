@@ -305,8 +305,8 @@ throttle(struct brw_context *brw)
    }
 
    if (brw->need_flush_throttle) {
-      __DRIscreen *psp = brw->intelScreen->driScrnPriv;
-      drmCommandNone(psp->fd, DRM_I915_GEM_THROTTLE);
+      __DRIscreen *dri_screen = brw->intelScreen->driScrnPriv;
+      drmCommandNone(dri_screen->fd, DRM_I915_GEM_THROTTLE);
       brw->need_flush_throttle = false;
    }
 }

@@ -399,11 +399,11 @@ intel_setup_image_from_mipmap_tree(struct brw_context *brw, __DRIimage *image,
 }
 
 static __DRIimage *
-intel_create_image_from_name(__DRIscreen *screen,
+intel_create_image_from_name(__DRIscreen *dri_screen,
 			     int width, int height, int format,
 			     int name, int pitch, void *loaderPrivate)
 {
-    struct intel_screen *intelScreen = screen->driverPrivate;
+    struct intel_screen *intelScreen = dri_screen->driverPrivate;
     __DRIimage *image;
     int cpp;
 
@@ -536,13 +536,13 @@ intel_destroy_image(__DRIimage *image)
 }
 
 static __DRIimage *
-intel_create_image(__DRIscreen *screen,
+intel_create_image(__DRIscreen *dri_screen,
 		   int width, int height, int format,
 		   unsigned int use,
 		   void *loaderPrivate)
 {
    __DRIimage *image;
-   struct intel_screen *intelScreen = screen->driverPrivate;
+   struct intel_screen *intelScreen = dri_screen->driverPrivate;
    uint32_t tiling;
    int cpp;
    unsigned long pitch;
@@ -657,7 +657,7 @@ intel_validate_usage(__DRIimage *image, unsigned int use)
 }
 
 static __DRIimage *
-intel_create_image_from_names(__DRIscreen *screen,
+intel_create_image_from_names(__DRIscreen *dri_screen,
                               int width, int height, int fourcc,
                               int *names, int num_names,
                               int *strides, int *offsets,
@@ -667,14 +667,14 @@ intel_create_image_from_names(__DRIscreen *screen,
     __DRIimage *image;
     int i, index;
 
-    if (screen == NULL || names == NULL || num_names != 1)
+    if (dri_screen == NULL || names == NULL || num_names != 1)
         return NULL;
 
     f = intel_image_format_lookup(fourcc);
     if (f == NULL)
         return NULL;
 
-    image = intel_create_image_from_name(screen, width, height,
+    image = intel_create_image_from_name(dri_screen, width, height,
                                          __DRI_IMAGE_FORMAT_NONE,
                                          names[0], strides[0],
                                          loaderPrivate);
@@ -693,12 +693,12 @@ intel_create_image_from_names(__DRIscreen *screen,
 }
 
 static __DRIimage *
-intel_create_image_from_fds(__DRIscreen *screen,
+intel_create_image_from_fds(__DRIscreen *dri_screen,
                             int width, int height, int fourcc,
                             int *fds, int num_fds, int *strides, int *offsets,
                             void *loaderPrivate)
 {
-   struct intel_screen *intelScreen = screen->driverPrivate;
+   struct intel_screen *intelScreen = dri_screen->driverPrivate;
    struct intel_image_format *f;
    __DRIimage *image;
    int i, index;
@@ -756,7 +756,7 @@ intel_create_image_from_fds(__DRIscreen *screen,
 }
 
 static __DRIimage *
-intel_create_image_from_dma_bufs(__DRIscreen *screen,
+intel_create_image_from_dma_bufs(__DRIscreen *dri_screen,
                                  int width, int height, int fourcc,
                                  int *fds, int num_fds,
                                  int *strides, int *offsets,
@@ -775,7 +775,7 @@ intel_create_image_from_dma_bufs(__DRIscreen *screen,
       return NULL;
    }
 
-   image = intel_create_image_from_fds(screen, width, height, fourcc, fds,
+   image = intel_create_image_from_fds(dri_screen, width, height, fourcc, fds,
                                        num_fds, strides, offsets,
                                        loaderPrivate);
 
@@ -864,10 +864,11 @@ static const __DRIimageExtension intelImageExtension = {
 };
 
 static int
-brw_query_renderer_integer(__DRIscreen *psp, int param, unsigned int *value)
+brw_query_renderer_integer(__DRIscreen *dri_screen,
+                           int param, unsigned int *value)
 {
    const struct intel_screen *const intelScreen =
-      (struct intel_screen *) psp->driverPrivate;
+      (struct intel_screen *) dri_screen->driverPrivate;
 
    switch (param) {
    case __DRI2_RENDERER_VENDOR_ID:
@@ -887,7 +888,7 @@ brw_query_renderer_integer(__DRIscreen *psp, int param, unsigned int *value)
       size_t aper_size;
       size_t mappable_size;
 
-      drm_intel_get_aperture_sizes(psp->fd, &mappable_size, &aper_size);
+      drm_intel_get_aperture_sizes(dri_screen->fd, &mappable_size, &aper_size);
 
       const unsigned gpu_mappable_megabytes =
          (aper_size / (1024 * 1024)) * 3 / 4;
@@ -911,17 +912,18 @@ brw_query_renderer_integer(__DRIscreen *psp, int param, unsigned int *value)
       value[0] = 1;
       return 0;
    default:
-      return driQueryRendererIntegerCommon(psp, param, value);
+      return driQueryRendererIntegerCommon(dri_screen, param, value);
    }
 
    return -1;
 }
 
 static int
-brw_query_renderer_string(__DRIscreen *psp, int param, const char **value)
+brw_query_renderer_string(__DRIscreen *dri_screen,
+                          int param, const char **value)
 {
    const struct intel_screen *intelScreen =
-      (struct intel_screen *) psp->driverPrivate;
+      (struct intel_screen *) dri_screen->driverPrivate;
 
    switch (param) {
    case __DRI2_RENDERER_VENDOR_ID:
@@ -1023,14 +1025,16 @@ intelDestroyScreen(__DRIscreen * sPriv)
  * This is called when we need to set up GL rendering to a new X window.
  */
 static GLboolean
-intelCreateBuffer(__DRIscreen * driScrnPriv,
+intelCreateBuffer(__DRIscreen *dri_screen,
                   __DRIdrawable * driDrawPriv,
                   const struct gl_config * mesaVis, GLboolean isPixmap)
 {
    struct intel_renderbuffer *rb;
-   struct intel_screen *screen = (struct intel_screen*) driScrnPriv->driverPrivate;
+   struct intel_screen *screen = (struct intel_screen *)
+      dri_screen->driverPrivate;
    mesa_format rgbFormat;
-   unsigned num_samples = intel_quantize_num_samples(screen, mesaVis->samples);
+   unsigned num_samples =
+      intel_quantize_num_samples(screen, mesaVis->samples);
    struct gl_framebuffer *fb;
 
    if (isPixmap)
@@ -1167,11 +1171,11 @@ err_out:
 static bool
 intel_init_bufmgr(struct intel_screen *intelScreen)
 {
-   __DRIscreen *spriv = intelScreen->driScrnPriv;
+   __DRIscreen *dri_screen = intelScreen->driScrnPriv;
 
    intelScreen->no_hw = getenv("INTEL_NO_HW") != NULL;
 
-   intelScreen->bufmgr = intel_bufmgr_gem_init(spriv->fd, BATCH_SZ);
+   intelScreen->bufmgr = intel_bufmgr_gem_init(dri_screen->fd, BATCH_SZ);
    if (intelScreen->bufmgr == NULL) {
       fprintf(stderr, "[%s:%u] Error initializing buffer manager.\n",
 	      __func__, __LINE__);
@@ -1421,34 +1425,34 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
 static void
 set_max_gl_versions(struct intel_screen *screen)
 {
-   __DRIscreen *psp = screen->driScrnPriv;
+   __DRIscreen *dri_screen = screen->driScrnPriv;
 
    switch (screen->devinfo->gen) {
    case 9:
    case 8:
-      psp->max_gl_core_version = 44;
-      psp->max_gl_compat_version = 30;
-      psp->max_gl_es1_version = 11;
-      psp->max_gl_es2_version = 31;
+      dri_screen->max_gl_core_version = 44;
+      dri_screen->max_gl_compat_version = 30;
+      dri_screen->max_gl_es1_version = 11;
+      dri_screen->max_gl_es2_version = 31;
       break;
    case 7:
-      psp->max_gl_core_version = 33;
-      psp->max_gl_compat_version = 30;
-      psp->max_gl_es1_version = 11;
-      psp->max_gl_es2_version = screen->devinfo->is_haswell ? 31 : 30;
+      dri_screen->max_gl_core_version = 33;
+      dri_screen->max_gl_compat_version = 30;
+      dri_screen->max_gl_es1_version = 11;
+      dri_screen->max_gl_es2_version = screen->devinfo->is_haswell ? 31 : 30;
       break;
    case 6:
-      psp->max_gl_core_version = 33;
-      psp->max_gl_compat_version = 30;
-      psp->max_gl_es1_version = 11;
-      psp->max_gl_es2_version = 30;
+      dri_screen->max_gl_core_version = 33;
+      dri_screen->max_gl_compat_version = 30;
+      dri_screen->max_gl_es1_version = 11;
+      dri_screen->max_gl_es2_version = 30;
       break;
    case 5:
    case 4:
-      psp->max_gl_core_version = 0;
-      psp->max_gl_compat_version = 21;
-      psp->max_gl_es1_version = 11;
-      psp->max_gl_es2_version = 20;
+      dri_screen->max_gl_core_version = 0;
+      dri_screen->max_gl_compat_version = 21;
+      dri_screen->max_gl_es1_version = 11;
+      dri_screen->max_gl_es2_version = 20;
       break;
    default:
       unreachable("unrecognized intel_screen::gen");
@@ -1534,13 +1538,13 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
  * \return the struct gl_config supported by this driver
  */
 static const
-__DRIconfig **intelInitScreen2(__DRIscreen *psp)
+__DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
 {
    struct intel_screen *intelScreen;
 
-   if (psp->image.loader) {
-   } else if (psp->dri2.loader->base.version <= 2 ||
-       psp->dri2.loader->getBuffersWithFormat == NULL) {
+   if (dri_screen->image.loader) {
+   } else if (dri_screen->dri2.loader->base.version <= 2 ||
+       dri_screen->dri2.loader->getBuffersWithFormat == NULL) {
       fprintf(stderr,
 	      "\nERROR!  DRI2 loader with getBuffersWithFormat() "
 	      "support required\n");
@@ -1556,8 +1560,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    /* parse information in __driConfigOptions */
    driParseOptionInfo(&intelScreen->optionCache, brw_config_options.xml);
 
-   intelScreen->driScrnPriv = psp;
-   psp->driverPrivate = (void *) intelScreen;
+   intelScreen->driScrnPriv = dri_screen;
+   dri_screen->driverPrivate = (void *) intelScreen;
 
    if (!intel_init_bufmgr(intelScreen))
        return false;
@@ -1653,7 +1657,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
       struct drm_i915_reset_stats stats;
       memset(&stats, 0, sizeof(stats));
 
-      const int ret = drmIoctl(psp->fd, DRM_IOCTL_I915_GET_RESET_STATS, &stats);
+      const int ret = drmIoctl(dri_screen->fd, DRM_IOCTL_I915_GET_RESET_STATS, &stats);
 
       intelScreen->has_context_reset_notification =
          (ret != -1 || errno != EINVAL);
@@ -1672,7 +1676,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
                                       (intelScreen->devinfo->is_haswell &&
                                        intelScreen->cmd_parser_version >= 7);
 
-   psp->extensions = !intelScreen->has_context_reset_notification
+   dri_screen->extensions = !intelScreen->has_context_reset_notification
       ? intelScreenExtensions : intelRobustScreenExtensions;
 
    intelScreen->compiler = brw_compiler_create(intelScreen,
@@ -1686,7 +1690,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
         intel_get_boolean(intelScreen, I915_PARAM_HAS_RESOURCE_STREAMER);
    }
 
-   return (const __DRIconfig**) intel_screen_make_configs(psp);
+   return (const __DRIconfig**) intel_screen_make_configs(dri_screen);
 }
 
 struct intel_buffer {
@@ -1695,12 +1699,12 @@ struct intel_buffer {
 };
 
 static __DRIbuffer *
-intelAllocateBuffer(__DRIscreen *screen,
+intelAllocateBuffer(__DRIscreen *dri_screen,
 		    unsigned attachment, unsigned format,
 		    int width, int height)
 {
    struct intel_buffer *intelBuffer;
-   struct intel_screen *intelScreen = screen->driverPrivate;
+   struct intel_screen *intelScreen = dri_screen->driverPrivate;
 
    assert(attachment == __DRI_BUFFER_FRONT_LEFT ||
           attachment == __DRI_BUFFER_BACK_LEFT);
@@ -1736,7 +1740,7 @@ intelAllocateBuffer(__DRIscreen *screen,
 }
 
 static void
-intelReleaseBuffer(__DRIscreen *screen, __DRIbuffer *buffer)
+intelReleaseBuffer(__DRIscreen *dri_screen, __DRIbuffer *buffer)
 {
    struct intel_buffer *intelBuffer = (struct intel_buffer *) buffer;
 
