@@ -957,6 +957,7 @@ typedef enum VkPipelineCreateFlagBits {
     VK_PIPELINE_CREATE_DERIVATIVE_BIT = 0x00000004,
 } VkPipelineCreateFlagBits;
 typedef VkFlags VkPipelineCreateFlags;
+typedef VkFlags VkPipelineShaderStageCreateFlags;
 
 typedef enum VkShaderStageFlagBits {
     VK_SHADER_STAGE_VERTEX_BIT = 0x00000001,
@@ -968,6 +969,11 @@ typedef enum VkShaderStageFlagBits {
     VK_SHADER_STAGE_ALL_GRAPHICS = 0x1F,
     VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
 } VkShaderStageFlagBits;
+typedef VkFlags VkPipelineVertexInputStateCreateFlags;
+typedef VkFlags VkPipelineInputAssemblyStateCreateFlags;
+typedef VkFlags VkPipelineTesselationStateCreateFlags;
+typedef VkFlags VkPipelineViewportStateCreateFlags;
+typedef VkFlags VkPipelineRasterizationStateCreateFlags;
 
 typedef enum VkCullModeFlagBits {
     VK_CULL_MODE_NONE = 0,
@@ -976,6 +982,10 @@ typedef enum VkCullModeFlagBits {
     VK_CULL_MODE_FRONT_AND_BACK = 0x3,
 } VkCullModeFlagBits;
 typedef VkFlags VkCullModeFlags;
+typedef VkFlags VkPipelineMultisampleStateCreateFlags;
+typedef VkFlags VkPipelineDepthStencilStateCreateFlags;
+typedef VkFlags VkPipelineColorBlendStateCreateFlags;
+typedef VkFlags VkPipelineDynamicStateCreateFlags;
 typedef VkFlags VkShaderStageFlags;
 
 typedef enum VkAttachmentDescriptionFlagBits {
@@ -1591,6 +1601,7 @@ typedef struct VkSpecializationInfo {
 typedef struct VkPipelineShaderStageCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineShaderStageCreateFlags            flags;
     VkShaderStage                               stage;
     VkShader                                    shader;
     const VkSpecializationInfo*                 pSpecializationInfo;
@@ -1612,6 +1623,7 @@ typedef struct VkVertexInputAttributeDescription {
 typedef struct VkPipelineVertexInputStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineVertexInputStateCreateFlags       flags;
     uint32_t                                    vertexBindingDescriptionCount;
     const VkVertexInputBindingDescription*      pVertexBindingDescriptions;
     uint32_t                                    vertexAttributeDescriptionCount;
@@ -1621,6 +1633,7 @@ typedef struct VkPipelineVertexInputStateCreateInfo {
 typedef struct VkPipelineInputAssemblyStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineInputAssemblyStateCreateFlags     flags;
     VkPrimitiveTopology                         topology;
     VkBool32                                    primitiveRestartEnable;
 } VkPipelineInputAssemblyStateCreateInfo;
@@ -1628,6 +1641,7 @@ typedef struct VkPipelineInputAssemblyStateCreateInfo {
 typedef struct VkPipelineTessellationStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineTesselationStateCreateFlags       flags;
     uint32_t                                    patchControlPoints;
 } VkPipelineTessellationStateCreateInfo;
 
@@ -1658,6 +1672,7 @@ typedef struct VkRect2D {
 typedef struct VkPipelineViewportStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineViewportStateCreateFlags          flags;
     uint32_t                                    viewportCount;
     const VkViewport*                           pViewports;
     uint32_t                                    scissorCount;
@@ -1667,6 +1682,7 @@ typedef struct VkPipelineViewportStateCreateInfo {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineRasterizationStateCreateFlags     flags;
     VkBool32                                    depthClipEnable;
     VkBool32                                    rasterizerDiscardEnable;
     VkPolygonMode                               polygonMode;
@@ -1682,6 +1698,7 @@ typedef struct {
 typedef struct VkPipelineMultisampleStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineMultisampleStateCreateFlags       flags;
     uint32_t                                    rasterSamples;
     VkBool32                                    sampleShadingEnable;
     float                                       minSampleShading;
@@ -1701,6 +1718,7 @@ typedef struct VkStencilOpState {
 typedef struct VkPipelineDepthStencilStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineDepthStencilStateCreateFlags      flags;
     VkBool32                                    depthTestEnable;
     VkBool32                                    depthWriteEnable;
     VkCompareOp                                 depthCompareOp;
@@ -1726,6 +1744,7 @@ typedef struct VkPipelineColorBlendAttachmentState {
 typedef struct VkPipelineColorBlendStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineColorBlendStateCreateFlags        flags;
     VkBool32                                    alphaToCoverageEnable;
     VkBool32                                    alphaToOneEnable;
     VkBool32                                    logicOpEnable;
@@ -1738,6 +1757,7 @@ typedef struct VkPipelineColorBlendStateCreateInfo {
 typedef struct VkPipelineDynamicStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineDynamicStateCreateFlags           flags;
     uint32_t                                    dynamicStateCount;
     const VkDynamicState*                       pDynamicStates;
 } VkPipelineDynamicStateCreateInfo;
@@ -1745,6 +1765,7 @@ typedef struct VkPipelineDynamicStateCreateInfo {
 typedef struct VkGraphicsPipelineCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkPipelineCreateFlags                       flags;
     uint32_t                                    stageCount;
     const VkPipelineShaderStageCreateInfo*      pStages;
     const VkPipelineVertexInputStateCreateInfo* pVertexInputState;
@@ -1756,7 +1777,6 @@ typedef struct VkGraphicsPipelineCreateInfo {
     const VkPipelineDepthStencilStateCreateInfo* pDepthStencilState;
     const VkPipelineColorBlendStateCreateInfo*  pColorBlendState;
     const VkPipelineDynamicStateCreateInfo*     pDynamicState;
-    VkPipelineCreateFlags                       flags;
     VkPipelineLayout                            layout;
     VkRenderPass                                renderPass;
     uint32_t                                    subpass;
@@ -1767,8 +1787,8 @@ typedef struct VkGraphicsPipelineCreateInfo {
 typedef struct VkComputePipelineCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkPipelineShaderStageCreateInfo             stage;
     VkPipelineCreateFlags                       flags;
+    VkPipelineShaderStageCreateInfo             stage;
     VkPipelineLayout                            layout;
     VkPipeline                                  basePipelineHandle;
     int32_t                                     basePipelineIndex;
