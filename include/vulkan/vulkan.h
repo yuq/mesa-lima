@@ -1926,21 +1926,21 @@ typedef struct VkAttachmentReference {
 typedef struct VkSubpassDescription {
     VkSubpassDescriptionFlags                   flags;
     VkPipelineBindPoint                         pipelineBindPoint;
-    uint32_t                                    inputCount;
+    uint32_t                                    inputAttachmentCount;
     const VkAttachmentReference*                pInputAttachments;
-    uint32_t                                    colorCount;
+    uint32_t                                    colorAttachmentCount;
     const VkAttachmentReference*                pColorAttachments;
     const VkAttachmentReference*                pResolveAttachments;
-    VkAttachmentReference                       depthStencilAttachment;
-    uint32_t                                    preserveCount;
+    const VkAttachmentReference*                pDepthStencilAttachment;
+    uint32_t                                    preserveAttachmentCount;
     const VkAttachmentReference*                pPreserveAttachments;
 } VkSubpassDescription;
 
 typedef struct VkSubpassDependency {
     uint32_t                                    srcSubpass;
-    uint32_t                                    destSubpass;
+    uint32_t                                    dstSubpass;
     VkPipelineStageFlags                        srcStageMask;
-    VkPipelineStageFlags                        destStageMask;
+    VkPipelineStageFlags                        dstStageMask;
     VkMemoryOutputFlags                         outputMask;
     VkMemoryInputFlags                          inputMask;
     VkBool32                                    byRegion;

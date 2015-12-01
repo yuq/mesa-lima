@@ -68,26 +68,28 @@ VkResult anv_CreateRenderPass(
       const VkSubpassDescription *desc = &pCreateInfo->pSubpasses[i];
       struct anv_subpass *subpass = &pass->subpasses[i];
 
-      subpass->input_count = desc->inputCount;
-      subpass->color_count = desc->colorCount;
+      subpass->input_count = desc->inputAttachmentCount;
+      subpass->color_count = desc->colorAttachmentCount;
 
-      if (desc->inputCount > 0) {
+      if (desc->inputAttachmentCount > 0) {
          subpass->input_attachments =
-            anv_device_alloc(device, desc->inputCount * sizeof(uint32_t),
+            anv_device_alloc(device,
+                             desc->inputAttachmentCount * sizeof(uint32_t),
                              8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
 
-         for (uint32_t j = 0; j < desc->inputCount; j++) {
+         for (uint32_t j = 0; j < desc->inputAttachmentCount; j++) {
             subpass->input_attachments[j]
                = desc->pInputAttachments[j].attachment;
          }
       }
 
-      if (desc->colorCount > 0) {
+      if (desc->colorAttachmentCount > 0) {
          subpass->color_attachments =
-            anv_device_alloc(device, desc->colorCount * sizeof(uint32_t),
+            anv_device_alloc(device,
+                             desc->colorAttachmentCount * sizeof(uint32_t),
                              8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
 
-         for (uint32_t j = 0; j < desc->colorCount; j++) {
+         for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
             subpass->color_attachments[j]
                = desc->pColorAttachments[j].attachment;
          }
@@ -95,16 +97,22 @@ VkResult anv_CreateRenderPass(
 
       if (desc->pResolveAttachments) {
          subpass->resolve_attachments =
-            anv_device_alloc(device, desc->colorCount * sizeof(uint32_t),
+            anv_device_alloc(device,
+                             desc->colorAttachmentCount * sizeof(uint32_t),
                              8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
 
-         for (uint32_t j = 0; j < desc->colorCount; j++) {
+         for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
             subpass->resolve_attachments[j]
                = desc->pResolveAttachments[j].attachment;
          }
       }
 
-      subpass->depth_stencil_attachment = desc->depthStencilAttachment.attachment;
+      if (desc->pDepthStencilAttachment) {
+         subpass->depth_stencil_attachment =
+            desc->pDepthStencilAttachment->attachment;
+      } else {
+         subpass->depth_stencil_attachment = VK_ATTACHMENT_UNUSED;
+      }
    }
 
    *pRenderPass = anv_render_pass_to_handle(pass);

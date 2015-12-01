@@ -737,18 +737,18 @@ void anv_CmdClearColorImage(
                   .subpassCount = 1,
                   .pSubpasses = &(VkSubpassDescription) {
                      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-                     .inputCount = 0,
-                     .colorCount = 1,
+                     .inputAttachmentCount = 0,
+                     .colorAttachmentCount = 1,
                      .pColorAttachments = &(VkAttachmentReference) {
                         .attachment = 0,
                         .layout = VK_IMAGE_LAYOUT_GENERAL,
                      },
                      .pResolveAttachments = NULL,
-                     .depthStencilAttachment = (VkAttachmentReference) {
+                     .pDepthStencilAttachment = &(VkAttachmentReference) {
                         .attachment = VK_ATTACHMENT_UNUSED,
                         .layout = VK_IMAGE_LAYOUT_GENERAL,
                      },
-                     .preserveCount = 1,
+                     .preserveAttachmentCount = 1,
                      .pPreserveAttachments = &(VkAttachmentReference) {
                         .attachment = 0,
                         .layout = VK_IMAGE_LAYOUT_GENERAL,
