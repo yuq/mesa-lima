@@ -667,8 +667,8 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
           * probably better of simply copying it into our batch.
           */
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_EMIT;
-      } else if (cmd_buffer->opt_flags &
-                 VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT) {
+      } else if (!(cmd_buffer->usage_flags &
+                   VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT)) {
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_CHAIN;
 
          /* When we chain, we need to add an MI_BATCH_BUFFER_START command

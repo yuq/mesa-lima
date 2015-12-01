@@ -188,7 +188,7 @@ VkResult anv_CreateCommandBuffer(
                          &device->dynamic_state_block_pool);
 
    cmd_buffer->level = pCreateInfo->level;
-   cmd_buffer->opt_flags = 0;
+   cmd_buffer->usage_flags = 0;
 
    anv_cmd_state_init(&cmd_buffer->state);
 
@@ -265,7 +265,7 @@ VkResult anv_BeginCommandBuffer(
 
    anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
 
-   cmd_buffer->opt_flags = pBeginInfo->flags;
+   cmd_buffer->usage_flags = pBeginInfo->flags;
 
    if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
       cmd_buffer->state.framebuffer =

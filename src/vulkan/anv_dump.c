@@ -94,7 +94,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
    result = anv_BeginCommandBuffer(cmd,
       &(VkCommandBufferBeginInfo) {
          .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-         .flags = VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT,
+         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
       });
    assert(result == VK_SUCCESS);
 

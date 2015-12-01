@@ -1044,7 +1044,7 @@ struct anv_cmd_buffer {
    struct anv_state_stream                      surface_state_stream;
    struct anv_state_stream                      dynamic_state_stream;
 
-   VkCommandBufferOptimizeFlags                 opt_flags;
+   VkCommandBufferUsageFlags                    usage_flags;
    VkCommandBufferLevel                         level;
 
    struct anv_cmd_state                         state;
