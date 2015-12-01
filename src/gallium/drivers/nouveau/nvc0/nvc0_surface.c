@@ -288,6 +288,8 @@ nvc0_clear_render_target(struct pipe_context *pipe,
    struct nv04_resource *res = nv04_resource(sf->base.texture);
    unsigned z;
 
+   assert(dst->texture->target != PIPE_BUFFER);
+
    if (!PUSH_SPACE(push, 32 + sf->depth))
       return;
 
@@ -515,6 +517,8 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
    uint32_t mode = 0;
    int unk = mt->base.base.target == PIPE_TEXTURE_2D;
    unsigned z;
+
+   assert(dst->texture->target != PIPE_BUFFER);
 
    if (!PUSH_SPACE(push, 32 + sf->depth))
       return;

@@ -286,6 +286,8 @@ nv50_clear_render_target(struct pipe_context *pipe,
    struct nouveau_bo *bo = mt->base.bo;
    unsigned z;
 
+   assert(dst->texture->target != PIPE_BUFFER);
+
    BEGIN_NV04(push, NV50_3D(CLEAR_COLOR(0)), 4);
    PUSH_DATAf(push, color->f[0]);
    PUSH_DATAf(push, color->f[1]);
@@ -371,6 +373,7 @@ nv50_clear_depth_stencil(struct pipe_context *pipe,
    uint32_t mode = 0;
    unsigned z;
 
+   assert(dst->texture->target != PIPE_BUFFER);
    assert(nouveau_bo_memtype(bo)); /* ZETA cannot be linear */
 
    if (clear_flags & PIPE_CLEAR_DEPTH) {
