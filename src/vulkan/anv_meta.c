@@ -601,8 +601,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
 
    anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 1,
                       &(VkViewport) {
-                        .originX = 0.0f,
-                        .originY = 0.0f,
+                        .x = 0.0f,
+                        .y = 0.0f,
                         .width = dest_iview->extent.width,
                         .height = dest_iview->extent.height,
                         .minDepth = 0.0f,

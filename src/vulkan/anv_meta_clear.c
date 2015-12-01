@@ -355,8 +355,8 @@ emit_load_color_clear(struct anv_cmd_buffer *cmd_buffer,
    ANV_CALL(CmdSetViewport)(cmd_buffer_h, 1,
       (VkViewport[]) {
          {
-            .originX = 0,
-            .originY = 0,
+            .x = 0,
+            .y = 0,
             .width = fb->width,
             .height = fb->height,
             .minDepth = 0.0,
@@ -523,8 +523,8 @@ emit_load_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
    ANV_CALL(CmdSetViewport)(cmd_buffer_h, 1,
       (VkViewport[]) {
          {
-            .originX = 0,
-            .originY = 0,
+            .x = 0,
+            .y = 0,
             .width = fb->width,
             .height = fb->height,
 

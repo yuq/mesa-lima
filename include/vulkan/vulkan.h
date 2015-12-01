@@ -1646,8 +1646,8 @@ typedef struct VkPipelineTessellationStateCreateInfo {
 } VkPipelineTessellationStateCreateInfo;
 
 typedef struct VkViewport {
-    float                                       originX;
-    float                                       originY;
+    float                                       x;
+    float                                       y;
     float                                       width;
     float                                       height;
     float                                       minDepth;
