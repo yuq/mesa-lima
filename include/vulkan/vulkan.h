@@ -949,14 +949,6 @@ typedef VkFlags VkShaderModuleCreateFlags;
 typedef VkFlags VkPipelineCacheCreateFlags;
 typedef VkFlags VkShaderCreateFlags;
 
-typedef enum {
-    VK_CHANNEL_R_BIT = 0x00000001,
-    VK_CHANNEL_G_BIT = 0x00000002,
-    VK_CHANNEL_B_BIT = 0x00000004,
-    VK_CHANNEL_A_BIT = 0x00000008,
-} VkChannelFlagBits;
-typedef VkFlags VkChannelFlags;
-
 typedef enum VkPipelineCreateFlagBits {
     VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT = 0x00000001,
     VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT = 0x00000002,
@@ -991,6 +983,14 @@ typedef VkFlags VkCullModeFlags;
 typedef VkFlags VkPipelineMultisampleStateCreateFlags;
 typedef VkFlags VkPipelineDepthStencilStateCreateFlags;
 typedef VkFlags VkPipelineColorBlendStateCreateFlags;
+
+typedef enum VkColorComponentFlagBits {
+    VK_COLOR_COMPONENT_R_BIT = 0x00000001,
+    VK_COLOR_COMPONENT_G_BIT = 0x00000002,
+    VK_COLOR_COMPONENT_B_BIT = 0x00000004,
+    VK_COLOR_COMPONENT_A_BIT = 0x00000008,
+} VkColorComponentFlagBits;
+typedef VkFlags VkColorComponentFlags;
 typedef VkFlags VkPipelineDynamicStateCreateFlags;
 typedef VkFlags VkPipelineLayoutCreateFlags;
 typedef VkFlags VkShaderStageFlags;
@@ -1757,7 +1757,7 @@ typedef struct VkPipelineColorBlendAttachmentState {
     VkBlendFactor                               srcAlphaBlendFactor;
     VkBlendFactor                               dstAlphaBlendFactor;
     VkBlendOp                                   alphaBlendOp;
-    VkChannelFlags                              channelWriteMask;
+    VkColorComponentFlags                       colorWriteMask;
 } VkPipelineColorBlendAttachmentState;
 
 typedef struct VkPipelineColorBlendStateCreateInfo {

@@ -292,10 +292,10 @@ init_color_pipeline(struct anv_device *device)
       .pAttachments = (VkPipelineColorBlendAttachmentState []) {
          {
             .blendEnable = false,
-            .channelWriteMask = VK_CHANNEL_A_BIT |
-                                VK_CHANNEL_R_BIT |
-                                VK_CHANNEL_G_BIT |
-                                VK_CHANNEL_B_BIT,
+            .colorWriteMask = VK_COLOR_COMPONENT_A_BIT |
+                              VK_COLOR_COMPONENT_R_BIT |
+                              VK_COLOR_COMPONENT_G_BIT |
+                              VK_COLOR_COMPONENT_B_BIT,
          },
       },
    };

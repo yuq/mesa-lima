@@ -371,8 +371,11 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
          .attachmentCount = 1,
          .pAttachments = (VkPipelineColorBlendAttachmentState []) {
-            { .channelWriteMask = VK_CHANNEL_A_BIT |
-                 VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
+            { .colorWriteMask =
+                 VK_COLOR_COMPONENT_A_BIT |
+                 VK_COLOR_COMPONENT_R_BIT |
+                 VK_COLOR_COMPONENT_G_BIT |
+                 VK_COLOR_COMPONENT_B_BIT },
          }
       },
       .pDynamicState = &(VkPipelineDynamicStateCreateInfo) {

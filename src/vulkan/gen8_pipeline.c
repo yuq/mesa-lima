@@ -234,10 +234,10 @@ emit_cb_state(struct anv_pipeline *pipeline,
          .SourceAlphaBlendFactor = vk_to_gen_blend[a->srcAlphaBlendFactor],
          .DestinationAlphaBlendFactor = vk_to_gen_blend[a->dstAlphaBlendFactor],
          .AlphaBlendFunction = vk_to_gen_blend_op[a->alphaBlendOp],
-         .WriteDisableAlpha = !(a->channelWriteMask & VK_CHANNEL_A_BIT),
-         .WriteDisableRed = !(a->channelWriteMask & VK_CHANNEL_R_BIT),
-         .WriteDisableGreen = !(a->channelWriteMask & VK_CHANNEL_G_BIT),
-         .WriteDisableBlue = !(a->channelWriteMask & VK_CHANNEL_B_BIT),
+         .WriteDisableAlpha = !(a->colorWriteMask & VK_COLOR_COMPONENT_A_BIT),
+         .WriteDisableRed = !(a->colorWriteMask & VK_COLOR_COMPONENT_R_BIT),
+         .WriteDisableGreen = !(a->colorWriteMask & VK_COLOR_COMPONENT_G_BIT),
+         .WriteDisableBlue = !(a->colorWriteMask & VK_COLOR_COMPONENT_B_BIT),
       };
 
       /* Our hardware applies the blend factor prior to the blend function

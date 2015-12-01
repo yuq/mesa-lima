@@ -291,10 +291,10 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
          bool                                         AlphaToCoverageDitherEnable;
 #     endif
 
-         .WriteDisableAlpha = !(a->channelWriteMask & VK_CHANNEL_A_BIT),
-         .WriteDisableRed = !(a->channelWriteMask & VK_CHANNEL_R_BIT),
-         .WriteDisableGreen = !(a->channelWriteMask & VK_CHANNEL_G_BIT),
-         .WriteDisableBlue = !(a->channelWriteMask & VK_CHANNEL_B_BIT),
+         .WriteDisableAlpha = !(a->colorWriteMask & VK_COLOR_COMPONENT_A_BIT),
+         .WriteDisableRed = !(a->colorWriteMask & VK_COLOR_COMPONENT_R_BIT),
+         .WriteDisableGreen = !(a->colorWriteMask & VK_COLOR_COMPONENT_G_BIT),
+         .WriteDisableBlue = !(a->colorWriteMask & VK_COLOR_COMPONENT_B_BIT),
 
          .LogicOpEnable = info->logicOpEnable,
          .LogicOpFunction = vk_to_gen_logic_op[info->logicOp],
