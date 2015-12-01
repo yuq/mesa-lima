@@ -391,6 +391,9 @@ struct anv_state_stream {
    uint32_t end;
 };
 
+#define CACHELINE_SIZE 64
+#define CACHELINE_MASK 63
+
 void anv_block_pool_init(struct anv_block_pool *pool,
                          struct anv_device *device, uint32_t block_size);
 void anv_block_pool_finish(struct anv_block_pool *pool);

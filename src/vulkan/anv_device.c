@@ -1035,22 +1035,57 @@ void anv_UnmapMemory(
    anv_gem_munmap(mem->map, mem->map_size);
 }
 
+static void
+clflush_mapped_ranges(struct anv_device         *device,
+                      uint32_t                   count,
+                      const VkMappedMemoryRange *ranges)
+{
+   for (uint32_t i = 0; i < count; i++) {
+      ANV_FROM_HANDLE(anv_device_memory, mem, ranges[i].memory);
+      void *p = mem->map + (ranges[i].offset & ~CACHELINE_MASK);
+      void *end = mem->map + ranges[i].offset + ranges[i].size;
+
+      while (p < end) {
+         __builtin_ia32_clflush(p);
+         p += CACHELINE_SIZE;
+      }
+   }
+}
+
 VkResult anv_FlushMappedMemoryRanges(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     uint32_t                                    memoryRangeCount,
     const VkMappedMemoryRange*                  pMemoryRanges)
 {
-   /* clflush here for !llc platforms */
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   if (device->info.has_llc)
+      return VK_SUCCESS;
+
+   /* Make sure the writes we're flushing have landed. */
+   __builtin_ia32_sfence();
+
+   clflush_mapped_ranges(device, memoryRangeCount, pMemoryRanges);
 
    return VK_SUCCESS;
 }
 
 VkResult anv_InvalidateMappedMemoryRanges(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     uint32_t                                    memoryRangeCount,
     const VkMappedMemoryRange*                  pMemoryRanges)
 {
-   return anv_FlushMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   if (device->info.has_llc)
+      return VK_SUCCESS;
+
+   clflush_mapped_ranges(device, memoryRangeCount, pMemoryRanges);
+
+   /* Make sure no reads get moved up above the invalidate. */
+   __builtin_ia32_lfence();
+
+   return VK_SUCCESS;
 }
 
 void anv_GetBufferMemoryRequirements(
