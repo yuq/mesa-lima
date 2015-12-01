@@ -1078,11 +1078,11 @@ typedef void (VKAPI_PTR *PFN_vkFreeFunction)(
 
 typedef void (VKAPI_PTR *PFN_vkVoidFunction)(void);
 
-typedef struct {
+typedef struct VkApplicationInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
-    const char*                                 pAppName;
-    uint32_t                                    appVersion;
+    const char*                                 pApplicationName;
+    uint32_t                                    applicationVersion;
     const char*                                 pEngineName;
     uint32_t                                    engineVersion;
     uint32_t                                    apiVersion;
@@ -1098,12 +1098,12 @@ typedef struct VkInstanceCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkInstanceCreateFlags                       flags;
-    const VkApplicationInfo*                    pAppInfo;
+    const VkApplicationInfo*                    pApplicationInfo;
     const VkAllocCallbacks*                     pAllocCb;
-    uint32_t                                    layerCount;
-    const char*const*                           ppEnabledLayerNames;
-    uint32_t                                    extensionCount;
-    const char*const*                           ppEnabledExtensionNames;
+    uint32_t                                    enabledLayerNameCount;
+    const char* const*                          ppEnabledLayerNames;
+    uint32_t                                    enabledExtensionNameCount;
+    const char* const*                          ppEnabledExtensionNames;
 } VkInstanceCreateInfo;
 
 typedef struct VkPhysicalDeviceFeatures {

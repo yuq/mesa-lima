@@ -194,10 +194,10 @@ VkResult anv_CreateInstance(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
-   if (pCreateInfo->pAppInfo->apiVersion != VK_MAKE_VERSION(0, 170, 2))
+   if (pCreateInfo->pApplicationInfo->apiVersion != VK_MAKE_VERSION(0, 170, 2))
       return vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
 
-   for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+   for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
       bool found = false;
       for (uint32_t j = 0; j < ARRAY_SIZE(global_extensions); j++) {
          if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
@@ -223,7 +223,7 @@ VkResult anv_CreateInstance(
    instance->pAllocUserData = alloc_callbacks->pUserData;
    instance->pfnAlloc = alloc_callbacks->pfnAlloc;
    instance->pfnFree = alloc_callbacks->pfnFree;
-   instance->apiVersion = pCreateInfo->pAppInfo->apiVersion;
+   instance->apiVersion = pCreateInfo->pApplicationInfo->apiVersion;
    instance->physicalDeviceCount = -1;
 
    _mesa_locale_init();
