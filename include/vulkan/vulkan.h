@@ -68,12 +68,12 @@ VK_DEFINE_HANDLE(VkInstance)
 VK_DEFINE_HANDLE(VkPhysicalDevice)
 VK_DEFINE_HANDLE(VkDevice)
 VK_DEFINE_HANDLE(VkQueue)
+VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSemaphore)
 VK_DEFINE_HANDLE(VkCommandBuffer)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkFence)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkDeviceMemory)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkBuffer)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkImage)
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkSemaphore)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkEvent)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkQueryPool)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkBufferView)
@@ -108,7 +108,7 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCommandPool)
 #define VK_MAX_DESCRIPTION                256
 
 
-typedef enum {
+typedef enum VkResult {
     VK_SUCCESS = 0,
     VK_UNSUPPORTED = 1,
     VK_NOT_READY = 2,
@@ -130,7 +130,7 @@ typedef enum {
     VK_RESULT_MAX_ENUM = 0x7FFFFFFF
 } VkResult;
 
-typedef enum {
+typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_APPLICATION_INFO = 0,
     VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO = 1,
     VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO = 2,
@@ -196,7 +196,7 @@ typedef enum {
     VK_SYSTEM_ALLOC_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkSystemAllocType;
 
-typedef enum {
+typedef enum VkFormat {
     VK_FORMAT_UNDEFINED = 0,
     VK_FORMAT_R4G4_UNORM = 1,
     VK_FORMAT_R4G4_USCALED = 2,
@@ -849,7 +849,7 @@ typedef enum VkQueueFlagBits {
 } VkQueueFlagBits;
 typedef VkFlags VkQueueFlags;
 
-typedef enum {
+typedef enum VkMemoryPropertyFlagBits {
     VK_MEMORY_PROPERTY_DEVICE_ONLY = 0,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT = 0x00000001,
     VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT = 0x00000002,
@@ -1119,7 +1119,7 @@ typedef struct {
     PFN_vkFreeFunction                          pfnFree;
 } VkAllocCallbacks;
 
-typedef struct {
+typedef struct VkInstanceCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkInstanceCreateFlags                       flags;
@@ -1131,7 +1131,7 @@ typedef struct {
     const char*const*                           ppEnabledExtensionNames;
 } VkInstanceCreateInfo;
 
-typedef struct {
+typedef struct VkPhysicalDeviceFeatures {
     VkBool32                                    robustBufferAccess;
     VkBool32                                    fullDrawIndexUint32;
     VkBool32                                    imageCubeArray;
@@ -1185,19 +1185,19 @@ typedef struct {
     VkBool32                                    sparseResidencyAliased;
 } VkPhysicalDeviceFeatures;
 
-typedef struct {
+typedef struct VkFormatProperties {
     VkFormatFeatureFlags                        linearTilingFeatures;
     VkFormatFeatureFlags                        optimalTilingFeatures;
     VkFormatFeatureFlags                        bufferFeatures;
 } VkFormatProperties;
 
-typedef struct {
+typedef struct VkExtent3D {
     int32_t                                     width;
     int32_t                                     height;
     int32_t                                     depth;
 } VkExtent3D;
 
-typedef struct {
+typedef struct VkImageFormatProperties {
     VkExtent3D                                  maxExtent;
     uint32_t                                    maxMipLevels;
     uint32_t                                    maxArraySize;
@@ -1205,7 +1205,7 @@ typedef struct {
     VkDeviceSize                                maxResourceSize;
 } VkImageFormatProperties;
 
-typedef struct {
+typedef struct VkPhysicalDeviceLimits {
     uint32_t                                    maxImageDimension1D;
     uint32_t                                    maxImageDimension2D;
     uint32_t                                    maxImageDimension3D;
@@ -1304,16 +1304,15 @@ typedef struct {
     float                                       lineWidthGranularity;
 } VkPhysicalDeviceLimits;
 
-typedef struct {
+typedef struct VkPhysicalDeviceSparseProperties {
     VkBool32                                    residencyStandard2DBlockShape;
-    VkBool32                                    residencyStandard2DMSBlockShape;
+    VkBool32                                    residencyStandard2DMultisampleBlockShape;
     VkBool32                                    residencyStandard3DBlockShape;
     VkBool32                                    residencyAlignedMipSize;
-    VkBool32                                    residencyNonResident;
     VkBool32                                    residencyNonResidentStrict;
 } VkPhysicalDeviceSparseProperties;
 
-typedef struct {
+typedef struct VkPhysicalDeviceProperties {
     uint32_t                                    apiVersion;
     uint32_t                                    driverVersion;
     uint32_t                                    vendorId;
@@ -1604,9 +1603,9 @@ typedef struct VkPipelineCacheCreateInfo {
 } VkPipelineCacheCreateInfo;
 
 typedef struct VkSpecializationMapEntry {
-    uint32_t                                    constantId;
-    size_t                                      size;
+    uint32_t                                    constantID;
     uint32_t                                    offset;
+    size_t                                      size;
 } VkSpecializationMapEntry;
 
 typedef struct VkSpecializationInfo {
