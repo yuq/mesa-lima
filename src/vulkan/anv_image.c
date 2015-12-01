@@ -430,16 +430,18 @@ void anv_GetImageSubresourceLayout(
 {
    ANV_FROM_HANDLE(anv_image, image, _image);
 
-   switch (pSubresource->aspect) {
-   case VK_IMAGE_ASPECT_COLOR:
+   assert(__builtin_popcount(pSubresource->aspectMask) == 1);
+
+   switch (pSubresource->aspectMask) {
+   case VK_IMAGE_ASPECT_COLOR_BIT:
       anv_surface_get_subresource_layout(image, &image->color_surface,
                                          pSubresource, pLayout);
       break;
-   case VK_IMAGE_ASPECT_DEPTH:
+   case VK_IMAGE_ASPECT_DEPTH_BIT:
       anv_surface_get_subresource_layout(image, &image->depth_surface,
                                          pSubresource, pLayout);
       break;
-   case VK_IMAGE_ASPECT_STENCIL:
+   case VK_IMAGE_ASPECT_STENCIL_BIT:
       anv_surface_get_subresource_layout(image, &image->stencil_surface,
                                          pSubresource, pLayout);
       break;
@@ -520,7 +522,7 @@ anv_validate_CreateImageView(VkDevice _device,
                 image->format->isl_layout->bs);
       }
 
-      if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL) {
+      if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
          /* FINISHME: Is it legal to have an R8 view of S8? */
          assert(image->format->has_stencil);
          assert(view_format_info->has_stencil);

@@ -409,17 +409,6 @@ typedef enum VkPhysicalDeviceType {
     VK_PHYSICAL_DEVICE_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkPhysicalDeviceType;
 
-typedef enum {
-    VK_IMAGE_ASPECT_COLOR = 0,
-    VK_IMAGE_ASPECT_DEPTH = 1,
-    VK_IMAGE_ASPECT_STENCIL = 2,
-    VK_IMAGE_ASPECT_METADATA = 3,
-    VK_IMAGE_ASPECT_BEGIN_RANGE = VK_IMAGE_ASPECT_COLOR,
-    VK_IMAGE_ASPECT_END_RANGE = VK_IMAGE_ASPECT_METADATA,
-    VK_IMAGE_ASPECT_NUM = (VK_IMAGE_ASPECT_METADATA - VK_IMAGE_ASPECT_COLOR + 1),
-    VK_IMAGE_ASPECT_MAX_ENUM = 0x7FFFFFFF
-} VkImageAspect;
-
 typedef enum VkQueryType {
     VK_QUERY_TYPE_OCCLUSION = 0,
     VK_QUERY_TYPE_PIPELINE_STATISTICS = 1,
@@ -1420,7 +1409,7 @@ typedef struct VkSparseImageOpaqueMemoryBindInfo {
 } VkSparseImageOpaqueMemoryBindInfo;
 
 typedef struct VkImageSubresource {
-    VkImageAspect                               aspect;
+    VkImageAspectFlags                          aspectMask;
     uint32_t                                    mipLevel;
     uint32_t                                    arrayLayer;
 } VkImageSubresource;

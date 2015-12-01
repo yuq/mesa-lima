@@ -178,7 +178,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
    VkSubresourceLayout layout;
    anv_GetImageSubresourceLayout(vk_device, copy_image,
       &(VkImageSubresource) {
-         .aspect = VK_IMAGE_ASPECT_COLOR,
+         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
          .mipLevel = 0,
          .arrayLayer = 0,
       }, &layout);
