@@ -173,8 +173,8 @@ create_pipeline(struct anv_device *device,
             .scissorCount = 1,
             .pScissors = NULL, /* dynamic */
          },
-         .pRasterState = &(VkPipelineRasterStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
+         .pRasterizationState = &(VkPipelineRasterizationStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             .depthClipEnable = false,
             .rasterizerDiscardEnable = false,
             .polygonMode = VK_POLYGON_MODE_FILL,
@@ -185,7 +185,7 @@ create_pipeline(struct anv_device *device,
          },
          .pMultisampleState = &(VkPipelineMultisampleStateCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-            .rasterSamples = 1, /* FINISHME: Multisampling */
+            .rasterizationSamples = 1, /* FINISHME: Multisampling */
             .sampleShadingEnable = false,
             .pSampleMask = (VkSampleMask[]) { UINT32_MAX },
             .alphaToCoverageEnable = false,

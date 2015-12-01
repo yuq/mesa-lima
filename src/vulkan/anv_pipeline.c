@@ -314,13 +314,13 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
                           info->pMultisampleState &&
                           info->pMultisampleState->alphaToCoverageEnable;
 
-   if (info->pMultisampleState && info->pMultisampleState->rasterSamples > 1) {
+   if (info->pMultisampleState && info->pMultisampleState->rasterizationSamples > 1) {
       /* We should probably pull this out of the shader, but it's fairly
        * harmless to compute it and then let dead-code take care of it.
        */
       key->persample_shading = info->pMultisampleState->sampleShadingEnable;
       if (key->persample_shading)
-         key->persample_2x = info->pMultisampleState->rasterSamples == 2;
+         key->persample_2x = info->pMultisampleState->rasterizationSamples == 2;
 
       key->compute_pos_offset = info->pMultisampleState->sampleShadingEnable;
       key->compute_sample_id = info->pMultisampleState->sampleShadingEnable;
@@ -844,17 +844,18 @@ anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
    }
 
    if (states & (1 << VK_DYNAMIC_STATE_LINE_WIDTH)) {
-      assert(pCreateInfo->pRasterState);
-      dynamic->line_width = pCreateInfo->pRasterState->lineWidth;
+      assert(pCreateInfo->pRasterizationState);
+      dynamic->line_width = pCreateInfo->pRasterizationState->lineWidth;
    }
 
    if (states & (1 << VK_DYNAMIC_STATE_DEPTH_BIAS)) {
-      assert(pCreateInfo->pRasterState);
+      assert(pCreateInfo->pRasterizationState);
       dynamic->depth_bias.bias =
-         pCreateInfo->pRasterState->depthBiasConstantFactor;
-      dynamic->depth_bias.clamp = pCreateInfo->pRasterState->depthBiasClamp;
+         pCreateInfo->pRasterizationState->depthBiasConstantFactor;
+      dynamic->depth_bias.clamp =
+         pCreateInfo->pRasterizationState->depthBiasClamp;
       dynamic->depth_bias.slope =
-         pCreateInfo->pRasterState->depthBiasSlopeFactor;
+         pCreateInfo->pRasterizationState->depthBiasSlopeFactor;
    }
 
    if (states & (1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS)) {
@@ -935,7 +936,7 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
    assert(info->pVertexInputState);
    assert(info->pInputAssemblyState);
    assert(info->pViewportState);
-   assert(info->pRasterState);
+   assert(info->pRasterizationState);
    assert(info->pMultisampleState);
 
    if (subpass && subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED)
@@ -987,7 +988,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
    if (pCreateInfo->pTessellationState)
       anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO");
    if (pCreateInfo->pMultisampleState &&
-       pCreateInfo->pMultisampleState->rasterSamples > 1)
+       pCreateInfo->pMultisampleState->rasterizationSamples > 1)
       anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO");
 
    pipeline->use_repclear = extra && extra->use_repclear;

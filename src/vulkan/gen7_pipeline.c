@@ -102,7 +102,7 @@ static const uint32_t vk_to_gen_front_face[] = {
 
 static void
 gen7_emit_rs_state(struct anv_pipeline *pipeline,
-                   const VkPipelineRasterStateCreateInfo *info,
+                   const VkPipelineRasterizationStateCreateInfo *info,
                    const struct anv_graphics_pipeline_create_info *extra)
 {
    struct GEN7_3DSTATE_SF sf = {
@@ -351,8 +351,8 @@ genX(graphics_pipeline_create)(
    assert(pCreateInfo->pVertexInputState);
    gen7_emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
 
-   assert(pCreateInfo->pRasterState);
-   gen7_emit_rs_state(pipeline, pCreateInfo->pRasterState, extra);
+   assert(pCreateInfo->pRasterizationState);
+   gen7_emit_rs_state(pipeline, pCreateInfo->pRasterizationState, extra);
 
    gen7_emit_ds_state(pipeline, pCreateInfo->pDepthStencilState);
 
@@ -391,7 +391,8 @@ genX(graphics_pipeline_create)(
 
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_AA_LINE_PARAMETERS);
 
-   const VkPipelineRasterStateCreateInfo *rs_info = pCreateInfo->pRasterState;
+   const VkPipelineRasterizationStateCreateInfo *rs_info =
+      pCreateInfo->pRasterizationState;
 
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_CLIP,
       .FrontWinding                             = vk_to_gen_front_face[rs_info->frontFace],

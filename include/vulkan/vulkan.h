@@ -151,7 +151,7 @@ typedef enum {
     VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO = 17,
     VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO = 18,
     VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO = 19,
-    VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO = 20,
+    VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO = 20,
     VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO = 21,
     VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO = 22,
     VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO = 23,
@@ -1696,7 +1696,7 @@ typedef struct VkPipelineViewportStateCreateInfo {
     const VkRect2D*                             pScissors;
 } VkPipelineViewportStateCreateInfo;
 
-typedef struct {
+typedef struct VkPipelineRasterizationStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPipelineRasterizationStateCreateFlags     flags;
@@ -1710,13 +1710,13 @@ typedef struct {
     float                                       depthBiasClamp;
     float                                       depthBiasSlopeFactor;
     float                                       lineWidth;
-} VkPipelineRasterStateCreateInfo;
+} VkPipelineRasterizationStateCreateInfo;
 
 typedef struct VkPipelineMultisampleStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPipelineMultisampleStateCreateFlags       flags;
-    uint32_t                                    rasterSamples;
+    VkSampleCountFlagBits                       rasterizationSamples;
     VkBool32                                    sampleShadingEnable;
     float                                       minSampleShading;
     const VkSampleMask*                         pSampleMask;
@@ -1789,7 +1789,7 @@ typedef struct VkGraphicsPipelineCreateInfo {
     const VkPipelineInputAssemblyStateCreateInfo* pInputAssemblyState;
     const VkPipelineTessellationStateCreateInfo* pTessellationState;
     const VkPipelineViewportStateCreateInfo*    pViewportState;
-    const VkPipelineRasterStateCreateInfo*      pRasterState;
+    const VkPipelineRasterizationStateCreateInfo* pRasterizationState;
     const VkPipelineMultisampleStateCreateInfo* pMultisampleState;
     const VkPipelineDepthStencilStateCreateInfo* pDepthStencilState;
     const VkPipelineColorBlendStateCreateInfo*  pColorBlendState;

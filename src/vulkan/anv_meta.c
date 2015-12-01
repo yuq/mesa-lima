@@ -353,8 +353,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .viewportCount = 1,
          .scissorCount = 1,
       },
-      .pRasterState = &(VkPipelineRasterStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
+      .pRasterizationState = &(VkPipelineRasterizationStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
          .depthClipEnable = true,
          .rasterizerDiscardEnable = false,
          .polygonMode = VK_POLYGON_MODE_FILL,
@@ -363,7 +363,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       },
       .pMultisampleState = &(VkPipelineMultisampleStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-         .rasterSamples = 1,
+         .rasterizationSamples = 1,
          .sampleShadingEnable = false,
          .pSampleMask = (VkSampleMask[]) { UINT32_MAX },
       },
