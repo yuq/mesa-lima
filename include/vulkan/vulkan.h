@@ -1563,9 +1563,9 @@ typedef struct VkImageViewCreateInfo {
 typedef struct VkShaderModuleCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
-    size_t                                      codeSize;
-    const void*                                 pCode;
     VkShaderModuleCreateFlags                   flags;
+    size_t                                      codeSize;
+    const uint32_t*                             pCode;
 } VkShaderModuleCreateInfo;
 
 typedef struct {
