@@ -311,7 +311,8 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
    key->nr_color_regions = render_pass->subpasses[info->subpass].color_count;
 
    key->replicate_alpha = key->nr_color_regions > 1 &&
-                          info->pColorBlendState->alphaToCoverageEnable;
+                          info->pMultisampleState &&
+                          info->pMultisampleState->alphaToCoverageEnable;
 
    if (info->pMultisampleState && info->pMultisampleState->rasterSamples > 1) {
       /* We should probably pull this out of the shader, but it's fairly

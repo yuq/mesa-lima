@@ -148,7 +148,8 @@ emit_rs_state(struct anv_pipeline *pipeline,
 
 static void
 emit_cb_state(struct anv_pipeline *pipeline,
-              const VkPipelineColorBlendStateCreateInfo *info)
+              const VkPipelineColorBlendStateCreateInfo *info,
+              const VkPipelineMultisampleStateCreateInfo *ms_info)
 {
    struct anv_device *device = pipeline->device;
 
@@ -206,8 +207,8 @@ emit_cb_state(struct anv_pipeline *pipeline,
       anv_state_pool_alloc(&device->dynamic_state_pool, num_dwords * 4, 64);
 
    struct GENX(BLEND_STATE) blend_state = {
-      .AlphaToCoverageEnable = info->alphaToCoverageEnable,
-      .AlphaToOneEnable = info->alphaToOneEnable,
+      .AlphaToCoverageEnable = ms_info && ms_info->alphaToCoverageEnable,
+      .AlphaToOneEnable = ms_info && ms_info->alphaToOneEnable,
    };
 
    for (uint32_t i = 0; i < info->attachmentCount; i++) {
@@ -365,7 +366,8 @@ genX(graphics_pipeline_create)(
    assert(pCreateInfo->pRasterState);
    emit_rs_state(pipeline, pCreateInfo->pRasterState, extra);
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState);
-   emit_cb_state(pipeline, pCreateInfo->pColorBlendState);
+   emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
+                           pCreateInfo->pMultisampleState);
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_STATISTICS),
                    .StatisticsEnable = true);

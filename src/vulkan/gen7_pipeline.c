@@ -248,7 +248,8 @@ gen7_emit_ds_state(struct anv_pipeline *pipeline,
 
 static void
 gen7_emit_cb_state(struct anv_pipeline *pipeline,
-                   const VkPipelineColorBlendStateCreateInfo *info)
+                   const VkPipelineColorBlendStateCreateInfo *info,
+                   const VkPipelineMultisampleStateCreateInfo *ms_info)
 {
    struct anv_device *device = pipeline->device;
 
@@ -283,7 +284,7 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
          .ColorBlendFunction = vk_to_gen_blend_op[a->colorBlendOp],
          .SourceBlendFactor = vk_to_gen_blend[a->srcColorBlendFactor],
          .DestinationBlendFactor = vk_to_gen_blend[a->dstColorBlendFactor],
-         .AlphaToCoverageEnable = info->alphaToCoverageEnable,
+         .AlphaToCoverageEnable = ms_info && ms_info->alphaToCoverageEnable,
 
 #     if 0
          bool                                         AlphaToOneEnable;
@@ -355,7 +356,8 @@ genX(graphics_pipeline_create)(
 
    gen7_emit_ds_state(pipeline, pCreateInfo->pDepthStencilState);
 
-   gen7_emit_cb_state(pipeline, pCreateInfo->pColorBlendState);
+   gen7_emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
+                                pCreateInfo->pMultisampleState);
 
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_VF_STATISTICS,
                    .StatisticsEnable = true);

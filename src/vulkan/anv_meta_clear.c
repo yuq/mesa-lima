@@ -188,6 +188,8 @@ create_pipeline(struct anv_device *device,
             .rasterSamples = 1, /* FINISHME: Multisampling */
             .sampleShadingEnable = false,
             .pSampleMask = (VkSampleMask[]) { UINT32_MAX },
+            .alphaToCoverageEnable = false,
+            .alphaToOneEnable = false,
          },
          .pDepthStencilState = ds_state,
          .pColorBlendState = cb_state,
@@ -285,8 +287,6 @@ init_color_pipeline(struct anv_device *device)
 
    const VkPipelineColorBlendStateCreateInfo cb_state = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-      .alphaToCoverageEnable = false,
-      .alphaToOneEnable = false,
       .logicOpEnable = false,
       .attachmentCount = 1,
       .pAttachments = (VkPipelineColorBlendAttachmentState []) {
@@ -469,8 +469,6 @@ create_depthstencil_pipeline(struct anv_device *device,
 
    const VkPipelineColorBlendStateCreateInfo cb_state = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-      .alphaToCoverageEnable = false,
-      .alphaToOneEnable = false,
       .logicOpEnable = false,
       .attachmentCount = 0,
       .pAttachments = NULL,

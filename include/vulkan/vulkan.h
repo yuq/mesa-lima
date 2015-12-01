@@ -1703,6 +1703,8 @@ typedef struct VkPipelineMultisampleStateCreateInfo {
     VkBool32                                    sampleShadingEnable;
     float                                       minSampleShading;
     const VkSampleMask*                         pSampleMask;
+    VkBool32                                    alphaToCoverageEnable;
+    VkBool32                                    alphaToOneEnable;
 } VkPipelineMultisampleStateCreateInfo;
 
 typedef struct VkStencilOpState {
@@ -1745,8 +1747,6 @@ typedef struct VkPipelineColorBlendStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPipelineColorBlendStateCreateFlags        flags;
-    VkBool32                                    alphaToCoverageEnable;
-    VkBool32                                    alphaToOneEnable;
     VkBool32                                    logicOpEnable;
     VkLogicOp                                   logicOp;
     uint32_t                                    attachmentCount;
