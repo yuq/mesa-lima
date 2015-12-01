@@ -385,16 +385,38 @@ static OMX_ERRORTYPE vid_dec_MessageHandler(OMX_COMPONENTTYPE* comp, internalReq
 void vid_dec_NeedTarget(vid_dec_PrivateType *priv)
 {
    struct pipe_video_buffer templat = {};
+   struct vl_screen *omx_screen;
+   struct pipe_screen *pscreen;
    omx_base_video_PortType *port;
 
+   omx_screen = priv->screen;
    port = (omx_base_video_PortType *)priv->ports[OMX_BASE_FILTER_INPUTPORT_INDEX];
 
+   assert(omx_screen);
+   assert(port);
+
+   pscreen = omx_screen->pscreen;
+
+   assert(pscreen);
+
    if (!priv->target) {
-      templat.buffer_format = PIPE_FORMAT_NV12;
+      memset(&templat, 0, sizeof(templat));
+
       templat.chroma_format = PIPE_VIDEO_CHROMA_FORMAT_420;
       templat.width = port->sPortParam.format.video.nFrameWidth;
       templat.height = port->sPortParam.format.video.nFrameHeight;
-      templat.interlaced = false;
+      templat.buffer_format = pscreen->get_video_param(
+            pscreen,
+            PIPE_VIDEO_PROFILE_UNKNOWN,
+            PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+            PIPE_VIDEO_CAP_PREFERED_FORMAT
+      );
+      templat.interlaced = pscreen->get_video_param(
+          pscreen,
+          PIPE_VIDEO_PROFILE_UNKNOWN,
+          PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+          PIPE_VIDEO_CAP_PREFERS_INTERLACED
+      );
       priv->target = priv->pipe->create_video_buffer(priv->pipe, &templat);
    }
 }
