@@ -6771,6 +6771,9 @@
 #define   G_028804_ENABLE_POSTZ_OVERRASTERIZATION(x)                  (((x) >> 27) & 0x1)
 #define   C_028804_ENABLE_POSTZ_OVERRASTERIZATION                     0xF7FFFFFF
 #define R_028808_CB_COLOR_CONTROL                                       0x028808
+#define   S_028808_DISABLE_DUAL_QUAD(x)                               (((x) & 0x1) << 0)
+#define   G_028808_DISABLE_DUAL_QUAD(x)                               (((x) >> 0) & 0x1)
+#define   C_028808_DISABLE_DUAL_QUAD                                  0xFFFFFFFE
 #define   S_028808_DEGAMMA_ENABLE(x)                                  (((x) & 0x1) << 3)
 #define   G_028808_DEGAMMA_ENABLE(x)                                  (((x) >> 3) & 0x1)
 #define   C_028808_DEGAMMA_ENABLE                                     0xFFFFFFF7

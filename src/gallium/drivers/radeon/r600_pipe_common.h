@@ -86,6 +86,7 @@
 #define DBG_CHECK_VM		(1llu << 42)
 #define DBG_NO_DCC		(1llu << 43)
 #define DBG_NO_DCC_CLEAR	(1llu << 44)
+#define DBG_NO_RB_PLUS		(1llu << 45)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
@@ -250,6 +251,8 @@ struct r600_surface {
 	unsigned cb_color_fmask_slice;	/* EG and later */
 	unsigned cb_color_cmask;	/* CB_COLORn_TILE (r600 only) */
 	unsigned cb_color_mask;		/* R600 only */
+	unsigned sx_ps_downconvert;	/* Stoney only */
+	unsigned sx_blend_opt_epsilon;	/* Stoney only */
 	struct r600_resource *cb_buffer_fmask; /* Used for FMASK relocations. R600 only */
 	struct r600_resource *cb_buffer_cmask; /* Used for CMASK relocations. R600 only */
 

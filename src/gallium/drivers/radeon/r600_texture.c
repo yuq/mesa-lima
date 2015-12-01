@@ -1389,6 +1389,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		return;
 
 	for (i = 0; i < fb->nr_cbufs; i++) {
+		struct r600_surface *surf;
 		struct r600_texture *tex;
 		unsigned clear_bit = PIPE_CLEAR_COLOR0 << i;
 
@@ -1399,6 +1400,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		if (!(*buffers & clear_bit))
 			continue;
 
+		surf = (struct r600_surface *)fb->cbufs[i];
 		tex = (struct r600_texture *)fb->cbufs[i]->texture;
 
 		/* 128-bit formats are unusupported */
@@ -1445,6 +1447,10 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			if (clear_words_needed)
 				tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
 		} else {
+			/* RB+ doesn't work with CMASK fast clear. */
+			if (surf->sx_ps_downconvert)
+				continue;
+
 			/* ensure CMASK is enabled */
 			r600_texture_alloc_cmask_separate(rctx->screen, tex);
 			if (tex->cmask.size == 0) {
