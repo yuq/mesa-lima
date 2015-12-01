@@ -316,8 +316,7 @@ emit_load_color_clear(struct anv_cmd_buffer *cmd_buffer,
    };
 
    struct anv_state state =
-      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, sizeof(vertex_data), 16);
-   memcpy(state.map, vertex_data, sizeof(vertex_data));
+      anv_cmd_buffer_emit_dynamic(cmd_buffer, vertex_data, sizeof(vertex_data), 16);
 
    struct anv_buffer vertex_buffer = {
       .device = device,
@@ -485,8 +484,7 @@ emit_load_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
    };
 
    struct anv_state state =
-      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, sizeof(vertex_data), 16);
-   memcpy(state.map, vertex_data, sizeof(vertex_data));
+      anv_cmd_buffer_emit_dynamic(cmd_buffer, vertex_data, sizeof(vertex_data), 16);
 
    struct anv_buffer vertex_buffer = {
       .device = device,

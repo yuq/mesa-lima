@@ -308,6 +308,9 @@ genX(image_view_init)(struct anv_image_view *iview,
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->nonrt_surface_state.map,
                                       &surface_state);
+
+      if (!device->info.has_llc)
+         anv_state_clflush(iview->nonrt_surface_state);
    }
 
    if (image->needs_color_rt_surface_state) {
@@ -326,5 +329,7 @@ genX(image_view_init)(struct anv_image_view *iview,
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->color_rt_surface_state.map,
                                       &surface_state);
+      if (!device->info.has_llc)
+         anv_state_clflush(iview->color_rt_surface_state);
    }
 }

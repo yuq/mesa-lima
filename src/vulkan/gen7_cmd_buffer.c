@@ -201,6 +201,9 @@ emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
 
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_SCISSOR_STATE_POINTERS,
                   .ScissorRectPointer = scissor_state.offset);
+
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(scissor_state);
 }
 
 GENX_FUNC(GEN7, GEN7) void
@@ -266,19 +269,15 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    if (result != VK_SUCCESS)
       return result;
 
-   struct GEN7_INTERFACE_DESCRIPTOR_DATA desc = {
-      .KernelStartPointer = pipeline->cs_simd,
-      .BindingTablePointer = surfaces.offset,
-      .SamplerStatePointer = samplers.offset,
-      .NumberofThreadsinGPGPUThreadGroup = 0 /* FIXME: Really? */
-   };
-
-   uint32_t size = GEN7_INTERFACE_DESCRIPTOR_DATA_length * sizeof(uint32_t);
    struct anv_state state =
-      anv_state_pool_alloc(&device->dynamic_state_pool, size, 64);
+      anv_state_pool_emit(&device->dynamic_state_pool,
+                          GEN7_INTERFACE_DESCRIPTOR_DATA, 64,
+                          .KernelStartPointer = pipeline->cs_simd,
+                          .BindingTablePointer = surfaces.offset,
+                          .SamplerStatePointer = samplers.offset,
+                          .NumberofThreadsinGPGPUThreadGroup = 0);
 
-   GEN7_INTERFACE_DESCRIPTOR_DATA_pack(NULL, state.map, &desc);
-
+   const uint32_t size = GEN7_INTERFACE_DESCRIPTOR_DATA_length * sizeof(uint32_t);
    anv_batch_emit(&cmd_buffer->batch, GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD,
                   .InterfaceDescriptorTotalLength = size,
                   .InterfaceDescriptorDataStartAddress = state.offset);
@@ -441,6 +440,8 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
             cmd_buffer->state.dynamic.stencil_reference.back,
       };
       GEN7_COLOR_CALC_STATE_pack(NULL, cc_state.map, &cc);
+      if (!cmd_buffer->device->info.has_llc)
+         anv_state_clflush(cc_state);
 
       anv_batch_emit(&cmd_buffer->batch,
                      GEN7_3DSTATE_CC_STATE_POINTERS,

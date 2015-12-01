@@ -724,6 +724,7 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
       struct anv_batch_bo *this_bbo = anv_cmd_buffer_current_batch_bo(primary);
       assert(primary->batch.start == this_bbo->bo.map);
       uint32_t offset = primary->batch.next - primary->batch.start;
+      const uint32_t inst_size = GEN8_MI_BATCH_BUFFER_START_length * 4;
 
       /* Roll back the previous MI_BATCH_BUFFER_START and its relocation so we
        * can emit a new command and relocation for the current splice.  In
@@ -732,9 +733,25 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
        * here.
        */
       last_bbo->relocs.num_relocs--;
-      secondary->batch.next -= GEN8_MI_BATCH_BUFFER_START_length * 4;
+      secondary->batch.next -= inst_size;
       emit_batch_buffer_start(secondary, &this_bbo->bo, offset);
       anv_cmd_buffer_add_seen_bbos(primary, &secondary->batch_bos);
+
+      /* After patching up the secondary buffer, we need to clflush the
+       * modified instruction in case we're on a !llc platform. We use a
+       * little loop to handle the case where the instruction crosses a cache
+       * line boundary.
+       */
+      if (!primary->device->info.has_llc) {
+         void *inst = secondary->batch.next - inst_size;
+         void *p = (void *) (((uintptr_t) inst) & ~CACHELINE_MASK);
+         __builtin_ia32_sfence();
+         while (p < secondary->batch.next) {
+            __builtin_ia32_clflush(p);
+            p += CACHELINE_SIZE;
+         }
+      }
+
       break;
    }
    case ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN: {
@@ -886,6 +903,11 @@ adjust_relocations_from_block_pool(struct anv_block_pool *pool,
        */
       assert(relocs->relocs[i].offset < pool->state.end);
       uint32_t *reloc_data = pool->map + relocs->relocs[i].offset;
+
+      /* We're reading back the relocated value from potentially incoherent
+       * memory here. However, any change to the value will be from the kernel
+       * writing out relocations, which will keep the CPU cache up to date.
+       */
       relocs->relocs[i].presumed_offset = *reloc_data - relocs->relocs[i].delta;
 
       /* All of the relocations from this block pool to other BO's should
@@ -993,6 +1015,14 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
       anv_cmd_buffer_process_relocs(cmd_buffer, &(*bbo)->relocs);
 
    anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
+
+   if (!cmd_buffer->device->info.has_llc) {
+      __builtin_ia32_sfence();
+      anv_vector_foreach(bbo, &cmd_buffer->seen_bbos) {
+         for (uint32_t i = 0; i < (*bbo)->length; i += CACHELINE_SIZE)
+            __builtin_ia32_clflush((*bbo)->bo.map + i);
+      }
+   }
 
    cmd_buffer->execbuf2.execbuf = (struct drm_i915_gem_execbuffer2) {
       .buffers_ptr = (uintptr_t) cmd_buffer->execbuf2.objects,

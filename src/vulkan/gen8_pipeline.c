@@ -259,6 +259,8 @@ emit_cb_state(struct anv_pipeline *pipeline,
    }
 
    GENX(BLEND_STATE_pack)(NULL, pipeline->blend_state.map, &blend_state);
+   if (!device->info.has_llc)
+      anv_state_clflush(pipeline->blend_state);
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_BLEND_STATE_POINTERS),
                   .BlendStatePointer = pipeline->blend_state.offset,

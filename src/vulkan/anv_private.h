@@ -394,6 +394,22 @@ struct anv_state_stream {
 #define CACHELINE_SIZE 64
 #define CACHELINE_MASK 63
 
+static void inline
+anv_state_clflush(struct anv_state state)
+{
+   /* state.map may not be cacheline aligned, so round down the start pointer
+    * to a cacheline boundary so we flush all pages that contain the state.
+    */
+   void *end = state.map + state.alloc_size;
+   void *p = (void *) (((uintptr_t) state.map) & ~CACHELINE_MASK);
+
+   __builtin_ia32_sfence();
+   while (p < end) {
+      __builtin_ia32_clflush(p);
+      p += CACHELINE_SIZE;
+   }
+}
+
 void anv_block_pool_init(struct anv_block_pool *pool,
                          struct anv_device *device, uint32_t block_size);
 void anv_block_pool_finish(struct anv_block_pool *pool);
@@ -720,6 +736,20 @@ __gen_combine_address(struct anv_batch *batch, void *location,
          dw[i] = (dwords0)[i] | (dwords1)[i];                           \
       VG(VALGRIND_CHECK_MEM_IS_DEFINED(dw, ARRAY_SIZE(dwords0) * 4));\
    } while (0)
+
+#define anv_state_pool_emit(pool, cmd, align, ...) ({                   \
+      const uint32_t __size = __anv_cmd_length(cmd) * 4;                \
+      struct anv_state __state =                                        \
+         anv_state_pool_alloc((pool), __size, align);                   \
+      struct cmd __template = {                                         \
+         __VA_ARGS__                                                    \
+      };                                                                \
+      __anv_cmd_pack(cmd)(NULL, __state.map, &__template);              \
+      VG(VALGRIND_CHECK_MEM_IS_DEFINED(__state.map, __anv_cmd_length(cmd) * 4)); \
+      if (!(pool)->block_pool->device->info.has_llc)                    \
+         anv_state_clflush(__state);                                    \
+      __state;                                                          \
+   })
 
 #define GEN7_MOCS (struct GEN7_MEMORY_OBJECT_CONTROL_STATE) {  \
    .GraphicsDataTypeGFDT                        = 0,           \
@@ -1104,8 +1134,7 @@ VkResult anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
 void gen7_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_state anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
-                                             uint32_t *a, uint32_t dwords,
-                                             uint32_t alignment);
+                                             const void *data, uint32_t size, uint32_t alignment);
 struct anv_state anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
                                               uint32_t *a, uint32_t *b,
                                               uint32_t dwords, uint32_t alignment);

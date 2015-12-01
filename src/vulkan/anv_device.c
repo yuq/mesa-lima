@@ -599,6 +599,20 @@ anv_queue_finish(struct anv_queue *queue)
 {
 }
 
+static struct anv_state
+anv_state_pool_emit_data(struct anv_state_pool *pool, size_t size, size_t align, const void *p)
+{
+   struct anv_state state;
+
+   state = anv_state_pool_alloc(pool, size, align);
+   memcpy(state.map, p, size);
+
+   if (!pool->block_pool->device->info.has_llc)
+      anv_state_clflush(state);
+
+   return state;
+}
+
 static void
 anv_device_init_border_colors(struct anv_device *device)
 {
@@ -611,10 +625,8 @@ anv_device_init_border_colors(struct anv_device *device)
       [VK_BORDER_COLOR_INT_OPAQUE_WHITE] =         { .uint32 = { 1, 1, 1, 1 } },
    };
 
-   device->border_colors =
-      anv_state_pool_alloc(&device->dynamic_state_pool,
-                           sizeof(border_colors), 32);
-   memcpy(device->border_colors.map, border_colors, sizeof(border_colors));
+   device->border_colors = anv_state_pool_emit_data(&device->dynamic_state_pool,
+                                                    sizeof(border_colors), 32, border_colors);
 }
 
 VkResult anv_CreateDevice(
@@ -884,6 +896,9 @@ VkResult anv_DeviceWaitIdle(
    batch.end = state.map + 32;
    anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
    anv_batch_emit(&batch, GEN7_MI_NOOP);
+
+   if (!device->info.has_llc)
+      anv_state_clflush(state);
 
    exec2_objects[0].handle = bo->gem_handle;
    exec2_objects[0].relocation_count = 0;
@@ -1218,6 +1233,13 @@ VkResult anv_CreateFence(
    batch.end = fence->bo.map + fence->bo.size;
    anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
    anv_batch_emit(&batch, GEN7_MI_NOOP);
+
+   if (!device->info.has_llc) {
+      assert(((uintptr_t) fence->bo.map & CACHELINE_MASK) == 0);
+      assert(batch.next - fence->bo.map <= CACHELINE_SIZE);
+      __builtin_ia32_sfence();
+      __builtin_ia32_clflush(fence->bo.map);
+   }
 
    fence->exec2_objects[0].handle = fence->bo.gem_handle;
    fence->exec2_objects[0].relocation_count = 0;

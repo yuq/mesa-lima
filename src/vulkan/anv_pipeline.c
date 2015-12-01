@@ -373,8 +373,12 @@ anv_pipeline_upload_kernel(struct anv_pipeline *pipeline,
 
    memcpy(state.map, data, size);
 
+   if (!pipeline->device->info.has_llc)
+      anv_state_clflush(state);
+
    return state.offset;
 }
+
 static void
 anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
                                 gl_shader_stage stage,

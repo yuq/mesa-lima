@@ -107,6 +107,11 @@ emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
       GENX(CC_VIEWPORT_pack)(NULL, cc_state.map + i * 32, &cc_viewport);
    }
 
+   if (!cmd_buffer->device->info.has_llc) {
+      anv_state_clflush(sf_clip_state);
+      anv_state_clflush(cc_state);
+   }
+
    anv_batch_emit(&cmd_buffer->batch,
                   GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC),
                   .CCViewportPointer = cc_state.offset);
@@ -270,6 +275,9 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       };
       GEN8_COLOR_CALC_STATE_pack(NULL, cc_state.map, &cc);
 
+      if (!cmd_buffer->device->info.has_llc)
+         anv_state_clflush(cc_state);
+
       anv_batch_emit(&cmd_buffer->batch,
                      GEN8_3DSTATE_CC_STATE_POINTERS,
                      .ColorCalcStatePointer = cc_state.offset,
@@ -316,6 +324,9 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
          .BlendConstantColorAlpha = cmd_buffer->state.dynamic.blend_constants[3],
       };
       GEN9_COLOR_CALC_STATE_pack(NULL, cc_state.map, &cc);
+
+      if (!cmd_buffer->device->info.has_llc)
+         anv_state_clflush(cc_state);
 
       anv_batch_emit(&cmd_buffer->batch,
                      GEN9_3DSTATE_CC_STATE_POINTERS,
@@ -500,22 +511,18 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    if (result != VK_SUCCESS)
       return result;
 
-   struct GENX(INTERFACE_DESCRIPTOR_DATA) desc = {
-      .KernelStartPointer = pipeline->cs_simd,
-      .KernelStartPointerHigh = 0,
-      .BindingTablePointer = surfaces.offset,
-      .BindingTableEntryCount = 0,
-      .SamplerStatePointer = samplers.offset,
-      .SamplerCount = 0,
-      .NumberofThreadsinGPGPUThreadGroup = 0 /* FIXME: Really? */
-   };
+   struct anv_state state =
+      anv_state_pool_emit(&device->dynamic_state_pool,
+                          GENX(INTERFACE_DESCRIPTOR_DATA), 64,
+                          .KernelStartPointer = pipeline->cs_simd,
+                          .KernelStartPointerHigh = 0,
+                          .BindingTablePointer = surfaces.offset,
+                          .BindingTableEntryCount = 0,
+                          .SamplerStatePointer = samplers.offset,
+                          .SamplerCount = 0,
+                          .NumberofThreadsinGPGPUThreadGroup = 0);
 
    uint32_t size = GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
-   struct anv_state state =
-      anv_state_pool_alloc(&device->dynamic_state_pool, size, 64);
-
-   GENX(INTERFACE_DESCRIPTOR_DATA_pack)(NULL, state.map, &desc);
-
    anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_INTERFACE_DESCRIPTOR_LOAD),
                   .InterfaceDescriptorTotalLength = size,
                   .InterfaceDescriptorDataStartAddress = state.offset);

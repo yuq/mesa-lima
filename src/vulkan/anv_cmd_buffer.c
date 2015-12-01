@@ -666,7 +666,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    }
 
    if (layout == NULL)
-      return VK_SUCCESS;
+      goto out;
 
    for (uint32_t s = 0; s < layout->stage[stage].surface_count; s++) {
       struct anv_pipeline_binding *binding =
@@ -698,6 +698,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                               surface_state.map,
                                               stage, desc->type,
                                               bo_offset, desc->range);
+
+         if (!cmd_buffer->device->info.has_llc)
+            anv_state_clflush(surface_state);
+
          break;
       }
 
@@ -723,6 +727,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       bt_map[bias + s] = surface_state.offset + state_offset;
       add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
    }
+
+ out:
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(*bt_state);
 
    return VK_SUCCESS;
 }
@@ -772,20 +780,25 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
              sampler->state, sizeof(sampler->state));
    }
 
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(*state);
+
    return VK_SUCCESS;
 }
 
 struct anv_state
 anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
-                             uint32_t *a, uint32_t dwords, uint32_t alignment)
+                            const void *data, uint32_t size, uint32_t alignment)
 {
    struct anv_state state;
 
-   state = anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
-                                              dwords * 4, alignment);
-   memcpy(state.map, a, dwords * 4);
+   state = anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, size, alignment);
+   memcpy(state.map, data, size);
 
-   VG(VALGRIND_CHECK_MEM_IS_DEFINED(state.map, dwords * 4));
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(state);
+
+   VG(VALGRIND_CHECK_MEM_IS_DEFINED(state.map, size));
 
    return state;
 }
@@ -803,6 +816,9 @@ anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
    p = state.map;
    for (uint32_t i = 0; i < dwords; i++)
       p[i] = a[i] | b[i];
+
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(state);
 
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(p, dwords * 4));
 
@@ -880,6 +896,9 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
       uint32_t offset = (uintptr_t)prog_data->param[i];
       u32_map[i] = *(uint32_t *)((uint8_t *)data + offset);
    }
+
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(state);
 
    return state;
 }
