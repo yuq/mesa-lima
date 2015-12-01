@@ -999,14 +999,14 @@ void anv_FreeMemory(
 
 VkResult anv_MapMemory(
     VkDevice                                    _device,
-    VkDeviceMemory                              _mem,
+    VkDeviceMemory                              _memory,
     VkDeviceSize                                offset,
     VkDeviceSize                                size,
     VkMemoryMapFlags                            flags,
     void**                                      ppData)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
+   ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
 
    /* FIXME: Is this supposed to be thread safe? Since vkUnmapMemory() only
     * takes a VkDeviceMemory pointer, it seems like only one map of the memory
@@ -1024,17 +1024,17 @@ VkResult anv_MapMemory(
 
 void anv_UnmapMemory(
     VkDevice                                    _device,
-    VkDeviceMemory                              _mem)
+    VkDeviceMemory                              _memory)
 {
-   ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
+   ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
 
    anv_gem_munmap(mem->map, mem->map_size);
 }
 
 VkResult anv_FlushMappedMemoryRanges(
     VkDevice                                    device,
-    uint32_t                                    memRangeCount,
-    const VkMappedMemoryRange*                  pMemRanges)
+    uint32_t                                    memoryRangeCount,
+    const VkMappedMemoryRange*                  pMemoryRanges)
 {
    /* clflush here for !llc platforms */
 
@@ -1043,10 +1043,10 @@ VkResult anv_FlushMappedMemoryRanges(
 
 VkResult anv_InvalidateMappedMemoryRanges(
     VkDevice                                    device,
-    uint32_t                                    memRangeCount,
-    const VkMappedMemoryRange*                  pMemRanges)
+    uint32_t                                    memoryRangeCount,
+    const VkMappedMemoryRange*                  pMemoryRanges)
 {
-   return anv_FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
+   return anv_FlushMappedMemoryRanges(device, memoryRangeCount, pMemoryRanges);
 }
 
 void anv_GetBufferMemoryRequirements(
@@ -1113,14 +1113,14 @@ void anv_GetDeviceMemoryCommitment(
 VkResult anv_BindBufferMemory(
     VkDevice                                    device,
     VkBuffer                                    _buffer,
-    VkDeviceMemory                              _mem,
-    VkDeviceSize                                memOffset)
+    VkDeviceMemory                              _memory,
+    VkDeviceSize                                memoryOffset)
 {
-   ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
+   ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    buffer->bo = &mem->bo;
-   buffer->offset = memOffset;
+   buffer->offset = memoryOffset;
 
    return VK_SUCCESS;
 }
@@ -1128,14 +1128,14 @@ VkResult anv_BindBufferMemory(
 VkResult anv_BindImageMemory(
     VkDevice                                    device,
     VkImage                                     _image,
-    VkDeviceMemory                              _mem,
-    VkDeviceSize                                memOffset)
+    VkDeviceMemory                              _memory,
+    VkDeviceSize                                memoryOffset)
 {
-   ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
+   ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
    ANV_FROM_HANDLE(anv_image, image, _image);
 
    image->bo = &mem->bo;
-   image->offset = memOffset;
+   image->offset = memoryOffset;
 
    return VK_SUCCESS;
 }
