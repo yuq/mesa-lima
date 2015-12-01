@@ -264,41 +264,41 @@ anv_device_init_meta_blit_state(struct anv_device *device)
 
    VkPipelineVertexInputStateCreateInfo vi_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .bindingCount = 2,
+      .vertexBindingDescriptionCount = 2,
       .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
          {
             .binding = 0,
-            .strideInBytes = 0,
+            .stride = 0,
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
          },
          {
             .binding = 1,
-            .strideInBytes = 5 * sizeof(float),
+            .stride = 5 * sizeof(float),
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
          },
       },
-      .attributeCount = 3,
+      .vertexAttributeDescriptionCount = 3,
       .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
          {
             /* VUE Header */
             .location = 0,
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_UINT,
-            .offsetInBytes = 0
+            .offset = 0
          },
          {
             /* Position */
             .location = 1,
             .binding = 1,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offsetInBytes = 0
+            .offset = 0
          },
          {
             /* Texture Coordinate */
             .location = 2,
             .binding = 1,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offsetInBytes = 8
+            .offset = 8
          }
       }
    };

@@ -38,17 +38,18 @@ gen7_emit_vertex_input(struct anv_pipeline *pipeline,
 {
    const bool sgvs = pipeline->vs_prog_data.uses_vertexid ||
       pipeline->vs_prog_data.uses_instanceid;
-   const uint32_t element_count = info->attributeCount + (sgvs ? 1 : 0);
+   const uint32_t element_count =
+      info->vertexAttributeDescriptionCount + (sgvs ? 1 : 0);
    const uint32_t num_dwords = 1 + element_count * 2;
    uint32_t *p;
 
-   if (info->attributeCount == 0 && !sgvs)
+   if (info->vertexAttributeDescriptionCount == 0 && !sgvs)
       return;
 
    p = anv_batch_emitn(&pipeline->batch, num_dwords,
                        GEN7_3DSTATE_VERTEX_ELEMENTS);
 
-   for (uint32_t i = 0; i < info->attributeCount; i++) {
+   for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++) {
       const VkVertexInputAttributeDescription *desc =
          &info->pVertexAttributeDescriptions[i];
       const struct anv_format *format = anv_format_for_vk_format(desc->format);
@@ -58,7 +59,7 @@ gen7_emit_vertex_input(struct anv_pipeline *pipeline,
          .Valid = true,
          .SourceElementFormat = format->surface_format,
          .EdgeFlagEnable = false,
-         .SourceElementOffset = desc->offsetInBytes,
+         .SourceElementOffset = desc->offset,
          .Component0Control = VFCOMP_STORE_SRC,
          .Component1Control = format->num_channels >= 2 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
          .Component2Control = format->num_channels >= 3 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
@@ -77,7 +78,7 @@ gen7_emit_vertex_input(struct anv_pipeline *pipeline,
          .Component2Control = VFCOMP_STORE_VID,
          .Component3Control = VFCOMP_STORE_IID
       };
-      GEN7_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + info->attributeCount * 2], &element);
+      GEN7_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + info->vertexAttributeDescriptionCount * 2], &element);
    }
 }
 

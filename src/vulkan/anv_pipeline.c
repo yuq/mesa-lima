@@ -1034,12 +1034,12 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
    const VkPipelineVertexInputStateCreateInfo *vi_info =
       pCreateInfo->pVertexInputState;
    pipeline->vb_used = 0;
-   for (uint32_t i = 0; i < vi_info->bindingCount; i++) {
+   for (uint32_t i = 0; i < vi_info->vertexBindingDescriptionCount; i++) {
       const VkVertexInputBindingDescription *desc =
          &vi_info->pVertexBindingDescriptions[i];
 
       pipeline->vb_used |= 1 << desc->binding;
-      pipeline->binding_stride[desc->binding] = desc->strideInBytes;
+      pipeline->binding_stride[desc->binding] = desc->stride;
 
       /* Step rate is programmed per vertex element (attribute), not
        * binding. Set up a map of which bindings step per instance, for

@@ -36,17 +36,17 @@ static void
 emit_vertex_input(struct anv_pipeline *pipeline,
                   const VkPipelineVertexInputStateCreateInfo *info)
 {
-   const uint32_t num_dwords = 1 + info->attributeCount * 2;
+   const uint32_t num_dwords = 1 + info->vertexAttributeDescriptionCount * 2;
    uint32_t *p;
 
    static_assert(ANV_GEN >= 8, "should be compiling this for gen < 8");
 
-   if (info->attributeCount > 0) {
+   if (info->vertexAttributeDescriptionCount > 0) {
       p = anv_batch_emitn(&pipeline->batch, num_dwords,
                           GENX(3DSTATE_VERTEX_ELEMENTS));
    }
 
-   for (uint32_t i = 0; i < info->attributeCount; i++) {
+   for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++) {
       const VkVertexInputAttributeDescription *desc =
          &info->pVertexAttributeDescriptions[i];
       const struct anv_format *format = anv_format_for_vk_format(desc->format);
@@ -56,7 +56,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
          .Valid = true,
          .SourceElementFormat = format->surface_format,
          .EdgeFlagEnable = false,
-         .SourceElementOffset = desc->offsetInBytes,
+         .SourceElementOffset = desc->offset,
          .Component0Control = VFCOMP_STORE_SRC,
          .Component1Control = format->num_channels >= 2 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
          .Component2Control = format->num_channels >= 3 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
@@ -75,10 +75,10 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_SGVS),
                   .VertexIDEnable = pipeline->vs_prog_data.uses_vertexid,
                   .VertexIDComponentNumber = 2,
-                  .VertexIDElementOffset = info->bindingCount,
+                  .VertexIDElementOffset = info->vertexBindingDescriptionCount,
                   .InstanceIDEnable = pipeline->vs_prog_data.uses_instanceid,
                   .InstanceIDComponentNumber = 3,
-                  .InstanceIDElementOffset = info->bindingCount);
+                  .InstanceIDElementOffset = info->vertexBindingDescriptionCount);
 }
 
 static void
@@ -355,7 +355,7 @@ genX(graphics_pipeline_create)(
     * inputs. */
    if (pipeline->vs_simd8 == NO_KERNEL) {
       pipeline->wm_prog_data.num_varying_inputs =
-         pCreateInfo->pVertexInputState->attributeCount - 2;
+         pCreateInfo->pVertexInputState->vertexAttributeDescriptionCount - 2;
    }
 
    assert(pCreateInfo->pVertexInputState);

@@ -241,36 +241,36 @@ init_color_pipeline(struct anv_device *device)
 
    const VkPipelineVertexInputStateCreateInfo vi_state = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .bindingCount = 1,
+      .vertexBindingDescriptionCount = 1,
       .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
          {
             .binding = 0,
-            .strideInBytes = sizeof(struct color_clear_vattrs),
+            .stride = sizeof(struct color_clear_vattrs),
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
          },
       },
-      .attributeCount = 3,
+      .vertexAttributeDescriptionCount = 3,
       .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
          {
             /* VUE Header */
             .location = 0,
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_UINT,
-            .offsetInBytes = offsetof(struct color_clear_vattrs, vue_header),
+            .offset = offsetof(struct color_clear_vattrs, vue_header),
          },
          {
             /* Position */
             .location = 1,
             .binding = 0,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offsetInBytes = offsetof(struct color_clear_vattrs, position),
+            .offset = offsetof(struct color_clear_vattrs, position),
          },
          {
             /* Color */
             .location = 2,
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-            .offsetInBytes = offsetof(struct color_clear_vattrs, color),
+            .offset = offsetof(struct color_clear_vattrs, color),
          },
       },
    };
@@ -424,29 +424,29 @@ create_depthstencil_pipeline(struct anv_device *device,
 
    const VkPipelineVertexInputStateCreateInfo vi_state = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .bindingCount = 1,
+      .vertexBindingDescriptionCount = 1,
       .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
          {
             .binding = 0,
-            .strideInBytes = sizeof(struct depthstencil_clear_vattrs),
+            .stride = sizeof(struct depthstencil_clear_vattrs),
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
          },
       },
-      .attributeCount = 2,
+      .vertexAttributeDescriptionCount = 2,
       .pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
          {
             /* VUE Header */
             .location = 0,
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_UINT,
-            .offsetInBytes = offsetof(struct depthstencil_clear_vattrs, vue_header),
+            .offset = offsetof(struct depthstencil_clear_vattrs, vue_header),
          },
          {
             /* Position */
             .location = 1,
             .binding = 0,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offsetInBytes = offsetof(struct depthstencil_clear_vattrs, position),
+            .offset = offsetof(struct depthstencil_clear_vattrs, position),
          },
       },
    };

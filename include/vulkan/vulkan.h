@@ -1598,7 +1598,7 @@ typedef struct VkPipelineShaderStageCreateInfo {
 
 typedef struct VkVertexInputBindingDescription {
     uint32_t                                    binding;
-    uint32_t                                    strideInBytes;
+    uint32_t                                    stride;
     VkVertexInputRate                           inputRate;
 } VkVertexInputBindingDescription;
 
@@ -1606,15 +1606,15 @@ typedef struct VkVertexInputAttributeDescription {
     uint32_t                                    location;
     uint32_t                                    binding;
     VkFormat                                    format;
-    uint32_t                                    offsetInBytes;
+    uint32_t                                    offset;
 } VkVertexInputAttributeDescription;
 
 typedef struct VkPipelineVertexInputStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    bindingCount;
+    uint32_t                                    vertexBindingDescriptionCount;
     const VkVertexInputBindingDescription*      pVertexBindingDescriptions;
-    uint32_t                                    attributeCount;
+    uint32_t                                    vertexAttributeDescriptionCount;
     const VkVertexInputAttributeDescription*    pVertexAttributeDescriptions;
 } VkPipelineVertexInputStateCreateInfo;
 
