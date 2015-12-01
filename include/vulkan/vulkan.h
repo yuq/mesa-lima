@@ -1510,7 +1510,7 @@ typedef struct VkImageCreateInfo {
     VkExtent3D                                  extent;
     uint32_t                                    mipLevels;
     uint32_t                                    arrayLayers;
-    uint32_t                                    samples;
+    VkSampleCountFlagBits                       samples;
     VkImageTiling                               tiling;
     VkImageUsageFlags                           usage;
     VkSharingMode                               sharingMode;
@@ -1912,7 +1912,7 @@ typedef struct VkFramebufferCreateInfo {
 typedef struct VkAttachmentDescription {
     VkAttachmentDescriptionFlags                flags;
     VkFormat                                    format;
-    uint32_t                                    samples;
+    VkSampleCountFlagBits                       samples;
     VkAttachmentLoadOp                          loadOp;
     VkAttachmentStoreOp                         storeOp;
     VkAttachmentLoadOp                          stencilLoadOp;
@@ -2157,7 +2157,7 @@ typedef VkResult (VKAPI_PTR *PFN_vkBindImageMemory)(VkDevice device, VkImage ima
 typedef void (VKAPI_PTR *PFN_vkGetBufferMemoryRequirements)(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements);
 typedef void (VKAPI_PTR *PFN_vkGetImageMemoryRequirements)(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements);
 typedef void (VKAPI_PTR *PFN_vkGetImageSparseMemoryRequirements)(VkDevice device, VkImage image, uint32_t* pNumRequirements, VkSparseImageMemoryRequirements* pSparseMemoryRequirements);
-typedef void (VKAPI_PTR *PFN_vkGetPhysicalDeviceSparseImageFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, uint32_t samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pNumProperties, VkSparseImageFormatProperties* pProperties);
+typedef void (VKAPI_PTR *PFN_vkGetPhysicalDeviceSparseImageFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkSampleCountFlagBits samples, VkImageUsageFlags usage, VkImageTiling tiling, uint32_t* pPropertyCount, VkSparseImageFormatProperties* pProperties);
 typedef VkResult (VKAPI_PTR *PFN_vkQueueBindSparse)(VkQueue queue, uint32_t bindInfoCount, const VkBindSparseInfo* pBindInfo, VkFence fence);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
 typedef void (VKAPI_PTR *PFN_vkDestroyFence)(VkDevice device, VkFence fence);
@@ -2433,10 +2433,10 @@ VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkImageType                                 type,
-    uint32_t                                    samples,
+    VkSampleCountFlagBits                       samples,
     VkImageUsageFlags                           usage,
     VkImageTiling                               tiling,
-    uint32_t*                                   pNumProperties,
+    uint32_t*                                   pPropertyCount,
     VkSparseImageFormatProperties*              pProperties);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkQueueBindSparse(
