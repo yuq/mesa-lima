@@ -278,9 +278,16 @@ lower_buffer_access::is_dereferenced_thing_row_major(const ir_rvalue *deref)
             glsl_matrix_layout(var_deref->var->data.matrix_layout);
 
          switch (matrix_layout) {
-         case GLSL_MATRIX_LAYOUT_INHERITED:
-            assert(!matrix);
+         case GLSL_MATRIX_LAYOUT_INHERITED: {
+            /* For interface block matrix variables we handle inherited
+             * layouts at HIR generation time, but we don't do that for shared
+             * variables, which are always column-major
+             */
+            ir_variable *var = deref->variable_referenced();
+            assert((var->is_in_buffer_block() && !matrix) ||
+                   var->data.mode == ir_var_shader_shared);
             return false;
+         }
          case GLSL_MATRIX_LAYOUT_COLUMN_MAJOR:
             return false;
          case GLSL_MATRIX_LAYOUT_ROW_MAJOR:
