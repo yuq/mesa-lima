@@ -64,22 +64,22 @@ genX(fill_buffer_surface_state)(void *state, const struct anv_format *format,
 }
 
 static const uint32_t vk_to_gen_tex_filter[] = {
-   [VK_TEX_FILTER_NEAREST]                      = MAPFILTER_NEAREST,
-   [VK_TEX_FILTER_LINEAR]                       = MAPFILTER_LINEAR
+   [VK_FILTER_NEAREST]                          = MAPFILTER_NEAREST,
+   [VK_FILTER_LINEAR]                           = MAPFILTER_LINEAR
 };
 
 static const uint32_t vk_to_gen_mipmap_mode[] = {
-   [VK_TEX_MIPMAP_MODE_BASE]                    = MIPFILTER_NONE,
-   [VK_TEX_MIPMAP_MODE_NEAREST]                 = MIPFILTER_NEAREST,
-   [VK_TEX_MIPMAP_MODE_LINEAR]                  = MIPFILTER_LINEAR
+   [VK_SAMPLER_MIPMAP_MODE_BASE]                = MIPFILTER_NONE,
+   [VK_SAMPLER_MIPMAP_MODE_NEAREST]             = MIPFILTER_NEAREST,
+   [VK_SAMPLER_MIPMAP_MODE_LINEAR]              = MIPFILTER_LINEAR
 };
 
 static const uint32_t vk_to_gen_tex_address[] = {
-   [VK_TEX_ADDRESS_MODE_WRAP]                   = TCM_WRAP,
-   [VK_TEX_ADDRESS_MODE_MIRROR]                 = TCM_MIRROR,
-   [VK_TEX_ADDRESS_MODE_CLAMP]                  = TCM_CLAMP,
-   [VK_TEX_ADDRESS_MODE_MIRROR_ONCE]            = TCM_MIRROR_ONCE,
-   [VK_TEX_ADDRESS_MODE_CLAMP_BORDER]           = TCM_CLAMP_BORDER,
+   [VK_SAMPLER_ADDRESS_MODE_REPEAT]             = TCM_WRAP,
+   [VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT]    = TCM_MIRROR,
+   [VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE]      = TCM_CLAMP,
+   [VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE] = TCM_MIRROR_ONCE,
+   [VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER]    = TCM_CLAMP_BORDER,
 };
 
 static const uint32_t vk_to_gen_compare_op[] = {
@@ -134,7 +134,7 @@ VkResult genX(CreateSampler)(
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
       .BaseMipLevel = 0.0,
-      .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipMode],
+      .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
       .MagModeFilter = mag_filter,
       .MinModeFilter = min_filter,
       .TextureLODBias = pCreateInfo->mipLodBias * 256,

@@ -647,36 +647,36 @@ typedef enum VkDynamicState {
     VK_DYNAMIC_STATE_MAX_ENUM = 0x7FFFFFFF
 } VkDynamicState;
 
-typedef enum {
-    VK_TEX_FILTER_NEAREST = 0,
-    VK_TEX_FILTER_LINEAR = 1,
-    VK_TEX_FILTER_BEGIN_RANGE = VK_TEX_FILTER_NEAREST,
-    VK_TEX_FILTER_END_RANGE = VK_TEX_FILTER_LINEAR,
-    VK_TEX_FILTER_NUM = (VK_TEX_FILTER_LINEAR - VK_TEX_FILTER_NEAREST + 1),
-    VK_TEX_FILTER_MAX_ENUM = 0x7FFFFFFF
-} VkTexFilter;
+typedef enum VkFilter {
+    VK_FILTER_NEAREST = 0,
+    VK_FILTER_LINEAR = 1,
+    VK_FILTER_BEGIN_RANGE = VK_FILTER_NEAREST,
+    VK_FILTER_END_RANGE = VK_FILTER_LINEAR,
+    VK_FILTER_RANGE_SIZE = (VK_FILTER_LINEAR - VK_FILTER_NEAREST + 1),
+    VK_FILTER_MAX_ENUM = 0x7FFFFFFF
+} VkFilter;
 
-typedef enum {
-    VK_TEX_MIPMAP_MODE_BASE = 0,
-    VK_TEX_MIPMAP_MODE_NEAREST = 1,
-    VK_TEX_MIPMAP_MODE_LINEAR = 2,
-    VK_TEX_MIPMAP_MODE_BEGIN_RANGE = VK_TEX_MIPMAP_MODE_BASE,
-    VK_TEX_MIPMAP_MODE_END_RANGE = VK_TEX_MIPMAP_MODE_LINEAR,
-    VK_TEX_MIPMAP_MODE_NUM = (VK_TEX_MIPMAP_MODE_LINEAR - VK_TEX_MIPMAP_MODE_BASE + 1),
-    VK_TEX_MIPMAP_MODE_MAX_ENUM = 0x7FFFFFFF
-} VkTexMipmapMode;
+typedef enum VkSamplerMipmapMode {
+    VK_SAMPLER_MIPMAP_MODE_BASE = 0,
+    VK_SAMPLER_MIPMAP_MODE_NEAREST = 1,
+    VK_SAMPLER_MIPMAP_MODE_LINEAR = 2,
+    VK_SAMPLER_MIPMAP_MODE_BEGIN_RANGE = VK_SAMPLER_MIPMAP_MODE_BASE,
+    VK_SAMPLER_MIPMAP_MODE_END_RANGE = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+    VK_SAMPLER_MIPMAP_MODE_RANGE_SIZE = (VK_SAMPLER_MIPMAP_MODE_LINEAR - VK_SAMPLER_MIPMAP_MODE_BASE + 1),
+    VK_SAMPLER_MIPMAP_MODE_MAX_ENUM = 0x7FFFFFFF
+} VkSamplerMipmapMode;
 
-typedef enum {
-    VK_TEX_ADDRESS_MODE_WRAP = 0,
-    VK_TEX_ADDRESS_MODE_MIRROR = 1,
-    VK_TEX_ADDRESS_MODE_CLAMP = 2,
-    VK_TEX_ADDRESS_MODE_MIRROR_ONCE = 3,
-    VK_TEX_ADDRESS_MODE_CLAMP_BORDER = 4,
-    VK_TEX_ADDRESS_BEGIN_RANGE = VK_TEX_ADDRESS_MODE_WRAP,
-    VK_TEX_ADDRESS_END_RANGE = VK_TEX_ADDRESS_MODE_CLAMP_BORDER,
-    VK_TEX_ADDRESS_NUM = (VK_TEX_ADDRESS_MODE_CLAMP_BORDER - VK_TEX_ADDRESS_MODE_WRAP + 1),
-    VK_TEX_ADDRESS_MAX_ENUM = 0x7FFFFFFF
-} VkTexAddressMode;
+typedef enum VkSamplerAddressMode {
+    VK_SAMPLER_ADDRESS_MODE_REPEAT = 0,
+    VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT = 1,
+    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE = 2,
+    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER = 3,
+    VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE = 4,
+    VK_SAMPLER_ADDRESS_MODE_BEGIN_RANGE = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+    VK_SAMPLER_ADDRESS_MODE_END_RANGE = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE,
+    VK_SAMPLER_ADDRESS_MODE_RANGE_SIZE = (VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE - VK_SAMPLER_ADDRESS_MODE_REPEAT + 1),
+    VK_SAMPLER_ADDRESS_MODE_MAX_ENUM = 0x7FFFFFFF
+} VkSamplerAddressMode;
 
 typedef enum VkBorderColor {
     VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK = 0,
@@ -1759,12 +1759,12 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkTexFilter                                 magFilter;
-    VkTexFilter                                 minFilter;
-    VkTexMipmapMode                             mipMode;
-    VkTexAddressMode                            addressModeU;
-    VkTexAddressMode                            addressModeV;
-    VkTexAddressMode                            addressModeW;
+    VkFilter                                    magFilter;
+    VkFilter                                    minFilter;
+    VkSamplerMipmapMode                         mipmapMode;
+    VkSamplerAddressMode                        addressModeU;
+    VkSamplerAddressMode                        addressModeV;
+    VkSamplerAddressMode                        addressModeW;
     float                                       mipLodBias;
     float                                       maxAnisotropy;
     VkBool32                                    compareEnable;
@@ -2192,7 +2192,7 @@ typedef void (VKAPI_PTR *PFN_vkCmdDispatch)(VkCommandBuffer commandBuffer, uint3
 typedef void (VKAPI_PTR *PFN_vkCmdDispatchIndirect)(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset);
 typedef void (VKAPI_PTR *PFN_vkCmdCopyBuffer)(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferCopy* pRegions);
 typedef void (VKAPI_PTR *PFN_vkCmdCopyImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageCopy* pRegions);
-typedef void (VKAPI_PTR *PFN_vkCmdBlitImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageBlit* pRegions, VkTexFilter filter);
+typedef void (VKAPI_PTR *PFN_vkCmdBlitImage)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkImageBlit* pRegions, VkFilter filter);
 typedef void (VKAPI_PTR *PFN_vkCmdCopyBufferToImage)(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkImage dstImage, VkImageLayout dstImageLayout, uint32_t regionCount, const VkBufferImageCopy* pRegions);
 typedef void (VKAPI_PTR *PFN_vkCmdCopyImageToBuffer)(VkCommandBuffer commandBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer dstBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions);
 typedef void (VKAPI_PTR *PFN_vkCmdUpdateBuffer)(VkCommandBuffer commandBuffer, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize dataSize, const uint32_t* pData);
@@ -2843,7 +2843,7 @@ VKAPI_ATTR void VKAPI_CALL vkCmdBlitImage(
     VkImageLayout                               dstImageLayout,
     uint32_t                                    regionCount,
     const VkImageBlit*                          pRegions,
-    VkTexFilter                                 filter);
+    VkFilter                                    filter);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdCopyBufferToImage(
     VkCommandBuffer                             commandBuffer,

@@ -126,7 +126,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
             extent.height,
             1
          },
-      }, VK_TEX_FILTER_NEAREST);
+      }, VK_FILTER_NEAREST);
 
    ANV_CALL(CmdPipelineBarrier)(cmd,
       VK_PIPELINE_STAGE_TRANSFER_BIT,

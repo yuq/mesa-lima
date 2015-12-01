@@ -449,7 +449,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                struct anv_image_view *dest_iview,
                VkOffset3D dest_offset,
                VkExtent3D dest_extent,
-               VkTexFilter blit_filter)
+               VkFilter blit_filter)
 {
    struct anv_device *device = cmd_buffer->device;
    VkDescriptorPool dummy_desc_pool = (VkDescriptorPool)1;
@@ -734,7 +734,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
                   &dest_iview,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 },
-                  VK_TEX_FILTER_NEAREST);
+                  VK_FILTER_NEAREST);
 
    anv_DestroyImage(vk_device, src_image);
    anv_DestroyImage(vk_device, dest_image);
@@ -907,7 +907,7 @@ void anv_CmdCopyImage(
                         dest_image, &dest_iview,
                         dest_offset,
                         pRegions[r].extent,
-                        VK_TEX_FILTER_NEAREST);
+                        VK_FILTER_NEAREST);
       }
    }
 
@@ -922,7 +922,7 @@ void anv_CmdBlitImage(
     VkImageLayout                               destImageLayout,
     uint32_t                                    regionCount,
     const VkImageBlit*                          pRegions,
-    VkTexFilter                                 filter)
+    VkFilter                                    filter)
 
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
@@ -934,7 +934,7 @@ void anv_CmdBlitImage(
 
    struct anv_meta_saved_state saved_state;
 
-   anv_finishme("respect VkTexFilter");
+   anv_finishme("respect VkFilter");
 
    meta_prepare_blit(cmd_buffer, &saved_state);
 
@@ -1141,7 +1141,7 @@ void anv_CmdCopyBufferToImage(
                         &dest_iview,
                         dest_offset,
                         pRegions[r].imageExtent,
-                        VK_TEX_FILTER_NEAREST);
+                        VK_FILTER_NEAREST);
 
          /* Once we've done the blit, all of the actual information about
           * the image is embedded in the command buffer so we can just
@@ -1244,7 +1244,7 @@ void anv_CmdCopyImageToBuffer(
                         &dest_iview,
                         (VkOffset3D) { 0, 0, 0 },
                         pRegions[r].imageExtent,
-                        VK_TEX_FILTER_NEAREST);
+                        VK_FILTER_NEAREST);
 
          /* Once we've done the blit, all of the actual information about
           * the image is embedded in the command buffer so we can just
