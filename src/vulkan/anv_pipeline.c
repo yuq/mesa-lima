@@ -210,6 +210,7 @@ size_t anv_GetPipelineCacheSize(
 VkResult anv_GetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
+    size_t*                                     pDataSize,
     void*                                       pData)
 {
    stub_return(VK_UNSUPPORTED);

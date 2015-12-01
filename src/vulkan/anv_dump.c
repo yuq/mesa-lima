@@ -139,7 +139,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
          .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
          .newLayout = VK_IMAGE_LAYOUT_GENERAL,
          .srcQueueFamilyIndex = 0,
-         .destQueueFamilyIndex = 0,
+         .dstQueueFamilyIndex = 0,
          .image = copy_image,
          .subresourceRange = (VkImageSubresourceRange) {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
