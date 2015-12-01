@@ -100,12 +100,12 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkCommandPool)
 #define VK_FALSE                          0
 #define VK_QUEUE_FAMILY_IGNORED           (~0U)
 #define VK_SUBPASS_EXTERNAL               (~0U)
-#define VK_MAX_PHYSICAL_DEVICE_NAME       256
-#define VK_UUID_LENGTH                    16
+#define VK_MAX_PHYSICAL_DEVICE_NAME_SIZE  256
+#define VK_UUID_SIZE                      16
 #define VK_MAX_MEMORY_TYPES               32
 #define VK_MAX_MEMORY_HEAPS               16
-#define VK_MAX_EXTENSION_NAME             256
-#define VK_MAX_DESCRIPTION                256
+#define VK_MAX_EXTENSION_NAME_SIZE        256
+#define VK_MAX_DESCRIPTION_SIZE           256
 
 
 typedef enum VkResult {
@@ -1315,11 +1315,11 @@ typedef struct VkPhysicalDeviceSparseProperties {
 typedef struct VkPhysicalDeviceProperties {
     uint32_t                                    apiVersion;
     uint32_t                                    driverVersion;
-    uint32_t                                    vendorId;
-    uint32_t                                    deviceId;
+    uint32_t                                    vendorID;
+    uint32_t                                    deviceID;
     VkPhysicalDeviceType                        deviceType;
-    char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME];
-    uint8_t                                     pipelineCacheUUID[VK_UUID_LENGTH];
+    char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
+    uint8_t                                     pipelineCacheUUID[VK_UUID_SIZE];
     VkPhysicalDeviceLimits                      limits;
     VkPhysicalDeviceSparseProperties            sparseProperties;
 } VkPhysicalDeviceProperties;
@@ -1353,31 +1353,32 @@ typedef struct VkDeviceQueueCreateInfo {
     VkDeviceQueueCreateFlags                    flags;
     uint32_t                                    queueFamilyIndex;
     uint32_t                                    queueCount;
+    const float*                                pQueuePriorities;
 } VkDeviceQueueCreateInfo;
 
 typedef struct VkDeviceCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkDeviceCreateFlags                         flags;
-    uint32_t                                    queueRecordCount;
-    const VkDeviceQueueCreateInfo*              pRequestedQueues;
-    uint32_t                                    layerCount;
-    const char*const*                           ppEnabledLayerNames;
-    uint32_t                                    extensionCount;
-    const char*const*                           ppEnabledExtensionNames;
+    uint32_t                                    queueCreateInfoCount;
+    const VkDeviceQueueCreateInfo*              pQueueCreateInfos;
+    uint32_t                                    enabledLayerNameCount;
+    const char* const*                          ppEnabledLayerNames;
+    uint32_t                                    enabledExtensionNameCount;
+    const char* const*                          ppEnabledExtensionNames;
     const VkPhysicalDeviceFeatures*             pEnabledFeatures;
 } VkDeviceCreateInfo;
 
 typedef struct VkExtensionProperties {
-    char                                        extName[VK_MAX_EXTENSION_NAME];
+    char                                        extensionName[VK_MAX_EXTENSION_NAME_SIZE];
     uint32_t                                    specVersion;
 } VkExtensionProperties;
 
 typedef struct VkLayerProperties {
-    char                                        layerName[VK_MAX_EXTENSION_NAME];
+    char                                        layerName[VK_MAX_EXTENSION_NAME_SIZE];
     uint32_t                                    specVersion;
-    uint32_t                                    implVersion;
-    char                                        description[VK_MAX_DESCRIPTION];
+    uint32_t                                    implementationVersion;
+    char                                        description[VK_MAX_DESCRIPTION_SIZE];
 } VkLayerProperties;
 
 typedef struct {

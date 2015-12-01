@@ -172,14 +172,14 @@ static const VkAllocCallbacks default_alloc_callbacks = {
 
 static const VkExtensionProperties global_extensions[] = {
    {
-      .extName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
+      .extensionName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
       .specVersion = 17,
    },
 };
 
 static const VkExtensionProperties device_extensions[] = {
    {
-      .extName = VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
+      .extensionName = VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
       .specVersion = 53,
    },
 };
@@ -201,7 +201,7 @@ VkResult anv_CreateInstance(
       bool found = false;
       for (uint32_t j = 0; j < ARRAY_SIZE(global_extensions); j++) {
          if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
-                    global_extensions[j].extName) == 0) {
+                    global_extensions[j].extensionName) == 0) {
             found = true;
             break;
          }
@@ -502,15 +502,15 @@ void anv_GetPhysicalDeviceProperties(
    *pProperties = (VkPhysicalDeviceProperties) {
       .apiVersion = VK_MAKE_VERSION(0, 170, 2),
       .driverVersion = 1,
-      .vendorId = 0x8086,
-      .deviceId = pdevice->chipset_id,
+      .vendorID = 0x8086,
+      .deviceID = pdevice->chipset_id,
       .deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
       .limits = limits,
       .sparseProperties = {0}, /* Broadwell doesn't do sparse. */
    };
 
    strcpy(pProperties->deviceName, pdevice->name);
-   snprintf((char *)pProperties->pipelineCacheUUID, VK_UUID_LENGTH,
+   snprintf((char *)pProperties->pipelineCacheUUID, VK_UUID_SIZE,
             "anv-%s", MESA_GIT_SHA1 + 4);
 }
 
@@ -619,11 +619,11 @@ VkResult anv_CreateDevice(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
 
-   for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+   for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
       bool found = false;
       for (uint32_t j = 0; j < ARRAY_SIZE(device_extensions); j++) {
          if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
-                    device_extensions[j].extName) == 0) {
+                    device_extensions[j].extensionName) == 0) {
             found = true;
             break;
          }
