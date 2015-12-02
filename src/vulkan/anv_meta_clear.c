@@ -126,24 +126,6 @@ create_pipeline(struct anv_device *device,
    struct anv_shader_module vs_m = { .nir = vs_nir };
    struct anv_shader_module fs_m = { .nir = fs_nir };
 
-   VkShader vs_h;
-   ANV_CALL(CreateShader)(device_h,
-      &(VkShaderCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = anv_shader_module_to_handle(&vs_m),
-         .pName = "main",
-      },
-      &vs_h);
-
-   VkShader fs_h;
-   ANV_CALL(CreateShader)(device_h,
-      &(VkShaderCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = anv_shader_module_to_handle(&fs_m),
-         .pName = "main",
-      },
-      &fs_h);
-
    VkPipeline pipeline_h;
    anv_graphics_pipeline_create(device_h,
       &(VkGraphicsPipelineCreateInfo) {
@@ -153,12 +135,14 @@ create_pipeline(struct anv_device *device,
             {
                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                .stage = VK_SHADER_STAGE_VERTEX,
-               .shader = vs_h,
+               .module = anv_shader_module_to_handle(&vs_m),
+               .pName = "main",
             },
             {
                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
                .stage = VK_SHADER_STAGE_FRAGMENT,
-               .shader = fs_h,
+               .module = anv_shader_module_to_handle(&fs_m),
+               .pName = "main",
             },
          },
          .pVertexInputState = vi_state,
@@ -226,9 +210,6 @@ create_pipeline(struct anv_device *device,
       },
       alloc,
       &pipeline_h);
-
-   ANV_CALL(DestroyShader)(device_h, vs_h);
-   ANV_CALL(DestroyShader)(device_h, fs_h);
 
    ralloc_free(vs_nir);
    ralloc_free(fs_nir);

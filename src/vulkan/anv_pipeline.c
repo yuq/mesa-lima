@@ -75,44 +75,6 @@ void anv_DestroyShaderModule(
    anv_free2(&device->alloc, pAllocator, module);
 }
 
-VkResult anv_CreateShader(
-    VkDevice                                    _device,
-    const VkShaderCreateInfo*                   pCreateInfo,
-    VkShader*                                   pShader)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_shader_module, module, pCreateInfo->module);
-   struct anv_shader *shader;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SHADER_CREATE_INFO);
-   assert(pCreateInfo->flags == 0);
-
-   const char *name = pCreateInfo->pName ? pCreateInfo->pName : "main";
-   size_t name_len = strlen(name);
-
-   shader = anv_alloc(&device->alloc, sizeof(*shader) + name_len + 1, 8,
-                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (shader == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   shader->module = module,
-   memcpy(shader->entrypoint, name, name_len + 1);
-
-   *pShader = anv_shader_to_handle(shader);
-
-   return VK_SUCCESS;
-}
-
-void anv_DestroyShader(
-    VkDevice                                    _device,
-    VkShader                                    _shader)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_shader, shader, _shader);
-
-   anv_free(&device->alloc, shader);
-}
-
 #define SPIR_V_MAGIC_NUMBER 0x07230203
 
 static const gl_shader_stage vk_shader_stage_to_mesa_stage[] = {
@@ -136,9 +98,10 @@ anv_is_scalar_shader_stage(const struct brw_compiler *compiler,
  */
 static nir_shader *
 anv_shader_compile_to_nir(struct anv_device *device,
-                          struct anv_shader *shader, VkShaderStage vk_stage)
+                          struct anv_shader_module *module,
+                          const char *entrypoint_name, VkShaderStage vk_stage)
 {
-   if (strcmp(shader->entrypoint, "main") != 0) {
+   if (strcmp(entrypoint_name, "main") != 0) {
       anv_finishme("Multiple shaders per module not really supported");
    }
 
@@ -149,18 +112,18 @@ anv_shader_compile_to_nir(struct anv_device *device,
       compiler->glsl_compiler_options[stage].NirOptions;
 
    nir_shader *nir;
-   if (shader->module->nir) {
+   if (module->nir) {
       /* Some things such as our meta clear/blit code will give us a NIR
        * shader directly.  In that case, we just ignore the SPIR-V entirely
        * and just use the NIR shader */
-      nir = shader->module->nir;
+      nir = module->nir;
       nir->options = nir_options;
    } else {
-      uint32_t *spirv = (uint32_t *) shader->module->data;
+      uint32_t *spirv = (uint32_t *) module->data;
       assert(spirv[0] == SPIR_V_MAGIC_NUMBER);
-      assert(shader->module->size % 4 == 0);
+      assert(module->size % 4 == 0);
 
-      nir = spirv_to_nir(spirv, shader->module->size / 4, stage, nir_options);
+      nir = spirv_to_nir(spirv, module->size / 4, stage, nir_options);
    }
    nir_validate_shader(nir);
 
@@ -172,7 +135,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
     */
    nir_function_impl *entrypoint = NULL;
    nir_foreach_overload(nir, overload) {
-      if (strcmp(shader->entrypoint, overload->function->name) == 0 &&
+      if (strcmp(entrypoint_name, overload->function->name) == 0 &&
           overload->impl) {
          assert(entrypoint == NULL);
          entrypoint = overload->impl;
@@ -339,14 +302,16 @@ populate_cs_prog_key(const struct brw_device_info *devinfo,
 
 static nir_shader *
 anv_pipeline_compile(struct anv_pipeline *pipeline,
-                     struct anv_shader *shader,
+                     struct anv_shader_module *module,
+                     const char *entrypoint,
                      VkShaderStage stage,
                      struct brw_stage_prog_data *prog_data)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
 
-   nir_shader *nir = anv_shader_compile_to_nir(pipeline->device, shader, stage);
+   nir_shader *nir = anv_shader_compile_to_nir(pipeline->device,
+                                               module, entrypoint, stage);
    if (nir == NULL)
       return NULL;
 
@@ -451,7 +416,8 @@ anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
 static VkResult
 anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
                         const VkGraphicsPipelineCreateInfo *info,
-                        struct anv_shader *shader)
+                        struct anv_shader_module *module,
+                        const char *entrypoint)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
@@ -464,7 +430,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 
    memset(prog_data, 0, sizeof(*prog_data));
 
-   nir_shader *nir = anv_pipeline_compile(pipeline, shader,
+   nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
                                           VK_SHADER_STAGE_VERTEX,
                                           &prog_data->base.base);
    if (nir == NULL)
@@ -472,7 +438,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 
    void *mem_ctx = ralloc_context(NULL);
 
-   if (shader->module->nir == NULL)
+   if (module->nir == NULL)
       ralloc_steal(mem_ctx, nir);
 
    prog_data->inputs_read = nir->info.inputs_read;
@@ -513,7 +479,8 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 static VkResult
 anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
                         const VkGraphicsPipelineCreateInfo *info,
-                        struct anv_shader *shader)
+                        struct anv_shader_module *module,
+                        const char *entrypoint)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
@@ -526,7 +493,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
    memset(prog_data, 0, sizeof(*prog_data));
 
-   nir_shader *nir = anv_pipeline_compile(pipeline, shader,
+   nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
                                           VK_SHADER_STAGE_GEOMETRY,
                                           &prog_data->base.base);
    if (nir == NULL)
@@ -534,7 +501,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
    void *mem_ctx = ralloc_context(NULL);
 
-   if (shader->module->nir == NULL)
+   if (module->nir == NULL)
       ralloc_steal(mem_ctx, nir);
 
    brw_compute_vue_map(&pipeline->device->info,
@@ -567,7 +534,8 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 static VkResult
 anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
                         const VkGraphicsPipelineCreateInfo *info,
-                        struct anv_shader *shader)
+                        struct anv_shader_module *module,
+                        const char *entrypoint)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
@@ -585,7 +553,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
    prog_data->binding_table.render_target_start = 0;
 
-   nir_shader *nir = anv_pipeline_compile(pipeline, shader,
+   nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
                                           VK_SHADER_STAGE_FRAGMENT,
                                           &prog_data->base);
    if (nir == NULL)
@@ -593,7 +561,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
    void *mem_ctx = ralloc_context(NULL);
 
-   if (shader->module->nir == NULL)
+   if (module->nir == NULL)
       ralloc_steal(mem_ctx, nir);
 
    unsigned code_size;
@@ -643,7 +611,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 VkResult
 anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
                         const VkComputePipelineCreateInfo *info,
-                        struct anv_shader *shader)
+                        struct anv_shader_module *module,
+                        const char *entrypoint)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
@@ -656,7 +625,7 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 
    memset(prog_data, 0, sizeof(*prog_data));
 
-   nir_shader *nir = anv_pipeline_compile(pipeline, shader,
+   nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
                                           VK_SHADER_STAGE_COMPUTE,
                                           &prog_data->base);
    if (nir == NULL)
@@ -664,7 +633,7 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 
    void *mem_ctx = ralloc_context(NULL);
 
-   if (shader->module->nir == NULL)
+   if (module->nir == NULL)
       ralloc_steal(mem_ctx, nir);
 
    unsigned code_size;
@@ -1009,17 +978,19 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
    pipeline->total_scratch = 0;
 
    for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-      ANV_FROM_HANDLE(anv_shader, shader, pCreateInfo->pStages[i].shader);
+      ANV_FROM_HANDLE(anv_shader_module, module,
+                      pCreateInfo->pStages[i].module);
+      const char *entrypoint = pCreateInfo->pStages[i].pName;
 
       switch (pCreateInfo->pStages[i].stage) {
       case VK_SHADER_STAGE_VERTEX:
-         anv_pipeline_compile_vs(pipeline, pCreateInfo, shader);
+         anv_pipeline_compile_vs(pipeline, pCreateInfo, module, entrypoint);
          break;
       case VK_SHADER_STAGE_GEOMETRY:
-         anv_pipeline_compile_gs(pipeline, pCreateInfo, shader);
+         anv_pipeline_compile_gs(pipeline, pCreateInfo, module, entrypoint);
          break;
       case VK_SHADER_STAGE_FRAGMENT:
-         anv_pipeline_compile_fs(pipeline, pCreateInfo, shader);
+         anv_pipeline_compile_fs(pipeline, pCreateInfo, module, entrypoint);
          break;
       default:
          anv_finishme("Unsupported shader stage");

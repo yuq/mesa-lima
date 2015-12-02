@@ -710,8 +710,9 @@ VkResult genX(compute_pipeline_create)(
    pipeline->total_scratch = 0;
 
    assert(pCreateInfo->stage.stage == VK_SHADER_STAGE_COMPUTE);
-   ANV_FROM_HANDLE(anv_shader, shader,  pCreateInfo->stage.shader);
-   anv_pipeline_compile_cs(pipeline, pCreateInfo, shader);
+   ANV_FROM_HANDLE(anv_shader_module, module,  pCreateInfo->stage.module);
+   anv_pipeline_compile_cs(pipeline, pCreateInfo, module,
+                           pCreateInfo->stage.pName);
 
    pipeline->use_repclear = false;
 

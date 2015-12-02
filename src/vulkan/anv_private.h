@@ -1163,11 +1163,6 @@ struct anv_shader_module {
    char                                         data[0];
 };
 
-struct anv_shader {
-   struct anv_shader_module *                   module;
-   char                                         entrypoint[0];
-};
-
 struct anv_pipeline {
    struct anv_device *                          device;
    struct anv_batch                             batch;
@@ -1253,7 +1248,8 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
 VkResult
 anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
                         const VkComputePipelineCreateInfo *info,
-                        struct anv_shader *shader);
+                        struct anv_shader_module *module,
+                        const char *entrypoint_name);
 
 VkResult
 anv_graphics_pipeline_create(VkDevice device,
@@ -1607,7 +1603,6 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_pipeline_layout, VkPipelineLayout)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_query_pool, VkQueryPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_render_pass, VkRenderPass)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_sampler, VkSampler)
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader, VkShader)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
 
 #define ANV_DEFINE_STRUCT_CASTS(__anv_type, __VkType) \

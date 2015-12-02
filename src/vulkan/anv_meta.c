@@ -224,41 +224,17 @@ anv_device_init_meta_blit_state(struct anv_device *device)
     * to provide GLSL source for the vertex shader so that the compiler
     * does not dead-code our inputs.
     */
-   struct anv_shader_module vsm = {
+   struct anv_shader_module vs = {
       .nir = build_nir_vertex_shader(false),
    };
 
-   struct anv_shader_module fsm_2d = {
+   struct anv_shader_module fs_2d = {
       .nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_2D),
    };
 
-   struct anv_shader_module fsm_3d = {
+   struct anv_shader_module fs_3d = {
       .nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_3D),
    };
-
-   VkShader vs;
-   anv_CreateShader(anv_device_to_handle(device),
-      &(VkShaderCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = anv_shader_module_to_handle(&vsm),
-         .pName = "main",
-      }, &vs);
-
-   VkShader fs_2d;
-   anv_CreateShader(anv_device_to_handle(device),
-      &(VkShaderCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = anv_shader_module_to_handle(&fsm_2d),
-         .pName = "main",
-      }, &fs_2d);
-
-   VkShader fs_3d;
-   anv_CreateShader(anv_device_to_handle(device),
-      &(VkShaderCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = anv_shader_module_to_handle(&fsm_3d),
-         .pName = "main",
-      }, &fs_3d);
 
    VkPipelineVertexInputStateCreateInfo vi_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -329,12 +305,14 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
          .stage = VK_SHADER_STAGE_VERTEX,
-         .shader = vs,
+         .module = anv_shader_module_to_handle(&vs),
+         .pName = "main",
          .pSpecializationInfo = NULL
       }, {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
          .stage = VK_SHADER_STAGE_FRAGMENT,
-         .shader = VK_NULL_HANDLE, /* TEMPLATE VALUE! FILL ME IN! */
+         .module = VK_NULL_HANDLE, /* TEMPLATE VALUE! FILL ME IN! */
+         .pName = "main",
          .pSpecializationInfo = NULL
       },
    };
@@ -408,22 +386,19 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       .use_rectlist = true
    };
 
-   pipeline_shader_stages[1].shader = fs_2d;
+   pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_2d);
    anv_graphics_pipeline_create(anv_device_to_handle(device),
       &vk_pipeline_info, &anv_pipeline_info,
       NULL, &device->meta_state.blit.pipeline_2d_src);
 
-   pipeline_shader_stages[1].shader = fs_3d;
+   pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_3d);
    anv_graphics_pipeline_create(anv_device_to_handle(device),
       &vk_pipeline_info, &anv_pipeline_info,
       NULL, &device->meta_state.blit.pipeline_3d_src);
 
-   anv_DestroyShader(anv_device_to_handle(device), vs);
-   anv_DestroyShader(anv_device_to_handle(device), fs_2d);
-   anv_DestroyShader(anv_device_to_handle(device), fs_3d);
-   ralloc_free(vsm.nir);
-   ralloc_free(fsm_2d.nir);
-   ralloc_free(fsm_3d.nir);
+   ralloc_free(vs.nir);
+   ralloc_free(fs_2d.nir);
+   ralloc_free(fs_3d.nir);
 }
 
 static void

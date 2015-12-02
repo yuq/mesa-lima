@@ -79,7 +79,6 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkQueryPool)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkBufferView)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkImageView)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkShaderModule)
-VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkShader)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPipelineCache)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkPipelineLayout)
 VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkRenderPass)
@@ -136,7 +135,6 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO = 2,
     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO = 3,
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO = 4,
-    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO = 5,
     VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO = 6,
     VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO = 7,
     VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO = 8,
@@ -921,7 +919,6 @@ typedef VkFlags VkBufferViewCreateFlags;
 typedef VkFlags VkImageViewCreateFlags;
 typedef VkFlags VkShaderModuleCreateFlags;
 typedef VkFlags VkPipelineCacheCreateFlags;
-typedef VkFlags VkShaderCreateFlags;
 
 typedef enum VkPipelineCreateFlagBits {
     VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT = 0x00000001,
@@ -1582,15 +1579,6 @@ typedef struct VkShaderModuleCreateInfo {
     const uint32_t*                             pCode;
 } VkShaderModuleCreateInfo;
 
-typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkShaderModule                              module;
-    const char*                                 pName;
-    VkShaderCreateFlags                         flags;
-    VkShaderStage                               stage;
-} VkShaderCreateInfo;
-
 typedef struct VkPipelineCacheCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
@@ -1617,7 +1605,8 @@ typedef struct VkPipelineShaderStageCreateInfo {
     const void*                                 pNext;
     VkPipelineShaderStageCreateFlags            flags;
     VkShaderStage                               stage;
-    VkShader                                    shader;
+    VkShaderModule                              module;
+    const char*                                 pName;
     const VkSpecializationInfo*                 pSpecializationInfo;
 } VkPipelineShaderStageCreateInfo;
 
@@ -2207,8 +2196,6 @@ typedef VkResult (VKAPI_PTR *PFN_vkCreateImageView)(VkDevice device, const VkIma
 typedef void (VKAPI_PTR *PFN_vkDestroyImageView)(VkDevice device, VkImageView imageView, const VkAllocationCallbacks* pAllocator);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkShaderModule* pShaderModule);
 typedef void (VKAPI_PTR *PFN_vkDestroyShaderModule)(VkDevice device, VkShaderModule shaderModule, const VkAllocationCallbacks* pAllocator);
-typedef VkResult (VKAPI_PTR *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
-typedef void (VKAPI_PTR *PFN_vkDestroyShader)(VkDevice device, VkShader shader);
 typedef VkResult (VKAPI_PTR *PFN_vkCreatePipelineCache)(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineCache* pPipelineCache);
 typedef void (VKAPI_PTR *PFN_vkDestroyPipelineCache)(VkDevice device, VkPipelineCache pipelineCache, const VkAllocationCallbacks* pAllocator);
 typedef VkResult (VKAPI_PTR *PFN_vkGetPipelineCacheData)(VkDevice device, VkPipelineCache pipelineCache, size_t* pDataSize, void* pData);
@@ -2611,15 +2598,6 @@ VKAPI_ATTR void VKAPI_CALL vkDestroyShaderModule(
     VkDevice                                    device,
     VkShaderModule                              shaderModule,
     const VkAllocationCallbacks*                pAllocator);
-
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateShader(
-    VkDevice                                    device,
-    const VkShaderCreateInfo*                   pCreateInfo,
-    VkShader*                                   pShader);
-
-VKAPI_ATTR void VKAPI_CALL vkDestroyShader(
-    VkDevice                                    device,
-    VkShader                                    shader);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreatePipelineCache(
     VkDevice                                    device,
