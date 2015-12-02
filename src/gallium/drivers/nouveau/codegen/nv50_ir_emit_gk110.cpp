@@ -75,6 +75,7 @@ private:
    void emitLOAD(const Instruction *);
    void emitSTORE(const Instruction *);
    void emitMOV(const Instruction *);
+   void emitMEMBAR(const Instruction *);
 
    void emitINTERP(const Instruction *);
    void emitAFETCH(const Instruction *);
@@ -1687,6 +1688,14 @@ CodeEmitterGK110::emitMOV(const Instruction *i)
    }
 }
 
+void CodeEmitterGK110::emitMEMBAR(const Instruction *i)
+{
+   code[0] = 0x00000002 | NV50_IR_SUBOP_MEMBAR_SCOPE(i->subOp) << 8;
+   code[1] = 0x7cc00000;
+
+   emitPredicate(i);
+}
+
 bool
 CodeEmitterGK110::emitInstruction(Instruction *insn)
 {
@@ -1917,6 +1926,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_BAR:
       emitBAR(insn);
+      break;
+   case OP_MEMBAR:
+      emitMEMBAR(insn);
       break;
    case OP_PHI:
    case OP_UNION:
