@@ -82,12 +82,12 @@ anv_dump_image_to_ppm(struct anv_device *device,
    assert(result == VK_SUCCESS);
 
    VkCommandBuffer cmd;
-   result = anv_CreateCommandBuffer(vk_device,
-      &(VkCommandBufferCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_CREATE_INFO,
+   result = anv_AllocateCommandBuffers(vk_device,
+      &(VkCommandBufferAllocateInfo) {
+         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
          .commandPool = commandPool,
          .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-         .flags = 0,
+         .bufferCount = 1,
       }, &cmd);
    assert(result == VK_SUCCESS);
 

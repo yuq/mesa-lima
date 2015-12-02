@@ -140,7 +140,7 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO = 6,
     VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO = 7,
     VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO = 8,
-    VK_STRUCTURE_TYPE_COMMAND_BUFFER_CREATE_INFO = 9,
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO = 9,
     VK_STRUCTURE_TYPE_EVENT_CREATE_INFO = 10,
     VK_STRUCTURE_TYPE_FENCE_CREATE_INFO = 11,
     VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO = 12,
@@ -1997,13 +1997,13 @@ typedef struct VkCommandPoolCreateInfo {
     uint32_t                                    queueFamilyIndex;
 } VkCommandPoolCreateInfo;
 
-typedef struct {
+typedef struct VkCommandBufferAllocateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkCommandPool                               commandPool;
     VkCommandBufferLevel                        level;
-    VkCommandBufferCreateFlags                  flags;
-} VkCommandBufferCreateInfo;
+    uint32_t                                    bufferCount;
+} VkCommandBufferAllocateInfo;
 
 typedef struct VkCommandBufferBeginInfo {
     VkStructureType                             sType;
@@ -2243,8 +2243,8 @@ typedef void (VKAPI_PTR *PFN_vkGetRenderAreaGranularity)(VkDevice device, VkRend
 typedef VkResult (VKAPI_PTR *PFN_vkCreateCommandPool)(VkDevice device, const VkCommandPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkCommandPool* pCommandPool);
 typedef void (VKAPI_PTR *PFN_vkDestroyCommandPool)(VkDevice device, VkCommandPool commandPool, const VkAllocationCallbacks* pAllocator);
 typedef VkResult (VKAPI_PTR *PFN_vkResetCommandPool)(VkDevice device, VkCommandPool commandPool, VkCommandPoolResetFlags flags);
-typedef VkResult (VKAPI_PTR *PFN_vkCreateCommandBuffer)(VkDevice device, const VkCommandBufferCreateInfo* pCreateInfo, VkCommandBuffer* pCommandBuffer);
-typedef void (VKAPI_PTR *PFN_vkDestroyCommandBuffer)(VkDevice device, VkCommandBuffer commandBuffer);
+typedef VkResult (VKAPI_PTR *PFN_vkAllocateCommandBuffers)(VkDevice device, const VkCommandBufferAllocateInfo* pAllocateInfo, VkCommandBuffer* pCommandBuffers);
+typedef void (VKAPI_PTR *PFN_vkFreeCommandBuffers)(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers);
 typedef VkResult (VKAPI_PTR *PFN_vkBeginCommandBuffer)(VkCommandBuffer commandBuffer, const VkCommandBufferBeginInfo* pBeginInfo);
 typedef VkResult (VKAPI_PTR *PFN_vkEndCommandBuffer)(VkCommandBuffer commandBuffer);
 typedef VkResult (VKAPI_PTR *PFN_vkResetCommandBuffer)(VkCommandBuffer commandBuffer, VkCommandBufferResetFlags flags);
@@ -2782,14 +2782,16 @@ VKAPI_ATTR VkResult VKAPI_CALL vkResetCommandPool(
     VkCommandPool                               commandPool,
     VkCommandPoolResetFlags                     flags);
 
-VKAPI_ATTR VkResult VKAPI_CALL vkCreateCommandBuffer(
+VKAPI_ATTR VkResult VKAPI_CALL vkAllocateCommandBuffers(
     VkDevice                                    device,
-    const VkCommandBufferCreateInfo*            pCreateInfo,
-    VkCommandBuffer*                            pCommandBuffer);
+    const VkCommandBufferAllocateInfo*          pAllocateInfo,
+    VkCommandBuffer*                            pCommandBuffers);
 
-VKAPI_ATTR void VKAPI_CALL vkDestroyCommandBuffer(
+VKAPI_ATTR void VKAPI_CALL vkFreeCommandBuffers(
     VkDevice                                    device,
-    VkCommandBuffer                             commandBuffer);
+    VkCommandPool                               commandPool,
+    uint32_t                                    commandBufferCount,
+    const VkCommandBuffer*                      pCommandBuffers);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkBeginCommandBuffer(
     VkCommandBuffer                             commandBuffer,
