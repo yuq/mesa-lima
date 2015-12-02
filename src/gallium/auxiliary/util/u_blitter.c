@@ -1825,6 +1825,7 @@ void util_blitter_clear_render_target(struct blitter_context *blitter,
    struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = ctx->base.pipe;
    struct pipe_framebuffer_state fb_state;
+   unsigned num_layers;
 
    assert(dstsurf->texture);
    if (!dstsurf->texture)
@@ -1854,7 +1855,7 @@ void util_blitter_clear_render_target(struct blitter_context *blitter,
 
    blitter_set_dst_dimensions(ctx, dstsurf->width, dstsurf->height);
 
-   unsigned num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
+   num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
    if (num_layers > 1 && ctx->has_layered) {
       blitter_set_common_draw_rect_state(ctx, FALSE, TRUE);
       blitter_set_clear_color(ctx, color);
@@ -1886,6 +1887,7 @@ void util_blitter_clear_depth_stencil(struct blitter_context *blitter,
    struct pipe_context *pipe = ctx->base.pipe;
    struct pipe_framebuffer_state fb_state;
    struct pipe_stencil_ref sr = { { 0 } };
+   unsigned num_layers;
 
    assert(dstsurf->texture);
    if (!dstsurf->texture)
@@ -1931,7 +1933,7 @@ void util_blitter_clear_depth_stencil(struct blitter_context *blitter,
 
    blitter_set_dst_dimensions(ctx, dstsurf->width, dstsurf->height);
 
-   unsigned num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
+   num_layers = dstsurf->u.tex.last_layer - dstsurf->u.tex.first_layer + 1;
    if (num_layers > 1 && ctx->has_layered) {
       blitter_set_common_draw_rect_state(ctx, FALSE, TRUE);
       blitter_draw(ctx, dstx, dsty, dstx+width, dsty+height, (float) depth, num_layers);
