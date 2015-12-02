@@ -1356,6 +1356,16 @@ void brw_validate_textures( struct brw_context *brw );
 /*======================================================================
  * brw_program.c
  */
+static inline bool
+key_debug(struct brw_context *brw, const char *name, int a, int b)
+{
+   if (a != b) {
+      perf_debug("  %s %d->%d\n", name, a, b);
+      return true;
+   }
+   return false;
+}
+
 void brwInitFragProgFuncs( struct dd_function_table *functions );
 
 /* Per-thread scratch space is a power-of-two multiple of 1KB. */

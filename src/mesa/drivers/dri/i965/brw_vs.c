@@ -220,16 +220,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
    return true;
 }
 
-static bool
-key_debug(struct brw_context *brw, const char *name, int a, int b)
-{
-   if (a != b) {
-      perf_debug("  %s %d->%d\n", name, a, b);
-      return true;
-   }
-   return false;
-}
-
 void
 brw_vs_debug_recompile(struct brw_context *brw,
                        struct gl_shader_program *prog,
