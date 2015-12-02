@@ -698,6 +698,9 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
    const struct brw_vue_map *vue_map = &vue_prog_data->vue_map;
    bool flush;
    fs_reg sources[8];
+   fs_reg urb_handle;
+
+   urb_handle = fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
 
    /* If we don't have any valid slots to write, just do a minimal urb write
     * send to terminate the shader.  This includes 1 slot of undefined data,
@@ -711,8 +714,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
     */
    if (vue_map->slots_valid == 0) {
       fs_reg payload = fs_reg(VGRF, alloc.allocate(2), BRW_REGISTER_TYPE_UD);
-      bld.exec_all().MOV(payload, fs_reg(retype(brw_vec8_grf(1, 0),
-                                                BRW_REGISTER_TYPE_UD)));
+      bld.exec_all().MOV(payload, urb_handle);
 
       fs_inst *inst = bld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
       inst->eot = true;
@@ -856,8 +858,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
             ralloc_array(mem_ctx, fs_reg, length + header_size);
          fs_reg payload = fs_reg(VGRF, alloc.allocate(length + header_size),
                                  BRW_REGISTER_TYPE_F);
-         payload_sources[0] =
-            fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
+         payload_sources[0] = urb_handle;
 
          if (opcode == SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT)
             payload_sources[1] = per_slot_offsets;
