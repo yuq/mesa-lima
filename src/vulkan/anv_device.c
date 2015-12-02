@@ -530,14 +530,17 @@ void anv_GetPhysicalDeviceMemoryProperties(
    /* The property flags below are valid only for llc platforms. */
    pMemoryProperties->memoryTypeCount = 1;
    pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
-      .propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+      .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                       VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
       .heapIndex = 1,
    };
 
    pMemoryProperties->memoryHeapCount = 1;
    pMemoryProperties->memoryHeaps[0] = (VkMemoryHeap) {
       .size = heap_size,
-      .flags = VK_MEMORY_HEAP_HOST_LOCAL_BIT,
+      .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
    };
 }
 
