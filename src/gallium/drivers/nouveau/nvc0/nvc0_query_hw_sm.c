@@ -1272,6 +1272,11 @@ nvc0_hw_sm_create_query(struct nvc0_context *nvc0, unsigned type)
         * [04] = WS0.C1
         * [08] = WS0.C2
         * [0c] = WS0.C3
+        * [10] = WS1.C0
+        * [14] = WS1.C1
+        * [18] = WS1.C2
+        * [1c] = WS1.C3
+        * [20] = WS2.C0
         * [24] = WS2.C1
         * [28] = WS2.C2
         * [2c] = WS2.C3
