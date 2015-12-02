@@ -204,6 +204,14 @@ void brw_set_sampler_message(struct brw_codegen *p,
                              unsigned simd_mode,
                              unsigned return_format);
 
+void brw_set_message_descriptor(struct brw_codegen *p,
+                                brw_inst *inst,
+                                enum brw_message_target sfid,
+                                unsigned msg_length,
+                                unsigned response_length,
+                                bool header_present,
+                                bool end_of_thread);
+
 void brw_set_dp_read_message(struct brw_codegen *p,
 			     brw_inst *insn,
 			     unsigned binding_table_index,
