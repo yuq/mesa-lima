@@ -177,7 +177,7 @@ genX(image_view_init)(struct anv_image_view *iview,
    static const uint8_t isl_to_gen_tiling[] = {
       [ISL_TILING_LINEAR]  = LINEAR,
       [ISL_TILING_X]       = XMAJOR,
-      [ISL_TILING_Y]       = YMAJOR,
+      [ISL_TILING_Y0]      = YMAJOR,
       [ISL_TILING_Yf]      = YMAJOR,
       [ISL_TILING_Ys]      = YMAJOR,
       [ISL_TILING_W]       = WMAJOR,

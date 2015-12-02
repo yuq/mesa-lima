@@ -56,7 +56,7 @@ isl_tiling_get_extent(const struct isl_device *dev,
    static const struct isl_extent2d legacy_extents[] = {
       [ISL_TILING_LINEAR]  = {   1,   1 },
       [ISL_TILING_X]       = { 512,   8 },
-      [ISL_TILING_Y]       = { 128,  32 },
+      [ISL_TILING_Y0]      = { 128,  32 },
       [ISL_TILING_W]       = { 128,  32 },
    };
 
@@ -74,7 +74,7 @@ isl_tiling_get_extent(const struct isl_device *dev,
    switch (tiling) {
    case ISL_TILING_LINEAR:
    case ISL_TILING_X:
-   case ISL_TILING_Y:
+   case ISL_TILING_Y0:
    case ISL_TILING_W:
       *e = legacy_extents[tiling];
       return;

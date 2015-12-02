@@ -249,7 +249,7 @@ genX(image_view_init)(struct anv_image_view *iview,
        * Tiled Surface is False."
        */
       .TiledSurface = surface->tiling != ISL_TILING_LINEAR,
-      .TileWalk = surface->tiling == ISL_TILING_Y ?
+      .TileWalk = surface->tiling == ISL_TILING_Y0 ?
                   TILEWALK_YMAJOR : TILEWALK_XMAJOR,
 
       .VerticalLineStride = 0,

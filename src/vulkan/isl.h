@@ -40,12 +40,15 @@ struct brw_device_info;
 /**
  * WARNING: These values differ from the hardware enum values, which are
  * unstable across hardware generations.
+ *
+ * Note that legacy Y tiling is ISL_TILING_Y0 instead of ISL_TILING_Y, to
+ * clearly distinguish it from Yf and Ys.
  */
 enum isl_tiling {
    ISL_TILING_LINEAR,
    ISL_TILING_W,
    ISL_TILING_X,
-   ISL_TILING_Y, /**< Legacy Y tiling */
+   ISL_TILING_Y0, /**< Legacy Y tiling */
    ISL_TILING_Yf,
    ISL_TILING_Ys,
 };

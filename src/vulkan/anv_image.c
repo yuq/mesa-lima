@@ -100,7 +100,7 @@ static const struct anv_tile_info {
 } anv_tile_info_table[] = {
    [ISL_TILING_LINEAR]  = {   64 },
    [ISL_TILING_X]       = { 4096 },
-   [ISL_TILING_Y]       = { 4096 },
+   [ISL_TILING_Y0]      = { 4096 },
    [ISL_TILING_Yf]      = { 4096 },
    [ISL_TILING_Ys]      = { 4096 },
    [ISL_TILING_W]       = { 4096 },
@@ -124,7 +124,7 @@ anv_image_choose_tiling(const struct anv_image_create_info *anv_info)
       if (unlikely(anv_info->vk_info->format == VK_FORMAT_S8_UINT)) {
          return ISL_TILING_W;
       } else {
-         return ISL_TILING_Y;
+         return ISL_TILING_Y0;
       }
    default:
       assert(!"bad VKImageTiling");
