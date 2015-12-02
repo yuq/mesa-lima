@@ -585,6 +585,54 @@ static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 	}
 }
 
+static void
+r600_print_texture_info(struct r600_texture *rtex, FILE *f)
+{
+	int i;
+
+	fprintf(f, "  Info: npix_x=%u, npix_y=%u, npix_z=%u, blk_w=%u, "
+		"blk_h=%u, blk_d=%u, array_size=%u, last_level=%u, "
+		"bpe=%u, nsamples=%u, flags=0x%x, %s\n",
+		rtex->surface.npix_x, rtex->surface.npix_y,
+		rtex->surface.npix_z, rtex->surface.blk_w,
+		rtex->surface.blk_h, rtex->surface.blk_d,
+		rtex->surface.array_size, rtex->surface.last_level,
+		rtex->surface.bpe, rtex->surface.nsamples,
+		rtex->surface.flags, util_format_short_name(rtex->resource.b.b.format));
+	for (i = 0; i <= rtex->surface.last_level; i++) {
+		fprintf(f, "  L %i: offset=%"PRIu64", slice_size=%"PRIu64", npix_x=%u, "
+			"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
+			"nblk_z=%u, pitch_bytes=%u, mode=%u\n",
+			i, rtex->surface.level[i].offset,
+			rtex->surface.level[i].slice_size,
+			u_minify(rtex->resource.b.b.width0, i),
+			u_minify(rtex->resource.b.b.height0, i),
+			u_minify(rtex->resource.b.b.depth0, i),
+			rtex->surface.level[i].nblk_x,
+			rtex->surface.level[i].nblk_y,
+			rtex->surface.level[i].nblk_z,
+			rtex->surface.level[i].pitch_bytes,
+			rtex->surface.level[i].mode);
+	}
+	if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+		for (i = 0; i <= rtex->surface.last_level; i++) {
+			fprintf(f, "  S %i: offset=%"PRIu64", slice_size=%"PRIu64", npix_x=%u, "
+				"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
+				"nblk_z=%u, pitch_bytes=%u, mode=%u\n",
+				i, rtex->surface.stencil_level[i].offset,
+				rtex->surface.stencil_level[i].slice_size,
+				u_minify(rtex->resource.b.b.width0, i),
+				u_minify(rtex->resource.b.b.height0, i),
+				u_minify(rtex->resource.b.b.depth0, i),
+				rtex->surface.stencil_level[i].nblk_x,
+				rtex->surface.stencil_level[i].nblk_y,
+				rtex->surface.stencil_level[i].nblk_z,
+				rtex->surface.stencil_level[i].pitch_bytes,
+				rtex->surface.stencil_level[i].mode);
+		}
+	}
+}
+
 /* Common processing for r600_texture_create and r600_texture_from_handle */
 static struct r600_texture *
 r600_texture_create_object(struct pipe_screen *screen,
@@ -678,48 +726,10 @@ r600_texture_create_object(struct pipe_screen *screen,
 	}
 
 	if (rscreen->debug_flags & DBG_TEX) {
-		printf("Texture: npix_x=%u, npix_y=%u, npix_z=%u, blk_w=%u, "
-		       "blk_h=%u, blk_d=%u, array_size=%u, last_level=%u, "
-		       "bpe=%u, nsamples=%u, flags=0x%x, %s\n",
-		       rtex->surface.npix_x, rtex->surface.npix_y,
-		       rtex->surface.npix_z, rtex->surface.blk_w,
-		       rtex->surface.blk_h, rtex->surface.blk_d,
-		       rtex->surface.array_size, rtex->surface.last_level,
-		       rtex->surface.bpe, rtex->surface.nsamples,
-		       rtex->surface.flags, util_format_short_name(base->format));
-		for (int i = 0; i <= rtex->surface.last_level; i++) {
-			printf("  L %i: offset=%"PRIu64", slice_size=%"PRIu64", npix_x=%u, "
-			       "npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
-			       "nblk_z=%u, pitch_bytes=%u, mode=%u\n",
-			       i, rtex->surface.level[i].offset,
-			       rtex->surface.level[i].slice_size,
-			       u_minify(rtex->resource.b.b.width0, i),
-			       u_minify(rtex->resource.b.b.height0, i),
-			       u_minify(rtex->resource.b.b.depth0, i),
-			       rtex->surface.level[i].nblk_x,
-			       rtex->surface.level[i].nblk_y,
-			       rtex->surface.level[i].nblk_z,
-			       rtex->surface.level[i].pitch_bytes,
-			       rtex->surface.level[i].mode);
-		}
-		if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
-			for (int i = 0; i <= rtex->surface.last_level; i++) {
-				printf("  S %i: offset=%"PRIu64", slice_size=%"PRIu64", npix_x=%u, "
-				       "npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
-				       "nblk_z=%u, pitch_bytes=%u, mode=%u\n",
-				       i, rtex->surface.stencil_level[i].offset,
-				       rtex->surface.stencil_level[i].slice_size,
-				       u_minify(rtex->resource.b.b.width0, i),
-				       u_minify(rtex->resource.b.b.height0, i),
-				       u_minify(rtex->resource.b.b.depth0, i),
-				       rtex->surface.stencil_level[i].nblk_x,
-				       rtex->surface.stencil_level[i].nblk_y,
-				       rtex->surface.stencil_level[i].nblk_z,
-				       rtex->surface.stencil_level[i].pitch_bytes,
-				       rtex->surface.stencil_level[i].mode);
-			}
-		}
+		puts("Texture:");
+		r600_print_texture_info(rtex, stdout);
 	}
+
 	return rtex;
 }
 
