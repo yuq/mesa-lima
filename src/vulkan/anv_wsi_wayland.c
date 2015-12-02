@@ -215,15 +215,15 @@ wsi_wl_display_destroy(struct wsi_wayland *wsi, struct wsi_wl_display *display)
    anv_vector_finish(&display->formats);
    if (display->drm)
       wl_drm_destroy(display->drm);
-   anv_instance_free(wsi->instance, display);
+   anv_free(&wsi->instance->alloc, display);
 }
 
 static struct wsi_wl_display *
 wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
 {
    struct wsi_wl_display *display =
-      anv_instance_alloc(wsi->instance, sizeof(*display), 8,
-                         VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      anv_alloc(&wsi->instance->alloc, sizeof(*display), 8,
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!display)
       return NULL;
 
@@ -520,8 +520,8 @@ static void
 wsi_wl_image_finish(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
 {
    VkDevice vk_device = anv_device_to_handle(chain->base.device);
-   anv_FreeMemory(vk_device, anv_device_memory_to_handle(image->memory));
-   anv_DestroyImage(vk_device, anv_image_to_handle(image->image));
+   anv_FreeMemory(vk_device, anv_device_memory_to_handle(image->memory), NULL);
+   anv_DestroyImage(vk_device, anv_image_to_handle(image->image), NULL);
 }
 
 static void
@@ -568,6 +568,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
          .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
          .flags = 0,
       }},
+      NULL,
       &vk_image);
 
    if (result != VK_SUCCESS)
@@ -579,12 +580,13 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
    struct anv_surface *surface = &image->image->color_surface;
 
    VkDeviceMemory vk_memory;
-   result = anv_AllocMemory(vk_device,
-      &(VkMemoryAllocInfo) {
-         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+   result = anv_AllocateMemory(vk_device,
+      &(VkMemoryAllocateInfo) {
+         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
          .allocationSize = image->image->size,
          .memoryTypeIndex = 0,
       },
+      NULL,
       &vk_memory);
 
    if (result != VK_SUCCESS)
@@ -631,9 +633,9 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
    return VK_SUCCESS;
 
 fail_mem:
-   anv_FreeMemory(vk_device, vk_memory);
+   anv_FreeMemory(vk_device, vk_memory, NULL);
 fail_image:
-   anv_DestroyImage(vk_device, vk_image);
+   anv_DestroyImage(vk_device, vk_image, NULL);
 
    return result;
 }
@@ -648,7 +650,7 @@ wsi_wl_destroy_swapchain(struct anv_swapchain *anv_chain)
          wsi_wl_image_finish(chain, &chain->images[i]);
    }
 
-   anv_device_free(chain->base.device, chain);
+   anv_free(&chain->base.device->alloc, chain);
 
    return VK_SUCCESS;
 }
@@ -685,8 +687,8 @@ wsi_wl_create_swapchain(struct anv_wsi_implementation *impl,
       num_images = MAX2(num_images, 4);
 
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
-   chain = anv_device_alloc(device, size, 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   chain = anv_alloc(&device->alloc, size, 8,
+                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -744,8 +746,8 @@ anv_wl_init_wsi(struct anv_instance *instance)
    struct wsi_wayland *wsi;
    VkResult result;
 
-   wsi = anv_instance_alloc(instance, sizeof(*wsi), 8,
-                            VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+   wsi = anv_alloc(&instance->alloc, sizeof(*wsi), 8,
+                   VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!wsi)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -784,7 +786,7 @@ fail_mutex:
    pthread_mutex_destroy(&wsi->mutex);
 
 fail_alloc:
-   anv_instance_free(instance, wsi);
+   anv_free(&instance->alloc, wsi);
 
    return result;
 }
@@ -799,5 +801,5 @@ anv_wl_finish_wsi(struct anv_instance *instance)
 
    pthread_mutex_destroy(&wsi->mutex);
 
-   anv_instance_free(instance, wsi);
+   anv_free(&instance->alloc, wsi);
 }

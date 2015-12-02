@@ -26,6 +26,7 @@
 VkResult anv_CreateRenderPass(
     VkDevice                                    _device,
     const VkRenderPassCreateInfo*               pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkRenderPass*                               pRenderPass)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -40,8 +41,8 @@ VkResult anv_CreateRenderPass(
    attachments_offset = size;
    size += pCreateInfo->attachmentCount * sizeof(pass->attachments[0]);
 
-   pass = anv_device_alloc(device, size, 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   pass = anv_alloc2(&device->alloc, pAllocator, size, 8,
+                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pass == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -73,9 +74,9 @@ VkResult anv_CreateRenderPass(
 
       if (desc->inputAttachmentCount > 0) {
          subpass->input_attachments =
-            anv_device_alloc(device,
-                             desc->inputAttachmentCount * sizeof(uint32_t),
-                             8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+            anv_alloc2(&device->alloc, pAllocator,
+                       desc->inputAttachmentCount * sizeof(uint32_t), 8,
+                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
          for (uint32_t j = 0; j < desc->inputAttachmentCount; j++) {
             subpass->input_attachments[j]
@@ -85,9 +86,9 @@ VkResult anv_CreateRenderPass(
 
       if (desc->colorAttachmentCount > 0) {
          subpass->color_attachments =
-            anv_device_alloc(device,
-                             desc->colorAttachmentCount * sizeof(uint32_t),
-                             8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+            anv_alloc2(&device->alloc, pAllocator,
+                       desc->colorAttachmentCount * sizeof(uint32_t), 8,
+                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
          for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
             subpass->color_attachments[j]
@@ -97,9 +98,9 @@ VkResult anv_CreateRenderPass(
 
       if (desc->pResolveAttachments) {
          subpass->resolve_attachments =
-            anv_device_alloc(device,
-                             desc->colorAttachmentCount * sizeof(uint32_t),
-                             8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+            anv_alloc2(&device->alloc, pAllocator,
+                       desc->colorAttachmentCount * sizeof(uint32_t), 8,
+                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
          for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
             subpass->resolve_attachments[j]
@@ -122,7 +123,8 @@ VkResult anv_CreateRenderPass(
 
 void anv_DestroyRenderPass(
     VkDevice                                    _device,
-    VkRenderPass                                _pass)
+    VkRenderPass                                _pass,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_render_pass, pass, _pass);
@@ -133,12 +135,12 @@ void anv_DestroyRenderPass(
        */
       struct anv_subpass *subpass = &pass->subpasses[i];
 
-      anv_device_free(device, subpass->input_attachments);
-      anv_device_free(device, subpass->color_attachments);
-      anv_device_free(device, subpass->resolve_attachments);
+      anv_free2(&device->alloc, pAllocator, subpass->input_attachments);
+      anv_free2(&device->alloc, pAllocator, subpass->color_attachments);
+      anv_free2(&device->alloc, pAllocator, subpass->resolve_attachments);
    }
 
-   anv_device_free(device, pass);
+   anv_free2(&device->alloc, pAllocator, pass);
 }
 
 void anv_GetRenderAreaGranularity(

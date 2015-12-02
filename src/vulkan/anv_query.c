@@ -32,6 +32,7 @@
 VkResult anv_CreateQueryPool(
     VkDevice                                    _device,
     const VkQueryPoolCreateInfo*                pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkQueryPool*                                pQueryPool)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -50,8 +51,8 @@ VkResult anv_CreateQueryPool(
       unreachable("");
    }
 
-   pool = anv_device_alloc(device, sizeof(*pool), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   pool = anv_alloc2(&device->alloc, pAllocator, sizeof(*pool), 8,
+                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pool == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -67,21 +68,22 @@ VkResult anv_CreateQueryPool(
    return VK_SUCCESS;
 
  fail:
-   anv_device_free(device, pool);
+   anv_free2(&device->alloc, pAllocator, pool);
 
    return result;
 }
 
 void anv_DestroyQueryPool(
     VkDevice                                    _device,
-    VkQueryPool                                 _pool)
+    VkQueryPool                                 _pool,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_query_pool, pool, _pool);
 
    anv_gem_munmap(pool->bo.map, pool->bo.size);
    anv_gem_close(device, pool->bo.gem_handle);
-   anv_device_free(device, pool);
+   anv_free2(&device->alloc, pAllocator, pool);
 }
 
 VkResult anv_GetQueryPoolResults(

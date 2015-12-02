@@ -148,28 +148,6 @@ anv_physical_device_finish(struct anv_physical_device *device)
    ralloc_free(device->compiler);
 }
 
-static void *default_alloc(
-    void*                                       pUserData,
-    size_t                                      size,
-    size_t                                      alignment,
-    VkSystemAllocType                           allocType)
-{
-   return malloc(size);
-}
-
-static void default_free(
-    void*                                       pUserData,
-    void*                                       pMem)
-{
-   free(pMem);
-}
-
-static const VkAllocCallbacks default_alloc_callbacks = {
-   .pUserData = NULL,
-   .pfnAlloc = default_alloc,
-   .pfnFree = default_free
-};
-
 static const VkExtensionProperties global_extensions[] = {
    {
       .extensionName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -184,13 +162,39 @@ static const VkExtensionProperties device_extensions[] = {
    },
 };
 
+static void *
+default_alloc_func(void *pUserData, size_t size, size_t align, 
+                   VkSystemAllocationScope allocationScope)
+{
+   return malloc(size);
+}
+
+static void *
+default_realloc_func(void *pUserData, void *pOriginal, size_t size,
+                     size_t align, VkSystemAllocationScope allocationScope)
+{
+   return realloc(pOriginal, size);
+}
+
+static void
+default_free_func(void *pUserData, void *pMemory)
+{
+   free(pMemory);
+}
+
+static const VkAllocationCallbacks default_alloc = {
+   .pUserData = NULL,
+   .pfnAllocation = default_alloc_func,
+   .pfnReallocation = default_realloc_func,
+   .pfnFree = default_free_func,
+};
+
 VkResult anv_CreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkInstance*                                 pInstance)
 {
    struct anv_instance *instance;
-   const VkAllocCallbacks *alloc_callbacks = &default_alloc_callbacks;
-   void *user_data = NULL;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
@@ -210,19 +214,18 @@ VkResult anv_CreateInstance(
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
-   if (pCreateInfo->pAllocCb) {
-      alloc_callbacks = pCreateInfo->pAllocCb;
-      user_data = pCreateInfo->pAllocCb->pUserData;
-   }
-   instance = alloc_callbacks->pfnAlloc(user_data, sizeof(*instance), 8,
-                                        VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   instance = anv_alloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
+                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!instance)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    instance->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
-   instance->pAllocUserData = alloc_callbacks->pUserData;
-   instance->pfnAlloc = alloc_callbacks->pfnAlloc;
-   instance->pfnFree = alloc_callbacks->pfnFree;
+
+   if (pAllocator)
+      instance->alloc = *pAllocator;
+   else
+      instance->alloc = default_alloc;
+
    instance->apiVersion = pCreateInfo->pApplicationInfo->apiVersion;
    instance->physicalDeviceCount = -1;
 
@@ -238,7 +241,8 @@ VkResult anv_CreateInstance(
 }
 
 void anv_DestroyInstance(
-    VkInstance                                  _instance)
+    VkInstance                                  _instance,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
 
@@ -254,31 +258,7 @@ void anv_DestroyInstance(
 
    _mesa_locale_fini();
 
-   instance->pfnFree(instance->pAllocUserData, instance);
-}
-
-void *
-anv_instance_alloc(struct anv_instance *instance, size_t size,
-                   size_t alignment, VkSystemAllocType allocType)
-{
-   void *mem = instance->pfnAlloc(instance->pAllocUserData,
-                                  size, alignment, allocType);
-   if (mem) {
-      VG(VALGRIND_MEMPOOL_ALLOC(instance, mem, size));
-      VG(VALGRIND_MAKE_MEM_UNDEFINED(mem, size));
-   }
-   return mem;
-}
-
-void
-anv_instance_free(struct anv_instance *instance, void *mem)
-{
-   if (mem == NULL)
-      return;
-
-   VG(VALGRIND_MEMPOOL_FREE(instance, mem));
-
-   instance->pfnFree(instance->pAllocUserData, mem);
+   anv_free(&instance->alloc, instance);
 }
 
 VkResult anv_EnumeratePhysicalDevices(
@@ -611,10 +591,10 @@ anv_device_init_border_colors(struct anv_device *device)
 VkResult anv_CreateDevice(
     VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkDevice*                                   pDevice)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
-   struct anv_instance *instance = physical_device->instance;
    struct anv_device *device;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
@@ -634,13 +614,19 @@ VkResult anv_CreateDevice(
 
    anv_set_dispatch_devinfo(physical_device->info);
 
-   device = anv_instance_alloc(instance, sizeof(*device), 8,
-                               VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   device = anv_alloc2(&physical_device->instance->alloc, pAllocator,
+                       sizeof(*device), 8,
+                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!device)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = physical_device->instance;
+
+   if (pAllocator)
+      device->alloc = *pAllocator;
+   else
+      device->alloc = physical_device->instance->alloc;
 
    /* XXX(chadv): Can we dup() physicalDevice->fd here? */
    device->fd = open(physical_device->path, O_RDWR | O_CLOEXEC);
@@ -686,13 +672,14 @@ VkResult anv_CreateDevice(
  fail_fd:
    close(device->fd);
  fail_device:
-   anv_device_free(device, device);
+   anv_free(&device->alloc, device);
 
    return vk_error(VK_ERROR_INITIALIZATION_FAILED);
 }
 
 void anv_DestroyDevice(
-    VkDevice                                    _device)
+    VkDevice                                    _device,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
 
@@ -720,7 +707,7 @@ void anv_DestroyDevice(
 
    close(device->fd);
 
-   anv_instance_free(device->instance, device);
+   anv_free(&device->alloc, device);
 }
 
 VkResult anv_EnumerateInstanceExtensionProperties(
@@ -915,22 +902,6 @@ VkResult anv_DeviceWaitIdle(
    return result;
 }
 
-void *
-anv_device_alloc(struct anv_device *            device,
-                 size_t                         size,
-                 size_t                         alignment,
-                 VkSystemAllocType              allocType)
-{
-   return anv_instance_alloc(device->instance, size, alignment, allocType);
-}
-
-void
-anv_device_free(struct anv_device *             device,
-                void *                          mem)
-{
-   anv_instance_free(device->instance, mem);
-}
-
 VkResult
 anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size)
 {
@@ -946,28 +917,29 @@ anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size)
    return VK_SUCCESS;
 }
 
-VkResult anv_AllocMemory(
+VkResult anv_AllocateMemory(
     VkDevice                                    _device,
-    const VkMemoryAllocInfo*                    pAllocInfo,
+    const VkMemoryAllocateInfo*                 pAllocateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkDeviceMemory*                             pMem)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_device_memory *mem;
    VkResult result;
 
-   assert(pAllocInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
+   assert(pAllocateInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO);
 
    /* We support exactly one memory heap. */
-   assert(pAllocInfo->memoryTypeIndex == 0);
+   assert(pAllocateInfo->memoryTypeIndex == 0);
 
    /* FINISHME: Fail if allocation request exceeds heap size. */
 
-   mem = anv_device_alloc(device, sizeof(*mem), 8,
-                          VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   mem = anv_alloc2(&device->alloc, pAllocator, sizeof(*mem), 8,
+                    VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (mem == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_bo_init_new(&mem->bo, device, pAllocInfo->allocationSize);
+   result = anv_bo_init_new(&mem->bo, device, pAllocateInfo->allocationSize);
    if (result != VK_SUCCESS)
       goto fail;
 
@@ -976,14 +948,15 @@ VkResult anv_AllocMemory(
    return VK_SUCCESS;
 
  fail:
-   anv_device_free(device, mem);
+   anv_free2(&device->alloc, pAllocator, mem);
 
    return result;
 }
 
 void anv_FreeMemory(
     VkDevice                                    _device,
-    VkDeviceMemory                              _mem)
+    VkDeviceMemory                              _mem,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
@@ -994,7 +967,7 @@ void anv_FreeMemory(
    if (mem->bo.gem_handle != 0)
       anv_gem_close(device, mem->bo.gem_handle);
 
-   anv_device_free(device, mem);
+   anv_free2(&device->alloc, pAllocator, mem);
 }
 
 VkResult anv_MapMemory(
@@ -1152,6 +1125,7 @@ VkResult anv_QueueBindSparse(
 VkResult anv_CreateFence(
     VkDevice                                    _device,
     const VkFenceCreateInfo*                    pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkFence*                                    pFence)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -1163,8 +1137,8 @@ VkResult anv_CreateFence(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
 
-   fence = anv_device_alloc(device, sizeof(*fence), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   fence = anv_alloc2(&device->alloc, pAllocator, sizeof(*fence), 8,
+                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (fence == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -1207,21 +1181,22 @@ VkResult anv_CreateFence(
    return VK_SUCCESS;
 
  fail:
-   anv_device_free(device, fence);
+   anv_free2(&device->alloc, pAllocator, fence);
 
    return result;
 }
 
 void anv_DestroyFence(
     VkDevice                                    _device,
-    VkFence                                     _fence)
+    VkFence                                     _fence,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_fence, fence, _fence);
 
    anv_gem_munmap(fence->bo.map, fence->bo.size);
    anv_gem_close(device, fence->bo.gem_handle);
-   anv_device_free(device, fence);
+   anv_free2(&device->alloc, pAllocator, fence);
 }
 
 VkResult anv_ResetFences(
@@ -1301,6 +1276,7 @@ VkResult anv_WaitForFences(
 VkResult anv_CreateSemaphore(
     VkDevice                                    device,
     const VkSemaphoreCreateInfo*                pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkSemaphore*                                pSemaphore)
 {
    *pSemaphore = (VkSemaphore)1;
@@ -1309,7 +1285,8 @@ VkResult anv_CreateSemaphore(
 
 void anv_DestroySemaphore(
     VkDevice                                    device,
-    VkSemaphore                                 semaphore)
+    VkSemaphore                                 semaphore,
+    const VkAllocationCallbacks*                pAllocator)
 {
    stub();
 }
@@ -1333,6 +1310,7 @@ VkResult anv_QueueWaitSemaphore(
 VkResult anv_CreateEvent(
     VkDevice                                    device,
     const VkEventCreateInfo*                    pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkEvent*                                    pEvent)
 {
    stub_return(VK_UNSUPPORTED);
@@ -1340,7 +1318,8 @@ VkResult anv_CreateEvent(
 
 void anv_DestroyEvent(
     VkDevice                                    device,
-    VkEvent                                     event)
+    VkEvent                                     event,
+    const VkAllocationCallbacks*                pAllocator)
 {
    stub();
 }
@@ -1371,6 +1350,7 @@ VkResult anv_ResetEvent(
 VkResult anv_CreateBuffer(
     VkDevice                                    _device,
     const VkBufferCreateInfo*                   pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkBuffer*                                   pBuffer)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -1378,8 +1358,8 @@ VkResult anv_CreateBuffer(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
 
-   buffer = anv_device_alloc(device, sizeof(*buffer), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   buffer = anv_alloc2(&device->alloc, pAllocator, sizeof(*buffer), 8,
+                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (buffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -1394,12 +1374,13 @@ VkResult anv_CreateBuffer(
 
 void anv_DestroyBuffer(
     VkDevice                                    _device,
-    VkBuffer                                    _buffer)
+    VkBuffer                                    _buffer,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
-   anv_device_free(device, buffer);
+   anv_free2(&device->alloc, pAllocator, buffer);
 }
 
 void
@@ -1428,6 +1409,7 @@ anv_fill_buffer_surface_state(struct anv_device *device, void *state,
 VkResult anv_CreateBufferView(
     VkDevice                                    _device,
     const VkBufferViewCreateInfo*               pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkBufferView*                               pView)
 {
    stub_return(VK_UNSUPPORTED);
@@ -1435,24 +1417,27 @@ VkResult anv_CreateBufferView(
 
 void anv_DestroyBufferView(
     VkDevice                                    _device,
-    VkBufferView                                _bview)
+    VkBufferView                                _bview,
+    const VkAllocationCallbacks*                pAllocator)
 {
    stub();
 }
 
 void anv_DestroySampler(
     VkDevice                                    _device,
-    VkSampler                                   _sampler)
+    VkSampler                                   _sampler,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_sampler, sampler, _sampler);
 
-   anv_device_free(device, sampler);
+   anv_free2(&device->alloc, pAllocator, sampler);
 }
 
 VkResult anv_CreateFramebuffer(
     VkDevice                                    _device,
     const VkFramebufferCreateInfo*              pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkFramebuffer*                              pFramebuffer)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -1462,8 +1447,8 @@ VkResult anv_CreateFramebuffer(
 
    size_t size = sizeof(*framebuffer) +
                  sizeof(struct anv_image_view *) * pCreateInfo->attachmentCount;
-   framebuffer = anv_device_alloc(device, size, 8,
-                                  VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   framebuffer = anv_alloc2(&device->alloc, pAllocator, size, 8,
+                            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (framebuffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -1484,12 +1469,13 @@ VkResult anv_CreateFramebuffer(
 
 void anv_DestroyFramebuffer(
     VkDevice                                    _device,
-    VkFramebuffer                               _fb)
+    VkFramebuffer                               _fb,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_framebuffer, fb, _fb);
 
-   anv_device_free(device, fb);
+   anv_free2(&device->alloc, pAllocator, fb);
 }
 
 void vkCmdDbgMarkerBegin(

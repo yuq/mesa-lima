@@ -245,7 +245,7 @@ x11_destroy_swapchain(struct anv_swapchain *anv_chain)
       /* TODO: Delete images and free memory */
    }
 
-   anv_device_free(chain->base.device, chain);
+   anv_free(NULL /* XXX: pAllocator */, chain);
 
    return VK_SUCCESS;
 }
@@ -271,8 +271,8 @@ x11_create_swapchain(struct anv_wsi_implementation *impl,
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
 
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
-   chain = anv_device_alloc(device, size, 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   chain = anv_alloc(&device->alloc, size, 8,
+                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -320,6 +320,7 @@ x11_create_swapchain(struct anv_wsi_implementation *impl,
             .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             .flags = 0,
          }},
+         NULL,
          &image_h);
 
       image = anv_image_from_handle(image_h);
@@ -327,13 +328,14 @@ x11_create_swapchain(struct anv_wsi_implementation *impl,
 
       surface = &image->color_surface;
 
-      anv_AllocMemory(anv_device_to_handle(device),
-                      &(VkMemoryAllocInfo) {
-                         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
-                         .allocationSize = image->size,
-                         .memoryTypeIndex = 0,
-                      },
-                      &memory_h);
+      anv_AllocateMemory(anv_device_to_handle(device),
+         &(VkMemoryAllocateInfo) {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .allocationSize = image->size,
+            .memoryTypeIndex = 0,
+         },
+         NULL /* XXX: pAllocator */,
+         &memory_h);
 
       memory = anv_device_memory_from_handle(memory_h);
 
@@ -406,8 +408,8 @@ anv_x11_init_wsi(struct anv_instance *instance)
 {
    struct anv_wsi_implementation *impl;
 
-   impl = anv_instance_alloc(instance, sizeof(*impl), 8,
-                             VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+   impl = anv_alloc(&instance->alloc, sizeof(*impl), 8,
+                    VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!impl)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -425,5 +427,5 @@ anv_x11_init_wsi(struct anv_instance *instance)
 void
 anv_x11_finish_wsi(struct anv_instance *instance)
 {
-   anv_instance_free(instance, instance->wsi_impl[VK_PLATFORM_XCB_KHR]);
+   anv_free(&instance->alloc, instance->wsi_impl[VK_PLATFORM_XCB_KHR]);
 }

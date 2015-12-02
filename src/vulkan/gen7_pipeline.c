@@ -329,6 +329,7 @@ genX(graphics_pipeline_create)(
     VkDevice                                    _device,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
     const struct anv_graphics_pipeline_create_info *extra,
+    const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipeline)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -337,14 +338,14 @@ genX(graphics_pipeline_create)(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
    
-   pipeline = anv_device_alloc(device, sizeof(*pipeline), 8,
-                               VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   pipeline = anv_alloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
+                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pipeline == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_pipeline_init(pipeline, device, pCreateInfo, extra);
+   result = anv_pipeline_init(pipeline, device, pCreateInfo, extra, pAllocator);
    if (result != VK_SUCCESS) {
-      anv_device_free(device, pipeline);
+      anv_free2(&device->alloc, pAllocator, pipeline);
       return result;
    }
 
@@ -582,6 +583,7 @@ GENX_FUNC(GEN7, GEN75) VkResult
 genX(compute_pipeline_create)(
     VkDevice                                    _device,
     const VkComputePipelineCreateInfo*          pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipeline)
 {
    anv_finishme("primitive_id needs sbe swizzling setup");

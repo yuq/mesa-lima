@@ -107,6 +107,7 @@ alloc_surface_state(struct anv_device *device,
 VkResult genX(CreateSampler)(
     VkDevice                                    _device,
     const VkSamplerCreateInfo*                  pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkSampler*                                  pSampler)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -115,8 +116,8 @@ VkResult genX(CreateSampler)(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
 
-   sampler = anv_device_alloc(device, sizeof(*sampler), 8,
-                              VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   sampler = anv_alloc2(&device->alloc, pAllocator, sizeof(*sampler), 8,
+                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!sampler)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 

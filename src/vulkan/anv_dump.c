@@ -54,19 +54,19 @@ anv_dump_image_to_ppm(struct anv_device *device,
          .tiling = VK_IMAGE_TILING_LINEAR,
          .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
          .flags = 0,
-      }, &copy_image);
+      }, NULL, &copy_image);
    assert(result == VK_SUCCESS);
 
    VkMemoryRequirements reqs;
    anv_GetImageMemoryRequirements(vk_device, copy_image, &reqs);
 
    VkDeviceMemory memory;
-   result = anv_AllocMemory(vk_device,
-      &(VkMemoryAllocInfo) {
-         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
+   result = anv_AllocateMemory(vk_device,
+      &(VkMemoryAllocateInfo) {
+         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
          .allocationSize = reqs.size,
          .memoryTypeIndex = 0,
-      }, &memory);
+      }, NULL, &memory);
    assert(result == VK_SUCCESS);
 
    result = anv_BindImageMemory(vk_device, copy_image, memory, 0);
@@ -78,7 +78,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
          .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
          .queueFamilyIndex = 0,
          .flags = 0,
-      }, &commandPool);
+      }, NULL, &commandPool);
    assert(result == VK_SUCCESS);
 
    VkCommandBuffer cmd;
@@ -158,7 +158,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
       &(VkFenceCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
          .flags = 0,
-      }, &fence);
+      }, NULL, &fence);
    assert(result == VK_SUCCESS);
 
    result = anv_QueueSubmit(anv_queue_to_handle(&device->queue),
@@ -168,8 +168,8 @@ anv_dump_image_to_ppm(struct anv_device *device,
    result = anv_WaitForFences(vk_device, 1, &fence, true, UINT64_MAX);
    assert(result == VK_SUCCESS);
 
-   anv_DestroyFence(vk_device, fence);
-   anv_DestroyCommandPool(vk_device, commandPool);
+   anv_DestroyFence(vk_device, fence, NULL);
+   anv_DestroyCommandPool(vk_device, commandPool, NULL);
 
    uint8_t *map;
    result = anv_MapMemory(vk_device, memory, 0, reqs.size, 0, (void **)&map);
@@ -204,6 +204,6 @@ anv_dump_image_to_ppm(struct anv_device *device,
    fclose(file);
 
    anv_UnmapMemory(vk_device, memory);
-   anv_DestroyImage(vk_device, copy_image);
-   anv_FreeMemory(vk_device, memory);
+   anv_DestroyImage(vk_device, copy_image, NULL);
+   anv_FreeMemory(vk_device, memory, NULL);
 }

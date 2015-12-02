@@ -292,6 +292,7 @@ anv_image_get_full_usage(const VkImageCreateInfo *info)
 VkResult
 anv_image_create(VkDevice _device,
                  const struct anv_image_create_info *create_info,
+                 const VkAllocationCallbacks* alloc,
                  VkImage *pImage)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -321,8 +322,8 @@ anv_image_create(VkDevice _device,
    assert(extent->height <= limits->height);
    assert(extent->depth <= limits->depth);
 
-   image = anv_device_alloc(device, sizeof(*image), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   image = anv_alloc2(&device->alloc, alloc, sizeof(*image), 8,
+                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!image)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -374,7 +375,7 @@ anv_image_create(VkDevice _device,
 
 fail:
    if (image)
-      anv_device_free(device, image);
+      anv_free2(&device->alloc, alloc, image);
 
    return r;
 }
@@ -382,21 +383,24 @@ fail:
 VkResult
 anv_CreateImage(VkDevice device,
                 const VkImageCreateInfo *pCreateInfo,
+                const VkAllocationCallbacks *pAllocator,
                 VkImage *pImage)
 {
    return anv_image_create(device,
       &(struct anv_image_create_info) {
          .vk_info = pCreateInfo,
       },
+      pAllocator,
       pImage);
 }
 
 void
-anv_DestroyImage(VkDevice _device, VkImage _image)
+anv_DestroyImage(VkDevice _device, VkImage _image,
+                 const VkAllocationCallbacks *pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
 
-   anv_device_free(device, anv_image_from_handle(_image));
+   anv_free2(&device->alloc, pAllocator, anv_image_from_handle(_image));
 }
 
 static void
@@ -453,6 +457,7 @@ void anv_GetImageSubresourceLayout(
 VkResult
 anv_validate_CreateImageView(VkDevice _device,
                              const VkImageViewCreateInfo *pCreateInfo,
+                             const VkAllocationCallbacks *pAllocator,
                              VkImageView *pView)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
@@ -531,7 +536,7 @@ anv_validate_CreateImageView(VkDevice _device,
       assert(!"bad VkImageSubresourceRange::aspectFlags");
    }
 
-   return anv_CreateImageView(_device, pCreateInfo, pView);
+   return anv_CreateImageView(_device, pCreateInfo, pAllocator, pView);
 }
 
 void
@@ -584,13 +589,14 @@ anv_image_view_init(struct anv_image_view *iview,
 VkResult
 anv_CreateImageView(VkDevice _device,
                     const VkImageViewCreateInfo *pCreateInfo,
+                    const VkAllocationCallbacks *pAllocator,
                     VkImageView *pView)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_image_view *view;
 
-   view = anv_device_alloc(device, sizeof(*view), 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   view = anv_alloc2(&device->alloc, pAllocator, sizeof(*view), 8,
+                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -601,10 +607,13 @@ anv_CreateImageView(VkDevice _device,
    return VK_SUCCESS;
 }
 
-static void
-anv_image_view_destroy(struct anv_device *device,
-                       struct anv_image_view *iview)
+void
+anv_DestroyImageView(VkDevice _device, VkImageView _iview,
+                     const VkAllocationCallbacks *pAllocator)
 {
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_image_view, iview, _iview);
+
    if (iview->image->needs_color_rt_surface_state) {
       anv_state_pool_free(&device->surface_state_pool,
                           iview->color_rt_surface_state);
@@ -615,16 +624,7 @@ anv_image_view_destroy(struct anv_device *device,
                           iview->nonrt_surface_state);
    }
 
-   anv_device_free(device, iview);
-}
-
-void
-anv_DestroyImageView(VkDevice _device, VkImageView _iview)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_image_view, iview, _iview);
-
-   anv_image_view_destroy(device, iview);
+   anv_free2(&device->alloc, pAllocator, iview);
 }
 
 struct anv_surface *

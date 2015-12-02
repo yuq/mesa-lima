@@ -217,7 +217,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
             },
          },
          .dependencyCount = 0,
-      }, &device->meta_state.blit.render_pass);
+      }, NULL, &device->meta_state.blit.render_pass);
 
    /* We don't use a vertex shader for clearing, but instead build and pass
     * the VUEs directly to the rasterization backend.  However, we do need
@@ -315,7 +315,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       }
    };
    anv_CreateDescriptorSetLayout(anv_device_to_handle(device), &ds_layout_info,
-                                 &device->meta_state.blit.ds_layout);
+                                 NULL, &device->meta_state.blit.ds_layout);
 
    anv_CreatePipelineLayout(anv_device_to_handle(device),
       &(VkPipelineLayoutCreateInfo) {
@@ -323,7 +323,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .setLayoutCount = 1,
          .pSetLayouts = &device->meta_state.blit.ds_layout,
       },
-      &device->meta_state.blit.pipeline_layout);
+      NULL, &device->meta_state.blit.pipeline_layout);
 
    VkPipelineShaderStageCreateInfo pipeline_shader_stages[] = {
       {
@@ -411,12 +411,12 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    pipeline_shader_stages[1].shader = fs_2d;
    anv_graphics_pipeline_create(anv_device_to_handle(device),
       &vk_pipeline_info, &anv_pipeline_info,
-      &device->meta_state.blit.pipeline_2d_src);
+      NULL, &device->meta_state.blit.pipeline_2d_src);
 
    pipeline_shader_stages[1].shader = fs_3d;
    anv_graphics_pipeline_create(anv_device_to_handle(device),
       &vk_pipeline_info, &anv_pipeline_info,
-      &device->meta_state.blit.pipeline_3d_src);
+      NULL, &device->meta_state.blit.pipeline_3d_src);
 
    anv_DestroyShader(anv_device_to_handle(device), vs);
    anv_DestroyShader(anv_device_to_handle(device), fs_2d);
@@ -527,7 +527,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
          .magFilter = blit_filter,
          .minFilter = blit_filter,
-      }, &sampler);
+      }, &cmd_buffer->pool->alloc, &sampler);
 
    VkDescriptorSet set;
    anv_AllocateDescriptorSets(anv_device_to_handle(device),
@@ -568,7 +568,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .width = dest_iview->extent.width,
          .height = dest_iview->extent.height,
          .layers = 1
-      }, &fb);
+      }, &cmd_buffer->pool->alloc, &fb);
 
    ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
       &(VkRenderPassBeginInfo) {
@@ -628,8 +628,10 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
     * descriptor sets, etc. has been used.  We are free to delete it.
     */
    anv_descriptor_set_destroy(device, anv_descriptor_set_from_handle(set));
-   anv_DestroySampler(anv_device_to_handle(device), sampler);
-   anv_DestroyFramebuffer(anv_device_to_handle(device), fb);
+   anv_DestroySampler(anv_device_to_handle(device), sampler,
+                      &cmd_buffer->pool->alloc);
+   anv_DestroyFramebuffer(anv_device_to_handle(device), fb,
+                          &cmd_buffer->pool->alloc);
 }
 
 static void
@@ -683,11 +685,13 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
 
    VkImage src_image;
    image_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-   anv_CreateImage(vk_device, &image_info, &src_image);
+   anv_CreateImage(vk_device, &image_info,
+                   &cmd_buffer->pool->alloc, &src_image);
 
    VkImage dest_image;
    image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-   anv_CreateImage(vk_device, &image_info, &dest_image);
+   anv_CreateImage(vk_device, &image_info,
+                   &cmd_buffer->pool->alloc, &dest_image);
 
    /* We could use a vk call to bind memory, but that would require
     * creating a dummy memory object etc. so there's really no point.
@@ -742,8 +746,8 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
                   (VkExtent3D) { width, height, 1 },
                   VK_FILTER_NEAREST);
 
-   anv_DestroyImage(vk_device, src_image);
-   anv_DestroyImage(vk_device, dest_image);
+   anv_DestroyImage(vk_device, src_image, &cmd_buffer->pool->alloc);
+   anv_DestroyImage(vk_device, dest_image, &cmd_buffer->pool->alloc);
 }
 
 void anv_CmdCopyBuffer(
@@ -1013,6 +1017,7 @@ static struct anv_image *
 make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
                       VkImageUsageFlags usage,
                       VkImageType image_type,
+                      const VkAllocationCallbacks *alloc,
                       const VkBufferImageCopy *copy)
 {
    ANV_FROM_HANDLE(anv_buffer, buffer, vk_buffer);
@@ -1037,7 +1042,7 @@ make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
          .tiling = VK_IMAGE_TILING_LINEAR,
          .usage = usage,
          .flags = 0,
-      }, &vk_image);
+      }, alloc, &vk_image);
    assert(result == VK_SUCCESS);
 
    ANV_FROM_HANDLE(anv_image, image, vk_image);
@@ -1079,7 +1084,8 @@ void anv_CmdCopyBufferToImage(
       struct anv_image *src_image =
          make_image_for_buffer(vk_device, srcBuffer, proxy_format,
                                VK_IMAGE_USAGE_SAMPLED_BIT,
-                               dest_image->type, &pRegions[r]);
+                               dest_image->type, &cmd_buffer->pool->alloc,
+                               &pRegions[r]);
 
       const uint32_t dest_base_array_slice =
          meta_blit_get_dest_view_base_array_slice(dest_image,
@@ -1159,7 +1165,8 @@ void anv_CmdCopyBufferToImage(
                               src_image->extent.height * 4;
       }
 
-      anv_DestroyImage(vk_device, anv_image_to_handle(src_image));
+      anv_DestroyImage(vk_device, anv_image_to_handle(src_image),
+                       &cmd_buffer->pool->alloc);
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1209,7 +1216,8 @@ void anv_CmdCopyImageToBuffer(
       struct anv_image *dest_image =
          make_image_for_buffer(vk_device, destBuffer, dest_format,
                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                               src_image->type, &pRegions[r]);
+                               src_image->type, &cmd_buffer->pool->alloc,
+                               &pRegions[r]);
 
       unsigned num_slices;
       if (src_image->type == VK_IMAGE_TYPE_3D) {
@@ -1262,7 +1270,8 @@ void anv_CmdCopyImageToBuffer(
                                dest_image->extent.height * 4;
       }
 
-      anv_DestroyImage(vk_device, anv_image_to_handle(dest_image));
+      anv_DestroyImage(vk_device, anv_image_to_handle(dest_image),
+                       &cmd_buffer->pool->alloc);
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1314,13 +1323,13 @@ anv_device_finish_meta(struct anv_device *device)
 
    /* Blit */
    anv_DestroyRenderPass(anv_device_to_handle(device),
-                         device->meta_state.blit.render_pass);
+                         device->meta_state.blit.render_pass, NULL);
    anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_2d_src);
+                       device->meta_state.blit.pipeline_2d_src, NULL);
    anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_3d_src);
+                       device->meta_state.blit.pipeline_3d_src, NULL);
    anv_DestroyPipelineLayout(anv_device_to_handle(device),
-                             device->meta_state.blit.pipeline_layout);
+                             device->meta_state.blit.pipeline_layout, NULL);
    anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
-                                  device->meta_state.blit.ds_layout);
+                                  device->meta_state.blit.ds_layout, NULL);
 }

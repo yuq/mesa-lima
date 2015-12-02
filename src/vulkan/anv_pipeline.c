@@ -40,6 +40,7 @@
 VkResult anv_CreateShaderModule(
     VkDevice                                    _device,
     const VkShaderModuleCreateInfo*             pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkShaderModule*                             pShaderModule)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -48,8 +49,9 @@ VkResult anv_CreateShaderModule(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO);
    assert(pCreateInfo->flags == 0);
 
-   module = anv_device_alloc(device, sizeof(*module) + pCreateInfo->codeSize, 8,
-                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   module = anv_alloc2(&device->alloc, pAllocator,
+                       sizeof(*module) + pCreateInfo->codeSize, 8,
+                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (module == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -64,12 +66,13 @@ VkResult anv_CreateShaderModule(
 
 void anv_DestroyShaderModule(
     VkDevice                                    _device,
-    VkShaderModule                              _module)
+    VkShaderModule                              _module,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_shader_module, module, _module);
 
-   anv_device_free(device, module);
+   anv_free2(&device->alloc, pAllocator, module);
 }
 
 VkResult anv_CreateShader(
@@ -87,8 +90,8 @@ VkResult anv_CreateShader(
    const char *name = pCreateInfo->pName ? pCreateInfo->pName : "main";
    size_t name_len = strlen(name);
 
-   shader = anv_device_alloc(device, sizeof(*shader) + name_len + 1, 8,
-                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   shader = anv_alloc(&device->alloc, sizeof(*shader) + name_len + 1, 8,
+                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (shader == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -107,7 +110,7 @@ void anv_DestroyShader(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_shader, shader, _shader);
 
-   anv_device_free(device, shader);
+   anv_free(&device->alloc, shader);
 }
 
 #define SPIR_V_MAGIC_NUMBER 0x07230203
@@ -187,6 +190,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
 VkResult anv_CreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkPipelineCache*                            pPipelineCache)
 {
    *pPipelineCache = (VkPipelineCache)1;
@@ -196,7 +200,8 @@ VkResult anv_CreatePipelineCache(
 
 void anv_DestroyPipelineCache(
     VkDevice                                    _device,
-    VkPipelineCache                             _cache)
+    VkPipelineCache                             _cache,
+    const VkAllocationCallbacks*                pAllocator)
 {
 }
 
@@ -227,16 +232,18 @@ VkResult anv_MergePipelineCaches(
 
 void anv_DestroyPipeline(
     VkDevice                                    _device,
-    VkPipeline                                  _pipeline)
+    VkPipeline                                  _pipeline,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_pipeline, pipeline, _pipeline);
 
-   anv_reloc_list_finish(&pipeline->batch_relocs, pipeline->device);
+   anv_reloc_list_finish(&pipeline->batch_relocs,
+                         pAllocator ? pAllocator : &device->alloc);
    anv_state_stream_finish(&pipeline->program_stream);
    if (pipeline->blend_state.map)
       anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
-   anv_device_free(pipeline->device, pipeline);
+   anv_free2(&device->alloc, pAllocator, pipeline);
 }
 
 static const uint32_t vk_to_gen_primitive_type[] = {
@@ -366,10 +373,9 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       prog_data->nr_params += MAX_DYNAMIC_BUFFERS * 2;
 
    if (prog_data->nr_params > 0) {
+      /* XXX: I think we're leaking this */
       prog_data->param = (const gl_constant_value **)
-         anv_device_alloc(pipeline->device,
-                          prog_data->nr_params * sizeof(gl_constant_value *),
-                          8, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
+         malloc(prog_data->nr_params * sizeof(gl_constant_value *));
 
       /* We now set the param values to be offsets into a
        * anv_push_constant_data structure.  Since the compiler doesn't
@@ -961,22 +967,23 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
 VkResult
 anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                  const struct anv_graphics_pipeline_create_info *extra)
+                  const struct anv_graphics_pipeline_create_info *extra,
+                  const VkAllocationCallbacks *alloc)
 {
-   VkResult result;
-
    anv_validate {
       anv_pipeline_validate_create_info(pCreateInfo);
    }
 
+   if (alloc == NULL)
+      alloc = &device->alloc;
+
    pipeline->device = device;
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
 
-   result = anv_reloc_list_init(&pipeline->batch_relocs, device);
-   if (result != VK_SUCCESS) {
-      anv_device_free(device, pipeline);
-      return result;
-   }
+   anv_reloc_list_init(&pipeline->batch_relocs, alloc);
+   /* TODO: Handle allocation fail */
+
+   pipeline->batch.alloc = alloc;
    pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
    pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
    pipeline->batch.relocs = &pipeline->batch_relocs;
@@ -1074,6 +1081,7 @@ anv_graphics_pipeline_create(
    VkDevice _device,
    const VkGraphicsPipelineCreateInfo *pCreateInfo,
    const struct anv_graphics_pipeline_create_info *extra,
+   const VkAllocationCallbacks *pAllocator,
    VkPipeline *pPipeline)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -1081,13 +1089,13 @@ anv_graphics_pipeline_create(
    switch (device->info.gen) {
    case 7:
       if (device->info.is_haswell)
-         return gen75_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
+         return gen75_graphics_pipeline_create(_device, pCreateInfo, extra, pAllocator, pPipeline);
       else
-         return gen7_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
+         return gen7_graphics_pipeline_create(_device, pCreateInfo, extra, pAllocator, pPipeline);
    case 8:
-      return gen8_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
+      return gen8_graphics_pipeline_create(_device, pCreateInfo, extra, pAllocator, pPipeline);
    case 9:
-      return gen9_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
+      return gen9_graphics_pipeline_create(_device, pCreateInfo, extra, pAllocator, pPipeline);
    default:
       unreachable("unsupported gen\n");
    }
@@ -1098,6 +1106,7 @@ VkResult anv_CreateGraphicsPipelines(
     VkPipelineCache                             pipelineCache,
     uint32_t                                    count,
     const VkGraphicsPipelineCreateInfo*         pCreateInfos,
+    const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipelines)
 {
    VkResult result = VK_SUCCESS;
@@ -1105,10 +1114,10 @@ VkResult anv_CreateGraphicsPipelines(
    unsigned i = 0;
    for (; i < count; i++) {
       result = anv_graphics_pipeline_create(_device, &pCreateInfos[i],
-                                            NULL, &pPipelines[i]);
+                                            NULL, pAllocator, &pPipelines[i]);
       if (result != VK_SUCCESS) {
          for (unsigned j = 0; j < i; j++) {
-            anv_DestroyPipeline(_device, pPipelines[j]);
+            anv_DestroyPipeline(_device, pPipelines[j], pAllocator);
          }
 
          return result;
@@ -1121,6 +1130,7 @@ VkResult anv_CreateGraphicsPipelines(
 static VkResult anv_compute_pipeline_create(
     VkDevice                                    _device,
     const VkComputePipelineCreateInfo*          pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipeline)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -1128,13 +1138,13 @@ static VkResult anv_compute_pipeline_create(
    switch (device->info.gen) {
    case 7:
       if (device->info.is_haswell)
-         return gen75_compute_pipeline_create(_device, pCreateInfo, pPipeline);
+         return gen75_compute_pipeline_create(_device, pCreateInfo, pAllocator, pPipeline);
       else
-         return gen7_compute_pipeline_create(_device, pCreateInfo, pPipeline);
+         return gen7_compute_pipeline_create(_device, pCreateInfo, pAllocator, pPipeline);
    case 8:
-      return gen8_compute_pipeline_create(_device, pCreateInfo, pPipeline);
+      return gen8_compute_pipeline_create(_device, pCreateInfo, pAllocator, pPipeline);
    case 9:
-      return gen9_compute_pipeline_create(_device, pCreateInfo, pPipeline);
+      return gen9_compute_pipeline_create(_device, pCreateInfo, pAllocator, pPipeline);
    default:
       unreachable("unsupported gen\n");
    }
@@ -1145,6 +1155,7 @@ VkResult anv_CreateComputePipelines(
     VkPipelineCache                             pipelineCache,
     uint32_t                                    count,
     const VkComputePipelineCreateInfo*          pCreateInfos,
+    const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipelines)
 {
    VkResult result = VK_SUCCESS;
@@ -1152,10 +1163,10 @@ VkResult anv_CreateComputePipelines(
    unsigned i = 0;
    for (; i < count; i++) {
       result = anv_compute_pipeline_create(_device, &pCreateInfos[i],
-                                           &pPipelines[i]);
+                                           pAllocator, &pPipelines[i]);
       if (result != VK_SUCCESS) {
          for (unsigned j = 0; j < i; j++) {
-            anv_DestroyPipeline(_device, pPipelines[j]);
+            anv_DestroyPipeline(_device, pPipelines[j], pAllocator);
          }
 
          return result;

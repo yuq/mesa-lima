@@ -42,13 +42,14 @@ typedef struct VkDmaBufImageCreateInfo_
     uint32_t                                    strideInBytes;
 } VkDmaBufImageCreateInfo;
 
-typedef VkResult (VKAPI_PTR *PFN_vkCreateDmaBufImageINTEL)(VkDevice device, const VkDmaBufImageCreateInfo* pCreateInfo, VkDeviceMemory* pMem, VkImage* pImage);
+typedef VkResult (VKAPI_PTR *PFN_vkCreateDmaBufImageINTEL)(VkDevice device, const VkDmaBufImageCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMem, VkImage* pImage);
 
 #ifdef VK_PROTOTYPES
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateDmaBufImageINTEL(
     VkDevice                                    _device,
-    const VkDmaBufImageCreateInfo*             pCreateInfo,
+    const VkDmaBufImageCreateInfo*              pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkDeviceMemory*                             pMem,
     VkImage*                                    pImage);
 

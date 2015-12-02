@@ -118,7 +118,8 @@ create_pipeline(struct anv_device *device,
                 struct nir_shader *fs_nir,
                 const VkPipelineVertexInputStateCreateInfo *vi_state,
                 const VkPipelineDepthStencilStateCreateInfo *ds_state,
-                const VkPipelineColorBlendStateCreateInfo *cb_state)
+                const VkPipelineColorBlendStateCreateInfo *cb_state,
+                const VkAllocationCallbacks *alloc)
 {
    VkDevice device_h = anv_device_to_handle(device);
 
@@ -223,6 +224,7 @@ create_pipeline(struct anv_device *device,
          .disable_vs = true,
          .use_rectlist = true
       },
+      alloc,
       &pipeline_h);
 
    ANV_CALL(DestroyShader)(device_h, vs_h);
@@ -302,7 +304,7 @@ init_color_pipeline(struct anv_device *device)
 
    device->meta_state.clear.color_pipeline =
       create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
-                      &cb_state);
+                      &cb_state, NULL);
 }
 
 static void
@@ -475,7 +477,7 @@ create_depthstencil_pipeline(struct anv_device *device,
    };
 
    return create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
-                          &cb_state);
+                          &cb_state, NULL);
 }
 
 static void
@@ -601,13 +603,17 @@ anv_device_finish_meta_clear_state(struct anv_device *device)
    VkDevice device_h = anv_device_to_handle(device);
 
    ANV_CALL(DestroyPipeline)(device_h,
-      anv_pipeline_to_handle(device->meta_state.clear.color_pipeline));
+      anv_pipeline_to_handle(device->meta_state.clear.color_pipeline),
+      NULL);
    ANV_CALL(DestroyPipeline)(device_h,
-      anv_pipeline_to_handle(device->meta_state.clear.depth_only_pipeline));
+      anv_pipeline_to_handle(device->meta_state.clear.depth_only_pipeline),
+      NULL);
    ANV_CALL(DestroyPipeline)(device_h,
-      anv_pipeline_to_handle(device->meta_state.clear.stencil_only_pipeline));
+      anv_pipeline_to_handle(device->meta_state.clear.stencil_only_pipeline),
+      NULL);
    ANV_CALL(DestroyPipeline)(device_h,
-      anv_pipeline_to_handle(device->meta_state.clear.depthstencil_pipeline));
+      anv_pipeline_to_handle(device->meta_state.clear.depthstencil_pipeline),
+      NULL);
 }
 
 void
@@ -720,7 +726,7 @@ void anv_CmdClearColorImage(
                   .width = iview.extent.width,
                   .height = iview.extent.height,
                   .layers = 1
-               }, &fb);
+               }, &cmd_buffer->pool->alloc, &fb);
 
             VkRenderPass pass;
             anv_CreateRenderPass(anv_device_to_handle(cmd_buffer->device),
@@ -755,7 +761,7 @@ void anv_CmdClearColorImage(
                      },
                   },
                   .dependencyCount = 0,
-               }, &pass);
+               }, &cmd_buffer->pool->alloc, &pass);
 
             ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
                &(VkRenderPassBeginInfo) {
@@ -776,6 +782,8 @@ void anv_CmdClearColorImage(
                }, VK_SUBPASS_CONTENTS_INLINE);
 
             ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
+
+            /* XXX: We're leaking the render pass and framebuffer */
          }
       }
    }

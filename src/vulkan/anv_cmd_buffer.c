@@ -134,23 +134,17 @@ anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
    struct anv_push_constants **ptr = &cmd_buffer->state.push_constants[stage];
 
    if (*ptr == NULL) {
-      *ptr = anv_device_alloc(cmd_buffer->device, size, 8,
-                              VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      *ptr = anv_alloc(&cmd_buffer->pool->alloc, size, 8,
+                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
       if (*ptr == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      (*ptr)->size = size;
    } else if ((*ptr)->size < size) {
-      void *new_data = anv_device_alloc(cmd_buffer->device, size, 8,
-                                        VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-      if (new_data == NULL)
+      *ptr = anv_realloc(&cmd_buffer->pool->alloc, *ptr, size, 8,
+                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+      if (*ptr == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-      memcpy(new_data, *ptr, (*ptr)->size);
-      anv_device_free(cmd_buffer->device, *ptr);
-
-      *ptr = new_data;
-      (*ptr)->size = size;
    }
+   (*ptr)->size = size;
 
    return VK_SUCCESS;
 }
@@ -170,13 +164,14 @@ VkResult anv_CreateCommandBuffer(
    struct anv_cmd_buffer *cmd_buffer;
    VkResult result;
 
-   cmd_buffer = anv_device_alloc(device, sizeof(*cmd_buffer), 8,
-                                 VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   cmd_buffer = anv_alloc(&pool->alloc, sizeof(*cmd_buffer), 8,
+                          VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (cmd_buffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    cmd_buffer->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    cmd_buffer->device = device;
+   cmd_buffer->pool = pool;
 
    result = anv_cmd_buffer_init_batch_bo_chain(cmd_buffer);
    if (result != VK_SUCCESS)
@@ -205,7 +200,8 @@ VkResult anv_CreateCommandBuffer(
 
    return VK_SUCCESS;
 
- fail: anv_device_free(device, cmd_buffer);
+ fail:
+   anv_free(&cmd_buffer->pool->alloc, cmd_buffer);
 
    return result;
 }
@@ -214,7 +210,6 @@ void anv_DestroyCommandBuffer(
     VkDevice                                    _device,
     VkCommandBuffer                             _cmd_buffer)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, _cmd_buffer);
 
    list_del(&cmd_buffer->pool_link);
@@ -223,7 +218,8 @@ void anv_DestroyCommandBuffer(
 
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
-   anv_device_free(device, cmd_buffer);
+
+   anv_free(&cmd_buffer->pool->alloc, cmd_buffer);
 }
 
 VkResult anv_ResetCommandBuffer(
@@ -549,7 +545,7 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
 
    const uint32_t dword = cmd_buffer->device->info.gen < 8 ? 1 : 8;
 
-   anv_reloc_list_add(&cmd_buffer->surface_relocs, cmd_buffer->device,
+   anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
                       state.offset + dword * 4, bo, offset);
 }
 
@@ -898,15 +894,21 @@ void anv_CmdExecuteCommands(
 VkResult anv_CreateCommandPool(
     VkDevice                                    _device,
     const VkCommandPoolCreateInfo*              pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkCommandPool*                              pCmdPool)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_cmd_pool *pool;
 
-   pool = anv_device_alloc(device, sizeof(*pool), 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   pool = anv_alloc2(&device->alloc, pAllocator, sizeof(*pool), 8,
+                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pool == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   if (pAllocator)
+      pool->alloc = *pAllocator;
+   else
+      pool->alloc = device->alloc;
 
    list_inithead(&pool->cmd_buffers);
 
@@ -917,14 +919,15 @@ VkResult anv_CreateCommandPool(
 
 void anv_DestroyCommandPool(
     VkDevice                                    _device,
-    VkCommandPool                               commandPool)
+    VkCommandPool                               commandPool,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_cmd_pool, pool, commandPool);
 
    anv_ResetCommandPool(_device, commandPool, 0);
 
-   anv_device_free(device, pool);
+   anv_free2(&device->alloc, pAllocator, pool);
 }
 
 VkResult anv_ResetCommandPool(

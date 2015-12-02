@@ -32,6 +32,7 @@
 VkResult anv_CreateDmaBufImageINTEL(
     VkDevice                                    _device,
     const VkDmaBufImageCreateInfo*              pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkDeviceMemory*                             pMem,
     VkImage*                                    pImage)
 {
@@ -43,8 +44,8 @@ VkResult anv_CreateDmaBufImageINTEL(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DMA_BUF_IMAGE_CREATE_INFO_INTEL);
 
-   mem = anv_device_alloc(device, sizeof(*mem), 8,
-                          VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   mem = anv_alloc2(&device->alloc, pAllocator, sizeof(*mem), 8,
+                    VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (mem == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -58,13 +59,6 @@ VkResult anv_CreateDmaBufImageINTEL(
    mem->bo.index = 0;
    mem->bo.offset = 0;
    mem->bo.size = pCreateInfo->strideInBytes * pCreateInfo->extent.height;
-
-   image = anv_device_alloc(device, sizeof(*image), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (image == NULL) {
-      result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      goto fail_mem;
-   }
 
    anv_image_create(_device,
       &(struct anv_image_create_info) {
@@ -85,7 +79,7 @@ VkResult anv_CreateDmaBufImageINTEL(
          .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
          .flags = 0,
       }},
-      &image_h);
+      pAllocator, &image_h);
 
    image = anv_image_from_handle(image_h);
    image->bo = &mem->bo;
@@ -100,10 +94,8 @@ VkResult anv_CreateDmaBufImageINTEL(
 
    return VK_SUCCESS;
 
- fail_mem:
-   anv_gem_close(device, mem->bo.gem_handle);
  fail:
-   anv_device_free(device, mem);
+   anv_free2(&device->alloc, pAllocator, mem);
 
    return result;
 }

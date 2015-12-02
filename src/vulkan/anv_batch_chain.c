@@ -47,7 +47,7 @@
 
 static VkResult
 anv_reloc_list_init_clone(struct anv_reloc_list *list,
-                          struct anv_device *device,
+                          const VkAllocationCallbacks *alloc,
                           const struct anv_reloc_list *other_list)
 {
    if (other_list) {
@@ -59,18 +59,18 @@ anv_reloc_list_init_clone(struct anv_reloc_list *list,
    }
 
    list->relocs =
-      anv_device_alloc(device, list->array_length * sizeof(*list->relocs), 8,
-                       VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      anv_alloc(alloc, list->array_length * sizeof(*list->relocs), 8,
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
    if (list->relocs == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    list->reloc_bos =
-      anv_device_alloc(device, list->array_length * sizeof(*list->reloc_bos), 8,
-                       VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      anv_alloc(alloc, list->array_length * sizeof(*list->reloc_bos), 8,
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
    if (list->reloc_bos == NULL) {
-      anv_device_free(device, list->relocs);
+      anv_free(alloc, list->relocs);
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
@@ -85,20 +85,23 @@ anv_reloc_list_init_clone(struct anv_reloc_list *list,
 }
 
 VkResult
-anv_reloc_list_init(struct anv_reloc_list *list, struct anv_device *device)
+anv_reloc_list_init(struct anv_reloc_list *list,
+                    const VkAllocationCallbacks *alloc)
 {
-   return anv_reloc_list_init_clone(list, device, NULL);
+   return anv_reloc_list_init_clone(list, alloc, NULL);
 }
 
 void
-anv_reloc_list_finish(struct anv_reloc_list *list, struct anv_device *device)
+anv_reloc_list_finish(struct anv_reloc_list *list,
+                      const VkAllocationCallbacks *alloc)
 {
-   anv_device_free(device, list->relocs);
-   anv_device_free(device, list->reloc_bos);
+   anv_free(alloc, list->relocs);
+   anv_free(alloc, list->reloc_bos);
 }
 
 static VkResult
-anv_reloc_list_grow(struct anv_reloc_list *list, struct anv_device *device,
+anv_reloc_list_grow(struct anv_reloc_list *list,
+                    const VkAllocationCallbacks *alloc,
                     size_t num_additional_relocs)
 {
    if (list->num_relocs + num_additional_relocs <= list->array_length)
@@ -109,16 +112,16 @@ anv_reloc_list_grow(struct anv_reloc_list *list, struct anv_device *device,
       new_length *= 2;
 
    struct drm_i915_gem_relocation_entry *new_relocs =
-      anv_device_alloc(device, new_length * sizeof(*list->relocs), 8,
-                       VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      anv_alloc(alloc, new_length * sizeof(*list->relocs), 8,
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (new_relocs == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    struct anv_bo **new_reloc_bos =
-      anv_device_alloc(device, new_length * sizeof(*list->reloc_bos), 8,
-                       VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      anv_alloc(alloc, new_length * sizeof(*list->reloc_bos), 8,
+                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (new_relocs == NULL) {
-      anv_device_free(device, new_relocs);
+      anv_free(alloc, new_relocs);
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
@@ -126,8 +129,8 @@ anv_reloc_list_grow(struct anv_reloc_list *list, struct anv_device *device,
    memcpy(new_reloc_bos, list->reloc_bos,
           list->num_relocs * sizeof(*list->reloc_bos));
 
-   anv_device_free(device, list->relocs);
-   anv_device_free(device, list->reloc_bos);
+   anv_free(alloc, list->relocs);
+   anv_free(alloc, list->reloc_bos);
 
    list->array_length = new_length;
    list->relocs = new_relocs;
@@ -137,13 +140,14 @@ anv_reloc_list_grow(struct anv_reloc_list *list, struct anv_device *device,
 }
 
 uint64_t
-anv_reloc_list_add(struct anv_reloc_list *list, struct anv_device *device,
+anv_reloc_list_add(struct anv_reloc_list *list,
+                   const VkAllocationCallbacks *alloc,
                    uint32_t offset, struct anv_bo *target_bo, uint32_t delta)
 {
    struct drm_i915_gem_relocation_entry *entry;
    int index;
 
-   anv_reloc_list_grow(list, device, 1);
+   anv_reloc_list_grow(list, alloc, 1);
    /* TODO: Handle failure */
 
    /* XXX: Can we use I915_EXEC_HANDLE_LUT? */
@@ -161,10 +165,11 @@ anv_reloc_list_add(struct anv_reloc_list *list, struct anv_device *device,
 }
 
 static void
-anv_reloc_list_append(struct anv_reloc_list *list, struct anv_device *device,
+anv_reloc_list_append(struct anv_reloc_list *list,
+                      const VkAllocationCallbacks *alloc,
                       struct anv_reloc_list *other, uint32_t offset)
 {
-   anv_reloc_list_grow(list, device, other->num_relocs);
+   anv_reloc_list_grow(list, alloc, other->num_relocs);
    /* TODO: Handle failure */
 
    memcpy(&list->relocs[list->num_relocs], &other->relocs[0],
@@ -200,7 +205,7 @@ uint64_t
 anv_batch_emit_reloc(struct anv_batch *batch,
                      void *location, struct anv_bo *bo, uint32_t delta)
 {
-   return anv_reloc_list_add(batch->relocs, batch->device,
+   return anv_reloc_list_add(batch->relocs, batch->alloc,
                              location - batch->start, bo, delta);
 }
 
@@ -221,7 +226,7 @@ anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other)
    memcpy(batch->next, other->start, size);
 
    offset = batch->next - batch->start;
-   anv_reloc_list_append(batch->relocs, batch->device,
+   anv_reloc_list_append(batch->relocs, batch->alloc,
                          other->relocs, offset);
 
    batch->next += size;
@@ -232,20 +237,21 @@ anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other)
  *-----------------------------------------------------------------------*/
 
 static VkResult
-anv_batch_bo_create(struct anv_device *device, struct anv_batch_bo **bbo_out)
+anv_batch_bo_create(struct anv_cmd_buffer *cmd_buffer,
+                    struct anv_batch_bo **bbo_out)
 {
    VkResult result;
 
-   struct anv_batch_bo *bbo =
-      anv_device_alloc(device, sizeof(*bbo), 8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+   struct anv_batch_bo *bbo = anv_alloc(&cmd_buffer->pool->alloc, sizeof(*bbo),
+                                        8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (bbo == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_bo_pool_alloc(&device->batch_bo_pool, &bbo->bo);
+   result = anv_bo_pool_alloc(&cmd_buffer->device->batch_bo_pool, &bbo->bo);
    if (result != VK_SUCCESS)
       goto fail_alloc;
 
-   result = anv_reloc_list_init(&bbo->relocs, device);
+   result = anv_reloc_list_init(&bbo->relocs, &cmd_buffer->pool->alloc);
    if (result != VK_SUCCESS)
       goto fail_bo_alloc;
 
@@ -254,30 +260,31 @@ anv_batch_bo_create(struct anv_device *device, struct anv_batch_bo **bbo_out)
    return VK_SUCCESS;
 
  fail_bo_alloc:
-   anv_bo_pool_free(&device->batch_bo_pool, &bbo->bo);
+   anv_bo_pool_free(&cmd_buffer->device->batch_bo_pool, &bbo->bo);
  fail_alloc:
-   anv_device_free(device, bbo);
+   anv_free(&cmd_buffer->pool->alloc, bbo);
 
    return result;
 }
 
 static VkResult
-anv_batch_bo_clone(struct anv_device *device,
+anv_batch_bo_clone(struct anv_cmd_buffer *cmd_buffer,
                    const struct anv_batch_bo *other_bbo,
                    struct anv_batch_bo **bbo_out)
 {
    VkResult result;
 
-   struct anv_batch_bo *bbo =
-      anv_device_alloc(device, sizeof(*bbo), 8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+   struct anv_batch_bo *bbo = anv_alloc(&cmd_buffer->pool->alloc, sizeof(*bbo),
+                                        8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (bbo == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_bo_pool_alloc(&device->batch_bo_pool, &bbo->bo);
+   result = anv_bo_pool_alloc(&cmd_buffer->device->batch_bo_pool, &bbo->bo);
    if (result != VK_SUCCESS)
       goto fail_alloc;
 
-   result = anv_reloc_list_init_clone(&bbo->relocs, device, &other_bbo->relocs);
+   result = anv_reloc_list_init_clone(&bbo->relocs, &cmd_buffer->pool->alloc,
+                                      &other_bbo->relocs);
    if (result != VK_SUCCESS)
       goto fail_bo_alloc;
 
@@ -291,9 +298,9 @@ anv_batch_bo_clone(struct anv_device *device,
    return VK_SUCCESS;
 
  fail_bo_alloc:
-   anv_bo_pool_free(&device->batch_bo_pool, &bbo->bo);
+   anv_bo_pool_free(&cmd_buffer->device->batch_bo_pool, &bbo->bo);
  fail_alloc:
-   anv_device_free(device, bbo);
+   anv_free(&cmd_buffer->pool->alloc, bbo);
 
    return result;
 }
@@ -328,15 +335,17 @@ anv_batch_bo_finish(struct anv_batch_bo *bbo, struct anv_batch *batch)
 }
 
 static void
-anv_batch_bo_destroy(struct anv_batch_bo *bbo, struct anv_device *device)
+anv_batch_bo_destroy(struct anv_batch_bo *bbo,
+                     struct anv_cmd_buffer *cmd_buffer)
 {
-   anv_reloc_list_finish(&bbo->relocs, device);
-   anv_bo_pool_free(&device->batch_bo_pool, &bbo->bo);
-   anv_device_free(device, bbo);
+   anv_reloc_list_finish(&bbo->relocs, &cmd_buffer->pool->alloc);
+   anv_bo_pool_free(&cmd_buffer->device->batch_bo_pool, &bbo->bo);
+   anv_free(&cmd_buffer->pool->alloc, bbo);
 }
 
 static VkResult
-anv_batch_bo_list_clone(const struct list_head *list, struct anv_device *device,
+anv_batch_bo_list_clone(const struct list_head *list,
+                        struct anv_cmd_buffer *cmd_buffer,
                         struct list_head *new_list)
 {
    VkResult result = VK_SUCCESS;
@@ -346,7 +355,7 @@ anv_batch_bo_list_clone(const struct list_head *list, struct anv_device *device,
    struct anv_batch_bo *prev_bbo = NULL;
    list_for_each_entry(struct anv_batch_bo, bbo, list, link) {
       struct anv_batch_bo *new_bbo;
-      result = anv_batch_bo_clone(device, bbo, &new_bbo);
+      result = anv_batch_bo_clone(cmd_buffer, bbo, &new_bbo);
       if (result != VK_SUCCESS)
          break;
       list_addtail(&new_bbo->link, new_list);
@@ -367,7 +376,7 @@ anv_batch_bo_list_clone(const struct list_head *list, struct anv_device *device,
 
    if (result != VK_SUCCESS) {
       list_for_each_entry_safe(struct anv_batch_bo, bbo, new_list, link)
-         anv_batch_bo_destroy(bbo, device);
+         anv_batch_bo_destroy(bbo, cmd_buffer);
    }
 
    return result;
@@ -393,7 +402,8 @@ anv_cmd_buffer_surface_base_address(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
-emit_batch_buffer_start(struct anv_batch *batch, struct anv_bo *bo, uint32_t offset)
+emit_batch_buffer_start(struct anv_cmd_buffer *cmd_buffer,
+                        struct anv_bo *bo, uint32_t offset)
 {
    /* In gen8+ the address field grew to two dwords to accomodate 48 bit
     * offsets. The high 16 bits are in the last dword, so we can use the gen8
@@ -408,8 +418,9 @@ emit_batch_buffer_start(struct anv_batch *batch, struct anv_bo *bo, uint32_t off
    const uint32_t gen8_length =
       GEN8_MI_BATCH_BUFFER_START_length - GEN8_MI_BATCH_BUFFER_START_length_bias;
 
-   anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_START,
-      .DwordLength = batch->device->info.gen < 8 ? gen7_length : gen8_length,
+   anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_START,
+      .DwordLength = cmd_buffer->device->info.gen < 8 ?
+                     gen7_length : gen8_length,
       ._2ndLevelBatchBuffer = _1stlevelbatch,
       .AddressSpaceIndicator = ASI_PPGTT,
       .BatchBufferStartAddress = { bo, offset });
@@ -430,7 +441,7 @@ cmd_buffer_chain_to_batch_bo(struct anv_cmd_buffer *cmd_buffer,
    batch->end += GEN8_MI_BATCH_BUFFER_START_length * 4;
    assert(batch->end == current_bbo->bo.map + current_bbo->bo.size);
 
-   emit_batch_buffer_start(batch, &bbo->bo, 0);
+   emit_batch_buffer_start(cmd_buffer, &bbo->bo, 0);
 
    anv_batch_bo_finish(current_bbo, batch);
 }
@@ -441,13 +452,13 @@ anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
    struct anv_cmd_buffer *cmd_buffer = _data;
    struct anv_batch_bo *new_bbo;
 
-   VkResult result = anv_batch_bo_create(cmd_buffer->device, &new_bbo);
+   VkResult result = anv_batch_bo_create(cmd_buffer, &new_bbo);
    if (result != VK_SUCCESS)
       return result;
 
    struct anv_batch_bo **seen_bbo = anv_vector_add(&cmd_buffer->seen_bbos);
    if (seen_bbo == NULL) {
-      anv_batch_bo_destroy(new_bbo, cmd_buffer->device);
+      anv_batch_bo_destroy(new_bbo, cmd_buffer);
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
    *seen_bbo = new_bbo;
@@ -520,18 +531,17 @@ VkResult
 anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_batch_bo *batch_bo;
-   struct anv_device *device = cmd_buffer->device;
    VkResult result;
 
    list_inithead(&cmd_buffer->batch_bos);
 
-   result = anv_batch_bo_create(device, &batch_bo);
+   result = anv_batch_bo_create(cmd_buffer, &batch_bo);
    if (result != VK_SUCCESS)
       return result;
 
    list_addtail(&batch_bo->link, &cmd_buffer->batch_bos);
 
-   cmd_buffer->batch.device = device;
+   cmd_buffer->batch.alloc = &cmd_buffer->pool->alloc;
    cmd_buffer->batch.extend_cb = anv_cmd_buffer_chain_batch;
    cmd_buffer->batch.user_data = cmd_buffer;
 
@@ -552,7 +562,7 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
       goto fail_seen_bbos;
 
    result = anv_reloc_list_init(&cmd_buffer->surface_relocs,
-                                cmd_buffer->device);
+                                &cmd_buffer->pool->alloc);
    if (result != VK_SUCCESS)
       goto fail_bt_blocks;
 
@@ -569,7 +579,7 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
  fail_seen_bbos:
    anv_vector_finish(&cmd_buffer->seen_bbos);
  fail_batch_bo:
-   anv_batch_bo_destroy(batch_bo, device);
+   anv_batch_bo_destroy(batch_bo, cmd_buffer);
 
    return result;
 }
@@ -577,8 +587,6 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 void
 anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_device *device = cmd_buffer->device;
-
    int32_t *bt_block;
    anv_vector_foreach(bt_block, &cmd_buffer->bt_blocks) {
       anv_block_pool_free(&cmd_buffer->device->surface_state_block_pool,
@@ -586,31 +594,29 @@ anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    }
    anv_vector_finish(&cmd_buffer->bt_blocks);
 
-   anv_reloc_list_finish(&cmd_buffer->surface_relocs, cmd_buffer->device);
+   anv_reloc_list_finish(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc);
 
    anv_vector_finish(&cmd_buffer->seen_bbos);
 
    /* Destroy all of the batch buffers */
    list_for_each_entry_safe(struct anv_batch_bo, bbo,
                             &cmd_buffer->batch_bos, link) {
-      anv_batch_bo_destroy(bbo, device);
+      anv_batch_bo_destroy(bbo, cmd_buffer);
    }
 
-   anv_device_free(device, cmd_buffer->execbuf2.objects);
-   anv_device_free(device, cmd_buffer->execbuf2.bos);
+   anv_free(&cmd_buffer->pool->alloc, cmd_buffer->execbuf2.objects);
+   anv_free(&cmd_buffer->pool->alloc, cmd_buffer->execbuf2.bos);
 }
 
 void
 anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_device *device = cmd_buffer->device;
-
    /* Delete all but the first batch bo */
    assert(!list_empty(&cmd_buffer->batch_bos));
    while (cmd_buffer->batch_bos.next != cmd_buffer->batch_bos.prev) {
       struct anv_batch_bo *bbo = anv_cmd_buffer_current_batch_bo(cmd_buffer);
       list_del(&bbo->link);
-      anv_batch_bo_destroy(bbo, device);
+      anv_batch_bo_destroy(bbo, cmd_buffer);
    }
    assert(!list_empty(&cmd_buffer->batch_bos));
 
@@ -713,7 +719,7 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
       struct anv_batch_bo *last_bbo =
          list_last_entry(&secondary->batch_bos, struct anv_batch_bo, link);
 
-      emit_batch_buffer_start(&primary->batch, &first_bbo->bo, 0);
+      emit_batch_buffer_start(primary, &first_bbo->bo, 0);
 
       struct anv_batch_bo *this_bbo = anv_cmd_buffer_current_batch_bo(primary);
       assert(primary->batch.start == this_bbo->bo.map);
@@ -727,14 +733,14 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
        */
       last_bbo->relocs.num_relocs--;
       secondary->batch.next -= GEN8_MI_BATCH_BUFFER_START_length * 4;
-      emit_batch_buffer_start(&secondary->batch, &this_bbo->bo, offset);
+      emit_batch_buffer_start(secondary, &this_bbo->bo, offset);
       anv_cmd_buffer_add_seen_bbos(primary, &secondary->batch_bos);
       break;
    }
    case ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN: {
       struct list_head copy_list;
       VkResult result = anv_batch_bo_list_clone(&secondary->batch_bos,
-                                                secondary->device,
+                                                secondary,
                                                 &copy_list);
       if (result != VK_SUCCESS)
          return; /* FIXME */
@@ -760,7 +766,7 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
       assert(!"Invalid execution mode");
    }
 
-   anv_reloc_list_append(&primary->surface_relocs, primary->device,
+   anv_reloc_list_append(&primary->surface_relocs, &primary->pool->alloc,
                          &secondary->surface_relocs, 0);
 }
 
@@ -784,16 +790,16 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
                             cmd_buffer->execbuf2.array_length * 2 : 64;
 
          struct drm_i915_gem_exec_object2 *new_objects =
-            anv_device_alloc(cmd_buffer->device, new_len * sizeof(*new_objects),
-                             8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            anv_alloc(&cmd_buffer->pool->alloc, new_len * sizeof(*new_objects),
+                      8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
          if (new_objects == NULL)
             return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
          struct anv_bo **new_bos =
-            anv_device_alloc(cmd_buffer->device, new_len * sizeof(*new_bos),
-                             8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+            anv_alloc(&cmd_buffer->pool->alloc, new_len * sizeof(*new_bos),
+                      8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
          if (new_objects == NULL) {
-            anv_device_free(cmd_buffer->device, new_objects);
+            anv_free(&cmd_buffer->pool->alloc, new_objects);
             return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
          }
 

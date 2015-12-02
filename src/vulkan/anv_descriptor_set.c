@@ -36,6 +36,7 @@
 VkResult anv_CreateDescriptorSetLayout(
     VkDevice                                    _device,
     const VkDescriptorSetLayoutCreateInfo*      pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkDescriptorSetLayout*                      pSetLayout)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -56,8 +57,8 @@ VkResult anv_CreateDescriptorSetLayout(
                  (max_binding + 1) * sizeof(set_layout->binding[0]) +
                  immutable_sampler_count * sizeof(struct anv_sampler *);
 
-   set_layout = anv_device_alloc(device, size, 8,
-                                 VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   set_layout = anv_alloc2(&device->alloc, pAllocator, size, 8,
+                           VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!set_layout)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -154,12 +155,13 @@ VkResult anv_CreateDescriptorSetLayout(
 
 void anv_DestroyDescriptorSetLayout(
     VkDevice                                    _device,
-    VkDescriptorSetLayout                       _set_layout)
+    VkDescriptorSetLayout                       _set_layout,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout, _set_layout);
 
-   anv_device_free(device, set_layout);
+   anv_free2(&device->alloc, pAllocator, set_layout);
 }
 
 /*
@@ -170,6 +172,7 @@ void anv_DestroyDescriptorSetLayout(
 VkResult anv_CreatePipelineLayout(
     VkDevice                                    _device,
     const VkPipelineLayoutCreateInfo*           pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkPipelineLayout*                           pPipelineLayout)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -219,7 +222,8 @@ VkResult anv_CreatePipelineLayout(
 
    size_t size = sizeof(*layout) + num_bindings * sizeof(layout->entries[0]);
 
-   layout = anv_device_alloc(device, size, 8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   layout = anv_alloc2(&device->alloc, pAllocator, size, 8,
+                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (layout == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -273,12 +277,13 @@ VkResult anv_CreatePipelineLayout(
 
 void anv_DestroyPipelineLayout(
     VkDevice                                    _device,
-    VkPipelineLayout                            _pipelineLayout)
+    VkPipelineLayout                            _pipelineLayout,
+    const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_pipeline_layout, pipeline_layout, _pipelineLayout);
 
-   anv_device_free(device, pipeline_layout);
+   anv_free2(&device->alloc, pAllocator, pipeline_layout);
 }
 
 /*
@@ -288,6 +293,7 @@ void anv_DestroyPipelineLayout(
 VkResult anv_CreateDescriptorPool(
     VkDevice                                    device,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
     VkDescriptorPool*                           pDescriptorPool)
 {
    anv_finishme("VkDescriptorPool is a stub");
@@ -297,7 +303,8 @@ VkResult anv_CreateDescriptorPool(
 
 void anv_DestroyDescriptorPool(
     VkDevice                                    _device,
-    VkDescriptorPool                            _pool)
+    VkDescriptorPool                            _pool,
+    const VkAllocationCallbacks*                pAllocator)
 {
    anv_finishme("VkDescriptorPool is a stub: free the pool's descriptor sets");
 }
@@ -319,7 +326,8 @@ anv_descriptor_set_create(struct anv_device *device,
    struct anv_descriptor_set *set;
    size_t size = sizeof(*set) + layout->size * sizeof(set->descriptors[0]);
 
-   set = anv_device_alloc(device, size, 8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   set = anv_alloc(&device->alloc /* XXX: Use the pool */, size, 8,
+                   VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!set)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -349,7 +357,7 @@ void
 anv_descriptor_set_destroy(struct anv_device *device,
                            struct anv_descriptor_set *set)
 {
-   anv_device_free(device, set);
+   anv_free(&device->alloc /* XXX: Use the pool */, set);
 }
 
 VkResult anv_AllocateDescriptorSets(

@@ -431,6 +431,50 @@ extern struct anv_dispatch_table dtable;
    dtable.func; \
 })
 
+static inline void *
+anv_alloc(const VkAllocationCallbacks *alloc,
+          size_t size, size_t align,
+          VkSystemAllocationScope scope)
+{
+   return alloc->pfnAllocation(alloc->pUserData, size, align, scope);
+}
+
+static inline void *
+anv_realloc(const VkAllocationCallbacks *alloc,
+            void *ptr, size_t size, size_t align,
+            VkSystemAllocationScope scope)
+{
+   return alloc->pfnReallocation(alloc->pUserData, ptr, size, align, scope);
+}
+
+static inline void
+anv_free(const VkAllocationCallbacks *alloc, void *data)
+{
+   alloc->pfnFree(alloc->pUserData, data);
+}
+
+static inline void *
+anv_alloc2(const VkAllocationCallbacks *parent_alloc,
+           const VkAllocationCallbacks *alloc,
+           size_t size, size_t align,
+           VkSystemAllocationScope scope)
+{
+   if (alloc)
+      return anv_alloc(alloc, size, align, scope);
+   else
+      return anv_alloc(parent_alloc, size, align, scope);
+}
+
+static inline void
+anv_free2(const VkAllocationCallbacks *parent_alloc,
+          const VkAllocationCallbacks *alloc,
+          void *data)
+{
+   if (alloc)
+      anv_free(alloc, data);
+   else
+      anv_free(parent_alloc, data);
+}
 
 struct anv_physical_device {
     VK_LOADER_DATA                              _loader_data;
@@ -451,9 +495,8 @@ bool anv_is_scalar_shader_stage(const struct brw_compiler *compiler,
 struct anv_instance {
     VK_LOADER_DATA                              _loader_data;
 
-    void *                                      pAllocUserData;
-    PFN_vkAllocFunction                         pfnAlloc;
-    PFN_vkFreeFunction                          pfnFree;
+    VkAllocationCallbacks                       alloc;
+
     uint32_t                                    apiVersion;
     int                                         physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
@@ -497,6 +540,8 @@ struct anv_queue {
 struct anv_device {
     VK_LOADER_DATA                              _loader_data;
 
+    VkAllocationCallbacks                       alloc;
+
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
     struct brw_device_info                      info;
@@ -525,26 +570,6 @@ struct anv_device {
 
     pthread_mutex_t                             mutex;
 };
-
-void *
-anv_instance_alloc(struct anv_instance *        instance,
-                   size_t                       size,
-                   size_t                       alignment,
-                   VkSystemAllocType            allocType);
-
-void
-anv_instance_free(struct anv_instance *         instance,
-                  void *                        mem);
-
-void *
-anv_device_alloc(struct anv_device *            device,
-                 size_t                         size,
-                 size_t                         alignment,
-                 VkSystemAllocType              allocType);
-
-void
-anv_device_free(struct anv_device *             device,
-                void *                          mem);
 
 void* anv_gem_mmap(struct anv_device *device,
                    uint32_t gem_handle, uint64_t offset, uint64_t size);
@@ -575,12 +600,12 @@ struct anv_reloc_list {
 };
 
 VkResult anv_reloc_list_init(struct anv_reloc_list *list,
-                             struct anv_device *device);
+                             const VkAllocationCallbacks *alloc);
 void anv_reloc_list_finish(struct anv_reloc_list *list,
-                           struct anv_device *device);
+                           const VkAllocationCallbacks *alloc);
 
 uint64_t anv_reloc_list_add(struct anv_reloc_list *list,
-                            struct anv_device *device,
+                            const VkAllocationCallbacks *alloc,
                             uint32_t offset, struct anv_bo *target_bo,
                             uint32_t delta);
 
@@ -600,7 +625,7 @@ struct anv_batch_bo {
 };
 
 struct anv_batch {
-   struct anv_device *                          device;
+   const VkAllocationCallbacks *                alloc;
 
    void *                                       start;
    void *                                       end;
@@ -977,6 +1002,7 @@ struct anv_cmd_state {
 };
 
 struct anv_cmd_pool {
+   VkAllocationCallbacks                        alloc;
    struct list_head                             cmd_buffers;
 };
 
@@ -994,6 +1020,7 @@ struct anv_cmd_buffer {
 
    struct anv_device *                          device;
 
+   struct anv_cmd_pool *                        pool;
    struct list_head                             pool_link;
 
    struct anv_batch                             batch;
@@ -1220,7 +1247,8 @@ struct anv_graphics_pipeline_create_info {
 VkResult
 anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                  const struct anv_graphics_pipeline_create_info *extra);
+                  const struct anv_graphics_pipeline_create_info *extra,
+                  const VkAllocationCallbacks *alloc);
 
 VkResult
 anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
@@ -1231,46 +1259,55 @@ VkResult
 anv_graphics_pipeline_create(VkDevice device,
                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
                              const struct anv_graphics_pipeline_create_info *extra,
+                             const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
 
 VkResult
 gen7_graphics_pipeline_create(VkDevice _device,
                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
                               const struct anv_graphics_pipeline_create_info *extra,
+                              const VkAllocationCallbacks *alloc,
                               VkPipeline *pPipeline);
 
 VkResult
 gen75_graphics_pipeline_create(VkDevice _device,
                                const VkGraphicsPipelineCreateInfo *pCreateInfo,
                                const struct anv_graphics_pipeline_create_info *extra,
+                               const VkAllocationCallbacks *alloc,
                                VkPipeline *pPipeline);
 
 VkResult
 gen8_graphics_pipeline_create(VkDevice _device,
                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
                               const struct anv_graphics_pipeline_create_info *extra,
+                              const VkAllocationCallbacks *alloc,
                               VkPipeline *pPipeline);
 VkResult
 gen9_graphics_pipeline_create(VkDevice _device,
                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
                               const struct anv_graphics_pipeline_create_info *extra,
+                              const VkAllocationCallbacks *alloc,
                               VkPipeline *pPipeline);
 VkResult
 gen7_compute_pipeline_create(VkDevice _device,
                              const VkComputePipelineCreateInfo *pCreateInfo,
+                             const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
 VkResult
 gen75_compute_pipeline_create(VkDevice _device,
                               const VkComputePipelineCreateInfo *pCreateInfo,
+                              const VkAllocationCallbacks *alloc,
                               VkPipeline *pPipeline);
 
 VkResult
 gen8_compute_pipeline_create(VkDevice _device,
                              const VkComputePipelineCreateInfo *pCreateInfo,
+                             const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
 VkResult
 gen9_compute_pipeline_create(VkDevice _device,
                              const VkComputePipelineCreateInfo *pCreateInfo,
+                             const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
 
 struct anv_format {
@@ -1406,6 +1443,7 @@ struct anv_image_create_info {
 
 VkResult anv_image_create(VkDevice _device,
                           const struct anv_image_create_info *info,
+                          const VkAllocationCallbacks* alloc,
                           VkImage *pImage);
 
 struct anv_surface *
