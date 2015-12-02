@@ -2687,7 +2687,7 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
  * Match explicit locations of outputs to inputs and deactivate the
  * unmatch flag if found so we don't optimise them away.
  */
-void
+static void
 match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
                                  gl_shader *producer,
                                  gl_shader *consumer)
@@ -2703,10 +2703,6 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
       if ((var == NULL) || (var->data.mode != ir_var_shader_out))
          continue;
 
-      /* Mark output as matched if separate shader with no linked consumer */
-      if (consumer == NULL)
-         var->data.is_unmatched_generic_inout = 0;
-
       if (var->data.explicit_location &&
           var->data.location >= VARYING_SLOT_VAR0) {
          const unsigned idx = var->data.location - VARYING_SLOT_VAR0;
@@ -2721,10 +2717,6 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
 
       if ((input == NULL) || (input->data.mode != ir_var_shader_in))
          continue;
-
-      /* Mark input as matched if separate shader with no linked producer */
-      if (producer == NULL)
-         input->data.is_unmatched_generic_inout = 0;
 
       ir_variable *output = NULL;
       if (input->data.explicit_location
