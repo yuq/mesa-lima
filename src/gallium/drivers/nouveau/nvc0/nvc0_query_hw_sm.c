@@ -185,24 +185,15 @@ struct nvc0_hw_sm_counter_cfg
    uint32_t src_sel;      /* signal selection for up to 4 sources */
 };
 
-#define NVC0_COUNTER_OPn_SUM            0
-#define NVC0_COUNTER_OPn_OR             1
-#define NVC0_COUNTER_OPn_AND            2
-#define NVC0_COUNTER_OP2_REL_SUM_MM     3 /* (sum(ctr0) - sum(ctr1)) / sum(ctr0) */
-#define NVC0_COUNTER_OP2_DIV_SUM_M0     4 /* sum(ctr0) / ctr1 of MP[0]) */
-#define NVC0_COUNTER_OP2_AVG_DIV_MM     5 /* avg(ctr0 / ctr1) */
-#define NVC0_COUNTER_OP2_AVG_DIV_M0     6 /* avg(ctr0) / ctr1 of MP[0]) */
-
 struct nvc0_hw_sm_query_cfg
 {
    struct nvc0_hw_sm_counter_cfg ctr[8];
    uint8_t num_counters;
-   uint8_t op;
    uint8_t norm[2]; /* normalization num,denom */
 };
 
-#define _Q1A(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, NVC0_COUNTER_OPn_SUM, { nu, dn } }
-#define _Q1B(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, NVC0_COUNTER_OPn_SUM, { nu, dn } }
+#define _Q1A(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, { nu, dn } }
+#define _Q1B(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, { nu, dn } }
 
 /* NOTES:
  * active_warps: bit 0 alternates btw 0 and 1 for odd nr of warps
@@ -362,7 +353,6 @@ sm20_active_cycles =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x11, 0x000000ff, 0x00000000),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -376,7 +366,6 @@ sm20_active_warps =
    .ctr[4]       = _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000050),
    .ctr[5]       = _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000060),
    .num_counters = 6,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -385,7 +374,6 @@ sm20_atom_count =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x63, 0x000000ff, 0x00000030),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -395,7 +383,6 @@ sm20_branch =
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x1a, 0x000000ff, 0x00000000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x1a, 0x000000ff, 0x00000010),
    .num_counters = 2,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -405,7 +392,6 @@ sm20_divergent_branch =
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x19, 0x000000ff, 0x00000020),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x19, 0x000000ff, 0x00000030),
    .num_counters = 2,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -414,7 +400,6 @@ sm20_gld_request =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000030),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -423,7 +408,6 @@ sm20_gred_count =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x63, 0x000000ff, 0x00000040),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -432,7 +416,6 @@ sm20_gst_request =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000060),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -442,7 +425,6 @@ sm20_inst_executed =
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x2d, 0x0000ffff, 0x00001000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x2d, 0x0000ffff, 0x00001010),
    .num_counters = 2,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -452,7 +434,6 @@ sm20_inst_issued =
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x27, 0x0000ffff, 0x00007060),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x27, 0x0000ffff, 0x00007070),
    .num_counters = 2,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -461,7 +442,6 @@ sm20_local_ld =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000020),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -470,7 +450,6 @@ sm20_local_st =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000050),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -479,7 +458,6 @@ sm20_prof_trigger_0 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000000),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -488,7 +466,6 @@ sm20_prof_trigger_1 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000010),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -497,7 +474,6 @@ sm20_prof_trigger_2 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000020),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -506,7 +482,6 @@ sm20_prof_trigger_3 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000030),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -515,7 +490,6 @@ sm20_prof_trigger_4 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000040),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -524,7 +498,6 @@ sm20_prof_trigger_5 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000050),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -533,7 +506,6 @@ sm20_prof_trigger_6 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000060),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -542,7 +514,6 @@ sm20_prof_trigger_7 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000070),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -551,7 +522,6 @@ sm20_shared_ld =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000010),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -560,7 +530,6 @@ sm20_shared_st =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000040),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -574,7 +543,6 @@ sm20_threads_launched =
    .ctr[4]       = _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000050),
    .ctr[5]       = _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000060),
    .num_counters = 6,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -588,7 +556,6 @@ sm20_th_inst_executed_0 =
    .ctr[4]       = _C(0xaaaa, LOGOP, 0x2f, 0x000000ff, 0x00000040),
    .ctr[5]       = _C(0xaaaa, LOGOP, 0x2f, 0x000000ff, 0x00000050),
    .num_counters = 6,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -602,7 +569,6 @@ sm20_th_inst_executed_1 =
    .ctr[4]       = _C(0xaaaa, LOGOP, 0x30, 0x000000ff, 0x00000040),
    .ctr[5]       = _C(0xaaaa, LOGOP, 0x30, 0x000000ff, 0x00000050),
    .num_counters = 6,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -611,7 +577,6 @@ sm20_warps_launched =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000000),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -659,7 +624,6 @@ sm21_inst_executed =
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x2d, 0x000000ff, 0x00000010),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0x2d, 0x000000ff, 0x00000020),
    .num_counters = 3,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -668,7 +632,6 @@ sm21_inst_issued1_0 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000010),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -677,7 +640,6 @@ sm21_inst_issued1_1 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000040),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -686,7 +648,6 @@ sm21_inst_issued2_0 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000020),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -695,7 +656,6 @@ sm21_inst_issued2_1 =
 {
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000050),
    .num_counters = 1,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -709,7 +669,6 @@ sm21_th_inst_executed_0 =
    .ctr[4]       = _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000040),
    .ctr[5]       = _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000050),
    .num_counters = 6,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -723,7 +682,6 @@ sm21_th_inst_executed_1 =
    .ctr[4]       = _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000040),
    .ctr[5]       = _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000050),
    .num_counters = 6,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -737,7 +695,6 @@ sm21_th_inst_executed_2 =
    .ctr[4]       = _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000040),
    .ctr[5]       = _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000050),
    .num_counters = 6,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -751,7 +708,6 @@ sm21_th_inst_executed_3 =
    .ctr[4]       = _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000040),
    .ctr[5]       = _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000050),
    .num_counters = 6,
-   .op           = NVC0_COUNTER_OPn_SUM,
    .norm         = { 1, 1 },
 };
 
@@ -1150,62 +1106,10 @@ nvc0_hw_sm_get_query_result(struct nvc0_context *nvc0, struct nvc0_hw_query *hq,
    if (!ret)
       return false;
 
-   if (cfg->op == NVC0_COUNTER_OPn_SUM) {
-      for (c = 0; c < cfg->num_counters; ++c)
-         for (p = 0; p < mp_count; ++p)
-            value += count[p][c];
-      value = (value * cfg->norm[0]) / cfg->norm[1];
-   } else
-   if (cfg->op == NVC0_COUNTER_OPn_OR) {
-      uint32_t v = 0;
-      for (c = 0; c < cfg->num_counters; ++c)
-         for (p = 0; p < mp_count; ++p)
-            v |= count[p][c];
-      value = ((uint64_t)v * cfg->norm[0]) / cfg->norm[1];
-   } else
-   if (cfg->op == NVC0_COUNTER_OPn_AND) {
-      uint32_t v = ~0;
-      for (c = 0; c < cfg->num_counters; ++c)
-         for (p = 0; p < mp_count; ++p)
-            v &= count[p][c];
-      value = ((uint64_t)v * cfg->norm[0]) / cfg->norm[1];
-   } else
-   if (cfg->op == NVC0_COUNTER_OP2_REL_SUM_MM) {
-      uint64_t v[2] = { 0, 0 };
-      for (p = 0; p < mp_count; ++p) {
-         v[0] += count[p][0];
-         v[1] += count[p][1];
-      }
-      if (v[0])
-         value = ((v[0] - v[1]) * cfg->norm[0]) / (v[0] * cfg->norm[1]);
-   } else
-   if (cfg->op == NVC0_COUNTER_OP2_DIV_SUM_M0) {
+   for (c = 0; c < cfg->num_counters; ++c)
       for (p = 0; p < mp_count; ++p)
-         value += count[p][0];
-      if (count[0][1])
-         value = (value * cfg->norm[0]) / (count[0][1] * cfg->norm[1]);
-      else
-         value = 0;
-   } else
-   if (cfg->op == NVC0_COUNTER_OP2_AVG_DIV_MM) {
-      unsigned mp_used = 0;
-      for (p = 0; p < mp_count; ++p, mp_used += !!count[p][0])
-         if (count[p][1])
-            value += (count[p][0] * cfg->norm[0]) / count[p][1];
-      if (mp_used)
-         value /= (uint64_t)mp_used * cfg->norm[1];
-   } else
-   if (cfg->op == NVC0_COUNTER_OP2_AVG_DIV_M0) {
-      unsigned mp_used = 0;
-      for (p = 0; p < mp_count; ++p, mp_used += !!count[p][0])
-         value += count[p][0];
-      if (count[0][1] && mp_used) {
-         value *= cfg->norm[0];
-         value /= (uint64_t)count[0][1] * mp_used * cfg->norm[1];
-      } else {
-         value = 0;
-      }
-   }
+         value += count[p][c];
+   value = (value * cfg->norm[0]) / cfg->norm[1];
 
    *(uint64_t *)result = value;
    return true;
