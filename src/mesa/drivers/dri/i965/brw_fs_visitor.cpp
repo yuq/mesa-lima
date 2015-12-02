@@ -870,7 +870,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
                            header_size);
 
          fs_inst *inst = abld.emit(opcode, reg_undef, payload);
-         inst->eot = last && stage == MESA_SHADER_VERTEX;
+         inst->eot = last && stage != MESA_SHADER_GEOMETRY;
          inst->mlen = length + header_size;
          inst->offset = urb_offset;
          urb_offset = starting_urb_offset + slot + 1;
