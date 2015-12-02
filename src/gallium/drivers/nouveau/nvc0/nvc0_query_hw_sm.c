@@ -81,13 +81,6 @@ static const char *nve4_hw_sm_query_names[] =
    "threads_launched",
    "uncached_global_load_transaction",
    "warps_launched",
-   /* metrics, i.e. functions of the MP counters */
-   "metric-ipc",                   /* inst_executed, clock */
-   "metric-ipac",                  /* inst_executed, active_cycles */
-   "metric-ipec",                  /* inst_executed, (bool)inst_executed */
-   "metric-achieved_occupancy",    /* active_warps, active_cycles */
-   "metric-sm_efficiency",         /* active_cycles, clock */
-   "metric-inst_replay_overhead"   /* inst_issued, inst_executed */
 };
 
 /* Code to read out MP counters: They are accessible via mmio, too, but let's
@@ -210,24 +203,10 @@ struct nvc0_hw_sm_query_cfg
 
 #define _Q1A(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, NVC0_COUNTER_OPn_SUM, { nu, dn } }
 #define _Q1B(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, NVC0_COUNTER_OPn_SUM, { nu, dn } }
-#define _M2A(n, f0, m0, g0, s0, f1, m1, g1, s1, o, nu, dn) [NVE4_HW_SM_QUERY_METRIC_##n] = { { \
-   { f0, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m0, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g0, 0, s0 }, \
-   { f1, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m1, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g1, 0, s1 }, \
-   {}, {}, }, 2, NVC0_COUNTER_OP2_##o, { nu, dn } }
-#define _M2B(n, f0, m0, g0, s0, f1, m1, g1, s1, o, nu, dn) [NVE4_HW_SM_QUERY_METRIC_##n] = { { \
-   { f0, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m0, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g0, 0, s0 }, \
-   { f1, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m1, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g1, 0, s1 }, \
-   {}, {}, }, 2, NVC0_COUNTER_OP2_##o, { nu, dn } }
-#define _M2AB(n, f0, m0, g0, s0, f1, m1, g1, s1, o, nu, dn) [NVE4_HW_SM_QUERY_METRIC_##n] = { { \
-   { f0, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m0, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g0, 0, s0 }, \
-   { f1, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m1, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g1, 0, s1 }, \
-   {}, {}, }, 2, NVC0_COUNTER_OP2_##o, { nu, dn } }
 
 /* NOTES:
  * active_warps: bit 0 alternates btw 0 and 1 for odd nr of warps
  * inst_executed etc.: we only count a single warp scheduler
- * metric-ipXc: we simply multiply by 4 to account for the 4 warp schedulers;
- *  this is inaccurate !
  */
 static const struct nvc0_hw_sm_query_cfg nve4_hw_sm_queries[] =
 {
@@ -276,18 +255,10 @@ static const struct nvc0_hw_sm_query_cfg nve4_hw_sm_queries[] =
    _Q1A(THREADS_LAUNCHED,  0x003f, B6, LAUNCH, 0x398a4188, 1, 1),
    _Q1B(UNCACHED_GLD_TRANSACTIONS, 0x0001, B6, MEM, 0x00000000, 1, 1),
    _Q1A(WARPS_LAUNCHED,    0x0001, B6, LAUNCH, 0x00000004, 1, 1),
-   _M2AB(IPC, 0x3, B6, EXEC, 0x398, 0xffff, LOGOP, WARP, 0x0, DIV_SUM_M0, 10, 1),
-   _M2AB(IPAC, 0x3, B6, EXEC, 0x398, 0x1, B6, WARP, 0x0, AVG_DIV_MM, 10, 1),
-   _M2A(IPEC, 0x3, B6, EXEC, 0x398, 0xe, LOGOP, EXEC, 0x398, AVG_DIV_MM, 10, 1),
-   _M2A(INST_REPLAY_OHEAD, 0x3, B6, ISSUE, 0x104, 0x3, B6, EXEC, 0x398, REL_SUM_MM, 100, 1),
-   _M2B(MP_OCCUPANCY, 0x3f, B6, WARP, 0x31483104, 0x01, B6, WARP, 0x0, AVG_DIV_MM, 200, 64),
-   _M2B(MP_EFFICIENCY, 0x01, B6, WARP, 0x0, 0xffff, LOGOP, WARP, 0x0, AVG_DIV_M0, 100, 1),
 };
 
 #undef _Q1A
 #undef _Q1B
-#undef _M2A
-#undef _M2B
 
 /* === PERFORMANCE MONITORING COUNTERS for NVC0:NVE4 === */
 /* NOTES:
@@ -1376,8 +1347,6 @@ nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
          if (screen->base.class_3d == NVE4_3D_CLASS) {
             info->name = nve4_hw_sm_query_names[id];
             info->query_type = NVE4_HW_SM_QUERY(id);
-            info->max_value.u64 =
-               (id < NVE4_HW_SM_QUERY_METRIC_MP_OCCUPANCY) ? 0 : 100;
             info->group_id = NVC0_HW_SM_QUERY_GROUP;
             return 1;
          } else
