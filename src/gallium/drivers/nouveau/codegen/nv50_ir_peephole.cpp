@@ -858,6 +858,12 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          i->src(0).mod = i->src(t).mod;
          i->setSrc(1, new_ImmediateValue(prog, imm0.reg.data.u32));
          i->src(1).mod = 0;
+      } else
+      if (i->postFactor && i->sType == TYPE_F32) {
+         /* Can't emit a postfactor with an immediate, have to fold it in */
+         i->setSrc(s, new_ImmediateValue(
+                      prog, imm0.reg.data.f32 * exp2f(i->postFactor)));
+         i->postFactor = 0;
       }
       break;
    case OP_MAD:
