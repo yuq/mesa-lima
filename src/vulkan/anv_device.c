@@ -1291,20 +1291,6 @@ void anv_DestroySemaphore(
    stub();
 }
 
-VkResult anv_QueueSignalSemaphore(
-    VkQueue                                     queue,
-    VkSemaphore                                 semaphore)
-{
-   stub_return(VK_UNSUPPORTED);
-}
-
-VkResult anv_QueueWaitSemaphore(
-    VkQueue                                     queue,
-    VkSemaphore                                 semaphore)
-{
-   stub_return(VK_UNSUPPORTED);
-}
-
 // Event functions
 
 VkResult anv_CreateEvent(

@@ -205,13 +205,6 @@ void anv_DestroyPipelineCache(
 {
 }
 
-size_t anv_GetPipelineCacheSize(
-    VkDevice                                    device,
-    VkPipelineCache                             pipelineCache)
-{
-   stub_return(0);
-}
-
 VkResult anv_GetPipelineCacheData(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,

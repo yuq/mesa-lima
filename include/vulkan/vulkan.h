@@ -2195,8 +2195,6 @@ typedef VkResult (VKAPI_PTR *PFN_vkGetFenceStatus)(VkDevice device, VkFence fenc
 typedef VkResult (VKAPI_PTR *PFN_vkWaitForFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences, VkBool32 waitAll, uint64_t timeout);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateSemaphore)(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSemaphore* pSemaphore);
 typedef void (VKAPI_PTR *PFN_vkDestroySemaphore)(VkDevice device, VkSemaphore semaphore, const VkAllocationCallbacks* pAllocator);
-typedef VkResult (VKAPI_PTR *PFN_vkQueueSignalSemaphore)(VkQueue queue, VkSemaphore semaphore);
-typedef VkResult (VKAPI_PTR *PFN_vkQueueWaitSemaphore)(VkQueue queue, VkSemaphore semaphore);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateEvent)(VkDevice device, const VkEventCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkEvent* pEvent);
 typedef void (VKAPI_PTR *PFN_vkDestroyEvent)(VkDevice device, VkEvent event, const VkAllocationCallbacks* pAllocator);
 typedef VkResult (VKAPI_PTR *PFN_vkGetEventStatus)(VkDevice device, VkEvent event);
@@ -2220,7 +2218,6 @@ typedef VkResult (VKAPI_PTR *PFN_vkCreateShader)(VkDevice device, const VkShader
 typedef void (VKAPI_PTR *PFN_vkDestroyShader)(VkDevice device, VkShader shader);
 typedef VkResult (VKAPI_PTR *PFN_vkCreatePipelineCache)(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkPipelineCache* pPipelineCache);
 typedef void (VKAPI_PTR *PFN_vkDestroyPipelineCache)(VkDevice device, VkPipelineCache pipelineCache, const VkAllocationCallbacks* pAllocator);
-typedef size_t (VKAPI_PTR *PFN_vkGetPipelineCacheSize)(VkDevice device, VkPipelineCache pipelineCache);
 typedef VkResult (VKAPI_PTR *PFN_vkGetPipelineCacheData)(VkDevice device, VkPipelineCache pipelineCache, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI_PTR *PFN_vkMergePipelineCaches)(VkDevice device, VkPipelineCache dstCache, uint32_t srcCacheCount, const VkPipelineCache* pSrcCaches);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateGraphicsPipelines)(VkDevice device, VkPipelineCache pipelineCache, uint32_t createInfoCount, const VkGraphicsPipelineCreateInfo* pCreateInfos, const VkAllocationCallbacks* pAllocator, VkPipeline* pPipelines);
@@ -2518,14 +2515,6 @@ VKAPI_ATTR void VKAPI_CALL vkDestroySemaphore(
     VkSemaphore                                 semaphore,
     const VkAllocationCallbacks*                pAllocator);
 
-VKAPI_ATTR VkResult VKAPI_CALL vkQueueSignalSemaphore(
-    VkQueue                                     queue,
-    VkSemaphore                                 semaphore);
-
-VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitSemaphore(
-    VkQueue                                     queue,
-    VkSemaphore                                 semaphore);
-
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateEvent(
     VkDevice                                    device,
     const VkEventCreateInfo*                    pCreateInfo,
@@ -2649,10 +2638,6 @@ VKAPI_ATTR void VKAPI_CALL vkDestroyPipelineCache(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache,
     const VkAllocationCallbacks*                pAllocator);
-
-VKAPI_ATTR size_t VKAPI_CALL vkGetPipelineCacheSize(
-    VkDevice                                    device,
-    VkPipelineCache                             pipelineCache);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkGetPipelineCacheData(
     VkDevice                                    device,
