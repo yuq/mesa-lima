@@ -598,6 +598,9 @@ int anv_gem_get_aperture(int fd, uint64_t *size);
 int anv_gem_handle_to_fd(struct anv_device *device, int gem_handle);
 int anv_gem_fd_to_handle(struct anv_device *device, int fd);
 int anv_gem_userptr(struct anv_device *device, void *mem, size_t size);
+int anv_gem_set_caching(struct anv_device *device, int gem_handle, uint32_t caching);
+int anv_gem_set_domain(struct anv_device *device, int gem_handle,
+                       uint32_t read_domains, uint32_t write_domain);
 
 VkResult anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size);
 

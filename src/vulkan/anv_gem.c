@@ -137,6 +137,32 @@ anv_gem_userptr(struct anv_device *device, void *mem, size_t size)
    return userptr.handle;
 }
 
+int
+anv_gem_set_caching(struct anv_device *device, int gem_handle, uint32_t caching)
+{
+   struct drm_i915_gem_caching gem_caching;
+
+   VG_CLEAR(gem_caching);
+   gem_caching.handle = gem_handle;
+   gem_caching.caching = caching;
+
+   return anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_SET_CACHING, &gem_caching);
+}
+
+int
+anv_gem_set_domain(struct anv_device *device, int gem_handle,
+                   uint32_t read_domains, uint32_t write_domain)
+{
+   struct drm_i915_gem_set_domain gem_set_domain;
+
+   VG_CLEAR(gem_set_domain);
+   gem_set_domain.handle = gem_handle;
+   gem_set_domain.read_domains = read_domains;
+   gem_set_domain.write_domain = write_domain;
+
+   return anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &gem_set_domain);
+}
+
 /**
  * On error, \a timeout_ns holds the remaining time.
  */
