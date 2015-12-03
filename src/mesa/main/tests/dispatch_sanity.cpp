@@ -1937,7 +1937,8 @@ const struct function gles11_functions_possible[] = {
    { "glGetLightxv", 11, -1 },
    { "glGetMaterialfv", 11, _gloffset_GetMaterialfv },
    { "glGetMaterialxv", 11, -1 },
-   { "glGetPointerv", 11, _gloffset_GetPointerv },
+   // We check for the aliased -KHR version in GLES 1.1
+// { "glGetPointerv", 11, _gloffset_GetPointerv },
    { "glGetRenderbufferParameterivOES", 11, -1 },
    { "glGetString", 11, _gloffset_GetString },
    { "glGetTexEnvfv", 11, _gloffset_GetTexEnvfv },
@@ -2049,6 +2050,7 @@ const struct function gles11_functions_possible[] = {
    { "glGetDebugMessageLogKHR", 11, -1 },
    { "glGetObjectLabelKHR", 11, -1 },
    { "glGetObjectPtrLabelKHR", 11, -1 },
+   { "glGetPointervKHR", 11, _gloffset_GetPointerv },
    { "glObjectLabelKHR", 11, -1 },
    { "glObjectPtrLabelKHR", 11, -1 },
 
@@ -2284,6 +2286,7 @@ const struct function gles2_functions_possible[] = {
    { "glGetDebugMessageLogKHR", 20, -1 },
    { "glGetObjectLabelKHR", 20, -1 },
    { "glGetObjectPtrLabelKHR", 20, -1 },
+   { "glGetPointervKHR", 20, -1 },
    { "glObjectLabelKHR", 20, -1 },
    { "glObjectPtrLabelKHR", 20, -1 },
 
