@@ -432,9 +432,10 @@ typedef enum VkPhysicalDeviceType {
 typedef enum VkQueryType {
     VK_QUERY_TYPE_OCCLUSION = 0,
     VK_QUERY_TYPE_PIPELINE_STATISTICS = 1,
+    VK_QUERY_TYPE_TIMESTAMP = 2,
     VK_QUERY_TYPE_BEGIN_RANGE = VK_QUERY_TYPE_OCCLUSION,
-    VK_QUERY_TYPE_END_RANGE = VK_QUERY_TYPE_PIPELINE_STATISTICS,
-    VK_QUERY_TYPE_RANGE_SIZE = (VK_QUERY_TYPE_PIPELINE_STATISTICS - VK_QUERY_TYPE_OCCLUSION + 1),
+    VK_QUERY_TYPE_END_RANGE = VK_QUERY_TYPE_TIMESTAMP,
+    VK_QUERY_TYPE_RANGE_SIZE = (VK_QUERY_TYPE_TIMESTAMP - VK_QUERY_TYPE_OCCLUSION + 1),
     VK_QUERY_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkQueryType;
 
@@ -752,15 +753,6 @@ typedef enum VkIndexType {
     VK_INDEX_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkIndexType;
 
-typedef enum {
-    VK_TIMESTAMP_TYPE_TOP = 0,
-    VK_TIMESTAMP_TYPE_BOTTOM = 1,
-    VK_TIMESTAMP_TYPE_BEGIN_RANGE = VK_TIMESTAMP_TYPE_TOP,
-    VK_TIMESTAMP_TYPE_END_RANGE = VK_TIMESTAMP_TYPE_BOTTOM,
-    VK_TIMESTAMP_TYPE_NUM = (VK_TIMESTAMP_TYPE_BOTTOM - VK_TIMESTAMP_TYPE_TOP + 1),
-    VK_TIMESTAMP_TYPE_MAX_ENUM = 0x7FFFFFFF
-} VkTimestampType;
-
 typedef enum VkSubpassContents {
     VK_SUBPASS_CONTENTS_INLINE = 0,
     VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS = 1,
@@ -874,17 +866,17 @@ typedef VkFlags VkEventCreateFlags;
 typedef VkFlags VkQueryPoolCreateFlags;
 
 typedef enum VkQueryPipelineStatisticFlagBits {
-    VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT = 0x00000001,
-    VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT = 0x00000002,
-    VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT = 0x00000004,
-    VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT = 0x00000008,
-    VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT = 0x00000010,
-    VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT = 0x00000020,
-    VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT = 0x00000040,
-    VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT = 0x00000080,
-    VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT = 0x00000100,
-    VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT = 0x00000200,
-    VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT = 0x00000400,
+    VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT = 0x00000001,
+    VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT = 0x00000002,
+    VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT = 0x00000004,
+    VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_INVOCATIONS_BIT = 0x00000008,
+    VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_PRIMITIVES_BIT = 0x00000010,
+    VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT = 0x00000020,
+    VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT = 0x00000040,
+    VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT = 0x00000080,
+    VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_CONTROL_SHADER_PATCHES_BIT = 0x00000100,
+    VK_QUERY_PIPELINE_STATISTIC_TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT = 0x00000200,
+    VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT = 0x00000400,
 } VkQueryPipelineStatisticFlagBits;
 typedef VkFlags VkQueryPipelineStatisticFlags;
 
@@ -1047,6 +1039,11 @@ typedef enum VkCommandBufferUsageFlagBits {
 } VkCommandBufferUsageFlagBits;
 typedef VkFlags VkCommandBufferUsageFlags;
 
+typedef enum VkQueryControlFlagBits {
+    VK_QUERY_CONTROL_PRECISE_BIT = 0x00000001,
+} VkQueryControlFlagBits;
+typedef VkFlags VkQueryControlFlags;
+
 typedef enum VkCommandBufferResetFlagBits {
     VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT = 0x00000001,
 } VkCommandBufferResetFlagBits;
@@ -1059,11 +1056,6 @@ typedef enum VkStencilFaceFlagBits {
     VK_STENCIL_FRONT_AND_BACK = 0x3,
 } VkStencilFaceFlagBits;
 typedef VkFlags VkStencilFaceFlags;
-
-typedef enum {
-    VK_QUERY_CONTROL_CONSERVATIVE_BIT = 0x00000001,
-} VkQueryControlFlagBits;
-typedef VkFlags VkQueryControlFlags;
 
 typedef void* (VKAPI_PTR *PFN_vkAllocationFunction)(
     void*                                       pUserData,
@@ -2018,6 +2010,9 @@ typedef struct VkCommandBufferBeginInfo {
     VkRenderPass                                renderPass;
     uint32_t                                    subpass;
     VkFramebuffer                               framebuffer;
+    VkBool32                                    occlusionQueryEnable;
+    VkQueryControlFlags                         queryFlags;
+    VkQueryPipelineStatisticFlags               pipelineStatistics;
 } VkCommandBufferBeginInfo;
 
 typedef struct VkBufferCopy {
@@ -2208,7 +2203,7 @@ typedef VkResult (VKAPI_PTR *PFN_vkSetEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI_PTR *PFN_vkResetEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateQueryPool)(VkDevice device, const VkQueryPoolCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkQueryPool* pQueryPool);
 typedef void (VKAPI_PTR *PFN_vkDestroyQueryPool)(VkDevice device, VkQueryPool queryPool, const VkAllocationCallbacks* pAllocator);
-typedef VkResult (VKAPI_PTR *PFN_vkGetQueryPoolResults)(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags);
+typedef VkResult (VKAPI_PTR *PFN_vkGetQueryPoolResults)(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t dataSize, void* pData, VkDeviceSize stride, VkQueryResultFlags flags);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateBuffer)(VkDevice device, const VkBufferCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBuffer* pBuffer);
 typedef void (VKAPI_PTR *PFN_vkDestroyBuffer)(VkDevice device, VkBuffer buffer, const VkAllocationCallbacks* pAllocator);
 typedef VkResult (VKAPI_PTR *PFN_vkCreateBufferView)(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkBufferView* pView);
@@ -2289,7 +2284,7 @@ typedef void (VKAPI_PTR *PFN_vkCmdPipelineBarrier)(VkCommandBuffer commandBuffer
 typedef void (VKAPI_PTR *PFN_vkCmdBeginQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t entry, VkQueryControlFlags flags);
 typedef void (VKAPI_PTR *PFN_vkCmdEndQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t entry);
 typedef void (VKAPI_PTR *PFN_vkCmdResetQueryPool)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
-typedef void (VKAPI_PTR *PFN_vkCmdWriteTimestamp)(VkCommandBuffer commandBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset);
+typedef void (VKAPI_PTR *PFN_vkCmdWriteTimestamp)(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t entry);
 typedef void (VKAPI_PTR *PFN_vkCmdCopyQueryPoolResults)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize stride, VkQueryResultFlags flags);
 typedef void (VKAPI_PTR *PFN_vkCmdPushConstants)(VkCommandBuffer commandBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues);
 typedef void (VKAPI_PTR *PFN_vkCmdBeginRenderPass)(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents);
@@ -2558,8 +2553,9 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetQueryPoolResults(
     VkQueryPool                                 queryPool,
     uint32_t                                    startQuery,
     uint32_t                                    queryCount,
-    size_t*                                     pDataSize,
+    size_t                                      dataSize,
     void*                                       pData,
+    VkDeviceSize                                stride,
     VkQueryResultFlags                          flags);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateBuffer(
@@ -3045,9 +3041,9 @@ VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
 
 VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(
     VkCommandBuffer                             commandBuffer,
-    VkTimestampType                             timestampType,
-    VkBuffer                                    destBuffer,
-    VkDeviceSize                                destOffset);
+    VkPipelineStageFlagBits                     pipelineStage,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    entry);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     VkCommandBuffer                             commandBuffer,

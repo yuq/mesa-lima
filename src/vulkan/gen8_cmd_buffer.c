@@ -854,33 +854,32 @@ void genX(CmdEndQuery)(
 
 void genX(CmdWriteTimestamp)(
     VkCommandBuffer                             commandBuffer,
-    VkTimestampType                             timestampType,
-    VkBuffer                                    destBuffer,
-    VkDeviceSize                                destOffset)
+    VkPipelineStageFlagBits                     pipelineStage,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    entry)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
-   ANV_FROM_HANDLE(anv_buffer, buffer, destBuffer);
-   struct anv_bo *bo = buffer->bo;
+   ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
 
-   switch (timestampType) {
-   case VK_TIMESTAMP_TYPE_TOP:
+   assert(pool->type == VK_QUERY_TYPE_TIMESTAMP);
+
+   switch (pipelineStage) {
+   case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                      .RegisterAddress = TIMESTAMP,
-                     .MemoryAddress = { bo, buffer->offset + destOffset });
+                     .MemoryAddress = { &pool->bo, entry * 8 });
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                      .RegisterAddress = TIMESTAMP + 4,
-                     .MemoryAddress = { bo, buffer->offset + destOffset + 4 });
+                     .MemoryAddress = { &pool->bo, entry * 8 + 4 });
       break;
 
-   case VK_TIMESTAMP_TYPE_BOTTOM:
+   default:
+      /* Everything else is bottom-of-pipe */
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                      .DestinationAddressType = DAT_PPGTT,
                      .PostSyncOperation = WriteTimestamp,
                      .Address = /* FIXME: This is only lower 32 bits */
-                        { bo, buffer->offset + destOffset });
-      break;
-
-   default:
+                        { &pool->bo, entry * 8 });
       break;
    }
 }
