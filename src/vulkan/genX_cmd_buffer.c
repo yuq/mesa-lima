@@ -223,10 +223,11 @@ void genX(CmdPipelineBarrier)(
       }
    }
 
-   for_each_bit(b, dst_flags) {
+   /* The src flags represent how things were used previously.  This is
+    * what we use for doing flushes.
+    */
+   for_each_bit(b, src_flags) {
       switch ((VkAccessFlagBits)(1 << b)) {
-      case VK_ACCESS_HOST_WRITE_BIT:
-         break; /* FIXME: Little-core systems */
       case VK_ACCESS_SHADER_WRITE_BIT:
          cmd.DCFlushEnable = true;
          break;
@@ -241,14 +242,16 @@ void genX(CmdPipelineBarrier)(
          cmd.DepthCacheFlushEnable = true;
          break;
       default:
-         assert(!"Not a write bit");
+         /* Doesn't require a flush */
+         break;
       }
    }
 
-   for_each_bit(b, src_flags) {
+   /* The dst flags represent how things will be used in the fugure.  This
+    * is what we use for doing cache invalidations.
+    */
+   for_each_bit(b, dst_flags) {
       switch ((VkAccessFlagBits)(1 << b)) {
-      case VK_ACCESS_HOST_READ_BIT:
-         break; /* FIXME: Little-core systems */
       case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
       case VK_ACCESS_INDEX_READ_BIT:
       case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
@@ -258,14 +261,10 @@ void genX(CmdPipelineBarrier)(
          cmd.ConstantCacheInvalidationEnable = true;
          /* fallthrough */
       case VK_ACCESS_SHADER_READ_BIT:
-         cmd.DCFlushEnable = true;
          cmd.TextureCacheInvalidationEnable = true;
          break;
       case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:
          cmd.TextureCacheInvalidationEnable = true;
-         break;
-      case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT:
-         cmd.DCFlushEnable = true;
          break;
       case VK_ACCESS_TRANSFER_READ_BIT:
          cmd.TextureCacheInvalidationEnable = true;
@@ -273,7 +272,8 @@ void genX(CmdPipelineBarrier)(
       case VK_ACCESS_MEMORY_READ_BIT:
          break; /* XXX: What is this? */
       default:
-         assert(!"Not a read bit");
+         /* Doesn't require a flush */
+         break;
       }
    }
 
