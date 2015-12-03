@@ -832,7 +832,7 @@ NV50LoweringPreSSA::handleTXB(TexInstruction *i)
    }
    Value *flags = bld.getScratch(1, FILE_FLAGS);
    bld.setPosition(cond, true);
-   bld.mkCvt(OP_CVT, TYPE_U8, flags, TYPE_U32, cond->getDef(0));
+   bld.mkCvt(OP_CVT, TYPE_U8, flags, TYPE_U32, cond->getDef(0))->flagsDef = 0;
 
    Instruction *tex[4];
    for (l = 0; l < 4; ++l) {
