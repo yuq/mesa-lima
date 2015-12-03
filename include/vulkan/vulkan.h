@@ -1688,7 +1688,7 @@ typedef struct VkPipelineRasterizationStateCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPipelineRasterizationStateCreateFlags     flags;
-    VkBool32                                    depthClipEnable;
+    VkBool32                                    depthClampEnable;
     VkBool32                                    rasterizerDiscardEnable;
     VkPolygonMode                               polygonMode;
     VkCullModeFlags                             cullMode;

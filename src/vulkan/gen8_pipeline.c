@@ -135,11 +135,11 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .BackFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
       .ScissorRectangleEnable = !(extra && extra->disable_scissor),
 #if ANV_GEN == 8
-      .ViewportZClipTestEnable = info->depthClipEnable
+      .ViewportZClipTestEnable = true,
 #else
       /* GEN9+ splits ViewportZClipTestEnable into near and far enable bits */
-      .ViewportZFarClipTestEnable = info->depthClipEnable,
-      .ViewportZNearClipTestEnable = info->depthClipEnable,
+      .ViewportZFarClipTestEnable = true,
+      .ViewportZNearClipTestEnable = true,
 #endif
    };
 

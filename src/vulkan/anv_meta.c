@@ -334,7 +334,6 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       },
       .pRasterizationState = &(VkPipelineRasterizationStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-         .depthClipEnable = true,
          .rasterizerDiscardEnable = false,
          .polygonMode = VK_POLYGON_MODE_FILL,
          .cullMode = VK_CULL_MODE_NONE,
