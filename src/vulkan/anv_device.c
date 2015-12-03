@@ -511,7 +511,8 @@ void anv_GetPhysicalDeviceQueueFamilyProperties(
                     VK_QUEUE_COMPUTE_BIT |
                     VK_QUEUE_TRANSFER_BIT,
       .queueCount = 1,
-      .supportsTimestamps = true,
+      .timestampValidBits = 0, /* XXX: Real value here */
+      .minImageTransferGranularity = (VkExtent3D) { 1, 1, 1 },
    };
 }
 

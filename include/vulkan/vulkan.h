@@ -1311,7 +1311,8 @@ typedef struct VkPhysicalDeviceProperties {
 typedef struct VkQueueFamilyProperties {
     VkQueueFlags                                queueFlags;
     uint32_t                                    queueCount;
-    VkBool32                                    supportsTimestamps;
+    uint32_t                                    timestampValidBits;
+    VkExtent3D                                  minImageTransferGranularity;
 } VkQueueFamilyProperties;
 
 typedef struct VkMemoryType {
