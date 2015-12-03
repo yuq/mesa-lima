@@ -707,7 +707,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .StencilWriteEnable = has_stencil,
          .HierarchicalDepthBufferEnable = false,
          .SurfaceFormat = iview->format->depth_format,
-         .SurfacePitch = image->depth_surface.stride - 1,
+         .SurfacePitch = image->depth_surface.isl.row_pitch - 1,
          .SurfaceBaseAddress = {
             .bo = image->bo,
             .offset = image->depth_surface.offset,
@@ -758,7 +758,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
           *    The pitch must be set to 2x the value computed based on width,
           *    as the stencil buffer is stored with two rows interleaved.
           */
-         .SurfacePitch = 2 * image->stencil_surface.stride - 1,
+         .SurfacePitch = 2 * image->stencil_surface.isl.row_pitch - 1,
 
          .SurfaceBaseAddress = {
             .bo = image->bo,

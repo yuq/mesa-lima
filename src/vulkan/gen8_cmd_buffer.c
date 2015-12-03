@@ -659,7 +659,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .StencilWriteEnable = has_stencil,
          .HierarchicalDepthBufferEnable = false,
          .SurfaceFormat = iview->format->depth_format,
-         .SurfacePitch = image->depth_surface.stride - 1,
+         .SurfacePitch = image->depth_surface.isl.row_pitch - 1,
          .SurfaceBaseAddress = {
             .bo = image->bo,
             .offset = image->depth_surface.offset,
@@ -671,7 +671,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .MinimumArrayElement = 0,
          .DepthBufferObjectControlState = GENX(MOCS),
          .RenderTargetViewExtent = 1 - 1,
-         .SurfaceQPitch = image->depth_surface.qpitch >> 2);
+         .SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->depth_surface.isl) >> 2);
    } else {
       /* Even when no depth buffer is present, the hardware requires that
        * 3DSTATE_DEPTH_BUFFER be programmed correctly. The Broadwell PRM says:
@@ -709,13 +709,13 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
           *    The pitch must be set to 2x the value computed based on width,
           *    as the stencil buffer is stored with two rows interleaved.
           */
-         .SurfacePitch = 2 * image->stencil_surface.stride - 1,
+         .SurfacePitch = 2 * image->stencil_surface.isl.row_pitch - 1,
 
          .SurfaceBaseAddress = {
             .bo = image->bo,
             .offset = image->offset + image->stencil_surface.offset,
          },
-         .SurfaceQPitch = image->stencil_surface.stride >> 2);
+         .SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->stencil_surface.isl) >> 2);
    } else {
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER));
    }

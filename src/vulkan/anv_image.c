@@ -147,7 +147,7 @@ anv_image_make_surface(const struct anv_device *dev,
                        const struct anv_format *format,
                        uint64_t *inout_image_size,
                        uint32_t *inout_image_alignment,
-                       struct anv_surface *out_surface)
+                       struct anv_surface *out_anv_surf)
 {
    const VkImageCreateInfo *vk_info = anv_info->vk_info;
 
@@ -157,8 +157,7 @@ anv_image_make_surface(const struct anv_device *dev,
       [VK_IMAGE_TYPE_3D] = ISL_SURF_DIM_3D,
    };
 
-   struct isl_surf isl_surf;
-   isl_surf_init(&dev->isl_dev, &isl_surf,
+   isl_surf_init(&dev->isl_dev, &out_anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
       .format = format->surface_format,
       .width = vk_info->extent.width,
@@ -172,17 +171,12 @@ anv_image_make_surface(const struct anv_device *dev,
       .usage = choose_isl_surf_usage(anv_info, format),
       .tiling_flags = choose_isl_tiling_flags(anv_info));
 
-   *out_surface = (struct anv_surface) {
-      .offset = align_u32(*inout_image_size, isl_surf.alignment),
-      .stride = isl_surf.row_pitch,
-      .tiling = isl_surf.tiling,
-      .qpitch = isl_surf_get_array_pitch_sa_rows(&isl_surf),
-      .h_align = isl_surf_get_lod_alignment_sa(&isl_surf).width,
-      .v_align = isl_surf_get_lod_alignment_sa(&isl_surf).height,
-   };
+   out_anv_surf->offset = align_u32(*inout_image_size,
+                                    out_anv_surf->isl.alignment);
 
-   *inout_image_size = out_surface->offset + isl_surf.size;
-   *inout_image_alignment = MAX(*inout_image_alignment, isl_surf.alignment);
+   *inout_image_size = out_anv_surf->offset + out_anv_surf->isl.size;
+   *inout_image_alignment = MAX(*inout_image_alignment,
+                                out_anv_surf->isl.alignment);
 
    return VK_SUCCESS;
 }
@@ -325,16 +319,9 @@ anv_surface_get_subresource_layout(struct anv_image *image,
    anv_assert(subresource->arrayLayer == 0);
 
    layout->offset = surface->offset;
-   layout->rowPitch = surface->stride;
-
-   /* Anvil's qpitch is in units of rows. Vulkan's depthPitch is in bytes. */
-   layout->depthPitch = surface->qpitch * surface->stride;
-
-   /* FINISHME: We really shouldn't be doing this calculation here */
-   if (image->array_size > 1)
-      layout->size = surface->qpitch * image->array_size;
-   else
-      layout->size = surface->stride * image->extent.height;
+   layout->rowPitch = surface->isl.row_pitch;
+   layout->depthPitch = isl_surf_get_array_pitch(&surface->isl);
+   layout->size = surface->isl.size;
 }
 
 void anv_GetImageSubresourceLayout(

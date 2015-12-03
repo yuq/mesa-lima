@@ -1372,30 +1372,15 @@ struct anv_image_view_info
 anv_image_view_info_for_vk_image_view_type(VkImageViewType type);
 
 /**
- * A proxy for the color surfaces, depth surfaces, and stencil surfaces.
+ * Subsurface of an anv_image.
  */
 struct anv_surface {
+   struct isl_surf isl;
+
    /**
     * Offset from VkImage's base address, as bound by vkBindImageMemory().
     */
    uint32_t offset;
-
-   uint32_t stride; /**< RENDER_SURFACE_STATE.SurfacePitch */
-   uint16_t qpitch; /**< RENDER_SURFACE_STATE.QPitch */
-
-   /**
-    * \name Alignment of miptree images, in units of pixels.
-    *
-    * These fields contain the real alignment values, not the values to be
-    * given to the GPU.  For example, if h_align is 4, then program the GPU
-    * with HALIGN_4.
-    * \{
-    */
-   uint8_t h_align; /**< RENDER_SURFACE_STATE.SurfaceHorizontalAlignment */
-   uint8_t v_align; /**< RENDER_SURFACE_STATE.SurfaceVerticalAlignment */
-   /** \} */
-
-   enum isl_tiling tiling;
 };
 
 struct anv_image {

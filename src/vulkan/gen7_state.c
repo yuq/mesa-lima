@@ -238,18 +238,21 @@ genX(image_view_init)(struct anv_image_view *iview,
       depth = image->extent.depth;
    }
 
+   const struct isl_extent3d lod_align_sa =
+      isl_surf_get_lod_alignment_sa(&surface->isl);
+
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = image->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format->surface_format,
-      .SurfaceVerticalAlignment = anv_valign[surface->v_align],
-      .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
+      .SurfaceVerticalAlignment = anv_valign[lod_align_sa.height],
+      .SurfaceHorizontalAlignment = anv_halign[lod_align_sa.width],
 
       /* From bspec (DevSNB, DevIVB): "Set Tile Walk to TILEWALK_XMAJOR if
        * Tiled Surface is False."
        */
-      .TiledSurface = surface->tiling != ISL_TILING_LINEAR,
-      .TileWalk = surface->tiling == ISL_TILING_Y0 ?
+      .TiledSurface = surface->isl.tiling != ISL_TILING_LINEAR,
+      .TileWalk = surface->isl.tiling == ISL_TILING_Y0 ?
                   TILEWALK_YMAJOR : TILEWALK_XMAJOR,
 
       .VerticalLineStride = 0,
@@ -260,7 +263,7 @@ genX(image_view_init)(struct anv_image_view *iview,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
       .Depth = depth - 1,
-      .SurfacePitch = surface->stride - 1,
+      .SurfacePitch = surface->isl.row_pitch - 1,
       .MinimumArrayElement = range->baseArrayLayer,
       .NumberofMultisamples = MULTISAMPLECOUNT_1,
       .XOffset = 0,

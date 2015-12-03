@@ -388,7 +388,7 @@ x11_surface_create_swapchain(struct anv_wsi_surface *wsi_surface,
                           memory_h, 0);
 
       int ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
-                                   surface->stride, I915_TILING_X);
+                                   surface->isl.row_pitch, I915_TILING_X);
       if (ret) {
          /* FINISHME: Choose a better error. */
          result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
@@ -415,7 +415,7 @@ x11_surface_create_swapchain(struct anv_wsi_surface *wsi_surface,
                                              image->size,
                                              pCreateInfo->imageExtent.width,
                                              pCreateInfo->imageExtent.height,
-                                             surface->stride,
+                                             surface->isl.row_pitch,
                                              depth, bpp, fd);
 
       chain->images[i].image = image;

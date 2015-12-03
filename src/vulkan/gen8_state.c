@@ -183,13 +183,16 @@ genX(image_view_init)(struct anv_image_view *iview,
       [ISL_TILING_W]       = WMAJOR,
    };
 
+   const struct isl_extent3d lod_align_sa =
+      isl_surf_get_lod_alignment_sa(&surface->isl);
+
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = image->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
-      .SurfaceVerticalAlignment = anv_valign[surface->v_align],
-      .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
-      .TileMode = isl_to_gen_tiling[surface->tiling],
+      .SurfaceVerticalAlignment = anv_valign[lod_align_sa.height],
+      .SurfaceHorizontalAlignment = anv_halign[lod_align_sa.width],
+      .TileMode = isl_to_gen_tiling[surface->isl.tiling],
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,
@@ -202,11 +205,11 @@ genX(image_view_init)(struct anv_image_view *iview,
        */
       .BaseMipLevel = 0.0,
 
-      .SurfaceQPitch = surface->qpitch >> 2,
+      .SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&surface->isl) >> 2,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
       .Depth = depth - 1,
-      .SurfacePitch = surface->stride - 1,
+      .SurfacePitch = surface->isl.row_pitch - 1,
       .RenderTargetViewExtent = rt_view_extent - 1,
       .MinimumArrayElement = range->baseArrayLayer,
       .NumberofMultisamples = MULTISAMPLECOUNT_1,

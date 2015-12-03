@@ -678,7 +678,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
 
    int ret = anv_gem_set_tiling(chain->base.device,
                                 image->memory->bo.gem_handle,
-                                surface->stride, I915_TILING_X);
+                                surface->isl.row_pitch, I915_TILING_X);
    if (ret) {
       /* FINISHME: Choose a better error. */
       result = vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
@@ -699,7 +699,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
                                               chain->extent.height,
                                               chain->drm_format,
                                               surface->offset,
-                                              surface->stride,
+                                              surface->isl.row_pitch,
                                               0, 0, 0, 0 /* unused */);
    wl_display_roundtrip(chain->display->display);
    close(fd);
