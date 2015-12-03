@@ -3334,11 +3334,14 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
          /* Overwrite the destination without and with execution masking to
           * find out which of the channels is active.
           */
+         brw_push_insn_state(p);
+         brw_set_default_exec_size(p, BRW_EXECUTE_4);
          brw_MOV(p, brw_writemask(vec4(dst), WRITEMASK_X),
                  brw_imm_ud(1));
 
          inst = brw_MOV(p, brw_writemask(vec4(dst), WRITEMASK_X),
                         brw_imm_ud(0));
+         brw_pop_insn_state(p);
          brw_inst_set_mask_control(devinfo, inst, BRW_MASK_ENABLE);
       }
    }
