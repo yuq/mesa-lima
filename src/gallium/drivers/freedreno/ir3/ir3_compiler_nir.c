@@ -236,8 +236,6 @@ compile_init(struct ir3_compiler *compiler,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
 	ctx->var_ht = _mesa_hash_table_create(ctx,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
-	ctx->addr_ht = _mesa_hash_table_create(ctx,
-			_mesa_hash_pointer, _mesa_key_pointer_equal);
 	ctx->block_ht = _mesa_hash_table_create(ctx,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
 
@@ -583,12 +581,17 @@ static struct ir3_instruction *
 get_addr(struct ir3_compile *ctx, struct ir3_instruction *src)
 {
 	struct ir3_instruction *addr;
-	struct hash_entry *entry;
-	entry = _mesa_hash_table_search(ctx->addr_ht, src);
-	if (entry)
-		return entry->data;
 
-	/* TODO do we need to cache per block? */
+	if (!ctx->addr_ht) {
+		ctx->addr_ht = _mesa_hash_table_create(ctx,
+				_mesa_hash_pointer, _mesa_key_pointer_equal);
+	} else {
+		struct hash_entry *entry;
+		entry = _mesa_hash_table_search(ctx->addr_ht, src);
+		if (entry)
+			return entry->data;
+	}
+
 	addr = create_addr(ctx->block, src);
 	_mesa_hash_table_insert(ctx->addr_ht, src, addr);
 
@@ -1979,6 +1982,10 @@ emit_block(struct ir3_compile *ctx, nir_block *nblock)
 
 	ctx->block = block;
 	list_addtail(&block->node, &ctx->ir->block_list);
+
+	/* re-emit addr register in each block if needed: */
+	_mesa_hash_table_destroy(ctx->addr_ht, NULL);
+	ctx->addr_ht = NULL;
 
 	nir_foreach_instr(nblock, instr) {
 		emit_instr(ctx, instr);
