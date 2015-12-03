@@ -329,12 +329,12 @@ struct ir3_nir_block_data {
 static struct ir3_nir_block_data *
 get_block_data(struct ir3_compile *ctx, struct ir3_block *block)
 {
-	if (!block->bd) {
+	if (!block->data) {
 		struct ir3_nir_block_data *bd = ralloc_size(ctx, sizeof(*bd) +
 				((ctx->num_arrays + 1) * sizeof(bd->arrs[0])));
-		block->bd = bd;
+		block->data = bd;
 	}
-	return block->bd;
+	return block->data;
 }
 
 static void
@@ -397,7 +397,7 @@ get_var(struct ir3_compile *ctx, nir_variable *var)
 				pred_block && (pred_block->predecessors->entries < 2) && !defn;
 				pred_block = nir_block_pred(pred_block)) {
 			struct ir3_block *pblock = get_block(ctx, pred_block);
-			struct ir3_nir_block_data *pbd = pblock->bd;
+			struct ir3_nir_block_data *pbd = pblock->data;
 			if (!pbd)
 				continue;
 			defn = pbd->arrs[arr->aid];
@@ -452,7 +452,7 @@ add_array_phi_srcs(struct ir3_compile *ctx, nir_block *nblock,
 	BITSET_SET(visited, nblock->index);
 
 	block = get_block(ctx, nblock);
-	bd = block->bd;
+	bd = block->data;
 
 	if (bd && bd->arrs[av->aid]) {
 		struct ir3_array_value *dav = bd->arrs[av->aid];
@@ -472,7 +472,7 @@ add_array_phi_srcs(struct ir3_compile *ctx, nir_block *nblock,
 static void
 resolve_array_phis(struct ir3_compile *ctx, struct ir3_block *block)
 {
-	struct ir3_nir_block_data *bd = block->bd;
+	struct ir3_nir_block_data *bd = block->data;
 	unsigned bitset_words = BITSET_WORDS(ctx->impl->num_blocks);
 
 	if (!bd)

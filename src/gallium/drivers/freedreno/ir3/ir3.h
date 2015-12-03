@@ -401,7 +401,7 @@ struct ir3_block {
 	/* used for per-pass extra block data.  Mainly used right
 	 * now in RA step to track livein/liveout.
 	 */
-	void *bd;
+	void *data;
 
 #ifdef DEBUG
 	uint32_t serialno;

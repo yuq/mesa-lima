@@ -590,7 +590,7 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 	bd->livein  = rzalloc_array(bd, BITSET_WORD, bitset_words);
 	bd->liveout = rzalloc_array(bd, BITSET_WORD, bitset_words);
 
-	block->bd = bd;
+	block->data = bd;
 
 	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 		struct ir3_instruction *src;
@@ -692,7 +692,7 @@ ra_compute_livein_liveout(struct ir3_ra_ctx *ctx)
 	bool progress = false;
 
 	list_for_each_entry (struct ir3_block, block, &ctx->ir->block_list, node) {
-		struct ir3_ra_block_data *bd = block->bd;
+		struct ir3_ra_block_data *bd = block->data;
 
 		/* update livein: */
 		for (unsigned i = 0; i < bitset_words; i++) {
@@ -713,7 +713,7 @@ ra_compute_livein_liveout(struct ir3_ra_ctx *ctx)
 			if (!succ)
 				continue;
 
-			succ_bd = succ->bd;
+			succ_bd = succ->data;
 
 			for (unsigned i = 0; i < bitset_words; i++) {
 				BITSET_WORD new_liveout =
@@ -749,7 +749,7 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 	/* extend start/end ranges based on livein/liveout info from cfg: */
 	unsigned bitset_words = BITSET_WORDS(ctx->alloc_count);
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
-		struct ir3_ra_block_data *bd = block->bd;
+		struct ir3_ra_block_data *bd = block->data;
 
 		for (unsigned i = 0; i < bitset_words; i++) {
 			if (BITSET_TEST(bd->livein, i)) {
