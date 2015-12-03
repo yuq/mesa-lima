@@ -2660,7 +2660,7 @@ NV50PostRaConstantFolding::visit(BasicBlock *bb)
             break;
 
          def = i->getSrc(1)->getInsn();
-         if (def->op == OP_MOV && def->src(0).getFile() == FILE_IMMEDIATE) {
+         if (def && def->op == OP_MOV && def->src(0).getFile() == FILE_IMMEDIATE) {
             vtmp = i->getSrc(1);
             i->setSrc(1, def->getSrc(0));
 
