@@ -670,6 +670,34 @@ ConstantFolding::expr(Instruction *i,
       res.data.u32 = ((a->data.u32 << offset) & bitmask) | (c->data.u32 & ~bitmask);
       break;
    }
+   case OP_MAD:
+   case OP_FMA: {
+      switch (i->dType) {
+      case TYPE_F32:
+         res.data.f32 = a->data.f32 * b->data.f32 * exp2f(i->postFactor) +
+            c->data.f32;
+         break;
+      case TYPE_F64:
+         res.data.f64 = a->data.f64 * b->data.f64 + c->data.f64;
+         break;
+      case TYPE_S32:
+         if (i->subOp == NV50_IR_SUBOP_MUL_HIGH) {
+            res.data.s32 = ((int64_t)a->data.s32 * b->data.s32 >> 32) + c->data.s32;
+            break;
+         }
+         /* fallthrough */
+      case TYPE_U32:
+         if (i->subOp == NV50_IR_SUBOP_MUL_HIGH) {
+            res.data.u32 = ((uint64_t)a->data.u32 * b->data.u32 >> 32) + c->data.u32;
+            break;
+         }
+         res.data.u32 = a->data.u32 * b->data.u32 + c->data.u32;
+         break;
+      default:
+         return;
+      }
+      break;
+   }
    default:
       return;
    }
@@ -684,6 +712,8 @@ ConstantFolding::expr(Instruction *i,
    i->setSrc(2, NULL);
 
    i->getSrc(0)->reg.data = res.data;
+   i->getSrc(0)->reg.type = i->dType;
+   i->getSrc(0)->reg.size = typeSizeof(i->dType);
 
    i->op = OP_MOV;
 }
