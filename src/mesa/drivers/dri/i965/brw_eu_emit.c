@@ -1229,8 +1229,9 @@ brw_F16TO32(struct brw_codegen *p, struct brw_reg dst, struct brw_reg src)
 void brw_NOP(struct brw_codegen *p)
 {
    brw_inst *insn = next_insn(p, BRW_OPCODE_NOP);
-   brw_set_dest(p, insn, retype(brw_vec4_grf(0,0), BRW_REGISTER_TYPE_UD));
-   brw_set_src0(p, insn, retype(brw_vec4_grf(0,0), BRW_REGISTER_TYPE_UD));
+   brw_inst_set_exec_size(p->devinfo, insn, BRW_EXECUTE_1);
+   brw_set_dest(p, insn, retype(brw_vec1_grf(0,0), BRW_REGISTER_TYPE_UD));
+   brw_set_src0(p, insn, retype(brw_vec1_grf(0,0), BRW_REGISTER_TYPE_UD));
    brw_set_src1(p, insn, brw_imm_ud(0x0));
 }
 
