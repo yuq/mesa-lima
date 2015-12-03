@@ -30,6 +30,12 @@ vulkan_include_HEADERS =				\
 	$(top_srcdir)/include/vulkan/vk_ext_khr_swapchain.h	\
 	$(top_srcdir)/include/vulkan/vk_ext_khr_device_swapchain.h
 
+# Used when generating entrypoints to filter out unwanted extensions
+VULKAN_ENTRYPOINT_CPPFLAGS = \
+   -I$(top_srcdir)/include/vulkan \
+   -DVK_USE_PLATFORM_XCB_KHR \
+   -DVK_USE_PLATFORM_WAYLAND_KHR
+
 lib_LTLIBRARIES = libvulkan.la
 
 check_LTLIBRARIES = libvulkan-test.la
@@ -146,10 +152,10 @@ libvulkan_la_SOURCES =                                  \
 	anv_gem.c
 
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
-	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< header > $@
+	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) - | $(PYTHON2) $< header > $@
 
 anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
-	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< code > $@
+	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) - | $(PYTHON2) $< code > $@
 
 isl_format_layout.c: isl_format_layout_gen.bash \
                      isl_format_layout.csv
