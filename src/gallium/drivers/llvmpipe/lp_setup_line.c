@@ -311,6 +311,7 @@ try_setup_line( struct lp_setup_context *setup,
    float y2diff;
    float dx, dy;
    float area;
+   const float (*pv)[4];
 
    boolean draw_start;
    boolean draw_end;
@@ -320,20 +321,26 @@ try_setup_line( struct lp_setup_context *setup,
    if (0)
       print_line(setup, v1, v2);
 
+   if (setup->flatshade_first) {
+      pv = v1;
+   }
+   else {
+      pv = v2;
+   }
+   if (setup->viewport_index_slot > 0) {
+      unsigned *udata = (unsigned*)pv[setup->viewport_index_slot];
+      viewport_index = lp_clamp_viewport_idx(*udata);
+   }
+   if (setup->layer_slot > 0) {
+      layer = *(unsigned*)pv[setup->layer_slot];
+      layer = MIN2(layer, scene->fb_max_layer);
+   }
+
    if (setup->scissor_test) {
       nr_planes = 8;
-      if (setup->viewport_index_slot > 0) {
-         unsigned *udata = (unsigned*)v1[setup->viewport_index_slot];
-         viewport_index = lp_clamp_viewport_idx(*udata);
-      }
    }
    else {
       nr_planes = 4;
-   }
-
-   if (setup->layer_slot > 0) {
-      layer = *(unsigned*)v1[setup->layer_slot];
-      layer = MIN2(layer, scene->fb_max_layer);
    }
 
    dx = v1[0][0] - v2[0][0];
