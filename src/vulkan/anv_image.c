@@ -417,7 +417,9 @@ anv_surface_get_subresource_layout(struct anv_image *image,
 
    layout->offset = surface->offset;
    layout->rowPitch = surface->stride;
-   layout->depthPitch = surface->qpitch;
+
+   /* Anvil's qpitch is in units of rows. Vulkan's depthPitch is in bytes. */
+   layout->depthPitch = surface->qpitch * surface->stride;
 
    /* FINISHME: We really shouldn't be doing this calculation here */
    if (image->array_size > 1)
