@@ -202,8 +202,20 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
    /* Generators should set a default exec_size of either 8 (SIMD4x2 or SIMD8)
     * or 16 (SIMD16), as that's normally correct.  However, when dealing with
     * small registers, we automatically reduce it to match the register size.
+    *
+    * In platforms that support fp64 we can emit instructions with a width of
+    * 4 that need two SIMD8 registers and an exec_size of 8 or 16. In these
+    * cases we need to make sure that these instructions have their exec sizes
+    * set properly when they are emitted and we can't rely on this code to fix
+    * it.
     */
-   if (dest.width < BRW_EXECUTE_8)
+   bool fix_exec_size;
+   if (devinfo->gen >= 6)
+      fix_exec_size = dest.width < BRW_EXECUTE_4;
+   else
+      fix_exec_size = dest.width < BRW_EXECUTE_8;
+
+   if (fix_exec_size)
       brw_inst_set_exec_size(devinfo, inst, dest.width);
 }
 
