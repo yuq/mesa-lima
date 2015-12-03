@@ -77,35 +77,19 @@ void anv_DestroyShaderModule(
 
 #define SPIR_V_MAGIC_NUMBER 0x07230203
 
-static const gl_shader_stage vk_shader_stage_to_mesa_stage[] = {
-   [VK_SHADER_STAGE_VERTEX] = MESA_SHADER_VERTEX,
-   [VK_SHADER_STAGE_TESS_CONTROL] = -1,
-   [VK_SHADER_STAGE_TESS_EVALUATION] = -1,
-   [VK_SHADER_STAGE_GEOMETRY] = MESA_SHADER_GEOMETRY,
-   [VK_SHADER_STAGE_FRAGMENT] = MESA_SHADER_FRAGMENT,
-   [VK_SHADER_STAGE_COMPUTE] = MESA_SHADER_COMPUTE,
-};
-
-bool
-anv_is_scalar_shader_stage(const struct brw_compiler *compiler,
-                           VkShaderStage stage)
-{
-   return compiler->scalar_stage[vk_shader_stage_to_mesa_stage[stage]];
-}
-
 /* Eventually, this will become part of anv_CreateShader.  Unfortunately,
  * we can't do that yet because we don't have the ability to copy nir.
  */
 static nir_shader *
 anv_shader_compile_to_nir(struct anv_device *device,
                           struct anv_shader_module *module,
-                          const char *entrypoint_name, VkShaderStage vk_stage)
+                          const char *entrypoint_name,
+                          gl_shader_stage stage)
 {
    if (strcmp(entrypoint_name, "main") != 0) {
       anv_finishme("Multiple shaders per module not really supported");
    }
 
-   gl_shader_stage stage = vk_shader_stage_to_mesa_stage[vk_stage];
    const struct brw_compiler *compiler =
       device->instance->physicalDevice.compiler;
    const nir_shader_compiler_options *nir_options =
@@ -304,7 +288,7 @@ static nir_shader *
 anv_pipeline_compile(struct anv_pipeline *pipeline,
                      struct anv_shader_module *module,
                      const char *entrypoint,
-                     VkShaderStage stage,
+                     gl_shader_stage stage,
                      struct brw_stage_prog_data *prog_data)
 {
    const struct brw_compiler *compiler =
@@ -315,7 +299,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (nir == NULL)
       return NULL;
 
-   anv_nir_lower_push_constants(nir, anv_is_scalar_shader_stage(compiler, stage));
+   anv_nir_lower_push_constants(nir, compiler->scalar_stage[stage]);
 
    /* Figure out the number of parameters */
    prog_data->nr_params = 0;
@@ -358,7 +342,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    /* All binding table offsets provided by apply_pipeline_layout() are
     * relative to the start of the bindint table (plus MAX_RTS for VS).
     */
-   unsigned bias = stage == VK_SHADER_STAGE_FRAGMENT ? MAX_RTS : 0;
+   unsigned bias = stage == MESA_SHADER_FRAGMENT ? MAX_RTS : 0;
    prog_data->binding_table.size_bytes = 0;
    prog_data->binding_table.texture_start = bias;
    prog_data->binding_table.ubo_start = bias;
@@ -367,7 +351,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
 
    /* Finish the optimization and compilation process */
    nir = brw_lower_nir(nir, &pipeline->device->info, NULL,
-                       anv_is_scalar_shader_stage(compiler, stage));
+                       compiler->scalar_stage[stage]);
 
    /* nir_lower_io will only handle the push constants; we need to set this
     * to the full number of possible uniforms.
@@ -392,21 +376,21 @@ anv_pipeline_upload_kernel(struct anv_pipeline *pipeline,
 }
 static void
 anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
-                                VkShaderStage stage,
+                                gl_shader_stage stage,
                                 struct brw_stage_prog_data *prog_data)
 {
    struct brw_device_info *devinfo = &pipeline->device->info;
    uint32_t max_threads[] = {
-      [VK_SHADER_STAGE_VERTEX]                  = devinfo->max_vs_threads,
-      [VK_SHADER_STAGE_TESS_CONTROL]            = 0,
-      [VK_SHADER_STAGE_TESS_EVALUATION]         = 0,
-      [VK_SHADER_STAGE_GEOMETRY]                = devinfo->max_gs_threads,
-      [VK_SHADER_STAGE_FRAGMENT]                = devinfo->max_wm_threads,
-      [VK_SHADER_STAGE_COMPUTE]                 = devinfo->max_cs_threads,
+      [MESA_SHADER_VERTEX]                  = devinfo->max_vs_threads,
+      [MESA_SHADER_TESS_CTRL]               = 0,
+      [MESA_SHADER_TESS_EVAL]               = 0,
+      [MESA_SHADER_GEOMETRY]                = devinfo->max_gs_threads,
+      [MESA_SHADER_FRAGMENT]                = devinfo->max_wm_threads,
+      [MESA_SHADER_COMPUTE]                 = devinfo->max_cs_threads,
    };
 
    pipeline->prog_data[stage] = prog_data;
-   pipeline->active_stages |= 1 << stage;
+   pipeline->active_stages |= mesa_to_vk_shader_stage(stage);
    pipeline->scratch_start[stage] = pipeline->total_scratch;
    pipeline->total_scratch =
       align_u32(pipeline->total_scratch, 1024) +
@@ -431,7 +415,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
    memset(prog_data, 0, sizeof(*prog_data));
 
    nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          VK_SHADER_STAGE_VERTEX,
+                                          MESA_SHADER_VERTEX,
                                           &prog_data->base.base);
    if (nir == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -470,7 +454,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 
    ralloc_free(mem_ctx);
 
-   anv_pipeline_add_compiled_stage(pipeline, VK_SHADER_STAGE_VERTEX,
+   anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_VERTEX,
                                    &prog_data->base.base);
 
    return VK_SUCCESS;
@@ -494,7 +478,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
    memset(prog_data, 0, sizeof(*prog_data));
 
    nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          VK_SHADER_STAGE_GEOMETRY,
+                                          MESA_SHADER_GEOMETRY,
                                           &prog_data->base.base);
    if (nir == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -525,7 +509,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
    ralloc_free(mem_ctx);
 
-   anv_pipeline_add_compiled_stage(pipeline, VK_SHADER_STAGE_GEOMETRY,
+   anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_GEOMETRY,
                                    &prog_data->base.base);
 
    return VK_SUCCESS;
@@ -554,7 +538,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    prog_data->binding_table.render_target_start = 0;
 
    nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          VK_SHADER_STAGE_FRAGMENT,
+                                          MESA_SHADER_FRAGMENT,
                                           &prog_data->base);
    if (nir == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -602,7 +586,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
    ralloc_free(mem_ctx);
 
-   anv_pipeline_add_compiled_stage(pipeline, VK_SHADER_STAGE_FRAGMENT,
+   anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_FRAGMENT,
                                    &prog_data->base);
 
    return VK_SUCCESS;
@@ -626,7 +610,7 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
    memset(prog_data, 0, sizeof(*prog_data));
 
    nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          VK_SHADER_STAGE_COMPUTE,
+                                          MESA_SHADER_COMPUTE,
                                           &prog_data->base);
    if (nir == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -649,7 +633,7 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
                                                   shader_code, code_size);
    ralloc_free(mem_ctx);
 
-   anv_pipeline_add_compiled_stage(pipeline, VK_SHADER_STAGE_COMPUTE,
+   anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_COMPUTE,
                                    &prog_data->base);
 
    return VK_SUCCESS;
@@ -916,8 +900,8 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
 
    for (uint32_t i = 0; i < info->stageCount; ++i) {
       switch (info->pStages[i].stage) {
-      case VK_SHADER_STAGE_TESS_CONTROL:
-      case VK_SHADER_STAGE_TESS_EVALUATION:
+      case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+      case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
          assert(info->pTessellationState);
          break;
       default:
@@ -983,13 +967,13 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
       const char *entrypoint = pCreateInfo->pStages[i].pName;
 
       switch (pCreateInfo->pStages[i].stage) {
-      case VK_SHADER_STAGE_VERTEX:
+      case VK_SHADER_STAGE_VERTEX_BIT:
          anv_pipeline_compile_vs(pipeline, pCreateInfo, module, entrypoint);
          break;
-      case VK_SHADER_STAGE_GEOMETRY:
+      case VK_SHADER_STAGE_GEOMETRY_BIT:
          anv_pipeline_compile_gs(pipeline, pCreateInfo, module, entrypoint);
          break;
-      case VK_SHADER_STAGE_FRAGMENT:
+      case VK_SHADER_STAGE_FRAGMENT_BIT:
          anv_pipeline_compile_fs(pipeline, pCreateInfo, module, entrypoint);
          break;
       default:

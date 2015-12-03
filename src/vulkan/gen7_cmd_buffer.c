@@ -36,18 +36,17 @@ static void
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
    static const uint32_t push_constant_opcodes[] = {
-      [VK_SHADER_STAGE_VERTEX]                  = 21,
-      [VK_SHADER_STAGE_TESS_CONTROL]            = 25, /* HS */
-      [VK_SHADER_STAGE_TESS_EVALUATION]         = 26, /* DS */
-      [VK_SHADER_STAGE_GEOMETRY]                = 22,
-      [VK_SHADER_STAGE_FRAGMENT]                = 23,
-      [VK_SHADER_STAGE_COMPUTE]                 = 0,
+      [MESA_SHADER_VERTEX]                      = 21,
+      [MESA_SHADER_TESS_CTRL]                   = 25, /* HS */
+      [MESA_SHADER_TESS_EVAL]                   = 26, /* DS */
+      [MESA_SHADER_GEOMETRY]                    = 22,
+      [MESA_SHADER_FRAGMENT]                    = 23,
+      [MESA_SHADER_COMPUTE]                     = 0,
    };
 
-   VkShaderStage stage;
    VkShaderStageFlags flushed = 0;
 
-   for_each_bit(stage, cmd_buffer->state.push_constants_dirty) {
+   anv_foreach_stage(stage, cmd_buffer->state.push_constants_dirty) {
       struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
 
       if (state.offset == 0)
@@ -60,14 +59,14 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
                         .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
                      });
 
-      flushed |= 1 << stage;
+      flushed |= mesa_to_vk_shader_stage(stage);
    }
 
    cmd_buffer->state.push_constants_dirty &= ~flushed;
 }
 
 static VkResult
-flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, VkShaderStage stage)
+flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, gl_shader_stage stage)
 {
    struct anv_state surfaces = { 0, }, samplers = { 0, };
    VkResult result;
@@ -80,21 +79,21 @@ flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, VkShaderStage stage)
       return result;
 
    static const uint32_t sampler_state_opcodes[] = {
-      [VK_SHADER_STAGE_VERTEX]                  = 43,
-      [VK_SHADER_STAGE_TESS_CONTROL]            = 44, /* HS */
-      [VK_SHADER_STAGE_TESS_EVALUATION]         = 45, /* DS */
-      [VK_SHADER_STAGE_GEOMETRY]                = 46,
-      [VK_SHADER_STAGE_FRAGMENT]                = 47,
-      [VK_SHADER_STAGE_COMPUTE]                 = 0,
+      [MESA_SHADER_VERTEX]                      = 43,
+      [MESA_SHADER_TESS_CTRL]                   = 44, /* HS */
+      [MESA_SHADER_TESS_EVAL]                   = 45, /* DS */
+      [MESA_SHADER_GEOMETRY]                    = 46,
+      [MESA_SHADER_FRAGMENT]                    = 47,
+      [MESA_SHADER_COMPUTE]                     = 0,
    };
 
    static const uint32_t binding_table_opcodes[] = {
-      [VK_SHADER_STAGE_VERTEX]                  = 38,
-      [VK_SHADER_STAGE_TESS_CONTROL]            = 39,
-      [VK_SHADER_STAGE_TESS_EVALUATION]         = 40,
-      [VK_SHADER_STAGE_GEOMETRY]                = 41,
-      [VK_SHADER_STAGE_FRAGMENT]                = 42,
-      [VK_SHADER_STAGE_COMPUTE]                 = 0,
+      [MESA_SHADER_VERTEX]                      = 38,
+      [MESA_SHADER_TESS_CTRL]                   = 39,
+      [MESA_SHADER_TESS_EVAL]                   = 40,
+      [MESA_SHADER_GEOMETRY]                    = 41,
+      [MESA_SHADER_FRAGMENT]                    = 42,
+      [MESA_SHADER_COMPUTE]                     = 0,
    };
 
    if (samplers.alloc_size > 0) {
@@ -117,12 +116,11 @@ flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, VkShaderStage stage)
 GENX_FUNC(GEN7, GEN7) void
 genX(cmd_buffer_flush_descriptor_sets)(struct anv_cmd_buffer *cmd_buffer)
 {
-   VkShaderStage s;
    VkShaderStageFlags dirty = cmd_buffer->state.descriptors_dirty &
                               cmd_buffer->state.pipeline->active_stages;
 
    VkResult result = VK_SUCCESS;
-   for_each_bit(s, dirty) {
+   anv_foreach_stage(s, dirty) {
       result = flush_descriptor_set(cmd_buffer, s);
       if (result != VK_SUCCESS)
          break;
@@ -140,7 +138,7 @@ genX(cmd_buffer_flush_descriptor_sets)(struct anv_cmd_buffer *cmd_buffer)
       anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
       /* Re-emit all active binding tables */
-      for_each_bit(s, cmd_buffer->state.pipeline->active_stages) {
+      anv_foreach_stage(s, cmd_buffer->state.pipeline->active_stages) {
          result = flush_descriptor_set(cmd_buffer, s);
 
          /* It had better succeed this time */
@@ -260,11 +258,11 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    VkResult result;
 
    result = anv_cmd_buffer_emit_samplers(cmd_buffer,
-                                         VK_SHADER_STAGE_COMPUTE, &samplers);
+                                         MESA_SHADER_COMPUTE, &samplers);
    if (result != VK_SUCCESS)
       return result;
    result = anv_cmd_buffer_emit_binding_table(cmd_buffer,
-                                               VK_SHADER_STAGE_COMPUTE, &surfaces);
+                                              MESA_SHADER_COMPUTE, &surfaces);
    if (result != VK_SUCCESS)
       return result;
 
@@ -310,7 +308,7 @@ cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
       /* FIXME: figure out descriptors for gen7 */
       result = flush_compute_descriptor_set(cmd_buffer);
       assert(result == VK_SUCCESS);
-      cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE;
+      cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE_BIT;
    }
 
    cmd_buffer->state.compute_dirty = 0;

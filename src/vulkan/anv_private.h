@@ -489,9 +489,6 @@ struct anv_physical_device {
     struct isl_device                           isl_dev;
 };
 
-bool anv_is_scalar_shader_stage(const struct brw_compiler *compiler,
-                                VkShaderStage stage);
-
 struct anv_instance {
     VK_LOADER_DATA                              _loader_data;
 
@@ -772,7 +769,7 @@ struct anv_descriptor_set_binding_layout {
 
       /* Index into the sampler table for the associated sampler */
       int16_t sampler_index;
-   } stage[VK_SHADER_STAGE_NUM];
+   } stage[MESA_SHADER_STAGES];
 
    /* Immutable samplers (or NULL if no immutable samplers) */
    struct anv_sampler **immutable_samplers;
@@ -852,7 +849,7 @@ struct anv_pipeline_layout {
       struct {
          uint32_t surface_start;
          uint32_t sampler_start;
-      } stage[VK_SHADER_STAGE_NUM];
+      } stage[MESA_SHADER_STAGES];
    } set[MAX_SETS];
 
    uint32_t num_sets;
@@ -863,7 +860,7 @@ struct anv_pipeline_layout {
       struct anv_pipeline_binding *surface_to_descriptor;
       uint32_t sampler_count;
       struct anv_pipeline_binding *sampler_to_descriptor;
-   } stage[VK_SHADER_STAGE_NUM];
+   } stage[MESA_SHADER_STAGES];
 
    struct anv_pipeline_binding entries[0];
 };
@@ -991,7 +988,7 @@ struct anv_cmd_state {
    uint32_t                                     restart_index;
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set *                  descriptors[MAX_SETS];
-   struct anv_push_constants *                  push_constants[VK_SHADER_STAGE_NUM];
+   struct anv_push_constants *                  push_constants[MESA_SHADER_STAGES];
    struct anv_dynamic_state                     dynamic;
 
    struct {
@@ -1137,7 +1134,7 @@ void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
 
 struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
-                              VkShaderStage stage);
+                              gl_shader_stage stage);
 
 void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
                                       struct anv_render_pass *pass,
@@ -1163,6 +1160,24 @@ struct anv_shader_module {
    char                                         data[0];
 };
 
+static inline gl_shader_stage
+vk_to_mesa_shader_stage(VkShaderStageFlagBits vk_stage)
+{
+   assert(__builtin_popcount(vk_stage) == 1);
+   return ffs(vk_stage) - 1;
+}
+
+static inline VkShaderStageFlagBits
+mesa_to_vk_shader_stage(gl_shader_stage mesa_stage)
+{
+   return (1 << mesa_stage);
+}
+
+#define anv_foreach_stage(stage, stage_bits)                         \
+   for (gl_shader_stage stage, __tmp = (gl_shader_stage)(stage_bits);\
+        stage = __builtin_ffs(__tmp) - 1, __tmp;                     \
+        __tmp &= ~(1 << (stage)))
+
 struct anv_pipeline {
    struct anv_device *                          device;
    struct anv_batch                             batch;
@@ -1179,8 +1194,8 @@ struct anv_pipeline {
    struct brw_gs_prog_data                      gs_prog_data;
    struct brw_cs_prog_data                      cs_prog_data;
    bool                                         writes_point_size;
-   struct brw_stage_prog_data *                 prog_data[VK_SHADER_STAGE_NUM];
-   uint32_t                                     scratch_start[VK_SHADER_STAGE_NUM];
+   struct brw_stage_prog_data *                 prog_data[MESA_SHADER_STAGES];
+   uint32_t                                     scratch_start[MESA_SHADER_STAGES];
    uint32_t                                     total_scratch;
    struct {
       uint32_t                                  vs_start;

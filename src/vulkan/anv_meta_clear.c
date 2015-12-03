@@ -134,13 +134,13 @@ create_pipeline(struct anv_device *device,
          .pStages = (VkPipelineShaderStageCreateInfo[]) {
             {
                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-               .stage = VK_SHADER_STAGE_VERTEX,
+               .stage = VK_SHADER_STAGE_VERTEX_BIT,
                .module = anv_shader_module_to_handle(&vs_m),
                .pName = "main",
             },
             {
                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-               .stage = VK_SHADER_STAGE_FRAGMENT,
+               .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
                .module = anv_shader_module_to_handle(&fs_m),
                .pName = "main",
             },

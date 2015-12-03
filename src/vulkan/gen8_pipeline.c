@@ -454,7 +454,7 @@ genX(graphics_pipeline_create)(
                      .BindingTableEntryCount = 0,
                      .ExpectedVertexCount = pipeline->gs_vertex_count,
 
-                     .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_GEOMETRY],
+                     .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_GEOMETRY],
                      .PerThreadScratchSpace = ffs(gs_prog_data->base.base.total_scratch / 2048),
 
                      .OutputVertexSize = gs_prog_data->output_vertex_size_hwords * 2 - 1,
@@ -512,7 +512,7 @@ genX(graphics_pipeline_create)(
                      .AccessesUAV = false,
                      .SoftwareExceptionEnable = false,
 
-                     .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_VERTEX],
+                     .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_VERTEX],
                      .PerThreadScratchSpace = ffs(vue_prog_data->base.total_scratch / 2048),
 
                      .DispatchGRFStartRegisterForURBData =
@@ -624,7 +624,7 @@ genX(graphics_pipeline_create)(
                   .VectorMaskEnable = true,
                   .SamplerCount = 1,
 
-                  .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_FRAGMENT],
+                  .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_FRAGMENT],
                   .PerThreadScratchSpace = ffs(wm_prog_data->base.total_scratch / 2048),
 
                   .MaximumNumberofThreadsPerPSD = 64 - num_thread_bias,
@@ -709,7 +709,7 @@ VkResult genX(compute_pipeline_create)(
    pipeline->active_stages = 0;
    pipeline->total_scratch = 0;
 
-   assert(pCreateInfo->stage.stage == VK_SHADER_STAGE_COMPUTE);
+   assert(pCreateInfo->stage.stage == VK_SHADER_STAGE_COMPUTE_BIT);
    ANV_FROM_HANDLE(anv_shader_module, module,  pCreateInfo->stage.module);
    anv_pipeline_compile_cs(pipeline, pCreateInfo, module,
                            pCreateInfo->stage.pName);
@@ -719,7 +719,7 @@ VkResult genX(compute_pipeline_create)(
    const struct brw_cs_prog_data *cs_prog_data = &pipeline->cs_prog_data;
 
    anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE),
-                  .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_COMPUTE],
+                  .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_COMPUTE],
                   .PerThreadScratchSpace = ffs(cs_prog_data->base.total_scratch / 2048),
                   .ScratchSpaceBasePointerHigh = 0,
                   .StackSize = 0,

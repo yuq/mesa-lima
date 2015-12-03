@@ -28,7 +28,6 @@ struct apply_dynamic_offsets_state {
    nir_shader *shader;
    nir_builder builder;
 
-   VkShaderStage stage;
    struct anv_pipeline_layout *layout;
 
    uint32_t indices_start;
@@ -216,12 +215,11 @@ anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
 {
    struct apply_dynamic_offsets_state state = {
       .shader = shader,
-      .stage = anv_vk_shader_stage_for_mesa_stage(shader->stage),
       .layout = pipeline->layout,
       .indices_start = shader->num_uniforms,
    };
 
-   if (!state.layout || !state.layout->stage[state.stage].has_dynamic_offsets)
+   if (!state.layout || !state.layout->stage[shader->stage].has_dynamic_offsets)
       return;
 
    nir_foreach_overload(shader, overload) {

@@ -477,19 +477,6 @@ typedef enum VkComponentSwizzle {
     VK_COMPONENT_SWIZZLE_MAX_ENUM = 0x7FFFFFFF
 } VkComponentSwizzle;
 
-typedef enum {
-    VK_SHADER_STAGE_VERTEX = 0,
-    VK_SHADER_STAGE_TESS_CONTROL = 1,
-    VK_SHADER_STAGE_TESS_EVALUATION = 2,
-    VK_SHADER_STAGE_GEOMETRY = 3,
-    VK_SHADER_STAGE_FRAGMENT = 4,
-    VK_SHADER_STAGE_COMPUTE = 5,
-    VK_SHADER_STAGE_BEGIN_RANGE = VK_SHADER_STAGE_VERTEX,
-    VK_SHADER_STAGE_END_RANGE = VK_SHADER_STAGE_COMPUTE,
-    VK_SHADER_STAGE_NUM = (VK_SHADER_STAGE_COMPUTE - VK_SHADER_STAGE_VERTEX + 1),
-    VK_SHADER_STAGE_MAX_ENUM = 0x7FFFFFFF
-} VkShaderStage;
-
 typedef enum VkVertexInputRate {
     VK_VERTEX_INPUT_RATE_VERTEX = 0,
     VK_VERTEX_INPUT_RATE_INSTANCE = 1,
@@ -1604,7 +1591,7 @@ typedef struct VkPipelineShaderStageCreateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPipelineShaderStageCreateFlags            flags;
-    VkShaderStage                               stage;
+    VkShaderStageFlagBits                       stage;
     VkShaderModule                              module;
     const char*                                 pName;
     const VkSpecializationInfo*                 pSpecializationInfo;

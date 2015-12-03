@@ -36,18 +36,17 @@ static void
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
    static const uint32_t push_constant_opcodes[] = {
-      [VK_SHADER_STAGE_VERTEX]                  = 21,
-      [VK_SHADER_STAGE_TESS_CONTROL]            = 25, /* HS */
-      [VK_SHADER_STAGE_TESS_EVALUATION]         = 26, /* DS */
-      [VK_SHADER_STAGE_GEOMETRY]                = 22,
-      [VK_SHADER_STAGE_FRAGMENT]                = 23,
-      [VK_SHADER_STAGE_COMPUTE]                 = 0,
+      [MESA_SHADER_VERTEX]                      = 21,
+      [MESA_SHADER_TESS_CTRL]                   = 25, /* HS */
+      [MESA_SHADER_TESS_EVAL]                   = 26, /* DS */
+      [MESA_SHADER_GEOMETRY]                    = 22,
+      [MESA_SHADER_FRAGMENT]                    = 23,
+      [MESA_SHADER_COMPUTE]                     = 0,
    };
 
-   VkShaderStage stage;
    VkShaderStageFlags flushed = 0;
 
-   for_each_bit(stage, cmd_buffer->state.push_constants_dirty) {
+   anv_foreach_stage(stage, cmd_buffer->state.push_constants_dirty) {
       struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
 
       if (state.offset == 0)
@@ -60,7 +59,7 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
                         .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
                      });
 
-      flushed |= 1 << stage;
+      flushed |= mesa_to_vk_shader_stage(stage);
    }
 
    cmd_buffer->state.push_constants_dirty &= ~flushed;
@@ -493,11 +492,11 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    VkResult result;
 
    result = anv_cmd_buffer_emit_samplers(cmd_buffer,
-                                         VK_SHADER_STAGE_COMPUTE, &samplers);
+                                         MESA_SHADER_COMPUTE, &samplers);
    if (result != VK_SUCCESS)
       return result;
    result = anv_cmd_buffer_emit_binding_table(cmd_buffer,
-                                               VK_SHADER_STAGE_COMPUTE, &surfaces);
+                                              MESA_SHADER_COMPUTE, &surfaces);
    if (result != VK_SUCCESS)
       return result;
 
@@ -548,7 +547,7 @@ cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
        (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)) {
       result = flush_compute_descriptor_set(cmd_buffer);
       assert(result == VK_SUCCESS);
-      cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE;
+      cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE_BIT;
    }
 
    cmd_buffer->state.compute_dirty = 0;

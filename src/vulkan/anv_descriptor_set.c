@@ -77,8 +77,8 @@ VkResult anv_CreateDescriptorSetLayout(
    /* Initialize all samplers to 0 */
    memset(samplers, 0, immutable_sampler_count * sizeof(*samplers));
 
-   uint32_t sampler_count[VK_SHADER_STAGE_NUM] = { 0, };
-   uint32_t surface_count[VK_SHADER_STAGE_NUM] = { 0, };
+   uint32_t sampler_count[MESA_SHADER_STAGES] = { 0, };
+   uint32_t surface_count[MESA_SHADER_STAGES] = { 0, };
    uint32_t dynamic_offset_count = 0;
 
    for (uint32_t j = 0; j < pCreateInfo->bindingCount; j++) {
@@ -196,7 +196,7 @@ VkResult anv_CreatePipelineLayout(
             dynamic_offset_count += set_layout->binding[b].array_size;
       }
 
-      for (VkShaderStage s = 0; s < VK_SHADER_STAGE_NUM; s++) {
+      for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++) {
          l.set[set].stage[s].surface_start = l.stage[s].surface_count;
          l.set[set].stage[s].sampler_start = l.stage[s].sampler_count;
 
@@ -217,7 +217,7 @@ VkResult anv_CreatePipelineLayout(
    }
 
    unsigned num_bindings = 0;
-   for (VkShaderStage s = 0; s < VK_SHADER_STAGE_NUM; s++)
+   for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++)
       num_bindings += l.stage[s].surface_count + l.stage[s].sampler_count;
 
    size_t size = sizeof(*layout) + num_bindings * sizeof(layout->entries[0]);
@@ -229,7 +229,7 @@ VkResult anv_CreatePipelineLayout(
 
    /* Now we can actually build our surface and sampler maps */
    struct anv_pipeline_binding *entry = layout->entries;
-   for (VkShaderStage s = 0; s < VK_SHADER_STAGE_NUM; s++) {
+   for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++) {
       l.stage[s].surface_to_descriptor = entry;
       entry += l.stage[s].surface_count;
       l.stage[s].sampler_to_descriptor = entry;

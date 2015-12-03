@@ -129,7 +129,7 @@ anv_cmd_state_init(struct anv_cmd_state *state)
 
 static VkResult
 anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
-                                          VkShaderStage stage, uint32_t size)
+                                          gl_shader_stage stage, uint32_t size)
 {
    struct anv_push_constants **ptr = &cmd_buffer->state.push_constants[stage];
 
@@ -520,8 +520,7 @@ void anv_CmdBindDescriptorSets(
       }
 
       if (set_layout->dynamic_offset_count > 0) {
-         VkShaderStage s;
-         for_each_bit(s, set_layout->shader_stages) {
+         anv_foreach_stage(s, set_layout->shader_stages) {
             anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, s, dynamic);
 
             struct anv_push_constants *push =
@@ -585,7 +584,8 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
 
 static void
 fill_descriptor_buffer_surface_state(struct anv_device *device, void *state,
-                                     VkShaderStage stage, VkDescriptorType type,
+                                     gl_shader_stage stage,
+                                     VkDescriptorType type,
                                      uint32_t offset, uint32_t range)
 {
    VkFormat format;
@@ -594,8 +594,7 @@ fill_descriptor_buffer_surface_state(struct anv_device *device, void *state,
    switch (type) {
    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      if (anv_is_scalar_shader_stage(device->instance->physicalDevice.compiler,
-                                     stage)) {
+      if (device->instance->physicalDevice.compiler->scalar_stage[stage]) {
          stride = 4;
       } else {
          stride = 16;
@@ -620,19 +619,20 @@ fill_descriptor_buffer_surface_state(struct anv_device *device, void *state,
 
 VkResult
 anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
-                                  VkShaderStage stage, struct anv_state *bt_state)
+                                  gl_shader_stage stage,
+                                  struct anv_state *bt_state)
 {
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
    struct anv_pipeline_layout *layout;
    uint32_t color_count, bias, state_offset;
 
-   if (stage == VK_SHADER_STAGE_COMPUTE)
+   if (stage == MESA_SHADER_COMPUTE)
       layout = cmd_buffer->state.compute_pipeline->layout;
    else
       layout = cmd_buffer->state.pipeline->layout;
 
-   if (stage == VK_SHADER_STAGE_FRAGMENT) {
+   if (stage == MESA_SHADER_FRAGMENT) {
       bias = MAX_RTS;
       color_count = subpass->color_count;
    } else {
@@ -729,12 +729,12 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
 VkResult
 anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
-                             VkShaderStage stage, struct anv_state *state)
+                             gl_shader_stage stage, struct anv_state *state)
 {
    struct anv_pipeline_layout *layout;
    uint32_t sampler_count;
 
-   if (stage == VK_SHADER_STAGE_COMPUTE)
+   if (stage == MESA_SHADER_COMPUTE)
       layout = cmd_buffer->state.compute_pipeline->layout;
    else
       layout = cmd_buffer->state.pipeline->layout;
@@ -858,7 +858,7 @@ void anv_CmdWaitEvents(
 
 struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
-                              VkShaderStage stage)
+                              gl_shader_stage stage)
 {
    struct anv_push_constants *data =
       cmd_buffer->state.push_constants[stage];
@@ -893,9 +893,8 @@ void anv_CmdPushConstants(
     const void*                                 pValues)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
-   VkShaderStage stage;
 
-   for_each_bit(stage, stageFlags) {
+   anv_foreach_stage(stage, stageFlags) {
       anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, client_data);
 
       memcpy(cmd_buffer->state.push_constants[stage]->client_data + offset,

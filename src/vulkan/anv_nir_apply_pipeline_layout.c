@@ -28,7 +28,6 @@ struct apply_pipeline_layout_state {
    nir_shader *shader;
    nir_builder builder;
 
-   VkShaderStage stage;
    const struct anv_pipeline_layout *layout;
 
    bool progress;
@@ -42,15 +41,17 @@ get_surface_index(unsigned set, unsigned binding,
    struct anv_descriptor_set_layout *set_layout =
       state->layout->set[set].layout;
 
+   gl_shader_stage stage = state->shader->stage;
+
    assert(binding < set_layout->binding_count);
 
-   assert(set_layout->binding[binding].stage[state->stage].surface_index >= 0);
+   assert(set_layout->binding[binding].stage[stage].surface_index >= 0);
 
    uint32_t surface_index =
-      state->layout->set[set].stage[state->stage].surface_start +
-      set_layout->binding[binding].stage[state->stage].surface_index;
+      state->layout->set[set].stage[stage].surface_start +
+      set_layout->binding[binding].stage[stage].surface_index;
 
-   assert(surface_index < state->layout->stage[state->stage].surface_count);
+   assert(surface_index < state->layout->stage[stage].surface_count);
 
    return surface_index;
 }
@@ -65,16 +66,18 @@ get_sampler_index(unsigned set, unsigned binding, nir_texop tex_op,
 
    assert(binding < set_layout->binding_count);
 
-   if (set_layout->binding[binding].stage[state->stage].sampler_index < 0) {
+   gl_shader_stage stage = state->shader->stage;
+
+   if (set_layout->binding[binding].stage[stage].sampler_index < 0) {
       assert(tex_op == nir_texop_txf);
       return 0;
    }
 
    uint32_t sampler_index =
-      state->layout->set[set].stage[state->stage].sampler_start +
-      set_layout->binding[binding].stage[state->stage].sampler_index;
+      state->layout->set[set].stage[stage].sampler_start +
+      set_layout->binding[binding].stage[stage].sampler_index;
 
-   assert(sampler_index < state->layout->stage[state->stage].sampler_count);
+   assert(sampler_index < state->layout->stage[stage].sampler_count);
 
    return sampler_index;
 }
@@ -217,7 +220,6 @@ anv_nir_apply_pipeline_layout(nir_shader *shader,
 {
    struct apply_pipeline_layout_state state = {
       .shader = shader,
-      .stage = anv_vk_shader_stage_for_mesa_stage(shader->stage),
       .layout = layout,
    };
 

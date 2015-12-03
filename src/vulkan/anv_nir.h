@@ -30,13 +30,6 @@
 extern "C" {
 #endif
 
-static inline VkShaderStage
-anv_vk_shader_stage_for_mesa_stage(gl_shader_stage stage)
-{
-   /* The two enums happen to line up. */
-   return (VkShaderStage)(int)stage;
-}
-
 void anv_nir_lower_push_constants(nir_shader *shader, bool is_scalar);
 
 void anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,

@@ -304,13 +304,13 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    VkPipelineShaderStageCreateInfo pipeline_shader_stages[] = {
       {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-         .stage = VK_SHADER_STAGE_VERTEX,
+         .stage = VK_SHADER_STAGE_VERTEX_BIT,
          .module = anv_shader_module_to_handle(&vs),
          .pName = "main",
          .pSpecializationInfo = NULL
       }, {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-         .stage = VK_SHADER_STAGE_FRAGMENT,
+         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
          .module = VK_NULL_HANDLE, /* TEMPLATE VALUE! FILL ME IN! */
          .pName = "main",
          .pSpecializationInfo = NULL

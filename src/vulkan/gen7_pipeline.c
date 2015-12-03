@@ -468,7 +468,7 @@ genX(graphics_pipeline_create)(
    else
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS),
          .KernelStartPointer                    = pipeline->vs_vec4,
-         .ScratchSpaceBaseOffset                = pipeline->scratch_start[VK_SHADER_STAGE_VERTEX],
+         .ScratchSpaceBaseOffset                = pipeline->scratch_start[MESA_SHADER_VERTEX],
          .PerThreadScratchSpace                 = scratch_space(&vue_prog_data->base),
 
          .DispatchGRFStartRegisterforURBData    =
@@ -490,7 +490,7 @@ genX(graphics_pipeline_create)(
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS),
          .KernelStartPointer                    = pipeline->gs_vec4,
-         .ScratchSpaceBasePointer               = pipeline->scratch_start[VK_SHADER_STAGE_GEOMETRY],
+         .ScratchSpaceBasePointer               = pipeline->scratch_start[MESA_SHADER_GEOMETRY],
          .PerThreadScratchSpace                 = scratch_space(&gs_prog_data->base.base),
 
          .OutputVertexSize                      = gs_prog_data->output_vertex_size_hwords * 2 - 1,
@@ -531,7 +531,7 @@ genX(graphics_pipeline_create)(
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
       .KernelStartPointer0                      = pipeline->ps_ksp0,
-      .ScratchSpaceBasePointer                  = pipeline->scratch_start[VK_SHADER_STAGE_FRAGMENT],
+      .ScratchSpaceBasePointer                  = pipeline->scratch_start[MESA_SHADER_FRAGMENT],
       .PerThreadScratchSpace                    = scratch_space(&wm_prog_data->base),
                   
       .MaximumNumberofThreads                   = device->info.max_wm_threads - 1,
