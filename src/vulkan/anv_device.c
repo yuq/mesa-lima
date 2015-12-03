@@ -150,15 +150,25 @@ anv_physical_device_finish(struct anv_physical_device *device)
 
 static const VkExtensionProperties global_extensions[] = {
    {
-      .extensionName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
-      .specVersion = 17,
+      .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
+      .specVersion = 24,
    },
+   {
+      .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+      .specVersion = 5,
+   },
+#ifdef HAVE_WAYLAND_PLATFORM
+   {
+      .extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+      .specVersion = 4,
+   },
+#endif
 };
 
 static const VkExtensionProperties device_extensions[] = {
    {
-      .extensionName = VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
-      .specVersion = 53,
+      .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+      .specVersion = 67,
    },
 };
 
@@ -198,7 +208,7 @@ VkResult anv_CreateInstance(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
-   if (pCreateInfo->pApplicationInfo->apiVersion != VK_MAKE_VERSION(0, 210, 0))
+   if (pCreateInfo->pApplicationInfo->apiVersion != VK_MAKE_VERSION(0, 210, 1))
       return vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
 
    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {

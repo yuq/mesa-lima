@@ -30,6 +30,13 @@
 
 #define MIN_NUM_IMAGES 2
 
+struct wsi_wl_surface {
+   struct anv_wsi_surface base;
+
+   struct wl_display *display;
+   struct wl_surface *surface;
+};
+
 struct wsi_wl_display {
    struct wl_display *                          display;
    struct wl_drm *                              drm;
@@ -41,13 +48,11 @@ struct wsi_wl_display {
 };
 
 struct wsi_wayland {
-   struct anv_wsi_implementation                base;
-
    struct anv_instance *                        instance;
 
-    pthread_mutex_t                             mutex;
-    /* Hash table of wl_display -> wsi_wl_display mappings */
-    struct hash_table *                         displays;
+   pthread_mutex_t                              mutex;
+   /* Hash table of wl_display -> wsi_wl_display mappings */
+   struct hash_table *                          displays;
 };
 
 static void
@@ -234,7 +239,7 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
 {
    struct wsi_wl_display *display =
       anv_alloc(&wsi->instance->alloc, sizeof(*display), 8,
-                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+                VK_SYSTEM_ALLOCATION_SCOPE_CACHE);
    if (!display)
       return NULL;
 
@@ -278,8 +283,10 @@ fail:
 }
 
 static struct wsi_wl_display *
-wsi_wl_get_display(struct wsi_wayland *wsi, struct wl_display *wl_display)
+wsi_wl_get_display(struct anv_instance *instance, struct wl_display *wl_display)
 {
+   struct wsi_wayland *wsi = instance->wayland_wsi;
+
    pthread_mutex_lock(&wsi->mutex);
 
    struct hash_entry *entry = _mesa_hash_table_search(wsi->displays,
@@ -308,15 +315,23 @@ wsi_wl_get_display(struct wsi_wayland *wsi, struct wl_display *wl_display)
    return entry->data;
 }
 
-static VkResult
-wsi_wl_get_window_supported(struct anv_wsi_implementation *impl,
-                            struct anv_physical_device *physical_device,
-                            const VkSurfaceDescriptionWindowKHR *window,
-                            VkBool32 *pSupported)
+VkBool32 anv_GetPhysicalDeviceWaylandPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    struct wl_display*                          display)
 {
-   struct wsi_wayland *wsi = (struct wsi_wayland *)impl;
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
 
-   *pSupported = wsi_wl_get_display(wsi, window->pPlatformHandle) != NULL;
+   return wsi_wl_get_display(physical_device->instance, display) != NULL;
+}
+
+static VkResult
+wsi_wl_surface_get_support(struct anv_wsi_surface *surface,
+                           struct anv_physical_device *device,
+                           uint32_t queueFamilyIndex,
+                           VkBool32* pSupported)
+{
+   *pSupported = true;
 
    return VK_SUCCESS;
 }
@@ -327,20 +342,24 @@ static const VkPresentModeKHR present_modes[] = {
 };
 
 static VkResult
-wsi_wl_get_surface_properties(struct anv_wsi_implementation *impl,
-                              struct anv_device *device,
-                              const VkSurfaceDescriptionWindowKHR *window,
-                              VkSurfacePropertiesKHR *props)
+wsi_wl_surface_get_capabilities(struct anv_wsi_surface *surface,
+                                struct anv_physical_device *device,
+                                VkSurfaceCapabilitiesKHR* caps)
 {
-   props->minImageCount = MIN_NUM_IMAGES;
-   props->maxImageCount = 4;
-   props->currentExtent = (VkExtent2D) { -1, -1 };
-   props->minImageExtent = (VkExtent2D) { 1, 1 };
-   props->maxImageExtent = (VkExtent2D) { INT16_MAX, INT16_MAX };
-   props->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
-   props->currentTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
-   props->maxImageArraySize = 1;
-   props->supportedUsageFlags =
+   caps->minImageCount = MIN_NUM_IMAGES;
+   caps->maxImageCount = 4;
+   caps->currentExtent = (VkExtent2D) { -1, -1 };
+   caps->minImageExtent = (VkExtent2D) { 1, 1 };
+   caps->maxImageExtent = (VkExtent2D) { INT16_MAX, INT16_MAX };
+   caps->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+   caps->currentTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+   caps->maxImageArrayLayers = 1;
+
+   caps->supportedCompositeAlpha =
+      VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR |
+      VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+
+   caps->supportedUsageFlags =
       VK_IMAGE_USAGE_TRANSFER_DST_BIT |
       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -348,25 +367,24 @@ wsi_wl_get_surface_properties(struct anv_wsi_implementation *impl,
 }
 
 static VkResult
-wsi_wl_get_surface_formats(struct anv_wsi_implementation *impl,
-                           struct anv_device *device,
-                           const VkSurfaceDescriptionWindowKHR *window,
-                           uint32_t *pCount,
-                           VkSurfaceFormatKHR *pSurfaceFormats)
+wsi_wl_surface_get_formats(struct anv_wsi_surface *wsi_surface,
+                           struct anv_physical_device *device,
+                           uint32_t* pSurfaceFormatCount,
+                           VkSurfaceFormatKHR* pSurfaceFormats)
 {
-   struct wsi_wayland *wsi = (struct wsi_wayland *)impl;
+   struct wsi_wl_surface *surface = (struct wsi_wl_surface *)wsi_surface;
    struct wsi_wl_display *display =
-      wsi_wl_get_display(wsi, window->pPlatformHandle);
+      wsi_wl_get_display(device->instance, surface->display);
 
    uint32_t count = anv_vector_length(&display->formats);
 
    if (pSurfaceFormats == NULL) {
-      *pCount = count;
+      *pSurfaceFormatCount = count;
       return VK_SUCCESS;
    }
 
-   assert(*pCount >= count);
-   *pCount = count;
+   assert(*pSurfaceFormatCount >= count);
+   *pSurfaceFormatCount = count;
 
    VkFormat *f;
    anv_vector_foreach(f, &display->formats) {
@@ -381,20 +399,64 @@ wsi_wl_get_surface_formats(struct anv_wsi_implementation *impl,
 }
 
 static VkResult
-wsi_wl_get_surface_present_modes(struct anv_wsi_implementation *impl,
-                                 struct anv_device *device,
-                                 const VkSurfaceDescriptionWindowKHR *window,
-                                 uint32_t *pCount,
-                                 VkPresentModeKHR *pPresentModes)
+wsi_wl_surface_get_present_modes(struct anv_wsi_surface *surface,
+                                 struct anv_physical_device *device,
+                                 uint32_t* pPresentModeCount,
+                                 VkPresentModeKHR* pPresentModes)
 {
    if (pPresentModes == NULL) {
-      *pCount = ARRAY_SIZE(present_modes);
+      *pPresentModeCount = ARRAY_SIZE(present_modes);
       return VK_SUCCESS;
    }
 
-   assert(*pCount >= ARRAY_SIZE(present_modes));
-   typed_memcpy(pPresentModes, present_modes, *pCount);
-   *pCount = ARRAY_SIZE(present_modes);
+   assert(*pPresentModeCount >= ARRAY_SIZE(present_modes));
+   typed_memcpy(pPresentModes, present_modes, *pPresentModeCount);
+   *pPresentModeCount = ARRAY_SIZE(present_modes);
+
+   return VK_SUCCESS;
+}
+
+static void
+wsi_wl_surface_destroy(struct anv_wsi_surface *surface,
+                       const VkAllocationCallbacks *pAllocator)
+{
+   anv_free2(&surface->instance->alloc, pAllocator, surface);
+}
+
+static VkResult
+wsi_wl_surface_create_swapchain(struct anv_wsi_surface *surface,
+                                struct anv_device *device,
+                                const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                const VkAllocationCallbacks* pAllocator,
+                                struct anv_swapchain **swapchain);
+
+VkResult anv_CreateWaylandSurfaceKHR(
+    VkInstance                                  _instance,
+    struct wl_display*                          wl_display,
+    struct wl_surface*                          wl_surface,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+   struct wsi_wl_surface *surface;
+
+   surface = anv_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
+                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (surface == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   surface->display = wl_display;
+   surface->surface = wl_surface;
+
+   surface->base.instance = instance;
+   surface->base.destroy = wsi_wl_surface_destroy;
+   surface->base.get_support = wsi_wl_surface_get_support;
+   surface->base.get_capabilities = wsi_wl_surface_get_capabilities;
+   surface->base.get_formats = wsi_wl_surface_get_formats;
+   surface->base.get_present_modes = wsi_wl_surface_get_present_modes;
+   surface->base.create_swapchain = wsi_wl_surface_create_swapchain;
+
+   *pSurface = anv_wsi_surface_to_handle(&surface->base);
 
    return VK_SUCCESS;
 }
@@ -425,8 +487,8 @@ struct wsi_wl_swapchain {
 };
 
 static VkResult
-wsi_wl_get_images(struct anv_swapchain *anv_chain,
-                  uint32_t *pCount, VkImage *pSwapchainImages)
+wsi_wl_swapchain_get_images(struct anv_swapchain *anv_chain,
+                            uint32_t *pCount, VkImage *pSwapchainImages)
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)anv_chain;
 
@@ -445,10 +507,10 @@ wsi_wl_get_images(struct anv_swapchain *anv_chain,
 }
 
 static VkResult
-wsi_wl_acquire_next_image(struct anv_swapchain *anv_chain,
-                          uint64_t timeout,
-                          VkSemaphore semaphore,
-                          uint32_t *image_index)
+wsi_wl_swapchain_acquire_next_image(struct anv_swapchain *anv_chain,
+                                    uint64_t timeout,
+                                    VkSemaphore semaphore,
+                                    uint32_t *image_index)
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)anv_chain;
 
@@ -495,9 +557,9 @@ static const struct wl_callback_listener frame_listener = {
 };
 
 static VkResult
-wsi_wl_queue_present(struct anv_swapchain *anv_chain,
-                     struct anv_queue *queue,
-                     uint32_t image_index)
+wsi_wl_swapchain_queue_present(struct anv_swapchain *anv_chain,
+                               struct anv_queue *queue,
+                               uint32_t image_index)
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)anv_chain;
 
@@ -528,11 +590,14 @@ wsi_wl_queue_present(struct anv_swapchain *anv_chain,
 }
 
 static void
-wsi_wl_image_finish(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
+wsi_wl_image_finish(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
+                    const VkAllocationCallbacks* pAllocator)
 {
    VkDevice vk_device = anv_device_to_handle(chain->base.device);
-   anv_FreeMemory(vk_device, anv_device_memory_to_handle(image->memory), NULL);
-   anv_DestroyImage(vk_device, anv_image_to_handle(image->image), NULL);
+   anv_FreeMemory(vk_device, anv_device_memory_to_handle(image->memory),
+                  pAllocator);
+   anv_DestroyImage(vk_device, anv_image_to_handle(image->image),
+                    pAllocator);
 }
 
 static void
@@ -550,7 +615,8 @@ static const struct wl_buffer_listener buffer_listener = {
 };
 
 static VkResult
-wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
+wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
+                  const VkAllocationCallbacks* pAllocator)
 {
    VkDevice vk_device = anv_device_to_handle(chain->base.device);
    VkResult result;
@@ -579,7 +645,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
          .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
          .flags = 0,
       }},
-      NULL,
+      pAllocator,
       &vk_image);
 
    if (result != VK_SUCCESS)
@@ -597,7 +663,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
          .allocationSize = image->image->size,
          .memoryTypeIndex = 0,
       },
-      NULL,
+      pAllocator,
       &vk_memory);
 
    if (result != VK_SUCCESS)
@@ -644,45 +710,41 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image)
    return VK_SUCCESS;
 
 fail_mem:
-   anv_FreeMemory(vk_device, vk_memory, NULL);
+   anv_FreeMemory(vk_device, vk_memory, pAllocator);
 fail_image:
-   anv_DestroyImage(vk_device, vk_image, NULL);
+   anv_DestroyImage(vk_device, vk_image, pAllocator);
 
    return result;
 }
 
 static VkResult
-wsi_wl_destroy_swapchain(struct anv_swapchain *anv_chain)
+wsi_wl_swapchain_destroy(struct anv_swapchain *anv_chain,
+                         const VkAllocationCallbacks *pAllocator)
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)anv_chain;
 
    for (uint32_t i = 0; i < chain->image_count; i++) {
       if (chain->images[i].buffer)
-         wsi_wl_image_finish(chain, &chain->images[i]);
+         wsi_wl_image_finish(chain, &chain->images[i], pAllocator);
    }
 
-   anv_free(&chain->base.device->alloc, chain);
+   anv_free2(&chain->base.device->alloc, pAllocator, chain);
 
    return VK_SUCCESS;
 }
 
 static VkResult
-wsi_wl_create_swapchain(struct anv_wsi_implementation *impl,
-                         struct anv_device *device,
-                         const VkSwapchainCreateInfoKHR *pCreateInfo,
-                         struct anv_swapchain **swapchain_out)
+wsi_wl_surface_create_swapchain(struct anv_wsi_surface *wsi_surface,
+                                struct anv_device *device,
+                                const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                const VkAllocationCallbacks* pAllocator,
+                                struct anv_swapchain **swapchain_out)
 {
-   struct wsi_wayland *wsi = (struct wsi_wayland *)impl;
+   struct wsi_wl_surface *surface = (struct wsi_wl_surface *)wsi_surface;
    struct wsi_wl_swapchain *chain;
    VkResult result;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
-
-   assert(pCreateInfo->pSurfaceDescription->sType ==
-          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR);
-   VkSurfaceDescriptionWindowKHR *vk_window =
-      (VkSurfaceDescriptionWindowKHR *)pCreateInfo->pSurfaceDescription;
-   assert(vk_window->platform == VK_PLATFORM_WAYLAND_KHR);
 
    int num_images = pCreateInfo->minImageCount;
 
@@ -698,18 +760,18 @@ wsi_wl_create_swapchain(struct anv_wsi_implementation *impl,
       num_images = MAX2(num_images, 4);
 
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
-   chain = anv_alloc(&device->alloc, size, 8,
-                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   chain = anv_alloc2(&device->alloc, pAllocator, size, 8,
+                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    chain->base.device = device;
-   chain->base.destroy = wsi_wl_destroy_swapchain;
-   chain->base.get_images = wsi_wl_get_images;
-   chain->base.acquire_next_image = wsi_wl_acquire_next_image;
-   chain->base.queue_present = wsi_wl_queue_present;
+   chain->base.destroy = wsi_wl_swapchain_destroy;
+   chain->base.get_images = wsi_wl_swapchain_get_images;
+   chain->base.acquire_next_image = wsi_wl_swapchain_acquire_next_image;
+   chain->base.queue_present = wsi_wl_swapchain_queue_present;
 
-   chain->surface = vk_window->pPlatformWindow;
+   chain->surface = surface->surface;
    chain->extent = pCreateInfo->imageExtent;
    chain->vk_format = pCreateInfo->imageFormat;
    chain->drm_format = wl_drm_format_for_vk_format(chain->vk_format, false);
@@ -726,7 +788,7 @@ wsi_wl_create_swapchain(struct anv_wsi_implementation *impl,
       chain->images[i].buffer = NULL;
    chain->queue = NULL;
 
-   chain->display = wsi_wl_get_display(wsi, vk_window->pPlatformHandle);
+   chain->display = wsi_wl_get_display(device->instance, surface->display);
    if (!chain->display)
       goto fail;
 
@@ -735,7 +797,7 @@ wsi_wl_create_swapchain(struct anv_wsi_implementation *impl,
       goto fail;
 
    for (uint32_t i = 0; i < chain->image_count; i++) {
-      result = wsi_wl_image_init(chain, &chain->images[i]);
+      result = wsi_wl_image_init(chain, &chain->images[i], pAllocator);
       if (result != VK_SUCCESS)
          goto fail;
       chain->images[i].busy = false;
@@ -746,7 +808,7 @@ wsi_wl_create_swapchain(struct anv_wsi_implementation *impl,
    return VK_SUCCESS;
 
 fail:
-   wsi_wl_destroy_swapchain(&chain->base);
+   wsi_wl_swapchain_destroy(&chain->base, pAllocator);
 
    return result;
 }
@@ -761,12 +823,6 @@ anv_wl_init_wsi(struct anv_instance *instance)
                    VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!wsi)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   wsi->base.get_window_supported = wsi_wl_get_window_supported;
-   wsi->base.get_surface_properties = wsi_wl_get_surface_properties;
-   wsi->base.get_surface_formats = wsi_wl_get_surface_formats;
-   wsi->base.get_surface_present_modes = wsi_wl_get_surface_present_modes;
-   wsi->base.create_swapchain = wsi_wl_create_swapchain;
 
    wsi->instance = instance;
 
@@ -789,7 +845,7 @@ anv_wl_init_wsi(struct anv_instance *instance)
       goto fail_mutex;
    }
 
-   instance->wsi_impl[VK_PLATFORM_WAYLAND_KHR] = &wsi->base;
+   instance->wayland_wsi = wsi;
 
    return VK_SUCCESS;
 
@@ -805,8 +861,7 @@ fail_alloc:
 void
 anv_wl_finish_wsi(struct anv_instance *instance)
 {
-   struct wsi_wayland *wsi =
-      (struct wsi_wayland *)instance->wsi_impl[VK_PLATFORM_WAYLAND_KHR];
+   struct wsi_wayland *wsi = instance->wayland_wsi;
 
    _mesa_hash_table_destroy(wsi->displays, NULL);
 

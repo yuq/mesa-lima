@@ -25,10 +25,40 @@
 
 #include "anv_private.h"
 
-struct anv_swapchain {
-   struct anv_device *                          device;
+struct anv_swapchain;
 
-   VkResult (*destroy)(struct anv_swapchain *swapchain);
+struct anv_wsi_surface {
+   struct anv_instance *instance;
+
+   void (*destroy)(struct anv_wsi_surface *surface,
+                   const VkAllocationCallbacks *pAllocator);
+   VkResult (*get_support)(struct anv_wsi_surface *surface,
+                           struct anv_physical_device *device,
+                           uint32_t queueFamilyIndex,
+                           VkBool32* pSupported);
+   VkResult (*get_capabilities)(struct anv_wsi_surface *surface,
+                                struct anv_physical_device *device,
+                                VkSurfaceCapabilitiesKHR* pSurfaceCapabilities);
+   VkResult (*get_formats)(struct anv_wsi_surface *surface,
+                           struct anv_physical_device *device,
+                           uint32_t* pSurfaceFormatCount,
+                           VkSurfaceFormatKHR* pSurfaceFormats);
+   VkResult (*get_present_modes)(struct anv_wsi_surface *surface,
+                                 struct anv_physical_device *device,
+                                 uint32_t* pPresentModeCount,
+                                 VkPresentModeKHR* pPresentModes);
+   VkResult (*create_swapchain)(struct anv_wsi_surface *surface,
+                                struct anv_device *device,
+                                const VkSwapchainCreateInfoKHR* pCreateInfo,
+                                const VkAllocationCallbacks* pAllocator,
+                                struct anv_swapchain **swapchain);
+};
+
+struct anv_swapchain {
+   struct anv_device *device;
+
+   VkResult (*destroy)(struct anv_swapchain *swapchain,
+                       const VkAllocationCallbacks *pAllocator);
    VkResult (*get_images)(struct anv_swapchain *swapchain,
                           uint32_t *pCount, VkImage *pSwapchainImages);
    VkResult (*acquire_next_image)(struct anv_swapchain *swap_chain,
@@ -39,32 +69,8 @@ struct anv_swapchain {
                              uint32_t image_index);
 };
 
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_wsi_surface, VkSurfaceKHR)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_swapchain, VkSwapchainKHR)
-
-struct anv_wsi_implementation {
-   VkResult (*get_window_supported)(struct anv_wsi_implementation *impl,
-                                    struct anv_physical_device *physical_device,
-                                    const VkSurfaceDescriptionWindowKHR *window,
-                                    VkBool32 *pSupported);
-   VkResult (*get_surface_properties)(struct anv_wsi_implementation *impl,
-                                      struct anv_device *device,
-                                      const VkSurfaceDescriptionWindowKHR *window,
-                                      VkSurfacePropertiesKHR *properties);
-   VkResult (*get_surface_formats)(struct anv_wsi_implementation *impl,
-                                   struct anv_device *device,
-                                   const VkSurfaceDescriptionWindowKHR *window,
-                                   uint32_t *pCount,
-                                   VkSurfaceFormatKHR *pSurfaceFormats);
-   VkResult (*get_surface_present_modes)(struct anv_wsi_implementation *impl,
-                                         struct anv_device *device,
-                                         const VkSurfaceDescriptionWindowKHR *window,
-                                         uint32_t *pCount,
-                                         VkPresentModeKHR *pPresentModes);
-   VkResult (*create_swapchain)(struct anv_wsi_implementation *impl,
-                                struct anv_device *device,
-                                const VkSwapchainCreateInfoKHR *pCreateInfo,
-                                struct anv_swapchain **swapchain);
-};
 
 VkResult anv_x11_init_wsi(struct anv_instance *instance);
 void anv_x11_finish_wsi(struct anv_instance *instance);

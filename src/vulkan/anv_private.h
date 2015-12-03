@@ -28,6 +28,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <assert.h>
+#include <stdint.h>
 #include <i915_drm.h>
 
 #ifdef HAVE_VALGRIND
@@ -43,11 +44,19 @@
 #include "util/macros.h"
 #include "util/list.h"
 
+/* Pre-declarations needed for WSI entrypoints */
+struct wl_surface;
+struct wl_display;
+typedef struct xcb_connection_t xcb_connection_t;
+typedef uint32_t xcb_visualid_t;
+typedef uint32_t xcb_window_t;
+
+#define VK_USE_PLATFORM_XCB_KHR
+#define VK_USE_PLATFORM_WAYLAND_KHR
+
 #define VK_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_intel.h>
-#include <vulkan/vk_ext_khr_swapchain.h>
-#include <vulkan/vk_ext_khr_device_swapchain.h>
 
 #include "anv_entrypoints.h"
 #include "anv_gen_macros.h"
@@ -498,7 +507,7 @@ struct anv_instance {
     int                                         physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
 
-    struct anv_wsi_implementation *             wsi_impl[VK_PLATFORM_NUM_KHR];
+    void *                                      wayland_wsi;
 };
 
 VkResult anv_init_wsi(struct anv_instance *instance);
