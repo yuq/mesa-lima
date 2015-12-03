@@ -2563,6 +2563,9 @@ brw_send_indirect_message(struct brw_codegen *p,
       brw_set_src1(p, send, addr);
    }
 
+   if (dst.width < BRW_EXECUTE_8)
+      brw_inst_set_exec_size(devinfo, send, dst.width);
+
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, retype(payload, BRW_REGISTER_TYPE_UD));
    brw_inst_set_sfid(devinfo, send, sfid);
