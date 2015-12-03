@@ -161,8 +161,12 @@ anv_dump_image_to_ppm(struct anv_device *device,
       }, NULL, &fence);
    assert(result == VK_SUCCESS);
 
-   result = anv_QueueSubmit(anv_queue_to_handle(&device->queue),
-                            1, &cmd, fence);
+   result = anv_QueueSubmit(anv_queue_to_handle(&device->queue), 1,
+      &(VkSubmitInfo) {
+         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+         .commandBufferCount = 1,
+         .pCommandBuffers = &cmd,
+      }, fence);
    assert(result == VK_SUCCESS);
 
    result = anv_WaitForFences(vk_device, 1, &fence, true, UINT64_MAX);

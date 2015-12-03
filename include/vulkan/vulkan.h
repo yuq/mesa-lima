@@ -1377,6 +1377,17 @@ typedef struct VkLayerProperties {
     char                                        description[VK_MAX_DESCRIPTION_SIZE];
 } VkLayerProperties;
 
+typedef struct VkSubmitInfo {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    uint32_t                                    waitSemaphoreCount;
+    const VkSemaphore*                          pWaitSemaphores;
+    uint32_t                                    commandBufferCount;
+    const VkCommandBuffer*                      pCommandBuffers;
+    uint32_t                                    signalSemaphoreCount;
+    const VkSemaphore*                          pSignalSemaphores;
+} VkSubmitInfo;
+
 typedef struct VkMemoryAllocateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
@@ -2155,7 +2166,7 @@ typedef VkResult (VKAPI_PTR *PFN_vkEnumerateDeviceExtensionProperties)(VkPhysica
 typedef VkResult (VKAPI_PTR *PFN_vkEnumerateInstanceLayerProperties)(uint32_t* pPropertyCount, VkLayerProperties* pProperties);
 typedef VkResult (VKAPI_PTR *PFN_vkEnumerateDeviceLayerProperties)(VkPhysicalDevice physicalDevice, uint32_t* pPropertyCount, VkLayerProperties* pProperties);
 typedef void (VKAPI_PTR *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue);
-typedef VkResult (VKAPI_PTR *PFN_vkQueueSubmit)(VkQueue queue, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers, VkFence fence);
+typedef VkResult (VKAPI_PTR *PFN_vkQueueSubmit)(VkQueue queue, uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence);
 typedef VkResult (VKAPI_PTR *PFN_vkQueueWaitIdle)(VkQueue queue);
 typedef VkResult (VKAPI_PTR *PFN_vkDeviceWaitIdle)(VkDevice device);
 typedef VkResult (VKAPI_PTR *PFN_vkAllocateMemory)(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);
@@ -2367,8 +2378,8 @@ VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue(
 
 VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
     VkQueue                                     queue,
-    uint32_t                                    commandBufferCount,
-    const VkCommandBuffer*                      pCommandBuffers,
+    uint32_t                                    submitCount,
+    const VkSubmitInfo*                         pSubmits,
     VkFence                                     fence);
 
 VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(

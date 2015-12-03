@@ -808,8 +808,8 @@ void anv_GetDeviceQueue(
 
 VkResult anv_QueueSubmit(
     VkQueue                                     _queue,
-    uint32_t                                    commandBufferCount,
-    const VkCommandBuffer*                      pCommandBuffers,
+    uint32_t                                    submitCount,
+    const VkSubmitInfo*                         pSubmits,
     VkFence                                     _fence)
 {
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
@@ -817,29 +817,31 @@ VkResult anv_QueueSubmit(
    struct anv_device *device = queue->device;
    int ret;
 
-   for (uint32_t i = 0; i < commandBufferCount; i++) {
-      ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, pCommandBuffers[i]);
+   for (uint32_t i = 0; i < submitCount; i++) {
+      for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
+         ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer,
+                         pSubmits[i].pCommandBuffers[j]);
+         assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-      assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-
-      ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
-      if (ret != 0) {
-         /* We don't know the real error. */
-         return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
-                          "execbuf2 failed: %m");
-      }
-
-      if (fence) {
-         ret = anv_gem_execbuffer(device, &fence->execbuf);
+         ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
          if (ret != 0) {
             /* We don't know the real error. */
             return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
                              "execbuf2 failed: %m");
          }
-      }
 
-      for (uint32_t i = 0; i < cmd_buffer->execbuf2.bo_count; i++)
-         cmd_buffer->execbuf2.bos[i]->offset = cmd_buffer->execbuf2.objects[i].offset;
+         if (fence) {
+            ret = anv_gem_execbuffer(device, &fence->execbuf);
+            if (ret != 0) {
+               /* We don't know the real error. */
+               return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                                "execbuf2 failed: %m");
+            }
+         }
+
+         for (uint32_t k = 0; k < cmd_buffer->execbuf2.bo_count; k++)
+            cmd_buffer->execbuf2.bos[k]->offset = cmd_buffer->execbuf2.objects[k].offset;
+      }
    }
 
    return VK_SUCCESS;
