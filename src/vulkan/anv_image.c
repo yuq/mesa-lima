@@ -71,19 +71,6 @@ anv_image_view_info_for_vk_image_view_type(VkImageViewType type)
    return anv_image_view_info_table[type];
 }
 
-static const struct anv_surf_type_limits {
-   int32_t width;
-   int32_t height;
-   int32_t depth;
-} anv_surf_type_limits[] = {
-   [SURFTYPE_1D]     = {16384,       1,   2048},
-   [SURFTYPE_2D]     = {16384,   16384,   2048},
-   [SURFTYPE_3D]     = {2048,     2048,   2048},
-   [SURFTYPE_CUBE]   = {16384,   16384,    340},
-   [SURFTYPE_BUFFER] = {128,     16384,     64},
-   [SURFTYPE_STRBUF] = {128,     16384,     64},
-};
-
 static isl_tiling_flags_t
 choose_isl_tiling_flags(const struct anv_image_create_info *anv_info)
 {
@@ -228,7 +215,6 @@ anv_image_create(VkDevice _device,
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
-   const VkExtent3D *restrict extent = &pCreateInfo->extent;
    struct anv_image *image = NULL;
    VkResult r;
 
@@ -244,14 +230,6 @@ anv_image_create(VkDevice _device,
    /* TODO(chadv): How should we validate inputs? */
    const uint8_t surf_type =
       anv_surf_type_from_image_type[pCreateInfo->imageType];
-
-   const struct anv_surf_type_limits *limits =
-      &anv_surf_type_limits[surf_type];
-
-   /* Errors should be caught by VkImageFormatProperties. */
-   assert(extent->width <= limits->width);
-   assert(extent->height <= limits->height);
-   assert(extent->depth <= limits->depth);
 
    image = anv_alloc2(&device->alloc, alloc, sizeof(*image), 8,
                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
