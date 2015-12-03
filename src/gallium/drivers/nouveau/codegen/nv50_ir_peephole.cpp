@@ -2962,6 +2962,16 @@ DeadCodeElim::visit(BasicBlock *bb)
    return true;
 }
 
+// Each load can go into up to 4 destinations, any of which might potentially
+// be dead (i.e. a hole). These can always be split into 2 loads, independent
+// of where the holes are. We find the first contiguous region, put it into
+// the first load, and then put the second contiguous region into the second
+// load. There can be at most 2 contiguous regions.
+//
+// Note that there are some restrictions, for example it's not possible to do
+// a 64-bit load that's not 64-bit aligned, so such a load has to be split
+// up. Also hardware doesn't support 96-bit loads, so those also have to be
+// split into a 64-bit and 32-bit load.
 void
 DeadCodeElim::checkSplitLoad(Instruction *ld1)
 {
@@ -2982,6 +2992,8 @@ DeadCodeElim::checkSplitLoad(Instruction *ld1)
    addr1 = ld1->getSrc(0)->reg.data.offset;
    n1 = n2 = 0;
    size1 = size2 = 0;
+
+   // Compute address/width for first load
    for (d = 0; ld1->defExists(d); ++d) {
       if (mask & (1 << d)) {
          if (size1 && (addr1 & 0x7))
@@ -2995,15 +3007,33 @@ DeadCodeElim::checkSplitLoad(Instruction *ld1)
          break;
       }
    }
+
+   // Scale back the size of the first load until it can be loaded. This
+   // typically happens for TYPE_B96 loads.
+   while (n1 &&
+          !prog->getTarget()->isAccessSupported(ld1->getSrc(0)->reg.file,
+                                                typeOfSize(size1))) {
+      size1 -= def1[--n1]->reg.size;
+      d--;
+   }
+
+   // Compute address/width for second load
    for (addr2 = addr1 + size1; ld1->defExists(d); ++d) {
       if (mask & (1 << d)) {
+         assert(!size2 || !(addr2 & 0x7));
          def2[n2] = ld1->getDef(d);
          size2 += def2[n2++]->reg.size;
-      } else {
+      } else if (!n2) {
          assert(!n2);
          addr2 += ld1->getDef(d)->reg.size;
+      } else {
+         break;
       }
    }
+
+   // Make sure that we've processed all the values
+   for (; ld1->defExists(d); ++d)
+      assert(!(mask & (1 << d)));
 
    updateLdStOffset(ld1, addr1, func);
    ld1->setType(typeOfSize(size1));
