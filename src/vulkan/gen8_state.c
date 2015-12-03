@@ -105,6 +105,37 @@ vk_to_gen_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component)
       return vk_to_gen_swizzle_map[swizzle];
 }
 
+/**
+ * Get the values to pack into RENDER_SUFFACE_STATE.SurfaceHorizontalAlignment
+ * and SurfaceVerticalAlignment.
+ */
+static void
+get_halign_valign(const struct isl_surf *surf, uint32_t *halign, uint32_t *valign)
+{
+   #if ANV_GENx10 >= 90
+      /* In Skylake, RENDER_SUFFACE_STATE.SurfaceVerticalAlignment is in units
+       * of surface elements (not pixels nor samples). For compressed formats,
+       * a "surface element" is defined as a compression block.  For example,
+       * if SurfaceVerticalAlignment is VALIGN_4 and SurfaceFormat is an ETC2
+       * format (ETC2 has a block height of 4), then the vertical alignment is
+       * 4 compression blocks or, equivalently, 16 pixels.
+       */
+      struct isl_extent3d lod_align_el = isl_surf_get_lod_alignment_el(surf);
+      *halign = anv_halign[lod_align_el.width];
+      *valign = anv_valign[lod_align_el.height];
+   #else
+      /* Pre-Skylake, RENDER_SUFFACE_STATE.SurfaceVerticalAlignment is in
+       * units of surface samples.  For example, if SurfaceVerticalAlignment
+       * is VALIGN_4 and the surface is singlesampled, then for any surface
+       * format (compressed or not) the vertical alignment is
+       * 4 pixels.
+       */
+      struct isl_extent3d lod_align_sa = isl_surf_get_lod_alignment_sa(surf);
+      *halign = anv_halign[lod_align_sa.width];
+      *valign = anv_valign[lod_align_sa.height];
+   #endif
+}
+
 void
 genX(image_view_init)(struct anv_image_view *iview,
                       struct anv_device *device,
@@ -183,15 +214,15 @@ genX(image_view_init)(struct anv_image_view *iview,
       [ISL_TILING_W]       = WMAJOR,
    };
 
-   const struct isl_extent3d lod_align_sa =
-      isl_surf_get_lod_alignment_sa(&surface->isl);
+   uint32_t halign, valign;
+   get_halign_valign(&surface->isl, &halign, &valign);
 
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = image->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
-      .SurfaceVerticalAlignment = anv_valign[lod_align_sa.height],
-      .SurfaceHorizontalAlignment = anv_halign[lod_align_sa.width],
+      .SurfaceVerticalAlignment = valign,
+      .SurfaceHorizontalAlignment = halign,
       .TileMode = isl_to_gen_tiling[surface->isl.tiling],
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
