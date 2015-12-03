@@ -158,7 +158,8 @@ VkResult anv_GetPipelineCacheData(
     size_t*                                     pDataSize,
     void*                                       pData)
 {
-   stub_return(VK_UNSUPPORTED);
+   *pDataSize = 0;
+   stub_return(VK_SUCCESS);
 }
 
 VkResult anv_MergePipelineCaches(
@@ -167,7 +168,7 @@ VkResult anv_MergePipelineCaches(
     uint32_t                                    srcCacheCount,
     const VkPipelineCache*                      pSrcCaches)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub_return(VK_SUCCESS);
 }
 
 void anv_DestroyPipeline(

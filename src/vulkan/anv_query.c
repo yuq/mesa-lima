@@ -46,7 +46,7 @@ VkResult anv_CreateQueryPool(
    case VK_QUERY_TYPE_OCCLUSION:
       break;
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
-      return VK_UNSUPPORTED;
+      return VK_ERROR_INCOMPATIBLE_DRIVER;
    default:
       unreachable("");
    }
@@ -107,7 +107,7 @@ VkResult anv_GetQueryPoolResults(
    if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
       /* Where is the availabilty info supposed to go? */
       anv_finishme("VK_QUERY_RESULT_WITH_AVAILABILITY_BIT");
-      return VK_UNSUPPORTED;
+      return VK_ERROR_INCOMPATIBLE_DRIVER;
    }
 
    assert(pool->type == VK_QUERY_TYPE_OCCLUSION);

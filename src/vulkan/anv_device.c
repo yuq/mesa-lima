@@ -92,7 +92,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    } else if (device->info->gen == 8 && !device->info->is_cherryview) {
       /* Broadwell is as fully supported as anything */
    } else {
-      result = vk_errorf(VK_UNSUPPORTED,
+      result = vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
                          "Vulkan not yet supported on %s", device->name);
       goto fail;
    }
@@ -272,7 +272,7 @@ VkResult anv_EnumeratePhysicalDevices(
    if (instance->physicalDeviceCount < 0) {
       result = anv_physical_device_init(&instance->physicalDevice,
                                         instance, "/dev/dri/renderD128");
-      if (result == VK_UNSUPPORTED) {
+      if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
          instance->physicalDeviceCount = 0;
       } else if (result == VK_SUCCESS) {
          instance->physicalDeviceCount = 1;
@@ -1122,7 +1122,7 @@ VkResult anv_QueueBindSparse(
     const VkBindSparseInfo*                     pBindInfo,
     VkFence                                     fence)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
 }
 
 VkResult anv_CreateFence(
@@ -1302,7 +1302,7 @@ VkResult anv_CreateEvent(
     const VkAllocationCallbacks*                pAllocator,
     VkEvent*                                    pEvent)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
 }
 
 void anv_DestroyEvent(
@@ -1317,21 +1317,21 @@ VkResult anv_GetEventStatus(
     VkDevice                                    device,
     VkEvent                                     event)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
 }
 
 VkResult anv_SetEvent(
     VkDevice                                    device,
     VkEvent                                     event)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
 }
 
 VkResult anv_ResetEvent(
     VkDevice                                    device,
     VkEvent                                     event)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
 }
 
 // Buffer functions
@@ -1401,7 +1401,7 @@ VkResult anv_CreateBufferView(
     const VkAllocationCallbacks*                pAllocator,
     VkBufferView*                               pView)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
 }
 
 void anv_DestroyBufferView(
