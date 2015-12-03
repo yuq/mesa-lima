@@ -84,54 +84,71 @@ static const struct anv_surf_type_limits {
    [SURFTYPE_STRBUF] = {128,     16384,     64},
 };
 
-static const struct anv_tile_info {
-   /**
-    * Alignment for RENDER_SURFACE_STATE.SurfaceBaseAddress.
-    *
-    * To simplify calculations, the alignments defined in the table are
-    * sometimes larger than required.  For example, Skylake requires that X and
-    * Y tiled buffers be aligned to 4K, but Broadwell permits smaller
-    * alignment. We choose 4K to accomodate both chipsets.  The alignment of
-    * a linear buffer depends on its element type and usage. Linear depth
-    * buffers have the largest alignment, 64B, so we choose that for all linear
-    * buffers.
-    */
-   uint32_t surface_alignment;
-} anv_tile_info_table[] = {
-   [ISL_TILING_LINEAR]  = {   64 },
-   [ISL_TILING_X]       = { 4096 },
-   [ISL_TILING_Y0]      = { 4096 },
-   [ISL_TILING_Yf]      = { 4096 },
-   [ISL_TILING_Ys]      = { 4096 },
-   [ISL_TILING_W]       = { 4096 },
-};
-
-static enum isl_tiling
-anv_image_choose_tiling(const struct anv_image_create_info *anv_info)
+static isl_tiling_flags_t
+choose_isl_tiling_flags(const struct anv_image_create_info *anv_info)
 {
-   if (anv_info->force_tiling)
-      return anv_info->tiling;
+   const VkImageCreateInfo *vk_info = anv_info->vk_info;
 
-   /* The Sandybridge PRM says that the stencil buffer "is supported
-    * only in Tile W memory".
-    */
-
-   switch (anv_info->vk_info->tiling) {
-   case VK_IMAGE_TILING_LINEAR:
-      assert(anv_info->vk_info->format != VK_FORMAT_S8_UINT);
-      return ISL_TILING_LINEAR;
-   case VK_IMAGE_TILING_OPTIMAL:
-      if (unlikely(anv_info->vk_info->format == VK_FORMAT_S8_UINT)) {
-         return ISL_TILING_W;
-      } else {
-         return ISL_TILING_Y0;
-      }
-   default:
-      assert(!"bad VKImageTiling");
-      return ISL_TILING_LINEAR;
+   if (anv_info->force_tiling) {
+      return 1u << anv_info->tiling;
+   } else if (vk_info->tiling == VK_IMAGE_TILING_LINEAR) {
+      return ISL_TILING_LINEAR_BIT;
+   } else if (vk_info->tiling == VK_IMAGE_TILING_OPTIMAL) {
+      return ISL_TILING_ANY_MASK;
+   } else {
+      unreachable("bad anv_image_create_info");
+      return 0;
    }
 }
 
+/**
+ * The \a format argument is required and overrides any format found in struct
+ * anv_image_create_info.
+ */
+static isl_surf_usage_flags_t
+choose_isl_surf_usage(const struct anv_image_create_info *info,
+                      const struct anv_format *format)
+{
+   const VkImageCreateInfo *vk_info = info->vk_info;
+   isl_surf_usage_flags_t isl_flags = 0;
+
+   /* FINISHME: Support aux surfaces */
+   isl_flags |= ISL_SURF_USAGE_DISABLE_AUX_BIT;
+
+   if (vk_info->usage & VK_IMAGE_USAGE_SAMPLED_BIT)
+      isl_flags |= ISL_SURF_USAGE_TEXTURE_BIT;
+
+   if (vk_info->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
+      isl_flags |= ISL_SURF_USAGE_TEXTURE_BIT;
+
+   if (vk_info->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+      isl_flags |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
+
+   if (vk_info->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+      isl_flags |= ISL_SURF_USAGE_CUBE_BIT;
+
+   if (vk_info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+      assert((format->depth_format != 0) ^ format->has_stencil);
+
+      if (format->depth_format) {
+         isl_flags |= ISL_SURF_USAGE_DEPTH_BIT;
+      } else if (format->has_stencil) {
+         isl_flags |= ISL_SURF_USAGE_STENCIL_BIT;
+      }
+   }
+
+   if (vk_info->usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
+      /* Meta implements transfers by sampling from the source image. */
+      isl_flags |= ISL_SURF_USAGE_TEXTURE_BIT;
+   }
+
+   if (vk_info->usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
+      /* Meta implements transfers by rendering into the destination image. */
+      isl_flags |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
+   }
+
+   return isl_flags;
+}
 
 /**
  * The \a format argument is required and overrides any format in
@@ -139,132 +156,46 @@ anv_image_choose_tiling(const struct anv_image_create_info *anv_info)
  */
 static VkResult
 anv_image_make_surface(const struct anv_device *dev,
-                       const struct anv_image_create_info *create_info,
+                       const struct anv_image_create_info *anv_info,
                        const struct anv_format *format,
                        uint64_t *inout_image_size,
                        uint32_t *inout_image_alignment,
                        struct anv_surface *out_surface)
 {
-   /* See RENDER_SURFACE_STATE.SurfaceQPitch */
-   static const uint16_t min_qpitch UNUSED = 0x4;
-   static const uint16_t max_qpitch UNUSED = 0x1ffc;
+   const VkImageCreateInfo *vk_info = anv_info->vk_info;
 
-   const VkExtent3D *restrict extent = &create_info->vk_info->extent;
-   const uint32_t levels = create_info->vk_info->mipLevels;
-   const uint32_t array_size = create_info->vk_info->arrayLayers;
-   const enum isl_tiling tiling = anv_image_choose_tiling(create_info);
+   static const enum isl_surf_dim vk_to_isl_surf_dim[] = {
+      [VK_IMAGE_TYPE_1D] = ISL_SURF_DIM_1D,
+      [VK_IMAGE_TYPE_2D] = ISL_SURF_DIM_2D,
+      [VK_IMAGE_TYPE_3D] = ISL_SURF_DIM_3D,
+   };
 
-   const struct anv_tile_info *tile_info =
-       &anv_tile_info_table[tiling];
-
-   const uint32_t bs = format->isl_layout->bs;
-   const uint32_t bw = format->isl_layout->bw;
-   const uint32_t bh = format->isl_layout->bh;
-
-   struct isl_extent2d tile_extent;
-   isl_tiling_get_extent(&dev->isl_dev, tiling, bs, &tile_extent);
-
-   const uint32_t i = MAX(4, bw); /* FINISHME: Stop hardcoding subimage alignment */
-   const uint32_t j = MAX(4, bh); /* FINISHME: Stop hardcoding subimage alignment */
-   assert(i == 4 || i == 8 || i == 16);
-   assert(j == 4 || j == 8 || j == 16);
-
-   uint16_t qpitch = min_qpitch;
-   uint32_t mt_width = 0;
-   uint32_t mt_height = 0;
-
-   switch (create_info->vk_info->imageType) {
-   case VK_IMAGE_TYPE_1D:
-      /* From the Broadwell PRM >> Memory Views >> Common Surface Formats >>
-       * Surface Layout >> 1D Surfaces:
-       *
-       *    One-dimensional surfaces are identical to 2D surfaces with height of one.
-       *
-       * So fallthrough...
-       */
-   case VK_IMAGE_TYPE_2D: {
-      const uint32_t w0 = align_u32(extent->width, i);
-      const uint32_t h0 = align_u32(extent->height, j);
-
-      if (levels == 1 && array_size == 1) {
-         qpitch = min_qpitch;
-         mt_width = w0;
-         mt_height = h0;
-      } else {
-         uint32_t w1 = align_u32(anv_minify(extent->width, 1), i);
-         uint32_t h1 = align_u32(anv_minify(extent->height, 1), j);
-         uint32_t w2 = align_u32(anv_minify(extent->width, 2), i);
-
-         /* The QPitch equation is found in the Broadwell PRM >> Volume 5: Memory
-          * Views >> Common Surface Formats >> Surface Layout >> 2D Surfaces >>
-          * Surface Arrays >> For All Surface Other Than Separate Stencil Buffer:
-          */
-         assert(bh ==1 || bh == 4);
-         qpitch = (h0 + h1 + 11 * j) / bh;
-         mt_width = MAX(w0, w1 + w2);
-         mt_height = array_size * qpitch;
-      }
-      break;
-   }
-   case VK_IMAGE_TYPE_3D:
-      /* The layout of 3D surfaces is described by the Broadwell PRM >>
-       * Volume 5: Memory Views >> Common Surface Formats >> Surface Layout >>
-       * 3D Surfaces.
-       */
-      for (uint32_t l = 0; l < levels; ++l) {
-         const uint32_t w_l = align_u32(anv_minify(extent->width, l), i);
-         const uint32_t h_l = align_u32(anv_minify(extent->height, l), j);
-         const uint32_t d_l = anv_minify(extent->depth, l);
-
-         const uint32_t max_layers_horiz = MIN(d_l, 1u << l);
-         const uint32_t max_layers_vert = align_u32(d_l, 1u << l) / (1u << l);
-
-         mt_width = MAX(mt_width, w_l * max_layers_horiz);
-         mt_height += h_l * max_layers_vert;
-      }
-      break;
-   default:
-      unreachable(!"bad VkImageType");
-   }
-
-   assert(qpitch >= min_qpitch);
-   if (qpitch > max_qpitch) {
-      anv_loge("image qpitch > 0x%x\n", max_qpitch);
-      return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-   }
-
-   /* From the Broadwell PRM, RENDER_SURFACE_STATE.SurfaceQpitch:
-    *
-    *   This field must be set an integer multiple of the Surface Vertical
-    *   Alignment.
-    */
-   assert(anv_is_aligned(qpitch, j));
-
-   uint32_t stride = align_u32(mt_width * bs / bw, tile_extent.width);
-   if (create_info->stride > 0)
-      stride = create_info->stride;
-
-  /* The padding requirement is found in the Broadwell PRM >> Volume 5: Memory
-   * Views >> Common Surface Formats >> Surface Padding Requirements >>
-   * Sampling Engine Surfaces >> Buffer Padding Requirements:
-   */
-   const uint32_t mem_rows = align_u32(mt_height / bh, 2 * bh);
-   const uint32_t size = stride * align_u32(mem_rows, tile_extent.height);
-   const uint32_t offset = align_u32(*inout_image_size,
-                                     tile_info->surface_alignment);
-
-   *inout_image_size = offset + size;
-   *inout_image_alignment = MAX(*inout_image_alignment,
-                                tile_info->surface_alignment);
+   struct isl_surf isl_surf;
+   isl_surf_init(&dev->isl_dev, &isl_surf,
+      .dim = vk_to_isl_surf_dim[vk_info->imageType],
+      .format = format->surface_format,
+      .width = vk_info->extent.width,
+      .height = vk_info->extent.height,
+      .depth = vk_info->extent.depth,
+      .levels = vk_info->mipLevels,
+      .array_len = vk_info->arrayLayers,
+      .samples = vk_info->samples,
+      .min_alignment = 0,
+      .min_pitch = 0,
+      .usage = choose_isl_surf_usage(anv_info, format),
+      .tiling_flags = choose_isl_tiling_flags(anv_info));
 
    *out_surface = (struct anv_surface) {
-      .offset = offset,
-      .stride = stride,
-      .tiling = tiling,
-      .qpitch = qpitch,
-      .h_align = i,
-      .v_align = j,
+      .offset = align_u32(*inout_image_size, isl_surf.alignment),
+      .stride = isl_surf.row_pitch,
+      .tiling = isl_surf.tiling,
+      .qpitch = isl_surf_get_array_pitch_sa_rows(&isl_surf),
+      .h_align = isl_surf_get_lod_alignment_sa(&isl_surf).width,
+      .v_align = isl_surf_get_lod_alignment_sa(&isl_surf).height,
    };
+
+   *inout_image_size = out_surface->offset + isl_surf.size;
+   *inout_image_alignment = MAX(*inout_image_alignment, isl_surf.alignment);
 
    return VK_SUCCESS;
 }
