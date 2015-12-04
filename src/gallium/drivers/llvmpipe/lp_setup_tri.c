@@ -96,7 +96,7 @@ lp_setup_alloc_triangle(struct lp_scene *scene,
                 plane_sz);
 
    tri = lp_scene_alloc_aligned( scene, *tri_size, 16 );
-   if (tri == NULL)
+   if (!tri)
       return NULL;
 
    tri->inputs.stride = input_array_sz;

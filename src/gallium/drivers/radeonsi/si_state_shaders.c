@@ -100,7 +100,7 @@ static void si_shader_ls(struct si_shader *shader)
 	uint64_t va;
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
-	if (pm4 == NULL)
+	if (!pm4)
 		return;
 
 	va = shader->bo->gpu_address;
@@ -136,7 +136,7 @@ static void si_shader_hs(struct si_shader *shader)
 	uint64_t va;
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
-	if (pm4 == NULL)
+	if (!pm4)
 		return;
 
 	va = shader->bo->gpu_address;
@@ -172,7 +172,7 @@ static void si_shader_es(struct si_shader *shader)
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
-	if (pm4 == NULL)
+	if (!pm4)
 		return;
 
 	va = shader->bo->gpu_address;
@@ -229,7 +229,7 @@ static void si_shader_gs(struct si_shader *shader)
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
-	if (pm4 == NULL)
+	if (!pm4)
 		return;
 
 	if (gs_max_vert_out <= 128) {
@@ -301,7 +301,7 @@ static void si_shader_vs(struct si_shader *shader)
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
-	if (pm4 == NULL)
+	if (!pm4)
 		return;
 
 	/* If this is the GS copy shader, the GS state writes this register.
@@ -394,7 +394,7 @@ static void si_shader_ps(struct si_shader *shader)
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
-	if (pm4 == NULL)
+	if (!pm4)
 		return;
 
 	for (i = 0; i < info->num_inputs; i++) {

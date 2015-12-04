@@ -699,7 +699,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 
 	rtex = CALLOC_STRUCT(r600_texture);
-	if (rtex == NULL)
+	if (!rtex)
 		return NULL;
 
 	resource = &rtex->resource;
@@ -1039,7 +1039,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	}
 
 	trans = CALLOC_STRUCT(r600_transfer);
-	if (trans == NULL)
+	if (!trans)
 		return NULL;
 	trans->transfer.resource = texture;
 	trans->transfer.level = level;
@@ -1115,7 +1115,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 
 		/* Create the temporary texture. */
 		staging = (struct r600_texture*)ctx->screen->resource_create(ctx->screen, &resource);
-		if (staging == NULL) {
+		if (!staging) {
 			R600_ERR("failed to create temporary texture to hold untiled copy\n");
 			FREE(trans);
 			return NULL;
@@ -1192,7 +1192,7 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 {
 	struct r600_surface *surface = CALLOC_STRUCT(r600_surface);
 
-	if (surface == NULL)
+	if (!surface)
 		return NULL;
 
 	assert(templ->u.tex.first_layer <= util_max_layer(texture, templ->u.tex.level));

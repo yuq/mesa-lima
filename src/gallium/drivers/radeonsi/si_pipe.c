@@ -109,7 +109,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 #endif
 	int shader, i;
 
-	if (sctx == NULL)
+	if (!sctx)
 		return NULL;
 
 	if (sscreen->b.debug_flags & DBG_CHECK_VM)
@@ -520,7 +520,7 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 {
 	struct si_screen *sscreen = (struct si_screen *)pscreen;
 
-	if (sscreen == NULL)
+	if (!sscreen)
 		return;
 
 	if (!sscreen->b.ws->unref(sscreen->b.ws))
@@ -611,7 +611,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
 
-	if (sscreen == NULL) {
+	if (!sscreen) {
 		return NULL;
 	}
 

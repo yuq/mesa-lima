@@ -202,7 +202,7 @@ static struct pipe_query *r600_query_sw_create(struct pipe_context *ctx,
 	struct r600_query_sw *query;
 
 	query = CALLOC_STRUCT(r600_query_sw);
-	if (query == NULL)
+	if (!query)
 		return NULL;
 
 	query->b.type = query_type;

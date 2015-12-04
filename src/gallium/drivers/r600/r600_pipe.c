@@ -115,7 +115,7 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 	struct r600_screen* rscreen = (struct r600_screen *)screen;
 	struct radeon_winsys *ws = rscreen->b.ws;
 
-	if (rctx == NULL)
+	if (!rctx)
 		return NULL;
 
 	rctx->b.b.screen = screen;
@@ -527,7 +527,7 @@ static void r600_destroy_screen(struct pipe_screen* pscreen)
 {
 	struct r600_screen *rscreen = (struct r600_screen *)pscreen;
 
-	if (rscreen == NULL)
+	if (!rscreen)
 		return;
 
 	if (!rscreen->b.ws->unref(rscreen->b.ws))
@@ -554,7 +554,7 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
 {
 	struct r600_screen *rscreen = CALLOC_STRUCT(r600_screen);
 
-	if (rscreen == NULL) {
+	if (!rscreen) {
 		return NULL;
 	}
 

@@ -459,7 +459,7 @@ emit_consts_vgpu9(struct svga_context *svga, unsigned shader)
       data = (const float (*)[4])
          pipe_buffer_map(&svga->pipe, svga->curr.constbufs[shader][0].buffer,
                          PIPE_TRANSFER_READ, &transfer);
-      if (data == NULL) {
+      if (!data) {
          return PIPE_ERROR_OUT_OF_MEMORY;
       }
 
@@ -747,7 +747,7 @@ emit_fs_consts(struct svga_context *svga, unsigned dirty)
 
    /* SVGA_NEW_FS_VARIANT
     */
-   if (variant == NULL)
+   if (!variant)
       return PIPE_OK;
 
    /* SVGA_NEW_FS_CONST_BUFFER
@@ -782,7 +782,7 @@ emit_vs_consts(struct svga_context *svga, unsigned dirty)
 
    /* SVGA_NEW_VS_VARIANT
     */
-   if (variant == NULL)
+   if (!variant)
       return PIPE_OK;
 
    /* SVGA_NEW_VS_CONST_BUFFER
@@ -816,7 +816,7 @@ emit_gs_consts(struct svga_context *svga, unsigned dirty)
 
    /* SVGA_NEW_GS_VARIANT
     */
-   if (variant == NULL)
+   if (!variant)
       return PIPE_OK;
 
    /* SVGA_NEW_GS_CONST_BUFFER

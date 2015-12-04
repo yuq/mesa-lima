@@ -55,7 +55,7 @@ static struct r600_bytecode_cf *r600_bytecode_cf(void)
 {
 	struct r600_bytecode_cf *cf = CALLOC_STRUCT(r600_bytecode_cf);
 
-	if (cf == NULL)
+	if (!cf)
 		return NULL;
 	LIST_INITHEAD(&cf->list);
 	LIST_INITHEAD(&cf->alu);
@@ -68,7 +68,7 @@ static struct r600_bytecode_alu *r600_bytecode_alu(void)
 {
 	struct r600_bytecode_alu *alu = CALLOC_STRUCT(r600_bytecode_alu);
 
-	if (alu == NULL)
+	if (!alu)
 		return NULL;
 	LIST_INITHEAD(&alu->list);
 	return alu;
@@ -78,7 +78,7 @@ static struct r600_bytecode_vtx *r600_bytecode_vtx(void)
 {
 	struct r600_bytecode_vtx *vtx = CALLOC_STRUCT(r600_bytecode_vtx);
 
-	if (vtx == NULL)
+	if (!vtx)
 		return NULL;
 	LIST_INITHEAD(&vtx->list);
 	return vtx;
@@ -88,7 +88,7 @@ static struct r600_bytecode_tex *r600_bytecode_tex(void)
 {
 	struct r600_bytecode_tex *tex = CALLOC_STRUCT(r600_bytecode_tex);
 
-	if (tex == NULL)
+	if (!tex)
 		return NULL;
 	LIST_INITHEAD(&tex->list);
 	return tex;
@@ -157,7 +157,7 @@ int r600_bytecode_add_cf(struct r600_bytecode *bc)
 {
 	struct r600_bytecode_cf *cf = r600_bytecode_cf();
 
-	if (cf == NULL)
+	if (!cf)
 		return -ENOMEM;
 	LIST_ADDTAIL(&cf->list, &bc->cf);
 	if (bc->cf_last) {
@@ -1148,7 +1148,7 @@ int r600_bytecode_add_alu_type(struct r600_bytecode *bc,
 	struct r600_bytecode_alu *lalu;
 	int i, r;
 
-	if (nalu == NULL)
+	if (!nalu)
 		return -ENOMEM;
 	memcpy(nalu, alu, sizeof(struct r600_bytecode_alu));
 
@@ -1309,7 +1309,7 @@ int r600_bytecode_add_vtx(struct r600_bytecode *bc, const struct r600_bytecode_v
 	struct r600_bytecode_vtx *nvtx = r600_bytecode_vtx();
 	int r;
 
-	if (nvtx == NULL)
+	if (!nvtx)
 		return -ENOMEM;
 	memcpy(nvtx, vtx, sizeof(struct r600_bytecode_vtx));
 
@@ -1361,7 +1361,7 @@ int r600_bytecode_add_tex(struct r600_bytecode *bc, const struct r600_bytecode_t
 	struct r600_bytecode_tex *ntex = r600_bytecode_tex();
 	int r;
 
-	if (ntex == NULL)
+	if (!ntex)
 		return -ENOMEM;
 	memcpy(ntex, tex, sizeof(struct r600_bytecode_tex));
 
@@ -2420,7 +2420,7 @@ void *r600_create_vertex_fetch_shader(struct pipe_context *ctx,
 				      &format, &num_format, &format_comp, &endian);
 
 		desc = util_format_description(elements[i].src_format);
-		if (desc == NULL) {
+		if (!desc) {
 			r600_bytecode_clear(&bc);
 			R600_ERR("unknown format %d\n", elements[i].src_format);
 			return NULL;

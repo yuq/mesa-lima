@@ -404,7 +404,7 @@ static void *evergreen_create_dsa_state(struct pipe_context *ctx,
 	unsigned db_depth_control, alpha_test_control, alpha_ref;
 	struct r600_dsa_state *dsa = CALLOC_STRUCT(r600_dsa_state);
 
-	if (dsa == NULL) {
+	if (!dsa) {
 		return NULL;
 	}
 
@@ -461,7 +461,7 @@ static void *evergreen_create_rs_state(struct pipe_context *ctx,
 	float psize_min, psize_max;
 	struct r600_rasterizer_state *rs = CALLOC_STRUCT(r600_rasterizer_state);
 
-	if (rs == NULL) {
+	if (!rs) {
 		return NULL;
 	}
 
@@ -558,7 +558,7 @@ static void *evergreen_create_sampler_state(struct pipe_context *ctx,
 	struct r600_pipe_sampler_state *ss = CALLOC_STRUCT(r600_pipe_sampler_state);
 	unsigned aniso_flag_offset = state->max_anisotropy > 1 ? 2 : 0;
 
-	if (ss == NULL) {
+	if (!ss) {
 		return NULL;
 	}
 
@@ -669,7 +669,7 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 	unsigned dim, last_layer;
 	uint64_t va;
 
-	if (view == NULL)
+	if (!view)
 		return NULL;
 
 	/* initialize base object */

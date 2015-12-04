@@ -240,7 +240,7 @@ expand(struct svga_shader_emitter_v10 *emit)
    else
       new_buf = NULL;
 
-   if (new_buf == NULL) {
+   if (!new_buf) {
       emit->ptr = err_buf;
       emit->buf = err_buf;
       emit->size = sizeof(err_buf);

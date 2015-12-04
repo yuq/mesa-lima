@@ -318,7 +318,7 @@ void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resour
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_resource *rr = (struct r600_resource *)r;
 
-	if (r == NULL) {
+	if (!r) {
 		return;
 	}
 

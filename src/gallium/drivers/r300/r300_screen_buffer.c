@@ -129,7 +129,7 @@ r300_buffer_transfer_map( struct pipe_context *context,
 
     map = rws->buffer_map(rbuf->cs_buf, r300->cs, usage);
 
-    if (map == NULL) {
+    if (!map) {
         util_slab_free(&r300->pool_transfers, transfer);
         return NULL;
     }

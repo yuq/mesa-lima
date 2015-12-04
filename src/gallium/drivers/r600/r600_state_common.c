@@ -192,7 +192,7 @@ static void r600_bind_blend_state(struct pipe_context *ctx, void *state)
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct r600_blend_state *blend = (struct r600_blend_state *)state;
 
-	if (blend == NULL) {
+	if (!blend) {
 		r600_set_cso_state_with_cb(rctx, &rctx->blend_state, NULL, NULL);
 		return;
 	}
@@ -299,7 +299,7 @@ static void r600_bind_dsa_state(struct pipe_context *ctx, void *state)
 	struct r600_dsa_state *dsa = state;
 	struct r600_stencil_ref ref;
 
-	if (state == NULL) {
+	if (!state) {
 		r600_set_cso_state_with_cb(rctx, &rctx->dsa_state, NULL, NULL);
 		return;
 	}
@@ -339,7 +339,7 @@ static void r600_bind_rs_state(struct pipe_context *ctx, void *state)
 	struct r600_rasterizer_state *rs = (struct r600_rasterizer_state *)state;
 	struct r600_context *rctx = (struct r600_context *)ctx;
 
-	if (state == NULL)
+	if (!state)
 		return;
 
 	rctx->rasterizer = rs;

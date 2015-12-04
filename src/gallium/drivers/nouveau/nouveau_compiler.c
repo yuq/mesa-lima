@@ -168,7 +168,7 @@ main(int argc, char *argv[])
    else
       f = fopen(filename, "r");
 
-   if (f == NULL) {
+   if (!f) {
       _debug_printf("Error opening file '%s': %s\n", filename, strerror(errno));
       return 1;
    }

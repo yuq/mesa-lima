@@ -497,9 +497,9 @@ nv84_decoder_vp_mpeg12(struct nv84_decoder *dec,
 
    STATIC_ASSERT(sizeof(struct mpeg12_header) == 0x100);
 
-   if (ref1 == NULL)
+   if (!ref1)
       ref1 = dest;
-   if (ref2 == NULL)
+   if (!ref2)
       ref2 = dest;
    bo_refs[1].bo = ref1->interlaced;
    bo_refs[2].bo = ref2->interlaced;

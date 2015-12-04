@@ -51,7 +51,7 @@ struct compute_memory_pool* compute_memory_pool_new(
 {
 	struct compute_memory_pool* pool = (struct compute_memory_pool*)
 				CALLOC(sizeof(struct compute_memory_pool), 1);
-	if (pool == NULL)
+	if (!pool)
 		return NULL;
 
 	COMPUTE_DBG(rscreen, "* compute_memory_pool_new()\n");
@@ -399,7 +399,7 @@ int compute_memory_promote_item(struct compute_memory_pool *pool,
 	list_addtail(&item->link, pool->item_list);
 	item->start_in_dw = start_in_dw;
 
-	if (src != NULL) {
+	if (src) {
 		u_box_1d(0, item->size_in_dw * 4, &box);
 
 		rctx->b.b.resource_copy_region(pipe,
@@ -630,7 +630,7 @@ struct compute_memory_item* compute_memory_alloc(
 
 	new_item = (struct compute_memory_item *)
 				CALLOC(sizeof(struct compute_memory_item), 1);
-	if (new_item == NULL)
+	if (!new_item)
 		return NULL;
 
 	new_item->size_in_dw = size_in_dw;

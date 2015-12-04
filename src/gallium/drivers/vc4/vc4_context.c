@@ -207,7 +207,7 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
         vc4_debug &= ~VC4_DEBUG_SHADERDB;
 
         vc4 = rzalloc(NULL, struct vc4_context);
-        if (vc4 == NULL)
+        if (!vc4)
                 return NULL;
         struct pipe_context *pctx = &vc4->base;
 

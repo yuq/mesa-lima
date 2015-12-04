@@ -723,7 +723,7 @@ generate_setup_variant(struct lp_setup_variant_key *key,
       goto fail;
 
    variant = CALLOC_STRUCT(lp_setup_variant);
-   if (variant == NULL)
+   if (!variant)
       goto fail;
 
    variant->no = setup_no++;

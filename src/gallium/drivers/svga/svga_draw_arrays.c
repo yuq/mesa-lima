@@ -52,11 +52,11 @@ generate_indices(struct svga_hwtnl *hwtnl,
 
    dst = pipe_buffer_create(pipe->screen, PIPE_BIND_INDEX_BUFFER,
                             PIPE_USAGE_IMMUTABLE, size);
-   if (dst == NULL)
+   if (!dst)
       goto fail;
 
    dst_map = pipe_buffer_map(pipe, dst, PIPE_TRANSFER_WRITE, &transfer);
-   if (dst_map == NULL)
+   if (!dst_map)
       goto fail;
 
    generate(0, nr, dst_map);

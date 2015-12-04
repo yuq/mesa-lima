@@ -134,7 +134,7 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
    enum pipe_error ret;
 
    svga = CALLOC_STRUCT(svga_context);
-   if (svga == NULL)
+   if (!svga)
       goto cleanup;
 
    LIST_INITHEAD(&svga->dirty_buffers);
@@ -340,7 +340,7 @@ void svga_context_flush( struct svga_context *svga,
                                           PIPE_TIMEOUT_INFINITE);
    }
 
-   if(pfence)
+   if (pfence)
       svgascreen->sws->fence_reference(svgascreen->sws, pfence, fence);
 
    svgascreen->sws->fence_reference(svgascreen->sws, &fence, NULL);
