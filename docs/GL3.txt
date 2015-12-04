@@ -112,7 +112,7 @@ GL 4.0, GLSL 4.00 --- all DONE: nvc0, radeonsi
   GL_ARB_gpu_shader_fp64                               DONE (r600, llvmpipe, softpipe)
   GL_ARB_sample_shading                                DONE (i965, nv50, r600)
   GL_ARB_shader_subroutine                             DONE (i965, nv50, r600, llvmpipe, softpipe)
-  GL_ARB_tessellation_shader                           DONE ()
+  GL_ARB_tessellation_shader                           DONE (r600)
   GL_ARB_texture_buffer_object_rgb32                   DONE (i965, r600, llvmpipe, softpipe)
   GL_ARB_texture_cube_map_array                        DONE (i965, nv50, r600, llvmpipe, softpipe)
   GL_ARB_texture_gather                                DONE (i965, nv50, r600, llvmpipe, softpipe)
