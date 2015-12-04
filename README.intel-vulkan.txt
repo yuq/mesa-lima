@@ -1,6 +1,6 @@
 Intel's Open Source Vulkan Driver
-Vulkan API Version: 0.170.2
-SPIR-V Version: 32
+Vulkan API Version: 0.210.1
+SPIR-V Version: 1.0
 
 Intro
 =====
@@ -36,7 +36,12 @@ Chad Versace <chad.versace@intel.com>
 Supported Hardware
 ==================
 - Broadwell, main development focus
-- Ivybridge, early experimental support
+- Ivybridge
+- Sky Lake
+- Haswell
+- Bay Trail
+- Cherryview
+- Broxton
 
 
 Supported OS Platforms
@@ -104,9 +109,10 @@ Supported Features:
   - Index buffers, instanced draw, indirect draw
   - Nested command buffers
   - Consumes SPIR-V (no GLSL "backdoor")
-  - Fragment, vertex, and geometry shaders
+  - Fragment, vertex, geometry, and compute shaders
   - Uniform buffers, sampled images, dynamic uniform buffers
-  - Push constants (to the extent they're supported by SPIR-V v32)
+  - Shader storage buffers
+  - Push constants (VS and FS only)
   - Color, depth and stencil attachments
   - 1D, 2D, 3D textures, texture arrays
   - Memory barrier
@@ -118,10 +124,10 @@ Supported Features:
   - Occlution query and timestamps
 
 Unsupported Features:
-   - Shader storage buffers
    - Shader specialization
    - Storage images
-   - Compute and tesselation stages
+   - Tesselation shaders
+   - Push constants in GS and CS (and VS on HSW and prior)
    - Sparse resources
    - MSAA
    - VkkSemaphore and VkEvent
