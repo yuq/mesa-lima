@@ -265,6 +265,57 @@ LoadPropagation::visit(BasicBlock *bb)
 
 // =============================================================================
 
+class IndirectPropagation : public Pass
+{
+private:
+   virtual bool visit(BasicBlock *);
+};
+
+bool
+IndirectPropagation::visit(BasicBlock *bb)
+{
+   const Target *targ = prog->getTarget();
+   Instruction *next;
+
+   for (Instruction *i = bb->getEntry(); i; i = next) {
+      next = i->next;
+
+      for (int s = 0; i->srcExists(s); ++s) {
+         Instruction *insn;
+         ImmediateValue imm;
+         if (!i->src(s).isIndirect(0))
+            continue;
+         insn = i->getIndirect(s, 0)->getInsn();
+         if (!insn)
+            continue;
+         if (insn->op == OP_ADD && !isFloatType(insn->dType)) {
+            if (insn->src(0).getFile() != targ->nativeFile(FILE_ADDRESS) ||
+                !insn->src(1).getImmediate(imm))
+               continue;
+            i->setIndirect(s, 0, insn->getSrc(0));
+            i->setSrc(s, cloneShallow(func, i->getSrc(s)));
+            i->src(s).get()->reg.data.offset += imm.reg.data.u32;
+         } else if (insn->op == OP_SUB && !isFloatType(insn->dType)) {
+            if (insn->src(0).getFile() != targ->nativeFile(FILE_ADDRESS) ||
+                !insn->src(1).getImmediate(imm))
+               continue;
+            i->setIndirect(s, 0, insn->getSrc(0));
+            i->setSrc(s, cloneShallow(func, i->getSrc(s)));
+            i->src(s).get()->reg.data.offset -= imm.reg.data.u32;
+         } else if (insn->op == OP_MOV) {
+            if (!insn->src(0).getImmediate(imm))
+               continue;
+            i->setIndirect(s, 0, NULL);
+            i->setSrc(s, cloneShallow(func, i->getSrc(s)));
+            i->src(s).get()->reg.data.offset += imm.reg.data.u32;
+         }
+      }
+   }
+   return true;
+}
+
+// =============================================================================
+
 // Evaluate constant expressions.
 class ConstantFolding : public Pass
 {
@@ -3135,6 +3186,7 @@ Program::optimizeSSA(int level)
    RUN_PASS(2, ModifierFolding, run); // before load propagation -> less checks
    RUN_PASS(1, ConstantFolding, foldAll);
    RUN_PASS(1, LoadPropagation, run);
+   RUN_PASS(1, IndirectPropagation, run);
    RUN_PASS(2, MemoryOpt, run);
    RUN_PASS(2, LocalCSE, run);
    RUN_PASS(0, DeadCodeElim, buryAll);
