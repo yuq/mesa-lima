@@ -70,7 +70,7 @@ anv_gem_create(struct anv_device *device, size_t size)
 }
 
 void
-anv_gem_close(struct anv_device *device, int gem_handle)
+anv_gem_close(struct anv_device *device, uint32_t gem_handle)
 {
    struct drm_gem_close close;
 
@@ -116,7 +116,7 @@ anv_gem_munmap(void *p, uint64_t size)
    munmap(p, size);
 }
 
-int
+uint32_t
 anv_gem_userptr(struct anv_device *device, void *mem, size_t size)
 {
    struct drm_i915_gem_userptr userptr;
@@ -135,7 +135,8 @@ anv_gem_userptr(struct anv_device *device, void *mem, size_t size)
 }
 
 int
-anv_gem_set_caching(struct anv_device *device, int gem_handle, uint32_t caching)
+anv_gem_set_caching(struct anv_device *device,
+                    uint32_t gem_handle, uint32_t caching)
 {
    struct drm_i915_gem_caching gem_caching;
 
@@ -147,7 +148,7 @@ anv_gem_set_caching(struct anv_device *device, int gem_handle, uint32_t caching)
 }
 
 int
-anv_gem_set_domain(struct anv_device *device, int gem_handle,
+anv_gem_set_domain(struct anv_device *device, uint32_t gem_handle,
                    uint32_t read_domains, uint32_t write_domain)
 {
    struct drm_i915_gem_set_domain gem_set_domain;
@@ -164,7 +165,7 @@ anv_gem_set_domain(struct anv_device *device, int gem_handle,
  * On error, \a timeout_ns holds the remaining time.
  */
 int
-anv_gem_wait(struct anv_device *device, int gem_handle, int64_t *timeout_ns)
+anv_gem_wait(struct anv_device *device, uint32_t gem_handle, int64_t *timeout_ns)
 {
    struct drm_i915_gem_wait wait;
    int ret;
@@ -189,7 +190,7 @@ anv_gem_execbuffer(struct anv_device *device,
 
 int
 anv_gem_set_tiling(struct anv_device *device,
-                   int gem_handle, uint32_t stride, uint32_t tiling)
+                   uint32_t gem_handle, uint32_t stride, uint32_t tiling)
 {
    struct drm_i915_gem_set_tiling set_tiling;
    int ret;
@@ -269,7 +270,7 @@ anv_gem_get_aperture(int fd, uint64_t *size)
 }
 
 int
-anv_gem_handle_to_fd(struct anv_device *device, int gem_handle)
+anv_gem_handle_to_fd(struct anv_device *device, uint32_t gem_handle)
 {
    struct drm_prime_handle args;
    int ret;
@@ -285,7 +286,7 @@ anv_gem_handle_to_fd(struct anv_device *device, int gem_handle)
    return args.fd;
 }
 
-int
+uint32_t
 anv_gem_fd_to_handle(struct anv_device *device, int fd)
 {
    struct drm_prime_handle args;

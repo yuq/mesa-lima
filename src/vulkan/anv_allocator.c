@@ -328,7 +328,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 {
    size_t size;
    void *map;
-   int gem_handle;
+   uint32_t gem_handle;
    struct anv_mmap_cleanup *cleanup;
 
    pthread_mutex_lock(&pool->device->mutex);

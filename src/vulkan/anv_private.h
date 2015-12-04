@@ -266,7 +266,7 @@ anv_vector_finish(struct anv_vector *queue)
         __anv_vector_offset += (queue)->element_size)
 
 struct anv_bo {
-   int gem_handle;
+   uint32_t gem_handle;
 
    /* Index into the current validation list.  This is used by the
     * validation list building alrogithm to track which buffers are already
@@ -600,22 +600,21 @@ void* anv_gem_mmap(struct anv_device *device,
                    uint32_t gem_handle, uint64_t offset, uint64_t size, uint32_t flags);
 void anv_gem_munmap(void *p, uint64_t size);
 uint32_t anv_gem_create(struct anv_device *device, size_t size);
-void anv_gem_close(struct anv_device *device, int gem_handle);
-int anv_gem_userptr(struct anv_device *device, void *mem, size_t size);
-int anv_gem_wait(struct anv_device *device, int gem_handle, int64_t *timeout_ns);
+void anv_gem_close(struct anv_device *device, uint32_t gem_handle);
+uint32_t anv_gem_userptr(struct anv_device *device, void *mem, size_t size);
+int anv_gem_wait(struct anv_device *device, uint32_t gem_handle, int64_t *timeout_ns);
 int anv_gem_execbuffer(struct anv_device *device,
                        struct drm_i915_gem_execbuffer2 *execbuf);
-int anv_gem_set_tiling(struct anv_device *device, int gem_handle,
+int anv_gem_set_tiling(struct anv_device *device, uint32_t gem_handle,
                        uint32_t stride, uint32_t tiling);
 int anv_gem_create_context(struct anv_device *device);
 int anv_gem_destroy_context(struct anv_device *device, int context);
 int anv_gem_get_param(int fd, uint32_t param);
 int anv_gem_get_aperture(int fd, uint64_t *size);
-int anv_gem_handle_to_fd(struct anv_device *device, int gem_handle);
-int anv_gem_fd_to_handle(struct anv_device *device, int fd);
-int anv_gem_userptr(struct anv_device *device, void *mem, size_t size);
-int anv_gem_set_caching(struct anv_device *device, int gem_handle, uint32_t caching);
-int anv_gem_set_domain(struct anv_device *device, int gem_handle,
+int anv_gem_handle_to_fd(struct anv_device *device, uint32_t gem_handle);
+uint32_t anv_gem_fd_to_handle(struct anv_device *device, int fd);
+int anv_gem_set_caching(struct anv_device *device, uint32_t gem_handle, uint32_t caching);
+int anv_gem_set_domain(struct anv_device *device, uint32_t gem_handle,
                        uint32_t read_domains, uint32_t write_domain);
 
 VkResult anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size);
