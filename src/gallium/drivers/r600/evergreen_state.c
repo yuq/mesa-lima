@@ -2820,7 +2820,7 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 		num_ls_stack_entries = 42;
 		break;
 	case CHIP_CAICOS:
-		num_ps_threads = 128;
+		num_ps_threads = 96;
 		num_vs_threads = 10;
 		num_gs_threads = 10;
 		num_es_threads = 10;
