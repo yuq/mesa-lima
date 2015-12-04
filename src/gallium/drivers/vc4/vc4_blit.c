@@ -57,6 +57,9 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         if (util_format_is_depth_or_stencil(info->dst.resource->format))
                 return false;
 
+        if (info->scissor_enable)
+                return false;
+
         if ((info->mask & PIPE_MASK_RGBA) == 0)
                 return false;
 
