@@ -85,7 +85,11 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
 
    case GLSLstd450Modf:        op = nir_op_fmod;       break;
    case GLSLstd450FMin:        op = nir_op_fmin;       break;
+   case GLSLstd450UMin:        op = nir_op_umin;       break;
+   case GLSLstd450SMin:        op = nir_op_imin;       break;
    case GLSLstd450FMax:        op = nir_op_fmax;       break;
+   case GLSLstd450UMax:        op = nir_op_umax;       break;
+   case GLSLstd450SMax:        op = nir_op_imax;       break;
    case GLSLstd450FMix:        op = nir_op_flrp;       break;
    case GLSLstd450Step:
       val->ssa->def = nir_sge(&b->nb, src[1], src[0]);

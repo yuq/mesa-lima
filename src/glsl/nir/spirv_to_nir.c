@@ -343,9 +343,6 @@ struct_member_decoration_cb(struct vtn_builder *b,
    switch (dec->decoration) {
    case SpvDecorationRelaxedPrecision:
       break; /* FIXME: Do nothing with this for now. */
-   case SpvDecorationSmooth:
-      ctx->fields[member].interpolation = INTERP_QUALIFIER_SMOOTH;
-      break;
    case SpvDecorationNoPerspective:
       ctx->fields[member].interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
       break;
@@ -815,11 +812,6 @@ vtn_get_builtin_location(struct vtn_builder *b,
       *location = SYSTEM_VALUE_SAMPLE_MASK_IN; /* XXX out? */
       set_mode_system_value(mode);
       break;
-   case SpvBuiltInFragColor:
-      *location = FRAG_RESULT_COLOR;
-      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
-      assert(*mode == nir_var_shader_out);
-      break;
    case SpvBuiltInFragDepth:
       *location = FRAG_RESULT_DEPTH;
       assert(b->shader->stage == MESA_SHADER_FRAGMENT);
@@ -860,9 +852,6 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    switch (dec->decoration) {
    case SpvDecorationRelaxedPrecision:
       break; /* FIXME: Do nothing with this for now. */
-   case SpvDecorationSmooth:
-      var->data.interpolation = INTERP_QUALIFIER_SMOOTH;
-      break;
    case SpvDecorationNoPerspective:
       var->data.interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
       break;
@@ -1565,14 +1554,14 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       case SpvStorageClassOutput:
          var->data.mode = nir_var_shader_out;
          break;
-      case SpvStorageClassPrivateGlobal:
+      case SpvStorageClassPrivate:
          var->data.mode = nir_var_global;
          break;
       case SpvStorageClassFunction:
          var->data.mode = nir_var_local;
          break;
-      case SpvStorageClassWorkgroupLocal:
-      case SpvStorageClassWorkgroupGlobal:
+      case SpvStorageClassWorkgroup:
+      case SpvStorageClassCrossWorkgroup:
       case SpvStorageClassGeneric:
       case SpvStorageClassAtomicCounter:
       default:
@@ -3001,13 +2990,13 @@ gl_primitive_from_spv_execution_mode(SpvExecutionMode mode)
       return 1; /* GL_LINES */
    case SpvExecutionModeInputLinesAdjacency:
       return 0x000A; /* GL_LINE_STRIP_ADJACENCY_ARB */
-   case SpvExecutionModeInputTriangles:
+   case SpvExecutionModeTriangles:
       return 4; /* GL_TRIANGLES */
    case SpvExecutionModeInputTrianglesAdjacency:
       return 0x000C; /* GL_TRIANGLES_ADJACENCY_ARB */
-   case SpvExecutionModeInputQuads:
+   case SpvExecutionModeQuads:
       return 7; /* GL_QUADS */
-   case SpvExecutionModeInputIsolines:
+   case SpvExecutionModeIsolines:
       return 0x8E7A; /* GL_ISOLINES */
    case SpvExecutionModeOutputLineStrip:
       return 3; /* GL_LINE_STRIP */
@@ -3029,7 +3018,7 @@ vertices_in_from_spv_execution_mode(SpvExecutionMode mode)
       return 2;
    case SpvExecutionModeInputLinesAdjacency:
       return 4;
-   case SpvExecutionModeInputTriangles:
+   case SpvExecutionModeTriangles:
       return 3;
    case SpvExecutionModeInputTrianglesAdjacency:
       return 6;
@@ -3133,10 +3122,10 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvExecutionModeInputPoints:
       case SpvExecutionModeInputLines:
       case SpvExecutionModeInputLinesAdjacency:
-      case SpvExecutionModeInputTriangles:
+      case SpvExecutionModeTriangles:
       case SpvExecutionModeInputTrianglesAdjacency:
-      case SpvExecutionModeInputQuads:
-      case SpvExecutionModeInputIsolines:
+      case SpvExecutionModeQuads:
+      case SpvExecutionModeIsolines:
          if (b->shader->stage == MESA_SHADER_GEOMETRY) {
             b->shader->info.gs.vertices_in =
                vertices_in_from_spv_execution_mode(mode);
@@ -3169,7 +3158,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
 
       case SpvExecutionModeVecTypeHint:
       case SpvExecutionModeContractionOff:
-      case SpvExecutionModeIndependentForwardProgress:
          break; /* OpenCL */
       }
       break;
@@ -3746,7 +3734,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    assert(word_count > 5);
 
    assert(words[0] == SpvMagicNumber);
-   assert(words[1] == 99);
+   assert(words[1] >= 0x10000);
    /* words[2] == generator magic */
    unsigned value_id_bound = words[3];
    assert(words[4] == 0);
