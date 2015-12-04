@@ -69,7 +69,7 @@ VkResult anv_CreateQueryPool(
    if (result != VK_SUCCESS)
       goto fail;
 
-   pool->bo.map = anv_gem_mmap(device, pool->bo.gem_handle, 0, size);
+   pool->bo.map = anv_gem_mmap(device, pool->bo.gem_handle, 0, size, 0);
 
    *pQueryPool = anv_query_pool_to_handle(pool);
 

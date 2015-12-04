@@ -84,7 +84,7 @@ anv_gem_close(struct anv_device *device, int gem_handle)
  */
 void*
 anv_gem_mmap(struct anv_device *device, uint32_t gem_handle,
-             uint64_t offset, uint64_t size)
+             uint64_t offset, uint64_t size, uint32_t flags)
 {
    struct drm_i915_gem_mmap gem_mmap;
    int ret;
@@ -94,10 +94,7 @@ anv_gem_mmap(struct anv_device *device, uint32_t gem_handle,
    gem_mmap.offset = offset;
    gem_mmap.size = size;
    VG_CLEAR(gem_mmap.addr_ptr);
-
-#ifdef I915_MMAP_WC
-   gem_mmap.flags = 0;
-#endif
+   gem_mmap.flags = flags;
 
    ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_MMAP, &gem_mmap);
    if (ret != 0) {

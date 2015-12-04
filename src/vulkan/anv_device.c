@@ -121,6 +121,12 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
+   if (anv_gem_get_param(fd, I915_PARAM_MMAP_VERSION < 1)) {
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "kernel missing wc mmap");
+      goto fail;
+   }
+
    close(fd);
 
    brw_process_intel_debug_variable();
@@ -1059,7 +1065,11 @@ VkResult anv_MapMemory(
     * pointer here, but that may exhaust virtual memory on 32 bit
     * userspace. */
 
-   mem->map = anv_gem_mmap(device, mem->bo.gem_handle, offset, size);
+   uint32_t gem_flags = 0;
+   if (!device->info.has_llc && mem->type_index == 0)
+      gem_flags |= I915_MMAP_WC;
+
+   mem->map = anv_gem_mmap(device, mem->bo.gem_handle, offset, size, gem_flags);
    mem->map_size = size;
 
    *ppData = mem->map;
@@ -1254,7 +1264,7 @@ VkResult anv_CreateFence(
       goto fail;
 
    fence->bo.map =
-      anv_gem_mmap(device, fence->bo.gem_handle, 0, fence->bo.size);
+      anv_gem_mmap(device, fence->bo.gem_handle, 0, fence->bo.size, 0);
    batch.next = batch.start = fence->bo.map;
    batch.end = fence->bo.map + fence->bo.size;
    anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
