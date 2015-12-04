@@ -605,7 +605,7 @@ static int replace_gpr_with_pv_ps(struct r600_bytecode *bc,
 
 	for (i = 0; i < max_slots; ++i) {
 		struct r600_bytecode_alu *alu = slots[i];
-		if(!alu)
+		if (!alu)
 			continue;
 
 		if (is_alu_64bit_inst(bc, alu))

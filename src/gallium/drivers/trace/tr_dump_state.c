@@ -41,7 +41,7 @@ void trace_dump_resource_template(const struct pipe_resource *templat)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!templat) {
+   if (!templat) {
       trace_dump_null();
       return;
    }
@@ -82,7 +82,7 @@ void trace_dump_box(const struct pipe_box *box)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!box) {
+   if (!box) {
       trace_dump_null();
       return;
    }
@@ -105,7 +105,7 @@ void trace_dump_rasterizer_state(const struct pipe_rasterizer_state *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -168,7 +168,7 @@ void trace_dump_poly_stipple(const struct pipe_poly_stipple *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -190,7 +190,7 @@ void trace_dump_viewport_state(const struct pipe_viewport_state *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -209,7 +209,7 @@ void trace_dump_scissor_state(const struct pipe_scissor_state *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -232,7 +232,7 @@ void trace_dump_clip_state(const struct pipe_clip_state *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -260,7 +260,7 @@ void trace_dump_shader_state(const struct pipe_shader_state *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -312,7 +312,7 @@ void trace_dump_depth_stencil_alpha_state(const struct pipe_depth_stencil_alpha_
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -382,7 +382,7 @@ void trace_dump_blend_state(const struct pipe_blend_state *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -411,7 +411,7 @@ void trace_dump_blend_color(const struct pipe_blend_color *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -428,7 +428,7 @@ void trace_dump_stencil_ref(const struct pipe_stencil_ref *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -462,7 +462,7 @@ void trace_dump_sampler_state(const struct pipe_sampler_state *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -495,7 +495,7 @@ void trace_dump_sampler_view_template(const struct pipe_sampler_view *state,
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -541,7 +541,7 @@ void trace_dump_surface_template(const struct pipe_surface *state,
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -582,7 +582,7 @@ void trace_dump_transfer(const struct pipe_transfer *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -611,7 +611,7 @@ void trace_dump_vertex_buffer(const struct pipe_vertex_buffer *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -632,7 +632,7 @@ void trace_dump_index_buffer(const struct pipe_index_buffer *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -653,7 +653,7 @@ void trace_dump_vertex_element(const struct pipe_vertex_element *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -675,7 +675,7 @@ void trace_dump_constant_buffer(const struct pipe_constant_buffer *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
@@ -693,7 +693,7 @@ void trace_dump_draw_info(const struct pipe_draw_info *state)
    if (!trace_dumping_enabled_locked())
       return;
 
-   if(!state) {
+   if (!state) {
       trace_dump_null();
       return;
    }
