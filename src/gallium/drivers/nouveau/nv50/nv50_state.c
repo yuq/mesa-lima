@@ -189,7 +189,7 @@ nv50_blend_state_create(struct pipe_context *pipe,
       SB_DATA    (so, nv50_colormask(cso->rt[0].colormask));
    }
 
-   assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
+   assert(so->size <= ARRAY_SIZE(so->state));
    return so;
 }
 
@@ -326,7 +326,7 @@ nv50_rasterizer_state_create(struct pipe_context *pipe,
    SB_BEGIN_3D(so, PIXEL_CENTER_INTEGER, 1);
    SB_DATA    (so, !cso->half_pixel_center);
 
-   assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
+   assert(so->size <= ARRAY_SIZE(so->state));
    return (void *)so;
 }
 
@@ -415,7 +415,7 @@ nv50_zsa_state_create(struct pipe_context *pipe,
       SB_DATA    (so, 0);
    }
 
-   assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
+   assert(so->size <= ARRAY_SIZE(so->state));
    return (void *)so;
 }
 

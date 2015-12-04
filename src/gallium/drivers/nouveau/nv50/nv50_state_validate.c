@@ -508,7 +508,6 @@ static struct state_validate {
     { nv50_vertex_arrays_validate, NV50_NEW_VERTEX | NV50_NEW_ARRAYS },
     { nv50_validate_min_samples,   NV50_NEW_MIN_SAMPLES },
 };
-#define validate_list_len (sizeof(validate_list) / sizeof(validate_list[0]))
 
 bool
 nv50_state_validate(struct nv50_context *nv50, uint32_t mask, unsigned words)
@@ -523,7 +522,7 @@ nv50_state_validate(struct nv50_context *nv50, uint32_t mask, unsigned words)
    state_mask = nv50->dirty & mask;
 
    if (state_mask) {
-      for (i = 0; i < validate_list_len; ++i) {
+      for (i = 0; i < ARRAY_SIZE(validate_list); ++i) {
          struct state_validate *validate = &validate_list[i];
 
          if (state_mask & validate->states)

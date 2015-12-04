@@ -56,7 +56,7 @@ nv98_decoder_bsp(struct nouveau_vp3_decoder *dec, union pipe_desc desc,
 #endif
       { dec->bitplane_bo, NOUVEAU_BO_RDWR | NOUVEAU_BO_VRAM },
    };
-   int num_refs = sizeof(bo_refs)/sizeof(*bo_refs);
+   int num_refs = ARRAY_SIZE(bo_refs);
 
    if (!dec->bitplane_bo)
       num_refs--;

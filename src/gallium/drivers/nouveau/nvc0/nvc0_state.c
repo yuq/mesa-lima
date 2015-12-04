@@ -176,7 +176,7 @@ nvc0_blend_state_create(struct pipe_context *pipe,
       }
    }
 
-   assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
+   assert(so->size <= ARRAY_SIZE(so->state));
    return so;
 }
 
@@ -305,7 +305,7 @@ nvc0_rasterizer_state_create(struct pipe_context *pipe,
 
     SB_IMMED_3D(so, PIXEL_CENTER_INTEGER, !cso->half_pixel_center);
 
-    assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
+    assert(so->size <= ARRAY_SIZE(so->state));
     return (void *)so;
 }
 
@@ -383,7 +383,7 @@ nvc0_zsa_state_create(struct pipe_context *pipe,
       SB_DATA    (so, nvgl_comparison_op(cso->alpha.func));
    }
 
-   assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
+   assert(so->size <= ARRAY_SIZE(so->state));
    return (void *)so;
 }
 
