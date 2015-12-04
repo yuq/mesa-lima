@@ -259,12 +259,10 @@ pb_debug_buffer_map(struct pb_buffer *_buf,
    if (!map)
       return NULL;
    
-   if (map) {
-      pipe_mutex_lock(buf->mutex);
-      ++buf->map_count;
-      debug_backtrace_capture(buf->map_backtrace, 1, PB_DEBUG_MAP_BACKTRACE);
-      pipe_mutex_unlock(buf->mutex);
-   }
+   pipe_mutex_lock(buf->mutex);
+   ++buf->map_count;
+   debug_backtrace_capture(buf->map_backtrace, 1, PB_DEBUG_MAP_BACKTRACE);
+   pipe_mutex_unlock(buf->mutex);
    
    return (uint8_t *)map + buf->underflow_size;
 }

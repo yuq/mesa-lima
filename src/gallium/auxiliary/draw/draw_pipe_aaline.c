@@ -793,8 +793,7 @@ draw_aaline_stage(struct draw_context *draw)
    return aaline;
 
  fail:
-   if (aaline)
-      aaline->stage.destroy(&aaline->stage);
+   aaline->stage.destroy(&aaline->stage);
 
    return NULL;
 }
