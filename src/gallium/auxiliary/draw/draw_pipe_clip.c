@@ -915,7 +915,7 @@ static void clip_destroy(struct draw_stage *stage)
 struct draw_stage *draw_clip_stage(struct draw_context *draw)
 {
    struct clip_stage *clipper = CALLOC_STRUCT(clip_stage);
-   if (clipper == NULL)
+   if (!clipper)
       goto fail;
 
    clipper->stage.draw = draw;

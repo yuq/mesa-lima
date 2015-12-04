@@ -542,7 +542,7 @@ vl_mpeg12_get_decode_buffer(struct vl_mpeg12_decoder *dec, struct pipe_video_buf
       return buffer;
 
    buffer = CALLOC_STRUCT(vl_mpeg12_buffer);
-   if (buffer == NULL)
+   if (!buffer)
       return NULL;
 
    if (!vl_vb_init(&buffer->vertex_stream, dec->context,

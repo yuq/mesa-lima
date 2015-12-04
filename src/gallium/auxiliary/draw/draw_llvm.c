@@ -551,7 +551,7 @@ draw_llvm_create_variant(struct draw_llvm *llvm,
    variant = MALLOC(sizeof *variant +
                     shader->variant_key_size -
                     sizeof variant->key);
-   if (variant == NULL)
+   if (!variant)
       return NULL;
 
    variant->llvm = llvm;
@@ -2224,7 +2224,7 @@ draw_gs_llvm_create_variant(struct draw_llvm *llvm,
    variant = MALLOC(sizeof *variant +
                     shader->variant_key_size -
                     sizeof variant->key);
-   if (variant == NULL)
+   if (!variant)
       return NULL;
 
    variant->llvm = llvm;

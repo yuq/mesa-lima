@@ -1843,7 +1843,7 @@ ureg_create_with_screen(unsigned processor, struct pipe_screen *screen)
 {
    int i;
    struct ureg_program *ureg = CALLOC_STRUCT( ureg_program );
-   if (ureg == NULL)
+   if (!ureg)
       goto no_ureg;
 
    ureg->processor = processor;
