@@ -61,6 +61,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
+	-I$(top_builddir)/src \
+	-I$(top_builddir)/src/glsl/nir \
 	-I$(top_builddir)/src/vulkan
 
 libvulkan_la_CFLAGS =							\
