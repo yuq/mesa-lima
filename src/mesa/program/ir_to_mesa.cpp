@@ -1113,7 +1113,13 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
       if (ir->operands[0]->type->is_vector() ||
 	  ir->operands[1]->type->is_vector()) {
 	 src_reg temp = get_temp(glsl_type::vec4_type);
-	 emit(ir, OPCODE_SNE, dst_reg(temp), op[0], op[1]);
+         if (ir->operands[0]->type->is_boolean() &&
+             ir->operands[1]->as_constant() &&
+             ir->operands[1]->as_constant()->is_zero()) {
+            temp = op[0];
+         } else {
+            emit(ir, OPCODE_SNE, dst_reg(temp), op[0], op[1]);
+         }
 
 	 /* After the dot-product, the value will be an integer on the
 	  * range [0,4].  Zero stays zero, and positive values become 1.0.
