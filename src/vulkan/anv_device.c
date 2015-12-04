@@ -553,15 +553,38 @@ void anv_GetPhysicalDeviceMemoryProperties(
     */
    heap_size = 3 * physical_device->aperture_size / 4;
 
-   /* The property flags below are valid only for llc platforms. */
-   pMemoryProperties->memoryTypeCount = 1;
-   pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
-      .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                       VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-      .heapIndex = 1,
-   };
+   if (physical_device->info->has_llc) {
+      /* Big core GPUs share LLC with the CPU and thus one memory type can be
+       * both cached and coherent at the same time.
+       */
+      pMemoryProperties->memoryTypeCount = 1;
+      pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
+         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+         .heapIndex = 1,
+      };
+   } else {
+      /* The spec requires that we expose a host-visible, coherent memory
+       * type, but Atom GPUs don't share LLC. Thus we offer two memory types
+       * to give the application a choice between cached, but not coherent and
+       * coherent but uncached (WC though).
+       */
+      pMemoryProperties->memoryTypeCount = 2;
+      pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
+         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+         .heapIndex = 1,
+      };
+      pMemoryProperties->memoryTypes[1] = (VkMemoryType) {
+         .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                          VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+         .heapIndex = 1,
+      };
+   }
 
    pMemoryProperties->memoryHeapCount = 1;
    pMemoryProperties->memoryHeaps[0] = (VkMemoryHeap) {
@@ -976,7 +999,8 @@ VkResult anv_AllocateMemory(
    assert(pAllocateInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO);
 
    /* We support exactly one memory heap. */
-   assert(pAllocateInfo->memoryTypeIndex == 0);
+   assert(pAllocateInfo->memoryTypeIndex == 0 ||
+          (!device->info.has_llc && pAllocateInfo->memoryTypeIndex < 2));
 
    /* FINISHME: Fail if allocation request exceeds heap size. */
 
@@ -988,6 +1012,8 @@ VkResult anv_AllocateMemory(
    result = anv_bo_init_new(&mem->bo, device, pAllocateInfo->allocationSize);
    if (result != VK_SUCCESS)
       goto fail;
+
+   mem->type_index = pAllocateInfo->memoryTypeIndex;
 
    *pMem = anv_device_memory_to_handle(mem);
 
