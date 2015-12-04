@@ -1132,13 +1132,43 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          break;
       // try to concatenate shifts
       Instruction *si = i->getSrc(0)->getInsn();
-      if (!si || si->op != OP_SHL)
+      if (!si)
          break;
       ImmediateValue imm1;
-      if (si->src(1).getImmediate(imm1)) {
+      switch (si->op) {
+      case OP_SHL:
+         if (si->src(1).getImmediate(imm1)) {
+            bld.setPosition(i, false);
+            i->setSrc(0, si->getSrc(0));
+            i->setSrc(1, bld.loadImm(NULL, imm0.reg.data.u32 + imm1.reg.data.u32));
+         }
+         break;
+      case OP_SUB:
+      case OP_ADD:
+         int adds;
+         if (isFloatType(si->dType))
+            return;
+         if (si->op != OP_SUB && si->src(0).getImmediate(imm1))
+            adds = 0;
+         else if (si->src(1).getImmediate(imm1))
+            adds = 1;
+         else
+            return;
+         // SHL(ADD(x, y), z) = ADD(SHL(x, z), SHL(y, z))
+
+         // This is more operations, but if one of x, y is an immediate, then
+         // we can get a situation where (a) we can use ISCADD, or (b)
+         // propagate the add bit into an indirect load.
          bld.setPosition(i, false);
-         i->setSrc(0, si->getSrc(0));
-         i->setSrc(1, bld.loadImm(NULL, imm0.reg.data.u32 + imm1.reg.data.u32));
+         i->op = si->op;
+         i->setSrc(adds, bld.loadImm(NULL, imm1.reg.data.u32 << imm0.reg.data.u32));
+         i->setSrc(!adds, bld.mkOp2v(OP_SHL, i->dType,
+                                     bld.getSSA(i->def(0).getSize(), i->def(0).getFile()),
+                                     si->getSrc(!adds),
+                                     bld.mkImm(imm0.reg.data.u32)));
+         break;
+      default:
+         return;
       }
    }
       break;
