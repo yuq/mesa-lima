@@ -2768,8 +2768,8 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 		num_vs_threads = 25;
 		num_gs_threads = 25;
 		num_es_threads = 25;
-		num_hs_threads = 25;
-		num_ls_threads = 25;
+		num_hs_threads = 16;
+		num_ls_threads = 16;
 		num_ps_stack_entries = 42;
 		num_vs_stack_entries = 42;
 		num_gs_stack_entries = 42;
@@ -2782,8 +2782,8 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 		num_vs_threads = 25;
 		num_gs_threads = 25;
 		num_es_threads = 25;
-		num_hs_threads = 25;
-		num_ls_threads = 25;
+		num_hs_threads = 16;
+		num_ls_threads = 16;
 		num_ps_stack_entries = 85;
 		num_vs_stack_entries = 85;
 		num_gs_stack_entries = 85;
