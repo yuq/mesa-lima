@@ -26,6 +26,7 @@
 #include "svga_cmd.h"
 
 #include "util/u_inlines.h"
+#include "util/u_prim.h"
 #include "indices/u_indices.h"
 
 #include "svga_hw_reg.h"
@@ -276,6 +277,10 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
                                          gen_size, gen_func, &gen_buf);
       if (ret != PIPE_OK)
          goto done;
+
+      pipe_debug_message(&svga->debug.callback, PERF_INFO,
+                         "generating temporary index buffer for drawing %s",
+                         u_prim_name(prim));
 
       ret = svga_hwtnl_simple_draw_range_elements(hwtnl,
                                                   gen_buf,

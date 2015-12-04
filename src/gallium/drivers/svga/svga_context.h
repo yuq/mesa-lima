@@ -392,6 +392,9 @@ struct svga_context
 
       boolean no_line_width;
       boolean force_hw_line_stipple;
+
+      /** To report perf/conformance/etc issues to the state tracker */
+      struct pipe_debug_callback callback;
    } debug;
 
    struct {

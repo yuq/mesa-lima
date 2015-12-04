@@ -352,6 +352,11 @@ svga_create_rasterizer_state(struct pipe_context *pipe,
       define_rasterizer_object(svga, rast);
    }
 
+   if (templ->poly_smooth) {
+      pipe_debug_message(&svga->debug.callback, CONFORMANCE,
+                         "GL_POLYGON_SMOOTH not supported");
+   }
+
    svga->hud.num_state_objects++;
 
    return rast;
