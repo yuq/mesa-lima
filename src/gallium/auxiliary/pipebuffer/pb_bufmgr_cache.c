@@ -354,7 +354,7 @@ pb_cache_manager_create_buffer(struct pb_manager *_mgr,
       }
    }
    
-   if(buf) {
+   if (buf) {
       mgr->cache_size -= buf->base.size;
       LIST_DEL(&buf->head);
       --mgr->numDelayed;
@@ -367,7 +367,7 @@ pb_cache_manager_create_buffer(struct pb_manager *_mgr,
    pipe_mutex_unlock(mgr->mutex);
 
    buf = CALLOC_STRUCT(pb_cache_buffer);
-   if(!buf)
+   if (!buf)
       return NULL;
    
    buf->buffer = mgr->provider->create_buffer(mgr->provider, size, desc);
@@ -454,7 +454,7 @@ pb_cache_manager_create(struct pb_manager *provider,
 {
    struct pb_cache_manager *mgr;
 
-   if(!provider)
+   if (!provider)
       return NULL;
    
    mgr = CALLOC_STRUCT(pb_cache_manager);

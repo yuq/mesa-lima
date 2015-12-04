@@ -109,7 +109,7 @@ draw_pt_arrays(struct draw_context *draw,
 
    frontend = draw->pt.frontend;
 
-   if (frontend ) {
+   if (frontend) {
       if (draw->pt.prim != prim || draw->pt.opt != opt) {
          /* In certain conditions switching primitives requires us to flush
           * and validate the different stages. One example is when smooth

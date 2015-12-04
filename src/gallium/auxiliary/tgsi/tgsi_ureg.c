@@ -1018,7 +1018,7 @@ static void validate( unsigned opcode,
 #ifdef DEBUG
    const struct tgsi_opcode_info *info = tgsi_get_opcode_info( opcode );
    assert(info);
-   if(info) {
+   if (info) {
       assert(nr_dst == info->num_dst);
       assert(nr_src == info->num_src);
    }
@@ -1083,7 +1083,7 @@ ureg_emit_label(struct ureg_program *ureg,
 {
    union tgsi_any_token *out, *insn;
 
-   if(!label_token)
+   if (!label_token)
       return;
 
    out = get_tokens( ureg, DOMAIN_INSN, 1 );

@@ -1701,15 +1701,15 @@ emit_fetch_deriv(
    LLVMValueRef *ddx,
    LLVMValueRef *ddy)
 {
-   if(res)
+   if (res)
       *res = src;
 
    /* TODO: use interpolation coeffs for inputs */
 
-   if(ddx)
+   if (ddx)
       *ddx = lp_build_ddx(&bld->bld_base.base, src);
 
-   if(ddy)
+   if (ddy)
       *ddy = lp_build_ddy(&bld->bld_base.base, src);
 }
 
