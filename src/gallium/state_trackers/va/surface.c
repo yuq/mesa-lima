@@ -697,11 +697,11 @@ vlVaQueryVideoProcFilterCaps(VADriverContextP ctx, VAContextID context,
    return VA_STATUS_SUCCESS;
 }
 
-static VAProcColorStandardType vpp_input_color_standards[VAProcColorStandardCount] = {
+static VAProcColorStandardType vpp_input_color_standards[] = {
    VAProcColorStandardBT601
 };
 
-static VAProcColorStandardType vpp_output_color_standards[VAProcColorStandardCount] = {
+static VAProcColorStandardType vpp_output_color_standards[] = {
    VAProcColorStandardBT601
 };
 
@@ -725,9 +725,9 @@ vlVaQueryVideoProcPipelineCaps(VADriverContextP ctx, VAContextID context,
    pipeline_cap->filter_flags = 0;
    pipeline_cap->num_forward_references = 0;
    pipeline_cap->num_backward_references = 0;
-   pipeline_cap->num_input_color_standards = 1;
+   pipeline_cap->num_input_color_standards = Elements(vpp_input_color_standards);
    pipeline_cap->input_color_standards = vpp_input_color_standards;
-   pipeline_cap->num_output_color_standards = 1;
+   pipeline_cap->num_output_color_standards = Elements(vpp_output_color_standards);
    pipeline_cap->output_color_standards = vpp_output_color_standards;
 
    for (i = 0; i < num_filters; i++) {
