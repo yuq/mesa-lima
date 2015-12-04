@@ -293,8 +293,7 @@ NV50LegalizePostRA::visit(BasicBlock *bb)
                next = hi;
          }
 
-         if (i->op != OP_MOV && i->op != OP_PFETCH &&
-             i->op != OP_BAR &&
+         if (i->op != OP_PFETCH && i->op != OP_BAR &&
              (!i->defExists(0) || i->def(0).getFile() != FILE_ADDRESS))
             replaceZero(i);
       }
