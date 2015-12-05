@@ -609,17 +609,17 @@ intel_get_yf_ys_bo_size(struct intel_mipmap_tree *mt, unsigned *alignment,
    return size;
 }
 
-struct intel_mipmap_tree *
-intel_miptree_create(struct brw_context *brw,
-                     GLenum target,
-                     mesa_format format,
-                     GLuint first_level,
-                     GLuint last_level,
-                     GLuint width0,
-                     GLuint height0,
-                     GLuint depth0,
-                     GLuint num_samples,
-                     uint32_t layout_flags)
+static struct intel_mipmap_tree *
+miptree_create(struct brw_context *brw,
+               GLenum target,
+               mesa_format format,
+               GLuint first_level,
+               GLuint last_level,
+               GLuint width0,
+               GLuint height0,
+               GLuint depth0,
+               GLuint num_samples,
+               uint32_t layout_flags)
 {
    struct intel_mipmap_tree *mt;
    mesa_format tex_format = format;
@@ -644,12 +644,8 @@ intel_miptree_create(struct brw_context *brw,
       return NULL;
    }
 
-   bool y_or_x = false;
-
-   if (mt->tiling == (I915_TILING_Y | I915_TILING_X)) {
-      y_or_x = true;
+   if (mt->tiling == (I915_TILING_Y | I915_TILING_X))
       mt->tiling = I915_TILING_Y;
-   }
 
    if (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD)
       alloc_flags |= BO_ALLOC_FOR_RENDER;
@@ -682,11 +678,37 @@ intel_miptree_create(struct brw_context *brw,
 
    mt->pitch = pitch;
 
+   return mt;
+}
+
+struct intel_mipmap_tree *
+intel_miptree_create(struct brw_context *brw,
+                     GLenum target,
+                     mesa_format format,
+                     GLuint first_level,
+                     GLuint last_level,
+                     GLuint width0,
+                     GLuint height0,
+                     GLuint depth0,
+                     GLuint num_samples,
+                     uint32_t layout_flags)
+{
+   struct intel_mipmap_tree *mt = miptree_create(
+                                     brw, target, format,
+                                     first_level, last_level,
+                                     width0, height0, depth0, num_samples,
+                                     layout_flags);
+
    /* If the BO is too large to fit in the aperture, we need to use the
     * BLT engine to support it.  Prior to Sandybridge, the BLT paths can't
     * handle Y-tiling, so we need to fall back to X.
     */
-   if (brw->gen < 6 && y_or_x && mt->bo->size >= brw->max_gtt_map_object_size) {
+   if (brw->gen < 6 && mt->bo->size >= brw->max_gtt_map_object_size &&
+       mt->tiling == I915_TILING_Y) {
+      unsigned long pitch = mt->pitch;
+      const uint32_t alloc_flags =
+         (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD) ?
+         BO_ALLOC_FOR_RENDER : 0;
       perf_debug("%dx%d miptree larger than aperture; falling back to X-tiled\n",
                  mt->total_width, mt->total_height);
 
