@@ -221,6 +221,29 @@ anv_format_for_vk_format(VkFormat format)
    return &anv_formats[format];
 }
 
+/**
+ * Exactly one bit must be set in \a aspect.
+ */
+enum isl_format
+anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect)
+{
+   const struct anv_format *anv_fmt = &anv_formats[format];
+
+   switch (aspect) {
+   case VK_IMAGE_ASPECT_COLOR_BIT:
+      return anv_fmt->surface_format;
+   case VK_IMAGE_ASPECT_DEPTH_BIT:
+      assert(anv_fmt->depth_format != 0);
+      return anv_fmt->surface_format;
+   case VK_IMAGE_ASPECT_STENCIL_BIT:
+      assert(anv_fmt->has_stencil);
+      return ISL_FORMAT_R8_UINT;
+   default:
+      unreachable("bad VkImageAspect");
+      return ISL_FORMAT_UNSUPPORTED;
+   }
+}
+
 // Format capabilities
 
 void anv_validate_GetPhysicalDeviceFormatProperties(

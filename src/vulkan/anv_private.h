@@ -1385,6 +1385,9 @@ extern const struct anv_format *const anv_format_s8_uint;
 const struct anv_format *
 anv_format_for_vk_format(VkFormat format);
 
+enum isl_format
+anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect);
+
 static inline bool
 anv_format_is_color(const struct anv_format *format)
 {
