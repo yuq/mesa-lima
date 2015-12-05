@@ -163,7 +163,7 @@ static struct nir_shader *to_nir(struct ir3_compile *ctx,
 
 	struct nir_shader *s = tgsi_to_nir(tokens, &options);
 
-	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
+	if (fd_mesa_debug & FD_DBG_DISASM) {
 		debug_printf("----------------------\n");
 		nir_print_shader(s, stdout);
 		debug_printf("----------------------\n");
@@ -201,7 +201,7 @@ static struct nir_shader *to_nir(struct ir3_compile *ctx,
 	nir_remove_dead_variables(s);
 	nir_validate_shader(s);
 
-	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
+	if (fd_mesa_debug & FD_DBG_DISASM) {
 		debug_printf("----------------------\n");
 		nir_print_shader(s, stdout);
 		debug_printf("----------------------\n");
