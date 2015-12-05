@@ -500,7 +500,7 @@ gen7_update_renderbuffer_surface(struct brw_context *brw,
       /* fallthrough */
    default:
       surftype = translate_tex_target(gl_target);
-      is_array = _mesa_tex_target_is_array(gl_target);
+      is_array = _mesa_is_array_texture(gl_target);
       break;
    }
 
