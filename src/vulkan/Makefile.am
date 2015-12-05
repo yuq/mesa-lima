@@ -65,9 +65,7 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/glsl/nir \
 	-I$(top_builddir)/src/vulkan
 
-libvulkan_la_CFLAGS =							\
-	-Wall -Wno-unused-parameter -fvisibility=hidden -O0 -g		\
-	-Wstrict-prototypes -Wmissing-prototypes -Wno-override-init
+libvulkan_la_CFLAGS = $(CFLAGS) -Wno-override-init
 
 VULKAN_SOURCES =                                        \
 	anv_allocator.c                                 \
