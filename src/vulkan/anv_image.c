@@ -573,35 +573,3 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
        return NULL;
    }
 }
-
-#if 0
-   VkImageAspectFlags aspect_mask = 0;
-   if (format->depth_format)
-      aspect_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-   if (format->has_stencil)
-      aspect_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-   if (!aspect_mask)
-      aspect_mask |= VK_IMAGE_ASPECT_COLOR_BIT;
-
-   anv_image_view_init(iview, device,
-      &(VkImageViewCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-         .image = info->image,
-         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-         .format = info->format,
-         .channels = {
-            .r = VK_CHANNEL_SWIZZLE_R,
-            .g = VK_CHANNEL_SWIZZLE_G,
-            .b = VK_CHANNEL_SWIZZLE_B,
-            .a = VK_CHANNEL_SWIZZLE_A,
-         },
-         .subresourceRange = {
-            .aspectMask = aspect_mask,
-            .baseMipLevel = info->mipLevel,
-            .mipLevels = 1,
-            .baseArrayLayer = info->baseArraySlice,
-            .arraySize = info->arraySize,
-         },
-      },
-      NULL);
-#endif
