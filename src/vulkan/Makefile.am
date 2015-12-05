@@ -44,7 +44,7 @@ PER_GEN_LIBS = \
    libanv-gen8.la \
    libanv-gen9.la
 
-noinst_LTLIBRARIES = $(PER_GEN_LIBS)
+noinst_LTLIBRARIES = $(PER_GEN_LIBS) libisl.la
 
 # The gallium includes are for the util/u_math.h include from main/macros.h
 
@@ -92,7 +92,11 @@ VULKAN_SOURCES =                                        \
 	anv_query.c                                     \
 	anv_util.c                                      \
 	anv_wsi.c					\
-	anv_wsi_x11.c					\
+	anv_wsi_x11.c
+
+libisl_la_CFLAGS = $(libvulkan_la_CFLAGS)
+
+libisl_la_SOURCES =                                     \
 	isl.c                                           \
 	isl_format_layout.c                             \
 	isl_gen4.c                                      \
@@ -180,7 +184,7 @@ libvulkan_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
 	../mesa/libmesa.la \
 	../mesa/drivers/dri/common/libdri_test_stubs.la \
 	-lpthread -ldl -lstdc++ \
-        $(PER_GEN_LIBS)
+        $(PER_GEN_LIBS) libisl.la
 
 # Libvulkan with dummy gem. Used for unit tests.
 
