@@ -1669,6 +1669,8 @@ NineDevice9_ColorFill( struct NineDevice9 *This,
     user_assert((surf->base.usage & D3DUSAGE_RENDERTARGET) ||
                 NineSurface9_IsOffscreenPlain(surf), D3DERR_INVALIDCALL);
 
+    user_assert(surf->desc.Format != D3DFMT_NULL, D3D_OK);
+
     if (pRect) {
         x = pRect->left;
         y = pRect->top;
