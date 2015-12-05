@@ -624,7 +624,6 @@ intel_miptree_create(struct brw_context *brw,
    struct intel_mipmap_tree *mt;
    mesa_format tex_format = format;
    mesa_format etc_format = MESA_FORMAT_NONE;
-   GLuint total_width, total_height;
    uint32_t alloc_flags = 0;
 
    format = intel_lower_compressed_format(brw, format);
@@ -643,15 +642,6 @@ intel_miptree_create(struct brw_context *brw,
    if (!mt || !mt->total_width || !mt->total_height) {
       intel_miptree_release(&mt);
       return NULL;
-   }
-
-   total_width = mt->total_width;
-   total_height = mt->total_height;
-
-   if (format == MESA_FORMAT_S_UINT8) {
-      /* Align to size of W tile, 64x64. */
-      total_width = ALIGN(total_width, 64);
-      total_height = ALIGN(total_height, 64);
    }
 
    bool y_or_x = false;
@@ -675,10 +665,19 @@ intel_miptree_create(struct brw_context *brw,
       mt->bo = drm_intel_bo_alloc_for_render(brw->bufmgr, "miptree",
                                              size, alignment);
    } else {
-      mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
-                                        total_width, total_height, mt->cpp,
-                                        &mt->tiling, &pitch,
-                                        alloc_flags);
+      if (format == MESA_FORMAT_S_UINT8) {
+         /* Align to size of W tile, 64x64. */
+         mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
+                                           ALIGN(mt->total_width, 64),
+                                           ALIGN(mt->total_height, 64),
+                                           mt->cpp, &mt->tiling, &pitch,
+                                           alloc_flags);
+      } else {
+         mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
+                                           mt->total_width, mt->total_height,
+                                           mt->cpp, &mt->tiling, &pitch,
+                                           alloc_flags);
+      }
    }
 
    mt->pitch = pitch;
@@ -694,7 +693,7 @@ intel_miptree_create(struct brw_context *brw,
       mt->tiling = I915_TILING_X;
       drm_intel_bo_unreference(mt->bo);
       mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
-                                  total_width, total_height, mt->cpp,
+                                  mt->total_width, mt->total_height, mt->cpp,
                                   &mt->tiling, &pitch, alloc_flags);
       mt->pitch = pitch;
    }
