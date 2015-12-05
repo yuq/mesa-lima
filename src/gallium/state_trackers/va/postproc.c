@@ -25,13 +25,7 @@
  *
  **************************************************************************/
 
-//#include "pipe/p_video_codec.h"
-
 #include "util/u_handle_table.h"
-//#include "util/u_video.h"
-
-//#include "vl/vl_vlc.h"
-//#include "vl/vl_winsys.h"
 
 #include "va_private.h"
 
