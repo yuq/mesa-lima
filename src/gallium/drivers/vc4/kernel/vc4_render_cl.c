@@ -62,7 +62,6 @@ static inline void rcl_u32(struct vc4_rcl_setup *setup, u32 val)
 	setup->next_offset += 4;
 }
 
-
 /*
  * Emits a no-op STORE_TILE_BUFFER_GENERAL.
  *
@@ -255,6 +254,7 @@ static int vc4_create_rcl_bo(struct drm_device *dev, struct vc4_exec_info *exec,
 		for (x = min_x_tile; x <= max_x_tile; x++) {
 			bool first = (x == min_x_tile && y == min_y_tile);
 			bool last = (x == max_x_tile && y == max_y_tile);
+
 			emit_tile(exec, setup, x, y, first, last);
 		}
 	}
@@ -414,7 +414,8 @@ int vc4_get_rcl(struct drm_device *dev, struct vc4_exec_info *exec)
 	if (has_bin &&
 	    (args->max_x_tile > exec->bin_tiles_x ||
 	     args->max_y_tile > exec->bin_tiles_y)) {
-		DRM_ERROR("Render tiles (%d,%d) outside of bin config (%d,%d)\n",
+		DRM_ERROR("Render tiles (%d,%d) outside of bin config "
+			  "(%d,%d)\n",
 			  args->max_x_tile, args->max_y_tile,
 			  exec->bin_tiles_x, exec->bin_tiles_y);
 		return -EINVAL;
