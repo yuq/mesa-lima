@@ -1147,7 +1147,7 @@ static uint64_t radeon_winsys_bo_va(struct radeon_winsys_cs_handle *buf)
     return ((struct radeon_bo*)buf)->va;
 }
 
-void radeon_bomgr_init_functions(struct radeon_drm_winsys *ws)
+void radeon_drm_bo_init_functions(struct radeon_drm_winsys *ws)
 {
     ws->base.buffer_get_cs_handle = radeon_drm_get_cs_handle;
     ws->base.buffer_set_tiling = radeon_bo_set_tiling;

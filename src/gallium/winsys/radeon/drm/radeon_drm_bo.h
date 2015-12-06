@@ -70,7 +70,7 @@ struct radeon_bo {
 };
 
 struct pb_manager *radeon_bomgr_create(struct radeon_drm_winsys *rws);
-void radeon_bomgr_init_functions(struct radeon_drm_winsys *ws);
+void radeon_drm_bo_init_functions(struct radeon_drm_winsys *ws);
 
 static inline
 void radeon_bo_reference(struct radeon_bo **dst, struct radeon_bo *src)

@@ -771,7 +771,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     ws->base.query_value = radeon_query_value;
     ws->base.read_registers = radeon_read_registers;
 
-    radeon_bomgr_init_functions(ws);
+    radeon_drm_bo_init_functions(ws);
     radeon_drm_cs_init_functions(ws);
     radeon_surface_init_functions(ws);
 
