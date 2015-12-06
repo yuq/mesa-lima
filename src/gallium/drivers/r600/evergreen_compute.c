@@ -237,7 +237,7 @@ void *evergreen_create_compute_state(
 #endif
 #endif
 
-	shader->ctx = (struct r600_context*)ctx;
+	shader->ctx = ctx;
 	shader->local_size = cso->req_local_mem;
 	shader->private_size = cso->req_private_mem;
 	shader->input_size = cso->req_input_mem;
@@ -997,7 +997,7 @@ void *r600_compute_global_transfer_map(
 	}
 	else {
 		if (item->real_buffer == NULL) {
-			item->real_buffer = (struct r600_resource*)
+			item->real_buffer =
 					r600_compute_buffer_alloc_vram(pool->screen, item->size_in_dw * 4);
 		}
 	}

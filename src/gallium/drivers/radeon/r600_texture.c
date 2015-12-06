@@ -1081,7 +1081,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 				r600_copy_region_with_blit(ctx, temp, 0, 0, 0, 0, texture, level, box);
 				rctx->blit_decompress_depth(ctx, (struct r600_texture*)temp, staging_depth,
 							    0, 0, 0, box->depth, 0, 0);
-				pipe_resource_reference((struct pipe_resource**)&temp, NULL);
+				pipe_resource_reference(&temp, NULL);
 			}
 		}
 		else {

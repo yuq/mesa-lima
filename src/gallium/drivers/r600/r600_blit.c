@@ -553,7 +553,7 @@ static void r600_copy_global_buffer(struct pipe_context *ctx,
 			src = (struct pipe_resource *)pool->bo;
 		} else {
 			if (item->real_buffer == NULL) {
-				item->real_buffer = (struct r600_resource*)
+				item->real_buffer =
 					r600_compute_buffer_alloc_vram(pool->screen,
 								       item->size_in_dw * 4);
 			}
@@ -570,7 +570,7 @@ static void r600_copy_global_buffer(struct pipe_context *ctx,
 			dst = (struct pipe_resource *)pool->bo;
 		} else {
 			if (item->real_buffer == NULL) {
-				item->real_buffer = (struct r600_resource*)
+				item->real_buffer =
 					r600_compute_buffer_alloc_vram(pool->screen,
 								       item->size_in_dw * 4);
 			}

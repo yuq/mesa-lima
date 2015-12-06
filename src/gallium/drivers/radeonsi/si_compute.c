@@ -76,7 +76,7 @@ static void init_scratch_buffer(struct si_context *sctx, struct si_compute *prog
 	if (scratch_bytes == 0)
 		return;
 
-	program->shader.scratch_bo = (struct r600_resource*)
+	program->shader.scratch_bo =
 				si_resource_create_custom(sctx->b.b.screen,
 				PIPE_USAGE_DEFAULT,
 				scratch_bytes * scratch_waves);

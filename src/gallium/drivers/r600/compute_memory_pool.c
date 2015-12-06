@@ -80,8 +80,8 @@ static void compute_memory_pool_init(struct compute_memory_pool * pool,
 		initial_size_in_dw);
 
 	pool->size_in_dw = initial_size_in_dw;
-	pool->bo = (struct r600_resource*)r600_compute_buffer_alloc_vram(pool->screen,
-							pool->size_in_dw * 4);
+	pool->bo = r600_compute_buffer_alloc_vram(pool->screen,
+						  pool->size_in_dw * 4);
 }
 
 /**
@@ -202,8 +202,7 @@ int compute_memory_grow_defrag_pool(struct compute_memory_pool *pool,
 	} else {
 		struct r600_resource *temp = NULL;
 
-		temp = (struct r600_resource *)r600_compute_buffer_alloc_vram(
-							pool->screen, new_size_in_dw * 4);
+		temp = r600_compute_buffer_alloc_vram(pool->screen, new_size_in_dw * 4);
 
 		if (temp != NULL) {
 			struct pipe_resource *src = (struct pipe_resource *)pool->bo;
@@ -234,9 +233,7 @@ int compute_memory_grow_defrag_pool(struct compute_memory_pool *pool,
 			pool->screen->b.b.resource_destroy(
 					(struct pipe_screen *)pool->screen,
 					(struct pipe_resource *)pool->bo);
-			pool->bo = (struct r600_resource*)r600_compute_buffer_alloc_vram(
-					pool->screen,
-					pool->size_in_dw * 4);
+			pool->bo = r600_compute_buffer_alloc_vram(pool->screen, pool->size_in_dw * 4);
 			compute_memory_shadow(pool, pipe, 0);
 
 			if (pool->status & POOL_FRAGMENTED) {
@@ -449,7 +446,7 @@ void compute_memory_demote_item(struct compute_memory_pool *pool,
 	/* We check if the intermediate buffer exists, and if it
 	 * doesn't, we create it again */
 	if (item->real_buffer == NULL) {
-		item->real_buffer = (struct r600_resource*)r600_compute_buffer_alloc_vram(
+		item->real_buffer = r600_compute_buffer_alloc_vram(
 				pool->screen, item->size_in_dw * 4);
 	}
 
