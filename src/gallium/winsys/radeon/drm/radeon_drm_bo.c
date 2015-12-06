@@ -72,8 +72,6 @@ struct radeon_bomgr {
     pipe_mutex bo_handles_mutex;
     pipe_mutex bo_va_mutex;
 
-    /* is virtual address supported */
-    bool va;
     uint64_t va_offset;
     struct list_head va_holes;
 
@@ -331,7 +329,7 @@ static void radeon_bo_destroy(struct pb_buffer *_buf)
     if (bo->ptr)
         os_munmap(bo->ptr, bo->base.size);
 
-    if (mgr->va) {
+    if (mgr->rws->info.r600_virtual_address) {
         if (bo->rws->va_unmap_working) {
             struct drm_radeon_gem_va va;
 
@@ -611,7 +609,7 @@ static struct pb_buffer *radeon_bomgr_create_bo(struct pb_manager *_mgr,
     bo->initial_domain = rdesc->initial_domains;
     pipe_mutex_init(bo->map_mutex);
 
-    if (mgr->va) {
+    if (mgr->rws->info.r600_virtual_address) {
         struct drm_radeon_gem_va va;
 
         bo->va = radeon_bomgr_find_va(mgr, size, desc->alignment);
@@ -721,7 +719,6 @@ struct pb_manager *radeon_bomgr_create(struct radeon_drm_winsys *rws)
     pipe_mutex_init(mgr->bo_handles_mutex);
     pipe_mutex_init(mgr->bo_va_mutex);
 
-    mgr->va = rws->info.r600_virtual_address;
     mgr->va_offset = rws->va_start;
     list_inithead(&mgr->va_holes);
 
@@ -967,7 +964,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
 
     pipe_mutex_unlock(mgr->bo_handles_mutex);
 
-    if (mgr->va) {
+    if (mgr->rws->info.r600_virtual_address) {
         struct drm_radeon_gem_va va;
 
         bo->va = radeon_bomgr_find_va(mgr, bo->base.size, 1 << 20);
@@ -1101,7 +1098,7 @@ done:
     if (stride)
         *stride = whandle->stride;
 
-    if (mgr->va && !bo->va) {
+    if (mgr->rws->info.r600_virtual_address && !bo->va) {
         struct drm_radeon_gem_va va;
 
         bo->va = radeon_bomgr_find_va(mgr, bo->base.size, 1 << 20);
