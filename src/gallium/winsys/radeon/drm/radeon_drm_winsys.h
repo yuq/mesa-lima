@@ -31,6 +31,7 @@
 #define RADEON_DRM_WINSYS_H
 
 #include "gallium/drivers/radeon/radeon_winsys.h"
+#include "pipebuffer/pb_cache.h"
 #include "os/os_thread.h"
 #include "util/list.h"
 #include <radeon_drm.h>
@@ -64,6 +65,7 @@ enum radeon_generation {
 struct radeon_drm_winsys {
     struct radeon_winsys base;
     struct pipe_reference reference;
+    struct pb_cache bo_cache;
 
     int fd; /* DRM file descriptor */
     int num_cs; /* The number of command streams created. */
@@ -93,8 +95,6 @@ struct radeon_drm_winsys {
     /* BO size alignment */
     unsigned size_align;
 
-    struct pb_manager *kman;
-    struct pb_manager *cman;
     struct radeon_surface_manager *surf_man;
 
     uint32_t num_cpus;      /* Number of CPUs. */
