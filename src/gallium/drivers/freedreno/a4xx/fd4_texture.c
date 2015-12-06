@@ -150,6 +150,9 @@ fd4_sampler_states_bind(struct pipe_context *pctx,
 	uint16_t saturate_s = 0, saturate_t = 0, saturate_r = 0;
 	unsigned i;
 
+	if (!hwcso)
+		nr = 0;
+
 	for (i = 0; i < nr; i++) {
 		if (hwcso[i]) {
 			struct fd4_sampler_stateobj *sampler =
