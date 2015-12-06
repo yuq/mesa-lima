@@ -337,10 +337,8 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	}
 
 	buf = fd_bo_map(rsc->bo);
-	if (!buf) {
-		fd_resource_transfer_unmap(pctx, ptrans);
-		return NULL;
-	}
+	if (!buf)
+		goto fail;
 
 	offset = slice->offset +
 		box->y / util_format_get_blockheight(format) * ptrans->stride +
