@@ -48,7 +48,6 @@ struct radeon_bo_desc {
 struct radeon_bo {
     struct pb_buffer base;
 
-    struct radeon_bomgr *mgr;
     struct radeon_drm_winsys *rws;
     void *user_ptr; /* from buffer_from_ptr */
 

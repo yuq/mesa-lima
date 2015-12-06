@@ -168,9 +168,9 @@ static enum radeon_bo_domain radeon_bo_get_initial_domain(
     return get_valid_domain(args.value);
 }
 
-static uint64_t radeon_bomgr_find_va(struct radeon_bomgr *mgr, uint64_t size, uint64_t alignment)
+static uint64_t radeon_bomgr_find_va(struct radeon_drm_winsys *rws,
+                                     uint64_t size, uint64_t alignment)
 {
-    struct radeon_drm_winsys *rws = mgr->rws;
     struct radeon_bo_va_hole *hole, *n;
     uint64_t offset = 0, waste = 0;
 
@@ -230,9 +230,9 @@ static uint64_t radeon_bomgr_find_va(struct radeon_bomgr *mgr, uint64_t size, ui
     return offset;
 }
 
-static void radeon_bomgr_free_va(struct radeon_bomgr *mgr, uint64_t va, uint64_t size)
+static void radeon_bomgr_free_va(struct radeon_drm_winsys *rws,
+                                 uint64_t va, uint64_t size)
 {
-    struct radeon_drm_winsys *rws = mgr->rws;
     struct radeon_bo_va_hole *hole;
 
     size = align(size, rws->size_align);
@@ -300,7 +300,6 @@ static void radeon_bo_destroy(struct pb_buffer *_buf)
 {
     struct radeon_bo *bo = radeon_bo(_buf);
     struct radeon_drm_winsys *rws = bo->rws;
-    struct radeon_bomgr *mgr = bo->mgr;
     struct drm_gem_close args;
 
     memset(&args, 0, sizeof(args));
@@ -337,7 +336,7 @@ static void radeon_bo_destroy(struct pb_buffer *_buf)
             }
 	}
 
-	radeon_bomgr_free_va(mgr, bo->va, bo->base.size);
+	radeon_bomgr_free_va(rws, bo->va, bo->base.size);
     }
 
     /* Close object. */
@@ -589,7 +588,6 @@ static struct pb_buffer *radeon_bomgr_create_bo(struct pb_manager *_mgr,
     bo->base.usage = desc->usage;
     bo->base.size = size;
     bo->base.vtbl = &radeon_bo_vtbl;
-    bo->mgr = mgr;
     bo->rws = rws;
     bo->handle = args.handle;
     bo->va = 0;
@@ -599,7 +597,7 @@ static struct pb_buffer *radeon_bomgr_create_bo(struct pb_manager *_mgr,
     if (rws->info.r600_virtual_address) {
         struct drm_radeon_gem_va va;
 
-        bo->va = radeon_bomgr_find_va(mgr, size, desc->alignment);
+        bo->va = radeon_bomgr_find_va(rws, size, desc->alignment);
 
         va.handle = bo->handle;
         va.vm_id = 0;
@@ -832,7 +830,6 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
                         enum radeon_bo_flag flags)
 {
     struct radeon_drm_winsys *ws = radeon_drm_winsys(rws);
-    struct radeon_bomgr *mgr = radeon_bomgr(ws->kman);
     struct radeon_bo_desc desc;
     struct pb_manager *provider;
     struct pb_buffer *buffer;
@@ -880,7 +877,6 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
                                                    void *pointer, unsigned size)
 {
     struct radeon_drm_winsys *ws = radeon_drm_winsys(rws);
-    struct radeon_bomgr *mgr = radeon_bomgr(ws->kman);
     struct drm_radeon_gem_userptr args;
     struct radeon_bo *bo;
     int r;
@@ -910,7 +906,6 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
     bo->base.usage = PB_USAGE_GPU_WRITE | PB_USAGE_GPU_READ;
     bo->base.size = size;
     bo->base.vtbl = &radeon_bo_vtbl;
-    bo->mgr = mgr;
     bo->rws = ws;
     bo->user_ptr = pointer;
     bo->va = 0;
@@ -924,7 +919,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
     if (ws->info.r600_virtual_address) {
         struct drm_radeon_gem_va va;
 
-        bo->va = radeon_bomgr_find_va(mgr, bo->base.size, 1 << 20);
+        bo->va = radeon_bomgr_find_va(rws, bo->base.size, 1 << 20);
 
         va.handle = bo->handle;
         va.operation = RADEON_VA_MAP;
@@ -966,7 +961,6 @@ static struct pb_buffer *radeon_winsys_bo_from_handle(struct radeon_winsys *rws,
 {
     struct radeon_drm_winsys *ws = radeon_drm_winsys(rws);
     struct radeon_bo *bo;
-    struct radeon_bomgr *mgr = radeon_bomgr(ws->kman);
     int r;
     unsigned handle;
     uint64_t size = 0;
@@ -1039,7 +1033,6 @@ static struct pb_buffer *radeon_winsys_bo_from_handle(struct radeon_winsys *rws,
     bo->base.usage = PB_USAGE_GPU_WRITE | PB_USAGE_GPU_READ;
     bo->base.size = (unsigned) size;
     bo->base.vtbl = &radeon_bo_vtbl;
-    bo->mgr = mgr;
     bo->rws = ws;
     bo->va = 0;
     pipe_mutex_init(bo->map_mutex);
@@ -1058,7 +1051,7 @@ done:
     if (ws->info.r600_virtual_address && !bo->va) {
         struct drm_radeon_gem_va va;
 
-        bo->va = radeon_bomgr_find_va(mgr, bo->base.size, 1 << 20);
+        bo->va = radeon_bomgr_find_va(rws, bo->base.size, 1 << 20);
 
         va.handle = bo->handle;
         va.operation = RADEON_VA_MAP;
