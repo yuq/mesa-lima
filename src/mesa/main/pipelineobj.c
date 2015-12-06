@@ -898,6 +898,21 @@ _mesa_validate_program_pipeline(struct gl_context* ctx,
    if (!_mesa_sampler_uniforms_pipeline_are_valid(pipe))
       goto err;
 
+   /* Validate inputs against outputs, this cannot be done during linking
+    * since programs have been linked separately from each other.
+    *
+    * From OpenGL 4.5 Core spec:
+    *     "Separable program objects may have validation failures that cannot be
+    *     detected without the complete program pipeline. Mismatched interfaces,
+    *     improper usage of program objects together, and the same
+    *     state-dependent failures can result in validation errors for such
+    *     program objects."
+    *
+    * OpenGL ES 3.1 specification has the same text.
+    */
+   if (!_mesa_validate_pipeline_io(pipe))
+      goto err;
+
    pipe->Validated = GL_TRUE;
    return GL_TRUE;
 
@@ -933,21 +948,6 @@ _mesa_ValidateProgramPipeline(GLuint pipeline)
     * false for IsBound to avoid an error being thrown.
     */
    _mesa_validate_program_pipeline(ctx, pipe, false);
-
-   /* Validate inputs against outputs, this cannot be done during linking
-    * since programs have been linked separately from each other.
-    *
-    * From OpenGL 4.5 Core spec:
-    *     "Separable program objects may have validation failures that cannot be
-    *     detected without the complete program pipeline. Mismatched interfaces,
-    *     improper usage of program objects together, and the same
-    *     state-dependent failures can result in validation errors for such
-    *     program objects."
-    *
-    * OpenGL ES 3.1 specification has the same text.
-    */
-   if (!_mesa_validate_pipeline_io(pipe))
-      pipe->Validated = GL_FALSE;
 }
 
 void GLAPIENTRY
