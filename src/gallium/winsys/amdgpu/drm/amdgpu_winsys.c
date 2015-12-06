@@ -386,9 +386,9 @@ static int compare_dev(void *key1, void *key2)
    return key1 != key2;
 }
 
-static bool amdgpu_winsys_unref(struct radeon_winsys *ws)
+static bool amdgpu_winsys_unref(struct radeon_winsys *rws)
 {
-   struct amdgpu_winsys *rws = (struct amdgpu_winsys*)ws;
+   struct amdgpu_winsys *ws = (struct amdgpu_winsys*)rws;
    bool destroy;
 
    /* When the reference counter drops to zero, remove the device pointer
@@ -398,9 +398,9 @@ static bool amdgpu_winsys_unref(struct radeon_winsys *ws)
     * from the table when the counter drops to 0. */
    pipe_mutex_lock(dev_tab_mutex);
 
-   destroy = pipe_reference(&rws->reference, NULL);
+   destroy = pipe_reference(&ws->reference, NULL);
    if (destroy && dev_tab)
-      util_hash_table_remove(dev_tab, rws->dev);
+      util_hash_table_remove(dev_tab, ws->dev);
 
    pipe_mutex_unlock(dev_tab_mutex);
    return destroy;

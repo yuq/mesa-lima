@@ -46,7 +46,7 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
                            enum radeon_bo_usage usage)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
-   struct amdgpu_winsys *ws = bo->rws;
+   struct amdgpu_winsys *ws = bo->ws;
    int i;
 
    if (bo->is_shared) {
@@ -136,9 +136,9 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
       amdgpu_fence_reference(&bo->fence[i], NULL);
 
    if (bo->initial_domain & RADEON_DOMAIN_VRAM)
-      bo->rws->allocated_vram -= align(bo->base.size, bo->rws->gart_page_size);
+      bo->ws->allocated_vram -= align(bo->base.size, bo->ws->gart_page_size);
    else if (bo->initial_domain & RADEON_DOMAIN_GTT)
-      bo->rws->allocated_gtt -= align(bo->base.size, bo->rws->gart_page_size);
+      bo->ws->allocated_gtt -= align(bo->base.size, bo->ws->gart_page_size);
    FREE(bo);
 }
 
@@ -220,7 +220,7 @@ static void *amdgpu_bo_map(struct radeon_winsys_cs_handle *buf,
                            RADEON_USAGE_READWRITE);
          }
 
-         bo->rws->buffer_wait_time += os_time_get_nano() - time;
+         bo->ws->buffer_wait_time += os_time_get_nano() - time;
       }
    }
 
@@ -244,7 +244,7 @@ static const struct pb_vtbl amdgpu_winsys_bo_vtbl = {
    /* other functions are never called */
 };
 
-static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *rws,
+static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
                                                  unsigned size,
                                                  unsigned alignment,
                                                  unsigned usage,
@@ -264,7 +264,7 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *rws,
       return NULL;
    }
 
-   pb_cache_init_entry(&rws->bo_cache, &bo->cache_entry, &bo->base);
+   pb_cache_init_entry(&ws->bo_cache, &bo->cache_entry, &bo->base);
    request.alloc_size = size;
    request.phys_alignment = alignment;
 
@@ -279,7 +279,7 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *rws,
          request.flags |= AMDGPU_GEM_CREATE_CPU_GTT_USWC;
    }
 
-   r = amdgpu_bo_alloc(rws->dev, &request, &buf_handle);
+   r = amdgpu_bo_alloc(ws->dev, &request, &buf_handle);
    if (r) {
       fprintf(stderr, "amdgpu: Failed to allocate a buffer:\n");
       fprintf(stderr, "amdgpu:    size      : %d bytes\n", size);
@@ -288,7 +288,7 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *rws,
       goto error_bo_alloc;
    }
 
-   r = amdgpu_va_range_alloc(rws->dev, amdgpu_gpu_va_range_general,
+   r = amdgpu_va_range_alloc(ws->dev, amdgpu_gpu_va_range_general,
                              size, alignment, 0, &va, &va_handle, 0);
    if (r)
       goto error_va_alloc;
@@ -302,17 +302,17 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *rws,
    bo->base.usage = usage;
    bo->base.size = size;
    bo->base.vtbl = &amdgpu_winsys_bo_vtbl;
-   bo->rws = rws;
+   bo->ws = ws;
    bo->bo = buf_handle;
    bo->va = va;
    bo->va_handle = va_handle;
    bo->initial_domain = initial_domain;
-   bo->unique_id = __sync_fetch_and_add(&rws->next_bo_unique_id, 1);
+   bo->unique_id = __sync_fetch_and_add(&ws->next_bo_unique_id, 1);
 
    if (initial_domain & RADEON_DOMAIN_VRAM)
-      rws->allocated_vram += align(size, rws->gart_page_size);
+      ws->allocated_vram += align(size, ws->gart_page_size);
    else if (initial_domain & RADEON_DOMAIN_GTT)
-      rws->allocated_gtt += align(size, rws->gart_page_size);
+      ws->allocated_gtt += align(size, ws->gart_page_size);
 
    return bo;
 
@@ -569,7 +569,7 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
    bo->bo = result.buf_handle;
    bo->base.size = result.alloc_size;
    bo->base.vtbl = &amdgpu_winsys_bo_vtbl;
-   bo->rws = ws;
+   bo->ws = ws;
    bo->va = va;
    bo->va_handle = va_handle;
    bo->initial_domain = initial;
@@ -660,7 +660,7 @@ static struct pb_buffer *amdgpu_bo_from_ptr(struct radeon_winsys *rws,
     bo->base.usage = PB_USAGE_GPU_WRITE | PB_USAGE_GPU_READ;
     bo->base.size = size;
     bo->base.vtbl = &amdgpu_winsys_bo_vtbl;
-    bo->rws = ws;
+    bo->ws = ws;
     bo->user_ptr = pointer;
     bo->va = va;
     bo->va_handle = va_handle;

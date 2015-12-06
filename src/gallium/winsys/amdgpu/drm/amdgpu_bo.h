@@ -40,7 +40,7 @@ struct amdgpu_winsys_bo {
    struct pb_buffer base;
    struct pb_cache_entry cache_entry;
 
-   struct amdgpu_winsys *rws;
+   struct amdgpu_winsys *ws;
    void *user_ptr; /* from buffer_from_ptr */
 
    amdgpu_bo_handle bo;
