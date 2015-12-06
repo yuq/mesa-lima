@@ -134,7 +134,6 @@ struct r600_resource {
 
 	/* Winsys objects. */
 	struct pb_buffer		*buf;
-	struct radeon_winsys_cs_handle	*cs_buf;
 	uint64_t			gpu_address;
 
 	/* Resource state. */
@@ -478,7 +477,7 @@ struct r600_common_context {
 
 /* r600_buffer.c */
 boolean r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
-					struct radeon_winsys_cs_handle *buf,
+					struct pb_buffer *buf,
 					enum radeon_bo_usage usage);
 void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
                                       struct r600_resource *resource,

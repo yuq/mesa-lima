@@ -149,7 +149,7 @@ static int store_shader(struct pipe_context *ctx,
 		} else {
 			memcpy(ptr, shader->shader.bc.bytecode, shader->shader.bc.ndw * sizeof(*ptr));
 		}
-		rctx->b.ws->buffer_unmap(shader->bo->cs_buf);
+		rctx->b.ws->buffer_unmap(shader->bo->buf);
 	}
 
 	return 0;

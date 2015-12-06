@@ -948,7 +948,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 										PIPE_USAGE_STAGING,
 										4096);
 		if (rscreen->trace_bo) {
-			rscreen->trace_ptr = rscreen->ws->buffer_map(rscreen->trace_bo->cs_buf, NULL,
+			rscreen->trace_ptr = rscreen->ws->buffer_map(rscreen->trace_bo->buf, NULL,
 									PIPE_TRANSFER_UNSYNCHRONIZED);
 		}
 	}

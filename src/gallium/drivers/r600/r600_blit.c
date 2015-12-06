@@ -533,7 +533,7 @@ static void r600_copy_buffer(struct pipe_context *ctx, struct pipe_resource *dst
 /**
  * Global buffers are not really resources, they are are actually offsets
  * into a single global resource (r600_screen::global_pool).  The means
- * they don't have their own cs_buf handle, so they cannot be passed
+ * they don't have their own buf handle, so they cannot be passed
  * to r600_copy_buffer() and must be handled separately.
  */
 static void r600_copy_global_buffer(struct pipe_context *ctx,

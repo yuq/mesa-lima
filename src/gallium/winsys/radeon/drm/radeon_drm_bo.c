@@ -115,7 +115,7 @@ static enum radeon_bo_domain get_valid_domain(enum radeon_bo_domain domain)
 }
 
 static enum radeon_bo_domain radeon_bo_get_initial_domain(
-		struct radeon_winsys_cs_handle *buf)
+		struct pb_buffer *buf)
 {
     struct radeon_bo *bo = (struct radeon_bo*)buf;
     struct drm_radeon_gem_op args;
@@ -372,7 +372,7 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
     return bo->ptr;
 }
 
-static void *radeon_bo_map(struct radeon_winsys_cs_handle *buf,
+static void *radeon_bo_map(struct pb_buffer *buf,
                            struct radeon_winsys_cs *rcs,
                            enum pipe_transfer_usage usage)
 {
@@ -450,7 +450,7 @@ static void *radeon_bo_map(struct radeon_winsys_cs_handle *buf,
     return radeon_bo_do_map(bo);
 }
 
-static void radeon_bo_unmap(struct radeon_winsys_cs_handle *_buf)
+static void radeon_bo_unmap(struct pb_buffer *_buf)
 {
     struct radeon_bo *bo = (struct radeon_bo*)_buf;
 
@@ -730,12 +730,6 @@ static void radeon_bo_set_tiling(struct pb_buffer *_buf,
                         DRM_RADEON_GEM_SET_TILING,
                         &args,
                         sizeof(args));
-}
-
-static struct radeon_winsys_cs_handle *radeon_drm_get_cs_handle(struct pb_buffer *_buf)
-{
-    /* return radeon_bo. */
-    return (struct radeon_winsys_cs_handle*)radeon_bo(_buf);
 }
 
 static struct pb_buffer *
@@ -1046,14 +1040,13 @@ static boolean radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
     return TRUE;
 }
 
-static uint64_t radeon_winsys_bo_va(struct radeon_winsys_cs_handle *buf)
+static uint64_t radeon_winsys_bo_va(struct pb_buffer *buf)
 {
     return ((struct radeon_bo*)buf)->va;
 }
 
 void radeon_drm_bo_init_functions(struct radeon_drm_winsys *ws)
 {
-    ws->base.buffer_get_cs_handle = radeon_drm_get_cs_handle;
     ws->base.buffer_set_tiling = radeon_bo_set_tiling;
     ws->base.buffer_get_tiling = radeon_bo_get_tiling;
     ws->base.buffer_map = radeon_bo_map;

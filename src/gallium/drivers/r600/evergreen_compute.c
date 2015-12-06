@@ -233,7 +233,7 @@ void *evergreen_create_compute_state(
 							shader->bc.ndw * 4);
 	p = r600_buffer_map_sync_with_rings(&ctx->b, shader->code_bo, PIPE_TRANSFER_WRITE);
 	memcpy(p, shader->bc.bytecode, shader->bc.ndw * 4);
-	ctx->b.ws->buffer_unmap(shader->code_bo->cs_buf);
+	ctx->b.ws->buffer_unmap(shader->code_bo->buf);
 #endif
 #endif
 
@@ -613,7 +613,7 @@ static void evergreen_launch_grid(
                                                         kernel->bc.ndw * 4);
                 p = r600_buffer_map_sync_with_rings(&ctx->b, kernel->code_bo, PIPE_TRANSFER_WRITE);
                 memcpy(p, kernel->bc.bytecode, kernel->bc.ndw * 4);
-                ctx->b.ws->buffer_unmap(kernel->code_bo->cs_buf);
+                ctx->b.ws->buffer_unmap(kernel->code_bo->buf);
         }
 	shader->active_kernel = kernel;
 	ctx->cs_shader_state.kernel_index = pc;

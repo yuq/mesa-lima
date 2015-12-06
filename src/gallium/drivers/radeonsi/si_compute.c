@@ -267,7 +267,7 @@ static void si_launch_grid(
 	/* The extra num_work_size_bytes are for work group / work item size information */
 	kernel_args_size = program->input_size + num_work_size_bytes + 8 /* For scratch va */;
 
-	kernel_args = sctx->b.ws->buffer_map(input_buffer->cs_buf,
+	kernel_args = sctx->b.ws->buffer_map(input_buffer->buf,
 			sctx->b.gfx.cs, PIPE_TRANSFER_WRITE);
 	for (i = 0; i < 3; i++) {
 		kernel_args[i] = grid_layout[i];

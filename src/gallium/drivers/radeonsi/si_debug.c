@@ -410,7 +410,7 @@ static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 		 * waited for the context, so this buffer should be idle.
 		 * If the GPU is hung, there is no point in waiting for it.
 		 */
-		uint32_t *map = sctx->b.ws->buffer_map(sctx->last_trace_buf->cs_buf,
+		uint32_t *map = sctx->b.ws->buffer_map(sctx->last_trace_buf->buf,
 						       NULL,
 						       PIPE_TRANSFER_UNSYNCHRONIZED |
 						       PIPE_TRANSFER_READ);

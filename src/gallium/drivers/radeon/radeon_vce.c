@@ -64,7 +64,7 @@ static void flush(struct rvce_encoder *enc)
 #if 0
 static void dump_feedback(struct rvce_encoder *enc, struct rvid_buffer *fb)
 {
-	uint32_t *ptr = enc->ws->buffer_map(fb->res->cs_buf, enc->cs, PIPE_TRANSFER_READ_WRITE);
+	uint32_t *ptr = enc->ws->buffer_map(fb->res->buf, enc->cs, PIPE_TRANSFER_READ_WRITE);
 	unsigned i = 0;
 	fprintf(stderr, "\n");
 	fprintf(stderr, "encStatus:\t\t\t%08x\n", ptr[i++]);
@@ -83,7 +83,7 @@ static void dump_feedback(struct rvce_encoder *enc, struct rvid_buffer *fb)
 	fprintf(stderr, "seiPrivatePackageOffset:\t%08x\n", ptr[i++]);
 	fprintf(stderr, "seiPrivatePackageSize:\t\t%08x\n", ptr[i++]);
 	fprintf(stderr, "\n");
-	enc->ws->buffer_unmap(fb->res->cs_buf);
+	enc->ws->buffer_unmap(fb->res->buf);
 }
 #endif
 
@@ -346,7 +346,7 @@ static void rvce_get_feedback(struct pipe_video_codec *encoder,
 	struct rvid_buffer *fb = feedback;
 
 	if (size) {
-		uint32_t *ptr = enc->ws->buffer_map(fb->res->cs_buf, enc->cs, PIPE_TRANSFER_READ_WRITE);
+		uint32_t *ptr = enc->ws->buffer_map(fb->res->buf, enc->cs, PIPE_TRANSFER_READ_WRITE);
 
 		if (ptr[1]) {
 			*size = ptr[4] - ptr[9];
@@ -354,7 +354,7 @@ static void rvce_get_feedback(struct pipe_video_codec *encoder,
 			*size = 0;
 		}
 
-		enc->ws->buffer_unmap(fb->res->cs_buf);
+		enc->ws->buffer_unmap(fb->res->buf);
 	}
 	//dump_feedback(enc, fb);
 	rvid_destroy_buffer(fb);
@@ -522,7 +522,7 @@ bool rvce_is_fw_version_supported(struct r600_common_screen *rscreen)
 /**
  * Add the buffer as relocation to the current command submission
  */
-void rvce_add_buffer(struct rvce_encoder *enc, struct radeon_winsys_cs_handle *buf,
+void rvce_add_buffer(struct rvce_encoder *enc, struct pb_buffer *buf,
                      enum radeon_bo_usage usage, enum radeon_bo_domain domain,
                      signed offset)
 {

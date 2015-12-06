@@ -118,7 +118,7 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
 }
 
 static enum radeon_bo_domain amdgpu_bo_get_initial_domain(
-      struct radeon_winsys_cs_handle *buf)
+      struct pb_buffer *buf)
 {
    return ((struct amdgpu_winsys_bo*)buf)->initial_domain;
 }
@@ -152,7 +152,7 @@ static void amdgpu_bo_destroy_or_cache(struct pb_buffer *_buf)
       amdgpu_bo_destroy(_buf);
 }
 
-static void *amdgpu_bo_map(struct radeon_winsys_cs_handle *buf,
+static void *amdgpu_bo_map(struct pb_buffer *buf,
                            struct radeon_winsys_cs *rcs,
                            enum pipe_transfer_usage usage)
 {
@@ -232,7 +232,7 @@ static void *amdgpu_bo_map(struct radeon_winsys_cs_handle *buf,
    return r ? NULL : cpu;
 }
 
-static void amdgpu_bo_unmap(struct radeon_winsys_cs_handle *buf)
+static void amdgpu_bo_unmap(struct pb_buffer *buf)
 {
    struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)buf;
 
@@ -444,12 +444,6 @@ static void amdgpu_bo_set_tiling(struct pb_buffer *_buf,
    metadata.tiling_info = tiling_flags;
 
    amdgpu_bo_set_metadata(bo->bo, &metadata);
-}
-
-static struct radeon_winsys_cs_handle *amdgpu_get_cs_handle(struct pb_buffer *_buf)
-{
-   /* return a direct pointer to amdgpu_winsys_bo. */
-   return (struct radeon_winsys_cs_handle*)_buf;
 }
 
 static struct pb_buffer *
@@ -682,14 +676,13 @@ error:
     return NULL;
 }
 
-static uint64_t amdgpu_bo_get_va(struct radeon_winsys_cs_handle *buf)
+static uint64_t amdgpu_bo_get_va(struct pb_buffer *buf)
 {
    return ((struct amdgpu_winsys_bo*)buf)->va;
 }
 
 void amdgpu_bo_init_functions(struct amdgpu_winsys *ws)
 {
-   ws->base.buffer_get_cs_handle = amdgpu_get_cs_handle;
    ws->base.buffer_set_tiling = amdgpu_bo_set_tiling;
    ws->base.buffer_get_tiling = amdgpu_bo_get_tiling;
    ws->base.buffer_map = amdgpu_bo_map;

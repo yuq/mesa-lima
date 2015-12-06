@@ -143,7 +143,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 	sctx->b.gfx.cs = ws->cs_create(sctx->b.ctx, RING_GFX, si_context_gfx_flush,
 				       sctx, sscreen->b.trace_bo ?
-					       sscreen->b.trace_bo->cs_buf : NULL);
+					       sscreen->b.trace_bo->buf : NULL);
 	sctx->b.gfx.flush = si_context_gfx_flush;
 
 	/* Border colors. */
@@ -160,7 +160,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		goto fail;
 
 	sctx->border_color_map =
-		ws->buffer_map(sctx->border_color_buffer->cs_buf,
+		ws->buffer_map(sctx->border_color_buffer->buf,
 			       NULL, PIPE_TRANSFER_WRITE);
 	if (!sctx->border_color_map)
 		goto fail;
