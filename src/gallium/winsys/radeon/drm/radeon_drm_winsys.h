@@ -32,6 +32,7 @@
 
 #include "gallium/drivers/radeon/radeon_winsys.h"
 #include "os/os_thread.h"
+#include "util/list.h"
 #include <radeon_drm.h>
 
 #ifndef DRM_RADEON_GEM_USERPTR
@@ -76,6 +77,21 @@ struct radeon_drm_winsys {
     uint32_t va_start;
     uint32_t va_unmap_working;
     uint32_t accel_working2;
+
+    /* List of buffer GEM names. Protected by bo_handles_mutex. */
+    struct util_hash_table *bo_names;
+    /* List of buffer handles. Protectded by bo_handles_mutex. */
+    struct util_hash_table *bo_handles;
+    /* List of buffer virtual memory ranges. Protectded by bo_handles_mutex. */
+    struct util_hash_table *bo_vas;
+    pipe_mutex bo_handles_mutex;
+    pipe_mutex bo_va_mutex;
+
+    uint64_t va_offset;
+    struct list_head va_holes;
+
+    /* BO size alignment */
+    unsigned size_align;
 
     struct pb_manager *kman;
     struct pb_manager *cman;
