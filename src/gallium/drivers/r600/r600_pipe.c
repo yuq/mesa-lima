@@ -455,7 +455,6 @@ static int r600_get_shader_param(struct pipe_screen* pscreen, unsigned shader, e
 		if (rscreen->b.family >= CHIP_CEDAR)
 			break;
 	default:
-		/* XXX: support tessellation on Evergreen */
 		return 0;
 	}
 
