@@ -2424,7 +2424,7 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 	struct r600_command_buffer *cb = &rctx->start_cs_cmd;
 	int tmp, i;
 
-	r600_init_command_buffer(cb, 336);
+	r600_init_command_buffer(cb, 342);
 
 	/* This must be first. */
 	r600_store_value(cb, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
@@ -2440,6 +2440,12 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 
 	r600_store_config_reg(cb, R_009100_SPI_CONFIG_CNTL, 0);
 	r600_store_config_reg(cb, R_00913C_SPI_CONFIG_CNTL_1, S_00913C_VTX_DONE_DELAY(4));
+
+	/* remove LS/HS from one SIMD for hw workaround */
+	r600_store_config_reg_seq(cb, R_008E20_SQ_STATIC_THREAD_MGMT1, 3);
+	r600_store_value(cb, 0xffffffff);
+	r600_store_value(cb, 0xffffffff);
+	r600_store_value(cb, 0xfffffffe);
 
 	r600_store_context_reg_seq(cb, R_028900_SQ_ESGS_RING_ITEMSIZE, 6);
 	r600_store_value(cb, 0); /* R_028900_SQ_ESGS_RING_ITEMSIZE */
@@ -2862,6 +2868,7 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_config_reg(cb, R_008E2C_SQ_LDS_RESOURCE_MGMT,
 			      S_008E2C_NUM_PS_LDS(0x1000) | S_008E2C_NUM_LS_LDS(0x1000));
 
+	/* remove LS/HS from one SIMD for hw workaround */
 	r600_store_config_reg_seq(cb, R_008E20_SQ_STATIC_THREAD_MGMT1, 3);
 	r600_store_value(cb, 0xffffffff);
 	r600_store_value(cb, 0xffffffff);
