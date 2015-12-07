@@ -1468,16 +1468,16 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
     */
    const uint32_t mcs_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
                               MIPTREE_LAYOUT_TILING_Y;
-   mt->mcs_mt = intel_miptree_create(brw,
-                                     mt->target,
-                                     format,
-                                     mt->first_level,
-                                     mt->last_level,
-                                     mt->logical_width0,
-                                     mt->logical_height0,
-                                     mt->logical_depth0,
-                                     0 /* num_samples */,
-                                     mcs_flags);
+   mt->mcs_mt = miptree_create(brw,
+                               mt->target,
+                               format,
+                               mt->first_level,
+                               mt->last_level,
+                               mt->logical_width0,
+                               mt->logical_height0,
+                               mt->logical_depth0,
+                               0 /* num_samples */,
+                               mcs_flags);
 
    /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
     *
