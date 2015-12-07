@@ -202,7 +202,7 @@ anv_gem_set_tiling(struct anv_device *device,
    do {
       VG_CLEAR(set_tiling);
       set_tiling.handle = gem_handle;
-      set_tiling.tiling_mode = I915_TILING_X;
+      set_tiling.tiling_mode = tiling;
       set_tiling.stride = stride;
 
       ret = ioctl(device->fd, DRM_IOCTL_I915_GEM_SET_TILING, &set_tiling);
