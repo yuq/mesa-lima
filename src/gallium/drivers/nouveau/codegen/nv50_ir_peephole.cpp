@@ -957,7 +957,8 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          if (i->op != OP_CVT)
             i->src(0).mod = 0;
       } else
-      if (imm0.isInteger(1) || imm0.isInteger(-1)) {
+      if (i->subOp != NV50_IR_SUBOP_MUL_HIGH &&
+          (imm0.isInteger(1) || imm0.isInteger(-1))) {
          if (imm0.isNegative())
             i->src(t).mod = i->src(t).mod ^ Modifier(NV50_IR_MOD_NEG);
          if (s == 0) {
@@ -1589,11 +1590,10 @@ AlgebraicOpt::tryADDToMADOrSAD(Instruction *add, operation toOp)
    else
       return false;
 
-   if ((src0->getUniqueInsn() && src0->getUniqueInsn()->bb != add->bb) ||
-       (src1->getUniqueInsn() && src1->getUniqueInsn()->bb != add->bb))
-      return false;
-
    src = add->getSrc(s);
+
+   if (src->getUniqueInsn() && src->getUniqueInsn()->bb != add->bb)
+      return false;
 
    if (src->getInsn()->postFactor)
       return false;
@@ -1605,6 +1605,10 @@ AlgebraicOpt::tryADDToMADOrSAD(Instruction *add, operation toOp)
          return false;
    }
 
+   if (typeSizeof(add->dType) != typeSizeof(src->getInsn()->dType) ||
+       isFloatType(add->dType) != isFloatType(src->getInsn()->dType))
+      return false;
+
    mod[0] = add->src(0).mod;
    mod[1] = add->src(1).mod;
    mod[2] = src->getUniqueInsn()->src(0).mod;
@@ -1615,6 +1619,8 @@ AlgebraicOpt::tryADDToMADOrSAD(Instruction *add, operation toOp)
 
    add->op = toOp;
    add->subOp = src->getInsn()->subOp; // potentially mul-high
+   add->dType = src->getInsn()->dType; // sign matters for imad hi
+   add->sType = src->getInsn()->sType;
 
    add->setSrc(2, add->src(s ? 0 : 1));
 
