@@ -29,9 +29,26 @@
 
 #include "va_private.h"
 
+static const VARectangle *
+vlVaRegionDefault(const VARectangle *region, struct pipe_video_buffer *buf,
+		  VARectangle *def)
+{
+   if (region)
+      return region;
+
+   def->x = 0;
+   def->y = 0;
+   def->width = buf->width;
+   def->height = buf->height;
+
+   return def;
+}
+
 VAStatus
 vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
+   VARectangle def_src_region, def_dst_region;
+   const VARectangle *src_region, *dst_region;
    struct u_rect src_rect;
    struct u_rect dst_rect;
    vlVaSurface *src_surface;
@@ -64,15 +81,18 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
 
    psurf = surfaces[0];
 
-   src_rect.x0 = pipeline_param->surface_region->x;
-   src_rect.y0 = pipeline_param->surface_region->y;
-   src_rect.x1 = pipeline_param->surface_region->x + pipeline_param->surface_region->width;
-   src_rect.y1 = pipeline_param->surface_region->y + pipeline_param->surface_region->height;
+   src_region = vlVaRegionDefault(pipeline_param->surface_region, src_surface->buffer, &def_src_region);
+   dst_region = vlVaRegionDefault(pipeline_param->output_region, context->target, &def_dst_region);
 
-   dst_rect.x0 = pipeline_param->output_region->x;
-   dst_rect.y0 = pipeline_param->output_region->y;
-   dst_rect.x1 = pipeline_param->output_region->x + pipeline_param->output_region->width;
-   dst_rect.y1 = pipeline_param->output_region->y + pipeline_param->output_region->height;
+   src_rect.x0 = src_region->x;
+   src_rect.y0 = src_region->y;
+   src_rect.x1 = src_region->x + src_region->width;
+   src_rect.y1 = src_region->y + src_region->height;
+
+   dst_rect.x0 = dst_region->x;
+   dst_rect.y0 = dst_region->y;
+   dst_rect.x1 = dst_region->x + dst_region->width;
+   dst_rect.y1 = dst_region->y + dst_region->height;
 
    vl_compositor_clear_layers(&drv->cstate);
    vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, src_surface->buffer, &src_rect, NULL, VL_COMPOSITOR_WEAVE);
