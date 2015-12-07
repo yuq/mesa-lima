@@ -1541,16 +1541,16 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    if (brw->gen >= 8) {
       layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
    }
-   mt->mcs_mt = intel_miptree_create(brw,
-                                     mt->target,
-                                     format,
-                                     mt->first_level,
-                                     mt->last_level,
-                                     mcs_width,
-                                     mcs_height,
-                                     mt->logical_depth0,
-                                     0 /* num_samples */,
-                                     layout_flags);
+   mt->mcs_mt = miptree_create(brw,
+                               mt->target,
+                               format,
+                               mt->first_level,
+                               mt->last_level,
+                               mcs_width,
+                               mcs_height,
+                               mt->logical_depth0,
+                               0 /* num_samples */,
+                               layout_flags);
 
    return mt->mcs_mt;
 }
