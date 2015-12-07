@@ -1473,6 +1473,7 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 	unsigned vtx_id = src->Dimension.Index;
 	int offset_reg = vtx_id / 3;
 	int offset_chan = vtx_id % 3;
+	int t2 = 0;
 
 	/* offsets of per-vertex data in ESGS ring are passed to GS in R0.x, R0.y,
 	 * R0.w, R1.x, R1.y, R1.z (it seems R0.z is used for PrimitiveID) */
@@ -1480,9 +1481,11 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 	if (offset_reg == 0 && offset_chan == 2)
 		offset_chan = 3;
 
+	if (src->Dimension.Indirect || src->Register.Indirect)
+		t2 = r600_get_temp(ctx);
+
 	if (src->Dimension.Indirect) {
 		int treg[3];
-		int t2;
 		struct r600_bytecode_alu alu;
 		int r, i;
 
@@ -1494,7 +1497,6 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 		}
 		r600_add_gpr_array(ctx->shader, treg[0], 3, 0x0F);
 
-		t2 = r600_get_temp(ctx);
 		for (i = 0; i < 3; i++) {
 			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 			alu.op = ALU_OP1_MOV;
@@ -1519,8 +1521,33 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 		if (r)
 			return r;
 		offset_reg = t2;
+		offset_chan = 0;
 	}
 
+	if (src->Register.Indirect) {
+		int addr_reg;
+		unsigned first = ctx->info.input_array_first[src->Indirect.ArrayID];
+
+		addr_reg = get_address_file_reg(ctx, src->Indirect.Index);
+
+		/* pull the value from index_reg */
+		r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+				   t2, 1,
+				   addr_reg, 0,
+				   V_SQ_ALU_SRC_LITERAL, first);
+		if (r)
+			return r;
+		r = single_alu_op3(ctx, ALU_OP3_MULADD_UINT24,
+				   t2, 0,
+				   t2, 1,
+				   V_SQ_ALU_SRC_LITERAL, 4,
+				   offset_reg, offset_chan);
+		if (r)
+			return r;
+		offset_reg = t2;
+		offset_chan = 0;
+		index = src->Register.Index - first;
+	}
 
 	memset(&vtx, 0, sizeof(vtx));
 	vtx.buffer_id = R600_GS_RING_CONST_BUFFER;
@@ -1566,6 +1593,7 @@ static int tgsi_split_gs_inputs(struct r600_shader_ctx *ctx)
 
 			fetch_gs_input(ctx, src, treg);
 			ctx->src[i].sel = treg;
+			ctx->src[i].rel = 0;
 		}
 	}
 	return 0;
