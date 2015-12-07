@@ -2051,8 +2051,10 @@ intel_miptree_resolve_color(struct brw_context *brw,
    case INTEL_FAST_CLEAR_STATE_UNRESOLVED:
    case INTEL_FAST_CLEAR_STATE_CLEAR:
       /* Fast color clear resolves only make sense for non-MSAA buffers. */
-      if (mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE)
+      if (mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE ||
+          intel_miptree_is_lossless_compressed(brw, mt)) {
          brw_meta_resolve_color(brw, mt);
+      }
       break;
    }
 }

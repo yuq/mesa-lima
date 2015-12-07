@@ -228,7 +228,9 @@ get_fast_clear_rect(struct brw_context *brw, struct gl_framebuffer *fb,
    unsigned int x_align, y_align;
    unsigned int x_scaledown, y_scaledown;
 
-   if (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE) {
+   /* Only single sampled surfaces need to (and actually can) be resolved. */
+   if (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE ||
+       intel_miptree_is_lossless_compressed(brw, irb->mt)) {
       /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
        * Target(s)", beneath the "Fast Color Clear" bullet (p327):
        *
