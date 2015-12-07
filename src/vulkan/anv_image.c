@@ -124,16 +124,34 @@ choose_isl_surf_usage(const struct anv_image_create_info *info,
 }
 
 /**
- * The \a format argument is required and overrides any format in struct
- * anv_image_create_info. Exactly one bit must be set in \a aspect.
+ * Exactly one bit must be set in \a aspect.
+ */
+static struct anv_surface *
+get_surface(struct anv_image *image, VkImageAspectFlags aspect)
+{
+   switch (aspect) {
+   default:
+      unreachable("bad VkImageAspect");
+   case VK_IMAGE_ASPECT_COLOR_BIT:
+      return &image->color_surface;
+   case VK_IMAGE_ASPECT_DEPTH_BIT:
+      return &image->depth_surface;
+   case VK_IMAGE_ASPECT_STENCIL_BIT:
+      return &image->stencil_surface;
+   }
+}
+
+/**
+ * Initialize the anv_image::*_surface selected by \a aspect. Then update the
+ * image's memory requirements (that is, the image's size and alignment).
+ *
+ * Exactly one bit must be set in \a aspect.
  */
 static VkResult
-anv_image_make_surface(const struct anv_device *dev,
-                       const struct anv_image_create_info *anv_info,
-                       VkImageAspectFlags aspect,
-                       uint64_t *inout_image_size,
-                       uint32_t *inout_image_alignment,
-                       struct anv_surface *out_anv_surf)
+make_surface(const struct anv_device *dev,
+             struct anv_image *image,
+             const struct anv_image_create_info *anv_info,
+             VkImageAspectFlags aspect)
 {
    const VkImageCreateInfo *vk_info = anv_info->vk_info;
    bool ok UNUSED;
@@ -144,12 +162,13 @@ anv_image_make_surface(const struct anv_device *dev,
       [VK_IMAGE_TYPE_3D] = ISL_SURF_DIM_3D,
    };
 
-
    isl_tiling_flags_t tiling_flags = anv_info->isl_tiling_flags;
    if (vk_info->tiling == VK_IMAGE_TILING_LINEAR)
       tiling_flags &= ISL_TILING_LINEAR_BIT;
 
-   ok = isl_surf_init(&dev->isl_dev, &out_anv_surf->isl,
+   struct anv_surface *anv_surf = get_surface(image, aspect);
+
+   ok = isl_surf_init(&dev->isl_dev, &anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
       .format = anv_get_isl_format(vk_info->format, aspect),
       .width = vk_info->extent.width,
@@ -168,12 +187,9 @@ anv_image_make_surface(const struct anv_device *dev,
     */
    assert(ok);
 
-   out_anv_surf->offset = align_u32(*inout_image_size,
-                                    out_anv_surf->isl.alignment);
-
-   *inout_image_size = out_anv_surf->offset + out_anv_surf->isl.size;
-   *inout_image_alignment = MAX(*inout_image_alignment,
-                                out_anv_surf->isl.alignment);
+   anv_surf->offset = align_u32(image->size, anv_surf->isl.alignment);
+   image->size = anv_surf->offset + anv_surf->isl.size;
+   image->alignment = MAX(image->alignment, anv_surf->isl.alignment);
 
    return VK_SUCCESS;
 }
@@ -246,27 +262,21 @@ anv_image_create(VkDevice _device,
    }
 
    if (likely(anv_format_is_color(image->format))) {
-      r = anv_image_make_surface(device, create_info,
-                                 VK_IMAGE_ASPECT_COLOR_BIT,
-                                 &image->size, &image->alignment,
-                                 &image->color_surface);
+      r = make_surface(device, image, create_info,
+                       VK_IMAGE_ASPECT_COLOR_BIT);
       if (r != VK_SUCCESS)
          goto fail;
    } else {
       if (image->format->depth_format) {
-         r = anv_image_make_surface(device, create_info,
-                                    VK_IMAGE_ASPECT_DEPTH_BIT,
-                                    &image->size, &image->alignment,
-                                    &image->depth_surface);
+         r = make_surface(device, image, create_info,
+                          VK_IMAGE_ASPECT_DEPTH_BIT);
          if (r != VK_SUCCESS)
             goto fail;
       }
 
       if (image->format->has_stencil) {
-         r = anv_image_make_surface(device, create_info,
-                                    VK_IMAGE_ASPECT_STENCIL_BIT,
-                                    &image->size, &image->alignment,
-                                    &image->stencil_surface);
+         r = make_surface(device, image, create_info,
+                          VK_IMAGE_ASPECT_STENCIL_BIT);
          if (r != VK_SUCCESS)
             goto fail;
       }
