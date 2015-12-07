@@ -23,6 +23,7 @@
 #include "codegen/nv50_ir.h"
 #include "codegen/nv50_ir_target.h"
 
+#include <algorithm>
 #include <stack>
 #include <limits>
 #if __cplusplus >= 201103L
@@ -1649,6 +1650,13 @@ SpillCodeInserter::unspill(Instruction *usei, LValue *lval, Value *slot)
    return lval;
 }
 
+static bool
+value_cmp(ValueRef *a, ValueRef *b) {
+   Instruction *ai = a->getInsn(), *bi = b->getInsn();
+   if (ai->bb != bi->bb)
+      return ai->bb->getId() < bi->bb->getId();
+   return ai->serial < bi->serial;
+}
 
 // For each value that is to be spilled, go through all its definitions.
 // A value can have multiple definitions if it has been coalesced before.
@@ -1682,18 +1690,25 @@ SpillCodeInserter::run(const std::list<ValuePair>& lst)
          LValue *dval = (*d)->get()->asLValue();
          Instruction *defi = (*d)->getInsn();
 
+         // Sort all the uses by BB/instruction so that we don't unspill
+         // multiple times in a row, and also remove a source of
+         // non-determinism.
+         std::vector<ValueRef *> refs(dval->uses.begin(), dval->uses.end());
+         std::sort(refs.begin(), refs.end(), value_cmp);
+
          // Unspill at each use *before* inserting spill instructions,
          // we don't want to have the spill instructions in the use list here.
-         while (!dval->uses.empty()) {
-            ValueRef *u = *dval->uses.begin();
+         for (std::vector<ValueRef*>::const_iterator it = refs.begin();
+              it != refs.end(); ++it) {
+            ValueRef *u = *it;
             Instruction *usei = u->getInsn();
             assert(usei);
             if (usei->isPseudo()) {
                tmp = (slot->reg.file == FILE_MEMORY_LOCAL) ? NULL : slot;
                last = NULL;
-            } else
-            if (!last || usei != last->next) { // TODO: sort uses
-               tmp = unspill(usei, dval, slot);
+            } else {
+               if (!last || (usei != last->next && usei != last))
+                  tmp = unspill(usei, dval, slot);
                last = usei;
             }
             u->set(tmp);
