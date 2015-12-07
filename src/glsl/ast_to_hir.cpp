@@ -2649,7 +2649,9 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
 
          return;
       }
-   } else if (state->is_version(420, 310) && base_type->is_image()) {
+   } else if ((state->is_version(420, 310) ||
+               state->ARB_shading_language_420pack_enable) &&
+              base_type->is_image()) {
       assert(ctx->Const.MaxImageUnits <= MAX_IMAGE_UNITS);
       if (max_index >= ctx->Const.MaxImageUnits) {
          _mesa_glsl_error(loc, state, "Image binding %d exceeds the "
