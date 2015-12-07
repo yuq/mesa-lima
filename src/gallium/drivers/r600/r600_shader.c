@@ -1488,8 +1488,17 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 		int treg[3];
 		struct r600_bytecode_alu alu;
 		int r, i;
-
-		/* you have got to be shitting me -
+		unsigned addr_reg;
+		addr_reg = get_address_file_reg(ctx, src->DimIndirect.Index);
+		if (src->DimIndirect.Index > 0) {
+			r = single_alu_op2(ctx, ALU_OP1_MOV,
+					   ctx->bc->ar_reg, 0,
+					   addr_reg, 0,
+					   0, 0);
+			if (r)
+				return r;
+		}
+		/*
 		   we have to put the R0.x/y/w into Rt.x Rt+1.x Rt+2.x then index reg from Rt.
 		   at least this is what fglrx seems to do. */
 		for (i = 0; i < 3; i++) {
