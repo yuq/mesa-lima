@@ -824,7 +824,7 @@ brw_render_target_supported(struct brw_context *brw,
  * compression.
  */
 bool
-brw_losslessly_compressible_format(struct brw_context *brw,
+brw_losslessly_compressible_format(const struct brw_context *brw,
                                    uint32_t brw_format)
 {
    const struct surface_format_info * const sinfo =
