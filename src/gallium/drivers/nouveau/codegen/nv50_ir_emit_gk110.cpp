@@ -576,8 +576,8 @@ CodeEmitterGK110::emitIMUL(const Instruction *i)
    if (isLIMM(i->src(1), TYPE_S32)) {
       emitForm_L(i, 0x280, 2, Modifier(0));
 
-      assert(i->subOp != NV50_IR_SUBOP_MUL_HIGH);
-
+      if (i->subOp == NV50_IR_SUBOP_MUL_HIGH)
+         code[1] |= 1 << 24;
       if (i->sType == TYPE_S32)
          code[1] |= 3 << 25;
    } else {
