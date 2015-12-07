@@ -70,10 +70,16 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
                 return false;
         }
 
+        int dst_surface_width = u_minify(info->dst.resource->width0,
+                                         info->dst.level);
+        int dst_surface_height = u_minify(info->dst.resource->height0,
+                                         info->dst.level);
         if (is_tile_unaligned(info->dst.box.x, tile_width) ||
             is_tile_unaligned(info->dst.box.y, tile_height) ||
-            is_tile_unaligned(info->dst.box.width, tile_width) ||
-            is_tile_unaligned(info->dst.box.height, tile_height)) {
+            (is_tile_unaligned(info->dst.box.width, tile_width) &&
+             info->dst.box.x + info->dst.box.width != dst_surface_width) ||
+            (is_tile_unaligned(info->dst.box.height, tile_height) &&
+             info->dst.box.y + info->dst.box.height != dst_surface_height)) {
                 return false;
         }
 
