@@ -1472,8 +1472,7 @@ struct anv_image_view {
 
 struct anv_image_create_info {
    const VkImageCreateInfo *vk_info;
-   bool force_tiling;
-   enum isl_tiling tiling;
+   isl_tiling_flags_t isl_tiling_flags;
    uint32_t stride;
 };
 

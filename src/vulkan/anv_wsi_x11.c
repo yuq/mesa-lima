@@ -344,8 +344,7 @@ x11_surface_create_swapchain(struct anv_wsi_surface *wsi_surface,
 
       anv_image_create(anv_device_to_handle(device),
          &(struct anv_image_create_info) {
-            .force_tiling = true,
-            .tiling = ISL_TILING_X,
+            .isl_tiling_flags = ISL_TILING_X_BIT,
             .stride = 0,
             .vk_info =
          &(VkImageCreateInfo) {

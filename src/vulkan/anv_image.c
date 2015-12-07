@@ -71,23 +71,6 @@ anv_image_view_info_for_vk_image_view_type(VkImageViewType type)
    return anv_image_view_info_table[type];
 }
 
-static isl_tiling_flags_t
-choose_isl_tiling_flags(const struct anv_image_create_info *anv_info)
-{
-   const VkImageCreateInfo *vk_info = anv_info->vk_info;
-
-   if (anv_info->force_tiling) {
-      return 1u << anv_info->tiling;
-   } else if (vk_info->tiling == VK_IMAGE_TILING_LINEAR) {
-      return ISL_TILING_LINEAR_BIT;
-   } else if (vk_info->tiling == VK_IMAGE_TILING_OPTIMAL) {
-      return ISL_TILING_ANY_MASK;
-   } else {
-      unreachable("bad anv_image_create_info");
-      return 0;
-   }
-}
-
 /**
  * The \a format argument is required and overrides any format found in struct
  * anv_image_create_info. Exactly one bit must be set in \a aspect.
@@ -160,6 +143,11 @@ anv_image_make_surface(const struct anv_device *dev,
       [VK_IMAGE_TYPE_3D] = ISL_SURF_DIM_3D,
    };
 
+
+   isl_tiling_flags_t tiling_flags = anv_info->isl_tiling_flags;
+   if (vk_info->tiling == VK_IMAGE_TILING_LINEAR)
+      tiling_flags &= ISL_TILING_LINEAR_BIT;
+
    isl_surf_init(&dev->isl_dev, &out_anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
       .format = anv_get_isl_format(vk_info->format, aspect),
@@ -172,7 +160,7 @@ anv_image_make_surface(const struct anv_device *dev,
       .min_alignment = 0,
       .min_pitch = 0,
       .usage = choose_isl_surf_usage(anv_info, aspect),
-      .tiling_flags = choose_isl_tiling_flags(anv_info));
+      .tiling_flags = tiling_flags);
 
    out_anv_surf->offset = align_u32(*inout_image_size,
                                     out_anv_surf->isl.alignment);
@@ -298,6 +286,7 @@ anv_CreateImage(VkDevice device,
    return anv_image_create(device,
       &(struct anv_image_create_info) {
          .vk_info = pCreateInfo,
+         .isl_tiling_flags = ISL_TILING_ANY_MASK,
       },
       pAllocator,
       pImage);
