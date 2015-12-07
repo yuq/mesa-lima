@@ -136,6 +136,7 @@ anv_image_make_surface(const struct anv_device *dev,
                        struct anv_surface *out_anv_surf)
 {
    const VkImageCreateInfo *vk_info = anv_info->vk_info;
+   bool ok UNUSED;
 
    static const enum isl_surf_dim vk_to_isl_surf_dim[] = {
       [VK_IMAGE_TYPE_1D] = ISL_SURF_DIM_1D,
@@ -148,7 +149,7 @@ anv_image_make_surface(const struct anv_device *dev,
    if (vk_info->tiling == VK_IMAGE_TILING_LINEAR)
       tiling_flags &= ISL_TILING_LINEAR_BIT;
 
-   isl_surf_init(&dev->isl_dev, &out_anv_surf->isl,
+   ok = isl_surf_init(&dev->isl_dev, &out_anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
       .format = anv_get_isl_format(vk_info->format, aspect),
       .width = vk_info->extent.width,
@@ -161,6 +162,11 @@ anv_image_make_surface(const struct anv_device *dev,
       .min_pitch = 0,
       .usage = choose_isl_surf_usage(anv_info, aspect),
       .tiling_flags = tiling_flags);
+
+   /* isl_surf_init() will fail only if provided invalid input. Invalid input
+    * is illegal in Vulkan.
+    */
+   assert(ok);
 
    out_anv_surf->offset = align_u32(*inout_image_size,
                                     out_anv_surf->isl.alignment);
