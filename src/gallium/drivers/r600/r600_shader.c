@@ -8839,7 +8839,8 @@ static int tgsi_gs_emit(struct r600_shader_ctx *ctx)
 	r = r600_bytecode_add_cfinst(ctx->bc, ctx->inst_info->op);
 	if (!r) {
 		ctx->bc->cf_last->count = stream; // Count field for CUT/EMIT_VERTEX indicates which stream
-		return emit_inc_ring_offset(ctx, stream, TRUE);
+		if (ctx->inst_info->op == CF_OP_EMIT_VERTEX)
+			return emit_inc_ring_offset(ctx, stream, TRUE);
 	}
 	return r;
 }
