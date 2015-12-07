@@ -68,11 +68,11 @@ vlVaBeginPicture(VADriverContextP ctx, VAContextID context_id, VASurfaceID rende
 
       /* VPP */
       if (context->templat.profile == PIPE_VIDEO_PROFILE_UNKNOWN &&
-         ((context->target->buffer_format != PIPE_FORMAT_B8G8R8A8_UNORM  &&
-           context->target->buffer_format != PIPE_FORMAT_R8G8B8A8_UNORM  &&
-           context->target->buffer_format != PIPE_FORMAT_B8G8R8X8_UNORM  &&
-           context->target->buffer_format != PIPE_FORMAT_R8G8B8X8_UNORM) ||
-           context->target->interlaced))
+          context->target->buffer_format != PIPE_FORMAT_B8G8R8A8_UNORM &&
+          context->target->buffer_format != PIPE_FORMAT_R8G8B8A8_UNORM &&
+          context->target->buffer_format != PIPE_FORMAT_B8G8R8X8_UNORM &&
+          context->target->buffer_format != PIPE_FORMAT_R8G8B8X8_UNORM &&
+          context->target->buffer_format != PIPE_FORMAT_NV12)
          return VA_STATUS_ERROR_UNIMPLEMENTED;
 
       return VA_STATUS_SUCCESS;

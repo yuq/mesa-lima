@@ -27,6 +27,9 @@
 
 #include "util/u_handle_table.h"
 
+#include "vl/vl_defines.h"
+#include "vl/vl_video_buffer.h"
+
 #include "va_private.h"
 
 static const VARectangle *
@@ -44,42 +47,20 @@ vlVaRegionDefault(const VARectangle *region, struct pipe_video_buffer *buf,
    return def;
 }
 
-VAStatus
-vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
+static VAStatus
+vlVaPostProcCompositor(vlVaDriver *drv, vlVaContext *context,
+                       const VARectangle *src_region,
+                       const VARectangle *dst_region,
+                       struct pipe_video_buffer *src,
+                       struct pipe_video_buffer *dst)
 {
-   VARectangle def_src_region, def_dst_region;
-   const VARectangle *src_region, *dst_region;
+   struct pipe_surface **surfaces;
    struct u_rect src_rect;
    struct u_rect dst_rect;
-   vlVaSurface *src_surface;
-   VAProcPipelineParameterBuffer *pipeline_param;
-   struct pipe_surface **surfaces;
-   struct pipe_surface *psurf;
 
-   if (!drv || !context)
-      return VA_STATUS_ERROR_INVALID_CONTEXT;
-
-   if (!buf || !buf->data)
-      return VA_STATUS_ERROR_INVALID_BUFFER;
-
-   if (!context->target)
-      return VA_STATUS_ERROR_INVALID_SURFACE;
-
-   pipeline_param = (VAProcPipelineParameterBuffer *)buf->data;
-
-   src_surface = handle_table_get(drv->htab, pipeline_param->surface);
-   if (!src_surface || !src_surface->buffer)
-      return VA_STATUS_ERROR_INVALID_SURFACE;
-
-   surfaces = context->target->get_surfaces(context->target);
-
+   surfaces = dst->get_surfaces(dst);
    if (!surfaces || !surfaces[0])
       return VA_STATUS_ERROR_INVALID_SURFACE;
-
-   psurf = surfaces[0];
-
-   src_region = vlVaRegionDefault(pipeline_param->surface_region, src_surface->buffer, &def_src_region);
-   dst_region = vlVaRegionDefault(pipeline_param->output_region, context->target, &def_dst_region);
 
    src_rect.x0 = src_region->x;
    src_rect.y0 = src_region->y;
@@ -92,9 +73,83 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    dst_rect.y1 = dst_region->y + dst_region->height;
 
    vl_compositor_clear_layers(&drv->cstate);
-   vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, src_surface->buffer, &src_rect, NULL, VL_COMPOSITOR_WEAVE);
+   vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, src,
+				  &src_rect, NULL, VL_COMPOSITOR_WEAVE);
    vl_compositor_set_layer_dst_area(&drv->cstate, 0, &dst_rect);
-   vl_compositor_render(&drv->cstate, &drv->compositor, psurf, NULL, false);
+   vl_compositor_render(&drv->cstate, &drv->compositor, surfaces[0], NULL, false);
+
+   return VA_STATUS_SUCCESS;
+}
+
+static void vlVaGetBox(struct pipe_video_buffer *buf, unsigned idx,
+                       struct pipe_box *box, const VARectangle *region)
+{
+   unsigned plane = buf->interlaced ? idx / 2: idx;
+   unsigned x, y, width, height;
+
+   x = abs(region->x);
+   y = abs(region->y);
+   width = region->width;
+   height = region->height;
+
+   vl_video_buffer_adjust_size(&x, &y, plane, buf->chroma_format,
+                               buf->interlaced);
+   vl_video_buffer_adjust_size(&width, &height, plane, buf->chroma_format,
+                               buf->interlaced);
+
+   box->x = region->x < 0 ? -x : x;
+   box->y = region->y < 0 ? -y : y;
+   box->width = width;
+   box->height = height;
+}
+
+static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
+                                 const VARectangle *src_region,
+                                 const VARectangle *dst_region,
+                                 struct pipe_video_buffer *src,
+                                 struct pipe_video_buffer *dst)
+{
+   struct pipe_surface **src_surfaces;
+   struct pipe_surface **dst_surfaces;
+   unsigned i;
+
+   if (src->interlaced != dst->interlaced)
+      return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   src_surfaces = src->get_surfaces(src);
+   if (!src_surfaces || !src_surfaces[0])
+      return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   dst_surfaces = dst->get_surfaces(dst);
+   if (!dst_surfaces || !dst_surfaces[0])
+      return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   for (i = 0; i < VL_MAX_SURFACES; ++i) {
+      struct pipe_blit_info blit;
+
+      if (!src_surfaces[i] || !dst_surfaces[i])
+         continue;
+
+      memset(&blit, 0, sizeof(blit));
+      blit.src.resource = src_surfaces[i]->texture;
+      blit.src.format = src_surfaces[i]->format;
+      blit.src.level = 0;
+      blit.src.box.z = src_surfaces[i]->u.tex.first_layer;
+      blit.src.box.depth = 1;
+      vlVaGetBox(src, i, &blit.src.box, src_region);
+
+      blit.dst.resource = dst_surfaces[i]->texture;
+      blit.dst.format = dst_surfaces[i]->format;
+      blit.dst.level = 0;
+      blit.dst.box.z = dst_surfaces[i]->u.tex.first_layer;
+      blit.dst.box.depth = 1;
+      vlVaGetBox(dst, i, &blit.dst.box, dst_region);
+
+      blit.mask = PIPE_MASK_RGBA;
+      blit.filter = PIPE_TEX_MIPFILTER_LINEAR;
+
+      drv->pipe->blit(drv->pipe, &blit);
+   }
 
    // TODO: figure out why this is necessary for DMA-buf sharing
    drv->pipe->flush(drv->pipe, NULL, 0);
@@ -102,4 +157,36 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    return VA_STATUS_SUCCESS;
 }
 
+VAStatus
+vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
+{
+   VARectangle def_src_region, def_dst_region;
+   const VARectangle *src_region, *dst_region;
+   VAProcPipelineParameterBuffer *param;
+   vlVaSurface *src_surface;
 
+   if (!drv || !context)
+      return VA_STATUS_ERROR_INVALID_CONTEXT;
+
+   if (!buf || !buf->data)
+      return VA_STATUS_ERROR_INVALID_BUFFER;
+
+   if (!context->target)
+      return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   param = buf->data;
+
+   src_surface = handle_table_get(drv->htab, param->surface);
+   if (!src_surface || !src_surface->buffer)
+      return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   src_region = vlVaRegionDefault(param->surface_region, src_surface->buffer, &def_src_region);
+   dst_region = vlVaRegionDefault(param->output_region, context->target, &def_dst_region);
+
+   if (context->target->buffer_format != PIPE_FORMAT_NV12)
+      return vlVaPostProcCompositor(drv, context, src_region, dst_region,
+                                    src_surface->buffer, context->target);
+   else
+      return vlVaPostProcBlit(drv, context, src_region, dst_region,
+                              src_surface->buffer, context->target);
+}
