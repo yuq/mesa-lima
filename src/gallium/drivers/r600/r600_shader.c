@@ -2113,7 +2113,7 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 		*last_exp_pos = NULL, *last_exp_param = NULL;
 	int i, j, next_clip_pos = 61, next_param = 0;
 	int ring;
-
+	bool only_ring_0 = true;
 	cshader = calloc(1, sizeof(struct r600_pipe_shader));
 	if (!cshader)
 		return 0;
@@ -2186,6 +2186,8 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 		for (i = 0; i < so->num_outputs; i++) {
 			if (so->output[i].stream == ring) {
 				enabled = true;
+				if (ring > 0)
+					only_ring_0 = false;
 				break;
 			}
 		}
@@ -2220,7 +2222,7 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 		cf_jump = ctx.bc->cf_last;
 
 		if (enabled)
-			emit_streamout(&ctx, so, ring, &cshader->shader.ring_item_sizes[ring]);
+			emit_streamout(&ctx, so, only_ring_0 ? -1 : ring, &cshader->shader.ring_item_sizes[ring]);
 		cshader->shader.ring_item_sizes[ring] = ocnt * 16;
 	}
 
