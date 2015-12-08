@@ -516,36 +516,18 @@ brw_preprocess_nir(nir_shader *nir, bool is_scalar)
    return nir;
 }
 
-/* Lowers inputs, outputs, uniforms, and samplers for i965
- *
- * This function does all of the standard lowering prior to post-processing.
- * The lowering done is highly gen, stage, and backend-specific.  The
- * shader_prog parameter is optional and is used only for lowering sampler
- * derefs and atomics for GLSL shaders.
- */
+/** Lower input and output loads and stores for i965. */
 nir_shader *
-brw_lower_nir(nir_shader *nir,
-              const struct brw_device_info *devinfo,
-              const struct gl_shader_program *shader_prog,
-              bool is_scalar)
+brw_nir_lower_io(nir_shader *nir,
+                 const struct brw_device_info *devinfo,
+                 bool is_scalar)
 {
    bool progress; /* Written by OPT and OPT_V */
    (void)progress;
 
    OPT_V(brw_nir_lower_inputs, devinfo, is_scalar);
    OPT_V(brw_nir_lower_outputs, devinfo, is_scalar);
-   OPT_V(brw_nir_lower_uniforms, is_scalar);
    OPT_V(nir_lower_io, nir_var_all, is_scalar ? type_size_scalar : type_size_vec4);
-
-   if (shader_prog) {
-      OPT_V(nir_lower_samplers, shader_prog);
-   }
-
-   OPT(nir_lower_system_values);
-
-   if (shader_prog) {
-      OPT_V(nir_lower_atomics, shader_prog);
-   }
 
    return nir_optimize(nir, is_scalar);
 }
@@ -656,7 +638,19 @@ brw_create_nir(struct brw_context *brw,
    (void)progress;
 
    nir = brw_preprocess_nir(nir, is_scalar);
-   nir = brw_lower_nir(nir, devinfo, shader_prog, is_scalar);
+
+   OPT(nir_lower_system_values);
+   OPT_V(brw_nir_lower_uniforms, is_scalar);
+
+   if (shader_prog) {
+      OPT_V(nir_lower_samplers, shader_prog);
+      OPT_V(nir_lower_atomics, shader_prog);
+   }
+
+   if (nir->stage != MESA_SHADER_TESS_CTRL &&
+       nir->stage != MESA_SHADER_TESS_EVAL) {
+      nir = brw_nir_lower_io(nir, devinfo, is_scalar);
+   }
 
    return nir;
 }
