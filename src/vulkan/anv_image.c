@@ -40,18 +40,6 @@ struct anv_image_view_info {
    bool is_cube:1; /**< RENDER_SURFACE_STATE.CubeFaceEnable* */
 };
 
-static const uint8_t anv_halign[] = {
-    [4] = HALIGN4,
-    [8] = HALIGN8,
-    [16] = HALIGN16,
-};
-
-static const uint8_t anv_valign[] = {
-    [4] = VALIGN4,
-    [8] = VALIGN8,
-    [16] = VALIGN16,
-};
-
 static const uint8_t anv_surf_type_from_image_type[] = {
    [VK_IMAGE_TYPE_1D] = SURFTYPE_1D,
    [VK_IMAGE_TYPE_2D] = SURFTYPE_2D,
