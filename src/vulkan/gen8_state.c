@@ -302,6 +302,21 @@ genX(image_view_init)(struct anv_image_view *iview,
       if (!device->info.has_llc)
          anv_state_clflush(iview->color_rt_surface_state);
    }
+
+   if (image->needs_storage_surface_state) {
+      iview->storage_surface_state =
+         alloc_surface_state(device, cmd_buffer);
+
+      surface_state.SurfaceFormat =
+         isl_lower_storage_image_format(&device->isl_dev,
+                                        format_info->surface_format);
+
+      surface_state.SurfaceMinLOD = range->baseMipLevel;
+      surface_state.MIPCountLOD = range->levelCount - 1;
+
+      GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->storage_surface_state.map,
+                                      &surface_state);
+   }
 }
 
 VkResult genX(CreateSampler)(

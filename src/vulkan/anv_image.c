@@ -252,13 +252,16 @@ anv_image_create(VkDevice _device,
    image->usage = anv_image_get_full_usage(pCreateInfo);
    image->surface_type = surf_type;
 
-   if (image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
-                       VK_IMAGE_USAGE_STORAGE_BIT)) {
+   if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       image->needs_nonrt_surface_state = true;
    }
 
    if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
       image->needs_color_rt_surface_state = true;
+   }
+
+   if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+      image->needs_storage_surface_state = true;
    }
 
    if (likely(anv_format_is_color(image->format))) {
@@ -531,6 +534,11 @@ anv_DestroyImageView(VkDevice _device, VkImageView _iview,
    if (iview->image->needs_nonrt_surface_state) {
       anv_state_pool_free(&device->surface_state_pool,
                           iview->nonrt_surface_state);
+   }
+
+   if (iview->image->needs_storage_surface_state) {
+      anv_state_pool_free(&device->surface_state_pool,
+                          iview->storage_surface_state);
    }
 
    anv_free2(&device->alloc, pAllocator, iview);

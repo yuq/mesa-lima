@@ -1433,6 +1433,7 @@ struct anv_image {
 
    bool needs_nonrt_surface_state:1;
    bool needs_color_rt_surface_state:1;
+   bool needs_storage_surface_state:1;
 
    /**
     * Image subsurfaces
@@ -1468,6 +1469,9 @@ struct anv_image_view {
 
    /** RENDER_SURFACE_STATE when using image as a non render target. */
    struct anv_state nonrt_surface_state;
+
+   /** RENDER_SURFACE_STATE when using image as a storage image. */
+   struct anv_state storage_surface_state;
 };
 
 struct anv_image_create_info {
