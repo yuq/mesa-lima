@@ -186,6 +186,7 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
    &brw_cc_vp,
    &gen7_sf_clip_viewport,
 
+   &gen7_l3_state,
    &gen7_push_constant_space,
    &gen7_urb,
    &gen6_blend_state,		/* must do before cc unit */
@@ -259,6 +260,7 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
 static const struct brw_tracked_state *gen7_compute_atoms[] =
 {
    &brw_state_base_address,
+   &gen7_l3_state,
    &brw_cs_image_surfaces,
    &gen7_cs_push_constants,
    &brw_cs_pull_constants,
@@ -277,6 +279,7 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
    &brw_cc_vp,
    &gen8_sf_clip_viewport,
 
+   &gen7_l3_state,
    &gen7_push_constant_space,
    &gen7_urb,
    &gen8_blend_state,
@@ -357,6 +360,7 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
 static const struct brw_tracked_state *gen8_compute_atoms[] =
 {
    &gen8_state_base_address,
+   &gen7_l3_state,
    &brw_cs_image_surfaces,
    &gen7_cs_push_constants,
    &brw_cs_pull_constants,

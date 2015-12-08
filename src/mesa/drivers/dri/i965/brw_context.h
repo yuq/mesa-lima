@@ -1226,8 +1226,8 @@ struct brw_context
    } perfmon;
 
    int num_atoms[BRW_NUM_PIPELINES];
-   const struct brw_tracked_state render_atoms[61];
-   const struct brw_tracked_state compute_atoms[9];
+   const struct brw_tracked_state render_atoms[62];
+   const struct brw_tracked_state compute_atoms[10];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {
