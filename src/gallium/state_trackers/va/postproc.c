@@ -52,7 +52,8 @@ vlVaPostProcCompositor(vlVaDriver *drv, vlVaContext *context,
                        const VARectangle *src_region,
                        const VARectangle *dst_region,
                        struct pipe_video_buffer *src,
-                       struct pipe_video_buffer *dst)
+                       struct pipe_video_buffer *dst,
+                       enum vl_compositor_deinterlace deinterlace)
 {
    struct pipe_surface **surfaces;
    struct u_rect src_rect;
@@ -74,7 +75,7 @@ vlVaPostProcCompositor(vlVaDriver *drv, vlVaContext *context,
 
    vl_compositor_clear_layers(&drv->cstate);
    vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, src,
-				  &src_rect, NULL, VL_COMPOSITOR_WEAVE);
+				  &src_rect, NULL, deinterlace);
    vl_compositor_set_layer_dst_area(&drv->cstate, 0, &dst_rect);
    vl_compositor_render(&drv->cstate, &drv->compositor, surfaces[0], NULL, false);
 
@@ -107,7 +108,8 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
                                  const VARectangle *src_region,
                                  const VARectangle *dst_region,
                                  struct pipe_video_buffer *src,
-                                 struct pipe_video_buffer *dst)
+                                 struct pipe_video_buffer *dst,
+                                 enum vl_compositor_deinterlace deinterlace)
 {
    struct pipe_surface **src_surfaces;
    struct pipe_surface **dst_surfaces;
@@ -125,16 +127,31 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
    for (i = 0; i < VL_MAX_SURFACES; ++i) {
+      struct pipe_surface *from = src_surfaces[i];
       struct pipe_blit_info blit;
 
-      if (!src_surfaces[i] || !dst_surfaces[i])
+      if (src->interlaced) {
+         /* Not 100% accurate, but close enough */
+         switch (deinterlace) {
+         case VL_COMPOSITOR_BOB_TOP:
+            from = src_surfaces[i & ~1];
+            break;
+         case VL_COMPOSITOR_BOB_BOTTOM:
+            from = src_surfaces[(i & ~1) + 1];
+            break;
+         default:
+            break;
+         }
+      }
+
+      if (!from || !dst_surfaces[i])
          continue;
 
       memset(&blit, 0, sizeof(blit));
-      blit.src.resource = src_surfaces[i]->texture;
-      blit.src.format = src_surfaces[i]->format;
+      blit.src.resource = from->texture;
+      blit.src.format = from->format;
       blit.src.level = 0;
-      blit.src.box.z = src_surfaces[i]->u.tex.first_layer;
+      blit.src.box.z = from->u.tex.first_layer;
       blit.src.box.depth = 1;
       vlVaGetBox(src, i, &blit.src.box, src_region);
 
@@ -160,10 +177,12 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
 VAStatus
 vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
+   enum vl_compositor_deinterlace deinterlace = VL_COMPOSITOR_WEAVE;
    VARectangle def_src_region, def_dst_region;
    const VARectangle *src_region, *dst_region;
    VAProcPipelineParameterBuffer *param;
    vlVaSurface *src_surface;
+   unsigned i;
 
    if (!drv || !context)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
@@ -180,13 +199,50 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    if (!src_surface || !src_surface->buffer)
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
+   for (i = 0; i < param->num_filters; i++) {
+      vlVaBuffer *buf = handle_table_get(drv->htab, param->filters[i]);
+      VAProcFilterParameterBufferBase *filter;
+
+      if (!buf || buf->type != VAProcFilterParameterBufferType)
+         return VA_STATUS_ERROR_INVALID_BUFFER;
+
+      filter = buf->data;
+      switch (filter->type) {
+      case VAProcFilterDeinterlacing: {
+         VAProcFilterParameterBufferDeinterlacing *deint = buf->data;
+         switch (deint->algorithm) {
+         case VAProcDeinterlacingBob:
+            if (deint->flags & VA_DEINTERLACING_BOTTOM_FIELD)
+               deinterlace = VL_COMPOSITOR_BOB_BOTTOM;
+            else
+               deinterlace = VL_COMPOSITOR_BOB_TOP;
+            break;
+
+         case VAProcDeinterlacingWeave:
+            deinterlace = VL_COMPOSITOR_WEAVE;
+            break;
+
+         default:
+            return VA_STATUS_ERROR_UNIMPLEMENTED;
+         }
+
+         break;
+      }
+
+      default:
+         return VA_STATUS_ERROR_UNIMPLEMENTED;
+      }
+   }
+
    src_region = vlVaRegionDefault(param->surface_region, src_surface->buffer, &def_src_region);
    dst_region = vlVaRegionDefault(param->output_region, context->target, &def_dst_region);
 
    if (context->target->buffer_format != PIPE_FORMAT_NV12)
       return vlVaPostProcCompositor(drv, context, src_region, dst_region,
-                                    src_surface->buffer, context->target);
+                                    src_surface->buffer, context->target,
+                                    deinterlace);
    else
       return vlVaPostProcBlit(drv, context, src_region, dst_region,
-                              src_surface->buffer, context->target);
+                              src_surface->buffer, context->target,
+                              deinterlace);
 }

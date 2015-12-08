@@ -663,7 +663,7 @@ vlVaQueryVideoProcFilters(VADriverContextP ctx, VAContextID context,
    if (!num_filters || !filters)
       return VA_STATUS_ERROR_INVALID_PARAMETER;
 
-   filters[num++] = VAProcFilterNone;
+   filters[num++] = VAProcFilterDeinterlacing;
 
    *num_filters = num;
 
@@ -688,8 +688,20 @@ vlVaQueryVideoProcFilterCaps(VADriverContextP ctx, VAContextID context,
    switch (type) {
    case VAProcFilterNone:
       break;
+   case VAProcFilterDeinterlacing: {
+      VAProcFilterCapDeinterlacing *deint = filter_caps;
+
+      if (*num_filter_caps < 2) {
+         *num_filter_caps = 2;
+         return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
+      }
+
+      deint[i++].type = VAProcDeinterlacingBob;
+      deint[i++].type = VAProcDeinterlacingWeave;
+      break;
+   }
+
    case VAProcFilterNoiseReduction:
-   case VAProcFilterDeinterlacing:
    case VAProcFilterSharpening:
    case VAProcFilterColorBalance:
    case VAProcFilterSkinToneEnhancement:
