@@ -1275,6 +1275,10 @@ struct gl_buffer_object
    GLboolean Immutable; /**< GL_ARB_buffer_storage */
    gl_buffer_usage UsageHistory; /**< How has this buffer been used so far? */
 
+   /** Counters used for buffer usage warnings */
+   GLuint NumSubDataCalls;
+   GLuint NumMapBufferWriteCalls;
+
    struct gl_buffer_mapping Mappings[MAP_COUNT];
 };
 
