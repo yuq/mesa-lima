@@ -290,6 +290,9 @@ ddebug_screen_create(struct pipe_screen *screen)
       puts("    $HOME/"DD_DIR"/ when a hang is detected.");
       puts("    If 'noflush' is specified, only detect hangs in pipe->flush.");
       puts("");
+      puts("  GALLIUM_DDEBUG_SKIP=[count]");
+      puts("    Skip flush and hang detection for the given initial number of draw calls.");
+      puts("");
       exit(0);
    }
 
@@ -347,6 +350,12 @@ ddebug_screen_create(struct pipe_screen *screen)
       break;
    default:
       assert(0);
+   }
+
+   dscreen->skip_count = debug_get_num_option("GALLIUM_DDEBUG_SKIP", 0);
+   if (dscreen->skip_count > 0) {
+      fprintf(stderr, "Gallium debugger skipping the first %u draw calls.\n",
+              dscreen->skip_count);
    }
 
    return &dscreen->base;

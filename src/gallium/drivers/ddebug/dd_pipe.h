@@ -45,6 +45,7 @@ struct dd_screen
    unsigned timeout_ms;
    enum dd_mode mode;
    bool no_flush;
+   unsigned skip_count;
 };
 
 struct dd_query
@@ -110,6 +111,8 @@ struct dd_context
    struct pipe_scissor_state scissors[PIPE_MAX_VIEWPORTS];
    struct pipe_viewport_state viewports[PIPE_MAX_VIEWPORTS];
    float tess_default_levels[6];
+
+   unsigned num_draw_calls;
 };
 
 
