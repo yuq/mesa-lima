@@ -385,6 +385,21 @@ TargetNV50::insnCanLoad(const Instruction *i, int s,
 }
 
 bool
+TargetNV50::insnCanLoadOffset(const Instruction *i, int s, int offset) const
+{
+   if (!i->src(s).isIndirect(0))
+      return true;
+   offset += i->src(s).get()->reg.data.offset;
+   if (i->op == OP_LOAD || i->op == OP_STORE) {
+      // There are some restrictions in theory, but in practice they're never
+      // going to be hit. When we enable shared/global memory, this will
+      // become more important.
+      return true;
+   }
+   return offset >= 0 && offset <= (int32_t)(127 * i->src(s).get()->reg.size);
+}
+
+bool
 TargetNV50::isAccessSupported(DataFile file, DataType ty) const
 {
    if (ty == TYPE_B96 || ty == TYPE_NONE)

@@ -290,20 +290,23 @@ IndirectPropagation::visit(BasicBlock *bb)
             continue;
          if (insn->op == OP_ADD && !isFloatType(insn->dType)) {
             if (insn->src(0).getFile() != targ->nativeFile(FILE_ADDRESS) ||
-                !insn->src(1).getImmediate(imm))
+                !insn->src(1).getImmediate(imm) ||
+                !targ->insnCanLoadOffset(i, s, imm.reg.data.s32))
                continue;
             i->setIndirect(s, 0, insn->getSrc(0));
             i->setSrc(s, cloneShallow(func, i->getSrc(s)));
             i->src(s).get()->reg.data.offset += imm.reg.data.u32;
          } else if (insn->op == OP_SUB && !isFloatType(insn->dType)) {
             if (insn->src(0).getFile() != targ->nativeFile(FILE_ADDRESS) ||
-                !insn->src(1).getImmediate(imm))
+                !insn->src(1).getImmediate(imm) ||
+                !targ->insnCanLoadOffset(i, s, -imm.reg.data.s32))
                continue;
             i->setIndirect(s, 0, insn->getSrc(0));
             i->setSrc(s, cloneShallow(func, i->getSrc(s)));
             i->src(s).get()->reg.data.offset -= imm.reg.data.u32;
          } else if (insn->op == OP_MOV) {
-            if (!insn->src(0).getImmediate(imm))
+            if (!insn->src(0).getImmediate(imm) ||
+                !targ->insnCanLoadOffset(i, s, imm.reg.data.s32))
                continue;
             i->setIndirect(s, 0, NULL);
             i->setSrc(s, cloneShallow(func, i->getSrc(s)));
