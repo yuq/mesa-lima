@@ -2335,16 +2335,14 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       assert(instr->const_index[0] % 4 == 0);
       assert(instr->const_index[1] % 4 == 0);
 
-      fs_reg uniform_reg(UNIFORM, instr->const_index[0] / 4);
-      uniform_reg.reg_offset = instr->const_index[1] / 4;
+      fs_reg src(UNIFORM, instr->const_index[0] / 4, dest.type);
+      src.reg_offset = instr->const_index[1] / 4;
+
+      if (has_indirect)
+         src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
 
       for (unsigned j = 0; j < instr->num_components; j++) {
-         fs_reg src = offset(retype(uniform_reg, dest.type), bld, j);
-         if (has_indirect)
-            src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
-
-         bld.MOV(dest, src);
-         dest = offset(dest, bld, 1);
+         bld.MOV(offset(dest, bld, j), offset(src, bld, j));
       }
       break;
    }
@@ -2538,19 +2536,16 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       unreachable("Not allowed");
       /* fallthrough */
    case nir_intrinsic_load_input: {
-      unsigned index = 0;
-      for (unsigned j = 0; j < instr->num_components; j++) {
-         fs_reg src;
-         if (stage == MESA_SHADER_VERTEX) {
-            src = offset(fs_reg(ATTR, instr->const_index[0], dest.type), bld, index);
-         } else {
-            src = offset(retype(nir_inputs, dest.type), bld,
-                         instr->const_index[0] + index);
-         }
-         index++;
+      fs_reg src;
+      if (stage == MESA_SHADER_VERTEX) {
+         src = fs_reg(ATTR, instr->const_index[0], dest.type);
+      } else {
+         src = offset(retype(nir_inputs, dest.type), bld,
+                      instr->const_index[0]);
+      }
 
-         bld.MOV(dest, src);
-         dest = offset(dest, bld, 1);
+      for (unsigned j = 0; j < instr->num_components; j++) {
+         bld.MOV(offset(dest, bld, j), offset(src, bld, j));
       }
       break;
    }
@@ -2623,13 +2618,11 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       /* fallthrough */
    case nir_intrinsic_store_output: {
       fs_reg src = get_nir_src(instr->src[0]);
-      unsigned index = 0;
+      fs_reg new_dest = offset(retype(nir_outputs, src.type), bld,
+                               instr->const_index[0]);
+
       for (unsigned j = 0; j < instr->num_components; j++) {
-         fs_reg new_dest = offset(retype(nir_outputs, src.type), bld,
-                                  instr->const_index[0] + index);
-         index++;
-         bld.MOV(new_dest, src);
-         src = offset(src, bld, 1);
+         bld.MOV(offset(new_dest, bld, j), offset(src, bld, j));
       }
       break;
    }
