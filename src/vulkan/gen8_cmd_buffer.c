@@ -208,11 +208,11 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       cmd_buffer->state.pipeline->active_stages;
 #endif
 
-   if (cmd_buffer->state.push_constants_dirty)
-      cmd_buffer_flush_push_constants(cmd_buffer);
-
    if (cmd_buffer->state.descriptors_dirty)
       gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
+
+   if (cmd_buffer->state.push_constants_dirty)
+      cmd_buffer_flush_push_constants(cmd_buffer);
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
       gen8_cmd_buffer_emit_viewport(cmd_buffer);
