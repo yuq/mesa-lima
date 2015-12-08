@@ -72,8 +72,6 @@ vlVaDestroySurfaces(VADriverContextP ctx, VASurfaceID *surface_list, int num_sur
       vlVaSurface *surf = handle_table_get(drv->htab, surface_list[i]);
       if (surf->buffer)
          surf->buffer->destroy(surf->buffer);
-      if(surf->fence)
-         drv->pipe->screen->fence_reference(drv->pipe->screen, &surf->fence, NULL);
       util_dynarray_fini(&surf->subpics);
       FREE(surf);
       handle_table_remove(drv->htab, surface_list[i]);
@@ -245,11 +243,6 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
    screen = drv->pipe->screen;
    vscreen = drv->vscreen;
 
-   if(surf->fence) {
-      screen->fence_finish(screen, surf->fence, PIPE_TIMEOUT_INFINITE);
-      screen->fence_reference(screen, &surf->fence, NULL);
-   }
-
    tex = vscreen->texture_from_drawable(vscreen, draw);
    if (!tex)
       return VA_STATUS_ERROR_INVALID_DISPLAY;
@@ -281,8 +274,7 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
    screen->flush_frontbuffer(screen, tex, 0, 0,
                              vscreen->get_private(vscreen), NULL);
 
-   screen->fence_reference(screen, &surf->fence, NULL);
-   drv->pipe->flush(drv->pipe, &surf->fence, 0);
+   drv->pipe->flush(drv->pipe, NULL, 0);
 
    pipe_resource_reference(&tex, NULL);
    pipe_surface_reference(&surf_draw, NULL);

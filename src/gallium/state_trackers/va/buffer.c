@@ -212,6 +212,7 @@ VAStatus
 vlVaAcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id,
                         VABufferInfo *out_buf_info)
 {
+   vlVaDriver *drv;
    uint32_t i;
    uint32_t mem_type;
    vlVaBuffer *buf ;
@@ -255,12 +256,8 @@ vlVaAcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id,
    if (!buf->derived_surface.resource)
       return VA_STATUS_ERROR_INVALID_BUFFER;
 
+   drv = VL_VA_DRIVER(ctx);
    screen = VL_VA_PSCREEN(ctx);
-
-   if (buf->derived_surface.fence) {
-      screen->fence_finish(screen, buf->derived_surface.fence, PIPE_TIMEOUT_INFINITE);
-      screen->fence_reference(screen, &buf->derived_surface.fence, NULL);
-   }
 
    if (buf->export_refcount > 0) {
       if (buf->export_state.mem_type != mem_type)
@@ -271,6 +268,8 @@ vlVaAcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id,
       switch (mem_type) {
       case VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME: {
          struct winsys_handle whandle;
+
+         drv->pipe->flush(drv->pipe, NULL, 0);
 
          memset(&whandle, 0, sizeof(whandle));
          whandle.type = DRM_API_HANDLE_TYPE_FD;

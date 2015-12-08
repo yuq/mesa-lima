@@ -54,7 +54,6 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    vlVaSurface *src_surface;
    VAProcPipelineParameterBuffer *pipeline_param;
    struct pipe_surface **surfaces;
-   struct pipe_screen *screen;
    struct pipe_surface *psurf;
 
    if (!drv || !context)
@@ -77,8 +76,6 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    if (!surfaces || !surfaces[0])
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
-   screen = drv->pipe->screen;
-
    psurf = surfaces[0];
 
    src_region = vlVaRegionDefault(pipeline_param->surface_region, src_surface->buffer, &def_src_region);
@@ -99,8 +96,8 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    vl_compositor_set_layer_dst_area(&drv->cstate, 0, &dst_rect);
    vl_compositor_render(&drv->cstate, &drv->compositor, psurf, NULL, false);
 
-   screen->fence_reference(screen, &src_surface->fence, NULL);
-   drv->pipe->flush(drv->pipe, &src_surface->fence, 0);
+   // TODO: figure out why this is necessary for DMA-buf sharing
+   drv->pipe->flush(drv->pipe, NULL, 0);
 
    return VA_STATUS_SUCCESS;
 }
