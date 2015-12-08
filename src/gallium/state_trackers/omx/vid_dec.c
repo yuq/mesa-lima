@@ -48,6 +48,7 @@
 #include "pipe/p_video_codec.h"
 #include "util/u_memory.h"
 #include "util/u_surface.h"
+#include "vl/vl_video_buffer.h"
 #include "vl/vl_vlc.h"
 
 #include "entrypoint.h"
@@ -515,34 +516,34 @@ static void vid_dec_FillOutput(vid_dec_PrivateType *priv, struct pipe_video_buff
    OMX_VIDEO_PORTDEFINITIONTYPE *def = &port->sPortParam.format.video;
 
    struct pipe_sampler_view **views;
-   struct pipe_transfer *transfer;
-   struct pipe_box box = { };
-   uint8_t *src, *dst;
+   unsigned i, j;
+   unsigned width, height;
 
    views = buf->get_sampler_view_planes(buf);
 
-   dst = output->pBuffer;
+   for (i = 0; i < 2 /* NV12 */; i++) {
+      if (!views[i]) continue;
+      width = buf->width;
+      height = buf->height;
+      vl_video_buffer_adjust_size(&width, &height, i, buf->interlaced, buf->chroma_format);
+      for (j = 0; j < views[i]->texture->array_size; ++j) {
+         struct pipe_box box = {0, 0, j, width, height, 1};
+         struct pipe_transfer *transfer;
+         uint8_t *map, *dst;
+         map = priv->pipe->transfer_map(priv->pipe, views[i]->texture, 0,
+                  PIPE_TRANSFER_READ, &box, &transfer);
+         if (!map)
+            return;
 
-   box.width = def->nFrameWidth;
-   box.height = def->nFrameHeight;
-   box.depth = 1;
+         dst = ((uint8_t*)output->pBuffer + output->nOffset) + j * def->nStride + i * buf->width * buf->height;
+         util_copy_rect(dst,
+            views[i]->texture->format,
+            def->nStride * views[i]->texture->array_size, 0, 0,
+            box.width, box.height, map, transfer->stride, 0, 0);
 
-   src = priv->pipe->transfer_map(priv->pipe, views[0]->texture, 0,
-                                  PIPE_TRANSFER_READ, &box, &transfer);
-   util_copy_rect(dst, views[0]->texture->format, def->nStride, 0, 0,
-                  box.width, box.height, src, transfer->stride, 0, 0);
-   pipe_transfer_unmap(priv->pipe, transfer);
-
-   dst = ((uint8_t*)output->pBuffer) + (def->nStride * box.height);
-
-   box.width = def->nFrameWidth / 2;
-   box.height = def->nFrameHeight / 2;
-
-   src = priv->pipe->transfer_map(priv->pipe, views[1]->texture, 0,
-                                  PIPE_TRANSFER_READ, &box, &transfer);
-   util_copy_rect(dst, views[1]->texture->format, def->nStride, 0, 0,
-                  box.width, box.height, src, transfer->stride, 0, 0);
-   pipe_transfer_unmap(priv->pipe, transfer);
+         pipe_transfer_unmap(priv->pipe, transfer);
+      }
+   }
 }
 
 static void vid_dec_FrameDecoded(OMX_COMPONENTTYPE *comp, OMX_BUFFERHEADERTYPE* input,
