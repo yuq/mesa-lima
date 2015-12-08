@@ -674,20 +674,40 @@ brw_print_dirty_count(struct dirty_bit_map *bit_map)
 }
 
 static inline void
+brw_upload_tess_programs(struct brw_context *brw)
+{
+   if (brw->tess_eval_program) {
+      uint64_t per_vertex_slots = brw->tess_eval_program->Base.InputsRead;
+      uint32_t per_patch_slots =
+         brw->tess_eval_program->Base.PatchInputsRead;
+
+      /* The TCS may have additional outputs which aren't read by the
+       * TES (possibly for cross-thread communication).  These need to
+       * be stored in the Patch URB Entry as well.
+       */
+      if (brw->tess_ctrl_program) {
+         per_vertex_slots |= brw->tess_ctrl_program->Base.OutputsWritten;
+         per_patch_slots |=
+            brw->tess_ctrl_program->Base.PatchOutputsWritten;
+      }
+
+      brw_upload_tcs_prog(brw, per_vertex_slots, per_patch_slots);
+      brw_upload_tes_prog(brw, per_vertex_slots, per_patch_slots);
+   } else {
+      brw->tcs.prog_data = NULL;
+      brw->tcs.base.prog_data = NULL;
+      brw->tes.prog_data = NULL;
+      brw->tes.base.prog_data = NULL;
+   }
+}
+
+static inline void
 brw_upload_programs(struct brw_context *brw,
                     enum brw_pipeline pipeline)
 {
    if (pipeline == BRW_RENDER_PIPELINE) {
       brw_upload_vs_prog(brw);
-      if (brw->tess_eval_program) {
-         brw_upload_tcs_prog(brw);
-         brw_upload_tes_prog(brw);
-      } else {
-         brw->tcs.prog_data = NULL;
-         brw->tcs.base.prog_data = NULL;
-         brw->tes.prog_data = NULL;
-         brw->tes.base.prog_data = NULL;
-      }
+      brw_upload_tess_programs(brw);
 
       if (brw->gen < 6)
          brw_upload_ff_gs_prog(brw);

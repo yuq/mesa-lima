@@ -66,6 +66,10 @@ brw_tes_debug_recompile(struct brw_context *brw,
    }
 
    found |= brw_debug_recompile_sampler_key(brw, &old_key->tex, &key->tex);
+   found |= key_debug(brw, "inputs read", old_key->inputs_read,
+                      key->inputs_read);
+   found |= key_debug(brw, "patch inputs read", old_key->patch_inputs_read,
+                      key->patch_inputs_read);
 
    if (!found) {
       perf_debug("  Something else\n");
@@ -226,7 +230,9 @@ brw_codegen_tes_prog(struct brw_context *brw,
 
 
 void
-brw_upload_tes_prog(struct brw_context *brw)
+brw_upload_tes_prog(struct brw_context *brw,
+                    uint64_t per_vertex_slots,
+                    uint32_t per_patch_slots)
 {
    struct gl_context *ctx = &brw->ctx;
    struct gl_shader_program **current = ctx->_Shader->CurrentProgram;
@@ -246,6 +252,14 @@ brw_upload_tes_prog(struct brw_context *brw)
    memset(&key, 0, sizeof(key));
 
    key.program_string_id = tep->id;
+
+   /* Ignore gl_TessLevelInner/Outer - we treat them as system values,
+    * not inputs, and they're always present in the URB entry regardless
+    * of whether or not we read them.
+    */
+   key.inputs_read = per_vertex_slots &
+      ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
+   key.patch_inputs_read = per_patch_slots;
 
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
@@ -280,6 +294,20 @@ brw_tes_precompile(struct gl_context *ctx,
    memset(&key, 0, sizeof(key));
 
    key.program_string_id = btep->id;
+   key.inputs_read = prog->InputsRead;
+   key.patch_inputs_read = prog->PatchInputsRead;
+
+   if (shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]) {
+      struct gl_program *tcp =
+         shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]->Program;
+      key.inputs_read |= tcp->OutputsWritten;
+      key.patch_inputs_read |= tcp->PatchOutputsWritten;
+   }
+
+   /* Ignore gl_TessLevelInner/Outer - they're system values. */
+   key.inputs_read &= ~(VARYING_BIT_TESS_LEVEL_INNER |
+                        VARYING_BIT_TESS_LEVEL_OUTER);
+
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
 
    success = brw_codegen_tes_prog(brw, shader_prog, btep, &key);

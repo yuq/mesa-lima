@@ -67,6 +67,10 @@ brw_tcs_debug_recompile(struct brw_context *brw,
 
    found |= key_debug(brw, "input vertices", old_key->input_vertices,
                       key->input_vertices);
+   found |= key_debug(brw, "outputs written", old_key->outputs_written,
+                      key->outputs_written);
+   found |= key_debug(brw, "patch outputs written", old_key->patch_outputs_written,
+                      key->patch_outputs_written);
    found |= key_debug(brw, "TES primitive mode", old_key->tes_primitive_mode,
                       key->tes_primitive_mode);
    found |= brw_debug_recompile_sampler_key(brw, &old_key->tex, &key->tex);
@@ -224,7 +228,9 @@ brw_codegen_tcs_prog(struct brw_context *brw,
 
 
 void
-brw_upload_tcs_prog(struct brw_context *brw)
+brw_upload_tcs_prog(struct brw_context *brw,
+                    uint64_t per_vertex_slots,
+                    uint32_t per_patch_slots)
 {
    struct gl_context *ctx = &brw->ctx;
    struct gl_shader_program **current = ctx->_Shader->CurrentProgram;
@@ -248,6 +254,8 @@ brw_upload_tcs_prog(struct brw_context *brw)
    memset(&key, 0, sizeof(key));
 
    key.input_vertices = ctx->TessCtrlProgram.patch_vertices;
+   key.outputs_written = per_vertex_slots;
+   key.patch_outputs_written = per_patch_slots;
 
    /* We need to specialize our code generation for tessellation levels
     * based on the domain the DS is expecting to tessellate.
@@ -300,6 +308,9 @@ brw_tcs_precompile(struct gl_context *ctx,
    key.input_vertices = shader_prog->TessCtrl.VerticesOut;
 
    key.tes_primitive_mode = GL_TRIANGLES;
+
+   key.outputs_written = prog->OutputsWritten;
+   key.patch_outputs_written = prog->PatchOutputsWritten;
 
    success = brw_codegen_tcs_prog(brw, shader_prog, btcp, &key);
 

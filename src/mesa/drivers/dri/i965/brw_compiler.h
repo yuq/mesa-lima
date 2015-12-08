@@ -200,6 +200,9 @@ struct brw_tcs_prog_key
 
    unsigned input_vertices;
 
+   /** A bitfield of per-patch outputs written. */
+   uint32_t patch_outputs_written;
+
    /** A bitfield of per-vertex outputs written. */
    uint64_t outputs_written;
 
@@ -210,6 +213,12 @@ struct brw_tcs_prog_key
 struct brw_tes_prog_key
 {
    unsigned program_string_id;
+
+   /** A bitfield of per-patch inputs read. */
+   uint32_t patch_inputs_read;
+
+   /** A bitfield of per-vertex inputs read. */
+   uint64_t inputs_read;
 
    struct brw_sampler_prog_key_data tex;
 };
