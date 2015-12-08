@@ -34,6 +34,12 @@
  */
 #include "gen8_pack.h"
 
+struct anv_image_view_info {
+   uint8_t surface_type; /**< RENDER_SURFACE_STATE.SurfaceType */
+   bool is_array:1; /**< RENDER_SURFACE_STATE.SurfaceArray */
+   bool is_cube:1; /**< RENDER_SURFACE_STATE.CubeFaceEnable* */
+};
+
 static const uint8_t anv_halign[] = {
     [4] = HALIGN4,
     [8] = HALIGN8,
@@ -64,12 +70,6 @@ anv_image_view_info_table[] = {
    [VK_IMAGE_VIEW_TYPE_CUBE_ARRAY]  = INFO(SURFTYPE_CUBE,   .is_array = 1, .is_cube = 1),
    #undef INFO
 };
-
-struct anv_image_view_info
-anv_image_view_info_for_vk_image_view_type(VkImageViewType type)
-{
-   return anv_image_view_info_table[type];
-}
 
 /**
  * The \a format argument is required and overrides any format found in struct

@@ -1398,15 +1398,6 @@ anv_format_is_depth_or_stencil(const struct anv_format *format)
    return format->depth_format || format->has_stencil;
 }
 
-struct anv_image_view_info {
-   uint8_t surface_type; /**< RENDER_SURFACE_STATE.SurfaceType */
-   bool is_array:1; /**< RENDER_SURFACE_STATE.SurfaceArray */
-   bool is_cube:1; /**< RENDER_SURFACE_STATE.CubeFaceEnable* */
-};
-
-struct anv_image_view_info
-anv_image_view_info_for_vk_image_view_type(VkImageViewType type);
-
 /**
  * Subsurface of an anv_image.
  */
