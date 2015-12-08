@@ -623,6 +623,9 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
    }
 
    ++dctx->num_draw_calls;
+   if (dscreen->skip_count && dctx->num_draw_calls % 10000 == 0)
+      fprintf(stderr, "Gallium debugger reached %u draw calls.\n",
+              dctx->num_draw_calls);
 }
 
 static void
