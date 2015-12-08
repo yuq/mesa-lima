@@ -82,6 +82,16 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
 
         vc4_flush(pctx);
 
+        if (false) {
+                fprintf(stderr, "RCL blit from %d,%d to %d,%d (%d,%d)\n",
+                        info->src.box.x,
+                        info->src.box.y,
+                        info->dst.box.x,
+                        info->dst.box.y,
+                        info->dst.box.width,
+                        info->dst.box.height);
+        }
+
         struct pipe_surface *dst_surf =
                 vc4_get_blit_surface(pctx, info->dst.resource, info->dst.level);
         struct pipe_surface *src_surf =
