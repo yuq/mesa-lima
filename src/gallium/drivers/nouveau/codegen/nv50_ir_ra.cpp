@@ -103,6 +103,8 @@ public:
 
    void print() const;
 
+   const bool restrictedGPR16Range;
+
 private:
    BitSet bits[LAST_REGISTER_FILE + 1];
 
@@ -110,8 +112,6 @@ private:
 
    int last[LAST_REGISTER_FILE + 1];
    int fill[LAST_REGISTER_FILE + 1];
-
-   const bool restrictedGPR16Range;
 };
 
 void
@@ -840,6 +840,32 @@ GCRA::printNodeInfo() const
    }
 }
 
+static bool
+isShortRegOp(Instruction *insn)
+{
+   // Immediates are always in src1. Every other situation can be resolved by
+   // using a long encoding.
+   return insn->srcExists(1) && insn->src(1).getFile() == FILE_IMMEDIATE;
+}
+
+// Check if this LValue is ever used in an instruction that can't be encoded
+// with long registers (i.e. > r63)
+static bool
+isShortRegVal(LValue *lval)
+{
+   if (lval->defs.size() == 0)
+      return false;
+   for (Value::DefCIterator def = lval->defs.begin();
+        def != lval->defs.end(); ++def)
+      if (isShortRegOp((*def)->getInsn()))
+         return true;
+   for (Value::UseCIterator use = lval->uses.begin();
+        use != lval->uses.end(); ++use)
+      if (isShortRegOp((*use)->getInsn()))
+         return true;
+   return false;
+}
+
 void
 GCRA::RIG_Node::init(const RegisterSet& regs, LValue *lval)
 {
@@ -855,7 +881,12 @@ GCRA::RIG_Node::init(const RegisterSet& regs, LValue *lval)
 
    weight = std::numeric_limits<float>::infinity();
    degree = 0;
-   degreeLimit = regs.getFileSize(f, lval->reg.size);
+   int size = regs.getFileSize(f, lval->reg.size);
+   // On nv50, we lose a bit of gpr encoding when there's an embedded
+   // immediate.
+   if (regs.restrictedGPR16Range && f == FILE_GPR && isShortRegVal(lval))
+      size /= 2;
+   degreeLimit = size;
    degreeLimit -= relDegree[1][colors] - 1;
 
    livei.insert(lval->livei);
