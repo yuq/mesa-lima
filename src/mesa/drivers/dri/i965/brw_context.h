@@ -702,6 +702,8 @@ enum brw_predicate_state {
 
 struct shader_times;
 
+struct brw_l3_config;
+
 /**
  * brw_context is derived from gl_context.
  */
@@ -1266,6 +1268,10 @@ struct brw_context
 
    uint32_t num_instances;
    int basevertex;
+
+   struct {
+      const struct brw_l3_config *config;
+   } l3;
 
    struct {
       drm_intel_bo *bo;

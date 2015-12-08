@@ -422,3 +422,84 @@ setup_l3_config(struct brw_context *brw, const struct brw_l3_config *cfg)
       }
    }
 }
+
+/**
+ * Return the unit brw_context::urb::size is expressed in, in KB.  \sa
+ * brw_device_info::urb::size.
+ */
+static unsigned
+get_urb_size_scale(const struct brw_device_info *devinfo)
+{
+   return (devinfo->gen >= 8 ? devinfo->num_slices : 1);
+}
+
+/**
+ * Update the URB size in the context state for the specified L3
+ * configuration.
+ */
+static void
+update_urb_size(struct brw_context *brw, const struct brw_l3_config *cfg)
+{
+   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
+   /* From the SKL "L3 Allocation and Programming" documentation:
+    *
+    * "URB is limited to 1008KB due to programming restrictions.  This is not
+    * a restriction of the L3 implementation, but of the FF and other clients.
+    * Therefore, in a GT4 implementation it is possible for the programmed
+    * allocation of the L3 data array to provide 3*384KB=1152KB for URB, but
+    * only 1008KB of this will be used."
+    */
+   const unsigned max = (devinfo->gen == 9 ? 1008 : ~0);
+   const unsigned sz =
+      MIN2(max, cfg->n[L3P_URB] * get_l3_way_size(devinfo)) /
+      get_urb_size_scale(devinfo);
+
+   if (brw->urb.size != sz) {
+      brw->urb.size = sz;
+      brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
+   }
+}
+
+static void
+emit_l3_state(struct brw_context *brw)
+{
+   const struct brw_l3_weights w = get_pipeline_state_l3_weights(brw);
+   const float dw = diff_l3_weights(w, get_config_l3_weights(brw->l3.config));
+   /* The distance between any two compatible weight vectors cannot exceed two
+    * due to the triangle inequality.
+    */
+   const float large_dw_threshold = 2.0;
+   /* Somewhat arbitrary, simply makes sure that there will be no repeated
+    * transitions to the same L3 configuration, could probably do better here.
+    */
+   const float small_dw_threshold = 0.5;
+   /* If we're emitting a new batch the caches should already be clean and the
+    * transition should be relatively cheap, so it shouldn't hurt much to use
+    * the smaller threshold.  Otherwise use the larger threshold so that we
+    * only reprogram the L3 mid-batch if the most recently programmed
+    * configuration is incompatible with the current pipeline state.
+    */
+   const float dw_threshold = (brw->ctx.NewDriverState & BRW_NEW_BATCH ?
+                               small_dw_threshold : large_dw_threshold);
+
+   if (dw > dw_threshold && brw->can_do_pipelined_register_writes) {
+      const struct brw_l3_config *const cfg =
+         get_l3_config(brw->intelScreen->devinfo, w);
+
+      setup_l3_config(brw, cfg);
+      update_urb_size(brw, cfg);
+      brw->l3.config = cfg;
+   }
+}
+
+const struct brw_tracked_state gen7_l3_state = {
+   .dirty = {
+      .mesa = 0,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_CS_PROG_DATA |
+             BRW_NEW_FS_PROG_DATA |
+             BRW_NEW_GS_PROG_DATA |
+             BRW_NEW_VS_PROG_DATA,
+   },
+   .emit = emit_l3_state
+};

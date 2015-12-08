@@ -130,6 +130,7 @@ extern const struct brw_tracked_state gen7_clip_state;
 extern const struct brw_tracked_state gen7_ds_state;
 extern const struct brw_tracked_state gen7_gs_state;
 extern const struct brw_tracked_state gen7_hs_state;
+extern const struct brw_tracked_state gen7_l3_state;
 extern const struct brw_tracked_state gen7_ps_state;
 extern const struct brw_tracked_state gen7_push_constant_space;
 extern const struct brw_tracked_state gen7_sbe_state;
