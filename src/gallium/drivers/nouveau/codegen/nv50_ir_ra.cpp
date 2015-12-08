@@ -1465,6 +1465,20 @@ GCRA::allocateRegisters(ArrayList& insns)
       if (lval) {
          nodes[i].init(regs, lval);
          RIG.insert(&nodes[i]);
+
+         if (lval->inFile(FILE_GPR) && lval->defs.size() > 0 &&
+             prog->getTarget()->getChipset() < 0xc0) {
+            Instruction *insn = lval->getInsn();
+            if (insn->op == OP_MAD || insn->op == OP_SAD)
+               // Short encoding only possible if they're all GPRs, no need to
+               // affect them otherwise.
+               if (insn->flagsDef < 0 &&
+                   isFloatType(insn->dType) &&
+                   insn->src(0).getFile() == FILE_GPR &&
+                   insn->src(1).getFile() == FILE_GPR &&
+                   insn->src(2).getFile() == FILE_GPR)
+                  nodes[i].addRegPreference(getNode(insn->getSrc(2)->asLValue()));
+         }
       }
    }
 
