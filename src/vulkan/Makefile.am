@@ -107,6 +107,7 @@ libisl_la_SOURCES =                                     \
 	isl_gen8.h                                      \
 	isl_gen9.c                                      \
 	isl_gen9.h                                      \
+	isl_image.c                                     \
 	$(NULL)
 
 BUILT_SOURCES =                                         \

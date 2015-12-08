@@ -70,6 +70,7 @@ extern "C" {
 #endif
 
 struct brw_device_info;
+struct brw_image_param;
 
 #ifndef ISL_DEV_GEN
 /**
@@ -752,6 +753,10 @@ isl_format_block_is_1x1x1(enum isl_format fmt)
 
    return fmtl->bw == 1 && fmtl->bh == 1 && fmtl->bd == 1;
 }
+
+enum isl_format
+isl_lower_storage_image_format(const struct isl_device *dev,
+                               enum isl_format fmt);
 
 static inline bool
 isl_tiling_is_std_y(enum isl_tiling tiling)
