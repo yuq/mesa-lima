@@ -874,7 +874,10 @@ brw_meta_resolve_color(struct brw_context *brw,
     * bits to let us select the type of resolve.  For fast clear resolves, it
     * turns out we can use the same value as pre-SKL though.
     */
-   set_fast_clear_op(brw, GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE);
+   if (intel_miptree_is_lossless_compressed(brw, mt))
+      set_fast_clear_op(brw, GEN9_PS_RENDER_TARGET_RESOLVE_FULL);
+   else
+      set_fast_clear_op(brw, GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE);
 
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
    get_resolve_rect(brw, mt, &rect);

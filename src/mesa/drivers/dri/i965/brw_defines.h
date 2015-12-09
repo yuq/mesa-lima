@@ -2727,6 +2727,7 @@ enum brw_wm_barycentric_interp_mode {
 # define GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE	(1 << 8)
 # define GEN7_PS_DUAL_SOURCE_BLEND_ENABLE		(1 << 7)
 # define GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE		(1 << 6)
+# define GEN9_PS_RENDER_TARGET_RESOLVE_FULL             (3 << 6)
 # define HSW_PS_UAV_ACCESS_ENABLE			(1 << 5)
 # define GEN7_PS_POSOFFSET_NONE				(0 << 3)
 # define GEN7_PS_POSOFFSET_CENTROID			(2 << 3)
