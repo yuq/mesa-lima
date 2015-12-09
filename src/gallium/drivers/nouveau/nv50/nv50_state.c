@@ -664,6 +664,17 @@ nv50_stage_set_sampler_views(struct nv50_context *nv50, int s,
       if (old)
          nv50_screen_tic_unlock(nv50->screen, old);
 
+      if (views[i] && views[i]->texture) {
+         struct pipe_resource *res = views[i]->texture;
+         if (res->target == PIPE_BUFFER &&
+             (res->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT))
+            nv50->textures_coherent[s] |= 1 << i;
+         else
+            nv50->textures_coherent[s] &= ~(1 << i);
+      } else {
+         nv50->textures_coherent[s] &= ~(1 << i);
+      }
+
       pipe_sampler_view_reference(&nv50->textures[s][i], views[i]);
    }
 
@@ -847,13 +858,19 @@ nv50_set_constant_buffer(struct pipe_context *pipe, uint shader, uint index,
       nv50->constbuf[s][i].u.data = cb->user_buffer;
       nv50->constbuf[s][i].size = MIN2(cb->buffer_size, 0x10000);
       nv50->constbuf_valid[s] |= 1 << i;
+      nv50->constbuf_coherent[s] &= ~(1 << i);
    } else
    if (res) {
       nv50->constbuf[s][i].offset = cb->buffer_offset;
       nv50->constbuf[s][i].size = MIN2(align(cb->buffer_size, 0x100), 0x10000);
       nv50->constbuf_valid[s] |= 1 << i;
+      if (res->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
+         nv50->constbuf_coherent[s] |= 1 << i;
+      else
+         nv50->constbuf_coherent[s] &= ~(1 << i);
    } else {
       nv50->constbuf_valid[s] &= ~(1 << i);
+      nv50->constbuf_coherent[s] &= ~(1 << i);
    }
    nv50->constbuf_dirty[s] |= 1 << i;
 
@@ -1003,6 +1020,7 @@ nv50_set_vertex_buffers(struct pipe_context *pipe,
    if (!vb) {
       nv50->vbo_user &= ~(((1ull << count) - 1) << start_slot);
       nv50->vbo_constant &= ~(((1ull << count) - 1) << start_slot);
+      nv50->vtxbufs_coherent &= ~(((1ull << count) - 1) << start_slot);
       return;
    }
 
@@ -1015,9 +1033,16 @@ nv50_set_vertex_buffers(struct pipe_context *pipe,
             nv50->vbo_constant |= 1 << dst_index;
          else
             nv50->vbo_constant &= ~(1 << dst_index);
+         nv50->vtxbufs_coherent &= ~(1 << dst_index);
       } else {
          nv50->vbo_user &= ~(1 << dst_index);
          nv50->vbo_constant &= ~(1 << dst_index);
+
+         if (vb[i].buffer &&
+             vb[i].buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
+            nv50->vtxbufs_coherent |= (1 << dst_index);
+         else
+            nv50->vtxbufs_coherent &= ~(1 << dst_index);
       }
    }
 }

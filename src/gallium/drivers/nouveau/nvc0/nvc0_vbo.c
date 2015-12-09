@@ -871,7 +871,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-   int i, s;
+   int s;
 
    /* NOTE: caller must ensure that (min_index + index_bias) is >= 0 */
    nvc0->vb_elt_first = info->min_index + info->index_bias;
@@ -922,27 +922,9 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 
    push->kick_notify = nvc0_draw_vbo_kick_notify;
 
-   /* TODO: Instead of iterating over all the buffer resources looking for
-    * coherent buffers, keep track of a context-wide count.
-    */
    for (s = 0; s < 5 && !nvc0->cb_dirty; ++s) {
-      uint32_t valid = nvc0->constbuf_valid[s];
-
-      while (valid && !nvc0->cb_dirty) {
-         const unsigned i = ffs(valid) - 1;
-         struct pipe_resource *res;
-
-         valid &= ~(1 << i);
-         if (nvc0->constbuf[s][i].user)
-            continue;
-
-         res = nvc0->constbuf[s][i].u.buf;
-         if (!res)
-            continue;
-
-         if (res->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
-            nvc0->cb_dirty = true;
-      }
+      if (nvc0->constbuf_coherent[s])
+         nvc0->cb_dirty = true;
    }
 
    if (nvc0->cb_dirty) {
@@ -951,14 +933,12 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    }
 
    for (s = 0; s < 5; ++s) {
+      if (!nvc0->textures_coherent[s])
+         continue;
+
       for (int i = 0; i < nvc0->num_textures[s]; ++i) {
          struct nv50_tic_entry *tic = nv50_tic_entry(nvc0->textures[s][i]);
-         struct pipe_resource *res;
-         if (!tic)
-            continue;
-         res = nvc0->textures[s][i]->texture;
-         if (res->target != PIPE_BUFFER ||
-             !(res->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT))
+         if (!(nvc0->textures_coherent[s] & (1 << i)))
             continue;
 
          BEGIN_NVC0(push, NVC0_3D(TEX_CACHE_CTL), 1);
@@ -984,12 +964,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       PUSH_DATA (push, info->start_instance);
    }
 
-   for (i = 0; i < nvc0->num_vtxbufs && !nvc0->base.vbo_dirty; ++i) {
-      if (!nvc0->vtxbuf[i].buffer)
-         continue;
-      if (nvc0->vtxbuf[i].buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
-         nvc0->base.vbo_dirty = true;
-   }
+   nvc0->base.vbo_dirty |= !!nvc0->vtxbufs_coherent;
 
    if (!nvc0->base.vbo_dirty && nvc0->idxbuf.buffer &&
        nvc0->idxbuf.buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)

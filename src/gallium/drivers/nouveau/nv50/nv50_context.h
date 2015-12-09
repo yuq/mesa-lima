@@ -134,9 +134,11 @@ struct nv50_context {
    struct nv50_constbuf constbuf[3][NV50_MAX_PIPE_CONSTBUFS];
    uint16_t constbuf_dirty[3];
    uint16_t constbuf_valid[3];
+   uint16_t constbuf_coherent[3];
 
    struct pipe_vertex_buffer vtxbuf[PIPE_MAX_ATTRIBS];
    unsigned num_vtxbufs;
+   uint32_t vtxbufs_coherent;
    struct pipe_index_buffer idxbuf;
    uint32_t vbo_fifo; /* bitmask of vertex elements to be pushed to FIFO */
    uint32_t vbo_user; /* bitmask of vertex buffers pointing to user memory */
@@ -148,6 +150,7 @@ struct nv50_context {
 
    struct pipe_sampler_view *textures[3][PIPE_MAX_SAMPLERS];
    unsigned num_textures[3];
+   uint32_t textures_coherent[3];
    struct nv50_tsc_entry *samplers[3][PIPE_MAX_SAMPLERS];
    unsigned num_samplers[3];
 
