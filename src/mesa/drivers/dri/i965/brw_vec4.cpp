@@ -496,11 +496,6 @@ vec4_visitor::split_uniform_registers()
 	 inst->src[i].reg_offset = 0;
       }
    }
-
-   /* Update that everything is now vector-sized. */
-   for (int i = 0; i < this->uniforms; i++) {
-      this->uniform_size[i] = 1;
-   }
 }
 
 void
@@ -558,7 +553,6 @@ vec4_visitor::pack_uniform_registers()
     * push constants.
     */
    for (int src = 0; src < uniforms; src++) {
-      assert(src < uniform_array_size);
       int size = chans_used[src];
 
       if (size == 0)
@@ -1599,8 +1593,6 @@ vec4_visitor::setup_uniforms(int reg)
     * matter what, or the GPU would hang.
     */
    if (devinfo->gen < 6 && this->uniforms == 0) {
-      assert(this->uniforms < this->uniform_array_size);
-
       stage_prog_data->param =
          reralloc(NULL, stage_prog_data->param, const gl_constant_value *, 4);
       for (unsigned int i = 0; i < 4; i++) {

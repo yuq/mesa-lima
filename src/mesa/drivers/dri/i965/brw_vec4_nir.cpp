@@ -132,15 +132,6 @@ void
 vec4_visitor::nir_setup_uniforms()
 {
    uniforms = nir->num_uniforms / 16;
-
-   nir_foreach_variable(var, &nir->uniforms) {
-      /* UBO's and atomics don't take up space in the uniform file */
-      if (var->interface_type != NULL || var->type->contains_atomic())
-         continue;
-
-      if (type_size_vec4(var->type) > 0)
-         uniform_size[var->data.driver_location / 16] = type_size_vec4(var->type);
-   }
 }
 
 void

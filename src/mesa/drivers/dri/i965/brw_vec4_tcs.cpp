@@ -59,8 +59,6 @@ vec4_tcs_visitor::emit_nir_code()
        * copies VS outputs to TES inputs.
        */
       uniforms = 2;
-      uniform_size[0] = 1;
-      uniform_size[1] = 1;
 
       uint64_t varyings = key->outputs_written;
 
