@@ -741,6 +741,7 @@ static LLVMValueRef fetch_input_gs(
 	unsigned semantic_name = info->input_semantic_name[reg->Register.Index];
 	unsigned semantic_index = info->input_semantic_index[reg->Register.Index];
 	unsigned param;
+	LLVMValueRef value;
 
 	if (swizzle != ~0 && semantic_name == TGSI_SEMANTIC_PRIMID)
 		return get_primitive_id(bld_base, swizzle);
@@ -782,11 +783,22 @@ static LLVMValueRef fetch_input_gs(
 	args[7] = uint->zero; /* SLC */
 	args[8] = uint->zero; /* TFE */
 
+	value = lp_build_intrinsic(gallivm->builder,
+				   "llvm.SI.buffer.load.dword.i32.i32",
+				   i32, args, 9,
+				   LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
+	if (type == TGSI_TYPE_DOUBLE) {
+		LLVMValueRef value2;
+		args[2] = lp_build_const_int32(gallivm, (param * 4 + swizzle + 1) * 256);
+		value2 = lp_build_intrinsic(gallivm->builder,
+					    "llvm.SI.buffer.load.dword.i32.i32",
+					    i32, args, 9,
+					    LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
+		return radeon_llvm_emit_fetch_double(bld_base,
+						     value, value2);
+	}
 	return LLVMBuildBitCast(gallivm->builder,
-				lp_build_intrinsic(gallivm->builder,
-						"llvm.SI.buffer.load.dword.i32.i32",
-						i32, args, 9,
-						LLVMReadOnlyAttribute | LLVMNoUnwindAttribute),
+				value,
 				tgsi2llvmtype(bld_base, type), "");
 }
 
