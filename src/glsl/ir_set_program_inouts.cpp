@@ -146,6 +146,7 @@ void
 ir_set_program_inouts_visitor::mark_whole_variable(ir_variable *var)
 {
    const glsl_type *type = var->type;
+   bool vertex_input = false;
    if (this->shader_stage == MESA_SHADER_GEOMETRY &&
        var->data.mode == ir_var_shader_in && type->is_array()) {
       type = type->fields.array;
@@ -169,7 +170,11 @@ ir_set_program_inouts_visitor::mark_whole_variable(ir_variable *var)
       type = type->fields.array;
    }
 
-   mark(this->prog, var, 0, type->count_attribute_slots(),
+   if (this->shader_stage == MESA_SHADER_VERTEX &&
+       var->data.mode == ir_var_shader_in)
+      vertex_input = true;
+
+   mark(this->prog, var, 0, type->count_attribute_slots(vertex_input),
         this->shader_stage);
 }
 

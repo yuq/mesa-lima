@@ -1712,7 +1712,8 @@ check_against_output_limit(struct gl_context *ctx,
 
       if (var && var->data.mode == ir_var_shader_out &&
           var_counts_against_varying_limit(producer->Stage, var)) {
-         output_vectors += var->type->count_attribute_slots();
+         /* outputs for fragment shader can't be doubles */
+         output_vectors += var->type->count_attribute_slots(false);
       }
    }
 
@@ -1753,7 +1754,8 @@ check_against_input_limit(struct gl_context *ctx,
 
       if (var && var->data.mode == ir_var_shader_in &&
           var_counts_against_varying_limit(consumer->Stage, var)) {
-         input_vectors += var->type->count_attribute_slots();
+         /* vertex inputs aren't varying counted */
+         input_vectors += var->type->count_attribute_slots(false);
       }
    }
 
