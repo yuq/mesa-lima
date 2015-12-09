@@ -1926,9 +1926,7 @@ fs_visitor::compact_virtual_grfs()
  * maximum number of fragment shader uniform components (64).  If
  * there are too many of these, they'd fill up all of register space.
  * So, this will push some of them out to the pull constant buffer and
- * update the program to load them.  We also use pull constants for all
- * indirect constant loads because we don't support indirect accesses in
- * registers yet.
+ * update the program to load them.
  */
 void
 fs_visitor::assign_constant_locations()
@@ -1940,15 +1938,18 @@ fs_visitor::assign_constant_locations()
    bool is_live[uniforms];
    memset(is_live, 0, sizeof(is_live));
 
-   bool needs_pull[uniforms];
-   memset(needs_pull, 0, sizeof(needs_pull));
+   /* For each uniform slot, a value of true indicates that the given slot and
+    * the next slot must remain contiguous.  This is used to keep us from
+    * splitting arrays apart.
+    */
+   bool contiguous[uniforms];
+   memset(contiguous, 0, sizeof(contiguous));
 
    /* First, we walk through the instructions and do two things:
     *
     *  1) Figure out which uniforms are live.
     *
-    *  2) Find all indirect access of uniform arrays and flag them as needing
-    *     to go into the pull constant buffer.
+    *  2) Mark any indirectly used ranges of registers as contiguous.
     *
     * Note that we don't move constant-indexed accesses to arrays.  No
     * testing has been done of the performance impact of this choice.
@@ -1961,12 +1962,16 @@ fs_visitor::assign_constant_locations()
          int constant_nr = inst->src[i].nr + inst->src[i].reg_offset;
 
          if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0) {
-            for (unsigned j = 0; j < inst->src[2].ud / 4; j++) {
-               is_live[constant_nr + j] = true;
-               needs_pull[constant_nr + j] = true;
+            assert(inst->src[2].ud % 4 == 0);
+            unsigned last = constant_nr + (inst->src[2].ud / 4) - 1;
+            assert(last < uniforms);
+
+            for (unsigned j = constant_nr; j < last; j++) {
+               is_live[j] = true;
+               contiguous[j] = true;
             }
+            is_live[last] = true;
          } else {
-            /* Mark the the one accessed uniform as live */
             if (constant_nr >= 0 && constant_nr < (int) uniforms)
                is_live[constant_nr] = true;
          }
@@ -1981,26 +1986,49 @@ fs_visitor::assign_constant_locations()
     * If changing this value, note the limitation about total_regs in
     * brw_curbe.c.
     */
-   unsigned int max_push_components = 16 * 8;
+   const unsigned int max_push_components = 16 * 8;
+
+   /* We push small arrays, but no bigger than 16 floats.  This is big enough
+    * for a vec4 but hopefully not large enough to push out other stuff.  We
+    * should probably use a better heuristic at some point.
+    */
+   const unsigned int max_chunk_size = 16;
+
    unsigned int num_push_constants = 0;
    unsigned int num_pull_constants = 0;
 
    push_constant_loc = ralloc_array(mem_ctx, int, uniforms);
    pull_constant_loc = ralloc_array(mem_ctx, int, uniforms);
 
-   for (unsigned int i = 0; i < uniforms; i++) {
-      push_constant_loc[i] = -1;
-      pull_constant_loc[i] = -1;
+   int chunk_start = -1;
+   for (unsigned u = 0; u < uniforms; u++) {
+      push_constant_loc[u] = -1;
+      pull_constant_loc[u] = -1;
 
-      if (!is_live[i])
+      if (!is_live[u])
          continue;
 
-      if (!needs_pull[i] && num_push_constants < max_push_components) {
-         /* Retain as a push constant */
-         push_constant_loc[i] = num_push_constants++;
-      } else {
-         /* We have to pull it */
-         pull_constant_loc[i] = num_pull_constants++;
+      /* This is the first live uniform in the chunk */
+      if (chunk_start < 0)
+         chunk_start = u;
+
+      /* If this element does not need to be contiguous with the next, we
+       * split at this point and everthing between chunk_start and u forms a
+       * single chunk.
+       */
+      if (!contiguous[u]) {
+         unsigned chunk_size = u - chunk_start + 1;
+
+         if (num_push_constants + chunk_size <= max_push_components &&
+             chunk_size <= max_chunk_size) {
+            for (unsigned j = chunk_start; j <= u; j++)
+               push_constant_loc[j] = num_push_constants++;
+         } else {
+            for (unsigned j = chunk_start; j <= u; j++)
+               pull_constant_loc[j] = num_pull_constants++;
+         }
+
+         chunk_start = -1;
       }
    }
 
@@ -2081,7 +2109,9 @@ fs_visitor::lower_constant_loads()
             continue; /* Out of bounds access */
 
          int pull_index = pull_constant_loc[location];
-         assert(pull_index >= 0); /* This had better be pull */
+
+         if (pull_index == -1)
+	    continue;
 
          VARYING_PULL_CONSTANT_LOAD(ibld, inst->dst,
                                     brw_imm_ud(index),
