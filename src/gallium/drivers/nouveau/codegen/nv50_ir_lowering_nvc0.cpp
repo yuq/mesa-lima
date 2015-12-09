@@ -870,7 +870,7 @@ NVC0LoweringPass::handleManualTXD(TexInstruction *i)
    Instruction *tex;
    Value *zero = bld.loadImm(bld.getSSA(), 0);
    int l, c;
-   const int dim = i->tex.target.getDim();
+   const int dim = i->tex.target.getDim() + i->tex.target.isCube();
    const int array = i->tex.target.isArray();
 
    i->op = OP_TEX; // no need to clone dPdx/dPdy later
@@ -917,7 +917,7 @@ NVC0LoweringPass::handleManualTXD(TexInstruction *i)
 bool
 NVC0LoweringPass::handleTXD(TexInstruction *txd)
 {
-   int dim = txd->tex.target.getDim();
+   int dim = txd->tex.target.getDim() + txd->tex.target.isCube();
    unsigned arg = txd->tex.target.getArgCount();
    unsigned expected_args = arg;
    const int chipset = prog->getTarget()->getChipset();
@@ -937,8 +937,7 @@ NVC0LoweringPass::handleTXD(TexInstruction *txd)
 
    if (expected_args > 4 ||
        dim > 2 ||
-       txd->tex.target.isShadow() ||
-       txd->tex.target.isCube())
+       txd->tex.target.isShadow())
       txd->op = OP_TEX;
 
    handleTEX(txd);

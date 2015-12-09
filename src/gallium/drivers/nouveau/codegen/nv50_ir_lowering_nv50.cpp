@@ -911,7 +911,7 @@ NV50LoweringPreSSA::handleTXD(TexInstruction *i)
    Instruction *tex;
    Value *zero = bld.loadImm(bld.getSSA(), 0);
    int l, c;
-   const int dim = i->tex.target.getDim();
+   const int dim = i->tex.target.getDim() + i->tex.target.isCube();
 
    handleTEX(i);
    i->op = OP_TEX; // no need to clone dPdx/dPdy later
