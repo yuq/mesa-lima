@@ -139,7 +139,7 @@ public:
    void split_virtual_grfs();
    bool compact_virtual_grfs();
    void assign_constant_locations();
-   void demote_pull_constants();
+   void lower_constant_loads();
    void invalidate_live_intervals();
    void calculate_live_intervals();
    void calculate_register_pressure();

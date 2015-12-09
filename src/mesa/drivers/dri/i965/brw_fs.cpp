@@ -2031,7 +2031,7 @@ fs_visitor::assign_constant_locations()
  * or VARYING_PULL_CONSTANT_LOAD instructions which load values into VGRFs.
  */
 void
-fs_visitor::demote_pull_constants()
+fs_visitor::lower_constant_loads()
 {
    const unsigned index = stage_prog_data->binding_table.pull_constants_start;
 
@@ -5098,7 +5098,7 @@ fs_visitor::optimize()
    bld = fs_builder(this, 64);
 
    assign_constant_locations();
-   demote_pull_constants();
+   lower_constant_loads();
 
    validate();
 
