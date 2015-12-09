@@ -601,7 +601,7 @@ void genX(CmdDispatch)(
                   .SIMDSize = prog_data->simd_size / 16,
                   .ThreadDepthCounterMaximum = 0,
                   .ThreadHeightCounterMaximum = 0,
-                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max,
+                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max - 1,
                   .ThreadGroupIDXDimension = x,
                   .ThreadGroupIDYDimension = y,
                   .ThreadGroupIDZDimension = z,
@@ -638,7 +638,7 @@ void genX(CmdDispatchIndirect)(
                   .SIMDSize = prog_data->simd_size / 16,
                   .ThreadDepthCounterMaximum = 0,
                   .ThreadHeightCounterMaximum = 0,
-                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max,
+                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max - 1,
                   .RightExecutionMask = pipeline->cs_right_mask,
                   .BottomExecutionMask = 0xffffffff);
 
