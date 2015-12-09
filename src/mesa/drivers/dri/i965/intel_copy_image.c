@@ -270,11 +270,11 @@ intel_copy_image_sub_data(struct gl_context *ctx,
     */
    intel_miptree_all_slices_resolve_hiz(brw, src_mt);
    intel_miptree_all_slices_resolve_depth(brw, src_mt);
-   intel_miptree_resolve_color(brw, src_mt);
+   intel_miptree_resolve_color(brw, src_mt, 0);
 
    intel_miptree_all_slices_resolve_hiz(brw, dst_mt);
    intel_miptree_all_slices_resolve_depth(brw, dst_mt);
-   intel_miptree_resolve_color(brw, dst_mt);
+   intel_miptree_resolve_color(brw, dst_mt, 0);
 
    _mesa_get_format_block_size(src_mt->format, &bw, &bh);
 

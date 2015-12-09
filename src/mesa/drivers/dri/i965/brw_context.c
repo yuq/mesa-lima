@@ -208,7 +208,7 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       if (!tex_obj || !tex_obj->mt)
 	 continue;
       intel_miptree_all_slices_resolve_depth(brw, tex_obj->mt);
-      intel_miptree_resolve_color(brw, tex_obj->mt);
+      intel_miptree_resolve_color(brw, tex_obj->mt, 0);
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
    }
 
@@ -223,7 +223,7 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
             tex_obj = intel_texture_object(u->TexObj);
 
             if (tex_obj && tex_obj->mt) {
-               intel_miptree_resolve_color(brw, tex_obj->mt);
+               intel_miptree_resolve_color(brw, tex_obj->mt, 0);
                brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
             }
          }
@@ -252,7 +252,7 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
              _mesa_get_srgb_format_linear(mt->format) == mt->format)
                continue;
 
-         intel_miptree_resolve_color(brw, mt);
+         intel_miptree_resolve_color(brw, mt, 0);
          brw_render_cache_set_check_flush(brw, mt->bo);
       }
    }
@@ -1227,7 +1227,7 @@ intel_resolve_for_dri2_flush(struct brw_context *brw,
       if (rb == NULL || rb->mt == NULL)
          continue;
       if (rb->mt->num_samples <= 1)
-         intel_miptree_resolve_color(brw, rb->mt);
+         intel_miptree_resolve_color(brw, rb->mt, 0);
       else
          intel_renderbuffer_downsample(brw, rb);
    }
