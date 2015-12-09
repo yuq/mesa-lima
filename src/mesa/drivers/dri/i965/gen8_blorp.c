@@ -77,7 +77,7 @@ gen8_blorp_emit_surface_state(struct brw_context *brw,
       surf[6] = SET_FIELD(surface->mt->qpitch / 4, GEN8_SURFACE_AUX_QPITCH) |
                 SET_FIELD((surface->mt->mcs_mt->pitch / 128) - 1,
                           GEN8_SURFACE_AUX_PITCH) |
-                GEN8_SURFACE_AUX_MODE_MCS;
+                gen8_get_aux_mode(brw, mt);
    } else {
       surf[6] = 0;
    }

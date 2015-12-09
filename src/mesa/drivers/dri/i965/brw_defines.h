@@ -656,6 +656,7 @@
 #define GEN8_SURFACE_AUX_MODE_MCS               1
 #define GEN8_SURFACE_AUX_MODE_APPEND            2
 #define GEN8_SURFACE_AUX_MODE_HIZ               3
+#define GEN9_SURFACE_AUX_MODE_CCS_E             5
 
 /* Surface state DW7 */
 #define GEN9_SURFACE_RT_COMPRESSION_SHIFT       30

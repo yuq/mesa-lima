@@ -216,6 +216,9 @@ gen8_get_aux_mode(const struct brw_context *brw,
    if (brw->gen >= 9 || mt->num_samples == 1)
       assert(mt->halign == 16);
 
+   if (intel_miptree_is_lossless_compressed(brw, mt))
+      return GEN9_SURFACE_AUX_MODE_CCS_E;
+
    return GEN8_SURFACE_AUX_MODE_MCS;
 }
 
