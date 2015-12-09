@@ -471,6 +471,14 @@ struct glsl_type {
    }
 
    /**
+    * Query whether a double takes two slots.
+    */
+   bool is_dual_slot_double() const
+   {
+      return base_type == GLSL_TYPE_DOUBLE && vector_elements > 2;
+   }
+
+   /**
     * Query whether or not a type is a non-array boolean type
     */
    bool is_boolean() const

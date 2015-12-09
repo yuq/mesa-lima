@@ -81,13 +81,6 @@ is_shader_inout(ir_variable *var)
           var->data.mode == ir_var_system_value;
 }
 
-static inline bool
-is_dual_slot(ir_variable *var)
-{
-   const glsl_type *type = var->type->without_array();
-   return type == glsl_type::dvec4_type || type == glsl_type::dvec3_type;
-}
-
 static void
 mark(struct gl_program *prog, ir_variable *var, int offset, int len,
      gl_shader_stage stage)
@@ -101,7 +94,6 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
     */
 
    for (int i = 0; i < len; i++) {
-      bool dual_slot = is_dual_slot(var);
       int idx = var->data.location + var->data.index + offset + i;
       bool is_patch_generic = var->data.patch &&
                               idx != VARYING_SLOT_TESS_LEVEL_INNER &&
@@ -123,7 +115,7 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
          else
             prog->InputsRead |= bitfield;
 
-         if (dual_slot)
+         if (var->type->without_array()->is_dual_slot_double())
             prog->DoubleInputsRead |= bitfield;
          if (stage == MESA_SHADER_FRAGMENT) {
             gl_fragment_program *fprog = (gl_fragment_program *) prog;
