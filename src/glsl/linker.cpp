@@ -2603,17 +2603,8 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
              * issue (3) of the GL_ARB_vertex_attrib_64bit behavior, this
              * is optional behavior, but it seems preferable.
              */
-            const glsl_type *type = var->type->without_array();
-            if (type == glsl_type::dvec3_type ||
-                type == glsl_type::dvec4_type ||
-                type == glsl_type::dmat2x3_type ||
-                type == glsl_type::dmat2x4_type ||
-                type == glsl_type::dmat3_type ||
-                type == glsl_type::dmat3x4_type ||
-                type == glsl_type::dmat4x3_type ||
-                type == glsl_type::dmat4_type) {
+            if (var->type->without_array()->is_dual_slot_double())
                double_storage_locations |= (use_mask << attr);
-            }
 	 }
 
 	 continue;
