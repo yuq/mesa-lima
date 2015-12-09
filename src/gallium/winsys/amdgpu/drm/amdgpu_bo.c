@@ -229,6 +229,11 @@ static void *amdgpu_bo_map(struct pb_buffer *buf,
        return bo->user_ptr;
 
    r = amdgpu_bo_cpu_map(bo->bo, &cpu);
+   if (r) {
+      /* Clear the cache and try again. */
+      pb_cache_release_all_buffers(&bo->ws->bo_cache);
+      r = amdgpu_bo_cpu_map(bo->bo, &cpu);
+   }
    return r ? NULL : cpu;
 }
 
