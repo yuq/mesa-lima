@@ -1225,7 +1225,7 @@ NV50LoweringPreSSA::handleEXPORT(Instruction *i)
          i->setDef(0, new_LValue(func, FILE_GPR));
          i->getDef(0)->reg.data.id = id;
 
-         prog->maxGPR = MAX2(prog->maxGPR, id);
+         prog->maxGPR = MAX2(prog->maxGPR, id * 2);
       }
    }
    return true;

@@ -2532,6 +2532,7 @@ MemoryOpt::runOpt(BasicBlock *bb)
 class FlatteningPass : public Pass
 {
 private:
+   virtual bool visit(Function *);
    virtual bool visit(BasicBlock *);
 
    bool tryPredicateConditional(BasicBlock *);
@@ -2540,6 +2541,8 @@ private:
    inline bool isConstantCondition(Value *pred);
    inline bool mayPredicate(const Instruction *, const Value *pred) const;
    inline void removeFlow(Instruction *);
+
+   uint8_t gpr_unit;
 };
 
 bool
@@ -2561,9 +2564,15 @@ FlatteningPass::isConstantCondition(Value *pred)
          file = ld->src(0).getFile();
       } else {
          file = insn->src(s).getFile();
-         // catch $r63 on NVC0
-         if (file == FILE_GPR && insn->getSrc(s)->reg.data.id > prog->maxGPR)
-            file = FILE_IMMEDIATE;
+         // catch $r63 on NVC0 and $r63/$r127 on NV50. Unfortunately maxGPR is
+         // in register "units", which can vary between targets.
+         if (file == FILE_GPR) {
+            Value *v = insn->getSrc(s);
+            int bytes = v->reg.data.id * MIN2(v->reg.size, 4);
+            int units = bytes >> gpr_unit;
+            if (units > prog->maxGPR)
+               file = FILE_IMMEDIATE;
+         }
       }
       if (file != FILE_IMMEDIATE && file != FILE_MEMORY_CONST)
          return false;
@@ -2666,6 +2675,14 @@ FlatteningPass::tryPropagateBranch(BasicBlock *bb)
       if (bf->cfg.incidentCount() == 1)
          bf->remove(rep);
    }
+}
+
+bool
+FlatteningPass::visit(Function *fn)
+{
+   gpr_unit = prog->getTarget()->getFileUnit(FILE_GPR);
+
+   return true;
 }
 
 bool
