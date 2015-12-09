@@ -1184,6 +1184,8 @@ void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
 struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
                               gl_shader_stage stage);
+struct anv_state
+anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
                                       struct anv_render_pass *pass,

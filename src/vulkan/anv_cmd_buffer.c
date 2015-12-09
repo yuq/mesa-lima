@@ -927,6 +927,60 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
    return state;
 }
 
+struct anv_state
+anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_push_constants *data =
+      cmd_buffer->state.push_constants[MESA_SHADER_COMPUTE];
+   struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+   const struct brw_cs_prog_data *cs_prog_data = &pipeline->cs_prog_data;
+   const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
+
+   const unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
+   const unsigned push_constant_data_size =
+      (local_id_dwords + prog_data->nr_params) * sizeof(gl_constant_value);
+   const unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
+   const unsigned param_aligned_count =
+      reg_aligned_constant_size / sizeof(uint32_t);
+
+   /* If we don't actually have any push constants, bail. */
+   if (reg_aligned_constant_size == 0)
+      return (struct anv_state) { .offset = 0 };
+
+   const unsigned threads = pipeline->cs_thread_width_max;
+   const unsigned total_push_constants_size =
+      reg_aligned_constant_size * threads;
+   struct anv_state state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
+                                         total_push_constants_size,
+                                         32 /* bottom 5 bits MBZ */);
+
+   /* Walk through the param array and fill the buffer with data */
+   uint32_t *u32_map = state.map;
+
+   brw_cs_fill_local_id_payload(cs_prog_data, u32_map, threads,
+                                reg_aligned_constant_size);
+
+   /* Setup uniform data for the first thread */
+   for (unsigned i = 0; i < prog_data->nr_params; i++) {
+      uint32_t offset = (uintptr_t)prog_data->param[i];
+      u32_map[local_id_dwords + i] = *(uint32_t *)((uint8_t *)data + offset);
+   }
+
+   /* Copy uniform data from the first thread to every other thread */
+   const size_t uniform_data_size = prog_data->nr_params * sizeof(uint32_t);
+   for (unsigned t = 1; t < threads; t++) {
+      memcpy(&u32_map[t * param_aligned_count + local_id_dwords],
+             &u32_map[local_id_dwords],
+             uniform_data_size);
+   }
+
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(state);
+
+   return state;
+}
+
 void anv_CmdPushConstants(
     VkCommandBuffer                             commandBuffer,
     VkPipelineLayout                            layout,
