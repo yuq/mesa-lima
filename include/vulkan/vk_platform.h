@@ -92,24 +92,36 @@ extern "C"
     #endif
 #endif // !defined(VK_NO_STDINT_H)
 
-typedef uint64_t   VkDeviceSize;
-typedef uint32_t   VkBool32;
-
-typedef uint32_t   VkSampleMask;
-typedef uint32_t   VkFlags;
-
-#if (UINTPTR_MAX >= UINT64_MAX)
-    #define VK_UINTPTRLEAST64_MAX UINTPTR_MAX
-
-    typedef uintptr_t VkUintPtrLeast64;
-#else
-    #define VK_UINTPTRLEAST64_MAX UINT64_MAX
-
-    typedef uint64_t  VkUintPtrLeast64;
-#endif
-
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus
+
+// Platform-specific headers required by platform window system extensions.
+// These are enabled prior to #including "vulkan.h". The same enable then
+// controls inclusion of the extension interfaces in vulkan.h.
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+#include <android/native_window.h>
+#endif
+
+#ifdef VK_USE_PLATFORM_MIR_KHR
+#include <mir_toolkit/client_types.h>
+#endif
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#include <wayland-client.h>
+#endif
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+#include <windows.h>
+#endif
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+#include <X11/Xlib.h>
+#endif
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+#include <xcb/xcb.h>
+#endif
 
 #endif // __VK_PLATFORM_H__
