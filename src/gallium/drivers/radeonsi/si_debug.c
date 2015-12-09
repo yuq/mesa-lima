@@ -61,13 +61,16 @@ static void print_spaces(FILE *f, unsigned num)
 static void print_value(FILE *file, uint32_t value, int bits)
 {
 	/* Guess if it's int or float */
-	if (value <= (1 << 15))
-		fprintf(file, "%u\n", value);
-	else {
+	if (value <= (1 << 15)) {
+		if (value <= 9)
+			fprintf(file, "%u\n", value);
+		else
+			fprintf(file, "%u (0x%0*x)\n", value, bits / 4, value);
+	} else {
 		float f = uif(value);
 
 		if (fabs(f) < 100000 && f*10 == floor(f*10))
-			fprintf(file, "%.1ff\n", f);
+			fprintf(file, "%.1ff (0x%0*x)\n", f, bits / 4, value);
 		else
 			/* Don't print more leading zeros than there are bits. */
 			fprintf(file, "0x%0*x\n", bits / 4, value);
