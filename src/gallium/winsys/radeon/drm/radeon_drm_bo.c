@@ -767,8 +767,13 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     }
 
     bo = radeon_create_bo(ws, size, alignment, usage, domain, flags);
-    if (!bo)
-        return NULL;
+    if (!bo) {
+        /* Clear the cache and try again. */
+        pb_cache_release_all_buffers(&ws->bo_cache);
+        bo = radeon_create_bo(ws, size, alignment, usage, domain, flags);
+        if (!bo)
+            return NULL;
+    }
 
     bo->use_reusable_pool = use_reusable_pool;
 
