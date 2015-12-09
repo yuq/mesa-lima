@@ -32,7 +32,7 @@
  * may be set to "softpipe" or "llvmpipe" to override.
  *
  * With softpipe we could render directly into the user's buffer by using a
- * display target resource.  However, softpipe doesn't suport "upside-down"
+ * display target resource.  However, softpipe doesn't support "upside-down"
  * rendering which would be needed for the OSMESA_Y_UP=TRUE case.
  *
  * With llvmpipe we could only render directly into the user's buffer when its
