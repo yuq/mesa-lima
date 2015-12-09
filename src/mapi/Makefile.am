@@ -107,11 +107,15 @@ if HAVE_SPARC_ASM
 GLAPI_ASM_SOURCES = glapi/glapi_sparc.S
 endif
 
-glapi_libglapi_la_SOURCES = glapi/glapi_gentable.c
+glapi_libglapi_la_SOURCES =
 glapi_libglapi_la_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-I$(top_srcdir)/src/mapi/glapi \
 	-I$(top_srcdir)/src/mesa
+
+if HAVE_APPLEDRI
+glapi_libglapi_la_SOURCES += glapi/glapi_gentable.c
+endif
 
 if HAVE_SHARED_GLAPI
 glapi_libglapi_la_SOURCES += $(MAPI_BRIDGE_FILES) glapi/glapi_mapi_tmp.h
