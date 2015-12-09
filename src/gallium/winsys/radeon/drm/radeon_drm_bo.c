@@ -361,9 +361,16 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
     ptr = os_mmap(0, args.size, PROT_READ|PROT_WRITE, MAP_SHARED,
                bo->rws->fd, args.addr_ptr);
     if (ptr == MAP_FAILED) {
-        pipe_mutex_unlock(bo->map_mutex);
-        fprintf(stderr, "radeon: mmap failed, errno: %i\n", errno);
-        return NULL;
+        /* Clear the cache and try again. */
+        pb_cache_release_all_buffers(&bo->rws->bo_cache);
+
+        ptr = os_mmap(0, args.size, PROT_READ|PROT_WRITE, MAP_SHARED,
+                      bo->rws->fd, args.addr_ptr);
+        if (ptr == MAP_FAILED) {
+            pipe_mutex_unlock(bo->map_mutex);
+            fprintf(stderr, "radeon: mmap failed, errno: %i\n", errno);
+            return NULL;
+        }
     }
     bo->ptr = ptr;
     bo->map_count = 1;
