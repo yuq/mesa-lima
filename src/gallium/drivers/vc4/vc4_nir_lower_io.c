@@ -326,7 +326,8 @@ vc4_nir_lower_output(struct vc4_compile *c, nir_builder *b,
         /* Color output is lowered by vc4_nir_lower_blend(). */
         if (c->stage == QSTAGE_FRAG &&
             (output_var->data.location == FRAG_RESULT_COLOR ||
-             output_var->data.location == FRAG_RESULT_DATA0)) {
+             output_var->data.location == FRAG_RESULT_DATA0 ||
+             output_var->data.location == FRAG_RESULT_SAMPLE_MASK)) {
                 intr->const_index[0] *= 4;
                 return;
         }
