@@ -90,7 +90,7 @@ is_dual_slot(ir_variable *var)
 
 static void
 mark(struct gl_program *prog, ir_variable *var, int offset, int len,
-     bool is_fragment_shader)
+     gl_shader_stage stage)
 {
    /* As of GLSL 1.20, varyings can only be floats, floating-point
     * vectors or matrices, or arrays of them.  For Mesa programs using
@@ -125,7 +125,7 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
 
          if (dual_slot)
             prog->DoubleInputsRead |= bitfield;
-         if (is_fragment_shader) {
+         if (stage == MESA_SHADER_FRAGMENT) {
             gl_fragment_program *fprog = (gl_fragment_program *) prog;
             fprog->InterpQualifier[idx] =
                (glsl_interp_qualifier) var->data.interpolation;
@@ -178,7 +178,7 @@ ir_set_program_inouts_visitor::mark_whole_variable(ir_variable *var)
    }
 
    mark(this->prog, var, 0, type->count_attribute_slots(),
-        this->shader_stage == MESA_SHADER_FRAGMENT);
+        this->shader_stage);
 }
 
 /* Default handler: Mark all the locations in the variable as used. */
@@ -302,7 +302,7 @@ ir_set_program_inouts_visitor::try_mark_partial_variable(ir_variable *var,
    }
 
    mark(this->prog, var, index_as_constant->value.u[0] * elem_width,
-        elem_width, this->shader_stage == MESA_SHADER_FRAGMENT);
+        elem_width, this->shader_stage);
    return true;
 }
 
