@@ -60,22 +60,28 @@
 
 /**
  * Helper to warn of possible performance issues, such as frequently
- * updating a buffer created with GL_STATIC_DRAW.
+ * updating a buffer created with GL_STATIC_DRAW.  Called via the macro
+ * below.
  */
 static void
-buffer_usage_warning(struct gl_context *ctx, const char *fmt, ...)
+buffer_usage_warning(struct gl_context *ctx, GLuint *id, const char *fmt, ...)
 {
    va_list args;
-   GLuint msg_id = 0;
 
    va_start(args, fmt);
-   _mesa_gl_vdebug(ctx, &msg_id,
+   _mesa_gl_vdebug(ctx, id,
                    MESA_DEBUG_SOURCE_API,
                    MESA_DEBUG_TYPE_PERFORMANCE,
                    MESA_DEBUG_SEVERITY_MEDIUM,
                    fmt, args);
    va_end(args);
 }
+
+#define BUFFER_USAGE_WARNING(CTX, FMT, ...) \
+   do { \
+      static GLuint id = 0; \
+      buffer_usage_warning(CTX, &id, FMT, ##__VA_ARGS__); \
+   } while (0)
 
 
 /**
@@ -1713,7 +1719,7 @@ _mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
       /* If the application declared the buffer as static draw/copy or stream
        * draw, it should not be frequently modified with glBufferSubData.
        */
-      buffer_usage_warning(ctx,
+      BUFFER_USAGE_WARNING(ctx,
                            "using %s(buffer %u, offset %u, size %u) to "
                            "update a %s buffer",
                            func, bufObj->Name, offset, size,
@@ -2432,7 +2438,7 @@ _mesa_map_buffer_range(struct gl_context *ctx,
       if ((bufObj->Usage == GL_STATIC_DRAW ||
            bufObj->Usage == GL_STATIC_COPY) &&
           bufObj->NumMapBufferWriteCalls >= BUFFER_WARNING_CALL_COUNT) {
-         buffer_usage_warning(ctx,
+         BUFFER_USAGE_WARNING(ctx,
                               "using %s(buffer %u, offset %u, length %u) to "
                               "update a %s buffer",
                               func, bufObj->Name, offset, length,
