@@ -105,10 +105,10 @@ struct lp_setup_context
    float pixel_offset;
    float line_width;
    float point_size;
-   float psize;
-   unsigned viewport_index_slot;
-   unsigned layer_slot;
-   int face_slot;
+   uint8_t psize_slot;
+   uint8_t viewport_index_slot;
+   uint8_t layer_slot;
+   uint8_t face_slot;
 
    struct pipe_framebuffer_state fb;
    struct u_rect framebuffer;

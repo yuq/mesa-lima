@@ -108,22 +108,28 @@ struct llvmpipe_context {
    struct vertex_info vertex_info;
    
    /** Which vertex shader output slot contains color */
-   int color_slot[2];
+   uint8_t color_slot[2];
 
    /** Which vertex shader output slot contains bcolor */
-   int bcolor_slot[2];
+   uint8_t bcolor_slot[2];
 
    /** Which vertex shader output slot contains point size */
-   int psize_slot;
+   uint8_t psize_slot;
 
    /** Which vertex shader output slot contains viewport index */
-   int viewport_index_slot;
+   uint8_t viewport_index_slot;
 
    /** Which geometry shader output slot contains layer */
-   int layer_slot;
+   uint8_t layer_slot;
 
    /** A fake frontface output for unfilled primitives */
-   int face_slot;
+   uint8_t face_slot;
+
+   /** Which output slot is used for the fake vp index info */
+   uint8_t fake_vpindex_slot;
+
+   /** Which output slot is used for the fake layer info */
+   uint8_t fake_layer_slot;
 
    /** Depth format and bias settings. */
    boolean floating_point_depth;

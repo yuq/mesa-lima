@@ -328,7 +328,7 @@ try_setup_point( struct lp_setup_context *setup,
    struct llvmpipe_context *lp_context = (struct llvmpipe_context *)setup->pipe;
    /* x/y positions in fixed point */
    const struct lp_setup_variant_key *key = &setup->setup.variant->key;
-   const int sizeAttr = setup->psize;
+   const int sizeAttr = setup->psize_slot;
    const float size
       = (setup->point_size_per_vertex && sizeAttr > 0) ? v0[sizeAttr][0]
       : setup->point_size;
