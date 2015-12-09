@@ -115,8 +115,6 @@ public:
     */
    dst_reg output_reg[BRW_VARYING_SLOT_COUNT];
    const char *output_reg_annotation[BRW_VARYING_SLOT_COUNT];
-   int *uniform_size;
-   int uniform_array_size; /*< Size of the uniform_size array */
    int uniforms;
 
    src_reg shader_start_time;
