@@ -539,11 +539,18 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
       SVGA3dSurfaceFormat indexFormat = xlate_index_format(range->indexWidth);
 
       /* setup index buffer */
-      ret = SVGA3D_vgpu10_SetIndexBuffer(svga->swc, ib_handle,
-                                         indexFormat,
-                                         range->indexArray.offset);
-      if (ret != PIPE_OK)
-         return ret;
+      if (ib_handle != svga->state.hw_draw.ib ||
+          indexFormat != svga->state.hw_draw.ib_format ||
+          range->indexArray.offset != svga->state.hw_draw.ib_offset) {
+         ret = SVGA3D_vgpu10_SetIndexBuffer(svga->swc, ib_handle,
+                                            indexFormat,
+                                            range->indexArray.offset);
+         if (ret != PIPE_OK)
+            return ret;
+         svga->state.hw_draw.ib = ib_handle;
+         svga->state.hw_draw.ib_format = indexFormat;
+         svga->state.hw_draw.ib_offset = range->indexArray.offset;
+      }
 
       if (instance_count > 1) {
          ret = SVGA3D_vgpu10_DrawIndexedInstanced(svga->swc,
