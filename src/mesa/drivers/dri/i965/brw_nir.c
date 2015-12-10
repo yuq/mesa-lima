@@ -178,8 +178,9 @@ brw_nir_lower_inputs(nir_shader *nir,
          }
       }
       break;
+   case MESA_SHADER_TESS_CTRL:
    case MESA_SHADER_GEOMETRY: {
-      if (!is_scalar) {
+      if (!is_scalar && nir->stage == MESA_SHADER_GEOMETRY) {
          foreach_list_typed(nir_variable, var, node, &nir->inputs) {
             var->data.driver_location = var->data.location;
          }
@@ -243,6 +244,7 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
 {
    switch (nir->stage) {
    case MESA_SHADER_VERTEX:
+   case MESA_SHADER_TESS_EVAL:
    case MESA_SHADER_GEOMETRY:
       if (is_scalar) {
          nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
