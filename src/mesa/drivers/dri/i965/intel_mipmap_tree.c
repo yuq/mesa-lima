@@ -1449,6 +1449,27 @@ intel_miptree_copy_teximage(struct brw_context *brw,
    intel_obj->needs_validate = true;
 }
 
+static void
+intel_miptree_init_mcs(struct brw_context *brw,
+                       struct intel_mipmap_tree *mt,
+                       int init_value)
+{
+   /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
+    *
+    *     When MCS buffer is enabled and bound to MSRT, it is required that it
+    *     is cleared prior to any rendering.
+    *
+    * Since we don't use the MCS buffer for any purpose other than rendering,
+    * it makes sense to just clear it immediately upon allocation.
+    *
+    * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
+    */
+   void *data = intel_miptree_map_raw(brw, mt->mcs_mt);
+   memset(data, init_value, mt->mcs_mt->total_height * mt->mcs_mt->pitch);
+   intel_miptree_unmap_raw(mt->mcs_mt);
+   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
+}
+
 static bool
 intel_miptree_alloc_mcs(struct brw_context *brw,
                         struct intel_mipmap_tree *mt,
@@ -1505,20 +1526,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
                                0 /* num_samples */,
                                mcs_flags);
 
-   /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
-    *
-    *     When MCS buffer is enabled and bound to MSRT, it is required that it
-    *     is cleared prior to any rendering.
-    *
-    * Since we don't use the MCS buffer for any purpose other than rendering,
-    * it makes sense to just clear it immediately upon allocation.
-    *
-    * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
-    */
-   void *data = intel_miptree_map_raw(brw, mt->mcs_mt);
-   memset(data, 0xff, mt->mcs_mt->total_height * mt->mcs_mt->pitch);
-   intel_miptree_unmap_raw(mt->mcs_mt);
-   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
+   intel_miptree_init_mcs(brw, mt, 0xFF);
 
    return mt->mcs_mt;
 }
