@@ -1671,7 +1671,8 @@ fs_visitor::assign_vs_urb_setup()
 
    assert(stage == MESA_SHADER_VERTEX);
    int count = _mesa_bitcount_64(vs_prog_data->inputs_read);
-   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid)
+   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid ||
+       vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       count++;
 
    /* Each attribute is 4 regs. */

@@ -491,9 +491,9 @@ brw_try_draw_prims(struct gl_context *ctx,
          }
       }
 
-      brw->draw.gl_basevertex =
+      brw->draw.params.gl_basevertex =
          prims[i].indexed ? prims[i].basevertex : prims[i].start;
-
+      brw->draw.params.gl_baseinstance = prims[i].base_instance;
       drm_intel_bo_unreference(brw->draw.draw_params_bo);
 
       if (prims[i].is_indirect) {

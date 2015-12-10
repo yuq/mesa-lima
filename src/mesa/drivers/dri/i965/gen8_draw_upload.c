@@ -115,7 +115,11 @@ gen8_emit_vertices(struct brw_context *brw)
    }
 
    /* Now emit 3DSTATE_VERTEX_BUFFERS and 3DSTATE_VERTEX_ELEMENTS packets. */
-   unsigned nr_buffers = brw->vb.nr_buffers + brw->vs.prog_data->uses_vertexid;
+   const bool uses_draw_params =
+      brw->vs.prog_data->uses_basevertex ||
+      brw->vs.prog_data->uses_baseinstance;
+   const unsigned nr_buffers = brw->vb.nr_buffers + uses_draw_params;
+
    if (nr_buffers) {
       assert(nr_buffers <= 33);
 
@@ -135,7 +139,7 @@ gen8_emit_vertices(struct brw_context *brw)
          OUT_BATCH(buffer->bo->size);
       }
 
-      if (brw->vs.prog_data->uses_vertexid) {
+      if (uses_draw_params) {
          OUT_BATCH(brw->vb.nr_buffers << GEN6_VB0_INDEX_SHIFT |
                    GEN7_VB0_ADDRESS_MODIFYENABLE |
                    mocs_wb << 16);
@@ -148,16 +152,18 @@ gen8_emit_vertices(struct brw_context *brw)
 
    /* Normally we don't need an element for the SGVS attribute because the
     * 3DSTATE_VF_SGVS instruction lets you store the generated attribute in an
-    * element that is past the list in 3DSTATE_VERTEX_ELEMENTS. However if the
-    * vertex ID is used then it needs an element for the base vertex buffer.
-    * Additionally if there is an edge flag element then the SGVS can't be
-    * inserted past that so we need a dummy element to ensure that the edge
-    * flag is the last one.
+    * element that is past the list in 3DSTATE_VERTEX_ELEMENTS. However if
+    * we're using draw parameters then we need an element for the those
+    * values.  Additionally if there is an edge flag element then the SGVS
+    * can't be inserted past that so we need a dummy element to ensure that
+    * the edge flag is the last one.
     */
-   bool needs_sgvs_element = (brw->vs.prog_data->uses_vertexid ||
-                              (brw->vs.prog_data->uses_instanceid &&
-                               uses_edge_flag));
-   unsigned nr_elements = brw->vb.nr_enabled + needs_sgvs_element;
+   const bool needs_sgvs_element = (brw->vs.prog_data->uses_basevertex ||
+                                    brw->vs.prog_data->uses_baseinstance ||
+                                    ((brw->vs.prog_data->uses_instanceid ||
+                                      brw->vs.prog_data->uses_vertexid) &&
+                                     uses_edge_flag));
+   const unsigned nr_elements = brw->vb.nr_enabled + needs_sgvs_element;
 
    /* The hardware allows one more VERTEX_ELEMENTS than VERTEX_BUFFERS,
     * presumably for VertexID/InstanceID.
@@ -212,12 +218,13 @@ gen8_emit_vertices(struct brw_context *brw)
    }
 
    if (needs_sgvs_element) {
-      if (brw->vs.prog_data->uses_vertexid) {
+      if (brw->vs.prog_data->uses_basevertex ||
+          brw->vs.prog_data->uses_baseinstance) {
          OUT_BATCH(GEN6_VE0_VALID |
                    brw->vb.nr_buffers << GEN6_VE0_INDEX_SHIFT |
-                   BRW_SURFACEFORMAT_R32_UINT << BRW_VE0_FORMAT_SHIFT);
+                   BRW_SURFACEFORMAT_R32G32_UINT << BRW_VE0_FORMAT_SHIFT);
          OUT_BATCH((BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_0_SHIFT) |
-                   (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_1_SHIFT) |
+                   (BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_1_SHIFT) |
                    (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_2_SHIFT) |
                    (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_3_SHIFT));
       } else {

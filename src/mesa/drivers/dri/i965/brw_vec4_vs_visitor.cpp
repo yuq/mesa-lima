@@ -155,7 +155,11 @@ vec4_vs_visitor::make_reg_for_system_value(int location,
    switch (location) {
    case SYSTEM_VALUE_BASE_VERTEX:
       reg->writemask = WRITEMASK_X;
-      vs_prog_data->uses_vertexid = true;
+      vs_prog_data->uses_basevertex = true;
+      break;
+   case SYSTEM_VALUE_BASE_INSTANCE:
+      reg->writemask = WRITEMASK_Y;
+      vs_prog_data->uses_baseinstance = true;
       break;
    case SYSTEM_VALUE_VERTEX_ID:
    case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:

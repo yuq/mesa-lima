@@ -909,8 +909,13 @@ struct brw_context
    uint32_t pma_stall_bits;
 
    struct {
-      /** The value of gl_BaseVertex for the current _mesa_prim. */
-      int gl_basevertex;
+      struct {
+         /** The value of gl_BaseVertex for the current _mesa_prim. */
+         int gl_basevertex;
+
+         /** The value of gl_BaseInstance for the current _mesa_prim. */
+         int gl_baseinstance;
+      } params;
 
       /**
        * Buffer and offset used for GL_ARB_shader_draw_parameters

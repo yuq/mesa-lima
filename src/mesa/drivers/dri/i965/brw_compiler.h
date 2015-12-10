@@ -595,6 +595,8 @@ struct brw_vs_prog_data {
 
    bool uses_vertexid;
    bool uses_instanceid;
+   bool uses_basevertex;
+   bool uses_baseinstance;
 };
 
 struct brw_tcs_prog_data

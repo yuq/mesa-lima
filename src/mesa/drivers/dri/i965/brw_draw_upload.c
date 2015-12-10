@@ -592,8 +592,10 @@ void
 brw_prepare_shader_draw_parameters(struct brw_context *brw)
 {
    /* For non-indirect draws, upload gl_BaseVertex. */
-   if (brw->vs.prog_data->uses_vertexid && brw->draw.draw_params_bo == NULL) {
-      intel_upload_data(brw, &brw->draw.gl_basevertex, 4, 4,
+   if ((brw->vs.prog_data->uses_basevertex ||
+        brw->vs.prog_data->uses_baseinstance) &&
+       brw->draw.draw_params_bo == NULL) {
+      intel_upload_data(brw, &brw->draw.params, sizeof(brw->draw.params), 4,
 			&brw->draw.draw_params_bo,
                         &brw->draw.draw_params_offset);
    }
@@ -658,7 +660,8 @@ brw_emit_vertices(struct brw_context *brw)
    brw_emit_query_begin(brw);
 
    unsigned nr_elements = brw->vb.nr_enabled;
-   if (brw->vs.prog_data->uses_vertexid || brw->vs.prog_data->uses_instanceid)
+   if (brw->vs.prog_data->uses_vertexid || brw->vs.prog_data->uses_instanceid ||
+       brw->vs.prog_data->uses_basevertex || brw->vs.prog_data->uses_baseinstance)
       ++nr_elements;
 
    /* If the VS doesn't read any inputs (calculating vertex position from
@@ -693,8 +696,10 @@ brw_emit_vertices(struct brw_context *brw)
    /* Now emit VB and VEP state packets.
     */
 
-   unsigned nr_buffers =
-      brw->vb.nr_buffers + brw->vs.prog_data->uses_vertexid;
+   const bool uses_draw_params =
+      brw->vs.prog_data->uses_basevertex ||
+      brw->vs.prog_data->uses_baseinstance;
+   const unsigned nr_buffers = brw->vb.nr_buffers + uses_draw_params;
 
    if (nr_buffers) {
       if (brw->gen >= 6) {
@@ -713,7 +718,7 @@ brw_emit_vertices(struct brw_context *brw)
 
       }
 
-      if (brw->vs.prog_data->uses_vertexid) {
+      if (uses_draw_params) {
          EMIT_VERTEX_BUFFER_STATE(brw, brw->vb.nr_buffers,
                                   brw->draw.draw_params_bo,
                                   brw->draw.draw_params_bo->size - 1,
@@ -790,21 +795,25 @@ brw_emit_vertices(struct brw_context *brw)
                     ((i * 4) << BRW_VE1_DST_OFFSET_SHIFT));
    }
 
-   if (brw->vs.prog_data->uses_vertexid || brw->vs.prog_data->uses_instanceid) {
+   if (brw->vs.prog_data->uses_vertexid || brw->vs.prog_data->uses_instanceid ||
+       brw->vs.prog_data->uses_basevertex || brw->vs.prog_data->uses_baseinstance) {
       uint32_t dw0 = 0, dw1 = 0;
       uint32_t comp0 = BRW_VE1_COMPONENT_STORE_0;
       uint32_t comp1 = BRW_VE1_COMPONENT_STORE_0;
       uint32_t comp2 = BRW_VE1_COMPONENT_STORE_0;
       uint32_t comp3 = BRW_VE1_COMPONENT_STORE_0;
 
-      if (brw->vs.prog_data->uses_vertexid) {
+      if (brw->vs.prog_data->uses_basevertex)
          comp0 = BRW_VE1_COMPONENT_STORE_SRC;
-         comp2 = BRW_VE1_COMPONENT_STORE_VID;
-      }
 
-      if (brw->vs.prog_data->uses_instanceid) {
+      if (brw->vs.prog_data->uses_baseinstance)
+         comp1 = BRW_VE1_COMPONENT_STORE_SRC;
+
+      if (brw->vs.prog_data->uses_vertexid)
+         comp2 = BRW_VE1_COMPONENT_STORE_VID;
+
+      if (brw->vs.prog_data->uses_instanceid)
          comp3 = BRW_VE1_COMPONENT_STORE_IID;
-      }
 
       dw1 = (comp0 << BRW_VE1_COMPONENT_0_SHIFT) |
             (comp1 << BRW_VE1_COMPONENT_1_SHIFT) |
@@ -814,11 +823,11 @@ brw_emit_vertices(struct brw_context *brw)
       if (brw->gen >= 6) {
          dw0 |= GEN6_VE0_VALID |
                 brw->vb.nr_buffers << GEN6_VE0_INDEX_SHIFT |
-                BRW_SURFACEFORMAT_R32_UINT << BRW_VE0_FORMAT_SHIFT;
+                BRW_SURFACEFORMAT_R32G32_UINT << BRW_VE0_FORMAT_SHIFT;
       } else {
          dw0 |= BRW_VE0_VALID |
                 brw->vb.nr_buffers << BRW_VE0_INDEX_SHIFT |
-                BRW_SURFACEFORMAT_R32_UINT << BRW_VE0_FORMAT_SHIFT;
+                BRW_SURFACEFORMAT_R32G32_UINT << BRW_VE0_FORMAT_SHIFT;
 	 dw1 |= (i * 4) << BRW_VE1_DST_OFFSET_SHIFT;
       }
 
