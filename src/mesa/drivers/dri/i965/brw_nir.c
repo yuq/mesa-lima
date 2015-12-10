@@ -135,6 +135,61 @@ remap_inputs_with_vue_map(nir_block *block, void *closure)
    return true;
 }
 
+struct remap_patch_urb_offsets_state {
+   nir_builder b;
+   struct brw_vue_map vue_map;
+};
+
+static bool
+remap_patch_urb_offsets(nir_block *block, void *closure)
+{
+   struct remap_patch_urb_offsets_state *state = closure;
+
+   nir_foreach_instr_safe(block, instr) {
+      if (instr->type != nir_instr_type_intrinsic)
+         continue;
+
+      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+      gl_shader_stage stage = state->b.shader->stage;
+
+      if ((stage == MESA_SHADER_TESS_CTRL && is_output(intrin)) ||
+          (stage == MESA_SHADER_TESS_EVAL && is_input(intrin))) {
+         int vue_slot = state->vue_map.varying_to_slot[intrin->const_index[0]];
+         assert(vue_slot != -1);
+         intrin->const_index[0] = vue_slot;
+
+         nir_src *vertex = nir_get_io_vertex_index_src(intrin);
+         if (vertex) {
+            nir_const_value *const_vertex = nir_src_as_const_value(*vertex);
+            if (const_vertex) {
+               intrin->const_index[0] += const_vertex->u[0] *
+                                         state->vue_map.num_per_vertex_slots;
+            } else {
+               state->b.cursor = nir_before_instr(&intrin->instr);
+
+               /* Multiply by the number of per-vertex slots. */
+               nir_ssa_def *vertex_offset =
+                  nir_imul(&state->b,
+                           nir_ssa_for_src(&state->b, *vertex, 1),
+                           nir_imm_int(&state->b,
+                                       state->vue_map.num_per_vertex_slots));
+
+               /* Add it to the existing offset */
+               nir_src *offset = nir_get_io_offset_src(intrin);
+               nir_ssa_def *total_offset =
+                  nir_iadd(&state->b, vertex_offset,
+                           nir_ssa_for_src(&state->b, *offset, 1));
+
+               nir_instr_rewrite_src(&intrin->instr, offset,
+                                     nir_src_for_ssa(total_offset));
+            }
+         }
+      }
+   }
+   return true;
+}
+
 static void
 brw_nir_lower_inputs(nir_shader *nir,
                      const struct brw_device_info *devinfo,
@@ -225,6 +280,31 @@ brw_nir_lower_inputs(nir_shader *nir,
       }
       break;
    }
+   case MESA_SHADER_TESS_EVAL: {
+      struct remap_patch_urb_offsets_state state;
+      brw_compute_tess_vue_map(&state.vue_map,
+                               nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
+                               nir->info.patch_inputs_read);
+
+      foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+         var->data.driver_location = var->data.location;
+      }
+
+      nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+
+      /* This pass needs actual constants */
+      nir_opt_constant_folding(nir);
+
+      nir_foreach_overload(nir, overload) {
+         if (overload->impl) {
+            nir_builder_init(&params.b, overload->impl);
+            nir_foreach_block(overload->impl, add_const_offset_to_base, &params);
+            nir_builder_init(&state.b, overload->impl);
+            nir_foreach_block(overload->impl, remap_patch_urb_offsets, &state);
+         }
+      }
+      break;
+   }
    case MESA_SHADER_FRAGMENT:
       assert(is_scalar);
       nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
@@ -240,7 +320,9 @@ brw_nir_lower_inputs(nir_shader *nir,
 }
 
 static void
-brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
+brw_nir_lower_outputs(nir_shader *nir,
+                      const struct brw_device_info *devinfo,
+                      bool is_scalar)
 {
    switch (nir->stage) {
    case MESA_SHADER_VERTEX:
@@ -255,6 +337,34 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
             var->data.driver_location = var->data.location;
       }
       break;
+   case MESA_SHADER_TESS_CTRL: {
+      struct add_const_offset_to_base_params params = {
+         .mode = nir_var_shader_out
+      };
+
+      struct remap_patch_urb_offsets_state state;
+      brw_compute_tess_vue_map(&state.vue_map, nir->info.outputs_written,
+                               nir->info.patch_outputs_written);
+
+      nir_foreach_variable(var, &nir->outputs) {
+         var->data.driver_location = var->data.location;
+      }
+
+      nir_lower_io(nir, nir_var_shader_out, type_size_vec4);
+
+      /* This pass needs actual constants */
+      nir_opt_constant_folding(nir);
+
+      nir_foreach_overload(nir, overload) {
+         if (overload->impl) {
+            nir_builder_init(&params.b, overload->impl);
+            nir_foreach_block(overload->impl, add_const_offset_to_base, &params);
+            nir_builder_init(&state.b, overload->impl);
+            nir_foreach_block(overload->impl, remap_patch_urb_offsets, &state);
+         }
+      }
+      break;
+   }
    case MESA_SHADER_FRAGMENT:
       nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
                                type_size_scalar);
@@ -422,7 +532,7 @@ brw_lower_nir(nir_shader *nir,
    (void)progress;
 
    OPT_V(brw_nir_lower_inputs, devinfo, is_scalar);
-   OPT_V(brw_nir_lower_outputs, is_scalar);
+   OPT_V(brw_nir_lower_outputs, devinfo, is_scalar);
    OPT_V(brw_nir_lower_uniforms, is_scalar);
    OPT_V(nir_lower_io, nir_var_all, is_scalar ? type_size_scalar : type_size_vec4);
 
