@@ -46,6 +46,7 @@ fs_visitor::emit_vs_system_value(int location)
       vs_prog_data->uses_vertexid = true;
       break;
    case SYSTEM_VALUE_VERTEX_ID:
+      unreachable("should have been lowered");
    case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
       reg->reg_offset = 2;
       vs_prog_data->uses_vertexid = true;
