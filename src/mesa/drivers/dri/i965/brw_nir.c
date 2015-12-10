@@ -257,7 +257,8 @@ brw_nir_lower_inputs(nir_shader *nir,
          GLbitfield64 inputs_read =
             nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
          brw_compute_vue_map(devinfo, &input_vue_map, inputs_read,
-                             nir->info.separate_shader);
+                             nir->info.separate_shader ||
+                             nir->stage == MESA_SHADER_TESS_CTRL);
 
          foreach_list_typed(nir_variable, var, node, &nir->inputs) {
             var->data.driver_location = var->data.location;
