@@ -1674,6 +1674,8 @@ fs_visitor::assign_vs_urb_setup()
    if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid ||
        vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       count++;
+   if (vs_prog_data->uses_drawid)
+      count++;
 
    /* Each attribute is 4 regs. */
    this->first_non_payload_grf += 4 * vs_prog_data->nr_attributes;

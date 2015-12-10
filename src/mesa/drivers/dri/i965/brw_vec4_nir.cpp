@@ -85,6 +85,13 @@ vec4_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
                                            glsl_type::int_type);
       break;
 
+   case nir_intrinsic_load_draw_id:
+      reg = &nir_system_values[SYSTEM_VALUE_DRAW_ID];
+      if (reg->file == BAD_FILE)
+         *reg = *make_reg_for_system_value(SYSTEM_VALUE_DRAW_ID,
+                                           glsl_type::int_type);
+      break;
+
    default:
       break;
    }
@@ -677,6 +684,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_load_base_vertex:
    case nir_intrinsic_load_instance_id:
    case nir_intrinsic_load_base_instance:
+   case nir_intrinsic_load_draw_id:
    case nir_intrinsic_load_invocation_id:
    case nir_intrinsic_load_tess_level_inner:
    case nir_intrinsic_load_tess_level_outer: {

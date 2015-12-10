@@ -118,7 +118,8 @@ gen8_emit_vertices(struct brw_context *brw)
    const bool uses_draw_params =
       brw->vs.prog_data->uses_basevertex ||
       brw->vs.prog_data->uses_baseinstance;
-   const unsigned nr_buffers = brw->vb.nr_buffers + uses_draw_params;
+   const unsigned nr_buffers = brw->vb.nr_buffers +
+      uses_draw_params + brw->vs.prog_data->uses_drawid;
 
    if (nr_buffers) {
       assert(nr_buffers <= 33);
@@ -147,6 +148,15 @@ gen8_emit_vertices(struct brw_context *brw)
                      brw->draw.draw_params_offset);
          OUT_BATCH(brw->draw.draw_params_bo->size);
       }
+
+      if (brw->vs.prog_data->uses_drawid) {
+         OUT_BATCH((brw->vb.nr_buffers + 1) << GEN6_VB0_INDEX_SHIFT |
+                   GEN7_VB0_ADDRESS_MODIFYENABLE |
+                   mocs_wb << 16);
+         OUT_RELOC64(brw->draw.draw_id_bo, I915_GEM_DOMAIN_VERTEX, 0,
+                     brw->draw.draw_id_offset);
+         OUT_BATCH(brw->draw.draw_id_bo->size);
+      }
       ADVANCE_BATCH();
    }
 
@@ -163,7 +173,8 @@ gen8_emit_vertices(struct brw_context *brw)
                                     ((brw->vs.prog_data->uses_instanceid ||
                                       brw->vs.prog_data->uses_vertexid) &&
                                      uses_edge_flag));
-   const unsigned nr_elements = brw->vb.nr_enabled + needs_sgvs_element;
+   const unsigned nr_elements =
+      brw->vb.nr_enabled + needs_sgvs_element + brw->vs.prog_data->uses_drawid;
 
    /* The hardware allows one more VERTEX_ELEMENTS than VERTEX_BUFFERS,
     * presumably for VertexID/InstanceID.
@@ -236,6 +247,16 @@ gen8_emit_vertices(struct brw_context *brw)
       }
    }
 
+   if (brw->vs.prog_data->uses_drawid) {
+      OUT_BATCH(GEN6_VE0_VALID |
+                ((brw->vb.nr_buffers + 1) << GEN6_VE0_INDEX_SHIFT) |
+                (BRW_SURFACEFORMAT_R32_UINT << BRW_VE0_FORMAT_SHIFT));
+      OUT_BATCH((BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_0_SHIFT) |
+                   (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_1_SHIFT) |
+                   (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_2_SHIFT) |
+                   (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_3_SHIFT));
+   }
+
    if (gen6_edgeflag_input) {
       uint32_t format =
          brw_get_vertex_surface_type(brw, gen6_edgeflag_input->glarray);
@@ -271,6 +292,15 @@ gen8_emit_vertices(struct brw_context *brw)
       OUT_BATCH(element_index |
                 (buffer->step_rate ? GEN8_VF_INSTANCING_ENABLE : 0));
       OUT_BATCH(buffer->step_rate);
+      ADVANCE_BATCH();
+   }
+
+   if (brw->vs.prog_data->uses_drawid) {
+      const unsigned element = brw->vb.nr_enabled + needs_sgvs_element;
+      BEGIN_BATCH(3);
+      OUT_BATCH(_3DSTATE_VF_INSTANCING << 16 | (3 - 2));
+      OUT_BATCH(element);
+      OUT_BATCH(0);
       ADVANCE_BATCH();
    }
 }

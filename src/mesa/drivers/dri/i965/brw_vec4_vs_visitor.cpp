@@ -170,6 +170,11 @@ vec4_vs_visitor::make_reg_for_system_value(int location,
       reg->writemask = WRITEMASK_W;
       vs_prog_data->uses_instanceid = true;
       break;
+   case SYSTEM_VALUE_DRAW_ID:
+      reg = new(mem_ctx) dst_reg(ATTR, VERT_ATTRIB_MAX + 1);
+      reg->writemask = WRITEMASK_X;
+      vs_prog_data->uses_drawid = true;
+      break;
    default:
       unreachable("not reached");
    }

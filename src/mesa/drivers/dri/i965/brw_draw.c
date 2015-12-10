@@ -511,6 +511,18 @@ brw_try_draw_prims(struct gl_context *ctx,
          brw->draw.draw_params_offset = 0;
       }
 
+      /* gl_DrawID always needs its own vertex buffer since it's not part of
+       * the indirect parameter buffer. If the program uses gl_DrawID we need
+       * to flag BRW_NEW_VERTICES. For the first iteration, we don't have
+       * valid brw->vs.prog_data, but we always flag BRW_NEW_VERTICES before
+       * the loop.
+       */
+      brw->draw.gl_drawid = prims[i].draw_id;
+      drm_intel_bo_unreference(brw->draw.draw_id_bo);
+      brw->draw.draw_id_bo = NULL;
+      if (i > 0 && brw->vs.prog_data->uses_drawid)
+         brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
+
       if (brw->gen < 6)
 	 brw_set_prim(brw, &prims[i]);
       else
