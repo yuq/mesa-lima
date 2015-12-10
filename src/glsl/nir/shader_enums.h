@@ -379,6 +379,26 @@ typedef enum
     * \sa SYSTEM_VALUE_VERTEX_ID, SYSTEM_VALUE_VERTEX_ID_ZERO_BASE
     */
    SYSTEM_VALUE_BASE_VERTEX,
+
+   /**
+    * Value of \c baseinstance passed to instanced draw entry points
+    *
+    * \sa SYSTEM_VALUE_INSTANCE_ID
+    */
+   SYSTEM_VALUE_BASE_INSTANCE,
+
+   /**
+    * From _ARB_shader_draw_parameters:
+    *
+    *   "Additionally, this extension adds a further built-in variable,
+    *    gl_DrawID to the shading language. This variable contains the index
+    *    of the draw currently being processed by a Multi* variant of a
+    *    drawing command (such as MultiDrawElements or
+    *    MultiDrawArraysIndirect)."
+    *
+    * If GL_ARB_multi_draw_indirect is not supported, this is always 0.
+    */
+   SYSTEM_VALUE_DRAW_ID,
    /*@}*/
 
    /**

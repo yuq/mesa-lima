@@ -96,6 +96,7 @@ EXT(ARB_separate_shader_objects             , dummy_true                        
 EXT(ARB_shader_atomic_counters              , ARB_shader_atomic_counters             , GLL, GLC,  x ,  x , 2011)
 EXT(ARB_shader_bit_encoding                 , ARB_shader_bit_encoding                , GLL, GLC,  x ,  x , 2010)
 EXT(ARB_shader_clock                        , ARB_shader_clock                       , GLL, GLC,  x ,  x , 2015)
+EXT(ARB_shader_draw_parameters              , ARB_shader_draw_parameters             , GLL, GLC,  x ,  x , 2013)
 EXT(ARB_shader_image_load_store             , ARB_shader_image_load_store            , GLL, GLC,  x ,  x , 2011)
 EXT(ARB_shader_image_size                   , ARB_shader_image_size                  , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_shader_objects                      , dummy_true                             , GLL, GLC,  x ,  x , 2002)
