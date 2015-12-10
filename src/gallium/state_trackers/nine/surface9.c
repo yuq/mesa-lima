@@ -56,6 +56,9 @@ NineSurface9_ctor( struct NineSurface9 *This,
                    D3DSURFACE_DESC *pDesc )
 {
     HRESULT hr;
+    union pipe_color_union rgba = {0};
+    struct pipe_surface *surf;
+    struct pipe_context *pipe = pParams->device->pipe;
 
     DBG("This=%p pDevice=%p pResource=%p Level=%u Layer=%u pDesc=%p\n",
         This, pParams->device, pResource, Level, Layer, pDesc);
@@ -139,6 +142,12 @@ NineSurface9_ctor( struct NineSurface9 *This,
 
     if (pResource && NineSurface9_IsOffscreenPlain(This))
         pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
+
+    /* TODO: investigate what else exactly needs to be cleared */
+    if (This->base.resource && (pDesc->Usage & D3DUSAGE_RENDERTARGET)) {
+        surf = NineSurface9_GetSurface(This, 0);
+        pipe->clear_render_target(pipe, surf, &rgba, 0, 0, pDesc->Width, pDesc->Height);
+    }
 
     NineSurface9_Dump(This);
 
