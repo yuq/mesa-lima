@@ -473,7 +473,7 @@ SVGA3D_SurfaceDMA(struct svga_winsys_context *swc,
    pSuffix->flags = flags;
 
    swc->commit(swc);
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
 
    return PIPE_OK;
 }
@@ -544,7 +544,7 @@ SVGA3D_BufferDMA(struct svga_winsys_context *swc,
    pSuffix->flags = flags;
 
    swc->commit(swc);
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
 
    return PIPE_OK;
 }
@@ -1018,7 +1018,7 @@ SVGA3D_BeginDrawPrimitives(struct svga_winsys_context *swc,
    *decls = declArray;
    *ranges = rangeArray;
 
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
 
    return PIPE_OK;
 }
@@ -1722,7 +1722,7 @@ SVGA3D_UpdateGBImage(struct svga_winsys_context *swc,
    cmd->box = *box;
 
    swc->commit(swc);
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
 
    return PIPE_OK;
 }
@@ -1749,7 +1749,7 @@ SVGA3D_UpdateGBSurface(struct svga_winsys_context *swc,
                            SVGA_RELOC_WRITE | SVGA_RELOC_INTERNAL);
 
    swc->commit(swc);
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
 
    return PIPE_OK;
 }
@@ -1779,7 +1779,7 @@ SVGA3D_ReadbackGBImage(struct svga_winsys_context *swc,
    cmd->image.mipmap = mipLevel;
 
    swc->commit(swc);
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
 
    return PIPE_OK;
 }
@@ -1806,7 +1806,7 @@ SVGA3D_ReadbackGBSurface(struct svga_winsys_context *swc,
                            SVGA_RELOC_READ | SVGA_RELOC_INTERNAL);
 
    swc->commit(swc);
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
 
    return PIPE_OK;
 }
@@ -1835,7 +1835,7 @@ SVGA3D_ReadbackGBImagePartial(struct svga_winsys_context *swc,
    cmd->invertBox = invertBox;
 
    swc->commit(swc);
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
 
    return PIPE_OK;
 }

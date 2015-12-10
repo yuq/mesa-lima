@@ -308,7 +308,7 @@ svga_buffer_upload_gb_command(struct svga_context *svga,
    pipe_resource_reference(&dummy, &sbuf->b.b);
    SVGA_FIFOCommitAll(swc);
 
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
    sbuf->dma.flags.discard = FALSE;
 
    return PIPE_OK;
@@ -382,7 +382,7 @@ svga_buffer_upload_command(struct svga_context *svga,
 
    SVGA_FIFOCommitAll(swc);
 
-   swc->hints |= SVGA_HINT_FLAG_DRAW_EMITTED;
+   swc->hints |= SVGA_HINT_FLAG_CAN_PRE_FLUSH;
    sbuf->dma.flags.discard = FALSE;
 
    return PIPE_OK;

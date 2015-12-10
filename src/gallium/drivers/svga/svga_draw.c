@@ -520,7 +520,7 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
          /* If we haven't yet emitted a drawing command or if any
           * vertex buffer state is changing, issue that state now.
           */
-         if (((hwtnl->cmd.swc->hints & SVGA_HINT_FLAG_DRAW_EMITTED) == 0) ||
+         if (((hwtnl->cmd.swc->hints & SVGA_HINT_FLAG_CAN_PRE_FLUSH) == 0) ||
              vbuf_count != svga->state.hw_draw.num_vbuffers ||
              memcmp(buffers, svga->state.hw_draw.vbuffers,
                     vbuf_count * sizeof(buffers[0])) ||
