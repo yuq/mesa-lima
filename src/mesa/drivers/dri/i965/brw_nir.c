@@ -114,6 +114,27 @@ remap_vs_attrs(nir_block *block, void *closure)
    return true;
 }
 
+static bool
+remap_inputs_with_vue_map(nir_block *block, void *closure)
+{
+   const struct brw_vue_map *vue_map = closure;
+
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_intrinsic)
+         continue;
+
+      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+      if (intrin->intrinsic == nir_intrinsic_load_input ||
+          intrin->intrinsic == nir_intrinsic_load_per_vertex_input) {
+         int vue_slot = vue_map->varying_to_slot[intrin->const_index[0]];
+         assert(vue_slot != -1);
+         intrin->const_index[0] = vue_slot;
+      }
+   }
+   return true;
+}
+
 static void
 brw_nir_lower_inputs(nir_shader *nir,
                      const struct brw_device_info *devinfo,
@@ -182,15 +203,24 @@ brw_nir_lower_inputs(nir_shader *nir,
          brw_compute_vue_map(devinfo, &input_vue_map, inputs_read,
                              nir->info.separate_shader);
 
-         /* Start with the slot for the variable's base. */
          foreach_list_typed(nir_variable, var, node, &nir->inputs) {
-            assert(input_vue_map.varying_to_slot[var->data.location] != -1);
-            var->data.driver_location =
-               input_vue_map.varying_to_slot[var->data.location];
+            var->data.driver_location = var->data.location;
          }
 
          /* Inputs are stored in vec4 slots, so use type_size_vec4(). */
          nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+
+         /* This pass needs actual constants */
+         nir_opt_constant_folding(nir);
+
+         nir_foreach_overload(nir, overload) {
+            if (overload->impl) {
+               nir_builder_init(&params.b, overload->impl);
+               nir_foreach_block(overload->impl, add_const_offset_to_base, &params);
+               nir_foreach_block(overload->impl, remap_inputs_with_vue_map,
+                                 &input_vue_map);
+            }
+         }
       }
       break;
    }
