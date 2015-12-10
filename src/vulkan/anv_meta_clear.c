@@ -680,7 +680,7 @@ void anv_CmdClearColorImage(
                &(VkImageViewCreateInfo) {
                   .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                   .image = _image,
-                  .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                  .viewType = anv_meta_get_view_type(image),
                   .format = image->format->vk_format,
                   .subresourceRange = {
                      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

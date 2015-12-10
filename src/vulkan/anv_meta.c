@@ -145,19 +145,15 @@ anv_meta_restore(const struct anv_meta_saved_state *state,
    cmd_buffer->state.dirty |= state->dynamic_mask;
 }
 
-static VkImageViewType
-meta_blit_get_src_image_view_type(const struct anv_image *src_image)
+VkImageViewType
+anv_meta_get_view_type(const struct anv_image *image)
 {
-   switch (src_image->type) {
-   case VK_IMAGE_TYPE_1D:
-      return VK_IMAGE_VIEW_TYPE_1D;
-   case VK_IMAGE_TYPE_2D:
-      return VK_IMAGE_VIEW_TYPE_2D;
-   case VK_IMAGE_TYPE_3D:
-      return VK_IMAGE_VIEW_TYPE_3D;
+   switch (image->type) {
+   case VK_IMAGE_TYPE_1D: return VK_IMAGE_VIEW_TYPE_1D;
+   case VK_IMAGE_TYPE_2D: return VK_IMAGE_VIEW_TYPE_2D;
+   case VK_IMAGE_TYPE_3D: return VK_IMAGE_VIEW_TYPE_3D;
    default:
-      assert(!"bad VkImageType");
-      return 0;
+      unreachable("bad VkImageViewType");
    }
 }
 
@@ -817,9 +813,6 @@ void anv_CmdCopyImage(
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
 
-   const VkImageViewType src_iview_type =
-      meta_blit_get_src_image_view_type(src_image);
-
    struct anv_meta_saved_state saved_state;
 
    meta_prepare_blit(cmd_buffer, &saved_state);
@@ -830,7 +823,7 @@ void anv_CmdCopyImage(
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
-            .viewType = src_iview_type,
+            .viewType = anv_meta_get_view_type(src_image),
             .format = src_image->format->vk_format,
             .subresourceRange = {
                .aspectMask = pRegions[r].srcSubresource.aspectMask,
@@ -874,7 +867,7 @@ void anv_CmdCopyImage(
             &(VkImageViewCreateInfo) {
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = destImage,
-               .viewType = VK_IMAGE_VIEW_TYPE_2D,
+               .viewType = anv_meta_get_view_type(dest_image),
                .format = dest_image->format->vk_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -915,9 +908,6 @@ void anv_CmdBlitImage(
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
 
-   const VkImageViewType src_iview_type =
-      meta_blit_get_src_image_view_type(src_image);
-
    struct anv_meta_saved_state saved_state;
 
    anv_finishme("respect VkFilter");
@@ -930,7 +920,7 @@ void anv_CmdBlitImage(
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
-            .viewType = src_iview_type,
+            .viewType = anv_meta_get_view_type(src_image),
             .format = src_image->format->vk_format,
             .subresourceRange = {
                .aspectMask = pRegions[r].srcSubresource.aspectMask,
@@ -964,7 +954,7 @@ void anv_CmdBlitImage(
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = destImage,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .viewType = anv_meta_get_view_type(dest_image),
             .format = dest_image->format->vk_format,
             .subresourceRange = {
                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1100,7 +1090,7 @@ void anv_CmdCopyBufferToImage(
             &(VkImageViewCreateInfo) {
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = anv_image_to_handle(dest_image),
-               .viewType = VK_IMAGE_VIEW_TYPE_2D,
+               .viewType = anv_meta_get_view_type(dest_image),
                .format = proxy_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1161,9 +1151,6 @@ void anv_CmdCopyImageToBuffer(
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    struct anv_meta_saved_state saved_state;
 
-   const VkImageViewType src_iview_type =
-      meta_blit_get_src_image_view_type(src_image);
-
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
@@ -1172,7 +1159,7 @@ void anv_CmdCopyImageToBuffer(
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
-            .viewType = src_iview_type,
+            .viewType = anv_meta_get_view_type(src_image),
             .format = src_image->format->vk_format,
             .subresourceRange = {
                .aspectMask = pRegions[r].imageSubresource.aspectMask,

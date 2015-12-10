@@ -53,6 +53,9 @@ void
 anv_meta_restore(const struct anv_meta_saved_state *state,
                  struct anv_cmd_buffer *cmd_buffer);
 
+VkImageViewType
+anv_meta_get_view_type(const struct anv_image *image);
+
 #ifdef __cplusplus
 }
 #endif
