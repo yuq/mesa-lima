@@ -58,6 +58,7 @@ struct _mesa_prim {
    GLint basevertex;
    GLuint num_instances;
    GLuint base_instance;
+   GLuint draw_id;
 
    GLsizeiptr indirect_offset;
 };
