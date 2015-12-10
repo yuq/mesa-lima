@@ -253,6 +253,8 @@ struct si_context {
 	bool			db_flush_stencil_inplace;
 	bool			db_depth_clear;
 	bool			db_depth_disable_expclear;
+	bool			db_stencil_clear;
+	bool			db_stencil_disable_expclear;
 	unsigned		ps_db_shader_control;
 
 	/* Emitted draw state. */

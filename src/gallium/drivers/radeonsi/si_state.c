@@ -1090,10 +1090,10 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 		radeon_emit(cs,
 			    S_028000_DEPTH_COMPRESS_DISABLE(sctx->db_flush_depth_inplace) |
 			    S_028000_STENCIL_COMPRESS_DISABLE(sctx->db_flush_stencil_inplace));
-	} else if (sctx->db_depth_clear) {
-		radeon_emit(cs, S_028000_DEPTH_CLEAR_ENABLE(1));
 	} else {
-		radeon_emit(cs, 0);
+		radeon_emit(cs,
+			    S_028000_DEPTH_CLEAR_ENABLE(sctx->db_depth_clear) |
+			    S_028000_STENCIL_CLEAR_ENABLE(sctx->db_stencil_clear));
 	}
 
 	/* DB_COUNT_CONTROL (occlusion queries) */
@@ -1120,12 +1120,9 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 	}
 
 	/* DB_RENDER_OVERRIDE2 */
-	if (sctx->db_depth_disable_expclear) {
-		radeon_set_context_reg(cs, R_028010_DB_RENDER_OVERRIDE2,
-			S_028010_DISABLE_ZMASK_EXPCLEAR_OPTIMIZATION(1));
-	} else {
-		radeon_set_context_reg(cs, R_028010_DB_RENDER_OVERRIDE2, 0);
-	}
+	radeon_set_context_reg(cs, R_028010_DB_RENDER_OVERRIDE2,
+		S_028010_DISABLE_ZMASK_EXPCLEAR_OPTIMIZATION(sctx->db_depth_disable_expclear) |
+		S_028010_DISABLE_SMEM_EXPCLEAR_OPTIMIZATION(sctx->db_stencil_disable_expclear));
 
 	db_shader_control = S_02880C_ALPHA_TO_MASK_DISABLE(sctx->framebuffer.cb0_is_integer) |
 		            sctx->ps_db_shader_control;
@@ -2217,7 +2214,10 @@ static void si_init_depth_surface(struct si_context *sctx,
 		z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
 			  S_028040_ALLOW_EXPCLEAR(1);
 
-		if (!(rtex->surface.flags & RADEON_SURF_SBUFFER))
+		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
+			s_info |= S_028044_ALLOW_EXPCLEAR(1);
+		else
+			/* Use all of the htile_buffer for depth if there's no stencil. */
 			s_info |= S_028044_TILE_STENCIL_DISABLE(1);
 
 		uint64_t va = rtex->htile_buffer->gpu_address;
@@ -2486,8 +2486,11 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		radeon_emit(cs, zb->db_depth_size);	/* R_028058_DB_DEPTH_SIZE */
 		radeon_emit(cs, zb->db_depth_slice);	/* R_02805C_DB_DEPTH_SLICE */
 
+		radeon_set_context_reg_seq(cs, R_028028_DB_STENCIL_CLEAR, 2);
+		radeon_emit(cs, rtex->stencil_clear_value); /* R_028028_DB_STENCIL_CLEAR */
+		radeon_emit(cs, fui(rtex->depth_clear_value)); /* R_02802C_DB_DEPTH_CLEAR */
+
 		radeon_set_context_reg(cs, R_028ABC_DB_HTILE_SURFACE, zb->db_htile_surface);
-		radeon_set_context_reg(cs, R_02802C_DB_DEPTH_CLEAR, fui(rtex->depth_clear_value));
 		radeon_set_context_reg(cs, R_028B78_PA_SU_POLY_OFFSET_DB_FMT_CNTL,
 				       zb->pa_su_poly_offset_db_fmt_cntl);
 	} else if (sctx->framebuffer.dirty_zsbuf) {
@@ -3578,7 +3581,6 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028BEC_PA_CL_GB_VERT_DISC_ADJ, fui(1.0));
 	si_pm4_set_reg(pm4, R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ, fui(1.0));
 	si_pm4_set_reg(pm4, R_028BF4_PA_CL_GB_HORZ_DISC_ADJ, fui(1.0));
-	si_pm4_set_reg(pm4, R_028028_DB_STENCIL_CLEAR, 0);
 	si_pm4_set_reg(pm4, R_028AC0_DB_SRESULTS_COMPARE_STATE0, 0x0);
 	si_pm4_set_reg(pm4, R_028AC4_DB_SRESULTS_COMPARE_STATE1, 0x0);
 	si_pm4_set_reg(pm4, R_028AC8_DB_PRELOAD_CONTROL, 0x0);

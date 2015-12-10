@@ -222,6 +222,8 @@ struct r600_texture {
 	struct r600_resource		*htile_buffer;
 	bool				depth_cleared; /* if it was cleared at least once */
 	float				depth_clear_value;
+	bool				stencil_cleared; /* if it was cleared at least once */
+	uint8_t				stencil_clear_value;
 
 	bool				non_disp_tiling; /* R600-Cayman only */
 };
