@@ -34,29 +34,10 @@
  */
 #include "gen8_pack.h"
 
-struct anv_image_view_info {
-   uint8_t surface_type; /**< RENDER_SURFACE_STATE.SurfaceType */
-   bool is_array:1; /**< RENDER_SURFACE_STATE.SurfaceArray */
-   bool is_cube:1; /**< RENDER_SURFACE_STATE.CubeFaceEnable* */
-};
-
 static const uint8_t anv_surf_type_from_image_type[] = {
    [VK_IMAGE_TYPE_1D] = SURFTYPE_1D,
    [VK_IMAGE_TYPE_2D] = SURFTYPE_2D,
    [VK_IMAGE_TYPE_3D] = SURFTYPE_3D,
-};
-
-static const struct anv_image_view_info
-anv_image_view_info_table[] = {
-   #define INFO(s, ...) { .surface_type = s, __VA_ARGS__ }
-   [VK_IMAGE_VIEW_TYPE_1D]          = INFO(SURFTYPE_1D),
-   [VK_IMAGE_VIEW_TYPE_2D]          = INFO(SURFTYPE_2D),
-   [VK_IMAGE_VIEW_TYPE_3D]          = INFO(SURFTYPE_3D),
-   [VK_IMAGE_VIEW_TYPE_CUBE]        = INFO(SURFTYPE_CUBE,                  .is_cube = 1),
-   [VK_IMAGE_VIEW_TYPE_1D_ARRAY]    = INFO(SURFTYPE_1D,     .is_array = 1),
-   [VK_IMAGE_VIEW_TYPE_2D_ARRAY]    = INFO(SURFTYPE_2D,     .is_array = 1),
-   [VK_IMAGE_VIEW_TYPE_CUBE_ARRAY]  = INFO(SURFTYPE_CUBE,   .is_array = 1, .is_cube = 1),
-   #undef INFO
 };
 
 /**
@@ -362,7 +343,6 @@ anv_validate_CreateImageView(VkDevice _device,
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *subresource;
-   const struct anv_image_view_info *view_info;
    const struct anv_format *view_format_info;
 
    /* Validate structure type before dereferencing it. */
@@ -373,7 +353,6 @@ anv_validate_CreateImageView(VkDevice _device,
    /* Validate viewType is in range before using it. */
    assert(pCreateInfo->viewType >= VK_IMAGE_VIEW_TYPE_BEGIN_RANGE);
    assert(pCreateInfo->viewType <= VK_IMAGE_VIEW_TYPE_END_RANGE);
-   view_info = &anv_image_view_info_table[pCreateInfo->viewType];
 
    /* Validate format is in range before using it. */
    assert(pCreateInfo->format >= VK_FORMAT_BEGIN_RANGE);
@@ -399,11 +378,6 @@ anv_validate_CreateImageView(VkDevice _device,
    assert(subresource->baseArrayLayer < image->array_size);
    assert(subresource->baseArrayLayer + subresource->layerCount <= image->array_size);
    assert(pView);
-
-   if (view_info->is_cube) {
-      assert(subresource->baseArrayLayer % 6 == 0);
-      assert(subresource->layerCount % 6 == 0);
-   }
 
    const VkImageAspectFlags ds_flags = VK_IMAGE_ASPECT_DEPTH_BIT
                                      | VK_IMAGE_ASPECT_STENCIL_BIT;
