@@ -1501,6 +1501,7 @@ private:
    void handleSLCT(Instruction *);
    void handleLOGOP(Instruction *);
    void handleCVT_NEG(Instruction *);
+   void handleCVT_CVT(Instruction *);
    void handleCVT_EXTBF(Instruction *);
    void handleSUCLAMP(Instruction *);
 
@@ -1792,6 +1793,47 @@ AlgebraicOpt::handleCVT_NEG(Instruction *cvt)
    delete_Instruction(prog, cvt);
 }
 
+// F2I(TRUNC()) and so on can be expressed as a single CVT. If the earlier CVT
+// does a type conversion, this becomes trickier as there might be range
+// changes/etc. We could handle those in theory as long as the range was being
+// reduced or kept the same.
+void
+AlgebraicOpt::handleCVT_CVT(Instruction *cvt)
+{
+   Instruction *insn = cvt->getSrc(0)->getInsn();
+   RoundMode rnd = insn->rnd;
+
+   if (insn->saturate ||
+       insn->subOp ||
+       insn->dType != insn->sType ||
+       insn->dType != cvt->sType)
+      return;
+
+   switch (insn->op) {
+   case OP_CEIL:
+      rnd = ROUND_PI;
+      break;
+   case OP_FLOOR:
+      rnd = ROUND_MI;
+      break;
+   case OP_TRUNC:
+      rnd = ROUND_ZI;
+      break;
+   case OP_CVT:
+      break;
+   default:
+      return;
+   }
+
+   if (!isFloatType(cvt->dType) || !isFloatType(insn->sType))
+      rnd = (RoundMode)(rnd & 3);
+
+   cvt->rnd = rnd;
+   cvt->setSrc(0, insn->getSrc(0));
+   cvt->src(0).mod *= insn->src(0).mod;
+   cvt->sType = insn->sType;
+}
+
 // Some shaders extract packed bytes out of words and convert them to
 // e.g. float. The Fermi+ CVT instruction can extract those directly, as can
 // nv50 for word sizes.
@@ -1961,6 +2003,7 @@ AlgebraicOpt::visit(BasicBlock *bb)
          break;
       case OP_CVT:
          handleCVT_NEG(i);
+         handleCVT_CVT(i);
          if (prog->getTarget()->isOpSupported(OP_EXTBF, TYPE_U32))
              handleCVT_EXTBF(i);
          break;
