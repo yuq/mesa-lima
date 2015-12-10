@@ -1745,6 +1745,8 @@ static int do_lds_fetch_values(struct r600_shader_ctx *ctx, unsigned temp_reg,
 				   temp_reg, i,
 				   temp_reg, 0,
 				   V_SQ_ALU_SRC_LITERAL, 4 * i);
+		if (r)
+			return r;
 	}
 	for (i = 0; i < 4; i++) {
 		/* emit an LDS_READ_RET */
