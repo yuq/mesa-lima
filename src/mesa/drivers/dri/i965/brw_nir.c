@@ -636,6 +636,17 @@ brw_create_nir(struct brw_context *brw,
    /* First, lower the GLSL IR or Mesa IR to NIR */
    if (shader_prog) {
       nir = glsl_to_nir(shader_prog, stage, options);
+
+      if (nir->stage == MESA_SHADER_TESS_EVAL &&
+          shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]) {
+         const struct gl_program *tcs =
+            shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]->Program;
+         /* Work around the TCS having bonus outputs used as shared memory
+          * segments, which makes OutputsWritten not match InputsRead
+          */
+         nir->info.inputs_read = tcs->OutputsWritten;
+         nir->info.patch_inputs_read = tcs->PatchOutputsWritten;
+      }
    } else {
       nir = prog_to_nir(prog, options);
       OPT_V(nir_convert_to_ssa); /* turn registers into SSA */
