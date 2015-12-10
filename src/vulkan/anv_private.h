@@ -1429,8 +1429,6 @@ struct anv_image {
    struct anv_bo *bo;
    VkDeviceSize offset;
 
-   uint8_t surface_type; /**< RENDER_SURFACE_STATE.SurfaceType */
-
    bool needs_nonrt_surface_state:1;
    bool needs_color_rt_surface_state:1;
    bool needs_storage_surface_state:1;

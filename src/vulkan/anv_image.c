@@ -34,12 +34,6 @@
  */
 #include "gen8_pack.h"
 
-static const uint8_t anv_surf_type_from_image_type[] = {
-   [VK_IMAGE_TYPE_1D] = SURFTYPE_1D,
-   [VK_IMAGE_TYPE_2D] = SURFTYPE_2D,
-   [VK_IMAGE_TYPE_3D] = SURFTYPE_3D,
-};
-
 /**
  * The \a format argument is required and overrides any format found in struct
  * anv_image_create_info. Exactly one bit must be set in \a aspect.
@@ -203,10 +197,6 @@ anv_image_create(VkDevice _device,
    anv_assert(pCreateInfo->extent.height > 0);
    anv_assert(pCreateInfo->extent.depth > 0);
 
-   /* TODO(chadv): How should we validate inputs? */
-   const uint8_t surf_type =
-      anv_surf_type_from_image_type[pCreateInfo->imageType];
-
    image = anv_alloc2(&device->alloc, alloc, sizeof(*image), 8,
                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!image)
@@ -219,7 +209,6 @@ anv_image_create(VkDevice _device,
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arrayLayers;
    image->usage = anv_image_get_full_usage(pCreateInfo);
-   image->surface_type = surf_type;
 
    if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       image->needs_nonrt_surface_state = true;

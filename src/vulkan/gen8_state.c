@@ -32,6 +32,30 @@
 #include "gen8_pack.h"
 #include "gen9_pack.h"
 
+static const uint8_t
+anv_surftype(const struct anv_image *image, VkImageViewType view_type)
+{
+   switch (view_type) {
+   default:
+      unreachable("bad VkImageViewType");
+   case VK_IMAGE_VIEW_TYPE_1D:
+   case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+      assert(image->type == VK_IMAGE_TYPE_1D);
+      return SURFTYPE_1D;
+   case VK_IMAGE_VIEW_TYPE_CUBE:
+   case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+      anv_finishme("%s:%s: cube images", __FILE__, __func__);
+      /* fallthrough */
+   case VK_IMAGE_VIEW_TYPE_2D:
+   case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+      assert(image->type == VK_IMAGE_TYPE_2D);
+      return SURFTYPE_2D;
+   case VK_IMAGE_VIEW_TYPE_3D:
+      assert(image->type == VK_IMAGE_TYPE_3D);
+      return SURFTYPE_3D;
+   }
+}
+
 void
 genX(fill_buffer_surface_state)(void *state, const struct anv_format *format,
                                 uint32_t offset, uint32_t range, uint32_t stride)
@@ -222,7 +246,7 @@ genX(image_view_init)(struct anv_image_view *iview,
    get_halign_valign(&surface->isl, &halign, &valign);
 
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
-      .SurfaceType = image->surface_type,
+      .SurfaceType = anv_surftype(image, pCreateInfo->viewType),
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
       .SurfaceVerticalAlignment = valign,
