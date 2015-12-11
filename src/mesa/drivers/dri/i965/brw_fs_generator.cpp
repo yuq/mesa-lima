@@ -27,11 +27,10 @@
  * native instructions.
  */
 
-#include "main/macros.h"
-#include "brw_context.h"
 #include "brw_eu.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
+#include "brw_program.h"
 
 static enum brw_reg_file
 brw_file_from_reg(fs_reg *reg)
@@ -92,7 +91,7 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
    case ARF:
    case FIXED_GRF:
    case IMM:
-      brw_reg = *static_cast<struct brw_reg *>(reg);
+      brw_reg = reg->as_brw_reg();
       break;
    case BAD_FILE:
       /* Probably unused. */

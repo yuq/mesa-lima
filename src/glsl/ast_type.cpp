@@ -116,7 +116,7 @@ ast_type_qualifier::interpolation_string() const
 bool
 ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 				    _mesa_glsl_parse_state *state,
-				    ast_type_qualifier q)
+				    const ast_type_qualifier &q)
 {
    ast_type_qualifier ubo_mat_mask;
    ubo_mat_mask.flags.i = 0;
@@ -293,7 +293,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 bool
 ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
                                         _mesa_glsl_parse_state *state,
-                                        ast_type_qualifier q,
+                                        const ast_type_qualifier &q,
                                         ast_node* &node)
 {
    void *mem_ctx = state;
@@ -309,7 +309,7 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
 bool
 ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
                                        _mesa_glsl_parse_state *state,
-                                       ast_type_qualifier q,
+                                       const ast_type_qualifier &q,
                                        ast_node* &node)
 {
    void *mem_ctx = state;

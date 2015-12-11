@@ -23,6 +23,8 @@
 #include "glsl/glsl_parser_extras.h"
 #include "brw_vec4.h"
 #include "brw_cfg.h"
+#include "brw_eu.h"
+#include "brw_program.h"
 
 using namespace brw;
 
@@ -364,7 +366,7 @@ generate_gs_urb_write_allocate(struct brw_codegen *p, vec4_instruction *inst)
 
    /* We pass the temporary passed in src0 as the writeback register */
    brw_urb_WRITE(p,
-                 inst->src[0], /* dest */
+                 inst->src[0].as_brw_reg(), /* dest */
                  inst->base_mrf, /* starting mrf reg nr */
                  src,
                  BRW_URB_WRITE_ALLOCATE_COMPLETE,
@@ -377,8 +379,8 @@ generate_gs_urb_write_allocate(struct brw_codegen *p, vec4_instruction *inst)
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   brw_MOV(p, get_element_ud(inst->dst, 0),
-           get_element_ud(inst->src[0], 0));
+   brw_MOV(p, get_element_ud(inst->dst.as_brw_reg(), 0),
+           get_element_ud(inst->src[0].as_brw_reg(), 0));
    brw_pop_insn_state(p);
 }
 
@@ -808,7 +810,7 @@ generate_scratch_read(struct brw_codegen *p,
    if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(devinfo, send, inst->base_mrf);
    brw_set_dp_read_message(p, send,
-			   255, /* binding table index: stateless access */
+                           brw_scratch_surface_idx(p),
 			   BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
 			   msg_type,
 			   BRW_DATAPORT_READ_TARGET_RENDER_CACHE,
@@ -881,7 +883,7 @@ generate_scratch_write(struct brw_codegen *p,
    if (devinfo->gen < 6)
       brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
    brw_set_dp_write_message(p, send,
-			    255, /* binding table index: stateless access */
+                            brw_scratch_surface_idx(p),
 			    BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
 			    msg_type,
 			    3, /* mlen */
@@ -909,8 +911,21 @@ generate_pull_constant_load(struct brw_codegen *p,
 
    gen6_resolve_implied_move(p, &header, inst->base_mrf);
 
-   brw_MOV(p, retype(brw_message_reg(inst->base_mrf + 1), BRW_REGISTER_TYPE_D),
-	   offset);
+   if (devinfo->gen >= 6) {
+      if (offset.file == BRW_IMMEDIATE_VALUE) {
+         brw_MOV(p, retype(brw_message_reg(inst->base_mrf + 1),
+                           BRW_REGISTER_TYPE_D),
+                 brw_imm_d(offset.ud >> 4));
+      } else {
+         brw_SHR(p, retype(brw_message_reg(inst->base_mrf + 1),
+                           BRW_REGISTER_TYPE_D),
+                 offset, brw_imm_d(4));
+      }
+   } else {
+      brw_MOV(p, retype(brw_message_reg(inst->base_mrf + 1),
+                        BRW_REGISTER_TYPE_D),
+              offset);
+   }
 
    uint32_t msg_type;
 
@@ -1067,9 +1082,9 @@ generate_code(struct brw_codegen *p,
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < 3; i++) {
-         src[i] = inst->src[i];
+         src[i] = inst->src[i].as_brw_reg();
       }
-      dst = inst->dst;
+      dst = inst->dst.as_brw_reg();
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);

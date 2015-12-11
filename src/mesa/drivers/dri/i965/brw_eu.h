@@ -35,11 +35,9 @@
 
 #include <stdbool.h>
 #include "brw_inst.h"
-#include "brw_structs.h"
 #include "brw_defines.h"
 #include "brw_reg.h"
 #include "intel_asm_annotation.h"
-#include "program/prog_instruction.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -317,6 +315,8 @@ void brw_oword_block_read(struct brw_codegen *p,
 			  uint32_t offset,
 			  uint32_t bind_table_index);
 
+unsigned brw_scratch_surface_idx(const struct brw_codegen *p);
+
 void brw_oword_block_read_scratch(struct brw_codegen *p,
 				  struct brw_reg dest,
 				  struct brw_reg mrf,
@@ -542,6 +542,15 @@ is_3src(enum opcode opcode)
 {
    return opcode_descs[opcode].nsrc == 3;
 }
+
+/** Maximum SEND message length */
+#define BRW_MAX_MSG_LENGTH 15
+
+/** First MRF register used by pull loads */
+#define FIRST_SPILL_MRF(gen) ((gen) == 6 ? 21 : 13)
+
+/** First MRF register used by spills */
+#define FIRST_PULL_LOAD_MRF(gen) ((gen) == 6 ? 16 : 13)
 
 #ifdef __cplusplus
 }

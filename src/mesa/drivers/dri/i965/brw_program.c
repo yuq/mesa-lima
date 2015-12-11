@@ -31,8 +31,6 @@
 
 #include <pthread.h>
 #include "main/imports.h"
-#include "main/enums.h"
-#include "main/shaderobj.h"
 #include "program/prog_parameter.h"
 #include "program/prog_print.h"
 #include "program/program.h"
@@ -41,10 +39,10 @@
 #include "util/ralloc.h"
 #include "glsl/ir.h"
 
+#include "brw_program.h"
 #include "brw_context.h"
 #include "brw_shader.h"
 #include "brw_nir.h"
-#include "brw_wm.h"
 #include "intel_batchbuffer.h"
 
 static unsigned
@@ -88,6 +86,28 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
 
    case GL_GEOMETRY_PROGRAM_NV: {
       struct brw_geometry_program *prog = CALLOC_STRUCT(brw_geometry_program);
+      if (prog) {
+         prog->id = get_new_program_id(brw->intelScreen);
+
+         return _mesa_init_gl_program(&prog->program.Base, target, id);
+      } else {
+         return NULL;
+      }
+   }
+
+   case GL_TESS_CONTROL_PROGRAM_NV: {
+      struct brw_tess_ctrl_program *prog = CALLOC_STRUCT(brw_tess_ctrl_program);
+      if (prog) {
+         prog->id = get_new_program_id(brw->intelScreen);
+
+         return _mesa_init_gl_program(&prog->program.Base, target, id);
+      } else {
+         return NULL;
+      }
+   }
+
+   case GL_TESS_EVALUATION_PROGRAM_NV: {
+      struct brw_tess_eval_program *prog = CALLOC_STRUCT(brw_tess_eval_program);
       if (prog) {
          prog->id = get_new_program_id(brw->intelScreen);
 

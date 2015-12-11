@@ -24,7 +24,6 @@
  */
 
 #include "main/blend.h"
-#include "main/glheader.h"
 #include "main/enums.h"
 #include "main/image.h"
 #include "main/colormac.h"

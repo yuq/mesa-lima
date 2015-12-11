@@ -840,7 +840,7 @@ sp_setup_tri(struct setup_context *setup,
    setup->span.right[1] = 0;
    /*   setup->span.z_mode = tri_z_mode( setup->ctx ); */
    if (setup->softpipe->layer_slot > 0) {
-      layer = *(unsigned *)v1[setup->softpipe->layer_slot];
+      layer = *(unsigned *)setup->vprovoke[setup->softpipe->layer_slot];
       layer = MIN2(layer, setup->max_layer);
    }
    setup->quad[0].input.layer = layer;
@@ -1127,7 +1127,7 @@ sp_setup_line(struct setup_context *setup,
    setup->quad[0].input.x0 = setup->quad[0].input.y0 = -1;
    setup->quad[0].inout.mask = 0x0;
    if (setup->softpipe->layer_slot > 0) {
-      layer = *(unsigned *)v1[setup->softpipe->layer_slot];
+      layer = *(unsigned *)setup->vprovoke[setup->softpipe->layer_slot];
       layer = MIN2(layer, setup->max_layer);
    }
    setup->quad[0].input.layer = layer;

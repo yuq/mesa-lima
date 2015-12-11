@@ -41,8 +41,6 @@
  * we do retain the vector types in that case.
  */
 
-#include "main/core.h"
-#include "brw_wm.h"
 #include "glsl/ir.h"
 #include "glsl/ir_expression_flattening.h"
 #include "glsl/nir/glsl_types.h"

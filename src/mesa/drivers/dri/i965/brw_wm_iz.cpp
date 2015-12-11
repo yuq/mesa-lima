@@ -30,8 +30,8 @@
   */
 
 
-#include "main/mtypes.h"
 #include "brw_fs.h"
+#include "brw_wm.h"
 
 
 #undef P                        /* prompted depth */

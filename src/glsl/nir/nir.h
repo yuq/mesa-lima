@@ -1309,8 +1309,8 @@ nir_block_last_instr(nir_block *block)
    foreach_list_typed_reverse(nir_instr, instr, node, &(block)->instr_list)
 #define nir_foreach_instr_safe(block, instr) \
    foreach_list_typed_safe(nir_instr, instr, node, &(block)->instr_list)
-#define nir_foreach_instr_safe_reverse(block, instr) \
-   foreach_list_typed_safe_reverse(nir_instr, instr, node, &(block)->instr_list)
+#define nir_foreach_instr_reverse_safe(block, instr) \
+   foreach_list_typed_reverse_safe(nir_instr, instr, node, &(block)->instr_list)
 
 typedef struct nir_if {
    nir_cf_node cf_node;
@@ -2018,7 +2018,7 @@ void nir_assign_var_locations(struct exec_list *var_list,
 void nir_lower_io(nir_shader *shader,
                   nir_variable_mode mode,
                   int (*type_size)(const struct glsl_type *));
-nir_src *nir_get_io_indirect_src(nir_intrinsic_instr *instr);
+nir_src *nir_get_io_offset_src(nir_intrinsic_instr *instr);
 nir_src *nir_get_io_vertex_index_src(nir_intrinsic_instr *instr);
 
 void nir_lower_vars_to_ssa(nir_shader *shader);

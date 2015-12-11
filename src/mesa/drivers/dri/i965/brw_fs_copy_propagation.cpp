@@ -37,6 +37,7 @@
 #include "util/bitset.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
+#include "brw_eu.h"
 
 namespace { /* avoid conflict with opt_copy_propagation_elements */
 struct acp_entry : public exec_node {
@@ -532,14 +533,14 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
 
       if (inst->src[i].abs) {
          if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-             !brw_abs_immediate(val.type, &val)) {
+             !brw_abs_immediate(val.type, &val.as_brw_reg())) {
             continue;
          }
       }
 
       if (inst->src[i].negate) {
          if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-             !brw_negate_immediate(val.type, &val)) {
+             !brw_negate_immediate(val.type, &val.as_brw_reg())) {
             continue;
          }
       }

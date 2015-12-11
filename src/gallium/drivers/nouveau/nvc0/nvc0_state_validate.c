@@ -667,7 +667,6 @@ static struct state_validate {
     { nvc0_tfb_validate,           NVC0_NEW_TFB_TARGETS | NVC0_NEW_GMTYPROG },
     { nvc0_validate_min_samples,   NVC0_NEW_MIN_SAMPLES },
 };
-#define validate_list_len (sizeof(validate_list) / sizeof(validate_list[0]))
 
 bool
 nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask, unsigned words)
@@ -682,7 +681,7 @@ nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask, unsigned words)
    state_mask = nvc0->dirty & mask;
 
    if (state_mask) {
-      for (i = 0; i < validate_list_len; ++i) {
+      for (i = 0; i < ARRAY_SIZE(validate_list); ++i) {
          struct state_validate *validate = &validate_list[i];
 
          if (state_mask & validate->states)

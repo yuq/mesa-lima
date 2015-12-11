@@ -51,7 +51,8 @@ libi965_compiler_la_SOURCES = $(i965_compiler_FILES)
 TEST_LIBS = \
 	libi965_compiler.la \
         ../../../libmesa.la \
-	-lpthread -ldl \
+	$(PTHREAD_LIBS) \
+	$(DLOPEN_LIBS) \
 	../common/libdri_test_stubs.la
 
 TESTS = \

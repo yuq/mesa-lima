@@ -186,6 +186,7 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
    &brw_cc_vp,
    &gen7_sf_clip_viewport,
 
+   &gen7_l3_state,
    &gen7_push_constant_space,
    &gen7_urb,
    &gen6_blend_state,		/* must do before cc unit */
@@ -225,8 +226,10 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
    &brw_gs_samplers,
    &gen6_multisample_state,
 
-   &gen7_disable_stages,
    &gen7_vs_state,
+   &gen7_hs_state,
+   &gen7_te_state,
+   &gen7_ds_state,
    &gen7_gs_state,
    &gen7_sol_state,
    &gen7_clip_state,
@@ -257,6 +260,7 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
 static const struct brw_tracked_state *gen7_compute_atoms[] =
 {
    &brw_state_base_address,
+   &gen7_l3_state,
    &brw_cs_image_surfaces,
    &gen7_cs_push_constants,
    &brw_cs_pull_constants,
@@ -275,6 +279,7 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
    &brw_cc_vp,
    &gen8_sf_clip_viewport,
 
+   &gen7_l3_state,
    &gen7_push_constant_space,
    &gen7_urb,
    &gen8_blend_state,
@@ -315,6 +320,9 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
 
    &gen8_disable_stages,
    &gen8_vs_state,
+   &gen8_hs_state,
+   &gen7_te_state,
+   &gen8_ds_state,
    &gen8_gs_state,
    &gen8_sol_state,
    &gen6_clip_state,
@@ -352,6 +360,7 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
 static const struct brw_tracked_state *gen8_compute_atoms[] =
 {
    &gen8_state_base_address,
+   &gen7_l3_state,
    &brw_cs_image_surfaces,
    &gen7_cs_push_constants,
    &brw_cs_pull_constants,
@@ -382,7 +391,7 @@ brw_upload_initial_gpu_state(struct brw_context *brw)
       BEGIN_BATCH(3);
       OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
       OUT_BATCH(GEN7_CACHE_MODE_1);
-      OUT_BATCH((GEN9_PARTIAL_RESOLVE_DISABLE_IN_VC << 16) |
+      OUT_BATCH(REG_MASK(GEN9_PARTIAL_RESOLVE_DISABLE_IN_VC) |
                 GEN9_PARTIAL_RESOLVE_DISABLE_IN_VC);
       ADVANCE_BATCH();
    }
@@ -577,14 +586,19 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_VS_PROG_DATA),
    DEFINE_BIT(BRW_NEW_FF_GS_PROG_DATA),
    DEFINE_BIT(BRW_NEW_GS_PROG_DATA),
+   DEFINE_BIT(BRW_NEW_TCS_PROG_DATA),
+   DEFINE_BIT(BRW_NEW_TES_PROG_DATA),
    DEFINE_BIT(BRW_NEW_CLIP_PROG_DATA),
    DEFINE_BIT(BRW_NEW_CS_PROG_DATA),
    DEFINE_BIT(BRW_NEW_URB_FENCE),
    DEFINE_BIT(BRW_NEW_FRAGMENT_PROGRAM),
    DEFINE_BIT(BRW_NEW_GEOMETRY_PROGRAM),
+   DEFINE_BIT(BRW_NEW_TESS_EVAL_PROGRAM),
+   DEFINE_BIT(BRW_NEW_TESS_CTRL_PROGRAM),
    DEFINE_BIT(BRW_NEW_VERTEX_PROGRAM),
    DEFINE_BIT(BRW_NEW_CURBE_OFFSETS),
    DEFINE_BIT(BRW_NEW_REDUCED_PRIMITIVE),
+   DEFINE_BIT(BRW_NEW_PATCH_PRIMITIVE),
    DEFINE_BIT(BRW_NEW_PRIMITIVE),
    DEFINE_BIT(BRW_NEW_CONTEXT),
    DEFINE_BIT(BRW_NEW_PSP),
@@ -618,6 +632,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_VS_ATTRIB_WORKAROUNDS),
    DEFINE_BIT(BRW_NEW_COMPUTE_PROGRAM),
    DEFINE_BIT(BRW_NEW_CS_WORK_GROUPS),
+   DEFINE_BIT(BRW_NEW_URB_SIZE),
    {0, 0, 0}
 };
 
@@ -715,6 +730,16 @@ brw_upload_pipeline_state(struct brw_context *brw,
       if (brw->fragment_program != ctx->FragmentProgram._Current) {
          brw->fragment_program = ctx->FragmentProgram._Current;
          brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;
+      }
+
+      if (brw->tess_eval_program != ctx->TessEvalProgram._Current) {
+         brw->tess_eval_program = ctx->TessEvalProgram._Current;
+         brw->ctx.NewDriverState |= BRW_NEW_TESS_EVAL_PROGRAM;
+      }
+
+      if (brw->tess_ctrl_program != ctx->TessCtrlProgram._Current) {
+         brw->tess_ctrl_program = ctx->TessCtrlProgram._Current;
+         brw->ctx.NewDriverState |= BRW_NEW_TESS_CTRL_PROGRAM;
       }
 
       if (brw->geometry_program != ctx->GeometryProgram._Current) {

@@ -1127,12 +1127,20 @@ print_help(struct pipe_screen *screen)
    }
 
    if (screen->get_driver_query_info){
+      boolean skipping = false;
       struct pipe_driver_query_info info;
       num_queries = screen->get_driver_query_info(screen, 0, NULL);
 
       for (i = 0; i < num_queries; i++){
          screen->get_driver_query_info(screen, i, &info);
-         printf("    %s\n", info.name);
+         if (info.flags & PIPE_DRIVER_QUERY_FLAG_DONT_LIST) {
+            if (!skipping)
+               puts("    ...");
+            skipping = true;
+         } else {
+            printf("    %s\n", info.name);
+            skipping = false;
+         }
       }
    }
 

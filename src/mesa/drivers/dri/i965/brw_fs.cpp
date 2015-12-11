@@ -28,29 +28,17 @@
  * from the LIR.
  */
 
-#include <sys/types.h>
-
-#include "util/hash_table.h"
 #include "main/macros.h"
-#include "main/shaderobj.h"
-#include "main/fbobject.h"
-#include "program/prog_parameter.h"
-#include "program/prog_print.h"
-#include "util/register_allocate.h"
-#include "program/hash_table.h"
 #include "brw_context.h"
 #include "brw_eu.h"
-#include "brw_wm.h"
 #include "brw_fs.h"
 #include "brw_cs.h"
 #include "brw_nir.h"
 #include "brw_vec4_gs_visitor.h"
 #include "brw_cfg.h"
+#include "brw_program.h"
 #include "brw_dead_control_flow.h"
-#include "main/uniforms.h"
-#include "brw_fs_live_variables.h"
 #include "glsl/nir/glsl_types.h"
-#include "program/sampler.h"
 
 using namespace brw;
 
@@ -187,7 +175,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
     * the redundant ones.
     */
    fs_reg vec4_offset = vgrf(glsl_type::int_type);
-   bld.ADD(vec4_offset, varying_offset, brw_imm_ud(const_offset & ~3));
+   bld.ADD(vec4_offset, varying_offset, brw_imm_ud(const_offset & ~0xf));
 
    int scale = 1;
    if (devinfo->gen == 4 && bld.dispatch_width() == 8) {
@@ -219,7 +207,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
          inst->mlen = 1 + bld.dispatch_width() / 8;
    }
 
-   bld.MOV(dst, offset(vec4_result, bld, (const_offset & 3) * scale));
+   bld.MOV(dst, offset(vec4_result, bld, ((const_offset & 0xf) / 4) * scale));
 }
 
 /**
@@ -300,6 +288,71 @@ fs_inst::is_send_from_grf() const
    }
 }
 
+/**
+ * Returns true if this instruction's sources and destinations cannot
+ * safely be the same register.
+ *
+ * In most cases, a register can be written over safely by the same
+ * instruction that is its last use.  For a single instruction, the
+ * sources are dereferenced before writing of the destination starts
+ * (naturally).
+ *
+ * However, there are a few cases where this can be problematic:
+ *
+ * - Virtual opcodes that translate to multiple instructions in the
+ *   code generator: if src == dst and one instruction writes the
+ *   destination before a later instruction reads the source, then
+ *   src will have been clobbered.
+ *
+ * - SIMD16 compressed instructions with certain regioning (see below).
+ *
+ * The register allocator uses this information to set up conflicts between
+ * GRF sources and the destination.
+ */
+bool
+fs_inst::has_source_and_destination_hazard() const
+{
+   switch (opcode) {
+   case FS_OPCODE_PACK_HALF_2x16_SPLIT:
+      /* Multiple partial writes to the destination */
+      return true;
+   default:
+      /* The SIMD16 compressed instruction
+       *
+       * add(16)      g4<1>F      g4<8,8,1>F   g6<8,8,1>F
+       *
+       * is actually decoded in hardware as:
+       *
+       * add(8)       g4<1>F      g4<8,8,1>F   g6<8,8,1>F
+       * add(8)       g5<1>F      g5<8,8,1>F   g7<8,8,1>F
+       *
+       * Which is safe.  However, if we have uniform accesses
+       * happening, we get into trouble:
+       *
+       * add(8)       g4<1>F      g4<0,1,0>F   g6<8,8,1>F
+       * add(8)       g5<1>F      g4<0,1,0>F   g7<8,8,1>F
+       *
+       * Now our destination for the first instruction overwrote the
+       * second instruction's src0, and we get garbage for those 8
+       * pixels.  There's a similar issue for the pre-gen6
+       * pixel_x/pixel_y, which are registers of 16-bit values and thus
+       * would get stomped by the first decode as well.
+       */
+      if (exec_size == 16) {
+         for (int i = 0; i < sources; i++) {
+            if (src[i].file == VGRF && (src[i].stride == 0 ||
+                                        src[i].type == BRW_REGISTER_TYPE_UW ||
+                                        src[i].type == BRW_REGISTER_TYPE_W ||
+                                        src[i].type == BRW_REGISTER_TYPE_UB ||
+                                        src[i].type == BRW_REGISTER_TYPE_B)) {
+               return true;
+            }
+         }
+      }
+      return false;
+   }
+}
+
 bool
 fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
 {
@@ -375,7 +428,7 @@ fs_reg::fs_reg()
    this->file = BAD_FILE;
 }
 
-fs_reg::fs_reg(struct brw_reg reg) :
+fs_reg::fs_reg(struct ::brw_reg reg) :
    backend_reg(reg)
 {
    this->reg_offset = 0;
@@ -393,8 +446,7 @@ fs_reg::fs_reg(struct brw_reg reg) :
 bool
 fs_reg::equals(const fs_reg &r) const
 {
-   return (memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
-           reg_offset == r.reg_offset &&
+   return (this->backend_reg::equals(r) &&
            subreg_offset == r.subreg_offset &&
            !reladdr && !r.reladdr &&
            stride == r.stride);
@@ -1057,33 +1109,19 @@ fs_visitor::emit_linterp(const fs_reg &attr, const fs_reg &interp,
 }
 
 void
-fs_visitor::emit_general_interpolation(fs_reg attr, const char *name,
+fs_visitor::emit_general_interpolation(fs_reg *attr, const char *name,
                                        const glsl_type *type,
                                        glsl_interp_qualifier interpolation_mode,
-                                       int location, bool mod_centroid,
+                                       int *location, bool mod_centroid,
                                        bool mod_sample)
 {
-   attr.type = brw_type_for_base_type(type->get_scalar_type());
-
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
-   unsigned int array_elements;
-
-   if (type->is_array()) {
-      array_elements = type->arrays_of_arrays_size();
-      if (array_elements == 0) {
-         fail("dereferenced array '%s' has length 0\n", name);
-      }
-      type = type->without_array();
-   } else {
-      array_elements = 1;
-   }
-
    if (interpolation_mode == INTERP_QUALIFIER_NONE) {
       bool is_gl_Color =
-         location == VARYING_SLOT_COL0 || location == VARYING_SLOT_COL1;
+         *location == VARYING_SLOT_COL0 || *location == VARYING_SLOT_COL1;
       if (key->flat_shade && is_gl_Color) {
          interpolation_mode = INTERP_QUALIFIER_FLAT;
       } else {
@@ -1091,71 +1129,86 @@ fs_visitor::emit_general_interpolation(fs_reg attr, const char *name,
       }
    }
 
-   for (unsigned int i = 0; i < array_elements; i++) {
-      for (unsigned int j = 0; j < type->matrix_columns; j++) {
-	 if (prog_data->urb_setup[location] == -1) {
-	    /* If there's no incoming setup data for this slot, don't
-	     * emit interpolation for it.
-	     */
-	    attr = offset(attr, bld, type->vector_elements);
-	    location++;
-	    continue;
-	 }
+   if (type->is_array() || type->is_matrix()) {
+      const glsl_type *elem_type = glsl_get_array_element(type);
+      const unsigned length = glsl_get_length(type);
 
-	 if (interpolation_mode == INTERP_QUALIFIER_FLAT) {
-	    /* Constant interpolation (flat shading) case. The SF has
-	     * handed us defined values in only the constant offset
-	     * field of the setup reg.
-	     */
-	    for (unsigned int k = 0; k < type->vector_elements; k++) {
-	       struct brw_reg interp = interp_reg(location, k);
-	       interp = suboffset(interp, 3);
-               interp.type = attr.type;
-               bld.emit(FS_OPCODE_CINTERP, attr, fs_reg(interp));
-	       attr = offset(attr, bld, 1);
-	    }
-	 } else {
-	    /* Smooth/noperspective interpolation case. */
-	    for (unsigned int k = 0; k < type->vector_elements; k++) {
-               struct brw_reg interp = interp_reg(location, k);
-               if (devinfo->needs_unlit_centroid_workaround && mod_centroid) {
-                  /* Get the pixel/sample mask into f0 so that we know
-                   * which pixels are lit.  Then, for each channel that is
-                   * unlit, replace the centroid data with non-centroid
-                   * data.
-                   */
-                  bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
-
-                  fs_inst *inst;
-                  inst = emit_linterp(attr, fs_reg(interp), interpolation_mode,
-                                      false, false);
-                  inst->predicate = BRW_PREDICATE_NORMAL;
-                  inst->predicate_inverse = true;
-                  if (devinfo->has_pln)
-                     inst->no_dd_clear = true;
-
-                  inst = emit_linterp(attr, fs_reg(interp), interpolation_mode,
-                                      mod_centroid && !key->persample_shading,
-                                      mod_sample || key->persample_shading);
-                  inst->predicate = BRW_PREDICATE_NORMAL;
-                  inst->predicate_inverse = false;
-                  if (devinfo->has_pln)
-                     inst->no_dd_check = true;
-
-               } else {
-                  emit_linterp(attr, fs_reg(interp), interpolation_mode,
-                               mod_centroid && !key->persample_shading,
-                               mod_sample || key->persample_shading);
-               }
-               if (devinfo->gen < 6 && interpolation_mode == INTERP_QUALIFIER_SMOOTH) {
-                  bld.MUL(attr, attr, this->pixel_w);
-               }
-	       attr = offset(attr, bld, 1);
-	    }
-
-	 }
-	 location++;
+      for (unsigned i = 0; i < length; i++) {
+         emit_general_interpolation(attr, name, elem_type, interpolation_mode,
+                                    location, mod_centroid, mod_sample);
       }
+   } else if (type->is_record()) {
+      for (unsigned i = 0; i < type->length; i++) {
+         const glsl_type *field_type = type->fields.structure[i].type;
+         emit_general_interpolation(attr, name, field_type, interpolation_mode,
+                                    location, mod_centroid, mod_sample);
+      }
+   } else {
+      assert(type->is_scalar() || type->is_vector());
+
+      if (prog_data->urb_setup[*location] == -1) {
+         /* If there's no incoming setup data for this slot, don't
+          * emit interpolation for it.
+          */
+         *attr = offset(*attr, bld, type->vector_elements);
+         (*location)++;
+         return;
+      }
+
+      attr->type = brw_type_for_base_type(type->get_scalar_type());
+
+      if (interpolation_mode == INTERP_QUALIFIER_FLAT) {
+         /* Constant interpolation (flat shading) case. The SF has
+          * handed us defined values in only the constant offset
+          * field of the setup reg.
+          */
+         for (unsigned int i = 0; i < type->vector_elements; i++) {
+            struct brw_reg interp = interp_reg(*location, i);
+            interp = suboffset(interp, 3);
+            interp.type = attr->type;
+            bld.emit(FS_OPCODE_CINTERP, *attr, fs_reg(interp));
+            *attr = offset(*attr, bld, 1);
+         }
+      } else {
+         /* Smooth/noperspective interpolation case. */
+         for (unsigned int i = 0; i < type->vector_elements; i++) {
+            struct brw_reg interp = interp_reg(*location, i);
+            if (devinfo->needs_unlit_centroid_workaround && mod_centroid) {
+               /* Get the pixel/sample mask into f0 so that we know
+                * which pixels are lit.  Then, for each channel that is
+                * unlit, replace the centroid data with non-centroid
+                * data.
+                */
+               bld.emit(FS_OPCODE_MOV_DISPATCH_TO_FLAGS);
+
+               fs_inst *inst;
+               inst = emit_linterp(*attr, fs_reg(interp), interpolation_mode,
+                                   false, false);
+               inst->predicate = BRW_PREDICATE_NORMAL;
+               inst->predicate_inverse = true;
+               if (devinfo->has_pln)
+                  inst->no_dd_clear = true;
+
+               inst = emit_linterp(*attr, fs_reg(interp), interpolation_mode,
+                                   mod_centroid && !key->persample_shading,
+                                   mod_sample || key->persample_shading);
+               inst->predicate = BRW_PREDICATE_NORMAL;
+               inst->predicate_inverse = false;
+               if (devinfo->has_pln)
+                  inst->no_dd_check = true;
+
+            } else {
+               emit_linterp(*attr, fs_reg(interp), interpolation_mode,
+                            mod_centroid && !key->persample_shading,
+                            mod_sample || key->persample_shading);
+            }
+            if (devinfo->gen < 6 && interpolation_mode == INTERP_QUALIFIER_SMOOTH) {
+               bld.MUL(*attr, *attr, this->pixel_w);
+            }
+            *attr = offset(*attr, bld, 1);
+         }
+      }
+      (*location)++;
    }
 }
 
@@ -2003,7 +2056,7 @@ fs_visitor::demote_pull_constants()
             VARYING_PULL_CONSTANT_LOAD(ibld, dst,
                                        brw_imm_ud(index),
                                        *inst->src[i].reladdr,
-                                       pull_index);
+                                       pull_index * 4);
             inst->src[i].reladdr = NULL;
             inst->src[i].stride = 1;
          } else {
@@ -2039,7 +2092,8 @@ fs_visitor::opt_algebraic()
             if (inst->dst.type != inst->src[0].type)
                assert(!"unimplemented: saturate mixed types");
 
-            if (brw_saturate_immediate(inst->dst.type, &inst->src[0])) {
+            if (brw_saturate_immediate(inst->dst.type,
+                                       &inst->src[0].as_brw_reg())) {
                inst->saturate = false;
                progress = true;
             }
@@ -3054,13 +3108,11 @@ fs_visitor::lower_uniform_pull_constant_loads()
          continue;
 
       if (devinfo->gen >= 7) {
-         /* The offset arg before was a vec4-aligned byte offset.  We need to
-          * turn it into a dword offset.
-          */
+         /* The offset arg is a vec4-aligned immediate byte offset. */
          fs_reg const_offset_reg = inst->src[1];
          assert(const_offset_reg.file == IMM &&
                 const_offset_reg.type == BRW_REGISTER_TYPE_UD);
-         const_offset_reg.ud /= 4;
+         assert(const_offset_reg.ud % 16 == 0);
 
          fs_reg payload, offset;
          if (devinfo->gen >= 9) {
@@ -5540,42 +5592,6 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
       prog_data->prog_offset_16 = g.generate_code(simd16_cfg, 16);
 
    return g.get_assembly(final_assembly_size);
-}
-
-void
-brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *prog_data,
-                             void *buffer, uint32_t threads, uint32_t stride)
-{
-   if (prog_data->local_invocation_id_regs == 0)
-      return;
-
-   /* 'stride' should be an integer number of registers, that is, a multiple
-    * of 32 bytes.
-    */
-   assert(stride % 32 == 0);
-
-   unsigned x = 0, y = 0, z = 0;
-   for (unsigned t = 0; t < threads; t++) {
-      uint32_t *param = (uint32_t *) buffer + stride * t / 4;
-
-      for (unsigned i = 0; i < prog_data->simd_size; i++) {
-         param[0 * prog_data->simd_size + i] = x;
-         param[1 * prog_data->simd_size + i] = y;
-         param[2 * prog_data->simd_size + i] = z;
-
-         x++;
-         if (x == prog_data->local_size[0]) {
-            x = 0;
-            y++;
-            if (y == prog_data->local_size[1]) {
-               y = 0;
-               z++;
-               if (z == prog_data->local_size[2])
-                  z = 0;
-            }
-         }
-      }
-   }
 }
 
 fs_reg *

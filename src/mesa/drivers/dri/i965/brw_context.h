@@ -34,15 +34,11 @@
 #define BRWCONTEXT_INC
 
 #include <stdbool.h>
-#include <string.h>
-#include "main/imports.h"
 #include "main/macros.h"
-#include "main/mm.h"
 #include "main/mtypes.h"
 #include "brw_structs.h"
 #include "brw_compiler.h"
 #include "intel_aub.h"
-#include "program/prog_parameter.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,9 +46,7 @@ extern "C" {
         #define virtual virt
 #endif
 
-#include <drm.h>
 #include <intel_bufmgr.h>
-#include <i915_drm.h>
 #ifdef __cplusplus
 	#undef virtual
 }
@@ -116,6 +110,12 @@ extern "C" {
  * enabled, it first passes them to a VS thread which is a good place
  * for the driver to implement any active vertex shader.
  *
+ * HS - Hull Shader (Tessellation Control Shader)
+ *
+ * TE - Tessellation Engine (Tessellation Primitive Generation)
+ *
+ * DS - Domain Shader (Tessellation Evaluation Shader)
+ *
  * GS - Geometry Shader.  This corresponds to a new DX10 concept.  If
  * enabled, incoming strips etc are passed to GS threads in individual
  * line/triangle/point units.  The GS thread may perform arbitary
@@ -166,6 +166,8 @@ enum brw_cache_id {
    BRW_CACHE_VS_PROG,
    BRW_CACHE_FF_GS_PROG,
    BRW_CACHE_GS_PROG,
+   BRW_CACHE_TCS_PROG,
+   BRW_CACHE_TES_PROG,
    BRW_CACHE_CLIP_PROG,
    BRW_CACHE_CS_PROG,
 
@@ -177,9 +179,12 @@ enum brw_state_id {
    BRW_STATE_URB_FENCE = BRW_MAX_CACHE,
    BRW_STATE_FRAGMENT_PROGRAM,
    BRW_STATE_GEOMETRY_PROGRAM,
+   BRW_STATE_TESS_CTRL_PROGRAM,
+   BRW_STATE_TESS_EVAL_PROGRAM,
    BRW_STATE_VERTEX_PROGRAM,
    BRW_STATE_CURBE_OFFSETS,
    BRW_STATE_REDUCED_PRIMITIVE,
+   BRW_STATE_PATCH_PRIMITIVE,
    BRW_STATE_PRIMITIVE,
    BRW_STATE_CONTEXT,
    BRW_STATE_PSP,
@@ -213,6 +218,7 @@ enum brw_state_id {
    BRW_STATE_VS_ATTRIB_WORKAROUNDS,
    BRW_STATE_COMPUTE_PROGRAM,
    BRW_STATE_CS_WORK_GROUPS,
+   BRW_STATE_URB_SIZE,
    BRW_NUM_STATE_BITS
 };
 
@@ -247,14 +253,19 @@ enum brw_state_id {
 #define BRW_NEW_VS_PROG_DATA            (1ull << BRW_CACHE_VS_PROG)
 #define BRW_NEW_FF_GS_PROG_DATA         (1ull << BRW_CACHE_FF_GS_PROG)
 #define BRW_NEW_GS_PROG_DATA            (1ull << BRW_CACHE_GS_PROG)
+#define BRW_NEW_TCS_PROG_DATA           (1ull << BRW_CACHE_TCS_PROG)
+#define BRW_NEW_TES_PROG_DATA           (1ull << BRW_CACHE_TES_PROG)
 #define BRW_NEW_CLIP_PROG_DATA          (1ull << BRW_CACHE_CLIP_PROG)
 #define BRW_NEW_CS_PROG_DATA            (1ull << BRW_CACHE_CS_PROG)
 #define BRW_NEW_URB_FENCE               (1ull << BRW_STATE_URB_FENCE)
 #define BRW_NEW_FRAGMENT_PROGRAM        (1ull << BRW_STATE_FRAGMENT_PROGRAM)
 #define BRW_NEW_GEOMETRY_PROGRAM        (1ull << BRW_STATE_GEOMETRY_PROGRAM)
+#define BRW_NEW_TESS_EVAL_PROGRAM       (1ull << BRW_STATE_TESS_EVAL_PROGRAM)
+#define BRW_NEW_TESS_CTRL_PROGRAM       (1ull << BRW_STATE_TESS_CTRL_PROGRAM)
 #define BRW_NEW_VERTEX_PROGRAM          (1ull << BRW_STATE_VERTEX_PROGRAM)
 #define BRW_NEW_CURBE_OFFSETS           (1ull << BRW_STATE_CURBE_OFFSETS)
 #define BRW_NEW_REDUCED_PRIMITIVE       (1ull << BRW_STATE_REDUCED_PRIMITIVE)
+#define BRW_NEW_PATCH_PRIMITIVE         (1ull << BRW_STATE_PATCH_PRIMITIVE)
 #define BRW_NEW_PRIMITIVE               (1ull << BRW_STATE_PRIMITIVE)
 #define BRW_NEW_CONTEXT                 (1ull << BRW_STATE_CONTEXT)
 #define BRW_NEW_PSP                     (1ull << BRW_STATE_PSP)
@@ -293,6 +304,7 @@ enum brw_state_id {
 #define BRW_NEW_VS_ATTRIB_WORKAROUNDS   (1ull << BRW_STATE_VS_ATTRIB_WORKAROUNDS)
 #define BRW_NEW_COMPUTE_PROGRAM         (1ull << BRW_STATE_COMPUTE_PROGRAM)
 #define BRW_NEW_CS_WORK_GROUPS          (1ull << BRW_STATE_CS_WORK_GROUPS)
+#define BRW_NEW_URB_SIZE                (1ull << BRW_STATE_URB_SIZE)
 
 struct brw_state_flags {
    /** State update flags signalled by mesa internals */
@@ -307,6 +319,20 @@ struct brw_state_flags {
 struct brw_vertex_program {
    struct gl_vertex_program program;
    GLuint id;
+};
+
+
+/** Subclass of Mesa tessellation control program */
+struct brw_tess_ctrl_program {
+   struct gl_tess_ctrl_program program;
+   unsigned id;  /**< serial no. to identify tess ctrl progs, never re-used */
+};
+
+
+/** Subclass of Mesa tessellation evaluation program */
+struct brw_tess_eval_program {
+   struct gl_tess_eval_program program;
+   unsigned id;  /**< serial no. to identify tess eval progs, never re-used */
 };
 
 
@@ -420,7 +446,7 @@ struct brw_ff_gs_prog_data {
 #define BRW_MAX_DRAW_BUFFERS 8
 
 /** Max number of UBOs in a shader */
-#define BRW_MAX_UBO 12
+#define BRW_MAX_UBO 14
 
 /** Max number of SSBOs in a shader */
 #define BRW_MAX_SSBO 12
@@ -676,6 +702,8 @@ enum brw_predicate_state {
 
 struct shader_times;
 
+struct brw_l3_config;
+
 /**
  * brw_context is derived from gl_context.
  */
@@ -842,6 +870,11 @@ struct brw_context
    bool use_resource_streamer;
 
    /**
+    * Whether LRI can be used to write register values from the batch buffer.
+    */
+   bool can_do_pipelined_register_writes;
+
+   /**
     * Some versions of Gen hardware don't do centroid interpolation correctly
     * on unlit pixels, causing incorrect values for derivatives near triangle
     * edges.  Enabling this flag causes the fragment shader to use
@@ -944,6 +977,8 @@ struct brw_context
     */
    const struct gl_vertex_program *vertex_program;
    const struct gl_geometry_program *geometry_program;
+   const struct gl_tess_ctrl_program *tess_ctrl_program;
+   const struct gl_tess_eval_program *tess_eval_program;
    const struct gl_fragment_program *fragment_program;
    const struct gl_compute_program *compute_program;
 
@@ -991,7 +1026,13 @@ struct brw_context
       GLuint clip_start;
       GLuint sf_start;
       GLuint cs_start;
-      GLuint size; /* Hardware URB size, in KB. */
+      /**
+       * URB size in the current configuration.  The units this is expressed
+       * in are somewhat inconsistent, see brw_device_info::urb::size.
+       *
+       * FINISHME: Represent the URB size consistently in KB on all platforms.
+       */
+      GLuint size;
 
       /* True if the most recently sent _3DSTATE_URB message allocated
        * URB space for the GS.
@@ -1032,6 +1073,28 @@ struct brw_context
       struct brw_stage_state base;
       struct brw_vs_prog_data *prog_data;
    } vs;
+
+   struct {
+      struct brw_stage_state base;
+      struct brw_tcs_prog_data *prog_data;
+
+      /**
+       * True if the 3DSTATE_HS command most recently emitted to the 3D
+       * pipeline enabled the HS; false otherwise.
+       */
+      bool enabled;
+   } tcs;
+
+   struct {
+      struct brw_stage_state base;
+      struct brw_tes_prog_data *prog_data;
+
+      /**
+       * True if the 3DSTATE_DS command most recently emitted to the 3D
+       * pipeline enabled the DS; false otherwise.
+       */
+      bool enabled;
+   } tes;
 
    struct {
       struct brw_stage_state base;
@@ -1169,8 +1232,8 @@ struct brw_context
    } perfmon;
 
    int num_atoms[BRW_NUM_PIPELINES];
-   const struct brw_tracked_state render_atoms[60];
-   const struct brw_tracked_state compute_atoms[9];
+   const struct brw_tracked_state render_atoms[62];
+   const struct brw_tracked_state compute_atoms[10];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {
@@ -1211,6 +1274,10 @@ struct brw_context
 
    uint32_t num_instances;
    int basevertex;
+
+   struct {
+      const struct brw_l3_config *config;
+   } l3;
 
    struct {
       drm_intel_bo *bo;
@@ -1362,6 +1429,16 @@ void brw_validate_textures( struct brw_context *brw );
 /*======================================================================
  * brw_program.c
  */
+static inline bool
+key_debug(struct brw_context *brw, const char *name, int a, int b)
+{
+   if (a != b) {
+      perf_debug("  %s %d->%d\n", name, a, b);
+      return true;
+   }
+   return false;
+}
+
 void brwInitFragProgFuncs( struct dd_function_table *functions );
 
 /* Per-thread scratch space is a power-of-two multiple of 1KB. */
@@ -1434,14 +1511,12 @@ void brw_create_constant_surface(struct brw_context *brw,
                                  drm_intel_bo *bo,
                                  uint32_t offset,
                                  uint32_t size,
-                                 uint32_t *out_offset,
-                                 bool dword_pitch);
+                                 uint32_t *out_offset);
 void brw_create_buffer_surface(struct brw_context *brw,
                                drm_intel_bo *bo,
                                uint32_t offset,
                                uint32_t size,
-                               uint32_t *out_offset,
-                               bool dword_pitch);
+                               uint32_t *out_offset);
 void brw_update_buffer_texture_surface(struct gl_context *ctx,
                                        unsigned unit,
                                        uint32_t *surf_offset);
@@ -1453,8 +1528,7 @@ brw_update_sol_surface(struct brw_context *brw,
 void brw_upload_ubo_surfaces(struct brw_context *brw,
 			     struct gl_shader *shader,
                              struct brw_stage_state *stage_state,
-                             struct brw_stage_prog_data *prog_data,
-                             bool dword_pitch);
+                             struct brw_stage_prog_data *prog_data);
 void brw_upload_abo_surfaces(struct brw_context *brw,
                              struct gl_shader *shader,
                              struct brw_stage_state *stage_state,

@@ -780,26 +780,39 @@ svga_get_driver_query_info(struct pipe_screen *screen,
                            unsigned index,
                            struct pipe_driver_query_info *info)
 {
+#define QUERY(NAME, ENUM, UNITS) \
+   {NAME, ENUM, {0}, UNITS, PIPE_DRIVER_QUERY_RESULT_TYPE_AVERAGE, 0, 0x0}
+
    static const struct pipe_driver_query_info queries[] = {
       /* per-frame counters */
-      {"num-draw-calls", SVGA_QUERY_NUM_DRAW_CALLS, {0}},
-      {"num-fallbacks", SVGA_QUERY_NUM_FALLBACKS, {0}},
-      {"num-flushes", SVGA_QUERY_NUM_FLUSHES, {0}},
-      {"num-validations", SVGA_QUERY_NUM_VALIDATIONS, {0}},
-      {"map-buffer-time", SVGA_QUERY_MAP_BUFFER_TIME, {0},
-       PIPE_DRIVER_QUERY_TYPE_MICROSECONDS},
-      {"num-resources-mapped", SVGA_QUERY_NUM_RESOURCES_MAPPED, {0}},
-      {"num-bytes-uploaded", SVGA_QUERY_NUM_BYTES_UPLOADED, {0},
-       PIPE_DRIVER_QUERY_TYPE_BYTES, PIPE_DRIVER_QUERY_RESULT_TYPE_AVERAGE},
+      QUERY("num-draw-calls", SVGA_QUERY_NUM_DRAW_CALLS,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-fallbacks", SVGA_QUERY_NUM_FALLBACKS,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-flushes", SVGA_QUERY_NUM_FLUSHES,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-validations", SVGA_QUERY_NUM_VALIDATIONS,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("map-buffer-time", SVGA_QUERY_MAP_BUFFER_TIME,
+            PIPE_DRIVER_QUERY_TYPE_MICROSECONDS),
+      QUERY("num-resources-mapped", SVGA_QUERY_NUM_RESOURCES_MAPPED,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-bytes-uploaded", SVGA_QUERY_NUM_BYTES_UPLOADED,
+            PIPE_DRIVER_QUERY_TYPE_BYTES),
 
       /* running total counters */
-      {"memory-used", SVGA_QUERY_MEMORY_USED, {0},
-       PIPE_DRIVER_QUERY_TYPE_BYTES},
-      {"num-shaders", SVGA_QUERY_NUM_SHADERS, {0}},
-      {"num-resources", SVGA_QUERY_NUM_RESOURCES, {0}},
-      {"num-state-objects", SVGA_QUERY_NUM_STATE_OBJECTS, {0}},
-      {"num-surface-views", SVGA_QUERY_NUM_SURFACE_VIEWS, {0}},
+      QUERY("memory-used", SVGA_QUERY_MEMORY_USED,
+            PIPE_DRIVER_QUERY_TYPE_BYTES),
+      QUERY("num-shaders", SVGA_QUERY_NUM_SHADERS,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-resources", SVGA_QUERY_NUM_RESOURCES,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-state-objects", SVGA_QUERY_NUM_STATE_OBJECTS,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-surface-views", SVGA_QUERY_NUM_SURFACE_VIEWS,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
    };
+#undef QUERY
 
    if (!info)
       return Elements(queries);

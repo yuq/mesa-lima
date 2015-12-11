@@ -148,6 +148,13 @@ PipeToProfile(enum pipe_video_profile profile)
    case PIPE_VIDEO_PROFILE_HEVC_MAIN:
       return VAProfileHEVCMain;
    case PIPE_VIDEO_PROFILE_MPEG4_AVC_EXTENDED:
+   case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH10:
+   case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH422:
+   case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH444:
+   case PIPE_VIDEO_PROFILE_HEVC_MAIN_10:
+   case PIPE_VIDEO_PROFILE_HEVC_MAIN_12:
+   case PIPE_VIDEO_PROFILE_HEVC_MAIN_STILL:
+   case PIPE_VIDEO_PROFILE_HEVC_MAIN_444:
    case PIPE_VIDEO_PROFILE_UNKNOWN:
       return VAProfileNone;
    default:
@@ -208,7 +215,7 @@ typedef struct {
 } vlVaSubpicture;
 
 typedef struct {
-   struct pipe_video_codec *decoder;
+   struct pipe_video_codec templat, *decoder;
    struct pipe_video_buffer *target;
    union {
       struct pipe_picture_desc base;
@@ -340,4 +347,22 @@ VAStatus vlVaQueryVideoProcFilterCaps(VADriverContextP ctx, VAContextID context,
                                       void *filter_caps, unsigned int *num_filter_caps);
 VAStatus vlVaQueryVideoProcPipelineCaps(VADriverContextP ctx, VAContextID context, VABufferID *filters,
                                         unsigned int num_filters, VAProcPipelineCaps *pipeline_cap);
+
+// internal functions
+VAStatus vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+void vlVaGetReferenceFrame(vlVaDriver *drv, VASurfaceID surface_id, struct pipe_video_buffer **ref_frame);
+void vlVaHandlePictureParameterBufferMPEG12(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleIQMatrixBufferMPEG12(vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandlePictureParameterBufferH264(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleIQMatrixBufferH264(vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleSliceParameterBufferH264(vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandlePictureParameterBufferVC1(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandlePictureParameterBufferMPEG4(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleIQMatrixBufferMPEG4(vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleSliceParameterBufferMPEG4(vlVaContext *context, vlVaBuffer *buf);
+void vlVaDecoderFixMPEG4Startcode(vlVaContext *context);
+void vlVaHandlePictureParameterBufferHEVC(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleIQMatrixBufferHEVC(vlVaContext *context, vlVaBuffer *buf);
+void vlVaHandleSliceParameterBufferHEVC(vlVaContext *context, vlVaBuffer *buf);
+
 #endif //VA_PRIVATE_H

@@ -1548,13 +1548,21 @@ emit_fetch_gs_input(
                                     swizzle_index);
 
    assert(res);
-
-   if (stype == TGSI_TYPE_UNSIGNED) {
+   if (stype == TGSI_TYPE_DOUBLE) {
+      LLVMValueRef swizzle_index = lp_build_const_int32(gallivm, swizzle + 1);
+      LLVMValueRef res2;
+      res2 = bld->gs_iface->fetch_input(bld->gs_iface, bld_base,
+                                        reg->Dimension.Indirect,
+                                        vertex_index,
+                                        reg->Register.Indirect,
+                                        attrib_index,
+                                        swizzle_index);
+      assert(res2);
+      res = emit_fetch_double(bld_base, stype, res, res2);
+   } else if (stype == TGSI_TYPE_UNSIGNED) {
       res = LLVMBuildBitCast(builder, res, bld_base->uint_bld.vec_type, "");
    } else if (stype == TGSI_TYPE_SIGNED) {
       res = LLVMBuildBitCast(builder, res, bld_base->int_bld.vec_type, "");
-   } else if (stype == TGSI_TYPE_DOUBLE) {
-      res = LLVMBuildBitCast(builder, res, bld_base->dbl_bld.vec_type, "");
    }
 
    return res;
@@ -1701,15 +1709,15 @@ emit_fetch_deriv(
    LLVMValueRef *ddx,
    LLVMValueRef *ddy)
 {
-   if(res)
+   if (res)
       *res = src;
 
    /* TODO: use interpolation coeffs for inputs */
 
-   if(ddx)
+   if (ddx)
       *ddx = lp_build_ddx(&bld->bld_base.base, src);
 
-   if(ddy)
+   if (ddy)
       *ddy = lp_build_ddy(&bld->bld_base.base, src);
 }
 

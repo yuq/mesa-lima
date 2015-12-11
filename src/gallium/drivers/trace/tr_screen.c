@@ -462,7 +462,7 @@ trace_screen_create(struct pipe_screen *screen)
    trace_dump_call_begin("", "pipe_screen_create");
 
    tr_scr = CALLOC_STRUCT(trace_screen);
-   if(!tr_scr)
+   if (!tr_scr)
       goto error2;
 
    tr_scr->base.destroy = trace_screen_destroy;

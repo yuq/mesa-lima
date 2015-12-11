@@ -33,9 +33,10 @@
 #include "sw/kms-dri/kms_dri_sw_winsys.h"
 #include "sw/null/null_sw_winsys.h"
 #include "sw/wrapper/wrapper_sw_winsys.h"
-#include "target-helpers/inline_sw_helper.h"
+#include "target-helpers/sw_helper_public.h"
 #include "state_tracker/drisw_api.h"
 #include "state_tracker/sw_driver.h"
+#include "state_tracker/sw_winsys.h"
 
 struct pipe_loader_sw_device {
    struct pipe_loader_device base;
@@ -136,7 +137,7 @@ pipe_loader_sw_probe_dri(struct pipe_loader_device **devs, struct drisw_loader_f
    if (!pipe_loader_sw_probe_init_common(sdev))
       goto fail;
 
-   for (i = 0; sdev->dd->winsys; i++) {
+   for (i = 0; sdev->dd->winsys[i].name; i++) {
       if (strcmp(sdev->dd->winsys[i].name, "dri") == 0) {
          sdev->ws = sdev->dd->winsys[i].create_winsys(drisw_lf);
          break;
@@ -168,7 +169,7 @@ pipe_loader_sw_probe_kms(struct pipe_loader_device **devs, int fd)
    if (!pipe_loader_sw_probe_init_common(sdev))
       goto fail;
 
-   for (i = 0; sdev->dd->winsys; i++) {
+   for (i = 0; sdev->dd->winsys[i].name; i++) {
       if (strcmp(sdev->dd->winsys[i].name, "kms_dri") == 0) {
          sdev->ws = sdev->dd->winsys[i].create_winsys(fd);
          break;
@@ -199,7 +200,7 @@ pipe_loader_sw_probe_null(struct pipe_loader_device **devs)
    if (!pipe_loader_sw_probe_init_common(sdev))
       goto fail;
 
-   for (i = 0; sdev->dd->winsys; i++) {
+   for (i = 0; sdev->dd->winsys[i].name; i++) {
       if (strcmp(sdev->dd->winsys[i].name, "null") == 0) {
          sdev->ws = sdev->dd->winsys[i].create_winsys();
          break;
@@ -222,7 +223,7 @@ pipe_loader_sw_probe(struct pipe_loader_device **devs, int ndev)
 {
    int i = 1;
 
-   if (i < ndev) {
+   if (i <= ndev) {
       if (!pipe_loader_sw_probe_null(devs)) {
          i--;
       }
@@ -244,7 +245,7 @@ pipe_loader_sw_probe_wrapped(struct pipe_loader_device **dev,
    if (!pipe_loader_sw_probe_init_common(sdev))
       goto fail;
 
-   for (i = 0; sdev->dd->winsys; i++) {
+   for (i = 0; sdev->dd->winsys[i].name; i++) {
       if (strcmp(sdev->dd->winsys[i].name, "wrapped") == 0) {
          sdev->ws = sdev->dd->winsys[i].create_winsys(screen);
          break;

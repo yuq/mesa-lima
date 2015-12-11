@@ -72,7 +72,7 @@ trace_resource_unwrap(struct trace_context *tr_ctx,
 {
    struct trace_resource *tr_res;
 
-   if(!resource)
+   if (!resource)
       return NULL;
 
    tr_res = trace_resource(resource);
@@ -89,7 +89,7 @@ trace_surface_unwrap(struct trace_context *tr_ctx,
    struct trace_screen *tr_scr = trace_screen(tr_ctx->base.screen);
    struct trace_surface *tr_surf;
 
-   if(!surface)
+   if (!surface)
       return NULL;
 
    assert(surface->texture);
@@ -1284,7 +1284,7 @@ trace_context_flush(struct pipe_context *_pipe,
 
    pipe->flush(pipe, fence, flags);
 
-   if(fence)
+   if (fence)
       trace_dump_ret(ptr, *fence);
 
    trace_dump_call_end();
@@ -1539,14 +1539,14 @@ trace_context_create(struct trace_screen *tr_scr,
 {
    struct trace_context *tr_ctx;
 
-   if(!pipe)
+   if (!pipe)
       goto error1;
 
    if(!trace_enabled())
       goto error1;
 
    tr_ctx = CALLOC_STRUCT(trace_context);
-   if(!tr_ctx)
+   if (!tr_ctx)
       goto error1;
 
    tr_ctx->base.priv = pipe->priv; /* expose wrapped priv data */

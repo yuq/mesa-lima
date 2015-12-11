@@ -1997,6 +1997,19 @@ void gen6_math(struct brw_codegen *p,
    brw_set_src1(p, insn, src1);
 }
 
+/**
+ * Return the right surface index to access the thread scratch space using
+ * stateless dataport messages.
+ */
+unsigned
+brw_scratch_surface_idx(const struct brw_codegen *p)
+{
+   /* The scratch space is thread-local so IA coherency is unnecessary. */
+   if (p->devinfo->gen >= 8)
+      return GEN8_BTI_STATELESS_NON_COHERENT;
+   else
+      return BRW_BTI_STATELESS;
+}
 
 /**
  * Write a block of OWORDs (half a GRF each) from the scratch buffer,
@@ -2097,7 +2110,7 @@ void brw_oword_block_write_scratch(struct brw_codegen *p,
 
       brw_set_dp_write_message(p,
 			       insn,
-			       255, /* binding table index (255=stateless) */
+                               brw_scratch_surface_idx(p),
 			       msg_control,
 			       msg_type,
 			       mlen,
@@ -2183,7 +2196,7 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
 
       brw_set_dp_read_message(p,
 			      insn,
-			      255, /* binding table index (255=stateless) */
+                              brw_scratch_surface_idx(p),
 			      msg_control,
 			      BRW_DATAPORT_READ_MESSAGE_OWORD_BLOCK_READ, /* msg_type */
 			      BRW_DATAPORT_READ_TARGET_RENDER_CACHE,
@@ -2604,17 +2617,27 @@ brw_find_next_block_end(struct brw_codegen *p, int start_offset)
    void *store = p->store;
    const struct brw_device_info *devinfo = p->devinfo;
 
+   int depth = 0;
+
    for (offset = next_offset(devinfo, store, start_offset);
         offset < p->next_insn_offset;
         offset = next_offset(devinfo, store, offset)) {
       brw_inst *insn = store + offset;
 
       switch (brw_inst_opcode(devinfo, insn)) {
+      case BRW_OPCODE_IF:
+         depth++;
+         break;
       case BRW_OPCODE_ENDIF:
+         if (depth == 0)
+            return offset;
+         depth--;
+         break;
       case BRW_OPCODE_ELSE:
       case BRW_OPCODE_WHILE:
       case BRW_OPCODE_HALT:
-	 return offset;
+         if (depth == 0)
+            return offset;
       }
    }
 

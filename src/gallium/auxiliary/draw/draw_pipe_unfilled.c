@@ -255,7 +255,7 @@ draw_unfilled_prepare_outputs( struct draw_context *draw,
 struct draw_stage *draw_unfilled_stage( struct draw_context *draw )
 {
    struct unfilled_stage *unfilled = CALLOC_STRUCT(unfilled_stage);
-   if (unfilled == NULL)
+   if (!unfilled)
       goto fail;
 
    unfilled->stage.draw = draw;

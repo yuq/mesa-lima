@@ -237,7 +237,7 @@ void *evergreen_create_compute_state(
 #endif
 #endif
 
-	shader->ctx = (struct r600_context*)ctx;
+	shader->ctx = ctx;
 	shader->local_size = cso->req_local_mem;
 	shader->private_size = cso->req_private_mem;
 	shader->input_size = cso->req_input_mem;
@@ -402,7 +402,7 @@ static void evergreen_emit_direct_dispatch(
 		assert(lds_size <= 8160);
 	}
 
-	radeon_compute_set_context_reg(cs, CM_R_0288E8_SQ_LDS_ALLOC,
+	radeon_compute_set_context_reg(cs, R_0288E8_SQ_LDS_ALLOC,
 					lds_size | (num_waves << 14));
 
 	/* Dispatch packet */
@@ -431,6 +431,10 @@ static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 	 * of registers initialized by the start_compute_cs_cmd atom.
 	 */
 	r600_emit_command_buffer(cs, &ctx->start_compute_cs_cmd);
+
+	/* emit config state */
+	if (ctx->b.chip_class == EVERGREEN)
+		r600_emit_atom(ctx, &ctx->config_state.atom);
 
 	ctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE | R600_CONTEXT_FLUSH_AND_INV;
 	r600_flush_emit(ctx);
@@ -791,7 +795,7 @@ void evergreen_init_atom_start_compute_cs(struct r600_context *ctx)
 
 	/* Config Registers */
 	if (ctx->b.chip_class < CAYMAN)
-		evergreen_init_common_regs(cb, ctx->b.chip_class, ctx->b.family,
+		evergreen_init_common_regs(ctx, cb, ctx->b.chip_class, ctx->b.family,
 					   ctx->screen->b.info.drm_minor);
 	else
 		cayman_init_common_regs(cb, ctx->b.chip_class, ctx->b.family,
@@ -997,7 +1001,7 @@ void *r600_compute_global_transfer_map(
 	}
 	else {
 		if (item->real_buffer == NULL) {
-			item->real_buffer = (struct r600_resource*)
+			item->real_buffer =
 					r600_compute_buffer_alloc_vram(pool->screen, item->size_in_dw * 4);
 		}
 	}

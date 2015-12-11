@@ -1446,6 +1446,7 @@ dri2_init_screen(__DRIscreen * sPriv)
    struct pipe_screen *pscreen = NULL;
    const struct drm_conf_ret *throttle_ret;
    const struct drm_conf_ret *dmabuf_ret;
+   int fd = -1;
 
    screen = CALLOC_STRUCT(dri_screen);
    if (!screen)
@@ -1457,7 +1458,10 @@ dri2_init_screen(__DRIscreen * sPriv)
 
    sPriv->driverPrivate = (void *)screen;
 
-   if (pipe_loader_drm_probe_fd(&screen->dev, dup(screen->fd)))
+   if (screen->fd < 0 || (fd = dup(screen->fd)) < 0)
+      goto fail;
+
+   if (pipe_loader_drm_probe_fd(&screen->dev, fd))
       pscreen = pipe_loader_create_screen(screen->dev);
 
    if (!pscreen)
@@ -1502,6 +1506,8 @@ fail:
    dri_destroy_screen_helper(screen);
    if (screen->dev)
       pipe_loader_release(&screen->dev, 1);
+   else
+      close(fd);
    FREE(screen);
    return NULL;
 }
@@ -1519,6 +1525,7 @@ dri_kms_init_screen(__DRIscreen * sPriv)
    struct dri_screen *screen;
    struct pipe_screen *pscreen = NULL;
    uint64_t cap;
+   int fd = -1;
 
    screen = CALLOC_STRUCT(dri_screen);
    if (!screen)
@@ -1529,7 +1536,10 @@ dri_kms_init_screen(__DRIscreen * sPriv)
 
    sPriv->driverPrivate = (void *)screen;
 
-   if (pipe_loader_sw_probe_kms(&screen->dev, dup(screen->fd)))
+   if (screen->fd < 0 || (fd = dup(screen->fd)) < 0)
+      goto fail;
+
+   if (pipe_loader_sw_probe_kms(&screen->dev, fd))
       pscreen = pipe_loader_create_screen(screen->dev);
 
    if (!pscreen)
@@ -1557,6 +1567,8 @@ fail:
    dri_destroy_screen_helper(screen);
    if (screen->dev)
       pipe_loader_release(&screen->dev, 1);
+   else
+      close(fd);
    FREE(screen);
 #endif // GALLIUM_SOFTPIPE
    return NULL;

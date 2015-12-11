@@ -286,7 +286,8 @@ setup_program(struct brw_context *brw, bool msaa_tex)
    char *fs_source;
    const struct sampler_and_fetch *sampler = &samplers[msaa_tex];
 
-   _mesa_meta_setup_vertex_objects(&blit->VAO, &blit->VBO, true, 2, 2, 0);
+   _mesa_meta_setup_vertex_objects(&brw->ctx, &blit->VAO, &blit->buf_obj, true,
+                                   2, 2, 0);
 
    GLuint *prog_id = &brw->meta_stencil_blit_programs[msaa_tex];
 
@@ -294,7 +295,7 @@ setup_program(struct brw_context *brw, bool msaa_tex)
       _mesa_UseProgram(*prog_id);
       return *prog_id;
    }
-  
+
    fs_source = ralloc_asprintf(NULL, fs_tmpl, sampler->sampler,
                                sampler->fetch);
    _mesa_meta_compile_and_link_program(ctx, vs_source, fs_source,
@@ -306,7 +307,7 @@ setup_program(struct brw_context *brw, bool msaa_tex)
 }
 
 /**
- * Samples in stencil buffer are interleaved, and unfortunately the data port 
+ * Samples in stencil buffer are interleaved, and unfortunately the data port
  * does not support it as render target. Therefore the surface is set up as
  * single sampled and the program handles the interleaving.
  * In case of single sampled stencil, the render buffer is adjusted with
@@ -372,7 +373,7 @@ adjust_mip_level(const struct intel_mipmap_tree *mt,
 }
 
 static void
-prepare_vertex_data(void)
+prepare_vertex_data(struct gl_context *ctx, struct gl_buffer_object *buf_obj)
 {
    static const struct vertex verts[] = {
       { .x = -1.0f, .y = -1.0f },
@@ -380,7 +381,7 @@ prepare_vertex_data(void)
       { .x =  1.0f, .y =  1.0f },
       { .x = -1.0f, .y =  1.0f } };
 
-   _mesa_BufferSubData(GL_ARRAY_BUFFER_ARB, 0, sizeof(verts), verts);
+   _mesa_buffer_sub_data(ctx, buf_obj, 0, sizeof(verts), verts, __func__);
 }
 
 static bool
@@ -460,7 +461,7 @@ brw_meta_stencil_blit(struct brw_context *brw,
    _mesa_Uniform1i(_mesa_GetUniformLocation(prog, "dst_num_samples"),
                    dst_mt->num_samples);
 
-   prepare_vertex_data();
+   prepare_vertex_data(ctx, ctx->Meta->Blit.buf_obj);
    _mesa_set_viewport(ctx, 0, dims.dst_x0, dims.dst_y0,
                       dims.dst_x1 - dims.dst_x0, dims.dst_y1 - dims.dst_y0);
    _mesa_ColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

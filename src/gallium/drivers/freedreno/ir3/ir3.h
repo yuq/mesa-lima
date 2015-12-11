@@ -177,6 +177,7 @@ struct ir3_instruction {
 		 * before register assignment is done:
 		 */
 		IR3_INSTR_MARK  = 0x1000,
+		IR3_INSTR_UNUSED= 0x2000,
 	} flags;
 	int repeat;
 #ifdef DEBUG
@@ -243,11 +244,7 @@ struct ir3_instruction {
 		 * result of moving a const to a reg would have a low cost,  so to
 		 * it could make sense to duplicate the instruction at various
 		 * points where the result is needed to reduce register footprint.
-		 *
-		 * DEPTH_UNUSED used to mark unused instructions after depth
-		 * calculation pass.
 		 */
-#define DEPTH_UNUSED  ~0
 		unsigned depth;
 		/* When we get to the RA stage, we no longer need depth, but
 		 * we do need instruction's position/name:
@@ -257,6 +254,10 @@ struct ir3_instruction {
 			uint16_t name;
 		};
 	};
+
+	/* used for per-pass extra instruction data.
+	 */
+	void *data;
 
 	/* Used during CP and RA stages.  For fanin and shader inputs/
 	 * outputs where we need a sequence of consecutive registers,
@@ -404,7 +405,7 @@ struct ir3_block {
 	/* used for per-pass extra block data.  Mainly used right
 	 * now in RA step to track livein/liveout.
 	 */
-	void *bd;
+	void *data;
 
 #ifdef DEBUG
 	uint32_t serialno;

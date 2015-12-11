@@ -139,7 +139,7 @@ remove_unused_by_block(struct ir3_block *block)
 			/* mark it, in case it is input, so we can
 			 * remove unused inputs:
 			 */
-			instr->depth = DEPTH_UNUSED;
+			instr->flags |= IR3_INSTR_UNUSED;
 			/* and remove from instruction list: */
 			list_delinit(&instr->node);
 		}
@@ -175,14 +175,14 @@ ir3_depth(struct ir3 *ir)
 	 */
 	for (i = 0; i < ir->indirects_count; i++) {
 		struct ir3_instruction *instr = ir->indirects[i];
-		if (instr->depth == DEPTH_UNUSED)
+		if (instr->flags & IR3_INSTR_UNUSED)
 			ir->indirects[i] = NULL;
 	}
 
 	/* cleanup unused inputs: */
 	for (i = 0; i < ir->ninputs; i++) {
 		struct ir3_instruction *in = ir->inputs[i];
-		if (in && (in->depth == DEPTH_UNUSED))
+		if (in && (in->flags & IR3_INSTR_UNUSED))
 			ir->inputs[i] = NULL;
 	}
 }

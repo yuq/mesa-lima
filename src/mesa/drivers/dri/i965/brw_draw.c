@@ -25,7 +25,6 @@
 
 #include <sys/errno.h>
 
-#include "main/glheader.h"
 #include "main/context.h"
 #include "main/condrender.h"
 #include "main/samplerobj.h"
@@ -116,14 +115,17 @@ gen6_set_prim(struct brw_context *brw, const struct _mesa_prim *prim)
 
    DBG("PRIM: %s\n", _mesa_enum_to_string(prim->mode));
 
-   if (prim->mode == GL_PATCHES)
+   if (prim->mode == GL_PATCHES) {
       hw_prim = _3DPRIM_PATCHLIST(ctx->TessCtrlProgram.patch_vertices);
-   else
+   } else {
       hw_prim = get_hw_prim_for_gl_prim(prim->mode);
+   }
 
    if (hw_prim != brw->primitive) {
       brw->primitive = hw_prim;
       brw->ctx.NewDriverState |= BRW_NEW_PRIMITIVE;
+      if (prim->mode == GL_PATCHES)
+         brw->ctx.NewDriverState |= BRW_NEW_PATCH_PRIMITIVE;
    }
 }
 
@@ -397,6 +399,10 @@ brw_try_draw_prims(struct gl_context *ctx,
       _mesa_fls(ctx->FragmentProgram._Current->Base.SamplersUsed);
    brw->gs.base.sampler_count = ctx->GeometryProgram._Current ?
       _mesa_fls(ctx->GeometryProgram._Current->Base.SamplersUsed) : 0;
+   brw->tes.base.sampler_count = ctx->TessEvalProgram._Current ?
+      _mesa_fls(ctx->TessEvalProgram._Current->Base.SamplersUsed) : 0;
+   brw->tcs.base.sampler_count = ctx->TessCtrlProgram._Current ?
+      _mesa_fls(ctx->TessCtrlProgram._Current->Base.SamplersUsed) : 0;
    brw->vs.base.sampler_count =
       _mesa_fls(ctx->VertexProgram._Current->Base.SamplersUsed);
 

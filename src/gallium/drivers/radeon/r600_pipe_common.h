@@ -56,7 +56,7 @@
 /* Debug flags. */
 /* logging */
 #define DBG_TEX			(1 << 0)
-#define DBG_TEXMIP		(1 << 1)
+/* gap - reuse */
 #define DBG_COMPUTE		(1 << 2)
 #define DBG_VM			(1 << 3)
 #define DBG_TRACE_CS		(1 << 4)
@@ -90,6 +90,7 @@
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
 struct r600_common_context;
+struct r600_perfcounters;
 
 struct radeon_shader_reloc {
 	char *name;
@@ -171,7 +172,7 @@ struct r600_fmask_info {
 	unsigned offset;
 	unsigned size;
 	unsigned alignment;
-	unsigned pitch;
+	unsigned pitch_in_pixels;
 	unsigned bank_height;
 	unsigned slice_tile_max;
 	unsigned tile_mode_index;
@@ -181,15 +182,25 @@ struct r600_cmask_info {
 	unsigned offset;
 	unsigned size;
 	unsigned alignment;
+	unsigned pitch;
+	unsigned height;
+	unsigned xalign;
+	unsigned yalign;
 	unsigned slice_tile_max;
 	unsigned base_address_reg;
+};
+
+struct r600_htile_info {
+	unsigned pitch;
+	unsigned height;
+	unsigned xalign;
+	unsigned yalign;
 };
 
 struct r600_texture {
 	struct r600_resource		resource;
 
 	unsigned			size;
-	unsigned			pitch_override;
 	bool				is_depth;
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
 	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */
@@ -206,6 +217,7 @@ struct r600_texture {
 	unsigned			color_clear_value[2];
 
 	/* Depth buffer compression and fast clear. */
+	struct r600_htile_info		htile;
 	struct r600_resource		*htile_buffer;
 	bool				depth_cleared; /* if it was cleared at least once */
 	float				depth_clear_value;
@@ -300,6 +312,9 @@ struct r600_common_screen {
 	volatile unsigned		gpu_load_stop_thread; /* bool */
 
 	char				renderer_string[64];
+
+	/* Performance counters. */
+	struct r600_perfcounters	*perfcounters;
 };
 
 /* This encapsulates a state or an operation which can emitted into the GPU
@@ -392,6 +407,7 @@ struct r600_common_context {
 	struct list_head		active_nontimer_queries;
 	struct list_head		active_timer_queries;
 	unsigned			num_cs_dw_nontimer_queries_suspend;
+	bool				nontimer_queries_suspended_by_flush;
 	unsigned			num_cs_dw_timer_queries_suspend;
 	/* Additional hardware info. */
 	unsigned			backend_mask;
@@ -508,6 +524,9 @@ void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen);
 uint64_t r600_gpu_load_begin(struct r600_common_screen *rscreen);
 unsigned r600_gpu_load_end(struct r600_common_screen *rscreen, uint64_t begin);
 
+/* r600_perfcounters.c */
+void r600_perfcounters_destroy(struct r600_common_screen *rscreen);
+
 /* r600_query.c */
 void r600_init_screen_query_functions(struct r600_common_screen *rscreen);
 void r600_query_init(struct r600_common_context *rctx);
@@ -539,6 +558,7 @@ void r600_texture_get_cmask_info(struct r600_common_screen *rscreen,
 bool r600_init_flushed_depth_texture(struct pipe_context *ctx,
 				     struct pipe_resource *texture,
 				     struct r600_texture **staging);
+void r600_print_texture_info(struct r600_texture *rtex, FILE *f);
 struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 					const struct pipe_resource *templ);
 struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,

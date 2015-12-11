@@ -176,7 +176,7 @@ nvc0_blend_state_create(struct pipe_context *pipe,
       }
    }
 
-   assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
+   assert(so->size <= ARRAY_SIZE(so->state));
    return so;
 }
 
@@ -305,7 +305,7 @@ nvc0_rasterizer_state_create(struct pipe_context *pipe,
 
     SB_IMMED_3D(so, PIXEL_CENTER_INTEGER, !cso->half_pixel_center);
 
-    assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
+    assert(so->size <= ARRAY_SIZE(so->state));
     return (void *)so;
 }
 
@@ -383,7 +383,7 @@ nvc0_zsa_state_create(struct pipe_context *pipe,
       SB_DATA    (so, nvgl_comparison_op(cso->alpha.func));
    }
 
-   assert(so->size <= (sizeof(so->state) / sizeof(so->state[0])));
+   assert(so->size <= ARRAY_SIZE(so->state));
    return (void *)so;
 }
 
@@ -1000,6 +1000,9 @@ nvc0_set_vertex_buffers(struct pipe_context *pipe,
     struct nvc0_context *nvc0 = nvc0_context(pipe);
     unsigned i;
 
+    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX);
+    nvc0->dirty |= NVC0_NEW_ARRAYS;
+
     util_set_vertex_buffers_count(nvc0->vtxbuf, &nvc0->num_vtxbufs, vb,
                                   start_slot, count);
 
@@ -1023,9 +1026,6 @@ nvc0_set_vertex_buffers(struct pipe_context *pipe,
           nvc0->constant_vbos &= ~(1 << dst_index);
        }
     }
-
-    nvc0->dirty |= NVC0_NEW_ARRAYS;
-    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX);
 }
 
 static void

@@ -133,7 +133,6 @@ API_XML = \
 	ARB_ES3_compatibility.xml \
 	ARB_framebuffer_no_attachments.xml \
 	ARB_framebuffer_object.xml \
-	ARB_geometry_shader4.xml \
 	ARB_get_program_binary.xml \
 	ARB_get_texture_sub_image.xml \
 	ARB_gpu_shader_fp64.xml \
@@ -271,8 +270,8 @@ $(MESA_GLAPI_DIR)/glapi_sparc.S: gl_SPARC_asm.py $(COMMON)
 
 ######################################################################
 
-$(MESA_DIR)/main/enums.c: gl_enums.py $(COMMON)
-	$(PYTHON_GEN) $(srcdir)/gl_enums.py -f $(srcdir)/gl_and_es_API.xml > $@
+$(MESA_DIR)/main/enums.c: gl_enums.py $(srcdir)/../registry/gl.xml
+	$(PYTHON_GEN) $(srcdir)/gl_enums.py -f $(srcdir)/../registry/gl.xml > $@
 
 $(MESA_DIR)/main/api_exec.c: gl_genexec.py apiexec.py $(COMMON)
 	$(PYTHON_GEN) $(srcdir)/gl_genexec.py -f $(srcdir)/gl_and_es_API.xml > $@

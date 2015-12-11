@@ -31,9 +31,7 @@
 
 #include "brw_vec4.h"
 #include "brw_cfg.h"
-extern "C" {
-#include "main/macros.h"
-}
+#include "brw_eu.h"
 
 namespace brw {
 
@@ -134,14 +132,14 @@ try_constant_propagate(const struct brw_device_info *devinfo,
 
    if (inst->src[arg].abs) {
       if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-          !brw_abs_immediate(value.type, &value)) {
+          !brw_abs_immediate(value.type, &value.as_brw_reg())) {
          return false;
       }
    }
 
    if (inst->src[arg].negate) {
       if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-          !brw_negate_immediate(value.type, &value)) {
+          !brw_negate_immediate(value.type, &value.as_brw_reg())) {
          return false;
       }
    }

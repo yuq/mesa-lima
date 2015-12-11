@@ -96,7 +96,7 @@ lp_setup_alloc_triangle(struct lp_scene *scene,
                 plane_sz);
 
    tri = lp_scene_alloc_aligned( scene, *tri_size, 16 );
-   if (tri == NULL)
+   if (!tri)
       return NULL;
 
    tri->inputs.stride = input_array_sz;
@@ -276,6 +276,7 @@ do_triangle_ccw(struct lp_setup_context *setup,
    int nr_planes = 3;
    unsigned viewport_index = 0;
    unsigned layer = 0;
+   const float (*pv)[4];
 
    /* Area should always be positive here */
    assert(position->area > 0);
@@ -283,19 +284,26 @@ do_triangle_ccw(struct lp_setup_context *setup,
    if (0)
       lp_setup_print_triangle(setup, v0, v1, v2);
 
+   if (setup->flatshade_first) {
+      pv = v0;
+   }
+   else {
+      pv = v2;
+   }
+   if (setup->viewport_index_slot > 0) {
+      unsigned *udata = (unsigned*)pv[setup->viewport_index_slot];
+      viewport_index = lp_clamp_viewport_idx(*udata);
+   }
+   if (setup->layer_slot > 0) {
+      layer = *(unsigned*)pv[setup->layer_slot];
+      layer = MIN2(layer, scene->fb_max_layer);
+   }
+
    if (setup->scissor_test) {
       nr_planes = 7;
-      if (setup->viewport_index_slot > 0) {
-         unsigned *udata = (unsigned*)v0[setup->viewport_index_slot];
-         viewport_index = lp_clamp_viewport_idx(*udata);
-      }
    }
    else {
       nr_planes = 3;
-   }
-   if (setup->layer_slot > 0) {
-      layer = *(unsigned*)v1[setup->layer_slot];
-      layer = MIN2(layer, scene->fb_max_layer);
    }
 
    /* Bounding rectangle (in pixels) */

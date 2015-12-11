@@ -48,7 +48,7 @@ struct svga_hwtnl *
 svga_hwtnl_create(struct svga_context *svga)
 {
    struct svga_hwtnl *hwtnl = CALLOC_STRUCT(svga_hwtnl);
-   if (hwtnl == NULL)
+   if (!hwtnl)
       goto fail;
 
    hwtnl->svga = svga;
@@ -189,7 +189,7 @@ draw_vgpu9(struct svga_hwtnl *hwtnl)
    for (i = 0; i < hwtnl->cmd.vdecl_count; i++) {
       unsigned j = hwtnl->cmd.vdecl_buffer_index[i];
       handle = svga_buffer_handle(svga, hwtnl->cmd.vbufs[j].buffer);
-      if (handle == NULL)
+      if (!handle)
          return PIPE_ERROR_OUT_OF_MEMORY;
 
       vb_handle[i] = handle;
@@ -198,7 +198,7 @@ draw_vgpu9(struct svga_hwtnl *hwtnl)
    for (i = 0; i < hwtnl->cmd.prim_count; i++) {
       if (hwtnl->cmd.prim_ib[i]) {
          handle = svga_buffer_handle(svga, hwtnl->cmd.prim_ib[i]);
-         if (handle == NULL)
+         if (!handle)
             return PIPE_ERROR_OUT_OF_MEMORY;
       }
       else
@@ -491,7 +491,7 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
       (void) sbuf; /* silence unused var warning */
 
       ib_handle = svga_buffer_handle(svga, ib);
-      if (ib_handle == NULL)
+      if (!ib_handle)
          return PIPE_ERROR_OUT_OF_MEMORY;
    }
    else {

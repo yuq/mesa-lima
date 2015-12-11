@@ -30,28 +30,8 @@
 #include "brw_shader.h"
 #include "brw_ir_fs.h"
 #include "brw_fs_builder.h"
-
-extern "C" {
-
-#include <sys/types.h>
-
-#include "main/macros.h"
-#include "main/shaderobj.h"
-#include "main/uniforms.h"
-#include "program/prog_parameter.h"
-#include "program/prog_print.h"
-#include "program/prog_optimize.h"
-#include "util/register_allocate.h"
-#include "program/hash_table.h"
-#include "brw_context.h"
-#include "brw_eu.h"
-#include "brw_wm.h"
-#include "intel_asm_annotation.h"
-}
-#include "glsl/nir/glsl_types.h"
 #include "glsl/ir.h"
 #include "glsl/nir/nir.h"
-#include "program/sampler.h"
 
 struct bblock_t;
 namespace {
@@ -205,10 +185,10 @@ public:
    fs_reg *emit_frontfacing_interpolation();
    fs_reg *emit_samplepos_setup();
    fs_reg *emit_sampleid_setup();
-   void emit_general_interpolation(fs_reg attr, const char *name,
+   void emit_general_interpolation(fs_reg *attr, const char *name,
                                    const glsl_type *type,
                                    glsl_interp_qualifier interpolation_mode,
-                                   int location, bool mod_centroid,
+                                   int *location, bool mod_centroid,
                                    bool mod_sample);
    fs_reg *emit_vs_system_value(int location);
    void emit_interpolation_setup_gen4();
@@ -245,6 +225,8 @@ public:
 
    void emit_nir_code();
    void nir_setup_inputs();
+   void nir_setup_single_output_varying(fs_reg *reg, const glsl_type *type,
+                                        unsigned *location);
    void nir_setup_outputs();
    void nir_setup_uniforms();
    void nir_emit_system_values();
@@ -271,6 +253,8 @@ public:
                            nir_intrinsic_instr *instr);
    void nir_emit_ssbo_atomic(const brw::fs_builder &bld,
                              int op, nir_intrinsic_instr *instr);
+   void nir_emit_shared_atomic(const brw::fs_builder &bld,
+                               int op, nir_intrinsic_instr *instr);
    void nir_emit_texture(const brw::fs_builder &bld,
                          nir_tex_instr *instr);
    void nir_emit_jump(const brw::fs_builder &bld,
@@ -298,7 +282,7 @@ public:
                        unsigned stream_id);
    void emit_gs_thread_end();
    void emit_gs_input_load(const fs_reg &dst, const nir_src &vertex_src,
-                           const fs_reg &indirect_offset, unsigned imm_offset,
+                           unsigned base_offset, const nir_src &offset_src,
                            unsigned num_components);
    void emit_cs_terminate();
    fs_reg *emit_cs_local_invocation_id_setup();

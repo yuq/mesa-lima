@@ -31,6 +31,44 @@
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
 #include "brw_nir.h"
+#include "brw_program.h"
+#include "glsl/ir_uniform.h"
+
+void
+brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *prog_data,
+                             void *buffer, uint32_t threads, uint32_t stride)
+{
+   if (prog_data->local_invocation_id_regs == 0)
+      return;
+
+   /* 'stride' should be an integer number of registers, that is, a multiple
+    * of 32 bytes.
+    */
+   assert(stride % 32 == 0);
+
+   unsigned x = 0, y = 0, z = 0;
+   for (unsigned t = 0; t < threads; t++) {
+      uint32_t *param = (uint32_t *) buffer + stride * t / 4;
+
+      for (unsigned i = 0; i < prog_data->simd_size; i++) {
+         param[0 * prog_data->simd_size + i] = x;
+         param[1 * prog_data->simd_size + i] = y;
+         param[2 * prog_data->simd_size + i] = z;
+
+         x++;
+         if (x == prog_data->local_size[0]) {
+            x = 0;
+            y++;
+            if (y == prog_data->local_size[1]) {
+               y = 0;
+               z++;
+               if (z == prog_data->local_size[2])
+                  z = 0;
+            }
+         }
+      }
+   }
+}
 
 static void
 assign_cs_binding_table_offsets(const struct brw_device_info *devinfo,
@@ -68,6 +106,19 @@ brw_codegen_cs_prog(struct brw_context *brw,
    assert (cs);
 
    memset(&prog_data, 0, sizeof(prog_data));
+
+   if (prog->Comp.SharedSize > 64 * 1024) {
+      prog->LinkStatus = false;
+      const char *error_str =
+         "Compute shader used more than 64KB of shared variables";
+      ralloc_strcat(&prog->InfoLog, error_str);
+      _mesa_problem(NULL, "Failed to link compute shader: %s\n", error_str);
+
+      ralloc_free(mem_ctx);
+      return false;
+   } else {
+      prog_data.base.total_shared = prog->Comp.SharedSize;
+   }
 
    assign_cs_binding_table_offsets(brw->intelScreen->devinfo, prog,
                                    &cp->program.Base, &prog_data);

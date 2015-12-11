@@ -262,7 +262,7 @@ pp_tgsi_to_state(struct pipe_context *pipe, const char *text, bool isvs,
     */ 
    tokens = tgsi_alloc_tokens(PP_MAX_TOKENS);
 
-   if (tokens == NULL) {
+   if (!tokens) {
       pp_debug("Failed to allocate temporary token storage.\n");
       return NULL;
    }

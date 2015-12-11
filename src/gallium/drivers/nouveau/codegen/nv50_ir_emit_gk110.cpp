@@ -75,6 +75,7 @@ private:
    void emitLOAD(const Instruction *);
    void emitSTORE(const Instruction *);
    void emitMOV(const Instruction *);
+   void emitMEMBAR(const Instruction *);
 
    void emitINTERP(const Instruction *);
    void emitAFETCH(const Instruction *);
@@ -575,8 +576,8 @@ CodeEmitterGK110::emitIMUL(const Instruction *i)
    if (isLIMM(i->src(1), TYPE_S32)) {
       emitForm_L(i, 0x280, 2, Modifier(0));
 
-      assert(i->subOp != NV50_IR_SUBOP_MUL_HIGH);
-
+      if (i->subOp == NV50_IR_SUBOP_MUL_HIGH)
+         code[1] |= 1 << 24;
       if (i->sType == TYPE_S32)
          code[1] |= 3 << 25;
    } else {
@@ -695,14 +696,9 @@ CodeEmitterGK110::emitIMAD(const Instruction *i)
    if (i->sType == TYPE_S32)
       code[1] |= (1 << 19) | (1 << 24);
 
-   if (code[0] & 0x1) {
-      assert(!i->subOp);
-      SAT_(39);
-   } else {
-      if (i->subOp == NV50_IR_SUBOP_MUL_HIGH)
-         code[1] |= 1 << 25;
-      SAT_(35);
-   }
+   if (i->subOp == NV50_IR_SUBOP_MUL_HIGH)
+      code[1] |= 1 << 25;
+   SAT_(35);
 }
 
 void
@@ -1687,6 +1683,14 @@ CodeEmitterGK110::emitMOV(const Instruction *i)
    }
 }
 
+void CodeEmitterGK110::emitMEMBAR(const Instruction *i)
+{
+   code[0] = 0x00000002 | NV50_IR_SUBOP_MEMBAR_SCOPE(i->subOp) << 8;
+   code[1] = 0x7cc00000;
+
+   emitPredicate(i);
+}
+
 bool
 CodeEmitterGK110::emitInstruction(Instruction *insn)
 {
@@ -1918,6 +1922,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
    case OP_BAR:
       emitBAR(insn);
       break;
+   case OP_MEMBAR:
+      emitMEMBAR(insn);
+      break;
    case OP_PHI:
    case OP_UNION:
    case OP_CONSTRAINT:
@@ -1930,7 +1937,7 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       ERROR("operation should have been lowered\n");
       return false;
    default:
-      ERROR("unknow op\n");
+      ERROR("unknown op: %u\n", insn->op);
       return false;
    }
 

@@ -479,7 +479,7 @@ _mesa_glsl_msg(const YYLTYPE *locp, _mesa_glsl_parse_state *state,
    struct gl_context *ctx = state->ctx;
 
    /* Report the error via GL_ARB_debug_output. */
-   _mesa_shader_debug(ctx, type, &msg_id, msg, strlen(msg));
+   _mesa_shader_debug(ctx, type, &msg_id, msg);
 
    ralloc_strcat(&state->info_log, "\n");
 }
@@ -876,7 +876,7 @@ void
 _mesa_ast_process_interface_block(YYLTYPE *locp,
                                   _mesa_glsl_parse_state *state,
                                   ast_interface_block *const block,
-                                  const struct ast_type_qualifier q)
+                                  const struct ast_type_qualifier &q)
 {
    if (q.flags.q.buffer) {
       if (!state->has_shader_storage_buffer_objects()) {
@@ -1088,7 +1088,7 @@ void
 ast_compound_statement::print(void) const
 {
    printf("{\n");
-   
+
    foreach_list_typed(ast_node, ast, link, &this->statements) {
       ast->print();
    }
@@ -1414,7 +1414,6 @@ ast_selection_statement::print(void) const
       printf("else ");
       else_statement->print();
    }
-   
 }
 
 

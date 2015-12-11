@@ -41,6 +41,12 @@
 #define GET_BITS(data, high, low) ((data & INTEL_MASK((high), (low))) >> (low))
 #define GET_FIELD(word, field) (((word)  & field ## _MASK) >> field ## _SHIFT)
 
+/**
+ * For use with masked MMIO registers where the upper 16 bits control which
+ * of the lower bits are committed to the register.
+ */
+#define REG_MASK(value) ((value) << 16)
+
 #ifndef BRW_DEFINES_H
 #define BRW_DEFINES_H
 
@@ -1722,6 +1728,19 @@ enum brw_message_target {
 #define HSW_DATAPORT_DC_PORT1_ATOMIC_COUNTER_OP_SIMD4X2             12
 #define HSW_DATAPORT_DC_PORT1_TYPED_SURFACE_WRITE                   13
 
+/* Dataport special binding table indices: */
+#define BRW_BTI_STATELESS                255
+#define GEN7_BTI_SLM                     254
+/* Note that on Gen8+ BTI 255 was redefined to be IA-coherent according to the
+ * hardware spec, however because the DRM sets bit 4 of HDC_CHICKEN0 on BDW,
+ * CHV and at least some pre-production steppings of SKL due to
+ * WaForceEnableNonCoherent, HDC memory access may have been overridden by the
+ * kernel to be non-coherent (matching the behavior of the same BTI on
+ * pre-Gen8 hardware) and BTI 255 may actually be an alias for BTI 253.
+ */
+#define GEN8_BTI_STATELESS_IA_COHERENT   255
+#define GEN8_BTI_STATELESS_NON_COHERENT  253
+
 /* dataport atomic operations. */
 #define BRW_AOP_AND                   1
 #define BRW_AOP_OR                    2
@@ -2554,6 +2573,25 @@ enum brw_wm_barycentric_interp_mode {
 #define _3DSTATE_CONSTANT_HS                  0x7819 /* GEN7+ */
 #define _3DSTATE_CONSTANT_DS                  0x781A /* GEN7+ */
 
+/* Resource streamer gather constants */
+#define _3DSTATE_GATHER_POOL_ALLOC            0x791A /* GEN7.5+ */
+#define HSW_GATHER_POOL_ALLOC_MUST_BE_ONE     (3 << 4) /* GEN7.5 only */
+
+#define _3DSTATE_GATHER_CONSTANT_VS           0x7834 /* GEN7.5+ */
+#define _3DSTATE_GATHER_CONSTANT_GS           0x7835
+#define _3DSTATE_GATHER_CONSTANT_HS           0x7836
+#define _3DSTATE_GATHER_CONSTANT_DS           0x7837
+#define _3DSTATE_GATHER_CONSTANT_PS           0x7838
+#define HSW_GATHER_CONSTANT_ENABLE            (1 << 11)
+#define HSW_GATHER_CONSTANT_BUFFER_VALID_SHIFT         16
+#define HSW_GATHER_CONSTANT_BUFFER_VALID_MASK          INTEL_MASK(31, 16)
+#define HSW_GATHER_CONSTANT_BINDING_TABLE_BLOCK_SHIFT  12
+#define HSW_GATHER_CONSTANT_BINDING_TABLE_BLOCK_MASK   INTEL_MASK(15, 12)
+#define HSW_GATHER_CONSTANT_CONST_BUFFER_OFFSET_SHIFT  8
+#define HSW_GATHER_CONSTANT_CONST_BUFFER_OFFSET_MASK   INTEL_MASK(15, 8)
+#define HSW_GATHER_CONSTANT_CHANNEL_MASK_SHIFT         4
+#define HSW_GATHER_CONSTANT_CHANNEL_MASK_MASK          INTEL_MASK(7, 4)
+
 #define _3DSTATE_STREAMOUT                    0x781e /* GEN7+ */
 /* DW1 */
 # define SO_FUNCTION_ENABLE				(1 << 31)
@@ -2848,6 +2886,8 @@ enum brw_wm_barycentric_interp_mode {
 /* GEN7 DW5, GEN8+ DW6 */
 # define MEDIA_BARRIER_ENABLE_SHIFT             21
 # define MEDIA_BARRIER_ENABLE_MASK              INTEL_MASK(21, 21)
+# define MEDIA_SHARED_LOCAL_MEMORY_SIZE_SHIFT   16
+# define MEDIA_SHARED_LOCAL_MEMORY_SIZE_MASK    INTEL_MASK(20, 16)
 # define MEDIA_GPGPU_THREAD_COUNT_SHIFT         0
 # define MEDIA_GPGPU_THREAD_COUNT_MASK          INTEL_MASK(7, 0)
 # define GEN8_MEDIA_GPGPU_THREAD_COUNT_SHIFT    0

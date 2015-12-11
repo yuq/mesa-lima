@@ -28,14 +28,7 @@
 #include "brw_nir.h"
 #include "brw_vec4_live_variables.h"
 #include "brw_dead_control_flow.h"
-
-extern "C" {
-#include "main/macros.h"
-#include "main/shaderobj.h"
-#include "program/prog_print.h"
 #include "program/prog_parameter.h"
-}
-#include "main/context.h"
 
 #define MAX_INSTRUCTION (1 << 30)
 
@@ -71,7 +64,7 @@ src_reg::src_reg()
    init();
 }
 
-src_reg::src_reg(struct brw_reg reg) :
+src_reg::src_reg(struct ::brw_reg reg) :
    backend_reg(reg)
 {
    this->reg_offset = 0;
@@ -79,9 +72,8 @@ src_reg::src_reg(struct brw_reg reg) :
 }
 
 src_reg::src_reg(const dst_reg &reg) :
-   backend_reg(static_cast<struct brw_reg>(reg))
+   backend_reg(reg)
 {
-   this->reg_offset = reg.reg_offset;
    this->reladdr = reg.reladdr;
    this->swizzle = brw_swizzle_for_mask(reg.writemask);
 }
@@ -129,7 +121,7 @@ dst_reg::dst_reg(enum brw_reg_file file, int nr, brw_reg_type type,
    this->writemask = writemask;
 }
 
-dst_reg::dst_reg(struct brw_reg reg) :
+dst_reg::dst_reg(struct ::brw_reg reg) :
    backend_reg(reg)
 {
    this->reg_offset = 0;
@@ -137,9 +129,8 @@ dst_reg::dst_reg(struct brw_reg reg) :
 }
 
 dst_reg::dst_reg(const src_reg &reg) :
-   backend_reg(static_cast<struct brw_reg>(reg))
+   backend_reg(reg)
 {
-   this->reg_offset = reg.reg_offset;
    this->writemask = brw_mask_for_swizzle(reg.swizzle);
    this->reladdr = reg.reladdr;
 }
@@ -147,8 +138,7 @@ dst_reg::dst_reg(const src_reg &reg) :
 bool
 dst_reg::equals(const dst_reg &r) const
 {
-   return (memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
-           reg_offset == r.reg_offset &&
+   return (this->backend_reg::equals(r) &&
            (reladdr == r.reladdr ||
             (reladdr && r.reladdr && reladdr->equals(*r.reladdr))));
 }
@@ -166,6 +156,35 @@ vec4_instruction::is_send_from_grf()
    case SHADER_OPCODE_TYPED_SURFACE_READ:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
       return true;
+   default:
+      return false;
+   }
+}
+
+/**
+ * Returns true if this instruction's sources and destinations cannot
+ * safely be the same register.
+ *
+ * In most cases, a register can be written over safely by the same
+ * instruction that is its last use.  For a single instruction, the
+ * sources are dereferenced before writing of the destination starts
+ * (naturally).
+ *
+ * However, there are a few cases where this can be problematic:
+ *
+ * - Virtual opcodes that translate to multiple instructions in the
+ *   code generator: if src == dst and one instruction writes the
+ *   destination before a later instruction reads the source, then
+ *   src will have been clobbered.
+ *
+ * The register allocator uses this information to set up conflicts between
+ * GRF sources and the destination.
+ */
+bool
+vec4_instruction::has_source_and_destination_hazard() const
+{
+   switch (opcode) {
+   /* Most opcodes in the vec4 world use MRFs. */
    default:
       return false;
    }
@@ -285,8 +304,7 @@ vec4_visitor::implied_mrf_writes(vec4_instruction *inst)
 bool
 src_reg::equals(const src_reg &r) const
 {
-   return (memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
-	   reg_offset == r.reg_offset &&
+   return (this->backend_reg::equals(r) &&
 	   !reladdr && !r.reladdr);
 }
 
@@ -587,7 +605,8 @@ vec4_visitor::opt_algebraic()
             if (inst->dst.type != inst->src[0].type)
                assert(!"unimplemented: saturate mixed types");
 
-            if (brw_saturate_immediate(inst->dst.type, &inst->src[0])) {
+            if (brw_saturate_immediate(inst->dst.type,
+                                       &inst->src[0].as_brw_reg())) {
                inst->saturate = false;
                progress = true;
             }
@@ -1769,7 +1788,7 @@ vec4_visitor::convert_to_hw_regs()
 
       case ARF:
       case FIXED_GRF:
-         reg = dst;
+         reg = dst.as_brw_reg();
          break;
 
       case BAD_FILE:

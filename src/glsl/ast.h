@@ -699,16 +699,16 @@ struct ast_type_qualifier {
 
    bool merge_qualifier(YYLTYPE *loc,
 			_mesa_glsl_parse_state *state,
-			ast_type_qualifier q);
+			const ast_type_qualifier &q);
 
    bool merge_out_qualifier(YYLTYPE *loc,
                            _mesa_glsl_parse_state *state,
-                           ast_type_qualifier q,
+                           const ast_type_qualifier &q,
                            ast_node* &node);
 
    bool merge_in_qualifier(YYLTYPE *loc,
                            _mesa_glsl_parse_state *state,
-                           ast_type_qualifier q,
+                           const ast_type_qualifier &q,
                            ast_node* &node);
 
    ast_subroutine_list *subroutine_list;
@@ -1152,7 +1152,7 @@ class ast_cs_input_layout : public ast_node
 {
 public:
    ast_cs_input_layout(const struct YYLTYPE &locp,
-                       ast_layout_expression **local_size)
+                       ast_layout_expression *const *local_size)
    {
       for (int i = 0; i < 3; i++) {
          this->local_size[i] = local_size[i];
@@ -1197,6 +1197,6 @@ check_builtin_array_max_size(const char *name, unsigned size,
 extern void _mesa_ast_process_interface_block(YYLTYPE *locp,
                                               _mesa_glsl_parse_state *state,
                                               ast_interface_block *const block,
-                                              const struct ast_type_qualifier q);
+                                              const struct ast_type_qualifier &q);
 
 #endif /* AST_H */

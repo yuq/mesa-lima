@@ -41,6 +41,8 @@
 #include "main/api_validate.h"
 #include "main/state.h"
 
+#include "util/format_srgb.h"
+
 #include "vbo/vbo_context.h"
 
 #include "drivers/common/meta.h"
@@ -48,14 +50,16 @@
 #include "brw_defines.h"
 #include "brw_context.h"
 #include "brw_draw.h"
+#include "brw_state.h"
 #include "intel_fbo.h"
 #include "intel_batchbuffer.h"
 
 #include "brw_blorp.h"
 
 struct brw_fast_clear_state {
+   struct gl_buffer_object *buf_obj;
+   struct gl_vertex_array_object *array_obj;
    GLuint vao;
-   GLuint vbo;
    GLuint shader_prog;
    GLint color_location;
 };
@@ -64,11 +68,11 @@ static bool
 brw_fast_clear_init(struct brw_context *brw)
 {
    struct brw_fast_clear_state *clear;
+   struct gl_context *ctx = &brw->ctx;
 
    if (brw->fast_clear_state) {
       clear = brw->fast_clear_state;
       _mesa_BindVertexArray(clear->vao);
-      _mesa_BindBuffer(GL_ARRAY_BUFFER, clear->vbo);
       return true;
    }
 
@@ -79,10 +83,21 @@ brw_fast_clear_init(struct brw_context *brw)
    memset(clear, 0, sizeof *clear);
    _mesa_GenVertexArrays(1, &clear->vao);
    _mesa_BindVertexArray(clear->vao);
-   _mesa_GenBuffers(1, &clear->vbo);
-   _mesa_BindBuffer(GL_ARRAY_BUFFER, clear->vbo);
-   _mesa_VertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
-   _mesa_EnableVertexAttribArray(0);
+
+   clear->buf_obj = ctx->Driver.NewBufferObject(ctx, 0xDEADBEEF);
+   if (clear->buf_obj == NULL)
+      return false;
+
+   clear->array_obj = _mesa_lookup_vao(ctx, clear->vao);
+   assert(clear->array_obj != NULL);
+
+   _mesa_update_array_format(ctx, clear->array_obj, VERT_ATTRIB_GENERIC(0),
+                             2, GL_FLOAT, GL_RGBA, GL_FALSE, GL_FALSE, GL_FALSE,
+                             0, true);
+   _mesa_bind_vertex_buffer(ctx, clear->array_obj, VERT_ATTRIB_GENERIC(0),
+                            clear->buf_obj, 0, sizeof(float) * 2);
+   _mesa_enable_vertex_array_attrib(ctx, clear->array_obj,
+                                    VERT_ATTRIB_GENERIC(0));
 
    return true;
 }
@@ -150,7 +165,7 @@ brw_meta_fast_clear_free(struct brw_context *brw)
    _mesa_make_current(&brw->ctx, NULL, NULL);
 
    _mesa_DeleteVertexArrays(1, &clear->vao);
-   _mesa_DeleteBuffers(1, &clear->vbo);
+   _mesa_reference_buffer_object(&brw->ctx, &clear->buf_obj, NULL);
    _mesa_DeleteProgram(clear->shader_prog);
    free(clear);
 
@@ -165,8 +180,10 @@ struct rect {
 };
 
 static void
-brw_draw_rectlist(struct gl_context *ctx, struct rect *rect, int num_instances)
+brw_draw_rectlist(struct brw_context *brw, struct rect *rect, int num_instances)
 {
+   struct gl_context *ctx = &brw->ctx;
+   struct brw_fast_clear_state *clear = brw->fast_clear_state;
    int start = 0, count = 3;
    struct _mesa_prim prim;
    float verts[6];
@@ -179,8 +196,8 @@ brw_draw_rectlist(struct gl_context *ctx, struct rect *rect, int num_instances)
    verts[5] = rect->y0;
 
    /* upload new vertex data */
-   _mesa_BufferData(GL_ARRAY_BUFFER_ARB, sizeof(verts), verts,
-                    GL_DYNAMIC_DRAW_ARB);
+   _mesa_buffer_data(ctx, clear->buf_obj, GL_NONE, sizeof(verts), verts,
+                     GL_DYNAMIC_DRAW, __func__);
 
    if (ctx->NewState)
       _mesa_update_state(ctx);
@@ -410,6 +427,15 @@ set_fast_clear_color(struct brw_context *brw,
          override_color.f[3] = 1.0f;
    }
 
+   /* Handle linear→SRGB conversion */
+   if (brw->ctx.Color.sRGBEnabled &&
+       _mesa_get_srgb_format_linear(mt->format) != mt->format) {
+      for (int i = 0; i < 3; i++) {
+         override_color.f[i] =
+            util_format_linear_to_srgb_float(override_color.f[i]);
+      }
+   }
+
    if (brw->gen >= 9) {
       mt->gen9_fast_clear_color = override_color;
    } else {
@@ -480,7 +506,6 @@ fast_clear_attachments(struct brw_context *brw,
                        struct rect fast_clear_rect)
 {
    assert(brw->gen >= 9);
-   struct gl_context *ctx = &brw->ctx;
 
    brw_bind_rep_write_shader(brw, (float *) fast_clear_color);
 
@@ -497,7 +522,7 @@ fast_clear_attachments(struct brw_context *brw,
 
       _mesa_meta_drawbuffers_from_bitfield(1 << index);
 
-      brw_draw_rectlist(ctx, &fast_clear_rect, MAX2(1, fb->MaxNumLayers));
+      brw_draw_rectlist(brw, &fast_clear_rect, MAX2(1, fb->MaxNumLayers));
 
       /* Now set the mcs we cleared to INTEL_FAST_CLEAR_STATE_CLEAR so we'll
        * resolve them eventually.
@@ -549,11 +574,17 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       if (brw->gen < 7)
          clear_type = REP_CLEAR;
 
-      /* Certain formats have unresolved issues with sampling from the MCS
-       * buffer on Gen9. This disables fast clears altogether for MSRTs until
-       * we can figure out what's going on.
+      /* If we're mapping the render format to a different format than the
+       * format we use for texturing then it is a bit questionable whether it
+       * should be possible to use a fast clear. Although we only actually
+       * render using a renderable format, without the override workaround it
+       * wouldn't be possible to have a non-renderable surface in a fast clear
+       * state so the hardware probably legitimately doesn't need to support
+       * this case. At least on Gen9 this really does seem to cause problems.
        */
-      if (brw->gen >= 9 && irb->mt->num_samples > 1)
+      if (brw->gen >= 9 &&
+          brw_format_for_mesa_format(irb->mt->format) !=
+          brw->render_target_format[irb->mt->format])
          clear_type = REP_CLEAR;
 
       if (irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_NO_MCS)
@@ -694,7 +725,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       _mesa_meta_drawbuffers_from_bitfield(fast_clear_buffers);
       brw_bind_rep_write_shader(brw, (float *) fast_clear_color);
       set_fast_clear_op(brw, GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE);
-      brw_draw_rectlist(ctx, &fast_clear_rect, layers);
+      brw_draw_rectlist(brw, &fast_clear_rect, layers);
       set_fast_clear_op(brw, 0);
 
       /* Now set the mcs we cleared to INTEL_FAST_CLEAR_STATE_CLEAR so we'll
@@ -713,7 +744,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    if (rep_clear_buffers) {
       _mesa_meta_drawbuffers_from_bitfield(rep_clear_buffers);
       brw_bind_rep_write_shader(brw, ctx->Color.ClearColor.f);
-      brw_draw_rectlist(ctx, &clear_rect, layers);
+      brw_draw_rectlist(brw, &clear_rect, layers);
    }
 
  bail_to_meta:
@@ -818,7 +849,7 @@ brw_meta_resolve_color(struct brw_context *brw,
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
    get_resolve_rect(brw, mt, &rect);
 
-   brw_draw_rectlist(ctx, &rect, 1);
+   brw_draw_rectlist(brw, &rect, 1);
 
    set_fast_clear_op(brw, 0);
    use_rectlist(brw, false);

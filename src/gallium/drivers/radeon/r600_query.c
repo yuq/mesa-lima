@@ -202,7 +202,7 @@ static struct pipe_query *r600_query_sw_create(struct pipe_context *ctx,
 	struct r600_query_sw *query;
 
 	query = CALLOC_STRUCT(r600_query_sw);
-	if (query == NULL)
+	if (!query)
 		return NULL;
 
 	query->b.type = query_type;
@@ -232,7 +232,7 @@ void r600_query_hw_destroy(struct r600_common_context *rctx,
 static struct r600_resource *r600_new_query_buffer(struct r600_common_context *ctx,
 						   struct r600_query_hw *query)
 {
-	unsigned buf_size = 4096;
+	unsigned buf_size = MAX2(query->result_size, 4096);
 
 	/* Queries are normally read by the CPU after
 	 * being written by the gpu, hence staging is probably a good
@@ -1141,11 +1141,15 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	unsigned num_queries = r600_get_num_queries(rscreen);
 
-	if (!info)
-		return num_queries;
+	if (!info) {
+		unsigned num_perfcounters =
+			r600_get_perfcounter_info(rscreen, 0, NULL);
+
+		return num_queries + num_perfcounters;
+	}
 
 	if (index >= num_queries)
-		return 0;
+		return r600_get_perfcounter_info(rscreen, index - num_queries, info);
 
 	*info = r600_driver_query_list[index];
 
@@ -1166,9 +1170,19 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 	return 1;
 }
 
+static int r600_get_driver_query_group_info(struct pipe_screen *screen,
+					    unsigned index,
+					    struct pipe_driver_query_group_info *info)
+{
+	struct r600_common_screen *rscreen = (struct r600_common_screen *)screen;
+
+	return r600_get_perfcounter_group_info(rscreen, index, info);
+}
+
 void r600_query_init(struct r600_common_context *rctx)
 {
 	rctx->b.create_query = r600_create_query;
+	rctx->b.create_batch_query = r600_create_batch_query;
 	rctx->b.destroy_query = r600_destroy_query;
 	rctx->b.begin_query = r600_begin_query;
 	rctx->b.end_query = r600_end_query;
@@ -1185,4 +1199,5 @@ void r600_query_init(struct r600_common_context *rctx)
 void r600_init_screen_query_functions(struct r600_common_screen *rscreen)
 {
 	rscreen->b.get_driver_query_info = r600_get_driver_query_info;
+	rscreen->b.get_driver_query_group_info = r600_get_driver_query_group_info;
 }

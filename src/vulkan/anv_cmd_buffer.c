@@ -589,22 +589,14 @@ fill_descriptor_buffer_surface_state(struct anv_device *device, void *state,
                                      uint32_t offset, uint32_t range)
 {
    VkFormat format;
-   uint32_t stride;
-
    switch (type) {
    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      if (device->instance->physicalDevice.compiler->scalar_stage[stage]) {
-         stride = 4;
-      } else {
-         stride = 16;
-      }
       format = VK_FORMAT_R32G32B32A32_SFLOAT;
       break;
 
    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-      stride = 1;
       format = VK_FORMAT_UNDEFINED;
       break;
 
@@ -614,7 +606,7 @@ fill_descriptor_buffer_surface_state(struct anv_device *device, void *state,
 
    anv_fill_buffer_surface_state(device, state,
                                  anv_format_for_vk_format(format),
-                                 offset, range, stride);
+                                 offset, range, 1);
 }
 
 VkResult
@@ -938,7 +930,7 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
 
    const unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
    const unsigned push_constant_data_size =
-      (local_id_dwords + prog_data->nr_params) * sizeof(gl_constant_value);
+      (local_id_dwords + prog_data->nr_params) * sizeof(union gl_constant_value *);
    const unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
    const unsigned param_aligned_count =
       reg_aligned_constant_size / sizeof(uint32_t);

@@ -21,28 +21,41 @@
  * IN THE SOFTWARE.
  */
 
+#pragma once
+
 #include <stdint.h>
 #include "brw_reg.h"
 #include "brw_defines.h"
 #include "brw_context.h"
-#include "main/compiler.h"
-#include "glsl/ir.h"
-#include "program/prog_parameter.h"
 
 #ifdef __cplusplus
 #include "brw_ir_allocator.h"
 #endif
 
-#pragma once
-
 #define MAX_SAMPLER_MESSAGE_SIZE 11
 #define MAX_VGRF_SIZE 16
 
 #ifdef __cplusplus
-struct backend_reg : public brw_reg
+struct backend_reg : private brw_reg
 {
    backend_reg() {}
-   backend_reg(struct brw_reg reg) : brw_reg(reg) {}
+   backend_reg(const struct brw_reg &reg) : brw_reg(reg) {}
+
+   const brw_reg &as_brw_reg() const
+   {
+      assert(file == ARF || file == FIXED_GRF || file == MRF || file == IMM);
+      assert(reg_offset == 0);
+      return static_cast<const brw_reg &>(*this);
+   }
+
+   brw_reg &as_brw_reg()
+   {
+      assert(file == ARF || file == FIXED_GRF || file == MRF || file == IMM);
+      assert(reg_offset == 0);
+      return static_cast<brw_reg &>(*this);
+   }
+
+   bool equals(const backend_reg &r) const;
 
    bool is_zero() const;
    bool is_one() const;
@@ -61,6 +74,25 @@ struct backend_reg : public brw_reg
     * For uniforms, this is in units of 1 float.
     */
    uint16_t reg_offset;
+
+   using brw_reg::type;
+   using brw_reg::file;
+   using brw_reg::negate;
+   using brw_reg::abs;
+   using brw_reg::address_mode;
+   using brw_reg::subnr;
+   using brw_reg::nr;
+
+   using brw_reg::swizzle;
+   using brw_reg::writemask;
+   using brw_reg::indirect_offset;
+   using brw_reg::vstride;
+   using brw_reg::width;
+   using brw_reg::hstride;
+
+   using brw_reg::f;
+   using brw_reg::d;
+   using brw_reg::ud;
 };
 #endif
 
@@ -247,6 +279,9 @@ bool brw_fs_precompile(struct gl_context *ctx,
 bool brw_cs_precompile(struct gl_context *ctx,
                        struct gl_shader_program *shader_prog,
                        struct gl_program *prog);
+
+GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
+struct gl_shader *brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type);
 
 int type_size_scalar(const struct glsl_type *type);
 int type_size_vec4(const struct glsl_type *type);

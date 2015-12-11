@@ -252,7 +252,7 @@ mm_bufmgr_create_from_buffer(struct pb_buffer *buffer,
 {
    struct mm_pb_manager *mm;
 
-   if(!buffer)
+   if (!buffer)
       return NULL;
    
    mm = CALLOC_STRUCT(mm_pb_manager);
@@ -300,7 +300,7 @@ mm_bufmgr_create(struct pb_manager *provider,
    struct pb_manager *mgr;
    struct pb_desc desc;
 
-   if(!provider)
+   if (!provider)
       return NULL;
    
    memset(&desc, 0, sizeof(desc));

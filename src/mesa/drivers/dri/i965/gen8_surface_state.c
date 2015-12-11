@@ -27,6 +27,7 @@
 #include "main/texformat.h"
 #include "main/teximage.h"
 #include "program/prog_parameter.h"
+#include "program/prog_instruction.h"
 
 #include "intel_mipmap_tree.h"
 #include "intel_batchbuffer.h"
@@ -272,7 +273,7 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
         format == BRW_SURFACEFORMAT_BC7_UNORM))
       surf[0] |= GEN8_SURFACE_SAMPLER_L2_BYPASS_DISABLE;
 
-   if (_mesa_is_array_texture(target) || target == GL_TEXTURE_CUBE_MAP)
+   if (_mesa_is_array_texture(mt->target) || mt->target == GL_TEXTURE_CUBE_MAP)
       surf[0] |= GEN8_SURFACE_IS_ARRAY;
 
    surf[1] = SET_FIELD(mocs_wb, GEN8_SURFACE_MOCS) | mt->qpitch >> 2;
@@ -451,7 +452,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
       /* fallthrough */
    default:
       surf_type = translate_tex_target(gl_target);
-      is_array = _mesa_tex_target_is_array(gl_target);
+      is_array = _mesa_is_array_texture(mt->target);
       break;
    }
 

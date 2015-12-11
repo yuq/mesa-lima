@@ -20,7 +20,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#include "main/context.h"
 #include "main/mtypes.h"
 
 #include "brw_context.h"
@@ -153,8 +152,8 @@ const struct brw_surface_format_info surface_formats[] = {
    SF( Y, 50,  Y,  x,  x,  x,  x,  x,  x,    x,   I32_FLOAT)
    SF( Y, 50,  Y,  x,  x,  x,  x,  x,  x,    x,   L32_FLOAT)
    SF( Y, 50,  Y,  x,  x,  x,  x,  x,  x,    x,   A32_FLOAT)
-   SF( Y,  Y,  x,  Y,  x,  x,  x,  x, 60,   90,   B8G8R8X8_UNORM)
-   SF( Y,  Y,  x,  x,  x,  x,  x,  x,  x,    x,   B8G8R8X8_UNORM_SRGB)
+   SF( Y,  Y,  x,  Y, 80, 80,  x,  x, 60,   90,   B8G8R8X8_UNORM)
+   SF( Y,  Y,  x,  x, 80, 80,  x,  x,  x,    x,   B8G8R8X8_UNORM_SRGB)
    SF( Y,  Y,  x,  x,  x,  x,  x,  x,  x,    x,   R8G8B8X8_UNORM)
    SF( Y,  Y,  x,  x,  x,  x,  x,  x,  x,    x,   R8G8B8X8_UNORM_SRGB)
    SF( Y,  Y,  x,  x,  x,  x,  x,  x,  x,    x,   R9G9B9E5_SHAREDEXP)
@@ -656,9 +655,10 @@ brw_init_surface_formats(struct brw_context *brw)
 	  * mask writes to alpha (ala glColorMask) and reconfigure the
 	  * alpha blending hardware to use GL_ONE (or GL_ZERO) for
 	  * cases where GL_DST_ALPHA (or GL_ONE_MINUS_DST_ALPHA) is
-	  * used.
+	  * used. On Gen8+ BGRX is actually allowed (but not RGBX).
 	  */
-	 render = BRW_SURFACEFORMAT_B8G8R8A8_UNORM;
+         if (gen < tinfo->render_target)
+            render = BRW_SURFACEFORMAT_B8G8R8A8_UNORM;
 	 break;
       case BRW_SURFACEFORMAT_R8G8B8X8_UNORM:
          render = BRW_SURFACEFORMAT_R8G8B8A8_UNORM;

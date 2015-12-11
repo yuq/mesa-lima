@@ -21,16 +21,14 @@
  * IN THE SOFTWARE.
  */
 
-#include "main/macros.h"
 #include "brw_context.h"
-#include "brw_vs.h"
-#include "brw_gs.h"
-#include "brw_fs.h"
 #include "brw_cfg.h"
+#include "brw_eu.h"
 #include "brw_nir.h"
-#include "glsl/ir_optimization.h"
 #include "glsl/glsl_parser_extras.h"
-#include "main/shaderapi.h"
+#include "main/shaderobj.h"
+#include "main/uniforms.h"
+#include "util/debug.h"
 
 static void
 shader_debug_log_mesa(void *data, const char *fmt, ...)
@@ -87,7 +85,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    compiler->scalar_stage[MESA_SHADER_VERTEX] =
       devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS);
    compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
-      devinfo->gen >= 8 && brw_env_var_as_boolean("INTEL_SCALAR_GS", false);
+      devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", false);
    compiler->scalar_stage[MESA_SHADER_FRAGMENT] = true;
    compiler->scalar_stage[MESA_SHADER_COMPUTE] = true;
 
@@ -142,10 +140,13 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    if (compiler->scalar_stage[MESA_SHADER_GEOMETRY])
       compiler->glsl_compiler_options[MESA_SHADER_GEOMETRY].EmitNoIndirectInput = false;
 
+   compiler->glsl_compiler_options[MESA_SHADER_COMPUTE]
+      .LowerShaderSharedVariables = true;
+
    return compiler;
 }
 
-struct gl_shader *
+extern "C" struct gl_shader *
 brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
 {
    struct brw_shader *shader;
@@ -161,7 +162,7 @@ brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
    return &shader->base;
 }
 
-void
+extern "C" void
 brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
                       unsigned surf_index)
 {
@@ -683,6 +684,13 @@ backend_shader::backend_shader(const struct brw_compiler *compiler,
    debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
    stage_name = _mesa_shader_stage_to_string(stage);
    stage_abbrev = _mesa_shader_stage_to_abbrev(stage);
+}
+
+bool
+backend_reg::equals(const backend_reg &r) const
+{
+   return memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
+          reg_offset == r.reg_offset;
 }
 
 bool

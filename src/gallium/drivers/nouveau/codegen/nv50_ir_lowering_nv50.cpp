@@ -202,7 +202,8 @@ NV50LegalizePostRA::visit(Function *fn)
    Program *prog = fn->getProgram();
 
    r63 = new_LValue(fn, FILE_GPR);
-   if (prog->maxGPR < 63)
+   // GPR units on nv50 are in half-regs
+   if (prog->maxGPR < 126)
       r63->reg.data.id = 63;
    else
       r63->reg.data.id = 127;
@@ -293,8 +294,7 @@ NV50LegalizePostRA::visit(BasicBlock *bb)
                next = hi;
          }
 
-         if (i->op != OP_MOV && i->op != OP_PFETCH &&
-             i->op != OP_BAR &&
+         if (i->op != OP_PFETCH && i->op != OP_BAR &&
              (!i->defExists(0) || i->def(0).getFile() != FILE_ADDRESS))
             replaceZero(i);
       }
@@ -832,7 +832,7 @@ NV50LoweringPreSSA::handleTXB(TexInstruction *i)
    }
    Value *flags = bld.getScratch(1, FILE_FLAGS);
    bld.setPosition(cond, true);
-   bld.mkCvt(OP_CVT, TYPE_U8, flags, TYPE_U32, cond->getDef(0));
+   bld.mkCvt(OP_CVT, TYPE_U8, flags, TYPE_U32, cond->getDef(0))->flagsDef = 0;
 
    Instruction *tex[4];
    for (l = 0; l < 4; ++l) {

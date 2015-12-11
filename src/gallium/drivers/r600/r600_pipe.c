@@ -76,6 +76,9 @@ static void r600_destroy_context(struct pipe_context *context)
 	pipe_resource_reference((struct pipe_resource**)&rctx->dummy_cmask, NULL);
 	pipe_resource_reference((struct pipe_resource**)&rctx->dummy_fmask, NULL);
 
+	if (rctx->fixed_func_tcs_shader)
+		rctx->b.b.delete_tcs_state(&rctx->b.b, rctx->fixed_func_tcs_shader);
+
 	if (rctx->dummy_pixel_shader) {
 		rctx->b.b.delete_fs_state(&rctx->b.b, rctx->dummy_pixel_shader);
 	}
@@ -115,7 +118,7 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 	struct r600_screen* rscreen = (struct r600_screen *)screen;
 	struct radeon_winsys *ws = rscreen->b.ws;
 
-	if (rctx == NULL)
+	if (!rctx)
 		return NULL;
 
 	rctx->b.b.screen = screen;
@@ -274,6 +277,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
 	case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
 	case PIPE_CAP_TGSI_TXQS:
+	case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
 		return 1;
 
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
@@ -340,14 +344,17 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_USER_VERTEX_BUFFERS:
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_VERTEXID_NOBASE:
-	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
 	case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
 	case PIPE_CAP_SHAREABLE_SHADERS:
-	case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
 	case PIPE_CAP_CLEAR_TEXTURE:
 		return 0;
 
+	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
+		if (family >= CHIP_CEDAR)
+			return 30;
+		else
+			return 0;
 	/* Stream output. */
 	case PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS:
 		return rscreen->b.has_streamout ? 4 : 0;
@@ -443,8 +450,11 @@ static int r600_get_shader_param(struct pipe_screen* pscreen, unsigned shader, e
 		if (rscreen->b.info.drm_minor >= 37)
 			break;
 		return 0;
+	case PIPE_SHADER_TESS_CTRL:
+	case PIPE_SHADER_TESS_EVAL:
+		if (rscreen->b.family >= CHIP_CEDAR)
+			break;
 	default:
-		/* XXX: support tessellation on Evergreen */
 		return 0;
 	}
 
@@ -527,7 +537,7 @@ static void r600_destroy_screen(struct pipe_screen* pscreen)
 {
 	struct r600_screen *rscreen = (struct r600_screen *)pscreen;
 
-	if (rscreen == NULL)
+	if (!rscreen)
 		return;
 
 	if (!rscreen->b.ws->unref(rscreen->b.ws))
@@ -554,7 +564,7 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
 {
 	struct r600_screen *rscreen = CALLOC_STRUCT(r600_screen);
 
-	if (rscreen == NULL) {
+	if (!rscreen) {
 		return NULL;
 	}
 
@@ -580,7 +590,7 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
 	if (debug_get_bool_option("R600_DEBUG_COMPUTE", FALSE))
 		rscreen->b.debug_flags |= DBG_COMPUTE;
 	if (debug_get_bool_option("R600_DUMP_SHADERS", FALSE))
-		rscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS;
+		rscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS | DBG_TCS | DBG_TES;
 	if (!debug_get_bool_option("R600_HYPERZ", TRUE))
 		rscreen->b.debug_flags |= DBG_NO_HYPERZ;
 	if (debug_get_bool_option("R600_LLVM", FALSE))

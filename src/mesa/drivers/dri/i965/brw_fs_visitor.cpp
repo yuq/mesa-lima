@@ -27,26 +27,8 @@
  * makes it easier to do backend-specific optimizations than doing so
  * in the GLSL IR or in the native code.
  */
-#include <sys/types.h>
-
-#include "main/macros.h"
-#include "main/shaderobj.h"
-#include "program/prog_parameter.h"
-#include "program/prog_print.h"
-#include "program/prog_optimize.h"
-#include "util/register_allocate.h"
-#include "program/hash_table.h"
-#include "brw_context.h"
-#include "brw_eu.h"
-#include "brw_wm.h"
-#include "brw_cs.h"
-#include "brw_vec4.h"
-#include "brw_vec4_gs_visitor.h"
 #include "brw_fs.h"
-#include "main/uniforms.h"
 #include "glsl/nir/glsl_types.h"
-#include "glsl/ir_optimization.h"
-#include "program/sampler.h"
 
 using namespace brw;
 
@@ -768,7 +750,6 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
       const int output_vertex_size_owords =
          gs_prog_data->output_vertex_size_hwords * 2;
 
-      fs_reg offset;
       if (gs_vertex_count.file == IMM) {
          per_slot_offsets = brw_imm_ud(output_vertex_size_owords *
                                        gs_vertex_count.ud);

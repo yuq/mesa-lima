@@ -136,8 +136,12 @@ static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
 void r600_preflush_suspend_features(struct r600_common_context *ctx)
 {
 	/* suspend queries */
-	if (!LIST_IS_EMPTY(&ctx->active_nontimer_queries))
+	if (ctx->num_cs_dw_nontimer_queries_suspend) {
+		/* Since non-timer queries are suspended during blits,
+		 * we have to guard against double-suspends. */
 		r600_suspend_nontimer_queries(ctx);
+		ctx->nontimer_queries_suspended_by_flush = true;
+	}
 	if (!LIST_IS_EMPTY(&ctx->active_timer_queries))
 		r600_suspend_timer_queries(ctx);
 
@@ -158,8 +162,10 @@ void r600_postflush_resume_features(struct r600_common_context *ctx)
 	/* resume queries */
 	if (!LIST_IS_EMPTY(&ctx->active_timer_queries))
 		r600_resume_timer_queries(ctx);
-	if (!LIST_IS_EMPTY(&ctx->active_nontimer_queries))
+	if (ctx->nontimer_queries_suspended_by_flush) {
+		ctx->nontimer_queries_suspended_by_flush = false;
 		r600_resume_nontimer_queries(ctx);
+	}
 }
 
 static void r600_flush_from_st(struct pipe_context *ctx,
@@ -233,8 +239,8 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	rctx->family = rscreen->family;
 	rctx->chip_class = rscreen->chip_class;
 
-	if (rscreen->family == CHIP_HAWAII)
-		rctx->max_db = 16;
+	if (rscreen->chip_class >= CIK)
+		rctx->max_db = MAX2(8, rscreen->info.r600_num_backends);
 	else if (rscreen->chip_class >= EVERGREEN)
 		rctx->max_db = 8;
 	else
@@ -312,7 +318,7 @@ void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resour
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_resource *rr = (struct r600_resource *)r;
 
-	if (r == NULL) {
+	if (!r) {
 		return;
 	}
 
@@ -338,7 +344,6 @@ void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resour
 static const struct debug_named_value common_debug_options[] = {
 	/* logging */
 	{ "tex", DBG_TEX, "Print texture info" },
-	{ "texmip", DBG_TEXMIP, "Print texture info (mipmapped only)" },
 	{ "compute", DBG_COMPUTE, "Print compute info" },
 	{ "vm", DBG_VM, "Print virtual addresses when creating resources" },
 	{ "trace_cs", DBG_TRACE_CS, "Trace cs and write rlockup_<csid>.c file with faulty cs" },
@@ -550,10 +555,11 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 	case CHIP_TONGA: return "tonga";
 	case CHIP_ICELAND: return "iceland";
 	case CHIP_CARRIZO: return "carrizo";
-	case CHIP_FIJI: return "fiji";
 #if HAVE_LLVM <= 0x0307
+	case CHIP_FIJI: return "tonga";
 	case CHIP_STONEY: return "carrizo";
 #else
+	case CHIP_FIJI: return "fiji";
 	case CHIP_STONEY: return "stoney";
 #endif
 	default: return "";
@@ -977,6 +983,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 
 void r600_destroy_common_screen(struct r600_common_screen *rscreen)
 {
+	r600_perfcounters_destroy(rscreen);
 	r600_gpu_load_kill_thread(rscreen);
 
 	pipe_mutex_destroy(rscreen->gpu_load_mutex);

@@ -22,8 +22,8 @@
  */
 
 #include "brw_fs.h"
-#include "brw_fs_live_variables.h"
 #include "brw_cfg.h"
+#include "brw_eu.h"
 
 /** @file brw_fs_cmod_propagation.cpp
  *

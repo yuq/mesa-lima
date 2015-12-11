@@ -143,19 +143,21 @@ verify_image_parameter(YYLTYPE *loc, _mesa_glsl_parse_state *state,
 }
 
 static bool
-verify_first_atomic_ssbo_parameter(YYLTYPE *loc, _mesa_glsl_parse_state *state,
+verify_first_atomic_parameter(YYLTYPE *loc, _mesa_glsl_parse_state *state,
                                    ir_variable *var)
 {
-   if (!var || !var->is_in_shader_storage_block()) {
+   if (!var ||
+       (!var->is_in_shader_storage_block() &&
+        var->data.mode != ir_var_shader_shared)) {
       _mesa_glsl_error(loc, state, "First argument to atomic function "
-                       "must be a buffer variable");
+                       "must be a buffer or shared variable");
       return false;
    }
    return true;
 }
 
 static bool
-is_atomic_ssbo_function(const char *func_name)
+is_atomic_function(const char *func_name)
 {
    return !strcmp(func_name, "atomicAdd") ||
           !strcmp(func_name, "atomicMin") ||
@@ -276,16 +278,16 @@ verify_parameter_modes(_mesa_glsl_parse_state *state,
 
    /* The first parameter of atomic functions must be a buffer variable */
    const char *func_name = sig->function_name();
-   bool is_atomic_ssbo = is_atomic_ssbo_function(func_name);
-   if (is_atomic_ssbo) {
+   bool is_atomic = is_atomic_function(func_name);
+   if (is_atomic) {
       const ir_rvalue *const actual = (ir_rvalue *) actual_ir_parameters.head;
 
       const ast_expression *const actual_ast =
          exec_node_data(ast_expression, actual_ast_parameters.head, link);
       YYLTYPE loc = actual_ast->get_location();
 
-      if (!verify_first_atomic_ssbo_parameter(&loc, state,
-                                              actual->variable_referenced())) {
+      if (!verify_first_atomic_parameter(&loc, state,
+                                         actual->variable_referenced())) {
          return false;
       }
    }
@@ -1737,7 +1739,7 @@ ast_function_expression::handle_method(exec_list *instructions,
             result = new(ctx) ir_constant(op->type->array_size());
          }
       } else if (op->type->is_vector()) {
-         if (state->ARB_shading_language_420pack_enable) {
+         if (state->has_420pack()) {
             /* .length() returns int. */
             result = new(ctx) ir_constant((int) op->type->vector_elements);
          } else {
@@ -1746,7 +1748,7 @@ ast_function_expression::handle_method(exec_list *instructions,
             goto fail;
          }
       } else if (op->type->is_matrix()) {
-         if (state->ARB_shading_language_420pack_enable) {
+         if (state->has_420pack()) {
             /* .length() returns int. */
             result = new(ctx) ir_constant((int) op->type->matrix_columns);
          } else {
@@ -2075,7 +2077,7 @@ ast_aggregate_initializer::hir(exec_list *instructions,
    }
    const glsl_type *const constructor_type = this->constructor_type;
 
-   if (!state->ARB_shading_language_420pack_enable) {
+   if (!state->has_420pack()) {
       _mesa_glsl_error(&loc, state, "C-style initialization requires the "
                        "GL_ARB_shading_language_420pack extension");
       return ir_rvalue::error_value(ctx);

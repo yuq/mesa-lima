@@ -1699,7 +1699,7 @@ texture_format_error_check_gles(struct gl_context *ctx, GLenum format,
       }
    }
    else {
-      err = _mesa_es_error_check_format_and_type(format, type, dimensions);
+      err = _mesa_es_error_check_format_and_type(ctx, format, type, dimensions);
       if (err != GL_NO_ERROR) {
          _mesa_error(ctx, err, "%s(format = %s, type = %s)",
                      callerName, _mesa_enum_to_string(format),
@@ -2028,7 +2028,7 @@ compressed_texture_error_check(struct gl_context *ctx, GLint dimensions,
        * if <imageSize> is not consistent with the format, dimensions, and
        * contents of the specified image.
        */
-      reason = "imageSize inconsistant with width/height/format";
+      reason = "imageSize inconsistent with width/height/format";
       error = GL_INVALID_VALUE;
       goto error;
    }
@@ -2492,8 +2492,8 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
 
    if (!_mesa_source_buffer_exists(ctx, texImage->_BaseFormat)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(missing readbuffer, format=0x%x)", caller,
-                  texImage->_BaseFormat);
+                  "%s(missing readbuffer, format=%s)", caller,
+                  _mesa_enum_to_string(texImage->_BaseFormat));
       return GL_TRUE;
    }
 
@@ -4303,15 +4303,15 @@ compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
 
    if ((GLint) format != texImage->InternalFormat) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(format=0x%x)",
-                  callerName, format);
+                  "%s(format=%s)",
+                  callerName, _mesa_enum_to_string(format));
       return GL_TRUE;
    }
 
    if (compressedteximage_only_format(ctx, format)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-               "%s(format=0x%x cannot be updated)",
-               callerName, format);
+                  "%s(format=%s cannot be updated)",
+                  callerName, _mesa_enum_to_string(format));
       return GL_TRUE;
    }
 
@@ -4901,8 +4901,8 @@ _mesa_texture_buffer_range(struct gl_context *ctx,
 
    format = _mesa_validate_texbuffer_format(ctx, internalFormat);
    if (format == MESA_FORMAT_NONE) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "%s(internalFormat 0x%x)", caller, internalFormat);
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(internalFormat %s)",
+                  caller, _mesa_enum_to_string(internalFormat));
       return;
    }
 

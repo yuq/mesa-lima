@@ -321,8 +321,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
 
    if (prog_data->nr_params > 0) {
       /* XXX: I think we're leaking this */
-      prog_data->param = (const gl_constant_value **)
-         malloc(prog_data->nr_params * sizeof(gl_constant_value *));
+      prog_data->param = (const union gl_constant_value **)
+         malloc(prog_data->nr_params * sizeof(union gl_constant_value *));
 
       /* We now set the param values to be offsets into a
        * anv_push_constant_data structure.  Since the compiler doesn't
@@ -333,7 +333,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       if (nir->num_uniforms > 0) {
          /* Fill out the push constants section of the param array */
          for (unsigned i = 0; i < MAX_PUSH_CONSTANTS_SIZE / sizeof(float); i++)
-            prog_data->param[i] = (const gl_constant_value *)
+            prog_data->param[i] = (const union gl_constant_value *)
                &null_data->client_data[i * sizeof(float)];
       }
    }
@@ -362,7 +362,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    /* nir_lower_io will only handle the push constants; we need to set this
     * to the full number of possible uniforms.
     */
-   nir->num_uniforms = prog_data->nr_params;
+   nir->num_uniforms = prog_data->nr_params * 4;
 
    return nir;
 }

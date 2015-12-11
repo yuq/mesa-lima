@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Intel Corporation
+ * Copyright © 2014 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -17,25 +17,48 @@
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 
-#pragma once
+#include "brw_context.h"
+#include "brw_state.h"
+#include "brw_defines.h"
+#include "intel_batchbuffer.h"
 
-#include <stdint.h>
+static void
+gen7_upload_ds_state(struct brw_context *brw)
+{
+   /* Disable the DS Unit */
+   BEGIN_BATCH(7);
+   OUT_BATCH(_3DSTATE_CONSTANT_DS << 16 | (7 - 2));
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   ADVANCE_BATCH();
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+   BEGIN_BATCH(6);
+   OUT_BATCH(_3DSTATE_DS << 16 | (6 - 2));
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   ADVANCE_BATCH();
 
-struct intel_mipmap_tree;
-
-#ifdef __cplusplus
+   BEGIN_BATCH(2);
+   OUT_BATCH(_3DSTATE_BINDING_TABLE_POINTERS_DS << 16 | (2 - 2));
+   OUT_BATCH(brw->hw_bt_pool.next_offset);
+   ADVANCE_BATCH();
 }
 
-void
-gen6_blorp_exec(struct brw_context *brw,
-                const brw_blorp_params *params);
-
-#endif
+const struct brw_tracked_state gen7_ds_state = {
+   .dirty = {
+      .mesa  = 0,
+      .brw   = BRW_NEW_CONTEXT,
+   },
+   .emit = gen7_upload_ds_state,
+};

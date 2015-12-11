@@ -1825,7 +1825,7 @@ ast_expression::do_hir(exec_list *instructions,
        * tree.  This particular use must be at location specified in the grammar
        * as 'variable_identifier'.
        */
-      ir_variable *var = 
+      ir_variable *var =
          state->symbols->get_variable(this->primary_expression.identifier);
 
       if (var != NULL) {
@@ -2650,7 +2650,9 @@ apply_explicit_binding(struct _mesa_glsl_parse_state *state,
 
          return;
       }
-   } else if (state->is_version(420, 310) && base_type->is_image()) {
+   } else if ((state->is_version(420, 310) ||
+               state->ARB_shading_language_420pack_enable) &&
+              base_type->is_image()) {
       assert(ctx->Const.MaxImageUnits <= MAX_IMAGE_UNITS);
       if (max_index >= ctx->Const.MaxImageUnits) {
          _mesa_glsl_error(loc, state, "Image binding %d exceeds the "
@@ -3737,7 +3739,7 @@ process_initializer(ir_variable *var, ast_declaration *decl,
              * expressions. Const-qualified global variables must still be
              * initialized with constant expressions.
              */
-            if (!state->ARB_shading_language_420pack_enable
+            if (!state->has_420pack()
                 || state->current_function == NULL) {
                _mesa_glsl_error(& initializer_loc, state,
                                 "initializer of %s variable `%s' must be a "
@@ -5366,7 +5368,7 @@ ast_jump_statement::hir(exec_list *instructions,
          if (state->current_function->return_type != ret_type) {
             YYLTYPE loc = this->get_location();
 
-            if (state->ARB_shading_language_420pack_enable) {
+            if (state->has_420pack()) {
                if (!apply_implicit_conversion(state->current_function->return_type,
                                               ret, state)) {
                   _mesa_glsl_error(& loc, state,
@@ -5558,8 +5560,8 @@ ast_switch_statement::hir(exec_list *instructions,
 
    /* From page 66 (page 55 of the PDF) of the GLSL 1.50 spec:
     *
-    *    "The type of init-expression in a switch statement must be a 
-    *     scalar integer." 
+    *    "The type of init-expression in a switch statement must be a
+    *     scalar integer."
     */
    if (!test_expression->type->is_scalar() ||
        !test_expression->type->is_integer()) {

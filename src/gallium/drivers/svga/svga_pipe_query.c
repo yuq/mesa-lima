@@ -348,7 +348,7 @@ allocate_query_block_entry(struct svga_context *svga,
    if (block_index == -1)
       return NULL;
    alloc_entry = CALLOC_STRUCT(svga_qmem_alloc_entry);
-   if (alloc_entry == NULL)
+   if (!alloc_entry)
       return NULL;
 
    alloc_entry->block_index = block_index;
@@ -381,13 +381,13 @@ allocate_query(struct svga_context *svga,
 
    alloc_entry = svga->gb_query_map[type];
 
-   if (alloc_entry == NULL) {
+   if (!alloc_entry) {
       /**
        * No query memory block has been allocated for this query type,
        * allocate one now
        */
       alloc_entry = allocate_query_block_entry(svga, len);
-      if (alloc_entry == NULL)
+      if (!alloc_entry)
          return -1;
       svga->gb_query_map[type] = alloc_entry;
    }
@@ -398,7 +398,7 @@ allocate_query(struct svga_context *svga,
    if (slot_index == -1) {
       /* This query memory block is full, allocate another one */
       alloc_entry = allocate_query_block_entry(svga, len);
-      if (alloc_entry == NULL)
+      if (!alloc_entry)
          return -1;
       alloc_entry->next = svga->gb_query_map[type];
       svga->gb_query_map[type] = alloc_entry;
@@ -753,8 +753,9 @@ svga_destroy_query(struct pipe_context *pipe, struct pipe_query *q)
    struct svga_winsys_screen *sws = svga_screen(svga->pipe.screen)->sws;
    struct svga_query *sq;
 
-   if (q == NULL) {
-      return destroy_gb_query_obj(svga);
+   if (!q) {
+      destroy_gb_query_obj(svga);
+      return;
    }
 
    sq = svga_query(q);

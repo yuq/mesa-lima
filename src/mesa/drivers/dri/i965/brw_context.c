@@ -69,6 +69,7 @@
 #include "tnl/tnl.h"
 #include "tnl/t_pipeline.h"
 #include "util/ralloc.h"
+#include "util/debug.h"
 
 /***************************************
  * Mesa's Driver Functions
@@ -194,6 +195,24 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       intel_miptree_all_slices_resolve_depth(brw, tex_obj->mt);
       intel_miptree_resolve_color(brw, tex_obj->mt);
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
+   }
+
+   /* Resolve color for each active shader image. */
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      const struct gl_shader *shader = ctx->_Shader->CurrentProgram[i] ?
+         ctx->_Shader->CurrentProgram[i]->_LinkedShaders[i] : NULL;
+
+      if (unlikely(shader && shader->NumImages)) {
+         for (unsigned j = 0; j < shader->NumImages; j++) {
+            struct gl_image_unit *u = &ctx->ImageUnits[shader->ImageUnits[j]];
+            tex_obj = intel_texture_object(u->TexObj);
+
+            if (tex_obj && tex_obj->mt) {
+               intel_miptree_resolve_color(brw, tex_obj->mt);
+               brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
+            }
+         }
+      }
    }
 
    _mesa_lock_context_textures(ctx);
@@ -326,11 +345,13 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    const bool stage_exists[MESA_SHADER_STAGES] = {
       [MESA_SHADER_VERTEX] = true,
-      [MESA_SHADER_TESS_CTRL] = false,
-      [MESA_SHADER_TESS_EVAL] = false,
+      [MESA_SHADER_TESS_CTRL] = brw->gen >= 8,
+      [MESA_SHADER_TESS_EVAL] = brw->gen >= 8,
       [MESA_SHADER_GEOMETRY] = brw->gen >= 6,
       [MESA_SHADER_FRAGMENT] = true,
-      [MESA_SHADER_COMPUTE] = _mesa_extension_override_enables.ARB_compute_shader,
+      [MESA_SHADER_COMPUTE] =
+         (ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) ||
+         _mesa_extension_override_enables.ARB_compute_shader,
    };
 
    unsigned num_stages = 0;
@@ -483,6 +504,8 @@ brw_initialize_context_constants(struct brw_context *brw)
    if (brw->gen >= 5 || brw->is_g4x)
       ctx->Const.MaxClipPlanes = 8;
 
+   ctx->Const.LowerTessLevel = true;
+
    ctx->Const.Program[MESA_SHADER_VERTEX].MaxNativeInstructions = 16 * 1024;
    ctx->Const.Program[MESA_SHADER_VERTEX].MaxAluInstructions = 0;
    ctx->Const.Program[MESA_SHADER_VERTEX].MaxTexInstructions = 0;
@@ -582,6 +605,10 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxInputComponents = 64;
       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents = 128;
       ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents = 128;
+      ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxInputComponents = 128;
+      ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxOutputComponents = 128;
+      ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxInputComponents = 128;
+      ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxOutputComponents = 128;
    }
 
    /* We want the GLSL compiler to emit code that uses condition codes */
@@ -613,7 +640,7 @@ brw_initialize_context_constants(struct brw_context *brw)
 }
 
 static void
-brw_adjust_cs_context_constants(struct brw_context *brw)
+brw_initialize_cs_context_constants(struct brw_context *brw, unsigned max_threads)
 {
    struct gl_context *ctx = &brw->ctx;
 
@@ -627,7 +654,7 @@ brw_adjust_cs_context_constants(struct brw_context *brw)
     */
    const int simd_size = ctx->API == API_OPENGL_CORE ? 16 : 8;
 
-   const uint32_t max_invocations = simd_size * brw->max_cs_threads;
+   const uint32_t max_invocations = simd_size * max_threads;
    ctx->Const.MaxComputeWorkGroupSize[0] = max_invocations;
    ctx->Const.MaxComputeWorkGroupSize[1] = max_invocations;
    ctx->Const.MaxComputeWorkGroupSize[2] = max_invocations;
@@ -757,6 +784,8 @@ brwCreateContext(gl_api api,
    brw->has_swizzling = screen->hw_has_swizzling;
 
    brw->vs.base.stage = MESA_SHADER_VERTEX;
+   brw->tcs.base.stage = MESA_SHADER_TESS_CTRL;
+   brw->tes.base.stage = MESA_SHADER_TESS_EVAL;
    brw->gs.base.stage = MESA_SHADER_GEOMETRY;
    brw->wm.base.stage = MESA_SHADER_FRAGMENT;
    if (brw->gen >= 8) {
@@ -817,6 +846,7 @@ brwCreateContext(gl_api api,
    if (INTEL_DEBUG & DEBUG_PERF)
       brw->perf_debug = true;
 
+   brw_initialize_cs_context_constants(brw, devinfo->max_cs_threads);
    brw_initialize_context_constants(brw);
 
    ctx->Const.ResetStrategy = notify_reset
@@ -871,8 +901,6 @@ brwCreateContext(gl_api api,
    brw->urb.max_ds_entries = devinfo->urb.max_ds_entries;
    brw->urb.max_gs_entries = devinfo->urb.max_gs_entries;
 
-   brw_adjust_cs_context_constants(brw);
-
    /* Estimate the size of the mappable aperture into the GTT.  There's an
     * ioctl to get the whole GTT size, but not one to get the mappable subset.
     * It turns out it's basically always 256MB, though some ancient hardware
@@ -899,8 +927,8 @@ brwCreateContext(gl_api api,
    brw->predicate.state = BRW_PREDICATE_STATE_RENDER;
 
    brw->use_resource_streamer = screen->has_resource_streamer &&
-      (brw_env_var_as_boolean("INTEL_USE_HW_BT", false) ||
-       brw_env_var_as_boolean("INTEL_USE_GATHER", false));
+      (env_var_as_boolean("INTEL_USE_HW_BT", false) ||
+       env_var_as_boolean("INTEL_USE_GATHER", false));
 
    ctx->VertexProgram._MaintainTnlProgram = true;
    ctx->FragmentProgram._MaintainTexEnvProgram = true;

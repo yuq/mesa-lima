@@ -479,6 +479,12 @@ compute_shader(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+buffer_atomics_supported(const _mesa_glsl_parse_state *state)
+{
+   return compute_shader(state) || shader_storage_buffer_object(state);
+}
+
+static bool
 barrier_supported(const _mesa_glsl_parse_state *state)
 {
    return compute_shader(state) ||
@@ -606,8 +612,8 @@ private:
                                ir_expression_operation opcode,
                                const glsl_type *return_type,
                                const glsl_type *param_type);
-   ir_function_signature *binop(ir_expression_operation opcode,
-                                builtin_available_predicate avail,
+   ir_function_signature *binop(builtin_available_predicate avail,
+                                ir_expression_operation opcode,
                                 const glsl_type *return_type,
                                 const glsl_type *param0_type,
                                 const glsl_type *param1_type);
@@ -774,16 +780,16 @@ private:
    ir_function_signature *_atomic_counter_op(const char *intrinsic,
                                              builtin_available_predicate avail);
 
-   ir_function_signature *_atomic_ssbo_intrinsic2(builtin_available_predicate avail,
-                                                  const glsl_type *type);
-   ir_function_signature *_atomic_ssbo_op2(const char *intrinsic,
-                                           builtin_available_predicate avail,
-                                           const glsl_type *type);
-   ir_function_signature *_atomic_ssbo_intrinsic3(builtin_available_predicate avail,
-                                                  const glsl_type *type);
-   ir_function_signature *_atomic_ssbo_op3(const char *intrinsic,
-                                           builtin_available_predicate avail,
-                                           const glsl_type *type);
+   ir_function_signature *_atomic_intrinsic2(builtin_available_predicate avail,
+                                             const glsl_type *type);
+   ir_function_signature *_atomic_op2(const char *intrinsic,
+                                      builtin_available_predicate avail,
+                                      const glsl_type *type);
+   ir_function_signature *_atomic_intrinsic3(builtin_available_predicate avail,
+                                             const glsl_type *type);
+   ir_function_signature *_atomic_op3(const char *intrinsic,
+                                      builtin_available_predicate avail,
+                                      const glsl_type *type);
 
    B1(min3)
    B1(max3)
@@ -930,53 +936,53 @@ builtin_builder::create_intrinsics()
                 _atomic_counter_intrinsic(shader_atomic_counters),
                 NULL);
 
-   add_function("__intrinsic_ssbo_atomic_add",
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::uint_type),
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::int_type),
+   add_function("__intrinsic_atomic_add",
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::uint_type),
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::int_type),
                 NULL);
-   add_function("__intrinsic_ssbo_atomic_min",
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::uint_type),
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::int_type),
+   add_function("__intrinsic_atomic_min",
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::uint_type),
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::int_type),
                 NULL);
-   add_function("__intrinsic_ssbo_atomic_max",
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::uint_type),
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::int_type),
+   add_function("__intrinsic_atomic_max",
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::uint_type),
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::int_type),
                 NULL);
-   add_function("__intrinsic_ssbo_atomic_and",
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::uint_type),
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::int_type),
+   add_function("__intrinsic_atomic_and",
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::uint_type),
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::int_type),
                 NULL);
-   add_function("__intrinsic_ssbo_atomic_or",
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::uint_type),
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::int_type),
+   add_function("__intrinsic_atomic_or",
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::uint_type),
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::int_type),
                 NULL);
-   add_function("__intrinsic_ssbo_atomic_xor",
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::uint_type),
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::int_type),
+   add_function("__intrinsic_atomic_xor",
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::uint_type),
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::int_type),
                 NULL);
-   add_function("__intrinsic_ssbo_atomic_exchange",
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::uint_type),
-                _atomic_ssbo_intrinsic2(shader_storage_buffer_object,
-                                        glsl_type::int_type),
+   add_function("__intrinsic_atomic_exchange",
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::uint_type),
+                _atomic_intrinsic2(buffer_atomics_supported,
+                                   glsl_type::int_type),
                 NULL);
-   add_function("__intrinsic_ssbo_atomic_comp_swap",
-                _atomic_ssbo_intrinsic3(shader_storage_buffer_object,
-                                        glsl_type::uint_type),
-                _atomic_ssbo_intrinsic3(shader_storage_buffer_object,
-                                        glsl_type::int_type),
+   add_function("__intrinsic_atomic_comp_swap",
+                _atomic_intrinsic3(buffer_atomics_supported,
+                                   glsl_type::uint_type),
+                _atomic_intrinsic3(buffer_atomics_supported,
+                                   glsl_type::int_type),
                 NULL);
 
    add_image_functions(false);
@@ -1336,7 +1342,7 @@ builtin_builder::create_builtins()
                 _smoothstep(fp64, glsl_type::dvec3_type,  glsl_type::dvec3_type),
                 _smoothstep(fp64, glsl_type::dvec4_type,  glsl_type::dvec4_type),
                 NULL);
- 
+
    FD130(isnan)
    FD130(isinf)
 
@@ -1373,7 +1379,7 @@ builtin_builder::create_builtins()
    FD(distance)
    FD(dot)
 
-   add_function("cross", _cross(always_available, glsl_type::vec3_type), 
+   add_function("cross", _cross(always_available, glsl_type::vec3_type),
                 _cross(fp64, glsl_type::dvec3_type), NULL);
 
    FD(normalize)
@@ -2682,68 +2688,68 @@ builtin_builder::create_builtins()
                 NULL);
 
    add_function("atomicAdd",
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_add",
-                                 shader_storage_buffer_object,
-                                 glsl_type::uint_type),
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_add",
-                                 shader_storage_buffer_object,
-                                 glsl_type::int_type),
+                _atomic_op2("__intrinsic_atomic_add",
+                            buffer_atomics_supported,
+                            glsl_type::uint_type),
+                _atomic_op2("__intrinsic_atomic_add",
+                            buffer_atomics_supported,
+                            glsl_type::int_type),
                 NULL);
    add_function("atomicMin",
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_min",
-                                 shader_storage_buffer_object,
-                                 glsl_type::uint_type),
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_min",
-                                 shader_storage_buffer_object,
-                                 glsl_type::int_type),
+                _atomic_op2("__intrinsic_atomic_min",
+                            buffer_atomics_supported,
+                            glsl_type::uint_type),
+                _atomic_op2("__intrinsic_atomic_min",
+                            buffer_atomics_supported,
+                            glsl_type::int_type),
                 NULL);
    add_function("atomicMax",
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_max",
-                                 shader_storage_buffer_object,
-                                 glsl_type::uint_type),
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_max",
-                                 shader_storage_buffer_object,
-                                 glsl_type::int_type),
+                _atomic_op2("__intrinsic_atomic_max",
+                            buffer_atomics_supported,
+                            glsl_type::uint_type),
+                _atomic_op2("__intrinsic_atomic_max",
+                            buffer_atomics_supported,
+                            glsl_type::int_type),
                 NULL);
    add_function("atomicAnd",
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_and",
-                                 shader_storage_buffer_object,
-                                 glsl_type::uint_type),
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_and",
-                                 shader_storage_buffer_object,
-                                 glsl_type::int_type),
+                _atomic_op2("__intrinsic_atomic_and",
+                            buffer_atomics_supported,
+                            glsl_type::uint_type),
+                _atomic_op2("__intrinsic_atomic_and",
+                            buffer_atomics_supported,
+                            glsl_type::int_type),
                 NULL);
    add_function("atomicOr",
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_or",
-                                 shader_storage_buffer_object,
-                                 glsl_type::uint_type),
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_or",
-                                 shader_storage_buffer_object,
-                                 glsl_type::int_type),
+                _atomic_op2("__intrinsic_atomic_or",
+                            buffer_atomics_supported,
+                            glsl_type::uint_type),
+                _atomic_op2("__intrinsic_atomic_or",
+                            buffer_atomics_supported,
+                            glsl_type::int_type),
                 NULL);
    add_function("atomicXor",
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_xor",
-                                 shader_storage_buffer_object,
-                                 glsl_type::uint_type),
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_xor",
-                                 shader_storage_buffer_object,
-                                 glsl_type::int_type),
+                _atomic_op2("__intrinsic_atomic_xor",
+                            buffer_atomics_supported,
+                            glsl_type::uint_type),
+                _atomic_op2("__intrinsic_atomic_xor",
+                            buffer_atomics_supported,
+                            glsl_type::int_type),
                 NULL);
    add_function("atomicExchange",
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_exchange",
-                                 shader_storage_buffer_object,
-                                 glsl_type::uint_type),
-                _atomic_ssbo_op2("__intrinsic_ssbo_atomic_exchange",
-                                 shader_storage_buffer_object,
-                                 glsl_type::int_type),
+                _atomic_op2("__intrinsic_atomic_exchange",
+                            buffer_atomics_supported,
+                            glsl_type::uint_type),
+                _atomic_op2("__intrinsic_atomic_exchange",
+                            buffer_atomics_supported,
+                            glsl_type::int_type),
                 NULL);
    add_function("atomicCompSwap",
-                _atomic_ssbo_op3("__intrinsic_ssbo_atomic_comp_swap",
-                                 shader_storage_buffer_object,
-                                 glsl_type::uint_type),
-                _atomic_ssbo_op3("__intrinsic_ssbo_atomic_comp_swap",
-                                 shader_storage_buffer_object,
-                                 glsl_type::int_type),
+                _atomic_op3("__intrinsic_atomic_comp_swap",
+                            buffer_atomics_supported,
+                            glsl_type::uint_type),
+                _atomic_op3("__intrinsic_atomic_comp_swap",
+                            buffer_atomics_supported,
+                            glsl_type::int_type),
                 NULL);
 
    add_function("min3",
@@ -3114,8 +3120,8 @@ builtin_builder::_##NAME(builtin_available_predicate avail, const glsl_type *typ
 }
 
 ir_function_signature *
-builtin_builder::binop(ir_expression_operation opcode,
-                       builtin_available_predicate avail,
+builtin_builder::binop(builtin_available_predicate avail,
+                       ir_expression_operation opcode,
                        const glsl_type *return_type,
                        const glsl_type *param0_type,
                        const glsl_type *param1_type)
@@ -3411,7 +3417,7 @@ builtin_builder::_atanh(const glsl_type *type)
 ir_function_signature *
 builtin_builder::_pow(const glsl_type *type)
 {
-   return binop(ir_binop_pow, always_available, type, type, type);
+   return binop(always_available, ir_binop_pow, type, type, type);
 }
 
 UNOP(exp,         ir_unop_exp,  always_available)
@@ -3435,7 +3441,7 @@ UNOPA(fract,     ir_unop_fract)
 ir_function_signature *
 builtin_builder::_mod(const glsl_type *x_type, const glsl_type *y_type)
 {
-   return binop(ir_binop_mod, always_available, x_type, x_type, y_type);
+   return binop(always_available, ir_binop_mod, x_type, x_type, y_type);
 }
 
 ir_function_signature *
@@ -3457,14 +3463,14 @@ ir_function_signature *
 builtin_builder::_min(builtin_available_predicate avail,
                       const glsl_type *x_type, const glsl_type *y_type)
 {
-   return binop(ir_binop_min, avail, x_type, x_type, y_type);
+   return binop(avail, ir_binop_min, x_type, x_type, y_type);
 }
 
 ir_function_signature *
 builtin_builder::_max(builtin_available_predicate avail,
                       const glsl_type *x_type, const glsl_type *y_type)
 {
-   return binop(ir_binop_max, avail, x_type, x_type, y_type);
+   return binop(avail, ir_binop_max, x_type, x_type, y_type);
 }
 
 ir_function_signature *
@@ -3793,9 +3799,9 @@ ir_function_signature *
 builtin_builder::_dot(builtin_available_predicate avail, const glsl_type *type)
 {
    if (type->vector_elements == 1)
-      return binop(ir_binop_mul, avail, type, type, type);
+      return binop(avail, ir_binop_mul, type, type, type);
 
-   return binop(ir_binop_dot, avail,
+   return binop(avail, ir_binop_dot,
                 type->get_base_type(), type, type);
 }
 
@@ -4311,7 +4317,7 @@ ir_function_signature *
 builtin_builder::_lessThan(builtin_available_predicate avail,
                            const glsl_type *type)
 {
-   return binop(ir_binop_less, avail,
+   return binop(avail, ir_binop_less,
                 glsl_type::bvec(type->vector_elements), type, type);
 }
 
@@ -4319,7 +4325,7 @@ ir_function_signature *
 builtin_builder::_lessThanEqual(builtin_available_predicate avail,
                                 const glsl_type *type)
 {
-   return binop(ir_binop_lequal, avail,
+   return binop(avail, ir_binop_lequal,
                 glsl_type::bvec(type->vector_elements), type, type);
 }
 
@@ -4327,7 +4333,7 @@ ir_function_signature *
 builtin_builder::_greaterThan(builtin_available_predicate avail,
                               const glsl_type *type)
 {
-   return binop(ir_binop_greater, avail,
+   return binop(avail, ir_binop_greater,
                 glsl_type::bvec(type->vector_elements), type, type);
 }
 
@@ -4335,7 +4341,7 @@ ir_function_signature *
 builtin_builder::_greaterThanEqual(builtin_available_predicate avail,
                                    const glsl_type *type)
 {
-   return binop(ir_binop_gequal, avail,
+   return binop(avail, ir_binop_gequal,
                 glsl_type::bvec(type->vector_elements), type, type);
 }
 
@@ -4343,7 +4349,7 @@ ir_function_signature *
 builtin_builder::_equal(builtin_available_predicate avail,
                         const glsl_type *type)
 {
-   return binop(ir_binop_equal, avail,
+   return binop(avail, ir_binop_equal,
                 glsl_type::bvec(type->vector_elements), type, type);
 }
 
@@ -4351,7 +4357,7 @@ ir_function_signature *
 builtin_builder::_notEqual(builtin_available_predicate avail,
                            const glsl_type *type)
 {
-   return binop(ir_binop_nequal, avail,
+   return binop(avail, ir_binop_nequal,
                 glsl_type::bvec(type->vector_elements), type, type);
 }
 
@@ -4939,7 +4945,8 @@ builtin_builder::_fma(builtin_available_predicate avail, const glsl_type *type)
 ir_function_signature *
 builtin_builder::_ldexp(const glsl_type *x_type, const glsl_type *exp_type)
 {
-   return binop(ir_binop_ldexp, x_type->base_type == GLSL_TYPE_DOUBLE ? fp64 : gpu_shader5_or_es31, x_type, x_type, exp_type);
+   return binop(x_type->base_type == GLSL_TYPE_DOUBLE ? fp64 : gpu_shader5_or_es31,
+                ir_binop_ldexp, x_type, x_type, exp_type);
 }
 
 ir_function_signature *
@@ -5096,8 +5103,8 @@ builtin_builder::_atomic_counter_intrinsic(builtin_available_predicate avail)
 }
 
 ir_function_signature *
-builtin_builder::_atomic_ssbo_intrinsic2(builtin_available_predicate avail,
-                                         const glsl_type *type)
+builtin_builder::_atomic_intrinsic2(builtin_available_predicate avail,
+                                    const glsl_type *type)
 {
    ir_variable *atomic = in_var(type, "atomic");
    ir_variable *data = in_var(type, "data");
@@ -5106,8 +5113,8 @@ builtin_builder::_atomic_ssbo_intrinsic2(builtin_available_predicate avail,
 }
 
 ir_function_signature *
-builtin_builder::_atomic_ssbo_intrinsic3(builtin_available_predicate avail,
-                                         const glsl_type *type)
+builtin_builder::_atomic_intrinsic3(builtin_available_predicate avail,
+                                    const glsl_type *type)
 {
    ir_variable *atomic = in_var(type, "atomic");
    ir_variable *data1 = in_var(type, "data1");
@@ -5131,9 +5138,9 @@ builtin_builder::_atomic_counter_op(const char *intrinsic,
 }
 
 ir_function_signature *
-builtin_builder::_atomic_ssbo_op2(const char *intrinsic,
-                                  builtin_available_predicate avail,
-                                  const glsl_type *type)
+builtin_builder::_atomic_op2(const char *intrinsic,
+                             builtin_available_predicate avail,
+                             const glsl_type *type)
 {
    ir_variable *atomic = in_var(type, "atomic_var");
    ir_variable *data = in_var(type, "atomic_data");
@@ -5147,9 +5154,9 @@ builtin_builder::_atomic_ssbo_op2(const char *intrinsic,
 }
 
 ir_function_signature *
-builtin_builder::_atomic_ssbo_op3(const char *intrinsic,
-                                  builtin_available_predicate avail,
-                                  const glsl_type *type)
+builtin_builder::_atomic_op3(const char *intrinsic,
+                             builtin_available_predicate avail,
+                             const glsl_type *type)
 {
    ir_variable *atomic = in_var(type, "atomic_var");
    ir_variable *data1 = in_var(type, "atomic_data1");

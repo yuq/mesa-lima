@@ -1275,6 +1275,10 @@ struct gl_buffer_object
    GLboolean Immutable; /**< GL_ARB_buffer_storage */
    gl_buffer_usage UsageHistory; /**< How has this buffer been used so far? */
 
+   /** Counters used for buffer usage warnings */
+   GLuint NumSubDataCalls;
+   GLuint NumMapBufferWriteCalls;
+
    struct gl_buffer_mapping Mappings[MAP_COUNT];
 };
 
@@ -1418,6 +1422,9 @@ struct gl_vertex_array_object
 
    /** Vertex buffer bindings */
    struct gl_vertex_buffer_binding VertexBinding[VERT_ATTRIB_MAX];
+
+   /** Mask indicating which vertex arrays have vertex buffer associated. */
+   GLbitfield64 VertexAttribBufferMask;
 
    /** Mask of VERT_BIT_* values indicating which arrays are enabled */
    GLbitfield64 _Enabled;
@@ -2672,6 +2679,10 @@ struct gl_shader_program
        * local_size_{x,y,z}.  Otherwise undefined.
        */
       unsigned LocalSize[3];
+      /**
+       * Size of shared variables accessed by the compute shader.
+       */
+      unsigned SharedSize;
    } Comp;
 
    /* post-link info: */
@@ -2882,6 +2893,9 @@ struct gl_shader_compiler_options
    GLboolean OptimizeForAOS;
 
    GLboolean LowerBufferInterfaceBlocks; /**< Lower UBO and SSBO access to intrinsics. */
+
+   GLboolean LowerShaderSharedVariables; /**< Lower compute shader shared
+                                          *   variable access to intrinsics. */
 
    const struct nir_shader_compiler_options *NirOptions;
 };
@@ -3402,7 +3416,7 @@ struct gl_constants
     */
    GLuint MaxUserAssignableUniformLocations;
 
-   /** GL_ARB_geometry_shader4 */
+   /** geometry shader */
    GLuint MaxGeometryOutputVertices;
    GLuint MaxGeometryTotalOutputComponents;
 
@@ -3453,6 +3467,9 @@ struct gl_constants
 
    /** GL_EXT_provoking_vertex */
    GLboolean QuadsFollowProvokingVertexConvention;
+
+   /** GL_ARB_viewport_array */
+   GLenum LayerAndVPIndexProvokingVertex;
 
    /** OpenGL version 3.0 */
    GLbitfield ContextFlags;  /**< Ex: GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT */
@@ -3687,7 +3704,6 @@ struct gl_extensions
    GLboolean ARB_enhanced_layouts;
    GLboolean ARB_explicit_attrib_location;
    GLboolean ARB_explicit_uniform_location;
-   GLboolean ARB_geometry_shader4;
    GLboolean ARB_gpu_shader5;
    GLboolean ARB_gpu_shader_fp64;
    GLboolean ARB_half_float_vertex;

@@ -416,7 +416,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 
 		vb = &sctx->vertex_buffer[ve->vertex_buffer_index];
 		rbuffer = (struct r600_resource*)vb->buffer;
-		if (rbuffer == NULL) {
+		if (!rbuffer) {
 			memset(desc, 0, 16);
 			continue;
 		}

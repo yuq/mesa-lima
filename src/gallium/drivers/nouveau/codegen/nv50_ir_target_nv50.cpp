@@ -268,6 +268,12 @@ TargetNV50::insnCanLoad(const Instruction *i, int s,
 {
    DataFile sf = ld->src(0).getFile();
 
+   // immediate 0 can be represented by GPR $r63/$r127
+   if (sf == FILE_IMMEDIATE && ld->getSrc(0)->reg.data.u64 == 0)
+      return (!i->isPseudo() &&
+              !i->asTex() &&
+              i->op != OP_EXPORT && i->op != OP_STORE);
+
    if (sf == FILE_IMMEDIATE && (i->predSrc >= 0 || i->flagsDef >= 0))
       return false;
    if (s >= opInfo[i->op].srcNr)
@@ -379,6 +385,21 @@ TargetNV50::insnCanLoad(const Instruction *i, int s,
 }
 
 bool
+TargetNV50::insnCanLoadOffset(const Instruction *i, int s, int offset) const
+{
+   if (!i->src(s).isIndirect(0))
+      return true;
+   offset += i->src(s).get()->reg.data.offset;
+   if (i->op == OP_LOAD || i->op == OP_STORE) {
+      // There are some restrictions in theory, but in practice they're never
+      // going to be hit. When we enable shared/global memory, this will
+      // become more important.
+      return true;
+   }
+   return offset >= 0 && offset <= (int32_t)(127 * i->src(s).get()->reg.size);
+}
+
+bool
 TargetNV50::isAccessSupported(DataFile file, DataType ty) const
 {
    if (ty == TYPE_B96 || ty == TYPE_NONE)
@@ -454,7 +475,7 @@ TargetNV50::isModSupported(const Instruction *insn, int s, Modifier mod) const
          return false;
       }
    }
-   if (s >= 3)
+   if (s >= opInfo[insn->op].srcNr || s >= 3)
       return false;
    return (mod & Modifier(opInfo[insn->op].srcMods[s])) == mod;
 }

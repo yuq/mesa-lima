@@ -382,7 +382,7 @@ const struct lp_type conv_types[] = {
 };
 
 
-const unsigned num_types = sizeof(conv_types)/sizeof(conv_types[0]);
+const unsigned num_types = ARRAY_SIZE(conv_types);
 
 
 boolean

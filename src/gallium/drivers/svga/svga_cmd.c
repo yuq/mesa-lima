@@ -1386,7 +1386,7 @@ SVGA3D_BeginGBQuery(struct svga_winsys_context *swc,
                             SVGA_3D_CMD_BEGIN_GB_QUERY,
                             sizeof *cmd,
                             1);
-   if(!cmd)
+   if (!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
 
    cmd->cid = swc->cid;
@@ -1466,7 +1466,7 @@ SVGA3D_EndGBQuery(struct svga_winsys_context *swc,
                             SVGA_3D_CMD_END_GB_QUERY,
                             sizeof *cmd,
                             2);
-   if(!cmd)
+   if (!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
 
    cmd->cid = swc->cid;
@@ -1553,7 +1553,7 @@ SVGA3D_WaitForGBQuery(struct svga_winsys_context *swc,
                             SVGA_3D_CMD_WAIT_FOR_GB_QUERY,
                             sizeof *cmd,
                             2);
-   if(!cmd)
+   if (!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
 
    cmd->cid = swc->cid;

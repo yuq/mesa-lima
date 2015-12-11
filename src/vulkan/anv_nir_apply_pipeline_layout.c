@@ -22,6 +22,7 @@
  */
 
 #include "anv_nir.h"
+#include "program/prog_parameter.h"
 #include "glsl/nir/nir_builder.h"
 
 struct apply_pipeline_layout_state {
@@ -238,8 +239,8 @@ apply_pipeline_layout_block(nir_block *block, void *void_state)
 }
 
 static void
-setup_vec4_uniform_value(const gl_constant_value **params,
-                         const gl_constant_value *values,
+setup_vec4_uniform_value(const union gl_constant_value **params,
+                         const union gl_constant_value *values,
                          unsigned n)
 {
    static const gl_constant_value zero = { 0 };
@@ -292,17 +293,17 @@ anv_nir_apply_pipeline_layout(nir_shader *shader,
       const struct brw_image_param *image_param = null_data->images;
       for (uint32_t i = 0; i < layout->stage[shader->stage].image_count; i++) {
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
-            (const gl_constant_value *)&image_param->surface_idx, 1);
+            (const union gl_constant_value *)&image_param->surface_idx, 1);
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_OFFSET_OFFSET,
-            (const gl_constant_value *)image_param->offset, 2);
+            (const union gl_constant_value *)image_param->offset, 2);
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SIZE_OFFSET,
-            (const gl_constant_value *)image_param->size, 3);
+            (const union gl_constant_value *)image_param->size, 3);
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_STRIDE_OFFSET,
-            (const gl_constant_value *)image_param->stride, 4);
+            (const union gl_constant_value *)image_param->stride, 4);
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_TILING_OFFSET,
-            (const gl_constant_value *)image_param->tiling, 3);
+            (const union gl_constant_value *)image_param->tiling, 3);
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SWIZZLING_OFFSET,
-            (const gl_constant_value *)image_param->swizzling, 2);
+            (const union gl_constant_value *)image_param->swizzling, 2);
 
          param += BRW_IMAGE_PARAM_SIZE;
          image_param ++;

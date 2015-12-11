@@ -30,6 +30,8 @@
 #include "intel_mipmap_tree.h"
 #include "intel_batchbuffer.h"
 #include "brw_state.h"
+#include "program/prog_statevars.h"
+#include "glsl/ir_uniform.h"
 
 static unsigned
 get_cs_thread_count(const struct brw_cs_prog_data *cs_prog_data)
@@ -164,8 +166,20 @@ brw_upload_cs_state(struct brw_context *brw)
       SET_FIELD(threads, GEN8_MEDIA_GPGPU_THREAD_COUNT) :
       SET_FIELD(threads, MEDIA_GPGPU_THREAD_COUNT);
    assert(threads <= brw->max_cs_threads);
+
+   assert(prog_data->total_shared <= 64 * 1024);
+   uint32_t slm_size = 0;
+   if (prog_data->total_shared > 0) {
+      /* slm_size is in 4k increments, but must be a power of 2. */
+      slm_size = 4 * 1024;
+      while (slm_size < prog_data->total_shared)
+         slm_size <<= 1;
+      slm_size /= 4 * 1024;
+   }
+
    desc[dw++] =
       SET_FIELD(cs_prog_data->uses_barrier, MEDIA_BARRIER_ENABLE) |
+      SET_FIELD(slm_size, MEDIA_SHARED_LOCAL_MEMORY_SIZE) |
       media_threads;
 
    BEGIN_BATCH(4);
@@ -304,7 +318,7 @@ brw_upload_cs_pull_constants(struct brw_context *brw)
 
    /* _NEW_PROGRAM_CONSTANTS */
    brw_upload_pull_constants(brw, BRW_NEW_SURFACES, &cp->program.Base,
-                             stage_state, prog_data, true);
+                             stage_state, prog_data);
 }
 
 const struct brw_tracked_state brw_cs_pull_constants = {

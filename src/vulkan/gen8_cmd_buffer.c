@@ -521,7 +521,7 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 
    unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
    unsigned push_constant_data_size =
-      (prog_data->nr_params + local_id_dwords) * sizeof(gl_constant_value);
+      (prog_data->nr_params + local_id_dwords) * sizeof(union gl_constant_value *);
    unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
    unsigned push_constant_regs = reg_aligned_constant_size / 32;
 

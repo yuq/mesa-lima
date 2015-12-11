@@ -115,8 +115,9 @@ nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
         nir_intrinsic_instr *intr =
                 nir_intrinsic_instr_create(b->shader,
                                            nir_intrinsic_load_uniform);
-        intr->const_index[0] = VC4_NIR_STATE_UNIFORM_OFFSET + contents;
+        intr->const_index[0] = (VC4_NIR_STATE_UNIFORM_OFFSET + contents) * 4;
         intr->num_components = 1;
+        intr->src[0] = nir_src_for_ssa(nir_imm_int(b, 0));
         nir_ssa_dest_init(&intr->instr, &intr->dest, 1, NULL);
         nir_builder_instr_insert(b, &intr->instr);
         return &intr->dest.ssa;
@@ -294,12 +295,87 @@ ntq_umul(struct vc4_compile *c, struct qreg src0, struct qreg src1)
                                         qir_uniform_ui(c, 24)));
 }
 
+static struct qreg
+ntq_scale_depth_texture(struct vc4_compile *c, struct qreg src)
+{
+        struct qreg depthf = qir_ITOF(c, qir_SHR(c, src,
+                                                 qir_uniform_ui(c, 8)));
+        return qir_FMUL(c, depthf, qir_uniform_f(c, 1.0f/0xffffff));
+}
+
+/**
+ * Emits a lowered TXF_MS from an MSAA texture.
+ *
+ * The addressing math has been lowered in NIR, and now we just need to read
+ * it like a UBO.
+ */
+static void
+ntq_emit_txf(struct vc4_compile *c, nir_tex_instr *instr)
+{
+        uint32_t tile_width = 32;
+        uint32_t tile_height = 32;
+        uint32_t tile_size = (tile_height * tile_width *
+                              VC4_MAX_SAMPLES * sizeof(uint32_t));
+
+        unsigned unit = instr->sampler_index;
+        uint32_t w = align(c->key->tex[unit].msaa_width, tile_width);
+        uint32_t w_tiles = w / tile_width;
+        uint32_t h = align(c->key->tex[unit].msaa_height, tile_height);
+        uint32_t h_tiles = h / tile_height;
+        uint32_t size = w_tiles * h_tiles * tile_size;
+
+        struct qreg addr;
+        assert(instr->num_srcs == 1);
+        assert(instr->src[0].src_type == nir_tex_src_coord);
+        addr = ntq_get_src(c, instr->src[0].src, 0);
+
+        /* Perform the clamping required by kernel validation. */
+        addr = qir_MAX(c, addr, qir_uniform_ui(c, 0));
+        addr = qir_MIN(c, addr,  qir_uniform_ui(c, size - 4));
+
+        qir_TEX_DIRECT(c, addr, qir_uniform(c, QUNIFORM_TEXTURE_MSAA_ADDR, unit));
+
+        struct qreg tex = qir_TEX_RESULT(c);
+        c->num_texture_samples++;
+
+        struct qreg texture_output[4];
+        enum pipe_format format = c->key->tex[unit].format;
+        if (util_format_is_depth_or_stencil(format)) {
+                struct qreg scaled = ntq_scale_depth_texture(c, tex);
+                for (int i = 0; i < 4; i++)
+                        texture_output[i] = scaled;
+        } else {
+                struct qreg tex_result_unpacked[4];
+                for (int i = 0; i < 4; i++)
+                        tex_result_unpacked[i] = qir_UNPACK_8_F(c, tex, i);
+
+                const uint8_t *format_swiz =
+                        vc4_get_format_swizzle(c->key->tex[unit].format);
+                for (int i = 0; i < 4; i++) {
+                        texture_output[i] =
+                                get_swizzled_channel(c, tex_result_unpacked,
+                                                     format_swiz[i]);
+                }
+        }
+
+        struct qreg *dest = ntq_get_dest(c, &instr->dest);
+        for (int i = 0; i < 4; i++) {
+                dest[i] = get_swizzled_channel(c, texture_output,
+                                               c->key->tex[unit].swizzle[i]);
+        }
+}
+
 static void
 ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
 {
         struct qreg s, t, r, lod, proj, compare;
         bool is_txb = false, is_txl = false, has_proj = false;
         unsigned unit = instr->sampler_index;
+
+        if (instr->op == nir_texop_txf) {
+                ntq_emit_txf(c, instr);
+                return;
+        }
 
         for (unsigned i = 0; i < instr->num_srcs; i++) {
                 switch (instr->src[i].src_type) {
@@ -396,11 +472,7 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
 
         struct qreg unpacked[4];
         if (util_format_is_depth_or_stencil(format)) {
-                struct qreg depthf = qir_ITOF(c, qir_SHR(c, tex,
-                                                         qir_uniform_ui(c, 8)));
-                struct qreg normalized = qir_FMUL(c, depthf,
-                                                  qir_uniform_f(c, 1.0f/0xffffff));
-
+                struct qreg normalized = ntq_scale_depth_texture(c, tex);
                 struct qreg depth_output;
 
                 struct qreg one = qir_uniform_f(c, 1.0f);
@@ -1109,6 +1181,10 @@ emit_frag_end(struct vc4_compile *c)
                 }
         }
 
+        if (c->output_sample_mask_index != -1) {
+                qir_MS_MASK(c, c->outputs[c->output_sample_mask_index]);
+        }
+
         if (c->fs_key->depth_enabled) {
                 struct qreg z;
                 if (c->output_position_index != -1) {
@@ -1120,7 +1196,12 @@ emit_frag_end(struct vc4_compile *c)
                 qir_TLB_Z_WRITE(c, z);
         }
 
-        qir_TLB_COLOR_WRITE(c, color);
+        if (!c->msaa_per_sample_output) {
+                qir_TLB_COLOR_WRITE(c, color);
+        } else {
+                for (int i = 0; i < VC4_MAX_SAMPLES; i++)
+                        qir_TLB_COLOR_WRITE_MS(c, c->sample_colors[i]);
+        }
 }
 
 static void
@@ -1359,6 +1440,9 @@ ntq_setup_outputs(struct vc4_compile *c)
                         case FRAG_RESULT_DEPTH:
                                 c->output_position_index = loc;
                                 break;
+                        case FRAG_RESULT_SAMPLE_MASK:
+                                c->output_sample_mask_index = loc;
+                                break;
                         }
                 } else {
                         switch (var->data.location) {
@@ -1433,6 +1517,8 @@ static void
 ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
 {
         const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
+        nir_const_value *const_offset;
+        unsigned offset;
         struct qreg *dest = NULL;
 
         if (info->has_dest) {
@@ -1442,19 +1528,23 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
         switch (instr->intrinsic) {
         case nir_intrinsic_load_uniform:
                 assert(instr->num_components == 1);
-                if (instr->const_index[0] < VC4_NIR_STATE_UNIFORM_OFFSET) {
-                        *dest = qir_uniform(c, QUNIFORM_UNIFORM,
-                                            instr->const_index[0]);
+                const_offset = nir_src_as_const_value(instr->src[0]);
+                if (const_offset) {
+                        offset = instr->const_index[0] + const_offset->u[0];
+                        assert(offset % 4 == 0);
+                        /* We need dwords */
+                        offset = offset / 4;
+                        if (offset < VC4_NIR_STATE_UNIFORM_OFFSET) {
+                                *dest = qir_uniform(c, QUNIFORM_UNIFORM,
+                                                    offset);
+                        } else {
+                                *dest = qir_uniform(c, offset -
+                                                    VC4_NIR_STATE_UNIFORM_OFFSET,
+                                                    0);
+                        }
                 } else {
-                        *dest = qir_uniform(c, instr->const_index[0] -
-                                            VC4_NIR_STATE_UNIFORM_OFFSET,
-                                            0);
+                        *dest = indirect_uniform_load(c, instr);
                 }
-                break;
-
-        case nir_intrinsic_load_uniform_indirect:
-                *dest = indirect_uniform_load(c, instr);
-
                 break;
 
         case nir_intrinsic_load_user_clip_plane:
@@ -1462,20 +1552,56 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                                     instr->const_index[0]);
                 break;
 
+        case nir_intrinsic_load_sample_mask_in:
+                *dest = qir_uniform(c, QUNIFORM_SAMPLE_MASK, 0);
+                break;
+
         case nir_intrinsic_load_input:
                 assert(instr->num_components == 1);
-                if (instr->const_index[0] == VC4_NIR_TLB_COLOR_READ_INPUT) {
-                        *dest = qir_TLB_COLOR_READ(c);
+                const_offset = nir_src_as_const_value(instr->src[0]);
+                assert(const_offset && "vc4 doesn't support indirect inputs");
+                if (instr->const_index[0] >= VC4_NIR_TLB_COLOR_READ_INPUT) {
+                        assert(const_offset->u[0] == 0);
+                        /* Reads of the per-sample color need to be done in
+                         * order.
+                         */
+                        int sample_index = (instr->const_index[0] -
+                                           VC4_NIR_TLB_COLOR_READ_INPUT);
+                        for (int i = 0; i <= sample_index; i++) {
+                                if (c->color_reads[i].file == QFILE_NULL) {
+                                        c->color_reads[i] =
+                                                qir_TLB_COLOR_READ(c);
+                                }
+                        }
+                        *dest = c->color_reads[sample_index];
                 } else {
-                        *dest = c->inputs[instr->const_index[0]];
+                        offset = instr->const_index[0] + const_offset->u[0];
+                        *dest = c->inputs[offset];
                 }
                 break;
 
         case nir_intrinsic_store_output:
-                assert(instr->num_components == 1);
-                c->outputs[instr->const_index[0]] =
-                        qir_MOV(c, ntq_get_src(c, instr->src[0], 0));
-                c->num_outputs = MAX2(c->num_outputs, instr->const_index[0] + 1);
+                const_offset = nir_src_as_const_value(instr->src[1]);
+                assert(const_offset && "vc4 doesn't support indirect outputs");
+                offset = instr->const_index[0] + const_offset->u[0];
+
+                /* MSAA color outputs are the only case where we have an
+                 * output that's not lowered to being a store of a single 32
+                 * bit value.
+                 */
+                if (c->stage == QSTAGE_FRAG && instr->num_components == 4) {
+                        assert(offset == c->output_color_index);
+                        for (int i = 0; i < 4; i++) {
+                                c->sample_colors[i] =
+                                        qir_MOV(c, ntq_get_src(c, instr->src[0],
+                                                               i));
+                        }
+                } else {
+                        assert(instr->num_components == 1);
+                        c->outputs[offset] =
+                                qir_MOV(c, ntq_get_src(c, instr->src[0], 0));
+                        c->num_outputs = MAX2(c->num_outputs, offset + 1);
+                }
                 break;
 
         case nir_intrinsic_discard:
@@ -1672,6 +1798,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                 nir_lower_clip_vs(c->s, c->key->ucp_enables);
 
         vc4_nir_lower_io(c);
+        vc4_nir_lower_txf_ms(c);
         nir_lower_idiv(c->s);
         nir_lower_load_const_to_scalar(c->s);
 
@@ -1907,12 +2034,19 @@ vc4_setup_shared_key(struct vc4_context *vc4, struct vc4_key *key,
                 struct pipe_sampler_state *sampler_state =
                         texstate->samplers[i];
 
-                if (sampler) {
-                        key->tex[i].format = sampler->format;
-                        key->tex[i].swizzle[0] = sampler->swizzle_r;
-                        key->tex[i].swizzle[1] = sampler->swizzle_g;
-                        key->tex[i].swizzle[2] = sampler->swizzle_b;
-                        key->tex[i].swizzle[3] = sampler->swizzle_a;
+                if (!sampler)
+                        continue;
+
+                key->tex[i].format = sampler->format;
+                key->tex[i].swizzle[0] = sampler->swizzle_r;
+                key->tex[i].swizzle[1] = sampler->swizzle_g;
+                key->tex[i].swizzle[2] = sampler->swizzle_b;
+                key->tex[i].swizzle[3] = sampler->swizzle_a;
+
+                if (sampler->texture->nr_samples) {
+                        key->tex[i].msaa_width = sampler->texture->width0;
+                        key->tex[i].msaa_height = sampler->texture->height0;
+                } else if (sampler){
                         key->tex[i].compare_mode = sampler_state->compare_mode;
                         key->tex[i].compare_func = sampler_state->compare_func;
                         key->tex[i].wrap_s = sampler_state->wrap_s;
@@ -1952,6 +2086,11 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
         } else {
                 key->logicop_func = PIPE_LOGICOP_COPY;
         }
+        key->msaa = vc4->rasterizer->base.multisample;
+        key->sample_coverage = (vc4->rasterizer->base.multisample &&
+                                vc4->sample_mask != (1 << VC4_MAX_SAMPLES) - 1);
+        key->sample_alpha_to_coverage = vc4->blend->alpha_to_coverage;
+        key->sample_alpha_to_one = vc4->blend->alpha_to_one;
         if (vc4->framebuffer.cbufs[0])
                 key->color_format = vc4->framebuffer.cbufs[0]->format;
 

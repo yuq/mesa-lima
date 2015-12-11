@@ -356,7 +356,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 
 	uint32_t color_control = 0;
 
-	if (blend == NULL)
+	if (!blend)
 		return NULL;
 
 	blend->alpha_to_one = state->alpha_to_one;
@@ -681,7 +681,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	unsigned tmp, i;
 	float psize_min, psize_max;
 
-	if (rs == NULL) {
+	if (!rs) {
 		return NULL;
 	}
 
@@ -803,7 +803,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 		(struct si_state_rasterizer*)sctx->queued.named.rasterizer;
 	struct si_state_rasterizer *rs = (struct si_state_rasterizer *)state;
 
-	if (state == NULL)
+	if (!state)
 		return;
 
 	if (sctx->framebuffer.nr_samples > 1 &&
@@ -897,7 +897,7 @@ static void *si_create_dsa_state(struct pipe_context *ctx,
 	unsigned db_depth_control;
 	uint32_t db_stencil_control = 0;
 
-	if (dsa == NULL) {
+	if (!dsa) {
 		return NULL;
 	}
 
@@ -953,7 +953,7 @@ static void si_bind_dsa_state(struct pipe_context *ctx, void *state)
         struct si_context *sctx = (struct si_context *)ctx;
         struct si_state_dsa *dsa = state;
 
-        if (state == NULL)
+        if (!state)
                 return;
 
 	si_pm4_bind_state(sctx, dsa, dsa);
@@ -1912,7 +1912,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 				color_attrib |= S_028C74_FMASK_BANK_HEIGHT(fmask_bankh);
 			}
 			if (sctx->b.chip_class >= CIK) {
-				color_pitch |= S_028C64_FMASK_TILE_MAX(rtex->fmask.pitch / 8 - 1);
+				color_pitch |= S_028C64_FMASK_TILE_MAX(rtex->fmask.pitch_in_pixels / 8 - 1);
 			}
 		}
 	}
@@ -2419,7 +2419,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	uint64_t va;
 	unsigned last_layer = state->u.tex.last_layer;
 
-	if (view == NULL)
+	if (!view)
 		return NULL;
 
 	/* initialize base object */
@@ -2701,7 +2701,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 				       S_008F1C_TYPE(si_tex_dim(texture->target,
 								state->target, 0));
 		view->fmask_state[4] = S_008F20_DEPTH(depth - 1) |
-				       S_008F20_PITCH(tmp->fmask.pitch - 1);
+				       S_008F20_PITCH(tmp->fmask.pitch_in_pixels - 1);
 		view->fmask_state[5] = S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
 				       S_008F24_LAST_ARRAY(last_layer);
 		view->fmask_state[6] = 0;
@@ -2762,7 +2762,7 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 	unsigned aniso_flag_offset = state->max_anisotropy > 1 ? 2 : 0;
 	unsigned border_color_type, border_color_index = 0;
 
-	if (rstate == NULL) {
+	if (!rstate) {
 		return NULL;
 	}
 
@@ -3291,7 +3291,7 @@ static void si_init_config(struct si_context *sctx)
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 	int i;
 
-	if (pm4 == NULL)
+	if (!pm4)
 		return;
 
 	si_pm4_cmd_begin(pm4, PKT3_CONTEXT_CONTROL);

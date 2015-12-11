@@ -39,6 +39,7 @@
 #include "program/prog_print.h"
 #include "program/prog_parameter.h"
 #include "brw_nir.h"
+#include "brw_program.h"
 
 #include "util/ralloc.h"
 
@@ -217,16 +218,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
    ralloc_free(mem_ctx);
 
    return true;
-}
-
-static bool
-key_debug(struct brw_context *brw, const char *name, int a, int b)
-{
-   if (a != b) {
-      perf_debug("  %s %d->%d\n", name, a, b);
-      return true;
-   }
-   return false;
 }
 
 void

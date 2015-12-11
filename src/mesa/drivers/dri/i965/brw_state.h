@@ -127,14 +127,17 @@ extern const struct brw_tracked_state gen6_wm_push_constants;
 extern const struct brw_tracked_state gen6_wm_state;
 extern const struct brw_tracked_state gen7_depthbuffer;
 extern const struct brw_tracked_state gen7_clip_state;
-extern const struct brw_tracked_state gen7_disable_stages;
+extern const struct brw_tracked_state gen7_ds_state;
 extern const struct brw_tracked_state gen7_gs_state;
+extern const struct brw_tracked_state gen7_hs_state;
+extern const struct brw_tracked_state gen7_l3_state;
 extern const struct brw_tracked_state gen7_ps_state;
 extern const struct brw_tracked_state gen7_push_constant_space;
 extern const struct brw_tracked_state gen7_sbe_state;
 extern const struct brw_tracked_state gen7_sf_clip_viewport;
 extern const struct brw_tracked_state gen7_sf_state;
 extern const struct brw_tracked_state gen7_sol_state;
+extern const struct brw_tracked_state gen7_te_state;
 extern const struct brw_tracked_state gen7_urb;
 extern const struct brw_tracked_state gen7_vs_state;
 extern const struct brw_tracked_state gen7_wm_state;
@@ -142,7 +145,9 @@ extern const struct brw_tracked_state gen7_hw_binding_tables;
 extern const struct brw_tracked_state haswell_cut_index;
 extern const struct brw_tracked_state gen8_blend_state;
 extern const struct brw_tracked_state gen8_disable_stages;
+extern const struct brw_tracked_state gen8_ds_state;
 extern const struct brw_tracked_state gen8_gs_state;
+extern const struct brw_tracked_state gen8_hs_state;
 extern const struct brw_tracked_state gen8_index_buffer;
 extern const struct brw_tracked_state gen8_multisample_state;
 extern const struct brw_tracked_state gen8_pma_fix;
@@ -357,8 +362,7 @@ brw_upload_pull_constants(struct brw_context *brw,
                           GLbitfield64 brw_new_constbuf,
                           const struct gl_program *prog,
                           struct brw_stage_state *stage_state,
-                          const struct brw_stage_prog_data *prog_data,
-                          bool dword_pitch);
+                          const struct brw_stage_prog_data *prog_data);
 
 /* gen7_vs_state.c */
 void
@@ -378,6 +382,10 @@ void gen7_update_binding_table_from_array(struct brw_context *brw,
                                           int num_surfaces);
 void gen7_disable_hw_binding_tables(struct brw_context *brw);
 void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);
+
+/* gen7_l3_state.c */
+void
+gen7_restore_default_l3_config(struct brw_context *brw);
 
 #ifdef __cplusplus
 }

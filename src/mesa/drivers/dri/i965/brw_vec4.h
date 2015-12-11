@@ -24,24 +24,11 @@
 #ifndef BRW_VEC4_H
 #define BRW_VEC4_H
 
-#include <stdint.h>
 #include "brw_shader.h"
-#include "main/compiler.h"
-#include "program/hash_table.h"
 #include "brw_program.h"
 
 #ifdef __cplusplus
 #include "brw_ir_vec4.h"
-
-extern "C" {
-#endif
-
-#include "brw_context.h"
-#include "brw_eu.h"
-#include "intel_asm_annotation.h"
-
-#ifdef __cplusplus
-}; /* extern "C" */
 #endif
 
 #include "glsl/ir.h"
@@ -328,7 +315,6 @@ public:
    bool is_high_sampler(src_reg sampler);
 
    virtual void emit_nir_code();
-   virtual void nir_setup_inputs();
    virtual void nir_setup_uniforms();
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
    virtual void nir_setup_system_values();
@@ -361,7 +347,6 @@ public:
 
    dst_reg *nir_locals;
    dst_reg *nir_ssa_values;
-   src_reg *nir_inputs;
    dst_reg *nir_system_values;
 
 protected:

@@ -36,6 +36,7 @@
 #include "main/samplerobj.h"
 #include "main/shaderimage.h"
 #include "program/prog_parameter.h"
+#include "program/prog_instruction.h"
 #include "main/framebuffer.h"
 
 #include "intel_mipmap_tree.h"
@@ -400,15 +401,11 @@ brw_create_constant_surface(struct brw_context *brw,
 			    drm_intel_bo *bo,
 			    uint32_t offset,
 			    uint32_t size,
-			    uint32_t *out_offset,
-                            bool dword_pitch)
+			    uint32_t *out_offset)
 {
-   uint32_t stride = dword_pitch ? 4 : 16;
-   uint32_t elements = ALIGN(size, stride) / stride;
-
    brw->vtbl.emit_buffer_surface_state(brw, out_offset, bo, offset,
                                        BRW_SURFACEFORMAT_R32G32B32A32_FLOAT,
-                                       elements, stride, false);
+                                       size, 1, false);
 }
 
 /**
@@ -421,8 +418,7 @@ brw_create_buffer_surface(struct brw_context *brw,
                           drm_intel_bo *bo,
                           uint32_t offset,
                           uint32_t size,
-                          uint32_t *out_offset,
-                          bool dword_pitch)
+                          uint32_t *out_offset)
 {
    /* Use a raw surface so we can reuse existing untyped read/write/atomic
     * messages. We need these specifically for the fragment shader since they
@@ -537,7 +533,7 @@ brw_upload_wm_pull_constants(struct brw_context *brw)
 
    /* _NEW_PROGRAM_CONSTANTS */
    brw_upload_pull_constants(brw, BRW_NEW_SURFACES, &fp->program.Base,
-                             stage_state, prog_data, true);
+                             stage_state, prog_data);
 }
 
 const struct brw_tracked_state brw_wm_pull_constants = {
@@ -773,7 +769,7 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
          const uint32_t surf_index = render_target_start + i;
 
 	 if (intel_renderbuffer(fb->_ColorDrawBuffers[i])) {
-            surf_offset[surf_index] = 
+            surf_offset[surf_index] =
                brw->vtbl.update_renderbuffer_surface(
                   brw, fb->_ColorDrawBuffers[i],
                   _mesa_geometric_layers(fb) > 0, i, surf_index);
@@ -918,8 +914,7 @@ void
 brw_upload_ubo_surfaces(struct brw_context *brw,
 			struct gl_shader *shader,
                         struct brw_stage_state *stage_state,
-                        struct brw_stage_prog_data *prog_data,
-                        bool dword_pitch)
+                        struct brw_stage_prog_data *prog_data)
 {
    struct gl_context *ctx = &brw->ctx;
 
@@ -944,8 +939,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
                                    binding->BufferObject->Size - binding->Offset);
          brw_create_constant_surface(brw, bo, binding->Offset,
                                      binding->BufferObject->Size - binding->Offset,
-                                     &ubo_surf_offsets[i],
-                                     dword_pitch);
+                                     &ubo_surf_offsets[i]);
       }
    }
 
@@ -967,8 +961,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
                                    binding->BufferObject->Size - binding->Offset);
          brw_create_buffer_surface(brw, bo, binding->Offset,
                                    binding->BufferObject->Size - binding->Offset,
-                                   &ssbo_surf_offsets[i],
-                                   dword_pitch);
+                                   &ssbo_surf_offsets[i]);
       }
    }
 
@@ -988,7 +981,7 @@ brw_upload_wm_ubo_surfaces(struct brw_context *brw)
 
    /* BRW_NEW_FS_PROG_DATA */
    brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
-                           &brw->wm.base, &brw->wm.prog_data->base, true);
+                           &brw->wm.base, &brw->wm.prog_data->base);
 }
 
 const struct brw_tracked_state brw_wm_ubo_surfaces = {
@@ -1014,7 +1007,7 @@ brw_upload_cs_ubo_surfaces(struct brw_context *brw)
 
    /* BRW_NEW_CS_PROG_DATA */
    brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
-                           &brw->cs.base, &brw->cs.prog_data->base, true);
+                           &brw->cs.base, &brw->cs.prog_data->base);
 }
 
 const struct brw_tracked_state brw_cs_ubo_surfaces = {
@@ -1060,7 +1053,7 @@ brw_upload_wm_abo_surfaces(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* _NEW_PROGRAM */
-   struct gl_shader_program *prog = ctx->Shader._CurrentFragmentProgram;
+   struct gl_shader_program *prog = ctx->_Shader->_CurrentFragmentProgram;
 
    if (prog) {
       /* BRW_NEW_FS_PROG_DATA */
@@ -1336,7 +1329,7 @@ brw_upload_wm_image_surfaces(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
-   struct gl_shader_program *prog = ctx->Shader._CurrentFragmentProgram;
+   struct gl_shader_program *prog = ctx->_Shader->_CurrentFragmentProgram;
 
    if (prog) {
       /* BRW_NEW_FS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */

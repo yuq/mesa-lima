@@ -130,6 +130,7 @@
 #define EVENT_TYPE_SAMPLE_STREAMOUTSTATS	0x20
 #define EVENT_TYPE_FLUSH_AND_INV_DB_META       0x2c /* supported on r700+ */
 #define EVENT_TYPE_VGT_FLUSH                   0x24
+#define EVENT_TYPE_SQ_NON_EVENT                0x26
 #define EVENT_TYPE_FLUSH_AND_INV_CB_META	46 /* supported on r700+ */
 #define		EVENT_TYPE(x)                           ((x) << 0)
 #define		EVENT_INDEX(x)                          ((x) << 8)
@@ -1367,7 +1368,7 @@
 #define     V_008958_DI_PT_TRISTRIP                    0x00000006
 #define     V_008958_DI_PT_UNUSED_0                    0x00000007
 #define     V_008958_DI_PT_UNUSED_1                    0x00000008
-#define     V_008958_DI_PT_UNUSED_2                    0x00000009
+#define     V_008958_DI_PT_PATCH                       0x00000009
 #define     V_008958_DI_PT_LINELIST_ADJ                0x0000000A
 #define     V_008958_DI_PT_LINESTRIP_ADJ               0x0000000B
 #define     V_008958_DI_PT_TRILIST_ADJ                 0x0000000C

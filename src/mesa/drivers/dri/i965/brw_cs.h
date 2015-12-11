@@ -25,8 +25,6 @@
 #ifndef BRW_CS_H
 #define BRW_CS_H
 
-#include "brw_program.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

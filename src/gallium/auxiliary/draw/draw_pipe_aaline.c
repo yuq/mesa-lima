@@ -429,7 +429,7 @@ aaline_create_texture(struct aaline_stage *aaline)
                                 PIPE_TRANSFER_WRITE,
                                 &box, &transfer);
 
-      if (data == NULL)
+      if (!data)
          return FALSE;
 
       for (i = 0; i < size; i++) {
@@ -774,7 +774,7 @@ static struct aaline_stage *
 draw_aaline_stage(struct draw_context *draw)
 {
    struct aaline_stage *aaline = CALLOC_STRUCT(aaline_stage);
-   if (aaline == NULL)
+   if (!aaline)
       return NULL;
 
    aaline->stage.draw = draw;
@@ -793,8 +793,7 @@ draw_aaline_stage(struct draw_context *draw)
    return aaline;
 
  fail:
-   if (aaline)
-      aaline->stage.destroy(&aaline->stage);
+   aaline->stage.destroy(&aaline->stage);
 
    return NULL;
 }
@@ -824,12 +823,12 @@ aaline_create_fs_state(struct pipe_context *pipe,
    struct aaline_stage *aaline = aaline_stage_from_pipe(pipe);
    struct aaline_fragment_shader *aafs = NULL;
 
-   if (aaline == NULL)
+   if (!aaline)
       return NULL;
 
    aafs = CALLOC_STRUCT(aaline_fragment_shader);
 
-   if (aafs == NULL)
+   if (!aafs)
       return NULL;
 
    aafs->state.tokens = tgsi_dup_tokens(fs->tokens);
@@ -847,7 +846,7 @@ aaline_bind_fs_state(struct pipe_context *pipe, void *fs)
    struct aaline_stage *aaline = aaline_stage_from_pipe(pipe);
    struct aaline_fragment_shader *aafs = (struct aaline_fragment_shader *) fs;
 
-   if (aaline == NULL) {
+   if (!aaline) {
       return;
    }
 
@@ -864,11 +863,11 @@ aaline_delete_fs_state(struct pipe_context *pipe, void *fs)
    struct aaline_stage *aaline = aaline_stage_from_pipe(pipe);
    struct aaline_fragment_shader *aafs = (struct aaline_fragment_shader *) fs;
 
-   if (aafs == NULL) {
+   if (!aafs) {
       return;
    }
 
-   if (aaline != NULL) {
+   if (aaline) {
       /* pass-through */
       aaline->driver_delete_fs_state(pipe, aafs->driver_fs);
 
@@ -889,7 +888,7 @@ aaline_bind_sampler_states(struct pipe_context *pipe, unsigned shader,
 
    assert(start == 0);
 
-   if (aaline == NULL) {
+   if (!aaline) {
       return;
    }
 
@@ -912,7 +911,7 @@ aaline_set_sampler_views(struct pipe_context *pipe, unsigned shader,
    struct aaline_stage *aaline = aaline_stage_from_pipe(pipe);
    uint i;
 
-   if (aaline == NULL) {
+   if (!aaline) {
       return;
    }
 

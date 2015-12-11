@@ -115,7 +115,7 @@ vl_video_buffer_formats(struct pipe_screen *screen, enum pipe_format format)
       return const_resource_formats_VUYA;
 
    case PIPE_FORMAT_R8G8B8X8_UNORM:
-      return const_resource_formats_VUYX;
+      return const_resource_formats_YUVX;
 
    case PIPE_FORMAT_B8G8R8X8_UNORM:
       return const_resource_formats_VUYX;

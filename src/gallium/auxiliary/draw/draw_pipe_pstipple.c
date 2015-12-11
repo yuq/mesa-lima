@@ -577,7 +577,7 @@ static struct pstip_stage *
 draw_pstip_stage(struct draw_context *draw, struct pipe_context *pipe)
 {
    struct pstip_stage *pstip = CALLOC_STRUCT(pstip_stage);
-   if (pstip == NULL)
+   if (!pstip)
       goto fail;
 
    pstip->pipe = pipe;
@@ -742,7 +742,7 @@ draw_install_pstipple_stage(struct draw_context *draw,
     * Create / install pgon stipple drawing / prim stage
     */
    pstip = draw_pstip_stage( draw, pipe );
-   if (pstip == NULL)
+   if (!pstip)
       goto fail;
 
    draw->pipeline.pstipple = &pstip->stage;

@@ -244,7 +244,7 @@ static void cso_init_vbuf(struct cso_context *cso)
 struct cso_context *cso_create_context( struct pipe_context *pipe )
 {
    struct cso_context *ctx = CALLOC_STRUCT(cso_context);
-   if (ctx == NULL)
+   if (!ctx)
       goto out;
 
    ctx->cache = cso_cache_create();
@@ -1075,7 +1075,7 @@ cso_single_sampler(struct cso_context *ctx, unsigned shader_stage,
 {
    void *handle = NULL;
 
-   if (templ != NULL) {
+   if (templ) {
       unsigned key_size = sizeof(struct pipe_sampler_state);
       unsigned hash_key = cso_construct_key((void*)templ, key_size);
       struct cso_hash_iter iter =

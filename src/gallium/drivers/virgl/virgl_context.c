@@ -198,7 +198,7 @@ static struct pipe_surface *virgl_create_surface(struct pipe_context *ctx,
    uint32_t handle;
 
    surf = CALLOC_STRUCT(virgl_surface);
-   if (surf == NULL)
+   if (!surf)
       return NULL;
 
    res->clean = FALSE;
@@ -669,7 +669,7 @@ static struct pipe_sampler_view *virgl_create_sampler_view(struct pipe_context *
    uint32_t handle;
    struct virgl_resource *res;
 
-   if (state == NULL)
+   if (!state)
       return NULL;
 
    grview = CALLOC_STRUCT(virgl_sampler_view);

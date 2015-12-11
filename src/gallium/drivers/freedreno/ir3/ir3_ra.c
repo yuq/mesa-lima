@@ -314,6 +314,14 @@ writes_gpr(struct ir3_instruction *instr)
 	return is_temp(instr->regs[0]);
 }
 
+static bool
+instr_before(struct ir3_instruction *a, struct ir3_instruction *b)
+{
+	if (a->flags & IR3_INSTR_UNUSED)
+		return false;
+	return (a->ip < b->ip);
+}
+
 static struct ir3_instruction *
 get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 		int *sz, int *off)
@@ -348,7 +356,7 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 
 			dd = get_definer(ctx, src->instr, &dsz, &doff);
 
-			if ((!d) || (dd->ip < d->ip)) {
+			if ((!d) || instr_before(dd, d)) {
 				d = dd;
 				*sz = dsz;
 				*off = doff - n;
@@ -369,9 +377,14 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 		 */
 		int cnt = 0;
 
-		d = f;
+		/* need to skip over unused in the group: */
+		while (f && (f->flags & IR3_INSTR_UNUSED)) {
+			f = f->cp.right;
+			cnt++;
+		}
+
 		while (f) {
-			if (f->ip < d->ip)
+			if ((!d) || instr_before(f, d))
 				d = f;
 			if (f == instr)
 				*off = cnt;
@@ -414,7 +427,7 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 		*sz = MAX2(*sz, dsz);
 		*off = doff;
 
-		if (dd->ip < d->ip) {
+		if (instr_before(dd, d)) {
 			d = dd;
 		}
 	}
@@ -432,7 +445,7 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 		foreach_src(src, d) {
 			if (!src->instr)
 				continue;
-			if (src->instr->ip < dd->ip)
+			if (instr_before(src->instr, dd))
 				dd = src->instr;
 		}
 
@@ -446,7 +459,7 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 		dd = get_definer(ctx, d->regs[1]->instr, &dsz, &doff);
 
 		/* by definition, should come before: */
-		debug_assert(dd->ip < d->ip);
+		debug_assert(instr_before(dd, d));
 
 		*sz = MAX2(*sz, dsz);
 
@@ -577,7 +590,7 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 	bd->livein  = rzalloc_array(bd, BITSET_WORD, bitset_words);
 	bd->liveout = rzalloc_array(bd, BITSET_WORD, bitset_words);
 
-	block->bd = bd;
+	block->data = bd;
 
 	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 		struct ir3_instruction *src;
@@ -679,7 +692,7 @@ ra_compute_livein_liveout(struct ir3_ra_ctx *ctx)
 	bool progress = false;
 
 	list_for_each_entry (struct ir3_block, block, &ctx->ir->block_list, node) {
-		struct ir3_ra_block_data *bd = block->bd;
+		struct ir3_ra_block_data *bd = block->data;
 
 		/* update livein: */
 		for (unsigned i = 0; i < bitset_words; i++) {
@@ -700,7 +713,7 @@ ra_compute_livein_liveout(struct ir3_ra_ctx *ctx)
 			if (!succ)
 				continue;
 
-			succ_bd = succ->bd;
+			succ_bd = succ->data;
 
 			for (unsigned i = 0; i < bitset_words; i++) {
 				BITSET_WORD new_liveout =
@@ -736,7 +749,7 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 	/* extend start/end ranges based on livein/liveout info from cfg: */
 	unsigned bitset_words = BITSET_WORDS(ctx->alloc_count);
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
-		struct ir3_ra_block_data *bd = block->bd;
+		struct ir3_ra_block_data *bd = block->data;
 
 		for (unsigned i = 0; i < bitset_words; i++) {
 			if (BITSET_TEST(bd->livein, i)) {

@@ -2563,7 +2563,7 @@ generate_variant(struct llvmpipe_context *lp,
    char module_name[64];
 
    variant = CALLOC_STRUCT(lp_fragment_shader_variant);
-   if(!variant)
+   if (!variant)
       return NULL;
 
    util_snprintf(module_name, sizeof(module_name), "fs%u_variant%u",
