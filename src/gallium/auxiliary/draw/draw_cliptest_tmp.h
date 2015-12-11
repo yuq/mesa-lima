@@ -137,7 +137,6 @@ static boolean TAG(do_cliptest)( struct pt_post_vs *pvs,
                if (have_cd && num_written_clipdistance) {
                   float clipdist;
                   i = plane_idx - 6;
-                  out->have_clipdist = 1;
                   /* first four clip distance in first vector etc. */
                   if (i < 4)
                      clipdist = out->data[cd[0]][i];

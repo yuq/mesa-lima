@@ -59,6 +59,7 @@ struct clip_stage {
    struct draw_stage stage;      /**< base class */
 
    unsigned pos_attr;
+   boolean have_clipdist;
 
    /* List of the attributes to be constant interpolated. */
    uint num_const_attribs;
@@ -145,7 +146,7 @@ static void interp(const struct clip_stage *clip,
     */
    dst->clipmask = 0;
    dst->edgeflag = 0;        /* will get overwritten later */
-   dst->have_clipdist = in->have_clipdist;
+   dst->pad = 0;
    dst->vertex_id = UNDEFINED_VERTEX_ID;
 
    /* Interpolate the clip-space coords.
@@ -350,7 +351,7 @@ static inline float getclipdist(const struct clip_stage *clipper,
       plane = clipper->plane[plane_idx];
       dp = dot4(vert->pre_clip_pos, plane);
    }
-   else if (vert->have_clipdist) {
+   else if (clipper->have_clipdist) {
       /* pick the correct clipdistance element from the output vectors */
       int _idx = plane_idx - 6;
       int cdi = _idx >= 4;
@@ -782,7 +783,7 @@ find_interp(const struct draw_fragment_shader *fs, int *indexed_interp,
 static void 
 clip_init_state(struct draw_stage *stage)
 {
-   struct clip_stage *clipper = clip_stage( stage );
+   struct clip_stage *clipper = clip_stage(stage);
    const struct draw_context *draw = stage->draw;
    const struct draw_fragment_shader *fs = draw->fs.fragment_shader;
    const struct tgsi_shader_info *info = draw_get_shader_info(draw);
@@ -790,6 +791,7 @@ clip_init_state(struct draw_stage *stage)
    int indexed_interp[2];
 
    clipper->pos_attr = draw_current_shader_position_output(draw);
+   clipper->have_clipdist = draw_current_shader_num_written_clipdistances(draw) > 0;
 
    /* We need to know for each attribute what kind of interpolation is
     * done on it (flat, smooth or noperspective).  But the information

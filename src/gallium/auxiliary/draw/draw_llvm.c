@@ -826,7 +826,7 @@ store_aos(struct gallivm_state *gallivm,
  * struct vertex_header {
  *    unsigned clipmask:DRAW_TOTAL_CLIP_PLANES;
  *    unsigned edgeflag:1;
- *    unsigned have_clipdist:1;
+ *    unsigned pad:1;
  *    unsigned vertex_id:16;
  *    [...]
  * }
@@ -838,7 +838,7 @@ store_aos(struct gallivm_state *gallivm,
  * {
  *   return (x >> 16) |              // vertex_id
  *          ((x & 0x3fff) << 18) |   // clipmask
- *          ((x & 0x4000) << 3) |    // have_clipdist
+ *          ((x & 0x4000) << 3) |    // pad
  *          ((x & 0x8000) << 1);     // edgeflag
  * }
  */
@@ -850,19 +850,23 @@ adjust_mask(struct gallivm_state *gallivm,
    LLVMBuilderRef builder = gallivm->builder;
    LLVMValueRef vertex_id;
    LLVMValueRef clipmask;
-   LLVMValueRef have_clipdist;
+   LLVMValueRef pad;
    LLVMValueRef edgeflag;
 
    vertex_id = LLVMBuildLShr(builder, mask, lp_build_const_int32(gallivm, 16), "");
    clipmask  = LLVMBuildAnd(builder, mask, lp_build_const_int32(gallivm, 0x3fff), "");
    clipmask  = LLVMBuildShl(builder, clipmask, lp_build_const_int32(gallivm, 18), "");
-   have_clipdist = LLVMBuildAnd(builder, mask, lp_build_const_int32(gallivm, 0x4000), "");
-   have_clipdist = LLVMBuildShl(builder, have_clipdist, lp_build_const_int32(gallivm, 3), "");
+   if (0) {
+      pad = LLVMBuildAnd(builder, mask, lp_build_const_int32(gallivm, 0x4000), "");
+      pad = LLVMBuildShl(builder, pad, lp_build_const_int32(gallivm, 3), "");
+   }
    edgeflag = LLVMBuildAnd(builder, mask, lp_build_const_int32(gallivm, 0x8000), "");
    edgeflag = LLVMBuildShl(builder, edgeflag, lp_build_const_int32(gallivm, 1), "");
 
    mask = LLVMBuildOr(builder, vertex_id, clipmask, "");
-   mask = LLVMBuildOr(builder, mask, have_clipdist, "");
+   if (0) {
+      mask = LLVMBuildOr(builder, mask, pad, "");
+   }
    mask = LLVMBuildOr(builder, mask, edgeflag, "");
 #endif
    return mask;
@@ -876,8 +880,7 @@ store_aos_array(struct gallivm_state *gallivm,
                 LLVMValueRef* aos,
                 int attrib,
                 int num_outputs,
-                LLVMValueRef clipmask,
-                boolean have_clipdist)
+                LLVMValueRef clipmask)
 {
    LLVMBuilderRef builder = gallivm->builder;
    LLVMValueRef attr_index = lp_build_const_int32(gallivm, attrib);
@@ -908,10 +911,8 @@ store_aos_array(struct gallivm_state *gallivm,
        * code here.  See struct vertex_header in draw_private.h.
        */
       assert(DRAW_TOTAL_CLIP_PLANES==14);
-      /* initialize vertex id:16 = 0xffff, have_clipdist:1 = 0, edgeflag:1 = 1 */
+      /* initialize vertex id:16 = 0xffff, pad:1 = 0, edgeflag:1 = 1 */
       vertex_id_pad_edgeflag = (0xffff << 16) | (1 << DRAW_TOTAL_CLIP_PLANES);
-      if (have_clipdist)
-         vertex_id_pad_edgeflag |= 1 << (DRAW_TOTAL_CLIP_PLANES+1);
       val = lp_build_const_int_vec(gallivm, lp_int_type(soa_type), vertex_id_pad_edgeflag);
       /* OR with the clipmask */
       cliptmp = LLVMBuildOr(builder, val, clipmask, "");
@@ -998,7 +999,7 @@ convert_to_aos(struct gallivm_state *gallivm,
                       aos,
                       attrib,
                       num_outputs,
-                      clipmask, have_clipdist);
+                      clipmask);
    }
 #if DEBUG_STORE
    lp_build_printf(gallivm, "   # storing end\n");
