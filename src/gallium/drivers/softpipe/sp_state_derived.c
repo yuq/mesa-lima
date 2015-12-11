@@ -64,6 +64,7 @@ struct vertex_info *
 softpipe_get_vertex_info(struct softpipe_context *softpipe)
 {
    struct vertex_info *vinfo = &softpipe->vertex_info;
+   int vs_index;
 
    if (vinfo->num_attribs == 0) {
       /* compute vertex layout now */
@@ -135,17 +136,35 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
          draw_emit_vertex_attr(vinfo, EMIT_4F, interp, src);
       }
 
-      softpipe->psize_slot = draw_find_shader_output(softpipe->draw,
-                                                 TGSI_SEMANTIC_PSIZE, 0);
-      if (softpipe->psize_slot >= 0) {
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT,
-                               softpipe->psize_slot);
+      /* Figure out if we need pointsize as well. */
+      vs_index = draw_find_shader_output(softpipe->draw,
+                                         TGSI_SEMANTIC_PSIZE, 0);
+
+      if (vs_index >= 0) {
+         softpipe->psize_slot = vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
       }
 
-      softpipe->layer_slot = draw_find_shader_output(softpipe->draw,
-                                         TGSI_SEMANTIC_LAYER, 0);
-      if (softpipe->layer_slot >= 0) {
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, softpipe->layer_slot);
+      /* Figure out if we need viewport index */
+      vs_index = draw_find_shader_output(softpipe->draw,
+                                         TGSI_SEMANTIC_VIEWPORT_INDEX,
+                                         0);
+      if (vs_index >= 0) {
+         softpipe->viewport_index_slot = vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
+      } else {
+         softpipe->viewport_index_slot = 0;
+      }
+
+      /* Figure out if we need layer */
+      vs_index = draw_find_shader_output(softpipe->draw,
+                                         TGSI_SEMANTIC_LAYER,
+                                         0);
+      if (vs_index >= 0) {
+         softpipe->layer_slot = vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
+      } else {
+         softpipe->layer_slot = 0;
       }
 
       draw_compute_vertex_size(vinfo);
@@ -183,30 +202,33 @@ softpipe_get_vbuf_vertex_info(struct softpipe_context *softpipe)
 static void
 compute_cliprect(struct softpipe_context *sp)
 {
+   unsigned i;
    /* SP_NEW_FRAMEBUFFER
     */
    uint surfWidth = sp->framebuffer.width;
    uint surfHeight = sp->framebuffer.height;
 
-   /* SP_NEW_RASTERIZER
-    */
-   if (sp->rasterizer->scissor) {
-
-      /* SP_NEW_SCISSOR
-       *
-       * clip to scissor rect:
+   for (i = 0; i < PIPE_MAX_VIEWPORTS; i++) {
+      /* SP_NEW_RASTERIZER
        */
-      sp->cliprect.minx = MAX2(sp->scissor.minx, 0);
-      sp->cliprect.miny = MAX2(sp->scissor.miny, 0);
-      sp->cliprect.maxx = MIN2(sp->scissor.maxx, surfWidth);
-      sp->cliprect.maxy = MIN2(sp->scissor.maxy, surfHeight);
-   }
-   else {
-      /* clip to surface bounds */
-      sp->cliprect.minx = 0;
-      sp->cliprect.miny = 0;
-      sp->cliprect.maxx = surfWidth;
-      sp->cliprect.maxy = surfHeight;
+      if (sp->rasterizer->scissor) {
+
+         /* SP_NEW_SCISSOR
+          *
+          * clip to scissor rect:
+          */
+         sp->cliprect[i].minx = MAX2(sp->scissors[i].minx, 0);
+         sp->cliprect[i].miny = MAX2(sp->scissors[i].miny, 0);
+         sp->cliprect[i].maxx = MIN2(sp->scissors[i].maxx, surfWidth);
+         sp->cliprect[i].maxy = MIN2(sp->scissors[i].maxy, surfHeight);
+      }
+      else {
+         /* clip to surface bounds */
+         sp->cliprect[i].minx = 0;
+         sp->cliprect[i].miny = 0;
+         sp->cliprect[i].maxx = surfWidth;
+         sp->cliprect[i].maxy = surfHeight;
+      }
    }
 }
 

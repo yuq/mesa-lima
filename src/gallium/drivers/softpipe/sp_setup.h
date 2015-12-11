@@ -45,6 +45,11 @@ void
 sp_setup_point( struct setup_context *setup,
              const float (*v0)[4] );
 
+static inline unsigned
+sp_clamp_viewport_idx(int idx)
+{
+   return (PIPE_MAX_VIEWPORTS > idx && idx >= 0) ? idx : 0;
+}
 
 struct setup_context *sp_setup_create_context( struct softpipe_context *softpipe );
 void sp_setup_prepare( struct setup_context *setup );
