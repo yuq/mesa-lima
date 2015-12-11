@@ -701,6 +701,13 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                unsigned *final_assembly_size,
                char **error_str);
 
+/**
+ * Fill out local id payload for compute shader according to cs_prog_data.
+ */
+void
+brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *cs_prog_data,
+                             void *buffer, uint32_t threads, uint32_t stride);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

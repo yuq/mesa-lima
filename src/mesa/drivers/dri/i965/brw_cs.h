@@ -32,10 +32,6 @@ extern "C" {
 void
 brw_upload_cs_prog(struct brw_context *brw);
 
-void
-brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *cs_prog_data,
-                             void *buffer, uint32_t threads, uint32_t stride);
-
 #ifdef __cplusplus
 }
 #endif
