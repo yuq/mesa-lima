@@ -353,15 +353,6 @@ genX(graphics_pipeline_create)(
    if (result != VK_SUCCESS)
       return result;
 
-   /* FIXME: The compiler dead-codes FS inputs when we don't have a VS, so we
-    * hard code this to num_attributes - 2. This is because the attributes
-    * include VUE header and position, which aren't counted as varying
-    * inputs. */
-   if (pipeline->vs_simd8 == NO_KERNEL) {
-      pipeline->wm_prog_data.num_varying_inputs =
-         pCreateInfo->pVertexInputState->vertexAttributeDescriptionCount - 2;
-   }
-
    assert(pCreateInfo->pVertexInputState);
    emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
    assert(pCreateInfo->pInputAssemblyState);
