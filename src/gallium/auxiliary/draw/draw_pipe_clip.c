@@ -345,13 +345,22 @@ static inline float getclipdist(const struct clip_stage *clipper,
 {
    const float *plane;
    float dp;
-   if (vert->have_clipdist && plane_idx >= 6) {
+   if (plane_idx < 6) {
+      /* ordinary xyz view volume clipping uses pos output */
+      plane = clipper->plane[plane_idx];
+      dp = dot4(vert->pre_clip_pos, plane);
+   }
+   else if (vert->have_clipdist) {
       /* pick the correct clipdistance element from the output vectors */
       int _idx = plane_idx - 6;
       int cdi = _idx >= 4;
       int vidx = cdi ? _idx - 4 : _idx;
       dp = vert->data[draw_current_shader_clipdistance_output(clipper->stage.draw, cdi)][vidx];
    } else {
+      /*
+       * legacy user clip planes or gl_ClipVertex
+       * (clip will contain clipVertex output if available, pos otherwise).
+       */
       plane = clipper->plane[plane_idx];
       dp = dot4(vert->clip, plane);
    }
