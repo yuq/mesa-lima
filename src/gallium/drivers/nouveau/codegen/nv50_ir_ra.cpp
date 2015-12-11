@@ -1473,7 +1473,6 @@ GCRA::allocateRegisters(ArrayList& insns)
                // Short encoding only possible if they're all GPRs, no need to
                // affect them otherwise.
                if (insn->flagsDef < 0 &&
-                   isFloatType(insn->dType) &&
                    insn->src(0).getFile() == FILE_GPR &&
                    insn->src(1).getFile() == FILE_GPR &&
                    insn->src(2).getFile() == FILE_GPR)

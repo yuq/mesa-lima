@@ -2804,12 +2804,14 @@ NV50PostRaConstantFolding::visit(BasicBlock *bb)
              i->src(0).getFile() != FILE_GPR ||
              i->src(1).getFile() != FILE_GPR ||
              i->src(2).getFile() != FILE_GPR ||
-             i->getDef(0)->reg.data.id != i->getSrc(2)->reg.data.id ||
-             !isFloatType(i->dType))
+             i->getDef(0)->reg.data.id != i->getSrc(2)->reg.data.id)
             break;
 
          if (i->getDef(0)->reg.data.id >= 64 ||
              i->getSrc(0)->reg.data.id >= 64)
+            break;
+
+         if (i->flagsSrc >= 0 && i->getSrc(i->flagsSrc)->reg.data.id != 0)
             break;
 
          if (i->getPredicate())
