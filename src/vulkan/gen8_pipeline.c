@@ -484,7 +484,10 @@ genX(graphics_pipeline_create)(
    offset = 1;
    length = (vue_prog_data->vue_map.num_slots + 1) / 2 - offset;
 
-   if (pipeline->vs_simd8 == NO_KERNEL || (extra && extra->disable_vs))
+   uint32_t vs_start = pipeline->vs_simd8 != NO_KERNEL ? pipeline->vs_simd8 :
+                                                         pipeline->vs_vec4;
+
+   if (vs_start == NO_KERNEL || (extra && extra->disable_vs))
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS),
                      .FunctionEnable = false,
                      /* Even if VS is disabled, SBE still gets the amount of
@@ -493,7 +496,7 @@ genX(graphics_pipeline_create)(
                      .VertexURBEntryOutputLength = length);
    else
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS),
-                     .KernelStartPointer = pipeline->vs_simd8,
+                     .KernelStartPointer = vs_start,
                      .SingleVertexDispatch = Multiple,
                      .VectorMaskEnable = Dmask,
                      .SamplerCount = 0,
@@ -515,7 +518,7 @@ genX(graphics_pipeline_create)(
 
                      .MaximumNumberofThreads = device->info.max_vs_threads - 1,
                      .StatisticsEnable = false,
-                     .SIMD8DispatchEnable = true,
+                     .SIMD8DispatchEnable = pipeline->vs_simd8 != NO_KERNEL,
                      .VertexCacheDisable = false,
                      .FunctionEnable = true,
 
