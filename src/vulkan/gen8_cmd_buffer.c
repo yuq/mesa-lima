@@ -525,9 +525,11 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
    unsigned push_constant_regs = reg_aligned_constant_size / 32;
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD),
-                  .CURBETotalDataLength = push_state.alloc_size,
-                  .CURBEDataStartAddress = push_state.offset);
+   if (push_state.alloc_size) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD),
+                     .CURBETotalDataLength = push_state.alloc_size,
+                     .CURBEDataStartAddress = push_state.offset);
+   }
 
    struct anv_state state =
       anv_state_pool_emit(&device->dynamic_state_pool,
