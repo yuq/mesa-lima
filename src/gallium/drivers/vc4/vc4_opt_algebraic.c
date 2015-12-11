@@ -181,6 +181,7 @@ qir_opt_algebraic(struct vc4_compile *c)
                 case QOP_SUB:
                         if (is_zero(c, inst->src[1])) {
                                 replace_with_mov(c, inst, inst->src[0]);
+                                progress = true;
                         }
                         break;
 
