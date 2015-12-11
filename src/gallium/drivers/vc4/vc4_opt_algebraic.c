@@ -182,6 +182,24 @@ qir_opt_algebraic(struct vc4_compile *c)
 
                         break;
 
+                case QOP_FMIN:
+                        if (is_1f(c, inst->src[1]) &&
+                            inst->src[0].pack >= QPU_UNPACK_8D_REP &&
+                            inst->src[0].pack <= QPU_UNPACK_8D) {
+                                replace_with_mov(c, inst, inst->src[0]);
+                                progress = true;
+                        }
+                        break;
+
+                case QOP_FMAX:
+                        if (is_zero(c, inst->src[1]) &&
+                            inst->src[0].pack >= QPU_UNPACK_8D_REP &&
+                            inst->src[0].pack <= QPU_UNPACK_8D) {
+                                replace_with_mov(c, inst, inst->src[0]);
+                                progress = true;
+                        }
+                        break;
+
                 case QOP_FSUB:
                 case QOP_SUB:
                         if (is_zero(c, inst->src[1])) {
