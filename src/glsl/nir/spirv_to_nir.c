@@ -1319,7 +1319,7 @@ _vtn_block_store(struct vtn_builder *b, nir_intrinsic_op op,
    if (glsl_type_is_vector_or_scalar(type->type)) {
       nir_intrinsic_instr *store = nir_intrinsic_instr_create(b->shader, op);
       store->num_components = glsl_get_vector_elements(type->type);
-      store->const_index[1] = (1 << store->num_components) - 1;
+      store->const_index[0] = (1 << store->num_components) - 1;
       store->src[0] = nir_src_for_ssa(src->def);
 
       nir_ssa_def *res_index = nir_vulkan_resource_index(&b->nb,
