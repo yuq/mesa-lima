@@ -304,11 +304,8 @@ static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
    struct amdgpu_winsys *ws = (struct amdgpu_winsys*)rws;
 
    pipe_mutex_destroy(ws->bo_fence_lock);
-
-   ws->cman->destroy(ws->cman);
-   ws->kman->destroy(ws->kman);
+   pb_cache_deinit(&ws->bo_cache);
    AddrDestroy(ws->addrlib);
-
    amdgpu_device_deinitialize(ws->dev);
    FREE(rws);
 }
@@ -389,9 +386,9 @@ static int compare_dev(void *key1, void *key2)
    return key1 != key2;
 }
 
-static bool amdgpu_winsys_unref(struct radeon_winsys *ws)
+static bool amdgpu_winsys_unref(struct radeon_winsys *rws)
 {
-   struct amdgpu_winsys *rws = (struct amdgpu_winsys*)ws;
+   struct amdgpu_winsys *ws = (struct amdgpu_winsys*)rws;
    bool destroy;
 
    /* When the reference counter drops to zero, remove the device pointer
@@ -401,9 +398,9 @@ static bool amdgpu_winsys_unref(struct radeon_winsys *ws)
     * from the table when the counter drops to 0. */
    pipe_mutex_lock(dev_tab_mutex);
 
-   destroy = pipe_reference(&rws->reference, NULL);
+   destroy = pipe_reference(&ws->reference, NULL);
    if (destroy && dev_tab)
-      util_hash_table_remove(dev_tab, rws->dev);
+      util_hash_table_remove(dev_tab, ws->dev);
 
    pipe_mutex_unlock(dev_tab_mutex);
    return destroy;
@@ -461,13 +458,9 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
       goto fail;
 
    /* Create managers. */
-   ws->kman = amdgpu_bomgr_create(ws);
-   if (!ws->kman)
-      goto fail;
-   ws->cman = pb_cache_manager_create(ws->kman, 500000, 2.0f, 0,
-			(ws->info.vram_size + ws->info.gart_size) / 8);
-   if (!ws->cman)
-      goto fail;
+   pb_cache_init(&ws->bo_cache, 500000, 2.0f, 0,
+                 (ws->info.vram_size + ws->info.gart_size) / 8,
+                 amdgpu_bo_destroy, amdgpu_bo_can_reclaim);
 
    /* init reference */
    pipe_reference_init(&ws->reference, 1);
@@ -480,7 +473,7 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
    ws->base.query_value = amdgpu_query_value;
    ws->base.read_registers = amdgpu_read_registers;
 
-   amdgpu_bomgr_init_functions(ws);
+   amdgpu_bo_init_functions(ws);
    amdgpu_cs_init_functions(ws);
    amdgpu_surface_init_functions(ws);
 
@@ -509,10 +502,7 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
 
 fail:
    pipe_mutex_unlock(dev_tab_mutex);
-   if (ws->cman)
-      ws->cman->destroy(ws->cman);
-   if (ws->kman)
-      ws->kman->destroy(ws->kman);
+   pb_cache_deinit(&ws->bo_cache);
    FREE(ws);
    return NULL;
 }

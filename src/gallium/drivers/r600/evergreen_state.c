@@ -1582,12 +1582,17 @@ static void evergreen_emit_msaa_state(struct r600_context *rctx, int nr_samples,
 				     S_028C00_EXPAND_LINE_WIDTH(1)); /* R_028C00_PA_SC_LINE_CNTL */
 		radeon_emit(cs, S_028C04_MSAA_NUM_SAMPLES(util_logbase2(nr_samples)) |
 				     S_028C04_MAX_SAMPLE_DIST(max_dist)); /* R_028C04_PA_SC_AA_CONFIG */
-		radeon_set_context_reg(cs, EG_R_028A4C_PA_SC_MODE_CNTL_1, EG_S_028A4C_PS_ITER_SAMPLE(ps_iter_samples > 1));
+		radeon_set_context_reg(cs, EG_R_028A4C_PA_SC_MODE_CNTL_1,
+				       EG_S_028A4C_PS_ITER_SAMPLE(ps_iter_samples > 1) |
+				       EG_S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
+				       EG_S_028A4C_FORCE_EOV_REZ_ENABLE(1));
 	} else {
 		radeon_set_context_reg_seq(cs, R_028C00_PA_SC_LINE_CNTL, 2);
 		radeon_emit(cs, S_028C00_LAST_PIXEL(1)); /* R_028C00_PA_SC_LINE_CNTL */
 		radeon_emit(cs, 0); /* R_028C04_PA_SC_AA_CONFIG */
-		radeon_set_context_reg(cs, EG_R_028A4C_PA_SC_MODE_CNTL_1, 0);
+		radeon_set_context_reg(cs, EG_R_028A4C_PA_SC_MODE_CNTL_1,
+				       EG_S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
+				       EG_S_028A4C_FORCE_EOV_REZ_ENABLE(1));
 	}
 }
 
@@ -1828,10 +1833,7 @@ static void evergreen_emit_db_misc_state(struct r600_context *rctx, struct r600_
 	unsigned db_count_control = 0;
 	unsigned db_render_override =
 		S_02800C_FORCE_HIS_ENABLE0(V_02800C_FORCE_DISABLE) |
-		S_02800C_FORCE_HIS_ENABLE1(V_02800C_FORCE_DISABLE) |
-		/* There is a hang with HTILE if stencil is used and
-		 * fast stencil is enabled. */
-		S_02800C_FAST_STENCIL_DISABLE(1);
+		S_02800C_FORCE_HIS_ENABLE1(V_02800C_FORCE_DISABLE);
 
 	if (a->occlusion_query_enabled) {
 		db_count_control |= S_028004_PERFECT_ZPASS_COUNTS(1);
@@ -1840,26 +1842,14 @@ static void evergreen_emit_db_misc_state(struct r600_context *rctx, struct r600_
 		}
 		db_render_override |= S_02800C_NOOP_CULL_DISABLE(1);
 	}
-	/* FIXME we should be able to use hyperz even if we are not writing to
-	 * zbuffer but somehow this trigger GPU lockup. See :
-	 *
-	 * https://bugs.freedesktop.org/show_bug.cgi?id=60848
-	 *
-	 * Disable hyperz for now if not writing to zbuffer.
+
+	/* This is to fix a lockup when hyperz and alpha test are enabled at
+	 * the same time somehow GPU get confuse on which order to pick for
+	 * z test
 	 */
-	if (rctx->db_state.rsurf && rctx->db_state.rsurf->db_htile_surface && rctx->zwritemask) {
-		/* FORCE_OFF means HiZ/HiS are determined by DB_SHADER_CONTROL */
-		db_render_override |= S_02800C_FORCE_HIZ_ENABLE(V_02800C_FORCE_OFF);
-		/* This is to fix a lockup when hyperz and alpha test are enabled at
-		 * the same time somehow GPU get confuse on which order to pick for
-		 * z test
-		 */
-		if (rctx->alphatest_state.sx_alpha_test_control) {
-			db_render_override |= S_02800C_FORCE_SHADER_Z_ORDER(1);
-		}
-	} else {
-		db_render_override |= S_02800C_FORCE_HIZ_ENABLE(V_02800C_FORCE_DISABLE);
-	}
+	if (rctx->alphatest_state.sx_alpha_test_control)
+		db_render_override |= S_02800C_FORCE_SHADER_Z_ORDER(1);
+
 	if (a->flush_depthstencil_through_cb) {
 		assert(a->copy_depth || a->copy_stencil);
 

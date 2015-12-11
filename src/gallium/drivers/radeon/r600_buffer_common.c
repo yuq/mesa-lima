@@ -31,7 +31,7 @@
 #include <stdio.h>
 
 boolean r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
-					struct radeon_winsys_cs_handle *buf,
+					struct pb_buffer *buf,
 					enum radeon_bo_usage usage)
 {
 	if (ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, buf, usage)) {
@@ -52,7 +52,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	bool busy = false;
 
 	if (usage & PIPE_TRANSFER_UNSYNCHRONIZED) {
-		return ctx->ws->buffer_map(resource->cs_buf, NULL, usage);
+		return ctx->ws->buffer_map(resource->buf, NULL, usage);
 	}
 
 	if (!(usage & PIPE_TRANSFER_WRITE)) {
@@ -62,7 +62,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 
 	if (ctx->gfx.cs->cdw != ctx->initial_gfx_cs_size &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs,
-					     resource->cs_buf, rusage)) {
+					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
 			ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 			return NULL;
@@ -74,7 +74,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	if (ctx->dma.cs &&
 	    ctx->dma.cs->cdw &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs,
-					     resource->cs_buf, rusage)) {
+					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
 			ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 			return NULL;
@@ -97,7 +97,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	}
 
 	/* Setting the CS to NULL will prevent doing checks we have done already. */
-	return ctx->ws->buffer_map(resource->cs_buf, NULL, usage);
+	return ctx->ws->buffer_map(resource->buf, NULL, usage);
 }
 
 bool r600_init_resource(struct r600_common_screen *rscreen,
@@ -179,11 +179,10 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 	 * the same buffer where one of the contexts invalidates it while
 	 * the others are using it. */
 	old_buf = res->buf;
-	res->cs_buf = rscreen->ws->buffer_get_cs_handle(new_buf); /* should be atomic */
 	res->buf = new_buf; /* should be atomic */
 
 	if (rscreen->info.r600_virtual_address)
-		res->gpu_address = rscreen->ws->buffer_get_virtual_address(res->cs_buf);
+		res->gpu_address = rscreen->ws->buffer_get_virtual_address(res->buf);
 	else
 		res->gpu_address = 0;
 
@@ -278,7 +277,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		assert(usage & PIPE_TRANSFER_WRITE);
 
 		/* Check if mapping this buffer would cause waiting for the GPU. */
-		if (r600_rings_is_buffer_referenced(rctx, rbuffer->cs_buf, RADEON_USAGE_READWRITE) ||
+		if (r600_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
 		    !rctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
 			rctx->invalidate_buffer(&rctx->b, &rbuffer->b.b);
 		}
@@ -292,7 +291,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		assert(usage & PIPE_TRANSFER_WRITE);
 
 		/* Check if mapping this buffer would cause waiting for the GPU. */
-		if (r600_rings_is_buffer_referenced(rctx, rbuffer->cs_buf, RADEON_USAGE_READWRITE) ||
+		if (r600_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
 		    !rctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
 			/* Do a wait-free write-only transfer using a temporary buffer. */
 			unsigned offset;
@@ -483,11 +482,9 @@ r600_buffer_from_user_memory(struct pipe_screen *screen,
 		return NULL;
 	}
 
-	rbuffer->cs_buf = ws->buffer_get_cs_handle(rbuffer->buf);
-
 	if (rscreen->info.r600_virtual_address)
 		rbuffer->gpu_address =
-			ws->buffer_get_virtual_address(rbuffer->cs_buf);
+			ws->buffer_get_virtual_address(rbuffer->buf);
 	else
 		rbuffer->gpu_address = 0;
 

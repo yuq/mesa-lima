@@ -497,10 +497,6 @@ static void vi_texture_alloc_dcc_separate(struct r600_common_screen *rscreen,
 	if (rscreen->debug_flags & DBG_NO_DCC)
 		return;
 
-	/* TODO: DCC is broken on Stoney */
-	if (rscreen->family == CHIP_STONEY)
-		return;
-
 	rtex->dcc_buffer = (struct r600_resource *)
 		r600_aligned_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
 				   PIPE_USAGE_DEFAULT, rtex->surface.dcc_size, rtex->surface.dcc_alignment);
@@ -758,9 +754,8 @@ r600_texture_create_object(struct pipe_screen *screen,
 		}
 	} else {
 		resource->buf = buf;
-		resource->cs_buf = rscreen->ws->buffer_get_cs_handle(buf);
-		resource->gpu_address = rscreen->ws->buffer_get_virtual_address(resource->cs_buf);
-		resource->domains = rscreen->ws->buffer_get_initial_domain(resource->cs_buf);
+		resource->gpu_address = rscreen->ws->buffer_get_virtual_address(resource->buf);
+		resource->domains = rscreen->ws->buffer_get_initial_domain(resource->buf);
 	}
 
 	if (rtex->cmask.size) {
@@ -1028,7 +1023,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		/* Untiled buffers in VRAM, which is slow for CPU reads */
 		use_staging_texture = TRUE;
 	} else if (!(usage & PIPE_TRANSFER_READ) &&
-	    (r600_rings_is_buffer_referenced(rctx, rtex->resource.cs_buf, RADEON_USAGE_READWRITE) ||
+	    (r600_rings_is_buffer_referenced(rctx, rtex->resource.buf, RADEON_USAGE_READWRITE) ||
 	     !rctx->ws->buffer_wait(rtex->resource.buf, 0, RADEON_USAGE_READWRITE))) {
 		/* Use a staging texture for uploads if the underlying BO is busy. */
 		use_staging_texture = TRUE;
@@ -1393,6 +1388,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		return;
 
 	for (i = 0; i < fb->nr_cbufs; i++) {
+		struct r600_surface *surf;
 		struct r600_texture *tex;
 		unsigned clear_bit = PIPE_CLEAR_COLOR0 << i;
 
@@ -1403,6 +1399,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		if (!(*buffers & clear_bit))
 			continue;
 
+		surf = (struct r600_surface *)fb->cbufs[i];
 		tex = (struct r600_texture *)fb->cbufs[i]->texture;
 
 		/* 128-bit formats are unusupported */
@@ -1449,6 +1446,10 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			if (clear_words_needed)
 				tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
 		} else {
+			/* RB+ doesn't work with CMASK fast clear. */
+			if (surf->sx_ps_downconvert)
+				continue;
+
 			/* ensure CMASK is enabled */
 			r600_texture_alloc_cmask_separate(rctx->screen, tex);
 			if (tex->cmask.size == 0) {

@@ -149,7 +149,7 @@ static int store_shader(struct pipe_context *ctx,
 		} else {
 			memcpy(ptr, shader->shader.bc.bytecode, shader->shader.bc.ndw * sizeof(*ptr));
 		}
-		rctx->b.ws->buffer_unmap(shader->bo->cs_buf);
+		rctx->b.ws->buffer_unmap(shader->bo->buf);
 	}
 
 	return 0;
@@ -1745,6 +1745,8 @@ static int do_lds_fetch_values(struct r600_shader_ctx *ctx, unsigned temp_reg,
 				   temp_reg, i,
 				   temp_reg, 0,
 				   V_SQ_ALU_SRC_LITERAL, 4 * i);
+		if (r)
+			return r;
 	}
 	for (i = 0; i < 4; i++) {
 		/* emit an LDS_READ_RET */
@@ -3144,7 +3146,8 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.nliterals = 0;
 	ctx.literals = NULL;
 
-	shader->fs_write_all = ctx.info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS];
+	shader->fs_write_all = ctx.info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
+			       ctx.info.colors_written == 1;
 	shader->vs_position_window_space = ctx.info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
 	shader->ps_conservative_z = (uint8_t)ctx.info.properties[TGSI_PROPERTY_FS_DEPTH_LAYOUT];
 

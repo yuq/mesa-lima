@@ -192,11 +192,11 @@ static void interp(const struct clip_stage *clip,
       t_nopersp = t;
       /* find either in.x != out.x or in.y != out.y */
       for (k = 0; k < 2; k++) {
-         if (in->clip[k] != out->clip[k]) {
+         if (in->pre_clip_pos[k] != out->pre_clip_pos[k]) {
             /* do divide by W, then compute linear interpolation factor */
-            float in_coord = in->clip[k] / in->clip[3];
-            float out_coord = out->clip[k] / out->clip[3];
-            float dst_coord = dst->clip[k] / dst->clip[3];
+            float in_coord = in->pre_clip_pos[k] / in->pre_clip_pos[3];
+            float out_coord = out->pre_clip_pos[k] / out->pre_clip_pos[3];
+            float dst_coord = dst->pre_clip_pos[k] / dst->pre_clip_pos[3];
             t_nopersp = (dst_coord - out_coord) / (in_coord - out_coord);
             break;
          }

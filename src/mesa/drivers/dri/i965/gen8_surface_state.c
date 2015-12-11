@@ -225,7 +225,11 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
       pitch = mt->pitch;
    }
 
-   if (mt->mcs_mt) {
+   /* The MCS is not uploaded for single-sampled surfaces because the color
+    * buffer should always have been resolved before it is used as a texture
+    * so there is no need for it.
+    */
+   if (mt->mcs_mt && mt->num_samples > 1) {
       aux_mt = mt->mcs_mt;
       aux_mode = GEN8_SURFACE_AUX_MODE_MCS;
 

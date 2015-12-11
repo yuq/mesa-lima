@@ -86,6 +86,7 @@
 #define DBG_CHECK_VM		(1llu << 42)
 #define DBG_NO_DCC		(1llu << 43)
 #define DBG_NO_DCC_CLEAR	(1llu << 44)
+#define DBG_NO_RB_PLUS		(1llu << 45)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
@@ -133,7 +134,6 @@ struct r600_resource {
 
 	/* Winsys objects. */
 	struct pb_buffer		*buf;
-	struct radeon_winsys_cs_handle	*cs_buf;
 	uint64_t			gpu_address;
 
 	/* Resource state. */
@@ -221,6 +221,8 @@ struct r600_texture {
 	struct r600_resource		*htile_buffer;
 	bool				depth_cleared; /* if it was cleared at least once */
 	float				depth_clear_value;
+	bool				stencil_cleared; /* if it was cleared at least once */
+	uint8_t				stencil_clear_value;
 
 	bool				non_disp_tiling; /* R600-Cayman only */
 };
@@ -250,6 +252,8 @@ struct r600_surface {
 	unsigned cb_color_fmask_slice;	/* EG and later */
 	unsigned cb_color_cmask;	/* CB_COLORn_TILE (r600 only) */
 	unsigned cb_color_mask;		/* R600 only */
+	unsigned sx_ps_downconvert;	/* Stoney only */
+	unsigned sx_blend_opt_epsilon;	/* Stoney only */
 	struct r600_resource *cb_buffer_fmask; /* Used for FMASK relocations. R600 only */
 	struct r600_resource *cb_buffer_cmask; /* Used for CMASK relocations. R600 only */
 
@@ -473,7 +477,7 @@ struct r600_common_context {
 
 /* r600_buffer.c */
 boolean r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
-					struct radeon_winsys_cs_handle *buf,
+					struct pb_buffer *buf,
 					enum radeon_bo_usage usage);
 void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
                                       struct r600_resource *resource,

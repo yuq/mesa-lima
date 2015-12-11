@@ -423,13 +423,19 @@ qir_remove_instruction(struct vc4_compile *c, struct qinst *qinst)
 struct qreg
 qir_follow_movs(struct vc4_compile *c, struct qreg reg)
 {
+        int pack = reg.pack;
+
         while (reg.file == QFILE_TEMP &&
                c->defs[reg.index] &&
-               c->defs[reg.index]->op == QOP_MOV &&
-               !c->defs[reg.index]->dst.pack) {
+               (c->defs[reg.index]->op == QOP_MOV ||
+                c->defs[reg.index]->op == QOP_FMOV ||
+                c->defs[reg.index]->op == QOP_MMOV)&&
+               !c->defs[reg.index]->dst.pack &&
+               !c->defs[reg.index]->src[0].pack) {
                 reg = c->defs[reg.index]->src[0];
         }
 
+        reg.pack = pack;
         return reg;
 }
 

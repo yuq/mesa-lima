@@ -494,11 +494,17 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
     pipe_mutex_destroy(ws->cmask_owner_mutex);
     pipe_mutex_destroy(ws->cs_stack_lock);
 
-    ws->cman->destroy(ws->cman);
-    ws->kman->destroy(ws->kman);
+    pb_cache_deinit(&ws->bo_cache);
+
     if (ws->gen >= DRV_R600) {
         radeon_surface_manager_free(ws->surf_man);
     }
+
+    util_hash_table_destroy(ws->bo_names);
+    util_hash_table_destroy(ws->bo_handles);
+    util_hash_table_destroy(ws->bo_vas);
+    pipe_mutex_destroy(ws->bo_handles_mutex);
+    pipe_mutex_destroy(ws->bo_va_mutex);
 
     if (ws->fd >= 0)
         close(ws->fd);
@@ -698,6 +704,18 @@ static bool radeon_winsys_unref(struct radeon_winsys *ws)
     return destroy;
 }
 
+#define PTR_TO_UINT(x) ((unsigned)((intptr_t)(x)))
+
+static unsigned handle_hash(void *key)
+{
+    return PTR_TO_UINT(key);
+}
+
+static int handle_compare(void *key1, void *key2)
+{
+    return PTR_TO_UINT(key1) != PTR_TO_UINT(key2);
+}
+
 PUBLIC struct radeon_winsys *
 radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
 {
@@ -726,15 +744,10 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     if (!do_winsys_init(ws))
         goto fail;
 
-    /* Create managers. */
-    ws->kman = radeon_bomgr_create(ws);
-    if (!ws->kman)
-        goto fail;
-
-    ws->cman = pb_cache_manager_create(ws->kman, 500000, 2.0f, 0,
-                                       MIN2(ws->info.vram_size, ws->info.gart_size));
-    if (!ws->cman)
-        goto fail;
+    pb_cache_init(&ws->bo_cache, 500000, 2.0f, 0,
+                  MIN2(ws->info.vram_size, ws->info.gart_size),
+                  radeon_bo_destroy,
+                  radeon_bo_can_reclaim);
 
     if (ws->gen >= DRV_R600) {
         ws->surf_man = radeon_surface_manager_new(ws->fd);
@@ -753,13 +766,24 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     ws->base.query_value = radeon_query_value;
     ws->base.read_registers = radeon_read_registers;
 
-    radeon_bomgr_init_functions(ws);
+    radeon_drm_bo_init_functions(ws);
     radeon_drm_cs_init_functions(ws);
     radeon_surface_init_functions(ws);
 
     pipe_mutex_init(ws->hyperz_owner_mutex);
     pipe_mutex_init(ws->cmask_owner_mutex);
     pipe_mutex_init(ws->cs_stack_lock);
+
+    ws->bo_names = util_hash_table_create(handle_hash, handle_compare);
+    ws->bo_handles = util_hash_table_create(handle_hash, handle_compare);
+    ws->bo_vas = util_hash_table_create(handle_hash, handle_compare);
+    pipe_mutex_init(ws->bo_handles_mutex);
+    pipe_mutex_init(ws->bo_va_mutex);
+    ws->va_offset = ws->va_start;
+    list_inithead(&ws->va_holes);
+
+    /* TTM aligns the BO size to the CPU page size */
+    ws->size_align = sysconf(_SC_PAGESIZE);
 
     ws->ncs = 0;
     pipe_semaphore_init(&ws->cs_queued, 0);
@@ -789,10 +813,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
 
 fail:
     pipe_mutex_unlock(fd_tab_mutex);
-    if (ws->cman)
-        ws->cman->destroy(ws->cman);
-    if (ws->kman)
-        ws->kman->destroy(ws->kman);
+    pb_cache_deinit(&ws->bo_cache);
     if (ws->surf_man)
         radeon_surface_manager_free(ws->surf_man);
     if (ws->fd >= 0)

@@ -169,7 +169,7 @@ radeon_drm_cs_create(struct radeon_winsys_ctx *ctx,
                      void (*flush)(void *ctx, unsigned flags,
                                    struct pipe_fence_handle **fence),
                      void *flush_ctx,
-                     struct radeon_winsys_cs_handle *trace_buf)
+                     struct pb_buffer *trace_buf)
 {
     struct radeon_drm_winsys *ws = (struct radeon_drm_winsys*)ctx;
     struct radeon_drm_cs *cs;
@@ -322,7 +322,7 @@ static unsigned radeon_add_buffer(struct radeon_drm_cs *cs,
 }
 
 static unsigned radeon_drm_cs_add_buffer(struct radeon_winsys_cs *rcs,
-                                        struct radeon_winsys_cs_handle *buf,
+                                        struct pb_buffer *buf,
                                         enum radeon_bo_usage usage,
                                         enum radeon_bo_domain domains,
                                         enum radeon_bo_priority priority)
@@ -342,7 +342,7 @@ static unsigned radeon_drm_cs_add_buffer(struct radeon_winsys_cs *rcs,
 }
 
 static int radeon_drm_cs_lookup_buffer(struct radeon_winsys_cs *rcs,
-                                   struct radeon_winsys_cs_handle *buf)
+                                   struct pb_buffer *buf)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
 
@@ -616,7 +616,7 @@ static void radeon_drm_cs_destroy(struct radeon_winsys_cs *rcs)
 }
 
 static boolean radeon_bo_is_referenced(struct radeon_winsys_cs *rcs,
-                                       struct radeon_winsys_cs_handle *_buf,
+                                       struct pb_buffer *_buf,
                                        enum radeon_bo_usage usage)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
@@ -650,7 +650,7 @@ radeon_cs_create_fence(struct radeon_winsys_cs *rcs)
     fence = cs->ws->base.buffer_create(&cs->ws->base, 1, 1, TRUE,
                                        RADEON_DOMAIN_GTT, 0);
     /* Add the fence as a dummy relocation. */
-    cs->ws->base.cs_add_buffer(rcs, cs->ws->base.buffer_get_cs_handle(fence),
+    cs->ws->base.cs_add_buffer(rcs, fence,
                               RADEON_USAGE_READWRITE, RADEON_DOMAIN_GTT,
                               RADEON_PRIO_FENCE);
     return (struct pipe_fence_handle*)fence;

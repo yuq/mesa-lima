@@ -217,7 +217,7 @@ nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables)
    int position = -1;
    int maxloc = -1;
    nir_ssa_def *cv;
-   nir_variable *out[2];
+   nir_variable *out[2] = { NULL };
 
    if (!ucp_enables)
       return;

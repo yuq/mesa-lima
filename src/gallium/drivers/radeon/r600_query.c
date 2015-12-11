@@ -253,7 +253,7 @@ static void r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 					 struct r600_resource *buffer)
 {
 	/* Callers ensure that the buffer is currently unused by the GPU. */
-	uint32_t *results = ctx->ws->buffer_map(buffer->cs_buf, NULL,
+	uint32_t *results = ctx->ws->buffer_map(buffer->buf, NULL,
 						PIPE_TRANSFER_WRITE |
 						PIPE_TRANSFER_UNSYNCHRONIZED);
 
@@ -667,7 +667,7 @@ static void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
 
 	if (query->flags & R600_QUERY_HW_FLAG_PREDICATE) {
 		/* Obtain a new buffer if the current one can't be mapped without a stall. */
-		if (r600_rings_is_buffer_referenced(rctx, query->buffer.buf->cs_buf, RADEON_USAGE_READWRITE) ||
+		if (r600_rings_is_buffer_referenced(rctx, query->buffer.buf->buf, RADEON_USAGE_READWRITE) ||
 		    !rctx->ws->buffer_wait(query->buffer.buf->buf, 0, RADEON_USAGE_READWRITE)) {
 			pipe_resource_reference((struct pipe_resource**)&query->buffer.buf, NULL);
 			query->buffer.buf = r600_new_query_buffer(rctx, query);

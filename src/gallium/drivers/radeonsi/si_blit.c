@@ -377,22 +377,39 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		}
 	}
 
-	if (buffers & PIPE_CLEAR_DEPTH &&
-	    zstex && zstex->htile_buffer &&
+	if (zstex && zstex->htile_buffer &&
 	    zsbuf->u.tex.level == 0 &&
 	    zsbuf->u.tex.first_layer == 0 &&
 	    zsbuf->u.tex.last_layer == util_max_layer(&zstex->resource.b.b, 0)) {
-		/* Need to disable EXPCLEAR temporarily if clearing
-		 * to a new value. */
-		if (zstex->depth_cleared && zstex->depth_clear_value != depth) {
-			sctx->db_depth_disable_expclear = true;
+		if (buffers & PIPE_CLEAR_DEPTH) {
+			/* Need to disable EXPCLEAR temporarily if clearing
+			 * to a new value. */
+			if (zstex->depth_cleared && zstex->depth_clear_value != depth) {
+				sctx->db_depth_disable_expclear = true;
+			}
+
+			zstex->depth_clear_value = depth;
+			sctx->framebuffer.dirty_zsbuf = true;
+			si_mark_atom_dirty(sctx, &sctx->framebuffer.atom); /* updates DB_DEPTH_CLEAR */
+			sctx->db_depth_clear = true;
+			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 		}
 
-		zstex->depth_clear_value = depth;
-		sctx->framebuffer.dirty_zsbuf = true;
-		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom); /* updates DB_DEPTH_CLEAR */
-		sctx->db_depth_clear = true;
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+		if (buffers & PIPE_CLEAR_STENCIL) {
+			stencil &= 0xff;
+
+			/* Need to disable EXPCLEAR temporarily if clearing
+			 * to a new value. */
+			if (zstex->stencil_cleared && zstex->stencil_clear_value != stencil) {
+				sctx->db_stencil_disable_expclear = true;
+			}
+
+			zstex->stencil_clear_value = stencil;
+			sctx->framebuffer.dirty_zsbuf = true;
+			si_mark_atom_dirty(sctx, &sctx->framebuffer.atom); /* updates DB_STENCIL_CLEAR */
+			sctx->db_stencil_clear = true;
+			si_mark_atom_dirty(sctx, &sctx->db_render_state);
+		}
 	}
 
 	si_blitter_begin(ctx, SI_CLEAR);
@@ -405,6 +422,13 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		sctx->db_depth_clear = false;
 		sctx->db_depth_disable_expclear = false;
 		zstex->depth_cleared = true;
+		si_mark_atom_dirty(sctx, &sctx->db_render_state);
+	}
+
+	if (sctx->db_stencil_clear) {
+		sctx->db_stencil_clear = false;
+		sctx->db_stencil_disable_expclear = false;
+		zstex->stencil_cleared = true;
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 	}
 }

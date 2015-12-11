@@ -128,7 +128,8 @@ struct setup_context {
 static inline void
 quad_clip(struct setup_context *setup, struct quad_header *quad)
 {
-   const struct pipe_scissor_state *cliprect = &setup->softpipe->cliprect;
+   unsigned viewport_index = quad[0].input.viewport_index;
+   const struct pipe_scissor_state *cliprect = &setup->softpipe->cliprect[viewport_index];
    const int minx = (int) cliprect->minx;
    const int maxx = (int) cliprect->maxx;
    const int miny = (int) cliprect->miny;
@@ -159,7 +160,7 @@ quad_clip(struct setup_context *setup, struct quad_header *quad)
 static inline void
 clip_emit_quad(struct setup_context *setup, struct quad_header *quad)
 {
-   quad_clip( setup, quad );
+   quad_clip(setup, quad);
 
    if (quad->inout.mask) {
       struct softpipe_context *sp = setup->softpipe;
@@ -707,9 +708,10 @@ static void
 subtriangle(struct setup_context *setup,
             struct edge *eleft,
             struct edge *eright,
-            int lines)
+            int lines,
+            unsigned viewport_index)
 {
-   const struct pipe_scissor_state *cliprect = &setup->softpipe->cliprect;
+   const struct pipe_scissor_state *cliprect = &setup->softpipe->cliprect[viewport_index];
    const int minx = (int) cliprect->minx;
    const int maxx = (int) cliprect->maxx;
    const int miny = (int) cliprect->miny;
@@ -807,6 +809,7 @@ sp_setup_tri(struct setup_context *setup,
 {
    float det;
    uint layer = 0;
+   unsigned viewport_index = 0;
 #if DEBUG_VERTS
    debug_printf("Setup triangle:\n");
    print_vertex(setup, v0);
@@ -845,19 +848,25 @@ sp_setup_tri(struct setup_context *setup,
    }
    setup->quad[0].input.layer = layer;
 
+   if (setup->softpipe->viewport_index_slot > 0) {
+      unsigned *udata = (unsigned*)v0[setup->softpipe->viewport_index_slot];
+      viewport_index = sp_clamp_viewport_idx(*udata);
+   }
+   setup->quad[0].input.viewport_index = viewport_index;
+
    /*   init_constant_attribs( setup ); */
 
    if (setup->oneoverarea < 0.0) {
       /* emaj on left:
        */
-      subtriangle( setup, &setup->emaj, &setup->ebot, setup->ebot.lines );
-      subtriangle( setup, &setup->emaj, &setup->etop, setup->etop.lines );
+      subtriangle(setup, &setup->emaj, &setup->ebot, setup->ebot.lines, viewport_index);
+      subtriangle(setup, &setup->emaj, &setup->etop, setup->etop.lines, viewport_index);
    }
    else {
       /* emaj on right:
        */
-      subtriangle( setup, &setup->ebot, &setup->emaj, setup->ebot.lines );
-      subtriangle( setup, &setup->etop, &setup->emaj, setup->etop.lines );
+      subtriangle(setup, &setup->ebot, &setup->emaj, setup->ebot.lines, viewport_index);
+      subtriangle(setup, &setup->etop, &setup->emaj, setup->etop.lines, viewport_index);
    }
 
    flush_spans( setup );
@@ -1054,7 +1063,7 @@ plot(struct setup_context *setup, int x, int y)
       /* flush prev quad, start new quad */
 
       if (setup->quad[0].input.x0 != -1)
-         clip_emit_quad( setup, &setup->quad[0] );
+         clip_emit_quad(setup, &setup->quad[0]);
 
       setup->quad[0].input.x0 = quadX;
       setup->quad[0].input.y0 = quadY;
@@ -1083,6 +1092,7 @@ sp_setup_line(struct setup_context *setup,
    int dy = y1 - y0;
    int xstep, ystep;
    uint layer = 0;
+   unsigned viewport_index = 0;
 
 #if DEBUG_VERTS
    debug_printf("Setup line:\n");
@@ -1131,6 +1141,12 @@ sp_setup_line(struct setup_context *setup,
       layer = MIN2(layer, setup->max_layer);
    }
    setup->quad[0].input.layer = layer;
+
+   if (setup->softpipe->viewport_index_slot > 0) {
+      unsigned *udata = (unsigned*)setup->vprovoke[setup->softpipe->viewport_index_slot];
+      viewport_index = sp_clamp_viewport_idx(*udata);
+   }
+   setup->quad[0].input.viewport_index = viewport_index;
 
    /* XXX temporary: set coverage to 1.0 so the line appears
     * if AA mode happens to be enabled.
@@ -1183,7 +1199,7 @@ sp_setup_line(struct setup_context *setup,
 
    /* draw final quad */
    if (setup->quad[0].inout.mask) {
-      clip_emit_quad( setup, &setup->quad[0] );
+      clip_emit_quad(setup, &setup->quad[0]);
    }
 }
 
@@ -1223,6 +1239,7 @@ sp_setup_point(struct setup_context *setup,
    const struct vertex_info *vinfo = softpipe_get_vertex_info(softpipe);
    uint fragSlot;
    uint layer = 0;
+   unsigned viewport_index = 0;
 #if DEBUG_VERTS
    debug_printf("Setup point:\n");
    print_vertex(setup, v0);
@@ -1238,6 +1255,12 @@ sp_setup_point(struct setup_context *setup,
       layer = MIN2(layer, setup->max_layer);
    }
    setup->quad[0].input.layer = layer;
+
+   if (setup->softpipe->viewport_index_slot > 0) {
+      unsigned *udata = (unsigned*)v0[setup->softpipe->viewport_index_slot];
+      viewport_index = sp_clamp_viewport_idx(*udata);
+   }
+   setup->quad[0].input.viewport_index = viewport_index;
 
    /* For points, all interpolants are constant-valued.
     * However, for point sprites, we'll need to setup texcoords appropriately.
@@ -1300,7 +1323,7 @@ sp_setup_point(struct setup_context *setup,
       setup->quad[0].input.x0 = (int) x - ix;
       setup->quad[0].input.y0 = (int) y - iy;
       setup->quad[0].inout.mask = (1 << ix) << (2 * iy);
-      clip_emit_quad( setup, &setup->quad[0] );
+      clip_emit_quad(setup, &setup->quad[0]);
    }
    else {
       if (round) {
@@ -1361,7 +1384,7 @@ sp_setup_point(struct setup_context *setup,
                if (setup->quad[0].inout.mask) {
                   setup->quad[0].input.x0 = ix;
                   setup->quad[0].input.y0 = iy;
-                  clip_emit_quad( setup, &setup->quad[0] );
+                  clip_emit_quad(setup, &setup->quad[0]);
                }
             }
          }
@@ -1408,7 +1431,7 @@ sp_setup_point(struct setup_context *setup,
                setup->quad[0].inout.mask = mask;
                setup->quad[0].input.x0 = ix;
                setup->quad[0].input.y0 = iy;
-               clip_emit_quad( setup, &setup->quad[0] );
+               clip_emit_quad(setup, &setup->quad[0]);
             }
          }
       }

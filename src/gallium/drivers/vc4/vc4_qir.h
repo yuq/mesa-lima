@@ -502,7 +502,7 @@ nir_ssa_def *vc4_nir_get_swizzled_channel(struct nir_builder *b,
 void vc4_nir_lower_txf_ms(struct vc4_compile *c);
 void qir_lower_uniforms(struct vc4_compile *c);
 
-void qpu_schedule_instructions(struct vc4_compile *c);
+uint32_t qpu_schedule_instructions(struct vc4_compile *c);
 
 void qir_SF(struct vc4_compile *c, struct qreg src);
 

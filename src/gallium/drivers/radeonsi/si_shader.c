@@ -3827,7 +3827,7 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	if (!shader->bo)
 		return -ENOMEM;
 
-	ptr = sscreen->b.ws->buffer_map(shader->bo->cs_buf, NULL,
+	ptr = sscreen->b.ws->buffer_map(shader->bo->buf, NULL,
 					PIPE_TRANSFER_READ_WRITE);
 	util_memcpy_cpu_to_le32(ptr, binary->code, binary->code_size);
 	if (binary->rodata_size > 0) {
@@ -3836,7 +3836,7 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 					binary->rodata_size);
 	}
 
-	sscreen->b.ws->buffer_unmap(shader->bo->cs_buf);
+	sscreen->b.ws->buffer_unmap(shader->bo->buf);
 	return 0;
 }
 

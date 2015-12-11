@@ -375,6 +375,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "check_vm", DBG_CHECK_VM, "Check VM faults and dump debug info." },
 	{ "nodcc", DBG_NO_DCC, "Disable DCC." },
 	{ "nodccclear", DBG_NO_DCC_CLEAR, "Disable DCC fast clear." },
+	{ "norbplus", DBG_NO_RB_PLUS, "Disable RB+ on Stoney." },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
@@ -947,7 +948,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 										PIPE_USAGE_STAGING,
 										4096);
 		if (rscreen->trace_bo) {
-			rscreen->trace_ptr = rscreen->ws->buffer_map(rscreen->trace_bo->cs_buf, NULL,
+			rscreen->trace_ptr = rscreen->ws->buffer_map(rscreen->trace_bo->buf, NULL,
 									PIPE_TRANSFER_UNSYNCHRONIZED);
 		}
 	}
