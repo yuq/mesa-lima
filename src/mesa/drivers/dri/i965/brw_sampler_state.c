@@ -55,6 +55,8 @@ gen7_emit_sampler_state_pointers_xs(struct brw_context *brw,
 {
    static const uint16_t packet_headers[] = {
       [MESA_SHADER_VERTEX] = _3DSTATE_SAMPLER_STATE_POINTERS_VS,
+      [MESA_SHADER_TESS_CTRL] = _3DSTATE_SAMPLER_STATE_POINTERS_HS,
+      [MESA_SHADER_TESS_EVAL] = _3DSTATE_SAMPLER_STATE_POINTERS_DS,
       [MESA_SHADER_GEOMETRY] = _3DSTATE_SAMPLER_STATE_POINTERS_GS,
       [MESA_SHADER_FRAGMENT] = _3DSTATE_SAMPLER_STATE_POINTERS_PS,
    };
@@ -646,4 +648,48 @@ const struct brw_tracked_state brw_gs_samplers = {
              BRW_NEW_GEOMETRY_PROGRAM,
    },
    .emit = brw_upload_gs_samplers,
+};
+
+
+static void
+brw_upload_tcs_samplers(struct brw_context *brw)
+{
+   /* BRW_NEW_TESS_CTRL_PROGRAM */
+   struct gl_program *tcs = (struct gl_program *) brw->tess_ctrl_program;
+   if (!tcs)
+      return;
+
+   brw_upload_sampler_state_table(brw, tcs, &brw->tcs.base);
+}
+
+
+const struct brw_tracked_state brw_tcs_samplers = {
+   .dirty = {
+      .mesa = _NEW_TEXTURE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_TESS_CTRL_PROGRAM,
+   },
+   .emit = brw_upload_tcs_samplers,
+};
+
+
+static void
+brw_upload_tes_samplers(struct brw_context *brw)
+{
+   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   struct gl_program *tes = (struct gl_program *) brw->tess_eval_program;
+   if (!tes)
+      return;
+
+   brw_upload_sampler_state_table(brw, tes, &brw->tes.base);
+}
+
+
+const struct brw_tracked_state brw_tes_samplers = {
+   .dirty = {
+      .mesa = _NEW_TEXTURE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_TESS_EVAL_PROGRAM,
+   },
+   .emit = brw_upload_tes_samplers,
 };

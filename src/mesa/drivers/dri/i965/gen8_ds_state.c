@@ -29,38 +29,71 @@
 static void
 gen8_upload_ds_state(struct brw_context *brw)
 {
-   /* Disable the DS Unit */
-   BEGIN_BATCH(11);
-   OUT_BATCH(_3DSTATE_CONSTANT_DS << 16 | (11 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
+   struct gl_context *ctx = &brw->ctx;
+   const struct brw_stage_state *stage_state = &brw->tes.base;
+   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   bool active = brw->tess_eval_program;
+   assert(!active || brw->tess_ctrl_program);
 
-   int ds_pkt_len = brw->gen >= 9 ? 11 : 9;
-   BEGIN_BATCH(ds_pkt_len);
-   OUT_BATCH(_3DSTATE_DS << 16 | (ds_pkt_len - 2));
-   for (int i = 0; i < ds_pkt_len - 1; i++)
+   /* BRW_NEW_TES_PROG_DATA */
+   const struct brw_tes_prog_data *tes_prog_data = brw->tes.prog_data;
+   const struct brw_vue_prog_data *vue_prog_data = &tes_prog_data->base;
+   const struct brw_stage_prog_data *prog_data = &vue_prog_data->base;
+
+   if (active) {
+      BEGIN_BATCH(9);
+      OUT_BATCH(_3DSTATE_DS << 16 | (9 - 2));
+      OUT_BATCH(stage_state->prog_offset);
       OUT_BATCH(0);
-   ADVANCE_BATCH();
+      OUT_BATCH(SET_FIELD(DIV_ROUND_UP(stage_state->sampler_count, 4),
+                          GEN7_DS_SAMPLER_COUNT) |
+                SET_FIELD(prog_data->binding_table.size_bytes / 4,
+                          GEN7_DS_BINDING_TABLE_ENTRY_COUNT));
+      if (prog_data->total_scratch) {
+         OUT_RELOC64(stage_state->scratch_bo,
+                     I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                     ffs(prog_data->total_scratch) - 11);
+      } else {
+         OUT_BATCH(0);
+         OUT_BATCH(0);
+      }
+      OUT_BATCH(SET_FIELD(prog_data->dispatch_grf_start_reg,
+                          GEN7_DS_DISPATCH_START_GRF) |
+                SET_FIELD(vue_prog_data->urb_read_length,
+                          GEN7_DS_URB_READ_LENGTH));
 
-   BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_BINDING_TABLE_POINTERS_DS << 16 | (2 - 2));
-   OUT_BATCH(brw->hw_bt_pool.next_offset);
-   ADVANCE_BATCH();
+      OUT_BATCH(GEN7_DS_ENABLE |
+                GEN7_DS_STATISTICS_ENABLE |
+                (brw->max_ds_threads - 1) << HSW_DS_MAX_THREADS_SHIFT |
+                (vue_prog_data->dispatch_mode == DISPATCH_MODE_SIMD8 ?
+                 GEN7_DS_SIMD8_DISPATCH_ENABLE : 0) |
+                (tes_prog_data->domain == BRW_TESS_DOMAIN_TRI ?
+                 GEN7_DS_COMPUTE_W_COORDINATE_ENABLE : 0));
+      OUT_BATCH(SET_FIELD(ctx->Transform.ClipPlanesEnabled,
+                          GEN8_DS_USER_CLIP_DISTANCE));
+      ADVANCE_BATCH();
+   } else {
+      BEGIN_BATCH(9);
+      OUT_BATCH(_3DSTATE_DS << 16 | (9 - 2));
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      ADVANCE_BATCH();
+   }
+   brw->tes.enabled = active;
 }
 
 const struct brw_tracked_state gen8_ds_state = {
    .dirty = {
       .mesa  = 0,
-      .brw   = BRW_NEW_CONTEXT,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_TESS_EVAL_PROGRAM |
+               BRW_NEW_TES_PROG_DATA,
    },
    .emit = gen8_upload_ds_state,
 };

@@ -27,6 +27,35 @@
 #include "intel_batchbuffer.h"
 
 static void
+gen7_upload_tes_push_constants(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->tes.base;
+   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   const struct brw_tess_eval_program *tep =
+      (struct brw_tess_eval_program *) brw->tess_eval_program;
+
+   if (tep) {
+      /* BRW_NEW_TES_PROG_DATA */
+      const struct brw_stage_prog_data *prog_data = &brw->tes.prog_data->base.base;
+      gen6_upload_push_constants(brw, &tep->program.Base, prog_data,
+                                      stage_state, AUB_TRACE_VS_CONSTANTS);
+   }
+
+   gen7_upload_constant_state(brw, stage_state, tep, _3DSTATE_CONSTANT_DS);
+}
+
+const struct brw_tracked_state gen7_tes_push_constants = {
+   .dirty = {
+      .mesa  = _NEW_PROGRAM_CONSTANTS,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+               BRW_NEW_TESS_EVAL_PROGRAM |
+               BRW_NEW_TES_PROG_DATA,
+   },
+   .emit = gen7_upload_tes_push_constants,
+};
+
+static void
 gen7_upload_ds_state(struct brw_context *brw)
 {
    /* Disable the DS Unit */
