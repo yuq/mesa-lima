@@ -1124,12 +1124,15 @@ CodeEmitterNV50::emitIMUL(const Instruction *i)
 {
    code[0] = 0x40000000;
 
+   if (i->src(1).getFile() == FILE_IMMEDIATE) {
+      if (i->sType == TYPE_S16)
+         code[0] |= 0x8100;
+      code[1] = 0;
+      emitForm_IMM(i);
+   } else
    if (i->encSize == 8) {
       code[1] = (i->sType == TYPE_S16) ? (0x8000 | 0x4000) : 0x0000;
-      if (i->src(1).getFile() == FILE_IMMEDIATE)
-         emitForm_IMM(i);
-      else
-         emitForm_MAD(i);
+      emitForm_MAD(i);
    } else {
       if (i->sType == TYPE_S16)
          code[0] |= 0x8100;
