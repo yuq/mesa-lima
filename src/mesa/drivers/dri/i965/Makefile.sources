@@ -2,8 +2,6 @@ i965_compiler_FILES = \
 	brw_cfg.cpp \
 	brw_cfg.h \
 	brw_compiler.h \
-	brw_cs.c \
-	brw_cs.h \
 	brw_cubemap_normalize.cpp \
 	brw_dead_control_flow.cpp \
 	brw_dead_control_flow.h \
@@ -113,6 +111,8 @@ i965_FILES = \
 	brw_conditional_render.c \
 	brw_context.c \
 	brw_context.h \
+	brw_cs.c \
+	brw_cs.h \
 	brw_curbe.c \
 	brw_draw.c \
 	brw_draw.h \
