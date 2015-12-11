@@ -674,6 +674,10 @@ brw_init_surface_formats(struct brw_context *brw)
          if (gen < tinfo->render_target)
             render = BRW_SURFACEFORMAT_B8G8R8A8_UNORM;
 	 break;
+      case BRW_SURFACEFORMAT_B8G8R8X8_UNORM_SRGB:
+         if (gen < tinfo->render_target)
+            render = BRW_SURFACEFORMAT_B8G8R8A8_UNORM_SRGB;
+         break;
       case BRW_SURFACEFORMAT_R8G8B8X8_UNORM:
          render = BRW_SURFACEFORMAT_R8G8B8A8_UNORM;
          break;
