@@ -284,7 +284,7 @@ anv_nir_apply_pipeline_layout(nir_shader *shader,
                                                    var->data.binding, &state);
 
             var->data.driver_location = shader->num_uniforms +
-                                        image_index * BRW_IMAGE_PARAM_SIZE;
+                                        image_index * BRW_IMAGE_PARAM_SIZE * 4;
          }
       }
 
@@ -310,7 +310,7 @@ anv_nir_apply_pipeline_layout(nir_shader *shader,
       }
 
       shader->num_uniforms += layout->stage[shader->stage].image_count *
-                              BRW_IMAGE_PARAM_SIZE;
+                              BRW_IMAGE_PARAM_SIZE * 4;
    }
 
    return state.progress;
