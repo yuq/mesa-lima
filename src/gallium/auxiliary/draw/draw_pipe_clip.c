@@ -151,15 +151,15 @@ static void interp(const struct clip_stage *clip,
 
    /* Interpolate the clip-space coords.
     */
-   interp_attr(dst->clip, t, in->clip, out->clip);
+   interp_attr(dst->clip_vertex, t, in->clip_vertex, out->clip_vertex);
    /* interpolate the clip-space position */
-   interp_attr(dst->pre_clip_pos, t, in->pre_clip_pos, out->pre_clip_pos);
+   interp_attr(dst->clip_pos, t, in->clip_pos, out->clip_pos);
 
    /* Do the projective divide and viewport transformation to get
     * new window coordinates:
     */
    {
-      const float *pos = dst->pre_clip_pos;
+      const float *pos = dst->clip_pos;
       const float *scale =
          clip->stage.draw->viewports[viewport_index].scale;
       const float *trans =
@@ -193,11 +193,11 @@ static void interp(const struct clip_stage *clip,
       t_nopersp = t;
       /* find either in.x != out.x or in.y != out.y */
       for (k = 0; k < 2; k++) {
-         if (in->pre_clip_pos[k] != out->pre_clip_pos[k]) {
+         if (in->clip_pos[k] != out->clip_pos[k]) {
             /* do divide by W, then compute linear interpolation factor */
-            float in_coord = in->pre_clip_pos[k] / in->pre_clip_pos[3];
-            float out_coord = out->pre_clip_pos[k] / out->pre_clip_pos[3];
-            float dst_coord = dst->pre_clip_pos[k] / dst->pre_clip_pos[3];
+            float in_coord = in->clip_pos[k] / in->clip_pos[3];
+            float out_coord = out->clip_pos[k] / out->clip_pos[3];
+            float dst_coord = dst->clip_pos[k] / dst->clip_pos[3];
             t_nopersp = (dst_coord - out_coord) / (in_coord - out_coord);
             break;
          }
@@ -308,10 +308,10 @@ static void emit_poly(struct draw_stage *stage,
                       stage->draw->rasterizer->flatshade_first);
          for (j = 0; j < 3; j++) {
             debug_printf("  Vert %d: clip: %f %f %f %f\n", j,
-                         header.v[j]->clip[0],
-                         header.v[j]->clip[1],
-                         header.v[j]->clip[2],
-                         header.v[j]->clip[3]);
+                         header.v[j]->clip_vertex[0],
+                         header.v[j]->clip_vertex[1],
+                         header.v[j]->clip_vertex[2],
+                         header.v[j]->clip_vertex[3]);
             for (k = 0; k < draw_num_shader_outputs(stage->draw); k++) {
                debug_printf("  Vert %d: Attr %d:  %f %f %f %f\n", j, k,
                             header.v[j]->data[k][0],
@@ -349,7 +349,7 @@ static inline float getclipdist(const struct clip_stage *clipper,
    if (plane_idx < 6) {
       /* ordinary xyz view volume clipping uses pos output */
       plane = clipper->plane[plane_idx];
-      dp = dot4(vert->pre_clip_pos, plane);
+      dp = dot4(vert->clip_pos, plane);
    }
    else if (clipper->have_clipdist) {
       /* pick the correct clipdistance element from the output vectors */
@@ -363,7 +363,7 @@ static inline float getclipdist(const struct clip_stage *clipper,
        * (clip will contain clipVertex output if available, pos otherwise).
        */
       plane = clipper->plane[plane_idx];
-      dp = dot4(vert->clip, plane);
+      dp = dot4(vert->clip_vertex, plane);
    }
    return dp;
 }
@@ -410,9 +410,9 @@ do_clip_tri(struct draw_stage *stage,
    viewport_index = draw_viewport_index(clipper->stage.draw, prov_vertex);
 
    if (DEBUG_CLIP) {
-      const float *v0 = header->v[0]->clip;
-      const float *v1 = header->v[1]->clip;
-      const float *v2 = header->v[2]->clip;
+      const float *v0 = header->v[0]->clip_vertex;
+      const float *v1 = header->v[1]->clip_vertex;
+      const float *v2 = header->v[2]->clip_vertex;
       debug_printf("Clip triangle:\n");
       debug_printf(" %f, %f, %f, %f\n", v0[0], v0[1], v0[2], v0[3]);
       debug_printf(" %f, %f, %f, %f\n", v1[0], v1[1], v1[2], v1[3]);
@@ -681,9 +681,9 @@ clip_point_guard_xy(struct draw_stage *stage, struct prim_header *header)
           * automatically). These would usually be captured by depth clip
           * too but this can be disabled.
           */
-         if (header->v[0]->clip[3] <= 0.0f ||
-             util_is_inf_or_nan(header->v[0]->clip[0]) ||
-             util_is_inf_or_nan(header->v[0]->clip[1]))
+         if (header->v[0]->clip_vertex[3] <= 0.0f ||
+             util_is_inf_or_nan(header->v[0]->clip_vertex[0]) ||
+             util_is_inf_or_nan(header->v[0]->clip_vertex[1]))
             return;
       }
       stage->next->point(stage->next, header);

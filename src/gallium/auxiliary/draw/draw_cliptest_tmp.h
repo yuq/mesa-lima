@@ -91,8 +91,8 @@ static boolean TAG(do_cliptest)( struct pt_post_vs *pvs,
          }
 
          for (i = 0; i < 4; i++) {
-            out->clip[i] = clipvertex[i];
-            out->pre_clip_pos[i] = position[i];
+            out->clip_vertex[i] = clipvertex[i];
+            out->clip_pos[i] = position[i];
          }
 
          /* Do the hardwired planes first:

@@ -188,6 +188,7 @@ create_jit_sampler_type(struct gallivm_state *gallivm, const char *struct_name)
    sampler_type = LLVMStructTypeInContext(gallivm->context, elem_types,
                                           Elements(elem_types), 0);
 
+   (void) target; /* silence unused var warning for non-debug build */
    LP_CHECK_MEMBER_OFFSET(struct draw_jit_sampler, min_lod,
                           target, sampler_type,
                           DRAW_JIT_SAMPLER_MIN_LOD);
@@ -234,6 +235,8 @@ create_jit_context_type(struct gallivm_state *gallivm,
                                  PIPE_MAX_SAMPLERS); /* samplers */
    context_type = LLVMStructTypeInContext(gallivm->context, elem_types,
                                           Elements(elem_types), 0);
+
+   (void) target; /* silence unused var warning for non-debug build */
    LP_CHECK_MEMBER_OFFSET(struct draw_jit_context, vs_constants,
                           target, context_type, DRAW_JIT_CTX_CONSTANTS);
    LP_CHECK_MEMBER_OFFSET(struct draw_jit_context, num_vs_constants,
@@ -382,8 +385,8 @@ create_jit_vertex_header(struct gallivm_state *gallivm, int data_elems)
    util_snprintf(struct_name, 23, "vertex_header%d", data_elems);
 
    elem_types[DRAW_JIT_VERTEX_VERTEX_ID]  = LLVMIntTypeInContext(gallivm->context, 32);
-   elem_types[DRAW_JIT_VERTEX_CLIP]  = LLVMArrayType(LLVMFloatTypeInContext(gallivm->context), 4);
-   elem_types[DRAW_JIT_VERTEX_PRE_CLIP_POS]  = LLVMArrayType(LLVMFloatTypeInContext(gallivm->context), 4);
+   elem_types[DRAW_JIT_VERTEX_CLIP_VERTEX]  = LLVMArrayType(LLVMFloatTypeInContext(gallivm->context), 4);
+   elem_types[DRAW_JIT_VERTEX_CLIP_POS]  = LLVMArrayType(LLVMFloatTypeInContext(gallivm->context), 4);
    elem_types[DRAW_JIT_VERTEX_DATA]  = LLVMArrayType(elem_types[1], data_elems);
 
    vertex_header = LLVMStructTypeInContext(gallivm->context, elem_types,
@@ -403,12 +406,13 @@ create_jit_vertex_header(struct gallivm_state *gallivm, int data_elems)
       target, vertex_header,
       DRAW_JIT_VERTEX_VERTEX_ID);
    */
-   LP_CHECK_MEMBER_OFFSET(struct vertex_header, clip,
+   (void) target; /* silence unused var warning for non-debug build */
+   LP_CHECK_MEMBER_OFFSET(struct vertex_header, clip_vertex,
                           target, vertex_header,
-                          DRAW_JIT_VERTEX_CLIP);
-   LP_CHECK_MEMBER_OFFSET(struct vertex_header, pre_clip_pos,
+                          DRAW_JIT_VERTEX_CLIP_VERTEX);
+   LP_CHECK_MEMBER_OFFSET(struct vertex_header, clip_pos,
                           target, vertex_header,
-                          DRAW_JIT_VERTEX_PRE_CLIP_POS);
+                          DRAW_JIT_VERTEX_CLIP_POS);
    LP_CHECK_MEMBER_OFFSET(struct vertex_header, data,
                           target, vertex_header,
                           DRAW_JIT_VERTEX_DATA);
@@ -1015,7 +1019,7 @@ store_clip(struct gallivm_state *gallivm,
            const struct lp_type vs_type,
            LLVMValueRef io_ptr,
            LLVMValueRef (*outputs)[TGSI_NUM_CHANNELS],
-           boolean pre_clip_pos, int idx)
+           boolean clip_vertex, int idx)
 {
    LLVMBuilderRef builder = gallivm->builder;
    LLVMValueRef soa[4];
@@ -1042,13 +1046,13 @@ store_clip(struct gallivm_state *gallivm,
    soa[2] = LLVMBuildLoad(builder, outputs[idx][2], ""); /*z0 z1 .. zn*/
    soa[3] = LLVMBuildLoad(builder, outputs[idx][3], ""); /*w0 w1 .. wn*/
 
-   if (!pre_clip_pos) {
+   if (clip_vertex) {
       for (i = 0; i < vs_type.length; i++) {
-         clip_ptrs[i] = draw_jit_header_clip(gallivm, io_ptrs[i]);
+         clip_ptrs[i] = draw_jit_header_clip_vertex(gallivm, io_ptrs[i]);
       }
    } else {
       for (i = 0; i < vs_type.length; i++) {
-         clip_ptrs[i] = draw_jit_header_pre_clip_pos(gallivm, io_ptrs[i]);
+         clip_ptrs[i] = draw_jit_header_clip_pos(gallivm, io_ptrs[i]);
       }
    }
 
@@ -1767,8 +1771,8 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
 
       if (pos != -1 && cv != -1) {
          /* store original positions in clip before further manipulation */
-         store_clip(gallivm, vs_type, io, outputs, FALSE, key->clip_user ? cv : pos);
-         store_clip(gallivm, vs_type, io, outputs, TRUE, pos);
+         store_clip(gallivm, vs_type, io, outputs, TRUE, key->clip_user ? cv : pos);
+         store_clip(gallivm, vs_type, io, outputs, FALSE, pos);
 
          /* do cliptest */
          if (enable_cliptest) {
