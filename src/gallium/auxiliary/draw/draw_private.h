@@ -89,7 +89,6 @@ struct vertex_header {
    unsigned pad:1;
    unsigned vertex_id:16;
 
-   float clip_vertex[4];
    float clip_pos[4];
 
    /* This will probably become float (*data)[4] soon:

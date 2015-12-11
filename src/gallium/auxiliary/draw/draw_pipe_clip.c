@@ -60,6 +60,7 @@ struct clip_stage {
 
    unsigned pos_attr;
    boolean have_clipdist;
+   int cv_attr;
 
    /* List of the attributes to be constant interpolated. */
    uint num_const_attribs;
@@ -151,7 +152,10 @@ static void interp(const struct clip_stage *clip,
 
    /* Interpolate the clip-space coords.
     */
-   interp_attr(dst->clip_vertex, t, in->clip_vertex, out->clip_vertex);
+   if (clip->cv_attr >= 0) {
+      interp_attr(dst->data[clip->cv_attr], t,
+                  in->data[clip->cv_attr], out->data[clip->cv_attr]);
+   }
    /* interpolate the clip-space position */
    interp_attr(dst->clip_pos, t, in->clip_pos, out->clip_pos);
 
@@ -215,9 +219,9 @@ static void interp(const struct clip_stage *clip,
  * Triangle is considered null/empty if its area is equal to zero.
  */
 static inline boolean
-is_tri_null(struct draw_context *draw, const struct prim_header *header)
+is_tri_null(const struct clip_stage *clip, const struct prim_header *header)
 {
-   const unsigned pos_attr = draw_current_shader_position_output(draw);
+   const unsigned pos_attr = clip->pos_attr;
    float x1 = header->v[1]->data[pos_attr][0] - header->v[0]->data[pos_attr][0];
    float y1 = header->v[1]->data[pos_attr][1] - header->v[0]->data[pos_attr][1];
    float z1 = header->v[1]->data[pos_attr][2] - header->v[0]->data[pos_attr][2];
@@ -243,6 +247,7 @@ static void emit_poly(struct draw_stage *stage,
                       unsigned n,
                       const struct prim_header *origPrim)
 {
+   const struct clip_stage *clipper = clip_stage(stage);
    struct prim_header header;
    unsigned i;
    ushort edge_first, edge_middle, edge_last;
@@ -282,7 +287,7 @@ static void emit_poly(struct draw_stage *stage,
          header.v[2] = inlist[0];  /* the provoking vertex */
       }
 
-      tri_null = is_tri_null(stage->draw, &header);
+      tri_null = is_tri_null(clipper, &header);
       /* If we generated a triangle with an area, aka. non-null triangle,
        * or if the previous triangle was also null then skip all subsequent
        * null triangles */
@@ -307,11 +312,18 @@ static void emit_poly(struct draw_stage *stage,
          debug_printf("Clipped tri: (flat-shade-first = %d)\n",
                       stage->draw->rasterizer->flatshade_first);
          for (j = 0; j < 3; j++) {
-            debug_printf("  Vert %d: clip: %f %f %f %f\n", j,
-                         header.v[j]->clip_vertex[0],
-                         header.v[j]->clip_vertex[1],
-                         header.v[j]->clip_vertex[2],
-                         header.v[j]->clip_vertex[3]);
+            debug_printf("  Vert %d: clip pos: %f %f %f %f\n", j,
+                         header.v[j]->clip_pos[0],
+                         header.v[j]->clip_pos[1],
+                         header.v[j]->clip_pos[2],
+                         header.v[j]->clip_pos[3]);
+            if (clipper->cv_attr >= 0) {
+               debug_printf("  Vert %d: cv: %f %f %f %f\n", j,
+                            header.v[j]->data[clipper->cv_attr][0],
+                            header.v[j]->data[clipper->cv_attr][1],
+                            header.v[j]->data[clipper->cv_attr][2],
+                            header.v[j]->data[clipper->cv_attr][3]);
+            }
             for (k = 0; k < draw_num_shader_outputs(stage->draw); k++) {
                debug_printf("  Vert %d: Attr %d:  %f %f %f %f\n", j, k,
                             header.v[j]->data[k][0],
@@ -321,7 +333,7 @@ static void emit_poly(struct draw_stage *stage,
             }
          }
       }
-      stage->next->tri( stage->next, &header );
+      stage->next->tri(stage->next, &header);
    }
 }
 
@@ -360,10 +372,14 @@ static inline float getclipdist(const struct clip_stage *clipper,
    } else {
       /*
        * legacy user clip planes or gl_ClipVertex
-       * (clip will contain clipVertex output if available, pos otherwise).
        */
       plane = clipper->plane[plane_idx];
-      dp = dot4(vert->clip_vertex, plane);
+      if (clipper->cv_attr >= 0) {
+         dp = dot4(vert->data[clipper->cv_attr], plane);
+      }
+      else {
+         dp = dot4(vert->clip_pos, plane);
+      }
    }
    return dp;
 }
@@ -410,13 +426,22 @@ do_clip_tri(struct draw_stage *stage,
    viewport_index = draw_viewport_index(clipper->stage.draw, prov_vertex);
 
    if (DEBUG_CLIP) {
-      const float *v0 = header->v[0]->clip_vertex;
-      const float *v1 = header->v[1]->clip_vertex;
-      const float *v2 = header->v[2]->clip_vertex;
-      debug_printf("Clip triangle:\n");
+      const float *v0 = header->v[0]->clip_pos;
+      const float *v1 = header->v[1]->clip_pos;
+      const float *v2 = header->v[2]->clip_pos;
+      debug_printf("Clip triangle pos:\n");
       debug_printf(" %f, %f, %f, %f\n", v0[0], v0[1], v0[2], v0[3]);
       debug_printf(" %f, %f, %f, %f\n", v1[0], v1[1], v1[2], v1[3]);
       debug_printf(" %f, %f, %f, %f\n", v2[0], v2[1], v2[2], v2[3]);
+      if (clipper->cv_attr >= 0) {
+         const float *v0 = header->v[0]->data[clipper->cv_attr];
+         const float *v1 = header->v[1]->data[clipper->cv_attr];
+         const float *v2 = header->v[2]->data[clipper->cv_attr];
+         debug_printf("Clip triangle cv:\n");
+         debug_printf(" %f, %f, %f, %f\n", v0[0], v0[1], v0[2], v0[3]);
+         debug_printf(" %f, %f, %f, %f\n", v1[0], v1[1], v1[2], v1[3]);
+         debug_printf(" %f, %f, %f, %f\n", v2[0], v2[1], v2[2], v2[3]);
+      }
    }
 
    /*
@@ -565,7 +590,7 @@ do_clip_tri(struct draw_stage *stage,
 
       /* Emit the polygon as triangles to the setup stage:
        */
-      emit_poly( stage, inlist, inEdges, n, header );
+      emit_poly(stage, inlist, inEdges, n, header);
    }
 }
 
@@ -577,7 +602,7 @@ do_clip_line(struct draw_stage *stage,
              struct prim_header *header,
              unsigned clipmask)
 {
-   const struct clip_stage *clipper = clip_stage( stage );
+   const struct clip_stage *clipper = clip_stage(stage);
    struct vertex_header *v0 = header->v[0];
    struct vertex_header *v1 = header->v[1];
    struct vertex_header *prov_vertex;
@@ -792,6 +817,12 @@ clip_init_state(struct draw_stage *stage)
 
    clipper->pos_attr = draw_current_shader_position_output(draw);
    clipper->have_clipdist = draw_current_shader_num_written_clipdistances(draw) > 0;
+   if (draw_current_shader_clipvertex_output(draw) != clipper->pos_attr) {
+      clipper->cv_attr = (int)draw_current_shader_clipvertex_output(draw);
+   }
+   else {
+      clipper->cv_attr = -1;
+   }
 
    /* We need to know for each attribute what kind of interpolation is
     * done on it (flat, smooth or noperspective).  But the information

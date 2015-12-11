@@ -378,14 +378,13 @@ static LLVMTypeRef
 create_jit_vertex_header(struct gallivm_state *gallivm, int data_elems)
 {
    LLVMTargetDataRef target = gallivm->target;
-   LLVMTypeRef elem_types[4];
+   LLVMTypeRef elem_types[3];
    LLVMTypeRef vertex_header;
    char struct_name[24];
 
    util_snprintf(struct_name, 23, "vertex_header%d", data_elems);
 
    elem_types[DRAW_JIT_VERTEX_VERTEX_ID]  = LLVMIntTypeInContext(gallivm->context, 32);
-   elem_types[DRAW_JIT_VERTEX_CLIP_VERTEX]  = LLVMArrayType(LLVMFloatTypeInContext(gallivm->context), 4);
    elem_types[DRAW_JIT_VERTEX_CLIP_POS]  = LLVMArrayType(LLVMFloatTypeInContext(gallivm->context), 4);
    elem_types[DRAW_JIT_VERTEX_DATA]  = LLVMArrayType(elem_types[1], data_elems);
 
@@ -407,9 +406,6 @@ create_jit_vertex_header(struct gallivm_state *gallivm, int data_elems)
       DRAW_JIT_VERTEX_VERTEX_ID);
    */
    (void) target; /* silence unused var warning for non-debug build */
-   LP_CHECK_MEMBER_OFFSET(struct vertex_header, clip_vertex,
-                          target, vertex_header,
-                          DRAW_JIT_VERTEX_CLIP_VERTEX);
    LP_CHECK_MEMBER_OFFSET(struct vertex_header, clip_pos,
                           target, vertex_header,
                           DRAW_JIT_VERTEX_CLIP_POS);
@@ -1019,7 +1015,7 @@ store_clip(struct gallivm_state *gallivm,
            const struct lp_type vs_type,
            LLVMValueRef io_ptr,
            LLVMValueRef (*outputs)[TGSI_NUM_CHANNELS],
-           boolean clip_vertex, int idx)
+           int idx)
 {
    LLVMBuilderRef builder = gallivm->builder;
    LLVMValueRef soa[4];
@@ -1046,14 +1042,8 @@ store_clip(struct gallivm_state *gallivm,
    soa[2] = LLVMBuildLoad(builder, outputs[idx][2], ""); /*z0 z1 .. zn*/
    soa[3] = LLVMBuildLoad(builder, outputs[idx][3], ""); /*w0 w1 .. wn*/
 
-   if (clip_vertex) {
-      for (i = 0; i < vs_type.length; i++) {
-         clip_ptrs[i] = draw_jit_header_clip_vertex(gallivm, io_ptrs[i]);
-      }
-   } else {
-      for (i = 0; i < vs_type.length; i++) {
-         clip_ptrs[i] = draw_jit_header_clip_pos(gallivm, io_ptrs[i]);
-      }
+   for (i = 0; i < vs_type.length; i++) {
+      clip_ptrs[i] = draw_jit_header_clip_pos(gallivm, io_ptrs[i]);
    }
 
    lp_build_transpose_aos(gallivm, vs_type, soa, soa);
@@ -1771,8 +1761,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
 
       if (pos != -1 && cv != -1) {
          /* store original positions in clip before further manipulation */
-         store_clip(gallivm, vs_type, io, outputs, TRUE, key->clip_user ? cv : pos);
-         store_clip(gallivm, vs_type, io, outputs, FALSE, pos);
+         store_clip(gallivm, vs_type, io, outputs, pos);
 
          /* do cliptest */
          if (enable_cliptest) {

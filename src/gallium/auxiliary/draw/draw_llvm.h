@@ -104,7 +104,6 @@ enum {
 
 enum {
    DRAW_JIT_VERTEX_VERTEX_ID = 0,
-   DRAW_JIT_VERTEX_CLIP_VERTEX,
    DRAW_JIT_VERTEX_CLIP_POS,
    DRAW_JIT_VERTEX_DATA
 };
@@ -161,9 +160,6 @@ enum {
 
 #define draw_jit_header_id(_gallivm, _ptr)              \
    lp_build_struct_get_ptr(_gallivm, _ptr, DRAW_JIT_VERTEX_VERTEX_ID, "id")
-
-#define draw_jit_header_clip_vertex(_gallivm, _ptr) \
-   lp_build_struct_get_ptr(_gallivm, _ptr, DRAW_JIT_VERTEX_CLIP_VERTEX, "clip_vertex")
 
 #define draw_jit_header_clip_pos(_gallivm, _ptr) \
    lp_build_struct_get_ptr(_gallivm, _ptr, DRAW_JIT_VERTEX_CLIP_POS, "clip_pos")
