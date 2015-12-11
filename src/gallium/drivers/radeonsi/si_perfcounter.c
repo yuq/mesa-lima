@@ -56,6 +56,8 @@ enum si_pc_reg_layout {
 
 	/* Registers are laid out in decreasing rather than increasing order. */
 	SI_PC_REG_REVERSE = 4,
+
+	SI_PC_FAKE = 8,
 };
 
 struct si_pc_block_base {
@@ -325,6 +327,20 @@ static struct si_pc_block_base cik_WD = {
 	.counter0_lo = R_034200_WD_PERFCOUNTER0_LO,
 };
 
+static struct si_pc_block_base cik_MC = {
+	.name = "MC",
+	.num_counters = 4,
+
+	.layout = SI_PC_FAKE,
+};
+
+static struct si_pc_block_base cik_SRBM = {
+	.name = "SRBM",
+	.num_counters = 2,
+
+	.layout = SI_PC_FAKE,
+};
+
 /* Both the number of instances and selectors varies between chips of the same
  * class. We only differentiate by class here and simply expose the maximum
  * number over all chips in a class.
@@ -352,6 +368,8 @@ static struct si_pc_block groups_CIK[] = {
 	{ &cik_GDS, 121 },
 	{ &cik_VGT, 140 },
 	{ &cik_IA, 22 },
+	{ &cik_MC, 22 },
+	{ &cik_SRBM, 19 },
 	{ &cik_WD, 22 },
 	{ &cik_CPG, 46 },
 	{ &cik_CPC, 22 },
@@ -377,6 +395,8 @@ static struct si_pc_block groups_VI[] = {
 	{ &cik_GDS, 121 },
 	{ &cik_VGT, 147 },
 	{ &cik_IA, 24 },
+	{ &cik_MC, 22 },
+	{ &cik_SRBM, 27 },
 	{ &cik_WD, 37 },
 	{ &cik_CPG, 48 },
 	{ &cik_CPC, 24 },
@@ -391,7 +411,9 @@ static void si_pc_get_size(struct r600_perfcounter_block *group,
 	struct si_pc_block_base *regs = sigroup->b;
 	unsigned layout_multi = regs->layout & SI_PC_MULTI_MASK;
 
-	if (layout_multi == SI_PC_MULTI_BLOCK) {
+	if (regs->layout & SI_PC_FAKE) {
+		*num_select_dw = 0;
+	} else if (layout_multi == SI_PC_MULTI_BLOCK) {
 		if (count < regs->num_multi)
 			*num_select_dw = 2 * (count + 2) + regs->num_prelude;
 		else
@@ -453,6 +475,9 @@ static void si_pc_emit_select(struct r600_common_context *ctx,
 	unsigned dw;
 
 	assert(count <= regs->num_counters);
+
+	if (regs->layout & SI_PC_FAKE)
+		return;
 
 	if (layout_multi == SI_PC_MULTI_BLOCK) {
 		assert(!(regs->layout & SI_PC_REG_REVERSE));
@@ -613,22 +638,35 @@ static void si_pc_emit_read(struct r600_common_context *ctx,
 	unsigned reg = regs->counter0_lo;
 	unsigned reg_delta = 8;
 
-	if (regs->layout & SI_PC_REG_REVERSE)
-		reg_delta = -reg_delta;
+	if (!(regs->layout & SI_PC_FAKE)) {
+		if (regs->layout & SI_PC_REG_REVERSE)
+			reg_delta = -reg_delta;
 
-	for (idx = 0; idx < count; ++idx) {
-		if (regs->counters)
-			reg = regs->counters[idx];
+		for (idx = 0; idx < count; ++idx) {
+			if (regs->counters)
+				reg = regs->counters[idx];
 
-		radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
-		radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_PERF) |
-				COPY_DATA_DST_SEL(COPY_DATA_MEM));
-		radeon_emit(cs, reg >> 2);
-		radeon_emit(cs, 0); /* unused */
-		radeon_emit(cs, va);
-		radeon_emit(cs, va >> 32);
-		va += 4;
-		reg += reg_delta;
+			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_PERF) |
+					COPY_DATA_DST_SEL(COPY_DATA_MEM));
+			radeon_emit(cs, reg >> 2);
+			radeon_emit(cs, 0); /* unused */
+			radeon_emit(cs, va);
+			radeon_emit(cs, va >> 32);
+			va += 4;
+			reg += reg_delta;
+		}
+	} else {
+		for (idx = 0; idx < count; ++idx) {
+			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_IMM) |
+					COPY_DATA_DST_SEL(COPY_DATA_MEM));
+			radeon_emit(cs, 0); /* immediate */
+			radeon_emit(cs, 0); /* unused */
+			radeon_emit(cs, va);
+			radeon_emit(cs, va >> 32);
+			va += 4;
+		}
 	}
 }
 
