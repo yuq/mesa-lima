@@ -2791,6 +2791,15 @@ private:
    virtual bool visit(BasicBlock *);
 };
 
+static bool
+post_ra_dead(Instruction *i)
+{
+   for (int d = 0; i->defExists(d); ++d)
+      if (i->getDef(d)->refCount())
+         return false;
+   return true;
+}
+
 bool
 NV50PostRaConstantFolding::visit(BasicBlock *bb)
 {
@@ -2818,15 +2827,34 @@ NV50PostRaConstantFolding::visit(BasicBlock *bb)
             break;
 
          def = i->getSrc(1)->getInsn();
+         if (def && def->op == OP_SPLIT && typeSizeof(def->sType) == 4)
+            def = def->getSrc(0)->getInsn();
          if (def && def->op == OP_MOV && def->src(0).getFile() == FILE_IMMEDIATE) {
             vtmp = i->getSrc(1);
-            i->setSrc(1, def->getSrc(0));
+            if (isFloatType(i->sType)) {
+               i->setSrc(1, def->getSrc(0));
+            } else {
+               ImmediateValue val;
+               bool ret = def->src(0).getImmediate(val);
+               assert(ret);
+               if (i->getSrc(1)->reg.data.id & 1)
+                  val.reg.data.u32 >>= 16;
+               val.reg.data.u32 &= 0xffff;
+               i->setSrc(1, new_ImmediateValue(bb->getProgram(), val.reg.data.u32));
+            }
 
             /* There's no post-RA dead code elimination, so do it here
              * XXX: if we add more code-removing post-RA passes, we might
              *      want to create a post-RA dead-code elim pass */
-            if (vtmp->refCount() == 0)
-               delete_Instruction(bb->getProgram(), def);
+            if (post_ra_dead(vtmp->getInsn())) {
+               Value *src = vtmp->getInsn()->getSrc(0);
+               // Careful -- splits will have already been removed from the
+               // functions. Don't double-delete.
+               if (vtmp->getInsn()->bb)
+                  delete_Instruction(prog, vtmp->getInsn());
+               if (src->getInsn() && post_ra_dead(src->getInsn()))
+                  delete_Instruction(prog, src->getInsn());
+            }
 
             break;
          }
