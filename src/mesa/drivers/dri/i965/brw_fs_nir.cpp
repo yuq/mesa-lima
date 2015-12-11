@@ -2453,7 +2453,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
       /* Get the offset to read from */
       fs_reg offset_reg;
-      nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
+      nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
       if (const_offset) {
          offset_reg = brw_imm_ud(instr->const_index[0] + const_offset->u[0]);
       } else {
