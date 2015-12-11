@@ -311,53 +311,59 @@ static struct si_pc_block_base cik_WD = {
 /* Both the number of instances and selectors varies between chips of the same
  * class. We only differentiate by class here and simply expose the maximum
  * number over all chips in a class.
+ *
+ * Unfortunately, GPUPerfStudio uses the order of performance counter groups
+ * blindly once it believes it has identified the hardware, so the order of
+ * blocks here matters.
  */
 static struct si_pc_block groups_CIK[] = {
 	{ &cik_CB, 226, 4 },
-	{ &cik_CPC, 22 },
 	{ &cik_CPF, 17 },
-	{ &cik_CPG, 46 },
 	{ &cik_DB, 257, 4 },
-	{ &cik_GDS, 121 },
 	{ &cik_GRBM, 34 },
 	{ &cik_GRBMSE, 15 },
-	{ &cik_IA, 22 },
-	{ &cik_PA_SC, 395 },
 	{ &cik_PA_SU, 153 },
+	{ &cik_PA_SC, 395 },
 	{ &cik_SPI, 186 },
 	{ &cik_SQ, 252 },
 	{ &cik_SX, 32 },
 	{ &cik_TA, 111, 11 },
 	{ &cik_TCA, 39, 2 },
 	{ &cik_TCC, 160, 16 },
-	{ &cik_TCP, 154, 11 },
 	{ &cik_TD, 55, 11 },
+	{ &cik_TCP, 154, 11 },
+	{ &cik_GDS, 121 },
 	{ &cik_VGT, 140 },
+	{ &cik_IA, 22 },
 	{ &cik_WD, 22 },
+	{ &cik_CPG, 46 },
+	{ &cik_CPC, 22 },
+
 };
 
 static struct si_pc_block groups_VI[] = {
 	{ &cik_CB, 396, 4 },
-	{ &cik_CPC, 24 },
 	{ &cik_CPF, 19 },
-	{ &cik_CPG, 48 },
 	{ &cik_DB, 257, 4 },
-	{ &cik_GDS, 121 },
 	{ &cik_GRBM, 34 },
 	{ &cik_GRBMSE, 15 },
-	{ &cik_IA, 24 },
-	{ &cik_PA_SC, 397 },
 	{ &cik_PA_SU, 153 },
+	{ &cik_PA_SC, 397 },
 	{ &cik_SPI, 197 },
 	{ &cik_SQ, 273 },
 	{ &cik_SX, 34 },
 	{ &cik_TA, 119, 16 },
 	{ &cik_TCA, 35, 2 },
 	{ &cik_TCC, 192, 16 },
-	{ &cik_TCP, 180, 16 },
 	{ &cik_TD, 55, 16 },
+	{ &cik_TCP, 180, 16 },
+	{ &cik_GDS, 121 },
 	{ &cik_VGT, 147 },
+	{ &cik_IA, 24 },
 	{ &cik_WD, 37 },
+	{ &cik_CPG, 48 },
+	{ &cik_CPC, 24 },
+
 };
 
 static void si_pc_get_size(struct r600_perfcounter_block *group,
