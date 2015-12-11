@@ -681,9 +681,9 @@ clip_point_guard_xy(struct draw_stage *stage, struct prim_header *header)
           * automatically). These would usually be captured by depth clip
           * too but this can be disabled.
           */
-         if (header->v[0]->clip_vertex[3] <= 0.0f ||
-             util_is_inf_or_nan(header->v[0]->clip_vertex[0]) ||
-             util_is_inf_or_nan(header->v[0]->clip_vertex[1]))
+         if (header->v[0]->clip_pos[3] <= 0.0f ||
+             util_is_inf_or_nan(header->v[0]->clip_pos[0]) ||
+             util_is_inf_or_nan(header->v[0]->clip_pos[1]))
             return;
       }
       stage->next->point(stage->next, header);
