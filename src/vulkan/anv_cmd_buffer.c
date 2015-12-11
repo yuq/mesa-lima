@@ -930,7 +930,7 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
 
    const unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
    const unsigned push_constant_data_size =
-      (local_id_dwords + prog_data->nr_params) * sizeof(union gl_constant_value *);
+      (local_id_dwords + prog_data->nr_params) * 4;
    const unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
    const unsigned param_aligned_count =
       reg_aligned_constant_size / sizeof(uint32_t);
