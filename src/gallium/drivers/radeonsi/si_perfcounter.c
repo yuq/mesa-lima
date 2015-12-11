@@ -79,6 +79,23 @@ struct si_pc_block {
 	unsigned instances;
 };
 
+/* The order is chosen to be compatible with GPUPerfStudio's hardcoding of
+ * performance counter group IDs.
+ */
+static const char * const si_pc_shader_type_suffixes[] = {
+	"", "_ES", "_GS", "_VS", "_PS", "_LS", "_HS", "_CS"
+};
+
+static const unsigned si_pc_shader_type_bits[] = {
+	0x7f,
+	S_036780_ES_EN(1),
+	S_036780_GS_EN(1),
+	S_036780_VS_EN(1),
+	S_036780_PS_EN(1),
+	S_036780_LS_EN(1),
+	S_036780_HS_EN(1),
+	S_036780_CS_EN(1),
+};
 
 static struct si_pc_block_base cik_CB = {
 	.name = "CB",
@@ -661,6 +678,10 @@ void si_init_perfcounters(struct si_screen *screen)
 	if (screen->b.chip_class == CIK) {
 		pc->num_stop_cs_dwords += 6;
 	}
+
+	pc->num_shader_types = ARRAY_SIZE(si_pc_shader_type_bits);
+	pc->shader_type_suffixes = si_pc_shader_type_suffixes;
+	pc->shader_type_bits = si_pc_shader_type_bits;
 
 	pc->get_size = si_pc_get_size;
 	pc->emit_instance = si_pc_emit_instance;

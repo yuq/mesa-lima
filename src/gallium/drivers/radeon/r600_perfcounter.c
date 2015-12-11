@@ -33,10 +33,6 @@
 /* Max counters per HW block */
 #define R600_QUERY_MAX_COUNTERS 16
 
-static const char * const r600_pc_shader_suffix[] = {
-	"", "_PS", "_VS", "_GS", "_ES", "_HS", "_LS", "_CS"
-};
-
 static struct r600_perfcounter_block *
 lookup_counter(struct r600_perfcounters *pc, unsigned index,
 	       unsigned *base_gid, unsigned *sub_index)
@@ -91,6 +87,8 @@ struct r600_pc_counter {
 	unsigned dwords;
 	unsigned stride;
 };
+
+#define R600_PC_SHADERS_WINDOWING (1 << 31)
 
 struct r600_query_pc {
 	struct r600_query_hw b;
@@ -246,32 +244,29 @@ static struct r600_pc_group *get_group_state(struct r600_common_screen *screen,
 	if (block->flags & R600_PC_BLOCK_SHADER) {
 		unsigned sub_gids = block->num_instances;
 		unsigned shader_id;
-		unsigned shader_mask;
-		unsigned query_shader_mask;
+		unsigned shaders;
+		unsigned query_shaders;
 
 		if (block->flags & R600_PC_BLOCK_SE_GROUPS)
 			sub_gids = sub_gids * screen->info.max_se;
 		shader_id = sub_gid / sub_gids;
 		sub_gid = sub_gid % sub_gids;
 
-		if (shader_id == 0)
-			shader_mask = R600_PC_SHADER_ALL;
-		else
-			shader_mask = 1 << (shader_id - 1);
+		shaders = screen->perfcounters->shader_type_bits[shader_id];
 
-		query_shader_mask = query->shaders & R600_PC_SHADER_ALL;
-		if (query_shader_mask && query_shader_mask != shader_mask) {
+		query_shaders = query->shaders & ~R600_PC_SHADERS_WINDOWING;
+		if (query_shaders && query_shaders != shaders) {
 			fprintf(stderr, "r600_perfcounter: incompatible shader groups\n");
 			FREE(group);
 			return NULL;
 		}
-		query->shaders |= shader_mask;
+		query->shaders = shaders;
 	}
 
-	if (block->flags & R600_PC_BLOCK_SHADER_WINDOWED) {
+	if (block->flags & R600_PC_BLOCK_SHADER_WINDOWED && !query->shaders) {
 		// A non-zero value in query->shaders ensures that the shader
 		// masking is reset unless the user explicitly requests one.
-		query->shaders |= R600_PC_SHADER_WINDOWING;
+		query->shaders = R600_PC_SHADERS_WINDOWING;
 	}
 
 	if (block->flags & R600_PC_BLOCK_SE_GROUPS) {
@@ -379,8 +374,8 @@ struct pipe_query *r600_create_batch_query(struct pipe_context *ctx,
 	}
 
 	if (query->shaders) {
-		if ((query->shaders & R600_PC_SHADER_ALL) == 0)
-			query->shaders |= R600_PC_SHADER_ALL;
+		if (query->shaders == R600_PC_SHADERS_WINDOWING)
+			query->shaders = 0xffffffff;
 		query->b.num_cs_dw_begin += pc->num_shaders_cs_dwords;
 	}
 
@@ -438,7 +433,7 @@ static boolean r600_init_block_names(struct r600_common_screen *screen,
 	if (block->flags & R600_PC_BLOCK_SE_GROUPS)
 		groups_se = screen->info.max_se;
 	if (block->flags & R600_PC_BLOCK_SHADER)
-		groups_shader = ARRAY_SIZE(r600_pc_shader_suffix);
+		groups_shader = screen->perfcounters->num_shader_types;
 
 	namelen = strlen(block->basename);
 	block->group_name_stride = namelen + 1;
@@ -462,14 +457,15 @@ static boolean r600_init_block_names(struct r600_common_screen *screen,
 
 	groupname = block->group_names;
 	for (i = 0; i < groups_shader; ++i) {
-		unsigned shaderlen = strlen(r600_pc_shader_suffix[i]);
+		const char *shader_suffix = screen->perfcounters->shader_type_suffixes[i];
+		unsigned shaderlen = strlen(shader_suffix);
 		for (j = 0; j < groups_se; ++j) {
 			for (k = 0; k < groups_instance; ++k) {
 				strcpy(groupname, block->basename);
 				p = groupname + namelen;
 
 				if (block->flags & R600_PC_BLOCK_SHADER) {
-					strcpy(p, r600_pc_shader_suffix[i]);
+					strcpy(p, shader_suffix);
 					p += shaderlen;
 				}
 
@@ -626,7 +622,7 @@ void r600_perfcounters_add_block(struct r600_common_screen *rscreen,
 	if (block->flags & R600_PC_BLOCK_SE_GROUPS)
 		block->num_groups *= rscreen->info.max_se;
 	if (block->flags & R600_PC_BLOCK_SHADER)
-		block->num_groups *= ARRAY_SIZE(r600_pc_shader_suffix);
+		block->num_groups *= pc->num_shader_types;
 
 	++pc->num_blocks;
 	pc->num_groups += block->num_groups;
