@@ -314,16 +314,16 @@ regions_overlap(int srcX0, int srcY0,
                 int dstX0, int dstY0,
                 int dstX1, int dstY1)
 {
-   if (MAX2(srcX0, srcX1) < MIN2(dstX0, dstX1))
+   if (MAX2(srcX0, srcX1) <= MIN2(dstX0, dstX1))
       return FALSE; /* src completely left of dst */
 
-   if (MAX2(dstX0, dstX1) < MIN2(srcX0, srcX1))
+   if (MAX2(dstX0, dstX1) <= MIN2(srcX0, srcX1))
       return FALSE; /* dst completely left of src */
 
-   if (MAX2(srcY0, srcY1) < MIN2(dstY0, dstY1))
+   if (MAX2(srcY0, srcY1) <= MIN2(dstY0, dstY1))
       return FALSE; /* src completely above dst */
 
-   if (MAX2(dstY0, dstY1) < MIN2(srcY0, srcY1))
+   if (MAX2(dstY0, dstY1) <= MIN2(srcY0, srcY1))
       return FALSE; /* dst completely above src */
 
    return TRUE; /* some overlap */
