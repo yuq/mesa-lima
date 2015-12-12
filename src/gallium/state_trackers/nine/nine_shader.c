@@ -877,7 +877,7 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
                 assert(!param->rel);
                 src = ureg_DECL_fs_input(tx->ureg, TGSI_SEMANTIC_COLOR,
                                          param->idx,
-                                         TGSI_INTERPOLATE_PERSPECTIVE);
+                                         TGSI_INTERPOLATE_COLOR);
             } else {
                 assert(!param->rel); /* TODO */
                 assert(param->idx < Elements(tx->regs.v));
@@ -1961,6 +1961,7 @@ nine_tgsi_to_interp_mode(struct tgsi_declaration_semantic *sem)
         return TGSI_INTERPOLATE_LINEAR;
     case TGSI_SEMANTIC_BCOLOR:
     case TGSI_SEMANTIC_COLOR:
+        return TGSI_INTERPOLATE_COLOR;
     case TGSI_SEMANTIC_FOG:
     case TGSI_SEMANTIC_GENERIC:
     case TGSI_SEMANTIC_TEXCOORD:
