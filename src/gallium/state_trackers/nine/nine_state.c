@@ -913,7 +913,8 @@ commit_ps(struct NineDevice9 *device)
     NINE_STATE_DSA |      \
     NINE_STATE_VIEWPORT | \
     NINE_STATE_VDECL |    \
-    NINE_STATE_IDXBUF)
+    NINE_STATE_IDXBUF |   \
+    NINE_STATE_STREAMFREQ)
 
 #define NINE_STATE_RARE      \
    (NINE_STATE_SCISSOR |     \
@@ -984,8 +985,7 @@ nine_update_state(struct NineDevice9 *device)
             prepare_dsa(device);
         if (group & NINE_STATE_VIEWPORT)
             update_viewport(device);
-        if ((group & (NINE_STATE_VDECL | NINE_STATE_VS)) ||
-            state->changed.stream_freq & ~1)
+        if (group & (NINE_STATE_VDECL | NINE_STATE_VS | NINE_STATE_STREAMFREQ))
             update_vertex_elements(device);
         if (group & NINE_STATE_IDXBUF)
             commit_index_buffer(device);

@@ -3565,7 +3565,9 @@ NineDevice9_SetStreamSourceFreq( struct NineDevice9 *This,
     else
         state->stream_instancedata_mask &= ~(1 << StreamNumber);
 
-    state->changed.stream_freq |= 1 << StreamNumber;
+    state->changed.stream_freq |= 1 << StreamNumber; /* Used for stateblocks */
+    if (StreamNumber != 0)
+        state->changed.group |= NINE_STATE_STREAMFREQ;
     return D3D_OK;
 }
 
