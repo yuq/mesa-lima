@@ -3555,6 +3555,9 @@ NineDevice9_SetStreamSourceFreq( struct NineDevice9 *This,
                   (Setting & D3DSTREAMSOURCE_INDEXEDDATA)), D3DERR_INVALIDCALL);
     user_assert(Setting, D3DERR_INVALIDCALL);
 
+    if (likely(!This->is_recording) && state->stream_freq[StreamNumber] == Setting)
+        return D3D_OK;
+
     state->stream_freq[StreamNumber] = Setting;
 
     if (Setting & D3DSTREAMSOURCE_INSTANCEDATA)
