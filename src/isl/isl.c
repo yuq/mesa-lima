@@ -225,8 +225,10 @@ isl_msaa_interleaved_scale_px_to_sa(uint32_t samples,
     *    MSFMT_DEPTH_STENCIL, W_L and H_L must be adjusted as follows before
     *    proceeding: [...]
     */
-   *width = isl_align(*width, 2) << ((ffs(samples) - 0) / 2);
-   *height = isl_align(*height, 2) << ((ffs(samples) - 1) / 2);
+   if (width)
+      *width = isl_align(*width, 2) << ((ffs(samples) - 0) / 2);
+   if (height)
+      *height = isl_align(*height, 2) << ((ffs(samples) - 1) / 2);
 }
 
 static enum isl_array_pitch_span
@@ -1044,4 +1046,122 @@ isl_surf_init_s(const struct isl_device *dev,
    };
 
    return true;
+}
+
+/**
+ * A variant of isl_surf_get_image_offset_sa() specific to
+ * ISL_DIM_LAYOUT_GEN4_2D.
+ */
+static void
+get_image_offset_sa_gen4_2d(const struct isl_surf *surf,
+                            uint32_t level, uint32_t layer,
+                            uint32_t *x_offset_sa,
+                            uint32_t *y_offset_sa)
+{
+   assert(level < surf->levels);
+   assert(layer < surf->phys_level0_sa.array_len);
+   assert(surf->phys_level0_sa.depth == 1);
+
+   const struct isl_extent3d image_align_sa =
+      isl_surf_get_image_alignment_sa(surf);
+
+   const uint32_t W0 = surf->phys_level0_sa.width;
+   const uint32_t H0 = surf->phys_level0_sa.height;
+
+   uint32_t x = 0;
+   uint32_t y = layer * isl_surf_get_array_pitch_sa_rows(surf);
+
+   for (uint32_t l = 0; l < level; ++l) {
+      if (l == 1) {
+         uint32_t W = isl_minify(W0, l);
+
+         if (surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED)
+            isl_msaa_interleaved_scale_px_to_sa(surf->samples, &W, NULL);
+
+         x += isl_align_npot(W, image_align_sa.w);
+      } else {
+         uint32_t H = isl_minify(H0, l);
+
+         if (surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED)
+            isl_msaa_interleaved_scale_px_to_sa(surf->samples, NULL, &H);
+
+         y += isl_align_npot(H, image_align_sa.h);
+      }
+   }
+
+   *x_offset_sa = x;
+   *y_offset_sa = y;
+}
+
+/**
+ * A variant of isl_surf_get_image_offset_sa() specific to
+ * ISL_DIM_LAYOUT_GEN4_3D.
+ */
+static void
+get_image_offset_sa_gen4_3d(const struct isl_surf *surf,
+                            uint32_t level, uint32_t logical_z_offset_px,
+                            uint32_t *x_offset_sa,
+                            uint32_t *y_offset_sa)
+{
+   assert(level < surf->levels);
+   assert(logical_z_offset_px < isl_minify(surf->phys_level0_sa.depth, level));
+   assert(surf->phys_level0_sa.array_len == 1);
+
+   const struct isl_extent3d image_align_sa =
+      isl_surf_get_image_alignment_sa(surf);
+
+   const uint32_t W0 = surf->phys_level0_sa.width;
+   const uint32_t H0 = surf->phys_level0_sa.height;
+   const uint32_t D0 = surf->phys_level0_sa.depth;
+
+   uint32_t x = 0;
+   uint32_t y = 0;
+
+   for (uint32_t l = 0; l < level; ++l) {
+      const uint32_t level_h = isl_align_npot(isl_minify(H0, l), image_align_sa.h);
+      const uint32_t level_d = isl_align_npot(isl_minify(D0, l), image_align_sa.d);
+      const uint32_t max_layers_vert = isl_align(level_d, 1u << l) / (1u << l);
+
+      y += level_h * max_layers_vert;
+   }
+
+   const uint32_t level_w = isl_align_npot(isl_minify(W0, level), image_align_sa.w);
+   const uint32_t level_h = isl_align_npot(isl_minify(H0, level), image_align_sa.h);
+   const uint32_t level_d = isl_align_npot(isl_minify(D0, level), image_align_sa.d);
+
+   const uint32_t max_layers_horiz = MIN(level_d, 1u << level);
+   const uint32_t max_layers_vert = isl_align_div(level_d, 1u << level);
+
+   x += level_w * (logical_z_offset_px % max_layers_horiz);
+   y += level_h * (logical_z_offset_px / max_layers_vert);
+
+   *x_offset_sa = x;
+   *y_offset_sa = y;
+}
+
+void
+isl_surf_get_image_offset_sa(const struct isl_surf *surf,
+                             uint32_t level,
+                             uint32_t logical_array_layer,
+                             uint32_t logical_z_offset_px,
+                             uint32_t *x_offset_sa,
+                             uint32_t *y_offset_sa)
+{
+   assert(level < surf->levels);
+   assert(logical_array_layer < surf->logical_level0_px.array_len);
+   assert(logical_z_offset_px
+          < isl_minify(surf->logical_level0_px.depth, level));
+
+   switch (surf->dim_layout) {
+   case ISL_DIM_LAYOUT_GEN9_1D:
+      isl_finishme("%s:%s: gen9 1d surfaces", __FILE__, __func__);
+   case ISL_DIM_LAYOUT_GEN4_2D:
+      get_image_offset_sa_gen4_2d(surf, level, logical_array_layer,
+                                  x_offset_sa, y_offset_sa);
+      break;
+   case ISL_DIM_LAYOUT_GEN4_3D:
+      get_image_offset_sa_gen4_3d(surf, level, logical_z_offset_px,
+                                  x_offset_sa, y_offset_sa);
+      break;
+   }
 }

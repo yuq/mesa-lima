@@ -23,6 +23,8 @@ SUBDIRS = .
 
 noinst_LTLIBRARIES = libisl.la
 
+EXTRA_DIST = tests
+
 # The gallium includes are for the util/u_math.h include from main/macros.h
 AM_CPPFLAGS = \
 	$(INTEL_CFLAGS) \
@@ -63,5 +65,24 @@ isl_format_layout.c: isl_format_layout_gen.bash \
                      isl_format_layout.csv
 	$(AM_V_GEN)$(srcdir)/isl_format_layout_gen.bash \
 	    <$(srcdir)/isl_format_layout.csv >$@
+
+# ----------------------------------------------------------------------------
+#  Tests
+# ----------------------------------------------------------------------------
+
+TESTS = tests/isl_surf_get_image_offset_test
+
+check_PROGRAMS = $(TESTS)
+
+# Link tests to lib965_compiler.la for brw_get_device_info().
+tests_ldadd =						\
+	libisl.la					\
+	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la
+
+tests_isl_surf_get_image_offset_test_SOURCES =		\
+	tests/isl_surf_get_image_offset_test.c
+tests_isl_surf_get_image_offset_test_LDADD = $(tests_ldadd)
+
+# ----------------------------------------------------------------------------
 
 include $(top_srcdir)/install-lib-links.mk

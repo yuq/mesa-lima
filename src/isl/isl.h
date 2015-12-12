@@ -912,6 +912,22 @@ isl_surf_get_array_pitch(const struct isl_surf *surf)
    return isl_surf_get_array_pitch_sa_rows(surf) * surf->row_pitch;
 }
 
+/**
+ * Get the offset to an subimage within the surface, in units of surface
+ * samples.
+ *
+ * @invariant level < surface levels
+ * @invariant logical_array_layer < logical array length of surface
+ * @invariant logical_z_offset_px < logical depth of surface at level
+ */
+void
+isl_surf_get_image_offset_sa(const struct isl_surf *surf,
+                             uint32_t level,
+                             uint32_t logical_array_layer,
+                             uint32_t logical_z_offset_px,
+                             uint32_t *x_offset_sa,
+                             uint32_t *y_offset_sa);
+
 #ifdef __cplusplus
 }
 #endif
