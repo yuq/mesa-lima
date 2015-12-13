@@ -691,13 +691,14 @@ vlVaQueryVideoProcFilterCaps(VADriverContextP ctx, VAContextID context,
    case VAProcFilterDeinterlacing: {
       VAProcFilterCapDeinterlacing *deint = filter_caps;
 
-      if (*num_filter_caps < 2) {
-         *num_filter_caps = 2;
+      if (*num_filter_caps < 3) {
+         *num_filter_caps = 3;
          return VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
       }
 
       deint[i++].type = VAProcDeinterlacingBob;
       deint[i++].type = VAProcDeinterlacingWeave;
+      deint[i++].type = VAProcDeinterlacingMotionAdaptive;
       break;
    }
 
@@ -750,9 +751,24 @@ vlVaQueryVideoProcPipelineCaps(VADriverContextP ctx, VAContextID context,
 
    for (i = 0; i < num_filters; i++) {
       vlVaBuffer *buf = handle_table_get(VL_VA_DRIVER(ctx)->htab, filters[i]);
+      VAProcFilterParameterBufferBase *filter;
 
-      if (!buf || buf->type >= VABufferTypeMax)
+      if (!buf || buf->type != VAProcFilterParameterBufferType)
          return VA_STATUS_ERROR_INVALID_BUFFER;
+
+      filter = buf->data;
+      switch (filter->type) {
+      case VAProcFilterDeinterlacing: {
+         VAProcFilterParameterBufferDeinterlacing *deint = buf->data;
+         if (deint->algorithm == VAProcDeinterlacingMotionAdaptive) {
+            pipeline_cap->num_forward_references = 1;
+            pipeline_cap->num_backward_references = 2;
+         }
+         break;
+      }
+      default:
+         return VA_STATUS_ERROR_UNIMPLEMENTED;
+      }
    }
 
    return VA_STATUS_SUCCESS;
