@@ -730,6 +730,11 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       }
 
       case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+         surface_state = desc->buffer_view->surface_state;
+         bo = desc->buffer_view->buffer->bo;
+         bo_offset = desc->buffer_view->buffer->offset;
+         break;
+
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
          assert(!"Unsupported descriptor type");
          break;

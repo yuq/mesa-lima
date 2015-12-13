@@ -1514,23 +1514,6 @@ anv_fill_buffer_surface_state(struct anv_device *device, void *state,
    }
 }
 
-VkResult anv_CreateBufferView(
-    VkDevice                                    _device,
-    const VkBufferViewCreateInfo*               pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkBufferView*                               pView)
-{
-   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
-}
-
-void anv_DestroyBufferView(
-    VkDevice                                    _device,
-    VkBufferView                                _bview,
-    const VkAllocationCallbacks*                pAllocator)
-{
-   stub();
-}
-
 void anv_DestroySampler(
     VkDevice                                    _device,
     VkSampler                                   _sampler,

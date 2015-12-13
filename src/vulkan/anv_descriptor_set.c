@@ -483,7 +483,15 @@ void anv_UpdateDescriptorSets(
 
       case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-         anv_finishme("texel buffers not implemented");
+         for (uint32_t j = 0; j < write->descriptorCount; j++) {
+            ANV_FROM_HANDLE(anv_buffer_view, bview,
+                            write->pTexelBufferView[j]);
+
+            desc[j] = (struct anv_descriptor) {
+               .type = write->descriptorType,
+               .buffer_view = bview,
+            };
+         }
          break;
 
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:

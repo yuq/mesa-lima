@@ -851,6 +851,8 @@ struct anv_descriptor {
          struct anv_sampler *sampler;
       };
 
+      struct anv_buffer_view *buffer_view;
+
       struct {
          struct anv_buffer *buffer;
          uint64_t offset;
@@ -1516,6 +1518,11 @@ gen9_image_view_init(struct anv_image_view *iview,
                      const VkImageViewCreateInfo* pCreateInfo,
                      struct anv_cmd_buffer *cmd_buffer);
 
+struct anv_buffer_view {
+   struct anv_buffer *buffer;
+   struct anv_state surface_state;
+};
+
 void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
                                    const struct anv_format *format,
                                    uint32_t offset, uint32_t range,
@@ -1636,6 +1643,7 @@ ANV_DEFINE_HANDLE_CASTS(anv_queue, VkQueue)
 
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_cmd_pool, VkCommandPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer, VkBuffer)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer_view, VkBufferView)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set, VkDescriptorSet)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set_layout, VkDescriptorSetLayout)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_device_memory, VkDeviceMemory)
