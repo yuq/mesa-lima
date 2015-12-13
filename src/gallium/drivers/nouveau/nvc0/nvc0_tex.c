@@ -515,12 +515,12 @@ nve4_set_tex_handles(struct nvc0_context *nvc0)
       return;
    address = nvc0->screen->uniform_bo->offset + (5 << 16);
 
-   for (s = 0; s < 5; ++s, address += (1 << 9)) {
+   for (s = 0; s < 5; ++s, address += (1 << 10)) {
       uint32_t dirty = nvc0->textures_dirty[s] | nvc0->samplers_dirty[s];
       if (!dirty)
          continue;
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-      PUSH_DATA (push, 512);
+      PUSH_DATA (push, 1024);
       PUSH_DATAh(push, address);
       PUSH_DATA (push, address);
       do {
