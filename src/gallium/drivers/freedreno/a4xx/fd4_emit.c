@@ -529,14 +529,16 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 		OUT_PKT0(ring, REG_A4XX_RB_DEPTH_CONTROL, 1);
 		OUT_RING(ring, zsa->rb_depth_control |
-				COND(fragz, A4XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE));
+				COND(fragz, A4XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE) |
+				COND(fragz && fp->frag_coord, A4XX_RB_DEPTH_CONTROL_FORCE_FRAGZ_TO_FS));
 
 		/* maybe this register/bitfield needs a better name.. this
 		 * appears to be just disabling early-z
 		 */
 		OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
 		OUT_RING(ring, zsa->gras_alpha_control |
-				COND(fragz, A4XX_GRAS_ALPHA_CONTROL_ALPHA_TEST_ENABLE));
+				COND(fragz, A4XX_GRAS_ALPHA_CONTROL_ALPHA_TEST_ENABLE) |
+				COND(fragz && fp->frag_coord, A4XX_GRAS_ALPHA_CONTROL_FORCE_FRAGZ_TO_FS));
 	}
 
 	if (dirty & FD_DIRTY_RASTERIZER) {
