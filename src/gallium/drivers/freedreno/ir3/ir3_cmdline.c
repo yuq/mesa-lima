@@ -114,8 +114,6 @@ int main(int argc, char **argv)
 	void *ptr;
 	size_t size;
 
-	fd_mesa_debug |= FD_DBG_DISASM;
-
 	memset(&s, 0, sizeof(s));
 	memset(&v, 0, sizeof(v));
 
@@ -128,7 +126,7 @@ int main(int argc, char **argv)
 
 	while (n < argc) {
 		if (!strcmp(argv[n], "--verbose")) {
-			fd_mesa_debug |= FD_DBG_MSGS | FD_DBG_OPTMSGS;
+			fd_mesa_debug |= FD_DBG_MSGS | FD_DBG_OPTMSGS | FD_DBG_DISASM;
 			n++;
 			continue;
 		}
