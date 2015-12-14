@@ -1517,7 +1517,9 @@ gen9_image_view_init(struct anv_image_view *iview,
                      struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_buffer_view {
-   struct anv_buffer *buffer;
+   struct anv_bo *bo;
+   uint32_t offset; /**< Offset into bo. */
+
    struct anv_state surface_state;
 };
 

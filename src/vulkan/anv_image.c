@@ -512,7 +512,9 @@ anv_CreateBufferView(VkDevice _device,
    if (!view)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->buffer = buffer;
+   view->bo = buffer->bo;
+   view->offset = buffer->offset + pCreateInfo->offset;
+
    view->surface_state =
       anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
 
@@ -520,7 +522,7 @@ anv_CreateBufferView(VkDevice _device,
       anv_format_for_vk_format(pCreateInfo->format);
 
    anv_fill_buffer_surface_state(device, view->surface_state.map, format,
-                                 pCreateInfo->offset, pCreateInfo->range,
+                                 view->offset, pCreateInfo->range,
                                  format->isl_layout->bpb / 8);
 
    *pView = anv_buffer_view_to_handle(view);
