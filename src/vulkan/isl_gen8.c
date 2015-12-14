@@ -100,7 +100,7 @@ gen8_choose_msaa_layout(const struct isl_device *dev,
 }
 
 /**
- * Choose horizontal LOD alignment, in units of surface elements.
+ * Choose horizontal subimage alignment, in units of surface elements.
  */
 static uint32_t
 gen8_choose_halign_el(const struct isl_device *dev,
@@ -154,7 +154,7 @@ gen8_choose_halign_el(const struct isl_device *dev,
 }
 
 /**
- * Choose vertical LOD alignment, in units of surface elements.
+ * Choose vertical subimage alignment, in units of surface elements.
  */
 static uint32_t
 gen8_choose_valign_el(const struct isl_device *dev,
@@ -192,11 +192,11 @@ gen8_choose_valign_el(const struct isl_device *dev,
 }
 
 void
-gen8_choose_lod_alignment_el(const struct isl_device *dev,
-                             const struct isl_surf_init_info *restrict info,
-                             enum isl_tiling tiling,
-                             enum isl_msaa_layout msaa_layout,
-                             struct isl_extent3d *lod_align_el)
+gen8_choose_image_alignment_el(const struct isl_device *dev,
+                               const struct isl_surf_init_info *restrict info,
+                               enum isl_tiling tiling,
+                               enum isl_msaa_layout msaa_layout,
+                               struct isl_extent3d *image_align_el)
 {
    assert(!isl_tiling_is_std_y(tiling));
 
@@ -221,7 +221,7 @@ gen8_choose_lod_alignment_el(const struct isl_device *dev,
     *         row.)
     */
 
-   *lod_align_el = (struct isl_extent3d) {
+   *image_align_el = (struct isl_extent3d) {
       .w = gen8_choose_halign_el(dev, info),
       .h = gen8_choose_valign_el(dev, info),
       .d = 1,

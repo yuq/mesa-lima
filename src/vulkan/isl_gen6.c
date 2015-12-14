@@ -83,11 +83,11 @@ gen6_choose_msaa_layout(const struct isl_device *dev,
 }
 
 void
-gen6_choose_lod_alignment_el(const struct isl_device *dev,
-                             const struct isl_surf_init_info *restrict info,
-                             enum isl_tiling tiling,
-                             enum isl_msaa_layout msaa_layout,
-                             struct isl_extent3d *lod_align_el)
+gen6_choose_image_alignment_el(const struct isl_device *dev,
+                               const struct isl_surf_init_info *restrict info,
+                               enum isl_tiling tiling,
+                               enum isl_msaa_layout msaa_layout,
+                               struct isl_extent3d *image_align_el)
 {
    /* Note that the surface's horizontal image alignment is not programmable
     * on Sandybridge.
@@ -123,38 +123,38 @@ gen6_choose_lod_alignment_el(const struct isl_device *dev,
     */
 
    if (isl_format_is_compressed(info->format)) {
-      *lod_align_el = isl_extent3d(1, 1, 1);
+      *image_align_el = isl_extent3d(1, 1, 1);
       return;
    }
 
    if (isl_format_is_yuv(info->format)) {
-      *lod_align_el = isl_extent3d(4, 2, 1);
+      *image_align_el = isl_extent3d(4, 2, 1);
       return;
    }
 
    if (info->samples > 1) {
-      *lod_align_el = isl_extent3d(4, 4, 1);
+      *image_align_el = isl_extent3d(4, 4, 1);
       return;
    }
 
    if (isl_surf_usage_is_depth_or_stencil(info->usage) &&
        !ISL_DEV_USE_SEPARATE_STENCIL(dev)) {
       /* interleaved depthstencil buffer */
-      *lod_align_el = isl_extent3d(4, 4, 1);
+      *image_align_el = isl_extent3d(4, 4, 1);
       return;
    }
 
    if (isl_surf_usage_is_depth(info->usage)) {
       /* separate depth buffer */
-      *lod_align_el = isl_extent3d(4, 4, 1);
+      *image_align_el = isl_extent3d(4, 4, 1);
       return;
    }
 
    if (isl_surf_usage_is_stencil(info->usage)) {
       /* separate stencil buffer */
-      *lod_align_el = isl_extent3d(4, 2, 1);
+      *image_align_el = isl_extent3d(4, 2, 1);
       return;
    }
 
-   *lod_align_el = isl_extent3d(4, 2, 1);
+   *image_align_el = isl_extent3d(4, 2, 1);
 }

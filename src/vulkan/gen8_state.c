@@ -120,9 +120,11 @@ get_halign_valign(const struct isl_surf *surf, uint32_t *halign, uint32_t *valig
        * format (ETC2 has a block height of 4), then the vertical alignment is
        * 4 compression blocks or, equivalently, 16 pixels.
        */
-      struct isl_extent3d lod_align_el = isl_surf_get_lod_alignment_el(surf);
-      *halign = anv_halign[lod_align_el.width];
-      *valign = anv_valign[lod_align_el.height];
+      struct isl_extent3d image_align_el
+         = isl_surf_get_image_alignment_el(surf);
+
+      *halign = anv_halign[image_align_el.width];
+      *valign = anv_valign[image_align_el.height];
    #else
       /* Pre-Skylake, RENDER_SUFFACE_STATE.SurfaceVerticalAlignment is in
        * units of surface samples.  For example, if SurfaceVerticalAlignment
@@ -130,9 +132,11 @@ get_halign_valign(const struct isl_surf *surf, uint32_t *halign, uint32_t *valig
        * format (compressed or not) the vertical alignment is
        * 4 pixels.
        */
-      struct isl_extent3d lod_align_sa = isl_surf_get_lod_alignment_sa(surf);
-      *halign = anv_halign[lod_align_sa.width];
-      *valign = anv_valign[lod_align_sa.height];
+      struct isl_extent3d image_align_sa
+         = isl_surf_get_image_alignment_sa(surf);
+
+      *halign = anv_halign[image_align_sa.width];
+      *valign = anv_valign[image_align_sa.height];
    #endif
 }
 

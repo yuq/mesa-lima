@@ -26,15 +26,15 @@
 #include "isl_priv.h"
 
 /**
- * Calculate the LOD alignment, in units of surface samples, for the standard
- * tiling formats Yf and Ys.
+ * Calculate the surface's subimage alignment, in units of surface samples,
+ * for the standard tiling formats Yf and Ys.
  */
 static void
-gen9_calc_std_lod_alignment_sa(const struct isl_device *dev,
-                               const struct isl_surf_init_info *restrict info,
-                               enum isl_tiling tiling,
-                               enum isl_msaa_layout msaa_layout,
-                               struct isl_extent3d *align_sa)
+gen9_calc_std_image_alignment_sa(const struct isl_device *dev,
+                                 const struct isl_surf_init_info *restrict info,
+                                 enum isl_tiling tiling,
+                                 enum isl_msaa_layout msaa_layout,
+                                 struct isl_extent3d *align_sa)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
 
@@ -97,11 +97,11 @@ gen9_calc_std_lod_alignment_sa(const struct isl_device *dev,
 }
 
 void
-gen9_choose_lod_alignment_el(const struct isl_device *dev,
-                             const struct isl_surf_init_info *restrict info,
-                             enum isl_tiling tiling,
-                             enum isl_msaa_layout msaa_layout,
-                             struct isl_extent3d *lod_align_el)
+gen9_choose_image_alignment_el(const struct isl_device *dev,
+                               const struct isl_surf_init_info *restrict info,
+                               enum isl_tiling tiling,
+                               enum isl_msaa_layout msaa_layout,
+                               struct isl_extent3d *image_align_el)
 {
    /* This BSpec text provides some insight into the hardware's alignment
     * requirements [Skylake BSpec > Memory Views > Common Surface Formats >
@@ -150,11 +150,11 @@ gen9_choose_lod_alignment_el(const struct isl_device *dev,
     */
 
    if (isl_tiling_is_std_y(tiling)) {
-      struct isl_extent3d lod_align_sa;
-      gen9_calc_std_lod_alignment_sa(dev, info, tiling, msaa_layout,
-                                     &lod_align_sa);
+      struct isl_extent3d image_align_sa;
+      gen9_calc_std_image_alignment_sa(dev, info, tiling, msaa_layout,
+                                     &image_align_sa);
 
-      *lod_align_el = isl_extent3d_sa_to_el(info->format, lod_align_sa);
+      *image_align_el = isl_extent3d_sa_to_el(info->format, image_align_sa);
       return;
    }
 
@@ -162,7 +162,7 @@ gen9_choose_lod_alignment_el(const struct isl_device *dev,
       /* See the Skylake BSpec > Memory Views > Common Surface Formats > Surface
        * Layout and Tiling > 1D Surfaces > 1D Alignment Requirements.
        */
-      *lod_align_el = isl_extent3d(64, 1, 1);
+      *image_align_el = isl_extent3d(64, 1, 1);
       return;
    }
 
@@ -176,9 +176,10 @@ gen9_choose_lod_alignment_el(const struct isl_device *dev,
        * To avoid wasting memory, choose the smallest alignment possible:
        * HALIGN_4 and VALIGN_4.
        */
-      *lod_align_el = isl_extent3d(4, 4, 1);
+      *image_align_el = isl_extent3d(4, 4, 1);
       return;
    }
 
-   gen8_choose_lod_alignment_el(dev, info, tiling, msaa_layout, lod_align_el);
+   gen8_choose_image_alignment_el(dev, info, tiling, msaa_layout,
+                                  image_align_el);
 }

@@ -344,27 +344,27 @@ isl_choose_array_pitch_span(const struct isl_device *dev,
 }
 
 static void
-isl_choose_lod_alignment_el(const struct isl_device *dev,
-                            const struct isl_surf_init_info *restrict info,
-                            enum isl_tiling tiling,
-                            enum isl_msaa_layout msaa_layout,
-                            struct isl_extent3d *lod_align_el)
+isl_choose_image_alignment_el(const struct isl_device *dev,
+                              const struct isl_surf_init_info *restrict info,
+                              enum isl_tiling tiling,
+                              enum isl_msaa_layout msaa_layout,
+                              struct isl_extent3d *image_align_el)
 {
    if (ISL_DEV_GEN(dev) >= 9) {
-      gen9_choose_lod_alignment_el(dev, info, tiling, msaa_layout,
-                                   lod_align_el);
+      gen9_choose_image_alignment_el(dev, info, tiling, msaa_layout,
+                                     image_align_el);
    } else if (ISL_DEV_GEN(dev) >= 8) {
-      gen8_choose_lod_alignment_el(dev, info, tiling, msaa_layout,
-                                   lod_align_el);
+      gen8_choose_image_alignment_el(dev, info, tiling, msaa_layout,
+                                     image_align_el);
    } else if (ISL_DEV_GEN(dev) >= 7) {
-      gen7_choose_lod_alignment_el(dev, info, tiling, msaa_layout,
-                                   lod_align_el);
+      gen7_choose_image_alignment_el(dev, info, tiling, msaa_layout,
+                                     image_align_el);
    } else if (ISL_DEV_GEN(dev) >= 6) {
-      gen6_choose_lod_alignment_el(dev, info, tiling, msaa_layout,
-                                   lod_align_el);
+      gen6_choose_image_alignment_el(dev, info, tiling, msaa_layout,
+                                     image_align_el);
    } else {
-      gen4_choose_lod_alignment_el(dev, info, tiling, msaa_layout,
-                                   lod_align_el);
+      gen4_choose_image_alignment_el(dev, info, tiling, msaa_layout,
+                                     image_align_el);
    }
 }
 
@@ -528,7 +528,7 @@ isl_calc_phys_slice0_extent_sa_gen4_2d(
       const struct isl_device *dev,
       const struct isl_surf_init_info *restrict info,
       enum isl_msaa_layout msaa_layout,
-      const struct isl_extent3d *lod_align_sa,
+      const struct isl_extent3d *image_align_sa,
       const struct isl_extent4d *phys_level0_sa,
       struct isl_extent2d *phys_slice0_sa)
 {
@@ -558,8 +558,8 @@ isl_calc_phys_slice0_extent_sa_gen4_2d(
          isl_msaa_interleaved_scale_px_to_sa(info->samples, &W, &H);
       }
 
-      uint32_t w = isl_align_npot(W, lod_align_sa->w);
-      uint32_t h = isl_align_npot(H, lod_align_sa->h);
+      uint32_t w = isl_align_npot(W, image_align_sa->w);
+      uint32_t h = isl_align_npot(H, image_align_sa->h);
 
       if (l == 0) {
          slice_top_w = w;
@@ -589,7 +589,7 @@ static void
 isl_calc_phys_slice0_extent_sa_gen4_3d(
       const struct isl_device *dev,
       const struct isl_surf_init_info *restrict info,
-      const struct isl_extent3d *lod_align_sa,
+      const struct isl_extent3d *image_align_sa,
       const struct isl_extent4d *phys_level0_sa,
       struct isl_extent2d *phys_slice0_sa)
 {
@@ -604,9 +604,9 @@ isl_calc_phys_slice0_extent_sa_gen4_3d(
    uint32_t D0 = phys_level0_sa->d;
 
    for (uint32_t l = 0; l < info->levels; ++l) {
-      uint32_t level_w = isl_align_npot(isl_minify(W0, l), lod_align_sa->w);
-      uint32_t level_h = isl_align_npot(isl_minify(H0, l), lod_align_sa->h);
-      uint32_t level_d = isl_align_npot(isl_minify(D0, l), lod_align_sa->d);
+      uint32_t level_w = isl_align_npot(isl_minify(W0, l), image_align_sa->w);
+      uint32_t level_h = isl_align_npot(isl_minify(H0, l), image_align_sa->h);
+      uint32_t level_d = isl_align_npot(isl_minify(D0, l), image_align_sa->d);
 
       uint32_t max_layers_horiz = MIN(level_d, 1u << l);
       uint32_t max_layers_vert = isl_align(level_d, 1u << l) / (1u << l);
@@ -623,14 +623,14 @@ isl_calc_phys_slice0_extent_sa_gen4_3d(
 
 /**
  * Calculate the physical extent of the surface's first array slice, in units
- * of surface samples. The result is aligned to \a lod_align_sa.
+ * of surface samples. The result is aligned to \a image_align_sa.
  */
 static void
 isl_calc_phys_slice0_extent_sa(const struct isl_device *dev,
                                const struct isl_surf_init_info *restrict info,
                                enum isl_dim_layout dim_layout,
                                enum isl_msaa_layout msaa_layout,
-                               const struct isl_extent3d *lod_align_sa,
+                               const struct isl_extent3d *image_align_sa,
                                const struct isl_extent4d *phys_level0_sa,
                                struct isl_extent2d *phys_slice0_sa)
 {
@@ -642,11 +642,11 @@ isl_calc_phys_slice0_extent_sa(const struct isl_device *dev,
       /*fallthrough*/
    case ISL_DIM_LAYOUT_GEN4_2D:
       isl_calc_phys_slice0_extent_sa_gen4_2d(dev, info, msaa_layout,
-                                             lod_align_sa, phys_level0_sa,
+                                             image_align_sa, phys_level0_sa,
                                              phys_slice0_sa);
       return;
    case ISL_DIM_LAYOUT_GEN4_3D:
-      isl_calc_phys_slice0_extent_sa_gen4_3d(dev, info, lod_align_sa,
+      isl_calc_phys_slice0_extent_sa_gen4_3d(dev, info, image_align_sa,
                                              phys_level0_sa, phys_slice0_sa);
       return;
    }
@@ -654,14 +654,14 @@ isl_calc_phys_slice0_extent_sa(const struct isl_device *dev,
 
 /**
  * Calculate the pitch between physical array slices, in units of rows of
- * surface samples. The result is aligned to \a lod_align_sa.
+ * surface samples. The result is aligned to \a image_align_sa.
  */
 static uint32_t
 isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
                              const struct isl_surf_init_info *restrict info,
                              enum isl_dim_layout dim_layout,
                              enum isl_array_pitch_span array_pitch_span,
-                             const struct isl_extent3d *lod_align_sa,
+                             const struct isl_extent3d *image_align_sa,
                              const struct isl_extent4d *phys_level0_sa,
                              const struct isl_extent2d *phys_slice0_sa)
 {
@@ -677,7 +677,7 @@ isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
    case ISL_DIM_LAYOUT_GEN4_2D:
       switch (array_pitch_span) {
       case ISL_ARRAY_PITCH_SPAN_COMPACT:
-         return isl_align_npot(phys_slice0_sa->h, lod_align_sa->h);
+         return isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
       case ISL_ARRAY_PITCH_SPAN_FULL: {
          /* The QPitch equation is found in the Broadwell PRM >> Volume 5:
           * Memory Views >> Common Surface Formats >> Surface Layout >> 2D
@@ -686,8 +686,8 @@ isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
          uint32_t H0_sa = phys_level0_sa->h;
          uint32_t H1_sa = isl_minify(H0_sa, 1);
 
-         uint32_t h0_sa = isl_align_npot(H0_sa, lod_align_sa->h);
-         uint32_t h1_sa = isl_align_npot(H1_sa, lod_align_sa->h);
+         uint32_t h0_sa = isl_align_npot(H0_sa, image_align_sa->h);
+         uint32_t h1_sa = isl_align_npot(H1_sa, image_align_sa->h);
 
          uint32_t m;
          if (ISL_DEV_GEN(dev) >= 7) {
@@ -697,7 +697,7 @@ isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
             m = 11;
          }
 
-         uint32_t pitch_sa_rows = h0_sa + h1_sa + (m * lod_align_sa->h);
+         uint32_t pitch_sa_rows = h0_sa + h1_sa + (m * image_align_sa->h);
 
          if (ISL_DEV_GEN(dev) == 6 && info->samples > 1 &&
              (info->height % 4 == 1)) {
@@ -724,7 +724,7 @@ isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
 
    case ISL_DIM_LAYOUT_GEN4_3D:
       assert(array_pitch_span == ISL_ARRAY_PITCH_SPAN_COMPACT);
-      return isl_align_npot(phys_slice0_sa->h, lod_align_sa->h);
+      return isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
    }
 
    unreachable("bad isl_dim_layout");
@@ -738,7 +738,7 @@ static uint32_t
 isl_calc_row_pitch(const struct isl_device *dev,
                    const struct isl_surf_init_info *restrict info,
                    const struct isl_tile_info *tile_info,
-                   const struct isl_extent3d *lod_align_sa,
+                   const struct isl_extent3d *image_align_sa,
                    const struct isl_extent2d *phys_slice0_sa)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
@@ -974,11 +974,12 @@ isl_surf_init_s(const struct isl_device *dev,
    if (!isl_choose_msaa_layout(dev, info, tiling, &msaa_layout))
        return false;
 
-   struct isl_extent3d lod_align_el;
-   isl_choose_lod_alignment_el(dev, info, tiling, msaa_layout, &lod_align_el);
+   struct isl_extent3d image_align_el;
+   isl_choose_image_alignment_el(dev, info, tiling, msaa_layout,
+                                 &image_align_el);
 
-   struct isl_extent3d lod_align_sa =
-      isl_extent3d_el_to_sa(info->format, lod_align_el);
+   struct isl_extent3d image_align_sa =
+      isl_extent3d_el_to_sa(info->format, image_align_el);
 
    struct isl_extent4d phys_level0_sa;
    isl_calc_phys_level0_extent_sa(dev, info, dim_layout, tiling, msaa_layout,
@@ -989,18 +990,18 @@ isl_surf_init_s(const struct isl_device *dev,
 
    struct isl_extent2d phys_slice0_sa;
    isl_calc_phys_slice0_extent_sa(dev, info, dim_layout, msaa_layout,
-                                  &lod_align_sa, &phys_level0_sa,
+                                  &image_align_sa, &phys_level0_sa,
                                   &phys_slice0_sa);
    assert(phys_slice0_sa.w % fmtl->bw == 0);
    assert(phys_slice0_sa.h % fmtl->bh == 0);
 
    const uint32_t row_pitch = isl_calc_row_pitch(dev, info, &tile_info,
-                                                 &lod_align_sa,
+                                                 &image_align_sa,
                                                  &phys_slice0_sa);
 
    const uint32_t array_pitch_sa_rows =
       isl_calc_array_pitch_sa_rows(dev, info, dim_layout, array_pitch_span,
-                                   &lod_align_sa, &phys_level0_sa,
+                                   &image_align_sa, &phys_level0_sa,
                                    &phys_slice0_sa);
    assert(array_pitch_sa_rows % fmtl->bh == 0);
 
@@ -1028,7 +1029,7 @@ isl_surf_init_s(const struct isl_device *dev,
       .levels = info->levels,
       .samples = info->samples,
 
-      .lod_alignment_el = lod_align_el,
+      .image_alignment_el = image_align_el,
       .logical_level0_px = logical_level0_px,
       .phys_level0_sa = phys_level0_sa,
 

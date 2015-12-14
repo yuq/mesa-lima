@@ -646,10 +646,10 @@ struct isl_surf {
    enum isl_format format;
 
    /**
-    * Alignment of the upper-left sample of each LOD, in units of surface
+    * Alignment of the upper-left sample of each subimage, in units of surface
     * elements.
     */
-   struct isl_extent3d lod_alignment_el;
+   struct isl_extent3d image_alignment_el;
 
    /**
     * Logical extent of the surface's base level, in units of pixels.  This is
@@ -859,28 +859,28 @@ isl_surf_init_s(const struct isl_device *dev,
                 const struct isl_surf_init_info *restrict info);
 
 /**
- * Alignment of the upper-left sample of each LOD, in units of surface
+ * Alignment of the upper-left sample of each subimage, in units of surface
  * elements.
  */
 static inline struct isl_extent3d
-isl_surf_get_lod_alignment_el(const struct isl_surf *surf)
+isl_surf_get_image_alignment_el(const struct isl_surf *surf)
 {
-   return surf->lod_alignment_el;
+   return surf->image_alignment_el;
 }
 
 /**
- * Alignment of the upper-left sample of each LOD, in units of surface
+ * Alignment of the upper-left sample of each subimage, in units of surface
  * samples.
  */
 static inline struct isl_extent3d
-isl_surf_get_lod_alignment_sa(const struct isl_surf *surf)
+isl_surf_get_image_alignment_sa(const struct isl_surf *surf)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
 
    return (struct isl_extent3d) {
-      .w = fmtl->bw * surf->lod_alignment_el.w,
-      .h = fmtl->bh * surf->lod_alignment_el.h,
-      .d = fmtl->bd * surf->lod_alignment_el.d,
+      .w = fmtl->bw * surf->image_alignment_el.w,
+      .h = fmtl->bh * surf->image_alignment_el.h,
+      .d = fmtl->bd * surf->image_alignment_el.d,
    };
 }
 

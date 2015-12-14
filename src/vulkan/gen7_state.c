@@ -238,15 +238,15 @@ genX(image_view_init)(struct anv_image_view *iview,
       depth = image->extent.depth;
    }
 
-   const struct isl_extent3d lod_align_sa =
-      isl_surf_get_lod_alignment_sa(&surface->isl);
+   const struct isl_extent3d image_align_sa =
+      isl_surf_get_image_alignment_sa(&surface->isl);
 
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = image->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format->surface_format,
-      .SurfaceVerticalAlignment = anv_valign[lod_align_sa.height],
-      .SurfaceHorizontalAlignment = anv_halign[lod_align_sa.width],
+      .SurfaceVerticalAlignment = anv_valign[image_align_sa.height],
+      .SurfaceHorizontalAlignment = anv_halign[image_align_sa.width],
 
       /* From bspec (DevSNB, DevIVB): "Set Tile Walk to TILEWALK_XMAJOR if
        * Tiled Surface is False."

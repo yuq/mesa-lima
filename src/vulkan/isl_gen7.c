@@ -278,7 +278,7 @@ gen7_filter_tiling(const struct isl_device *dev,
 }
 
 /**
- * Choose horizontal LOD alignment, in units of surface elements.
+ * Choose horizontal subimage alignment, in units of surface elements.
  */
 static uint32_t
 gen7_choose_halign_el(const struct isl_device *dev,
@@ -303,7 +303,7 @@ gen7_choose_halign_el(const struct isl_device *dev,
 }
 
 /**
- * Choose vertical LOD alignment, in units of surface elements.
+ * Choose vertical subimage alignment, in units of surface elements.
  */
 static uint32_t
 gen7_choose_valign_el(const struct isl_device *dev,
@@ -375,16 +375,16 @@ gen7_choose_valign_el(const struct isl_device *dev,
 }
 
 void
-gen7_choose_lod_alignment_el(const struct isl_device *dev,
-                             const struct isl_surf_init_info *restrict info,
-                             enum isl_tiling tiling,
-                             enum isl_msaa_layout msaa_layout,
-                             struct isl_extent3d *lod_align_el)
+gen7_choose_image_alignment_el(const struct isl_device *dev,
+                               const struct isl_surf_init_info *restrict info,
+                               enum isl_tiling tiling,
+                               enum isl_msaa_layout msaa_layout,
+                               struct isl_extent3d *image_align_el)
 {
    /* IVB+ does not support combined depthstencil. */
    assert(!isl_surf_usage_is_depth_and_stencil(info->usage));
 
-   *lod_align_el = (struct isl_extent3d) {
+   *image_align_el = (struct isl_extent3d) {
       .w = gen7_choose_halign_el(dev, info),
       .h = gen7_choose_valign_el(dev, info, tiling),
       .d = 1,

@@ -38,11 +38,11 @@ gen4_choose_msaa_layout(const struct isl_device *dev,
 }
 
 void
-gen4_choose_lod_alignment_el(const struct isl_device *dev,
-                             const struct isl_surf_init_info *restrict info,
-                             enum isl_tiling tiling,
-                             enum isl_msaa_layout msaa_layout,
-                             struct isl_extent3d *lod_align_el)
+gen4_choose_image_alignment_el(const struct isl_device *dev,
+                               const struct isl_surf_init_info *restrict info,
+                               enum isl_tiling tiling,
+                               enum isl_msaa_layout msaa_layout,
+                               struct isl_extent3d *image_align_el)
 {
    assert(info->samples == 1);
    assert(msaa_layout == ISL_MSAA_LAYOUT_NONE);
@@ -66,9 +66,9 @@ gen4_choose_lod_alignment_el(const struct isl_device *dev,
     */
 
    if (isl_format_is_compressed(info->format)) {
-      *lod_align_el = isl_extent3d(1, 1, 1);
+      *image_align_el = isl_extent3d(1, 1, 1);
       return;
    }
 
-   *lod_align_el = isl_extent3d(4, 2, 1);
+   *image_align_el = isl_extent3d(4, 2, 1);
 }
