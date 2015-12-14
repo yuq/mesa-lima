@@ -54,8 +54,8 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         bool old_msaa = vc4->msaa;
         int old_tile_width = vc4->tile_width;
         int old_tile_height = vc4->tile_height;
-        bool msaa = (info->src.resource->nr_samples ||
-                     info->dst.resource->nr_samples);
+        bool msaa = (info->src.resource->nr_samples > 1 ||
+                     info->dst.resource->nr_samples > 1);
         int tile_width = msaa ? 32 : 64;
         int tile_height = msaa ? 32 : 64;
 
@@ -110,9 +110,11 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
 
         pipe_surface_reference(&vc4->color_read, src_surf);
         pipe_surface_reference(&vc4->color_write,
-                               dst_surf->texture->nr_samples ? NULL : dst_surf);
+                               dst_surf->texture->nr_samples > 1 ?
+                               NULL : dst_surf);
         pipe_surface_reference(&vc4->msaa_color_write,
-                               dst_surf->texture->nr_samples ? dst_surf : NULL);
+                               dst_surf->texture->nr_samples > 1 ?
+                               dst_surf : NULL);
         pipe_surface_reference(&vc4->zs_read, NULL);
         pipe_surface_reference(&vc4->zs_write, NULL);
         pipe_surface_reference(&vc4->msaa_zs_write, NULL);

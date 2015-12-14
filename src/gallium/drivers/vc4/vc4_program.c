@@ -2043,7 +2043,7 @@ vc4_setup_shared_key(struct vc4_context *vc4, struct vc4_key *key,
                 key->tex[i].swizzle[2] = sampler->swizzle_b;
                 key->tex[i].swizzle[3] = sampler->swizzle_a;
 
-                if (sampler->texture->nr_samples) {
+                if (sampler->texture->nr_samples > 1) {
                         key->tex[i].msaa_width = sampler->texture->width0;
                         key->tex[i].msaa_height = sampler->texture->height0;
                 } else if (sampler){
