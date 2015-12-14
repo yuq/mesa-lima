@@ -51,15 +51,18 @@ anv_gem_create(struct anv_device *device, size_t size)
 }
 
 void
-anv_gem_close(struct anv_device *device, int gem_handle)
+anv_gem_close(struct anv_device *device, uint32_t gem_handle)
 {
    close(gem_handle);
 }
 
 void*
 anv_gem_mmap(struct anv_device *device, uint32_t gem_handle,
-             uint64_t offset, uint64_t size)
+             uint64_t offset, uint64_t size, uint32_t flags)
 {
+   /* Ignore flags, as they're specific to I915_GEM_MMAP. */
+   (void) flags;
+
    return mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED,
                gem_handle, offset);
 }
@@ -73,14 +76,14 @@ anv_gem_munmap(void *p, uint64_t size)
    munmap(p, size);
 }
 
-int
+uint32_t
 anv_gem_userptr(struct anv_device *device, void *mem, size_t size)
 {
    return -1;
 }
 
 int
-anv_gem_wait(struct anv_device *device, int gem_handle, int64_t *timeout_ns)
+anv_gem_wait(struct anv_device *device, uint32_t gem_handle, int64_t *timeout_ns)
 {
    return 0;
 }
@@ -94,7 +97,21 @@ anv_gem_execbuffer(struct anv_device *device,
 
 int
 anv_gem_set_tiling(struct anv_device *device,
-                   int gem_handle, uint32_t stride, uint32_t tiling)
+                   uint32_t gem_handle, uint32_t stride, uint32_t tiling)
+{
+   return 0;
+}
+
+int
+anv_gem_set_caching(struct anv_device *device, uint32_t gem_handle,
+                    uint32_t caching)
+{
+   return 0;
+}
+
+int
+anv_gem_set_domain(struct anv_device *device, uint32_t gem_handle,
+                   uint32_t read_domains, uint32_t write_domain)
 {
    return 0;
 }
@@ -124,12 +141,12 @@ anv_gem_get_aperture(int fd, uint64_t *size)
 }
 
 int
-anv_gem_handle_to_fd(struct anv_device *device, int gem_handle)
+anv_gem_handle_to_fd(struct anv_device *device, uint32_t gem_handle)
 {
    unreachable("Unused");
 }
 
-int
+uint32_t
 anv_gem_fd_to_handle(struct anv_device *device, int fd)
 {
    unreachable("Unused");
