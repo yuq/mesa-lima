@@ -947,10 +947,14 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
    const unsigned threads = pipeline->cs_thread_width_max;
    const unsigned total_push_constants_size =
       reg_aligned_constant_size * threads;
+   const unsigned push_constant_alignment =
+      cmd_buffer->device->info.gen < 8 ? 32 : 64;
+   const unsigned aligned_total_push_constants_size =
+      ALIGN(total_push_constants_size, push_constant_alignment);
    struct anv_state state =
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
-                                         total_push_constants_size,
-                                         32 /* bottom 5 bits MBZ */);
+                                         aligned_total_push_constants_size,
+                                         push_constant_alignment);
 
    /* Walk through the param array and fill the buffer with data */
    uint32_t *u32_map = state.map;
