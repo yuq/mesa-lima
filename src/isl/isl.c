@@ -570,6 +570,7 @@ isl_calc_phys_slice0_extent_sa_gen4_2d(
          slice_left_h += h;
       } else if (l == 2) {
          slice_bottom_w += w;
+         slice_right_h += h;
       } else {
          slice_right_h += h;
       }
