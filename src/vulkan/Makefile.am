@@ -44,7 +44,7 @@ PER_GEN_LIBS = \
    libanv-gen8.la \
    libanv-gen9.la
 
-noinst_LTLIBRARIES = $(PER_GEN_LIBS) libisl.la
+noinst_LTLIBRARIES = $(PER_GEN_LIBS)
 
 # The gallium includes are for the util/u_math.h include from main/macros.h
 
@@ -61,6 +61,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
+	-I$(top_srcdir)/src/isl/ \
 	-I$(top_builddir)/src \
 	-I$(top_builddir)/src/glsl/nir \
 	-I$(top_builddir)/src/vulkan
@@ -92,28 +93,9 @@ VULKAN_SOURCES =                                        \
 	anv_wsi.c					\
 	anv_wsi_x11.c
 
-libisl_la_CFLAGS = $(libvulkan_la_CFLAGS)
-
-libisl_la_SOURCES =                                     \
-	isl.c                                           \
-	isl_format_layout.c                             \
-	isl_gen4.c                                      \
-	isl_gen4.h                                      \
-	isl_gen6.c                                      \
-	isl_gen6.h                                      \
-	isl_gen7.c                                      \
-	isl_gen7.h                                      \
-	isl_gen8.c                                      \
-	isl_gen8.h                                      \
-	isl_gen9.c                                      \
-	isl_gen9.h                                      \
-	isl_image.c                                     \
-	$(NULL)
-
 BUILT_SOURCES =                                         \
 	anv_entrypoints.h                               \
-	anv_entrypoints.c                               \
-	isl_format_layout.c
+	anv_entrypoints.c
 
 libanv_gen7_la_SOURCES =                                \
 	genX_cmd_buffer.c				\
@@ -171,19 +153,15 @@ anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) - | $(PYTHON2) $< code > $@
 
-isl_format_layout.c: isl_format_layout_gen.bash \
-                     isl_format_layout.csv
-	$(AM_V_GEN)$(srcdir)/isl_format_layout_gen.bash \
-	    <$(srcdir)/isl_format_layout.csv >$@
-
 CLEANFILES = $(BUILT_SOURCES)
 
 libvulkan_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
+	$(top_builddir)/src/isl/libisl.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	../mesa/libmesa.la \
 	../mesa/drivers/dri/common/libdri_test_stubs.la \
 	-lpthread -ldl -lstdc++ \
-        $(PER_GEN_LIBS) libisl.la
+        $(PER_GEN_LIBS)
 
 # Libvulkan with dummy gem. Used for unit tests.
 

@@ -2437,6 +2437,7 @@ AC_CONFIG_FILES([Makefile
 		src/glx/apple/Makefile
 		src/glx/tests/Makefile
 		src/gtest/Makefile
+		src/isl/Makefile
 		src/loader/Makefile
 		src/mapi/Makefile
 		src/mapi/es1api/glesv1_cm.pc
