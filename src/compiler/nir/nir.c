@@ -1151,19 +1151,6 @@ visit_intrinsic_src(nir_intrinsic_instr *instr, nir_foreach_src_cb cb,
 }
 
 static bool
-visit_call_src(nir_call_instr *instr, nir_foreach_src_cb cb, void *state)
-{
-   return true;
-}
-
-static bool
-visit_load_const_src(nir_load_const_instr *instr, nir_foreach_src_cb cb,
-                     void *state)
-{
-   return true;
-}
-
-static bool
 visit_phi_src(nir_phi_instr *instr, nir_foreach_src_cb cb, void *state)
 {
    nir_foreach_phi_src(src, instr) {
@@ -1219,12 +1206,10 @@ nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state)
          return false;
       break;
    case nir_instr_type_call:
-      if (!visit_call_src(nir_instr_as_call(instr), cb, state))
-         return false;
+      /* Call instructions have no regular sources */
       break;
    case nir_instr_type_load_const:
-      if (!visit_load_const_src(nir_instr_as_load_const(instr), cb, state))
-         return false;
+      /* Constant load instructions have no regular sources */
       break;
    case nir_instr_type_phi:
       if (!visit_phi_src(nir_instr_as_phi(instr), cb, state))
