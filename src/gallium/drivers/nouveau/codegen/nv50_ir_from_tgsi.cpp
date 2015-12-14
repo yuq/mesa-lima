@@ -3199,6 +3199,10 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    case TGSI_OPCODE_ATOMIMAX:
       handleATOM(dst0, dstTy, tgsi::opcodeToSubOp(tgsi.getOpcode()));
       break;
+   case TGSI_OPCODE_RESQ:
+      mkOp1(OP_SUQ, TYPE_U32, dst0[0],
+            makeSym(TGSI_FILE_BUFFER, tgsi.getSrc(0).getIndex(0), -1, 0, 0));
+      break;
    case TGSI_OPCODE_IBFE:
    case TGSI_OPCODE_UBFE:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {

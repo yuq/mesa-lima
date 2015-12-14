@@ -1023,6 +1023,14 @@ NVC0LoweringPass::handleTXLQ(TexInstruction *i)
 }
 
 bool
+NVC0LoweringPass::handleSUQ(Instruction *suq)
+{
+   suq->op = OP_MOV;
+   suq->setSrc(0, loadResLength32(NULL, suq->getSrc(0)->reg.fileIndex * 16));
+   return true;
+}
+
+bool
 NVC0LoweringPass::handleATOM(Instruction *atom)
 {
    SVSemantic sv;
@@ -1881,6 +1889,9 @@ NVC0LoweringPass::visit(Instruction *i)
    case OP_SUREDP:
       if (targ->getChipset() >= NVISA_GK104_CHIPSET)
          handleSurfaceOpNVE4(i->asTex());
+      break;
+   case OP_SUQ:
+      handleSUQ(i);
       break;
    default:
       break;
