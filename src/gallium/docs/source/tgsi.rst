@@ -2311,6 +2311,18 @@ Resource Access Opcodes
                texture arrays and 2D textures.  address.w is always
                ignored.
 
+.. opcode:: RESQ - Query information about a resource
+
+  Syntax: ``RESQ dst, resource``
+
+  Example: ``RESQ TEMP[0], BUFFER[0]``
+
+  Returns information about the buffer or image resource. For buffer
+  resources, the size (in bytes) is returned in the x component. For
+  image resources, .xyz will contain the width/height/layers of the
+  image, while .w will contain the number of samples for multi-sampled
+  images.
+
 
 .. _threadsyncopcodes:
 
