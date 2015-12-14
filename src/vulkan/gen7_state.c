@@ -44,8 +44,8 @@ anv_surftype(const struct anv_image *image, VkImageViewType view_type)
       return SURFTYPE_1D;
    case VK_IMAGE_VIEW_TYPE_CUBE:
    case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
-      anv_finishme("%s:%s: cube images", __FILE__, __func__);
-      /* fallthrough */
+      assert(image->type == VK_IMAGE_TYPE_2D);
+      return SURFTYPE_CUBE;
    case VK_IMAGE_VIEW_TYPE_2D:
    case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
       assert(image->type == VK_IMAGE_TYPE_2D);
