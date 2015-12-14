@@ -567,6 +567,7 @@ static bool
 is_resource_instruction(unsigned opcode)
 {
    switch (opcode) {
+   case TGSI_OPCODE_RESQ:
    case TGSI_OPCODE_LOAD:
    case TGSI_OPCODE_ATOMUADD:
    case TGSI_OPCODE_ATOMXCHG:
@@ -2220,6 +2221,22 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
       emit_asm(ir, TGSI_OPCODE_UP2H, result_dst, op[0]);
       break;
 
+   case ir_unop_get_buffer_size: {
+      ir_constant *const_offset = ir->operands[0]->as_constant();
+      st_src_reg buffer(
+            PROGRAM_BUFFER,
+            ctx->Const.Program[shader->Stage].MaxAtomicBuffers +
+            (const_offset ? const_offset->value.u[0] : 0),
+            GLSL_TYPE_UINT);
+      if (!const_offset) {
+         buffer.reladdr = ralloc(mem_ctx, st_src_reg);
+         memcpy(buffer.reladdr, &sampler_reladdr, sizeof(sampler_reladdr));
+         emit_arl(ir, sampler_reladdr, op[0]);
+      }
+      emit_asm(ir, TGSI_OPCODE_RESQ, result_dst)->buffer = buffer;
+      break;
+   }
+
    case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_unorm_2x16:
    case ir_unop_pack_snorm_4x8:
@@ -2242,10 +2259,6 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
       /* This operation is not supported, or should have already been handled.
        */
       assert(!"Invalid ir opcode in glsl_to_tgsi_visitor::visit()");
-      break;
-
-   case ir_unop_get_buffer_size:
-      assert(!"Not implemented yet");
       break;
    }
 
@@ -5131,6 +5144,7 @@ compile_tgsi_instruction(struct st_translate *t,
                     src, num_src);
       return;
 
+   case TGSI_OPCODE_RESQ:
    case TGSI_OPCODE_LOAD:
    case TGSI_OPCODE_ATOMUADD:
    case TGSI_OPCODE_ATOMXCHG:
