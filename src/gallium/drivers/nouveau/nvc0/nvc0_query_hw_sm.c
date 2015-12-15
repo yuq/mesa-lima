@@ -1075,17 +1075,6 @@ nve4_hw_sm_query_read_data(uint32_t count[32][8],
    return true;
 }
 
-/* Metric calculations:
- * sum(x) ... sum of x over all MPs
- * avg(x) ... average of x over all MPs
- *
- * IPC              : sum(inst_executed) / clock
- * INST_REPLAY_OHEAD: (sum(inst_issued) - sum(inst_executed)) / sum(inst_issued)
- * MP_OCCUPANCY     : avg((active_warps / 64) / active_cycles)
- * MP_EFFICIENCY    : avg(active_cycles / clock)
- *
- * NOTE: Interpretation of IPC requires knowledge of MP count.
- */
 static boolean
 nvc0_hw_sm_get_query_result(struct nvc0_context *nvc0, struct nvc0_hw_query *hq,
                             boolean wait, union pipe_query_result *result)
