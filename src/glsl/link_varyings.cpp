@@ -1518,7 +1518,9 @@ reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode)
    foreach_in_list(ir_instruction, node, stage->ir) {
       ir_variable *const var = node->as_variable();
 
-      if (var == NULL || var->data.mode != io_mode || !var->data.explicit_location)
+      if (var == NULL || var->data.mode != io_mode ||
+          !var->data.explicit_location ||
+          var->data.location < VARYING_SLOT_VAR0)
          continue;
 
       var_slot = var->data.location - VARYING_SLOT_VAR0;
