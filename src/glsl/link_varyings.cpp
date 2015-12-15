@@ -825,7 +825,8 @@ public:
                    gl_shader_stage consumer_stage);
    ~varying_matches();
    void record(ir_variable *producer_var, ir_variable *consumer_var);
-   unsigned assign_locations(uint64_t reserved_slots, bool separate_shader);
+   unsigned assign_locations(struct gl_shader_program *prog,
+                             uint64_t reserved_slots, bool separate_shader);
    void store_locations() const;
 
 private:
@@ -1031,7 +1032,9 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
  * passed to varying_matches::record().
  */
 unsigned
-varying_matches::assign_locations(uint64_t reserved_slots, bool separate_shader)
+varying_matches::assign_locations(struct gl_shader_program *prog,
+                                  uint64_t reserved_slots,
+                                  bool separate_shader)
 {
    /* We disable varying sorting for separate shader programs for the
     * following reasons:
@@ -1068,10 +1071,20 @@ varying_matches::assign_locations(uint64_t reserved_slots, bool separate_shader)
    for (unsigned i = 0; i < this->num_matches; i++) {
       unsigned *location = &generic_location;
 
-      if ((this->matches[i].consumer_var &&
-           this->matches[i].consumer_var->data.patch) ||
-          (this->matches[i].producer_var &&
-           this->matches[i].producer_var->data.patch))
+      const ir_variable *var;
+      const glsl_type *type;
+      bool is_vertex_input = false;
+      if (matches[i].consumer_var) {
+         var = matches[i].consumer_var;
+         type = get_varying_type(var, consumer_stage);
+         if (consumer_stage == MESA_SHADER_VERTEX)
+            is_vertex_input = true;
+      } else {
+         var = matches[i].producer_var;
+         type = get_varying_type(var, producer_stage);
+      }
+
+      if (var->data.patch)
          location = &generic_patch_location;
 
       /* Advance to the next slot if this varying has a different packing
@@ -1083,9 +1096,45 @@ varying_matches::assign_locations(uint64_t reserved_slots, bool separate_shader)
           != this->matches[i].packing_class) {
          *location = ALIGN(*location, 4);
       }
-      while ((*location < MAX_VARYING * 4u) &&
-            (reserved_slots & (1u << *location / 4u))) {
-         *location = ALIGN(*location + 1, 4);
+
+      unsigned num_elements =  type->count_attribute_slots(is_vertex_input);
+      unsigned slot_end = this->disable_varying_packing ? 4 :
+         type->without_array()->vector_elements;
+      slot_end += *location - 1;
+
+      /* FIXME: We could be smarter in the below code and loop back over
+       * trying to fill any locations that we skipped because we couldn't pack
+       * the varying between an explicit location. For now just let the user
+       * hit the linking error if we run out of room and suggest they use
+       * explicit locations.
+       */
+      for (unsigned j = 0; j < num_elements; j++) {
+         while ((slot_end < MAX_VARYING * 4u) &&
+                ((reserved_slots & (1u << *location / 4u) ||
+                 (reserved_slots & (1u << slot_end / 4u))))) {
+
+            *location = ALIGN(*location + 1, 4);
+            slot_end = *location;
+
+            /* reset the counter and try again */
+            j = 0;
+         }
+
+         /* Increase the slot to make sure there is enough room for next
+          * array element.
+          */
+         if (this->disable_varying_packing)
+            slot_end += 4;
+         else
+            slot_end += type->without_array()->vector_elements;
+      }
+
+      if (!var->data.patch && *location >= MAX_VARYING * 4u) {
+         linker_error(prog, "insufficient contiguous locations available for "
+                      "%s it is possible an array or struct could not be "
+                      "packed between varyings with explicit locations. Try "
+                      "using an explicit location for arrays and structs.",
+                      var->name);
       }
 
       this->matches[i].generic_location = *location;
@@ -1473,8 +1522,14 @@ reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode)
          continue;
 
       var_slot = var->data.location - VARYING_SLOT_VAR0;
-      if (var_slot >= 0 && var_slot < MAX_VARYING)
-         slots |= 1u << var_slot;
+
+      unsigned num_elements = get_varying_type(var, stage->Stage)
+         ->count_attribute_slots(stage->Stage == MESA_SHADER_VERTEX);
+      for (unsigned i = 0; i < num_elements; i++) {
+         if (var_slot >= 0 && var_slot < MAX_VARYING)
+            slots |= 1u << var_slot;
+         var_slot += 1;
+      }
    }
 
    return slots;
@@ -1660,7 +1715,7 @@ assign_varying_locations(struct gl_context *ctx,
       reserved_varying_slot(producer, ir_var_shader_out) |
       reserved_varying_slot(consumer, ir_var_shader_in);
 
-   const unsigned slots_used = matches.assign_locations(reserved_slots,
+   const unsigned slots_used = matches.assign_locations(prog, reserved_slots,
                                                         prog->SeparateShader);
    matches.store_locations();
 
