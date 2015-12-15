@@ -634,7 +634,6 @@ static int si_shader_select(struct pipe_context *ctx,
 		sel->last_variant = shader;
 	}
 	state->current = shader;
-	p_atomic_inc(&sctx->screen->b.num_compilations);
 	pipe_mutex_unlock(sel->mutex);
 	return 0;
 }
