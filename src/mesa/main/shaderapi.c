@@ -1514,6 +1514,8 @@ void GLAPIENTRY
 _mesa_LinkProgram(GLhandleARB programObj)
 {
    GET_CURRENT_CONTEXT(ctx);
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glLinkProgram %u\n", programObj);
    link_program(ctx, programObj);
 }
 
@@ -1730,6 +1732,9 @@ _mesa_UseProgram(GLhandleARB program)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg;
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glUseProgram %u\n", program);
 
    if (_mesa_is_xfb_active_and_unpaused(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
