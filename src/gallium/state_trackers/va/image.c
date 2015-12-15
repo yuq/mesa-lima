@@ -264,7 +264,7 @@ vlVaDeriveImage(VADriverContextP ctx, VASurfaceID surface, VAImage *image)
    img->image_id = handle_table_add(drv->htab, img);
 
    img_buf->type = VAImageBufferType;
-   img_buf->size = image->data_size;
+   img_buf->size = img->data_size;
    img_buf->num_elements = 1;
    img_buf->derived_surface.fence = surf->fence;
 
