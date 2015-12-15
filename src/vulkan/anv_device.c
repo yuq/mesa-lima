@@ -1472,6 +1472,7 @@ VkResult anv_CreateBuffer(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    buffer->size = pCreateInfo->size;
+   buffer->usage = pCreateInfo->usage;
    buffer->bo = NULL;
    buffer->offset = 0;
 

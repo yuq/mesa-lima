@@ -133,11 +133,16 @@ VkResult anv_CreateDescriptorSetLayout(
          break;
       }
 
-      if (binding->descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+      switch (binding->descriptorType) {
+      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
          for_each_bit(s, binding->stageFlags) {
             set_layout->binding[b].stage[s].image_index = image_count[s];
             image_count[s] += binding->descriptorCount;
          }
+         break;
+      default:
+         break;
       }
 
       if (binding->pImmutableSamplers) {

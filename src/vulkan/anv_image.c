@@ -505,26 +505,45 @@ anv_CreateBufferView(VkDevice _device,
    ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
    struct anv_buffer_view *view;
 
-   /* TODO: Storage texel buffers */
-
    view = anv_alloc2(&device->alloc, pAllocator, sizeof(*view), 8,
                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!view)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->bo = buffer->bo;
-   view->offset = buffer->offset + pCreateInfo->offset;
-
-   view->surface_state =
-      anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   anv_fill_buffer_surface_state(device, view->surface_state.map,
-                                 format->surface_format,
-                                 view->offset, pCreateInfo->range,
-                                 format->isl_layout->bpb / 8);
+   view->format = format->surface_format;
+   view->bo = buffer->bo;
+   view->offset = buffer->offset + pCreateInfo->offset;
+   view->range = pCreateInfo->range;
+
+   if (buffer->usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
+      view->surface_state =
+         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+
+      anv_fill_buffer_surface_state(device, view->surface_state.map,
+                                    view->format,
+                                    view->offset, pCreateInfo->range,
+                                    format->isl_layout->bpb / 8);
+   } else {
+      view->surface_state = (struct anv_state){ 0 };
+   }
+
+   if (buffer->usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
+      view->storage_surface_state =
+         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+
+      enum isl_format storage_format =
+         isl_lower_storage_image_format(&device->isl_dev, view->format);
+
+      anv_fill_buffer_surface_state(device, view->storage_surface_state.map,
+                                    storage_format,
+                                    view->offset, pCreateInfo->range,
+                                    format->isl_layout->bpb / 8);
+   } else {
+      view->storage_surface_state = (struct anv_state){ 0 };
+   }
 
    *pView = anv_buffer_view_to_handle(view);
 
@@ -538,7 +557,14 @@ anv_DestroyBufferView(VkDevice _device, VkBufferView bufferView,
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_buffer_view, view, bufferView);
 
-   anv_state_pool_free(&device->surface_state_pool, view->surface_state);
+   if (view->surface_state.alloc_size > 0)
+      anv_state_pool_free(&device->surface_state_pool,
+                          view->surface_state);
+
+   if (view->storage_surface_state.alloc_size > 0)
+      anv_state_pool_free(&device->surface_state_pool,
+                          view->storage_surface_state);
+
    anv_free2(&device->alloc, pAllocator, view);
 }
 
@@ -598,4 +624,20 @@ anv_image_view_fill_image_param(struct anv_device *device,
 {
    memset(param, 0, sizeof *param);
    anv_finishme("Actually fill out brw_image_param");
+}
+
+void
+anv_buffer_view_fill_image_param(struct anv_device *device,
+                                 struct anv_buffer_view *view,
+                                 struct brw_image_param *param)
+{
+   /* Set the swizzling shifts to all-ones to effectively disable swizzling --
+    * See emit_address_calculation() in brw_fs_surface_builder.cpp for a more
+    * detailed explanation of these parameters.
+    */
+   param->swizzling[0] = 0xff;
+   param->swizzling[1] = 0xff;
+
+   param->stride[0] = isl_format_layouts[view->format].bpb / 8;
+   param->size[0] = view->range / param->stride[0];
 }

@@ -921,6 +921,8 @@ struct anv_buffer {
    struct anv_device *                          device;
    VkDeviceSize                                 size;
 
+   VkBufferUsageFlags                           usage;
+
    /* Set when bound */
    struct anv_bo *                              bo;
    VkDeviceSize                                 offset;
@@ -1517,10 +1519,13 @@ gen9_image_view_init(struct anv_image_view *iview,
                      struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_buffer_view {
+   enum isl_format format; /**< VkBufferViewCreateInfo::format */
    struct anv_bo *bo;
    uint32_t offset; /**< Offset into bo. */
+   uint64_t range; /**< VkBufferViewCreateInfo::range */
 
    struct anv_state surface_state;
+   struct anv_state storage_surface_state;
 };
 
 void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
@@ -1544,6 +1549,9 @@ void gen9_fill_buffer_surface_state(void *state, enum isl_format format,
 void anv_image_view_fill_image_param(struct anv_device *device,
                                      struct anv_image_view *view,
                                      struct brw_image_param *param);
+void anv_buffer_view_fill_image_param(struct anv_device *device,
+                                      struct anv_buffer_view *view,
+                                      struct brw_image_param *param);
 
 struct anv_sampler {
    uint32_t state[4];

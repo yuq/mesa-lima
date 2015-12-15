@@ -736,7 +736,16 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          break;
 
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-         assert(!"Unsupported descriptor type");
+         surface_state = desc->buffer_view->storage_surface_state;
+         bo = desc->buffer_view->bo;
+         bo_offset = desc->buffer_view->offset;
+
+         struct brw_image_param *image_param =
+            &cmd_buffer->state.push_constants[stage]->images[image++];
+
+         anv_buffer_view_fill_image_param(cmd_buffer->device, desc->buffer_view,
+                                          image_param);
+         image_param->surface_idx = bias + s;
          break;
 
       default:
