@@ -705,8 +705,10 @@ generate_gs_ff_sync(struct brw_codegen *p,
    brw_MOV(p, get_element_ud(header, 0), get_element_ud(dst, 0));
 
    /* src1 is not an immediate when we use transform feedback */
-   if (src1.file != BRW_IMMEDIATE_VALUE)
+   if (src1.file != BRW_IMMEDIATE_VALUE) {
+      brw_set_default_exec_size(p, BRW_EXECUTE_4);
       brw_MOV(p, brw_vec4_grf(src1.nr, 0), brw_vec4_grf(dst.nr, 1));
+   }
 
    brw_pop_insn_state(p);
 }
