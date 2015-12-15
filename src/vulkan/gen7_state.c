@@ -33,7 +33,8 @@
 #include "gen75_pack.h"
 
 static const uint8_t
-anv_surftype(const struct anv_image *image, VkImageViewType view_type)
+anv_surftype(const struct anv_image *image, VkImageViewType view_type,
+             bool storage)
 {
    switch (view_type) {
    default:
@@ -45,7 +46,7 @@ anv_surftype(const struct anv_image *image, VkImageViewType view_type)
    case VK_IMAGE_VIEW_TYPE_CUBE:
    case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
       assert(image->type == VK_IMAGE_TYPE_2D);
-      return SURFTYPE_CUBE;
+      return storage ? SURFTYPE_2D : SURFTYPE_CUBE;
    case VK_IMAGE_VIEW_TYPE_2D:
    case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
       assert(image->type == VK_IMAGE_TYPE_2D);
@@ -266,7 +267,7 @@ genX(image_view_init)(struct anv_image_view *iview,
       isl_surf_get_image_alignment_sa(&surface->isl);
 
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
-      .SurfaceType = anv_surftype(image, pCreateInfo->viewType),
+      .SurfaceType = anv_surftype(image, pCreateInfo->viewType, false),
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[image_align_sa.height],
@@ -359,6 +360,9 @@ genX(image_view_init)(struct anv_image_view *iview,
 
    if (image->needs_storage_surface_state) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
+
+      surface_state.SurfaceType =
+         anv_surftype(image, pCreateInfo->viewType, true),
 
       surface_state.SurfaceFormat =
          isl_lower_storage_image_format(&device->isl_dev,
