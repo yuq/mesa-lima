@@ -491,6 +491,7 @@ genX(graphics_pipeline_create)(
          .OutputVertexSize                      = gs_prog_data->output_vertex_size_hwords * 2 - 1,
          .OutputTopology                        = gs_prog_data->output_topology,
          .VertexURBEntryReadLength              = gs_prog_data->base.urb_read_length,
+         .IncludeVertexHandles                  = gs_prog_data->base.include_vue_handles,
          .DispatchGRFStartRegisterforURBData    =
             gs_prog_data->base.base.dispatch_grf_start_reg,
 
