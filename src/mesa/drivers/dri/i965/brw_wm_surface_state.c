@@ -946,12 +946,14 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
       } else {
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);
+         GLsizeiptrARB size = MIN2(binding->BufferObject->BufferRangeSize,
+                                   binding->BufferObject->Size - binding->Offset);
          drm_intel_bo *bo =
             intel_bufferobj_buffer(brw, intel_bo,
                                    binding->Offset,
-                                   binding->BufferObject->Size - binding->Offset);
+                                   size);
          brw_create_constant_surface(brw, bo, binding->Offset,
-                                     binding->BufferObject->Size - binding->Offset,
+                                     size,
                                      &ubo_surf_offsets[i]);
       }
    }
@@ -968,12 +970,14 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
       } else {
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);
+         GLsizeiptrARB size = MIN2(binding->BufferObject->BufferRangeSize,
+                                   binding->BufferObject->Size - binding->Offset);
          drm_intel_bo *bo =
             intel_bufferobj_buffer(brw, intel_bo,
                                    binding->Offset,
-                                   binding->BufferObject->Size - binding->Offset);
+                                   size);
          brw_create_buffer_surface(brw, bo, binding->Offset,
-                                   binding->BufferObject->Size - binding->Offset,
+                                   size,
                                    &ssbo_surf_offsets[i]);
       }
    }

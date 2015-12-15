@@ -43,7 +43,7 @@
 #include "glformats.h"
 #include "texstore.h"
 #include "transformfeedback.h"
-
+#include "macros.h"
 
 /* Debug flags */
 /*#define VBO_DEBUG*/
@@ -2840,6 +2840,7 @@ bind_buffer_range_uniform_buffer(struct gl_context *ctx,
 
    _mesa_reference_buffer_object(ctx, &ctx->UniformBuffer, bufObj);
    bind_uniform_buffer(ctx, index, bufObj, offset, size, GL_FALSE);
+   bufObj->BufferRangeSize = MIN2(size, bufObj->Size);
 }
 
 /**
@@ -2875,6 +2876,7 @@ bind_buffer_range_shader_storage_buffer(struct gl_context *ctx,
 
    _mesa_reference_buffer_object(ctx, &ctx->ShaderStorageBuffer, bufObj);
    bind_shader_storage_buffer(ctx, index, bufObj, offset, size, GL_FALSE);
+   bufObj->BufferRangeSize = MIN2(size, bufObj->Size);
 }
 
 /**

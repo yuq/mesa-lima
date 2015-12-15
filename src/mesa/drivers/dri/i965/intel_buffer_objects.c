@@ -198,6 +198,7 @@ brw_buffer_data(struct gl_context *ctx,
    (void) target;
 
    intel_obj->Base.Size = size;
+   intel_obj->Base.BufferRangeSize = size;
    intel_obj->Base.Usage = usage;
    intel_obj->Base.StorageFlags = storageFlags;
 
