@@ -880,7 +880,8 @@ store_aos_array(struct gallivm_state *gallivm,
                 LLVMValueRef* aos,
                 int attrib,
                 int num_outputs,
-                LLVMValueRef clipmask)
+                LLVMValueRef clipmask,
+                boolean need_edgeflag)
 {
    LLVMBuilderRef builder = gallivm->builder;
    LLVMValueRef attr_index = lp_build_const_int32(gallivm, attrib);
@@ -912,8 +913,14 @@ store_aos_array(struct gallivm_state *gallivm,
        */
       assert(DRAW_TOTAL_CLIP_PLANES==14);
       /* initialize vertex id:16 = 0xffff, pad:1 = 0, edgeflag:1 = 1 */
-      vertex_id_pad_edgeflag = (0xffff << 16) | (1 << DRAW_TOTAL_CLIP_PLANES);
-      val = lp_build_const_int_vec(gallivm, lp_int_type(soa_type), vertex_id_pad_edgeflag);
+      if (!need_edgeflag) {
+         vertex_id_pad_edgeflag = (0xffff << 16) | (1 << DRAW_TOTAL_CLIP_PLANES);
+      }
+      else {
+         vertex_id_pad_edgeflag = (0xffff << 16);
+      }
+      val = lp_build_const_int_vec(gallivm, lp_int_type(soa_type),
+                                   vertex_id_pad_edgeflag);
       /* OR with the clipmask */
       cliptmp = LLVMBuildOr(builder, val, clipmask, "");
       for (i = 0; i < vector_length; i++) {
@@ -943,7 +950,7 @@ convert_to_aos(struct gallivm_state *gallivm,
                LLVMValueRef clipmask,
                int num_outputs,
                struct lp_type soa_type,
-               boolean have_clipdist)
+               boolean need_edgeflag)
 {
    LLVMBuilderRef builder = gallivm->builder;
    unsigned chan, attrib, i;
@@ -999,7 +1006,8 @@ convert_to_aos(struct gallivm_state *gallivm,
                       aos,
                       attrib,
                       num_outputs,
-                      clipmask);
+                      clipmask,
+                      need_edgeflag);
    }
 #if DEBUG_STORE
    lp_build_printf(gallivm, "   # storing end\n");
@@ -1135,11 +1143,7 @@ generate_clipmask(struct draw_llvm *llvm,
                   struct gallivm_state *gallivm,
                   struct lp_type vs_type,
                   LLVMValueRef (*outputs)[TGSI_NUM_CHANNELS],
-                  boolean clip_xy,
-                  boolean clip_z,
-                  boolean clip_user,
-                  boolean clip_halfz,
-                  unsigned ucp_enable,
+                  struct draw_llvm_variant_key *key,
                   LLVMValueRef context_ptr,
                   boolean *have_clipdist)
 {
@@ -1155,7 +1159,9 @@ generate_clipmask(struct draw_llvm *llvm,
    const unsigned pos = llvm->draw->vs.position_output;
    const unsigned cv = llvm->draw->vs.clipvertex_output;
    int num_written_clipdistance = llvm->draw->vs.vertex_shader->info.num_written_clipdistance;
-   bool have_cd = false;
+   boolean have_cd = false;
+   boolean clip_user = key->clip_user;
+   unsigned ucp_enable = key->ucp_enable;
    unsigned cd[2];
 
    cd[0] = llvm->draw->vs.clipdistance_output[0];
@@ -1196,7 +1202,11 @@ generate_clipmask(struct draw_llvm *llvm,
    }
 
    /* Cliptest, for hardwired planes */
-   if (clip_xy) {
+   /*
+    * XXX should take guardband into account (currently not in key).
+    * Otherwise might run the draw pipeline stages for nothing.
+    */
+   if (key->clip_xy) {
       /* plane 1 */
       test = lp_build_compare(gallivm, f32_type, PIPE_FUNC_GREATER, pos_x , pos_w);
       temp = shift;
@@ -1224,9 +1234,9 @@ generate_clipmask(struct draw_llvm *llvm,
       mask = LLVMBuildOr(builder, mask, test, "");
    }
 
-   if (clip_z) {
+   if (key->clip_z) {
       temp = lp_build_const_int_vec(gallivm, i32_type, 16);
-      if (clip_halfz) {
+      if (key->clip_halfz) {
          /* plane 5 */
          test = lp_build_compare(gallivm, f32_type, PIPE_FUNC_GREATER, zero, pos_z);
          test = LLVMBuildAnd(builder, test, temp, "");
@@ -1313,6 +1323,20 @@ generate_clipmask(struct draw_llvm *llvm,
          }
       }
    }
+   if (key->need_edgeflags) {
+      /*
+       * This isn't really part of clipmask but stored the same in vertex
+       * header later, so do it here.
+       */
+      unsigned edge_attr = llvm->draw->vs.edgeflag_output;
+      LLVMValueRef one = lp_build_const_vec(gallivm, f32_type, 1.0);
+      LLVMValueRef edgeflag = LLVMBuildLoad(builder, outputs[edge_attr][0], "");
+      test = lp_build_compare(gallivm, f32_type, PIPE_FUNC_EQUAL, one, edgeflag);
+      temp = lp_build_const_int_vec(gallivm, i32_type,
+                                    1LL << DRAW_TOTAL_CLIP_PLANES);
+      test = LLVMBuildAnd(builder, test, temp, "");
+      mask = LLVMBuildOr(builder, mask, test, "");
+   }
    return mask;
 }
 
@@ -1324,7 +1348,8 @@ generate_clipmask(struct draw_llvm *llvm,
 static LLVMValueRef
 clipmask_booli32(struct gallivm_state *gallivm,
                  const struct lp_type vs_type,
-                 LLVMValueRef clipmask_bool_ptr)
+                 LLVMValueRef clipmask_bool_ptr,
+                 boolean edgeflag_in_clipmask)
 {
    LLVMBuilderRef builder = gallivm->builder;
    LLVMTypeRef int32_type = LLVMInt32TypeInContext(gallivm->context);
@@ -1334,8 +1359,18 @@ clipmask_booli32(struct gallivm_state *gallivm,
    int i;
 
    /*
-    * Can do this with log2(vector length) pack instructions and one extract
-    * (as we don't actually need a or) with sse2 which would be way better.
+    * We need to invert the edgeflag bit from the clipmask here
+    * (because the result is really if we want to run the pipeline or not
+    * and we (may) need it if edgeflag was 0).
+    */
+   if (edgeflag_in_clipmask) {
+      struct lp_type i32_type = lp_int_type(vs_type);
+      LLVMValueRef edge = lp_build_const_int_vec(gallivm, i32_type,
+                                                 1LL << DRAW_TOTAL_CLIP_PLANES);
+      clipmask_bool = LLVMBuildXor(builder, clipmask_bool, edge, "");
+   }
+   /*
+    * Could do much better with just cmp/movmskps.
     */
    for (i=0; i < vs_type.length; i++) {
       temp = LLVMBuildExtractElement(builder, clipmask_bool,
@@ -1531,8 +1566,9 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    const boolean bypass_viewport = key->has_gs || key->bypass_viewport ||
                                    llvm->draw->vs.vertex_shader->info.writes_viewport_index;
    const boolean enable_cliptest = !key->has_gs && (key->clip_xy ||
-                                                    key->clip_z  ||
-                                                    key->clip_user);
+                                                    key->clip_z ||
+                                                    key->clip_user ||
+                                                    key->need_edgeflags);
    LLVMValueRef variant_func;
    const unsigned pos = llvm->draw->vs.position_output;
    const unsigned cv = llvm->draw->vs.clipvertex_output;
@@ -1771,11 +1807,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
                                          gallivm,
                                          vs_type,
                                          outputs,
-                                         key->clip_xy,
-                                         key->clip_z,
-                                         key->clip_user,
-                                         key->clip_halfz,
-                                         key->ucp_enable,
+                                         key,
                                          context_ptr, &have_clipdist);
             temp = LLVMBuildOr(builder, clipmask, temp, "");
             /* store temporary clipping boolean value */
@@ -1800,14 +1832,15 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
        */
       convert_to_aos(gallivm, io, NULL, outputs, clipmask,
                      vs_info->num_outputs, vs_type,
-                     have_clipdist);
+                     enable_cliptest && key->need_edgeflags);
    }
    lp_build_loop_end_cond(&lp_loop, count, step, LLVMIntUGE);
 
    sampler->destroy(sampler);
 
    /* return clipping boolean value for function */
-   ret = clipmask_booli32(gallivm, vs_type, clipmask_bool_ptr);
+   ret = clipmask_booli32(gallivm, vs_type, clipmask_bool_ptr,
+                          enable_cliptest && key->need_edgeflags);
 
    LLVMBuildRet(builder, ret);
 
@@ -1841,6 +1874,7 @@ draw_llvm_make_variant_key(struct draw_llvm *llvm, char *store)
    key->clip_user = llvm->draw->clip_user;
    key->bypass_viewport = llvm->draw->bypass_viewport;
    key->clip_halfz = llvm->draw->rasterizer->clip_halfz;
+   /* XXX assumes edgeflag output not at 0 */
    key->need_edgeflags = (llvm->draw->vs.edgeflag_output ? TRUE : FALSE);
    key->ucp_enable = llvm->draw->rasterizer->clip_plane_enable;
    key->has_gs = llvm->draw->gs.geometry_shader != NULL;
