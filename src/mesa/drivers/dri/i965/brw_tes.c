@@ -241,15 +241,6 @@ brw_upload_tes_prog(struct brw_context *brw)
                         BRW_NEW_TESS_EVAL_PROGRAM))
       return;
 
-   if (tep == NULL) {
-      /* Other state atoms had better not try to access prog_data, since
-       * there's no TES program.
-       */
-      brw->tes.prog_data = NULL;
-      brw->tes.base.prog_data = NULL;
-      return;
-   }
-
    struct gl_program *prog = &tep->program.Base;
 
    memset(&key, 0, sizeof(key));

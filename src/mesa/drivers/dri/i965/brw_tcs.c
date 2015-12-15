@@ -187,6 +187,10 @@ brw_upload_tcs_prog(struct brw_context *brw)
    /* BRW_NEW_TESS_CTRL_PROGRAM */
    struct brw_tess_ctrl_program *tcp =
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
+   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   struct brw_tess_eval_program *tep =
+      (struct brw_tess_eval_program *) brw->tess_eval_program;
+   assert(tcp && tep);
 
    if (!brw_state_dirty(brw,
                         _NEW_TEXTURE,
@@ -194,15 +198,6 @@ brw_upload_tcs_prog(struct brw_context *brw)
                         BRW_NEW_TESS_CTRL_PROGRAM |
                         BRW_NEW_TESS_EVAL_PROGRAM))
       return;
-
-   if (tcp == NULL) {
-      /* Other state atoms had better not try to access prog_data, since
-       * there's no HS program.
-       */
-      brw->tcs.prog_data = NULL;
-      brw->tcs.base.prog_data = NULL;
-      return;
-   }
 
    struct gl_program *prog = &tcp->program.Base;
 
@@ -216,13 +211,9 @@ brw_upload_tcs_prog(struct brw_context *brw)
    brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
                                       &key.tex);
 
-   /* BRW_NEW_TESS_EVAL_PROGRAM */
    /* We need to specialize our code generation for tessellation levels
     * based on the domain the DS is expecting to tessellate.
     */
-   struct brw_tess_eval_program *tep =
-      (struct brw_tess_eval_program *) brw->tess_eval_program;
-   assert(tep);
    key.tes_primitive_mode = tep->program.PrimitiveMode;
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_TCS_PROG,
