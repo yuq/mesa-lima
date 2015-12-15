@@ -2155,8 +2155,6 @@ struct gl_compute_program_state
 /**
  * ATI_fragment_shader runtime state
  */
-#define ATI_FS_INPUT_PRIMARY 0
-#define ATI_FS_INPUT_SECONDARY 1
 
 struct atifs_instruction;
 struct atifs_setupinst;
