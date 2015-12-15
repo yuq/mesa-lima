@@ -1524,20 +1524,20 @@ struct anv_buffer_view {
 };
 
 void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
-                                   const struct anv_format *format,
+                                   enum isl_format format,
                                    uint32_t offset, uint32_t range,
                                    uint32_t stride);
 
-void gen7_fill_buffer_surface_state(void *state, const struct anv_format *format,
+void gen7_fill_buffer_surface_state(void *state, enum isl_format format,
                                     uint32_t offset, uint32_t range,
                                     uint32_t stride);
-void gen75_fill_buffer_surface_state(void *state, const struct anv_format *format,
+void gen75_fill_buffer_surface_state(void *state, enum isl_format format,
                                      uint32_t offset, uint32_t range,
                                      uint32_t stride);
-void gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
+void gen8_fill_buffer_surface_state(void *state, enum isl_format format,
                                     uint32_t offset, uint32_t range,
                                     uint32_t stride);
-void gen9_fill_buffer_surface_state(void *state, const struct anv_format *format,
+void gen9_fill_buffer_surface_state(void *state, enum isl_format format,
                                     uint32_t offset, uint32_t range,
                                     uint32_t stride);
 

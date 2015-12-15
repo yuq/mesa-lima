@@ -57,7 +57,7 @@ anv_surftype(const struct anv_image *image, VkImageViewType view_type)
 }
 
 GENX_FUNC(GEN7, GEN75) void
-genX(fill_buffer_surface_state)(void *state, const struct anv_format *format,
+genX(fill_buffer_surface_state)(void *state, enum isl_format format,
                                 uint32_t offset, uint32_t range,
                                 uint32_t stride)
 {
@@ -65,7 +65,7 @@ genX(fill_buffer_surface_state)(void *state, const struct anv_format *format,
 
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType                              = SURFTYPE_BUFFER,
-      .SurfaceFormat                            = format->surface_format,
+      .SurfaceFormat                            = format,
       .SurfaceVerticalAlignment                 = VALIGN_4,
       .SurfaceHorizontalAlignment               = HALIGN_4,
       .TiledSurface                             = false,

@@ -605,7 +605,7 @@ fill_descriptor_buffer_surface_state(struct anv_device *device, void *state,
    }
 
    anv_fill_buffer_surface_state(device, state,
-                                 anv_format_for_vk_format(format),
+                                 anv_format_for_vk_format(format)->surface_format,
                                  offset, range, 1);
 }
 

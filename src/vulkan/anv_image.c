@@ -521,7 +521,8 @@ anv_CreateBufferView(VkDevice _device,
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   anv_fill_buffer_surface_state(device, view->surface_state.map, format,
+   anv_fill_buffer_surface_state(device, view->surface_state.map,
+                                 format->surface_format,
                                  view->offset, pCreateInfo->range,
                                  format->isl_layout->bpb / 8);
 
