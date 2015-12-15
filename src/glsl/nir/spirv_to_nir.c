@@ -818,20 +818,26 @@ vtn_get_builtin_location(struct vtn_builder *b,
       assert(*mode == nir_var_shader_out);
       break;
    case SpvBuiltInNumWorkgroups:
+      *location = SYSTEM_VALUE_NUM_WORK_GROUPS;
+      set_mode_system_value(mode);
    case SpvBuiltInWorkgroupSize:
-      /* these are constants, need to be handled specially */
+      /* This should already be handled */
       unreachable("unsupported builtin");
       break;
-   case SpvBuiltInGlobalInvocationId:
-   case SpvBuiltInLocalInvocationIndex:
-      /* these are computed values, need to be handled specially */
-      unreachable("unsupported builtin");
    case SpvBuiltInWorkgroupId:
       *location = SYSTEM_VALUE_WORK_GROUP_ID;
       set_mode_system_value(mode);
       break;
    case SpvBuiltInLocalInvocationId:
       *location = SYSTEM_VALUE_LOCAL_INVOCATION_ID;
+      set_mode_system_value(mode);
+      break;
+   case SpvBuiltInLocalInvocationIndex:
+      *location = SYSTEM_VALUE_LOCAL_INVOCATION_INDEX;
+      set_mode_system_value(mode);
+      break;
+   case SpvBuiltInGlobalInvocationId:
+      *location = SYSTEM_VALUE_GLOBAL_INVOCATION_ID;
       set_mode_system_value(mode);
       break;
    case SpvBuiltInHelperInvocation:
@@ -893,6 +899,19 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       break;
    case SpvDecorationBuiltIn: {
       SpvBuiltIn builtin = dec->literals[0];
+
+      if (builtin == SpvBuiltInWorkgroupSize) {
+         /* This shouldn't be a builtin.  It's actually a constant. */
+         var->data.mode = nir_var_global;
+         var->data.read_only = true;
+
+         nir_constant *val = ralloc(var, nir_constant);
+         val->value.u[0] = b->shader->info.cs.local_size[0];
+         val->value.u[1] = b->shader->info.cs.local_size[1];
+         val->value.u[2] = b->shader->info.cs.local_size[2];
+         var->constant_initializer = val;
+         break;
+      }
 
       nir_variable_mode mode = var->data.mode;
       vtn_get_builtin_location(b, builtin, &var->data.location, &mode);
