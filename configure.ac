@@ -383,10 +383,11 @@ save_CFLAGS="$CFLAGS"
 CFLAGS="$SSE41_CFLAGS $CFLAGS"
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #include <smmintrin.h>
+int param;
 int main () {
-    __m128i a = _mm_set1_epi32 (0), b = _mm_set1_epi32 (0), c;
+    __m128i a = _mm_set1_epi32 (param), b = _mm_set1_epi32 (param + 1), c;
     c = _mm_max_epu32(a, b);
-    return 0;
+    return _mm_cvtsi128_si32(c);
 }]])], SSE41_SUPPORTED=1)
 CFLAGS="$save_CFLAGS"
 if test "x$SSE41_SUPPORTED" = x1; then
