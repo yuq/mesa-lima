@@ -119,7 +119,7 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
-   if (anv_gem_get_param(fd, I915_PARAM_MMAP_VERSION < 1)) {
+   if (anv_gem_get_param(fd, I915_PARAM_MMAP_VERSION) < 1) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
                          "kernel missing wc mmap");
       goto fail;
