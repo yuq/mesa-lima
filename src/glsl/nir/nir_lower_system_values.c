@@ -40,17 +40,15 @@ convert_instr(nir_intrinsic_instr *instr)
 
    void *mem_ctx = ralloc_parent(instr);
 
+   assert(instr->dest.is_ssa);
+
    nir_intrinsic_op op = nir_intrinsic_from_system_value(var->data.location);
    nir_intrinsic_instr *new_instr = nir_intrinsic_instr_create(mem_ctx, op);
 
-   if (instr->dest.is_ssa) {
-      nir_ssa_dest_init(&new_instr->instr, &new_instr->dest,
-                        instr->dest.ssa.num_components, NULL);
-      nir_ssa_def_rewrite_uses(&instr->dest.ssa,
-                               nir_src_for_ssa(&new_instr->dest.ssa));
-   } else {
-      nir_dest_copy(&new_instr->dest, &instr->dest, mem_ctx);
-   }
+   nir_ssa_dest_init(&new_instr->instr, &new_instr->dest,
+                     instr->dest.ssa.num_components, NULL);
+   nir_ssa_def_rewrite_uses(&instr->dest.ssa,
+                            nir_src_for_ssa(&new_instr->dest.ssa));
 
    nir_instr_insert_before(&instr->instr, &new_instr->instr);
    nir_instr_remove(&instr->instr);
