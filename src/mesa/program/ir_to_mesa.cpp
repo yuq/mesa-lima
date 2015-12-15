@@ -2998,8 +2998,6 @@ _mesa_ir_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       if (linked_prog) {
          _mesa_copy_linked_program_data((gl_shader_stage) i, prog, linked_prog);
 
-	 _mesa_reference_program(ctx, &prog->_LinkedShaders[i]->Program,
-				 linked_prog);
          if (!ctx->Driver.ProgramStringNotify(ctx,
                                               _mesa_shader_stage_to_program(i),
                                               linked_prog)) {
