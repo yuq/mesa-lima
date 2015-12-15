@@ -55,9 +55,61 @@ convert_block(nir_block *block, void *void_state)
 
       b->cursor = nir_after_instr(&load_var->instr);
 
-      nir_intrinsic_op sysval_op =
-         nir_intrinsic_from_system_value(var->data.location);
-      nir_ssa_def *sysval = nir_load_system_value(b, sysval_op, 0);
+      nir_ssa_def *sysval;
+      switch (var->data.location) {
+      case SYSTEM_VALUE_GLOBAL_INVOCATION_ID: {
+         /* From the GLSL man page for gl_GlobalInvocationID:
+          *
+          *    "The value of gl_GlobalInvocationID is equal to
+          *    gl_WorkGroupID * gl_WorkGroupSize + gl_LocalInvocationID"
+          */
+
+         nir_const_value local_size;
+         local_size.u[0] = b->shader->info.cs.local_size[0];
+         local_size.u[1] = b->shader->info.cs.local_size[1];
+         local_size.u[2] = b->shader->info.cs.local_size[2];
+
+         nir_ssa_def *group_id =
+            nir_load_system_value(b, nir_intrinsic_load_work_group_id, 0);
+         nir_ssa_def *local_id =
+            nir_load_system_value(b, nir_intrinsic_load_invocation_id, 0);
+
+         sysval = nir_iadd(b, nir_imul(b, group_id,
+                                          nir_build_imm(b, 3, local_size)),
+                              local_id);
+         break;
+      }
+
+      case SYSTEM_VALUE_LOCAL_INVOCATION_INDEX: {
+         /* From the GLSL man page for gl_LocalInvocationIndex:
+          *
+          *    ?The value of gl_LocalInvocationIndex is equal to
+          *    gl_LocalInvocationID.z * gl_WorkGroupSize.x *
+          *    gl_WorkGroupSize.y + gl_LocalInvocationID.y *
+          *    gl_WorkGroupSize.x + gl_LocalInvocationID.x"
+          */
+         nir_ssa_def *local_id =
+            nir_load_system_value(b, nir_intrinsic_load_invocation_id, 0);
+
+         unsigned stride_y = b->shader->info.cs.local_size[0];
+         unsigned stride_z = b->shader->info.cs.local_size[0] *
+                             b->shader->info.cs.local_size[1];
+
+         sysval = nir_iadd(b, nir_imul(b, nir_channel(b, local_id, 2),
+                                          nir_imm_int(b, stride_z)),
+                              nir_iadd(b, nir_imul(b, nir_channel(b, local_id, 1),
+                                                      nir_imm_int(b, stride_y)),
+                                          nir_channel(b, local_id, 0)));
+         break;
+      }
+
+      default: {
+         nir_intrinsic_op sysval_op =
+            nir_intrinsic_from_system_value(var->data.location);
+         sysval = nir_load_system_value(b, sysval_op, 0);
+         break;
+      } /* default */
+      }
 
       nir_ssa_def_rewrite_uses(&load_var->dest.ssa, nir_src_for_ssa(sysval));
       nir_instr_remove(&load_var->instr);
