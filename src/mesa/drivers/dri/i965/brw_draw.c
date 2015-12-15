@@ -491,9 +491,29 @@ brw_try_draw_prims(struct gl_context *ctx,
          }
       }
 
-      brw->draw.params.gl_basevertex =
+      /* Determine if we need to flag BRW_NEW_VERTICES for updating the
+       * gl_BaseVertexARB or gl_BaseInstanceARB values. For indirect draw, we
+       * always flag if the shader uses one of the values. For direct draws,
+       * we only flag if the values change.
+       */
+      const int new_basevertex =
          prims[i].indexed ? prims[i].basevertex : prims[i].start;
-      brw->draw.params.gl_baseinstance = prims[i].base_instance;
+      const int new_baseinstance = prims[i].base_instance;
+      if (i > 0) {
+         const bool uses_draw_parameters =
+            brw->vs.prog_data->uses_basevertex ||
+            brw->vs.prog_data->uses_baseinstance;
+
+         if ((uses_draw_parameters && prims[i].is_indirect) ||
+             (brw->vs.prog_data->uses_basevertex &&
+              brw->draw.params.gl_basevertex != new_basevertex) ||
+             (brw->vs.prog_data->uses_baseinstance &&
+              brw->draw.params.gl_baseinstance != new_baseinstance))
+            brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
+      }
+
+      brw->draw.params.gl_basevertex = new_basevertex;
+      brw->draw.params.gl_baseinstance = new_baseinstance;
       drm_intel_bo_unreference(brw->draw.draw_params_bo);
 
       if (prims[i].is_indirect) {
