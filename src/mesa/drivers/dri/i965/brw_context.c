@@ -379,7 +379,10 @@ brw_initialize_context_constants(struct brw_context *brw)
       [MESA_SHADER_GEOMETRY] = brw->gen >= 6,
       [MESA_SHADER_FRAGMENT] = true,
       [MESA_SHADER_COMPUTE] =
-         (ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) ||
+         (ctx->API == API_OPENGL_CORE &&
+          ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) ||
+         (ctx->API == API_OPENGLES2 &&
+          ctx->Const.MaxComputeWorkGroupSize[0] >= 128) ||
          _mesa_extension_override_enables.ARB_compute_shader,
    };
 
