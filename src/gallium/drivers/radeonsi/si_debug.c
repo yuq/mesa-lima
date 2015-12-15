@@ -28,8 +28,11 @@
 #include "si_shader.h"
 #include "sid.h"
 #include "sid_tables.h"
+#include "radeon/radeon_elf_util.h"
 #include "ddebug/dd_util.h"
+#include "util/u_memory.h"
 
+DEBUG_GET_ONCE_OPTION(replace_shaders, "RADEON_REPLACE_SHADERS", NULL)
 
 static void si_dump_shader(struct si_shader_ctx_state *state, const char *name,
 			   FILE *f)
@@ -40,6 +43,98 @@ static void si_dump_shader(struct si_shader_ctx_state *state, const char *name,
 	fprintf(f, "%s shader disassembly:\n", name);
 	si_dump_shader_key(state->cso->type, &state->current->key, f);
 	fprintf(f, "%s\n\n", state->current->binary.disasm_string);
+}
+
+/**
+ * Shader compiles can be overridden with arbitrary ELF objects by setting
+ * the environment variable RADEON_REPLACE_SHADERS=num1:filename1[;num2:filename2]
+ */
+bool si_replace_shader(unsigned num, struct radeon_shader_binary *binary)
+{
+	const char *p = debug_get_option_replace_shaders();
+	const char *semicolon;
+	char *copy = NULL;
+	FILE *f;
+	long filesize, nread;
+	char *buf = NULL;
+	bool replaced = false;
+
+	if (!p)
+		return false;
+
+	while (*p) {
+		unsigned long i;
+		char *endp;
+		i = strtoul(p, &endp, 0);
+
+		p = endp;
+		if (*p != ':') {
+			fprintf(stderr, "RADEON_REPLACE_SHADERS formatted badly.\n");
+			exit(1);
+		}
+		++p;
+
+		if (i == num)
+			break;
+
+		p = strchr(p, ';');
+		if (!p)
+			return false;
+		++p;
+	}
+	if (!*p)
+		return false;
+
+	semicolon = strchr(p, ';');
+	if (semicolon) {
+		p = copy = strndup(p, semicolon - p);
+		if (!copy) {
+			fprintf(stderr, "out of memory\n");
+			return false;
+		}
+	}
+
+	fprintf(stderr, "radeonsi: replace shader %u by %s\n", num, p);
+
+	f = fopen(p, "r");
+	if (!f) {
+		perror("radeonsi: failed to open file");
+		goto out_free;
+	}
+
+	if (fseek(f, 0, SEEK_END) != 0)
+		goto file_error;
+
+	filesize = ftell(f);
+	if (filesize < 0)
+		goto file_error;
+
+	if (fseek(f, 0, SEEK_SET) != 0)
+		goto file_error;
+
+	buf = MALLOC(filesize);
+	if (!buf) {
+		fprintf(stderr, "out of memory\n");
+		goto out_close;
+	}
+
+	nread = fread(buf, 1, filesize, f);
+	if (nread != filesize)
+		goto file_error;
+
+	radeon_elf_read(buf, filesize, binary);
+	replaced = true;
+
+out_close:
+	fclose(f);
+out_free:
+	FREE(buf);
+	free(copy);
+	return replaced;
+
+file_error:
+	perror("radeonsi: reading shader");
+	goto out_close;
 }
 
 /* Parsed IBs are difficult to read without colors. Use "less -R file" to
