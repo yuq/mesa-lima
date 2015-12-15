@@ -3075,7 +3075,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
 
       case SpvExecutionModeInvocations:
          assert(b->shader->stage == MESA_SHADER_GEOMETRY);
-         b->shader->info.gs.invocations = w[3];
+         b->shader->info.gs.invocations = MAX2(1, w[3]);
          break;
 
       case SpvExecutionModeDepthReplacing:
