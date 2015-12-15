@@ -513,7 +513,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
    }
 
    /* TODO: SIMD8 GS */
-   pipeline->gs_vec4 =
+   pipeline->gs_kernel =
       anv_pipeline_upload_kernel(pipeline, shader_code, code_size);
    pipeline->gs_vertex_count = nir->info.gs.vertices_in;
 
@@ -966,7 +966,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
 
    pipeline->vs_simd8 = NO_KERNEL;
    pipeline->vs_vec4 = NO_KERNEL;
-   pipeline->gs_vec4 = NO_KERNEL;
+   pipeline->gs_kernel = NO_KERNEL;
 
    pipeline->active_stages = 0;
    pipeline->total_scratch = 0;

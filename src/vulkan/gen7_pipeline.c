@@ -477,14 +477,14 @@ genX(graphics_pipeline_create)(
 
    const struct brw_gs_prog_data *gs_prog_data = &pipeline->gs_prog_data;
 
-   if (pipeline->gs_vec4 == NO_KERNEL || (extra && extra->disable_vs)) {
+   if (pipeline->gs_kernel == NO_KERNEL || (extra && extra->disable_vs)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), .GSEnable = false);
    } else {
       urb_offset = 1;
       urb_length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - urb_offset;
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS),
-         .KernelStartPointer                    = pipeline->gs_vec4,
+         .KernelStartPointer                    = pipeline->gs_kernel,
          .ScratchSpaceBasePointer               = pipeline->scratch_start[MESA_SHADER_GEOMETRY],
          .PerThreadScratchSpace                 = scratch_space(&gs_prog_data->base.base),
 

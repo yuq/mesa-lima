@@ -436,12 +436,12 @@ genX(graphics_pipeline_create)(
    offset = 1;
    length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
 
-   if (pipeline->gs_vec4 == NO_KERNEL)
+   if (pipeline->gs_kernel == NO_KERNEL)
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), .Enable = false);
    else
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS),
                      .SingleProgramFlow = false,
-                     .KernelStartPointer = pipeline->gs_vec4,
+                     .KernelStartPointer = pipeline->gs_kernel,
                      .VectorMaskEnable = Dmask,
                      .SamplerCount = 0,
                      .BindingTableEntryCount = 0,
@@ -533,7 +533,7 @@ genX(graphics_pipeline_create)(
     * shared with other gens.
     */
    const struct brw_vue_map *fs_input_map;
-   if (pipeline->gs_vec4 == NO_KERNEL)
+   if (pipeline->gs_kernel == NO_KERNEL)
       fs_input_map = &vue_prog_data->vue_map;
    else
       fs_input_map = &gs_prog_data->base.vue_map;
@@ -700,7 +700,7 @@ VkResult genX(compute_pipeline_create)(
 
    pipeline->vs_simd8 = NO_KERNEL;
    pipeline->vs_vec4 = NO_KERNEL;
-   pipeline->gs_vec4 = NO_KERNEL;
+   pipeline->gs_kernel = NO_KERNEL;
 
    pipeline->active_stages = 0;
    pipeline->total_scratch = 0;
