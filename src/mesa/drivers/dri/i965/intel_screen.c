@@ -999,13 +999,14 @@ intelCreateBuffer(__DRIscreen * driScrnPriv,
       fb->Visual.samples = num_samples;
    }
 
-   if (mesaVis->redBits == 5) {
+   if (mesaVis->redBits == 5)
       rgbFormat = MESA_FORMAT_B5G6R5_UNORM;
-   } else {
-      if (mesaVis->alphaBits == 0)
-         rgbFormat = MESA_FORMAT_B8G8R8X8_SRGB;
-      else
-         rgbFormat = MESA_FORMAT_B8G8R8A8_SRGB;
+   else if (mesaVis->sRGBCapable)
+      rgbFormat = MESA_FORMAT_B8G8R8A8_SRGB;
+   else if (mesaVis->alphaBits == 0)
+      rgbFormat = MESA_FORMAT_B8G8R8X8_UNORM;
+   else {
+      rgbFormat = MESA_FORMAT_B8G8R8A8_SRGB;
       fb->Visual.sRGBCapable = true;
    }
 
