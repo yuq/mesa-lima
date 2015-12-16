@@ -65,7 +65,6 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
                           GLsizei bufSize, GLint *params)
 {
    GLint buffer[16];
-   GLsizei count = 0;
    GET_CURRENT_CONTEXT(ctx);
 
    ASSERT_OUTSIDE_BEGIN_END(ctx);
@@ -141,10 +140,12 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       return;
    }
 
+   /* initialize the contents of the temporary buffer */
+   memcpy(buffer, params, MIN2(bufSize, 16) * sizeof(GLint));
+
    switch (pname) {
    case GL_SAMPLES:
-      count = ctx->Driver.QuerySamplesForFormat(ctx, target,
-            internalformat, buffer);
+      ctx->Driver.QuerySamplesForFormat(ctx, target, internalformat, buffer);
       break;
    case GL_NUM_SAMPLE_COUNTS: {
       if ((ctx->API == API_OPENGLES2 && ctx->Version == 30) &&
@@ -157,7 +158,6 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
           * Such a restriction no longer exists in GL ES 3.1.
           */
          buffer[0] = 0;
-         count = 1;
       } else {
          size_t num_samples;
 
@@ -182,7 +182,6 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
           * separately over-write it with the requested value.
           */
          buffer[0] = (GLint) num_samples;
-         count = 1;
       }
       break;
    }
@@ -206,7 +205,7 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
     * application.  Clamp the size of the copy to the size supplied by the
     * application.
     */
-   memcpy(params, buffer, MIN2(count, bufSize) * sizeof(GLint));
+   memcpy(params, buffer, MIN2(bufSize, 16) * sizeof(GLint));
 
    return;
 }
