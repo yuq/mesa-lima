@@ -256,6 +256,112 @@ _legal_parameters(struct gl_context *ctx, GLenum target, GLenum internalformat,
    return true;
 }
 
+/* Sets the appropriate "unsupported" response as defined by the
+ * ARB_internalformat_query2 spec for each each <pname>.
+ */
+static void
+_set_default_response(GLenum pname, GLint buffer[16])
+{
+   /* The ARB_internalformat_query2 defines which is the reponse best
+    * representing "not supported" or "not applicable" for each <pname>.
+    *
+    *     " In general:
+    *          - size- or count-based queries will return zero,
+    *          - support-, format- or type-based queries will return NONE,
+    *          - boolean-based queries will return FALSE, and
+    *          - list-based queries return no entries."
+    */
+   switch(pname) {
+   case GL_SAMPLES:
+      break;
+
+   case GL_MAX_COMBINED_DIMENSIONS:
+   case GL_NUM_SAMPLE_COUNTS:
+   case GL_INTERNALFORMAT_RED_SIZE:
+   case GL_INTERNALFORMAT_GREEN_SIZE:
+   case GL_INTERNALFORMAT_BLUE_SIZE:
+   case GL_INTERNALFORMAT_ALPHA_SIZE:
+   case GL_INTERNALFORMAT_DEPTH_SIZE:
+   case GL_INTERNALFORMAT_STENCIL_SIZE:
+   case GL_INTERNALFORMAT_SHARED_SIZE:
+   case GL_MAX_WIDTH:
+   case GL_MAX_HEIGHT:
+   case GL_MAX_DEPTH:
+   case GL_MAX_LAYERS:
+   case GL_IMAGE_TEXEL_SIZE:
+   case GL_TEXTURE_COMPRESSED_BLOCK_WIDTH:
+   case GL_TEXTURE_COMPRESSED_BLOCK_HEIGHT:
+   case GL_TEXTURE_COMPRESSED_BLOCK_SIZE:
+      buffer[0] = 0;
+      break;
+
+   case GL_INTERNALFORMAT_PREFERRED:
+   case GL_INTERNALFORMAT_RED_TYPE:
+   case GL_INTERNALFORMAT_GREEN_TYPE:
+   case GL_INTERNALFORMAT_BLUE_TYPE:
+   case GL_INTERNALFORMAT_ALPHA_TYPE:
+   case GL_INTERNALFORMAT_DEPTH_TYPE:
+   case GL_INTERNALFORMAT_STENCIL_TYPE:
+   case GL_FRAMEBUFFER_RENDERABLE:
+   case GL_FRAMEBUFFER_RENDERABLE_LAYERED:
+   case GL_FRAMEBUFFER_BLEND:
+   case GL_READ_PIXELS:
+   case GL_READ_PIXELS_FORMAT:
+   case GL_READ_PIXELS_TYPE:
+   case GL_TEXTURE_IMAGE_FORMAT:
+   case GL_TEXTURE_IMAGE_TYPE:
+   case GL_GET_TEXTURE_IMAGE_FORMAT:
+   case GL_GET_TEXTURE_IMAGE_TYPE:
+   case GL_MANUAL_GENERATE_MIPMAP:
+   case GL_AUTO_GENERATE_MIPMAP:
+   case GL_COLOR_ENCODING:
+   case GL_SRGB_READ:
+   case GL_SRGB_WRITE:
+   case GL_SRGB_DECODE_ARB:
+   case GL_FILTER:
+   case GL_VERTEX_TEXTURE:
+   case GL_TESS_CONTROL_TEXTURE:
+   case GL_TESS_EVALUATION_TEXTURE:
+   case GL_GEOMETRY_TEXTURE:
+   case GL_FRAGMENT_TEXTURE:
+   case GL_COMPUTE_TEXTURE:
+   case GL_TEXTURE_SHADOW:
+   case GL_TEXTURE_GATHER:
+   case GL_TEXTURE_GATHER_SHADOW:
+   case GL_SHADER_IMAGE_LOAD:
+   case GL_SHADER_IMAGE_STORE:
+   case GL_SHADER_IMAGE_ATOMIC:
+   case GL_IMAGE_COMPATIBILITY_CLASS:
+   case GL_IMAGE_PIXEL_FORMAT:
+   case GL_IMAGE_PIXEL_TYPE:
+   case GL_IMAGE_FORMAT_COMPATIBILITY_TYPE:
+   case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_TEST:
+   case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_TEST:
+   case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_WRITE:
+   case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE:
+   case GL_CLEAR_BUFFER:
+   case GL_TEXTURE_VIEW:
+   case GL_VIEW_COMPATIBILITY_CLASS:
+      buffer[0] = GL_NONE;
+      break;
+
+   case GL_INTERNALFORMAT_SUPPORTED:
+   case GL_COLOR_COMPONENTS:
+   case GL_DEPTH_COMPONENTS:
+   case GL_STENCIL_COMPONENTS:
+   case GL_COLOR_RENDERABLE:
+   case GL_DEPTH_RENDERABLE:
+   case GL_STENCIL_RENDERABLE:
+   case GL_MIPMAP:
+   case GL_TEXTURE_COMPRESSED:
+      buffer[0] = GL_FALSE;
+      break;
+
+   default:
+      unreachable("invalid 'pname'");
+   }
+}
+
 /* default implementation of QueryInternalFormat driverfunc, for
  * drivers not implementing ARB_internalformat_query2.
  */
