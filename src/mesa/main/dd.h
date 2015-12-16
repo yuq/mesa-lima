@@ -184,24 +184,6 @@ struct dd_function_table {
                                       GLenum srcFormat, GLenum srcType );
 
    /**
-    * Determine sample counts support for a particular target and format
-    *
-    * \param ctx            GL context
-    * \param target         GL target enum
-    * \param internalFormat GL format enum
-    * \param samples        Buffer to hold the returned sample counts.
-    *                       Drivers \b must \b not return more than 16 counts.
-    *
-    * \returns
-    * The number of sample counts actually written to \c samples.  If
-    * \c internaFormat is not renderable, zero is returned.
-    */
-   size_t (*QuerySamplesForFormat)(struct gl_context *ctx,
-                                   GLenum target,
-                                   GLenum internalFormat,
-                                   int samples[16]);
-
-   /**
     * Queries different driver parameters for a particular target and format.
     * Since ARB_internalformat_query2 introduced several new query parameters
     * over ARB_internalformat_query, having one driver hook for each parameter
