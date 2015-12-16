@@ -136,6 +136,12 @@ v140(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+v140_or_es3(const _mesa_glsl_parse_state *state)
+{
+   return state->is_version(140, 300);
+}
+
+static bool
 v400_fs_only(const _mesa_glsl_parse_state *state)
 {
    return state->is_version(400, 0) &&
@@ -1438,9 +1444,9 @@ builtin_builder::create_builtins()
 
                 NULL);
    add_function("inverse",
-                _inverse_mat2(v120, glsl_type::mat2_type),
-                _inverse_mat3(v120, glsl_type::mat3_type),
-                _inverse_mat4(v120, glsl_type::mat4_type),
+                _inverse_mat2(v140_or_es3, glsl_type::mat2_type),
+                _inverse_mat3(v140_or_es3, glsl_type::mat3_type),
+                _inverse_mat4(v140_or_es3, glsl_type::mat4_type),
                 _inverse_mat2(fp64, glsl_type::dmat2_type),
                 _inverse_mat3(fp64, glsl_type::dmat3_type),
                 _inverse_mat4(fp64, glsl_type::dmat4_type),
