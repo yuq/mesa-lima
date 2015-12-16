@@ -820,6 +820,7 @@ vtn_get_builtin_location(struct vtn_builder *b,
    case SpvBuiltInNumWorkgroups:
       *location = SYSTEM_VALUE_NUM_WORK_GROUPS;
       set_mode_system_value(mode);
+      break;
    case SpvBuiltInWorkgroupSize:
       /* This should already be handled */
       unreachable("unsupported builtin");
