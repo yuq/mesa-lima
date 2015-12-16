@@ -255,7 +255,13 @@ vl_deint_filter_init(struct vl_deint_filter *filter, struct pipe_context *pipe,
 
    /* TODO: handle other than 4:2:0 subsampling */
    memset(&templ, 0, sizeof(templ));
-   templ.buffer_format = PIPE_FORMAT_YV12;
+   templ.buffer_format = pipe->screen->get_video_param
+   (
+      pipe->screen,
+      PIPE_VIDEO_PROFILE_UNKNOWN,
+      PIPE_VIDEO_ENTRYPOINT_UNKNOWN,
+      PIPE_VIDEO_CAP_PREFERED_FORMAT
+   );
    templ.chroma_format = PIPE_VIDEO_CHROMA_FORMAT_420;
    templ.width = video_width;
    templ.height = video_height;
