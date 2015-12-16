@@ -29,6 +29,233 @@
 #include "fbobject.h"
 #include "formatquery.h"
 
+/* Handles the cases where either ARB_internalformat_query or
+ * ARB_internalformat_query2 have to return an error.
+ */
+static bool
+_legal_parameters(struct gl_context *ctx, GLenum target, GLenum internalformat,
+                  GLenum pname, GLsizei bufSize, GLint *params)
+
+{
+   bool query2 = _mesa_has_ARB_internalformat_query2(ctx);
+
+   /* The ARB_internalformat_query2 spec says:
+    *
+    *    "The INVALID_ENUM error is generated if the <target> parameter to
+    *    GetInternalformati*v is not one of the targets listed in Table 6.xx.
+    */
+   switch(target){
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_1D_ARRAY:
+   case GL_TEXTURE_2D:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_3D:
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_RECTANGLE:
+   case GL_TEXTURE_BUFFER:
+      if (!query2) {
+         /* The ARB_internalformat_query spec says:
+          *
+          *     "If the <target> parameter to GetInternalformativ is not one of
+          *      TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY
+          *      or RENDERBUFFER then an INVALID_ENUM error is generated.
+          */
+         _mesa_error(ctx, GL_INVALID_ENUM,
+                     "glGetInternalformativ(target=%s)",
+                     _mesa_enum_to_string(target));
+
+         return false;
+      }
+      break;
+
+   case GL_RENDERBUFFER:
+      break;
+
+   case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      /* The non-existence of ARB_texture_multisample is treated in
+       * ARB_internalformat_query implementation like an error.
+       */
+      if (!query2 &&
+          !(_mesa_has_ARB_texture_multisample(ctx) || _mesa_is_gles31(ctx))) {
+         _mesa_error(ctx, GL_INVALID_ENUM,
+                     "glGetInternalformativ(target=%s)",
+                     _mesa_enum_to_string(target));
+
+         return false;
+      }
+      break;
+
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glGetInternalformativ(target=%s)",
+                  _mesa_enum_to_string(target));
+      return false;
+   }
+
+
+   /* The ARB_internalformat_query2 spec says:
+    *
+    *     "The INVALID_ENUM error is generated if the <pname> parameter is
+    *     not one of the listed possibilities.
+    */
+   switch(pname){
+   case GL_SAMPLES:
+   case GL_NUM_SAMPLE_COUNTS:
+      break;
+
+   case GL_SRGB_DECODE_ARB:
+      /* The ARB_internalformat_query2 spec says:
+       *
+       *     "If ARB_texture_sRGB_decode or EXT_texture_sRGB_decode or
+       *     equivalent functionality is not supported, queries for the
+       *     SRGB_DECODE_ARB <pname> set the INVALID_ENUM error.
+       */
+      if (!_mesa_has_EXT_texture_sRGB_decode(ctx)) {
+         _mesa_error(ctx, GL_INVALID_ENUM,
+                     "glGetInternalformativ(pname=%s)",
+                     _mesa_enum_to_string(pname));
+         return false;
+      }
+      /* fallthrough */
+   case GL_INTERNALFORMAT_SUPPORTED:
+   case GL_INTERNALFORMAT_PREFERRED:
+   case GL_INTERNALFORMAT_RED_SIZE:
+   case GL_INTERNALFORMAT_GREEN_SIZE:
+   case GL_INTERNALFORMAT_BLUE_SIZE:
+   case GL_INTERNALFORMAT_ALPHA_SIZE:
+   case GL_INTERNALFORMAT_DEPTH_SIZE:
+   case GL_INTERNALFORMAT_STENCIL_SIZE:
+   case GL_INTERNALFORMAT_SHARED_SIZE:
+   case GL_INTERNALFORMAT_RED_TYPE:
+   case GL_INTERNALFORMAT_GREEN_TYPE:
+   case GL_INTERNALFORMAT_BLUE_TYPE:
+   case GL_INTERNALFORMAT_ALPHA_TYPE:
+   case GL_INTERNALFORMAT_DEPTH_TYPE:
+   case GL_INTERNALFORMAT_STENCIL_TYPE:
+   case GL_MAX_WIDTH:
+   case GL_MAX_HEIGHT:
+   case GL_MAX_DEPTH:
+   case GL_MAX_LAYERS:
+   case GL_MAX_COMBINED_DIMENSIONS:
+   case GL_COLOR_COMPONENTS:
+   case GL_DEPTH_COMPONENTS:
+   case GL_STENCIL_COMPONENTS:
+   case GL_COLOR_RENDERABLE:
+   case GL_DEPTH_RENDERABLE:
+   case GL_STENCIL_RENDERABLE:
+   case GL_FRAMEBUFFER_RENDERABLE:
+   case GL_FRAMEBUFFER_RENDERABLE_LAYERED:
+   case GL_FRAMEBUFFER_BLEND:
+   case GL_READ_PIXELS:
+   case GL_READ_PIXELS_FORMAT:
+   case GL_READ_PIXELS_TYPE:
+   case GL_TEXTURE_IMAGE_FORMAT:
+   case GL_TEXTURE_IMAGE_TYPE:
+   case GL_GET_TEXTURE_IMAGE_FORMAT:
+   case GL_GET_TEXTURE_IMAGE_TYPE:
+   case GL_MIPMAP:
+   case GL_MANUAL_GENERATE_MIPMAP:
+   case GL_AUTO_GENERATE_MIPMAP:
+   case GL_COLOR_ENCODING:
+   case GL_SRGB_READ:
+   case GL_SRGB_WRITE:
+   case GL_FILTER:
+   case GL_VERTEX_TEXTURE:
+   case GL_TESS_CONTROL_TEXTURE:
+   case GL_TESS_EVALUATION_TEXTURE:
+   case GL_GEOMETRY_TEXTURE:
+   case GL_FRAGMENT_TEXTURE:
+   case GL_COMPUTE_TEXTURE:
+   case GL_TEXTURE_SHADOW:
+   case GL_TEXTURE_GATHER:
+   case GL_TEXTURE_GATHER_SHADOW:
+   case GL_SHADER_IMAGE_LOAD:
+   case GL_SHADER_IMAGE_STORE:
+   case GL_SHADER_IMAGE_ATOMIC:
+   case GL_IMAGE_TEXEL_SIZE:
+   case GL_IMAGE_COMPATIBILITY_CLASS:
+   case GL_IMAGE_PIXEL_FORMAT:
+   case GL_IMAGE_PIXEL_TYPE:
+   case GL_IMAGE_FORMAT_COMPATIBILITY_TYPE:
+   case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_TEST:
+   case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_TEST:
+   case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_WRITE:
+   case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE:
+   case GL_TEXTURE_COMPRESSED:
+   case GL_TEXTURE_COMPRESSED_BLOCK_WIDTH:
+   case GL_TEXTURE_COMPRESSED_BLOCK_HEIGHT:
+   case GL_TEXTURE_COMPRESSED_BLOCK_SIZE:
+   case GL_CLEAR_BUFFER:
+   case GL_TEXTURE_VIEW:
+   case GL_VIEW_COMPATIBILITY_CLASS:
+      /* The ARB_internalformat_query spec says:
+       *
+       *     "If the <pname> parameter to GetInternalformativ is not SAMPLES
+       *     or NUM_SAMPLE_COUNTS, then an INVALID_ENUM error is generated."
+       */
+      if (!query2) {
+         _mesa_error(ctx, GL_INVALID_ENUM,
+                     "glGetInternalformativ(pname=%s)",
+                     _mesa_enum_to_string(pname));
+
+         return false;
+      }
+      break;
+
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glGetInternalformativ(pname=%s)",
+                  _mesa_enum_to_string(pname));
+      return false;
+   }
+
+   /* The ARB_internalformat_query spec says:
+    *
+    *     "If the <bufSize> parameter to GetInternalformativ is negative, then
+    *     an INVALID_VALUE error is generated."
+    *
+    * Nothing is said in ARB_internalformat_query2 but we assume the same.
+    */
+   if (bufSize < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "glGetInternalformativ(target=%s)",
+                  _mesa_enum_to_string(target));
+      return false;
+   }
+
+   /* The ARB_internalformat_query spec says:
+    *
+    *     "If the <internalformat> parameter to GetInternalformativ is not
+    *     color-, depth- or stencil-renderable, then an INVALID_ENUM error is
+    *     generated."
+    *
+    * Page 243 of the GLES 3.0.4 spec says this for GetInternalformativ:
+    *
+    *     "internalformat must be color-renderable, depth-renderable or
+    *     stencilrenderable (as defined in section 4.4.4)."
+    *
+    * Section 4.4.4 on page 212 of the same spec says:
+    *
+    *     "An internal format is color-renderable if it is one of the
+    *     formats from table 3.13 noted as color-renderable or if it
+    *     is unsized format RGBA or RGB."
+    *
+    * Therefore, we must accept GL_RGB and GL_RGBA here.
+    */
+   if (!query2 &&
+       internalformat != GL_RGB && internalformat != GL_RGBA &&
+       _mesa_base_fbo_format(ctx, internalformat) == 0) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glGetInternalformativ(internalformat=%s)",
+                  _mesa_enum_to_string(internalformat));
+      return false;
+   }
+
+   return true;
+}
+
 /* default implementation of QueryInternalFormat driverfunc, for
  * drivers not implementing ARB_internalformat_query2.
  */
