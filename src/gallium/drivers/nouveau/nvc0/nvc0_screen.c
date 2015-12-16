@@ -22,6 +22,7 @@
 
 #include <xf86drm.h>
 #include <nouveau_drm.h>
+#include <nvif/class.h>
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
 #include "pipe/p_screen.h"
@@ -699,12 +700,13 @@ nvc0_screen_create(struct nouveau_device *dev)
    screen->base.fence.update = nvc0_screen_fence_update;
 
 
-   ret = nouveau_object_new(chan,
-                            (dev->chipset < 0xe0) ? 0x1f906e : 0x906e, 0x906e,
-                            NULL, 0, &screen->nvsw);
+   ret = nouveau_object_new(chan, (dev->chipset < 0xe0) ? 0x1f906e : 0x906e,
+                            NVIF_CLASS_SW_GF100, NULL, 0, &screen->nvsw);
    if (ret)
       FAIL_SCREEN_INIT("Error creating SW object: %d\n", ret);
 
+   BEGIN_NVC0(push, SUBC_SW(NV01_SUBCHAN_OBJECT), 1);
+   PUSH_DATA (push, screen->nvsw->handle);
 
    switch (dev->chipset & ~0xf) {
    case 0x110:
