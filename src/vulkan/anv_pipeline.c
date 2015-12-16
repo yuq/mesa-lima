@@ -900,7 +900,6 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
    assert(info->pInputAssemblyState);
    assert(info->pViewportState);
    assert(info->pRasterizationState);
-   assert(info->pMultisampleState);
 
    if (subpass && subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED)
       assert(info->pDepthStencilState);
