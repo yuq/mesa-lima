@@ -68,6 +68,7 @@ vlVaDestroySurfaces(VADriverContextP ctx, VASurfaceID *surface_list, int num_sur
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = VL_VA_DRIVER(ctx);
+   pipe_mutex_lock(drv->mutex);
    for (i = 0; i < num_surfaces; ++i) {
       vlVaSurface *surf = handle_table_get(drv->htab, surface_list[i]);
       if (surf->buffer)
@@ -76,6 +77,7 @@ vlVaDestroySurfaces(VADriverContextP ctx, VASurfaceID *surface_list, int num_sur
       FREE(surf);
       handle_table_remove(drv->htab, surface_list[i]);
    }
+   pipe_mutex_unlock(drv->mutex);
 
    return VA_STATUS_SUCCESS;
 }
@@ -236,16 +238,21 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = VL_VA_DRIVER(ctx);
+   pipe_mutex_lock(drv->mutex);
    surf = handle_table_get(drv->htab, surface_id);
-   if (!surf)
+   if (!surf) {
+      pipe_mutex_unlock(drv->mutex);
       return VA_STATUS_ERROR_INVALID_SURFACE;
+   }
 
    screen = drv->pipe->screen;
    vscreen = drv->vscreen;
 
    tex = vscreen->texture_from_drawable(vscreen, draw);
-   if (!tex)
+   if (!tex) {
+      pipe_mutex_unlock(drv->mutex);
       return VA_STATUS_ERROR_INVALID_DISPLAY;
+   }
 
    dirty_area = vscreen->get_dirty_area(vscreen);
 
@@ -254,6 +261,7 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
    surf_draw = drv->pipe->create_surface(drv->pipe, tex, &surf_templ);
    if (!surf_draw) {
       pipe_resource_reference(&tex, NULL);
+      pipe_mutex_unlock(drv->mutex);
       return VA_STATUS_ERROR_INVALID_DISPLAY;
    }
 
@@ -268,8 +276,10 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
    vl_compositor_render(&drv->cstate, &drv->compositor, surf_draw, dirty_area, true);
 
    status = vlVaPutSubpictures(surf, drv, surf_draw, dirty_area, &src_rect, &dst_rect);
-   if (status)
+   if (status) {
+      pipe_mutex_unlock(drv->mutex);
       return status;
+   }
 
    screen->flush_frontbuffer(screen, tex, 0, 0,
                              vscreen->get_private(vscreen), NULL);
@@ -278,6 +288,7 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
 
    pipe_resource_reference(&tex, NULL);
    pipe_surface_reference(&surf_draw, NULL);
+   pipe_mutex_unlock(drv->mutex);
 
    return VA_STATUS_SUCCESS;
 }
@@ -599,6 +610,7 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
 
    memset(surfaces, VA_INVALID_ID, num_surfaces * sizeof(VASurfaceID));
 
+   pipe_mutex_lock(drv->mutex);
    for (i = 0; i < num_surfaces; i++) {
       vlVaSurface *surf = CALLOC(1, sizeof(vlVaSurface));
       if (!surf)
@@ -627,10 +639,12 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
          assert(0);
       }
    }
+   pipe_mutex_unlock(drv->mutex);
 
    return VA_STATUS_SUCCESS;
 
 no_res:
+   pipe_mutex_unlock(drv->mutex);
    if (i)
       vlVaDestroySurfaces(ctx, surfaces, i);
 
