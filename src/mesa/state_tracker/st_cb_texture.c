@@ -404,6 +404,16 @@ static boolean
 allocate_full_mipmap(const struct st_texture_object *stObj,
                      const struct st_texture_image *stImage)
 {
+   switch (stObj->base.Target) {
+   case GL_TEXTURE_RECTANGLE_NV:
+   case GL_TEXTURE_BUFFER:
+   case GL_TEXTURE_EXTERNAL_OES:
+   case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      /* these texture types cannot be mipmapped */
+      return FALSE;
+   }
+
    if (stImage->base.Level > 0 || stObj->base.GenerateMipmap)
       return TRUE;
 
@@ -418,6 +428,10 @@ allocate_full_mipmap(const struct st_texture_object *stObj,
    if (stObj->base.Sampler.MinFilter == GL_NEAREST ||
        stObj->base.Sampler.MinFilter == GL_LINEAR)
       /* not a mipmap minification filter */
+      return FALSE;
+
+   if (stObj->base.Target == GL_TEXTURE_3D)
+      /* 3D textures are seldom mipmapped */
       return FALSE;
 
    return TRUE;
