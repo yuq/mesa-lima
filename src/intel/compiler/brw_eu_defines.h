@@ -148,6 +148,18 @@ enum PACKED brw_horizontal_stride {
    BRW_HORIZONTAL_STRIDE_4 = 3,
 };
 
+enum PACKED gen10_align1_3src_src_horizontal_stride {
+   BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0 = 0,
+   BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1 = 1,
+   BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_2 = 2,
+   BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_4 = 3,
+};
+
+enum PACKED gen10_align1_3src_dst_horizontal_stride {
+   BRW_ALIGN1_3SRC_DST_HORIZONTAL_STRIDE_1 = 0,
+   BRW_ALIGN1_3SRC_DST_HORIZONTAL_STRIDE_2 = 1,
+};
+
 #define BRW_INSTRUCTION_NORMAL    0
 #define BRW_INSTRUCTION_SATURATE  1
 
@@ -819,6 +831,12 @@ enum PACKED brw_reg_file {
    BAD_FILE,
 };
 
+enum PACKED gen10_align1_3src_reg_file {
+   BRW_ALIGN1_3SRC_GENERAL_REGISTER_FILE = 0,
+   BRW_ALIGN1_3SRC_IMMEDIATE_VALUE       = 1, /* src0, src2 */
+   BRW_ALIGN1_3SRC_ACCUMULATOR           = 1, /* dest, src1 */
+};
+
 /* SNB adds 3-src instructions (MAD and LRP) that only operate on floats, so
  * the types were implied. IVB adds BFE and BFI2 that operate on doublewords
  * and unsigned doublewords, so a new field is also available in the da3src
@@ -829,6 +847,16 @@ enum PACKED brw_reg_file {
 #define BRW_3SRC_TYPE_D  1
 #define BRW_3SRC_TYPE_UD 2
 #define BRW_3SRC_TYPE_DF 3
+
+/* CNL adds Align1 support for 3-src instructions. Bit 35 of the instruction
+ * word is "Execution Datatype" which controls whether the instruction operates
+ * on float or integer types. The register arguments have fields that offer
+ * more fine control their respective types.
+ */
+enum PACKED gen10_align1_3src_exec_type {
+   BRW_ALIGN1_3SRC_EXEC_TYPE_INT   = 0,
+   BRW_ALIGN1_3SRC_EXEC_TYPE_FLOAT = 1,
+};
 
 #define BRW_ARF_NULL                  0x00
 #define BRW_ARF_ADDRESS               0x10
@@ -866,6 +894,13 @@ enum PACKED brw_vertical_stride {
    BRW_VERTICAL_STRIDE_16              = 5,
    BRW_VERTICAL_STRIDE_32              = 6,
    BRW_VERTICAL_STRIDE_ONE_DIMENSIONAL = 0xF,
+};
+
+enum PACKED gen10_align1_3src_vertical_stride {
+   BRW_ALIGN1_3SRC_VERTICAL_STRIDE_0 = 0,
+   BRW_ALIGN1_3SRC_VERTICAL_STRIDE_2 = 1,
+   BRW_ALIGN1_3SRC_VERTICAL_STRIDE_4 = 2,
+   BRW_ALIGN1_3SRC_VERTICAL_STRIDE_8 = 3,
 };
 
 enum PACKED brw_width {
