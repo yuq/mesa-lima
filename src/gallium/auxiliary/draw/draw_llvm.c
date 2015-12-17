@@ -1201,6 +1201,10 @@ generate_clipmask(struct draw_llvm *llvm,
       cv_w = pos_w;
    }
 
+   /*
+    * Be careful with the comparisons and NaNs (using llvm's unordered
+    * comparisons here).
+    */
    /* Cliptest, for hardwired planes */
    /*
     * XXX should take guardband into account (currently not in key).
