@@ -24,6 +24,57 @@
 #include "isl.h"
 #include "brw_compiler.h"
 
+bool
+isl_is_storage_image_format(enum isl_format format)
+{
+   /* XXX: Maybe we should put this in the CSV? */
+
+   switch (format) {
+   case ISL_FORMAT_R32G32B32A32_UINT:
+   case ISL_FORMAT_R32G32B32A32_SINT:
+   case ISL_FORMAT_R32G32B32A32_FLOAT:
+   case ISL_FORMAT_R32_UINT:
+   case ISL_FORMAT_R32_SINT:
+   case ISL_FORMAT_R32_FLOAT:
+   case ISL_FORMAT_R16G16B16A16_UINT:
+   case ISL_FORMAT_R16G16B16A16_SINT:
+   case ISL_FORMAT_R16G16B16A16_FLOAT:
+   case ISL_FORMAT_R32G32_UINT:
+   case ISL_FORMAT_R32G32_SINT:
+   case ISL_FORMAT_R32G32_FLOAT:
+   case ISL_FORMAT_R8G8B8A8_UINT:
+   case ISL_FORMAT_R8G8B8A8_SINT:
+   case ISL_FORMAT_R16G16_UINT:
+   case ISL_FORMAT_R16G16_SINT:
+   case ISL_FORMAT_R16G16_FLOAT:
+   case ISL_FORMAT_R8G8_UINT:
+   case ISL_FORMAT_R8G8_SINT:
+   case ISL_FORMAT_R16_UINT:
+   case ISL_FORMAT_R16_FLOAT:
+   case ISL_FORMAT_R16_SINT:
+   case ISL_FORMAT_R8_UINT:
+   case ISL_FORMAT_R8_SINT:
+   case ISL_FORMAT_R10G10B10A2_UINT:
+   case ISL_FORMAT_R10G10B10A2_UNORM:
+   case ISL_FORMAT_R11G11B10_FLOAT:
+   case ISL_FORMAT_R16G16B16A16_UNORM:
+   case ISL_FORMAT_R16G16B16A16_SNORM:
+   case ISL_FORMAT_R8G8B8A8_UNORM:
+   case ISL_FORMAT_R8G8B8A8_SNORM:
+   case ISL_FORMAT_R16G16_UNORM:
+   case ISL_FORMAT_R16G16_SNORM:
+   case ISL_FORMAT_R8G8_UNORM:
+   case ISL_FORMAT_R8G8_SNORM:
+   case ISL_FORMAT_R16_UNORM:
+   case ISL_FORMAT_R16_SNORM:
+   case ISL_FORMAT_R8_UNORM:
+   case ISL_FORMAT_R8_SNORM:
+      return true;
+   default:
+      return false;
+   }
+}
+
 enum isl_format
 isl_lower_storage_image_format(const struct isl_device *dev,
                                enum isl_format format)
