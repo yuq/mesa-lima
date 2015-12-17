@@ -271,7 +271,7 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    if (format->surface_format== ISL_FORMAT_UNSUPPORTED)
       goto unsupported;
 
-   uint32_t linear = 0, tiled = 0;
+   uint32_t linear = 0, tiled = 0, buffer = 0;
    if (anv_format_is_depth_or_stencil(format)) {
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
       if (physical_device->info->gen >= 8) {
@@ -292,6 +292,9 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                  VK_FORMAT_FEATURE_BLIT_SRC_BIT;
          linear |= flags;
          tiled |= flags;
+
+         if (!isl_format_is_compressed(format->surface_format))
+            buffer |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
       }
       if (info->render_target <= gen) {
          flags = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
@@ -304,19 +307,33 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
          tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
       }
       if (info->input_vb <= gen) {
-         linear |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
+         buffer |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
+      }
+
+      if (isl_is_storage_image_format(format->surface_format)) {
+         tiled |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+         linear |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+         buffer |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT;
+      }
+
+      if (format->surface_format == ISL_FORMAT_R32_SINT &&
+          format->surface_format == ISL_FORMAT_R32_UINT) {
+         tiled |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
+         linear |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
+         buffer |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;
       }
    }
 
    out_properties->linearTilingFeatures = linear;
    out_properties->optimalTilingFeatures = tiled;
-   out_properties->bufferFeatures = 0; /* FINISHME */
+   out_properties->bufferFeatures = buffer;
 
    return;
 
  unsupported:
    out_properties->linearTilingFeatures = 0;
    out_properties->optimalTilingFeatures = 0;
+   out_properties->bufferFeatures = 0;
 }
 
 
