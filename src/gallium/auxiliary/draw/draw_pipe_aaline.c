@@ -646,6 +646,7 @@ aaline_first_line(struct draw_stage *stage, struct prim_header *header)
    struct pipe_context *pipe = draw->pipe;
    const struct pipe_rasterizer_state *rast = draw->rasterizer;
    uint num_samplers;
+   uint num_sampler_views;
    void *r;
 
    assert(draw->rasterizer->line_smooth);
@@ -667,9 +668,9 @@ aaline_first_line(struct draw_stage *stage, struct prim_header *header)
    draw_aaline_prepare_outputs(draw, draw->pipeline.aaline);
 
    /* how many samplers? */
-   /* we'll use sampler/texture[pstip->sampler_unit] for the stipple */
-   num_samplers = MAX2(aaline->num_sampler_views, aaline->num_samplers);
-   num_samplers = MAX2(num_samplers, aaline->fs->sampler_unit + 1);
+   /* we'll use sampler/texture[aaline->sampler_unit] for the alpha texture */
+   num_samplers = MAX2(aaline->num_samplers, aaline->fs->sampler_unit + 1);
+   num_sampler_views = MAX2(num_samplers, aaline->num_sampler_views);
 
    aaline->state.sampler[aaline->fs->sampler_unit] = aaline->sampler_cso;
    pipe_sampler_view_reference(&aaline->state.sampler_views[aaline->fs->sampler_unit],
@@ -681,7 +682,7 @@ aaline_first_line(struct draw_stage *stage, struct prim_header *header)
                                       num_samplers, aaline->state.sampler);
 
    aaline->driver_set_sampler_views(pipe, PIPE_SHADER_FRAGMENT, 0,
-                                    num_samplers, aaline->state.sampler_views);
+                                    num_sampler_views, aaline->state.sampler_views);
 
    /* Disable triangle culling, stippling, unfilled mode etc. */
    r = draw_get_rasterizer_no_cull(draw, rast->scissor, rast->flatshade);

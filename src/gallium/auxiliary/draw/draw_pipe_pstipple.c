@@ -477,6 +477,7 @@ pstip_first_tri(struct draw_stage *stage, struct prim_header *header)
    struct pipe_context *pipe = pstip->pipe;
    struct draw_context *draw = stage->draw;
    uint num_samplers;
+   uint num_sampler_views;
 
    assert(stage->draw->rasterizer->poly_stipple_enable);
 
@@ -490,8 +491,8 @@ pstip_first_tri(struct draw_stage *stage, struct prim_header *header)
 
    /* how many samplers? */
    /* we'll use sampler/texture[pstip->sampler_unit] for the stipple */
-   num_samplers = MAX2(pstip->num_sampler_views, pstip->num_samplers);
-   num_samplers = MAX2(num_samplers, pstip->fs->sampler_unit + 1);
+   num_samplers = MAX2(pstip->num_samplers, pstip->fs->sampler_unit + 1);
+   num_sampler_views = MAX2(pstip->num_sampler_views, num_samplers);
 
    /* plug in our sampler, texture */
    pstip->state.samplers[pstip->fs->sampler_unit] = pstip->sampler_cso;
@@ -506,7 +507,7 @@ pstip_first_tri(struct draw_stage *stage, struct prim_header *header)
                                      num_samplers, pstip->state.samplers);
 
    pstip->driver_set_sampler_views(pipe, PIPE_SHADER_FRAGMENT, 0,
-                                   num_samplers, pstip->state.sampler_views);
+                                   num_sampler_views, pstip->state.sampler_views);
 
    draw->suspend_flushing = FALSE;
 
