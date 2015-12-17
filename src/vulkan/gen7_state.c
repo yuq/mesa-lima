@@ -329,7 +329,7 @@ genX(image_view_init)(struct anv_image_view *iview,
        * sampler engine is [SurfaceMinLOD, SurfaceMinLOD + MIPCountLOD].
        */
       surface_state.SurfaceMinLOD = range->baseMipLevel;
-      surface_state.MIPCountLOD = range->levelCount - 1;
+      surface_state.MIPCountLOD = MIN2(range->levelCount, 1) - 1;
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->nonrt_surface_state.map,
                                       &surface_state);
@@ -369,7 +369,7 @@ genX(image_view_init)(struct anv_image_view *iview,
                                         format->surface_format);
 
       surface_state.SurfaceMinLOD = range->baseMipLevel;
-      surface_state.MIPCountLOD = range->levelCount - 1;
+      surface_state.MIPCountLOD = MIN2(range->levelCount, 1) - 1;
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->storage_surface_state.map,
                                       &surface_state);
