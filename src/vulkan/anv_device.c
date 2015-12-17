@@ -1002,6 +1002,12 @@ VkResult anv_AllocateMemory(
 
    assert(pAllocateInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO);
 
+   if (pAllocateInfo->allocationSize == 0) {
+      /* Apparently, this is allowed */
+      *pMem = VK_NULL_HANDLE;
+      return VK_SUCCESS;
+   }
+
    /* We support exactly one memory heap. */
    assert(pAllocateInfo->memoryTypeIndex == 0 ||
           (!device->info.has_llc && pAllocateInfo->memoryTypeIndex < 2));
@@ -1037,6 +1043,9 @@ void anv_FreeMemory(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
 
+   if (mem == NULL)
+      return;
+
    if (mem->bo.map)
       anv_gem_munmap(mem->bo.map, mem->bo.size);
 
@@ -1056,6 +1065,11 @@ VkResult anv_MapMemory(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
+
+   if (mem == NULL) {
+      *ppData = NULL;
+      return VK_SUCCESS;
+   }
 
    /* FIXME: Is this supposed to be thread safe? Since vkUnmapMemory() only
     * takes a VkDeviceMemory pointer, it seems like only one map of the memory
@@ -1080,6 +1094,9 @@ void anv_UnmapMemory(
     VkDeviceMemory                              _memory)
 {
    ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
+
+   if (mem == NULL)
+      return;
 
    anv_gem_munmap(mem->map, mem->map_size);
 }
@@ -1207,8 +1224,13 @@ VkResult anv_BindBufferMemory(
    ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
-   buffer->bo = &mem->bo;
-   buffer->offset = memoryOffset;
+   if (mem) {
+      buffer->bo = &mem->bo;
+      buffer->offset = memoryOffset;
+   } else {
+      buffer->bo = NULL;
+      buffer->offset = 0;
+   }
 
    return VK_SUCCESS;
 }
@@ -1222,8 +1244,13 @@ VkResult anv_BindImageMemory(
    ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
    ANV_FROM_HANDLE(anv_image, image, _image);
 
-   image->bo = &mem->bo;
-   image->offset = memoryOffset;
+   if (mem) {
+      image->bo = &mem->bo;
+      image->offset = memoryOffset;
+   } else {
+      image->bo = NULL;
+      image->offset = 0;
+   }
 
    return VK_SUCCESS;
 }
