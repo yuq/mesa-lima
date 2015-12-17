@@ -350,7 +350,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
                                  gl_shader *producer, gl_shader *consumer)
 {
    glsl_symbol_table parameters;
-   ir_variable *explicit_locations[MAX_VARYING] = { NULL, };
+   ir_variable *explicit_locations[MAX_VARYING][4] = { {NULL, NULL} };
 
    /* Find all shader outputs in the "producer" stage.
     */
@@ -371,18 +371,59 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
          unsigned num_elements = type->count_attribute_slots(false);
          unsigned idx = var->data.location - VARYING_SLOT_VAR0;
          unsigned slot_limit = idx + num_elements;
+         unsigned last_comp;
+
+         if (var->type->without_array()->is_record()) {
+            /* The component qualifier can't be used on structs so just treat
+             * all component slots as used.
+             */
+            last_comp = 4;
+         } else {
+            unsigned dmul = var->type->is_double() ? 2 : 1;
+            last_comp = var->data.location_frac +
+               var->type->without_array()->vector_elements * dmul;
+         }
 
          while (idx < slot_limit) {
-            if (explicit_locations[idx] != NULL) {
-               linker_error(prog,
-                         "%s shader has multiple outputs explicitly "
-                         "assigned to location %d\n",
-                         _mesa_shader_stage_to_string(producer->Stage),
-                         idx);
-               return;
-            }
+            for (unsigned i = var->data.location_frac; i < last_comp; i++) {
+               if (explicit_locations[idx][i] != NULL) {
+                  linker_error(prog,
+                               "%s shader has multiple outputs explicitly "
+                               "assigned to location %d and component %d\n",
+                               _mesa_shader_stage_to_string(producer->Stage),
+                               idx, var->data.location_frac);
+                  return;
+               }
 
-            explicit_locations[idx] = var;
+               /* Make sure all component at this location have the same type.
+                */
+               for (unsigned j = 0; j < 4; j++) {
+                  if (explicit_locations[idx][j] &&
+                      (explicit_locations[idx][j]->type->without_array()
+                       ->base_type != var->type->without_array()->base_type)) {
+                     linker_error(prog,
+                                  "Varyings sharing the same location must "
+                                  "have the same underlying numerical type. "
+                                  "Location %u component %u\n", idx,
+                                  var->data.location_frac);
+                     return;
+                  }
+               }
+
+               explicit_locations[idx][i] = var;
+
+               /* We need to do some special handling for doubles as dvec3 and
+                * dvec4 consume two consecutive locations. We don't need to
+                * worry about components beginning at anything other than 0 as
+                * the spec does not allow this for dvec3 and dvec4.
+                */
+               if (i == 3 && last_comp > 4) {
+                  last_comp = last_comp - 4;
+                  /* Bump location index and reset the component index */
+                  idx++;
+                  i = 0;
+               }
+            }
             idx++;
          }
       }
@@ -439,7 +480,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
             unsigned slot_limit = idx + num_elements;
 
             while (idx < slot_limit) {
-               output = explicit_locations[idx];
+               output = explicit_locations[idx][input->data.location_frac];
 
                if (output == NULL ||
                    input->data.location != output->data.location) {
