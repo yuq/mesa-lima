@@ -201,18 +201,23 @@ brw_upload_tcs_prog(struct brw_context *brw)
 
    memset(&key, 0, sizeof(key));
 
-   key.program_string_id = tcp->id;
-
    key.input_vertices = ctx->TessCtrlProgram.patch_vertices;
-
-   /* _NEW_TEXTURE */
-   brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
-                                      &key.tex);
 
    /* We need to specialize our code generation for tessellation levels
     * based on the domain the DS is expecting to tessellate.
     */
    key.tes_primitive_mode = tep->program.PrimitiveMode;
+
+   if (tcp) {
+      key.program_string_id = tcp->id;
+
+      /* _NEW_TEXTURE */
+      brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
+                                         &key.tex);
+   } else {
+      key.outputs_written = tep->program.Base.InputsRead;
+   }
+
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_TCS_PROG,
                          &key, sizeof(key),

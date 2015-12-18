@@ -200,6 +200,9 @@ struct brw_tcs_prog_key
 
    unsigned input_vertices;
 
+   /** A bitfield of per-vertex outputs written. */
+   uint64_t outputs_written;
+
    struct brw_sampler_prog_key_data tex;
 };
 
