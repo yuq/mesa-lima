@@ -4548,7 +4548,9 @@ _mesa_active_fragment_shader_has_side_effects(const struct gl_context *ctx)
       return false;
 
    sh = ctx->_Shader->_CurrentFragmentProgram->_LinkedShaders[MESA_SHADER_FRAGMENT];
-   return sh->NumAtomicBuffers > 0 || sh->NumImages > 0;
+   return sh->NumAtomicBuffers > 0 ||
+          sh->NumImages > 0 ||
+          sh->NumShaderStorageBlocks > 0;
 }
 
 #ifdef __cplusplus
