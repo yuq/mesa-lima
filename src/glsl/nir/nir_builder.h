@@ -353,6 +353,16 @@ nir_store_var(nir_builder *build, nir_variable *var, nir_ssa_def *value)
    nir_builder_instr_insert(build, &store->instr);
 }
 
+static inline void
+nir_copy_var(nir_builder *build, nir_variable *dest, nir_variable *src)
+{
+   nir_intrinsic_instr *copy =
+      nir_intrinsic_instr_create(build->shader, nir_intrinsic_copy_var);
+   copy->variables[0] = nir_deref_var_create(copy, dest);
+   copy->variables[1] = nir_deref_var_create(copy, src);
+   nir_builder_instr_insert(build, &copy->instr);
+}
+
 static inline nir_ssa_def *
 nir_load_system_value(nir_builder *build, nir_intrinsic_op op, int index)
 {

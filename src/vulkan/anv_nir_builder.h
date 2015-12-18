@@ -44,13 +44,3 @@ nir_builder_init_simple_shader(nir_builder *b, gl_shader_stage stage)
    b->impl = nir_function_impl_create(overload);
    b->cursor = nir_after_cf_list(&b->impl->body);
 }
-
-static inline void
-nir_copy_var(nir_builder *build, nir_variable *dest, nir_variable *src)
-{
-   nir_intrinsic_instr *copy =
-      nir_intrinsic_instr_create(build->shader, nir_intrinsic_copy_var);
-   copy->variables[0] = nir_deref_var_create(copy, dest);
-   copy->variables[1] = nir_deref_var_create(copy, src);
-   nir_builder_instr_insert(build, &copy->instr);
-}
