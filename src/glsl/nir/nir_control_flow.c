@@ -336,8 +336,7 @@ block_add_normal_succs(nir_block *block)
          nir_block *next_block = nir_cf_node_as_block(next);
 
          link_blocks(block, next_block, NULL);
-      } else {
-         assert(parent->type == nir_cf_node_loop);
+      } else if (parent->type == nir_cf_node_loop) {
          nir_loop *loop = nir_cf_node_as_loop(parent);
 
          nir_cf_node *head = nir_loop_first_cf_node(loop);
@@ -346,6 +345,10 @@ block_add_normal_succs(nir_block *block)
 
          link_blocks(block, head_block, NULL);
          insert_phi_undef(head_block, block);
+      } else {
+         assert(parent->type == nir_cf_node_function);
+         nir_function_impl *impl = nir_cf_node_as_function(parent);
+         link_blocks(block, impl->end_block, NULL);
       }
    } else {
       nir_cf_node *next = nir_cf_node_next(&block->cf_node);
