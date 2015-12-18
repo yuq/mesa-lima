@@ -617,6 +617,20 @@ void genX(CmdDispatch)(
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
 
+   if (prog_data->uses_num_work_groups) {
+      struct anv_state state =
+         anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, 12, 4);
+      uint32_t *sizes = state.map;
+      sizes[0] = x;
+      sizes[1] = y;
+      sizes[2] = z;
+      if (!cmd_buffer->device->info.has_llc)
+         anv_state_clflush(state);
+      cmd_buffer->state.num_workgroups_offset = state.offset;
+      cmd_buffer->state.num_workgroups_bo =
+         &cmd_buffer->device->dynamic_state_block_pool.bo;
+   }
+
    cmd_buffer_flush_compute_state(cmd_buffer);
 
    anv_batch_emit(&cmd_buffer->batch, GENX(GPGPU_WALKER),
@@ -648,6 +662,11 @@ void genX(CmdDispatchIndirect)(
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
+
+   if (prog_data->uses_num_work_groups) {
+      cmd_buffer->state.num_workgroups_offset = bo_offset;
+      cmd_buffer->state.num_workgroups_bo = bo;
+   }
 
    cmd_buffer_flush_compute_state(cmd_buffer);
 

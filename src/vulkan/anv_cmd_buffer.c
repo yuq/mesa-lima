@@ -619,17 +619,22 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    struct anv_pipeline_layout *layout;
    uint32_t color_count, bias, state_offset;
 
-   if (stage == MESA_SHADER_COMPUTE)
-      layout = cmd_buffer->state.compute_pipeline->layout;
-   else
+   switch (stage) {
+   case  MESA_SHADER_FRAGMENT:
       layout = cmd_buffer->state.pipeline->layout;
-
-   if (stage == MESA_SHADER_FRAGMENT) {
       bias = MAX_RTS;
       color_count = subpass->color_count;
-   } else {
+      break;
+   case  MESA_SHADER_COMPUTE:
+      layout = cmd_buffer->state.compute_pipeline->layout;
+      bias = 1;
+      color_count = 0;
+      break;
+   default:
+      layout = cmd_buffer->state.pipeline->layout;
       bias = 0;
       color_count = 0;
+      break;
    }
 
    /* This is a little awkward: layout can be NULL but we still have to
@@ -655,6 +660,27 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       bt_map[a] = iview->color_rt_surface_state.offset + state_offset;
       add_surface_state_reloc(cmd_buffer, iview->color_rt_surface_state,
                               iview->bo, iview->offset);
+   }
+
+   if (stage == MESA_SHADER_COMPUTE &&
+       cmd_buffer->state.compute_pipeline->cs_prog_data.uses_num_work_groups) {
+      struct anv_bo *bo = cmd_buffer->state.num_workgroups_bo;
+      uint32_t bo_offset = cmd_buffer->state.num_workgroups_offset;
+
+      struct anv_state surface_state;
+      surface_state =
+         anv_cmd_buffer_alloc_surface_state(cmd_buffer);
+
+      fill_descriptor_buffer_surface_state(cmd_buffer->device,
+                                           surface_state.map, stage,
+                                           VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                                           bo_offset, 12);
+
+      if (!cmd_buffer->device->info.has_llc)
+         anv_state_clflush(surface_state);
+
+      bt_map[0] = surface_state.offset + state_offset;
+      add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
    }
 
    if (layout == NULL)

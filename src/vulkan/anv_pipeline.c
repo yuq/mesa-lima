@@ -348,7 +348,18 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    /* All binding table offsets provided by apply_pipeline_layout() are
     * relative to the start of the bindint table (plus MAX_RTS for VS).
     */
-   unsigned bias = stage == MESA_SHADER_FRAGMENT ? MAX_RTS : 0;
+   unsigned bias;
+   switch (stage) {
+   case MESA_SHADER_FRAGMENT:
+      bias = MAX_RTS;
+      break;
+   case MESA_SHADER_COMPUTE:
+      bias = 1;
+      break;
+   default:
+      bias = 0;
+      break;
+   }
    prog_data->binding_table.size_bytes = 0;
    prog_data->binding_table.texture_start = bias;
    prog_data->binding_table.ubo_start = bias;
@@ -618,6 +629,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
    /* TODO: Look up shader in cache */
 
    memset(prog_data, 0, sizeof(*prog_data));
+
+   prog_data->binding_table.work_groups_start = 0;
 
    nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
                                           MESA_SHADER_COMPUTE,

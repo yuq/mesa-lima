@@ -1031,6 +1031,8 @@ struct anv_cmd_state {
    uint32_t                                     vb_dirty;
    anv_cmd_dirty_mask_t                         dirty;
    anv_cmd_dirty_mask_t                         compute_dirty;
+   uint32_t                                     num_workgroups_offset;
+   struct anv_bo                                *num_workgroups_bo;
    VkShaderStageFlags                           descriptors_dirty;
    VkShaderStageFlags                           push_constants_dirty;
    uint32_t                                     scratch_size;
