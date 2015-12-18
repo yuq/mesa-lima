@@ -125,12 +125,6 @@ struct llvmpipe_context {
    /** A fake frontface output for unfilled primitives */
    uint8_t face_slot;
 
-   /** Which output slot is used for the fake vp index info */
-   uint8_t fake_vpindex_slot;
-
-   /** Which output slot is used for the fake layer info */
-   uint8_t fake_layer_slot;
-
    /** Depth format and bias settings. */
    boolean floating_point_depth;
    double mrd;   /**< minimum resolvable depth value, for polygon offset */

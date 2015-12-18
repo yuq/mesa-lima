@@ -100,27 +100,16 @@ compute_vertex_info(struct llvmpipe_context *llvmpipe)
          draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
       /*
        * For vp index and layer, if the fs requires them but the vs doesn't
-       * provide them, store the slot - we'll later replace the data directly
-       * with zero (as required by ARB_fragment_layer_viewport). This is
-       * because draw itself just redirects them to whatever was at output 0.
-       * We'll also store the real vpindex/layer slot for setup use.
+       * provide them, draw (vbuf) will give us the required 0 (slot -1).
+       * (This means in this case we'll also use those slots in setup, which
+       * isn't necessary but they'll contain the correct (0) value.)
        */
       } else if (lpfs->info.base.input_semantic_name[i] ==
                  TGSI_SEMANTIC_VIEWPORT_INDEX) {
-         if (vs_index >= 0) {
-            llvmpipe->viewport_index_slot = vinfo->num_attribs;
-         }
-         else {
-            llvmpipe->fake_vpindex_slot = vinfo->num_attribs;
-         }
+         llvmpipe->viewport_index_slot = vinfo->num_attribs;
          draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
       } else if (lpfs->info.base.input_semantic_name[i] == TGSI_SEMANTIC_LAYER) {
-         if (vs_index >= 0) {
-            llvmpipe->layer_slot = vinfo->num_attribs;
-         }
-         else {
-            llvmpipe->fake_layer_slot = vinfo->num_attribs;
-         }
+         llvmpipe->layer_slot = vinfo->num_attribs;
          draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
       } else {
          /*
