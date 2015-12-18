@@ -191,6 +191,7 @@ enum brw_state_id {
    BRW_STATE_BINDING_TABLE_POINTERS,
    BRW_STATE_INDICES,
    BRW_STATE_VERTICES,
+   BRW_STATE_DEFAULT_TESS_LEVELS,
    BRW_STATE_BATCH,
    BRW_STATE_INDEX_BUFFER,
    BRW_STATE_VS_CONSTBUF,
@@ -273,6 +274,7 @@ enum brw_state_id {
 #define BRW_NEW_BINDING_TABLE_POINTERS  (1ull << BRW_STATE_BINDING_TABLE_POINTERS)
 #define BRW_NEW_INDICES                 (1ull << BRW_STATE_INDICES)
 #define BRW_NEW_VERTICES                (1ull << BRW_STATE_VERTICES)
+#define BRW_NEW_DEFAULT_TESS_LEVELS     (1ull << BRW_STATE_DEFAULT_TESS_LEVELS)
 /**
  * Used for any batch entry with a relocated pointer that will be used
  * by any 3D rendering.

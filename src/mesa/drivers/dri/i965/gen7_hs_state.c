@@ -49,6 +49,7 @@ const struct brw_tracked_state gen7_tcs_push_constants = {
    .dirty = {
       .mesa  = _NEW_PROGRAM_CONSTANTS,
       .brw   = BRW_NEW_BATCH |
+               BRW_NEW_DEFAULT_TESS_LEVELS |
                BRW_NEW_PUSH_CONSTANT_ALLOCATION |
                BRW_NEW_TESS_PROGRAMS |
                BRW_NEW_TCS_PROG_DATA,

@@ -517,6 +517,7 @@ void brw_init_state( struct brw_context *brw )
    ctx->DriverFlags.NewTextureBuffer = BRW_NEW_TEXTURE_BUFFER;
    ctx->DriverFlags.NewAtomicBuffer = BRW_NEW_ATOMIC_BUFFER;
    ctx->DriverFlags.NewImageUnits = BRW_NEW_IMAGE_UNITS;
+   ctx->DriverFlags.NewDefaultTessLevels = BRW_NEW_DEFAULT_TESS_LEVELS;
 }
 
 
@@ -619,6 +620,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_BINDING_TABLE_POINTERS),
    DEFINE_BIT(BRW_NEW_INDICES),
    DEFINE_BIT(BRW_NEW_VERTICES),
+   DEFINE_BIT(BRW_NEW_DEFAULT_TESS_LEVELS),
    DEFINE_BIT(BRW_NEW_BATCH),
    DEFINE_BIT(BRW_NEW_INDEX_BUFFER),
    DEFINE_BIT(BRW_NEW_VS_CONSTBUF),
