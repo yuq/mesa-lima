@@ -149,7 +149,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    brw_compute_vue_map(brw->intelScreen->devinfo,
                        &prog_data.base.vue_map, outputs_written,
                        prog ? prog->SeparateShader ||
-                              prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]
+                              prog->_LinkedShaders[MESA_SHADER_TESS_EVAL]
                             : false);
 
    if (0) {

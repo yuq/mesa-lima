@@ -33,15 +33,16 @@ gen7_upload_tcs_push_constants(struct brw_context *brw)
    /* BRW_NEW_TESS_PROGRAMS */
    const struct brw_tess_ctrl_program *tcp =
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
+   bool active = brw->tess_eval_program;
 
-   if (tcp) {
+   if (active) {
       /* BRW_NEW_TCS_PROG_DATA */
       const struct brw_stage_prog_data *prog_data = &brw->tcs.prog_data->base.base;
       gen6_upload_push_constants(brw, &tcp->program.Base, prog_data,
                                       stage_state, AUB_TRACE_VS_CONSTANTS);
    }
 
-   gen7_upload_constant_state(brw, stage_state, tcp, _3DSTATE_CONSTANT_HS);
+   gen7_upload_constant_state(brw, stage_state, active, _3DSTATE_CONSTANT_HS);
 }
 
 const struct brw_tracked_state gen7_tcs_push_constants = {
