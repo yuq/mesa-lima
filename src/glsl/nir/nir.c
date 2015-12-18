@@ -311,6 +311,10 @@ nir_function_impl_create(nir_function_overload *overload)
    overload->impl = impl;
    impl->overload = overload;
 
+   impl->num_params = overload->num_params;
+   impl->params = ralloc_array(overload->function->shader,
+                               nir_variable *, impl->num_params);
+
    return impl;
 }
 
