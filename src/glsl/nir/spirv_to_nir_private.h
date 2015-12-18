@@ -61,7 +61,7 @@ struct vtn_block {
 struct vtn_function {
    struct exec_node node;
 
-   nir_function_overload *overload;
+   nir_function_impl *impl;
    struct vtn_block *start_block;
 
    const uint32_t *end;
@@ -204,6 +204,9 @@ struct vtn_builder {
 
    struct vtn_function *func;
    struct exec_list functions;
+
+   /* Current function parameter index */
+   unsigned func_param_idx;
 };
 
 static inline struct vtn_value *
