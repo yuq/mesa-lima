@@ -4535,11 +4535,20 @@ enum _debug
    DEBUG_INCOMPLETE_FBO         = (1 << 3)
 };
 
+/**
+ * Checks if the active fragment shader program can have side effects due
+ * to use of things like atomic buffers or images
+ */
 static inline bool
-_mesa_active_fragment_shader_has_atomic_ops(const struct gl_context *ctx)
+_mesa_active_fragment_shader_has_side_effects(const struct gl_context *ctx)
 {
-   return ctx->Shader._CurrentFragmentProgram != NULL &&
-      ctx->Shader._CurrentFragmentProgram->_LinkedShaders[MESA_SHADER_FRAGMENT]->NumAtomicBuffers > 0;
+   const struct gl_shader *sh;
+
+   if (!ctx->_Shader->_CurrentFragmentProgram)
+      return false;
+
+   sh = ctx->_Shader->_CurrentFragmentProgram->_LinkedShaders[MESA_SHADER_FRAGMENT];
+   return sh->NumAtomicBuffers > 0 || sh->NumImages > 0;
 }
 
 #ifdef __cplusplus

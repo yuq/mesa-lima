@@ -77,13 +77,9 @@ upload_wm_state(struct brw_context *brw)
       dw1 |= GEN7_WM_KILL_ENABLE;
    }
 
-   if (_mesa_active_fragment_shader_has_atomic_ops(&brw->ctx)) {
-      dw1 |= GEN7_WM_DISPATCH_ENABLE;
-   }
-
    /* _NEW_BUFFERS | _NEW_COLOR */
    if (brw_color_buffer_write_enabled(brw) || writes_depth ||
-       prog_data->base.nr_image_params ||
+       _mesa_active_fragment_shader_has_side_effects(&brw->ctx) ||
        dw1 & GEN7_WM_KILL_ENABLE) {
       dw1 |= GEN7_WM_DISPATCH_ENABLE;
    }
