@@ -30,7 +30,7 @@ static void
 gen7_upload_tes_push_constants(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->tes.base;
-   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    const struct brw_tess_eval_program *tep =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
 
@@ -49,7 +49,7 @@ const struct brw_tracked_state gen7_tes_push_constants = {
       .mesa  = _NEW_PROGRAM_CONSTANTS,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_PUSH_CONSTANT_ALLOCATION |
-               BRW_NEW_TESS_EVAL_PROGRAM |
+               BRW_NEW_TESS_PROGRAMS |
                BRW_NEW_TES_PROG_DATA,
    },
    .emit = gen7_upload_tes_push_constants,

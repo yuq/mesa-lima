@@ -607,8 +607,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_URB_FENCE),
    DEFINE_BIT(BRW_NEW_FRAGMENT_PROGRAM),
    DEFINE_BIT(BRW_NEW_GEOMETRY_PROGRAM),
-   DEFINE_BIT(BRW_NEW_TESS_EVAL_PROGRAM),
-   DEFINE_BIT(BRW_NEW_TESS_CTRL_PROGRAM),
+   DEFINE_BIT(BRW_NEW_TESS_PROGRAMS),
    DEFINE_BIT(BRW_NEW_VERTEX_PROGRAM),
    DEFINE_BIT(BRW_NEW_CURBE_OFFSETS),
    DEFINE_BIT(BRW_NEW_REDUCED_PRIMITIVE),
@@ -761,12 +760,12 @@ brw_upload_pipeline_state(struct brw_context *brw,
 
       if (brw->tess_eval_program != ctx->TessEvalProgram._Current) {
          brw->tess_eval_program = ctx->TessEvalProgram._Current;
-         brw->ctx.NewDriverState |= BRW_NEW_TESS_EVAL_PROGRAM;
+         brw->ctx.NewDriverState |= BRW_NEW_TESS_PROGRAMS;
       }
 
       if (brw->tess_ctrl_program != ctx->TessCtrlProgram._Current) {
          brw->tess_ctrl_program = ctx->TessCtrlProgram._Current;
-         brw->ctx.NewDriverState |= BRW_NEW_TESS_CTRL_PROGRAM;
+         brw->ctx.NewDriverState |= BRW_NEW_TESS_PROGRAMS;
       }
 
       if (brw->geometry_program != ctx->GeometryProgram._Current) {

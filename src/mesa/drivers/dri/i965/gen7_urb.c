@@ -63,7 +63,7 @@ gen7_allocate_push_constants(struct brw_context *brw)
    /* BRW_NEW_GEOMETRY_PROGRAM */
    bool gs_present = brw->geometry_program;
 
-   /* BRW_NEW_TESS_CTRL_PROGRAM, BRW_NEW_TESS_EVAL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    bool tess_present = brw->tess_eval_program;
 
    unsigned avail_size = 16;
@@ -146,8 +146,7 @@ const struct brw_tracked_state gen7_push_constant_space = {
       .mesa = 0,
       .brw = BRW_NEW_CONTEXT |
              BRW_NEW_GEOMETRY_PROGRAM |
-             BRW_NEW_TESS_CTRL_PROGRAM |
-             BRW_NEW_TESS_EVAL_PROGRAM,
+             BRW_NEW_TESS_PROGRAMS,
    },
    .emit = gen7_allocate_push_constants,
 };
@@ -167,7 +166,7 @@ gen7_upload_urb(struct brw_context *brw)
    unsigned gs_size = gs_present ? brw->gs.prog_data->base.urb_entry_size : 1;
    unsigned gs_entry_size_bytes = gs_size * 64;
 
-   /* BRW_NEW_TESS_CTRL_PROGRAM, BRW_NEW_TESS_EVAL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    const bool tess_present = brw->tess_eval_program;
    assert(!tess_present || brw->tess_ctrl_program);
    /* BRW_NEW_TCS_PROG_DATA */
@@ -422,8 +421,7 @@ const struct brw_tracked_state gen7_urb = {
       .brw = BRW_NEW_CONTEXT |
              BRW_NEW_URB_SIZE |
              BRW_NEW_GEOMETRY_PROGRAM |
-             BRW_NEW_TESS_CTRL_PROGRAM |
-             BRW_NEW_TESS_EVAL_PROGRAM |
+             BRW_NEW_TESS_PROGRAMS |
              BRW_NEW_GS_PROG_DATA |
              BRW_NEW_TCS_PROG_DATA |
              BRW_NEW_TES_PROG_DATA |

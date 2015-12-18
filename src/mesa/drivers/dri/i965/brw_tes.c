@@ -232,13 +232,13 @@ brw_upload_tes_prog(struct brw_context *brw)
    struct gl_shader_program **current = ctx->_Shader->CurrentProgram;
    struct brw_stage_state *stage_state = &brw->tes.base;
    struct brw_tes_prog_key key;
-   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    struct brw_tess_eval_program *tep =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
 
    if (!brw_state_dirty(brw,
                         _NEW_TEXTURE,
-                        BRW_NEW_TESS_EVAL_PROGRAM))
+                        BRW_NEW_TESS_PROGRAMS))
       return;
 
    struct gl_program *prog = &tep->program.Base;

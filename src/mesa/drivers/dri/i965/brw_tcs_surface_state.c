@@ -39,7 +39,7 @@ brw_upload_tcs_pull_constants(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->tcs.base;
 
-   /* BRW_NEW_TESS_CTRL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    struct brw_tess_ctrl_program *tcp =
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
 
@@ -59,7 +59,7 @@ const struct brw_tracked_state brw_tcs_pull_constants = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_TCS_PROG_DATA |
-             BRW_NEW_TESS_CTRL_PROGRAM,
+             BRW_NEW_TESS_PROGRAMS,
    },
    .emit = brw_upload_tcs_pull_constants,
 };
@@ -122,7 +122,7 @@ static void
 brw_upload_tcs_image_surfaces(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   /* BRW_NEW_TESS_CTRL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_TESS_CTRL];
 
@@ -138,7 +138,7 @@ const struct brw_tracked_state brw_tcs_image_surfaces = {
       .brw = BRW_NEW_BATCH |
              BRW_NEW_TCS_PROG_DATA |
              BRW_NEW_IMAGE_UNITS |
-             BRW_NEW_TESS_CTRL_PROGRAM,
+             BRW_NEW_TESS_PROGRAMS,
    },
    .emit = brw_upload_tcs_image_surfaces,
 };

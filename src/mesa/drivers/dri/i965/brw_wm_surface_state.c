@@ -862,10 +862,8 @@ brw_update_texture_surfaces(struct brw_context *brw)
    /* BRW_NEW_VERTEX_PROGRAM */
    struct gl_program *vs = (struct gl_program *) brw->vertex_program;
 
-   /* BRW_NEW_TESS_CTRL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    struct gl_program *tcs = (struct gl_program *) brw->tess_ctrl_program;
-
-   /* BRW_NEW_TESS_EVAL_PROGRAM */
    struct gl_program *tes = (struct gl_program *) brw->tess_eval_program;
 
    /* BRW_NEW_GEOMETRY_PROGRAM */
@@ -915,8 +913,7 @@ const struct brw_tracked_state brw_texture_surfaces = {
              BRW_NEW_FS_PROG_DATA |
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_GS_PROG_DATA |
-             BRW_NEW_TESS_CTRL_PROGRAM |
-             BRW_NEW_TESS_EVAL_PROGRAM |
+             BRW_NEW_TESS_PROGRAMS |
              BRW_NEW_TCS_PROG_DATA |
              BRW_NEW_TES_PROG_DATA |
              BRW_NEW_TEXTURE_BUFFER |

@@ -31,7 +31,7 @@ gen8_upload_ds_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    const struct brw_stage_state *stage_state = &brw->tes.base;
-   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    bool active = brw->tess_eval_program;
    assert(!active || brw->tess_ctrl_program);
 
@@ -92,7 +92,7 @@ const struct brw_tracked_state gen8_ds_state = {
    .dirty = {
       .mesa  = 0,
       .brw   = BRW_NEW_BATCH |
-               BRW_NEW_TESS_EVAL_PROGRAM |
+               BRW_NEW_TESS_PROGRAMS |
                BRW_NEW_TES_PROG_DATA,
    },
    .emit = gen8_upload_ds_state,
