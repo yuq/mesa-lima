@@ -515,8 +515,14 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       struct vtn_type *array_element =
          vtn_value(b, w[2], vtn_value_type_type)->type;
 
-      /* A length of 0 is used to denote unsized arrays */
-      unsigned length = (opcode == SpvOpTypeArray) ? w[3] : 0;
+      unsigned length;
+      if (opcode == SpvOpTypeRuntimeArray) {
+         /* A length of 0 is used to denote unsized arrays */
+         length = 0;
+      } else {
+         length =
+            vtn_value(b, w[3], vtn_value_type_constant)->constant->value.u[0];
+      }
 
       val->type->type = glsl_array_type(array_element->type, length);
       val->type->array_element = array_element;
