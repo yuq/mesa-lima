@@ -41,6 +41,29 @@
 
 
 /**
+ * Get the varying type stripped of the outermost array if we're processing
+ * a stage whose varyings are arrays indexed by a vertex number (such as
+ * geometry shader inputs).
+ */
+static const glsl_type *
+get_varying_type(const ir_variable *var, gl_shader_stage stage)
+{
+   const glsl_type *type = var->type;
+
+   if (!var->data.patch &&
+       ((var->data.mode == ir_var_shader_out &&
+         stage == MESA_SHADER_TESS_CTRL) ||
+        (var->data.mode == ir_var_shader_in &&
+         (stage == MESA_SHADER_TESS_CTRL || stage == MESA_SHADER_TESS_EVAL ||
+          stage == MESA_SHADER_GEOMETRY)))) {
+      assert(type->is_array());
+      type = type->fields.array;
+   }
+
+   return type;
+}
+
+/**
  * Validate the types and qualifiers of an output from one stage against the
  * matching input to another stage.
  */
@@ -981,18 +1004,11 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
    this->matches[this->num_matches].packing_order
       = this->compute_packing_order(var);
    if (this->disable_varying_packing) {
-      const struct glsl_type *type = var->type;
       unsigned slots;
+      gl_shader_stage stage =
+         (producer_var != NULL) ? producer_stage : consumer_stage;
 
-      /* Some shader stages have 2-dimensional varyings. Use the inner type. */
-      if (!var->data.patch &&
-          ((var == producer_var && producer_stage == MESA_SHADER_TESS_CTRL) ||
-           (var == consumer_var && (consumer_stage == MESA_SHADER_TESS_CTRL ||
-                                    consumer_stage == MESA_SHADER_TESS_EVAL ||
-                                    consumer_stage == MESA_SHADER_GEOMETRY)))) {
-         assert(type->is_array());
-         type = type->fields.array;
-      }
+      const glsl_type *type = get_varying_type(var, stage);
 
       slots = type->count_attribute_slots(false);
       this->matches[this->num_matches].num_components = slots * 4;
