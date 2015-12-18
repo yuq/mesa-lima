@@ -45,9 +45,11 @@ public:
                     struct brw_tcs_prog_data *prog_data,
                     const nir_shader *nir,
                     void *mem_ctx,
-                    int shader_time_index);
+                    int shader_time_index,
+                    const struct brw_vue_map *input_vue_map);
 
 protected:
+   virtual void emit_nir_code();
    virtual dst_reg *make_reg_for_system_value(int location,
                                               const glsl_type *type);
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
@@ -73,6 +75,8 @@ protected:
     */
    virtual void emit_urb_write_header(int mrf) {}
    virtual vec4_instruction *emit_urb_write_opcode(bool complete) { return NULL; }
+
+   const struct brw_vue_map *input_vue_map;
 
    const struct brw_tcs_prog_key *key;
    src_reg invocation_id;

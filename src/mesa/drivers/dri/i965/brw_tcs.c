@@ -82,12 +82,30 @@ brw_codegen_tcs_prog(struct brw_context *brw,
                      struct brw_tess_ctrl_program *tcp,
                      struct brw_tcs_prog_key *key)
 {
+   struct gl_context *ctx = &brw->ctx;
    const struct brw_compiler *compiler = brw->intelScreen->compiler;
    struct brw_stage_state *stage_state = &brw->tcs.base;
-   nir_shader *nir = tcp->program.Base.nir;
+   nir_shader *nir;
    struct brw_tcs_prog_data prog_data;
    bool start_busy = false;
    double start_time = 0;
+
+   if (tcp) {
+      nir = tcp->program.Base.nir;
+   } else {
+      /* Create a dummy nir_shader.  We won't actually use NIR code to
+       * generate assembly (it's easier to generate assembly directly),
+       * but the whole compiler assumes one of these exists.
+       */
+      const nir_shader_compiler_options *options =
+         ctx->Const.ShaderCompilerOptions[MESA_SHADER_TESS_CTRL].NirOptions;
+      nir = nir_shader_create(NULL, MESA_SHADER_TESS_CTRL, options);
+      nir->num_uniforms = 2; /* both halves of the patch header */
+      nir->info.outputs_written = key->outputs_written;
+      nir->info.inputs_read = key->outputs_written;
+      nir->info.tcs.vertices_out = key->input_vertices;
+      nir->info.name = ralloc_strdup(nir, "passthrough");
+   }
 
    memset(&prog_data, 0, sizeof(prog_data));
 
@@ -99,7 +117,8 @@ brw_codegen_tcs_prog(struct brw_context *brw,
     * padding around uniform values below vec4 size, so the worst case is that
     * every uniform is a float which gets padded to the size of a vec4.
     */
-   struct gl_shader *tcs = shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL];
+   struct gl_shader *tcs = shader_prog ?
+      shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL] : NULL;
    int param_count = nir->num_uniforms;
    if (!compiler->scalar_stage[MESA_SHADER_TESS_CTRL])
       param_count *= 4;
@@ -108,15 +127,38 @@ brw_codegen_tcs_prog(struct brw_context *brw,
       rzalloc_array(NULL, const gl_constant_value *, param_count);
    prog_data.base.base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data.base.base.image_param =
-      rzalloc_array(NULL, struct brw_image_param, tcs->NumImages);
    prog_data.base.base.nr_params = param_count;
-   prog_data.base.base.nr_image_params = tcs->NumImages;
 
-   brw_nir_setup_glsl_uniforms(nir, shader_prog, &tcp->program.Base,
-                               &prog_data.base.base, false);
+   if (tcs) {
+      prog_data.base.base.image_param =
+         rzalloc_array(NULL, struct brw_image_param, tcs->NumImages);
+      prog_data.base.base.nr_image_params = tcs->NumImages;
 
-   if (unlikely(INTEL_DEBUG & DEBUG_TCS))
+      brw_nir_setup_glsl_uniforms(nir, shader_prog, &tcp->program.Base,
+                                  &prog_data.base.base, false);
+   } else {
+      /* Upload the Patch URB Header as the first two uniforms.
+       * Do the annoying scrambling so the shader doesn't have to.
+       */
+      const float **param = (const float **) prog_data.base.base.param;
+      static float zero = 0.0f;
+      for (int i = 0; i < 4; i++) {
+         param[7 - i] = &ctx->TessCtrlProgram.patch_default_outer_level[i];
+      }
+
+      if (key->tes_primitive_mode == GL_QUADS) {
+         param[3] = &ctx->TessCtrlProgram.patch_default_inner_level[0];
+         param[2] = &ctx->TessCtrlProgram.patch_default_inner_level[1];
+         param[1] = &zero;
+         param[0] = &zero;
+      } else if (key->tes_primitive_mode == GL_TRIANGLES) {
+         param[4] = &ctx->TessCtrlProgram.patch_default_inner_level[0];
+         for (int i = 0; i < 4; i++)
+            param[i] = &zero;
+      }
+   }
+
+   if (unlikely(INTEL_DEBUG & DEBUG_TCS) && tcs)
       brw_dump_ir("tessellation control", shader_prog, tcs, NULL);
 
    int st_index = -1;
@@ -138,6 +180,8 @@ brw_codegen_tcs_prog(struct brw_context *brw,
       if (shader_prog) {
          shader_prog->LinkStatus = false;
          ralloc_strcat(&shader_prog->InfoLog, error_str);
+      } else {
+         ralloc_free(nir);
       }
 
       _mesa_problem(NULL, "Failed to compile tessellation control shader: "
@@ -172,6 +216,8 @@ brw_codegen_tcs_prog(struct brw_context *brw,
                     &prog_data, sizeof(prog_data),
                     &stage_state->prog_offset, &brw->tcs.prog_data);
    ralloc_free(mem_ctx);
+   if (!tcs)
+      ralloc_free(nir);
 
    return true;
 }

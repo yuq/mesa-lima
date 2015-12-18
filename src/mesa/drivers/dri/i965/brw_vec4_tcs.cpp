@@ -38,13 +38,64 @@ vec4_tcs_visitor::vec4_tcs_visitor(const struct brw_compiler *compiler,
                                    struct brw_tcs_prog_data *prog_data,
                                    const nir_shader *nir,
                                    void *mem_ctx,
-                                   int shader_time_index)
+                                   int shader_time_index,
+                                   const struct brw_vue_map *input_vue_map)
    : vec4_visitor(compiler, log_data, &key->tex, &prog_data->base,
                   nir, mem_ctx, false, shader_time_index),
-     key(key)
+     input_vue_map(input_vue_map), key(key)
 {
 }
 
+
+void
+vec4_tcs_visitor::emit_nir_code()
+{
+   if (key->program_string_id != 0) {
+      /* We have a real application-supplied TCS, emit real code. */
+      vec4_visitor::emit_nir_code();
+   } else {
+      /* There is no TCS; automatically generate a passthrough shader
+       * that writes the API-specified default tessellation levels and
+       * copies VS outputs to TES inputs.
+       */
+      uniforms = 2;
+      uniform_size[0] = 1;
+      uniform_size[1] = 1;
+
+      uint64_t varyings = key->outputs_written;
+
+      src_reg vertex_offset(this, glsl_type::uint_type);
+      emit(MUL(dst_reg(vertex_offset), invocation_id,
+               brw_imm_ud(prog_data->vue_map.num_per_vertex_slots)));
+
+      while (varyings != 0) {
+         const int varying = ffsll(varyings) - 1;
+
+         unsigned in_offset = input_vue_map->varying_to_slot[varying];
+         unsigned out_offset = prog_data->vue_map.varying_to_slot[varying];
+         assert(out_offset >= 2);
+
+         dst_reg val(this, glsl_type::vec4_type);
+         emit_input_urb_read(val, invocation_id, in_offset, src_reg());
+         emit_urb_write(src_reg(val), WRITEMASK_XYZW, out_offset,
+                        vertex_offset);
+
+         varyings &= ~BITFIELD64_BIT(varying);
+      }
+
+      /* Only write the tessellation factors from invocation 0.
+       * There's no point in making other threads do redundant work.
+       */
+      emit(CMP(dst_null_d(), invocation_id, brw_imm_ud(0),
+               BRW_CONDITIONAL_EQ));
+      emit(IF(BRW_PREDICATE_NORMAL));
+      emit_urb_write(src_reg(UNIFORM, 0, glsl_type::vec4_type),
+                     WRITEMASK_XYZW, 0, src_reg());
+      emit_urb_write(src_reg(UNIFORM, 1, glsl_type::vec4_type),
+                     WRITEMASK_XYZW, 1, src_reg());
+      emit(BRW_OPCODE_ENDIF);
+   }
+}
 
 void
 vec4_tcs_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
@@ -478,7 +529,7 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    }
 
    vec4_tcs_visitor v(compiler, log_data, key, prog_data,
-                      nir, mem_ctx, shader_time_index);
+                      nir, mem_ctx, shader_time_index, &input_vue_map);
    if (!v.run()) {
       if (error_str)
          *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
