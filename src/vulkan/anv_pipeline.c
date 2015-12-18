@@ -102,26 +102,38 @@ anv_shader_compile_to_nir(struct anv_device *device,
        * and just use the NIR shader */
       nir = module->nir;
       nir->options = nir_options;
+      nir_validate_shader(nir);
    } else {
       uint32_t *spirv = (uint32_t *) module->data;
       assert(spirv[0] == SPIR_V_MAGIC_NUMBER);
       assert(module->size % 4 == 0);
 
       nir = spirv_to_nir(spirv, module->size / 4, stage, nir_options);
+      nir_validate_shader(nir);
+
+      nir_lower_returns(nir);
+      nir_validate_shader(nir);
+
+      nir_inline_functions(nir);
+      nir_validate_shader(nir);
    }
-   nir_validate_shader(nir);
 
    /* Vulkan uses the separate-shader linking model */
    nir->info.separate_shader = true;
 
-   /* Make sure the provided shader has exactly one entrypoint and that the
-    * name matches the name that came in from the VkShader.
-    */
+   /* Pick off the single entrypoint that we want */
    nir_function_impl *entrypoint = NULL;
-   nir_foreach_overload(nir, overload) {
-      if (strcmp(entrypoint_name, overload->function->name) == 0 &&
-          overload->impl) {
-         assert(entrypoint == NULL);
+   foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
+      if (strcmp(entrypoint_name, func->name) != 0) {
+         /* Not our function, get rid of it */
+         exec_node_remove(&func->node);
+         continue;
+      }
+
+      assert(exec_list_length(&func->overload_list) == 1);
+      foreach_list_typed(nir_function_overload, overload, node,
+                         &func->overload_list) {
+         assert(overload->impl);
          entrypoint = overload->impl;
       }
    }
