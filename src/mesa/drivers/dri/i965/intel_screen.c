@@ -1497,6 +1497,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
 
    intelScreen->compiler = brw_compiler_create(intelScreen,
                                                intelScreen->devinfo);
+   intelScreen->program_id = 1;
 
    if (intelScreen->devinfo->has_resource_streamer) {
       int val = -1;
