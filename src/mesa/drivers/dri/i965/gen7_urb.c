@@ -168,7 +168,6 @@ gen7_upload_urb(struct brw_context *brw)
 
    /* BRW_NEW_TESS_PROGRAMS */
    const bool tess_present = brw->tess_eval_program;
-   assert(!tess_present || brw->tess_ctrl_program);
    /* BRW_NEW_TCS_PROG_DATA */
    unsigned hs_size = tess_present ? brw->tcs.prog_data->base.urb_entry_size : 1;
    unsigned hs_entry_size_bytes = hs_size * 64;

@@ -189,7 +189,7 @@ brw_upload_tcs_prog(struct brw_context *brw)
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
    struct brw_tess_eval_program *tep =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
-   assert(tcp && tep);
+   assert(tep);
 
    if (!brw_state_dirty(brw,
                         _NEW_TEXTURE,

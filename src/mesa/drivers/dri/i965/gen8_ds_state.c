@@ -33,7 +33,6 @@ gen8_upload_ds_state(struct brw_context *brw)
    const struct brw_stage_state *stage_state = &brw->tes.base;
    /* BRW_NEW_TESS_PROGRAMS */
    bool active = brw->tess_eval_program;
-   assert(!active || brw->tess_ctrl_program);
 
    /* BRW_NEW_TES_PROG_DATA */
    const struct brw_tes_prog_data *tes_prog_data = brw->tes.prog_data;
