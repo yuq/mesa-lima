@@ -34,6 +34,7 @@
 #include "get.h"
 #include "genmipmap.h"
 #include "shaderimage.h"
+#include "texcompress.h"
 
 static bool
 _is_renderable(struct gl_context *ctx, GLenum internalformat)
@@ -1332,20 +1333,38 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_TEXTURE_COMPRESSED:
-      /* @TODO */
+      buffer[0] = _mesa_is_compressed_format(ctx, internalformat);
       break;
 
    case GL_TEXTURE_COMPRESSED_BLOCK_WIDTH:
-      /* @TODO */
-      break;
-
    case GL_TEXTURE_COMPRESSED_BLOCK_HEIGHT:
-      /* @TODO */
-      break;
+   case GL_TEXTURE_COMPRESSED_BLOCK_SIZE: {
+      mesa_format mesaformat;
+      GLint block_size;
 
-   case GL_TEXTURE_COMPRESSED_BLOCK_SIZE:
-      /* @TODO */
+      mesaformat = _mesa_glenum_to_compressed_format(internalformat);
+      if (mesaformat == MESA_FORMAT_NONE)
+         goto end;
+
+      block_size = _mesa_get_format_bytes(mesaformat);
+      assert(block_size > 0);
+
+      if (pname == GL_TEXTURE_COMPRESSED_BLOCK_SIZE) {
+         buffer[0] = block_size;
+      } else {
+         GLuint bwidth, bheight;
+
+         /* Returns the width and height in pixels. We return bytes */
+         _mesa_get_format_block_size(mesaformat, &bwidth, &bheight);
+         assert(bwidth > 0 && bheight > 0);
+
+         if (pname == GL_TEXTURE_COMPRESSED_BLOCK_WIDTH)
+            buffer[0] = block_size / bheight;
+         else
+            buffer[0] = block_size / bwidth;
+      }
       break;
+   }
 
    case GL_CLEAR_BUFFER:
       /* @TODO */
