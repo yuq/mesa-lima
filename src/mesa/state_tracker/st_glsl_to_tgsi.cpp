@@ -334,7 +334,23 @@ struct array_decl {
    unsigned mesa_index;
    unsigned array_id;
    unsigned array_size;
+   unsigned array_type;
 };
+
+static unsigned
+find_array_type(struct array_decl *arrays, unsigned count, unsigned array_id)
+{
+   unsigned i;
+
+   for (i = 0; i < count; i++) {
+      struct array_decl *decl = &arrays[i];
+
+      if (array_id == decl->array_id) {
+         return decl->array_type;
+      }
+   }
+   return GLSL_TYPE_ERROR;
+}
 
 struct rename_reg_pair {
    int old_reg;
@@ -663,6 +679,11 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
       dst_is_double[j] = false;
       if (inst->dst[j].type == GLSL_TYPE_DOUBLE)
          dst_is_double[j] = true;
+      else if (inst->dst[j].file == PROGRAM_OUTPUT && inst->dst[j].type == GLSL_TYPE_ARRAY) {
+         unsigned type = find_array_type(this->output_arrays, this->num_output_arrays, inst->dst[j].array_id);
+         if (type == GLSL_TYPE_DOUBLE)
+            dst_is_double[j] = true;
+      }
    }
 
    if (dst_is_double[0] || dst_is_double[1] ||
@@ -2270,10 +2291,13 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
             decl->mesa_index = var->data.location;
             decl->array_id = num_input_arrays + 1;
-            if (is_2d)
+            if (is_2d) {
                decl->array_size = type_size(var->type->fields.array);
-            else
+               decl->array_type = var->type->fields.array->without_array()->base_type;
+            } else {
                decl->array_size = type_size(var->type);
+               decl->array_type = var->type->without_array()->base_type;
+            }
             num_input_arrays++;
 
             entry = new(mem_ctx) variable_storage(var,
@@ -2296,10 +2320,13 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
             decl->mesa_index = var->data.location;
             decl->array_id = num_output_arrays + 1;
-            if (is_2d)
+            if (is_2d) {
                decl->array_size = type_size(var->type->fields.array);
-            else
+               decl->array_type = var->type->fields.array->without_array()->base_type;
+            } else {
                decl->array_size = type_size(var->type);
+               decl->array_type = var->type->without_array()->base_type;
+            }
             num_output_arrays++;
 
             entry = new(mem_ctx) variable_storage(var,
