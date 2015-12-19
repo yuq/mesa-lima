@@ -2372,6 +2372,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 static void
 shrink_array_declarations(struct array_decl *arrays, unsigned count,
                           GLbitfield64 usage_mask,
+                          GLbitfield64 double_usage_mask,
                           GLbitfield patch_usage_mask)
 {
    unsigned i, j;
@@ -2392,6 +2393,8 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
          else {
             if (usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
                break;
+            if (double_usage_mask & BITFIELD64_BIT(decl->mesa_index+j-1))
+               break;
          }
 
          decl->mesa_index++;
@@ -2408,6 +2411,8 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
          }
          else {
             if (usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
+               break;
+            if (double_usage_mask & BITFIELD64_BIT(decl->mesa_index+j-1))
                break;
          }
 
@@ -5587,9 +5592,9 @@ get_mesa_program(struct gl_context *ctx,
 
    do_set_program_inouts(shader->ir, prog, shader->Stage);
    shrink_array_declarations(v->input_arrays, v->num_input_arrays,
-                             prog->InputsRead, prog->PatchInputsRead);
+                             prog->InputsRead, prog->DoubleInputsRead, prog->PatchInputsRead);
    shrink_array_declarations(v->output_arrays, v->num_output_arrays,
-                             prog->OutputsWritten, prog->PatchOutputsWritten);
+                             prog->OutputsWritten, 0ULL, prog->PatchOutputsWritten);
    count_resources(v, prog);
 
    /* This must be done before the uniform storage is associated. */
