@@ -172,20 +172,16 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    /* Create upload manager for vertex data for glBitmap, glDrawPixels,
     * glClear, etc.
     */
-   st->uploader = u_upload_create(st->pipe, 65536, 4, PIPE_BIND_VERTEX_BUFFER);
+   st->uploader = u_upload_create(st->pipe, 65536, PIPE_BIND_VERTEX_BUFFER);
 
    if (!screen->get_param(screen, PIPE_CAP_USER_INDEX_BUFFERS)) {
-      st->indexbuf_uploader = u_upload_create(st->pipe, 128 * 1024, 4,
+      st->indexbuf_uploader = u_upload_create(st->pipe, 128 * 1024,
                                               PIPE_BIND_INDEX_BUFFER);
    }
 
-   if (!screen->get_param(screen, PIPE_CAP_USER_CONSTANT_BUFFERS)) {
-      unsigned alignment =
-         screen->get_param(screen, PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT);
-
-      st->constbuf_uploader = u_upload_create(pipe, 128 * 1024, alignment,
+   if (!screen->get_param(screen, PIPE_CAP_USER_CONSTANT_BUFFERS))
+      st->constbuf_uploader = u_upload_create(pipe, 128 * 1024,
                                               PIPE_BIND_CONSTANT_BUFFER);
-   }
 
    st->cso_context = cso_create_context(pipe);
 

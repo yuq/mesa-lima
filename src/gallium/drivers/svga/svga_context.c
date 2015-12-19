@@ -219,7 +219,6 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
 
    svga->const0_upload = u_upload_create(&svga->pipe,
                                          CONST0_UPLOAD_DEFAULT_SIZE,
-                                         CONST0_UPLOAD_ALIGNMENT,
                                          PIPE_BIND_CONSTANT_BUFFER);
    if (!svga->const0_upload)
       goto cleanup;

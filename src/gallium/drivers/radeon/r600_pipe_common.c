@@ -272,7 +272,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	if (!rctx->allocator_so_filled_size)
 		return false;
 
-	rctx->uploader = u_upload_create(&rctx->b, 1024 * 1024, 256,
+	rctx->uploader = u_upload_create(&rctx->b, 1024 * 1024,
 					PIPE_BIND_INDEX_BUFFER |
 					PIPE_BIND_CONSTANT_BUFFER);
 	if (!rctx->uploader)

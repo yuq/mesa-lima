@@ -1176,7 +1176,7 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
 
    hud->pipe = pipe;
    hud->cso = cso;
-   hud->uploader = u_upload_create(pipe, 256 * 1024, 16,
+   hud->uploader = u_upload_create(pipe, 256 * 1024,
                                    PIPE_BIND_VERTEX_BUFFER);
 
    /* font */

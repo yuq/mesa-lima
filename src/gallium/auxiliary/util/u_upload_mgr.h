@@ -43,12 +43,10 @@ struct pipe_resource;
  *
  * \param pipe          Pipe driver.
  * \param default_size  Minimum size of the upload buffer, in bytes.
- * \param alignment     Alignment of each suballocation in the upload buffer.
  * \param bind          Bitmask of PIPE_BIND_* flags.
  */
 struct u_upload_mgr *u_upload_create( struct pipe_context *pipe,
                                       unsigned default_size,
-                                      unsigned alignment,
                                       unsigned bind );
 
 /**

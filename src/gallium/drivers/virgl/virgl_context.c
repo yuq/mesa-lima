@@ -948,7 +948,7 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
                     16, UTIL_SLAB_SINGLETHREADED);
 
    vctx->primconvert = util_primconvert_create(&vctx->base, rs->caps.caps.v1.prim_mask);
-   vctx->uploader = u_upload_create(&vctx->base, 1024 * 1024, 256,
+   vctx->uploader = u_upload_create(&vctx->base, 1024 * 1024,
                                      PIPE_BIND_INDEX_BUFFER);
    if (!vctx->uploader)
            goto fail;

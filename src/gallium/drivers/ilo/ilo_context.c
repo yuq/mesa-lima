@@ -189,7 +189,7 @@ ilo_context_create(struct pipe_screen *screen, void *priv, unsigned flags)
     * These must be called last as u_upload/u_blitter are clients of the pipe
     * context.
     */
-   ilo->uploader = u_upload_create(&ilo->base, 1024 * 1024, 16,
+   ilo->uploader = u_upload_create(&ilo->base, 1024 * 1024,
          PIPE_BIND_CONSTANT_BUFFER | PIPE_BIND_INDEX_BUFFER);
    if (!ilo->uploader) {
       ilo_context_destroy(&ilo->base);
