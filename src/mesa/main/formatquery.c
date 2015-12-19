@@ -35,6 +35,7 @@
 #include "genmipmap.h"
 #include "shaderimage.h"
 #include "texcompress.h"
+#include "textureview.h"
 
 static bool
 _is_renderable(struct gl_context *ctx, GLenum internalformat)
@@ -617,6 +618,7 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_WRITE:
    case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE:
    case GL_CLEAR_BUFFER:
+   case GL_TEXTURE_VIEW:
       params[0] = GL_FULL_SUPPORT;
       break;
 
@@ -1376,11 +1378,23 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_TEXTURE_VIEW:
-      /* @TODO */
-      break;
-
    case GL_VIEW_COMPATIBILITY_CLASS:
-      /* @TODO */
+      if (!_mesa_has_ARB_texture_view(ctx) ||
+          target == GL_TEXTURE_BUFFER ||
+          target == GL_RENDERBUFFER)
+         goto end;
+
+      if (pname == GL_TEXTURE_VIEW) {
+         ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                         buffer);
+      } else {
+         GLenum view_class = _mesa_texture_view_lookup_view_class(ctx,
+                                                                  internalformat);
+         if (view_class == GL_FALSE)
+            goto end;
+
+         buffer[0] = view_class;
+      }
       break;
 
    default:
