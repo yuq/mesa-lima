@@ -397,10 +397,9 @@ NineDevice9_ctor( struct NineDevice9 *This,
     if (!This->driver_caps.user_ibufs)
         This->index_uploader = u_upload_create(This->pipe, 128 * 1024, 4, PIPE_BIND_INDEX_BUFFER);
     if (!This->driver_caps.user_cbufs) {
-        unsigned alignment = GET_PCAP(CONSTANT_BUFFER_OFFSET_ALIGNMENT);
-
+        This->constbuf_alignment = GET_PCAP(CONSTANT_BUFFER_OFFSET_ALIGNMENT);
         This->constbuf_uploader = u_upload_create(This->pipe, This->vs_const_size,
-                                                  alignment, PIPE_BIND_CONSTANT_BUFFER);
+                                                  This->constbuf_alignment, PIPE_BIND_CONSTANT_BUFFER);
     }
 
     This->driver_caps.window_space_position_support = GET_PCAP(TGSI_VS_WINDOW_SPACE_POSITION);
@@ -2955,6 +2954,7 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
         u_upload_data(This->vertex_uploader,
                       0,
                       (info.max_index + 1) * VertexStreamZeroStride, /* XXX */
+                      4,
                       vtxbuf.user_buffer,
                       &vtxbuf.buffer_offset,
                       &vtxbuf.buffer);
@@ -3027,6 +3027,7 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
                       base,
                       (info.max_index -
                        info.min_index + 1) * VertexStreamZeroStride, /* XXX */
+                      4,
                       (const uint8_t *)vbuf.user_buffer + base,
                       &vbuf.buffer_offset,
                       &vbuf.buffer);
@@ -3039,6 +3040,7 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
         u_upload_data(This->index_uploader,
                       0,
                       info.count * ibuf.index_size,
+                      4,
                       ibuf.user_buffer,
                       &ibuf.offset,
                       &ibuf.buffer);

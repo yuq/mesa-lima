@@ -314,10 +314,11 @@ void st_init_limits(struct pipe_screen *screen,
    c->GLSLSkipStrictMaxUniformLimitCheck =
       screen->get_param(screen, PIPE_CAP_TGSI_CAN_COMPACT_CONSTANTS);
 
+   c->UniformBufferOffsetAlignment =
+      screen->get_param(screen, PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT);
+
    if (can_ubo) {
       extensions->ARB_uniform_buffer_object = GL_TRUE;
-      c->UniformBufferOffsetAlignment =
-         screen->get_param(screen, PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT);
       c->MaxCombinedUniformBlocks = c->MaxUniformBufferBindings =
          c->Program[MESA_SHADER_VERTEX].MaxUniformBlocks +
          c->Program[MESA_SHADER_TESS_CTRL].MaxUniformBlocks +

@@ -1191,7 +1191,7 @@ static void blitter_draw(struct blitter_context_priv *ctx,
 
    vb.stride = 8 * sizeof(float);
 
-   u_upload_data(ctx->upload, 0, sizeof(ctx->vertices), ctx->vertices,
+   u_upload_data(ctx->upload, 0, sizeof(ctx->vertices), 4, ctx->vertices,
                  &vb.buffer_offset, &vb.buffer);
    if (!vb.buffer)
       return;
@@ -2111,7 +2111,7 @@ void util_blitter_clear_buffer(struct blitter_context *blitter,
       return;
    }
 
-   u_upload_data(ctx->upload, 0, num_channels*4, clear_value,
+   u_upload_data(ctx->upload, 0, num_channels*4, 4, clear_value,
                  &vb.buffer_offset, &vb.buffer);
    if (!vb.buffer)
       goto out;

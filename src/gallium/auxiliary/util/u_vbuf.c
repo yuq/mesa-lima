@@ -987,7 +987,7 @@ u_vbuf_upload_buffers(struct u_vbuf *mgr,
       real_vb = &mgr->real_vertex_buffer[i];
       ptr = mgr->vertex_buffer[i].user_buffer;
 
-      u_upload_data(mgr->uploader, start, end - start, ptr + start,
+      u_upload_data(mgr->uploader, start, end - start, 4, ptr + start,
                     &real_vb->buffer_offset, &real_vb->buffer);
       if (!real_vb->buffer)
          return PIPE_ERROR_OUT_OF_MEMORY;

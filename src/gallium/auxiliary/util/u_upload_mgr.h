@@ -97,6 +97,7 @@ void u_upload_alloc(struct u_upload_mgr *upload,
 void u_upload_data(struct u_upload_mgr *upload,
                    unsigned min_out_offset,
                    unsigned size,
+                   unsigned alignment,
                    const void *data,
                    unsigned *out_offset,
                    struct pipe_resource **outbuf);

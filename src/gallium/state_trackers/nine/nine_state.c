@@ -260,6 +260,7 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb.buffer_size,
+                      device->constbuf_alignment,
                       cb.user_buffer,
                       &cb.buffer_offset,
                       &cb.buffer);
@@ -336,6 +337,7 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb.buffer_size,
+                      device->constbuf_alignment,
                       cb.user_buffer,
                       &cb.buffer_offset,
                       &cb.buffer);

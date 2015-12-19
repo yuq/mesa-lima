@@ -842,7 +842,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			start_offset = start * ib.index_size;
 
 			u_upload_data(sctx->b.uploader, start_offset, count * ib.index_size,
-				      (char*)ib.user_buffer + start_offset,
+				      256, (char*)ib.user_buffer + start_offset,
 				      &ib.offset, &ib.buffer);
 			if (!ib.buffer)
 				return;

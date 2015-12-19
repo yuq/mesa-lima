@@ -107,7 +107,7 @@ setup_index_buffer(struct st_context *st,
    else if (st->indexbuf_uploader) {
       /* upload indexes from user memory into a real buffer */
       u_upload_data(st->indexbuf_uploader, 0,
-                    ib->count * ibuffer->index_size, ib->ptr,
+                    ib->count * ibuffer->index_size, 4, ib->ptr,
                     &ibuffer->offset, &ibuffer->buffer);
       if (!ibuffer->buffer) {
          /* out of memory */
