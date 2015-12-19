@@ -29,6 +29,7 @@
 #include "fbobject.h"
 #include "formatquery.h"
 #include "teximage.h"
+#include "texparam.h"
 
 static bool
 _is_renderable(struct gl_context *ctx, GLenum internalformat)
@@ -682,56 +683,90 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_INTERNALFORMAT_RED_SIZE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_GREEN_SIZE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_BLUE_SIZE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_ALPHA_SIZE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_DEPTH_SIZE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_STENCIL_SIZE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_SHARED_SIZE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_RED_TYPE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_GREEN_TYPE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_BLUE_TYPE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_ALPHA_TYPE:
-      /* @TODO */
-      break;
-
    case GL_INTERNALFORMAT_DEPTH_TYPE:
-      /* @TODO */
-      break;
+   case GL_INTERNALFORMAT_STENCIL_TYPE: {
+      GLint baseformat;
+      mesa_format texformat;
 
-   case GL_INTERNALFORMAT_STENCIL_TYPE:
-      /* @TODO */
+      if (target != GL_RENDERBUFFER) {
+         if (!_mesa_legal_get_tex_level_parameter_target(ctx, target, true))
+            goto end;
+
+         baseformat = _mesa_base_tex_format(ctx, internalformat);
+      } else {
+         baseformat = _mesa_base_fbo_format(ctx, internalformat);
+      }
+
+      /* Let the driver choose the texture format.
+       *
+       * Disclaimer: I am considering that drivers use for renderbuffers the
+       * same format-choice logic as for textures.
+       */
+      texformat = ctx->Driver.ChooseTextureFormat(ctx, target, internalformat,
+                                                  GL_NONE /*format */, GL_NONE /* type */);
+
+      if (texformat == MESA_FORMAT_NONE || baseformat <= 0)
+         goto end;
+
+      /* Implementation based on what Mesa does for glGetTexLevelParameteriv
+       * and glGetRenderbufferParameteriv functions.
+       */
+      if (pname == GL_INTERNALFORMAT_SHARED_SIZE) {
+         if (_mesa_has_EXT_texture_shared_exponent(ctx) &&
+             target != GL_TEXTURE_BUFFER &&
+             target != GL_RENDERBUFFER &&
+             texformat == MESA_FORMAT_R9G9B9E5_FLOAT) {
+            buffer[0] = 5;
+         }
+         goto end;
+      }
+
+      if (!_mesa_base_format_has_channel(baseformat, pname))
+         goto end;
+
+      switch (pname) {
+      case GL_INTERNALFORMAT_DEPTH_SIZE:
+         if (!_mesa_has_ARB_depth_texture(ctx) &&
+             target != GL_RENDERBUFFER &&
+             target != GL_TEXTURE_BUFFER)
+            goto end;
+         /* fallthrough */
+      case GL_INTERNALFORMAT_RED_SIZE:
+      case GL_INTERNALFORMAT_GREEN_SIZE:
+      case GL_INTERNALFORMAT_BLUE_SIZE:
+      case GL_INTERNALFORMAT_ALPHA_SIZE:
+      case GL_INTERNALFORMAT_STENCIL_SIZE:
+         buffer[0] = _mesa_get_format_bits(texformat, pname);
+         break;
+
+      case GL_INTERNALFORMAT_DEPTH_TYPE:
+         if (!_mesa_has_ARB_texture_float(ctx))
+            goto end;
+         /* fallthrough */
+      case GL_INTERNALFORMAT_RED_TYPE:
+      case GL_INTERNALFORMAT_GREEN_TYPE:
+      case GL_INTERNALFORMAT_BLUE_TYPE:
+      case GL_INTERNALFORMAT_ALPHA_TYPE:
+      case GL_INTERNALFORMAT_STENCIL_TYPE:
+         buffer[0]  = _mesa_get_format_datatype(texformat);
+         break;
+
+      default:
+         break;
+
+      }
       break;
+   }
 
    case GL_MAX_WIDTH:
       /* @TODO */
