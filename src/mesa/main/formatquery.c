@@ -33,6 +33,7 @@
 #include "texobj.h"
 #include "get.h"
 #include "genmipmap.h"
+#include "shaderimage.h"
 
 static bool
 _is_renderable(struct gl_context *ctx, GLenum internalformat)
@@ -607,6 +608,9 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    case GL_GEOMETRY_TEXTURE:
    case GL_FRAGMENT_TEXTURE:
    case GL_COMPUTE_TEXTURE:
+   case GL_SHADER_IMAGE_LOAD:
+   case GL_SHADER_IMAGE_STORE:
+   case GL_SHADER_IMAGE_ATOMIC:
       params[0] = GL_FULL_SUPPORT;
       break;
 
@@ -1190,15 +1194,30 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_SHADER_IMAGE_LOAD:
-      /* @TODO */
-      break;
-
    case GL_SHADER_IMAGE_STORE:
-      /* @TODO */
+      if (!_mesa_has_ARB_shader_image_load_store(ctx))
+         goto end;
+
+      /* We call to _mesa_is_shader_image_format_supported
+       * using "internalformat" as parameter, because the
+       * the ARB_internalformat_query2 spec says:
+       * "In this case the <internalformat> is the value of the <format>
+       * parameter that is passed to BindImageTexture."
+       */
+      if (target == GL_RENDERBUFFER ||
+          !_mesa_is_shader_image_format_supported(ctx, internalformat))
+         goto end;
+
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_SHADER_IMAGE_ATOMIC:
-      /* @TODO */
+      if (!_mesa_has_ARB_shader_image_load_store(ctx))
+         goto end;
+
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_IMAGE_TEXEL_SIZE:
