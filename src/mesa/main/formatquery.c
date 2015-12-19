@@ -32,6 +32,7 @@
 #include "texparam.h"
 #include "texobj.h"
 #include "get.h"
+#include "genmipmap.h"
 
 static bool
 _is_renderable(struct gl_context *ctx, GLenum internalformat)
@@ -595,6 +596,11 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
       params[0] = internalFormat;
       break;
 
+   case GL_MANUAL_GENERATE_MIPMAP:
+   case GL_AUTO_GENERATE_MIPMAP:
+      params[0] = GL_FULL_SUPPORT;
+      break;
+
    default:
       _set_default_response(pname, params);
       break;
@@ -1061,15 +1067,35 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_MIPMAP:
-      /* @TODO */
-      break;
-
    case GL_MANUAL_GENERATE_MIPMAP:
-      /* @TODO */
-      break;
-
    case GL_AUTO_GENERATE_MIPMAP:
-      /* @TODO */
+      if (!_mesa_is_valid_generate_texture_mipmap_target(ctx, target) ||
+          !_mesa_is_valid_generate_texture_mipmap_internalformat(ctx,
+                                                              internalformat)) {
+         goto end;
+      }
+
+      if (pname == GL_MIPMAP) {
+         buffer[0] = GL_TRUE;
+         goto end;
+      }
+      else if (pname == GL_MANUAL_GENERATE_MIPMAP) {
+         if (!_mesa_has_ARB_framebuffer_object(ctx))
+            goto end;
+      }
+      else {
+         /* From ARB_internalformat_query2:
+          *    "Dependencies on OpenGL 3.2 (Core Profile)
+          *     In core profiles for OpenGL 3.2 and later versions, queries
+          *     for the AUTO_GENERATE_MIPMAP <pname> return the appropriate
+          *     unsupported response."
+          */
+         if (_mesa_is_desktop_gl(ctx) && ctx->Version >= 32)
+            goto end;
+      }
+
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_COLOR_ENCODING:
