@@ -601,6 +601,12 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    case GL_SRGB_READ:
    case GL_SRGB_WRITE:
    case GL_SRGB_DECODE_ARB:
+   case GL_VERTEX_TEXTURE:
+   case GL_TESS_CONTROL_TEXTURE:
+   case GL_TESS_EVALUATION_TEXTURE:
+   case GL_GEOMETRY_TEXTURE:
+   case GL_FRAGMENT_TEXTURE:
+   case GL_COMPUTE_TEXTURE:
       params[0] = GL_FULL_SUPPORT;
       break;
 
@@ -1148,27 +1154,27 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_VERTEX_TEXTURE:
-      /* @TODO */
-      break;
-
    case GL_TESS_CONTROL_TEXTURE:
-      /* @TODO */
-      break;
-
    case GL_TESS_EVALUATION_TEXTURE:
-      /* @TODO */
-      break;
-
    case GL_GEOMETRY_TEXTURE:
-      /* @TODO */
-      break;
-
    case GL_FRAGMENT_TEXTURE:
-      /* @TODO */
-      break;
-
    case GL_COMPUTE_TEXTURE:
-      /* @TODO */
+      if (target == GL_RENDERBUFFER)
+         goto end;
+
+      if ((pname == GL_TESS_CONTROL_TEXTURE ||
+           pname == GL_TESS_EVALUATION_TEXTURE) &&
+          !_mesa_has_tessellation(ctx))
+         goto end;
+
+      if (pname == GL_GEOMETRY_TEXTURE && !_mesa_has_geometry_shaders(ctx))
+         goto end;
+
+      if (pname == GL_COMPUTE_TEXTURE && !_mesa_has_compute_shaders(ctx))
+         goto end;
+
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_TEXTURE_SHADOW:
