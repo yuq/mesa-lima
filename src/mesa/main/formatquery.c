@@ -616,6 +616,7 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_TEST:
    case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_WRITE:
    case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE:
+   case GL_CLEAR_BUFFER:
       params[0] = GL_FULL_SUPPORT;
       break;
 
@@ -1367,7 +1368,11 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
    }
 
    case GL_CLEAR_BUFFER:
-      /* @TODO */
+      if (target != GL_TEXTURE_BUFFER)
+         goto end;
+
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_TEXTURE_VIEW:
