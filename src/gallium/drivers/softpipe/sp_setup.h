@@ -30,11 +30,19 @@
 struct setup_context;
 struct softpipe_context;
 
+struct sp_setup_info {
+   unsigned valid;
+   struct {
+      unsigned interp:8;      /**< INTERP_X */
+      unsigned src_index:8;
+   } attrib[PIPE_MAX_SHADER_OUTPUTS];
+};
+
 void 
-sp_setup_tri( struct setup_context *setup,
-	   const float (*v0)[4],
-	   const float (*v1)[4],
-	   const float (*v2)[4] );
+sp_setup_tri(struct setup_context *setup,
+             const float (*v0)[4],
+             const float (*v1)[4],
+             const float (*v2)[4]);
 
 void
 sp_setup_line(struct setup_context *setup,

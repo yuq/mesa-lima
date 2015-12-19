@@ -599,9 +599,11 @@ setup_tri_coefficients(struct setup_context *setup)
 {
    struct softpipe_context *softpipe = setup->softpipe;
    const struct tgsi_shader_info *fsInfo = &setup->softpipe->fs_variant->info;
-   const struct vertex_info *vinfo = softpipe_get_vertex_info(softpipe);
+   const struct sp_setup_info *sinfo = &softpipe->setup_info;
    uint fragSlot;
    float v[3];
+
+   assert(sinfo->valid);
 
    /* z and w are done by linear interpolation:
     */
@@ -618,13 +620,14 @@ setup_tri_coefficients(struct setup_context *setup)
    /* setup interpolation for all the remaining attributes:
     */
    for (fragSlot = 0; fragSlot < fsInfo->num_inputs; fragSlot++) {
-      const uint vertSlot = vinfo->attrib[fragSlot].src_index;
+      const uint vertSlot = sinfo->attrib[fragSlot].src_index;
       uint j;
 
-      switch (vinfo->attrib[fragSlot].interp_mode) {
+      switch (sinfo->attrib[fragSlot].interp) {
       case INTERP_CONSTANT:
-         for (j = 0; j < TGSI_NUM_CHANNELS; j++)
+         for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             const_coeff(setup, &setup->coef[fragSlot], vertSlot, j);
+         }
          break;
       case INTERP_LINEAR:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
@@ -966,10 +969,12 @@ setup_line_coefficients(struct setup_context *setup,
 {
    struct softpipe_context *softpipe = setup->softpipe;
    const struct tgsi_shader_info *fsInfo = &setup->softpipe->fs_variant->info;
-   const struct vertex_info *vinfo = softpipe_get_vertex_info(softpipe);
+   const struct sp_setup_info *sinfo = &softpipe->setup_info;
    uint fragSlot;
    float area;
    float v[2];
+
+   assert(sinfo->valid);
 
    /* use setup->vmin, vmax to point to vertices */
    if (softpipe->rasterizer->flatshade_first)
@@ -1001,10 +1006,10 @@ setup_line_coefficients(struct setup_context *setup,
    /* setup interpolation for all the remaining attributes:
     */
    for (fragSlot = 0; fragSlot < fsInfo->num_inputs; fragSlot++) {
-      const uint vertSlot = vinfo->attrib[fragSlot].src_index;
+      const uint vertSlot = sinfo->attrib[fragSlot].src_index;
       uint j;
 
-      switch (vinfo->attrib[fragSlot].interp_mode) {
+      switch (sinfo->attrib[fragSlot].interp) {
       case INTERP_CONSTANT:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++)
             const_coeff(setup, &setup->coef[fragSlot], vertSlot, j);
@@ -1236,7 +1241,7 @@ sp_setup_point(struct setup_context *setup,
    const boolean round = (boolean) setup->softpipe->rasterizer->point_smooth;
    const float x = v0[0][0];  /* Note: data[0] is always position */
    const float y = v0[0][1];
-   const struct vertex_info *vinfo = softpipe_get_vertex_info(softpipe);
+   const struct sp_setup_info *sinfo = &softpipe->setup_info;
    uint fragSlot;
    uint layer = 0;
    unsigned viewport_index = 0;
@@ -1244,6 +1249,8 @@ sp_setup_point(struct setup_context *setup,
    debug_printf("Setup point:\n");
    print_vertex(setup, v0);
 #endif
+
+   assert(sinfo->valid);
 
    if (setup->softpipe->no_rast || setup->softpipe->rasterizer->rasterizer_discard)
       return;
@@ -1285,10 +1292,10 @@ sp_setup_point(struct setup_context *setup,
    const_coeff(setup, &setup->posCoef, 0, 3);
 
    for (fragSlot = 0; fragSlot < fsInfo->num_inputs; fragSlot++) {
-      const uint vertSlot = vinfo->attrib[fragSlot].src_index;
+      const uint vertSlot = sinfo->attrib[fragSlot].src_index;
       uint j;
 
-      switch (vinfo->attrib[fragSlot].interp_mode) {
+      switch (sinfo->attrib[fragSlot].interp) {
       case INTERP_CONSTANT:
          /* fall-through */
       case INTERP_LINEAR:

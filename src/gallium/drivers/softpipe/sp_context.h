@@ -37,6 +37,7 @@
 #include "draw/draw_vertex.h"
 
 #include "sp_quad_pipe.h"
+#include "sp_setup.h"
 
 
 /** Do polygon stipple in the draw module? */
@@ -117,7 +118,7 @@ struct softpipe_context {
    unsigned const_buffer_size[PIPE_SHADER_TYPES][PIPE_MAX_CONSTANT_BUFFERS];
 
    /** Vertex format */
-   struct vertex_info vertex_info;
+   struct sp_setup_info setup_info;
    struct vertex_info vertex_info_vbuf;
 
    /** Which vertex shader output slot contains point size */

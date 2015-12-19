@@ -48,7 +48,7 @@
 static void
 invalidate_vertex_layout(struct softpipe_context *softpipe)
 {
-   softpipe->vertex_info.num_attribs =  0;
+   softpipe->setup_info.valid =  0;
 }
 
 
@@ -57,17 +57,16 @@ invalidate_vertex_layout(struct softpipe_context *softpipe)
  * (simple float[][4]) used by the 'draw' module into vertices for
  * rasterization.
  *
- * This function validates the vertex layout and returns a pointer to a
- * vertex_info object.
+ * This function validates the vertex layout.
  */
-struct vertex_info *
-softpipe_get_vertex_info(struct softpipe_context *softpipe)
+static void
+softpipe_compute_vertex_info(struct softpipe_context *softpipe)
 {
-   struct vertex_info *vinfo = &softpipe->vertex_info;
+   struct sp_setup_info *sinfo = &softpipe->setup_info;
    int vs_index;
 
-   if (vinfo->num_attribs == 0) {
-      /* compute vertex layout now */
+   if (sinfo->valid == 0) {
+      /* compute vertex layout for vbuf now */
       const struct tgsi_shader_info *fsInfo = &softpipe->fs_variant->info;
       struct vertex_info *vinfo_vbuf = &softpipe->vertex_info_vbuf;
       const uint num = draw_num_shader_outputs(softpipe->draw);
@@ -91,7 +90,6 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
        * Loop over fragment shader inputs, searching for the matching output
        * from the vertex shader.
        */
-      vinfo->num_attribs = 0;
       for (i = 0; i < fsInfo->num_inputs; i++) {
          int src;
          enum interp_mode interp = INTERP_LINEAR;
@@ -142,7 +140,15 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
                                           TGSI_SEMANTIC_BCOLOR,
                                           fsInfo->input_semantic_index[i]);
 
-         draw_emit_vertex_attr(vinfo, EMIT_4F, interp, src);
+         sinfo->attrib[i].interp = interp;
+         /*
+          * note src can be -1 if not found. Would need special handling,
+          * (as we don't tell draw anything about it) just force to 0.
+          * It's wrong either way but should be safer...
+          */
+         if (src < 0)
+            src = 0;
+         sinfo->attrib[i].src_index = src;
       }
 
       /* Figure out if we need pointsize as well. */
@@ -151,7 +157,6 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
 
       if (vs_index >= 0) {
          softpipe->psize_slot = vs_index;
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
       }
 
       /* Figure out if we need viewport index */
@@ -160,7 +165,6 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
                                          0);
       if (vs_index >= 0) {
          softpipe->viewport_index_slot = vs_index;
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
       }
 
       /* Figure out if we need layer */
@@ -169,34 +173,25 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
                                          0);
       if (vs_index >= 0) {
          softpipe->layer_slot = vs_index;
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
       }
-
-      draw_compute_vertex_size(vinfo);
+      softpipe->setup_info.valid = 1;
    }
 
-   return vinfo;
+   return;
 }
 
 
 /**
  * Called from vbuf module.
  *
- * Note that there's actually two different vertex layouts in softpipe.
- *
- * The normal one is computed in softpipe_get_vertex_info() above and is
- * used by the point/line/tri "setup" code.
- *
- * The other one (this one) is only used by the vbuf module (which is
- * not normally used by default but used in testing).  For the vbuf module,
- * we basically want to pass-through the draw module's vertex layout as-is.
- * When the softpipe vbuf code begins drawing, the normal vertex layout
- * will come into play again.
+ * Note the vertex layout used for vbuf is simply telling it to pass
+ * through everything as is. The mapping actually used for setup is
+ * stored separately (but calculated here too at the same time).
  */
 struct vertex_info *
 softpipe_get_vbuf_vertex_info(struct softpipe_context *softpipe)
 {
-   (void) softpipe_get_vertex_info(softpipe);
+   softpipe_compute_vertex_info(softpipe);
    return &softpipe->vertex_info_vbuf;
 }
 
