@@ -113,6 +113,7 @@ void u_upload_buffer(struct u_upload_mgr *upload,
                      unsigned min_out_offset,
                      unsigned offset,
                      unsigned size,
+                     unsigned alignment,
                      struct pipe_resource *inbuf,
                      unsigned *out_offset,
                      struct pipe_resource **outbuf);

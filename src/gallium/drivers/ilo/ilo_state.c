@@ -431,7 +431,7 @@ finalize_index_buffer(struct ilo_context *ilo)
                &hw_offset, &vec->ib.hw_resource);
       } else {
          u_upload_buffer(ilo->uploader, 0,
-               vec->ib.state.offset + offset, size, vec->ib.state.buffer,
+               vec->ib.state.offset + offset, size, 16, vec->ib.state.buffer,
                &hw_offset, &vec->ib.hw_resource);
       }
 

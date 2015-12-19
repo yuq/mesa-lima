@@ -262,6 +262,7 @@ void u_upload_buffer(struct u_upload_mgr *upload,
                      unsigned min_out_offset,
                      unsigned offset,
                      unsigned size,
+                     unsigned alignment,
                      struct pipe_resource *inbuf,
                      unsigned *out_offset,
                      struct pipe_resource **outbuf)
@@ -283,7 +284,7 @@ void u_upload_buffer(struct u_upload_mgr *upload,
    if (0)
       debug_printf("upload ptr %p ofs %d sz %d\n", map, offset, size);
 
-   u_upload_data(upload, min_out_offset, size, upload->alignment,
+   u_upload_data(upload, min_out_offset, size, alignment,
                  map, out_offset, outbuf);
    pipe_buffer_unmap( upload->pipe, transfer );
 }
