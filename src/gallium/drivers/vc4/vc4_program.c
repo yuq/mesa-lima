@@ -123,26 +123,6 @@ nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
         return &intr->dest.ssa;
 }
 
-nir_ssa_def *
-vc4_nir_get_swizzled_channel(nir_builder *b, nir_ssa_def **srcs, int swiz)
-{
-        switch (swiz) {
-        default:
-        case UTIL_FORMAT_SWIZZLE_NONE:
-                fprintf(stderr, "warning: unknown swizzle\n");
-                /* FALLTHROUGH */
-        case UTIL_FORMAT_SWIZZLE_0:
-                return nir_imm_float(b, 0.0);
-        case UTIL_FORMAT_SWIZZLE_1:
-                return nir_imm_float(b, 1.0);
-        case UTIL_FORMAT_SWIZZLE_X:
-        case UTIL_FORMAT_SWIZZLE_Y:
-        case UTIL_FORMAT_SWIZZLE_Z:
-        case UTIL_FORMAT_SWIZZLE_W:
-                return srcs[swiz];
-        }
-}
-
 static struct qreg *
 ntq_init_ssa_def(struct vc4_compile *c, nir_ssa_def *def)
 {
@@ -338,30 +318,15 @@ ntq_emit_txf(struct vc4_compile *c, nir_tex_instr *instr)
         struct qreg tex = qir_TEX_RESULT(c);
         c->num_texture_samples++;
 
-        struct qreg texture_output[4];
+        struct qreg *dest = ntq_get_dest(c, &instr->dest);
         enum pipe_format format = c->key->tex[unit].format;
         if (util_format_is_depth_or_stencil(format)) {
                 struct qreg scaled = ntq_scale_depth_texture(c, tex);
                 for (int i = 0; i < 4; i++)
-                        texture_output[i] = scaled;
+                        dest[i] = scaled;
         } else {
-                struct qreg tex_result_unpacked[4];
                 for (int i = 0; i < 4; i++)
-                        tex_result_unpacked[i] = qir_UNPACK_8_F(c, tex, i);
-
-                const uint8_t *format_swiz =
-                        vc4_get_format_swizzle(c->key->tex[unit].format);
-                for (int i = 0; i < 4; i++) {
-                        texture_output[i] =
-                                get_swizzled_channel(c, tex_result_unpacked,
-                                                     format_swiz[i]);
-                }
-        }
-
-        struct qreg *dest = ntq_get_dest(c, &instr->dest);
-        for (int i = 0; i < 4; i++) {
-                dest[i] = get_swizzled_channel(c, texture_output,
-                                               c->key->tex[unit].swizzle[i]);
+                        dest[i] = qir_UNPACK_8_F(c, tex, i);
         }
 }
 
@@ -470,7 +435,7 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
 
         enum pipe_format format = c->key->tex[unit].format;
 
-        struct qreg unpacked[4];
+        struct qreg *dest = ntq_get_dest(c, &instr->dest);
         if (util_format_is_depth_or_stencil(format)) {
                 struct qreg normalized = ntq_scale_depth_texture(c, tex);
                 struct qreg depth_output;
@@ -518,29 +483,15 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 }
 
                 for (int i = 0; i < 4; i++)
-                        unpacked[i] = depth_output;
+                        dest[i] = depth_output;
         } else {
                 for (int i = 0; i < 4; i++)
-                        unpacked[i] = qir_UNPACK_8_F(c, tex, i);
+                        dest[i] = qir_UNPACK_8_F(c, tex, i);
         }
 
-        const uint8_t *format_swiz = vc4_get_format_swizzle(format);
-        struct qreg texture_output[4];
         for (int i = 0; i < 4; i++) {
-                texture_output[i] = get_swizzled_channel(c, unpacked,
-                                                         format_swiz[i]);
-        }
-
-        if (util_format_is_srgb(format)) {
-                for (int i = 0; i < 3; i++)
-                        texture_output[i] = qir_srgb_decode(c,
-                                                            texture_output[i]);
-        }
-
-        struct qreg *dest = ntq_get_dest(c, &instr->dest);
-        for (int i = 0; i < 4; i++) {
-                dest[i] = get_swizzled_channel(c, texture_output,
-                                               c->key->tex[unit].swizzle[i]);
+                if (c->tex_srgb_decode[unit] & (1 << i))
+                        dest[i] = qir_srgb_decode(c, dest[i]);
         }
 }
 
@@ -1804,6 +1755,56 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
 
         if (stage == QSTAGE_FRAG)
                 vc4_nir_lower_blend(c);
+
+        struct nir_lower_tex_options tex_options = {
+                /* We would need to implement txs, but we don't want the
+                 * int/float conversions
+                 */
+                .lower_rect = false,
+
+                /* We want to use this, but we don't want to newton-raphson
+                 * its rcp.
+                 */
+                .lower_txp = false,
+
+                /* Apply swizzles to all samplers. */
+                .swizzle_result = ~0,
+        };
+
+        /* Lower the format swizzle and ARB_texture_swizzle-style swizzle.
+         * The format swizzling applies before sRGB decode, and
+         * ARB_texture_swizzle is the last thing before returning the sample.
+         */
+        for (int i = 0; i < ARRAY_SIZE(key->tex); i++) {
+                enum pipe_format format = c->key->tex[i].format;
+
+                if (!format)
+                        continue;
+
+                const uint8_t *format_swizzle = vc4_get_format_swizzle(format);
+
+                for (int j = 0; j < 4; j++) {
+                        uint8_t arb_swiz = c->key->tex[i].swizzle[j];
+
+                        if (arb_swiz <= 3) {
+                                tex_options.swizzles[i][j] =
+                                        format_swizzle[arb_swiz];
+                        } else {
+                                tex_options.swizzles[i][j] = arb_swiz;
+                        }
+
+                        /* If ARB_texture_swizzle is reading from the R, G, or
+                         * B channels of an sRGB texture, then we need to
+                         * apply sRGB decode to this channel at sample time.
+                         */
+                        if (arb_swiz < 3 && util_format_is_srgb(format)) {
+                                c->tex_srgb_decode[i] |= (1 << j);
+                        }
+
+                }
+        }
+
+        nir_lower_tex(c->s, &tex_options);
 
         if (c->fs_key && c->fs_key->light_twoside)
                 nir_lower_two_sided_color(c->s);
