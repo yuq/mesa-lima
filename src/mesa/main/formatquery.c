@@ -611,6 +611,10 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    case GL_SHADER_IMAGE_LOAD:
    case GL_SHADER_IMAGE_STORE:
    case GL_SHADER_IMAGE_ATOMIC:
+   case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_TEST:
+   case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_TEST:
+   case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_WRITE:
+   case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE:
       params[0] = GL_FULL_SUPPORT;
       break;
 
@@ -1307,19 +1311,24 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
    }
 
    case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_TEST:
-      /* @TODO */
-      break;
-
    case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_TEST:
-      /* @TODO */
-      break;
-
    case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_WRITE:
-      /* @TODO */
-      break;
-
    case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE:
-      /* @TODO */
+      if (target == GL_RENDERBUFFER)
+         goto end;
+
+      if (!_mesa_is_depthstencil_format(internalformat)) {
+         if (((pname == GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_TEST ||
+               pname == GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_WRITE) &&
+              !_mesa_is_depth_format(internalformat)) ||
+             ((pname == GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_TEST ||
+               pname == GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE) &&
+              !_mesa_is_stencil_format(internalformat)))
+            goto end;
+      }
+
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_TEXTURE_COMPRESSED:
