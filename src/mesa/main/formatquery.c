@@ -1099,7 +1099,13 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_COLOR_ENCODING:
-      /* @TODO */
+      if (!_mesa_is_color_format(internalformat))
+         goto end;
+
+      if (_mesa_is_srgb_format(internalformat))
+         buffer[0] = GL_SRGB;
+      else
+         buffer[0] = GL_LINEAR;
       break;
 
    case GL_SRGB_READ:
