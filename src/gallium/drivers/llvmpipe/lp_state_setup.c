@@ -372,9 +372,9 @@ load_attribute(struct gallivm_state *gallivm,
    /* Potentially modify it according to twoside, etc:
     */
    if (key->twoside) {
-      if (vert_attr == key->color_slot && key->bcolor_slot > 0)
+      if (vert_attr == key->color_slot && key->bcolor_slot >= 0)
          lp_twoside(gallivm, args, key, key->bcolor_slot, attribv);
-      else if (vert_attr == key->spec_slot && key->bspec_slot > 0)
+      else if (vert_attr == key->spec_slot && key->bspec_slot >= 0)
          lp_twoside(gallivm, args, key, key->bspec_slot, attribv);
    }
 }
