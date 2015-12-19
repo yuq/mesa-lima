@@ -2754,7 +2754,26 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
     */
    if (ir->write_mask == 0) {
       assert(!ir->lhs->type->is_scalar() && !ir->lhs->type->is_vector());
-      l.writemask = WRITEMASK_XYZW;
+
+      if (ir->lhs->type->is_array() || ir->lhs->type->without_array()->is_matrix()) {
+         if (ir->lhs->type->without_array()->is_double()) {
+            switch (ir->lhs->type->without_array()->vector_elements) {
+            case 1:
+               l.writemask = WRITEMASK_X;
+               break;
+            case 2:
+               l.writemask = WRITEMASK_XY;
+               break;
+            case 3:
+               l.writemask = WRITEMASK_XYZ;
+               break;
+            case 4:
+               l.writemask = WRITEMASK_XYZW;
+               break;
+            }
+         } else
+            l.writemask = WRITEMASK_XYZW;
+      }
    } else if (ir->lhs->type->is_scalar() &&
               !ir->lhs->type->is_double() &&
               ir->lhs->variable_referenced()->data.mode == ir_var_shader_out) {
