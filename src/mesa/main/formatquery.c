@@ -30,6 +30,7 @@
 #include "formatquery.h"
 #include "teximage.h"
 #include "texparam.h"
+#include "texobj.h"
 
 static bool
 _is_renderable(struct gl_context *ctx, GLenum internalformat)
@@ -948,9 +949,26 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       /* @TODO */
       break;
 
-   case GL_IMAGE_FORMAT_COMPATIBILITY_TYPE:
-      /* @TODO */
+   case GL_IMAGE_FORMAT_COMPATIBILITY_TYPE: {
+      if (!_mesa_has_ARB_shader_image_load_store(ctx))
+         goto end;
+
+      if (!_mesa_legal_get_tex_level_parameter_target(ctx, target, true))
+         goto end;
+
+      /* From spec: "Equivalent to calling GetTexParameter with <value> set
+       * to IMAGE_FORMAT_COMPATIBILITY_TYPE."
+       *
+       * GetTexParameter just returns
+       * tex_obj->ImageFormatCompatibilityType. We create a fake tex_obj
+       * just with the purpose of getting the value.
+       */
+      struct gl_texture_object *tex_obj = _mesa_new_texture_object(ctx, 0, target);
+      buffer[0] = tex_obj->ImageFormatCompatibilityType;
+      _mesa_delete_texture_object(ctx, tex_obj);
+
       break;
+   }
 
    case GL_SIMULTANEOUS_TEXTURE_AND_DEPTH_TEST:
       /* @TODO */
