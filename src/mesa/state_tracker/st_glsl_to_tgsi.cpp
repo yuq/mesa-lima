@@ -2907,20 +2907,57 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
       st_dst_reg mat_column = st_dst_reg(mat);
 
       for (i = 0; i < ir->type->matrix_columns; i++) {
-         assert(ir->type->base_type == GLSL_TYPE_FLOAT);
-         values = (gl_constant_value *) &ir->value.f[i * ir->type->vector_elements];
+         switch (ir->type->base_type) {
+         case GLSL_TYPE_FLOAT:
+            values = (gl_constant_value *) &ir->value.f[i * ir->type->vector_elements];
 
-         src = st_src_reg(file, -1, ir->type->base_type);
-         src.index = add_constant(file,
-                                  values,
-                                  ir->type->vector_elements,
-                                  GL_FLOAT,
-                                  &src.swizzle);
-         emit_asm(ir, TGSI_OPCODE_MOV, mat_column, src);
-
+            src = st_src_reg(file, -1, ir->type->base_type);
+            src.index = add_constant(file,
+                                     values,
+                                     ir->type->vector_elements,
+                                     GL_FLOAT,
+                                     &src.swizzle);
+            emit_asm(ir, TGSI_OPCODE_MOV, mat_column, src);
+            break;
+         case GLSL_TYPE_DOUBLE:
+            values = (gl_constant_value *) &ir->value.d[i * ir->type->vector_elements];
+            src = st_src_reg(file, -1, ir->type->base_type);
+            src.index = add_constant(file,
+                                     values,
+                                     ir->type->vector_elements,
+                                     GL_DOUBLE,
+                                     &src.swizzle);
+            if (ir->type->vector_elements >= 2) {
+               mat_column.writemask = WRITEMASK_XY;
+               src.swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_X, SWIZZLE_Y);
+               emit_asm(ir, TGSI_OPCODE_MOV, mat_column, src);
+            } else {
+               mat_column.writemask = WRITEMASK_X;
+               src.swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_X);
+               emit_asm(ir, TGSI_OPCODE_MOV, mat_column, src);
+            }
+            src.index++;
+            if (ir->type->vector_elements > 2) {
+               if (ir->type->vector_elements == 4) {
+                  mat_column.writemask = WRITEMASK_ZW;
+                  src.swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y, SWIZZLE_X, SWIZZLE_Y);
+                  emit_asm(ir, TGSI_OPCODE_MOV, mat_column, src);
+               } else {
+                  mat_column.writemask = WRITEMASK_Z;
+                  src.swizzle = MAKE_SWIZZLE4(SWIZZLE_Y, SWIZZLE_Y, SWIZZLE_Y, SWIZZLE_Y);
+                  emit_asm(ir, TGSI_OPCODE_MOV, mat_column, src);
+                  mat_column.writemask = WRITEMASK_XYZW;
+                  src.swizzle = SWIZZLE_XYZW;
+               }
+               mat_column.index++;
+            }
+            break;
+         default:
+            unreachable("Illegal matrix constant type.\n");
+            break;
+         }
          mat_column.index++;
       }
-
       this->result = mat;
       return;
    }
