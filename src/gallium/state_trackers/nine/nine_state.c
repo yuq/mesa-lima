@@ -504,7 +504,6 @@ update_framebuffer(struct NineDevice9 *device)
 static void
 update_viewport(struct NineDevice9 *device)
 {
-    struct pipe_context *pipe = device->pipe;
     const D3DVIEWPORT9 *vport = &device->state.viewport;
     struct pipe_viewport_state pvport;
 
@@ -543,7 +542,7 @@ update_viewport(struct NineDevice9 *device)
         pvport.translate[1] -= 1.0f / 128.0f;
     }
 
-    pipe->set_viewport_states(pipe, 0, 1, &pvport);
+    cso_set_viewport(device->cso, &pvport);
 }
 
 /* Loop through VS inputs and pick the vertex elements with the declared
