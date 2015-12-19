@@ -85,6 +85,7 @@ public:
       this->has_index2 = false;
       this->double_reg2 = false;
       this->array_id = 0;
+      this->is_double_vertex_input = false;
    }
 
    st_src_reg(gl_register_file file, int index, int type)
@@ -100,6 +101,7 @@ public:
       this->has_index2 = false;
       this->double_reg2 = false;
       this->array_id = 0;
+      this->is_double_vertex_input = false;
    }
 
    st_src_reg(gl_register_file file, int index, int type, int index2D)
@@ -115,6 +117,7 @@ public:
       this->has_index2 = false;
       this->double_reg2 = false;
       this->array_id = 0;
+      this->is_double_vertex_input = false;
    }
 
    st_src_reg()
@@ -130,6 +133,7 @@ public:
       this->has_index2 = false;
       this->double_reg2 = false;
       this->array_id = 0;
+      this->is_double_vertex_input = false;
    }
 
    explicit st_src_reg(st_dst_reg reg);
@@ -150,6 +154,7 @@ public:
     */
    bool double_reg2;
    unsigned array_id;
+   bool is_double_vertex_input;
 };
 
 class st_dst_reg {
@@ -224,6 +229,7 @@ st_src_reg::st_src_reg(st_dst_reg reg)
    this->has_index2 = reg.has_index2;
    this->double_reg2 = false;
    this->array_id = reg.array_id;
+   this->is_double_vertex_input = false;
 }
 
 st_dst_reg::st_dst_reg(st_src_reg reg)
@@ -2370,6 +2376,8 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
    this->result = st_src_reg(entry->file, entry->index, var->type);
    this->result.array_id = entry->array_id;
+   if (this->shader->Stage == MESA_SHADER_VERTEX && var->data.mode == ir_var_shader_in && var->type->is_double())
+      this->result.is_double_vertex_input = true;
    if (!native_integers)
       this->result.type = GLSL_TYPE_FLOAT;
 }
@@ -2714,7 +2722,7 @@ glsl_to_tgsi_visitor::emit_block_mov(ir_assignment *ir, const struct glsl_type *
    if (type->is_matrix()) {
       const struct glsl_type *vec_type;
 
-      vec_type = glsl_type::get_instance(GLSL_TYPE_FLOAT,
+      vec_type = glsl_type::get_instance(type->is_double() ? GLSL_TYPE_DOUBLE : GLSL_TYPE_FLOAT,
                                          type->vector_elements, 1);
 
       for (int i = 0; i < type->matrix_columns; i++) {
@@ -2744,6 +2752,11 @@ glsl_to_tgsi_visitor::emit_block_mov(ir_assignment *ir, const struct glsl_type *
    }
    l->index++;
    r->index++;
+   if (type->is_dual_slot_double()) {
+      l->index++;
+      if (r->is_double_vertex_input == false)
+	 r->index++;
+   }
 }
 
 void
