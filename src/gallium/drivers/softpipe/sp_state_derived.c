@@ -79,9 +79,13 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
        */
       vinfo_vbuf->num_attribs = 0;
       for (i = 0; i < num; i++) {
-	 draw_emit_vertex_attr(vinfo_vbuf, EMIT_4F, INTERP_PERSPECTIVE, i);
+         draw_emit_vertex_attr(vinfo_vbuf, EMIT_4F, INTERP_PERSPECTIVE, i);
       }
       draw_compute_vertex_size(vinfo_vbuf);
+
+      softpipe->viewport_index_slot = 0;
+      softpipe->layer_slot = 0;
+      softpipe->psize_slot = 0;
 
       /*
        * Loop over fragment shader inputs, searching for the matching output
@@ -128,10 +132,15 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
          src = draw_find_shader_output(softpipe->draw,
                                        fsInfo->input_semantic_name[i],
                                        fsInfo->input_semantic_index[i]);
-	 if (fsInfo->input_semantic_name[i] == TGSI_SEMANTIC_COLOR && src == -1)
-	   /* try and find a bcolor */
-	   src = draw_find_shader_output(softpipe->draw,
-					 TGSI_SEMANTIC_BCOLOR, fsInfo->input_semantic_index[i]);
+         if (fsInfo->input_semantic_name[i] == TGSI_SEMANTIC_COLOR && src == -1)
+            /*
+             * try and find a bcolor.
+             * Note that if there's both front and back color, draw will
+             * have copied back to front color already.
+             */
+            src = draw_find_shader_output(softpipe->draw,
+                                          TGSI_SEMANTIC_BCOLOR,
+                                          fsInfo->input_semantic_index[i]);
 
          draw_emit_vertex_attr(vinfo, EMIT_4F, interp, src);
       }
@@ -141,7 +150,7 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
                                          TGSI_SEMANTIC_PSIZE, 0);
 
       if (vs_index >= 0) {
-         softpipe->psize_slot = vinfo->num_attribs;
+         softpipe->psize_slot = vs_index;
          draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
       }
 
@@ -150,10 +159,8 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
                                          TGSI_SEMANTIC_VIEWPORT_INDEX,
                                          0);
       if (vs_index >= 0) {
-         softpipe->viewport_index_slot = vinfo->num_attribs;
+         softpipe->viewport_index_slot = vs_index;
          draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
-      } else {
-         softpipe->viewport_index_slot = 0;
       }
 
       /* Figure out if we need layer */
@@ -161,10 +168,8 @@ softpipe_get_vertex_info(struct softpipe_context *softpipe)
                                          TGSI_SEMANTIC_LAYER,
                                          0);
       if (vs_index >= 0) {
-         softpipe->layer_slot = vinfo->num_attribs;
+         softpipe->layer_slot = vs_index;
          draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
-      } else {
-         softpipe->layer_slot = 0;
       }
 
       draw_compute_vertex_size(vinfo);
