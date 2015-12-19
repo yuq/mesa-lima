@@ -78,7 +78,7 @@ softpipe_compute_vertex_info(struct softpipe_context *softpipe)
        */
       vinfo_vbuf->num_attribs = 0;
       for (i = 0; i < num; i++) {
-         draw_emit_vertex_attr(vinfo_vbuf, EMIT_4F, INTERP_PERSPECTIVE, i);
+         draw_emit_vertex_attr(vinfo_vbuf, EMIT_4F, i);
       }
       draw_compute_vertex_size(vinfo_vbuf);
 
@@ -92,17 +92,17 @@ softpipe_compute_vertex_info(struct softpipe_context *softpipe)
        */
       for (i = 0; i < fsInfo->num_inputs; i++) {
          int src;
-         enum interp_mode interp = INTERP_LINEAR;
+         enum sp_interp_mode interp = SP_INTERP_LINEAR;
 
          switch (fsInfo->input_interpolate[i]) {
          case TGSI_INTERPOLATE_CONSTANT:
-            interp = INTERP_CONSTANT;
+            interp = SP_INTERP_CONSTANT;
             break;
          case TGSI_INTERPOLATE_LINEAR:
-            interp = INTERP_LINEAR;
+            interp = SP_INTERP_LINEAR;
             break;
          case TGSI_INTERPOLATE_PERSPECTIVE:
-            interp = INTERP_PERSPECTIVE;
+            interp = SP_INTERP_PERSPECTIVE;
             break;
          case TGSI_INTERPOLATE_COLOR:
             assert(fsInfo->input_semantic_name[i] == TGSI_SEMANTIC_COLOR);
@@ -113,15 +113,15 @@ softpipe_compute_vertex_info(struct softpipe_context *softpipe)
 
          switch (fsInfo->input_semantic_name[i]) {
          case TGSI_SEMANTIC_POSITION:
-            interp = INTERP_POS;
+            interp = SP_INTERP_POS;
             break;
 
          case TGSI_SEMANTIC_COLOR:
             if (fsInfo->input_interpolate[i] == TGSI_INTERPOLATE_COLOR) {
                if (softpipe->rasterizer->flatshade)
-                  interp = INTERP_CONSTANT;
+                  interp = SP_INTERP_CONSTANT;
                else
-                  interp = INTERP_PERSPECTIVE;
+                  interp = SP_INTERP_PERSPECTIVE;
             }
             break;
          }

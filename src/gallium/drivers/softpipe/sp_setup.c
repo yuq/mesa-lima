@@ -38,7 +38,6 @@
 #include "sp_setup.h"
 #include "sp_state.h"
 #include "draw/draw_context.h"
-#include "draw/draw_vertex.h"
 #include "pipe/p_shader_tokens.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
@@ -624,12 +623,12 @@ setup_tri_coefficients(struct setup_context *setup)
       uint j;
 
       switch (sinfo->attrib[fragSlot].interp) {
-      case INTERP_CONSTANT:
+      case SP_INTERP_CONSTANT:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             const_coeff(setup, &setup->coef[fragSlot], vertSlot, j);
          }
          break;
-      case INTERP_LINEAR:
+      case SP_INTERP_LINEAR:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             tri_apply_cylindrical_wrap(setup->vmin[vertSlot][j],
                                        setup->vmid[vertSlot][j],
@@ -639,7 +638,7 @@ setup_tri_coefficients(struct setup_context *setup)
             tri_linear_coeff(setup, &setup->coef[fragSlot], j, v);
          }
          break;
-      case INTERP_PERSPECTIVE:
+      case SP_INTERP_PERSPECTIVE:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             tri_apply_cylindrical_wrap(setup->vmin[vertSlot][j],
                                        setup->vmid[vertSlot][j],
@@ -649,7 +648,7 @@ setup_tri_coefficients(struct setup_context *setup)
             tri_persp_coeff(setup, &setup->coef[fragSlot], j, v);
          }
          break;
-      case INTERP_POS:
+      case SP_INTERP_POS:
          setup_fragcoord_coeff(setup, fragSlot);
          break;
       default:
@@ -1010,11 +1009,11 @@ setup_line_coefficients(struct setup_context *setup,
       uint j;
 
       switch (sinfo->attrib[fragSlot].interp) {
-      case INTERP_CONSTANT:
+      case SP_INTERP_CONSTANT:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++)
             const_coeff(setup, &setup->coef[fragSlot], vertSlot, j);
          break;
-      case INTERP_LINEAR:
+      case SP_INTERP_LINEAR:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             line_apply_cylindrical_wrap(setup->vmin[vertSlot][j],
                                         setup->vmax[vertSlot][j],
@@ -1023,7 +1022,7 @@ setup_line_coefficients(struct setup_context *setup,
             line_linear_coeff(setup, &setup->coef[fragSlot], j, v);
          }
          break;
-      case INTERP_PERSPECTIVE:
+      case SP_INTERP_PERSPECTIVE:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             line_apply_cylindrical_wrap(setup->vmin[vertSlot][j],
                                         setup->vmax[vertSlot][j],
@@ -1032,7 +1031,7 @@ setup_line_coefficients(struct setup_context *setup,
             line_persp_coeff(setup, &setup->coef[fragSlot], j, v);
          }
          break;
-      case INTERP_POS:
+      case SP_INTERP_POS:
          setup_fragcoord_coeff(setup, fragSlot);
          break;
       default:
@@ -1296,18 +1295,18 @@ sp_setup_point(struct setup_context *setup,
       uint j;
 
       switch (sinfo->attrib[fragSlot].interp) {
-      case INTERP_CONSTANT:
+      case SP_INTERP_CONSTANT:
          /* fall-through */
-      case INTERP_LINEAR:
+      case SP_INTERP_LINEAR:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++)
             const_coeff(setup, &setup->coef[fragSlot], vertSlot, j);
          break;
-      case INTERP_PERSPECTIVE:
+      case SP_INTERP_PERSPECTIVE:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++)
             point_persp_coeff(setup, setup->vprovoke,
                               &setup->coef[fragSlot], vertSlot, j);
          break;
-      case INTERP_POS:
+      case SP_INTERP_POS:
          setup_fragcoord_coeff(setup, fragSlot);
          break;
       default:

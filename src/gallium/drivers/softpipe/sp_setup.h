@@ -30,10 +30,21 @@
 struct setup_context;
 struct softpipe_context;
 
+/**
+ * Attribute interpolation mode
+ */
+enum sp_interp_mode {
+   SP_INTERP_POS,       /**< special case for frag position */
+   SP_INTERP_CONSTANT,
+   SP_INTERP_LINEAR,
+   SP_INTERP_PERSPECTIVE
+};
+
+
 struct sp_setup_info {
    unsigned valid;
    struct {
-      unsigned interp:8;      /**< INTERP_X */
+      unsigned interp:8;      /**< SP_INTERP_X */
       unsigned src_index:8;
    } attrib[PIPE_MAX_SHADER_OUTPUTS];
 };
