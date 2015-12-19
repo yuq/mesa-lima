@@ -1220,21 +1220,70 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
                                       buffer);
       break;
 
-   case GL_IMAGE_TEXEL_SIZE:
-      /* @TODO */
+   case GL_IMAGE_TEXEL_SIZE: {
+      mesa_format image_format;
+
+      if (!_mesa_has_ARB_shader_image_load_store(ctx) ||
+          target == GL_RENDERBUFFER)
+         goto end;
+
+      image_format = _mesa_get_shader_image_format(internalformat);
+      if (image_format == MESA_FORMAT_NONE)
+         goto end;
+
+      /* We return bits */
+      buffer[0] = (_mesa_get_format_bytes(image_format) * 8);
       break;
+   }
 
    case GL_IMAGE_COMPATIBILITY_CLASS:
-      /* @TODO */
+      if (!_mesa_has_ARB_shader_image_load_store(ctx) ||
+          target == GL_RENDERBUFFER)
+         goto end;
+
+      buffer[0] = _mesa_get_image_format_class(internalformat);
       break;
 
-   case GL_IMAGE_PIXEL_FORMAT:
-      /* @TODO */
-      break;
+   case GL_IMAGE_PIXEL_FORMAT: {
+      GLint base_format;
 
-   case GL_IMAGE_PIXEL_TYPE:
-      /* @TODO */
+      if (!_mesa_has_ARB_shader_image_load_store(ctx) ||
+          target == GL_RENDERBUFFER ||
+          !_mesa_is_shader_image_format_supported(ctx, internalformat))
+         goto end;
+
+      base_format = _mesa_base_tex_format(ctx, internalformat);
+      if (base_format == -1)
+         goto end;
+
+      if (_mesa_is_enum_format_integer(internalformat))
+         buffer[0] = _mesa_base_format_to_integer_format(base_format);
+      else
+         buffer[0] = base_format;
       break;
+   }
+
+   case GL_IMAGE_PIXEL_TYPE: {
+      mesa_format image_format;
+      GLenum datatype;
+      GLuint comps;
+
+      if (!_mesa_has_ARB_shader_image_load_store(ctx) ||
+          target == GL_RENDERBUFFER)
+         goto end;
+
+      image_format = _mesa_get_shader_image_format(internalformat);
+      if (image_format == MESA_FORMAT_NONE)
+         goto end;
+
+      _mesa_uncompressed_format_to_type_and_comps(image_format, &datatype,
+                                                  &comps);
+      if (!datatype)
+         goto end;
+
+      buffer[0] = datatype;
+      break;
+   }
 
    case GL_IMAGE_FORMAT_COMPATIBILITY_TYPE: {
       if (!_mesa_has_ARB_shader_image_load_store(ctx))
