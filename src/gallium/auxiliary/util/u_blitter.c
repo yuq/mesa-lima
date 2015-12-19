@@ -320,7 +320,8 @@ struct blitter_context *util_blitter_create(struct pipe_context *pipe)
    for (i = 0; i < 4; i++)
       ctx->vertices[i][0][3] = 1; /*v.w*/
 
-   ctx->upload = u_upload_create(pipe, 65536, PIPE_BIND_VERTEX_BUFFER);
+   ctx->upload = u_upload_create(pipe, 65536, PIPE_BIND_VERTEX_BUFFER,
+                                 PIPE_USAGE_STREAM);
 
    return &ctx->base;
 }

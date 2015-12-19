@@ -44,10 +44,11 @@ struct pipe_resource;
  * \param pipe          Pipe driver.
  * \param default_size  Minimum size of the upload buffer, in bytes.
  * \param bind          Bitmask of PIPE_BIND_* flags.
+ * \param usage         PIPE_USAGE_*
  */
-struct u_upload_mgr *u_upload_create( struct pipe_context *pipe,
-                                      unsigned default_size,
-                                      unsigned bind );
+struct u_upload_mgr *
+u_upload_create(struct pipe_context *pipe, unsigned default_size,
+                unsigned bind, unsigned usage);
 
 /**
  * Destroy the upload manager.

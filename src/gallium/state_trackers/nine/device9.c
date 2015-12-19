@@ -393,13 +393,15 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->driver_caps.user_cbufs = GET_PCAP(USER_CONSTANT_BUFFERS);
 
     if (!This->driver_caps.user_vbufs)
-        This->vertex_uploader = u_upload_create(This->pipe, 65536, PIPE_BIND_VERTEX_BUFFER);
+        This->vertex_uploader = u_upload_create(This->pipe, 65536,
+                                                PIPE_BIND_VERTEX_BUFFER, PIPE_USAGE_STREAM);
     if (!This->driver_caps.user_ibufs)
-        This->index_uploader = u_upload_create(This->pipe, 128 * 1024, PIPE_BIND_INDEX_BUFFER);
+        This->index_uploader = u_upload_create(This->pipe, 128 * 1024,
+                                               PIPE_BIND_INDEX_BUFFER, PIPE_USAGE_STREAM);
     if (!This->driver_caps.user_cbufs) {
         This->constbuf_alignment = GET_PCAP(CONSTANT_BUFFER_OFFSET_ALIGNMENT);
         This->constbuf_uploader = u_upload_create(This->pipe, This->vs_const_size,
-                                                  PIPE_BIND_CONSTANT_BUFFER);
+                                                  PIPE_BIND_CONSTANT_BUFFER, PIPE_USAGE_STREAM);
     }
 
     This->driver_caps.window_space_position_support = GET_PCAP(TGSI_VS_WINDOW_SPACE_POSITION);

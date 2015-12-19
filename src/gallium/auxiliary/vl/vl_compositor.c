@@ -1091,7 +1091,8 @@ vl_compositor_init(struct vl_compositor *c, struct pipe_context *pipe)
 
    c->pipe = pipe;
 
-   c->upload = u_upload_create(pipe, 128 * 1024, PIPE_BIND_VERTEX_BUFFER);
+   c->upload = u_upload_create(pipe, 128 * 1024, PIPE_BIND_VERTEX_BUFFER,
+                               PIPE_USAGE_STREAM);
 
    if (!c->upload)
       return false;

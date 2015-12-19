@@ -274,7 +274,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 
 	rctx->uploader = u_upload_create(&rctx->b, 1024 * 1024,
 					PIPE_BIND_INDEX_BUFFER |
-					PIPE_BIND_CONSTANT_BUFFER);
+					PIPE_BIND_CONSTANT_BUFFER, PIPE_USAGE_STREAM);
 	if (!rctx->uploader)
 		return false;
 

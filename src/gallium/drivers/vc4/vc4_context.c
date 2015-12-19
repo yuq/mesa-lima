@@ -255,7 +255,8 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
                 goto fail;
 
         vc4->uploader = u_upload_create(pctx, 16 * 1024,
-                                        PIPE_BIND_INDEX_BUFFER);
+                                        PIPE_BIND_INDEX_BUFFER,
+                                        PIPE_USAGE_STREAM);
 
         vc4_debug |= saved_shaderdb_flag;
 

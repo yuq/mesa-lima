@@ -43,6 +43,7 @@ struct u_upload_mgr {
 
    unsigned default_size;  /* Minimum size of the upload buffer, in bytes. */
    unsigned bind;          /* Bitmask of PIPE_BIND_* flags. */
+   unsigned usage;         /* PIPE_USAGE_* */
    unsigned map_flags;     /* Bitmask of PIPE_TRANSFER_* flags. */
    boolean map_persistent; /* If persistent mappings are supported. */
 
@@ -54,9 +55,9 @@ struct u_upload_mgr {
 };
 
 
-struct u_upload_mgr *u_upload_create( struct pipe_context *pipe,
-                                      unsigned default_size,
-                                      unsigned bind )
+struct u_upload_mgr *
+u_upload_create(struct pipe_context *pipe, unsigned default_size,
+                unsigned bind, unsigned usage)
 {
    struct u_upload_mgr *upload = CALLOC_STRUCT( u_upload_mgr );
    if (!upload)
@@ -65,6 +66,7 @@ struct u_upload_mgr *u_upload_create( struct pipe_context *pipe,
    upload->pipe = pipe;
    upload->default_size = default_size;
    upload->bind = bind;
+   upload->usage = usage;
 
    upload->map_persistent =
       pipe->screen->get_param(pipe->screen,
@@ -146,7 +148,7 @@ u_upload_alloc_buffer(struct u_upload_mgr *upload,
    buffer.target = PIPE_BUFFER;
    buffer.format = PIPE_FORMAT_R8_UNORM; /* want TYPELESS or similar */
    buffer.bind = upload->bind;
-   buffer.usage = PIPE_USAGE_STREAM;
+   buffer.usage = upload->usage;
    buffer.width0 = size;
    buffer.height0 = 1;
    buffer.depth0 = 1;

@@ -315,7 +315,8 @@ u_vbuf_create(struct pipe_context *pipe,
    memset(mgr->fallback_vbs, ~0, sizeof(mgr->fallback_vbs));
 
    mgr->uploader = u_upload_create(pipe, 1024 * 1024,
-                                   PIPE_BIND_VERTEX_BUFFER);
+                                   PIPE_BIND_VERTEX_BUFFER,
+                                   PIPE_USAGE_STREAM);
 
    return mgr;
 }
