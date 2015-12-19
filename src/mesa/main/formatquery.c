@@ -31,6 +31,7 @@
 #include "teximage.h"
 #include "texparam.h"
 #include "texobj.h"
+#include "get.h"
 
 static bool
 _is_renderable(struct gl_context *ctx, GLenum internalformat)
@@ -594,6 +595,101 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    }
 }
 
+/*
+ * For MAX_WIDTH/MAX_HEIGHT/MAX_DEPTH it returns the equivalent GetInteger
+ * pname for a Getinternalformat pname/target combination. target/pname
+ * combinations that would return 0 due dimension number or unsupported status
+ * should be already filtered out
+ *
+ * Note that this means that the returned value would be independent of the
+ * internalformat. This possibility is already mentioned at the Issue 7 of the
+ * arb_internalformat_query2 spec.
+ */
+static GLenum
+equivalentSizePname(GLenum target,
+                    GLenum pname)
+{
+   switch (target) {
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_2D:
+   case GL_TEXTURE_2D_MULTISAMPLE:
+      return GL_MAX_TEXTURE_SIZE;
+   case GL_TEXTURE_3D:
+      return GL_MAX_3D_TEXTURE_SIZE;
+   case GL_TEXTURE_CUBE_MAP:
+      return GL_MAX_CUBE_MAP_TEXTURE_SIZE;
+   case GL_TEXTURE_RECTANGLE:
+      return GL_MAX_RECTANGLE_TEXTURE_SIZE;
+   case GL_RENDERBUFFER:
+      return GL_MAX_RENDERBUFFER_SIZE;
+   case GL_TEXTURE_1D_ARRAY:
+      if (pname == GL_MAX_HEIGHT)
+         return GL_MAX_ARRAY_TEXTURE_LAYERS;
+      else
+         return GL_MAX_TEXTURE_SIZE;
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      if (pname == GL_MAX_DEPTH)
+         return GL_MAX_ARRAY_TEXTURE_LAYERS;
+      else
+         return GL_MAX_TEXTURE_SIZE;
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+      if (pname == GL_MAX_DEPTH)
+         return GL_MAX_ARRAY_TEXTURE_LAYERS;
+      else
+         return GL_MAX_CUBE_MAP_TEXTURE_SIZE;
+   case GL_TEXTURE_BUFFER:
+      return GL_MAX_TEXTURE_BUFFER_SIZE;
+   default:
+      return 0;
+   }
+}
+
+/*
+ * Returns the dimensions associated to a target. GL_TEXTURE_BUFFER and
+ * GL_RENDERBUFFER have associated a dimension, but they are not textures
+ * per-se, so we can't just call _mesa_get_texture_dimension directly.
+ */
+static GLint
+get_target_dimensions(GLenum target)
+{
+   switch(target) {
+   case GL_TEXTURE_BUFFER:
+      return 1;
+   case GL_RENDERBUFFER:
+      return 2;
+   default:
+      return _mesa_get_texture_dimensions(target);
+   }
+}
+
+/*
+ * Returns the minimum amount of dimensions associated to a pname. So for
+ * example, if querying GL_MAX_HEIGHT, it is assumed that your target would
+ * have as minimum 2 dimensions.
+ *
+ * Useful to handle sentences like this from query2 spec:
+ *
+ * "MAX_HEIGHT:
+ *  <skip>
+ *  If the resource does not have at least two dimensions
+ *  <skip>."
+ */
+static GLint
+get_min_dimensions(GLenum pname)
+{
+   switch(pname) {
+   case GL_MAX_WIDTH:
+      return 1;
+   case GL_MAX_HEIGHT:
+      return 2;
+   case GL_MAX_DEPTH:
+      return 3;
+   default:
+      return 0;
+   }
+}
+
 void GLAPIENTRY
 _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
                           GLsizei bufSize, GLint *params)
@@ -769,20 +865,42 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
    }
 
+      /* For WIDTH/HEIGHT/DEPTH/LAYERS there is no reason to think that the
+       * returned values should be different to the values returned by
+       * GetInteger with MAX_TEXTURE_SIZE, MAX_3D_TEXTURE_SIZE, etc.*/
    case GL_MAX_WIDTH:
-      /* @TODO */
-      break;
-
    case GL_MAX_HEIGHT:
-      /* @TODO */
-      break;
+   case GL_MAX_DEPTH: {
+      GLenum get_pname;
+      GLint dimensions;
+      GLint min_dimensions;
 
-   case GL_MAX_DEPTH:
-      /* @TODO */
+      /* From query2:MAX_HEIGHT spec (as example):
+       *
+       * "If the resource does not have at least two dimensions, or if the
+       * resource is unsupported, zero is returned."
+       */
+      dimensions = get_target_dimensions(target);
+      min_dimensions = get_min_dimensions(pname);
+      if (dimensions < min_dimensions)
+         goto end;
+
+      get_pname = equivalentSizePname(target, pname);
+      if (get_pname == 0)
+         goto end;
+
+      _mesa_GetIntegerv(get_pname, buffer);
       break;
+   }
 
    case GL_MAX_LAYERS:
-      /* @TODO */
+      if (!_mesa_has_EXT_texture_array(ctx))
+         goto end;
+
+      if (!_mesa_is_array_texture(target))
+         goto end;
+
+      _mesa_GetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, buffer);
       break;
 
    case GL_MAX_COMBINED_DIMENSIONS:
