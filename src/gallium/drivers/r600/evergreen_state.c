@@ -2414,7 +2414,7 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 	struct r600_command_buffer *cb = &rctx->start_cs_cmd;
 	int tmp, i;
 
-	r600_init_command_buffer(cb, 342);
+	r600_init_command_buffer(cb, 341);
 
 	/* This must be first. */
 	r600_store_value(cb, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
@@ -2468,9 +2468,7 @@ static void cayman_init_atom_start_cs(struct r600_context *rctx)
 
 	r600_store_context_reg(cb, R_028B98_VGT_STRMOUT_BUFFER_CONFIG, 0);
 
-	r600_store_context_reg_seq(cb, R_028AB4_VGT_REUSE_OFF, 2);
-	r600_store_value(cb, 0); /* R_028AB4_VGT_REUSE_OFF */
-	r600_store_value(cb, 0); /* R_028AB8_VGT_VTX_CNT_EN */
+	r600_store_context_reg(cb, R_028AB4_VGT_REUSE_OFF, 0);
 
 	r600_store_config_reg(cb, R_008A14_PA_CL_ENHANCE, (3 << 1) | 1);
 
@@ -2671,7 +2669,7 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 		return;
 	}
 
-	r600_init_command_buffer(cb, 342);
+	r600_init_command_buffer(cb, 341);
 
 	/* This must be first. */
 	r600_store_value(cb, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
@@ -2896,9 +2894,7 @@ void evergreen_init_atom_start_cs(struct r600_context *rctx)
 	r600_store_value(cb, 0); /* R_028A3C_VGT_GROUP_VECT_1_FMT_CNTL */
 	r600_store_value(cb, 0); /* R_028A40_VGT_GS_MODE */
 
-	r600_store_context_reg_seq(cb, R_028AB4_VGT_REUSE_OFF, 2);
-	r600_store_value(cb, 0); /* R_028AB4_VGT_REUSE_OFF */
-	r600_store_value(cb, 0); /* R_028AB8_VGT_VTX_CNT_EN */
+	r600_store_context_reg(cb, R_028AB4_VGT_REUSE_OFF, 0);
 
 	r600_store_config_reg(cb, R_008A14_PA_CL_ENHANCE, (3 << 1) | 1);
 
