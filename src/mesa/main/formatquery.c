@@ -283,6 +283,12 @@ _set_default_response(GLenum pname, GLint buffer[16])
       break;
 
    case GL_MAX_COMBINED_DIMENSIONS:
+      /* This value can be a 64-bit value. As the default is the 32-bit query,
+       * we pack 2 32-bit integers. So we need to clean both */
+      buffer[0] = 0;
+      buffer[1] = 0;
+      break;
+
    case GL_NUM_SAMPLE_COUNTS:
    case GL_INTERNALFORMAT_RED_SIZE:
    case GL_INTERNALFORMAT_GREEN_SIZE:
@@ -690,6 +696,23 @@ get_min_dimensions(GLenum pname)
    }
 }
 
+/*
+ * Similar to teximage.c:check_multisample_target, but independent of the
+ * dimensions.
+ */
+static bool
+is_multisample_target(GLenum target)
+{
+   switch(target) {
+   case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      return true;
+   default:
+      return false;
+   }
+
+}
+
 void GLAPIENTRY
 _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
                           GLsizei bufSize, GLint *params)
@@ -903,9 +926,43 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       _mesa_GetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, buffer);
       break;
 
-   case GL_MAX_COMBINED_DIMENSIONS:
-      /* @TODO */
+   case GL_MAX_COMBINED_DIMENSIONS:{
+      GLint64 combined_value = 1;
+      GLenum max_dimensions_pnames[] = {
+         GL_MAX_WIDTH,
+         GL_MAX_HEIGHT,
+         GL_MAX_DEPTH,
+         GL_SAMPLES
+      };
+      unsigned i;
+      GLint current_value;
+
+      /* Combining the dimensions. Note that for array targets, this would
+       * automatically include the value of MAX_LAYERS, as that value is
+       * returned as MAX_HEIGHT or MAX_DEPTH */
+      for (i = 0; i < 4; i++) {
+         if (max_dimensions_pnames[i] == GL_SAMPLES &&
+             !is_multisample_target(target))
+            continue;
+
+         _mesa_GetInternalformativ(target, internalformat,
+                                   max_dimensions_pnames[i],
+                                   1, &current_value);
+
+         if (current_value != 0)
+            combined_value *= current_value;
+      }
+
+      if (_mesa_is_cube_map_texture(target))
+         combined_value *= 6;
+
+      /* We pack the 64-bit value on two 32-bit values. Calling the 32-bit
+       * query, this would work as far as the value can be hold on a 32-bit
+       * signed integer. For the 64-bit query, the wrapper around the 32-bit
+       * query will unpack the value */
+      memcpy(buffer, &combined_value, sizeof(GLint64));
       break;
+   }
 
    case GL_COLOR_COMPONENTS:
       /* @TODO */
@@ -1162,6 +1219,7 @@ _mesa_GetInternalformati64v(GLenum target, GLenum internalformat,
    GLint params32[16];
    unsigned i;
    GLsizei realSize = MIN2(bufSize, 16);
+   GLsizei callSize;
 
    GET_CURRENT_CONTEXT(ctx);
 
@@ -1178,12 +1236,26 @@ _mesa_GetInternalformati64v(GLenum target, GLenum internalformat,
     * params */
    memset(params32, -1, 16);
 
-   _mesa_GetInternalformativ(target, internalformat, pname, realSize, params32);
+   /* For GL_MAX_COMBINED_DIMENSIONS we need to get back 2 32-bit integers,
+    * and at the same time we only need 2. So for that pname, we call the
+    * 32-bit query with bufSize 2, except on the case of bufSize 0, that is
+    * basically like asking to not get the value, but that is a caller
+    * problem. */
+   if (pname == GL_MAX_COMBINED_DIMENSIONS && bufSize > 0)
+      callSize = 2;
+   else
+      callSize = bufSize;
 
-   for (i = 0; i < realSize; i++) {
-      /* We only copy back the values that changed */
-      if (params32[i] < 0)
-         break;
-      params[i] = (GLint64) params32[i];
+   _mesa_GetInternalformativ(target, internalformat, pname, callSize, params32);
+
+   if (pname == GL_MAX_COMBINED_DIMENSIONS) {
+      memcpy(params, params32, sizeof(GLint64));
+   } else {
+      for (i = 0; i < realSize; i++) {
+         /* We only copy back the values that changed */
+         if (params32[i] < 0)
+            break;
+         params[i] = (GLint64) params32[i];
+      }
    }
 }
