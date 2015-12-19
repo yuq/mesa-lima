@@ -1001,15 +1001,23 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_COLOR_RENDERABLE:
-      /* @TODO */
-      break;
-
    case GL_DEPTH_RENDERABLE:
-      /* @TODO */
-      break;
-
    case GL_STENCIL_RENDERABLE:
-      /* @TODO */
+      if (!_is_renderable(ctx, internalformat))
+         goto end;
+
+      if (pname == GL_COLOR_RENDERABLE) {
+         if (!_mesa_is_color_format(internalformat))
+            goto end;
+      } else {
+         GLenum baseFormat = _mesa_base_fbo_format(ctx, internalformat);
+         if (baseFormat != GL_DEPTH_STENCIL &&
+             ((pname == GL_DEPTH_RENDERABLE && baseFormat != GL_DEPTH_COMPONENT) ||
+              (pname == GL_STENCIL_RENDERABLE && baseFormat != GL_STENCIL_INDEX)))
+            goto end;
+      }
+
+      buffer[0] = GL_TRUE;
       break;
 
    case GL_FRAMEBUFFER_RENDERABLE:
