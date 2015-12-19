@@ -555,6 +555,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
 {
    glsl_to_tgsi_instruction *inst = new(mem_ctx) glsl_to_tgsi_instruction();
    int num_reladdr = 0, i, j;
+   bool dst_is_double[2];
 
    op = get_opcode(ir, op, dst, src0, src1);
 
@@ -658,7 +659,13 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
     * GLSL [0].z -> TGSI [1].xy
     * GLSL [0].w -> TGSI [1].zw
     */
-   if (inst->dst[0].type == GLSL_TYPE_DOUBLE || inst->dst[1].type == GLSL_TYPE_DOUBLE ||
+   for (j = 0; j < 2; j++) {
+      dst_is_double[j] = false;
+      if (inst->dst[j].type == GLSL_TYPE_DOUBLE)
+         dst_is_double[j] = true;
+   }
+
+   if (dst_is_double[0] || dst_is_double[1] ||
        inst->src[0].type == GLSL_TYPE_DOUBLE) {
       glsl_to_tgsi_instruction *dinst = NULL;
       int initial_src_swz[4], initial_src_idx[4];
@@ -699,7 +706,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
 
          /* modify the destination if we are splitting */
          for (j = 0; j < 2; j++) {
-            if (dinst->dst[j].type == GLSL_TYPE_DOUBLE) {
+            if (dst_is_double[j]) {
                dinst->dst[j].writemask = (i & 1) ? WRITEMASK_ZW : WRITEMASK_XY;
                dinst->dst[j].index = initial_dst_idx[j];
                if (i > 1)
@@ -732,7 +739,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
                   - F2D is a float src0, DLDEXP is integer src1 */
                if (op == TGSI_OPCODE_F2D ||
                    op == TGSI_OPCODE_DLDEXP ||
-                   (op == TGSI_OPCODE_UCMP && dinst->dst[0].type == GLSL_TYPE_DOUBLE)) {
+                   (op == TGSI_OPCODE_UCMP && dst_is_double[0])) {
                   dinst->src[j].swizzle = MAKE_SWIZZLE4(swz, swz, swz, swz);
                }
             }
