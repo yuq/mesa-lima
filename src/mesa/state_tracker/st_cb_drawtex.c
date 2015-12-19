@@ -150,7 +150,7 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
       GLuint attr;
 
       u_upload_alloc(st->uploader, 0,
-                     numAttribs * 4 * 4 * sizeof(GLfloat),
+                     numAttribs * 4 * 4 * sizeof(GLfloat), 4,
                      &offset, &vbuffer, (void **) &vbuf);
       if (!vbuffer) {
          return;

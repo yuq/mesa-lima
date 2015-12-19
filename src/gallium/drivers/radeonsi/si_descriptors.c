@@ -109,7 +109,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	if (!desc->list_dirty)
 		return true;
 
-	u_upload_alloc(sctx->b.uploader, 0, list_size,
+	u_upload_alloc(sctx->b.uploader, 0, list_size, 256,
 		       &desc->buffer_offset,
 		       (struct pipe_resource**)&desc->buffer, &ptr);
 	if (!desc->buffer)
@@ -391,7 +391,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * directly through a staging buffer and don't go through
 	 * the fine-grained upload path.
 	 */
-	u_upload_alloc(sctx->b.uploader, 0, count * 16, &desc->buffer_offset,
+	u_upload_alloc(sctx->b.uploader, 0, count * 16, 256, &desc->buffer_offset,
 		       (struct pipe_resource**)&desc->buffer, (void**)&ptr);
 	if (!desc->buffer)
 		return false;
@@ -465,7 +465,7 @@ void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuf
 {
 	void *tmp;
 
-	u_upload_alloc(sctx->b.uploader, 0, size, const_offset,
+	u_upload_alloc(sctx->b.uploader, 0, size, 256, const_offset,
 		       (struct pipe_resource**)rbuffer, &tmp);
 	if (rbuffer)
 		util_memcpy_cpu_to_le32(tmp, ptr, size);

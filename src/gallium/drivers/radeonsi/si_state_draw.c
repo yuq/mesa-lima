@@ -818,7 +818,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			si_get_draw_start_count(sctx, info, &start, &count);
 			start_offset = start * ib.index_size;
 
-			u_upload_alloc(sctx->b.uploader, start_offset, count * 2,
+			u_upload_alloc(sctx->b.uploader, start_offset, count * 2, 256,
 				       &out_offset, &out_buffer, &ptr);
 			if (!out_buffer) {
 				pipe_resource_reference(&ib.buffer, NULL);

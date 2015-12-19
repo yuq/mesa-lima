@@ -454,7 +454,7 @@ u_vbuf_translate_buffers(struct u_vbuf *mgr, struct translate_key *key,
 
       /* Create and map the output buffer. */
       u_upload_alloc(mgr->uploader, 0,
-                     key->output_stride * num_indices,
+                     key->output_stride * num_indices, 4,
                      &out_offset, &out_buffer,
                      (void**)&out_map);
       if (!out_buffer)
@@ -487,7 +487,7 @@ u_vbuf_translate_buffers(struct u_vbuf *mgr, struct translate_key *key,
       /* Create and map the output buffer. */
       u_upload_alloc(mgr->uploader,
                      key->output_stride * start_vertex,
-                     key->output_stride * num_vertices,
+                     key->output_stride * num_vertices, 4,
                      &out_offset, &out_buffer,
                      (void**)&out_map);
       if (!out_buffer)

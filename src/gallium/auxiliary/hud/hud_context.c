@@ -431,7 +431,7 @@ hud_alloc_vertices(struct hud_context *hud, struct vertex_queue *v,
    v->max_num_vertices = num_vertices;
    v->vbuf.stride = stride;
    u_upload_alloc(hud->uploader, 0, v->vbuf.stride * v->max_num_vertices,
-                  &v->vbuf.buffer_offset, &v->vbuf.buffer,
+                  16, &v->vbuf.buffer_offset, &v->vbuf.buffer,
                   (void**)&v->vertices);
 }
 

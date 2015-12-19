@@ -85,7 +85,7 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	/* Upload vertices. The hw rectangle has only 3 vertices,
 	 * I guess the 4th one is derived from the first 3.
 	 * The vertex specification should match u_blitter's vertex element state. */
-	u_upload_alloc(rctx->uploader, 0, sizeof(float) * 24, &offset, &buf, (void**)&vb);
+	u_upload_alloc(rctx->uploader, 0, sizeof(float) * 24, 256, &offset, &buf, (void**)&vb);
 	if (!buf)
 		return;
 

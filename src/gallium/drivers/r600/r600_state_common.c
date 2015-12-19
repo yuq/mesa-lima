@@ -1732,7 +1732,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				}
 			}
 
-			u_upload_alloc(rctx->b.uploader, start, count * 2,
+			u_upload_alloc(rctx->b.uploader, start, count * 2, 256,
 				       &out_offset, &out_buffer, &ptr);
 
 			util_shorten_ubyte_elts_to_userptr(

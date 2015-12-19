@@ -298,7 +298,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 			struct r600_resource *staging = NULL;
 
 			u_upload_alloc(rctx->uploader, 0, box->width + (box->x % R600_MAP_BUFFER_ALIGNMENT),
-				       &offset, (struct pipe_resource**)&staging, (void**)&data);
+				       256, &offset, (struct pipe_resource**)&staging, (void**)&data);
 
 			if (staging) {
 				data += box->x % R600_MAP_BUFFER_ALIGNMENT;

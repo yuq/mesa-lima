@@ -74,6 +74,7 @@ void u_upload_unmap( struct u_upload_mgr *upload );
  * \param upload           Upload manager
  * \param min_out_offset   Minimum offset that should be returned in out_offset.
  * \param size             Size of the allocation.
+ * \param alignment        Alignment of the suballocation within the buffer
  * \param out_offset       Pointer to where the new buffer offset will be returned.
  * \param outbuf           Pointer to where the upload buffer will be returned.
  * \param ptr              Pointer to the allocated memory that is returned.
@@ -81,6 +82,7 @@ void u_upload_unmap( struct u_upload_mgr *upload );
 void u_upload_alloc(struct u_upload_mgr *upload,
                     unsigned min_out_offset,
                     unsigned size,
+                    unsigned alignment,
                     unsigned *out_offset,
                     struct pipe_resource **outbuf,
                     void **ptr);

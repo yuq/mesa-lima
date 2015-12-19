@@ -184,7 +184,7 @@ draw_quad(struct st_context *st,
 
    vb.stride = 8 * sizeof(float);
 
-   u_upload_alloc(st->uploader, 0, 4 * sizeof(vertices[0]),
+   u_upload_alloc(st->uploader, 0, 4 * sizeof(vertices[0]), 4,
                   &vb.buffer_offset, &vb.buffer,
                   (void **) &vertices);
    if (!vb.buffer) {

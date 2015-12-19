@@ -181,11 +181,11 @@ void
 u_upload_alloc(struct u_upload_mgr *upload,
                unsigned min_out_offset,
                unsigned size,
+               unsigned alignment,
                unsigned *out_offset,
                struct pipe_resource **outbuf,
                void **ptr)
 {
-   unsigned alignment = upload->alignment;
    unsigned buffer_size = upload->buffer ? upload->buffer->width0 : 0;
    unsigned offset;
 
@@ -249,7 +249,7 @@ void u_upload_data(struct u_upload_mgr *upload,
 {
    uint8_t *ptr;
 
-   u_upload_alloc(upload, min_out_offset, size,
+   u_upload_alloc(upload, min_out_offset, size, upload->alignment,
                   out_offset, outbuf,
                   (void**)&ptr);
    if (ptr)

@@ -74,6 +74,8 @@
  */
 #define SVGA_MAX_CONST_BUF_SIZE (4096 * 4 * sizeof(int))
 
+#define CONST0_UPLOAD_ALIGNMENT 256
+
 struct draw_vertex_shader;
 struct draw_fragment_shader;
 struct svga_shader_variant;
