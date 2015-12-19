@@ -435,6 +435,94 @@ _is_target_supported(struct gl_context *ctx, GLenum target)
    return true;
 }
 
+static bool
+_is_resource_supported(struct gl_context *ctx, GLenum target,
+                       GLenum internalformat, GLenum pname)
+{
+   /* From the ARB_internalformat_query2 spec:
+    *
+    * In the following descriptions, the term /resource/ is used to generically
+    * refer to an object of the appropriate type that has been created with
+    * <internalformat> and <target>.  If the particular <target> and
+    * <internalformat> combination do not make sense, ... the "unsupported"
+    * answer should be given. This is not an error.
+    */
+
+   /* In the ARB_internalformat_query2 spec wording, some <pnames> do not care
+    * about the /resource/ being supported or not, we return 'true' for those.
+    */
+   switch (pname) {
+   case GL_INTERNALFORMAT_SUPPORTED:
+   case GL_INTERNALFORMAT_PREFERRED:
+   case GL_COLOR_COMPONENTS:
+   case GL_DEPTH_COMPONENTS:
+   case GL_STENCIL_COMPONENTS:
+   case GL_COLOR_RENDERABLE:
+   case GL_DEPTH_RENDERABLE:
+   case GL_STENCIL_RENDERABLE:
+      return true;
+   default:
+      break;
+   }
+
+   switch(target){
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_1D_ARRAY:
+   case GL_TEXTURE_2D:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_3D:
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_RECTANGLE:
+      /* Based on what Mesa does for glTexImage1D/2D/3D and
+       * glCompressedTexImage1D/2D/3D functions.
+       */
+      if (_mesa_base_tex_format(ctx, internalformat) < 0)
+         return false;
+
+      /* additional checks for depth textures */
+      if (!_mesa_legal_texture_base_format_for_target(ctx, target, internalformat))
+         return false;
+
+      /* additional checks for compressed textures */
+      if (_mesa_is_compressed_format(ctx, internalformat) &&
+          (!_mesa_target_can_be_compressed(ctx, target, internalformat, NULL) ||
+           _mesa_format_no_online_compression(ctx, internalformat)))
+         return false;
+
+      break;
+   case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+      /* Based on what Mesa does for glTexImage2D/3DMultisample,
+       * glTexStorage2D/3DMultisample and
+       * glTextureStorage2D/3DMultisample functions.
+       */
+      if (!_mesa_is_renderable_texture_format(ctx, internalformat))
+         return false;
+
+      break;
+   case GL_TEXTURE_BUFFER:
+      /* Based on what Mesa does for the glTexBuffer function. */
+      if (_mesa_validate_texbuffer_format(ctx, internalformat) ==
+          MESA_FORMAT_NONE)
+         return false;
+
+      break;
+   case GL_RENDERBUFFER:
+      /* Based on what Mesa does for glRenderbufferStorage(Multisample) and
+       * glNamedRenderbufferStorage functions.
+       */
+      if (!_mesa_base_fbo_format(ctx, internalformat))
+         return false;
+
+      break;
+   default:
+      unreachable("bad target");
+   }
+
+   return true;
+}
+
 /* default implementation of QueryInternalFormat driverfunc, for
  * drivers not implementing ARB_internalformat_query2.
  */
@@ -487,7 +575,8 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
     */
    _set_default_response(pname, buffer);
 
-   if (!_is_target_supported(ctx, target))
+   if (!_is_target_supported(ctx, target) ||
+       !_is_resource_supported(ctx, target, internalformat, pname))
       goto end;
 
    switch (pname) {
