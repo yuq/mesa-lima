@@ -1085,7 +1085,7 @@ glsl_to_tgsi_visitor::st_src_reg_for_type(int type, int val)
 }
 
 static int
-type_size(const struct glsl_type *type)
+attrib_type_size(const struct glsl_type *type, bool is_vs_input)
 {
    unsigned int i;
    int size;
@@ -1108,7 +1108,7 @@ type_size(const struct glsl_type *type)
       break;
    case GLSL_TYPE_DOUBLE:
       if (type->is_matrix()) {
-         if (type->vector_elements <= 2)
+         if (type->vector_elements <= 2 || is_vs_input)
             return type->matrix_columns;
          else
             return type->matrix_columns * 2;
@@ -1116,7 +1116,7 @@ type_size(const struct glsl_type *type)
          /* For doubles if we have a double or dvec2 they fit in one
           * vec4, else they need 2 vec4s.
           */
-         if (type->vector_elements <= 2)
+         if (type->vector_elements <= 2 || is_vs_input)
             return 1;
          else
             return 2;
@@ -1124,11 +1124,11 @@ type_size(const struct glsl_type *type)
       break;
    case GLSL_TYPE_ARRAY:
       assert(type->length > 0);
-      return type_size(type->fields.array) * type->length;
+      return attrib_type_size(type->fields.array, is_vs_input) * type->length;
    case GLSL_TYPE_STRUCT:
       size = 0;
       for (i = 0; i < type->length; i++) {
-         size += type_size(type->fields.structure[i].type);
+         size += attrib_type_size(type->fields.structure[i].type, is_vs_input);
       }
       return size;
    case GLSL_TYPE_SAMPLER:
@@ -1148,6 +1148,11 @@ type_size(const struct glsl_type *type)
    return 0;
 }
 
+static int
+type_size(const struct glsl_type *type)
+{
+  return attrib_type_size(type, false);
+}
 
 /**
  * If the given GLSL type is an array or matrix or a structure containing
@@ -2454,6 +2459,10 @@ glsl_to_tgsi_visitor::visit(ir_dereference_array *ir)
       element_size = 1;
 
    if (index) {
+
+      if (this->prog->Target == GL_VERTEX_PROGRAM_ARB &&
+	  src.file == PROGRAM_INPUT)
+	 element_size = attrib_type_size(ir->type, true);
       if (is_2D) {
          src.index2D = index->value.i[0];
          src.has_index2 = true;
