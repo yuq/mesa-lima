@@ -185,15 +185,20 @@ u_upload_alloc(struct u_upload_mgr *upload,
                struct pipe_resource **outbuf,
                void **ptr)
 {
-   unsigned alloc_size = align(size, upload->alignment);
-   unsigned alloc_offset = align(min_out_offset, upload->alignment);
+   unsigned alignment = upload->alignment;
    unsigned buffer_size = upload->buffer ? upload->buffer->width0 : 0;
    unsigned offset;
 
+   min_out_offset = align(min_out_offset, alignment);
+
+   offset = align(upload->offset, alignment);
+   offset = MAX2(offset, min_out_offset);
+
    /* Make sure we have enough space in the upload buffer
-    * for the sub-allocation. */
-   if (unlikely(MAX2(upload->offset, alloc_offset) + alloc_size > buffer_size)) {
-      u_upload_alloc_buffer(upload, alloc_offset + alloc_size);
+    * for the sub-allocation.
+    */
+   if (unlikely(!upload->buffer || offset + size > buffer_size)) {
+      u_upload_alloc_buffer(upload, min_out_offset + size);
 
       if (unlikely(!upload->buffer)) {
          *out_offset = ~0;
@@ -202,10 +207,9 @@ u_upload_alloc(struct u_upload_mgr *upload,
          return;
       }
 
+      offset = min_out_offset;
       buffer_size = upload->buffer->width0;
    }
-
-   offset = MAX2(upload->offset, alloc_offset);
 
    if (unlikely(!upload->map)) {
       upload->map = pipe_buffer_map_range(upload->pipe, upload->buffer,
@@ -224,8 +228,8 @@ u_upload_alloc(struct u_upload_mgr *upload,
       upload->map -= offset;
    }
 
-   assert(offset < upload->buffer->width0);
-   assert(offset + size <= upload->buffer->width0);
+   assert(offset < buffer_size);
+   assert(offset + size <= buffer_size);
    assert(size);
 
    /* Emit the return values: */
@@ -233,7 +237,7 @@ u_upload_alloc(struct u_upload_mgr *upload,
    pipe_resource_reference(outbuf, upload->buffer);
    *out_offset = offset;
 
-   upload->offset = offset + alloc_size;
+   upload->offset = offset + size;
 }
 
 void u_upload_data(struct u_upload_mgr *upload,
