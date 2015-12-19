@@ -4640,7 +4640,7 @@ src_register(struct st_translate *t, const st_src_reg *reg)
       if (!reg->array_id) {
          assert(t->inputMapping[index] < ARRAY_SIZE(t->inputs));
          assert(t->inputs[t->inputMapping[index]].File != TGSI_FILE_NULL);
-         return t->inputs[t->inputMapping[index]];
+         return t->inputs[t->inputMapping[index] + double_reg2];
       }
       else {
          struct array_decl *decl = &t->input_arrays[reg->array_id-1];
@@ -4649,7 +4649,7 @@ src_register(struct st_translate *t, const st_src_reg *reg)
 
          assert(slot != -1 && t->inputs[slot].File == TGSI_FILE_INPUT);
          assert(t->inputs[slot].ArrayID == reg->array_id);
-         return ureg_src_array_offset(t->inputs[slot], index - mesa_index);
+         return ureg_src_array_offset(t->inputs[slot], index + double_reg2 - mesa_index);
       }
 
    case PROGRAM_ADDRESS:
