@@ -900,34 +900,6 @@ anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
-void anv_CmdSetEvent(
-    VkCommandBuffer                             commandBuffer,
-    VkEvent                                     event,
-    VkPipelineStageFlags                        stageMask)
-{
-   stub();
-}
-
-void anv_CmdResetEvent(
-    VkCommandBuffer                             commandBuffer,
-    VkEvent                                     event,
-    VkPipelineStageFlags                        stageMask)
-{
-   stub();
-}
-
-void anv_CmdWaitEvents(
-    VkCommandBuffer                             commandBuffer,
-    uint32_t                                    eventCount,
-    const VkEvent*                              pEvents,
-    VkPipelineStageFlags                        srcStageMask,
-    VkPipelineStageFlags                        destStageMask,
-    uint32_t                                    memBarrierCount,
-    const void* const*                          ppMemBarriers)
-{
-   stub();
-}
-
 struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
                               gl_shader_stage stage)

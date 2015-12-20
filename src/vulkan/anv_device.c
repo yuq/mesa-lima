@@ -1443,41 +1443,95 @@ void anv_DestroySemaphore(
 // Event functions
 
 VkResult anv_CreateEvent(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     const VkEventCreateInfo*                    pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkEvent*                                    pEvent)
 {
-   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_state state;
+   struct anv_event *event;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_EVENT_CREATE_INFO);
+
+   state = anv_state_pool_alloc(&device->dynamic_state_pool,
+                                sizeof(*event), 4);
+   event = state.map;
+   event->state = state;
+   event->semaphore = VK_EVENT_RESET;
+
+   if (!device->info.has_llc) {
+      /* Make sure the writes we're flushing have landed. */
+      __builtin_ia32_sfence();
+      __builtin_ia32_clflush(event);
+   }
+
+   *pEvent = anv_event_to_handle(event);
+
+   return VK_SUCCESS;
 }
 
 void anv_DestroyEvent(
-    VkDevice                                    device,
-    VkEvent                                     event,
+    VkDevice                                    _device,
+    VkEvent                                     _event,
     const VkAllocationCallbacks*                pAllocator)
 {
-   stub();
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_event, event, _event);
+
+   anv_state_pool_free(&device->dynamic_state_pool, event->state);
 }
 
 VkResult anv_GetEventStatus(
-    VkDevice                                    device,
-    VkEvent                                     event)
+    VkDevice                                    _device,
+    VkEvent                                     _event)
 {
-   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_event, event, _event);
+
+   if (!device->info.has_llc) {
+      /* Make sure the writes we're flushing have landed. */
+      __builtin_ia32_clflush(event);
+      __builtin_ia32_lfence();
+   }
+
+   return event->semaphore;
 }
 
 VkResult anv_SetEvent(
-    VkDevice                                    device,
-    VkEvent                                     event)
+    VkDevice                                    _device,
+    VkEvent                                     _event)
 {
-   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_event, event, _event);
+
+   event->semaphore = VK_EVENT_SET;
+
+   if (!device->info.has_llc) {
+      /* Make sure the writes we're flushing have landed. */
+      __builtin_ia32_sfence();
+      __builtin_ia32_clflush(event);
+   }
+
+   return VK_SUCCESS;
 }
 
 VkResult anv_ResetEvent(
-    VkDevice                                    device,
-    VkEvent                                     event)
+    VkDevice                                    _device,
+    VkEvent                                     _event)
 {
-   stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_event, event, _event);
+
+   event->semaphore = VK_EVENT_RESET;
+
+   if (!device->info.has_llc) {
+      /* Make sure the writes we're flushing have landed. */
+      __builtin_ia32_sfence();
+      __builtin_ia32_clflush(event);
+   }
+
+   return VK_SUCCESS;
 }
 
 // Buffer functions

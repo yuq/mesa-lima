@@ -856,3 +856,31 @@ void genX(CmdEndRenderPass)(
                   .TextureCacheInvalidationEnable = true,
                   .CommandStreamerStallEnable = true);
 }
+
+void genX(CmdSetEvent)(
+    VkCommandBuffer                             commandBuffer,
+    VkEvent                                     event,
+    VkPipelineStageFlags                        stageMask)
+{
+   stub();
+}
+
+void genX(CmdResetEvent)(
+    VkCommandBuffer                             commandBuffer,
+    VkEvent                                     event,
+    VkPipelineStageFlags                        stageMask)
+{
+   stub();
+}
+
+void genX(CmdWaitEvents)(
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    eventCount,
+    const VkEvent*                              pEvents,
+    VkPipelineStageFlags                        srcStageMask,
+    VkPipelineStageFlags                        destStageMask,
+    uint32_t                                    memBarrierCount,
+    const void* const*                          ppMemBarriers)
+{
+   stub();
+}

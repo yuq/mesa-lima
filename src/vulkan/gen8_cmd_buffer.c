@@ -1035,3 +1035,67 @@ void genX(CmdCopyQueryPoolResults)(
       dst_offset += destStride;
    }
 }
+
+void genX(CmdSetEvent)(
+    VkCommandBuffer                             commandBuffer,
+    VkEvent                                     _event,
+    VkPipelineStageFlags                        stageMask)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_event, event, _event);
+
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
+                  .DestinationAddressType = DAT_PPGTT,
+                  .PostSyncOperation = WriteImmediateData,
+                  .Address = {
+                     &cmd_buffer->device->dynamic_state_block_pool.bo,
+                     event->state.offset
+                   },
+                  .ImmediateData = VK_EVENT_SET);
+}
+
+void genX(CmdResetEvent)(
+    VkCommandBuffer                             commandBuffer,
+    VkEvent                                     _event,
+    VkPipelineStageFlags                        stageMask)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_event, event, _event);
+
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
+                  .DestinationAddressType = DAT_PPGTT,
+                  .PostSyncOperation = WriteImmediateData,
+                  .Address = {
+                     &cmd_buffer->device->dynamic_state_block_pool.bo,
+                     event->state.offset
+                   },
+                  .ImmediateData = VK_EVENT_RESET);
+}
+
+void genX(CmdWaitEvents)(
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    eventCount,
+    const VkEvent*                              pEvents,
+    VkPipelineStageFlags                        srcStageMask,
+    VkPipelineStageFlags                        destStageMask,
+    uint32_t                                    memBarrierCount,
+    const void* const*                          ppMemBarriers)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   for (uint32_t i = 0; i < eventCount; i++) {
+      ANV_FROM_HANDLE(anv_event, event, pEvents[i]);
+
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_SEMAPHORE_WAIT),
+                     .WaitMode = PollingMode,
+                     .CompareOperation = SAD_EQUAL_SDD,
+                     .SemaphoreDataDword = VK_EVENT_SET,
+                     .SemaphoreAddress = {
+                        &cmd_buffer->device->dynamic_state_block_pool.bo,
+                        event->state.offset
+                     });
+   }
+
+   genX(CmdPipelineBarrier)(commandBuffer, srcStageMask, destStageMask,
+                            false, /* byRegion */
+                            memBarrierCount, ppMemBarriers);
+}

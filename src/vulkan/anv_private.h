@@ -1208,6 +1208,11 @@ struct anv_fence {
    bool ready;
 };
 
+struct anv_event {
+   uint32_t                                     semaphore;
+   struct anv_state                             state;
+};
+
 struct nir_shader;
 
 struct anv_shader_module {
@@ -1658,6 +1663,7 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set, VkDescriptorSet)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set_layout, VkDescriptorSetLayout)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_device_memory, VkDeviceMemory)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_fence, VkFence)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_event, VkEvent)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_framebuffer, VkFramebuffer)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_image, VkImage)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_image_view, VkImageView);
