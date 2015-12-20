@@ -854,7 +854,7 @@ emit_ps_depth_count(struct anv_batch *batch,
    anv_batch_emit(batch, GENX(PIPE_CONTROL),
                   .DestinationAddressType = DAT_PPGTT,
                   .PostSyncOperation = WritePSDepthCount,
-                  .Address = { bo, offset });  /* FIXME: This is only lower 32 bits */
+                  .Address = { bo, offset });
 }
 
 void genX(CmdBeginQuery)(
@@ -926,8 +926,7 @@ void genX(CmdWriteTimestamp)(
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                      .DestinationAddressType = DAT_PPGTT,
                      .PostSyncOperation = WriteTimestamp,
-                     .Address = /* FIXME: This is only lower 32 bits */
-                        { &pool->bo, entry * 8 });
+                     .Address = { &pool->bo, entry * 8 });
       break;
    }
 }
@@ -1023,13 +1022,11 @@ void genX(CmdCopyQueryPoolResults)(
 
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                      .RegisterAddress = CS_GPR(2),
-                     /* FIXME: This is only lower 32 bits */
                      .MemoryAddress = { buffer->bo, dst_offset });
 
       if (flags & VK_QUERY_RESULT_64_BIT)
          anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                         .RegisterAddress = CS_GPR(2) + 4,
-                        /* FIXME: This is only lower 32 bits */
                         .MemoryAddress = { buffer->bo, dst_offset + 4 });
 
       dst_offset += destStride;
