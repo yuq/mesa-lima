@@ -1429,8 +1429,13 @@ VkResult anv_CreateSemaphore(
     const VkAllocationCallbacks*                pAllocator,
     VkSemaphore*                                pSemaphore)
 {
+   /* The DRM execbuffer ioctl always execute in-oder, even between different
+    * rings. As such, there's nothing to do for the user space semaphore.
+    */
+
    *pSemaphore = (VkSemaphore)1;
-   stub_return(VK_SUCCESS);
+
+   return VK_SUCCESS;
 }
 
 void anv_DestroySemaphore(
@@ -1438,7 +1443,6 @@ void anv_DestroySemaphore(
     VkSemaphore                                 semaphore,
     const VkAllocationCallbacks*                pAllocator)
 {
-   stub();
 }
 
 // Event functions
