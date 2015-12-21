@@ -619,6 +619,9 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    case GL_SIMULTANEOUS_TEXTURE_AND_STENCIL_WRITE:
    case GL_CLEAR_BUFFER:
    case GL_TEXTURE_VIEW:
+   case GL_TEXTURE_SHADOW:
+   case GL_TEXTURE_GATHER:
+   case GL_TEXTURE_GATHER_SHADOW:
       params[0] = GL_FULL_SUPPORT;
       break;
 
@@ -1189,16 +1192,42 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
                                       buffer);
       break;
 
-   case GL_TEXTURE_SHADOW:
-      /* @TODO */
-      break;
-
    case GL_TEXTURE_GATHER:
-      /* @TODO */
-      break;
-
    case GL_TEXTURE_GATHER_SHADOW:
-      /* @TODO */
+      if (!_mesa_has_ARB_texture_gather(ctx))
+         goto end;
+
+      /* fallthrough */
+   case GL_TEXTURE_SHADOW:
+      /* Only depth or depth-stencil image formats make sense in shadow
+         samplers */
+      if (pname != GL_TEXTURE_GATHER &&
+          !_mesa_is_depth_format(internalformat) &&
+          !_mesa_is_depthstencil_format(internalformat))
+         goto end;
+
+      /* Validate the target for shadow and gather operations */
+      switch (target) {
+      case GL_TEXTURE_2D:
+      case GL_TEXTURE_2D_ARRAY:
+      case GL_TEXTURE_CUBE_MAP:
+      case GL_TEXTURE_CUBE_MAP_ARRAY:
+      case GL_TEXTURE_RECTANGLE:
+         break;
+
+      case GL_TEXTURE_1D:
+      case GL_TEXTURE_1D_ARRAY:
+         /* 1D and 1DArray textures are not admitted in gather operations */
+         if (pname != GL_TEXTURE_SHADOW)
+            goto end;
+         break;
+
+      default:
+         goto end;
+      }
+
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_SHADER_IMAGE_LOAD:
