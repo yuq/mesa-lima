@@ -404,6 +404,19 @@ debug_get_flags_option(const char *name,
                        const struct debug_named_value *flags,
                        uint64_t dfault);
 
+#define DEBUG_GET_ONCE_OPTION(suffix, name, dfault) \
+static const char * \
+debug_get_option_ ## suffix (void) \
+{ \
+   static boolean first = TRUE; \
+   static const char * value; \
+   if (first) { \
+      first = FALSE; \
+      value = debug_get_option(name, dfault); \
+   } \
+   return value; \
+}
+
 #define DEBUG_GET_ONCE_BOOL_OPTION(sufix, name, dfault) \
 static boolean \
 debug_get_option_ ## sufix (void) \
