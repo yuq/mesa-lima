@@ -1954,8 +1954,6 @@ emit_instr(struct ir3_compile *ctx, nir_instr *instr)
 		case nir_texop_query_levels:
 			emit_tex_query_levels(ctx, tex);
 			break;
-		case nir_texop_samples_identical:
-			unreachable("nir_texop_samples_identical");
 		default:
 			emit_tex(ctx, tex);
 			break;
