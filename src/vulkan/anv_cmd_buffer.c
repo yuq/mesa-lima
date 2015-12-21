@@ -536,8 +536,12 @@ void anv_CmdBindDescriptorSets(
 
                unsigned array_size = set_layout->binding[b].array_size;
                for (unsigned j = 0; j < array_size; j++) {
+                  uint32_t range = 0;
+                  if (desc->buffer_view)
+                     range = desc->buffer_view;
                   push->dynamic[d].offset = *(offsets++);
-                  push->dynamic[d].range = (desc++)->range;
+                  push->dynamic[d].range = range;
+                  desc++;
                   d++;
                }
             }
@@ -582,31 +586,21 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
                       state.offset + dword * 4, bo, offset);
 }
 
-static void
-fill_descriptor_buffer_surface_state(struct anv_device *device, void *state,
-                                     gl_shader_stage stage,
-                                     VkDescriptorType type,
-                                     uint32_t offset, uint32_t range)
+const struct anv_format *
+anv_format_for_descriptor_type(VkDescriptorType type)
 {
-   VkFormat format;
    switch (type) {
    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
    case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      format = VK_FORMAT_R32G32B32A32_SFLOAT;
-      break;
+      return anv_format_for_vk_format(VK_FORMAT_R32G32B32A32_SFLOAT);
 
    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-      format = VK_FORMAT_UNDEFINED;
-      break;
+      return anv_format_for_vk_format(VK_FORMAT_UNDEFINED);
 
    default:
       unreachable("Invalid descriptor type");
    }
-
-   anv_fill_buffer_surface_state(device, state,
-                                 anv_format_for_vk_format(format)->surface_format,
-                                 offset, range, 1);
 }
 
 VkResult
@@ -671,10 +665,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       surface_state =
          anv_cmd_buffer_alloc_surface_state(cmd_buffer);
 
-      fill_descriptor_buffer_surface_state(cmd_buffer->device,
-                                           surface_state.map, stage,
-                                           VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                                           bo_offset, 12);
+      const struct anv_format *format =
+         anv_format_for_descriptor_type(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+      anv_fill_buffer_surface_state(cmd_buffer->device, surface_state.map,
+                                    format->surface_format, bo_offset, 12, 1);
 
       if (!cmd_buffer->device->info.has_llc)
          anv_state_clflush(surface_state);
@@ -712,27 +706,6 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          /* Nothing for us to do here */
          continue;
 
-      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
-         bo = desc->buffer->bo;
-         bo_offset = desc->buffer->offset + desc->offset;
-
-         surface_state =
-            anv_cmd_buffer_alloc_surface_state(cmd_buffer);
-
-         fill_descriptor_buffer_surface_state(cmd_buffer->device,
-                                              surface_state.map,
-                                              stage, desc->type,
-                                              bo_offset, desc->range);
-
-         if (!cmd_buffer->device->info.has_llc)
-            anv_state_clflush(surface_state);
-
-         break;
-      }
-
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
@@ -755,6 +728,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          break;
       }
 
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
          surface_state = desc->buffer_view->surface_state;
          bo = desc->buffer_view->bo;

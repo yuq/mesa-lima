@@ -808,6 +808,9 @@ struct anv_descriptor_set_binding_layout {
    /* Index into the dynamic state array for a dynamic buffer */
    int16_t dynamic_offset_index;
 
+   /* Index into the descriptor set buffer views */
+   int16_t buffer_index;
+
    struct {
       /* Index into the binding table for the associated surface */
       int16_t surface_index;
@@ -833,6 +836,9 @@ struct anv_descriptor_set_layout {
    /* Shader stages affected by this descriptor set */
    uint16_t shader_stages;
 
+   /* Number of buffers in this descriptor set */
+   uint16_t buffer_count;
+
    /* Number of dynamic offsets used by this descriptor set */
    uint16_t dynamic_offset_count;
 
@@ -852,17 +858,12 @@ struct anv_descriptor {
       };
 
       struct anv_buffer_view *buffer_view;
-
-      struct {
-         struct anv_buffer *buffer;
-         uint64_t offset;
-         uint64_t range;
-      };
    };
 };
 
 struct anv_descriptor_set {
    const struct anv_descriptor_set_layout *layout;
+   struct anv_buffer_view *buffer_views;
    struct anv_descriptor descriptors[0];
 };
 
@@ -1537,6 +1538,9 @@ struct anv_buffer_view {
    struct anv_state surface_state;
    struct anv_state storage_surface_state;
 };
+
+const struct anv_format *
+anv_format_for_descriptor_type(VkDescriptorType type);
 
 void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
                                    enum isl_format format,
