@@ -309,6 +309,41 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
    }
 }
 
+/**
+ * Demote shader inputs and outputs that are not used in other stages, and
+ * remove them via dead code elimination.
+ */
+void
+remove_unused_shader_inputs_and_outputs(bool is_separate_shader_object,
+                                        gl_shader *sh,
+                                        enum ir_variable_mode mode)
+{
+   if (is_separate_shader_object)
+      return;
+
+   foreach_in_list(ir_instruction, node, sh->ir) {
+      ir_variable *const var = node->as_variable();
+
+      if ((var == NULL) || (var->data.mode != int(mode)))
+	 continue;
+
+      /* A shader 'in' or 'out' variable is only really an input or output if
+       * its value is used by other shader stages. This will cause the
+       * variable to have a location assigned.
+       */
+      if (var->data.is_unmatched_generic_inout) {
+         assert(var->data.mode != ir_var_temporary);
+	 var->data.mode = ir_var_auto;
+      }
+   }
+
+   /* Eliminate code that is now dead due to unused inputs/outputs being
+    * demoted.
+    */
+   while (do_dead_code(sh->ir, false))
+      ;
+
+}
 
 /**
  * Initialize this object based on a string that was passed to
@@ -1671,6 +1706,16 @@ assign_varying_locations(struct gl_context *ctx,
             }
          }
       }
+
+      /* Now that validation is done its safe to remove unused varyings. As
+       * we have both a producer and consumer its safe to remove unused
+       * varyings even if the program is a SSO because the stages are being
+       * linked together i.e. we have a multi-stage SSO.
+       */
+      remove_unused_shader_inputs_and_outputs(false, producer,
+                                              ir_var_shader_out);
+      remove_unused_shader_inputs_and_outputs(false, consumer,
+                                              ir_var_shader_in);
    }
 
    if (!disable_varying_packing) {

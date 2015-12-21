@@ -2723,30 +2723,6 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
 }
 
 /**
- * Demote shader inputs and outputs that are not used in other stages
- */
-void
-demote_shader_inputs_and_outputs(gl_shader *sh, enum ir_variable_mode mode)
-{
-   foreach_in_list(ir_instruction, node, sh->ir) {
-      ir_variable *const var = node->as_variable();
-
-      if ((var == NULL) || (var->data.mode != int(mode)))
-	 continue;
-
-      /* A shader 'in' or 'out' variable is only really an input or output if
-       * its value is used by other shader stages.  This will cause the variable
-       * to have a location assigned.
-       */
-      if (var->data.is_unmatched_generic_inout) {
-         assert(var->data.mode != ir_var_temporary);
-	 var->data.mode = ir_var_auto;
-      }
-   }
-}
-
-
-/**
  * Store the gl_FragDepth layout in the gl_shader_program struct.
  */
 static void
@@ -4446,14 +4422,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       do_dead_builtin_varyings(ctx, sh, NULL,
                                num_tfeedback_decls, tfeedback_decls);
 
-      if (!prog->SeparateShader) {
-         demote_shader_inputs_and_outputs(sh, ir_var_shader_out);
-         /* Eliminate code that is now dead due to unused outputs being
-          * demoted.
-          */
-         while (do_dead_code(sh->ir, false))
-            ;
-      }
+      remove_unused_shader_inputs_and_outputs(prog->SeparateShader, sh,
+                                              ir_var_shader_out);
    }
    else if (first == MESA_SHADER_FRAGMENT) {
       /* If the program only contains a fragment shader...
@@ -4471,12 +4441,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                                        NULL /* tfeedback_decls */))
             goto done;
       } else {
-         demote_shader_inputs_and_outputs(sh, ir_var_shader_in);
-         /* Eliminate code that is now dead due to unused inputs being
-          * demoted.
-          */
-         while (do_dead_code(sh->ir, false))
-            ;
+         remove_unused_shader_inputs_and_outputs(false, sh,
+                                                 ir_var_shader_in);
       }
    }
 
@@ -4496,16 +4462,6 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       do_dead_builtin_varyings(ctx, sh_i, sh_next,
                 next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
                 tfeedback_decls);
-
-      demote_shader_inputs_and_outputs(sh_i, ir_var_shader_out);
-      demote_shader_inputs_and_outputs(sh_next, ir_var_shader_in);
-
-      /* Eliminate code that is now dead due to unused outputs being demoted.
-       */
-      while (do_dead_code(sh_i->ir, false))
-         ;
-      while (do_dead_code(sh_next->ir, false))
-         ;
 
       /* This must be done after all dead varyings are eliminated. */
       if (!check_against_output_limit(ctx, prog, sh_i))
