@@ -573,6 +573,23 @@ _is_internalformat_supported(struct gl_context *ctx, GLenum target,
    return (buffer[0] == GL_TRUE);
 }
 
+static bool
+_legal_target_for_framebuffer_texture_layer(struct gl_context *ctx,
+                                            GLenum target)
+{
+   switch (target) {
+   case GL_TEXTURE_3D:
+   case GL_TEXTURE_1D_ARRAY:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+   case GL_TEXTURE_CUBE_MAP:
+      return true;
+   default:
+      return false;
+   }
+}
+
 /* default implementation of QueryInternalFormat driverfunc, for
  * drivers not implementing ARB_internalformat_query2.
  */
@@ -622,6 +639,9 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    case GL_TEXTURE_SHADOW:
    case GL_TEXTURE_GATHER:
    case GL_TEXTURE_GATHER_SHADOW:
+   case GL_FRAMEBUFFER_RENDERABLE:
+   case GL_FRAMEBUFFER_RENDERABLE_LAYERED:
+   case GL_FRAMEBUFFER_BLEND:
       params[0] = GL_FULL_SUPPORT;
       break;
 
@@ -1050,16 +1070,22 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       buffer[0] = GL_TRUE;
       break;
 
-   case GL_FRAMEBUFFER_RENDERABLE:
-      /* @TODO */
-      break;
-
    case GL_FRAMEBUFFER_RENDERABLE_LAYERED:
-      /* @TODO */
-      break;
-
+      if (!_mesa_has_EXT_texture_array(ctx) ||
+          _legal_target_for_framebuffer_texture_layer(ctx, target))
+         goto end;
+      /* fallthrough */
+   case GL_FRAMEBUFFER_RENDERABLE:
    case GL_FRAMEBUFFER_BLEND:
-      /* @TODO */
+      if (!_mesa_has_ARB_framebuffer_object(ctx))
+         goto end;
+
+      if (target == GL_TEXTURE_BUFFER ||
+          !_is_renderable(ctx, internalformat))
+         goto end;
+
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_READ_PIXELS:
