@@ -216,15 +216,6 @@ typedef struct {
       unsigned has_initializer:1;
 
       /**
-       * Is this variable a generic output or input that has not yet been matched
-       * up to a variable in another stage of the pipeline?
-       *
-       * This is used by the linker as scratch storage while assigning locations
-       * to generic inputs and outputs.
-       */
-      unsigned is_unmatched_generic_inout:1;
-
-      /**
        * If non-zero, then this variable may be packed along with other variables
        * into a single varying slot, so this offset should be applied when
        * accessing components.  For example, an offset of 1 means that the x

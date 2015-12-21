@@ -364,7 +364,6 @@ nir_visitor::visit(ir_variable *ir)
    var->data.explicit_index = ir->data.explicit_index;
    var->data.explicit_binding = ir->data.explicit_binding;
    var->data.has_initializer = ir->data.has_initializer;
-   var->data.is_unmatched_generic_inout = ir->data.is_unmatched_generic_inout;
    var->data.location_frac = ir->data.location_frac;
    var->data.from_named_ifc_block_array = ir->data.from_named_ifc_block_array;
    var->data.from_named_ifc_block_nonarray = ir->data.from_named_ifc_block_nonarray;
