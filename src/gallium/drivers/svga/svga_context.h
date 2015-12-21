@@ -59,8 +59,9 @@
 #define SVGA_QUERY_NUM_RESOURCES           (PIPE_QUERY_DRIVER_SPECIFIC + 9)
 #define SVGA_QUERY_NUM_STATE_OBJECTS       (PIPE_QUERY_DRIVER_SPECIFIC + 10)
 #define SVGA_QUERY_NUM_SURFACE_VIEWS       (PIPE_QUERY_DRIVER_SPECIFIC + 11)
+#define SVGA_QUERY_NUM_GENERATE_MIPMAP     (PIPE_QUERY_DRIVER_SPECIFIC + 12)
 /*SVGA_QUERY_MAX has to be last because it is size of an array*/
-#define SVGA_QUERY_MAX                     (PIPE_QUERY_DRIVER_SPECIFIC + 12)
+#define SVGA_QUERY_MAX                     (PIPE_QUERY_DRIVER_SPECIFIC + 13)
 
 /**
  * Maximum supported number of constant buffers per shader
@@ -505,6 +506,7 @@ struct svga_context
       uint64_t num_state_objects;    /**< SVGA_QUERY_NUM_STATE_OBJECTS */
       uint64_t num_surface_views;    /**< SVGA_QUERY_NUM_SURFACE_VIEWS */
       uint64_t num_bytes_uploaded;   /**< SVGA_QUERY_NUM_BYTES_UPLOADED */
+      uint64_t num_generate_mipmap;  /**< SVGA_QUERY_NUM_GENERATE_MIPMAP */
    } hud;
 
    /** The currently bound stream output targets */
