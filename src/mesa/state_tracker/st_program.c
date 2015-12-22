@@ -38,6 +38,8 @@
 #include "program/prog_print.h"
 #include "program/programopt.h"
 
+#include "compiler/nir/nir.h"
+
 #include "pipe/p_context.h"
 #include "pipe/p_defines.h"
 #include "pipe/p_shader_tokens.h"
@@ -54,6 +56,7 @@
 #include "st_program.h"
 #include "st_mesa_to_tgsi.h"
 #include "st_atifs_to_tgsi.h"
+#include "st_nir.h"
 #include "cso_cache/cso_context.h"
 
 
@@ -70,10 +73,10 @@ delete_vp_variant(struct st_context *st, struct st_vp_variant *vpv)
       
    if (vpv->draw_shader)
       draw_delete_vertex_shader( st->draw, vpv->draw_shader );
-      
-   if (vpv->tgsi.tokens)
+
+   if (((vpv->tgsi.type == PIPE_SHADER_IR_TGSI)) && vpv->tgsi.tokens)
       ureg_free_tokens(vpv->tgsi.tokens);
-      
+
    free( vpv );
 }
 
@@ -96,7 +99,7 @@ st_release_vp_variants( struct st_context *st,
 
    stvp->variants = NULL;
 
-   if (stvp->tgsi.tokens) {
+   if ((stvp->tgsi.type == PIPE_SHADER_IR_TGSI) && stvp->tgsi.tokens) {
       tgsi_free_tokens(stvp->tgsi.tokens);
       stvp->tgsi.tokens = NULL;
    }
@@ -133,7 +136,7 @@ st_release_fp_variants(struct st_context *st, struct st_fragment_program *stfp)
 
    stfp->variants = NULL;
 
-   if (stfp->tgsi.tokens) {
+   if ((stfp->tgsi.type == PIPE_SHADER_IR_TGSI) && stfp->tgsi.tokens) {
       ureg_free_tokens(stfp->tgsi.tokens);
       stfp->tgsi.tokens = NULL;
    }
@@ -361,8 +364,22 @@ st_translate_vertex_program(struct st_context *st,
    output_semantic_name[num_outputs] = TGSI_SEMANTIC_EDGEFLAG;
    output_semantic_index[num_outputs] = 0;
 
-   if (!stvp->glsl_to_tgsi)
+   if (!stvp->glsl_to_tgsi && !stvp->shader_program)
       _mesa_remove_output_reads(&stvp->Base.Base, PROGRAM_OUTPUT);
+
+   if (stvp->shader_program) {
+      nir_shader *nir = st_glsl_to_nir(st, &stvp->Base.Base,
+                                       stvp->shader_program,
+                                       MESA_SHADER_VERTEX);
+
+      stvp->tgsi.type = PIPE_SHADER_IR_NIR;
+      stvp->tgsi.ir.nir = nir;
+
+      st_translate_stream_output_info2(&stvp->shader_program->LinkedTransformFeedback,
+                                       stvp->result_to_output,
+                                       &stvp->tgsi.stream_output);
+      return true;
+   }
 
    ureg = ureg_create_with_screen(PIPE_SHADER_VERTEX, st->pipe->screen);
    if (ureg == NULL)
@@ -446,9 +463,26 @@ st_create_vp_variant(struct st_context *st,
    struct pipe_context *pipe = st->pipe;
 
    vpv->key = *key;
-   vpv->tgsi.tokens = tgsi_dup_tokens(stvp->tgsi.tokens);
    vpv->tgsi.stream_output = stvp->tgsi.stream_output;
    vpv->num_inputs = stvp->num_inputs;
+
+   if (stvp->tgsi.type == PIPE_SHADER_IR_NIR) {
+      vpv->tgsi.type = PIPE_SHADER_IR_NIR;
+      vpv->tgsi.ir.nir = nir_shader_clone(NULL, stvp->tgsi.ir.nir);
+      if (key->clamp_color)
+         NIR_PASS_V(vpv->tgsi.ir.nir, nir_lower_clamp_color_outputs);
+      if (key->passthrough_edgeflags)
+         NIR_PASS_V(vpv->tgsi.ir.nir, nir_lower_passthrough_edgeflags);
+
+      st_finalize_nir(st, &stvp->Base.Base, vpv->tgsi.ir.nir);
+
+      vpv->driver_shader = pipe->create_vs_state(pipe, &vpv->tgsi);
+      /* driver takes ownership of IR: */
+      vpv->tgsi.ir.nir = NULL;
+      return vpv;
+   }
+
+   vpv->tgsi.tokens = tgsi_dup_tokens(stvp->tgsi.tokens);
 
    /* Emulate features. */
    if (key->clamp_color || key->passthrough_edgeflags) {
@@ -559,7 +593,7 @@ st_translate_fragment_program(struct st_context *st,
 
    memset(inputSlotToAttr, ~0, sizeof(inputSlotToAttr));
 
-   if (!stfp->glsl_to_tgsi) {
+   if (!stfp->glsl_to_tgsi && !stfp->shader_program) {
       _mesa_remove_output_reads(&stfp->Base.Base, PROGRAM_OUTPUT);
       if (st->ctx->Const.GLSLFragCoordIsSysVal)
          _mesa_program_fragment_position_to_sysval(&stfp->Base.Base);
@@ -767,6 +801,17 @@ st_translate_fragment_program(struct st_context *st,
       }
    }
 
+   if (stfp->shader_program) {
+      nir_shader *nir = st_glsl_to_nir(st, &stfp->Base.Base,
+                                       stfp->shader_program,
+                                       MESA_SHADER_FRAGMENT);
+
+      stfp->tgsi.type = PIPE_SHADER_IR_NIR;
+      stfp->tgsi.ir.nir = nir;
+
+      return true;
+   }
+
    ureg = ureg_create_with_screen(PIPE_SHADER_FRAGMENT, st->pipe->screen);
    if (ureg == NULL)
       return false;
@@ -880,6 +925,73 @@ st_create_fp_variant(struct st_context *st,
 
    if (!variant)
       return NULL;
+
+   if (stfp->tgsi.type == PIPE_SHADER_IR_NIR) {
+      tgsi.type = PIPE_SHADER_IR_NIR;
+      tgsi.ir.nir = nir_shader_clone(NULL, stfp->tgsi.ir.nir);
+
+      if (key->clamp_color)
+         NIR_PASS_V(tgsi.ir.nir, nir_lower_clamp_color_outputs);
+
+      if (key->persample_shading) {
+          nir_shader *shader = tgsi.ir.nir;
+          nir_foreach_variable(var, &shader->inputs)
+             var->data.sample = true;
+      }
+
+      assert(!(key->bitmap && key->drawpixels));
+
+      /* glBitmap */
+      if (key->bitmap) {
+         nir_lower_bitmap_options options = {0};
+
+         variant->bitmap_sampler = ffs(~stfp->Base.Base.SamplersUsed) - 1;
+         options.sampler = variant->bitmap_sampler;
+         options.swizzle_xxxx = (st->bitmap.tex_format == PIPE_FORMAT_L8_UNORM);
+
+         NIR_PASS_V(tgsi.ir.nir, nir_lower_bitmap, &options);
+      }
+
+      /* glDrawPixels (color only) */
+      if (key->drawpixels) {
+         nir_lower_drawpixels_options options = {0};
+         unsigned samplers_used = stfp->Base.Base.SamplersUsed;
+
+         /* Find the first unused slot. */
+         variant->drawpix_sampler = ffs(~samplers_used) - 1;
+         options.drawpix_sampler = variant->drawpix_sampler;
+         samplers_used |= (1 << variant->drawpix_sampler);
+
+         options.pixel_maps = key->pixelMaps;
+         if (key->pixelMaps) {
+            variant->pixelmap_sampler = ffs(~samplers_used) - 1;
+            options.pixelmap_sampler = variant->pixelmap_sampler;
+         }
+
+         options.scale_and_bias = key->scaleAndBias;
+         if (key->scaleAndBias) {
+            _mesa_add_state_reference(params, scale_state);
+            memcpy(options.scale_state_tokens, scale_state,
+                   sizeof(options.scale_state_tokens));
+            _mesa_add_state_reference(params, bias_state);
+            memcpy(options.bias_state_tokens, bias_state,
+                   sizeof(options.bias_state_tokens));
+         }
+
+         _mesa_add_state_reference(params, texcoord_state);
+         memcpy(options.texcoord_state_tokens, texcoord_state,
+                sizeof(options.texcoord_state_tokens));
+
+         NIR_PASS_V(tgsi.ir.nir, nir_lower_drawpixels, &options);
+      }
+
+      st_finalize_nir(st, &stfp->Base.Base, tgsi.ir.nir);
+
+      variant->driver_shader = pipe->create_fs_state(pipe, &tgsi);
+      variant->key = *key;
+
+      return variant;
+   }
 
    tgsi.tokens = stfp->tgsi.tokens;
 

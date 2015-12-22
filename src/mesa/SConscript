@@ -13,6 +13,7 @@ env = env.Clone()
 env.MSVC2013Compat()
 
 env.Append(CPPPATH = [
+    '../compiler/nir',  # for generated nir_opcodes.h, etc
     '#/src',
     '#/src/mapi',
     '#/src/glsl',

@@ -53,6 +53,7 @@
 #include "st_mesa_to_tgsi.h"
 #include "st_format.h"
 #include "st_glsl_types.h"
+#include "st_nir.h"
 
 
 #define PROGRAM_ANY_CONST ((1 << PROGRAM_STATE_VAR) |    \
@@ -6437,9 +6438,9 @@ out:
  * generating Mesa IR.
  */
 static struct gl_program *
-get_mesa_program(struct gl_context *ctx,
-                 struct gl_shader_program *shader_program,
-                 struct gl_shader *shader)
+get_mesa_program_tgsi(struct gl_context *ctx,
+                      struct gl_shader_program *shader_program,
+                      struct gl_shader *shader)
 {
    glsl_to_tgsi_visitor* v;
    struct gl_program *prog;
@@ -6647,6 +6648,29 @@ get_mesa_program(struct gl_context *ctx,
    return prog;
 }
 
+static struct gl_program *
+get_mesa_program(struct gl_context *ctx,
+                 struct gl_shader_program *shader_program,
+                 struct gl_shader *shader)
+{
+   struct pipe_screen *pscreen = ctx->st->pipe->screen;
+   unsigned ptarget = st_shader_stage_to_ptarget(shader->Stage);
+   enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
+      pscreen->get_shader_param(pscreen, ptarget, PIPE_SHADER_CAP_PREFERRED_IR);
+   if (preferred_ir == PIPE_SHADER_IR_NIR) {
+      /* TODO only for GLSL VS/FS for now: */
+      switch (shader->Type) {
+      case GL_VERTEX_SHADER:
+      case GL_FRAGMENT_SHADER:
+         return st_nir_get_mesa_program(ctx, shader_program, shader);
+      default:
+         break;
+      }
+   }
+   return get_mesa_program_tgsi(ctx, shader_program, shader);
+}
+
+
 extern "C" {
 
 static void
@@ -6849,9 +6873,17 @@ st_translate_stream_output_info(glsl_to_tgsi_visitor *glsl_to_tgsi,
                                 const GLuint outputMapping[],
                                 struct pipe_stream_output_info *so)
 {
-   unsigned i;
    struct gl_transform_feedback_info *info =
       &glsl_to_tgsi->shader_program->LinkedTransformFeedback;
+   st_translate_stream_output_info2(info, outputMapping, so);
+}
+
+void
+st_translate_stream_output_info2(struct gl_transform_feedback_info *info,
+                                const GLuint outputMapping[],
+                                struct pipe_stream_output_info *so)
+{
+   unsigned i;
 
    for (i = 0; i < info->NumOutputs; i++) {
       so->output[i].register_index =
