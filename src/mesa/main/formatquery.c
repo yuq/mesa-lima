@@ -590,6 +590,17 @@ _legal_target_for_framebuffer_texture_layer(struct gl_context *ctx,
    }
 }
 
+static GLenum
+_mesa_generic_type_for_internal_format(GLenum internalFormat)
+{
+   if (_mesa_is_enum_format_unsigned_int(internalFormat))
+      return GL_UNSIGNED_BYTE;
+   else if (_mesa_is_enum_format_signed_int(internalFormat))
+      return GL_BYTE;
+   else
+      return GL_FLOAT;
+}
+
 /* default implementation of QueryInternalFormat driverfunc, for
  * drivers not implementing ARB_internalformat_query2.
  */
@@ -631,6 +642,15 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
          params[0] = GL_NONE;
          break;
       }
+      break;
+   }
+
+   case GL_READ_PIXELS_TYPE: {
+      GLenum base_format = _mesa_base_tex_format(ctx, internalFormat);
+      if (base_format > 0)
+         params[0] = _mesa_generic_type_for_internal_format(internalFormat);
+      else
+         params[0] = GL_NONE;
       break;
    }
 
@@ -1109,12 +1129,9 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
 
    case GL_READ_PIXELS:
    case GL_READ_PIXELS_FORMAT:
+   case GL_READ_PIXELS_TYPE:
       ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
                                       buffer);
-      break;
-
-   case GL_READ_PIXELS_TYPE:
-      /* @TODO */
       break;
 
    case GL_TEXTURE_IMAGE_FORMAT:
