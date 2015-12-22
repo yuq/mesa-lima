@@ -2843,7 +2843,7 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
                                  gl_shader *consumer)
 {
    glsl_symbol_table parameters;
-   ir_variable *explicit_locations[MAX_VARYING] = { NULL };
+   ir_variable *explicit_locations[MAX_VARYING][4] = { {NULL, NULL} };
 
    /* Find all shader outputs in the "producer" stage.
     */
@@ -2856,8 +2856,8 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
       if (var->data.explicit_location &&
           var->data.location >= VARYING_SLOT_VAR0) {
          const unsigned idx = var->data.location - VARYING_SLOT_VAR0;
-         if (explicit_locations[idx] == NULL)
-            explicit_locations[idx] = var;
+         if (explicit_locations[idx][var->data.location_frac] == NULL)
+            explicit_locations[idx][var->data.location_frac] = var;
       }
    }
 
@@ -2871,7 +2871,8 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
       ir_variable *output = NULL;
       if (input->data.explicit_location
           && input->data.location >= VARYING_SLOT_VAR0) {
-         output = explicit_locations[input->data.location - VARYING_SLOT_VAR0];
+         output = explicit_locations[input->data.location - VARYING_SLOT_VAR0]
+            [input->data.location_frac];
 
          if (output != NULL){
             input->data.is_unmatched_generic_inout = 0;
