@@ -252,8 +252,8 @@ incomplete(struct gl_context *ctx, struct gl_texture_object *texObj)
 }
 
 
-static GLboolean
-target_allows_setting_sampler_parameters(GLenum target)
+GLboolean
+_mesa_target_allows_setting_sampler_parameters(GLenum target)
 {
    switch (target) {
    case GL_TEXTURE_2D_MULTISAMPLE:
@@ -279,7 +279,7 @@ set_tex_parameteri(struct gl_context *ctx,
 
    switch (pname) {
    case GL_TEXTURE_MIN_FILTER:
-      if (!target_allows_setting_sampler_parameters(texObj->Target))
+      if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
          goto invalid_enum;
 
       if (texObj->Sampler.MinFilter == params[0])
@@ -307,7 +307,7 @@ set_tex_parameteri(struct gl_context *ctx,
       return GL_FALSE;
 
    case GL_TEXTURE_MAG_FILTER:
-      if (!target_allows_setting_sampler_parameters(texObj->Target))
+      if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
          goto invalid_enum;
 
       if (texObj->Sampler.MagFilter == params[0])
@@ -324,7 +324,7 @@ set_tex_parameteri(struct gl_context *ctx,
       return GL_FALSE;
 
    case GL_TEXTURE_WRAP_S:
-      if (!target_allows_setting_sampler_parameters(texObj->Target))
+      if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
          goto invalid_enum;
 
       if (texObj->Sampler.WrapS == params[0])
@@ -337,7 +337,7 @@ set_tex_parameteri(struct gl_context *ctx,
       return GL_FALSE;
 
    case GL_TEXTURE_WRAP_T:
-      if (!target_allows_setting_sampler_parameters(texObj->Target))
+      if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
          goto invalid_enum;
 
       if (texObj->Sampler.WrapT == params[0])
@@ -350,7 +350,7 @@ set_tex_parameteri(struct gl_context *ctx,
       return GL_FALSE;
 
    case GL_TEXTURE_WRAP_R:
-      if (!target_allows_setting_sampler_parameters(texObj->Target))
+      if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
          goto invalid_enum;
 
       if (texObj->Sampler.WrapR == params[0])
@@ -438,7 +438,7 @@ set_tex_parameteri(struct gl_context *ctx,
       if ((_mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_shadow)
           || _mesa_is_gles3(ctx)) {
 
-         if (!target_allows_setting_sampler_parameters(texObj->Target))
+         if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
             goto invalid_enum;
 
          if (texObj->Sampler.CompareMode == params[0])
@@ -457,7 +457,7 @@ set_tex_parameteri(struct gl_context *ctx,
       if ((_mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_shadow)
           || _mesa_is_gles3(ctx)) {
 
-         if (!target_allows_setting_sampler_parameters(texObj->Target))
+         if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
             goto invalid_enum;
 
          if (texObj->Sampler.CompareFunc == params[0])
@@ -571,7 +571,7 @@ set_tex_parameteri(struct gl_context *ctx,
       if (ctx->Extensions.EXT_texture_sRGB_decode) {
          GLenum decode = params[0];
 
-         if (!target_allows_setting_sampler_parameters(texObj->Target))
+         if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
             goto invalid_enum;
 
 	 if (decode == GL_DECODE_EXT || decode == GL_SKIP_DECODE_EXT) {
@@ -589,7 +589,7 @@ set_tex_parameteri(struct gl_context *ctx,
           && ctx->Extensions.AMD_seamless_cubemap_per_texture) {
          GLenum param = params[0];
 
-         if (!target_allows_setting_sampler_parameters(texObj->Target))
+         if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
             goto invalid_enum;
 
          if (param != GL_TRUE && param != GL_FALSE) {
@@ -645,7 +645,7 @@ set_tex_parameterf(struct gl_context *ctx,
       if (!_mesa_is_desktop_gl(ctx) && !_mesa_is_gles3(ctx))
          goto invalid_pname;
 
-      if (!target_allows_setting_sampler_parameters(texObj->Target))
+      if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
          goto invalid_enum;
 
       if (texObj->Sampler.MinLod == params[0])
@@ -658,7 +658,7 @@ set_tex_parameterf(struct gl_context *ctx,
       if (!_mesa_is_desktop_gl(ctx) && !_mesa_is_gles3(ctx))
          goto invalid_pname;
 
-      if (!target_allows_setting_sampler_parameters(texObj->Target))
+      if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
          goto invalid_enum;
 
       if (texObj->Sampler.MaxLod == params[0])
@@ -677,7 +677,7 @@ set_tex_parameterf(struct gl_context *ctx,
 
    case GL_TEXTURE_MAX_ANISOTROPY_EXT:
       if (ctx->Extensions.EXT_texture_filter_anisotropic) {
-         if (!target_allows_setting_sampler_parameters(texObj->Target))
+         if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
             goto invalid_enum;
 
          if (texObj->Sampler.MaxAnisotropy == params[0])
@@ -705,7 +705,7 @@ set_tex_parameterf(struct gl_context *ctx,
       if (_mesa_is_gles(ctx))
          goto invalid_pname;
 
-      if (!target_allows_setting_sampler_parameters(texObj->Target))
+      if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
          goto invalid_enum;
 
       if (texObj->Sampler.LodBias != params[0]) {
@@ -720,7 +720,7 @@ set_tex_parameterf(struct gl_context *ctx,
           !ctx->Extensions.ARB_texture_border_clamp)
          goto invalid_pname;
 
-      if (!target_allows_setting_sampler_parameters(texObj->Target))
+      if (!_mesa_target_allows_setting_sampler_parameters(texObj->Target))
          goto invalid_enum;
 
       flush(ctx);

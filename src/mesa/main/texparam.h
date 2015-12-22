@@ -69,6 +69,9 @@ GLboolean
 _mesa_legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target,
                                            bool dsa);
 
+GLboolean
+_mesa_target_allows_setting_sampler_parameters(GLenum target);
+
 /*@}*/
 
 /**
