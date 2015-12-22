@@ -63,35 +63,47 @@ static void
 softpipe_compute_vertex_info(struct softpipe_context *softpipe)
 {
    struct sp_setup_info *sinfo = &softpipe->setup_info;
-   int vs_index;
 
    if (sinfo->valid == 0) {
-      /* compute vertex layout for vbuf now */
       const struct tgsi_shader_info *fsInfo = &softpipe->fs_variant->info;
-      struct vertex_info *vinfo_vbuf = &softpipe->vertex_info_vbuf;
-      const uint num = draw_num_shader_outputs(softpipe->draw);
+      struct vertex_info *vinfo = &softpipe->vertex_info;
       uint i;
-
-      /* Tell draw_vbuf to simply emit the whole post-xform vertex
-       * as-is.  No longer any need to try and emit draw vertex_header
-       * info.
+      int vs_index;
+      /*
+       * This doesn't quite work right (wrt face injection, prim id,
+       * wide points) - hit a couple assertions, misrenderings plus
+       * memory corruption. Albeit could fix (the former two) by calling
+       * this "more often" (rasterizer changes etc.). (The latter would
+       * need to be included in draw_prepare_shader_outputs, but it looks
+       * like that would potentially allocate quite some unused additional
+       * vertex outputs.)
+       * draw_prepare_shader_outputs(softpipe->draw);
        */
-      vinfo_vbuf->num_attribs = 0;
-      for (i = 0; i < num; i++) {
-         draw_emit_vertex_attr(vinfo_vbuf, EMIT_4F, i);
-      }
-      draw_compute_vertex_size(vinfo_vbuf);
-
-      softpipe->viewport_index_slot = 0;
-      softpipe->layer_slot = 0;
-      softpipe->psize_slot = 0;
 
       /*
-       * Loop over fragment shader inputs, searching for the matching output
-       * from the vertex shader.
+       * Those can't actually be 0 (because pos is always at 0).
+       * But use ints anyway to avoid confusion (in vs outputs, they
+       * can very well be at pos 0).
+       */
+      softpipe->viewport_index_slot = -1;
+      softpipe->layer_slot = -1;
+      softpipe->psize_slot = -1;
+
+      vinfo->num_attribs = 0;
+
+      /*
+       * Put position always first (setup needs it there).
+       */
+      vs_index = draw_find_shader_output(softpipe->draw,
+                                         TGSI_SEMANTIC_POSITION, 0);
+
+      draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
+
+      /*
+       * Match FS inputs against VS outputs, emitting the necessary
+       * attributes.
        */
       for (i = 0; i < fsInfo->num_inputs; i++) {
-         int src;
          enum sp_interp_mode interp = SP_INTERP_LINEAR;
 
          switch (fsInfo->input_interpolate[i]) {
@@ -126,57 +138,93 @@ softpipe_compute_vertex_info(struct softpipe_context *softpipe)
             break;
          }
 
-         /* this includes texcoords and varying vars */
-         src = draw_find_shader_output(softpipe->draw,
-                                       fsInfo->input_semantic_name[i],
-                                       fsInfo->input_semantic_index[i]);
-         if (fsInfo->input_semantic_name[i] == TGSI_SEMANTIC_COLOR && src == -1)
+         /*
+          * Search for each input in current vs output:
+          */
+         vs_index = draw_find_shader_output(softpipe->draw,
+                                            fsInfo->input_semantic_name[i],
+                                            fsInfo->input_semantic_index[i]);
+
+         if (fsInfo->input_semantic_name[i] == TGSI_SEMANTIC_COLOR &&
+             vs_index == -1) {
             /*
              * try and find a bcolor.
              * Note that if there's both front and back color, draw will
              * have copied back to front color already.
              */
-            src = draw_find_shader_output(softpipe->draw,
-                                          TGSI_SEMANTIC_BCOLOR,
-                                          fsInfo->input_semantic_index[i]);
+            vs_index = draw_find_shader_output(softpipe->draw,
+                                               TGSI_SEMANTIC_BCOLOR,
+                                               fsInfo->input_semantic_index[i]);
+         }
 
          sinfo->attrib[i].interp = interp;
+         /* extremely pointless index map */
+         sinfo->attrib[i].src_index = i + 1;
          /*
-          * note src can be -1 if not found. Would need special handling,
-          * (as we don't tell draw anything about it) just force to 0.
-          * It's wrong either way but should be safer...
+          * For vp index and layer, if the fs requires them but the vs doesn't
+          * provide them, draw (vbuf) will give us the required 0 (slot -1).
+          * (This means in this case we'll also use those slots in setup, which
+          * isn't necessary but they'll contain the correct (0) value.)
           */
-         if (src < 0)
-            src = 0;
-         sinfo->attrib[i].src_index = src;
+         if (fsInfo->input_semantic_name[i] ==
+                    TGSI_SEMANTIC_VIEWPORT_INDEX) {
+            softpipe->viewport_index_slot = (int)vinfo->num_attribs;
+            draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
+         } else if (fsInfo->input_semantic_name[i] == TGSI_SEMANTIC_LAYER) {
+            softpipe->layer_slot = (int)vinfo->num_attribs;
+            draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
+            /*
+             * Note that we'd actually want to skip position (as we won't use
+             * the attribute in the fs) but can't. The reason is that we don't
+             * actually have a input/output map for setup (even though it looks
+             * like we do...). Could adjust for this though even without a map.
+             */
+         } else {
+            /*
+             * Note that we'd actually want to skip position (as we won't use
+             * the attribute in the fs) but can't. The reason is that we don't
+             * actually have a input/output map for setup (even though it looks
+             * like we do...). Could adjust for this though even without a map.
+             */
+            draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
+         }
       }
 
-      /* Figure out if we need pointsize as well. */
+      /* Figure out if we need pointsize as well.
+       */
       vs_index = draw_find_shader_output(softpipe->draw,
                                          TGSI_SEMANTIC_PSIZE, 0);
 
       if (vs_index >= 0) {
-         softpipe->psize_slot = vs_index;
+         softpipe->psize_slot = (int)vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
       }
 
-      /* Figure out if we need viewport index */
-      vs_index = draw_find_shader_output(softpipe->draw,
-                                         TGSI_SEMANTIC_VIEWPORT_INDEX,
-                                         0);
-      if (vs_index >= 0) {
-         softpipe->viewport_index_slot = vs_index;
+      /* Figure out if we need viewport index (if it wasn't already in fs input) */
+      if (softpipe->viewport_index_slot < 0) {
+         vs_index = draw_find_shader_output(softpipe->draw,
+                                            TGSI_SEMANTIC_VIEWPORT_INDEX,
+                                            0);
+         if (vs_index >= 0) {
+            softpipe->viewport_index_slot =(int)vinfo->num_attribs;
+            draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
+         }
       }
 
-      /* Figure out if we need layer */
-      vs_index = draw_find_shader_output(softpipe->draw,
-                                         TGSI_SEMANTIC_LAYER,
-                                         0);
-      if (vs_index >= 0) {
-         softpipe->layer_slot = vs_index;
+      /* Figure out if we need layer (if it wasn't already in fs input) */
+      if (softpipe->layer_slot < 0) {
+         vs_index = draw_find_shader_output(softpipe->draw,
+                                            TGSI_SEMANTIC_LAYER,
+                                            0);
+         if (vs_index >= 0) {
+            softpipe->layer_slot = (int)vinfo->num_attribs;
+            draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
+         }
       }
+
+      draw_compute_vertex_size(vinfo);
       softpipe->setup_info.valid = 1;
    }
-
    return;
 }
 
@@ -184,15 +232,14 @@ softpipe_compute_vertex_info(struct softpipe_context *softpipe)
 /**
  * Called from vbuf module.
  *
- * Note the vertex layout used for vbuf is simply telling it to pass
- * through everything as is. The mapping actually used for setup is
- * stored separately (but calculated here too at the same time).
+ * This will trigger validation of the vertex layout (and also compute
+ * the required information for setup).
  */
 struct vertex_info *
 softpipe_get_vbuf_vertex_info(struct softpipe_context *softpipe)
 {
    softpipe_compute_vertex_info(softpipe);
-   return &softpipe->vertex_info_vbuf;
+   return &softpipe->vertex_info;
 }
 
 

@@ -119,16 +119,16 @@ struct softpipe_context {
 
    /** Vertex format */
    struct sp_setup_info setup_info;
-   struct vertex_info vertex_info_vbuf;
+   struct vertex_info vertex_info;
 
    /** Which vertex shader output slot contains point size */
-   int psize_slot;
+   int8_t psize_slot;
 
    /** Which vertex shader output slot contains viewport index */
-   int viewport_index_slot;
+   int8_t viewport_index_slot;
 
    /** Which vertex shader output slot contains layer */
-   int layer_slot;
+   int8_t layer_slot;
 
    /** The reduced version of the primitive supplied by the state tracker */
    unsigned reduced_api_prim;

@@ -45,7 +45,7 @@ struct sp_setup_info {
    unsigned valid;
    struct {
       unsigned interp:8;      /**< SP_INTERP_X */
-      unsigned src_index:8;
+      int src_index:8;
    } attrib[PIPE_MAX_SHADER_OUTPUTS];
 };
 
