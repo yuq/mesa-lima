@@ -645,7 +645,9 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
       break;
    }
 
-   case GL_READ_PIXELS_TYPE: {
+   case GL_READ_PIXELS_TYPE:
+   case GL_TEXTURE_IMAGE_TYPE:
+   case GL_GET_TEXTURE_IMAGE_TYPE: {
       GLenum base_format = _mesa_base_tex_format(ctx, internalFormat);
       if (base_format > 0)
          params[0] = _mesa_generic_type_for_internal_format(internalFormat);
@@ -1151,16 +1153,10 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
 
    case GL_TEXTURE_IMAGE_FORMAT:
    case GL_GET_TEXTURE_IMAGE_FORMAT:
+   case GL_TEXTURE_IMAGE_TYPE:
+   case GL_GET_TEXTURE_IMAGE_TYPE:
       ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
                                       buffer);
-      break;
-
-   case GL_TEXTURE_IMAGE_TYPE:
-      /* @TODO */
-      break;
-
-   case GL_GET_TEXTURE_IMAGE_TYPE:
-      /* @TODO */
       break;
 
    case GL_MIPMAP:
