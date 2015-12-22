@@ -789,7 +789,7 @@ LLVMModuleRef r600_tgsi_llvm(
 	unsigned ArgumentsCount = 0;
 	for (unsigned i = 0; i < ctx->inputs_count; i++)
 		Arguments[ArgumentsCount++] = LLVMVectorType(bld_base->base.elem_type, 4);
-	radeon_llvm_create_func(ctx, Arguments, ArgumentsCount);
+	radeon_llvm_create_func(ctx, NULL, 0, Arguments, ArgumentsCount);
 	for (unsigned i = 0; i < ctx->inputs_count; i++) {
 		LLVMValueRef P = LLVMGetParam(ctx->main_fn, i);
 		LLVMAddAttribute(P, LLVMInRegAttribute);

@@ -1701,14 +1701,22 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx, const char *trip
 }
 
 void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
+			     LLVMTypeRef *return_types, unsigned num_return_elems,
 			     LLVMTypeRef *ParamTypes, unsigned ParamCount)
 {
-	LLVMTypeRef main_fn_type;
+	LLVMTypeRef main_fn_type, ret_type;
 	LLVMBasicBlockRef main_fn_body;
 
+	if (num_return_elems)
+		ret_type = LLVMStructTypeInContext(ctx->gallivm.context,
+						   return_types,
+						   num_return_elems, true);
+	else
+		ret_type = LLVMVoidTypeInContext(ctx->gallivm.context);
+
 	/* Setup the function */
-	main_fn_type = LLVMFunctionType(LLVMVoidTypeInContext(ctx->gallivm.context),
-					ParamTypes, ParamCount, 0);
+	ctx->return_type = ret_type;
+	main_fn_type = LLVMFunctionType(ret_type, ParamTypes, ParamCount, 0);
 	ctx->main_fn = LLVMAddFunction(ctx->gallivm.module, "main", main_fn_type);
 	main_fn_body = LLVMAppendBasicBlockInContext(ctx->gallivm.context,
 			ctx->main_fn, "main_body");

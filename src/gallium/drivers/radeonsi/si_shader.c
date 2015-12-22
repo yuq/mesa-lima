@@ -96,6 +96,7 @@ struct si_shader_context
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring[4];
 	LLVMValueRef gs_next_vertex[4];
+	LLVMValueRef return_value;
 
 	LLVMTypeRef voidt;
 	LLVMTypeRef i1;
@@ -3711,8 +3712,10 @@ static void create_function(struct si_shader_context *ctx)
 	}
 
 	assert(num_params <= Elements(params));
-	radeon_llvm_create_func(&ctx->radeon_bld, params, num_params);
+	radeon_llvm_create_func(&ctx->radeon_bld, NULL, 0,
+				params, num_params);
 	radeon_llvm_shader_type(ctx->radeon_bld.main_fn, ctx->type);
+	ctx->return_value = LLVMGetUndef(ctx->radeon_bld.return_type);
 
 	for (i = 0; i <= last_sgpr; ++i) {
 		LLVMValueRef P = LLVMGetParam(ctx->radeon_bld.main_fn, i);
@@ -4241,7 +4244,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
 
-	LLVMBuildRetVoid(bld_base->base.gallivm->builder);
+	LLVMBuildRet(gallivm->builder, ctx->return_value);
 
 	/* Dump LLVM IR before any optimization passes */
 	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
@@ -4475,7 +4478,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		goto out;
 	}
 
-	LLVMBuildRetVoid(bld_base->base.gallivm->builder);
+	LLVMBuildRet(bld_base->base.gallivm->builder, ctx.return_value);
 	mod = bld_base->base.gallivm->module;
 
 	/* Dump LLVM IR before any optimization passes */
