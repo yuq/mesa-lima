@@ -2398,6 +2398,13 @@ typedef struct nir_lower_drawpixels_options {
 void nir_lower_drawpixels(nir_shader *shader,
                           const nir_lower_drawpixels_options *options);
 
+typedef struct nir_lower_bitmap_options {
+   unsigned sampler;
+   bool swizzle_xxxx;
+} nir_lower_bitmap_options;
+
+void nir_lower_bitmap(nir_shader *shader, const nir_lower_bitmap_options *options);
+
 void nir_lower_atomics(nir_shader *shader,
                        const struct gl_shader_program *shader_program);
 void nir_lower_to_source_mods(nir_shader *shader);
