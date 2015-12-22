@@ -248,8 +248,11 @@ int rvid_get_video_param(struct pipe_screen *screen,
 			return true;
 		case PIPE_VIDEO_FORMAT_HEVC:
 			/* Carrizo only supports HEVC Main */
-			return rscreen->family >= CHIP_CARRIZO &&
-				   profile == PIPE_VIDEO_PROFILE_HEVC_MAIN;
+			if (rscreen->family >= CHIP_STONEY)
+				return (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN ||
+					profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10);
+			else if (rscreen->family >= CHIP_CARRIZO)
+				return profile == PIPE_VIDEO_PROFILE_HEVC_MAIN;
 		default:
 			return false;
 		}
@@ -297,6 +300,7 @@ int rvid_get_video_param(struct pipe_screen *screen,
 		case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH:
 			return 41;
 		case PIPE_VIDEO_PROFILE_HEVC_MAIN:
+		case PIPE_VIDEO_PROFILE_HEVC_MAIN_10:
 			return 186;
 		default:
 			return 0;
