@@ -90,7 +90,7 @@ svga_check_sampler_view_resource_collision(struct svga_context *svga,
  * Create a DX ShaderResourceSamplerView for the given pipe_sampler_view,
  * if needed.
  */
-static enum pipe_error
+enum pipe_error
 svga_validate_pipe_sampler_view(struct svga_context *svga,
                                 struct svga_pipe_sampler_view *sv)
 {

@@ -319,6 +319,9 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_PRIMITIVE_RESTART:
       return 1; /* may be a sw fallback, depending on restart index */
 
+   case PIPE_CAP_GENERATE_MIPMAP:
+      return sws->have_vgpu10;
+
    /* Unsupported features */
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
@@ -392,7 +395,6 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_DRAW_PARAMETERS:
    case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
    case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
-   case PIPE_CAP_GENERATE_MIPMAP:
       return 0;
    }
 
