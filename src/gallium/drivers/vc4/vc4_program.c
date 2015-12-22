@@ -275,7 +275,7 @@ qir_srgb_decode(struct vc4_compile *c, struct qreg srgb)
                                    qir_uniform_f(c, 2.4));
 
         qir_SF(c, qir_FSUB(c, srgb, qir_uniform_f(c, 0.04045)));
-        return qir_SEL_X_Y_NS(c, low, high);
+        return qir_SEL(c, QPU_COND_NS, low, high);
 }
 
 static struct qreg
@@ -475,7 +475,8 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 struct qreg normalized = ntq_scale_depth_texture(c, tex);
                 struct qreg depth_output;
 
-                struct qreg one = qir_uniform_f(c, 1.0f);
+                struct qreg u0 = qir_uniform_f(c, 0.0f);
+                struct qreg u1 = qir_uniform_f(c, 1.0f);
                 if (c->key->tex[unit].compare_mode) {
                         if (has_proj)
                                 compare = qir_FMUL(c, compare, proj);
@@ -485,31 +486,31 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                                 depth_output = qir_uniform_f(c, 0.0f);
                                 break;
                         case PIPE_FUNC_ALWAYS:
-                                depth_output = one;
+                                depth_output = u1;
                                 break;
                         case PIPE_FUNC_EQUAL:
                                 qir_SF(c, qir_FSUB(c, compare, normalized));
-                                depth_output = qir_SEL_X_0_ZS(c, one);
+                                depth_output = qir_SEL(c, QPU_COND_ZS, u1, u0);
                                 break;
                         case PIPE_FUNC_NOTEQUAL:
                                 qir_SF(c, qir_FSUB(c, compare, normalized));
-                                depth_output = qir_SEL_X_0_ZC(c, one);
+                                depth_output = qir_SEL(c, QPU_COND_ZC, u1, u0);
                                 break;
                         case PIPE_FUNC_GREATER:
                                 qir_SF(c, qir_FSUB(c, compare, normalized));
-                                depth_output = qir_SEL_X_0_NC(c, one);
+                                depth_output = qir_SEL(c, QPU_COND_NC, u1, u0);
                                 break;
                         case PIPE_FUNC_GEQUAL:
                                 qir_SF(c, qir_FSUB(c, normalized, compare));
-                                depth_output = qir_SEL_X_0_NS(c, one);
+                                depth_output = qir_SEL(c, QPU_COND_NS, u1, u0);
                                 break;
                         case PIPE_FUNC_LESS:
                                 qir_SF(c, qir_FSUB(c, compare, normalized));
-                                depth_output = qir_SEL_X_0_NS(c, one);
+                                depth_output = qir_SEL(c, QPU_COND_NS, u1, u0);
                                 break;
                         case PIPE_FUNC_LEQUAL:
                                 qir_SF(c, qir_FSUB(c, normalized, compare));
-                                depth_output = qir_SEL_X_0_NC(c, one);
+                                depth_output = qir_SEL(c, QPU_COND_NC, u1, u0);
                                 break;
                         }
                 } else {
@@ -553,9 +554,8 @@ ntq_ffract(struct vc4_compile *c, struct qreg src)
         struct qreg trunc = qir_ITOF(c, qir_FTOI(c, src));
         struct qreg diff = qir_FSUB(c, src, trunc);
         qir_SF(c, diff);
-        return qir_SEL_X_Y_NS(c,
-                              qir_FADD(c, diff, qir_uniform_f(c, 1.0)),
-                              diff);
+        return qir_SEL(c, QPU_COND_NS,
+                       qir_FADD(c, diff, qir_uniform_f(c, 1.0)), diff);
 }
 
 /**
@@ -572,9 +572,8 @@ ntq_ffloor(struct vc4_compile *c, struct qreg src)
          */
         qir_SF(c, qir_FSUB(c, src, trunc));
 
-        return qir_SEL_X_Y_NS(c,
-                              qir_FSUB(c, trunc, qir_uniform_f(c, 1.0)),
-                              trunc);
+        return qir_SEL(c, QPU_COND_NS,
+                       qir_FSUB(c, trunc, qir_uniform_f(c, 1.0)), trunc);
 }
 
 /**
@@ -591,9 +590,8 @@ ntq_fceil(struct vc4_compile *c, struct qreg src)
          */
         qir_SF(c, qir_FSUB(c, trunc, src));
 
-        return qir_SEL_X_Y_NS(c,
-                              qir_FADD(c, trunc, qir_uniform_f(c, 1.0)),
-                              trunc);
+        return qir_SEL(c, QPU_COND_NS,
+                       qir_FADD(c, trunc, qir_uniform_f(c, 1.0)), trunc);
 }
 
 static struct qreg
@@ -668,10 +666,13 @@ ntq_fcos(struct vc4_compile *c, struct qreg src)
 static struct qreg
 ntq_fsign(struct vc4_compile *c, struct qreg src)
 {
+        struct qreg t = qir_get_temp(c);
+
         qir_SF(c, src);
-        return qir_SEL_X_Y_NC(c,
-                              qir_SEL_X_0_ZC(c, qir_uniform_f(c, 1.0)),
-                              qir_uniform_f(c, -1.0));
+        qir_MOV_dest(c, t, qir_uniform_f(c, 0.0));
+        qir_MOV_dest(c, t, qir_uniform_f(c, 1.0))->cond = QPU_COND_ZC;
+        qir_MOV_dest(c, t, qir_uniform_f(c, -1.0))->cond = QPU_COND_NS;
+        return t;
 }
 
 static void
@@ -888,6 +889,56 @@ ntq_emit_ubfe(struct vc4_compile *c, struct qreg base, struct qreg offset,
         return qir_UNPACK_8_I(c, base, offset_bit / 8);
 }
 
+static struct qreg
+ntq_emit_comparison(struct vc4_compile *c, nir_alu_instr *instr,
+                    struct qreg src0, struct qreg src1)
+{
+        enum qpu_cond cond;
+
+        switch (instr->op) {
+        case nir_op_feq:
+        case nir_op_ieq:
+        case nir_op_seq:
+                cond = QPU_COND_ZS;
+                break;
+        case nir_op_fne:
+        case nir_op_ine:
+        case nir_op_sne:
+                cond = QPU_COND_ZC;
+                break;
+        case nir_op_fge:
+        case nir_op_ige:
+        case nir_op_uge:
+        case nir_op_sge:
+                cond = QPU_COND_NC;
+                break;
+        case nir_op_flt:
+        case nir_op_ilt:
+        case nir_op_slt:
+                cond = QPU_COND_NS;
+                break;
+        default:
+                unreachable("bad ALU op for comparison");
+        }
+
+        if (nir_op_infos[instr->op].input_types[0] == nir_type_float)
+                qir_SF(c, qir_FSUB(c, src0, src1));
+        else
+                qir_SF(c, qir_SUB(c, src0, src1));
+
+        switch (instr->op) {
+        case nir_op_seq:
+        case nir_op_sne:
+        case nir_op_sge:
+        case nir_op_slt:
+                return qir_SEL(c, cond,
+                               qir_uniform_f(c, 1.0), qir_uniform_f(c, 0.0));
+        default:
+                return qir_SEL(c, cond,
+                               qir_uniform_ui(c, ~0), qir_uniform_ui(c, 0.0));
+        }
+}
+
 static void
 ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
 {
@@ -974,7 +1025,9 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
         case nir_op_i2b:
         case nir_op_f2b:
                 qir_SF(c, src[0]);
-                *dest = qir_SEL_X_0_ZC(c, qir_uniform_ui(c, ~0));
+                *dest = qir_SEL(c, QPU_COND_ZC,
+                                qir_uniform_ui(c, ~0),
+                                qir_uniform_ui(c, 0));
                 break;
 
         case nir_op_iadd:
@@ -1016,65 +1069,28 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
                 break;
 
         case nir_op_seq:
-                qir_SF(c, qir_FSUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_ZS(c, qir_uniform_f(c, 1.0));
-                break;
         case nir_op_sne:
-                qir_SF(c, qir_FSUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_ZC(c, qir_uniform_f(c, 1.0));
-                break;
         case nir_op_sge:
-                qir_SF(c, qir_FSUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_NC(c, qir_uniform_f(c, 1.0));
-                break;
         case nir_op_slt:
-                qir_SF(c, qir_FSUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_NS(c, qir_uniform_f(c, 1.0));
-                break;
         case nir_op_feq:
-                qir_SF(c, qir_FSUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_ZS(c, qir_uniform_ui(c, ~0));
-                break;
         case nir_op_fne:
-                qir_SF(c, qir_FSUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_ZC(c, qir_uniform_ui(c, ~0));
-                break;
         case nir_op_fge:
-                qir_SF(c, qir_FSUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_NC(c, qir_uniform_ui(c, ~0));
-                break;
         case nir_op_flt:
-                qir_SF(c, qir_FSUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_NS(c, qir_uniform_ui(c, ~0));
-                break;
         case nir_op_ieq:
-                qir_SF(c, qir_SUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_ZS(c, qir_uniform_ui(c, ~0));
-                break;
         case nir_op_ine:
-                qir_SF(c, qir_SUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_ZC(c, qir_uniform_ui(c, ~0));
-                break;
         case nir_op_ige:
-                qir_SF(c, qir_SUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_NC(c, qir_uniform_ui(c, ~0));
-                break;
         case nir_op_uge:
-                qir_SF(c, qir_SUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_CC(c, qir_uniform_ui(c, ~0));
-                break;
         case nir_op_ilt:
-                qir_SF(c, qir_SUB(c, src[0], src[1]));
-                *dest = qir_SEL_X_0_NS(c, qir_uniform_ui(c, ~0));
+                *dest = ntq_emit_comparison(c, instr, src[0], src[1]);
                 break;
 
         case nir_op_bcsel:
                 qir_SF(c, src[0]);
-                *dest = qir_SEL_X_Y_NS(c, src[1], src[2]);
+                *dest = qir_SEL(c, QPU_COND_NS, src[1], src[2]);
                 break;
         case nir_op_fcsel:
                 qir_SF(c, src[0]);
-                *dest = qir_SEL_X_Y_ZC(c, src[1], src[2]);
+                *dest = qir_SEL(c, QPU_COND_ZC, src[1], src[2]);
                 break;
 
         case nir_op_frcp:
