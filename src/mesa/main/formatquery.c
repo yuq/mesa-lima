@@ -654,6 +654,21 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
       break;
    }
 
+   case GL_TEXTURE_IMAGE_FORMAT:
+   case GL_GET_TEXTURE_IMAGE_FORMAT: {
+      GLenum format = GL_NONE;
+      GLenum base_format = _mesa_base_tex_format(ctx, internalFormat);
+      if (base_format > 0) {
+         if (_mesa_is_enum_format_integer(internalFormat))
+           format = _mesa_base_format_to_integer_format(base_format);
+         else
+           format = base_format;
+      }
+
+      params[0] = format;
+      break;
+   }
+
    case GL_MANUAL_GENERATE_MIPMAP:
    case GL_AUTO_GENERATE_MIPMAP:
    case GL_SRGB_READ:
@@ -1135,14 +1150,12 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_TEXTURE_IMAGE_FORMAT:
-      /* @TODO */
+   case GL_GET_TEXTURE_IMAGE_FORMAT:
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_TEXTURE_IMAGE_TYPE:
-      /* @TODO */
-      break;
-
-   case GL_GET_TEXTURE_IMAGE_FORMAT:
       /* @TODO */
       break;
 
