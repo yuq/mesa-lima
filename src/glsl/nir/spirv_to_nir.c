@@ -2824,6 +2824,8 @@ vtn_composite_extract(struct vtn_builder *b, struct vtn_ssa_value *src,
          ret->type = glsl_scalar_type(glsl_get_base_type(cur->type));
          ret->def = vtn_vector_extract(b, cur->def, indices[i]);
          return ret;
+      } else {
+         cur = cur->elems[indices[i]];
       }
    }
 
