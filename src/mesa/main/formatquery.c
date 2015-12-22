@@ -642,6 +642,7 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    case GL_FRAMEBUFFER_RENDERABLE:
    case GL_FRAMEBUFFER_RENDERABLE_LAYERED:
    case GL_FRAMEBUFFER_BLEND:
+   case GL_FILTER:
       params[0] = GL_FULL_SUPPORT;
       break;
 
@@ -1191,7 +1192,24 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       break;
 
    case GL_FILTER:
-      /* @TODO */
+      /* If it doesn't allow to set sampler parameters then it would not allow
+       * to set a filter different to GL_NEAREST. In practice, this method
+       * only filters out MULTISAMPLE/MULTISAMPLE_ARRAY */
+      if (!_mesa_target_allows_setting_sampler_parameters(target))
+         goto end;
+
+      if (_mesa_is_enum_format_integer(internalformat))
+         goto end;
+
+      if (target == GL_TEXTURE_BUFFER)
+         goto end;
+
+      /* At this point we know that multi-texel filtering is supported. We
+       * need to call the driver to know if it is CAVEAT_SUPPORT or
+       * FULL_SUPPORT.
+       */
+      ctx->Driver.QueryInternalFormat(ctx, target, internalformat, pname,
+                                      buffer);
       break;
 
    case GL_VERTEX_TEXTURE:
