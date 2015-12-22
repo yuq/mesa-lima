@@ -523,6 +523,43 @@ _is_resource_supported(struct gl_context *ctx, GLenum target,
    return true;
 }
 
+static bool
+_is_internalformat_supported(struct gl_context *ctx, GLenum target,
+                             GLenum internalformat)
+{
+   /* From the ARB_internalformat_query2 specification:
+    *
+    *     "- INTERNALFORMAT_SUPPORTED: If <internalformat> is an internal format
+    *     that is supported by the implementation in at least some subset of
+    *     possible operations, TRUE is written to <params>.  If <internalformat>
+    *     if not a valid token for any internal format usage, FALSE is returned.
+    *
+    *     <internalformats> that must be supported (in GL 4.2 or later) include
+    *      the following:
+    *         - "sized internal formats" from Table 3.12, 3.13, and 3.15,
+    *         - any specific "compressed internal format" from Table 3.14,
+    *         - any "image unit format" from Table 3.21.
+    *         - any generic "compressed internal format" from Table 3.14, if the
+    *         implementation accepts it for any texture specification commands, and
+    *         - unsized or base internal format, if the implementation accepts
+    *         it for texture or image specification.
+    */
+   GLint buffer[1];
+
+   /* At this point a internalformat is valid if it is valid as a texture or
+    * as a renderbuffer format. The checks are different because those methods
+    * return different values when passing non supported internalformats */
+   if (_mesa_base_tex_format(ctx, internalformat) < 0 &&
+       _mesa_base_fbo_format(ctx, internalformat) == 0)
+      return false;
+
+   /* Let the driver have the final word */
+   ctx->Driver.QueryInternalFormat(ctx, target, internalformat,
+                                   GL_INTERNALFORMAT_SUPPORTED, buffer);
+
+   return (buffer[0] == GL_TRUE);
+}
+
 /* default implementation of QueryInternalFormat driverfunc, for
  * drivers not implementing ARB_internalformat_query2.
  */
@@ -576,6 +613,7 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
    _set_default_response(pname, buffer);
 
    if (!_is_target_supported(ctx, target) ||
+       !_is_internalformat_supported(ctx, target, internalformat) ||
        !_is_resource_supported(ctx, target, internalformat, pname))
       goto end;
 
