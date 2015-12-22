@@ -2385,6 +2385,19 @@ typedef struct nir_lower_wpos_ytransform_options {
 bool nir_lower_wpos_ytransform(nir_shader *shader,
                                const nir_lower_wpos_ytransform_options *options);
 
+typedef struct nir_lower_drawpixels_options {
+   int texcoord_state_tokens[5];
+   int scale_state_tokens[5];
+   int bias_state_tokens[5];
+   unsigned drawpix_sampler;
+   unsigned pixelmap_sampler;
+   bool pixel_maps :1;
+   bool scale_and_bias :1;
+} nir_lower_drawpixels_options;
+
+void nir_lower_drawpixels(nir_shader *shader,
+                          const nir_lower_drawpixels_options *options);
+
 void nir_lower_atomics(nir_shader *shader,
                        const struct gl_shader_program *shader_program);
 void nir_lower_to_source_mods(nir_shader *shader);
