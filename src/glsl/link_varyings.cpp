@@ -1629,17 +1629,6 @@ assign_varying_locations(struct gl_context *ctx,
    hash_table_dtor(consumer_inputs);
    hash_table_dtor(consumer_interface_inputs);
 
-   if (!disable_varying_packing) {
-      if (producer) {
-         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
-                               0, producer);
-      }
-      if (consumer) {
-         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
-                               consumer_vertices, consumer);
-      }
-   }
-
    if (consumer && producer) {
       foreach_in_list(ir_instruction, node, consumer->ir) {
          ir_variable *const var = node->as_variable();
@@ -1686,6 +1675,17 @@ assign_varying_locations(struct gl_context *ctx,
              */
             var->data.mode = ir_var_auto;
          }
+      }
+   }
+
+   if (!disable_varying_packing) {
+      if (producer) {
+         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
+                               0, producer);
+      }
+      if (consumer) {
+         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
+                               consumer_vertices, consumer);
       }
    }
 
