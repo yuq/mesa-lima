@@ -30,6 +30,44 @@
 #include "nir_control_flow.h"
 
 static struct vtn_ssa_value *
+vtn_undef_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
+{
+   struct vtn_ssa_value *val = rzalloc(b, struct vtn_ssa_value);
+   val->type = type;
+
+   if (glsl_type_is_vector_or_scalar(type)) {
+      unsigned num_components = glsl_get_vector_elements(val->type);
+      nir_ssa_undef_instr *undef =
+         nir_ssa_undef_instr_create(b->shader, num_components);
+
+      nir_instr_insert_before_cf_list(&b->impl->body, &undef->instr);
+      val->def = &undef->def;
+   } else {
+      unsigned elems = glsl_get_length(val->type);
+      val->elems = ralloc_array(b, struct vtn_ssa_value *, elems);
+      if (glsl_type_is_matrix(type)) {
+         const struct glsl_type *elem_type =
+            glsl_vector_type(glsl_get_base_type(type),
+                             glsl_get_vector_elements(type));
+
+         for (unsigned i = 0; i < elems; i++)
+            val->elems[i] = vtn_undef_ssa_value(b, elem_type);
+      } else if (glsl_type_is_array(type)) {
+         const struct glsl_type *elem_type = glsl_get_array_element(type);
+         for (unsigned i = 0; i < elems; i++)
+            val->elems[i] = vtn_undef_ssa_value(b, elem_type);
+      } else {
+         for (unsigned i = 0; i < elems; i++) {
+            const struct glsl_type *elem_type = glsl_get_struct_field(type, i);
+            val->elems[i] = vtn_undef_ssa_value(b, elem_type);
+         }
+      }
+   }
+
+   return val;
+}
+
+static struct vtn_ssa_value *
 vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
                     const struct glsl_type *type)
 {
@@ -118,6 +156,9 @@ vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
 {
    struct vtn_value *val = vtn_untyped_value(b, value_id);
    switch (val->value_type) {
+   case vtn_value_type_undef:
+      return vtn_undef_ssa_value(b, val->type->type);
+
    case vtn_value_type_constant:
       return vtn_const_ssa_value(b, val->constant, val->const_type);
 
@@ -3458,9 +3499,11 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       /* This is handled by cfg pre-pass and walk_blocks */
       break;
 
-   case SpvOpUndef:
-      vtn_push_value(b, w[2], vtn_value_type_undef);
+   case SpvOpUndef: {
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_undef);
+      val->type = vtn_value(b, w[1], vtn_value_type_type)->type;
       break;
+   }
 
    case SpvOpExtInst:
       vtn_handle_extension(b, opcode, w, count);
