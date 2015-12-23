@@ -392,6 +392,8 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                      }
                      else if (semName == TGSI_SEMANTIC_STENCIL) {
                         info->writes_stencil = TRUE;
+                     } else if (semName == TGSI_SEMANTIC_SAMPLEMASK) {
+                        info->writes_samplemask = TRUE;
                      }
                   }
 
