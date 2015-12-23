@@ -106,8 +106,9 @@ nv98_decoder_bsp(struct nouveau_vp3_decoder *dec, union pipe_desc desc,
       return -1;
    }
 
-   caps = nouveau_vp3_bsp(dec, desc, target, comm_seq,
-                          num_buffers, data, num_bytes);
+   nouveau_vp3_bsp_begin(dec);
+   nouveau_vp3_bsp_next(dec, num_buffers, data, num_bytes);
+   caps = nouveau_vp3_bsp_end(dec, desc);
 
    nouveau_vp3_vp_caps(dec, desc, target, comm_seq, vp_caps, is_ref, refs);
 
