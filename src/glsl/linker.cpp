@@ -3433,7 +3433,7 @@ add_interface_variables(struct gl_shader_program *shProg,
 }
 
 static bool
-add_packed_varyings(struct gl_shader_program *shProg, int stage)
+add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
 {
    struct gl_shader *sh = shProg->_LinkedShaders[stage];
    GLenum iface;
@@ -3454,10 +3454,13 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage)
          default:
             unreachable("unexpected type");
          }
-         if (!add_program_resource(shProg, iface, var,
-                                   build_stageref(shProg, var->name,
-                                                  var->data.mode)))
-            return false;
+
+         if (type == iface) {
+            if (!add_program_resource(shProg, iface, var,
+                                      build_stageref(shProg, var->name,
+                                                     var->data.mode)))
+               return false;
+         }
       }
    }
    return true;
@@ -3724,9 +3727,9 @@ build_program_resource_list(struct gl_shader_program *shProg)
 
    /* Program interface needs to expose varyings in case of SSO. */
    if (shProg->SeparateShader) {
-      if (!add_packed_varyings(shProg, input_stage))
+      if (!add_packed_varyings(shProg, input_stage, GL_PROGRAM_INPUT))
          return;
-      if (!add_packed_varyings(shProg, output_stage))
+      if (!add_packed_varyings(shProg, output_stage, GL_PROGRAM_OUTPUT))
          return;
    }
 
