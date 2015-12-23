@@ -367,18 +367,24 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
          /* User-defined varyings with explicit locations are handled
           * differently because they do not need to have matching names.
           */
-         const unsigned idx = var->data.location - VARYING_SLOT_VAR0;
+         const glsl_type *type = get_varying_type(var, producer->Stage);
+         unsigned num_elements = type->count_attribute_slots(false);
+         unsigned idx = var->data.location - VARYING_SLOT_VAR0;
+         unsigned slot_limit = idx + num_elements;
 
-         if (explicit_locations[idx] != NULL) {
-            linker_error(prog,
+         while (idx < slot_limit) {
+            if (explicit_locations[idx] != NULL) {
+               linker_error(prog,
                          "%s shader has multiple outputs explicitly "
                          "assigned to location %d\n",
                          _mesa_shader_stage_to_string(producer->Stage),
                          idx);
-            return;
-         }
+               return;
+            }
 
-         explicit_locations[idx] = var;
+            explicit_locations[idx] = var;
+            idx++;
+         }
       }
    }
 
@@ -426,14 +432,25 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
          ir_variable *output = NULL;
          if (input->data.explicit_location
              && input->data.location >= VARYING_SLOT_VAR0) {
-            output = explicit_locations[input->data.location - VARYING_SLOT_VAR0];
 
-            if (output == NULL) {
-               linker_error(prog,
-                            "%s shader input `%s' with explicit location "
-                            "has no matching output\n",
-                            _mesa_shader_stage_to_string(consumer->Stage),
-                            input->name);
+            const glsl_type *type = get_varying_type(input, consumer->Stage);
+            unsigned num_elements = type->count_attribute_slots(false);
+            unsigned idx = input->data.location - VARYING_SLOT_VAR0;
+            unsigned slot_limit = idx + num_elements;
+
+            while (idx < slot_limit) {
+               output = explicit_locations[idx];
+
+               if (output == NULL ||
+                   input->data.location != output->data.location) {
+                  linker_error(prog,
+                               "%s shader input `%s' with explicit location "
+                               "has no matching output\n",
+                               _mesa_shader_stage_to_string(consumer->Stage),
+                               input->name);
+                  break;
+               }
+               idx++;
             }
          } else {
             output = parameters.get_variable(input->name);
