@@ -2570,6 +2570,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpLogicalEqual:          op = nir_op_ieq;     break;
    case SpvOpLogicalNotEqual:       op = nir_op_ine;     break;
    case SpvOpLogicalAnd:            op = nir_op_iand;    break;
+   case SpvOpLogicalNot:            op = nir_op_inot;    break;
    case SpvOpBitwiseOr:             op = nir_op_ior;     break;
    case SpvOpBitwiseXor:            op = nir_op_ixor;    break;
    case SpvOpBitwiseAnd:            op = nir_op_iand;    break;
@@ -3562,10 +3563,11 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpShiftRightLogical:
    case SpvOpShiftRightArithmetic:
    case SpvOpShiftLeftLogical:
-   case SpvOpLogicalOr:
    case SpvOpLogicalEqual:
    case SpvOpLogicalNotEqual:
+   case SpvOpLogicalOr:
    case SpvOpLogicalAnd:
+   case SpvOpLogicalNot:
    case SpvOpBitwiseOr:
    case SpvOpBitwiseXor:
    case SpvOpBitwiseAnd:
