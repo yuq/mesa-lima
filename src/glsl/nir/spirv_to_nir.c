@@ -109,6 +109,10 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
    return val;
 }
 
+static struct vtn_ssa_value *
+vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
+                  struct vtn_type *src_type);
+
 struct vtn_ssa_value *
 vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
 {
@@ -119,6 +123,11 @@ vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
 
    case vtn_value_type_ssa:
       return val->ssa;
+
+   case vtn_value_type_deref:
+      /* This is needed for function parameters */
+      return vtn_variable_load(b, val->deref, val->deref_type);
+
    default:
       unreachable("Invalid type for an SSA value");
    }
