@@ -221,6 +221,7 @@ enum brw_state_id {
    BRW_STATE_COMPUTE_PROGRAM,
    BRW_STATE_CS_WORK_GROUPS,
    BRW_STATE_URB_SIZE,
+   BRW_STATE_CC_STATE,
    BRW_NUM_STATE_BITS
 };
 
@@ -309,6 +310,7 @@ enum brw_state_id {
 #define BRW_NEW_COMPUTE_PROGRAM         (1ull << BRW_STATE_COMPUTE_PROGRAM)
 #define BRW_NEW_CS_WORK_GROUPS          (1ull << BRW_STATE_CS_WORK_GROUPS)
 #define BRW_NEW_URB_SIZE                (1ull << BRW_STATE_URB_SIZE)
+#define BRW_NEW_CC_STATE                (1ull << BRW_STATE_CC_STATE)
 
 struct brw_state_flags {
    /** State update flags signalled by mesa internals */
