@@ -1168,7 +1168,16 @@ _vtn_block_load(struct vtn_builder *b, nir_intrinsic_op op,
 
       nir_ssa_dest_init(&load->instr, &load->dest, load->num_components, NULL);
       nir_builder_instr_insert(&b->nb, &load->instr);
-      val->def = &load->dest.ssa;
+
+      if (glsl_get_base_type(type->type) == GLSL_TYPE_BOOL) {
+         /* Loads of booleans from externally visible memory need to be
+          * fixed up since they're defined to be zero/nonzero rather than
+          * NIR_FALSE/NIR_TRUE.
+          */
+         val->def = nir_ine(&b->nb, &load->dest.ssa, nir_imm_int(&b->nb, 0));
+      } else {
+         val->def = &load->dest.ssa;
+      }
    } else {
       unsigned elems = glsl_get_length(type->type);
       val->elems = ralloc_array(b, struct vtn_ssa_value *, elems);
