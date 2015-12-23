@@ -2273,7 +2273,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
 }
 
 static nir_alu_instr *
-create_vec(void *mem_ctx, unsigned num_components)
+create_vec(nir_shader *shader, unsigned num_components)
 {
    nir_op op;
    switch (num_components) {
@@ -2284,7 +2284,7 @@ create_vec(void *mem_ctx, unsigned num_components)
    default: unreachable("bad vector size");
    }
 
-   nir_alu_instr *vec = nir_alu_instr_create(mem_ctx, op);
+   nir_alu_instr *vec = nir_alu_instr_create(shader, op);
    nir_ssa_dest_init(&vec->instr, &vec->dest.dest, num_components, NULL);
    vec->dest.write_mask = (1 << num_components) - 1;
 
@@ -2301,7 +2301,8 @@ vtn_transpose(struct vtn_builder *b, struct vtn_ssa_value *src)
       vtn_create_ssa_value(b, glsl_transposed_type(src->type));
 
    for (unsigned i = 0; i < glsl_get_matrix_columns(dest->type); i++) {
-      nir_alu_instr *vec = create_vec(b, glsl_get_matrix_columns(src->type));
+      nir_alu_instr *vec = create_vec(b->shader,
+                                      glsl_get_matrix_columns(src->type));
       if (glsl_type_is_vector_or_scalar(src->type)) {
           vec->src[0].src = nir_src_for_ssa(src->def);
           vec->src[0].swizzle[0] = i;
@@ -2392,7 +2393,7 @@ vtn_matrix_multiply(struct vtn_builder *b,
        */
 
       for (unsigned i = 0; i < src1_columns; i++) {
-         nir_alu_instr *vec = create_vec(b, src0_rows);
+         nir_alu_instr *vec = create_vec(b->shader, src0_rows);
          for (unsigned j = 0; j < src0_rows; j++) {
             vec->src[j].src =
                nir_src_for_ssa(nir_fdot(&b->nb, src0_transpose->elems[j]->def,
