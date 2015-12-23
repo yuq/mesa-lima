@@ -552,8 +552,10 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 	case PIPE_SHADER_FRAGMENT: {
 		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
-		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
+		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
+		    sel->info.colors_written == 0x1)
 			key->ps.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
+
 		key->ps.export_16bpc = sctx->framebuffer.export_16bpc;
 
 		if (rs) {

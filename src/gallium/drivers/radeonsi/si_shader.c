@@ -2189,9 +2189,8 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 			/* This instruction will be emitted at the end of the shader. */
 			memcpy(last_args, args, sizeof(args));
 
-			/* Handle FS_COLOR0_WRITES_ALL_CBUFS. */
-			if (shader->selector->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
-			    semantic_index == 0 &&
+			/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
+			if (semantic_index == 0 &&
 			    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
 				for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
 					si_llvm_init_export_args_load(bld_base,
