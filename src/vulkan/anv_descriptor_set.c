@@ -41,7 +41,6 @@ VkResult anv_CreateDescriptorSetLayout(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_descriptor_set_layout *set_layout;
-   uint32_t s;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
 
@@ -97,7 +96,7 @@ VkResult anv_CreateDescriptorSetLayout(
       switch (binding->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-         for_each_bit(s, binding->stageFlags) {
+         anv_foreach_stage(s, binding->stageFlags) {
             set_layout->binding[b].stage[s].sampler_index = sampler_count[s];
             sampler_count[s] += binding->descriptorCount;
          }
@@ -117,7 +116,7 @@ VkResult anv_CreateDescriptorSetLayout(
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-         for_each_bit(s, binding->stageFlags) {
+         anv_foreach_stage(s, binding->stageFlags) {
             set_layout->binding[b].stage[s].surface_index = surface_count[s];
             surface_count[s] += binding->descriptorCount;
          }
@@ -139,7 +138,7 @@ VkResult anv_CreateDescriptorSetLayout(
       switch (binding->descriptorType) {
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-         for_each_bit(s, binding->stageFlags) {
+         anv_foreach_stage(s, binding->stageFlags) {
             set_layout->binding[b].stage[s].image_index = image_count[s];
             image_count[s] += binding->descriptorCount;
          }
