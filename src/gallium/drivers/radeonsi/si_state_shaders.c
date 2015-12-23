@@ -387,6 +387,8 @@ static void si_shader_ps(struct si_shader *shader)
 	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
 	unsigned i, spi_ps_in_control;
+	unsigned spi_shader_col_format = 0, cb_shader_mask = 0;
+	unsigned colors_written, export_16bpc;
 	unsigned num_sgprs, num_user_sgprs;
 	unsigned spi_baryc_cntl = 0;
 	uint64_t va;
@@ -422,12 +424,35 @@ static void si_shader_ps(struct si_shader *shader)
 		}
 	}
 
+	/* Find out what SPI_SHADER_COL_FORMAT and CB_SHADER_MASK should be. */
+	colors_written = info->colors_written;
+	export_16bpc = shader->key.ps.export_16bpc;
+
+	if (info->colors_written == 0x0) {
+		colors_written = 0x1; /* dummy export */
+		export_16bpc = 0;
+	} else if (info->colors_written == 0x1 &&
+		   info->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS]) {
+		colors_written |= (1 << (shader->key.ps.last_cbuf + 1)) - 1;
+	}
+
+	while (colors_written) {
+		i = u_bit_scan(&colors_written);
+		if (export_16bpc & (1 << i))
+			spi_shader_col_format |= V_028714_SPI_SHADER_FP16_ABGR << (4 * i);
+		else
+			spi_shader_col_format |= V_028714_SPI_SHADER_32_ABGR << (4 * i);
+		cb_shader_mask |= 0xf << (4 * i);
+	}
+
+	/* Set interpolation controls. */
 	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->spi_ps_input_ena) ||
 		       G_0286CC_LINEAR_CENTROID_ENA(shader->spi_ps_input_ena);
 
 	spi_ps_in_control = S_0286D8_NUM_INTERP(shader->nparam) |
 			    S_0286D8_BC_OPTIMIZE_DISABLE(has_centroid);
 
+	/* Set registers. */
 	si_pm4_set_reg(pm4, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
 	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL, spi_ps_in_control);
 
@@ -437,9 +462,8 @@ static void si_shader_ps(struct si_shader *shader)
 		       info->writes_z ? V_028710_SPI_SHADER_32_R :
 		       V_028710_SPI_SHADER_ZERO);
 
-	si_pm4_set_reg(pm4, R_028714_SPI_SHADER_COL_FORMAT,
-		       shader->spi_shader_col_format);
-	si_pm4_set_reg(pm4, R_02823C_CB_SHADER_MASK, shader->cb_shader_mask);
+	si_pm4_set_reg(pm4, R_028714_SPI_SHADER_COL_FORMAT, spi_shader_col_format);
+	si_pm4_set_reg(pm4, R_02823C_CB_SHADER_MASK, cb_shader_mask);
 
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);

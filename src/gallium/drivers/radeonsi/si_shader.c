@@ -1302,18 +1302,8 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	if (si_shader_ctx->type == TGSI_PROCESSOR_FRAGMENT) {
 		int cbuf = target - V_008DFC_SQ_EXP_MRT;
 
-		if (cbuf >= 0 && cbuf < 8) {
+		if (cbuf >= 0 && cbuf < 8)
 			compressed = (si_shader_ctx->shader->key.ps.export_16bpc >> cbuf) & 0x1;
-
-			if (compressed)
-				si_shader_ctx->shader->spi_shader_col_format |=
-					V_028714_SPI_SHADER_FP16_ABGR << (4 * cbuf);
-			else
-				si_shader_ctx->shader->spi_shader_col_format |=
-					V_028714_SPI_SHADER_32_ABGR << (4 * cbuf);
-
-			si_shader_ctx->shader->cb_shader_mask |= 0xf << (4 * cbuf);
-		}
 	}
 
 	/* Set COMPR flag */
