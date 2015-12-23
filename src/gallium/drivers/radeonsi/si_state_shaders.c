@@ -428,7 +428,7 @@ static void si_shader_ps(struct si_shader *shader)
 	colors_written = info->colors_written;
 	export_16bpc = shader->key.ps.export_16bpc;
 
-	if (info->colors_written == 0x0) {
+	if (!info->num_outputs) {
 		colors_written = 0x1; /* dummy export */
 		export_16bpc = 0;
 	} else if (info->colors_written == 0x1 &&

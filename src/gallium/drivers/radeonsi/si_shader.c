@@ -2109,9 +2109,35 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 	struct tgsi_shader_info *info = &shader->selector->info;
 	LLVMBuilderRef builder = base->gallivm->builder;
 	LLVMValueRef args[9];
-	LLVMValueRef last_args[9] = { 0 };
 	int depth_index = -1, stencil_index = -1, samplemask_index = -1;
+	int last_color_export = -1;
 	int i;
+
+	/* If there are no outputs, add a dummy export. */
+	if (!info->num_outputs) {
+		args[0] = lp_build_const_int32(base->gallivm, 0x0); /* enabled channels */
+		args[1] = uint->one; /* whether the EXEC mask is valid */
+		args[2] = uint->one; /* DONE bit */
+		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_MRT);
+		args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
+		args[5] = uint->zero; /* R */
+		args[6] = uint->zero; /* G */
+		args[7] = uint->zero; /* B */
+		args[8] = uint->zero; /* A */
+
+		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+				   LLVMVoidTypeInContext(base->gallivm->context),
+				   args, 9, 0);
+		return;
+	}
+
+	/* Determine the last export. If MRTZ is present, it's always last.
+	 * Otherwise, find the last color export.
+	 */
+	if (!info->writes_z && !info->writes_stencil && !info->writes_samplemask)
+		for (i = 0; i < info->num_outputs; i++)
+			if (info->output_semantic_name[i] == TGSI_SEMANTIC_COLOR)
+				last_color_export = i;
 
 	for (i = 0; i < info->num_outputs; i++) {
 		unsigned semantic_name = info->output_semantic_name[i];
@@ -2157,56 +2183,48 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 
 			break;
 		default:
-			target = 0;
 			fprintf(stderr,
 				"Warning: SI unhandled fs output type:%d\n",
 				semantic_name);
+			continue;
+		}
+
+		/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
+		if (semantic_index == 0 &&
+		    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
+			for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
+				si_llvm_init_export_args_load(bld_base,
+							      si_shader_ctx->radeon_bld.soa.outputs[i],
+							      V_008DFC_SQ_EXP_MRT + c, args);
+				lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+						   LLVMVoidTypeInContext(base->gallivm->context),
+						   args, 9, 0);
+			}
 		}
 
 		si_llvm_init_export_args_load(bld_base,
 					      si_shader_ctx->radeon_bld.soa.outputs[i],
 					      target, args);
-
-		if (semantic_name == TGSI_SEMANTIC_COLOR) {
-			/* If there is an export instruction waiting to be emitted, do so now. */
-			if (last_args[0]) {
-				lp_build_intrinsic(base->gallivm->builder,
-						   "llvm.SI.export",
-						   LLVMVoidTypeInContext(base->gallivm->context),
-						   last_args, 9, 0);
-			}
-
-			/* This instruction will be emitted at the end of the shader. */
-			memcpy(last_args, args, sizeof(args));
-
-			/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
-			if (semantic_index == 0 &&
-			    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
-				for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
-					si_llvm_init_export_args_load(bld_base,
-								      si_shader_ctx->radeon_bld.soa.outputs[i],
-								      V_008DFC_SQ_EXP_MRT + c, args);
-					lp_build_intrinsic(base->gallivm->builder,
-							   "llvm.SI.export",
-							   LLVMVoidTypeInContext(base->gallivm->context),
-							   args, 9, 0);
-				}
-			}
-		} else {
-			lp_build_intrinsic(base->gallivm->builder,
-					   "llvm.SI.export",
-					   LLVMVoidTypeInContext(base->gallivm->context),
-					   args, 9, 0);
+		if (last_color_export == i) {
+			args[1] = uint->one; /* whether the EXEC mask is valid */
+			args[2] = uint->one; /* DONE bit */
 		}
+		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+				   LLVMVoidTypeInContext(base->gallivm->context),
+				   args, 9, 0);
 	}
 
 	if (depth_index >= 0 || stencil_index >= 0 || samplemask_index >= 0) {
 		LLVMValueRef out_ptr;
 		unsigned mask = 0;
 
+		args[1] = uint->one; /* whether the EXEC mask is valid */
+		args[2] = uint->one; /* DONE bit */
+
 		/* Specify the target we are exporting */
 		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_MRTZ);
 
+		args[4] = uint->zero; /* COMP flag */
 		args[5] = base->zero; /* R, depth */
 		args[6] = base->zero; /* G, stencil test value[0:7], stencil op value[8:15] */
 		args[7] = base->zero; /* B, sample mask */
@@ -2239,46 +2257,10 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		/* Specify which components to enable */
 		args[0] = lp_build_const_int32(base->gallivm, mask);
 
-		args[1] =
-		args[2] =
-		args[4] = uint->zero;
-
-		if (last_args[0])
-			lp_build_intrinsic(base->gallivm->builder,
-					   "llvm.SI.export",
-					   LLVMVoidTypeInContext(base->gallivm->context),
-					   args, 9, 0);
-		else
-			memcpy(last_args, args, sizeof(args));
+		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+				   LLVMVoidTypeInContext(base->gallivm->context),
+				   args, 9, 0);
 	}
-
-	if (!last_args[0]) {
-		/* Specify which components to enable */
-		last_args[0] = lp_build_const_int32(base->gallivm, 0x0);
-
-		/* Specify the target we are exporting */
-		last_args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_MRT);
-
-		/* Set COMPR flag to zero to export data as 32-bit */
-		last_args[4] = uint->zero;
-
-		/* dummy bits */
-		last_args[5]= uint->zero;
-		last_args[6]= uint->zero;
-		last_args[7]= uint->zero;
-		last_args[8]= uint->zero;
-	}
-
-	/* Specify whether the EXEC mask represents the valid mask */
-	last_args[1] = uint->one;
-
-	/* Specify that this is the last export */
-	last_args[2] = lp_build_const_int32(base->gallivm, 1);
-
-	lp_build_intrinsic(base->gallivm->builder,
-			   "llvm.SI.export",
-			   LLVMVoidTypeInContext(base->gallivm->context),
-			   last_args, 9, 0);
 }
 
 static void build_tex_intrinsic(const struct lp_build_tgsi_action * action,
