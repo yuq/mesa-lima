@@ -1669,11 +1669,6 @@ assign_varying_locations(struct gl_context *ctx,
 			    var->name,
                             _mesa_shader_stage_to_string(producer->Stage));
             }
-
-            /* An 'in' variable is only really a shader input if its
-             * value is written by the previous stage.
-             */
-            var->data.mode = ir_var_auto;
          }
       }
    }
