@@ -2369,9 +2369,14 @@ vtn_matrix_multiply(struct vtn_builder *b,
    unsigned src0_columns = glsl_get_matrix_columns(src0->type);
    unsigned src1_columns = glsl_get_matrix_columns(src1->type);
 
-   struct vtn_ssa_value *dest =
-      vtn_create_ssa_value(b, glsl_matrix_type(glsl_get_base_type(src0->type),
-                                               src0_rows, src1_columns));
+   const struct glsl_type *dest_type;
+   if (src1_columns > 1) {
+      dest_type = glsl_matrix_type(glsl_get_base_type(src0->type),
+                                   src0_rows, src1_columns);
+   } else {
+      dest_type = glsl_vector_type(glsl_get_base_type(src0->type), src0_rows);
+   }
+   struct vtn_ssa_value *dest = vtn_create_ssa_value(b, dest_type);
 
    dest = vtn_wrap_matrix(b, dest);
 
