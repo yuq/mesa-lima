@@ -76,8 +76,9 @@ struct vtn_ssa_value {
       struct vtn_ssa_value **elems;
    };
 
-   /* For matrices, a transposed version of the value, or NULL if it hasn't
-    * been computed
+   /* For matrices, if this is non-NULL, then this value is actually the
+    * transpose of some other value.  The value that `transposed` points to
+    * always dominates this value.
     */
    struct vtn_ssa_value *transposed;
 
