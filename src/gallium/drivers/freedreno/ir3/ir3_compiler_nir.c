@@ -1264,7 +1264,7 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 
 /* handles array reads: */
 static void
-emit_intrinisic_load_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
+emit_intrinsic_load_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 		struct ir3_instruction **dst)
 {
 	nir_deref_var *dvar = intr->variables[0];
@@ -1305,7 +1305,7 @@ emit_intrinisic_load_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 
 /* handles array writes: */
 static void
-emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
+emit_intrinsic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 {
 	nir_deref_var *dvar = intr->variables[0];
 	nir_deref_array *darr = nir_deref_as_array(dvar->deref.child);
@@ -1400,7 +1400,7 @@ static void add_sysval_input(struct ir3_compile *ctx, gl_system_value slot,
 }
 
 static void
-emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
+emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 {
 	const nir_intrinsic_info *info = &nir_intrinsic_infos[intr->intrinsic];
 	struct ir3_instruction **dst, **src;
@@ -1462,10 +1462,10 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		}
 		break;
 	case nir_intrinsic_load_var:
-		emit_intrinisic_load_var(ctx, intr, dst);
+		emit_intrinsic_load_var(ctx, intr, dst);
 		break;
 	case nir_intrinsic_store_var:
-		emit_intrinisic_store_var(ctx, intr);
+		emit_intrinsic_store_var(ctx, intr);
 		break;
 	case nir_intrinsic_store_output:
 		const_offset = nir_src_as_const_value(intr->src[1]);
@@ -1935,7 +1935,7 @@ emit_instr(struct ir3_compile *ctx, nir_instr *instr)
 		emit_alu(ctx, nir_instr_as_alu(instr));
 		break;
 	case nir_instr_type_intrinsic:
-		emit_intrinisic(ctx, nir_instr_as_intrinsic(instr));
+		emit_intrinsic(ctx, nir_instr_as_intrinsic(instr));
 		break;
 	case nir_instr_type_load_const:
 		emit_load_const(ctx, nir_instr_as_load_const(instr));
