@@ -2247,13 +2247,6 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		    si_shader_ctx->screen->b.family != CHIP_OLAND)
 			mask |= 0x1;
 
-		if (samplemask_index >= 0)
-			si_shader_ctx->shader->spi_shader_z_format = V_028710_SPI_SHADER_32_ABGR;
-		else if (stencil_index >= 0)
-			si_shader_ctx->shader->spi_shader_z_format = V_028710_SPI_SHADER_32_GR;
-		else
-			si_shader_ctx->shader->spi_shader_z_format = V_028710_SPI_SHADER_32_R;
-
 		/* Specify which components to enable */
 		args[0] = lp_build_const_int32(base->gallivm, mask);
 
