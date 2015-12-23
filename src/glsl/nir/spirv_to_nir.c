@@ -2493,7 +2493,11 @@ vtn_handle_matrix_alu(struct vtn_builder *b, SpvOp opcode,
       struct vtn_ssa_value *src0 = vtn_ssa_value(b, w[3]);
       struct vtn_ssa_value *src1 = vtn_ssa_value(b, w[4]);
 
-      val->ssa = vtn_matrix_multiply(b, src0, src1);
+      if (opcode == SpvOpVectorTimesMatrix) {
+         val->ssa = vtn_matrix_multiply(b, vtn_transpose(b, src1), src0);
+      } else {
+         val->ssa = vtn_matrix_multiply(b, src0, src1);
+      }
       break;
    }
 
