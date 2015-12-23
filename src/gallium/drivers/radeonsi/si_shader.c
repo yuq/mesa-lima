@@ -1390,8 +1390,6 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 				LLVMVoidTypeInContext(gallivm->context),
 				NULL, 0, 0);
 	}
-
-	si_shader_ctx->shader->db_shader_control |= S_02880C_KILL_ENABLE(1);
 }
 
 static void si_scale_alpha_by_sample_mask(struct lp_build_tgsi_context *bld_base,
@@ -2229,22 +2227,18 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 			out_ptr = si_shader_ctx->radeon_bld.soa.outputs[depth_index][2];
 			args[5] = LLVMBuildLoad(base->gallivm->builder, out_ptr, "");
 			mask |= 0x1;
-			si_shader_ctx->shader->db_shader_control |= S_02880C_Z_EXPORT_ENABLE(1);
 		}
 
 		if (stencil_index >= 0) {
 			out_ptr = si_shader_ctx->radeon_bld.soa.outputs[stencil_index][1];
 			args[6] = LLVMBuildLoad(base->gallivm->builder, out_ptr, "");
 			mask |= 0x2;
-			si_shader_ctx->shader->db_shader_control |=
-				S_02880C_STENCIL_TEST_VAL_EXPORT_ENABLE(1);
 		}
 
 		if (samplemask_index >= 0) {
 			out_ptr = si_shader_ctx->radeon_bld.soa.outputs[samplemask_index][0];
 			args[7] = LLVMBuildLoad(base->gallivm->builder, out_ptr, "");
 			mask |= 0x4;
-			si_shader_ctx->shader->db_shader_control |= S_02880C_MASK_EXPORT_ENABLE(1);
 		}
 
 		/* SI (except OLAND) has a bug that it only looks
@@ -4113,9 +4107,6 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	if (sel->type != PIPE_SHADER_COMPUTE)
 		shader->dx10_clamp_mode = true;
 
-	if (sel->info.uses_kill)
-		shader->db_shader_control |= S_02880C_KILL_ENABLE(1);
-
 	shader->uses_instanceid = sel->info.uses_instanceid;
 	bld_base->info = poly_stipple ? &stipple_shader_info : &sel->info;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;
@@ -4190,17 +4181,6 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	case TGSI_PROCESSOR_FRAGMENT:
 		si_shader_ctx.radeon_bld.load_input = declare_input_fs;
 		bld_base->emit_epilogue = si_llvm_emit_fs_epilogue;
-
-		switch (sel->info.properties[TGSI_PROPERTY_FS_DEPTH_LAYOUT]) {
-		case TGSI_FS_DEPTH_LAYOUT_GREATER:
-			shader->db_shader_control |=
-				S_02880C_CONSERVATIVE_Z_EXPORT(V_02880C_EXPORT_GREATER_THAN_Z);
-			break;
-		case TGSI_FS_DEPTH_LAYOUT_LESS:
-			shader->db_shader_control |=
-				S_02880C_CONSERVATIVE_Z_EXPORT(V_02880C_EXPORT_LESS_THAN_Z);
-			break;
-		}
 		break;
 	default:
 		assert(!"Unsupported shader type");

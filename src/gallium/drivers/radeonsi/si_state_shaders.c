@@ -496,6 +496,16 @@ static void si_shader_init_pm4_state(struct si_shader *shader)
 	}
 }
 
+static unsigned si_get_alpha_test_func(struct si_context *sctx)
+{
+	/* Alpha-test should be disabled if colorbuffer 0 is integer. */
+	if (sctx->queued.named.dsa &&
+	    !sctx->framebuffer.cb0_is_integer)
+		return sctx->queued.named.dsa->alpha_func;
+
+	return PIPE_FUNC_ALWAYS;
+}
+
 /* Compute the key for the hw shader variant */
 static inline void si_shader_selector_key(struct pipe_context *ctx,
 					  struct si_shader_selector *sel,
@@ -562,11 +572,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			key->ps.clamp_color = rs->clamp_fragment_color;
 		}
 
-		key->ps.alpha_func = PIPE_FUNC_ALWAYS;
-		/* Alpha-test should be disabled if colorbuffer 0 is integer. */
-		if (sctx->queued.named.dsa &&
-		    !sctx->framebuffer.cb0_is_integer)
-			key->ps.alpha_func = sctx->queued.named.dsa->alpha_func;
+		key->ps.alpha_func = si_get_alpha_test_func(sctx);
 		break;
 	}
 	default:
@@ -731,6 +737,25 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		break;
 	}
 
+	/* DB_SHADER_CONTROL */
+	sel->db_shader_control =
+		S_02880C_Z_EXPORT_ENABLE(sel->info.writes_z) |
+		S_02880C_STENCIL_TEST_VAL_EXPORT_ENABLE(sel->info.writes_stencil) |
+		S_02880C_MASK_EXPORT_ENABLE(sel->info.writes_samplemask) |
+		S_02880C_KILL_ENABLE(sel->info.uses_kill);
+
+	switch (sel->info.properties[TGSI_PROPERTY_FS_DEPTH_LAYOUT]) {
+	case TGSI_FS_DEPTH_LAYOUT_GREATER:
+		sel->db_shader_control |=
+			S_02880C_CONSERVATIVE_Z_EXPORT(V_02880C_EXPORT_GREATER_THAN_Z);
+		break;
+	case TGSI_FS_DEPTH_LAYOUT_LESS:
+		sel->db_shader_control |=
+			S_02880C_CONSERVATIVE_Z_EXPORT(V_02880C_EXPORT_LESS_THAN_Z);
+		break;
+	}
+
+	/* Pre-compilation. */
 	if (sscreen->b.debug_flags & DBG_PRECOMPILE) {
 		struct si_shader_ctx_state state = {sel};
 
@@ -1549,6 +1574,10 @@ bool si_update_shaders(struct si_context *sctx)
 	si_update_vgt_shader_config(sctx);
 
 	if (sctx->ps_shader.cso) {
+		unsigned db_shader_control =
+			sctx->ps_shader.cso->db_shader_control |
+			S_02880C_KILL_ENABLE(si_get_alpha_test_func(sctx) != PIPE_FUNC_ALWAYS);
+
 		r = si_shader_select(ctx, &sctx->ps_shader);
 		if (r)
 			return false;
@@ -1568,8 +1597,8 @@ bool si_update_shaders(struct si_context *sctx)
 			si_mark_atom_dirty(sctx, &sctx->spi_ps_input);
 		}
 
-		if (sctx->ps_db_shader_control != sctx->ps_shader.current->db_shader_control) {
-			sctx->ps_db_shader_control = sctx->ps_shader.current->db_shader_control;
+		if (sctx->ps_db_shader_control != db_shader_control) {
+			sctx->ps_db_shader_control = db_shader_control;
 			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 		}
 

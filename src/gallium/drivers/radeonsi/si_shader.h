@@ -201,6 +201,7 @@ struct si_shader_selector {
 	bool		forces_persample_interp_for_persp;
 	bool		forces_persample_interp_for_linear;
 
+	/* GS parameters. */
 	unsigned	esgs_itemsize;
 	unsigned	gs_input_verts_per_prim;
 	unsigned	gs_output_prim;
@@ -209,6 +210,9 @@ struct si_shader_selector {
 	unsigned	max_gs_stream; /* count - 1 */
 	unsigned	gsvs_vertex_size;
 	unsigned	max_gsvs_emit_size;
+
+	/* PS parameters. */
+	unsigned	db_shader_control;
 
 	/* masks of "get_unique_index" bits */
 	uint64_t	outputs_written;
@@ -275,7 +279,6 @@ struct si_shader {
 	unsigned			scratch_bytes_per_wave;
 	unsigned			spi_shader_col_format;
 	unsigned			spi_shader_z_format;
-	unsigned			db_shader_control;
 	unsigned			cb_shader_mask;
 	union si_shader_key		key;
 
