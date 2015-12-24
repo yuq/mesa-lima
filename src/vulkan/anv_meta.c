@@ -48,7 +48,7 @@ build_nir_vertex_shader(bool attr_flat)
    pos_in->data.location = VERT_ATTRIB_GENERIC0;
    nir_variable *pos_out = nir_variable_create(b.shader, nir_var_shader_out,
                                                vertex_type, "gl_Position");
-   pos_in->data.location = VARYING_SLOT_POS;
+   pos_out->data.location = VARYING_SLOT_POS;
    nir_copy_var(&b, pos_out, pos_in);
 
    /* Add one more pass-through attribute.  For clear shaders, this is used
