@@ -34,22 +34,48 @@
 
 static void
 emit_vertex_input(struct anv_pipeline *pipeline,
-                  const VkPipelineVertexInputStateCreateInfo *info)
+                  const VkPipelineVertexInputStateCreateInfo *info,
+                  const struct anv_graphics_pipeline_create_info *extra)
 {
-   const uint32_t num_dwords = 1 + info->vertexAttributeDescriptionCount * 2;
-   uint32_t *p;
 
    static_assert(ANV_GEN >= 8, "should be compiling this for gen < 8");
 
-   if (info->vertexAttributeDescriptionCount > 0) {
+   uint32_t vb_used;
+   if (extra && extra->disable_vs) {
+      /* If the VS is disabled, just assume the user knows what they're
+       * doing and apply the layout blindly.  This can only come from
+       * meta, so this *should* be safe.
+       */
+      vb_used = 0;
+      for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++)
+         vb_used |= (1 << info->pVertexAttributeDescriptions[i].location);
+   } else {
+      /* Pull inputs_read out of the VS prog data */
+      uint64_t inputs_read = pipeline->vs_prog_data.inputs_read;
+      assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
+      vb_used = inputs_read >> VERT_ATTRIB_GENERIC0;
+   }
+
+   const uint32_t num_dwords = 1 + __builtin_popcount(vb_used) * 2;
+
+   uint32_t *p;
+   if (vb_used != 0) {
       p = anv_batch_emitn(&pipeline->batch, num_dwords,
                           GENX(3DSTATE_VERTEX_ELEMENTS));
+      memset(p + 1, 0, (num_dwords - 1) * 4);
    }
 
    for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++) {
       const VkVertexInputAttributeDescription *desc =
          &info->pVertexAttributeDescriptions[i];
       const struct anv_format *format = anv_format_for_vk_format(desc->format);
+
+      assert(desc->binding < 32);
+
+      if ((vb_used & (1 << desc->location)) == 0)
+         continue; /* Binding unused */
+
+      uint32_t slot = __builtin_popcount(vb_used & ((1 << desc->location) - 1));
 
       struct GENX(VERTEX_ELEMENT_STATE) element = {
          .VertexBufferIndex = desc->binding,
@@ -62,23 +88,24 @@ emit_vertex_input(struct anv_pipeline *pipeline,
          .Component2Control = format->num_channels >= 3 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
          .Component3Control = format->num_channels >= 4 ? VFCOMP_STORE_SRC : VFCOMP_STORE_1_FP
       };
-      GENX(VERTEX_ELEMENT_STATE_pack)(NULL, &p[1 + i * 2], &element);
+      GENX(VERTEX_ELEMENT_STATE_pack)(NULL, &p[1 + slot * 2], &element);
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_INSTANCING),
                      .InstancingEnable = pipeline->instancing_enable[desc->binding],
-                     .VertexElementIndex = i,
+                     .VertexElementIndex = slot,
                      /* Vulkan so far doesn't have an instance divisor, so
                       * this is always 1 (ignored if not instancing). */
                      .InstanceDataStepRate = 1);
    }
 
+   const uint32_t id_slot = __builtin_popcount(vb_used);
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_SGVS),
                   .VertexIDEnable = pipeline->vs_prog_data.uses_vertexid,
                   .VertexIDComponentNumber = 2,
-                  .VertexIDElementOffset = info->vertexBindingDescriptionCount,
+                  .VertexIDElementOffset = id_slot,
                   .InstanceIDEnable = pipeline->vs_prog_data.uses_instanceid,
                   .InstanceIDComponentNumber = 3,
-                  .InstanceIDElementOffset = info->vertexBindingDescriptionCount);
+                  .InstanceIDElementOffset = id_slot);
 }
 
 static void
@@ -354,7 +381,7 @@ genX(graphics_pipeline_create)(
       return result;
 
    assert(pCreateInfo->pVertexInputState);
-   emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
+   emit_vertex_input(pipeline, pCreateInfo->pVertexInputState, extra);
    assert(pCreateInfo->pInputAssemblyState);
    emit_ia_state(pipeline, pCreateInfo->pInputAssemblyState, extra);
    assert(pCreateInfo->pRasterizationState);
