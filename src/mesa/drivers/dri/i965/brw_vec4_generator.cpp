@@ -955,6 +955,8 @@ generate_tcs_create_barrier_header(struct brw_codegen *p,
                                    struct brw_vue_prog_data *prog_data,
                                    struct brw_reg dst)
 {
+   const struct brw_device_info *devinfo = p->devinfo;
+   const bool ivb = devinfo->is_ivybridge || devinfo->is_baytrail;
    struct brw_reg m0_2 = get_element_ud(dst, 2);
    unsigned instances = ((struct brw_tcs_prog_data *) prog_data)->instances;
 
@@ -965,13 +967,13 @@ generate_tcs_create_barrier_header(struct brw_codegen *p,
    /* Zero the message header */
    brw_MOV(p, retype(dst, BRW_REGISTER_TYPE_UD), brw_imm_ud(0u));
 
-   /* Copy "Barrier ID" from DW0 bits 16:13 */
+   /* Copy "Barrier ID" from r0.2, bits 16:13 (Gen7.5+) or 15:12 (Gen7) */
    brw_AND(p, m0_2,
            retype(brw_vec1_grf(0, 2), BRW_REGISTER_TYPE_UD),
-           brw_imm_ud(0x1e000));
+           brw_imm_ud(ivb ? INTEL_MASK(15, 12) : INTEL_MASK(16, 13)));
 
-   /* Shift it into place */
-   brw_SHL(p, m0_2, get_element_ud(dst, 2), brw_imm_ud(11));
+   /* Shift it up to bits 27:24. */
+   brw_SHL(p, m0_2, get_element_ud(dst, 2), brw_imm_ud(ivb ? 12 : 11));
 
    /* Set the Barrier Count and the enable bit */
    brw_OR(p, m0_2, m0_2, brw_imm_ud(instances << 9 | (1 << 15)));
