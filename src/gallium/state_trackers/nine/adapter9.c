@@ -618,7 +618,8 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
 
     pCaps->DestBlendCaps = pCaps->SrcBlendCaps;
 
-    pCaps->AlphaCmpCaps = D3DPCMPCAPS_LESS |
+    pCaps->AlphaCmpCaps = D3DPCMPCAPS_NEVER |
+                          D3DPCMPCAPS_LESS |
                           D3DPCMPCAPS_EQUAL |
                           D3DPCMPCAPS_LESSEQUAL |
                           D3DPCMPCAPS_GREATER |
