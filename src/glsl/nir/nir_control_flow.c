@@ -749,6 +749,12 @@ nir_cf_extract(nir_cf_list *extracted, nir_cursor begin, nir_cursor end)
 {
    nir_block *block_begin, *block_end, *block_before, *block_after;
 
+   if (nir_cursors_equal(begin, end)) {
+      exec_list_make_empty(&extracted->list);
+      extracted->impl = NULL; /* we shouldn't need this */
+      return;
+   }
+
    /* In the case where begin points to an instruction in some basic block and
     * end points to the end of the same basic block, we rely on the fact that
     * splitting on an instruction moves earlier instructions into a new basic
@@ -787,6 +793,9 @@ void
 nir_cf_reinsert(nir_cf_list *cf_list, nir_cursor cursor)
 {
    nir_block *before, *after;
+
+   if (exec_list_is_empty(&cf_list->list))
+      return;
 
    split_block_cursor(cursor, &before, &after);
 
