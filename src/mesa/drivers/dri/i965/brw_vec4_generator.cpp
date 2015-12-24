@@ -758,8 +758,12 @@ generate_tcs_urb_write(struct brw_codegen *p,
                               true /* header */, false /* eot */);
    brw_inst_set_urb_opcode(devinfo, send, BRW_URB_OPCODE_WRITE_OWORD);
    brw_inst_set_urb_global_offset(devinfo, send, inst->offset);
-   brw_inst_set_urb_per_slot_offset(devinfo, send, 1);
-   brw_inst_set_urb_swizzle_control(devinfo, send, BRW_URB_SWIZZLE_INTERLEAVE);
+   if (inst->urb_write_flags & BRW_URB_WRITE_EOT) {
+      brw_inst_set_eot(devinfo, send, 1);
+   } else {
+      brw_inst_set_urb_per_slot_offset(devinfo, send, 1);
+      brw_inst_set_urb_swizzle_control(devinfo, send, BRW_URB_SWIZZLE_INTERLEAVE);
+   }
 
    /* what happens to swizzles? */
 }
@@ -966,6 +970,30 @@ generate_tcs_release_input(struct brw_codegen *p,
    brw_inst_set_urb_swizzle_control(devinfo, send, is_unpaired.ud ?
                                     BRW_URB_SWIZZLE_NONE :
                                     BRW_URB_SWIZZLE_INTERLEAVE);
+}
+
+static void
+generate_tcs_thread_end(struct brw_codegen *p, vec4_instruction *inst)
+{
+   struct brw_reg header = brw_message_reg(inst->base_mrf);
+
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
+   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+   brw_MOV(p, header, brw_imm_ud(0));
+   brw_MOV(p, get_element_ud(header, 0),
+           retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD));
+   brw_pop_insn_state(p);
+
+   brw_urb_WRITE(p,
+                 brw_null_reg(), /* dest */
+                 inst->base_mrf, /* starting mrf reg nr */
+                 header,
+                 BRW_URB_WRITE_EOT | inst->urb_write_flags,
+                 inst->mlen,
+                 0,              /* response len */
+                 0,              /* urb destination offset */
+                 0);
 }
 
 static void
@@ -1890,6 +1918,10 @@ generate_code(struct brw_codegen *p,
 
       case TCS_OPCODE_RELEASE_INPUT:
          generate_tcs_release_input(p, dst, src[0], src[1]);
+         break;
+
+      case TCS_OPCODE_THREAD_END:
+         generate_tcs_thread_end(p, inst);
          break;
 
       case SHADER_OPCODE_BARRIER:

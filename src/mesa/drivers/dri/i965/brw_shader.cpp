@@ -572,6 +572,8 @@ brw_instruction_name(enum opcode op)
       return "tcs_src0<0,1,0>_is_zero";
    case TCS_OPCODE_RELEASE_INPUT:
       return "tcs_release_input";
+   case TCS_OPCODE_THREAD_END:
+      return "tcs_thread_end";
    case TES_OPCODE_CREATE_INPUT_READ_HEADER:
       return "tes_create_input_read_header";
    case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:

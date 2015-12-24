@@ -203,9 +203,9 @@ vec4_tcs_visitor::emit_thread_end()
    if (unlikely(INTEL_DEBUG & DEBUG_SHADER_TIME))
       emit_shader_time_end();
 
-   inst = emit(VS_OPCODE_URB_WRITE);
-   inst->mlen = 1;   /* just the header, no data. */
-   inst->urb_write_flags = BRW_URB_WRITE_EOT_COMPLETE;
+   inst = emit(TCS_OPCODE_THREAD_END);
+   inst->base_mrf = 14;
+   inst->mlen = 1;
 }
 
 
