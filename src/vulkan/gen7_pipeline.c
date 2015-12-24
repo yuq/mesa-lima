@@ -33,28 +33,53 @@
 #include "gen75_pack.h"
 
 static void
-gen7_emit_vertex_input(struct anv_pipeline *pipeline,
-                       const VkPipelineVertexInputStateCreateInfo *info)
+emit_vertex_input(struct anv_pipeline *pipeline,
+                  const VkPipelineVertexInputStateCreateInfo *info,
+                  const struct anv_graphics_pipeline_create_info *extra)
 {
-   const bool sgvs = pipeline->vs_prog_data.uses_vertexid ||
-      pipeline->vs_prog_data.uses_instanceid;
-   const uint32_t element_count =
-      info->vertexAttributeDescriptionCount + (sgvs ? 1 : 0);
-   const uint32_t num_dwords = 1 + element_count * 2;
-   uint32_t *p;
 
-   anv_finishme("gen7 vertex input needs to use inputs_read");
+   uint32_t vb_used;
+   if (extra && extra->disable_vs) {
+      /* If the VS is disabled, just assume the user knows what they're
+       * doing and apply the layout blindly.  This can only come from
+       * meta, so this *should* be safe.
+       */
+      vb_used = 0;
+      for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++)
+         vb_used |= (1 << info->pVertexAttributeDescriptions[i].location);
+   } else {
+      /* Pull inputs_read out of the VS prog data */
+      uint64_t inputs_read = pipeline->vs_prog_data.inputs_read;
+      assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
+      vb_used = inputs_read >> VERT_ATTRIB_GENERIC0;
+   }
 
-   if (info->vertexAttributeDescriptionCount == 0 && !sgvs)
+   uint32_t vb_count = __builtin_popcount(vb_used);
+
+   if (pipeline->vs_prog_data.uses_vertexid ||
+       pipeline->vs_prog_data.uses_instanceid)
+      vb_count++;
+
+   if (vb_count == 0)
       return;
 
-   p = anv_batch_emitn(&pipeline->batch, num_dwords,
-                       GEN7_3DSTATE_VERTEX_ELEMENTS);
+   const uint32_t num_dwords = 1 + vb_count * 2;
+
+   uint32_t *p = anv_batch_emitn(&pipeline->batch, num_dwords,
+                                 GEN7_3DSTATE_VERTEX_ELEMENTS);
+   memset(p + 1, 0, (num_dwords - 1) * 4);
 
    for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++) {
       const VkVertexInputAttributeDescription *desc =
          &info->pVertexAttributeDescriptions[i];
       const struct anv_format *format = anv_format_for_vk_format(desc->format);
+
+      assert(desc->binding < 32);
+
+      if ((vb_used & (1 << desc->location)) == 0)
+         continue; /* Binding unused */
+
+      uint32_t slot = __builtin_popcount(vb_used & ((1 << desc->location) - 1));
 
       struct GEN7_VERTEX_ELEMENT_STATE element = {
          .VertexBufferIndex = desc->binding,
@@ -67,10 +92,11 @@ gen7_emit_vertex_input(struct anv_pipeline *pipeline,
          .Component2Control = format->num_channels >= 3 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
          .Component3Control = format->num_channels >= 4 ? VFCOMP_STORE_SRC : VFCOMP_STORE_1_FP
       };
-      GEN7_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + i * 2], &element);
+      GEN7_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + slot * 2], &element);
    }
 
-   if (sgvs) {
+   if (pipeline->vs_prog_data.uses_vertexid ||
+       pipeline->vs_prog_data.uses_instanceid) {
       struct GEN7_VERTEX_ELEMENT_STATE element = {
          .Valid = true,
          /* FIXME: Do we need to provide the base vertex as component 0 here
@@ -80,7 +106,7 @@ gen7_emit_vertex_input(struct anv_pipeline *pipeline,
          .Component2Control = VFCOMP_STORE_VID,
          .Component3Control = VFCOMP_STORE_IID
       };
-      GEN7_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + info->vertexAttributeDescriptionCount * 2], &element);
+      GEN7_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + (vb_count - 1) * 2], &element);
    }
 }
 
@@ -347,7 +373,7 @@ genX(graphics_pipeline_create)(
    }
 
    assert(pCreateInfo->pVertexInputState);
-   gen7_emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
+   emit_vertex_input(pipeline, pCreateInfo->pVertexInputState, extra);
 
    assert(pCreateInfo->pRasterizationState);
    gen7_emit_rs_state(pipeline, pCreateInfo->pRasterizationState, extra);
