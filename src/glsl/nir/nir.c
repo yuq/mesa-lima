@@ -163,7 +163,7 @@ nir_variable *
 nir_local_variable_create(nir_function_impl *impl,
                           const struct glsl_type *type, const char *name)
 {
-   nir_variable *var = rzalloc(impl->overload->function->shader, nir_variable);
+   nir_variable *var = rzalloc(impl->function->shader, nir_variable);
    var->name = ralloc_strdup(var, name);
    var->type = type;
    var->data.mode = nir_var_local;
@@ -179,29 +179,15 @@ nir_function_create(nir_shader *shader, const char *name)
    nir_function *func = ralloc(shader, nir_function);
 
    exec_list_push_tail(&shader->functions, &func->node);
-   exec_list_make_empty(&func->overload_list);
+
    func->name = ralloc_strdup(func, name);
    func->shader = shader;
+   func->num_params = 0;
+   func->params = NULL;
+   func->return_type = glsl_void_type();
+   func->impl = NULL;
 
    return func;
-}
-
-nir_function_overload *
-nir_function_overload_create(nir_function *func)
-{
-   void *mem_ctx = ralloc_parent(func);
-
-   nir_function_overload *overload = ralloc(mem_ctx, nir_function_overload);
-
-   overload->num_params = 0;
-   overload->params = NULL;
-   overload->return_type = glsl_void_type();
-   overload->impl = NULL;
-
-   exec_list_push_tail(&func->overload_list, &overload->node);
-   overload->function = func;
-
-   return overload;
 }
 
 void nir_src_copy(nir_src *dest, const nir_src *src, void *mem_ctx)
@@ -268,16 +254,16 @@ cf_init(nir_cf_node *node, nir_cf_node_type type)
 }
 
 nir_function_impl *
-nir_function_impl_create(nir_function_overload *overload)
+nir_function_impl_create(nir_function *function)
 {
-   assert(overload->impl == NULL);
+   assert(function->impl == NULL);
 
-   void *mem_ctx = ralloc_parent(overload);
+   void *mem_ctx = ralloc_parent(function);
 
    nir_function_impl *impl = ralloc(mem_ctx, nir_function_impl);
 
-   overload->impl = impl;
-   impl->overload = overload;
+   function->impl = impl;
+   impl->function = function;
 
    cf_init(&impl->cf_node, nir_cf_node_function);
 
@@ -474,7 +460,7 @@ nir_intrinsic_instr_create(nir_shader *shader, nir_intrinsic_op op)
 }
 
 nir_call_instr *
-nir_call_instr_create(nir_shader *shader, nir_function_overload *callee)
+nir_call_instr_create(nir_shader *shader, nir_function *callee)
 {
    nir_call_instr *instr = ralloc(shader, nir_call_instr);
    instr_init(&instr->instr, nir_instr_type_call);

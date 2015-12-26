@@ -41,10 +41,10 @@ vec4_visitor::emit_nir_code()
    nir_setup_system_values();
 
    /* get the main function and emit it */
-   nir_foreach_overload(nir, overload) {
-      assert(strcmp(overload->function->name, "main") == 0);
-      assert(overload->impl);
-      nir_emit_impl(overload->impl);
+   nir_foreach_function(nir, function) {
+      assert(strcmp(function->name, "main") == 0);
+      assert(function->impl);
+      nir_emit_impl(function->impl);
    }
 }
 
@@ -107,10 +107,10 @@ vec4_visitor::nir_setup_system_values()
       nir_system_values[i] = dst_reg();
    }
 
-   nir_foreach_overload(nir, overload) {
-      assert(strcmp(overload->function->name, "main") == 0);
-      assert(overload->impl);
-      nir_foreach_block(overload->impl, setup_system_values_block, this);
+   nir_foreach_function(nir, function) {
+      assert(strcmp(function->name, "main") == 0);
+      assert(function->impl);
+      nir_foreach_block(function->impl, setup_system_values_block, this);
    }
 }
 

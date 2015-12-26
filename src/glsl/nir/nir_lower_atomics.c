@@ -156,10 +156,10 @@ nir_lower_atomics(nir_shader *shader,
       .shader_program = shader_program,
    };
 
-   nir_foreach_overload(shader, overload) {
-      if (overload->impl) {
-         nir_foreach_block(overload->impl, lower_block, (void *) &state);
-         nir_metadata_preserve(overload->impl, nir_metadata_block_index |
+   nir_foreach_function(shader, function) {
+      if (function->impl) {
+         nir_foreach_block(function->impl, lower_block, (void *) &state);
+         nir_metadata_preserve(function->impl, nir_metadata_block_index |
                                                nir_metadata_dominance);
       }
    }

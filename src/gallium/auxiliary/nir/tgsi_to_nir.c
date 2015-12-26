@@ -1972,8 +1972,7 @@ tgsi_to_nir(const void *tgsi_tokens,
                          options);
 
    nir_function *func = nir_function_create(s, "main");
-   nir_function_overload *overload = nir_function_overload_create(func);
-   nir_function_impl *impl = nir_function_impl_create(overload);
+   nir_function_impl *impl = nir_function_impl_create(func);
 
    nir_builder_init(&c->build, impl);
    c->build.cursor = nir_after_cf_list(&impl->body);

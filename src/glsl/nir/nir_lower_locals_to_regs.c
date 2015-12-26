@@ -348,7 +348,7 @@ nir_lower_locals_to_regs_impl(nir_function_impl *impl)
 {
    struct locals_to_regs_state state;
 
-   state.shader = impl->overload->function->shader;
+   state.shader = impl->function->shader;
    state.impl = impl;
    state.progress = false;
    state.regs_table = _mesa_hash_table_create(NULL, hash_deref, derefs_equal);
@@ -387,9 +387,9 @@ nir_lower_locals_to_regs(nir_shader *shader)
 {
    bool progress = false;
 
-   nir_foreach_overload(shader, overload) {
-      if (overload->impl)
-         progress = nir_lower_locals_to_regs_impl(overload->impl) || progress;
+   nir_foreach_function(shader, function) {
+      if (function->impl)
+         progress = nir_lower_locals_to_regs_impl(function->impl) || progress;
    }
 
    return progress;

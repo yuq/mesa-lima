@@ -712,12 +712,12 @@ vc4_nir_lower_blend_block(nir_block *block, void *state)
 void
 vc4_nir_lower_blend(struct vc4_compile *c)
 {
-        nir_foreach_overload(c->s, overload) {
-                if (overload->impl) {
-                        nir_foreach_block(overload->impl,
+        nir_foreach_function(c->s, function) {
+                if (function->impl) {
+                        nir_foreach_block(function->impl,
                                           vc4_nir_lower_blend_block, c);
 
-                        nir_metadata_preserve(overload->impl,
+                        nir_metadata_preserve(function->impl,
                                               nir_metadata_block_index |
                                               nir_metadata_dominance);
                 }

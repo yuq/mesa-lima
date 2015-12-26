@@ -467,8 +467,8 @@ vc4_nir_lower_io_impl(struct vc4_compile *c, nir_function_impl *impl)
 void
 vc4_nir_lower_io(struct vc4_compile *c)
 {
-        nir_foreach_overload(c->s, overload) {
-                if (overload->impl)
-                        vc4_nir_lower_io_impl(c, overload->impl);
+        nir_foreach_function(c->s, function) {
+                if (function->impl)
+                        vc4_nir_lower_io_impl(c, function->impl);
         }
 }

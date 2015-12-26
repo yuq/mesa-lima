@@ -2351,10 +2351,10 @@ emit_instructions(struct ir3_compile *ctx)
 	nir_function_impl *fxn = NULL;
 
 	/* Find the main function: */
-	nir_foreach_overload(ctx->s, overload) {
-		compile_assert(ctx, strcmp(overload->function->name, "main") == 0);
-		compile_assert(ctx, overload->impl);
-		fxn = overload->impl;
+	nir_foreach_function(ctx->s, function) {
+		compile_assert(ctx, strcmp(function->name, "main") == 0);
+		compile_assert(ctx, function->impl);
+		fxn = function->impl;
 		break;
 	}
 

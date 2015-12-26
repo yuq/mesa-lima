@@ -40,7 +40,7 @@ nir_builder_init(nir_builder *build, nir_function_impl *impl)
 {
    memset(build, 0, sizeof(*build));
    build->impl = impl;
-   build->shader = impl->overload->function->shader;
+   build->shader = impl->function->shader;
 }
 
 static inline void

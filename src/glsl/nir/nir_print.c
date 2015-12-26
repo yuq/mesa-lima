@@ -644,7 +644,7 @@ print_call_instr(nir_call_instr *instr, print_state *state)
 {
    FILE *fp = state->fp;
 
-   fprintf(fp, "call %s ", instr->callee->function->name);
+   fprintf(fp, "call %s ", instr->callee->name);
 
    for (unsigned i = 0; i < instr->num_params; i++) {
       if (i != 0)
@@ -910,7 +910,7 @@ print_function_impl(nir_function_impl *impl, print_state *state)
 {
    FILE *fp = state->fp;
 
-   fprintf(fp, "\nimpl %s ", impl->overload->function->name);
+   fprintf(fp, "\nimpl %s ", impl->function->name);
 
    for (unsigned i = 0; i < impl->num_params; i++) {
       if (i != 0)
@@ -948,18 +948,17 @@ print_function_impl(nir_function_impl *impl, print_state *state)
 }
 
 static void
-print_function_overload(nir_function_overload *overload,
-                        print_state *state)
+print_function(nir_function *function, print_state *state)
 {
    FILE *fp = state->fp;
 
-   fprintf(fp, "decl_overload %s ", overload->function->name);
+   fprintf(fp, "decl_function %s ", function->name);
 
-   for (unsigned i = 0; i < overload->num_params; i++) {
+   for (unsigned i = 0; i < function->num_params; i++) {
       if (i != 0)
          fprintf(fp, ", ");
 
-      switch (overload->params[i].param_type) {
+      switch (function->params[i].param_type) {
       case nir_parameter_in:
          fprintf(fp, "in ");
          break;
@@ -973,29 +972,21 @@ print_function_overload(nir_function_overload *overload,
          unreachable("Invalid parameter type");
       }
 
-      glsl_print_type(overload->params[i].type, fp);
+      glsl_print_type(function->params[i].type, fp);
    }
 
-   if (overload->return_type != NULL) {
-      if (overload->num_params != 0)
+   if (function->return_type != NULL) {
+      if (function->num_params != 0)
          fprintf(fp, ", ");
       fprintf(fp, "returning ");
-      glsl_print_type(overload->return_type, fp);
+      glsl_print_type(function->return_type, fp);
    }
 
    fprintf(fp, "\n");
 
-   if (overload->impl != NULL) {
-      print_function_impl(overload->impl, state);
+   if (function->impl != NULL) {
+      print_function_impl(function->impl, state);
       return;
-   }
-}
-
-static void
-print_function(nir_function *func, print_state *state)
-{
-   foreach_list_typed(nir_function_overload, overload, node, &func->overload_list) {
-      print_function_overload(overload, state);
    }
 }
 
