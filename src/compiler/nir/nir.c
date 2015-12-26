@@ -724,6 +724,62 @@ nir_cf_node_get_function(nir_cf_node *node)
    return nir_cf_node_as_function(node);
 }
 
+/* Reduces a cursor by trying to convert everything to after and trying to
+ * go up to block granularity when possible.
+ */
+static nir_cursor
+reduce_cursor(nir_cursor cursor)
+{
+   switch (cursor.option) {
+   case nir_cursor_before_block:
+      assert(nir_cf_node_prev(&cursor.block->cf_node) == NULL ||
+             nir_cf_node_prev(&cursor.block->cf_node)->type != nir_cf_node_block);
+      if (exec_list_is_empty(&cursor.block->instr_list)) {
+         /* Empty block.  After is as good as before. */
+         cursor.option = nir_cursor_after_block;
+      }
+      return cursor;
+
+   case nir_cursor_after_block:
+      return cursor;
+
+   case nir_cursor_before_instr: {
+      nir_instr *prev_instr = nir_instr_prev(cursor.instr);
+      if (prev_instr) {
+         /* Before this instruction is after the previous */
+         cursor.instr = prev_instr;
+         cursor.option = nir_cursor_after_instr;
+      } else {
+         /* No previous instruction.  Switch to before block */
+         cursor.block = cursor.instr->block;
+         cursor.option = nir_cursor_before_block;
+      }
+      return reduce_cursor(cursor);
+   }
+
+   case nir_cursor_after_instr:
+      if (nir_instr_next(cursor.instr) == NULL) {
+         /* This is the last instruction, switch to after block */
+         cursor.option = nir_cursor_after_block;
+         cursor.block = cursor.instr->block;
+      }
+      return cursor;
+
+   default:
+      unreachable("Inavlid cursor option");
+   }
+}
+
+bool
+nir_cursors_equal(nir_cursor a, nir_cursor b)
+{
+   /* Reduced cursors should be unique */
+   a = reduce_cursor(a);
+   b = reduce_cursor(b);
+
+   return a.block == b.block && a.option == b.option;
+}
+
 static bool
 add_use_cb(nir_src *src, void *state)
 {

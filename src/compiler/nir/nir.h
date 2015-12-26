@@ -1867,6 +1867,8 @@ typedef struct {
    };
 } nir_cursor;
 
+bool nir_cursors_equal(nir_cursor a, nir_cursor b);
+
 static inline nir_cursor
 nir_before_block(nir_block *block)
 {
