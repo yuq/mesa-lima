@@ -1323,11 +1323,12 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 						    LLVMInt32TypeInContext(base->gallivm->context),
 						    pack_args, 2,
 						    LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
-			args[chan + 7] = args[chan + 5] =
+			args[chan + 5] =
 				LLVMBuildBitCast(base->gallivm->builder,
 						 packed,
 						 LLVMFloatTypeInContext(base->gallivm->context),
 						 "");
+			args[chan + 7] = base->undef;
 		}
 	} else
 		memcpy(&args[5], values, sizeof(values[0]) * 4);
@@ -2119,10 +2120,10 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 	args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_MRTZ);
 
 	args[4] = uint->zero; /* COMP flag */
-	args[5] = base->zero; /* R, depth */
-	args[6] = base->zero; /* G, stencil test value[0:7], stencil op value[8:15] */
-	args[7] = base->zero; /* B, sample mask */
-	args[8] = base->zero; /* A, alpha to mask */
+	args[5] = base->undef; /* R, depth */
+	args[6] = base->undef; /* G, stencil test value[0:7], stencil op value[8:15] */
+	args[7] = base->undef; /* B, sample mask */
+	args[8] = base->undef; /* A, alpha to mask */
 
 	if (depth) {
 		args[5] = depth;
@@ -2173,10 +2174,10 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		args[2] = uint->one; /* DONE bit */
 		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_MRT);
 		args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
-		args[5] = uint->zero; /* R */
-		args[6] = uint->zero; /* G */
-		args[7] = uint->zero; /* B */
-		args[8] = uint->zero; /* A */
+		args[5] = uint->undef; /* R */
+		args[6] = uint->undef; /* G */
+		args[7] = uint->undef; /* B */
+		args[8] = uint->undef; /* A */
 
 		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
 				   LLVMVoidTypeInContext(base->gallivm->context),
