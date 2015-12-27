@@ -136,7 +136,8 @@ static void *si_create_compute_state(
 	 * the shader code to the GPU.
 	 */
 	init_scratch_buffer(sctx, program);
-	si_shader_binary_read(sctx->screen, &program->shader, &sctx->b.debug);
+	si_shader_binary_read(sctx->screen, &program->shader, &sctx->b.debug,
+			      TGSI_PROCESSOR_COMPUTE);
 
 #endif
 	program->input_buffer =	si_resource_create_custom(sctx->b.b.screen,

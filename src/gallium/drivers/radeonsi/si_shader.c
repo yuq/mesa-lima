@@ -3888,7 +3888,7 @@ static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary
 }
 
 int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
-			  struct pipe_debug_callback *debug)
+			  struct pipe_debug_callback *debug, unsigned processor)
 {
 	const struct radeon_shader_binary *binary = &shader->binary;
 	int r;
@@ -3940,7 +3940,7 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 			return r;
 	}
 
-	r = si_shader_binary_read(sscreen, shader, debug);
+	r = si_shader_binary_read(sscreen, shader, debug, processor);
 
 	FREE(shader->binary.config);
 	FREE(shader->binary.rodata);

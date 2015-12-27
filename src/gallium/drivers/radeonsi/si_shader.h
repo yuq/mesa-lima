@@ -337,7 +337,7 @@ void si_shader_destroy(struct si_shader *shader);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
 int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
-			  struct pipe_debug_callback *debug);
+			  struct pipe_debug_callback *debug, unsigned processor);
 void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			struct si_shader *shader,
 			uint64_t scratch_va);
