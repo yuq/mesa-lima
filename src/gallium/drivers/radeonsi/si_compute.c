@@ -123,7 +123,7 @@ static void *si_create_compute_state(
 		        LLVMModuleRef mod = radeon_llvm_get_kernel_module(program->llvm_ctx, i,
                                                         code, header->num_bytes);
 			si_compile_llvm(sctx->screen, &program->kernels[i], sctx->tm,
-					mod, &sctx->b.debug);
+					mod, &sctx->b.debug, TGSI_PROCESSOR_COMPUTE);
 			LLVMDisposeModule(mod);
 		}
 	}

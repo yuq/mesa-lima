@@ -3921,7 +3921,7 @@ int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 
 int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 		    LLVMTargetMachineRef tm, LLVMModuleRef mod,
-		    struct pipe_debug_callback *debug)
+		    struct pipe_debug_callback *debug, unsigned processor)
 {
 	int r = 0;
 	bool dump_asm = r600_can_dump_shader(&sscreen->b,
@@ -4026,7 +4026,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	r = si_compile_llvm(sscreen, si_shader_ctx->shader,
 			    si_shader_ctx->tm, bld_base->base.gallivm->module,
-			    debug);
+			    debug, TGSI_PROCESSOR_GEOMETRY);
 
 	radeon_llvm_dispose(&si_shader_ctx->radeon_bld);
 
@@ -4235,7 +4235,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	radeon_llvm_finalize_module(&si_shader_ctx.radeon_bld);
 
 	mod = bld_base->base.gallivm->module;
-	r = si_compile_llvm(sscreen, shader, tm, mod, debug);
+	r = si_compile_llvm(sscreen, shader, tm, mod, debug, si_shader_ctx.type);
 	if (r) {
 		fprintf(stderr, "LLVM failed to compile shader\n");
 		goto out;
