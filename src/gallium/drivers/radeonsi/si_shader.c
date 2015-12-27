@@ -4250,47 +4250,26 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 	}
 }
 
-int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
-		     struct si_shader *shader,
-		     struct pipe_debug_callback *debug)
+static void si_init_shader_ctx(struct si_shader_context *ctx,
+			       struct si_screen *sscreen,
+			       struct si_shader *shader,
+			       LLVMTargetMachineRef tm,
+			       struct tgsi_shader_info *info)
 {
-	struct si_shader_selector *sel = shader->selector;
-	struct tgsi_token *tokens = sel->tokens;
-	struct si_shader_context si_shader_ctx;
-	struct lp_build_tgsi_context * bld_base;
-	struct tgsi_shader_info stipple_shader_info;
-	LLVMModuleRef mod;
-	int r = 0;
-	bool poly_stipple = sel->type == PIPE_SHADER_FRAGMENT &&
-			    shader->key.ps.poly_stipple;
-	bool dump = r600_can_dump_shader(&sscreen->b, sel->info.processor);
+	struct lp_build_tgsi_context *bld_base;
 
-	if (poly_stipple) {
-		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
-						SI_POLY_STIPPLE_SAMPLER,
-						TGSI_FILE_SYSTEM_VALUE);
-		tgsi_scan_shader(tokens, &stipple_shader_info);
-	}
+	memset(ctx, 0, sizeof(*ctx));
+	radeon_llvm_context_init(&ctx->radeon_bld);
+	ctx->tm = tm;
+	ctx->screen = sscreen;
+	if (shader && shader->selector)
+		ctx->type = shader->selector->info.processor;
+	else
+		ctx->type = -1;
+	ctx->shader = shader;
 
-	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
-	 * conversion fails. */
-	if (dump && !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
-		si_dump_shader_key(sel->type, &shader->key, stderr);
-		tgsi_dump(tokens, 0);
-		si_dump_streamout(&sel->so);
-	}
-
-	assert(shader->nparam == 0);
-
-	memset(&si_shader_ctx, 0, sizeof(si_shader_ctx));
-	radeon_llvm_context_init(&si_shader_ctx.radeon_bld);
-	bld_base = &si_shader_ctx.radeon_bld.soa.bld_base;
-
-	if (sel->type != PIPE_SHADER_COMPUTE)
-		shader->dx10_clamp_mode = true;
-
-	shader->uses_instanceid = sel->info.uses_instanceid;
-	bld_base->info = poly_stipple ? &stipple_shader_info : &sel->info;
+	bld_base = &ctx->radeon_bld.soa.bld_base;
+	bld_base->info = info;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;
 
 	bld_base->op_actions[TGSI_OPCODE_INTERP_CENTROID] = interp_action;
@@ -4326,12 +4305,50 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		bld_base->op_actions[TGSI_OPCODE_MIN].emit = build_tgsi_intrinsic_nomem;
 		bld_base->op_actions[TGSI_OPCODE_MIN].intr_name = "llvm.minnum.f32";
 	}
+}
 
+int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
+		     struct si_shader *shader,
+		     struct pipe_debug_callback *debug)
+{
+	struct si_shader_selector *sel = shader->selector;
+	struct tgsi_token *tokens = sel->tokens;
+	struct si_shader_context si_shader_ctx;
+	struct lp_build_tgsi_context * bld_base;
+	struct tgsi_shader_info stipple_shader_info;
+	LLVMModuleRef mod;
+	int r = 0;
+	bool poly_stipple = sel->type == PIPE_SHADER_FRAGMENT &&
+			    shader->key.ps.poly_stipple;
+	bool dump = r600_can_dump_shader(&sscreen->b, sel->info.processor);
+
+	if (poly_stipple) {
+		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
+						SI_POLY_STIPPLE_SAMPLER,
+						TGSI_FILE_SYSTEM_VALUE);
+		tgsi_scan_shader(tokens, &stipple_shader_info);
+	}
+
+	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
+	 * conversion fails. */
+	if (dump && !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
+		si_dump_shader_key(sel->type, &shader->key, stderr);
+		tgsi_dump(tokens, 0);
+		si_dump_streamout(&sel->so);
+	}
+
+	assert(shader->nparam == 0);
+
+	si_init_shader_ctx(&si_shader_ctx, sscreen, shader, tm,
+			   poly_stipple ? &stipple_shader_info : &sel->info);
+
+	if (sel->type != PIPE_SHADER_COMPUTE)
+		shader->dx10_clamp_mode = true;
+
+	shader->uses_instanceid = sel->info.uses_instanceid;
+
+	bld_base = &si_shader_ctx.radeon_bld.soa.bld_base;
 	si_shader_ctx.radeon_bld.load_system_value = declare_system_value;
-	si_shader_ctx.shader = shader;
-	si_shader_ctx.type = tgsi_get_processor_type(tokens);
-	si_shader_ctx.screen = sscreen;
-	si_shader_ctx.tm = tm;
 
 	switch (si_shader_ctx.type) {
 	case TGSI_PROCESSOR_VERTEX:
