@@ -1011,13 +1011,9 @@ void r600_destroy_common_screen(struct r600_common_screen *rscreen)
 }
 
 bool r600_can_dump_shader(struct r600_common_screen *rscreen,
-			  const struct tgsi_token *tokens)
+			  unsigned processor)
 {
-	/* Compute shader don't have tgsi_tokens */
-	if (!tokens)
-		return (rscreen->debug_flags & DBG_CS) != 0;
-
-	switch (tgsi_get_processor_type(tokens)) {
+	switch (processor) {
 	case TGSI_PROCESSOR_VERTEX:
 		return (rscreen->debug_flags & DBG_VS) != 0;
 	case TGSI_PROCESSOR_TESS_CTRL:

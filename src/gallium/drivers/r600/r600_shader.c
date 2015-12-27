@@ -162,7 +162,8 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct r600_pipe_shader_selector *sel = shader->selector;
 	int r;
-	bool dump = r600_can_dump_shader(&rctx->screen->b, sel->tokens);
+	bool dump = r600_can_dump_shader(&rctx->screen->b,
+					 tgsi_get_processor_type(sel->tokens));
 	unsigned use_sb = !(rctx->screen->b.debug_flags & DBG_NO_SB);
 	unsigned sb_disasm = use_sb || (rctx->screen->b.debug_flags & DBG_SB_DISASM);
 	unsigned export_shader;
@@ -3238,7 +3239,8 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	if (use_llvm) {
 		struct radeon_llvm_context radeon_llvm_ctx;
 		LLVMModuleRef mod;
-		bool dump = r600_can_dump_shader(&rscreen->b, tokens);
+		bool dump = r600_can_dump_shader(&rscreen->b,
+						 tgsi_get_processor_type(tokens));
 		boolean use_kill = false;
 
 		memset(&radeon_llvm_ctx, 0, sizeof(radeon_llvm_ctx));

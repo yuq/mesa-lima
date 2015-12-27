@@ -3892,15 +3892,13 @@ int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 {
 	const struct radeon_shader_binary *binary = &shader->binary;
 	int r;
-	bool dump  = r600_can_dump_shader(&sscreen->b,
-		shader->selector ? shader->selector->tokens : NULL);
 
 	si_shader_binary_read_config(sscreen, shader, 0);
 	r = si_shader_binary_upload(sscreen, shader);
 	if (r)
 		return r;
 
-	if (dump) {
+	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		if (!(sscreen->b.debug_flags & DBG_NO_ASM))
 			si_shader_dump_disassembly(binary, debug);
 
@@ -3924,8 +3922,7 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor)
 {
 	int r = 0;
-	bool dump_asm = r600_can_dump_shader(&sscreen->b,
-				shader->selector ? shader->selector->tokens : NULL);
+	bool dump_asm = r600_can_dump_shader(&sscreen->b, processor);
 	bool dump_ir = dump_asm && !(sscreen->b.debug_flags & DBG_NO_IR);
 	unsigned count = p_atomic_inc_return(&sscreen->b.num_compilations);
 
@@ -4092,7 +4089,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	int r = 0;
 	bool poly_stipple = sel->type == PIPE_SHADER_FRAGMENT &&
 			    shader->key.ps.poly_stipple;
-	bool dump = r600_can_dump_shader(&sscreen->b, sel->tokens);
+	bool dump = r600_can_dump_shader(&sscreen->b, sel->info.processor);
 
 	if (poly_stipple) {
 		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
