@@ -124,6 +124,7 @@ static void *si_create_compute_state(
                                                         code, header->num_bytes);
 			si_compile_llvm(sctx->screen, &program->kernels[i], sctx->tm,
 					mod, &sctx->b.debug, TGSI_PROCESSOR_COMPUTE);
+			si_shader_binary_upload(sctx->screen, &program->kernels[i]);
 			LLVMDisposeModule(mod);
 		}
 	}
