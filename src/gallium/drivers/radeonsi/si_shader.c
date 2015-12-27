@@ -2186,34 +2186,41 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 			   args, 9, 0);
 }
 
+static void si_export_null(struct lp_build_tgsi_context *bld_base)
+{
+	struct lp_build_context *base = &bld_base->base;
+	struct lp_build_context *uint = &bld_base->uint_bld;
+	LLVMValueRef args[9];
+
+	args[0] = lp_build_const_int32(base->gallivm, 0x0); /* enabled channels */
+	args[1] = uint->one; /* whether the EXEC mask is valid */
+	args[2] = uint->one; /* DONE bit */
+	args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_NULL);
+	args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
+	args[5] = uint->undef; /* R */
+	args[6] = uint->undef; /* G */
+	args[7] = uint->undef; /* B */
+	args[8] = uint->undef; /* A */
+
+	lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+			   LLVMVoidTypeInContext(base->gallivm->context),
+			   args, 9, 0);
+}
+
 static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 {
 	struct si_shader_context * si_shader_ctx = si_shader_context(bld_base);
 	struct si_shader * shader = si_shader_ctx->shader;
 	struct lp_build_context * base = &bld_base->base;
-	struct lp_build_context * uint = &bld_base->uint_bld;
 	struct tgsi_shader_info *info = &shader->selector->info;
 	LLVMBuilderRef builder = base->gallivm->builder;
-	LLVMValueRef args[9];
 	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
 	int last_color_export = -1;
 	int i;
 
 	/* If there are no outputs, add a dummy export. */
 	if (!info->num_outputs) {
-		args[0] = lp_build_const_int32(base->gallivm, 0x0); /* enabled channels */
-		args[1] = uint->one; /* whether the EXEC mask is valid */
-		args[2] = uint->one; /* DONE bit */
-		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_NULL);
-		args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
-		args[5] = uint->undef; /* R */
-		args[6] = uint->undef; /* G */
-		args[7] = uint->undef; /* B */
-		args[8] = uint->undef; /* A */
-
-		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-				   LLVMVoidTypeInContext(base->gallivm->context),
-				   args, 9, 0);
+		si_export_null(bld_base);
 		return;
 	}
 
