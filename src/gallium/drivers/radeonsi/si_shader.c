@@ -2135,6 +2135,57 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 			   args, 9, 0);
 }
 
+static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
+				LLVMValueRef *color, unsigned index,
+				bool is_last)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+	struct lp_build_context *base = &bld_base->base;
+	LLVMValueRef args[9];
+	int i;
+
+	/* Clamp color */
+	if (si_shader_ctx->shader->key.ps.clamp_color)
+		for (i = 0; i < 4; i++)
+			color[i] = radeon_llvm_saturate(bld_base, color[i]);
+
+	/* Alpha to one */
+	if (si_shader_ctx->shader->key.ps.alpha_to_one)
+		color[3] = base->one;
+
+	/* Alpha test */
+	if (index == 0 &&
+	    si_shader_ctx->shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS)
+		si_alpha_test(bld_base, color[3]);
+
+	/* Line & polygon smoothing */
+	if (si_shader_ctx->shader->key.ps.poly_line_smoothing)
+		color[3] = si_scale_alpha_by_sample_mask(bld_base, color[3]);
+
+	/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
+	if (index == 0 &&
+	    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
+		for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
+			si_llvm_init_export_args(bld_base, color,
+						 V_008DFC_SQ_EXP_MRT + c, args);
+			lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+					   LLVMVoidTypeInContext(base->gallivm->context),
+					   args, 9, 0);
+		}
+	}
+
+	/* Export */
+	si_llvm_init_export_args(bld_base, color, V_008DFC_SQ_EXP_MRT + index,
+				 args);
+	if (is_last) {
+		args[1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
+		args[2] = bld_base->uint_bld.one; /* DONE bit */
+	}
+	lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+			   LLVMVoidTypeInContext(base->gallivm->context),
+			   args, 9, 0);
+}
+
 static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 {
 	struct si_shader_context * si_shader_ctx = si_shader_context(bld_base);
@@ -2177,7 +2228,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 	for (i = 0; i < info->num_outputs; i++) {
 		unsigned semantic_name = info->output_semantic_name[i];
 		unsigned semantic_index = info->output_semantic_index[i];
-		unsigned target, j;
+		unsigned j;
 		LLVMValueRef color[4] = {};
 
 		/* Select the correct target */
@@ -2185,63 +2236,28 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		case TGSI_SEMANTIC_POSITION:
 			depth = LLVMBuildLoad(builder,
 					      si_shader_ctx->radeon_bld.soa.outputs[i][2], "");
-			continue;
+			break;
 		case TGSI_SEMANTIC_STENCIL:
 			stencil = LLVMBuildLoad(builder,
 						si_shader_ctx->radeon_bld.soa.outputs[i][1], "");
-			continue;
+			break;
 		case TGSI_SEMANTIC_SAMPLEMASK:
 			samplemask = LLVMBuildLoad(builder,
 						   si_shader_ctx->radeon_bld.soa.outputs[i][0], "");
-			continue;
+			break;
 		case TGSI_SEMANTIC_COLOR:
-			target = V_008DFC_SQ_EXP_MRT + semantic_index;
-
 			for (j = 0; j < 4; j++)
 				color[j] = LLVMBuildLoad(builder,
 							 si_shader_ctx->radeon_bld.soa.outputs[i][j], "");
 
-			if (si_shader_ctx->shader->key.ps.clamp_color)
-				for (j = 0; j < 4; j++)
-					color[j] = radeon_llvm_saturate(bld_base, color[j]);
-
-			if (si_shader_ctx->shader->key.ps.alpha_to_one)
-				color[3] = base->one;
-
-			if (semantic_index == 0 &&
-			    si_shader_ctx->shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS)
-				si_alpha_test(bld_base, color[3]);
-
-			if (si_shader_ctx->shader->key.ps.poly_line_smoothing)
-				color[3] = si_scale_alpha_by_sample_mask(bld_base, color[3]);
+			si_export_mrt_color(bld_base, color, semantic_index,
+					    last_color_export == i);
 			break;
 		default:
 			fprintf(stderr,
 				"Warning: SI unhandled fs output type:%d\n",
 				semantic_name);
-			continue;
 		}
-
-		/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
-		if (semantic_index == 0 &&
-		    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
-			for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
-				si_llvm_init_export_args(bld_base, color,
-							 V_008DFC_SQ_EXP_MRT + c, args);
-				lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-						   LLVMVoidTypeInContext(base->gallivm->context),
-						   args, 9, 0);
-			}
-		}
-
-		si_llvm_init_export_args(bld_base, color, target, args);
-		if (last_color_export == i) {
-			args[1] = uint->one; /* whether the EXEC mask is valid */
-			args[2] = uint->one; /* DONE bit */
-		}
-		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-				   LLVMVoidTypeInContext(base->gallivm->context),
-				   args, 9, 0);
 	}
 
 	if (depth || stencil || samplemask)
