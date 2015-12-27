@@ -3907,14 +3907,9 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 		return r;
 
 	FREE(shader->binary.config);
-	FREE(shader->binary.rodata);
 	FREE(shader->binary.global_symbol_offsets);
-	if (shader->config.scratch_bytes_per_wave == 0) {
-		FREE(shader->binary.code);
-		FREE(shader->binary.relocs);
-		memset(&shader->binary, 0,
-		       offsetof(struct radeon_shader_binary, disasm_string));
-	}
+	shader->binary.config = NULL;
+	shader->binary.global_symbol_offsets = NULL;
 	return r;
 }
 
@@ -4227,6 +4222,7 @@ void si_shader_destroy(struct si_shader *shader)
 	r600_resource_reference(&shader->bo, NULL);
 
 	FREE(shader->binary.code);
+	FREE(shader->binary.rodata);
 	FREE(shader->binary.relocs);
 	FREE(shader->binary.disasm_string);
 }
