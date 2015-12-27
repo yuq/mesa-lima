@@ -428,11 +428,8 @@ static void si_shader_ps(struct si_shader *shader)
 	colors_written = info->colors_written;
 	export_16bpc = shader->key.ps.export_16bpc;
 
-	if (!info->num_outputs) {
-		colors_written = 0x1; /* dummy export */
-		export_16bpc = 0;
-	} else if (info->colors_written == 0x1 &&
-		   info->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS]) {
+	if (info->colors_written == 0x1 &&
+	    info->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS]) {
 		colors_written |= (1 << (shader->key.ps.last_cbuf + 1)) - 1;
 	}
 

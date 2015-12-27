@@ -2153,7 +2153,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		args[0] = lp_build_const_int32(base->gallivm, 0x0); /* enabled channels */
 		args[1] = uint->one; /* whether the EXEC mask is valid */
 		args[2] = uint->one; /* DONE bit */
-		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_MRT);
+		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_NULL);
 		args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
 		args[5] = uint->undef; /* R */
 		args[6] = uint->undef; /* G */
