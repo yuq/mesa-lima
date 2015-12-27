@@ -39,7 +39,7 @@ void radeon_llvm_shader_type(LLVMValueRef F, unsigned type);
 LLVMTargetRef radeon_llvm_get_r600_target(const char *triple);
 
 unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binary,
-			     const char *gpu_family, bool dump_ir, bool dump_asm,
+			     const char *gpu_family, bool dump_ir,
 			     LLVMTargetMachineRef tm,
 			     struct pipe_debug_callback *debug);
 
