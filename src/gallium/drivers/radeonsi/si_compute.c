@@ -68,7 +68,7 @@ static void init_scratch_buffer(struct si_context *sctx, struct si_compute *prog
 		unsigned scratch_bytes_needed;
 
 		si_shader_binary_read_config(&program->shader, offset);
-		scratch_bytes_needed = program->shader.scratch_bytes_per_wave;
+		scratch_bytes_needed = program->shader.config.scratch_bytes_per_wave;
 		scratch_bytes = MAX2(scratch_bytes, scratch_bytes_needed);
 	}
 
@@ -86,7 +86,7 @@ static void init_scratch_buffer(struct si_context *sctx, struct si_compute *prog
 	 * to the maximum bytes needed, so it can compute the stride
 	 * correctly.
 	 */
-	program->shader.scratch_bytes_per_wave = scratch_bytes;
+	program->shader.config.scratch_bytes_per_wave = scratch_bytes;
 
 	/* Patch the shader with the scratch buffer address. */
 	si_shader_apply_scratch_relocs(sctx,
@@ -281,12 +281,12 @@ static void si_launch_grid(
 
 	memcpy(kernel_args + (num_work_size_bytes / 4), input, program->input_size);
 
-	if (shader->scratch_bytes_per_wave > 0) {
+	if (shader->config.scratch_bytes_per_wave > 0) {
 
 		COMPUTE_DBG(sctx->screen, "Waves: %u; Scratch per wave: %u bytes; "
 		            "Total Scratch: %u bytes\n", num_waves_for_scratch,
-			    shader->scratch_bytes_per_wave,
-			    shader->scratch_bytes_per_wave *
+			    shader->config.scratch_bytes_per_wave,
+			    shader->config.scratch_bytes_per_wave *
 			    num_waves_for_scratch);
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
@@ -313,7 +313,7 @@ static void si_launch_grid(
 	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0 + 8, scratch_buffer_va);
 	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0 + 12,
 		S_008F04_BASE_ADDRESS_HI(scratch_buffer_va >> 32)
-		|  S_008F04_STRIDE(shader->scratch_bytes_per_wave / 64));
+		|  S_008F04_STRIDE(shader->config.scratch_bytes_per_wave / 64));
 
 	si_pm4_set_reg(pm4, R_00B810_COMPUTE_START_X, 0);
 	si_pm4_set_reg(pm4, R_00B814_COMPUTE_START_Y, 0);
@@ -361,9 +361,9 @@ static void si_launch_grid(
 	si_pm4_set_reg(pm4, R_00B830_COMPUTE_PGM_LO, shader_va >> 8);
 	si_pm4_set_reg(pm4, R_00B834_COMPUTE_PGM_HI, shader_va >> 40);
 
-	si_pm4_set_reg(pm4, R_00B848_COMPUTE_PGM_RSRC1, shader->rsrc1);
+	si_pm4_set_reg(pm4, R_00B848_COMPUTE_PGM_RSRC1, shader->config.rsrc1);
 
-	lds_blocks = shader->lds_size;
+	lds_blocks = shader->config.lds_size;
 	/* XXX: We are over allocating LDS.  For SI, the shader reports LDS in
 	 * blocks of 256 bytes, so if there are 4 bytes lds allocated in
 	 * the shader and 4 bytes allocated by the state tracker, then
@@ -377,10 +377,10 @@ static void si_launch_grid(
 
 	assert(lds_blocks <= 0xFF);
 
-	shader->rsrc2 &= C_00B84C_LDS_SIZE;
-	shader->rsrc2 |=  S_00B84C_LDS_SIZE(lds_blocks);
+	shader->config.rsrc2 &= C_00B84C_LDS_SIZE;
+	shader->config.rsrc2 |=  S_00B84C_LDS_SIZE(lds_blocks);
 
-	si_pm4_set_reg(pm4, R_00B84C_COMPUTE_PGM_RSRC2, shader->rsrc2);
+	si_pm4_set_reg(pm4, R_00B84C_COMPUTE_PGM_RSRC2, shader->config.rsrc2);
 	si_pm4_set_reg(pm4, R_00B854_COMPUTE_RESOURCE_LIMITS, 0);
 
 	si_pm4_set_reg(pm4, R_00B858_COMPUTE_STATIC_THREAD_MGMT_SE0,
@@ -402,7 +402,7 @@ static void si_launch_grid(
 		 * COMPUTE_PGM_RSRC2.SCRATCH_EN is enabled.
 		 */
 		S_00B860_WAVES(num_waves_for_scratch)
-		| S_00B860_WAVESIZE(shader->scratch_bytes_per_wave >> 10))
+		| S_00B860_WAVESIZE(shader->config.scratch_bytes_per_wave >> 10))
 		;
 
 	si_pm4_cmd_begin(pm4, PKT3_DISPATCH_DIRECT);

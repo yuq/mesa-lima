@@ -3727,25 +3727,25 @@ void si_shader_binary_read_config(struct si_shader *shader,
 		case R_00B128_SPI_SHADER_PGM_RSRC1_VS:
 		case R_00B228_SPI_SHADER_PGM_RSRC1_GS:
 		case R_00B848_COMPUTE_PGM_RSRC1:
-			shader->num_sgprs = MAX2(shader->num_sgprs, (G_00B028_SGPRS(value) + 1) * 8);
-			shader->num_vgprs = MAX2(shader->num_vgprs, (G_00B028_VGPRS(value) + 1) * 4);
-			shader->float_mode =  G_00B028_FLOAT_MODE(value);
-			shader->rsrc1 = value;
+			shader->config.num_sgprs = MAX2(shader->config.num_sgprs, (G_00B028_SGPRS(value) + 1) * 8);
+			shader->config.num_vgprs = MAX2(shader->config.num_vgprs, (G_00B028_VGPRS(value) + 1) * 4);
+			shader->config.float_mode =  G_00B028_FLOAT_MODE(value);
+			shader->config.rsrc1 = value;
 			break;
 		case R_00B02C_SPI_SHADER_PGM_RSRC2_PS:
-			shader->lds_size = MAX2(shader->lds_size, G_00B02C_EXTRA_LDS_SIZE(value));
+			shader->config.lds_size = MAX2(shader->config.lds_size, G_00B02C_EXTRA_LDS_SIZE(value));
 			break;
 		case R_00B84C_COMPUTE_PGM_RSRC2:
-			shader->lds_size = MAX2(shader->lds_size, G_00B84C_LDS_SIZE(value));
-			shader->rsrc2 = value;
+			shader->config.lds_size = MAX2(shader->config.lds_size, G_00B84C_LDS_SIZE(value));
+			shader->config.rsrc2 = value;
 			break;
 		case R_0286CC_SPI_PS_INPUT_ENA:
-			shader->spi_ps_input_ena = value;
+			shader->config.spi_ps_input_ena = value;
 			break;
 		case R_0286E8_SPI_TMPRING_SIZE:
 		case R_00B860_COMPUTE_TMPRING_SIZE:
 			/* WAVESIZE is in units of 256 dwords. */
-			shader->scratch_bytes_per_wave =
+			shader->config.scratch_bytes_per_wave =
 				G_00B860_WAVESIZE(value) * 256 * 4 * 1;
 			break;
 		default:
@@ -3764,7 +3764,7 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 	uint32_t scratch_rsrc_dword0 = scratch_va;
 	uint32_t scratch_rsrc_dword1 =
 		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32)
-		|  S_008F04_STRIDE(shader->scratch_bytes_per_wave / 64);
+		|  S_008F04_STRIDE(shader->config.scratch_bytes_per_wave / 64);
 
 	for (i = 0 ; i < shader->binary.reloc_count; i++) {
 		const struct radeon_shader_reloc *reloc =
@@ -3866,14 +3866,15 @@ void si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 		fprintf(stderr, "*** SHADER STATS ***\n"
 			"SGPRS: %d\nVGPRS: %d\nCode Size: %d bytes\nLDS: %d blocks\n"
 			"Scratch: %d bytes per wave\n********************\n",
-			shader->num_sgprs, shader->num_vgprs, binary->code_size,
-			shader->lds_size, shader->scratch_bytes_per_wave);
+			shader->config.num_sgprs, shader->config.num_vgprs, binary->code_size,
+			shader->config.lds_size, shader->config.scratch_bytes_per_wave);
 	}
 
 	pipe_debug_message(debug, SHADER_INFO,
 			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d LDS: %d Scratch: %d",
-			   shader->num_sgprs, shader->num_vgprs, binary->code_size,
-			   shader->lds_size, shader->scratch_bytes_per_wave);
+			   shader->config.num_sgprs, shader->config.num_vgprs,
+			   binary->code_size, shader->config.lds_size,
+			   shader->config.scratch_bytes_per_wave);
 }
 
 int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
@@ -3907,7 +3908,7 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 	FREE(shader->binary.config);
 	FREE(shader->binary.rodata);
 	FREE(shader->binary.global_symbol_offsets);
-	if (shader->scratch_bytes_per_wave == 0) {
+	if (shader->config.scratch_bytes_per_wave == 0) {
 		FREE(shader->binary.code);
 		FREE(shader->binary.relocs);
 		memset(&shader->binary, 0,

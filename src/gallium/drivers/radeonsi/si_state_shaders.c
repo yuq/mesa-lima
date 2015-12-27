@@ -111,7 +111,7 @@ static void si_shader_ls(struct si_shader *shader)
 	vgpr_comp_cnt = shader->uses_instanceid ? 3 : 1;
 
 	num_user_sgprs = SI_LS_NUM_USER_SGPR;
-	num_sgprs = shader->num_sgprs;
+	num_sgprs = shader->config.num_sgprs;
 	if (num_user_sgprs > num_sgprs) {
 		/* Last 2 reserved SGPRs are used for VCC */
 		num_sgprs = num_user_sgprs + 2;
@@ -121,12 +121,12 @@ static void si_shader_ls(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B520_SPI_SHADER_PGM_LO_LS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B524_SPI_SHADER_PGM_HI_LS, va >> 40);
 
-	shader->rsrc1 = S_00B528_VGPRS((shader->num_vgprs - 1) / 4) |
+	shader->config.rsrc1 = S_00B528_VGPRS((shader->config.num_vgprs - 1) / 4) |
 			   S_00B528_SGPRS((num_sgprs - 1) / 8) |
 		           S_00B528_VGPR_COMP_CNT(vgpr_comp_cnt) |
 			   S_00B528_DX10_CLAMP(shader->dx10_clamp_mode);
-	shader->rsrc2 = S_00B52C_USER_SGPR(num_user_sgprs) |
-			   S_00B52C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0);
+	shader->config.rsrc2 = S_00B52C_USER_SGPR(num_user_sgprs) |
+			   S_00B52C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
 }
 
 static void si_shader_hs(struct si_shader *shader)
@@ -143,7 +143,7 @@ static void si_shader_hs(struct si_shader *shader)
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
 	num_user_sgprs = SI_TCS_NUM_USER_SGPR;
-	num_sgprs = shader->num_sgprs;
+	num_sgprs = shader->config.num_sgprs;
 	/* One SGPR after user SGPRs is pre-loaded with tessellation factor
 	 * buffer offset. */
 	if ((num_user_sgprs + 1) > num_sgprs) {
@@ -155,12 +155,12 @@ static void si_shader_hs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B420_SPI_SHADER_PGM_LO_HS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B424_SPI_SHADER_PGM_HI_HS, va >> 40);
 	si_pm4_set_reg(pm4, R_00B428_SPI_SHADER_PGM_RSRC1_HS,
-		       S_00B428_VGPRS((shader->num_vgprs - 1) / 4) |
+		       S_00B428_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B428_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B428_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
 		       S_00B42C_USER_SGPR(num_user_sgprs) |
-		       S_00B42C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
+		       S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 }
 
 static void si_shader_es(struct si_shader *shader)
@@ -187,7 +187,7 @@ static void si_shader_es(struct si_shader *shader)
 	} else
 		unreachable("invalid shader selector type");
 
-	num_sgprs = shader->num_sgprs;
+	num_sgprs = shader->config.num_sgprs;
 	/* One SGPR after user SGPRs is pre-loaded with es2gs_offset */
 	if ((num_user_sgprs + 1) > num_sgprs) {
 		/* Last 2 reserved SGPRs are used for VCC */
@@ -200,13 +200,13 @@ static void si_shader_es(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B320_SPI_SHADER_PGM_LO_ES, va >> 8);
 	si_pm4_set_reg(pm4, R_00B324_SPI_SHADER_PGM_HI_ES, va >> 40);
 	si_pm4_set_reg(pm4, R_00B328_SPI_SHADER_PGM_RSRC1_ES,
-		       S_00B328_VGPRS((shader->num_vgprs - 1) / 4) |
+		       S_00B328_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B328_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B328_VGPR_COMP_CNT(vgpr_comp_cnt) |
 		       S_00B328_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B32C_SPI_SHADER_PGM_RSRC2_ES,
 		       S_00B32C_USER_SGPR(num_user_sgprs) |
-		       S_00B32C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
+		       S_00B32C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 
 	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
 		si_set_tesseval_regs(shader, pm4);
@@ -272,7 +272,7 @@ static void si_shader_gs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B224_SPI_SHADER_PGM_HI_GS, va >> 40);
 
 	num_user_sgprs = SI_GS_NUM_USER_SGPR;
-	num_sgprs = shader->num_sgprs;
+	num_sgprs = shader->config.num_sgprs;
 	/* Two SGPRs after user SGPRs are pre-loaded with gs2vs_offset, gs_wave_id */
 	if ((num_user_sgprs + 2) > num_sgprs) {
 		/* Last 2 reserved SGPRs are used for VCC */
@@ -281,12 +281,12 @@ static void si_shader_gs(struct si_shader *shader)
 	assert(num_sgprs <= 104);
 
 	si_pm4_set_reg(pm4, R_00B228_SPI_SHADER_PGM_RSRC1_GS,
-		       S_00B228_VGPRS((shader->num_vgprs - 1) / 4) |
+		       S_00B228_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B228_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B228_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B22C_SPI_SHADER_PGM_RSRC2_GS,
 		       S_00B22C_USER_SGPR(num_user_sgprs) |
-		       S_00B22C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
+		       S_00B22C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 }
 
 static void si_shader_vs(struct si_shader *shader)
@@ -329,7 +329,7 @@ static void si_shader_vs(struct si_shader *shader)
 	} else
 		unreachable("invalid shader selector type");
 
-	num_sgprs = shader->num_sgprs;
+	num_sgprs = shader->config.num_sgprs;
 	if (num_user_sgprs > num_sgprs) {
 		/* Last 2 reserved SGPRs are used for VCC */
 		num_sgprs = num_user_sgprs + 2;
@@ -356,7 +356,7 @@ static void si_shader_vs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B120_SPI_SHADER_PGM_LO_VS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B124_SPI_SHADER_PGM_HI_VS, va >> 40);
 	si_pm4_set_reg(pm4, R_00B128_SPI_SHADER_PGM_RSRC1_VS,
-		       S_00B128_VGPRS((shader->num_vgprs - 1) / 4) |
+		       S_00B128_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B128_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B128_VGPR_COMP_CNT(vgpr_comp_cnt) |
 		       S_00B128_DX10_CLAMP(shader->dx10_clamp_mode));
@@ -367,7 +367,7 @@ static void si_shader_vs(struct si_shader *shader)
 		       S_00B12C_SO_BASE2_EN(!!shader->selector->so.stride[2]) |
 		       S_00B12C_SO_BASE3_EN(!!shader->selector->so.stride[3]) |
 		       S_00B12C_SO_EN(!!shader->selector->so.num_outputs) |
-		       S_00B12C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
+		       S_00B12C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 	if (window_space)
 		si_pm4_set_reg(pm4, R_028818_PA_CL_VTE_CNTL,
 			       S_028818_VTX_XY_FMT(1) | S_028818_VTX_Z_FMT(1));
@@ -443,8 +443,8 @@ static void si_shader_ps(struct si_shader *shader)
 	}
 
 	/* Set interpolation controls. */
-	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->spi_ps_input_ena) ||
-		       G_0286CC_LINEAR_CENTROID_ENA(shader->spi_ps_input_ena);
+	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena) ||
+		       G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena);
 
 	spi_ps_in_control = S_0286D8_NUM_INTERP(shader->nparam) |
 			    S_0286D8_BC_OPTIMIZE_DISABLE(has_centroid);
@@ -468,7 +468,7 @@ static void si_shader_ps(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B024_SPI_SHADER_PGM_HI_PS, va >> 40);
 
 	num_user_sgprs = SI_PS_NUM_USER_SGPR;
-	num_sgprs = shader->num_sgprs;
+	num_sgprs = shader->config.num_sgprs;
 	/* One SGPR after user SGPRs is pre-loaded with {prim_mask, lds_offset} */
 	if ((num_user_sgprs + 1) > num_sgprs) {
 		/* Last 2 reserved SGPRs are used for VCC */
@@ -477,13 +477,13 @@ static void si_shader_ps(struct si_shader *shader)
 	assert(num_sgprs <= 104);
 
 	si_pm4_set_reg(pm4, R_00B028_SPI_SHADER_PGM_RSRC1_PS,
-		       S_00B028_VGPRS((shader->num_vgprs - 1) / 4) |
+		       S_00B028_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B028_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B028_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B02C_SPI_SHADER_PGM_RSRC2_PS,
-		       S_00B02C_EXTRA_LDS_SIZE(shader->lds_size) |
+		       S_00B02C_EXTRA_LDS_SIZE(shader->config.lds_size) |
 		       S_00B02C_USER_SGPR(num_user_sgprs) |
-		       S_00B32C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
+		       S_00B32C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 }
 
 static void si_shader_init_pm4_state(struct si_shader *shader)
@@ -1040,7 +1040,7 @@ static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom
 	if (!ps)
 		return;
 
-	input_ena = ps->spi_ps_input_ena;
+	input_ena = ps->config.spi_ps_input_ena;
 
 	/* we need to enable at least one of them, otherwise we hang the GPU */
 	assert(G_0286CC_PERSP_SAMPLE_ENA(input_ena) ||
@@ -1269,7 +1269,7 @@ static int si_update_scratch_buffer(struct si_context *sctx,
 		return 0;
 
 	/* This shader doesn't need a scratch buffer */
-	if (shader->scratch_bytes_per_wave == 0)
+	if (shader->config.scratch_bytes_per_wave == 0)
 		return 0;
 
 	/* This shader is already configured to use the current
@@ -1301,7 +1301,7 @@ static unsigned si_get_current_scratch_buffer_size(struct si_context *sctx)
 
 static unsigned si_get_scratch_buffer_bytes_per_wave(struct si_shader *shader)
 {
-	return shader ? shader->scratch_bytes_per_wave : 0;
+	return shader ? shader->config.scratch_bytes_per_wave : 0;
 }
 
 static unsigned si_get_max_scratch_bytes_per_wave(struct si_context *sctx)

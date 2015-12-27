@@ -262,6 +262,17 @@ union si_shader_key {
 	} tes; /* tessellation evaluation shader */
 };
 
+struct si_shader_config {
+	unsigned			num_sgprs;
+	unsigned			num_vgprs;
+	unsigned			lds_size;
+	unsigned			spi_ps_input_ena;
+	unsigned			float_mode;
+	unsigned			scratch_bytes_per_wave;
+	unsigned			rsrc1;
+	unsigned			rsrc2;
+};
+
 struct si_shader {
 	struct si_shader_selector	*selector;
 	struct si_shader		*next_variant;
@@ -270,14 +281,9 @@ struct si_shader {
 	struct si_pm4_state		*pm4;
 	struct r600_resource		*bo;
 	struct r600_resource		*scratch_bo;
-	struct radeon_shader_binary	binary;
-	unsigned			num_sgprs;
-	unsigned			num_vgprs;
-	unsigned			lds_size;
-	unsigned			spi_ps_input_ena;
-	unsigned			float_mode;
-	unsigned			scratch_bytes_per_wave;
 	union si_shader_key		key;
+	struct radeon_shader_binary	binary;
+	struct si_shader_config		config;
 
 	unsigned		nparam;
 	unsigned		vs_output_param_offset[PIPE_MAX_SHADER_OUTPUTS];
@@ -288,9 +294,6 @@ struct si_shader {
 	unsigned		nr_param_exports;
 	bool			is_gs_copy_shader;
 	bool			dx10_clamp_mode; /* convert NaNs to 0 */
-
-	unsigned		rsrc1;
-	unsigned		rsrc2;
 };
 
 static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
