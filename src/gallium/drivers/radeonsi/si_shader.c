@@ -2100,6 +2100,59 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 	FREE(outputs);
 }
 
+static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
+			   LLVMValueRef depth, LLVMValueRef stencil,
+			   LLVMValueRef samplemask)
+{
+	struct si_screen *sscreen = si_shader_context(bld_base)->screen;
+	struct lp_build_context *base = &bld_base->base;
+	struct lp_build_context *uint = &bld_base->uint_bld;
+	LLVMValueRef args[9];
+	unsigned mask = 0;
+
+	assert(depth || stencil || samplemask);
+
+	args[1] = uint->one; /* whether the EXEC mask is valid */
+	args[2] = uint->one; /* DONE bit */
+
+	/* Specify the target we are exporting */
+	args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_MRTZ);
+
+	args[4] = uint->zero; /* COMP flag */
+	args[5] = base->zero; /* R, depth */
+	args[6] = base->zero; /* G, stencil test value[0:7], stencil op value[8:15] */
+	args[7] = base->zero; /* B, sample mask */
+	args[8] = base->zero; /* A, alpha to mask */
+
+	if (depth) {
+		args[5] = depth;
+		mask |= 0x1;
+	}
+
+	if (stencil) {
+		args[6] = stencil;
+		mask |= 0x2;
+	}
+
+	if (samplemask) {
+		args[7] = samplemask;
+		mask |= 0x4;
+	}
+
+	/* SI (except OLAND) has a bug that it only looks
+	 * at the X writemask component. */
+	if (sscreen->b.chip_class == SI &&
+	    sscreen->b.family != CHIP_OLAND)
+		mask |= 0x1;
+
+	/* Specify which components to enable */
+	args[0] = lp_build_const_int32(base->gallivm, mask);
+
+	lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+			   LLVMVoidTypeInContext(base->gallivm->context),
+			   args, 9, 0);
+}
+
 static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 {
 	struct si_shader_context * si_shader_ctx = si_shader_context(bld_base);
@@ -2109,7 +2162,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 	struct tgsi_shader_info *info = &shader->selector->info;
 	LLVMBuilderRef builder = base->gallivm->builder;
 	LLVMValueRef args[9];
-	int depth_index = -1, stencil_index = -1, samplemask_index = -1;
+	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
 	int last_color_export = -1;
 	int i;
 
@@ -2148,13 +2201,16 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 		/* Select the correct target */
 		switch (semantic_name) {
 		case TGSI_SEMANTIC_POSITION:
-			depth_index = i;
+			depth = LLVMBuildLoad(builder,
+					      si_shader_ctx->radeon_bld.soa.outputs[i][2], "");
 			continue;
 		case TGSI_SEMANTIC_STENCIL:
-			stencil_index = i;
+			stencil = LLVMBuildLoad(builder,
+						si_shader_ctx->radeon_bld.soa.outputs[i][1], "");
 			continue;
 		case TGSI_SEMANTIC_SAMPLEMASK:
-			samplemask_index = i;
+			samplemask = LLVMBuildLoad(builder,
+						   si_shader_ctx->radeon_bld.soa.outputs[i][0], "");
 			continue;
 		case TGSI_SEMANTIC_COLOR:
 			target = V_008DFC_SQ_EXP_MRT + semantic_index;
@@ -2214,53 +2270,8 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 				   args, 9, 0);
 	}
 
-	if (depth_index >= 0 || stencil_index >= 0 || samplemask_index >= 0) {
-		LLVMValueRef out_ptr;
-		unsigned mask = 0;
-
-		args[1] = uint->one; /* whether the EXEC mask is valid */
-		args[2] = uint->one; /* DONE bit */
-
-		/* Specify the target we are exporting */
-		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_MRTZ);
-
-		args[4] = uint->zero; /* COMP flag */
-		args[5] = base->zero; /* R, depth */
-		args[6] = base->zero; /* G, stencil test value[0:7], stencil op value[8:15] */
-		args[7] = base->zero; /* B, sample mask */
-		args[8] = base->zero; /* A, alpha to mask */
-
-		if (depth_index >= 0) {
-			out_ptr = si_shader_ctx->radeon_bld.soa.outputs[depth_index][2];
-			args[5] = LLVMBuildLoad(base->gallivm->builder, out_ptr, "");
-			mask |= 0x1;
-		}
-
-		if (stencil_index >= 0) {
-			out_ptr = si_shader_ctx->radeon_bld.soa.outputs[stencil_index][1];
-			args[6] = LLVMBuildLoad(base->gallivm->builder, out_ptr, "");
-			mask |= 0x2;
-		}
-
-		if (samplemask_index >= 0) {
-			out_ptr = si_shader_ctx->radeon_bld.soa.outputs[samplemask_index][0];
-			args[7] = LLVMBuildLoad(base->gallivm->builder, out_ptr, "");
-			mask |= 0x4;
-		}
-
-		/* SI (except OLAND) has a bug that it only looks
-		 * at the X writemask component. */
-		if (si_shader_ctx->screen->b.chip_class == SI &&
-		    si_shader_ctx->screen->b.family != CHIP_OLAND)
-			mask |= 0x1;
-
-		/* Specify which components to enable */
-		args[0] = lp_build_const_int32(base->gallivm, mask);
-
-		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-				   LLVMVoidTypeInContext(base->gallivm->context),
-				   args, 9, 0);
-	}
+	if (depth || stencil || samplemask)
+		si_export_mrt_z(bld_base, depth, stencil, samplemask);
 }
 
 static void build_tex_intrinsic(const struct lp_build_tgsi_action * action,
