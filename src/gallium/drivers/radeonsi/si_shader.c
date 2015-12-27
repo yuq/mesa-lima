@@ -3922,16 +3922,18 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor)
 {
 	int r = 0;
-	bool dump_asm = r600_can_dump_shader(&sscreen->b, processor);
-	bool dump_ir = dump_asm && !(sscreen->b.debug_flags & DBG_NO_IR);
 	unsigned count = p_atomic_inc_return(&sscreen->b.num_compilations);
 
-	if (dump_ir || dump_asm)
+	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		fprintf(stderr, "radeonsi: Compiling shader %d\n", count);
+
+		if (!(sscreen->b.debug_flags & DBG_NO_IR))
+			LLVMDumpModule(mod);
+	}
 
 	if (!si_replace_shader(count, &shader->binary)) {
 		r = radeon_llvm_compile(mod, &shader->binary,
-			r600_get_llvm_processor_name(sscreen->b.family), dump_ir, tm,
+			r600_get_llvm_processor_name(sscreen->b.family), tm,
 			debug);
 		if (r)
 			return r;
