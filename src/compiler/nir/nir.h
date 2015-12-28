@@ -1935,6 +1935,22 @@ nir_after_cf_node(nir_cf_node *node)
 }
 
 static inline nir_cursor
+nir_after_cf_node_and_phis(nir_cf_node *node)
+{
+   if (node->type == nir_cf_node_block)
+      return nir_after_block(nir_cf_node_as_block(node));
+
+   nir_block *block = nir_cf_node_as_block(nir_cf_node_next(node));
+   assert(block->cf_node.type == nir_cf_node_block);
+
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_phi)
+         return nir_before_instr(instr);
+   }
+   return nir_after_block(block);
+}
+
+static inline nir_cursor
 nir_before_cf_list(struct exec_list *cf_list)
 {
    nir_cf_node *first_node = exec_node_data(nir_cf_node,
