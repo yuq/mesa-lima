@@ -160,7 +160,7 @@ lower_returns_in_block(nir_block *block, struct lower_returns_state *state)
 
    if (state->loop) {
       /* We're in a loop.  Make the return a break. */
-      jump->type = nir_jump_return;
+      jump->type = nir_jump_break;
    } else {
       /* Not in a loop.  Just delete the return; we'll deal with
        * predicating later.
