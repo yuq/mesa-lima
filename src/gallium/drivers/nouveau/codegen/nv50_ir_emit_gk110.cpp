@@ -1613,6 +1613,10 @@ CodeEmitterGK110::emitSTORE(const Instruction *i)
 
    srcId(i->src(1), 2);
    srcId(i->src(0).getIndirect(0), 10);
+   if (i->src(0).getFile() == FILE_MEMORY_GLOBAL &&
+       i->src(0).isIndirect(0) &&
+       i->getIndirect(0, 0)->reg.size == 8)
+      code[1] |= 1 << 23;
 }
 
 void
