@@ -2557,10 +2557,12 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    val->ssa = vtn_create_ssa_value(b, type);
 
    /* Collect the various SSA sources */
-   unsigned num_inputs = count - 3;
+   const unsigned num_inputs = count - 3;
    nir_ssa_def *src[4];
    for (unsigned i = 0; i < num_inputs; i++)
       src[i] = vtn_ssa_value(b, w[i + 3])->def;
+   for (unsigned i = num_inputs; i < 4; i++)
+      src[i] = NULL;
 
    /* Indicates that the first two arguments should be swapped.  This is
     * used for implementing greater-than and less-than-or-equal.
@@ -2583,7 +2585,6 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
          case 3:  op = nir_op_bany_inequal3; break;
          case 4:  op = nir_op_bany_inequal4; break;
          }
-         num_inputs = 2;
          src[1] = nir_imm_int(&b->nb, NIR_FALSE);
       }
       break;
@@ -2597,7 +2598,6 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
          case 3:  op = nir_op_ball_iequal3;  break;
          case 4:  op = nir_op_ball_iequal4;  break;
          }
-         num_inputs = 2;
          src[1] = nir_imm_int(&b->nb, NIR_TRUE);
       }
       break;
@@ -2726,16 +2726,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
       src[1] = tmp;
    }
 
-   nir_alu_instr *instr = nir_alu_instr_create(b->shader, op);
-   nir_ssa_dest_init(&instr->instr, &instr->dest.dest,
-                     glsl_get_vector_elements(type), val->name);
-   instr->dest.write_mask = (1 << glsl_get_vector_elements(type)) - 1;
-   val->ssa->def = &instr->dest.dest.ssa;
-
-   for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++)
-      instr->src[i].src = nir_src_for_ssa(src[i]);
-
-   nir_builder_instr_insert(&b->nb, &instr->instr);
+   val->ssa->def = nir_build_alu(&b->nb, op, src[0], src[1], src[2], src[3]);
 }
 
 static nir_ssa_def *
