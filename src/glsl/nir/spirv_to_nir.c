@@ -1879,10 +1879,10 @@ static void
 vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
                          const uint32_t *w, unsigned count)
 {
-   struct nir_function_overload *overload =
-      vtn_value(b, w[3], vtn_value_type_function)->func->impl->overload;
+   struct nir_function *callee =
+      vtn_value(b, w[3], vtn_value_type_function)->func->impl->function;
 
-   nir_call_instr *call = nir_call_instr_create(b->nb.shader, overload);
+   nir_call_instr *call = nir_call_instr_create(b->nb.shader, callee);
    for (unsigned i = 0; i < call->num_params; i++) {
       unsigned arg_id = w[4 + i];
       struct vtn_value *arg = vtn_untyped_value(b, arg_id);
@@ -1902,15 +1902,15 @@ vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
    }
 
    nir_variable *out_tmp = NULL;
-   if (!glsl_type_is_void(overload->return_type)) {
-      out_tmp = nir_local_variable_create(b->impl, overload->return_type,
+   if (!glsl_type_is_void(callee->return_type)) {
+      out_tmp = nir_local_variable_create(b->impl, callee->return_type,
                                           "out_tmp");
       call->return_deref = nir_deref_var_create(call, out_tmp);
    }
 
    nir_builder_instr_insert(&b->nb, &call->instr);
 
-   if (glsl_type_is_void(overload->return_type)) {
+   if (glsl_type_is_void(callee->return_type)) {
       vtn_push_value(b, w[2], vtn_value_type_undef);
    } else {
       struct vtn_type *rettype = vtn_value(b, w[1], vtn_value_type_type)->type;
@@ -3381,36 +3381,33 @@ vtn_handle_first_cfg_pass_instruction(struct vtn_builder *b, SpvOp opcode,
       nir_function *func =
          nir_function_create(b->shader, ralloc_strdup(b->shader, val->name));
 
-      nir_function_overload *overload = nir_function_overload_create(func);
-      overload->num_params = glsl_get_length(func_type);
-      overload->params = ralloc_array(overload, nir_parameter,
-                                      overload->num_params);
-      for (unsigned i = 0; i < overload->num_params; i++) {
+      func->num_params = glsl_get_length(func_type);
+      func->params = ralloc_array(b->shader, nir_parameter, func->num_params);
+      for (unsigned i = 0; i < func->num_params; i++) {
          const struct glsl_function_param *param =
             glsl_get_function_param(func_type, i);
-         overload->params[i].type = param->type;
+         func->params[i].type = param->type;
          if (param->in) {
             if (param->out) {
-               overload->params[i].param_type = nir_parameter_inout;
+               func->params[i].param_type = nir_parameter_inout;
             } else {
-               overload->params[i].param_type = nir_parameter_in;
+               func->params[i].param_type = nir_parameter_in;
             }
          } else {
             if (param->out) {
-               overload->params[i].param_type = nir_parameter_out;
+               func->params[i].param_type = nir_parameter_out;
             } else {
                assert(!"Parameter is neither in nor out");
             }
          }
       }
 
-      overload->return_type = glsl_get_function_return_type(func_type);
+      func->return_type = glsl_get_function_return_type(func_type);
 
-      b->func->impl = nir_function_impl_create(overload);
-      if (!glsl_type_is_void(overload->return_type)) {
+      b->func->impl = nir_function_impl_create(func);
+      if (!glsl_type_is_void(func->return_type)) {
          b->func->impl->return_var =
-            nir_local_variable_create(b->func->impl,
-                                      overload->return_type, "retval");
+            nir_local_variable_create(b->func->impl, func->return_type, "ret");
       }
 
       b->func_param_idx = 0;
@@ -3430,7 +3427,7 @@ vtn_handle_first_cfg_pass_instruction(struct vtn_builder *b, SpvOp opcode,
 
       nir_variable *param =
          nir_local_variable_create(b->func->impl,
-                                   b->func->impl->overload->params[idx].type,
+                                   b->func->impl->function->params[idx].type,
                                    val->name);
 
       b->func->impl->params[idx] = param;

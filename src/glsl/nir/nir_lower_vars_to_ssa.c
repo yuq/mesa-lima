@@ -887,7 +887,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
 {
    struct lower_variables_state state;
 
-   state.shader = impl->overload->function->shader;
+   state.shader = impl->function->shader;
    state.dead_ctx = ralloc_context(state.shader);
    state.impl = impl;
 
@@ -966,8 +966,8 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
 void
 nir_lower_vars_to_ssa(nir_shader *shader)
 {
-   nir_foreach_overload(shader, overload) {
-      if (overload->impl)
-         nir_lower_vars_to_ssa_impl(overload->impl);
+   nir_foreach_function(shader, function) {
+      if (function->impl)
+         nir_lower_vars_to_ssa_impl(function->impl);
    }
 }

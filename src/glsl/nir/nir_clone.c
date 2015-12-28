@@ -454,7 +454,7 @@ clone_jump(clone_state *state, const nir_jump_instr *jmp)
 static nir_call_instr *
 clone_call(clone_state *state, const nir_call_instr *call)
 {
-   nir_function_overload *ncallee = remap_global(state, call->callee);
+   nir_function *ncallee = remap_global(state, call->callee);
    nir_call_instr *ncall = nir_call_instr_create(state->ns, ncallee);
 
    for (unsigned i = 0; i < ncall->num_params; i++)
@@ -628,7 +628,7 @@ nir_function_impl_clone(const nir_function_impl *fi)
    init_clone_state(&state, false);
 
    /* We use the same shader */
-   state.ns = fi->overload->function->shader;
+   state.ns = fi->function->shader;
 
    nir_function_impl *nfi = clone_function_impl(&state, fi);
 
@@ -637,38 +637,26 @@ nir_function_impl_clone(const nir_function_impl *fi)
    return nfi;
 }
 
-static nir_function_overload *
-clone_function_overload(clone_state *state, const nir_function_overload *fo,
-                        nir_function *nfxn)
-{
-   nir_function_overload *nfo = nir_function_overload_create(nfxn);
-
-   /* Needed for call instructions */
-   add_remap(state, nfo, fo);
-
-   nfo->num_params = fo->num_params;
-   nfo->params = ralloc_array(state->ns, nir_parameter, fo->num_params);
-   memcpy(nfo->params, fo->params, sizeof(nir_parameter) * fo->num_params);
-
-   nfo->return_type = fo->return_type;
-
-   /* At first glance, it looks like we should clone the function_impl here.
-    * However, call instructions need to be able to reference at least the
-    * overload and those will get processed as we clone the function_impl's.
-    * We stop here and do function_impls as a second pass.
-    */
-
-   return nfo;
-}
-
 static nir_function *
 clone_function(clone_state *state, const nir_function *fxn, nir_shader *ns)
 {
    assert(ns == state->ns);
    nir_function *nfxn = nir_function_create(ns, fxn->name);
 
-   foreach_list_typed(nir_function_overload, fo, node, &fxn->overload_list)
-      clone_function_overload(state, fo, nfxn);
+   /* Needed for call instructions */
+   add_remap(state, nfxn, fxn);
+
+   nfxn->num_params = fxn->num_params;
+   nfxn->params = ralloc_array(state->ns, nir_parameter, fxn->num_params);
+   memcpy(nfxn->params, fxn->params, sizeof(nir_parameter) * fxn->num_params);
+
+   nfxn->return_type = fxn->return_type;
+
+   /* At first glance, it looks like we should clone the function_impl here.
+    * However, call instructions need to be able to reference at least the
+    * function and those will get processed as we clone the function_impl's.
+    * We stop here and do function_impls as a second pass.
+    */
 
    return nfxn;
 }
@@ -688,19 +676,19 @@ nir_shader_clone(void *mem_ctx, const nir_shader *s)
    clone_var_list(&state, &ns->globals,  &s->globals);
    clone_var_list(&state, &ns->system_values, &s->system_values);
 
-   /* Go through and clone functions and overloads */
+   /* Go through and clone functions */
    foreach_list_typed(nir_function, fxn, node, &s->functions)
       clone_function(&state, fxn, ns);
 
-   /* Only after all overloads are cloned can we clone the actual function
+   /* Only after all functions are cloned can we clone the actual function
     * implementations.  This is because nir_call_instr's need to reference the
-    * overloads of other functions and we don't know what order the functions
+    * functions of other functions and we don't know what order the functions
     * will have in the list.
     */
-   nir_foreach_overload(s, fo) {
-      nir_function_overload *nfo = remap_global(&state, fo);
-      nfo->impl = clone_function_impl(&state, fo->impl);
-      nfo->impl->overload = nfo;
+   nir_foreach_function(s, fxn) {
+      nir_function *nfxn = remap_global(&state, fxn);
+      nfxn->impl = clone_function_impl(&state, fxn->impl);
+      nfxn->impl->function = nfxn;
    }
 
    clone_reg_list(&state, &ns->registers, &s->registers);

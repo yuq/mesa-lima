@@ -95,9 +95,9 @@ anv_nir_lower_push_constants(nir_shader *shader, bool is_scalar)
       .is_scalar = is_scalar,
    };
 
-   nir_foreach_overload(shader, overload) {
-      if (overload->impl)
-         nir_foreach_block(overload->impl, lower_push_constants_block, &state);
+   nir_foreach_function(shader, function) {
+      if (function->impl)
+         nir_foreach_block(function->impl, lower_push_constants_block, &state);
    }
 
    assert(shader->num_uniforms % 4 == 0);

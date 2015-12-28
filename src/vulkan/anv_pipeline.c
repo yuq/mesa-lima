@@ -133,13 +133,11 @@ anv_shader_compile_to_nir(struct anv_device *device,
          continue;
       }
 
-      assert(exec_list_length(&func->overload_list) == 1);
-      foreach_list_typed(nir_function_overload, overload, node,
-                         &func->overload_list) {
-         assert(overload->impl);
-         entrypoint = overload->impl;
-      }
+      assert(entrypoint == NULL);
+      assert(func->impl);
+      entrypoint = func->impl;
    }
+   assert(exec_list_length(&nir->functions) == 1);
    assert(entrypoint != NULL);
 
    nir = brw_preprocess_nir(nir, compiler->scalar_stage[stage]);

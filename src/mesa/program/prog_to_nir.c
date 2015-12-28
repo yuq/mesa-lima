@@ -1099,8 +1099,7 @@ prog_to_nir(const struct gl_program *prog,
    }
 
    nir_function *func = nir_function_create(s, "main");
-   nir_function_overload *overload = nir_function_overload_create(func);
-   nir_function_impl *impl = nir_function_impl_create(overload);
+   nir_function_impl *impl = nir_function_impl_create(func);
 
    c->build.shader = s;
    c->build.impl = impl;

@@ -36,11 +36,9 @@ nir_builder_init_simple_shader(nir_builder *b, gl_shader_stage stage)
 {
    b->shader = nir_shader_create(NULL, stage, NULL);
 
-   nir_function *func = nir_function_create(b->shader,
-                                            ralloc_strdup(b->shader, "main"));
-   nir_function_overload *overload = nir_function_overload_create(func);
-   overload->num_params = 0;
+   nir_function *func =
+      nir_function_create(b->shader, ralloc_strdup(b->shader, "main"));
 
-   b->impl = nir_function_impl_create(overload);
+   b->impl = nir_function_impl_create(func);
    b->cursor = nir_after_cf_list(&b->impl->body);
 }

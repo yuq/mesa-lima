@@ -70,10 +70,9 @@ public:
    virtual void visit(ir_dereference_array *);
    virtual void visit(ir_barrier *);
 
-   void create_function(ir_function *ir);
+   void create_function(ir_function_signature *ir);
 
 private:
-   void create_overload(ir_function_signature *ir, nir_function *function);
    void add_instr(nir_instr *instr, unsigned num_components);
    nir_ssa_def *evaluate_rvalue(ir_rvalue *ir);
 
@@ -434,60 +433,50 @@ nir_visitor::visit(ir_variable *ir)
 ir_visitor_status
 nir_function_visitor::visit_enter(ir_function *ir)
 {
-   visitor->create_function(ir);
+   foreach_in_list(ir_function_signature, sig, &ir->signatures) {
+      visitor->create_function(sig);
+   }
    return visit_continue_with_parent;
 }
 
-
 void
-nir_visitor::create_function(ir_function *ir)
-{
-   nir_function *func = nir_function_create(this->shader, ir->name);
-   foreach_in_list(ir_function_signature, sig, &ir->signatures) {
-      create_overload(sig, func);
-   }
-}
-
-
-
-void
-nir_visitor::create_overload(ir_function_signature *ir, nir_function *function)
+nir_visitor::create_function(ir_function_signature *ir)
 {
    if (ir->is_intrinsic)
       return;
 
-   nir_function_overload *overload = nir_function_overload_create(function);
+   nir_function *func = nir_function_create(shader, ir->function_name());
 
    unsigned num_params = ir->parameters.length();
-   overload->num_params = num_params;
-   overload->params = ralloc_array(shader, nir_parameter, num_params);
+   func->num_params = num_params;
+   func->params = ralloc_array(shader, nir_parameter, num_params);
 
    unsigned i = 0;
    foreach_in_list(ir_variable, param, &ir->parameters) {
       switch (param->data.mode) {
       case ir_var_function_in:
-         overload->params[i].param_type = nir_parameter_in;
+         func->params[i].param_type = nir_parameter_in;
          break;
 
       case ir_var_function_out:
-         overload->params[i].param_type = nir_parameter_out;
+         func->params[i].param_type = nir_parameter_out;
          break;
 
       case ir_var_function_inout:
-         overload->params[i].param_type = nir_parameter_inout;
+         func->params[i].param_type = nir_parameter_inout;
          break;
 
       default:
          unreachable("not reached");
       }
 
-      overload->params[i].type = param->type;
+      func->params[i].type = param->type;
       i++;
    }
 
-   overload->return_type = ir->return_type;
+   func->return_type = ir->return_type;
 
-   _mesa_hash_table_insert(this->overload_table, ir, overload);
+   _mesa_hash_table_insert(this->overload_table, ir, func);
 }
 
 void
@@ -507,13 +496,13 @@ nir_visitor::visit(ir_function_signature *ir)
       _mesa_hash_table_search(this->overload_table, ir);
 
    assert(entry);
-   nir_function_overload *overload = (nir_function_overload *) entry->data;
+   nir_function *func = (nir_function *) entry->data;
 
    if (ir->is_defined) {
-      nir_function_impl *impl = nir_function_impl_create(overload);
+      nir_function_impl *impl = nir_function_impl_create(func);
       this->impl = impl;
 
-      unsigned num_params = overload->num_params;
+      unsigned num_params = func->num_params;
       impl->num_params = num_params;
       impl->params = ralloc_array(this->shader, nir_variable *, num_params);
       unsigned i = 0;
@@ -523,13 +512,13 @@ nir_visitor::visit(ir_function_signature *ir)
          i++;
       }
 
-      if (overload->return_type == glsl_type::void_type) {
+      if (func->return_type == glsl_type::void_type) {
          impl->return_var = NULL;
       } else {
          impl->return_var = ralloc(this->shader, nir_variable);
          impl->return_var->name = ralloc_strdup(impl->return_var,
                                                 "return_var");
-         impl->return_var->type = overload->return_type;
+         impl->return_var->type = func->return_type;
       }
 
       this->is_global = false;
@@ -540,7 +529,7 @@ nir_visitor::visit(ir_function_signature *ir)
 
       this->is_global = true;
    } else {
-      overload->impl = NULL;
+      func->impl = NULL;
    }
 }
 
@@ -1086,7 +1075,7 @@ nir_visitor::visit(ir_call *ir)
    struct hash_entry *entry =
       _mesa_hash_table_search(this->overload_table, ir->callee);
    assert(entry);
-   nir_function_overload *callee = (nir_function_overload *) entry->data;
+   nir_function *callee = (nir_function *) entry->data;
 
    nir_call_instr *instr = nir_call_instr_create(this->shader, callee);
 

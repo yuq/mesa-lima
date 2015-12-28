@@ -129,9 +129,9 @@ nir_inline_functions(nir_shader *shader)
 {
    bool progress = false;
 
-   nir_foreach_overload(shader, overload) {
-      if (overload->impl)
-         progress = nir_inline_functions_impl(overload->impl) || progress;
+   nir_foreach_function(shader, function) {
+      if (function->impl)
+         progress = nir_inline_functions_impl(function->impl) || progress;
    }
 
    return progress;

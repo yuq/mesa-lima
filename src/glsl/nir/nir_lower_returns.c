@@ -236,9 +236,9 @@ nir_lower_returns(nir_shader *shader)
 {
    bool progress = false;
 
-   nir_foreach_overload(shader, overload) {
-      if (overload->impl)
-         progress = nir_lower_returns_impl(overload->impl) || progress;
+   nir_foreach_function(shader, function) {
+      if (function->impl)
+         progress = nir_lower_returns_impl(function->impl) || progress;
    }
 
    return progress;

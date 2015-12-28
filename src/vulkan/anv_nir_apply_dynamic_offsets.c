@@ -150,11 +150,11 @@ anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
    if (!state.layout || !state.layout->stage[shader->stage].has_dynamic_offsets)
       return;
 
-   nir_foreach_overload(shader, overload) {
-      if (overload->impl) {
-         nir_builder_init(&state.builder, overload->impl);
-         nir_foreach_block(overload->impl, apply_dynamic_offsets_block, &state);
-         nir_metadata_preserve(overload->impl, nir_metadata_block_index |
+   nir_foreach_function(shader, function) {
+      if (function->impl) {
+         nir_builder_init(&state.builder, function->impl);
+         nir_foreach_block(function->impl, apply_dynamic_offsets_block, &state);
+         nir_metadata_preserve(function->impl, nir_metadata_block_index |
                                                nir_metadata_dominance);
       }
    }

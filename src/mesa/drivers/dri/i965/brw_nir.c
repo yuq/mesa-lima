@@ -224,11 +224,11 @@ brw_nir_lower_inputs(nir_shader *nir,
          /* This pass needs actual constants */
          nir_opt_constant_folding(nir);
 
-         nir_foreach_overload(nir, overload) {
-            if (overload->impl) {
-               nir_builder_init(&params.b, overload->impl);
-               nir_foreach_block(overload->impl, add_const_offset_to_base, &params);
-               nir_foreach_block(overload->impl, remap_vs_attrs, &inputs_read);
+         nir_foreach_function(nir, function) {
+            if (function->impl) {
+               nir_builder_init(&params.b, function->impl);
+               nir_foreach_block(function->impl, add_const_offset_to_base, &params);
+               nir_foreach_block(function->impl, remap_vs_attrs, &inputs_read);
             }
          }
       }
@@ -270,11 +270,11 @@ brw_nir_lower_inputs(nir_shader *nir,
          /* This pass needs actual constants */
          nir_opt_constant_folding(nir);
 
-         nir_foreach_overload(nir, overload) {
-            if (overload->impl) {
-               nir_builder_init(&params.b, overload->impl);
-               nir_foreach_block(overload->impl, add_const_offset_to_base, &params);
-               nir_foreach_block(overload->impl, remap_inputs_with_vue_map,
+         nir_foreach_function(nir, function) {
+            if (function->impl) {
+               nir_builder_init(&params.b, function->impl);
+               nir_foreach_block(function->impl, add_const_offset_to_base, &params);
+               nir_foreach_block(function->impl, remap_inputs_with_vue_map,
                                  &input_vue_map);
             }
          }
@@ -296,12 +296,12 @@ brw_nir_lower_inputs(nir_shader *nir,
       /* This pass needs actual constants */
       nir_opt_constant_folding(nir);
 
-      nir_foreach_overload(nir, overload) {
-         if (overload->impl) {
-            nir_builder_init(&params.b, overload->impl);
-            nir_foreach_block(overload->impl, add_const_offset_to_base, &params);
-            nir_builder_init(&state.b, overload->impl);
-            nir_foreach_block(overload->impl, remap_patch_urb_offsets, &state);
+      nir_foreach_function(nir, function) {
+         if (function->impl) {
+            nir_builder_init(&params.b, function->impl);
+            nir_foreach_block(function->impl, add_const_offset_to_base, &params);
+            nir_builder_init(&state.b, function->impl);
+            nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
          }
       }
       break;
@@ -356,12 +356,12 @@ brw_nir_lower_outputs(nir_shader *nir,
       /* This pass needs actual constants */
       nir_opt_constant_folding(nir);
 
-      nir_foreach_overload(nir, overload) {
-         if (overload->impl) {
-            nir_builder_init(&params.b, overload->impl);
-            nir_foreach_block(overload->impl, add_const_offset_to_base, &params);
-            nir_builder_init(&state.b, overload->impl);
-            nir_foreach_block(overload->impl, remap_patch_urb_offsets, &state);
+      nir_foreach_function(nir, function) {
+         if (function->impl) {
+            nir_builder_init(&params.b, function->impl);
+            nir_foreach_block(function->impl, add_const_offset_to_base, &params);
+            nir_builder_init(&state.b, function->impl);
+            nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
          }
       }
       break;
@@ -565,9 +565,9 @@ brw_postprocess_nir(nir_shader *nir,
 
    if (unlikely(debug_enabled)) {
       /* Re-index SSA defs so we print more sensible numbers. */
-      nir_foreach_overload(nir, overload) {
-         if (overload->impl)
-            nir_index_ssa_defs(overload->impl);
+      nir_foreach_function(nir, function) {
+         if (function->impl)
+            nir_index_ssa_defs(function->impl);
       }
 
       fprintf(stderr, "NIR (SSA form) for %s shader:\n",
