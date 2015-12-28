@@ -420,9 +420,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 			COND(s[FS].v->frag_face, A4XX_RB_RENDER_CONTROL2_FACENESS) |
 			COND(s[FS].v->frag_coord, A4XX_RB_RENDER_CONTROL2_XCOORD |
 					A4XX_RB_RENDER_CONTROL2_YCOORD |
-// TODO enabling gl_FragCoord.z is causing lockups on 0ad (but seems
-// to work everywhere else).
-//					A4XX_RB_RENDER_CONTROL2_ZCOORD |
+					A4XX_RB_RENDER_CONTROL2_ZCOORD |
 					A4XX_RB_RENDER_CONTROL2_WCOORD));
 
 	OUT_PKT0(ring, REG_A4XX_RB_FS_OUTPUT_REG, 1);

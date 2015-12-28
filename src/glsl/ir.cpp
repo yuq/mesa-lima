@@ -307,10 +307,6 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
       this->type = glsl_type::uvec2_type;
       break;
 
-   case ir_unop_any:
-      this->type = glsl_type::bool_type;
-      break;
-
    case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_snorm_4x8:
    case ir_unop_pack_unorm_2x16:
@@ -538,7 +534,6 @@ static const char *const operator_strs[] = {
    "bitcast_f2i",
    "bitcast_u2f",
    "bitcast_f2u",
-   "any",
    "trunc",
    "ceil",
    "floor",

@@ -782,7 +782,9 @@ static void
 nvc0_hw_sm_destroy_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 {
    struct nvc0_query *q = &hq->base;
-   q->funcs->destroy_query(nvc0, q);
+   nvc0_hw_query_allocate(nvc0, q, 0);
+   nouveau_fence_ref(NULL, &hq->fence);
+   FREE(hq);
 }
 
 static boolean
@@ -1075,17 +1077,6 @@ nve4_hw_sm_query_read_data(uint32_t count[32][8],
    return true;
 }
 
-/* Metric calculations:
- * sum(x) ... sum of x over all MPs
- * avg(x) ... average of x over all MPs
- *
- * IPC              : sum(inst_executed) / clock
- * INST_REPLAY_OHEAD: (sum(inst_issued) - sum(inst_executed)) / sum(inst_issued)
- * MP_OCCUPANCY     : avg((active_warps / 64) / active_cycles)
- * MP_EFFICIENCY    : avg(active_cycles / clock)
- *
- * NOTE: Interpretation of IPC requires knowledge of MP count.
- */
 static boolean
 nvc0_hw_sm_get_query_result(struct nvc0_context *nvc0, struct nvc0_hw_query *hq,
                             boolean wait, union pipe_query_result *result)
@@ -1130,7 +1121,7 @@ nvc0_hw_sm_create_query(struct nvc0_context *nvc0, unsigned type)
    struct nvc0_hw_query *hq;
    unsigned space;
 
-   if (nvc0->screen->base.device->drm_version < 0x01000101)
+   if (nvc0->screen->base.drm->version < 0x01000101)
       return NULL;
 
    if ((type < NVE4_HW_SM_QUERY(0) || type > NVE4_HW_SM_QUERY_LAST) &&
@@ -1225,7 +1216,7 @@ nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
 {
    int count = 0;
 
-   if (screen->base.device->drm_version >= 0x01000101) {
+   if (screen->base.drm->version >= 0x01000101) {
       if (screen->compute) {
          if (screen->base.class_3d == NVE4_3D_CLASS) {
             count += NVE4_HW_SM_QUERY_COUNT;

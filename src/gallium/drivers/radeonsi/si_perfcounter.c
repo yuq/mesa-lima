@@ -436,7 +436,7 @@ static void si_pc_emit_select(struct r600_common_context *ctx,
 
 		dw = count + regs->num_prelude;
 		if (count >= regs->num_multi)
-			count += regs->num_multi;
+			dw += regs->num_multi;
 		radeon_set_uconfig_reg_seq(cs, regs->select0, dw);
 		for (idx = 0; idx < regs->num_prelude; ++idx)
 			radeon_emit(cs, 0);

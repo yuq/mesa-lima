@@ -29,10 +29,8 @@
 static void
 upload_te_state(struct brw_context *brw)
 {
-   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    bool active = brw->tess_eval_program;
-   if (active)
-      assert(brw->tess_ctrl_program);
 
    const struct brw_tes_prog_data *tes_prog_data = brw->tes.prog_data;
 
@@ -61,7 +59,7 @@ const struct brw_tracked_state gen7_te_state = {
       .mesa  = 0,
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_TES_PROG_DATA |
-               BRW_NEW_TESS_EVAL_PROGRAM,
+               BRW_NEW_TESS_PROGRAMS,
    },
    .emit = upload_te_state,
 };

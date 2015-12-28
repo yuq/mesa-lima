@@ -1339,6 +1339,11 @@ set_max_gl_versions(struct intel_screen *screen)
    switch (screen->devinfo->gen) {
    case 9:
    case 8:
+      psp->max_gl_core_version = 33;
+      psp->max_gl_compat_version = 30;
+      psp->max_gl_es1_version = 11;
+      psp->max_gl_es2_version = 31;
+      break;
    case 7:
    case 6:
       psp->max_gl_core_version = 33;
@@ -1492,6 +1497,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
 
    intelScreen->compiler = brw_compiler_create(intelScreen,
                                                intelScreen->devinfo);
+   intelScreen->program_id = 1;
 
    if (intelScreen->devinfo->has_resource_streamer) {
       int val = -1;

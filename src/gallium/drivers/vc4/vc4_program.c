@@ -1848,12 +1848,15 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         qir_optimize(c);
         qir_lower_uniforms(c);
 
+        qir_schedule_instructions(c);
+
         if (vc4_debug & VC4_DEBUG_QIR) {
                 fprintf(stderr, "%s prog %d/%d QIR:\n",
                         qir_get_stage_name(c->stage),
                         c->program_id, c->variant_id);
                 qir_dump(c);
         }
+
         qir_reorder_uniforms(c);
         vc4_generate_code(vc4, c);
 
@@ -2043,7 +2046,7 @@ vc4_setup_shared_key(struct vc4_context *vc4, struct vc4_key *key,
                 key->tex[i].swizzle[2] = sampler->swizzle_b;
                 key->tex[i].swizzle[3] = sampler->swizzle_a;
 
-                if (sampler->texture->nr_samples) {
+                if (sampler->texture->nr_samples > 1) {
                         key->tex[i].msaa_width = sampler->texture->width0;
                         key->tex[i].msaa_height = sampler->texture->height0;
                 } else if (sampler){

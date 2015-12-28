@@ -97,7 +97,8 @@ void
 brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags)
 {
    if (brw->gen >= 8) {
-      gen8_add_cs_stall_workaround_bits(&flags);
+      if (brw->gen == 8)
+         gen8_add_cs_stall_workaround_bits(&flags);
 
       BEGIN_BATCH(6);
       OUT_BATCH(_3DSTATE_PIPE_CONTROL | (6 - 2));
@@ -141,7 +142,8 @@ brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
                             uint32_t imm_lower, uint32_t imm_upper)
 {
    if (brw->gen >= 8) {
-      gen8_add_cs_stall_workaround_bits(&flags);
+      if (brw->gen == 8)
+         gen8_add_cs_stall_workaround_bits(&flags);
 
       BEGIN_BATCH(6);
       OUT_BATCH(_3DSTATE_PIPE_CONTROL | (6 - 2));

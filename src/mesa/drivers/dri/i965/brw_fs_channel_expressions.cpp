@@ -288,23 +288,6 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
       }
       break;
 
-   case ir_unop_any: {
-      ir_expression *temp;
-      temp = new(mem_ctx) ir_expression(ir_binop_logic_or,
-					element_type,
-					get_element(op_var[0], 0),
-					get_element(op_var[0], 1));
-
-      for (i = 2; i < vector_elements; i++) {
-	 temp = new(mem_ctx) ir_expression(ir_binop_logic_or,
-					   element_type,
-					   get_element(op_var[0], i),
-					   temp);
-      }
-      assign(ir, 0, temp);
-      break;
-   }
-
    case ir_binop_dot: {
       ir_expression *last = NULL;
       for (i = 0; i < vector_elements; i++) {

@@ -39,7 +39,7 @@ brw_upload_tes_pull_constants(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->tes.base;
 
-   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    struct brw_tess_eval_program *dp =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
 
@@ -59,7 +59,7 @@ const struct brw_tracked_state brw_tes_pull_constants = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_TES_PROG_DATA |
-             BRW_NEW_TESS_EVAL_PROGRAM,
+             BRW_NEW_TESS_PROGRAMS,
    },
    .emit = brw_upload_tes_pull_constants,
 };
@@ -122,7 +122,7 @@ static void
 brw_upload_tes_image_surfaces(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_TESS_EVAL];
 
@@ -137,7 +137,7 @@ const struct brw_tracked_state brw_tes_image_surfaces = {
    .dirty = {
       .brw = BRW_NEW_BATCH |
              BRW_NEW_IMAGE_UNITS |
-             BRW_NEW_TESS_EVAL_PROGRAM |
+             BRW_NEW_TESS_PROGRAMS |
              BRW_NEW_TES_PROG_DATA,
    },
    .emit = brw_upload_tes_image_surfaces,

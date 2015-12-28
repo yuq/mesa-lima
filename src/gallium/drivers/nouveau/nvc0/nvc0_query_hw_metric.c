@@ -293,7 +293,8 @@ nvc0_hw_metric_destroy_query(struct nvc0_context *nvc0,
    unsigned i;
 
    for (i = 0; i < hmq->num_queries; i++)
-      hmq->queries[i]->funcs->destroy_query(nvc0, hmq->queries[i]);
+      if (hmq->queries[i]->funcs->destroy_query)
+         hmq->queries[i]->funcs->destroy_query(nvc0, hmq->queries[i]);
    FREE(hmq);
 }
 
@@ -420,7 +421,10 @@ sm30_hw_metric_calc_result(struct nvc0_hw_query *hq, uint64_t res64[8])
 {
    switch (hq->base.type - NVE4_HW_METRIC_QUERY(0)) {
    case NVE4_HW_METRIC_QUERY_ACHIEVED_OCCUPANCY:
-      return sm20_hw_metric_calc_result(hq, res64);
+      /* (active_warps / active_cycles) / max. number of warps on a MP */
+      if (res64[1])
+         return (res64[0] / (double)res64[1]) / 64;
+      break;
    case NVE4_HW_METRIC_QUERY_BRANCH_EFFICIENCY:
       return sm20_hw_metric_calc_result(hq, res64);
    case NVE4_HW_METRIC_QUERY_INST_ISSUED:
@@ -561,7 +565,7 @@ nvc0_hw_metric_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
    uint16_t class_3d = screen->base.class_3d;
    int count = 0;
 
-   if (screen->base.device->drm_version >= 0x01000101) {
+   if (screen->base.drm->version >= 0x01000101) {
       if (screen->compute) {
          if (screen->base.class_3d == NVE4_3D_CLASS) {
             count += NVE4_HW_METRIC_QUERY_COUNT;

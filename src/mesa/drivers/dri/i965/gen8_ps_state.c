@@ -90,8 +90,7 @@ gen8_upload_ps_extra(struct brw_context *brw,
     *
     * BRW_NEW_FS_PROG_DATA | BRW_NEW_FRAGMENT_PROGRAM | _NEW_BUFFERS | _NEW_COLOR
     */
-   if ((_mesa_active_fragment_shader_has_atomic_ops(&brw->ctx) ||
-        prog_data->base.nr_image_params) &&
+   if (_mesa_active_fragment_shader_has_side_effects(&brw->ctx) &&
        !brw_color_buffer_write_enabled(brw))
       dw1 |= GEN8_PSX_SHADER_HAS_UAV;
 
@@ -157,7 +156,7 @@ upload_wm_state(struct brw_context *brw)
    /* BRW_NEW_FS_PROG_DATA */
    if (brw->wm.prog_data->early_fragment_tests)
       dw1 |= GEN7_WM_EARLY_DS_CONTROL_PREPS;
-   else if (brw->wm.prog_data->base.nr_image_params)
+   else if (_mesa_active_fragment_shader_has_side_effects(&brw->ctx))
       dw1 |= GEN7_WM_EARLY_DS_CONTROL_PSEXEC;
 
    BEGIN_BATCH(2);

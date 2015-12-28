@@ -1355,7 +1355,6 @@ enum ir_expression_operation {
    ir_unop_bitcast_f2i, /**< Bit-identical float-to-int "conversion" */
    ir_unop_bitcast_u2f, /**< Bit-identical uint-to-float "conversion" */
    ir_unop_bitcast_f2u, /**< Bit-identical float-to-uint "conversion" */
-   ir_unop_any,
 
    /**
     * \name Unary floating-point rounding operations.
@@ -1726,7 +1725,6 @@ public:
    {
       return operation == ir_binop_all_equal ||
              operation == ir_binop_any_nequal ||
-             operation == ir_unop_any ||
              operation == ir_binop_dot ||
              operation == ir_quadop_vector;
    }

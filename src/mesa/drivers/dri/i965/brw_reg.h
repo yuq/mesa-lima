@@ -84,6 +84,7 @@ struct brw_device_info;
 #define BRW_SWIZZLE_YZXW      BRW_SWIZZLE4(1,2,0,3)
 #define BRW_SWIZZLE_ZXYW      BRW_SWIZZLE4(2,0,1,3)
 #define BRW_SWIZZLE_ZWZW      BRW_SWIZZLE4(2,3,2,3)
+#define BRW_SWIZZLE_WZYX      BRW_SWIZZLE4(3,2,1,0)
 
 static inline bool
 brw_is_single_value_swizzle(unsigned swiz)

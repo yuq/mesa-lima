@@ -156,7 +156,7 @@ lower_returns_in_block(nir_block *block, struct lower_returns_state *state)
       state->return_flag->constant_initializer =
          rzalloc(state->return_flag, nir_constant);
    }
-   nir_store_var(b, state->return_flag, nir_imm_int(b, NIR_TRUE));
+   nir_store_var(b, state->return_flag, nir_imm_int(b, NIR_TRUE), 1);
 
    if (state->loop) {
       /* We're in a loop.  Make the return a break. */

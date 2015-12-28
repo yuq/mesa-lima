@@ -77,14 +77,11 @@ upload_wm_state(struct brw_context *brw)
       dw1 |= GEN7_WM_KILL_ENABLE;
    }
 
-   if (_mesa_active_fragment_shader_has_atomic_ops(&brw->ctx)) {
-      dw1 |= GEN7_WM_DISPATCH_ENABLE;
-   }
-
    /* _NEW_BUFFERS | _NEW_COLOR */
+   const bool active_fs_has_side_effects =
+      _mesa_active_fragment_shader_has_side_effects(&brw->ctx);
    if (brw_color_buffer_write_enabled(brw) || writes_depth ||
-       prog_data->base.nr_image_params ||
-       dw1 & GEN7_WM_KILL_ENABLE) {
+       active_fs_has_side_effects || dw1 & GEN7_WM_KILL_ENABLE) {
       dw1 |= GEN7_WM_DISPATCH_ENABLE;
    }
    if (multisampled_fbo) {
@@ -110,7 +107,7 @@ upload_wm_state(struct brw_context *brw)
    /* BRW_NEW_FS_PROG_DATA */
    if (prog_data->early_fragment_tests)
       dw1 |= GEN7_WM_EARLY_DS_CONTROL_PREPS;
-   else if (prog_data->base.nr_image_params)
+   else if (active_fs_has_side_effects)
       dw1 |= GEN7_WM_EARLY_DS_CONTROL_PSEXEC;
 
    /* The "UAV access enable" bits are unnecessary on HSW because they only
@@ -123,7 +120,7 @@ upload_wm_state(struct brw_context *brw)
     */
    if (brw->is_haswell &&
        !(brw_color_buffer_write_enabled(brw) || writes_depth) &&
-       prog_data->base.nr_image_params)
+       active_fs_has_side_effects)
       dw2 |= HSW_WM_UAV_ONLY;
 
    BEGIN_BATCH(3);

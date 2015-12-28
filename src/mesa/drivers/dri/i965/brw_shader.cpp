@@ -24,6 +24,7 @@
 #include "brw_context.h"
 #include "brw_cfg.h"
 #include "brw_eu.h"
+#include "brw_fs.h"
 #include "brw_nir.h"
 #include "glsl/glsl_parser_extras.h"
 #include "main/shaderobj.h"
@@ -84,6 +85,8 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 
    compiler->scalar_stage[MESA_SHADER_VERTEX] =
       devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS);
+   compiler->scalar_stage[MESA_SHADER_TESS_CTRL] = false;
+   compiler->scalar_stage[MESA_SHADER_TESS_EVAL] = true;
    compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
       devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", false);
    compiler->scalar_stage[MESA_SHADER_FRAGMENT] = true;
@@ -136,6 +139,9 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 
       compiler->glsl_compiler_options[i].LowerBufferInterfaceBlocks = true;
    }
+
+   compiler->glsl_compiler_options[MESA_SHADER_TESS_CTRL].EmitNoIndirectInput = false;
+   compiler->glsl_compiler_options[MESA_SHADER_TESS_EVAL].EmitNoIndirectInput = false;
 
    if (compiler->scalar_stage[MESA_SHADER_GEOMETRY])
       compiler->glsl_compiler_options[MESA_SHADER_GEOMETRY].EmitNoIndirectInput = false;
@@ -548,6 +554,21 @@ brw_instruction_name(enum opcode op)
       return "mulh";
    case SHADER_OPCODE_MOV_INDIRECT:
       return "mov_indirect";
+
+   case VEC4_OPCODE_URB_READ:
+      return "urb_read";
+   case TCS_OPCODE_GET_INSTANCE_ID:
+      return "tcs_get_instance_id";
+   case TCS_OPCODE_URB_WRITE:
+      return "tcs_urb_write";
+   case TCS_OPCODE_SET_INPUT_URB_OFFSETS:
+      return "tcs_set_input_urb_offsets";
+   case TCS_OPCODE_SET_OUTPUT_URB_OFFSETS:
+      return "tcs_set_output_urb_offsets";
+   case TCS_OPCODE_GET_PRIMITIVE_ID:
+      return "tcs_get_primitive_id";
+   case TCS_OPCODE_CREATE_BARRIER_HEADER:
+      return "tcs_create_barrier_header";
    }
 
    unreachable("not reached");
@@ -1292,3 +1313,96 @@ gl_clip_plane *brw_select_clip_planes(struct gl_context *ctx)
    }
 }
 
+extern "C" const unsigned *
+brw_compile_tes(const struct brw_compiler *compiler,
+                void *log_data,
+                void *mem_ctx,
+                const struct brw_tes_prog_key *key,
+                struct brw_tes_prog_data *prog_data,
+                const nir_shader *src_shader,
+                struct gl_shader_program *shader_prog,
+                int shader_time_index,
+                unsigned *final_assembly_size,
+                char **error_str)
+{
+   const struct brw_device_info *devinfo = compiler->devinfo;
+   struct gl_shader *shader =
+      shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
+   const bool is_scalar = compiler->scalar_stage[MESA_SHADER_TESS_EVAL];
+
+   nir_shader *nir = nir_shader_clone(mem_ctx, src_shader);
+   nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
+   nir->info.inputs_read = key->inputs_read;
+   nir->info.patch_inputs_read = key->patch_inputs_read;
+   nir = brw_nir_lower_io(nir, compiler->devinfo, is_scalar);
+   nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
+
+   brw_compute_vue_map(devinfo, &prog_data->base.vue_map,
+                       nir->info.outputs_written,
+                       nir->info.separate_shader);
+
+   unsigned output_size_bytes = prog_data->base.vue_map.num_slots * 4 * 4;
+
+   assert(output_size_bytes >= 1);
+   if (output_size_bytes > GEN7_MAX_DS_URB_ENTRY_SIZE_BYTES) {
+      if (error_str)
+         *error_str = ralloc_strdup(mem_ctx, "DS outputs exceed maximum size");
+      return NULL;
+   }
+
+   /* URB entry sizes are stored as a multiple of 64 bytes. */
+   prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
+
+   struct brw_vue_map input_vue_map;
+   brw_compute_tess_vue_map(&input_vue_map,
+                            nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
+                            nir->info.patch_inputs_read);
+
+   bool need_patch_header = nir->info.system_values_read &
+      (BITFIELD64_BIT(SYSTEM_VALUE_TESS_LEVEL_OUTER) |
+       BITFIELD64_BIT(SYSTEM_VALUE_TESS_LEVEL_INNER));
+
+   /* The TES will pull most inputs using URB read messages.
+    *
+    * However, we push the patch header for TessLevel factors when required,
+    * as it's a tiny amount of extra data.
+    */
+   prog_data->base.urb_read_length = need_patch_header ? 1 : 0;
+
+   if (unlikely(INTEL_DEBUG & DEBUG_TES)) {
+      fprintf(stderr, "TES Input ");
+      brw_print_vue_map(stderr, &input_vue_map);
+      fprintf(stderr, "TES Output ");
+      brw_print_vue_map(stderr, &prog_data->base.vue_map);
+   }
+
+   if (is_scalar) {
+      fs_visitor v(compiler, log_data, mem_ctx, (void *) key,
+                   &prog_data->base.base, shader->Program, nir, 8,
+                   shader_time_index, &input_vue_map);
+      if (!v.run_tes()) {
+         if (error_str)
+            *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
+         return NULL;
+      }
+
+      prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
+
+      fs_generator g(compiler, log_data, mem_ctx, (void *) key,
+                     &prog_data->base.base, v.promoted_constants, false,
+                     "TES");
+      if (unlikely(INTEL_DEBUG & DEBUG_TES)) {
+         g.enable_debug(ralloc_asprintf(mem_ctx,
+                                        "%s tessellation evaluation shader %s",
+                                        nir->info.label ? nir->info.label
+                                                        : "unnamed",
+                                        nir->info.name));
+      }
+
+      g.generate_code(v.cfg, 8);
+
+      return g.get_assembly(final_assembly_size);
+   } else {
+      unreachable("XXX: vec4 tessellation evalation shaders not merged yet.");
+   }
+}

@@ -67,15 +67,13 @@ vc4_flush(struct pipe_context *pctx)
         cl_u8(&bcl, VC4_PACKET_FLUSH);
         cl_end(&vc4->bcl, bcl);
 
-        vc4->msaa = false;
         if (cbuf && (vc4->resolve & PIPE_CLEAR_COLOR0)) {
                 pipe_surface_reference(&vc4->color_write,
-                                       cbuf->texture->nr_samples ? NULL : cbuf);
+                                       cbuf->texture->nr_samples > 1 ?
+                                       NULL : cbuf);
                 pipe_surface_reference(&vc4->msaa_color_write,
-                                       cbuf->texture->nr_samples ? cbuf : NULL);
-
-                if (cbuf->texture->nr_samples)
-                        vc4->msaa = true;
+                                       cbuf->texture->nr_samples > 1 ?
+                                       cbuf : NULL);
 
                 if (!(vc4->cleared & PIPE_CLEAR_COLOR0)) {
                         pipe_surface_reference(&vc4->color_read, cbuf);
@@ -92,14 +90,11 @@ vc4_flush(struct pipe_context *pctx)
         if (vc4->framebuffer.zsbuf &&
             (vc4->resolve & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL))) {
                 pipe_surface_reference(&vc4->zs_write,
-                                       zsbuf->texture->nr_samples ?
+                                       zsbuf->texture->nr_samples > 1 ?
                                        NULL : zsbuf);
                 pipe_surface_reference(&vc4->msaa_zs_write,
-                                       zsbuf->texture->nr_samples ?
+                                       zsbuf->texture->nr_samples > 1 ?
                                        zsbuf : NULL);
-
-                if (zsbuf->texture->nr_samples)
-                        vc4->msaa = true;
 
                 if (!(vc4->cleared & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL))) {
                         pipe_surface_reference(&vc4->zs_read, zsbuf);

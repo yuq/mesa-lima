@@ -1207,7 +1207,7 @@ lp_setup_update_state( struct lp_setup_context *setup,
       /* Will probably need to move this somewhere else, just need  
        * to know about vertex shader point size attribute.
        */
-      setup->psize = lp->psize_slot;
+      setup->psize_slot = lp->psize_slot;
       setup->viewport_index_slot = lp->viewport_index_slot;
       setup->layer_slot = lp->layer_slot;
       setup->face_slot = lp->face_slot;

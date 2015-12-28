@@ -2466,7 +2466,7 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
          return false;
       }
 
-      const unsigned slots = var->type->count_attribute_slots();
+      const unsigned slots = var->type->count_attribute_slots(target_index == MESA_SHADER_VERTEX ? true : false);
 
       /* If the variable is not a built-in and has a location statically
        * assigned in the shader (presumably via a layout qualifier), make sure
@@ -2603,17 +2603,8 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
              * issue (3) of the GL_ARB_vertex_attrib_64bit behavior, this
              * is optional behavior, but it seems preferable.
              */
-            const glsl_type *type = var->type->without_array();
-            if (type == glsl_type::dvec3_type ||
-                type == glsl_type::dvec4_type ||
-                type == glsl_type::dmat2x3_type ||
-                type == glsl_type::dmat2x4_type ||
-                type == glsl_type::dmat3_type ||
-                type == glsl_type::dmat3x4_type ||
-                type == glsl_type::dmat4x3_type ||
-                type == glsl_type::dmat4_type) {
+            if (var->type->without_array()->is_dual_slot_double())
                double_storage_locations |= (use_mask << attr);
-            }
 	 }
 
 	 continue;
@@ -3004,7 +2995,8 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
             foreach_in_list(ir_instruction, node, sh->ir) {
                ir_variable *var = node->as_variable();
                if (var && var->data.mode == ir_var_shader_out)
-                  fragment_outputs += var->type->count_attribute_slots();
+                  /* since there are no double fs outputs - pass false */
+                  fragment_outputs += var->type->count_attribute_slots(false);
             }
          }
       }
@@ -4423,13 +4415,13 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    if (first < MESA_SHADER_FRAGMENT) {
       gl_shader *const sh = prog->_LinkedShaders[last];
 
-      if (first == MESA_SHADER_GEOMETRY) {
+      if (first != MESA_SHADER_VERTEX) {
          /* There was no vertex shader, but we still have to assign varying
-          * locations for use by geometry shader inputs in SSO.
+          * locations for use by tessellation/geometry shader inputs in SSO.
           *
           * If the shader is not separable (i.e., prog->SeparateShader is
-          * false), linking will have already failed when first is
-          * MESA_SHADER_GEOMETRY.
+          * false), linking will have already failed when first is not
+          * MESA_SHADER_VERTEX.
           */
          if (!assign_varying_locations(ctx, mem_ctx, prog,
                                        NULL, prog->_LinkedShaders[first],

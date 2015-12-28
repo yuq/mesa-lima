@@ -517,6 +517,7 @@ void brw_init_state( struct brw_context *brw )
    ctx->DriverFlags.NewTextureBuffer = BRW_NEW_TEXTURE_BUFFER;
    ctx->DriverFlags.NewAtomicBuffer = BRW_NEW_ATOMIC_BUFFER;
    ctx->DriverFlags.NewImageUnits = BRW_NEW_IMAGE_UNITS;
+   ctx->DriverFlags.NewDefaultTessLevels = BRW_NEW_DEFAULT_TESS_LEVELS;
 }
 
 
@@ -607,8 +608,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_URB_FENCE),
    DEFINE_BIT(BRW_NEW_FRAGMENT_PROGRAM),
    DEFINE_BIT(BRW_NEW_GEOMETRY_PROGRAM),
-   DEFINE_BIT(BRW_NEW_TESS_EVAL_PROGRAM),
-   DEFINE_BIT(BRW_NEW_TESS_CTRL_PROGRAM),
+   DEFINE_BIT(BRW_NEW_TESS_PROGRAMS),
    DEFINE_BIT(BRW_NEW_VERTEX_PROGRAM),
    DEFINE_BIT(BRW_NEW_CURBE_OFFSETS),
    DEFINE_BIT(BRW_NEW_REDUCED_PRIMITIVE),
@@ -620,6 +620,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_BINDING_TABLE_POINTERS),
    DEFINE_BIT(BRW_NEW_INDICES),
    DEFINE_BIT(BRW_NEW_VERTICES),
+   DEFINE_BIT(BRW_NEW_DEFAULT_TESS_LEVELS),
    DEFINE_BIT(BRW_NEW_BATCH),
    DEFINE_BIT(BRW_NEW_INDEX_BUFFER),
    DEFINE_BIT(BRW_NEW_VS_CONSTBUF),
@@ -673,11 +674,40 @@ brw_print_dirty_count(struct dirty_bit_map *bit_map)
 }
 
 static inline void
+brw_upload_tess_programs(struct brw_context *brw)
+{
+   if (brw->tess_eval_program) {
+      uint64_t per_vertex_slots = brw->tess_eval_program->Base.InputsRead;
+      uint32_t per_patch_slots =
+         brw->tess_eval_program->Base.PatchInputsRead;
+
+      /* The TCS may have additional outputs which aren't read by the
+       * TES (possibly for cross-thread communication).  These need to
+       * be stored in the Patch URB Entry as well.
+       */
+      if (brw->tess_ctrl_program) {
+         per_vertex_slots |= brw->tess_ctrl_program->Base.OutputsWritten;
+         per_patch_slots |=
+            brw->tess_ctrl_program->Base.PatchOutputsWritten;
+      }
+
+      brw_upload_tcs_prog(brw, per_vertex_slots, per_patch_slots);
+      brw_upload_tes_prog(brw, per_vertex_slots, per_patch_slots);
+   } else {
+      brw->tcs.prog_data = NULL;
+      brw->tcs.base.prog_data = NULL;
+      brw->tes.prog_data = NULL;
+      brw->tes.base.prog_data = NULL;
+   }
+}
+
+static inline void
 brw_upload_programs(struct brw_context *brw,
                     enum brw_pipeline pipeline)
 {
    if (pipeline == BRW_RENDER_PIPELINE) {
       brw_upload_vs_prog(brw);
+      brw_upload_tess_programs(brw);
 
       if (brw->gen < 6)
          brw_upload_ff_gs_prog(brw);
@@ -691,6 +721,8 @@ brw_upload_programs(struct brw_context *brw,
       bool old_separate = brw->vue_map_geom_out.separate;
       if (brw->geometry_program)
          brw->vue_map_geom_out = brw->gs.prog_data->base.vue_map;
+      else if (brw->tess_eval_program)
+         brw->vue_map_geom_out = brw->tes.prog_data->base.vue_map;
       else
          brw->vue_map_geom_out = brw->vs.prog_data->base.vue_map;
 
@@ -750,12 +782,12 @@ brw_upload_pipeline_state(struct brw_context *brw,
 
       if (brw->tess_eval_program != ctx->TessEvalProgram._Current) {
          brw->tess_eval_program = ctx->TessEvalProgram._Current;
-         brw->ctx.NewDriverState |= BRW_NEW_TESS_EVAL_PROGRAM;
+         brw->ctx.NewDriverState |= BRW_NEW_TESS_PROGRAMS;
       }
 
       if (brw->tess_ctrl_program != ctx->TessCtrlProgram._Current) {
          brw->tess_ctrl_program = ctx->TessCtrlProgram._Current;
-         brw->ctx.NewDriverState |= BRW_NEW_TESS_CTRL_PROGRAM;
+         brw->ctx.NewDriverState |= BRW_NEW_TESS_PROGRAMS;
       }
 
       if (brw->geometry_program != ctx->GeometryProgram._Current) {

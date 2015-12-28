@@ -95,6 +95,9 @@ nvc0_vertex_state_create(struct pipe_context *pipe,
             }
             so->element[i].state = nvc0_format_table[fmt].vtx;
             so->need_conversion = true;
+            pipe_debug_message(&nouveau_context(pipe)->debug, FALLBACK,
+                               "Converting vertex element %d, no hw format %s",
+                               i, util_format_name(ve->src_format));
         }
         size = util_format_get_blocksize(fmt);
 

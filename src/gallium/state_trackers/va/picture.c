@@ -92,7 +92,6 @@ vlVaGetReferenceFrame(vlVaDriver *drv, VASurfaceID surface_id,
 static VAStatus
 handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
-   unsigned int i;
    VAStatus vaStatus = VA_STATUS_SUCCESS;
 
    switch (u_reduce_video_profile(context->templat.profile)) {

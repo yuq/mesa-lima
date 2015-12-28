@@ -654,7 +654,7 @@ const struct brw_tracked_state brw_gs_samplers = {
 static void
 brw_upload_tcs_samplers(struct brw_context *brw)
 {
-   /* BRW_NEW_TESS_CTRL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    struct gl_program *tcs = (struct gl_program *) brw->tess_ctrl_program;
    if (!tcs)
       return;
@@ -667,7 +667,7 @@ const struct brw_tracked_state brw_tcs_samplers = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_TESS_CTRL_PROGRAM,
+             BRW_NEW_TESS_PROGRAMS,
    },
    .emit = brw_upload_tcs_samplers,
 };
@@ -676,7 +676,7 @@ const struct brw_tracked_state brw_tcs_samplers = {
 static void
 brw_upload_tes_samplers(struct brw_context *brw)
 {
-   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   /* BRW_NEW_TESS_PROGRAMS */
    struct gl_program *tes = (struct gl_program *) brw->tess_eval_program;
    if (!tes)
       return;
@@ -689,7 +689,7 @@ const struct brw_tracked_state brw_tes_samplers = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_TESS_EVAL_PROGRAM,
+             BRW_NEW_TESS_PROGRAMS,
    },
    .emit = brw_upload_tes_samplers,
 };

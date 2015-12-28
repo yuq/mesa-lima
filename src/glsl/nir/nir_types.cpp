@@ -125,9 +125,10 @@ glsl_get_aoa_size(const struct glsl_type *type)
 }
 
 unsigned
-glsl_count_attribute_slots(const struct glsl_type *type)
+glsl_count_attribute_slots(const struct glsl_type *type,
+                           bool vertex_input_slots)
 {
-   return type->count_attribute_slots();
+   return type->count_attribute_slots(vertex_input_slots);
 }
 
 const char *
@@ -238,6 +239,18 @@ glsl_float_type(void)
 }
 
 const glsl_type *
+glsl_vec_type(unsigned n)
+{
+   return glsl_type::vec(n);
+}
+
+const glsl_type *
+glsl_vec4_type(void)
+{
+   return glsl_type::vec4_type;
+}
+
+const glsl_type *
 glsl_int_type(void)
 {
    return glsl_type::int_type;
@@ -253,12 +266,6 @@ const glsl_type *
 glsl_bool_type(void)
 {
    return glsl_type::bool_type;
-}
-
-const glsl_type *
-glsl_vec4_type(void)
-{
-   return glsl_type::vec4_type;
 }
 
 const glsl_type *

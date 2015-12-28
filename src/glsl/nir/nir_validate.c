@@ -417,6 +417,7 @@ validate_intrinsic_instr(nir_intrinsic_instr *instr, validate_state *state)
       assert(instr->variables[0]->var->data.mode != nir_var_shader_in &&
              instr->variables[0]->var->data.mode != nir_var_uniform &&
              instr->variables[0]->var->data.mode != nir_var_shader_storage);
+      assert((instr->const_index[0] & ~((1 << instr->num_components) - 1)) == 0);
       break;
    }
    case nir_intrinsic_copy_var:

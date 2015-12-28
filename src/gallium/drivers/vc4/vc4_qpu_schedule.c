@@ -50,7 +50,7 @@ struct schedule_node {
         uint32_t child_array_size;
         uint32_t parent_count;
 
-        /* Longest cycles + n->latency of any parent of this node. */
+        /* Longest cycles + instruction_latency() of any parent of this node. */
         uint32_t unblocked_time;
 
         /**
@@ -259,7 +259,8 @@ process_waddr_deps(struct schedule_state *state, struct schedule_node *n,
                 }
         } else if (is_tmu_write(waddr)) {
                 add_write_dep(state, &state->last_tmu_write, n);
-        } else if (qpu_waddr_is_tlb(waddr)) {
+        } else if (qpu_waddr_is_tlb(waddr) ||
+                   waddr == QPU_W_MS_FLAGS) {
                 add_write_dep(state, &state->last_tlb, n);
         } else {
                 switch (waddr) {
@@ -623,6 +624,46 @@ dump_state(struct list_head *schedule_list)
         }
 }
 
+static uint32_t waddr_latency(uint32_t waddr, uint64_t after)
+{
+        if (waddr < 32)
+                return 2;
+
+        /* Apply some huge latency between texture fetch requests and getting
+         * their results back.
+         */
+        if (waddr == QPU_W_TMU0_S) {
+                if (QPU_GET_FIELD(after, QPU_SIG) == QPU_SIG_LOAD_TMU0)
+                        return 100;
+        }
+        if (waddr == QPU_W_TMU1_S) {
+                if (QPU_GET_FIELD(after, QPU_SIG) == QPU_SIG_LOAD_TMU1)
+                        return 100;
+        }
+
+        switch(waddr) {
+        case QPU_W_SFU_RECIP:
+        case QPU_W_SFU_RECIPSQRT:
+        case QPU_W_SFU_EXP:
+        case QPU_W_SFU_LOG:
+                return 3;
+        default:
+                return 1;
+        }
+}
+
+static uint32_t
+instruction_latency(struct schedule_node *before, struct schedule_node *after)
+{
+        uint64_t before_inst = before->inst->inst;
+        uint64_t after_inst = after->inst->inst;
+
+        return MAX2(waddr_latency(QPU_GET_FIELD(before_inst, QPU_WADDR_ADD),
+                                  after_inst),
+                    waddr_latency(QPU_GET_FIELD(before_inst, QPU_WADDR_MUL),
+                                  after_inst));
+}
+
 /** Recursive computation of the delay member of a node. */
 static void
 compute_delay(struct schedule_node *n)
@@ -634,7 +675,8 @@ compute_delay(struct schedule_node *n)
                         if (!n->children[i].node->delay)
                                 compute_delay(n->children[i].node);
                         n->delay = MAX2(n->delay,
-                                        n->children[i].node->delay + n->latency);
+                                        n->children[i].node->delay +
+                                        instruction_latency(n, n->children[i].node));
                 }
         }
 }
@@ -663,9 +705,14 @@ mark_instruction_scheduled(struct list_head *schedule_list,
                  * immediately after (or paired with!) the thing reading the
                  * destination.
                  */
-                int latency_from_previous = war_only ? 0 : node->latency;
+                uint32_t latency = 0;
+                if (!war_only) {
+                        latency = instruction_latency(node,
+                                                      node->children[i].node);
+                }
+
                 child->unblocked_time = MAX2(child->unblocked_time,
-                                             time + latency_from_previous);
+                                             time + latency);
                 child->parent_count--;
                 if (child->parent_count == 0)
                         list_add(&child->link, schedule_list);
@@ -798,33 +845,6 @@ schedule_instructions(struct vc4_compile *c, struct list_head *schedule_list)
         return time;
 }
 
-static uint32_t waddr_latency(uint32_t waddr)
-{
-        if (waddr < 32)
-                return 2;
-
-        /* Some huge number, really. */
-        if (waddr >= QPU_W_TMU0_S && waddr <= QPU_W_TMU1_B)
-                return 100;
-
-        switch(waddr) {
-        case QPU_W_SFU_RECIP:
-        case QPU_W_SFU_RECIPSQRT:
-        case QPU_W_SFU_EXP:
-        case QPU_W_SFU_LOG:
-                return 3;
-        default:
-                return 1;
-        }
-}
-
-static uint32_t
-instruction_latency(uint64_t inst)
-{
-        return MAX2(waddr_latency(QPU_GET_FIELD(inst, QPU_WADDR_ADD)),
-                    waddr_latency(QPU_GET_FIELD(inst, QPU_WADDR_MUL)));
-}
-
 uint32_t
 qpu_schedule_instructions(struct vc4_compile *c)
 {
@@ -851,7 +871,6 @@ qpu_schedule_instructions(struct vc4_compile *c)
                 struct schedule_node *n = rzalloc(mem_ctx, struct schedule_node);
 
                 n->inst = inst;
-                n->latency = instruction_latency(inst->inst);
 
                 if (reads_uniform(inst->inst)) {
                         n->uniform = next_uniform++;

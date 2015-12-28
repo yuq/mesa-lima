@@ -43,7 +43,7 @@
 
 
 INTRINSIC(load_var, 0, ARR(), true, 0, 1, 0, NIR_INTRINSIC_CAN_ELIMINATE)
-INTRINSIC(store_var, 1, ARR(0), false, 0, 1, 0, 0)
+INTRINSIC(store_var, 1, ARR(0), false, 0, 1, 1, 0)
 INTRINSIC(copy_var, 0, ARR(), false, 0, 2, 0, 0)
 
 /*
@@ -323,13 +323,13 @@ LOAD(push_constant, 1, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDE
 #define STORE(name, srcs, indices, flags) \
    INTRINSIC(store_##name, srcs, ARR(0, 1, 1, 1), false, 0, 0, indices, flags)
 
-/* src[] = { value, offset }. const_index[] = { base } */
-STORE(output, 2, 1, 0)
-/* src[] = { value, vertex, offset }. const_index[] = { base } */
-STORE(per_vertex_output, 3, 1, 0)
+/* src[] = { value, offset }. const_index[] = { base, write_mask } */
+STORE(output, 2, 2, 0)
+/* src[] = { value, vertex, offset }. const_index[] = { base, write_mask } */
+STORE(per_vertex_output, 3, 2, 0)
 /* src[] = { value, block_index, offset }. const_index[] = { write_mask } */
 STORE(ssbo, 3, 1, 0)
 /* src[] = { value, offset }. const_index[] = { base, write_mask } */
-STORE(shared, 2, 1, 0)
+STORE(shared, 2, 2, 0)
 
 LAST_INTRINSIC(store_shared)

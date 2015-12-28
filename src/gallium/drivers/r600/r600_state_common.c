@@ -1377,11 +1377,13 @@ static void r600_update_clip_state(struct r600_context *rctx,
 {
 	if (current->pa_cl_vs_out_cntl != rctx->clip_misc_state.pa_cl_vs_out_cntl ||
 	    current->shader.clip_dist_write != rctx->clip_misc_state.clip_dist_write ||
-	    current->shader.vs_position_window_space != rctx->clip_misc_state.clip_disable) {
-				rctx->clip_misc_state.pa_cl_vs_out_cntl = current->pa_cl_vs_out_cntl;
-				rctx->clip_misc_state.clip_dist_write = current->shader.clip_dist_write;
-				rctx->clip_misc_state.clip_disable = current->shader.vs_position_window_space;
-				r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
+	    current->shader.vs_position_window_space != rctx->clip_misc_state.clip_disable ||
+	    current->shader.vs_out_viewport != rctx->clip_misc_state.vs_out_viewport) {
+		rctx->clip_misc_state.pa_cl_vs_out_cntl = current->pa_cl_vs_out_cntl;
+		rctx->clip_misc_state.clip_dist_write = current->shader.clip_dist_write;
+		rctx->clip_misc_state.clip_disable = current->shader.vs_position_window_space;
+		rctx->clip_misc_state.vs_out_viewport = current->shader.vs_out_viewport;
+		r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
 	}
 }
 
@@ -1656,6 +1658,10 @@ void r600_emit_clip_misc_state(struct r600_context *rctx, struct r600_atom *atom
 	radeon_set_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
 			       state->pa_cl_vs_out_cntl |
 			       (state->clip_plane_enable & state->clip_dist_write));
+	/* reuse needs to be set off if we write oViewport */
+	if (rctx->b.chip_class >= EVERGREEN)
+		radeon_set_context_reg(cs, R_028AB4_VGT_REUSE_OFF,
+				       S_028AB4_REUSE_OFF(state->vs_out_viewport));
 }
 
 static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *dinfo)

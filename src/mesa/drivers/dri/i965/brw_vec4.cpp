@@ -155,6 +155,9 @@ vec4_instruction::is_send_from_grf()
    case SHADER_OPCODE_TYPED_ATOMIC:
    case SHADER_OPCODE_TYPED_SURFACE_READ:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
+   case VEC4_OPCODE_URB_READ:
+   case TCS_OPCODE_URB_WRITE:
+   case SHADER_OPCODE_BARRIER:
       return true;
    default:
       return false;
@@ -184,7 +187,9 @@ bool
 vec4_instruction::has_source_and_destination_hazard() const
 {
    switch (opcode) {
-   /* Most opcodes in the vec4 world use MRFs. */
+   case TCS_OPCODE_SET_INPUT_URB_OFFSETS:
+   case TCS_OPCODE_SET_OUTPUT_URB_OFFSETS:
+      return true;
    default:
       return false;
    }
@@ -204,6 +209,7 @@ vec4_instruction::regs_read(unsigned arg) const
    case SHADER_OPCODE_TYPED_ATOMIC:
    case SHADER_OPCODE_TYPED_SURFACE_READ:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
+   case TCS_OPCODE_URB_WRITE:
       return arg == 0 ? mlen : 1;
 
    case VS_OPCODE_PULL_CONSTANT_LOAD_GEN7:
@@ -281,6 +287,8 @@ vec4_visitor::implied_mrf_writes(vec4_instruction *inst)
       return 0;
    case GS_OPCODE_FF_SYNC:
       return 1;
+   case TCS_OPCODE_URB_WRITE:
+      return 0;
    case SHADER_OPCODE_SHADER_TIME_ADD:
       return 0;
    case SHADER_OPCODE_TEX:

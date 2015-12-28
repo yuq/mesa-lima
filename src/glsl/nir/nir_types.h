@@ -67,7 +67,8 @@ unsigned glsl_get_length(const struct glsl_type *type);
 
 unsigned glsl_get_aoa_size(const struct glsl_type *type);
 
-unsigned glsl_count_attribute_slots(const struct glsl_type *type);
+unsigned glsl_count_attribute_slots(const struct glsl_type *type,
+                                    bool vertex_input_slots);
 
 const char *glsl_get_struct_elem_name(const struct glsl_type *type,
                                       unsigned index);
@@ -92,11 +93,12 @@ bool glsl_sampler_type_is_array(const struct glsl_type *type);
 
 const struct glsl_type *glsl_void_type(void);
 const struct glsl_type *glsl_float_type(void);
+const struct glsl_type *glsl_vec_type(unsigned n);
+const struct glsl_type *glsl_vec4_type(void);
 const struct glsl_type *glsl_int_type(void);
 const struct glsl_type *glsl_uint_type(void);
 const struct glsl_type *glsl_bool_type(void);
 
-const struct glsl_type *glsl_vec4_type(void);
 const struct glsl_type *glsl_scalar_type(enum glsl_base_type base_type);
 const struct glsl_type *glsl_vector_type(enum glsl_base_type base_type,
                                          unsigned components);

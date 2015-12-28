@@ -1133,6 +1133,7 @@ _vtn_variable_store(struct vtn_builder *b,
       store->variables[0] =
          nir_deref_as_var(nir_copy_deref(store, &dest_deref->deref));
       store->num_components = glsl_get_vector_elements(src->type);
+      store->const_index[0] = (1 << store->num_components) - 1;
       store->src[0] = nir_src_for_ssa(src->def);
 
       nir_builder_instr_insert(&b->nb, &store->instr);
@@ -2574,20 +2575,30 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpNot:                   op = nir_op_inot;    break;
 
    case SpvOpAny:
-      switch (src[0]->num_components) {
-      case 1:  op = nir_op_imov;    break;
-      case 2:  op = nir_op_bany2;   break;
-      case 3:  op = nir_op_bany3;   break;
-      case 4:  op = nir_op_bany4;   break;
+      if (src[0]->num_components == 1) {
+         op = nir_op_imov;
+      } else {
+         switch (src[0]->num_components) {
+         case 2:  op = nir_op_bany_inequal2; break;
+         case 3:  op = nir_op_bany_inequal3; break;
+         case 4:  op = nir_op_bany_inequal4; break;
+         }
+         num_inputs = 2;
+         src[1] = nir_imm_int(&b->nb, NIR_FALSE);
       }
       break;
 
    case SpvOpAll:
-      switch (src[0]->num_components) {
-      case 1:  op = nir_op_imov;    break;
-      case 2:  op = nir_op_ball2;   break;
-      case 3:  op = nir_op_ball3;   break;
-      case 4:  op = nir_op_ball4;   break;
+      if (src[0]->num_components == 1) {
+         op = nir_op_imov;
+      } else {
+         switch (src[0]->num_components) {
+         case 2:  op = nir_op_ball_iequal2;  break;
+         case 3:  op = nir_op_ball_iequal3;  break;
+         case 4:  op = nir_op_ball_iequal4;  break;
+         }
+         num_inputs = 2;
+         src[1] = nir_imm_int(&b->nb, NIR_TRUE);
       }
       break;
 

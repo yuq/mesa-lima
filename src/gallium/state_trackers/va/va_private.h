@@ -244,7 +244,6 @@ typedef struct {
    struct {
       struct pipe_resource *resource;
       struct pipe_transfer *transfer;
-      struct pipe_fence_handle *fence;
    } derived_surface;
    unsigned int export_refcount;
    VABufferInfo export_state;
@@ -252,7 +251,6 @@ typedef struct {
 
 typedef struct {
    struct pipe_video_buffer templat, *buffer;
-   struct pipe_fence_handle *fence;
    struct util_dynarray subpics; /* vlVaSubpicture */
 } vlVaSurface;
 

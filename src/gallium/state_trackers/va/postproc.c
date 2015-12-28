@@ -25,25 +25,35 @@
  *
  **************************************************************************/
 
-//#include "pipe/p_video_codec.h"
-
 #include "util/u_handle_table.h"
-//#include "util/u_video.h"
-
-//#include "vl/vl_vlc.h"
-//#include "vl/vl_winsys.h"
 
 #include "va_private.h"
+
+static const VARectangle *
+vlVaRegionDefault(const VARectangle *region, struct pipe_video_buffer *buf,
+		  VARectangle *def)
+{
+   if (region)
+      return region;
+
+   def->x = 0;
+   def->y = 0;
+   def->width = buf->width;
+   def->height = buf->height;
+
+   return def;
+}
 
 VAStatus
 vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
+   VARectangle def_src_region, def_dst_region;
+   const VARectangle *src_region, *dst_region;
    struct u_rect src_rect;
    struct u_rect dst_rect;
    vlVaSurface *src_surface;
    VAProcPipelineParameterBuffer *pipeline_param;
    struct pipe_surface **surfaces;
-   struct pipe_screen *screen;
    struct pipe_surface *psurf;
 
    if (!drv || !context)
@@ -66,27 +76,28 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    if (!surfaces || !surfaces[0])
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
-   screen = drv->pipe->screen;
-
    psurf = surfaces[0];
 
-   src_rect.x0 = pipeline_param->surface_region->x;
-   src_rect.y0 = pipeline_param->surface_region->y;
-   src_rect.x1 = pipeline_param->surface_region->x + pipeline_param->surface_region->width;
-   src_rect.y1 = pipeline_param->surface_region->y + pipeline_param->surface_region->height;
+   src_region = vlVaRegionDefault(pipeline_param->surface_region, src_surface->buffer, &def_src_region);
+   dst_region = vlVaRegionDefault(pipeline_param->output_region, context->target, &def_dst_region);
 
-   dst_rect.x0 = pipeline_param->output_region->x;
-   dst_rect.y0 = pipeline_param->output_region->y;
-   dst_rect.x1 = pipeline_param->output_region->x + pipeline_param->output_region->width;
-   dst_rect.y1 = pipeline_param->output_region->y + pipeline_param->output_region->height;
+   src_rect.x0 = src_region->x;
+   src_rect.y0 = src_region->y;
+   src_rect.x1 = src_region->x + src_region->width;
+   src_rect.y1 = src_region->y + src_region->height;
+
+   dst_rect.x0 = dst_region->x;
+   dst_rect.y0 = dst_region->y;
+   dst_rect.x1 = dst_region->x + dst_region->width;
+   dst_rect.y1 = dst_region->y + dst_region->height;
 
    vl_compositor_clear_layers(&drv->cstate);
    vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, src_surface->buffer, &src_rect, NULL, VL_COMPOSITOR_WEAVE);
    vl_compositor_set_layer_dst_area(&drv->cstate, 0, &dst_rect);
    vl_compositor_render(&drv->cstate, &drv->compositor, psurf, NULL, false);
 
-   screen->fence_reference(screen, &src_surface->fence, NULL);
-   drv->pipe->flush(drv->pipe, &src_surface->fence, 0);
+   // TODO: figure out why this is necessary for DMA-buf sharing
+   drv->pipe->flush(drv->pipe, NULL, 0);
 
    return VA_STATUS_SUCCESS;
 }

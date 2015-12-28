@@ -432,6 +432,8 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
          this->matched_candidate->type->fields.array->matrix_columns;
       const unsigned vector_elements =
          this->matched_candidate->type->fields.array->vector_elements;
+      const unsigned dmul =
+         this->matched_candidate->type->fields.array->is_double() ? 2 : 1;
       unsigned actual_array_size;
       switch (this->lowered_builtin_array_variable) {
       case clip_distance:
@@ -459,7 +461,7 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
             return false;
          }
          unsigned array_elem_size = this->lowered_builtin_array_variable ?
-            1 : vector_elements * matrix_cols;
+            1 : vector_elements * matrix_cols * dmul;
          fine_location += array_elem_size * this->array_subscript;
          this->size = 1;
       } else {
@@ -519,7 +521,6 @@ tfeedback_decl::get_num_outputs() const
    if (!this->is_varying()) {
       return 0;
    }
-
    return (this->num_components() + this->location_frac + 3)/4;
 }
 
@@ -968,6 +969,8 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
       } else {
          slots = type->matrix_columns;
       }
+      if (type->without_array()->is_dual_slot_double())
+         slots *= 2;
       this->matches[this->num_matches].num_components = 4 * slots;
    } else {
       this->matches[this->num_matches].num_components
@@ -1712,7 +1715,8 @@ check_against_output_limit(struct gl_context *ctx,
 
       if (var && var->data.mode == ir_var_shader_out &&
           var_counts_against_varying_limit(producer->Stage, var)) {
-         output_vectors += var->type->count_attribute_slots();
+         /* outputs for fragment shader can't be doubles */
+         output_vectors += var->type->count_attribute_slots(false);
       }
    }
 
@@ -1753,7 +1757,8 @@ check_against_input_limit(struct gl_context *ctx,
 
       if (var && var->data.mode == ir_var_shader_in &&
           var_counts_against_varying_limit(consumer->Stage, var)) {
-         input_vectors += var->type->count_attribute_slots();
+         /* vertex inputs aren't varying counted */
+         input_vectors += var->type->count_attribute_slots(false);
       }
    }
 

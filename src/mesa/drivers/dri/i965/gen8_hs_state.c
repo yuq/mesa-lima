@@ -30,9 +30,8 @@ static void
 gen8_upload_hs_state(struct brw_context *brw)
 {
    const struct brw_stage_state *stage_state = &brw->tcs.base;
-   /* BRW_NEW_TESS_CTRL_PROGRAM */
-   bool active = brw->tess_ctrl_program;
-   assert(!active || brw->tess_eval_program);
+   /* BRW_NEW_TESS_PROGRAMS */
+   bool active = brw->tess_eval_program;
    /* BRW_NEW_HS_PROG_DATA */
    const struct brw_vue_prog_data *prog_data = &brw->tcs.prog_data->base;
 
@@ -84,7 +83,7 @@ const struct brw_tracked_state gen8_hs_state = {
       .mesa  = 0,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_TCS_PROG_DATA |
-               BRW_NEW_TESS_CTRL_PROGRAM,
+               BRW_NEW_TESS_PROGRAMS,
    },
    .emit = gen8_upload_hs_state,
 };

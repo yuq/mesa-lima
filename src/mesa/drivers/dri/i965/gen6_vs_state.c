@@ -65,7 +65,8 @@ gen6_upload_push_constants(struct brw_context *brw,
        * basic type of PROGRAM_STATE_VAR.
        */
       /* XXX: Should this happen somewhere before to get our state flag set? */
-      _mesa_load_state_parameters(ctx, prog->Parameters);
+      if (prog)
+         _mesa_load_state_parameters(ctx, prog->Parameters);
 
       gl_constant_value *param;
       unsigned i;

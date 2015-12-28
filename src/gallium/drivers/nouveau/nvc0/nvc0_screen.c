@@ -22,6 +22,7 @@
 
 #include <xf86drm.h>
 #include <nouveau_drm.h>
+#include <nvif/class.h>
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
 #include "pipe/p_screen.h"
@@ -428,6 +429,7 @@ nvc0_screen_destroy(struct pipe_screen *pscreen)
    if (screen->pm.prog) {
       screen->pm.prog->code = NULL; /* hardcoded, don't FREE */
       nvc0_program_destroy(NULL, screen->pm.prog);
+      FREE(screen->pm.prog);
    }
 
    nouveau_bo_ref(NULL, &screen->text);
@@ -617,11 +619,10 @@ nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
 #define FAIL_SCREEN_INIT(str, err)                    \
    do {                                               \
       NOUVEAU_ERR(str, err);                          \
-      nvc0_screen_destroy(pscreen);                   \
-      return NULL;                                    \
+      goto fail;                                      \
    } while(0)
 
-struct pipe_screen *
+struct nouveau_screen *
 nvc0_screen_create(struct nouveau_device *dev)
 {
    struct nvc0_screen *screen;
@@ -650,6 +651,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    if (!screen)
       return NULL;
    pscreen = &screen->base.base;
+   pscreen->destroy = nvc0_screen_destroy;
 
    ret = nouveau_screen_init(&screen->base, dev);
    if (ret) {
@@ -672,7 +674,6 @@ nvc0_screen_create(struct nouveau_device *dev)
       screen->base.vidmem_bindings = 0;
    }
 
-   pscreen->destroy = nvc0_screen_destroy;
    pscreen->context_create = nvc0_create;
    pscreen->is_format_supported = nvc0_screen_is_format_supported;
    pscreen->get_param = nvc0_screen_get_param;
@@ -687,7 +688,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    screen->base.base.is_video_format_supported = nouveau_vp3_screen_video_supported;
 
    flags = NOUVEAU_BO_GART | NOUVEAU_BO_MAP;
-   if (dev->drm_version >= 0x01000202)
+   if (screen->base.drm->version >= 0x01000202)
       flags |= NOUVEAU_BO_COHERENT;
 
    ret = nouveau_bo_new(dev, flags, 0, 4096, NULL, &screen->fence.bo);
@@ -699,12 +700,13 @@ nvc0_screen_create(struct nouveau_device *dev)
    screen->base.fence.update = nvc0_screen_fence_update;
 
 
-   ret = nouveau_object_new(chan,
-                            (dev->chipset < 0xe0) ? 0x1f906e : 0x906e, 0x906e,
-                            NULL, 0, &screen->nvsw);
+   ret = nouveau_object_new(chan, (dev->chipset < 0xe0) ? 0x1f906e : 0x906e,
+                            NVIF_CLASS_SW_GF100, NULL, 0, &screen->nvsw);
    if (ret)
       FAIL_SCREEN_INIT("Error creating SW object: %d\n", ret);
 
+   BEGIN_NVC0(push, SUBC_SW(NV01_SUBCHAN_OBJECT), 1);
+   PUSH_DATA (push, screen->nvsw->handle);
 
    switch (dev->chipset & ~0xf) {
    case 0x110:
@@ -811,10 +813,11 @@ nvc0_screen_create(struct nouveau_device *dev)
       PUSH_DATA (push, 0x17);
    }
 
-   IMMED_NVC0(push, NVC0_3D(ZETA_COMP_ENABLE), dev->drm_version >= 0x01000101);
+   IMMED_NVC0(push, NVC0_3D(ZETA_COMP_ENABLE),
+                    screen->base.drm->version >= 0x01000101);
    BEGIN_NVC0(push, NVC0_3D(RT_COMP_ENABLE(0)), 8);
    for (i = 0; i < 8; ++i)
-           PUSH_DATA(push, dev->drm_version >= 0x01000101);
+           PUSH_DATA(push, screen->base.drm->version >= 0x01000101);
 
    BEGIN_NVC0(push, NVC0_3D(RT_CONTROL), 1);
    PUSH_DATA (push, 1);
@@ -910,7 +913,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATAh(push, screen->uniform_bo->offset + (5 << 16) + (6 << 9));
    PUSH_DATA (push, screen->uniform_bo->offset + (5 << 16) + (6 << 9));
 
-   if (dev->drm_version >= 0x01000101) {
+   if (screen->base.drm->version >= 0x01000101) {
       ret = nouveau_getparam(dev, NOUVEAU_GETPARAM_GRAPH_UNITS, &value);
       if (ret) {
          NOUVEAU_ERR("NOUVEAU_GETPARAM_GRAPH_UNITS failed.\n");
@@ -1061,11 +1064,11 @@ nvc0_screen_create(struct nouveau_device *dev)
 
    nouveau_fence_new(&screen->base, &screen->base.fence.current, false);
 
-   return pscreen;
+   return &screen->base;
 
 fail:
-   nvc0_screen_destroy(pscreen);
-   return NULL;
+   screen->base.base.context_create = NULL;
+   return &screen->base;
 }
 
 int

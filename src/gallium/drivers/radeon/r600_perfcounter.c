@@ -202,9 +202,6 @@ static void r600_pc_query_add_result(struct r600_common_context *ctx,
 	for (i = 0; i < query->num_counters; ++i) {
 		struct r600_pc_counter *counter = &query->counters[i];
 
-		if (counter->base == ~0)
-			continue;
-
 		for (j = 0; j < counter->dwords; ++j) {
 			uint32_t value = results[counter->base + j * counter->stride];
 			result->batch[i].u32 += value;

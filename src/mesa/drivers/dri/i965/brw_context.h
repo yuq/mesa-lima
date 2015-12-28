@@ -179,8 +179,7 @@ enum brw_state_id {
    BRW_STATE_URB_FENCE = BRW_MAX_CACHE,
    BRW_STATE_FRAGMENT_PROGRAM,
    BRW_STATE_GEOMETRY_PROGRAM,
-   BRW_STATE_TESS_CTRL_PROGRAM,
-   BRW_STATE_TESS_EVAL_PROGRAM,
+   BRW_STATE_TESS_PROGRAMS,
    BRW_STATE_VERTEX_PROGRAM,
    BRW_STATE_CURBE_OFFSETS,
    BRW_STATE_REDUCED_PRIMITIVE,
@@ -192,6 +191,7 @@ enum brw_state_id {
    BRW_STATE_BINDING_TABLE_POINTERS,
    BRW_STATE_INDICES,
    BRW_STATE_VERTICES,
+   BRW_STATE_DEFAULT_TESS_LEVELS,
    BRW_STATE_BATCH,
    BRW_STATE_INDEX_BUFFER,
    BRW_STATE_VS_CONSTBUF,
@@ -262,8 +262,7 @@ enum brw_state_id {
 #define BRW_NEW_URB_FENCE               (1ull << BRW_STATE_URB_FENCE)
 #define BRW_NEW_FRAGMENT_PROGRAM        (1ull << BRW_STATE_FRAGMENT_PROGRAM)
 #define BRW_NEW_GEOMETRY_PROGRAM        (1ull << BRW_STATE_GEOMETRY_PROGRAM)
-#define BRW_NEW_TESS_EVAL_PROGRAM       (1ull << BRW_STATE_TESS_EVAL_PROGRAM)
-#define BRW_NEW_TESS_CTRL_PROGRAM       (1ull << BRW_STATE_TESS_CTRL_PROGRAM)
+#define BRW_NEW_TESS_PROGRAMS           (1ull << BRW_STATE_TESS_PROGRAMS)
 #define BRW_NEW_VERTEX_PROGRAM          (1ull << BRW_STATE_VERTEX_PROGRAM)
 #define BRW_NEW_CURBE_OFFSETS           (1ull << BRW_STATE_CURBE_OFFSETS)
 #define BRW_NEW_REDUCED_PRIMITIVE       (1ull << BRW_STATE_REDUCED_PRIMITIVE)
@@ -275,6 +274,7 @@ enum brw_state_id {
 #define BRW_NEW_BINDING_TABLE_POINTERS  (1ull << BRW_STATE_BINDING_TABLE_POINTERS)
 #define BRW_NEW_INDICES                 (1ull << BRW_STATE_INDICES)
 #define BRW_NEW_VERTICES                (1ull << BRW_STATE_VERTICES)
+#define BRW_NEW_DEFAULT_TESS_LEVELS     (1ull << BRW_STATE_DEFAULT_TESS_LEVELS)
 /**
  * Used for any batch entry with a relocated pointer that will be used
  * by any 3D rendering.
@@ -1008,6 +1008,8 @@ struct brw_context
    struct {
       GLuint vsize;		/* vertex size plus header in urb registers */
       GLuint gsize;	        /* GS output size in urb registers */
+      GLuint hsize;             /* Tessellation control output size in urb registers */
+      GLuint dsize;             /* Tessellation evaluation output size in urb registers */
       GLuint csize;		/* constant buffer size in urb registers */
       GLuint sfsize;		/* setup data size in urb registers */
 
@@ -1020,12 +1022,16 @@ struct brw_context
       GLuint max_gs_entries;	/* Maximum number of GS entries */
 
       GLuint nr_vs_entries;
+      GLuint nr_hs_entries;
+      GLuint nr_ds_entries;
       GLuint nr_gs_entries;
       GLuint nr_clip_entries;
       GLuint nr_sf_entries;
       GLuint nr_cs_entries;
 
       GLuint vs_start;
+      GLuint hs_start;
+      GLuint ds_start;
       GLuint gs_start;
       GLuint clip_start;
       GLuint sf_start;
@@ -1042,6 +1048,11 @@ struct brw_context
        * URB space for the GS.
        */
       bool gs_present;
+
+      /* True if the most recently sent _3DSTATE_URB message allocated
+       * URB space for the HS and DS.
+       */
+      bool tess_present;
    } urb;
 
 
@@ -1648,12 +1659,18 @@ void gen8_emit_3dstate_sample_pattern(struct brw_context *brw);
 /* gen7_urb.c */
 void
 gen7_emit_push_constant_state(struct brw_context *brw, unsigned vs_size,
+                              unsigned hs_size, unsigned ds_size,
                               unsigned gs_size, unsigned fs_size);
 
 void
 gen7_emit_urb_state(struct brw_context *brw,
-                    unsigned nr_vs_entries, unsigned vs_size,
-                    unsigned vs_start, unsigned nr_gs_entries,
+                    unsigned nr_vs_entries,
+                    unsigned vs_size, unsigned vs_start,
+                    unsigned nr_hs_entries,
+                    unsigned hs_size, unsigned hs_start,
+                    unsigned nr_ds_entries,
+                    unsigned ds_size, unsigned ds_start,
+                    unsigned nr_gs_entries,
                     unsigned gs_size, unsigned gs_start);
 
 
@@ -1685,6 +1702,18 @@ static inline const struct brw_vertex_program *
 brw_vertex_program_const(const struct gl_vertex_program *p)
 {
    return (const struct brw_vertex_program *) p;
+}
+
+static inline struct brw_tess_ctrl_program *
+brw_tess_ctrl_program(struct gl_tess_ctrl_program *p)
+{
+   return (struct brw_tess_ctrl_program *) p;
+}
+
+static inline struct brw_tess_eval_program *
+brw_tess_eval_program(struct gl_tess_eval_program *p)
+{
+   return (struct brw_tess_eval_program *) p;
 }
 
 static inline struct brw_geometry_program *

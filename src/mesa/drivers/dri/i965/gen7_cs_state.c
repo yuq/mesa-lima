@@ -141,7 +141,7 @@ brw_upload_cs_state(struct brw_context *brw)
       BEGIN_BATCH(4);
       OUT_BATCH(MEDIA_CURBE_LOAD << 16 | (4 - 2));
       OUT_BATCH(0);
-      OUT_BATCH(reg_aligned_constant_size * threads);
+      OUT_BATCH(ALIGN(reg_aligned_constant_size * threads, 64));
       OUT_BATCH(stage_state->push_const_offset);
       ADVANCE_BATCH();
    }
@@ -249,8 +249,8 @@ brw_upload_cs_push_constants(struct brw_context *brw,
 
       param = (gl_constant_value*)
          brw_state_batch(brw, type,
-                         reg_aligned_constant_size * threads,
-                         32, &stage_state->push_const_offset);
+                         ALIGN(reg_aligned_constant_size * threads, 64),
+                         64, &stage_state->push_const_offset);
       assert(param);
 
       STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));

@@ -11,10 +11,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    398 bytes, from 2015-09-24 17:25:31)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1453 bytes, from 2015-05-20 20:03:07)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2015-05-20 20:03:14)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10755 bytes, from 2015-09-14 20:46:55)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14968 bytes, from 2015-05-20 20:12:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  68291 bytes, from 2015-11-17 16:39:59)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  64038 bytes, from 2015-11-17 16:37:36)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  11518 bytes, from 2015-11-24 14:39:00)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  15149 bytes, from 2015-11-20 16:22:25)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  69600 bytes, from 2015-11-24 14:39:00)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  67220 bytes, from 2015-12-13 17:58:09)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2015 by the following authors:
@@ -157,58 +157,62 @@ enum a4xx_vtx_fmt {
 	VFMT4_10_10_10_2_UNORM = 57,
 	VFMT4_10_10_10_2_SINT = 58,
 	VFMT4_10_10_10_2_SNORM = 59,
+	VFMT4_2_10_10_10_UINT = 60,
+	VFMT4_2_10_10_10_UNORM = 61,
+	VFMT4_2_10_10_10_SINT = 62,
+	VFMT4_2_10_10_10_SNORM = 63,
 };
 
 enum a4xx_tex_fmt {
-	TFMT4_5_6_5_UNORM = 11,
-	TFMT4_5_5_5_1_UNORM = 9,
+	TFMT4_A8_UNORM = 3,
+	TFMT4_8_UNORM = 4,
+	TFMT4_8_SNORM = 5,
+	TFMT4_8_UINT = 6,
+	TFMT4_8_SINT = 7,
 	TFMT4_4_4_4_4_UNORM = 8,
-	TFMT4_X8Z24_UNORM = 71,
+	TFMT4_5_5_5_1_UNORM = 9,
+	TFMT4_5_6_5_UNORM = 11,
+	TFMT4_L8_A8_UNORM = 13,
+	TFMT4_8_8_UNORM = 14,
+	TFMT4_8_8_SNORM = 15,
+	TFMT4_8_8_UINT = 16,
+	TFMT4_8_8_SINT = 17,
+	TFMT4_16_UNORM = 18,
+	TFMT4_16_SNORM = 19,
+	TFMT4_16_FLOAT = 20,
+	TFMT4_16_UINT = 21,
+	TFMT4_16_SINT = 22,
+	TFMT4_8_8_8_8_UNORM = 28,
+	TFMT4_8_8_8_8_SNORM = 29,
+	TFMT4_8_8_8_8_UINT = 30,
+	TFMT4_8_8_8_8_SINT = 31,
+	TFMT4_9_9_9_E5_FLOAT = 32,
 	TFMT4_10_10_10_2_UNORM = 33,
 	TFMT4_10_10_10_2_UINT = 34,
-	TFMT4_A8_UNORM = 3,
-	TFMT4_L8_A8_UNORM = 13,
-	TFMT4_8_UNORM = 4,
-	TFMT4_8_8_UNORM = 14,
-	TFMT4_8_8_8_8_UNORM = 28,
-	TFMT4_8_SNORM = 5,
-	TFMT4_8_8_SNORM = 15,
-	TFMT4_8_8_8_8_SNORM = 29,
-	TFMT4_8_UINT = 6,
-	TFMT4_8_8_UINT = 16,
-	TFMT4_8_8_8_8_UINT = 30,
-	TFMT4_8_SINT = 7,
-	TFMT4_8_8_SINT = 17,
-	TFMT4_8_8_8_8_SINT = 31,
-	TFMT4_16_UNORM = 18,
+	TFMT4_11_11_10_FLOAT = 37,
 	TFMT4_16_16_UNORM = 38,
-	TFMT4_16_16_16_16_UNORM = 51,
-	TFMT4_16_SNORM = 19,
 	TFMT4_16_16_SNORM = 39,
-	TFMT4_16_16_16_16_SNORM = 52,
-	TFMT4_16_UINT = 21,
-	TFMT4_16_16_UINT = 41,
-	TFMT4_16_16_16_16_UINT = 54,
-	TFMT4_16_SINT = 22,
-	TFMT4_16_16_SINT = 42,
-	TFMT4_16_16_16_16_SINT = 55,
-	TFMT4_32_UINT = 44,
-	TFMT4_32_32_UINT = 57,
-	TFMT4_32_32_32_32_UINT = 64,
-	TFMT4_32_SINT = 45,
-	TFMT4_32_32_SINT = 58,
-	TFMT4_32_32_32_32_SINT = 65,
-	TFMT4_16_FLOAT = 20,
 	TFMT4_16_16_FLOAT = 40,
-	TFMT4_16_16_16_16_FLOAT = 53,
+	TFMT4_16_16_UINT = 41,
+	TFMT4_16_16_SINT = 42,
 	TFMT4_32_FLOAT = 43,
+	TFMT4_32_UINT = 44,
+	TFMT4_32_SINT = 45,
+	TFMT4_16_16_16_16_UNORM = 51,
+	TFMT4_16_16_16_16_SNORM = 52,
+	TFMT4_16_16_16_16_FLOAT = 53,
+	TFMT4_16_16_16_16_UINT = 54,
+	TFMT4_16_16_16_16_SINT = 55,
 	TFMT4_32_32_FLOAT = 56,
-	TFMT4_32_32_32_32_FLOAT = 63,
+	TFMT4_32_32_UINT = 57,
+	TFMT4_32_32_SINT = 58,
 	TFMT4_32_32_32_FLOAT = 59,
 	TFMT4_32_32_32_UINT = 60,
 	TFMT4_32_32_32_SINT = 61,
-	TFMT4_9_9_9_E5_FLOAT = 32,
-	TFMT4_11_11_10_FLOAT = 37,
+	TFMT4_32_32_32_32_FLOAT = 63,
+	TFMT4_32_32_32_32_UINT = 64,
+	TFMT4_32_32_32_32_SINT = 65,
+	TFMT4_X8Z24_UNORM = 71,
 	TFMT4_DXT1 = 86,
 	TFMT4_DXT3 = 87,
 	TFMT4_DXT5 = 88,
@@ -800,6 +804,7 @@ static inline uint32_t A4XX_RB_DEPTH_CONTROL_ZFUNC(enum adreno_compare_func val)
 }
 #define A4XX_RB_DEPTH_CONTROL_BF_ENABLE				0x00000080
 #define A4XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE			0x00010000
+#define A4XX_RB_DEPTH_CONTROL_FORCE_FRAGZ_TO_FS			0x00020000
 #define A4XX_RB_DEPTH_CONTROL_Z_TEST_ENABLE			0x80000000
 
 #define REG_A4XX_RB_DEPTH_CLEAR					0x00002102
@@ -1060,6 +1065,9 @@ static inline uint32_t REG_A4XX_RBBM_CLOCK_DELAY_TP_REG(uint32_t i0) { return 0x
 
 #define REG_A4XX_RBBM_CFG_DEBBUS_SEL_D				0x0000004d
 
+#define REG_A4XX_RBBM_POWER_CNTL_IP				0x00000098
+#define A4XX_RBBM_POWER_CNTL_IP_SW_COLLAPSE			0x00000001
+
 #define REG_A4XX_RBBM_PERFCTR_CP_0_LO				0x0000009c
 
 static inline uint32_t REG_A4XX_RBBM_CLOCK_CTL_SP(uint32_t i0) { return 0x00000068 + 0x1*i0; }
@@ -1109,6 +1117,10 @@ static inline uint32_t REG_A4XX_RBBM_CLOCK_HYST_RB_MARB_CCU_REG(uint32_t i0) { r
 static inline uint32_t REG_A4XX_RBBM_CLOCK_DELAY_RB_MARB_CCU_L1(uint32_t i0) { return 0x0000008e + 0x1*i0; }
 
 static inline uint32_t REG_A4XX_RBBM_CLOCK_DELAY_RB_MARB_CCU_L1_REG(uint32_t i0) { return 0x0000008e + 0x1*i0; }
+
+#define REG_A4XX_RBBM_SP_REGFILE_SLEEP_CNTL_0			0x00000099
+
+#define REG_A4XX_RBBM_SP_REGFILE_SLEEP_CNTL_1			0x0000009a
 
 #define REG_A4XX_RBBM_PERFCTR_PWR_1_LO				0x00000168
 
@@ -1162,6 +1174,11 @@ static inline uint32_t REG_A4XX_RBBM_CLOCK_DELAY_RB_MARB_CCU_L1_REG(uint32_t i0)
 #define A4XX_RBBM_STATUS_GPU_BUSY				0x80000000
 
 #define REG_A4XX_RBBM_INTERFACE_RRDY_STATUS5			0x0000019f
+
+#define REG_A4XX_RBBM_POWER_STATUS				0x000001b0
+#define A4XX_RBBM_POWER_STATUS_SP_TP_PWR_ON			0x00100000
+
+#define REG_A4XX_RBBM_WAIT_IDLE_CLOCKS_CTL2			0x000001b8
 
 #define REG_A4XX_CP_SCRATCH_UMASK				0x00000228
 
@@ -1264,6 +1281,28 @@ static inline uint32_t REG_A4XX_CP_SCRATCH_REG(uint32_t i0) { return 0x00000578 
 #define REG_A4XX_SP_VS_STATUS					0x00000ec0
 
 #define REG_A4XX_SP_MODE_CONTROL				0x00000ec3
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_0				0x00000ec4
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_1				0x00000ec5
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_2				0x00000ec6
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_3				0x00000ec7
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_4				0x00000ec8
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_5				0x00000ec9
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_6				0x00000eca
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_7				0x00000ecb
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_8				0x00000ecc
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_9				0x00000ecd
+
+#define REG_A4XX_SP_PERFCTR_SP_SEL_10				0x00000ece
 
 #define REG_A4XX_SP_PERFCTR_SP_SEL_11				0x00000ecf
 
@@ -2180,6 +2219,7 @@ static inline uint32_t A4XX_GRAS_SU_POINT_SIZE(float val)
 
 #define REG_A4XX_GRAS_ALPHA_CONTROL				0x00002073
 #define A4XX_GRAS_ALPHA_CONTROL_ALPHA_TEST_ENABLE		0x00000004
+#define A4XX_GRAS_ALPHA_CONTROL_FORCE_FRAGZ_TO_FS		0x00000008
 
 #define REG_A4XX_GRAS_SU_POLY_OFFSET_SCALE			0x00002074
 #define A4XX_GRAS_SU_POLY_OFFSET_SCALE__MASK			0xffffffff

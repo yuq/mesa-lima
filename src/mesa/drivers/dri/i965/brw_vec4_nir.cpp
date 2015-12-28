@@ -327,6 +327,24 @@ vec4_visitor::get_nir_src(nir_src src, unsigned num_components)
    return get_nir_src(src, nir_type_int, num_components);
 }
 
+src_reg
+vec4_visitor::get_indirect_offset(nir_intrinsic_instr *instr)
+{
+   nir_src *offset_src = nir_get_io_offset_src(instr);
+   nir_const_value *const_value = nir_src_as_const_value(*offset_src);
+
+   if (const_value) {
+      /* The only constant offset we should find is 0.  brw_nir.c's
+       * add_const_offset_to_base() will fold other constant offsets
+       * into instr->const_index[0].
+       */
+      assert(const_value->u[0] == 0);
+      return src_reg();
+   }
+
+   return get_nir_src(*offset_src, BRW_REGISTER_TYPE_UD, 1);
+}
+
 void
 vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 {
@@ -650,7 +668,10 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
    case nir_intrinsic_load_vertex_id_zero_base:
    case nir_intrinsic_load_base_vertex:
-   case nir_intrinsic_load_instance_id: {
+   case nir_intrinsic_load_instance_id:
+   case nir_intrinsic_load_invocation_id:
+   case nir_intrinsic_load_tess_level_inner:
+   case nir_intrinsic_load_tess_level_outer: {
       gl_system_value sv = nir_system_value_from_intrinsic(instr->intrinsic);
       src_reg val = src_reg(nir_system_values[sv]);
       assert(val.file != BAD_FILE);
@@ -886,6 +907,59 @@ brw_conditional_for_nir_comparison(nir_op op)
    default:
       unreachable("not reached: bad operation for comparison");
    }
+}
+
+bool
+vec4_visitor::optimize_predicate(nir_alu_instr *instr,
+                                 enum brw_predicate *predicate)
+{
+   if (!instr->src[0].src.is_ssa ||
+       instr->src[0].src.ssa->parent_instr->type != nir_instr_type_alu)
+      return false;
+
+   nir_alu_instr *cmp_instr =
+      nir_instr_as_alu(instr->src[0].src.ssa->parent_instr);
+
+   switch (cmp_instr->op) {
+   case nir_op_bany_fnequal2:
+   case nir_op_bany_inequal2:
+   case nir_op_bany_fnequal3:
+   case nir_op_bany_inequal3:
+   case nir_op_bany_fnequal4:
+   case nir_op_bany_inequal4:
+      *predicate = BRW_PREDICATE_ALIGN16_ANY4H;
+      break;
+   case nir_op_ball_fequal2:
+   case nir_op_ball_iequal2:
+   case nir_op_ball_fequal3:
+   case nir_op_ball_iequal3:
+   case nir_op_ball_fequal4:
+   case nir_op_ball_iequal4:
+      *predicate = BRW_PREDICATE_ALIGN16_ALL4H;
+      break;
+   default:
+      return false;
+   }
+
+   unsigned size_swizzle =
+      brw_swizzle_for_size(nir_op_infos[cmp_instr->op].input_sizes[0]);
+
+   src_reg op[2];
+   assert(nir_op_infos[cmp_instr->op].num_inputs == 2);
+   for (unsigned i = 0; i < 2; i++) {
+      op[i] = get_nir_src(cmp_instr->src[i].src,
+                          nir_op_infos[cmp_instr->op].input_types[i], 4);
+      unsigned base_swizzle =
+         brw_swizzle_for_nir_swizzle(cmp_instr->src[i].swizzle);
+      op[i].swizzle = brw_compose_swizzle(size_swizzle, base_swizzle);
+      op[i].abs = cmp_instr->src[i].abs;
+      op[i].negate = cmp_instr->src[i].negate;
+   }
+
+   emit(CMP(dst_null_d(), op[0], op[1],
+            brw_conditional_for_nir_comparison(cmp_instr->op)));
+
+   return true;
 }
 
 void
@@ -1378,25 +1452,29 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_bcsel:
-      emit(CMP(dst_null_d(), op[0], brw_imm_d(0), BRW_CONDITIONAL_NZ));
-      inst = emit(BRW_OPCODE_SEL, dst, op[1], op[2]);
-      switch (dst.writemask) {
-      case WRITEMASK_X:
-         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_X;
-         break;
-      case WRITEMASK_Y:
-         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Y;
-         break;
-      case WRITEMASK_Z:
-         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Z;
-         break;
-      case WRITEMASK_W:
-         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_W;
-         break;
-      default:
-         inst->predicate = BRW_PREDICATE_NORMAL;
-         break;
+      enum brw_predicate predicate;
+      if (!optimize_predicate(instr, &predicate)) {
+         emit(CMP(dst_null_d(), op[0], brw_imm_d(0), BRW_CONDITIONAL_NZ));
+         switch (dst.writemask) {
+         case WRITEMASK_X:
+            predicate = BRW_PREDICATE_ALIGN16_REPLICATE_X;
+            break;
+         case WRITEMASK_Y:
+            predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Y;
+            break;
+         case WRITEMASK_Z:
+            predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Z;
+            break;
+         case WRITEMASK_W:
+            predicate = BRW_PREDICATE_ALIGN16_REPLICATE_W;
+            break;
+         default:
+            predicate = BRW_PREDICATE_NORMAL;
+            break;
+         }
       }
+      inst = emit(BRW_OPCODE_SEL, dst, op[1], op[2]);
+      inst->predicate = predicate;
       break;
 
    case nir_op_fdot_replicated2:
@@ -1418,20 +1496,6 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst = emit(BRW_OPCODE_DPH, dst, op[0], op[1]);
       inst->saturate = instr->dest.saturate;
       break;
-
-   case nir_op_bany2:
-   case nir_op_bany3:
-   case nir_op_bany4: {
-      unsigned swiz =
-         brw_swizzle_for_size(nir_op_infos[instr->op].input_sizes[0]);
-
-      emit(CMP(dst_null_d(), swizzle(op[0], swiz), brw_imm_d(0),
-               BRW_CONDITIONAL_NZ));
-      emit(MOV(dst, brw_imm_d(0)));
-      inst = emit(MOV(dst, brw_imm_d(~0)));
-      inst->predicate = BRW_PREDICATE_ALIGN16_ANY4H;
-      break;
-   }
 
    case nir_op_fabs:
    case nir_op_iabs:

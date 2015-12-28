@@ -60,7 +60,7 @@ draw_pt_emit_prepare(struct pt_emit *emit,
 
    /* XXX: need to flush to get prim_vbuf.c to release its allocation??
     */
-   draw_do_flush( draw, DRAW_FLUSH_BACKEND );
+   draw_do_flush(draw, DRAW_FLUSH_BACKEND);
 
    /* XXX: may need to defensively reset this later on as clipping can
     * clobber this state in the render backend.
@@ -80,7 +80,7 @@ draw_pt_emit_prepare(struct pt_emit *emit,
       unsigned emit_sz = 0;
       unsigned src_buffer = 0;
       unsigned output_format;
-      unsigned src_offset = (vinfo->attrib[i].src_index * 4 * sizeof(float) );
+      unsigned src_offset = vinfo->attrib[i].src_index * 4 * sizeof(float);
 
       output_format = draw_translate_vinfo_format(vinfo->attrib[i].emit);
       emit_sz = draw_translate_vinfo_size(vinfo->attrib[i].emit);
@@ -89,8 +89,8 @@ draw_pt_emit_prepare(struct pt_emit *emit,
       assert(emit_sz != 0);
 
       if (vinfo->attrib[i].emit == EMIT_1F_PSIZE) {
-	 src_buffer = 1;
-	 src_offset = 0;
+         src_buffer = 1;
+         src_offset = 0;
       }
 
       hw_key.element[i].type = TRANSLATE_ELEMENT_NORMAL;
@@ -138,7 +138,7 @@ draw_pt_emit(struct pt_emit *emit,
 
    /* XXX: need to flush to get prim_vbuf.c to release its allocation??
     */
-   draw_do_flush( draw, DRAW_FLUSH_BACKEND );
+   draw_do_flush(draw, DRAW_FLUSH_BACKEND);
 
    if (vertex_count == 0)
       return;
@@ -152,31 +152,31 @@ draw_pt_emit(struct pt_emit *emit,
                              (ushort)translate->key.output_stride,
                              (ushort)vertex_count);
 
-   hw_verts = render->map_vertices( render );
+   hw_verts = render->map_vertices(render);
    if (!hw_verts) {
       debug_warn_once("map of vertex buffer failed (out of memory?)");
       return;
    }
 
    translate->set_buffer(translate,
-			 0,
-			 vertex_data,
-			 stride,
-			 ~0);
+                         0,
+                         vertex_data,
+                         stride,
+                         ~0);
 
    translate->set_buffer(translate,
-			 1,
-			 &draw->rasterizer->point_size,
-			 0,
-			 ~0);
+                         1,
+                         &draw->rasterizer->point_size,
+                         0,
+                         ~0);
 
    /* fetch/translate vertex attribs to fill hw_verts[] */
    translate->run(translate,
-		  0,
-		  vertex_count,
-                  draw->start_instance,
-                  draw->instance_id,
-		  hw_verts );
+                  0,
+                  vertex_count,
+                  0,
+                  0,
+                  hw_verts);
 
    render->unmap_vertices(render, 0, vertex_count - 1);
 
@@ -212,7 +212,7 @@ draw_pt_emit_linear(struct pt_emit *emit,
 #endif
    /* XXX: need to flush to get prim_vbuf.c to release its allocation??
     */
-   draw_do_flush( draw, DRAW_FLUSH_BACKEND );
+   draw_do_flush(draw, DRAW_FLUSH_BACKEND);
 
    /* XXX: and work out some way to coordinate the render primitive
     * between vbuf.c and here...
@@ -224,35 +224,35 @@ draw_pt_emit_linear(struct pt_emit *emit,
                                   (ushort)count))
       goto fail;
 
-   hw_verts = render->map_vertices( render );
+   hw_verts = render->map_vertices(render);
    if (!hw_verts)
       goto fail;
 
    translate->set_buffer(translate, 0,
-			 vertex_data, stride, count - 1);
+                         vertex_data, stride, count - 1);
 
    translate->set_buffer(translate, 1,
-			 &draw->rasterizer->point_size,
-			 0, ~0);
+                         &draw->rasterizer->point_size,
+                         0, ~0);
 
    translate->run(translate,
                   0,
                   count,
-                  draw->start_instance,
-                  draw->instance_id,
+                  0,
+                  0,
                   hw_verts);
 
    if (0) {
       unsigned i;
       for (i = 0; i < count; i++) {
          debug_printf("\n\n%s vertex %d:\n", __FUNCTION__, i);
-         draw_dump_emitted_vertex( emit->vinfo,
-                                   (const uint8_t *)hw_verts +
-                                   translate->key.output_stride * i );
+         draw_dump_emitted_vertex(emit->vinfo,
+                                  (const uint8_t *)hw_verts +
+                                  translate->key.output_stride * i);
       }
    }
 
-   render->unmap_vertices( render, 0, count - 1 );
+   render->unmap_vertices(render, 0, count - 1);
 
    for (start = i = 0;
         i < prim_info->primitive_count;
@@ -262,7 +262,7 @@ draw_pt_emit_linear(struct pt_emit *emit,
                           start,
                           prim_info->primitive_lengths[i]);
    }
-   
+
    render->release_vertices(render);
 
    return;

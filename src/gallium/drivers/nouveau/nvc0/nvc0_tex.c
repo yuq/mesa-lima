@@ -193,9 +193,7 @@ nvc0_create_texture_view(struct pipe_context *pipe,
       tic[2] |= NV50_TIC_2_TARGET_CUBE_ARRAY;
       break;
    default:
-      NOUVEAU_ERR("unexpected/invalid texture target: %d\n",
-                  mt->base.base.target);
-      return false;
+      unreachable("unexpected/invalid texture target");
    }
 
    tic[3] = (flags & NV50_TEXVIEW_FILTER_MSAA8) ? 0x20000000 : 0x00300000;

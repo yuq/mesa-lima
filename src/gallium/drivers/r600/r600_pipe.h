@@ -152,6 +152,7 @@ struct r600_clip_misc_state {
 	unsigned clip_plane_enable; /* from rasterizer    */
 	unsigned clip_dist_write;   /* from vertex shader */
 	boolean clip_disable;       /* from vertex shader */
+	boolean vs_out_viewport;    /* from vertex shader */
 };
 
 struct r600_alphatest_state {

@@ -123,6 +123,7 @@ fs_visitor::nir_setup_outputs()
 
       switch (stage) {
       case MESA_SHADER_VERTEX:
+      case MESA_SHADER_TESS_EVAL:
       case MESA_SHADER_GEOMETRY: {
          unsigned location = var->data.location;
          nir_setup_single_output_varying(&reg, var->type, &location);
@@ -442,6 +443,9 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
       switch (stage) {
       case MESA_SHADER_VERTEX:
          nir_emit_vs_intrinsic(abld, nir_instr_as_intrinsic(instr));
+         break;
+      case MESA_SHADER_TESS_EVAL:
+         nir_emit_tes_intrinsic(abld, nir_instr_as_intrinsic(instr));
          break;
       case MESA_SHADER_GEOMETRY:
          nir_emit_gs_intrinsic(abld, nir_instr_as_intrinsic(instr));
@@ -841,12 +845,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_fdot2:
    case nir_op_fdot3:
    case nir_op_fdot4:
-   case nir_op_bany2:
-   case nir_op_bany3:
-   case nir_op_bany4:
-   case nir_op_ball2:
-   case nir_op_ball3:
-   case nir_op_ball4:
    case nir_op_ball_fequal2:
    case nir_op_ball_iequal2:
    case nir_op_ball_fequal3:
@@ -1715,6 +1713,24 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
    }
 }
 
+fs_reg
+fs_visitor::get_indirect_offset(nir_intrinsic_instr *instr)
+{
+   nir_src *offset_src = nir_get_io_offset_src(instr);
+   nir_const_value *const_value = nir_src_as_const_value(*offset_src);
+
+   if (const_value) {
+      /* The only constant offset we should find is 0.  brw_nir.c's
+       * add_const_offset_to_base() will fold other constant offsets
+       * into instr->const_index[0].
+       */
+      assert(const_value->u[0] == 0);
+      return fs_reg();
+   }
+
+   return get_nir_src(*offset_src);
+}
+
 void
 fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
                                   nir_intrinsic_instr *instr)
@@ -1740,6 +1756,106 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
       break;
    }
 
+   default:
+      nir_emit_intrinsic(bld, instr);
+      break;
+   }
+}
+
+void
+fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
+                                   nir_intrinsic_instr *instr)
+{
+   assert(stage == MESA_SHADER_TESS_EVAL);
+   struct brw_tes_prog_data *tes_prog_data = (struct brw_tes_prog_data *) prog_data;
+
+   fs_reg dest;
+   if (nir_intrinsic_infos[instr->intrinsic].has_dest)
+      dest = get_nir_dest(instr->dest);
+
+   switch (instr->intrinsic) {
+   case nir_intrinsic_load_primitive_id:
+      bld.MOV(dest, fs_reg(brw_vec1_grf(0, 1)));
+      break;
+   case nir_intrinsic_load_tess_coord:
+      /* gl_TessCoord is part of the payload in g1-3 */
+      for (unsigned i = 0; i < 3; i++) {
+         bld.MOV(offset(dest, bld, i), fs_reg(brw_vec8_grf(1 + i, 0)));
+      }
+      break;
+
+   case nir_intrinsic_load_tess_level_outer:
+      /* When the TES reads gl_TessLevelOuter, we ensure that the patch header
+       * appears as a push-model input.  So, we can simply use the ATTR file
+       * rather than issuing URB read messages.  The data is stored in the
+       * high DWords in reverse order - DWord 7 contains .x, DWord 6 contains
+       * .y, and so on.
+       */
+      switch (tes_prog_data->domain) {
+      case BRW_TESS_DOMAIN_QUAD:
+         for (unsigned i = 0; i < 4; i++)
+            bld.MOV(offset(dest, bld, i), component(fs_reg(ATTR, 0), 7 - i));
+         break;
+      case BRW_TESS_DOMAIN_TRI:
+         for (unsigned i = 0; i < 3; i++)
+            bld.MOV(offset(dest, bld, i), component(fs_reg(ATTR, 0), 7 - i));
+         break;
+      case BRW_TESS_DOMAIN_ISOLINE:
+         for (unsigned i = 0; i < 2; i++)
+            bld.MOV(offset(dest, bld, i), component(fs_reg(ATTR, 0), 7 - i));
+         break;
+      }
+      break;
+
+   case nir_intrinsic_load_tess_level_inner:
+      /* When the TES reads gl_TessLevelInner, we ensure that the patch header
+       * appears as a push-model input.  So, we can simply use the ATTR file
+       * rather than issuing URB read messages.
+       */
+      switch (tes_prog_data->domain) {
+      case BRW_TESS_DOMAIN_QUAD:
+         bld.MOV(dest, component(fs_reg(ATTR, 0), 3));
+         bld.MOV(offset(dest, bld, 1), component(fs_reg(ATTR, 0), 2));
+         break;
+      case BRW_TESS_DOMAIN_TRI:
+         bld.MOV(dest, component(fs_reg(ATTR, 0), 4));
+         break;
+      case BRW_TESS_DOMAIN_ISOLINE:
+         /* ignore - value is undefined */
+         break;
+      }
+      break;
+
+   case nir_intrinsic_load_input:
+   case nir_intrinsic_load_per_vertex_input: {
+      fs_reg indirect_offset = get_indirect_offset(instr);
+      unsigned imm_offset = instr->const_index[0];
+
+      fs_inst *inst;
+      if (indirect_offset.file == BAD_FILE) {
+         /* Replicate the patch handle to all enabled channels */
+         fs_reg patch_handle = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+         bld.MOV(patch_handle, retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD));
+
+         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dest, patch_handle);
+         inst->mlen = 1;
+      } else {
+         /* Indirect indexing - use per-slot offsets as well. */
+         const fs_reg srcs[] = {
+            retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD),
+            indirect_offset
+         };
+         fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+         bld.LOAD_PAYLOAD(payload, srcs, ARRAY_SIZE(srcs), 0);
+
+         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dest, payload);
+         inst->mlen = 2;
+      }
+      inst->offset = imm_offset;
+      inst->base_mrf = -1;
+      inst->regs_written = instr->num_components;
+      break;
+   }
    default:
       nir_emit_intrinsic(bld, instr);
       break;

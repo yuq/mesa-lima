@@ -116,6 +116,12 @@ static void
 nvc0_hw_destroy_query(struct nvc0_context *nvc0, struct nvc0_query *q)
 {
    struct nvc0_hw_query *hq = nvc0_hw_query(q);
+
+   if (hq->funcs && hq->funcs->destroy_query) {
+      hq->funcs->destroy_query(nvc0, hq);
+      return;
+   }
+
    nvc0_hw_query_allocate(nvc0, q, 0);
    nouveau_fence_ref(NULL, &hq->fence);
    FREE(hq);

@@ -116,6 +116,9 @@ anv_shader_compile_to_nir(struct anv_device *device,
 
       nir_inline_functions(nir);
       nir_validate_shader(nir);
+
+      nir_lower_system_values(nir);
+      nir_validate_shader(nir);
    }
 
    /* Vulkan uses the separate-shader linking model */
@@ -379,8 +382,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    prog_data->binding_table.image_start = bias;
 
    /* Finish the optimization and compilation process */
-   nir = brw_lower_nir(nir, &pipeline->device->info, NULL,
-                       compiler->scalar_stage[stage]);
+   nir = brw_nir_lower_io(nir, &pipeline->device->info,
+                          compiler->scalar_stage[stage]);
 
    /* nir_lower_io will only handle the push constants; we need to set this
     * to the full number of possible uniforms.

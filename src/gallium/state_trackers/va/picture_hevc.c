@@ -159,11 +159,6 @@ void vlVaHandlePictureParameterBufferHEVC(vlVaDriver *drv, vlVaContext *context,
    for (i = 0 ; i < 15 ; i++) {
       context->desc.h265.PicOrderCntVal[i] = hevc->ReferenceFrames[i].pic_order_cnt;
 
-      unsigned int index = hevc->ReferenceFrames[i].picture_id & 0x7F;
-
-      if (index == 0x7F)
-         continue;
-
       vlVaGetReferenceFrame(drv, hevc->ReferenceFrames[i].picture_id, &context->desc.h265.ref[i]);
 
       if ((hevc->ReferenceFrames[i].flags & VA_PICTURE_HEVC_RPS_ST_CURR_BEFORE) && (iBefore < 8)) {

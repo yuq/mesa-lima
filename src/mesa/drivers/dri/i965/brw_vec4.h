@@ -314,6 +314,8 @@ public:
 
    bool is_high_sampler(src_reg sampler);
 
+   bool optimize_predicate(nir_alu_instr *instr, enum brw_predicate *predicate);
+
    virtual void emit_nir_code();
    virtual void nir_setup_uniforms();
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
@@ -341,6 +343,7 @@ public:
                        unsigned num_components = 4);
    src_reg get_nir_src(nir_src src,
                        unsigned num_components = 4);
+   src_reg get_indirect_offset(nir_intrinsic_instr *instr);
 
    virtual dst_reg *make_reg_for_system_value(int location,
                                               const glsl_type *type) = 0;

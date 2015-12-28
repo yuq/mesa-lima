@@ -1501,6 +1501,7 @@ private:
    void handleSLCT(Instruction *);
    void handleLOGOP(Instruction *);
    void handleCVT_NEG(Instruction *);
+   void handleCVT_CVT(Instruction *);
    void handleCVT_EXTBF(Instruction *);
    void handleSUCLAMP(Instruction *);
 
@@ -1792,6 +1793,47 @@ AlgebraicOpt::handleCVT_NEG(Instruction *cvt)
    delete_Instruction(prog, cvt);
 }
 
+// F2I(TRUNC()) and so on can be expressed as a single CVT. If the earlier CVT
+// does a type conversion, this becomes trickier as there might be range
+// changes/etc. We could handle those in theory as long as the range was being
+// reduced or kept the same.
+void
+AlgebraicOpt::handleCVT_CVT(Instruction *cvt)
+{
+   Instruction *insn = cvt->getSrc(0)->getInsn();
+   RoundMode rnd = insn->rnd;
+
+   if (insn->saturate ||
+       insn->subOp ||
+       insn->dType != insn->sType ||
+       insn->dType != cvt->sType)
+      return;
+
+   switch (insn->op) {
+   case OP_CEIL:
+      rnd = ROUND_PI;
+      break;
+   case OP_FLOOR:
+      rnd = ROUND_MI;
+      break;
+   case OP_TRUNC:
+      rnd = ROUND_ZI;
+      break;
+   case OP_CVT:
+      break;
+   default:
+      return;
+   }
+
+   if (!isFloatType(cvt->dType) || !isFloatType(insn->sType))
+      rnd = (RoundMode)(rnd & 3);
+
+   cvt->rnd = rnd;
+   cvt->setSrc(0, insn->getSrc(0));
+   cvt->src(0).mod *= insn->src(0).mod;
+   cvt->sType = insn->sType;
+}
+
 // Some shaders extract packed bytes out of words and convert them to
 // e.g. float. The Fermi+ CVT instruction can extract those directly, as can
 // nv50 for word sizes.
@@ -1961,6 +2003,7 @@ AlgebraicOpt::visit(BasicBlock *bb)
          break;
       case OP_CVT:
          handleCVT_NEG(i);
+         handleCVT_CVT(i);
          if (prog->getTarget()->isOpSupported(OP_EXTBF, TYPE_U32))
              handleCVT_EXTBF(i);
          break;
@@ -2532,6 +2575,7 @@ MemoryOpt::runOpt(BasicBlock *bb)
 class FlatteningPass : public Pass
 {
 private:
+   virtual bool visit(Function *);
    virtual bool visit(BasicBlock *);
 
    bool tryPredicateConditional(BasicBlock *);
@@ -2540,6 +2584,8 @@ private:
    inline bool isConstantCondition(Value *pred);
    inline bool mayPredicate(const Instruction *, const Value *pred) const;
    inline void removeFlow(Instruction *);
+
+   uint8_t gpr_unit;
 };
 
 bool
@@ -2561,9 +2607,15 @@ FlatteningPass::isConstantCondition(Value *pred)
          file = ld->src(0).getFile();
       } else {
          file = insn->src(s).getFile();
-         // catch $r63 on NVC0
-         if (file == FILE_GPR && insn->getSrc(s)->reg.data.id > prog->maxGPR)
-            file = FILE_IMMEDIATE;
+         // catch $r63 on NVC0 and $r63/$r127 on NV50. Unfortunately maxGPR is
+         // in register "units", which can vary between targets.
+         if (file == FILE_GPR) {
+            Value *v = insn->getSrc(s);
+            int bytes = v->reg.data.id * MIN2(v->reg.size, 4);
+            int units = bytes >> gpr_unit;
+            if (units > prog->maxGPR)
+               file = FILE_IMMEDIATE;
+         }
       }
       if (file != FILE_IMMEDIATE && file != FILE_MEMORY_CONST)
          return false;
@@ -2666,6 +2718,14 @@ FlatteningPass::tryPropagateBranch(BasicBlock *bb)
       if (bf->cfg.incidentCount() == 1)
          bf->remove(rep);
    }
+}
+
+bool
+FlatteningPass::visit(Function *fn)
+{
+   gpr_unit = prog->getTarget()->getFileUnit(FILE_GPR);
+
+   return true;
 }
 
 bool
@@ -2774,6 +2834,15 @@ private:
    virtual bool visit(BasicBlock *);
 };
 
+static bool
+post_ra_dead(Instruction *i)
+{
+   for (int d = 0; i->defExists(d); ++d)
+      if (i->getDef(d)->refCount())
+         return false;
+   return true;
+}
+
 bool
 NV50PostRaConstantFolding::visit(BasicBlock *bb)
 {
@@ -2787,24 +2856,48 @@ NV50PostRaConstantFolding::visit(BasicBlock *bb)
              i->src(0).getFile() != FILE_GPR ||
              i->src(1).getFile() != FILE_GPR ||
              i->src(2).getFile() != FILE_GPR ||
-             i->getDef(0)->reg.data.id != i->getSrc(2)->reg.data.id ||
-             !isFloatType(i->dType))
+             i->getDef(0)->reg.data.id != i->getSrc(2)->reg.data.id)
             break;
 
          if (i->getDef(0)->reg.data.id >= 64 ||
              i->getSrc(0)->reg.data.id >= 64)
             break;
 
+         if (i->flagsSrc >= 0 && i->getSrc(i->flagsSrc)->reg.data.id != 0)
+            break;
+
+         if (i->getPredicate())
+            break;
+
          def = i->getSrc(1)->getInsn();
+         if (def && def->op == OP_SPLIT && typeSizeof(def->sType) == 4)
+            def = def->getSrc(0)->getInsn();
          if (def && def->op == OP_MOV && def->src(0).getFile() == FILE_IMMEDIATE) {
             vtmp = i->getSrc(1);
-            i->setSrc(1, def->getSrc(0));
+            if (isFloatType(i->sType)) {
+               i->setSrc(1, def->getSrc(0));
+            } else {
+               ImmediateValue val;
+               bool ret = def->src(0).getImmediate(val);
+               assert(ret);
+               if (i->getSrc(1)->reg.data.id & 1)
+                  val.reg.data.u32 >>= 16;
+               val.reg.data.u32 &= 0xffff;
+               i->setSrc(1, new_ImmediateValue(bb->getProgram(), val.reg.data.u32));
+            }
 
             /* There's no post-RA dead code elimination, so do it here
              * XXX: if we add more code-removing post-RA passes, we might
              *      want to create a post-RA dead-code elim pass */
-            if (vtmp->refCount() == 0)
-               delete_Instruction(bb->getProgram(), def);
+            if (post_ra_dead(vtmp->getInsn())) {
+               Value *src = vtmp->getInsn()->getSrc(0);
+               // Careful -- splits will have already been removed from the
+               // functions. Don't double-delete.
+               if (vtmp->getInsn()->bb)
+                  delete_Instruction(prog, vtmp->getInsn());
+               if (src->getInsn() && post_ra_dead(src->getInsn()))
+                  delete_Instruction(prog, src->getInsn());
+            }
 
             break;
          }

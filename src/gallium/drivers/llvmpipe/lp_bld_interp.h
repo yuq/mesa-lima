@@ -63,7 +63,8 @@ enum lp_interp {
    LP_INTERP_LINEAR,
    LP_INTERP_PERSPECTIVE,
    LP_INTERP_POSITION,
-   LP_INTERP_FACING
+   LP_INTERP_FACING,
+   LP_INTERP_ZERO
 };
 
 struct lp_shader_input {

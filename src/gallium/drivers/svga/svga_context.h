@@ -343,6 +343,13 @@ struct svga_hw_draw_state
    SVGA3dElementLayoutId layout_id;
    SVGA3dPrimitiveType topology;
 
+   struct svga_winsys_surface *ib;  /**< index buffer for drawing */
+   SVGA3dSurfaceFormat ib_format;
+   unsigned ib_offset;
+
+   unsigned num_samplers[PIPE_SHADER_TYPES];
+   SVGA3dSamplerId samplers[PIPE_SHADER_TYPES][PIPE_MAX_SAMPLERS];
+
    /* used for rebinding */
    unsigned num_sampler_views[PIPE_SHADER_TYPES];
    unsigned default_constbuf_size[PIPE_SHADER_TYPES];
