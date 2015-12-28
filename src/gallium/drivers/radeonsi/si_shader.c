@@ -3852,12 +3852,13 @@ static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary
 	}
 }
 
-void si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
-			   struct pipe_debug_callback *debug, unsigned processor)
+void si_shader_binary_read(struct si_screen *sscreen,
+			   struct radeon_shader_binary *binary,
+			   struct si_shader_config *conf,
+			   struct pipe_debug_callback *debug,
+			   unsigned processor)
 {
-	const struct radeon_shader_binary *binary = &shader->binary;
-
-	si_shader_binary_read_config(&shader->binary, &shader->config, 0);
+	si_shader_binary_read_config(binary, conf, 0);
 
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		if (!(sscreen->b.debug_flags & DBG_NO_ASM))
@@ -3866,15 +3867,14 @@ void si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 		fprintf(stderr, "*** SHADER STATS ***\n"
 			"SGPRS: %d\nVGPRS: %d\nCode Size: %d bytes\nLDS: %d blocks\n"
 			"Scratch: %d bytes per wave\n********************\n",
-			shader->config.num_sgprs, shader->config.num_vgprs, binary->code_size,
-			shader->config.lds_size, shader->config.scratch_bytes_per_wave);
+			conf->num_sgprs, conf->num_vgprs, binary->code_size,
+			conf->lds_size, conf->scratch_bytes_per_wave);
 	}
 
 	pipe_debug_message(debug, SHADER_INFO,
 			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d LDS: %d Scratch: %d",
-			   shader->config.num_sgprs, shader->config.num_vgprs,
-			   binary->code_size, shader->config.lds_size,
-			   shader->config.scratch_bytes_per_wave);
+			   conf->num_sgprs, conf->num_vgprs, binary->code_size,
+			   conf->lds_size, conf->scratch_bytes_per_wave);
 }
 
 int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
@@ -3899,7 +3899,8 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 			return r;
 	}
 
-	si_shader_binary_read(sscreen, shader, debug, processor);
+	si_shader_binary_read(sscreen, &shader->binary, &shader->config,
+			      debug, processor);
 
 	r = si_shader_binary_upload(sscreen, shader);
 	if (r)
