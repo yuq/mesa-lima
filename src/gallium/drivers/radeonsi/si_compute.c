@@ -122,7 +122,8 @@ static void *si_create_compute_state(
 	        for (i = 0; i < program->num_kernels; i++) {
 		        LLVMModuleRef mod = radeon_llvm_get_kernel_module(program->llvm_ctx, i,
                                                         code, header->num_bytes);
-			si_compile_llvm(sctx->screen, &program->kernels[i], sctx->tm,
+			si_compile_llvm(sctx->screen, &program->kernels[i].binary,
+					&program->kernels[i].config, sctx->tm,
 					mod, &sctx->b.debug, TGSI_PROCESSOR_COMPUTE);
 			si_shader_binary_upload(sctx->screen, &program->kernels[i]);
 			LLVMDisposeModule(mod);

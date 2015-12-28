@@ -3877,9 +3877,13 @@ void si_shader_binary_read(struct si_screen *sscreen,
 			   conf->lds_size, conf->scratch_bytes_per_wave);
 }
 
-int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
-		    LLVMTargetMachineRef tm, LLVMModuleRef mod,
-		    struct pipe_debug_callback *debug, unsigned processor)
+int si_compile_llvm(struct si_screen *sscreen,
+		    struct radeon_shader_binary *binary,
+		    struct si_shader_config *conf,
+		    LLVMTargetMachineRef tm,
+		    LLVMModuleRef mod,
+		    struct pipe_debug_callback *debug,
+		    unsigned processor)
 {
 	int r = 0;
 	unsigned count = p_atomic_inc_return(&sscreen->b.num_compilations);
@@ -3891,21 +3895,20 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 			LLVMDumpModule(mod);
 	}
 
-	if (!si_replace_shader(count, &shader->binary)) {
-		r = radeon_llvm_compile(mod, &shader->binary,
+	if (!si_replace_shader(count, binary)) {
+		r = radeon_llvm_compile(mod, binary,
 			r600_get_llvm_processor_name(sscreen->b.family), tm,
 			debug);
 		if (r)
 			return r;
 	}
 
-	si_shader_binary_read(sscreen, &shader->binary, &shader->config,
-			      debug, processor);
+	si_shader_binary_read(sscreen, binary, conf, debug, processor);
 
-	FREE(shader->binary.config);
-	FREE(shader->binary.global_symbol_offsets);
-	shader->binary.config = NULL;
-	shader->binary.global_symbol_offsets = NULL;
+	FREE(binary->config);
+	FREE(binary->global_symbol_offsets);
+	binary->config = NULL;
+	binary->global_symbol_offsets = NULL;
 	return r;
 }
 
@@ -3979,8 +3982,9 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	if (dump)
 		fprintf(stderr, "Copy Vertex Shader for Geometry Shader:\n\n");
 
-	r = si_compile_llvm(sscreen, si_shader_ctx->shader,
-			    si_shader_ctx->tm, bld_base->base.gallivm->module,
+	r = si_compile_llvm(sscreen, &si_shader_ctx->shader->binary,
+			    &si_shader_ctx->shader->config, si_shader_ctx->tm,
+			    bld_base->base.gallivm->module,
 			    debug, TGSI_PROCESSOR_GEOMETRY);
 	if (!r)
 		r = si_shader_binary_upload(sscreen, si_shader_ctx->shader);
@@ -4178,7 +4182,8 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	radeon_llvm_finalize_module(&si_shader_ctx.radeon_bld);
 
 	mod = bld_base->base.gallivm->module;
-	r = si_compile_llvm(sscreen, shader, tm, mod, debug, si_shader_ctx.type);
+	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
+			    mod, debug, si_shader_ctx.type);
 	if (r) {
 		fprintf(stderr, "LLVM failed to compile shader\n");
 		goto out;
