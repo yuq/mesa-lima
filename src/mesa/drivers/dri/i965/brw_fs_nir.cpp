@@ -1850,8 +1850,11 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
       fs_inst *inst;
       if (indirect_offset.file == BAD_FILE) {
          /* Replicate the patch handle to all enabled channels */
+         const fs_reg srcs[] = {
+            retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD)
+         };
          fs_reg patch_handle = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
-         bld.MOV(patch_handle, retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD));
+         bld.LOAD_PAYLOAD(patch_handle, srcs, ARRAY_SIZE(srcs), 0);
 
          inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dest, patch_handle);
          inst->mlen = 1;
