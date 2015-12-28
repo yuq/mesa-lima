@@ -25,9 +25,9 @@
  *
  */
 
-#include "nir.h"
+#include "nir/nir.h"
+#include "nir/nir_builder.h"
 #include "nir_spirv.h"
-#include "nir_builder.h"
 #include "spirv.h"
 
 struct vtn_builder;

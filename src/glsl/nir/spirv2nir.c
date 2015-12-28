@@ -31,7 +31,7 @@
  * spirv_to_nir code.
  */
 
-#include "nir_spirv.h"
+#include "spirv/nir_spirv.h"
 
 #include <sys/mman.h>
 #include <sys/types.h>

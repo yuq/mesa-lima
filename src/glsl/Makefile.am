@@ -144,11 +144,13 @@ libglsl_la_SOURCES =					\
 	glsl_parser.h					\
 	$(LIBGLSL_FILES)				\
 	$(NIR_FILES)					\
+	$(SPIRV_FILES)					\
 	$(NIR_GENERATED_FILES)
 
 
 libnir_la_SOURCES =					\
 	$(NIR_FILES)					\
+	$(SPIRV_FILES)					\
 	$(NIR_GENERATED_FILES)
 
 glsl_compiler_SOURCES = \

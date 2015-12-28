@@ -25,8 +25,8 @@
  *
  */
 
-#include "spirv_to_nir_private.h"
-#include "spirv_glsl450.h"
+#include "vtn_private.h"
+#include "GLSL.std.450.h"
 
 static nir_ssa_def*
 build_length(nir_builder *b, nir_ssa_def *vec)

@@ -25,9 +25,9 @@
  *
  */
 
-#include "spirv_to_nir_private.h"
-#include "nir_vla.h"
-#include "nir_control_flow.h"
+#include "vtn_private.h"
+#include "nir/nir_vla.h"
+#include "nir/nir_control_flow.h"
 
 static struct vtn_ssa_value *
 vtn_undef_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
