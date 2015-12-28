@@ -3707,19 +3707,19 @@ static void preload_ring_buffers(struct si_shader_context *si_shader_ctx)
 	}
 }
 
-void si_shader_binary_read_config(struct si_shader *shader,
+void si_shader_binary_read_config(struct radeon_shader_binary *binary,
+				  struct si_shader_config *conf,
 				  unsigned symbol_offset)
 {
 	unsigned i;
 	const unsigned char *config =
-		radeon_shader_binary_config_start(&shader->binary,
-						symbol_offset);
+		radeon_shader_binary_config_start(binary, symbol_offset);
 
 	/* XXX: We may be able to emit some of these values directly rather than
 	 * extracting fields to be emitted later.
 	 */
 
-	for (i = 0; i < shader->binary.config_size_per_symbol; i+= 8) {
+	for (i = 0; i < binary->config_size_per_symbol; i+= 8) {
 		unsigned reg = util_le32_to_cpu(*(uint32_t*)(config + i));
 		unsigned value = util_le32_to_cpu(*(uint32_t*)(config + i + 4));
 		switch (reg) {
@@ -3727,25 +3727,25 @@ void si_shader_binary_read_config(struct si_shader *shader,
 		case R_00B128_SPI_SHADER_PGM_RSRC1_VS:
 		case R_00B228_SPI_SHADER_PGM_RSRC1_GS:
 		case R_00B848_COMPUTE_PGM_RSRC1:
-			shader->config.num_sgprs = MAX2(shader->config.num_sgprs, (G_00B028_SGPRS(value) + 1) * 8);
-			shader->config.num_vgprs = MAX2(shader->config.num_vgprs, (G_00B028_VGPRS(value) + 1) * 4);
-			shader->config.float_mode =  G_00B028_FLOAT_MODE(value);
-			shader->config.rsrc1 = value;
+			conf->num_sgprs = MAX2(conf->num_sgprs, (G_00B028_SGPRS(value) + 1) * 8);
+			conf->num_vgprs = MAX2(conf->num_vgprs, (G_00B028_VGPRS(value) + 1) * 4);
+			conf->float_mode =  G_00B028_FLOAT_MODE(value);
+			conf->rsrc1 = value;
 			break;
 		case R_00B02C_SPI_SHADER_PGM_RSRC2_PS:
-			shader->config.lds_size = MAX2(shader->config.lds_size, G_00B02C_EXTRA_LDS_SIZE(value));
+			conf->lds_size = MAX2(conf->lds_size, G_00B02C_EXTRA_LDS_SIZE(value));
 			break;
 		case R_00B84C_COMPUTE_PGM_RSRC2:
-			shader->config.lds_size = MAX2(shader->config.lds_size, G_00B84C_LDS_SIZE(value));
-			shader->config.rsrc2 = value;
+			conf->lds_size = MAX2(conf->lds_size, G_00B84C_LDS_SIZE(value));
+			conf->rsrc2 = value;
 			break;
 		case R_0286CC_SPI_PS_INPUT_ENA:
-			shader->config.spi_ps_input_ena = value;
+			conf->spi_ps_input_ena = value;
 			break;
 		case R_0286E8_SPI_TMPRING_SIZE:
 		case R_00B860_COMPUTE_TMPRING_SIZE:
 			/* WAVESIZE is in units of 256 dwords. */
-			shader->config.scratch_bytes_per_wave =
+			conf->scratch_bytes_per_wave =
 				G_00B860_WAVESIZE(value) * 256 * 4 * 1;
 			break;
 		default:
@@ -3857,7 +3857,7 @@ void si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 {
 	const struct radeon_shader_binary *binary = &shader->binary;
 
-	si_shader_binary_read_config(shader, 0);
+	si_shader_binary_read_config(&shader->binary, &shader->config, 0);
 
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		if (!(sscreen->b.debug_flags & DBG_NO_ASM))
