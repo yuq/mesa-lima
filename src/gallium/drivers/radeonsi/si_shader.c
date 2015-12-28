@@ -3741,9 +3741,8 @@ static void preload_ring_buffers(struct si_shader_context *si_shader_ctx)
 	}
 }
 
-void si_shader_binary_read_config(const struct si_screen *sscreen,
-				struct si_shader *shader,
-				unsigned symbol_offset)
+void si_shader_binary_read_config(struct si_shader *shader,
+				  unsigned symbol_offset)
 {
 	unsigned i;
 	const unsigned char *config =
@@ -3892,7 +3891,7 @@ void si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 {
 	const struct radeon_shader_binary *binary = &shader->binary;
 
-	si_shader_binary_read_config(sscreen, shader, 0);
+	si_shader_binary_read_config(shader, 0);
 
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		if (!(sscreen->b.debug_flags & DBG_NO_ASM))

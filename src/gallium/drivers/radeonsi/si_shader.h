@@ -341,8 +341,7 @@ void si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			struct si_shader *shader,
 			uint64_t scratch_va);
-void si_shader_binary_read_config(const struct si_screen *sscreen,
-				struct si_shader *shader,
-				unsigned symbol_offset);
+void si_shader_binary_read_config(struct si_shader *shader,
+				  unsigned symbol_offset);
 
 #endif

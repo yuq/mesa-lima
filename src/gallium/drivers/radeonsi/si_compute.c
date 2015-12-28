@@ -67,8 +67,7 @@ static void init_scratch_buffer(struct si_context *sctx, struct si_compute *prog
 				program->shader.binary.global_symbol_offsets[i];
 		unsigned scratch_bytes_needed;
 
-		si_shader_binary_read_config(sctx->screen,
-						&program->shader, offset);
+		si_shader_binary_read_config(&program->shader, offset);
 		scratch_bytes_needed = program->shader.scratch_bytes_per_wave;
 		scratch_bytes = MAX2(scratch_bytes, scratch_bytes_needed);
 	}
@@ -261,7 +260,7 @@ static void si_launch_grid(
 
 #if HAVE_LLVM >= 0x0306
 	/* Read the config information */
-	si_shader_binary_read_config(sctx->screen, shader, pc);
+	si_shader_binary_read_config(shader, pc);
 #endif
 
 	/* Upload the kernel arguments */
