@@ -535,6 +535,16 @@ enum gl_frag_depth_layout
    FRAG_DEPTH_LAYOUT_UNCHANGED
 };
 
+/**
+ * \brief Buffer access qualifiers
+ */
+enum gl_buffer_access_qualifier
+{
+   ACCESS_COHERENT = 1,
+   ACCESS_RESTRICT = 2,
+   ACCESS_VOLATILE = 4,
+};
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
