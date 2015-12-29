@@ -1026,12 +1026,31 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
 
    const VkPipelineVertexInputStateCreateInfo *vi_info =
       pCreateInfo->pVertexInputState;
+
+   uint64_t inputs_read;
+   if (extra && extra->disable_vs) {
+      /* If the VS is disabled, just assume the user knows what they're
+       * doing and apply the layout blindly.  This can only come from
+       * meta, so this *should* be safe.
+       */
+      inputs_read = ~0ull;
+   } else {
+      inputs_read = pipeline->vs_prog_data.inputs_read;
+   }
+
    pipeline->vb_used = 0;
+   for (uint32_t i = 0; i < vi_info->vertexAttributeDescriptionCount; i++) {
+      const VkVertexInputAttributeDescription *desc =
+         &vi_info->pVertexAttributeDescriptions[i];
+
+      if (inputs_read & (1 << (VERT_ATTRIB_GENERIC0 + desc->location)))
+         pipeline->vb_used |= 1 << desc->binding;
+   }
+
    for (uint32_t i = 0; i < vi_info->vertexBindingDescriptionCount; i++) {
       const VkVertexInputBindingDescription *desc =
          &vi_info->pVertexBindingDescriptions[i];
 
-      pipeline->vb_used |= 1 << desc->binding;
       pipeline->binding_stride[desc->binding] = desc->stride;
 
       /* Step rate is programmed per vertex element (attribute), not
