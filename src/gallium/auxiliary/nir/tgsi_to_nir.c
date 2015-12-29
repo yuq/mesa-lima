@@ -1968,14 +1968,10 @@ tgsi_to_nir(const void *tgsi_tokens,
    tgsi_scan_shader(tgsi_tokens, &scan);
    c->scan = &scan;
 
-   s = nir_shader_create(NULL, tgsi_processor_to_shader_stage(scan.processor),
-                         options);
-
-   nir_function *func = nir_function_create(s, "main");
-   nir_function_impl *impl = nir_function_impl_create(func);
-
-   nir_builder_init(&c->build, impl);
-   c->build.cursor = nir_after_cf_list(&impl->body);
+   nir_builder_init_simple_shader(&c->build, NULL,
+                                  tgsi_processor_to_shader_stage(scan.processor),
+                                  options);
+   s = c->build.shader;
 
    s->num_inputs = scan.file_max[TGSI_FILE_INPUT] + 1;
    s->num_uniforms = scan.const_file_max[0] + 1;

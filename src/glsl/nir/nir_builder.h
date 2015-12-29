@@ -44,6 +44,17 @@ nir_builder_init(nir_builder *build, nir_function_impl *impl)
 }
 
 static inline void
+nir_builder_init_simple_shader(nir_builder *build, void *mem_ctx,
+                               gl_shader_stage stage,
+                               const nir_shader_compiler_options *options)
+{
+   build->shader = nir_shader_create(mem_ctx, stage, options);
+   nir_function *func = nir_function_create(build->shader, "main");
+   build->impl = nir_function_impl_create(func);
+   build->cursor = nir_after_cf_list(&build->impl->body);
+}
+
+static inline void
 nir_builder_instr_insert(nir_builder *build, nir_instr *instr)
 {
    nir_instr_insert(build->cursor, instr);

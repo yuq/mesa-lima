@@ -30,23 +30,17 @@ protected:
    ~nir_cf_test();
 
    nir_builder b;
-   nir_shader *shader;
-   nir_function_impl *impl;
 };
 
 nir_cf_test::nir_cf_test()
 {
    static const nir_shader_compiler_options options = { };
-   shader = nir_shader_create(NULL, MESA_SHADER_VERTEX, &options);
-   nir_function *func = nir_function_create(shader, "main");
-   impl = nir_function_impl_create(func);
-
-   nir_builder_init(&b, impl);
+   nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, &options);
 }
 
 nir_cf_test::~nir_cf_test()
 {
-   ralloc_free(shader);
+   ralloc_free(b.shader);
 }
 
 TEST_F(nir_cf_test, delete_break_in_loop)
@@ -55,12 +49,12 @@ TEST_F(nir_cf_test, delete_break_in_loop)
     *
     * while (...) { break; }
     */
-   nir_loop *loop = nir_loop_create(shader);
-   nir_cf_node_insert(nir_after_cf_list(&impl->body), &loop->cf_node);
+   nir_loop *loop = nir_loop_create(b.shader);
+   nir_cf_node_insert(nir_after_cf_list(&b.impl->body), &loop->cf_node);
 
    b.cursor = nir_after_cf_list(&loop->body);
 
-   nir_jump_instr *jump = nir_jump_instr_create(shader, nir_jump_break);
+   nir_jump_instr *jump = nir_jump_instr_create(b.shader, nir_jump_break);
    nir_builder_instr_insert(&b, &jump->instr);
 
    /* At this point, we should have:
@@ -81,10 +75,10 @@ TEST_F(nir_cf_test, delete_break_in_loop)
     *         block block_3:
     * }
     */
-   nir_block *block_0 = nir_start_block(impl);
+   nir_block *block_0 = nir_start_block(b.impl);
    nir_block *block_1 = nir_cf_node_as_block(nir_loop_first_cf_node(loop));
    nir_block *block_2 = nir_cf_node_as_block(nir_cf_node_next(&loop->cf_node));
-   nir_block *block_3 = impl->end_block;
+   nir_block *block_3 = b.impl->end_block;
    ASSERT_EQ(nir_cf_node_block, block_0->cf_node.type);
    ASSERT_EQ(nir_cf_node_block, block_1->cf_node.type);
    ASSERT_EQ(nir_cf_node_block, block_2->cf_node.type);
@@ -107,12 +101,12 @@ TEST_F(nir_cf_test, delete_break_in_loop)
    EXPECT_TRUE(_mesa_set_search(block_2->predecessors, block_1));
    EXPECT_TRUE(_mesa_set_search(block_3->predecessors, block_2));
 
-   nir_print_shader(shader, stderr);
+   nir_print_shader(b.shader, stderr);
 
    /* Now remove the break. */
    nir_instr_remove(&jump->instr);
 
-   nir_print_shader(shader, stderr);
+   nir_print_shader(b.shader, stderr);
 
    /* At this point, we should have:
     *
@@ -150,5 +144,5 @@ TEST_F(nir_cf_test, delete_break_in_loop)
    EXPECT_TRUE(_mesa_set_search(block_2->predecessors, block_1));
    EXPECT_TRUE(_mesa_set_search(block_3->predecessors, block_2));
 
-   nir_metadata_require(impl, nir_metadata_dominance);
+   nir_metadata_require(b.impl, nir_metadata_dominance);
 }
