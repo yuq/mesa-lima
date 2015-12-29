@@ -1014,7 +1014,7 @@ cross_validate_globals(struct gl_shader_program *prog,
             }
 
             if (var->type->contains_atomic() &&
-                var->data.atomic.offset != existing->data.atomic.offset) {
+                var->data.offset != existing->data.offset) {
                linker_error(prog, "offset specifications for %s "
                             "`%s' have differing values\n",
                             mode_string(var), var->name);

@@ -871,9 +871,7 @@ public:
       /**
        * Location an atomic counter is stored at.
        */
-      struct {
-         unsigned offset;
-      } atomic;
+      unsigned offset;
 
       /**
        * Highest element accessed with a constant expression array index

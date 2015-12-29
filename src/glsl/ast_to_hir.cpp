@@ -3105,7 +3105,7 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
                _mesa_glsl_error(loc, state,
                                 "misaligned atomic counter offset");
 
-            var->data.atomic.offset = *offset;
+            var->data.offset = *offset;
             *offset += var->type->atomic_size();
 
          } else {

@@ -291,9 +291,7 @@ typedef struct {
       /**
        * Location an atomic counter is stored at.
        */
-      struct {
-         unsigned offset;
-      } atomic;
+      unsigned offset;
 
       /**
        * ARB_shader_image_load_store qualifiers.
