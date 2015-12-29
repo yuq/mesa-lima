@@ -190,6 +190,13 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
    }
 
+   case GLSLstd450FaceForward:
+      val->ssa->def =
+         nir_bcsel(nb, nir_flt(nb, nir_fdot(nb, src[2], src[1]),
+                                   nir_imm_float(nb, 0.0)),
+                       src[0], nir_fneg(nb, src[0]));
+      return;
+
    case GLSLstd450Asin:
    case GLSLstd450Acos:
    case GLSLstd450Atan:
@@ -203,7 +210,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Frexp:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
-   case GLSLstd450FaceForward:
    case GLSLstd450Reflect:
    case GLSLstd450Refract:
    case GLSLstd450IMix:
