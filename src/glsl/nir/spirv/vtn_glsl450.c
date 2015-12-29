@@ -249,13 +249,29 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                                    build_exp(nb, nir_fneg(nb, src[0]))));
       return;
 
+   case GLSLstd450Asinh:
+      val->ssa->def = nir_fmul(nb, nir_fsign(nb, src[0]),
+         build_log(nb, nir_fadd(nb, nir_fabs(nb, src[0]),
+                       nir_fsqrt(nb, nir_fadd(nb, nir_fmul(nb, src[0], src[0]),
+                                                  nir_imm_float(nb, 1.0f))))));
+      return;
+   case GLSLstd450Acosh:
+      val->ssa->def = build_log(nb, nir_fadd(nb, src[0],
+         nir_fsqrt(nb, nir_fsub(nb, nir_fmul(nb, src[0], src[0]),
+                                    nir_imm_float(nb, 1.0f)))));
+      return;
+   case GLSLstd450Atanh: {
+      nir_ssa_def *one = nir_imm_float(nb, 1.0);
+      val->ssa->def = nir_fmul(nb, nir_imm_float(nb, 0.5f),
+         build_log(nb, nir_fdiv(nb, nir_fadd(nb, one, src[0]),
+                                    nir_fsub(nb, one, src[0]))));
+      return;
+   }
+
    case GLSLstd450Asin:
    case GLSLstd450Acos:
    case GLSLstd450Atan:
    case GLSLstd450Atan2:
-   case GLSLstd450Asinh:
-   case GLSLstd450Acosh:
-   case GLSLstd450Atanh:
    case GLSLstd450Frexp:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
