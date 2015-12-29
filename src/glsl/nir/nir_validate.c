@@ -454,10 +454,12 @@ validate_tex_instr(nir_tex_instr *instr, validate_state *state)
 static void
 validate_call_instr(nir_call_instr *instr, validate_state *state)
 {
-   if (instr->return_deref == NULL)
+   if (instr->return_deref == NULL) {
       assert(glsl_type_is_void(instr->callee->return_type));
-   else
+   } else {
       assert(instr->return_deref->deref.type == instr->callee->return_type);
+      validate_deref_var(instr, instr->return_deref, state);
+   }
 
    assert(instr->num_params == instr->callee->num_params);
 
@@ -465,8 +467,6 @@ validate_call_instr(nir_call_instr *instr, validate_state *state)
       assert(instr->callee->params[i].type == instr->params[i]->deref.type);
       validate_deref_var(instr, instr->params[i], state);
    }
-
-   validate_deref_var(instr, instr->return_deref, state);
 }
 
 static void
