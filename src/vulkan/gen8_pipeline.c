@@ -37,29 +37,28 @@ emit_vertex_input(struct anv_pipeline *pipeline,
                   const VkPipelineVertexInputStateCreateInfo *info,
                   const struct anv_graphics_pipeline_create_info *extra)
 {
-
    static_assert(ANV_GEN >= 8, "should be compiling this for gen < 8");
 
-   uint32_t vb_used;
+   uint32_t elements;
    if (extra && extra->disable_vs) {
       /* If the VS is disabled, just assume the user knows what they're
        * doing and apply the layout blindly.  This can only come from
        * meta, so this *should* be safe.
        */
-      vb_used = 0;
+      elements = 0;
       for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++)
-         vb_used |= (1 << info->pVertexAttributeDescriptions[i].location);
+         elements |= (1 << info->pVertexAttributeDescriptions[i].location);
    } else {
       /* Pull inputs_read out of the VS prog data */
       uint64_t inputs_read = pipeline->vs_prog_data.inputs_read;
       assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
-      vb_used = inputs_read >> VERT_ATTRIB_GENERIC0;
+      elements = inputs_read >> VERT_ATTRIB_GENERIC0;
    }
 
-   const uint32_t num_dwords = 1 + __builtin_popcount(vb_used) * 2;
+   const uint32_t num_dwords = 1 + __builtin_popcount(elements) * 2;
 
    uint32_t *p;
-   if (vb_used != 0) {
+   if (elements != 0) {
       p = anv_batch_emitn(&pipeline->batch, num_dwords,
                           GENX(3DSTATE_VERTEX_ELEMENTS));
       memset(p + 1, 0, (num_dwords - 1) * 4);
@@ -72,10 +71,10 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 
       assert(desc->binding < 32);
 
-      if ((vb_used & (1 << desc->location)) == 0)
+      if ((elements & (1 << desc->location)) == 0)
          continue; /* Binding unused */
 
-      uint32_t slot = __builtin_popcount(vb_used & ((1 << desc->location) - 1));
+      uint32_t slot = __builtin_popcount(elements & ((1 << desc->location) - 1));
 
       struct GENX(VERTEX_ELEMENT_STATE) element = {
          .VertexBufferIndex = desc->binding,
@@ -98,7 +97,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
                      .InstanceDataStepRate = 1);
    }
 
-   const uint32_t id_slot = __builtin_popcount(vb_used);
+   const uint32_t id_slot = __builtin_popcount(elements);
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_SGVS),
                   .VertexIDEnable = pipeline->vs_prog_data.uses_vertexid,
                   .VertexIDComponentNumber = 2,
