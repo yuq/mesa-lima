@@ -144,8 +144,10 @@ lower_returns_in_block(nir_block *block, struct lower_returns_state *state)
    if (jump->type != nir_jump_return)
       return false;
 
+   nir_instr_remove(&jump->instr);
+
    nir_builder *b = &state->builder;
-   b->cursor = nir_before_instr(&jump->instr);
+   b->cursor = nir_after_block(block);
 
    /* Set the return flag */
    if (state->return_flag == NULL) {
@@ -159,14 +161,11 @@ lower_returns_in_block(nir_block *block, struct lower_returns_state *state)
    nir_store_var(b, state->return_flag, nir_imm_int(b, NIR_TRUE), 1);
 
    if (state->loop) {
-      /* We're in a loop.  Make the return a break. */
-      jump->type = nir_jump_break;
+      /* We're in a loop;  we need to break out of it. */
+      nir_jump(b, nir_jump_break);
    } else {
-      /* Not in a loop.  Just delete the return; we'll deal with
-       * predicating later.
-       */
+      /* Not in a loop;  we'll deal with predicating later*/
       assert(nir_cf_node_next(&block->cf_node) == NULL);
-      nir_instr_remove(&jump->instr);
    }
 
    return true;
