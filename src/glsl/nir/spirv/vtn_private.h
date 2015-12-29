@@ -49,12 +49,72 @@ enum vtn_value_type {
    vtn_value_type_sampled_image,
 };
 
+enum vtn_branch_type {
+   vtn_branch_type_none,
+   vtn_branch_type_break,
+   vtn_branch_type_continue,
+   vtn_branch_type_discard,
+   vtn_branch_type_return,
+};
+
+enum vtn_cf_node_type {
+   vtn_cf_node_type_block,
+   vtn_cf_node_type_if,
+   vtn_cf_node_type_loop,
+   vtn_cf_node_type_switch,
+   vtn_cf_node_type_case,
+};
+
+struct vtn_cf_node {
+   struct list_head link;
+   enum vtn_cf_node_type type;
+};
+
+struct vtn_loop {
+   struct vtn_cf_node node;
+
+   /* The main body of the loop */
+   struct list_head body;
+
+   /* The "continue" part of the loop.  This gets executed after the body
+    * and is where you go when you hit a continue.
+    */
+   struct list_head cont_body;
+
+   SpvLoopControlMask control;
+};
+
+struct vtn_if {
+   struct vtn_cf_node node;
+
+   uint32_t condition;
+
+   enum vtn_branch_type then_type;
+   struct list_head then_body;
+
+   enum vtn_branch_type else_type;
+   struct list_head else_body;
+
+   SpvSelectionControlMask control;
+};
+
 struct vtn_block {
-   /* Merge opcode if this block contains a merge; SpvOpNop otherwise. */
-   SpvOp merge_op;
-   uint32_t merge_block_id;
+   struct vtn_cf_node node;
+
+   /** A pointer to the label instruction */
    const uint32_t *label;
+
+   /** A pointer to the merge instruction (or NULL if non exists) */
+   const uint32_t *merge;
+
+   /** A pointer to the branch instruction that ends this block */
    const uint32_t *branch;
+
+   enum vtn_branch_type branch_type;
+
+   /** Points to the loop that this block starts (if it starts a loop) */
+   struct vtn_loop *loop;
+
    nir_block *block;
 };
 
@@ -64,11 +124,22 @@ struct vtn_function {
    nir_function_impl *impl;
    struct vtn_block *start_block;
 
+   struct list_head body;
+
    const uint32_t *end;
+
+   SpvFunctionControlMask control;
 };
+
+void vtn_build_cfg(struct vtn_builder *b, const uint32_t *words,
+                   const uint32_t *end);
 
 typedef bool (*vtn_instruction_handler)(struct vtn_builder *, uint32_t,
                                         const uint32_t *, unsigned);
+
+const uint32_t *
+vtn_foreach_instruction(struct vtn_builder *b, const uint32_t *start,
+                        const uint32_t *end, vtn_instruction_handler handler);
 
 struct vtn_ssa_value {
    union {
