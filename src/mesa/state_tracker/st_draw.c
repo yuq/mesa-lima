@@ -266,6 +266,7 @@ st_draw_vbo(struct gl_context *ctx,
       info.instance_count = prims[i].num_instances;
       info.vertices_per_patch = ctx->TessCtrlProgram.patch_vertices;
       info.index_bias = prims[i].basevertex;
+      info.drawid = prims[i].draw_id;
       if (!ib) {
          info.min_index = info.start;
          info.max_index = info.start + info.count - 1;
