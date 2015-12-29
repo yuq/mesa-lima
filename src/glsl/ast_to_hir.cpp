@@ -6169,7 +6169,7 @@ ast_type_specifier::hir(exec_list *instructions,
  * The number of fields processed.  A pointer to the array structure fields is
  * stored in \c *fields_ret.
  */
-unsigned
+static unsigned
 ast_process_struct_or_iface_block_members(exec_list *instructions,
                                           struct _mesa_glsl_parse_state *state,
                                           exec_list *declarations,
