@@ -204,6 +204,26 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                                            src[1])));
       return;
 
+   case GLSLstd450Refract: {
+      nir_ssa_def *I = src[0];
+      nir_ssa_def *N = src[1];
+      nir_ssa_def *eta = src[2];
+      nir_ssa_def *n_dot_i = nir_fdot(nb, N, I);
+      nir_ssa_def *one = nir_imm_float(nb, 1.0);
+      nir_ssa_def *zero = nir_imm_float(nb, 0.0);
+      /* k = 1.0 - eta * eta * (1.0 - dot(N, I) * dot(N, I)) */
+      nir_ssa_def *k =
+         nir_fsub(nb, one, nir_fmul(nb, eta, nir_fmul(nb, eta,
+                      nir_fsub(nb, one, nir_fmul(nb, n_dot_i, n_dot_i)))));
+      nir_ssa_def *result =
+         nir_fsub(nb, nir_fmul(nb, eta, I),
+                      nir_fmul(nb, nir_fadd(nb, nir_fmul(nb, eta, n_dot_i),
+                                                nir_fsqrt(nb, k)), N));
+      /* XXX: bcsel, or if statement? */
+      val->ssa->def = nir_bcsel(nb, nir_flt(nb, k, zero), zero, result);
+      return;
+   }
+
    case GLSLstd450Sinh:
       /* 0.5 * (e^x - e^(-x)) */
       val->ssa->def =
@@ -239,7 +259,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Frexp:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
-   case GLSLstd450Refract:
    case GLSLstd450IMix:
    default:
       unreachable("Unhandled opcode");
