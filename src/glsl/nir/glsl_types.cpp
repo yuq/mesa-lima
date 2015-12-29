@@ -1055,7 +1055,7 @@ function_key_compare(const void *a, const void *b)
       return 1;
 
    return memcmp(key1->fields.parameters, key2->fields.parameters,
-                 (key1->length + 1) * sizeof(*key1->fields.parameters));
+                 (key1->length + 1) * sizeof(*key1->fields.parameters)) == 0;
 }
 
 
