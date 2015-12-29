@@ -1205,9 +1205,10 @@ _mesa_BindBuffer(GLenum target, GLuint buffer)
 {
    GET_CURRENT_CONTEXT(ctx);
 
-   if (MESA_VERBOSE & VERBOSE_API)
+   if (MESA_VERBOSE & VERBOSE_API) {
       _mesa_debug(ctx, "glBindBuffer(%s, %u)\n",
                   _mesa_enum_to_string(target), buffer);
+   }
 
    bind_buffer_object(ctx, target, buffer);
 }
@@ -1562,12 +1563,13 @@ _mesa_buffer_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
 {
    bool valid_usage;
 
-   if (MESA_VERBOSE & VERBOSE_API)
+   if (MESA_VERBOSE & VERBOSE_API) {
       _mesa_debug(ctx, "%s(%s, %ld, %p, %s)\n",
                   func,
                   _mesa_enum_to_string(target),
                   (long int) size, data,
                   _mesa_enum_to_string(usage));
+   }
 
    if (size < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(size < 0)", func);
@@ -3911,6 +3913,11 @@ _mesa_BindBufferRange(GLenum target, GLuint index,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
 
+   if (MESA_VERBOSE & VERBOSE_API) {
+      _mesa_debug(ctx, "glBindBufferRange(%s, %u, %u, %d, %d)\n",
+                  _mesa_enum_to_string(target), index, buffer, offset, size);
+   }
+
    if (buffer == 0) {
       bufObj = ctx->Shared->NullBufferObj;
    } else {
@@ -3962,6 +3969,11 @@ _mesa_BindBufferBase(GLenum target, GLuint index, GLuint buffer)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_buffer_object *bufObj;
+
+   if (MESA_VERBOSE & VERBOSE_API) {
+      _mesa_debug(ctx, "glBindBufferBase(%s, %u, %u)\n",
+                  _mesa_enum_to_string(target), index, buffer);
+   }
 
    if (buffer == 0) {
       bufObj = ctx->Shared->NullBufferObj;
@@ -4033,6 +4045,12 @@ _mesa_BindBuffersRange(GLenum target, GLuint first, GLsizei count,
 {
    GET_CURRENT_CONTEXT(ctx);
 
+   if (MESA_VERBOSE & VERBOSE_API) {
+      _mesa_debug(ctx, "glBindBuffersRange(%s, %u, %d, %p, %p, %p)\n",
+                  _mesa_enum_to_string(target), first, count,
+                  buffers, offsets, sizes);
+   }
+
    switch (target) {
    case GL_TRANSFORM_FEEDBACK_BUFFER:
       bind_xfb_buffers_range(ctx, first, count, buffers, offsets, sizes);
@@ -4060,6 +4078,11 @@ _mesa_BindBuffersBase(GLenum target, GLuint first, GLsizei count,
                       const GLuint *buffers)
 {
    GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API) {
+      _mesa_debug(ctx, "glBindBuffersBase(%s, %u, %d, %p)\n",
+                  _mesa_enum_to_string(target), first, count, buffers);
+   }
 
    switch (target) {
    case GL_TRANSFORM_FEEDBACK_BUFFER:
