@@ -27,6 +27,7 @@
 
 #include "nir/nir.h"
 #include "nir/nir_builder.h"
+#include "nir/nir_array.h"
 #include "nir_spirv.h"
 #include "spirv.h"
 
@@ -51,8 +52,10 @@ enum vtn_value_type {
 
 enum vtn_branch_type {
    vtn_branch_type_none,
-   vtn_branch_type_break,
-   vtn_branch_type_continue,
+   vtn_branch_type_switch_break,
+   vtn_branch_type_switch_fallthrough,
+   vtn_branch_type_loop_break,
+   vtn_branch_type_loop_continue,
    vtn_branch_type_discard,
    vtn_branch_type_return,
 };
@@ -62,7 +65,6 @@ enum vtn_cf_node_type {
    vtn_cf_node_type_if,
    vtn_cf_node_type_loop,
    vtn_cf_node_type_switch,
-   vtn_cf_node_type_case,
 };
 
 struct vtn_cf_node {
@@ -98,6 +100,32 @@ struct vtn_if {
    SpvSelectionControlMask control;
 };
 
+struct vtn_case {
+   struct list_head link;
+
+   struct list_head body;
+
+   /* The fallthrough case, if any */
+   struct vtn_case *fallthrough;
+
+   /* The uint32_t values that map to this case */
+   nir_array values;
+
+   /* True if this is the default case */
+   bool is_default;
+
+   /* Initialized to false; used when sorting the list of cases */
+   bool visited;
+};
+
+struct vtn_switch {
+   struct vtn_cf_node node;
+
+   uint32_t selector;
+
+   struct list_head cases;
+};
+
 struct vtn_block {
    struct vtn_cf_node node;
 
@@ -114,6 +142,9 @@ struct vtn_block {
 
    /** Points to the loop that this block starts (if it starts a loop) */
    struct vtn_loop *loop;
+
+   /** Points to the switch case started by this block (if any) */
+   struct vtn_case *switch_case;
 
    nir_block *block;
 };

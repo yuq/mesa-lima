@@ -3574,26 +3574,42 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    return true;
 }
 
-static void vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list);
-
-static void
-vtn_emit_branch(struct vtn_builder *b, enum vtn_branch_type branch_type)
+/* XXX: This should go in nir_builder.h */
+static inline void
+nir_jump(nir_builder *build, nir_jump_type jump_type)
 {
-   nir_jump_type jump_type;
-   switch (branch_type) {
-   case vtn_branch_type_break:      jump_type = nir_jump_break;      break;
-   case vtn_branch_type_continue:   jump_type = nir_jump_continue;   break;
-   case vtn_branch_type_return:     jump_type = nir_jump_return;     break;
-   default:
-      unreachable("Invalid branch type");
-   }
-
-   nir_jump_instr *jump = nir_jump_instr_create(b->shader, jump_type);
-   nir_builder_instr_insert(&b->nb, &jump->instr);
+   nir_jump_instr *jump = nir_jump_instr_create(build->shader, jump_type);
+   nir_builder_instr_insert(build, &jump->instr);
 }
 
 static void
-vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list)
+vtn_emit_branch(struct vtn_builder *b, enum vtn_branch_type branch_type,
+                nir_variable *switch_fall_var, bool *has_switch_break)
+{
+   switch (branch_type) {
+   case vtn_branch_type_switch_break:
+      nir_store_var(&b->nb, switch_fall_var, nir_imm_int(&b->nb, NIR_FALSE), 1);
+      *has_switch_break = true;
+      break;
+   case vtn_branch_type_switch_fallthrough:
+      break; /* Nothing to do */
+   case vtn_branch_type_loop_break:
+      nir_jump(&b->nb, nir_jump_break);
+      break;
+   case vtn_branch_type_loop_continue:
+      nir_jump(&b->nb, nir_jump_continue);
+      break;
+   case vtn_branch_type_return:
+      nir_jump(&b->nb, nir_jump_return);
+      break;
+   default:
+      unreachable("Invalid branch type");
+   }
+}
+
+static void
+vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
+                 nir_variable *switch_fall_var, bool *has_switch_break)
 {
    list_for_each_entry(struct vtn_cf_node, node, cf_list, link) {
       switch (node->type) {
@@ -3614,8 +3630,10 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list)
                                NULL);
          }
 
-         if (block->branch_type != vtn_branch_type_none)
-            vtn_emit_branch(b, block->branch_type);
+         if (block->branch_type != vtn_branch_type_none) {
+            vtn_emit_branch(b, block->branch_type,
+                            switch_fall_var, has_switch_break);
+         }
 
          break;
       }
@@ -3628,19 +3646,38 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list)
             nir_src_for_ssa(vtn_ssa_value(b, vtn_if->condition)->def);
          nir_cf_node_insert(b->nb.cursor, &if_stmt->cf_node);
 
+         bool sw_break = false;
+
          b->nb.cursor = nir_after_cf_list(&if_stmt->then_list);
          if (vtn_if->then_type == vtn_branch_type_none)
-            vtn_emit_cf_list(b, &vtn_if->then_body);
+            vtn_emit_cf_list(b, &vtn_if->then_body, switch_fall_var, &sw_break);
          else
-            vtn_emit_branch(b, vtn_if->then_type);
+            vtn_emit_branch(b, vtn_if->then_type, switch_fall_var, &sw_break);
 
          b->nb.cursor = nir_after_cf_list(&if_stmt->else_list);
          if (vtn_if->else_type == vtn_branch_type_none)
-            vtn_emit_cf_list(b, &vtn_if->else_body);
+            vtn_emit_cf_list(b, &vtn_if->else_body, switch_fall_var, &sw_break);
          else
-            vtn_emit_branch(b, vtn_if->else_type);
+            vtn_emit_branch(b, vtn_if->else_type, switch_fall_var, &sw_break);
 
          b->nb.cursor = nir_after_cf_node(&if_stmt->cf_node);
+
+         /* If we encountered a switch break somewhere inside of the if,
+          * then it would have been handled correctly by calling
+          * emit_cf_list or emit_branch for the interrior.  However, we
+          * need to predicate everything following on wether or not we're
+          * still going.
+          */
+         if (sw_break) {
+            *has_switch_break = true;
+
+            nir_if *switch_if = nir_if_create(b->shader);
+            switch_if->condition =
+               nir_src_for_ssa(nir_load_var(&b->nb, switch_fall_var));
+            nir_cf_node_insert(b->nb.cursor, &switch_if->cf_node);
+
+            b->nb.cursor = nir_after_cf_list(&if_stmt->then_list);
+         }
          break;
       }
 
@@ -3667,21 +3704,89 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list)
             nir_cf_node_insert(b->nb.cursor, &cont_if->cf_node);
 
             b->nb.cursor = nir_after_cf_list(&cont_if->then_list);
-            vtn_emit_cf_list(b, &vtn_loop->cont_body);
+            vtn_emit_cf_list(b, &vtn_loop->cont_body, NULL, NULL);
 
             b->nb.cursor = nir_after_cf_node(&cont_if->cf_node);
             nir_store_var(&b->nb, do_cont, nir_imm_int(&b->nb, NIR_TRUE), 1);
          }
 
          b->nb.cursor = nir_after_cf_list(&loop->body);
-         vtn_emit_cf_list(b, &vtn_loop->body);
+         vtn_emit_cf_list(b, &vtn_loop->body, NULL, NULL);
 
          b->nb.cursor = nir_after_cf_node(&loop->cf_node);
          break;
       }
 
-      case vtn_cf_node_type_switch:
-      case vtn_cf_node_type_case:
+      case vtn_cf_node_type_switch: {
+         struct vtn_switch *vtn_switch = (struct vtn_switch *)node;
+
+         /* First, we create a variable to keep track of whether or not the
+          * switch is still going at any given point.  Any switch breaks
+          * will set this variable to false.
+          */
+         nir_variable *fall_var =
+            nir_local_variable_create(b->nb.impl, glsl_bool_type(), "fall");
+         nir_store_var(&b->nb, fall_var, nir_imm_int(&b->nb, NIR_TRUE), 1);
+
+         /* Next, we gather up all of the conditions.  We have to do this
+          * up-front because we also need to build an "any" condition so
+          * that we can use !any for default.
+          */
+         const int num_cases = list_length(&vtn_switch->cases);
+         NIR_VLA(nir_ssa_def *, conditions, num_cases);
+
+         nir_ssa_def *sel = vtn_ssa_value(b, vtn_switch->selector)->def;
+         /* An accumulation of all conditions.  Used for the default */
+         nir_ssa_def *any = NULL;
+
+         int i = 0;
+         list_for_each_entry(struct vtn_case, cse, &vtn_switch->cases, link) {
+            if (cse->is_default) {
+               conditions[i++] = NULL;
+               continue;
+            }
+
+            nir_ssa_def *cond = NULL;
+            nir_array_foreach(&cse->values, uint32_t, val) {
+               nir_ssa_def *is_val =
+                  nir_ieq(&b->nb, sel, nir_imm_int(&b->nb, *val));
+
+               cond = cond ? nir_ior(&b->nb, cond, is_val) : is_val;
+            }
+
+            any = any ? nir_ior(&b->nb, any, cond) : cond;
+            conditions[i++] = cond;
+         }
+         assert(i == num_cases);
+
+         /* Now we can walk the list of cases and actually emit code */
+         i = 0;
+         list_for_each_entry(struct vtn_case, cse, &vtn_switch->cases, link) {
+            /* Figure out the condition */
+            nir_ssa_def *cond = conditions[i++];
+            if (cse->is_default) {
+               assert(cond == NULL);
+               cond = nir_inot(&b->nb, any);
+            }
+            /* Take fallthrough into account */
+            cond = nir_ior(&b->nb, cond, nir_load_var(&b->nb, fall_var));
+
+            nir_if *case_if = nir_if_create(b->nb.shader);
+            case_if->condition = nir_src_for_ssa(cond);
+            nir_cf_node_insert(b->nb.cursor, &case_if->cf_node);
+
+            bool has_break = false;
+            b->nb.cursor = nir_after_cf_list(&case_if->then_list);
+            vtn_emit_cf_list(b, &cse->body, fall_var, &has_break);
+            (void)has_break; /* We don't care */
+
+            b->nb.cursor = nir_after_cf_node(&case_if->cf_node);
+         }
+         assert(i == num_cases);
+
+         break;
+      }
+
       default:
          unreachable("Invalid CF node type");
       }
@@ -3736,7 +3841,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
                                                _mesa_key_pointer_equal);
       nir_builder_init(&b->nb, b->impl);
       b->nb.cursor = nir_after_cf_list(&b->impl->body);
-      vtn_emit_cf_list(b, &func->body);
+      vtn_emit_cf_list(b, &func->body, NULL, NULL);
       vtn_foreach_instruction(b, func->start_block->label, func->end,
                               vtn_handle_phi_second_pass);
    }
