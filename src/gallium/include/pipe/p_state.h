@@ -587,6 +587,8 @@ struct pipe_draw_info
    unsigned start_instance; /**< first instance id */
    unsigned instance_count; /**< number of instances */
 
+   unsigned drawid; /**< id of this draw in a multidraw */
+
    unsigned vertices_per_patch; /**< the number of vertices per patch */
 
    /**
