@@ -39,8 +39,7 @@ nir_cf_test::nir_cf_test()
    static const nir_shader_compiler_options options = { };
    shader = nir_shader_create(NULL, MESA_SHADER_VERTEX, &options);
    nir_function *func = nir_function_create(shader, "main");
-   nir_function_overload *overload = nir_function_overload_create(func);
-   impl = nir_function_impl_create(overload);
+   impl = nir_function_impl_create(func);
 
    nir_builder_init(&b, impl);
 }
