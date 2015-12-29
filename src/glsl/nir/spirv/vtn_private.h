@@ -162,11 +162,13 @@ struct vtn_function {
    SpvFunctionControlMask control;
 };
 
-void vtn_build_cfg(struct vtn_builder *b, const uint32_t *words,
-                   const uint32_t *end);
-
 typedef bool (*vtn_instruction_handler)(struct vtn_builder *, uint32_t,
                                         const uint32_t *, unsigned);
+
+void vtn_build_cfg(struct vtn_builder *b, const uint32_t *words,
+                   const uint32_t *end);
+void vtn_function_emit(struct vtn_builder *b, struct vtn_function *func,
+                       vtn_instruction_handler instruction_handler);
 
 const uint32_t *
 vtn_foreach_instruction(struct vtn_builder *b, const uint32_t *start,
@@ -341,6 +343,10 @@ vtn_value(struct vtn_builder *b, uint32_t value_id,
 }
 
 struct vtn_ssa_value *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
+
+void vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
+                        nir_deref_var *dest, struct vtn_type *dest_type);
+
 
 typedef void (*vtn_decoration_foreach_cb)(struct vtn_builder *,
                                           struct vtn_value *,
