@@ -3673,8 +3673,10 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list)
             nir_store_var(&b->nb, do_cont, nir_imm_int(&b->nb, NIR_TRUE), 1);
          }
 
-         b->nb.cursor = nir_after_cf_node(&loop->cf_node);
+         b->nb.cursor = nir_after_cf_list(&loop->body);
          vtn_emit_cf_list(b, &vtn_loop->body);
+
+         b->nb.cursor = nir_after_cf_node(&loop->cf_node);
          break;
       }
 
