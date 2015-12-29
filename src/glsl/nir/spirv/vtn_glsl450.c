@@ -176,6 +176,20 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
    }
 
+   case GLSLstd450SmoothStep: {
+      /* t = clamp((x - edge0) / (edge1 - edge0), 0, 1) */
+      nir_ssa_def *t =
+         build_fclamp(nb, nir_fdiv(nb, nir_fsub(nb, src[2], src[0]),
+                                       nir_fsub(nb, src[1], src[0])),
+                          nir_imm_float(nb, 0.0), nir_imm_float(nb, 1.0));
+      /* result = t * t * (3 - 2 * t) */
+      val->ssa->def =
+         nir_fmul(nb, t, nir_fmul(nb, t,
+            nir_fsub(nb, nir_imm_float(nb, 3.0),
+                         nir_fmul(nb, nir_imm_float(nb, 2.0), t))));
+      return;
+   }
+
    case GLSLstd450Asin:
    case GLSLstd450Acos:
    case GLSLstd450Atan:
@@ -186,7 +200,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Asinh:
    case GLSLstd450Acosh:
    case GLSLstd450Atanh:
-   case GLSLstd450SmoothStep:
    case GLSLstd450Frexp:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
