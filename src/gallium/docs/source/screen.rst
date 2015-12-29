@@ -239,8 +239,7 @@ The integer capabilities:
   will need to lower TGSI_SEMANTIC_VERTEXID to TGSI_SEMANTIC_VERTEXID_NOBASE
   and TGSI_SEMANTIC_BASEVERTEX, so drivers setting this must handle both these
   semantics. Only relevant if geometry shaders are supported.
-  (Currently not possible to query availability of these two semantics outside
-  this, at least BASEVERTEX should be exposed separately too).
+  (BASEVERTEX could be exposed separately too via ``PIPE_CAP_DRAW_PARAMETERS``).
 * ``PIPE_CAP_POLYGON_OFFSET_CLAMP``: If true, the driver implements support
   for ``pipe_rasterizer_state::offset_clamp``.
 * ``PIPE_CAP_MULTISAMPLE_Z_RESOLVE``: Whether the driver supports blitting
@@ -283,6 +282,9 @@ The integer capabilities:
   a compressed block is copied to/from a plain pixel of the same size.
 * ``PIPE_CAP_CLEAR_TEXTURE``: Whether `clear_texture` will be
   available in contexts.
+* ``PIPE_CAP_DRAW_PARAMETERS``: Whether ``TGSI_SEMANTIC_BASEVERTEX``,
+  ``TGSI_SEMANTIC_BASEINSTANCE``, and ``TGSI_SEMANTIC_DRAWID`` are
+  supported in vertex shaders.
 
 
 .. _pipe_capf:

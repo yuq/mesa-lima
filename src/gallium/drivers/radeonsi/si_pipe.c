@@ -340,6 +340,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_CLEAR_TEXTURE:
+	case PIPE_CAP_DRAW_PARAMETERS:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:

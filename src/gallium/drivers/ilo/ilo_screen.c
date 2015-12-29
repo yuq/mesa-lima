@@ -476,6 +476,7 @@ ilo_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_SHAREABLE_SHADERS:
    case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
    case PIPE_CAP_CLEAR_TEXTURE:
+   case PIPE_CAP_DRAW_PARAMETERS:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
