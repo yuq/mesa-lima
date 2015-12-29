@@ -152,6 +152,9 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
 
    case GLSLstd450Log:
+      val->ssa->def = build_log(nb, src[0]);
+      return;
+
    case GLSLstd450FClamp:
    case GLSLstd450UClamp:
    case GLSLstd450SClamp:
