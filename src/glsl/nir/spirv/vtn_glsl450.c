@@ -156,8 +156,15 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
 
    case GLSLstd450FClamp:
+      val->ssa->def = build_fclamp(nb, src[0], src[1], src[2]);
+      return;
    case GLSLstd450UClamp:
+      val->ssa->def = nir_umin(nb, nir_umax(nb, src[0], src[1]), src[2]);
+      return;
    case GLSLstd450SClamp:
+      val->ssa->def = nir_imin(nb, nir_imax(nb, src[0], src[1]), src[2]);
+      return;
+
    case GLSLstd450Asin:
    case GLSLstd450Acos:
    case GLSLstd450Atan:
