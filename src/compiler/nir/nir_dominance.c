@@ -94,7 +94,6 @@ calc_dominance_cb(nir_block *block, void *_state)
       }
    }
 
-   assert(new_idom);
    if (block->imm_dom != new_idom) {
       block->imm_dom = new_idom;
       state->progress = true;
@@ -112,6 +111,11 @@ calc_dom_frontier_cb(nir_block *block, void *state)
       struct set_entry *entry;
       set_foreach(block->predecessors, entry) {
          nir_block *runner = (nir_block *) entry->key;
+
+         /* Skip unreachable predecessors */
+         if (runner->imm_dom == NULL)
+            continue;
+
          while (runner != block->imm_dom) {
             _mesa_set_add(runner->dom_frontier, block);
             runner = runner->imm_dom;
