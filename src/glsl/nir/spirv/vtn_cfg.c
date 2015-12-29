@@ -450,14 +450,6 @@ vtn_build_cfg(struct vtn_builder *b, const uint32_t *words, const uint32_t *end)
    }
 }
 
-/* XXX: This should go in nir_builder.h */
-static inline void
-nir_jump(nir_builder *build, nir_jump_type jump_type)
-{
-   nir_jump_instr *jump = nir_jump_instr_create(build->shader, jump_type);
-   nir_builder_instr_insert(build, &jump->instr);
-}
-
 static void
 vtn_emit_branch(struct vtn_builder *b, enum vtn_branch_type branch_type,
                 nir_variable *switch_fall_var, bool *has_switch_break)
