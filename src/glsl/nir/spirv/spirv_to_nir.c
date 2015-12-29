@@ -587,16 +587,13 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
       NIR_VLA(struct glsl_struct_field, fields, count);
       for (unsigned i = 0; i < num_fields; i++) {
-         /* TODO: Handle decorators */
          val->type->members[i] =
             vtn_value(b, w[i + 2], vtn_value_type_type)->type;
-         fields[i].type = val->type->members[i]->type;
-         fields[i].name = ralloc_asprintf(b, "field%d", i);
-         fields[i].location = -1;
-         fields[i].interpolation = 0;
-         fields[i].centroid = 0;
-         fields[i].sample = 0;
-         fields[i].matrix_layout = 2;
+         fields[i] = (struct glsl_struct_field) {
+            .type = val->type->members[i]->type,
+            .name = ralloc_asprintf(b, "field%d", i),
+            .location = -1,
+         };
       }
 
       struct member_decoration_ctx ctx = {
