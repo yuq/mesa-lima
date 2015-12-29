@@ -2949,6 +2949,19 @@ invocation is covered or not. Helper invocations are created in order
 to properly compute derivatives, however it may be desirable to skip
 some of the logic in those cases. See ``gl_HelperInvocation`` documentation.
 
+TGSI_SEMANTIC_BASEINSTANCE
+""""""""""""""""""""""""""
+
+For vertex shaders, the base instance argument supplied for this
+draw. This is an integer value, and only the X component is used.
+
+TGSI_SEMANTIC_DRAWID
+""""""""""""""""""""
+
+For vertex shaders, the zero-based index of the current draw in a
+``glMultiDraw*`` invocation. This is an integer value, and only the X
+component is used.
+
 
 Declaration Interpolate
 ^^^^^^^^^^^^^^^^^^^^^^^
