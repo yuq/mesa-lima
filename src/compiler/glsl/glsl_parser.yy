@@ -1498,7 +1498,8 @@ layout_qualifier_id:
          $$.binding = $3;
       }
 
-      if (state->has_atomic_counters() &&
+      if ((state->has_atomic_counters() ||
+           state->has_enhanced_layouts()) &&
           match_layout_qualifier("offset", $1, state) == 0) {
          $$.flags.q.explicit_offset = 1;
          $$.offset = $3;
