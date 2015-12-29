@@ -66,7 +66,6 @@ build_log(nir_builder *b, nir_ssa_def *x)
    return nir_fmul(b, nir_flog2(b, x), nir_imm_float(b, 1.0 / M_LOG2E));
 }
 
-
 static void
 handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                    const uint32_t *w, unsigned count)
@@ -205,13 +204,35 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                                            src[1])));
       return;
 
+   case GLSLstd450Sinh:
+      /* 0.5 * (e^x - e^(-x)) */
+      val->ssa->def =
+         nir_fmul(nb, nir_imm_float(nb, 0.5f),
+                      nir_fsub(nb, build_exp(nb, src[0]),
+                                   build_exp(nb, nir_fneg(nb, src[0]))));
+      return;
+
+   case GLSLstd450Cosh:
+      /* 0.5 * (e^x + e^(-x)) */
+      val->ssa->def =
+         nir_fmul(nb, nir_imm_float(nb, 0.5f),
+                      nir_fadd(nb, build_exp(nb, src[0]),
+                                   build_exp(nb, nir_fneg(nb, src[0]))));
+      return;
+
+   case GLSLstd450Tanh:
+      /* (e^x - e^(-x)) / (e^x + e^(-x)) */
+      val->ssa->def =
+         nir_fdiv(nb, nir_fsub(nb, build_exp(nb, src[0]),
+                                   build_exp(nb, nir_fneg(nb, src[0]))),
+                      nir_fadd(nb, build_exp(nb, src[0]),
+                                   build_exp(nb, nir_fneg(nb, src[0]))));
+      return;
+
    case GLSLstd450Asin:
    case GLSLstd450Acos:
    case GLSLstd450Atan:
    case GLSLstd450Atan2:
-   case GLSLstd450Sinh:
-   case GLSLstd450Cosh:
-   case GLSLstd450Tanh:
    case GLSLstd450Asinh:
    case GLSLstd450Acosh:
    case GLSLstd450Atanh:
