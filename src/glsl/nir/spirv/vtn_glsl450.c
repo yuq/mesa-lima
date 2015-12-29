@@ -41,6 +41,25 @@ build_length(nir_builder *b, nir_ssa_def *vec)
    }
 }
 
+/**
+ * Return e^x.
+ */
+static nir_ssa_def *
+build_exp(nir_builder *b, nir_ssa_def *x)
+{
+   return nir_fexp2(b, nir_fmul(b, x, nir_imm_float(b, M_LOG2E)));
+}
+
+/**
+ * Return ln(x) - the natural logarithm of x.
+ */
+static nir_ssa_def *
+build_log(nir_builder *b, nir_ssa_def *x)
+{
+   return nir_fmul(b, nir_flog2(b, x), nir_imm_float(b, 1.0 / M_LOG2E));
+}
+
+
 static void
 handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                    const uint32_t *w, unsigned count)
