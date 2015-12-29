@@ -3039,8 +3039,10 @@ vtn_phi_node_add_src(struct vtn_ssa_value *phi, const nir_block *pred,
       nir_phi_instr *phi_instr = nir_instr_as_phi(phi->def->parent_instr);
       nir_phi_src *src = ralloc(phi_instr, nir_phi_src);
       src->pred = (nir_block *) pred;
-      src->src = nir_src_for_ssa(val->def);
+      src->src = NIR_SRC_INIT;
       exec_list_push_tail(&phi_instr->srcs, &src->node);
+      nir_instr_rewrite_src(&phi_instr->instr, &src->src,
+                            nir_src_for_ssa(val->def));
    } else {
       unsigned elems = glsl_get_length(phi->type);
       for (unsigned i = 0; i < elems; i++)
