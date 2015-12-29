@@ -165,6 +165,17 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       val->ssa->def = nir_imin(nb, nir_imax(nb, src[0], src[1]), src[2]);
       return;
 
+   case GLSLstd450Cross: {
+      unsigned yzx[4] = { 1, 2, 0, 0 };
+      unsigned zxy[4] = { 2, 0, 1, 0 };
+      val->ssa->def =
+         nir_fsub(nb, nir_fmul(nb, nir_swizzle(nb, src[0], yzx, 3, true),
+                                   nir_swizzle(nb, src[1], zxy, 3, true)),
+                      nir_fmul(nb, nir_swizzle(nb, src[0], zxy, 3, true),
+                                   nir_swizzle(nb, src[1], yzx, 3, true)));
+      return;
+   }
+
    case GLSLstd450Asin:
    case GLSLstd450Acos:
    case GLSLstd450Atan:
@@ -179,7 +190,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Frexp:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
-   case GLSLstd450Cross:
    case GLSLstd450FaceForward:
    case GLSLstd450Reflect:
    case GLSLstd450Refract:
