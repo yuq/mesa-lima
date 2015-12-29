@@ -41,6 +41,13 @@ build_length(nir_builder *b, nir_ssa_def *vec)
    }
 }
 
+static inline nir_ssa_def *
+build_fclamp(nir_builder *b,
+             nir_ssa_def *x, nir_ssa_def *min_val, nir_ssa_def *max_val)
+{
+   return nir_fmin(b, nir_fmax(b, x, min_val), max_val);
+}
+
 /**
  * Return e^x.
  */
