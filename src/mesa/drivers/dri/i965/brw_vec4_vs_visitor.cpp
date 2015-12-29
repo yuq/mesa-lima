@@ -155,7 +155,11 @@ vec4_vs_visitor::make_reg_for_system_value(int location,
    switch (location) {
    case SYSTEM_VALUE_BASE_VERTEX:
       reg->writemask = WRITEMASK_X;
-      vs_prog_data->uses_vertexid = true;
+      vs_prog_data->uses_basevertex = true;
+      break;
+   case SYSTEM_VALUE_BASE_INSTANCE:
+      reg->writemask = WRITEMASK_Y;
+      vs_prog_data->uses_baseinstance = true;
       break;
    case SYSTEM_VALUE_VERTEX_ID:
    case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
@@ -165,6 +169,11 @@ vec4_vs_visitor::make_reg_for_system_value(int location,
    case SYSTEM_VALUE_INSTANCE_ID:
       reg->writemask = WRITEMASK_W;
       vs_prog_data->uses_instanceid = true;
+      break;
+   case SYSTEM_VALUE_DRAW_ID:
+      reg = new(mem_ctx) dst_reg(ATTR, VERT_ATTRIB_MAX + 1);
+      reg->writemask = WRITEMASK_X;
+      vs_prog_data->uses_drawid = true;
       break;
    default:
       unreachable("not reached");

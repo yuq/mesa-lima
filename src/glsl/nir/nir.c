@@ -1655,6 +1655,10 @@ nir_intrinsic_from_system_value(gl_system_value val)
       return nir_intrinsic_load_vertex_id;
    case SYSTEM_VALUE_INSTANCE_ID:
       return nir_intrinsic_load_instance_id;
+   case SYSTEM_VALUE_DRAW_ID:
+      return nir_intrinsic_load_draw_id;
+   case SYSTEM_VALUE_BASE_INSTANCE:
+      return nir_intrinsic_load_base_instance;
    case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
       return nir_intrinsic_load_vertex_id_zero_base;
    case SYSTEM_VALUE_BASE_VERTEX:
@@ -1700,6 +1704,10 @@ nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
       return SYSTEM_VALUE_VERTEX_ID;
    case nir_intrinsic_load_instance_id:
       return SYSTEM_VALUE_INSTANCE_ID;
+   case nir_intrinsic_load_draw_id:
+      return SYSTEM_VALUE_DRAW_ID;
+   case nir_intrinsic_load_base_instance:
+      return SYSTEM_VALUE_BASE_INSTANCE;
    case nir_intrinsic_load_vertex_id_zero_base:
       return SYSTEM_VALUE_VERTEX_ID_ZERO_BASE;
    case nir_intrinsic_load_base_vertex:

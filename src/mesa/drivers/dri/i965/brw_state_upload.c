@@ -196,10 +196,14 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
    &gen7_hw_binding_tables, /* Enable hw-generated binding tables for Haswell */
 
    &brw_vs_image_surfaces, /* Before vs push/pull constants and binding table */
+   &brw_tcs_image_surfaces, /* Before tcs push/pull constants and binding table */
+   &brw_tes_image_surfaces, /* Before tes push/pull constants and binding table */
    &brw_gs_image_surfaces, /* Before gs push/pull constants and binding table */
    &brw_wm_image_surfaces, /* Before wm push/pull constants and binding table */
 
    &gen6_vs_push_constants, /* Before vs_state */
+   &gen7_tcs_push_constants,
+   &gen7_tes_push_constants,
    &gen6_gs_push_constants, /* Before gs_state */
    &gen6_wm_push_constants, /* Before wm_surfaces and constant_buffer */
 
@@ -209,6 +213,12 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
    &brw_vs_pull_constants,
    &brw_vs_ubo_surfaces,
    &brw_vs_abo_surfaces,
+   &brw_tcs_pull_constants,
+   &brw_tcs_ubo_surfaces,
+   &brw_tcs_abo_surfaces,
+   &brw_tes_pull_constants,
+   &brw_tes_ubo_surfaces,
+   &brw_tes_abo_surfaces,
    &brw_gs_pull_constants,
    &brw_gs_ubo_surfaces,
    &brw_gs_abo_surfaces,
@@ -218,11 +228,15 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
    &gen6_renderbuffer_surfaces,
    &brw_texture_surfaces,
    &brw_vs_binding_table,
+   &brw_tcs_binding_table,
+   &brw_tes_binding_table,
    &brw_gs_binding_table,
    &brw_wm_binding_table,
 
    &brw_fs_samplers,
    &brw_vs_samplers,
+   &brw_tcs_samplers,
+   &brw_tes_samplers,
    &brw_gs_samplers,
    &gen6_multisample_state,
 

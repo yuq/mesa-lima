@@ -909,8 +909,13 @@ struct brw_context
    uint32_t pma_stall_bits;
 
    struct {
-      /** The value of gl_BaseVertex for the current _mesa_prim. */
-      int gl_basevertex;
+      struct {
+         /** The value of gl_BaseVertex for the current _mesa_prim. */
+         int gl_basevertex;
+
+         /** The value of gl_BaseInstance for the current _mesa_prim. */
+         int gl_baseinstance;
+      } params;
 
       /**
        * Buffer and offset used for GL_ARB_shader_draw_parameters
@@ -918,6 +923,15 @@ struct brw_context
        */
       drm_intel_bo *draw_params_bo;
       uint32_t draw_params_offset;
+
+      /**
+       * The value of gl_DrawID for the current _mesa_prim. This always comes
+       * in from it's own vertex buffer since it's not part of the indirect
+       * draw parameters.
+       */
+      int gl_drawid;
+      drm_intel_bo *draw_id_bo;
+      uint32_t draw_id_offset;
    } draw;
 
    struct {

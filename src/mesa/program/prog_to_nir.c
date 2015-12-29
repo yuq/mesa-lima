@@ -1083,10 +1083,10 @@ prog_to_nir(const struct gl_program *prog,
    c = rzalloc(NULL, struct ptn_compile);
    if (!c)
       return NULL;
-   s = nir_shader_create(NULL, stage, options);
-   if (!s)
-      goto fail;
    c->prog = prog;
+
+   nir_builder_init_simple_shader(&c->build, NULL, stage, options);
+   s = c->build.shader;
 
    if (prog->Parameters->NumParameters > 0) {
       c->parameters = rzalloc(s, nir_variable);
@@ -1097,13 +1097,6 @@ prog_to_nir(const struct gl_program *prog,
       c->parameters->data.mode = nir_var_uniform;
       exec_list_push_tail(&s->uniforms, &c->parameters->node);
    }
-
-   nir_function *func = nir_function_create(s, "main");
-   nir_function_impl *impl = nir_function_impl_create(func);
-
-   c->build.shader = s;
-   c->build.impl = impl;
-   c->build.cursor = nir_after_cf_list(&impl->body);
 
    setup_registers_and_variables(c);
    if (unlikely(c->error))

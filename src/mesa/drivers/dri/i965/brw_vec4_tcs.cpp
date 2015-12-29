@@ -156,18 +156,56 @@ vec4_tcs_visitor::emit_prolog()
 void
 vec4_tcs_visitor::emit_thread_end()
 {
+   vec4_instruction *inst;
    current_annotation = "thread end";
 
    if (nir->info.tcs.vertices_out % 2) {
       emit(BRW_OPCODE_ENDIF);
    }
 
+   if (devinfo->gen == 7) {
+      struct brw_tcs_prog_data *tcs_prog_data =
+         (struct brw_tcs_prog_data *) prog_data;
+
+      current_annotation = "release input vertices";
+
+      /* Synchronize all threads, so we know that no one is still
+       * using the input URB handles.
+       */
+      if (tcs_prog_data->instances > 1) {
+         dst_reg header = dst_reg(this, glsl_type::uvec4_type);
+         emit(TCS_OPCODE_CREATE_BARRIER_HEADER, header);
+         emit(SHADER_OPCODE_BARRIER, dst_null_ud(), src_reg(header));
+      }
+
+      /* Make thread 0 (invocations <1, 0>) release pairs of ICP handles.
+       * We want to compare the bottom half of invocation_id with 0, but
+       * use that truth value for the top half as well.  Unfortunately,
+       * we don't have stride in the vec4 world, nor UV immediates in
+       * align16, so we need an opcode to get invocation_id<0,4,0>.
+       */
+      emit(TCS_OPCODE_SRC0_010_IS_ZERO, dst_null_d(), invocation_id);
+      emit(IF(BRW_PREDICATE_NORMAL));
+      for (unsigned i = 0; i < key->input_vertices; i += 2) {
+         /* If we have an odd number of input vertices, the last will be
+          * unpaired.  We don't want to use an interleaved URB write in
+          * that case.
+          */
+         const bool is_unpaired = i == key->input_vertices - 1;
+
+         dst_reg header(this, glsl_type::uvec4_type);
+         emit(TCS_OPCODE_RELEASE_INPUT, header, brw_imm_ud(i),
+              brw_imm_ud(is_unpaired));
+      }
+      emit(BRW_OPCODE_ENDIF);
+   }
+
    if (unlikely(INTEL_DEBUG & DEBUG_SHADER_TIME))
       emit_shader_time_end();
 
-   vec4_instruction *inst = emit(VS_OPCODE_URB_WRITE);
-   inst->mlen = 1;   /* just the header, no data. */
-   inst->urb_write_flags = BRW_URB_WRITE_EOT_COMPLETE;
+   inst = emit(TCS_OPCODE_THREAD_END);
+   inst->base_mrf = 14;
+   inst->mlen = 1;
 }
 
 

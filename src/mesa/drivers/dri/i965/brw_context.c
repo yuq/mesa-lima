@@ -374,8 +374,8 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    const bool stage_exists[MESA_SHADER_STAGES] = {
       [MESA_SHADER_VERTEX] = true,
-      [MESA_SHADER_TESS_CTRL] = brw->gen >= 8,
-      [MESA_SHADER_TESS_EVAL] = brw->gen >= 8,
+      [MESA_SHADER_TESS_CTRL] = brw->gen >= 7,
+      [MESA_SHADER_TESS_EVAL] = brw->gen >= 7,
       [MESA_SHADER_GEOMETRY] = brw->gen >= 6,
       [MESA_SHADER_FRAGMENT] = true,
       [MESA_SHADER_COMPUTE] =

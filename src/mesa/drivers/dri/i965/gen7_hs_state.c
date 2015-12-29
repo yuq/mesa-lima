@@ -60,37 +60,58 @@ const struct brw_tracked_state gen7_tcs_push_constants = {
 static void
 gen7_upload_hs_state(struct brw_context *brw)
 {
-   /* Disable the HS Unit */
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_CONSTANT_HS << 16 | (7 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
+   const struct brw_stage_state *stage_state = &brw->tcs.base;
+   /* BRW_NEW_TESS_PROGRAMS */
+   bool active = brw->tess_eval_program;
+   /* BRW_NEW_TCS_PROG_DATA */
+   const struct brw_vue_prog_data *prog_data = &brw->tcs.prog_data->base;
 
-   BEGIN_BATCH(7);
-   OUT_BATCH(_3DSTATE_HS << 16 | (7 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
-   BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_BINDING_TABLE_POINTERS_HS << 16 | (2 - 2));
-   OUT_BATCH(brw->hw_bt_pool.next_offset);
-   ADVANCE_BATCH();
+   if (active) {
+      BEGIN_BATCH(7);
+      OUT_BATCH(_3DSTATE_HS << 16 | (7 - 2));
+      OUT_BATCH(SET_FIELD(DIV_ROUND_UP(stage_state->sampler_count, 4),
+                          GEN7_HS_SAMPLER_COUNT) |
+                SET_FIELD(prog_data->base.binding_table.size_bytes / 4,
+                          GEN7_HS_BINDING_TABLE_ENTRY_COUNT) |
+                (brw->max_hs_threads - 1));
+      OUT_BATCH(GEN7_HS_ENABLE |
+                GEN7_HS_STATISTICS_ENABLE |
+                SET_FIELD(brw->tcs.prog_data->instances - 1,
+                          GEN7_HS_INSTANCE_COUNT));
+      OUT_BATCH(stage_state->prog_offset);
+      if (prog_data->base.total_scratch) {
+         OUT_RELOC(stage_state->scratch_bo,
+                   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                   ffs(prog_data->base.total_scratch) - 11);
+      } else {
+         OUT_BATCH(0);
+      }
+      OUT_BATCH(GEN7_HS_INCLUDE_VERTEX_HANDLES |
+                SET_FIELD(prog_data->base.dispatch_grf_start_reg,
+                          GEN7_HS_DISPATCH_START_GRF));
+      /* Ignore URB semaphores */
+      OUT_BATCH(0);
+      ADVANCE_BATCH();
+   } else {
+      BEGIN_BATCH(7);
+      OUT_BATCH(_3DSTATE_HS << 16 | (7 - 2));
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      ADVANCE_BATCH();
+   }
+   brw->tcs.enabled = active;
 }
 
 const struct brw_tracked_state gen7_hs_state = {
    .dirty = {
       .mesa  = 0,
-      .brw   = BRW_NEW_CONTEXT,
+      .brw   = BRW_NEW_BATCH |
+               BRW_NEW_TCS_PROG_DATA |
+               BRW_NEW_TESS_PROGRAMS,
    },
    .emit = gen7_upload_hs_state,
 };

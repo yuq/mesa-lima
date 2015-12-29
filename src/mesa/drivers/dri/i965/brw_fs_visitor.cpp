@@ -43,9 +43,14 @@ fs_visitor::emit_vs_system_value(int location)
    switch (location) {
    case SYSTEM_VALUE_BASE_VERTEX:
       reg->reg_offset = 0;
-      vs_prog_data->uses_vertexid = true;
+      vs_prog_data->uses_basevertex = true;
+      break;
+   case SYSTEM_VALUE_BASE_INSTANCE:
+      reg->reg_offset = 1;
+      vs_prog_data->uses_baseinstance = true;
       break;
    case SYSTEM_VALUE_VERTEX_ID:
+      unreachable("should have been lowered");
    case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
       reg->reg_offset = 2;
       vs_prog_data->uses_vertexid = true;
@@ -53,6 +58,16 @@ fs_visitor::emit_vs_system_value(int location)
    case SYSTEM_VALUE_INSTANCE_ID:
       reg->reg_offset = 3;
       vs_prog_data->uses_instanceid = true;
+      break;
+   case SYSTEM_VALUE_DRAW_ID:
+      if (nir->info.system_values_read &
+          (BITFIELD64_BIT(SYSTEM_VALUE_BASE_VERTEX) |
+           BITFIELD64_BIT(SYSTEM_VALUE_BASE_INSTANCE) |
+           BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
+           BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID)))
+         reg->nr += 4;
+      reg->reg_offset = 0;
+      vs_prog_data->uses_drawid = true;
       break;
    default:
       unreachable("not reached");

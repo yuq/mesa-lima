@@ -157,6 +157,7 @@ vec4_instruction::is_send_from_grf()
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
    case VEC4_OPCODE_URB_READ:
    case TCS_OPCODE_URB_WRITE:
+   case TCS_OPCODE_RELEASE_INPUT:
    case SHADER_OPCODE_BARRIER:
       return true;
    default:
@@ -189,6 +190,7 @@ vec4_instruction::has_source_and_destination_hazard() const
    switch (opcode) {
    case TCS_OPCODE_SET_INPUT_URB_OFFSETS:
    case TCS_OPCODE_SET_OUTPUT_URB_OFFSETS:
+   case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:
       return true;
    default:
       return false;
@@ -274,6 +276,7 @@ vec4_visitor::implied_mrf_writes(vec4_instruction *inst)
    case SHADER_OPCODE_POW:
       return 2;
    case VS_OPCODE_URB_WRITE:
+   case TCS_OPCODE_THREAD_END:
       return 1;
    case VS_OPCODE_PULL_CONSTANT_LOAD:
       return 2;
@@ -1563,7 +1566,7 @@ int
 vec4_vs_visitor::setup_attributes(int payload_reg)
 {
    int nr_attributes;
-   int attribute_map[VERT_ATTRIB_MAX + 1];
+   int attribute_map[VERT_ATTRIB_MAX + 2];
    memset(attribute_map, 0, sizeof(attribute_map));
 
    nr_attributes = 0;
@@ -1574,12 +1577,19 @@ vec4_vs_visitor::setup_attributes(int payload_reg)
       }
    }
 
+   if (vs_prog_data->uses_drawid) {
+      attribute_map[VERT_ATTRIB_MAX + 1] = payload_reg + nr_attributes;
+      nr_attributes++;
+   }
+
    /* VertexID is stored by the VF as the last vertex element, but we
     * don't represent it with a flag in inputs_read, so we call it
     * VERT_ATTRIB_MAX.
     */
-   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid) {
+   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid ||
+       vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance) {
       attribute_map[VERT_ATTRIB_MAX] = payload_reg + nr_attributes;
+      nr_attributes++;
    }
 
    lower_attributes_to_hw_regs(attribute_map, false /* interleaved */);
@@ -1979,8 +1989,15 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
     * incoming vertex attribute.  So, add an extra slot.
     */
    if (shader->info.system_values_read &
-       (BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
+       (BITFIELD64_BIT(SYSTEM_VALUE_BASE_VERTEX) |
+        BITFIELD64_BIT(SYSTEM_VALUE_BASE_INSTANCE) |
+        BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
         BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID))) {
+      nr_attributes++;
+   }
+
+   /* gl_DrawID has its very own vec4 */
+   if (shader->info.system_values_read & BITFIELD64_BIT(SYSTEM_VALUE_DRAW_ID)) {
       nr_attributes++;
    }
 

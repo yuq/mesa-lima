@@ -222,6 +222,20 @@ emit_system_values_block(nir_block *block, void *void_visitor)
             *reg = *v->emit_vs_system_value(SYSTEM_VALUE_INSTANCE_ID);
          break;
 
+      case nir_intrinsic_load_base_instance:
+         assert(v->stage == MESA_SHADER_VERTEX);
+         reg = &v->nir_system_values[SYSTEM_VALUE_BASE_INSTANCE];
+         if (reg->file == BAD_FILE)
+            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_BASE_INSTANCE);
+         break;
+
+      case nir_intrinsic_load_draw_id:
+         assert(v->stage == MESA_SHADER_VERTEX);
+         reg = &v->nir_system_values[SYSTEM_VALUE_DRAW_ID];
+         if (reg->file == BAD_FILE)
+            *reg = *v->emit_vs_system_value(SYSTEM_VALUE_DRAW_ID);
+         break;
+
       case nir_intrinsic_load_invocation_id:
          assert(v->stage == MESA_SHADER_GEOMETRY);
          reg = &v->nir_system_values[SYSTEM_VALUE_INVOCATION_ID];
@@ -1747,7 +1761,9 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
 
    case nir_intrinsic_load_vertex_id_zero_base:
    case nir_intrinsic_load_base_vertex:
-   case nir_intrinsic_load_instance_id: {
+   case nir_intrinsic_load_instance_id:
+   case nir_intrinsic_load_base_instance:
+   case nir_intrinsic_load_draw_id: {
       gl_system_value sv = nir_system_value_from_intrinsic(instr->intrinsic);
       fs_reg val = nir_system_values[sv];
       assert(val.file != BAD_FILE);

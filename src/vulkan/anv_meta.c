@@ -30,7 +30,7 @@
 #include "anv_meta.h"
 #include "anv_meta_clear.h"
 #include "anv_private.h"
-#include "anv_nir_builder.h"
+#include "glsl/nir/nir_builder.h"
 
 struct anv_render_pass anv_meta_dummy_renderpass = {0};
 
@@ -41,7 +41,7 @@ build_nir_vertex_shader(bool attr_flat)
 
    const struct glsl_type *vertex_type = glsl_vec4_type();
 
-   nir_builder_init_simple_shader(&b, MESA_SHADER_VERTEX);
+   nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
 
    nir_variable *pos_in = nir_variable_create(b.shader, nir_var_shader_in,
                                               vertex_type, "a_pos");
@@ -73,7 +73,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
 {
    nir_builder b;
 
-   nir_builder_init_simple_shader(&b, MESA_SHADER_FRAGMENT);
+   nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
 
    const struct glsl_type *color_type = glsl_vec4_type();
 

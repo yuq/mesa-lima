@@ -1341,6 +1341,7 @@ vbo_validated_multidrawelements(struct gl_context *ctx, GLenum mode,
 	 prim[i].indexed = 1;
          prim[i].num_instances = 1;
          prim[i].base_instance = 0;
+         prim[i].draw_id = i;
          prim[i].is_indirect = 0;
 	 if (basevertex != NULL)
 	    prim[i].basevertex = basevertex[i];
@@ -1371,6 +1372,7 @@ vbo_validated_multidrawelements(struct gl_context *ctx, GLenum mode,
 	 prim[0].indexed = 1;
          prim[0].num_instances = 1;
          prim[0].base_instance = 0;
+         prim[0].draw_id = i;
          prim[0].is_indirect = 0;
 	 if (basevertex != NULL)
 	    prim[0].basevertex = basevertex[i];
@@ -1598,6 +1600,7 @@ vbo_validated_multidrawarraysindirect(struct gl_context *ctx,
       prim[i].mode = mode;
       prim[i].indirect_offset = offset;
       prim[i].is_indirect = 1;
+      prim[i].draw_id = i;
    }
 
    check_buffers_are_unmapped(exec->array.inputs);
@@ -1684,6 +1687,7 @@ vbo_validated_multidrawelementsindirect(struct gl_context *ctx,
       prim[i].indexed = 1;
       prim[i].indirect_offset = offset;
       prim[i].is_indirect = 1;
+      prim[i].draw_id = i;
    }
 
    check_buffers_are_unmapped(exec->array.inputs);
