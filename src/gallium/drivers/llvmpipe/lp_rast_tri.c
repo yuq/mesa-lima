@@ -133,36 +133,8 @@ lp_rast_triangle_4_16(struct lp_rasterizer_task *task,
    lp_rast_triangle_4(task, arg2);
 }
 
-#if !defined(PIPE_ARCH_SSE)
+#if defined(PIPE_ARCH_SSE)
 
-void
-lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
-                         const union lp_rast_cmd_arg arg)
-{
-   union lp_rast_cmd_arg arg2;
-   arg2.triangle.tri = arg.triangle.tri;
-   arg2.triangle.plane_mask = (1<<3)-1;
-   lp_rast_triangle_32_3(task, arg2);
-}
-
-void
-lp_rast_triangle_32_4_16(struct lp_rasterizer_task *task,
-                         const union lp_rast_cmd_arg arg)
-{
-   union lp_rast_cmd_arg arg2;
-   arg2.triangle.tri = arg.triangle.tri;
-   arg2.triangle.plane_mask = (1<<4)-1;
-   lp_rast_triangle_32_4(task, arg2);
-}
-
-void
-lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
-                      const union lp_rast_cmd_arg arg)
-{
-   lp_rast_triangle_32_3_16(task, arg);
-}
-
-#else
 #include <emmintrin.h>
 #include "util/u_sse.h"
 
@@ -264,12 +236,6 @@ sign_bits4(const __m128i *cstep, int cdiff)
 
 
 #define NR_PLANES 3
-
-
-
-
-
-
 
 void
 lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
@@ -381,10 +347,6 @@ lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
                                0xffff & ~out[i].mask);
 }
 
-
-
-
-
 void
 lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
                      const union lp_rast_cmd_arg arg)
@@ -471,6 +433,114 @@ lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
 }
 
 #undef NR_PLANES
+
+#else
+
+#if defined(_ARCH_PWR8) && defined(PIPE_ARCH_LITTLE_ENDIAN)
+
+#include <altivec.h>
+#include "util/u_pwr8.h"
+
+static inline void
+build_masks_32(int c,
+               int cdiff,
+               int dcdx,
+               int dcdy,
+               unsigned *outmask,
+               unsigned *partmask)
+{
+   __m128i cstep0 = vec_setr_epi32(c, c+dcdx, c+dcdx*2, c+dcdx*3);
+   __m128i xdcdy = (__m128i) vec_splats(dcdy);
+
+   /* Get values across the quad
+    */
+   __m128i cstep1 = vec_add_epi32(cstep0, xdcdy);
+   __m128i cstep2 = vec_add_epi32(cstep1, xdcdy);
+   __m128i cstep3 = vec_add_epi32(cstep2, xdcdy);
+
+   {
+      __m128i cstep01, cstep23, result;
+
+      cstep01 = vec_packs_epi32(cstep0, cstep1);
+      cstep23 = vec_packs_epi32(cstep2, cstep3);
+      result = vec_packs_epi16(cstep01, cstep23);
+
+      *outmask |= vec_movemask_epi8(result);
+   }
+
+
+   {
+      __m128i cio4 = (__m128i) vec_splats(cdiff);
+      __m128i cstep01, cstep23, result;
+
+      cstep0 = vec_add_epi32(cstep0, cio4);
+      cstep1 = vec_add_epi32(cstep1, cio4);
+      cstep2 = vec_add_epi32(cstep2, cio4);
+      cstep3 = vec_add_epi32(cstep3, cio4);
+
+      cstep01 = vec_packs_epi32(cstep0, cstep1);
+      cstep23 = vec_packs_epi32(cstep2, cstep3);
+      result = vec_packs_epi16(cstep01, cstep23);
+
+      *partmask |= vec_movemask_epi8(result);
+   }
+}
+
+static inline unsigned
+build_mask_linear_32(int c, int dcdx, int dcdy)
+{
+   __m128i cstep0 = vec_setr_epi32(c, c+dcdx, c+dcdx*2, c+dcdx*3);
+   __m128i xdcdy = (__m128i) vec_splats(dcdy);
+
+   /* Get values across the quad
+    */
+   __m128i cstep1 = vec_add_epi32(cstep0, xdcdy);
+   __m128i cstep2 = vec_add_epi32(cstep1, xdcdy);
+   __m128i cstep3 = vec_add_epi32(cstep2, xdcdy);
+
+   /* pack pairs of results into epi16
+    */
+   __m128i cstep01 = vec_packs_epi32(cstep0, cstep1);
+   __m128i cstep23 = vec_packs_epi32(cstep2, cstep3);
+
+   /* pack into epi8, preserving sign bits
+    */
+   __m128i result = vec_packs_epi16(cstep01, cstep23);
+
+   /* extract sign bits to create mask
+    */
+   return vec_movemask_epi8(result);
+}
+
+#endif /* _ARCH_PWR8 && PIPE_ARCH_LITTLE_ENDIAN */
+
+void
+lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
+                         const union lp_rast_cmd_arg arg)
+{
+   union lp_rast_cmd_arg arg2;
+   arg2.triangle.tri = arg.triangle.tri;
+   arg2.triangle.plane_mask = (1<<3)-1;
+   lp_rast_triangle_32_3(task, arg2);
+}
+
+void
+lp_rast_triangle_32_4_16(struct lp_rasterizer_task *task,
+                         const union lp_rast_cmd_arg arg)
+{
+   union lp_rast_cmd_arg arg2;
+   arg2.triangle.tri = arg.triangle.tri;
+   arg2.triangle.plane_mask = (1<<4)-1;
+   lp_rast_triangle_32_4(task, arg2);
+}
+
+void
+lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
+                      const union lp_rast_cmd_arg arg)
+{
+   lp_rast_triangle_32_3_16(task, arg);
+}
+
 #endif
 
 
@@ -512,7 +582,7 @@ lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
 #define NR_PLANES 8
 #include "lp_rast_tri_tmp.h"
 
-#ifdef PIPE_ARCH_SSE
+#if defined(PIPE_ARCH_SSE) || (defined(_ARCH_PWR8) && defined(PIPE_ARCH_LITTLE_ENDIAN))
 #undef BUILD_MASKS
 #undef BUILD_MASK_LINEAR
 #define BUILD_MASKS(c, cdiff, dcdx, dcdy, omask, pmask) build_masks_32((int)c, (int)cdiff, dcdx, dcdy, omask, pmask)
