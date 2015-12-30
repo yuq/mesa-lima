@@ -516,7 +516,7 @@ int bits = src0, offset = src1;
 if (offset < 0 || bits < 0 || offset + bits > 32)
    dst = 0; /* undefined per the spec */
 else
-   dst = ((1 << bits)- 1) << offset;
+   dst = ((1ull << bits) - 1) << offset;
 """)
 
 opcode("ldexp", 0, tfloat, [0, 0], [tfloat, tint], "", """
@@ -578,7 +578,7 @@ if (bits == 0) {
 } else if (bits < 0 || offset < 0 || offset + bits > 32) {
    dst = 0; /* undefined per the spec */
 } else {
-   dst = (base >> offset) & ((1 << bits) - 1);
+   dst = (base >> offset) & ((1ull << bits) - 1);
 }
 """)
 opcode("ibitfield_extract", 0, tint,
@@ -618,7 +618,7 @@ if (bits == 0) {
 } else if (offset < 0 || bits < 0 || bits + offset > 32) {
    dst = 0;
 } else {
-   unsigned mask = ((1 << bits) - 1) << offset;
+   unsigned mask = ((1ull << bits) - 1) << offset;
    dst = (base & ~mask) | ((insert << bits) & mask);
 }
 """)

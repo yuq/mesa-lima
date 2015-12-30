@@ -1539,10 +1539,10 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             data.i[c] = -1;
          else {
             int count = 0;
-            int top_bit = op[0]->type->base_type == GLSL_TYPE_UINT
-                          ? 0 : v & (1 << 31);
+            unsigned top_bit = op[0]->type->base_type == GLSL_TYPE_UINT
+                               ? 0 : v & (1u << 31);
 
-            while (((v & (1 << 31)) == top_bit) && count != 32) {
+            while (((v & (1u << 31)) == top_bit) && count != 32) {
                count++;
                v <<= 1;
             }
@@ -1721,7 +1721,7 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
          else if (offset + bits > 32)
             data.u[c] = 0; /* Undefined, per spec. */
          else {
-            unsigned insert_mask = ((1 << bits) - 1) << offset;
+            unsigned insert_mask = ((1ull << bits) - 1) << offset;
 
             unsigned insert = op[1]->value.u[c];
             insert <<= offset;
