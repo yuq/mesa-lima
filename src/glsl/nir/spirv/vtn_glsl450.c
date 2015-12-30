@@ -88,6 +88,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Trunc:       op = nir_op_ftrunc;        break;
    case GLSLstd450FAbs:        op = nir_op_fabs;          break;
    case GLSLstd450FSign:       op = nir_op_fsign;         break;
+   case GLSLstd450SSign:       op = nir_op_isign;         break;
    case GLSLstd450Floor:       op = nir_op_ffloor;        break;
    case GLSLstd450Ceil:        op = nir_op_fceil;         break;
    case GLSLstd450Fract:       op = nir_op_ffract;        break;
@@ -272,7 +273,15 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Acos:
    case GLSLstd450Atan:
    case GLSLstd450Atan2:
+   case GLSLstd450ModfStruct:
+   case GLSLstd450NMin:
+   case GLSLstd450NMax:
+   case GLSLstd450NClamp:
    case GLSLstd450Frexp:
+   case GLSLstd450FrexpStruct:
+   case GLSLstd450FindILsb:
+   case GLSLstd450FindSMsb:
+   case GLSLstd450FindUMsb:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
    case GLSLstd450IMix:
