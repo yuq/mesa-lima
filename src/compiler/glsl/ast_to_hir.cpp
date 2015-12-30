@@ -6247,6 +6247,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                           unsigned expl_location)
 {
    unsigned decl_count = 0;
+   unsigned next_offset = 0;
 
    /* Make an initial pass over the list of fields to determine how
     * many there are.  Each element in this list is an ast_declarator_list.
@@ -6458,6 +6459,54 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             } else {
                fields[i].location = -1;
             }
+         }
+
+         /* Offset can only be used with std430 and std140 layouts an initial
+          * value of 0 is used for error detection.
+          */
+         unsigned align = 0;
+         unsigned size = 0;
+         if (layout) {
+            bool row_major;
+            if (qual->flags.q.row_major ||
+                matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR) {
+               row_major = true;
+            } else {
+               row_major = false;
+            }
+
+            if(layout->flags.q.std140) {
+               align = field_type->std140_base_alignment(row_major);
+               size = field_type->std140_size(row_major);
+            } else if (layout->flags.q.std430) {
+               align = field_type->std430_base_alignment(row_major);
+               size = field_type->std430_size(row_major);
+            }
+         }
+
+         if (qual->flags.q.explicit_offset) {
+            unsigned qual_offset;
+            if (process_qualifier_constant(state, &loc, "offset",
+                                           qual->offset, &qual_offset)) {
+               if (align != 0 && size != 0) {
+                   if (next_offset > qual_offset)
+                      _mesa_glsl_error(&loc, state, "layout qualifier "
+                                       "offset overlaps previous member");
+
+                  if (qual_offset % align) {
+                     _mesa_glsl_error(&loc, state, "layout qualifier offset "
+                                      "must be a multiple of the base "
+                                      "alignment of %s", field_type->name);
+                  }
+                  next_offset = glsl_align(qual_offset + size, align);
+               } else {
+                  _mesa_glsl_error(&loc, state, "offset can only be used "
+                                   "with std430 and std140 layouts");
+               }
+            }
+         } else {
+            if (align != 0 && size != 0)
+               next_offset = glsl_align(next_offset + size, align);
          }
 
          /* Propogate row- / column-major information down the fields of the
