@@ -7,6 +7,7 @@
 #include "radeon/radeon_llvm.h"
 #include <llvm-c/Core.h>
 
+struct pipe_debug_callback;
 struct r600_bytecode;
 struct r600_shader_ctx;
 struct radeon_llvm_context;
@@ -22,7 +23,8 @@ unsigned r600_llvm_compile(
 	enum radeon_family family,
 	struct r600_bytecode *bc,
 	boolean *use_kill,
-	unsigned dump);
+	unsigned dump,
+	struct pipe_debug_callback *debug);
 
 unsigned r600_create_shader(struct r600_bytecode *bc,
 		const struct radeon_shader_binary *binary,

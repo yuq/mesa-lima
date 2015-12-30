@@ -23,10 +23,12 @@
  * Authors: Tom Stellard <thomas.stellard@amd.com>
  *
  */
+
 #include "radeon_llvm_emit.h"
 #include "radeon_elf_util.h"
 #include "c11/threads.h"
 #include "gallivm/lp_bld_misc.h"
+#include "util/u_debug.h"
 #include "util/u_memory.h"
 #include "pipe/p_shader_tokens.h"
 
@@ -142,9 +144,9 @@ static void radeonDiagnosticHandler(LLVMDiagnosticInfoRef di, void *context)
  */
 unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binary,
 			     const char *gpu_family, bool dump_ir, bool dump_asm,
-			     LLVMTargetMachineRef tm)
+			     LLVMTargetMachineRef tm,
+			     struct pipe_debug_callback *debug)
 {
-
 	char cpu[CPU_STRING_LEN];
 	char fs[FS_STRING_LEN];
 	char *err;

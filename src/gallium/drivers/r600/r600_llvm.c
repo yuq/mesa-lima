@@ -915,14 +915,15 @@ unsigned r600_llvm_compile(
 	enum radeon_family family,
 	struct r600_bytecode *bc,
 	boolean *use_kill,
-	unsigned dump)
+	unsigned dump,
+	struct pipe_debug_callback *debug)
 {
 	unsigned r;
 	struct radeon_shader_binary binary;
 	const char * gpu_family = r600_get_llvm_processor_name(family);
 
 	memset(&binary, 0, sizeof(struct radeon_shader_binary));
-	r = radeon_llvm_compile(mod, &binary, gpu_family, dump, dump, NULL);
+	r = radeon_llvm_compile(mod, &binary, gpu_family, dump, dump, NULL, debug);
 
 	r = r600_create_shader(bc, &binary, use_kill);
 

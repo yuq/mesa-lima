@@ -3934,7 +3934,8 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 
 	if (!si_replace_shader(count, &shader->binary)) {
 		r = radeon_llvm_compile(mod, &shader->binary,
-			r600_get_llvm_processor_name(sscreen->b.family), dump_ir, dump_asm, tm);
+			r600_get_llvm_processor_name(sscreen->b.family), dump_ir, dump_asm, tm,
+			debug);
 		if (r)
 			return r;
 	}

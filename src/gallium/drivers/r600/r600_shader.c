@@ -3259,7 +3259,8 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		ctx.shader->has_txq_cube_array_z_comp = radeon_llvm_ctx.has_txq_cube_array_z_comp;
 		ctx.shader->uses_tex_buffers = radeon_llvm_ctx.uses_tex_buffers;
 
-		if (r600_llvm_compile(mod, rscreen->b.family, ctx.bc, &use_kill, dump)) {
+		if (r600_llvm_compile(mod, rscreen->b.family, ctx.bc, &use_kill,
+				      dump, &rctx->b.debug)) {
 			radeon_llvm_dispose(&radeon_llvm_ctx);
 			use_llvm = 0;
 			fprintf(stderr, "R600 LLVM backend failed to compile "
