@@ -675,20 +675,16 @@ anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state)
 }
 
 #define NULL_BLOCK 1
-struct stream_block {
-   uint32_t next;
+struct anv_state_stream_block {
+   /* The next block */
+   struct anv_state_stream_block *next;
 
-   /* The map for the BO at the time the block was givne to us */
-   void *current_map;
+   /* The offset into the block pool at which this block starts */
+   uint32_t offset;
 
 #ifdef HAVE_VALGRIND
-   /* The pointer pointing to the beginning of the user portion of the
-    * block.  More specifically, this value is:
-    *
-    * current_map + ALIGN(sizeof(stream_block), first_chunk_alignment)
-    *
-    * where first_chunk_alignment is the alignment of the first chunk
-    * allocated out of this particular block.
+   /* A pointer to the first user-allocated thing in this block.  This is
+    * what valgrind sees as the start of the block.
     */
    void *_vg_ptr;
 #endif
@@ -702,9 +698,13 @@ anv_state_stream_init(struct anv_state_stream *stream,
                       struct anv_block_pool *block_pool)
 {
    stream->block_pool = block_pool;
-   stream->next = 0;
+   stream->block = NULL;
+
+   /* Ensure that next + whatever > end.  This way the first call to
+    * state_stream_alloc fetches a new block.
+    */
+   stream->next = 1;
    stream->end = 0;
-   stream->current_block = NULL_BLOCK;
 
    VG(VALGRIND_CREATE_MEMPOOL(stream, 0, false));
 }
@@ -712,17 +712,16 @@ anv_state_stream_init(struct anv_state_stream *stream,
 void
 anv_state_stream_finish(struct anv_state_stream *stream)
 {
-   struct stream_block *sb;
-   uint32_t block, next_block;
+   const uint32_t block_size = stream->block_pool->block_size;
 
-   block = stream->current_block;
-   while (block != NULL_BLOCK) {
-      assert(block % stream->block_pool->block_size == 0);
-      sb = stream->block_pool->map + block;
-      next_block = VG_NOACCESS_READ(&sb->next);
-      VG(VALGRIND_MEMPOOL_FREE(stream, VG_NOACCESS_READ(&sb->_vg_ptr)));
-      anv_block_pool_free(stream->block_pool, block);
-      block = next_block;
+   struct anv_state_stream_block *next = stream->block;
+   while (next != NULL) {
+      VG(VALGRIND_MAKE_MEM_DEFINED(next, sizeof(*next)));
+      struct anv_state_stream_block sb = VG_NOACCESS_READ(next);
+      VG(VALGRIND_MEMPOOL_FREE(stream, sb._vg_ptr));
+      VG(VALGRIND_MAKE_MEM_UNDEFINED(next, block_size));
+      anv_block_pool_free(stream->block_pool, sb.offset);
+      next = sb.next;
    }
 
    VG(VALGRIND_DESTROY_MEMPOOL(stream));
@@ -732,33 +731,32 @@ struct anv_state
 anv_state_stream_alloc(struct anv_state_stream *stream,
                        uint32_t size, uint32_t alignment)
 {
-   struct stream_block *sb;
+   struct anv_state_stream_block *sb = stream->block;
+
    struct anv_state state;
-   uint32_t block;
 
    state.offset = align_u32(stream->next, alignment);
    if (state.offset + size > stream->end) {
-      block = anv_block_pool_alloc(stream->block_pool);
-      void *current_map = stream->block_pool->map;
-      sb = current_map + block;
-      sb->current_map = current_map;
-      sb->next = stream->current_block;
-      VG(sb->_vg_ptr = NULL);
+      uint32_t block = anv_block_pool_alloc(stream->block_pool);
+      sb = stream->block_pool->map + block;
 
-      /* Blocks come in from the block_pool as UNDEFINED */
+      VALGRIND_MAKE_MEM_UNDEFINED(sb, sizeof(*sb));
+      sb->next = stream->block;
+      sb->offset = block;
+      VG(sb->_vg_ptr = NULL);
       VG(VALGRIND_MAKE_MEM_NOACCESS(sb, stream->block_pool->block_size));
 
-      stream->current_block = block;
+      stream->block = sb;
+      stream->start = block;
       stream->next = block + sizeof(*sb);
       stream->end = block + stream->block_pool->block_size;
+
       state.offset = align_u32(stream->next, alignment);
       assert(state.offset + size <= stream->end);
    }
 
-   sb = stream->block_pool->map + stream->current_block;
-   void *current_map = VG_NOACCESS_READ(&sb->current_map);
-
-   state.map = current_map + state.offset;
+   assert(state.offset > stream->start);
+   state.map = (void *)sb + (state.offset - stream->start);
    state.alloc_size = size;
 
 #ifdef HAVE_VALGRIND
@@ -768,13 +766,10 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
       VG_NOACCESS_WRITE(&sb->_vg_ptr, vg_ptr);
       VALGRIND_MEMPOOL_ALLOC(stream, vg_ptr, size);
    } else {
-      ptrdiff_t vg_offset = vg_ptr - current_map;
-      assert(vg_offset >= stream->current_block &&
-             vg_offset < stream->end);
+      void *state_end = state.map + state.alloc_size;
       /* This only updates the mempool.  The newly allocated chunk is still
        * marked as NOACCESS. */
-      VALGRIND_MEMPOOL_CHANGE(stream, vg_ptr, vg_ptr,
-                              (state.offset + size) - vg_offset);
+      VALGRIND_MEMPOOL_CHANGE(stream, vg_ptr, vg_ptr, state_end - vg_ptr);
       /* Mark the newly allocated chunk as undefined */
       VALGRIND_MAKE_MEM_UNDEFINED(state.map, state.alloc_size);
    }

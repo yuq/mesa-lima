@@ -384,10 +384,19 @@ struct anv_state_pool {
    struct anv_fixed_size_state_pool buckets[ANV_STATE_BUCKETS];
 };
 
+struct anv_state_stream_block;
+
 struct anv_state_stream {
    struct anv_block_pool *block_pool;
+
+   /* The current working block */
+   struct anv_state_stream_block *block;
+
+   /* Offset at which the current block starts */
+   uint32_t start;
+   /* Offset at which to allocate the next state */
    uint32_t next;
-   uint32_t current_block;
+   /* Offset at which the current block ends */
    uint32_t end;
 };
 
