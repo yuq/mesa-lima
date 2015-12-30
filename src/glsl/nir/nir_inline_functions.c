@@ -26,10 +26,12 @@
 #include "nir_control_flow.h"
 
 struct inline_functions_state {
-   nir_function_impl *impl;
+   struct set *inlined;
    nir_builder builder;
    bool progress;
 };
+
+static bool inline_function_impl(nir_function_impl *impl, struct set *inlined);
 
 static bool
 inline_functions_block(nir_block *block, void *void_state)
@@ -54,11 +56,13 @@ inline_functions_block(nir_block *block, void *void_state)
       nir_call_instr *call = nir_instr_as_call(instr);
       assert(call->callee->impl);
 
+      inline_function_impl(call->callee->impl, state->inlined);
+
       nir_function_impl *callee_copy =
          nir_function_impl_clone(call->callee->impl);
 
-      exec_list_append(&state->impl->locals, &callee_copy->locals);
-      exec_list_append(&state->impl->registers, &callee_copy->registers);
+      exec_list_append(&b->impl->locals, &callee_copy->locals);
+      exec_list_append(&b->impl->registers, &callee_copy->registers);
 
       b->cursor = nir_before_instr(&call->instr);
 
@@ -104,22 +108,29 @@ inline_functions_block(nir_block *block, void *void_state)
    return true;
 }
 
-bool
-nir_inline_functions_impl(nir_function_impl *impl)
+static bool
+inline_function_impl(nir_function_impl *impl, struct set *inlined)
 {
+   if (_mesa_set_search(inlined, impl))
+      return false; /* Already inlined */
+
    struct inline_functions_state state;
 
+   state.inlined = inlined;
    state.progress = false;
-   state.impl = impl;
    nir_builder_init(&state.builder, impl);
 
    nir_foreach_block(impl, inline_functions_block, &state);
 
-   /* SSA and register indices are completely messed up now */
-   nir_index_ssa_defs(impl);
-   nir_index_local_regs(impl);
+   if (state.progress) {
+      /* SSA and register indices are completely messed up now */
+      nir_index_ssa_defs(impl);
+      nir_index_local_regs(impl);
 
-   nir_metadata_preserve(impl, nir_metadata_none);
+      nir_metadata_preserve(impl, nir_metadata_none);
+   }
+
+   _mesa_set_add(inlined, impl);
 
    return state.progress;
 }
@@ -127,12 +138,16 @@ nir_inline_functions_impl(nir_function_impl *impl)
 bool
 nir_inline_functions(nir_shader *shader)
 {
+   struct set *inlined = _mesa_set_create(NULL, _mesa_hash_pointer,
+                                          _mesa_key_pointer_equal);
    bool progress = false;
 
    nir_foreach_function(shader, function) {
       if (function->impl)
-         progress = nir_inline_functions_impl(function->impl) || progress;
+         progress = inline_function_impl(function->impl, inlined) || progress;
    }
+
+   _mesa_set_destroy(inlined, NULL);
 
    return progress;
 }
