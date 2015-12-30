@@ -87,6 +87,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450RoundEven:   op = nir_op_fround_even;   break;
    case GLSLstd450Trunc:       op = nir_op_ftrunc;        break;
    case GLSLstd450FAbs:        op = nir_op_fabs;          break;
+   case GLSLstd450SAbs:        op = nir_op_iabs;          break;
    case GLSLstd450FSign:       op = nir_op_fsign;         break;
    case GLSLstd450SSign:       op = nir_op_isign;         break;
    case GLSLstd450Floor:       op = nir_op_ffloor;        break;
