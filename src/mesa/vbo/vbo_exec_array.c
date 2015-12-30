@@ -1546,27 +1546,14 @@ vbo_validated_drawarraysindirect(struct gl_context *ctx,
 {
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
-   struct _mesa_prim prim[1];
 
    vbo_bind_arrays(ctx);
 
-   memset(prim, 0, sizeof(prim));
-   prim[0].begin = 1;
-   prim[0].end = 1;
-   prim[0].mode = mode;
-   prim[0].is_indirect = 1;
-   prim[0].indirect_offset = (GLsizeiptr)indirect;
-
-   /* NOTE: We do NOT want to handle primitive restart here, nor perform any
-    * other checks that require knowledge of the values in the command buffer.
-    * That would defeat the whole purpose of this function.
-    */
-
    check_buffers_are_unmapped(exec->array.inputs);
-   vbo->draw_prims(ctx, prim, 1,
-                   NULL, GL_TRUE, 0, ~0,
-                   NULL, 0,
-                   ctx->DrawIndirectBuffer);
+   vbo->draw_indirect_prims(ctx, mode,
+                            ctx->DrawIndirectBuffer, (GLsizeiptr)indirect,
+                            1 /* draw_count */, 16 /* stride */,
+                            NULL, 0, NULL);
 
    if (MESA_DEBUG_FLAGS & DEBUG_ALWAYS_FLUSH)
       _mesa_flush(ctx);
@@ -1580,36 +1567,18 @@ vbo_validated_multidrawarraysindirect(struct gl_context *ctx,
 {
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
-   struct _mesa_prim *prim;
-   GLsizei i;
    GLsizeiptr offset = (GLsizeiptr)indirect;
 
    if (primcount == 0)
       return;
-   prim = calloc(primcount, sizeof(*prim));
-   if (prim == NULL) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glMultiDrawArraysIndirect");
-      return;
-   }
 
    vbo_bind_arrays(ctx);
 
-   prim[0].begin = 1;
-   prim[primcount - 1].end = 1;
-   for (i = 0; i < primcount; ++i, offset += stride) {
-      prim[i].mode = mode;
-      prim[i].indirect_offset = offset;
-      prim[i].is_indirect = 1;
-      prim[i].draw_id = i;
-   }
-
    check_buffers_are_unmapped(exec->array.inputs);
-   vbo->draw_prims(ctx, prim, primcount,
-                   NULL, GL_TRUE, 0, ~0,
-                   NULL, 0,
-                   ctx->DrawIndirectBuffer);
-
-   free(prim);
+   vbo->draw_indirect_prims(ctx, mode,
+                            ctx->DrawIndirectBuffer, offset,
+                            primcount, stride,
+                            NULL, 0, NULL);
 
    if (MESA_DEBUG_FLAGS & DEBUG_ALWAYS_FLUSH)
       _mesa_flush(ctx);
@@ -1623,7 +1592,6 @@ vbo_validated_drawelementsindirect(struct gl_context *ctx,
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
    struct _mesa_index_buffer ib;
-   struct _mesa_prim prim[1];
 
    vbo_bind_arrays(ctx);
 
@@ -1632,19 +1600,12 @@ vbo_validated_drawelementsindirect(struct gl_context *ctx,
    ib.obj = ctx->Array.VAO->IndexBufferObj;
    ib.ptr = NULL;
 
-   memset(prim, 0, sizeof(prim));
-   prim[0].begin = 1;
-   prim[0].end = 1;
-   prim[0].mode = mode;
-   prim[0].indexed = 1;
-   prim[0].indirect_offset = (GLsizeiptr)indirect;
-   prim[0].is_indirect = 1;
-
    check_buffers_are_unmapped(exec->array.inputs);
-   vbo->draw_prims(ctx, prim, 1,
-                   &ib, GL_TRUE, 0, ~0,
-                   NULL, 0,
-                   ctx->DrawIndirectBuffer);
+   vbo->draw_indirect_prims(ctx, mode,
+                            ctx->DrawIndirectBuffer, (GLsizeiptr)indirect,
+                            1 /* draw_count */, 20 /* stride */,
+                            NULL, 0,
+                            &ib);
 
    if (MESA_DEBUG_FLAGS & DEBUG_ALWAYS_FLUSH)
       _mesa_flush(ctx);
@@ -1659,17 +1620,10 @@ vbo_validated_multidrawelementsindirect(struct gl_context *ctx,
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
    struct _mesa_index_buffer ib;
-   struct _mesa_prim *prim;
-   GLsizei i;
    GLsizeiptr offset = (GLsizeiptr)indirect;
 
    if (primcount == 0)
       return;
-   prim = calloc(primcount, sizeof(*prim));
-   if (prim == NULL) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glMultiDrawElementsIndirect");
-      return;
-   }
 
    vbo_bind_arrays(ctx);
 
@@ -1680,23 +1634,12 @@ vbo_validated_multidrawelementsindirect(struct gl_context *ctx,
    ib.obj = ctx->Array.VAO->IndexBufferObj;
    ib.ptr = NULL;
 
-   prim[0].begin = 1;
-   prim[primcount - 1].end = 1;
-   for (i = 0; i < primcount; ++i, offset += stride) {
-      prim[i].mode = mode;
-      prim[i].indexed = 1;
-      prim[i].indirect_offset = offset;
-      prim[i].is_indirect = 1;
-      prim[i].draw_id = i;
-   }
-
    check_buffers_are_unmapped(exec->array.inputs);
-   vbo->draw_prims(ctx, prim, primcount,
-                   &ib, GL_TRUE, 0, ~0,
-                   NULL, 0,
-                   ctx->DrawIndirectBuffer);
-
-   free(prim);
+   vbo->draw_indirect_prims(ctx, mode,
+                            ctx->DrawIndirectBuffer, offset,
+                            primcount, stride,
+                            NULL, 0,
+                            &ib);
 
    if (MESA_DEBUG_FLAGS & DEBUG_ALWAYS_FLUSH)
       _mesa_flush(ctx);

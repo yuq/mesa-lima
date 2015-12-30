@@ -110,6 +110,18 @@ typedef void (*vbo_draw_func)( struct gl_context *ctx,
 			       struct gl_buffer_object *indirect);
 
 
+typedef void (*vbo_indirect_draw_func)(
+   struct gl_context *ctx,
+   GLuint mode,
+   struct gl_buffer_object *indirect_data,
+   GLsizeiptr indirect_offset,
+   unsigned draw_count,
+   unsigned stride,
+   struct gl_buffer_object *indirect_params,
+   GLsizeiptr indirect_params_offset,
+   const struct _mesa_index_buffer *ib);
+
+
 
 
 /* Utility function to cope with various constraints on tnl modules or
@@ -178,6 +190,9 @@ void vbo_use_buffer_objects(struct gl_context *ctx);
 void vbo_always_unmap_buffers(struct gl_context *ctx);
 
 void vbo_set_draw_func(struct gl_context *ctx, vbo_draw_func func);
+
+void vbo_set_indirect_draw_func(struct gl_context *ctx,
+                                vbo_indirect_draw_func func);
 
 void vbo_check_buffers_are_unmapped(struct gl_context *ctx);
 
