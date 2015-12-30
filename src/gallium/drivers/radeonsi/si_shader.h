@@ -76,10 +76,10 @@ struct radeon_shader_binary;
 struct radeon_shader_reloc;
 
 #define SI_SGPR_RW_BUFFERS	0  /* rings (& stream-out, VS only) */
-#define SI_SGPR_CONST		2
-#define SI_SGPR_SAMPLER		4
-#define SI_SGPR_RESOURCE	6
-#define SI_SGPR_VERTEX_BUFFER	8  /* VS only */
+#define SI_SGPR_CONST_BUFFERS	2
+#define SI_SGPR_SAMPLER_STATES	4
+#define SI_SGPR_SAMPLER_VIEWS	6
+#define SI_SGPR_VERTEX_BUFFERS	8  /* VS only */
 #define SI_SGPR_BASE_VERTEX	10 /* VS only */
 #define SI_SGPR_START_INSTANCE	11 /* VS only */
 #define SI_SGPR_VS_STATE_BITS	12 /* VS(VS) only */
@@ -101,12 +101,12 @@ struct radeon_shader_reloc;
 
 /* LLVM function parameter indices */
 #define SI_PARAM_RW_BUFFERS	0
-#define SI_PARAM_CONST		1
-#define SI_PARAM_SAMPLER	2
-#define SI_PARAM_RESOURCE	3
+#define SI_PARAM_CONST_BUFFERS	1
+#define SI_PARAM_SAMPLER_STATES	2
+#define SI_PARAM_SAMPLER_VIEWS	3
 
 /* VS only parameters */
-#define SI_PARAM_VERTEX_BUFFER	4
+#define SI_PARAM_VERTEX_BUFFERS	4
 #define SI_PARAM_BASE_VERTEX	5
 #define SI_PARAM_START_INSTANCE	6
 /* [0] = clamp vertex color */

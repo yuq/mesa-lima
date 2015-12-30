@@ -1011,19 +1011,19 @@ void si_init_all_descriptors(struct si_context *sctx)
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		si_init_buffer_resources(&sctx->const_buffers[i],
-					 SI_NUM_CONST_BUFFERS, SI_SGPR_CONST,
+					 SI_NUM_CONST_BUFFERS, SI_SGPR_CONST_BUFFERS,
 					 RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
 		si_init_buffer_resources(&sctx->rw_buffers[i],
 					 SI_NUM_RW_BUFFERS, SI_SGPR_RW_BUFFERS,
 					 RADEON_USAGE_READWRITE, RADEON_PRIO_RINGS_STREAMOUT);
 
 		si_init_descriptors(&sctx->samplers[i].views.desc,
-				    SI_SGPR_RESOURCE, 8, SI_NUM_SAMPLER_VIEWS);
+				    SI_SGPR_SAMPLER_VIEWS, 8, SI_NUM_SAMPLER_VIEWS);
 		si_init_descriptors(&sctx->samplers[i].states.desc,
-				    SI_SGPR_SAMPLER, 4, SI_NUM_SAMPLER_STATES);
+				    SI_SGPR_SAMPLER_STATES, 4, SI_NUM_SAMPLER_STATES);
 	}
 
-	si_init_descriptors(&sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFER,
+	si_init_descriptors(&sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFERS,
 			    4, SI_NUM_VERTEX_BUFFERS);
 
 	/* Set pipe_context functions. */
