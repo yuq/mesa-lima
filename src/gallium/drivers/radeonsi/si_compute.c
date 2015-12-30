@@ -123,7 +123,7 @@ static void *si_create_compute_state(
 		        LLVMModuleRef mod = radeon_llvm_get_kernel_module(program->llvm_ctx, i,
                                                         code, header->num_bytes);
 			si_compile_llvm(sctx->screen, &program->kernels[i], sctx->tm,
-					mod);
+					mod, &sctx->b.debug);
 			LLVMDisposeModule(mod);
 		}
 	}
@@ -136,7 +136,7 @@ static void *si_create_compute_state(
 	 * the shader code to the GPU.
 	 */
 	init_scratch_buffer(sctx, program);
-	si_shader_binary_read(sctx->screen, &program->shader);
+	si_shader_binary_read(sctx->screen, &program->shader, &sctx->b.debug);
 
 #endif
 	program->input_buffer =	si_resource_create_custom(sctx->b.b.screen,

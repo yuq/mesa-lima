@@ -616,7 +616,7 @@ static int si_shader_select(struct pipe_context *ctx,
 	shader->selector = sel;
 	shader->key = key;
 
-	r = si_shader_create(sctx->screen, sctx->tm, shader);
+	r = si_shader_create(sctx->screen, sctx->tm, shader, &sctx->b.debug);
 	if (unlikely(r)) {
 		R600_ERR("Failed to build shader variant (type=%u) %d\n",
 			 sel->type, r);

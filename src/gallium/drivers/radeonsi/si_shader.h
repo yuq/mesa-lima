@@ -327,14 +327,17 @@ static inline bool si_vs_exports_prim_id(struct si_shader *shader)
 
 /* radeonsi_shader.c */
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
-		     struct si_shader *shader);
+		     struct si_shader *shader,
+		     struct pipe_debug_callback *debug);
 void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f);
 int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
-		    LLVMTargetMachineRef tm, LLVMModuleRef mod);
+		    LLVMTargetMachineRef tm, LLVMModuleRef mod,
+		    struct pipe_debug_callback *debug);
 void si_shader_destroy(struct si_shader *shader);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
-int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader);
+int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
+			  struct pipe_debug_callback *debug);
 void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			struct si_shader *shader,
 			uint64_t scratch_va);

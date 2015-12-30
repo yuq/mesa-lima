@@ -3840,7 +3840,8 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	return 0;
 }
 
-int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader)
+int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
+			  struct pipe_debug_callback *debug)
 {
 	const struct radeon_shader_binary *binary = &shader->binary;
 	unsigned i;
@@ -3878,7 +3879,8 @@ int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader)
 }
 
 int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
-		    LLVMTargetMachineRef tm, LLVMModuleRef mod)
+		    LLVMTargetMachineRef tm, LLVMModuleRef mod,
+		    struct pipe_debug_callback *debug)
 {
 	int r = 0;
 	bool dump_asm = r600_can_dump_shader(&sscreen->b,
@@ -3896,7 +3898,7 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 			return r;
 	}
 
-	r = si_shader_binary_read(sscreen, shader);
+	r = si_shader_binary_read(sscreen, shader, debug);
 
 	FREE(shader->binary.config);
 	FREE(shader->binary.rodata);
@@ -3913,7 +3915,8 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 /* Generate code for the hardware VS shader stage to go with a geometry shader */
 static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 				      struct si_shader_context *si_shader_ctx,
-				      struct si_shader *gs, bool dump)
+				      struct si_shader *gs, bool dump,
+				      struct pipe_debug_callback *debug)
 {
 	struct gallivm_state *gallivm = &si_shader_ctx->radeon_bld.gallivm;
 	struct lp_build_tgsi_context *bld_base = &si_shader_ctx->radeon_bld.soa.bld_base;
@@ -3980,7 +3983,8 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 		fprintf(stderr, "Copy Vertex Shader for Geometry Shader:\n\n");
 
 	r = si_compile_llvm(sscreen, si_shader_ctx->shader,
-			    si_shader_ctx->tm, bld_base->base.gallivm->module);
+			    si_shader_ctx->tm, bld_base->base.gallivm->module,
+			    debug);
 
 	radeon_llvm_dispose(&si_shader_ctx->radeon_bld);
 
@@ -4034,7 +4038,8 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 }
 
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
-		     struct si_shader *shader)
+		     struct si_shader *shader,
+		     struct pipe_debug_callback *debug)
 {
 	struct si_shader_selector *sel = shader->selector;
 	struct tgsi_token *tokens = sel->tokens;
@@ -4188,7 +4193,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	radeon_llvm_finalize_module(&si_shader_ctx.radeon_bld);
 
 	mod = bld_base->base.gallivm->module;
-	r = si_compile_llvm(sscreen, shader, tm, mod);
+	r = si_compile_llvm(sscreen, shader, tm, mod, debug);
 	if (r) {
 		fprintf(stderr, "LLVM failed to compile shader\n");
 		goto out;
@@ -4202,7 +4207,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		shader->gs_copy_shader->key = shader->key;
 		si_shader_ctx.shader = shader->gs_copy_shader;
 		if ((r = si_generate_gs_copy_shader(sscreen, &si_shader_ctx,
-						    shader, dump))) {
+						    shader, dump, debug))) {
 			free(shader->gs_copy_shader);
 			shader->gs_copy_shader = NULL;
 			goto out;
