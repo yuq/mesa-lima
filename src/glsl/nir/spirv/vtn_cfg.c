@@ -470,6 +470,12 @@ vtn_emit_branch(struct vtn_builder *b, enum vtn_branch_type branch_type,
    case vtn_branch_type_return:
       nir_jump(&b->nb, nir_jump_return);
       break;
+   case vtn_branch_type_discard: {
+      nir_intrinsic_instr *discard =
+         nir_intrinsic_instr_create(b->nb.shader, nir_intrinsic_discard);
+      nir_builder_instr_insert(&b->nb, &discard->instr);
+      break;
+   }
    default:
       unreachable("Invalid branch type");
    }
