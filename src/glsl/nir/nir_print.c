@@ -232,15 +232,20 @@ get_var_name(nir_variable *var, print_state *state)
       return entry->data;
 
    char *name;
-
-   struct set_entry *set_entry = _mesa_set_search(state->syms, var->name);
-   if (set_entry != NULL) {
-      /* we have a collision with another name, append an @ + a unique index */
-      name = ralloc_asprintf(state->syms, "%s@%u", var->name, state->index++);
+   if (var->name == NULL) {
+      name = ralloc_asprintf(state->syms, "@%u", state->index++);
    } else {
-      /* Mark this one as seen */
-      _mesa_set_add(state->syms, var->name);
-      name = var->name;
+      struct set_entry *set_entry = _mesa_set_search(state->syms, var->name);
+      if (set_entry != NULL) {
+         /* we have a collision with another name, append an @ + a unique
+          * index */
+         name = ralloc_asprintf(state->syms, "%s@%u", var->name,
+                                state->index++);
+      } else {
+         /* Mark this one as seen */
+         _mesa_set_add(state->syms, var->name);
+         name = var->name;
+      }
    }
 
    _mesa_hash_table_insert(state->ht, var, name);
