@@ -6498,6 +6498,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                       "must be a multiple of the base "
                                       "alignment of %s", field_type->name);
                   }
+                  fields[i].offset = qual_offset;
                   next_offset = glsl_align(qual_offset + size, align);
                } else {
                   _mesa_glsl_error(&loc, state, "offset can only be used "
@@ -6505,6 +6506,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                }
             }
          } else {
+            fields[i].offset = -1;
             if (align != 0 && size != 0)
                next_offset = glsl_align(next_offset + size, align);
          }
@@ -6883,6 +6885,8 @@ ast_interface_block::hir(exec_list *instructions,
          } else {
             fields[i].location =
                earlier_per_vertex->fields.structure[j].location;
+            fields[i].offset =
+               earlier_per_vertex->fields.structure[j].offset;
             fields[i].interpolation =
                earlier_per_vertex->fields.structure[j].interpolation;
             fields[i].centroid =
