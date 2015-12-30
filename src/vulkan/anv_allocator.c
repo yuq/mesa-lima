@@ -682,6 +682,14 @@ struct stream_block {
    void *current_map;
 
 #ifdef HAVE_VALGRIND
+   /* The pointer pointing to the beginning of the user portion of the
+    * block.  More specifically, this value is:
+    *
+    * current_map + ALIGN(sizeof(stream_block), first_chunk_alignment)
+    *
+    * where first_chunk_alignment is the alignment of the first chunk
+    * allocated out of this particular block.
+    */
    void *_vg_ptr;
 #endif
 };
@@ -733,9 +741,13 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
       block = anv_block_pool_alloc(stream->block_pool);
       void *current_map = stream->block_pool->map;
       sb = current_map + block;
-      VG_NOACCESS_WRITE(&sb->current_map, current_map);
-      VG_NOACCESS_WRITE(&sb->next, stream->current_block);
-      VG(VG_NOACCESS_WRITE(&sb->_vg_ptr, 0));
+      sb->current_map = current_map;
+      sb->next = stream->current_block;
+      VG(sb->_vg_ptr = NULL);
+
+      /* Blocks come in from the block_pool as UNDEFINED */
+      VG(VALGRIND_MAKE_MEM_NOACCESS(sb, stream->block_pool->block_size));
+
       stream->current_block = block;
       stream->next = block + sizeof(*sb);
       stream->end = block + stream->block_pool->block_size;
@@ -759,8 +771,12 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
       ptrdiff_t vg_offset = vg_ptr - current_map;
       assert(vg_offset >= stream->current_block &&
              vg_offset < stream->end);
+      /* This only updates the mempool.  The newly allocated chunk is still
+       * marked as NOACCESS. */
       VALGRIND_MEMPOOL_CHANGE(stream, vg_ptr, vg_ptr,
                               (state.offset + size) - vg_offset);
+      /* Mark the newly allocated chunk as undefined */
+      VALGRIND_MAKE_MEM_UNDEFINED(state.map, state.alloc_size);
    }
 #endif
 
