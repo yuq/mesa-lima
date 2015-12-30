@@ -274,9 +274,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Atan:
    case GLSLstd450Atan2:
    case GLSLstd450ModfStruct:
-   case GLSLstd450NMin:
-   case GLSLstd450NMax:
-   case GLSLstd450NClamp:
    case GLSLstd450Frexp:
    case GLSLstd450FrexpStruct:
    case GLSLstd450FindILsb:

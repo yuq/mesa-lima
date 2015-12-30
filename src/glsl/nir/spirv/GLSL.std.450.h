@@ -27,8 +27,8 @@
 #ifndef GLSLstd450_H
 #define GLSLstd450_H
 
-const int GLSLstd450Version = 100;
-const int GLSLstd450Revision = 1;
+const int GLSLstd450Version = 99;
+const int GLSLstd450Revision = 3;
 
 enum GLSLstd450 {
     GLSLstd450Bad = 0,              // Don't use
@@ -74,55 +74,52 @@ enum GLSLstd450 {
     GLSLstd450Modf = 35,            // second operand needs an OpVariable to write to
     GLSLstd450ModfStruct = 36,      // no OpVariable operand
     GLSLstd450FMin = 37,
-    GLSLstd450NMin = 38,
-    GLSLstd450UMin = 39,
-    GLSLstd450SMin = 40,
-    GLSLstd450FMax = 41,
-    GLSLstd450NMax = 42,
-    GLSLstd450UMax = 43,
-    GLSLstd450SMax = 44,
-    GLSLstd450FClamp = 45,
-    GLSLstd450NClamp = 46,
-    GLSLstd450UClamp = 47,
-    GLSLstd450SClamp = 48,
-    GLSLstd450FMix = 49,
-    GLSLstd450IMix = 50,
-    GLSLstd450Step = 51,
-    GLSLstd450SmoothStep = 52,
+    GLSLstd450UMin = 38,
+    GLSLstd450SMin = 39,
+    GLSLstd450FMax = 40,
+    GLSLstd450UMax = 41,
+    GLSLstd450SMax = 42,
+    GLSLstd450FClamp = 43,
+    GLSLstd450UClamp = 44,
+    GLSLstd450SClamp = 45,
+    GLSLstd450FMix = 46,
+    GLSLstd450IMix = 47,
+    GLSLstd450Step = 48,
+    GLSLstd450SmoothStep = 49,
 
-    GLSLstd450Fma = 53,
-    GLSLstd450Frexp = 54,            // second operand needs an OpVariable to write to
-    GLSLstd450FrexpStruct = 55,      // no OpVariable operand
-    GLSLstd450Ldexp = 56,
+    GLSLstd450Fma = 50,
+    GLSLstd450Frexp = 51,            // second operand needs an OpVariable to write to
+    GLSLstd450FrexpStruct = 52,      // no OpVariable operand
+    GLSLstd450Ldexp = 53,
 
-    GLSLstd450PackSnorm4x8 = 57,
-    GLSLstd450PackUnorm4x8 = 58,
-    GLSLstd450PackSnorm2x16 = 59,
-    GLSLstd450PackUnorm2x16 = 60,
-    GLSLstd450PackHalf2x16 = 61,
-    GLSLstd450PackDouble2x32 = 62,
-    GLSLstd450UnpackSnorm2x16 = 63,
-    GLSLstd450UnpackUnorm2x16 = 64,
-    GLSLstd450UnpackHalf2x16 = 65,
-    GLSLstd450UnpackSnorm4x8 = 66,
-    GLSLstd450UnpackUnorm4x8 = 67,
-    GLSLstd450UnpackDouble2x32 = 68,
+    GLSLstd450PackSnorm4x8 = 54,
+    GLSLstd450PackUnorm4x8 = 55,
+    GLSLstd450PackSnorm2x16 = 56,
+    GLSLstd450PackUnorm2x16 = 57,
+    GLSLstd450PackHalf2x16 = 58,
+    GLSLstd450PackDouble2x32 = 59,
+    GLSLstd450UnpackSnorm2x16 = 60,
+    GLSLstd450UnpackUnorm2x16 = 61,
+    GLSLstd450UnpackHalf2x16 = 62,
+    GLSLstd450UnpackSnorm4x8 = 63,
+    GLSLstd450UnpackUnorm4x8 = 64,
+    GLSLstd450UnpackDouble2x32 = 65,
 
-    GLSLstd450Length = 69,
-    GLSLstd450Distance = 70,
-    GLSLstd450Cross = 71,
-    GLSLstd450Normalize = 72,
-    GLSLstd450FaceForward = 73,
-    GLSLstd450Reflect = 74,
-    GLSLstd450Refract = 75,
+    GLSLstd450Length = 66,
+    GLSLstd450Distance = 67,
+    GLSLstd450Cross = 68,
+    GLSLstd450Normalize = 69,
+    GLSLstd450FaceForward = 70,
+    GLSLstd450Reflect = 71,
+    GLSLstd450Refract = 72,
 
-    GLSLstd450FindILsb = 76,
-    GLSLstd450FindSMsb = 77,
-    GLSLstd450FindUMsb = 78,
+    GLSLstd450FindILsb = 73,
+    GLSLstd450FindSMsb = 74,
+    GLSLstd450FindUMsb = 75,
 
-    GLSLstd450InterpolateAtCentroid = 79,
-    GLSLstd450InterpolateAtSample = 80,
-    GLSLstd450InterpolateAtOffset = 81,
+    GLSLstd450InterpolateAtCentroid = 76,
+    GLSLstd450InterpolateAtSample = 77,
+    GLSLstd450InterpolateAtOffset = 78,
 
     GLSLstd450Count
 };
