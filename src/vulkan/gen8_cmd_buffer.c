@@ -265,7 +265,8 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
-                                            GEN8_COLOR_CALC_STATE_length, 64);
+                                            GEN8_COLOR_CALC_STATE_length * 4,
+                                            64);
       struct GEN8_COLOR_CALC_STATE cc = {
          .BlendConstantColorRed = cmd_buffer->state.dynamic.blend_constants[0],
          .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
@@ -319,7 +320,8 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS) {
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
-                                            GEN9_COLOR_CALC_STATE_length, 64);
+                                            GEN9_COLOR_CALC_STATE_length * 4,
+                                            64);
       struct GEN9_COLOR_CALC_STATE cc = {
          .BlendConstantColorRed = cmd_buffer->state.dynamic.blend_constants[0],
          .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
