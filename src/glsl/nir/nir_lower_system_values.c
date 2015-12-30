@@ -72,7 +72,7 @@ convert_block(nir_block *block, void *void_state)
          nir_ssa_def *group_id =
             nir_load_system_value(b, nir_intrinsic_load_work_group_id, 0);
          nir_ssa_def *local_id =
-            nir_load_system_value(b, nir_intrinsic_load_invocation_id, 0);
+            nir_load_system_value(b, nir_intrinsic_load_local_invocation_id, 0);
 
          sysval = nir_iadd(b, nir_imul(b, group_id,
                                           nir_build_imm(b, 3, local_size)),
