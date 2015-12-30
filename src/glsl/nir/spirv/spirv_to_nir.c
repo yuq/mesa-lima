@@ -2706,7 +2706,14 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
       unreachable("No NIR equivalent");
 
    case SpvOpIsNan:
+      val->ssa->def = nir_fne(&b->nb, src[0], src[0]);
+      return;
+
    case SpvOpIsInf:
+      val->ssa->def = nir_feq(&b->nb, nir_fabs(&b->nb, src[0]),
+                                      nir_imm_float(&b->nb, INFINITY));
+      return;
+
    case SpvOpIsFinite:
    case SpvOpIsNormal:
    case SpvOpSignBitSet:
