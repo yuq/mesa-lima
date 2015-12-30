@@ -866,7 +866,7 @@ public:
       unsigned stream;
 
       /**
-       * Location an atomic counter is stored at.
+       * Atomic or block member offset.
        */
       unsigned offset;
 
