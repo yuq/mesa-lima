@@ -241,8 +241,10 @@ locn_0f_ts:
    parm $r2 /* instance_count */
    parm $r4 maddr 0x5f7 /* INDEX_BATCH_FIRST, start */
    parm $r4 send $r4 /* index_bias, send start */
+   maddr 0x8e4 /* CB_DATA */
    braz $r2 #dei_end
-   parm $r5 /* start_instance */
+   parm $r5 send $r4 /* start_instance, send index_bias */
+   send $r5 /* send start_instance */
    read $r6 0x50d /* VB_ELEMENT_BASE */
    read $r7 0x50e /* VB_INSTANCE_BASE */
    maddr 0x150d /* VB_ELEMENT,INSTANCE_BASE */
@@ -283,8 +285,10 @@ dei_end:
    parm $r2 /* count */
    parm $r3 /* instance_count */
    parm $r4 maddr 0x35d /* VERTEX_BUFFER_FIRST, start */
-   parm $r4 send $r4 /* start_instance */
    braz $r3 #dai_end
+   parm $r4 send $r4 /* start_instance */
+   maddrsend 0x8e4 /* CB_DATA, send 0 as base_vertex */
+   send $r4 /* send start_instance */
    read $r6 0x50e /* VB_INSTANCE_BASE */
    maddr 0x50e /* VB_INSTANCE_BASE */
    mov $r5 0x1

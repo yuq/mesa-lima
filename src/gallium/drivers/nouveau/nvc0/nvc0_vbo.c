@@ -814,6 +814,14 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
    if (buf->fence_wr && !nouveau_fence_signalled(buf->fence_wr))
       IMMED_NVC0(push, SUBC_3D(NV10_SUBCHAN_REF_CNT), 0);
 
+   /* Queue things up to let the macros write params to the driver constbuf */
+   BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+   PUSH_DATA (push, 512);
+   PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+   PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+   BEGIN_NVC0(push, NVC0_3D(CB_POS), 1);
+   PUSH_DATA (push, 256 + 128);
+
    PUSH_SPACE(push, 8);
    if (info->indexed) {
       assert(nvc0->idxbuf.buffer);
@@ -900,6 +908,18 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 
    /* 8 as minimum to avoid immediate double validation of new buffers */
    nvc0_state_validate(nvc0, ~0, 8);
+
+   if (nvc0->vertprog->vp.need_draw_parameters) {
+      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+      PUSH_DATA (push, 512);
+      PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+      PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+      BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 3);
+      PUSH_DATA (push, 256 + 128);
+      PUSH_DATA (push, info->index_bias);
+      PUSH_DATA (push, info->start_instance);
+      PUSH_DATA (push, info->drawid);
+   }
 
    push->kick_notify = nvc0_draw_vbo_kick_notify;
 

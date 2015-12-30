@@ -377,6 +377,9 @@ static nv50_ir::SVSemantic translateSysVal(uint sysval)
    case TGSI_SEMANTIC_TESSINNER:  return nv50_ir::SV_TESS_INNER;
    case TGSI_SEMANTIC_VERTICESIN: return nv50_ir::SV_VERTEX_COUNT;
    case TGSI_SEMANTIC_HELPER_INVOCATION: return nv50_ir::SV_THREAD_KILL;
+   case TGSI_SEMANTIC_BASEVERTEX: return nv50_ir::SV_BASEVERTEX;
+   case TGSI_SEMANTIC_BASEINSTANCE: return nv50_ir::SV_BASEINSTANCE;
+   case TGSI_SEMANTIC_DRAWID:     return nv50_ir::SV_DRAWID;
    default:
       assert(0);
       return nv50_ir::SV_CLOCK;
@@ -1127,6 +1130,11 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       case TGSI_SEMANTIC_SAMPLEID:
       case TGSI_SEMANTIC_SAMPLEPOS:
          info->prop.fp.sampleInterp = 1;
+         break;
+      case TGSI_SEMANTIC_BASEVERTEX:
+      case TGSI_SEMANTIC_BASEINSTANCE:
+      case TGSI_SEMANTIC_DRAWID:
+         info->prop.vp.usesDrawParameters = true;
          break;
       default:
          break;
@@ -3252,7 +3260,7 @@ Converter::handleUserClipPlanes()
 
    for (c = 0; c < 4; ++c) {
       for (i = 0; i < info->io.genUserClip; ++i) {
-         Symbol *sym = mkSymbol(FILE_MEMORY_CONST, info->io.ucpCBSlot,
+         Symbol *sym = mkSymbol(FILE_MEMORY_CONST, info->io.auxCBSlot,
                                 TYPE_F32, info->io.ucpBase + i * 16 + c * 4);
          Value *ucp = mkLoadv(TYPE_F32, sym, NULL);
          if (c == 0)

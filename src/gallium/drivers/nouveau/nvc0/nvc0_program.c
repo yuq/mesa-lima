@@ -533,8 +533,9 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    info->bin.source = (void *)prog->pipe.tokens;
 
    info->io.genUserClip = prog->vp.num_ucps;
+   info->io.auxCBSlot = 15;
    info->io.ucpBase = 256;
-   info->io.ucpCBSlot = 15;
+   info->io.drawInfoBase = 256 + 128;
 
    if (prog->type == PIPE_SHADER_COMPUTE) {
       if (chipset >= NVISA_GK104_CHIPSET) {
@@ -583,6 +584,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    prog->num_barriers = info->numBarriers;
 
    prog->vp.need_vertex_id = info->io.vertexId < PIPE_MAX_SHADER_INPUTS;
+   prog->vp.need_draw_parameters = info->prop.vp.usesDrawParameters;
 
    if (info->io.edgeFlagOut < PIPE_MAX_ATTRIBS)
       info->out[info->io.edgeFlagOut].mask = 0; /* for headergen */
