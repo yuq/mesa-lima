@@ -36,8 +36,9 @@
 extern "C" {
 #endif
 
-nir_shader *spirv_to_nir(const uint32_t *words, size_t word_count,
-                         const nir_shader_compiler_options *options);
+nir_function *spirv_to_nir(const uint32_t *words, size_t word_count,
+                           const char *entry_point_name,
+                           const nir_shader_compiler_options *options);
 
 #ifdef __cplusplus
 }

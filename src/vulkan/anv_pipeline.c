@@ -96,6 +96,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
       compiler->glsl_compiler_options[stage].NirOptions;
 
    nir_shader *nir;
+   nir_function *entry_point;
    if (module->nir) {
       /* Some things such as our meta clear/blit code will give us a NIR
        * shader directly.  In that case, we just ignore the SPIR-V entirely
@@ -103,12 +104,18 @@ anv_shader_compile_to_nir(struct anv_device *device,
       nir = module->nir;
       nir->options = nir_options;
       nir_validate_shader(nir);
+
+      assert(exec_list_length(&nir->functions) == 1);
+      struct exec_node *node = exec_list_get_head(&nir->functions);
+      entry_point = exec_node_data(nir_function, node, node);
    } else {
       uint32_t *spirv = (uint32_t *) module->data;
       assert(spirv[0] == SPIR_V_MAGIC_NUMBER);
       assert(module->size % 4 == 0);
 
-      nir = spirv_to_nir(spirv, module->size / 4, nir_options);
+      entry_point = spirv_to_nir(spirv, module->size / 4, entrypoint_name,
+                                 nir_options);
+      nir = entry_point->shader;
       assert(nir->stage == stage);
       nir_validate_shader(nir);
 
@@ -126,24 +133,15 @@ anv_shader_compile_to_nir(struct anv_device *device,
    nir->info.separate_shader = true;
 
    /* Pick off the single entrypoint that we want */
-   nir_function_impl *entrypoint = NULL;
    foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
-      if (strcmp(entrypoint_name, func->name) != 0) {
-         /* Not our function, get rid of it */
+      if (func != entry_point)
          exec_node_remove(&func->node);
-         continue;
-      }
-
-      assert(entrypoint == NULL);
-      assert(func->impl);
-      entrypoint = func->impl;
    }
    assert(exec_list_length(&nir->functions) == 1);
-   assert(entrypoint != NULL);
 
    nir = brw_preprocess_nir(nir, compiler->scalar_stage[stage]);
 
-   nir_shader_gather_info(nir, entrypoint);
+   nir_shader_gather_info(nir, entry_point->impl);
 
    return nir;
 }

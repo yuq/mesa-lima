@@ -3223,11 +3223,16 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       assert(w[2] == SpvMemoryModelGLSL450);
       break;
 
-   case SpvOpEntryPoint:
+   case SpvOpEntryPoint: {
+      char *name = vtn_string_literal(b, &w[3], count - 3);
+      if (strcmp(name, b->entry_point_name) != 0)
+         break;
+
       assert(b->entry_point == NULL);
       b->entry_point = &b->values[w[2]];
       b->execution_model = w[1];
       break;
+   }
 
    case SpvOpString:
       vtn_push_value(b, w[1], vtn_value_type_string)->str =
@@ -3665,8 +3670,9 @@ stage_for_execution_model(SpvExecutionModel model)
    }
 }
 
-nir_shader *
+nir_function *
 spirv_to_nir(const uint32_t *words, size_t word_count,
+             const char *entry_point_name,
              const nir_shader_compiler_options *options)
 {
    const uint32_t *word_end = words + word_count;
@@ -3687,14 +3693,20 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    b->value_id_bound = value_id_bound;
    b->values = rzalloc_array(b, struct vtn_value, value_id_bound);
    exec_list_make_empty(&b->functions);
+   b->entry_point_name = entry_point_name;
 
    /* Handle all the preamble instructions */
    words = vtn_foreach_instruction(b, words, word_end,
                                    vtn_handle_preamble_instruction);
 
+   if (b->entry_point == NULL) {
+      assert(!"Entry point not found");
+      ralloc_free(b);
+      return NULL;
+   }
+
    gl_shader_stage stage = stage_for_execution_model(b->execution_model);
-   nir_shader *shader = nir_shader_create(NULL, stage, options);
-   b->shader = shader;
+   b->shader = nir_shader_create(NULL, stage, options);
 
    /* Parse execution modes */
    vtn_foreach_execution_mode(b, b->entry_point,
@@ -3717,12 +3729,16 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
                               vtn_handle_phi_second_pass);
    }
 
+   assert(b->entry_point->value_type == vtn_value_type_function);
+   nir_function *entry_point = b->entry_point->func->impl->function;
+   assert(entry_point);
+
    ralloc_free(b);
 
    /* Because we can still have output reads in NIR, we need to lower
     * outputs to temporaries before we are truely finished.
     */
-   nir_lower_outputs_to_temporaries(shader);
+   nir_lower_outputs_to_temporaries(entry_point->shader);
 
-   return shader;
+   return entry_point;
 }
