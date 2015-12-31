@@ -65,21 +65,6 @@ isl_device_init(struct isl_device *dev,
       assert(ISL_DEV_USE_SEPARATE_STENCIL(dev));
 }
 
-bool
-isl_format_has_sint_channel(enum isl_format fmt)
-{
-   const struct isl_format_layout *fmtl = isl_format_get_layout(fmt);
-
-   return fmtl->channels.r.type == ISL_SINT ||
-          fmtl->channels.g.type == ISL_SINT ||
-          fmtl->channels.b.type == ISL_SINT ||
-          fmtl->channels.a.type == ISL_SINT ||
-          fmtl->channels.l.type == ISL_SINT ||
-          fmtl->channels.i.type == ISL_SINT ||
-          fmtl->channels.p.type == ISL_SINT ||
-          fmtl->channels.g.type == ISL_SINT;
-}
-
 /**
  * @param[out] info is written only on success
  */

@@ -44,6 +44,7 @@ libisl_la_CFLAGS = $(CFLAGS) -Wno-override-init
 
 libisl_la_SOURCES =                                     \
 	isl.c                                           \
+	isl_format.c                                    \
 	isl_format_layout.c                             \
 	isl_gen4.c                                      \
 	isl_gen4.h                                      \
