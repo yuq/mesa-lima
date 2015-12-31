@@ -32,30 +32,7 @@
 #include "gen8_pack.h"
 #include "gen9_pack.h"
 
-static const uint8_t
-anv_surftype(const struct anv_image *image, VkImageViewType view_type,
-             bool storage)
-{
-   switch (view_type) {
-   default:
-      unreachable("bad VkImageViewType");
-   case VK_IMAGE_VIEW_TYPE_1D:
-   case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
-      assert(image->type == VK_IMAGE_TYPE_1D);
-      return SURFTYPE_1D;
-   case VK_IMAGE_VIEW_TYPE_CUBE:
-   case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
-      assert(image->type == VK_IMAGE_TYPE_2D);
-      return storage ? SURFTYPE_2D : SURFTYPE_CUBE;
-   case VK_IMAGE_VIEW_TYPE_2D:
-   case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
-      assert(image->type == VK_IMAGE_TYPE_2D);
-      return SURFTYPE_2D;
-   case VK_IMAGE_VIEW_TYPE_3D:
-      assert(image->type == VK_IMAGE_TYPE_3D);
-      return SURFTYPE_3D;
-   }
-}
+#include "genX_state_util.h"
 
 void
 genX(fill_buffer_surface_state)(void *state, enum isl_format format,
@@ -110,24 +87,6 @@ alloc_surface_state(struct anv_device *device,
       } else {
          return anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
       }
-}
-
-static const uint32_t vk_to_gen_swizzle_map[] = {
-   [VK_COMPONENT_SWIZZLE_ZERO]                 = SCS_ZERO,
-   [VK_COMPONENT_SWIZZLE_ONE]                  = SCS_ONE,
-   [VK_COMPONENT_SWIZZLE_R]                    = SCS_RED,
-   [VK_COMPONENT_SWIZZLE_G]                    = SCS_GREEN,
-   [VK_COMPONENT_SWIZZLE_B]                    = SCS_BLUE,
-   [VK_COMPONENT_SWIZZLE_A]                    = SCS_ALPHA
-};
-
-static inline uint32_t
-vk_to_gen_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component)
-{
-   if (swizzle == VK_COMPONENT_SWIZZLE_IDENTITY)
-      return vk_to_gen_swizzle_map[component];
-   else
-      return vk_to_gen_swizzle_map[swizzle];
 }
 
 /**
