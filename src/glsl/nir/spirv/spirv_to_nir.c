@@ -2273,6 +2273,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       } else {
          image.sample = nir_ssa_undef(&b->nb, 1);
       }
+      break;
 
    default:
       unreachable("Invalid image opcode");
