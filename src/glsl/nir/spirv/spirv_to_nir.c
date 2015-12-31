@@ -242,11 +242,14 @@ _foreach_decoration_helper(struct vtn_builder *b,
 {
    for (struct vtn_decoration *dec = value->decoration; dec; dec = dec->next) {
       int member;
-      if (dec->member < 0) {
+      if (dec->scope == VTN_DEC_DECORATION) {
          member = parent_member;
-      } else {
+      } else if (dec->scope >= VTN_DEC_STRUCT_MEMBER0) {
          assert(parent_member == -1);
-         member = dec->member;
+         member = dec->scope - VTN_DEC_STRUCT_MEMBER0;
+      } else {
+         /* Not a decoration */
+         continue;
       }
 
       if (dec->group) {
@@ -272,6 +275,19 @@ vtn_foreach_decoration(struct vtn_builder *b, struct vtn_value *value,
    _foreach_decoration_helper(b, value, -1, value, cb, data);
 }
 
+void
+vtn_foreach_execution_mode(struct vtn_builder *b, struct vtn_value *value,
+                           vtn_execution_mode_foreach_cb cb, void *data)
+{
+   for (struct vtn_decoration *dec = value->decoration; dec; dec = dec->next) {
+      if (dec->scope != VTN_DEC_EXECUTION_MODE)
+         continue;
+
+      assert(dec->group == NULL);
+      cb(b, value, dec, data);
+   }
+}
+
 static void
 vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
                       const uint32_t *w, unsigned count)
@@ -280,20 +296,30 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
    const uint32_t target = w[1];
    w += 2;
 
-   int member = -1;
    switch (opcode) {
    case SpvOpDecorationGroup:
       vtn_push_value(b, target, vtn_value_type_undef);
       break;
 
+   case SpvOpDecorate:
    case SpvOpMemberDecorate:
-      member = *(w++);
-      /* fallthrough */
-   case SpvOpDecorate: {
+   case SpvOpExecutionMode: {
       struct vtn_value *val = &b->values[target];
 
       struct vtn_decoration *dec = rzalloc(b, struct vtn_decoration);
-      dec->member = member;
+      switch (opcode) {
+      case SpvOpDecorate:
+         dec->scope = VTN_DEC_DECORATION;
+         break;
+      case SpvOpMemberDecorate:
+         dec->scope = VTN_DEC_STRUCT_MEMBER0 + *(w++);
+         break;
+      case SpvOpExecutionMode:
+         dec->scope = VTN_DEC_EXECUTION_MODE;
+         break;
+      default:
+         unreachable("Invalid decoration opcode");
+      }
       dec->decoration = *(w++);
       dec->literals = w;
 
@@ -304,16 +330,21 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpGroupMemberDecorate:
-      member = *(w++);
-      /* fallthrough */
    case SpvOpGroupDecorate: {
       struct vtn_value *group = &b->values[target];
       assert(group->value_type == vtn_value_type_decoration_group);
 
+      int scope;
+      if (opcode == SpvOpGroupDecorate) {
+         scope = VTN_DEC_DECORATION;
+      } else {
+         scope = VTN_DEC_STRUCT_MEMBER0 + *(w++);
+      }
+
       for (; w < w_end; w++) {
          struct vtn_value *val = &b->values[*w];
          struct vtn_decoration *dec = rzalloc(b, struct vtn_decoration);
-         dec->member = member;
+         dec->scope = scope;
          dec->group = group;
 
          /* Link into the list */
@@ -3201,100 +3232,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       b->execution_model = w[1];
       break;
 
-   case SpvOpExecutionMode:
-      assert(b->entry_point == &b->values[w[1]]);
-
-      SpvExecutionMode mode = w[2];
-      switch(mode) {
-      case SpvExecutionModeOriginUpperLeft:
-      case SpvExecutionModeOriginLowerLeft:
-         b->origin_upper_left = (mode == SpvExecutionModeOriginUpperLeft);
-         break;
-
-      case SpvExecutionModeEarlyFragmentTests:
-         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
-         b->shader->info.fs.early_fragment_tests = true;
-         break;
-
-      case SpvExecutionModeInvocations:
-         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
-         b->shader->info.gs.invocations = MAX2(1, w[3]);
-         break;
-
-      case SpvExecutionModeDepthReplacing:
-         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
-         b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_ANY;
-         break;
-      case SpvExecutionModeDepthGreater:
-         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
-         b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_GREATER;
-         break;
-      case SpvExecutionModeDepthLess:
-         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
-         b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_LESS;
-         break;
-      case SpvExecutionModeDepthUnchanged:
-         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
-         b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_UNCHANGED;
-         break;
-
-      case SpvExecutionModeLocalSize:
-         assert(b->shader->stage == MESA_SHADER_COMPUTE);
-         b->shader->info.cs.local_size[0] = w[3];
-         b->shader->info.cs.local_size[1] = w[4];
-         b->shader->info.cs.local_size[2] = w[5];
-         break;
-      case SpvExecutionModeLocalSizeHint:
-         break; /* Nothing do do with this */
-
-      case SpvExecutionModeOutputVertices:
-         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
-         b->shader->info.gs.vertices_out = w[3];
-         break;
-
-      case SpvExecutionModeInputPoints:
-      case SpvExecutionModeInputLines:
-      case SpvExecutionModeInputLinesAdjacency:
-      case SpvExecutionModeTriangles:
-      case SpvExecutionModeInputTrianglesAdjacency:
-      case SpvExecutionModeQuads:
-      case SpvExecutionModeIsolines:
-         if (b->shader->stage == MESA_SHADER_GEOMETRY) {
-            b->shader->info.gs.vertices_in =
-               vertices_in_from_spv_execution_mode(mode);
-         } else {
-            assert(!"Tesselation shaders not yet supported");
-         }
-         break;
-
-      case SpvExecutionModeOutputPoints:
-      case SpvExecutionModeOutputLineStrip:
-      case SpvExecutionModeOutputTriangleStrip:
-         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
-         b->shader->info.gs.output_primitive =
-            gl_primitive_from_spv_execution_mode(mode);
-         break;
-
-      case SpvExecutionModeSpacingEqual:
-      case SpvExecutionModeSpacingFractionalEven:
-      case SpvExecutionModeSpacingFractionalOdd:
-      case SpvExecutionModeVertexOrderCw:
-      case SpvExecutionModeVertexOrderCcw:
-      case SpvExecutionModePointMode:
-         assert(!"TODO: Add tessellation metadata");
-         break;
-
-      case SpvExecutionModePixelCenterInteger:
-      case SpvExecutionModeXfb:
-         assert(!"Unhandled execution mode");
-         break;
-
-      case SpvExecutionModeVecTypeHint:
-      case SpvExecutionModeContractionOff:
-         break; /* OpenCL */
-      }
-      break;
-
    case SpvOpString:
       vtn_push_value(b, w[1], vtn_value_type_string)->str =
          vtn_string_literal(b, &w[2], count - 2);
@@ -3311,6 +3248,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpLine:
       break; /* Ignored for now */
 
+   case SpvOpExecutionMode:
    case SpvOpDecorationGroup:
    case SpvOpDecorate:
    case SpvOpMemberDecorate:
@@ -3324,6 +3262,103 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    }
 
    return true;
+}
+
+static void
+vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
+                          const struct vtn_decoration *mode, void *data)
+{
+   assert(b->entry_point == entry_point);
+
+   switch(mode->exec_mode) {
+   case SpvExecutionModeOriginUpperLeft:
+   case SpvExecutionModeOriginLowerLeft:
+      b->origin_upper_left =
+         (mode->exec_mode == SpvExecutionModeOriginUpperLeft);
+      break;
+
+   case SpvExecutionModeEarlyFragmentTests:
+      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
+      b->shader->info.fs.early_fragment_tests = true;
+      break;
+
+   case SpvExecutionModeInvocations:
+      assert(b->shader->stage == MESA_SHADER_GEOMETRY);
+      b->shader->info.gs.invocations = MAX2(1, mode->literals[0]);
+      break;
+
+   case SpvExecutionModeDepthReplacing:
+      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
+      b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_ANY;
+      break;
+   case SpvExecutionModeDepthGreater:
+      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
+      b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_GREATER;
+      break;
+   case SpvExecutionModeDepthLess:
+      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
+      b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_LESS;
+      break;
+   case SpvExecutionModeDepthUnchanged:
+      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
+      b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_UNCHANGED;
+      break;
+
+   case SpvExecutionModeLocalSize:
+      assert(b->shader->stage == MESA_SHADER_COMPUTE);
+      b->shader->info.cs.local_size[0] = mode->literals[0];
+      b->shader->info.cs.local_size[1] = mode->literals[1];
+      b->shader->info.cs.local_size[2] = mode->literals[2];
+      break;
+   case SpvExecutionModeLocalSizeHint:
+      break; /* Nothing do do with this */
+
+   case SpvExecutionModeOutputVertices:
+      assert(b->shader->stage == MESA_SHADER_GEOMETRY);
+      b->shader->info.gs.vertices_out = mode->literals[0];
+      break;
+
+   case SpvExecutionModeInputPoints:
+   case SpvExecutionModeInputLines:
+   case SpvExecutionModeInputLinesAdjacency:
+   case SpvExecutionModeTriangles:
+   case SpvExecutionModeInputTrianglesAdjacency:
+   case SpvExecutionModeQuads:
+   case SpvExecutionModeIsolines:
+      if (b->shader->stage == MESA_SHADER_GEOMETRY) {
+         b->shader->info.gs.vertices_in =
+            vertices_in_from_spv_execution_mode(mode->exec_mode);
+      } else {
+         assert(!"Tesselation shaders not yet supported");
+      }
+      break;
+
+   case SpvExecutionModeOutputPoints:
+   case SpvExecutionModeOutputLineStrip:
+   case SpvExecutionModeOutputTriangleStrip:
+      assert(b->shader->stage == MESA_SHADER_GEOMETRY);
+      b->shader->info.gs.output_primitive =
+         gl_primitive_from_spv_execution_mode(mode->exec_mode);
+      break;
+
+   case SpvExecutionModeSpacingEqual:
+   case SpvExecutionModeSpacingFractionalEven:
+   case SpvExecutionModeSpacingFractionalOdd:
+   case SpvExecutionModeVertexOrderCw:
+   case SpvExecutionModeVertexOrderCcw:
+   case SpvExecutionModePointMode:
+      assert(!"TODO: Add tessellation metadata");
+      break;
+
+   case SpvExecutionModePixelCenterInteger:
+   case SpvExecutionModeXfb:
+      assert(!"Unhandled execution mode");
+      break;
+
+   case SpvExecutionModeVecTypeHint:
+   case SpvExecutionModeContractionOff:
+      break; /* OpenCL */
+   }
 }
 
 static bool
@@ -3648,6 +3683,10 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    /* Handle all the preamble instructions */
    words = vtn_foreach_instruction(b, words, word_end,
                                    vtn_handle_preamble_instruction);
+
+   /* Parse execution modes */
+   vtn_foreach_execution_mode(b, b->entry_point,
+                              vtn_handle_execution_mode, NULL);
 
    /* Handle all variable, type, and constant instructions */
    words = vtn_foreach_instruction(b, words, word_end,

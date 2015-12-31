@@ -263,12 +263,26 @@ struct vtn_value {
    };
 };
 
+#define VTN_DEC_DECORATION -1
+#define VTN_DEC_EXECUTION_MODE -2
+#define VTN_DEC_STRUCT_MEMBER0 0
+
 struct vtn_decoration {
    struct vtn_decoration *next;
-   int member; /* -1 if not a member decoration */
+
+   /* Specifies how to apply this decoration.  Negative values represent a
+    * decoration or execution mode. (See the VTN_DEC_ #defines above.)
+    * Non-negative values specify that it applies to a structure member.
+    */
+   int scope;
+
    const uint32_t *literals;
    struct vtn_value *group;
-   SpvDecoration decoration;
+
+   union {
+      SpvDecoration decoration;
+      SpvExecutionMode exec_mode;
+   };
 };
 
 struct vtn_builder {
@@ -356,6 +370,14 @@ typedef void (*vtn_decoration_foreach_cb)(struct vtn_builder *,
 
 void vtn_foreach_decoration(struct vtn_builder *b, struct vtn_value *value,
                             vtn_decoration_foreach_cb cb, void *data);
+
+typedef void (*vtn_execution_mode_foreach_cb)(struct vtn_builder *,
+                                              struct vtn_value *,
+                                              const struct vtn_decoration *,
+                                              void *);
+
+void vtn_foreach_execution_mode(struct vtn_builder *b, struct vtn_value *value,
+                                vtn_execution_mode_foreach_cb cb, void *data);
 
 bool vtn_handle_glsl450_instruction(struct vtn_builder *b, uint32_t ext_opcode,
                                     const uint32_t *words, unsigned count);
