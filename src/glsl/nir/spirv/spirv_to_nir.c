@@ -1690,10 +1690,10 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       vtn_foreach_decoration(b, val, var_decoration_cb, var);
 
       if (!var->data.explicit_location) {
-         if (b->execution_model == SpvExecutionModelFragment &&
+         if (b->shader->stage == MESA_SHADER_FRAGMENT &&
              var->data.mode == nir_var_shader_out) {
             var->data.location += FRAG_RESULT_DATA0;
-         } else if (b->execution_model == SpvExecutionModelVertex &&
+         } else if (b->shader->stage == MESA_SHADER_VERTEX &&
                     var->data.mode == nir_var_shader_in) {
             var->data.location += VERT_ATTRIB_GENERIC0;
          } else if (var->data.mode == nir_var_shader_in ||
