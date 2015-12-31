@@ -3319,6 +3319,38 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       vtn_handle_decoration(b, opcode, w, count);
       break;
 
+   default:
+      return false; /* End of preamble */
+   }
+
+   return true;
+}
+
+static bool
+vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
+                                        const uint32_t *w, unsigned count)
+{
+   switch (opcode) {
+   case SpvOpSource:
+   case SpvOpSourceExtension:
+   case SpvOpExtension:
+   case SpvOpCapability:
+   case SpvOpExtInstImport:
+   case SpvOpMemoryModel:
+   case SpvOpEntryPoint:
+   case SpvOpExecutionMode:
+   case SpvOpString:
+   case SpvOpName:
+   case SpvOpMemberName:
+   case SpvOpLine:
+   case SpvOpDecorationGroup:
+   case SpvOpDecorate:
+   case SpvOpMemberDecorate:
+   case SpvOpGroupDecorate:
+   case SpvOpGroupMemberDecorate:
+      assert(!"Invalid opcode types and variables section");
+      break;
+
    case SpvOpTypeVoid:
    case SpvOpTypeBool:
    case SpvOpTypeInt:
@@ -3616,6 +3648,10 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    /* Handle all the preamble instructions */
    words = vtn_foreach_instruction(b, words, word_end,
                                    vtn_handle_preamble_instruction);
+
+   /* Handle all variable, type, and constant instructions */
+   words = vtn_foreach_instruction(b, words, word_end,
+                                   vtn_handle_variable_or_type_instruction);
 
    vtn_build_cfg(b, words, word_end);
 
