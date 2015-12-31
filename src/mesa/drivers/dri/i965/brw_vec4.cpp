@@ -1784,7 +1784,20 @@ vec4_visitor::convert_to_hw_regs()
          case ATTR:
             unreachable("not reached");
          }
+
          src = reg;
+      }
+
+      if (inst->is_3src()) {
+         /* 3-src instructions with scalar sources support arbitrary subnr,
+          * but don't actually use swizzles.  Convert swizzle into subnr.
+          */
+         for (int i = 0; i < 3; i++) {
+            if (inst->src[i].vstride == BRW_VERTICAL_STRIDE_0) {
+               assert(brw_is_single_value_swizzle(inst->src[i].swizzle));
+               inst->src[i].subnr += 4 * BRW_GET_SWZ(inst->src[i].swizzle, 0);
+            }
+         }
       }
 
       dst_reg &dst = inst->dst;
