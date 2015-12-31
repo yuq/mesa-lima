@@ -568,7 +568,7 @@ void anv_GetPhysicalDeviceMemoryProperties(
                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
                           VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-         .heapIndex = 1,
+         .heapIndex = 0,
       };
    } else {
       /* The spec requires that we expose a host-visible, coherent memory
@@ -581,13 +581,13 @@ void anv_GetPhysicalDeviceMemoryProperties(
          .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-         .heapIndex = 1,
+         .heapIndex = 0,
       };
       pMemoryProperties->memoryTypes[1] = (VkMemoryType) {
          .propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                           VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-         .heapIndex = 1,
+         .heapIndex = 0,
       };
    }
 
