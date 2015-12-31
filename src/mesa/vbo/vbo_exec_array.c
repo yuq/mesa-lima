@@ -1732,6 +1732,25 @@ vbo_exec_MultiDrawElementsIndirect(GLenum mode, GLenum type,
                                            primcount, stride);
 }
 
+static void GLAPIENTRY
+vbo_exec_MultiDrawArraysIndirectCount(GLenum mode,
+                                      GLintptr indirect,
+                                      GLintptr drawcount,
+                                      GLsizei maxdrawcount, GLsizei stride)
+{
+
+}
+
+static void GLAPIENTRY
+vbo_exec_MultiDrawElementsIndirectCount(GLenum mode, GLenum type,
+                                        GLintptr indirect,
+                                        GLintptr drawcount,
+                                        GLsizei maxdrawcount, GLsizei stride)
+{
+
+}
+
+
 /**
  * Initialize the dispatch table with the VBO functions for drawing.
  */
@@ -1779,6 +1798,8 @@ vbo_initialize_exec_dispatch(const struct gl_context *ctx,
    if (ctx->API == API_OPENGL_CORE) {
       SET_MultiDrawArraysIndirect(exec, vbo_exec_MultiDrawArraysIndirect);
       SET_MultiDrawElementsIndirect(exec, vbo_exec_MultiDrawElementsIndirect);
+      SET_MultiDrawArraysIndirectCountARB(exec, vbo_exec_MultiDrawArraysIndirectCount);
+      SET_MultiDrawElementsIndirectCountARB(exec, vbo_exec_MultiDrawElementsIndirectCount);
    }
 
    if (_mesa_is_desktop_gl(ctx) || _mesa_is_gles3(ctx)) {

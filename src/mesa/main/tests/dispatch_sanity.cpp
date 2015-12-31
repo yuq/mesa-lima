@@ -1844,6 +1844,10 @@ const struct function gl_core_functions_possible[] = {
    { "glGetQueryBufferObjecti64v", 45, -1 },
    { "glGetQueryBufferObjectui64v", 45, -1 },
 
+   /* GL_ARB_indirect_parameters */
+   { "glMultiDrawArraysIndirectCountARB", 31, -1 },
+   { "glMultiDrawElementsIndirectCountARB", 31, -1 },
+
    { NULL, 0, -1 }
 };
 
