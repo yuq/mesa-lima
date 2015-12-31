@@ -69,7 +69,8 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++) {
       const VkVertexInputAttributeDescription *desc =
          &info->pVertexAttributeDescriptions[i];
-      const struct anv_format *format = anv_format_for_vk_format(desc->format);
+      enum isl_format format = anv_get_isl_format(desc->format,
+                                                  VK_IMAGE_ASPECT_COLOR_BIT);
 
       assert(desc->binding < 32);
 
@@ -81,13 +82,13 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       struct GENX(VERTEX_ELEMENT_STATE) element = {
          .VertexBufferIndex = desc->binding,
          .Valid = true,
-         .SourceElementFormat = format->surface_format,
+         .SourceElementFormat = format,
          .EdgeFlagEnable = false,
          .SourceElementOffset = desc->offset,
-         .Component0Control = VFCOMP_STORE_SRC,
-         .Component1Control = format->num_channels >= 2 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
-         .Component2Control = format->num_channels >= 3 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
-         .Component3Control = format->num_channels >= 4 ? VFCOMP_STORE_SRC : VFCOMP_STORE_1_FP
+         .Component0Control = vertex_element_comp_control(format, 0),
+         .Component1Control = vertex_element_comp_control(format, 1),
+         .Component2Control = vertex_element_comp_control(format, 2),
+         .Component3Control = vertex_element_comp_control(format, 3),
       };
       GENX(VERTEX_ELEMENT_STATE_pack)(NULL, &p[1 + slot * 2], &element);
 

@@ -21,6 +21,32 @@
  * IN THE SOFTWARE.
  */
 
+static uint32_t
+vertex_element_comp_control(enum isl_format format, unsigned comp)
+{
+   uint8_t bits;
+   switch (comp) {
+   case 0: bits = isl_format_layouts[format].channels.r.bits; break;
+   case 1: bits = isl_format_layouts[format].channels.g.bits; break;
+   case 2: bits = isl_format_layouts[format].channels.b.bits; break;
+   case 3: bits = isl_format_layouts[format].channels.a.bits; break;
+   default: unreachable("Invalid component");
+   }
+
+   if (bits) {
+      return VFCOMP_STORE_SRC;
+   } else if (comp < 3) {
+      return VFCOMP_STORE_0;
+   } else if (isl_format_layouts[format].channels.r.type == ISL_UINT ||
+            isl_format_layouts[format].channels.r.type == ISL_SINT) {
+      assert(comp == 3);
+      return VFCOMP_STORE_1_INT;
+   } else {
+      assert(comp == 3);
+      return VFCOMP_STORE_1_FP;
+   }
+}
+
 static const uint32_t vk_to_gen_cullmode[] = {
    [VK_CULL_MODE_NONE]                       = CULLMODE_NONE,
    [VK_CULL_MODE_FRONT_BIT]                  = CULLMODE_FRONT,
