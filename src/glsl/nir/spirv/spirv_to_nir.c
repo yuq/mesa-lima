@@ -3223,16 +3223,17 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       assert(w[2] == SpvMemoryModelGLSL450);
       break;
 
-   case SpvOpEntryPoint: {
-      char *name = vtn_string_literal(b, &w[3], count - 3);
-      if (strcmp(name, b->entry_point_name) != 0)
+   case SpvOpEntryPoint:
+      /* Let this be a name label regardless */
+      b->values[w[2]].name = vtn_string_literal(b, &w[3], count - 3);
+
+      if (strcmp(b->values[w[2]].name, b->entry_point_name) != 0)
          break;
 
       assert(b->entry_point == NULL);
       b->entry_point = &b->values[w[2]];
       b->execution_model = w[1];
       break;
-   }
 
    case SpvOpString:
       vtn_push_value(b, w[1], vtn_value_type_string)->str =
