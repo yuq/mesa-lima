@@ -205,6 +205,7 @@ anv_image_create(VkDevice _device,
    memset(image, 0, sizeof(*image));
    image->type = pCreateInfo->imageType;
    image->extent = pCreateInfo->extent;
+   image->vk_format = pCreateInfo->format;
    image->format = anv_format_for_vk_format(pCreateInfo->format);
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arrayLayers;

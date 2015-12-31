@@ -729,7 +729,7 @@ void anv_CmdClearColorImage(
                   .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                   .image = _image,
                   .viewType = anv_meta_get_view_type(image),
-                  .format = image->format->vk_format,
+                  .format = image->vk_format,
                   .subresourceRange = {
                      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                      .baseMipLevel = pRanges[r].baseMipLevel + l,

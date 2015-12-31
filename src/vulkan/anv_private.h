@@ -1443,6 +1443,10 @@ struct anv_surface {
 
 struct anv_image {
    VkImageType type;
+   /* The original VkFormat provided by the client.  This may not match any
+    * of the actual surface formats.
+    */
+   VkFormat vk_format;
    const struct anv_format *format;
    VkExtent3D extent;
    uint32_t levels;

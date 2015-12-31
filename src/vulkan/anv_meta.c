@@ -858,7 +858,7 @@ void anv_CmdCopyImage(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
             .viewType = anv_meta_get_view_type(src_image),
-            .format = src_image->format->vk_format,
+            .format = src_image->vk_format,
             .subresourceRange = {
                .aspectMask = pRegions[r].srcSubresource.aspectMask,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
@@ -902,7 +902,7 @@ void anv_CmdCopyImage(
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = destImage,
                .viewType = anv_meta_get_view_type(dest_image),
-               .format = dest_image->format->vk_format,
+               .format = dest_image->vk_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = pRegions[r].dstSubresource.mipLevel,
@@ -955,7 +955,7 @@ void anv_CmdBlitImage(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
             .viewType = anv_meta_get_view_type(src_image),
-            .format = src_image->format->vk_format,
+            .format = src_image->vk_format,
             .subresourceRange = {
                .aspectMask = pRegions[r].srcSubresource.aspectMask,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
@@ -989,7 +989,7 @@ void anv_CmdBlitImage(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = destImage,
             .viewType = anv_meta_get_view_type(dest_image),
-            .format = dest_image->format->vk_format,
+            .format = dest_image->vk_format,
             .subresourceRange = {
                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                .baseMipLevel = pRegions[r].dstSubresource.mipLevel,
@@ -1067,7 +1067,7 @@ void anv_CmdCopyBufferToImage(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
-   const VkFormat orig_format = dest_image->format->vk_format;
+   const VkFormat orig_format = dest_image->vk_format;
    struct anv_meta_saved_state saved_state;
 
    meta_prepare_blit(cmd_buffer, &saved_state);
@@ -1194,7 +1194,7 @@ void anv_CmdCopyImageToBuffer(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
             .viewType = anv_meta_get_view_type(src_image),
-            .format = src_image->format->vk_format,
+            .format = src_image->vk_format,
             .subresourceRange = {
                .aspectMask = pRegions[r].imageSubresource.aspectMask,
                .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
@@ -1205,7 +1205,7 @@ void anv_CmdCopyImageToBuffer(
          },
          cmd_buffer);
 
-      VkFormat dest_format = src_image->format->vk_format;
+      VkFormat dest_format = src_image->vk_format;
       if (dest_format == VK_FORMAT_S8_UINT) {
          dest_format = VK_FORMAT_R8_UINT;
       }
