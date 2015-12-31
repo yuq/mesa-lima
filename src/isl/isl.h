@@ -492,12 +492,16 @@ enum isl_dim_layout {
     *
     *    One-dimensional surfaces are identical to 2D surfaces with height of
     *    one.
+    *
+    * @invariant isl_surf::phys_level0_sa::depth == 1
     */
    ISL_DIM_LAYOUT_GEN4_2D,
 
    /**
     * For details, see the G35 PRM >> Volume 1: Graphics Core >> Section
     * 6.17.5: 3D Surfaces.
+    *
+    * @invariant isl_surf::phys_level0_sa::array_len == 1
     */
    ISL_DIM_LAYOUT_GEN4_3D,
 
