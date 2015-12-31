@@ -50,6 +50,7 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, nir_shader *shader)
       break;
 
    case nir_intrinsic_end_primitive:
+   case nir_intrinsic_end_primitive_with_counter:
       assert(shader->stage == MESA_SHADER_GEOMETRY);
       shader->info.gs.uses_end_primitive = 1;
       break;
