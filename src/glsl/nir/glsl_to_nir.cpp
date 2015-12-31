@@ -145,7 +145,16 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    v2.run(sh->ir);
    visit_exec_list(sh->ir, &v1);
 
-   nir_lower_outputs_to_temporaries(shader);
+   nir_function *main = NULL;
+   nir_foreach_function(shader, func) {
+      if (strcmp(func->name, "main") == 0) {
+         main = func;
+         break;
+      }
+   }
+   assert(main);
+
+   nir_lower_outputs_to_temporaries(shader, main);
 
    shader->info.name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
    if (shader_prog->Label)
