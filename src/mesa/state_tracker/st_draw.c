@@ -252,13 +252,7 @@ st_draw_vbo(struct gl_context *ctx,
       }
    }
 
-   if (indirect) {
-      info.indirect = st_buffer_object(indirect)->buffer;
-
-      /* Primitive restart is not handled by the VBO module in this case. */
-      info.primitive_restart = ctx->Array._PrimitiveRestart;
-      info.restart_index = ctx->Array.RestartIndex;
-   }
+   assert(!indirect);
 
    /* do actual drawing */
    for (i = 0; i < nr_prims; i++) {
@@ -274,7 +268,6 @@ st_draw_vbo(struct gl_context *ctx,
          info.min_index = info.start;
          info.max_index = info.start + info.count - 1;
       }
-      info.indirect_offset = prims[i].indirect_offset;
 
       if (ST_DEBUG & DEBUG_DRAW) {
          debug_printf("st/draw: mode %s  start %u  count %u  indexed %d\n",
@@ -284,7 +277,7 @@ st_draw_vbo(struct gl_context *ctx,
                       info.indexed);
       }
 
-      if (info.count_from_stream_output || info.indirect) {
+      if (info.count_from_stream_output) {
          cso_draw_vbo(st->cso_context, &info);
       }
       else if (info.primitive_restart) {
@@ -301,6 +294,84 @@ st_draw_vbo(struct gl_context *ctx,
    }
 }
 
+static void
+st_indirect_draw_vbo(struct gl_context *ctx,
+                     GLuint mode,
+                     struct gl_buffer_object *indirect_data,
+                     GLsizeiptr indirect_offset,
+                     unsigned draw_count,
+                     unsigned stride,
+                     struct gl_buffer_object *indirect_params,
+                     GLsizeiptr indirect_params_offset,
+                     const struct _mesa_index_buffer *ib)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_index_buffer ibuffer = {0};
+   struct pipe_draw_info info;
+
+   /* Mesa core state should have been validated already */
+   assert(ctx->NewState == 0x0);
+   assert(stride);
+
+   /* Validate state. */
+   if (st->dirty.st || ctx->NewDriverState) {
+      st_validate_state(st);
+   }
+
+   if (st->vertex_array_out_of_memory) {
+      return;
+   }
+
+   util_draw_init_info(&info);
+
+   if (ib) {
+      if (!setup_index_buffer(st, ib, &ibuffer)) {
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sDrawElementsIndirect%s",
+                     (draw_count > 1) ? "Multi" : "",
+                     indirect_params ? "CountARB" : "");
+         return;
+      }
+
+      info.indexed = TRUE;
+   }
+
+   info.mode = translate_prim(ctx, mode);
+   info.vertices_per_patch = ctx->TessCtrlProgram.patch_vertices;
+   info.indirect = st_buffer_object(indirect_data)->buffer;
+   info.indirect_offset = indirect_offset;
+
+   /* Primitive restart is not handled by the VBO module in this case. */
+   info.primitive_restart = ctx->Array._PrimitiveRestart;
+   info.restart_index = ctx->Array.RestartIndex;
+
+   if (ST_DEBUG & DEBUG_DRAW) {
+      debug_printf("st/draw indirect: mode %s drawcount %d indexed %d\n",
+                   u_prim_name(info.mode),
+                   draw_count,
+                   info.indexed);
+   }
+
+   if (!st->has_multi_draw_indirect) {
+      int i;
+
+      assert(!indirect_params);
+      info.indirect_count = 1;
+      for (i = 0; i < draw_count; i++) {
+         info.drawid = i;
+         cso_draw_vbo(st->cso_context, &info);
+         info.indirect_offset += stride;
+      }
+   } else {
+      info.indirect_count = draw_count;
+      info.indirect_stride = stride;
+      if (indirect_params) {
+         info.indirect_params = st_buffer_object(indirect_params)->buffer;
+         info.indirect_params_offset = indirect_params_offset;
+      }
+      cso_draw_vbo(st->cso_context, &info);
+   }
+}
+
 
 void
 st_init_draw(struct st_context *st)
@@ -308,6 +379,7 @@ st_init_draw(struct st_context *st)
    struct gl_context *ctx = st->ctx;
 
    vbo_set_draw_func(ctx, st_draw_vbo);
+   vbo_set_indirect_draw_func(ctx, st_indirect_draw_vbo);
 
    st->draw = draw_create(st->pipe); /* for selection/feedback */
 

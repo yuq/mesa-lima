@@ -267,6 +267,8 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
       screen->get_param(screen, PIPE_CAP_QUERY_TIME_ELAPSED);
    st->has_half_float_packing =
       screen->get_param(screen, PIPE_CAP_TGSI_PACK_HALF_FLOAT);
+   st->has_multi_draw_indirect =
+      screen->get_param(screen, PIPE_CAP_MULTI_DRAW_INDIRECT);
 
    /* GL limits and extensions */
    st_init_limits(st->pipe->screen, &ctx->Const, &ctx->Extensions);
