@@ -1401,7 +1401,6 @@ struct anv_format {
    const char *name;
    enum isl_format surface_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
    const struct isl_format_layout *isl_layout;
-   uint8_t num_channels;
    uint16_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
    bool has_stencil;
 };
