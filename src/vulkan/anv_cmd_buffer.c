@@ -538,7 +538,7 @@ void anv_CmdBindDescriptorSets(
                for (unsigned j = 0; j < array_size; j++) {
                   uint32_t range = 0;
                   if (desc->buffer_view)
-                     range = desc->buffer_view;
+                     range = desc->buffer_view->range;
                   push->dynamic[d].offset = *(offsets++);
                   push->dynamic[d].range = range;
                   desc++;
