@@ -109,8 +109,8 @@ remap_var(clone_state *state, const nir_variable *var)
    return _lookup_ptr(state, var, nir_variable_is_global(var));
 }
 
-static nir_constant *
-clone_constant(clone_state *state, const nir_constant *c, nir_variable *nvar)
+nir_constant *
+nir_constant_clone(const nir_constant *c, nir_variable *nvar)
 {
    nir_constant *nc = ralloc(nvar, nir_constant);
 
@@ -118,7 +118,7 @@ clone_constant(clone_state *state, const nir_constant *c, nir_variable *nvar)
    nc->num_elements = c->num_elements;
    nc->elements = ralloc_array(nvar, nir_constant *, c->num_elements);
    for (unsigned i = 0; i < c->num_elements; i++) {
-      nc->elements[i] = clone_constant(state, c->elements[i], nvar);
+      nc->elements[i] = nir_constant_clone(c->elements[i], nvar);
    }
 
    return nc;
@@ -142,7 +142,7 @@ clone_variable(clone_state *state, const nir_variable *var)
           var->num_state_slots * sizeof(nir_state_slot));
    if (var->constant_initializer) {
       nvar->constant_initializer =
-         clone_constant(state, var->constant_initializer, nvar);
+         nir_constant_clone(var->constant_initializer, nvar);
    }
    nvar->interface_type = var->interface_type;
 
