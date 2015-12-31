@@ -3207,10 +3207,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       switch ((SpvCapability)w[1]) {
       case SpvCapabilityMatrix:
       case SpvCapabilityShader:
-         /* All shaders support these */
-         break;
       case SpvCapabilityGeometry:
-         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
          break;
       default:
          assert(!"Unsupported capability");
@@ -3647,9 +3644,29 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    return true;
 }
 
+static gl_shader_stage
+stage_for_execution_model(SpvExecutionModel model)
+{
+   switch (model) {
+   case SpvExecutionModelVertex:
+      return MESA_SHADER_VERTEX;
+   case SpvExecutionModelTessellationControl:
+      return MESA_SHADER_TESS_CTRL;
+   case SpvExecutionModelTessellationEvaluation:
+      return MESA_SHADER_TESS_EVAL;
+   case SpvExecutionModelGeometry:
+      return MESA_SHADER_GEOMETRY;
+   case SpvExecutionModelFragment:
+      return MESA_SHADER_FRAGMENT;
+   case SpvExecutionModelGLCompute:
+      return MESA_SHADER_COMPUTE;
+   default:
+      unreachable("Unsupported execution model");
+   }
+}
+
 nir_shader *
 spirv_to_nir(const uint32_t *words, size_t word_count,
-             gl_shader_stage stage,
              const nir_shader_compiler_options *options)
 {
    const uint32_t *word_end = words + word_count;
@@ -3665,11 +3682,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
 
    words+= 5;
 
-   nir_shader *shader = nir_shader_create(NULL, stage, options);
-
    /* Initialize the stn_builder object */
    struct vtn_builder *b = rzalloc(NULL, struct vtn_builder);
-   b->shader = shader;
    b->value_id_bound = value_id_bound;
    b->values = rzalloc_array(b, struct vtn_value, value_id_bound);
    exec_list_make_empty(&b->functions);
@@ -3677,6 +3691,10 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    /* Handle all the preamble instructions */
    words = vtn_foreach_instruction(b, words, word_end,
                                    vtn_handle_preamble_instruction);
+
+   gl_shader_stage stage = stage_for_execution_model(b->execution_model);
+   nir_shader *shader = nir_shader_create(NULL, stage, options);
+   b->shader = shader;
 
    /* Parse execution modes */
    vtn_foreach_execution_mode(b, b->entry_point,
@@ -3699,12 +3717,12 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
                               vtn_handle_phi_second_pass);
    }
 
+   ralloc_free(b);
+
    /* Because we can still have output reads in NIR, we need to lower
     * outputs to temporaries before we are truely finished.
     */
    nir_lower_outputs_to_temporaries(shader);
-
-   ralloc_free(b);
 
    return shader;
 }

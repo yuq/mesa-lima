@@ -317,9 +317,9 @@ struct vtn_builder {
    unsigned value_id_bound;
    struct vtn_value *values;
 
+   struct vtn_value *entry_point;
    SpvExecutionModel execution_model;
    bool origin_upper_left;
-   struct vtn_value *entry_point;
 
    struct vtn_function *func;
    struct exec_list functions;
