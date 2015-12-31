@@ -390,6 +390,10 @@ do_triangle_ccw(struct lp_setup_context *setup,
    plane = GET_PLANES(tri);
 
 #if defined(PIPE_ARCH_SSE)
+   /*
+    * XXX this code is effectively disabled for all practical purposes,
+    * as the allowed fb size is tiny if FIXED_ORDER is 8.
+    */
    if (setup->fb.width <= MAX_FIXED_LENGTH32 &&
        setup->fb.height <= MAX_FIXED_LENGTH32 &&
        (bbox.x1 - bbox.x0) <= MAX_FIXED_LENGTH32 &&
@@ -407,8 +411,8 @@ do_triangle_ccw(struct lp_setup_context *setup,
       __m128i zero = _mm_setzero_si128();
       PIPE_ALIGN_VAR(16) int32_t temp_vec[4];
 
-      vertx = _mm_loadu_si128((__m128i *)position->x); /* vertex x coords */
-      verty = _mm_loadu_si128((__m128i *)position->y); /* vertex y coords */
+      vertx = _mm_load_si128((__m128i *)position->x); /* vertex x coords */
+      verty = _mm_load_si128((__m128i *)position->y); /* vertex y coords */
 
       shufx = _mm_shuffle_epi32(vertx, _MM_SHUFFLE(3,0,2,1));
       shufy = _mm_shuffle_epi32(verty, _MM_SHUFFLE(3,0,2,1));
@@ -1032,12 +1036,12 @@ rotate_fixed_position_12( struct fixed_position* position )
 /**
  * Draw triangle if it's CW, cull otherwise.
  */
-static void triangle_cw( struct lp_setup_context *setup,
-			 const float (*v0)[4],
-			 const float (*v1)[4],
-			 const float (*v2)[4] )
+static void triangle_cw(struct lp_setup_context *setup,
+                        const float (*v0)[4],
+                        const float (*v1)[4],
+                        const float (*v2)[4])
 {
-   struct fixed_position position;
+   PIPE_ALIGN_VAR(16) struct fixed_position position;
 
    calc_fixed_position(setup, &position, v0, v1, v2);
 
@@ -1053,12 +1057,12 @@ static void triangle_cw( struct lp_setup_context *setup,
 }
 
 
-static void triangle_ccw( struct lp_setup_context *setup,
-                          const float (*v0)[4],
-                          const float (*v1)[4],
-                          const float (*v2)[4])
+static void triangle_ccw(struct lp_setup_context *setup,
+                         const float (*v0)[4],
+                         const float (*v1)[4],
+                         const float (*v2)[4])
 {
-   struct fixed_position position;
+   PIPE_ALIGN_VAR(16) struct fixed_position position;
 
    calc_fixed_position(setup, &position, v0, v1, v2);
 
@@ -1069,12 +1073,12 @@ static void triangle_ccw( struct lp_setup_context *setup,
 /**
  * Draw triangle whether it's CW or CCW.
  */
-static void triangle_both( struct lp_setup_context *setup,
-			   const float (*v0)[4],
-			   const float (*v1)[4],
-			   const float (*v2)[4] )
+static void triangle_both(struct lp_setup_context *setup,
+                          const float (*v0)[4],
+                          const float (*v1)[4],
+                          const float (*v2)[4])
 {
-   struct fixed_position position;
+   PIPE_ALIGN_VAR(16) struct fixed_position position;
    struct llvmpipe_context *lp_context = (struct llvmpipe_context *)setup->pipe;
 
    if (lp_context->active_statistics_queries &&
