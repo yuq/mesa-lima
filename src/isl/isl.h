@@ -823,6 +823,18 @@ isl_format_block_is_1x1x1(enum isl_format fmt)
    return fmtl->bw == 1 && fmtl->bh == 1 && fmtl->bd == 1;
 }
 
+static inline bool
+isl_format_is_rgb(enum isl_format fmt)
+{
+   return isl_format_layouts[fmt].channels.r.bits > 0 &&
+          isl_format_layouts[fmt].channels.g.bits > 0 &&
+          isl_format_layouts[fmt].channels.b.bits > 0 &&
+          isl_format_layouts[fmt].channels.a.bits == 0;
+}
+
+enum isl_format isl_format_rgb_to_rgba(enum isl_format rgb) ATTRIBUTE_CONST;
+enum isl_format isl_format_rgb_to_rgbx(enum isl_format rgb) ATTRIBUTE_CONST;
+
 bool isl_is_storage_image_format(enum isl_format fmt);
 
 enum isl_format
