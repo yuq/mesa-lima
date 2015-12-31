@@ -3248,9 +3248,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       /* TODO */
       break;
 
-   case SpvOpLine:
-      break; /* Ignored for now */
-
    case SpvOpExecutionMode:
    case SpvOpDecorationGroup:
    case SpvOpDecorate:
@@ -3380,7 +3377,6 @@ vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpString:
    case SpvOpName:
    case SpvOpMemberName:
-   case SpvOpLine:
    case SpvOpDecorationGroup:
    case SpvOpDecorate:
    case SpvOpMemberDecorate:
@@ -3388,6 +3384,9 @@ vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpGroupMemberDecorate:
       assert(!"Invalid opcode types and variables section");
       break;
+
+   case SpvOpLine:
+      break; /* Ignored for now */
 
    case SpvOpTypeVoid:
    case SpvOpTypeBool:
@@ -3440,6 +3439,9 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
                             const uint32_t *w, unsigned count)
 {
    switch (opcode) {
+   case SpvOpLine:
+      break; /* Ignored for now */
+
    case SpvOpLabel: {
       struct vtn_block *block = vtn_value(b, w[1], vtn_value_type_block)->block;
       assert(block->block == nir_cursor_current_block(b->nb.cursor));
