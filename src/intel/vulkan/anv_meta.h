@@ -70,6 +70,54 @@ anv_meta_get_iview_layer(const struct anv_image *dest_image,
                          const VkImageSubresourceLayers *dest_subresource,
                          const VkOffset3D *dest_offset);
 
+struct anv_meta_blit2d_surf {
+   struct anv_bo *bo;
+   enum isl_tiling tiling;
+
+   /** Base offset to the start of the image */
+   uint64_t base_offset;
+
+   uint32_t offset_x;
+   uint32_t offset_y;
+
+   /** The size of a unit in bytes. (Usually texel size) */
+   uint8_t units;
+
+   /** Stride between rows in bytes. */
+   uint32_t stride;
+
+   /** Possible vertical stride in rows.
+    *
+    * This is a hint to the blit engine that tells it that it can, if it
+    * wants, split the surface into v_stride tall chunks.  The user makes
+    * the guarantee that no rectangles it passes in will every cross a
+    * v_stride boundary.  A v_stride value of 0 indicates that the user
+    * cannot make such a guarantee.
+    */
+   uint32_t v_stride;
+};
+
+struct anv_meta_blit2d_rect {
+   uint32_t src_x, src_y;
+   uint32_t dst_x, dst_y;
+   uint32_t width, height;
+};
+
+static void
+anv_meta_begin_blit2d(struct anv_cmd_buffer *cmd_buffer,
+                      struct anv_meta_saved_state *save);
+
+static void
+anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
+                struct anv_meta_blit2d_surf *src,
+                struct anv_meta_blit2d_surf *dst,
+                unsigned num_rects,
+                struct anv_meta_blit2d_rect *rects);
+
+static void
+anv_meta_end_blit2d(struct anv_cmd_buffer *cmd_buffer,
+                    struct anv_meta_saved_state *save);
+
 #ifdef __cplusplus
 }
 #endif
