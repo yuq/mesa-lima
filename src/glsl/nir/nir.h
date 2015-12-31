@@ -1994,6 +1994,7 @@ void nir_print_instr(const nir_instr *instr, FILE *fp);
 
 nir_shader *nir_shader_clone(void *mem_ctx, const nir_shader *s);
 nir_function_impl *nir_function_impl_clone(const nir_function_impl *impl);
+nir_constant *nir_constant_clone(const nir_constant *c, nir_variable *var);
 
 #ifdef DEBUG
 void nir_validate_shader(nir_shader *shader);
