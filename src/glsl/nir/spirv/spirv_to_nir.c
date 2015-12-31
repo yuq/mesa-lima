@@ -1599,6 +1599,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       struct vtn_type *type =
          vtn_value(b, w[1], vtn_value_type_type)->type;
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
+      SpvStorageClass storage_class = w[3];
 
       nir_variable *var = rzalloc(b->shader, nir_variable);
 
@@ -1618,7 +1619,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       if (interface_type)
          var->interface_type = interface_type->type;
 
-      switch ((SpvStorageClass)w[3]) {
+      switch (storage_class) {
       case SpvStorageClassUniform:
       case SpvStorageClassUniformConstant:
          if (interface_type && interface_type->buffer_block) {
@@ -1702,6 +1703,18 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                     var->data.mode == nir_var_shader_out) {
             var->data.location += VARYING_SLOT_VAR0;
          }
+      }
+
+      /* XXX: Work around what appears to be a glslang bug.  While the
+       * SPIR-V spec doesn't say that setting a descriptor set on a push
+       * constant is invalid, it certainly makes no sense.  However, at
+       * some point, glslang started setting descriptor set 0 on push
+       * constants for some unknown reason.  Hopefully this can be removed
+       * at some point in the future.
+       */
+      if (storage_class == SpvStorageClassPushConstant) {
+         var->data.descriptor_set = -1;
+         var->data.binding = -1;
       }
 
       /* Interface block variables aren't actually going to be referenced
