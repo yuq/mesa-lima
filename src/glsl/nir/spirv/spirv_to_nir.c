@@ -741,7 +741,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_constant);
    val->const_type = vtn_value(b, w[1], vtn_value_type_type)->type->type;
-   val->constant = ralloc(b, nir_constant);
+   val->constant = rzalloc(b, nir_constant);
    switch (opcode) {
    case SpvOpConstantTrue:
       assert(val->const_type == glsl_bool_type());
@@ -784,6 +784,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       case GLSL_TYPE_STRUCT:
       case GLSL_TYPE_ARRAY:
          ralloc_steal(val->constant, elems);
+         val->constant->num_elements = elem_count;
          val->constant->elements = elems;
          break;
 
@@ -990,7 +991,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          var->data.mode = nir_var_global;
          var->data.read_only = true;
 
-         nir_constant *val = ralloc(var, nir_constant);
+         nir_constant *val = rzalloc(var, nir_constant);
          val->value.u[0] = b->shader->info.cs.local_size[0];
          val->value.u[1] = b->shader->info.cs.local_size[1];
          val->value.u[2] = b->shader->info.cs.local_size[2];
@@ -1674,8 +1675,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
       if (count > 4) {
          assert(count == 5);
-         var->constant_initializer =
+         nir_constant *constant =
             vtn_value(b, w[4], vtn_value_type_constant)->constant;
+         var->constant_initializer = nir_constant_clone(constant, var);
       }
 
       val->deref = nir_deref_var_create(b, var);
