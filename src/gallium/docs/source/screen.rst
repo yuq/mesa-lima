@@ -213,6 +213,11 @@ The integer capabilities:
 * ``PIPE_CAP_DRAW_INDIRECT``: Whether the driver supports taking draw arguments
   { count, instance_count, start, index_bias } from a PIPE_BUFFER resource.
   See pipe_draw_info.
+* ``PIPE_CAP_MULTI_DRAW_INDIRECT``: Whether the driver supports
+  pipe_draw_info::indirect_stride and ::indirect_count
+* ``PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS``: Whether the driver supports
+  taking the number of indirect draws from a separate parameter
+  buffer, see pipe_draw_info::indirect_params.
 * ``PIPE_CAP_TGSI_FS_FINE_DERIVATIVE``: Whether the fragment shader supports
   the FINE versions of DDX/DDY.
 * ``PIPE_CAP_VENDOR_ID``: The vendor ID of the underlying hardware. If it's
