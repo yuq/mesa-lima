@@ -650,6 +650,10 @@ meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
 static VkFormat
 vk_format_for_size(int bs)
 {
+   /* Note: We intentionally use the 4-channel formats whenever we can.
+    * This is so that, when we do a RGB <-> RGBX copy, the two formats will
+    * line up even though one of them is 3/4 the size of the other.
+    */
    switch (bs) {
    case 1: return VK_FORMAT_R8_UINT;
    case 2: return VK_FORMAT_R8G8_UINT;
@@ -834,6 +838,50 @@ void anv_CmdCopyBuffer(
    meta_finish_blit(cmd_buffer, &saved_state);
 }
 
+static VkFormat
+choose_iview_format(struct anv_image *image, VkImageAspectFlagBits aspect)
+{
+   assert(__builtin_popcount(aspect) == 1);
+
+   struct isl_surf *surf =
+      &anv_image_get_surface_for_aspect_mask(image, aspect)->isl;
+
+   /* vkCmdCopyImage behaves like memcpy. Therefore we choose identical UINT
+    * formats for the source and destination image views.
+    *
+    * From the Vulkan spec (2015-12-30):
+    *
+    *    vkCmdCopyImage performs image copies in a similar manner to a host
+    *    memcpy. It does not perform general-purpose conversions such as
+    *    scaling, resizing, blending, color-space conversion, or format
+    *    conversions.  Rather, it simply copies raw image data. vkCmdCopyImage
+    *    can copy between images with different formats, provided the formats
+    *    are compatible as defined below.
+    *
+    *    [The spec later defines compatibility as having the same number of
+    *    bytes per block].
+    */
+   return vk_format_for_size(isl_format_layouts[surf->format].bs);
+}
+
+static VkFormat
+choose_buffer_format(struct anv_image *image, VkImageAspectFlagBits aspect)
+{
+   assert(__builtin_popcount(aspect) == 1);
+
+   /* vkCmdCopy* commands behave like memcpy. Therefore we choose
+    * compatable UINT formats for the source and destination image views.
+    *
+    * For the buffer, we go back to the original image format and get a
+    * the format as if it were linear.  This way, for RGB formats, we get
+    * an RGB format here even if the tiled image is RGBA. XXX: This doesn't
+    * work if the buffer is the destination.
+    */
+   enum isl_format linear_format = anv_get_isl_format(image->vk_format, aspect);
+
+   return vk_format_for_size(isl_format_layouts[linear_format].bs);
+}
+
 void anv_CmdCopyImage(
     VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
@@ -852,15 +900,23 @@ void anv_CmdCopyImage(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
+      assert(pRegions[r].srcSubresource.aspectMask ==
+             pRegions[r].dstSubresource.aspectMask);
+
+      VkImageAspectFlags aspect = pRegions[r].srcSubresource.aspectMask;
+
+      VkFormat src_format = choose_iview_format(src_image, aspect);
+      VkFormat dst_format = choose_iview_format(dest_image, aspect);
+
       struct anv_image_view src_iview;
       anv_image_view_init(&src_iview, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
             .viewType = anv_meta_get_view_type(src_image),
-            .format = src_image->vk_format,
+            .format = src_format,
             .subresourceRange = {
-               .aspectMask = pRegions[r].srcSubresource.aspectMask,
+               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .levelCount = 1,
                .baseArrayLayer = pRegions[r].srcSubresource.baseArrayLayer,
@@ -902,7 +958,7 @@ void anv_CmdCopyImage(
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = destImage,
                .viewType = anv_meta_get_view_type(dest_image),
-               .format = dest_image->vk_format,
+               .format = dst_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = pRegions[r].dstSubresource.mipLevel,
@@ -1067,22 +1123,18 @@ void anv_CmdCopyBufferToImage(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
-   const VkFormat orig_format = dest_image->vk_format;
    struct anv_meta_saved_state saved_state;
 
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      VkFormat proxy_format = orig_format;
-      VkImageAspectFlags proxy_aspect = pRegions[r].imageSubresource.aspectMask;
+      VkImageAspectFlags aspect = pRegions[r].imageSubresource.aspectMask;
 
-      if (orig_format == VK_FORMAT_S8_UINT) {
-         proxy_format = VK_FORMAT_R8_UINT;
-         proxy_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-      }
+      VkFormat image_format = choose_iview_format(dest_image, aspect);
+      VkFormat buffer_format = choose_buffer_format(dest_image, aspect);
 
       struct anv_image *src_image =
-         make_image_for_buffer(vk_device, srcBuffer, proxy_format,
+         make_image_for_buffer(vk_device, srcBuffer, buffer_format,
                                VK_IMAGE_USAGE_SAMPLED_BIT,
                                dest_image->type, &cmd_buffer->pool->alloc,
                                &pRegions[r]);
@@ -1108,9 +1160,9 @@ void anv_CmdCopyBufferToImage(
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = anv_image_to_handle(src_image),
                .viewType = VK_IMAGE_VIEW_TYPE_2D,
-               .format = proxy_format,
+               .format = buffer_format,
                .subresourceRange = {
-                  .aspectMask = proxy_aspect,
+                  .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = 0,
                   .levelCount = 1,
                   .baseArrayLayer = 0,
@@ -1125,7 +1177,7 @@ void anv_CmdCopyBufferToImage(
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = anv_image_to_handle(dest_image),
                .viewType = anv_meta_get_view_type(dest_image),
-               .format = proxy_format,
+               .format = image_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
@@ -1188,15 +1240,20 @@ void anv_CmdCopyImageToBuffer(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
+      VkImageAspectFlags aspect = pRegions[r].imageSubresource.aspectMask;
+
+      VkFormat image_format = choose_iview_format(src_image, aspect);
+      VkFormat buffer_format = choose_buffer_format(src_image, aspect);
+
       struct anv_image_view src_iview;
       anv_image_view_init(&src_iview, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
             .viewType = anv_meta_get_view_type(src_image),
-            .format = src_image->vk_format,
+            .format = image_format,
             .subresourceRange = {
-               .aspectMask = pRegions[r].imageSubresource.aspectMask,
+               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
                .levelCount = 1,
                .baseArrayLayer = pRegions[r].imageSubresource.baseArrayLayer,
@@ -1205,13 +1262,8 @@ void anv_CmdCopyImageToBuffer(
          },
          cmd_buffer);
 
-      VkFormat dest_format = src_image->vk_format;
-      if (dest_format == VK_FORMAT_S8_UINT) {
-         dest_format = VK_FORMAT_R8_UINT;
-      }
-
       struct anv_image *dest_image =
-         make_image_for_buffer(vk_device, destBuffer, dest_format,
+         make_image_for_buffer(vk_device, destBuffer, buffer_format,
                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                                src_image->type, &cmd_buffer->pool->alloc,
                                &pRegions[r]);
@@ -1235,7 +1287,7 @@ void anv_CmdCopyImageToBuffer(
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = anv_image_to_handle(dest_image),
                .viewType = VK_IMAGE_VIEW_TYPE_2D,
-               .format = dest_format,
+               .format = buffer_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = 0,
