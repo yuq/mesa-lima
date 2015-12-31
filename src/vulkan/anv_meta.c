@@ -846,7 +846,7 @@ void anv_CmdCopyBuffer(
 
       /* First, we make a bunch of max-sized copies */
       uint64_t max_copy_size = max_surface_dim * max_surface_dim * bs;
-      while (copy_size > max_copy_size) {
+      while (copy_size >= max_copy_size) {
          do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
                         dest_buffer->bo, dest_offset,
                         max_surface_dim, max_surface_dim, copy_format);
