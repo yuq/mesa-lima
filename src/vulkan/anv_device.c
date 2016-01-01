@@ -468,7 +468,7 @@ void anv_GetPhysicalDeviceProperties(
       .maxViewportDimensions                    = { (1 << 14), (1 << 14) },
       .viewportBoundsRange                      = { -1.0, 1.0 }, /* FIXME */
       .viewportSubPixelBits                     = 13, /* We take a float? */
-      .minMemoryMapAlignment                    = 64, /* A cache line */
+      .minMemoryMapAlignment                    = 4096, /* A page */
       .minTexelBufferOffsetAlignment            = 1,
       .minUniformBufferOffsetAlignment          = 1,
       .minStorageBufferOffsetAlignment          = 1,
@@ -1082,10 +1082,19 @@ VkResult anv_MapMemory(
    if (!device->info.has_llc && mem->type_index == 0)
       gem_flags |= I915_MMAP_WC;
 
-   mem->map = anv_gem_mmap(device, mem->bo.gem_handle, offset, size, gem_flags);
-   mem->map_size = size;
+   /* GEM will fail to map if the offset isn't 4k-aligned.  Round down. */
+   uint64_t map_offset = offset & ~4095ull;
+   assert(offset >= map_offset);
+   uint64_t map_size = (offset + size) - map_offset;
 
-   *ppData = mem->map;
+   /* Let's map whole pages */
+   map_size = (map_size + 4095) & ~4095ull;
+
+   mem->map = anv_gem_mmap(device, mem->bo.gem_handle,
+                           map_offset, map_size, gem_flags);
+   mem->map_size = map_size;
+
+   *ppData = mem->map + (offset - map_offset);
 
    return VK_SUCCESS;
 }
