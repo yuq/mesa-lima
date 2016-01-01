@@ -407,7 +407,7 @@ BuildUtil::loadImm(Value *dst, float f)
 Value *
 BuildUtil::loadImm(Value *dst, double d)
 {
-   return mkOp1v(OP_MOV, TYPE_F64, dst ? dst : getScratch(), mkImm(d));
+   return mkOp1v(OP_MOV, TYPE_F64, dst ? dst : getScratch(8), mkImm(d));
 }
 
 Value *
@@ -499,7 +499,7 @@ BuildUtil::DataArray::acquire(ValueMap &m, int i, int c)
 
       return v;
    } else {
-      return up->getScratch();
+      return up->getScratch(eltSize, file);
    }
 }
 
