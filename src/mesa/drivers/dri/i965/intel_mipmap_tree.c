@@ -161,8 +161,9 @@ intel_get_non_msrt_mcs_alignment(struct intel_mipmap_tree *mt,
    }
 }
 
-static bool
-intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
+bool
+intel_tiling_supports_non_msrt_mcs(const struct brw_context *brw,
+                                   unsigned tiling)
 {
    /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
     * Target(s)", beneath the "Fast Color Clear" bullet (p326):
@@ -200,9 +201,9 @@ intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
  *     - MCS and Lossless compression is supported for TiledY/TileYs/TileYf
  *     non-MSRTs only.
  */
-static bool
+bool
 intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
-                                           struct intel_mipmap_tree *mt)
+                                           const struct intel_mipmap_tree *mt)
 {
    /* MCS support does not exist prior to Gen7 */
    if (brw->gen < 7)
