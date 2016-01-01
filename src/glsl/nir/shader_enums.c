@@ -60,8 +60,8 @@ _mesa_shader_stage_to_string(unsigned stage)
    case MESA_SHADER_FRAGMENT: return "fragment";
    case MESA_SHADER_GEOMETRY: return "geometry";
    case MESA_SHADER_COMPUTE:  return "compute";
-   case MESA_SHADER_TESS_CTRL: return "tess ctrl";
-   case MESA_SHADER_TESS_EVAL: return "tess eval";
+   case MESA_SHADER_TESS_CTRL: return "tessellation control";
+   case MESA_SHADER_TESS_EVAL: return "tessellation evaluation";
    }
 
    unreachable("Unknown shader stage.");
