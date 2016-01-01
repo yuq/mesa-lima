@@ -246,6 +246,7 @@ anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
    case VK_IMAGE_ASPECT_COLOR_BIT:
       return anv_fmt->surface_format;
    case VK_IMAGE_ASPECT_DEPTH_BIT:
+   case (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT):
       assert(anv_fmt->depth_format != 0);
       return anv_fmt->surface_format;
    case VK_IMAGE_ASPECT_STENCIL_BIT:
