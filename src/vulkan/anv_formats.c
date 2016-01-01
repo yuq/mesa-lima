@@ -269,75 +269,94 @@ void anv_validate_GetPhysicalDeviceFormatProperties(
    anv_GetPhysicalDeviceFormatProperties(physicalDevice, _format, pFormatProperties);
 }
 
+static VkFormatFeatureFlags
+get_image_format_properties(int gen, enum isl_format base,
+                            enum isl_format actual)
+{
+   const struct brw_surface_format_info *info = &surface_formats[actual];
+
+   if (actual == ISL_FORMAT_UNSUPPORTED || !info->exists)
+      return 0;
+
+   VkFormatFeatureFlags flags = 0;
+   if (info->sampling <= gen) {
+      flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+               VK_FORMAT_FEATURE_BLIT_SRC_BIT;
+   }
+
+   if (info->render_target <= gen) {
+      flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+               VK_FORMAT_FEATURE_BLIT_DST_BIT;
+   }
+
+   if (info->alpha_blend <= gen)
+      flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+
+   /* Load/store is determined based on base format.  This prevents RGB
+    * formats from showing up as load/store capable.
+    */
+   if (isl_is_storage_image_format(base))
+      flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+
+   if (base == ISL_FORMAT_R32_SINT || base == ISL_FORMAT_R32_UINT)
+      flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
+
+   return flags;
+}
+
+static VkFormatFeatureFlags
+get_buffer_format_properties(int gen, enum isl_format format)
+{
+   const struct brw_surface_format_info *info = &surface_formats[format];
+
+   if (format == ISL_FORMAT_UNSUPPORTED || !info->exists)
+      return 0;
+
+   VkFormatFeatureFlags flags = 0;
+   if (info->sampling <= gen && !isl_format_is_compressed(format))
+      flags |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
+
+   if (info->input_vb <= gen)
+      flags |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
+
+   if (isl_is_storage_image_format(format))
+      flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT;
+
+   if (format == ISL_FORMAT_R32_SINT || format == ISL_FORMAT_R32_UINT)
+      flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;
+
+   return flags;
+}
+
 static void
 anv_physical_device_get_format_properties(struct anv_physical_device *physical_device,
-                                          const struct anv_format *format,
+                                          VkFormat format,
                                           VkFormatProperties *out_properties)
 {
-   const struct brw_surface_format_info *info;
-   int gen;
-   VkFormatFeatureFlags flags;
-
-   assert(format != NULL);
-
-   gen = physical_device->info->gen * 10;
+   int gen = physical_device->info->gen * 10;
    if (physical_device->info->is_haswell)
       gen += 5;
 
-   if (format->surface_format== ISL_FORMAT_UNSUPPORTED)
-      goto unsupported;
-
-   uint32_t linear = 0, tiled = 0, buffer = 0;
-   if (anv_format_is_depth_or_stencil(format)) {
+   VkFormatFeatureFlags linear = 0, tiled = 0, buffer = 0;
+   if (anv_format_is_depth_or_stencil(&anv_formats[format])) {
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
       if (physical_device->info->gen >= 8) {
          tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
          tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT;
       }
-      if (format->depth_format) {
+      if (anv_formats[format].depth_format) {
          tiled |= VK_FORMAT_FEATURE_BLIT_DST_BIT;
       }
    } else {
-      /* The surface_formats table only contains color formats */
-      info = &surface_formats[format->surface_format];
-      if (!info->exists)
-         goto unsupported;
+      enum isl_format linear_fmt, tiled_fmt;
+      linear_fmt = anv_get_isl_format(format, VK_IMAGE_ASPECT_COLOR_BIT,
+                                      VK_IMAGE_TILING_LINEAR);
+      tiled_fmt = anv_get_isl_format(format, VK_IMAGE_ASPECT_COLOR_BIT,
+                                     VK_IMAGE_TILING_OPTIMAL);
 
-      if (info->sampling <= gen) {
-         flags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
-                 VK_FORMAT_FEATURE_BLIT_SRC_BIT;
-         linear |= flags;
-         tiled |= flags;
-
-         if (!isl_format_is_compressed(format->surface_format))
-            buffer |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
-      }
-      if (info->render_target <= gen) {
-         flags = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
-                 VK_FORMAT_FEATURE_BLIT_DST_BIT;
-         linear |= flags;
-         tiled |= flags;
-      }
-      if (info->alpha_blend <= gen) {
-         linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
-         tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
-      }
-      if (info->input_vb <= gen) {
-         buffer |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
-      }
-
-      if (isl_is_storage_image_format(format->surface_format)) {
-         tiled |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
-         linear |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
-         buffer |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT;
-      }
-
-      if (format->surface_format == ISL_FORMAT_R32_SINT &&
-          format->surface_format == ISL_FORMAT_R32_UINT) {
-         tiled |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
-         linear |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
-         buffer |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;
-      }
+      linear = get_image_format_properties(gen, linear_fmt, linear_fmt);
+      tiled = get_image_format_properties(gen, linear_fmt, tiled_fmt);
+      buffer = get_buffer_format_properties(gen, linear_fmt);
    }
 
    out_properties->linearTilingFeatures = linear;
@@ -345,11 +364,6 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    out_properties->bufferFeatures = buffer;
 
    return;
-
- unsupported:
-   out_properties->linearTilingFeatures = 0;
-   out_properties->optimalTilingFeatures = 0;
-   out_properties->bufferFeatures = 0;
 }
 
 
@@ -362,13 +376,13 @@ void anv_GetPhysicalDeviceFormatProperties(
 
    anv_physical_device_get_format_properties(
                physical_device,
-               anv_format_for_vk_format(format),
+               format,
                pFormatProperties);
 }
 
 VkResult anv_GetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
-    VkFormat                                    _format,
+    VkFormat                                    format,
     VkImageType                                 type,
     VkImageTiling                               tiling,
     VkImageUsageFlags                           usage,
@@ -376,7 +390,6 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
     VkImageFormatProperties*                    pImageFormatProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
-   const struct anv_format *format = anv_format_for_vk_format(_format);
    VkFormatProperties format_props;
    VkFormatFeatureFlags format_feature_flags;
    VkExtent3D maxExtent;
@@ -434,7 +447,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
    }
 
    if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
-      if (format->has_stencil) {
+      if (anv_format_for_vk_format(format)->has_stencil) {
          /* Not yet implemented because copying to a W-tiled surface is crazy
           * hard.
           */
