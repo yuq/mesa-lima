@@ -536,6 +536,25 @@ isl_calc_phys_slice0_extent_sa_gen4_2d(
 {
    assert(phys_level0_sa->depth == 1);
 
+   if (info->levels == 1) {
+      /* Do not align single-level surfaces to the image alignment.
+       *
+       * For tiled surfaces, skipping the alignment here avoids wasting CPU
+       * cycles on the below mipmap layout caluclations. Skipping the
+       * alignment here is safe because we later align the row pitch and array
+       * pitch to the tile boundary. It is safe even for
+       * ISL_MSAA_LAYOUT_INTERLEAVED, because phys_level0_sa is already scaled
+       * to accomodate the interleaved samples.
+       *
+       * For linear surfaces, skipping the alignment here permits us to later
+       * choose an arbitrary, non-aligned row pitch. If the surface backs
+       * a VkBuffer, then an arbitrary pitch may be needed to accomodate
+       * VkBufferImageCopy::bufferRowLength.
+       */
+      *phys_slice0_sa = isl_extent2d(phys_level0_sa->w, phys_level0_sa->h);
+      return;
+   }
+
    uint32_t slice_top_w = 0;
    uint32_t slice_bottom_w = 0;
    uint32_t slice_left_h = 0;
@@ -626,7 +645,8 @@ isl_calc_phys_slice0_extent_sa_gen4_3d(
 
 /**
  * Calculate the physical extent of the surface's first array slice, in units
- * of surface samples. The result is aligned to \a image_align_sa.
+ * of surface samples. If the surface is multi-leveled, then the result will
+ * be aligned to \a image_align_sa.
  */
 static void
 isl_calc_phys_slice0_extent_sa(const struct isl_device *dev,
