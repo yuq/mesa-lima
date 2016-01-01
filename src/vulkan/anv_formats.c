@@ -237,7 +237,8 @@ anv_format_for_vk_format(VkFormat format)
  * Exactly one bit must be set in \a aspect.
  */
 enum isl_format
-anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect)
+anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
+                   VkImageTiling tiling)
 {
    const struct anv_format *anv_fmt = &anv_formats[format];
 

@@ -877,7 +877,8 @@ choose_buffer_format(struct anv_image *image, VkImageAspectFlagBits aspect)
     * an RGB format here even if the tiled image is RGBA. XXX: This doesn't
     * work if the buffer is the destination.
     */
-   enum isl_format linear_format = anv_get_isl_format(image->vk_format, aspect);
+   enum isl_format linear_format = anv_get_isl_format(image->vk_format, aspect,
+                                                      VK_IMAGE_TILING_LINEAR);
 
    return vk_format_for_size(isl_format_layouts[linear_format].bs);
 }

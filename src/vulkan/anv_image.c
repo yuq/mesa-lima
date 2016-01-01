@@ -133,7 +133,7 @@ make_surface(const struct anv_device *dev,
 
    ok = isl_surf_init(&dev->isl_dev, &anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
-      .format = anv_get_isl_format(vk_info->format, aspect),
+      .format = anv_get_isl_format(vk_info->format, aspect, vk_info->tiling),
       .width = vk_info->extent.width,
       .height = vk_info->extent.height,
       .depth = vk_info->extent.depth,
