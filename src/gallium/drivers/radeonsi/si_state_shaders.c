@@ -681,7 +681,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				       sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY;
 			bool is_line = !is_poly && sctx->current_rast_prim != PIPE_PRIM_POINTS;
 
-			key->ps.color_two_side = rs->two_side;
+			key->ps.color_two_side = rs->two_side && sel->info.colors_read;
 
 			if (sctx->queued.named.blend) {
 				key->ps.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
