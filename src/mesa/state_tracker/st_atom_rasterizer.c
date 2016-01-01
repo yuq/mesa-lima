@@ -244,7 +244,7 @@ static void update_raster_state( struct st_context *st )
          _mesa_is_multisample_enabled(ctx) &&
          ctx->Multisample.SampleShading &&
          ctx->Multisample.MinSampleShadingValue *
-         ctx->DrawBuffer->Visual.samples > 1;
+         _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 
    /* _NEW_SCISSOR */
    raster->scissor = ctx->Scissor.EnableFlags;
