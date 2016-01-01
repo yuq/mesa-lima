@@ -187,14 +187,28 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                   }
 
                   if (procType == TGSI_PROCESSOR_FRAGMENT &&
-		      !src->Register.Indirect &&
-		      info->input_semantic_name[src->Register.Index] ==
-		      TGSI_SEMANTIC_POSITION &&
-                      (src->Register.SwizzleX == TGSI_SWIZZLE_Z ||
-                       src->Register.SwizzleY == TGSI_SWIZZLE_Z ||
-                       src->Register.SwizzleZ == TGSI_SWIZZLE_Z ||
-                       src->Register.SwizzleW == TGSI_SWIZZLE_Z)) {
-                     info->reads_z = TRUE;
+                      !src->Register.Indirect) {
+                     unsigned name =
+                        info->input_semantic_name[src->Register.Index];
+                     unsigned index =
+                        info->input_semantic_index[src->Register.Index];
+
+                     if (name == TGSI_SEMANTIC_POSITION &&
+                         (src->Register.SwizzleX == TGSI_SWIZZLE_Z ||
+                          src->Register.SwizzleY == TGSI_SWIZZLE_Z ||
+                          src->Register.SwizzleZ == TGSI_SWIZZLE_Z ||
+                          src->Register.SwizzleW == TGSI_SWIZZLE_Z))
+                        info->reads_z = TRUE;
+
+                     if (name == TGSI_SEMANTIC_COLOR) {
+                        unsigned mask =
+                              (1 << src->Register.SwizzleX) |
+                              (1 << src->Register.SwizzleY) |
+                              (1 << src->Register.SwizzleZ) |
+                              (1 << src->Register.SwizzleW);
+
+                        info->colors_read |= mask << (index * 4);
+                     }
                   }
                }
 
