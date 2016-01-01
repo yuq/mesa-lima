@@ -858,47 +858,41 @@ static unsigned select_interp_param(struct si_shader_context *si_shader_ctx,
 	}
 }
 
-static void declare_input_fs(
-	struct radeon_llvm_context *radeon_bld,
-	unsigned input_index,
-	const struct tgsi_full_declaration *decl)
+/**
+ * Interpolate a fragment shader input.
+ *
+ * @param si_shader_ctx		context
+ * @param input_index		index of the input in hardware
+ * @param semantic_name		TGSI_SEMANTIC_*
+ * @param semantic_index	semantic index
+ * @param num_interp_inputs	number of all interpolated inputs (= BCOLOR offset)
+ * @param colors_read_mask	color components read (4 bits for each color, 8 bits in total)
+ * @param interp_param		interpolation weights (i,j)
+ * @param prim_mask		SI_PARAM_PRIM_MASK
+ * @param face			SI_PARAM_FRONT_FACE
+ * @param result		the return value (4 components)
+ */
+static void interp_fs_input(struct si_shader_context *si_shader_ctx,
+			    unsigned input_index,
+			    unsigned semantic_name,
+			    unsigned semantic_index,
+			    unsigned num_interp_inputs,
+			    unsigned colors_read_mask,
+			    LLVMValueRef interp_param,
+			    LLVMValueRef prim_mask,
+			    LLVMValueRef face,
+			    LLVMValueRef result[4])
 {
-	struct lp_build_context *base = &radeon_bld->soa.bld_base.base;
-	struct si_shader_context *si_shader_ctx =
-		si_shader_context(&radeon_bld->soa.bld_base);
-	struct si_shader *shader = si_shader_ctx->shader;
-	struct lp_build_context *uint =	&radeon_bld->soa.bld_base.uint_bld;
+	struct lp_build_context *base = &si_shader_ctx->radeon_bld.soa.bld_base.base;
+	struct lp_build_context *uint =	&si_shader_ctx->radeon_bld.soa.bld_base.uint_bld;
 	struct gallivm_state *gallivm = base->gallivm;
 	LLVMTypeRef input_type = LLVMFloatTypeInContext(gallivm->context);
-	LLVMValueRef main_fn = radeon_bld->main_fn;
-
-	LLVMValueRef interp_param = NULL;
-	int interp_param_idx;
 	const char * intr_name;
-
-	/* This value is:
-	 * [15:0] NewPrimMask (Bit mask for each quad.  It is set it the
-	 *                     quad begins a new primitive.  Bit 0 always needs
-	 *                     to be unset)
-	 * [32:16] ParamOffset
-	 *
-	 */
-	LLVMValueRef params = LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK);
 	LLVMValueRef attr_number;
 
 	unsigned chan;
 
 	attr_number = lp_build_const_int32(gallivm, input_index);
-
-	interp_param_idx = lookup_interp_param_index(decl->Interp.Interpolate,
-						     decl->Interp.Location);
-	if (interp_param_idx == -1)
-		return;
-	else if (interp_param_idx) {
-		interp_param_idx = select_interp_param(si_shader_ctx,
-						       interp_param_idx);
-		interp_param = LLVMGetParam(main_fn, interp_param_idx);
-	}
 
 	/* fs.constant returns the param from the middle vertex, so it's not
 	 * really useful for flat shading. It's meant to be used for custom
@@ -912,32 +906,28 @@ static void declare_input_fs(
 	 */
 	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
 
-	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
+	if (semantic_name == TGSI_SEMANTIC_COLOR &&
 	    si_shader_ctx->shader->key.ps.color_two_side) {
-		struct tgsi_shader_info *info = &shader->selector->info;
 		LLVMValueRef args[4];
-		LLVMValueRef face, is_face_positive;
+		LLVMValueRef is_face_positive;
 		LLVMValueRef back_attr_number;
 
 		/* If BCOLOR0 is used, BCOLOR1 is at offset "num_inputs + 1",
 		 * otherwise it's at offset "num_inputs".
 		 */
-		unsigned back_attr_offset = shader->selector->info.num_inputs;
-		if (decl->Semantic.Index == 1 && info->colors_read & 0xf)
+		unsigned back_attr_offset = num_interp_inputs;
+		if (semantic_index == 1 && colors_read_mask & 0xf)
 			back_attr_offset += 1;
 
 		back_attr_number = lp_build_const_int32(gallivm, back_attr_offset);
 
-		face = LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE);
-
 		is_face_positive = LLVMBuildICmp(gallivm->builder, LLVMIntNE,
 						 face, uint->zero, "");
 
-		args[2] = params;
+		args[2] = prim_mask;
 		args[3] = interp_param;
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 			LLVMValueRef llvm_chan = lp_build_const_int32(gallivm, chan);
-			unsigned soa_index = radeon_llvm_reg_index_soa(input_index, chan);
 			LLVMValueRef front, back;
 
 			args[0] = llvm_chan;
@@ -951,44 +941,69 @@ static void declare_input_fs(
 					       input_type, args, args[3] ? 4 : 3,
 					       LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 
-			radeon_bld->inputs[soa_index] =
-				LLVMBuildSelect(gallivm->builder,
+			result[chan] = LLVMBuildSelect(gallivm->builder,
 						is_face_positive,
 						front,
 						back,
 						"");
 		}
-	} else if (decl->Semantic.Name == TGSI_SEMANTIC_FOG) {
+	} else if (semantic_name == TGSI_SEMANTIC_FOG) {
 		LLVMValueRef args[4];
 
 		args[0] = uint->zero;
 		args[1] = attr_number;
-		args[2] = params;
+		args[2] = prim_mask;
 		args[3] = interp_param;
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)] =
-			lp_build_intrinsic(gallivm->builder, intr_name,
+		result[0] = lp_build_intrinsic(gallivm->builder, intr_name,
 					input_type, args, args[3] ? 4 : 3,
 					LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 1)] =
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 2)] =
-			lp_build_const_float(gallivm, 0.0f);
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 3)] =
-			lp_build_const_float(gallivm, 1.0f);
+		result[1] =
+		result[2] = lp_build_const_float(gallivm, 0.0f);
+		result[3] = lp_build_const_float(gallivm, 1.0f);
 	} else {
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 			LLVMValueRef args[4];
 			LLVMValueRef llvm_chan = lp_build_const_int32(gallivm, chan);
-			unsigned soa_index = radeon_llvm_reg_index_soa(input_index, chan);
+
 			args[0] = llvm_chan;
 			args[1] = attr_number;
-			args[2] = params;
+			args[2] = prim_mask;
 			args[3] = interp_param;
-			radeon_bld->inputs[soa_index] =
-				lp_build_intrinsic(gallivm->builder, intr_name,
+			result[chan] = lp_build_intrinsic(gallivm->builder, intr_name,
 						input_type, args, args[3] ? 4 : 3,
 						LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 		}
 	}
+}
+
+static void declare_input_fs(
+	struct radeon_llvm_context *radeon_bld,
+	unsigned input_index,
+	const struct tgsi_full_declaration *decl)
+{
+	struct si_shader_context *si_shader_ctx =
+		si_shader_context(&radeon_bld->soa.bld_base);
+	struct si_shader *shader = si_shader_ctx->shader;
+	LLVMValueRef main_fn = radeon_bld->main_fn;
+	LLVMValueRef interp_param = NULL;
+	int interp_param_idx;
+
+	interp_param_idx = lookup_interp_param_index(decl->Interp.Interpolate,
+						     decl->Interp.Location);
+	if (interp_param_idx == -1)
+		return;
+	else if (interp_param_idx) {
+		interp_param_idx = select_interp_param(si_shader_ctx,
+						       interp_param_idx);
+		interp_param = LLVMGetParam(main_fn, interp_param_idx);
+	}
+
+	interp_fs_input(si_shader_ctx, input_index, decl->Semantic.Name,
+			decl->Semantic.Index, shader->selector->info.num_inputs,
+			shader->selector->info.colors_read, interp_param,
+			LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK),
+			LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE),
+			&radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)]);
 }
 
 static LLVMValueRef get_sample_id(struct radeon_llvm_context *radeon_bld)
