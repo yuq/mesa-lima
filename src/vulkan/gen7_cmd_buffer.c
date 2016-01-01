@@ -459,7 +459,7 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
          anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
 
       struct GEN7_DEPTH_STENCIL_STATE depth_stencil = {
-         .StencilBufferWriteEnable = iview && iview->format->has_stencil,
+         .StencilBufferWriteEnable = iview && (iview->aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT),
 
          .StencilTestMask =
             cmd_buffer->state.dynamic.stencil_compare_mask.front & 0xff,
@@ -698,17 +698,22 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    const struct anv_image_view *iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
    const struct anv_image *image = iview ? iview->image : NULL;
-   const bool has_depth = iview && iview->format->depth_format;
-   const bool has_stencil = iview && iview->format->has_stencil;
+
+   /* XXX: isl needs to grow depth format support */
+   const struct anv_format *anv_format =
+      iview ? anv_format_for_vk_format(iview->vk_format) : NULL;
+
+   const bool has_depth = iview && anv_format->depth_format;
+   const bool has_stencil = iview && anv_format->has_stencil;
 
    /* Emit 3DSTATE_DEPTH_BUFFER */
    if (has_depth) {
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER),
          .SurfaceType = SURFTYPE_2D,
-         .DepthWriteEnable = iview->format->depth_format,
+         .DepthWriteEnable = true,
          .StencilWriteEnable = has_stencil,
          .HierarchicalDepthBufferEnable = false,
-         .SurfaceFormat = iview->format->depth_format,
+         .SurfaceFormat = anv_format->depth_format,
          .SurfacePitch = image->depth_surface.isl.row_pitch - 1,
          .SurfaceBaseAddress = {
             .bo = image->bo,

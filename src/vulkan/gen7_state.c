@@ -214,7 +214,7 @@ genX(image_view_init)(struct anv_image_view *iview,
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = anv_surftype(image, pCreateInfo->viewType, false),
       .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = iview->format->surface_format,
+      .SurfaceFormat = iview->format,
       .SurfaceVerticalAlignment = anv_valign[image_align_sa.height],
       .SurfaceHorizontalAlignment = anv_halign[image_align_sa.width],
 
@@ -310,8 +310,7 @@ genX(image_view_init)(struct anv_image_view *iview,
          anv_surftype(image, pCreateInfo->viewType, true),
 
       surface_state.SurfaceFormat =
-         isl_lower_storage_image_format(&device->isl_dev,
-                                        iview->format->surface_format);
+         isl_lower_storage_image_format(&device->isl_dev, iview->format);
 
       surface_state.SurfaceMinLOD = range->baseMipLevel;
       surface_state.MIPCountLOD = MAX2(range->levelCount, 1) - 1;

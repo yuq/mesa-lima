@@ -1453,6 +1453,7 @@ struct anv_image {
    uint32_t levels;
    uint32_t array_size;
    VkImageUsageFlags usage; /**< Superset of VkImageCreateInfo::usage. */
+   VkImageTiling tiling; /** VkImageCreateInfo::tiling */
 
    VkDeviceSize size;
    uint32_t alignment;
@@ -1489,11 +1490,12 @@ struct anv_image {
 
 struct anv_image_view {
    const struct anv_image *image; /**< VkImageViewCreateInfo::image */
-   const struct anv_format *format; /**< VkImageViewCreateInfo::format */
    struct anv_bo *bo;
    uint32_t offset; /**< Offset into bo. */
 
    VkImageAspectFlags aspect_mask;
+   VkFormat vk_format;
+   enum isl_format format;
    VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
 
    /** RENDER_SURFACE_STATE when using image as a color render target. */

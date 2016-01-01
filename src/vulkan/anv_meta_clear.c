@@ -759,7 +759,7 @@ void anv_CmdClearColorImage(
                   .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
                   .attachmentCount = 1,
                   .pAttachments = &(VkAttachmentDescription) {
-                     .format = iview.format->vk_format,
+                     .format = iview.vk_format,
                      .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                      .initialLayout = VK_IMAGE_LAYOUT_GENERAL,

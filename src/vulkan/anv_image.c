@@ -210,6 +210,7 @@ anv_image_create(VkDevice _device,
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arrayLayers;
    image->usage = anv_image_get_full_usage(pCreateInfo);
+   image->tiling = pCreateInfo->tiling;
 
    if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       image->needs_nonrt_surface_state = true;
@@ -440,7 +441,9 @@ anv_image_view_init(struct anv_image_view *iview,
    iview->offset = image->offset + surface->offset;
 
    iview->aspect_mask = pCreateInfo->subresourceRange.aspectMask;
-   iview->format = anv_format_for_vk_format(pCreateInfo->format);
+   iview->vk_format = pCreateInfo->format;
+   iview->format = anv_get_isl_format(pCreateInfo->format, iview->aspect_mask,
+                                      image->tiling);
 
    iview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, range->baseMipLevel),
