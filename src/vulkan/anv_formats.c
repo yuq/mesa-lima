@@ -59,7 +59,7 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_R8G8_UINT,               ISL_FORMAT_R8G8_UINT),
    fmt(VK_FORMAT_R8G8_SINT,               ISL_FORMAT_R8G8_SINT),
    fmt(VK_FORMAT_R8G8_SRGB,               ISL_FORMAT_UNSUPPORTED), /* L8A8_UNORM_SRGB */
-   fmt(VK_FORMAT_R8G8B8_UNORM,            ISL_FORMAT_R8G8B8X8_UNORM),
+   fmt(VK_FORMAT_R8G8B8_UNORM,            ISL_FORMAT_R8G8B8_UNORM),
    fmt(VK_FORMAT_R8G8B8_SNORM,            ISL_FORMAT_R8G8B8_SNORM),
    fmt(VK_FORMAT_R8G8B8_USCALED,          ISL_FORMAT_R8G8B8_USCALED),
    fmt(VK_FORMAT_R8G8B8_SSCALED,          ISL_FORMAT_R8G8B8_SSCALED),
@@ -244,14 +244,33 @@ anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
 
    switch (aspect) {
    case VK_IMAGE_ASPECT_COLOR_BIT:
-      return anv_fmt->surface_format;
+      if (anv_fmt->surface_format == ISL_FORMAT_UNSUPPORTED) {
+         return ISL_FORMAT_UNSUPPORTED;
+      } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+                 !util_is_power_of_two(anv_fmt->isl_layout->bpb)) {
+         /* Tiled formats *must* be power-of-two because we need up upload
+          * them with the render pipeline.  For 3-channel formats, we fix
+          * this by switching them over to RGBX or RGBA formats under the
+          * hood.
+          */
+         enum isl_format rgbx = isl_format_rgb_to_rgbx(anv_fmt->surface_format);
+         if (rgbx != ISL_FORMAT_UNSUPPORTED)
+            return rgbx;
+         else
+            return isl_format_rgb_to_rgba(anv_fmt->surface_format);
+      } else {
+         return anv_fmt->surface_format;
+      }
+
    case VK_IMAGE_ASPECT_DEPTH_BIT:
    case (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT):
       assert(anv_fmt->depth_format != 0);
       return anv_fmt->surface_format;
+
    case VK_IMAGE_ASPECT_STENCIL_BIT:
       assert(anv_fmt->has_stencil);
       return ISL_FORMAT_R8_UINT;
+
    default:
       unreachable("bad VkImageAspect");
       return ISL_FORMAT_UNSUPPORTED;
@@ -358,6 +377,20 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
       linear = get_image_format_properties(gen, linear_fmt, linear_fmt);
       tiled = get_image_format_properties(gen, linear_fmt, tiled_fmt);
       buffer = get_buffer_format_properties(gen, linear_fmt);
+
+      /* XXX: We handle 3-channel formats by switching them out for RGBX or
+       * RGBA formats behind-the-scenes.  This works fine for textures
+       * because the upload process will fill in the extra channel.
+       * We could also support it for render targets, but it will take
+       * substantially more work and we have enough RGBX formats to handle
+       * what most clients will want.
+       */
+      if (linear_fmt != ISL_FORMAT_UNSUPPORTED &&
+          isl_format_is_rgb(linear_fmt) &&
+          isl_format_rgb_to_rgbx(linear_fmt) == ISL_FORMAT_UNSUPPORTED) {
+         tiled &= ~VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT &
+                  ~VK_FORMAT_FEATURE_BLIT_DST_BIT;
+      }
    }
 
    out_properties->linearTilingFeatures = linear;
