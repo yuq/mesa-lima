@@ -3580,6 +3580,26 @@ static void declare_streamout_params(struct si_shader_context *ctx,
 	}
 }
 
+static unsigned llvm_get_type_size(LLVMTypeRef type)
+{
+	LLVMTypeKind kind = LLVMGetTypeKind(type);
+
+	switch (kind) {
+	case LLVMIntegerTypeKind:
+		return LLVMGetIntTypeWidth(type) / 8;
+	case LLVMFloatTypeKind:
+		return 4;
+	case LLVMPointerTypeKind:
+		return 8;
+	case LLVMVectorTypeKind:
+		return LLVMGetVectorSize(type) *
+		       llvm_get_type_size(LLVMGetElementType(type));
+	default:
+		assert(0);
+		return 0;
+	}
+}
+
 static void create_function(struct si_shader_context *ctx)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
@@ -3717,6 +3737,9 @@ static void create_function(struct si_shader_context *ctx)
 	radeon_llvm_shader_type(ctx->radeon_bld.main_fn, ctx->type);
 	ctx->return_value = LLVMGetUndef(ctx->radeon_bld.return_type);
 
+	shader->num_input_sgprs = 0;
+	shader->num_input_vgprs = 0;
+
 	for (i = 0; i <= last_sgpr; ++i) {
 		LLVMValueRef P = LLVMGetParam(ctx->radeon_bld.main_fn, i);
 
@@ -3726,7 +3749,16 @@ static void create_function(struct si_shader_context *ctx)
 			LLVMAddAttribute(P, LLVMByValAttribute);
 		else
 			LLVMAddAttribute(P, LLVMInRegAttribute);
+
+		shader->num_input_sgprs += llvm_get_type_size(params[i]) / 4;
 	}
+
+	/* Unused fragment shader inputs are eliminated by the compiler,
+	 * so we don't know yet how many there will be.
+	 */
+	if (ctx->type != TGSI_PROCESSOR_FRAGMENT)
+		for (; i < num_params; ++i)
+			shader->num_input_vgprs += llvm_get_type_size(params[i]) / 4;
 
 	if (bld_base->info &&
 	    (bld_base->info->opcode_count[TGSI_OPCODE_DDX] > 0 ||

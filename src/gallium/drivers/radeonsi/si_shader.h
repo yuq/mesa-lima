@@ -279,6 +279,8 @@ struct si_shader {
 	struct radeon_shader_binary	binary;
 	struct si_shader_config		config;
 
+	ubyte			num_input_sgprs;
+	ubyte			num_input_vgprs;
 	unsigned		vs_output_param_offset[PIPE_MAX_SHADER_OUTPUTS];
 	bool			uses_instanceid;
 	unsigned		nr_pos_exports;
