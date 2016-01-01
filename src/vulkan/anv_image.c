@@ -432,6 +432,22 @@ anv_image_view_init(struct anv_image_view *iview,
       break;
    }
 
+   struct anv_surface *surface =
+      anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
+
+   iview->image = image;
+   iview->bo = image->bo;
+   iview->offset = image->offset + surface->offset;
+
+   iview->aspect_mask = pCreateInfo->subresourceRange.aspectMask;
+   iview->format = anv_format_for_vk_format(pCreateInfo->format);
+
+   iview->extent = (VkExtent3D) {
+      .width = anv_minify(image->extent.width, range->baseMipLevel),
+      .height = anv_minify(image->extent.height, range->baseMipLevel),
+      .depth = anv_minify(image->extent.depth, range->baseMipLevel),
+   };
+
    switch (device->info.gen) {
    case 7:
       if (device->info.is_haswell)

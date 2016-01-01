@@ -140,20 +140,6 @@ genX(image_view_init)(struct anv_image_view *iview,
    uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
    uint32_t rt_view_extent = 1; /* RENDER_SURFACE_STATE::RenderTargetViewExtent */
 
-   const struct anv_format *format_info =
-      anv_format_for_vk_format(pCreateInfo->format);
-
-   iview->image = image;
-   iview->bo = image->bo;
-   iview->offset = image->offset + surface->offset;
-   iview->format = format_info;
-
-   iview->extent = (VkExtent3D) {
-      .width = anv_minify(image->extent.width, range->baseMipLevel),
-      .height = anv_minify(image->extent.height, range->baseMipLevel),
-      .depth = anv_minify(image->extent.depth, range->baseMipLevel),
-   };
-
    switch (image->type) {
    case VK_IMAGE_TYPE_1D:
    case VK_IMAGE_TYPE_2D:
@@ -208,7 +194,7 @@ genX(image_view_init)(struct anv_image_view *iview,
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = anv_surftype(image, pCreateInfo->viewType, false),
       .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = format_info->surface_format,
+      .SurfaceFormat = iview->format->surface_format,
       .SurfaceVerticalAlignment = valign,
       .SurfaceHorizontalAlignment = halign,
       .TileMode = isl_to_gen_tiling[surface->isl.tiling],
@@ -300,7 +286,7 @@ genX(image_view_init)(struct anv_image_view *iview,
 
       surface_state.SurfaceFormat =
          isl_lower_storage_image_format(&device->isl_dev,
-                                        format_info->surface_format);
+                                        iview->format->surface_format);
 
       surface_state.SurfaceMinLOD = range->baseMipLevel;
       surface_state.MIPCountLOD = MAX2(range->levelCount, 1) - 1;

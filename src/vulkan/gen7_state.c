@@ -198,22 +198,8 @@ genX(image_view_init)(struct anv_image_view *iview,
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
-   const struct anv_format *format =
-      anv_format_for_vk_format(pCreateInfo->format);
-
    if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
       anv_finishme("non-2D image views");
-
-   iview->image = image;
-   iview->bo = image->bo;
-   iview->offset = image->offset + surface->offset;
-   iview->format = anv_format_for_vk_format(pCreateInfo->format);
-
-   iview->extent = (VkExtent3D) {
-      .width = anv_minify(image->extent.width, range->baseMipLevel),
-      .height = anv_minify(image->extent.height, range->baseMipLevel),
-      .depth = anv_minify(image->extent.depth, range->baseMipLevel),
-   };
 
    uint32_t depth = 1;
    if (range->layerCount > 1) {
@@ -228,7 +214,7 @@ genX(image_view_init)(struct anv_image_view *iview,
    struct GENX(RENDER_SURFACE_STATE) surface_state = {
       .SurfaceType = anv_surftype(image, pCreateInfo->viewType, false),
       .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = format->surface_format,
+      .SurfaceFormat = iview->format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[image_align_sa.height],
       .SurfaceHorizontalAlignment = anv_halign[image_align_sa.width],
 
@@ -325,7 +311,7 @@ genX(image_view_init)(struct anv_image_view *iview,
 
       surface_state.SurfaceFormat =
          isl_lower_storage_image_format(&device->isl_dev,
-                                        format->surface_format);
+                                        iview->format->surface_format);
 
       surface_state.SurfaceMinLOD = range->baseMipLevel;
       surface_state.MIPCountLOD = MAX2(range->levelCount, 1) - 1;
