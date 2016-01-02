@@ -68,11 +68,11 @@ fixed_to_float(int a)
 struct fixed_position {
    int32_t x[4];
    int32_t y[4];
-   int64_t area;
    int32_t dx01;
    int32_t dy01;
    int32_t dx20;
    int32_t dy20;
+   int64_t area;
 };
 
 
@@ -966,29 +966,71 @@ static void retry_triangle_ccw( struct lp_setup_context *setup,
 
 /**
  * Calculate fixed position data for a triangle
+ * It is unfortunate we need to do that here (as we need area
+ * calculated in fixed point), as there's quite some code duplication
+ * to what is done in the jit setup prog.
  */
 static inline void
-calc_fixed_position( struct lp_setup_context *setup,
-                     struct fixed_position* position,
-                     const float (*v0)[4],
-                     const float (*v1)[4],
-                     const float (*v2)[4])
+calc_fixed_position(struct lp_setup_context *setup,
+                    struct fixed_position* position,
+                    const float (*v0)[4],
+                    const float (*v1)[4],
+                    const float (*v2)[4])
 {
+   /*
+    * The rounding may not be quite the same with PIPE_ARCH_SSE
+    * (util_iround right now only does nearest/even on x87,
+    * otherwise nearest/away-from-zero).
+    * Both should be acceptable, I think.
+    */
+#if defined(PIPE_ARCH_SSE)
+   __m128d v0r, v1r, v2r;
+   __m128 vxy0xy2, vxy1xy0;
+   __m128i vxy0xy2i, vxy1xy0i;
+   __m128i dxdy0120, x0x2y0y2, x1x0y1y0, x0120, y0120;
+   __m128 pix_offset = _mm_set1_ps(setup->pixel_offset);
+   __m128 fixed_one = _mm_set1_ps((float)FIXED_ONE);
+   v0r = _mm_load_sd((const double *)v0[0]);
+   v1r = _mm_load_sd((const double *)v1[0]);
+   v2r = _mm_load_sd((const double *)v2[0]);
+   vxy0xy2 = (__m128)_mm_unpacklo_pd(v0r, v2r);
+   vxy1xy0 = (__m128)_mm_unpacklo_pd(v1r, v0r);
+   vxy0xy2 = _mm_sub_ps(vxy0xy2, pix_offset);
+   vxy1xy0 = _mm_sub_ps(vxy1xy0, pix_offset);
+   vxy0xy2 = _mm_mul_ps(vxy0xy2, fixed_one);
+   vxy1xy0 = _mm_mul_ps(vxy1xy0, fixed_one);
+   vxy0xy2i = _mm_cvtps_epi32(vxy0xy2);
+   vxy1xy0i = _mm_cvtps_epi32(vxy1xy0);
+   dxdy0120 = _mm_sub_epi32(vxy0xy2i, vxy1xy0i);
+   _mm_store_si128((__m128i *)&position->dx01, dxdy0120);
+   /*
+    * For the mul, would need some more shuffles, plus emulation
+    * for the signed mul (without sse41), so don't bother.
+    */
+   x0x2y0y2 = _mm_shuffle_epi32(vxy0xy2i, _MM_SHUFFLE(3,1,2,0));
+   x1x0y1y0 = _mm_shuffle_epi32(vxy1xy0i, _MM_SHUFFLE(3,1,2,0));
+   x0120 = _mm_unpacklo_epi32(x0x2y0y2, x1x0y1y0);
+   y0120 = _mm_unpackhi_epi32(x0x2y0y2, x1x0y1y0);
+   _mm_store_si128((__m128i *)&position->x[0], x0120);
+   _mm_store_si128((__m128i *)&position->y[0], y0120);
+
+#else
    position->x[0] = subpixel_snap(v0[0][0] - setup->pixel_offset);
    position->x[1] = subpixel_snap(v1[0][0] - setup->pixel_offset);
    position->x[2] = subpixel_snap(v2[0][0] - setup->pixel_offset);
-   position->x[3] = 0;
+   position->x[3] = 0; // should be unused
 
    position->y[0] = subpixel_snap(v0[0][1] - setup->pixel_offset);
    position->y[1] = subpixel_snap(v1[0][1] - setup->pixel_offset);
    position->y[2] = subpixel_snap(v2[0][1] - setup->pixel_offset);
-   position->y[3] = 0;
+   position->y[3] = 0; // should be unused
 
    position->dx01 = position->x[0] - position->x[1];
    position->dy01 = position->y[0] - position->y[1];
 
    position->dx20 = position->x[2] - position->x[0];
    position->dy20 = position->y[2] - position->y[0];
+#endif
 
    position->area = IMUL64(position->dx01, position->dy20) -
          IMUL64(position->dx20, position->dy01);
