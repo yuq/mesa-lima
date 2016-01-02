@@ -3515,6 +3515,10 @@ struct gl_constants
     */
    GLboolean GLSLSkipStrictMaxUniformLimitCheck;
 
+   /** Whether gl_FragCoord and gl_FrontFacing are system values. */
+   bool GLSLFragCoordIsSysVal;
+   bool GLSLFrontFacingIsSysVal;
+
    /**
     * Always use the GetTransformFeedbackVertexCount() driver hook, rather
     * than passing the transform feedback object to the drawing function.

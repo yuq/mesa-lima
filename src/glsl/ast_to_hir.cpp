@@ -3517,7 +3517,7 @@ get_variable_being_redeclared(ir_variable *var, YYLTYPE loc,
               state->is_version(150, 0))
               && strcmp(var->name, "gl_FragCoord") == 0
               && earlier->type == var->type
-              && earlier->data.mode == var->data.mode) {
+              && var->data.mode == ir_var_shader_in) {
       /* Allow redeclaration of gl_FragCoord for ARB_fcc layout
        * qualifiers.
        */

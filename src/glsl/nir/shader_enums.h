@@ -412,7 +412,8 @@ typedef enum
     * \name Fragment shader system values
     */
    /*@{*/
-   SYSTEM_VALUE_FRONT_FACE,     /**< (not done yet) */
+   SYSTEM_VALUE_FRAG_COORD,
+   SYSTEM_VALUE_FRONT_FACE,
    SYSTEM_VALUE_SAMPLE_ID,
    SYSTEM_VALUE_SAMPLE_POS,
    SYSTEM_VALUE_SAMPLE_MASK_IN,

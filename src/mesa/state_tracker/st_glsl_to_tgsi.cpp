@@ -4459,6 +4459,7 @@ const unsigned _mesa_sysval_to_semantic[SYSTEM_VALUE_MAX] = {
 
    /* Fragment shader
     */
+   TGSI_SEMANTIC_POSITION,
    TGSI_SEMANTIC_FACE,
    TGSI_SEMANTIC_SAMPLEID,
    TGSI_SEMANTIC_SAMPLEPOS,
