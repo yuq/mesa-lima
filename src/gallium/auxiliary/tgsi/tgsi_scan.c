@@ -187,8 +187,9 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                   }
 
                   if (procType == TGSI_PROCESSOR_FRAGMENT &&
-                      info->reads_position &&
-                      src->Register.Index == 0 &&
+		      !src->Register.Indirect &&
+		      info->input_semantic_name[src->Register.Index] ==
+		      TGSI_SEMANTIC_POSITION &&
                       (src->Register.SwizzleX == TGSI_SWIZZLE_Z ||
                        src->Register.SwizzleY == TGSI_SWIZZLE_Z ||
                        src->Register.SwizzleZ == TGSI_SWIZZLE_Z ||
