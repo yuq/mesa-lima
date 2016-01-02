@@ -475,24 +475,6 @@ static void emit_swz( struct st_translate *t,
 }
 
 
-/**
- * Negate the value of DDY to match GL semantics where (0,0) is the
- * lower-left corner of the window.
- * Note that the GL_ARB_fragment_coord_conventions extension will
- * effect this someday.
- */
-static void emit_ddy( struct st_translate *t,
-                      struct ureg_dst dst,
-                      const struct prog_src_register *SrcReg )
-{
-   struct ureg_program *ureg = t->ureg;
-   struct ureg_src src = translate_src( t, SrcReg );
-   src = ureg_negate( src );
-   ureg_DDY( ureg, dst, src );
-}
-
-
-
 static unsigned
 translate_opcode( unsigned op )
 {
@@ -714,10 +696,6 @@ compile_instruction(
        */
       ureg_MOV( ureg, dst[0], ureg_imm1f(ureg, 0.5) );
       break;
-		 
-   case OPCODE_DDY:
-      emit_ddy( t, dst[0], &inst->SrcReg[0] );
-      break;
 
    case OPCODE_RSQ:
       ureg_RSQ( ureg, dst[0], ureg_abs(src[0]) );
@@ -926,31 +904,6 @@ emit_wpos(struct st_context *st,
 
 
 /**
- * OpenGL's fragment gl_FrontFace input is 1 for front-facing, 0 for back.
- * TGSI uses +1 for front, -1 for back.
- * This function converts the TGSI value to the GL value.  Simply clamping/
- * saturating the value to [0,1] does the job.
- */
-static void
-emit_face_var( struct st_translate *t,
-               const struct gl_program *program )
-{
-   struct ureg_program *ureg = t->ureg;
-   struct ureg_dst face_temp = ureg_DECL_temporary( ureg );
-   struct ureg_src face_input = t->inputs[t->inputMapping[VARYING_SLOT_FACE]];
-
-   /* MOV_SAT face_temp, input[face]
-    */
-   face_temp = ureg_saturate( face_temp );
-   ureg_MOV( ureg, face_temp, face_input );
-
-   /* Use face_temp as face input from here on:
-    */
-   t->inputs[t->inputMapping[VARYING_SLOT_FACE]] = ureg_src(face_temp);
-}
-
-
-/**
  * Translate Mesa program to TGSI format.
  * \param program  the program to translate
  * \param numInputs  number of input registers used
@@ -1018,10 +971,6 @@ st_translate_mesa_program(
           * emitting constant references, below:
           */
          emit_wpos(st_context(ctx), t, program, ureg);
-      }
-
-      if (program->InputsRead & VARYING_BIT_FACE) {
-         emit_face_var( t, program );
       }
 
       /*
