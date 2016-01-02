@@ -1087,14 +1087,50 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 	free(sel);
 }
 
+static unsigned si_get_ps_input_cntl(struct si_context *sctx,
+				     struct si_shader *vs, unsigned name,
+				     unsigned index, unsigned interpolate)
+{
+	struct tgsi_shader_info *vsinfo = &vs->selector->info;
+	unsigned j, ps_input_cntl = 0;
+
+	if (interpolate == TGSI_INTERPOLATE_CONSTANT ||
+	    (interpolate == TGSI_INTERPOLATE_COLOR && sctx->flatshade))
+		ps_input_cntl |= S_028644_FLAT_SHADE(1);
+
+	if (name == TGSI_SEMANTIC_PCOORD ||
+	    (name == TGSI_SEMANTIC_TEXCOORD &&
+	     sctx->sprite_coord_enable & (1 << index))) {
+		ps_input_cntl |= S_028644_PT_SPRITE_TEX(1);
+	}
+
+	for (j = 0; j < vsinfo->num_outputs; j++) {
+		if (name == vsinfo->output_semantic_name[j] &&
+		    index == vsinfo->output_semantic_index[j]) {
+			ps_input_cntl |= S_028644_OFFSET(vs->vs_output_param_offset[j]);
+			break;
+		}
+	}
+
+	if (name == TGSI_SEMANTIC_PRIMID)
+		/* PrimID is written after the last output. */
+		ps_input_cntl |= S_028644_OFFSET(vs->vs_output_param_offset[vsinfo->num_outputs]);
+	else if (j == vsinfo->num_outputs && !G_028644_PT_SPRITE_TEX(ps_input_cntl)) {
+		/* No corresponding output found, load defaults into input.
+		 * Don't set any other bits.
+		 * (FLAT_SHADE=1 completely changes behavior) */
+		ps_input_cntl = S_028644_OFFSET(0x20);
+	}
+	return ps_input_cntl;
+}
+
 static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_shader *ps = sctx->ps_shader.current;
 	struct si_shader *vs = si_get_vs_state(sctx);
 	struct tgsi_shader_info *psinfo;
-	struct tgsi_shader_info *vsinfo = &vs->selector->info;
-	unsigned i, j, tmp, num_written = 0;
+	unsigned i, num_written = 0;
 
 	if (!ps || !ps->nparam)
 		return;
@@ -1109,38 +1145,8 @@ static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 		unsigned interpolate = psinfo->input_interpolate[i];
 		unsigned param_offset = ps->ps_input_param_offset[i];
 bcolor:
-		tmp = 0;
-
-		if (interpolate == TGSI_INTERPOLATE_CONSTANT ||
-		    (interpolate == TGSI_INTERPOLATE_COLOR && sctx->flatshade))
-			tmp |= S_028644_FLAT_SHADE(1);
-
-		if (name == TGSI_SEMANTIC_PCOORD ||
-		    (name == TGSI_SEMANTIC_TEXCOORD &&
-		     sctx->sprite_coord_enable & (1 << index))) {
-			tmp |= S_028644_PT_SPRITE_TEX(1);
-		}
-
-		for (j = 0; j < vsinfo->num_outputs; j++) {
-			if (name == vsinfo->output_semantic_name[j] &&
-			    index == vsinfo->output_semantic_index[j]) {
-				tmp |= S_028644_OFFSET(vs->vs_output_param_offset[j]);
-				break;
-			}
-		}
-
-		if (name == TGSI_SEMANTIC_PRIMID)
-			/* PrimID is written after the last output. */
-			tmp |= S_028644_OFFSET(vs->vs_output_param_offset[vsinfo->num_outputs]);
-		else if (j == vsinfo->num_outputs && !G_028644_PT_SPRITE_TEX(tmp)) {
-			/* No corresponding output found, load defaults into input.
-			 * Don't set any other bits.
-			 * (FLAT_SHADE=1 completely changes behavior) */
-			tmp = S_028644_OFFSET(0x20);
-		}
-
-		assert(param_offset == num_written);
-		radeon_emit(cs, tmp);
+		radeon_emit(cs, si_get_ps_input_cntl(sctx, vs, name, index,
+						     interpolate));
 		num_written++;
 
 		if (name == TGSI_SEMANTIC_COLOR &&
