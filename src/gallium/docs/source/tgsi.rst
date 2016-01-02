@@ -2658,7 +2658,8 @@ space coordinate system.  After clipping, the X, Y and Z components of the
 vertex will be divided by the W value to get normalized device coordinates.
 
 For fragment shaders, TGSI_SEMANTIC_POSITION is used to indicate that
-fragment shader input contains the fragment's window position.  The X
+fragment shader input (or system value, depending on which one is
+supported by the driver) contains the fragment's window position.  The X
 component starts at zero and always increases from left to right.
 The Y component starts at zero and always increases but Y=0 may either
 indicate the top of the window or the bottom depending on the fragment
@@ -2770,11 +2771,17 @@ typically only used for legacy graphics APIs.
 TGSI_SEMANTIC_FACE
 """"""""""""""""""
 
-This label applies to fragment shader inputs only and indicates that
-the register contains front/back-face information of the form (F, 0,
-0, 1).  The first component will be positive when the fragment belongs
-to a front-facing polygon, and negative when the fragment belongs to a
-back-facing polygon.
+This label applies to fragment shader inputs (or system values,
+depending on which one is supported by the driver) and indicates that
+the register contains front/back-face information.
+
+If it is an input, it will be a floating-point vector in the form (F, 0, 0, 1),
+where F will be positive when the fragment belongs to a front-facing polygon,
+and negative when the fragment belongs to a back-facing polygon.
+
+If it is a system value, it will be an integer vector in the form (F, 0, 0, 1),
+where F is 0xffffffff when the fragment belongs to a front-facing polygon and
+0 when the fragment belongs to a back-facing polygon.
 
 
 TGSI_SEMANTIC_EDGEFLAG

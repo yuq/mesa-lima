@@ -292,6 +292,11 @@ The integer capabilities:
   supported in vertex shaders.
 * ``PIPE_CAP_TGSI_PACK_HALF_FLOAT``: Whether the ``UP2H`` and ``PK2H``
   TGSI opcodes are supported.
+* ``PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL``: If state trackers should use
+  a system value for the POSITION fragment shader input.
+* ``PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL``: If state trackers should use
+  a system value for the FACE fragment shader input.
+  Also, the FACE system value is integer, not float.
 
 
 .. _pipe_capf:
