@@ -807,8 +807,8 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct nv04_resource *buf = nv04_resource(info->indirect);
-   unsigned size;
-   const uint32_t offset = buf->offset + info->indirect_offset;
+   unsigned size, macro, count = info->indirect_count, drawid = info->drawid;
+   uint32_t offset = buf->offset + info->indirect_offset;
 
    /* must make FIFO wait for engines idle before continuing to process */
    if (buf->fence_wr && !nouveau_fence_signalled(buf->fence_wr))
@@ -820,13 +820,11 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
    PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
    PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
 
-   nouveau_pushbuf_space(push, 8, 0, 1);
-   PUSH_REFN(push, buf->bo, NOUVEAU_BO_RD | buf->domain);
    if (info->indexed) {
       assert(nvc0->idxbuf.buffer);
       assert(nouveau_resource_mapped_by_gpu(nvc0->idxbuf.buffer));
-      size = 5 * 4;
-      BEGIN_1IC0(push, NVC0_3D(MACRO_DRAW_ELEMENTS_INDIRECT), 3 + size / 4);
+      size = 5;
+      macro = NVC0_3D_MACRO_DRAW_ELEMENTS_INDIRECT;
    } else {
       if (nvc0->state.index_bias) {
          /* index_bias is implied 0 if !info->indexed (really ?) */
@@ -834,15 +832,47 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
          IMMED_NVC0(push, NVC0_3D(VERTEX_ID_BASE), 0);
          nvc0->state.index_bias = 0;
       }
-      size = 4 * 4;
-      BEGIN_1IC0(push, NVC0_3D(MACRO_DRAW_ARRAYS_INDIRECT), 3 + size / 4);
+      size = 4;
+      macro = NVC0_3D_MACRO_DRAW_ARRAYS_INDIRECT;
    }
-   PUSH_DATA(push, nvc0_prim_gl(info->mode));
-   PUSH_DATA(push, info->drawid);
-   PUSH_DATA(push, 1);
-#define NVC0_IB_ENTRY_1_NO_PREFETCH (1 << (31 - 8))
-   nouveau_pushbuf_data(push,
-                        buf->bo, offset, NVC0_IB_ENTRY_1_NO_PREFETCH | size);
+
+   /* If the stride is not the natural stride, we have to stick a separate
+    * push data reference for each draw. Otherwise it can all go in as one.
+    * Of course there is a maximum packet size, so we have to break things up
+    * along those borders as well.
+    */
+   while (count) {
+      unsigned draws = count, pushes, i;
+      if (info->indirect_stride == size * 4) {
+         draws = MIN2(draws, (NV04_PFIFO_MAX_PACKET_LEN - 4) / size);
+         pushes = 1;
+      } else {
+         draws = MIN2(draws, 32);
+         pushes = draws;
+      }
+
+      nouveau_pushbuf_space(push, 8, 0, pushes);
+      PUSH_REFN(push, buf->bo, NOUVEAU_BO_RD | buf->domain);
+      PUSH_DATA(push, NVC0_FIFO_PKHDR_1I(0, macro, 3 + draws * size));
+      PUSH_DATA(push, nvc0_prim_gl(info->mode));
+      PUSH_DATA(push, drawid);
+      PUSH_DATA(push, draws);
+      if (pushes == 1) {
+         nouveau_pushbuf_data(push,
+                              buf->bo, offset,
+                              NVC0_IB_ENTRY_1_NO_PREFETCH | (size * 4 * draws));
+         offset += draws * info->indirect_stride;
+      } else {
+         for (i = 0; i < pushes; i++) {
+            nouveau_pushbuf_data(push,
+                                 buf->bo, offset,
+                                 NVC0_IB_ENTRY_1_NO_PREFETCH | (size * 4));
+            offset += info->indirect_stride;
+         }
+      }
+      count -= draws;
+      drawid += draws;
+   }
 }
 
 static inline void
