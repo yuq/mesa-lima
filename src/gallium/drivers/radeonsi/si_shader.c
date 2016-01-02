@@ -3840,11 +3840,57 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	return 0;
 }
 
+static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary,
+				       struct pipe_debug_callback *debug)
+{
+	char *line, *p;
+	unsigned i, count;
+
+	if (binary->disasm_string) {
+		fprintf(stderr, "\nShader Disassembly:\n\n");
+		fprintf(stderr, "%s\n", binary->disasm_string);
+
+		if (debug && debug->debug_message) {
+			/* Very long debug messages are cut off, so send the
+			 * disassembly one line at a time. This causes more
+			 * overhead, but on the plus side it simplifies
+			 * parsing of resulting logs.
+			 */
+			pipe_debug_message(debug, SHADER_INFO,
+					   "Shader Disassembly Begin");
+
+			line = binary->disasm_string;
+			while (*line) {
+				p = strchrnul(line, '\n');
+				count = p - line;
+
+				if (count) {
+					pipe_debug_message(debug, SHADER_INFO,
+							   "%.*s", count, line);
+				}
+
+				if (!*p)
+					break;
+				line = p + 1;
+			}
+
+			pipe_debug_message(debug, SHADER_INFO,
+					   "Shader Disassembly End");
+		}
+	} else {
+		fprintf(stderr, "SI CODE:\n");
+		for (i = 0; i < binary->code_size; i += 4) {
+			fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i,
+				binary->code[i + 3], binary->code[i + 2],
+				binary->code[i + 1], binary->code[i]);
+		}
+	}
+}
+
 int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 			  struct pipe_debug_callback *debug)
 {
 	const struct radeon_shader_binary *binary = &shader->binary;
-	unsigned i;
 	int r;
 	bool dump  = r600_can_dump_shader(&sscreen->b,
 		shader->selector ? shader->selector->tokens : NULL);
@@ -3855,19 +3901,8 @@ int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 		return r;
 
 	if (dump) {
-		if (!(sscreen->b.debug_flags & DBG_NO_ASM)) {
-			if (binary->disasm_string) {
-				fprintf(stderr, "\nShader Disassembly:\n\n");
-				fprintf(stderr, "%s\n", binary->disasm_string);
-			} else {
-				fprintf(stderr, "SI CODE:\n");
-				for (i = 0; i < binary->code_size; i+=4 ) {
-					fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i, binary->code[i + 3],
-					binary->code[i + 2], binary->code[i + 1],
-					binary->code[i]);
-				}
-			}
-		}
+		if (!(sscreen->b.debug_flags & DBG_NO_ASM))
+			si_shader_dump_disassembly(binary, debug);
 
 		fprintf(stderr, "*** SHADER STATS ***\n"
 			"SGPRS: %d\nVGPRS: %d\nCode Size: %d bytes\nLDS: %d blocks\n"
@@ -3875,6 +3910,12 @@ int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader,
 			shader->num_sgprs, shader->num_vgprs, binary->code_size,
 			shader->lds_size, shader->scratch_bytes_per_wave);
 	}
+
+	pipe_debug_message(debug, SHADER_INFO,
+			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d LDS: %d Scratch: %d",
+			   shader->num_sgprs, shader->num_vgprs, binary->code_size,
+			   shader->lds_size, shader->scratch_bytes_per_wave);
+
 	return 0;
 }
 
