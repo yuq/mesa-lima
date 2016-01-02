@@ -819,8 +819,6 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
    PUSH_DATA (push, 512);
    PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
    PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
-   BEGIN_NVC0(push, NVC0_3D(CB_POS), 1);
-   PUSH_DATA (push, 256 + 128);
 
    nouveau_pushbuf_space(push, 8, 0, 1);
    PUSH_REFN(push, buf->bo, NOUVEAU_BO_RD | buf->domain);
@@ -828,7 +826,7 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
       assert(nvc0->idxbuf.buffer);
       assert(nouveau_resource_mapped_by_gpu(nvc0->idxbuf.buffer));
       size = 5 * 4;
-      BEGIN_1IC0(push, NVC0_3D(MACRO_DRAW_ELEMENTS_INDIRECT), 1 + size / 4);
+      BEGIN_1IC0(push, NVC0_3D(MACRO_DRAW_ELEMENTS_INDIRECT), 3 + size / 4);
    } else {
       if (nvc0->state.index_bias) {
          /* index_bias is implied 0 if !info->indexed (really ?) */
@@ -837,9 +835,11 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
          nvc0->state.index_bias = 0;
       }
       size = 4 * 4;
-      BEGIN_1IC0(push, NVC0_3D(MACRO_DRAW_ARRAYS_INDIRECT), 1 + size / 4);
+      BEGIN_1IC0(push, NVC0_3D(MACRO_DRAW_ARRAYS_INDIRECT), 3 + size / 4);
    }
    PUSH_DATA(push, nvc0_prim_gl(info->mode));
+   PUSH_DATA(push, info->drawid);
+   PUSH_DATA(push, 1);
 #define NVC0_IB_ENTRY_1_NO_PREFETCH (1 << (31 - 8))
    nouveau_pushbuf_data(push,
                         buf->bo, offset, NVC0_IB_ENTRY_1_NO_PREFETCH | size);
@@ -913,11 +913,13 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       PUSH_DATA (push, 512);
       PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
       PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
-      BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 3);
-      PUSH_DATA (push, 256 + 128);
-      PUSH_DATA (push, info->index_bias);
-      PUSH_DATA (push, info->start_instance);
-      PUSH_DATA (push, info->drawid);
+      if (!info->indirect) {
+         BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 3);
+         PUSH_DATA (push, 256 + 128);
+         PUSH_DATA (push, info->index_bias);
+         PUSH_DATA (push, info->start_instance);
+         PUSH_DATA (push, info->drawid);
+      }
    }
 
    push->kick_notify = nvc0_draw_vbo_kick_notify;
