@@ -203,6 +203,8 @@ brw_codegen_vs_prog(struct brw_context *brw,
       brw_nir_setup_glsl_uniforms(vp->program.nir, &vp->program,
                                   &prog_data.base.base,
                                   compiler->scalar_stage[MESA_SHADER_VERTEX]);
+      brw_nir_analyze_ubo_ranges(compiler, vp->program.nir,
+                                 prog_data.base.base.ubo_ranges);
    } else {
       brw_nir_setup_arb_uniforms(vp->program.nir, &vp->program,
                                  &prog_data.base.base);

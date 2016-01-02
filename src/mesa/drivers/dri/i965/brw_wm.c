@@ -165,6 +165,8 @@ brw_codegen_wm_prog(struct brw_context *brw,
    if (!fp->program.is_arb_asm) {
       brw_nir_setup_glsl_uniforms(fp->program.nir, &fp->program,
                                   &prog_data.base, true);
+      brw_nir_analyze_ubo_ranges(brw->screen->compiler, fp->program.nir,
+                                 prog_data.base.ubo_ranges);
    } else {
       brw_nir_setup_arb_uniforms(fp->program.nir, &fp->program,
                                  &prog_data.base);

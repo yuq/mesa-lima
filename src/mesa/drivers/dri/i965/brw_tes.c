@@ -102,6 +102,8 @@ brw_codegen_tes_prog(struct brw_context *brw,
 
    brw_nir_setup_glsl_uniforms(nir, &tep->program, &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_TESS_EVAL]);
+   brw_nir_analyze_ubo_ranges(compiler, tep->program.nir,
+                              prog_data.base.base.ubo_ranges);
 
    int st_index = -1;
    if (unlikely(INTEL_DEBUG & DEBUG_SHADER_TIME))

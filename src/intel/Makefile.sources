@@ -74,6 +74,7 @@ COMPILER_FILES = \
 	compiler/brw_nir.h \
 	compiler/brw_nir.c \
 	compiler/brw_nir_analyze_boolean_resolves.c \
+	compiler/brw_nir_analyze_ubo_ranges.c \
 	compiler/brw_nir_attribute_workarounds.c \
 	compiler/brw_nir_intrinsics.c \
 	compiler/brw_nir_opt_peephole_ffma.c \
