@@ -621,19 +621,19 @@ do_triangle_ccw(struct lp_setup_context *setup,
    }
 
    if (0) {
-      debug_printf("p0: %"PRIx64"/%08x/%08x/%"PRIx64"\n",
+      debug_printf("p0: %"PRIx64"/%08x/%08x/%08x\n",
                    plane[0].c,
                    plane[0].dcdx,
                    plane[0].dcdy,
                    plane[0].eo);
-      
-      debug_printf("p1: %"PRIx64"/%08x/%08x/%"PRIx64"\n",
+
+      debug_printf("p1: %"PRIx64"/%08x/%08x/%08x\n",
                    plane[1].c,
                    plane[1].dcdx,
                    plane[1].dcdy,
                    plane[1].eo);
-      
-      debug_printf("p2: %"PRIx64"/%08x/%08x/%"PRIx64"\n",
+
+      debug_printf("p2: %"PRIx64"/%08x/%08x/%08x\n",
                    plane[2].c,
                    plane[2].dcdx,
                    plane[2].dcdy,
@@ -694,7 +694,7 @@ do_triangle_ccw(struct lp_setup_context *setup,
 static inline uint32_t 
 floor_pot(uint32_t n)
 {
-#if defined(PIPE_CC_GCC) && defined(PIPE_ARCH_X86)
+#if defined(PIPE_CC_GCC) && (defined(PIPE_ARCH_X86) || defined(PIPE_ARCH_X86_64))
    if (n == 0)
       return 0;
 
@@ -842,9 +842,9 @@ lp_setup_bin_triangle( struct lp_setup_context *setup,
 
          ei[i] = (plane[i].dcdy - 
                   plane[i].dcdx - 
-                  plane[i].eo) << TILE_ORDER;
+                  (int64_t)plane[i].eo) << TILE_ORDER;
 
-         eo[i] = plane[i].eo << TILE_ORDER;
+         eo[i] = (int64_t)plane[i].eo << TILE_ORDER;
          xstep[i] = -(((int64_t)plane[i].dcdx) << TILE_ORDER);
          ystep[i] = ((int64_t)plane[i].dcdy) << TILE_ORDER;
       }

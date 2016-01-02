@@ -82,7 +82,7 @@ TAG(do_block_16)(struct lp_rasterizer_task *task,
       const int64_t dcdx = -IMUL64(plane[j].dcdx, 4);
       const int64_t dcdy = IMUL64(plane[j].dcdy, 4);
       const int64_t cox = IMUL64(plane[j].eo, 4);
-      const int64_t ei = plane[j].dcdy - plane[j].dcdx - plane[j].eo;
+      const int64_t ei = plane[j].dcdy - plane[j].dcdx - (int64_t)plane[j].eo;
       const int64_t cio = IMUL64(ei, 4) - 1;
 
       BUILD_MASKS(c[j] + cox,
@@ -182,7 +182,7 @@ TAG(lp_rast_triangle)(struct lp_rasterizer_task *task,
          const int64_t dcdx = -IMUL64(plane[j].dcdx, 16);
          const int64_t dcdy = IMUL64(plane[j].dcdy, 16);
          const int64_t cox = IMUL64(plane[j].eo, 16);
-         const int64_t ei = plane[j].dcdy - plane[j].dcdx - plane[j].eo;
+         const int64_t ei = plane[j].dcdy - plane[j].dcdx - (int64_t)plane[j].eo;
          const int64_t cio = IMUL64(ei, 16) - 1;
 
          BUILD_MASKS(c[j] + cox,
