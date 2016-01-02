@@ -645,6 +645,8 @@ util_dump_framebuffer_state(FILE *stream, const struct pipe_framebuffer_state *s
 
    util_dump_member(stream, uint, state, width);
    util_dump_member(stream, uint, state, height);
+   util_dump_member(stream, uint, state, samples);
+   util_dump_member(stream, uint, state, layers);
    util_dump_member(stream, uint, state, nr_cbufs);
    util_dump_member_array(stream, ptr, state, cbufs);
    util_dump_member(stream, ptr, state, zsbuf);

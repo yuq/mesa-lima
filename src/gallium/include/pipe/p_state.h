@@ -298,9 +298,17 @@ struct pipe_stencil_ref
 };
 
 
+/**
+ * Note that pipe_surfaces are "texture views for rendering"
+ * and so in the case of ARB_framebuffer_no_attachment there
+ * is no pipe_surface state available such that we may
+ * extract the number of samples and layers.
+ */
 struct pipe_framebuffer_state
 {
    unsigned width, height;
+   unsigned samples; /**< Number of samples in a no-attachment framebuffer */
+   unsigned layers;  /**< Number of layers  in a no-attachment framebuffer */
 
    /** multiple color buffers for multiple render targets */
    unsigned nr_cbufs;
