@@ -3914,7 +3914,7 @@ _mesa_BindBufferRange(GLenum target, GLuint index,
    struct gl_buffer_object *bufObj;
 
    if (MESA_VERBOSE & VERBOSE_API) {
-      _mesa_debug(ctx, "glBindBufferRange(%s, %u, %u, %d, %d)\n",
+      _mesa_debug(ctx, "glBindBufferRange(%s, %u, %u, %ld, %ld)\n",
                   _mesa_enum_to_string(target), index, buffer, offset, size);
    }
 
