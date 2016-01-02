@@ -807,12 +807,16 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct nv04_resource *buf = nv04_resource(info->indirect);
+   struct nv04_resource *buf_count = nv04_resource(info->indirect_params);
    unsigned size, macro, count = info->indirect_count, drawid = info->drawid;
    uint32_t offset = buf->offset + info->indirect_offset;
 
    /* must make FIFO wait for engines idle before continuing to process */
-   if (buf->fence_wr && !nouveau_fence_signalled(buf->fence_wr))
+   if ((buf->fence_wr && !nouveau_fence_signalled(buf->fence_wr)) ||
+       (buf_count && buf_count->fence_wr &&
+        !nouveau_fence_signalled(buf_count->fence_wr))) {
       IMMED_NVC0(push, SUBC_3D(NV10_SUBCHAN_REF_CNT), 0);
+   }
 
    /* Queue things up to let the macros write params to the driver constbuf */
    BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
@@ -824,7 +828,10 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
       assert(nvc0->idxbuf.buffer);
       assert(nouveau_resource_mapped_by_gpu(nvc0->idxbuf.buffer));
       size = 5;
-      macro = NVC0_3D_MACRO_DRAW_ELEMENTS_INDIRECT;
+      if (buf_count)
+         macro = NVC0_3D_MACRO_DRAW_ELEMENTS_INDIRECT_COUNT;
+      else
+         macro = NVC0_3D_MACRO_DRAW_ELEMENTS_INDIRECT;
    } else {
       if (nvc0->state.index_bias) {
          /* index_bias is implied 0 if !info->indexed (really ?) */
@@ -833,7 +840,10 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
          nvc0->state.index_bias = 0;
       }
       size = 4;
-      macro = NVC0_3D_MACRO_DRAW_ARRAYS_INDIRECT;
+      if (buf_count)
+         macro = NVC0_3D_MACRO_DRAW_ARRAYS_INDIRECT_COUNT;
+      else
+         macro = NVC0_3D_MACRO_DRAW_ARRAYS_INDIRECT;
    }
 
    /* If the stride is not the natural stride, we have to stick a separate
@@ -851,12 +861,21 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
          pushes = draws;
       }
 
-      nouveau_pushbuf_space(push, 8, 0, pushes);
+      nouveau_pushbuf_space(push, 16, 0, pushes + !!buf_count);
       PUSH_REFN(push, buf->bo, NOUVEAU_BO_RD | buf->domain);
-      PUSH_DATA(push, NVC0_FIFO_PKHDR_1I(0, macro, 3 + draws * size));
+      if (buf_count)
+         PUSH_REFN(push, buf_count->bo, NOUVEAU_BO_RD | buf_count->domain);
+      PUSH_DATA(push,
+                NVC0_FIFO_PKHDR_1I(0, macro, 3 + !!buf_count + draws * size));
       PUSH_DATA(push, nvc0_prim_gl(info->mode));
       PUSH_DATA(push, drawid);
       PUSH_DATA(push, draws);
+      if (buf_count) {
+         nouveau_pushbuf_data(push,
+                              buf_count->bo,
+                              buf_count->offset + info->indirect_params_offset,
+                              NVC0_IB_ENTRY_1_NO_PREFETCH | 4);
+      }
       if (pushes == 1) {
          nouveau_pushbuf_data(push,
                               buf->bo, offset,

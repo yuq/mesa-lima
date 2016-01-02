@@ -334,3 +334,160 @@ dai_end:
    mov $r6 (add $r6 1)
    exit maddr 0x50e /* VB_INSTANCE_BASE to restore */
    send $r5
+
+/* NVC0_3D_MACRO_DRAW_ELEMENTS_INDIRECT_COUNT
+ *
+ * NOTE: Saves and restores VB_ELEMENT,INSTANCE_BASE.
+ * Forcefully sets VERTEX_ID_BASE to the value of VB_ELEMENT_BASE.
+ *
+ * arg     = mode
+ * parm[0] = start_drawid
+ * parm[1] = numparams
+ * parm[2] = totaldraws
+ * parm[3 + 5n + 0] = count
+ * parm[3 + 5n + 1] = instance_count
+ * parm[3 + 5n + 2] = start
+ * parm[3 + 5n + 3] = index_bias
+ * parm[3 + 5n + 4] = start_instance
+ *
+ * SCRATCH[0] = saved VB_ELEMENT_BASE
+ * SCRATCH[1] = saved VB_INSTANCE_BASE
+ * SCRATCH[2] = draws left
+ */
+.section #mme9097_draw_elts_indirect_count
+   read $r6 0x50d /* VB_ELEMENT_BASE */
+   read $r7 0x50e /* VB_INSTANCE_BASE */
+   maddr 0x1d00
+   send $r6 /* SCRATCH[0] = VB_ELEMENT_BASE */
+   send $r7 /* SCRATCH[1] = VB_INSTANCE_BASE */
+   parm $r6 /* start_drawid */
+   parm $r7 /* numparams */
+   parm $r5 /* totaldraws */
+   mov $r5 (sub $r5 $r6) /* draws left */
+   braz $r5 #deic_runout
+   mov $r3 (extrinsrt 0x0 $r5 31 1 0) /* extract high bit */
+   branz $r3 #deic_runout
+   send $r5
+deic_draw_again:
+   parm $r3 /* count */
+   parm $r2 /* instance_count */
+   parm $r4 maddr 0x5f7 /* INDEX_BATCH_FIRST, start */
+   parm $r4 send $r4 /* index_bias, send start */
+   maddr 0x18e3 /* CB_POS */
+   send 0x180 /* 256 + 128 */
+   braz $r2 #deic_end
+   parm $r5 send $r4 /* start_instance, send index_bias */
+   send $r5 /* send start_instance */
+   send $r6 /* draw id */
+   maddr 0x150d /* VB_ELEMENT,INSTANCE_BASE */
+   send $r4
+   send $r5
+   maddr 0x446
+   send $r4
+   mov $r4 0x1
+   mov $r1 (extrinsrt $r1 0x0 0 1 26) /* clear INSTANCE_NEXT */
+deic_again:
+   maddr 0x586 /* VERTEX_BEGIN_GL */
+   send $r1 /* mode */
+   maddr 0x5f8 /* INDEX_BATCH_COUNT */
+   send $r3 /* count */
+   mov $r2 (sub $r2 $r4)
+   maddrsend 0x585 /* VERTEX_END_GL */
+   branz $r2 #deic_again
+   mov $r1 (extrinsrt $r1 $r4 0 1 26) /* set INSTANCE_NEXT */
+deic_end:
+   read $r5 0xd02
+   mov $r5 (add $r5 -1)
+   braz $r5 #deic_runout_check
+   mov $r7 (add $r7 -1)
+   maddr 0xd02
+   send $r5
+   branz $r7 #deic_draw_again
+   mov $r6 (add $r6 1)
+deic_restore:
+   read $r6 0xd00
+   read $r7 0xd01
+   maddr 0x150d /* VB_ELEMENT,INSTANCE_BASE */
+   send $r6
+   send $r7
+   exit maddr 0x446
+   send $r6
+deic_runout:
+   parm $r2
+   parm $r2
+   parm $r2
+   parm $r2
+   parm $r2
+   mov $r7 (add $r7 -1)
+deic_runout_check:
+   branz annul $r7 #deic_runout
+   bra annul #deic_restore
+
+/* NVC0_3D_MACRO_DRAW_ARRAYS_INDIRECT_COUNT:
+ *
+ * NOTE: Saves and restores VB_INSTANCE_BASE.
+ *
+ * arg     = mode
+ * parm[0] = start_drawid
+ * parm[1] = numparams
+ * parm[2] = totaldraws
+ * parm[3 + 4n + 0] = count
+ * parm[3 + 4n + 1] = instance_count
+ * parm[3 + 4n + 2] = start
+ * parm[3 + 4n + 3] = start_instance
+ *
+ * SCRATCH[0] = VB_INSTANCE_BASE
+ */
+.section #mme9097_draw_arrays_indirect_count
+   read $r5 0x50e /* VB_INSTANCE_BASE */
+   maddr 0xd00
+   parm $r6 send $r5 /* start_drawid, save VB_INSTANCE_BASE */
+   parm $r7 /* numparams */
+   parm $r5 /* totaldraws */
+   mov $r5 (sub $r5 $r6) /* draws left */
+   braz $r5 #daic_runout
+   mov $r3 (extrinsrt 0x0 $r5 31 1 0) /* extract high bit */
+   branz annul $r3 #daic_runout
+daic_draw_again:
+   parm $r2 /* count */
+   parm $r3 /* instance_count */
+   parm $r4 maddr 0x35d /* VERTEX_BUFFER_FIRST, start */
+   braz $r3 #daic_end
+   parm $r4 send $r4 /* start_instance */
+   maddr 0x18e3 /* CB_POS */
+   send 0x180 /* 256 + 128 */
+   send 0x0 /* send 0 as base_vertex */
+   send $r4 /* send start_instance */
+   send $r6 /* draw id */
+   maddr 0x50e /* VB_INSTANCE_BASE */
+   send $r4
+   mov $r4 0x1
+   mov $r1 (extrinsrt $r1 0x0 0 1 26) /* clear INSTANCE_NEXT */
+daic_again:
+   maddr 0x586 /* VERTEX_BEGIN_GL */
+   send $r1 /* mode */
+   maddr 0x35e /* VERTEX_BUFFER_COUNT */
+   send $r2
+   mov $r3 (sub $r3 $r4)
+   maddrsend 0x585 /* VERTEX_END_GL */
+   branz $r3 #daic_again
+   mov $r1 (extrinsrt $r1 $r4 0 1 26) /* set INSTANCE_NEXT */
+daic_end:
+   mov $r5 (add $r5 -1)
+   braz $r5 #daic_runout_check
+   mov $r7 (add $r7 -1)
+   branz $r7 #daic_draw_again
+   mov $r6 (add $r6 1)
+daic_restore:
+   read $r5 0xd00
+   exit maddr 0x50e /* VB_INSTANCE_BASE to restore */
+   send $r5
+daic_runout:
+   parm $r2
+   parm $r2
+   parm $r2
+   parm $r2
+   mov $r7 (add $r7 -1)
+daic_runout_check:
+   branz annul $r7 #daic_runout
+   bra annul #daic_restore
