@@ -404,6 +404,18 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 		si_set_tesseval_regs(shader, pm4);
 }
 
+static unsigned si_get_ps_num_interp(struct si_shader *ps)
+{
+	struct tgsi_shader_info *info = &ps->selector->info;
+	unsigned num_colors = !!(info->colors_read & 0x0f) +
+			      !!(info->colors_read & 0xf0);
+	unsigned num_interp = ps->selector->info.num_inputs +
+			      (ps->key.ps.color_two_side ? num_colors : 0);
+
+	assert(num_interp <= 32);
+	return MIN2(num_interp, 32);
+}
+
 static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
 {
 	unsigned value = shader->key.ps.spi_shader_col_format;
@@ -507,7 +519,7 @@ static void si_shader_ps(struct si_shader *shader)
 	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena) ||
 		       G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena);
 
-	spi_ps_in_control = S_0286D8_NUM_INTERP(shader->nparam) |
+	spi_ps_in_control = S_0286D8_NUM_INTERP(si_get_ps_num_interp(shader)) |
 			    S_0286D8_BC_OPTIMIZE_DISABLE(has_centroid);
 
 	/* Set registers. */
@@ -1129,34 +1141,44 @@ static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_shader *ps = sctx->ps_shader.current;
 	struct si_shader *vs = si_get_vs_state(sctx);
-	struct tgsi_shader_info *psinfo;
-	unsigned i, num_written = 0;
+	struct tgsi_shader_info *psinfo = ps ? &ps->selector->info : NULL;
+	unsigned i, num_interp, num_written = 0, bcol_interp[2];
 
-	if (!ps || !ps->nparam)
+	if (!ps || !ps->selector->info.num_inputs)
 		return;
 
-	psinfo = &ps->selector->info;
-
-	radeon_set_context_reg_seq(cs, R_028644_SPI_PS_INPUT_CNTL_0, ps->nparam);
+	num_interp = si_get_ps_num_interp(ps);
+	assert(num_interp > 0);
+	radeon_set_context_reg_seq(cs, R_028644_SPI_PS_INPUT_CNTL_0, num_interp);
 
 	for (i = 0; i < psinfo->num_inputs; i++) {
 		unsigned name = psinfo->input_semantic_name[i];
 		unsigned index = psinfo->input_semantic_index[i];
 		unsigned interpolate = psinfo->input_interpolate[i];
-		unsigned param_offset = ps->ps_input_param_offset[i];
-bcolor:
+
 		radeon_emit(cs, si_get_ps_input_cntl(sctx, vs, name, index,
 						     interpolate));
 		num_written++;
 
-		if (name == TGSI_SEMANTIC_COLOR &&
-		    ps->key.ps.color_two_side) {
-			name = TGSI_SEMANTIC_BCOLOR;
-			param_offset++;
-			goto bcolor;
+		if (name == TGSI_SEMANTIC_COLOR) {
+			assert(index < ARRAY_SIZE(bcol_interp));
+			bcol_interp[index] = interpolate;
 		}
 	}
-	assert(ps->nparam == num_written);
+
+	if (ps->key.ps.color_two_side) {
+		unsigned bcol = TGSI_SEMANTIC_BCOLOR;
+
+		for (i = 0; i < 2; i++) {
+			if (!(psinfo->colors_read & (0xf << (i * 4))))
+				continue;
+
+			radeon_emit(cs, si_get_ps_input_cntl(sctx, vs, bcol,
+							     i, bcol_interp[i]));
+			num_written++;
+		}
+	}
+	assert(num_interp == num_written);
 }
 
 static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom)

@@ -290,9 +290,7 @@ struct si_shader {
 	struct radeon_shader_binary	binary;
 	struct si_shader_config		config;
 
-	unsigned		nparam;
 	unsigned		vs_output_param_offset[PIPE_MAX_SHADER_OUTPUTS];
-	unsigned		ps_input_param_offset[PIPE_MAX_SHADER_INPUTS];
 	unsigned		ps_input_interpolate[PIPE_MAX_SHADER_INPUTS];
 	bool			uses_instanceid;
 	unsigned		nr_pos_exports;

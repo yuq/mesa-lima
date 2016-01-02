@@ -912,9 +912,7 @@ static void declare_input_fs(
 
 	unsigned chan;
 
-	shader->ps_input_param_offset[input_index] = shader->nparam++;
-	attr_number = lp_build_const_int32(gallivm,
-					   shader->ps_input_param_offset[input_index]);
+	attr_number = lp_build_const_int32(gallivm, input_index);
 
 	shader->ps_input_interpolate[input_index] = decl->Interp.Interpolate;
 	interp_param_idx = lookup_interp_param_index(decl->Interp.Interpolate,
@@ -938,11 +936,19 @@ static void declare_input_fs(
 
 	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
 	    si_shader_ctx->shader->key.ps.color_two_side) {
+		struct tgsi_shader_info *info = &shader->selector->info;
 		LLVMValueRef args[4];
 		LLVMValueRef face, is_face_positive;
-		LLVMValueRef back_attr_number =
-			lp_build_const_int32(gallivm,
-					     shader->ps_input_param_offset[input_index] + 1);
+		LLVMValueRef back_attr_number;
+
+		/* If BCOLOR0 is used, BCOLOR1 is at offset "num_inputs + 1",
+		 * otherwise it's at offset "num_inputs".
+		 */
+		unsigned back_attr_offset = shader->selector->info.num_inputs;
+		if (decl->Semantic.Index == 1 && info->colors_read & 0xf)
+			back_attr_offset += 1;
+
+		back_attr_number = lp_build_const_int32(gallivm, back_attr_offset);
 
 		face = LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE);
 
@@ -974,8 +980,6 @@ static void declare_input_fs(
 						back,
 						"");
 		}
-
-		shader->nparam++;
 	} else if (decl->Semantic.Name == TGSI_SEMANTIC_FOG) {
 		LLVMValueRef args[4];
 
@@ -3280,8 +3284,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	else
 		interp_param = NULL;
 
-	attr_number = lp_build_const_int32(gallivm,
-					   shader->ps_input_param_offset[input_index]);
+	attr_number = lp_build_const_int32(gallivm, input_index);
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
 	    inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
@@ -4336,8 +4339,6 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		tgsi_dump(tokens, 0);
 		si_dump_streamout(&sel->so);
 	}
-
-	assert(shader->nparam == 0);
 
 	si_init_shader_ctx(&si_shader_ctx, sscreen, shader, tm,
 			   poly_stipple ? &stipple_shader_info : &sel->info);
