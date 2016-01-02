@@ -798,7 +798,8 @@ intel_miptree_create(struct brw_context *brw,
    /* If this miptree is capable of supporting fast color clears, set
     * fast_clear_state appropriately to ensure that fast clears will occur.
     * Allocation of the MCS miptree will be deferred until the first fast
-    * clear actually occurs.
+    * clear actually occurs or when compressed single sampled buffer is
+    * written by the GPU for the first time.
     */
    if (intel_tiling_supports_non_msrt_mcs(brw, mt->tiling) &&
        intel_miptree_supports_non_msrt_fast_clear(brw, mt)) {
@@ -1603,11 +1604,28 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    unsigned mcs_height =
       ALIGN(mt->logical_height0, height_divisor) / height_divisor;
    assert(mt->logical_depth0 == 1);
-   uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
-                           MIPTREE_LAYOUT_TILING_Y;
+   uint32_t layout_flags = MIPTREE_LAYOUT_TILING_Y;
+
    if (brw->gen >= 8) {
       layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
    }
+
+   /* On Gen9+ clients are not currently capable of consuming compressed
+    * single-sampled buffers. Disabling compression allows us to skip
+    * resolves.
+    */
+   const bool is_lossless_compressed =
+      brw->gen >= 9 && !mt->is_scanout &&
+      intel_miptree_supports_lossless_compressed(brw, mt);
+
+   /* In case of compression mcs buffer needs to be initialised requiring the
+    * buffer to be immediately mapped to cpu space for writing. Therefore do
+    * not use the gpu access flag which can cause an unnecessary delay if the
+    * backing pages happened to be just used by the GPU.
+    */
+   if (!is_lossless_compressed)
+      layout_flags |= MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
+
    mt->mcs_mt = miptree_create(brw,
                                mt->target,
                                format,
@@ -1618,6 +1636,25 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                mt->logical_depth0,
                                0 /* num_samples */,
                                layout_flags);
+
+   /* From Gen9 onwards single-sampled (non-msrt) auxiliary buffers are
+    * used for lossless compression which requires similar initialisation
+    * as multi-sample compression.
+    */
+   if (is_lossless_compressed) {
+      /* Hardware sets the auxiliary buffer to all zeroes when it does full
+       * resolve. Initialize it accordingly in case the first renderer is
+       * cpu (or other none compression aware party).
+       *
+       * This is also explicitly stated in the spec (MCS Buffer for Render
+       * Target(s)):
+       *   "If Software wants to enable Color Compression without Fast clear,
+       *    Software needs to initialize MCS with zeros."
+       */
+      intel_miptree_init_mcs(brw, mt, 0);
+      mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
+      mt->msaa_layout = INTEL_MSAA_LAYOUT_CMS;
+   }
 
    return mt->mcs_mt;
 }
