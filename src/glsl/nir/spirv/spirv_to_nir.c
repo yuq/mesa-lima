@@ -298,7 +298,7 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
 
    switch (opcode) {
    case SpvOpDecorationGroup:
-      vtn_push_value(b, target, vtn_value_type_undef);
+      vtn_push_value(b, target, vtn_value_type_decoration_group);
       break;
 
    case SpvOpDecorate:
@@ -331,21 +331,19 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpGroupMemberDecorate:
    case SpvOpGroupDecorate: {
-      struct vtn_value *group = &b->values[target];
-      assert(group->value_type == vtn_value_type_decoration_group);
-
-      int scope;
-      if (opcode == SpvOpGroupDecorate) {
-         scope = VTN_DEC_DECORATION;
-      } else {
-         scope = VTN_DEC_STRUCT_MEMBER0 + *(w++);
-      }
+      struct vtn_value *group =
+         vtn_value(b, target, vtn_value_type_decoration_group);
 
       for (; w < w_end; w++) {
-         struct vtn_value *val = &b->values[*w];
+         struct vtn_value *val = vtn_untyped_value(b, *w);
          struct vtn_decoration *dec = rzalloc(b, struct vtn_decoration);
-         dec->scope = scope;
+
          dec->group = group;
+         if (opcode == SpvOpGroupDecorate) {
+            dec->scope = VTN_DEC_DECORATION;
+         } else {
+            dec->scope = VTN_DEC_STRUCT_MEMBER0 + *(w++);
+         }
 
          /* Link into the list */
          dec->next = val->decoration;
