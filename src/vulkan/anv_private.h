@@ -86,6 +86,12 @@ align_u32(uint32_t v, uint32_t a)
    return (v + a - 1) & ~(a - 1);
 }
 
+static inline uint64_t
+align_u64(uint64_t v, uint64_t a)
+{
+   return (v + a - 1) & ~(a - 1);
+}
+
 static inline int32_t
 align_i32(int32_t v, int32_t a)
 {

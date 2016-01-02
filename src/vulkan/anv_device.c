@@ -1020,7 +1020,10 @@ VkResult anv_AllocateMemory(
    if (mem == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_bo_init_new(&mem->bo, device, pAllocateInfo->allocationSize);
+   /* The kernel is going to give us whole pages anyway */
+   uint64_t alloc_size = align_u64(pAllocateInfo->allocationSize, 4096);
+
+   result = anv_bo_init_new(&mem->bo, device, alloc_size);
    if (result != VK_SUCCESS)
       goto fail;
 
@@ -1088,7 +1091,7 @@ VkResult anv_MapMemory(
    uint64_t map_size = (offset + size) - map_offset;
 
    /* Let's map whole pages */
-   map_size = (map_size + 4095) & ~4095ull;
+   map_size = align_u64(map_size, 4096);
 
    mem->map = anv_gem_mmap(device, mem->bo.gem_handle,
                            map_offset, map_size, gem_flags);
