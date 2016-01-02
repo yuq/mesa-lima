@@ -914,7 +914,6 @@ static void declare_input_fs(
 
 	attr_number = lp_build_const_int32(gallivm, input_index);
 
-	shader->ps_input_interpolate[input_index] = decl->Interp.Interpolate;
 	interp_param_idx = lookup_interp_param_index(decl->Interp.Interpolate,
 						     decl->Interp.Location);
 	if (interp_param_idx == -1)
@@ -3257,17 +3256,17 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	LLVMValueRef interp_param;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	const char *intr_name;
-	int input_index;
+	int input_index = inst->Src[0].Register.Index;
 	int chan;
 	int i;
 	LLVMValueRef attr_number;
 	LLVMTypeRef input_type = LLVMFloatTypeInContext(gallivm->context);
 	LLVMValueRef params = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_PRIM_MASK);
 	int interp_param_idx;
+	unsigned interp = shader->selector->info.input_interpolate[input_index];
 	unsigned location;
 
 	assert(inst->Src[0].Register.File == TGSI_FILE_INPUT);
-	input_index = inst->Src[0].Register.Index;
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
 	    inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE)
@@ -3275,8 +3274,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	else
 		location = TGSI_INTERPOLATE_LOC_CENTROID;
 
-	interp_param_idx = lookup_interp_param_index(shader->ps_input_interpolate[input_index],
-						     location);
+	interp_param_idx = lookup_interp_param_index(interp, location);
 	if (interp_param_idx == -1)
 		return;
 	else if (interp_param_idx)
