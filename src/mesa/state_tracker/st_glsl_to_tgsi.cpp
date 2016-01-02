@@ -4906,10 +4906,11 @@ compile_tgsi_instruction(struct st_translate *t,
  * a FBO is bound (STATE_FB_WPOS_Y_TRANSFORM).
  */
 static void
-emit_wpos_adjustment( struct st_translate *t,
-                      int wpos_transform_const,
-                      boolean invert,
-                      GLfloat adjX, GLfloat adjY[2])
+emit_wpos_adjustment(struct gl_context *ctx,
+                     struct st_translate *t,
+                     int wpos_transform_const,
+                     boolean invert,
+                     GLfloat adjX, GLfloat adjY[2])
 {
    struct ureg_program *ureg = t->ureg;
 
@@ -4921,7 +4922,11 @@ emit_wpos_adjustment( struct st_translate *t,
     */
    struct ureg_src wpostrans = ureg_DECL_constant(ureg, wpos_transform_const);
    struct ureg_dst wpos_temp = ureg_DECL_temporary( ureg );
-   struct ureg_src wpos_input = t->inputs[t->inputMapping[VARYING_SLOT_POS]];
+   struct ureg_src *wpos =
+      ctx->Const.GLSLFragCoordIsSysVal ?
+         &t->systemValues[SYSTEM_VALUE_FRAG_COORD] :
+         &t->inputs[t->inputMapping[VARYING_SLOT_POS]];
+   struct ureg_src wpos_input = *wpos;
 
    /* First, apply the coordinate shift: */
    if (adjX || adjY[0] || adjY[1]) {
@@ -4972,7 +4977,7 @@ emit_wpos_adjustment( struct st_translate *t,
 
    /* Use wpos_temp as position input from here on:
     */
-   t->inputs[t->inputMapping[VARYING_SLOT_POS]] = ureg_src(wpos_temp);
+   *wpos = ureg_src(wpos_temp);
 }
 
 
@@ -5081,7 +5086,7 @@ emit_wpos(struct st_context *st,
 
    /* we invert after adjustment so that we avoid the MOV to temporary,
     * and reuse the adjustment ADD instead */
-   emit_wpos_adjustment(t, wpos_transform_const, invert, adjX, adjY);
+   emit_wpos_adjustment(st->ctx, t, wpos_transform_const, invert, adjX, adjY);
 }
 
 /**
@@ -5399,6 +5404,11 @@ st_translate_program(
                }
             }
 
+            if (procType == TGSI_PROCESSOR_FRAGMENT &&
+                semName == TGSI_SEMANTIC_POSITION)
+               emit_wpos(st_context(ctx), t, proginfo, ureg,
+                         program->wpos_transform_const);
+
             sysInputs &= ~(1 << i);
          }
       }
@@ -5685,7 +5695,8 @@ get_mesa_program(struct gl_context *ctx,
 
    /* This must be done before the uniform storage is associated. */
    if (shader->Type == GL_FRAGMENT_SHADER &&
-       prog->InputsRead & VARYING_BIT_POS){
+       (prog->InputsRead & VARYING_BIT_POS ||
+        prog->SystemValuesRead & (1 << SYSTEM_VALUE_FRAG_COORD))) {
       static const gl_state_index wposTransformState[STATE_LENGTH] = {
          STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM
       };

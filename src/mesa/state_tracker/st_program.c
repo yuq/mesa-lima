@@ -581,8 +581,11 @@ st_translate_fragment_program(struct st_context *st,
 
    memset(inputSlotToAttr, ~0, sizeof(inputSlotToAttr));
 
-   if (!stfp->glsl_to_tgsi)
+   if (!stfp->glsl_to_tgsi) {
       _mesa_remove_output_reads(&stfp->Base.Base, PROGRAM_OUTPUT);
+      if (st->ctx->Const.GLSLFragCoordIsSysVal)
+         _mesa_program_fragment_position_to_sysval(&stfp->Base.Base);
+   }
 
    /*
     * Convert Mesa program inputs to TGSI input register semantics.

@@ -717,10 +717,11 @@ compile_instruction(
  * a FBO is bound (STATE_FB_WPOS_Y_TRANSFORM).
  */
 static void
-emit_wpos_adjustment( struct st_translate *t,
-                      const struct gl_program *program,
-                      boolean invert,
-                      GLfloat adjX, GLfloat adjY[2])
+emit_wpos_adjustment(struct gl_context *ctx,
+                     struct st_translate *t,
+                     const struct gl_program *program,
+                     boolean invert,
+                     GLfloat adjX, GLfloat adjY[2])
 {
    struct ureg_program *ureg = t->ureg;
 
@@ -740,7 +741,11 @@ emit_wpos_adjustment( struct st_translate *t,
 
    struct ureg_src wpostrans = ureg_DECL_constant( ureg, wposTransConst );
    struct ureg_dst wpos_temp = ureg_DECL_temporary( ureg );
-   struct ureg_src wpos_input = t->inputs[t->inputMapping[VARYING_SLOT_POS]];
+   struct ureg_src *wpos =
+      ctx->Const.GLSLFragCoordIsSysVal ?
+         &t->systemValues[SYSTEM_VALUE_FRAG_COORD] :
+         &t->inputs[t->inputMapping[VARYING_SLOT_POS]];
+   struct ureg_src wpos_input = *wpos;
 
    /* First, apply the coordinate shift: */
    if (adjX || adjY[0] || adjY[1]) {
@@ -791,7 +796,7 @@ emit_wpos_adjustment( struct st_translate *t,
 
    /* Use wpos_temp as position input from here on:
     */
-   t->inputs[t->inputMapping[VARYING_SLOT_POS]] = ureg_src(wpos_temp);
+   *wpos = ureg_src(wpos_temp);
 }
 
 
@@ -899,7 +904,7 @@ emit_wpos(struct st_context *st,
 
    /* we invert after adjustment so that we avoid the MOV to temporary,
     * and reuse the adjustment ADD instead */
-   emit_wpos_adjustment(t, program, invert, adjX, adjY);
+   emit_wpos_adjustment(st->ctx, t, program, invert, adjX, adjY);
 }
 
 
@@ -1076,6 +1081,10 @@ st_translate_mesa_program(
                   t->systemValues[i] = ureg_scalar(ureg_src(temp), 0);
                }
             }
+
+            if (procType == TGSI_PROCESSOR_FRAGMENT &&
+                semName == TGSI_SEMANTIC_POSITION)
+               emit_wpos(st_context(ctx), t, program, ureg);
 
             sysInputs &= ~(1 << i);
          }

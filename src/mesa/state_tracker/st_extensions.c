@@ -327,6 +327,11 @@ void st_init_limits(struct pipe_screen *screen,
          c->Program[MESA_SHADER_FRAGMENT].MaxUniformBlocks;
       assert(c->MaxCombinedUniformBlocks <= MAX_COMBINED_UNIFORM_BUFFERS);
    }
+
+   c->GLSLFragCoordIsSysVal =
+      screen->get_param(screen, PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL);
+   c->GLSLFrontFacingIsSysVal =
+      screen->get_param(screen, PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL);
 }
 
 
