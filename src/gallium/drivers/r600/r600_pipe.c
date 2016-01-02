@@ -349,6 +349,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_SHAREABLE_SHADERS:
 	case PIPE_CAP_CLEAR_TEXTURE:
 	case PIPE_CAP_DRAW_PARAMETERS:
+	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
