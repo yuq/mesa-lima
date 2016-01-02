@@ -390,7 +390,7 @@ static void si_shader_ps(struct si_shader *shader)
 	unsigned spi_shader_col_format = 0, cb_shader_mask = 0;
 	unsigned colors_written, export_16bpc;
 	unsigned num_sgprs, num_user_sgprs;
-	unsigned spi_baryc_cntl = 0;
+	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
 	bool has_centroid;
 
@@ -979,12 +979,6 @@ static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 		unsigned index = psinfo->input_semantic_index[i];
 		unsigned interpolate = psinfo->input_interpolate[i];
 		unsigned param_offset = ps->ps_input_param_offset[i];
-
-		if (name == TGSI_SEMANTIC_POSITION ||
-		    name == TGSI_SEMANTIC_FACE)
-			/* Read from preloaded VGPRs, not parameters */
-			continue;
-
 bcolor:
 		tmp = 0;
 

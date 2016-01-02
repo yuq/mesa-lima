@@ -911,36 +911,6 @@ static void declare_input_fs(
 
 	unsigned chan;
 
-	if (decl->Semantic.Name == TGSI_SEMANTIC_POSITION) {
-		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-			unsigned soa_index =
-				radeon_llvm_reg_index_soa(input_index, chan);
-			radeon_bld->inputs[soa_index] =
-				LLVMGetParam(main_fn, SI_PARAM_POS_X_FLOAT + chan);
-
-			if (chan == 3)
-				/* RCP for fragcoord.w */
-				radeon_bld->inputs[soa_index] =
-					LLVMBuildFDiv(gallivm->builder,
-						      lp_build_const_float(gallivm, 1.0f),
-						      radeon_bld->inputs[soa_index],
-						      "");
-		}
-		return;
-	}
-
-	if (decl->Semantic.Name == TGSI_SEMANTIC_FACE) {
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)] =
-			LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE);
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 1)] =
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 2)] =
-			lp_build_const_float(gallivm, 0.0f);
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 3)] =
-			lp_build_const_float(gallivm, 1.0f);
-
-		return;
-	}
-
 	shader->ps_input_param_offset[input_index] = shader->nparam++;
 	attr_number = lp_build_const_int32(gallivm,
 					   shader->ps_input_param_offset[input_index]);
@@ -975,10 +945,8 @@ static void declare_input_fs(
 
 		face = LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE);
 
-		is_face_positive = LLVMBuildFCmp(gallivm->builder,
-						 LLVMRealOGT, face,
-						 lp_build_const_float(gallivm, 0.0f),
-						 "");
+		is_face_positive = LLVMBuildICmp(gallivm->builder, LLVMIntNE,
+						 face, uint->zero, "");
 
 		args[2] = params;
 		args[3] = interp_param;
@@ -1127,6 +1095,24 @@ static void declare_system_value(
 					     SI_PARAM_GS_INSTANCE_ID);
 		else
 			assert(!"INVOCATIONID not implemented");
+		break;
+
+	case TGSI_SEMANTIC_POSITION:
+	{
+		LLVMValueRef pos[4] = {
+			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_X_FLOAT),
+			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_Y_FLOAT),
+			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_Z_FLOAT),
+			lp_build_emit_llvm_unary(&radeon_bld->soa.bld_base, TGSI_OPCODE_RCP,
+						 LLVMGetParam(radeon_bld->main_fn,
+							      SI_PARAM_POS_W_FLOAT)),
+		};
+		value = lp_build_gather_values(gallivm, pos, 4);
+		break;
+	}
+
+	case TGSI_SEMANTIC_FACE:
+		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_FRONT_FACE);
 		break;
 
 	case TGSI_SEMANTIC_SAMPLEID:
@@ -3506,7 +3492,7 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 		params[SI_PARAM_POS_Y_FLOAT] = f32;
 		params[SI_PARAM_POS_Z_FLOAT] = f32;
 		params[SI_PARAM_POS_W_FLOAT] = f32;
-		params[SI_PARAM_FRONT_FACE] = f32;
+		params[SI_PARAM_FRONT_FACE] = i32;
 		params[SI_PARAM_ANCILLARY] = i32;
 		params[SI_PARAM_SAMPLE_COVERAGE] = f32;
 		params[SI_PARAM_POS_FIXED_PT] = f32;
@@ -4067,7 +4053,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	if (poly_stipple) {
 		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
 						SI_POLY_STIPPLE_SAMPLER,
-						TGSI_FILE_INPUT);
+						TGSI_FILE_SYSTEM_VALUE);
 		tgsi_scan_shader(tokens, &stipple_shader_info);
 	}
 
