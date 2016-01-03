@@ -944,6 +944,30 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
              (brw->gen >= 9 ? (3 << 8) : 0) |
              (pipeline == BRW_COMPUTE_PIPELINE ? 2 : 0));
    ADVANCE_BATCH();
+
+   if (brw->gen == 7 && !brw->is_haswell &&
+       pipeline == BRW_RENDER_PIPELINE) {
+      /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
+       * PIPELINE_SELECT [DevBWR+]":
+       *
+       *   Project: DEVIVB, DEVHSW:GT3:A0
+       *
+       *   Software must send a pipe_control with a CS stall and a post sync
+       *   operation and then a dummy DRAW after every MI_SET_CONTEXT and
+       *   after any PIPELINE_SELECT that is enabling 3D mode.
+       */
+      gen7_emit_cs_stall_flush(brw);
+
+      BEGIN_BATCH(7);
+      OUT_BATCH(CMD_3D_PRIM << 16 | (7 - 2));
+      OUT_BATCH(_3DPRIM_POINTLIST);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      ADVANCE_BATCH();
+   }
 }
 
 /**
