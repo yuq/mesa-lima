@@ -297,6 +297,10 @@ The integer capabilities:
 * ``PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL``: If state trackers should use
   a system value for the FACE fragment shader input.
   Also, the FACE system value is integer, not float.
+* ``PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT``: Describes the required
+  alignment for pipe_shader_buffer::buffer_offset, in bytes. Maximum
+  value allowed is 256 (for GL conformance). 0 is only allowed if
+  shader buffers are not supported.
 
 
 .. _pipe_capf:

@@ -244,6 +244,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 	case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
 	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
+	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:
