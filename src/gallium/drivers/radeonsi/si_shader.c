@@ -3885,12 +3885,6 @@ void si_shader_dump(struct si_screen *sscreen,
 	si_shader_dump_stats(sscreen, conf, binary->code_size, debug, processor);
 }
 
-void si_shader_binary_read(struct radeon_shader_binary *binary,
-			   struct si_shader_config *conf)
-{
-	si_shader_binary_read_config(binary, conf, 0);
-}
-
 int si_compile_llvm(struct si_screen *sscreen,
 		    struct radeon_shader_binary *binary,
 		    struct si_shader_config *conf,
@@ -3917,7 +3911,7 @@ int si_compile_llvm(struct si_screen *sscreen,
 			return r;
 	}
 
-	si_shader_binary_read(binary, conf);
+	si_shader_binary_read_config(binary, conf, 0);
 	si_shader_dump(sscreen, binary, conf, debug, processor);
 
 	FREE(binary->config);
