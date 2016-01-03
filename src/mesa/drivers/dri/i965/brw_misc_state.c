@@ -886,6 +886,43 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
 
          brw->ctx.NewDriverState |= BRW_NEW_CC_STATE;
       }
+
+   } else if (brw->gen >= 6) {
+      /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
+       * PIPELINE_SELECT [DevBWR+]":
+       *
+       *   Project: DEVSNB+
+       *
+       *   Software must ensure all the write caches are flushed through a
+       *   stalling PIPE_CONTROL command followed by another PIPE_CONTROL
+       *   command to invalidate read only caches prior to programming
+       *   MI_PIPELINE_SELECT command to change the Pipeline Select Mode.
+       */
+      const unsigned dc_flush =
+         brw->gen >= 7 ? PIPE_CONTROL_DATA_CACHE_INVALIDATE : 0;
+
+      if (brw->gen == 6) {
+         /* Hardware workaround: SNB B-Spec says:
+          *
+          *   Before a PIPE_CONTROL with Write Cache Flush Enable = 1, a
+          *   PIPE_CONTROL with any non-zero post-sync-op is required.
+          */
+         brw_emit_post_sync_nonzero_flush(brw);
+      }
+
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                  PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                  dc_flush |
+                                  PIPE_CONTROL_NO_WRITE |
+                                  PIPE_CONTROL_CS_STALL);
+
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE |
+                                  PIPE_CONTROL_CONST_CACHE_INVALIDATE |
+                                  PIPE_CONTROL_STATE_CACHE_INVALIDATE |
+                                  PIPE_CONTROL_INSTRUCTION_INVALIDATE |
+                                  PIPE_CONTROL_NO_WRITE);
    }
 
    /* Select the pipeline */
