@@ -923,6 +923,19 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
                                   PIPE_CONTROL_STATE_CACHE_INVALIDATE |
                                   PIPE_CONTROL_INSTRUCTION_INVALIDATE |
                                   PIPE_CONTROL_NO_WRITE);
+
+   } else {
+      /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
+       * PIPELINE_SELECT [DevBWR+]":
+       *
+       *   Project: PRE-DEVSNB
+       *
+       *   Software must ensure the current pipeline is flushed via an
+       *   MI_FLUSH or PIPE_CONTROL prior to the execution of PIPELINE_SELECT.
+       */
+      BEGIN_BATCH(1);
+      OUT_BATCH(MI_FLUSH);
+      ADVANCE_BATCH();
    }
 
    /* Select the pipeline */
