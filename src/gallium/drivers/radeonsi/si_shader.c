@@ -3852,6 +3852,39 @@ static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary
 	}
 }
 
+static void si_shader_dump_stats(struct si_screen *sscreen,
+			         struct si_shader_config *conf,
+				 unsigned code_size,
+			         struct pipe_debug_callback *debug,
+			         unsigned processor)
+{
+	if (r600_can_dump_shader(&sscreen->b, processor)) {
+		fprintf(stderr, "*** SHADER STATS ***\n"
+			"SGPRS: %d\nVGPRS: %d\nCode Size: %d bytes\nLDS: %d blocks\n"
+			"Scratch: %d bytes per wave\n********************\n",
+			conf->num_sgprs, conf->num_vgprs, code_size,
+			conf->lds_size, conf->scratch_bytes_per_wave);
+	}
+
+	pipe_debug_message(debug, SHADER_INFO,
+			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d LDS: %d Scratch: %d",
+			   conf->num_sgprs, conf->num_vgprs, code_size,
+			   conf->lds_size, conf->scratch_bytes_per_wave);
+}
+
+static void si_shader_dump(struct si_screen *sscreen,
+			   struct radeon_shader_binary *binary,
+			   struct si_shader_config *conf,
+			   struct pipe_debug_callback *debug,
+			   unsigned processor)
+{
+	if (r600_can_dump_shader(&sscreen->b, processor))
+		if (!(sscreen->b.debug_flags & DBG_NO_ASM))
+			si_shader_dump_disassembly(binary, debug);
+
+	si_shader_dump_stats(sscreen, conf, binary->code_size, debug, processor);
+}
+
 void si_shader_binary_read(struct si_screen *sscreen,
 			   struct radeon_shader_binary *binary,
 			   struct si_shader_config *conf,
@@ -3859,22 +3892,7 @@ void si_shader_binary_read(struct si_screen *sscreen,
 			   unsigned processor)
 {
 	si_shader_binary_read_config(binary, conf, 0);
-
-	if (r600_can_dump_shader(&sscreen->b, processor)) {
-		if (!(sscreen->b.debug_flags & DBG_NO_ASM))
-			si_shader_dump_disassembly(binary, debug);
-
-		fprintf(stderr, "*** SHADER STATS ***\n"
-			"SGPRS: %d\nVGPRS: %d\nCode Size: %d bytes\nLDS: %d blocks\n"
-			"Scratch: %d bytes per wave\n********************\n",
-			conf->num_sgprs, conf->num_vgprs, binary->code_size,
-			conf->lds_size, conf->scratch_bytes_per_wave);
-	}
-
-	pipe_debug_message(debug, SHADER_INFO,
-			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d LDS: %d Scratch: %d",
-			   conf->num_sgprs, conf->num_vgprs, binary->code_size,
-			   conf->lds_size, conf->scratch_bytes_per_wave);
+	si_shader_dump(sscreen, binary, conf, debug, processor);
 }
 
 int si_compile_llvm(struct si_screen *sscreen,
