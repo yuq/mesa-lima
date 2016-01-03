@@ -713,24 +713,24 @@ try_setup_line( struct lp_setup_context *setup,
       const struct u_rect *scissor =
          &setup->scissors[viewport_index];
 
-      plane[4].dcdx = -1;
+      plane[4].dcdx = -1 << 8;
       plane[4].dcdy = 0;
-      plane[4].c = 1-scissor->x0;
-      plane[4].eo = 1;
+      plane[4].c = (1-scissor->x0) << 8;
+      plane[4].eo = 1 << 8;
 
-      plane[5].dcdx = 1;
+      plane[5].dcdx = 1 << 8;
       plane[5].dcdy = 0;
-      plane[5].c = scissor->x1+1;
+      plane[5].c = (scissor->x1+1) << 8;
       plane[5].eo = 0;
 
       plane[6].dcdx = 0;
-      plane[6].dcdy = 1;
-      plane[6].c = 1-scissor->y0;
-      plane[6].eo = 1;
+      plane[6].dcdy = 1 << 8;
+      plane[6].c = (1-scissor->y0) << 8;
+      plane[6].eo = 1 << 8;
 
       plane[7].dcdx = 0;
-      plane[7].dcdy = -1;
-      plane[7].c = scissor->y1+1;
+      plane[7].dcdy = -1 << 8;
+      plane[7].c = (scissor->y1+1) << 8;
       plane[7].eo = 0;
    }
 
