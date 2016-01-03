@@ -176,6 +176,8 @@ private:
    void emitISBERD();
    void emitAL2P();
    void emitIPA();
+   void emitATOM();
+   void emitCCTL();
 
    void emitPIXLD();
 
@@ -2298,6 +2300,50 @@ CodeEmitterGM107::emitIPA()
       emitGPR(0x27);
 }
 
+void
+CodeEmitterGM107::emitATOM()
+{
+   unsigned dType, subOp;
+   switch (insn->dType) {
+   case TYPE_U32: dType = 0; break;
+   case TYPE_S32: dType = 1; break;
+   case TYPE_U64: dType = 2; break;
+   case TYPE_F32: dType = 3; break;
+   case TYPE_B128: dType = 4; break;
+   case TYPE_S64: dType = 5; break;
+   default: assert(!"unexpected dType"); dType = 0; break;
+   }
+   if (insn->subOp == NV50_IR_SUBOP_ATOM_EXCH)
+      subOp = 8;
+   else
+      subOp = insn->subOp;
+   assert(insn->subOp != NV50_IR_SUBOP_ATOM_CAS); /* XXX */
+
+   emitInsn (0xed000000);
+   emitField(0x34, 4, subOp);
+   emitField(0x31, 3, dType);
+   emitField(0x30, 1, insn->src(0).getIndirect(0)->getSize() == 8);
+   emitGPR  (0x14, insn->src(1));
+   emitADDR (0x08, 0x1c, 20, 0, insn->src(0));
+   emitGPR  (0x00, insn->def(0));
+}
+
+void
+CodeEmitterGM107::emitCCTL()
+{
+   unsigned width;
+   if (insn->src(0).getFile() == FILE_MEMORY_GLOBAL) {
+      emitInsn(0xef600000);
+      width = 30;
+   } else {
+      emitInsn(0xef800000);
+      width = 22;
+   }
+   emitField(0x34, 1, insn->src(0).getIndirect(0)->getSize() == 8);
+   emitADDR (0x08, 0x16, width, 2, insn->src(0));
+   emitField(0x00, 4, insn->subOp);
+}
+
 /*******************************************************************************
  * surface
  ******************************************************************************/
@@ -2796,6 +2842,12 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
          emitNOP();
          break;
       }
+      break;
+   case OP_ATOM:
+      emitATOM();
+      break;
+   case OP_CCTL:
+      emitCCTL();
       break;
    case OP_VFETCH:
       emitALD();
