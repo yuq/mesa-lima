@@ -344,11 +344,13 @@ void si_shader_destroy(struct si_shader *shader);
 void si_shader_destroy_binary(struct radeon_shader_binary *binary);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
-void si_shader_binary_read(struct si_screen *sscreen,
-			   struct radeon_shader_binary *binary,
-			   struct si_shader_config *conf,
-			   struct pipe_debug_callback *debug,
-			   unsigned processor);
+void si_shader_binary_read(struct radeon_shader_binary *binary,
+			   struct si_shader_config *conf);
+void si_shader_dump(struct si_screen *sscreen,
+		    struct radeon_shader_binary *binary,
+		    struct si_shader_config *conf,
+		    struct pipe_debug_callback *debug,
+		    unsigned processor);
 void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			struct si_shader *shader,
 			uint64_t scratch_va);

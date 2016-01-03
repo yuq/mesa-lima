@@ -3872,11 +3872,11 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			   conf->lds_size, conf->scratch_bytes_per_wave);
 }
 
-static void si_shader_dump(struct si_screen *sscreen,
-			   struct radeon_shader_binary *binary,
-			   struct si_shader_config *conf,
-			   struct pipe_debug_callback *debug,
-			   unsigned processor)
+void si_shader_dump(struct si_screen *sscreen,
+		    struct radeon_shader_binary *binary,
+		    struct si_shader_config *conf,
+		    struct pipe_debug_callback *debug,
+		    unsigned processor)
 {
 	if (r600_can_dump_shader(&sscreen->b, processor))
 		if (!(sscreen->b.debug_flags & DBG_NO_ASM))
@@ -3885,14 +3885,10 @@ static void si_shader_dump(struct si_screen *sscreen,
 	si_shader_dump_stats(sscreen, conf, binary->code_size, debug, processor);
 }
 
-void si_shader_binary_read(struct si_screen *sscreen,
-			   struct radeon_shader_binary *binary,
-			   struct si_shader_config *conf,
-			   struct pipe_debug_callback *debug,
-			   unsigned processor)
+void si_shader_binary_read(struct radeon_shader_binary *binary,
+			   struct si_shader_config *conf)
 {
 	si_shader_binary_read_config(binary, conf, 0);
-	si_shader_dump(sscreen, binary, conf, debug, processor);
 }
 
 int si_compile_llvm(struct si_screen *sscreen,
@@ -3921,7 +3917,8 @@ int si_compile_llvm(struct si_screen *sscreen,
 			return r;
 	}
 
-	si_shader_binary_read(sscreen, binary, conf, debug, processor);
+	si_shader_binary_read(binary, conf);
+	si_shader_dump(sscreen, binary, conf, debug, processor);
 
 	FREE(binary->config);
 	FREE(binary->global_symbol_offsets);
