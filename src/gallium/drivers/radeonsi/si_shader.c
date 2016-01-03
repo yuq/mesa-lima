@@ -3912,7 +3912,6 @@ int si_compile_llvm(struct si_screen *sscreen,
 	}
 
 	si_shader_binary_read_config(binary, conf, 0);
-	si_shader_dump(sscreen, binary, conf, debug, processor);
 
 	FREE(binary->config);
 	FREE(binary->global_symbol_offsets);
@@ -3995,8 +3994,12 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 			    &si_shader_ctx->shader->config, si_shader_ctx->tm,
 			    bld_base->base.gallivm->module,
 			    debug, TGSI_PROCESSOR_GEOMETRY);
-	if (!r)
+	if (!r) {
+		si_shader_dump(sscreen, &si_shader_ctx->shader->binary,
+			       &si_shader_ctx->shader->config, debug,
+			       TGSI_PROCESSOR_GEOMETRY);
 		r = si_shader_binary_upload(sscreen, si_shader_ctx->shader);
+	}
 
 	radeon_llvm_dispose(&si_shader_ctx->radeon_bld);
 
@@ -4197,6 +4200,9 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		fprintf(stderr, "LLVM failed to compile shader\n");
 		goto out;
 	}
+
+	si_shader_dump(sscreen, &shader->binary, &shader->config,
+		       debug, si_shader_ctx.type);
 
 	r = si_shader_binary_upload(sscreen, shader);
 	if (r) {
