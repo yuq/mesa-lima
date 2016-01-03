@@ -281,6 +281,8 @@ struct si_shader {
 
 	ubyte			num_input_sgprs;
 	ubyte			num_input_vgprs;
+	char			face_vgpr_index;
+
 	unsigned		vs_output_param_offset[PIPE_MAX_SHADER_OUTPUTS];
 	bool			uses_instanceid;
 	unsigned		nr_pos_exports;
