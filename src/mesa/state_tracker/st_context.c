@@ -43,6 +43,7 @@
 #include "st_cb_blit.h"
 #include "st_cb_bufferobjects.h"
 #include "st_cb_clear.h"
+#include "st_cb_compute.h"
 #include "st_cb_condrender.h"
 #include "st_cb_copyimage.h"
 #include "st_cb_drawpixels.h"
@@ -510,6 +511,7 @@ void st_init_driver_functions(struct pipe_screen *screen,
    st_init_flush_functions(screen, functions);
    st_init_string_functions(functions);
    st_init_viewport_functions(functions);
+   st_init_compute_functions(functions);
 
    st_init_xformfb_functions(functions);
    st_init_syncobj_functions(functions);

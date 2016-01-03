@@ -427,6 +427,8 @@ STATETRACKER_FILES = \
 	state_tracker/st_cb_bufferobjects.h \
 	state_tracker/st_cb_clear.c \
 	state_tracker/st_cb_clear.h \
+	state_tracker/st_cb_compute.c \
+	state_tracker/st_cb_compute.h \
 	state_tracker/st_cb_condrender.c \
 	state_tracker/st_cb_condrender.h \
 	state_tracker/st_cb_copyimage.c \
