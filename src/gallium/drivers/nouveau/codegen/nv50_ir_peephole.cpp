@@ -3044,7 +3044,7 @@ Instruction::isResultEqual(const Instruction *that) const
    if (that->srcExists(s))
       return false;
 
-   if (op == OP_LOAD || op == OP_VFETCH) {
+   if (op == OP_LOAD || op == OP_VFETCH || op == OP_ATOM) {
       switch (src(0).getFile()) {
       case FILE_MEMORY_CONST:
       case FILE_SHADER_INPUT:

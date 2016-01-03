@@ -1022,11 +1022,11 @@ NVC0LoweringPass::handleTXLQ(TexInstruction *i)
    return true;
 }
 
-
 bool
 NVC0LoweringPass::handleATOM(Instruction *atom)
 {
    SVSemantic sv;
+   Value *ptr = atom->getIndirect(0, 0), *base;
 
    switch (atom->src(0).getFile()) {
    case FILE_MEMORY_LOCAL:
@@ -1037,11 +1037,16 @@ NVC0LoweringPass::handleATOM(Instruction *atom)
       break;
    default:
       assert(atom->src(0).getFile() == FILE_MEMORY_GLOBAL);
+      base = loadResInfo64(NULL, atom->getSrc(0)->reg.fileIndex * 16);
+      assert(base->reg.size == 8);
+      if (ptr)
+         base = bld.mkOp2v(OP_ADD, TYPE_U64, base, base, ptr);
+      assert(base->reg.size == 8);
+      atom->setIndirect(0, 0, base);
       return true;
    }
-   Value *base =
+   base =
       bld.mkOp1v(OP_RDSV, TYPE_U32, bld.getScratch(), bld.mkSysVal(sv, 0));
-   Value *ptr = atom->getIndirect(0, 0);
 
    atom->setSrc(0, cloneShallow(func, atom->getSrc(0)));
    atom->getSrc(0)->reg.file = FILE_MEMORY_GLOBAL;
@@ -1091,6 +1096,26 @@ NVC0LoweringPass::loadResInfo32(Value *ptr, uint32_t off)
    off += prog->driver->io.suInfoBase;
    return bld.
       mkLoadv(TYPE_U32, bld.mkSymbol(FILE_MEMORY_CONST, b, TYPE_U32, off), ptr);
+}
+
+inline Value *
+NVC0LoweringPass::loadResInfo64(Value *ptr, uint32_t off)
+{
+   uint8_t b = prog->driver->io.resInfoCBSlot;
+   off += prog->driver->io.suInfoBase;
+
+   return bld.
+      mkLoadv(TYPE_U64, bld.mkSymbol(FILE_MEMORY_CONST, b, TYPE_U64, off), ptr);
+}
+
+inline Value *
+NVC0LoweringPass::loadResLength32(Value *ptr, uint32_t off)
+{
+   uint8_t b = prog->driver->io.resInfoCBSlot;
+   off += prog->driver->io.suInfoBase;
+
+   return bld.
+      mkLoadv(TYPE_U32, bld.mkSymbol(FILE_MEMORY_CONST, b, TYPE_U64, off + 8), ptr);
 }
 
 inline Value *
@@ -1786,6 +1811,7 @@ NVC0LoweringPass::visit(Instruction *i)
       return handleRDSV(i);
    case OP_WRSV:
       return handleWRSV(i);
+   case OP_STORE:
    case OP_LOAD:
       if (i->src(0).getFile() == FILE_SHADER_INPUT) {
          if (prog->getType() == Program::TYPE_COMPUTE) {
@@ -1820,6 +1846,24 @@ NVC0LoweringPass::visit(Instruction *i)
       } else if (i->src(0).getFile() == FILE_SHADER_OUTPUT) {
          assert(prog->getType() == Program::TYPE_TESSELLATION_CONTROL);
          i->op = OP_VFETCH;
+      } else if (i->src(0).getFile() == FILE_MEMORY_GLOBAL) {
+         Value *ptr = loadResInfo64(NULL, i->getSrc(0)->reg.fileIndex * 16);
+         // XXX come up with a way not to do this for EVERY little access but
+         // rather to batch these up somehow. Unfortunately we've lost the
+         // information about the field width by the time we get here.
+         Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType));
+         Value *length = loadResLength32(NULL, i->getSrc(0)->reg.fileIndex * 16);
+         Value *pred = new_LValue(func, FILE_PREDICATE);
+         if (i->src(0).isIndirect(0)) {
+            bld.mkOp2(OP_ADD, TYPE_U64, ptr, ptr, i->getIndirect(0, 0));
+            bld.mkOp2(OP_ADD, TYPE_U32, offset, offset, i->getIndirect(0, 0));
+         }
+         i->setIndirect(0, 0, ptr);
+         bld.mkCmp(OP_SET, CC_GT, TYPE_U32, pred, TYPE_U32, offset, length);
+         i->setPredicate(CC_NOT_P, pred);
+         if (i->defExists(0)) {
+            bld.mkMov(i->getDef(0), bld.mkImm(0));
+         }
       }
       break;
    case OP_ATOM:
