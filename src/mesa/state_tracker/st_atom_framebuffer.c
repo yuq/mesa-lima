@@ -43,6 +43,7 @@
 #include "util/u_math.h"
 #include "util/u_inlines.h"
 #include "util/u_format.h"
+#include "main/framebuffer.h"
 
 
 /**
@@ -114,8 +115,6 @@ update_framebuffer_state( struct st_context *st )
    st_flush_bitmap_cache(st);
 
    st->state.fb_orientation = st_fb_orientation(fb);
-   framebuffer->width  = UINT_MAX;
-   framebuffer->height = UINT_MAX;
 
    /**
     * Quantize the derived default number of samples:
@@ -128,7 +127,10 @@ update_framebuffer_state( struct st_context *st )
    fb->DefaultGeometry._NumSamples =
       framebuffer_quantize_num_samples(st, fb->DefaultGeometry.NumSamples);
 
-   /*printf("------ fb size %d x %d\n", fb->Width, fb->Height);*/
+   framebuffer->width  = _mesa_geometric_width(fb);
+   framebuffer->height = _mesa_geometric_height(fb);
+   framebuffer->samples = _mesa_geometric_samples(fb);
+   framebuffer->layers = _mesa_geometric_layers(fb);
 
    /* Examine Mesa's ctx->DrawBuffer->_ColorDrawBuffers state
     * to determine which surfaces to draw to
