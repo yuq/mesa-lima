@@ -365,7 +365,7 @@ gen7_disable_hw_binding_tables(struct brw_context *brw)
 /**
  * Enable hardware binding tables and set up the binding table pool.
  */
-static void
+void
 gen7_enable_hw_binding_tables(struct brw_context *brw)
 {
    if (!brw->use_resource_streamer)

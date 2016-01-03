@@ -396,6 +396,7 @@ void gen7_update_binding_table_from_array(struct brw_context *brw,
                                           gl_shader_stage stage,
                                           const uint32_t* binding_table,
                                           int num_surfaces);
+void gen7_enable_hw_binding_tables(struct brw_context *brw);
 void gen7_disable_hw_binding_tables(struct brw_context *brw);
 void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);
 
