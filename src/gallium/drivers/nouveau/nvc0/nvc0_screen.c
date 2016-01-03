@@ -676,6 +676,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    push->rsvd_kick = 5;
 
    screen->base.vidmem_bindings |= PIPE_BIND_CONSTANT_BUFFER |
+      PIPE_BIND_SHADER_BUFFER |
       PIPE_BIND_VERTEX_BUFFER | PIPE_BIND_INDEX_BUFFER |
       PIPE_BIND_COMMAND_ARGS_BUFFER;
    screen->base.sysmem_bindings |=
@@ -953,8 +954,12 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, screen->tls->size);
    BEGIN_NVC0(push, NVC0_3D(WARP_TEMP_ALLOC), 1);
    PUSH_DATA (push, 0);
+   /* Reduce likelihood of collision with real buffers by placing the hole at
+    * the top of the 4G area. This will have to be dealt with for real
+    * eventually by blocking off that area from the VM.
+    */
    BEGIN_NVC0(push, NVC0_3D(LOCAL_BASE), 1);
-   PUSH_DATA (push, 0);
+   PUSH_DATA (push, 0xff << 24);
 
    if (screen->eng3d->oclass < GM107_3D_CLASS) {
       ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 17, 1 << 20, NULL,
