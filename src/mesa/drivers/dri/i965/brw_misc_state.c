@@ -868,6 +868,26 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
    const uint32_t _3DSTATE_PIPELINE_SELECT =
       is_965 ? CMD_PIPELINE_SELECT_965 : CMD_PIPELINE_SELECT_GM45;
 
+   if (brw->gen >= 8 && brw->gen < 10) {
+      /* From the Broadwell PRM, Volume 2a: Instructions, PIPELINE_SELECT:
+       *
+       *   Software must clear the COLOR_CALC_STATE Valid field in
+       *   3DSTATE_CC_STATE_POINTERS command prior to send a PIPELINE_SELECT
+       *   with Pipeline Select set to GPGPU.
+       *
+       * The internal hardware docs recommend the same workaround for Gen9
+       * hardware too.
+       */
+      if (pipeline == BRW_COMPUTE_PIPELINE) {
+         BEGIN_BATCH(2);
+         OUT_BATCH(_3DSTATE_CC_STATE_POINTERS << 16 | (2 - 2));
+         OUT_BATCH(0);
+         ADVANCE_BATCH();
+
+         brw->ctx.NewDriverState |= BRW_NEW_CC_STATE;
+      }
+   }
+
    /* Select the pipeline */
    BEGIN_BATCH(1);
    OUT_BATCH(_3DSTATE_PIPELINE_SELECT << 16 |
