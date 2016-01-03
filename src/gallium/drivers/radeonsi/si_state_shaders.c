@@ -472,6 +472,17 @@ static void si_shader_ps(struct si_shader *shader)
 	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
 	bool has_centroid;
+	unsigned input_ena = shader->config.spi_ps_input_ena;
+
+	/* we need to enable at least one of them, otherwise we hang the GPU */
+	assert(G_0286CC_PERSP_SAMPLE_ENA(input_ena) ||
+	       G_0286CC_PERSP_CENTER_ENA(input_ena) ||
+	       G_0286CC_PERSP_CENTROID_ENA(input_ena) ||
+	       G_0286CC_PERSP_PULL_MODEL_ENA(input_ena) ||
+	       G_0286CC_LINEAR_SAMPLE_ENA(input_ena) ||
+	       G_0286CC_LINEAR_CENTER_ENA(input_ena) ||
+	       G_0286CC_LINEAR_CENTROID_ENA(input_ena) ||
+	       G_0286CC_LINE_STIPPLE_TEX_ENA(input_ena));
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
@@ -514,6 +525,9 @@ static void si_shader_ps(struct si_shader *shader)
 	    (shader->selector->info.uses_kill ||
 	     shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS))
 		spi_shader_col_format = V_028714_SPI_SHADER_32_R;
+
+	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, input_ena);
+	si_pm4_set_reg(pm4, R_0286D0_SPI_PS_INPUT_ADDR, input_ena);
 
 	/* Set interpolation controls. */
 	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena) ||
@@ -706,6 +720,15 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 						       (is_line && rs->line_smooth)) &&
 						      sctx->framebuffer.nr_samples <= 1;
 			key->ps.clamp_color = rs->clamp_fragment_color;
+
+			key->ps.force_persample_interp = rs->force_persample_interp &&
+							 rs->multisample_enable &&
+							 sctx->framebuffer.nr_samples > 1 &&
+							 sctx->ps_iter_samples > 1 &&
+							 (sel->info.uses_persp_center ||
+							  sel->info.uses_persp_centroid ||
+							  sel->info.uses_linear_center ||
+							  sel->info.uses_linear_centroid);
 		}
 
 		key->ps.alpha_func = si_get_alpha_test_func(sctx);
@@ -808,7 +831,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	sel->type = util_pipe_shader_from_tgsi_processor(sel->info.processor);
 	p_atomic_inc(&sscreen->b.num_shaders_created);
 
-	/* First set which opcode uses which (i,j) pair. */
+	/* Set which opcode uses which (i,j) pair. */
 	if (sel->info.uses_persp_opcode_interp_centroid)
 		sel->info.uses_persp_centroid = true;
 
@@ -822,19 +845,6 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	if (sel->info.uses_linear_opcode_interp_offset ||
 	    sel->info.uses_linear_opcode_interp_sample)
 		sel->info.uses_linear_center = true;
-
-	/* Determine if the shader has to use a conditional assignment when
-	 * emulating force_persample_interp.
-	 */
-	sel->forces_persample_interp_for_persp =
-		sel->info.uses_persp_center +
-		sel->info.uses_persp_centroid +
-		sel->info.uses_persp_sample >= 2;
-
-	sel->forces_persample_interp_for_linear =
-		sel->info.uses_linear_center +
-		sel->info.uses_linear_centroid +
-		sel->info.uses_linear_sample >= 2;
 
 	switch (sel->type) {
 	case PIPE_SHADER_GEOMETRY:
@@ -1179,68 +1189,6 @@ static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 		}
 	}
 	assert(num_interp == num_written);
-}
-
-static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom)
-{
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	struct si_shader *ps = sctx->ps_shader.current;
-	unsigned input_ena;
-
-	if (!ps)
-		return;
-
-	input_ena = ps->config.spi_ps_input_ena;
-
-	/* we need to enable at least one of them, otherwise we hang the GPU */
-	assert(G_0286CC_PERSP_SAMPLE_ENA(input_ena) ||
-	    G_0286CC_PERSP_CENTER_ENA(input_ena) ||
-	    G_0286CC_PERSP_CENTROID_ENA(input_ena) ||
-	    G_0286CC_PERSP_PULL_MODEL_ENA(input_ena) ||
-	    G_0286CC_LINEAR_SAMPLE_ENA(input_ena) ||
-	    G_0286CC_LINEAR_CENTER_ENA(input_ena) ||
-	    G_0286CC_LINEAR_CENTROID_ENA(input_ena) ||
-	    G_0286CC_LINE_STIPPLE_TEX_ENA(input_ena));
-
-	if (sctx->force_persample_interp) {
-		unsigned num_persp = G_0286CC_PERSP_SAMPLE_ENA(input_ena) +
-				     G_0286CC_PERSP_CENTER_ENA(input_ena) +
-				     G_0286CC_PERSP_CENTROID_ENA(input_ena);
-		unsigned num_linear = G_0286CC_LINEAR_SAMPLE_ENA(input_ena) +
-				      G_0286CC_LINEAR_CENTER_ENA(input_ena) +
-				      G_0286CC_LINEAR_CENTROID_ENA(input_ena);
-
-		/* If only one set of (i,j) coordinates is used, we can disable
-		 * CENTER/CENTROID, enable SAMPLE and it will load SAMPLE coordinates
-		 * where CENTER/CENTROID are expected, effectively forcing per-sample
-		 * interpolation.
-		 */
-		if (num_persp == 1) {
-			input_ena &= C_0286CC_PERSP_CENTER_ENA;
-			input_ena &= C_0286CC_PERSP_CENTROID_ENA;
-			input_ena |= G_0286CC_PERSP_SAMPLE_ENA(1);
-		}
-		if (num_linear == 1) {
-			input_ena &= C_0286CC_LINEAR_CENTER_ENA;
-			input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
-			input_ena |= G_0286CC_LINEAR_SAMPLE_ENA(1);
-		}
-
-		/* If at least 2 sets of coordinates are used, we can't use this
-		 * trick and have to select SAMPLE using a conditional assignment
-		 * in the shader with "force_persample_interp" being a shader constant.
-		 */
-	}
-
-	radeon_set_context_reg_seq(cs, R_0286CC_SPI_PS_INPUT_ENA, 2);
-	radeon_emit(cs, input_ena);
-	radeon_emit(cs, input_ena);
-
-	if (ps->selector->forces_persample_interp_for_persp ||
-	    ps->selector->forces_persample_interp_for_linear)
-		radeon_set_sh_reg(cs, R_00B030_SPI_SHADER_USER_DATA_PS_0 +
-				      SI_SGPR_PS_STATE_BITS * 4,
-				  sctx->force_persample_interp);
 }
 
 /**
@@ -1774,12 +1722,6 @@ bool si_update_shaders(struct si_context *sctx)
 			si_mark_atom_dirty(sctx, &sctx->spi_map);
 		}
 
-		if (si_pm4_state_changed(sctx, ps) ||
-		    sctx->force_persample_interp != rs->force_persample_interp) {
-			sctx->force_persample_interp = rs->force_persample_interp;
-			si_mark_atom_dirty(sctx, &sctx->spi_ps_input);
-		}
-
 		if (sctx->b.family == CHIP_STONEY && si_pm4_state_changed(sctx, ps))
 			si_mark_atom_dirty(sctx, &sctx->cb_render_state);
 
@@ -1812,7 +1754,6 @@ bool si_update_shaders(struct si_context *sctx)
 void si_init_shader_functions(struct si_context *sctx)
 {
 	si_init_atom(sctx, &sctx->spi_map, &sctx->atoms.s.spi_map, si_emit_spi_map);
-	si_init_atom(sctx, &sctx->spi_ps_input, &sctx->atoms.s.spi_ps_input, si_emit_spi_ps_input);
 
 	sctx->b.b.create_vs_state = si_create_shader_selector;
 	sctx->b.b.create_tcs_state = si_create_shader_selector;
