@@ -664,6 +664,7 @@ VkResult anv_CreateDevice(
     VkDevice*                                   pDevice)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+   VkResult result;
    struct anv_device *device;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
@@ -699,12 +700,16 @@ VkResult anv_CreateDevice(
 
    /* XXX(chadv): Can we dup() physicalDevice->fd here? */
    device->fd = open(physical_device->path, O_RDWR | O_CLOEXEC);
-   if (device->fd == -1)
+   if (device->fd == -1) {
+      result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
       goto fail_device;
+   }
 
    device->context_id = anv_gem_create_context(device);
-   if (device->context_id == -1)
+   if (device->context_id == -1) {
+      result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
       goto fail_fd;
+   }
 
    device->info = *physical_device->info;
    device->isl_dev = physical_device->isl_dev;
@@ -730,7 +735,9 @@ VkResult anv_CreateDevice(
 
    anv_queue_init(device, &device->queue);
 
-   anv_device_init_meta(device);
+   result = anv_device_init_meta(device);
+   if (result != VK_SUCCESS)
+      goto fail_fd;
 
    anv_device_init_border_colors(device);
 
@@ -743,7 +750,7 @@ VkResult anv_CreateDevice(
  fail_device:
    anv_free(&device->alloc, device);
 
-   return vk_error(VK_ERROR_INITIALIZATION_FAILED);
+   return result;
 }
 
 void anv_DestroyDevice(

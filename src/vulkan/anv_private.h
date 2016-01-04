@@ -1631,7 +1631,7 @@ struct anv_query_pool {
    struct anv_bo                                bo;
 };
 
-void anv_device_init_meta(struct anv_device *device);
+VkResult anv_device_init_meta(struct anv_device *device);
 void anv_device_finish_meta(struct anv_device *device);
 
 void *anv_lookup_entrypoint(const char *name);

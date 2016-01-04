@@ -178,10 +178,12 @@ meta_blit_get_dest_view_base_array_slice(const struct anv_image *dest_image,
    }
 }
 
-static void
+static VkResult
 anv_device_init_meta_blit_state(struct anv_device *device)
 {
-   anv_CreateRenderPass(anv_device_to_handle(device),
+   VkResult result;
+
+   result = anv_CreateRenderPass(anv_device_to_handle(device),
       &(VkRenderPassCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
          .attachmentCount = 1,
@@ -214,6 +216,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          },
          .dependencyCount = 0,
       }, NULL, &device->meta_state.blit.render_pass);
+   if (result != VK_SUCCESS)
+      goto fail;
 
    /* We don't use a vertex shader for clearing, but instead build and pass
     * the VUEs directly to the rasterization backend.  However, we do need
@@ -286,16 +290,21 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          },
       }
    };
-   anv_CreateDescriptorSetLayout(anv_device_to_handle(device), &ds_layout_info,
-                                 NULL, &device->meta_state.blit.ds_layout);
+   result = anv_CreateDescriptorSetLayout(anv_device_to_handle(device),
+                                          &ds_layout_info, NULL,
+                                          &device->meta_state.blit.ds_layout);
+   if (result != VK_SUCCESS)
+      goto fail_render_pass;
 
-   anv_CreatePipelineLayout(anv_device_to_handle(device),
+   result = anv_CreatePipelineLayout(anv_device_to_handle(device),
       &(VkPipelineLayoutCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
          .setLayoutCount = 1,
          .pSetLayouts = &device->meta_state.blit.ds_layout,
       },
       NULL, &device->meta_state.blit.pipeline_layout);
+   if (result != VK_SUCCESS)
+      goto fail_descriptor_set_layout;
 
    VkPipelineShaderStageCreateInfo pipeline_shader_stages[] = {
       {
@@ -382,18 +391,43 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    };
 
    pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_2d);
-   anv_graphics_pipeline_create(anv_device_to_handle(device),
+   result = anv_graphics_pipeline_create(anv_device_to_handle(device),
       &vk_pipeline_info, &anv_pipeline_info,
       NULL, &device->meta_state.blit.pipeline_2d_src);
+   if (result != VK_SUCCESS)
+      goto fail_pipeline_layout;
 
    pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_3d);
-   anv_graphics_pipeline_create(anv_device_to_handle(device),
+   result = anv_graphics_pipeline_create(anv_device_to_handle(device),
       &vk_pipeline_info, &anv_pipeline_info,
       NULL, &device->meta_state.blit.pipeline_3d_src);
+   if (result != VK_SUCCESS)
+      goto fail_pipeline_2d;
 
    ralloc_free(vs.nir);
    ralloc_free(fs_2d.nir);
    ralloc_free(fs_3d.nir);
+
+   return VK_SUCCESS;
+
+ fail_pipeline_2d:
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       device->meta_state.blit.pipeline_2d_src, NULL);
+ fail_pipeline_layout:
+   anv_DestroyPipelineLayout(anv_device_to_handle(device),
+                             device->meta_state.blit.pipeline_layout, NULL);
+ fail_descriptor_set_layout:
+   anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
+                                  device->meta_state.blit.ds_layout, NULL);
+ fail_render_pass:
+   anv_DestroyRenderPass(anv_device_to_handle(device),
+                         device->meta_state.blit.render_pass, NULL);
+
+   ralloc_free(vs.nir);
+   ralloc_free(fs_2d.nir);
+   ralloc_free(fs_3d.nir);
+ fail:
+   return result;
 }
 
 static void
@@ -1272,11 +1306,19 @@ void anv_CmdResolveImage(
    stub();
 }
 
-void
+VkResult
 anv_device_init_meta(struct anv_device *device)
 {
-   anv_device_init_meta_clear_state(device);
-   anv_device_init_meta_blit_state(device);
+   VkResult result;
+   result = anv_device_init_meta_clear_state(device);
+   if (result != VK_SUCCESS)
+      return result;
+
+   result = anv_device_init_meta_blit_state(device);
+   if (result != VK_SUCCESS)
+      return result;
+
+   return VK_SUCCESS;
 }
 
 void

@@ -112,22 +112,24 @@ build_color_shaders(struct nir_shader **out_vs,
    *out_fs = fs_b.shader;
 }
 
-static struct anv_pipeline *
+static VkResult
 create_pipeline(struct anv_device *device,
                 struct nir_shader *vs_nir,
                 struct nir_shader *fs_nir,
                 const VkPipelineVertexInputStateCreateInfo *vi_state,
                 const VkPipelineDepthStencilStateCreateInfo *ds_state,
                 const VkPipelineColorBlendStateCreateInfo *cb_state,
-                const VkAllocationCallbacks *alloc)
+                const VkAllocationCallbacks *alloc,
+                struct anv_pipeline **pipeline)
 {
    VkDevice device_h = anv_device_to_handle(device);
+   VkResult result;
 
    struct anv_shader_module vs_m = { .nir = vs_nir };
    struct anv_shader_module fs_m = { .nir = fs_nir };
 
    VkPipeline pipeline_h;
-   anv_graphics_pipeline_create(device_h,
+   result = anv_graphics_pipeline_create(device_h,
       &(VkGraphicsPipelineCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
          .stageCount = 2,
@@ -212,10 +214,12 @@ create_pipeline(struct anv_device *device,
    ralloc_free(vs_nir);
    ralloc_free(fs_nir);
 
-   return anv_pipeline_from_handle(pipeline_h);
+   *pipeline = anv_pipeline_from_handle(pipeline_h);
+
+   return result;
 }
 
-static void
+static VkResult
 init_color_pipeline(struct anv_device *device)
 {
    struct nir_shader *vs_nir;
@@ -281,9 +285,10 @@ init_color_pipeline(struct anv_device *device)
       },
    };
 
-   device->meta_state.clear.color_pipeline =
+   return
       create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
-                      &cb_state, NULL);
+                      &cb_state, NULL,
+                      &device->meta_state.clear.color_pipeline);
 }
 
 static void
@@ -393,9 +398,10 @@ build_depthstencil_shaders(struct nir_shader **out_vs,
    *out_fs = fs_b.shader;
 }
 
-static struct anv_pipeline *
+static VkResult
 create_depthstencil_pipeline(struct anv_device *device,
-                             VkImageAspectFlags aspects)
+                             VkImageAspectFlags aspects,
+                             struct anv_pipeline **pipeline)
 {
    struct nir_shader *vs_nir;
    struct nir_shader *fs_nir;
@@ -455,7 +461,7 @@ create_depthstencil_pipeline(struct anv_device *device,
    };
 
    return create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
-                          &cb_state, NULL);
+                          &cb_state, NULL, pipeline);
 }
 
 static void
@@ -553,25 +559,67 @@ emit_load_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
    ANV_CALL(CmdDraw)(cmd_buffer_h, 3, 1, 0, 0);
 }
 
-static void
+static VkResult
 init_depthstencil_pipelines(struct anv_device *device)
 {
-   device->meta_state.clear.depth_only_pipeline =
-      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_DEPTH_BIT);
+   VkResult result;
+   struct anv_meta_state *state = &device->meta_state;
 
-   device->meta_state.clear.stencil_only_pipeline =
-      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_STENCIL_BIT);
+   result =
+      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_DEPTH_BIT,
+                                   &state->clear.depth_only_pipeline);
+   if (result != VK_SUCCESS)
+      goto fail;
 
-   device->meta_state.clear.depthstencil_pipeline =
-      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_DEPTH_BIT |
-                                           VK_IMAGE_ASPECT_STENCIL_BIT);
+   result =
+      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_STENCIL_BIT,
+                                   &state->clear.stencil_only_pipeline);
+   if (result != VK_SUCCESS)
+      goto fail_depth_only;
+
+   result =
+      create_depthstencil_pipeline(device,
+                                   VK_IMAGE_ASPECT_DEPTH_BIT |
+                                   VK_IMAGE_ASPECT_STENCIL_BIT,
+                                   &state->clear.depthstencil_pipeline);
+   if (result != VK_SUCCESS)
+      goto fail_stencil_only;
+
+   return result;
+
+ fail_stencil_only:
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       anv_pipeline_to_handle(state->clear.stencil_only_pipeline),
+                       NULL);
+ fail_depth_only:
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       anv_pipeline_to_handle(state->clear.depth_only_pipeline),
+                       NULL);
+ fail:
+   return result;
 }
 
-void
+VkResult
 anv_device_init_meta_clear_state(struct anv_device *device)
 {
-   init_color_pipeline(device);
-   init_depthstencil_pipelines(device);
+   VkResult result;
+
+   result = init_color_pipeline(device);
+   if (result != VK_SUCCESS)
+      goto fail;
+
+   result = init_depthstencil_pipelines(device);
+   if (result != VK_SUCCESS)
+      goto fail_color_pipeline;
+
+   return VK_SUCCESS;
+
+ fail_color_pipeline:
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       anv_pipeline_to_handle(device->meta_state.clear.color_pipeline),
+                       NULL);
+ fail:
+    return result;
 }
 
 void
