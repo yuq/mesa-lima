@@ -1923,7 +1923,7 @@ NineDevice9_Clear( struct NineDevice9 *This,
         Count = 0;
 #endif
 
-    nine_update_state_framebuffer(This);
+    nine_update_state_framebuffer_clear(This);
 
     if (Flags & D3DCLEAR_TARGET) bufs |= PIPE_CLEAR_COLOR;
     /* Ignore Z buffer if not bound */

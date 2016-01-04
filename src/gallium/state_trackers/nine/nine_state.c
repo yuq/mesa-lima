@@ -427,8 +427,8 @@ prepare_ps(struct NineDevice9 *device, uint8_t shader_changed)
 
 /* State preparation + State commit */
 
-static uint32_t
-update_framebuffer(struct NineDevice9 *device)
+static void
+update_framebuffer(struct NineDevice9 *device, bool is_clear)
 {
     struct pipe_context *pipe = device->pipe;
     struct nine_state *state = &device->state;
@@ -438,7 +438,8 @@ update_framebuffer(struct NineDevice9 *device)
     unsigned w = rt0->desc.Width;
     unsigned h = rt0->desc.Height;
     D3DMULTISAMPLE_TYPE nr_samples = rt0->desc.MultiSampleType;
-    unsigned mask = state->ps ? state->ps->rt_mask : 1;
+    unsigned ps_mask = state->ps ? state->ps->rt_mask : 1;
+    unsigned mask = is_clear ? 0xf : ps_mask;
     const int sRGB = state->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
 
     DBG("\n");
@@ -498,7 +499,8 @@ update_framebuffer(struct NineDevice9 *device)
 
     pipe->set_framebuffer_state(pipe, fb); /* XXX: cso ? */
 
-    return state->changed.group;
+    if (is_clear && state->rt_mask == ps_mask)
+        state->changed.group &= ~NINE_STATE_FB;
 }
 
 static void
@@ -934,16 +936,14 @@ validate_textures(struct NineDevice9 *device)
 }
 
 void
-nine_update_state_framebuffer(struct NineDevice9 *device)
+nine_update_state_framebuffer_clear(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
 
     validate_textures(device);
 
     if (state->changed.group & NINE_STATE_FB)
-        update_framebuffer(device);
-
-    state->changed.group &= ~NINE_STATE_FB;
+        update_framebuffer(device, TRUE);
 }
 
 boolean
@@ -977,7 +977,7 @@ nine_update_state(struct NineDevice9 *device)
 
     if (group & (NINE_STATE_COMMON | NINE_STATE_VS)) {
         if (group & NINE_STATE_FB)
-            group |= update_framebuffer(device); /* may set NINE_STATE_RASTERIZER */
+            update_framebuffer(device, FALSE);
         if (group & NINE_STATE_BLEND)
             prepare_blend(device);
         if (group & NINE_STATE_DSA)

@@ -239,7 +239,7 @@ extern const uint32_t nine_render_states_vertex[(NINED3DRS_COUNT + 31) / 32];
 
 struct NineDevice9;
 
-void nine_update_state_framebuffer(struct NineDevice9 *);
+void nine_update_state_framebuffer_clear(struct NineDevice9 *);
 boolean nine_update_state(struct NineDevice9 *);
 
 void nine_state_restore_non_cso(struct NineDevice9 *device);

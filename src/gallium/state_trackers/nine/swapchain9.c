@@ -854,7 +854,6 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
     ID3DPresent_WaitBufferReleased(This->present, This->present_handles[0]);
 
     This->base.device->state.changed.group |= NINE_STATE_FB;
-    nine_update_state_framebuffer(This->base.device);
 
     return hr;
 }
