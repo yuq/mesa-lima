@@ -439,8 +439,8 @@ enum isl_tiling {
    ISL_TILING_W,
    ISL_TILING_X,
    ISL_TILING_Y0, /**< Legacy Y tiling */
-   ISL_TILING_Yf,
-   ISL_TILING_Ys,
+   ISL_TILING_Yf, /**< Standard 4K tiling. The 'f' means "four". */
+   ISL_TILING_Ys, /**< Standard 64K tiling. The 's' means "sixty-four". */
 };
 
 /**
