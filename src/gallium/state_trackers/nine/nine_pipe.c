@@ -181,6 +181,7 @@ nine_convert_blend_state(struct pipe_blend_state *blend_state, const DWORD *rs)
         }
         nine_convert_blend_state_fixup(&blend, rs); /* for BOTH[INV]SRCALPHA */
     }
+
     blend.rt[0].colormask = rs[D3DRS_COLORWRITEENABLE];
 
     if (rs[D3DRS_COLORWRITEENABLE1] != rs[D3DRS_COLORWRITEENABLE] ||
@@ -222,8 +223,8 @@ nine_convert_sampler_state(struct cso_context *ctx, int idx, const DWORD *ss)
     samp.wrap_s = d3dtextureaddress_to_pipe_tex_wrap(ss[D3DSAMP_ADDRESSU]);
     samp.wrap_t = d3dtextureaddress_to_pipe_tex_wrap(ss[D3DSAMP_ADDRESSV]);
     samp.wrap_r = d3dtextureaddress_to_pipe_tex_wrap(ss[D3DSAMP_ADDRESSW]);
-    samp.min_img_filter = ss[D3DSAMP_MINFILTER] == D3DTEXF_POINT ? PIPE_TEX_FILTER_NEAREST : PIPE_TEX_FILTER_LINEAR;
-    samp.mag_img_filter = ss[D3DSAMP_MAGFILTER] == D3DTEXF_POINT ? PIPE_TEX_FILTER_NEAREST : PIPE_TEX_FILTER_LINEAR;
+    samp.min_img_filter = (ss[D3DSAMP_MINFILTER] == D3DTEXF_POINT && !ss[NINED3DSAMP_SHADOW]) ? PIPE_TEX_FILTER_NEAREST : PIPE_TEX_FILTER_LINEAR;
+    samp.mag_img_filter = (ss[D3DSAMP_MAGFILTER] == D3DTEXF_POINT && !ss[NINED3DSAMP_SHADOW]) ? PIPE_TEX_FILTER_NEAREST : PIPE_TEX_FILTER_LINEAR;
     if (ss[D3DSAMP_MINFILTER] == D3DTEXF_ANISOTROPIC ||
         ss[D3DSAMP_MAGFILTER] == D3DTEXF_ANISOTROPIC)
         samp.max_anisotropy = ss[D3DSAMP_MAXANISOTROPY];
