@@ -206,8 +206,8 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
       .BaseMipLevel = 0.0,
 
       .SurfaceQPitch = get_qpitch(&surface->isl) >> 2,
-      .Height = image->extent.height - 1,
-      .Width = image->extent.width - 1,
+      .Height = iview->level_0_extent.height - 1,
+      .Width  = iview->level_0_extent.width  - 1,
       .Depth = 0, /* TEMPLATE */
       .SurfacePitch = surface->isl.row_pitch - 1,
       .RenderTargetViewExtent = 0, /* TEMPLATE */
