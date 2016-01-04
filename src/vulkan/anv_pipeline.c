@@ -950,6 +950,8 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
                   const struct anv_graphics_pipeline_create_info *extra,
                   const VkAllocationCallbacks *alloc)
 {
+   VkResult result;
+
    anv_validate {
       anv_pipeline_validate_create_info(pCreateInfo);
    }
@@ -960,8 +962,9 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
    pipeline->device = device;
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
 
-   anv_reloc_list_init(&pipeline->batch_relocs, alloc);
-   /* TODO: Handle allocation fail */
+   result = anv_reloc_list_init(&pipeline->batch_relocs, alloc);
+   if (result != VK_SUCCESS)
+      return result;
 
    pipeline->batch.alloc = alloc;
    pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
