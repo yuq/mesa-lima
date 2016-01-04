@@ -151,6 +151,10 @@ void cso_save_tesseval_shader(struct cso_context *cso);
 void cso_restore_tesseval_shader(struct cso_context *cso);
 
 
+void cso_set_compute_shader_handle(struct cso_context *ctx, void *handle);
+void cso_delete_compute_shader(struct cso_context *ctx, void *handle);
+
+
 void cso_set_framebuffer(struct cso_context *cso,
                          const struct pipe_framebuffer_state *fb);
 void cso_save_framebuffer(struct cso_context *cso);

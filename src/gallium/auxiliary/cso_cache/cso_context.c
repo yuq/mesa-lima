@@ -69,6 +69,7 @@ struct cso_context {
 
    boolean has_geometry_shader;
    boolean has_tessellation;
+   boolean has_compute_shader;
    boolean has_streamout;
 
    struct pipe_sampler_view *fragment_views[PIPE_MAX_SHADER_SAMPLER_VIEWS];
@@ -106,6 +107,7 @@ struct cso_context {
    void *geometry_shader, *geometry_shader_saved;
    void *tessctrl_shader, *tessctrl_shader_saved;
    void *tesseval_shader, *tesseval_shader_saved;
+   void *compute_shader;
    void *velements, *velements_saved;
    struct pipe_query *render_condition, *render_condition_saved;
    uint render_condition_mode, render_condition_mode_saved;
@@ -272,6 +274,10 @@ struct cso_context *cso_create_context( struct pipe_context *pipe )
                                 PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
       ctx->has_tessellation = TRUE;
    }
+   if (pipe->screen->get_shader_param(pipe->screen, PIPE_SHADER_COMPUTE,
+                                      PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
+      ctx->has_compute_shader = TRUE;
+   }
    if (pipe->screen->get_param(pipe->screen,
                                PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS) != 0) {
       ctx->has_streamout = TRUE;
@@ -332,6 +338,10 @@ void cso_destroy_context( struct cso_context *ctx )
          ctx->pipe->set_constant_buffer(ctx->pipe, PIPE_SHADER_TESS_CTRL, 0, NULL);
          ctx->pipe->bind_tes_state(ctx->pipe, NULL);
          ctx->pipe->set_constant_buffer(ctx->pipe, PIPE_SHADER_TESS_EVAL, 0, NULL);
+      }
+      if (ctx->has_compute_shader) {
+         ctx->pipe->bind_compute_state(ctx->pipe, NULL);
+         ctx->pipe->set_constant_buffer(ctx->pipe, PIPE_SHADER_COMPUTE, 0, NULL);
       }
       ctx->pipe->bind_vertex_elements_state( ctx->pipe, NULL );
 
@@ -905,6 +915,26 @@ void cso_restore_tesseval_shader(struct cso_context *ctx)
       ctx->tesseval_shader = ctx->tesseval_shader_saved;
    }
    ctx->tesseval_shader_saved = NULL;
+}
+
+void cso_set_compute_shader_handle(struct cso_context *ctx, void *handle)
+{
+   assert(ctx->has_compute_shader || !handle);
+
+   if (ctx->has_compute_shader && ctx->compute_shader != handle) {
+      ctx->compute_shader = handle;
+      ctx->pipe->bind_compute_state(ctx->pipe, handle);
+   }
+}
+
+void cso_delete_compute_shader(struct cso_context *ctx, void *handle)
+{
+    if (handle == ctx->compute_shader) {
+      /* unbind before deleting */
+      ctx->pipe->bind_compute_state(ctx->pipe, NULL);
+      ctx->compute_shader = NULL;
+   }
+   ctx->pipe->delete_compute_state(ctx->pipe, handle);
 }
 
 enum pipe_error
