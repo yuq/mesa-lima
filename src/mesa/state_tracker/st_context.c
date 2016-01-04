@@ -80,6 +80,23 @@ DEBUG_GET_ONCE_BOOL_OPTION(mesa_mvp_dp4, "MESA_MVP_DP4", FALSE)
 
 
 /**
+ * Called via ctx->Driver.Enable()
+ */
+static void st_Enable(struct gl_context * ctx, GLenum cap, GLboolean state)
+{
+   struct st_context *st = st_context(ctx);
+
+   switch (cap) {
+   case GL_DEBUG_OUTPUT:
+      st_enable_debug_output(st, state);
+      break;
+   default:
+      break;
+   }
+}
+
+
+/**
  * Called via ctx->Driver.UpdateState()
  */
 void st_invalidate_state(struct gl_context * ctx, GLuint new_state)
@@ -457,5 +474,6 @@ void st_init_driver_functions(struct pipe_screen *screen,
 
    st_init_vdpau_functions(functions);
 
+   functions->Enable = st_Enable;
    functions->UpdateState = st_invalidate_state;
 }
