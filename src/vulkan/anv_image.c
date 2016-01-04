@@ -532,10 +532,28 @@ anv_image_view_init(struct anv_image_view *iview,
 
    iview->base_layer = range->baseArrayLayer;
    iview->base_mip = range->baseMipLevel;
+
+   if (!isl_format_is_compressed(iview->format) &&
+       isl_format_is_compressed(image->format->surface_format)) {
+      /* Scale the ImageView extent by the backing Image. This is used
+       * internally when an uncompressed ImageView is created on a
+       * compressed Image. The ImageView can therefore be used for copying
+       * data from a source Image to a destination Image.
+       */
+      const struct isl_format_layout * isl_layout = image->format->isl_layout;
+      iview->level_0_extent.width  = DIV_ROUND_UP(image->extent.width , isl_layout->bw);
+      iview->level_0_extent.height = DIV_ROUND_UP(image->extent.height, isl_layout->bh);
+      iview->level_0_extent.depth  = DIV_ROUND_UP(image->extent.depth , isl_layout->bd);
+   } else {
+      iview->level_0_extent.width  = image->extent.width ;
+      iview->level_0_extent.height = image->extent.height;
+      iview->level_0_extent.depth  = image->extent.depth ;
+   }
+
    iview->extent = (VkExtent3D) {
-      .width = anv_minify(image->extent.width, range->baseMipLevel),
-      .height = anv_minify(image->extent.height, range->baseMipLevel),
-      .depth = anv_minify(image->extent.depth, range->baseMipLevel),
+      .width  = anv_minify(iview->level_0_extent.width , range->baseMipLevel),
+      .height = anv_minify(iview->level_0_extent.height, range->baseMipLevel),
+      .depth  = anv_minify(iview->level_0_extent.depth , range->baseMipLevel),
    };
 
    if (image->needs_nonrt_surface_state) {
