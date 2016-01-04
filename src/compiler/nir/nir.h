@@ -2417,6 +2417,7 @@ typedef enum {
    nir_lower_drcp = (1 << 0),
    nir_lower_dsqrt = (1 << 1),
    nir_lower_drsq = (1 << 2),
+   nir_lower_dtrunc = (1 << 3),
 } nir_lower_doubles_options;
 
 void nir_lower_doubles(nir_shader *shader, nir_lower_doubles_options options);

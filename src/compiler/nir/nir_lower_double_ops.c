@@ -299,6 +299,58 @@ lower_sqrt_rsq(nir_builder *b, nir_ssa_def *src, bool sqrt)
     return res;
 }
 
+static nir_ssa_def *
+lower_trunc(nir_builder *b, nir_ssa_def *src)
+{
+   nir_ssa_def *unbiased_exp = nir_isub(b, get_exponent(b, src),
+                                        nir_imm_int(b, 1023));
+
+   nir_ssa_def *frac_bits = nir_isub(b, nir_imm_int(b, 52), unbiased_exp);
+
+   /*
+    * Decide the operation to apply depending on the unbiased exponent:
+    *
+    * if (unbiased_exp < 0)
+    *    return 0
+    * else if (unbiased_exp > 52)
+    *    return src
+    * else
+    *    return src & (~0 << frac_bits)
+    *
+    * Notice that the else branch is a 64-bit integer operation that we need
+    * to implement in terms of 32-bit integer arithmetics (at least until we
+    * support 64-bit integer arithmetics).
+    */
+
+   /* Compute "~0 << frac_bits" in terms of hi/lo 32-bit integer math */
+   nir_ssa_def *mask_lo =
+      nir_bcsel(b,
+                nir_ige(b, frac_bits, nir_imm_int(b, 32)),
+                nir_imm_int(b, 0),
+                nir_ishl(b, nir_imm_int(b, ~0), frac_bits));
+
+   nir_ssa_def *mask_hi =
+      nir_bcsel(b,
+                nir_ilt(b, frac_bits, nir_imm_int(b, 33)),
+                nir_imm_int(b, ~0),
+                nir_ishl(b,
+                         nir_imm_int(b, ~0),
+                         nir_isub(b, frac_bits, nir_imm_int(b, 32))));
+
+   nir_ssa_def *src_lo = nir_unpack_double_2x32_split_x(b, src);
+   nir_ssa_def *src_hi = nir_unpack_double_2x32_split_y(b, src);
+
+   return
+      nir_bcsel(b,
+                nir_ilt(b, unbiased_exp, nir_imm_int(b, 0)),
+                nir_imm_double(b, 0.0),
+                nir_bcsel(b, nir_ige(b, unbiased_exp, nir_imm_int(b, 53)),
+                          src,
+                          nir_pack_double_2x32_split(b,
+                                                     nir_iand(b, mask_lo, src_lo),
+                                                     nir_iand(b, mask_hi, src_hi))));
+}
+
 static void
 lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
 {
@@ -319,6 +371,11 @@ lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
 
    case nir_op_frsq:
       if (!(options & nir_lower_drsq))
+         return;
+      break;
+
+   case nir_op_ftrunc:
+      if (!(options & nir_lower_dtrunc))
          return;
       break;
 
@@ -344,6 +401,9 @@ lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
       break;
    case nir_op_frsq:
       result = lower_sqrt_rsq(&bld, src, false);
+      break;
+   case nir_op_ftrunc:
+      result = lower_trunc(&bld, src);
       break;
    default:
       unreachable("unhandled opcode");
