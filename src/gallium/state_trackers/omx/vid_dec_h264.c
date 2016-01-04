@@ -128,6 +128,7 @@ static void vid_dec_h264_BeginFrame(vid_dec_PrivateType *priv)
 
       priv->codec = priv->pipe->create_video_codec(priv->pipe, &templat);
    }
+   priv->picture.h264.slice_count = 0;
    priv->codec->begin_frame(priv->codec, priv->target, &priv->picture.base);
    priv->frame_started = true;
 }
@@ -961,6 +962,7 @@ static void vid_dec_h264_Decode(vid_dec_PrivateType *priv, struct vl_vlc *vlc, u
 
    if (priv->slice) {
       unsigned bytes = priv->bytes_left - (vl_vlc_bits_left(vlc) / 8);
+      ++priv->picture.h264.slice_count;
       priv->codec->decode_bitstream(priv->codec, priv->target, &priv->picture.base,
                                     1, &priv->slice, &bytes);
       priv->slice = NULL;
@@ -1018,6 +1020,7 @@ static void vid_dec_h264_Decode(vid_dec_PrivateType *priv, struct vl_vlc *vlc, u
 
       vid_dec_h264_BeginFrame(priv);
 
+      ++priv->picture.h264.slice_count;
       priv->codec->decode_bitstream(priv->codec, priv->target, &priv->picture.base,
                                     1, &ptr, &bytes);
    }
