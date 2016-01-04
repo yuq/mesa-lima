@@ -290,8 +290,10 @@ genX(graphics_pipeline_create)(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    result = anv_pipeline_init(pipeline, device, pCreateInfo, extra, pAllocator);
-   if (result != VK_SUCCESS)
+   if (result != VK_SUCCESS) {
+      anv_free2(&device->alloc, pAllocator, pipeline);
       return result;
+   }
 
    assert(pCreateInfo->pVertexInputState);
    emit_vertex_input(pipeline, pCreateInfo->pVertexInputState, extra);
