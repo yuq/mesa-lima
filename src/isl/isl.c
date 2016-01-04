@@ -833,9 +833,9 @@ isl_calc_row_pitch(const struct isl_device *dev,
        */
       if (info->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) {
          if (isl_format_is_yuv(info->format)) {
-            row_pitch = isl_align(row_pitch, 2 * fmtl->bs);
+            row_pitch = isl_align_npot(row_pitch, 2 * fmtl->bs);
          } else  {
-            row_pitch = isl_align(row_pitch, fmtl->bs);
+            row_pitch = isl_align_npot(row_pitch, fmtl->bs);
          }
       }
       break;
