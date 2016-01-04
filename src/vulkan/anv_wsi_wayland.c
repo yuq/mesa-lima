@@ -862,9 +862,11 @@ anv_wl_finish_wsi(struct anv_instance *instance)
 {
    struct wsi_wayland *wsi = instance->wayland_wsi;
 
-   _mesa_hash_table_destroy(wsi->displays, NULL);
+   if (wsi) {
+      _mesa_hash_table_destroy(wsi->displays, NULL);
 
-   pthread_mutex_destroy(&wsi->mutex);
+      pthread_mutex_destroy(&wsi->mutex);
 
-   anv_free(&instance->alloc, wsi);
+      anv_free(&instance->alloc, wsi);
+   }
 }
