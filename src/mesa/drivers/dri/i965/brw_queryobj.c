@@ -111,6 +111,14 @@ brw_write_depth_count(struct brw_context *brw, struct brw_bo *query_bo, int idx)
    if (brw->gen == 9 && brw->gt == 4)
       flags |= PIPE_CONTROL_CS_STALL;
 
+   if (brw->gen >= 10) {
+      /* "Driver must program PIPE_CONTROL with only Depth Stall Enable bit set
+       * prior to programming a PIPE_CONTROL with Write PS Depth Count Post sync
+       * operation."
+       */
+      brw_emit_pipe_control_flush(brw, PIPE_CONTROL_DEPTH_STALL);
+   }
+
    brw_emit_pipe_control_write(brw, flags,
                                query_bo, idx * sizeof(uint64_t),
                                0, 0);
