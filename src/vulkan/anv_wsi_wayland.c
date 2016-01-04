@@ -820,18 +820,20 @@ anv_wl_init_wsi(struct anv_instance *instance)
 
    wsi = anv_alloc(&instance->alloc, sizeof(*wsi), 8,
                    VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (!wsi)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   if (!wsi) {
+      result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      goto fail;
+   }
 
    wsi->instance = instance;
 
    int ret = pthread_mutex_init(&wsi->mutex, NULL);
    if (ret != 0) {
       if (ret == ENOMEM) {
-         result = VK_ERROR_OUT_OF_HOST_MEMORY;
+         result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       } else {
          /* FINISHME: Choose a better error. */
-         result = VK_ERROR_OUT_OF_HOST_MEMORY;
+         result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
       goto fail_alloc;
@@ -840,7 +842,7 @@ anv_wl_init_wsi(struct anv_instance *instance)
    wsi->displays = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                            _mesa_key_pointer_equal);
    if (!wsi->displays) {
-      result = VK_ERROR_OUT_OF_HOST_MEMORY;
+      result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       goto fail_mutex;
    }
 
@@ -853,6 +855,8 @@ fail_mutex:
 
 fail_alloc:
    anv_free(&instance->alloc, wsi);
+fail:
+   instance->wayland_wsi = NULL;
 
    return result;
 }
