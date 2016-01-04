@@ -6170,6 +6170,11 @@ emit_vertex_attrib_instructions(struct svga_shader_emitter_v10 *emit)
 
       while (adjust_mask) {
          unsigned index = u_bit_scan(&adjust_mask);
+
+         /* skip the instruction if this vertex attribute is not being used */
+         if (emit->info.input_usage_mask[index] == 0)
+            continue;
+
          unsigned tmp = emit->vs.adjusted_input[index];
          struct tgsi_full_src_register input_src =
             make_src_reg(TGSI_FILE_INPUT, index);
