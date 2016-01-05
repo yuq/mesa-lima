@@ -3129,86 +3129,27 @@ vtn_handle_barrier(struct vtn_builder *b, SpvOp opcode,
 }
 
 static void
-vtn_phi_node_init(struct vtn_builder *b, struct vtn_ssa_value *val)
-{
-   if (glsl_type_is_vector_or_scalar(val->type)) {
-      nir_phi_instr *phi = nir_phi_instr_create(b->shader);
-      nir_ssa_dest_init(&phi->instr, &phi->dest,
-                        glsl_get_vector_elements(val->type), NULL);
-      exec_list_make_empty(&phi->srcs);
-      nir_builder_instr_insert(&b->nb, &phi->instr);
-      val->def = &phi->dest.ssa;
-   } else {
-      unsigned elems = glsl_get_length(val->type);
-      for (unsigned i = 0; i < elems; i++)
-         vtn_phi_node_init(b, val->elems[i]);
-   }
-}
-
-static struct vtn_ssa_value *
-vtn_phi_node_create(struct vtn_builder *b, const struct glsl_type *type)
-{
-   struct vtn_ssa_value *val = vtn_create_ssa_value(b, type);
-   vtn_phi_node_init(b, val);
-   return val;
-}
-
-static void
 vtn_handle_phi_first_pass(struct vtn_builder *b, const uint32_t *w)
 {
+   /* For handling phi nodes, we do a poor-man's out-of-ssa on the spot.
+    * For each phi, we create a variable with the appropreate type and do a
+    * load from that variable.  Then, in a second pass, we add stores to
+    * that variable to each of the predecessor blocks.
+    *
+    * We could do something more intelligent here.  However, in order to
+    * handle loops and things properly, we really need dominance
+    * information.  It would end up basically being the into-SSA algorithm
+    * all over again.  It's easier if we just let lower_vars_to_ssa do that
+    * for us instead of repeating it here.
+    */
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-   const struct glsl_type *type =
-      vtn_value(b, w[1], vtn_value_type_type)->type->type;
-   val->ssa = vtn_phi_node_create(b, type);
-}
 
-static void
-vtn_phi_node_add_src(struct vtn_ssa_value *phi, const nir_block *pred,
-                     struct vtn_ssa_value *val)
-{
-   assert(phi->type == val->type);
-   if (glsl_type_is_vector_or_scalar(phi->type)) {
-      nir_phi_instr *phi_instr = nir_instr_as_phi(phi->def->parent_instr);
-      nir_phi_src *src = ralloc(phi_instr, nir_phi_src);
-      src->pred = (nir_block *) pred;
-      src->src = NIR_SRC_INIT;
-      exec_list_push_tail(&phi_instr->srcs, &src->node);
-      nir_instr_rewrite_src(&phi_instr->instr, &src->src,
-                            nir_src_for_ssa(val->def));
-   } else {
-      unsigned elems = glsl_get_length(phi->type);
-      for (unsigned i = 0; i < elems; i++)
-         vtn_phi_node_add_src(phi->elems[i], pred, val->elems[i]);
-   }
-}
+   struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
+   nir_variable *phi_var =
+      nir_local_variable_create(b->nb.impl, type->type, "phi");
+   _mesa_hash_table_insert(b->phi_table, w, phi_var);
 
-static struct vtn_ssa_value *
-vtn_get_phi_node_src(struct vtn_builder *b, nir_block *block,
-                     const struct glsl_type *type, const uint32_t *w,
-                     unsigned count)
-{
-   struct hash_entry *entry = _mesa_hash_table_search(b->block_table, block);
-   if (entry) {
-      struct vtn_block *spv_block = entry->data;
-      for (unsigned off = 4; off < count; off += 2) {
-         if (spv_block == vtn_value(b, w[off], vtn_value_type_block)->block) {
-            return vtn_ssa_value(b, w[off - 1]);
-         }
-      }
-   }
-
-   b->nb.cursor = nir_before_block(block);
-   struct vtn_ssa_value *phi = vtn_phi_node_create(b, type);
-
-   struct set_entry *entry2;
-   set_foreach(block->predecessors, entry2) {
-      nir_block *pred = (nir_block *) entry2->key;
-      struct vtn_ssa_value *val = vtn_get_phi_node_src(b, pred, type, w,
-                                                       count);
-      vtn_phi_node_add_src(phi, pred, val);
-   }
-
-   return phi;
+   val->ssa = vtn_variable_load(b, nir_deref_var_create(b, phi_var), type);
 }
 
 static bool
@@ -3223,15 +3164,20 @@ vtn_handle_phi_second_pass(struct vtn_builder *b, SpvOp opcode,
    if (opcode != SpvOpPhi)
       return true;
 
-   struct vtn_ssa_value *phi = vtn_value(b, w[2], vtn_value_type_ssa)->ssa;
+   struct hash_entry *phi_entry = _mesa_hash_table_search(b->phi_table, w);
+   assert(phi_entry);
+   nir_variable *phi_var = phi_entry->data;
 
-   struct set_entry *entry;
-   set_foreach(b->block->block->predecessors, entry) {
-      nir_block *pred = (nir_block *) entry->key;
+   struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
 
-      struct vtn_ssa_value *val = vtn_get_phi_node_src(b, pred, phi->type, w,
-                                                       count);
-      vtn_phi_node_add_src(phi, pred, val);
+   for (unsigned i = 3; i < count; i += 2) {
+      struct vtn_ssa_value *src = vtn_ssa_value(b, w[i]);
+      struct vtn_block *pred =
+         vtn_value(b, w[i + 1], vtn_value_type_block)->block;
+
+      b->nb.cursor = nir_after_block_before_jump(pred->end_block);
+
+      vtn_variable_store(b, src, nir_deref_var_create(b, phi_var), type);
    }
 
    return true;
@@ -3536,11 +3482,8 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpLine:
       break; /* Ignored for now */
 
-   case SpvOpLabel: {
-      struct vtn_block *block = vtn_value(b, w[1], vtn_value_type_block)->block;
-      assert(block->block == nir_cursor_current_block(b->nb.cursor));
+   case SpvOpLabel:
       break;
-   }
 
    case SpvOpLoopMerge:
    case SpvOpSelectionMerge:
@@ -3828,8 +3771,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
       b->impl = func->impl;
       b->const_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
                                                _mesa_key_pointer_equal);
-      b->block_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
-                                               _mesa_key_pointer_equal);
+      b->phi_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
+                                             _mesa_key_pointer_equal);
       vtn_function_emit(b, func, vtn_handle_body_instruction);
       vtn_foreach_instruction(b, func->start_block->label, func->end,
                               vtn_handle_phi_second_pass);

@@ -491,12 +491,11 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
       case vtn_cf_node_type_block: {
          struct vtn_block *block = (struct vtn_block *)node;
 
-         block->block = nir_cursor_current_block(b->nb.cursor);
-         _mesa_hash_table_insert(b->block_table, block->block, block);
-
          vtn_foreach_instruction(b, block->label,
                                  block->merge ? block->merge : block->branch,
                                  handler);
+
+         block->end_block = nir_cursor_current_block(b->nb.cursor);
 
          if ((*block->branch & SpvOpCodeMask) == SpvOpReturnValue) {
             struct vtn_ssa_value *src = vtn_ssa_value(b, block->branch[1]);

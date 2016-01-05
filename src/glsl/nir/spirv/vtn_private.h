@@ -146,7 +146,8 @@ struct vtn_block {
    /** Points to the switch case started by this block (if any) */
    struct vtn_case *switch_case;
 
-   nir_block *block;
+   /** The last block in this SPIR-V block. */
+   nir_block *end_block;
 };
 
 struct vtn_function {
@@ -301,10 +302,10 @@ struct vtn_builder {
    struct hash_table *const_table;
 
    /*
-    * Map from nir_block to the vtn_block which ends with it -- used for
-    * handling phi nodes.
+    * Map from phi instructions (pointer to the start of the instruction)
+    * to the variable corresponding to it.
     */
-   struct hash_table *block_table;
+   struct hash_table *phi_table;
 
    /*
     * NIR variable for each SPIR-V builtin.
