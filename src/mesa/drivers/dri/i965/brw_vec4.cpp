@@ -274,9 +274,9 @@ vec4_visitor::implied_mrf_writes(vec4_instruction *inst)
    case SHADER_OPCODE_INT_QUOTIENT:
    case SHADER_OPCODE_INT_REMAINDER:
    case SHADER_OPCODE_POW:
+   case TCS_OPCODE_THREAD_END:
       return 2;
    case VS_OPCODE_URB_WRITE:
-   case TCS_OPCODE_THREAD_END:
       return 1;
    case VS_OPCODE_PULL_CONSTANT_LOAD:
       return 2;

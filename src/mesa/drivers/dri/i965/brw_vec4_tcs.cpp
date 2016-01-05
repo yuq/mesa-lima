@@ -205,7 +205,7 @@ vec4_tcs_visitor::emit_thread_end()
 
    inst = emit(TCS_OPCODE_THREAD_END);
    inst->base_mrf = 14;
-   inst->mlen = 1;
+   inst->mlen = 2;
 }
 
 

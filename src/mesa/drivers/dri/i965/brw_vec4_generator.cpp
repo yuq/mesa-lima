@@ -980,15 +980,18 @@ generate_tcs_thread_end(struct brw_codegen *p, vec4_instruction *inst)
    brw_set_default_access_mode(p, BRW_ALIGN_1);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
    brw_MOV(p, header, brw_imm_ud(0));
+   brw_MOV(p, get_element_ud(header, 5), brw_imm_ud(WRITEMASK_X << 8));
    brw_MOV(p, get_element_ud(header, 0),
            retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD));
+   brw_MOV(p, brw_message_reg(inst->base_mrf + 1), brw_imm_ud(0u));
    brw_pop_insn_state(p);
 
    brw_urb_WRITE(p,
                  brw_null_reg(), /* dest */
                  inst->base_mrf, /* starting mrf reg nr */
                  header,
-                 BRW_URB_WRITE_EOT | inst->urb_write_flags,
+                 BRW_URB_WRITE_EOT | BRW_URB_WRITE_OWORD |
+                 BRW_URB_WRITE_USE_CHANNEL_MASKS,
                  inst->mlen,
                  0,              /* response len */
                  0,              /* urb destination offset */
