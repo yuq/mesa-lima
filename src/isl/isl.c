@@ -166,6 +166,16 @@ isl_surf_choose_tiling(const struct isl_device *dev,
    /* Of the tiling modes remaining, choose the one that offers the best
     * performance.
     */
+
+   if (info->dim == ISL_SURF_DIM_1D) {
+      /* Prefer linear for 1D surfaces because they do not benefit from
+       * tiling. To the contrary, tiling leads to wasted memory and poor
+       * memory locality due to the swizzling and alignment restrictions
+       * required in tiled surfaces.
+       */
+      CHOOSE(ISL_TILING_LINEAR);
+   }
+
    CHOOSE(ISL_TILING_Ys);
    CHOOSE(ISL_TILING_Yf);
    CHOOSE(ISL_TILING_Y0);
