@@ -395,7 +395,7 @@ static int tgsi_last_instruction(unsigned writemask)
 static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *i = &ctx->parse.FullToken.FullInstruction;
-	int j;
+	unsigned j;
 
 	if (i->Instruction.NumDstRegs > 1 && i->Instruction.Opcode != TGSI_OPCODE_DFRACEXP) {
 		R600_ERR("too many dst (%d)\n", i->Instruction.NumDstRegs);
@@ -1167,7 +1167,7 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 */
 static int evergreen_gpr_count(struct r600_shader_ctx *ctx)
 {
-	int i;
+	unsigned i;
 	int num_baryc;
 	struct tgsi_parse_context parse;
 
@@ -1586,7 +1586,7 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 static int tgsi_split_gs_inputs(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
-	int i;
+	unsigned i;
 
 	for (i = 0; i < inst->Instruction.NumSrcRegs; i++) {
 		struct tgsi_full_src_register *src = &inst->Src[i];
@@ -1855,7 +1855,7 @@ static int fetch_tcs_output(struct r600_shader_ctx *ctx, struct tgsi_full_src_re
 static int tgsi_split_lds_inputs(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
-	int i;
+	unsigned i;
 
 	for (i = 0; i < inst->Instruction.NumSrcRegs; i++) {
 		struct tgsi_full_src_register *src = &inst->Src[i];
@@ -2785,7 +2785,7 @@ static int r600_tess_factor_read(struct r600_shader_ctx *ctx,
 
 static int r600_emit_tess_factor(struct r600_shader_ctx *ctx)
 {
-	int i;
+	unsigned i;
 	int stride, outer_comps, inner_comps;
 	int tessinner_idx = -1, tessouter_idx = -1;
 	int r;
@@ -4794,7 +4794,7 @@ static int tgsi_lit(struct r600_shader_ctx *ctx)
 	{
 		int chan;
 		int sel;
-		int i;
+		unsigned i;
 
 		if (ctx->bc->chip_class == CAYMAN) {
 			for (i = 0; i < 3; i++) {
@@ -7928,7 +7928,7 @@ static int tgsi_exp(struct r600_shader_ctx *ctx)
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	struct r600_bytecode_alu alu;
 	int r;
-	int i;
+	unsigned i;
 
 	/* result.x = 2^floor(src); */
 	if (inst->Dst[0].Register.WriteMask & 1) {
@@ -8057,7 +8057,7 @@ static int tgsi_log(struct r600_shader_ctx *ctx)
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	struct r600_bytecode_alu alu;
 	int r;
-	int i;
+	unsigned i;
 
 	/* result.x = floor(log2(|src|)); */
 	if (inst->Dst[0].Register.WriteMask & 1) {
@@ -8784,7 +8784,7 @@ static int tgsi_bgnloop(struct r600_shader_ctx *ctx)
 
 static int tgsi_endloop(struct r600_shader_ctx *ctx)
 {
-	int i;
+	unsigned i;
 
 	r600_bytecode_add_cfinst(ctx->bc, CF_OP_LOOP_END);
 
