@@ -695,13 +695,93 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
    }
 }
 
+static void
+image_param_defaults(struct brw_image_param *param)
+{
+   memset(param, 0, sizeof *param);
+   /* Set the swizzling shifts to all-ones to effectively disable swizzling --
+    * See emit_address_calculation() in brw_fs_surface_builder.cpp for a more
+    * detailed explanation of these parameters.
+    */
+   param->swizzling[0] = 0xff;
+   param->swizzling[1] = 0xff;
+}
+
 void
 anv_image_view_fill_image_param(struct anv_device *device,
                                 struct anv_image_view *view,
                                 struct brw_image_param *param)
 {
-   memset(param, 0, sizeof *param);
-   anv_finishme("Actually fill out brw_image_param");
+   image_param_defaults(param);
+
+   const struct isl_surf *surf = &view->image->color_surface.isl;
+
+   const int cpp = isl_format_get_layout(surf->format)->bs;
+
+   param->size[0] = minify(surf->logical_level0_px.width, view->base_mip);
+   param->size[1] = minify(surf->logical_level0_px.height, view->base_mip);
+   if (surf->dim == ISL_SURF_DIM_3D) {
+      param->size[2] = minify(surf->logical_level0_px.depth, view->base_mip);
+   } else {
+      param->size[2] = surf->logical_level0_px.array_len - view->base_layer;
+   }
+
+   isl_surf_get_image_offset_sa(surf, view->base_mip, view->base_layer, 0,
+                                &param->offset[0],  &param->offset[1]);
+
+   param->stride[0] = cpp;
+   param->stride[1] = surf->row_pitch / cpp;
+   if (device->info.gen < 9 && surf->dim == ISL_SURF_DIM_3D)
+      param->stride[2] = util_align_npot(param->size[0], surf->alignment);
+   param->stride[3] = /* TODO */ 0;
+
+   switch (surf->tiling) {
+   case ISL_TILING_LINEAR:
+      /* image_param_defaults is good enough */
+      break;
+
+   case ISL_TILING_X:
+      /* An X tile is a rectangular block of 512x8 bytes. */
+      param->tiling[0] = util_logbase2(512 / cpp);
+      param->tiling[1] = util_logbase2(8);
+
+      if (device->isl_dev.has_bit6_swizzling) {
+         /* Right shifts required to swizzle bits 9 and 10 of the memory
+          * address with bit 6.
+          */
+         param->swizzling[0] = 3;
+         param->swizzling[1] = 4;
+      }
+      break;
+
+   case ISL_TILING_Y0:
+      /* The layout of a Y-tiled surface in memory isn't really fundamentally
+       * different to the layout of an X-tiled surface, we simply pretend that
+       * the surface is broken up in a number of smaller 16Bx32 tiles, each
+       * one arranged in X-major order just like is the case for X-tiling.
+       */
+      param->tiling[0] = util_logbase2(16 / cpp);
+      param->tiling[1] = util_logbase2(32);
+
+      if (device->isl_dev.has_bit6_swizzling) {
+         /* Right shift required to swizzle bit 9 of the memory address with
+          * bit 6.
+          */
+         param->swizzling[0] = 3;
+         param->swizzling[1] = 0xff;
+      }
+      break;
+
+   default:
+      assert(!"Unhandled storage image tiling");
+   }
+
+   /* 3D textures are arranged in 2D in memory with 2^lod slices per row.  The
+    * address calculation algorithm (emit_address_calculation() in
+    * brw_fs_surface_builder.cpp) handles this as a sort of tiling with
+    * modulus equal to the LOD.
+    */
+   param->tiling[2] = (surf->dim == ISL_SURF_DIM_3D) ? view->base_mip : 0;
 }
 
 void
@@ -709,12 +789,7 @@ anv_buffer_view_fill_image_param(struct anv_device *device,
                                  struct anv_buffer_view *view,
                                  struct brw_image_param *param)
 {
-   /* Set the swizzling shifts to all-ones to effectively disable swizzling --
-    * See emit_address_calculation() in brw_fs_surface_builder.cpp for a more
-    * detailed explanation of these parameters.
-    */
-   param->swizzling[0] = 0xff;
-   param->swizzling[1] = 0xff;
+   image_param_defaults(param);
 
    param->stride[0] = isl_format_layouts[view->format].bs;
    param->size[0] = view->range / param->stride[0];
