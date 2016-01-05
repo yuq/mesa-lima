@@ -968,12 +968,43 @@ isl_surf_get_image_alignment_sa(const struct isl_surf *surf)
 }
 
 /**
+ * Pitch between vertically adjacent surface elements, in bytes.
+ */
+static inline uint32_t
+isl_surf_get_row_pitch(const struct isl_surf *surf)
+{
+   return surf->row_pitch;
+}
+
+/**
+ * Pitch between vertically adjacent surface elements, in units of surface elements.
+ */
+static inline uint32_t
+isl_surf_get_row_pitch_el(const struct isl_surf *surf)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
+
+   assert(surf->row_pitch % fmtl->bs == 0);
+   return surf->row_pitch / fmtl->bs;
+}
+
+/**
  * Pitch between physical array slices, in rows of surface elements.
  */
 static inline uint32_t
 isl_surf_get_array_pitch_el_rows(const struct isl_surf *surf)
 {
    return surf->array_pitch_el_rows;
+}
+
+/**
+ * Pitch between physical array slices, in units of surface elements.
+ */
+static inline uint32_t
+isl_surf_get_array_pitch_el(const struct isl_surf *surf)
+{
+   return isl_surf_get_array_pitch_el_rows(surf) *
+          isl_surf_get_row_pitch_el(surf);
 }
 
 /**
