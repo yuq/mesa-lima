@@ -47,9 +47,9 @@ VkResult anv_CreateDescriptorSetLayout(
    uint32_t max_binding = 0;
    uint32_t immutable_sampler_count = 0;
    for (uint32_t j = 0; j < pCreateInfo->bindingCount; j++) {
-      max_binding = MAX2(max_binding, pCreateInfo->pBinding[j].binding); 
-      if (pCreateInfo->pBinding[j].pImmutableSamplers)
-         immutable_sampler_count += pCreateInfo->pBinding[j].descriptorCount;
+      max_binding = MAX2(max_binding, pCreateInfo->pBindings[j].binding);
+      if (pCreateInfo->pBindings[j].pImmutableSamplers)
+         immutable_sampler_count += pCreateInfo->pBindings[j].descriptorCount;
    }
 
    size_t size = sizeof(struct anv_descriptor_set_layout) +
@@ -86,7 +86,7 @@ VkResult anv_CreateDescriptorSetLayout(
    uint32_t dynamic_offset_count = 0;
 
    for (uint32_t j = 0; j < pCreateInfo->bindingCount; j++) {
-      const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBinding[j];
+      const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBindings[j];
       uint32_t b = binding->binding;
 
       assert(binding->descriptorCount > 0);

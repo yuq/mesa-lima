@@ -1041,7 +1041,7 @@ store_query_result(struct anv_batch *batch, uint32_t reg,
 void genX(CmdCopyQueryPoolResults)(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    startQuery,
+    uint32_t                                    firstQuery,
     uint32_t                                    queryCount,
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset,
@@ -1061,7 +1061,7 @@ void genX(CmdCopyQueryPoolResults)(
    dst_offset = buffer->offset + destOffset;
    for (uint32_t i = 0; i < queryCount; i++) {
 
-      slot_offset = (startQuery + i) * sizeof(struct anv_query_pool_slot);
+      slot_offset = (firstQuery + i) * sizeof(struct anv_query_pool_slot);
       switch (pool->type) {
       case VK_QUERY_TYPE_OCCLUSION:
          emit_load_alu_reg_u64(&cmd_buffer->batch,

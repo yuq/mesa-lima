@@ -377,13 +377,14 @@ void anv_CmdBindPipeline(
 
 void anv_CmdSetViewport(
     VkCommandBuffer                             commandBuffer,
+    uint32_t                                    firstViewport,
     uint32_t                                    viewportCount,
     const VkViewport*                           pViewports)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    cmd_buffer->state.dynamic.viewport.count = viewportCount;
-   memcpy(cmd_buffer->state.dynamic.viewport.viewports,
+   memcpy(cmd_buffer->state.dynamic.viewport.viewports + firstViewport,
           pViewports, viewportCount * sizeof(*pViewports));
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_VIEWPORT;
@@ -391,13 +392,14 @@ void anv_CmdSetViewport(
 
 void anv_CmdSetScissor(
     VkCommandBuffer                             commandBuffer,
+    uint32_t                                    firstScissor,
     uint32_t                                    scissorCount,
     const VkRect2D*                             pScissors)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    cmd_buffer->state.dynamic.scissor.count = scissorCount;
-   memcpy(cmd_buffer->state.dynamic.scissor.scissors,
+   memcpy(cmd_buffer->state.dynamic.scissor.scissors + firstScissor,
           pScissors, scissorCount * sizeof(*pScissors));
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_SCISSOR;
@@ -558,7 +560,7 @@ void anv_CmdBindDescriptorSets(
 
 void anv_CmdBindVertexBuffers(
     VkCommandBuffer                             commandBuffer,
-    uint32_t                                    startBinding,
+    uint32_t                                    firstBinding,
     uint32_t                                    bindingCount,
     const VkBuffer*                             pBuffers,
     const VkDeviceSize*                         pOffsets)
@@ -569,11 +571,11 @@ void anv_CmdBindVertexBuffers(
    /* We have to defer setting up vertex buffer since we need the buffer
     * stride from the pipeline. */
 
-   assert(startBinding + bindingCount < MAX_VBS);
+   assert(firstBinding + bindingCount < MAX_VBS);
    for (uint32_t i = 0; i < bindingCount; i++) {
-      vb[startBinding + i].buffer = anv_buffer_from_handle(pBuffers[i]);
-      vb[startBinding + i].offset = pOffsets[i];
-      cmd_buffer->state.vb_dirty |= 1 << (startBinding + i);
+      vb[firstBinding + i].buffer = anv_buffer_from_handle(pBuffers[i]);
+      vb[firstBinding + i].offset = pOffsets[i];
+      cmd_buffer->state.vb_dirty |= 1 << (firstBinding + i);
    }
 }
 

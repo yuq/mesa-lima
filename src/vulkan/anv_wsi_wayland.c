@@ -351,8 +351,8 @@ wsi_wl_surface_get_capabilities(struct anv_wsi_surface *surface,
    caps->currentExtent = (VkExtent2D) { -1, -1 };
    caps->minImageExtent = (VkExtent2D) { 1, 1 };
    caps->maxImageExtent = (VkExtent2D) { INT16_MAX, INT16_MAX };
-   caps->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
-   caps->currentTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+   caps->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+   caps->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
    caps->maxImageArrayLayers = 1;
 
    caps->supportedCompositeAlpha =
@@ -432,11 +432,12 @@ wsi_wl_surface_create_swapchain(struct anv_wsi_surface *surface,
 
 VkResult anv_CreateWaylandSurfaceKHR(
     VkInstance                                  _instance,
-    struct wl_display*                          wl_display,
-    struct wl_surface*                          wl_surface,
+    const VkWaylandSurfaceCreateInfoKHR*        pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR);
+
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
    struct wsi_wl_surface *surface;
 
@@ -445,8 +446,8 @@ VkResult anv_CreateWaylandSurfaceKHR(
    if (surface == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   surface->display = wl_display;
-   surface->surface = wl_surface;
+   surface->display = pCreateInfo->display;
+   surface->surface = pCreateInfo->surface;
 
    surface->base.instance = instance;
    surface->base.destroy = wsi_wl_surface_destroy;

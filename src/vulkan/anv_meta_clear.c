@@ -338,7 +338,7 @@ emit_load_color_clear(struct anv_cmd_buffer *cmd_buffer,
          .depth_stencil_attachment = VK_ATTACHMENT_UNUSED,
       });
 
-   ANV_CALL(CmdSetViewport)(cmd_buffer_h, 1,
+   ANV_CALL(CmdSetViewport)(cmd_buffer_h, 0, 1,
       (VkViewport[]) {
          {
             .x = 0,
@@ -350,7 +350,7 @@ emit_load_color_clear(struct anv_cmd_buffer *cmd_buffer,
          },
       });
 
-   ANV_CALL(CmdSetScissor)(cmd_buffer_h, 1,
+   ANV_CALL(CmdSetScissor)(cmd_buffer_h, 0, 1,
       (VkRect2D[]) {
          {
             .offset = { 0, 0 },
@@ -506,7 +506,7 @@ emit_load_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
          .depth_stencil_attachment = attachment,
       });
 
-   ANV_CALL(CmdSetViewport)(cmd_buffer_h, 1,
+   ANV_CALL(CmdSetViewport)(cmd_buffer_h, 0, 1,
       (VkViewport[]) {
          {
             .x = 0,
@@ -520,7 +520,7 @@ emit_load_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
          },
       });
 
-   ANV_CALL(CmdSetScissor)(cmd_buffer_h, 1,
+   ANV_CALL(CmdSetScissor)(cmd_buffer_h, 0, 1,
       (VkRect2D[]) {
          {
             .offset = { 0, 0 },

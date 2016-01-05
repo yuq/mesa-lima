@@ -95,7 +95,7 @@ void anv_DestroyQueryPool(
 VkResult anv_GetQueryPoolResults(
     VkDevice                                    _device,
     VkQueryPool                                 queryPool,
-    uint32_t                                    startQuery,
+    uint32_t                                    firstQuery,
     uint32_t                                    queryCount,
     size_t                                      dataSize,
     void*                                       pData,
@@ -129,14 +129,14 @@ VkResult anv_GetQueryPoolResults(
    for (uint32_t i = 0; i < queryCount; i++) {
       switch (pool->type) {
       case VK_QUERY_TYPE_OCCLUSION: {
-         result = slot[startQuery + i].end - slot[startQuery + i].begin;
+         result = slot[firstQuery + i].end - slot[firstQuery + i].begin;
          break;
       }
       case VK_QUERY_TYPE_PIPELINE_STATISTICS:
          /* Not yet implemented */
          break;
       case VK_QUERY_TYPE_TIMESTAMP: {
-         result = slot[startQuery + i].begin;
+         result = slot[firstQuery + i].begin;
          break;
       }
       default:
@@ -147,14 +147,14 @@ VkResult anv_GetQueryPoolResults(
          uint64_t *dst = pData;
          dst[0] = result;
          if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
-            dst[1] = slot[startQuery + i].available;
+            dst[1] = slot[firstQuery + i].available;
       } else {
          uint32_t *dst = pData;
          if (result > UINT32_MAX)
             result = UINT32_MAX;
          dst[0] = result;
          if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
-            dst[1] = slot[startQuery + i].available;
+            dst[1] = slot[firstQuery + i].available;
       }
 
       pData += stride;
@@ -168,7 +168,7 @@ VkResult anv_GetQueryPoolResults(
 void anv_CmdResetQueryPool(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    startQuery,
+    uint32_t                                    firstQuery,
     uint32_t                                    queryCount)
 {
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
@@ -178,7 +178,7 @@ void anv_CmdResetQueryPool(
       case VK_QUERY_TYPE_OCCLUSION:
       case VK_QUERY_TYPE_TIMESTAMP: {
          struct anv_query_pool_slot *slot = pool->bo.map;
-         slot[startQuery + i].available = 0;
+         slot[firstQuery + i].available = 0;
          break;
       }
       default:

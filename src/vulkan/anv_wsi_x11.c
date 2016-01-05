@@ -83,8 +83,8 @@ x11_surface_get_capabilities(struct anv_wsi_surface *wsi_surface,
 
    caps->minImageCount = 2;
    caps->maxImageCount = 4;
-   caps->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
-   caps->currentTransform = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
+   caps->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+   caps->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
    caps->maxImageArrayLayers = 1;
    caps->supportedCompositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
    caps->supportedUsageFlags =
@@ -146,11 +146,12 @@ x11_surface_create_swapchain(struct anv_wsi_surface *surface,
 
 VkResult anv_CreateXcbSurfaceKHR(
     VkInstance                                  _instance,
-    xcb_connection_t*                           connection,
-    xcb_window_t                                window,
+    const VkXcbSurfaceCreateInfoKHR*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR);
+
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
    struct x11_surface *surface;
 
@@ -159,8 +160,8 @@ VkResult anv_CreateXcbSurfaceKHR(
    if (surface == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   surface->connection = connection;
-   surface->window = window;
+   surface->connection = pCreateInfo->connection;
+   surface->window = pCreateInfo->window;
 
    surface->base.instance = instance;
    surface->base.destroy = x11_surface_destroy;

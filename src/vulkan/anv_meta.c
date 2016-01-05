@@ -290,7 +290,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    VkDescriptorSetLayoutCreateInfo ds_layout_info = {
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
       .bindingCount = 1,
-      .pBinding = (VkDescriptorSetLayoutBinding[]) {
+      .pBindings = (VkDescriptorSetLayoutBinding[]) {
          {
             .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -637,7 +637,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                           VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
    }
 
-   anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 1,
+   anv_CmdSetViewport(anv_cmd_buffer_to_handle(cmd_buffer), 0, 1,
                       &(VkViewport) {
                         .x = 0.0f,
                         .y = 0.0f,
