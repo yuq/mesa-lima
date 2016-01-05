@@ -2594,6 +2594,12 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       image = *vtn_value(b, w[3], vtn_value_type_image_pointer)->image;
       break;
 
+   case SpvOpImageQuerySize:
+      image.deref = vtn_value(b, w[3], vtn_value_type_deref)->deref;
+      image.coord = NULL;
+      image.sample = NULL;
+      break;
+
    case SpvOpImageRead:
       image.deref = vtn_value(b, w[3], vtn_value_type_deref)->deref;
       image.coord = get_image_coord(b, w[4]);
@@ -2627,6 +2633,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    nir_intrinsic_op op;
    switch (opcode) {
 #define OP(S, N) case SpvOp##S: op = nir_intrinsic_image_##N; break;
+   OP(ImageQuerySize,         size)
    OP(ImageRead,              load)
    OP(ImageWrite,             store)
    OP(AtomicExchange,         atomic_exchange)
@@ -2651,17 +2658,21 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    intrin->variables[0] =
       nir_deref_as_var(nir_copy_deref(&intrin->instr, &image.deref->deref));
 
-   /* The image coordinate is always 4 components but we may not have that
-    * many.  Swizzle to compensate.
-    */
-   unsigned swiz[4];
-   for (unsigned i = 0; i < 4; i++)
-      swiz[i] = i < image.coord->num_components ? i : 0;
-   intrin->src[0] = nir_src_for_ssa(nir_swizzle(&b->nb, image.coord,
-                                                swiz, 4, false));
-   intrin->src[1] = nir_src_for_ssa(image.sample);
+   /* ImageQuerySize doesn't take any extra parameters */
+   if (opcode != SpvOpImageQuerySize) {
+      /* The image coordinate is always 4 components but we may not have that
+       * many.  Swizzle to compensate.
+       */
+      unsigned swiz[4];
+      for (unsigned i = 0; i < 4; i++)
+         swiz[i] = i < image.coord->num_components ? i : 0;
+      intrin->src[0] = nir_src_for_ssa(nir_swizzle(&b->nb, image.coord,
+                                                   swiz, 4, false));
+      intrin->src[1] = nir_src_for_ssa(image.sample);
+   }
 
    switch (opcode) {
+   case SpvOpImageQuerySize:
    case SpvOpImageRead:
       break;
    case SpvOpImageWrite:
@@ -3578,7 +3589,6 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpImageGather:
    case SpvOpImageDrefGather:
    case SpvOpImageQuerySizeLod:
-   case SpvOpImageQuerySize:
    case SpvOpImageQueryLod:
    case SpvOpImageQueryLevels:
    case SpvOpImageQuerySamples:
@@ -3590,6 +3600,17 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpImageTexelPointer:
       vtn_handle_image(b, opcode, w, count);
       break;
+
+   case SpvOpImageQuerySize: {
+      nir_deref_var *image = vtn_value(b, w[3], vtn_value_type_deref)->deref;
+      const struct glsl_type *image_type = nir_deref_tail(&image->deref)->type;
+      if (glsl_type_is_image(image_type)) {
+         vtn_handle_image(b, opcode, w, count);
+      } else {
+         vtn_handle_texture(b, opcode, w, count);
+      }
+      break;
+   }
 
    case SpvOpAtomicExchange:
    case SpvOpAtomicCompareExchange:
