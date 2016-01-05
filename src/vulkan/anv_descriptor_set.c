@@ -544,7 +544,7 @@ void anv_UpdateDescriptorSets(
             assert(buffer);
 
             struct anv_buffer_view *view =
-               &set->buffer_views[bind_layout->descriptor_index + j];
+               &set->buffer_views[bind_layout->buffer_index + j];
 
             const struct anv_format *format =
                anv_format_for_descriptor_type(write->descriptorType);
