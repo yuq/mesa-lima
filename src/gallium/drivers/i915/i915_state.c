@@ -423,7 +423,7 @@ i915_prepare_vertex_sampling(struct i915_context *i915)
          for (j = view->u.tex.first_level; j <= tex->last_level; j++) {
             mip_offsets[j] = i915_texture_offset(i915_tex, j , 0 /* FIXME depth */);
             row_stride[j] = i915_tex->stride;
-            img_stride[j] = 0; /* FIXME */;
+            img_stride[j] = 0; /* FIXME */
          }
 
          draw_set_mapped_texture(i915->draw,

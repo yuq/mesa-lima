@@ -337,7 +337,7 @@ SVGA3D_DefineSurface2D(struct svga_winsys_context *swc,    // IN
    mipSizes[0].height = height;
    mipSizes[0].depth = 1;
 
-   swc->commit(swc);;
+   swc->commit(swc);
 
    return PIPE_OK;
 }
@@ -372,7 +372,7 @@ SVGA3D_DestroySurface(struct svga_winsys_context *swc,
    
    swc->surface_relocation(swc, &cmd->sid, NULL, sid,
                            SVGA_RELOC_WRITE | SVGA_RELOC_INTERNAL);
-   swc->commit(swc);;
+   swc->commit(swc);
 
    return PIPE_OK;
 }

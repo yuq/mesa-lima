@@ -196,7 +196,7 @@ static void cik_sdma_copy_tile(struct si_context *ctx,
 			(tile_split << 11) | (mt << 8) | (array_mode << 3) |
 			lbpe;
 		cs->buf[cs->cdw++] = y << 16; /* | x */
-		cs->buf[cs->cdw++] = 0; /* z */;
+		cs->buf[cs->cdw++] = 0; /* z */
 		cs->buf[cs->cdw++] = addr & 0xfffffffc;
 		cs->buf[cs->cdw++] = addr >> 32;
 		cs->buf[cs->cdw++] = (pitch / bpe) - 1;

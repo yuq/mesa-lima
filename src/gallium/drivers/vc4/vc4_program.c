@@ -89,7 +89,7 @@ indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
                 range->dst_offset = c->next_ubo_dst_offset;
                 c->next_ubo_dst_offset += range->size;
                 c->num_ubo_ranges++;
-        };
+        }
 
         offset -= range->src_offset;
 

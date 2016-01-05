@@ -4427,7 +4427,7 @@ static int cayman_mul_double_instr(struct r600_shader_ctx *ctx)
 			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 			alu.op = ctx->inst_info->op;
 			for (j = 0; j < inst->Instruction.NumSrcRegs; j++) {
-				r600_bytecode_src(&alu.src[j], &ctx->src[j], k * 2 + ((i == 3) ? 0 : 1));;
+				r600_bytecode_src(&alu.src[j], &ctx->src[j], k * 2 + ((i == 3) ? 0 : 1));
 			}
 			alu.dst.sel = t1;
 			alu.dst.chan = i;

@@ -184,7 +184,7 @@ add_blend_test(struct gallivm_state *gallivm,
 
    LLVMBuildStore(builder, res, res_ptr);
 
-   LLVMBuildRetVoid(builder);;
+   LLVMBuildRetVoid(builder);
 
    gallivm_verify_function(gallivm, func);
 

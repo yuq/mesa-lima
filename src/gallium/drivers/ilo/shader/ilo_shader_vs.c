@@ -126,7 +126,7 @@ vs_lower_opcode_tgsi_const_gen6(struct vs_compile_context *vcc,
    tc_MOV(tc, block_offsets, idx);
 
    msg_type = GEN6_MSG_DP_OWORD_DUAL_BLOCK_READ;
-   msg_ctrl = GEN6_MSG_DP_OWORD_DUAL_BLOCK_SIZE_1;;
+   msg_ctrl = GEN6_MSG_DP_OWORD_DUAL_BLOCK_SIZE_1;
    msg_len = 2;
 
    desc = tsrc_imm_mdesc_data_port(tc, false, msg_len, 1, true, false,
