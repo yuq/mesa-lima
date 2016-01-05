@@ -97,18 +97,28 @@ static void
 get_halign_valign(const struct isl_surf *surf, uint32_t *halign, uint32_t *valign)
 {
    #if ANV_GENx10 >= 90
-      /* In Skylake, RENDER_SUFFACE_STATE.SurfaceVerticalAlignment is in units
-       * of surface elements (not pixels nor samples). For compressed formats,
-       * a "surface element" is defined as a compression block.  For example,
-       * if SurfaceVerticalAlignment is VALIGN_4 and SurfaceFormat is an ETC2
-       * format (ETC2 has a block height of 4), then the vertical alignment is
-       * 4 compression blocks or, equivalently, 16 pixels.
-       */
-      struct isl_extent3d image_align_el
-         = isl_surf_get_image_alignment_el(surf);
+      if (isl_tiling_is_std_y(surf->tiling) ||
+          surf->dim_layout == ISL_DIM_LAYOUT_GEN9_1D) {
+         /* The hardware ignores the alignment values. Anyway, the surface's
+          * true alignment is likely outside the enum range of HALIGN* and
+          * VALIGN*.
+          */
+         *halign = 0;
+         *valign = 0;
+      } else {
+         /* In Skylake, RENDER_SUFFACE_STATE.SurfaceVerticalAlignment is in units
+          * of surface elements (not pixels nor samples). For compressed formats,
+          * a "surface element" is defined as a compression block.  For example,
+          * if SurfaceVerticalAlignment is VALIGN_4 and SurfaceFormat is an ETC2
+          * format (ETC2 has a block height of 4), then the vertical alignment is
+          * 4 compression blocks or, equivalently, 16 pixels.
+          */
+         struct isl_extent3d image_align_el
+            = isl_surf_get_image_alignment_el(surf);
 
-      *halign = anv_halign[image_align_el.width];
-      *valign = anv_valign[image_align_el.height];
+         *halign = anv_halign[image_align_el.width];
+         *valign = anv_valign[image_align_el.height];
+      }
    #else
       /* Pre-Skylake, RENDER_SUFFACE_STATE.SurfaceVerticalAlignment is in
        * units of surface samples.  For example, if SurfaceVerticalAlignment
