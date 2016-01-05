@@ -483,6 +483,39 @@ struct blit_region {
    VkExtent3D dest_extent;
 };
 
+/* Returns the user-provided VkBufferImageCopy::imageOffset in units of
+ * elements rather than texels. One element equals one texel or one block
+ * if Image is uncompressed or compressed, respectively.
+ */
+static struct VkOffset3D
+meta_region_offset_el(const struct anv_image * image,
+                      const struct VkOffset3D * offset)
+{
+   const struct isl_format_layout * isl_layout = image->format->isl_layout;
+   return (VkOffset3D) {
+      .x = offset->x / isl_layout->bw,
+      .y = offset->y / isl_layout->bh,
+      .z = offset->z / isl_layout->bd,
+   };
+}
+
+/* Returns the user-provided VkBufferImageCopy::imageExtent in units of
+ * elements rather than texels. One element equals one texel or one block
+ * if Image is uncompressed or compressed, respectively.
+ */
+static struct VkExtent3D
+meta_region_extent_el(const VkFormat format,
+                      const struct VkExtent3D * extent)
+{
+   const struct isl_format_layout * isl_layout =
+      anv_format_for_vk_format(format)->isl_layout;
+   return (VkExtent3D) {
+      .width  = DIV_ROUND_UP(extent->width , isl_layout->bw),
+      .height = DIV_ROUND_UP(extent->height, isl_layout->bh),
+      .depth  = DIV_ROUND_UP(extent->depth , isl_layout->bd),
+   };
+}
+
 static void
 meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                struct anv_image *src_image,
@@ -1318,22 +1351,21 @@ void anv_CmdCopyBufferToImage(
             cmd_buffer);
 
          VkOffset3D src_offset = { 0, 0, slice };
-
-         const VkOffset3D dest_offset = {
-            .x = pRegions[r].imageOffset.x,
-            .y = pRegions[r].imageOffset.y,
-            .z = 0,
-         };
+         VkOffset3D dest_offset_el = meta_region_offset_el(dest_image,
+                                                      &pRegions[r].imageOffset);
+         dest_offset_el.z = 0;
+         const VkExtent3D img_extent_el = meta_region_extent_el(dest_image->vk_format,
+                                                      &pRegions[r].imageExtent);
 
          meta_emit_blit(cmd_buffer,
                         src_image,
                         &src_iview,
                         src_offset,
-                        pRegions[r].imageExtent,
+                        img_extent_el,
                         dest_image,
                         &dest_iview,
-                        dest_offset,
-                        pRegions[r].imageExtent,
+                        dest_offset_el,
+                        img_extent_el,
                         VK_FILTER_NEAREST);
 
          /* Once we've done the blit, all of the actual information about
