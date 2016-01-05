@@ -747,7 +747,7 @@ struct isl_surf {
    uint32_t alignment;
 
    /**
-    * Pitch between vertically adjacent samples, in bytes.
+    * Pitch between vertically adjacent surface elements, in bytes.
     */
    uint32_t row_pitch;
 
