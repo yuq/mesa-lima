@@ -836,6 +836,10 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       val->constant = vtn_null_constant(b, val->const_type);
       break;
 
+   case SpvOpConstantSampler:
+      assert(!"OpConstantSampler requires Kernel Capability");
+      break;
+
    default:
       unreachable("Unhandled opcode");
    }
