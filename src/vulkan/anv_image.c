@@ -484,6 +484,8 @@ anv_image_view_init(struct anv_image_view *iview,
    iview->format = anv_get_isl_format(pCreateInfo->format, iview->aspect_mask,
                                       image->tiling);
 
+   iview->base_layer = range->baseArrayLayer;
+   iview->base_mip = range->baseMipLevel;
    iview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, range->baseMipLevel),
       .height = anv_minify(image->extent.height, range->baseMipLevel),
