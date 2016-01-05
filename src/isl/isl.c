@@ -383,7 +383,7 @@ isl_surf_choose_dim_layout(const struct isl_device *dev,
 
 /**
  * Calculate the physical extent of the surface's first level, in units of
- * surface samples.
+ * surface samples. The result is aligned to the format's compression block.
  */
 static void
 isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
@@ -393,6 +393,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
                                enum isl_msaa_layout msaa_layout,
                                struct isl_extent4d *phys_level0_sa)
 {
+   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+
    if (isl_format_is_yuv(info->format))
       isl_finishme("%s:%s: YUV format", __FILE__, __func__);
 
@@ -401,6 +403,7 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
       assert(info->height == 1);
       assert(info->depth == 1);
       assert(info->samples == 1);
+      assert(!isl_format_is_compressed(info->format));
 
       switch (dim_layout) {
       case ISL_DIM_LAYOUT_GEN4_3D:
@@ -434,8 +437,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
          assert(info->samples == 1);
 
          *phys_level0_sa = (struct isl_extent4d) {
-            .w = info->width,
-            .h = info->height,
+            .w = isl_align(info->width, fmtl->bw),
+            .h = isl_align(info->height, fmtl->bh),
             .d = 1,
             .a = info->array_len,
          };
@@ -477,6 +480,11 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
       assert(info->array_len == 1);
       assert(info->samples == 1);
 
+      if (fmtl->bd > 1) {
+         isl_finishme("%s:%s: compression block with depth > 1",
+                      __FILE__, __func__);
+      }
+
       switch (dim_layout) {
       case ISL_DIM_LAYOUT_GEN9_1D:
          unreachable("bad isl_dim_layout");
@@ -485,8 +493,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
          assert(ISL_DEV_GEN(dev) >= 9);
 
          *phys_level0_sa = (struct isl_extent4d) {
-            .w = info->width,
-            .h = info->height,
+            .w = isl_align(info->width, fmtl->bw),
+            .h = isl_align(info->height, fmtl->bh),
             .d = 1,
             .a = info->depth,
          };
@@ -495,8 +503,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
       case ISL_DIM_LAYOUT_GEN4_3D:
          assert(ISL_DEV_GEN(dev) < 9);
          *phys_level0_sa = (struct isl_extent4d) {
-            .w = info->width,
-            .h = info->height,
+            .w = isl_align(info->width, fmtl->bw),
+            .h = isl_align(info->height, fmtl->bh),
             .d = info->depth,
             .a = 1,
          };
@@ -998,6 +1006,8 @@ isl_surf_init_s(const struct isl_device *dev,
    struct isl_extent4d phys_level0_sa;
    isl_calc_phys_level0_extent_sa(dev, info, dim_layout, tiling, msaa_layout,
                                   &phys_level0_sa);
+   assert(phys_level0_sa.w % fmtl->bw == 0);
+   assert(phys_level0_sa.h % fmtl->bh == 0);
 
    enum isl_array_pitch_span array_pitch_span =
       isl_choose_array_pitch_span(dev, info, dim_layout, &phys_level0_sa);
