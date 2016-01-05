@@ -545,7 +545,7 @@ anv_CreateBufferView(VkDevice _device,
       anv_fill_buffer_surface_state(device, view->surface_state.map,
                                     view->format,
                                     view->offset, pCreateInfo->range,
-                                    format->isl_layout->bpb / 8);
+                                    format->isl_layout->bs);
    } else {
       view->surface_state = (struct anv_state){ 0 };
    }
@@ -560,7 +560,7 @@ anv_CreateBufferView(VkDevice _device,
       anv_fill_buffer_surface_state(device, view->storage_surface_state.map,
                                     storage_format,
                                     view->offset, pCreateInfo->range,
-                                    format->isl_layout->bpb / 8);
+                                    format->isl_layout->bs);
    } else {
       view->storage_surface_state = (struct anv_state){ 0 };
    }
@@ -658,6 +658,6 @@ anv_buffer_view_fill_image_param(struct anv_device *device,
    param->swizzling[0] = 0xff;
    param->swizzling[1] = 0xff;
 
-   param->stride[0] = isl_format_layouts[view->format].bpb / 8;
+   param->stride[0] = isl_format_layouts[view->format].bs;
    param->size[0] = view->range / param->stride[0];
 }

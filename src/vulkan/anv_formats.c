@@ -247,7 +247,7 @@ anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
       if (anv_fmt->surface_format == ISL_FORMAT_UNSUPPORTED) {
          return ISL_FORMAT_UNSUPPORTED;
       } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-                 !util_is_power_of_two(anv_fmt->isl_layout->bpb)) {
+                 !util_is_power_of_two(anv_fmt->isl_layout->bs)) {
          /* Tiled formats *must* be power-of-two because we need up upload
           * them with the render pipeline.  For 3-channel formats, we fix
           * this by switching them over to RGBX or RGBA formats under the
