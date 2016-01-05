@@ -2839,10 +2839,17 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    const unsigned vue_entries =
       MAX2(nr_attribute_slots, (unsigned)prog_data->base.vue_map.num_slots);
 
-   if (compiler->devinfo->gen == 6)
+   if (compiler->devinfo->gen == 6) {
       prog_data->base.urb_entry_size = DIV_ROUND_UP(vue_entries, 8);
-   else
+   } else {
       prog_data->base.urb_entry_size = DIV_ROUND_UP(vue_entries, 4);
+      /* On Cannonlake software shall not program an allocation size that
+       * specifies a size that is a multiple of 3 64B (512-bit) cachelines.
+       */
+      if (compiler->devinfo->gen == 10 &&
+          prog_data->base.urb_entry_size % 3 == 0)
+         prog_data->base.urb_entry_size++;
+   }
 
    if (INTEL_DEBUG & DEBUG_VS) {
       fprintf(stderr, "VS Output ");

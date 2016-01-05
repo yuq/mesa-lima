@@ -1197,6 +1197,14 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
    /* URB entry sizes are stored as a multiple of 64 bytes. */
    prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
+
+   /* On Cannonlake software shall not program an allocation size that
+    * specifies a size that is a multiple of 3 64B (512-bit) cachelines.
+    */
+   if (devinfo->gen == 10 &&
+       prog_data->base.urb_entry_size % 3 == 0)
+      prog_data->base.urb_entry_size++;
+
    prog_data->base.urb_read_length = 0;
 
    STATIC_ASSERT(BRW_TESS_PARTITIONING_INTEGER == TESS_SPACING_EQUAL - 1);

@@ -441,6 +441,13 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    /* URB entry sizes are stored as a multiple of 64 bytes. */
    vue_prog_data->urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
 
+   /* On Cannonlake software shall not program an allocation size that
+    * specifies a size that is a multiple of 3 64B (512-bit) cachelines.
+    */
+   if (devinfo->gen == 10 &&
+       vue_prog_data->urb_entry_size % 3 == 0)
+      vue_prog_data->urb_entry_size++;
+
    /* HS does not use the usual payload pushing from URB to GRFs,
     * because we don't have enough registers for a full-size payload, and
     * the hardware is broken on Haswell anyway.
