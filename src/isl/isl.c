@@ -234,10 +234,6 @@ isl_choose_array_pitch_span(const struct isl_device *dev,
 {
    switch (dim_layout) {
    case ISL_DIM_LAYOUT_GEN9_1D:
-      if (ISL_DEV_GEN(dev) >= 9)
-         isl_finishme("%s:%s: [SKL+] 1d surface layout", __FILE__, __func__);
-      /* fallthrough */
-
    case ISL_DIM_LAYOUT_GEN4_2D:
       if (ISL_DEV_GEN(dev) >= 8) {
          /* QPitch becomes programmable in Broadwell. So choose the
@@ -420,10 +416,6 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
          unreachable("bad isl_dim_layout");
 
       case ISL_DIM_LAYOUT_GEN9_1D:
-         if (ISL_DEV_GEN(dev) >= 9)
-            isl_finishme("%s:%s: [SKL+] 1d surface layout", __FILE__, __func__);
-         /* fallthrough */
-
       case ISL_DIM_LAYOUT_GEN4_2D:
          *phys_level0_sa = (struct isl_extent4d) {
             .w = info->width,
@@ -653,6 +645,38 @@ isl_calc_phys_slice0_extent_sa_gen4_3d(
 }
 
 /**
+ * A variant of isl_calc_phys_slice0_extent_sa() specific to
+ * ISL_DIM_LAYOUT_GEN9_1D.
+ */
+static void
+isl_calc_phys_slice0_extent_sa_gen9_1d(
+      const struct isl_device *dev,
+      const struct isl_surf_init_info *restrict info,
+      const struct isl_extent3d *image_align_sa,
+      const struct isl_extent4d *phys_level0_sa,
+      struct isl_extent2d *phys_slice0_sa)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+
+   assert(phys_level0_sa->height == 1);
+   assert(phys_level0_sa->depth == 1);
+   assert(info->samples == 1);
+   assert(image_align_sa->w >= fmtl->bw);
+
+   uint32_t slice_w = 0;
+   const uint32_t W0 = phys_level0_sa->w;
+
+   for (uint32_t l = 0; l < info->levels; ++l) {
+      uint32_t W = isl_minify(W0, l);
+      uint32_t w = isl_align_npot(W, image_align_sa->w);
+
+      slice_w += w;
+   }
+
+   *phys_slice0_sa = isl_extent2d(slice_w, 1);
+}
+
+/**
  * Calculate the physical extent of the surface's first array slice, in units
  * of surface samples. If the surface is multi-leveled, then the result will
  * be aligned to \a image_align_sa.
@@ -668,10 +692,10 @@ isl_calc_phys_slice0_extent_sa(const struct isl_device *dev,
 {
    switch (dim_layout) {
    case ISL_DIM_LAYOUT_GEN9_1D:
-      if (ISL_DEV_GEN(dev) >= 9)
-         isl_finishme("%s:%s: [SKL+] physical layout of 1d surfaces",
-                      __FILE__, __func__);
-      /*fallthrough*/
+      isl_calc_phys_slice0_extent_sa_gen9_1d(dev, info,
+                                             image_align_sa, phys_level0_sa,
+                                             phys_slice0_sa);
+      return;
    case ISL_DIM_LAYOUT_GEN4_2D:
       isl_calc_phys_slice0_extent_sa_gen4_2d(dev, info, msaa_layout,
                                              image_align_sa, phys_level0_sa,
@@ -701,11 +725,8 @@ isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
 
    switch (dim_layout) {
    case ISL_DIM_LAYOUT_GEN9_1D:
-      if (ISL_DEV_GEN(dev) >= 9)
-         isl_finishme("%s:%s: [SKL+] physical layout of 1d surfaces",
-                      __FILE__, __func__);
-      /*fallthrough*/
-
+      /* Each row is an array slice */
+      return 1;
    case ISL_DIM_LAYOUT_GEN4_2D:
       switch (array_pitch_span) {
       case ISL_ARRAY_PITCH_SPAN_COMPACT:
@@ -1170,6 +1191,39 @@ get_image_offset_sa_gen4_3d(const struct isl_surf *surf,
    *y_offset_sa = y;
 }
 
+/**
+ * A variant of isl_surf_get_image_offset_sa() specific to
+ * ISL_DIM_LAYOUT_GEN9_1D.
+ */
+static void
+get_image_offset_sa_gen9_1d(const struct isl_surf *surf,
+                            uint32_t level, uint32_t layer,
+                            uint32_t *x_offset_sa,
+                            uint32_t *y_offset_sa)
+{
+   assert(level < surf->levels);
+   assert(layer < surf->phys_level0_sa.array_len);
+   assert(surf->phys_level0_sa.height == 1);
+   assert(surf->phys_level0_sa.depth == 1);
+   assert(surf->samples == 1);
+
+   const uint32_t W0 = surf->phys_level0_sa.width;
+   const struct isl_extent3d image_align_sa =
+      isl_surf_get_image_alignment_sa(surf);
+
+   uint32_t x = layer * isl_surf_get_array_pitch_sa_rows(surf);
+
+   for (uint32_t l = 0; l < level; ++l) {
+      uint32_t W = isl_minify(W0, l);
+      uint32_t w = isl_align_npot(W, image_align_sa.w);
+
+      x += w;
+   }
+
+   *x_offset_sa = x;
+   *y_offset_sa = 0;
+}
+
 void
 isl_surf_get_image_offset_sa(const struct isl_surf *surf,
                              uint32_t level,
@@ -1185,7 +1239,9 @@ isl_surf_get_image_offset_sa(const struct isl_surf *surf,
 
    switch (surf->dim_layout) {
    case ISL_DIM_LAYOUT_GEN9_1D:
-      isl_finishme("%s:%s: gen9 1d surfaces", __FILE__, __func__);
+      get_image_offset_sa_gen9_1d(surf, level, logical_array_layer,
+                                  x_offset_sa, y_offset_sa);
+      break;
    case ISL_DIM_LAYOUT_GEN4_2D:
       get_image_offset_sa_gen4_2d(surf, level, logical_array_layer,
                                   x_offset_sa, y_offset_sa);
