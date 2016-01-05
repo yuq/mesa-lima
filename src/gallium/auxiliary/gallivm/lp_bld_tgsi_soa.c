@@ -1197,7 +1197,7 @@ get_soa_array_offsets(struct lp_build_context *uint_bld,
 
    if (need_perelement_offset) {
       LLVMValueRef pixel_offsets;
-      int i;
+      unsigned i;
      /* build pixel offset vector: {0, 1, 2, 3, ...} */
       pixel_offsets = uint_bld->undef;
       for (i = 0; i < uint_bld->type.length; i++) {
@@ -1809,7 +1809,7 @@ emit_store_double_chan(struct lp_build_tgsi_context *bld_base,
    struct gallivm_state *gallivm = bld_base->base.gallivm;
    LLVMBuilderRef builder = gallivm->builder;
    struct lp_build_context *float_bld = &bld_base->base;
-   int i;
+   unsigned i;
    LLVMValueRef temp, temp2;
    LLVMValueRef shuffles[8];
    LLVMValueRef shuffles2[8];
@@ -2713,7 +2713,7 @@ static boolean
 near_end_of_shader(struct lp_build_tgsi_soa_context *bld,
                    int pc)
 {
-   int i;
+   unsigned i;
 
    for (i = 0; i < 5; i++) {
       unsigned opcode;
