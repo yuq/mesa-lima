@@ -792,7 +792,7 @@ vl_mpeg12_end_frame(struct pipe_video_codec *decoder,
       for (j = 0; j < VL_MAX_REF_FRAMES; ++j) {
          if (!ref_frames[j] || !ref_frames[j][i]) continue;
 
-         vb[2] = vl_vb_get_mv(&buf->vertex_stream, j);;
+         vb[2] = vl_vb_get_mv(&buf->vertex_stream, j);
          dec->context->set_vertex_buffers(dec->context, 0, 3, vb);
 
          vl_mc_render_ref(i ? &dec->mc_c : &dec->mc_y, &buf->mc[i], ref_frames[j][i]);
