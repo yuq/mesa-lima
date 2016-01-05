@@ -2715,6 +2715,30 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
       }
       break;
 
+   case SpvOpIAddCarry:
+      assert(glsl_type_is_struct(val->ssa->type));
+      val->ssa->elems[0]->def = nir_iadd(&b->nb, src[0], src[1]);
+      val->ssa->elems[1]->def = nir_uadd_carry(&b->nb, src[0], src[1]);
+      return;
+
+   case SpvOpISubBorrow:
+      assert(glsl_type_is_struct(val->ssa->type));
+      val->ssa->elems[0]->def = nir_isub(&b->nb, src[0], src[1]);
+      val->ssa->elems[1]->def = nir_usub_borrow(&b->nb, src[0], src[1]);
+      return;
+
+   case SpvOpUMulExtended:
+      assert(glsl_type_is_struct(val->ssa->type));
+      val->ssa->elems[0]->def = nir_imul(&b->nb, src[0], src[1]);
+      val->ssa->elems[1]->def = nir_umul_high(&b->nb, src[0], src[1]);
+      return;
+
+   case SpvOpSMulExtended:
+      assert(glsl_type_is_struct(val->ssa->type));
+      val->ssa->elems[0]->def = nir_imul(&b->nb, src[0], src[1]);
+      val->ssa->elems[1]->def = nir_imul_high(&b->nb, src[0], src[1]);
+      return;
+
    case SpvOpShiftRightLogical:     op = nir_op_ushr;    break;
    case SpvOpShiftRightArithmetic:  op = nir_op_ishr;    break;
    case SpvOpShiftLeftLogical:      op = nir_op_ishl;    break;
@@ -3635,6 +3659,10 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpFMod:
    case SpvOpVectorTimesScalar:
    case SpvOpDot:
+   case SpvOpIAddCarry:
+   case SpvOpISubBorrow:
+   case SpvOpUMulExtended:
+   case SpvOpSMulExtended:
    case SpvOpShiftRightLogical:
    case SpvOpShiftRightArithmetic:
    case SpvOpShiftLeftLogical:
