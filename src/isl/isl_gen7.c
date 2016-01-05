@@ -185,6 +185,17 @@ gen7_format_needs_valign2(const struct isl_device *dev,
           format == ISL_FORMAT_R32G32B32_FLOAT;
 }
 
+/**
+ * @brief Filter out tiling flags that are incompatible with the surface.
+ *
+ * The resultant outgoing @a flags is a subset of the incoming @a flags. The
+ * outgoing flags may be empty (0x0) if the incoming flags were too
+ * restrictive.
+ *
+ * For example, if the surface will be used for a display
+ * (ISL_SURF_USAGE_DISPLAY_BIT), then this function filters out all tiling
+ * flags except ISL_TILING_X_BIT and ISL_TILING_LINEAR_BIT.
+ */
 void
 gen7_filter_tiling(const struct isl_device *dev,
                    const struct isl_surf_init_info *restrict info,
