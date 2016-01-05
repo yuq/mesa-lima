@@ -99,7 +99,7 @@ do
     cat <<EOF
    [$format] = {
       $format,
-      .bs = $((bpb/8)), .bpb = $bpb,
+      .bs = $((bpb/8)),
       .bw = $bw, .bh = $bh, .bd = $bd,
       .channels = {
           .r = { $red },
