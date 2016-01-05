@@ -95,8 +95,9 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    tex->src[0].src = nir_src_for_ssa(nir_load_var(&b, tex_pos_in));
    tex->dest_type = nir_type_float; /* TODO */
 
-   if (tex_dim == GLSL_SAMPLER_DIM_2D)
+   if (tex_dim != GLSL_SAMPLER_DIM_3D)
       tex->is_array = true;
+
    tex->coord_components = 3;
 
    tex->sampler = nir_deref_var_create(tex, sampler);
@@ -226,6 +227,10 @@ anv_device_init_meta_blit_state(struct anv_device *device)
     */
    struct anv_shader_module vs = {
       .nir = build_nir_vertex_shader(false),
+   };
+
+   struct anv_shader_module fs_1d = {
+      .nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_1D),
    };
 
    struct anv_shader_module fs_2d = {
@@ -390,13 +395,21 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       .use_rectlist = true
    };
 
+   pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_1d);
+   result = anv_graphics_pipeline_create(anv_device_to_handle(device),
+      VK_NULL_HANDLE,
+      &vk_pipeline_info, &anv_pipeline_info,
+      NULL, &device->meta_state.blit.pipeline_1d_src);
+   if (result != VK_SUCCESS)
+      goto fail_pipeline_layout;
+
    pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_2d);
    result = anv_graphics_pipeline_create(anv_device_to_handle(device),
       VK_NULL_HANDLE,
       &vk_pipeline_info, &anv_pipeline_info,
       NULL, &device->meta_state.blit.pipeline_2d_src);
    if (result != VK_SUCCESS)
-      goto fail_pipeline_layout;
+      goto fail_pipeline_1d;
 
    pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_3d);
    result = anv_graphics_pipeline_create(anv_device_to_handle(device),
@@ -407,6 +420,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       goto fail_pipeline_2d;
 
    ralloc_free(vs.nir);
+   ralloc_free(fs_1d.nir);
    ralloc_free(fs_2d.nir);
    ralloc_free(fs_3d.nir);
 
@@ -415,6 +429,11 @@ anv_device_init_meta_blit_state(struct anv_device *device)
  fail_pipeline_2d:
    anv_DestroyPipeline(anv_device_to_handle(device),
                        device->meta_state.blit.pipeline_2d_src, NULL);
+
+ fail_pipeline_1d:
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       device->meta_state.blit.pipeline_1d_src, NULL);
+
  fail_pipeline_layout:
    anv_DestroyPipelineLayout(anv_device_to_handle(device),
                              device->meta_state.blit.pipeline_layout, NULL);
@@ -426,6 +445,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
                          device->meta_state.blit.render_pass, NULL);
 
    ralloc_free(vs.nir);
+   ralloc_free(fs_1d.nir);
    ralloc_free(fs_2d.nir);
    ralloc_free(fs_3d.nir);
  fail:
@@ -595,8 +615,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
 
    switch (src_image->type) {
    case VK_IMAGE_TYPE_1D:
-      anv_finishme("VK_IMAGE_TYPE_1D");
-      pipeline = device->meta_state.blit.pipeline_2d_src;
+      pipeline = device->meta_state.blit.pipeline_1d_src;
       break;
    case VK_IMAGE_TYPE_2D:
       pipeline = device->meta_state.blit.pipeline_2d_src;
@@ -1384,6 +1403,8 @@ anv_device_finish_meta(struct anv_device *device)
    /* Blit */
    anv_DestroyRenderPass(anv_device_to_handle(device),
                          device->meta_state.blit.render_pass, NULL);
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       device->meta_state.blit.pipeline_1d_src, NULL);
    anv_DestroyPipeline(anv_device_to_handle(device),
                        device->meta_state.blit.pipeline_2d_src, NULL);
    anv_DestroyPipeline(anv_device_to_handle(device),

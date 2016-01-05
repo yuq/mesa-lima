@@ -558,6 +558,9 @@ struct anv_meta_state {
    struct {
       VkRenderPass render_pass;
 
+      /** Pipeline that blits from a 1D image. */
+      VkPipeline pipeline_1d_src;
+
       /** Pipeline that blits from a 2D image. */
       VkPipeline pipeline_2d_src;
 
