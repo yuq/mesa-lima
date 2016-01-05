@@ -3113,6 +3113,8 @@ vtn_handle_barrier(struct vtn_builder *b, SpvOp opcode,
       intrinsic_op = nir_intrinsic_memory_barrier;
       break;
    case SpvOpControlBarrier:
+      intrinsic_op = nir_intrinsic_barrier;
+      break;
    default:
       unreachable("unknown barrier instruction");
    }
