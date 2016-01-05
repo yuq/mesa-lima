@@ -2729,6 +2729,12 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpSelect:                op = nir_op_bcsel;   break;
    case SpvOpIEqual:                op = nir_op_ieq;     break;
 
+   case SpvOpBitFieldInsert:        op = nir_op_bitfield_insert;     break;
+   case SpvOpBitFieldSExtract:      op = nir_op_ibitfield_extract;   break;
+   case SpvOpBitFieldUExtract:      op = nir_op_ubitfield_extract;   break;
+   case SpvOpBitReverse:            op = nir_op_bitfield_reverse;    break;
+   case SpvOpBitCount:              op = nir_op_bit_count;           break;
+
    /* Comparisons: (TODO: How do we want to handled ordered/unordered?) */
    case SpvOpFOrdEqual:             op = nir_op_feq;     break;
    case SpvOpFUnordEqual:           op = nir_op_feq;     break;
@@ -3672,6 +3678,11 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpDPdxCoarse:
    case SpvOpDPdyCoarse:
    case SpvOpFwidthCoarse:
+   case SpvOpBitFieldInsert:
+   case SpvOpBitFieldSExtract:
+   case SpvOpBitFieldUExtract:
+   case SpvOpBitReverse:
+   case SpvOpBitCount:
       vtn_handle_alu(b, opcode, w, count);
       break;
 
