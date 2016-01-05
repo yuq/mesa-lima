@@ -608,6 +608,7 @@ enum isl_msaa_layout {
 struct isl_device {
    const struct brw_device_info *info;
    bool use_separate_stencil;
+   bool has_bit6_swizzling;
 };
 
 struct isl_extent2d {
@@ -766,7 +767,8 @@ extern const struct isl_format_layout isl_format_layouts[];
 
 void
 isl_device_init(struct isl_device *dev,
-                const struct brw_device_info *info);
+                const struct brw_device_info *info,
+                bool has_bit6_swizzling);
 
 static inline const struct isl_format_layout * ATTRIBUTE_CONST
 isl_format_get_layout(enum isl_format fmt)
