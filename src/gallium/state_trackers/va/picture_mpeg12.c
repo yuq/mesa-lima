@@ -32,6 +32,7 @@ void vlVaHandlePictureParameterBufferMPEG12(vlVaDriver *drv, vlVaContext *contex
    VAPictureParameterBufferMPEG2 *mpeg2 = buf->data;
 
    assert(buf->size >= sizeof(VAPictureParameterBufferMPEG2) && buf->num_elements == 1);
+   context->desc.mpeg12.num_slices = 0;
    /*horizontal_size;*/
    /*vertical_size;*/
    vlVaGetReferenceFrame(drv, mpeg2->forward_reference_picture, &context->desc.mpeg12.ref[0]);
@@ -78,3 +79,8 @@ void vlVaHandleIQMatrixBufferMPEG12(vlVaContext *context, vlVaBuffer *buf)
       context->desc.mpeg12.non_intra_matrix = NULL;
 }
 
+void vlVaHandleSliceParameterBufferMPEG12(vlVaContext *context, vlVaBuffer *buf)
+{
+   assert(buf->size >= sizeof(VASliceParameterBufferMPEG2) && buf->num_elements == 1);
+   context->desc.mpeg12.num_slices += buf->num_elements;
+}

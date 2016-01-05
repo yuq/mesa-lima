@@ -48,6 +48,7 @@ void vlVaHandlePictureParameterBufferH264(vlVaDriver *drv, vlVaContext *context,
    unsigned i;
 
    assert(buf->size >= sizeof(VAPictureParameterBufferH264) && buf->num_elements == 1);
+   context->desc.h264.slice_count = 0;
    /*CurrPic*/
    context->desc.h264.field_order_cnt[0] = h264->CurrPic.TopFieldOrderCnt;
    context->desc.h264.field_order_cnt[1] = h264->CurrPic.BottomFieldOrderCnt;
@@ -162,6 +163,7 @@ void vlVaHandleSliceParameterBufferH264(vlVaContext *context, vlVaBuffer *buf)
    VASliceParameterBufferH264 *h264 = buf->data;
 
    assert(buf->size >= sizeof(VASliceParameterBufferH264) && buf->num_elements == 1);
+   context->desc.h264.slice_count += buf->num_elements;
    context->desc.h264.num_ref_idx_l0_active_minus1 =
       h264->num_ref_idx_l0_active_minus1;
    context->desc.h264.num_ref_idx_l1_active_minus1 =

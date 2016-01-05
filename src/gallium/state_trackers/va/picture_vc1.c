@@ -32,6 +32,7 @@ void vlVaHandlePictureParameterBufferVC1(vlVaDriver *drv, vlVaContext *context, 
    VAPictureParameterBufferVC1 * vc1 = buf->data;
 
    assert(buf->size >= sizeof(VAPictureParameterBufferVC1) && buf->num_elements == 1);
+   context->desc.vc1.slice_count = 0;
    vlVaGetReferenceFrame(drv, vc1->forward_reference_picture, &context->desc.vc1.ref[0]);
    vlVaGetReferenceFrame(drv, vc1->backward_reference_picture, &context->desc.vc1.ref[1]);
    context->desc.vc1.picture_type = vc1->picture_fields.bits.picture_type;
@@ -64,4 +65,10 @@ void vlVaHandlePictureParameterBufferVC1(vlVaDriver *drv, vlVaContext *context, 
    context->desc.vc1.maxbframes = vc1->sequence_fields.bits.max_b_frames;
    context->desc.vc1.deblockEnable = vc1->post_processing != 0;
    context->desc.vc1.pquant = vc1->pic_quantizer_fields.bits.pic_quantizer_scale;
+}
+
+void vlVaHandleSliceParameterBufferVC1(vlVaContext *context, vlVaBuffer *buf)
+{
+   assert(buf->size >= sizeof(VASliceParameterBufferVC1) && buf->num_elements == 1);
+   context->desc.vc1.slice_count += buf->num_elements;
 }
