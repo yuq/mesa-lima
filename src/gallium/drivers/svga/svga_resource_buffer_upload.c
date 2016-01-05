@@ -221,7 +221,7 @@ svga_buffer_upload_gb_command(struct svga_context *svga,
    struct svga_3d_update_gb_image *whole_update_cmd = NULL;
    uint32 numBoxes = sbuf->map.num_ranges;
    struct pipe_resource *dummy;
-   unsigned int i;
+   unsigned i;
 
    assert(numBoxes);
    assert(sbuf->dma.updates == NULL);
