@@ -383,6 +383,12 @@ lower_ceil(nir_builder *b, nir_ssa_def *src)
                     nir_fadd(b, tr, nir_imm_double(b, 1.0)));
 }
 
+static nir_ssa_def *
+lower_fract(nir_builder *b, nir_ssa_def *src)
+{
+   return nir_fsub(b, src, nir_ffloor(b, src));
+}
+
 static void
 lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
 {
@@ -421,6 +427,11 @@ lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
          return;
       break;
 
+   case nir_op_ffract:
+      if (!(options & nir_lower_dfract))
+         return;
+      break;
+
    default:
       return;
    }
@@ -452,6 +463,9 @@ lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
       break;
    case nir_op_fceil:
       result = lower_ceil(&bld, src);
+      break;
+   case nir_op_ffract:
+      result = lower_fract(&bld, src);
       break;
    default:
       unreachable("unhandled opcode");
