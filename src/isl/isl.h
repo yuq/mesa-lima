@@ -727,7 +727,8 @@ struct isl_surf {
    struct isl_extent4d logical_level0_px;
 
    /**
-    * Physical extent of the surface's base level, in units of pixels.
+    * Physical extent of the surface's base level, in units of physical
+    * surface samples.
     *
     * Consider isl_dim_layout as an operator that transforms a logical surface
     * layout to a physical surface layout. Then
