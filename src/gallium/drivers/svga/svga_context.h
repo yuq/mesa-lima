@@ -314,7 +314,7 @@ struct svga_hw_view_state
    struct svga_sampler_view *v;
    unsigned min_lod;
    unsigned max_lod;
-   int dirty;
+   boolean dirty;
 };
 
 /* Updated by calling svga_update_state( SVGA_STATE_HW_DRAW )
