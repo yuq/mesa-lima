@@ -647,10 +647,11 @@ ir_validate::visit_leave(ir_expression *ir)
       break;
 
    case ir_quadop_bitfield_insert:
+      assert(ir->type->is_integer());
       assert(ir->operands[0]->type == ir->type);
       assert(ir->operands[1]->type == ir->type);
-      assert(ir->operands[2]->type == glsl_type::int_type);
-      assert(ir->operands[3]->type == glsl_type::int_type);
+      assert(ir->operands[2]->type == ir->type);
+      assert(ir->operands[3]->type == ir->type);
       break;
 
    case ir_quadop_vector:

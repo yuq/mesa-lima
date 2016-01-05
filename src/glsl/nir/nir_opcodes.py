@@ -609,10 +609,10 @@ def quadop_horiz(name, output_size, src1_size, src2_size, src3_size,
           [tuint, tuint, tuint, tuint],
           "", const_expr)
 
-opcode("bitfield_insert", 0, tuint, [0, 0, 1, 1],
+opcode("bitfield_insert", 0, tuint, [0, 0, 0, 0],
        [tuint, tuint, tint, tint], "", """
 unsigned base = src0, insert = src1;
-int offset = src2.x, bits = src3.x;
+int offset = src2, bits = src3;
 if (bits == 0) {
    dst = 0;
 } else if (offset < 0 || bits < 0 || bits + offset > 32) {

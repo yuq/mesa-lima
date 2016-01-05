@@ -381,8 +381,8 @@ lower_instructions_visitor::ldexp_to_arith(ir_expression *ir)
 
    ir_constant *sign_mask = new(ir) ir_constant(0x80000000u, vec_elem);
 
-   ir_constant *exp_shift = new(ir) ir_constant(23);
-   ir_constant *exp_width = new(ir) ir_constant(8);
+   ir_constant *exp_shift = new(ir) ir_constant(23, vec_elem);
+   ir_constant *exp_width = new(ir) ir_constant(8, vec_elem);
 
    /* Temporary variables */
    ir_variable *x = new(ir) ir_variable(ir->type, "x", ir_var_temporary);
@@ -470,8 +470,8 @@ lower_instructions_visitor::dldexp_to_arith(ir_expression *ir)
 
    ir_constant *sign_mask = new(ir) ir_constant(0x80000000u);
 
-   ir_constant *exp_shift = new(ir) ir_constant(20);
-   ir_constant *exp_width = new(ir) ir_constant(11);
+   ir_constant *exp_shift = new(ir) ir_constant(20, vec_elem);
+   ir_constant *exp_width = new(ir) ir_constant(11, vec_elem);
    ir_constant *exp_bias = new(ir) ir_constant(1022, vec_elem);
 
    /* Temporary variables */

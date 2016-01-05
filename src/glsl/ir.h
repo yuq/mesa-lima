@@ -1710,7 +1710,6 @@ public:
              operation == ir_triop_vector_insert ||
              operation == ir_quadop_vector ||
              /* TODO: these can't currently be vectorized */
-             operation == ir_quadop_bitfield_insert ||
              operation == ir_triop_bitfield_extract;
    }
 
