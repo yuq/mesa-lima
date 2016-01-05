@@ -281,6 +281,7 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
          continue;
       }
 
+      assert(block->node.link.next == NULL);
       list_addtail(&block->node.link, cf_list);
 
       switch (*block->branch & SpvOpCodeMask) {
