@@ -522,7 +522,7 @@ vs_prepare_tgsi_sampling(struct vs_compile_context *vcc,
       if (num_coords >= 3) {
          struct toy_dst tmp, max;
          struct toy_src abs_coords[3];
-         int i;
+         unsigned i;
 
          tmp = tc_alloc_tmp(tc);
          max = tdst_writemask(tmp, TOY_WRITEMASK_W);
@@ -804,7 +804,7 @@ static int
 vs_collect_outputs(struct vs_compile_context *vcc, struct toy_src *outs)
 {
    const struct toy_tgsi *tgsi = &vcc->tgsi;
-   int i;
+   unsigned i;
 
    for (i = 0; i < vcc->shader->out.count; i++) {
       const int slot = vcc->output_map[i];
