@@ -156,3 +156,21 @@ const struct st_tracked_state st_bind_tes_atomics = {
    },
    bind_tes_atomics
 };
+
+static void
+bind_cs_atomics(struct st_context *st)
+{
+   struct gl_shader_program *prog =
+      st->ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+
+   st_bind_atomics(st, prog, PIPE_SHADER_COMPUTE);
+}
+
+const struct st_tracked_state st_bind_cs_atomics = {
+   "st_bind_cs_atomics",
+   {
+      0,
+      ST_NEW_COMPUTE_PROGRAM | ST_NEW_ATOMIC_BUFFER,
+   },
+   bind_cs_atomics
+};

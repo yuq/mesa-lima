@@ -99,6 +99,12 @@ static const struct st_tracked_state *render_atoms[] =
 static const struct st_tracked_state *compute_atoms[] =
 {
    &st_update_cp,
+   &st_update_compute_texture,
+   &st_update_sampler, /* depends on update_compute_texture for swizzle */
+   &st_update_cs_constants,
+   &st_bind_cs_ubos,
+   &st_bind_cs_atomics,
+   &st_bind_cs_ssbos,
 };
 
 

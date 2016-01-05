@@ -534,6 +534,22 @@ update_tesseval_textures(struct st_context *st)
 }
 
 
+static void
+update_compute_textures(struct st_context *st)
+{
+   const struct gl_context *ctx = st->ctx;
+
+   if (ctx->ComputeProgram._Current) {
+      update_textures(st,
+                      MESA_SHADER_COMPUTE,
+                      &ctx->ComputeProgram._Current->Base,
+                      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits,
+                      st->state.sampler_views[PIPE_SHADER_COMPUTE],
+                      &st->state.num_sampler_views[PIPE_SHADER_COMPUTE]);
+   }
+}
+
+
 const struct st_tracked_state st_update_fragment_texture = {
    "st_update_texture",					/* name */
    {							/* dirty */
@@ -581,4 +597,14 @@ const struct st_tracked_state st_update_tesseval_texture = {
       ST_NEW_TESSEVAL_PROGRAM | ST_NEW_SAMPLER_VIEWS,	/* st */
    },
    update_tesseval_textures				/* update */
+};
+
+
+const struct st_tracked_state st_update_compute_texture = {
+   "st_update_compute_texture",			/* name */
+   {							/* dirty */
+      _NEW_TEXTURE,					/* mesa */
+      ST_NEW_COMPUTE_PROGRAM | ST_NEW_SAMPLER_VIEWS,	/* st */
+   },
+   update_compute_textures				/* update */
 };
