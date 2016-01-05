@@ -134,6 +134,34 @@ get_halign_valign(const struct isl_surf *surf, uint32_t *halign, uint32_t *valig
    #endif
 }
 
+static uint32_t
+get_qpitch(const struct isl_surf *surf)
+{
+   switch (surf->dim) {
+   default:
+      unreachable(!"bad isl_surf_dim");
+   case ISL_SURF_DIM_1D:
+      #if ANV_GENx10 >= 90
+         /* QPitch is usually expressed as rows of surface elements (where
+          * a surface element is an compression block or a single surface
+          * sample). Skylake 1D is an outlier.
+          *
+          * From the Skylake BSpec >> Memory Views >> Common Surface
+          * Formats >> Surface Layout and Tiling >> 1D Surfaces:
+          *
+          *    Surface QPitch specifies the distance in pixels between array
+          *    slices.
+          */
+         return isl_surf_get_array_pitch_el(surf);
+      #else
+         return isl_surf_get_array_pitch_el_rows(surf);
+      #endif
+   case ISL_SURF_DIM_2D:
+   case ISL_SURF_DIM_3D:
+      return isl_surf_get_array_pitch_el_rows(surf);
+   }
+}
+
 void
 genX(image_view_init)(struct anv_image_view *iview,
                       struct anv_device *device,
@@ -220,7 +248,7 @@ genX(image_view_init)(struct anv_image_view *iview,
        */
       .BaseMipLevel = 0.0,
 
-      .SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&surface->isl) >> 2,
+      .SurfaceQPitch = get_qpitch(&surface->isl) >> 2,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
       .Depth = depth - 1,
