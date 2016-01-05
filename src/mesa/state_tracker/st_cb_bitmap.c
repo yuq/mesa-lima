@@ -713,7 +713,7 @@ st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
     * explicitly uploaded in the draw_bitmap_quad() function.
     */
    if ((st->dirty.mesa & ~_NEW_PROGRAM_CONSTANTS) || st->dirty.st) {
-      st_validate_state(st);
+      st_validate_state(st, ST_PIPELINE_RENDER);
    }
 
    if (UseBitmapCache && accum_bitmap(ctx, x, y, width, height, unpack, bitmap))

@@ -202,7 +202,7 @@ st_draw_vbo(struct gl_context *ctx,
 
    /* Validate state. */
    if (st->dirty.st || ctx->NewDriverState) {
-      st_validate_state(st);
+      st_validate_state(st, ST_PIPELINE_RENDER);
 
 #if 0
       if (MESA_VERBOSE & VERBOSE_GLSL) {
@@ -315,7 +315,7 @@ st_indirect_draw_vbo(struct gl_context *ctx,
 
    /* Validate state. */
    if (st->dirty.st || ctx->NewDriverState) {
-      st_validate_state(st);
+      st_validate_state(st, ST_PIPELINE_RENDER);
    }
 
    if (st->vertex_array_out_of_memory) {

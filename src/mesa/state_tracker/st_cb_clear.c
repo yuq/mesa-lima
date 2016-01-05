@@ -470,7 +470,7 @@ st_Clear(struct gl_context *ctx, GLbitfield mask)
    st_flush_bitmap_cache(st);
 
    /* This makes sure the pipe has the latest scissor, etc values */
-   st_validate_state( st );
+   st_validate_state( st, ST_PIPELINE_RENDER );
 
    if (mask & BUFFER_BITS_COLOR) {
       for (i = 0; i < ctx->DrawBuffer->_NumColorDrawBuffers; i++) {

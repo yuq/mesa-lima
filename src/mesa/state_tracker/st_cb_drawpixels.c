@@ -1074,7 +1074,7 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
 
    st_flush_bitmap_cache(st);
 
-   st_validate_state(st);
+   st_validate_state(st, ST_PIPELINE_RENDER);
 
    /* Limit the size of the glDrawPixels to the max texture size.
     * Strictly speaking, that's not correct but since we don't handle
@@ -1436,7 +1436,7 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
 
    st_flush_bitmap_cache(st);
 
-   st_validate_state(st);
+   st_validate_state(st, ST_PIPELINE_RENDER);
 
    if (type == GL_DEPTH_STENCIL) {
       /* XXX make this more efficient */

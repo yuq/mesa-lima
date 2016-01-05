@@ -78,6 +78,14 @@ struct st_tracked_state {
 };
 
 
+/**
+ * Enumeration of state tracker pipelines.
+ */
+enum st_pipeline {
+   ST_PIPELINE_RENDER,
+   ST_PIPELINE_COMPUTE,
+};
+
 
 struct st_context
 {
@@ -153,6 +161,7 @@ struct st_context
    char renderer[100];
 
    struct st_state_flags dirty;
+   struct st_state_flags dirty_cp;
 
    GLboolean vertdata_edgeflags;
    GLboolean edgeflag_culls_prims;

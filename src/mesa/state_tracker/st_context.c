@@ -138,8 +138,11 @@ void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
       st->dirty.st |= ST_NEW_VERTEX_PROGRAM;
    }
 
+   /* Invalidate render and compute pipelines. */
    st->dirty.mesa |= new_state;
    st->dirty.st |= ST_NEW_MESA;
+   st->dirty_cp.mesa |= new_state;
+   st->dirty_cp.st |= ST_NEW_MESA;
 
    /* This is the only core Mesa module we depend upon.
     * No longer use swrast, swsetup, tnl.
@@ -208,8 +211,11 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    /* state tracker needs the VBO module */
    _vbo_CreateContext(ctx);
 
+   /* Initialize render and compute pipelines flags */
    st->dirty.mesa = ~0;
    st->dirty.st = ~0;
+   st->dirty_cp.mesa = ~0;
+   st->dirty_cp.st = ~0;
 
    /* Create upload manager for vertex data for glBitmap, glDrawPixels,
     * glClear, etc.

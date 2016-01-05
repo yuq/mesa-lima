@@ -36,6 +36,9 @@
 
 #include "main/glheader.h"
 
+#include "state_tracker/st_api.h"
+#include "state_tracker/st_context.h"
+
 struct st_context;
 struct st_tracked_state;
 
@@ -43,7 +46,7 @@ void st_init_atoms( struct st_context *st );
 void st_destroy_atoms( struct st_context *st );
 
 
-void st_validate_state( struct st_context *st );
+void st_validate_state( struct st_context *st, enum st_pipeline pipeline );
 
 
 extern const struct st_tracked_state st_update_array;
