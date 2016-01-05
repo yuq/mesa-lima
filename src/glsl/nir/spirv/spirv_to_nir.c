@@ -733,6 +733,46 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    vtn_foreach_decoration(b, val, type_decoration_cb, NULL);
 }
 
+static nir_constant *
+vtn_null_constant(struct vtn_builder *b, const struct glsl_type *type)
+{
+   nir_constant *c = rzalloc(b, nir_constant);
+
+   switch (glsl_get_base_type(type)) {
+   case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT:
+   case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_DOUBLE:
+      /* Nothing to do here.  It's already initialized to zero */
+      break;
+
+   case GLSL_TYPE_ARRAY:
+      assert(glsl_get_length(type) > 0);
+      c->num_elements = glsl_get_length(type);
+      c->elements = ralloc_array(b, nir_constant *, c->num_elements);
+
+      c->elements[0] = vtn_null_constant(b, glsl_get_array_element(type));
+      for (unsigned i = 1; i < c->num_elements; i++)
+         c->elements[i] = c->elements[0];
+      break;
+
+   case GLSL_TYPE_STRUCT:
+      c->num_elements = glsl_get_length(type);
+      c->elements = ralloc_array(b, nir_constant *, c->num_elements);
+
+      for (unsigned i = 0; i < c->num_elements; i++) {
+         c->elements[i] = vtn_null_constant(b, glsl_get_struct_field(type, i));
+      }
+      break;
+
+   default:
+      unreachable("Invalid type for null constant");
+   }
+
+   return c;
+}
+
 static void
 vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                     const uint32_t *w, unsigned count)
@@ -791,6 +831,10 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       }
       break;
    }
+
+   case SpvOpConstantNull:
+      val->constant = vtn_null_constant(b, val->const_type);
+      break;
 
    default:
       unreachable("Unhandled opcode");
