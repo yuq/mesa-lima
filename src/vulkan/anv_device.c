@@ -783,6 +783,8 @@ void anv_DestroyDevice(
 
    close(device->fd);
 
+   pthread_mutex_destroy(&device->mutex);
+
    anv_free(&device->alloc, device);
 }
 
