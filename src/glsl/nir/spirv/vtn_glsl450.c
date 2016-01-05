@@ -270,6 +270,10 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
    }
 
+   case GLSLstd450FindILsb:   op = nir_op_find_lsb;   break;
+   case GLSLstd450FindSMsb:   op = nir_op_ifind_msb;  break;
+   case GLSLstd450FindUMsb:   op = nir_op_ufind_msb;  break;
+
    case GLSLstd450Asin:
    case GLSLstd450Acos:
    case GLSLstd450Atan:
@@ -277,9 +281,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450ModfStruct:
    case GLSLstd450Frexp:
    case GLSLstd450FrexpStruct:
-   case GLSLstd450FindILsb:
-   case GLSLstd450FindSMsb:
-   case GLSLstd450FindUMsb:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
    case GLSLstd450IMix:
