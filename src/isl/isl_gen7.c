@@ -265,14 +265,6 @@ gen7_filter_tiling(const struct isl_device *dev,
       *flags &= (ISL_TILING_ANY_Y_MASK | ISL_TILING_W_BIT);
    }
 
-   /* For 1D surfaces, use linear when possible. 1D surfaces (array and
-    * non-array) do not benefit from tiling. In fact, it leads to less
-    * efficient use of memory due to tile alignment.
-    */
-   if (info->dim == ISL_SURF_DIM_1D && (*flags & ISL_TILING_LINEAR_BIT)) {
-      *flags = ISL_TILING_LINEAR_BIT;
-   }
-
    /* workaround */
    if (ISL_DEV_GEN(dev) == 7 &&
        gen7_format_needs_valign2(dev, info->format) &&
