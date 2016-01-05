@@ -519,24 +519,30 @@ isl_calc_phys_slice0_extent_sa_gen4_2d(
       const struct isl_extent4d *phys_level0_sa,
       struct isl_extent2d *phys_slice0_sa)
 {
+   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+
    assert(phys_level0_sa->depth == 1);
 
-   if (info->levels == 1) {
-      /* Do not align single-level surfaces to the image alignment.
+   if (info->levels == 1 && msaa_layout != ISL_MSAA_LAYOUT_INTERLEAVED) {
+      /* Do not pad the surface to the image alignment. Instead, pad it only
+       * to the pixel format's block alignment.
        *
-       * For tiled surfaces, skipping the alignment here avoids wasting CPU
-       * cycles on the below mipmap layout caluclations. Skipping the
+       * For tiled surfaces, using a reduced alignment here avoids wasting CPU
+       * cycles on the below mipmap layout caluclations. Reducing the
        * alignment here is safe because we later align the row pitch and array
        * pitch to the tile boundary. It is safe even for
        * ISL_MSAA_LAYOUT_INTERLEAVED, because phys_level0_sa is already scaled
        * to accomodate the interleaved samples.
        *
-       * For linear surfaces, skipping the alignment here permits us to later
+       * For linear surfaces, reducing the alignment here permits us to later
        * choose an arbitrary, non-aligned row pitch. If the surface backs
        * a VkBuffer, then an arbitrary pitch may be needed to accomodate
        * VkBufferImageCopy::bufferRowLength.
        */
-      *phys_slice0_sa = isl_extent2d(phys_level0_sa->w, phys_level0_sa->h);
+      *phys_slice0_sa = (struct isl_extent2d) {
+         .w = isl_align_npot(phys_level0_sa->w, fmtl->bw),
+         .h = isl_align_npot(phys_level0_sa->h, fmtl->bh),
+      };
       return;
    }
 
