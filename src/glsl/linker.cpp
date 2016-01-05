@@ -1133,6 +1133,12 @@ cross_validate_globals(struct gl_shader_program *prog,
                             mode_string(var), var->name);
                return;
             }
+            if (existing->data.image_format != var->data.image_format) {
+               linker_error(prog, "declarations for %s `%s` have "
+                            "mismatching image format qualifiers\n",
+                            mode_string(var), var->name);
+               return;
+            }
 	 } else
 	    variables.add_variable(var);
       }
