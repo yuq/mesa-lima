@@ -273,6 +273,7 @@ emit_ds_state(struct anv_pipeline *pipeline,
 VkResult
 genX(graphics_pipeline_create)(
     VkDevice                                    _device,
+    struct anv_pipeline_cache *                 cache,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
     const struct anv_graphics_pipeline_create_info *extra,
     const VkAllocationCallbacks*                pAllocator,
@@ -290,7 +291,8 @@ genX(graphics_pipeline_create)(
    if (pipeline == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_pipeline_init(pipeline, device, pCreateInfo, extra, pAllocator);
+   result = anv_pipeline_init(pipeline, device, cache,
+                              pCreateInfo, extra, pAllocator);
    if (result != VK_SUCCESS) {
       anv_free2(&device->alloc, pAllocator, pipeline);
       return result;
@@ -603,6 +605,7 @@ genX(graphics_pipeline_create)(
 
 VkResult genX(compute_pipeline_create)(
     VkDevice                                    _device,
+    struct anv_pipeline_cache *                 cache,
     const VkComputePipelineCreateInfo*          pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipeline)
@@ -633,9 +636,6 @@ VkResult genX(compute_pipeline_create)(
    pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
    pipeline->batch.relocs = &pipeline->batch_relocs;
 
-   anv_state_stream_init(&pipeline->program_stream,
-                         &device->instruction_block_pool);
-
    /* When we free the pipeline, we detect stages based on the NULL status
     * of various prog_data pointers.  Make them NULL by default.
     */
@@ -651,7 +651,7 @@ VkResult genX(compute_pipeline_create)(
 
    assert(pCreateInfo->stage.stage == VK_SHADER_STAGE_COMPUTE_BIT);
    ANV_FROM_HANDLE(anv_shader_module, module,  pCreateInfo->stage.module);
-   anv_pipeline_compile_cs(pipeline, pCreateInfo, module,
+   anv_pipeline_compile_cs(pipeline, cache, pCreateInfo, module,
                            pCreateInfo->stage.pName);
 
    pipeline->use_repclear = false;

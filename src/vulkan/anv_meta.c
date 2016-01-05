@@ -392,6 +392,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
 
    pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_2d);
    result = anv_graphics_pipeline_create(anv_device_to_handle(device),
+      VK_NULL_HANDLE,
       &vk_pipeline_info, &anv_pipeline_info,
       NULL, &device->meta_state.blit.pipeline_2d_src);
    if (result != VK_SUCCESS)
@@ -399,6 +400,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
 
    pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_3d);
    result = anv_graphics_pipeline_create(anv_device_to_handle(device),
+      VK_NULL_HANDLE,
       &vk_pipeline_info, &anv_pipeline_info,
       NULL, &device->meta_state.blit.pipeline_3d_src);
    if (result != VK_SUCCESS)

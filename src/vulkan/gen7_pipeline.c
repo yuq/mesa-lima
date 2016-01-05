@@ -264,6 +264,7 @@ scratch_space(const struct brw_stage_prog_data *prog_data)
 GENX_FUNC(GEN7, GEN75) VkResult
 genX(graphics_pipeline_create)(
     VkDevice                                    _device,
+    struct anv_pipeline_cache *                 cache,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
     const struct anv_graphics_pipeline_create_info *extra,
     const VkAllocationCallbacks*                pAllocator,
@@ -280,7 +281,8 @@ genX(graphics_pipeline_create)(
    if (pipeline == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_pipeline_init(pipeline, device, pCreateInfo, extra, pAllocator);
+   result = anv_pipeline_init(pipeline, device, cache,
+                              pCreateInfo, extra, pAllocator);
    if (result != VK_SUCCESS) {
       anv_free2(&device->alloc, pAllocator, pipeline);
       return result;
@@ -520,6 +522,7 @@ genX(graphics_pipeline_create)(
 GENX_FUNC(GEN7, GEN75) VkResult
 genX(compute_pipeline_create)(
     VkDevice                                    _device,
+    struct anv_pipeline_cache *                 cache,
     const VkComputePipelineCreateInfo*          pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipeline)

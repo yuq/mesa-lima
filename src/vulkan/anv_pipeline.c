@@ -146,15 +146,67 @@ anv_shader_compile_to_nir(struct anv_device *device,
    return nir;
 }
 
+void
+anv_pipeline_cache_init(struct anv_pipeline_cache *cache,
+                        struct anv_device *device)
+{
+   cache->device = device;
+   anv_state_stream_init(&cache->program_stream,
+                         &device->instruction_block_pool);
+   pthread_mutex_init(&cache->mutex, NULL);
+}
+
+void
+anv_pipeline_cache_finish(struct anv_pipeline_cache *cache)
+{
+   anv_state_stream_finish(&cache->program_stream);
+   pthread_mutex_destroy(&cache->mutex);
+}
+
+static uint32_t
+anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
+                                 const void *data, size_t size)
+{
+   pthread_mutex_lock(&cache->mutex);
+
+   struct anv_state state =
+      anv_state_stream_alloc(&cache->program_stream, size, 64);
+
+   pthread_mutex_unlock(&cache->mutex);
+
+   assert(size < cache->program_stream.block_pool->block_size);
+
+   memcpy(state.map, data, size);
+
+   if (!cache->device->info.has_llc)
+      anv_state_clflush(state);
+
+   return state.offset;
+}
+
 VkResult anv_CreatePipelineCache(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkPipelineCache*                            pPipelineCache)
 {
-   *pPipelineCache = (VkPipelineCache)1;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_pipeline_cache *cache;
 
-   stub_return(VK_SUCCESS);
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO);
+   assert(pCreateInfo->flags == 0);
+
+   cache = anv_alloc2(&device->alloc, pAllocator,
+                       sizeof(*cache), 8,
+                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (cache == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   anv_pipeline_cache_init(cache, device);
+
+   *pPipelineCache = anv_pipeline_cache_to_handle(cache);
+
+   return VK_SUCCESS;
 }
 
 void anv_DestroyPipelineCache(
@@ -162,6 +214,12 @@ void anv_DestroyPipelineCache(
     VkPipelineCache                             _cache,
     const VkAllocationCallbacks*                pAllocator)
 {
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_pipeline_cache, cache, _cache);
+
+   anv_pipeline_cache_finish(cache);
+
+   anv_free2(&device->alloc, pAllocator, cache);
 }
 
 VkResult anv_GetPipelineCacheData(
@@ -171,7 +229,8 @@ VkResult anv_GetPipelineCacheData(
     void*                                       pData)
 {
    *pDataSize = 0;
-   stub_return(VK_SUCCESS);
+
+   return VK_SUCCESS;
 }
 
 VkResult anv_MergePipelineCaches(
@@ -193,7 +252,6 @@ void anv_DestroyPipeline(
 
    anv_reloc_list_finish(&pipeline->batch_relocs,
                          pAllocator ? pAllocator : &device->alloc);
-   anv_state_stream_finish(&pipeline->program_stream);
    if (pipeline->blend_state.map)
       anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
    anv_free2(&device->alloc, pAllocator, pipeline);
@@ -390,23 +448,6 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    return nir;
 }
 
-static uint32_t
-anv_pipeline_upload_kernel(struct anv_pipeline *pipeline,
-                           const void *data, size_t size)
-{
-   struct anv_state state =
-      anv_state_stream_alloc(&pipeline->program_stream, size, 64);
-
-   assert(size < pipeline->program_stream.block_pool->block_size);
-
-   memcpy(state.map, data, size);
-
-   if (!pipeline->device->info.has_llc)
-      anv_state_clflush(state);
-
-   return state.offset;
-}
-
 static void
 anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
                                 gl_shader_stage stage,
@@ -432,6 +473,7 @@ anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
 
 static VkResult
 anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
+                        struct anv_pipeline_cache *cache,
                         const VkGraphicsPipelineCreateInfo *info,
                         struct anv_shader_module *module,
                         const char *entrypoint)
@@ -476,7 +518,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
    }
 
    const uint32_t offset =
-      anv_pipeline_upload_kernel(pipeline, shader_code, code_size);
+      anv_pipeline_cache_upload_kernel(cache, shader_code, code_size);
    if (prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8) {
       pipeline->vs_simd8 = offset;
       pipeline->vs_vec4 = NO_KERNEL;
@@ -495,6 +537,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 
 static VkResult
 anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
+                        struct anv_pipeline_cache *cache,
                         const VkGraphicsPipelineCreateInfo *info,
                         struct anv_shader_module *module,
                         const char *entrypoint)
@@ -537,7 +580,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
    /* TODO: SIMD8 GS */
    pipeline->gs_kernel =
-      anv_pipeline_upload_kernel(pipeline, shader_code, code_size);
+      anv_pipeline_cache_upload_kernel(cache, shader_code, code_size);
    pipeline->gs_vertex_count = nir->info.gs.vertices_in;
 
    ralloc_free(mem_ctx);
@@ -550,6 +593,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
 static VkResult
 anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
+                        struct anv_pipeline_cache *cache,
                         const VkGraphicsPipelineCreateInfo *info,
                         struct anv_shader_module *module,
                         const char *entrypoint)
@@ -590,8 +634,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
-   uint32_t offset = anv_pipeline_upload_kernel(pipeline,
-                                                shader_code, code_size);
+   uint32_t offset =
+      anv_pipeline_cache_upload_kernel(cache, shader_code, code_size);
    if (prog_data->no_8)
       pipeline->ps_simd8 = NO_KERNEL;
    else
@@ -627,6 +671,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
 VkResult
 anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
+                        struct anv_pipeline_cache *cache,
                         const VkComputePipelineCreateInfo *info,
                         struct anv_shader_module *module,
                         const char *entrypoint)
@@ -664,8 +709,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
-   pipeline->cs_simd = anv_pipeline_upload_kernel(pipeline,
-                                                  shader_code, code_size);
+   pipeline->cs_simd =
+      anv_pipeline_cache_upload_kernel(cache, shader_code, code_size);
    ralloc_free(mem_ctx);
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_COMPUTE,
@@ -945,7 +990,9 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
 }
 
 VkResult
-anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
+anv_pipeline_init(struct anv_pipeline *pipeline,
+                  struct anv_device *device,
+                  struct anv_pipeline_cache *cache,
                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
                   const struct anv_graphics_pipeline_create_info *extra,
                   const VkAllocationCallbacks *alloc)
@@ -970,9 +1017,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
    pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
    pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
    pipeline->batch.relocs = &pipeline->batch_relocs;
-
-   anv_state_stream_init(&pipeline->program_stream,
-                         &device->instruction_block_pool);
 
    anv_pipeline_init_dynamic_state(pipeline, pCreateInfo);
 
@@ -1005,13 +1049,13 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
 
       switch (pCreateInfo->pStages[i].stage) {
       case VK_SHADER_STAGE_VERTEX_BIT:
-         anv_pipeline_compile_vs(pipeline, pCreateInfo, module, entrypoint);
+         anv_pipeline_compile_vs(pipeline, cache, pCreateInfo, module, entrypoint);
          break;
       case VK_SHADER_STAGE_GEOMETRY_BIT:
-         anv_pipeline_compile_gs(pipeline, pCreateInfo, module, entrypoint);
+         anv_pipeline_compile_gs(pipeline, cache, pCreateInfo, module, entrypoint);
          break;
       case VK_SHADER_STAGE_FRAGMENT_BIT:
-         anv_pipeline_compile_fs(pipeline, pCreateInfo, module, entrypoint);
+         anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, module, entrypoint);
          break;
       default:
          anv_finishme("Unsupported shader stage");
@@ -1083,23 +1127,28 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
 VkResult
 anv_graphics_pipeline_create(
    VkDevice _device,
+   VkPipelineCache _cache,
    const VkGraphicsPipelineCreateInfo *pCreateInfo,
    const struct anv_graphics_pipeline_create_info *extra,
    const VkAllocationCallbacks *pAllocator,
    VkPipeline *pPipeline)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_pipeline_cache, cache, _cache);
+
+   if (cache == NULL)
+      cache = &device->default_pipeline_cache;
 
    switch (device->info.gen) {
    case 7:
       if (device->info.is_haswell)
-         return gen75_graphics_pipeline_create(_device, pCreateInfo, extra, pAllocator, pPipeline);
+         return gen75_graphics_pipeline_create(_device, cache, pCreateInfo, extra, pAllocator, pPipeline);
       else
-         return gen7_graphics_pipeline_create(_device, pCreateInfo, extra, pAllocator, pPipeline);
+         return gen7_graphics_pipeline_create(_device, cache, pCreateInfo, extra, pAllocator, pPipeline);
    case 8:
-      return gen8_graphics_pipeline_create(_device, pCreateInfo, extra, pAllocator, pPipeline);
+      return gen8_graphics_pipeline_create(_device, cache, pCreateInfo, extra, pAllocator, pPipeline);
    case 9:
-      return gen9_graphics_pipeline_create(_device, pCreateInfo, extra, pAllocator, pPipeline);
+      return gen9_graphics_pipeline_create(_device, cache, pCreateInfo, extra, pAllocator, pPipeline);
    default:
       unreachable("unsupported gen\n");
    }
@@ -1117,7 +1166,9 @@ VkResult anv_CreateGraphicsPipelines(
 
    unsigned i = 0;
    for (; i < count; i++) {
-      result = anv_graphics_pipeline_create(_device, &pCreateInfos[i],
+      result = anv_graphics_pipeline_create(_device,
+                                            pipelineCache,
+                                            &pCreateInfos[i],
                                             NULL, pAllocator, &pPipelines[i]);
       if (result != VK_SUCCESS) {
          for (unsigned j = 0; j < i; j++) {
@@ -1133,22 +1184,27 @@ VkResult anv_CreateGraphicsPipelines(
 
 static VkResult anv_compute_pipeline_create(
     VkDevice                                    _device,
+    VkPipelineCache                             _cache,
     const VkComputePipelineCreateInfo*          pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipeline)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_pipeline_cache, cache, _cache);
+
+   if (cache == NULL)
+      cache = &device->default_pipeline_cache;
 
    switch (device->info.gen) {
    case 7:
       if (device->info.is_haswell)
-         return gen75_compute_pipeline_create(_device, pCreateInfo, pAllocator, pPipeline);
+         return gen75_compute_pipeline_create(_device, cache, pCreateInfo, pAllocator, pPipeline);
       else
-         return gen7_compute_pipeline_create(_device, pCreateInfo, pAllocator, pPipeline);
+         return gen7_compute_pipeline_create(_device, cache, pCreateInfo, pAllocator, pPipeline);
    case 8:
-      return gen8_compute_pipeline_create(_device, pCreateInfo, pAllocator, pPipeline);
+      return gen8_compute_pipeline_create(_device, cache, pCreateInfo, pAllocator, pPipeline);
    case 9:
-      return gen9_compute_pipeline_create(_device, pCreateInfo, pAllocator, pPipeline);
+      return gen9_compute_pipeline_create(_device, cache, pCreateInfo, pAllocator, pPipeline);
    default:
       unreachable("unsupported gen\n");
    }
@@ -1166,7 +1222,8 @@ VkResult anv_CreateComputePipelines(
 
    unsigned i = 0;
    for (; i < count; i++) {
-      result = anv_compute_pipeline_create(_device, &pCreateInfos[i],
+      result = anv_compute_pipeline_create(_device, pipelineCache,
+                                           &pCreateInfos[i],
                                            pAllocator, &pPipelines[i]);
       if (result != VK_SUCCESS) {
          for (unsigned j = 0; j < i; j++) {

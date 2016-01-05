@@ -130,6 +130,7 @@ create_pipeline(struct anv_device *device,
 
    VkPipeline pipeline_h;
    result = anv_graphics_pipeline_create(device_h,
+      VK_NULL_HANDLE,
       &(VkGraphicsPipelineCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
          .stageCount = 2,

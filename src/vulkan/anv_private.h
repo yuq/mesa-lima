@@ -577,6 +577,16 @@ struct anv_queue {
     struct anv_state_pool *                     pool;
 };
 
+struct anv_pipeline_cache {
+   struct anv_device *                          device;
+   struct anv_state_stream                      program_stream;
+   pthread_mutex_t                              mutex;
+};
+
+void anv_pipeline_cache_init(struct anv_pipeline_cache *cache,
+                             struct anv_device *device);
+void anv_pipeline_cache_finish(struct anv_pipeline_cache *cache);
+
 struct anv_device {
     VK_LOADER_DATA                              _loader_data;
 
@@ -595,6 +605,8 @@ struct anv_device {
     struct anv_state_pool                       dynamic_state_pool;
 
     struct anv_block_pool                       instruction_block_pool;
+    struct anv_pipeline_cache                   default_pipeline_cache;
+
     struct anv_block_pool                       surface_state_block_pool;
     struct anv_state_pool                       surface_state_pool;
 
@@ -1288,7 +1300,6 @@ struct anv_pipeline {
    } urb;
 
    VkShaderStageFlags                           active_stages;
-   struct anv_state_stream                      program_stream;
    struct anv_state                             blend_state;
    uint32_t                                     vs_simd8;
    uint32_t                                     vs_vec4;
@@ -1337,18 +1348,21 @@ struct anv_graphics_pipeline_create_info {
 
 VkResult
 anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
+                  struct anv_pipeline_cache *cache,
                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
                   const struct anv_graphics_pipeline_create_info *extra,
                   const VkAllocationCallbacks *alloc);
 
 VkResult
 anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
+                        struct anv_pipeline_cache *cache,
                         const VkComputePipelineCreateInfo *info,
                         struct anv_shader_module *module,
                         const char *entrypoint_name);
 
 VkResult
 anv_graphics_pipeline_create(VkDevice device,
+                             VkPipelineCache cache,
                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
                              const struct anv_graphics_pipeline_create_info *extra,
                              const VkAllocationCallbacks *alloc,
@@ -1356,6 +1370,7 @@ anv_graphics_pipeline_create(VkDevice device,
 
 VkResult
 gen7_graphics_pipeline_create(VkDevice _device,
+                              struct anv_pipeline_cache *cache,
                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
                               const struct anv_graphics_pipeline_create_info *extra,
                               const VkAllocationCallbacks *alloc,
@@ -1363,6 +1378,7 @@ gen7_graphics_pipeline_create(VkDevice _device,
 
 VkResult
 gen75_graphics_pipeline_create(VkDevice _device,
+                               struct anv_pipeline_cache *cache,
                                const VkGraphicsPipelineCreateInfo *pCreateInfo,
                                const struct anv_graphics_pipeline_create_info *extra,
                                const VkAllocationCallbacks *alloc,
@@ -1370,34 +1386,40 @@ gen75_graphics_pipeline_create(VkDevice _device,
 
 VkResult
 gen8_graphics_pipeline_create(VkDevice _device,
+                              struct anv_pipeline_cache *cache,
                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
                               const struct anv_graphics_pipeline_create_info *extra,
                               const VkAllocationCallbacks *alloc,
                               VkPipeline *pPipeline);
 VkResult
 gen9_graphics_pipeline_create(VkDevice _device,
+                              struct anv_pipeline_cache *cache,
                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
                               const struct anv_graphics_pipeline_create_info *extra,
                               const VkAllocationCallbacks *alloc,
                               VkPipeline *pPipeline);
 VkResult
 gen7_compute_pipeline_create(VkDevice _device,
+                             struct anv_pipeline_cache *cache,
                              const VkComputePipelineCreateInfo *pCreateInfo,
                              const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
 VkResult
 gen75_compute_pipeline_create(VkDevice _device,
+                              struct anv_pipeline_cache *cache,
                               const VkComputePipelineCreateInfo *pCreateInfo,
                               const VkAllocationCallbacks *alloc,
                               VkPipeline *pPipeline);
 
 VkResult
 gen8_compute_pipeline_create(VkDevice _device,
+                             struct anv_pipeline_cache *cache,
                              const VkComputePipelineCreateInfo *pCreateInfo,
                              const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
 VkResult
 gen9_compute_pipeline_create(VkDevice _device,
+                             struct anv_pipeline_cache *cache,
                              const VkComputePipelineCreateInfo *pCreateInfo,
                              const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
@@ -1698,6 +1720,7 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_event, VkEvent)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_framebuffer, VkFramebuffer)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_image, VkImage)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_image_view, VkImageView);
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_pipeline_cache, VkPipelineCache)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_pipeline, VkPipeline)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_pipeline_layout, VkPipelineLayout)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_query_pool, VkQueryPool)
