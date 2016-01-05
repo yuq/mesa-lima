@@ -821,8 +821,8 @@ isl_calc_row_pitch(const struct isl_device *dev,
     *    texels, and must be converted to bytes based on the surface format
     *    being used to determine whether additional pages need to be defined.
     */
-   row_pitch = MAX(row_pitch,
-                   fmtl->bs * isl_align_div_npot(phys_slice0_sa->w, fmtl->bw));
+   assert(phys_slice0_sa->w % fmtl->bw == 0);
+   row_pitch = MAX(row_pitch, fmtl->bs * phys_slice0_sa->w);
 
    switch (tile_info->tiling) {
    case ISL_TILING_LINEAR:
