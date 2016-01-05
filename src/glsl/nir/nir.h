@@ -1440,6 +1440,7 @@ typedef struct nir_function {
 } nir_function;
 
 typedef struct nir_shader_compiler_options {
+   bool lower_fdiv;
    bool lower_ffma;
    bool lower_flrp;
    bool lower_fpow;
