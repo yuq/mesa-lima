@@ -328,6 +328,11 @@ ntq_emit_txf(struct vc4_compile *c, nir_tex_instr *instr)
                 for (int i = 0; i < 4; i++)
                         dest[i] = qir_UNPACK_8_F(c, tex, i);
         }
+
+        for (int i = 0; i < 4; i++) {
+                if (c->tex_srgb_decode[unit] & (1 << i))
+                        dest[i] = qir_srgb_decode(c, dest[i]);
+        }
 }
 
 static void
