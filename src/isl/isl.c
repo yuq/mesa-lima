@@ -1071,8 +1071,9 @@ isl_surf_init_s(const struct isl_device *dev,
    const uint32_t size = row_pitch * isl_align(total_h_sa, tile_info.height);
 
    /* Alignment of surface base address, in bytes */
-   uint32_t base_alignment = info->min_alignment;
-   base_alignment = isl_align(base_alignment, tile_info.size);
+   uint32_t base_alignment = MAX(1, info->min_alignment);
+   assert(isl_is_pow2(base_alignment) && isl_is_pow2(tile_info.size));
+   base_alignment = MAX(base_alignment, tile_info.size);
 
    *surf = (struct isl_surf) {
       .dim = info->dim,
