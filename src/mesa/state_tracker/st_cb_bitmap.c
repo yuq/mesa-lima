@@ -622,7 +622,14 @@ st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
    if (width == 0 || height == 0)
       return;
 
-   st_validate_state(st);
+   /* We only need to validate state of the st dirty flags are set or
+    * any non-_NEW_PROGRAM_CONSTANTS mesa flags are set.  The VS we use
+    * for bitmap drawing uses no constants and the FS constants are
+    * explicitly uploaded in the draw_bitmap_quad() function.
+    */
+   if ((st->dirty.mesa & ~_NEW_PROGRAM_CONSTANTS) || st->dirty.st) {
+      st_validate_state(st);
+   }
 
    if (!st->bitmap.vs) {
       /* create pass-through vertex shader now */
