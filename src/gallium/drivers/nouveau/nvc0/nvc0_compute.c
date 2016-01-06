@@ -212,6 +212,38 @@ nvc0_compute_validate_driverconst(struct nvc0_context *nvc0)
    nvc0->dirty |= NVC0_NEW_DRIVERCONST;
 }
 
+static void
+nvc0_compute_validate_buffers(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   const int s = 5;
+   int i;
+
+   BEGIN_NVC0(push, NVC0_COMPUTE(CB_SIZE), 3);
+   PUSH_DATA (push, 1024);
+   PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (6 << 16) + (s << 10));
+   PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (6 << 16) + (s << 10));
+   BEGIN_1IC0(push, NVC0_COMPUTE(CB_POS), 1 + 4 * NVC0_MAX_BUFFERS);
+   PUSH_DATA (push, 512);
+
+   for (i = 0; i < NVC0_MAX_BUFFERS; i++) {
+      if (nvc0->buffers[s][i].buffer) {
+         struct nv04_resource *res =
+            nv04_resource(nvc0->buffers[s][i].buffer);
+         PUSH_DATA (push, res->address + nvc0->buffers[s][i].buffer_offset);
+         PUSH_DATAh(push, res->address + nvc0->buffers[s][i].buffer_offset);
+         PUSH_DATA (push, nvc0->buffers[s][i].buffer_size);
+         PUSH_DATA (push, 0);
+         BCTX_REFN(nvc0->bufctx_cp, CP_BUF, res, RDWR);
+      } else {
+         PUSH_DATA (push, 0);
+         PUSH_DATA (push, 0);
+         PUSH_DATA (push, 0);
+         PUSH_DATA (push, 0);
+      }
+   }
+}
+
 static bool
 nvc0_compute_state_validate(struct nvc0_context *nvc0)
 {
@@ -221,6 +253,8 @@ nvc0_compute_state_validate(struct nvc0_context *nvc0)
       nvc0_compute_validate_constbufs(nvc0);
    if (nvc0->dirty_cp & NVC0_NEW_CP_DRIVERCONST)
       nvc0_compute_validate_driverconst(nvc0);
+   if (nvc0->dirty_cp & NVC0_NEW_CP_BUFFERS)
+      nvc0_compute_validate_buffers(nvc0);
 
    /* TODO: textures, samplers, surfaces, global memory buffers */
 

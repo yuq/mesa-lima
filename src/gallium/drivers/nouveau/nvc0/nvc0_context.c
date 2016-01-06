@@ -261,12 +261,17 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
       }
       }
 
-      for (s = 0; s < 5; ++s) {
+      for (s = 0; s < 6; ++s) {
       for (i = 0; i < NVC0_MAX_BUFFERS; ++i) {
          if (nvc0->buffers[s][i].buffer == res) {
             nvc0->buffers_dirty[s] |= 1 << i;
-            nvc0->dirty |= NVC0_NEW_BUFFERS;
-            nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_BUF);
+            if (unlikely(s == 5)) {
+               nvc0->dirty_cp |= NVC0_NEW_CP_BUFFERS;
+               nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_BUF);
+            } else {
+               nvc0->dirty |= NVC0_NEW_BUFFERS;
+               nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_BUF);
+            }
             if (!--ref)
                return ref;
          }

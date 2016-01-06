@@ -1245,7 +1245,7 @@ nvc0_bind_buffers_range(struct nvc0_context *nvc0, const unsigned t,
    const unsigned mask = ((1 << nr) - 1) << start;
    unsigned i;
 
-   assert(t < 5);
+   assert(t < 6);
 
    if (pbuffers) {
       for (i = start; i < end; ++i) {
@@ -1265,7 +1265,11 @@ nvc0_bind_buffers_range(struct nvc0_context *nvc0, const unsigned t,
    }
    nvc0->buffers_dirty[t] |= mask;
 
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_BUF);
+   if (t == 5)
+      nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_BUF);
+   else
+      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_BUF);
+
 }
 
 static void
@@ -1277,7 +1281,10 @@ nvc0_set_shader_buffers(struct pipe_context *pipe,
    const unsigned s = nvc0_shader_stage(shader);
    nvc0_bind_buffers_range(nvc0_context(pipe), s, start, nr, buffers);
 
-   nvc0_context(pipe)->dirty |= NVC0_NEW_BUFFERS;
+   if (s == 5)
+      nvc0_context(pipe)->dirty_cp |= NVC0_NEW_CP_BUFFERS;
+   else
+      nvc0_context(pipe)->dirty |= NVC0_NEW_BUFFERS;
 }
 
 static inline void

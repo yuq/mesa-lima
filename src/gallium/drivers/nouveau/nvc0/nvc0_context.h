@@ -66,6 +66,7 @@
 #define NVC0_NEW_CP_CONSTBUF  (1 << 4)
 #define NVC0_NEW_CP_GLOBALS   (1 << 5)
 #define NVC0_NEW_CP_DRIVERCONST (1 << 6)
+#define NVC0_NEW_CP_BUFFERS   (1 << 7)
 
 /* 3d bufctx (during draw_vbo, blit_3d) */
 #define NVC0_BIND_FB            0
@@ -89,7 +90,8 @@
 #define NVC0_BIND_CP_DESC        50
 #define NVC0_BIND_CP_SCREEN      51
 #define NVC0_BIND_CP_QUERY       52
-#define NVC0_BIND_CP_COUNT       53
+#define NVC0_BIND_CP_BUF         53
+#define NVC0_BIND_CP_COUNT       54
 
 /* bufctx for other operations */
 #define NVC0_BIND_2D            0
