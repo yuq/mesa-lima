@@ -104,6 +104,13 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
     */
    nir_options->lower_ffma = true;
    nir_options->lower_sub = true;
+   nir_options->lower_fdiv = true;
+   nir_options->lower_scmp = true;
+   nir_options->lower_fmod = true;
+   nir_options->lower_bitfield_insert = true;
+   nir_options->lower_uadd_carry = true;
+   nir_options->lower_usub_borrow = true;
+
    /* In the vec4 backend, our dpN instruction replicates its result to all
     * the components of a vec4.  We would like NIR to give us replicated fdot
     * instructions because it can optimize better for us.
