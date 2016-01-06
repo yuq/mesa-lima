@@ -626,44 +626,42 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		if (writes_gpr(instr)) {
 			struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 
-			if (id->defn == instr) {
-				/* arrays which don't fit in one of the pre-defined class
-				 * sizes are pre-colored:
+			/* arrays which don't fit in one of the pre-defined class
+			 * sizes are pre-colored:
+			 */
+			if ((id->defn == instr) && (id->cls > 0)) {
+				unsigned name = ra_name(ctx, id->cls, id->defn);
+
+				ctx->def[name] = id->defn->ip;
+				ctx->use[name] = id->defn->ip;
+
+				/* since we are in SSA at this point: */
+				debug_assert(!BITSET_TEST(bd->use, name));
+
+				BITSET_SET(bd->def, name);
+
+				if (is_half(id->defn)) {
+					ra_set_node_class(ctx->g, name,
+							ctx->set->half_classes[id->cls - class_count]);
+				} else {
+					ra_set_node_class(ctx->g, name,
+							ctx->set->classes[id->cls]);
+				}
+
+				/* extend the live range for phi srcs, which may come
+				 * from the bottom of the loop
 				 */
-				if (id->cls >= 0) {
-					unsigned name = ra_name(ctx, id->cls, id->defn);
-
-					ctx->def[name] = id->defn->ip;
-					ctx->use[name] = id->defn->ip;
-
-					/* since we are in SSA at this point: */
-					debug_assert(!BITSET_TEST(bd->use, name));
-
-					BITSET_SET(bd->def, name);
-
-					if (is_half(id->defn)) {
-						ra_set_node_class(ctx->g, name,
-								ctx->set->half_classes[id->cls - class_count]);
-					} else {
-						ra_set_node_class(ctx->g, name,
-								ctx->set->classes[id->cls]);
-					}
-
-					/* extend the live range for phi srcs, which may come
-					 * from the bottom of the loop
-					 */
-					if (id->defn->regs[0]->flags & IR3_REG_PHI_SRC) {
-						struct ir3_instruction *phi = id->defn->regs[0]->instr;
-						foreach_ssa_src(src, phi) {
-							/* if src is after phi, then we need to extend
-							 * the liverange to the end of src's block:
-							 */
-							if (src->ip > phi->ip) {
-								struct ir3_instruction *last =
+				if (id->defn->regs[0]->flags & IR3_REG_PHI_SRC) {
+					struct ir3_instruction *phi = id->defn->regs[0]->instr;
+					foreach_ssa_src(src, phi) {
+						/* if src is after phi, then we need to extend
+						 * the liverange to the end of src's block:
+						 */
+						if (src->ip > phi->ip) {
+							struct ir3_instruction *last =
 									list_last_entry(&src->block->instr_list,
-										struct ir3_instruction, node);
-								ctx->use[name] = MAX2(ctx->use[name], last->ip);
-							}
+											struct ir3_instruction, node);
+							ctx->use[name] = MAX2(ctx->use[name], last->ip);
 						}
 					}
 				}
