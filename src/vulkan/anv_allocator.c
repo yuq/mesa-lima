@@ -740,7 +740,7 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
       uint32_t block = anv_block_pool_alloc(stream->block_pool);
       sb = stream->block_pool->map + block;
 
-      VALGRIND_MAKE_MEM_UNDEFINED(sb, sizeof(*sb));
+      VG(VALGRIND_MAKE_MEM_UNDEFINED(sb, sizeof(*sb)));
       sb->next = stream->block;
       sb->offset = block;
       VG(sb->_vg_ptr = NULL);
