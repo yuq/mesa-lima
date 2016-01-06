@@ -164,6 +164,7 @@ vtn_add_case(struct vtn_builder *b, struct vtn_switch *swtch,
       struct vtn_case *c = ralloc(b, struct vtn_case);
 
       list_inithead(&c->body);
+      c->start_block = case_block;
       c->fallthrough = NULL;
       nir_array_init(&c->values, b);
       c->is_default = false;
@@ -399,18 +400,10 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
           * the blocks, we also gather the much-needed fall-through
           * information.
           */
-         for (const uint32_t *w = block->branch + 2; w < branch_end; w += 2) {
-            struct vtn_block *case_block =
-               vtn_value(b, *w, vtn_value_type_block)->block;
-
-            if (case_block == break_block)
-               continue;
-
-            assert(case_block->switch_case);
-
-            vtn_cfg_walk_blocks(b, &case_block->switch_case->body, case_block,
-                                case_block->switch_case, break_block,
-                                NULL, loop_cont, NULL);
+         list_for_each_entry(struct vtn_case, cse, &swtch->cases, link) {
+            assert(cse->start_block != break_block);
+            vtn_cfg_walk_blocks(b, &cse->body, cse->start_block, cse,
+                                break_block, NULL, loop_cont, NULL);
          }
 
          /* Finally, we walk over all of the cases one more time and put

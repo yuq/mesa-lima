@@ -105,6 +105,9 @@ struct vtn_case {
 
    struct list_head body;
 
+   /* The block that starts this case */
+   struct vtn_block *start_block;
+
    /* The fallthrough case, if any */
    struct vtn_case *fallthrough;
 
