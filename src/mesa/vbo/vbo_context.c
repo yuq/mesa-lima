@@ -186,7 +186,7 @@ GLboolean _vbo_CreateContext( struct gl_context *ctx )
 }
 
 
-void _vbo_InvalidateState( struct gl_context *ctx, GLuint new_state )
+void _vbo_InvalidateState( struct gl_context *ctx, GLbitfield new_state )
 {
    vbo_exec_invalidate_state(ctx, new_state);
 }
