@@ -562,13 +562,20 @@ ra_init(struct ir3_ra_ctx *ctx)
 }
 
 static unsigned
-ra_name(struct ir3_ra_ctx *ctx, int cls, struct ir3_instruction *defn)
+__ra_name(struct ir3_ra_ctx *ctx, int cls, struct ir3_instruction *defn)
 {
 	unsigned name;
 	debug_assert(cls >= 0);
 	name = ctx->class_base[cls] + defn->name;
 	debug_assert(name < ctx->alloc_count);
 	return name;
+}
+
+static int
+ra_name(struct ir3_ra_ctx *ctx, struct ir3_ra_instr_data *id)
+{
+	/* TODO handle name mapping for arrays */
+	return __ra_name(ctx, id->cls, id->defn);
 }
 
 static void
@@ -626,11 +633,8 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		if (writes_gpr(instr)) {
 			struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 
-			/* arrays which don't fit in one of the pre-defined class
-			 * sizes are pre-colored:
-			 */
-			if ((id->defn == instr) && (id->cls > 0)) {
-				unsigned name = ra_name(ctx, id->cls, id->defn);
+			if (id->defn == instr) {
+				unsigned name = ra_name(ctx, id);
 
 				ctx->def[name] = id->defn->ip;
 				ctx->use[name] = id->defn->ip;
@@ -670,14 +674,10 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 
 		foreach_ssa_src(src, instr) {
 			if (writes_gpr(src)) {
-				struct ir3_ra_instr_data *id = &ctx->instrd[src->ip];
-
-				if (id->cls >= 0) {
-					unsigned name = ra_name(ctx, id->cls, id->defn);
-					ctx->use[name] = MAX2(ctx->use[name], instr->ip);
-					if (!BITSET_TEST(bd->def, name))
-						BITSET_SET(bd->use, name);
-				}
+				unsigned name = ra_name(ctx, &ctx->instrd[src->ip]);
+				ctx->use[name] = MAX2(ctx->use[name], instr->ip);
+				if (!BITSET_TEST(bd->def, name))
+					BITSET_SET(bd->use, name);
 			}
 		}
 	}
@@ -765,12 +765,8 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 	/* need to fix things up to keep outputs live: */
 	for (unsigned i = 0; i < ir->noutputs; i++) {
 		struct ir3_instruction *instr = ir->outputs[i];
-		struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
-
-		if (id->cls >= 0) {
-			unsigned name = ra_name(ctx, id->cls, id->defn);
-			ctx->use[name] = ctx->instr_cnt;
-		}
+		unsigned name = ra_name(ctx, &ctx->instrd[instr->ip]);
+		ctx->use[name] = ctx->instr_cnt;
 	}
 
 	for (unsigned i = 0; i < ctx->alloc_count; i++) {
@@ -839,9 +835,8 @@ reg_assign(struct ir3_ra_ctx *ctx, struct ir3_register *reg,
 		struct ir3_instruction *instr)
 {
 	struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
-
-	if (id->cls >= 0) {
-		unsigned name = ra_name(ctx, id->cls, id->defn);
+	if (id->defn) {
+		unsigned name = ra_name(ctx, id);
 		unsigned r = ra_get_node_reg(ctx->g, name);
 		unsigned num = ctx->set->ra_reg_to_gpr[r] + id->off;
 
@@ -895,7 +890,7 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 		if (ctx->frag_face && (i < ir->ninputs) && ir->inputs[i]) {
 			struct ir3_instruction *instr = ir->inputs[i];
 			int cls = size_to_class(1, true);
-			unsigned name = ra_name(ctx, cls, instr);
+			unsigned name = __ra_name(ctx, cls, instr);
 			unsigned reg = ctx->set->gpr_to_ra_reg[cls][0];
 
 			/* if we have frag_face, it gets hr0.x */
@@ -911,7 +906,7 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 				if (id->defn == instr) {
 					unsigned name, reg;
 
-					name = ra_name(ctx, id->cls, id->defn);
+					name = ra_name(ctx, id);
 					reg = ctx->set->gpr_to_ra_reg[id->cls][j];
 
 					ra_set_node_reg(ctx->g, name, reg);
