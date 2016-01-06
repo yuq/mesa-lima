@@ -125,8 +125,7 @@ static void *si_create_compute_state(
 			si_compile_llvm(sctx->screen, &program->kernels[i].binary,
 					&program->kernels[i].config, sctx->tm,
 					mod, &sctx->b.debug, TGSI_PROCESSOR_COMPUTE);
-			si_shader_dump(sctx->screen, &program->kernels[i].binary,
-				       &program->kernels[i].config,
+			si_shader_dump(sctx->screen, &program->kernels[i],
 				       &sctx->b.debug, TGSI_PROCESSOR_COMPUTE);
 			si_shader_binary_upload(sctx->screen, &program->kernels[i]);
 			LLVMDisposeModule(mod);
@@ -143,8 +142,7 @@ static void *si_create_compute_state(
 	init_scratch_buffer(sctx, program);
 	si_shader_binary_read_config(&program->shader.binary,
 				     &program->shader.config, 0);
-	si_shader_dump(sctx->screen, &program->shader.binary,
-		       &program->shader.config, &sctx->b.debug,
+	si_shader_dump(sctx->screen, &program->shader, &sctx->b.debug,
 		       TGSI_PROCESSOR_COMPUTE);
 	si_shader_binary_upload(sctx->screen, &program->shader);
 

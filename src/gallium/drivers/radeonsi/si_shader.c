@@ -3872,17 +3872,15 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			   conf->lds_size, conf->scratch_bytes_per_wave);
 }
 
-void si_shader_dump(struct si_screen *sscreen,
-		    struct radeon_shader_binary *binary,
-		    struct si_shader_config *conf,
-		    struct pipe_debug_callback *debug,
-		    unsigned processor)
+void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
+		    struct pipe_debug_callback *debug, unsigned processor)
 {
 	if (r600_can_dump_shader(&sscreen->b, processor))
 		if (!(sscreen->b.debug_flags & DBG_NO_ASM))
-			si_shader_dump_disassembly(binary, debug);
+			si_shader_dump_disassembly(&shader->binary, debug);
 
-	si_shader_dump_stats(sscreen, conf, binary->code_size, debug, processor);
+	si_shader_dump_stats(sscreen, &shader->config,
+			     shader->binary.code_size, debug, processor);
 }
 
 int si_compile_llvm(struct si_screen *sscreen,
@@ -3995,8 +3993,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 			    bld_base->base.gallivm->module,
 			    debug, TGSI_PROCESSOR_GEOMETRY);
 	if (!r) {
-		si_shader_dump(sscreen, &si_shader_ctx->shader->binary,
-			       &si_shader_ctx->shader->config, debug,
+		si_shader_dump(sscreen, si_shader_ctx->shader, debug,
 			       TGSI_PROCESSOR_GEOMETRY);
 		r = si_shader_binary_upload(sscreen, si_shader_ctx->shader);
 	}
@@ -4201,8 +4198,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		goto out;
 	}
 
-	si_shader_dump(sscreen, &shader->binary, &shader->config,
-		       debug, si_shader_ctx.type);
+	si_shader_dump(sscreen, shader, debug, si_shader_ctx.type);
 
 	r = si_shader_binary_upload(sscreen, shader);
 	if (r) {
