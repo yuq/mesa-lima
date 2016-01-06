@@ -501,8 +501,8 @@ st_flush_bitmap_cache(struct st_context *st)
 */
 
       /* The texture transfer has been mapped until now.
-          * So unmap and release the texture transfer before drawing.
-          */
+       * So unmap and release the texture transfer before drawing.
+       */
       if (cache->trans && cache->buffer) {
          if (0)
             print_cache(cache);
