@@ -494,11 +494,11 @@ st_flush_bitmap_cache(struct st_context *st)
 
       assert(cache->xmin <= cache->xmax);
 
-/*    printf("flush size %d x %d  at %d, %d\n",
-             cache->xmax - cache->xmin,
-             cache->ymax - cache->ymin,
-             cache->xpos, cache->ypos);
-*/
+      if (0)
+         printf("flush bitmap, size %d x %d  at %d, %d\n",
+                cache->xmax - cache->xmin,
+                cache->ymax - cache->ymin,
+                cache->xpos, cache->ypos);
 
       /* The texture transfer has been mapped until now.
        * So unmap and release the texture transfer before drawing.
