@@ -21,6 +21,7 @@
 
 #include "st_context.h"
 #include "st_atom.h"
+#include "st_cb_bitmap.h"
 #include "st_cb_drawtex.h"
 
 #include "pipe/p_context.h"
@@ -112,6 +113,8 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
    uint semantic_indexes[2 + MAX_TEXTURE_UNITS];
    struct pipe_vertex_element velements[2 + MAX_TEXTURE_UNITS];
    unsigned offset;
+
+   st_flush_bitmap_cache(st);
 
    st_validate_state(st);
 

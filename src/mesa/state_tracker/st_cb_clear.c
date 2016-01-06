@@ -41,6 +41,7 @@
 #include "program/prog_instruction.h"
 #include "st_context.h"
 #include "st_atom.h"
+#include "st_cb_bitmap.h"
 #include "st_cb_clear.h"
 #include "st_cb_fbo.h"
 #include "st_format.h"
@@ -465,6 +466,8 @@ st_Clear(struct gl_context *ctx, GLbitfield mask)
    GLbitfield quad_buffers = 0x0;
    GLbitfield clear_buffers = 0x0;
    GLuint i;
+
+   st_flush_bitmap_cache(st);
 
    /* This makes sure the pipe has the latest scissor, etc values */
    st_validate_state( st );

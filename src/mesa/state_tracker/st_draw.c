@@ -48,6 +48,7 @@
 
 #include "st_context.h"
 #include "st_atom.h"
+#include "st_cb_bitmap.h"
 #include "st_cb_bufferobjects.h"
 #include "st_cb_xformfb.h"
 #include "st_debug.h"
@@ -196,6 +197,8 @@ st_draw_vbo(struct gl_context *ctx,
 
    /* Mesa core state should have been validated already */
    assert(ctx->NewState == 0x0);
+
+   st_flush_bitmap_cache(st);
 
    /* Validate state. */
    if (st->dirty.st || ctx->NewDriverState) {

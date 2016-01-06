@@ -33,7 +33,6 @@
 #include "pipe/p_defines.h"
 #include "st_context.h"
 #include "st_atom.h"
-#include "st_cb_bitmap.h"
 #include "st_program.h"
 #include "st_manager.h"
 
@@ -180,9 +179,6 @@ void st_validate_state( struct st_context *st )
    st->ctx->NewDriverState = 0;
 
    check_attrib_edgeflag(st);
-
-   if (state->mesa)
-      st_flush_bitmap_cache(st);
 
    check_program_state( st );
 

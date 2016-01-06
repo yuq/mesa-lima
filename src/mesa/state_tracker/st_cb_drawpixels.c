@@ -50,6 +50,7 @@
 
 #include "st_atom.h"
 #include "st_atom_constbuf.h"
+#include "st_cb_bitmap.h"
 #include "st_cb_drawpixels.h"
 #include "st_cb_readpixels.h"
 #include "st_cb_fbo.h"
@@ -1063,6 +1064,8 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
    /* Mesa state should be up to date by now */
    assert(ctx->NewState == 0x0);
 
+   st_flush_bitmap_cache(st);
+
    st_validate_state(st);
 
    /* Limit the size of the glDrawPixels to the max texture size.
@@ -1421,6 +1424,8 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
    GLboolean invertTex = GL_FALSE;
    GLint readX, readY, readW, readH;
    struct gl_pixelstore_attrib pack = ctx->DefaultPacking;
+
+   st_flush_bitmap_cache(st);
 
    st_validate_state(st);
 
