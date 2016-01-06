@@ -123,6 +123,26 @@ nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
         return &intr->dest.ssa;
 }
 
+nir_ssa_def *
+vc4_nir_get_swizzled_channel(nir_builder *b, nir_ssa_def **srcs, int swiz)
+{
+        switch (swiz) {
+        default:
+        case UTIL_FORMAT_SWIZZLE_NONE:
+                fprintf(stderr, "warning: unknown swizzle\n");
+                /* FALLTHROUGH */
+        case UTIL_FORMAT_SWIZZLE_0:
+                return nir_imm_float(b, 0.0);
+        case UTIL_FORMAT_SWIZZLE_1:
+                return nir_imm_float(b, 1.0);
+        case UTIL_FORMAT_SWIZZLE_X:
+        case UTIL_FORMAT_SWIZZLE_Y:
+        case UTIL_FORMAT_SWIZZLE_Z:
+        case UTIL_FORMAT_SWIZZLE_W:
+                return srcs[swiz];
+        }
+}
+
 static struct qreg *
 ntq_init_ssa_def(struct vc4_compile *c, nir_ssa_def *def)
 {
@@ -183,27 +203,6 @@ ntq_get_alu_src(struct vc4_compile *c, nir_alu_instr *instr,
 
         return r;
 };
-
-static struct qreg
-get_swizzled_channel(struct vc4_compile *c,
-                     struct qreg *srcs, int swiz)
-{
-        switch (swiz) {
-        default:
-        case UTIL_FORMAT_SWIZZLE_NONE:
-                fprintf(stderr, "warning: unknown swizzle\n");
-                /* FALLTHROUGH */
-        case UTIL_FORMAT_SWIZZLE_0:
-                return qir_uniform_f(c, 0.0);
-        case UTIL_FORMAT_SWIZZLE_1:
-                return qir_uniform_f(c, 1.0);
-        case UTIL_FORMAT_SWIZZLE_X:
-        case UTIL_FORMAT_SWIZZLE_Y:
-        case UTIL_FORMAT_SWIZZLE_Z:
-        case UTIL_FORMAT_SWIZZLE_W:
-                return srcs[swiz];
-        }
-}
 
 static inline struct qreg
 qir_SAT(struct vc4_compile *c, struct qreg val)
