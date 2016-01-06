@@ -64,6 +64,8 @@ _mesa_hash_table_create(void *mem_ctx,
                                                     const void *b));
 void _mesa_hash_table_destroy(struct hash_table *ht,
                               void (*delete_function)(struct hash_entry *entry));
+void _mesa_hash_table_clear(struct hash_table *ht,
+                            void (*delete_function)(struct hash_entry *entry));
 void _mesa_hash_table_set_deleted_key(struct hash_table *ht,
                                       const void *deleted_key);
 
