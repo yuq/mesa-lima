@@ -64,43 +64,43 @@ block_full_16(struct lp_rasterizer_task *task,
 }
 
 static inline unsigned
-build_mask_linear(int64_t c, int64_t dcdx, int64_t dcdy)
+build_mask_linear(int32_t c, int32_t dcdx, int32_t dcdy)
 {
    unsigned mask = 0;
 
-   int64_t c0 = c;
-   int64_t c1 = c0 + dcdy;
-   int64_t c2 = c1 + dcdy;
-   int64_t c3 = c2 + dcdy;
+   int32_t c0 = c;
+   int32_t c1 = c0 + dcdy;
+   int32_t c2 = c1 + dcdy;
+   int32_t c3 = c2 + dcdy;
 
-   mask |= ((c0 + 0 * dcdx) >> FIXED_SHIFT) & (1 << 0);
-   mask |= ((c0 + 1 * dcdx) >> FIXED_SHIFT) & (1 << 1);
-   mask |= ((c0 + 2 * dcdx) >> FIXED_SHIFT) & (1 << 2);
-   mask |= ((c0 + 3 * dcdx) >> FIXED_SHIFT) & (1 << 3);
-   mask |= ((c1 + 0 * dcdx) >> FIXED_SHIFT) & (1 << 4);
-   mask |= ((c1 + 1 * dcdx) >> FIXED_SHIFT) & (1 << 5);
-   mask |= ((c1 + 2 * dcdx) >> FIXED_SHIFT) & (1 << 6);
-   mask |= ((c1 + 3 * dcdx) >> FIXED_SHIFT) & (1 << 7);
-   mask |= ((c2 + 0 * dcdx) >> FIXED_SHIFT) & (1 << 8);
-   mask |= ((c2 + 1 * dcdx) >> FIXED_SHIFT) & (1 << 9);
-   mask |= ((c2 + 2 * dcdx) >> FIXED_SHIFT) & (1 << 10);
-   mask |= ((c2 + 3 * dcdx) >> FIXED_SHIFT) & (1 << 11);
-   mask |= ((c3 + 0 * dcdx) >> FIXED_SHIFT) & (1 << 12);
-   mask |= ((c3 + 1 * dcdx) >> FIXED_SHIFT) & (1 << 13);
-   mask |= ((c3 + 2 * dcdx) >> FIXED_SHIFT) & (1 << 14);
-   mask |= ((c3 + 3 * dcdx) >> FIXED_SHIFT) & (1 << 15);
+   mask |= ((c0 + 0 * dcdx) >> 31) & (1 << 0);
+   mask |= ((c0 + 1 * dcdx) >> 31) & (1 << 1);
+   mask |= ((c0 + 2 * dcdx) >> 31) & (1 << 2);
+   mask |= ((c0 + 3 * dcdx) >> 31) & (1 << 3);
+   mask |= ((c1 + 0 * dcdx) >> 31) & (1 << 4);
+   mask |= ((c1 + 1 * dcdx) >> 31) & (1 << 5);
+   mask |= ((c1 + 2 * dcdx) >> 31) & (1 << 6);
+   mask |= ((c1 + 3 * dcdx) >> 31) & (1 << 7);
+   mask |= ((c2 + 0 * dcdx) >> 31) & (1 << 8);
+   mask |= ((c2 + 1 * dcdx) >> 31) & (1 << 9);
+   mask |= ((c2 + 2 * dcdx) >> 31) & (1 << 10);
+   mask |= ((c2 + 3 * dcdx) >> 31) & (1 << 11);
+   mask |= ((c3 + 0 * dcdx) >> 31) & (1 << 12);
+   mask |= ((c3 + 1 * dcdx) >> 31) & (1 << 13);
+   mask |= ((c3 + 2 * dcdx) >> 31) & (1 << 14);
+   mask |= ((c3 + 3 * dcdx) >> 31) & (1 << 15);
   
    return mask;
 }
 
 
 static inline void
-build_masks(int64_t c,
-            int64_t cdiff,
-            int64_t dcdx,
-            int64_t dcdy,
-	    unsigned *outmask,
-	    unsigned *partmask)
+build_masks(int32_t c,
+            int32_t cdiff,
+            int32_t dcdx,
+            int32_t dcdy,
+            unsigned *outmask,
+            unsigned *partmask)
 {
    *outmask |= build_mask_linear(c, dcdx, dcdy);
    *partmask |= build_mask_linear(c + cdiff, dcdx, dcdy);
@@ -140,12 +140,12 @@ lp_rast_triangle_4_16(struct lp_rasterizer_task *task,
 
 
 static inline void
-build_masks_32(int c, 
-               int cdiff,
-               int dcdx,
-               int dcdy,
-               unsigned *outmask,
-               unsigned *partmask)
+build_masks_sse(int c,
+                int cdiff,
+                int dcdx,
+                int dcdy,
+                unsigned *outmask,
+                unsigned *partmask)
 {
    __m128i cstep0 = _mm_setr_epi32(c, c+dcdx, c+dcdx*2, c+dcdx*3);
    __m128i xdcdy = _mm_set1_epi32(dcdy);
@@ -186,7 +186,7 @@ build_masks_32(int c,
 
 
 static inline unsigned
-build_mask_linear_32(int c, int dcdx, int dcdy)
+build_mask_linear_sse(int c, int dcdx, int dcdy)
 {
    __m128i cstep0 = _mm_setr_epi32(c, c+dcdx, c+dcdx*2, c+dcdx*3);
    __m128i xdcdy = _mm_set1_epi32(dcdy);
@@ -442,12 +442,12 @@ lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
 #include "util/u_pwr8.h"
 
 static inline void
-build_masks_32(int c,
-               int cdiff,
-               int dcdx,
-               int dcdy,
-               unsigned *outmask,
-               unsigned *partmask)
+build_masks_ppc(int c,
+                int cdiff,
+                int dcdx,
+                int dcdy,
+                unsigned *outmask,
+                unsigned *partmask)
 {
    __m128i cstep0 = vec_setr_epi32(c, c+dcdx, c+dcdx*2, c+dcdx*3);
    __m128i xdcdy = (__m128i) vec_splats(dcdy);
@@ -487,7 +487,7 @@ build_masks_32(int c,
 }
 
 static inline unsigned
-build_mask_linear_32(int c, int dcdx, int dcdy)
+build_mask_linear_ppc(int c, int dcdx, int dcdy)
 {
    __m128i cstep0 = vec_setr_epi32(c, c+dcdx, c+dcdx*2, c+dcdx*3);
    __m128i xdcdy = (__m128i) vec_splats(dcdy);
@@ -684,8 +684,18 @@ lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
 #endif
 
 
+#if defined PIPE_ARCH_SSE
+#define BUILD_MASKS(c, cdiff, dcdx, dcdy, omask, pmask) build_masks_sse((int)c, (int)cdiff, dcdx, dcdy, omask, pmask)
+#define BUILD_MASK_LINEAR(c, dcdx, dcdy) build_mask_linear_sse((int)c, dcdx, dcdy)
+#elif (defined(_ARCH_PWR8) && defined(PIPE_ARCH_LITTLE_ENDIAN))
+#define BUILD_MASKS(c, cdiff, dcdx, dcdy, omask, pmask) build_masks_ppc((int)c, (int)cdiff, dcdx, dcdy, omask, pmask)
+#define BUILD_MASK_LINEAR(c, dcdx, dcdy) build_mask_linear_ppc((int)c, dcdx, dcdy)
+#else
 #define BUILD_MASKS(c, cdiff, dcdx, dcdy, omask, pmask) build_masks(c, cdiff, dcdx, dcdy, omask, pmask)
 #define BUILD_MASK_LINEAR(c, dcdx, dcdy) build_mask_linear(c, dcdx, dcdy)
+#endif
+
+#define RASTER_64 1
 
 #define TAG(x) x##_1
 #define NR_PLANES 1
@@ -722,12 +732,7 @@ lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
 #define NR_PLANES 8
 #include "lp_rast_tri_tmp.h"
 
-#if defined(PIPE_ARCH_SSE) || (defined(_ARCH_PWR8) && defined(PIPE_ARCH_LITTLE_ENDIAN))
-#undef BUILD_MASKS
-#undef BUILD_MASK_LINEAR
-#define BUILD_MASKS(c, cdiff, dcdx, dcdy, omask, pmask) build_masks_32((int)c, (int)cdiff, dcdx, dcdy, omask, pmask)
-#define BUILD_MASK_LINEAR(c, dcdx, dcdy) build_mask_linear_32((int)c, dcdx, dcdy)
-#endif
+#undef RASTER_64
 
 #define TAG(x) x##_32_1
 #define NR_PLANES 1
