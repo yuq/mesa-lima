@@ -377,6 +377,7 @@ VBO_FILES = \
 	vbo/vbo_exec_eval.c \
 	vbo/vbo_exec.h \
 	vbo/vbo.h \
+	vbo/vbo_minmax_index.c \
 	vbo/vbo_noop.c \
 	vbo/vbo_noop.h \
 	vbo/vbo_primitive_restart.c \
