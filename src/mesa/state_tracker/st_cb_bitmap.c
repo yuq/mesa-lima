@@ -619,8 +619,8 @@ st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
    struct st_context *st = st_context(ctx);
    struct pipe_resource *pt;
 
-   if (width == 0 || height == 0)
-      return;
+   assert(width > 0);
+   assert(height > 0);
 
    /* We only need to validate state of the st dirty flags are set or
     * any non-_NEW_PROGRAM_CONSTANTS mesa flags are set.  The VS we use
