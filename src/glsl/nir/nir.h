@@ -1509,6 +1509,10 @@ typedef struct nir_shader_compiler_options {
    bool lower_fpow;
    bool lower_fsat;
    bool lower_fsqrt;
+   bool lower_fmod;
+   bool lower_bitfield_insert;
+   bool lower_uadd_carry;
+   bool lower_usub_borrow;
    /** lowers fneg and ineg to fsub and isub. */
    bool lower_negate;
    /** lowers fsub and isub to fadd+fneg and iadd+ineg. */

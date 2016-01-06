@@ -222,6 +222,12 @@ optimizations = [
    (('iadd', a, ('isub', 0, b)), ('isub', a, b)),
    (('fabs', ('fsub', 0.0, a)), ('fabs', a)),
    (('iabs', ('isub', 0, a)), ('iabs', a)),
+
+   # Misc. lowering
+   (('fmod', a, b), ('fsub', a, ('fmul', b, ('ffloor', ('fdiv', a, b)))), 'options->lower_fmod'),
+   (('bitfield_insert', a, b, c, d), ('bfi', ('bfm', d, c), b, a), 'options->lower_bitfield_insert'),
+   (('uadd_carry', a, b), ('ult', ('iadd', a, b), a), 'options->lower_uadd_carry'),
+   (('usub_borrow', a, b), ('ult', a, b), 'options->lower_usub_borrow'),
 ]
 
 # Add optimizations to handle the case where the result of a ternary is
