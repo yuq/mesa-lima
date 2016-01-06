@@ -3875,7 +3875,7 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 			conf->spi_ps_input_ena = value;
 			break;
 		case R_0286D0_SPI_PS_INPUT_ADDR:
-			/* Not used yet, but will be in the future */
+			conf->spi_ps_input_addr = value;
 			break;
 		case R_0286E8_SPI_TMPRING_SIZE:
 		case R_00B860_COMPUTE_TMPRING_SIZE:
@@ -3895,6 +3895,9 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 			}
 			break;
 		}
+
+		if (!conf->spi_ps_input_addr)
+			conf->spi_ps_input_addr = conf->spi_ps_input_ena;
 	}
 }
 

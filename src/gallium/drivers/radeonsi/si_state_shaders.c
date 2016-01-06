@@ -527,7 +527,8 @@ static void si_shader_ps(struct si_shader *shader)
 		spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 
 	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, input_ena);
-	si_pm4_set_reg(pm4, R_0286D0_SPI_PS_INPUT_ADDR, input_ena);
+	si_pm4_set_reg(pm4, R_0286D0_SPI_PS_INPUT_ADDR,
+		       shader->config.spi_ps_input_addr);
 
 	/* Set interpolation controls. */
 	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena) ||
