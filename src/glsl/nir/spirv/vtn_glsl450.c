@@ -111,7 +111,14 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Sqrt:        op = nir_op_fsqrt;      break;
    case GLSLstd450InverseSqrt: op = nir_op_frsq;       break;
 
-   case GLSLstd450Modf:        op = nir_op_fmod;       break;
+   case GLSLstd450Modf: {
+      val->ssa->def = nir_ffract(nb, src[0]);
+      nir_deref_var *out = vtn_value(b, w[6], vtn_value_type_deref)->deref;
+      nir_store_deref_var(nb, out, nir_ffloor(nb, src[0]), 0xf);
+      return;
+   }
+
+   op = nir_op_fmod;       break;
    case GLSLstd450FMin:        op = nir_op_fmin;       break;
    case GLSLstd450UMin:        op = nir_op_umin;       break;
    case GLSLstd450SMin:        op = nir_op_imin;       break;
