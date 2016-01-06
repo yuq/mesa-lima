@@ -67,7 +67,7 @@ isl_is_aligned(uintmax_t n, uintmax_t a)
 static inline uintmax_t
 isl_align(uintmax_t n, uintmax_t a)
 {
-   assert(isl_is_pow2(a));
+   assert(a != 0 && isl_is_pow2(a));
    return (n + a - 1) & ~(a - 1);
 }
 
