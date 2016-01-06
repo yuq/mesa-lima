@@ -1868,12 +1868,14 @@ _mesa_clear_buffer_sub_data(struct gl_context *ctx,
       return;
    }
 
+   /* Bail early. Negative size has already been checked. */
+   if (size == 0)
+      return;
+
    if (data == NULL) {
       /* clear to zeros, per the spec */
-      if (size > 0) {
-         ctx->Driver.ClearBufferSubData(ctx, offset, size,
-                                        NULL, clearValueSize, bufObj);
-      }
+      ctx->Driver.ClearBufferSubData(ctx, offset, size,
+                                     NULL, clearValueSize, bufObj);
       return;
    }
 
@@ -1882,10 +1884,8 @@ _mesa_clear_buffer_sub_data(struct gl_context *ctx,
       return;
    }
 
-   if (size > 0) {
-      ctx->Driver.ClearBufferSubData(ctx, offset, size,
-                                     clearValue, clearValueSize, bufObj);
-   }
+   ctx->Driver.ClearBufferSubData(ctx, offset, size,
+                                  clearValue, clearValueSize, bufObj);
 }
 
 void GLAPIENTRY
