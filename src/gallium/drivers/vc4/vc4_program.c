@@ -845,13 +845,19 @@ ntq_emit_ubfe(struct vc4_compile *c, struct qreg base, struct qreg offset,
         return qir_UNPACK_8_I(c, base, offset_bit / 8);
 }
 
-static struct qreg
-ntq_emit_comparison(struct vc4_compile *c, nir_alu_instr *instr,
-                    struct qreg src0, struct qreg src1)
+/**
+ * If compare_instr is a valid comparison instruction, emits the
+ * compare_instr's comparison and returns the sel_instr's return value based
+ * on the compare_instr's result.
+ */
+static bool
+ntq_emit_comparison(struct vc4_compile *c, struct qreg *dest,
+                    nir_alu_instr *compare_instr,
+                    nir_alu_instr *sel_instr)
 {
         enum qpu_cond cond;
 
-        switch (instr->op) {
+        switch (compare_instr->op) {
         case nir_op_feq:
         case nir_op_ieq:
         case nir_op_seq:
@@ -874,25 +880,63 @@ ntq_emit_comparison(struct vc4_compile *c, nir_alu_instr *instr,
                 cond = QPU_COND_NS;
                 break;
         default:
-                unreachable("bad ALU op for comparison");
+                return false;
         }
 
-        if (nir_op_infos[instr->op].input_types[0] == nir_type_float)
+        struct qreg src0 = ntq_get_alu_src(c, compare_instr, 0);
+        struct qreg src1 = ntq_get_alu_src(c, compare_instr, 1);
+
+        if (nir_op_infos[compare_instr->op].input_types[0] == nir_type_float)
                 qir_SF(c, qir_FSUB(c, src0, src1));
         else
                 qir_SF(c, qir_SUB(c, src0, src1));
 
-        switch (instr->op) {
+        switch (sel_instr->op) {
         case nir_op_seq:
         case nir_op_sne:
         case nir_op_sge:
         case nir_op_slt:
-                return qir_SEL(c, cond,
-                               qir_uniform_f(c, 1.0), qir_uniform_f(c, 0.0));
+                *dest = qir_SEL(c, cond,
+                                qir_uniform_f(c, 1.0), qir_uniform_f(c, 0.0));
+                break;
+
+        case nir_op_bcsel:
+                *dest = qir_SEL(c, cond,
+                                ntq_get_alu_src(c, sel_instr, 1),
+                                ntq_get_alu_src(c, sel_instr, 2));
+                break;
+
         default:
-                return qir_SEL(c, cond,
-                               qir_uniform_ui(c, ~0), qir_uniform_ui(c, 0.0));
+                *dest = qir_SEL(c, cond,
+                                qir_uniform_ui(c, ~0), qir_uniform_ui(c, 0));
+                break;
         }
+
+        return true;
+}
+
+/**
+ * Attempts to fold a comparison generating a boolean result into the
+ * condition code for selecting between two values, instead of comparing the
+ * boolean result against 0 to generate the condition code.
+ */
+static struct qreg ntq_emit_bcsel(struct vc4_compile *c, nir_alu_instr *instr,
+                                  struct qreg *src)
+{
+        if (!instr->src[0].src.is_ssa)
+                goto out;
+        nir_alu_instr *compare =
+                nir_instr_as_alu(instr->src[0].src.ssa->parent_instr);
+        if (!compare)
+                goto out;
+
+        struct qreg dest;
+        if (ntq_emit_comparison(c, &dest, compare, instr))
+                return dest;
+
+out:
+        qir_SF(c, src[0]);
+        return qir_SEL(c, QPU_COND_NS, src[1], src[2]);
 }
 
 static void
@@ -1037,12 +1081,13 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
         case nir_op_ige:
         case nir_op_uge:
         case nir_op_ilt:
-                *dest = ntq_emit_comparison(c, instr, src[0], src[1]);
+                if (!ntq_emit_comparison(c, dest, instr, instr)) {
+                        fprintf(stderr, "Bad comparison instruction\n");
+                }
                 break;
 
         case nir_op_bcsel:
-                qir_SF(c, src[0]);
-                *dest = qir_SEL(c, QPU_COND_NS, src[1], src[2]);
+                *dest = ntq_emit_bcsel(c, instr, src);
                 break;
         case nir_op_fcsel:
                 qir_SF(c, src[0]);
