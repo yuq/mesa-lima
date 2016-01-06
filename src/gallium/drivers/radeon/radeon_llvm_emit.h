@@ -34,6 +34,7 @@
 struct pipe_debug_callback;
 struct radeon_shader_binary;
 
+void radeon_llvm_add_attribute(LLVMValueRef F, const char *name, int value);
 void radeon_llvm_shader_type(LLVMValueRef F, unsigned type);
 
 LLVMTargetRef radeon_llvm_get_r600_target(const char *triple);
