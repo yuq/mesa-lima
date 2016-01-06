@@ -99,7 +99,7 @@ static void st_Enable(struct gl_context * ctx, GLenum cap, GLboolean state)
 /**
  * Called via ctx->Driver.UpdateState()
  */
-void st_invalidate_state(struct gl_context * ctx, GLuint new_state)
+void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
 {
    struct st_context *st = st_context(ctx);
 
