@@ -145,6 +145,19 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
 #endif
 
 static void
+flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer)
+{
+   if (cmd_buffer->state.current_pipeline != _3D) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
+#if ANV_GEN >= 9
+                     .MaskBits = 3,
+#endif
+                     .PipelineSelection = _3D);
+      cmd_buffer->state.current_pipeline = _3D;
+   }
+}
+
+static void
 cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
@@ -154,14 +167,7 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 
    assert((pipeline->active_stages & VK_SHADER_STAGE_COMPUTE_BIT) == 0);
 
-   if (cmd_buffer->state.current_pipeline != _3D) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
-#if ANV_GEN >= 9
-                     .MaskBits = 3,
-#endif
-                     .PipelineSelection = _3D);
-      cmd_buffer->state.current_pipeline = _3D;
-   }
+   flush_pipeline_select_3d(cmd_buffer);
 
    if (vb_emit) {
       const uint32_t num_buffers = __builtin_popcount(vb_emit);
@@ -806,6 +812,8 @@ void genX(CmdBeginRenderPass)(
 
    cmd_buffer->state.framebuffer = framebuffer;
    cmd_buffer->state.pass = pass;
+
+   flush_pipeline_select_3d(cmd_buffer);
 
    const VkRect2D *render_area = &pRenderPassBegin->renderArea;
 
