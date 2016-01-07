@@ -710,11 +710,12 @@ isl_calc_phys_slice0_extent_sa(const struct isl_device *dev,
 
 /**
  * Calculate the pitch between physical array slices, in units of rows of
- * surface samples. The result is aligned to \a image_align_sa.
+ * surface elements.
  */
 static uint32_t
-isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
+isl_calc_array_pitch_el_rows(const struct isl_device *dev,
                              const struct isl_surf_init_info *restrict info,
+                             const struct isl_tile_info *tile_info,
                              enum isl_dim_layout dim_layout,
                              enum isl_array_pitch_span array_pitch_span,
                              const struct isl_extent3d *image_align_sa,
@@ -722,15 +723,17 @@ isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
                              const struct isl_extent2d *phys_slice0_sa)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+   uint32_t pitch_sa_rows = 0;
 
    switch (dim_layout) {
    case ISL_DIM_LAYOUT_GEN9_1D:
       /* Each row is an array slice */
-      return 1;
+      pitch_sa_rows = 1;
+      break;
    case ISL_DIM_LAYOUT_GEN4_2D:
       switch (array_pitch_span) {
       case ISL_ARRAY_PITCH_SPAN_COMPACT:
-         return isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
+         pitch_sa_rows = isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
       case ISL_ARRAY_PITCH_SPAN_FULL: {
          /* The QPitch equation is found in the Broadwell PRM >> Volume 5:
           * Memory Views >> Common Surface Formats >> Surface Layout >> 2D
@@ -750,7 +753,7 @@ isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
             m = 11;
          }
 
-         uint32_t pitch_sa_rows = h0_sa + h1_sa + (m * image_align_sa->h);
+         pitch_sa_rows = h0_sa + h1_sa + (m * image_align_sa->h);
 
          if (ISL_DEV_GEN(dev) == 6 && info->samples > 1 &&
              (info->height % 4 == 1)) {
@@ -768,20 +771,21 @@ isl_calc_array_pitch_sa_rows(const struct isl_device *dev,
          }
 
          pitch_sa_rows = isl_align_npot(pitch_sa_rows, fmtl->bh);
-
-         return pitch_sa_rows;
          } /* end case */
          break;
       }
       break;
-
    case ISL_DIM_LAYOUT_GEN4_3D:
       assert(array_pitch_span == ISL_ARRAY_PITCH_SPAN_COMPACT);
-      return isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
+      pitch_sa_rows = isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
+      break;
+   default:
+      unreachable("bad isl_dim_layout");
+      break;
    }
 
-   unreachable("bad isl_dim_layout");
-   return 0;
+   assert(pitch_sa_rows % fmtl->bh == 0);
+   return pitch_sa_rows / fmtl->bh;
 }
 
 /**
@@ -1054,13 +1058,10 @@ isl_surf_init_s(const struct isl_device *dev,
                                                  &image_align_sa,
                                                  &phys_slice0_sa);
 
-   const uint32_t array_pitch_sa_rows =
-      isl_calc_array_pitch_sa_rows(dev, info, dim_layout, array_pitch_span,
-                                   &image_align_sa, &phys_level0_sa,
-                                   &phys_slice0_sa);
-   assert(array_pitch_sa_rows % fmtl->bh == 0);
-
-   const uint32_t array_pitch_el_rows = array_pitch_sa_rows / fmtl->bh;
+   const uint32_t array_pitch_el_rows =
+      isl_calc_array_pitch_el_rows(dev, info, &tile_info, dim_layout,
+                                   array_pitch_span, &image_align_sa,
+                                   &phys_level0_sa, &phys_slice0_sa);
 
    const uint32_t total_h_el =
       isl_calc_total_height_el(dev, info, &tile_info,
