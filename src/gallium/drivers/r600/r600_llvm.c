@@ -726,7 +726,7 @@ static void tex_fetch_args(
 		 * That operand should be passed as a float value in the args array
 		 * right after the coord vector. After packing it's not used anymore,
 		 * that's why arg_count is not increased */
-		coords[4] = lp_build_emit_fetch(bld_base, inst, 1, 0);
+		coords[4] = lp_build_emit_fetch(bld_base, inst, 1, TGSI_CHAN_X);
 	}
 
 	if ((inst->Texture.Texture == TGSI_TEXTURE_CUBE ||

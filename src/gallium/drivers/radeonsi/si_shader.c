@@ -2453,7 +2453,7 @@ static void tex_fetch_args(
 		emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
 		emit_data->args[0] = res;
 		emit_data->args[1] = bld_base->uint_bld.zero;
-		emit_data->args[2] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, 0);
+		emit_data->args[2] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
 		emit_data->arg_count = 3;
 		return;
 	}
@@ -2502,12 +2502,12 @@ static void tex_fetch_args(
 	if (opcode == TGSI_OPCODE_TXB)
 		address[count++] = coords[3];
 	if (opcode == TGSI_OPCODE_TXB2)
-		address[count++] = lp_build_emit_fetch(bld_base, inst, 1, 0);
+		address[count++] = lp_build_emit_fetch(bld_base, inst, 1, TGSI_CHAN_X);
 
 	/* Pack depth comparison value */
 	if (tgsi_is_shadow_target(target) && opcode != TGSI_OPCODE_LODQ) {
 		if (target == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
-			address[count++] = lp_build_emit_fetch(bld_base, inst, 1, 0);
+			address[count++] = lp_build_emit_fetch(bld_base, inst, 1, TGSI_CHAN_X);
 		} else {
 			assert(ref_pos >= 0);
 			address[count++] = coords[ref_pos];
@@ -2578,7 +2578,7 @@ static void tex_fetch_args(
 	if (opcode == TGSI_OPCODE_TXL || opcode == TGSI_OPCODE_TXF)
 		address[count++] = coords[3];
 	else if (opcode == TGSI_OPCODE_TXL2)
-		address[count++] = lp_build_emit_fetch(bld_base, inst, 1, 0);
+		address[count++] = lp_build_emit_fetch(bld_base, inst, 1, TGSI_CHAN_X);
 
 	if (count > 16) {
 		assert(!"Cannot handle more than 16 texture address parameters");
@@ -3071,10 +3071,10 @@ static void interp_fetch_args(
 		/* offset is in second src, first two channels */
 		emit_data->args[0] = lp_build_emit_fetch(bld_base,
 							 emit_data->inst, 1,
-							 0);
+							 TGSI_CHAN_X);
 		emit_data->args[1] = lp_build_emit_fetch(bld_base,
 							 emit_data->inst, 1,
-							 1);
+							 TGSI_CHAN_Y);
 		emit_data->arg_count = 2;
 	} else if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
 		LLVMValueRef sample_position;
@@ -3085,7 +3085,7 @@ static void interp_fetch_args(
 		 * and place into first two channels.
 		 */
 		sample_id = lp_build_emit_fetch(bld_base,
-						emit_data->inst, 1, 0);
+						emit_data->inst, 1, TGSI_CHAN_X);
 		sample_id = LLVMBuildBitCast(gallivm->builder, sample_id,
 					     LLVMInt32TypeInContext(gallivm->context),
 					     "");
