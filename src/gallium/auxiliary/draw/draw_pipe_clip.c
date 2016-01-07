@@ -611,6 +611,8 @@ do_clip_line(struct draw_stage *stage,
    struct prim_header newprim;
    int viewport_index;
 
+   newprim.flags = header->flags;
+
    if (stage->draw->rasterizer->flatshade_first) {
       prov_vertex = v0;
    }
