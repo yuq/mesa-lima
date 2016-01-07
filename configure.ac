@@ -476,8 +476,29 @@ AC_ARG_ENABLE([debug],
     [enable_debug="$enableval"],
     [enable_debug=no]
 )
+
+AC_ARG_ENABLE([profile],
+    [AS_HELP_STRING([--enable-profile],
+        [enable profiling of code @<:@default=disabled@:>@])],
+    [enable_profile="$enableval"],
+    [enable_profile=no]
+)
+
+if test "x$enable_profile" = xyes; then
+    DEFINES="$DEFINES -DPROFILE"
+    if test "x$GCC" = xyes; then
+        CFLAGS="$CFLAGS -fno-omit-frame-pointer"
+    fi
+    if test "x$GXX" = xyes; then
+        CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
+    fi
+fi
+
 if test "x$enable_debug" = xyes; then
     DEFINES="$DEFINES -DDEBUG"
+    if test "x$enable_profile" = xyes; then
+        AC_MSG_WARN([Debug and Profile are enabled at the same time])
+    fi
     if test "x$GCC" = xyes; then
         if ! echo "$CFLAGS" | grep -q -e '-g'; then
             CFLAGS="$CFLAGS -g"
