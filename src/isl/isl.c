@@ -785,7 +785,20 @@ isl_calc_array_pitch_el_rows(const struct isl_device *dev,
    }
 
    assert(pitch_sa_rows % fmtl->bh == 0);
-   return pitch_sa_rows / fmtl->bh;
+   uint32_t pitch_el_rows = pitch_sa_rows / fmtl->bh;
+
+   if (ISL_DEV_GEN(dev) >= 9 &&
+       info->dim == ISL_SURF_DIM_3D &&
+       tile_info->tiling != ISL_TILING_LINEAR) {
+      /* From the Skylake BSpec >> RENDER_SURFACE_STATE >> Surface QPitch:
+       *
+       *    Tile Mode != Linear: This field must be set to an integer multiple
+       *    of the tile height
+       */
+      pitch_el_rows = isl_align(pitch_el_rows, tile_info->height);
+   }
+
+   return pitch_el_rows;
 }
 
 /**
