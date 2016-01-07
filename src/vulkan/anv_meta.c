@@ -1234,9 +1234,9 @@ void anv_CmdCopyBufferToImage(
           * increment the offset directly in the image effectively
           * re-binding it to different backing memory.
           */
-         /* XXX: Insert a real CPP */
          src_image->offset += src_image->extent.width *
-                              src_image->extent.height * 4;
+                              src_image->extent.height *
+                              src_image->format->isl_layout->bs;
       }
 
       anv_DestroyImage(vk_device, anv_image_to_handle(src_image),
@@ -1336,9 +1336,9 @@ void anv_CmdCopyImageToBuffer(
           * increment the offset directly in the image effectively
           * re-binding it to different backing memory.
           */
-         /* XXX: Insert a real CPP */
          dest_image->offset += dest_image->extent.width *
-                               dest_image->extent.height * 4;
+                               dest_image->extent.height *
+                               src_image->format->isl_layout->bs;
       }
 
       anv_DestroyImage(vk_device, anv_image_to_handle(dest_image),
