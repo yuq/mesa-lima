@@ -295,6 +295,7 @@ anv_surface_get_subresource_layout(struct anv_image *image,
    layout->offset = surface->offset;
    layout->rowPitch = surface->isl.row_pitch;
    layout->depthPitch = isl_surf_get_array_pitch(&surface->isl);
+   layout->arrayPitch = isl_surf_get_array_pitch(&surface->isl);
    layout->size = surface->isl.size;
 }
 
