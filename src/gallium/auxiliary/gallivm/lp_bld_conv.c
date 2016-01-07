@@ -458,7 +458,7 @@ int lp_build_conv_auto(struct gallivm_state *gallivm,
    {
       /* Special case 4x4f --> 1x16ub */
       if (src_type.length == 4 &&
-          util_cpu_caps.has_sse2)
+            (util_cpu_caps.has_sse2 || util_cpu_caps.has_altivec))
       {
          num_dsts = (num_srcs + 3) / 4;
          dst_type->length = num_srcs * 4 >= 16 ? 16 : num_srcs * 4;
@@ -545,7 +545,7 @@ lp_build_conv(struct gallivm_state *gallivm,
        ((dst_type.length == 16 && 4 * num_dsts == num_srcs) ||
         (num_dsts == 1 && dst_type.length * num_srcs == 16 && num_srcs != 3)) &&
 
-       util_cpu_caps.has_sse2)
+       (util_cpu_caps.has_sse2 || util_cpu_caps.has_altivec))
    {
       struct lp_build_context bld;
       struct lp_type int16_type, int32_type;
