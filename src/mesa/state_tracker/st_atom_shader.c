@@ -255,3 +255,35 @@ const struct st_tracked_state st_update_tep = {
    },
    update_tep  				/* update */
 };
+
+
+
+static void
+update_cp( struct st_context *st )
+{
+   struct st_compute_program *stcp;
+
+   if (!st->ctx->ComputeProgram._Current) {
+      cso_set_compute_shader_handle(st->cso_context, NULL);
+      return;
+   }
+
+   stcp = st_compute_program(st->ctx->ComputeProgram._Current);
+   assert(stcp->Base.Base.Target == GL_COMPUTE_PROGRAM_NV);
+
+   st->cp_variant = st_get_cp_variant(st, &stcp->tgsi, &stcp->variants);
+
+   st_reference_compprog(st, &st->cp, stcp);
+
+   cso_set_compute_shader_handle(st->cso_context,
+                                 st->cp_variant->driver_shader);
+}
+
+const struct st_tracked_state st_update_cp = {
+   "st_update_cp",			/* name */
+   {					/* dirty */
+      0,				/* mesa */
+      ST_NEW_COMPUTE_PROGRAM           /* st */
+   },
+   update_cp  				/* update */
+};

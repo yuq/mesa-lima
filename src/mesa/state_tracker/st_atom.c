@@ -98,7 +98,7 @@ static const struct st_tracked_state *render_atoms[] =
  */
 static const struct st_tracked_state *compute_atoms[] =
 {
-   /* will be updated in the next commit */
+   &st_update_cp,
 };
 
 

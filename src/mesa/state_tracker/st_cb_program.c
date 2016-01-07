@@ -74,6 +74,9 @@ st_bind_program(struct gl_context *ctx, GLenum target, struct gl_program *prog)
    case GL_TESS_EVALUATION_PROGRAM_NV:
       st->dirty.st |= ST_NEW_TESSEVAL_PROGRAM;
       break;
+   case GL_COMPUTE_PROGRAM_NV:
+      st->dirty_cp.st |= ST_NEW_COMPUTE_PROGRAM;
+      break;
    }
 }
 
@@ -92,6 +95,7 @@ st_use_program(struct gl_context *ctx, struct gl_shader_program *shProg)
    st->dirty.st |= ST_NEW_GEOMETRY_PROGRAM;
    st->dirty.st |= ST_NEW_TESSCTRL_PROGRAM;
    st->dirty.st |= ST_NEW_TESSEVAL_PROGRAM;
+   st->dirty_cp.st |= ST_NEW_COMPUTE_PROGRAM;
 }
 
 
@@ -121,6 +125,10 @@ st_new_program(struct gl_context *ctx, GLenum target, GLuint id)
    }
    case GL_TESS_EVALUATION_PROGRAM_NV: {
       struct st_tesseval_program *prog = ST_CALLOC_STRUCT(st_tesseval_program);
+      return _mesa_init_gl_program(&prog->Base.Base, target, id);
+   }
+   case GL_COMPUTE_PROGRAM_NV: {
+      struct st_compute_program *prog = ST_CALLOC_STRUCT(st_compute_program);
       return _mesa_init_gl_program(&prog->Base.Base, target, id);
    }
    default:
@@ -193,6 +201,17 @@ st_delete_program(struct gl_context *ctx, struct gl_program *prog)
 
          if (sttep->glsl_to_tgsi)
             free_glsl_to_tgsi_visitor(sttep->glsl_to_tgsi);
+      }
+      break;
+   case GL_COMPUTE_PROGRAM_NV:
+      {
+         struct st_compute_program *stcp =
+            (struct st_compute_program *) prog;
+
+         st_release_cp_variants(st, stcp);
+
+         if (stcp->glsl_to_tgsi)
+            free_glsl_to_tgsi_visitor(stcp->glsl_to_tgsi);
       }
       break;
    default:
@@ -271,6 +290,17 @@ st_program_string_notify( struct gl_context *ctx,
 
       if (st->tep == sttep)
          st->dirty.st |= ST_NEW_TESSEVAL_PROGRAM;
+   }
+   else if (target == GL_COMPUTE_PROGRAM_NV) {
+      struct st_compute_program *stcp =
+         (struct st_compute_program *) prog;
+
+      st_release_cp_variants(st, stcp);
+      if (!st_translate_compute_program(st, stcp))
+         return false;
+
+      if (st->cp == stcp)
+         st->dirty_cp.st |= ST_NEW_COMPUTE_PROGRAM;
    }
 
    if (ST_DEBUG & DEBUG_PRECOMPILE ||

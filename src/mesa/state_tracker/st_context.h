@@ -64,6 +64,7 @@ struct u_upload_mgr;
 #define ST_NEW_SAMPLER_VIEWS           (1 << 11)
 #define ST_NEW_ATOMIC_BUFFER           (1 << 12)
 #define ST_NEW_STORAGE_BUFFER          (1 << 13)
+#define ST_NEW_COMPUTE_PROGRAM         (1 << 14)
 
 
 struct st_state_flags {
@@ -174,12 +175,14 @@ struct st_context
    struct st_geometry_program *gp;  /**< Currently bound geometry program */
    struct st_tessctrl_program *tcp; /**< Currently bound tess control program */
    struct st_tesseval_program *tep; /**< Currently bound tess eval program */
+   struct st_compute_program *cp;   /**< Currently bound compute program */
 
    struct st_vp_variant *vp_variant;
    struct st_fp_variant *fp_variant;
    struct st_basic_variant *gp_variant;
    struct st_basic_variant *tcp_variant;
    struct st_basic_variant *tep_variant;
+   struct st_basic_variant *cp_variant;
 
    struct gl_texture_object *default_texture;
 

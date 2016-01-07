@@ -446,6 +446,7 @@ void st_destroy_context( struct st_context *st )
    st_reference_vertprog(st, &st->vp, NULL);
    st_reference_tesscprog(st, &st->tcp, NULL);
    st_reference_tesseprog(st, &st->tep, NULL);
+   st_reference_compprog(st, &st->cp, NULL);
 
    /* release framebuffer surfaces */
    for (i = 0; i < PIPE_MAX_COLOR_BUFS; i++) {

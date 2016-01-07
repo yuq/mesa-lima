@@ -174,9 +174,12 @@ void st_init_limits(struct pipe_screen *screen,
          pc = &c->Program[MESA_SHADER_TESS_EVAL];
          options = &c->ShaderCompilerOptions[MESA_SHADER_TESS_EVAL];
          break;
+      case PIPE_SHADER_COMPUTE:
+         pc = &c->Program[MESA_SHADER_COMPUTE];
+         options = &c->ShaderCompilerOptions[MESA_SHADER_COMPUTE];
+         break;
       default:
-         /* compute shader, etc. */
-         continue;
+         assert(0);
       }
 
       pc->MaxTextureImageUnits =
