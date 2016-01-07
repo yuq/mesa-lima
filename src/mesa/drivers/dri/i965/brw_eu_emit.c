@@ -501,6 +501,8 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
    assert(brw_inst_src0_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE);
 
    if (reg.file == BRW_IMMEDIATE_VALUE) {
+      /* two-argument instructions can only use 32-bit immediates */
+      assert(type_sz(reg.type) < 8);
       brw_inst_set_imm_ud(devinfo, inst, reg.ud);
    } else {
       /* This is a hardware restriction, which may or may not be lifted
