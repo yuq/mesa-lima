@@ -44,6 +44,9 @@ struct pt_emit {
    unsigned prim;
 
    const struct vertex_info *vinfo;
+
+   float zero4[4];
+
 };
 
 
@@ -92,6 +95,11 @@ draw_pt_emit_prepare(struct pt_emit *emit,
          src_buffer = 1;
          src_offset = 0;
       }
+      else if (vinfo->attrib[i].src_index == DRAW_ATTR_NONEXIST) {
+         /* elements which don't exist will get assigned zeros */
+         src_buffer = 2;
+         src_offset = 0;
+      }
 
       hw_key.element[i].type = TRANSLATE_ELEMENT_NORMAL;
       hw_key.element[i].input_format = PIPE_FORMAT_R32G32B32A32_FLOAT;
@@ -111,6 +119,8 @@ draw_pt_emit_prepare(struct pt_emit *emit,
        translate_key_compare(&emit->translate->key, &hw_key) != 0) {
       translate_key_sanitize(&hw_key);
       emit->translate = translate_cache_find(emit->cache, &hw_key);
+
+      emit->translate->set_buffer(emit->translate, 2, &emit->zero4[0], 0, ~0);
    }
 
    if (!vinfo->size)
@@ -286,6 +296,8 @@ draw_pt_emit_create(struct draw_context *draw)
       FREE(emit);
       return NULL;
    }
+
+   emit->zero4[0] = emit->zero4[1] = emit->zero4[2] = emit->zero4[3] = 0.0f;
 
    return emit;
 }

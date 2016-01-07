@@ -44,6 +44,7 @@
 #include "util/u_debug.h"
 #include "util/u_memory.h"
 
+#define DRAW_ATTR_NONEXIST 255
 
 /**
  * Vertex attribute emit modes
@@ -130,9 +131,9 @@ draw_emit_vertex_attr(struct vertex_info *vinfo,
    const uint n = vinfo->num_attribs;
 
    /* If the src_index is negative, meaning it hasn't been found
-    * lets just redirect it to the first output slot */
+    * we'll assign it all zeros later - set to DRAW_ATTR_NONEXIST */
    if (src_index < 0) {
-      src_index = 0;
+      src_index = DRAW_ATTR_NONEXIST;
    }
 
    assert(n < Elements(vinfo->attrib));
