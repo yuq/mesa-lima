@@ -399,30 +399,29 @@ static void si_shader_ps(struct si_shader *shader)
 	if (!pm4)
 		return;
 
-	for (i = 0; i < info->num_inputs; i++) {
-		switch (info->input_semantic_name[i]) {
-		case TGSI_SEMANTIC_POSITION:
-			/* SPI_BARYC_CNTL.POS_FLOAT_LOCATION
-			 * Possible vaules:
-			 * 0 -> Position = pixel center (default)
-			 * 1 -> Position = pixel centroid
-			 * 2 -> Position = at sample position
-			 */
-			switch (info->input_interpolate_loc[i]) {
-			case TGSI_INTERPOLATE_LOC_CENTROID:
-				spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(1);
-				break;
-			case TGSI_INTERPOLATE_LOC_SAMPLE:
-				spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(2);
-				break;
-			}
+	/* SPI_BARYC_CNTL.POS_FLOAT_LOCATION
+	 * Possible vaules:
+	 * 0 -> Position = pixel center
+	 * 1 -> Position = pixel centroid
+	 * 2 -> Position = at sample position
+	 *
+	 * From GLSL 4.5 specification, section 7.1:
+	 *   "The variable gl_FragCoord is available as an input variable from
+	 *    within fragment shaders and it holds the window relative coordinates
+	 *    (x, y, z, 1/w) values for the fragment. If multi-sampling, this
+	 *    value can be for any location within the pixel, or one of the
+	 *    fragment samples. The use of centroid does not further restrict
+	 *    this value to be inside the current primitive."
+	 *
+	 * Meaning that centroid has no effect and we can return anything within
+	 * the pixel. Thus, return the value at sample position, because that's
+	 * the most accurate one shaders can get.
+	 */
+	spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(2);
 
-			if (info->properties[TGSI_PROPERTY_FS_COORD_PIXEL_CENTER] ==
-			    TGSI_FS_COORD_PIXEL_CENTER_INTEGER)
-				spi_baryc_cntl |= S_0286E0_POS_FLOAT_ULC(1);
-			break;
-		}
-	}
+	if (info->properties[TGSI_PROPERTY_FS_COORD_PIXEL_CENTER] ==
+	    TGSI_FS_COORD_PIXEL_CENTER_INTEGER)
+		spi_baryc_cntl |= S_0286E0_POS_FLOAT_ULC(1);
 
 	/* Find out what SPI_SHADER_COL_FORMAT and CB_SHADER_MASK should be. */
 	colors_written = info->colors_written;
