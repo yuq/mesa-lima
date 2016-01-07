@@ -1014,6 +1014,15 @@ bind_buffer_object(struct gl_context *ctx, GLenum target, GLuint buffer)
          return;
    }
 
+   /* record usage history */
+   switch (target) {
+   case GL_PIXEL_PACK_BUFFER:
+      newBufObj->UsageHistory |= USAGE_PIXEL_PACK_BUFFER;
+      break;
+   default:
+      break;
+   }
+
    /* bind new buffer */
    _mesa_reference_buffer_object(ctx, bindTarget, newBufObj);
 }
