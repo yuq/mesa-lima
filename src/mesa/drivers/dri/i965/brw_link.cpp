@@ -126,14 +126,12 @@ process_glsl_ir(gl_shader_stage stage,
     */
    brw_lower_packing_builtins(brw, shader->Stage, shader->ir);
    do_mat_op_to_vec(shader->ir);
-   const int bitfield_insert = brw->gen >= 7 ? BITFIELD_INSERT_TO_BFM_BFI : 0;
    lower_instructions(shader->ir,
                       MOD_TO_FLOOR |
                       DIV_TO_MUL_RCP |
                       SUB_TO_ADD_NEG |
                       EXP_TO_EXP2 |
                       LOG_TO_LOG2 |
-                      bitfield_insert |
                       LDEXP_TO_ARITH |
                       CARRY_TO_ARITH |
                       BORROW_TO_ARITH);
