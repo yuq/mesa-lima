@@ -871,6 +871,7 @@ emit_ps_depth_count(struct anv_batch *batch,
    anv_batch_emit(batch, GENX(PIPE_CONTROL),
                   .DestinationAddressType = DAT_PPGTT,
                   .PostSyncOperation = WritePSDepthCount,
+                  .DepthStallEnable = true,
                   .Address = { bo, offset });
 }
 
