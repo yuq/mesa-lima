@@ -350,36 +350,6 @@ VkResult genX(CreateSampler)(
    if (!sampler)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   static const uint32_t vk_to_gen_tex_filter[] = {
-      [VK_FILTER_NEAREST]                       = MAPFILTER_NEAREST,
-      [VK_FILTER_LINEAR]                        = MAPFILTER_LINEAR
-   };
-
-   static const uint32_t vk_to_gen_mipmap_mode[] = {
-      [VK_SAMPLER_MIPMAP_MODE_BASE]             = MIPFILTER_NONE,
-      [VK_SAMPLER_MIPMAP_MODE_NEAREST]          = MIPFILTER_NEAREST,
-      [VK_SAMPLER_MIPMAP_MODE_LINEAR]           = MIPFILTER_LINEAR
-   };
-
-   static const uint32_t vk_to_gen_tex_address[] = {
-      [VK_SAMPLER_ADDRESS_MODE_REPEAT]          = TCM_WRAP,
-      [VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT] = TCM_MIRROR,
-      [VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE]   = TCM_CLAMP,
-      [VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE] = TCM_MIRROR_ONCE,
-      [VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER] = TCM_CLAMP_BORDER,
-   };
-
-   static const uint32_t vk_to_gen_compare_op[] = {
-      [VK_COMPARE_OP_NEVER]                     = PREFILTEROPNEVER,
-      [VK_COMPARE_OP_LESS]                      = PREFILTEROPLESS,
-      [VK_COMPARE_OP_EQUAL]                     = PREFILTEROPEQUAL,
-      [VK_COMPARE_OP_LESS_OR_EQUAL]             = PREFILTEROPLEQUAL,
-      [VK_COMPARE_OP_GREATER]                   = PREFILTEROPGREATER,
-      [VK_COMPARE_OP_NOT_EQUAL]                 = PREFILTEROPNOTEQUAL,
-      [VK_COMPARE_OP_GREATER_OR_EQUAL]          = PREFILTEROPGEQUAL,
-      [VK_COMPARE_OP_ALWAYS]                    = PREFILTEROPALWAYS,
-   };
-
    if (pCreateInfo->maxAnisotropy > 1) {
       mag_filter = MAPFILTER_ANISOTROPIC;
       min_filter = MAPFILTER_ANISOTROPIC;
