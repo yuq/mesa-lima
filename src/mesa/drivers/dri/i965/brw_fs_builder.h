@@ -197,6 +197,13 @@ namespace brw {
                                BRW_REGISTER_TYPE_F));
       }
 
+      dst_reg
+      null_reg_df() const
+      {
+         return dst_reg(retype(brw_null_vec(dispatch_width()),
+                               BRW_REGISTER_TYPE_DF));
+      }
+
       /**
        * Create a null register of signed integer type.
        */
