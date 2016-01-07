@@ -115,7 +115,6 @@ struct ureg_program
    unsigned vs_inputs[PIPE_MAX_ATTRIBS/32];
 
    struct {
-      unsigned index;
       unsigned semantic_name;
       unsigned semantic_index;
    } system_value[UREG_MAX_SYSTEM_VALUE];
@@ -320,20 +319,21 @@ ureg_DECL_input(struct ureg_program *ureg,
 
 struct ureg_src
 ureg_DECL_system_value(struct ureg_program *ureg,
-                       unsigned index,
                        unsigned semantic_name,
                        unsigned semantic_index)
 {
+   unsigned i = 0;
+
    if (ureg->nr_system_values < UREG_MAX_SYSTEM_VALUE) {
-      ureg->system_value[ureg->nr_system_values].index = index;
       ureg->system_value[ureg->nr_system_values].semantic_name = semantic_name;
       ureg->system_value[ureg->nr_system_values].semantic_index = semantic_index;
+      i = ureg->nr_system_values;
       ureg->nr_system_values++;
    } else {
       set_bad(ureg);
    }
 
-   return ureg_src_register(TGSI_FILE_SYSTEM_VALUE, index);
+   return ureg_src_register(TGSI_FILE_SYSTEM_VALUE, i);
 }
 
 
@@ -1587,8 +1587,8 @@ static void emit_decls( struct ureg_program *ureg )
    for (i = 0; i < ureg->nr_system_values; i++) {
       emit_decl_semantic(ureg,
                          TGSI_FILE_SYSTEM_VALUE,
-                         ureg->system_value[i].index,
-                         ureg->system_value[i].index,
+                         i,
+                         i,
                          ureg->system_value[i].semantic_name,
                          ureg->system_value[i].semantic_index,
                          TGSI_WRITEMASK_XYZW, 0);

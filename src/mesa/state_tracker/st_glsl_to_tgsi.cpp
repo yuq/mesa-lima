@@ -5370,11 +5370,13 @@ st_translate_program(
     */
    {
       GLbitfield sysInputs = proginfo->SystemValuesRead;
-      unsigned numSys = 0;
+
       for (i = 0; sysInputs; i++) {
          if (sysInputs & (1 << i)) {
             unsigned semName = _mesa_sysval_to_semantic[i];
-            t->systemValues[i] = ureg_DECL_system_value(ureg, numSys, semName, 0);
+
+            t->systemValues[i] = ureg_DECL_system_value(ureg, semName, 0);
+
             if (semName == TGSI_SEMANTIC_INSTANCEID ||
                 semName == TGSI_SEMANTIC_VERTEXID) {
                /* From Gallium perspective, these system values are always
@@ -5395,7 +5397,7 @@ st_translate_program(
                   t->systemValues[i] = ureg_scalar(ureg_src(temp), 0);
                }
             }
-            numSys++;
+
             sysInputs &= ~(1 << i);
          }
       }
