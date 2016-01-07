@@ -734,6 +734,7 @@ isl_calc_array_pitch_el_rows(const struct isl_device *dev,
       switch (array_pitch_span) {
       case ISL_ARRAY_PITCH_SPAN_COMPACT:
          pitch_sa_rows = isl_align_npot(phys_slice0_sa->h, image_align_sa->h);
+         break;
       case ISL_ARRAY_PITCH_SPAN_FULL: {
          /* The QPitch equation is found in the Broadwell PRM >> Volume 5:
           * Memory Views >> Common Surface Formats >> Surface Layout >> 2D
