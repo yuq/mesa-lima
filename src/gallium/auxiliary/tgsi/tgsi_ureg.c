@@ -322,7 +322,14 @@ ureg_DECL_system_value(struct ureg_program *ureg,
                        unsigned semantic_name,
                        unsigned semantic_index)
 {
-   unsigned i = 0;
+   unsigned i;
+
+   for (i = 0; i < ureg->nr_system_values; i++) {
+      if (ureg->system_value[i].semantic_name == semantic_name &&
+          ureg->system_value[i].semantic_index == semantic_index) {
+         goto out;
+      }
+   }
 
    if (ureg->nr_system_values < UREG_MAX_SYSTEM_VALUE) {
       ureg->system_value[ureg->nr_system_values].semantic_name = semantic_name;
@@ -333,6 +340,7 @@ ureg_DECL_system_value(struct ureg_program *ureg,
       set_bad(ureg);
    }
 
+out:
    return ureg_src_register(TGSI_FILE_SYSTEM_VALUE, i);
 }
 
