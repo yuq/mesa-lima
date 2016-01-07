@@ -875,6 +875,17 @@ emit_ps_depth_count(struct anv_batch *batch,
                   .Address = { bo, offset });
 }
 
+static void
+emit_query_availability(struct anv_batch *batch,
+                        struct anv_bo *bo, uint32_t offset)
+{
+   anv_batch_emit(batch, GENX(PIPE_CONTROL),
+                  .DestinationAddressType = DAT_PPGTT,
+                  .PostSyncOperation = WriteImmediateData,
+                  .Address = { bo, offset },
+                  .ImmediateData = 1);
+}
+
 void genX(CmdBeginQuery)(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
@@ -908,6 +919,9 @@ void genX(CmdEndQuery)(
    case VK_QUERY_TYPE_OCCLUSION:
       emit_ps_depth_count(&cmd_buffer->batch, &pool->bo,
                           entry * sizeof(struct anv_query_pool_slot) + 8);
+
+      emit_query_availability(&cmd_buffer->batch, &pool->bo,
+                              entry * sizeof(struct anv_query_pool_slot) + 16);
       break;
 
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
@@ -926,6 +940,7 @@ void genX(CmdWriteTimestamp)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
+   uint32_t offset = entry * sizeof(struct anv_query_pool_slot);
 
    assert(pool->type == VK_QUERY_TYPE_TIMESTAMP);
 
@@ -933,10 +948,10 @@ void genX(CmdWriteTimestamp)(
    case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                      .RegisterAddress = TIMESTAMP,
-                     .MemoryAddress = { &pool->bo, entry * 8 });
+                     .MemoryAddress = { &pool->bo, offset });
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
                      .RegisterAddress = TIMESTAMP + 4,
-                     .MemoryAddress = { &pool->bo, entry * 8 + 4 });
+                     .MemoryAddress = { &pool->bo, offset + 4 });
       break;
 
    default:
@@ -944,9 +959,11 @@ void genX(CmdWriteTimestamp)(
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                      .DestinationAddressType = DAT_PPGTT,
                      .PostSyncOperation = WriteTimestamp,
-                     .Address = { &pool->bo, entry * 8 });
+                     .Address = { &pool->bo, offset });
       break;
    }
+
+   emit_query_availability(&cmd_buffer->batch, &pool->bo, entry + 16);
 }
 
 #define alu_opcode(v)   __gen_field((v),  20, 31)
@@ -993,6 +1010,20 @@ emit_load_alu_reg_u64(struct anv_batch *batch, uint32_t reg,
                   .MemoryAddress = { bo, offset + 4 });
 }
 
+static void
+store_query_result(struct anv_batch *batch, uint32_t reg,
+                   struct anv_bo *bo, uint32_t offset, VkQueryResultFlags flags)
+{
+      anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM),
+                     .RegisterAddress = reg,
+                     .MemoryAddress = { bo, offset });
+
+      if (flags & VK_QUERY_RESULT_64_BIT)
+         anv_batch_emit(batch, GENX(MI_STORE_REGISTER_MEM),
+                        .RegisterAddress = reg + 4,
+                        .MemoryAddress = { bo, offset + 4 });
+}
+
 void genX(CmdCopyQueryPoolResults)(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
@@ -1008,15 +1039,6 @@ void genX(CmdCopyQueryPoolResults)(
    ANV_FROM_HANDLE(anv_buffer, buffer, destBuffer);
    uint32_t slot_offset, dst_offset;
 
-   if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
-      /* Where is the availabilty info supposed to go? */
-      anv_finishme("VK_QUERY_RESULT_WITH_AVAILABILITY_BIT");
-      return;
-   }
-
-   assert(pool->type == VK_QUERY_TYPE_OCCLUSION);
-
-   /* FIXME: If we're not waiting, should we just do this on the CPU? */
    if (flags & VK_QUERY_RESULT_WAIT_BIT)
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                      .CommandStreamerStallEnable = true,
@@ -1026,26 +1048,44 @@ void genX(CmdCopyQueryPoolResults)(
    for (uint32_t i = 0; i < queryCount; i++) {
 
       slot_offset = (startQuery + i) * sizeof(struct anv_query_pool_slot);
+      switch (pool->type) {
+      case VK_QUERY_TYPE_OCCLUSION:
+         emit_load_alu_reg_u64(&cmd_buffer->batch,
+                               CS_GPR(0), &pool->bo, slot_offset);
+         emit_load_alu_reg_u64(&cmd_buffer->batch,
+                               CS_GPR(1), &pool->bo, slot_offset + 8);
 
-      emit_load_alu_reg_u64(&cmd_buffer->batch, CS_GPR(0), &pool->bo, slot_offset);
-      emit_load_alu_reg_u64(&cmd_buffer->batch, CS_GPR(1), &pool->bo, slot_offset + 8);
+         /* FIXME: We need to clamp the result for 32 bit. */
 
-      /* FIXME: We need to clamp the result for 32 bit. */
+         uint32_t *dw = anv_batch_emitn(&cmd_buffer->batch, 5, GENX(MI_MATH));
+         dw[1] = alu(OPCODE_LOAD, OPERAND_SRCA, OPERAND_R1);
+         dw[2] = alu(OPCODE_LOAD, OPERAND_SRCB, OPERAND_R0);
+         dw[3] = alu(OPCODE_SUB, 0, 0);
+         dw[4] = alu(OPCODE_STORE, OPERAND_R2, OPERAND_ACCU);
+         break;
 
-      uint32_t *dw = anv_batch_emitn(&cmd_buffer->batch, 5, GENX(MI_MATH));
-      dw[1] = alu(OPCODE_LOAD, OPERAND_SRCA, OPERAND_R1);
-      dw[2] = alu(OPCODE_LOAD, OPERAND_SRCB, OPERAND_R0);
-      dw[3] = alu(OPCODE_SUB, 0, 0);
-      dw[4] = alu(OPCODE_STORE, OPERAND_R2, OPERAND_ACCU);
+      case VK_QUERY_TYPE_TIMESTAMP:
+         emit_load_alu_reg_u64(&cmd_buffer->batch,
+                               CS_GPR(2), &pool->bo, slot_offset);
+         break;
 
-      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
-                     .RegisterAddress = CS_GPR(2),
-                     .MemoryAddress = { buffer->bo, dst_offset });
+      default:
+         unreachable("unhandled query type");
+      }
 
-      if (flags & VK_QUERY_RESULT_64_BIT)
-         anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM),
-                        .RegisterAddress = CS_GPR(2) + 4,
-                        .MemoryAddress = { buffer->bo, dst_offset + 4 });
+      store_query_result(&cmd_buffer->batch,
+                         CS_GPR(2), buffer->bo, dst_offset, flags);
+
+      if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
+         emit_load_alu_reg_u64(&cmd_buffer->batch, CS_GPR(0),
+                               &pool->bo, slot_offset + 16);
+         if (flags & VK_QUERY_RESULT_64_BIT)
+            store_query_result(&cmd_buffer->batch,
+                               CS_GPR(0), buffer->bo, dst_offset + 8, flags);
+         else
+            store_query_result(&cmd_buffer->batch,
+                               CS_GPR(0), buffer->bo, dst_offset + 4, flags);
+      }
 
       dst_offset += destStride;
    }

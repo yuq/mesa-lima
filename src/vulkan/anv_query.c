@@ -45,17 +45,15 @@ VkResult anv_CreateQueryPool(
 
    switch (pCreateInfo->queryType) {
    case VK_QUERY_TYPE_OCCLUSION:
-      slot_size = sizeof(struct anv_query_pool_slot);
+   case VK_QUERY_TYPE_TIMESTAMP:
       break;
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
       return VK_ERROR_INCOMPATIBLE_DRIVER;
-   case VK_QUERY_TYPE_TIMESTAMP:
-      slot_size = sizeof(uint64_t);
-      break;
    default:
       assert(!"Invalid query type");
    }
 
+   slot_size = sizeof(struct anv_query_pool_slot);
    pool = anv_alloc2(&device->alloc, pAllocator, sizeof(*pool), 8,
                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pool == NULL)
@@ -110,12 +108,6 @@ VkResult anv_GetQueryPoolResults(
    uint64_t result;
    int ret;
 
-   if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
-      /* Where is the availabilty info supposed to go? */
-      anv_finishme("VK_QUERY_RESULT_WITH_AVAILABILITY_BIT");
-      return VK_ERROR_INCOMPATIBLE_DRIVER;
-   }
-
    assert(pool->type == VK_QUERY_TYPE_OCCLUSION ||
           pool->type == VK_QUERY_TYPE_TIMESTAMP);
 
@@ -132,11 +124,11 @@ VkResult anv_GetQueryPoolResults(
    }
 
    void *data_end = pData + dataSize;
+   struct anv_query_pool_slot *slot = pool->bo.map;
 
    for (uint32_t i = 0; i < queryCount; i++) {
       switch (pool->type) {
       case VK_QUERY_TYPE_OCCLUSION: {
-         struct anv_query_pool_slot *slot = pool->bo.map;
          result = slot[startQuery + i].end - slot[startQuery + i].begin;
          break;
       }
@@ -144,8 +136,7 @@ VkResult anv_GetQueryPoolResults(
          /* Not yet implemented */
          break;
       case VK_QUERY_TYPE_TIMESTAMP: {
-         uint64_t *slot = pool->bo.map;
-         result = slot[startQuery + i];
+         result = slot[startQuery + i].begin;
          break;
       }
       default:
@@ -153,12 +144,19 @@ VkResult anv_GetQueryPoolResults(
       }
 
       if (flags & VK_QUERY_RESULT_64_BIT) {
-         *(uint64_t *)pData = result;
+         uint64_t *dst = pData;
+         dst[0] = result;
+         if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
+            dst[1] = slot[startQuery + i].available;
       } else {
+         uint32_t *dst = pData;
          if (result > UINT32_MAX)
             result = UINT32_MAX;
-         *(uint32_t *)pData = result;
+         dst[0] = result;
+         if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT)
+            dst[1] = slot[startQuery + i].available;
       }
+
       pData += stride;
       if (pData >= data_end)
          break;
@@ -173,5 +171,17 @@ void anv_CmdResetQueryPool(
     uint32_t                                    startQuery,
     uint32_t                                    queryCount)
 {
-   stub();
+   ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
+
+   for (uint32_t i = 0; i < queryCount; i++) {
+      switch (pool->type) {
+      case VK_QUERY_TYPE_OCCLUSION: {
+         struct anv_query_pool_slot *slot = pool->bo.map;
+         slot[startQuery + i].available = 0;
+         break;
+      }
+      default:
+         assert(!"Invalid query type");
+      }
+   }
 }
