@@ -598,7 +598,7 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
           */
          nir_variable *fall_var =
             nir_local_variable_create(b->nb.impl, glsl_bool_type(), "fall");
-         nir_store_var(&b->nb, fall_var, nir_imm_int(&b->nb, NIR_TRUE), 1);
+         nir_store_var(&b->nb, fall_var, nir_imm_int(&b->nb, NIR_FALSE), 1);
 
          /* Next, we gather up all of the conditions.  We have to do this
           * up-front because we also need to build an "any" condition so
@@ -649,6 +649,7 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
 
             bool has_break = false;
             b->nb.cursor = nir_after_cf_list(&case_if->then_list);
+            nir_store_var(&b->nb, fall_var, nir_imm_int(&b->nb, NIR_TRUE), 1);
             vtn_emit_cf_list(b, &cse->body, fall_var, &has_break, handler);
             (void)has_break; /* We don't care */
 
