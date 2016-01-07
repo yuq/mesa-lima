@@ -4066,7 +4066,8 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 	if (poly_stipple) {
 		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
-						SI_POLY_STIPPLE_SAMPLER);
+						SI_POLY_STIPPLE_SAMPLER,
+						TGSI_FILE_INPUT);
 		tgsi_scan_shader(tokens, &stipple_shader_info);
 	}
 

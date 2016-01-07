@@ -3844,7 +3844,8 @@ svga_shader_emit_instructions(struct svga_shader_emitter *emit,
    if (emit->unit == PIPE_SHADER_FRAGMENT && emit->key.fs.pstipple) {
       unsigned unit;
 
-      new_tokens = util_pstipple_create_fragment_shader(tokens, &unit, 0);
+      new_tokens = util_pstipple_create_fragment_shader(tokens, &unit, 0,
+                                                        TGSI_FILE_INPUT);
 
       if (new_tokens) {
          /* Setup texture state for stipple */

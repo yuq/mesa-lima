@@ -6609,7 +6609,8 @@ transform_fs_pstipple(struct svga_shader_emitter_v10 *emit,
       tgsi_dump(tokens,0);
    }
 
-   new_tokens = util_pstipple_create_fragment_shader(tokens, &unit, 0);
+   new_tokens = util_pstipple_create_fragment_shader(tokens, &unit, 0,
+                                                     TGSI_FILE_INPUT);
 
    emit->fs.pstipple_sampler_unit = unit;
 
