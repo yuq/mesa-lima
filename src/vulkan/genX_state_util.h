@@ -66,10 +66,24 @@ vk_to_gen_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component)
 }
 #endif
 
-static const uint32_t vk_to_gen_tex_filter[] = {
-   [VK_FILTER_NEAREST]                       = MAPFILTER_NEAREST,
-   [VK_FILTER_LINEAR]                        = MAPFILTER_LINEAR
-};
+static inline uint32_t
+vk_to_gen_tex_filter(VkFilter filter, bool anisotropyEnable)
+{
+   switch (filter) {
+   default:
+      assert(!"Invalid filter");
+   case VK_FILTER_NEAREST:
+      return MAPFILTER_NEAREST;
+   case VK_FILTER_LINEAR:
+      return anisotropyEnable ? MAPFILTER_ANISOTROPIC : MAPFILTER_LINEAR;
+   }
+}
+
+static inline uint32_t
+vk_to_gen_max_anisotropy(float ratio)
+{
+   return (anv_clamp_f(ratio, 2, 16) - 2) / 2;
+}
 
 static const uint32_t vk_to_gen_mipmap_mode[] = {
    [VK_SAMPLER_MIPMAP_MODE_BASE]             = MIPFILTER_NONE,
