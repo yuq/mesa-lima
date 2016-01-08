@@ -157,6 +157,32 @@ vtn_handle_matrix_alu(struct vtn_builder *b, SpvOp opcode,
                       struct vtn_ssa_value *src0, struct vtn_ssa_value *src1)
 {
    switch (opcode) {
+   case SpvOpFNegate: {
+      dest->ssa = vtn_create_ssa_value(b, src0->type);
+      unsigned cols = glsl_get_matrix_columns(src0->type);
+      for (unsigned i = 0; i < cols; i++)
+         dest->ssa->elems[i]->def = nir_fneg(&b->nb, src0->elems[i]->def);
+      break;
+   }
+
+   case SpvOpFAdd: {
+      dest->ssa = vtn_create_ssa_value(b, src0->type);
+      unsigned cols = glsl_get_matrix_columns(src0->type);
+      for (unsigned i = 0; i < cols; i++)
+         dest->ssa->elems[i]->def =
+            nir_fadd(&b->nb, src0->elems[i]->def, src1->elems[i]->def);
+      break;
+   }
+
+   case SpvOpFSub: {
+      dest->ssa = vtn_create_ssa_value(b, src0->type);
+      unsigned cols = glsl_get_matrix_columns(src0->type);
+      for (unsigned i = 0; i < cols; i++)
+         dest->ssa->elems[i]->def =
+            nir_fsub(&b->nb, src0->elems[i]->def, src1->elems[i]->def);
+      break;
+   }
+
    case SpvOpTranspose:
       dest->ssa = vtn_ssa_transpose(b, src0);
       break;
