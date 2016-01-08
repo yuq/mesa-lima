@@ -2,7 +2,6 @@ i965_compiler_FILES = \
 	brw_cfg.cpp \
 	brw_cfg.h \
 	brw_compiler.h \
-	brw_cubemap_normalize.cpp \
 	brw_dead_control_flow.cpp \
 	brw_dead_control_flow.h \
 	brw_defines.h \
@@ -16,7 +15,6 @@ i965_compiler_FILES = \
 	brw_eu_util.c \
 	brw_eu_validate.c \
 	brw_fs_builder.h \
-	brw_fs_channel_expressions.cpp \
 	brw_fs_cmod_propagation.cpp \
 	brw_fs_combine_constants.cpp \
 	brw_fs_copy_propagation.cpp \
@@ -35,15 +33,12 @@ i965_compiler_FILES = \
 	brw_fs_surface_builder.cpp \
 	brw_fs_surface_builder.h \
 	brw_fs_validate.cpp \
-	brw_fs_vector_splitting.cpp \
 	brw_fs_visitor.cpp \
 	brw_inst.h \
 	brw_interpolation_map.c \
 	brw_ir_allocator.h \
 	brw_ir_fs.h \
 	brw_ir_vec4.h \
-	brw_lower_texture_gradients.cpp \
-	brw_lower_unnormalized_offset.cpp \
 	brw_nir.h \
 	brw_nir.c \
 	brw_nir_analyze_boolean_resolves.c \
@@ -114,6 +109,7 @@ i965_FILES = \
 	brw_context.h \
 	brw_cs.c \
 	brw_cs.h \
+	brw_cubemap_normalize.cpp \
 	brw_curbe.c \
 	brw_draw.c \
 	brw_draw.h \
@@ -121,11 +117,15 @@ i965_FILES = \
 	brw_ff_gs.c \
 	brw_ff_gs_emit.c \
 	brw_ff_gs.h \
+	brw_fs_channel_expressions.cpp \
+	brw_fs_vector_splitting.cpp \
 	brw_gs.c \
 	brw_gs.h \
 	brw_gs_state.c \
 	brw_gs_surface_state.c \
 	brw_link.cpp \
+	brw_lower_texture_gradients.cpp \
+	brw_lower_unnormalized_offset.cpp \
 	brw_meta_fast_clear.c \
 	brw_meta_stencil_blit.c \
 	brw_meta_updownsample.c \
