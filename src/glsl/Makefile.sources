@@ -18,8 +18,6 @@ NIR_GENERATED_FILES = \
 	nir/nir_opt_algebraic.c
 
 NIR_FILES = \
-	nir/glsl_to_nir.cpp \
-	nir/glsl_to_nir.h \
 	nir/glsl_types.cpp \
 	nir/glsl_types.h \
 	nir/builtin_type_macros.h \
@@ -184,6 +182,8 @@ LIBGLSL_FILES = \
 	lower_output_reads.cpp \
 	lower_shared_reference.cpp \
 	lower_ubo_reference.cpp \
+	nir/glsl_to_nir.cpp \
+	nir/glsl_to_nir.h \
 	opt_algebraic.cpp \
 	opt_array_splitting.cpp \
 	opt_conditional_discard.cpp \
