@@ -182,8 +182,6 @@ LIBGLSL_FILES = \
 	lower_output_reads.cpp \
 	lower_shared_reference.cpp \
 	lower_ubo_reference.cpp \
-	nir/glsl_to_nir.cpp \
-	nir/glsl_to_nir.h \
 	opt_algebraic.cpp \
 	opt_array_splitting.cpp \
 	opt_conditional_discard.cpp \
@@ -212,6 +210,11 @@ LIBGLSL_FILES = \
 	program.h \
 	s_expression.cpp \
 	s_expression.h
+
+# glsl to nir pass
+GLSL_TO_NIR_FILES = \
+	nir/glsl_to_nir.cpp \
+	nir/glsl_to_nir.h
 
 # glsl_compiler
 
