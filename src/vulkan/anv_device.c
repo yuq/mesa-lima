@@ -718,7 +718,7 @@ VkResult anv_CreateDevice(
 
    anv_bo_pool_init(&device->batch_bo_pool, device, ANV_CMD_BUFFER_BATCH_SIZE);
 
-   anv_block_pool_init(&device->dynamic_state_block_pool, device, 2048);
+   anv_block_pool_init(&device->dynamic_state_block_pool, device, 16384);
 
    anv_state_pool_init(&device->dynamic_state_pool,
                        &device->dynamic_state_block_pool);
