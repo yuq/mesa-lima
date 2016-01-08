@@ -373,7 +373,10 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                      info->uses_primid = TRUE;
                   } else if (semName == TGSI_SEMANTIC_INVOCATIONID) {
                      info->uses_invocationid = TRUE;
-                  }
+                  } else if (semName == TGSI_SEMANTIC_POSITION)
+                     info->reads_position = TRUE;
+                  else if (semName == TGSI_SEMANTIC_FACE)
+                     info->uses_frontface = TRUE;
                }
                else if (file == TGSI_FILE_OUTPUT) {
                   info->output_semantic_name[reg] = (ubyte) semName;
