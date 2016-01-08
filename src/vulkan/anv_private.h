@@ -1079,6 +1079,8 @@ struct anv_cmd_state {
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set *                  descriptors[MAX_SETS];
    struct anv_push_constants *                  push_constants[MESA_SHADER_STAGES];
+   struct anv_state                             binding_tables[MESA_SHADER_STAGES];
+   struct anv_state                             samplers[MESA_SHADER_STAGES];
    struct anv_dynamic_state                     dynamic;
 
    struct {
@@ -1176,7 +1178,9 @@ VkResult anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                            unsigned stage, struct anv_state *bt_state);
 VkResult anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
                                       unsigned stage, struct anv_state *state);
-void gen7_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer);
+uint32_t gen7_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer);
+void gen7_cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
+                                              uint32_t stages);
 
 struct anv_state anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
                                              const void *data, uint32_t size, uint32_t alignment);

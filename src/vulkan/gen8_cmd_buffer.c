@@ -32,7 +32,7 @@
 #include "gen8_pack.h"
 #include "gen9_pack.h"
 
-static void
+static uint32_t
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
    static const uint32_t push_constant_opcodes[] = {
@@ -66,6 +66,8 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
    }
 
    cmd_buffer->state.push_constants_dirty &= ~flushed;
+
+   return flushed;
 }
 
 #if ANV_GEN == 8
@@ -205,23 +207,22 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
    }
 
-#if ANV_GEN >= 9
-   /* On SKL+ the new constants don't take effect until the next corresponding
-    * 3DSTATE_BINDING_TABLE_POINTER_* command is parsed so we need to ensure
-    * that is sent. As it is, we re-emit binding tables but we could hold on
-    * to the offset of the most recent binding table and only re-emit the
-    * 3DSTATE_BINDING_TABLE_POINTER_* command.
+   /* We emit the binding tables and sampler tables first, then emit push
+    * constants and then finally emit binding table and sampler table
+    * pointers.  It has to happen in this order, since emitting the binding
+    * tables may change the push constants (in case of storage images). After
+    * emitting push constants, on SKL+ we have to emit the corresponding
+    * 3DSTATE_BINDING_TABLE_POINTER_* for the push constants to take effect.
     */
-   cmd_buffer->state.descriptors_dirty |=
-      cmd_buffer->state.push_constants_dirty &
-      cmd_buffer->state.pipeline->active_stages;
-#endif
-
+   uint32_t dirty = 0;
    if (cmd_buffer->state.descriptors_dirty)
-      gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
+      dirty = gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
 
    if (cmd_buffer->state.push_constants_dirty)
-      cmd_buffer_flush_push_constants(cmd_buffer);
+      dirty |= cmd_buffer_flush_push_constants(cmd_buffer);
+
+   if (dirty)
+      gen7_cmd_buffer_emit_descriptor_pointers(cmd_buffer, dirty);
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
       gen8_cmd_buffer_emit_viewport(cmd_buffer);

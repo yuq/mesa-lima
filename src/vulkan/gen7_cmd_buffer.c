@@ -32,7 +32,7 @@
 #include "gen7_pack.h"
 #include "gen75_pack.h"
 
-static void
+static uint32_t
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
    static const uint32_t push_constant_opcodes[] = {
@@ -63,21 +63,14 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
    }
 
    cmd_buffer->state.push_constants_dirty &= ~flushed;
+
+   return flushed;
 }
 
-static VkResult
-flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, gl_shader_stage stage)
+GENX_FUNC(GEN7, GEN7) void
+genX(cmd_buffer_emit_descriptor_pointers)(struct anv_cmd_buffer *cmd_buffer,
+                                          uint32_t stages)
 {
-   struct anv_state surfaces = { 0, }, samplers = { 0, };
-   VkResult result;
-
-   result = anv_cmd_buffer_emit_samplers(cmd_buffer, stage, &samplers);
-   if (result != VK_SUCCESS)
-      return result;
-   result = anv_cmd_buffer_emit_binding_table(cmd_buffer, stage, &surfaces);
-   if (result != VK_SUCCESS)
-      return result;
-
    static const uint32_t sampler_state_opcodes[] = {
       [MESA_SHADER_VERTEX]                      = 43,
       [MESA_SHADER_TESS_CTRL]                   = 44, /* HS */
@@ -96,24 +89,24 @@ flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, gl_shader_stage stage)
       [MESA_SHADER_COMPUTE]                     = 0,
    };
 
-   if (samplers.alloc_size > 0) {
-      anv_batch_emit(&cmd_buffer->batch,
-                     GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS,
-                     ._3DCommandSubOpcode  = sampler_state_opcodes[stage],
-                     .PointertoVSSamplerState = samplers.offset);
-   }
+   anv_foreach_stage(s, stages) {
+      if (cmd_buffer->state.samplers[s].alloc_size > 0) {
+         anv_batch_emit(&cmd_buffer->batch,
+                        GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS,
+                        ._3DCommandSubOpcode  = sampler_state_opcodes[s],
+                        .PointertoVSSamplerState = cmd_buffer->state.samplers[s].offset);
+      }
 
-   if (surfaces.alloc_size > 0) {
+      /* Always emit binding table pointers if we're asked to, since on SKL
+       * this is what flushes push constants. */
       anv_batch_emit(&cmd_buffer->batch,
                      GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS,
-                     ._3DCommandSubOpcode  = binding_table_opcodes[stage],
-                     .PointertoVSBindingTable = surfaces.offset);
+                     ._3DCommandSubOpcode  = binding_table_opcodes[s],
+                     .PointertoVSBindingTable = cmd_buffer->state.binding_tables[s].offset);
    }
-
-   return VK_SUCCESS;
 }
 
-GENX_FUNC(GEN7, GEN7) void
+GENX_FUNC(GEN7, GEN7) uint32_t
 genX(cmd_buffer_flush_descriptor_sets)(struct anv_cmd_buffer *cmd_buffer)
 {
    VkShaderStageFlags dirty = cmd_buffer->state.descriptors_dirty &
@@ -121,7 +114,12 @@ genX(cmd_buffer_flush_descriptor_sets)(struct anv_cmd_buffer *cmd_buffer)
 
    VkResult result = VK_SUCCESS;
    anv_foreach_stage(s, dirty) {
-      result = flush_descriptor_set(cmd_buffer, s);
+      result = anv_cmd_buffer_emit_samplers(cmd_buffer, s,
+                                            &cmd_buffer->state.samplers[s]);
+      if (result != VK_SUCCESS)
+         break;
+      result = anv_cmd_buffer_emit_binding_table(cmd_buffer, s,
+                                                 &cmd_buffer->state.binding_tables[s]);
       if (result != VK_SUCCESS)
          break;
    }
@@ -138,15 +136,22 @@ genX(cmd_buffer_flush_descriptor_sets)(struct anv_cmd_buffer *cmd_buffer)
       anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
       /* Re-emit all active binding tables */
-      anv_foreach_stage(s, cmd_buffer->state.pipeline->active_stages) {
-         result = flush_descriptor_set(cmd_buffer, s);
-
-         /* It had better succeed this time */
-         assert(result == VK_SUCCESS);
+      dirty |= cmd_buffer->state.pipeline->active_stages;
+      anv_foreach_stage(s, dirty) {
+         result = anv_cmd_buffer_emit_samplers(cmd_buffer, s,
+                                               &cmd_buffer->state.samplers[s]);
+         if (result != VK_SUCCESS)
+            return result;
+         result = anv_cmd_buffer_emit_binding_table(cmd_buffer, s,
+                                                    &cmd_buffer->state.binding_tables[s]);
+         if (result != VK_SUCCESS)
+            return result;
       }
    }
 
-   cmd_buffer->state.descriptors_dirty &= ~cmd_buffer->state.pipeline->active_stages;
+   cmd_buffer->state.descriptors_dirty &= ~dirty;
+
+   return dirty;
 }
 
 static inline int64_t
@@ -389,8 +394,11 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                      .Address = { &cmd_buffer->device->workaround_bo, 0 });
    }
 
-   if (cmd_buffer->state.descriptors_dirty)
-      gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
+   uint32_t dirty = 0;
+   if (cmd_buffer->state.descriptors_dirty) {
+      dirty = gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
+      gen7_cmd_buffer_emit_descriptor_pointers(cmd_buffer, dirty);
+   }
 
    if (cmd_buffer->state.push_constants_dirty)
       cmd_buffer_flush_push_constants(cmd_buffer);

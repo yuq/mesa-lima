@@ -636,8 +636,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
     * targets. */
    uint32_t surface_count = layout ? layout->stage[stage].surface_count : 0;
 
-   if (color_count + surface_count == 0)
+   if (color_count + surface_count == 0) {
+      *bt_state = (struct anv_state) { 0, };
       return VK_SUCCESS;
+   }
 
    *bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer,
                                                   bias + surface_count,
@@ -781,8 +783,10 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
       layout = cmd_buffer->state.pipeline->layout;
 
    sampler_count = layout ? layout->stage[stage].sampler_count : 0;
-   if (sampler_count == 0)
+   if (sampler_count == 0) {
+      *state = (struct anv_state) { 0, };
       return VK_SUCCESS;
+   }
 
    uint32_t size = sampler_count * 16;
    *state = anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, size, 32);
