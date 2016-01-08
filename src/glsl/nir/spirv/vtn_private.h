@@ -363,6 +363,12 @@ vtn_value(struct vtn_builder *b, uint32_t value_id,
 
 struct vtn_ssa_value *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
 
+struct vtn_ssa_value *vtn_create_ssa_value(struct vtn_builder *b,
+                                           const struct glsl_type *type);
+
+struct vtn_ssa_value *vtn_ssa_transpose(struct vtn_builder *b,
+                                        struct vtn_ssa_value *src);
+
 void vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                         nir_deref_var *dest, struct vtn_type *dest_type);
 
@@ -383,6 +389,9 @@ typedef void (*vtn_execution_mode_foreach_cb)(struct vtn_builder *,
 
 void vtn_foreach_execution_mode(struct vtn_builder *b, struct vtn_value *value,
                                 vtn_execution_mode_foreach_cb cb, void *data);
+
+void vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
+                    const uint32_t *w, unsigned count);
 
 bool vtn_handle_glsl450_instruction(struct vtn_builder *b, uint32_t ext_opcode,
                                     const uint32_t *words, unsigned count);
