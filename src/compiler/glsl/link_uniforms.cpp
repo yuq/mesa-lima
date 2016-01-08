@@ -194,6 +194,9 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
          if (t->fields.structure[i].type->is_record())
             this->visit_field(&t->fields.structure[i]);
 
+         if (t->is_interface() && t->fields.structure[i].offset != -1)
+            this->set_buffer_offset(t->fields.structure[i].offset);
+
          /* Append '.field' to the current variable name. */
          if (name_length == 0) {
             ralloc_asprintf_rewrite_tail(name, &new_length, "%s", field);
@@ -294,6 +297,11 @@ program_resource_visitor::enter_record(const glsl_type *, const char *, bool,
 void
 program_resource_visitor::leave_record(const glsl_type *, const char *, bool,
                                        const unsigned)
+{
+}
+
+void
+program_resource_visitor::set_buffer_offset(unsigned)
 {
 }
 
@@ -674,6 +682,11 @@ private:
          this->next_subroutine += MAX2(1, uniform->array_elements);
 
       }
+   }
+
+   virtual void set_buffer_offset(unsigned offset)
+   {
+      this->ubo_byte_offset = offset;
    }
 
    virtual void set_record_array_count(unsigned record_array_count)
