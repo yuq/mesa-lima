@@ -632,9 +632,10 @@ ir_validate::visit_leave(ir_expression *ir)
       break;
 
    case ir_triop_bitfield_extract:
+      assert(ir->type->is_integer());
       assert(ir->operands[0]->type == ir->type);
-      assert(ir->operands[1]->type == glsl_type::int_type);
-      assert(ir->operands[2]->type == glsl_type::int_type);
+      assert(ir->operands[1]->type == ir->type);
+      assert(ir->operands[2]->type == ir->type);
       break;
 
    case ir_triop_vector_insert:

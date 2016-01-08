@@ -1588,10 +1588,10 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
       break;
 
    case ir_triop_bitfield_extract: {
-      int offset = op[1]->value.i[0];
-      int bits = op[2]->value.i[0];
-
       for (unsigned c = 0; c < components; c++) {
+         int offset = op[1]->value.i[c];
+         int bits = op[2]->value.i[c];
+
          if (bits == 0)
             data.u[c] = 0;
          else if (offset < 0 || bits < 0)

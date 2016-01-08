@@ -365,11 +365,11 @@ private:
 
       if (op_mask & LOWER_PACK_USE_BFE) {
          /* u4.y = bitfield_extract(u, 8, 8); */
-         factory.emit(assign(u4, bitfield_extract(u, constant(8), constant(8)),
+         factory.emit(assign(u4, bitfield_extract(u, constant(8u), constant(8u)),
                              WRITEMASK_Y));
 
          /* u4.z = bitfield_extract(u, 16, 8); */
-         factory.emit(assign(u4, bitfield_extract(u, constant(16), constant(8)),
+         factory.emit(assign(u4, bitfield_extract(u, constant(16u), constant(8u)),
                              WRITEMASK_Z));
       } else {
          /* u4.y = (u >> 8u) & 0xffu; */

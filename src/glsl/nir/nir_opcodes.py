@@ -570,9 +570,9 @@ if (mask == 0) {
 """)
 
 opcode("ubitfield_extract", 0, tuint,
-       [0, 1, 1], [tuint, tint, tint], "", """
+       [0, 0, 0], [tuint, tint, tint], "", """
 unsigned base = src0;
-int offset = src1.x, bits = src2.x;
+int offset = src1, bits = src2;
 if (bits == 0) {
    dst = 0;
 } else if (bits < 0 || offset < 0 || offset + bits > 32) {
@@ -582,9 +582,9 @@ if (bits == 0) {
 }
 """)
 opcode("ibitfield_extract", 0, tint,
-       [0, 1, 1], [tint, tint, tint], "", """
+       [0, 0, 0], [tint, tint, tint], "", """
 int base = src0;
-int offset = src1.x, bits = src2.x;
+int offset = src1, bits = src2;
 if (bits == 0) {
    dst = 0;
 } else if (offset < 0 || bits < 0 || offset + bits > 32) {
