@@ -1110,8 +1110,8 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
        */
       for (unsigned j = 0; j < num_elements; j++) {
          while ((slot_end < MAX_VARYING * 4u) &&
-                ((reserved_slots & (1u << *location / 4u) ||
-                 (reserved_slots & (1u << slot_end / 4u))))) {
+                ((reserved_slots & (UINT64_C(1) << *location / 4u) ||
+                 (reserved_slots & (UINT64_C(1) << slot_end / 4u))))) {
 
             *location = ALIGN(*location + 1, 4);
             slot_end = *location;
@@ -1529,7 +1529,7 @@ reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode)
          ->count_attribute_slots(stage->Stage == MESA_SHADER_VERTEX);
       for (unsigned i = 0; i < num_elements; i++) {
          if (var_slot >= 0 && var_slot < MAX_VARYING)
-            slots |= 1u << var_slot;
+            slots |= UINT64_C(1) << var_slot;
          var_slot += 1;
       }
    }
