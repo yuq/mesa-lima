@@ -1316,9 +1316,7 @@ _vtn_load_store_tail(struct vtn_builder *b, nir_intrinsic_op op, bool load,
    if (load) {
       nir_ssa_dest_init(&instr->instr, &instr->dest,
                         instr->num_components, NULL);
-      *inout = rzalloc(b, struct vtn_ssa_value);
       (*inout)->def = &instr->dest.ssa;
-      (*inout)->type = type;
    }
 
    nir_builder_instr_insert(&b->nb, &instr->instr);
@@ -1332,11 +1330,8 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
                       nir_ssa_def *index, nir_ssa_def *offset, nir_deref *deref,
                       struct vtn_type *type, struct vtn_ssa_value **inout)
 {
-   if (deref == NULL && load) {
-      assert(*inout == NULL);
-      *inout = rzalloc(b, struct vtn_ssa_value);
-      (*inout)->type = type->type;
-   }
+   if (load && deref == NULL && *inout == NULL)
+      *inout = vtn_create_ssa_value(b, type->type);
 
    enum glsl_base_type base_type = glsl_get_base_type(type->type);
    switch (base_type) {
@@ -1350,18 +1345,12 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
       if (glsl_type_is_matrix(type->type)) {
          if (deref == NULL) {
             /* Loading the whole matrix */
-            if (load)
-               (*inout)->elems = ralloc_array(b, struct vtn_ssa_value *, 4);
-
             struct vtn_ssa_value *transpose;
             unsigned num_ops, vec_width;
             if (type->row_major) {
                num_ops = glsl_get_vector_elements(type->type);
                vec_width = glsl_get_matrix_columns(type->type);
-               if (load) {
-                  (*inout)->type =
-                     glsl_matrix_type(base_type, vec_width, num_ops);
-               } else {
+               if (!load) {
                   transpose = vtn_ssa_transpose(b, *inout);
                   inout = &transpose;
                }
@@ -1445,9 +1434,6 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
          return;
       } else {
          unsigned elems = glsl_get_length(type->type);
-         if (load)
-            (*inout)->elems = ralloc_array(b, struct vtn_ssa_value *, elems);
-
          for (unsigned i = 0; i < elems; i++) {
             nir_ssa_def *elem_off =
                nir_iadd(&b->nb, offset, nir_imm_int(&b->nb, i * type->stride));
@@ -1469,9 +1455,6 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
          return;
       } else {
          unsigned elems = glsl_get_length(type->type);
-         if (load)
-            (*inout)->elems = ralloc_array(b, struct vtn_ssa_value *, elems);
-
          for (unsigned i = 0; i < elems; i++) {
             nir_ssa_def *elem_off =
                nir_iadd(&b->nb, offset, nir_imm_int(&b->nb, type->offsets[i]));
