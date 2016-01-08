@@ -55,7 +55,6 @@ nvc0_shader_input_address(unsigned sn, unsigned si)
    case TGSI_SEMANTIC_INSTANCEID:   return 0x2f8;
    case TGSI_SEMANTIC_VERTEXID:     return 0x2fc;
    case TGSI_SEMANTIC_TEXCOORD:     return 0x300 + si * 0x10;
-   case TGSI_SEMANTIC_FACE:         return 0x3fc;
    default:
       assert(!"invalid TGSI input semantic");
       return ~0;

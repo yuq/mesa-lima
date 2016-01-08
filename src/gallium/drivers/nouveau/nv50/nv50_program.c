@@ -148,7 +148,6 @@ nv50_fragprog_assign_slots(struct nv50_ir_prog_info *info)
    for (m = 0, i = 0; i < info->numInputs; ++i) {
       switch (info->in[i].sn) {
       case TGSI_SEMANTIC_POSITION:
-      case TGSI_SEMANTIC_FACE:
          continue;
       default:
          m += info->in[i].flat ? 0 : 1;
@@ -166,9 +165,6 @@ nv50_fragprog_assign_slots(struct nv50_ir_prog_info *info)
          for (c = 0; c < 4; ++c)
             if (info->in[i].mask & (1 << c))
                info->in[i].slot[c] = nintp++;
-      } else
-      if (info->in[i].sn == TGSI_SEMANTIC_FACE) {
-         info->in[i].slot[0] = 255;
       } else {
          unsigned j = info->in[i].flat ? m++ : n++;
 
