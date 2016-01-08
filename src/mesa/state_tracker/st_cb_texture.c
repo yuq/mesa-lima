@@ -60,6 +60,7 @@
 #include "pipe/p_context.h"
 #include "pipe/p_defines.h"
 #include "util/u_inlines.h"
+#include "util/u_upload_mgr.h"
 #include "pipe/p_shader_tokens.h"
 #include "util/u_tile.h"
 #include "util/u_format.h"
@@ -67,6 +68,9 @@
 #include "util/u_sampler.h"
 #include "util/u_math.h"
 #include "util/u_box.h"
+#include "util/u_simple_shaders.h"
+#include "cso_cache/cso_context.h"
+#include "tgsi/tgsi_ureg.h"
 
 #define DBG if (0) printf
 
@@ -686,6 +690,865 @@ st_get_blit_mask(GLenum srcFormat, GLenum dstFormat)
    }
 }
 
+void
+st_init_pbo_upload(struct st_context *st)
+{
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_screen *screen = pipe->screen;
+
+   st->pbo_upload.enabled =
+      screen->get_param(screen, PIPE_CAP_TEXTURE_BUFFER_OBJECTS) &&
+      screen->get_param(screen, PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT) >= 1 &&
+      screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT, PIPE_SHADER_CAP_INTEGERS);
+   if (!st->pbo_upload.enabled)
+      return;
+
+   st->pbo_upload.rgba_only =
+      screen->get_param(screen, PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY);
+
+   /* Create the vertex shader */
+   {
+      unsigned semantic_names[] = { TGSI_SEMANTIC_POSITION };
+      unsigned semantic_indexes[] = { 0 };
+
+      st->pbo_upload.vs = util_make_vertex_passthrough_shader(pipe, 1,
+                                                              semantic_names,
+                                                              semantic_indexes,
+                                                              FALSE);
+   }
+
+   /* Blend state */
+   memset(&st->pbo_upload.blend, 0, sizeof(struct pipe_blend_state));
+   st->pbo_upload.blend.rt[0].colormask = PIPE_MASK_RGBA;
+
+   /* Rasterizer state */
+   memset(&st->pbo_upload.raster, 0, sizeof(struct pipe_rasterizer_state));
+   st->pbo_upload.raster.half_pixel_center = 1;
+}
+
+void
+st_destroy_pbo_upload(struct st_context *st)
+{
+   if (st->pbo_upload.fs) {
+      cso_delete_fragment_shader(st->cso_context, st->pbo_upload.fs);
+      st->pbo_upload.fs = NULL;
+   }
+
+   if (st->pbo_upload.vs) {
+      cso_delete_vertex_shader(st->cso_context, st->pbo_upload.vs);
+      st->pbo_upload.vs = NULL;
+   }
+}
+
+/**
+ * Converts format to a format with the same components, types
+ * and sizes, but with the components in RGBA order.
+ */
+static enum pipe_format
+unswizzle_format(enum pipe_format format)
+{
+   switch (format)
+   {
+   case PIPE_FORMAT_B8G8R8A8_UNORM:
+   case PIPE_FORMAT_A8R8G8B8_UNORM:
+   case PIPE_FORMAT_A8B8G8R8_UNORM:
+      return PIPE_FORMAT_R8G8B8A8_UNORM;
+
+   case PIPE_FORMAT_B10G10R10A2_UNORM:
+      return PIPE_FORMAT_R10G10B10A2_UNORM;
+
+   case PIPE_FORMAT_B10G10R10A2_SNORM:
+      return PIPE_FORMAT_R10G10B10A2_SNORM;
+
+   case PIPE_FORMAT_B10G10R10A2_UINT:
+      return PIPE_FORMAT_R10G10B10A2_UINT;
+
+   default:
+      return format;
+   }
+}
+
+/**
+ * Converts PIPE_FORMAT_A* to PIPE_FORMAT_R*.
+ */
+static enum pipe_format
+alpha_to_red(enum pipe_format format)
+{
+   switch (format)
+   {
+   case PIPE_FORMAT_A8_UNORM:
+      return PIPE_FORMAT_R8_UNORM;
+   case PIPE_FORMAT_A8_SNORM:
+      return PIPE_FORMAT_R8_SNORM;
+   case PIPE_FORMAT_A8_UINT:
+      return PIPE_FORMAT_R8_UINT;
+   case PIPE_FORMAT_A8_SINT:
+      return PIPE_FORMAT_R8_SINT;
+
+   case PIPE_FORMAT_A16_UNORM:
+      return PIPE_FORMAT_R16_UNORM;
+   case PIPE_FORMAT_A16_SNORM:
+      return PIPE_FORMAT_R16_SNORM;
+   case PIPE_FORMAT_A16_UINT:
+      return PIPE_FORMAT_R16_UINT;
+   case PIPE_FORMAT_A16_SINT:
+      return PIPE_FORMAT_R16_SINT;
+   case PIPE_FORMAT_A16_FLOAT:
+      return PIPE_FORMAT_R16_FLOAT;
+
+   case PIPE_FORMAT_A32_UINT:
+      return PIPE_FORMAT_R32_UINT;
+   case PIPE_FORMAT_A32_SINT:
+      return PIPE_FORMAT_R32_SINT;
+   case PIPE_FORMAT_A32_FLOAT:
+      return PIPE_FORMAT_R32_FLOAT;
+
+   default:
+      return format;
+   }
+}
+
+/**
+ * Converts PIPE_FORMAT_R*A* to PIPE_FORMAT_R*G*.
+ */
+static enum pipe_format
+red_alpha_to_red_green(enum pipe_format format)
+{
+   switch (format)
+   {
+   case PIPE_FORMAT_R8A8_UNORM:
+      return PIPE_FORMAT_R8G8_UNORM;
+   case PIPE_FORMAT_R8A8_SNORM:
+      return PIPE_FORMAT_R8G8_SNORM;
+   case PIPE_FORMAT_R8A8_UINT:
+      return PIPE_FORMAT_R8G8_UINT;
+   case PIPE_FORMAT_R8A8_SINT:
+      return PIPE_FORMAT_R8G8_SINT;
+
+   case PIPE_FORMAT_R16A16_UNORM:
+      return PIPE_FORMAT_R16G16_UNORM;
+   case PIPE_FORMAT_R16A16_SNORM:
+      return PIPE_FORMAT_R16G16_SNORM;
+   case PIPE_FORMAT_R16A16_UINT:
+      return PIPE_FORMAT_R16G16_UINT;
+   case PIPE_FORMAT_R16A16_SINT:
+      return PIPE_FORMAT_R16G16_SINT;
+   case PIPE_FORMAT_R16A16_FLOAT:
+      return PIPE_FORMAT_R16G16_FLOAT;
+
+   case PIPE_FORMAT_R32A32_UINT:
+      return PIPE_FORMAT_R32G32_UINT;
+   case PIPE_FORMAT_R32A32_SINT:
+      return PIPE_FORMAT_R32G32_SINT;
+   case PIPE_FORMAT_R32A32_FLOAT:
+      return PIPE_FORMAT_R32G32_FLOAT;
+
+   default:
+       return format;
+   }
+}
+
+/**
+ * Converts PIPE_FORMAT_L*A* to PIPE_FORMAT_R*G*.
+ */
+static enum pipe_format
+luminance_alpha_to_red_green(enum pipe_format format)
+{
+   switch (format)
+   {
+   case PIPE_FORMAT_L8A8_UNORM:
+      return PIPE_FORMAT_R8G8_UNORM;
+   case PIPE_FORMAT_L8A8_SNORM:
+      return PIPE_FORMAT_R8G8_SNORM;
+   case PIPE_FORMAT_L8A8_UINT:
+      return PIPE_FORMAT_R8G8_UINT;
+   case PIPE_FORMAT_L8A8_SINT:
+      return PIPE_FORMAT_R8G8_SINT;
+
+   case PIPE_FORMAT_L16A16_UNORM:
+      return PIPE_FORMAT_R16G16_UNORM;
+   case PIPE_FORMAT_L16A16_SNORM:
+      return PIPE_FORMAT_R16G16_SNORM;
+   case PIPE_FORMAT_L16A16_UINT:
+      return PIPE_FORMAT_R16G16_UINT;
+   case PIPE_FORMAT_L16A16_SINT:
+      return PIPE_FORMAT_R16G16_SINT;
+   case PIPE_FORMAT_L16A16_FLOAT:
+      return PIPE_FORMAT_R16G16_FLOAT;
+
+   case PIPE_FORMAT_L32A32_UINT:
+      return PIPE_FORMAT_R32G32_UINT;
+   case PIPE_FORMAT_L32A32_SINT:
+      return PIPE_FORMAT_R32G32_SINT;
+   case PIPE_FORMAT_L32A32_FLOAT:
+      return PIPE_FORMAT_R32G32_FLOAT;
+
+   default:
+       return format;
+   }
+}
+
+/**
+ * Returns true if format is a PIPE_FORMAT_A* format, and false otherwise.
+ */
+static bool
+format_is_alpha(enum pipe_format format)
+{
+   const struct util_format_description *desc = util_format_description(format);
+
+   if (desc->nr_channels == 1 &&
+       desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_0 &&
+       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_0 &&
+       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_0 &&
+       desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_X)
+      return true;
+
+   return false;
+}
+
+/**
+ * Returns true if format is a PIPE_FORMAT_R* format, and false otherwise.
+ */
+static bool
+format_is_red(enum pipe_format format)
+{
+   const struct util_format_description *desc = util_format_description(format);
+
+   if (desc->nr_channels == 1 &&
+       desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_X &&
+       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_0 &&
+       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_0 &&
+       desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1)
+      return true;
+
+   return false;
+}
+
+
+/**
+ * Returns true if format is a PIPE_FORMAT_L* format, and false otherwise.
+ */
+static bool
+format_is_luminance(enum pipe_format format)
+{
+   const struct util_format_description *desc = util_format_description(format);
+
+   if (desc->nr_channels == 1 &&
+       desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_X &&
+       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_X &&
+       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_X &&
+       desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1)
+      return true;
+
+   return false;
+}
+
+/**
+ * Returns true if format is a PIPE_FORMAT_R*A* format, and false otherwise.
+ */
+static bool
+format_is_red_alpha(enum pipe_format format)
+{
+   const struct util_format_description *desc = util_format_description(format);
+
+   if (desc->nr_channels == 2 &&
+       desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_X &&
+       desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_0 &&
+       desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_0 &&
+       desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_Y)
+      return true;
+
+   return false;
+}
+
+static bool
+format_is_swizzled_rgba(enum pipe_format format)
+{
+    const struct util_format_description *desc = util_format_description(format);
+
+    if ((desc->swizzle[0] == TGSI_SWIZZLE_X || desc->swizzle[0] == UTIL_FORMAT_SWIZZLE_0) &&
+        (desc->swizzle[1] == TGSI_SWIZZLE_Y || desc->swizzle[1] == UTIL_FORMAT_SWIZZLE_0) &&
+        (desc->swizzle[2] == TGSI_SWIZZLE_Z || desc->swizzle[2] == UTIL_FORMAT_SWIZZLE_0) &&
+        (desc->swizzle[3] == TGSI_SWIZZLE_W || desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1))
+       return false;
+
+    return true;
+}
+
+struct format_table
+{
+   unsigned char swizzle[4];
+   enum pipe_format format;
+};
+
+static const struct format_table table_8888_unorm[] = {
+   { { 0, 1, 2, 3 }, PIPE_FORMAT_R8G8B8A8_UNORM },
+   { { 2, 1, 0, 3 }, PIPE_FORMAT_B8G8R8A8_UNORM },
+   { { 3, 0, 1, 2 }, PIPE_FORMAT_A8R8G8B8_UNORM },
+   { { 3, 2, 1, 0 }, PIPE_FORMAT_A8B8G8R8_UNORM }
+};
+
+static const struct format_table table_1010102_unorm[] = {
+   { { 0, 1, 2, 3 }, PIPE_FORMAT_R10G10B10A2_UNORM },
+   { { 2, 1, 0, 3 }, PIPE_FORMAT_B10G10R10A2_UNORM }
+};
+
+static const struct format_table table_1010102_snorm[] = {
+   { { 0, 1, 2, 3 }, PIPE_FORMAT_R10G10B10A2_SNORM },
+   { { 2, 1, 0, 3 }, PIPE_FORMAT_B10G10R10A2_SNORM }
+};
+
+static const struct format_table table_1010102_uint[] = {
+   { { 0, 1, 2, 3 }, PIPE_FORMAT_R10G10B10A2_UINT },
+   { { 2, 1, 0, 3 }, PIPE_FORMAT_B10G10R10A2_UINT }
+};
+
+static enum pipe_format
+swizzle_format(enum pipe_format format, const int * const swizzle)
+{
+   unsigned i;
+
+   switch (format) {
+   case PIPE_FORMAT_R8G8B8A8_UNORM:
+   case PIPE_FORMAT_B8G8R8A8_UNORM:
+   case PIPE_FORMAT_A8R8G8B8_UNORM:
+   case PIPE_FORMAT_A8B8G8R8_UNORM:
+      for (i = 0; i < ARRAY_SIZE(table_8888_unorm); i++) {
+         if (swizzle[0] == table_8888_unorm[i].swizzle[0] &&
+             swizzle[1] == table_8888_unorm[i].swizzle[1] &&
+             swizzle[2] == table_8888_unorm[i].swizzle[2] &&
+             swizzle[3] == table_8888_unorm[i].swizzle[3])
+            return table_8888_unorm[i].format;
+      }
+      break;
+
+   case PIPE_FORMAT_R10G10B10A2_UNORM:
+   case PIPE_FORMAT_B10G10R10A2_UNORM:
+      for (i = 0; i < ARRAY_SIZE(table_1010102_unorm); i++) {
+         if (swizzle[0] == table_1010102_unorm[i].swizzle[0] &&
+             swizzle[1] == table_1010102_unorm[i].swizzle[1] &&
+             swizzle[2] == table_1010102_unorm[i].swizzle[2] &&
+             swizzle[3] == table_1010102_unorm[i].swizzle[3])
+            return table_1010102_unorm[i].format;
+      }
+      break;
+
+   case PIPE_FORMAT_R10G10B10A2_SNORM:
+   case PIPE_FORMAT_B10G10R10A2_SNORM:
+      for (i = 0; i < ARRAY_SIZE(table_1010102_snorm); i++) {
+         if (swizzle[0] == table_1010102_snorm[i].swizzle[0] &&
+             swizzle[1] == table_1010102_snorm[i].swizzle[1] &&
+             swizzle[2] == table_1010102_snorm[i].swizzle[2] &&
+             swizzle[3] == table_1010102_snorm[i].swizzle[3])
+            return table_1010102_snorm[i].format;
+      }
+      break;
+
+   case PIPE_FORMAT_R10G10B10A2_UINT:
+   case PIPE_FORMAT_B10G10R10A2_UINT:
+      for (i = 0; i < ARRAY_SIZE(table_1010102_uint); i++) {
+         if (swizzle[0] == table_1010102_uint[i].swizzle[0] &&
+             swizzle[1] == table_1010102_uint[i].swizzle[1] &&
+             swizzle[2] == table_1010102_uint[i].swizzle[2] &&
+             swizzle[3] == table_1010102_uint[i].swizzle[3])
+            return table_1010102_uint[i].format;
+      }
+      break;
+
+   default:
+      break;
+   }
+
+   return PIPE_FORMAT_NONE;
+}
+
+static bool
+reinterpret_formats(enum pipe_format *src_format, enum pipe_format *dst_format)
+{
+   enum pipe_format src = *src_format;
+   enum pipe_format dst = *dst_format;
+
+   /* Note: dst_format has already been transformed from luminance/intensity
+    *       to red when this function is called.  The source format will never
+    *       be an intensity format, because GL_INTENSITY is not a legal value
+    *       for the format parameter in glTex(Sub)Image(). */
+
+   if (format_is_alpha(src)) {
+      if (!format_is_alpha(dst))
+         return false;
+
+      src = alpha_to_red(src);
+      dst = alpha_to_red(dst);
+   } else if (format_is_luminance(src)) {
+      if (!format_is_red(dst) && !format_is_red_alpha(dst))
+         return false;
+
+      src = util_format_luminance_to_red(src);
+   } else if (util_format_is_luminance_alpha(src)) {
+      src = luminance_alpha_to_red_green(src);
+
+      if (format_is_red_alpha(dst)) {
+         dst = red_alpha_to_red_green(dst);
+      } else if (!format_is_red(dst))
+         return false;
+   } else if (format_is_swizzled_rgba(src)) {
+      const struct util_format_description *src_desc = util_format_description(src);
+      const struct util_format_description *dst_desc = util_format_description(dst);
+      int swizzle[4];
+      unsigned i;
+
+      /* Make sure the format is an RGBA and not an RGBX format */
+      if (src_desc->nr_channels != 4 || src_desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1)
+         return false;
+
+      if (dst_desc->nr_channels != 4 || dst_desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1)
+         return false;
+
+      for (i = 0; i < 4; i++)
+         swizzle[i] = dst_desc->swizzle[src_desc->swizzle[i]];
+
+      dst = swizzle_format(dst, swizzle);
+      if (dst == PIPE_FORMAT_NONE)
+         return false;
+
+      src = unswizzle_format(src);
+   }
+
+   *src_format = src;
+   *dst_format = dst;
+   return true;
+}
+
+static void *
+create_pbo_upload_shader(struct st_context *st)
+{
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_screen *screen = pipe->screen;
+   struct ureg_program *ureg;
+   struct ureg_dst out;
+   struct ureg_src sampler;
+   struct ureg_src pos;
+   struct ureg_src const0;
+   struct ureg_dst temp0;
+
+   ureg    = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+   out     = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
+   sampler = ureg_DECL_sampler(ureg, 0);
+   if (screen->get_param(screen, PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL)) {
+      pos = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_POSITION, 0);
+   } else {
+      pos = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
+                               TGSI_INTERPOLATE_LINEAR);
+   }
+   const0  = ureg_DECL_constant(ureg, 0);
+   temp0   = ureg_DECL_temporary(ureg);
+
+   /* Note: const0 = [ -xoffset + skip_pixels, -yoffset, stride, 0 ] */
+
+   /* temp0.xy = f2i(temp0.xy) */
+   ureg_F2I(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_XY),
+                  ureg_swizzle(pos,
+                               TGSI_SWIZZLE_X, TGSI_SWIZZLE_Y,
+                               TGSI_SWIZZLE_Y, TGSI_SWIZZLE_Y));
+
+   /* temp0.xy = temp0.xy + const0.xy */
+   ureg_UADD(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_XY),
+                   ureg_swizzle(ureg_src(temp0),
+                                TGSI_SWIZZLE_X, TGSI_SWIZZLE_Y,
+                                TGSI_SWIZZLE_Y, TGSI_SWIZZLE_Y),
+                   ureg_swizzle(const0,
+                                TGSI_SWIZZLE_X, TGSI_SWIZZLE_Y,
+                                TGSI_SWIZZLE_Y, TGSI_SWIZZLE_Y));
+
+   /* temp0.x = const0.z * temp0.y + temp0.x */
+   ureg_UMAD(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_X),
+                   ureg_scalar(const0, TGSI_SWIZZLE_Z),
+                   ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_Y),
+                   ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X));
+
+   /* out = txf(sampler, temp0.x) */
+   ureg_TXF(ureg, out, TGSI_TEXTURE_BUFFER,
+                  ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X),
+                  sampler);
+
+   ureg_release_temporary(ureg, temp0);
+
+   ureg_END(ureg);
+
+   return ureg_create_shader_and_destroy(ureg, pipe);
+}
+
+static bool
+try_pbo_upload_common(struct gl_context *ctx,
+                      struct pipe_surface *surface,
+                      int xoffset, int yoffset,
+                      unsigned upload_width, unsigned upload_height,
+                      struct pipe_resource *buffer,
+                      enum pipe_format src_format,
+                      intptr_t buf_offset,
+                      unsigned bytes_per_pixel,
+                      unsigned stride,
+                      unsigned image_height)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_sampler_view *sampler_view = NULL;
+   unsigned depth = surface->u.tex.last_layer - surface->u.tex.first_layer + 1;
+   unsigned skip_pixels = 0;
+
+   /* Check alignment. */
+   {
+      unsigned ofs = (buf_offset * bytes_per_pixel) % ctx->Const.TextureBufferOffsetAlignment;
+      if (ofs != 0) {
+         if (ofs % bytes_per_pixel != 0)
+            return false;
+
+         skip_pixels = ofs / bytes_per_pixel;
+         buf_offset -= skip_pixels;
+      }
+   }
+
+   /* Create the shaders */
+   if (!st->pbo_upload.fs) {
+      st->pbo_upload.fs = create_pbo_upload_shader(st);
+      if (!st->pbo_upload.fs)
+         return false;
+   }
+
+   /* Set up the sampler_view */
+   {
+      unsigned first_element = buf_offset;
+      unsigned last_element = buf_offset + skip_pixels + upload_width - 1
+         + (upload_height - 1 + (depth - 1) * image_height) * stride;
+      struct pipe_sampler_view templ;
+
+      /* This should be ensured by Mesa before calling our callbacks */
+      assert((last_element + 1) * bytes_per_pixel <= buffer->width0);
+
+      if (last_element - first_element > ctx->Const.MaxTextureBufferSize - 1)
+         return false;
+
+      memset(&templ, 0, sizeof(templ));
+      templ.format = src_format;
+      templ.u.buf.first_element = first_element;
+      templ.u.buf.last_element = last_element;
+      templ.swizzle_r = PIPE_SWIZZLE_RED;
+      templ.swizzle_g = PIPE_SWIZZLE_GREEN;
+      templ.swizzle_b = PIPE_SWIZZLE_BLUE;
+      templ.swizzle_a = PIPE_SWIZZLE_ALPHA;
+
+      sampler_view = pipe->create_sampler_view(pipe, buffer, &templ);
+      if (sampler_view == NULL)
+         return false;
+   }
+
+   /* Begin setting state. This is the point of no return. */
+   cso_save_fragment_sampler_views(st->cso_context);
+   cso_set_sampler_views(st->cso_context, PIPE_SHADER_FRAGMENT, 1,
+                         &sampler_view);
+
+   /* Framebuffer_state */
+   {
+      struct pipe_framebuffer_state fb;
+      memset(&fb, 0, sizeof(fb));
+      fb.width = surface->width;
+      fb.height = surface->height;
+      fb.nr_cbufs = 1;
+      pipe_surface_reference(&fb.cbufs[0], surface);
+
+      cso_save_framebuffer(st->cso_context);
+      cso_set_framebuffer(st->cso_context, &fb);
+
+      pipe_surface_reference(&fb.cbufs[0], NULL);
+   }
+
+   /* Viewport state */
+   {
+      struct pipe_viewport_state vp;
+      vp.scale[0] = 0.5f * surface->width;
+      vp.scale[1] = 0.5f * surface->height;
+      vp.scale[2] = 1.0f;
+      vp.translate[0] = 0.5f * surface->width;
+      vp.translate[1] = 0.5f * surface->height;
+      vp.translate[2] = 0.0f;
+
+      cso_save_viewport(st->cso_context);
+      cso_set_viewport(st->cso_context, &vp);
+   }
+
+   /* Blend state */
+   cso_save_blend(st->cso_context);
+   cso_set_blend(st->cso_context, &st->pbo_upload.blend);
+
+   /* Rasterizer state */
+   cso_save_rasterizer(st->cso_context);
+   cso_set_rasterizer(st->cso_context, &st->pbo_upload.raster);
+
+   /* Upload vertices */
+   {
+      struct pipe_vertex_buffer vbo;
+      struct pipe_vertex_element velem;
+
+      float x0 = (float) xoffset / surface->width * 2.0f - 1.0f;
+      float y0 = (float) yoffset / surface->height * 2.0f - 1.0f;
+      float x1 = (float) (xoffset + upload_width) / surface->width * 2.0f - 1.0f;
+      float y1 = (float) (yoffset + upload_height) / surface->height * 2.0f - 1.0f;
+
+      float *verts = NULL;
+
+      vbo.user_buffer = NULL;
+      vbo.buffer = NULL;
+      vbo.stride = 2 * sizeof(float);
+
+      u_upload_alloc(st->uploader, 0, 8 * sizeof(float), 4,
+                     &vbo.buffer_offset, &vbo.buffer, (void **) &verts);
+
+      verts[0] = x0;
+      verts[1] = y0;
+      verts[2] = x0;
+      verts[3] = y1;
+      verts[4] = x1;
+      verts[5] = y0;
+      verts[6] = x1;
+      verts[7] = y1;
+
+      u_upload_unmap(st->uploader);
+
+      velem.src_offset = 0;
+      velem.instance_divisor = 0;
+      velem.vertex_buffer_index = cso_get_aux_vertex_buffer_slot(st->cso_context);
+      velem.src_format = PIPE_FORMAT_R32G32_FLOAT;
+
+      cso_save_vertex_elements(st->cso_context);
+      cso_set_vertex_elements(st->cso_context, 1, &velem);
+
+      cso_save_aux_vertex_buffer_slot(st->cso_context);
+      cso_set_vertex_buffers(st->cso_context, velem.vertex_buffer_index,
+                             1, &vbo);
+   }
+
+   /* Upload constants */
+   {
+      struct pipe_constant_buffer cb;
+
+      struct {
+         int32_t xoffset;
+         int32_t yoffset;
+         int32_t stride;
+         int32_t pad;
+      } constants;
+
+      constants.xoffset = -xoffset + skip_pixels;
+      constants.yoffset = -yoffset;
+      constants.stride = stride;
+      constants.pad = 0;
+
+      if (st->constbuf_uploader) {
+         cb.buffer = NULL;
+         cb.user_buffer = NULL;
+         u_upload_data(st->constbuf_uploader, 0, sizeof(constants),
+                       st->ctx->Const.UniformBufferOffsetAlignment,
+                       &constants, &cb.buffer_offset, &cb.buffer);
+         u_upload_unmap(st->constbuf_uploader);
+      } else {
+         cb.buffer = NULL;
+         cb.user_buffer = &constants;
+         cb.buffer_offset = 0;
+      }
+      cb.buffer_size = sizeof(constants);
+
+      cso_save_constant_buffer_slot0(st->cso_context, PIPE_SHADER_FRAGMENT);
+      cso_set_constant_buffer(st->cso_context, PIPE_SHADER_FRAGMENT, 0, &cb);
+   }
+
+   /* Set up the shaders */
+   cso_save_vertex_shader(st->cso_context);
+   cso_set_vertex_shader_handle(st->cso_context, st->pbo_upload.vs);
+
+   cso_save_geometry_shader(st->cso_context);
+   cso_set_geometry_shader_handle(st->cso_context, NULL);
+
+   cso_save_tessctrl_shader(st->cso_context);
+   cso_set_tessctrl_shader_handle(st->cso_context, NULL);
+
+   cso_save_tesseval_shader(st->cso_context);
+   cso_set_tesseval_shader_handle(st->cso_context, NULL);
+
+   cso_save_fragment_shader(st->cso_context);
+   cso_set_fragment_shader_handle(st->cso_context, st->pbo_upload.fs);
+
+   /* Disable stream output */
+   cso_save_stream_outputs(st->cso_context);
+   cso_set_stream_outputs(st->cso_context, 0, NULL, 0);
+
+   cso_draw_arrays(st->cso_context, PIPE_PRIM_TRIANGLE_STRIP, 0, 4);
+
+   cso_restore_fragment_sampler_views(st->cso_context);
+   cso_restore_framebuffer(st->cso_context);
+   cso_restore_viewport(st->cso_context);
+   cso_restore_blend(st->cso_context);
+   cso_restore_rasterizer(st->cso_context);
+   cso_restore_vertex_elements(st->cso_context);
+   cso_restore_aux_vertex_buffer_slot(st->cso_context);
+   cso_restore_constant_buffer_slot0(st->cso_context, PIPE_SHADER_FRAGMENT);
+   cso_restore_vertex_shader(st->cso_context);
+   cso_restore_geometry_shader(st->cso_context);
+   cso_restore_tessctrl_shader(st->cso_context);
+   cso_restore_tesseval_shader(st->cso_context);
+   cso_restore_fragment_shader(st->cso_context);
+   cso_restore_stream_outputs(st->cso_context);
+
+   pipe_sampler_view_reference(&sampler_view, NULL);
+
+   return true;
+}
+
+static bool
+try_pbo_upload(struct gl_context *ctx, GLuint dims,
+               struct gl_texture_image *texImage,
+               GLenum format, GLenum type,
+               enum pipe_format dst_format,
+               GLint xoffset, GLint yoffset, GLint zoffset,
+               GLint width, GLint height, GLint depth,
+               const void *pixels,
+               const struct gl_pixelstore_attrib *unpack)
+{
+   struct st_context *st = st_context(ctx);
+   struct st_texture_image *stImage = st_texture_image(texImage);
+   struct st_texture_object *stObj = st_texture_object(texImage->TexObject);
+   struct pipe_resource *texture = stImage->pt;
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_screen *screen = pipe->screen;
+   struct pipe_surface *surface = NULL;
+   enum pipe_format src_format;
+   const struct util_format_description *desc;
+   GLenum gl_target = texImage->TexObject->Target;
+   intptr_t buf_offset;
+   unsigned bytes_per_pixel;
+   unsigned stride, image_height;
+   bool success;
+
+   if (!st->pbo_upload.enabled)
+      return false;
+
+   /* From now on, we need the gallium representation of dimensions. */
+   if (gl_target == GL_TEXTURE_1D_ARRAY) {
+      depth = height;
+      height = 1;
+      zoffset = yoffset;
+      yoffset = 0;
+      image_height = 1;
+   } else {
+      image_height = unpack->ImageHeight > 0 ? unpack->ImageHeight : height;
+   }
+
+   /* XXX We only support updating a single layer */
+   if (depth != 1)
+      return false;
+
+   /* Choose the source format. Initially, we do so without checking driver
+    * support at all because of the remapping we later perform and because
+    * at least the Radeon driver actually supports some formats for texture
+    * buffers which it doesn't support for regular textures. */
+   src_format = st_choose_matching_format(st, 0, format, type, unpack->SwapBytes);
+   if (!src_format) {
+      return false;
+   }
+
+   src_format = util_format_linear(src_format);
+   desc = util_format_description(src_format);
+
+   if (desc->layout != UTIL_FORMAT_LAYOUT_PLAIN)
+      return false;
+
+   if (desc->colorspace != UTIL_FORMAT_COLORSPACE_RGB)
+      return false;
+
+   if (st->pbo_upload.rgba_only) {
+      enum pipe_format orig_dst_format = dst_format;
+
+      if (!reinterpret_formats(&src_format, &dst_format)) {
+         return false;
+      }
+
+      if (dst_format != orig_dst_format &&
+          !screen->is_format_supported(screen, dst_format, PIPE_TEXTURE_2D, 0,
+                                       PIPE_BIND_RENDER_TARGET)) {
+         return false;
+      }
+   }
+
+   if (!src_format ||
+       !screen->is_format_supported(screen, src_format, PIPE_BUFFER, 0,
+                                    PIPE_BIND_SAMPLER_VIEW)) {
+      return false;
+   }
+
+   /* Check if the offset satisfies the alignment requirements */
+   buf_offset = (intptr_t) pixels;
+   bytes_per_pixel = desc->block.bits / 8;
+
+   if (buf_offset % bytes_per_pixel) {
+      return false;
+   }
+
+   /* Convert to texels */
+   buf_offset = buf_offset / bytes_per_pixel;
+
+   /* Compute the stride, taking unpack->Alignment into account */
+   {
+       unsigned pixels_per_row = unpack->RowLength > 0 ?
+                           unpack->RowLength : width;
+       unsigned bytes_per_row = pixels_per_row * bytes_per_pixel;
+       unsigned remainder = bytes_per_row % unpack->Alignment;
+       unsigned offset_rows;
+
+       if (remainder > 0)
+          bytes_per_row += (unpack->Alignment - remainder);
+
+       if (bytes_per_row % bytes_per_pixel) {
+          return false;
+       }
+
+       stride = bytes_per_row / bytes_per_pixel;
+
+       offset_rows = unpack->SkipRows;
+       if (dims == 3)
+          offset_rows += image_height * unpack->SkipImages;
+
+       buf_offset += unpack->SkipPixels + stride * offset_rows;
+   }
+
+   /* Set up the surface */
+   {
+      unsigned level = stObj->pt != stImage->pt ? 0 : texImage->TexObject->MinLevel + texImage->Level;
+      unsigned max_layer = util_max_layer(texture, level);
+
+      zoffset += texImage->Face + texImage->TexObject->MinLayer;
+
+      struct pipe_surface templ;
+      memset(&templ, 0, sizeof(templ));
+      templ.format = dst_format;
+      templ.u.tex.level = level;
+      templ.u.tex.first_layer = MIN2(zoffset, max_layer);
+      templ.u.tex.last_layer = MIN2(zoffset + depth - 1, max_layer);
+
+      surface = pipe->create_surface(pipe, texture, &templ);
+      if (!surface)
+         return false;
+   }
+
+   success = try_pbo_upload_common(ctx,  surface,
+                                   xoffset, yoffset, width, height,
+                                   st_buffer_object(unpack->BufferObj)->buffer,
+                                   src_format,
+                                   buf_offset,
+                                   bytes_per_pixel, stride, image_height);
+
+   pipe_surface_reference(&surface, NULL);
+
+   return success;
+}
 
 static void
 st_TexSubImage(struct gl_context *ctx, GLuint dims,
@@ -735,21 +1598,15 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
       goto fallback;
    }
 
-   /* See if the texture format already matches the format and type,
-    * in which case the memcpy-based fast path will likely be used and
-    * we don't have to blit. */
-   if (_mesa_format_matches_format_and_type(texImage->TexFormat, format,
-                                            type, unpack->SwapBytes, NULL)) {
-      goto fallback;
-   }
 
+   /* See if the destination format is supported. */
    if (format == GL_DEPTH_COMPONENT || format == GL_DEPTH_STENCIL)
       bind = PIPE_BIND_DEPTH_STENCIL;
    else
       bind = PIPE_BIND_RENDER_TARGET;
 
-   /* See if the destination format is supported.
-    * For luminance and intensity, only the red channel is stored there. */
+   /* For luminance and intensity, only the red channel is stored
+    * in the destination. */
    dst_format = util_format_linear(dst->format);
    dst_format = util_format_luminance_to_red(dst_format);
    dst_format = util_format_intensity_to_red(dst_format);
@@ -757,6 +1614,21 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
    if (!dst_format ||
        !screen->is_format_supported(screen, dst_format, dst->target,
                                     dst->nr_samples, bind)) {
+      goto fallback;
+   }
+
+   if (_mesa_is_bufferobj(unpack->BufferObj)) {
+      if (try_pbo_upload(ctx, dims, texImage, format, type, dst_format,
+                         xoffset, yoffset, zoffset,
+                         width, height, depth, pixels, unpack))
+         return;
+   }
+
+   /* See if the texture format already matches the format and type,
+    * in which case the memcpy-based fast path will likely be used and
+    * we don't have to blit. */
+   if (_mesa_format_matches_format_and_type(texImage->TexFormat, format,
+                                            type, unpack->SwapBytes, NULL)) {
       goto fallback;
    }
 

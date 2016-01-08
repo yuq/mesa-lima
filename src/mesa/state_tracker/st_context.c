@@ -136,6 +136,7 @@ st_destroy_context_priv(struct st_context *st)
    st_destroy_drawpix(st);
    st_destroy_drawtex(st);
    st_destroy_perfmon(st);
+   st_destroy_pbo_upload(st);
 
    for (shader = 0; shader < ARRAY_SIZE(st->state.sampler_views); shader++) {
       for (i = 0; i < ARRAY_SIZE(st->state.sampler_views[0]); i++) {
@@ -209,6 +210,7 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    st_init_bitmap(st);
    st_init_clear(st);
    st_init_draw( st );
+   st_init_pbo_upload(st);
 
    /* Choose texture target for glDrawPixels, glBitmap, renderbuffers */
    if (pipe->screen->get_param(pipe->screen, PIPE_CAP_NPOT_TEXTURES))

@@ -204,6 +204,16 @@ struct st_context
       void *gs_layered;
    } clear;
 
+   /* For gl(Compressed)Tex(Sub)Image */
+   struct {
+      struct pipe_rasterizer_state raster;
+      struct pipe_blend_state blend;
+      void *vs;
+      void *fs;
+      bool enabled;
+      bool rgba_only;
+   } pbo_upload;
+
    /** used for anything using util_draw_vertex_buffer */
    struct pipe_vertex_element velems_util_draw[3];
 
