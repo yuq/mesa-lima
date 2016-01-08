@@ -3130,6 +3130,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
       return;
    }
 
+   unsigned entries_total = 0;
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_shader *sh = prog->_LinkedShaders[i];
 
@@ -3138,8 +3139,12 @@ check_explicit_uniform_locations(struct gl_context *ctx,
 
       foreach_in_list(ir_instruction, node, sh->ir) {
          ir_variable *var = node->as_variable();
-         if (var && (var->data.mode == ir_var_uniform &&
-                     var->data.explicit_location)) {
+         if (!var || var->data.mode != ir_var_uniform)
+            continue;
+
+         entries_total += var->type->uniform_locations();
+
+         if (var->data.explicit_location) {
             bool ret;
             if (var->type->is_subroutine())
                ret = reserve_subroutine_explicit_locations(prog, sh, var);
@@ -3153,6 +3158,14 @@ check_explicit_uniform_locations(struct gl_context *ctx,
       }
    }
 
+   /* Verify that total amount of entries for explicit and implicit locations
+    * is less than MAX_UNIFORM_LOCATIONS.
+    */
+   if (entries_total >= ctx->Const.MaxUserAssignableUniformLocations) {
+      linker_error(prog, "count of uniform locations >= MAX_UNIFORM_LOCATIONS"
+                   "(%u >= %u)", entries_total,
+                   ctx->Const.MaxUserAssignableUniformLocations);
+   }
    delete uniform_map;
 }
 
