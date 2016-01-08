@@ -1350,7 +1350,11 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
             if (type->row_major) {
                num_ops = glsl_get_vector_elements(type->type);
                vec_width = glsl_get_matrix_columns(type->type);
-               if (!load) {
+               if (load) {
+                  const struct glsl_type *transpose_type =
+                     glsl_matrix_type(base_type, vec_width, num_ops);
+                  *inout = vtn_create_ssa_value(b, transpose_type);
+               } else {
                   transpose = vtn_ssa_transpose(b, *inout);
                   inout = &transpose;
                }
