@@ -351,8 +351,55 @@ compute_version(const struct gl_extensions *extensions,
                          extensions->ARB_shading_language_packing &&
                          extensions->ARB_texture_compression_bptc &&
                          extensions->ARB_transform_feedback_instanced);
+   const bool ver_4_3 = (ver_4_2 &&
+                         consts->GLSLVersion >= 430 &&
+                         extensions->ARB_ES3_compatibility &&
+                         extensions->ARB_arrays_of_arrays &&
+                         extensions->ARB_compute_shader &&
+                         extensions->ARB_copy_image &&
+                         extensions->ARB_explicit_uniform_location &&
+                         extensions->ARB_fragment_layer_viewport &&
+                         extensions->ARB_framebuffer_no_attachments &&
+                         extensions->ARB_internalformat_query2 &&
+                         /* extensions->ARB_robust_buffer_access_behavior */ 0 &&
+                         extensions->ARB_shader_image_size &&
+                         extensions->ARB_shader_storage_buffer_object &&
+                         extensions->ARB_stencil_texturing &&
+                         extensions->ARB_texture_buffer_range &&
+                         extensions->ARB_texture_query_levels &&
+                         extensions->ARB_texture_view);
+   const bool ver_4_4 = (ver_4_3 &&
+                         consts->GLSLVersion >= 440 &&
+                         extensions->ARB_buffer_storage &&
+                         extensions->ARB_clear_texture &&
+                         extensions->ARB_enhanced_layouts &&
+                         extensions->ARB_query_buffer_object &&
+                         extensions->ARB_texture_mirror_clamp_to_edge &&
+                         extensions->ARB_texture_stencil8 &&
+                         extensions->ARB_vertex_type_10f_11f_11f_rev);
+   const bool ver_4_5 = (ver_4_4 &&
+                         consts->GLSLVersion >= 450 &&
+                         extensions->ARB_ES3_1_compatibility &&
+                         extensions->ARB_clip_control &&
+                         extensions->ARB_conditional_render_inverted &&
+                         /* extensions->ARB_cull_distance */ 0 &&
+                         extensions->ARB_derivative_control &&
+                         extensions->ARB_shader_texture_image_samples &&
+                         extensions->NV_texture_barrier);
 
-   if (ver_4_2) {
+   if (ver_4_5) {
+      major = 4;
+      minor = 5;
+   }
+   else if (ver_4_4) {
+      major = 4;
+      minor = 4;
+   }
+   else if (ver_4_3) {
+      major = 4;
+      minor = 3;
+   }
+   else if (ver_4_2) {
       major = 4;
       minor = 2;
    }
