@@ -2470,6 +2470,115 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    nir_builder_instr_insert(&b->nb, &intrin->instr);
 }
 
+static void
+vtn_handle_ssbo_atomic(struct vtn_builder *b, SpvOp opcode,
+                       const uint32_t *w, unsigned count)
+{
+   struct vtn_value *pointer = vtn_value(b, w[3], vtn_value_type_deref);
+   struct vtn_type *type = pointer->deref_type;
+   nir_deref *deref = &pointer->deref->deref;
+   nir_ssa_def *index = get_vulkan_resource_index(b, &deref, &type);
+
+   nir_ssa_def *offset = nir_imm_int(&b->nb, 0);
+   while (deref->child) {
+      deref = deref->child;
+      switch (deref->deref_type) {
+      case nir_deref_type_array:
+         offset = nir_iadd(&b->nb, offset,
+                           nir_imul(&b->nb, deref_array_offset(b, deref),
+                                    nir_imm_int(&b->nb, type->stride)));
+         type = type->array_element;
+         continue;
+
+      case nir_deref_type_struct: {
+         unsigned member = nir_deref_as_struct(deref)->index;
+         offset = nir_iadd(&b->nb, offset,
+                           nir_imm_int(&b->nb, type->offsets[member]));
+         type = type->members[member];
+         continue;
+      }
+
+      default:
+         unreachable("Invalid deref type");
+      }
+   }
+
+   /*
+   SpvScope scope = w[4];
+   SpvMemorySemanticsMask semantics = w[5];
+   */
+
+   nir_intrinsic_op op;
+   switch (opcode) {
+#define OP(S, N) case SpvOp##S: op = nir_intrinsic_ssbo_##N; break;
+   OP(AtomicExchange,         atomic_exchange)
+   OP(AtomicCompareExchange,  atomic_comp_swap)
+   OP(AtomicIIncrement,       atomic_add)
+   OP(AtomicIDecrement,       atomic_add)
+   OP(AtomicIAdd,             atomic_add)
+   OP(AtomicISub,             atomic_add)
+   OP(AtomicSMin,             atomic_imin)
+   OP(AtomicUMin,             atomic_umin)
+   OP(AtomicSMax,             atomic_imax)
+   OP(AtomicUMax,             atomic_umax)
+   OP(AtomicAnd,              atomic_and)
+   OP(AtomicOr,               atomic_or)
+   OP(AtomicXor,              atomic_xor)
+#undef OP
+   default:
+      unreachable("Invalid SSBO atomic");
+   }
+
+   nir_intrinsic_instr *atomic = nir_intrinsic_instr_create(b->nb.shader, op);
+   atomic->src[0] = nir_src_for_ssa(index);
+   atomic->src[1] = nir_src_for_ssa(offset);
+
+   switch (opcode) {
+   case SpvOpAtomicIIncrement:
+      atomic->src[2] = nir_src_for_ssa(nir_imm_int(&b->nb, 1));
+      break;
+
+   case SpvOpAtomicIDecrement:
+      atomic->src[2] = nir_src_for_ssa(nir_imm_int(&b->nb, -1));
+      break;
+
+   case SpvOpAtomicISub:
+      atomic->src[2] =
+         nir_src_for_ssa(nir_ineg(&b->nb, vtn_ssa_value(b, w[6])->def));
+      break;
+
+   case SpvOpAtomicCompareExchange:
+      atomic->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[7])->def);
+      atomic->src[3] = nir_src_for_ssa(vtn_ssa_value(b, w[8])->def);
+      break;
+      /* Fall through */
+
+   case SpvOpAtomicExchange:
+   case SpvOpAtomicIAdd:
+   case SpvOpAtomicSMin:
+   case SpvOpAtomicUMin:
+   case SpvOpAtomicSMax:
+   case SpvOpAtomicUMax:
+   case SpvOpAtomicAnd:
+   case SpvOpAtomicOr:
+   case SpvOpAtomicXor:
+      atomic->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[6])->def);
+      break;
+
+   default:
+      unreachable("Invalid SSBO atomic");
+   }
+
+   nir_ssa_dest_init(&atomic->instr, &atomic->dest, 1, NULL);
+
+   struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
+   val->ssa = rzalloc(b, struct vtn_ssa_value);
+   val->ssa->def = &atomic->dest.ssa;
+   val->ssa->type = type->type;
+
+   nir_builder_instr_insert(&b->nb, &atomic->instr);
+}
+
 static nir_alu_instr *
 create_vec(nir_shader *shader, unsigned num_components)
 {
@@ -3627,8 +3736,10 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       if (pointer->value_type == vtn_value_type_image_pointer) {
          vtn_handle_image(b, opcode, w, count);
       } else {
-         assert(!"Atomic buffers not yet implemented");
+         assert(pointer->value_type == vtn_value_type_deref);
+         vtn_handle_ssbo_atomic(b, opcode, w, count);
       }
+      break;
    }
 
    case SpvOpSNegate:
