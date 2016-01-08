@@ -511,12 +511,15 @@ binop("fpow", tfloat, "", "powf(src0, src1)")
 binop_horiz("pack_half_2x16_split", 1, tuint, 1, tfloat, 1, tfloat,
             "pack_half_1x16(src0.x) | (pack_half_1x16(src1.x) << 16)")
 
+# bfm implements the behavior of the first operation of the SM5 "bfi" assembly
+# and that of the "bfi1" i965 instruction. That is, it has undefined behavior
+# if either of its arguments are 32.
 binop_convert("bfm", tuint, tint, "", """
 int bits = src0, offset = src1;
-if (offset < 0 || bits < 0 || offset + bits > 32)
-   dst = 0; /* undefined per the spec */
+if (offset < 0 || bits < 0 || offset > 31 || bits > 31 || offset + bits > 32)
+   dst = 0; /* undefined */
 else
-   dst = ((1ull << bits) - 1) << offset;
+   dst = ((1u << bits) - 1) << offset;
 """)
 
 opcode("ldexp", 0, tfloat, [0, 0], [tfloat, tint], "", """
