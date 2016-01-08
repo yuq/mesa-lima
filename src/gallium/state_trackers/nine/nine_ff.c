@@ -1391,7 +1391,15 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
     /* Fog.
      */
     if (key->fog_mode) {
-        struct ureg_src vPos = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0, TGSI_INTERPOLATE_LINEAR);
+        struct ureg_src vPos;
+        if (device->screen->get_param(device->screen,
+                                      PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL)) {
+            vPos = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_POSITION, 0);
+        } else {
+            vPos = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
+                                      TGSI_INTERPOLATE_LINEAR);
+        }
+
         struct ureg_dst rFog = ureg_writemask(ps.rTmp, TGSI_WRITEMASK_X);
         if (key->fog_mode == D3DFOG_EXP) {
             ureg_MUL(ureg, rFog, _ZZZZ(vPos), _ZZZZ(_CONST(22)));

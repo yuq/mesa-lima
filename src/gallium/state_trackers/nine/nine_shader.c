@@ -462,6 +462,8 @@ struct shader_translator
     boolean lower_preds;
     boolean want_texcoord;
     boolean shift_wpos;
+    boolean wpos_is_sysval;
+    boolean face_is_sysval_integer;
     unsigned texcoord_sn;
 
     struct sm1_instruction insn; /* current instruction */
@@ -945,10 +947,16 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
     case D3DSPR_MISCTYPE:
         switch (param->idx) {
         case D3DSMO_POSITION:
-           if (ureg_src_is_undef(tx->regs.vPos))
-               tx->regs.vPos = ureg_DECL_fs_input(ureg,
-                                                  TGSI_SEMANTIC_POSITION, 0,
-                                                  TGSI_INTERPOLATE_LINEAR);
+           if (ureg_src_is_undef(tx->regs.vPos)) {
+              if (tx->wpos_is_sysval) {
+                  tx->regs.vPos =
+                      ureg_DECL_system_value(ureg, TGSI_SEMANTIC_POSITION, 0);
+              } else {
+                  tx->regs.vPos =
+                      ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
+                                         TGSI_INTERPOLATE_LINEAR);
+              }
+           }
            if (tx->shift_wpos) {
                /* TODO: do this only once */
                struct ureg_dst wpos = tx_scratch(tx);
@@ -961,9 +969,20 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
            break;
         case D3DSMO_FACE:
            if (ureg_src_is_undef(tx->regs.vFace)) {
-               tx->regs.vFace = ureg_DECL_fs_input(ureg,
-                                                   TGSI_SEMANTIC_FACE, 0,
-                                                   TGSI_INTERPOLATE_CONSTANT);
+               if (tx->face_is_sysval_integer) {
+                   tmp = tx_scratch(tx);
+                   tx->regs.vFace =
+                       ureg_DECL_system_value(ureg, TGSI_SEMANTIC_FACE, 0);
+
+                   /* convert bool to float */
+                   ureg_UCMP(ureg, tmp, ureg_scalar(tx->regs.vFace, TGSI_SWIZZLE_X),
+                             ureg_imm1f(ureg, 1), ureg_imm1f(ureg, -1));
+                   tx->regs.vFace = ureg_src(tmp);
+               } else {
+                   tx->regs.vFace = ureg_DECL_fs_input(ureg,
+                                                       TGSI_SEMANTIC_FACE, 0,
+                                                       TGSI_INTERPOLATE_CONSTANT);
+               }
                tx->regs.vFace = ureg_scalar(tx->regs.vFace, TGSI_SWIZZLE_X);
            }
            src = tx->regs.vFace;
@@ -3259,10 +3278,15 @@ shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
         return;
     }
 
-    if (tx->info->fog_mode != D3DFOG_NONE)
-        depth = ureg_scalar(ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
-                                              TGSI_INTERPOLATE_LINEAR),
-                                              TGSI_SWIZZLE_Z);
+    if (tx->info->fog_mode != D3DFOG_NONE) {
+        if (tx->wpos_is_sysval) {
+            depth = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_POSITION, 0);
+        } else {
+            depth = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
+                                       TGSI_INTERPOLATE_LINEAR);
+        }
+        depth = ureg_scalar(depth, TGSI_SWIZZLE_Z);
+    }
 
     nine_info_mark_const_f_used(tx->info, 33);
     fog_color = NINE_CONSTANT_SRC(32);
@@ -3344,6 +3368,8 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     tx->shift_wpos = !GET_CAP(TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
     tx->texcoord_sn = tx->want_texcoord ?
         TGSI_SEMANTIC_TEXCOORD : TGSI_SEMANTIC_GENERIC;
+    tx->wpos_is_sysval = GET_CAP(TGSI_FS_POSITION_IS_SYSVAL);
+    tx->face_is_sysval_integer = GET_CAP(TGSI_FS_FACE_IS_INTEGER_SYSVAL);
 
     if (IS_VS) {
         tx->num_constf_allowed = NINE_MAX_CONST_F;
