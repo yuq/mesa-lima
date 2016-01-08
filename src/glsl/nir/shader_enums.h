@@ -26,6 +26,10 @@
 #ifndef SHADER_ENUMS_H
 #define SHADER_ENUMS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Shader stages. Note that these will become 5 with tessellation.
  *
@@ -44,6 +48,18 @@ typedef enum
 } gl_shader_stage;
 
 const char * gl_shader_stage_name(gl_shader_stage stage);
+
+/**
+ * Translate a gl_shader_stage to a short shader stage name for debug
+ * printouts and error messages.
+ */
+const char * _mesa_shader_stage_to_string(unsigned stage);
+
+/**
+ * Translate a gl_shader_stage to a shader stage abbreviation (VS, GS, FS)
+ * for debug printouts and error messages.
+ */
+const char * _mesa_shader_stage_to_abbrev(unsigned stage);
 
 #define MESA_SHADER_STAGES (MESA_SHADER_COMPUTE + 1)
 
@@ -518,5 +534,9 @@ enum gl_frag_depth_layout
    FRAG_DEPTH_LAYOUT_LESS,
    FRAG_DEPTH_LAYOUT_UNCHANGED
 };
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif /* SHADER_ENUMS_H */

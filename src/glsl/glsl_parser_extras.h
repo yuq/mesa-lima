@@ -731,16 +731,6 @@ extern bool _mesa_glsl_process_extension(const char *name, YYLTYPE *name_locp,
 extern "C" {
 #endif
 
-/**
- * Get the textual name of the specified shader stage (which is a
- * gl_shader_stage).
- */
-extern const char *
-_mesa_shader_stage_to_string(unsigned stage);
-
-extern const char *
-_mesa_shader_stage_to_abbrev(unsigned stage);
-
 extern int glcpp_preprocess(void *ctx, const char **shader, char **info_log,
                       const struct gl_extensions *extensions, struct gl_context *gl_ctx);
 

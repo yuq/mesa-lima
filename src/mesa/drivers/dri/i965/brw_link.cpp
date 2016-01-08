@@ -27,7 +27,6 @@
 #include "brw_nir.h"
 #include "brw_program.h"
 #include "glsl/ir_optimization.h"
-#include "glsl/glsl_parser_extras.h"
 #include "program/program.h"
 #include "main/shaderapi.h"
 #include "main/uniforms.h"

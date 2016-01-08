@@ -27,7 +27,6 @@
 #include "brw_fs.h"
 #include "brw_nir.h"
 #include "brw_vec4_tes.h"
-#include "glsl/glsl_parser_extras.h"
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
 #include "util/debug.h"
