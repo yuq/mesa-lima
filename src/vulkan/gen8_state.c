@@ -175,48 +175,6 @@ genX(image_view_init)(struct anv_image_view *iview,
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
-   uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
-   uint32_t rt_view_extent = 1; /* RENDER_SURFACE_STATE::RenderTargetViewExtent */
-
-   switch (image->type) {
-   case VK_IMAGE_TYPE_1D:
-   case VK_IMAGE_TYPE_2D:
-      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
-       *
-       *    For SURFTYPE_1D, 2D, and CUBE: The range of this field is reduced
-       *    by one for each increase from zero of Minimum Array Element. For
-       *    example, if Minimum Array Element is set to 1024 on a 2D surface,
-       *    the range of this field is reduced to [0,1023].
-       */
-      depth = range->layerCount;
-
-      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
-       *
-       *    For Render Target and Typed Dataport 1D and 2D Surfaces:
-       *    This field must be set to the same value as the Depth field.
-       */
-      rt_view_extent = depth;
-      break;
-   case VK_IMAGE_TYPE_3D:
-      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
-       *
-       *    If the volume texture is MIP-mapped, this field specifies the
-       *    depth of the base MIP level.
-       */
-      depth = image->extent.depth;
-
-      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
-       *
-       *    For Render Target and Typed Dataport 3D Surfaces: This field
-       *    indicates the extent of the accessible 'R' coordinates minus 1 on
-       *    the LOD currently being rendered to.
-       */
-      rt_view_extent = iview->extent.depth;
-      break;
-   default:
-      unreachable(!"bad VkImageType");
-   }
-
    static const uint8_t isl_to_gen_tiling[] = {
       [ISL_TILING_LINEAR]  = LINEAR,
       [ISL_TILING_X]       = XMAJOR,
@@ -251,9 +209,9 @@ genX(image_view_init)(struct anv_image_view *iview,
       .SurfaceQPitch = get_qpitch(&surface->isl) >> 2,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
-      .Depth = depth - 1,
+      .Depth = 0, /* TEMPLATE */
       .SurfacePitch = surface->isl.row_pitch - 1,
-      .RenderTargetViewExtent = rt_view_extent - 1,
+      .RenderTargetViewExtent = 0, /* TEMPLATE */
       .MinimumArrayElement = range->baseArrayLayer,
       .NumberofMultisamples = MULTISAMPLECOUNT_1,
       .XOffset = 0,
@@ -278,6 +236,48 @@ genX(image_view_init)(struct anv_image_view *iview,
       .ResourceMinLOD = 0.0,
       .SurfaceBaseAddress = { NULL, iview->offset },
    };
+
+   switch (surface_state.SurfaceType) {
+   case SURFTYPE_1D:
+   case SURFTYPE_2D:
+   case SURFTYPE_CUBE:
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
+       *
+       *    For SURFTYPE_1D, 2D, and CUBE: The range of this field is reduced
+       *    by one for each increase from zero of Minimum Array Element. For
+       *    example, if Minimum Array Element is set to 1024 on a 2D surface,
+       *    the range of this field is reduced to [0,1023].
+       *
+       * In other words, 'Depth' is the number of array layers.
+       */
+      surface_state.Depth = range->layerCount - 1;
+
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
+       *
+       *    For Render Target and Typed Dataport 1D and 2D Surfaces:
+       *    This field must be set to the same value as the Depth field.
+       */
+      surface_state.RenderTargetViewExtent = surface_state.Depth;
+      break;
+   case SURFTYPE_3D:
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
+       *
+       *    If the volume texture is MIP-mapped, this field specifies the
+       *    depth of the base MIP level.
+       */
+      surface_state.Depth = image->extent.depth - 1;
+
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
+       *
+       *    For Render Target and Typed Dataport 3D Surfaces: This field
+       *    indicates the extent of the accessible 'R' coordinates minus 1 on
+       *    the LOD currently being rendered to.
+       */
+      surface_state.RenderTargetViewExtent = iview->extent.depth - 1;
+      break;
+   default:
+      unreachable(!"bad SurfaceType");
+   }
 
    if (image->needs_nonrt_surface_state) {
       iview->nonrt_surface_state =
