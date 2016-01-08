@@ -269,13 +269,17 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    if (result != VK_SUCCESS)
       return result;
 
+   const struct brw_cs_prog_data *cs_prog_data = &pipeline->cs_prog_data;
+
    struct anv_state state =
       anv_state_pool_emit(&device->dynamic_state_pool,
                           GEN7_INTERFACE_DESCRIPTOR_DATA, 64,
                           .KernelStartPointer = pipeline->cs_simd,
                           .BindingTablePointer = surfaces.offset,
                           .SamplerStatePointer = samplers.offset,
-                          .NumberofThreadsinGPGPUThreadGroup = 0);
+                          .BarrierEnable = cs_prog_data->uses_barrier,
+                          .NumberofThreadsinGPGPUThreadGroup =
+                             pipeline->cs_thread_width_max);
 
    const uint32_t size = GEN7_INTERFACE_DESCRIPTOR_DATA_length * sizeof(uint32_t);
    anv_batch_emit(&cmd_buffer->batch, GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD,
