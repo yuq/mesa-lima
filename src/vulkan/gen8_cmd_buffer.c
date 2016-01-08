@@ -544,7 +544,9 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
                           .SamplerCount = 0,
                           .ConstantIndirectURBEntryReadLength = push_constant_regs,
                           .ConstantURBEntryReadOffset = 0,
-                          .NumberofThreadsinGPGPUThreadGroup = 0);
+                          .BarrierEnable = cs_prog_data->uses_barrier,
+                          .NumberofThreadsinGPGPUThreadGroup =
+                             pipeline->cs_thread_width_max);
 
    uint32_t size = GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
    anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_INTERFACE_DESCRIPTOR_LOAD),
