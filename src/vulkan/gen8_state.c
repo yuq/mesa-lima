@@ -212,7 +212,7 @@ genX(image_view_init)(struct anv_image_view *iview,
       .Depth = 0, /* TEMPLATE */
       .SurfacePitch = surface->isl.row_pitch - 1,
       .RenderTargetViewExtent = 0, /* TEMPLATE */
-      .MinimumArrayElement = range->baseArrayLayer,
+      .MinimumArrayElement = 0, /* TEMPLATE */
       .NumberofMultisamples = MULTISAMPLECOUNT_1,
       .XOffset = 0,
       .YOffset = 0,
@@ -240,7 +240,8 @@ genX(image_view_init)(struct anv_image_view *iview,
    switch (surface_state.SurfaceType) {
    case SURFTYPE_1D:
    case SURFTYPE_2D:
-   case SURFTYPE_CUBE:
+      surface_state.MinimumArrayElement = range->baseArrayLayer;
+
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
        *
        *    For SURFTYPE_1D, 2D, and CUBE: The range of this field is reduced
@@ -259,7 +260,22 @@ genX(image_view_init)(struct anv_image_view *iview,
        */
       surface_state.RenderTargetViewExtent = surface_state.Depth;
       break;
+   case SURFTYPE_CUBE:
+      #if ANV_GENx10 >= 90
+         /* Like SURFTYPE_2D, but divided by 6. */
+         surface_state.MinimumArrayElement = range->baseArrayLayer / 6;
+         surface_state.Depth = range->layerCount / 6 - 1;
+         surface_state.RenderTargetViewExtent = surface_state.Depth;
+      #else
+         /* Same as SURFTYPE_2D */
+         surface_state.MinimumArrayElement = range->baseArrayLayer;
+         surface_state.Depth = range->layerCount - 1;
+         surface_state.RenderTargetViewExtent = surface_state.Depth;
+      #endif
+      break;
    case SURFTYPE_3D:
+      surface_state.MinimumArrayElement = range->baseArrayLayer;
+
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
        *
        *    If the volume texture is MIP-mapped, this field specifies the
