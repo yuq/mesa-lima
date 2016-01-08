@@ -81,6 +81,7 @@ struct tgsi_shader_info
    ubyte colors_written;
    boolean reads_position; /**< does fragment shader read position? */
    boolean reads_z; /**< does fragment shader read depth? */
+   boolean reads_samplemask; /**< does fragment shader read sample mask? */
    boolean writes_z;  /**< does fragment shader write Z value? */
    boolean writes_stencil; /**< does fragment shader write stencil value? */
    boolean writes_samplemask; /**< does fragment shader write sample mask? */

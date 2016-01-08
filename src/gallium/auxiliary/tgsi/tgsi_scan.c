@@ -377,6 +377,8 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                      info->reads_position = TRUE;
                   else if (semName == TGSI_SEMANTIC_FACE)
                      info->uses_frontface = TRUE;
+                  else if (semName == TGSI_SEMANTIC_SAMPLEMASK)
+                     info->reads_samplemask = TRUE;
                }
                else if (file == TGSI_FILE_OUTPUT) {
                   info->output_semantic_name[reg] = (ubyte) semName;
