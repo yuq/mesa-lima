@@ -89,12 +89,9 @@ anv_physical_device_init(struct anv_physical_device *device,
       fprintf(stderr, "WARNING: Ivy Bridge Vulkan support is incomplete\n");
    } else if (device->info->gen == 7 && device->info->is_baytrail) {
       fprintf(stderr, "WARNING: Bay Trail Vulkan support is incomplete\n");
-   } else if (device->info->gen == 9 && !device->info->is_broxton) {
-      fprintf(stderr, "WARNING: Skylake Vulkan support is incomplete\n");
-   } else if (device->info->gen == 9 && device->info->is_broxton) {
-      fprintf(stderr, "WARNING: Broxton Vulkan support is incomplete\n");
-   } else if (device->info->gen == 8) {
-      /* Broadwell/Cherryview is as fully supported as anything */
+   } else if (device->info->gen >= 8) {
+      /* Broadwell, Cherryview, Skylake, Broxton, Kabylake is as fully
+       * supported as anything */
    } else {
       result = vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
                          "Vulkan not yet supported on %s", device->name);
