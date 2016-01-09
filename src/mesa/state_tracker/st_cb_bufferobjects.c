@@ -333,6 +333,31 @@ st_bufferobj_data(struct gl_context *ctx,
 
 
 /**
+ * Called via glInvalidateBuffer(Sub)Data.
+ */
+static void
+st_bufferobj_invalidate(struct gl_context *ctx,
+                        struct gl_buffer_object *obj,
+                        GLintptr offset,
+                        GLsizeiptr size)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_context *pipe = st->pipe;
+   struct st_buffer_object *st_obj = st_buffer_object(obj);
+
+   /* We ignore partial invalidates. */
+   if (offset != 0 || size != obj->Size)
+      return;
+
+   /* Nothing to invalidate. */
+   if (!st_obj->buffer)
+      return;
+
+   pipe->invalidate_resource(pipe, st_obj->buffer);
+}
+
+
+/**
  * Called via glMapBufferRange().
  */
 static void *
@@ -517,7 +542,8 @@ st_bufferobj_validate_usage(struct st_context *st,
 
 
 void
-st_init_bufferobject_functions(struct dd_function_table *functions)
+st_init_bufferobject_functions(struct pipe_screen *screen,
+                               struct dd_function_table *functions)
 {
    /* plug in default driver fallbacks (such as for ClearBufferSubData) */
    _mesa_init_buffer_object_functions(functions);
@@ -532,4 +558,7 @@ st_init_bufferobject_functions(struct dd_function_table *functions)
    functions->UnmapBuffer = st_bufferobj_unmap;
    functions->CopyBufferSubData = st_copy_buffer_subdata;
    functions->ClearBufferSubData = st_clear_buffer_subdata;
+
+   if (screen->get_param(screen, PIPE_CAP_INVALIDATE_BUFFER))
+      functions->InvalidateBufferSubData = st_bufferobj_invalidate;
 }
