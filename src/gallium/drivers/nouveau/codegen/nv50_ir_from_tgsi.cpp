@@ -374,6 +374,7 @@ static nv50_ir::DataFile translateFile(uint file)
    case TGSI_FILE_IMMEDIATE:       return nv50_ir::FILE_IMMEDIATE;
    case TGSI_FILE_SYSTEM_VALUE:    return nv50_ir::FILE_SYSTEM_VALUE;
    case TGSI_FILE_BUFFER:          return nv50_ir::FILE_MEMORY_BUFFER;
+   case TGSI_FILE_IMAGE:           return nv50_ir::FILE_MEMORY_GLOBAL;
    case TGSI_FILE_MEMORY:          return nv50_ir::FILE_MEMORY_GLOBAL;
    case TGSI_FILE_SAMPLER:
    case TGSI_FILE_NULL:
@@ -865,6 +866,14 @@ public:
    std::vector<Resource> resources;
    */
 
+   struct Image {
+      uint8_t target; // TGSI_TEXTURE_*
+      bool raw;
+      uint8_t slot;
+      uint16_t format; // PIPE_FORMAT_*
+   };
+   std::vector<Image> images;
+
    struct MemoryFile {
       uint8_t mem_type; // TGSI_MEMORY_TYPE_*
    };
@@ -915,6 +924,7 @@ bool Source::scanSource()
 
    textureViews.resize(scan.file_max[TGSI_FILE_SAMPLER_VIEW] + 1);
    //resources.resize(scan.file_max[TGSI_FILE_RESOURCE] + 1);
+   images.resize(scan.file_max[TGSI_FILE_IMAGE] + 1);
    tempArrayId.resize(scan.file_max[TGSI_FILE_TEMPORARY] + 1);
    memoryFiles.resize(scan.file_max[TGSI_FILE_MEMORY] + 1);
 
@@ -1221,6 +1231,14 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       }
       break;
 */
+   case TGSI_FILE_IMAGE:
+      for (i = first; i <= last; ++i) {
+         images[i].target = decl->Image.Resource;
+         images[i].raw = decl->Image.Raw;
+         images[i].format = decl->Image.Format;
+         images[i].slot = i;
+      }
+      break;
    case TGSI_FILE_SAMPLER_VIEW:
       for (i = first; i <= last; ++i)
          textureViews[i].target = decl->SamplerView.Resource;
@@ -1290,6 +1308,7 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
             indirectTempArrays.insert(dst.getArrayId());
       } else
       if (dst.getFile() == TGSI_FILE_BUFFER ||
+          dst.getFile() == TGSI_FILE_IMAGE || 
           (dst.getFile() == TGSI_FILE_MEMORY &&
            memoryFiles[dst.getIndex(0)].mem_type == TGSI_MEMORY_TYPE_GLOBAL)) {
          info->io.globalAccess |= 0x2;
@@ -1303,6 +1322,7 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
             indirectTempArrays.insert(src.getArrayId());
       } else
       if (src.getFile() == TGSI_FILE_BUFFER ||
+          src.getFile() == TGSI_FILE_IMAGE ||
           (src.getFile() == TGSI_FILE_MEMORY &&
            memoryFiles[src.getIndex(0)].mem_type == TGSI_MEMORY_TYPE_GLOBAL)) {
          info->io.globalAccess |= (insn.getOpcode() == TGSI_OPCODE_LOAD) ?
@@ -1809,7 +1829,8 @@ Converter::acquireDst(int d, int c)
    int idx = dst.getIndex(0);
    int idx2d = dst.is2D() ? dst.getIndex(1) : 0;
 
-   if (dst.isMasked(c) || f == TGSI_FILE_BUFFER || f == TGSI_FILE_MEMORY)
+   if (dst.isMasked(c) || f == TGSI_FILE_BUFFER || f == TGSI_FILE_MEMORY ||
+       f == TGSI_FILE_IMAGE)
       return NULL;
 
    if (dst.isIndirect(0) ||
