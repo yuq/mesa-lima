@@ -159,6 +159,7 @@ nir_sweep(nir_shader *nir)
    steal_list(nir, nir_variable, &nir->uniforms);
    steal_list(nir, nir_variable, &nir->inputs);
    steal_list(nir, nir_variable, &nir->outputs);
+   steal_list(nir, nir_variable, &nir->shared);
    steal_list(nir, nir_variable, &nir->globals);
    steal_list(nir, nir_variable, &nir->system_values);
    steal_list(nir, nir_register, &nir->registers);

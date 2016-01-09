@@ -63,7 +63,8 @@ lower_instr(nir_intrinsic_instr *instr,
    }
 
    if (instr->variables[0]->var->data.mode != nir_var_uniform &&
-       instr->variables[0]->var->data.mode != nir_var_shader_storage)
+       instr->variables[0]->var->data.mode != nir_var_shader_storage &&
+       instr->variables[0]->var->data.mode != nir_var_shared)
       return; /* atomics passed as function arguments can't be lowered */
 
    void *mem_ctx = ralloc_parent(instr);

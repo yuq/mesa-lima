@@ -1047,6 +1047,11 @@ nir_validate_shader(nir_shader *shader)
      validate_var_decl(var, true, &state);
    }
 
+   exec_list_validate(&shader->shared);
+   nir_foreach_variable(var, &shader->shared) {
+      validate_var_decl(var, true, &state);
+   }
+
    exec_list_validate(&shader->globals);
    nir_foreach_variable(var, &shader->globals) {
      validate_var_decl(var, true, &state);

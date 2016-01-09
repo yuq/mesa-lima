@@ -90,6 +90,7 @@ typedef enum {
    nir_var_shader_storage,
    nir_var_system_value,
    nir_var_param,
+   nir_var_shared,
 } nir_variable_mode;
 
 /**
@@ -172,7 +173,7 @@ typedef struct nir_variable {
        *
        * \sa nir_variable_mode
        */
-      nir_variable_mode mode:4;
+      nir_variable_mode mode:5;
 
       /**
        * Interpolation mode for shader inputs / outputs
@@ -1659,6 +1660,9 @@ typedef struct nir_shader {
 
    /** list of outputs (nir_variable) */
    struct exec_list outputs;
+
+   /** list of shared compute variables (nir_variable) */
+   struct exec_list shared;
 
    /** Set of driver-specific options for the shader.
     *

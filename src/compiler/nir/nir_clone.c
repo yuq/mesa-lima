@@ -675,6 +675,7 @@ nir_shader_clone(void *mem_ctx, const nir_shader *s)
    clone_var_list(&state, &ns->uniforms, &s->uniforms);
    clone_var_list(&state, &ns->inputs,   &s->inputs);
    clone_var_list(&state, &ns->outputs,  &s->outputs);
+   clone_var_list(&state, &ns->shared,   &s->shared);
    clone_var_list(&state, &ns->globals,  &s->globals);
    clone_var_list(&state, &ns->system_values, &s->system_values);
 

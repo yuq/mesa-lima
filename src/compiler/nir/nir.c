@@ -39,6 +39,7 @@ nir_shader_create(void *mem_ctx,
    exec_list_make_empty(&shader->uniforms);
    exec_list_make_empty(&shader->inputs);
    exec_list_make_empty(&shader->outputs);
+   exec_list_make_empty(&shader->shared);
 
    shader->options = options;
    memset(&shader->info, 0, sizeof(shader->info));
@@ -134,6 +135,11 @@ nir_shader_add_variable(nir_shader *shader, nir_variable *var)
    case nir_var_uniform:
    case nir_var_shader_storage:
       exec_list_push_tail(&shader->uniforms, &var->node);
+      break;
+
+   case nir_var_shared:
+      assert(shader->stage == MESA_SHADER_COMPUTE);
+      exec_list_push_tail(&shader->shared, &var->node);
       break;
 
    case nir_var_system_value:
