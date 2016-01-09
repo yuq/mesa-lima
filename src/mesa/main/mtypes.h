@@ -1873,6 +1873,7 @@ typedef enum
    PROGRAM_IMMEDIATE,   /**< Immediate value, used by TGSI */
    PROGRAM_BUFFER,      /**< for shader buffers, compile-time only */
    PROGRAM_MEMORY,      /**< for shared, global and local memory */
+   PROGRAM_IMAGE,       /**< for shader images, compile-time only */
    PROGRAM_FILE_MAX
 } gl_register_file;
 
