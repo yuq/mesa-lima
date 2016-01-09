@@ -122,6 +122,7 @@ Supported Features:
   - Most copy/blit commands for color and depth buffers,
     vkCmdCopyImageToBuffer for stencil buffers
   - Occlution query and timestamps
+  - VkkSemaphore and VkEvent
 
 Unsupported Features:
    - Shader specialization
@@ -130,6 +131,5 @@ Unsupported Features:
    - Push constants in GS and CS (and VS on HSW and prior)
    - Sparse resources
    - MSAA
-   - VkkSemaphore and VkEvent
    - vkCmdClear commands
    - Input attachments
