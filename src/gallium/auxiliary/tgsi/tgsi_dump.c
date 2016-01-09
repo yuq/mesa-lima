@@ -352,7 +352,7 @@ iter_declaration(
       TXT(", ");
       ENM(decl->Image.Resource, tgsi_texture_names);
       TXT(", ");
-      UID(decl->Image.Format);
+      TXT(util_format_name(decl->Image.Format));
       if (decl->Image.Writable)
          TXT(", WR");
       if (decl->Image.Raw)
