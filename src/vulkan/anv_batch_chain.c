@@ -160,6 +160,7 @@ anv_reloc_list_add(struct anv_reloc_list *list,
    entry->presumed_offset = target_bo->offset;
    entry->read_domains = 0;
    entry->write_domain = 0;
+   VG(VALGRIND_CHECK_MEM_IS_DEFINED(entry, sizeof(*entry)));
 
    return target_bo->offset + delta;
 }
