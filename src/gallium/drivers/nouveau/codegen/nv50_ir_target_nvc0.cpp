@@ -295,6 +295,9 @@ TargetNVC0::getSVAddress(DataFile shaderFile, const Symbol *sym) const
    case SV_SAMPLE_INDEX:   return 0;
    case SV_SAMPLE_POS:     return 0;
    case SV_SAMPLE_MASK:    return 0;
+   case SV_BASEVERTEX:     return 0;
+   case SV_BASEINSTANCE:   return 0;
+   case SV_DRAWID:         return 0;
    default:
       return 0xffffffff;
    }

@@ -402,7 +402,7 @@ nir_visitor::visit(ir_variable *ir)
    var->data.index = ir->data.index;
    var->data.descriptor_set = 0;
    var->data.binding = ir->data.binding;
-   var->data.atomic.offset = ir->data.atomic.offset;
+   var->data.offset = ir->data.offset;
    var->data.image.read_only = ir->data.image_read_only;
    var->data.image.write_only = ir->data.image_write_only;
    var->data.image.coherent = ir->data.image_coherent;

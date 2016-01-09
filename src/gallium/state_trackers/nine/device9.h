@@ -128,6 +128,7 @@ struct NineDevice9
     struct u_upload_mgr *vertex_uploader;
     struct u_upload_mgr *index_uploader;
     struct u_upload_mgr *constbuf_uploader;
+    unsigned constbuf_alignment;
 
     struct nine_range_pool range_pool;
 

@@ -644,19 +644,25 @@ try_setup_line( struct lp_setup_context *setup,
    line->inputs.layer = layer;
    line->inputs.viewport_index = viewport_index;
 
+   /*
+    * XXX: this code is mostly identical to the one in lp_setup_tri, except it
+    * uses 4 planes instead of 3. Could share the code (including the sse
+    * assembly, in fact we'd get the 4th plane for free).
+    * The only difference apart from storing the 4th plane would be some
+    * different shuffle for calculating dcdx/dcdy.
+    */
    for (i = 0; i < 4; i++) {
 
-      /* half-edge constants, will be interated over the whole render
+      /* half-edge constants, will be iterated over the whole render
        * target.
        */
       plane[i].c = IMUL64(plane[i].dcdx, x[i]) - IMUL64(plane[i].dcdy, y[i]);
 
-      
-      /* correct for top-left vs. bottom-left fill convention.  
-       */         
+      /* correct for top-left vs. bottom-left fill convention.
+       */
       if (plane[i].dcdx < 0) {
          /* both fill conventions want this - adjust for left edges */
-         plane[i].c++;            
+         plane[i].c++;
       }
       else if (plane[i].dcdx == 0) {
          if (setup->pixel_offset == 0) {

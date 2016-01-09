@@ -524,7 +524,7 @@ draw_vbo(struct draw_context *draw,
 #endif
    {
       if (index_limit == 0) {
-      /* one of the buffers is too small to do any valid drawing */
+         /* one of the buffers is too small to do any valid drawing */
          debug_warning("draw: VBO too small to draw anything\n");
          util_fpstate_set(fpstate);
          return;

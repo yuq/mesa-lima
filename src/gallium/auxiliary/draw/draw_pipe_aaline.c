@@ -938,7 +938,7 @@ draw_aaline_prepare_outputs(struct draw_context *draw,
    const struct pipe_rasterizer_state *rast = draw->rasterizer;
 
    /* update vertex attrib info */
-   aaline->pos_slot = draw_current_shader_position_output(draw);;
+   aaline->pos_slot = draw_current_shader_position_output(draw);
 
    if (!rast->line_smooth)
       return;

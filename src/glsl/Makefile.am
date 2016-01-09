@@ -145,8 +145,8 @@ libglsl_la_SOURCES =					\
 	$(LIBGLSL_FILES)				\
 	$(NIR_FILES)					\
 	$(SPIRV_FILES)					\
-	$(NIR_GENERATED_FILES)
-
+	$(NIR_GENERATED_FILES)				\
+	$(GLSL_TO_NIR_FILES)
 
 libnir_la_SOURCES =					\
 	$(NIR_FILES)					\

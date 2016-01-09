@@ -250,12 +250,11 @@ calculate_deps(struct schedule_setup_state *state, struct schedule_node *n)
         else if (inst->dst.file == QFILE_TEMP)
                 add_write_dep(dir, &state->last_temp_write[inst->dst.index], n);
 
+        if (qir_depends_on_flags(inst))
+                add_dep(dir, state->last_sf, n);
+
         if (inst->sf)
                 add_write_dep(dir, &state->last_sf, n);
-
-        if (qir_depends_on_flags(inst)) {
-                add_dep(dir, state->last_sf, n);
-        }
 }
 
 static void

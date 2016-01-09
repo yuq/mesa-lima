@@ -3455,8 +3455,7 @@ fs_visitor::lower_integer_multiplication()
              */
             assert(mul->src[1].type == BRW_REGISTER_TYPE_D ||
                    mul->src[1].type == BRW_REGISTER_TYPE_UD);
-            mul->src[1].type = (type_is_signed(mul->src[1].type) ?
-                                BRW_REGISTER_TYPE_W : BRW_REGISTER_TYPE_UW);
+            mul->src[1].type = BRW_REGISTER_TYPE_UW;
             mul->src[1].stride *= 2;
 
          } else if (devinfo->gen == 7 && !devinfo->is_haswell &&

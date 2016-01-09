@@ -946,7 +946,6 @@ static inline uint32_t S_FIXED(float value, uint32_t frac_bits)
 {
 	return value * (1 << frac_bits);
 }
-#define ALIGN_DIVUP(x, y) (((x) + (y) - 1) / (y))
 
 /* 12.4 fixed-point */
 static inline unsigned r600_pack_float_12p4(float x)

@@ -764,8 +764,12 @@ _mesa_program_resource_find_index(struct gl_shader_program *shProg,
 static bool
 add_index_to_name(struct gl_program_resource *res)
 {
-   bool add_index = !(((res->Type == GL_PROGRAM_INPUT) &&
-                       res->StageReferences & (1 << MESA_SHADER_GEOMETRY)));
+   bool add_index = !((res->Type == GL_PROGRAM_INPUT &&
+                       res->StageReferences & (1 << MESA_SHADER_GEOMETRY |
+                                               1 << MESA_SHADER_TESS_CTRL |
+                                               1 << MESA_SHADER_TESS_EVAL)) ||
+                      (res->Type == GL_PROGRAM_OUTPUT &&
+                       res->StageReferences & 1 << MESA_SHADER_TESS_CTRL));
 
    /* Transform feedback varyings have array index already appended
     * in their names.

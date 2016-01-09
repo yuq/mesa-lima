@@ -1576,6 +1576,17 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
       ld = bld.mkOp1(OP_PIXLD, TYPE_U32, i->getDef(0), bld.mkImm(0));
       ld->subOp = NV50_IR_SUBOP_PIXLD_COVMASK;
       break;
+   case SV_BASEVERTEX:
+   case SV_BASEINSTANCE:
+   case SV_DRAWID:
+      ld = bld.mkLoad(TYPE_U32, i->getDef(0),
+                      bld.mkSymbol(FILE_MEMORY_CONST,
+                                   prog->driver->io.auxCBSlot,
+                                   TYPE_U32,
+                                   prog->driver->io.drawInfoBase +
+                                   4 * (sv - SV_BASEVERTEX)),
+                      NULL);
+      break;
    default:
       if (prog->getType() == Program::TYPE_TESSELLATION_EVAL && !i->perPatch)
          vtx = bld.mkOp1v(OP_PFETCH, TYPE_U32, bld.getSSA(), bld.mkImm(0));

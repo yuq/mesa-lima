@@ -1950,7 +1950,7 @@ tgsi_processor_to_shader_stage(unsigned processor)
    case TGSI_PROCESSOR_COMPUTE:   return MESA_SHADER_COMPUTE;
    default:
       unreachable("invalid TGSI processor");
-   };
+   }
 }
 
 struct nir_shader *

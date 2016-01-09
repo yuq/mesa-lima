@@ -187,13 +187,28 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                   }
 
                   if (procType == TGSI_PROCESSOR_FRAGMENT &&
-                      info->reads_position &&
-                      src->Register.Index == 0 &&
-                      (src->Register.SwizzleX == TGSI_SWIZZLE_Z ||
-                       src->Register.SwizzleY == TGSI_SWIZZLE_Z ||
-                       src->Register.SwizzleZ == TGSI_SWIZZLE_Z ||
-                       src->Register.SwizzleW == TGSI_SWIZZLE_Z)) {
-                     info->reads_z = TRUE;
+                      !src->Register.Indirect) {
+                     unsigned name =
+                        info->input_semantic_name[src->Register.Index];
+                     unsigned index =
+                        info->input_semantic_index[src->Register.Index];
+
+                     if (name == TGSI_SEMANTIC_POSITION &&
+                         (src->Register.SwizzleX == TGSI_SWIZZLE_Z ||
+                          src->Register.SwizzleY == TGSI_SWIZZLE_Z ||
+                          src->Register.SwizzleZ == TGSI_SWIZZLE_Z ||
+                          src->Register.SwizzleW == TGSI_SWIZZLE_Z))
+                        info->reads_z = TRUE;
+
+                     if (name == TGSI_SEMANTIC_COLOR) {
+                        unsigned mask =
+                              (1 << src->Register.SwizzleX) |
+                              (1 << src->Register.SwizzleY) |
+                              (1 << src->Register.SwizzleZ) |
+                              (1 << src->Register.SwizzleW);
+
+                        info->colors_read |= mask << (index * 4);
+                     }
                   }
                }
 
@@ -358,7 +373,10 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                      info->uses_primid = TRUE;
                   } else if (semName == TGSI_SEMANTIC_INVOCATIONID) {
                      info->uses_invocationid = TRUE;
-                  }
+                  } else if (semName == TGSI_SEMANTIC_POSITION)
+                     info->reads_position = TRUE;
+                  else if (semName == TGSI_SEMANTIC_FACE)
+                     info->uses_frontface = TRUE;
                }
                else if (file == TGSI_FILE_OUTPUT) {
                   info->output_semantic_name[reg] = (ubyte) semName;
@@ -392,6 +410,8 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                      }
                      else if (semName == TGSI_SEMANTIC_STENCIL) {
                         info->writes_stencil = TRUE;
+                     } else if (semName == TGSI_SEMANTIC_SAMPLEMASK) {
+                        info->writes_samplemask = TRUE;
                      }
                   }
 

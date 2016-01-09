@@ -162,7 +162,8 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct r600_pipe_shader_selector *sel = shader->selector;
 	int r;
-	bool dump = r600_can_dump_shader(&rctx->screen->b, sel->tokens);
+	bool dump = r600_can_dump_shader(&rctx->screen->b,
+					 tgsi_get_processor_type(sel->tokens));
 	unsigned use_sb = !(rctx->screen->b.debug_flags & DBG_NO_SB);
 	unsigned sb_disasm = use_sb || (rctx->screen->b.debug_flags & DBG_SB_DISASM);
 	unsigned export_shader;
@@ -394,7 +395,7 @@ static int tgsi_last_instruction(unsigned writemask)
 static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *i = &ctx->parse.FullToken.FullInstruction;
-	int j;
+	unsigned j;
 
 	if (i->Instruction.NumDstRegs > 1 && i->Instruction.Opcode != TGSI_OPCODE_DFRACEXP) {
 		R600_ERR("too many dst (%d)\n", i->Instruction.NumDstRegs);
@@ -1166,7 +1167,7 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 */
 static int evergreen_gpr_count(struct r600_shader_ctx *ctx)
 {
-	int i;
+	unsigned i;
 	int num_baryc;
 	struct tgsi_parse_context parse;
 
@@ -1585,7 +1586,7 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 static int tgsi_split_gs_inputs(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
-	int i;
+	unsigned i;
 
 	for (i = 0; i < inst->Instruction.NumSrcRegs; i++) {
 		struct tgsi_full_src_register *src = &inst->Src[i];
@@ -1854,7 +1855,7 @@ static int fetch_tcs_output(struct r600_shader_ctx *ctx, struct tgsi_full_src_re
 static int tgsi_split_lds_inputs(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
-	int i;
+	unsigned i;
 
 	for (i = 0; i < inst->Instruction.NumSrcRegs; i++) {
 		struct tgsi_full_src_register *src = &inst->Src[i];
@@ -2784,7 +2785,7 @@ static int r600_tess_factor_read(struct r600_shader_ctx *ctx,
 
 static int r600_emit_tess_factor(struct r600_shader_ctx *ctx)
 {
-	int i;
+	unsigned i;
 	int stride, outer_comps, inner_comps;
 	int tessinner_idx = -1, tessouter_idx = -1;
 	int r;
@@ -3238,7 +3239,8 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	if (use_llvm) {
 		struct radeon_llvm_context radeon_llvm_ctx;
 		LLVMModuleRef mod;
-		bool dump = r600_can_dump_shader(&rscreen->b, tokens);
+		bool dump = r600_can_dump_shader(&rscreen->b,
+						 tgsi_get_processor_type(tokens));
 		boolean use_kill = false;
 
 		memset(&radeon_llvm_ctx, 0, sizeof(radeon_llvm_ctx));
@@ -3259,7 +3261,8 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		ctx.shader->has_txq_cube_array_z_comp = radeon_llvm_ctx.has_txq_cube_array_z_comp;
 		ctx.shader->uses_tex_buffers = radeon_llvm_ctx.uses_tex_buffers;
 
-		if (r600_llvm_compile(mod, rscreen->b.family, ctx.bc, &use_kill, dump)) {
+		if (r600_llvm_compile(mod, rscreen->b.family, ctx.bc, &use_kill,
+				      dump, &rctx->b.debug)) {
 			radeon_llvm_dispose(&radeon_llvm_ctx);
 			use_llvm = 0;
 			fprintf(stderr, "R600 LLVM backend failed to compile "
@@ -4424,7 +4427,7 @@ static int cayman_mul_double_instr(struct r600_shader_ctx *ctx)
 			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 			alu.op = ctx->inst_info->op;
 			for (j = 0; j < inst->Instruction.NumSrcRegs; j++) {
-				r600_bytecode_src(&alu.src[j], &ctx->src[j], k * 2 + ((i == 3) ? 0 : 1));;
+				r600_bytecode_src(&alu.src[j], &ctx->src[j], k * 2 + ((i == 3) ? 0 : 1));
 			}
 			alu.dst.sel = t1;
 			alu.dst.chan = i;
@@ -4791,7 +4794,7 @@ static int tgsi_lit(struct r600_shader_ctx *ctx)
 	{
 		int chan;
 		int sel;
-		int i;
+		unsigned i;
 
 		if (ctx->bc->chip_class == CAYMAN) {
 			for (i = 0; i < 3; i++) {
@@ -7925,7 +7928,7 @@ static int tgsi_exp(struct r600_shader_ctx *ctx)
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	struct r600_bytecode_alu alu;
 	int r;
-	int i;
+	unsigned i;
 
 	/* result.x = 2^floor(src); */
 	if (inst->Dst[0].Register.WriteMask & 1) {
@@ -8054,7 +8057,7 @@ static int tgsi_log(struct r600_shader_ctx *ctx)
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	struct r600_bytecode_alu alu;
 	int r;
-	int i;
+	unsigned i;
 
 	/* result.x = floor(log2(|src|)); */
 	if (inst->Dst[0].Register.WriteMask & 1) {
@@ -8781,7 +8784,7 @@ static int tgsi_bgnloop(struct r600_shader_ctx *ctx)
 
 static int tgsi_endloop(struct r600_shader_ctx *ctx)
 {
-	int i;
+	unsigned i;
 
 	r600_bytecode_add_cfinst(ctx->bc, CF_OP_LOOP_END);
 

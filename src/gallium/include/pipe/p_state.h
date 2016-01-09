@@ -587,6 +587,8 @@ struct pipe_draw_info
    unsigned start_instance; /**< first instance id */
    unsigned instance_count; /**< number of instances */
 
+   unsigned drawid; /**< id of this draw in a multidraw */
+
    unsigned vertices_per_patch; /**< the number of vertices per patch */
 
    /**
@@ -618,7 +620,7 @@ struct pipe_draw_info
     */
    struct pipe_stream_output_target *count_from_stream_output;
 
-   /* Indirect parameters resource: If not NULL, most values are taken
+   /* Indirect draw parameters resource: If not NULL, most values are taken
     * from this buffer instead, which is laid out as follows:
     *
     * if indexed is TRUE:
@@ -639,6 +641,15 @@ struct pipe_draw_info
     */
    struct pipe_resource *indirect;
    unsigned indirect_offset; /**< must be 4 byte aligned */
+   unsigned indirect_stride; /**< must be 4 byte aligned */
+   unsigned indirect_count; /**< number of indirect draws */
+
+   /* Indirect draw count resource: If not NULL, contains a 32-bit value which
+    * is to be used as the real indirect_count. In that case indirect_count
+    * becomes the maximum possible value.
+    */
+   struct pipe_resource *indirect_params;
+   unsigned indirect_params_offset; /**< must be 4 byte aligned */
 };
 
 

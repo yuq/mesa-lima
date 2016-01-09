@@ -740,6 +740,7 @@ CodeEmitterGM107::emitF2F()
    emitCC   (0x2f);
    emitField(0x2d, 1, (insn->op == OP_NEG) || insn->src(0).mod.neg());
    emitFMZ  (0x2c, 1);
+   emitField(0x29, 1, insn->subOp);
    emitRND  (0x27, rnd, 0x2a);
    emitField(0x0a, 2, util_logbase2(typeSizeof(insn->sType)));
    emitField(0x08, 2, util_logbase2(typeSizeof(insn->dType)));

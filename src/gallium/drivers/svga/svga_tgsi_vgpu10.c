@@ -2298,11 +2298,13 @@ emit_vgpu10_declaration(struct svga_shader_emitter_v10 *emit,
       emit->num_samplers = MAX2(emit->num_samplers, decl->Range.Last + 1);
       return TRUE;
 
+#if 0
    case TGSI_FILE_RESOURCE:
       /*opcode0.opcodeType = VGPU10_OPCODE_DCL_RESOURCE;*/
       /* XXX more, VGPU10_RETURN_TYPE_FLOAT */
       assert(!"TGSI_FILE_RESOURCE not handled yet");
       return FALSE;
+#endif
 
    case TGSI_FILE_ADDRESS:
       emit->num_address_regs = MAX2(emit->num_address_regs,
@@ -6170,6 +6172,11 @@ emit_vertex_attrib_instructions(struct svga_shader_emitter_v10 *emit)
 
       while (adjust_mask) {
          unsigned index = u_bit_scan(&adjust_mask);
+
+         /* skip the instruction if this vertex attribute is not being used */
+         if (emit->info.input_usage_mask[index] == 0)
+            continue;
+
          unsigned tmp = emit->vs.adjusted_input[index];
          struct tgsi_full_src_register input_src =
             make_src_reg(TGSI_FILE_INPUT, index);
@@ -6604,7 +6611,8 @@ transform_fs_pstipple(struct svga_shader_emitter_v10 *emit,
       tgsi_dump(tokens,0);
    }
 
-   new_tokens = util_pstipple_create_fragment_shader(tokens, &unit, 0);
+   new_tokens = util_pstipple_create_fragment_shader(tokens, &unit, 0,
+                                                     TGSI_FILE_INPUT);
 
    emit->fs.pstipple_sampler_unit = unit;
 

@@ -32,10 +32,6 @@
 #include "util/u_string.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
-#include "tgsi/tgsi_lowering.h"
-#include "tgsi/tgsi_strings.h"
-
-#include "nir/tgsi_to_nir.h"
 
 #include "freedreno_util.h"
 
@@ -123,97 +119,10 @@ struct ir3_compile {
 static struct ir3_instruction * create_immed(struct ir3_block *block, uint32_t val);
 static struct ir3_block * get_block(struct ir3_compile *ctx, nir_block *nblock);
 
-static struct nir_shader *to_nir(struct ir3_compile *ctx,
-		const struct tgsi_token *tokens, struct ir3_shader_variant *so)
-{
-	static const nir_shader_compiler_options options = {
-			.lower_fpow = true,
-			.lower_fsat = true,
-			.lower_scmp = true,
-			.lower_flrp = true,
-			.lower_ffract = true,
-			.native_integers = true,
-	};
-	struct nir_lower_tex_options tex_options = {
-			.lower_rect = 0,
-	};
-	bool progress;
-
-	switch (so->type) {
-	case SHADER_FRAGMENT:
-	case SHADER_COMPUTE:
-		tex_options.saturate_s = so->key.fsaturate_s;
-		tex_options.saturate_t = so->key.fsaturate_t;
-		tex_options.saturate_r = so->key.fsaturate_r;
-		break;
-	case SHADER_VERTEX:
-		tex_options.saturate_s = so->key.vsaturate_s;
-		tex_options.saturate_t = so->key.vsaturate_t;
-		tex_options.saturate_r = so->key.vsaturate_r;
-		break;
-	}
-
-	if (ctx->compiler->gpu_id >= 400) {
-		/* a4xx seems to have *no* sam.p */
-		tex_options.lower_txp = ~0;  /* lower all txp */
-	} else {
-		/* a3xx just needs to avoid sam.p for 3d tex */
-		tex_options.lower_txp = (1 << GLSL_SAMPLER_DIM_3D);
-	}
-
-	struct nir_shader *s = tgsi_to_nir(tokens, &options);
-
-	if (fd_mesa_debug & FD_DBG_DISASM) {
-		debug_printf("----------------------\n");
-		nir_print_shader(s, stdout);
-		debug_printf("----------------------\n");
-	}
-
-	nir_opt_global_to_local(s);
-	nir_convert_to_ssa(s);
-	if (s->stage == MESA_SHADER_VERTEX) {
-		nir_lower_clip_vs(s, so->key.ucp_enables);
-	} else if (s->stage == MESA_SHADER_FRAGMENT) {
-		nir_lower_clip_fs(s, so->key.ucp_enables);
-	}
-	nir_lower_tex(s, &tex_options);
-	if (so->key.color_two_side)
-		nir_lower_two_sided_color(s);
-	nir_lower_idiv(s);
-	nir_lower_load_const_to_scalar(s);
-
-	do {
-		progress = false;
-
-		nir_lower_vars_to_ssa(s);
-		nir_lower_alu_to_scalar(s);
-		nir_lower_phis_to_scalar(s);
-
-		progress |= nir_copy_prop(s);
-		progress |= nir_opt_dce(s);
-		progress |= nir_opt_cse(s);
-		progress |= ir3_nir_lower_if_else(s);
-		progress |= nir_opt_algebraic(s);
-		progress |= nir_opt_constant_folding(s);
-
-	} while (progress);
-
-	nir_remove_dead_variables(s);
-	nir_validate_shader(s);
-
-	if (fd_mesa_debug & FD_DBG_DISASM) {
-		debug_printf("----------------------\n");
-		nir_print_shader(s, stdout);
-		debug_printf("----------------------\n");
-	}
-
-	return s;
-}
 
 static struct ir3_compile *
 compile_init(struct ir3_compiler *compiler,
-		struct ir3_shader_variant *so,
-		const struct tgsi_token *tokens)
+		struct ir3_shader_variant *so)
 {
 	struct ir3_compile *ctx = rzalloc(NULL, struct ir3_compile);
 
@@ -239,7 +148,28 @@ compile_init(struct ir3_compiler *compiler,
 	ctx->block_ht = _mesa_hash_table_create(ctx,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
 
-	ctx->s = to_nir(ctx, tokens, so);
+	/* TODO: maybe generate some sort of bitmask of what key
+	 * lowers vs what shader has (ie. no need to lower
+	 * texture clamp lowering if no texture sample instrs)..
+	 * although should be done further up the stack to avoid
+	 * creating duplicate variants..
+	 */
+
+	if (ir3_key_lowers_nir(&so->key)) {
+		nir_shader *s = nir_shader_clone(ctx, so->shader->nir);
+		ctx->s = ir3_optimize_nir(so->shader, s, &so->key);
+	} else {
+		/* fast-path for shader key that lowers nothing in NIR: */
+		ctx->s = so->shader->nir;
+	}
+
+	if (fd_mesa_debug & FD_DBG_DISASM) {
+		DBG("dump nir%dv%d: type=%d, k={bp=%u,cts=%u,hp=%u}",
+			so->shader->id, so->id, so->type,
+			so->key.binning_pass, so->key.color_two_side,
+			so->key.half_precision);
+		nir_print_shader(ctx->s, stdout);
+	}
 
 	so->first_driver_param = so->first_immediate = ctx->s->num_uniforms;
 
@@ -1954,8 +1884,6 @@ emit_instr(struct ir3_compile *ctx, nir_instr *instr)
 		case nir_texop_query_levels:
 			emit_tex_query_levels(ctx, tex);
 			break;
-		case nir_texop_samples_identical:
-			unreachable("nir_texop_samples_identical");
 		default:
 			emit_tex(ctx, tex);
 			break;
@@ -2170,6 +2098,8 @@ emit_stream_out(struct ir3_compile *ctx)
 static void
 emit_function(struct ir3_compile *ctx, nir_function_impl *impl)
 {
+	nir_metadata_require(impl, nir_metadata_block_index);
+
 	emit_cf_list(ctx, &impl->body);
 	emit_block(ctx, impl->end_block);
 
@@ -2499,7 +2429,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 
 	assert(!so->ir);
 
-	ctx = compile_init(compiler, so, so->shader->tokens);
+	ctx = compile_init(compiler, so);
 	if (!ctx) {
 		DBG("INIT failed!");
 		ret = -1;

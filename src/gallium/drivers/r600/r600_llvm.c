@@ -726,7 +726,7 @@ static void tex_fetch_args(
 		 * That operand should be passed as a float value in the args array
 		 * right after the coord vector. After packing it's not used anymore,
 		 * that's why arg_count is not increased */
-		coords[4] = lp_build_emit_fetch(bld_base, inst, 1, 0);
+		coords[4] = lp_build_emit_fetch(bld_base, inst, 1, TGSI_CHAN_X);
 	}
 
 	if ((inst->Texture.Texture == TGSI_TEXTURE_CUBE ||
@@ -915,14 +915,17 @@ unsigned r600_llvm_compile(
 	enum radeon_family family,
 	struct r600_bytecode *bc,
 	boolean *use_kill,
-	unsigned dump)
+	unsigned dump,
+	struct pipe_debug_callback *debug)
 {
 	unsigned r;
 	struct radeon_shader_binary binary;
 	const char * gpu_family = r600_get_llvm_processor_name(family);
 
 	memset(&binary, 0, sizeof(struct radeon_shader_binary));
-	r = radeon_llvm_compile(mod, &binary, gpu_family, dump, dump, NULL);
+	if (dump)
+		LLVMDumpModule(mod);
+	r = radeon_llvm_compile(mod, &binary, gpu_family, NULL, debug);
 
 	r = r600_create_shader(bc, &binary, use_kill);
 

@@ -183,6 +183,8 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_SAMPLE_SHADING:
         case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
         case PIPE_CAP_DRAW_INDIRECT:
+        case PIPE_CAP_MULTI_DRAW_INDIRECT:
+        case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
         case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
         case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
         case PIPE_CAP_SAMPLER_VIEW_TARGET:
@@ -200,6 +202,11 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_SHAREABLE_SHADERS:
         case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
         case PIPE_CAP_CLEAR_TEXTURE:
+        case PIPE_CAP_DRAW_PARAMETERS:
+        case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
+        case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
+        case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
+        case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
             return 0;
 
         /* SWTCL-only features. */
@@ -304,6 +311,7 @@ static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, e
         case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
         case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
         case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
+        case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
             return 0;
         case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
             return 32;
@@ -362,6 +370,7 @@ static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, e
         case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
         case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
         case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
+        case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
             return 0;
         case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
             return 32;

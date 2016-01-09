@@ -372,9 +372,9 @@ load_attribute(struct gallivm_state *gallivm,
    /* Potentially modify it according to twoside, etc:
     */
    if (key->twoside) {
-      if (vert_attr == key->color_slot && key->bcolor_slot > 0)
+      if (vert_attr == key->color_slot && key->bcolor_slot >= 0)
          lp_twoside(gallivm, args, key, key->bcolor_slot, attribv);
-      else if (vert_attr == key->spec_slot && key->bspec_slot > 0)
+      else if (vert_attr == key->spec_slot && key->bspec_slot >= 0)
          lp_twoside(gallivm, args, key, key->bspec_slot, attribv);
    }
 }
@@ -602,13 +602,6 @@ emit_tri_coef( struct gallivm_state *gallivm,
           */
          break;
 
-      case LP_INTERP_ZERO:
-         /*
-          * The information we get from the output is bogus, replace it
-          * with zero.
-          */
-         emit_constant_coef4(gallivm, args, slot+1, args->bld.zero);
-         break;
       case LP_INTERP_FACING:
          emit_facing_coef(gallivm, args, slot+1);
          break;
@@ -879,13 +872,7 @@ lp_make_setup_variant_key(struct llvmpipe_context *lp,
    key->pad = 0;
    memcpy(key->inputs, fs->inputs, key->num_inputs * sizeof key->inputs[0]);
    for (i = 0; i < key->num_inputs; i++) {
-      if (key->inputs[i].interp == LP_INTERP_CONSTANT) {
-         if (key->inputs[i].src_index == lp->fake_vpindex_slot ||
-             key->inputs[i].src_index == lp->fake_layer_slot) {
-            key->inputs[i].interp = LP_INTERP_ZERO;
-         }
-      }
-      else if (key->inputs[i].interp == LP_INTERP_COLOR) {
+      if (key->inputs[i].interp == LP_INTERP_COLOR) {
          if (lp->rasterizer->flatshade)
             key->inputs[i].interp = LP_INTERP_CONSTANT;
          else

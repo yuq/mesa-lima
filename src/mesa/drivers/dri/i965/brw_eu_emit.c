@@ -847,12 +847,11 @@ brw_alu2(struct brw_codegen *p, unsigned opcode,
 static int
 get_3src_subreg_nr(struct brw_reg reg)
 {
-   if (reg.vstride == BRW_VERTICAL_STRIDE_0) {
-      assert(brw_is_single_value_swizzle(reg.swizzle));
-      return reg.subnr / 4 + BRW_GET_SWZ(reg.swizzle, 0);
-   } else {
-      return reg.subnr / 4;
-   }
+   /* Normally, SubRegNum is in bytes (0..31).  However, 3-src instructions
+    * use 32-bit units (components 0..7).  Since they only support F/D/UD
+    * types, this doesn't lose any flexibility, but uses fewer bits.
+    */
+   return reg.subnr / 4;
 }
 
 static brw_inst *

@@ -517,11 +517,27 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
          buffers[i].offset = hwtnl->cmd.vbufs[i].buffer_offset;
       }
       if (vbuf_count > 0) {
-         ret = SVGA3D_vgpu10_SetVertexBuffers(svga->swc, vbuf_count,
-                                              0,    /* startBuffer */
-                                              buffers, vb_handle);
-         if (ret != PIPE_OK)
-            return ret;
+         /* If we haven't yet emitted a drawing command or if any
+          * vertex buffer state is changing, issue that state now.
+          */
+         if (((hwtnl->cmd.swc->hints & SVGA_HINT_FLAG_CAN_PRE_FLUSH) == 0) ||
+             vbuf_count != svga->state.hw_draw.num_vbuffers ||
+             memcmp(buffers, svga->state.hw_draw.vbuffers,
+                    vbuf_count * sizeof(buffers[0])) ||
+             memcmp(vb_handle, svga->state.hw_draw.vbuffer_handles,
+                    vbuf_count * sizeof(vb_handle[0]))) {
+            ret = SVGA3D_vgpu10_SetVertexBuffers(svga->swc, vbuf_count,
+                                                 0,    /* startBuffer */
+                                                 buffers, vb_handle);
+            if (ret != PIPE_OK)
+               return ret;
+
+            svga->state.hw_draw.num_vbuffers = vbuf_count;
+            memcpy(svga->state.hw_draw.vbuffers, buffers,
+                   vbuf_count * sizeof(buffers[0]));
+            memcpy(svga->state.hw_draw.vbuffer_handles, vb_handle,
+                   vbuf_count * sizeof(vb_handle[0]));
+         }
       }
    }
 

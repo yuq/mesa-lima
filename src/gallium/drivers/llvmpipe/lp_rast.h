@@ -115,7 +115,7 @@ struct lp_rast_plane {
    int32_t dcdy;
 
    /* one-pixel sized trivial reject offsets for each plane */
-   int64_t eo;
+   uint32_t eo;
 };
 
 /**

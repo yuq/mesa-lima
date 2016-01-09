@@ -319,6 +319,10 @@ unsigned int Instruction::srcMask(unsigned int s) const
          x |= 2;
       return x;
    }
+   case TGSI_OPCODE_PK2H:
+      return 0x3;
+   case TGSI_OPCODE_UP2H:
+      return 0x1;
    default:
       break;
    }
@@ -348,7 +352,7 @@ static nv50_ir::DataFile translateFile(uint file)
    case TGSI_FILE_PREDICATE:       return nv50_ir::FILE_PREDICATE;
    case TGSI_FILE_IMMEDIATE:       return nv50_ir::FILE_IMMEDIATE;
    case TGSI_FILE_SYSTEM_VALUE:    return nv50_ir::FILE_SYSTEM_VALUE;
-   case TGSI_FILE_RESOURCE:        return nv50_ir::FILE_MEMORY_GLOBAL;
+   //case TGSI_FILE_RESOURCE:        return nv50_ir::FILE_MEMORY_GLOBAL;
    case TGSI_FILE_SAMPLER:
    case TGSI_FILE_NULL:
    default:
@@ -377,6 +381,9 @@ static nv50_ir::SVSemantic translateSysVal(uint sysval)
    case TGSI_SEMANTIC_TESSINNER:  return nv50_ir::SV_TESS_INNER;
    case TGSI_SEMANTIC_VERTICESIN: return nv50_ir::SV_VERTEX_COUNT;
    case TGSI_SEMANTIC_HELPER_INVOCATION: return nv50_ir::SV_THREAD_KILL;
+   case TGSI_SEMANTIC_BASEVERTEX: return nv50_ir::SV_BASEVERTEX;
+   case TGSI_SEMANTIC_BASEINSTANCE: return nv50_ir::SV_BASEINSTANCE;
+   case TGSI_SEMANTIC_DRAWID:     return nv50_ir::SV_DRAWID;
    default:
       assert(0);
       return nv50_ir::SV_CLOCK;
@@ -449,6 +456,7 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_ATOMUMAX:
    case TGSI_OPCODE_UBFE:
    case TGSI_OPCODE_UMSB:
+   case TGSI_OPCODE_UP2H:
       return nv50_ir::TYPE_U32;
    case TGSI_OPCODE_I2F:
    case TGSI_OPCODE_I2D:
@@ -513,10 +521,12 @@ nv50_ir::DataType Instruction::inferDstType() const
    case TGSI_OPCODE_DSGE:
    case TGSI_OPCODE_DSLT:
    case TGSI_OPCODE_DSNE:
+   case TGSI_OPCODE_PK2H:
       return nv50_ir::TYPE_U32;
    case TGSI_OPCODE_I2F:
    case TGSI_OPCODE_U2F:
    case TGSI_OPCODE_D2F:
+   case TGSI_OPCODE_UP2H:
       return nv50_ir::TYPE_F32;
    case TGSI_OPCODE_I2D:
    case TGSI_OPCODE_U2D:
@@ -861,7 +871,7 @@ bool Source::scanSource()
    clipVertexOutput = -1;
 
    textureViews.resize(scan.file_max[TGSI_FILE_SAMPLER_VIEW] + 1);
-   resources.resize(scan.file_max[TGSI_FILE_RESOURCE] + 1);
+   //resources.resize(scan.file_max[TGSI_FILE_RESOURCE] + 1);
 
    info->immd.bufSize = 0;
 
@@ -1128,6 +1138,11 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       case TGSI_SEMANTIC_SAMPLEPOS:
          info->prop.fp.sampleInterp = 1;
          break;
+      case TGSI_SEMANTIC_BASEVERTEX:
+      case TGSI_SEMANTIC_BASEINSTANCE:
+      case TGSI_SEMANTIC_DRAWID:
+         info->prop.vp.usesDrawParameters = true;
+         break;
       default:
          break;
       }
@@ -1144,6 +1159,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
          }
       }
       break;
+/*
    case TGSI_FILE_RESOURCE:
       for (i = first; i <= last; ++i) {
          resources[i].target = decl->Resource.Resource;
@@ -1151,6 +1167,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
          resources[i].slot = i;
       }
       break;
+*/
    case TGSI_FILE_SAMPLER_VIEW:
       for (i = first; i <= last; ++i)
          textureViews[i].target = decl->SamplerView.Resource;
@@ -1216,11 +1233,13 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
          if (src.isIndirect(0))
             mainTempsInLMem = true;
       } else
+/*
       if (src.getFile() == TGSI_FILE_RESOURCE) {
          if (src.getIndex(0) == TGSI_RESOURCE_GLOBAL)
             info->io.globalAccess |= (insn.getOpcode() == TGSI_OPCODE_LOAD) ?
                0x1 : 0x2;
       } else
+*/
       if (src.getFile() == TGSI_FILE_OUTPUT) {
          if (src.isIndirect(0)) {
             // We don't know which one is accessed, just mark everything for
@@ -1271,9 +1290,11 @@ Instruction::getTexture(const tgsi::Source *code, int s) const
    unsigned int r;
 
    switch (getSrc(s).getFile()) {
+/*
    case TGSI_FILE_RESOURCE:
       r = getSrc(s).getIndex(0);
       return translateTexture(code->resources.at(r).target);
+*/
    case TGSI_FILE_SAMPLER_VIEW:
       r = getSrc(s).getIndex(0);
       return translateTexture(code->textureViews.at(r).target);
@@ -1639,8 +1660,6 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
          // don't load masked inputs, won't be assigned a slot
          if (!ptr && !(info->in[idx].mask & (1 << swz)))
             return loadImm(NULL, swz == TGSI_SWIZZLE_W ? 1.0f : 0.0f);
-         if (!ptr && info->in[idx].sn == TGSI_SEMANTIC_FACE)
-            return mkOp1v(OP_RDSV, TYPE_F32, getSSA(), mkSysVal(SV_FACE, 0));
          return interpolate(src, c, shiftAddress(ptr));
       } else
       if (prog->getType() == Program::TYPE_GEOMETRY) {
@@ -1681,7 +1700,7 @@ Converter::acquireDst(int d, int c)
    const int idx = dst.getIndex(0);
    const int idx2d = dst.is2D() ? dst.getIndex(1) : 0;
 
-   if (dst.isMasked(c) || f == TGSI_FILE_RESOURCE)
+   if (dst.isMasked(c)/* || f == TGSI_FILE_RESOURCE*/)
       return NULL;
 
    if (dst.isIndirect(0) ||
@@ -2799,6 +2818,21 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
          mkCvt(OP_CVT, dstTy, dst0[c], srcTy, fetchSrc(0, c));
       break;
+   case TGSI_OPCODE_PK2H:
+      val0 = getScratch();
+      val1 = getScratch();
+      mkCvt(OP_CVT, TYPE_F16, val0, TYPE_F32, fetchSrc(0, 0));
+      mkCvt(OP_CVT, TYPE_F16, val1, TYPE_F32, fetchSrc(0, 1));
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
+         mkOp3(OP_INSBF, TYPE_U32, dst0[c], val1, mkImm(0x1010), val0);
+      break;
+   case TGSI_OPCODE_UP2H:
+      src0 = fetchSrc(0, 0);
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         geni = mkCvt(OP_CVT, TYPE_F32, dst0[c], TYPE_F16, src0);
+         geni->subOp = c & 1;
+      }
+      break;
    case TGSI_OPCODE_EMIT:
       /* export the saved viewport index */
       if (viewport != NULL) {
@@ -3252,7 +3286,7 @@ Converter::handleUserClipPlanes()
 
    for (c = 0; c < 4; ++c) {
       for (i = 0; i < info->io.genUserClip; ++i) {
-         Symbol *sym = mkSymbol(FILE_MEMORY_CONST, info->io.ucpCBSlot,
+         Symbol *sym = mkSymbol(FILE_MEMORY_CONST, info->io.auxCBSlot,
                                 TYPE_F32, info->io.ucpBase + i * 16 + c * 4);
          Value *ucp = mkLoadv(TYPE_F32, sym, NULL);
          if (c == 0)

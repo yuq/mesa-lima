@@ -921,7 +921,7 @@ vc4_get_shadow_index_buffer(struct pipe_context *pctx,
 
         void *data;
         struct pipe_resource *shadow_rsc = NULL;
-        u_upload_alloc(vc4->uploader, 0, count * 2,
+        u_upload_alloc(vc4->uploader, 0, count * 2, 4,
                        shadow_offset, &shadow_rsc, &data);
         uint16_t *dst = data;
 

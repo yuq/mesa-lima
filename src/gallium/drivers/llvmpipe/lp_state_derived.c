@@ -48,21 +48,26 @@
 static void
 compute_vertex_info(struct llvmpipe_context *llvmpipe)
 {
-   const struct lp_fragment_shader *lpfs = llvmpipe->fs;
+   const struct tgsi_shader_info *fsInfo = &llvmpipe->fs->info.base;
    struct vertex_info *vinfo = &llvmpipe->vertex_info;
    int vs_index;
    uint i;
 
    draw_prepare_shader_outputs(llvmpipe->draw);
 
-   llvmpipe->color_slot[0] = 0;
-   llvmpipe->color_slot[1] = 0;
-   llvmpipe->bcolor_slot[0] = 0;
-   llvmpipe->bcolor_slot[1] = 0;
-   llvmpipe->viewport_index_slot = 0;
-   llvmpipe->layer_slot = 0;
-   llvmpipe->face_slot = 0;
-   llvmpipe->psize_slot = 0;
+   /*
+    * Those can't actually be 0 (because pos is always at 0).
+    * But use ints anyway to avoid confusion (in vs outputs, they
+    * can very well be at pos 0).
+    */
+   llvmpipe->color_slot[0] = -1;
+   llvmpipe->color_slot[1] = -1;
+   llvmpipe->bcolor_slot[0] = -1;
+   llvmpipe->bcolor_slot[1] = -1;
+   llvmpipe->viewport_index_slot = -1;
+   llvmpipe->layer_slot = -1;
+   llvmpipe->face_slot = -1;
+   llvmpipe->psize_slot = -1;
 
    /*
     * Match FS inputs against VS outputs, emitting the necessary
@@ -73,60 +78,49 @@ compute_vertex_info(struct llvmpipe_context *llvmpipe)
    vinfo->num_attribs = 0;
 
    vs_index = draw_find_shader_output(llvmpipe->draw,
-                                      TGSI_SEMANTIC_POSITION,
-                                      0);
+                                      TGSI_SEMANTIC_POSITION, 0);
 
-   draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_PERSPECTIVE, vs_index);
+   draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
 
-   for (i = 0; i < lpfs->info.base.num_inputs; i++) {
+   for (i = 0; i < fsInfo->num_inputs; i++) {
       /*
        * Search for each input in current vs output:
        */
-
       vs_index = draw_find_shader_output(llvmpipe->draw,
-                                         lpfs->info.base.input_semantic_name[i],
-                                         lpfs->info.base.input_semantic_index[i]);
+                                         fsInfo->input_semantic_name[i],
+                                         fsInfo->input_semantic_index[i]);
 
-      if (lpfs->info.base.input_semantic_name[i] == TGSI_SEMANTIC_COLOR &&
-          lpfs->info.base.input_semantic_index[i] < 2) {
-         int idx = lpfs->info.base.input_semantic_index[i];
-         llvmpipe->color_slot[idx] = vinfo->num_attribs;
+      if (fsInfo->input_semantic_name[i] == TGSI_SEMANTIC_COLOR &&
+          fsInfo->input_semantic_index[i] < 2) {
+         int idx = fsInfo->input_semantic_index[i];
+         llvmpipe->color_slot[idx] = (int)vinfo->num_attribs;
       }
 
-      if (lpfs->info.base.input_semantic_name[i] == TGSI_SEMANTIC_FACE) {
-         llvmpipe->face_slot = vinfo->num_attribs;
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
-      } else if (lpfs->info.base.input_semantic_name[i] == TGSI_SEMANTIC_PRIMID) {
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
+      if (fsInfo->input_semantic_name[i] == TGSI_SEMANTIC_FACE) {
+         llvmpipe->face_slot = (int)vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
       /*
        * For vp index and layer, if the fs requires them but the vs doesn't
-       * provide them, store the slot - we'll later replace the data directly
-       * with zero (as required by ARB_fragment_layer_viewport). This is
-       * because draw itself just redirects them to whatever was at output 0.
-       * We'll also store the real vpindex/layer slot for setup use.
+       * provide them, draw (vbuf) will give us the required 0 (slot -1).
+       * (This means in this case we'll also use those slots in setup, which
+       * isn't necessary but they'll contain the correct (0) value.)
        */
-      } else if (lpfs->info.base.input_semantic_name[i] ==
+      } else if (fsInfo->input_semantic_name[i] ==
                  TGSI_SEMANTIC_VIEWPORT_INDEX) {
-         if (vs_index >= 0) {
-            llvmpipe->viewport_index_slot = vinfo->num_attribs;
-         }
-         else {
-            llvmpipe->fake_vpindex_slot = vinfo->num_attribs;
-         }
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
-      } else if (lpfs->info.base.input_semantic_name[i] == TGSI_SEMANTIC_LAYER) {
-         if (vs_index >= 0) {
-            llvmpipe->layer_slot = vinfo->num_attribs;
-         }
-         else {
-            llvmpipe->fake_layer_slot = vinfo->num_attribs;
-         }
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
+         llvmpipe->viewport_index_slot = (int)vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
+      } else if (fsInfo->input_semantic_name[i] == TGSI_SEMANTIC_LAYER) {
+         llvmpipe->layer_slot = (int)vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
       } else {
          /*
-          * Emit the requested fs attribute for all but position.
+          * Note that we'd actually want to skip position (as we won't use
+          * the attribute in the fs) but can't. The reason is that we don't
+          * actually have a input/output map for setup (even though it looks
+          * like we do...). Could adjust for this though even without a map
+          * (in llvmpipe_create_fs_state()).
           */
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_PERSPECTIVE, vs_index);
+         draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
       }
    }
 
@@ -137,8 +131,8 @@ compute_vertex_info(struct llvmpipe_context *llvmpipe)
                                          TGSI_SEMANTIC_BCOLOR, i);
 
       if (vs_index >= 0) {
-         llvmpipe->bcolor_slot[i] = vinfo->num_attribs;
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_PERSPECTIVE, vs_index);
+         llvmpipe->bcolor_slot[i] = (int)vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
       }
    }
 
@@ -148,29 +142,29 @@ compute_vertex_info(struct llvmpipe_context *llvmpipe)
                                       TGSI_SEMANTIC_PSIZE, 0);
 
    if (vs_index >= 0) {
-      llvmpipe->psize_slot = vinfo->num_attribs;
-      draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
+      llvmpipe->psize_slot = (int)vinfo->num_attribs;
+      draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
    }
 
    /* Figure out if we need viewport index (if it wasn't already in fs input) */
-   if (llvmpipe->viewport_index_slot == 0) {
+   if (llvmpipe->viewport_index_slot < 0) {
       vs_index = draw_find_shader_output(llvmpipe->draw,
                                          TGSI_SEMANTIC_VIEWPORT_INDEX,
                                          0);
       if (vs_index >= 0) {
-         llvmpipe->viewport_index_slot = vinfo->num_attribs;
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
+         llvmpipe->viewport_index_slot =(int)vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
       }
    }
 
    /* Figure out if we need layer (if it wasn't already in fs input) */
-   if (llvmpipe->layer_slot == 0) {
+   if (llvmpipe->layer_slot < 0) {
       vs_index = draw_find_shader_output(llvmpipe->draw,
                                          TGSI_SEMANTIC_LAYER,
                                          0);
       if (vs_index >= 0) {
-         llvmpipe->layer_slot = vinfo->num_attribs;
-         draw_emit_vertex_attr(vinfo, EMIT_4F, INTERP_CONSTANT, vs_index);
+         llvmpipe->layer_slot = (int)vinfo->num_attribs;
+         draw_emit_vertex_attr(vinfo, EMIT_4F, vs_index);
       }
    }
 
@@ -197,10 +191,9 @@ void llvmpipe_update_derived( struct llvmpipe_context *llvmpipe )
       llvmpipe->dirty |= LP_NEW_SAMPLER_VIEW;
    }
       
-   if (llvmpipe->dirty & (LP_NEW_RASTERIZER |
-                          LP_NEW_FS |
+   if (llvmpipe->dirty & (LP_NEW_FS |
                           LP_NEW_VS))
-      compute_vertex_info( llvmpipe );
+      compute_vertex_info(llvmpipe);
 
    if (llvmpipe->dirty & (LP_NEW_FS |
                           LP_NEW_FRAMEBUFFER |

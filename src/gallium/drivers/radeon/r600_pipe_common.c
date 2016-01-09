@@ -85,7 +85,7 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	/* Upload vertices. The hw rectangle has only 3 vertices,
 	 * I guess the 4th one is derived from the first 3.
 	 * The vertex specification should match u_blitter's vertex element state. */
-	u_upload_alloc(rctx->uploader, 0, sizeof(float) * 24, &offset, &buf, (void**)&vb);
+	u_upload_alloc(rctx->uploader, 0, sizeof(float) * 24, 256, &offset, &buf, (void**)&vb);
 	if (!buf)
 		return;
 
@@ -227,6 +227,17 @@ static enum pipe_reset_status r600_get_reset_status(struct pipe_context *ctx)
 	return PIPE_UNKNOWN_CONTEXT_RESET;
 }
 
+static void r600_set_debug_callback(struct pipe_context *ctx,
+				    const struct pipe_debug_callback *cb)
+{
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+
+	if (cb)
+		rctx->debug = *cb;
+	else
+		memset(&rctx->debug, 0, sizeof(rctx->debug));
+}
+
 bool r600_common_context_init(struct r600_common_context *rctx,
 			      struct r600_common_screen *rscreen)
 {
@@ -252,6 +263,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	rctx->b.transfer_inline_write = u_default_transfer_inline_write;
         rctx->b.memory_barrier = r600_memory_barrier;
 	rctx->b.flush = r600_flush_from_st;
+	rctx->b.set_debug_callback = r600_set_debug_callback;
 
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 43) {
 		rctx->b.get_device_reset_status = r600_get_reset_status;
@@ -272,9 +284,9 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	if (!rctx->allocator_so_filled_size)
 		return false;
 
-	rctx->uploader = u_upload_create(&rctx->b, 1024 * 1024, 256,
+	rctx->uploader = u_upload_create(&rctx->b, 1024 * 1024,
 					PIPE_BIND_INDEX_BUFFER |
-					PIPE_BIND_CONSTANT_BUFFER);
+					PIPE_BIND_CONSTANT_BUFFER, PIPE_USAGE_STREAM);
 	if (!rctx->uploader)
 		return false;
 
@@ -999,13 +1011,9 @@ void r600_destroy_common_screen(struct r600_common_screen *rscreen)
 }
 
 bool r600_can_dump_shader(struct r600_common_screen *rscreen,
-			  const struct tgsi_token *tokens)
+			  unsigned processor)
 {
-	/* Compute shader don't have tgsi_tokens */
-	if (!tokens)
-		return (rscreen->debug_flags & DBG_CS) != 0;
-
-	switch (tgsi_get_processor_type(tokens)) {
+	switch (processor) {
 	case TGSI_PROCESSOR_VERTEX:
 		return (rscreen->debug_flags & DBG_VS) != 0;
 	case TGSI_PROCESSOR_TESS_CTRL:

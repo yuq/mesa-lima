@@ -790,7 +790,7 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
         case D3DSWAPEFFECT_FLIP:
             UNTESTED(4);
         case D3DSWAPEFFECT_DISCARD:
-            /* rotate the queue */;
+            /* rotate the queue */
             pipe_resource_reference(&res, This->buffers[0]->base.resource);
             for (i = 1; i <= This->params.BackBufferCount; i++) {
                 NineSurface9_SetResourceResize(This->buffers[i - 1],

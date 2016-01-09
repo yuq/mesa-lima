@@ -174,6 +174,14 @@ static void
 handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
 {
    switch (u_reduce_video_profile(context->templat.profile)) {
+   case PIPE_VIDEO_FORMAT_MPEG12:
+      vlVaHandleSliceParameterBufferMPEG12(context, buf);
+      break;
+
+   case PIPE_VIDEO_FORMAT_VC1:
+      vlVaHandleSliceParameterBufferVC1(context, buf);
+      break;
+
    case PIPE_VIDEO_FORMAT_MPEG4_AVC:
       vlVaHandleSliceParameterBufferH264(context, buf);
       break;

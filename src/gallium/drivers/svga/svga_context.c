@@ -46,7 +46,6 @@
 #include "svga_winsys.h"
 
 #define CONST0_UPLOAD_DEFAULT_SIZE 65536
-#define CONST0_UPLOAD_ALIGNMENT 256
 
 DEBUG_GET_ONCE_BOOL_OPTION(no_swtnl, "SVGA_NO_SWTNL", FALSE)
 DEBUG_GET_ONCE_BOOL_OPTION(force_swtnl, "SVGA_FORCE_SWTNL", FALSE);
@@ -220,8 +219,8 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
 
    svga->const0_upload = u_upload_create(&svga->pipe,
                                          CONST0_UPLOAD_DEFAULT_SIZE,
-                                         CONST0_UPLOAD_ALIGNMENT,
-                                         PIPE_BIND_CONSTANT_BUFFER);
+                                         PIPE_BIND_CONSTANT_BUFFER,
+                                         PIPE_USAGE_STREAM);
    if (!svga->const0_upload)
       goto cleanup;
 

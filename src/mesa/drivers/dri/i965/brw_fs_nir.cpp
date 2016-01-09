@@ -1849,12 +1849,33 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
 
       fs_inst *inst;
       if (indirect_offset.file == BAD_FILE) {
-         /* Replicate the patch handle to all enabled channels */
-         fs_reg patch_handle = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
-         bld.MOV(patch_handle, retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD));
+         /* Arbitrarily only push up to 32 vec4 slots worth of data,
+          * which is 16 registers (since each holds 2 vec4 slots).
+          */
+         const unsigned max_push_slots = 32;
+         if (imm_offset < max_push_slots) {
+            fs_reg src = fs_reg(ATTR, imm_offset / 2, dest.type);
+            for (int i = 0; i < instr->num_components; i++) {
+               bld.MOV(offset(dest, bld, i),
+                       component(src, 4 * (imm_offset % 2) + i));
+            }
+            tes_prog_data->base.urb_read_length =
+               MAX2(tes_prog_data->base.urb_read_length,
+                    DIV_ROUND_UP(imm_offset + 1, 2));
+         } else {
+            /* Replicate the patch handle to all enabled channels */
+            const fs_reg srcs[] = {
+               retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD)
+            };
+            fs_reg patch_handle = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+            bld.LOAD_PAYLOAD(patch_handle, srcs, ARRAY_SIZE(srcs), 0);
 
-         inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dest, patch_handle);
-         inst->mlen = 1;
+            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dest, patch_handle);
+            inst->mlen = 1;
+            inst->offset = imm_offset;
+            inst->base_mrf = -1;
+            inst->regs_written = instr->num_components;
+         }
       } else {
          /* Indirect indexing - use per-slot offsets as well. */
          const fs_reg srcs[] = {
@@ -1866,10 +1887,10 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
 
          inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, dest, payload);
          inst->mlen = 2;
+         inst->offset = imm_offset;
+         inst->base_mrf = -1;
+         inst->regs_written = instr->num_components;
       }
-      inst->offset = imm_offset;
-      inst->base_mrf = -1;
-      inst->regs_written = instr->num_components;
       break;
    }
    default:

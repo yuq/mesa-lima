@@ -184,6 +184,7 @@ optimizations = [
    (('fmul', ('fexp2', a), ('fexp2', b)), ('fexp2', ('fadd', a, b))),
    # Division and reciprocal
    (('fdiv', 1.0, a), ('frcp', a)),
+   (('fdiv', a, b), ('fmul', a, ('frcp', b)), 'options->lower_fdiv'),
    (('frcp', ('frcp', a)), a),
    (('frcp', ('fsqrt', a)), ('frsq', a)),
    (('fsqrt', a), ('frcp', ('frsq', a)), 'options->lower_fsqrt'),
@@ -226,8 +227,8 @@ optimizations = [
    # Misc. lowering
    (('fmod', a, b), ('fsub', a, ('fmul', b, ('ffloor', ('fdiv', a, b)))), 'options->lower_fmod'),
    (('bitfield_insert', a, b, c, d), ('bfi', ('bfm', d, c), b, a), 'options->lower_bitfield_insert'),
-   (('uadd_carry', a, b), ('ult', ('iadd', a, b), a), 'options->lower_uadd_carry'),
-   (('usub_borrow', a, b), ('ult', a, b), 'options->lower_usub_borrow'),
+   (('uadd_carry', a, b), ('b2i', ('ult', ('iadd', a, b), a)), 'options->lower_uadd_carry'),
+   (('usub_borrow', a, b), ('b2i', ('ult', a, b)), 'options->lower_usub_borrow'),
 ]
 
 # Add optimizations to handle the case where the result of a ternary is

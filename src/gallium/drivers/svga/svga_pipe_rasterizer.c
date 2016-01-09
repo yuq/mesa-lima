@@ -368,13 +368,16 @@ static void svga_bind_rasterizer_state( struct pipe_context *pipe,
    struct svga_context *svga = svga_context(pipe);
    struct svga_rasterizer_state *raster = (struct svga_rasterizer_state *)state;
 
+   if (!raster ||
+       !svga->curr.rast ||
+       raster->templ.poly_stipple_enable !=
+       svga->curr.rast->templ.poly_stipple_enable) {
+      svga->dirty |= SVGA_NEW_STIPPLE;
+   }
+
    svga->curr.rast = raster;
 
    svga->dirty |= SVGA_NEW_RAST;
-
-   if (raster && raster->templ.poly_stipple_enable) {
-      svga->dirty |= SVGA_NEW_STIPPLE;
-   }
 }
 
 static void

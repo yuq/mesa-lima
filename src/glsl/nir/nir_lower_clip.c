@@ -72,6 +72,7 @@ store_clipdist_output(nir_builder *b, nir_variable *out, nir_ssa_def **val)
    store = nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_output);
    store->num_components = 4;
    store->const_index[0] = out->data.driver_location;
+   store->const_index[1] = 0xf;   /* wrmask */
    store->src[0].ssa = nir_vec4(b, val[0], val[1], val[2], val[3]);
    store->src[0].is_ssa = true;
    store->src[1] = nir_src_for_ssa(nir_imm_int(b, 0));

@@ -134,10 +134,12 @@ struct nvc0_context {
    struct nvc0_constbuf constbuf[6][NVC0_MAX_PIPE_CONSTBUFS];
    uint16_t constbuf_dirty[6];
    uint16_t constbuf_valid[6];
+   uint16_t constbuf_coherent[6];
    bool cb_dirty;
 
    struct pipe_vertex_buffer vtxbuf[PIPE_MAX_ATTRIBS];
    unsigned num_vtxbufs;
+   uint32_t vtxbufs_coherent;
    struct pipe_index_buffer idxbuf;
    uint32_t constant_vbos;
    uint32_t vbo_user; /* bitmask of vertex buffers pointing to user memory */
@@ -149,6 +151,7 @@ struct nvc0_context {
    struct pipe_sampler_view *textures[6][PIPE_MAX_SAMPLERS];
    unsigned num_textures[6];
    uint32_t textures_dirty[6];
+   uint32_t textures_coherent[6];
    struct nv50_tsc_entry *samplers[6][PIPE_MAX_SAMPLERS];
    unsigned num_samplers[6];
    uint16_t samplers_dirty[6];

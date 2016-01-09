@@ -296,9 +296,7 @@ typedef struct {
       /**
        * Location an atomic counter is stored at.
        */
-      struct {
-         unsigned offset;
-      } atomic;
+      unsigned offset;
 
       /**
        * ARB_shader_image_load_store qualifiers.
@@ -1503,8 +1501,8 @@ typedef struct nir_function {
 } nir_function;
 
 typedef struct nir_shader_compiler_options {
-   bool lower_ffma;
    bool lower_fdiv;
+   bool lower_ffma;
    bool lower_flrp;
    bool lower_fpow;
    bool lower_fsat;
@@ -2004,11 +2002,45 @@ nir_constant *nir_constant_clone(const nir_constant *c, nir_variable *var);
 void nir_validate_shader(nir_shader *shader);
 void nir_metadata_set_validation_flag(nir_shader *shader);
 void nir_metadata_check_validation_flag(nir_shader *shader);
+
+#include "util/debug.h"
+static inline bool
+should_clone_nir(void)
+{
+   static int should_clone = -1;
+   if (should_clone < 0)
+      should_clone = env_var_as_boolean("NIR_TEST_CLONE", false);
+
+   return should_clone;
+}
 #else
 static inline void nir_validate_shader(nir_shader *shader) { (void) shader; }
 static inline void nir_metadata_set_validation_flag(nir_shader *shader) { (void) shader; }
 static inline void nir_metadata_check_validation_flag(nir_shader *shader) { (void) shader; }
+static inline bool should_clone_nir(void) { return false; }
 #endif /* DEBUG */
+
+#define _PASS(nir, do_pass) do {                                     \
+   do_pass                                                           \
+   nir_validate_shader(nir);                                         \
+   if (should_clone_nir()) {                                         \
+      nir_shader *clone = nir_shader_clone(ralloc_parent(nir), nir); \
+      ralloc_free(nir);                                              \
+      nir = clone;                                                   \
+   }                                                                 \
+} while (0)
+
+#define NIR_PASS(progress, nir, pass, ...) _PASS(nir,                \
+   nir_metadata_set_validation_flag(nir);                            \
+   if (pass(nir, ##__VA_ARGS__)) {                                   \
+      progress = true;                                               \
+      nir_metadata_check_validation_flag(nir);                       \
+   }                                                                 \
+)
+
+#define NIR_PASS_V(nir, pass, ...) _PASS(nir,                        \
+   pass(nir, ##__VA_ARGS__);                                         \
+)
 
 void nir_calc_dominance_impl(nir_function_impl *impl);
 void nir_calc_dominance(nir_shader *shader);

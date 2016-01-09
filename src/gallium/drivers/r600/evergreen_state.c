@@ -1956,7 +1956,7 @@ static void evergreen_emit_constant_buffers(struct r600_context *rctx,
 
 		if (!gs_ring_buffer) {
 			radeon_set_context_reg_flag(cs, reg_alu_constbuf_size + buffer_index * 4,
-						    ALIGN_DIVUP(cb->buffer_size, 256), pkt_flags);
+						    DIV_ROUND_UP(cb->buffer_size, 256), pkt_flags);
 			radeon_set_context_reg_flag(cs, reg_alu_const_cache + buffer_index * 4, va >> 8,
 						    pkt_flags);
 		}

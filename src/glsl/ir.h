@@ -871,9 +871,7 @@ public:
       /**
        * Location an atomic counter is stored at.
        */
-      struct {
-         unsigned offset;
-      } atomic;
+      unsigned offset;
 
       /**
        * Highest element accessed with a constant expression array index
@@ -1726,6 +1724,8 @@ public:
       return operation == ir_binop_all_equal ||
              operation == ir_binop_any_nequal ||
              operation == ir_binop_dot ||
+             operation == ir_binop_vector_extract ||
+             operation == ir_triop_vector_insert ||
              operation == ir_quadop_vector;
    }
 

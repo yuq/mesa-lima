@@ -40,6 +40,8 @@
 #include "freedreno_gmem.h"
 #include "freedreno_util.h"
 
+#define BORDER_COLOR_UPLOAD_SIZE (2 * PIPE_MAX_SAMPLERS * BORDERCOLOR_SIZE)
+
 struct fd_vertex_stateobj;
 
 struct fd_texture_stateobj {

@@ -226,6 +226,8 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION:
 	case PIPE_CAP_DRAW_INDIRECT:
+	case PIPE_CAP_MULTI_DRAW_INDIRECT:
+	case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
 	case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
 	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
 	case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
@@ -238,6 +240,11 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_SHAREABLE_SHADERS:
 	case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
 	case PIPE_CAP_CLEAR_TEXTURE:
+	case PIPE_CAP_DRAW_PARAMETERS:
+	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
+	case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
+	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
+	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:
@@ -414,6 +421,8 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 		return PIPE_SHADER_IR_TGSI;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
+	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+		return 0;
 	}
 	debug_printf("unknown shader param %d\n", param);
 	return 0;

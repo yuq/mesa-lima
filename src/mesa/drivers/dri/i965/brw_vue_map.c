@@ -257,6 +257,7 @@ varying_name(brw_varying_slot slot)
       [BRW_VARYING_SLOT_PNTC - VARYING_SLOT_MAX] = "BRW_VARYING_SLOT_PNTC",
    };
 
+   assert(slot < BRW_VARYING_SLOT_COUNT);
    return brw_names[slot - VARYING_SLOT_MAX];
 }
 

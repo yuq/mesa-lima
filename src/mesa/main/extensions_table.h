@@ -70,6 +70,7 @@ EXT(ARB_gpu_shader5                         , ARB_gpu_shader5                   
 EXT(ARB_gpu_shader_fp64                     , ARB_gpu_shader_fp64                    ,  x , GLC,  x ,  x , 2010)
 EXT(ARB_half_float_pixel                    , dummy_true                             , GLL, GLC,  x ,  x , 2003)
 EXT(ARB_half_float_vertex                   , ARB_half_float_vertex                  , GLL, GLC,  x ,  x , 2008)
+EXT(ARB_indirect_parameters                 , ARB_indirect_parameters                ,  x , GLC,  x ,  x , 2013)
 EXT(ARB_instanced_arrays                    , ARB_instanced_arrays                   , GLL, GLC,  x ,  x , 2008)
 EXT(ARB_internalformat_query                , ARB_internalformat_query               , GLL, GLC,  x ,  x , 2011)
 EXT(ARB_invalidate_subdata                  , dummy_true                             , GLL, GLC,  x ,  x , 2012)

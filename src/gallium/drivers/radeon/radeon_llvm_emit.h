@@ -31,6 +31,7 @@
 #include <llvm-c/TargetMachine.h>
 #include <stdbool.h>
 
+struct pipe_debug_callback;
 struct radeon_shader_binary;
 
 void radeon_llvm_shader_type(LLVMValueRef F, unsigned type);
@@ -38,7 +39,8 @@ void radeon_llvm_shader_type(LLVMValueRef F, unsigned type);
 LLVMTargetRef radeon_llvm_get_r600_target(const char *triple);
 
 unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binary,
-			     const char *gpu_family, bool dump_ir, bool dump_asm,
-			     LLVMTargetMachineRef tm);
+			     const char *gpu_family,
+			     LLVMTargetMachineRef tm,
+			     struct pipe_debug_callback *debug);
 
 #endif /* RADEON_LLVM_EMIT_H */

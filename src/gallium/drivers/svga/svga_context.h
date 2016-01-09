@@ -74,6 +74,8 @@
  */
 #define SVGA_MAX_CONST_BUF_SIZE (4096 * 4 * sizeof(int))
 
+#define CONST0_UPLOAD_ALIGNMENT 256
+
 struct draw_vertex_shader;
 struct draw_fragment_shader;
 struct svga_shader_variant;
@@ -312,7 +314,7 @@ struct svga_hw_view_state
    struct svga_sampler_view *v;
    unsigned min_lod;
    unsigned max_lod;
-   int dirty;
+   boolean dirty;
 };
 
 /* Updated by calling svga_update_state( SVGA_STATE_HW_DRAW )
@@ -342,6 +344,11 @@ struct svga_hw_draw_state
    SVGA3dRasterizerStateId rasterizer_id;
    SVGA3dElementLayoutId layout_id;
    SVGA3dPrimitiveType topology;
+
+   /** Vertex buffer state */
+   SVGA3dVertexBuffer vbuffers[PIPE_MAX_ATTRIBS];
+   struct svga_winsys_surface *vbuffer_handles[PIPE_MAX_ATTRIBS];
+   unsigned num_vbuffers;
 
    struct svga_winsys_surface *ib;  /**< index buffer for drawing */
    SVGA3dSurfaceFormat ib_format;

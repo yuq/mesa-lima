@@ -279,7 +279,7 @@ lower_texture_grad_visitor::visit_leave(ir_texture *ir)
 
       /* 2. quotient rule */
       ir_variable *recip = temp(mem_ctx, glsl_type::float_type, "recip");
-      EMIT(assign(recip, div(new(mem_ctx) ir_constant(1.0f), swizzle_z(Q))));
+      EMIT(assign(recip, expr(ir_unop_rcp, swizzle_z(Q))));
 
       ir_variable *dx = temp(mem_ctx, glsl_type::vec2_type, "dx");
       ir_variable *dy = temp(mem_ctx, glsl_type::vec2_type, "dy");

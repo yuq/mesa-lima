@@ -1824,9 +1824,7 @@ ir_swizzle::constant_expression_value(struct hash_table *variable_context)
 ir_constant *
 ir_dereference_variable::constant_expression_value(struct hash_table *variable_context)
 {
-   /* This may occur during compile and var->type is glsl_type::error_type */
-   if (!var)
-      return NULL;
+   assert(var);
 
    /* Give priority to the context hashtable, if it exists */
    if (variable_context) {

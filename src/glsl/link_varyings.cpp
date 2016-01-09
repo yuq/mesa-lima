@@ -41,6 +41,29 @@
 
 
 /**
+ * Get the varying type stripped of the outermost array if we're processing
+ * a stage whose varyings are arrays indexed by a vertex number (such as
+ * geometry shader inputs).
+ */
+static const glsl_type *
+get_varying_type(const ir_variable *var, gl_shader_stage stage)
+{
+   const glsl_type *type = var->type;
+
+   if (!var->data.patch &&
+       ((var->data.mode == ir_var_shader_out &&
+         stage == MESA_SHADER_TESS_CTRL) ||
+        (var->data.mode == ir_var_shader_in &&
+         (stage == MESA_SHADER_TESS_CTRL || stage == MESA_SHADER_TESS_EVAL ||
+          stage == MESA_SHADER_GEOMETRY)))) {
+      assert(type->is_array());
+      type = type->fields.array;
+   }
+
+   return type;
+}
+
+/**
  * Validate the types and qualifiers of an output from one stage against the
  * matching input to another stage.
  */
@@ -309,6 +332,41 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
    }
 }
 
+/**
+ * Demote shader inputs and outputs that are not used in other stages, and
+ * remove them via dead code elimination.
+ */
+void
+remove_unused_shader_inputs_and_outputs(bool is_separate_shader_object,
+                                        gl_shader *sh,
+                                        enum ir_variable_mode mode)
+{
+   if (is_separate_shader_object)
+      return;
+
+   foreach_in_list(ir_instruction, node, sh->ir) {
+      ir_variable *const var = node->as_variable();
+
+      if ((var == NULL) || (var->data.mode != int(mode)))
+	 continue;
+
+      /* A shader 'in' or 'out' variable is only really an input or output if
+       * its value is used by other shader stages. This will cause the
+       * variable to have a location assigned.
+       */
+      if (var->data.is_unmatched_generic_inout) {
+         assert(var->data.mode != ir_var_temporary);
+	 var->data.mode = ir_var_auto;
+      }
+   }
+
+   /* Eliminate code that is now dead due to unused inputs/outputs being
+    * demoted.
+    */
+   while (do_dead_code(sh->ir, false))
+      ;
+
+}
 
 /**
  * Initialize this object based on a string that was passed to
@@ -767,7 +825,8 @@ public:
                    gl_shader_stage consumer_stage);
    ~varying_matches();
    void record(ir_variable *producer_var, ir_variable *consumer_var);
-   unsigned assign_locations(uint64_t reserved_slots, bool separate_shader);
+   unsigned assign_locations(struct gl_shader_program *prog,
+                             uint64_t reserved_slots, bool separate_shader);
    void store_locations() const;
 
 private:
@@ -946,32 +1005,14 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
    this->matches[this->num_matches].packing_order
       = this->compute_packing_order(var);
    if (this->disable_varying_packing) {
-      const struct glsl_type *type = var->type;
       unsigned slots;
+      gl_shader_stage stage =
+         (producer_var != NULL) ? producer_stage : consumer_stage;
 
-      /* Some shader stages have 2-dimensional varyings. Use the inner type. */
-      if (!var->data.patch &&
-          ((var == producer_var && producer_stage == MESA_SHADER_TESS_CTRL) ||
-           (var == consumer_var && (consumer_stage == MESA_SHADER_TESS_CTRL ||
-                                    consumer_stage == MESA_SHADER_TESS_EVAL ||
-                                    consumer_stage == MESA_SHADER_GEOMETRY)))) {
-         assert(type->is_array());
-         type = type->fields.array;
-      }
+      const glsl_type *type = get_varying_type(var, stage);
 
-      if (type->is_array()) {
-         slots = 1;
-         while (type->is_array()) {
-            slots *= type->length;
-            type = type->fields.array;
-         }
-         slots *= type->matrix_columns;
-      } else {
-         slots = type->matrix_columns;
-      }
-      if (type->without_array()->is_dual_slot_double())
-         slots *= 2;
-      this->matches[this->num_matches].num_components = 4 * slots;
+      slots = type->count_attribute_slots(false);
+      this->matches[this->num_matches].num_components = slots * 4;
    } else {
       this->matches[this->num_matches].num_components
          = var->type->component_slots();
@@ -991,7 +1032,9 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
  * passed to varying_matches::record().
  */
 unsigned
-varying_matches::assign_locations(uint64_t reserved_slots, bool separate_shader)
+varying_matches::assign_locations(struct gl_shader_program *prog,
+                                  uint64_t reserved_slots,
+                                  bool separate_shader)
 {
    /* We disable varying sorting for separate shader programs for the
     * following reasons:
@@ -1028,10 +1071,20 @@ varying_matches::assign_locations(uint64_t reserved_slots, bool separate_shader)
    for (unsigned i = 0; i < this->num_matches; i++) {
       unsigned *location = &generic_location;
 
-      if ((this->matches[i].consumer_var &&
-           this->matches[i].consumer_var->data.patch) ||
-          (this->matches[i].producer_var &&
-           this->matches[i].producer_var->data.patch))
+      const ir_variable *var;
+      const glsl_type *type;
+      bool is_vertex_input = false;
+      if (matches[i].consumer_var) {
+         var = matches[i].consumer_var;
+         type = get_varying_type(var, consumer_stage);
+         if (consumer_stage == MESA_SHADER_VERTEX)
+            is_vertex_input = true;
+      } else {
+         var = matches[i].producer_var;
+         type = get_varying_type(var, producer_stage);
+      }
+
+      if (var->data.patch)
          location = &generic_patch_location;
 
       /* Advance to the next slot if this varying has a different packing
@@ -1043,9 +1096,45 @@ varying_matches::assign_locations(uint64_t reserved_slots, bool separate_shader)
           != this->matches[i].packing_class) {
          *location = ALIGN(*location, 4);
       }
-      while ((*location < MAX_VARYING * 4u) &&
-            (reserved_slots & (1u << *location / 4u))) {
-         *location = ALIGN(*location + 1, 4);
+
+      unsigned num_elements =  type->count_attribute_slots(is_vertex_input);
+      unsigned slot_end = this->disable_varying_packing ? 4 :
+         type->without_array()->vector_elements;
+      slot_end += *location - 1;
+
+      /* FIXME: We could be smarter in the below code and loop back over
+       * trying to fill any locations that we skipped because we couldn't pack
+       * the varying between an explicit location. For now just let the user
+       * hit the linking error if we run out of room and suggest they use
+       * explicit locations.
+       */
+      for (unsigned j = 0; j < num_elements; j++) {
+         while ((slot_end < MAX_VARYING * 4u) &&
+                ((reserved_slots & (UINT64_C(1) << *location / 4u) ||
+                 (reserved_slots & (UINT64_C(1) << slot_end / 4u))))) {
+
+            *location = ALIGN(*location + 1, 4);
+            slot_end = *location;
+
+            /* reset the counter and try again */
+            j = 0;
+         }
+
+         /* Increase the slot to make sure there is enough room for next
+          * array element.
+          */
+         if (this->disable_varying_packing)
+            slot_end += 4;
+         else
+            slot_end += type->without_array()->vector_elements;
+      }
+
+      if (!var->data.patch && *location >= MAX_VARYING * 4u) {
+         linker_error(prog, "insufficient contiguous locations available for "
+                      "%s it is possible an array or struct could not be "
+                      "packed between varyings with explicit locations. Try "
+                      "using an explicit location for arrays and structs.",
+                      var->name);
       }
 
       this->matches[i].generic_location = *location;
@@ -1429,12 +1518,20 @@ reserved_varying_slot(struct gl_shader *stage, ir_variable_mode io_mode)
    foreach_in_list(ir_instruction, node, stage->ir) {
       ir_variable *const var = node->as_variable();
 
-      if (var == NULL || var->data.mode != io_mode || !var->data.explicit_location)
+      if (var == NULL || var->data.mode != io_mode ||
+          !var->data.explicit_location ||
+          var->data.location < VARYING_SLOT_VAR0)
          continue;
 
       var_slot = var->data.location - VARYING_SLOT_VAR0;
-      if (var_slot >= 0 && var_slot < MAX_VARYING)
-         slots |= 1u << var_slot;
+
+      unsigned num_elements = get_varying_type(var, stage->Stage)
+         ->count_attribute_slots(stage->Stage == MESA_SHADER_VERTEX);
+      for (unsigned i = 0; i < num_elements; i++) {
+         if (var_slot >= 0 && var_slot < MAX_VARYING)
+            slots |= UINT64_C(1) << var_slot;
+         var_slot += 1;
+      }
    }
 
    return slots;
@@ -1620,7 +1717,7 @@ assign_varying_locations(struct gl_context *ctx,
       reserved_varying_slot(producer, ir_var_shader_out) |
       reserved_varying_slot(consumer, ir_var_shader_in);
 
-   const unsigned slots_used = matches.assign_locations(reserved_slots,
+   const unsigned slots_used = matches.assign_locations(prog, reserved_slots,
                                                         prog->SeparateShader);
    matches.store_locations();
 
@@ -1639,17 +1736,6 @@ assign_varying_locations(struct gl_context *ctx,
    hash_table_dtor(tfeedback_candidates);
    hash_table_dtor(consumer_inputs);
    hash_table_dtor(consumer_interface_inputs);
-
-   if (!disable_varying_packing) {
-      if (producer) {
-         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
-                               0, producer);
-      }
-      if (consumer) {
-         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
-                               consumer_vertices, consumer);
-      }
-   }
 
    if (consumer && producer) {
       foreach_in_list(ir_instruction, node, consumer->ir) {
@@ -1691,12 +1777,28 @@ assign_varying_locations(struct gl_context *ctx,
 			    var->name,
                             _mesa_shader_stage_to_string(producer->Stage));
             }
-
-            /* An 'in' variable is only really a shader input if its
-             * value is written by the previous stage.
-             */
-            var->data.mode = ir_var_auto;
          }
+      }
+
+      /* Now that validation is done its safe to remove unused varyings. As
+       * we have both a producer and consumer its safe to remove unused
+       * varyings even if the program is a SSO because the stages are being
+       * linked together i.e. we have a multi-stage SSO.
+       */
+      remove_unused_shader_inputs_and_outputs(false, producer,
+                                              ir_var_shader_out);
+      remove_unused_shader_inputs_and_outputs(false, consumer,
+                                              ir_var_shader_in);
+   }
+
+   if (!disable_varying_packing) {
+      if (producer) {
+         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
+                               0, producer);
+      }
+      if (consumer) {
+         lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
+                               consumer_vertices, consumer);
       }
    }
 

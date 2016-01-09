@@ -133,36 +133,8 @@ lp_rast_triangle_4_16(struct lp_rasterizer_task *task,
    lp_rast_triangle_4(task, arg2);
 }
 
-#if !defined(PIPE_ARCH_SSE)
+#if defined(PIPE_ARCH_SSE)
 
-void
-lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
-                         const union lp_rast_cmd_arg arg)
-{
-   union lp_rast_cmd_arg arg2;
-   arg2.triangle.tri = arg.triangle.tri;
-   arg2.triangle.plane_mask = (1<<3)-1;
-   lp_rast_triangle_32_3(task, arg2);
-}
-
-void
-lp_rast_triangle_32_4_16(struct lp_rasterizer_task *task,
-                         const union lp_rast_cmd_arg arg)
-{
-   union lp_rast_cmd_arg arg2;
-   arg2.triangle.tri = arg.triangle.tri;
-   arg2.triangle.plane_mask = (1<<4)-1;
-   lp_rast_triangle_32_4(task, arg2);
-}
-
-void
-lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
-                      const union lp_rast_cmd_arg arg)
-{
-   lp_rast_triangle_32_3_16(task, arg);
-}
-
-#else
 #include <emmintrin.h>
 #include "util/u_sse.h"
 
@@ -264,12 +236,6 @@ sign_bits4(const __m128i *cstep, int cdiff)
 
 
 #define NR_PLANES 3
-
-
-
-
-
-
 
 void
 lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
@@ -381,10 +347,6 @@ lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
                                0xffff & ~out[i].mask);
 }
 
-
-
-
-
 void
 lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
                      const union lp_rast_cmd_arg arg)
@@ -471,6 +433,254 @@ lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
 }
 
 #undef NR_PLANES
+
+#else
+
+#if defined(_ARCH_PWR8) && defined(PIPE_ARCH_LITTLE_ENDIAN)
+
+#include <altivec.h>
+#include "util/u_pwr8.h"
+
+static inline void
+build_masks_32(int c,
+               int cdiff,
+               int dcdx,
+               int dcdy,
+               unsigned *outmask,
+               unsigned *partmask)
+{
+   __m128i cstep0 = vec_setr_epi32(c, c+dcdx, c+dcdx*2, c+dcdx*3);
+   __m128i xdcdy = (__m128i) vec_splats(dcdy);
+
+   /* Get values across the quad
+    */
+   __m128i cstep1 = vec_add_epi32(cstep0, xdcdy);
+   __m128i cstep2 = vec_add_epi32(cstep1, xdcdy);
+   __m128i cstep3 = vec_add_epi32(cstep2, xdcdy);
+
+   {
+      __m128i cstep01, cstep23, result;
+
+      cstep01 = vec_packs_epi32(cstep0, cstep1);
+      cstep23 = vec_packs_epi32(cstep2, cstep3);
+      result = vec_packs_epi16(cstep01, cstep23);
+
+      *outmask |= vec_movemask_epi8(result);
+   }
+
+
+   {
+      __m128i cio4 = (__m128i) vec_splats(cdiff);
+      __m128i cstep01, cstep23, result;
+
+      cstep0 = vec_add_epi32(cstep0, cio4);
+      cstep1 = vec_add_epi32(cstep1, cio4);
+      cstep2 = vec_add_epi32(cstep2, cio4);
+      cstep3 = vec_add_epi32(cstep3, cio4);
+
+      cstep01 = vec_packs_epi32(cstep0, cstep1);
+      cstep23 = vec_packs_epi32(cstep2, cstep3);
+      result = vec_packs_epi16(cstep01, cstep23);
+
+      *partmask |= vec_movemask_epi8(result);
+   }
+}
+
+static inline unsigned
+build_mask_linear_32(int c, int dcdx, int dcdy)
+{
+   __m128i cstep0 = vec_setr_epi32(c, c+dcdx, c+dcdx*2, c+dcdx*3);
+   __m128i xdcdy = (__m128i) vec_splats(dcdy);
+
+   /* Get values across the quad
+    */
+   __m128i cstep1 = vec_add_epi32(cstep0, xdcdy);
+   __m128i cstep2 = vec_add_epi32(cstep1, xdcdy);
+   __m128i cstep3 = vec_add_epi32(cstep2, xdcdy);
+
+   /* pack pairs of results into epi16
+    */
+   __m128i cstep01 = vec_packs_epi32(cstep0, cstep1);
+   __m128i cstep23 = vec_packs_epi32(cstep2, cstep3);
+
+   /* pack into epi8, preserving sign bits
+    */
+   __m128i result = vec_packs_epi16(cstep01, cstep23);
+
+   /* extract sign bits to create mask
+    */
+   return vec_movemask_epi8(result);
+}
+
+static inline __m128i
+lp_plane_to_m128i(const struct lp_rast_plane *plane)
+{
+   return vec_setr_epi32((int32_t)plane->c, (int32_t)plane->dcdx,
+                         (int32_t)plane->dcdy, (int32_t)plane->eo);
+}
+
+#define NR_PLANES 3
+
+void
+lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
+                      const union lp_rast_cmd_arg arg)
+{
+   const struct lp_rast_triangle *tri = arg.triangle.tri;
+   const struct lp_rast_plane *plane = GET_PLANES(tri);
+   int x = (arg.triangle.plane_mask & 0xff) + task->x;
+   int y = (arg.triangle.plane_mask >> 8) + task->y;
+   unsigned i, j;
+
+   struct { unsigned mask:16; unsigned i:8; unsigned j:8; } out[16];
+   unsigned nr = 0;
+
+   __m128i p0 = lp_plane_to_m128i(&plane[0]); /* c, dcdx, dcdy, eo */
+   __m128i p1 = lp_plane_to_m128i(&plane[1]); /* c, dcdx, dcdy, eo */
+   __m128i p2 = lp_plane_to_m128i(&plane[2]); /* c, dcdx, dcdy, eo */
+   __m128i zero = vec_splats((unsigned char) 0);
+
+   __m128i c;
+   __m128i dcdx;
+   __m128i dcdy;
+   __m128i rej4;
+
+   __m128i dcdx2;
+   __m128i dcdx3;
+
+   __m128i span_0;                /* 0,dcdx,2dcdx,3dcdx for plane 0 */
+   __m128i span_1;                /* 0,dcdx,2dcdx,3dcdx for plane 1 */
+   __m128i span_2;                /* 0,dcdx,2dcdx,3dcdx for plane 2 */
+   __m128i unused;
+
+   __m128i vshuf_mask0;
+   __m128i vshuf_mask1;
+   __m128i vshuf_mask2;
+
+#ifdef PIPE_ARCH_LITTLE_ENDIAN
+   vshuf_mask0 = (__m128i) vec_splats((unsigned int) 0x03020100);
+   vshuf_mask1 = (__m128i) vec_splats((unsigned int) 0x07060504);
+   vshuf_mask2 = (__m128i) vec_splats((unsigned int) 0x0B0A0908);
+#else
+   vshuf_mask0 = (__m128i) vec_splats((unsigned int) 0x0C0D0E0F);
+   vshuf_mask1 = (__m128i) vec_splats((unsigned int) 0x08090A0B);
+   vshuf_mask2 = (__m128i) vec_splats((unsigned int) 0x04050607);
+#endif
+
+   transpose4_epi32(&p0, &p1, &p2, &zero,
+                    &c, &dcdx, &dcdy, &rej4);
+
+   /* Adjust dcdx;
+    */
+   dcdx = vec_sub_epi32(zero, dcdx);
+
+   c = vec_add_epi32(c, vec_mullo_epi32(dcdx, (__m128i) vec_splats(x)));
+   c = vec_add_epi32(c, vec_mullo_epi32(dcdy, (__m128i) vec_splats(y)));
+   rej4 = vec_slli_epi32(rej4, 2);
+
+   /*
+    * Adjust so we can just check the sign bit (< 0 comparison),
+    * instead of having to do a less efficient <= 0 comparison
+    */
+   c = vec_sub_epi32(c, (__m128i) vec_splats((unsigned int) 1));
+   rej4 = vec_add_epi32(rej4, (__m128i) vec_splats((unsigned int) 1));
+
+   dcdx2 = vec_add_epi32(dcdx, dcdx);
+   dcdx3 = vec_add_epi32(dcdx2, dcdx);
+
+   transpose4_epi32(&zero, &dcdx, &dcdx2, &dcdx3,
+                    &span_0, &span_1, &span_2, &unused);
+
+   for (i = 0; i < 4; i++) {
+      __m128i cx = c;
+
+      for (j = 0; j < 4; j++) {
+         __m128i c4rej = vec_add_epi32(cx, rej4);
+         __m128i rej_masks = vec_srai_epi32(c4rej, 31);
+
+         /* if (is_zero(rej_masks)) */
+         if (vec_movemask_epi8(rej_masks) == 0) {
+            __m128i c0_0 = vec_add_epi32(vec_perm(cx, cx, vshuf_mask0), span_0);
+            __m128i c1_0 = vec_add_epi32(vec_perm(cx, cx, vshuf_mask1), span_1);
+            __m128i c2_0 = vec_add_epi32(vec_perm(cx, cx, vshuf_mask2), span_2);
+
+            __m128i c_0 = vec_or(vec_or(c0_0, c1_0), c2_0);
+
+            __m128i c0_1 = vec_add_epi32(c0_0, vec_perm(dcdy, dcdy, vshuf_mask0));
+            __m128i c1_1 = vec_add_epi32(c1_0, vec_perm(dcdy, dcdy, vshuf_mask1));
+            __m128i c2_1 = vec_add_epi32(c2_0, vec_perm(dcdy, dcdy, vshuf_mask2));
+
+            __m128i c_1 = vec_or(vec_or(c0_1, c1_1), c2_1);
+            __m128i c_01 = vec_packs_epi32(c_0, c_1);
+
+            __m128i c0_2 = vec_add_epi32(c0_1, vec_perm(dcdy, dcdy, vshuf_mask0));
+            __m128i c1_2 = vec_add_epi32(c1_1, vec_perm(dcdy, dcdy, vshuf_mask1));
+            __m128i c2_2 = vec_add_epi32(c2_1, vec_perm(dcdy, dcdy, vshuf_mask2));
+
+            __m128i c_2 = vec_or(vec_or(c0_2, c1_2), c2_2);
+
+            __m128i c0_3 = vec_add_epi32(c0_2, vec_perm(dcdy, dcdy, vshuf_mask0));
+            __m128i c1_3 = vec_add_epi32(c1_2, vec_perm(dcdy, dcdy, vshuf_mask1));
+            __m128i c2_3 = vec_add_epi32(c2_2, vec_perm(dcdy, dcdy, vshuf_mask2));
+
+            __m128i c_3 = vec_or(vec_or(c0_3, c1_3), c2_3);
+            __m128i c_23 = vec_packs_epi32(c_2, c_3);
+            __m128i c_0123 = vec_packs_epi16(c_01, c_23);
+
+            unsigned mask = vec_movemask_epi8(c_0123);
+
+            out[nr].i = i;
+            out[nr].j = j;
+            out[nr].mask = mask;
+            if (mask != 0xffff)
+               nr++;
+         }
+         cx = vec_add_epi32(cx, vec_slli_epi32(dcdx, 2));
+      }
+
+      c = vec_add_epi32(c, vec_slli_epi32(dcdy, 2));
+   }
+
+   for (i = 0; i < nr; i++)
+      lp_rast_shade_quads_mask(task,
+                               &tri->inputs,
+                               x + 4 * out[i].j,
+                               y + 4 * out[i].i,
+                               0xffff & ~out[i].mask);
+}
+
+#undef NR_PLANES
+
+#else
+
+void
+lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
+                         const union lp_rast_cmd_arg arg)
+{
+   union lp_rast_cmd_arg arg2;
+   arg2.triangle.tri = arg.triangle.tri;
+   arg2.triangle.plane_mask = (1<<3)-1;
+   lp_rast_triangle_32_3(task, arg2);
+}
+
+#endif /* _ARCH_PWR8 && PIPE_ARCH_LITTLE_ENDIAN */
+
+void
+lp_rast_triangle_32_4_16(struct lp_rasterizer_task *task,
+                         const union lp_rast_cmd_arg arg)
+{
+   union lp_rast_cmd_arg arg2;
+   arg2.triangle.tri = arg.triangle.tri;
+   arg2.triangle.plane_mask = (1<<4)-1;
+   lp_rast_triangle_32_4(task, arg2);
+}
+
+void
+lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
+                      const union lp_rast_cmd_arg arg)
+{
+   lp_rast_triangle_32_3_16(task, arg);
+}
+
 #endif
 
 
@@ -512,7 +722,7 @@ lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
 #define NR_PLANES 8
 #include "lp_rast_tri_tmp.h"
 
-#ifdef PIPE_ARCH_SSE
+#if defined(PIPE_ARCH_SSE) || (defined(_ARCH_PWR8) && defined(PIPE_ARCH_LITTLE_ENDIAN))
 #undef BUILD_MASKS
 #undef BUILD_MASK_LINEAR
 #define BUILD_MASKS(c, cdiff, dcdx, dcdy, omask, pmask) build_masks_32((int)c, (int)cdiff, dcdx, dcdy, omask, pmask)

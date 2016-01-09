@@ -787,7 +787,7 @@ nvc0_draw_stream_output(struct nvc0_context *nvc0,
    }
 
    while (num_instances--) {
-      PUSH_SPACE(push, 8);
+      nouveau_pushbuf_space(push, 9, 0, 1);
       BEGIN_NVC0(push, NVC0_3D(VERTEX_BEGIN_GL), 1);
       PUSH_DATA (push, mode);
       BEGIN_NVC0(push, NVC0_3D(DRAW_TFB_BASE), 1);
@@ -807,19 +807,31 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct nv04_resource *buf = nv04_resource(info->indirect);
-   unsigned size;
-   const uint32_t offset = buf->offset + info->indirect_offset;
+   struct nv04_resource *buf_count = nv04_resource(info->indirect_params);
+   unsigned size, macro, count = info->indirect_count, drawid = info->drawid;
+   uint32_t offset = buf->offset + info->indirect_offset;
 
    /* must make FIFO wait for engines idle before continuing to process */
-   if (buf->fence_wr && !nouveau_fence_signalled(buf->fence_wr))
+   if ((buf->fence_wr && !nouveau_fence_signalled(buf->fence_wr)) ||
+       (buf_count && buf_count->fence_wr &&
+        !nouveau_fence_signalled(buf_count->fence_wr))) {
       IMMED_NVC0(push, SUBC_3D(NV10_SUBCHAN_REF_CNT), 0);
+   }
 
-   PUSH_SPACE(push, 8);
+   /* Queue things up to let the macros write params to the driver constbuf */
+   BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+   PUSH_DATA (push, 512);
+   PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+   PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+
    if (info->indexed) {
       assert(nvc0->idxbuf.buffer);
       assert(nouveau_resource_mapped_by_gpu(nvc0->idxbuf.buffer));
-      size = 5 * 4;
-      BEGIN_1IC0(push, NVC0_3D(MACRO_DRAW_ELEMENTS_INDIRECT), 1 + size / 4);
+      size = 5;
+      if (buf_count)
+         macro = NVC0_3D_MACRO_DRAW_ELEMENTS_INDIRECT_COUNT;
+      else
+         macro = NVC0_3D_MACRO_DRAW_ELEMENTS_INDIRECT;
    } else {
       if (nvc0->state.index_bias) {
          /* index_bias is implied 0 if !info->indexed (really ?) */
@@ -827,15 +839,59 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
          IMMED_NVC0(push, NVC0_3D(VERTEX_ID_BASE), 0);
          nvc0->state.index_bias = 0;
       }
-      size = 4 * 4;
-      BEGIN_1IC0(push, NVC0_3D(MACRO_DRAW_ARRAYS_INDIRECT), 1 + size / 4);
+      size = 4;
+      if (buf_count)
+         macro = NVC0_3D_MACRO_DRAW_ARRAYS_INDIRECT_COUNT;
+      else
+         macro = NVC0_3D_MACRO_DRAW_ARRAYS_INDIRECT;
    }
-   PUSH_DATA(push, nvc0_prim_gl(info->mode));
-#define NVC0_IB_ENTRY_1_NO_PREFETCH (1 << (31 - 8))
-   PUSH_REFN(push, buf->bo, NOUVEAU_BO_RD | buf->domain);
-   nouveau_pushbuf_space(push, 0, 0, 1);
-   nouveau_pushbuf_data(push,
-                        buf->bo, offset, NVC0_IB_ENTRY_1_NO_PREFETCH | size);
+
+   /* If the stride is not the natural stride, we have to stick a separate
+    * push data reference for each draw. Otherwise it can all go in as one.
+    * Of course there is a maximum packet size, so we have to break things up
+    * along those borders as well.
+    */
+   while (count) {
+      unsigned draws = count, pushes, i;
+      if (info->indirect_stride == size * 4) {
+         draws = MIN2(draws, (NV04_PFIFO_MAX_PACKET_LEN - 4) / size);
+         pushes = 1;
+      } else {
+         draws = MIN2(draws, 32);
+         pushes = draws;
+      }
+
+      nouveau_pushbuf_space(push, 16, 0, pushes + !!buf_count);
+      PUSH_REFN(push, buf->bo, NOUVEAU_BO_RD | buf->domain);
+      if (buf_count)
+         PUSH_REFN(push, buf_count->bo, NOUVEAU_BO_RD | buf_count->domain);
+      PUSH_DATA(push,
+                NVC0_FIFO_PKHDR_1I(0, macro, 3 + !!buf_count + draws * size));
+      PUSH_DATA(push, nvc0_prim_gl(info->mode));
+      PUSH_DATA(push, drawid);
+      PUSH_DATA(push, draws);
+      if (buf_count) {
+         nouveau_pushbuf_data(push,
+                              buf_count->bo,
+                              buf_count->offset + info->indirect_params_offset,
+                              NVC0_IB_ENTRY_1_NO_PREFETCH | 4);
+      }
+      if (pushes == 1) {
+         nouveau_pushbuf_data(push,
+                              buf->bo, offset,
+                              NVC0_IB_ENTRY_1_NO_PREFETCH | (size * 4 * draws));
+         offset += draws * info->indirect_stride;
+      } else {
+         for (i = 0; i < pushes; i++) {
+            nouveau_pushbuf_data(push,
+                                 buf->bo, offset,
+                                 NVC0_IB_ENTRY_1_NO_PREFETCH | (size * 4));
+            offset += info->indirect_stride;
+         }
+      }
+      count -= draws;
+      drawid += draws;
+   }
 }
 
 static inline void
@@ -864,7 +920,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-   int i, s;
+   int s;
 
    /* NOTE: caller must ensure that (min_index + index_bias) is >= 0 */
    nvc0->vb_elt_first = info->min_index + info->index_bias;
@@ -901,29 +957,25 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    /* 8 as minimum to avoid immediate double validation of new buffers */
    nvc0_state_validate(nvc0, ~0, 8);
 
+   if (nvc0->vertprog->vp.need_draw_parameters) {
+      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+      PUSH_DATA (push, 512);
+      PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+      PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+      if (!info->indirect) {
+         BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 3);
+         PUSH_DATA (push, 256 + 128);
+         PUSH_DATA (push, info->index_bias);
+         PUSH_DATA (push, info->start_instance);
+         PUSH_DATA (push, info->drawid);
+      }
+   }
+
    push->kick_notify = nvc0_draw_vbo_kick_notify;
 
-   /* TODO: Instead of iterating over all the buffer resources looking for
-    * coherent buffers, keep track of a context-wide count.
-    */
    for (s = 0; s < 5 && !nvc0->cb_dirty; ++s) {
-      uint32_t valid = nvc0->constbuf_valid[s];
-
-      while (valid && !nvc0->cb_dirty) {
-         const unsigned i = ffs(valid) - 1;
-         struct pipe_resource *res;
-
-         valid &= ~(1 << i);
-         if (nvc0->constbuf[s][i].user)
-            continue;
-
-         res = nvc0->constbuf[s][i].u.buf;
-         if (!res)
-            continue;
-
-         if (res->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
-            nvc0->cb_dirty = true;
-      }
+      if (nvc0->constbuf_coherent[s])
+         nvc0->cb_dirty = true;
    }
 
    if (nvc0->cb_dirty) {
@@ -932,14 +984,12 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    }
 
    for (s = 0; s < 5; ++s) {
+      if (!nvc0->textures_coherent[s])
+         continue;
+
       for (int i = 0; i < nvc0->num_textures[s]; ++i) {
          struct nv50_tic_entry *tic = nv50_tic_entry(nvc0->textures[s][i]);
-         struct pipe_resource *res;
-         if (!tic)
-            continue;
-         res = nvc0->textures[s][i]->texture;
-         if (res->target != PIPE_BUFFER ||
-             !(res->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT))
+         if (!(nvc0->textures_coherent[s] & (1 << i)))
             continue;
 
          BEGIN_NVC0(push, NVC0_3D(TEX_CACHE_CTL), 1);
@@ -965,12 +1015,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       PUSH_DATA (push, info->start_instance);
    }
 
-   for (i = 0; i < nvc0->num_vtxbufs && !nvc0->base.vbo_dirty; ++i) {
-      if (!nvc0->vtxbuf[i].buffer)
-         continue;
-      if (nvc0->vtxbuf[i].buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
-         nvc0->base.vbo_dirty = true;
-   }
+   nvc0->base.vbo_dirty |= !!nvc0->vtxbufs_coherent;
 
    if (!nvc0->base.vbo_dirty && nvc0->idxbuf.buffer &&
        nvc0->idxbuf.buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)

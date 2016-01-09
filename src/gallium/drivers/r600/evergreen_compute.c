@@ -600,7 +600,7 @@ static void evergreen_launch_grid(
                            ctx->screen->has_compressed_msaa_texturing);
                 bc->type = TGSI_PROCESSOR_COMPUTE;
                 bc->isa = ctx->isa;
-                r600_llvm_compile(mod, ctx->b.family, bc, &use_kill, dump);
+                r600_llvm_compile(mod, ctx->b.family, bc, &use_kill, dump, &ctx->b.debug);
 
                 if (dump && !sb_disasm) {
                         r600_bytecode_disasm(bc);

@@ -76,8 +76,9 @@ enum tgsi_file_type {
    TGSI_FILE_IMMEDIATE           =7,
    TGSI_FILE_PREDICATE           =8,
    TGSI_FILE_SYSTEM_VALUE        =9,
-   TGSI_FILE_RESOURCE            =10,
+   TGSI_FILE_IMAGE               =10,
    TGSI_FILE_SAMPLER_VIEW        =11,
+   TGSI_FILE_BUFFER              =12,
    TGSI_FILE_COUNT      /**< how many TGSI_FILE_ types */
 };
 
@@ -127,7 +128,8 @@ struct tgsi_declaration
    unsigned Invariant   : 1;  /**< invariant optimization? */
    unsigned Local       : 1;  /**< optimize as subroutine local variable? */
    unsigned Array       : 1;  /**< extra array info? */
-   unsigned Padding     : 6;
+   unsigned Atomic      : 1;  /**< atomic only? for TGSI_FILE_BUFFER */
+   unsigned Padding     : 5;
 };
 
 struct tgsi_declaration_range
@@ -186,7 +188,9 @@ struct tgsi_declaration_interp
 #define TGSI_SEMANTIC_TESSINNER  33 /**< inner tessellation levels */
 #define TGSI_SEMANTIC_VERTICESIN 34 /**< number of input vertices */
 #define TGSI_SEMANTIC_HELPER_INVOCATION 35 /**< current invocation is helper */
-#define TGSI_SEMANTIC_COUNT      36 /**< number of semantic values */
+#define TGSI_SEMANTIC_BASEINSTANCE 36
+#define TGSI_SEMANTIC_DRAWID     37
+#define TGSI_SEMANTIC_COUNT      38 /**< number of semantic values */
 
 struct tgsi_declaration_semantic
 {
@@ -195,11 +199,12 @@ struct tgsi_declaration_semantic
    unsigned Padding        : 8;
 };
 
-struct tgsi_declaration_resource {
+struct tgsi_declaration_image {
    unsigned Resource    : 8; /**< one of TGSI_TEXTURE_ */
    unsigned Raw         : 1;
    unsigned Writable    : 1;
-   unsigned Padding     : 22;
+   unsigned Format      : 10; /**< one of PIPE_FORMAT_ */
+   unsigned Padding     : 12;
 };
 
 enum tgsi_return_type {
@@ -406,6 +411,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_ENDSUB              102
 #define TGSI_OPCODE_TXQ_LZ              103 /* TXQ for mipmap level 0 */
 #define TGSI_OPCODE_TXQS                104
+#define TGSI_OPCODE_RESQ                105
                                 /* gap */
 #define TGSI_OPCODE_NOP                 107
 
@@ -567,7 +573,8 @@ struct tgsi_instruction
    unsigned Predicate  : 1;  /* BOOL */
    unsigned Label      : 1;
    unsigned Texture    : 1;
-   unsigned Padding    : 2;
+   unsigned Memory     : 1;
+   unsigned Padding    : 1;
 };
 
 /*
@@ -722,6 +729,19 @@ struct tgsi_dst_register
    unsigned Dimension   : 1;  /* BOOL */
    int      Index       : 16; /* SINT */
    unsigned Padding     : 6;
+};
+
+#define TGSI_MEMORY_COHERENT (1 << 0)
+#define TGSI_MEMORY_RESTRICT (1 << 1)
+#define TGSI_MEMORY_VOLATILE (1 << 2)
+
+/**
+ * Specifies the type of memory access to do for the LOAD/STORE instruction.
+ */
+struct tgsi_instruction_memory
+{
+   unsigned Qualifier : 3;  /* TGSI_MEMORY_ */
+   unsigned Padding   : 29;
 };
 
 

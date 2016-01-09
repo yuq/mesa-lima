@@ -2741,6 +2741,13 @@ struct gl_shader_program
    int *InterfaceBlockStageIndex[MESA_SHADER_STAGES];
 
    /**
+    * Indices into the BufferInterfaceBlocks[] array for Uniform Buffer
+    * Objects and Shader Storage Buffer Objects.
+    */
+   unsigned *UboInterfaceBlockIndex;
+   unsigned *SsboInterfaceBlockIndex;
+
+   /**
     * Map of active uniform names to locations
     *
     * Maps any active uniform that is not an array element to a location.
@@ -3520,6 +3527,10 @@ struct gl_constants
     */
    GLboolean GLSLSkipStrictMaxUniformLimitCheck;
 
+   /** Whether gl_FragCoord and gl_FrontFacing are system values. */
+   bool GLSLFragCoordIsSysVal;
+   bool GLSLFrontFacingIsSysVal;
+
    /**
     * Always use the GetTransformFeedbackVertexCount() driver hook, rather
     * than passing the transform feedback object to the drawing function.
@@ -3705,6 +3716,7 @@ struct gl_extensions
    GLboolean ARB_gpu_shader5;
    GLboolean ARB_gpu_shader_fp64;
    GLboolean ARB_half_float_vertex;
+   GLboolean ARB_indirect_parameters;
    GLboolean ARB_instanced_arrays;
    GLboolean ARB_internalformat_query;
    GLboolean ARB_map_buffer_range;
@@ -4353,6 +4365,7 @@ struct gl_context
    struct gl_perf_monitor_state PerfMonitor;
 
    struct gl_buffer_object *DrawIndirectBuffer; /** < GL_ARB_draw_indirect */
+   struct gl_buffer_object *ParameterBuffer; /** < GL_ARB_indirect_parameters */
    struct gl_buffer_object *DispatchIndirectBuffer; /** < GL_ARB_compute_shader */
 
    struct gl_buffer_object *CopyReadBuffer; /**< GL_ARB_copy_buffer */

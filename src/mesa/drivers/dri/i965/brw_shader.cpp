@@ -27,7 +27,6 @@
 #include "brw_fs.h"
 #include "brw_nir.h"
 #include "brw_vec4_tes.h"
-#include "glsl/glsl_parser_extras.h"
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
 #include "util/debug.h"
@@ -97,6 +96,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    nir_shader_compiler_options *nir_options =
       rzalloc(compiler, nir_shader_compiler_options);
    nir_options->native_integers = true;
+   nir_options->lower_fdiv = true;
    /* In order to help allow for better CSE at the NIR level we tell NIR
     * to split all ffma instructions during opt_algebraic and we then
     * re-combine them as a later step.

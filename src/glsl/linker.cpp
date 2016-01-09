@@ -1014,7 +1014,7 @@ cross_validate_globals(struct gl_shader_program *prog,
             }
 
             if (var->type->contains_atomic() &&
-                var->data.atomic.offset != existing->data.atomic.offset) {
+                var->data.offset != existing->data.offset) {
                linker_error(prog, "offset specifications for %s "
                             "`%s' have differing values\n",
                             mode_string(var), var->name);
@@ -2723,30 +2723,6 @@ match_explicit_outputs_to_inputs(struct gl_shader_program *prog,
 }
 
 /**
- * Demote shader inputs and outputs that are not used in other stages
- */
-void
-demote_shader_inputs_and_outputs(gl_shader *sh, enum ir_variable_mode mode)
-{
-   foreach_in_list(ir_instruction, node, sh->ir) {
-      ir_variable *const var = node->as_variable();
-
-      if ((var == NULL) || (var->data.mode != int(mode)))
-	 continue;
-
-      /* A shader 'in' or 'out' variable is only really an input or output if
-       * its value is used by other shader stages.  This will cause the variable
-       * to have a location assigned.
-       */
-      if (var->data.is_unmatched_generic_inout) {
-         assert(var->data.mode != ir_var_temporary);
-	 var->data.mode = ir_var_auto;
-      }
-   }
-}
-
-
-/**
  * Store the gl_FragDepth layout in the gl_shader_program struct.
  */
 static void
@@ -3433,7 +3409,7 @@ add_interface_variables(struct gl_shader_program *shProg,
 }
 
 static bool
-add_packed_varyings(struct gl_shader_program *shProg, int stage)
+add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
 {
    struct gl_shader *sh = shProg->_LinkedShaders[stage];
    GLenum iface;
@@ -3454,10 +3430,13 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage)
          default:
             unreachable("unexpected type");
          }
-         if (!add_program_resource(shProg, iface, var,
-                                   build_stageref(shProg, var->name,
-                                                  var->data.mode)))
-            return false;
+
+         if (type == iface) {
+            if (!add_program_resource(shProg, iface, var,
+                                      build_stageref(shProg, var->name,
+                                                     var->data.mode)))
+               return false;
+         }
       }
    }
    return true;
@@ -3724,9 +3703,9 @@ build_program_resource_list(struct gl_shader_program *shProg)
 
    /* Program interface needs to expose varyings in case of SSO. */
    if (shProg->SeparateShader) {
-      if (!add_packed_varyings(shProg, input_stage))
+      if (!add_packed_varyings(shProg, input_stage, GL_PROGRAM_INPUT))
          return;
-      if (!add_packed_varyings(shProg, output_stage))
+      if (!add_packed_varyings(shProg, output_stage, GL_PROGRAM_OUTPUT))
          return;
    }
 
@@ -3942,8 +3921,10 @@ split_ubos_and_ssbos(void *mem_ctx,
                      unsigned num_blocks,
                      struct gl_uniform_block ***ubos,
                      unsigned *num_ubos,
+                     unsigned **ubo_interface_block_indices,
                      struct gl_uniform_block ***ssbos,
-                     unsigned *num_ssbos)
+                     unsigned *num_ssbos,
+                     unsigned **ssbo_interface_block_indices)
 {
    unsigned num_ubo_blocks = 0;
    unsigned num_ssbo_blocks = 0;
@@ -3961,11 +3942,25 @@ split_ubos_and_ssbos(void *mem_ctx,
    *ssbos = ralloc_array(mem_ctx, gl_uniform_block *, num_ssbo_blocks);
    *num_ssbos = 0;
 
+   if (ubo_interface_block_indices)
+      *ubo_interface_block_indices =
+         ralloc_array(mem_ctx, unsigned, num_ubo_blocks);
+
+   if (ssbo_interface_block_indices)
+      *ssbo_interface_block_indices =
+         ralloc_array(mem_ctx, unsigned, num_ssbo_blocks);
+
    for (unsigned i = 0; i < num_blocks; i++) {
       if (blocks[i].IsShaderStorage) {
-         (*ssbos)[(*num_ssbos)++] = &blocks[i];
+         (*ssbos)[*num_ssbos] = &blocks[i];
+         if (ssbo_interface_block_indices)
+            (*ssbo_interface_block_indices)[*num_ssbos] = i;
+         (*num_ssbos)++;
       } else {
-         (*ubos)[(*num_ubos)++] = &blocks[i];
+         (*ubos)[*num_ubos] = &blocks[i];
+         if (ubo_interface_block_indices)
+            (*ubo_interface_block_indices)[*num_ubos] = i;
+         (*num_ubos)++;
       }
    }
 
@@ -4443,14 +4438,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       do_dead_builtin_varyings(ctx, sh, NULL,
                                num_tfeedback_decls, tfeedback_decls);
 
-      if (!prog->SeparateShader) {
-         demote_shader_inputs_and_outputs(sh, ir_var_shader_out);
-         /* Eliminate code that is now dead due to unused outputs being
-          * demoted.
-          */
-         while (do_dead_code(sh->ir, false))
-            ;
-      }
+      remove_unused_shader_inputs_and_outputs(prog->SeparateShader, sh,
+                                              ir_var_shader_out);
    }
    else if (first == MESA_SHADER_FRAGMENT) {
       /* If the program only contains a fragment shader...
@@ -4468,12 +4457,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                                        NULL /* tfeedback_decls */))
             goto done;
       } else {
-         demote_shader_inputs_and_outputs(sh, ir_var_shader_in);
-         /* Eliminate code that is now dead due to unused inputs being
-          * demoted.
-          */
-         while (do_dead_code(sh->ir, false))
-            ;
+         remove_unused_shader_inputs_and_outputs(false, sh,
+                                                 ir_var_shader_in);
       }
    }
 
@@ -4493,16 +4478,6 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       do_dead_builtin_varyings(ctx, sh_i, sh_next,
                 next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
                 tfeedback_decls);
-
-      demote_shader_inputs_and_outputs(sh_i, ir_var_shader_out);
-      demote_shader_inputs_and_outputs(sh_next, ir_var_shader_in);
-
-      /* Eliminate code that is now dead due to unused outputs being demoted.
-       */
-      while (do_dead_code(sh_i->ir, false))
-         ;
-      while (do_dead_code(sh_next->ir, false))
-         ;
 
       /* This must be done after all dead varyings are eliminated. */
       if (!check_against_output_limit(ctx, prog, sh_i))
@@ -4577,8 +4552,10 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                               sh->NumBufferInterfaceBlocks,
                               &sh->UniformBlocks,
                               &sh->NumUniformBlocks,
+                              NULL,
                               &sh->ShaderStorageBlocks,
-                              &sh->NumShaderStorageBlocks);
+                              &sh->NumShaderStorageBlocks,
+                              NULL);
       }
    }
 
@@ -4587,8 +4564,10 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                         prog->NumBufferInterfaceBlocks,
                         &prog->UniformBlocks,
                         &prog->NumUniformBlocks,
+                        &prog->UboInterfaceBlockIndex,
                         &prog->ShaderStorageBlocks,
-                        &prog->NumShaderStorageBlocks);
+                        &prog->NumShaderStorageBlocks,
+                        &prog->SsboInterfaceBlockIndex);
 
    /* FINISHME: Assign fragment shader output locations. */
 

@@ -254,8 +254,9 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
         if (!vc4->primconvert)
                 goto fail;
 
-        vc4->uploader = u_upload_create(pctx, 16 * 1024, 4,
-                                        PIPE_BIND_INDEX_BUFFER);
+        vc4->uploader = u_upload_create(pctx, 16 * 1024,
+                                        PIPE_BIND_INDEX_BUFFER,
+                                        PIPE_USAGE_STREAM);
 
         vc4_debug |= saved_shaderdb_flag;
 

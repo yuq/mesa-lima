@@ -76,10 +76,10 @@ struct radeon_shader_binary;
 struct radeon_shader_reloc;
 
 #define SI_SGPR_RW_BUFFERS	0  /* rings (& stream-out, VS only) */
-#define SI_SGPR_CONST		2
-#define SI_SGPR_SAMPLER		4
-#define SI_SGPR_RESOURCE	6
-#define SI_SGPR_VERTEX_BUFFER	8  /* VS only */
+#define SI_SGPR_CONST_BUFFERS	2
+#define SI_SGPR_SAMPLER_STATES	4
+#define SI_SGPR_SAMPLER_VIEWS	6
+#define SI_SGPR_VERTEX_BUFFERS	8  /* VS only */
 #define SI_SGPR_BASE_VERTEX	10 /* VS only */
 #define SI_SGPR_START_INSTANCE	11 /* VS only */
 #define SI_SGPR_VS_STATE_BITS	12 /* VS(VS) only */
@@ -101,12 +101,12 @@ struct radeon_shader_reloc;
 
 /* LLVM function parameter indices */
 #define SI_PARAM_RW_BUFFERS	0
-#define SI_PARAM_CONST		1
-#define SI_PARAM_SAMPLER	2
-#define SI_PARAM_RESOURCE	3
+#define SI_PARAM_CONST_BUFFERS	1
+#define SI_PARAM_SAMPLER_STATES	2
+#define SI_PARAM_SAMPLER_VIEWS	3
 
 /* VS only parameters */
-#define SI_PARAM_VERTEX_BUFFER	4
+#define SI_PARAM_VERTEX_BUFFERS	4
 #define SI_PARAM_BASE_VERTEX	5
 #define SI_PARAM_START_INSTANCE	6
 /* [0] = clamp vertex color */
@@ -201,6 +201,7 @@ struct si_shader_selector {
 	bool		forces_persample_interp_for_persp;
 	bool		forces_persample_interp_for_linear;
 
+	/* GS parameters. */
 	unsigned	esgs_itemsize;
 	unsigned	gs_input_verts_per_prim;
 	unsigned	gs_output_prim;
@@ -209,6 +210,9 @@ struct si_shader_selector {
 	unsigned	max_gs_stream; /* count - 1 */
 	unsigned	gsvs_vertex_size;
 	unsigned	max_gsvs_emit_size;
+
+	/* PS parameters. */
+	unsigned	db_shader_control;
 
 	/* masks of "get_unique_index" bits */
 	uint64_t	outputs_written;
@@ -258,6 +262,17 @@ union si_shader_key {
 	} tes; /* tessellation evaluation shader */
 };
 
+struct si_shader_config {
+	unsigned			num_sgprs;
+	unsigned			num_vgprs;
+	unsigned			lds_size;
+	unsigned			spi_ps_input_ena;
+	unsigned			float_mode;
+	unsigned			scratch_bytes_per_wave;
+	unsigned			rsrc1;
+	unsigned			rsrc2;
+};
+
 struct si_shader {
 	struct si_shader_selector	*selector;
 	struct si_shader		*next_variant;
@@ -266,18 +281,9 @@ struct si_shader {
 	struct si_pm4_state		*pm4;
 	struct r600_resource		*bo;
 	struct r600_resource		*scratch_bo;
-	struct radeon_shader_binary	binary;
-	unsigned			num_sgprs;
-	unsigned			num_vgprs;
-	unsigned			lds_size;
-	unsigned			spi_ps_input_ena;
-	unsigned			float_mode;
-	unsigned			scratch_bytes_per_wave;
-	unsigned			spi_shader_col_format;
-	unsigned			spi_shader_z_format;
-	unsigned			db_shader_control;
-	unsigned			cb_shader_mask;
 	union si_shader_key		key;
+	struct radeon_shader_binary	binary;
+	struct si_shader_config		config;
 
 	unsigned		nparam;
 	unsigned		vs_output_param_offset[PIPE_MAX_SHADER_OUTPUTS];
@@ -288,9 +294,6 @@ struct si_shader {
 	unsigned		nr_param_exports;
 	bool			is_gs_copy_shader;
 	bool			dx10_clamp_mode; /* convert NaNs to 0 */
-
-	unsigned		rsrc1;
-	unsigned		rsrc2;
 };
 
 static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
@@ -327,19 +330,27 @@ static inline bool si_vs_exports_prim_id(struct si_shader *shader)
 
 /* radeonsi_shader.c */
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
-		     struct si_shader *shader);
+		     struct si_shader *shader,
+		     struct pipe_debug_callback *debug);
 void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f);
-int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
-		    LLVMTargetMachineRef tm, LLVMModuleRef mod);
+int si_compile_llvm(struct si_screen *sscreen,
+		    struct radeon_shader_binary *binary,
+		    struct si_shader_config *conf,
+		    LLVMTargetMachineRef tm,
+		    LLVMModuleRef mod,
+		    struct pipe_debug_callback *debug,
+		    unsigned processor);
 void si_shader_destroy(struct si_shader *shader);
+void si_shader_destroy_binary(struct radeon_shader_binary *binary);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
-int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader);
+void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
+		    struct pipe_debug_callback *debug, unsigned processor);
 void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			struct si_shader *shader,
 			uint64_t scratch_va);
-void si_shader_binary_read_config(const struct si_screen *sscreen,
-				struct si_shader *shader,
-				unsigned symbol_offset);
+void si_shader_binary_read_config(struct radeon_shader_binary *binary,
+				  struct si_shader_config *conf,
+				  unsigned symbol_offset);
 
 #endif

@@ -140,7 +140,7 @@ add_conv_test(struct gallivm_state *gallivm,
       LLVMBuildStore(builder, dst[i], ptr);
    }
 
-   LLVMBuildRetVoid(builder);;
+   LLVMBuildRetVoid(builder);
 
    gallivm_verify_function(gallivm, func);
 

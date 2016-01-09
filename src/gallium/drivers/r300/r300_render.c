@@ -1010,7 +1010,7 @@ static void r300_render_draw_elements(struct vbuf_render* render,
     CS_LOCALS(r300);
     DBG(r300, DBG_DRAW, "r300: render_draw_elements (count: %d)\n", count);
 
-    u_upload_data(r300->uploader, 0, count * 2, indices,
+    u_upload_data(r300->uploader, 0, count * 2, 4, indices,
                   &index_buffer_offset, &index_buffer);
     if (!index_buffer) {
         return;

@@ -2697,13 +2697,17 @@ use_intel_mipree_map_blit(struct brw_context *brw,
 {
    if (brw->has_llc &&
       /* It's probably not worth swapping to the blit ring because of
-       * all the overhead involved.
+       * all the overhead involved. But, we must use blitter for the
+       * surfaces with INTEL_MIPTREE_TRMODE_{YF,YS}.
        */
-       !(mode & GL_MAP_WRITE_BIT) &&
+       (!(mode & GL_MAP_WRITE_BIT) ||
+        mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) &&
        !mt->compressed &&
        (mt->tiling == I915_TILING_X ||
         /* Prior to Sandybridge, the blitter can't handle Y tiling */
-        (brw->gen >= 6 && mt->tiling == I915_TILING_Y)) &&
+        (brw->gen >= 6 && mt->tiling == I915_TILING_Y) ||
+        /* Fast copy blit on skl+ supports all tiling formats. */
+        brw->gen >= 9) &&
        can_blit_slice(mt, level, slice))
       return true;
 
@@ -2772,6 +2776,8 @@ intel_miptree_map(struct brw_context *brw,
       intel_miptree_map_movntdqa(brw, mt, map, level, slice);
 #endif
    } else {
+      /* intel_miptree_map_gtt() doesn't support surfaces with Yf/Ys tiling. */
+      assert(mt->tr_mode == INTEL_MIPTREE_TRMODE_NONE);
       intel_miptree_map_gtt(brw, mt, map, level, slice);
    }
 

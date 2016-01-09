@@ -361,12 +361,12 @@ binop("udiv", tuint, "", "src0 / src1")
 # returns a boolean representing the carry resulting from the addition of
 # the two unsigned arguments.
 
-binop_convert("uadd_carry", tbool, tuint, commutative, "src0 + src1 < src0")
+binop_convert("uadd_carry", tuint, tuint, commutative, "src0 + src1 < src0")
 
 # returns a boolean representing the borrow resulting from the subtraction
 # of the two unsigned arguments.
 
-binop_convert("usub_borrow", tbool, tuint, "", "src0 < src1")
+binop_convert("usub_borrow", tuint, tuint, "", "src0 < src1")
 
 binop("fmod", tfloat, "", "src0 - src1 * floorf(src0 / src1)")
 binop("umod", tuint, "", "src1 == 0 ? 0 : src0 % src1")

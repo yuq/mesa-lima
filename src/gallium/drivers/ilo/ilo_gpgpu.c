@@ -92,7 +92,7 @@ ilo_launch_grid(struct pipe_context *pipe,
    input_buf.buffer_size =
       ilo_shader_get_kernel_param(cs, ILO_KERNEL_CS_INPUT_SIZE);
    if (input_buf.buffer_size) {
-      u_upload_data(ilo->uploader, 0, input_buf.buffer_size, input,
+      u_upload_data(ilo->uploader, 0, input_buf.buffer_size, 16, input,
             &input_buf.buffer_offset, &input_buf.buffer);
    }
 

@@ -346,6 +346,9 @@ intelInitExtensions(struct gl_context *ctx)
          ctx->Extensions.ARB_transform_feedback3 = true;
          ctx->Extensions.ARB_transform_feedback_instanced = true;
 
+         if (ctx->Const.MaxComputeWorkGroupSize[0] >= 1024)
+            ctx->Extensions.ARB_compute_shader = true;
+
          if (brw->intelScreen->cmd_parser_version >= 2)
             brw->predicate.supported = true;
       }
@@ -357,8 +360,6 @@ intelInitExtensions(struct gl_context *ctx)
          ctx->Extensions.ARB_viewport_array = true;
          ctx->Extensions.AMD_vertex_shader_viewport_index = true;
          ctx->Extensions.ARB_shader_subroutine = true;
-         if (ctx->Const.MaxComputeWorkGroupSize[0] >= 1024)
-            ctx->Extensions.ARB_compute_shader = true;
       }
    }
 

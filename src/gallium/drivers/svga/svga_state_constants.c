@@ -613,7 +613,8 @@ emit_constbuf_vgpu10(struct svga_context *svga, unsigned shader)
     */
    new_buf_size = align(new_buf_size, 16);
 
-   u_upload_alloc(svga->const0_upload, 0, new_buf_size, &offset,
+   u_upload_alloc(svga->const0_upload, 0, new_buf_size,
+                  CONST0_UPLOAD_ALIGNMENT, &offset,
                   &dst_buffer, &dst_map);
    if (!dst_map) {
       if (src_map)

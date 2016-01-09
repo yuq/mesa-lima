@@ -38,7 +38,6 @@
 #include "sp_setup.h"
 #include "sp_state.h"
 #include "draw/draw_context.h"
-#include "draw/draw_vertex.h"
 #include "pipe/p_shader_tokens.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
@@ -599,9 +598,11 @@ setup_tri_coefficients(struct setup_context *setup)
 {
    struct softpipe_context *softpipe = setup->softpipe;
    const struct tgsi_shader_info *fsInfo = &setup->softpipe->fs_variant->info;
-   const struct vertex_info *vinfo = softpipe_get_vertex_info(softpipe);
+   const struct sp_setup_info *sinfo = &softpipe->setup_info;
    uint fragSlot;
    float v[3];
+
+   assert(sinfo->valid);
 
    /* z and w are done by linear interpolation:
     */
@@ -618,15 +619,16 @@ setup_tri_coefficients(struct setup_context *setup)
    /* setup interpolation for all the remaining attributes:
     */
    for (fragSlot = 0; fragSlot < fsInfo->num_inputs; fragSlot++) {
-      const uint vertSlot = vinfo->attrib[fragSlot].src_index;
+      const uint vertSlot = sinfo->attrib[fragSlot].src_index;
       uint j;
 
-      switch (vinfo->attrib[fragSlot].interp_mode) {
-      case INTERP_CONSTANT:
-         for (j = 0; j < TGSI_NUM_CHANNELS; j++)
+      switch (sinfo->attrib[fragSlot].interp) {
+      case SP_INTERP_CONSTANT:
+         for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             const_coeff(setup, &setup->coef[fragSlot], vertSlot, j);
+         }
          break;
-      case INTERP_LINEAR:
+      case SP_INTERP_LINEAR:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             tri_apply_cylindrical_wrap(setup->vmin[vertSlot][j],
                                        setup->vmid[vertSlot][j],
@@ -636,7 +638,7 @@ setup_tri_coefficients(struct setup_context *setup)
             tri_linear_coeff(setup, &setup->coef[fragSlot], j, v);
          }
          break;
-      case INTERP_PERSPECTIVE:
+      case SP_INTERP_PERSPECTIVE:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             tri_apply_cylindrical_wrap(setup->vmin[vertSlot][j],
                                        setup->vmid[vertSlot][j],
@@ -646,7 +648,7 @@ setup_tri_coefficients(struct setup_context *setup)
             tri_persp_coeff(setup, &setup->coef[fragSlot], j, v);
          }
          break;
-      case INTERP_POS:
+      case SP_INTERP_POS:
          setup_fragcoord_coeff(setup, fragSlot);
          break;
       default:
@@ -966,10 +968,12 @@ setup_line_coefficients(struct setup_context *setup,
 {
    struct softpipe_context *softpipe = setup->softpipe;
    const struct tgsi_shader_info *fsInfo = &setup->softpipe->fs_variant->info;
-   const struct vertex_info *vinfo = softpipe_get_vertex_info(softpipe);
+   const struct sp_setup_info *sinfo = &softpipe->setup_info;
    uint fragSlot;
    float area;
    float v[2];
+
+   assert(sinfo->valid);
 
    /* use setup->vmin, vmax to point to vertices */
    if (softpipe->rasterizer->flatshade_first)
@@ -1001,15 +1005,15 @@ setup_line_coefficients(struct setup_context *setup,
    /* setup interpolation for all the remaining attributes:
     */
    for (fragSlot = 0; fragSlot < fsInfo->num_inputs; fragSlot++) {
-      const uint vertSlot = vinfo->attrib[fragSlot].src_index;
+      const uint vertSlot = sinfo->attrib[fragSlot].src_index;
       uint j;
 
-      switch (vinfo->attrib[fragSlot].interp_mode) {
-      case INTERP_CONSTANT:
+      switch (sinfo->attrib[fragSlot].interp) {
+      case SP_INTERP_CONSTANT:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++)
             const_coeff(setup, &setup->coef[fragSlot], vertSlot, j);
          break;
-      case INTERP_LINEAR:
+      case SP_INTERP_LINEAR:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             line_apply_cylindrical_wrap(setup->vmin[vertSlot][j],
                                         setup->vmax[vertSlot][j],
@@ -1018,7 +1022,7 @@ setup_line_coefficients(struct setup_context *setup,
             line_linear_coeff(setup, &setup->coef[fragSlot], j, v);
          }
          break;
-      case INTERP_PERSPECTIVE:
+      case SP_INTERP_PERSPECTIVE:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
             line_apply_cylindrical_wrap(setup->vmin[vertSlot][j],
                                         setup->vmax[vertSlot][j],
@@ -1027,7 +1031,7 @@ setup_line_coefficients(struct setup_context *setup,
             line_persp_coeff(setup, &setup->coef[fragSlot], j, v);
          }
          break;
-      case INTERP_POS:
+      case SP_INTERP_POS:
          setup_fragcoord_coeff(setup, fragSlot);
          break;
       default:
@@ -1236,7 +1240,7 @@ sp_setup_point(struct setup_context *setup,
    const boolean round = (boolean) setup->softpipe->rasterizer->point_smooth;
    const float x = v0[0][0];  /* Note: data[0] is always position */
    const float y = v0[0][1];
-   const struct vertex_info *vinfo = softpipe_get_vertex_info(softpipe);
+   const struct sp_setup_info *sinfo = &softpipe->setup_info;
    uint fragSlot;
    uint layer = 0;
    unsigned viewport_index = 0;
@@ -1244,6 +1248,8 @@ sp_setup_point(struct setup_context *setup,
    debug_printf("Setup point:\n");
    print_vertex(setup, v0);
 #endif
+
+   assert(sinfo->valid);
 
    if (setup->softpipe->no_rast || setup->softpipe->rasterizer->rasterizer_discard)
       return;
@@ -1285,22 +1291,22 @@ sp_setup_point(struct setup_context *setup,
    const_coeff(setup, &setup->posCoef, 0, 3);
 
    for (fragSlot = 0; fragSlot < fsInfo->num_inputs; fragSlot++) {
-      const uint vertSlot = vinfo->attrib[fragSlot].src_index;
+      const uint vertSlot = sinfo->attrib[fragSlot].src_index;
       uint j;
 
-      switch (vinfo->attrib[fragSlot].interp_mode) {
-      case INTERP_CONSTANT:
+      switch (sinfo->attrib[fragSlot].interp) {
+      case SP_INTERP_CONSTANT:
          /* fall-through */
-      case INTERP_LINEAR:
+      case SP_INTERP_LINEAR:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++)
             const_coeff(setup, &setup->coef[fragSlot], vertSlot, j);
          break;
-      case INTERP_PERSPECTIVE:
+      case SP_INTERP_PERSPECTIVE:
          for (j = 0; j < TGSI_NUM_CHANNELS; j++)
             point_persp_coeff(setup, setup->vprovoke,
                               &setup->coef[fragSlot], vertSlot, j);
          break;
-      case INTERP_POS:
+      case SP_INTERP_POS:
          setup_fragcoord_coeff(setup, fragSlot);
          break;
       default:

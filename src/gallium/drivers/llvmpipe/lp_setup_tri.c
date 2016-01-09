@@ -46,6 +46,9 @@
 
 #if defined(PIPE_ARCH_SSE)
 #include <emmintrin.h>
+#elif defined(_ARCH_PWR8) && defined(PIPE_ARCH_LITTLE_ENDIAN)
+#include <altivec.h>
+#include "util/u_pwr8.h"
 #endif
 
 static inline int
@@ -387,25 +390,21 @@ do_triangle_ccw(struct lp_setup_context *setup,
    plane = GET_PLANES(tri);
 
 #if defined(PIPE_ARCH_SSE)
-   if (setup->fb.width <= MAX_FIXED_LENGTH32 &&
-       setup->fb.height <= MAX_FIXED_LENGTH32 &&
-       (bbox.x1 - bbox.x0) <= MAX_FIXED_LENGTH32 &&
-       (bbox.y1 - bbox.y0) <= MAX_FIXED_LENGTH32) {
+   if (1) {
       __m128i vertx, verty;
       __m128i shufx, shufy;
-      __m128i dcdx, dcdy, c;
-      __m128i unused;
+      __m128i dcdx, dcdy;
+      __m128i cdx02, cdx13, cdy02, cdy13, c02, c13;
+      __m128i c01, c23, unused;
       __m128i dcdx_neg_mask;
       __m128i dcdy_neg_mask;
       __m128i dcdx_zero_mask;
-      __m128i top_left_flag;
-      __m128i c_inc_mask, c_inc;
+      __m128i top_left_flag, c_dec;
       __m128i eo, p0, p1, p2;
       __m128i zero = _mm_setzero_si128();
-      PIPE_ALIGN_VAR(16) int32_t temp_vec[4];
 
-      vertx = _mm_loadu_si128((__m128i *)position->x); /* vertex x coords */
-      verty = _mm_loadu_si128((__m128i *)position->y); /* vertex y coords */
+      vertx = _mm_load_si128((__m128i *)position->x); /* vertex x coords */
+      verty = _mm_load_si128((__m128i *)position->y); /* vertex y coords */
 
       shufx = _mm_shuffle_epi32(vertx, _MM_SHUFFLE(3,0,2,1));
       shufy = _mm_shuffle_epi32(verty, _MM_SHUFFLE(3,0,2,1));
@@ -419,27 +418,146 @@ do_triangle_ccw(struct lp_setup_context *setup,
 
       top_left_flag = _mm_set1_epi32((setup->bottom_edge_rule == 0) ? ~0 : 0);
 
-      c_inc_mask = _mm_or_si128(dcdx_neg_mask,
-                                _mm_and_si128(dcdx_zero_mask,
-                                              _mm_xor_si128(dcdy_neg_mask,
-                                                            top_left_flag)));
+      c_dec = _mm_or_si128(dcdx_neg_mask,
+                           _mm_and_si128(dcdx_zero_mask,
+                                         _mm_xor_si128(dcdy_neg_mask,
+                                                       top_left_flag)));
 
-      c_inc = _mm_srli_epi32(c_inc_mask, 31);
+      /*
+       * 64 bit arithmetic.
+       * Note we need _signed_ mul (_mm_mul_epi32) which we emulate.
+       */
+      cdx02 = mm_mullohi_epi32(dcdx, vertx, &cdx13);
+      cdy02 = mm_mullohi_epi32(dcdy, verty, &cdy13);
+      c02 = _mm_sub_epi64(cdx02, cdy02);
+      c13 = _mm_sub_epi64(cdx13, cdy13);
+      c02 = _mm_sub_epi64(c02, _mm_shuffle_epi32(c_dec,
+                                                 _MM_SHUFFLE(2,2,0,0)));
+      c13 = _mm_sub_epi64(c13, _mm_shuffle_epi32(c_dec,
+                                                 _MM_SHUFFLE(3,3,1,1)));
 
-      c = _mm_sub_epi32(mm_mullo_epi32(dcdx, vertx),
-                        mm_mullo_epi32(dcdy, verty));
-
-      c = _mm_add_epi32(c, c_inc);
+      /*
+       * Useful for very small fbs/tris (or fewer subpixel bits) only:
+       * c = _mm_sub_epi32(mm_mullo_epi32(dcdx, vertx),
+       *                   mm_mullo_epi32(dcdy, verty));
+       *
+       * c = _mm_sub_epi32(c, c_dec);
+       */
 
       /* Scale up to match c:
        */
       dcdx = _mm_slli_epi32(dcdx, FIXED_ORDER);
       dcdy = _mm_slli_epi32(dcdy, FIXED_ORDER);
 
-      /* Calculate trivial reject values:
+      /*
+       * Calculate trivial reject values:
+       * Note eo cannot overflow even if dcdx/dcdy would already have
+       * 31 bits (which they shouldn't have). This is because eo
+       * is never negative (albeit if we rely on that need to be careful...)
        */
       eo = _mm_sub_epi32(_mm_andnot_si128(dcdy_neg_mask, dcdy),
                          _mm_and_si128(dcdx_neg_mask, dcdx));
+
+      /* ei = _mm_sub_epi32(_mm_sub_epi32(dcdy, dcdx), eo); */
+
+      /*
+       * Pointless transpose which gets undone immediately in
+       * rasterization.
+       * It is actually difficult to do away with it - would essentially
+       * need GET_PLANES_DX, GET_PLANES_DY etc., but the calculations
+       * for this then would need to depend on the number of planes.
+       * The transpose is quite special here due to c being 64bit...
+       * The store has to be unaligned (unless we'd make the plane size
+       * a multiple of 128), and of course storing eo separately...
+       */
+      c01 = _mm_unpacklo_epi64(c02, c13);
+      c23 = _mm_unpackhi_epi64(c02, c13);
+      transpose2_64_2_32(&c01, &c23, &dcdx, &dcdy,
+                         &p0, &p1, &p2, &unused);
+      _mm_storeu_si128((__m128i *)&plane[0], p0);
+      plane[0].eo = (uint32_t)_mm_cvtsi128_si32(eo);
+      _mm_storeu_si128((__m128i *)&plane[1], p1);
+      eo = _mm_shuffle_epi32(eo, _MM_SHUFFLE(3,2,0,1));
+      plane[1].eo = (uint32_t)_mm_cvtsi128_si32(eo);
+      _mm_storeu_si128((__m128i *)&plane[2], p2);
+      eo = _mm_shuffle_epi32(eo, _MM_SHUFFLE(0,0,0,2));
+      plane[2].eo = (uint32_t)_mm_cvtsi128_si32(eo);
+   } else
+#elif defined(_ARCH_PWR8) && defined(PIPE_ARCH_LITTLE_ENDIAN)
+   /*
+    * XXX this code is effectively disabled for all practical purposes,
+    * as the allowed fb size is tiny if FIXED_ORDER is 8.
+    */
+   if (setup->fb.width <= MAX_FIXED_LENGTH32 &&
+       setup->fb.height <= MAX_FIXED_LENGTH32 &&
+       (bbox.x1 - bbox.x0) <= MAX_FIXED_LENGTH32 &&
+       (bbox.y1 - bbox.y0) <= MAX_FIXED_LENGTH32) {
+      unsigned int bottom_edge;
+      __m128i vertx, verty;
+      __m128i shufx, shufy;
+      __m128i dcdx, dcdy, c;
+      __m128i unused;
+      __m128i dcdx_neg_mask;
+      __m128i dcdy_neg_mask;
+      __m128i dcdx_zero_mask;
+      __m128i top_left_flag;
+      __m128i c_inc_mask, c_inc;
+      __m128i eo, p0, p1, p2;
+      __m128i_union vshuf_mask;
+      __m128i zero = vec_splats((unsigned char) 0);
+      PIPE_ALIGN_VAR(16) int32_t temp_vec[4];
+
+#ifdef PIPE_ARCH_LITTLE_ENDIAN
+      vshuf_mask.i[0] = 0x07060504;
+      vshuf_mask.i[1] = 0x0B0A0908;
+      vshuf_mask.i[2] = 0x03020100;
+      vshuf_mask.i[3] = 0x0F0E0D0C;
+#else
+      vshuf_mask.i[0] = 0x00010203;
+      vshuf_mask.i[1] = 0x0C0D0E0F;
+      vshuf_mask.i[2] = 0x04050607;
+      vshuf_mask.i[3] = 0x08090A0B;
+#endif
+
+      /* vertex x coords */
+      vertx = vec_load_si128((const uint32_t *) position->x);
+      /* vertex y coords */
+      verty = vec_load_si128((const uint32_t *) position->y);
+
+      shufx = vec_perm (vertx, vertx, vshuf_mask.m128i);
+      shufy = vec_perm (verty, verty, vshuf_mask.m128i);
+
+      dcdx = vec_sub_epi32(verty, shufy);
+      dcdy = vec_sub_epi32(vertx, shufx);
+
+      dcdx_neg_mask = vec_srai_epi32(dcdx, 31);
+      dcdx_zero_mask = vec_cmpeq_epi32(dcdx, zero);
+      dcdy_neg_mask = vec_srai_epi32(dcdy, 31);
+
+      bottom_edge = (setup->bottom_edge_rule == 0) ? ~0 : 0;
+      top_left_flag = (__m128i) vec_splats(bottom_edge);
+
+      c_inc_mask = vec_or(dcdx_neg_mask,
+                                vec_and(dcdx_zero_mask,
+                                              vec_xor(dcdy_neg_mask,
+                                                            top_left_flag)));
+
+      c_inc = vec_srli_epi32(c_inc_mask, 31);
+
+      c = vec_sub_epi32(vec_mullo_epi32(dcdx, vertx),
+                        vec_mullo_epi32(dcdy, verty));
+
+      c = vec_add_epi32(c, c_inc);
+
+      /* Scale up to match c:
+       */
+      dcdx = vec_slli_epi32(dcdx, FIXED_ORDER);
+      dcdy = vec_slli_epi32(dcdy, FIXED_ORDER);
+
+      /* Calculate trivial reject values:
+       */
+      eo = vec_sub_epi32(vec_andc(dcdy_neg_mask, dcdy),
+                         vec_and(dcdx_neg_mask, dcdx));
 
       /* ei = _mm_sub_epi32(_mm_sub_epi32(dcdy, dcdx), eo); */
 
@@ -449,12 +567,12 @@ do_triangle_ccw(struct lp_setup_context *setup,
       transpose4_epi32(&c, &dcdx, &dcdy, &eo,
                        &p0, &p1, &p2, &unused);
 
-#define STORE_PLANE(plane, vec) do {                 \
-         _mm_store_si128((__m128i *)&temp_vec, vec); \
-         plane.c    = (int64_t)temp_vec[0];          \
-         plane.dcdx = temp_vec[1];                   \
-         plane.dcdy = temp_vec[2];                   \
-         plane.eo   = temp_vec[3];                   \
+#define STORE_PLANE(plane, vec) do {                  \
+         vec_store_si128((uint32_t *)&temp_vec, vec); \
+         plane.c    = (int64_t)temp_vec[0];           \
+         plane.dcdx = temp_vec[1];                    \
+         plane.dcdy = temp_vec[2];                    \
+         plane.eo   = temp_vec[3];                    \
       } while(0)
 
       STORE_PLANE(plane[0], p0);
@@ -473,17 +591,17 @@ do_triangle_ccw(struct lp_setup_context *setup,
       plane[2].dcdx = position->dy20;
   
       for (i = 0; i < 3; i++) {
-         /* half-edge constants, will be interated over the whole render
+         /* half-edge constants, will be iterated over the whole render
           * target.
           */
          plane[i].c = IMUL64(plane[i].dcdx, position->x[i]) -
-               IMUL64(plane[i].dcdy, position->y[i]);
+                      IMUL64(plane[i].dcdy, position->y[i]);
 
          /* correct for top-left vs. bottom-left fill convention.
-          */         
+          */
          if (plane[i].dcdx < 0) {
             /* both fill conventions want this - adjust for left edges */
-            plane[i].c++;            
+            plane[i].c++;
          }
          else if (plane[i].dcdx == 0) {
             if (setup->bottom_edge_rule == 0){
@@ -517,19 +635,19 @@ do_triangle_ccw(struct lp_setup_context *setup,
    }
 
    if (0) {
-      debug_printf("p0: %"PRIx64"/%08x/%08x/%"PRIx64"\n",
+      debug_printf("p0: %"PRIx64"/%08x/%08x/%08x\n",
                    plane[0].c,
                    plane[0].dcdx,
                    plane[0].dcdy,
                    plane[0].eo);
-      
-      debug_printf("p1: %"PRIx64"/%08x/%08x/%"PRIx64"\n",
+
+      debug_printf("p1: %"PRIx64"/%08x/%08x/%08x\n",
                    plane[1].c,
                    plane[1].dcdx,
                    plane[1].dcdy,
                    plane[1].eo);
-      
-      debug_printf("p2: %"PRIx64"/%08x/%08x/%"PRIx64"\n",
+
+      debug_printf("p2: %"PRIx64"/%08x/%08x/%08x\n",
                    plane[2].c,
                    plane[2].dcdx,
                    plane[2].dcdy,
@@ -590,7 +708,7 @@ do_triangle_ccw(struct lp_setup_context *setup,
 static inline uint32_t 
 floor_pot(uint32_t n)
 {
-#if defined(PIPE_CC_GCC) && defined(PIPE_ARCH_X86)
+#if defined(PIPE_CC_GCC) && (defined(PIPE_ARCH_X86) || defined(PIPE_ARCH_X86_64))
    if (n == 0)
       return 0;
 
@@ -738,9 +856,9 @@ lp_setup_bin_triangle( struct lp_setup_context *setup,
 
          ei[i] = (plane[i].dcdy - 
                   plane[i].dcdx - 
-                  plane[i].eo) << TILE_ORDER;
+                  (int64_t)plane[i].eo) << TILE_ORDER;
 
-         eo[i] = plane[i].eo << TILE_ORDER;
+         eo[i] = (int64_t)plane[i].eo << TILE_ORDER;
          xstep[i] = -(((int64_t)plane[i].dcdx) << TILE_ORDER);
          ystep[i] = ((int64_t)plane[i].dcdy) << TILE_ORDER;
       }
@@ -932,12 +1050,12 @@ rotate_fixed_position_12( struct fixed_position* position )
 /**
  * Draw triangle if it's CW, cull otherwise.
  */
-static void triangle_cw( struct lp_setup_context *setup,
-			 const float (*v0)[4],
-			 const float (*v1)[4],
-			 const float (*v2)[4] )
+static void triangle_cw(struct lp_setup_context *setup,
+                        const float (*v0)[4],
+                        const float (*v1)[4],
+                        const float (*v2)[4])
 {
-   struct fixed_position position;
+   PIPE_ALIGN_VAR(16) struct fixed_position position;
 
    calc_fixed_position(setup, &position, v0, v1, v2);
 
@@ -953,12 +1071,12 @@ static void triangle_cw( struct lp_setup_context *setup,
 }
 
 
-static void triangle_ccw( struct lp_setup_context *setup,
-                          const float (*v0)[4],
-                          const float (*v1)[4],
-                          const float (*v2)[4])
+static void triangle_ccw(struct lp_setup_context *setup,
+                         const float (*v0)[4],
+                         const float (*v1)[4],
+                         const float (*v2)[4])
 {
-   struct fixed_position position;
+   PIPE_ALIGN_VAR(16) struct fixed_position position;
 
    calc_fixed_position(setup, &position, v0, v1, v2);
 
@@ -969,12 +1087,12 @@ static void triangle_ccw( struct lp_setup_context *setup,
 /**
  * Draw triangle whether it's CW or CCW.
  */
-static void triangle_both( struct lp_setup_context *setup,
-			   const float (*v0)[4],
-			   const float (*v1)[4],
-			   const float (*v2)[4] )
+static void triangle_both(struct lp_setup_context *setup,
+                          const float (*v0)[4],
+                          const float (*v1)[4],
+                          const float (*v2)[4])
 {
-   struct fixed_position position;
+   PIPE_ALIGN_VAR(16) struct fixed_position position;
    struct llvmpipe_context *lp_context = (struct llvmpipe_context *)setup->pipe;
 
    if (lp_context->active_statistics_queries &&

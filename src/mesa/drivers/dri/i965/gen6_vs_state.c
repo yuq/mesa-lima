@@ -32,7 +32,6 @@
 #include "program/prog_parameter.h"
 #include "program/prog_statevars.h"
 #include "intel_batchbuffer.h"
-#include "glsl/glsl_parser_extras.h"
 
 /**
  * Creates a streamed BO containing the push constants for the VS or GS on

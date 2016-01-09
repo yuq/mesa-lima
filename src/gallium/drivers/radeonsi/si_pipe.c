@@ -340,6 +340,13 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_CLEAR_TEXTURE:
+	case PIPE_CAP_DRAW_PARAMETERS:
+	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
+	case PIPE_CAP_MULTI_DRAW_INDIRECT:
+	case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
+	case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
+	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
+	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
@@ -512,6 +519,8 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 		return 1;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
+	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+		return 0;
 	}
 	return 0;
 }

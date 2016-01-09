@@ -486,6 +486,11 @@ lp_setup_try_clear_zs(struct lp_setup_context *setup,
                                    depth,
                                    stencil);
 
+   /*
+    * XXX: should make a full mask here for things like D24X8,
+    * otherwise we'll do a read-modify-write clear later which
+    * should be unnecessary.
+    */
    zsmask = util_pack64_mask_z_stencil(setup->fb.zsbuf->format,
                                        zmask32,
                                        smask8);

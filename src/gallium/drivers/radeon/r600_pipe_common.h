@@ -440,6 +440,8 @@ struct r600_common_context {
 	 * the GPU addresses are updated. */
 	struct list_head		texture_buffers;
 
+	struct pipe_debug_callback	debug;
+
 	/* Copy one resource to another using async DMA. */
 	void (*dma_copy)(struct pipe_context *ctx,
 			 struct pipe_resource *dst,
@@ -514,7 +516,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 void r600_common_context_cleanup(struct r600_common_context *rctx);
 void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r);
 bool r600_can_dump_shader(struct r600_common_screen *rscreen,
-			  const struct tgsi_token *tokens);
+			  unsigned processor);
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
 			      unsigned offset, unsigned size, unsigned value,
 			      bool is_framebuffer);

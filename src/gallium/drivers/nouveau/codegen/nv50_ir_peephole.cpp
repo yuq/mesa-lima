@@ -676,23 +676,22 @@ ConstantFolding::expr(Instruction *i,
    switch (i->op) {
    case OP_MAD:
    case OP_FMA: {
-      i->op = OP_ADD;
+      ImmediateValue src0, src1 = *i->getSrc(0)->asImm();
 
-      /* Move the immediate to the second arg, otherwise the ADD operation
-       * won't be emittable
-       */
-      i->setSrc(1, i->getSrc(0));
+      // Move the immediate into position 1, where we know it might be
+      // emittable. However it might not be anyways, as there may be other
+      // restrictions, so move it into a separate LValue.
+      bld.setPosition(i, false);
+      i->op = OP_ADD;
+      i->setSrc(1, bld.mkMov(bld.getSSA(type), i->getSrc(0), type)->getDef(0));
       i->setSrc(0, i->getSrc(2));
       i->src(0).mod = i->src(2).mod;
       i->setSrc(2, NULL);
 
-      ImmediateValue src0;
       if (i->src(0).getImmediate(src0))
-         expr(i, src0, *i->getSrc(1)->asImm());
-      if (i->saturate && !prog->getTarget()->isSatSupported(i)) {
-         bld.setPosition(i, false);
-         i->setSrc(1, bld.loadImm(NULL, res.data.u32));
-      }
+         expr(i, src0, src1);
+      else
+         opnd(i, src1, 1);
       break;
    }
    case OP_PFETCH:
