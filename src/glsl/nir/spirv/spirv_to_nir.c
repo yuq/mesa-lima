@@ -1981,6 +1981,8 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          var->interface_type = NULL;
          break;
       case SpvStorageClassWorkgroup:
+         var->data.mode = nir_var_shared;
+         break;
       case SpvStorageClassCrossWorkgroup:
       case SpvStorageClassGeneric:
       case SpvStorageClassAtomicCounter:
