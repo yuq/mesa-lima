@@ -875,9 +875,12 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         } else {
             if (tx->version.major < 3) {
                 assert(!param->rel);
-                src = ureg_DECL_fs_input(tx->ureg, TGSI_SEMANTIC_COLOR,
-                                         param->idx,
-                                         TGSI_INTERPOLATE_COLOR);
+                src = ureg_DECL_fs_input_cyl_centroid(
+                    ureg, TGSI_SEMANTIC_COLOR, param->idx,
+                    TGSI_INTERPOLATE_COLOR, 0,
+                    tx->info->force_color_in_centroid ?
+                      TGSI_INTERPOLATE_LOC_CENTROID : 0,
+                    0, 1);
             } else {
                 assert(!param->rel); /* TODO */
                 assert(param->idx < Elements(tx->regs.v));
@@ -2045,7 +2048,8 @@ DECL_SPECIAL(DCL)
             unsigned interp_location = 0;
             /* SM3 only, SM2 input semantic determined by file */
             assert(sem.reg.idx < Elements(tx->regs.v));
-            if (sem.reg.mod & NINED3DSPDM_CENTROID)
+            if (sem.reg.mod & NINED3DSPDM_CENTROID ||
+                (tgsi.Name == TGSI_SEMANTIC_COLOR && tx->info->force_color_in_centroid))
                 interp_location = TGSI_INTERPOLATE_LOC_CENTROID;
             tx->regs.v[sem.reg.idx] = ureg_DECL_fs_input_cyl_centroid(
                 ureg, tgsi.Name, tgsi.Index,
