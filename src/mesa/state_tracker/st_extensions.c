@@ -226,6 +226,9 @@ void st_init_limits(struct pipe_screen *screen,
             screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS) / 2;
       pc->MaxShaderStorageBlocks = pc->MaxAtomicBuffers;
 
+      pc->MaxImageUniforms = screen->get_shader_param(
+            screen, sh, PIPE_SHADER_CAP_MAX_SHADER_IMAGES);
+
       /* Gallium doesn't really care about local vs. env parameters so use the
        * same limits.
        */
@@ -370,6 +373,20 @@ void st_init_limits(struct pipe_screen *screen,
          c->MaxCombinedShaderStorageBlocks;
       c->MaxShaderStorageBlockSize = 1 << 27;
       extensions->ARB_shader_storage_buffer_object = GL_TRUE;
+   }
+
+   c->MaxCombinedImageUniforms =
+         c->Program[MESA_SHADER_VERTEX].MaxImageUniforms +
+         c->Program[MESA_SHADER_TESS_CTRL].MaxImageUniforms +
+         c->Program[MESA_SHADER_TESS_EVAL].MaxImageUniforms +
+         c->Program[MESA_SHADER_GEOMETRY].MaxImageUniforms +
+         c->Program[MESA_SHADER_FRAGMENT].MaxImageUniforms +
+         c->Program[MESA_SHADER_COMPUTE].MaxImageUniforms;
+   c->MaxImageUnits = MAX_IMAGE_UNITS;
+   c->MaxImageSamples = 0; /* XXX */
+   if (c->MaxCombinedImageUniforms) {
+      extensions->ARB_shader_image_load_store = GL_TRUE;
+      extensions->ARB_shader_image_size = GL_TRUE;
    }
 }
 
