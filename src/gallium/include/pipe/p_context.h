@@ -313,14 +313,14 @@ struct pipe_context {
     * \param shader     selects shader stage
     * \param start_slot first image slot to bind.
     * \param count      number of consecutive images to bind.
-    * \param buffers    array of pointers to the images to bind, it
+    * \param buffers    array of the images to bind, it
     *                   should contain at least \a count elements
     *                   unless it's NULL, in which case no images will
     *                   be bound.
     */
    void (*set_shader_images)(struct pipe_context *, unsigned shader,
                              unsigned start_slot, unsigned count,
-                             struct pipe_image_view **images);
+                             struct pipe_image_view *images);
 
    void (*set_vertex_buffers)( struct pipe_context *,
                                unsigned start_slot,
@@ -478,16 +478,6 @@ struct pipe_context {
    void (*surface_destroy)(struct pipe_context *ctx,
                            struct pipe_surface *);
 
-   /**
-    * Create an image view into a buffer or texture to be used with load,
-    * store, and atomic instructions by a shader stage.
-    */
-   struct pipe_image_view * (*create_image_view)(struct pipe_context *ctx,
-                                                 struct pipe_resource *texture,
-                                                 const struct pipe_image_view *templat);
-
-   void (*image_view_destroy)(struct pipe_context *ctx,
-                              struct pipe_image_view *view);
 
    /**
     * Map a resource.

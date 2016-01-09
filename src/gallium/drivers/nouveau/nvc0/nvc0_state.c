@@ -1231,7 +1231,7 @@ nvc0_set_compute_resources(struct pipe_context *pipe,
 static void
 nvc0_set_shader_images(struct pipe_context *pipe, unsigned shader,
                        unsigned start_slot, unsigned count,
-                       struct pipe_image_view **views)
+                       struct pipe_image_view *views)
 {
 }
 

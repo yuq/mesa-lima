@@ -393,14 +393,12 @@ struct pipe_sampler_view
 
 
 /**
- * A view into a writable buffer or texture that can be bound to a shader
+ * A description of a writable buffer or texture that can be bound to a shader
  * stage.
  */
 struct pipe_image_view
 {
-   struct pipe_reference reference;
    struct pipe_resource *resource; /**< resource into which this is a view  */
-   struct pipe_context *context; /**< context this view belongs to */
    enum pipe_format format;      /**< typed PIPE_FORMAT_x */
 
    union {
