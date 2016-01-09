@@ -85,6 +85,11 @@ static const struct st_tracked_state *render_atoms[] =
    &st_bind_tes_ssbos,
    &st_bind_fs_ssbos,
    &st_bind_gs_ssbos,
+   &st_bind_vs_images,
+   &st_bind_tcs_images,
+   &st_bind_tes_images,
+   &st_bind_gs_images,
+   &st_bind_fs_images,
    &st_update_pixel_transfer,
    &st_update_tess,
 
@@ -105,6 +110,7 @@ static const struct st_tracked_state *compute_atoms[] =
    &st_bind_cs_ubos,
    &st_bind_cs_atomics,
    &st_bind_cs_ssbos,
+   &st_bind_cs_images,
 };
 
 

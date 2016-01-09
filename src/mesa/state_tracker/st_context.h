@@ -65,6 +65,7 @@ struct u_upload_mgr;
 #define ST_NEW_ATOMIC_BUFFER           (1 << 12)
 #define ST_NEW_STORAGE_BUFFER          (1 << 13)
 #define ST_NEW_COMPUTE_PROGRAM         (1 << 14)
+#define ST_NEW_IMAGE_UNITS             (1 << 15)
 
 
 struct st_state_flags {

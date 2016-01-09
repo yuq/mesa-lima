@@ -384,6 +384,7 @@ static void st_init_driver_flags(struct gl_driver_flags *f)
    f->NewTextureBuffer = ST_NEW_SAMPLER_VIEWS;
    f->NewAtomicBuffer = ST_NEW_ATOMIC_BUFFER;
    f->NewShaderStorageBuffer = ST_NEW_STORAGE_BUFFER;
+   f->NewImageUnits = ST_NEW_IMAGE_UNITS;
 }
 
 struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
