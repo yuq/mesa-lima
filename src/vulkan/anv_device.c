@@ -384,6 +384,8 @@ void anv_GetPhysicalDeviceProperties(
 
    anv_finishme("Get correct values for VkPhysicalDeviceLimits");
 
+   const float time_stamp_base = devinfo->gen >= 9 ? 83.333 : 80.0;
+
    VkSampleCountFlags sample_counts =
       VK_SAMPLE_COUNT_1_BIT |
       VK_SAMPLE_COUNT_2_BIT |
@@ -490,7 +492,7 @@ void anv_GetPhysicalDeviceProperties(
       .sampledImageStencilSampleCounts          = sample_counts,
       .storageImageSampleCounts                 = VK_SAMPLE_COUNT_1_BIT,
       .maxSampleMaskWords                       = 1,
-      .timestampPeriod                          = 80.0 / (1000 * 1000 * 1000),
+      .timestampPeriod                          = time_stamp_base / (1000 * 1000 * 1000),
       .maxClipDistances                         = 0 /* FIXME */,
       .maxCullDistances                         = 0 /* FIXME */,
       .maxCombinedClipAndCullDistances          = 0 /* FIXME */,
