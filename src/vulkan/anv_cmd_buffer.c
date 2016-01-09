@@ -297,7 +297,11 @@ VkResult anv_BeginCommandBuffer(
 
    cmd_buffer->usage_flags = pBeginInfo->flags;
 
-   if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
+   assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY ||
+          !(cmd_buffer->usage_flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT));
+
+   if (cmd_buffer->usage_flags &
+       VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
       cmd_buffer->state.framebuffer =
          anv_framebuffer_from_handle(pBeginInfo->framebuffer);
       cmd_buffer->state.pass =
