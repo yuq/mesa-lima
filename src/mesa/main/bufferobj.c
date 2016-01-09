@@ -3939,10 +3939,8 @@ _mesa_InvalidateBufferSubData(GLuint buffer, GLintptr offset,
       return;
    }
 
-   /* We don't actually do anything for this yet.  Just return after
-    * validating the parameters and generating the required errors.
-    */
-   return;
+   if (ctx->Driver.InvalidateBufferSubData)
+      ctx->Driver.InvalidateBufferSubData(ctx, bufObj, offset, length);
 }
 
 void GLAPIENTRY
@@ -3979,8 +3977,6 @@ _mesa_InvalidateBufferData(GLuint buffer)
       return;
    }
 
-   /* We don't actually do anything for this yet.  Just return after
-    * validating the parameters and generating the required errors.
-    */
-   return;
+   if (ctx->Driver.InvalidateBufferSubData)
+      ctx->Driver.InvalidateBufferSubData(ctx, bufObj, 0, bufObj->Size);
 }
