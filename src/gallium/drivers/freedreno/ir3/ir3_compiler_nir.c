@@ -46,7 +46,6 @@
 struct ir3_compile {
 	struct ir3_compiler *compiler;
 
-	const struct tgsi_token *tokens;
 	struct nir_shader *s;
 
 	struct ir3 *ir;
