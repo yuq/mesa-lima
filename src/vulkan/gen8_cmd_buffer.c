@@ -147,8 +147,73 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
 #endif
 
 static void
+emit_lrm(struct anv_batch *batch,
+         uint32_t reg, struct anv_bo *bo, uint32_t offset)
+{
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM),
+                  .RegisterAddress = reg,
+                  .MemoryAddress = { bo, offset });
+}
+
+static void
+emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
+{
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM),
+                  .RegisterOffset = reg,
+                  .DataDWord = imm);
+}
+
+#define GEN8_L3CNTLREG                  0x7034
+
+static void
+config_l3(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
+{
+   /* References for GL state:
+    *
+    * - commits e307cfa..228d5a3
+    * - src/mesa/drivers/dri/i965/gen7_l3_state.c
+    */
+
+   uint32_t val = enable_slm ?
+      /* All = 48 ways; URB = 16 ways; DC and RO = 0, SLM = 1 */
+      0x60000021 :
+      /* All = 48 ways; URB = 48 ways; DC, RO and SLM = 0 */
+      0x60000060;
+   bool changed = cmd_buffer->state.current_l3_config != val;
+
+   if (changed) {
+      /* According to the hardware docs, the L3 partitioning can only be changed
+       * while the pipeline is completely drained and the caches are flushed,
+       * which involves a first PIPE_CONTROL flush which stalls the pipeline and
+       * initiates invalidation of the relevant caches...
+       */
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
+                     .TextureCacheInvalidationEnable = true,
+                     .ConstantCacheInvalidationEnable = true,
+                     .InstructionCacheInvalidateEnable = true,
+                     .DCFlushEnable = true,
+                     .PostSyncOperation = NoWrite,
+                     .CommandStreamerStallEnable = true);
+
+      /* ...followed by a second stalling flush which guarantees that
+       * invalidation is complete when the L3 configuration registers are
+       * modified.
+       */
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
+                     .DCFlushEnable = true,
+                     .PostSyncOperation = NoWrite,
+                     .CommandStreamerStallEnable = true);
+
+      emit_lri(&cmd_buffer->batch, GEN8_L3CNTLREG, val);
+      cmd_buffer->state.current_l3_config = val;
+   }
+}
+
+static void
 flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer)
 {
+   config_l3(cmd_buffer, false);
+
    if (cmd_buffer->state.current_pipeline != _3D) {
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
 #if ANV_GEN >= 9
@@ -426,23 +491,6 @@ void genX(CmdDrawIndexed)(
                   .BaseVertexLocation = vertexOffset);
 }
 
-static void
-emit_lrm(struct anv_batch *batch,
-         uint32_t reg, struct anv_bo *bo, uint32_t offset)
-{
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_MEM),
-                  .RegisterAddress = reg,
-                  .MemoryAddress = { bo, offset });
-}
-
-static void
-emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
-{
-   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM),
-                  .RegisterOffset = reg,
-                  .DataDWord = imm);
-}
-
 /* Auto-Draw / Indirect Registers */
 #define GEN7_3DPRIM_END_OFFSET          0x2420
 #define GEN7_3DPRIM_START_VERTEX        0x2430
@@ -570,6 +618,9 @@ cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
    VkResult result;
 
    assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
+
+   bool needs_slm = pipeline->cs_prog_data.base.total_shared > 0;
+   config_l3(cmd_buffer, needs_slm);
 
    if (cmd_buffer->state.current_pipeline != GPGPU) {
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
