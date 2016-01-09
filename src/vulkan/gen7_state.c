@@ -251,6 +251,8 @@ genX(image_view_init)(struct anv_image_view *iview,
 
       if (!device->info.has_llc)
          anv_state_clflush(iview->nonrt_surface_state);
+   } else {
+      iview->nonrt_surface_state.alloc_size = 0;
    }
 
    if (image->needs_color_rt_surface_state) {
@@ -271,6 +273,8 @@ genX(image_view_init)(struct anv_image_view *iview,
                                       &surface_state);
       if (!device->info.has_llc)
          anv_state_clflush(iview->color_rt_surface_state);
+   } else {
+      iview->color_rt_surface_state.alloc_size = 0;
    }
 
    if (image->needs_storage_surface_state) {
@@ -287,5 +291,7 @@ genX(image_view_init)(struct anv_image_view *iview,
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->storage_surface_state.map,
                                       &surface_state);
+   } else {
+      iview->storage_surface_state.alloc_size = 0;
    }
 }
