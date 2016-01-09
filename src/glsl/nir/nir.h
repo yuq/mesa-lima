@@ -88,6 +88,7 @@ typedef enum {
    nir_var_local,
    nir_var_uniform,
    nir_var_shader_storage,
+   nir_var_shared,
    nir_var_system_value
 } nir_variable_mode;
 
@@ -1634,6 +1635,9 @@ typedef struct nir_shader {
 
    /** list of outputs (nir_variable) */
    struct exec_list outputs;
+
+   /** list of shared compute variables (nir_variable) */
+   struct exec_list shared;
 
    /** Set of driver-specific options for the shader.
     *
