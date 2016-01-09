@@ -175,7 +175,8 @@ void anv_CmdResetQueryPool(
 
    for (uint32_t i = 0; i < queryCount; i++) {
       switch (pool->type) {
-      case VK_QUERY_TYPE_OCCLUSION: {
+      case VK_QUERY_TYPE_OCCLUSION:
+      case VK_QUERY_TYPE_TIMESTAMP: {
          struct anv_query_pool_slot *slot = pool->bo.map;
          slot[startQuery + i].available = 0;
          break;
