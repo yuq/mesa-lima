@@ -495,16 +495,30 @@ genX(graphics_pipeline_create)(
       if (input_index < 0)
 	 continue;
 
-      /* We have to subtract two slots to accout for the URB entry output
-       * read offset in the VS and GS stages.
-       */
-      int source_attr = fs_input_map->varying_to_slot[attr] - 2;
+      int source_attr = fs_input_map->varying_to_slot[attr];
       max_source_attr = MAX2(max_source_attr, source_attr);
 
       if (input_index >= 16)
 	 continue;
 
-      swiz.Attribute[input_index].SourceAttribute = source_attr;
+      if (source_attr == -1) {
+         /* This attribute does not exist in the VUE--that means that the
+          * vertex shader did not write to it.  It could be that it's a
+          * regular varying read by the fragment shader but not written by the
+          * vertex shader or it's gl_PrimitiveID. In the first case the value
+          * is undefined, in the second it needs to be gl_PrimitiveID.
+          */
+         swiz.Attribute[input_index].ConstantSource = PRIM_ID;
+         swiz.Attribute[input_index].ComponentOverrideX = true;
+         swiz.Attribute[input_index].ComponentOverrideY = true;
+         swiz.Attribute[input_index].ComponentOverrideZ = true;
+         swiz.Attribute[input_index].ComponentOverrideW = true;
+      } else {
+         /* We have to subtract two slots to accout for the URB entry output
+          * read offset in the VS and GS stages.
+          */
+         swiz.Attribute[input_index].SourceAttribute = source_attr - 2;
+      }
    }
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE),
