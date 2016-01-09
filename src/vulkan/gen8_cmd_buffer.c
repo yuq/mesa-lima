@@ -588,6 +588,16 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
                      .CURBEDataStartAddress = push_state.offset);
    }
 
+   assert(prog_data->total_shared <= 64 * 1024);
+   uint32_t slm_size = 0;
+   if (prog_data->total_shared > 0) {
+      /* slm_size is in 4k increments, but must be a power of 2. */
+      slm_size = 4 * 1024;
+      while (slm_size < prog_data->total_shared)
+         slm_size <<= 1;
+      slm_size /= 4 * 1024;
+   }
+
    struct anv_state state =
       anv_state_pool_emit(&device->dynamic_state_pool,
                           GENX(INTERFACE_DESCRIPTOR_DATA), 64,
@@ -600,6 +610,7 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
                           .ConstantIndirectURBEntryReadLength = push_constant_regs,
                           .ConstantURBEntryReadOffset = 0,
                           .BarrierEnable = cs_prog_data->uses_barrier,
+                          .SharedLocalMemorySize = slm_size,
                           .NumberofThreadsinGPGPUThreadGroup =
                              pipeline->cs_thread_width_max);
 
