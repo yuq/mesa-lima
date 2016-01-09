@@ -1057,7 +1057,6 @@ static void declare_system_value(
 	struct si_shader_context *si_shader_ctx =
 		si_shader_context(&radeon_bld->soa.bld_base);
 	struct lp_build_context *bld = &radeon_bld->soa.bld_base.base;
-	struct lp_build_context *uint_bld = &radeon_bld->soa.bld_base.uint_bld;
 	struct gallivm_state *gallivm = &radeon_bld->gallivm;
 	LLVMValueRef value = 0;
 
@@ -1133,12 +1132,10 @@ static void declare_system_value(
 	}
 
 	case TGSI_SEMANTIC_SAMPLEMASK:
-		/* Smoothing isn't MSAA in GL, but it's MSAA in hardware.
-		 * Therefore, force gl_SampleMaskIn to 1 for GL. */
-		if (si_shader_ctx->shader->key.ps.poly_line_smoothing)
-			value = uint_bld->one;
-		else
-			value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_SAMPLE_COVERAGE);
+		/* This can only occur with the OpenGL Core profile, which
+		 * doesn't support smoothing.
+		 */
+		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_SAMPLE_COVERAGE);
 		break;
 
 	case TGSI_SEMANTIC_TESSCOORD:
