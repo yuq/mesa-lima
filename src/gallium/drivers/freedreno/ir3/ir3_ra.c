@@ -68,25 +68,24 @@
  * LOAD_PAYLOAD instruction which gets turned into multiple MOV's after
  * register assignment.  But for us that is horrible from a scheduling
  * standpoint.  Instead what we do is use idea of 'definer' instruction.
- * Ie. the first instruction (lowest ip) to write to the array is the
+ * Ie. the first instruction (lowest ip) to write to the variable is the
  * one we consider from use/def perspective when building interference
- * graph.  (Other instructions which write other array elements just
- * define the variable some more.)
+ * graph.  (Other instructions which write other variable components
+ * just define the variable some more.)
+ *
+ * Arrays of arbitrary size are handled via pre-coloring a consecutive
+ * sequence of registers.  Additional scalar (single component) reg
+ * names are allocated starting at ctx->class_base[total_class_count]
+ * (see arr->base), which are pre-colored.  In the use/def graph direct
+ * access is treated as a single element use/def, and indirect access
+ * is treated as use or def of all array elements.  (Only the first
+ * def is tracked, in case of multiple indirect writes, etc.)
  */
 
 static const unsigned class_sizes[] = {
 	1, 2, 3, 4,
 	4 + 4, /* txd + 1d/2d */
 	4 + 6, /* txd + 3d */
-	/* temporary: until we can assign arrays, create classes so we
-	 * can round up array to fit.  NOTE with tgsi arrays should
-	 * really all be multiples of four:
-	 */
-	4 * 4,
-	4 * 8,
-	4 * 16,
-	4 * 32,
-
 };
 #define class_count ARRAY_SIZE(class_sizes)
 
@@ -265,8 +264,9 @@ struct ir3_ra_ctx {
 	struct ir3_ra_reg_set *set;
 	struct ra_graph *g;
 	unsigned alloc_count;
-	unsigned class_alloc_count[total_class_count];
-	unsigned class_base[total_class_count];
+	/* one per class, plus one slot for arrays: */
+	unsigned class_alloc_count[total_class_count + 1];
+	unsigned class_base[total_class_count + 1];
 	unsigned instr_cnt;
 	unsigned *def, *use;     /* def/use table */
 	struct ir3_ra_instr_data *instrd;
@@ -328,9 +328,6 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 {
 	struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 	struct ir3_instruction *d = NULL;
-
-	if (instr->fanin)
-		return get_definer(ctx, instr->fanin, sz, off);
 
 	if (id->defn) {
 		*sz = id->sz;
@@ -485,10 +482,13 @@ ra_block_find_definers(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		/* couple special cases: */
 		if (writes_addr(instr) || writes_pred(instr)) {
 			id->cls = -1;
-			continue;
+		} else if (instr->regs[0]->flags & IR3_REG_ARRAY) {
+			id->cls = total_class_count;
+			id->defn = instr;
+		} else {
+			id->defn = get_definer(ctx, instr, &id->sz, &id->off);
+			id->cls = size_to_class(id->sz, is_half(id->defn));
 		}
-		id->defn = get_definer(ctx, instr, &id->sz, &id->off);
-		id->cls = size_to_class(id->sz, is_half(id->defn));
 	}
 }
 
@@ -518,8 +518,6 @@ ra_block_name_instructions(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 
 		/* arrays which don't fit in one of the pre-defined class
 		 * sizes are pre-colored:
-		 *
-		 * TODO but we still need to allocate names for them, don't we??
 		 */
 		if (id->cls >= 0) {
 			instr->name = ctx->class_alloc_count[id->cls]++;
@@ -531,7 +529,7 @@ ra_block_name_instructions(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 static void
 ra_init(struct ir3_ra_ctx *ctx)
 {
-	unsigned n;
+	unsigned n, base;
 
 	ir3_clear_mark(ctx->ir);
 	n = ir3_count_instructions(ctx->ir);
@@ -550,10 +548,19 @@ ra_init(struct ir3_ra_ctx *ctx)
 	 * actual ra name is class_base[cls] + instr->name;
 	 */
 	ctx->class_base[0] = 0;
-	for (unsigned i = 1; i < total_class_count; i++) {
+	for (unsigned i = 1; i <= total_class_count; i++) {
 		ctx->class_base[i] = ctx->class_base[i-1] +
 				ctx->class_alloc_count[i-1];
 	}
+
+	/* and vreg names for array elements: */
+	base = ctx->class_base[total_class_count];
+	list_for_each_entry (struct ir3_array, arr, &ctx->ir->array_list, node) {
+		arr->base = base;
+		ctx->class_alloc_count[total_class_count] += arr->length;
+		base += arr->length;
+	}
+	ctx->alloc_count += ctx->class_alloc_count[total_class_count];
 
 	ctx->g = ra_alloc_interference_graph(ctx->set->regs, ctx->alloc_count);
 	ralloc_steal(ctx->g, ctx->instrd);
@@ -566,6 +573,7 @@ __ra_name(struct ir3_ra_ctx *ctx, int cls, struct ir3_instruction *defn)
 {
 	unsigned name;
 	debug_assert(cls >= 0);
+	debug_assert(cls < total_class_count);  /* we shouldn't get arrays here.. */
 	name = ctx->class_base[cls] + defn->name;
 	debug_assert(name < ctx->alloc_count);
 	return name;
@@ -590,6 +598,22 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 	struct ir3_ra_block_data *bd;
 	unsigned bitset_words = BITSET_WORDS(ctx->alloc_count);
 
+	void def(unsigned name, struct ir3_instruction *instr)
+	{
+		/* defined on first write: */
+		if (!ctx->def[name])
+			ctx->def[name] = instr->ip;
+		ctx->use[name] = instr->ip;
+		BITSET_SET(bd->def, name);
+	}
+
+	void use(unsigned name, struct ir3_instruction *instr)
+	{
+		ctx->use[name] = MAX2(ctx->use[name], instr->ip);
+		if (!BITSET_TEST(bd->def, name))
+			BITSET_SET(bd->use, name);
+	}
+
 	bd = rzalloc(ctx->g, struct ir3_ra_block_data);
 
 	bd->def     = rzalloc_array(bd, BITSET_WORD, bitset_words);
@@ -601,6 +625,7 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 
 	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 		struct ir3_instruction *src;
+		struct ir3_register *reg;
 
 		if (instr->regs_count == 0)
 			continue;
@@ -632,17 +657,45 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 
 		if (writes_gpr(instr)) {
 			struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
+			struct ir3_register *dst = instr->regs[0];
 
-			if (id->defn == instr) {
+			if (dst->flags & IR3_REG_ARRAY) {
+				struct ir3_array *arr =
+					ir3_lookup_array(ctx->ir, dst->array.id);
+				unsigned i;
+
+				debug_assert(!(dst->flags & IR3_REG_PHI_SRC));
+
+				/* set the node class now.. in case we don't encounter
+				 * this array dst again.  From register_alloc algo's
+				 * perspective, these are all single/scalar regs:
+				 */
+				for (i = 0; i < arr->length; i++) {
+					unsigned name = arr->base + i;
+					ra_set_node_class(ctx->g, name, ctx->set->classes[0]);
+				}
+
+				/* indirect write is treated like a write to all array
+				 * elements, since we don't know which one is actually
+				 * written:
+				 */
+				if (dst->flags & IR3_REG_RELATIV) {
+					for (i = 0; i < arr->length; i++) {
+						unsigned name = arr->base + i;
+						def(name, instr);
+					}
+				} else {
+					unsigned name = arr->base + dst->array.offset;
+					def(name, instr);
+				}
+
+			} else if (id->defn == instr) {
 				unsigned name = ra_name(ctx, id);
-
-				ctx->def[name] = id->defn->ip;
-				ctx->use[name] = id->defn->ip;
 
 				/* since we are in SSA at this point: */
 				debug_assert(!BITSET_TEST(bd->use, name));
 
-				BITSET_SET(bd->def, name);
+				def(name, id->defn);
 
 				if (is_half(id->defn)) {
 					ra_set_node_class(ctx->g, name,
@@ -672,12 +725,28 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 			}
 		}
 
-		foreach_ssa_src(src, instr) {
-			if (writes_gpr(src)) {
+		foreach_src(reg, instr) {
+			if (reg->flags & IR3_REG_ARRAY) {
+				struct ir3_array *arr =
+					ir3_lookup_array(ctx->ir, reg->array.id);
+				/* indirect read is treated like a read fromall array
+				 * elements, since we don't know which one is actually
+				 * read:
+				 */
+				if (reg->flags & IR3_REG_RELATIV) {
+					unsigned i;
+					for (i = 0; i < arr->length; i++) {
+						unsigned name = arr->base + i;
+						use(name, instr);
+					}
+				} else {
+					unsigned name = arr->base + reg->array.offset;
+					use(name, instr);
+					debug_assert(reg->array.offset < arr->length);
+				}
+			} else if ((src = ssa(reg)) && writes_gpr(src)) {
 				unsigned name = ra_name(ctx, &ctx->instrd[src->ip]);
-				ctx->use[name] = MAX2(ctx->use[name], instr->ip);
-				if (!BITSET_TEST(bd->def, name))
-					BITSET_SET(bd->use, name);
+				use(name, instr);
 			}
 		}
 	}
@@ -830,18 +899,36 @@ static void fixup_half_instr_src(struct ir3_instruction *instr)
 	}
 }
 
+/* NOTE: instr could be NULL for IR3_REG_ARRAY case, for the first
+ * array access(es) which do not have any previous access to depend
+ * on from scheduling point of view
+ */
 static void
 reg_assign(struct ir3_ra_ctx *ctx, struct ir3_register *reg,
 		struct ir3_instruction *instr)
 {
-	struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
-	if (id->defn) {
+	struct ir3_ra_instr_data *id;
+
+	if (reg->flags & IR3_REG_ARRAY) {
+		struct ir3_array *arr =
+			ir3_lookup_array(ctx->ir, reg->array.id);
+		unsigned name = arr->base + reg->array.offset;
+		unsigned r = ra_get_node_reg(ctx->g, name);
+		unsigned num = ctx->set->ra_reg_to_gpr[r];
+
+		if (reg->flags & IR3_REG_RELATIV) {
+			reg->array.offset = num;
+		} else {
+			reg->num = num;
+		}
+
+		reg->flags &= ~IR3_REG_ARRAY;
+	} else if ((id = &ctx->instrd[instr->ip]) && id->defn) {
 		unsigned name = ra_name(ctx, id);
 		unsigned r = ra_get_node_reg(ctx->g, name);
 		unsigned num = ctx->set->ra_reg_to_gpr[r] + id->off;
 
-		if (reg->flags & IR3_REG_RELATIV)
-			num += reg->offset;
+		debug_assert(!(reg->flags & IR3_REG_RELATIV));
 
 		reg->num = num;
 		reg->flags &= ~(IR3_REG_SSA | IR3_REG_PHI_SRC);
@@ -868,9 +955,9 @@ ra_block_alloc(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 
 		foreach_src_n(reg, n, instr) {
 			struct ir3_instruction *src = reg->instr;
-			if (!src)
+			/* Note: reg->instr could be null for IR3_REG_ARRAY */
+			if (!(src || (reg->flags & IR3_REG_ARRAY)))
 				continue;
-
 			reg_assign(ctx, instr->regs[n+1], src);
 			if (instr->regs[n+1]->flags & IR3_REG_HALF)
 				fixup_half_instr_src(instr);
@@ -881,6 +968,8 @@ ra_block_alloc(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 static int
 ra_alloc(struct ir3_ra_ctx *ctx)
 {
+	unsigned n = 0;
+
 	/* frag shader inputs get pre-assigned, since we have some
 	 * constraints/unknowns about setup for some of these regs:
 	 */
@@ -898,7 +987,8 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 			i += 4;
 		}
 
-		for (j = 0; i < ir->ninputs; i++) {
+		j = 0;
+		for (; i < ir->ninputs; i++) {
 			struct ir3_instruction *instr = ir->inputs[i];
 			if (instr) {
 				struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
@@ -913,6 +1003,24 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 					j += id->sz;
 				}
 			}
+		}
+		n = j;
+	}
+
+	/* pre-assign array elements:
+	 * TODO we could be a bit more clever if we knew which arrays didn't
+	 * fully (partially?) conflict with each other..
+	 */
+	list_for_each_entry (struct ir3_array, arr, &ctx->ir->array_list, node) {
+		unsigned i;
+		for (i = 0; i < arr->length; i++) {
+			unsigned name, reg;
+
+			name = arr->base + i;
+			reg = ctx->set->gpr_to_ra_reg[0][n++];
+
+			ra_set_node_reg(ctx->g, name, reg);
+
 		}
 	}
 

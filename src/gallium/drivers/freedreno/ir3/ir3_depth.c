@@ -118,6 +118,10 @@ ir3_instr_depth(struct ir3_instruction *instr)
 		/* visit child to compute it's depth: */
 		ir3_instr_depth(src);
 
+		/* for array writes, no need to delay on previous write: */
+		if (i == 0)
+			continue;
+
 		sd = ir3_delayslots(src, instr, i) + src->depth;
 
 		instr->depth = MAX2(instr->depth, sd);

@@ -187,6 +187,9 @@ delay_calc(struct ir3_sched_ctx *ctx, struct ir3_instruction *instr)
 
 	foreach_ssa_src_n(src, i, instr) {
 		unsigned d;
+		/* for array writes, no need to delay on previous write: */
+		if (i == 0)
+			continue;
 		if (src->block != instr->block)
 			continue;
 		d = delay_calc_srcn(ctx, src, instr, i);

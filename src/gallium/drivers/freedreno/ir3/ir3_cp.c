@@ -202,6 +202,7 @@ static void combine_flags(unsigned *dstflags, unsigned srcflags)
 	*dstflags |= srcflags & IR3_REG_CONST;
 	*dstflags |= srcflags & IR3_REG_IMMED;
 	*dstflags |= srcflags & IR3_REG_RELATIV;
+	*dstflags |= srcflags & IR3_REG_ARRAY;
 }
 
 /* the "plain" MAD's (ie. the ones that don't shift first src prior to
@@ -233,6 +234,10 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 		combine_flags(&new_flags, src_reg->flags);
 
 		if (valid_flags(instr, n, new_flags)) {
+			if (new_flags & IR3_REG_ARRAY) {
+				debug_assert(!(reg->flags & IR3_REG_ARRAY));
+				reg->array = src_reg->array;
+			}
 			reg->flags = new_flags;
 			reg->instr = ssa(src_reg);
 		}
@@ -283,6 +288,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 					conflicts(instr->address, reg->instr->address))
 				return;
 
+			src_reg = ir3_reg_clone(instr->block->shader, src_reg);
 			src_reg->flags = new_flags;
 			instr->regs[n+1] = src_reg;
 
@@ -294,6 +300,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 
 		if ((src_reg->flags & IR3_REG_RELATIV) &&
 				!conflicts(instr->address, reg->instr->address)) {
+			src_reg = ir3_reg_clone(instr->block->shader, src_reg);
 			src_reg->flags = new_flags;
 			instr->regs[n+1] = src_reg;
 			ir3_instr_set_address(instr, reg->instr->address);
@@ -329,6 +336,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 			/* other than category 1 (mov) we can only encode up to 10 bits: */
 			if ((instr->category == 1) || !(iim_val & ~0x3ff)) {
 				new_flags &= ~(IR3_REG_SABS | IR3_REG_SNEG | IR3_REG_BNOT);
+				src_reg = ir3_reg_clone(instr->block->shader, src_reg);
 				src_reg->flags = new_flags;
 				src_reg->iim_val = iim_val;
 				instr->regs[n+1] = src_reg;
@@ -349,9 +357,11 @@ eliminate_output_mov(struct ir3_instruction *instr)
 {
 	if (is_eligible_mov(instr, false)) {
 		struct ir3_register *reg = instr->regs[1];
-		struct ir3_instruction *src_instr = ssa(reg);
-		debug_assert(src_instr);
-		return src_instr;
+		if (!(reg->flags & IR3_REG_ARRAY)) {
+			struct ir3_instruction *src_instr = ssa(reg);
+			debug_assert(src_instr);
+			return src_instr;
+		}
 	}
 	return instr;
 }
@@ -379,7 +389,20 @@ instr_cp(struct ir3_instruction *instr)
 			continue;
 
 		instr_cp(src);
+
+		/* TODO non-indirect access we could figure out which register
+		 * we actually want and allow cp..
+		 */
+		if (reg->flags & IR3_REG_ARRAY)
+			continue;
+
 		reg_cp(instr, reg, n);
+	}
+
+	if (instr->regs[0]->flags & IR3_REG_ARRAY) {
+		struct ir3_instruction *src = ssa(instr->regs[0]);
+		if (src)
+			instr_cp(src);
 	}
 
 	if (instr->address) {
