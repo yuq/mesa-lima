@@ -3278,7 +3278,16 @@ VOID Lib::PadDimensions(
 
     if (padDims > 1)
     {
-        *pHeight = PowTwoAlign((*pHeight), heightAlign);
+        if (IsPow2(heightAlign))
+        {
+            *pHeight = PowTwoAlign((*pHeight), heightAlign);
+        }
+        else
+        {
+            *pHeight += heightAlign - 1;
+            *pHeight /= heightAlign;
+            *pHeight *= heightAlign;
+        }
     }
 
     if (padDims > 2 || thickness > 1)
