@@ -196,12 +196,12 @@ const struct brw_tracked_state brw_wm_binding_table = {
    .emit = brw_upload_wm_binding_table,
 };
 
-/** Upload the TCS binding table (if TCS is active). */
+/** Upload the TCS binding table (if tessellation stages are active). */
 static void
 brw_tcs_upload_binding_table(struct brw_context *brw)
 {
-   /* If there's no TCS, skip changing anything. */
-   if (brw->tess_ctrl_program == NULL)
+   /* Skip if the tessellation stages are disabled. */
+   if (brw->tess_eval_program == NULL)
       return;
 
    /* BRW_NEW_TCS_PROG_DATA */
@@ -216,6 +216,7 @@ const struct brw_tracked_state brw_tcs_binding_table = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
+             BRW_NEW_DEFAULT_TESS_LEVELS |
              BRW_NEW_SURFACES |
              BRW_NEW_TCS_CONSTBUF |
              BRW_NEW_TCS_PROG_DATA,
