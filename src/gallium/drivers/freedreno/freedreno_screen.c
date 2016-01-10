@@ -299,6 +299,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	/* Queries. */
 	case PIPE_CAP_QUERY_TIME_ELAPSED:
 	case PIPE_CAP_QUERY_TIMESTAMP:
+	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 		return 0;
 	case PIPE_CAP_OCCLUSION_QUERY:
 		return is_a3xx(screen) || is_a4xx(screen);

@@ -317,6 +317,8 @@ The integer capabilities:
   non-compressed surface whose texels are the same number of bits as the
   compressed blocks, and vice versa. The width and height of the surface is
   adjusted appropriately.
+* ``PIPE_CAP_QUERY_BUFFER_OBJECT``: Driver supports
+  context::get_query_result_resource callback.
 
 
 .. _pipe_capf:
