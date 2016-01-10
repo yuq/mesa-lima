@@ -2766,16 +2766,59 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    }
 }
 
-static void
-vtn_handle_ssbo_atomic(struct vtn_builder *b, SpvOp opcode,
-                       const uint32_t *w, unsigned count)
+static nir_intrinsic_op
+get_ssbo_nir_atomic_op(SpvOp opcode)
 {
-   struct vtn_value *pointer = vtn_value(b, w[3], vtn_value_type_deref);
-   struct vtn_type *type = pointer->deref_type;
-   nir_deref *deref = &pointer->deref->deref;
-   nir_ssa_def *index = get_vulkan_resource_index(b, &deref, &type);
+   switch (opcode) {
+#define OP(S, N) case SpvOp##S: return nir_intrinsic_ssbo_##N;
+   OP(AtomicExchange,         atomic_exchange)
+   OP(AtomicCompareExchange,  atomic_comp_swap)
+   OP(AtomicIIncrement,       atomic_add)
+   OP(AtomicIDecrement,       atomic_add)
+   OP(AtomicIAdd,             atomic_add)
+   OP(AtomicISub,             atomic_add)
+   OP(AtomicSMin,             atomic_imin)
+   OP(AtomicUMin,             atomic_umin)
+   OP(AtomicSMax,             atomic_imax)
+   OP(AtomicUMax,             atomic_umax)
+   OP(AtomicAnd,              atomic_and)
+   OP(AtomicOr,               atomic_or)
+   OP(AtomicXor,              atomic_xor)
+#undef OP
+   default:
+      unreachable("Invalid SSBO atomic");
+   }
+}
 
+static nir_intrinsic_op
+get_shared_nir_atomic_op(SpvOp opcode)
+{
+   switch (opcode) {
+#define OP(S, N) case SpvOp##S: return nir_intrinsic_var_##N;
+   OP(AtomicExchange,         atomic_exchange)
+   OP(AtomicCompareExchange,  atomic_comp_swap)
+   OP(AtomicIIncrement,       atomic_add)
+   OP(AtomicIDecrement,       atomic_add)
+   OP(AtomicIAdd,             atomic_add)
+   OP(AtomicISub,             atomic_add)
+   OP(AtomicSMin,             atomic_imin)
+   OP(AtomicUMin,             atomic_umin)
+   OP(AtomicSMax,             atomic_imax)
+   OP(AtomicUMax,             atomic_umax)
+   OP(AtomicAnd,              atomic_and)
+   OP(AtomicOr,               atomic_or)
+   OP(AtomicXor,              atomic_xor)
+#undef OP
+   default:
+      unreachable("Invalid shared atomic");
+   }
+}
+
+static nir_ssa_def *
+get_ssbo_atomic_offset(struct vtn_builder *b, nir_deref *deref, struct vtn_type *type)
+{
    nir_ssa_def *offset = nir_imm_int(&b->nb, 0);
+
    while (deref->child) {
       deref = deref->child;
       switch (deref->deref_type) {
@@ -2799,53 +2842,30 @@ vtn_handle_ssbo_atomic(struct vtn_builder *b, SpvOp opcode,
       }
    }
 
-   /*
-   SpvScope scope = w[4];
-   SpvMemorySemanticsMask semantics = w[5];
-   */
+   return offset;
+}
 
-   nir_intrinsic_op op;
-   switch (opcode) {
-#define OP(S, N) case SpvOp##S: op = nir_intrinsic_ssbo_##N; break;
-   OP(AtomicExchange,         atomic_exchange)
-   OP(AtomicCompareExchange,  atomic_comp_swap)
-   OP(AtomicIIncrement,       atomic_add)
-   OP(AtomicIDecrement,       atomic_add)
-   OP(AtomicIAdd,             atomic_add)
-   OP(AtomicISub,             atomic_add)
-   OP(AtomicSMin,             atomic_imin)
-   OP(AtomicUMin,             atomic_umin)
-   OP(AtomicSMax,             atomic_imax)
-   OP(AtomicUMax,             atomic_umax)
-   OP(AtomicAnd,              atomic_and)
-   OP(AtomicOr,               atomic_or)
-   OP(AtomicXor,              atomic_xor)
-#undef OP
-   default:
-      unreachable("Invalid SSBO atomic");
-   }
-
-   nir_intrinsic_instr *atomic = nir_intrinsic_instr_create(b->nb.shader, op);
-   atomic->src[0] = nir_src_for_ssa(index);
-   atomic->src[1] = nir_src_for_ssa(offset);
-
+static void
+fill_common_atomic_sources(struct vtn_builder *b, SpvOp opcode,
+                           const uint32_t *w, nir_src *src)
+{
    switch (opcode) {
    case SpvOpAtomicIIncrement:
-      atomic->src[2] = nir_src_for_ssa(nir_imm_int(&b->nb, 1));
+      src[0] = nir_src_for_ssa(nir_imm_int(&b->nb, 1));
       break;
 
    case SpvOpAtomicIDecrement:
-      atomic->src[2] = nir_src_for_ssa(nir_imm_int(&b->nb, -1));
+      src[0] = nir_src_for_ssa(nir_imm_int(&b->nb, -1));
       break;
 
    case SpvOpAtomicISub:
-      atomic->src[2] =
+      src[0] =
          nir_src_for_ssa(nir_ineg(&b->nb, vtn_ssa_value(b, w[6])->def));
       break;
 
    case SpvOpAtomicCompareExchange:
-      atomic->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[7])->def);
-      atomic->src[3] = nir_src_for_ssa(vtn_ssa_value(b, w[8])->def);
+      src[0] = nir_src_for_ssa(vtn_ssa_value(b, w[7])->def);
+      src[1] = nir_src_for_ssa(vtn_ssa_value(b, w[8])->def);
       break;
       /* Fall through */
 
@@ -2858,11 +2878,43 @@ vtn_handle_ssbo_atomic(struct vtn_builder *b, SpvOp opcode,
    case SpvOpAtomicAnd:
    case SpvOpAtomicOr:
    case SpvOpAtomicXor:
-      atomic->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[6])->def);
+      src[0] = nir_src_for_ssa(vtn_ssa_value(b, w[6])->def);
       break;
 
    default:
-      unreachable("Invalid SSBO atomic");
+      unreachable("Invalid SPIR-V atomic");
+   }
+}
+
+static void
+vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
+                                 const uint32_t *w, unsigned count)
+{
+   struct vtn_value *pointer = vtn_value(b, w[3], vtn_value_type_deref);
+   struct vtn_type *type = pointer->deref_type;
+   nir_deref *deref = &pointer->deref->deref;
+   nir_intrinsic_instr *atomic;
+
+   /*
+   SpvScope scope = w[4];
+   SpvMemorySemanticsMask semantics = w[5];
+   */
+
+   if (pointer->deref->var->data.mode == nir_var_shared) {
+      nir_intrinsic_op op = get_shared_nir_atomic_op(opcode);
+      atomic = nir_intrinsic_instr_create(b->nb.shader, op);
+      atomic->variables[0] =
+         nir_deref_as_var(nir_copy_deref(atomic, &pointer->deref->deref));
+      fill_common_atomic_sources(b, opcode, w, &atomic->src[0]);
+   } else {
+      nir_ssa_def *index = get_vulkan_resource_index(b, &deref, &type);
+      nir_ssa_def *offset = get_ssbo_atomic_offset(b, deref, type);
+      nir_intrinsic_op op = get_ssbo_nir_atomic_op(opcode);
+
+      atomic = nir_intrinsic_instr_create(b->nb.shader, op);
+      atomic->src[0] = nir_src_for_ssa(index);
+      atomic->src[1] = nir_src_for_ssa(offset);
+      fill_common_atomic_sources(b, opcode, w, &atomic->src[2]);
    }
 
    nir_ssa_dest_init(&atomic->instr, &atomic->dest, 1, NULL);
@@ -3605,7 +3657,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
          vtn_handle_image(b, opcode, w, count);
       } else {
          assert(pointer->value_type == vtn_value_type_deref);
-         vtn_handle_ssbo_atomic(b, opcode, w, count);
+         vtn_handle_ssbo_or_shared_atomic(b, opcode, w, count);
       }
       break;
    }
