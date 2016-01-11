@@ -300,7 +300,8 @@ fs_visitor::opt_combine_constants()
          reg->subreg_offset = table.imm[i].subreg_offset;
          reg->stride = 0;
          reg->negate = signbit(reg->f) != signbit(table.imm[i].val);
-         assert(fabsf(reg->f) == table.imm[i].val);
+         assert((isnan(reg->f) && isnan(table.imm[i].val)) ||
+                fabsf(reg->f) == table.imm[i].val);
       }
    }
 
