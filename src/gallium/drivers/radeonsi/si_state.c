@@ -403,6 +403,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 	if (!blend)
 		return NULL;
 
+	blend->alpha_to_coverage = state->alpha_to_coverage;
 	blend->alpha_to_one = state->alpha_to_one;
 	blend->dual_src_blend = util_blend_state_is_dual(state, 0);
 
@@ -1883,6 +1884,21 @@ unsigned si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool sten
  * framebuffer handling
  */
 
+static void si_choose_spi_color_formats(struct r600_surface *surf,
+					unsigned format, unsigned swap,
+					unsigned ntype)
+{
+	unsigned max_comp_size = si_colorformat_max_comp_size(format);
+
+	surf->spi_shader_col_format = V_028714_SPI_SHADER_32_ABGR;
+
+	if (ntype == V_028C70_NUMBER_SRGB ||
+	    ((ntype == V_028C70_NUMBER_UNORM || ntype == V_028C70_NUMBER_SNORM) &&
+	     max_comp_size <= 10) ||
+	    (ntype == V_028C70_NUMBER_FLOAT && max_comp_size <= 16))
+		surf->spi_shader_col_format = V_028714_SPI_SHADER_FP16_ABGR;
+}
+
 static void si_initialize_color_surface(struct si_context *sctx,
 					struct r600_surface *surf)
 {
@@ -1896,7 +1912,6 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	const struct util_format_description *desc;
 	int i;
 	unsigned blend_clamp = 0, blend_bypass = 0;
-	unsigned max_comp_size;
 
 	/* Layered rendering doesn't work with LINEAR_GENERAL.
 	 * (LINEAR_ALIGNED and others work) */
@@ -2053,13 +2068,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	}
 
 	/* Determine pixel shader export format */
-	max_comp_size = si_colorformat_max_comp_size(format);
-	if (ntype == V_028C70_NUMBER_SRGB ||
-	    ((ntype == V_028C70_NUMBER_UNORM || ntype == V_028C70_NUMBER_SNORM) &&
-	     max_comp_size <= 10) ||
-	    (ntype == V_028C70_NUMBER_FLOAT && max_comp_size <= 16)) {
-		surf->export_16bpc = true;
-	}
+	si_choose_spi_color_formats(surf, format, swap, ntype);
 
 	if (sctx->b.family == CHIP_STONEY &&
 	    !(sctx->screen->b.debug_flags & DBG_NO_RB_PLUS)) {
@@ -2286,7 +2295,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 
 	util_copy_framebuffer_state(&sctx->framebuffer.state, state);
 
-	sctx->framebuffer.export_16bpc = 0;
+	sctx->framebuffer.spi_shader_col_format = 0;
 	sctx->framebuffer.compressed_cb_mask = 0;
 	sctx->framebuffer.nr_samples = util_framebuffer_get_num_samples(state);
 	sctx->framebuffer.log_samples = util_logbase2(sctx->framebuffer.nr_samples);
@@ -2307,21 +2316,19 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			si_initialize_color_surface(sctx, surf);
 		}
 
-		if (surf->export_16bpc) {
-			sctx->framebuffer.export_16bpc |= 1 << i;
-		}
+		sctx->framebuffer.spi_shader_col_format |=
+			surf->spi_shader_col_format << (i * 4);
 
 		if (rtex->fmask.size && rtex->cmask.size) {
 			sctx->framebuffer.compressed_cb_mask |= 1 << i;
 		}
 		r600_context_add_resource_size(ctx, surf->base.texture);
 	}
-	/* Set the 16BPC export for possible dual-src blending. */
-	if (i == 1 && surf && surf->export_16bpc) {
-		sctx->framebuffer.export_16bpc |= 1 << 1;
+	/* Set the second SPI format for possible dual-src blending. */
+	if (i == 1 && surf) {
+		sctx->framebuffer.spi_shader_col_format |=
+			surf->spi_shader_col_format << (i * 4);
 	}
-
-	assert(!(sctx->framebuffer.export_16bpc & ~0xff));
 
 	if (state->zsbuf) {
 		surf = (struct r600_surface*)state->zsbuf;

@@ -382,13 +382,28 @@ static void si_shader_vs(struct si_shader *shader)
 		si_set_tesseval_regs(shader, pm4);
 }
 
+static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
+{
+	unsigned value = shader->key.ps.spi_shader_col_format;
+	unsigned i, num_targets = (util_last_bit(value) + 3) / 4;
+
+	/* If the i-th target format is set, all previous target formats must
+	 * be non-zero to avoid hangs.
+	 */
+	for (i = 0; i < num_targets; i++)
+		if (!(value & (0xf << (i * 4))))
+			value |= V_028714_SPI_SHADER_32_R << (i * 4);
+
+	return value;
+}
+
 static void si_shader_ps(struct si_shader *shader)
 {
 	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
-	unsigned i, spi_ps_in_control;
-	unsigned spi_shader_col_format = 0, cb_shader_mask = 0;
-	unsigned colors_written, export_16bpc;
+	unsigned i, spi_ps_in_control, spi_shader_col_format;
+	unsigned cb_shader_mask = 0;
+	unsigned colors_written;
 	unsigned num_sgprs, num_user_sgprs;
 	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
@@ -425,7 +440,6 @@ static void si_shader_ps(struct si_shader *shader)
 
 	/* Find out what SPI_SHADER_COL_FORMAT and CB_SHADER_MASK should be. */
 	colors_written = info->colors_written;
-	export_16bpc = shader->key.ps.export_16bpc;
 
 	if (info->colors_written == 0x1 &&
 	    info->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS]) {
@@ -434,12 +448,19 @@ static void si_shader_ps(struct si_shader *shader)
 
 	while (colors_written) {
 		i = u_bit_scan(&colors_written);
-		if (export_16bpc & (1 << i))
-			spi_shader_col_format |= V_028714_SPI_SHADER_FP16_ABGR << (4 * i);
-		else
-			spi_shader_col_format |= V_028714_SPI_SHADER_32_ABGR << (4 * i);
 		cb_shader_mask |= 0xf << (4 * i);
 	}
+
+	spi_shader_col_format = si_get_spi_shader_col_format(shader);
+
+	/* This must be non-zero for alpha-test/kill to work.
+	 * The hardware ignores the EXEC mask if no export memory is allocated.
+	 */
+	if (!spi_shader_col_format &&
+	    !info->writes_z && !info->writes_stencil && !info->writes_samplemask &&
+	    (shader->selector->info.uses_kill ||
+	     shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS))
+		spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 
 	/* Set interpolation controls. */
 	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena) ||
@@ -571,12 +592,20 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		break;
 	case PIPE_SHADER_FRAGMENT: {
 		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
+		struct si_state_blend *blend = sctx->queued.named.blend;
 
 		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
 		    sel->info.colors_written == 0x1)
 			key->ps.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
 
-		key->ps.export_16bpc = sctx->framebuffer.export_16bpc;
+		key->ps.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
+
+		/* If alpha-to-coverage is enabled, we have to export alpha
+		 * even if there is no color buffer.
+		 */
+		if (!(key->ps.spi_shader_col_format & 0xf) &&
+		    blend && blend->alpha_to_coverage)
+			key->ps.spi_shader_col_format |= V_028710_SPI_SHADER_FP16_ABGR;
 
 		if (rs) {
 			bool is_poly = (sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&

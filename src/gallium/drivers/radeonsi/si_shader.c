@@ -1265,7 +1265,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	struct lp_build_context *uint =
 				&si_shader_ctx->radeon_bld.soa.bld_base.uint_bld;
 	struct lp_build_context *base = &bld_base->base;
-	unsigned compressed = 0;
+	unsigned spi_shader_col_format = V_028714_SPI_SHADER_32_ABGR;
 	unsigned chan;
 
 	/* XXX: This controls which components of the output
@@ -1286,17 +1286,29 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	args[3] = lp_build_const_int32(base->gallivm, target);
 
 	if (si_shader_ctx->type == TGSI_PROCESSOR_FRAGMENT) {
+		unsigned col_formats =
+			si_shader_ctx->shader->key.ps.spi_shader_col_format;
 		int cbuf = target - V_008DFC_SQ_EXP_MRT;
 
-		if (cbuf >= 0 && cbuf < 8)
-			compressed = (si_shader_ctx->shader->key.ps.export_16bpc >> cbuf) & 0x1;
+		assert(cbuf >= 0 && cbuf < 8);
+		spi_shader_col_format = (col_formats >> (cbuf * 4)) & 0xf;
 	}
 
-	/* Set COMPR flag */
-	args[4] = compressed ? uint->one : uint->zero;
+	args[4] = uint->zero; /* COMPR flag */
+	args[5] = base->undef;
+	args[6] = base->undef;
+	args[7] = base->undef;
+	args[8] = base->undef;
 
-	if (compressed) {
-		/* Pixel shader needs to pack output values before export */
+	switch (spi_shader_col_format) {
+	case V_028714_SPI_SHADER_ZERO:
+		args[0] = uint->zero; /* writemask */
+		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_NULL);
+		break;
+
+	case V_028714_SPI_SHADER_FP16_ABGR:
+		args[4] = uint->one; /* COMPR flag */
+
 		for (chan = 0; chan < 2; chan++) {
 			LLVMValueRef pack_args[2] = {
 				values[2 * chan],
@@ -1314,10 +1326,13 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 						 packed,
 						 LLVMFloatTypeInContext(base->gallivm->context),
 						 "");
-			args[chan + 7] = base->undef;
 		}
-	} else
+		break;
+
+	case V_028714_SPI_SHADER_32_ABGR:
 		memcpy(&args[5], values, sizeof(values[0]) * 4);
+		break;
+	}
 }
 
 static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
@@ -4031,7 +4046,7 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
-		fprintf(f, "  export_16bpc = 0x%X\n", key->ps.export_16bpc);
+		fprintf(f, "  spi_shader_col_format = 0x%x\n", key->ps.spi_shader_col_format);
 		fprintf(f, "  last_cbuf = %u\n", key->ps.last_cbuf);
 		fprintf(f, "  color_two_side = %u\n", key->ps.color_two_side);
 		fprintf(f, "  alpha_func = %u\n", key->ps.alpha_func);

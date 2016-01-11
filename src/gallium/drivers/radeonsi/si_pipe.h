@@ -125,7 +125,7 @@ struct si_framebuffer {
 	unsigned			log_samples;
 	unsigned			cb0_is_integer;
 	unsigned			compressed_cb_mask;
-	unsigned			export_16bpc;
+	unsigned			spi_shader_col_format;
 	unsigned			dirty_cbufs;
 	bool				dirty_zsbuf;
 };
