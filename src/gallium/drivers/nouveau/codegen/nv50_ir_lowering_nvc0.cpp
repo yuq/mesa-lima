@@ -540,6 +540,12 @@ NVC0LegalizePostRA::visit(BasicBlock *bb)
          // It seems like barriers are never required for tessellation since
          // the warp size is 32, and there are always at most 32 tcs threads.
          bb->remove(i);
+      } else
+      if (i->op == OP_LOAD && i->subOp == NV50_IR_SUBOP_LDC_IS) {
+         int offset = i->src(0).get()->reg.data.offset;
+         if (abs(offset) > 0x10000)
+            i->src(0).get()->reg.fileIndex += offset >> 16;
+         i->src(0).get()->reg.data.offset = (int)(short)offset;
       } else {
          // TODO: Move this to before register allocation for operations that
          // need the $c register !
