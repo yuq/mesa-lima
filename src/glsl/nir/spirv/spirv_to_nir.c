@@ -924,6 +924,15 @@ vtn_get_builtin_location(struct vtn_builder *b,
       *location = VARYING_SLOT_LAYER;
       *mode = nir_var_shader_out;
       break;
+   case SpvBuiltInViewportIndex:
+      *location = VARYING_SLOT_VIEWPORT;
+      if (b->shader->stage == MESA_SHADER_GEOMETRY)
+         *mode = nir_var_shader_out;
+      else if (b->shader->stage == MESA_SHADER_FRAGMENT)
+         *mode = nir_var_shader_in;
+      else
+         unreachable("invalid stage for SpvBuiltInViewportIndex");
+      break;
    case SpvBuiltInTessLevelOuter:
    case SpvBuiltInTessLevelInner:
    case SpvBuiltInTessCoord:
