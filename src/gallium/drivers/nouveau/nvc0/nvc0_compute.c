@@ -105,7 +105,17 @@ nvc0_screen_compute_setup(struct nvc0_screen *screen,
    PUSH_DATAh(push, screen->text->offset);
    PUSH_DATA (push, screen->text->offset);
 
-   /* TODO: textures & samplers */
+   /* textures */
+   BEGIN_NVC0(push, NVC0_COMPUTE(TIC_ADDRESS_HIGH), 3);
+   PUSH_DATAh(push, screen->txc->offset);
+   PUSH_DATA (push, screen->txc->offset);
+   PUSH_DATA (push, NVC0_TIC_MAX_ENTRIES - 1);
+
+   /* samplers */
+   BEGIN_NVC0(push, NVC0_COMPUTE(TSC_ADDRESS_HIGH), 3);
+   PUSH_DATAh(push, screen->txc->offset + 65536);
+   PUSH_DATA (push, screen->txc->offset + 65536);
+   PUSH_DATA (push, NVC0_TSC_MAX_ENTRIES - 1);
 
    return 0;
 }
@@ -136,6 +146,26 @@ nvc0_compute_validate_program(struct nvc0_context *nvc0)
       }
    }
    return false;
+}
+
+static void
+nvc0_compute_validate_samplers(struct nvc0_context *nvc0)
+{
+   bool need_flush = nvc0_validate_tsc(nvc0, 5);
+   if (need_flush) {
+      BEGIN_NVC0(nvc0->base.pushbuf, NVC0_COMPUTE(TSC_FLUSH), 1);
+      PUSH_DATA (nvc0->base.pushbuf, 0);
+   }
+}
+
+static void
+nvc0_compute_validate_textures(struct nvc0_context *nvc0)
+{
+   bool need_flush = nvc0_validate_tic(nvc0, 5);
+   if (need_flush) {
+      BEGIN_NVC0(nvc0->base.pushbuf, NVC0_COMPUTE(TIC_FLUSH), 1);
+      PUSH_DATA (nvc0->base.pushbuf, 0);
+   }
 }
 
 static void
@@ -255,8 +285,12 @@ nvc0_compute_state_validate(struct nvc0_context *nvc0)
       nvc0_compute_validate_driverconst(nvc0);
    if (nvc0->dirty_cp & NVC0_NEW_CP_BUFFERS)
       nvc0_compute_validate_buffers(nvc0);
+   if (nvc0->dirty_cp & NVC0_NEW_CP_TEXTURES)
+      nvc0_compute_validate_textures(nvc0);
+   if (nvc0->dirty_cp & NVC0_NEW_CP_SAMPLERS)
+      nvc0_compute_validate_samplers(nvc0);
 
-   /* TODO: textures, samplers, surfaces, global memory buffers */
+   /* TODO: surfaces, global memory buffers */
 
    nvc0_bufctx_fence(nvc0, nvc0->bufctx_cp, false);
 
