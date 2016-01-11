@@ -109,7 +109,7 @@ emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
 
       GENX(SF_CLIP_VIEWPORT_pack)(NULL, sf_clip_state.map + i * 64,
                                  &sf_clip_viewport);
-      GENX(CC_VIEWPORT_pack)(NULL, cc_state.map + i * 32, &cc_viewport);
+      GENX(CC_VIEWPORT_pack)(NULL, cc_state.map + i * 8, &cc_viewport);
    }
 
    if (!cmd_buffer->device->info.has_llc) {
