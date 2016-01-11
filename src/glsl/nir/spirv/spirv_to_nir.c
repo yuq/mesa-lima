@@ -597,6 +597,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       val->type->type = glsl_matrix_type(glsl_get_base_type(base->type),
                                          glsl_get_vector_elements(base->type),
                                          columns);
+      assert(!glsl_type_is_error(val->type->type));
       val->type->array_element = base;
       val->type->row_major = false;
       val->type->stride = 0;
