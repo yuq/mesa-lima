@@ -308,6 +308,43 @@ nve4_compute_set_tex_handles(struct nvc0_context *nvc0)
    nvc0->samplers_dirty[s] = 0;
 }
 
+static void
+nve4_compute_validate_buffers(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   uint64_t address;
+   const int s = 5;
+   int i;
+
+   address = nvc0->screen->uniform_bo->offset + NVC0_CB_AUX_INFO(s);
+
+   BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+   PUSH_DATAh(push, address + NVC0_CB_AUX_BUF_INFO(0));
+   PUSH_DATA (push, address + NVC0_CB_AUX_BUF_INFO(0));
+   BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+   PUSH_DATA (push, 4 * NVC0_MAX_BUFFERS * 4);
+   PUSH_DATA (push, 0x1);
+   BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + 4 * NVC0_MAX_BUFFERS);
+   PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
+
+   for (i = 0; i < NVC0_MAX_BUFFERS; i++) {
+      if (nvc0->buffers[s][i].buffer) {
+         struct nv04_resource *res =
+            nv04_resource(nvc0->buffers[s][i].buffer);
+         PUSH_DATA (push, res->address + nvc0->buffers[s][i].buffer_offset);
+         PUSH_DATAh(push, res->address + nvc0->buffers[s][i].buffer_offset);
+         PUSH_DATA (push, nvc0->buffers[s][i].buffer_size);
+         PUSH_DATA (push, 0);
+         BCTX_REFN(nvc0->bufctx_cp, CP_BUF, res, RDWR);
+      } else {
+         PUSH_DATA (push, 0);
+         PUSH_DATA (push, 0);
+         PUSH_DATA (push, 0);
+         PUSH_DATA (push, 0);
+      }
+   }
+}
+
 static struct nvc0_state_validate
 validate_list_cp[] = {
    { nvc0_compprog_validate,              NVC0_NEW_CP_PROGRAM     },
@@ -317,6 +354,7 @@ validate_list_cp[] = {
                                           NVC0_NEW_CP_SAMPLERS    },
    { nve4_compute_validate_surfaces,      NVC0_NEW_CP_SURFACES    },
    { nvc0_compute_validate_globals,       NVC0_NEW_CP_GLOBALS     },
+   { nve4_compute_validate_buffers,       NVC0_NEW_CP_BUFFERS     },
 };
 
 static bool

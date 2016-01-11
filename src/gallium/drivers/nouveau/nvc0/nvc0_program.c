@@ -543,12 +543,10 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
          info->io.auxCBSlot = 7;
          info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
          info->prop.cp.gridInfoBase = NVC0_CB_AUX_GRID_INFO;
-         info->io.bufInfoBase = 0; /* TODO */
-      } else {
-         info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
       }
       info->io.msInfoCBSlot = 0;
       info->io.msInfoBase = NVC0_CB_AUX_MS_INFO;
+      info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
       info->io.suInfoBase = 0; /* TODO */
    } else {
       if (chipset >= NVISA_GK104_CHIPSET) {
