@@ -125,19 +125,20 @@ anv_shader_compile_to_nir(struct anv_device *device,
       nir_inline_functions(nir);
       nir_validate_shader(nir);
 
+      /* Pick off the single entrypoint that we want */
+      foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
+         if (func != entry_point)
+            exec_node_remove(&func->node);
+      }
+      assert(exec_list_length(&nir->functions) == 1);
+      entry_point->name = ralloc_strdup(entry_point, "main");
+
       nir_lower_system_values(nir);
       nir_validate_shader(nir);
    }
 
    /* Vulkan uses the separate-shader linking model */
    nir->info.separate_shader = true;
-
-   /* Pick off the single entrypoint that we want */
-   foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
-      if (func != entry_point)
-         exec_node_remove(&func->node);
-   }
-   assert(exec_list_length(&nir->functions) == 1);
 
    nir = brw_preprocess_nir(nir, compiler->scalar_stage[stage]);
 
