@@ -4976,6 +4976,12 @@ const unsigned _mesa_sysval_to_semantic[SYSTEM_VALUE_MAX] = {
    TGSI_SEMANTIC_PRIMID,
    TGSI_SEMANTIC_TESSOUTER,
    TGSI_SEMANTIC_TESSINNER,
+
+   /* Compute shaders
+    */
+   TGSI_SEMANTIC_THREAD_ID,
+   TGSI_SEMANTIC_BLOCK_ID,
+   TGSI_SEMANTIC_GRID_SIZE,
 };
 
 /**
@@ -5746,6 +5752,12 @@ st_translate_program(
           TGSI_SEMANTIC_TESSCOORD);
    assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_HELPER_INVOCATION] ==
           TGSI_SEMANTIC_HELPER_INVOCATION);
+   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_LOCAL_INVOCATION_ID] ==
+          TGSI_SEMANTIC_THREAD_ID);
+   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_WORK_GROUP_ID] ==
+          TGSI_SEMANTIC_BLOCK_ID);
+   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_NUM_WORK_GROUPS] ==
+          TGSI_SEMANTIC_GRID_SIZE);
 
    t = CALLOC_STRUCT(st_translate);
    if (!t) {
