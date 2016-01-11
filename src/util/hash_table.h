@@ -69,6 +69,11 @@ void _mesa_hash_table_clear(struct hash_table *ht,
 void _mesa_hash_table_set_deleted_key(struct hash_table *ht,
                                       const void *deleted_key);
 
+static inline uint32_t _mesa_hash_table_num_entries(struct hash_table *ht)
+{
+   return ht->entries;
+}
+
 struct hash_entry *
 _mesa_hash_table_insert(struct hash_table *ht, const void *key, void *data);
 struct hash_entry *
