@@ -349,6 +349,11 @@ nvc0_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
    /* set the empty tctl prog on next draw in case one is never set */
    nvc0->dirty |= NVC0_NEW_TCTLPROG;
 
+   /* Do not bind the COMPUTE driver constbuf at screen initialization because
+    * CBs are aliased between 3D and COMPUTE, but make sure it will be bound if
+    * a grid is launched later. */
+   nvc0->dirty_cp |= NVC0_NEW_CP_DRIVERCONST;
+
    /* now that there are no more opportunities for errors, set the current
     * context if there isn't already one.
     */
@@ -368,6 +373,7 @@ nvc0_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
    BCTX_REFN_bo(nvc0->bufctx_3d, SCREEN, flags, screen->txc);
    if (screen->compute) {
       BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->text);
+      BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->uniform_bo);
       BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->txc);
       BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->parm);
    }

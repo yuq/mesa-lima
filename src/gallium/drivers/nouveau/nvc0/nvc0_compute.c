@@ -196,6 +196,22 @@ nvc0_compute_validate_constbufs(struct nvc0_context *nvc0)
    PUSH_DATA (push, NVC0_COMPUTE_FLUSH_CB);
 }
 
+static void
+nvc0_compute_validate_driverconst(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_screen *screen = nvc0->screen;
+
+   BEGIN_NVC0(push, NVC0_COMPUTE(CB_SIZE), 3);
+   PUSH_DATA (push, 1024);
+   PUSH_DATAh(push, screen->uniform_bo->offset + (6 << 16) + (5 << 10));
+   PUSH_DATA (push, screen->uniform_bo->offset + (6 << 16) + (5 << 10));
+   BEGIN_NVC0(push, NVC0_COMPUTE(CB_BIND), 1);
+   PUSH_DATA (push, (15 << 8) | 1);
+
+   nvc0->dirty |= NVC0_NEW_DRIVERCONST;
+}
+
 static bool
 nvc0_compute_state_validate(struct nvc0_context *nvc0)
 {
@@ -203,6 +219,8 @@ nvc0_compute_state_validate(struct nvc0_context *nvc0)
       return false;
    if (nvc0->dirty_cp & NVC0_NEW_CP_CONSTBUF)
       nvc0_compute_validate_constbufs(nvc0);
+   if (nvc0->dirty_cp & NVC0_NEW_CP_DRIVERCONST)
+      nvc0_compute_validate_driverconst(nvc0);
 
    /* TODO: textures, samplers, surfaces, global memory buffers */
 

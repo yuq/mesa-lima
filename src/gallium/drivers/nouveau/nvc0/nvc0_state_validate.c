@@ -555,6 +555,8 @@ nvc0_validate_driverconst(struct nvc0_context *nvc0)
       BEGIN_NVC0(push, NVC0_3D(CB_BIND(i)), 1);
       PUSH_DATA (push, (15 << 4) | 1);
    }
+
+   nvc0->dirty_cp |= NVC0_NEW_CP_DRIVERCONST;
 }
 
 void

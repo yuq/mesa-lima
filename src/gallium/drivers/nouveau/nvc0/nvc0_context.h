@@ -65,6 +65,7 @@
 #define NVC0_NEW_CP_SAMPLERS  (1 << 3)
 #define NVC0_NEW_CP_CONSTBUF  (1 << 4)
 #define NVC0_NEW_CP_GLOBALS   (1 << 5)
+#define NVC0_NEW_CP_DRIVERCONST (1 << 6)
 
 /* 3d bufctx (during draw_vbo, blit_3d) */
 #define NVC0_BIND_FB            0
