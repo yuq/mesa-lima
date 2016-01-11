@@ -133,6 +133,13 @@ anv_shader_compile_to_nir(struct anv_device *device,
       assert(exec_list_length(&nir->functions) == 1);
       entry_point->name = ralloc_strdup(entry_point, "main");
 
+      nir_remove_dead_variables(nir, nir_var_shader_in);
+      nir_remove_dead_variables(nir, nir_var_shader_out);
+      nir_remove_dead_variables(nir, nir_var_system_value);
+      nir_validate_shader(nir);
+
+      nir_lower_outputs_to_temporaries(entry_point->shader, entry_point);
+
       nir_lower_system_values(nir);
       nir_validate_shader(nir);
    }
