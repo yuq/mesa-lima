@@ -397,13 +397,43 @@ static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
 	return value;
 }
 
+static unsigned si_get_cb_shader_mask(unsigned spi_shader_col_format)
+{
+	unsigned i, cb_shader_mask = 0;
+
+	for (i = 0; i < 8; i++) {
+		switch ((spi_shader_col_format >> (i * 4)) & 0xf) {
+		case V_028714_SPI_SHADER_ZERO:
+			break;
+		case V_028714_SPI_SHADER_32_R:
+			cb_shader_mask |= 0x1 << (i * 4);
+			break;
+		case V_028714_SPI_SHADER_32_GR:
+			cb_shader_mask |= 0x3 << (i * 4);
+			break;
+		case V_028714_SPI_SHADER_32_AR:
+			cb_shader_mask |= 0x9 << (i * 4);
+			break;
+		case V_028714_SPI_SHADER_FP16_ABGR:
+		case V_028714_SPI_SHADER_UNORM16_ABGR:
+		case V_028714_SPI_SHADER_SNORM16_ABGR:
+		case V_028714_SPI_SHADER_UINT16_ABGR:
+		case V_028714_SPI_SHADER_SINT16_ABGR:
+		case V_028714_SPI_SHADER_32_ABGR:
+			cb_shader_mask |= 0xf << (i * 4);
+			break;
+		default:
+			assert(0);
+		}
+	}
+	return cb_shader_mask;
+}
+
 static void si_shader_ps(struct si_shader *shader)
 {
 	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
-	unsigned i, spi_ps_in_control, spi_shader_col_format;
-	unsigned cb_shader_mask = 0;
-	unsigned colors_written;
+	unsigned spi_ps_in_control, spi_shader_col_format, cb_shader_mask;
 	unsigned num_sgprs, num_user_sgprs;
 	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
@@ -438,23 +468,12 @@ static void si_shader_ps(struct si_shader *shader)
 	    TGSI_FS_COORD_PIXEL_CENTER_INTEGER)
 		spi_baryc_cntl |= S_0286E0_POS_FLOAT_ULC(1);
 
-	/* Find out what SPI_SHADER_COL_FORMAT and CB_SHADER_MASK should be. */
-	colors_written = info->colors_written;
-
-	if (info->colors_written == 0x1 &&
-	    info->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS]) {
-		colors_written |= (1 << (shader->key.ps.last_cbuf + 1)) - 1;
-	}
-
-	while (colors_written) {
-		i = u_bit_scan(&colors_written);
-		cb_shader_mask |= 0xf << (4 * i);
-	}
-
 	spi_shader_col_format = si_get_spi_shader_col_format(shader);
+	cb_shader_mask = si_get_cb_shader_mask(spi_shader_col_format);
 
 	/* This must be non-zero for alpha-test/kill to work.
 	 * The hardware ignores the EXEC mask if no export memory is allocated.
+	 * Don't add this to CB_SHADER_MASK.
 	 */
 	if (!spi_shader_col_format &&
 	    !info->writes_z && !info->writes_stencil && !info->writes_samplemask &&
