@@ -195,8 +195,10 @@ nvc0_launch_grid(struct pipe_context *pipe,
    int ret;
 
    ret = !nvc0_compute_state_validate(nvc0);
-   if (ret)
-      goto out;
+   if (ret) {
+      NOUVEAU_ERR("Failed to launch grid !\n");
+      return;
+   }
 
    nvc0_compute_upload_input(nvc0, input);
 
@@ -253,8 +255,4 @@ nvc0_launch_grid(struct pipe_context *pipe,
    }
    memset(nvc0->state.uniform_buffer_bound, 0,
           sizeof(nvc0->state.uniform_buffer_bound));
-
-out:
-   if (ret)
-      NOUVEAU_ERR("Failed to launch grid !\n");
 }
