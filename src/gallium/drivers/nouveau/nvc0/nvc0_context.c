@@ -56,6 +56,7 @@ static void
 nvc0_memory_barrier(struct pipe_context *pipe, unsigned flags)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    int i, s;
 
    if (flags & PIPE_BARRIER_MAPPED_BUFFER) {
@@ -89,6 +90,9 @@ nvc0_memory_barrier(struct pipe_context *pipe, unsigned flags)
                nvc0->cb_dirty = true;
          }
       }
+   }
+   if (flags & PIPE_BARRIER_SHADER_BUFFER) {
+      IMMED_NVC0(push, NVC0_3D(MEM_BARRIER), 0x1011);
    }
 }
 
