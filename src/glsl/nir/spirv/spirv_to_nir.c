@@ -3222,6 +3222,7 @@ vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpConstant:
    case SpvOpConstantComposite:
    case SpvOpConstantSampler:
+   case SpvOpConstantNull:
    case SpvOpSpecConstantTrue:
    case SpvOpSpecConstantFalse:
    case SpvOpSpecConstant:
