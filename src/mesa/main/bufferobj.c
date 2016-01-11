@@ -458,6 +458,7 @@ _mesa_delete_buffer_object(struct gl_context *ctx,
 {
    (void) ctx;
 
+   vbo_delete_minmax_cache(bufObj);
    _mesa_align_free(bufObj->Data);
 
    /* assign strange values here to help w/ debugging */
@@ -1528,6 +1529,7 @@ _mesa_buffer_storage(struct gl_context *ctx, struct gl_buffer_object *bufObj,
 
    bufObj->Written = GL_TRUE;
    bufObj->Immutable = GL_TRUE;
+   bufObj->MinMaxCacheDirty = true;
 
    assert(ctx->Driver.BufferData);
    if (!ctx->Driver.BufferData(ctx, target, size, data, GL_DYNAMIC_DRAW,
@@ -1641,6 +1643,7 @@ _mesa_buffer_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
    FLUSH_VERTICES(ctx, _NEW_BUFFER_OBJECT);
 
    bufObj->Written = GL_TRUE;
+   bufObj->MinMaxCacheDirty = true;
 
 #ifdef VBO_DEBUG
    printf("glBufferDataARB(%u, sz %ld, from %p, usage 0x%x)\n",
@@ -1753,6 +1756,7 @@ _mesa_buffer_sub_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
    }
 
    bufObj->Written = GL_TRUE;
+   bufObj->MinMaxCacheDirty = true;
 
    assert(ctx->Driver.BufferSubData);
    ctx->Driver.BufferSubData(ctx, offset, size, data, bufObj);
@@ -1871,6 +1875,8 @@ _mesa_clear_buffer_sub_data(struct gl_context *ctx,
    /* Bail early. Negative size has already been checked. */
    if (size == 0)
       return;
+
+   bufObj->MinMaxCacheDirty = true;
 
    if (data == NULL) {
       /* clear to zeros, per the spec */
@@ -2285,6 +2291,8 @@ _mesa_copy_buffer_sub_data(struct gl_context *ctx,
       }
    }
 
+   dst->MinMaxCacheDirty = true;
+
    ctx->Driver.CopyBufferSubData(ctx, src, dst, readOffset, writeOffset, size);
 }
 
@@ -2489,8 +2497,10 @@ _mesa_map_buffer_range(struct gl_context *ctx,
       assert(bufObj->Mappings[MAP_USER].AccessFlags == access);
    }
 
-   if (access & GL_MAP_WRITE_BIT)
+   if (access & GL_MAP_WRITE_BIT) {
       bufObj->Written = GL_TRUE;
+      bufObj->MinMaxCacheDirty = true;
+   }
 
 #ifdef VBO_DEBUG
    if (strstr(func, "Range") == NULL) { /* If not MapRange */

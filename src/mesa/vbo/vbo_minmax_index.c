@@ -32,6 +32,167 @@
 #include "main/macros.h"
 #include "main/sse_minmax.h"
 #include "x86/common_x86_asm.h"
+#include "util/hash_table.h"
+
+
+struct minmax_cache_key {
+   GLintptr offset;
+   GLuint count;
+   GLenum type;
+};
+
+
+struct minmax_cache_entry {
+   struct minmax_cache_key key;
+   GLuint min;
+   GLuint max;
+};
+
+
+static uint32_t
+vbo_minmax_cache_hash(const struct minmax_cache_key *key)
+{
+   return _mesa_hash_data(key, sizeof(*key));
+}
+
+
+static bool
+vbo_minmax_cache_key_equal(const struct minmax_cache_key *a,
+                           const struct minmax_cache_key *b)
+{
+   return (a->offset == b->offset) && (a->count == b->count) && (a->type == b->type);
+}
+
+
+static void
+vbo_minmax_cache_delete_entry(struct hash_entry *entry)
+{
+   free(entry->data);
+}
+
+
+static GLboolean
+vbo_use_minmax_cache(struct gl_buffer_object *bufferObj)
+{
+   if (bufferObj->UsageHistory & (USAGE_TEXTURE_BUFFER |
+                                  USAGE_ATOMIC_COUNTER_BUFFER |
+                                  USAGE_SHADER_STORAGE_BUFFER |
+                                  USAGE_TRANSFORM_FEEDBACK_BUFFER |
+                                  USAGE_PIXEL_PACK_BUFFER))
+      return GL_FALSE;
+
+   if ((bufferObj->Mappings[MAP_USER].AccessFlags &
+        (GL_MAP_PERSISTENT_BIT | GL_MAP_WRITE_BIT)) ==
+       (GL_MAP_PERSISTENT_BIT | GL_MAP_WRITE_BIT))
+      return GL_FALSE;
+
+   return GL_TRUE;
+}
+
+
+void
+vbo_delete_minmax_cache(struct gl_buffer_object *bufferObj)
+{
+   _mesa_hash_table_destroy(bufferObj->MinMaxCache, vbo_minmax_cache_delete_entry);
+   bufferObj->MinMaxCache = NULL;
+}
+
+
+static GLboolean
+vbo_get_minmax_cached(struct gl_buffer_object *bufferObj,
+                      GLenum type, GLintptr offset, GLuint count,
+                      GLuint *min_index, GLuint *max_index)
+{
+   GLboolean found = GL_FALSE;
+   struct minmax_cache_key key;
+   uint32_t hash;
+   struct hash_entry *result;
+
+   if (!bufferObj->MinMaxCache)
+      return GL_FALSE;
+   if (!vbo_use_minmax_cache(bufferObj))
+      return GL_FALSE;
+
+   mtx_lock(&bufferObj->Mutex);
+
+   if (bufferObj->MinMaxCacheDirty) {
+      _mesa_hash_table_clear(bufferObj->MinMaxCache, vbo_minmax_cache_delete_entry);
+      bufferObj->MinMaxCacheDirty = false;
+      goto out;
+   }
+
+   key.type = type;
+   key.offset = offset;
+   key.count = count;
+   hash = vbo_minmax_cache_hash(&key);
+   result = _mesa_hash_table_search_pre_hashed(bufferObj->MinMaxCache, hash, &key);
+   if (result) {
+      struct minmax_cache_entry *entry = result->data;
+      *min_index = entry->min;
+      *max_index = entry->max;
+      found = GL_TRUE;
+   }
+
+out:
+   mtx_unlock(&bufferObj->Mutex);
+   return found;
+}
+
+
+static void
+vbo_minmax_cache_store(struct gl_context *ctx,
+                       struct gl_buffer_object *bufferObj,
+                       GLenum type, GLintptr offset, GLuint count,
+                       GLuint min, GLuint max)
+{
+   struct minmax_cache_entry *entry;
+   struct hash_entry *table_entry;
+   uint32_t hash;
+
+   if (!vbo_use_minmax_cache(bufferObj))
+      return;
+
+   mtx_lock(&bufferObj->Mutex);
+
+   if (!bufferObj->MinMaxCache) {
+      bufferObj->MinMaxCache =
+         _mesa_hash_table_create(NULL,
+                                 (uint32_t (*)(const void *))vbo_minmax_cache_hash,
+                                 (bool (*)(const void *, const void *))vbo_minmax_cache_key_equal);
+      if (!bufferObj->MinMaxCache)
+         goto out;
+   }
+
+   entry = MALLOC_STRUCT(minmax_cache_entry);
+   if (!entry)
+      goto out;
+
+   entry->key.offset = offset;
+   entry->key.count = count;
+   entry->key.type = type;
+   entry->min = min;
+   entry->max = max;
+   hash = vbo_minmax_cache_hash(&entry->key);
+
+   table_entry = _mesa_hash_table_search_pre_hashed(bufferObj->MinMaxCache,
+                                                    hash, &entry->key);
+   if (table_entry) {
+      /* It seems like this could happen when two contexts are rendering using
+       * the same buffer object from multiple threads.
+       */
+      _mesa_debug(ctx, "duplicate entry in minmax cache\n");
+      free(entry);
+      goto out;
+   }
+
+   table_entry = _mesa_hash_table_insert_pre_hashed(bufferObj->MinMaxCache,
+                                                    hash, &entry->key, entry);
+   if (!table_entry)
+      free(entry);
+
+out:
+   mtx_unlock(&bufferObj->Mutex);
+}
 
 
 /**
@@ -56,6 +217,11 @@ vbo_get_minmax_index(struct gl_context *ctx,
    indices = (char *) ib->ptr + prim->start * index_size;
    if (_mesa_is_bufferobj(ib->obj)) {
       GLsizeiptr size = MIN2(count * index_size, ib->obj->Size);
+
+      if (vbo_get_minmax_cached(ib->obj, ib->type, (GLintptr) indices, count,
+                                min_index, max_index))
+         return;
+
       indices = ctx->Driver.MapBufferRange(ctx, (GLintptr) indices, size,
                                            GL_MAP_READ_BIT, ib->obj,
                                            MAP_INTERNAL);
@@ -139,6 +305,8 @@ vbo_get_minmax_index(struct gl_context *ctx,
    }
 
    if (_mesa_is_bufferobj(ib->obj)) {
+      vbo_minmax_cache_store(ctx, ib->obj, ib->type, prim->start, count,
+                             *min_index, *max_index);
       ctx->Driver.UnmapBuffer(ctx, ib->obj, MAP_INTERNAL);
    }
 }

@@ -1282,6 +1282,10 @@ struct gl_buffer_object
    GLuint NumMapBufferWriteCalls;
 
    struct gl_buffer_mapping Mappings[MAP_COUNT];
+
+   /** Memoization of min/max index computations for static index buffers */
+   struct hash_table *MinMaxCache;
+   bool MinMaxCacheDirty;
 };
 
 
