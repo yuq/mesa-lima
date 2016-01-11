@@ -805,10 +805,12 @@ genX(cmd_buffer_begin_subpass)(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer_emit_depth_stencil(cmd_buffer);
 }
 
-static void
-begin_render_pass(struct anv_cmd_buffer *cmd_buffer,
-                  const VkRenderPassBeginInfo* pRenderPassBegin)
+void genX(CmdBeginRenderPass)(
+    VkCommandBuffer                             commandBuffer,
+    const VkRenderPassBeginInfo*                pRenderPassBegin,
+    VkSubpassContents                           contents)
 {
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_render_pass, pass, pRenderPassBegin->renderPass);
    ANV_FROM_HANDLE(anv_framebuffer, framebuffer, pRenderPassBegin->framebuffer);
 
@@ -829,17 +831,6 @@ begin_render_pass(struct anv_cmd_buffer *cmd_buffer,
 
    anv_cmd_buffer_clear_attachments(cmd_buffer, pass,
                                     pRenderPassBegin->pClearValues);
-}
-
-void genX(CmdBeginRenderPass)(
-    VkCommandBuffer                             commandBuffer,
-    const VkRenderPassBeginInfo*                pRenderPassBegin,
-    VkSubpassContents                           contents)
-{
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
-   ANV_FROM_HANDLE(anv_render_pass, pass, pRenderPassBegin->renderPass);
-
-   begin_render_pass(cmd_buffer, pRenderPassBegin);
 
    gen7_cmd_buffer_begin_subpass(cmd_buffer, pass->subpasses);
 }
