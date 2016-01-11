@@ -78,7 +78,8 @@ vbo_use_minmax_cache(struct gl_buffer_object *bufferObj)
                                   USAGE_ATOMIC_COUNTER_BUFFER |
                                   USAGE_SHADER_STORAGE_BUFFER |
                                   USAGE_TRANSFORM_FEEDBACK_BUFFER |
-                                  USAGE_PIXEL_PACK_BUFFER))
+                                  USAGE_PIXEL_PACK_BUFFER |
+                                  USAGE_DISABLE_MINMAX_CACHE))
       return GL_FALSE;
 
    if ((bufferObj->Mappings[MAP_USER].AccessFlags &
