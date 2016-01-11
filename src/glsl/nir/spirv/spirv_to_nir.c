@@ -3190,6 +3190,7 @@ vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpLine:
+   case SpvOpNoLine:
       break; /* Ignored for now */
 
    case SpvOpTypeVoid:
@@ -3244,6 +3245,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
 {
    switch (opcode) {
    case SpvOpLine:
+   case SpvOpNoLine:
       break; /* Ignored for now */
 
    case SpvOpLabel:
