@@ -499,7 +499,7 @@ BuildUtil::DataArray::acquire(ValueMap &m, int i, int c)
 
       return v;
    } else {
-      return up->getScratch(eltSize, file);
+      return up->getScratch(eltSize);
    }
 }
 
