@@ -241,15 +241,20 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
       }
       }
 
-      for (s = 0; s < 5; ++s) {
+      for (s = 0; s < 6; ++s) {
       for (i = 0; i < NVC0_MAX_PIPE_CONSTBUFS; ++i) {
          if (!(nvc0->constbuf_valid[s] & (1 << i)))
             continue;
          if (!nvc0->constbuf[s][i].user &&
              nvc0->constbuf[s][i].u.buf == res) {
-            nvc0->dirty |= NVC0_NEW_CONSTBUF;
             nvc0->constbuf_dirty[s] |= 1 << i;
-            nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_CB(s, i));
+            if (unlikely(s == 5)) {
+               nvc0->dirty_cp |= NVC0_NEW_CP_CONSTBUF;
+               nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_CB(i));
+            } else {
+               nvc0->dirty |= NVC0_NEW_CONSTBUF;
+               nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_CB(s, i));
+            }
             if (!--ref)
                return ref;
          }

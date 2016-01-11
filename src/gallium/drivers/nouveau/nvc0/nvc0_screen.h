@@ -51,7 +51,7 @@ struct nvc0_graph_state {
    uint8_t c14_bound; /* whether immediate array constbuf is bound */
    uint8_t clip_enable;
    uint32_t clip_mode;
-   uint32_t uniform_buffer_bound[5];
+   uint32_t uniform_buffer_bound[6];
    struct nvc0_transform_feedback_state *tfb;
    bool seamless_cube_map;
 };

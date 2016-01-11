@@ -138,11 +138,71 @@ nvc0_compute_validate_program(struct nvc0_context *nvc0)
    return false;
 }
 
+static void
+nvc0_compute_validate_constbufs(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   const int s = 5;
+
+   while (nvc0->constbuf_dirty[s]) {
+      int i = ffs(nvc0->constbuf_dirty[s]) - 1;
+      nvc0->constbuf_dirty[s] &= ~(1 << i);
+
+      if (nvc0->constbuf[s][i].user) {
+         struct nouveau_bo *bo = nvc0->screen->uniform_bo;
+         const unsigned base = s << 16;
+         const unsigned size = nvc0->constbuf[s][0].size;
+         assert(i == 0); /* we really only want OpenGL uniforms here */
+         assert(nvc0->constbuf[s][0].u.data);
+
+         if (nvc0->state.uniform_buffer_bound[s] < size) {
+            nvc0->state.uniform_buffer_bound[s] = align(size, 0x100);
+
+            BEGIN_NVC0(push, NVC0_COMPUTE(CB_SIZE), 3);
+            PUSH_DATA (push, nvc0->state.uniform_buffer_bound[s]);
+            PUSH_DATAh(push, bo->offset + base);
+            PUSH_DATA (push, bo->offset + base);
+            BEGIN_NVC0(push, NVC0_COMPUTE(CB_BIND), 1);
+            PUSH_DATA (push, (0 << 8) | 1);
+         }
+         nvc0_cb_bo_push(&nvc0->base, bo, NV_VRAM_DOMAIN(&nvc0->screen->base),
+                         base, nvc0->state.uniform_buffer_bound[s],
+                         0, (size + 3) / 4,
+                         nvc0->constbuf[s][0].u.data);
+      } else {
+         struct nv04_resource *res =
+            nv04_resource(nvc0->constbuf[s][i].u.buf);
+         if (res) {
+            BEGIN_NVC0(push, NVC0_COMPUTE(CB_SIZE), 3);
+            PUSH_DATA (push, nvc0->constbuf[s][i].size);
+            PUSH_DATAh(push, res->address + nvc0->constbuf[s][i].offset);
+            PUSH_DATA (push, res->address + nvc0->constbuf[s][i].offset);
+            BEGIN_NVC0(push, NVC0_COMPUTE(CB_BIND), 1);
+            PUSH_DATA (push, (i << 8) | 1);
+
+            BCTX_REFN(nvc0->bufctx_cp, CP_CB(i), res, RD);
+
+            res->cb_bindings[s] |= 1 << i;
+         } else {
+            BEGIN_NVC0(push, NVC0_COMPUTE(CB_BIND), 1);
+            PUSH_DATA (push, (i << 8) | 0);
+         }
+         if (i == 0)
+            nvc0->state.uniform_buffer_bound[s] = 0;
+      }
+   }
+
+   BEGIN_NVC0(push, NVC0_COMPUTE(FLUSH), 1);
+   PUSH_DATA (push, NVC0_COMPUTE_FLUSH_CB);
+}
+
 static bool
 nvc0_compute_state_validate(struct nvc0_context *nvc0)
 {
    if (!nvc0_compute_validate_program(nvc0))
       return false;
+   if (nvc0->dirty_cp & NVC0_NEW_CP_CONSTBUF)
+      nvc0_compute_validate_constbufs(nvc0);
 
    /* TODO: textures, samplers, surfaces, global memory buffers */
 
@@ -188,7 +248,7 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    struct nvc0_program *cp = nvc0->compprog;
-   unsigned s, i;
+   unsigned s;
    int ret;
 
    ret = !nvc0_compute_state_validate(nvc0);
@@ -242,14 +302,10 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    BEGIN_NVC0(push, SUBC_COMPUTE(0x0360), 1);
    PUSH_DATA (push, 0x1);
 
-   /* rebind all the 3D constant buffers
-    * (looks like binding a CB on COMPUTE clobbers 3D state) */
+   /* Invalidate all 3D constbufs because they are aliased with COMPUTE. */
    nvc0->dirty |= NVC0_NEW_CONSTBUF;
    for (s = 0; s < 5; s++) {
-      for (i = 0; i < NVC0_MAX_PIPE_CONSTBUFS; i++)
-         if (nvc0->constbuf[s][i].u.buf)
-            nvc0->constbuf_dirty[s] |= 1 << i;
+      nvc0->constbuf_dirty[s] |= nvc0->constbuf_valid[s];
+      nvc0->state.uniform_buffer_bound[s] = 0;
    }
-   memset(nvc0->state.uniform_buffer_bound, 0,
-          sizeof(nvc0->state.uniform_buffer_bound));
 }

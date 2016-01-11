@@ -839,7 +839,9 @@ nvc0_set_constant_buffer(struct pipe_context *pipe, uint shader, uint index,
    const unsigned i = index;
 
    if (unlikely(shader == PIPE_SHADER_COMPUTE)) {
-      assert(!cb || !cb->user_buffer);
+      if (nvc0->constbuf[s][i].user)
+         nvc0->constbuf[s][i].u.buf = NULL;
+      else
       if (nvc0->constbuf[s][i].u.buf)
          nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_CB(i));
 
