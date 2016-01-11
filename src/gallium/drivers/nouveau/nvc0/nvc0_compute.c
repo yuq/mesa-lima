@@ -248,7 +248,7 @@ nvc0_launch_grid(struct pipe_context *pipe,
    /* rebind all the 3D constant buffers
     * (looks like binding a CB on COMPUTE clobbers 3D state) */
    nvc0->dirty |= NVC0_NEW_CONSTBUF;
-   for (s = 0; s < 6; s++) {
+   for (s = 0; s < 5; s++) {
       for (i = 0; i < NVC0_MAX_PIPE_CONSTBUFS; i++)
          if (nvc0->constbuf[s][i].u.buf)
             nvc0->constbuf_dirty[s] |= 1 << i;
