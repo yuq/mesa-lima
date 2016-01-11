@@ -1086,7 +1086,7 @@ NVC0LoweringPass::handleCasExch(Instruction *cas, bool needCctl)
          cctl->setPredicate(cas->cc, cas->getPredicate());
    }
 
-   if (cas->defExists(0) && cas->subOp == NV50_IR_SUBOP_ATOM_CAS) {
+   if (cas->subOp == NV50_IR_SUBOP_ATOM_CAS) {
       // CAS is crazy. It's 2nd source is a double reg, and the 3rd source
       // should be set to the high part of the double reg or bad things will
       // happen elsewhere in the universe.
@@ -1096,6 +1096,7 @@ NVC0LoweringPass::handleCasExch(Instruction *cas, bool needCctl)
       bld.setPosition(cas, false);
       bld.mkOp2(OP_MERGE, TYPE_U64, dreg, cas->getSrc(1), cas->getSrc(2));
       cas->setSrc(1, dreg);
+      cas->setSrc(2, dreg);
    }
 
    return true;

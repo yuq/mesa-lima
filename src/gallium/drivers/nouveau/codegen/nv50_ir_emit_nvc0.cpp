@@ -2021,8 +2021,10 @@ CodeEmitterNVC0::emitATOM(const Instruction *i)
       code[0] |= 63 << 20;
    }
 
-   if (i->subOp == NV50_IR_SUBOP_ATOM_CAS)
-      srcId(i->src(2), 32 + 17);
+   if (i->subOp == NV50_IR_SUBOP_ATOM_CAS) {
+      assert(i->src(1).getSize() == 2 * typeSizeof(i->sType));
+      code[1] |= (SDATA(i->src(1)).id + 1) << 17;
+   }
 }
 
 void

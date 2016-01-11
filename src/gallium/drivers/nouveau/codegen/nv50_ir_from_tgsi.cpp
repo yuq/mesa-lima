@@ -2435,13 +2435,13 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
          else
             sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, 0);
          insn = mkOp2(OP_ATOM, ty, dst, sym, fetchSrc(2, c));
+         if (subOp == NV50_IR_SUBOP_ATOM_CAS)
+            insn->setSrc(2, fetchSrc(3, 0));
          if (tgsi.getSrc(1).getFile() != TGSI_FILE_IMMEDIATE)
             insn->setIndirect(0, 0, off);
          if (tgsi.getSrc(0).isIndirect(0))
             insn->setIndirect(0, 1, fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));
          insn->subOp = subOp;
-         if (subOp == NV50_IR_SUBOP_ATOM_CAS)
-            insn->setSrc(2, fetchSrc(3, 0));
       }
       for (int c = 0; c < 4; ++c)
          if (dst0[c])
