@@ -352,6 +352,7 @@ enum pipe_flush_flags
  * Flags for pipe_context::memory_barrier.
  */
 #define PIPE_BARRIER_MAPPED_BUFFER     (1 << 0)
+#define PIPE_BARRIER_SHADER_BUFFER     (1 << 1)
 
 /**
  * Resource binding flags -- state tracker must specify in advance all
