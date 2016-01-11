@@ -581,6 +581,33 @@ add_phi_sources(nir_block *block, nir_block *pred,
    }
 }
 
+static void
+add_undef_phi_sources(nir_block *block, nir_block *pred,
+                      struct lower_variables_state *state)
+{
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_phi)
+         break;
+
+      nir_phi_instr *phi = nir_instr_as_phi(instr);
+
+      nir_ssa_undef_instr *undef =
+         nir_ssa_undef_instr_create(state->shader,
+                                    phi->dest.ssa.num_components);
+      nir_instr_insert(nir_before_cf_list(&state->impl->body), &undef->instr);
+
+      nir_phi_src *src = ralloc(phi, nir_phi_src);
+      src->pred = pred;
+      src->src.parent_instr = &phi->instr;
+      src->src.is_ssa = true;
+      src->src.ssa = &undef->def;
+
+      list_addtail(&src->src.use_link, &undef->def.uses);
+
+      exec_list_push_tail(&phi->srcs, &src->node);
+   }
+}
+
 /* Performs variable renaming by doing a DFS of the dominance tree
  *
  * This algorithm is very similar to the one outlined in "Efficiently
@@ -774,6 +801,23 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
    return true;
 }
 
+static bool
+add_unreachable_phi_srcs_block(nir_block *block, void *void_state)
+{
+   struct lower_variables_state *state = void_state;
+
+   /* Only run on unreachable blocks */
+   if (block->imm_dom || block == nir_start_block(state->impl))
+      return true;
+
+   if (block->successors[0])
+      add_undef_phi_sources(block->successors[0], block, state);
+   if (block->successors[1])
+      add_undef_phi_sources(block->successors[1], block, state);
+
+   return true;
+}
+
 /* Inserts phi nodes for all variables marked lower_to_ssa
  *
  * This is the same algorithm as presented in "Efficiently Computing Static
@@ -954,6 +998,8 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
 
    insert_phi_nodes(&state);
    rename_variables_block(nir_start_block(impl), &state);
+
+   nir_foreach_block(impl, add_unreachable_phi_srcs_block, &state);
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
