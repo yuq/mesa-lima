@@ -182,25 +182,31 @@ st_bufferobj_data(struct gl_context *ctx,
 {
    struct st_context *st = st_context(ctx);
    struct pipe_context *pipe = st->pipe;
+   struct pipe_screen *screen = pipe->screen;
    struct st_buffer_object *st_obj = st_buffer_object(obj);
    unsigned bind, pipe_usage, pipe_flags = 0;
 
    if (target != GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD &&
-       size && data && st_obj->buffer &&
+       size && st_obj->buffer &&
        st_obj->Base.Size == size &&
        st_obj->Base.Usage == usage &&
        st_obj->Base.StorageFlags == storageFlags) {
-      /* Just discard the old contents and write new data.
-       * This should be the same as creating a new buffer, but we avoid
-       * a lot of validation in Mesa.
-       */
-      struct pipe_box box;
+      if (data) {
+         /* Just discard the old contents and write new data.
+          * This should be the same as creating a new buffer, but we avoid
+          * a lot of validation in Mesa.
+          */
+         struct pipe_box box;
 
-      u_box_1d(0, size, &box);
-      pipe->transfer_inline_write(pipe, st_obj->buffer, 0,
-                                  PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE,
-                                  &box, data, 0, 0);
-      return GL_TRUE;
+         u_box_1d(0, size, &box);
+         pipe->transfer_inline_write(pipe, st_obj->buffer, 0,
+                                    PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE,
+                                    &box, data, 0, 0);
+         return GL_TRUE;
+      } else if (screen->get_param(screen, PIPE_CAP_INVALIDATE_BUFFER)) {
+         pipe->invalidate_resource(pipe, st_obj->buffer);
+         return GL_TRUE;
+      }
    }
 
    st_obj->Base.Size = size;
@@ -288,7 +294,6 @@ st_bufferobj_data(struct gl_context *ctx,
    }
 
    if (size != 0) {
-      struct pipe_screen *screen = pipe->screen;
       struct pipe_resource buffer;
 
       memset(&buffer, 0, sizeof buffer);
