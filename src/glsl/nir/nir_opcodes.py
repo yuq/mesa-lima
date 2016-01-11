@@ -512,7 +512,7 @@ binop_horiz("pack_half_2x16_split", 1, tuint, 1, tfloat, 1, tfloat,
             "pack_half_1x16(src0.x) | (pack_half_1x16(src1.x) << 16)")
 
 binop_convert("bfm", tuint, tint, "", """
-int offset = src0, bits = src1;
+int bits = src0, offset = src1;
 if (offset < 0 || bits < 0 || offset + bits > 32)
    dst = 0; /* undefined per the spec */
 else
