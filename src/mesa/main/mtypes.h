@@ -1286,6 +1286,8 @@ struct gl_buffer_object
 
    /** Memoization of min/max index computations for static index buffers */
    struct hash_table *MinMaxCache;
+   unsigned MinMaxCacheHitIndices;
+   unsigned MinMaxCacheMissIndices;
    bool MinMaxCacheDirty;
 };
 

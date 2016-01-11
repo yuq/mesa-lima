@@ -117,9 +117,24 @@ vbo_get_minmax_cached(struct gl_buffer_object *bufferObj,
    mtx_lock(&bufferObj->Mutex);
 
    if (bufferObj->MinMaxCacheDirty) {
+      /* Disable the cache permanently for this BO if the number of hits
+       * is asymptotically less than the number of misses. This happens when
+       * applications use the BO for streaming.
+       *
+       * However, some initial optimism allows applications that interleave
+       * draw calls with glBufferSubData during warmup.
+       */
+      unsigned optimism = bufferObj->Size;
+      if (bufferObj->MinMaxCacheMissIndices > optimism &&
+          bufferObj->MinMaxCacheHitIndices < bufferObj->MinMaxCacheMissIndices - optimism) {
+         bufferObj->UsageHistory |= USAGE_DISABLE_MINMAX_CACHE;
+         vbo_delete_minmax_cache(bufferObj);
+         goto out_disable;
+      }
+
       _mesa_hash_table_clear(bufferObj->MinMaxCache, vbo_minmax_cache_delete_entry);
       bufferObj->MinMaxCacheDirty = false;
-      goto out;
+      goto out_invalidate;
    }
 
    key.type = type;
@@ -134,7 +149,22 @@ vbo_get_minmax_cached(struct gl_buffer_object *bufferObj,
       found = GL_TRUE;
    }
 
-out:
+out_invalidate:
+   if (found) {
+      /* The hit counter saturates so that we don't accidently disable the
+       * cache in a long-running program.
+       */
+      unsigned new_hit_count = bufferObj->MinMaxCacheHitIndices + count;
+
+      if (new_hit_count >= bufferObj->MinMaxCacheHitIndices)
+         bufferObj->MinMaxCacheHitIndices = new_hit_count;
+      else
+         bufferObj->MinMaxCacheHitIndices = ~(unsigned)0;
+   } else {
+      bufferObj->MinMaxCacheMissIndices += count;
+   }
+
+out_disable:
    mtx_unlock(&bufferObj->Mutex);
    return found;
 }
