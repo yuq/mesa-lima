@@ -165,6 +165,12 @@ glsl_type_is_void(const glsl_type *type)
 }
 
 bool
+glsl_type_is_error(const glsl_type *type)
+{
+   return type->is_error();
+}
+
+bool
 glsl_type_is_vector(const struct glsl_type *type)
 {
    return type->is_vector();
