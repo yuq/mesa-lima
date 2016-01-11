@@ -176,9 +176,15 @@ vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
 
 static char *
 vtn_string_literal(struct vtn_builder *b, const uint32_t *words,
-                   unsigned word_count)
+                   unsigned word_count, unsigned *words_used)
 {
-   return ralloc_strndup(b, (char *)words, word_count * sizeof(*words));
+   char *dup = ralloc_strndup(b, (char *)words, word_count * sizeof(*words));
+   if (words_used) {
+      /* Ammount of space taken by the string (including the null) */
+      unsigned len = strlen(dup) + 1;
+      *words_used = DIV_ROUND_UP(len, sizeof(*words));
+   }
+   return dup;
 }
 
 const uint32_t *
@@ -2988,6 +2994,27 @@ vertices_in_from_spv_execution_mode(SpvExecutionMode mode)
    }
 }
 
+static gl_shader_stage
+stage_for_execution_model(SpvExecutionModel model)
+{
+   switch (model) {
+   case SpvExecutionModelVertex:
+      return MESA_SHADER_VERTEX;
+   case SpvExecutionModelTessellationControl:
+      return MESA_SHADER_TESS_CTRL;
+   case SpvExecutionModelTessellationEvaluation:
+      return MESA_SHADER_TESS_EVAL;
+   case SpvExecutionModelGeometry:
+      return MESA_SHADER_GEOMETRY;
+   case SpvExecutionModelFragment:
+      return MESA_SHADER_FRAGMENT;
+   case SpvExecutionModelGLCompute:
+      return MESA_SHADER_COMPUTE;
+   default:
+      unreachable("Unsupported execution model");
+   }
+}
+
 static bool
 vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
                                 const uint32_t *w, unsigned count)
@@ -3019,25 +3046,28 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       assert(w[2] == SpvMemoryModelGLSL450);
       break;
 
-   case SpvOpEntryPoint:
+   case SpvOpEntryPoint: {
+      struct vtn_value *entry_point = &b->values[w[2]];
       /* Let this be a name label regardless */
-      b->values[w[2]].name = vtn_string_literal(b, &w[3], count - 3);
+      unsigned name_words;
+      entry_point->name = vtn_string_literal(b, &w[3], count - 3, &name_words);
 
-      if (strcmp(b->values[w[2]].name, b->entry_point_name) != 0)
+      if (strcmp(entry_point->name, b->entry_point_name) != 0 ||
+          stage_for_execution_model(w[1]) != b->entry_point_stage)
          break;
 
       assert(b->entry_point == NULL);
-      b->entry_point = &b->values[w[2]];
-      b->execution_model = w[1];
+      b->entry_point = entry_point;
       break;
+   }
 
    case SpvOpString:
       vtn_push_value(b, w[1], vtn_value_type_string)->str =
-         vtn_string_literal(b, &w[2], count - 2);
+         vtn_string_literal(b, &w[2], count - 2, NULL);
       break;
 
    case SpvOpName:
-      b->values[w[1]].name = vtn_string_literal(b, &w[2], count - 2);
+      b->values[w[1]].name = vtn_string_literal(b, &w[2], count - 2, NULL);
       break;
 
    case SpvOpMemberName:
@@ -3453,30 +3483,9 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    return true;
 }
 
-static gl_shader_stage
-stage_for_execution_model(SpvExecutionModel model)
-{
-   switch (model) {
-   case SpvExecutionModelVertex:
-      return MESA_SHADER_VERTEX;
-   case SpvExecutionModelTessellationControl:
-      return MESA_SHADER_TESS_CTRL;
-   case SpvExecutionModelTessellationEvaluation:
-      return MESA_SHADER_TESS_EVAL;
-   case SpvExecutionModelGeometry:
-      return MESA_SHADER_GEOMETRY;
-   case SpvExecutionModelFragment:
-      return MESA_SHADER_FRAGMENT;
-   case SpvExecutionModelGLCompute:
-      return MESA_SHADER_COMPUTE;
-   default:
-      unreachable("Unsupported execution model");
-   }
-}
-
 nir_function *
 spirv_to_nir(const uint32_t *words, size_t word_count,
-             const char *entry_point_name,
+             gl_shader_stage stage, const char *entry_point_name,
              const nir_shader_compiler_options *options)
 {
    const uint32_t *word_end = words + word_count;
@@ -3497,6 +3506,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    b->value_id_bound = value_id_bound;
    b->values = rzalloc_array(b, struct vtn_value, value_id_bound);
    exec_list_make_empty(&b->functions);
+   b->entry_point_stage = stage;
    b->entry_point_name = entry_point_name;
 
    /* Handle all the preamble instructions */
@@ -3509,7 +3519,6 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
       return NULL;
    }
 
-   gl_shader_stage stage = stage_for_execution_model(b->execution_model);
    b->shader = nir_shader_create(NULL, stage, options);
 
    /* Parse execution modes */

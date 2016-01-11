@@ -113,8 +113,8 @@ anv_shader_compile_to_nir(struct anv_device *device,
       assert(spirv[0] == SPIR_V_MAGIC_NUMBER);
       assert(module->size % 4 == 0);
 
-      entry_point = spirv_to_nir(spirv, module->size / 4, entrypoint_name,
-                                 nir_options);
+      entry_point = spirv_to_nir(spirv, module->size / 4, stage,
+                                 entrypoint_name, nir_options);
       nir = entry_point->shader;
       assert(nir->stage == stage);
       nir_validate_shader(nir);
