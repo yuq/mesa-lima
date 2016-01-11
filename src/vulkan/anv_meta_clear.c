@@ -677,6 +677,9 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
 
    meta_clear_begin(&saved_state, cmd_buffer);
 
+   if (cmd_buffer->state.framebuffer->layers > 1)
+      anv_finishme("clearing multi-layer framebuffer");
+
    for (uint32_t a = 0; a < pass->attachment_count; ++a) {
       struct anv_render_pass_attachment *att = &pass->attachments[a];
 
