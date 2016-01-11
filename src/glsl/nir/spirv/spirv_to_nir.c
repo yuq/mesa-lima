@@ -867,21 +867,6 @@ set_mode_system_value(nir_variable_mode *mode)
 }
 
 static void
-validate_per_vertex_mode(struct vtn_builder *b, nir_variable_mode mode)
-{
-   switch (b->shader->stage) {
-   case MESA_SHADER_VERTEX:
-      assert(mode == nir_var_shader_out);
-      break;
-   case MESA_SHADER_GEOMETRY:
-      assert(mode == nir_var_shader_out || mode == nir_var_shader_in);
-      break;
-   default:
-      assert(!"Invalid shader stage");
-   }
-}
-
-static void
 vtn_get_builtin_location(struct vtn_builder *b,
                          SpvBuiltIn builtin, int *location,
                          nir_variable_mode *mode)
@@ -889,15 +874,12 @@ vtn_get_builtin_location(struct vtn_builder *b,
    switch (builtin) {
    case SpvBuiltInPosition:
       *location = VARYING_SLOT_POS;
-      validate_per_vertex_mode(b, *mode);
       break;
    case SpvBuiltInPointSize:
       *location = VARYING_SLOT_PSIZ;
-      validate_per_vertex_mode(b, *mode);
       break;
    case SpvBuiltInClipDistance:
       *location = VARYING_SLOT_CLIP_DIST0; /* XXX CLIP_DIST1? */
-      validate_per_vertex_mode(b, *mode);
       break;
    case SpvBuiltInCullDistance:
       /* XXX figure this out */
@@ -932,17 +914,14 @@ vtn_get_builtin_location(struct vtn_builder *b,
       unreachable("no tessellation support");
    case SpvBuiltInFragCoord:
       *location = VARYING_SLOT_POS;
-      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
       assert(*mode == nir_var_shader_in);
       break;
    case SpvBuiltInPointCoord:
       *location = VARYING_SLOT_PNTC;
-      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
       assert(*mode == nir_var_shader_in);
       break;
    case SpvBuiltInFrontFacing:
       *location = VARYING_SLOT_FACE;
-      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
       assert(*mode == nir_var_shader_in);
       break;
    case SpvBuiltInSampleId:
@@ -959,7 +938,6 @@ vtn_get_builtin_location(struct vtn_builder *b,
       break;
    case SpvBuiltInFragDepth:
       *location = FRAG_RESULT_DEPTH;
-      assert(b->shader->stage == MESA_SHADER_FRAGMENT);
       assert(*mode == nir_var_shader_out);
       break;
    case SpvBuiltInNumWorkgroups:
