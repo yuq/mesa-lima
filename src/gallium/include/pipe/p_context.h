@@ -649,11 +649,15 @@ struct pipe_context {
                           struct pipe_resource *resource);
 
    /**
-    * Invalidate the contents of the resource.
+    * Invalidate the contents of the resource. This is used to
     *
-    * This is used to implement EGL's semantic of undefined depth/stencil
+    * (1) implement EGL's semantic of undefined depth/stencil
     * contenst after a swapbuffers.  This allows a tiled renderer (for
     * example) to not store the depth buffer.
+    *
+    * (2) implement GL's InvalidateBufferData. For backwards compatibility,
+    * you must only rely on the usability for this purpose when
+    * PIPE_CAP_INVALIDATE_BUFFER is enabled.
     */
    void (*invalidate_resource)(struct pipe_context *ctx,
                                struct pipe_resource *resource);
