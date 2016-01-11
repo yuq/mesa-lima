@@ -32,6 +32,7 @@
 
 #include <stdbool.h>
 #include <inttypes.h>  /* for PRId64 macro */
+#include "util/debug.h"
 #include "glheader.h"
 #include "enums.h"
 #include "hash.h"
@@ -521,6 +522,24 @@ _mesa_reference_buffer_object_(struct gl_context *ctx,
 
 
 /**
+ * Get the value of MESA_NO_MINMAX_CACHE.
+ */
+static bool
+get_no_minmax_cache()
+{
+   static bool read = false;
+   static bool disable = false;
+
+   if (!read) {
+      disable = env_var_as_boolean("MESA_NO_MINMAX_CACHE", false);
+      read = true;
+   }
+
+   return disable;
+}
+
+
+/**
  * Initialize a buffer object to default values.
  */
 void
@@ -533,6 +552,9 @@ _mesa_initialize_buffer_object(struct gl_context *ctx,
    obj->RefCount = 1;
    obj->Name = name;
    obj->Usage = GL_STATIC_DRAW_ARB;
+
+   if (get_no_minmax_cache())
+      obj->UsageHistory |= USAGE_DISABLE_MINMAX_CACHE;
 }
 
 
