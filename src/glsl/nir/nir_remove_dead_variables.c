@@ -115,7 +115,7 @@ remove_dead_vars(struct exec_list *var_list, struct set *live)
 }
 
 bool
-nir_remove_dead_variables(nir_shader *shader)
+nir_remove_dead_variables(nir_shader *shader, nir_variable_mode mode)
 {
    bool progress = false;
    struct set *live =
@@ -123,15 +123,30 @@ nir_remove_dead_variables(nir_shader *shader)
 
    add_var_use_shader(shader, live);
 
-   progress = remove_dead_vars(&shader->globals, live) || progress;
+   if (mode == nir_var_uniform || mode == nir_var_all)
+      progress = remove_dead_vars(&shader->uniforms, live) || progress;
 
-   nir_foreach_function(shader, function) {
-      if (function->impl) {
-         if (remove_dead_vars(&function->impl->locals, live)) {
-            nir_metadata_preserve(function->impl, nir_metadata_block_index |
-                                                  nir_metadata_dominance |
-                                                  nir_metadata_live_ssa_defs);
-            progress = true;
+   if (mode == nir_var_shader_in || mode == nir_var_all)
+      progress = remove_dead_vars(&shader->inputs, live) || progress;
+
+   if (mode == nir_var_shader_out || mode == nir_var_all)
+      progress = remove_dead_vars(&shader->outputs, live) || progress;
+
+   if (mode == nir_var_global || mode == nir_var_all)
+      progress = remove_dead_vars(&shader->globals, live) || progress;
+
+   if (mode == nir_var_system_value || mode == nir_var_all)
+      progress = remove_dead_vars(&shader->system_values, live) || progress;
+
+   if (mode == nir_var_local || mode == nir_var_all) {
+      nir_foreach_function(shader, function) {
+         if (function->impl) {
+            if (remove_dead_vars(&function->impl->locals, live)) {
+               nir_metadata_preserve(function->impl, nir_metadata_block_index |
+                                                     nir_metadata_dominance |
+                                                     nir_metadata_live_ssa_defs);
+               progress = true;
+            }
          }
       }
    }
