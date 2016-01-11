@@ -56,7 +56,7 @@ static inline void
 nve4_cp_launch_desc_set_cb(struct nve4_cp_launch_desc *desc,
                            unsigned index,
                            struct nouveau_bo *bo,
-                           uint32_t base, uint16_t size)
+                           uint32_t base, uint32_t size)
 {
    uint64_t address = bo->offset + base;
 
@@ -68,23 +68,6 @@ nve4_cp_launch_desc_set_cb(struct nve4_cp_launch_desc *desc,
    desc->cb[index].size = size;
 
    desc->cb_mask |= 1 << index;
-}
-
-static inline void
-nve4_cp_launch_desc_set_ctx_cb(struct nve4_cp_launch_desc *desc,
-                               unsigned index,
-                               const struct nvc0_constbuf *cb)
-{
-   assert(index < 8);
-
-   if (!cb->u.buf) {
-      desc->cb_mask &= ~(1 << index);
-   } else {
-      const struct nv04_resource *buf = nv04_resource(cb->u.buf);
-      assert(!cb->user);
-      nve4_cp_launch_desc_set_cb(desc, index,
-                                 buf->bo, buf->offset + cb->offset, cb->size);
-   }
 }
 
 struct nve4_mp_trap_info {

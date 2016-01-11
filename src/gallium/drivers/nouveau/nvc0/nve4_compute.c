@@ -309,6 +309,42 @@ nve4_compute_set_tex_handles(struct nvc0_context *nvc0)
 }
 
 static void
+nve4_compute_validate_constbufs(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   const int s = 5;
+
+   while (nvc0->constbuf_dirty[s]) {
+      int i = ffs(nvc0->constbuf_dirty[s]) - 1;
+      nvc0->constbuf_dirty[s] &= ~(1 << i);
+
+      if (nvc0->constbuf[s][i].user) {
+         struct nouveau_bo *bo = nvc0->screen->uniform_bo;
+         const unsigned base = NVC0_CB_USR_INFO(s);
+         const unsigned size = nvc0->constbuf[s][0].size;
+         assert(i == 0); /* we really only want OpenGL uniforms here */
+         assert(nvc0->constbuf[s][0].u.data);
+
+         BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
+         PUSH_DATAh(push, bo->offset + base);
+         PUSH_DATA (push, bo->offset + base);
+         BEGIN_NVC0(push, NVE4_CP(UPLOAD_LINE_LENGTH_IN), 2);
+         PUSH_DATA (push, size);
+         PUSH_DATA (push, 0x1);
+         BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + (size / 4));
+         PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
+         PUSH_DATAp(push, nvc0->constbuf[s][0].u.data, size / 4);
+      }
+      else {
+         /* TODO: will be updated in the next commit */
+      }
+   }
+
+   BEGIN_NVC0(push, NVE4_CP(FLUSH), 1);
+   PUSH_DATA (push, NVE4_COMPUTE_FLUSH_CB);
+}
+
+static void
 nve4_compute_validate_buffers(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
@@ -355,6 +391,7 @@ validate_list_cp[] = {
    { nve4_compute_validate_surfaces,      NVC0_NEW_CP_SURFACES    },
    { nvc0_compute_validate_globals,       NVC0_NEW_CP_GLOBALS     },
    { nve4_compute_validate_buffers,       NVC0_NEW_CP_BUFFERS     },
+   { nve4_compute_validate_constbufs,     NVC0_NEW_CP_CONSTBUF    },
 };
 
 static bool
@@ -372,7 +409,9 @@ nve4_state_validate_cp(struct nvc0_context *nvc0, uint32_t mask)
 }
 
 static void
-nve4_compute_upload_input(struct nvc0_context *nvc0, const void *input,
+nve4_compute_upload_input(struct nvc0_context *nvc0,
+                          struct nve4_cp_launch_desc *desc,
+                          const void *input,
                           const uint *block_layout,
                           const uint *grid_layout)
 {
@@ -393,6 +432,11 @@ nve4_compute_upload_input(struct nvc0_context *nvc0, const void *input,
       BEGIN_1IC0(push, NVE4_CP(UPLOAD_EXEC), 1 + (cp->parm_size / 4));
       PUSH_DATA (push, NVE4_COMPUTE_UPLOAD_EXEC_LINEAR | (0x20 << 1));
       PUSH_DATAp(push, input, cp->parm_size / 4);
+
+      /* Bind user parameters coming from clover. */
+      /* TODO: This should be harmonized with uniform_bo. */
+      assert(!(desc->cb_mask & (1 << 0)));
+      nve4_cp_launch_desc_set_cb(desc, 0, screen->parm, 0, 1 << 12);
    }
    BEGIN_NVC0(push, NVE4_CP(UPLOAD_DST_ADDRESS_HIGH), 2);
    PUSH_DATAh(push, address + NVC0_CB_AUX_GRID_INFO);
@@ -429,7 +473,6 @@ nve4_compute_setup_launch_desc(struct nvc0_context *nvc0,
 {
    const struct nvc0_screen *screen = nvc0->screen;
    const struct nvc0_program *cp = nvc0->compprog;
-   unsigned i;
 
    nve4_cp_launch_desc_init_default(desc);
 
@@ -451,12 +494,13 @@ nve4_compute_setup_launch_desc(struct nvc0_context *nvc0,
    desc->gpr_alloc = cp->num_gprs;
    desc->bar_alloc = cp->num_barriers;
 
-   for (i = 0; i < 7; ++i) {
-      const unsigned s = 5;
-      if (nvc0->constbuf[s][i].u.buf)
-         nve4_cp_launch_desc_set_ctx_cb(desc, i + 1, &nvc0->constbuf[s][i]);
+   // Only bind OpenGL uniforms and the driver constant buffer through the
+   // launch descriptor because UBOs are sticked to the driver cb to avoid the
+   // limitation of 8 CBs.
+   if (nvc0->constbuf[5][0].user) {
+      nve4_cp_launch_desc_set_cb(desc, 0, screen->uniform_bo,
+                                 NVC0_CB_USR_INFO(5), 1 << 16);
    }
-   nve4_cp_launch_desc_set_cb(desc, 0, screen->parm, 0, 1 << 12);
    nve4_cp_launch_desc_set_cb(desc, 7, screen->uniform_bo,
                               NVC0_CB_AUX_INFO(5), 1 << 10);
 }
@@ -500,12 +544,13 @@ nve4_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
 
    nve4_compute_setup_launch_desc(nvc0, desc, info->pc,
                                   info->block, info->grid);
+
+   nve4_compute_upload_input(nvc0, desc, info->input, info->block, info->grid);
+
 #ifdef DEBUG
    if (debug_get_num_option("NV50_PROG_DEBUG", 0))
       nve4_compute_dump_launch_desc(desc);
 #endif
-
-   nve4_compute_upload_input(nvc0, info->input, info->block, info->grid);
 
    /* upload descriptor and flush */
 #if 0
