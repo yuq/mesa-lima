@@ -426,6 +426,8 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
       }
 
       case SpvOpUnreachable:
+         return;
+
       default:
          unreachable("Unhandled opcode");
       }
