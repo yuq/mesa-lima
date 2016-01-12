@@ -724,6 +724,8 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
          return;
 
    case nir_op_f2d:
+   case nir_op_i2d:
+   case nir_op_u2d:
    case nir_op_d2f:
    case nir_op_d2i:
    case nir_op_d2u:
