@@ -1596,15 +1596,13 @@ vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
 }
 
 static void
-vtn_variable_copy(struct vtn_builder *b, nir_deref_var *src,
-                  nir_deref_var *dest, struct vtn_type *type)
+vtn_variable_copy(struct vtn_builder *b,
+                  nir_deref_var *dest, struct vtn_type *dest_type,
+                  nir_deref_var *src, struct vtn_type *src_type)
 {
-   nir_deref *src_tail = get_deref_tail(src);
-
-   if (src_tail->child || src->var->interface_type) {
-      assert(get_deref_tail(dest)->child);
-      struct vtn_ssa_value *val = vtn_variable_load(b, src, type);
-      vtn_variable_store(b, val, dest, type);
+   if (src->var->interface_type || dest->var->interface_type) {
+      struct vtn_ssa_value *val = vtn_variable_load(b, src, src_type);
+      vtn_variable_store(b, val, dest, dest_type);
    } else {
       nir_intrinsic_instr *copy =
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_copy_var);
@@ -1957,12 +1955,11 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpCopyMemory: {
-      nir_deref_var *dest = vtn_value(b, w[1], vtn_value_type_deref)->deref;
-      nir_deref_var *src = vtn_value(b, w[2], vtn_value_type_deref)->deref;
-      struct vtn_type *type =
-         vtn_value(b, w[1], vtn_value_type_deref)->deref_type;
+      struct vtn_value *dest = vtn_value(b, w[1], vtn_value_type_deref);
+      struct vtn_value *src = vtn_value(b, w[2], vtn_value_type_deref);
 
-      vtn_variable_copy(b, src, dest, type);
+      vtn_variable_copy(b, dest->deref, dest->deref_type,
+                        src->deref, src->deref_type);
       break;
    }
 
