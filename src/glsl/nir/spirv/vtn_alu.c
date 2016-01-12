@@ -309,15 +309,13 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpIAddCarry:
       assert(glsl_type_is_struct(val->ssa->type));
       val->ssa->elems[0]->def = nir_iadd(&b->nb, src[0], src[1]);
-      val->ssa->elems[1]->def =
-         nir_b2i(&b->nb, nir_uadd_carry(&b->nb, src[0], src[1]));
+      val->ssa->elems[1]->def = nir_uadd_carry(&b->nb, src[0], src[1]);
       return;
 
    case SpvOpISubBorrow:
       assert(glsl_type_is_struct(val->ssa->type));
       val->ssa->elems[0]->def = nir_isub(&b->nb, src[0], src[1]);
-      val->ssa->elems[1]->def =
-         nir_b2i(&b->nb, nir_usub_borrow(&b->nb, src[0], src[1]));
+      val->ssa->elems[1]->def = nir_usub_borrow(&b->nb, src[0], src[1]);
       return;
 
    case SpvOpUMulExtended:
