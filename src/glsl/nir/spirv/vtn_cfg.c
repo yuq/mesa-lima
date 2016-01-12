@@ -276,7 +276,7 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
          vtn_cfg_walk_blocks(b, &loop->body, block, switch_case, NULL,
                              new_loop_break, new_loop_cont, NULL );
          vtn_cfg_walk_blocks(b, &loop->cont_body, new_loop_cont, NULL, NULL,
-                             NULL, NULL, block);
+                             new_loop_break, NULL, block);
 
          block = new_loop_break;
          continue;
