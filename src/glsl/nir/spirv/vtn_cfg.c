@@ -325,12 +325,10 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
 
          list_addtail(&if_stmt->node.link, cf_list);
 
-         /* OpBranchConditional must be at the end of a block with either
-          * an OpSelectionMerge or an OpLoopMerge.
-          */
-         assert(block->merge);
-         if ((*block->merge & SpvOpCodeMask) == SpvOpSelectionMerge)
+         if (block->merge &&
+             (*block->merge & SpvOpCodeMask) == SpvOpSelectionMerge) {
             if_stmt->control = block->merge[2];
+         }
 
          if_stmt->then_type = vtn_get_branch_type(then_block,
                                                   switch_case, switch_break,
