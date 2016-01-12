@@ -123,6 +123,7 @@ anv_cmd_state_init(struct anv_cmd_state *state)
    state->pipeline = NULL;
    state->restart_index = UINT32_MAX;
    state->dynamic = default_dynamic_state;
+   state->need_query_wa = true;
 
    state->gen7.index_buffer = NULL;
 }

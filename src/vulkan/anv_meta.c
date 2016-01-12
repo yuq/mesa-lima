@@ -144,6 +144,11 @@ anv_meta_restore(const struct anv_meta_saved_state *state,
    anv_dynamic_state_copy(&cmd_buffer->state.dynamic, &state->dynamic,
                           state->dynamic_mask);
    cmd_buffer->state.dirty |= state->dynamic_mask;
+
+   /* Since we've used the pipeline with the VS disabled, set
+    * need_query_wa. See CmdBeginQuery.
+    */
+   cmd_buffer->state.need_query_wa = true;
 }
 
 VkImageViewType
