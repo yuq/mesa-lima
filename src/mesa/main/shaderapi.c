@@ -300,7 +300,8 @@ create_shader(struct gl_context *ctx, GLenum type)
    GLuint name;
 
    if (!_mesa_validate_shader_target(ctx, type)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "CreateShader(type)");
+      _mesa_error(ctx, GL_INVALID_ENUM, "CreateShader(%s)",
+                  _mesa_enum_to_string(type));
       return 0;
    }
 
