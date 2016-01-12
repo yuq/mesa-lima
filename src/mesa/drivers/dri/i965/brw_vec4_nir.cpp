@@ -1177,6 +1177,16 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_fquantize2f16: {
+      /* See also vec4_visitor::emit_pack_half_2x16() */
+      src_reg tmp = src_reg(this, glsl_type::uvec4_type);
+
+      emit(F32TO16(dst_reg(tmp), op[0]));
+      inst = emit(F16TO32(dst, tmp));
+      inst->saturate = instr->dest.saturate;
+      break;
+   }
+
    case nir_op_fmin:
    case nir_op_imin:
    case nir_op_umin:

@@ -943,6 +943,19 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_fquantize2f16: {
+      fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_D);
+
+      /* The destination stride must be at least as big as the source stride. */
+      tmp.type = BRW_REGISTER_TYPE_W;
+      tmp.stride = 2;
+
+      bld.emit(BRW_OPCODE_F32TO16, tmp, op[0]);
+      inst = bld.emit(BRW_OPCODE_F16TO32, result, tmp);
+      inst->saturate = instr->dest.saturate;
+      break;
+   }
+
    case nir_op_fmin:
    case nir_op_imin:
    case nir_op_umin:
