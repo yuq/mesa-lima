@@ -131,7 +131,7 @@ static const char *types[] = {
 /**
  * Identity matrix.
  */
-static GLfloat Identity[16] = {
+static const GLfloat Identity[16] = {
    1.0, 0.0, 0.0, 0.0,
    0.0, 1.0, 0.0, 0.0,
    0.0, 0.0, 1.0, 0.0,

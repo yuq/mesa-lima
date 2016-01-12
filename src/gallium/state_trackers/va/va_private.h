@@ -44,6 +44,7 @@
 #include "vl/vl_csc.h"
 
 #include "util/u_dynarray.h"
+#include "os/os_thread.h"
 
 #define VL_VA_DRIVER(ctx) ((vlVaDriver *)ctx->pDriverData)
 #define VL_VA_PSCREEN(ctx) (VL_VA_DRIVER(ctx)->vscreen->pscreen)
@@ -203,6 +204,7 @@ typedef struct {
    struct vl_compositor compositor;
    struct vl_compositor_state cstate;
    vl_csc_matrix csc;
+   pipe_mutex mutex;
 } vlVaDriver;
 
 typedef struct {

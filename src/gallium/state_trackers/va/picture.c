@@ -50,24 +50,29 @@ vlVaBeginPicture(VADriverContextP ctx, VAContextID context_id, VASurfaceID rende
    if (!drv)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
+   pipe_mutex_lock(drv->mutex);
    context = handle_table_get(drv->htab, context_id);
-   if (!context)
+   if (!context) {
+      pipe_mutex_unlock(drv->mutex);
       return VA_STATUS_ERROR_INVALID_CONTEXT;
+   }
 
    surf = handle_table_get(drv->htab, render_target);
+   pipe_mutex_unlock(drv->mutex);
    if (!surf || !surf->buffer)
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
    context->target = surf->buffer;
 
    if (!context->decoder) {
+
       /* VPP */
       if (context->templat.profile == PIPE_VIDEO_PROFILE_UNKNOWN &&
-         ((context->target->buffer_format != PIPE_FORMAT_B8G8R8A8_UNORM  &&
-           context->target->buffer_format != PIPE_FORMAT_R8G8B8A8_UNORM  &&
-           context->target->buffer_format != PIPE_FORMAT_B8G8R8X8_UNORM  &&
-           context->target->buffer_format != PIPE_FORMAT_R8G8B8X8_UNORM) ||
-           context->target->interlaced))
+          context->target->buffer_format != PIPE_FORMAT_B8G8R8A8_UNORM &&
+          context->target->buffer_format != PIPE_FORMAT_R8G8B8A8_UNORM &&
+          context->target->buffer_format != PIPE_FORMAT_B8G8R8X8_UNORM &&
+          context->target->buffer_format != PIPE_FORMAT_R8G8B8X8_UNORM &&
+          context->target->buffer_format != PIPE_FORMAT_NV12)
          return VA_STATUS_ERROR_UNIMPLEMENTED;
 
       return VA_STATUS_SUCCESS;
@@ -289,14 +294,19 @@ vlVaRenderPicture(VADriverContextP ctx, VAContextID context_id, VABufferID *buff
    if (!drv)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
+   pipe_mutex_lock(drv->mutex);
    context = handle_table_get(drv->htab, context_id);
-   if (!context)
+   if (!context) {
+      pipe_mutex_unlock(drv->mutex);
       return VA_STATUS_ERROR_INVALID_CONTEXT;
+   }
 
    for (i = 0; i < num_buffers; ++i) {
       vlVaBuffer *buf = handle_table_get(drv->htab, buffers[i]);
-      if (!buf)
+      if (!buf) {
+         pipe_mutex_unlock(drv->mutex);
          return VA_STATUS_ERROR_INVALID_BUFFER;
+      }
 
       switch (buf->type) {
       case VAPictureParameterBufferType:
@@ -322,6 +332,7 @@ vlVaRenderPicture(VADriverContextP ctx, VAContextID context_id, VABufferID *buff
          break;
       }
    }
+   pipe_mutex_unlock(drv->mutex);
 
    return vaStatus;
 }
@@ -339,7 +350,9 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    if (!drv)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
+   pipe_mutex_lock(drv->mutex);
    context = handle_table_get(drv->htab, context_id);
+   pipe_mutex_unlock(drv->mutex);
    if (!context)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 

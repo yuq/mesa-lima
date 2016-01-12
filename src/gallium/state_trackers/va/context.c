@@ -155,6 +155,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
 
    vl_csc_get_matrix(VL_CSC_COLOR_STANDARD_BT_601, NULL, true, &drv->csc);
    vl_compositor_set_csc_matrix(&drv->cstate, (const vl_csc_matrix *)&drv->csc);
+   pipe_mutex_init(drv->mutex);
 
    ctx->pDriverData = (void *)drv;
    ctx->version_major = 0;
@@ -262,7 +263,9 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
    }
 
    context->desc.base.profile = config_id;
+   pipe_mutex_lock(drv->mutex);
    *context_id = handle_table_add(drv->htab, context);
+   pipe_mutex_unlock(drv->mutex);
 
    return VA_STATUS_SUCCESS;
 }
@@ -277,6 +280,7 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
 
    drv = VL_VA_DRIVER(ctx);
+   pipe_mutex_lock(drv->mutex);
    context = handle_table_get(drv->htab, context_id);
 
    if (context->decoder) {
@@ -294,6 +298,7 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
    }
    FREE(context);
    handle_table_remove(drv->htab, context_id);
+   pipe_mutex_unlock(drv->mutex);
 
    return VA_STATUS_SUCCESS;
 }
@@ -312,6 +317,7 @@ vlVaTerminate(VADriverContextP ctx)
    drv->pipe->destroy(drv->pipe);
    drv->vscreen->destroy(drv->vscreen);
    handle_table_destroy(drv->htab);
+   pipe_mutex_destroy(drv->mutex);
    FREE(drv);
 
    return VA_STATUS_SUCCESS;

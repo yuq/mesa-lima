@@ -420,6 +420,7 @@ static const struct brw_device_info brw_device_info_kbl_gt1 = {
    .max_cs_threads = 7 * 6,
    .max_wm_threads = KBL_MAX_THREADS_PER_PSD * 2,
    .urb.size = 192,
+   .num_slices = 1,
 };
 
 static const struct brw_device_info brw_device_info_kbl_gt1_5 = {
@@ -428,6 +429,7 @@ static const struct brw_device_info brw_device_info_kbl_gt1_5 = {
 
    .max_cs_threads = 7 * 6,
    .max_wm_threads = KBL_MAX_THREADS_PER_PSD * 3,
+   .num_slices = 1,
 };
 
 static const struct brw_device_info brw_device_info_kbl_gt2 = {
@@ -435,6 +437,7 @@ static const struct brw_device_info brw_device_info_kbl_gt2 = {
    .gt = 2,
 
    .max_wm_threads = KBL_MAX_THREADS_PER_PSD * 3,
+   .num_slices = 1,
 };
 
 static const struct brw_device_info brw_device_info_kbl_gt3 = {
@@ -442,6 +445,7 @@ static const struct brw_device_info brw_device_info_kbl_gt3 = {
    .gt = 3,
 
    .max_wm_threads = KBL_MAX_THREADS_PER_PSD * 6,
+   .num_slices = 2,
 };
 
 static const struct brw_device_info brw_device_info_kbl_gt4 = {
@@ -460,6 +464,7 @@ static const struct brw_device_info brw_device_info_kbl_gt4 = {
     *  will be used."
     */
    .urb.size = 1008 / 3,
+   .num_slices = 3,
 };
 
 const struct brw_device_info *

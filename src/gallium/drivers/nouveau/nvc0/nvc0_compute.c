@@ -195,8 +195,10 @@ nvc0_launch_grid(struct pipe_context *pipe,
    int ret;
 
    ret = !nvc0_compute_state_validate(nvc0);
-   if (ret)
-      goto out;
+   if (ret) {
+      NOUVEAU_ERR("Failed to launch grid !\n");
+      return;
+   }
 
    nvc0_compute_upload_input(nvc0, input);
 
@@ -246,15 +248,11 @@ nvc0_launch_grid(struct pipe_context *pipe,
    /* rebind all the 3D constant buffers
     * (looks like binding a CB on COMPUTE clobbers 3D state) */
    nvc0->dirty |= NVC0_NEW_CONSTBUF;
-   for (s = 0; s < 6; s++) {
+   for (s = 0; s < 5; s++) {
       for (i = 0; i < NVC0_MAX_PIPE_CONSTBUFS; i++)
          if (nvc0->constbuf[s][i].u.buf)
             nvc0->constbuf_dirty[s] |= 1 << i;
    }
    memset(nvc0->state.uniform_buffer_bound, 0,
           sizeof(nvc0->state.uniform_buffer_bound));
-
-out:
-   if (ret)
-      NOUVEAU_ERR("Failed to launch grid !\n");
 }

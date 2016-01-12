@@ -1295,13 +1295,12 @@ public:
 
    void process(ir_variable *var)
    {
+      /* All named varying interface blocks should be flattened by now */
+      assert(!var->is_interface_instance());
+
       this->toplevel_var = var;
       this->varying_floats = 0;
-      if (var->is_interface_instance())
-         program_resource_visitor::process(var->get_interface_type(),
-                                           var->get_interface_type()->name);
-      else
-         program_resource_visitor::process(var);
+      program_resource_visitor::process(var);
    }
 
 private:

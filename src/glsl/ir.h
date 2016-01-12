@@ -1726,7 +1726,12 @@ public:
              operation == ir_binop_dot ||
              operation == ir_binop_vector_extract ||
              operation == ir_triop_vector_insert ||
-             operation == ir_quadop_vector;
+             operation == ir_quadop_vector ||
+             /* TODO: these can't currently be vectorized */
+             operation == ir_quadop_bitfield_insert ||
+             operation == ir_triop_bitfield_extract ||
+             operation == ir_triop_bfi ||
+             operation == ir_binop_bfm;
    }
 
    /**

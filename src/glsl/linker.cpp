@@ -3130,6 +3130,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
       return;
    }
 
+   unsigned entries_total = 0;
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_shader *sh = prog->_LinkedShaders[i];
 
@@ -3138,8 +3139,12 @@ check_explicit_uniform_locations(struct gl_context *ctx,
 
       foreach_in_list(ir_instruction, node, sh->ir) {
          ir_variable *var = node->as_variable();
-         if (var && (var->data.mode == ir_var_uniform &&
-                     var->data.explicit_location)) {
+         if (!var || var->data.mode != ir_var_uniform)
+            continue;
+
+         entries_total += var->type->uniform_locations();
+
+         if (var->data.explicit_location) {
             bool ret;
             if (var->type->is_subroutine())
                ret = reserve_subroutine_explicit_locations(prog, sh, var);
@@ -3153,6 +3158,14 @@ check_explicit_uniform_locations(struct gl_context *ctx,
       }
    }
 
+   /* Verify that total amount of entries for explicit and implicit locations
+    * is less than MAX_UNIFORM_LOCATIONS.
+    */
+   if (entries_total >= ctx->Const.MaxUserAssignableUniformLocations) {
+      linker_error(prog, "count of uniform locations >= MAX_UNIFORM_LOCATIONS"
+                   "(%u >= %u)", entries_total,
+                   ctx->Const.MaxUserAssignableUniformLocations);
+   }
    delete uniform_map;
 }
 
@@ -3349,6 +3362,30 @@ build_stageref(struct gl_shader_program *shProg, const char *name,
    return stages;
 }
 
+/**
+ * Create gl_shader_variable from ir_variable class.
+ */
+static gl_shader_variable *
+create_shader_variable(struct gl_shader_program *shProg, const ir_variable *in)
+{
+   gl_shader_variable *out = ralloc(shProg, struct gl_shader_variable);
+   if (!out)
+      return NULL;
+
+   out->type = in->type;
+   out->name = ralloc_strdup(shProg, in->name);
+
+   if (!out->name)
+      return NULL;
+
+   out->location = in->data.location;
+   out->index = in->data.index;
+   out->patch = in->data.patch;
+   out->mode = in->data.mode;
+
+   return out;
+}
+
 static bool
 add_interface_variables(struct gl_shader_program *shProg,
                         exec_list *ir, GLenum programInterface)
@@ -3400,9 +3437,13 @@ add_interface_variables(struct gl_shader_program *shProg,
       if (strncmp(var->name, "gl_out_FragData", 15) == 0)
          continue;
 
-      if (!add_program_resource(shProg, programInterface, var,
-                                build_stageref(shProg, var->name,
-                                               var->data.mode) | mask))
+      gl_shader_variable *sha_v = create_shader_variable(shProg, var);
+      if (!sha_v)
+         return false;
+
+      if (!add_program_resource(shProg, programInterface, sha_v,
+                                build_stageref(shProg, sha_v->name,
+                                               sha_v->mode) | mask))
          return false;
    }
    return true;
@@ -3432,9 +3473,12 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage, GLenum type)
          }
 
          if (type == iface) {
-            if (!add_program_resource(shProg, iface, var,
-                                      build_stageref(shProg, var->name,
-                                                     var->data.mode)))
+            gl_shader_variable *sha_v = create_shader_variable(shProg, var);
+            if (!sha_v)
+               return false;
+            if (!add_program_resource(shProg, iface, sha_v,
+                                      build_stageref(shProg, sha_v->name,
+                                                     sha_v->mode)))
                return false;
          }
       }
@@ -3454,7 +3498,10 @@ add_fragdata_arrays(struct gl_shader_program *shProg)
       ir_variable *var = node->as_variable();
       if (var) {
          assert(var->data.mode == ir_var_shader_out);
-         if (!add_program_resource(shProg, GL_PROGRAM_OUTPUT, var,
+         gl_shader_variable *sha_v = create_shader_variable(shProg, var);
+         if (!sha_v)
+            return false;
+         if (!add_program_resource(shProg, GL_PROGRAM_OUTPUT, sha_v,
                                    1 << MESA_SHADER_FRAGMENT))
             return false;
       }
@@ -3705,8 +3752,14 @@ build_program_resource_list(struct gl_shader_program *shProg)
    if (shProg->SeparateShader) {
       if (!add_packed_varyings(shProg, input_stage, GL_PROGRAM_INPUT))
          return;
-      if (!add_packed_varyings(shProg, output_stage, GL_PROGRAM_OUTPUT))
-         return;
+
+      /* Only when dealing with multiple stages, otherwise we would have
+       * duplicate gl_shader_variable entries.
+       */
+      if (input_stage != output_stage) {
+         if (!add_packed_varyings(shProg, output_stage, GL_PROGRAM_OUTPUT))
+            return;
+      }
    }
 
    if (!add_fragdata_arrays(shProg))
