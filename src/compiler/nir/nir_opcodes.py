@@ -161,9 +161,12 @@ unop("fexp2", tfloat, "exp2f(src0)")
 unop("flog2", tfloat, "log2f(src0)")
 unop_convert("f2i", tint32, tfloat32, "src0") # Float-to-integer conversion.
 unop_convert("f2u", tuint32, tfloat32, "src0") # Float-to-unsigned conversion
+unop_convert("d2i", tint32, tfloat64, "src0") # Double-to-integer conversion.
+unop_convert("d2u", tuint32, tfloat64, "src0") # Double-to-unsigned conversion.
 unop_convert("i2f", tfloat32, tint32, "src0") # Integer-to-float conversion.
 # Float-to-boolean conversion
 unop_convert("f2b", tbool, tfloat32, "src0 != 0.0f")
+unop_convert("d2b", tbool, tfloat64, "src0 != 0.0")
 # Boolean-to-float conversion
 unop_convert("b2f", tfloat32, tbool, "src0 ? 1.0f : 0.0f")
 # Int-to-boolean conversion
