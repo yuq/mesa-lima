@@ -1740,9 +1740,11 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          break;
       case SpvStorageClassPrivate:
          var->data.mode = nir_var_global;
+         var->interface_type = NULL;
          break;
       case SpvStorageClassFunction:
          var->data.mode = nir_var_local;
+         var->interface_type = NULL;
          break;
       case SpvStorageClassWorkgroup:
       case SpvStorageClassCrossWorkgroup:
@@ -1798,7 +1800,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       /* Interface block variables aren't actually going to be referenced
        * by the generated NIR, so we don't put them in the list
        */
-      if (interface_type && glsl_type_is_struct(interface_type->type))
+      if (var->interface_type)
          break;
 
       if (var->data.mode == nir_var_local) {
