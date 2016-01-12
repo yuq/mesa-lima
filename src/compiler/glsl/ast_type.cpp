@@ -74,6 +74,7 @@ ast_type_qualifier::has_layout() const
           || this->flags.q.row_major
           || this->flags.q.packed
           || this->flags.q.explicit_align
+          || this->flags.q.explicit_component
           || this->flags.q.explicit_location
           || this->flags.q.explicit_image_format
           || this->flags.q.explicit_index
