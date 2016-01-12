@@ -3001,6 +3001,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    switch (opcode) {
    case SpvOpSource:
    case SpvOpSourceExtension:
+   case SpvOpSourceContinued:
    case SpvOpExtension:
       /* Unhandled, but these are for debug so that's ok. */
       break;
@@ -3172,6 +3173,7 @@ vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
 {
    switch (opcode) {
    case SpvOpSource:
+   case SpvOpSourceContinued:
    case SpvOpSourceExtension:
    case SpvOpExtension:
    case SpvOpCapability:
