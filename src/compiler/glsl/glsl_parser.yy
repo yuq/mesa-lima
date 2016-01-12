@@ -1468,6 +1468,17 @@ layout_qualifier_id:
                           "GLSL 4.40 or ARB_enhanced_layouts");
       }
 
+      if (match_layout_qualifier("align", $1, state) == 0) {
+         if (!state->has_enhanced_layouts()) {
+            _mesa_glsl_error(& @1, state,
+                             "align qualifier requires "
+                             "GLSL 4.40 or ARB_enhanced_layouts");
+         } else {
+            $$.flags.q.explicit_align = 1;
+            $$.align = $3;
+         }
+      }
+
       if (match_layout_qualifier("location", $1, state) == 0) {
          $$.flags.q.explicit_location = 1;
 

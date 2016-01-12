@@ -73,6 +73,7 @@ ast_type_qualifier::has_layout() const
           || this->flags.q.column_major
           || this->flags.q.row_major
           || this->flags.q.packed
+          || this->flags.q.explicit_align
           || this->flags.q.explicit_location
           || this->flags.q.explicit_image_format
           || this->flags.q.explicit_index
@@ -286,6 +287,9 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 		       "invalid input layout qualifier used");
       return false;
    }
+
+   if (q.flags.q.explicit_align)
+      this->align = q.align;
 
    if (q.flags.q.explicit_location)
       this->location = q.location;
