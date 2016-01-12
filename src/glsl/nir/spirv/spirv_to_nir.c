@@ -1254,10 +1254,9 @@ get_vulkan_resource_index(struct vtn_builder *b,
    nir_variable *var = nir_deref_as_var(*deref)->var;
 
    assert(var->interface_type && "variable is a block");
-   assert((*deref)->child);
 
    nir_ssa_def *array_index;
-   if ((*deref)->child->deref_type == nir_deref_type_array) {
+   if ((*deref)->child && (*deref)->child->deref_type == nir_deref_type_array) {
       *deref = (*deref)->child;
       *type = (*type)->array_element;
       array_index = deref_array_offset(b, *deref);
