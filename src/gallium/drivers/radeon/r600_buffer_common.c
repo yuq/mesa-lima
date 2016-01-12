@@ -209,11 +209,15 @@ static void r600_buffer_destroy(struct pipe_screen *screen,
 	FREE(rbuffer);
 }
 
-void r600_invalidate_resource(struct pipe_context *ctx,
-			      struct pipe_resource *resource)
+static bool
+r600_do_invalidate_resource(struct r600_common_context *rctx,
+			    struct r600_resource *rbuffer)
 {
-	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
-        struct r600_resource *rbuffer = r600_resource(resource);
+	/* In AMD_pinned_memory, the user pointer association only gets
+	 * broken when the buffer is explicitly re-allocated.
+	 */
+	if (rctx->ws->buffer_is_user_ptr(rbuffer->buf))
+		return false;
 
 	/* Check if mapping this buffer would cause waiting for the GPU. */
 	if (r600_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
@@ -222,6 +226,17 @@ void r600_invalidate_resource(struct pipe_context *ctx,
 	} else {
 		util_range_set_empty(&rbuffer->valid_buffer_range);
 	}
+
+	return true;
+}
+
+void r600_invalidate_resource(struct pipe_context *ctx,
+			      struct pipe_resource *resource)
+{
+	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
+	struct r600_resource *rbuffer = r600_resource(resource);
+
+	(void)r600_do_invalidate_resource(rctx, rbuffer);
 }
 
 static void *r600_buffer_get_transfer(struct pipe_context *ctx,
@@ -291,10 +306,10 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	    !(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
 		assert(usage & PIPE_TRANSFER_WRITE);
 
-		r600_invalidate_resource(ctx, resource);
-
-		/* At this point, the buffer is always idle. */
-		usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
+		if (r600_do_invalidate_resource(rctx, rbuffer)) {
+			/* At this point, the buffer is always idle. */
+			usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
+		}
 	}
 	else if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
 		 !(usage & PIPE_TRANSFER_UNSYNCHRONIZED) &&
