@@ -415,6 +415,23 @@ vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
    return dest;
 }
 
+static struct vtn_type *
+mutable_matrix_member(struct vtn_builder *b, struct vtn_type *type, int member)
+{
+   type->members[member] = vtn_type_copy(b, type->members[member]);
+   type = type->members[member];
+
+   /* We may have an array of matrices.... Oh, joy! */
+   while (glsl_type_is_array(type->type)) {
+      type->array_element = vtn_type_copy(b, type->array_element);
+      type = type->array_element;
+   }
+
+   assert(glsl_type_is_matrix(type->type));
+
+   return type;
+}
+
 static void
 struct_member_decoration_cb(struct vtn_builder *b,
                             struct vtn_value *val, int member,
@@ -444,8 +461,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
       ctx->fields[member].location = dec->literals[0];
       break;
    case SpvDecorationBuiltIn:
-      ctx->type->members[member] = vtn_type_copy(b,
-                                                 ctx->type->members[member]);
+      ctx->type->members[member] = vtn_type_copy(b, ctx->type->members[member]);
       ctx->type->members[member]->is_builtin = true;
       ctx->type->members[member]->builtin = dec->literals[0];
       ctx->type->builtin_block = true;
@@ -454,12 +470,12 @@ struct_member_decoration_cb(struct vtn_builder *b,
       ctx->type->offsets[member] = dec->literals[0];
       break;
    case SpvDecorationMatrixStride:
-      ctx->type->members[member]->stride = dec->literals[0];
+      mutable_matrix_member(b, ctx->type, member)->stride = dec->literals[0];
       break;
    case SpvDecorationColMajor:
       break; /* Nothing to do here.  Column-major is the default. */
    case SpvDecorationRowMajor:
-      ctx->type->members[member]->row_major = true;
+      mutable_matrix_member(b, ctx->type, member)->row_major = true;
       break;
    default:
       unreachable("Unhandled member decoration");
