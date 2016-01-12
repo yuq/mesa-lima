@@ -472,6 +472,7 @@ void anv_UpdateDescriptorSets(
          &set->layout->binding[write->dstBinding];
       struct anv_descriptor *desc =
          &set->descriptors[bind_layout->descriptor_index];
+      desc += write->dstArrayElement;
 
       switch (write->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -544,7 +545,8 @@ void anv_UpdateDescriptorSets(
             assert(buffer);
 
             struct anv_buffer_view *view =
-               &set->buffer_views[bind_layout->buffer_index + j];
+               &set->buffer_views[bind_layout->buffer_index];
+            view += write->dstArrayElement + j;
 
             const struct anv_format *format =
                anv_format_for_descriptor_type(write->descriptorType);
