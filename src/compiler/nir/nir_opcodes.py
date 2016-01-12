@@ -164,6 +164,7 @@ unop_convert("f2u", tuint32, tfloat32, "src0") # Float-to-unsigned conversion
 unop_convert("d2i", tint32, tfloat64, "src0") # Double-to-integer conversion.
 unop_convert("d2u", tuint32, tfloat64, "src0") # Double-to-unsigned conversion.
 unop_convert("i2f", tfloat32, tint32, "src0") # Integer-to-float conversion.
+unop_convert("i2d", tfloat64, tint32, "src0") # Integer-to-double conversion.
 # Float-to-boolean conversion
 unop_convert("f2b", tbool, tfloat32, "src0 != 0.0f")
 unop_convert("d2b", tbool, tfloat64, "src0 != 0.0")
@@ -173,6 +174,7 @@ unop_convert("b2f", tfloat32, tbool, "src0 ? 1.0f : 0.0f")
 unop_convert("i2b", tbool, tint32, "src0 != 0")
 unop_convert("b2i", tint32, tbool, "src0 ? 1 : 0") # Boolean-to-int conversion
 unop_convert("u2f", tfloat32, tuint32, "src0") # Unsigned-to-float conversion.
+unop_convert("u2d", tfloat64, tuint32, "src0") # Unsigned-to-double conversion.
 # double-to-float conversion
 unop_convert("d2f", tfloat32, tfloat64, "src0") # Single to double precision
 unop_convert("f2d", tfloat64, tfloat32, "src0") # Double to single precision
