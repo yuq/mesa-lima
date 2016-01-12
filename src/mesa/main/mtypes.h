@@ -2525,6 +2525,67 @@ struct gl_active_atomic_buffer
 };
 
 /**
+ * Data container for shader queries. This holds only the minimal
+ * amount of required information for resource queries to work.
+ */
+struct gl_shader_variable
+{
+   /**
+    * Declared type of the variable
+    */
+   const struct glsl_type *type;
+
+   /**
+    * Declared name of the variable
+    */
+   char *name;
+
+   /**
+    * Storage location of the base of this variable
+    *
+    * The precise meaning of this field depends on the nature of the variable.
+    *
+    *   - Vertex shader input: one of the values from \c gl_vert_attrib.
+    *   - Vertex shader output: one of the values from \c gl_varying_slot.
+    *   - Geometry shader input: one of the values from \c gl_varying_slot.
+    *   - Geometry shader output: one of the values from \c gl_varying_slot.
+    *   - Fragment shader input: one of the values from \c gl_varying_slot.
+    *   - Fragment shader output: one of the values from \c gl_frag_result.
+    *   - Uniforms: Per-stage uniform slot number for default uniform block.
+    *   - Uniforms: Index within the uniform block definition for UBO members.
+    *   - Non-UBO Uniforms: explicit location until linking then reused to
+    *     store uniform slot number.
+    *   - Other: This field is not currently used.
+    *
+    * If the variable is a uniform, shader input, or shader output, and the
+    * slot has not been assigned, the value will be -1.
+    */
+   int location;
+
+   /**
+    * Output index for dual source blending.
+    *
+    * \note
+    * The GLSL spec only allows the values 0 or 1 for the index in \b dual
+    * source blending.
+    */
+   unsigned index:1;
+
+   /**
+    * Specifies whether a shader input/output is per-patch in tessellation
+    * shader stages.
+    */
+   unsigned patch:1;
+
+   /**
+    * Storage class of the variable.
+    *
+    * \sa (n)ir_variable_mode
+    */
+   unsigned mode:4;
+};
+
+/**
  * Active resource in a gl_shader_program
  */
 struct gl_program_resource
