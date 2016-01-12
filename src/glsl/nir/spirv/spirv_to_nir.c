@@ -2188,8 +2188,39 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
+   case SpvOpArrayLength: {
+      struct vtn_value *v_deref = vtn_value(b, w[3], vtn_value_type_deref);
+      struct vtn_type *type = v_deref->deref_type;
+      const uint32_t offset = type->offsets[w[4]];
+      const uint32_t stride = type->members[w[4]]->stride;
+      nir_deref *n_deref = &v_deref->deref->deref;
+      nir_ssa_def *index =
+         get_vulkan_resource_index(b, &n_deref, &type);
+      nir_intrinsic_instr *instr =
+         nir_intrinsic_instr_create(b->nb.shader,
+                                    nir_intrinsic_get_buffer_size);
+      instr->src[0] = nir_src_for_ssa(index);
+      nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
+      nir_builder_instr_insert(&b->nb, &instr->instr);
+      nir_ssa_def *buf_size = &instr->dest.ssa;
+
+      /* array_length = max(buffer_size - offset, 0) / stride */
+      nir_ssa_def *array_length =
+         nir_idiv(&b->nb,
+                  nir_imax(&b->nb,
+                           nir_isub(&b->nb,
+                                    buf_size,
+                                    nir_imm_int(&b->nb, offset)),
+                           nir_imm_int(&b->nb, 0u)),
+                  nir_imm_int(&b->nb, stride));
+
+      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
+      val->ssa = vtn_create_ssa_value(b, glsl_uint_type());
+      val->ssa->def = array_length;
+      break;
+   }
+
    case SpvOpCopyMemorySized:
-   case SpvOpArrayLength:
    default:
       unreachable("Unhandled opcode");
    }
