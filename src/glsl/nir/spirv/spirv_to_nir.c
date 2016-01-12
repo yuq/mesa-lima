@@ -3370,6 +3370,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpUConvert:
    case SpvOpSConvert:
    case SpvOpFConvert:
+   case SpvOpQuantizeToF16:
    case SpvOpConvertPtrToU:
    case SpvOpConvertUToPtr:
    case SpvOpPtrCastToGeneric:

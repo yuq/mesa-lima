@@ -387,6 +387,10 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
       op = nir_op_fmov;
       break;
 
+   case SpvOpQuantizeToF16:
+      op = nir_op_fquantize2f16;
+      break;
+
    /* Derivatives: */
    case SpvOpDPdx:         op = nir_op_fddx;          break;
    case SpvOpDPdy:         op = nir_op_fddy;          break;
