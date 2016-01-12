@@ -360,14 +360,6 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    BEGIN_NVC0(push, NVC0_COMPUTE(CP_GPR_ALLOC), 1);
    PUSH_DATA (push, cp->num_gprs);
 
-   /* grid/block setup */
-   BEGIN_NVC0(push, NVC0_COMPUTE(GRIDDIM_YX), 2);
-   PUSH_DATA (push, (info->grid[1] << 16) | info->grid[0]);
-   PUSH_DATA (push, info->grid[2]);
-   BEGIN_NVC0(push, NVC0_COMPUTE(BLOCKDIM_YX), 2);
-   PUSH_DATA (push, (info->block[1] << 16) | info->block[0]);
-   PUSH_DATA (push, info->block[2]);
-
    /* launch preliminary setup */
    BEGIN_NVC0(push, NVC0_COMPUTE(GRIDID), 1);
    PUSH_DATA (push, 0x1);
@@ -376,17 +368,39 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    BEGIN_NVC0(push, NVC0_COMPUTE(FLUSH), 1);
    PUSH_DATA (push, NVC0_COMPUTE_FLUSH_GLOBAL | NVC0_COMPUTE_FLUSH_UNK8);
 
-   /* kernel launching */
-   BEGIN_NVC0(push, NVC0_COMPUTE(COMPUTE_BEGIN), 1);
-   PUSH_DATA (push, 0);
-   BEGIN_NVC0(push, SUBC_COMPUTE(0x0a08), 1);
-   PUSH_DATA (push, 0);
-   BEGIN_NVC0(push, NVC0_COMPUTE(LAUNCH), 1);
-   PUSH_DATA (push, 0x1000);
-   BEGIN_NVC0(push, NVC0_COMPUTE(COMPUTE_END), 1);
-   PUSH_DATA (push, 0);
-   BEGIN_NVC0(push, SUBC_COMPUTE(0x0360), 1);
-   PUSH_DATA (push, 0x1);
+   /* block setup */
+   BEGIN_NVC0(push, NVC0_COMPUTE(BLOCKDIM_YX), 2);
+   PUSH_DATA (push, (info->block[1] << 16) | info->block[0]);
+   PUSH_DATA (push, info->block[2]);
+
+   if (unlikely(info->indirect)) {
+      struct nv04_resource *res = nv04_resource(info->indirect);
+      uint32_t offset = res->offset + info->indirect_offset;
+      unsigned macro = NVC0_COMPUTE_MACRO_LAUNCH_GRID_INDIRECT;
+
+      nouveau_pushbuf_space(push, 16, 0, 1);
+      PUSH_REFN(push, res->bo, NOUVEAU_BO_RD | res->domain);
+      PUSH_DATA(push, NVC0_FIFO_PKHDR_1I(1, macro, 3));
+      nouveau_pushbuf_data(push, res->bo, offset,
+                           NVC0_IB_ENTRY_1_NO_PREFETCH | 3 * 4);
+   } else {
+      /* grid setup */
+      BEGIN_NVC0(push, NVC0_COMPUTE(GRIDDIM_YX), 2);
+      PUSH_DATA (push, (info->grid[1] << 16) | info->grid[0]);
+      PUSH_DATA (push, info->grid[2]);
+
+      /* kernel launching */
+      BEGIN_NVC0(push, NVC0_COMPUTE(COMPUTE_BEGIN), 1);
+      PUSH_DATA (push, 0);
+      BEGIN_NVC0(push, SUBC_COMPUTE(0x0a08), 1);
+      PUSH_DATA (push, 0);
+      BEGIN_NVC0(push, NVC0_COMPUTE(LAUNCH), 1);
+      PUSH_DATA (push, 0x1000);
+      BEGIN_NVC0(push, NVC0_COMPUTE(COMPUTE_END), 1);
+      PUSH_DATA (push, 0);
+      BEGIN_NVC0(push, SUBC_COMPUTE(0x0360), 1);
+      PUSH_DATA (push, 0x1);
+   }
 
    /* Invalidate all 3D constbufs because they are aliased with COMPUTE. */
    nvc0->dirty |= NVC0_NEW_CONSTBUF;
