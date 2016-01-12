@@ -3753,13 +3753,8 @@ build_program_resource_list(struct gl_shader_program *shProg)
       if (!add_packed_varyings(shProg, input_stage, GL_PROGRAM_INPUT))
          return;
 
-      /* Only when dealing with multiple stages, otherwise we would have
-       * duplicate gl_shader_variable entries.
-       */
-      if (input_stage != output_stage) {
-         if (!add_packed_varyings(shProg, output_stage, GL_PROGRAM_OUTPUT))
-            return;
-      }
+      if (!add_packed_varyings(shProg, output_stage, GL_PROGRAM_OUTPUT))
+         return;
    }
 
    if (!add_fragdata_arrays(shProg))
