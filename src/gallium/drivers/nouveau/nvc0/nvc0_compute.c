@@ -183,10 +183,7 @@ nvc0_compute_upload_input(struct nvc0_context *nvc0, const void *input)
 }
 
 void
-nvc0_launch_grid(struct pipe_context *pipe,
-                 const uint *block_layout, const uint *grid_layout,
-                 uint32_t label,
-                 const void *input)
+nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
@@ -200,10 +197,10 @@ nvc0_launch_grid(struct pipe_context *pipe,
       return;
    }
 
-   nvc0_compute_upload_input(nvc0, input);
+   nvc0_compute_upload_input(nvc0, info->input);
 
    BEGIN_NVC0(push, NVC0_COMPUTE(CP_START_ID), 1);
-   PUSH_DATA (push, nvc0_program_symbol_offset(cp, label));
+   PUSH_DATA (push, nvc0_program_symbol_offset(cp, info->pc));
 
    BEGIN_NVC0(push, NVC0_COMPUTE(LOCAL_POS_ALLOC), 3);
    PUSH_DATA (push, align(cp->cp.lmem_size, 0x10));
@@ -212,18 +209,18 @@ nvc0_launch_grid(struct pipe_context *pipe,
 
    BEGIN_NVC0(push, NVC0_COMPUTE(SHARED_SIZE), 3);
    PUSH_DATA (push, align(cp->cp.smem_size, 0x100));
-   PUSH_DATA (push, block_layout[0] * block_layout[1] * block_layout[2]);
+   PUSH_DATA (push, info->block[0] * info->block[1] * info->block[2]);
    PUSH_DATA (push, cp->num_barriers);
    BEGIN_NVC0(push, NVC0_COMPUTE(CP_GPR_ALLOC), 1);
    PUSH_DATA (push, cp->num_gprs);
 
    /* grid/block setup */
    BEGIN_NVC0(push, NVC0_COMPUTE(GRIDDIM_YX), 2);
-   PUSH_DATA (push, (grid_layout[1] << 16) | grid_layout[0]);
-   PUSH_DATA (push, grid_layout[2]);
+   PUSH_DATA (push, (info->grid[1] << 16) | info->grid[0]);
+   PUSH_DATA (push, info->grid[2]);
    BEGIN_NVC0(push, NVC0_COMPUTE(BLOCKDIM_YX), 2);
-   PUSH_DATA (push, (block_layout[1] << 16) | block_layout[0]);
-   PUSH_DATA (push, block_layout[2]);
+   PUSH_DATA (push, (info->block[1] << 16) | info->block[0]);
+   PUSH_DATA (push, info->block[2]);
 
    /* launch preliminary setup */
    BEGIN_NVC0(push, NVC0_COMPUTE(GRIDID), 1);

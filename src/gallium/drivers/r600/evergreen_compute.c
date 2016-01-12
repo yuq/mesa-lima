@@ -553,25 +553,24 @@ void evergreen_emit_cs_shader(
 }
 
 static void evergreen_launch_grid(
-		struct pipe_context *ctx_,
-		const uint *block_layout, const uint *grid_layout,
-		uint32_t pc, const void *input)
+		struct pipe_context *ctx_, const struct pipe_grid_info *info)
 {
 	struct r600_context *ctx = (struct r600_context *)ctx_;
 #ifdef HAVE_OPENCL
 	struct r600_pipe_compute *shader = ctx->cs_shader_state.shader;
 	boolean use_kill;
 
-	ctx->cs_shader_state.pc = pc;
+	ctx->cs_shader_state.pc = info->pc;
 	/* Get the config information for this kernel. */
-	r600_shader_binary_read_config(&shader->binary, &shader->bc, pc, &use_kill);
+	r600_shader_binary_read_config(&shader->binary, &shader->bc,
+                                  info->pc, &use_kill);
 #endif
 
-	COMPUTE_DBG(ctx->screen, "*** evergreen_launch_grid: pc = %u\n", pc);
+	COMPUTE_DBG(ctx->screen, "*** evergreen_launch_grid: pc = %u\n", info->pc);
 
 
-	evergreen_compute_upload_input(ctx_, block_layout, grid_layout, input);
-	compute_emit_cs(ctx, block_layout, grid_layout);
+	evergreen_compute_upload_input(ctx_, info->block, info->grid, info->input);
+	compute_emit_cs(ctx, info->block, info->grid);
 }
 
 static void evergreen_set_compute_resources(struct pipe_context * ctx_,

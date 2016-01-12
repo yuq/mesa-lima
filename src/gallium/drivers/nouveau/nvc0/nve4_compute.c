@@ -429,10 +429,7 @@ nve4_compute_alloc_launch_desc(struct nouveau_context *nv,
 }
 
 void
-nve4_launch_grid(struct pipe_context *pipe,
-                 const uint *block_layout, const uint *grid_layout,
-                 uint32_t label,
-                 const void *input)
+nve4_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
@@ -453,13 +450,14 @@ nve4_launch_grid(struct pipe_context *pipe,
    if (ret)
       goto out;
 
-   nve4_compute_setup_launch_desc(nvc0, desc, label, block_layout, grid_layout);
+   nve4_compute_setup_launch_desc(nvc0, desc, info->pc,
+                                  info->block, info->grid);
 #ifdef DEBUG
    if (debug_get_num_option("NV50_PROG_DEBUG", 0))
       nve4_compute_dump_launch_desc(desc);
 #endif
 
-   nve4_compute_upload_input(nvc0, input, block_layout, grid_layout);
+   nve4_compute_upload_input(nvc0, info->input, info->block, info->grid);
 
    /* upload descriptor and flush */
 #if 0

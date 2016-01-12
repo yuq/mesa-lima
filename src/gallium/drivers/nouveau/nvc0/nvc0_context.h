@@ -331,11 +331,9 @@ nvc0_video_buffer_create(struct pipe_context *pipe,
 void nvc0_push_vbo(struct nvc0_context *, const struct pipe_draw_info *);
 
 /* nve4_compute.c */
-void nve4_launch_grid(struct pipe_context *,
-                      const uint *, const uint *, uint32_t, const void *);
+void nve4_launch_grid(struct pipe_context *, const struct pipe_grid_info *);
 
 /* nvc0_compute.c */
-void nvc0_launch_grid(struct pipe_context *,
-                      const uint *, const uint *, uint32_t, const void *);
+void nvc0_launch_grid(struct pipe_context *, const struct pipe_grid_info *);
 
 #endif

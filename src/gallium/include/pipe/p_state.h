@@ -678,6 +678,33 @@ struct pipe_blit_info
    boolean alpha_blend; /* dst.rgb = src.rgb * src.a + dst.rgb * (1 - src.a) */
 };
 
+/**
+ * Information to describe a launch_grid call.
+ */
+struct pipe_grid_info
+{
+   /**
+    * For drivers that use PIPE_SHADER_IR_LLVM as their prefered IR, this value
+    * will be the index of the kernel in the opencl.kernels metadata list.
+    */
+   uint32_t pc;
+
+   /**
+    * Will be used to initialize the INPUT resource, and it should point to a
+    * buffer of at least pipe_compute_state::req_input_mem bytes.
+    */
+   void *input;
+
+   /**
+    * Determine the layout of the working block (in thread units) to be used.
+    */
+   uint block[3];
+
+   /**
+    * Determine the layout of the grid (in block units) to be used.
+    */
+   uint grid[3];
+};
 
 /**
  * Structure used as a header for serialized LLVM programs.

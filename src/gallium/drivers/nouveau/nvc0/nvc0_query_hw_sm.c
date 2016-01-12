@@ -937,11 +937,12 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
    const bool is_nve4 = screen->base.class_3d >= NVE4_3D_CLASS;
    struct nvc0_hw_sm_query *hsq = nvc0_hw_sm_query(hq);
+   struct pipe_grid_info info = {};
    uint32_t mask;
    uint32_t input[3];
    const uint block[3] = { 32, is_nve4 ? 4 : 1, 1 };
    const uint grid[3] = { screen->mp_count, screen->gpc_count, 1 };
-   unsigned c;
+   unsigned c, i;
 
    if (unlikely(!screen->pm.prog)) {
       struct nvc0_program *prog = CALLOC_STRUCT(nvc0_program);
@@ -989,7 +990,14 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    input[0] = (hq->bo->offset + hq->base_offset);
    input[1] = (hq->bo->offset + hq->base_offset) >> 32;
    input[2] = hq->sequence;
-   pipe->launch_grid(pipe, block, grid, 0, input);
+
+   for (i = 0; i < 3; i++) {
+      info.block[i] = block[i];
+      info.grid[i] = grid[i];
+   }
+   info.pc = 0;
+   info.input = input;
+   pipe->launch_grid(pipe, &info);
 
    nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_QUERY);
 
