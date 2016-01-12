@@ -6244,7 +6244,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                           ir_variable_mode var_mode,
                                           ast_type_qualifier *layout,
                                           unsigned block_stream,
-                                          unsigned expl_location)
+                                          unsigned expl_location,
+                                          unsigned expl_align)
 {
    unsigned decl_count = 0;
    unsigned next_offset = 0;
@@ -6507,6 +6508,34 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             }
          } else {
             fields[i].offset = -1;
+         }
+
+         if (qual->flags.q.explicit_align || expl_align != 0) {
+            unsigned offset = fields[i].offset != -1 ? fields[i].offset :
+               next_offset;
+            if (align == 0 || size == 0) {
+               _mesa_glsl_error(&loc, state, "align can only be used with "
+                                "std430 and std140 layouts");
+            } else if (qual->flags.q.explicit_align) {
+               unsigned member_align;
+               if (process_qualifier_constant(state, &loc, "align",
+                                              qual->align, &member_align)) {
+                  if (member_align == 0 ||
+                      member_align & (member_align - 1)) {
+                     _mesa_glsl_error(&loc, state, "align layout qualifier "
+                                      "in not a power of 2");
+                  } else {
+                     fields[i].offset = glsl_align(offset, member_align);
+                     next_offset = glsl_align(fields[i].offset + size, align);
+                  }
+               }
+            } else {
+               fields[i].offset = glsl_align(offset, expl_align);
+               next_offset = glsl_align(fields[i].offset + size, align);
+            }
+         }
+
+         if (!qual->flags.q.explicit_offset) {
             if (align != 0 && size != 0)
                next_offset = glsl_align(next_offset + size, align);
          }
@@ -6605,7 +6634,8 @@ ast_struct_specifier::hir(exec_list *instructions,
                                                 ir_var_auto,
                                                 layout,
                                                 0, /* for interface only */
-                                                expl_location);
+                                                expl_location,
+                                                0 /* for interface only */);
 
    validate_identifier(this->name, loc, state);
 
@@ -6773,6 +6803,20 @@ ast_interface_block::hir(exec_list *instructions,
       }
    }
 
+   unsigned expl_align = 0;
+   if (layout.flags.q.explicit_align) {
+      if (!process_qualifier_constant(state, &loc, "align",
+                                      layout.align, &expl_align)) {
+         return NULL;
+      } else {
+         if (expl_align == 0 || expl_align & (expl_align - 1)) {
+            _mesa_glsl_error(&loc, state, "align layout qualifier in not a "
+                             "power of 2.");
+            return NULL;
+         }
+      }
+   }
+
    unsigned int num_variables =
       ast_process_struct_or_iface_block_members(&declared_variables,
                                                 state,
@@ -6784,7 +6828,8 @@ ast_interface_block::hir(exec_list *instructions,
                                                 var_mode,
                                                 &this->layout,
                                                 qual_stream,
-                                                expl_location);
+                                                expl_location,
+                                                expl_align);
 
    if (!redeclaring_per_vertex) {
       validate_identifier(this->block_name, loc, state);
