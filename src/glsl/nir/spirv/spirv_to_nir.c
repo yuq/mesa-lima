@@ -1816,7 +1816,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       /* Interface block variables aren't actually going to be referenced
        * by the generated NIR, so we don't put them in the list
        */
-      if (var->interface_type)
+      if (var->interface_type && glsl_type_is_struct(var->interface_type))
          break;
 
       if (var->data.mode == nir_var_local) {
