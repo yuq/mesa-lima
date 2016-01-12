@@ -176,6 +176,7 @@ unop("ffloor", tfloat, "floorf(src0)")
 unop("ffract", tfloat, "src0 - floorf(src0)")
 unop("fround_even", tfloat, "_mesa_roundevenf(src0)")
 
+unop("fquantize2f16", tfloat, "_mesa_half_to_float(_mesa_float_to_half(src0))")
 
 # Trigonometric operations.
 
