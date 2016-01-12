@@ -851,7 +851,8 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
 
 static struct pb_buffer *radeon_winsys_bo_from_handle(struct radeon_winsys *rws,
                                                       struct winsys_handle *whandle,
-                                                      unsigned *stride)
+                                                      unsigned *stride,
+                                                      unsigned *offset)
 {
     struct radeon_drm_winsys *ws = radeon_drm_winsys(rws);
     struct radeon_bo *bo;
@@ -941,6 +942,8 @@ done:
 
     if (stride)
         *stride = whandle->stride;
+    if (offset)
+        *offset = whandle->offset;
 
     if (ws->info.has_virtual_memory && !bo->va) {
         struct drm_radeon_gem_va va;
@@ -991,7 +994,7 @@ fail:
 }
 
 static boolean radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
-                                           unsigned stride,
+                                           unsigned stride, unsigned offset,
                                            struct winsys_handle *whandle)
 {
     struct drm_gem_flink flink;
@@ -1025,7 +1028,7 @@ static boolean radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
     }
 
     whandle->stride = stride;
-    whandle->offset = 0;
+    whandle->offset = offset;
     return TRUE;
 }
 

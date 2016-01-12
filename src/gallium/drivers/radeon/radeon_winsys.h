@@ -515,7 +515,7 @@ struct radeon_winsys {
      */
     struct pb_buffer *(*buffer_from_handle)(struct radeon_winsys *ws,
                                             struct winsys_handle *whandle,
-                                            unsigned *stride);
+                                            unsigned *stride, unsigned *offset);
 
     /**
      * Get a winsys buffer from a user pointer. The resulting buffer can't
@@ -546,7 +546,7 @@ struct radeon_winsys {
      * \return          TRUE on success.
      */
     boolean (*buffer_get_handle)(struct pb_buffer *buf,
-                                 unsigned stride,
+                                 unsigned stride, unsigned offset,
                                  struct winsys_handle *whandle);
 
     /**

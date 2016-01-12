@@ -981,8 +981,8 @@ boolean r300_resource_get_handle(struct pipe_screen* screen,
         return FALSE;
     }
 
-    return rws->buffer_get_handle(tex->buf,
-                                  tex->tex.stride_in_bytes[0], whandle);
+    return rws->buffer_get_handle(tex->buf, tex->tex.stride_in_bytes[0],
+                                  0, whandle);
 }
 
 static const struct u_resource_vtbl r300_texture_vtbl =
@@ -1116,7 +1116,7 @@ struct pipe_resource *r300_texture_from_handle(struct pipe_screen *screen,
         return NULL;
     }
 
-    buffer = rws->buffer_from_handle(rws, whandle, &stride);
+    buffer = rws->buffer_from_handle(rws, whandle, &stride, NULL);
     if (!buffer)
         return NULL;
 
