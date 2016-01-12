@@ -35,6 +35,11 @@ struct winsys_handle
     * Output for texture_get_handle.
     */
    unsigned stride;
+   /**
+    * Input to texture_from_handle.
+    * Output for texture_get_handle.
+    */
+   unsigned offset;
 };
 
 

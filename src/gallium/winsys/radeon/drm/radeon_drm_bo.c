@@ -1025,6 +1025,7 @@ static boolean radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
     }
 
     whandle->stride = stride;
+    whandle->offset = 0;
     return TRUE;
 }
 

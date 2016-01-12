@@ -637,6 +637,7 @@ static boolean amdgpu_bo_get_handle(struct pb_buffer *buffer,
       return FALSE;
 
    whandle->stride = stride;
+   whandle->offset = 0;
    bo->is_shared = true;
    return TRUE;
 }

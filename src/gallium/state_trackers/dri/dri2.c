@@ -534,6 +534,7 @@ dri2_allocate_textures(struct dri_context *ctx,
          templ.bind = bind;
          whandle.handle = buf->name;
          whandle.stride = buf->pitch;
+         whandle.offset = 0;
          if (screen->can_share_buffer)
             whandle.type = DRM_API_HANDLE_TYPE_SHARED;
          else
@@ -756,6 +757,7 @@ dri2_create_image_from_winsys(__DRIscreen *_screen,
    templ.array_size = 1;
 
    whandle->stride = pitch * util_format_get_blocksize(pf);
+   whandle->offset = 0;
 
    img->texture = screen->base.screen->resource_from_handle(screen->base.screen,
          &templ, whandle, PIPE_HANDLE_USAGE_READ_WRITE);
