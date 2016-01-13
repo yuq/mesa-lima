@@ -841,30 +841,36 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
    struct gl_texture_object *const texObj =
       _mesa_get_current_tex_object(ctx, target);
 
-   /* Restore texture object state, the texture binding will
-    * be restored by _mesa_meta_end().
-    *
-    * If the target restricts values for base level or max level, we assume
-    * that the original values were valid.
+   /* Either there is no temporary texture or the temporary texture is bound. */
+   assert(blit->tempTex == 0 || texObj->Name == blit->tempTex);
+
+   /* Restore texture object state, the texture binding will be restored by
+    * _mesa_meta_end().  If the texture is the temporary texture that is about
+    * to be destroyed, don't bother restoring its state.
     */
-   if (blit->baseLevelSave != texObj->BaseLevel)
-      _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_BASE_LEVEL,
-                                &blit->baseLevelSave, false);
-
-   if (blit->maxLevelSave != texObj->MaxLevel)
-      _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_MAX_LEVEL,
-                                &blit->maxLevelSave, false);
-
-   /* If ARB_stencil_texturing is not supported, the mode won't have changed. */
-   if (texObj->StencilSampling != blit->stencilSamplingSave) {
-      /* GLint so the compiler won't complain about type signedness mismatch
-       * in the call to _mesa_texture_parameteriv below.
+   if (blit->tempTex == 0) {
+      /* If the target restricts values for base level or max level, we assume
+       * that the original values were valid.
        */
-      const GLint param = blit->stencilSamplingSave ?
-         GL_STENCIL_INDEX : GL_DEPTH_COMPONENT;
+      if (blit->baseLevelSave != texObj->BaseLevel)
+         _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_BASE_LEVEL,
+                                   &blit->baseLevelSave, false);
 
-      _mesa_texture_parameteriv(ctx, texObj, GL_DEPTH_STENCIL_TEXTURE_MODE,
-                                &param, false);
+      if (blit->maxLevelSave != texObj->MaxLevel)
+         _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_MAX_LEVEL,
+                                   &blit->maxLevelSave, false);
+
+      /* If ARB_stencil_texturing is not supported, the mode won't have changed. */
+      if (texObj->StencilSampling != blit->stencilSamplingSave) {
+         /* GLint so the compiler won't complain about type signedness mismatch
+          * in the call to _mesa_texture_parameteriv below.
+          */
+         const GLint param = blit->stencilSamplingSave ?
+            GL_STENCIL_INDEX : GL_DEPTH_COMPONENT;
+
+         _mesa_texture_parameteriv(ctx, texObj, GL_DEPTH_STENCIL_TEXTURE_MODE,
+                                   &param, false);
+      }
    }
 
    _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, blit->samp_obj_save);
