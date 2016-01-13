@@ -376,19 +376,31 @@ set_tex_parameteri(struct gl_context *ctx,
       if (texObj->BaseLevel == params[0])
          return GL_FALSE;
 
+      /* Section 8.10 (Texture Parameters) of the OpenGL 4.5 Core Profile spec
+       * says:
+       *
+       *    An INVALID_OPERATION error is generated if the effective target is
+       *    TEXTURE_2D_MULTISAMPLE, TEXTURE_2D_MULTISAMPLE_ARRAY, or
+       *    TEXTURE_RECTANGLE, and pname TEXTURE_BASE_LEVEL is set to a value
+       *    other than zero.
+       *
+       * Note that section 3.8.8 (Texture Parameters) of the OpenGL 3.3 Core
+       * Profile spec said:
+       *
+       *    The error INVALID_VALUE is generated if TEXTURE_BASE_LEVEL is set
+       *    to any value other than zero.
+       *
+       * We take the 4.5 language as a correction to 3.3, and we implement
+       * that on all GL versions.
+       */
       if ((texObj->Target == GL_TEXTURE_2D_MULTISAMPLE ||
-           texObj->Target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) && params[0] != 0)
+           texObj->Target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY ||
+           texObj->Target == GL_TEXTURE_RECTANGLE) && params[0] != 0)
          goto invalid_operation;
 
       if (params[0] < 0) {
          _mesa_error(ctx, GL_INVALID_VALUE,
                      "glTex%sParameter(param=%d)", suffix, params[0]);
-         return GL_FALSE;
-      }
-      if (texObj->Target == GL_TEXTURE_RECTANGLE_ARB && params[0] != 0) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glTex%sParameter(target=%s, param=%d)", suffix,
-                     _mesa_enum_to_string(texObj->Target), params[0]);
          return GL_FALSE;
       }
       incomplete(ctx, texObj);
