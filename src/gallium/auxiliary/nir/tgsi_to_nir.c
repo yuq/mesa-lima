@@ -1932,6 +1932,7 @@ ttn_add_output_stores(struct ttn_compile *c)
          store->src[0].reg.reg = c->output_regs[loc].reg;
          store->src[0].reg.base_offset = c->output_regs[loc].offset;
          store->const_index[0] = loc;
+         store->const_index[1] = 0xf;  /* writemask */
          store->src[1] = nir_src_for_ssa(nir_imm_int(b, 0));
          nir_builder_instr_insert(b, &store->instr);
       }
