@@ -232,8 +232,10 @@ vtn_nir_alu_op_for_spirv_opcode(SpvOp opcode, bool *swap)
    case SpvOpSDiv:               return nir_op_idiv;
    case SpvOpFDiv:               return nir_op_fdiv;
    case SpvOpUMod:               return nir_op_umod;
-   case SpvOpSMod:               return nir_op_umod; /* FIXME? */
+   case SpvOpSMod:               return nir_op_imod;
    case SpvOpFMod:               return nir_op_fmod;
+   case SpvOpSRem:               return nir_op_irem;
+   case SpvOpFRem:               return nir_op_frem;
 
    case SpvOpShiftRightLogical:     return nir_op_ushr;
    case SpvOpShiftRightArithmetic:  return nir_op_ishr;
@@ -298,8 +300,6 @@ vtn_nir_alu_op_for_spirv_opcode(SpvOp opcode, bool *swap)
    case SpvOpDPdxCoarse:   return nir_op_fddx_coarse;
    case SpvOpDPdyCoarse:   return nir_op_fddy_coarse;
 
-   case SpvOpSRem:
-   case SpvOpFRem:
    default:
       unreachable("No NIR equivalent");
    }
