@@ -84,7 +84,8 @@ static nir_shader *
 anv_shader_compile_to_nir(struct anv_device *device,
                           struct anv_shader_module *module,
                           const char *entrypoint_name,
-                          gl_shader_stage stage)
+                          gl_shader_stage stage,
+                          const VkSpecializationInfo *spec_info)
 {
    if (strcmp(entrypoint_name, "main") != 0) {
       anv_finishme("Multiple shaders per module not really supported");
@@ -113,11 +114,30 @@ anv_shader_compile_to_nir(struct anv_device *device,
       assert(spirv[0] == SPIR_V_MAGIC_NUMBER);
       assert(module->size % 4 == 0);
 
-      entry_point = spirv_to_nir(spirv, module->size / 4, NULL, 0, stage,
-                                 entrypoint_name, nir_options);
+      uint32_t num_spec_entries = 0;
+      struct nir_spirv_specialization *spec_entries = NULL;
+      if (spec_info && spec_info->mapEntryCount > 0) {
+         num_spec_entries = spec_info->mapEntryCount;
+         spec_entries = malloc(num_spec_entries * sizeof(*spec_entries));
+         for (uint32_t i = 0; i < num_spec_entries; i++) {
+            const uint32_t *data =
+               spec_info->pData + spec_info->pMapEntries[i].offset;
+            assert((const void *)(data + 1) <=
+                   spec_info->pData + spec_info->dataSize);
+
+            spec_entries[i].id = spec_info->pMapEntries[i].constantID;
+            spec_entries[i].data = *data;
+         }
+      }
+
+      entry_point = spirv_to_nir(spirv, module->size / 4,
+                                 spec_entries, num_spec_entries,
+                                 stage, entrypoint_name, nir_options);
       nir = entry_point->shader;
       assert(nir->stage == stage);
       nir_validate_shader(nir);
+
+      free(spec_entries);
 
       nir_lower_returns(nir);
       nir_validate_shader(nir);
@@ -374,13 +394,15 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
                      struct anv_shader_module *module,
                      const char *entrypoint,
                      gl_shader_stage stage,
+                     const VkSpecializationInfo *spec_info,
                      struct brw_stage_prog_data *prog_data)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
 
    nir_shader *nir = anv_shader_compile_to_nir(pipeline->device,
-                                               module, entrypoint, stage);
+                                               module, entrypoint, stage,
+                                               spec_info);
    if (nir == NULL)
       return NULL;
 
@@ -490,7 +512,8 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
                         const VkGraphicsPipelineCreateInfo *info,
                         struct anv_shader_module *module,
-                        const char *entrypoint)
+                        const char *entrypoint,
+                        const VkSpecializationInfo *spec_info)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
@@ -504,7 +527,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
    memset(prog_data, 0, sizeof(*prog_data));
 
    nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          MESA_SHADER_VERTEX,
+                                          MESA_SHADER_VERTEX, spec_info,
                                           &prog_data->base.base);
    if (nir == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -554,7 +577,8 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
                         const VkGraphicsPipelineCreateInfo *info,
                         struct anv_shader_module *module,
-                        const char *entrypoint)
+                        const char *entrypoint,
+                        const VkSpecializationInfo *spec_info)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
@@ -568,7 +592,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
    memset(prog_data, 0, sizeof(*prog_data));
 
    nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          MESA_SHADER_GEOMETRY,
+                                          MESA_SHADER_GEOMETRY, spec_info,
                                           &prog_data->base.base);
    if (nir == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -610,7 +634,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
                         const VkGraphicsPipelineCreateInfo *info,
                         struct anv_shader_module *module,
-                        const char *entrypoint)
+                        const char *entrypoint,
+                        const VkSpecializationInfo *spec_info)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
@@ -629,7 +654,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    prog_data->binding_table.render_target_start = 0;
 
    nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          MESA_SHADER_FRAGMENT,
+                                          MESA_SHADER_FRAGMENT, spec_info,
                                           &prog_data->base);
    if (nir == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -688,7 +713,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
                         const VkComputePipelineCreateInfo *info,
                         struct anv_shader_module *module,
-                        const char *entrypoint)
+                        const char *entrypoint,
+                        const VkSpecializationInfo *spec_info)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
@@ -704,7 +730,7 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
    prog_data->binding_table.work_groups_start = 0;
 
    nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          MESA_SHADER_COMPUTE,
+                                          MESA_SHADER_COMPUTE, spec_info,
                                           &prog_data->base);
    if (nir == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -1059,17 +1085,22 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
       ANV_FROM_HANDLE(anv_shader_module, module,
                       pCreateInfo->pStages[i].module);
-      const char *entrypoint = pCreateInfo->pStages[i].pName;
 
       switch (pCreateInfo->pStages[i].stage) {
       case VK_SHADER_STAGE_VERTEX_BIT:
-         anv_pipeline_compile_vs(pipeline, cache, pCreateInfo, module, entrypoint);
+         anv_pipeline_compile_vs(pipeline, cache, pCreateInfo, module,
+                                 pCreateInfo->pStages[i].pName,
+                                 pCreateInfo->pStages[i].pSpecializationInfo);
          break;
       case VK_SHADER_STAGE_GEOMETRY_BIT:
-         anv_pipeline_compile_gs(pipeline, cache, pCreateInfo, module, entrypoint);
+         anv_pipeline_compile_gs(pipeline, cache, pCreateInfo, module,
+                                 pCreateInfo->pStages[i].pName,
+                                 pCreateInfo->pStages[i].pSpecializationInfo);
          break;
       case VK_SHADER_STAGE_FRAGMENT_BIT:
-         anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, module, entrypoint);
+         anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, module,
+                                 pCreateInfo->pStages[i].pName,
+                                 pCreateInfo->pStages[i].pSpecializationInfo);
          break;
       default:
          anv_finishme("Unsupported shader stage");
