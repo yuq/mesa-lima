@@ -1059,6 +1059,16 @@ void anv_dynamic_state_copy(struct anv_dynamic_state *dest,
                             const struct anv_dynamic_state *src,
                             uint32_t copy_mask);
 
+/**
+ * Attachment state when recording a renderpass instance.
+ *
+ * The clear value is valid only if there exists a pending clear.
+ */
+struct anv_attachment_state {
+   VkImageAspectFlags                           pending_clear_aspects;
+   VkClearValue                                 clear_value;
+};
+
 /** State required while building cmd buffer */
 struct anv_cmd_state {
    /* PIPELINE_SELECT.PipelineSelection */
@@ -1084,6 +1094,12 @@ struct anv_cmd_state {
    struct anv_state                             samplers[MESA_SHADER_STAGES];
    struct anv_dynamic_state                     dynamic;
    bool                                         need_query_wa;
+
+   /**
+    * Array length is anv_cmd_state::pass::attachment_count. Array content is
+    * valid only when recording a render pass instance.
+    */
+   struct anv_attachment_state *                attachments;
 
    struct {
       struct anv_buffer *                       index_buffer;
@@ -1214,6 +1230,8 @@ void gen9_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 
+void anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
+                                     const VkRenderPassBeginInfo *info);
 void gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                    struct anv_subpass *subpass);
 

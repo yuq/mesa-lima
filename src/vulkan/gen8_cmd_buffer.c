@@ -813,6 +813,7 @@ void genX(CmdBeginRenderPass)(
 
    cmd_buffer->state.framebuffer = framebuffer;
    cmd_buffer->state.pass = pass;
+   anv_cmd_state_setup_attachments(cmd_buffer, pRenderPassBegin);
 
    flush_pipeline_select_3d(cmd_buffer);
 

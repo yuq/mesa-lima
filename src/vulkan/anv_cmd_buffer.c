@@ -111,8 +111,10 @@ anv_dynamic_state_copy(struct anv_dynamic_state *dest,
 }
 
 static void
-anv_cmd_state_reset(struct anv_cmd_state *state)
+anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
 {
+   struct anv_cmd_state *state = &cmd_buffer->state;
+
    memset(&state->descriptors, 0, sizeof(state->descriptors));
    memset(&state->push_constants, 0, sizeof(state->push_constants));
 
@@ -125,7 +127,67 @@ anv_cmd_state_reset(struct anv_cmd_state *state)
    state->dynamic = default_dynamic_state;
    state->need_query_wa = true;
 
+   if (state->attachments != NULL) {
+      anv_free(&cmd_buffer->pool->alloc, state->attachments);
+      state->attachments = NULL;
+   }
+
    state->gen7.index_buffer = NULL;
+}
+
+/**
+ * Setup anv_cmd_state::attachments for vkCmdBeginRenderPass.
+ */
+void
+anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
+                                const VkRenderPassBeginInfo *info)
+{
+   struct anv_cmd_state *state = &cmd_buffer->state;
+   ANV_FROM_HANDLE(anv_render_pass, pass, info->renderPass);
+
+   anv_free(&cmd_buffer->pool->alloc, state->attachments);
+
+   if (pass->attachment_count == 0) {
+      state->attachments = NULL;
+      return;
+   }
+
+   state->attachments = anv_alloc(&cmd_buffer->pool->alloc,
+                                  pass->attachment_count *
+                                       sizeof(state->attachments[0]),
+                                  8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (state->attachments == NULL) {
+      /* FIXME: Propagate VK_ERROR_OUT_OF_HOST_MEMORY to vkEndCommandBuffer */
+      abort();
+   }
+
+   for (uint32_t i = 0; i < pass->attachment_count; ++i) {
+      struct anv_render_pass_attachment *att = &pass->attachments[i];
+      VkImageAspectFlags clear_aspects = 0;
+
+      if (anv_format_is_color(att->format)) {
+         /* color attachment */
+         if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+            clear_aspects |= VK_IMAGE_ASPECT_COLOR_BIT;
+         }
+      } else {
+         /* depthstencil attachment */
+         if (att->format->depth_format &&
+             att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+            clear_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
+         }
+         if (att->format->has_stencil &&
+             att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+            clear_aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
+         }
+      }
+
+      state->attachments[i].pending_clear_aspects = clear_aspects;
+      if (clear_aspects) {
+         assert(info->clearValueCount > i);
+         state->attachments[i].clear_value = info->pClearValues[i];
+      }
+   }
 }
 
 static VkResult
@@ -173,6 +235,7 @@ static VkResult anv_create_cmd_buffer(
    cmd_buffer->device = device;
    cmd_buffer->pool = pool;
    cmd_buffer->level = level;
+   cmd_buffer->state.attachments = NULL;
 
    result = anv_cmd_buffer_init_batch_bo_chain(cmd_buffer);
    if (result != VK_SUCCESS)
@@ -237,6 +300,7 @@ anv_cmd_buffer_destroy(struct anv_cmd_buffer *cmd_buffer)
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
 
+   anv_free(&cmd_buffer->pool->alloc, cmd_buffer->state.attachments);
    anv_free(&cmd_buffer->pool->alloc, cmd_buffer);
 }
 
@@ -262,7 +326,7 @@ VkResult anv_ResetCommandBuffer(
    cmd_buffer->usage_flags = 0;
    cmd_buffer->state.current_pipeline = UINT32_MAX;
    anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
-   anv_cmd_state_reset(&cmd_buffer->state);
+   anv_cmd_state_reset(cmd_buffer);
 
    return VK_SUCCESS;
 }

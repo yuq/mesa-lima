@@ -816,6 +816,7 @@ void genX(CmdBeginRenderPass)(
 
    cmd_buffer->state.framebuffer = framebuffer;
    cmd_buffer->state.pass = pass;
+   anv_cmd_state_setup_attachments(cmd_buffer, pRenderPassBegin);
 
    const VkRect2D *render_area = &pRenderPassBegin->renderArea;
 
