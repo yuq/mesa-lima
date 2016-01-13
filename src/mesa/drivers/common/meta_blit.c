@@ -694,6 +694,7 @@ blitframebuffer_texture(struct gl_context *ctx,
    }
 
    target = texObj->Target;
+   fb_tex_blit.tex_obj = texObj;
    fb_tex_blit.baseLevelSave = texObj->BaseLevel;
    fb_tex_blit.maxLevelSave = texObj->MaxLevel;
    fb_tex_blit.stencilSamplingSave = texObj->StencilSampling;
