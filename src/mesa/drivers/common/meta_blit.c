@@ -639,10 +639,9 @@ blitframebuffer_texture(struct gl_context *ctx,
        */
       srcLevel = readAtt->TextureLevel;
       texObj = readAtt->Texture;
-      target = texObj->Target;
    } else if (!readAtt->Texture && ctx->Driver.BindRenderbufferTexImage) {
       if (!_mesa_meta_bind_rb_as_tex_image(ctx, rb, &fb_tex_blit.tempTex,
-                                           &texObj, &target))
+                                           &texObj))
          return false;
 
       srcLevel = 0;
@@ -673,7 +672,6 @@ blitframebuffer_texture(struct gl_context *ctx,
       }
 
       srcLevel = 0;
-      target = meta_temp_texture->Target;
       texObj = _mesa_lookup_texture(ctx, meta_temp_texture->TexObj);
       if (texObj == NULL) {
          return false;
@@ -685,6 +683,7 @@ blitframebuffer_texture(struct gl_context *ctx,
                                        tex_base_format,
                                        filter);
 
+      assert(texObj->Target == meta_temp_texture->Target);
 
       srcX0 = 0;
       srcY0 = 0;
@@ -692,6 +691,7 @@ blitframebuffer_texture(struct gl_context *ctx,
       srcY1 = srcH;
    }
 
+   target = texObj->Target;
    fb_tex_blit.baseLevelSave = texObj->BaseLevel;
    fb_tex_blit.maxLevelSave = texObj->MaxLevel;
    fb_tex_blit.stencilSamplingSave = texObj->StencilSampling;
@@ -885,16 +885,12 @@ GLboolean
 _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
                                 struct gl_renderbuffer *rb,
                                 GLuint *tex,
-                                struct gl_texture_object **texObj,
-                                GLenum *target)
+                                struct gl_texture_object **texObj)
 {
    struct gl_texture_image *texImage;
    GLuint tempTex;
-
-   if (rb->NumSamples > 1)
-      *target = GL_TEXTURE_2D_MULTISAMPLE;
-   else
-      *target = GL_TEXTURE_2D;
+   const GLenum target = rb->NumSamples > 1
+      ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
    tempTex = 0;
    _mesa_GenTextures(1, &tempTex);
@@ -903,9 +899,9 @@ _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
 
    *tex = tempTex;
 
-   _mesa_BindTexture(*target, *tex);
+   _mesa_BindTexture(target, *tex);
    *texObj = _mesa_lookup_texture(ctx, *tex);
-   texImage = _mesa_get_tex_image(ctx, *texObj, *target, 0);
+   texImage = _mesa_get_tex_image(ctx, *texObj, target, 0);
 
    if (!ctx->Driver.BindRenderbufferTexImage(ctx, rb, texImage)) {
       _mesa_DeleteTextures(1, tex);
@@ -917,6 +913,7 @@ _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
       ctx->Driver.FinishRenderTexture(ctx, rb);
    }
 
+   assert(target == (*texObj)->Target);
    return true;
 }
 

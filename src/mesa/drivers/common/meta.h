@@ -466,8 +466,7 @@ extern GLboolean
 _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
                                 struct gl_renderbuffer *rb,
                                 GLuint *tex,
-                                struct gl_texture_object **texObj,
-                                GLenum *target);
+                                struct gl_texture_object **texObj);
 
 struct gl_sampler_object *
 _mesa_meta_setup_sampler(struct gl_context *ctx,
