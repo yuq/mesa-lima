@@ -293,9 +293,9 @@ init_color_pipeline(struct anv_device *device)
 }
 
 static void
-emit_load_color_clear(struct anv_cmd_buffer *cmd_buffer,
-                      uint32_t attachment,
-                      VkClearColorValue clear_value)
+emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
+                 uint32_t attachment,
+                 VkClearColorValue clear_value)
 {
    struct anv_device *device = cmd_buffer->device;
    VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
@@ -466,10 +466,10 @@ create_depthstencil_pipeline(struct anv_device *device,
 }
 
 static void
-emit_load_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
-                             uint32_t attachment,
-                             VkImageAspectFlags aspects,
-                             VkClearDepthStencilValue clear_value)
+emit_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
+                        uint32_t attachment,
+                        VkImageAspectFlags aspects,
+                        VkClearDepthStencilValue clear_value)
 {
    struct anv_device *device = cmd_buffer->device;
    VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
@@ -652,12 +652,12 @@ emit_clear(struct anv_cmd_buffer *cmd_buffer,
            const VkClearValue *value)
 {
    if (aspects & VK_IMAGE_ASPECT_COLOR_BIT) {
-      emit_load_color_clear(cmd_buffer, attachment, value->color);
+      emit_color_clear(cmd_buffer, attachment, value->color);
    } else {
       assert(aspects & (VK_IMAGE_ASPECT_DEPTH_BIT |
                         VK_IMAGE_ASPECT_STENCIL_BIT));
-      emit_load_depthstencil_clear(cmd_buffer, attachment, aspects,
-                                   value->depthStencil);
+      emit_depthstencil_clear(cmd_buffer, attachment, aspects,
+                              value->depthStencil);
    }
 }
 
