@@ -843,13 +843,17 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
 
    /* Restore texture object state, the texture binding will
     * be restored by _mesa_meta_end().
+    *
+    * If the target restricts values for base level or max level, we assume
+    * that the original values were valid.
     */
-   if (target != GL_TEXTURE_RECTANGLE_ARB) {
+   if (blit->baseLevelSave != texObj->BaseLevel)
       _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_BASE_LEVEL,
                                 &blit->baseLevelSave, false);
+
+   if (blit->maxLevelSave != texObj->MaxLevel)
       _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_MAX_LEVEL,
                                 &blit->maxLevelSave, false);
-   }
 
    /* If ARB_stencil_texturing is not supported, the mode won't have changed. */
    if (texObj->StencilSampling != blit->stencilSamplingSave) {
