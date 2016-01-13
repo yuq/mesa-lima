@@ -834,16 +834,16 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
    if (target != GL_TEXTURE_RECTANGLE_ARB) {
       _mesa_TexParameteri(target, GL_TEXTURE_BASE_LEVEL, blit->baseLevelSave);
       _mesa_TexParameteri(target, GL_TEXTURE_MAX_LEVEL, blit->maxLevelSave);
+   }
 
-      if (ctx->Extensions.ARB_stencil_texturing) {
-         const struct gl_texture_object *texObj =
-            _mesa_get_current_tex_object(ctx, target);
+   if (ctx->Extensions.ARB_stencil_texturing) {
+      const struct gl_texture_object *texObj =
+         _mesa_get_current_tex_object(ctx, target);
 
-         if (texObj->StencilSampling != blit->stencilSamplingSave)
-            _mesa_TexParameteri(target, GL_DEPTH_STENCIL_TEXTURE_MODE,
-                                blit->stencilSamplingSave ?
-                                   GL_STENCIL_INDEX : GL_DEPTH_COMPONENT);
-      }
+      if (texObj->StencilSampling != blit->stencilSamplingSave)
+         _mesa_TexParameteri(target, GL_DEPTH_STENCIL_TEXTURE_MODE,
+                             blit->stencilSamplingSave ?
+                             GL_STENCIL_INDEX : GL_DEPTH_COMPONENT);
    }
 
    _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, blit->samp_obj_save);
