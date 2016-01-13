@@ -1988,11 +1988,11 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                unsigned *final_assembly_size,
                char **error_str)
 {
+   const bool is_scalar = compiler->scalar_stage[MESA_SHADER_VERTEX];
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
-                                      compiler->scalar_stage[MESA_SHADER_VERTEX]);
-   shader = brw_postprocess_nir(shader, compiler->devinfo,
-                                compiler->scalar_stage[MESA_SHADER_VERTEX]);
+                                      is_scalar);
+   shader = brw_postprocess_nir(shader, compiler->devinfo, is_scalar);
 
    const unsigned *assembly = NULL;
 
@@ -2018,7 +2018,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
     * Read Length" as 1 in vec4 mode, and 0 in SIMD8 mode.  Empirically, in
     * vec4 mode, the hardware appears to wedge unless we read something.
     */
-   if (compiler->scalar_stage[MESA_SHADER_VERTEX])
+   if (is_scalar)
       prog_data->base.urb_read_length = DIV_ROUND_UP(nr_attributes, 2);
    else
       prog_data->base.urb_read_length = DIV_ROUND_UP(MAX2(nr_attributes, 1), 2);
@@ -2037,7 +2037,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    else
       prog_data->base.urb_entry_size = DIV_ROUND_UP(vue_entries, 4);
 
-   if (compiler->scalar_stage[MESA_SHADER_VERTEX]) {
+   if (is_scalar) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
 
       fs_visitor v(compiler, log_data, mem_ctx, key, &prog_data->base.base,
