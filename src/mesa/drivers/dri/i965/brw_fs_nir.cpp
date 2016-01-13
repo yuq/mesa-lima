@@ -3366,6 +3366,9 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                                nir->info.num_ubos - 1);
       }
 
+      /* Number of 32-bit slots in the type */
+      unsigned type_slots = MAX2(1, type_sz(dest.type) / 4);
+
       nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
       if (const_offset == NULL) {
          fs_reg base_offset = retype(get_nir_src(instr->src[1]),
@@ -3373,19 +3376,66 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
          for (int i = 0; i < instr->num_components; i++)
             VARYING_PULL_CONSTANT_LOAD(bld, offset(dest, bld, i), surf_index,
-                                       base_offset, i * 4);
+                                       base_offset, i * type_sz(dest.type));
       } else {
+         /* Even if we are loading doubles, a pull constant load will load
+          * a 32-bit vec4, so should only reserve vgrf space for that. If we
+          * need to load a full dvec4 we will have to emit 2 loads. This is
+          * similar to demote_pull_constants(), except that in that case we
+          * see individual accesses to each component of the vector and then
+          * we let CSE deal with duplicate loads. Here we see a vector access
+          * and we have to split it if necessary.
+          */
          fs_reg packed_consts = vgrf(glsl_type::float_type);
          packed_consts.type = dest.type;
 
-         struct brw_reg const_offset_reg = brw_imm_ud(const_offset->u32[0] & ~15);
-         bld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD, packed_consts,
-                  surf_index, const_offset_reg);
+         unsigned const_offset_aligned = const_offset->u32[0] & ~15;
 
-         const fs_reg consts = byte_offset(packed_consts, const_offset->u32[0] % 16);
+         /* A vec4 only contains half of a dvec4, if we need more than 2
+          * components of a dvec4 we will have to issue another load for
+          * components z and w.
+          */
+         int num_components;
+         if (type_slots == 1)
+            num_components = instr->num_components;
+         else
+            num_components = MIN2(2, instr->num_components);
 
-         for (unsigned i = 0; i < instr->num_components; i++)
-            bld.MOV(offset(dest, bld, i), component(consts, i));
+         /* The computation of num_components doesn't take into account
+          * misalignment, which should be okay according to std140 vector
+          * alignment rules.
+          */
+         assert(const_offset->u32[0] % 16 +
+                type_sz(dest.type) * num_components <= 16);
+
+         int remaining_components = instr->num_components;
+         while (remaining_components > 0) {
+            /* Read the vec4 from a 16-byte aligned offset */
+            struct brw_reg const_offset_reg = brw_imm_ud(const_offset_aligned);
+            bld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
+                     retype(packed_consts, BRW_REGISTER_TYPE_F),
+                     surf_index, const_offset_reg);
+
+            const fs_reg consts = byte_offset(packed_consts, (const_offset->u32[0] % 16));
+            unsigned dest_offset = instr->num_components - remaining_components;
+
+            /* XXX: This doesn't update the sub-16B offset across iterations of
+             * the loop, which should work for std140 vector alignment rules.
+             */
+            assert(dest_offset == 0 || const_offset->u32[0] % 16 == 0);
+
+            for (int i = 0; i < num_components; i++)
+               bld.MOV(offset(dest, bld, i + dest_offset), component(consts, i));
+
+            /* If this is a large enough 64-bit load, we will need to emit
+             * another message
+             */
+            remaining_components -= num_components;
+            assert(remaining_components == 0 ||
+                   (remaining_components <= 2 && type_slots == 2));
+            num_components = remaining_components;
+            const_offset_aligned += 16;
+         }
       }
       break;
    }
