@@ -830,8 +830,8 @@ void genX(CmdBeginRenderPass)(
                   .DrawingRectangleOriginY = 0,
                   .DrawingRectangleOriginX = 0);
 
-   anv_cmd_buffer_clear_attachments(cmd_buffer);
    gen7_cmd_buffer_begin_subpass(cmd_buffer, pass->subpasses);
+   anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
 
 void genX(CmdNextSubpass)(
@@ -843,6 +843,7 @@ void genX(CmdNextSubpass)(
    assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
    gen7_cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->state.subpass + 1);
+   anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
 
 void genX(CmdEndRenderPass)(

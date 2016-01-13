@@ -1260,7 +1260,7 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
 struct anv_state
 anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer);
 
-void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer);
+void anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer);
 
 const struct anv_image_view *
 anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer);

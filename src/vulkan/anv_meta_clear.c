@@ -335,14 +335,20 @@ fail:
 
 static void
 emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
-                 uint32_t attachment,
-                 VkClearColorValue clear_value)
+                 const VkClearAttachment *clear_att)
 {
    struct anv_device *device = cmd_buffer->device;
-   VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
+   const struct anv_subpass *subpass = cmd_buffer->state.subpass;
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   struct anv_pipeline *pipeline = device->meta_state.clear.color_pipelines[0];
+   VkClearColorValue clear_value = clear_att->clearValue.color;
+   struct anv_pipeline *pipeline =
+      device->meta_state.clear.color_pipelines[clear_att->colorAttachment];
+
+   VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
    VkPipeline pipeline_h = anv_pipeline_to_handle(pipeline);
+
+   assert(clear_att->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
+   assert(clear_att->colorAttachment < subpass->color_count);
 
    const struct color_clear_vattrs vertex_data[3] = {
       {
@@ -371,13 +377,6 @@ emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
       .bo = &device->dynamic_state_block_pool.bo,
       .offset = state.offset,
    };
-
-   anv_cmd_buffer_begin_subpass(cmd_buffer,
-      &(struct anv_subpass) {
-         .color_count = 1,
-         .color_attachments = (uint32_t[]) { attachment },
-         .depth_stencil_attachment = VK_ATTACHMENT_UNUSED,
-      });
 
    ANV_CALL(CmdSetViewport)(cmd_buffer_h, 0, 1,
       (VkViewport[]) {
@@ -511,13 +510,22 @@ create_depthstencil_pipeline(struct anv_device *device,
 
 static void
 emit_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
-                        uint32_t attachment,
-                        VkImageAspectFlags aspects,
-                        VkClearDepthStencilValue clear_value)
+                        const VkClearAttachment *clear_att)
 {
    struct anv_device *device = cmd_buffer->device;
-   VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
+   const struct anv_subpass *subpass = cmd_buffer->state.subpass;
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+   uint32_t attachment = subpass->depth_stencil_attachment;
+   VkClearDepthStencilValue clear_value = clear_att->clearValue.depthStencil;
+   VkImageAspectFlags aspects = clear_att->aspectMask;
+
+   VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
+
+   assert(aspects == VK_IMAGE_ASPECT_DEPTH_BIT ||
+          aspects == VK_IMAGE_ASPECT_STENCIL_BIT ||
+          aspects == (VK_IMAGE_ASPECT_DEPTH_BIT |
+                      VK_IMAGE_ASPECT_STENCIL_BIT));
+   assert(attachment != VK_ATTACHMENT_UNUSED);
 
    const struct depthstencil_clear_vattrs vertex_data[3] = {
       {
@@ -543,12 +551,6 @@ emit_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
       .bo = &device->dynamic_state_block_pool.bo,
       .offset = state.offset,
    };
-
-   anv_cmd_buffer_begin_subpass(cmd_buffer,
-      &(struct anv_subpass) {
-         .color_count = 0,
-         .depth_stencil_attachment = attachment,
-      });
 
    ANV_CALL(CmdSetViewport)(cmd_buffer_h, 0, 1,
       (VkViewport[]) {
@@ -684,45 +686,54 @@ anv_device_finish_meta_clear_state(struct anv_device *device)
 }
 
 /**
- * At least one aspect must be specified.
+ * The parameters mean that same as those in vkCmdClearAttachments.
  */
 static void
 emit_clear(struct anv_cmd_buffer *cmd_buffer,
-           uint32_t attachment,
-           VkImageAspectFlags aspects,
-           const VkClearValue *value)
+           const VkClearAttachment *clear_att)
 {
-   if (aspects & VK_IMAGE_ASPECT_COLOR_BIT) {
-      emit_color_clear(cmd_buffer, attachment, value->color);
+   if (clear_att->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
+      emit_color_clear(cmd_buffer, clear_att);
    } else {
-      assert(aspects & (VK_IMAGE_ASPECT_DEPTH_BIT |
-                        VK_IMAGE_ASPECT_STENCIL_BIT));
-      emit_depthstencil_clear(cmd_buffer, attachment, aspects,
-                              value->depthStencil);
+      assert(clear_att->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT |
+                                      VK_IMAGE_ASPECT_STENCIL_BIT));
+      emit_depthstencil_clear(cmd_buffer, clear_att);
    }
 }
 
 static bool
-pass_needs_clear(const struct anv_cmd_buffer *cmd_buffer)
+subpass_needs_clear(const struct anv_cmd_buffer *cmd_buffer)
 {
    const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
+   uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
 
-   for (uint32_t i = 0; i < cmd_state->pass->attachment_count; ++i) {
-      if (cmd_state->attachments[i].pending_clear_aspects) {
+   for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
+      uint32_t a = cmd_state->subpass->color_attachments[i];
+      if (cmd_state->attachments[a].pending_clear_aspects) {
          return true;
       }
+   }
+
+   if (ds != VK_ATTACHMENT_UNUSED &&
+       cmd_state->attachments[ds].pending_clear_aspects) {
+      return true;
    }
 
    return false;
 }
 
+/**
+ * Emit any pending attachment clears for the current subpass.
+ *
+ * @see anv_attachment_state::pending_clear_aspects
+ */
 void
-anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer)
+anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_cmd_state *cmd_state = &cmd_buffer->state;
    struct anv_meta_saved_state saved_state;
 
-   if (!pass_needs_clear(cmd_buffer))
+   if (!subpass_needs_clear(cmd_buffer))
       return;
 
    meta_clear_begin(&saved_state, cmd_buffer);
@@ -730,15 +741,37 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_state->framebuffer->layers > 1)
       anv_finishme("clearing multi-layer framebuffer");
 
-   for (uint32_t a = 0; a < cmd_state->pass->attachment_count; ++a) {
+   for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
+      uint32_t a = cmd_state->subpass->color_attachments[i];
+
       if (!cmd_state->attachments[a].pending_clear_aspects)
          continue;
 
-      emit_clear(cmd_buffer, a,
-                 cmd_state->attachments[a].pending_clear_aspects,
-                 &cmd_state->attachments[a].clear_value);
+      assert(cmd_state->attachments[a].pending_clear_aspects ==
+             VK_IMAGE_ASPECT_COLOR_BIT);
 
+      VkClearAttachment clear_att = {
+         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+         .colorAttachment = i, /* Use attachment index relative to subpass */
+         .clearValue = cmd_state->attachments[a].clear_value,
+      };
+
+      emit_clear(cmd_buffer, &clear_att);
       cmd_state->attachments[a].pending_clear_aspects = 0;
+   }
+
+   uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
+
+   if (ds != VK_ATTACHMENT_UNUSED &&
+       cmd_state->attachments[ds].pending_clear_aspects) {
+
+      VkClearAttachment clear_att = {
+         .aspectMask = cmd_state->attachments[ds].pending_clear_aspects,
+         .clearValue = cmd_state->attachments[ds].clear_value,
+      };
+
+      emit_clear(cmd_buffer, &clear_att);
+      cmd_state->attachments[ds].pending_clear_aspects = 0;
    }
 
    meta_clear_end(&saved_state, cmd_buffer);
