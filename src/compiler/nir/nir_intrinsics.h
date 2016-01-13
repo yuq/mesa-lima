@@ -30,7 +30,7 @@
  * expands to a list of macros of the form:
  *
  * INTRINSIC(name, num_srcs, src_components, has_dest, dest_components,
- *              num_variables, num_indices, flags)
+ *              num_variables, num_indices, idx0, idx1, idx2, flags)
  *
  * Which should correspond one-to-one with the nir_intrinsic_info structure. It
  * is included in both ir.h to create the nir_intrinsic enum (with members of
@@ -42,9 +42,9 @@
 #define ARR(...) { __VA_ARGS__ }
 
 
-INTRINSIC(load_var, 0, ARR(), true, 0, 1, 0, NIR_INTRINSIC_CAN_ELIMINATE)
-INTRINSIC(store_var, 1, ARR(0), false, 0, 1, 1, 0)
-INTRINSIC(copy_var, 0, ARR(), false, 0, 2, 0, 0)
+INTRINSIC(load_var, 0, ARR(), true, 0, 1, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(store_var, 1, ARR(0), false, 0, 1, 1, WRMASK, xx, xx, 0)
+INTRINSIC(copy_var, 0, ARR(), false, 0, 2, 0, xx, xx, xx, 0)
 
 /*
  * Interpolation of input.  The interp_var_at* intrinsics are similar to the
@@ -54,25 +54,25 @@ INTRINSIC(copy_var, 0, ARR(), false, 0, 2, 0, 0)
  * respectively.
  */
 
-INTRINSIC(interp_var_at_centroid, 0, ARR(0), true, 0, 1, 0,
+INTRINSIC(interp_var_at_centroid, 0, ARR(0), true, 0, 1, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-INTRINSIC(interp_var_at_sample, 1, ARR(1), true, 0, 1, 0,
+INTRINSIC(interp_var_at_sample, 1, ARR(1), true, 0, 1, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-INTRINSIC(interp_var_at_offset, 1, ARR(2), true, 0, 1, 0,
+INTRINSIC(interp_var_at_offset, 1, ARR(2), true, 0, 1, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 /*
  * Ask the driver for the size of a given buffer. It takes the buffer index
  * as source.
  */
-INTRINSIC(get_buffer_size, 1, ARR(1), true, 1, 0, 0,
+INTRINSIC(get_buffer_size, 1, ARR(1), true, 1, 0, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 /*
  * a barrier is an intrinsic with no inputs/outputs but which can't be moved
  * around/optimized in general
  */
-#define BARRIER(name) INTRINSIC(name, 0, ARR(), false, 0, 0, 0, 0)
+#define BARRIER(name) INTRINSIC(name, 0, ARR(), false, 0, 0, 0, xx, xx, xx, 0)
 
 BARRIER(barrier)
 BARRIER(discard)
@@ -89,7 +89,7 @@ BARRIER(memory_barrier)
  * The latter can be used as code motion barrier, which is currently not
  * feasible with NIR.
  */
-INTRINSIC(shader_clock, 0, ARR(), true, 1, 0, 0, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(shader_clock, 0, ARR(), true, 1, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 
 /*
  * Memory barrier with semantics analogous to the compute shader
@@ -103,7 +103,7 @@ BARRIER(memory_barrier_image)
 BARRIER(memory_barrier_shared)
 
 /** A conditional discard, with a single boolean source. */
-INTRINSIC(discard_if, 1, ARR(1), false, 0, 0, 0, 0)
+INTRINSIC(discard_if, 1, ARR(1), false, 0, 0, 0, xx, xx, xx, 0)
 
 /**
  * Basic Geometry Shader intrinsics.
@@ -113,8 +113,8 @@ INTRINSIC(discard_if, 1, ARR(1), false, 0, 0, 0, 0)
  *
  * end_primitive implements GLSL's EndPrimitive() built-in.
  */
-INTRINSIC(emit_vertex,   0, ARR(), false, 0, 0, 1, 0)
-INTRINSIC(end_primitive, 0, ARR(), false, 0, 0, 1, 0)
+INTRINSIC(emit_vertex,   0, ARR(), false, 0, 0, 1, STREAM_ID, xx, xx, 0)
+INTRINSIC(end_primitive, 0, ARR(), false, 0, 0, 1, STREAM_ID, xx, xx, 0)
 
 /**
  * Geometry Shader intrinsics with a vertex count.
@@ -125,9 +125,9 @@ INTRINSIC(end_primitive, 0, ARR(), false, 0, 0, 1, 0)
  * These maintain a count of the number of vertices emitted, as an additional
  * unsigned integer source.
  */
-INTRINSIC(emit_vertex_with_counter, 1, ARR(1), false, 0, 0, 1, 0)
-INTRINSIC(end_primitive_with_counter, 1, ARR(1), false, 0, 0, 1, 0)
-INTRINSIC(set_vertex_count, 1, ARR(1), false, 0, 0, 0, 0)
+INTRINSIC(emit_vertex_with_counter, 1, ARR(1), false, 0, 0, 1, STREAM_ID, xx, xx, 0)
+INTRINSIC(end_primitive_with_counter, 1, ARR(1), false, 0, 0, 1, STREAM_ID, xx, xx, 0)
+INTRINSIC(set_vertex_count, 1, ARR(1), false, 0, 0, 0, xx, xx, xx, 0)
 
 /*
  * Atomic counters
@@ -137,8 +137,8 @@ INTRINSIC(set_vertex_count, 1, ARR(1), false, 0, 0, 0, 0)
  */
 
 #define ATOMIC(name, flags) \
-   INTRINSIC(atomic_counter_##name##_var, 0, ARR(), true, 1, 1, 0, flags) \
-   INTRINSIC(atomic_counter_##name, 1, ARR(1), true, 1, 0, 1, flags)
+   INTRINSIC(atomic_counter_##name##_var, 0, ARR(), true, 1, 1, 0, xx, xx, xx, flags) \
+   INTRINSIC(atomic_counter_##name, 1, ARR(1), true, 1, 0, 1, BASE, xx, xx, flags)
 
 ATOMIC(inc, 0)
 ATOMIC(dec, 0)
@@ -159,20 +159,20 @@ ATOMIC(read, NIR_INTRINSIC_CAN_ELIMINATE)
  * either one or two additional scalar arguments with the same meaning as in
  * the ARB_shader_image_load_store specification.
  */
-INTRINSIC(image_load, 2, ARR(4, 1), true, 4, 1, 0,
+INTRINSIC(image_load, 2, ARR(4, 1), true, 4, 1, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE)
-INTRINSIC(image_store, 3, ARR(4, 1, 4), false, 0, 1, 0, 0)
-INTRINSIC(image_atomic_add, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
-INTRINSIC(image_atomic_min, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
-INTRINSIC(image_atomic_max, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
-INTRINSIC(image_atomic_and, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
-INTRINSIC(image_atomic_or, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
-INTRINSIC(image_atomic_xor, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
-INTRINSIC(image_atomic_exchange, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
-INTRINSIC(image_atomic_comp_swap, 4, ARR(4, 1, 1, 1), true, 1, 1, 0, 0)
-INTRINSIC(image_size, 0, ARR(), true, 4, 1, 0,
+INTRINSIC(image_store, 3, ARR(4, 1, 4), false, 0, 1, 0, xx, xx, xx, 0)
+INTRINSIC(image_atomic_add, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(image_atomic_min, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(image_atomic_max, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(image_atomic_and, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(image_atomic_or, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(image_atomic_xor, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(image_atomic_exchange, 3, ARR(4, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(image_atomic_comp_swap, 4, ARR(4, 1, 1, 1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(image_size, 0, ARR(), true, 4, 1, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-INTRINSIC(image_samples, 0, ARR(), true, 1, 1, 0,
+INTRINSIC(image_samples, 0, ARR(), true, 1, 1, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 /*
@@ -192,16 +192,16 @@ INTRINSIC(image_samples, 0, ARR(), true, 1, 1, 0,
  *    in ssbo_atomic_add, etc).
  * 3: For CompSwap only: the second data parameter.
  */
-INTRINSIC(ssbo_atomic_add, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_imin, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_umin, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_imax, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_umax, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_and, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_or, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_xor, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_exchange, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_comp_swap, 4, ARR(1, 1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_add, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(ssbo_atomic_imin, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(ssbo_atomic_umin, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(ssbo_atomic_imax, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(ssbo_atomic_umax, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(ssbo_atomic_and, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(ssbo_atomic_or, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(ssbo_atomic_xor, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(ssbo_atomic_exchange, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(ssbo_atomic_comp_swap, 4, ARR(1, 1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
 
 /*
  * CS shared variable atomic intrinsics
@@ -219,42 +219,43 @@ INTRINSIC(ssbo_atomic_comp_swap, 4, ARR(1, 1, 1, 1), true, 1, 0, 0, 0)
  *    in shared_atomic_add, etc).
  * 2: For CompSwap only: the second data parameter.
  */
-INTRINSIC(shared_atomic_add, 2, ARR(1, 1), true, 1, 0, 0, 0)
-INTRINSIC(shared_atomic_imin, 2, ARR(1, 1), true, 1, 0, 0, 0)
-INTRINSIC(shared_atomic_umin, 2, ARR(1, 1), true, 1, 0, 0, 0)
-INTRINSIC(shared_atomic_imax, 2, ARR(1, 1), true, 1, 0, 0, 0)
-INTRINSIC(shared_atomic_umax, 2, ARR(1, 1), true, 1, 0, 0, 0)
-INTRINSIC(shared_atomic_and, 2, ARR(1, 1), true, 1, 0, 0, 0)
-INTRINSIC(shared_atomic_or, 2, ARR(1, 1), true, 1, 0, 0, 0)
-INTRINSIC(shared_atomic_xor, 2, ARR(1, 1), true, 1, 0, 0, 0)
-INTRINSIC(shared_atomic_exchange, 2, ARR(1, 1), true, 1, 0, 0, 0)
-INTRINSIC(shared_atomic_comp_swap, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_add, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(shared_atomic_imin, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(shared_atomic_umin, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(shared_atomic_imax, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(shared_atomic_umax, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(shared_atomic_and, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(shared_atomic_or, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(shared_atomic_xor, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(shared_atomic_exchange, 2, ARR(1, 1), true, 1, 0, 0, xx, xx, xx, 0)
+INTRINSIC(shared_atomic_comp_swap, 3, ARR(1, 1, 1), true, 1, 0, 0, xx, xx, xx, 0)
 
-#define SYSTEM_VALUE(name, components, num_indices) \
+#define SYSTEM_VALUE(name, components, num_indices, idx0, idx1, idx2) \
    INTRINSIC(load_##name, 0, ARR(), true, components, 0, num_indices, \
+   idx0, idx1, idx2, \
    NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
-SYSTEM_VALUE(front_face, 1, 0)
-SYSTEM_VALUE(vertex_id, 1, 0)
-SYSTEM_VALUE(vertex_id_zero_base, 1, 0)
-SYSTEM_VALUE(base_vertex, 1, 0)
-SYSTEM_VALUE(instance_id, 1, 0)
-SYSTEM_VALUE(base_instance, 1, 0)
-SYSTEM_VALUE(draw_id, 1, 0)
-SYSTEM_VALUE(sample_id, 1, 0)
-SYSTEM_VALUE(sample_pos, 2, 0)
-SYSTEM_VALUE(sample_mask_in, 1, 0)
-SYSTEM_VALUE(primitive_id, 1, 0)
-SYSTEM_VALUE(invocation_id, 1, 0)
-SYSTEM_VALUE(tess_coord, 3, 0)
-SYSTEM_VALUE(tess_level_outer, 4, 0)
-SYSTEM_VALUE(tess_level_inner, 2, 0)
-SYSTEM_VALUE(patch_vertices_in, 1, 0)
-SYSTEM_VALUE(local_invocation_id, 3, 0)
-SYSTEM_VALUE(work_group_id, 3, 0)
-SYSTEM_VALUE(user_clip_plane, 4, 1) /* const_index[0] is user_clip_plane[idx] */
-SYSTEM_VALUE(num_work_groups, 3, 0)
-SYSTEM_VALUE(helper_invocation, 1, 0)
+SYSTEM_VALUE(front_face, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(vertex_id, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(vertex_id_zero_base, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(base_vertex, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(instance_id, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(base_instance, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(draw_id, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(sample_id, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(sample_pos, 2, 0, xx, xx, xx)
+SYSTEM_VALUE(sample_mask_in, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(primitive_id, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(invocation_id, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(tess_coord, 3, 0, xx, xx, xx)
+SYSTEM_VALUE(tess_level_outer, 4, 0, xx, xx, xx)
+SYSTEM_VALUE(tess_level_inner, 2, 0, xx, xx, xx)
+SYSTEM_VALUE(patch_vertices_in, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(local_invocation_id, 3, 0, xx, xx, xx)
+SYSTEM_VALUE(work_group_id, 3, 0, xx, xx, xx)
+SYSTEM_VALUE(user_clip_plane, 4, 1, UCP_ID, xx, xx)
+SYSTEM_VALUE(num_work_groups, 3, 0, xx, xx, xx)
+SYSTEM_VALUE(helper_invocation, 1, 0, xx, xx, xx)
 
 /*
  * Load operations pull data from some piece of GPU memory.  All load
@@ -274,25 +275,25 @@ SYSTEM_VALUE(helper_invocation, 1, 0)
  * offsets are always in bytes.
  */
 
-#define LOAD(name, srcs, indices, flags) \
-   INTRINSIC(load_##name, srcs, ARR(1, 1, 1, 1), true, 0, 0, indices, flags)
+#define LOAD(name, srcs, num_indices, idx0, idx1, idx2, flags) \
+   INTRINSIC(load_##name, srcs, ARR(1, 1, 1, 1), true, 0, 0, num_indices, idx0, idx1, idx2, flags)
 
 /* src[] = { offset }. const_index[] = { base } */
-LOAD(uniform, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(uniform, 1, 1, BASE, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { buffer_index, offset }. No const_index */
-LOAD(ubo, 2, 0, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(ubo, 2, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { offset }. const_index[] = { base } */
-LOAD(input, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(input, 1, 1, BASE, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { vertex, offset }. const_index[] = { base } */
-LOAD(per_vertex_input, 2, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(per_vertex_input, 2, 1, BASE, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { buffer_index, offset }. No const_index */
-LOAD(ssbo, 2, 0, NIR_INTRINSIC_CAN_ELIMINATE)
+LOAD(ssbo, 2, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 /* src[] = { offset }. const_index[] = { base } */
-LOAD(output, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE)
+LOAD(output, 1, 1, BASE, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 /* src[] = { vertex, offset }. const_index[] = { base } */
-LOAD(per_vertex_output, 2, 1, NIR_INTRINSIC_CAN_ELIMINATE)
+LOAD(per_vertex_output, 2, 1, BASE, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 /* src[] = { offset }. const_index[] = { base } */
-LOAD(shared, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE)
+LOAD(shared, 1, 1, BASE, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 
 /*
  * Stores work the same way as loads, except now the first source is the value
@@ -301,16 +302,16 @@ LOAD(shared, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE)
  * const_index[0].
  */
 
-#define STORE(name, srcs, indices, flags) \
-   INTRINSIC(store_##name, srcs, ARR(0, 1, 1, 1), false, 0, 0, indices, flags)
+#define STORE(name, srcs, num_indices, idx0, idx1, idx2, flags) \
+   INTRINSIC(store_##name, srcs, ARR(0, 1, 1, 1), false, 0, 0, num_indices, idx0, idx1, idx2, flags)
 
 /* src[] = { value, offset }. const_index[] = { base, write_mask } */
-STORE(output, 2, 2, 0)
+STORE(output, 2, 2, BASE, WRMASK, xx, 0)
 /* src[] = { value, vertex, offset }. const_index[] = { base, write_mask } */
-STORE(per_vertex_output, 3, 2, 0)
+STORE(per_vertex_output, 3, 2, BASE, WRMASK, xx, 0)
 /* src[] = { value, block_index, offset }. const_index[] = { write_mask } */
-STORE(ssbo, 3, 1, 0)
+STORE(ssbo, 3, 1, WRMASK, xx, xx, 0)
 /* src[] = { value, offset }. const_index[] = { base, write_mask } */
-STORE(shared, 2, 2, 0)
+STORE(shared, 2, 2, BASE, WRMASK, xx, 0)
 
 LAST_INTRINSIC(store_shared)

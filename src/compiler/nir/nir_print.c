@@ -444,15 +444,16 @@ print_deref(nir_deref_var *deref, print_state *state)
 static void
 print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
 {
-   unsigned num_srcs = nir_intrinsic_infos[instr->intrinsic].num_srcs;
+   const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
+   unsigned num_srcs = info->num_srcs;
    FILE *fp = state->fp;
 
-   if (nir_intrinsic_infos[instr->intrinsic].has_dest) {
+   if (info->has_dest) {
       print_dest(&instr->dest, state);
       fprintf(fp, " = ");
    }
 
-   fprintf(fp, "intrinsic %s (", nir_intrinsic_infos[instr->intrinsic].name);
+   fprintf(fp, "intrinsic %s (", info->name);
 
    for (unsigned i = 0; i < num_srcs; i++) {
       if (i != 0)
@@ -463,9 +464,7 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
 
    fprintf(fp, ") (");
 
-   unsigned num_vars = nir_intrinsic_infos[instr->intrinsic].num_variables;
-
-   for (unsigned i = 0; i < num_vars; i++) {
+   for (unsigned i = 0; i < info->num_variables; i++) {
       if (i != 0)
          fprintf(fp, ", ");
 
@@ -474,9 +473,7 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
 
    fprintf(fp, ") (");
 
-   unsigned num_indices = nir_intrinsic_infos[instr->intrinsic].num_indices;
-
-   for (unsigned i = 0; i < num_indices; i++) {
+   for (unsigned i = 0; i < info->num_indices; i++) {
       if (i != 0)
          fprintf(fp, ", ");
 
@@ -484,6 +481,31 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
    }
 
    fprintf(fp, ")");
+
+   static const char *index_name[NIR_INTRINSIC_NUM_INDEX_FLAGS] = {
+      [NIR_INTRINSIC_BASE] = "base",
+      [NIR_INTRINSIC_WRMASK] = "wrmask",
+      [NIR_INTRINSIC_STREAM_ID] = "stream-id",
+      [NIR_INTRINSIC_UCP_ID] = "ucp-id",
+   };
+   for (unsigned idx = 1; idx < NIR_INTRINSIC_NUM_INDEX_FLAGS; idx++) {
+      if (!info->index_map[idx])
+         continue;
+      fprintf(fp, " /*");
+      if (idx == NIR_INTRINSIC_WRMASK) {
+         /* special case wrmask to show it as a writemask.. */
+         unsigned wrmask = nir_intrinsic_write_mask(instr);
+         fprintf(fp, " wrmask=");
+         for (unsigned i = 0; i < 4; i++)
+            if ((wrmask >> i) & 1)
+               fprintf(fp, "%c", "xyzw"[i]);
+      } else {
+         unsigned off = info->index_map[idx] - 1;
+         assert(index_name[idx]);  /* forgot to update index_name table? */
+         fprintf(fp, " %s=%d", index_name[idx], instr->const_index[off]);
+      }
+      fprintf(fp, " */");
+   }
 
    if (!state->shader)
       return;

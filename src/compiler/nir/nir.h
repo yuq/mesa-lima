@@ -768,7 +768,7 @@ typedef struct {
 } nir_call_instr;
 
 #define INTRINSIC(name, num_srcs, src_components, has_dest, dest_components, \
-                  num_variables, num_indices, flags) \
+                  num_variables, num_indices, idx0, idx1, idx2, flags) \
    nir_intrinsic_##name,
 
 #define LAST_INTRINSIC(name) nir_last_intrinsic = nir_intrinsic_##name,
@@ -780,6 +780,8 @@ typedef enum {
 
 #undef INTRINSIC
 #undef LAST_INTRINSIC
+
+#define NIR_INTRINSIC_MAX_CONST_INDEX 3
 
 /** Represents an intrinsic
  *
@@ -824,7 +826,7 @@ typedef struct {
     */
    uint8_t num_components;
 
-   int const_index[3];
+   int const_index[NIR_INTRINSIC_MAX_CONST_INDEX];
 
    nir_deref_var *variables[2];
 
@@ -852,6 +854,39 @@ typedef enum {
     */
    NIR_INTRINSIC_CAN_REORDER = (1 << 1),
 } nir_intrinsic_semantic_flag;
+
+/**
+ * \name NIR intrinsics const-index flag
+ *
+ * Indicates the usage of a const_index slot.
+ *
+ * \sa nir_intrinsic_info::index_map
+ */
+typedef enum {
+   /**
+    * Generally instructions that take a offset src argument, can encode
+    * a constant 'base' value which is added to the offset.
+    */
+   NIR_INTRINSIC_BASE = 1,
+
+   /**
+    * For store instructions, a writemask for the store.
+    */
+   NIR_INTRINSIC_WRMASK = 2,
+
+   /**
+    * The stream-id for GS emit_vertex/end_primitive intrinsics.
+    */
+   NIR_INTRINSIC_STREAM_ID = 3,
+
+   /**
+    * The clip-plane id for load_user_clip_plane intrinsic.
+    */
+   NIR_INTRINSIC_UCP_ID = 4,
+
+   NIR_INTRINSIC_NUM_INDEX_FLAGS,
+
+} nir_intrinsic_index_flag;
 
 #define NIR_INTRINSIC_MAX_INPUTS 4
 
@@ -882,11 +917,36 @@ typedef struct {
    /** the number of constant indices used by the intrinsic */
    unsigned num_indices;
 
+   /** indicates the usage of intr->const_index[n] */
+   unsigned index_map[NIR_INTRINSIC_NUM_INDEX_FLAGS];
+
    /** semantic flags for calls to this intrinsic */
    nir_intrinsic_semantic_flag flags;
 } nir_intrinsic_info;
 
 extern const nir_intrinsic_info nir_intrinsic_infos[nir_num_intrinsics];
+
+
+#define INTRINSIC_IDX_ACCESSORS(name, flag, type)                             \
+static inline type                                                            \
+nir_intrinsic_##name(nir_intrinsic_instr *instr)                              \
+{                                                                             \
+   const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];   \
+   assert(info->index_map[NIR_INTRINSIC_##flag] > 0);                         \
+   return instr->const_index[info->index_map[NIR_INTRINSIC_##flag] - 1];      \
+}                                                                             \
+static inline void                                                            \
+nir_intrinsic_set_##name(nir_intrinsic_instr *instr, type val)                \
+{                                                                             \
+   const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];   \
+   assert(info->index_map[NIR_INTRINSIC_##flag] > 0);                         \
+   instr->const_index[info->index_map[NIR_INTRINSIC_##flag] - 1] = val;       \
+}
+
+INTRINSIC_IDX_ACCESSORS(write_mask, WRMASK, unsigned)
+INTRINSIC_IDX_ACCESSORS(base, BASE, int)
+INTRINSIC_IDX_ACCESSORS(stream_id, STREAM_ID, unsigned)
+INTRINSIC_IDX_ACCESSORS(ucp_id, UCP_ID, unsigned)
 
 /**
  * \group texture information

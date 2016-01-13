@@ -30,7 +30,8 @@
 #define OPCODE(name) nir_intrinsic_##name
 
 #define INTRINSIC(_name, _num_srcs, _src_components, _has_dest, \
-                  _dest_components, _num_variables, _num_indices, _flags) \
+                  _dest_components, _num_variables, _num_indices, \
+                  idx0, idx1, idx2, _flags) \
 { \
    .name = #_name, \
    .num_srcs = _num_srcs, \
@@ -39,8 +40,15 @@
    .dest_components = _dest_components, \
    .num_variables = _num_variables, \
    .num_indices = _num_indices, \
+   .index_map = { \
+      [NIR_INTRINSIC_ ## idx0] = 1, \
+      [NIR_INTRINSIC_ ## idx1] = 2, \
+      [NIR_INTRINSIC_ ## idx2] = 3, \
+   }, \
    .flags = _flags \
 },
+
+#define NIR_INTRINSIC_xx 0
 
 #define LAST_INTRINSIC(name)
 
