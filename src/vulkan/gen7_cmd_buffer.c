@@ -830,9 +830,7 @@ void genX(CmdBeginRenderPass)(
                   .DrawingRectangleOriginY = 0,
                   .DrawingRectangleOriginX = 0);
 
-   anv_cmd_buffer_clear_attachments(cmd_buffer, pass,
-                                    pRenderPassBegin->pClearValues);
-
+   anv_cmd_buffer_clear_attachments(cmd_buffer);
    gen7_cmd_buffer_begin_subpass(cmd_buffer, pass->subpasses);
 }
 

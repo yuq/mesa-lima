@@ -642,69 +642,62 @@ anv_device_finish_meta_clear_state(struct anv_device *device)
       NULL);
 }
 
-void
-anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
-                                 struct anv_render_pass *pass,
-                                 const VkClearValue *clear_values)
+/**
+ * At least one aspect must be specified.
+ */
+static void
+emit_clear(struct anv_cmd_buffer *cmd_buffer,
+           uint32_t attachment,
+           VkImageAspectFlags aspects,
+           const VkClearValue *value)
 {
-   struct anv_meta_saved_state saved_state;
+   if (aspects & VK_IMAGE_ASPECT_COLOR_BIT) {
+      emit_load_color_clear(cmd_buffer, attachment, value->color);
+   } else {
+      assert(aspects & (VK_IMAGE_ASPECT_DEPTH_BIT |
+                        VK_IMAGE_ASPECT_STENCIL_BIT));
+      emit_load_depthstencil_clear(cmd_buffer, attachment, aspects,
+                                   value->depthStencil);
+   }
+}
 
-   /* Figure out whether or not we actually need to clear anything to avoid
-    * trashing state when clearing is a no-op.
-    */
-   bool needs_clear = false;
-   for (uint32_t a = 0; a < pass->attachment_count; ++a) {
-      struct anv_render_pass_attachment *att = &pass->attachments[a];
+static bool
+pass_needs_clear(const struct anv_cmd_buffer *cmd_buffer)
+{
+   const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
 
-      if (anv_format_is_color(att->format)) {
-         if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            needs_clear = true;
-            break;
-         }
-      } else {
-         if ((att->format->depth_format &&
-              att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) ||
-             (att->format->has_stencil &&
-              att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR)) {
-            needs_clear = true;
-            break;
-         }
+   for (uint32_t i = 0; i < cmd_state->pass->attachment_count; ++i) {
+      if (cmd_state->attachments[i].pending_clear_aspects) {
+         return true;
       }
    }
 
-   if (!needs_clear)
+   return false;
+}
+
+void
+anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_cmd_state *cmd_state = &cmd_buffer->state;
+   struct anv_meta_saved_state saved_state;
+
+   if (!pass_needs_clear(cmd_buffer))
       return;
 
    meta_clear_begin(&saved_state, cmd_buffer);
 
-   if (cmd_buffer->state.framebuffer->layers > 1)
+   if (cmd_state->framebuffer->layers > 1)
       anv_finishme("clearing multi-layer framebuffer");
 
-   for (uint32_t a = 0; a < pass->attachment_count; ++a) {
-      struct anv_render_pass_attachment *att = &pass->attachments[a];
+   for (uint32_t a = 0; a < cmd_state->pass->attachment_count; ++a) {
+      if (!cmd_state->attachments[a].pending_clear_aspects)
+         continue;
 
-      if (anv_format_is_color(att->format)) {
-         if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            emit_load_color_clear(cmd_buffer, a, clear_values[a].color);
-         }
-      } else {
-         VkImageAspectFlags clear_aspects = 0;
+      emit_clear(cmd_buffer, a,
+                 cmd_state->attachments[a].pending_clear_aspects,
+                 &cmd_state->attachments[a].clear_value);
 
-         if (att->format->depth_format &&
-             att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            clear_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
-         }
-
-         if (att->format->has_stencil &&
-             att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            clear_aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
-         }
-
-         if (clear_aspects) {
-            emit_load_depthstencil_clear(cmd_buffer, a, clear_aspects,
-                                         clear_values[a].depthStencil);
-         }
-      }
+      cmd_state->attachments[a].pending_clear_aspects = 0;
    }
 
    meta_clear_end(&saved_state, cmd_buffer);
