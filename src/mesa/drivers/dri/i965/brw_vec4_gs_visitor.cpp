@@ -594,11 +594,11 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    memset(&c, 0, sizeof(c));
    c.key = *key;
 
+   const bool is_scalar = compiler->scalar_stage[MESA_SHADER_GEOMETRY];
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
-                                      compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
-   shader = brw_postprocess_nir(shader, compiler->devinfo,
-                                compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
+                                      is_scalar);
+   shader = brw_postprocess_nir(shader, compiler->devinfo, is_scalar);
 
    prog_data->include_primitive_id =
       (shader->info.inputs_read & VARYING_BIT_PRIMITIVE_ID) != 0;
@@ -807,7 +807,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
       brw_print_vue_map(stderr, &prog_data->base.vue_map);
    }
 
-   if (compiler->scalar_stage[MESA_SHADER_GEOMETRY]) {
+   if (is_scalar) {
       /* TODO: Support instanced GS.  We have basically no tests... */
       assert(prog_data->invocations == 1);
 
