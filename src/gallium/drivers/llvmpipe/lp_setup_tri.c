@@ -993,8 +993,8 @@ calc_fixed_position(struct lp_setup_context *setup,
    v0r = _mm_load_sd((const double *)v0[0]);
    v1r = _mm_load_sd((const double *)v1[0]);
    v2r = _mm_load_sd((const double *)v2[0]);
-   vxy0xy2 = (__m128)_mm_unpacklo_pd(v0r, v2r);
-   vxy1xy0 = (__m128)_mm_unpacklo_pd(v1r, v0r);
+   vxy0xy2 = _mm_castpd_ps(_mm_unpacklo_pd(v0r, v2r));
+   vxy1xy0 = _mm_castpd_ps(_mm_unpacklo_pd(v1r, v0r));
    vxy0xy2 = _mm_sub_ps(vxy0xy2, pix_offset);
    vxy1xy0 = _mm_sub_ps(vxy1xy0, pix_offset);
    vxy0xy2 = _mm_mul_ps(vxy0xy2, fixed_one);
