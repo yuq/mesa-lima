@@ -805,6 +805,33 @@ vtn_null_constant(struct vtn_builder *b, const struct glsl_type *type)
 }
 
 static void
+spec_constant_deocoration_cb(struct vtn_builder *b, struct vtn_value *v,
+                             int member, const struct vtn_decoration *dec,
+                             void *data)
+{
+   assert(member == -1);
+   if (dec->decoration != SpvDecorationSpecId)
+      return;
+
+   uint32_t *const_value = data;
+
+   for (unsigned i = 0; i < b->num_specializations; i++) {
+      if (b->specializations[i].id == dec->literals[0]) {
+         *const_value = b->specializations[i].data;
+         return;
+      }
+   }
+}
+
+static uint32_t
+get_specialization(struct vtn_builder *b, struct vtn_value *val,
+                   uint32_t const_value)
+{
+   vtn_foreach_decoration(b, val, spec_constant_deocoration_cb, &const_value);
+   return const_value;
+}
+
+static void
 vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                     const uint32_t *w, unsigned count)
 {
@@ -820,10 +847,25 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       assert(val->const_type == glsl_bool_type());
       val->constant->value.u[0] = NIR_FALSE;
       break;
+
+   case SpvOpSpecConstantTrue:
+   case SpvOpSpecConstantFalse: {
+      assert(val->const_type == glsl_bool_type());
+      uint32_t int_val =
+         get_specialization(b, val, (opcode == SpvOpSpecConstantTrue));
+      val->constant->value.u[0] = int_val ? NIR_TRUE : NIR_FALSE;
+      break;
+   }
+
    case SpvOpConstant:
       assert(glsl_type_is_scalar(val->const_type));
       val->constant->value.u[0] = w[3];
       break;
+   case SpvOpSpecConstant:
+      assert(glsl_type_is_scalar(val->const_type));
+      val->constant->value.u[0] = get_specialization(b, val, w[3]);
+      break;
+   case SpvOpSpecConstantComposite:
    case SpvOpConstantComposite: {
       unsigned elem_count = count - 3;
       nir_constant **elems = ralloc_array(b, nir_constant *, elem_count);
@@ -3493,6 +3535,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
 
 nir_function *
 spirv_to_nir(const uint32_t *words, size_t word_count,
+             struct nir_spirv_specialization *spec, unsigned num_spec,
              gl_shader_stage stage, const char *entry_point_name,
              const nir_shader_compiler_options *options)
 {
@@ -3532,6 +3575,9 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    /* Parse execution modes */
    vtn_foreach_execution_mode(b, b->entry_point,
                               vtn_handle_execution_mode, NULL);
+
+   b->specializations = spec;
+   b->num_specializations = num_spec;
 
    /* Handle all variable, type, and constant instructions */
    words = vtn_foreach_instruction(b, words, word_end,

@@ -36,7 +36,14 @@
 extern "C" {
 #endif
 
+struct nir_spirv_specialization {
+   uint32_t id;
+   uint32_t data;
+};
+
 nir_function *spirv_to_nir(const uint32_t *words, size_t word_count,
+                           struct nir_spirv_specialization *specializations,
+                           unsigned num_specializations,
                            gl_shader_stage stage, const char *entry_point_name,
                            const nir_shader_compiler_options *options);
 

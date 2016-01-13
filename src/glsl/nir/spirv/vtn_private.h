@@ -310,6 +310,9 @@ struct vtn_builder {
     */
    struct hash_table *phi_table;
 
+   unsigned num_specializations;
+   struct nir_spirv_specialization *specializations;
+
    /*
     * NIR variable for each SPIR-V builtin.
     */
