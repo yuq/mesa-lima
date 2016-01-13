@@ -28,6 +28,7 @@
 #include "vtn_private.h"
 #include "nir/nir_vla.h"
 #include "nir/nir_control_flow.h"
+#include "nir/nir_constant_expressions.h"
 
 static struct vtn_ssa_value *
 vtn_undef_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
@@ -903,6 +904,136 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          unreachable("Unsupported type for constants");
       }
       break;
+   }
+
+   case SpvOpSpecConstantOp: {
+      SpvOp opcode = get_specialization(b, val, w[3]);
+      switch (opcode) {
+      case SpvOpVectorShuffle: {
+         struct vtn_value *v0 = vtn_value(b, w[4], vtn_value_type_constant);
+         struct vtn_value *v1 = vtn_value(b, w[5], vtn_value_type_constant);
+         unsigned len0 = glsl_get_vector_elements(v0->const_type);
+         unsigned len1 = glsl_get_vector_elements(v1->const_type);
+
+         uint32_t u[8];
+         for (unsigned i = 0; i < len0; i++)
+            u[i] = v0->constant->value.u[i];
+         for (unsigned i = 0; i < len1; i++)
+            u[len0 + i] = v1->constant->value.u[i];
+
+         for (unsigned i = 0; i < count - 6; i++) {
+            uint32_t comp = w[i + 6];
+            if (comp == (uint32_t)-1) {
+               val->constant->value.u[i] = 0xdeadbeef;
+            } else {
+               val->constant->value.u[i] = u[comp];
+            }
+         }
+         return;
+      }
+
+      case SpvOpCompositeExtract:
+      case SpvOpCompositeInsert: {
+         struct vtn_value *comp;
+         unsigned deref_start;
+         struct nir_constant **c;
+         if (opcode == SpvOpCompositeExtract) {
+            comp = vtn_value(b, w[4], vtn_value_type_constant);
+            deref_start = 5;
+            c = &comp->constant;
+         } else {
+            comp = vtn_value(b, w[5], vtn_value_type_constant);
+            deref_start = 6;
+            val->constant = nir_constant_clone(comp->constant,
+                                               (nir_variable *)b);
+            c = &val->constant;
+         }
+
+         int elem = -1;
+         const struct glsl_type *type = comp->const_type;
+         for (unsigned i = deref_start; i < count; i++) {
+            switch (glsl_get_base_type(type)) {
+            case GLSL_TYPE_UINT:
+            case GLSL_TYPE_INT:
+            case GLSL_TYPE_FLOAT:
+            case GLSL_TYPE_BOOL:
+               /* If we hit this granularity, we're picking off an element */
+               if (elem < 0)
+                  elem = 0;
+
+               if (glsl_type_is_matrix(type)) {
+                  elem += w[i] * glsl_get_vector_elements(type);
+                  type = glsl_get_column_type(type);
+               } else {
+                  assert(glsl_type_is_vector(type));
+                  elem += w[i];
+                  type = glsl_scalar_type(glsl_get_base_type(type));
+               }
+               continue;
+
+            case GLSL_TYPE_ARRAY:
+               c = &(*c)->elements[w[i]];
+               type = glsl_get_array_element(type);
+               continue;
+
+            case GLSL_TYPE_STRUCT:
+               c = &(*c)->elements[w[i]];
+               type = glsl_get_struct_field(type, w[i]);
+               continue;
+
+            default:
+               unreachable("Invalid constant type");
+            }
+         }
+
+         if (opcode == SpvOpCompositeExtract) {
+            if (elem == -1) {
+               val->constant = *c;
+            } else {
+               unsigned num_components = glsl_get_vector_elements(type);
+               for (unsigned i = 0; i < num_components; i++)
+                  val->constant->value.u[i] = (*c)->value.u[elem + i];
+            }
+         } else {
+            struct vtn_value *insert =
+               vtn_value(b, w[4], vtn_value_type_constant);
+            assert(insert->const_type == type);
+            if (elem == -1) {
+               *c = insert->constant;
+            } else {
+               unsigned num_components = glsl_get_vector_elements(type);
+               for (unsigned i = 0; i < num_components; i++)
+                  (*c)->value.u[elem + i] = insert->constant->value.u[i];
+            }
+         }
+         return;
+      }
+
+      default: {
+         bool swap;
+         nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap);
+
+         unsigned num_components = glsl_get_vector_elements(val->const_type);
+
+         nir_const_value src[3];
+         assert(count <= 7);
+         for (unsigned i = 0; i < count - 4; i++) {
+            nir_constant *c =
+               vtn_value(b, w[4 + i], vtn_value_type_constant)->constant;
+
+            unsigned j = swap ? 1 - i : i;
+            for (unsigned k = 0; k < num_components; k++)
+               src[j].u[k] = c->value.u[k];
+         }
+
+         nir_const_value res = nir_eval_const_opcode(op, num_components, src);
+
+         for (unsigned k = 0; k < num_components; k++)
+            val->constant->value.u[k] = res.u[k];
+
+         return;
+      } /* default */
+      }
    }
 
    case SpvOpConstantNull:
@@ -3294,6 +3425,7 @@ vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpSpecConstantFalse:
    case SpvOpSpecConstant:
    case SpvOpSpecConstantComposite:
+   case SpvOpSpecConstantOp:
       vtn_handle_constant(b, opcode, w, count);
       break;
 
