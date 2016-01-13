@@ -1027,6 +1027,9 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_ubitfield_extract:
    case nir_op_ibitfield_extract:
+      unreachable("should have been lowered");
+   case nir_op_ubfe:
+   case nir_op_ibfe:
       bld.BFE(result, op[2], op[1], op[0]);
       break;
    case nir_op_bfm:

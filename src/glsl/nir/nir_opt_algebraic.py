@@ -232,6 +232,16 @@ optimizations = [
     ('bcsel', ('ilt', 31, 'bits'), 'insert',
               ('bfi', ('bfm', 'bits', 'offset'), 'insert', 'base')),
     'options->lower_bitfield_insert'),
+
+   (('ibitfield_extract', 'value', 'offset', 'bits'),
+    ('bcsel', ('ilt', 31, 'bits'), 'value',
+              ('ibfe', 'value', 'offset', 'bits')),
+    'options->lower_bitfield_extract'),
+
+   (('ubitfield_extract', 'value', 'offset', 'bits'),
+    ('bcsel', ('ult', 31, 'bits'), 'value',
+              ('ubfe', 'value', 'offset', 'bits')),
+    'options->lower_bitfield_extract'),
 ]
 
 # Add optimizations to handle the case where the result of a ternary is

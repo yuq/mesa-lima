@@ -573,6 +573,37 @@ if (mask == 0) {
 }
 """)
 
+# SM5 ubfe/ibfe assembly
+opcode("ubfe", 0, tuint,
+       [0, 0, 0], [tuint, tint, tint], "", """
+unsigned base = src0;
+int offset = src1, bits = src2;
+if (bits == 0) {
+   dst = 0;
+} else if (bits < 0 || offset < 0) {
+   dst = 0; /* undefined */
+} else if (offset + bits < 32) {
+   dst = (base << (32 - bits - offset)) >> (32 - bits);
+} else {
+   dst = base >> offset;
+}
+""")
+opcode("ibfe", 0, tint,
+       [0, 0, 0], [tint, tint, tint], "", """
+int base = src0;
+int offset = src1, bits = src2;
+if (bits == 0) {
+   dst = 0;
+} else if (bits < 0 || offset < 0) {
+   dst = 0; /* undefined */
+} else if (offset + bits < 32) {
+   dst = (base << (32 - bits - offset)) >> (32 - bits);
+} else {
+   dst = base >> offset;
+}
+""")
+
+# GLSL bitfieldExtract()
 opcode("ubitfield_extract", 0, tuint,
        [0, 0, 0], [tuint, tint, tint], "", """
 unsigned base = src0;
