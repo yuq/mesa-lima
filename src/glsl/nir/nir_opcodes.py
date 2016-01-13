@@ -558,6 +558,7 @@ triop("fcsel", tfloat, "(src0 != 0.0f) ? src1 : src2")
 opcode("bcsel", 0, tuint, [0, 0, 0],
       [tbool, tuint, tuint], "", "src0 ? src1 : src2")
 
+# SM5 bfi assembly
 triop("bfi", tuint, """
 unsigned mask = src0, insert = src1, base = src2;
 if (mask == 0) {
