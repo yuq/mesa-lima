@@ -640,9 +640,10 @@ blitframebuffer_texture(struct gl_context *ctx,
       srcLevel = readAtt->TextureLevel;
       texObj = readAtt->Texture;
    } else if (!readAtt->Texture && ctx->Driver.BindRenderbufferTexImage) {
-      if (!_mesa_meta_bind_rb_as_tex_image(ctx, rb, &fb_tex_blit.tempTex,
-                                           &texObj))
+      if (!_mesa_meta_bind_rb_as_tex_image(ctx, rb, &texObj))
          return false;
+
+      fb_tex_blit.tempTex = texObj->Name;
 
       srcLevel = 0;
       if (_mesa_is_winsys_fbo(readFb)) {
@@ -884,7 +885,6 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
 GLboolean
 _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
                                 struct gl_renderbuffer *rb,
-                                GLuint *tex,
                                 struct gl_texture_object **texObj)
 {
    struct gl_texture_image *texImage;
@@ -897,14 +897,12 @@ _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
    if (tempTex == 0)
       return false;
 
-   *tex = tempTex;
-
-   _mesa_BindTexture(target, *tex);
-   *texObj = _mesa_lookup_texture(ctx, *tex);
+   _mesa_BindTexture(target, tempTex);
+   *texObj = _mesa_lookup_texture(ctx, tempTex);
    texImage = _mesa_get_tex_image(ctx, *texObj, target, 0);
 
    if (!ctx->Driver.BindRenderbufferTexImage(ctx, rb, texImage)) {
-      _mesa_DeleteTextures(1, tex);
+      _mesa_DeleteTextures(1, &tempTex);
       return false;
    }
 
@@ -914,6 +912,7 @@ _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
    }
 
    assert(target == (*texObj)->Target);
+   assert(tempTex == (*texObj)->Name);
    return true;
 }
 
