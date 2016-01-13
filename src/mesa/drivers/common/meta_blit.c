@@ -640,7 +640,8 @@ blitframebuffer_texture(struct gl_context *ctx,
       srcLevel = readAtt->TextureLevel;
       texObj = readAtt->Texture;
    } else if (!readAtt->Texture && ctx->Driver.BindRenderbufferTexImage) {
-      if (!_mesa_meta_bind_rb_as_tex_image(ctx, rb, &texObj))
+      texObj = _mesa_meta_bind_rb_as_tex_image(ctx, rb);
+      if (texObj == NULL)
          return false;
 
       fb_tex_blit.tempTex = texObj->Name;
@@ -882,12 +883,12 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
       _mesa_DeleteTextures(1, &blit->tempTex);
 }
 
-GLboolean
+struct gl_texture_object *
 _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
-                                struct gl_renderbuffer *rb,
-                                struct gl_texture_object **texObj)
+                                struct gl_renderbuffer *rb)
 {
    struct gl_texture_image *texImage;
+   struct gl_texture_object *texObj;
    GLuint tempTex;
    const GLenum target = rb->NumSamples > 1
       ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
@@ -895,15 +896,15 @@ _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
    tempTex = 0;
    _mesa_GenTextures(1, &tempTex);
    if (tempTex == 0)
-      return false;
+      return NULL;
 
    _mesa_BindTexture(target, tempTex);
-   *texObj = _mesa_lookup_texture(ctx, tempTex);
-   texImage = _mesa_get_tex_image(ctx, *texObj, target, 0);
+   texObj = _mesa_lookup_texture(ctx, tempTex);
+   texImage = _mesa_get_tex_image(ctx, texObj, target, 0);
 
    if (!ctx->Driver.BindRenderbufferTexImage(ctx, rb, texImage)) {
       _mesa_DeleteTextures(1, &tempTex);
-      return false;
+      return NULL;
    }
 
    if (ctx->Driver.FinishRenderTexture && !rb->NeedsFinishRenderTexture) {
@@ -911,9 +912,9 @@ _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
       ctx->Driver.FinishRenderTexture(ctx, rb);
    }
 
-   assert(target == (*texObj)->Target);
-   assert(tempTex == (*texObj)->Name);
-   return true;
+   assert(target == texObj->Target);
+   assert(tempTex == texObj->Name);
+   return texObj;
 }
 
 struct gl_sampler_object *

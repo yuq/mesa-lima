@@ -462,10 +462,9 @@ extern void
 _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
                            struct fb_tex_blit_state *blit);
 
-extern GLboolean
+extern struct gl_texture_object *
 _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
-                                struct gl_renderbuffer *rb,
-                                struct gl_texture_object **texObj);
+                                struct gl_renderbuffer *rb);
 
 struct gl_sampler_object *
 _mesa_meta_setup_sampler(struct gl_context *ctx,
