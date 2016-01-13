@@ -175,7 +175,9 @@ extern void
 _mesa_delete_nameless_texture(struct gl_context *ctx,
                               struct gl_texture_object *texObj);
 
-
+extern void
+_mesa_bind_texture(struct gl_context *ctx, GLenum target,
+                   struct gl_texture_object *tex_obj);
 /*@}*/
 
 /**
