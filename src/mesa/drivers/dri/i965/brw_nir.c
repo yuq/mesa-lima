@@ -220,6 +220,11 @@ brw_nir_lower_inputs(nir_shader *nir,
        */
       nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
 
+      /* This pass needs actual constants */
+      nir_opt_constant_folding(nir);
+
+      add_const_offset_to_base(nir, nir_var_shader_in);
+
       if (is_scalar) {
          /* Finally, translate VERT_ATTRIB_* values into the actual registers.
           *
@@ -228,11 +233,6 @@ brw_nir_lower_inputs(nir_shader *nir,
           * edge flag differences.
           */
          GLbitfield64 inputs_read = nir->info.inputs_read;
-
-         /* This pass needs actual constants */
-         nir_opt_constant_folding(nir);
-
-         add_const_offset_to_base(nir, nir_var_shader_in);
 
          nir_foreach_function(nir, function) {
             if (function->impl) {
