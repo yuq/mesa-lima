@@ -383,6 +383,10 @@ struct _mesa_glsl_parse_state {
       /* ARB_draw_buffers */
       unsigned MaxDrawBuffers;
 
+      /* ARB_enhanced_layouts */
+      unsigned MaxTransformFeedbackBuffers;
+      unsigned MaxTransformFeedbackInterleavedComponents;
+
       /* ARB_blend_func_extended */
       unsigned MaxDualSourceDrawBuffers;
 

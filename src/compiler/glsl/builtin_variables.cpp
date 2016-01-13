@@ -812,6 +812,13 @@ builtin_variable_generator::generate_constants()
        */
    }
 
+   if (state->has_enhanced_layouts()) {
+      add_const("gl_MaxTransformFeedbackBuffers",
+                state->Const.MaxTransformFeedbackBuffers);
+      add_const("gl_MaxTransformFeedbackInterleavedComponents",
+                state->Const.MaxTransformFeedbackInterleavedComponents);
+   }
+
    if (state->is_version(420, 310) ||
        state->ARB_shader_image_load_store_enable) {
       add_const("gl_MaxImageUnits",

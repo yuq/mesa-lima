@@ -138,6 +138,10 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->Const.MaxAtomicCounterBufferSize =
       ctx->Const.MaxAtomicBufferSize;
 
+   /* ARB_enhanced_layouts constants */
+   this->Const.MaxTransformFeedbackBuffers = ctx->Const.MaxTransformFeedbackBuffers;
+   this->Const.MaxTransformFeedbackInterleavedComponents = ctx->Const.MaxTransformFeedbackInterleavedComponents;
+
    /* Compute shader constants */
    for (unsigned i = 0; i < ARRAY_SIZE(this->Const.MaxComputeWorkGroupCount); i++)
       this->Const.MaxComputeWorkGroupCount[i] = ctx->Const.MaxComputeWorkGroupCount[i];
