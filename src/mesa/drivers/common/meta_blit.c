@@ -937,7 +937,7 @@ _mesa_meta_setup_sampler(struct gl_context *ctx,
                           samp_obj->WrapR);
 
    /* Prepare src texture state */
-   _mesa_BindTexture(target, texObj->Name);
+   _mesa_bind_texture(ctx, target, texObj);
    if (target != GL_TEXTURE_RECTANGLE_ARB) {
       _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_BASE_LEVEL,
                                 (GLint *) &srcLevel, false);
