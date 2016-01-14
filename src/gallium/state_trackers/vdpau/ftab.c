@@ -107,10 +107,12 @@ static void* ftab_winsys[1] =
    &vlVdpPresentationQueueTargetCreateX11  /* VDP_FUNC_ID_PRESENTATION_QUEUE_TARGET_CREATE_X11 */
 };
 
-static void* ftab_driver[2] =
+static void* ftab_driver[4] =
 {
    &vlVdpVideoSurfaceGallium, /* VDP_FUNC_ID_SURFACE_GALLIUM */
-   &vlVdpOutputSurfaceGallium /* VDP_FUNC_ID_OUTPUT_SURFACE_GALLIUM */
+   &vlVdpOutputSurfaceGallium, /* VDP_FUNC_ID_OUTPUT_SURFACE_GALLIUM */
+   &vlVdpVideoSurfaceDMABuf, /* VDP_FUNC_ID_VIDEO_SURFACE_DMA_BUF */
+   &vlVdpOutputSurfaceDMABuf /* VDP_FUNC_ID_OUTPUT_SURFACE_DMA_BUF */
 };
 
 boolean vlGetFuncFTAB(VdpFuncId function_id, void **func)

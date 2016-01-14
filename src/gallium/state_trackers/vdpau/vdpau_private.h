@@ -37,6 +37,7 @@
 #include "pipe/p_video_codec.h"
 
 #include "state_tracker/vdpau_interop.h"
+#include "state_tracker/vdpau_dmabuf.h"
 #include "state_tracker/vdpau_funcs.h"
 
 #include "util/u_debug.h"
@@ -522,6 +523,8 @@ VdpPresentationQueueTargetCreateX11 vlVdpPresentationQueueTargetCreateX11;
 /* interop to mesa state tracker */
 VdpVideoSurfaceGallium vlVdpVideoSurfaceGallium;
 VdpOutputSurfaceGallium vlVdpOutputSurfaceGallium;
+VdpVideoSurfaceDMABuf vlVdpVideoSurfaceDMABuf;
+VdpOutputSurfaceDMABuf vlVdpOutputSurfaceDMABuf;
 
 #define VDPAU_OUT   0
 #define VDPAU_ERR   1
