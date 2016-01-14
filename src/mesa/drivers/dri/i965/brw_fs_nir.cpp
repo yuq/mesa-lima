@@ -1072,6 +1072,9 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_ubitfield_extract:
    case nir_op_ibitfield_extract:
+      unreachable("should have been lowered");
+   case nir_op_ubfe:
+   case nir_op_ibfe:
       bld.BFE(result, op[2], op[1], op[0]);
       break;
    case nir_op_bfm:
@@ -1082,8 +1085,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_bitfield_insert:
-      unreachable("not reached: should be handled by "
-                  "lower_instructions::bitfield_insert_to_bfm_bfi");
+      unreachable("not reached: should have been lowered");
 
    case nir_op_ishl:
       bld.SHL(result, op[0], op[1]);

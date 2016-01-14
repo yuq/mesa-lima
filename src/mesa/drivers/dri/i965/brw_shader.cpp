@@ -106,6 +106,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    nir_options->lower_fdiv = true;
    nir_options->lower_scmp = true;
    nir_options->lower_fmod = true;
+   nir_options->lower_bitfield_extract = true;
    nir_options->lower_bitfield_insert = true;
    nir_options->lower_uadd_carry = true;
    nir_options->lower_usub_borrow = true;
@@ -1023,6 +1024,7 @@ backend_instruction::has_side_effects() const
    case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
    case FS_OPCODE_FB_WRITE:
    case SHADER_OPCODE_BARRIER:
+   case TCS_OPCODE_URB_WRITE:
    case TCS_OPCODE_RELEASE_INPUT:
       return true;
    default:

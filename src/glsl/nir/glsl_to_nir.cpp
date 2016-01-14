@@ -1734,7 +1734,6 @@ nir_visitor::visit(ir_expression *ir)
    case ir_binop_pack_half_2x16_split:
          result = nir_pack_half_2x16_split(&b, srcs[0], srcs[1]);
          break;
-   case ir_binop_bfm:   result = nir_bfm(&b, srcs[0], srcs[1]);   break;
    case ir_binop_ldexp: result = nir_ldexp(&b, srcs[0], srcs[1]); break;
    case ir_triop_fma:
       result = nir_ffma(&b, srcs[0], srcs[1], srcs[2]);
@@ -1747,9 +1746,6 @@ nir_visitor::visit(ir_expression *ir)
          result = nir_bcsel(&b, srcs[0], srcs[1], srcs[2]);
       else
          result = nir_fcsel(&b, srcs[0], srcs[1], srcs[2]);
-      break;
-   case ir_triop_bfi:
-      result = nir_bfi(&b, srcs[0], srcs[1], srcs[2]);
       break;
    case ir_triop_bitfield_extract:
       result = (out_type == GLSL_TYPE_INT) ?

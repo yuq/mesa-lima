@@ -319,6 +319,9 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_PRIMITIVE_RESTART:
       return 1; /* may be a sw fallback, depending on restart index */
 
+   case PIPE_CAP_GENERATE_MIPMAP:
+      return sws->have_vgpu10;
+
    /* Unsupported features */
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
@@ -353,6 +356,7 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
    case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
    case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
+   case PIPE_CAP_INVALIDATE_BUFFER:
       return 0;
    case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:
       return 64;
@@ -820,6 +824,8 @@ svga_get_driver_query_info(struct pipe_screen *screen,
       QUERY("num-state-objects", SVGA_QUERY_NUM_STATE_OBJECTS,
             PIPE_DRIVER_QUERY_TYPE_UINT64),
       QUERY("num-surface-views", SVGA_QUERY_NUM_SURFACE_VIEWS,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-generate-mipmap", SVGA_QUERY_NUM_GENERATE_MIPMAP,
             PIPE_DRIVER_QUERY_TYPE_UINT64),
    };
 #undef QUERY

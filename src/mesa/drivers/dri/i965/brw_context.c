@@ -812,7 +812,7 @@ brwCreateContext(gl_api api,
    brw->needs_unlit_centroid_workaround =
       devinfo->needs_unlit_centroid_workaround;
 
-   brw->must_use_separate_stencil = screen->hw_must_use_separate_stencil;
+   brw->must_use_separate_stencil = devinfo->must_use_separate_stencil;
    brw->has_swizzling = screen->hw_has_swizzling;
 
    brw->vs.base.stage = MESA_SHADER_VERTEX;

@@ -143,7 +143,7 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    ir_expression *expr = ir->rhs->as_expression();
    bool found_vector = false;
    unsigned int i, vector_elements = 1;
-   ir_variable *op_var[3];
+   ir_variable *op_var[4];
 
    if (!expr)
       return visit_continue;
@@ -345,20 +345,6 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    case ir_unop_noise:
       unreachable("noise should have been broken down to function call");
 
-   case ir_binop_bfm: {
-      /* Does not need to be scalarized, since its result will be identical
-       * for all channels.
-       */
-      ir_rvalue *op0 = get_element(op_var[0], 0);
-      ir_rvalue *op1 = get_element(op_var[1], 0);
-
-      assign(ir, 0, new(mem_ctx) ir_expression(expr->operation,
-                                               element_type,
-                                               op0,
-                                               op1));
-      break;
-   }
-
    case ir_binop_ubo_load:
    case ir_unop_get_buffer_size:
       unreachable("not yet supported");
@@ -380,22 +366,21 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
       }
       break;
 
-   case ir_triop_bfi: {
-      /* Only a single BFM is needed for multiple BFIs. */
-      ir_rvalue *op0 = get_element(op_var[0], 0);
-
+   case ir_quadop_bitfield_insert:
       for (i = 0; i < vector_elements; i++) {
+         ir_rvalue *op0 = get_element(op_var[0], i);
          ir_rvalue *op1 = get_element(op_var[1], i);
          ir_rvalue *op2 = get_element(op_var[2], i);
+         ir_rvalue *op3 = get_element(op_var[3], i);
 
          assign(ir, i, new(mem_ctx) ir_expression(expr->operation,
                                                   element_type,
-                                                  op0->clone(mem_ctx, NULL),
+                                                  op0,
                                                   op1,
-                                                  op2));
+                                                  op2,
+                                                  op3));
       }
       break;
-   }
 
    case ir_unop_pack_snorm_2x16:
    case ir_unop_pack_snorm_4x8:
@@ -410,7 +395,6 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    case ir_binop_ldexp:
    case ir_binop_vector_extract:
    case ir_triop_vector_insert:
-   case ir_quadop_bitfield_insert:
    case ir_quadop_vector:
    case ir_unop_ssbo_unsized_array_length:
       unreachable("should have been lowered");

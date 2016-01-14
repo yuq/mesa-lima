@@ -278,6 +278,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
 	case PIPE_CAP_TGSI_TXQS:
 	case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
+	case PIPE_CAP_INVALIDATE_BUFFER:
 		return 1;
 
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
@@ -355,6 +356,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
 	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
 	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
+	case PIPE_CAP_GENERATE_MIPMAP:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:

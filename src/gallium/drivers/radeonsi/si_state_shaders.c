@@ -390,7 +390,7 @@ static void si_shader_ps(struct si_shader *shader)
 	unsigned spi_shader_col_format = 0, cb_shader_mask = 0;
 	unsigned colors_written, export_16bpc;
 	unsigned num_sgprs, num_user_sgprs;
-	unsigned spi_baryc_cntl = 0;
+	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
 	bool has_centroid;
 
@@ -399,30 +399,29 @@ static void si_shader_ps(struct si_shader *shader)
 	if (!pm4)
 		return;
 
-	for (i = 0; i < info->num_inputs; i++) {
-		switch (info->input_semantic_name[i]) {
-		case TGSI_SEMANTIC_POSITION:
-			/* SPI_BARYC_CNTL.POS_FLOAT_LOCATION
-			 * Possible vaules:
-			 * 0 -> Position = pixel center (default)
-			 * 1 -> Position = pixel centroid
-			 * 2 -> Position = at sample position
-			 */
-			switch (info->input_interpolate_loc[i]) {
-			case TGSI_INTERPOLATE_LOC_CENTROID:
-				spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(1);
-				break;
-			case TGSI_INTERPOLATE_LOC_SAMPLE:
-				spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(2);
-				break;
-			}
+	/* SPI_BARYC_CNTL.POS_FLOAT_LOCATION
+	 * Possible vaules:
+	 * 0 -> Position = pixel center
+	 * 1 -> Position = pixel centroid
+	 * 2 -> Position = at sample position
+	 *
+	 * From GLSL 4.5 specification, section 7.1:
+	 *   "The variable gl_FragCoord is available as an input variable from
+	 *    within fragment shaders and it holds the window relative coordinates
+	 *    (x, y, z, 1/w) values for the fragment. If multi-sampling, this
+	 *    value can be for any location within the pixel, or one of the
+	 *    fragment samples. The use of centroid does not further restrict
+	 *    this value to be inside the current primitive."
+	 *
+	 * Meaning that centroid has no effect and we can return anything within
+	 * the pixel. Thus, return the value at sample position, because that's
+	 * the most accurate one shaders can get.
+	 */
+	spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(2);
 
-			if (info->properties[TGSI_PROPERTY_FS_COORD_PIXEL_CENTER] ==
-			    TGSI_FS_COORD_PIXEL_CENTER_INTEGER)
-				spi_baryc_cntl |= S_0286E0_POS_FLOAT_ULC(1);
-			break;
-		}
-	}
+	if (info->properties[TGSI_PROPERTY_FS_COORD_PIXEL_CENTER] ==
+	    TGSI_FS_COORD_PIXEL_CENTER_INTEGER)
+		spi_baryc_cntl |= S_0286E0_POS_FLOAT_ULC(1);
 
 	/* Find out what SPI_SHADER_COL_FORMAT and CB_SHADER_MASK should be. */
 	colors_written = info->colors_written;
@@ -980,12 +979,6 @@ static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 		unsigned index = psinfo->input_semantic_index[i];
 		unsigned interpolate = psinfo->input_interpolate[i];
 		unsigned param_offset = ps->ps_input_param_offset[i];
-
-		if (name == TGSI_SEMANTIC_POSITION ||
-		    name == TGSI_SEMANTIC_FACE)
-			/* Read from preloaded VGPRs, not parameters */
-			continue;
-
 bcolor:
 		tmp = 0;
 
@@ -1324,6 +1317,7 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 		si_get_max_scratch_bytes_per_wave(sctx);
 	unsigned scratch_needed_size = scratch_bytes_per_wave *
 		sctx->scratch_waves;
+	unsigned spi_tmpring_size;
 	int r;
 
 	if (scratch_needed_size > 0) {
@@ -1393,8 +1387,12 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 	assert((scratch_needed_size & ~0x3FF) == scratch_needed_size &&
 		"scratch size should already be aligned correctly.");
 
-	sctx->spi_tmpring_size = S_0286E8_WAVES(sctx->scratch_waves) |
-				S_0286E8_WAVESIZE(scratch_bytes_per_wave >> 10);
+	spi_tmpring_size = S_0286E8_WAVES(sctx->scratch_waves) |
+			   S_0286E8_WAVESIZE(scratch_bytes_per_wave >> 10);
+	if (spi_tmpring_size != sctx->spi_tmpring_size) {
+		sctx->spi_tmpring_size = spi_tmpring_size;
+		sctx->emit_scratch_reloc = true;
+	}
 	return true;
 }
 

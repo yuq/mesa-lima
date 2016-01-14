@@ -649,11 +649,15 @@ struct pipe_context {
                           struct pipe_resource *resource);
 
    /**
-    * Invalidate the contents of the resource.
+    * Invalidate the contents of the resource. This is used to
     *
-    * This is used to implement EGL's semantic of undefined depth/stencil
+    * (1) implement EGL's semantic of undefined depth/stencil
     * contenst after a swapbuffers.  This allows a tiled renderer (for
     * example) to not store the depth buffer.
+    *
+    * (2) implement GL's InvalidateBufferData. For backwards compatibility,
+    * you must only rely on the usability for this purpose when
+    * PIPE_CAP_INVALIDATE_BUFFER is enabled.
     */
    void (*invalidate_resource)(struct pipe_context *ctx,
                                struct pipe_resource *resource);
@@ -673,6 +677,18 @@ struct pipe_context {
     */
    void (*dump_debug_state)(struct pipe_context *ctx, FILE *stream,
                             unsigned flags);
+
+   /**
+    * Generate mipmap.
+    * \return TRUE if mipmap generation succeeds, FALSE otherwise
+    */
+   boolean (*generate_mipmap)(struct pipe_context *ctx,
+                              struct pipe_resource *resource,
+                              enum pipe_format format,
+                              unsigned base_level,
+                              unsigned last_level,
+                              unsigned first_layer,
+                              unsigned last_layer);
 };
 
 

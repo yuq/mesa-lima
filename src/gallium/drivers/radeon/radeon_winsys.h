@@ -530,6 +530,14 @@ struct radeon_winsys {
                                          void *pointer, unsigned size);
 
     /**
+     * Whether the buffer was created from a user pointer.
+     *
+     * \param buf       A winsys buffer object
+     * \return          whether \p buf was created via buffer_from_ptr
+     */
+    bool (*buffer_is_user_ptr)(struct pb_buffer *buf);
+
+    /**
      * Get a winsys handle from a winsys buffer. The internal structure
      * of the handle is platform-specific and only a winsys should access it.
      *

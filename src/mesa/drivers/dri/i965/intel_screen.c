@@ -1449,8 +1449,6 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    if (INTEL_DEBUG & DEBUG_AUB)
       drm_intel_bufmgr_gem_set_aub_dump(intelScreen->bufmgr, true);
 
-   intelScreen->hw_must_use_separate_stencil = intelScreen->devinfo->gen >= 7;
-
    intelScreen->hw_has_swizzling = intel_detect_swizzling(intelScreen);
    intelScreen->hw_has_timestamp = intel_detect_timestamp(intelScreen);
 

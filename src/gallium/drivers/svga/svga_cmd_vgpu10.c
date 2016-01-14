@@ -1293,3 +1293,24 @@ SVGA3D_vgpu10_UpdateSubResource(struct svga_winsys_context *swc,
    swc->commit(swc);
    return PIPE_OK;
 }
+
+enum pipe_error
+SVGA3D_vgpu10_GenMips(struct svga_winsys_context *swc,
+                      SVGA3dShaderResourceViewId shaderResourceViewId,
+                      struct svga_winsys_surface *view)
+{
+   SVGA3dCmdDXGenMips *cmd;
+
+   cmd = SVGA3D_FIFOReserve(swc, SVGA_3D_CMD_DX_GENMIPS,
+                            sizeof(SVGA3dCmdDXGenMips), 1);
+
+   if (!cmd)
+      return PIPE_ERROR_OUT_OF_MEMORY;
+
+   swc->surface_relocation(swc, &cmd->shaderResourceViewId, NULL, view,
+                           SVGA_RELOC_WRITE);
+   cmd->shaderResourceViewId = shaderResourceViewId;
+
+   swc->commit(swc);
+   return PIPE_OK;
+}

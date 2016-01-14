@@ -500,6 +500,9 @@ struct pipe_resource *
 r600_buffer_from_user_memory(struct pipe_screen *screen,
 			     const struct pipe_resource *templ,
 			     void *user_memory);
+void
+r600_invalidate_resource(struct pipe_context *ctx,
+			 struct pipe_resource *resource);
 
 /* r600_common_pipe.c */
 void r600_draw_rectangle(struct blitter_context *blitter,

@@ -2313,7 +2313,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
    compiler->shader_debug_log(log_data,
                               "%s SIMD%d shader: %d inst, %d loops, %u cycles, "
                               "%d:%d spills:fills, Promoted %u constants, "
-                              "compacted %d to %d bytes.\n",
+                              "compacted %d to %d bytes.",
                               stage_abbrev, dispatch_width, before_size / 16,
                               loop_count, cfg->cycle_count, spill_count,
                               fill_count, promoted_constants, before_size,

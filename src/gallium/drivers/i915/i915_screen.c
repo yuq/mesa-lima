@@ -259,6 +259,8 @@ i915_get_param(struct pipe_screen *screen, enum pipe_cap cap)
    case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
    case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
    case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
+   case PIPE_CAP_INVALIDATE_BUFFER:
+   case PIPE_CAP_GENERATE_MIPMAP:
       return 0;
 
    case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:

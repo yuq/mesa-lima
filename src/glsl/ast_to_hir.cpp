@@ -106,6 +106,15 @@ public:
       return found;
    }
 
+   virtual ir_visitor_status visit_enter(ir_expression *ir)
+   {
+      /* .length() doesn't actually read anything */
+      if (ir->operation == ir_unop_ssbo_unsized_array_length)
+         return visit_continue_with_parent;
+
+      return visit_continue;
+   }
+
 private:
    ir_variable *found;
 };

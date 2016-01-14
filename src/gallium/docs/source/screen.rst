@@ -301,6 +301,10 @@ The integer capabilities:
   alignment for pipe_shader_buffer::buffer_offset, in bytes. Maximum
   value allowed is 256 (for GL conformance). 0 is only allowed if
   shader buffers are not supported.
+* ``PIPE_CAP_INVALIDATE_BUFFER``: Whether the use of ``invalidate_resource``
+  for buffers is supported.
+* ``PIPE_CAP_GENERATE_MIPMAP``: Indicates whether pipe_context::generate_mipmap
+  is supported.
 
 
 .. _pipe_capf:

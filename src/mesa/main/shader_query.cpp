@@ -1500,6 +1500,13 @@ _mesa_validate_pipeline_io(struct gl_pipeline_object *pipeline)
 
    for (idx = prev + 1; idx < ARRAY_SIZE(pipeline->CurrentProgram); idx++) {
       if (shProg[idx]) {
+         /* Pipeline might include both non-compute and a compute program, do
+          * not attempt to validate varyings between non-compute and compute
+          * stage.
+          */
+         if (shProg[idx]->_LinkedShaders[idx]->Stage == MESA_SHADER_COMPUTE)
+            break;
+
          if (!validate_io(shProg[prev]->_LinkedShaders[prev],
                           shProg[idx]->_LinkedShaders[idx],
                           shProg[prev]->IsES || shProg[idx]->IsES))

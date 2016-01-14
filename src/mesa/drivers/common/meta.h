@@ -453,7 +453,7 @@ _mesa_meta_in_progress(struct gl_context *ctx)
 }
 
 extern void
-_mesa_meta_fb_tex_blit_begin(const struct gl_context *ctx,
+_mesa_meta_fb_tex_blit_begin(struct gl_context *ctx,
                              struct fb_tex_blit_state *blit);
 
 extern void
