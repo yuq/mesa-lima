@@ -1522,22 +1522,6 @@ vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
                                           bool interleaved)
 {
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      /* We have to support ATTR as a destination for GL_FIXED fixup. */
-      if (inst->dst.file == ATTR) {
-         int grf = attribute_map[inst->dst.nr + inst->dst.reg_offset];
-
-         /* All attributes used in the shader need to have been assigned a
-          * hardware register by the caller
-          */
-         assert(grf != 0);
-
-	 struct brw_reg reg = attribute_to_hw_reg(grf, interleaved);
-	 reg.type = inst->dst.type;
-	 reg.writemask = inst->dst.writemask;
-
-         inst->dst = reg;
-      }
-
       for (int i = 0; i < 3; i++) {
 	 if (inst->src[i].file != ATTR)
 	    continue;
