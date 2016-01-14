@@ -1209,9 +1209,9 @@ typedef struct VkFormatProperties {
 } VkFormatProperties;
 
 typedef struct VkExtent3D {
-    int32_t                                     width;
-    int32_t                                     height;
-    int32_t                                     depth;
+    uint32_t                                    width;
+    uint32_t                                    height;
+    uint32_t                                    depth;
 } VkExtent3D;
 
 typedef struct VkImageFormatProperties {
@@ -1710,8 +1710,8 @@ typedef struct VkOffset2D {
 } VkOffset2D;
 
 typedef struct VkExtent2D {
-    int32_t                                     width;
-    int32_t                                     height;
+    uint32_t                                    width;
+    uint32_t                                    height;
 } VkExtent2D;
 
 typedef struct VkRect2D {
