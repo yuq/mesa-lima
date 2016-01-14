@@ -992,7 +992,17 @@ cross_validate_globals(struct gl_shader_program *prog,
 
 	       existing->data.location = var->data.location;
 	       existing->data.explicit_location = true;
-	    }
+	    } else {
+               /* Check if uniform with implicit location was marked explicit
+                * by earlier shader stage. If so, mark it explicit in this stage
+                * too to make sure later processing does not treat it as
+                * implicit one.
+                */
+               if (existing->data.explicit_location) {
+	          var->data.location = existing->data.location;
+	          var->data.explicit_location = true;
+               }
+            }
 
             /* From the GLSL 4.20 specification:
              * "A link error will result if two compilation units in a program
