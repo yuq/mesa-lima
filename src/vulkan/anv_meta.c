@@ -1047,20 +1047,37 @@ void anv_CmdBlitImage(
          cmd_buffer);
 
       const VkOffset3D dest_offset = {
-         .x = pRegions[r].dstOffset.x,
-         .y = pRegions[r].dstOffset.y,
+         .x = pRegions[r].dstOffsets[0].x,
+         .y = pRegions[r].dstOffsets[0].y,
          .z = 0,
+      };
+
+      if (pRegions[r].dstOffsets[1].x < pRegions[r].dstOffsets[0].x ||
+          pRegions[r].dstOffsets[1].y < pRegions[r].dstOffsets[0].y ||
+          pRegions[r].srcOffsets[1].x < pRegions[r].srcOffsets[0].x ||
+          pRegions[r].srcOffsets[1].y < pRegions[r].srcOffsets[0].y)
+         anv_finishme("FINISHME: Allow flipping in blits");
+
+      const VkExtent3D dest_extent = {
+         .width = pRegions[r].dstOffsets[1].x - pRegions[r].dstOffsets[0].x,
+         .height = pRegions[r].dstOffsets[1].y - pRegions[r].dstOffsets[0].y,
+      };
+
+      const VkExtent3D src_extent = {
+         .width = pRegions[r].srcOffsets[1].x - pRegions[r].srcOffsets[0].x,
+         .height = pRegions[r].srcOffsets[1].y - pRegions[r].srcOffsets[0].y,
       };
 
       const uint32_t dest_array_slice =
          meta_blit_get_dest_view_base_array_slice(dest_image,
                                                   &pRegions[r].dstSubresource,
-                                                  &pRegions[r].dstOffset);
+                                                  &pRegions[r].dstOffsets[0]);
 
       if (pRegions[r].srcSubresource.layerCount > 1)
          anv_finishme("FINISHME: copy multiple array layers");
 
-      if (pRegions[r].dstExtent.depth > 1)
+      if (pRegions[r].srcOffsets[0].z != pRegions[r].srcOffsets[1].z ||
+          pRegions[r].dstOffsets[0].z != pRegions[r].dstOffsets[1].z)
          anv_finishme("FINISHME: copy multiple depth layers");
 
       struct anv_image_view dest_iview;
@@ -1082,11 +1099,9 @@ void anv_CmdBlitImage(
 
       meta_emit_blit(cmd_buffer,
                      src_image, &src_iview,
-                     pRegions[r].srcOffset,
-                     pRegions[r].srcExtent,
+                     pRegions[r].srcOffsets[0], src_extent,
                      dest_image, &dest_iview,
-                     dest_offset,
-                     pRegions[r].dstExtent,
+                     dest_offset, dest_extent,
                      filter);
    }
 

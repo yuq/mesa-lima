@@ -108,11 +108,9 @@ anv_dump_image_to_ppm(struct anv_device *device,
             .baseArrayLayer = array_layer,
             .layerCount = 1,
          },
-         .srcOffset = (VkOffset3D) { 0, 0, 0 },
-         .srcExtent = (VkExtent3D) {
-            extent.width,
-            extent.height,
-            1
+         .srcOffsets = {
+            { 0, 0, 0 },
+            { extent.width, extent.height, 1 },
          },
          .dstSubresource = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -120,11 +118,9 @@ anv_dump_image_to_ppm(struct anv_device *device,
             .baseArrayLayer = 0,
             .layerCount = 1,
          },
-         .dstOffset = (VkOffset3D) { 0, 0, 0 },
-         .dstExtent = (VkExtent3D) {
-            extent.width,
-            extent.height,
-            1
+         .dstOffsets = {
+            { 0, 0, 0 },
+            { extent.width, extent.height, 1 },
          },
       }, VK_FILTER_NEAREST);
 

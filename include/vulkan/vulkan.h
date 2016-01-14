@@ -2076,11 +2076,9 @@ typedef struct VkImageCopy {
 
 typedef struct VkImageBlit {
     VkImageSubresourceLayers                    srcSubresource;
-    VkOffset3D                                  srcOffset;
-    VkExtent3D                                  srcExtent;
+    VkOffset3D                                  srcOffsets[2];
     VkImageSubresourceLayers                    dstSubresource;
-    VkOffset3D                                  dstOffset;
-    VkExtent3D                                  dstExtent;
+    VkOffset3D                                  dstOffsets[2];
 } VkImageBlit;
 
 typedef struct VkBufferImageCopy {
