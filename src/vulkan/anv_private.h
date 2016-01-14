@@ -1368,6 +1368,12 @@ struct anv_pipeline {
 };
 
 struct anv_graphics_pipeline_create_info {
+   /**
+    * If non-negative, overrides the color attachment count of the pipeline's
+    * subpass.
+    */
+   int8_t color_attachment_count;
+
    bool                                         use_repclear;
    bool                                         disable_viewport;
    bool                                         disable_scissor;

@@ -341,6 +341,7 @@ populate_gs_prog_key(const struct brw_device_info *devinfo,
 static void
 populate_wm_prog_key(const struct brw_device_info *devinfo,
                      const VkGraphicsPipelineCreateInfo *info,
+                     const struct anv_graphics_pipeline_create_info *extra,
                      struct brw_wm_prog_key *key)
 {
    ANV_FROM_HANDLE(anv_render_pass, render_pass, info->renderPass);
@@ -361,7 +362,12 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
    key->drawable_height = 0;
    key->render_to_fbo = false;
 
-   key->nr_color_regions = render_pass->subpasses[info->subpass].color_count;
+   if (extra && extra->color_attachment_count >= 0) {
+      key->nr_color_regions = extra->color_attachment_count;
+   } else {
+      key->nr_color_regions =
+         render_pass->subpasses[info->subpass].color_count;
+   }
 
    key->replicate_alpha = key->nr_color_regions > 1 &&
                           info->pMultisampleState &&
@@ -633,6 +639,7 @@ static VkResult
 anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
                         const VkGraphicsPipelineCreateInfo *info,
+                        const struct anv_graphics_pipeline_create_info *extra,
                         struct anv_shader_module *module,
                         const char *entrypoint,
                         const VkSpecializationInfo *spec_info)
@@ -642,7 +649,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    struct brw_wm_prog_data *prog_data = &pipeline->wm_prog_data;
    struct brw_wm_prog_key key;
 
-   populate_wm_prog_key(&pipeline->device->info, info, &key);
+   populate_wm_prog_key(&pipeline->device->info, info, extra, &key);
 
    if (pipeline->use_repclear)
       key.nr_color_regions = 1;
@@ -1098,7 +1105,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
                                  pCreateInfo->pStages[i].pSpecializationInfo);
          break;
       case VK_SHADER_STAGE_FRAGMENT_BIT:
-         anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, module,
+         anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, extra, module,
                                  pCreateInfo->pStages[i].pName,
                                  pCreateInfo->pStages[i].pSpecializationInfo);
          break;

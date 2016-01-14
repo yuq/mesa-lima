@@ -392,6 +392,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    };
 
    const struct anv_graphics_pipeline_create_info anv_pipeline_info = {
+      .color_attachment_count = -1,
       .use_repclear = false,
       .disable_viewport = true,
       .disable_scissor = true,

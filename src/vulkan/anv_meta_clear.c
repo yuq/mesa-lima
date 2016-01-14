@@ -207,6 +207,7 @@ create_pipeline(struct anv_device *device,
          .subpass = 0,
       },
       &(struct anv_graphics_pipeline_create_info) {
+         .color_attachment_count = MAX_RTS,
          .use_repclear = true,
          .disable_viewport = true,
          .disable_vs = true,
