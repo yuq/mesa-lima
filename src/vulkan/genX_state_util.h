@@ -86,7 +86,6 @@ vk_to_gen_max_anisotropy(float ratio)
 }
 
 static const uint32_t vk_to_gen_mipmap_mode[] = {
-   [VK_SAMPLER_MIPMAP_MODE_BASE]             = MIPFILTER_NONE,
    [VK_SAMPLER_MIPMAP_MODE_NEAREST]          = MIPFILTER_NEAREST,
    [VK_SAMPLER_MIPMAP_MODE_LINEAR]           = MIPFILTER_LINEAR
 };
