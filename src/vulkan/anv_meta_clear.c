@@ -781,10 +781,7 @@ void anv_CmdClearColorImage(
                         .layout = VK_IMAGE_LAYOUT_GENERAL,
                      },
                      .preserveAttachmentCount = 1,
-                     .pPreserveAttachments = &(VkAttachmentReference) {
-                        .attachment = 0,
-                        .layout = VK_IMAGE_LAYOUT_GENERAL,
-                     },
+                     .pPreserveAttachments = (uint32_t[]) { 0 },
                   },
                   .dependencyCount = 0,
                }, &cmd_buffer->pool->alloc, &pass);

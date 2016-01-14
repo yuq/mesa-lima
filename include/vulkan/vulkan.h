@@ -1995,7 +1995,7 @@ typedef struct VkSubpassDescription {
     const VkAttachmentReference*                pResolveAttachments;
     const VkAttachmentReference*                pDepthStencilAttachment;
     uint32_t                                    preserveAttachmentCount;
-    const VkAttachmentReference*                pPreserveAttachments;
+    const uint32_t*                             pPreserveAttachments;
 } VkSubpassDescription;
 
 typedef struct VkSubpassDependency {

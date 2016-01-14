@@ -215,10 +215,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
                .layout = VK_IMAGE_LAYOUT_GENERAL,
             },
             .preserveAttachmentCount = 1,
-            .pPreserveAttachments = &(VkAttachmentReference) {
-               .attachment = 0,
-               .layout = VK_IMAGE_LAYOUT_GENERAL,
-            },
+            .pPreserveAttachments = (uint32_t[]) { 0 },
          },
          .dependencyCount = 0,
       }, NULL, &device->meta_state.blit.render_pass);
