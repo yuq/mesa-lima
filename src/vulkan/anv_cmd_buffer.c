@@ -111,7 +111,7 @@ anv_dynamic_state_copy(struct anv_dynamic_state *dest,
 }
 
 static void
-anv_cmd_state_init(struct anv_cmd_state *state)
+anv_cmd_state_reset(struct anv_cmd_state *state)
 {
    memset(&state->descriptors, 0, sizeof(state->descriptors));
    memset(&state->push_constants, 0, sizeof(state->push_constants));
@@ -172,6 +172,7 @@ static VkResult anv_create_cmd_buffer(
    cmd_buffer->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    cmd_buffer->device = device;
    cmd_buffer->pool = pool;
+   cmd_buffer->level = level;
 
    result = anv_cmd_buffer_init_batch_bo_chain(cmd_buffer);
    if (result != VK_SUCCESS)
@@ -181,11 +182,6 @@ static VkResult anv_create_cmd_buffer(
                          &device->surface_state_block_pool);
    anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
                          &device->dynamic_state_block_pool);
-
-   cmd_buffer->level = level;
-   cmd_buffer->usage_flags = 0;
-
-   anv_cmd_state_init(&cmd_buffer->state);
 
    if (pool) {
       list_addtail(&cmd_buffer->pool_link, &pool->cmd_buffers);
@@ -263,9 +259,10 @@ VkResult anv_ResetCommandBuffer(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
+   cmd_buffer->usage_flags = 0;
+   cmd_buffer->state.current_pipeline = UINT32_MAX;
    anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
-
-   anv_cmd_state_init(&cmd_buffer->state);
+   anv_cmd_state_reset(&cmd_buffer->state);
 
    return VK_SUCCESS;
 }
@@ -294,7 +291,21 @@ VkResult anv_BeginCommandBuffer(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
-   anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
+   /* If this is the first vkBeginCommandBuffer, we must *initialize* the
+    * command buffer's state. Otherwise, we must *reset* its state. In both
+    * cases we reset it.
+    *
+    * From the Vulkan 1.0 spec:
+    *
+    *    If a command buffer is in the executable state and the command buffer
+    *    was allocated from a command pool with the
+    *    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag set, then
+    *    vkBeginCommandBuffer implicitly resets the command buffer, behaving
+    *    as if vkResetCommandBuffer had been called with
+    *    VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT not set. It then puts
+    *    the command buffer in the recording state.
+    */
+   anv_ResetCommandBuffer(commandBuffer, /*flags*/ 0);
 
    cmd_buffer->usage_flags = pBeginInfo->flags;
 
@@ -315,7 +326,6 @@ VkResult anv_BeginCommandBuffer(
    }
 
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
-   cmd_buffer->state.current_pipeline = UINT32_MAX;
 
    return VK_SUCCESS;
 }
