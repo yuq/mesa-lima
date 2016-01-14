@@ -338,7 +338,8 @@ void anv_GetPhysicalDeviceFeatures(
       .sampleRateShading                        = false,
       .dualSrcBlend                             = true,
       .logicOp                                  = true,
-      .multiDrawIndirect                        = true,
+      .multiDrawIndirect                        = false,
+      .drawIndirectFirstInstance                = false,
       .depthClamp                               = false,
       .depthBiasClamp                           = false,
       .fillModeNonSolid                         = true,
@@ -372,6 +373,7 @@ void anv_GetPhysicalDeviceFeatures(
       .shaderInt16                              = false,
       .alphaToOne                               = true,
       .variableMultisampleRate                  = false,
+      .inheritedQueries                         = false,
    };
 }
 
@@ -492,6 +494,7 @@ void anv_GetPhysicalDeviceProperties(
       .sampledImageStencilSampleCounts          = sample_counts,
       .storageImageSampleCounts                 = VK_SAMPLE_COUNT_1_BIT,
       .maxSampleMaskWords                       = 1,
+      .timestampComputeAndGraphics              = false,
       .timestampPeriod                          = time_stamp_base / (1000 * 1000 * 1000),
       .maxClipDistances                         = 0 /* FIXME */,
       .maxCullDistances                         = 0 /* FIXME */,
