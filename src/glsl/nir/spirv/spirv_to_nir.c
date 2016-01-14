@@ -1074,6 +1074,10 @@ vtn_get_builtin_location(struct vtn_builder *b,
    case SpvBuiltInCullDistance:
       /* XXX figure this out */
       unreachable("unhandled builtin");
+   case SpvBuiltInVertexIndex:
+      *location = SYSTEM_VALUE_VERTEX_ID;
+      set_mode_system_value(mode);
+      break;
    case SpvBuiltInVertexId:
       /* Vulkan defines VertexID to be zero-based and reserves the new
        * builtin keyword VertexIndex to indicate the non-zero-based value.
@@ -1081,6 +1085,8 @@ vtn_get_builtin_location(struct vtn_builder *b,
       *location = SYSTEM_VALUE_VERTEX_ID_ZERO_BASE;
       set_mode_system_value(mode);
       break;
+   case SpvBuiltInInstanceIndex:
+      /* XXX */
    case SpvBuiltInInstanceId:
       *location = SYSTEM_VALUE_INSTANCE_ID;
       set_mode_system_value(mode);
