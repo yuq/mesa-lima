@@ -42,6 +42,7 @@ build_nir_vertex_shader(bool attr_flat)
    const struct glsl_type *vertex_type = glsl_vec4_type();
 
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
+   b.shader->info.name = ralloc_strdup(b.shader, "meta_blit_vs");
 
    nir_variable *pos_in = nir_variable_create(b.shader, nir_var_shader_in,
                                               vertex_type, "a_pos");
@@ -74,6 +75,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    nir_builder b;
 
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
+   b.shader->info.name = ralloc_strdup(b.shader, "meta_blit_fs");
 
    const struct glsl_type *color_type = glsl_vec4_type();
 
