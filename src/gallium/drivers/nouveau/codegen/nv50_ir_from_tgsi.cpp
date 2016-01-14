@@ -824,6 +824,8 @@ public:
    std::set<Location> locals;
 
    std::set<int> indirectTempArrays;
+   std::map<int, int> indirectTempOffsets;
+   std::map<int, std::pair<int, int> > tempArrayInfo;
    std::vector<int> tempArrayId;
 
    int clipVertexOutput;
@@ -931,9 +933,16 @@ bool Source::scanSource()
    }
    tgsi_parse_free(&parse);
 
-   // TODO: Compute based on relevant array sizes
-   if (indirectTempArrays.size())
-      info->bin.tlsSpace += (scan.file_max[TGSI_FILE_TEMPORARY] + 1) * 16;
+   if (indirectTempArrays.size()) {
+      int tempBase = 0;
+      for (std::set<int>::const_iterator it = indirectTempArrays.begin();
+           it != indirectTempArrays.end(); ++it) {
+         std::pair<int, int>& info = tempArrayInfo[*it];
+         indirectTempOffsets.insert(std::make_pair(*it, tempBase - info.first));
+         tempBase += info.second;
+      }
+      info->bin.tlsSpace += tempBase * 16;
+   }
 
    if (info->io.genUserClip > 0) {
       info->io.clipDistances = info->io.genUserClip;
@@ -1191,6 +1200,9 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
    case TGSI_FILE_TEMPORARY:
       for (i = first; i <= last; ++i)
          tempArrayId[i] = arrayId;
+      if (arrayId)
+         tempArrayInfo.insert(std::make_pair(arrayId, std::make_pair(
+                                                   first, last - first + 1)));
       break;
    case TGSI_FILE_NULL:
    case TGSI_FILE_ADDRESS:
@@ -1356,6 +1368,7 @@ private:
    void storeDst(const tgsi::Instruction::DstRegister dst, int c,
                  Value *val, Value *ptr);
 
+   void adjustTempIndex(int arrayId, int &idx, int &idx2d) const;
    Value *applySrcMod(Value *, int s, int c);
 
    Symbol *makeSym(uint file, int fileIndex, int idx, int c, uint32_t addr);
@@ -1661,11 +1674,23 @@ Converter::shiftAddress(Value *index)
    return mkOp2v(OP_SHL, TYPE_U32, getSSA(4, FILE_ADDRESS), index, mkImm(4));
 }
 
+void
+Converter::adjustTempIndex(int arrayId, int &idx, int &idx2d) const
+{
+   std::map<int, int>::const_iterator it =
+      code->indirectTempOffsets.find(arrayId);
+   if (it == code->indirectTempOffsets.end())
+      return;
+
+   idx2d = 1;
+   idx += it->second;
+}
+
 Value *
 Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
 {
    int idx2d = src.is2D() ? src.getIndex(1) : 0;
-   const int idx = src.getIndex(0);
+   int idx = src.getIndex(0);
    const int swz = src.getSwizzle(c);
    Instruction *ld;
 
@@ -1710,8 +1735,7 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
       int arrayid = src.getArrayId();
       if (!arrayid)
          arrayid = code->tempArrayId[idx];
-      idx2d = (code->indirectTempArrays.find(arrayid) !=
-               code->indirectTempArrays.end());
+      adjustTempIndex(arrayid, idx, idx2d);
    }
       /* fallthrough */
    default:
@@ -1725,7 +1749,7 @@ Converter::acquireDst(int d, int c)
 {
    const tgsi::Instruction::DstRegister dst = tgsi.getDst(d);
    const unsigned f = dst.getFile();
-   const int idx = dst.getIndex(0);
+   int idx = dst.getIndex(0);
    int idx2d = dst.is2D() ? dst.getIndex(1) : 0;
 
    if (dst.isMasked(c)/* || f == TGSI_FILE_RESOURCE*/)
@@ -1736,9 +1760,12 @@ Converter::acquireDst(int d, int c)
        (f == TGSI_FILE_OUTPUT && prog->getType() != Program::TYPE_FRAGMENT))
       return getScratch();
 
-   if (f == TGSI_FILE_TEMPORARY)
-      idx2d = code->indirectTempArrays.find(code->tempArrayId[idx]) !=
-         code->indirectTempArrays.end();
+   if (f == TGSI_FILE_TEMPORARY) {
+      int arrayid = dst.getArrayId();
+      if (!arrayid)
+         arrayid = code->tempArrayId[idx];
+      adjustTempIndex(arrayid, idx, idx2d);
+   }
 
    return getArrayForFile(f, idx2d)-> acquire(sub.cur->values, idx, c);
 }
@@ -1771,7 +1798,7 @@ Converter::storeDst(const tgsi::Instruction::DstRegister dst, int c,
                     Value *val, Value *ptr)
 {
    const unsigned f = dst.getFile();
-   const int idx = dst.getIndex(0);
+   int idx = dst.getIndex(0);
    int idx2d = dst.is2D() ? dst.getIndex(1) : 0;
 
    if (f == TGSI_FILE_SYSTEM_VALUE) {
@@ -1795,9 +1822,12 @@ Converter::storeDst(const tgsi::Instruction::DstRegister dst, int c,
        f == TGSI_FILE_PREDICATE ||
        f == TGSI_FILE_ADDRESS ||
        f == TGSI_FILE_OUTPUT) {
-      if (f == TGSI_FILE_TEMPORARY)
-         idx2d = code->indirectTempArrays.find(code->tempArrayId[idx]) !=
-            code->indirectTempArrays.end();
+      if (f == TGSI_FILE_TEMPORARY) {
+         int arrayid = dst.getArrayId();
+         if (!arrayid)
+            arrayid = code->tempArrayId[idx];
+         adjustTempIndex(arrayid, idx, idx2d);
+      }
 
       getArrayForFile(f, idx2d)->store(sub.cur->values, idx, c, ptr, val);
    } else {
