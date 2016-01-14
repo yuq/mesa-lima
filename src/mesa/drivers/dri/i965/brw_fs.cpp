@@ -194,8 +194,15 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
    else
       op = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD;
 
+   /* The pull load message will load a vec4 (16 bytes). If we are loading
+    * a double this means we are only loading 2 elements worth of data.
+    * We also want to use a 32-bit data type for the dst of the load operation
+    * so other parts of the driver don't get confused about the size of the
+    * result.
+    */
    int regs_written = 4 * (bld.dispatch_width() / 8) * scale;
-   fs_reg vec4_result = fs_reg(VGRF, alloc.allocate(regs_written), dst.type);
+   fs_reg vec4_result = fs_reg(VGRF, alloc.allocate(regs_written),
+                               BRW_REGISTER_TYPE_F);
    fs_inst *inst = bld.emit(op, vec4_result, surf_index, vec4_offset);
    inst->regs_written = regs_written;
 
@@ -208,7 +215,15 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
          inst->mlen = 1 + bld.dispatch_width() / 8;
    }
 
-   bld.MOV(dst, offset(vec4_result, bld, ((const_offset & 0xf) / 4) * scale));
+   if (type_sz(dst.type) == 8) {
+      assert(scale == 1);
+      shuffle_32bit_load_result_to_64bit_data(
+         bld, retype(vec4_result, dst.type), vec4_result, 2);
+   }
+
+   vec4_result.type = dst.type;
+   bld.MOV(dst, offset(vec4_result, bld,
+                       (const_offset & 0xf) / type_sz(vec4_result.type) * scale));
 }
 
 /**
