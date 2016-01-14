@@ -80,6 +80,7 @@ st_generate_mipmap(struct gl_context *ctx, GLenum target,
    struct st_texture_object *stObj = st_texture_object(texObj);
    struct pipe_resource *pt = st_get_texobj_resource(texObj);
    const uint baseLevel = texObj->BaseLevel;
+   enum pipe_format format;
    uint lastLevel, first_layer, last_layer;
    uint dstLevel;
 
@@ -149,16 +150,21 @@ st_generate_mipmap(struct gl_context *ctx, GLenum target,
       last_layer = util_max_layer(pt, baseLevel);
    }
 
+   if (stObj->surface_based)
+      format = stObj->surface_format;
+   else
+      format = pt->format;
+
    /* First see if the driver supports hardware mipmap generation,
     * if not then generate the mipmap by rendering/texturing.
     * If that fails, use the software fallback.
     */
    if (!st->pipe->screen->get_param(st->pipe->screen,
                                     PIPE_CAP_GENERATE_MIPMAP) ||
-       !st->pipe->generate_mipmap(st->pipe, pt, pt->format, baseLevel,
+       !st->pipe->generate_mipmap(st->pipe, pt, format, baseLevel,
                                   lastLevel, first_layer, last_layer)) {
 
-      if (!util_gen_mipmap(st->pipe, pt, pt->format, baseLevel, lastLevel,
+      if (!util_gen_mipmap(st->pipe, pt, format, baseLevel, lastLevel,
                            first_layer, last_layer, PIPE_TEX_FILTER_LINEAR)) {
          _mesa_generate_mipmap(ctx, target, texObj);
       }
