@@ -2121,15 +2121,12 @@ typedef struct VkImageResolve {
     VkExtent3D                                  extent;
 } VkImageResolve;
 
-typedef struct VkRenderPassBeginInfo {
+typedef struct VkMemoryBarrier {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkRenderPass                                renderPass;
-    VkFramebuffer                               framebuffer;
-    VkRect2D                                    renderArea;
-    uint32_t                                    clearValueCount;
-    const VkClearValue*                         pClearValues;
-} VkRenderPassBeginInfo;
+    VkAccessFlags                               srcAccessMask;
+    VkAccessFlags                               dstAccessMask;
+} VkMemoryBarrier;
 
 typedef struct VkBufferMemoryBarrier {
     VkStructureType                             sType;
@@ -2142,6 +2139,29 @@ typedef struct VkBufferMemoryBarrier {
     VkDeviceSize                                offset;
     VkDeviceSize                                size;
 } VkBufferMemoryBarrier;
+
+typedef struct VkImageMemoryBarrier {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkAccessFlags                               srcAccessMask;
+    VkAccessFlags                               dstAccessMask;
+    VkImageLayout                               oldLayout;
+    VkImageLayout                               newLayout;
+    uint32_t                                    srcQueueFamilyIndex;
+    uint32_t                                    dstQueueFamilyIndex;
+    VkImage                                     image;
+    VkImageSubresourceRange                     subresourceRange;
+} VkImageMemoryBarrier;
+
+typedef struct VkRenderPassBeginInfo {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkRenderPass                                renderPass;
+    VkFramebuffer                               framebuffer;
+    VkRect2D                                    renderArea;
+    uint32_t                                    clearValueCount;
+    const VkClearValue*                         pClearValues;
+} VkRenderPassBeginInfo;
 
 typedef struct VkDispatchIndirectCommand {
     uint32_t                                    x;
@@ -2163,26 +2183,6 @@ typedef struct VkDrawIndirectCommand {
     uint32_t                                    firstVertex;
     uint32_t                                    firstInstance;
 } VkDrawIndirectCommand;
-
-typedef struct VkImageMemoryBarrier {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkAccessFlags                               srcAccessMask;
-    VkAccessFlags                               dstAccessMask;
-    VkImageLayout                               oldLayout;
-    VkImageLayout                               newLayout;
-    uint32_t                                    srcQueueFamilyIndex;
-    uint32_t                                    dstQueueFamilyIndex;
-    VkImage                                     image;
-    VkImageSubresourceRange                     subresourceRange;
-} VkImageMemoryBarrier;
-
-typedef struct VkMemoryBarrier {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkAccessFlags                               srcAccessMask;
-    VkAccessFlags                               dstAccessMask;
-} VkMemoryBarrier;
 
 
 typedef VkResult (VKAPI_PTR *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance);
