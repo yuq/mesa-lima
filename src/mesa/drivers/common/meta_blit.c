@@ -640,7 +640,7 @@ blitframebuffer_texture(struct gl_context *ctx,
       srcLevel = readAtt->TextureLevel;
       texObj = readAtt->Texture;
    } else if (!readAtt->Texture && ctx->Driver.BindRenderbufferTexImage) {
-      texObj = _mesa_meta_bind_rb_as_tex_image(ctx, rb);
+      texObj = _mesa_meta_texture_object_from_renderbuffer(ctx, rb);
       if (texObj == NULL)
          return false;
 
@@ -885,8 +885,8 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
 }
 
 struct gl_texture_object *
-_mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
-                                struct gl_renderbuffer *rb)
+_mesa_meta_texture_object_from_renderbuffer(struct gl_context *ctx,
+                                            struct gl_renderbuffer *rb)
 {
    struct gl_texture_image *texImage;
    struct gl_texture_object *texObj;
@@ -895,11 +895,10 @@ _mesa_meta_bind_rb_as_tex_image(struct gl_context *ctx,
       ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
    tempTex = 0;
-   _mesa_GenTextures(1, &tempTex);
+   _mesa_CreateTextures(target, 1, &tempTex);
    if (tempTex == 0)
       return NULL;
 
-   _mesa_BindTexture(target, tempTex);
    texObj = _mesa_lookup_texture(ctx, tempTex);
    texImage = _mesa_get_tex_image(ctx, texObj, target, 0);
 
