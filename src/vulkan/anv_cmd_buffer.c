@@ -1074,6 +1074,14 @@ VkResult anv_ResetCommandPool(
 {
    ANV_FROM_HANDLE(anv_cmd_pool, pool, commandPool);
 
+   /* FIXME: vkResetCommandPool must not destroy its command buffers. The
+    * Vulkan 1.0 spec requires that it only reset them:
+    *
+    *    Resetting a command pool recycles all of the resources from all of
+    *    the command buffers allocated from the command pool back to the
+    *    command pool. All command buffers that have been allocated from the
+    *    command pool are put in the initial state.
+    */
    list_for_each_entry_safe(struct anv_cmd_buffer, cmd_buffer,
                             &pool->cmd_buffers, pool_link) {
       anv_cmd_buffer_destroy(cmd_buffer);
