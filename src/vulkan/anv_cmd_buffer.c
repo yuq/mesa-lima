@@ -304,12 +304,12 @@ VkResult anv_BeginCommandBuffer(
    if (cmd_buffer->usage_flags &
        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
       cmd_buffer->state.framebuffer =
-         anv_framebuffer_from_handle(pBeginInfo->framebuffer);
+         anv_framebuffer_from_handle(pBeginInfo->pInheritanceInfo->framebuffer);
       cmd_buffer->state.pass =
-         anv_render_pass_from_handle(pBeginInfo->renderPass);
+         anv_render_pass_from_handle(pBeginInfo->pInheritanceInfo->renderPass);
 
       struct anv_subpass *subpass =
-         &cmd_buffer->state.pass->subpasses[pBeginInfo->subpass];
+         &cmd_buffer->state.pass->subpasses[pBeginInfo->pInheritanceInfo->subpass];
 
       anv_cmd_buffer_begin_subpass(cmd_buffer, subpass);
    }

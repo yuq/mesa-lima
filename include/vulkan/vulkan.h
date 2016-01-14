@@ -187,13 +187,14 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO = 38,
     VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO = 39,
     VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO = 40,
-    VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO = 41,
-    VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO = 42,
-    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER = 43,
-    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER = 44,
-    VK_STRUCTURE_TYPE_MEMORY_BARRIER = 45,
-    VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO = 46,
-    VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO = 47,
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO = 41,
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO = 42,
+    VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO = 43,
+    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER = 44,
+    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER = 45,
+    VK_STRUCTURE_TYPE_MEMORY_BARRIER = 46,
+    VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO = 47,
+    VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO = 48,
     VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR = 1000001000,
     VK_STRUCTURE_TYPE_PRESENT_INFO_KHR = 1000001001,
     VK_STRUCTURE_TYPE_DISPLAY_MODE_CREATE_INFO_KHR = 1000002000,
@@ -2034,16 +2035,22 @@ typedef struct VkCommandBufferAllocateInfo {
     uint32_t                                    commandBufferCount;
 } VkCommandBufferAllocateInfo;
 
-typedef struct VkCommandBufferBeginInfo {
+typedef struct VkCommandBufferInheritanceInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkCommandBufferUsageFlags                   flags;
     VkRenderPass                                renderPass;
     uint32_t                                    subpass;
     VkFramebuffer                               framebuffer;
     VkBool32                                    occlusionQueryEnable;
     VkQueryControlFlags                         queryFlags;
     VkQueryPipelineStatisticFlags               pipelineStatistics;
+} VkCommandBufferInheritanceInfo;
+
+typedef struct VkCommandBufferBeginInfo {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkCommandBufferUsageFlags                   flags;
+    const VkCommandBufferInheritanceInfo*       pInheritanceInfo;
 } VkCommandBufferBeginInfo;
 
 typedef struct VkBufferCopy {
