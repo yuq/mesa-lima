@@ -235,7 +235,7 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
    }
 
    if (src_view_tex_image) {
-      /* Prever the tex image because, even if we have a renderbuffer, we may
+      /* Prefer the tex image because, even if we have a renderbuffer, we may
        * have had to wrap it in a texture view.
        */
       _mesa_meta_bind_fbo_image(GL_READ_FRAMEBUFFER, attachment,
