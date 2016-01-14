@@ -605,6 +605,7 @@ static void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs)
 }
 
 DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", FALSE)
+DEBUG_GET_ONCE_BOOL_OPTION(all_bos, "RADEON_ALL_BOS", FALSE)
 
 static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
                             unsigned flags,
@@ -644,9 +645,35 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    if (cs->base.cdw && cs->base.cdw <= cs->base.max_dw && !debug_get_option_noop()) {
       int r;
 
-      r = amdgpu_bo_list_create(ws->dev, cs->num_buffers,
-                                cs->handles, cs->flags,
-                                &cs->request.resources);
+      /* Use a buffer list containing all allocated buffers if requested. */
+      if (debug_get_option_all_bos()) {
+         struct amdgpu_winsys_bo *bo;
+         amdgpu_bo_handle *handles;
+         unsigned num = 0;
+
+         pipe_mutex_lock(ws->global_bo_list_lock);
+
+         handles = malloc(sizeof(handles[0]) * ws->num_buffers);
+         if (!handles) {
+            pipe_mutex_unlock(ws->global_bo_list_lock);
+            goto cleanup;
+         }
+
+         LIST_FOR_EACH_ENTRY(bo, &ws->global_bo_list, global_list_item) {
+            assert(num < ws->num_buffers);
+            handles[num++] = bo->bo;
+         }
+
+         r = amdgpu_bo_list_create(ws->dev, ws->num_buffers,
+                                   handles, NULL,
+                                   &cs->request.resources);
+         free(handles);
+         pipe_mutex_unlock(ws->global_bo_list_lock);
+      } else {
+         r = amdgpu_bo_list_create(ws->dev, cs->num_buffers,
+                                   cs->handles, cs->flags,
+                                   &cs->request.resources);
+      }
 
       if (r) {
          fprintf(stderr, "amdgpu: resource list creation failed (%d)\n", r);

@@ -300,6 +300,7 @@ static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
 
    pipe_mutex_destroy(ws->bo_fence_lock);
    pb_cache_deinit(&ws->bo_cache);
+   pipe_mutex_destroy(ws->global_bo_list_lock);
    AddrDestroy(ws->addrlib);
    amdgpu_device_deinitialize(ws->dev);
    FREE(rws);
@@ -472,6 +473,8 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
    amdgpu_cs_init_functions(ws);
    amdgpu_surface_init_functions(ws);
 
+   LIST_INITHEAD(&ws->global_bo_list);
+   pipe_mutex_init(ws->global_bo_list_lock);
    pipe_mutex_init(ws->bo_fence_lock);
 
    /* Create the screen at the end. The winsys must be initialized
