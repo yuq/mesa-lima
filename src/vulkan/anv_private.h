@@ -67,6 +67,15 @@ typedef uint32_t xcb_window_t;
 extern "C" {
 #endif
 
+#define MAX_VBS         32
+#define MAX_SETS         8
+#define MAX_RTS          8
+#define MAX_VIEWPORTS   16
+#define MAX_SCISSORS    16
+#define MAX_PUSH_CONSTANTS_SIZE 128
+#define MAX_DYNAMIC_BUFFERS 16
+#define MAX_IMAGES 8
+
 #define ICD_LOADER_MAGIC   0x01CDC0DE
 
 typedef union _VK_LOADER_DATA {
@@ -910,15 +919,6 @@ anv_descriptor_set_create(struct anv_device *device,
 void
 anv_descriptor_set_destroy(struct anv_device *device,
                            struct anv_descriptor_set *set);
-
-#define MAX_VBS         32
-#define MAX_SETS         8
-#define MAX_RTS          8
-#define MAX_VIEWPORTS   16
-#define MAX_SCISSORS    16
-#define MAX_PUSH_CONSTANTS_SIZE 128
-#define MAX_DYNAMIC_BUFFERS 16
-#define MAX_IMAGES 8
 
 struct anv_pipeline_binding {
    /* The descriptor set this surface corresponds to */
