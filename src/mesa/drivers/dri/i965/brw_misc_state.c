@@ -919,7 +919,7 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
        *   MI_PIPELINE_SELECT command to change the Pipeline Select Mode.
        */
       const unsigned dc_flush =
-         brw->gen >= 7 ? PIPE_CONTROL_DATA_CACHE_INVALIDATE : 0;
+         brw->gen >= 7 ? PIPE_CONTROL_DATA_CACHE_FLUSH : 0;
 
       if (brw->gen == 6) {
          /* Hardware workaround: SNB B-Spec says:

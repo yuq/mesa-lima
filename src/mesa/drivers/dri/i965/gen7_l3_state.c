@@ -333,7 +333,7 @@ setup_l3_config(struct brw_context *brw, const struct brw_l3_config *cfg)
     * which involves a first PIPE_CONTROL flush which stalls the pipeline...
     */
    brw_emit_pipe_control_flush(brw,
-                               PIPE_CONTROL_DATA_CACHE_INVALIDATE |
+                               PIPE_CONTROL_DATA_CACHE_FLUSH |
                                PIPE_CONTROL_NO_WRITE |
                                PIPE_CONTROL_CS_STALL);
 
@@ -362,7 +362,7 @@ setup_l3_config(struct brw_context *brw, const struct brw_l3_config *cfg)
     * complete when the L3 configuration registers are modified.
     */
    brw_emit_pipe_control_flush(brw,
-                               PIPE_CONTROL_DATA_CACHE_INVALIDATE |
+                               PIPE_CONTROL_DATA_CACHE_FLUSH |
                                PIPE_CONTROL_NO_WRITE |
                                PIPE_CONTROL_CS_STALL);
 
