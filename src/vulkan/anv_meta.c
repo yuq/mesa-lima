@@ -564,7 +564,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       &(VkDescriptorSetAllocateInfo) {
          .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
          .descriptorPool = dummy_desc_pool,
-         .setLayoutCount = 1,
+         .descriptorSetCount = 1,
          .pSetLayouts = &device->meta_state.blit.ds_layout
       }, &set);
    anv_UpdateDescriptorSets(anv_device_to_handle(device),

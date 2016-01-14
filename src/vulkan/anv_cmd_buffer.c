@@ -217,7 +217,7 @@ VkResult anv_AllocateCommandBuffers(
    VkResult result = VK_SUCCESS;
    uint32_t i;
 
-   for (i = 0; i < pAllocateInfo->bufferCount; i++) {
+   for (i = 0; i < pAllocateInfo->commandBufferCount; i++) {
       result = anv_create_cmd_buffer(device, pool, pAllocateInfo->level,
                                      &pCommandBuffers[i]);
       if (result != VK_SUCCESS)
@@ -1010,7 +1010,7 @@ void anv_CmdPushConstants(
 
 void anv_CmdExecuteCommands(
     VkCommandBuffer                             commandBuffer,
-    uint32_t                                    commandBuffersCount,
+    uint32_t                                    commandBufferCount,
     const VkCommandBuffer*                      pCmdBuffers)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, primary, commandBuffer);
@@ -1019,7 +1019,7 @@ void anv_CmdExecuteCommands(
 
    anv_assert(primary->state.subpass == &primary->state.pass->subpasses[0]);
 
-   for (uint32_t i = 0; i < commandBuffersCount; i++) {
+   for (uint32_t i = 0; i < commandBufferCount; i++) {
       ANV_FROM_HANDLE(anv_cmd_buffer, secondary, pCmdBuffers[i]);
 
       assert(secondary->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY);

@@ -421,7 +421,7 @@ VkResult anv_AllocateDescriptorSets(
    struct anv_descriptor_set *set;
    uint32_t i;
 
-   for (i = 0; i < pAllocateInfo->setLayoutCount; i++) {
+   for (i = 0; i < pAllocateInfo->descriptorSetCount; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set_layout, layout,
                       pAllocateInfo->pSetLayouts[i]);
 

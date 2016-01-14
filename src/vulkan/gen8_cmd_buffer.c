@@ -890,7 +890,7 @@ emit_query_availability(struct anv_batch *batch,
 void genX(CmdBeginQuery)(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    entry,
+    uint32_t                                    query,
     VkQueryControlFlags                         flags)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
@@ -912,7 +912,7 @@ void genX(CmdBeginQuery)(
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
       emit_ps_depth_count(&cmd_buffer->batch, &pool->bo,
-                          entry * sizeof(struct anv_query_pool_slot));
+                          query * sizeof(struct anv_query_pool_slot));
       break;
 
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
@@ -924,7 +924,7 @@ void genX(CmdBeginQuery)(
 void genX(CmdEndQuery)(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    entry)
+    uint32_t                                    query)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
@@ -932,10 +932,10 @@ void genX(CmdEndQuery)(
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
       emit_ps_depth_count(&cmd_buffer->batch, &pool->bo,
-                          entry * sizeof(struct anv_query_pool_slot) + 8);
+                          query * sizeof(struct anv_query_pool_slot) + 8);
 
       emit_query_availability(&cmd_buffer->batch, &pool->bo,
-                              entry * sizeof(struct anv_query_pool_slot) + 16);
+                              query * sizeof(struct anv_query_pool_slot) + 16);
       break;
 
    case VK_QUERY_TYPE_PIPELINE_STATISTICS:
@@ -950,11 +950,11 @@ void genX(CmdWriteTimestamp)(
     VkCommandBuffer                             commandBuffer,
     VkPipelineStageFlagBits                     pipelineStage,
     VkQueryPool                                 queryPool,
-    uint32_t                                    entry)
+    uint32_t                                    query)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
-   uint32_t offset = entry * sizeof(struct anv_query_pool_slot);
+   uint32_t offset = query * sizeof(struct anv_query_pool_slot);
 
    assert(pool->type == VK_QUERY_TYPE_TIMESTAMP);
 
@@ -977,7 +977,7 @@ void genX(CmdWriteTimestamp)(
       break;
    }
 
-   emit_query_availability(&cmd_buffer->batch, &pool->bo, entry + 16);
+   emit_query_availability(&cmd_buffer->batch, &pool->bo, query + 16);
 }
 
 #define alu_opcode(v)   __gen_field((v),  20, 31)

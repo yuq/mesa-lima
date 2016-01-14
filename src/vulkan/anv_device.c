@@ -213,7 +213,7 @@ VkResult anv_CreateInstance(
    if (pCreateInfo->pApplicationInfo->apiVersion != VK_MAKE_VERSION(0, 210, 1))
       return vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
 
-   for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+   for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
       bool found = false;
       for (uint32_t j = 0; j < ARRAY_SIZE(global_extensions); j++) {
          if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
@@ -671,7 +671,7 @@ VkResult anv_CreateDevice(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
 
-   for (uint32_t i = 0; i < pCreateInfo->enabledExtensionNameCount; i++) {
+   for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
       bool found = false;
       for (uint32_t j = 0; j < ARRAY_SIZE(device_extensions); j++) {
          if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],

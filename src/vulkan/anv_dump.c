@@ -87,7 +87,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
          .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
          .commandPool = commandPool,
          .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-         .bufferCount = 1,
+         .commandBufferCount = 1,
       }, &cmd);
    assert(result == VK_SUCCESS);
 

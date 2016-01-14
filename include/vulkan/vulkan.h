@@ -1128,9 +1128,9 @@ typedef struct VkInstanceCreateInfo {
     const void*                                 pNext;
     VkInstanceCreateFlags                       flags;
     const VkApplicationInfo*                    pApplicationInfo;
-    uint32_t                                    enabledLayerNameCount;
+    uint32_t                                    enabledLayerCount;
     const char* const*                          ppEnabledLayerNames;
-    uint32_t                                    enabledExtensionNameCount;
+    uint32_t                                    enabledExtensionCount;
     const char* const*                          ppEnabledExtensionNames;
 } VkInstanceCreateInfo;
 
@@ -1389,9 +1389,9 @@ typedef struct VkDeviceCreateInfo {
     VkDeviceCreateFlags                         flags;
     uint32_t                                    queueCreateInfoCount;
     const VkDeviceQueueCreateInfo*              pQueueCreateInfos;
-    uint32_t                                    enabledLayerNameCount;
+    uint32_t                                    enabledLayerCount;
     const char* const*                          ppEnabledLayerNames;
-    uint32_t                                    enabledExtensionNameCount;
+    uint32_t                                    enabledExtensionCount;
     const char* const*                          ppEnabledExtensionNames;
     const VkPhysicalDeviceFeatures*             pEnabledFeatures;
 } VkDeviceCreateInfo;
@@ -1540,7 +1540,7 @@ typedef struct VkQueryPoolCreateInfo {
     const void*                                 pNext;
     VkQueryPoolCreateFlags                      flags;
     VkQueryType                                 queryType;
-    uint32_t                                    entryCount;
+    uint32_t                                    queryCount;
     VkQueryPipelineStatisticFlags               pipelineStatistics;
 } VkQueryPoolCreateInfo;
 
@@ -1914,7 +1914,7 @@ typedef struct VkDescriptorSetAllocateInfo {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkDescriptorPool                            descriptorPool;
-    uint32_t                                    setLayoutCount;
+    uint32_t                                    descriptorSetCount;
     const VkDescriptorSetLayout*                pSetLayouts;
 } VkDescriptorSetAllocateInfo;
 
@@ -2031,7 +2031,7 @@ typedef struct VkCommandBufferAllocateInfo {
     const void*                                 pNext;
     VkCommandPool                               commandPool;
     VkCommandBufferLevel                        level;
-    uint32_t                                    bufferCount;
+    uint32_t                                    commandBufferCount;
 } VkCommandBufferAllocateInfo;
 
 typedef struct VkCommandBufferBeginInfo {
@@ -2312,16 +2312,16 @@ typedef void (VKAPI_PTR *PFN_vkCmdSetEvent)(VkCommandBuffer commandBuffer, VkEve
 typedef void (VKAPI_PTR *PFN_vkCmdResetEvent)(VkCommandBuffer commandBuffer, VkEvent event, VkPipelineStageFlags stageMask);
 typedef void (VKAPI_PTR *PFN_vkCmdWaitEvents)(VkCommandBuffer commandBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers);
 typedef void (VKAPI_PTR *PFN_vkCmdPipelineBarrier)(VkCommandBuffer commandBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask, VkDependencyFlags dependencyFlags, uint32_t memoryBarrierCount, const void* const* ppMemoryBarriers);
-typedef void (VKAPI_PTR *PFN_vkCmdBeginQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t entry, VkQueryControlFlags flags);
-typedef void (VKAPI_PTR *PFN_vkCmdEndQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t entry);
+typedef void (VKAPI_PTR *PFN_vkCmdBeginQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t query, VkQueryControlFlags flags);
+typedef void (VKAPI_PTR *PFN_vkCmdEndQuery)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t query);
 typedef void (VKAPI_PTR *PFN_vkCmdResetQueryPool)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount);
-typedef void (VKAPI_PTR *PFN_vkCmdWriteTimestamp)(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t entry);
+typedef void (VKAPI_PTR *PFN_vkCmdWriteTimestamp)(VkCommandBuffer commandBuffer, VkPipelineStageFlagBits pipelineStage, VkQueryPool queryPool, uint32_t query);
 typedef void (VKAPI_PTR *PFN_vkCmdCopyQueryPoolResults)(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t firstQuery, uint32_t queryCount, VkBuffer dstBuffer, VkDeviceSize dstOffset, VkDeviceSize stride, VkQueryResultFlags flags);
 typedef void (VKAPI_PTR *PFN_vkCmdPushConstants)(VkCommandBuffer commandBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues);
 typedef void (VKAPI_PTR *PFN_vkCmdBeginRenderPass)(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkSubpassContents contents);
 typedef void (VKAPI_PTR *PFN_vkCmdNextSubpass)(VkCommandBuffer commandBuffer, VkSubpassContents contents);
 typedef void (VKAPI_PTR *PFN_vkCmdEndRenderPass)(VkCommandBuffer commandBuffer);
-typedef void (VKAPI_PTR *PFN_vkCmdExecuteCommands)(VkCommandBuffer commandBuffer, uint32_t commandBuffersCount, const VkCommandBuffer* pCommandBuffers);
+typedef void (VKAPI_PTR *PFN_vkCmdExecuteCommands)(VkCommandBuffer commandBuffer, uint32_t commandBufferCount, const VkCommandBuffer* pCommandBuffers);
 
 #ifdef VK_PROTOTYPES
 VKAPI_ATTR VkResult VKAPI_CALL vkCreateInstance(
@@ -3058,13 +3058,13 @@ VKAPI_ATTR void VKAPI_CALL vkCmdPipelineBarrier(
 VKAPI_ATTR void VKAPI_CALL vkCmdBeginQuery(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    entry,
+    uint32_t                                    query,
     VkQueryControlFlags                         flags);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdEndQuery(
     VkCommandBuffer                             commandBuffer,
     VkQueryPool                                 queryPool,
-    uint32_t                                    entry);
+    uint32_t                                    query);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdResetQueryPool(
     VkCommandBuffer                             commandBuffer,
@@ -3076,7 +3076,7 @@ VKAPI_ATTR void VKAPI_CALL vkCmdWriteTimestamp(
     VkCommandBuffer                             commandBuffer,
     VkPipelineStageFlagBits                     pipelineStage,
     VkQueryPool                                 queryPool,
-    uint32_t                                    entry);
+    uint32_t                                    query);
 
 VKAPI_ATTR void VKAPI_CALL vkCmdCopyQueryPoolResults(
     VkCommandBuffer                             commandBuffer,
@@ -3110,7 +3110,7 @@ VKAPI_ATTR void VKAPI_CALL vkCmdEndRenderPass(
 
 VKAPI_ATTR void VKAPI_CALL vkCmdExecuteCommands(
     VkCommandBuffer                             commandBuffer,
-    uint32_t                                    commandBuffersCount,
+    uint32_t                                    commandBufferCount,
     const VkCommandBuffer*                      pCommandBuffers);
 #endif
 
