@@ -933,5 +933,19 @@ void anv_CmdClearAttachments(
     uint32_t                                    rectCount,
     const VkClearRect*                          pRects)
 {
-   stub();
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   struct anv_meta_saved_state saved_state;
+
+   meta_clear_begin(&saved_state, cmd_buffer);
+
+   /* FINISHME: We can do better than this dumb loop. It thrashes too much
+    * state.
+    */
+   for (uint32_t a = 0; a < attachmentCount; ++a) {
+      for (uint32_t r = 0; r < rectCount; ++r) {
+         emit_clear(cmd_buffer, &pAttachments[a], &pRects[r]);
+      }
+   }
+
+   meta_clear_end(&saved_state, cmd_buffer);
 }
