@@ -1147,8 +1147,12 @@ void genX(CmdWaitEvents)(
     const VkEvent*                              pEvents,
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        destStageMask,
-    uint32_t                                    memBarrierCount,
-    const void* const*                          ppMemBarriers)
+    uint32_t                                    memoryBarrierCount,
+    const VkMemoryBarrier*                      pMemoryBarriers,
+    uint32_t                                    bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier*                pBufferMemoryBarriers,
+    uint32_t                                    imageMemoryBarrierCount,
+    const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    for (uint32_t i = 0; i < eventCount; i++) {
@@ -1166,5 +1170,7 @@ void genX(CmdWaitEvents)(
 
    genX(CmdPipelineBarrier)(commandBuffer, srcStageMask, destStageMask,
                             false, /* byRegion */
-                            memBarrierCount, ppMemBarriers);
+                            memoryBarrierCount, pMemoryBarriers,
+                            bufferMemoryBarrierCount, pBufferMemoryBarriers,
+                            imageMemoryBarrierCount, pImageMemoryBarriers);
 }

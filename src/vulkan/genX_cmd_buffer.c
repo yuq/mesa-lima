@@ -143,8 +143,12 @@ void genX(CmdPipelineBarrier)(
     VkPipelineStageFlags                        srcStageMask,
     VkPipelineStageFlags                        destStageMask,
     VkBool32                                    byRegion,
-    uint32_t                                    memBarrierCount,
-    const void* const*                          ppMemBarriers)
+    uint32_t                                    memoryBarrierCount,
+    const VkMemoryBarrier*                      pMemoryBarriers,
+    uint32_t                                    bufferMemoryBarrierCount,
+    const VkBufferMemoryBarrier*                pBufferMemoryBarriers,
+    uint32_t                                    imageMemoryBarrierCount,
+    const VkImageMemoryBarrier*                 pImageMemoryBarriers)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    uint32_t b, *dw;
@@ -197,30 +201,19 @@ void genX(CmdPipelineBarrier)(
    VkAccessFlags src_flags = 0;
    VkAccessFlags dst_flags = 0;
 
-   for (uint32_t i = 0; i < memBarrierCount; i++) {
-      const struct anv_common *common = ppMemBarriers[i];
-      switch (common->sType) {
-      case VK_STRUCTURE_TYPE_MEMORY_BARRIER: {
-         ANV_COMMON_TO_STRUCT(VkMemoryBarrier, barrier, common);
-         src_flags |= barrier->srcAccessMask;
-         dst_flags |= barrier->dstAccessMask;
-         break;
-      }
-      case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER: {
-         ANV_COMMON_TO_STRUCT(VkBufferMemoryBarrier, barrier, common);
-         src_flags |= barrier->srcAccessMask;
-         dst_flags |= barrier->dstAccessMask;
-         break;
-      }
-      case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER: {
-         ANV_COMMON_TO_STRUCT(VkImageMemoryBarrier, barrier, common);
-         src_flags |= barrier->srcAccessMask;
-         dst_flags |= barrier->dstAccessMask;
-         break;
-      }
-      default:
-         unreachable("Invalid memory barrier type");
-      }
+   for (uint32_t i = 0; i < memoryBarrierCount; i++) {
+      src_flags |= pMemoryBarriers[i].srcAccessMask;
+      dst_flags |= pMemoryBarriers[i].dstAccessMask;
+   }
+
+   for (uint32_t i = 0; i < bufferMemoryBarrierCount; i++) {
+      src_flags |= pBufferMemoryBarriers[i].srcAccessMask;
+      dst_flags |= pBufferMemoryBarriers[i].dstAccessMask;
+   }
+
+   for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
+      src_flags |= pImageMemoryBarriers[i].srcAccessMask;
+      dst_flags |= pImageMemoryBarriers[i].dstAccessMask;
    }
 
    /* The src flags represent how things were used previously.  This is

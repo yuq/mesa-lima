@@ -127,8 +127,8 @@ anv_dump_image_to_ppm(struct anv_device *device,
    ANV_CALL(CmdPipelineBarrier)(cmd,
       VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_PIPELINE_STAGE_TRANSFER_BIT,
-      true, 1,
-      (const void * []) { &(VkImageMemoryBarrier) {
+      true, 0, NULL, 0, NULL, 1,
+      &(VkImageMemoryBarrier) {
          .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
          .srcAccessMask = VK_ACCESS_HOST_READ_BIT,
          .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -144,7 +144,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
             .baseArrayLayer = 0,
             .layerCount = 1,
          },
-      }});
+      });
 
    result = anv_EndCommandBuffer(cmd);
    assert(result == VK_SUCCESS);
