@@ -209,6 +209,21 @@ static void r600_buffer_destroy(struct pipe_screen *screen,
 	FREE(rbuffer);
 }
 
+void r600_invalidate_resource(struct pipe_context *ctx,
+			      struct pipe_resource *resource)
+{
+	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
+        struct r600_resource *rbuffer = r600_resource(resource);
+
+	/* Check if mapping this buffer would cause waiting for the GPU. */
+	if (r600_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
+	    !rctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
+		rctx->invalidate_buffer(&rctx->b, &rbuffer->b.b);
+	} else {
+		util_range_set_empty(&rbuffer->valid_buffer_range);
+	}
+}
+
 static void *r600_buffer_get_transfer(struct pipe_context *ctx,
 				      struct pipe_resource *resource,
                                       unsigned level,
@@ -276,13 +291,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	    !(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
 		assert(usage & PIPE_TRANSFER_WRITE);
 
-		/* Check if mapping this buffer would cause waiting for the GPU. */
-		if (r600_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
-		    !rctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
-			rctx->invalidate_buffer(&rctx->b, &rbuffer->b.b);
-		} else {
-			util_range_set_empty(&rbuffer->valid_buffer_range);
-		}
+		r600_invalidate_resource(ctx, resource);
 
 		/* At this point, the buffer is always idle. */
 		usage |= PIPE_TRANSFER_UNSYNCHRONIZED;

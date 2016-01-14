@@ -257,6 +257,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	else
 		rctx->max_db = 4;
 
+	rctx->b.invalidate_resource = r600_invalidate_resource;
 	rctx->b.transfer_map = u_transfer_map_vtbl;
 	rctx->b.transfer_flush_region = u_transfer_flush_region_vtbl;
 	rctx->b.transfer_unmap = u_transfer_unmap_vtbl;
