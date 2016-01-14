@@ -313,8 +313,8 @@ struct fb_tex_blit_state
    struct gl_sampler_object *samp_obj;
    struct gl_sampler_object *samp_obj_save;
    struct gl_texture_object *tex_obj;
+   struct gl_texture_object *temp_tex_obj;
    GLuint stencilSamplingSave;
-   GLuint tempTex;
 };
 
 

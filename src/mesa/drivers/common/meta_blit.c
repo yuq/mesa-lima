@@ -644,7 +644,7 @@ blitframebuffer_texture(struct gl_context *ctx,
       if (texObj == NULL)
          return false;
 
-      fb_tex_blit.tempTex = texObj->Name;
+      fb_tex_blit.temp_tex_obj = texObj;
 
       srcLevel = 0;
       if (_mesa_is_winsys_fbo(readFb)) {
@@ -834,7 +834,7 @@ _mesa_meta_fb_tex_blit_begin(struct gl_context *ctx,
    blit->samp_obj_save = NULL;
    _mesa_reference_sampler_object(ctx, &blit->samp_obj_save,
                                   ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler);
-   blit->tempTex = 0;
+   blit->temp_tex_obj = NULL;
 }
 
 void
@@ -845,13 +845,13 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
       _mesa_get_current_tex_object(ctx, target);
 
    /* Either there is no temporary texture or the temporary texture is bound. */
-   assert(blit->tempTex == 0 || texObj->Name == blit->tempTex);
+   assert(blit->temp_tex_obj == NULL || blit->temp_tex_obj == texObj);
 
    /* Restore texture object state, the texture binding will be restored by
     * _mesa_meta_end().  If the texture is the temporary texture that is about
     * to be destroyed, don't bother restoring its state.
     */
-   if (blit->tempTex == 0) {
+   if (blit->temp_tex_obj == NULL) {
       /* If the target restricts values for base level or max level, we assume
        * that the original values were valid.
        */
@@ -880,8 +880,8 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
    _mesa_reference_sampler_object(ctx, &blit->samp_obj_save, NULL);
    _mesa_reference_sampler_object(ctx, &blit->samp_obj, NULL);
 
-   if (blit->tempTex)
-      _mesa_DeleteTextures(1, &blit->tempTex);
+   if (blit->temp_tex_obj)
+      _mesa_DeleteTextures(1, &blit->temp_tex_obj->Name);
 }
 
 struct gl_texture_object *
