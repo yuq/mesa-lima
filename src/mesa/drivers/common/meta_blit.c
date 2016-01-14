@@ -674,7 +674,7 @@ blitframebuffer_texture(struct gl_context *ctx,
       }
 
       srcLevel = 0;
-      texObj = _mesa_lookup_texture(ctx, meta_temp_texture->TexObj);
+      texObj = meta_temp_texture->tex_obj;
       if (texObj == NULL) {
          return false;
       }
@@ -1056,8 +1056,10 @@ _mesa_meta_glsl_blit_cleanup(struct gl_context *ctx, struct blit_state *blit)
    _mesa_meta_blit_shader_table_cleanup(ctx, &blit->shaders_with_depth);
    _mesa_meta_blit_shader_table_cleanup(ctx, &blit->shaders_without_depth);
 
-   _mesa_DeleteTextures(1, &blit->depthTex.TexObj);
-   blit->depthTex.TexObj = 0;
+   if (blit->depthTex.tex_obj != NULL) {
+      _mesa_DeleteTextures(1, &blit->depthTex.tex_obj->Name);
+      blit->depthTex.tex_obj = NULL;
+   }
 }
 
 void

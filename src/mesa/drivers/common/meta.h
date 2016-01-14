@@ -200,7 +200,7 @@ struct save_state
  */
 struct temp_texture
 {
-   GLuint TexObj;
+   struct gl_texture_object *tex_obj;
    GLenum Target;         /**< GL_TEXTURE_2D or GL_TEXTURE_RECTANGLE */
    GLsizei MinSize;       /**< Min texture size to allocate */
    GLsizei MaxSize;       /**< Max possible texture size */

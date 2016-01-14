@@ -1228,6 +1228,8 @@ invert_z(GLfloat normZ)
 static void
 init_temp_texture(struct gl_context *ctx, struct temp_texture *tex)
 {
+   GLuint texObj;
+
    /* prefer texture rectangle */
    if (_mesa_is_desktop_gl(ctx) && ctx->Extensions.NV_texture_rectangle) {
       tex->Target = GL_TEXTURE_RECTANGLE;
@@ -1243,16 +1245,22 @@ init_temp_texture(struct gl_context *ctx, struct temp_texture *tex)
    tex->MinSize = 16;  /* 16 x 16 at least */
    assert(tex->MaxSize > 0);
 
-   _mesa_GenTextures(1, &tex->TexObj);
+   _mesa_GenTextures(1, &texObj);
+   tex->tex_obj = NULL;
+
+   if (texObj == 0)
+      return;
+
+   tex->tex_obj = _mesa_lookup_texture(ctx, texObj);
 }
 
 static void
 cleanup_temp_texture(struct temp_texture *tex)
 {
-   if (!tex->TexObj)
+   if (tex->tex_obj == NULL)
      return;
-   _mesa_DeleteTextures(1, &tex->TexObj);
-   tex->TexObj = 0;
+   _mesa_DeleteTextures(1, &tex->tex_obj->Name);
+   tex->tex_obj = NULL;
 }
 
 
@@ -1265,7 +1273,7 @@ _mesa_meta_get_temp_texture(struct gl_context *ctx)
 {
    struct temp_texture *tex = &ctx->Meta->TempTex;
 
-   if (!tex->TexObj) {
+   if (tex->tex_obj == NULL) {
       init_temp_texture(ctx, tex);
    }
 
@@ -1283,7 +1291,7 @@ get_bitmap_temp_texture(struct gl_context *ctx)
 {
    struct temp_texture *tex = &ctx->Meta->Bitmap.Tex;
 
-   if (!tex->TexObj) {
+   if (tex->tex_obj == NULL) {
       init_temp_texture(ctx, tex);
    }
 
@@ -1299,7 +1307,7 @@ _mesa_meta_get_temp_depth_texture(struct gl_context *ctx)
 {
    struct temp_texture *tex = &ctx->Meta->Blit.depthTex;
 
-   if (!tex->TexObj) {
+   if (tex->tex_obj == NULL) {
       init_temp_texture(ctx, tex);
    }
 
@@ -1378,9 +1386,11 @@ _mesa_meta_setup_copypix_texture(struct gl_context *ctx,
 {
    bool newTex;
 
-   _mesa_BindTexture(tex->Target, tex->TexObj);
-   _mesa_TexParameteri(tex->Target, GL_TEXTURE_MIN_FILTER, filter);
-   _mesa_TexParameteri(tex->Target, GL_TEXTURE_MAG_FILTER, filter);
+   _mesa_BindTexture(tex->Target, tex->tex_obj->Name);
+   _mesa_texture_parameteriv(ctx, tex->tex_obj, GL_TEXTURE_MIN_FILTER,
+                             (GLint *) &filter, false);
+   _mesa_texture_parameteriv(ctx, tex->tex_obj, GL_TEXTURE_MAG_FILTER,
+                             (GLint *) &filter, false);
    _mesa_TexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
    newTex = _mesa_meta_alloc_texture(tex, width, height, intFormat);
@@ -1422,9 +1432,16 @@ _mesa_meta_setup_drawpix_texture(struct gl_context *ctx,
                                  GLenum format, GLenum type,
                                  const GLvoid *pixels)
 {
-   _mesa_BindTexture(tex->Target, tex->TexObj);
-   _mesa_TexParameteri(tex->Target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-   _mesa_TexParameteri(tex->Target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   /* GLint so the compiler won't complain about type signedness mismatch in
+    * the call to _mesa_texture_parameteriv below.
+    */
+   static const GLint filter = GL_NEAREST;
+
+   _mesa_BindTexture(tex->Target, tex->tex_obj->Name);
+   _mesa_texture_parameteriv(ctx, tex->tex_obj, GL_TEXTURE_MIN_FILTER, &filter,
+                             false);
+   _mesa_texture_parameteriv(ctx, tex->tex_obj, GL_TEXTURE_MAG_FILTER, &filter,
+                             false);
    _mesa_TexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
    /* copy pixel data to texture */
