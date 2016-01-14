@@ -1188,8 +1188,6 @@ struct anv_state anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
 struct anv_state anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
                                               uint32_t *a, uint32_t *b,
                                               uint32_t dwords, uint32_t alignment);
-void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
-                                  struct anv_subpass *subpass);
 
 struct anv_address
 anv_cmd_buffer_surface_base_address(struct anv_cmd_buffer *cmd_buffer);
