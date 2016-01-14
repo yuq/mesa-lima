@@ -1061,7 +1061,7 @@ void anv_dynamic_state_copy(struct anv_dynamic_state *dest,
 
 /** State required while building cmd buffer */
 struct anv_cmd_state {
-   uint32_t                                     current_pipeline;
+   uint32_t current_pipeline; /**< PIPELINE_SELECT.PipelineSelection */
    uint32_t                                     vb_dirty;
    anv_cmd_dirty_mask_t                         dirty;
    anv_cmd_dirty_mask_t                         compute_dirty;
