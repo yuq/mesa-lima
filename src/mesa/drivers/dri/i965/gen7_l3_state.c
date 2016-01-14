@@ -355,6 +355,7 @@ setup_l3_config(struct brw_context *brw, const struct brw_l3_config *cfg)
                                PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE |
                                PIPE_CONTROL_CONST_CACHE_INVALIDATE |
                                PIPE_CONTROL_INSTRUCTION_INVALIDATE |
+                               PIPE_CONTROL_STATE_CACHE_INVALIDATE |
                                PIPE_CONTROL_NO_WRITE);
 
    /* Now send a third stalling flush to make sure that invalidation is
