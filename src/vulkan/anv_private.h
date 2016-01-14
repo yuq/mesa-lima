@@ -152,6 +152,8 @@ anv_clear_mask(uint32_t *inout_mask, uint32_t clear_mask)
    memcpy((dest), (src), (count) * sizeof(*(src))); \
 })
 
+#define zero(x) (memset(&(x), 0, sizeof(x)))
+
 /* Define no kernel as 1, since that's an illegal offset for a kernel */
 #define NO_KERNEL 1
 
