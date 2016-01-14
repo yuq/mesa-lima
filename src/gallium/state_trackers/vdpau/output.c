@@ -79,7 +79,8 @@ vlVdpOutputSurfaceCreate(VdpDevice device,
    res_tmpl.height0 = height;
    res_tmpl.depth0 = 1;
    res_tmpl.array_size = 1;
-   res_tmpl.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
+   res_tmpl.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET |
+                   PIPE_BIND_LINEAR;
    res_tmpl.usage = PIPE_USAGE_DEFAULT;
 
    pipe_mutex_lock(dev->mutex);
