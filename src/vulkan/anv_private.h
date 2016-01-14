@@ -1243,15 +1243,14 @@ void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
                                      const VkRenderPassBeginInfo *info);
-void gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
-                                   struct anv_subpass *subpass);
 
-void gen8_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+void gen7_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
                                    struct anv_subpass *subpass);
-void gen9_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+void gen8_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
                                    struct anv_subpass *subpass);
-
-void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+void gen9_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
+                                   struct anv_subpass *subpass);
+void anv_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
                                   struct anv_subpass *subpass);
 
 struct anv_state

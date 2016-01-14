@@ -386,7 +386,7 @@ VkResult anv_BeginCommandBuffer(
       struct anv_subpass *subpass =
          &cmd_buffer->state.pass->subpasses[pBeginInfo->pInheritanceInfo->subpass];
 
-      anv_cmd_buffer_begin_subpass(cmd_buffer, subpass);
+      anv_cmd_buffer_set_subpass(cmd_buffer, subpass);
    }
 
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
@@ -954,19 +954,31 @@ anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
    return state;
 }
 
+/**
+ * @brief Setup the command buffer for recording commands inside the given
+ * subpass.
+ *
+ * This does not record all commands needed for starting the subpass.
+ * Starting the subpass may require additional commands.
+ *
+ * Note that vkCmdBeginRenderPass, vkCmdNextSubpass, and vkBeginCommandBuffer
+ * with VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, all setup the
+ * command buffer for recording commands for some subpass.  But only the first
+ * two, vkCmdBeginRenderPass and vkCmdNextSubpass, can start a subpass.
+ */
 void
-anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
-                             struct anv_subpass *subpass)
+anv_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
+                           struct anv_subpass *subpass)
 {
    switch (cmd_buffer->device->info.gen) {
    case 7:
-      gen7_cmd_buffer_begin_subpass(cmd_buffer, subpass);
+      gen7_cmd_buffer_set_subpass(cmd_buffer, subpass);
       break;
    case 8:
-      gen8_cmd_buffer_begin_subpass(cmd_buffer, subpass);
+      gen8_cmd_buffer_set_subpass(cmd_buffer, subpass);
       break;
    case 9:
-      gen9_cmd_buffer_begin_subpass(cmd_buffer, subpass);
+      gen9_cmd_buffer_set_subpass(cmd_buffer, subpass);
       break;
    default:
       unreachable("unsupported gen\n");

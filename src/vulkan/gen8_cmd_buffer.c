@@ -791,9 +791,12 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS));
 }
 
+/**
+ * @see anv_cmd_buffer_set_subpass()
+ */
 void
-genX(cmd_buffer_begin_subpass)(struct anv_cmd_buffer *cmd_buffer,
-                               struct anv_subpass *subpass)
+genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
+                             struct anv_subpass *subpass)
 {
    cmd_buffer->state.subpass = subpass;
 
@@ -829,7 +832,7 @@ void genX(CmdBeginRenderPass)(
                   .DrawingRectangleOriginY = 0,
                   .DrawingRectangleOriginX = 0);
 
-   genX(cmd_buffer_begin_subpass)(cmd_buffer, pass->subpasses);
+   genX(cmd_buffer_set_subpass)(cmd_buffer, pass->subpasses);
    anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
 
@@ -841,7 +844,7 @@ void genX(CmdNextSubpass)(
 
    assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-   genX(cmd_buffer_begin_subpass)(cmd_buffer, cmd_buffer->state.subpass + 1);
+   genX(cmd_buffer_set_subpass)(cmd_buffer, cmd_buffer->state.subpass + 1);
    anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
 
