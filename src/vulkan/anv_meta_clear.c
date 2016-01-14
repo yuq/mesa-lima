@@ -335,7 +335,8 @@ fail:
 
 static void
 emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
-                 const VkClearAttachment *clear_att)
+                 const VkClearAttachment *clear_att,
+                 const VkClearRect *clear_rect)
 {
    struct anv_device *device = cmd_buffer->device;
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
@@ -353,17 +354,26 @@ emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
    const struct color_clear_vattrs vertex_data[3] = {
       {
          .vue_header = { 0 },
-         .position = { 0.0, 0.0 },
+         .position = {
+            clear_rect->rect.offset.x,
+            clear_rect->rect.offset.y,
+         },
          .color = clear_value,
       },
       {
          .vue_header = { 0 },
-         .position = { fb->width, 0.0 },
+         .position = {
+            clear_rect->rect.offset.x + clear_rect->rect.extent.width,
+            clear_rect->rect.offset.y,
+         },
          .color = clear_value,
       },
       {
          .vue_header = { 0 },
-         .position = { fb->width, fb->height },
+         .position = {
+            clear_rect->rect.offset.x + clear_rect->rect.extent.width,
+            clear_rect->rect.offset.y + clear_rect->rect.extent.height,
+         },
          .color = clear_value,
       },
    };
@@ -510,7 +520,8 @@ create_depthstencil_pipeline(struct anv_device *device,
 
 static void
 emit_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
-                        const VkClearAttachment *clear_att)
+                        const VkClearAttachment *clear_att,
+                        const VkClearRect *clear_rect)
 {
    struct anv_device *device = cmd_buffer->device;
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
@@ -530,15 +541,24 @@ emit_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
    const struct depthstencil_clear_vattrs vertex_data[3] = {
       {
          .vue_header = { 0 },
-         .position = { 0.0, 0.0 },
+         .position = {
+            clear_rect->rect.offset.x,
+            clear_rect->rect.offset.y,
+         },
       },
       {
          .vue_header = { 0 },
-         .position = { fb->width, 0.0 },
+         .position = {
+            clear_rect->rect.offset.x + clear_rect->rect.extent.width,
+            clear_rect->rect.offset.y,
+         },
       },
       {
          .vue_header = { 0 },
-         .position = { fb->width, fb->height },
+         .position = {
+            clear_rect->rect.offset.x + clear_rect->rect.extent.width,
+            clear_rect->rect.offset.y + clear_rect->rect.extent.height,
+         },
       },
    };
 
@@ -690,14 +710,15 @@ anv_device_finish_meta_clear_state(struct anv_device *device)
  */
 static void
 emit_clear(struct anv_cmd_buffer *cmd_buffer,
-           const VkClearAttachment *clear_att)
+           const VkClearAttachment *clear_att,
+           const VkClearRect *clear_rect)
 {
    if (clear_att->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
-      emit_color_clear(cmd_buffer, clear_att);
+      emit_color_clear(cmd_buffer, clear_att, clear_rect);
    } else {
       assert(clear_att->aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT |
                                       VK_IMAGE_ASPECT_STENCIL_BIT));
-      emit_depthstencil_clear(cmd_buffer, clear_att);
+      emit_depthstencil_clear(cmd_buffer, clear_att, clear_rect);
    }
 }
 
@@ -731,6 +752,7 @@ void
 anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_cmd_state *cmd_state = &cmd_buffer->state;
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_meta_saved_state saved_state;
 
    if (!subpass_needs_clear(cmd_buffer))
@@ -740,6 +762,15 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_state->framebuffer->layers > 1)
       anv_finishme("clearing multi-layer framebuffer");
+
+   VkClearRect clear_rect = {
+      .rect = {
+         .offset = { 0, 0 },
+         .extent = { fb->width, fb->height },
+      },
+      .baseArrayLayer = 0,
+      .layerCount = 1, /* FINISHME: clear multi-layer framebuffer */
+   };
 
    for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
       uint32_t a = cmd_state->subpass->color_attachments[i];
@@ -756,7 +787,7 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
          .clearValue = cmd_state->attachments[a].clear_value,
       };
 
-      emit_clear(cmd_buffer, &clear_att);
+      emit_clear(cmd_buffer, &clear_att, &clear_rect);
       cmd_state->attachments[a].pending_clear_aspects = 0;
    }
 
@@ -770,7 +801,7 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
          .clearValue = cmd_state->attachments[ds].clear_value,
       };
 
-      emit_clear(cmd_buffer, &clear_att);
+      emit_clear(cmd_buffer, &clear_att, &clear_rect);
       cmd_state->attachments[ds].pending_clear_aspects = 0;
    }
 
