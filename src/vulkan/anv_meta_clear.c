@@ -61,7 +61,8 @@ meta_clear_end(struct anv_meta_saved_state *saved_state,
 
 static void
 build_color_shaders(struct nir_shader **out_vs,
-                    struct nir_shader **out_fs)
+                    struct nir_shader **out_fs,
+                    uint32_t frag_output)
 {
    nir_builder vs_b;
    nir_builder fs_b;
@@ -105,7 +106,7 @@ build_color_shaders(struct nir_shader **out_vs,
    nir_variable *fs_out_color =
       nir_variable_create(fs_b.shader, nir_var_shader_out, color_type,
                           "f_color");
-   fs_out_color->data.location = FRAG_RESULT_DATA0;
+   fs_out_color->data.location = FRAG_RESULT_DATA0 + frag_output;
 
    nir_copy_var(&vs_b, vs_out_pos, vs_in_pos);
    nir_copy_var(&vs_b, vs_out_color, vs_in_color);
@@ -123,6 +124,7 @@ create_pipeline(struct anv_device *device,
                 const VkPipelineDepthStencilStateCreateInfo *ds_state,
                 const VkPipelineColorBlendStateCreateInfo *cb_state,
                 const VkAllocationCallbacks *alloc,
+                bool use_repclear,
                 struct anv_pipeline **pipeline)
 {
    VkDevice device_h = anv_device_to_handle(device);
@@ -208,7 +210,7 @@ create_pipeline(struct anv_device *device,
       },
       &(struct anv_graphics_pipeline_create_info) {
          .color_attachment_count = MAX_RTS,
-         .use_repclear = true,
+         .use_repclear = use_repclear,
          .disable_viewport = true,
          .disable_vs = true,
          .use_rectlist = true
@@ -225,11 +227,12 @@ create_pipeline(struct anv_device *device,
 }
 
 static VkResult
-init_color_pipeline(struct anv_device *device)
+create_color_pipeline(struct anv_device *device, uint32_t frag_output,
+                      struct anv_pipeline **pipeline)
 {
    struct nir_shader *vs_nir;
    struct nir_shader *fs_nir;
-   build_color_shaders(&vs_nir, &fs_nir);
+   build_color_shaders(&vs_nir, &fs_nir, frag_output);
 
    const VkPipelineVertexInputStateCreateInfo vi_state = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -290,10 +293,44 @@ init_color_pipeline(struct anv_device *device)
       },
    };
 
+   /* Disable repclear because we do not want the compiler to replace the
+    * shader. We need the shader to write to the specified color attachment,
+    * but the repclear shader writes to all color attachments.
+    */
    return
       create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
-                      &cb_state, NULL,
-                      &device->meta_state.clear.color_pipeline);
+                      &cb_state, NULL, /*use_repclear*/ false,
+                      pipeline);
+}
+
+static VkResult
+init_color_pipelines(struct anv_device *device)
+{
+   VkResult result;
+   struct anv_pipeline **pipelines = device->meta_state.clear.color_pipelines;
+   uint32_t n = ARRAY_SIZE(device->meta_state.clear.color_pipelines);
+
+   zero(device->meta_state.clear.color_pipelines);
+
+   for (uint32_t i = 0; i < n; ++i) {
+      result = create_color_pipeline(device, i, &pipelines[i]);
+      if (result < 0)
+         goto fail;
+   }
+
+   return VK_SUCCESS;
+
+fail:
+   for (uint32_t i = 0; i < n; ++i) {
+      if (pipelines[i] == NULL)
+         break;
+
+      anv_DestroyPipeline(anv_device_to_handle(device),
+                          anv_pipeline_to_handle(pipelines[i]),
+                          NULL);
+   }
+
+   return result;
 }
 
 static void
@@ -304,8 +341,8 @@ emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
    struct anv_device *device = cmd_buffer->device;
    VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   VkPipeline pipeline_h =
-      anv_pipeline_to_handle(device->meta_state.clear.color_pipeline);
+   struct anv_pipeline *pipeline = device->meta_state.clear.color_pipelines[0];
+   VkPipeline pipeline_h = anv_pipeline_to_handle(pipeline);
 
    const struct color_clear_vattrs vertex_data[3] = {
       {
@@ -366,7 +403,7 @@ emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
       (VkBuffer[]) { anv_buffer_to_handle(&vertex_buffer) },
       (VkDeviceSize[]) { 0 });
 
-   if (cmd_buffer->state.pipeline != device->meta_state.clear.color_pipeline) {
+   if (cmd_buffer->state.pipeline != pipeline) {
       ANV_CALL(CmdBindPipeline)(cmd_buffer_h, VK_PIPELINE_BIND_POINT_GRAPHICS,
                                 pipeline_h);
    }
@@ -469,7 +506,7 @@ create_depthstencil_pipeline(struct anv_device *device,
    };
 
    return create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
-                          &cb_state, NULL, pipeline);
+                          &cb_state, NULL, /*use_repclear*/ true, pipeline);
 }
 
 static void
@@ -612,22 +649,15 @@ anv_device_init_meta_clear_state(struct anv_device *device)
 {
    VkResult result;
 
-   result = init_color_pipeline(device);
+   result = init_color_pipelines(device);
    if (result != VK_SUCCESS)
-      goto fail;
+      return result;
 
    result = init_depthstencil_pipelines(device);
    if (result != VK_SUCCESS)
-      goto fail_color_pipeline;
+      return result;
 
    return VK_SUCCESS;
-
- fail_color_pipeline:
-   anv_DestroyPipeline(anv_device_to_handle(device),
-                       anv_pipeline_to_handle(device->meta_state.clear.color_pipeline),
-                       NULL);
- fail:
-    return result;
 }
 
 void
@@ -635,9 +665,13 @@ anv_device_finish_meta_clear_state(struct anv_device *device)
 {
    VkDevice device_h = anv_device_to_handle(device);
 
-   ANV_CALL(DestroyPipeline)(device_h,
-      anv_pipeline_to_handle(device->meta_state.clear.color_pipeline),
-      NULL);
+   for (uint32_t i = 0;
+        i < ARRAY_SIZE(device->meta_state.clear.color_pipelines); ++i) {
+      ANV_CALL(DestroyPipeline)(device_h,
+         anv_pipeline_to_handle(device->meta_state.clear.color_pipelines[i]),
+         NULL);
+   }
+
    ANV_CALL(DestroyPipeline)(device_h,
       anv_pipeline_to_handle(device->meta_state.clear.depth_only_pipeline),
       NULL);

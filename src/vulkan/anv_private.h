@@ -563,7 +563,16 @@ void anv_finish_wsi(struct anv_instance *instance);
 
 struct anv_meta_state {
    struct {
-      struct anv_pipeline *color_pipeline;
+      /**
+       * Pipeline N is used to clear color attachment N of the current
+       * subpass.
+       *
+       * HACK: We use one pipeline per color attachment to work around the
+       * compiler's inability to dynamically set the render target index of
+       * the render target write message.
+       */
+      struct anv_pipeline *color_pipelines[MAX_RTS];
+
       struct anv_pipeline *depth_only_pipeline;
       struct anv_pipeline *stencil_only_pipeline;
       struct anv_pipeline *depthstencil_pipeline;
