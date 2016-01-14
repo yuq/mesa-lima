@@ -71,7 +71,9 @@ i965_compiler_FILES = \
 	brw_vec4_surface_builder.cpp \
 	brw_vec4_surface_builder.h \
 	brw_vec4_tcs.cpp \
+	brw_vec4_tcs.h \
 	brw_vec4_tes.cpp \
+	brw_vec4_tes.h \
 	brw_vec4_visitor.cpp \
 	brw_vec4_vs_visitor.cpp \
 	brw_vue_map.c \
