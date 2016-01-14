@@ -303,6 +303,8 @@ The integer capabilities:
   shader buffers are not supported.
 * ``PIPE_CAP_INVALIDATE_BUFFER``: Whether the use of ``invalidate_resource``
   for buffers is supported.
+* ``PIPE_CAP_GENERATE_MIPMAP``: Indicates whether pipe_context::generate_mipmap
+  is supported.
 
 
 .. _pipe_capf:

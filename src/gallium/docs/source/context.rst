@@ -648,3 +648,14 @@ In addition, normal texture sampling is allowed from the compute
 program: ``bind_sampler_states`` may be used to set up texture
 samplers for the compute stage and ``set_sampler_views`` may
 be used to bind a number of sampler views to it.
+
+Mipmap generation
+^^^^^^^^^^^^^^^^^
+
+If PIPE_CAP_GENERATE_MIPMAP is true, ``generate_mipmap`` can be used
+to generate mipmaps for the specified texture resource.
+It replaces texel image levels base_level+1 through
+last_level for layers range from first_layer through last_layer.
+It returns TRUE if mipmap generation succeeds, otherwise it
+returns FALSE. Mipmap generation may fail when it is not supported
+for particular texture types or formats.
