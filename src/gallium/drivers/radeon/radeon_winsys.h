@@ -547,6 +547,7 @@ struct radeon_winsys {
      */
     boolean (*buffer_get_handle)(struct pb_buffer *buf,
                                  unsigned stride, unsigned offset,
+                                 unsigned slice_size,
                                  struct winsys_handle *whandle);
 
     /**

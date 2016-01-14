@@ -374,6 +374,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	return rscreen->ws->buffer_get_handle(res->buf,
 					      rtex->surface.level[0].pitch_bytes,
 					      rtex->surface.level[0].offset,
+					      rtex->surface.level[0].slice_size,
 					      whandle);
 }
 

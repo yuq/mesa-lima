@@ -995,6 +995,7 @@ fail:
 
 static boolean radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
                                            unsigned stride, unsigned offset,
+                                           unsigned slice_size,
                                            struct winsys_handle *whandle)
 {
     struct drm_gem_flink flink;
@@ -1029,6 +1030,8 @@ static boolean radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
 
     whandle->stride = stride;
     whandle->offset = offset;
+    whandle->offset += slice_size * whandle->layer;
+
     return TRUE;
 }
 

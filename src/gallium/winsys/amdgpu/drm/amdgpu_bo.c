@@ -613,6 +613,7 @@ error:
 
 static boolean amdgpu_bo_get_handle(struct pb_buffer *buffer,
                                     unsigned stride, unsigned offset,
+                                    unsigned slice_size,
                                     struct winsys_handle *whandle)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(buffer);
@@ -641,6 +642,7 @@ static boolean amdgpu_bo_get_handle(struct pb_buffer *buffer,
 
    whandle->stride = stride;
    whandle->offset = offset;
+   whandle->offset += slice_size * whandle->layer;
    bo->is_shared = true;
    return TRUE;
 }
