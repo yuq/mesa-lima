@@ -377,7 +377,7 @@ create_uniform(struct ir3_compile *ctx, unsigned n)
 }
 
 static struct ir3_instruction *
-create_uniform_indirect(struct ir3_compile *ctx, unsigned n,
+create_uniform_indirect(struct ir3_compile *ctx, int n,
 		struct ir3_instruction *address)
 {
 	struct ir3_instruction *mov;
@@ -411,7 +411,7 @@ create_collect(struct ir3_block *block, struct ir3_instruction **arr,
 }
 
 static struct ir3_instruction *
-create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
+create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, int n,
 		struct ir3_instruction *address, struct ir3_instruction *collect)
 {
 	struct ir3_block *block = ctx->block;
@@ -434,7 +434,7 @@ create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
 
 /* relative (indirect) if address!=NULL */
 static struct ir3_instruction *
-create_var_load(struct ir3_compile *ctx, struct ir3_array *arr, unsigned n,
+create_var_load(struct ir3_compile *ctx, struct ir3_array *arr, int n,
 		struct ir3_instruction *address)
 {
 	struct ir3_block *block = ctx->block;
@@ -462,7 +462,7 @@ create_var_load(struct ir3_compile *ctx, struct ir3_array *arr, unsigned n,
 
 /* relative (indirect) if address!=NULL */
 static struct ir3_instruction *
-create_var_store(struct ir3_compile *ctx, struct ir3_array *arr, unsigned n,
+create_var_store(struct ir3_compile *ctx, struct ir3_array *arr, int n,
 		struct ir3_instruction *src, struct ir3_instruction *address)
 {
 	struct ir3_block *block = ctx->block;
@@ -1000,7 +1000,7 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 	nir_const_value *const_offset;
 	/* UBO addresses are the first driver params: */
 	unsigned ubo = regid(ctx->so->first_driver_param + IR3_UBOS_OFF, 0);
-	unsigned off = intr->const_index[0];
+	int off = intr->const_index[0];
 
 	/* First src is ubo index, which could either be an immed or not: */
 	src0 = get_src(ctx, &intr->src[0])[0];
@@ -1141,7 +1141,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	const nir_intrinsic_info *info = &nir_intrinsic_infos[intr->intrinsic];
 	struct ir3_instruction **dst, **src;
 	struct ir3_block *b = ctx->block;
-	unsigned idx = intr->const_index[0];
+	int idx = intr->const_index[0];
 	nir_const_value *const_offset;
 
 	if (info->has_dest) {
@@ -1162,7 +1162,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		} else {
 			src = get_src(ctx, &intr->src[0]);
 			for (int i = 0; i < intr->num_components; i++) {
-				unsigned n = idx * 4 + i;
+				int n = idx * 4 + i;
 				dst[i] = create_uniform_indirect(ctx, n,
 						get_addr(ctx, src[0]));
 			}

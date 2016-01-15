@@ -126,7 +126,7 @@ static uint32_t reg(struct ir3_register *reg, struct ir3_info *info,
 
 		if (reg->flags & IR3_REG_RELATIV) {
 			components = reg->size;
-			val.dummy10 = reg->array.offset;
+			val.idummy10 = reg->array.offset;
 			max = (reg->array.offset + repeat + components - 1) >> 2;
 		} else {
 			components = util_last_bit(reg->wrmask);

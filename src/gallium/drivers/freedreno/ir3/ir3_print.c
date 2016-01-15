@@ -107,7 +107,7 @@ static void print_reg_name(struct ir3_register *reg)
 	if (reg->flags & IR3_REG_IMMED) {
 		printf("imm[%f,%d,0x%x]", reg->fim_val, reg->iim_val, reg->iim_val);
 	} else if (reg->flags & IR3_REG_ARRAY) {
-		printf("arr[id=%u, offset=%u, size=%u", reg->array.id,
+		printf("arr[id=%u, offset=%d, size=%u", reg->array.id,
 				reg->array.offset, reg->size);
 		/* for ARRAY we could have null src, for example first write
 		 * instruction..
@@ -126,9 +126,9 @@ static void print_reg_name(struct ir3_register *reg)
 		if (reg->flags & IR3_REG_HALF)
 			printf("h");
 		if (reg->flags & IR3_REG_CONST)
-			printf("c<a0.x + %u>", reg->array.offset);
+			printf("c<a0.x + %d>", reg->array.offset);
 		else
-			printf("\x1b[0;31mr<a0.x + %u>\x1b[0m (%u)", reg->array.offset, reg->size);
+			printf("\x1b[0;31mr<a0.x + %d>\x1b[0m (%u)", reg->array.offset, reg->size);
 	} else {
 		if (reg->flags & IR3_REG_HALF)
 			printf("h");

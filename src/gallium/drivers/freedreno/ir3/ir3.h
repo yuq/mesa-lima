@@ -100,7 +100,7 @@ struct ir3_register {
 		/* relative: */
 		struct {
 			uint16_t id;
-			uint16_t offset;
+			int16_t offset;
 		} array;
 	};
 
