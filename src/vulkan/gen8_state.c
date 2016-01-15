@@ -187,7 +187,7 @@ genX(image_view_init)(struct anv_image_view *iview,
    uint32_t halign, valign;
    get_halign_valign(&surface->isl, &halign, &valign);
 
-   struct GENX(RENDER_SURFACE_STATE) surface_state = {
+   struct GENX(RENDER_SURFACE_STATE) template = {
       .SurfaceType = anv_surftype(image, pCreateInfo->viewType, false),
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = iview->format,
@@ -237,10 +237,10 @@ genX(image_view_init)(struct anv_image_view *iview,
       .SurfaceBaseAddress = { NULL, iview->offset },
    };
 
-   switch (surface_state.SurfaceType) {
+   switch (template.SurfaceType) {
    case SURFTYPE_1D:
    case SURFTYPE_2D:
-      surface_state.MinimumArrayElement = range->baseArrayLayer;
+      template.MinimumArrayElement = range->baseArrayLayer;
 
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
        *
@@ -251,37 +251,37 @@ genX(image_view_init)(struct anv_image_view *iview,
        *
        * In other words, 'Depth' is the number of array layers.
        */
-      surface_state.Depth = range->layerCount - 1;
+      template.Depth = range->layerCount - 1;
 
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
        *
        *    For Render Target and Typed Dataport 1D and 2D Surfaces:
        *    This field must be set to the same value as the Depth field.
        */
-      surface_state.RenderTargetViewExtent = surface_state.Depth;
+      template.RenderTargetViewExtent = template.Depth;
       break;
    case SURFTYPE_CUBE:
       #if ANV_GENx10 >= 90
          /* Like SURFTYPE_2D, but divided by 6. */
-         surface_state.MinimumArrayElement = range->baseArrayLayer / 6;
-         surface_state.Depth = range->layerCount / 6 - 1;
-         surface_state.RenderTargetViewExtent = surface_state.Depth;
+         template.MinimumArrayElement = range->baseArrayLayer / 6;
+         template.Depth = range->layerCount / 6 - 1;
+         template.RenderTargetViewExtent = template.Depth;
       #else
          /* Same as SURFTYPE_2D */
-         surface_state.MinimumArrayElement = range->baseArrayLayer;
-         surface_state.Depth = range->layerCount - 1;
-         surface_state.RenderTargetViewExtent = surface_state.Depth;
+         template.MinimumArrayElement = range->baseArrayLayer;
+         template.Depth = range->layerCount - 1;
+         template.RenderTargetViewExtent = template.Depth;
       #endif
       break;
    case SURFTYPE_3D:
-      surface_state.MinimumArrayElement = range->baseArrayLayer;
+      template.MinimumArrayElement = range->baseArrayLayer;
 
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
        *
        *    If the volume texture is MIP-mapped, this field specifies the
        *    depth of the base MIP level.
        */
-      surface_state.Depth = image->extent.depth - 1;
+      template.Depth = image->extent.depth - 1;
 
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
        *
@@ -289,13 +289,15 @@ genX(image_view_init)(struct anv_image_view *iview,
        *    indicates the extent of the accessible 'R' coordinates minus 1 on
        *    the LOD currently being rendered to.
        */
-      surface_state.RenderTargetViewExtent = iview->extent.depth - 1;
+      template.RenderTargetViewExtent = iview->extent.depth - 1;
       break;
    default:
       unreachable(!"bad SurfaceType");
    }
 
    if (image->needs_nonrt_surface_state) {
+      struct GENX(RENDER_SURFACE_STATE) surface_state = template;
+
       iview->nonrt_surface_state =
          alloc_surface_state(device, cmd_buffer);
 
@@ -315,6 +317,8 @@ genX(image_view_init)(struct anv_image_view *iview,
    }
 
    if (image->needs_color_rt_surface_state) {
+      struct GENX(RENDER_SURFACE_STATE) surface_state = template;
+
       iview->color_rt_surface_state =
          alloc_surface_state(device, cmd_buffer);
 
@@ -336,6 +340,8 @@ genX(image_view_init)(struct anv_image_view *iview,
    }
 
    if (image->needs_storage_surface_state) {
+      struct GENX(RENDER_SURFACE_STATE) surface_state = template;
+
       iview->storage_surface_state =
          alloc_surface_state(device, cmd_buffer);
 

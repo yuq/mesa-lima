@@ -173,7 +173,7 @@ genX(image_view_init)(struct anv_image_view *iview,
    const struct isl_extent3d image_align_sa =
       isl_surf_get_image_alignment_sa(&surface->isl);
 
-   struct GENX(RENDER_SURFACE_STATE) surface_state = {
+   const struct GENX(RENDER_SURFACE_STATE) template = {
       .SurfaceType = anv_surftype(image, pCreateInfo->viewType, false),
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = iview->format,
@@ -227,6 +227,8 @@ genX(image_view_init)(struct anv_image_view *iview,
    };
 
    if (image->needs_nonrt_surface_state) {
+      struct GENX(RENDER_SURFACE_STATE) surface_state = template;
+
       iview->nonrt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       surface_state.RenderCacheReadWriteMode = false;
@@ -248,6 +250,8 @@ genX(image_view_init)(struct anv_image_view *iview,
    }
 
    if (image->needs_color_rt_surface_state) {
+      struct GENX(RENDER_SURFACE_STATE) surface_state = template;
+
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       surface_state.RenderCacheReadWriteMode = 0; /* Write only */
@@ -270,6 +274,8 @@ genX(image_view_init)(struct anv_image_view *iview,
    }
 
    if (image->needs_storage_surface_state) {
+      struct GENX(RENDER_SURFACE_STATE) surface_state = template;
+
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
       surface_state.SurfaceType =
