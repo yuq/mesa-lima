@@ -667,8 +667,7 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
        * actual ExecuteCommands implementation.
        */
       if ((cmd_buffer->batch_bos.next == cmd_buffer->batch_bos.prev) &&
-          (anv_cmd_buffer_current_batch_bo(cmd_buffer)->length <
-           ANV_CMD_BUFFER_BATCH_SIZE / 2)) {
+          (batch_bo->length < ANV_CMD_BUFFER_BATCH_SIZE / 2)) {
          /* If the secondary has exactly one batch buffer in its list *and*
           * that batch buffer is less than half of the maximum size, we're
           * probably better of simply copying it into our batch.
@@ -683,7 +682,7 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
           * so we can unconditionally decrement right before adding the
           * MI_BATCH_BUFFER_START command.
           */
-         anv_cmd_buffer_current_batch_bo(cmd_buffer)->relocs.num_relocs++;
+         batch_bo->relocs.num_relocs++;
          cmd_buffer->batch.next += GEN8_MI_BATCH_BUFFER_START_length * 4;
       } else {
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN;
