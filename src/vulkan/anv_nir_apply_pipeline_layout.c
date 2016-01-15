@@ -203,6 +203,11 @@ lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
    lower_tex_deref(tex, tex->sampler, &tex->sampler_index,
                    nir_tex_src_sampler_offset, state);
 
+   /* The backend only ever uses this to mark used surfaces.  We don't care
+    * about that little optimization so it just needs to be non-zero.
+    */
+   tex->texture_array_size = 1;
+
    if (tex->texture)
       cleanup_tex_deref(tex, tex->texture);
    cleanup_tex_deref(tex, tex->sampler);
