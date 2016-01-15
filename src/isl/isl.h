@@ -26,93 +26,13 @@
  * @brief Intel Surface Layout
  *
  * Header Layout
- * =============
- *
+ * -------------
  * The header is ordered as:
  *    - forward declarations
  *    - macros that may be overridden at compile-time for specific gens
  *    - enums and constants
  *    - structs and unions
  *    - functions
- *
- *
- * Surface Units
- * =============
- *
- * Intro
- * -----
- * ISL takes care in its equations to correctly handle conversion among
- * surface units (such as pixels and compression blocks) and to carefully
- * distinguish between a surface's logical layout in the client API and its
- * physical layout in memory.
- *
- * Symbol names often explicitly declare their unit with a suffix:
- *
- *    - px: logical pixels
- *    - sa: physical surface samples
- *    - el: physical surface elements
- *    - sa_rows: rows of physical surface samples
- *    - el_rows: rows of physical surface elements
- *
- * Logical units are independent of hardware generation and are closely
- * related to the user-facing API (OpenGL and Vulkan). Physical units are
- * dependent on hardware generation and reflect the surface's layout in
- * memory.
- *
- * Definitions
- * -----------
- * - Logical Pixels (px):
- *
- *   The surface's layout from the perspective of the client API (OpenGL and
- *   Vulkan) is in units of logical pixels. Logical pixels are independent of
- *   the surface's layout in memory.
- *
- *   A surface's width and height, in units of logical pixels, is not affected
- *   by the surface's sample count. For example, consider a VkImage created
- *   with VkImageCreateInfo{width=w0, height=h0, samples=s0}. The surface's
- *   width and height at level 0 is, in units of logical pixels, w0 and h0
- *   regardless of the value of s0.
- *
- *   For example, the logical array length of a 3D surface is always 1, even
- *   on Gen9 where the surface's memory layout is that of an array surface
- *   (ISL_DIM_LAYOUT_GEN4_2D).
- *
- * - Physical Surface Samples (sa):
- *
- *   For a multisampled surface, this unit has the obvious meaning.
- *   A singlesampled surface, from ISL's perspective, is simply a multisampled
- *   surface whose sample count is 1.
- *
- *   For example, consider a 2D single-level non-array surface with samples=4,
- *   width_px=64, and height_px=64 (note that the suffix 'px' indicates
- *   logical pixels). If the surface's multisample layout is
- *   ISL_MSAA_LAYOUT_INTERLEAVED, then the extent of level 0 is, in units of
- *   physical surface samples, width_sa=128, height_sa=128, depth_sa=1,
- *   array_length_sa=1. If ISL_MSAA_LAYOUT_ARRAY, then width_sa=64,
- *   height_sa=64, depth_sa=1, array_length_sa=4.
- *
- * - Physical Surface Elements (el):
- *
- *   This unit allows ISL to treat compressed and uncompressed formats
- *   identically in many calculations.
- *
- *   If the surface's pixel format is compressed, such as ETC2, then a surface
- *   element is equivalent to a compression block. If uncompressed, then
- *   a surface element is equivalent to a surface sample. As a corollary, for
- *   a given surface a surface element is at least as large as a surface
- *   sample.
- *
- * Errata
- * ------
- * ISL acquired the term 'element' from the Broadwell PRM [1], which defines
- * a surface element as follows:
- *
- *    An element is defined as a pixel in uncompresed surface formats, and as
- *    a compression block in compressed surface formats. For
- *    MSFMT_DEPTH_STENCIL type multisampled surfaces, an element is a sample.
- *
- * [1]: Broadwell PRM >> Volume 2d: Command Reference: Structures >>
- *      RENDER_SURFACE_STATE Surface Vertical Alignment (p325)
  */
 
 #pragma once
