@@ -433,6 +433,9 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 
 		unsigned blend_cntl = 0;
 
+		if (!state->rt[j].colormask)
+			continue;
+
 		/* we pretend 8 buffer are used, CB_SHADER_MASK will disable unused one */
 		blend->cb_target_mask |= state->rt[j].colormask << (4 * i);
 
