@@ -35,7 +35,8 @@ link_invalidate_variable_locations(exec_list *ir);
 
 extern void
 link_assign_uniform_locations(struct gl_shader_program *prog,
-                              unsigned int boolean_true);
+                              unsigned int boolean_true,
+                              unsigned int max_locations);
 
 extern void
 link_set_uniform_initializers(struct gl_shader_program *prog,
