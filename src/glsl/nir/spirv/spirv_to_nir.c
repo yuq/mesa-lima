@@ -2355,7 +2355,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
 
    unsigned idx = 4;
 
-   unsigned coord_components = 0;
+   bool has_coord = false;
    switch (opcode) {
    case SpvOpImageSampleImplicitLod:
    case SpvOpImageSampleExplicitLod:
@@ -2371,7 +2371,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    case SpvOpImageQueryLod: {
       /* All these types have the coordinate as their first real argument */
       struct vtn_ssa_value *coord = vtn_ssa_value(b, w[idx++]);
-      coord_components = glsl_get_vector_elements(coord->type);
+      has_coord = true;
       p->src = nir_src_for_ssa(coord->def);
       p->src_type = nir_tex_src_coord;
       p++;
@@ -2478,10 +2478,41 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    assert(idx == count);
 
    nir_tex_instr *instr = nir_tex_instr_create(b->shader, p - srcs);
+   instr->op = texop;
+
+   memcpy(instr->src, srcs, instr->num_srcs * sizeof(*instr->src));
 
    const struct glsl_type *sampler_type =
       nir_deref_tail(&sampled.sampler->deref)->type;
    instr->sampler_dim = glsl_get_sampler_dim(sampler_type);
+   instr->is_array = glsl_sampler_type_is_array(sampler_type);
+   instr->is_shadow = glsl_sampler_type_is_shadow(sampler_type);
+   instr->is_new_style_shadow = instr->is_shadow;
+
+   if (has_coord) {
+      switch (instr->sampler_dim) {
+      case GLSL_SAMPLER_DIM_1D:
+      case GLSL_SAMPLER_DIM_BUF:
+         instr->coord_components = 1;
+         break;
+      case GLSL_SAMPLER_DIM_2D:
+      case GLSL_SAMPLER_DIM_RECT:
+         instr->coord_components = 2;
+         break;
+      case GLSL_SAMPLER_DIM_3D:
+      case GLSL_SAMPLER_DIM_CUBE:
+      case GLSL_SAMPLER_DIM_MS:
+         instr->coord_components = 3;
+         break;
+      default:
+         assert("Invalid sampler type");
+      }
+
+      if (instr->is_array)
+         instr->coord_components++;
+   } else {
+      instr->coord_components = 0;
+   }
 
    switch (glsl_get_sampler_result_type(sampler_type)) {
    case GLSL_TYPE_FLOAT:   instr->dest_type = nir_type_float;     break;
@@ -2491,13 +2522,6 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    default:
       unreachable("Invalid base type for sampler result");
    }
-
-   instr->op = texop;
-   memcpy(instr->src, srcs, instr->num_srcs * sizeof(*instr->src));
-   instr->coord_components = coord_components;
-   instr->is_array = glsl_sampler_type_is_array(sampler_type);
-   instr->is_shadow = glsl_sampler_type_is_shadow(sampler_type);
-   instr->is_new_style_shadow = instr->is_shadow;
 
    instr->sampler =
       nir_deref_as_var(nir_copy_deref(instr, &sampled.sampler->deref));
