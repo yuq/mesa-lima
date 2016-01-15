@@ -916,14 +916,125 @@ void anv_CmdClearColorImage(
 }
 
 void anv_CmdClearDepthStencilImage(
-    VkCommandBuffer                             commandBuffer,
-    VkImage                                     image,
+    VkCommandBuffer                             cmd_buffer_h,
+    VkImage                                     image_h,
     VkImageLayout                               imageLayout,
     const VkClearDepthStencilValue*             pDepthStencil,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
-   stub();
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmd_buffer_h);
+   ANV_FROM_HANDLE(anv_image, image, image_h);
+   struct anv_meta_saved_state saved_state;
+   VkDevice device_h = anv_device_to_handle(cmd_buffer->device);
+
+   meta_clear_begin(&saved_state, cmd_buffer);
+
+   for (uint32_t r = 0; r < rangeCount; r++) {
+      const VkImageSubresourceRange *range = &pRanges[r];
+
+      for (uint32_t l = 0; l < range->levelCount; ++l) {
+         for (uint32_t s = 0; s < range->layerCount; ++s) {
+            struct anv_image_view iview;
+            anv_image_view_init(&iview, cmd_buffer->device,
+               &(VkImageViewCreateInfo) {
+                  .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                  .image = image_h,
+                  .viewType = anv_meta_get_view_type(image),
+                  .format = image->vk_format,
+                  .subresourceRange = {
+                     .aspectMask = range->aspectMask,
+                     .baseMipLevel = range->baseMipLevel + l,
+                     .levelCount = 1,
+                     .baseArrayLayer = range->baseArrayLayer + s,
+                     .layerCount = 1
+                  },
+               },
+               cmd_buffer);
+
+            VkFramebuffer fb;
+            anv_CreateFramebuffer(device_h,
+               &(VkFramebufferCreateInfo) {
+                  .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                  .attachmentCount = 1,
+                  .pAttachments = (VkImageView[]) {
+                     anv_image_view_to_handle(&iview),
+                  },
+                  .width = iview.extent.width,
+                  .height = iview.extent.height,
+                  .layers = 1
+               },
+               &cmd_buffer->pool->alloc,
+               &fb);
+
+            VkAttachmentLoadOp depth_load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
+            if (range->aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)
+               depth_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+            VkAttachmentLoadOp stencil_load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
+            if (range->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT)
+               stencil_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+            VkRenderPass pass;
+            anv_CreateRenderPass(device_h,
+               &(VkRenderPassCreateInfo) {
+                  .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+                  .attachmentCount = 1,
+                  .pAttachments = &(VkAttachmentDescription) {
+                     .format = iview.vk_format,
+                     .loadOp = depth_load_op,
+                     .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                     .stencilLoadOp = stencil_load_op,
+                     .stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
+                     .initialLayout = imageLayout,
+                     .finalLayout = imageLayout,
+                  },
+                  .subpassCount = 1,
+                  .pSubpasses = &(VkSubpassDescription) {
+                     .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                     .inputAttachmentCount = 0,
+                     .colorAttachmentCount = 0,
+                     .pColorAttachments = NULL,
+                     .pResolveAttachments = NULL,
+                     .pDepthStencilAttachment = &(VkAttachmentReference) {
+                        .attachment = 0,
+                        .layout = imageLayout,
+                     },
+                     .preserveAttachmentCount = 0,
+                     .pPreserveAttachments = NULL,
+                  },
+                  .dependencyCount = 0,
+               },
+               &cmd_buffer->pool->alloc,
+               &pass);
+
+            ANV_CALL(CmdBeginRenderPass)(cmd_buffer_h,
+               &(VkRenderPassBeginInfo) {
+                  .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                  .renderArea = {
+                     .offset = { 0, 0, },
+                     .extent = {
+                        .width = iview.extent.width,
+                        .height = iview.extent.height,
+                     },
+                  },
+                  .renderPass = pass,
+                  .framebuffer = fb,
+                  .clearValueCount = 1,
+                  .pClearValues = (VkClearValue[]) {
+                     { .depthStencil = *pDepthStencil },
+                  },
+               },
+               VK_SUBPASS_CONTENTS_INLINE);
+
+            ANV_CALL(CmdEndRenderPass)(cmd_buffer_h);
+
+            /* XXX: We're leaking the render pass and framebuffer */
+         }
+      }
+   }
+
+   meta_clear_end(&saved_state, cmd_buffer);
 }
 
 void anv_CmdClearAttachments(
