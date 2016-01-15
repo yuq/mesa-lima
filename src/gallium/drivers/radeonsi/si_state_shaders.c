@@ -617,7 +617,21 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		    sel->info.colors_written == 0x1)
 			key->ps.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
 
-		key->ps.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
+		if (blend) {
+			/* Select the shader color format based on whether
+			 * blending or alpha are needed.
+			 */
+			key->ps.spi_shader_col_format =
+				(blend->blend_enable_4bit & blend->need_src_alpha_4bit &
+				 sctx->framebuffer.spi_shader_col_format_blend_alpha) |
+				(blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
+				 sctx->framebuffer.spi_shader_col_format_blend) |
+				(~blend->blend_enable_4bit & blend->need_src_alpha_4bit &
+				 sctx->framebuffer.spi_shader_col_format_alpha) |
+				(~blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
+				 sctx->framebuffer.spi_shader_col_format);
+		} else
+			key->ps.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
 
 		/* If alpha-to-coverage is enabled, we have to export alpha
 		 * even if there is no color buffer.
@@ -625,6 +639,13 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		if (!(key->ps.spi_shader_col_format & 0xf) &&
 		    blend && blend->alpha_to_coverage)
 			key->ps.spi_shader_col_format |= V_028710_SPI_SHADER_32_AR;
+
+		/* On SI and CIK except Hawaii, the CB doesn't clamp outputs
+		 * to the range supported by the type if a channel has less
+		 * than 16 bits and the export format is 16_ABGR.
+		 */
+		if (sctx->b.chip_class <= CIK && sctx->b.family != CHIP_HAWAII)
+			key->ps.color_is_int8 = sctx->framebuffer.color_is_int8;
 
 		if (rs) {
 			bool is_poly = (sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&
