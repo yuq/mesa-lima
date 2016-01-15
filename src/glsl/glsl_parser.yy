@@ -957,7 +957,7 @@ parameter_qualifier:
                                       "or precise");
 
       $$ = $1;
-      $$.merge_qualifier(&@1, state, $2);
+      $$.merge_qualifier(&@1, state, $2, false);
    }
    | precision_qualifier parameter_qualifier
    {
@@ -974,7 +974,7 @@ parameter_qualifier:
    | memory_qualifier parameter_qualifier
    {
       $$ = $1;
-      $$.merge_qualifier(&@1, state, $2);
+      $$.merge_qualifier(&@1, state, $2, false);
    }
 
 parameter_direction_qualifier:
@@ -1153,7 +1153,7 @@ layout_qualifier_id_list:
    | layout_qualifier_id_list ',' layout_qualifier_id
    {
       $$ = $1;
-      if (!$$.merge_qualifier(& @3, state, $3)) {
+      if (!$$.merge_qualifier(& @3, state, $3, true)) {
          YYERROR;
       }
    }
@@ -1762,7 +1762,7 @@ type_qualifier:
       }
 
       $$ = $1;
-      $$.merge_qualifier(&@1, state, $2);
+      $$.merge_qualifier(&@1, state, $2, false);
    }
    | layout_qualifier type_qualifier
    {
@@ -1779,12 +1779,12 @@ type_qualifier:
          _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
 
       $$ = $1;
-      $$.merge_qualifier(&@1, state, $2);
+      $$.merge_qualifier(&@1, state, $2, false);
    }
    | subroutine_qualifier type_qualifier
    {
       $$ = $1;
-      $$.merge_qualifier(&@1, state, $2);
+      $$.merge_qualifier(&@1, state, $2, false);
    }
    | auxiliary_storage_qualifier type_qualifier
    {
@@ -1800,7 +1800,7 @@ type_qualifier:
                           "just before storage qualifiers");
       }
       $$ = $1;
-      $$.merge_qualifier(&@1, state, $2);
+      $$.merge_qualifier(&@1, state, $2, false);
    }
    | storage_qualifier type_qualifier
    {
@@ -1820,7 +1820,7 @@ type_qualifier:
       }
 
       $$ = $1;
-      $$.merge_qualifier(&@1, state, $2);
+      $$.merge_qualifier(&@1, state, $2, false);
    }
    | precision_qualifier type_qualifier
    {
@@ -1837,7 +1837,7 @@ type_qualifier:
    | memory_qualifier type_qualifier
    {
       $$ = $1;
-      $$.merge_qualifier(&@1, state, $2);
+      $$.merge_qualifier(&@1, state, $2, false);
    }
    ;
 
@@ -2589,7 +2589,7 @@ interface_block:
          YYERROR;
       }
 
-      if (!block->layout.merge_qualifier(& @1, state, $1)) {
+      if (!block->layout.merge_qualifier(& @1, state, $1, false)) {
          YYERROR;
       }
 
@@ -2606,7 +2606,7 @@ interface_block:
                              "memory qualifiers can only be used in the "
                              "declaration of shader storage blocks");
       }
-      if (!block->layout.merge_qualifier(& @1, state, $1)) {
+      if (!block->layout.merge_qualifier(& @1, state, $1, false)) {
          YYERROR;
       }
       $$ = block;
@@ -2750,14 +2750,15 @@ layout_uniform_defaults:
          YYERROR;
       } else {
          if (!state->default_uniform_qualifier->
-                merge_qualifier(& @1, state, $1)) {
+                merge_qualifier(& @1, state, $1, false)) {
             YYERROR;
          }
       }
    }
    | layout_qualifier UNIFORM ';'
    {
-      if (!state->default_uniform_qualifier->merge_qualifier(& @1, state, $1)) {
+      if (!state->default_uniform_qualifier->
+             merge_qualifier(& @1, state, $1, false)) {
          YYERROR;
       }
       $$ = NULL;
@@ -2773,14 +2774,15 @@ layout_buffer_defaults:
          YYERROR;
       } else {
          if (!state->default_shader_storage_qualifier->
-                merge_qualifier(& @1, state, $1)) {
+                merge_qualifier(& @1, state, $1, false)) {
             YYERROR;
          }
       }
    }
    | layout_qualifier BUFFER ';'
    {
-      if (!state->default_shader_storage_qualifier->merge_qualifier(& @1, state, $1)) {
+      if (!state->default_shader_storage_qualifier->
+             merge_qualifier(& @1, state, $1, false)) {
          YYERROR;
       }
 

@@ -114,10 +114,16 @@ ast_type_qualifier::interpolation_string() const
       return NULL;
 }
 
+/**
+ * This function merges both duplicate identifies within a single layout and
+ * multiple layout qualifiers on a single variable declaration. The
+ * is_single_layout_merge param is used differentiate between the two.
+ */
 bool
 ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 				    _mesa_glsl_parse_state *state,
-				    const ast_type_qualifier &q)
+                                    const ast_type_qualifier &q,
+                                    bool is_single_layout_merge)
 {
    ast_type_qualifier ubo_mat_mask;
    ubo_mat_mask.flags.i = 0;
@@ -157,7 +163,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
       allowed_duplicates_mask.flags.i |=
          stream_layout_mask.flags.i;
 
-   if (!state->has_enhanced_layouts() &&
+   if (is_single_layout_merge && !state->has_enhanced_layouts() &&
        (this->flags.i & q.flags.i & ~allowed_duplicates_mask.flags.i) != 0) {
       _mesa_glsl_error(loc, state,
 		       "duplicate layout qualifiers used");
@@ -294,7 +300,7 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
                                         ast_node* &node, bool create_node)
 {
    void *mem_ctx = state;
-   const bool r = this->merge_qualifier(loc, state, q);
+   const bool r = this->merge_qualifier(loc, state, q, false);
 
    if (state->stage == MESA_SHADER_GEOMETRY) {
       if (q.flags.q.prim_type) {
