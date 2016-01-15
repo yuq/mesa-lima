@@ -4722,8 +4722,8 @@ fs_visitor::lower_simd_width()
                split_inst.dst = dsts[i] =
                   lbld.vgrf(inst->dst.type, dst_size);
                split_inst.regs_written =
-                  DIV_ROUND_UP(inst->regs_written * lower_width,
-                               inst->exec_size);
+                  DIV_ROUND_UP(type_sz(inst->dst.type) * dst_size * lower_width,
+                               REG_SIZE);
             }
 
             lbld.emit(split_inst);
