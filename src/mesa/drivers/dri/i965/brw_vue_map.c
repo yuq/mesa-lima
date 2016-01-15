@@ -248,6 +248,8 @@ brw_compute_tess_vue_map(struct brw_vue_map *vue_map,
 static const char *
 varying_name(brw_varying_slot slot)
 {
+   assume(slot < BRW_VARYING_SLOT_COUNT);
+
    if (slot < VARYING_SLOT_MAX)
       return gl_varying_slot_name(slot);
 
@@ -257,7 +259,6 @@ varying_name(brw_varying_slot slot)
       [BRW_VARYING_SLOT_PNTC - VARYING_SLOT_MAX] = "BRW_VARYING_SLOT_PNTC",
    };
 
-   assert(slot < BRW_VARYING_SLOT_COUNT);
    return brw_names[slot - VARYING_SLOT_MAX];
 }
 
