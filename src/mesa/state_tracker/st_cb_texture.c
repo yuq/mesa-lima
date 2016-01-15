@@ -1926,7 +1926,33 @@ st_CompressedTexImage(struct gl_context *ctx, GLuint dims,
                       GLsizei imageSize, const GLvoid *data)
 {
    prep_teximage(ctx, texImage, GL_NONE, GL_NONE);
-   _mesa_store_compressed_teximage(ctx, dims, texImage, imageSize, data);
+
+   /* only 2D and 3D compressed images are supported at this time */
+   if (dims == 1) {
+      _mesa_problem(ctx, "Unexpected glCompressedTexImage1D call");
+      return;
+   }
+
+   /* This is pretty simple, because unlike the general texstore path we don't
+    * have to worry about the usual image unpacking or image transfer
+    * operations.
+    */
+   assert(texImage);
+   assert(texImage->Width > 0);
+   assert(texImage->Height > 0);
+   assert(texImage->Depth > 0);
+
+   /* allocate storage for texture data */
+   if (!st_AllocTextureImageBuffer(ctx, texImage)) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glCompressedTexImage%uD", dims);
+      return;
+   }
+
+   _mesa_store_compressed_texsubimage(ctx, dims, texImage,
+                                      0, 0, 0,
+                                      texImage->Width, texImage->Height, texImage->Depth,
+                                      texImage->TexFormat,
+                                      imageSize, data);
 }
 
 
