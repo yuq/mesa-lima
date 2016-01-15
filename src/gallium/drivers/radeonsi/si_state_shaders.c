@@ -647,6 +647,12 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		if (sctx->b.chip_class <= CIK && sctx->b.family != CHIP_HAWAII)
 			key->ps.color_is_int8 = sctx->framebuffer.color_is_int8;
 
+		/* Disable unwritten outputs (if WRITE_ALL_CBUFS isn't enabled). */
+		if (!key->ps.last_cbuf) {
+			key->ps.spi_shader_col_format &= sel->colors_written_4bit;
+			key->ps.color_is_int8 &= sel->info.colors_written;
+		}
+
 		if (rs) {
 			bool is_poly = (sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&
 					sctx->current_rast_prim <= PIPE_PRIM_POLYGON) ||
@@ -830,6 +836,12 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			}
 		}
 		sel->esgs_itemsize = util_last_bit64(sel->outputs_written) * 16;
+		break;
+
+	case PIPE_SHADER_FRAGMENT:
+		for (i = 0; i < 8; i++)
+			if (sel->info.colors_written & (1 << i))
+				sel->colors_written_4bit |= 0xf << (4 * i);
 		break;
 	}
 

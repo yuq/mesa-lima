@@ -213,6 +213,10 @@ struct si_shader_selector {
 
 	/* PS parameters. */
 	unsigned	db_shader_control;
+	/* Set 0xf or 0x0 (4 bits) per each written output.
+	 * ANDed with spi_shader_col_format.
+	 */
+	unsigned	colors_written_4bit;
 
 	/* masks of "get_unique_index" bits */
 	uint64_t	outputs_written;
