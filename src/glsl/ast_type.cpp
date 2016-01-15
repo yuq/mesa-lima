@@ -208,11 +208,6 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
             this->flags.q.stream = 1;
             this->stream = state->out_qualifier->stream;
          }
-      } else {
-         if (q.flags.q.explicit_stream) {
-            _mesa_glsl_error(loc, state,
-                             "duplicate layout `stream' qualifier");
-         }
       }
    }
 
