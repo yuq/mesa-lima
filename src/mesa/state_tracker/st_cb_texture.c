@@ -1921,6 +1921,18 @@ st_TexImage(struct gl_context * ctx, GLuint dims,
 
 
 static void
+st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
+                         struct gl_texture_image *texImage,
+                         GLint x, GLint y, GLint z,
+                         GLsizei w, GLsizei h, GLsizei d,
+                         GLenum format, GLsizei imageSize, const GLvoid *data)
+{
+   _mesa_store_compressed_texsubimage(ctx, dims, texImage,
+                                      x, y, z, w, h, d,
+                                      format, imageSize, data);
+}
+
+static void
 st_CompressedTexImage(struct gl_context *ctx, GLuint dims,
                       struct gl_texture_image *texImage,
                       GLsizei imageSize, const GLvoid *data)
@@ -1948,11 +1960,11 @@ st_CompressedTexImage(struct gl_context *ctx, GLuint dims,
       return;
    }
 
-   _mesa_store_compressed_texsubimage(ctx, dims, texImage,
-                                      0, 0, 0,
-                                      texImage->Width, texImage->Height, texImage->Depth,
-                                      texImage->TexFormat,
-                                      imageSize, data);
+   st_CompressedTexSubImage(ctx, dims, texImage,
+                            0, 0, 0,
+                            texImage->Width, texImage->Height, texImage->Depth,
+                            texImage->TexFormat,
+                            imageSize, data);
 }
 
 
@@ -2977,7 +2989,7 @@ st_init_texture_functions(struct dd_function_table *functions)
    functions->QuerySamplesForFormat = st_QuerySamplesForFormat;
    functions->TexImage = st_TexImage;
    functions->TexSubImage = st_TexSubImage;
-   functions->CompressedTexSubImage = _mesa_store_compressed_texsubimage;
+   functions->CompressedTexSubImage = st_CompressedTexSubImage;
    functions->CopyTexSubImage = st_CopyTexSubImage;
    functions->GenerateMipmap = st_generate_mipmap;
 
