@@ -1255,6 +1255,28 @@ static LLVMValueRef fetch_constant(
 	return result;
 }
 
+/* Upper 16 bits must be zero. */
+static LLVMValueRef si_llvm_pack_two_int16(struct gallivm_state *gallivm,
+					   LLVMValueRef val[2])
+{
+	return LLVMBuildOr(gallivm->builder, val[0],
+			   LLVMBuildShl(gallivm->builder, val[1],
+					lp_build_const_int32(gallivm, 16),
+					""), "");
+}
+
+/* Upper 16 bits are ignored and will be dropped. */
+static LLVMValueRef si_llvm_pack_two_int32_as_int16(struct gallivm_state *gallivm,
+						    LLVMValueRef val[2])
+{
+	LLVMValueRef v[2] = {
+		LLVMBuildAnd(gallivm->builder, val[0],
+			     lp_build_const_int32(gallivm, 0xffff), ""),
+		val[1],
+	};
+	return si_llvm_pack_two_int16(gallivm, v);
+}
+
 /* Initialize arguments for the shader export intrinsic */
 static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 				     LLVMValueRef *values,
@@ -1265,16 +1287,15 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	struct lp_build_context *uint =
 				&si_shader_ctx->radeon_bld.soa.bld_base.uint_bld;
 	struct lp_build_context *base = &bld_base->base;
+	struct gallivm_state *gallivm = base->gallivm;
+	LLVMBuilderRef builder = base->gallivm->builder;
+	LLVMValueRef val[4];
 	unsigned spi_shader_col_format = V_028714_SPI_SHADER_32_ABGR;
 	unsigned chan;
+	bool is_int8;
 
-	/* XXX: This controls which components of the output
-	 * registers actually get exported. (e.g bit 0 means export
-	 * X component, bit 1 means export Y component, etc.)  I'm
-	 * hard coding this to 0xf for now.  In the future, we might
-	 * want to do something else.
-	 */
-	args[0] = lp_build_const_int32(base->gallivm, 0xf);
+	/* Default is 0xf. Adjusted below depending on the format. */
+	args[0] = lp_build_const_int32(base->gallivm, 0xf); /* writemask */
 
 	/* Specify whether the EXEC mask represents the valid mask */
 	args[1] = uint->zero;
@@ -1286,12 +1307,13 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	args[3] = lp_build_const_int32(base->gallivm, target);
 
 	if (si_shader_ctx->type == TGSI_PROCESSOR_FRAGMENT) {
-		unsigned col_formats =
-			si_shader_ctx->shader->key.ps.spi_shader_col_format;
+		const union si_shader_key *key = &si_shader_ctx->shader->key;
+		unsigned col_formats = key->ps.spi_shader_col_format;
 		int cbuf = target - V_008DFC_SQ_EXP_MRT;
 
 		assert(cbuf >= 0 && cbuf < 8);
 		spi_shader_col_format = (col_formats >> (cbuf * 4)) & 0xf;
+		is_int8 = (key->ps.color_is_int8 >> cbuf) & 0x1;
 	}
 
 	args[4] = uint->zero; /* COMPR flag */
@@ -1306,6 +1328,23 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_NULL);
 		break;
 
+	case V_028714_SPI_SHADER_32_R:
+		args[0] = uint->one; /* writemask */
+		args[5] = values[0];
+		break;
+
+	case V_028714_SPI_SHADER_32_GR:
+		args[0] = lp_build_const_int32(base->gallivm, 0x3); /* writemask */
+		args[5] = values[0];
+		args[6] = values[1];
+		break;
+
+	case V_028714_SPI_SHADER_32_AR:
+		args[0] = lp_build_const_int32(base->gallivm, 0x9); /* writemask */
+		args[5] = values[0];
+		args[8] = values[3];
+		break;
+
 	case V_028714_SPI_SHADER_FP16_ABGR:
 		args[4] = uint->one; /* COMPR flag */
 
@@ -1318,16 +1357,102 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 
 			packed = lp_build_intrinsic(base->gallivm->builder,
 						    "llvm.SI.packf16",
-						    LLVMInt32TypeInContext(base->gallivm->context),
-						    pack_args, 2,
+						    uint->elem_type, pack_args, 2,
 						    LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 			args[chan + 5] =
 				LLVMBuildBitCast(base->gallivm->builder,
-						 packed,
-						 LLVMFloatTypeInContext(base->gallivm->context),
-						 "");
+						 packed, base->elem_type, "");
 		}
 		break;
+
+	case V_028714_SPI_SHADER_UNORM16_ABGR:
+		for (chan = 0; chan < 4; chan++) {
+			val[chan] = radeon_llvm_saturate(bld_base, values[chan]);
+			val[chan] = LLVMBuildFMul(builder, val[chan],
+						  lp_build_const_float(gallivm, 65535), "");
+			val[chan] = LLVMBuildFAdd(builder, val[chan],
+						  lp_build_const_float(gallivm, 0.5), "");
+			val[chan] = LLVMBuildFPToUI(builder, val[chan],
+						    uint->elem_type, "");
+		}
+
+		args[4] = uint->one; /* COMPR flag */
+		args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+				  si_llvm_pack_two_int16(gallivm, val));
+		args[6] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+				  si_llvm_pack_two_int16(gallivm, val+2));
+		break;
+
+	case V_028714_SPI_SHADER_SNORM16_ABGR:
+		for (chan = 0; chan < 4; chan++) {
+			/* Clamp between [-1, 1]. */
+			val[chan] = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_MIN,
+							      values[chan],
+							      lp_build_const_float(gallivm, 1));
+			val[chan] = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_MAX,
+							      val[chan],
+							      lp_build_const_float(gallivm, -1));
+			/* Convert to a signed integer in [-32767, 32767]. */
+			val[chan] = LLVMBuildFMul(builder, val[chan],
+						  lp_build_const_float(gallivm, 32767), "");
+			/* If positive, add 0.5, else add -0.5. */
+			val[chan] = LLVMBuildFAdd(builder, val[chan],
+					LLVMBuildSelect(builder,
+						LLVMBuildFCmp(builder, LLVMRealOGE,
+							      val[chan], base->zero, ""),
+						lp_build_const_float(gallivm, 0.5),
+						lp_build_const_float(gallivm, -0.5), ""), "");
+			val[chan] = LLVMBuildFPToSI(builder, val[chan], uint->elem_type, "");
+		}
+
+		args[4] = uint->one; /* COMPR flag */
+		args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+				  si_llvm_pack_two_int32_as_int16(gallivm, val));
+		args[6] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+				  si_llvm_pack_two_int32_as_int16(gallivm, val+2));
+		break;
+
+	case V_028714_SPI_SHADER_UINT16_ABGR: {
+		LLVMValueRef max = lp_build_const_int32(gallivm, is_int8 ?
+							255 : 65535);
+		/* Clamp. */
+		for (chan = 0; chan < 4; chan++) {
+			val[chan] = bitcast(bld_base, TGSI_TYPE_UNSIGNED, values[chan]);
+			val[chan] = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_UMIN,
+							      val[chan], max);
+		}
+
+		args[4] = uint->one; /* COMPR flag */
+		args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+				  si_llvm_pack_two_int16(gallivm, val));
+		args[6] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+				  si_llvm_pack_two_int16(gallivm, val+2));
+		break;
+	}
+
+	case V_028714_SPI_SHADER_SINT16_ABGR: {
+		LLVMValueRef max = lp_build_const_int32(gallivm, is_int8 ?
+							127 : 32767);
+		LLVMValueRef min = lp_build_const_int32(gallivm, is_int8 ?
+							-128 : -32768);
+		/* Clamp. */
+		for (chan = 0; chan < 4; chan++) {
+			val[chan] = bitcast(bld_base, TGSI_TYPE_UNSIGNED, values[chan]);
+			val[chan] = lp_build_emit_llvm_binary(bld_base,
+							      TGSI_OPCODE_IMIN,
+							      val[chan], max);
+			val[chan] = lp_build_emit_llvm_binary(bld_base,
+							      TGSI_OPCODE_IMAX,
+							      val[chan], min);
+		}
+
+		args[4] = uint->one; /* COMPR flag */
+		args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+				  si_llvm_pack_two_int32_as_int16(gallivm, val));
+		args[6] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+				  si_llvm_pack_two_int32_as_int16(gallivm, val+2));
+		break;
+	}
 
 	case V_028714_SPI_SHADER_32_ABGR:
 		memcpy(&args[5], values, sizeof(values[0]) * 4);

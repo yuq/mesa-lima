@@ -233,6 +233,7 @@ struct si_shader_selector {
 union si_shader_key {
 	struct {
 		unsigned	spi_shader_col_format;
+		unsigned	color_is_int8:8;
 		unsigned	last_cbuf:3;
 		unsigned	color_two_side:1;
 		unsigned	alpha_func:3;
