@@ -649,6 +649,15 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
    struct anv_batch_bo *batch_bo = anv_cmd_buffer_current_batch_bo(cmd_buffer);
 
    if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+      /* When we start a batch buffer, we subtract a certain amount of
+       * padding from the end to ensure that we always have room to emit a
+       * BATCH_BUFFER_START to chain to the next BO.  We need to remove
+       * that padding before we end the batch; otherwise, we may end up
+       * with our BATCH_BUFFER_END in another BO.
+       */
+      cmd_buffer->batch.end += GEN8_MI_BATCH_BUFFER_START_length * 4;
+      assert(cmd_buffer->batch.end == batch_bo->bo.map + batch_bo->bo.size);
+
       anv_batch_emit(&cmd_buffer->batch, GEN7_MI_BATCH_BUFFER_END);
 
       /* Round batch up to an even number of dwords. */
