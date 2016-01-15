@@ -913,6 +913,14 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
             /* Set the offset bits in DWord 2. */
             brw_MOV(p, get_element_ud(header_reg, 2),
                        brw_imm_ud(inst->offset));
+         } else if (stage != MESA_SHADER_VERTEX &&
+                    stage != MESA_SHADER_FRAGMENT) {
+            /* The vertex and fragment stages have g0.2 set to 0, so
+             * header0.2 is 0 when g0 is copied. Other stages may not, so we
+             * must set it to 0 to avoid setting undesirable bits in the
+             * message.
+             */
+            brw_MOV(p, get_element_ud(header_reg, 2), brw_imm_ud(0));
          }
 
          brw_adjust_sampler_state_pointer(p, header_reg, sampler_index);
