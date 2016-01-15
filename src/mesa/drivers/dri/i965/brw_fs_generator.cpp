@@ -914,6 +914,22 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
             /* Set the offset bits in DWord 2. */
             brw_MOV(p, get_element_ud(header_reg, 2),
                        brw_imm_ud(inst->offset));
+         } else if (stage != MESA_SHADER_VERTEX &&
+                    stage != MESA_SHADER_FRAGMENT) {
+            /* In the vertex and fragment stages, the hardware is nice to us
+             * and leaves g0.2 zerod out for us so we can use it for headers.
+             * However, in compute, geometry, and tessellation stages, the
+             * hardware is not so nice.  In particular, for compute shaders on
+             * BDW, the hardware places some debug bits in 23:15.  As it
+             * happens, bit 15 is the alpha channel mask.  This means that if
+             * you use a texturing instruction with a header in a compute
+             * shader, you may randomly get the alpha channel randomly
+             * disabled.  Since channel masks affect the return length of the
+             * sampler message, this can lead the GPU to expect a different
+             * mlen to the one you specified in the shader (probably 4 or 8)
+             * and this, in turn, hangs your GPU.
+             */
+            brw_MOV(p, get_element_ud(header_reg, 2), brw_imm_ud(0));
          }
 
          brw_adjust_sampler_state_pointer(p, header_reg, sampler_index);
