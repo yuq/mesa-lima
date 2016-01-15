@@ -3735,8 +3735,15 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 				G_00B860_WAVESIZE(value) * 256 * 4 * 1;
 			break;
 		default:
-			fprintf(stderr, "Warning: Compiler emitted unknown "
-				"config register: 0x%x\n", reg);
+			{
+				static bool printed;
+
+				if (!printed) {
+					fprintf(stderr, "Warning: LLVM emitted unknown "
+						"config register: 0x%x\n", reg);
+					printed = true;
+				}
+			}
 			break;
 		}
 	}
