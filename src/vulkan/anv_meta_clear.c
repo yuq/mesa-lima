@@ -932,8 +932,10 @@ anv_cmd_clear_image(VkCommandBuffer cmd_buffer_h,
                VK_SUBPASS_CONTENTS_INLINE);
 
             ANV_CALL(CmdEndRenderPass)(cmd_buffer_h);
-
-            /* XXX: We're leaking the render pass and framebuffer */
+            ANV_CALL(DestroyRenderPass)(device_h, pass,
+                                        &cmd_buffer->pool->alloc);
+            ANV_CALL(DestroyFramebuffer)(device_h, fb,
+                                         &cmd_buffer->pool->alloc);
          }
       }
    }
