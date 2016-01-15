@@ -796,13 +796,15 @@ lp_setup_set_fragment_sampler_views(struct lp_setup_context *setup,
                                     unsigned num,
                                     struct pipe_sampler_view **views)
 {
-   unsigned i;
+   unsigned i, max_tex_num;
 
    LP_DBG(DEBUG_SETUP, "%s\n", __FUNCTION__);
 
    assert(num <= PIPE_MAX_SHADER_SAMPLER_VIEWS);
 
-   for (i = 0; i < PIPE_MAX_SHADER_SAMPLER_VIEWS; i++) {
+   max_tex_num = MAX2(num, setup->fs.current_tex_num);
+
+   for (i = 0; i < max_tex_num; i++) {
       struct pipe_sampler_view *view = i < num ? views[i] : NULL;
 
       if (view) {
@@ -922,7 +924,11 @@ lp_setup_set_fragment_sampler_views(struct lp_setup_context *setup,
             assert(jit_tex->base);
          }
       }
+      else {
+         pipe_resource_reference(&setup->fs.current_tex[i], NULL);
+      }
    }
+   setup->fs.current_tex_num = num;
 
    setup->dirty |= LP_SETUP_NEW_FS;
 }
