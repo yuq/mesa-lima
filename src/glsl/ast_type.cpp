@@ -157,7 +157,8 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
       allowed_duplicates_mask.flags.i |=
          stream_layout_mask.flags.i;
 
-   if ((this->flags.i & q.flags.i & ~allowed_duplicates_mask.flags.i) != 0) {
+   if (!state->has_enhanced_layouts() &&
+       (this->flags.i & q.flags.i & ~allowed_duplicates_mask.flags.i) != 0) {
       _mesa_glsl_error(loc, state,
 		       "duplicate layout qualifiers used");
       return false;
