@@ -111,14 +111,14 @@ fs_generator::fs_generator(const struct brw_compiler *compiler, void *log_data,
                            struct brw_stage_prog_data *prog_data,
                            unsigned promoted_constants,
                            bool runtime_check_aads_emit,
-                           const char *stage_abbrev)
+                           gl_shader_stage stage)
 
    : compiler(compiler), log_data(log_data),
      devinfo(compiler->devinfo), key(key),
      prog_data(prog_data),
      promoted_constants(promoted_constants),
      runtime_check_aads_emit(runtime_check_aads_emit), debug_flag(false),
-     stage_abbrev(stage_abbrev), mem_ctx(mem_ctx)
+     stage(stage), mem_ctx(mem_ctx)
 {
    p = rzalloc(mem_ctx, struct brw_codegen);
    brw_init_codegen(devinfo, p, mem_ctx);
@@ -2306,7 +2306,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
                               "%s SIMD%d shader: %d inst, %d loops, %u cycles, "
                               "%d:%d spills:fills, Promoted %u constants, "
                               "compacted %d to %d bytes.",
-                              stage_abbrev, dispatch_width, before_size / 16,
+                              _mesa_shader_stage_to_abbrev(stage),
+                              dispatch_width, before_size / 16,
                               loop_count, cfg->cycle_count, spill_count,
                               fill_count, promoted_constants, before_size,
                               after_size);
