@@ -808,120 +808,13 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
    meta_clear_end(&saved_state, cmd_buffer);
 }
 
-void anv_CmdClearColorImage(
-    VkCommandBuffer                             commandBuffer,
-    VkImage                                     _image,
-    VkImageLayout                               imageLayout,
-    const VkClearColorValue*                    pColor,
-    uint32_t                                    rangeCount,
-    const VkImageSubresourceRange*              pRanges)
-{
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
-   ANV_FROM_HANDLE(anv_image, image, _image);
-   struct anv_meta_saved_state saved_state;
-
-   meta_clear_begin(&saved_state, cmd_buffer);
-
-   for (uint32_t r = 0; r < rangeCount; r++) {
-      for (uint32_t l = 0; l < pRanges[r].levelCount; l++) {
-         for (uint32_t s = 0; s < pRanges[r].layerCount; s++) {
-            struct anv_image_view iview;
-            anv_image_view_init(&iview, cmd_buffer->device,
-               &(VkImageViewCreateInfo) {
-                  .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-                  .image = _image,
-                  .viewType = anv_meta_get_view_type(image),
-                  .format = image->vk_format,
-                  .subresourceRange = {
-                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                     .baseMipLevel = pRanges[r].baseMipLevel + l,
-                     .levelCount = 1,
-                     .baseArrayLayer = pRanges[r].baseArrayLayer + s,
-                     .layerCount = 1
-                  },
-               },
-               cmd_buffer);
-
-            VkFramebuffer fb;
-            anv_CreateFramebuffer(anv_device_to_handle(cmd_buffer->device),
-               &(VkFramebufferCreateInfo) {
-                  .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                  .attachmentCount = 1,
-                  .pAttachments = (VkImageView[]) {
-                     anv_image_view_to_handle(&iview),
-                  },
-                  .width = iview.extent.width,
-                  .height = iview.extent.height,
-                  .layers = 1
-               }, &cmd_buffer->pool->alloc, &fb);
-
-            VkRenderPass pass;
-            anv_CreateRenderPass(anv_device_to_handle(cmd_buffer->device),
-               &(VkRenderPassCreateInfo) {
-                  .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-                  .attachmentCount = 1,
-                  .pAttachments = &(VkAttachmentDescription) {
-                     .format = iview.vk_format,
-                     .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-                     .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                     .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
-                     .finalLayout = VK_IMAGE_LAYOUT_GENERAL,
-                  },
-                  .subpassCount = 1,
-                  .pSubpasses = &(VkSubpassDescription) {
-                     .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-                     .inputAttachmentCount = 0,
-                     .colorAttachmentCount = 1,
-                     .pColorAttachments = &(VkAttachmentReference) {
-                        .attachment = 0,
-                        .layout = VK_IMAGE_LAYOUT_GENERAL,
-                     },
-                     .pResolveAttachments = NULL,
-                     .pDepthStencilAttachment = &(VkAttachmentReference) {
-                        .attachment = VK_ATTACHMENT_UNUSED,
-                        .layout = VK_IMAGE_LAYOUT_GENERAL,
-                     },
-                     .preserveAttachmentCount = 1,
-                     .pPreserveAttachments = (uint32_t[]) { 0 },
-                  },
-                  .dependencyCount = 0,
-               }, &cmd_buffer->pool->alloc, &pass);
-
-            ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
-               &(VkRenderPassBeginInfo) {
-                  .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-                  .renderArea = {
-                     .offset = { 0, 0, },
-                     .extent = {
-                        .width = iview.extent.width,
-                        .height = iview.extent.height,
-                     },
-                  },
-                  .renderPass = pass,
-                  .framebuffer = fb,
-                  .clearValueCount = 1,
-                  .pClearValues = (VkClearValue[]) {
-                     { .color = *pColor },
-                  },
-               }, VK_SUBPASS_CONTENTS_INLINE);
-
-            ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
-
-            /* XXX: We're leaking the render pass and framebuffer */
-         }
-      }
-   }
-
-   meta_clear_end(&saved_state, cmd_buffer);
-}
-
-void anv_CmdClearDepthStencilImage(
-    VkCommandBuffer                             cmd_buffer_h,
-    VkImage                                     image_h,
-    VkImageLayout                               imageLayout,
-    const VkClearDepthStencilValue*             pDepthStencil,
-    uint32_t                                    rangeCount,
-    const VkImageSubresourceRange*              pRanges)
+static void
+anv_cmd_clear_image(VkCommandBuffer cmd_buffer_h,
+                    VkImage image_h,
+                    VkImageLayout image_layout,
+                    const VkClearValue *clear_value,
+                    uint32_t range_count,
+                    const VkImageSubresourceRange *ranges)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmd_buffer_h);
    ANV_FROM_HANDLE(anv_image, image, image_h);
@@ -930,8 +823,8 @@ void anv_CmdClearDepthStencilImage(
 
    meta_clear_begin(&saved_state, cmd_buffer);
 
-   for (uint32_t r = 0; r < rangeCount; r++) {
-      const VkImageSubresourceRange *range = &pRanges[r];
+   for (uint32_t r = 0; r < range_count; r++) {
+      const VkImageSubresourceRange *range = &ranges[r];
 
       for (uint32_t l = 0; l < range->levelCount; ++l) {
          for (uint32_t s = 0; s < range->layerCount; ++s) {
@@ -967,43 +860,56 @@ void anv_CmdClearDepthStencilImage(
                &cmd_buffer->pool->alloc,
                &fb);
 
-            VkAttachmentLoadOp depth_load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
-            if (range->aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)
-               depth_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            VkAttachmentDescription att_desc = {
+               .format = iview.vk_format,
+               .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+               .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+               .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+               .stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
+               .initialLayout = image_layout,
+               .finalLayout = image_layout,
+            };
 
-            VkAttachmentLoadOp stencil_load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
-            if (range->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT)
-               stencil_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            VkSubpassDescription subpass_desc = {
+               .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+               .inputAttachmentCount = 0,
+               .colorAttachmentCount = 0,
+               .pColorAttachments = NULL,
+               .pResolveAttachments = NULL,
+               .pDepthStencilAttachment = NULL,
+               .preserveAttachmentCount = 0,
+               .pPreserveAttachments = NULL,
+            };
+
+            const VkAttachmentReference att_ref = {
+               .attachment = 0,
+               .layout = image_layout,
+            };
+
+            if (range->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
+               att_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+               subpass_desc.colorAttachmentCount = 1;
+               subpass_desc.pColorAttachments = &att_ref;
+            } else {
+               if (range->aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+                  att_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+               }
+               if (range->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+                  att_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+               }
+
+               subpass_desc.pDepthStencilAttachment = &att_ref;
+            }
 
             VkRenderPass pass;
             anv_CreateRenderPass(device_h,
                &(VkRenderPassCreateInfo) {
                   .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
                   .attachmentCount = 1,
-                  .pAttachments = &(VkAttachmentDescription) {
-                     .format = iview.vk_format,
-                     .loadOp = depth_load_op,
-                     .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                     .stencilLoadOp = stencil_load_op,
-                     .stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
-                     .initialLayout = imageLayout,
-                     .finalLayout = imageLayout,
-                  },
+                  .pAttachments = &att_desc,
                   .subpassCount = 1,
-                  .pSubpasses = &(VkSubpassDescription) {
-                     .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-                     .inputAttachmentCount = 0,
-                     .colorAttachmentCount = 0,
-                     .pColorAttachments = NULL,
-                     .pResolveAttachments = NULL,
-                     .pDepthStencilAttachment = &(VkAttachmentReference) {
-                        .attachment = 0,
-                        .layout = imageLayout,
-                     },
-                     .preserveAttachmentCount = 0,
-                     .pPreserveAttachments = NULL,
-                  },
-                  .dependencyCount = 0,
+                  .pSubpasses = &subpass_desc,
                },
                &cmd_buffer->pool->alloc,
                &pass);
@@ -1021,9 +927,7 @@ void anv_CmdClearDepthStencilImage(
                   .renderPass = pass,
                   .framebuffer = fb,
                   .clearValueCount = 1,
-                  .pClearValues = (VkClearValue[]) {
-                     { .depthStencil = *pDepthStencil },
-                  },
+                  .pClearValues = clear_value,
                },
                VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1035,6 +939,32 @@ void anv_CmdClearDepthStencilImage(
    }
 
    meta_clear_end(&saved_state, cmd_buffer);
+}
+
+void anv_CmdClearColorImage(
+    VkCommandBuffer                             commandBuffer,
+    VkImage                                     image,
+    VkImageLayout                               imageLayout,
+    const VkClearColorValue*                    pColor,
+    uint32_t                                    rangeCount,
+    const VkImageSubresourceRange*              pRanges)
+{
+   anv_cmd_clear_image(commandBuffer, image, imageLayout,
+                       (const VkClearValue *) pColor,
+                       rangeCount, pRanges);
+}
+
+void anv_CmdClearDepthStencilImage(
+    VkCommandBuffer                             commandBuffer,
+    VkImage                                     image,
+    VkImageLayout                               imageLayout,
+    const VkClearDepthStencilValue*             pDepthStencil,
+    uint32_t                                    rangeCount,
+    const VkImageSubresourceRange*              pRanges)
+{
+   anv_cmd_clear_image(commandBuffer, image, imageLayout,
+                       (const VkClearValue *) pDepthStencil,
+                       rangeCount, pRanges);
 }
 
 void anv_CmdClearAttachments(
