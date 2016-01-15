@@ -87,6 +87,7 @@
 #define DBG_NO_DCC		(1llu << 43)
 #define DBG_NO_DCC_CLEAR	(1llu << 44)
 #define DBG_NO_RB_PLUS		(1llu << 45)
+#define DBG_SI_SCHED		(1llu << 46)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
