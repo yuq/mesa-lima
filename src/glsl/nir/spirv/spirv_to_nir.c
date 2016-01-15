@@ -2337,6 +2337,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       return;
    }
 
+   struct vtn_type *ret_type = vtn_value(b, w[1], vtn_value_type_type)->type;
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
 
    struct vtn_sampled_image sampled;
@@ -2496,6 +2497,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    instr->coord_components = coord_components;
    instr->is_array = glsl_sampler_type_is_array(sampler_type);
    instr->is_shadow = glsl_sampler_type_is_shadow(sampler_type);
+   instr->is_new_style_shadow = instr->is_shadow;
 
    instr->sampler =
       nir_deref_as_var(nir_copy_deref(instr, &sampled.sampler->deref));
@@ -2506,8 +2508,13 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       instr->texture = NULL;
    }
 
-   nir_ssa_dest_init(&instr->instr, &instr->dest, 4, NULL);
-   val->ssa = vtn_create_ssa_value(b, glsl_vector_type(GLSL_TYPE_FLOAT, 4));
+   nir_ssa_dest_init(&instr->instr, &instr->dest,
+                     nir_tex_instr_dest_size(instr), NULL);
+
+   assert(glsl_get_vector_elements(ret_type->type) ==
+          nir_tex_instr_dest_size(instr));
+
+   val->ssa = vtn_create_ssa_value(b, ret_type->type);
    val->ssa->def = &instr->dest.ssa;
 
    nir_builder_instr_insert(&b->nb, &instr->instr);
