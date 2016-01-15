@@ -288,6 +288,15 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 					conflicts(instr->address, reg->instr->address))
 				return;
 
+			/* This seems to be a hw bug, or something where the timings
+			 * just somehow don't work out.  This restriction may only
+			 * apply if the first src is also CONST.
+			 */
+			if ((instr->category == 3) && (n == 2) &&
+					(src_reg->flags & IR3_REG_RELATIV) &&
+					(src_reg->array.offset == 0))
+				return;
+
 			src_reg = ir3_reg_clone(instr->block->shader, src_reg);
 			src_reg->flags = new_flags;
 			instr->regs[n+1] = src_reg;
