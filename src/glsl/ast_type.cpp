@@ -76,7 +76,8 @@ ast_type_qualifier::has_layout() const
           || this->flags.q.explicit_location
           || this->flags.q.explicit_index
           || this->flags.q.explicit_binding
-          || this->flags.q.explicit_offset;
+          || this->flags.q.explicit_offset
+          || this->flags.q.explicit_stream;
 }
 
 bool
