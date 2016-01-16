@@ -103,6 +103,16 @@ convert_block(nir_block *block, void *void_state)
          break;
       }
 
+      case SYSTEM_VALUE_VERTEX_ID:
+         if (b->shader->options->vertex_id_zero_based) {
+            sysval = nir_iadd(b,
+               nir_load_system_value(b, nir_intrinsic_load_vertex_id_zero_base, 0),
+               nir_load_system_value(b, nir_intrinsic_load_base_vertex, 0));
+         } else {
+            sysval = nir_load_system_value(b, nir_intrinsic_load_vertex_id, 0);
+         }
+         break;
+
       default: {
          nir_intrinsic_op sysval_op =
             nir_intrinsic_from_system_value(var->data.location);
