@@ -582,7 +582,7 @@ brw_upload_sampler_state_table(struct brw_context *brw,
       batch_offset_for_sampler_state += size_in_bytes;
    }
 
-   if (brw->gen >= 7) {
+   if (brw->gen >= 7 && stage_state->stage != MESA_SHADER_COMPUTE) {
       /* Emit a 3DSTATE_SAMPLER_STATE_POINTERS_XS packet. */
       gen7_emit_sampler_state_pointers_xs(brw, stage_state);
    } else {
