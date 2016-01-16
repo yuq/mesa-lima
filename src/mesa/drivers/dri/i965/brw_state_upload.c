@@ -282,6 +282,7 @@ static const struct brw_tracked_state *gen7_compute_atoms[] =
    &brw_cs_abo_surfaces,
    &brw_texture_surfaces,
    &brw_cs_work_groups_surface,
+   &brw_cs_samplers,
    &brw_cs_state,
 };
 
@@ -396,6 +397,7 @@ static const struct brw_tracked_state *gen8_compute_atoms[] =
    &brw_cs_abo_surfaces,
    &brw_texture_surfaces,
    &brw_cs_work_groups_surface,
+   &brw_cs_samplers,
    &brw_cs_state,
 };
 

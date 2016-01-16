@@ -693,3 +693,23 @@ const struct brw_tracked_state brw_tes_samplers = {
    },
    .emit = brw_upload_tes_samplers,
 };
+
+static void
+brw_upload_cs_samplers(struct brw_context *brw)
+{
+   /* BRW_NEW_COMPUTE_PROGRAM */
+   struct gl_program *cs = (struct gl_program *) brw->compute_program;
+   if (!cs)
+      return;
+
+   brw_upload_sampler_state_table(brw, cs, &brw->cs.base);
+}
+
+const struct brw_tracked_state brw_cs_samplers = {
+   .dirty = {
+      .mesa = _NEW_TEXTURE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_COMPUTE_PROGRAM,
+   },
+   .emit = brw_upload_cs_samplers,
+};
