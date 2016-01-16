@@ -624,7 +624,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		 */
 		if (!(key->ps.spi_shader_col_format & 0xf) &&
 		    blend && blend->alpha_to_coverage)
-			key->ps.spi_shader_col_format |= V_028710_SPI_SHADER_FP16_ABGR;
+			key->ps.spi_shader_col_format |= V_028710_SPI_SHADER_32_AR;
 
 		if (rs) {
 			bool is_poly = (sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&
