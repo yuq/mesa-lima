@@ -111,6 +111,7 @@ tgsi_default_declaration( void )
    declaration.Local = 0;
    declaration.Array = 0;
    declaration.Atomic = 0;
+   declaration.Shared = 0;
    declaration.Padding = 0;
 
    return declaration;

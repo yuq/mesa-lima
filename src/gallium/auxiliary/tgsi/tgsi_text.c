@@ -1381,6 +1381,9 @@ static boolean parse_declaration( struct translate_ctx *ctx )
          if (str_match_nocase_whole(&cur, "ATOMIC")) {
             decl.Declaration.Atomic = 1;
             ctx->cur = cur;
+         } else if (str_match_nocase_whole(&cur, "SHARED")) {
+            decl.Declaration.Shared = 1;
+            ctx->cur = cur;
          }
       } else {
          if (str_match_nocase_whole(&cur, "LOCAL")) {

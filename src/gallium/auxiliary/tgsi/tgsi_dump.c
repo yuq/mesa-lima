@@ -364,6 +364,11 @@ iter_declaration(
          TXT(", ATOMIC");
    }
 
+   if (decl->Declaration.File == TGSI_FILE_MEMORY) {
+      if (decl->Declaration.Shared)
+         TXT(", SHARED");
+   }
+
    if (decl->Declaration.File == TGSI_FILE_SAMPLER_VIEW) {
       TXT(", ");
       ENM(decl->SamplerView.Resource, tgsi_texture_names);
