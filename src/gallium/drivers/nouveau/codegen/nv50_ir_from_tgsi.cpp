@@ -374,6 +374,7 @@ static nv50_ir::DataFile translateFile(uint file)
    case TGSI_FILE_IMMEDIATE:       return nv50_ir::FILE_IMMEDIATE;
    case TGSI_FILE_SYSTEM_VALUE:    return nv50_ir::FILE_SYSTEM_VALUE;
    case TGSI_FILE_BUFFER:          return nv50_ir::FILE_MEMORY_GLOBAL;
+   case TGSI_FILE_MEMORY:          return nv50_ir::FILE_MEMORY_GLOBAL;
    case TGSI_FILE_SAMPLER:
    case TGSI_FILE_NULL:
    default:
@@ -858,6 +859,11 @@ public:
    };
    std::vector<Resource> resources;
 
+   struct MemoryFile {
+      bool shared;
+   };
+   std::vector<MemoryFile> memoryFiles;
+
 private:
    int inferSysValDirection(unsigned sn) const;
    bool scanDeclaration(const struct tgsi_full_declaration *);
@@ -904,6 +910,7 @@ bool Source::scanSource()
    textureViews.resize(scan.file_max[TGSI_FILE_SAMPLER_VIEW] + 1);
    //resources.resize(scan.file_max[TGSI_FILE_RESOURCE] + 1);
    tempArrayId.resize(scan.file_max[TGSI_FILE_TEMPORARY] + 1);
+   memoryFiles.resize(scan.file_max[TGSI_FILE_MEMORY] + 1);
 
    info->immd.bufSize = 0;
 
@@ -1213,6 +1220,11 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       for (i = first; i <= last; ++i)
          textureViews[i].target = decl->SamplerView.Resource;
       break;
+   case TGSI_FILE_MEMORY:
+      for (i = first; i <= last; ++i)
+         memoryFiles[i].shared = decl->Declaration.Shared;
+      break;
+   case TGSI_FILE_NULL:
    case TGSI_FILE_TEMPORARY:
       for (i = first; i <= last; ++i)
          tempArrayId[i] = arrayId;
@@ -1220,7 +1232,6 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
          tempArrayInfo.insert(std::make_pair(arrayId, std::make_pair(
                                                    first, last - first + 1)));
       break;
-   case TGSI_FILE_NULL:
    case TGSI_FILE_ADDRESS:
    case TGSI_FILE_CONSTANT:
    case TGSI_FILE_IMMEDIATE:
@@ -1516,6 +1527,9 @@ Converter::makeSym(uint tgsiFile, int fileIdx, int idx, int c, uint32_t address)
 
    sym->reg.fileIndex = fileIdx;
 
+   if (tgsiFile == TGSI_FILE_MEMORY && code->memoryFiles[fileIdx].shared)
+      sym->setFile(FILE_MEMORY_SHARED);
+
    if (idx >= 0) {
       if (sym->reg.file == FILE_SHADER_INPUT)
          sym->setOffset(info->in[idx].slot[c] * 4);
@@ -1769,7 +1783,7 @@ Converter::acquireDst(int d, int c)
    int idx = dst.getIndex(0);
    int idx2d = dst.is2D() ? dst.getIndex(1) : 0;
 
-   if (dst.isMasked(c) || f == TGSI_FILE_BUFFER)
+   if (dst.isMasked(c) || f == TGSI_FILE_BUFFER || f == TGSI_FILE_MEMORY)
       return NULL;
 
    if (dst.isIndirect(0) ||
@@ -2239,7 +2253,8 @@ Converter::handleLOAD(Value *dst0[4])
    int c;
    std::vector<Value *> off, src, ldv, def;
 
-   if (tgsi.getSrc(0).getFile() == TGSI_FILE_BUFFER) {
+   if (tgsi.getSrc(0).getFile() == TGSI_FILE_BUFFER ||
+       tgsi.getSrc(0).getFile() == TGSI_FILE_MEMORY) {
       for (c = 0; c < 4; ++c) {
          if (!dst0[c])
             continue;
@@ -2248,9 +2263,10 @@ Converter::handleLOAD(Value *dst0[4])
          Symbol *sym;
          if (tgsi.getSrc(1).getFile() == TGSI_FILE_IMMEDIATE) {
             off = NULL;
-            sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, tgsi.getSrc(1).getValueU32(0, info) + 4 * c);
+            sym = makeSym(tgsi.getSrc(0).getFile(), r, -1, c,
+                          tgsi.getSrc(1).getValueU32(0, info) + 4 * c);
          } else {
-            sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, 4 * c);
+            sym = makeSym(tgsi.getSrc(0).getFile(), r, -1, c, 4 * c);
          }
 
          Instruction *ld = mkLoad(TYPE_U32, dst0[c], sym, off);
@@ -2337,7 +2353,8 @@ Converter::handleSTORE()
    int c;
    std::vector<Value *> off, src, dummy;
 
-   if (tgsi.getDst(0).getFile() == TGSI_FILE_BUFFER) {
+   if (tgsi.getDst(0).getFile() == TGSI_FILE_BUFFER ||
+       tgsi.getDst(0).getFile() == TGSI_FILE_MEMORY) {
       for (c = 0; c < 4; ++c) {
          if (!(tgsi.getDst(0).getMask() & (1 << c)))
             continue;
@@ -2346,11 +2363,11 @@ Converter::handleSTORE()
          Value *off;
          if (tgsi.getSrc(0).getFile() == TGSI_FILE_IMMEDIATE) {
             off = NULL;
-            sym = makeSym(TGSI_FILE_BUFFER, r, -1, c,
+            sym = makeSym(tgsi.getDst(0).getFile(), r, -1, c,
                           tgsi.getSrc(0).getValueU32(0, info) + 4 * c);
          } else {
             off = fetchSrc(0, 0);
-            sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, 4 * c);
+            sym = makeSym(tgsi.getDst(0).getFile(), r, -1, c, 4 * c);
          }
 
          Instruction *st = mkStore(OP_STORE, TYPE_U32, sym, off, fetchSrc(1, c));
@@ -2422,7 +2439,8 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
    std::vector<Value *> defv;
    LValue *dst = getScratch();
 
-   if (tgsi.getSrc(0).getFile() == TGSI_FILE_BUFFER) {
+   if (tgsi.getSrc(0).getFile() == TGSI_FILE_BUFFER ||
+       tgsi.getSrc(0).getFile() == TGSI_FILE_MEMORY) {
       for (int c = 0; c < 4; ++c) {
          if (!dst0[c])
             continue;
@@ -2431,9 +2449,10 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
          Value *off = fetchSrc(1, c), *off2 = NULL;
          Value *sym;
          if (tgsi.getSrc(1).getFile() == TGSI_FILE_IMMEDIATE)
-            sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, tgsi.getSrc(1).getValueU32(c, info));
+            sym = makeSym(tgsi.getSrc(0).getFile(), r, -1, c,
+                          tgsi.getSrc(1).getValueU32(c, info));
          else
-            sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, 0);
+            sym = makeSym(tgsi.getSrc(0).getFile(), r, -1, c, 0);
          if (tgsi.getSrc(0).isIndirect(0))
             off2 = fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0);
          if (subOp == NV50_IR_SUBOP_ATOM_CAS)
