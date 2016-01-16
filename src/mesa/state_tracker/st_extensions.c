@@ -264,6 +264,9 @@ void st_init_limits(struct pipe_screen *screen,
 
       options->LowerClipDistance = true;
       options->LowerBufferInterfaceBlocks = true;
+
+      if (sh == PIPE_SHADER_COMPUTE)
+         options->LowerShaderSharedVariables = true;
    }
 
    c->LowerTessLevel = true;

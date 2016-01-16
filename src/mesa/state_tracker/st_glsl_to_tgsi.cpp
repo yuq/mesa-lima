@@ -451,6 +451,7 @@ public:
    void visit_atomic_counter_intrinsic(ir_call *);
    void visit_ssbo_intrinsic(ir_call *);
    void visit_membar_intrinsic(ir_call *);
+   void visit_shared_intrinsic(ir_call *);
 
    st_src_reg result;
 
@@ -3341,6 +3342,82 @@ glsl_to_tgsi_visitor::visit_membar_intrinsic(ir_call *ir)
 }
 
 void
+glsl_to_tgsi_visitor::visit_shared_intrinsic(ir_call *ir)
+{
+   const char *callee = ir->callee->function_name();
+   exec_node *param = ir->actual_parameters.get_head();
+
+   ir_rvalue *offset = ((ir_instruction *)param)->as_rvalue();
+
+   st_src_reg buffer(PROGRAM_MEMORY, 0, GLSL_TYPE_UINT);
+
+   /* Calculate the surface offset */
+   offset->accept(this);
+   st_src_reg off = this->result;
+
+   st_dst_reg dst = undef_dst;
+   if (ir->return_deref) {
+      ir->return_deref->accept(this);
+      dst = st_dst_reg(this->result);
+      dst.writemask = (1 << ir->return_deref->type->vector_elements) - 1;
+   }
+
+   glsl_to_tgsi_instruction *inst;
+
+   if (!strcmp("__intrinsic_load_shared", callee)) {
+      inst = emit_asm(ir, TGSI_OPCODE_LOAD, dst, off);
+      inst->buffer = buffer;
+   } else if (!strcmp("__intrinsic_store_shared", callee)) {
+      param = param->get_next();
+      ir_rvalue *val = ((ir_instruction *)param)->as_rvalue();
+      val->accept(this);
+
+      param = param->get_next();
+      ir_constant *write_mask = ((ir_instruction *)param)->as_constant();
+      assert(write_mask);
+      dst.writemask = write_mask->value.u[0];
+
+      dst.type = this->result.type;
+      inst = emit_asm(ir, TGSI_OPCODE_STORE, dst, off, this->result);
+      inst->buffer = buffer;
+   } else {
+      param = param->get_next();
+      ir_rvalue *val = ((ir_instruction *)param)->as_rvalue();
+      val->accept(this);
+
+      st_src_reg data = this->result, data2 = undef_src;
+      unsigned opcode;
+      if (!strcmp("__intrinsic_atomic_add_shared", callee))
+         opcode = TGSI_OPCODE_ATOMUADD;
+      else if (!strcmp("__intrinsic_atomic_min_shared", callee))
+         opcode = TGSI_OPCODE_ATOMIMIN;
+      else if (!strcmp("__intrinsic_atomic_max_shared", callee))
+         opcode = TGSI_OPCODE_ATOMIMAX;
+      else if (!strcmp("__intrinsic_atomic_and_shared", callee))
+         opcode = TGSI_OPCODE_ATOMAND;
+      else if (!strcmp("__intrinsic_atomic_or_shared", callee))
+         opcode = TGSI_OPCODE_ATOMOR;
+      else if (!strcmp("__intrinsic_atomic_xor_shared", callee))
+         opcode = TGSI_OPCODE_ATOMXOR;
+      else if (!strcmp("__intrinsic_atomic_exchange_shared", callee))
+         opcode = TGSI_OPCODE_ATOMXCHG;
+      else if (!strcmp("__intrinsic_atomic_comp_swap_shared", callee)) {
+         opcode = TGSI_OPCODE_ATOMCAS;
+         param = param->get_next();
+         val = ((ir_instruction *)param)->as_rvalue();
+         val->accept(this);
+         data2 = this->result;
+      } else {
+         assert(!"Unexpected intrinsic");
+         return;
+      }
+
+      inst = emit_asm(ir, opcode, dst, off, data, data2);
+      inst->buffer = buffer;
+   }
+}
+
+void
 glsl_to_tgsi_visitor::visit(ir_call *ir)
 {
    glsl_to_tgsi_instruction *call_inst;
@@ -3378,6 +3455,20 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
        !strcmp("__intrinsic_memory_barrier_shared", callee) ||
        !strcmp("__intrinsic_group_memory_barrier", callee)) {
       visit_membar_intrinsic(ir);
+      return;
+   }
+
+   if (!strcmp("__intrinsic_load_shared", callee) ||
+       !strcmp("__intrinsic_store_shared", callee) ||
+       !strcmp("__intrinsic_atomic_add_shared", callee) ||
+       !strcmp("__intrinsic_atomic_min_shared", callee) ||
+       !strcmp("__intrinsic_atomic_max_shared", callee) ||
+       !strcmp("__intrinsic_atomic_and_shared", callee) ||
+       !strcmp("__intrinsic_atomic_or_shared", callee) ||
+       !strcmp("__intrinsic_atomic_xor_shared", callee) ||
+       !strcmp("__intrinsic_atomic_exchange_shared", callee) ||
+       !strcmp("__intrinsic_atomic_comp_swap_shared", callee)) {
+      visit_shared_intrinsic(ir);
       return;
    }
 
