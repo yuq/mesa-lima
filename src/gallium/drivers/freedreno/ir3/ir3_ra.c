@@ -272,6 +272,13 @@ struct ir3_ra_ctx {
 	struct ir3_ra_instr_data *instrd;
 };
 
+/* does it conflict? */
+static inline bool
+intersects(unsigned a_start, unsigned a_end, unsigned b_start, unsigned b_end)
+{
+	return !((a_start >= b_end) || (b_start >= a_end));
+}
+
 static bool
 is_half(struct ir3_instruction *instr)
 {
@@ -666,6 +673,9 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 
 				debug_assert(!(dst->flags & IR3_REG_PHI_SRC));
 
+				arr->start_ip = MIN2(arr->start_ip, instr->ip);
+				arr->end_ip = MAX2(arr->end_ip, instr->ip);
+
 				/* set the node class now.. in case we don't encounter
 				 * this array dst again.  From register_alloc algo's
 				 * perspective, these are all single/scalar regs:
@@ -729,6 +739,8 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 			if (reg->flags & IR3_REG_ARRAY) {
 				struct ir3_array *arr =
 					ir3_lookup_array(ctx->ir, reg->array.id);
+				arr->start_ip = MIN2(arr->start_ip, instr->ip);
+				arr->end_ip = MAX2(arr->end_ip, instr->ip);
 				/* indirect read is treated like a read fromall array
 				 * elements, since we don't know which one is actually
 				 * read:
@@ -802,6 +814,12 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 {
 	struct ir3 *ir = ctx->ir;
 
+	/* initialize array live ranges: */
+	list_for_each_entry (struct ir3_array, arr, &ir->array_list, node) {
+		arr->start_ip = ~0;
+		arr->end_ip = 0;
+	}
+
 	/* compute live ranges (use/def) on a block level, also updating
 	 * block's def/use bitmasks (used below to calculate per-block
 	 * livein/liveout):
@@ -840,8 +858,8 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 
 	for (unsigned i = 0; i < ctx->alloc_count; i++) {
 		for (unsigned j = 0; j < ctx->alloc_count; j++) {
-			if (!((ctx->def[i] >= ctx->use[j]) ||
-					(ctx->def[j] >= ctx->use[i]))) {
+			if (intersects(ctx->def[i], ctx->use[i],
+					ctx->def[j], ctx->use[j])) {
 				ra_add_node_interference(ctx->g, i, j);
 			}
 		}
@@ -1008,19 +1026,41 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 	}
 
 	/* pre-assign array elements:
-	 * TODO we could be a bit more clever if we knew which arrays didn't
-	 * fully (partially?) conflict with each other..
 	 */
 	list_for_each_entry (struct ir3_array, arr, &ctx->ir->array_list, node) {
-		unsigned i;
-		for (i = 0; i < arr->length; i++) {
+		unsigned base = n;
+
+		if (arr->end_ip == 0)
+			continue;
+
+		/* figure out what else we conflict with which has already
+		 * been assigned:
+		 */
+retry:
+		list_for_each_entry (struct ir3_array, arr2, &ctx->ir->array_list, node) {
+			if (arr2 == arr)
+				break;
+			if (arr2->end_ip == 0)
+				continue;
+			/* if it intersects with liverange AND register range.. */
+			if (intersects(arr->start_ip, arr->end_ip,
+					arr2->start_ip, arr2->end_ip) &&
+				intersects(base, base + arr->length,
+					arr2->reg, arr2->reg + arr2->length)) {
+				base = MAX2(base, arr2->reg + arr2->length);
+				goto retry;
+			}
+		}
+
+		arr->reg = base;
+
+		for (unsigned i = 0; i < arr->length; i++) {
 			unsigned name, reg;
 
 			name = arr->base + i;
-			reg = ctx->set->gpr_to_ra_reg[0][n++];
+			reg = ctx->set->gpr_to_ra_reg[0][base++];
 
 			ra_set_node_reg(ctx->g, name, reg);
-
 		}
 	}
 

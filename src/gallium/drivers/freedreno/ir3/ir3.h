@@ -399,7 +399,9 @@ struct ir3_array {
 	struct ir3_instruction *last_write, *last_access;
 
 	/* extra stuff used in RA pass: */
-	unsigned base;
+	unsigned base;      /* base vreg name */
+	unsigned reg;       /* base physical reg */
+	uint16_t start_ip, end_ip;
 };
 
 struct ir3_array * ir3_lookup_array(struct ir3 *ir, unsigned id);
