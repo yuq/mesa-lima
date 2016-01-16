@@ -1927,6 +1927,121 @@ st_CompressedTexSubImage(struct gl_context *ctx, GLuint dims,
                          GLsizei w, GLsizei h, GLsizei d,
                          GLenum format, GLsizei imageSize, const GLvoid *data)
 {
+   struct st_context *st = st_context(ctx);
+   struct st_texture_image *stImage = st_texture_image(texImage);
+   struct st_texture_object *stObj = st_texture_object(texImage->TexObject);
+   struct pipe_resource *texture = stImage->pt;
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_screen *screen = pipe->screen;
+   struct pipe_resource *dst = stImage->pt;
+   struct pipe_surface *surface = NULL;
+   struct compressed_pixelstore store;
+   enum pipe_format copy_format;
+   unsigned bytes_per_block;
+   unsigned bw, bh;
+   intptr_t buf_offset;
+   bool success = false;
+
+   /* Check basic pre-conditions for PBO upload */
+   if (!st->prefer_blit_based_texture_transfer) {
+      goto fallback;
+   }
+
+   if (!_mesa_is_bufferobj(ctx->Unpack.BufferObj))
+      goto fallback;
+
+   if ((_mesa_is_format_etc2(texImage->TexFormat) && !st->has_etc2) ||
+       (texImage->TexFormat == MESA_FORMAT_ETC1_RGB8 && !st->has_etc1)) {
+      /* ETC isn't supported and is represented by uncompressed formats. */
+      goto fallback;
+   }
+
+   if (!dst) {
+      goto fallback;
+   }
+
+   if (!st->pbo_upload.enabled ||
+       !screen->get_param(screen, PIPE_CAP_SURFACE_REINTERPRET_BLOCKS)) {
+      goto fallback;
+   }
+
+   /* Choose the pipe format for the upload. */
+   bytes_per_block = util_format_get_blocksize(dst->format);
+   bw = util_format_get_blockwidth(dst->format);
+   bh = util_format_get_blockheight(dst->format);
+
+   switch (bytes_per_block) {
+   case 8:
+      copy_format = PIPE_FORMAT_R16G16B16A16_UINT;
+      break;
+   case 16:
+      copy_format = PIPE_FORMAT_R32G32B32A32_UINT;
+      break;
+   default:
+      goto fallback;
+   }
+
+   if (!screen->is_format_supported(screen, copy_format, PIPE_BUFFER, 0,
+                                    PIPE_BIND_SAMPLER_VIEW)) {
+      goto fallback;
+   }
+
+   if (!screen->is_format_supported(screen, copy_format, dst->target,
+                                    dst->nr_samples, PIPE_BIND_RENDER_TARGET)) {
+      goto fallback;
+   }
+
+   /* Interpret the pixelstore settings. */
+   _mesa_compute_compressed_pixelstore(dims, texImage->TexFormat, w, h, d,
+                                       &ctx->Unpack, &store);
+   assert(store.CopyBytesPerRow % bytes_per_block == 0);
+   assert(store.SkipBytes % bytes_per_block == 0);
+
+   /* Compute the offset into the buffer */
+   buf_offset = (intptr_t)data + store.SkipBytes;
+
+   if (buf_offset % bytes_per_block) {
+      goto fallback;
+   }
+
+   buf_offset = buf_offset / bytes_per_block;
+
+   /* Set up the surface. */
+   {
+      unsigned level = stObj->pt != stImage->pt ? 0 : texImage->TexObject->MinLevel + texImage->Level;
+      unsigned max_layer = util_max_layer(texture, level);
+
+      z += texImage->Face + texImage->TexObject->MinLayer;
+
+      struct pipe_surface templ;
+      memset(&templ, 0, sizeof(templ));
+      templ.format = copy_format;
+      templ.u.tex.level = level;
+      templ.u.tex.first_layer = MIN2(z, max_layer);
+      templ.u.tex.last_layer = MIN2(z + d - 1, max_layer);
+
+      surface = pipe->create_surface(pipe, texture, &templ);
+      if (!surface)
+         goto fallback;
+   }
+
+   success = try_pbo_upload_common(ctx, surface,
+                                   x / bw, y / bh,
+                                   store.CopyBytesPerRow / bytes_per_block,
+                                   store.CopyRowsPerSlice,
+                                   st_buffer_object(ctx->Unpack.BufferObj)->buffer,
+                                   copy_format,
+                                   buf_offset,
+                                   bytes_per_block,
+                                   store.TotalBytesPerRow / bytes_per_block,
+                                   store.TotalRowsPerSlice);
+
+   pipe_surface_reference(&surface, NULL);
+
+   if (success)
+      return;
+
+fallback:
    _mesa_store_compressed_texsubimage(ctx, dims, texImage,
                                       x, y, z, w, h, d,
                                       format, imageSize, data);
