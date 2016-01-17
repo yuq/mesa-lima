@@ -449,6 +449,7 @@ public:
 
    void visit_atomic_counter_intrinsic(ir_call *);
    void visit_ssbo_intrinsic(ir_call *);
+   void visit_membar_intrinsic(ir_call *);
 
    st_src_reg result;
 
@@ -3297,6 +3298,40 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
 }
 
 void
+glsl_to_tgsi_visitor::visit_membar_intrinsic(ir_call *ir)
+{
+   const char *callee = ir->callee->function_name();
+
+   if (!strcmp("__intrinsic_memory_barrier", callee))
+      emit_asm(ir, TGSI_OPCODE_MEMBAR, undef_dst,
+               st_src_reg_for_int(TGSI_MEMBAR_SHADER_BUFFER |
+                                  TGSI_MEMBAR_ATOMIC_BUFFER |
+                                  TGSI_MEMBAR_SHADER_IMAGE |
+                                  TGSI_MEMBAR_SHARED));
+   else if (!strcmp("__intrinsic_memory_barrier_atomic_counter", callee))
+      emit_asm(ir, TGSI_OPCODE_MEMBAR, undef_dst,
+               st_src_reg_for_int(TGSI_MEMBAR_ATOMIC_BUFFER));
+   else if (!strcmp("__intrinsic_memory_barrier_buffer", callee))
+      emit_asm(ir, TGSI_OPCODE_MEMBAR, undef_dst,
+               st_src_reg_for_int(TGSI_MEMBAR_SHADER_BUFFER));
+   else if (!strcmp("__intrinsic_memory_barrier_image", callee))
+      emit_asm(ir, TGSI_OPCODE_MEMBAR, undef_dst,
+               st_src_reg_for_int(TGSI_MEMBAR_SHADER_IMAGE));
+   else if (!strcmp("__intrinsic_memory_barrier_shared", callee))
+      emit_asm(ir, TGSI_OPCODE_MEMBAR, undef_dst,
+               st_src_reg_for_int(TGSI_MEMBAR_SHARED));
+   else if (!strcmp("__intrinsic_group_memory_barrier", callee))
+      emit_asm(ir, TGSI_OPCODE_MEMBAR, undef_dst,
+               st_src_reg_for_int(TGSI_MEMBAR_SHADER_BUFFER |
+                                  TGSI_MEMBAR_ATOMIC_BUFFER |
+                                  TGSI_MEMBAR_SHADER_IMAGE |
+                                  TGSI_MEMBAR_SHARED |
+                                  TGSI_MEMBAR_THREAD_GROUP));
+   else
+      assert(!"Unexpected memory barrier intrinsic");
+}
+
+void
 glsl_to_tgsi_visitor::visit(ir_call *ir)
 {
    glsl_to_tgsi_instruction *call_inst;
@@ -3324,6 +3359,16 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
        !strcmp("__intrinsic_atomic_exchange_ssbo", callee) ||
        !strcmp("__intrinsic_atomic_comp_swap_ssbo", callee)) {
       visit_ssbo_intrinsic(ir);
+      return;
+   }
+
+   if (!strcmp("__intrinsic_memory_barrier", callee) ||
+       !strcmp("__intrinsic_memory_barrier_atomic_counter", callee) ||
+       !strcmp("__intrinsic_memory_barrier_buffer", callee) ||
+       !strcmp("__intrinsic_memory_barrier_image", callee) ||
+       !strcmp("__intrinsic_memory_barrier_shared", callee) ||
+       !strcmp("__intrinsic_group_memory_barrier", callee)) {
+      visit_membar_intrinsic(ir);
       return;
    }
 
