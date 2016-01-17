@@ -261,8 +261,6 @@ struct r600_surface {
 	unsigned spi_shader_col_format_alpha;	/* SI+, alpha-to-coverage */
 	unsigned spi_shader_col_format_blend;	/* SI+, blending without alpha. */
 	unsigned spi_shader_col_format_blend_alpha; /* SI+, blending with alpha. */
-	unsigned sx_ps_downconvert;	/* Stoney only */
-	unsigned sx_blend_opt_epsilon;	/* Stoney only */
 	struct r600_resource *cb_buffer_fmask; /* Used for FMASK relocations. R600 only */
 	struct r600_resource *cb_buffer_cmask; /* Used for CMASK relocations. R600 only */
 

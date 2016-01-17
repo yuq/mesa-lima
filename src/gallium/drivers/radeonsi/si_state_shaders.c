@@ -1752,6 +1752,9 @@ bool si_update_shaders(struct si_context *sctx)
 			si_mark_atom_dirty(sctx, &sctx->spi_ps_input);
 		}
 
+		if (sctx->b.family == CHIP_STONEY && si_pm4_state_changed(sctx, ps))
+			si_mark_atom_dirty(sctx, &sctx->cb_render_state);
+
 		if (sctx->ps_db_shader_control != db_shader_control) {
 			sctx->ps_db_shader_control = db_shader_control;
 			si_mark_atom_dirty(sctx, &sctx->db_render_state);
