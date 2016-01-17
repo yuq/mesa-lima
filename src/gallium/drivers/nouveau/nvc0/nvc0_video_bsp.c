@@ -64,7 +64,7 @@ nvc0_decoder_bsp_next(struct nouveau_vp3_decoder *dec,
       bsp_size += num_bytes[i];
    bsp_size += 256; /* the 4 end markers */
 
-   if (!bsp_bo || bsp_size > bsp_bo->size) {
+   if (bsp_size > bsp_bo->size) {
       union nouveau_bo_config cfg;
       struct nouveau_bo *tmp_bo = NULL;
 
