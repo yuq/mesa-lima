@@ -2372,6 +2372,23 @@ programs.
   the program.  Results are unspecified if any of the remaining
   threads terminates or never reaches an executed BARRIER instruction.
 
+.. opcode:: MEMBAR - Memory barrier
+
+  ``MEMBAR type``
+
+  This opcode waits for the completion of all memory accesses based on
+  the type passed in. The type is an immediate bitfield with the following
+  meaning:
+
+  Bit 0: Shader storage buffers
+  Bit 1: Atomic buffers
+  Bit 2: Images
+  Bit 3: Shared memory
+  Bit 4: Thread group
+
+  These may be passed in in any combination. An implementation is free to not
+  distinguish between these as it sees fit. However these map to all the
+  possibilities made available by GLSL.
 
 .. _atomopcodes:
 

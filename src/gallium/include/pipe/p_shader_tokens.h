@@ -420,7 +420,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_FSLT                110
 #define TGSI_OPCODE_FSNE                111
 
-                                /* gap */
+#define TGSI_OPCODE_MEMBAR              112
 #define TGSI_OPCODE_CALLNZ              113
                                 /* gap */
 #define TGSI_OPCODE_BREAKC              115
@@ -744,6 +744,11 @@ struct tgsi_instruction_memory
    unsigned Padding   : 29;
 };
 
+#define TGSI_MEMBAR_SHADER_BUFFER (1 << 0)
+#define TGSI_MEMBAR_ATOMIC_BUFFER (1 << 1)
+#define TGSI_MEMBAR_SHADER_IMAGE  (1 << 2)
+#define TGSI_MEMBAR_SHARED        (1 << 3)
+#define TGSI_MEMBAR_THREAD_GROUP  (1 << 4)
 
 #ifdef __cplusplus
 }
