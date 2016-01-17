@@ -3722,6 +3722,7 @@ struct gl_constants
    GLuint MaxComputeWorkGroupCount[3]; /* Array of x, y, z dimensions */
    GLuint MaxComputeWorkGroupSize[3]; /* Array of x, y, z dimensions */
    GLuint MaxComputeWorkGroupInvocations;
+   GLuint MaxComputeSharedMemorySize;
 
    /** GL_ARB_gpu_shader5 */
    GLfloat MinFragmentInterpolationOffset;

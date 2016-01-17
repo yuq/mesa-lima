@@ -288,11 +288,6 @@
 #define PERFQUERY_HAVE_GPA_EXTENDED_COUNTERS 0
 /*@}*/
 
-/** For GL_ARB_compute_shader */
-/*@{*/
-#define MAX_COMPUTE_SHARED_MEMORY_SIZE      32768
-/*@}*/
-
 /** For GL_ARB_pipeline_statistics_query */
 #define MAX_PIPELINE_STATISTICS             11
 
