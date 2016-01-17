@@ -110,6 +110,7 @@ tgsi_default_declaration( void )
    declaration.Invariant = 0;
    declaration.Local = 0;
    declaration.Array = 0;
+   declaration.Atomic = 0;
    declaration.Padding = 0;
 
    return declaration;
