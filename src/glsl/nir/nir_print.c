@@ -312,7 +312,7 @@ print_var_decl(nir_variable *var, print_state *state)
    const char *const patch = (var->data.patch) ? "patch " : "";
    const char *const inv = (var->data.invariant) ? "invariant " : "";
    const char *const mode[] = { "shader_in ", "shader_out ", "", "",
-                                "uniform ", "shader_storage", "system " };
+                                "uniform ", "shader_storage ", "system " };
 
    fprintf(fp, "%s%s%s%s%s%s ",
       cent, samp, patch, inv, mode[var->data.mode],
