@@ -37,7 +37,7 @@
 #include "program/programopt.h"
 #include "tnl/tnl.h"
 #include "util/ralloc.h"
-#include "glsl/ir.h"
+#include "compiler/glsl/ir.h"
 
 #include "brw_program.h"
 #include "brw_context.h"

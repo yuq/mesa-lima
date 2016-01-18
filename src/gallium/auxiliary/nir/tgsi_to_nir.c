@@ -26,7 +26,7 @@
 #include "compiler/nir/nir.h"
 #include "compiler/nir/nir_control_flow.h"
 #include "compiler/nir/nir_builder.h"
-#include "glsl/list.h"
+#include "compiler/glsl/list.h"
 #include "compiler/shader_enums.h"
 
 #include "tgsi_to_nir.h"

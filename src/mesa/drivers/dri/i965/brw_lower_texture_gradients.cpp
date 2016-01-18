@@ -25,8 +25,8 @@
  * \file brw_lower_texture_gradients.cpp
  */
 
-#include "glsl/ir.h"
-#include "glsl/ir_builder.h"
+#include "compiler/glsl/ir.h"
+#include "compiler/glsl/ir_builder.h"
 #include "program/prog_instruction.h"
 #include "brw_context.h"
 

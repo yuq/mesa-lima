@@ -34,7 +34,7 @@
 #include "brw_ff_gs.h"
 #include "brw_nir.h"
 #include "brw_program.h"
-#include "glsl/ir_uniform.h"
+#include "compiler/glsl/ir_uniform.h"
 
 static void
 brw_gs_debug_recompile(struct brw_context *brw,

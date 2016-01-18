@@ -25,7 +25,7 @@
 
 #include "compiler/nir/nir.h"
 #include "compiler/nir/nir_builder.h"
-#include "glsl/list.h"
+#include "compiler/glsl/list.h"
 #include "main/imports.h"
 #include "util/ralloc.h"
 

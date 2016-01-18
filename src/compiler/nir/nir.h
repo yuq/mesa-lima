@@ -28,7 +28,7 @@
 #pragma once
 
 #include "util/hash_table.h"
-#include "glsl/list.h"
+#include "compiler/glsl/list.h"
 #include "GL/gl.h" /* GLenum */
 #include "util/list.h"
 #include "util/ralloc.h"

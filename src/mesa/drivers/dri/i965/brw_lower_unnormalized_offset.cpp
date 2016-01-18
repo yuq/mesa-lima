@@ -32,8 +32,8 @@
  */
 
 #include "compiler/glsl_types.h"
-#include "glsl/ir.h"
-#include "glsl/ir_builder.h"
+#include "compiler/glsl/ir.h"
+#include "compiler/glsl/ir_builder.h"
 
 using namespace ir_builder;
 

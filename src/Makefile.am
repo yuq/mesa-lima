@@ -25,7 +25,7 @@ SUBDIRS = . gtest util mapi/glapi/gen mapi
 SUBDIRS += compiler
 
 if NEED_OPENGL_COMMON
-SUBDIRS += glsl mesa
+SUBDIRS += mesa
 endif
 
 SUBDIRS += loader

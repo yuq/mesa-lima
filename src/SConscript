@@ -6,7 +6,6 @@ if env['platform'] == 'windows':
 
 SConscript('util/SConscript')
 SConscript('compiler/SConscript')
-SConscript('glsl/SConscript')
 
 if env['hostonly']:
     # We are just compiling the things necessary on the host for cross

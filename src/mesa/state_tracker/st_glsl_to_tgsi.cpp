@@ -32,8 +32,8 @@
 
 #include "st_glsl_to_tgsi.h"
 
-#include "glsl_parser_extras.h"
-#include "ir_optimization.h"
+#include "compiler/glsl/glsl_parser_extras.h"
+#include "compiler/glsl/ir_optimization.h"
 
 #include "main/errors.h"
 #include "main/shaderobj.h"

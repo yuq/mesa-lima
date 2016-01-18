@@ -25,7 +25,7 @@
  *
  */
 
-#include "glsl/ir_uniform.h"
+#include "compiler/glsl/ir_uniform.h"
 #include "nir.h"
 #include "main/config.h"
 #include <assert.h>

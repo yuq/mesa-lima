@@ -20,3 +20,5 @@ compiler = env.ConvenienceLibrary(
     source = sources
 )
 Export('compiler')
+
+SConscript('glsl/SConscript')

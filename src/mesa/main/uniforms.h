@@ -28,7 +28,7 @@
 
 #include "main/glheader.h"
 #include "compiler/glsl_types.h"
-#include "glsl/ir_uniform.h"
+#include "compiler/glsl/ir_uniform.h"
 #include "program/prog_parameter.h"
 
 #ifdef __cplusplus

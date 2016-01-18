@@ -41,8 +41,8 @@
  * we do retain the vector types in that case.
  */
 
-#include "glsl/ir.h"
-#include "glsl/ir_expression_flattening.h"
+#include "compiler/glsl/ir.h"
+#include "compiler/glsl/ir_expression_flattening.h"
 #include "compiler/glsl_types.h"
 
 class ir_channel_expressions_visitor : public ir_hierarchical_visitor {

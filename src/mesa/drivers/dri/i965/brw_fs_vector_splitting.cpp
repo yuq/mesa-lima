@@ -38,8 +38,8 @@
  */
 
 #include "main/imports.h"
-#include "glsl/ir.h"
-#include "glsl/ir_rvalue_visitor.h"
+#include "compiler/glsl/ir.h"
+#include "compiler/glsl/ir_rvalue_visitor.h"
 #include "compiler/glsl_types.h"
 #include "util/hash_table.h"
 

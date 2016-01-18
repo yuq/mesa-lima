@@ -32,7 +32,7 @@
 #include "intel_batchbuffer.h"
 #include "brw_nir.h"
 #include "brw_program.h"
-#include "glsl/ir_uniform.h"
+#include "compiler/glsl/ir_uniform.h"
 
 static void
 assign_cs_binding_table_offsets(const struct brw_device_info *devinfo,

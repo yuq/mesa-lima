@@ -26,7 +26,7 @@
  */
 
 #include "nir_types.h"
-#include "glsl/ir.h"
+#include "compiler/glsl/ir.h"
 
 void
 glsl_print_type(const glsl_type *type, FILE *fp)
