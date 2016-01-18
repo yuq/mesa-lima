@@ -22,4 +22,25 @@
 
 include Makefile.sources
 
-EXTRA_DIST = $(LIBCOMPILER_FILES)
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/src/mapi \
+	-I$(top_srcdir)/src/mesa/ \
+	-I$(top_srcdir)/src/gallium/include \
+	-I$(top_srcdir)/src/gallium/auxiliary \
+	$(DEFINES)
+
+AM_CFLAGS = \
+	$(VISIBILITY_CFLAGS) \
+	$(MSVC2013_COMPAT_CFLAGS)
+
+AM_CXXFLAGS = \
+	$(VISIBILITY_CXXFLAGS) \
+	$(MSVC2013_COMPAT_CXXFLAGS)
+
+noinst_LTLIBRARIES = libcompiler.la
+
+libcompiler_la_SOURCES = $(LIBCOMPILER_FILES)
+
+EXTRA_DIST = SConscript

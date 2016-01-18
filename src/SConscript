@@ -5,6 +5,7 @@ if env['platform'] == 'windows':
     SConscript('getopt/SConscript')
 
 SConscript('util/SConscript')
+SConscript('compiler/SConscript')
 SConscript('glsl/SConscript')
 
 if env['hostonly']:

@@ -1,2 +1,4 @@
 LIBCOMPILER_FILES = \
-	builtin_type_macros.h
+	builtin_type_macros.h \
+	shader_enums.c \
+	shader_enums.h

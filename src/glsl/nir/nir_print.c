@@ -26,7 +26,7 @@
  */
 
 #include "nir.h"
-#include "shader_enums.h"
+#include "compiler/shader_enums.h"
 #include <stdio.h>
 #include <stdlib.h>
 

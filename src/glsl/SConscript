@@ -65,7 +65,6 @@ for l in ('LIBGLCPP_FILES', 'LIBGLSL_FILES'):
 # XXX: Remove this once we build NIR and NIR_FILES.
 glsl_sources += [
     'nir/glsl_types.cpp',
-    'nir/shader_enums.c',
 ]
 
 if env['msvc']:
@@ -115,7 +114,7 @@ if env['platform'] == 'windows':
         'user32',
     ])
 
-env.Prepend(LIBS = [glsl])
+env.Prepend(LIBS = [compiler, glsl])
 
 glsl_compiler = env.Program(
     target = 'glsl_compiler',

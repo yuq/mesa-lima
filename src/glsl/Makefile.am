@@ -137,7 +137,10 @@ glcpp_glcpp_LDADD =					\
 	$(top_builddir)/src/libglsl_util.la		\
 	-lm
 
-libglsl_la_LIBADD = libglcpp.la
+libglsl_la_LIBADD = \
+	$(top_builddir)/src/compiler/libcompiler.la \
+	libglcpp.la
+
 libglsl_la_SOURCES =					\
 	glsl_lexer.cpp					\
 	glsl_parser.cpp					\
@@ -146,6 +149,9 @@ libglsl_la_SOURCES =					\
 	$(NIR_FILES)					\
 	$(NIR_GENERATED_FILES)				\
 	$(GLSL_TO_NIR_FILES)
+
+libnir_la_LIBADD = \
+	$(top_builddir)/src/compiler/libcompiler.la
 
 libnir_la_SOURCES =					\
 	$(NIR_FILES)					\
