@@ -224,8 +224,10 @@ nir_lower_returns_impl(nir_function_impl *impl)
 
    bool progress = lower_returns_in_cf_list(&impl->body, &state);
 
-   if (progress)
+   if (progress) {
       nir_metadata_preserve(impl, nir_metadata_none);
+      nir_repair_ssa_impl(impl);
+   }
 
    return progress;
 }
