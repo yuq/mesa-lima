@@ -775,7 +775,9 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
          int offset = 0;
          for (int i = 0; i < inst->sources; i++) {
             int effective_width = i < inst->header_size ? 8 : inst->exec_size;
-            int regs_written = effective_width / 8;
+            assert(effective_width * type_sz(inst->src[i].type) % REG_SIZE == 0);
+            int regs_written = effective_width *
+               type_sz(inst->src[i].type) / REG_SIZE;
             if (inst->src[i].file == VGRF) {
                acp_entry *entry = ralloc(copy_prop_ctx, acp_entry);
                entry->dst = inst->dst;
