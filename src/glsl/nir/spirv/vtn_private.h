@@ -334,6 +334,8 @@ struct vtn_builder {
 
    /* Current function parameter index */
    unsigned func_param_idx;
+
+   bool has_loop_continue;
 };
 
 static inline struct vtn_value *

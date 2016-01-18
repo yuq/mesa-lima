@@ -559,6 +559,9 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
          nir_loop *loop = nir_loop_create(b->shader);
          nir_cf_node_insert(b->nb.cursor, &loop->cf_node);
 
+         b->nb.cursor = nir_after_cf_list(&loop->body);
+         vtn_emit_cf_list(b, &vtn_loop->body, NULL, NULL, handler);
+
          if (!list_empty(&vtn_loop->cont_body)) {
             /* If we have a non-trivial continue body then we need to put
              * it at the beginning of the loop with a flag to ensure that
@@ -570,7 +573,7 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
             b->nb.cursor = nir_before_cf_node(&loop->cf_node);
             nir_store_var(&b->nb, do_cont, nir_imm_int(&b->nb, NIR_FALSE), 1);
 
-            b->nb.cursor = nir_after_cf_list(&loop->body);
+            b->nb.cursor = nir_before_cf_list(&loop->body);
             nir_if *cont_if = nir_if_create(b->shader);
             cont_if->condition = nir_src_for_ssa(nir_load_var(&b->nb, do_cont));
             nir_cf_node_insert(b->nb.cursor, &cont_if->cf_node);
@@ -580,10 +583,9 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
 
             b->nb.cursor = nir_after_cf_node(&cont_if->cf_node);
             nir_store_var(&b->nb, do_cont, nir_imm_int(&b->nb, NIR_TRUE), 1);
-         }
 
-         b->nb.cursor = nir_after_cf_list(&loop->body);
-         vtn_emit_cf_list(b, &vtn_loop->body, NULL, NULL, handler);
+            b->has_loop_continue = true;
+         }
 
          b->nb.cursor = nir_after_cf_node(&loop->cf_node);
          break;
@@ -672,5 +674,14 @@ vtn_function_emit(struct vtn_builder *b, struct vtn_function *func,
 {
    nir_builder_init(&b->nb, func->impl);
    b->nb.cursor = nir_after_cf_list(&func->impl->body);
+   b->has_loop_continue = false;
+
    vtn_emit_cf_list(b, &func->body, NULL, NULL, instruction_handler);
+
+   /* Continue blocks for loops get inserted before the body of the loop
+    * but instructions in the continue may use SSA defs in the loop body.
+    * Therefore, we need to repair SSA to insert the needed phi nodes.
+    */
+   if (b->has_loop_continue)
+      nir_repair_ssa_impl(func->impl);
 }
