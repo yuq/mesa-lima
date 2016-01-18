@@ -643,10 +643,19 @@ anv_state_pool_emit_data(struct anv_state_pool *pool, size_t size, size_t align,
    return state;
 }
 
+struct gen8_border_color {
+   union {
+      float float32[4];
+      uint32_t uint32[4];
+   };
+   /* Pad out to 64 bytes */
+   uint32_t _pad[12];
+};
+
 static void
 anv_device_init_border_colors(struct anv_device *device)
 {
-   static const VkClearColorValue border_colors[] = {
+   static const struct gen8_border_color border_colors[] = {
       [VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK] =  { .float32 = { 0.0, 0.0, 0.0, 0.0 } },
       [VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK] =       { .float32 = { 0.0, 0.0, 0.0, 1.0 } },
       [VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE] =       { .float32 = { 1.0, 1.0, 1.0, 1.0 } },
@@ -656,7 +665,8 @@ anv_device_init_border_colors(struct anv_device *device)
    };
 
    device->border_colors = anv_state_pool_emit_data(&device->dynamic_state_pool,
-                                                    sizeof(border_colors), 32, border_colors);
+                                                    sizeof(border_colors), 64,
+                                                    border_colors);
 }
 
 VkResult anv_CreateDevice(

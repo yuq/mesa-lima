@@ -380,6 +380,9 @@ VkResult genX(CreateSampler)(
    uint32_t filter = vk_to_gen_tex_filter(pCreateInfo->magFilter,
                                           pCreateInfo->anisotropyEnable);
 
+   uint32_t border_color_offset = device->border_colors.offset +
+                                  pCreateInfo->borderColor * 64;
+
    struct GENX(SAMPLER_STATE) sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
@@ -400,9 +403,7 @@ VkResult genX(CreateSampler)(
       .ShadowFunction = vk_to_gen_compare_op[pCreateInfo->compareOp],
       .CubeSurfaceControlMode = 0,
 
-      .IndirectStatePointer =
-         device->border_colors.offset +
-         pCreateInfo->borderColor * sizeof(float) * 4,
+      .IndirectStatePointer = border_color_offset >> 6,
 
       .LODClampMagnificationMode = MIPNONE,
       .MaximumAnisotropy = vk_to_gen_max_anisotropy(pCreateInfo->maxAnisotropy),
