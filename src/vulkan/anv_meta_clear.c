@@ -133,7 +133,7 @@ create_pipeline(struct anv_device *device,
    struct anv_shader_module vs_m = { .nir = vs_nir };
    struct anv_shader_module fs_m = { .nir = fs_nir };
 
-   VkPipeline pipeline_h;
+   VkPipeline pipeline_h = VK_NULL_HANDLE;
    result = anv_graphics_pipeline_create(device_h,
       VK_NULL_HANDLE,
       &(VkGraphicsPipelineCreateInfo) {
