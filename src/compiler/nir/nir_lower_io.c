@@ -189,6 +189,27 @@ store_op(struct lower_io_state *state,
    return op;
 }
 
+static nir_intrinsic_op
+atomic_op(nir_intrinsic_op opcode)
+{
+   switch (opcode) {
+#define OP(O) case nir_intrinsic_var_##O: return nir_intrinsic_shared_##O;
+   OP(atomic_exchange)
+   OP(atomic_comp_swap)
+   OP(atomic_add)
+   OP(atomic_imin)
+   OP(atomic_umin)
+   OP(atomic_imax)
+   OP(atomic_umax)
+   OP(atomic_and)
+   OP(atomic_or)
+   OP(atomic_xor)
+#undef OP
+   default:
+      unreachable("Invalid atomic");
+   }
+}
+
 static bool
 nir_lower_io_block(nir_block *block, void *void_state)
 {
@@ -202,9 +223,25 @@ nir_lower_io_block(nir_block *block, void *void_state)
 
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
-      if (intrin->intrinsic != nir_intrinsic_load_var &&
-          intrin->intrinsic != nir_intrinsic_store_var)
+      switch (intrin->intrinsic) {
+      case nir_intrinsic_load_var:
+      case nir_intrinsic_store_var:
+      case nir_intrinsic_var_atomic_add:
+      case nir_intrinsic_var_atomic_imin:
+      case nir_intrinsic_var_atomic_umin:
+      case nir_intrinsic_var_atomic_imax:
+      case nir_intrinsic_var_atomic_umax:
+      case nir_intrinsic_var_atomic_and:
+      case nir_intrinsic_var_atomic_or:
+      case nir_intrinsic_var_atomic_xor:
+      case nir_intrinsic_var_atomic_exchange:
+      case nir_intrinsic_var_atomic_comp_swap:
+         /* We can lower the io for this nir instrinsic */
+         break;
+      default:
+         /* We can't lower the io for this nir instrinsic, so skip it */
          continue;
+      }
 
       nir_variable_mode mode = intrin->variables[0]->var->data.mode;
 
@@ -289,6 +326,52 @@ nir_lower_io_block(nir_block *block, void *void_state)
          store->src[per_vertex ? 2 : 1] = nir_src_for_ssa(offset);
 
          nir_instr_insert_before(&intrin->instr, &store->instr);
+         nir_instr_remove(&intrin->instr);
+         break;
+      }
+
+      case nir_intrinsic_var_atomic_add:
+      case nir_intrinsic_var_atomic_imin:
+      case nir_intrinsic_var_atomic_umin:
+      case nir_intrinsic_var_atomic_imax:
+      case nir_intrinsic_var_atomic_umax:
+      case nir_intrinsic_var_atomic_and:
+      case nir_intrinsic_var_atomic_or:
+      case nir_intrinsic_var_atomic_xor:
+      case nir_intrinsic_var_atomic_exchange:
+      case nir_intrinsic_var_atomic_comp_swap: {
+         assert(mode == nir_var_shared);
+
+         nir_ssa_def *offset;
+
+         offset = get_io_offset(b, intrin->variables[0],
+                                NULL, state->type_size);
+
+         nir_intrinsic_instr *atomic =
+            nir_intrinsic_instr_create(state->mem_ctx,
+                                       atomic_op(intrin->intrinsic));
+
+         atomic->src[0] = nir_src_for_ssa(offset);
+
+         atomic->const_index[0] =
+            intrin->variables[0]->var->data.driver_location;
+
+         for (unsigned i = 0;
+              i < nir_op_infos[intrin->intrinsic].num_inputs;
+              i++) {
+            nir_src_copy(&atomic->src[i+1], &intrin->src[i], atomic);
+         }
+
+         if (intrin->dest.is_ssa) {
+            nir_ssa_dest_init(&atomic->instr, &atomic->dest,
+                              intrin->dest.ssa.num_components, NULL);
+            nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
+                                     nir_src_for_ssa(&atomic->dest.ssa));
+         } else {
+            nir_dest_copy(&atomic->dest, &intrin->dest, state->mem_ctx);
+         }
+
+         nir_instr_insert_before(&intrin->instr, &atomic->instr);
          nir_instr_remove(&intrin->instr);
          break;
       }
