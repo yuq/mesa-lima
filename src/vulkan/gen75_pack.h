@@ -7984,7 +7984,7 @@ struct GEN75_SAMPLER_STATE {
 #define     MAPFILTER_ANISOTROPIC                              2
 #define     MAPFILTER_MONO                                     6
    uint32_t                                     MinModeFilter;
-   uint32_t                                     TextureLODBias;
+   float                                        TextureLODBias;
 #define     LEGACY                                             0
 #define     EWAApproximation                                   1
    uint32_t                                     AnisotropicAlgorithm;
@@ -8048,7 +8048,7 @@ GEN75_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->MipModeFilter, 20, 21) |
       __gen_field(values->MagModeFilter, 17, 19) |
       __gen_field(values->MinModeFilter, 14, 16) |
-      __gen_field(values->TextureLODBias, 1, 13) |
+      __gen_field(values->TextureLODBias * (1 << 8), 1, 13) |
       __gen_field(values->AnisotropicAlgorithm, 0, 0) |
       0;
 
