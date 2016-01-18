@@ -171,7 +171,10 @@ LoadPropagation::isImmdLoad(Instruction *ld)
    if (!ld || (ld->op != OP_MOV) ||
        ((typeSizeof(ld->dType) != 4) && (typeSizeof(ld->dType) != 8)))
       return false;
-   return ld->src(0).getFile() == FILE_IMMEDIATE;
+
+   // A 0 can be replaced with a register, so it doesn't count as an immediate.
+   ImmediateValue val;
+   return ld->src(0).getImmediate(val) && !val.isInteger(0);
 }
 
 bool
@@ -187,7 +190,8 @@ LoadPropagation::isAttribOrSharedLoad(Instruction *ld)
 void
 LoadPropagation::checkSwapSrc01(Instruction *insn)
 {
-   if (!prog->getTarget()->getOpInfo(insn).commutative)
+   const Target *targ = prog->getTarget();
+   if (!targ->getOpInfo(insn).commutative)
       if (insn->op != OP_SET && insn->op != OP_SLCT)
          return;
    if (insn->src(1).getFile() != FILE_GPR)
@@ -196,14 +200,15 @@ LoadPropagation::checkSwapSrc01(Instruction *insn)
    Instruction *i0 = insn->getSrc(0)->getInsn();
    Instruction *i1 = insn->getSrc(1)->getInsn();
 
-   if (isCSpaceLoad(i0)) {
-      if (!isCSpaceLoad(i1))
-         insn->swapSources(0, 1);
-      else
-         return;
-   } else
-   if (isImmdLoad(i0)) {
-      if (!isCSpaceLoad(i1) && !isImmdLoad(i1))
+   // Swap sources to inline the less frequently used source. That way,
+   // optimistically, it will eventually be able to remove the instruction.
+   int i0refs = insn->getSrc(0)->refCount();
+   int i1refs = insn->getSrc(1)->refCount();
+
+   if ((isCSpaceLoad(i0) || isImmdLoad(i0)) && targ->insnCanLoad(insn, 1, i0)) {
+      if ((!isImmdLoad(i1) && !isCSpaceLoad(i1)) ||
+          !targ->insnCanLoad(insn, 1, i1) ||
+          i0refs < i1refs)
          insn->swapSources(0, 1);
       else
          return;
