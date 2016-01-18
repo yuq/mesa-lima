@@ -299,8 +299,8 @@ create_color_pipeline(struct anv_device *device, uint32_t frag_output,
     */
    return
       create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
-                      &cb_state, NULL, /*use_repclear*/ false,
-                      pipeline);
+                      &cb_state, &device->meta_state.alloc,
+                      /*use_repclear*/ false, pipeline);
 }
 
 static VkResult
@@ -327,7 +327,7 @@ fail:
 
       anv_DestroyPipeline(anv_device_to_handle(device),
                           anv_pipeline_to_handle(pipelines[i]),
-                          NULL);
+                          &device->meta_state.alloc);
    }
 
    return result;
@@ -515,7 +515,8 @@ create_depthstencil_pipeline(struct anv_device *device,
    };
 
    return create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
-                          &cb_state, NULL, /*use_repclear*/ true, pipeline);
+                          &cb_state, &device->meta_state.alloc,
+                          /*use_repclear*/ true, pipeline);
 }
 
 static void

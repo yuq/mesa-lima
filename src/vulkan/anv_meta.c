@@ -220,7 +220,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
             .pPreserveAttachments = (uint32_t[]) { 0 },
          },
          .dependencyCount = 0,
-      }, NULL, &device->meta_state.blit.render_pass);
+      }, &device->meta_state.alloc, &device->meta_state.blit.render_pass);
    if (result != VK_SUCCESS)
       goto fail;
 
@@ -300,7 +300,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       }
    };
    result = anv_CreateDescriptorSetLayout(anv_device_to_handle(device),
-                                          &ds_layout_info, NULL,
+                                          &ds_layout_info,
+                                          &device->meta_state.alloc,
                                           &device->meta_state.blit.ds_layout);
    if (result != VK_SUCCESS)
       goto fail_render_pass;
@@ -311,7 +312,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .setLayoutCount = 1,
          .pSetLayouts = &device->meta_state.blit.ds_layout,
       },
-      NULL, &device->meta_state.blit.pipeline_layout);
+      &device->meta_state.alloc, &device->meta_state.blit.pipeline_layout);
    if (result != VK_SUCCESS)
       goto fail_descriptor_set_layout;
 
@@ -404,7 +405,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    result = anv_graphics_pipeline_create(anv_device_to_handle(device),
       VK_NULL_HANDLE,
       &vk_pipeline_info, &anv_pipeline_info,
-      NULL, &device->meta_state.blit.pipeline_1d_src);
+      &device->meta_state.alloc, &device->meta_state.blit.pipeline_1d_src);
    if (result != VK_SUCCESS)
       goto fail_pipeline_layout;
 
@@ -412,7 +413,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    result = anv_graphics_pipeline_create(anv_device_to_handle(device),
       VK_NULL_HANDLE,
       &vk_pipeline_info, &anv_pipeline_info,
-      NULL, &device->meta_state.blit.pipeline_2d_src);
+      &device->meta_state.alloc, &device->meta_state.blit.pipeline_2d_src);
    if (result != VK_SUCCESS)
       goto fail_pipeline_1d;
 
@@ -420,7 +421,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    result = anv_graphics_pipeline_create(anv_device_to_handle(device),
       VK_NULL_HANDLE,
       &vk_pipeline_info, &anv_pipeline_info,
-      NULL, &device->meta_state.blit.pipeline_3d_src);
+      &device->meta_state.alloc, &device->meta_state.blit.pipeline_3d_src);
    if (result != VK_SUCCESS)
       goto fail_pipeline_2d;
 
@@ -433,21 +434,26 @@ anv_device_init_meta_blit_state(struct anv_device *device)
 
  fail_pipeline_2d:
    anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_2d_src, NULL);
+                       device->meta_state.blit.pipeline_2d_src,
+                       &device->meta_state.alloc);
 
  fail_pipeline_1d:
    anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_1d_src, NULL);
+                       device->meta_state.blit.pipeline_1d_src,
+                       &device->meta_state.alloc);
 
  fail_pipeline_layout:
    anv_DestroyPipelineLayout(anv_device_to_handle(device),
-                             device->meta_state.blit.pipeline_layout, NULL);
+                             device->meta_state.blit.pipeline_layout,
+                             &device->meta_state.alloc);
  fail_descriptor_set_layout:
    anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
-                                  device->meta_state.blit.ds_layout, NULL);
+                                  device->meta_state.blit.ds_layout,
+                                  &device->meta_state.alloc);
  fail_render_pass:
    anv_DestroyRenderPass(anv_device_to_handle(device),
-                         device->meta_state.blit.render_pass, NULL);
+                         device->meta_state.blit.render_pass,
+                         &device->meta_state.alloc);
 
    ralloc_free(vs.nir);
    ralloc_free(fs_1d.nir);
@@ -1400,9 +1406,42 @@ void anv_CmdResolveImage(
    stub();
 }
 
+static void *
+meta_alloc(void* _device, size_t size, size_t alignment,
+           VkSystemAllocationScope allocationScope)
+{
+   struct anv_device *device = _device;
+   return device->alloc.pfnAllocation(device->alloc.pUserData, size, alignment,
+                                      VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
+}
+
+static void *
+meta_realloc(void* _device, void *original, size_t size, size_t alignment,
+             VkSystemAllocationScope allocationScope)
+{
+   struct anv_device *device = _device;
+   return device->alloc.pfnReallocation(device->alloc.pUserData, original,
+                                        size, alignment,
+                                        VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
+}
+
+static void
+meta_free(void* _device, void *data)
+{
+   struct anv_device *device = _device;
+   return device->alloc.pfnFree(device->alloc.pUserData, data);
+}
+
 VkResult
 anv_device_init_meta(struct anv_device *device)
 {
+   device->meta_state.alloc = (VkAllocationCallbacks) {
+      .pUserData = device,
+      .pfnAllocation = meta_alloc,
+      .pfnReallocation = meta_realloc,
+      .pfnFree = meta_free,
+   };
+
    VkResult result;
    result = anv_device_init_meta_clear_state(device);
    if (result != VK_SUCCESS)
@@ -1422,15 +1461,21 @@ anv_device_finish_meta(struct anv_device *device)
 
    /* Blit */
    anv_DestroyRenderPass(anv_device_to_handle(device),
-                         device->meta_state.blit.render_pass, NULL);
+                         device->meta_state.blit.render_pass,
+                         &device->meta_state.alloc);
    anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_1d_src, NULL);
+                       device->meta_state.blit.pipeline_1d_src,
+                       &device->meta_state.alloc);
    anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_2d_src, NULL);
+                       device->meta_state.blit.pipeline_2d_src,
+                       &device->meta_state.alloc);
    anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_3d_src, NULL);
+                       device->meta_state.blit.pipeline_3d_src,
+                       &device->meta_state.alloc);
    anv_DestroyPipelineLayout(anv_device_to_handle(device),
-                             device->meta_state.blit.pipeline_layout, NULL);
+                             device->meta_state.blit.pipeline_layout,
+                             &device->meta_state.alloc);
    anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
-                                  device->meta_state.blit.ds_layout, NULL);
+                                  device->meta_state.blit.ds_layout,
+                                  &device->meta_state.alloc);
 }

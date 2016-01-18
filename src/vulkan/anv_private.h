@@ -562,6 +562,8 @@ VkResult anv_init_wsi(struct anv_instance *instance);
 void anv_finish_wsi(struct anv_instance *instance);
 
 struct anv_meta_state {
+   VkAllocationCallbacks alloc;
+
    struct {
       /**
        * Pipeline N is used to clear color attachment N of the current
