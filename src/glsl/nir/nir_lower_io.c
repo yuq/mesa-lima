@@ -160,6 +160,29 @@ load_op(struct lower_io_state *state,
    case nir_var_uniform:
       op = nir_intrinsic_load_uniform;
       break;
+   case nir_var_shared:
+      op = nir_intrinsic_load_shared;
+      break;
+   default:
+      unreachable("Unknown variable mode");
+   }
+   return op;
+}
+
+static nir_intrinsic_op
+store_op(struct lower_io_state *state,
+         nir_variable_mode mode, bool per_vertex)
+{
+   nir_intrinsic_op op;
+   switch (mode) {
+   case nir_var_shader_in:
+   case nir_var_shader_out:
+      op = per_vertex ? nir_intrinsic_store_per_vertex_output :
+                        nir_intrinsic_store_output;
+      break;
+   case nir_var_shared:
+      op = nir_intrinsic_store_shared;
+      break;
    default:
       unreachable("Unknown variable mode");
    }
@@ -190,6 +213,7 @@ nir_lower_io_block(nir_block *block, void *void_state)
 
       if (mode != nir_var_shader_in &&
           mode != nir_var_shader_out &&
+          mode != nir_var_shared &&
           mode != nir_var_uniform)
          continue;
 
@@ -236,7 +260,7 @@ nir_lower_io_block(nir_block *block, void *void_state)
       }
 
       case nir_intrinsic_store_var: {
-         assert(mode == nir_var_shader_out);
+         assert(mode == nir_var_shader_out || mode == nir_var_shared);
 
          nir_ssa_def *offset;
          nir_ssa_def *vertex_index;
@@ -248,12 +272,9 @@ nir_lower_io_block(nir_block *block, void *void_state)
                                 per_vertex ? &vertex_index : NULL,
                                 state->type_size);
 
-         nir_intrinsic_op store_op =
-            per_vertex ? nir_intrinsic_store_per_vertex_output :
-                         nir_intrinsic_store_output;
-
-         nir_intrinsic_instr *store = nir_intrinsic_instr_create(state->mem_ctx,
-                                                                 store_op);
+         nir_intrinsic_instr *store =
+            nir_intrinsic_instr_create(state->mem_ctx,
+                                       store_op(state, mode, per_vertex));
          store->num_components = intrin->num_components;
 
          nir_src_copy(&store->src[0], &intrin->src[0], store);
