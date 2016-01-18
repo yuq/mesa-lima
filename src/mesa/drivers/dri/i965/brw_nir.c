@@ -405,6 +405,14 @@ brw_nir_lower_uniforms(nir_shader *nir, bool is_scalar)
    }
 }
 
+static void
+brw_nir_lower_shared(nir_shader *nir)
+{
+   nir_assign_var_locations(&nir->shared, &nir->num_shared,
+                            type_size_scalar_bytes);
+   nir_lower_io(nir, nir_var_shared, type_size_scalar_bytes);
+}
+
 #define OPT(pass, ...) ({                                  \
    bool this_progress = false;                             \
    NIR_PASS(this_progress, nir, pass, ##__VA_ARGS__);      \
@@ -500,6 +508,8 @@ brw_nir_lower_io(nir_shader *nir,
 
    OPT_V(brw_nir_lower_inputs, devinfo, is_scalar);
    OPT_V(brw_nir_lower_outputs, devinfo, is_scalar);
+   if (nir->stage == MESA_SHADER_COMPUTE)
+      OPT_V(brw_nir_lower_shared);
    OPT_V(nir_lower_io, nir_var_all, is_scalar ? type_size_scalar : type_size_vec4);
 
    return nir_optimize(nir, is_scalar);
