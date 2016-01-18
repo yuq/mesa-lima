@@ -2786,33 +2786,8 @@ layout_out_defaults:
    layout_qualifier OUT_TOK ';'
    {
       $$ = NULL;
-      if (state->stage == MESA_SHADER_GEOMETRY) {
-         if ($1.flags.q.prim_type) {
-            /* Make sure this is a valid output primitive type. */
-            switch ($1.prim_type) {
-            case GL_POINTS:
-            case GL_LINE_STRIP:
-            case GL_TRIANGLE_STRIP:
-               break;
-            default:
-               _mesa_glsl_error(&@1, state, "invalid geometry shader output "
-                                "primitive type");
-               break;
-            }
-         }
-         if (!state->out_qualifier->merge_qualifier(& @1, state, $1))
-            YYERROR;
-
-         /* Allow future assigments of global out's stream id value */
-         state->out_qualifier->flags.q.explicit_stream = 0;
-      } else if (state->stage == MESA_SHADER_TESS_CTRL) {
-         if (!state->out_qualifier->merge_out_qualifier(& @1, state, $1, $$))
-            YYERROR;
-      } else {
-         _mesa_glsl_error(& @1, state,
-                          "out layout qualifiers only valid in "
-                          "tessellation control or geometry shaders");
-      }
+      if (!state->out_qualifier->merge_out_qualifier(& @1, state, $1, $$))
+         YYERROR;
    }
    ;
 

@@ -296,8 +296,28 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
    void *mem_ctx = state;
    const bool r = this->merge_qualifier(loc, state, q);
 
-   if (state->stage == MESA_SHADER_TESS_CTRL) {
+   if (state->stage == MESA_SHADER_GEOMETRY) {
+      if (q.flags.q.prim_type) {
+         /* Make sure this is a valid output primitive type. */
+         switch (q.prim_type) {
+         case GL_POINTS:
+         case GL_LINE_STRIP:
+         case GL_TRIANGLE_STRIP:
+            break;
+         default:
+            _mesa_glsl_error(loc, state, "invalid geometry shader output "
+                             "primitive type");
+            break;
+         }
+      }
+
+      /* Allow future assigments of global out's stream id value */
+      this->flags.q.explicit_stream = 0;
+   } else if (state->stage == MESA_SHADER_TESS_CTRL) {
       node = new(mem_ctx) ast_tcs_output_layout(*loc);
+   } else {
+      _mesa_glsl_error(loc, state, "out layout qualifiers only valid in "
+                       "tessellation control or geometry shaders");
    }
 
    return r;
