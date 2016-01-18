@@ -299,6 +299,10 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %type <node> for_init_statement
 %type <for_rest_statement> for_rest_statement
 %type <node> layout_defaults
+%type <node> layout_uniform_defaults
+%type <node> layout_buffer_defaults
+%type <node> layout_in_defaults
+%type <node> layout_out_defaults
 
 %right THEN ELSE
 %%
@@ -2737,7 +2741,7 @@ member_declaration:
    }
    ;
 
-layout_defaults:
+layout_uniform_defaults:
    layout_qualifier UNIFORM ';'
    {
       if (!state->default_uniform_qualifier->merge_qualifier(& @1, state, $1)) {
@@ -2745,8 +2749,10 @@ layout_defaults:
       }
       $$ = NULL;
    }
+   ;
 
-   | layout_qualifier BUFFER ';'
+layout_buffer_defaults:
+   layout_qualifier BUFFER ';'
    {
       if (!state->default_shader_storage_qualifier->merge_qualifier(& @1, state, $1)) {
          YYERROR;
@@ -2764,16 +2770,20 @@ layout_defaults:
 
       $$ = NULL;
    }
+   ;
 
-   | layout_qualifier IN_TOK ';'
+layout_in_defaults:
+   layout_qualifier IN_TOK ';'
    {
       $$ = NULL;
       if (!state->in_qualifier->merge_in_qualifier(& @1, state, $1, $$)) {
          YYERROR;
       }
    }
+   ;
 
-   | layout_qualifier OUT_TOK ';'
+layout_out_defaults:
+   layout_qualifier OUT_TOK ';'
    {
       $$ = NULL;
       if (state->stage == MESA_SHADER_GEOMETRY) {
@@ -2804,3 +2814,11 @@ layout_defaults:
                           "tessellation control or geometry shaders");
       }
    }
+   ;
+
+layout_defaults:
+   layout_uniform_defaults
+   | layout_buffer_defaults
+   | layout_in_defaults
+   | layout_out_defaults
+   ;
