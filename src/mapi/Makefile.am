@@ -35,6 +35,7 @@ EXTRA_DIST = \
 	es2api/ABI-check \
 	mapi_abi.py \
 	glapi/SConscript \
+	glapi/registry/gl.xml \
 	shared-glapi/SConscript
 
 AM_CFLAGS = \
