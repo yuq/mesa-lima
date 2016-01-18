@@ -1595,13 +1595,12 @@ set_shader_inout_layout(struct gl_shader *shader,
 		     struct _mesa_glsl_parse_state *state)
 {
    /* Should have been prevented by the parser. */
-   if (shader->Stage == MESA_SHADER_TESS_CTRL) {
+   if (shader->Stage == MESA_SHADER_TESS_CTRL ||
+       shader->Stage == MESA_SHADER_VERTEX) {
       assert(!state->in_qualifier->flags.i);
-   } else if (shader->Stage == MESA_SHADER_TESS_EVAL) {
-      assert(!state->out_qualifier->flags.i);
-   } else if (shader->Stage != MESA_SHADER_GEOMETRY) {
+   } else if (shader->Stage != MESA_SHADER_GEOMETRY &&
+              shader->Stage != MESA_SHADER_TESS_EVAL) {
       assert(!state->in_qualifier->flags.i);
-      assert(!state->out_qualifier->flags.i);
    }
 
    if (shader->Stage != MESA_SHADER_COMPUTE) {

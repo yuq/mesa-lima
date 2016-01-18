@@ -381,9 +381,10 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
       if (create_node) {
          node = new(mem_ctx) ast_tcs_output_layout(*loc);
       }
-   } else {
+   } else if (!(state->stage == MESA_SHADER_TESS_EVAL ||
+                state->stage == MESA_SHADER_VERTEX)) {
       _mesa_glsl_error(loc, state, "out layout qualifiers only valid in "
-                       "tessellation control or geometry shaders");
+                       "geometry, tessellation and vertex shaders");
    }
 
    /* Allow future assigments of global out's */
