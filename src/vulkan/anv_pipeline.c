@@ -746,6 +746,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
    if (nir == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   prog_data->base.total_shared = nir->num_shared;
+
    void *mem_ctx = ralloc_context(NULL);
 
    if (module->nir == NULL)
