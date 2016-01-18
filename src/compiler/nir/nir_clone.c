@@ -705,6 +705,7 @@ nir_shader_clone(void *mem_ctx, const nir_shader *s)
    ns->num_inputs = s->num_inputs;
    ns->num_uniforms = s->num_uniforms;
    ns->num_outputs = s->num_outputs;
+   ns->num_shared = s->num_shared;
 
    free_clone_state(&state);
 

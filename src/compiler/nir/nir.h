@@ -1692,7 +1692,7 @@ typedef struct nir_shader {
     * the highest index a load_input_*, load_uniform_*, etc. intrinsic can
     * access plus one
     */
-   unsigned num_inputs, num_uniforms, num_outputs;
+   unsigned num_inputs, num_uniforms, num_outputs, num_shared;
 
    /** The shader stage, such as MESA_SHADER_VERTEX. */
    gl_shader_stage stage;
