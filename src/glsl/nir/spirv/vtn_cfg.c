@@ -351,8 +351,15 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
                                 switch_case, switch_break,
                                 loop_break, loop_cont, merge_block);
 
-            block = merge_block;
-            continue;
+            enum vtn_branch_type merge_type =
+               vtn_get_branch_type(merge_block, switch_case, switch_break,
+                                   loop_break, loop_cont);
+            if (merge_type == vtn_branch_type_none) {
+               block = merge_block;
+               continue;
+            } else {
+               return;
+            }
          } else if (if_stmt->then_type != vtn_branch_type_none &&
                     if_stmt->else_type != vtn_branch_type_none) {
             /* Both sides were short-circuited.  We're done here. */
