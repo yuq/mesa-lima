@@ -217,12 +217,15 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 	struct stage s[MAX_STAGES];
 	uint32_t pos_regid, posz_regid, psize_regid, color_regid[8];
 	uint32_t face_regid, coord_regid, zwcoord_regid;
+	enum a3xx_threadsize fssz;
 	int constmode;
 	int i, j, k;
 
 	debug_assert(nr <= ARRAY_SIZE(color_regid));
 
 	setup_stages(emit, s);
+
+	fssz = (s[FS].i->max_reg >= 24) ? TWO_QUADS : FOUR_QUADS;
 
 	/* blob seems to always use constmode currently: */
 	constmode = 1;
@@ -258,7 +261,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 	OUT_RING(ring, 0x00000003);
 
 	OUT_PKT0(ring, REG_A4XX_HLSQ_CONTROL_0_REG, 5);
-	OUT_RING(ring, A4XX_HLSQ_CONTROL_0_REG_FSTHREADSIZE(FOUR_QUADS) |
+	OUT_RING(ring, A4XX_HLSQ_CONTROL_0_REG_FSTHREADSIZE(fssz) |
 			A4XX_HLSQ_CONTROL_0_REG_CONSTMODE(constmode) |
 			A4XX_HLSQ_CONTROL_0_REG_FSSUPERTHREADENABLE |
 			/* NOTE:  I guess SHADERRESTART and CONSTFULLUPDATE maybe
@@ -385,7 +388,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 			A4XX_SP_FS_CTRL_REG0_HALFREGFOOTPRINT(s[FS].i->max_half_reg + 1) |
 			A4XX_SP_FS_CTRL_REG0_FULLREGFOOTPRINT(s[FS].i->max_reg + 1) |
 			A4XX_SP_FS_CTRL_REG0_INOUTREGOVERLAP(1) |
-			A4XX_SP_FS_CTRL_REG0_THREADSIZE(FOUR_QUADS) |
+			A4XX_SP_FS_CTRL_REG0_THREADSIZE(fssz) |
 			A4XX_SP_FS_CTRL_REG0_SUPERTHREADMODE |
 			COND(s[FS].v->has_samp, A4XX_SP_FS_CTRL_REG0_PIXLODENABLE));
 	OUT_RING(ring, A4XX_SP_FS_CTRL_REG1_CONSTLENGTH(s[FS].constlen) |
