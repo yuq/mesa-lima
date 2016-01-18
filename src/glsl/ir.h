@@ -30,7 +30,7 @@
 #include <stdlib.h>
 
 #include "util/ralloc.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "list.h"
 #include "ir_visitor.h"
 #include "ir_hierarchical_visitor.h"

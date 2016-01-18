@@ -56,7 +56,7 @@
  * prevents further optimization, and thus is not currently performed.
  */
 
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include <string.h>
 #include "ir.h"
 

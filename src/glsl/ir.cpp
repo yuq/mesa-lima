@@ -23,7 +23,7 @@
 #include <string.h>
 #include "main/core.h" /* for MAX2 */
 #include "ir.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 
 ir_rvalue::ir_rvalue(enum ir_node_type t)
    : ir_instruction(t)

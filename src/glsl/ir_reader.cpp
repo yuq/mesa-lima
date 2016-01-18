@@ -23,7 +23,7 @@
 
 #include "ir_reader.h"
 #include "glsl_parser_extras.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "s_expression.h"
 
 static const bool debug = false;

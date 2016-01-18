@@ -24,7 +24,7 @@
 #include "ir.h"
 #include "glsl_parser_extras.h"
 #include "ast.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 
 ir_rvalue *
 _mesa_ast_field_selection_to_hir(const ast_expression *expr,

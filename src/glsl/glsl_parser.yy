@@ -31,7 +31,7 @@
 
 #include "ast.h"
 #include "glsl_parser_extras.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "main/context.h"
 
 #ifdef _MSC_VER

@@ -40,7 +40,7 @@
 #include "main/imports.h"
 #include "glsl/ir.h"
 #include "glsl/ir_rvalue_visitor.h"
-#include "glsl/nir/glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "util/hash_table.h"
 
 static bool debug = false;

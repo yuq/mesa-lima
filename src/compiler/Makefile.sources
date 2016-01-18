@@ -1,4 +1,6 @@
 LIBCOMPILER_FILES = \
 	builtin_type_macros.h \
+	glsl_types.cpp \
+	glsl_types.h \
 	shader_enums.c \
 	shader_enums.h

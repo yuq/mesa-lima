@@ -24,7 +24,7 @@
  */
 
 #include "main/mtypes.h"
-#include "glsl/nir/glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "glsl/ir.h"
 #include "glsl/ir_uniform.h"
 #include "glsl/ir_visitor.h"

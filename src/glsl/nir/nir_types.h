@@ -29,9 +29,9 @@
 
 #include <stdio.h>
 
-/* C wrapper around glsl_types.h */
+/* C wrapper around compiler/glsl_types.h */
 
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {

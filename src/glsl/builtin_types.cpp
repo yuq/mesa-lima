@@ -34,7 +34,7 @@
  * version and set of enabled extensions.
  */
 
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "glsl_parser_extras.h"
 #include "util/macros.h"
 

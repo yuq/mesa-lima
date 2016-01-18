@@ -36,7 +36,7 @@
 #include "ir_optimization.h"
 #include "ir_builder.h"
 #include "program/prog_instruction.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "main/macros.h"
 
 using namespace ir_builder;

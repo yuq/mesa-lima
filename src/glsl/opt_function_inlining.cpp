@@ -31,7 +31,7 @@
 #include "ir_visitor.h"
 #include "ir_function_inlining.h"
 #include "ir_expression_flattening.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "program/hash_table.h"
 
 static void

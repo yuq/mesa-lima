@@ -44,7 +44,7 @@
 #include "main/uniforms.h"
 #include "main/enums.h"
 #include "ir_uniform.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "program/program.h"
 
 /**

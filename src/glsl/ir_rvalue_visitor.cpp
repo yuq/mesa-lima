@@ -32,7 +32,7 @@
 #include "ir.h"
 #include "ir_visitor.h"
 #include "ir_rvalue_visitor.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 
 ir_visitor_status
 ir_rvalue_base_visitor::rvalue_visit(ir_expression *ir)

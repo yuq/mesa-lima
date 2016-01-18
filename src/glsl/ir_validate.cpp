@@ -37,7 +37,7 @@
 #include "ir_hierarchical_visitor.h"
 #include "util/hash_table.h"
 #include "util/set.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 
 namespace {
 

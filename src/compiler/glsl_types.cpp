@@ -23,7 +23,7 @@
 
 #include <stdio.h>
 #include "main/macros.h"
-#include "glsl_parser_extras.h"
+#include "glsl/glsl_parser_extras.h"
 #include "glsl_types.h"
 #include "util/hash_table.h"
 

@@ -18,8 +18,6 @@ NIR_GENERATED_FILES = \
 	nir/nir_opt_algebraic.c
 
 NIR_FILES = \
-	nir/glsl_types.cpp \
-	nir/glsl_types.h \
 	nir/nir.c \
 	nir/nir.h \
 	nir/nir_array.h \

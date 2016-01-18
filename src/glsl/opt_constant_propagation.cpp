@@ -39,7 +39,7 @@
 #include "ir_rvalue_visitor.h"
 #include "ir_basic_block.h"
 #include "ir_optimization.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "util/hash_table.h"
 
 namespace {

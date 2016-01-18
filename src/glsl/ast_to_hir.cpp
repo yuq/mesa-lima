@@ -52,7 +52,7 @@
 #include "glsl_symbol_table.h"
 #include "glsl_parser_extras.h"
 #include "ast.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "program/hash_table.h"
 #include "main/shaderobj.h"
 #include "ir.h"

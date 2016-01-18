@@ -45,7 +45,7 @@
  * to attempt to flatten any if-statements appearing at depth > N.
  */
 
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "ir.h"
 #include "program/hash_table.h"
 

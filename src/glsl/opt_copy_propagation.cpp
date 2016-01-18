@@ -36,7 +36,7 @@
 #include "ir_visitor.h"
 #include "ir_basic_block.h"
 #include "ir_optimization.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 
 namespace {
 

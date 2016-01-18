@@ -105,7 +105,7 @@
  * Unconditional discards are treated as having a condition of "true".
  */
 
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "ir.h"
 
 namespace {

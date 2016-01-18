@@ -30,7 +30,7 @@
 #include "ir.h"
 #include "ir_visitor.h"
 #include "ir_variable_refcount.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "util/hash_table.h"
 
 static bool debug = false;

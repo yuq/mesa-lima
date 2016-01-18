@@ -33,7 +33,7 @@
 #include "ir_rvalue_visitor.h"
 #include "ir_optimization.h"
 #include "ir_builder.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 
 using namespace ir_builder;
 

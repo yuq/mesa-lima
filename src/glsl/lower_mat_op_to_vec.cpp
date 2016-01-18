@@ -33,7 +33,7 @@
 
 #include "ir.h"
 #include "ir_expression_flattening.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 
 namespace {
 

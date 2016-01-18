@@ -21,7 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "ir.h"
 #include "glsl_parser_extras.h"
 #include "main/errors.h"

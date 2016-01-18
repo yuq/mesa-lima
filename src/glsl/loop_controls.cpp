@@ -23,7 +23,7 @@
 
 #include <limits.h>
 #include "main/compiler.h"
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "loop_analysis.h"
 #include "ir_hierarchical_visitor.h"
 

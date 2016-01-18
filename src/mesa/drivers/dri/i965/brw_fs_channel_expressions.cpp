@@ -43,7 +43,7 @@
 
 #include "glsl/ir.h"
 #include "glsl/ir_expression_flattening.h"
-#include "glsl/nir/glsl_types.h"
+#include "compiler/glsl_types.h"
 
 class ir_channel_expressions_visitor : public ir_hierarchical_visitor {
 public:

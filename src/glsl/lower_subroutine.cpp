@@ -27,7 +27,7 @@
  * lowers subroutines to an if ladder.
  */
 
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "glsl_parser_extras.h"
 #include "ir.h"
 #include "ir_builder.h"

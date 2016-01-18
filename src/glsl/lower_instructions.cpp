@@ -117,7 +117,7 @@
 
 #include "c99_math.h"
 #include "program/prog_instruction.h" /* for swizzle */
-#include "glsl_types.h"
+#include "compiler/glsl_types.h"
 #include "ir.h"
 #include "ir_builder.h"
 #include "ir_optimization.h"
