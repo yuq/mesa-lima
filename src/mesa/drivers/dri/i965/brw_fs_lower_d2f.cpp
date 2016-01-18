@@ -36,7 +36,9 @@ fs_visitor::lower_d2f()
       if (inst->opcode != BRW_OPCODE_MOV)
          continue;
 
-      if (inst->dst.type != BRW_REGISTER_TYPE_F)
+      if (inst->dst.type != BRW_REGISTER_TYPE_F &&
+          inst->dst.type != BRW_REGISTER_TYPE_D &&
+          inst->dst.type != BRW_REGISTER_TYPE_UD)
          continue;
 
       if (inst->src[0].type != BRW_REGISTER_TYPE_DF)
