@@ -63,6 +63,36 @@ __gen_field(uint64_t v, uint32_t start, uint32_t end)
 }
 
 static inline uint64_t
+__gen_fixed(float v, uint32_t start, uint32_t end,
+            bool is_signed, uint32_t fract_bits)
+{
+   __gen_validate_value(v);
+
+   const float factor = (1 << fract_bits);
+
+   float max, min;
+   if (is_signed) {
+      max = ((1 << (end - start)) - 1) / factor;
+      min = -(1 << (end - start)) / factor;
+   } else {
+      max = ((1 << (end - start + 1)) - 1) / factor;
+      min = 0.0f;
+   }
+
+   if (v > max)
+      v = max;
+   else if (v < min)
+      v = min;
+
+   int32_t int_val = roundf(v * factor);
+
+   if (is_signed)
+      int_val &= (1 << (end - start + 1)) - 1;
+
+   return int_val << start;
+}
+
+static inline uint64_t
 __gen_offset(uint64_t v, uint32_t start, uint32_t end)
 {
    __gen_validate_value(v);
@@ -9232,7 +9262,7 @@ GEN9_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->MipModeFilter, 20, 21) |
       __gen_field(values->MagModeFilter, 17, 19) |
       __gen_field(values->MinModeFilter, 14, 16) |
-      __gen_field(values->TextureLODBias * (1 << 8), 1, 13) |
+      __gen_fixed(values->TextureLODBias, 1, 13, true, 8) |
       __gen_field(values->AnisotropicAlgorithm, 0, 0) |
       0;
 
