@@ -28,8 +28,8 @@
  */
 
 #include "ir3_nir.h"
-#include "glsl/nir/nir_builder.h"
-#include "glsl/nir/nir_control_flow.h"
+#include "compiler/nir/nir_builder.h"
+#include "compiler/nir/nir_control_flow.h"
 
 /* Based on nir_opt_peephole_select, and hacked up to more aggressively
  * flatten anything that can be flattened

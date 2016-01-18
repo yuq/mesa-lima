@@ -22,7 +22,7 @@
  */
 
 #include "vc4_qir.h"
-#include "glsl/nir/nir_builder.h"
+#include "compiler/nir/nir_builder.h"
 #include "util/u_format.h"
 
 /**

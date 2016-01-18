@@ -27,9 +27,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/include \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/glsl/glcpp \
-	-I$(top_srcdir)/src/glsl/nir \
 	-I$(top_srcdir)/src/gtest/include \
-	-I$(top_builddir)/src/glsl/nir \
 	$(DEFINES)
 AM_CFLAGS = \
 	$(VISIBILITY_CFLAGS) \
@@ -43,21 +41,12 @@ EXTRA_DIST = tests glcpp/tests README TODO glcpp/README	\
 	glsl_parser.yy					\
 	glcpp/glcpp-lex.l				\
 	glcpp/glcpp-parse.y				\
-	nir/nir_algebraic.py				\
-	nir/nir_builder_opcodes_h.py			\
-	nir/nir_constant_expressions.py			\
-	nir/nir_opcodes.py				\
-	nir/nir_opcodes_c.py				\
-	nir/nir_opcodes_h.py				\
-	nir/nir_opt_algebraic.py			\
-	nir/tests					\
 	SConscript
 
 include Makefile.sources
 
 TESTS = glcpp/tests/glcpp-test				\
 	glcpp/tests/glcpp-test-cr-lf			\
-        nir/tests/control_flow_tests			\
 	tests/blob-test					\
 	tests/general-ir-test				\
 	tests/optimization-test				\
@@ -68,11 +57,10 @@ TESTS_ENVIRONMENT= \
 	export PYTHON2=$(PYTHON2); \
 	export PYTHON_FLAGS=$(PYTHON_FLAGS);
 
-noinst_LTLIBRARIES = libnir.la libglsl.la libglcpp.la
+noinst_LTLIBRARIES = libglsl.la libglcpp.la
 check_PROGRAMS =					\
 	glcpp/glcpp					\
 	glsl_test					\
-	nir/tests/control_flow_tests			\
 	tests/blob-test					\
 	tests/general-ir-test				\
 	tests/sampler-types-test			\
@@ -138,24 +126,15 @@ glcpp_glcpp_LDADD =					\
 	-lm
 
 libglsl_la_LIBADD = \
-	$(top_builddir)/src/compiler/libcompiler.la \
+	$(top_builddir)/src/compiler/nir/libnir.la \
 	libglcpp.la
 
 libglsl_la_SOURCES =					\
 	glsl_lexer.cpp					\
 	glsl_parser.cpp					\
 	glsl_parser.h					\
-	$(LIBGLSL_FILES)				\
-	$(NIR_FILES)					\
-	$(NIR_GENERATED_FILES)				\
-	$(GLSL_TO_NIR_FILES)
+	$(LIBGLSL_FILES)
 
-libnir_la_LIBADD = \
-	$(top_builddir)/src/compiler/libcompiler.la
-
-libnir_la_SOURCES =					\
-	$(NIR_FILES)					\
-	$(NIR_GENERATED_FILES)
 
 glsl_compiler_SOURCES = \
 	$(GLSL_COMPILER_CXX_FILES)
@@ -235,8 +214,7 @@ BUILT_SOURCES =						\
 	glsl_parser.cpp					\
 	glsl_lexer.cpp					\
 	glcpp/glcpp-parse.c				\
-	glcpp/glcpp-lex.c				\
-	$(NIR_GENERATED_FILES)
+	glcpp/glcpp-lex.c
 CLEANFILES =						\
 	glcpp/glcpp-parse.h				\
 	glsl_parser.h					\
@@ -248,35 +226,3 @@ clean-local:
 dist-hook:
 	$(RM) glcpp/tests/*.out
 	$(RM) glcpp/tests/subtest*/*.out
-
-PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
-
-nir/nir_builder_opcodes.h: nir/nir_opcodes.py nir/nir_builder_opcodes_h.py
-	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/nir/nir_builder_opcodes_h.py > $@ || ($(RM) $@; false)
-
-nir/nir_constant_expressions.c: nir/nir_opcodes.py nir/nir_constant_expressions.py
-	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/nir/nir_constant_expressions.py > $@ || ($(RM) $@; false)
-
-nir/nir_opcodes.h: nir/nir_opcodes.py nir/nir_opcodes_h.py
-	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/nir/nir_opcodes_h.py > $@ || ($(RM) $@; false)
-
-nir/nir_opcodes.c: nir/nir_opcodes.py nir/nir_opcodes_c.py
-	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/nir/nir_opcodes_c.py > $@ || ($(RM) $@; false)
-
-nir/nir_opt_algebraic.c: nir/nir_opt_algebraic.py nir/nir_algebraic.py
-	$(MKDIR_GEN)
-	$(PYTHON_GEN) $(srcdir)/nir/nir_opt_algebraic.py > $@ || ($(RM) $@; false)
-
-nir_tests_control_flow_tests_SOURCES =			\
-	nir/tests/control_flow_tests.cpp
-nir_tests_control_flow_tests_CFLAGS =			\
-	$(PTHREAD_CFLAGS)
-nir_tests_control_flow_tests_LDADD =			\
-	$(top_builddir)/src/gtest/libgtest.la		\
-	$(top_builddir)/src/glsl/libnir.la		\
-	$(top_builddir)/src/util/libmesautil.la		\
-	$(PTHREAD_LIBS)

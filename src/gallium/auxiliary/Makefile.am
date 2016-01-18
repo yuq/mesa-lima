@@ -18,7 +18,7 @@ libgallium_nir_la_SOURCES = \
 	$(NIR_SOURCES)
 
 libgallium_nir_la_CFLAGS = \
-	-I$(top_builddir)/src/glsl/nir \
+	-I$(top_builddir)/src/compiler/nir \
 	$(GALLIUM_CFLAGS) \
 	$(VISIBILITY_CFLAGS) \
 	$(MSVC2013_COMPAT_CFLAGS)

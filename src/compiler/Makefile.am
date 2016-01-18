@@ -29,6 +29,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa/ \
 	-I$(top_srcdir)/src/gallium/include \
 	-I$(top_srcdir)/src/gallium/auxiliary \
+	-I$(top_srcdir)/src/gtest/include \
 	$(DEFINES)
 
 AM_CFLAGS = \
@@ -43,4 +44,81 @@ noinst_LTLIBRARIES = libcompiler.la
 
 libcompiler_la_SOURCES = $(LIBCOMPILER_FILES)
 
+check_PROGRAMS =
+TESTS =
+BUILT_SOURCES =
+CLEANFILES =
 EXTRA_DIST = SConscript
+
+
+noinst_LTLIBRARIES += nir/libnir.la
+
+nir_libnir_la_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	-I$(top_builddir)/src/compiler/nir \
+	-I$(top_srcdir)/src/compiler/nir
+
+nir_libnir_la_LIBADD = \
+	libcompiler.la
+
+nir_libnir_la_SOURCES =					\
+	$(NIR_FILES)					\
+	$(NIR_GENERATED_FILES)
+
+PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
+
+nir/nir_builder_opcodes.h: nir/nir_opcodes.py nir/nir_builder_opcodes_h.py
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) $(srcdir)/nir/nir_builder_opcodes_h.py > $@ || ($(RM) $@; false)
+
+nir/nir_constant_expressions.c: nir/nir_opcodes.py nir/nir_constant_expressions.py
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) $(srcdir)/nir/nir_constant_expressions.py > $@ || ($(RM) $@; false)
+
+nir/nir_opcodes.h: nir/nir_opcodes.py nir/nir_opcodes_h.py
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) $(srcdir)/nir/nir_opcodes_h.py > $@ || ($(RM) $@; false)
+
+nir/nir_opcodes.c: nir/nir_opcodes.py nir/nir_opcodes_c.py
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) $(srcdir)/nir/nir_opcodes_c.py > $@ || ($(RM) $@; false)
+
+nir/nir_opt_algebraic.c: nir/nir_opt_algebraic.py nir/nir_algebraic.py
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) $(srcdir)/nir/nir_opt_algebraic.py > $@ || ($(RM) $@; false)
+
+
+check_PROGRAMS += nir/tests/control_flow_tests
+
+nir_tests_control_flow_tests_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	-I$(top_builddir)/src/compiler/nir \
+	-I$(top_srcdir)/src/compiler/nir
+
+nir_tests_control_flow_tests_SOURCES =			\
+	nir/tests/control_flow_tests.cpp
+nir_tests_control_flow_tests_CFLAGS =			\
+	$(PTHREAD_CFLAGS)
+nir_tests_control_flow_tests_LDADD =			\
+	$(top_builddir)/src/gtest/libgtest.la		\
+	$(top_builddir)/src/compiler/nir/libnir.la	\
+	$(top_builddir)/src/util/libmesautil.la		\
+	$(PTHREAD_LIBS)
+
+
+TESTS += nir/tests/control_flow_tests
+
+
+BUILT_SOURCES += $(NIR_GENERATED_FILES)
+CLEANFILES += $(NIR_GENERATED_FILES)
+
+EXTRA_DIST += \
+	nir/nir_algebraic.py				\
+	nir/nir_builder_opcodes_h.py			\
+	nir/nir_constant_expressions.py			\
+	nir/nir_opcodes.py				\
+	nir/nir_opcodes_c.py				\
+	nir/nir_opcodes_h.py				\
+	nir/nir_opt_algebraic.py			\
+	nir/tests					\
+	nir/Makefile.sources
