@@ -1861,6 +1861,8 @@ typedef enum
    PROGRAM_SAMPLER,     /**< for shader samplers, compile-time only */
    PROGRAM_SYSTEM_VALUE,/**< InstanceId, PrimitiveID, etc. */
    PROGRAM_UNDEFINED,   /**< Invalid/TBD value */
+   PROGRAM_IMMEDIATE,   /**< Immediate value, used by TGSI */
+   PROGRAM_BUFFER,      /**< for shader buffers, compile-time only */
    PROGRAM_FILE_MAX
 } gl_register_file;
 

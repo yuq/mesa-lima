@@ -52,7 +52,6 @@
 #include "st_mesa_to_tgsi.h"
 
 
-#define PROGRAM_IMMEDIATE PROGRAM_FILE_MAX
 #define PROGRAM_ANY_CONST ((1 << PROGRAM_STATE_VAR) |    \
                            (1 << PROGRAM_CONSTANT) |     \
                            (1 << PROGRAM_UNIFORM))
