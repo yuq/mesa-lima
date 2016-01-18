@@ -3382,17 +3382,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          bld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD, packed_consts,
                   surf_index, const_offset_reg);
 
-         for (unsigned i = 0; i < instr->num_components; i++) {
-            packed_consts.set_smear(const_offset->u32[0] % 16 / 4 + i);
+         const fs_reg consts = byte_offset(packed_consts, const_offset->u32[0] % 16);
 
-            /* The std140 packing rules don't allow vectors to cross 16-byte
-             * boundaries, and a reg is 32 bytes.
-             */
-            assert(packed_consts.subreg_offset < 32);
-
-            bld.MOV(dest, packed_consts);
-            dest = offset(dest, bld, 1);
-         }
+         for (unsigned i = 0; i < instr->num_components; i++)
+            bld.MOV(offset(dest, bld, i), component(consts, i));
       }
       break;
    }
