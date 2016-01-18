@@ -227,6 +227,61 @@ anv_gem_get_param(int fd, uint32_t param)
    return 0;
 }
 
+bool
+anv_gem_get_bit6_swizzle(int fd, uint32_t tiling)
+{
+   struct drm_gem_close close;
+   int ret;
+
+   struct drm_i915_gem_create gem_create;
+   VG_CLEAR(gem_create);
+   gem_create.size = 4096;
+
+   if (anv_ioctl(fd, DRM_IOCTL_I915_GEM_CREATE, &gem_create)) {
+      assert(!"Failed to create GEM BO");
+      return false;
+   }
+
+   bool swizzled = false;
+
+   /* set_tiling overwrites the input on the error path, so we have to open
+    * code anv_ioctl.
+    */
+   struct drm_i915_gem_set_tiling set_tiling;
+   do {
+      VG_CLEAR(set_tiling);
+      set_tiling.handle = gem_create.handle;
+      set_tiling.tiling_mode = tiling;
+      set_tiling.stride = tiling == I915_TILING_X ? 512 : 128;
+
+      ret = ioctl(fd, DRM_IOCTL_I915_GEM_SET_TILING, &set_tiling);
+   } while (ret == -1 && (errno == EINTR || errno == EAGAIN));
+
+   if (ret != 0) {
+      assert(!"Failed to set BO tiling");
+      goto close_and_return;
+   }
+
+   struct drm_i915_gem_get_tiling get_tiling;
+   VG_CLEAR(get_tiling);
+   get_tiling.handle = gem_create.handle;
+
+   if (anv_ioctl(fd, DRM_IOCTL_I915_GEM_GET_TILING, &get_tiling)) {
+      assert(!"Failed to get BO tiling");
+      goto close_and_return;
+   }
+
+   swizzled = get_tiling.swizzle_mode != I915_BIT_6_SWIZZLE_NONE;
+
+close_and_return:
+
+   VG_CLEAR(close);
+   close.handle = gem_create.handle;
+   anv_ioctl(fd, DRM_IOCTL_GEM_CLOSE, &close);
+
+   return swizzled;
+}
+
 int
 anv_gem_create_context(struct anv_device *device)
 {

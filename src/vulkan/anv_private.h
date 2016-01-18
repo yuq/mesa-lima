@@ -665,6 +665,7 @@ int anv_gem_set_tiling(struct anv_device *device, uint32_t gem_handle,
 int anv_gem_create_context(struct anv_device *device);
 int anv_gem_destroy_context(struct anv_device *device, int context);
 int anv_gem_get_param(int fd, uint32_t param);
+bool anv_gem_get_bit6_swizzle(int fd, uint32_t tiling);
 int anv_gem_get_aperture(int fd, uint64_t *size);
 int anv_gem_handle_to_fd(struct anv_device *device, uint32_t gem_handle);
 uint32_t anv_gem_fd_to_handle(struct anv_device *device, int fd);
