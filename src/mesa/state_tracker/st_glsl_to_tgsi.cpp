@@ -267,6 +267,7 @@ public:
    int dead_mask; /**< Used in dead code elimination */
 
    st_src_reg buffer; /**< buffer register */
+   unsigned buffer_access; /**< buffer access type */
 
    class function_entry *function; /* Set on TGSI_OPCODE_CAL or TGSI_OPCODE_BGNSUB */
    const struct tgsi_opcode_info *info;
@@ -447,6 +448,7 @@ public:
    /*@}*/
 
    void visit_atomic_counter_intrinsic(ir_call *);
+   void visit_ssbo_intrinsic(ir_call *);
 
    st_src_reg result;
 
@@ -687,8 +689,6 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
       }
    }
 
-   this->instructions.push_tail(inst);
-
    /*
     * This section contains the double processing.
     * GLSL just represents doubles as single channel values,
@@ -724,7 +724,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
       int initial_src_swz[4], initial_src_idx[4];
       int initial_dst_idx[2], initial_dst_writemask[2];
       /* select the writemask for dst0 or dst1 */
-      unsigned writemask = inst->dst[0].file == PROGRAM_UNDEFINED ? inst->dst[1].writemask : inst->dst[0].writemask;
+      unsigned writemask = inst->dst[1].file == PROGRAM_UNDEFINED ? inst->dst[0].writemask : inst->dst[1].writemask;
 
       /* copy out the writemask, index and swizzles for all src/dsts. */
       for (j = 0; j < 2; j++) {
@@ -741,9 +741,21 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
        * scan all the components in the dst writemask
        * generate an instruction for each of them if required.
        */
+      st_src_reg addr;
       while (writemask) {
 
          int i = u_bit_scan(&writemask);
+
+         /* before emitting the instruction, see if we have to adjust store
+          * address */
+         if (i > 1 && inst->op == TGSI_OPCODE_STORE &&
+             addr.file == PROGRAM_UNDEFINED) {
+            /* We have to advance the buffer address by 16 */
+            addr = get_temp(glsl_type::uint_type);
+            emit_asm(ir, TGSI_OPCODE_UADD, st_dst_reg(addr),
+                     inst->src[0], st_src_reg_for_int(16));
+         }
+
 
          /* first time use previous instruction */
          if (dinst == NULL) {
@@ -754,16 +766,21 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
             *dinst = *inst;
             dinst->next = NULL;
             dinst->prev = NULL;
-            this->instructions.push_tail(dinst);
          }
+         this->instructions.push_tail(dinst);
 
          /* modify the destination if we are splitting */
          for (j = 0; j < 2; j++) {
             if (dst_is_double[j]) {
                dinst->dst[j].writemask = (i & 1) ? WRITEMASK_ZW : WRITEMASK_XY;
                dinst->dst[j].index = initial_dst_idx[j];
-               if (i > 1)
+               if (i > 1) {
+                  if (dinst->op == TGSI_OPCODE_STORE) {
+                     dinst->src[0] = addr;
+                  } else {
                      dinst->dst[j].index++;
+                  }
+               }
             } else {
                /* if we aren't writing to a double, just get the bit of the initial writemask
                   for this channel */
@@ -799,6 +816,8 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
          }
       }
       inst = dinst;
+   } else {
+      this->instructions.push_tail(inst);
    }
 
 
@@ -833,7 +852,9 @@ glsl_to_tgsi_visitor::get_opcode(ir_instruction *ir, unsigned op,
    assert(src1.type != GLSL_TYPE_ARRAY);
    assert(src1.type != GLSL_TYPE_STRUCT);
 
-   if (src0.type == GLSL_TYPE_DOUBLE || src1.type == GLSL_TYPE_DOUBLE)
+   if (is_resource_instruction(op))
+      type = src1.type;
+   else if (src0.type == GLSL_TYPE_DOUBLE || src1.type == GLSL_TYPE_DOUBLE)
       type = GLSL_TYPE_DOUBLE;
    else if (src0.type == GLSL_TYPE_FLOAT || src1.type == GLSL_TYPE_FLOAT)
       type = GLSL_TYPE_FLOAT;
@@ -916,6 +937,9 @@ glsl_to_tgsi_visitor::get_opcode(ir_instruction *ir, unsigned op,
       case3fid(CEIL, CEIL, DCEIL);
       case3fid(FLR, FLR, DFLR);
       case3fid(ROUND, ROUND, DROUND);
+
+      case2iu(ATOMIMAX, ATOMUMAX);
+      case2iu(ATOMIMIN, ATOMUMIN);
 
       default: break;
    }
@@ -3149,6 +3173,117 @@ glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
 }
 
 void
+glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
+{
+   const char *callee = ir->callee->function_name();
+   exec_node *param = ir->actual_parameters.get_head();
+
+   ir_rvalue *block = ((ir_instruction *)param)->as_rvalue();
+
+   param = param->get_next();
+   ir_rvalue *offset = ((ir_instruction *)param)->as_rvalue();
+
+   ir_constant *const_block = block->as_constant();
+
+   st_src_reg buffer(
+         PROGRAM_BUFFER,
+         ctx->Const.Program[shader->Stage].MaxAtomicBuffers +
+         (const_block ? const_block->value.u[0] : 0),
+         GLSL_TYPE_UINT);
+
+   if (!const_block) {
+      block->accept(this);
+      emit_arl(ir, sampler_reladdr, this->result);
+      buffer.reladdr = ralloc(mem_ctx, st_src_reg);
+      memcpy(buffer.reladdr, &sampler_reladdr, sizeof(sampler_reladdr));
+   }
+
+   /* Calculate the surface offset */
+   offset->accept(this);
+   st_src_reg off = this->result;
+
+   st_dst_reg dst = undef_dst;
+   if (ir->return_deref) {
+      ir->return_deref->accept(this);
+      dst = st_dst_reg(this->result);
+      dst.writemask = (1 << ir->return_deref->type->vector_elements) - 1;
+   }
+
+   glsl_to_tgsi_instruction *inst;
+
+   if (!strcmp("__intrinsic_load_ssbo", callee)) {
+      inst = emit_asm(ir, TGSI_OPCODE_LOAD, dst, off);
+      if (dst.type == GLSL_TYPE_BOOL)
+         emit_asm(ir, TGSI_OPCODE_USNE, dst, st_src_reg(dst), st_src_reg_for_int(0));
+   } else if (!strcmp("__intrinsic_store_ssbo", callee)) {
+      param = param->get_next();
+      ir_rvalue *val = ((ir_instruction *)param)->as_rvalue();
+      val->accept(this);
+
+      param = param->get_next();
+      ir_constant *write_mask = ((ir_instruction *)param)->as_constant();
+      assert(write_mask);
+      dst.writemask = write_mask->value.u[0];
+
+      dst.type = this->result.type;
+      inst = emit_asm(ir, TGSI_OPCODE_STORE, dst, off, this->result);
+   } else {
+      param = param->get_next();
+      ir_rvalue *val = ((ir_instruction *)param)->as_rvalue();
+      val->accept(this);
+
+      st_src_reg data = this->result, data2 = undef_src;
+      unsigned opcode;
+      if (!strcmp("__intrinsic_atomic_add_ssbo", callee))
+         opcode = TGSI_OPCODE_ATOMUADD;
+      else if (!strcmp("__intrinsic_atomic_min_ssbo", callee))
+         opcode = TGSI_OPCODE_ATOMIMIN;
+      else if (!strcmp("__intrinsic_atomic_max_ssbo", callee))
+         opcode = TGSI_OPCODE_ATOMIMAX;
+      else if (!strcmp("__intrinsic_atomic_and_ssbo", callee))
+         opcode = TGSI_OPCODE_ATOMAND;
+      else if (!strcmp("__intrinsic_atomic_or_ssbo", callee))
+         opcode = TGSI_OPCODE_ATOMOR;
+      else if (!strcmp("__intrinsic_atomic_xor_ssbo", callee))
+         opcode = TGSI_OPCODE_ATOMXOR;
+      else if (!strcmp("__intrinsic_atomic_exchange_ssbo", callee))
+         opcode = TGSI_OPCODE_ATOMXCHG;
+      else if (!strcmp("__intrinsic_atomic_comp_swap_ssbo", callee)) {
+         opcode = TGSI_OPCODE_ATOMCAS;
+         param = param->get_next();
+         val = ((ir_instruction *)param)->as_rvalue();
+         val->accept(this);
+         data2 = this->result;
+      } else {
+         assert(!"Unexpected intrinsic");
+         return;
+      }
+
+      inst = emit_asm(ir, opcode, dst, off, data, data2);
+   }
+
+   param = param->get_next();
+   ir_constant *access = NULL;
+   if (!param->is_tail_sentinel()) {
+      access = ((ir_instruction *)param)->as_constant();
+      assert(access);
+   }
+
+   /* The emit_asm() might have actually split the op into pieces, e.g. for
+    * double stores. We have to go back and fix up all the generated ops.
+    */
+   unsigned op = inst->op;
+   do {
+      inst->buffer = buffer;
+      if (access)
+         inst->buffer_access = access->value.u[0];
+      inst = (glsl_to_tgsi_instruction *)inst->get_prev();
+      if (inst->op == TGSI_OPCODE_UADD)
+         inst = (glsl_to_tgsi_instruction *)inst->get_prev();
+   } while (inst && inst->buffer.file == PROGRAM_UNDEFINED && inst->op == op);
+}
+
+void
 glsl_to_tgsi_visitor::visit(ir_call *ir)
 {
    glsl_to_tgsi_instruction *call_inst;
@@ -3162,6 +3297,20 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
        !strcmp("__intrinsic_atomic_increment", callee) ||
        !strcmp("__intrinsic_atomic_predecrement", callee)) {
       visit_atomic_counter_intrinsic(ir);
+      return;
+   }
+
+   if (!strcmp("__intrinsic_load_ssbo", callee) ||
+       !strcmp("__intrinsic_store_ssbo", callee) ||
+       !strcmp("__intrinsic_atomic_add_ssbo", callee) ||
+       !strcmp("__intrinsic_atomic_min_ssbo", callee) ||
+       !strcmp("__intrinsic_atomic_max_ssbo", callee) ||
+       !strcmp("__intrinsic_atomic_and_ssbo", callee) ||
+       !strcmp("__intrinsic_atomic_or_ssbo", callee) ||
+       !strcmp("__intrinsic_atomic_xor_ssbo", callee) ||
+       !strcmp("__intrinsic_atomic_exchange_ssbo", callee) ||
+       !strcmp("__intrinsic_atomic_comp_swap_ssbo", callee)) {
+      visit_ssbo_intrinsic(ir);
       return;
    }
 
@@ -4999,7 +5148,18 @@ compile_tgsi_instruction(struct st_translate *t,
       src[0] = t->buffers[inst->buffer.index];
       if (inst->buffer.reladdr)
          src[0] = ureg_src_indirect(src[0], ureg_src(t->address[2]));
-      ureg_insn(ureg, inst->op, dst, num_dst, src, num_src);
+      assert(src[0].File != TGSI_FILE_NULL);
+      ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
+                       inst->buffer_access);
+      break;
+
+   case TGSI_OPCODE_STORE:
+      dst[0] = ureg_writemask(ureg_dst(t->buffers[inst->buffer.index]), inst->dst[0].writemask);
+      if (inst->buffer.reladdr)
+         dst[0] = ureg_dst_indirect(dst[0], ureg_src(t->address[2]));
+      assert(dst[0].File != TGSI_FILE_NULL);
+      ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
+                       inst->buffer_access);
       break;
 
    case TGSI_OPCODE_SCS:
@@ -5638,6 +5798,15 @@ st_translate_program(
          t->buffers[i] = ureg_DECL_buffer(ureg, i, true);
       }
    }
+
+   for (; i < frag_const->MaxAtomicBuffers + frag_const->MaxShaderStorageBlocks;
+        i++) {
+      if (program->buffers_used & (1 << i)) {
+         t->buffers[i] = ureg_DECL_buffer(ureg, i, false);
+      }
+   }
+
+
 
    /* Emit each instruction in turn:
     */

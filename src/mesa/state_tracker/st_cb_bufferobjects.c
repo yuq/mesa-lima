@@ -238,6 +238,7 @@ st_bufferobj_data(struct gl_context *ctx,
       bind = PIPE_BIND_COMMAND_ARGS_BUFFER;
       break;
    case GL_ATOMIC_COUNTER_BUFFER:
+   case GL_SHADER_STORAGE_BUFFER:
       bind = PIPE_BIND_SHADER_BUFFER;
       break;
    default:

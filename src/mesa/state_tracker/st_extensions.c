@@ -220,7 +220,8 @@ void st_init_limits(struct pipe_screen *screen,
 
       pc->MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
       pc->MaxAtomicBuffers = screen->get_shader_param(
-            screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS);
+            screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS) / 2;
+      pc->MaxShaderStorageBlocks = pc->MaxAtomicBuffers;
 
       /* Gallium doesn't really care about local vs. env parameters so use the
        * same limits.
@@ -350,6 +351,17 @@ void st_init_limits(struct pipe_screen *screen,
 
    if (c->MaxCombinedAtomicBuffers > 0)
       extensions->ARB_shader_atomic_counters = GL_TRUE;
+
+   c->MaxCombinedShaderOutputResources = c->MaxDrawBuffers;
+   c->ShaderStorageBufferOffsetAlignment =
+      screen->get_param(screen, PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT);
+   if (c->ShaderStorageBufferOffsetAlignment) {
+      c->MaxCombinedShaderStorageBlocks = c->MaxShaderStorageBufferBindings =
+         c->MaxCombinedAtomicBuffers;
+      c->MaxCombinedShaderOutputResources +=
+         c->MaxCombinedShaderStorageBlocks;
+      c->MaxShaderStorageBlockSize = 1 << 27;
+   }
 }
 
 
