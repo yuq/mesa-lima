@@ -26,7 +26,7 @@ i965_compiler_FILES = \
 	brw_fs.h \
 	brw_fs_live_variables.cpp \
 	brw_fs_live_variables.h \
-	brw_fs_lower_d2f.cpp \
+	brw_fs_lower_d2x.cpp \
 	brw_fs_lower_pack.cpp \
 	brw_fs_nir.cpp \
 	brw_fs_reg_allocate.cpp \

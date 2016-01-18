@@ -5359,7 +5359,7 @@ fs_visitor::optimize()
       OPT(dead_code_eliminate);
    }
 
-   if (OPT(lower_d2f)) {
+   if (OPT(lower_d2x)) {
       OPT(opt_copy_propagate);
       OPT(dead_code_eliminate);
    }

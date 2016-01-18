@@ -28,7 +28,7 @@
 using namespace brw;
 
 bool
-fs_visitor::lower_d2f()
+fs_visitor::lower_d2x()
 {
    bool progress = false;
 
