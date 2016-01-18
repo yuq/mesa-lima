@@ -2650,7 +2650,15 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    nir_intrinsic_instr *intrin = nir_intrinsic_instr_create(b->shader, op);
    intrin->variables[0] =
       nir_deref_as_var(nir_copy_deref(&intrin->instr, &image.deref->deref));
-   intrin->src[0] = nir_src_for_ssa(image.coord);
+
+   /* The image coordinate is always 4 components but we may not have that
+    * many.  Swizzle to compensate.
+    */
+   unsigned swiz[4];
+   for (unsigned i = 0; i < 4; i++)
+      swiz[i] = i < image.coord->num_components ? i : 0;
+   intrin->src[0] = nir_src_for_ssa(nir_swizzle(&b->nb, image.coord,
+                                                swiz, 4, false));
    intrin->src[1] = nir_src_for_ssa(image.sample);
 
    switch (opcode) {
@@ -2694,13 +2702,20 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    if (opcode != SpvOpImageWrite) {
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
       struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
-      nir_ssa_dest_init(&intrin->instr, &intrin->dest,
-                        glsl_get_vector_elements(type->type), NULL);
-      val->ssa = vtn_create_ssa_value(b, type->type);
-      val->ssa->def = &intrin->dest.ssa;
-   }
+      nir_ssa_dest_init(&intrin->instr, &intrin->dest, 4, NULL);
 
-   nir_builder_instr_insert(&b->nb, &intrin->instr);
+      nir_builder_instr_insert(&b->nb, &intrin->instr);
+
+      /* The image intrinsics always return 4 channels but we may not want
+       * that many.  Emit a mov to trim it down.
+       */
+      unsigned swiz[4] = {0, 1, 2, 3};
+      val->ssa = vtn_create_ssa_value(b, type->type);
+      val->ssa->def = nir_swizzle(&b->nb, &intrin->dest.ssa, swiz,
+                                  glsl_get_vector_elements(type->type), false);
+   } else {
+      nir_builder_instr_insert(&b->nb, &intrin->instr);
+   }
 }
 
 static void
