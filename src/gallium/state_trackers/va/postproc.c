@@ -273,7 +273,7 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
 
          case VAProcDeinterlacingMotionAdaptive:
             src = vlVaApplyDeint(drv, context, param, src,
-				 deint->flags & VA_DEINTERLACING_BOTTOM_FIELD);
+				 !!(deint->flags & VA_DEINTERLACING_BOTTOM_FIELD));
             break;
 
          default:
