@@ -704,12 +704,12 @@ struct ast_type_qualifier {
    bool merge_out_qualifier(YYLTYPE *loc,
                            _mesa_glsl_parse_state *state,
                            const ast_type_qualifier &q,
-                           ast_node* &node);
+                           ast_node* &node, bool create_node);
 
    bool merge_in_qualifier(YYLTYPE *loc,
                            _mesa_glsl_parse_state *state,
                            const ast_type_qualifier &q,
-                           ast_node* &node);
+                           ast_node* &node, bool create_node);
 
    ast_subroutine_list *subroutine_list;
 };

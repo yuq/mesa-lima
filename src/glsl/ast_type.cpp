@@ -291,7 +291,7 @@ bool
 ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
                                         _mesa_glsl_parse_state *state,
                                         const ast_type_qualifier &q,
-                                        ast_node* &node)
+                                        ast_node* &node, bool create_node)
 {
    void *mem_ctx = state;
    const bool r = this->merge_qualifier(loc, state, q);
@@ -314,7 +314,9 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
       /* Allow future assigments of global out's stream id value */
       this->flags.q.explicit_stream = 0;
    } else if (state->stage == MESA_SHADER_TESS_CTRL) {
-      node = new(mem_ctx) ast_tcs_output_layout(*loc);
+      if (create_node) {
+         node = new(mem_ctx) ast_tcs_output_layout(*loc);
+      }
    } else {
       _mesa_glsl_error(loc, state, "out layout qualifiers only valid in "
                        "tessellation control or geometry shaders");
@@ -327,7 +329,7 @@ bool
 ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
                                        _mesa_glsl_parse_state *state,
                                        const ast_type_qualifier &q,
-                                       ast_node* &node)
+                                       ast_node* &node, bool create_node)
 {
    void *mem_ctx = state;
    bool create_gs_ast = false;
@@ -467,10 +469,12 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
       this->point_mode = q.point_mode;
    }
 
-   if (create_gs_ast) {
-      node = new(mem_ctx) ast_gs_input_layout(*loc, q.prim_type);
-   } else if (create_cs_ast) {
-      node = new(mem_ctx) ast_cs_input_layout(*loc, q.local_size);
+   if (create_node) {
+      if (create_gs_ast) {
+         node = new(mem_ctx) ast_gs_input_layout(*loc, q.prim_type);
+      } else if (create_cs_ast) {
+         node = new(mem_ctx) ast_cs_input_layout(*loc, q.local_size);
+      }
    }
 
    return true;
