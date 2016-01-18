@@ -227,7 +227,7 @@ VkResult anv_CreateInstance(
    }
 
    instance = anv_alloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
-                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+                         VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!instance)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -698,7 +698,7 @@ VkResult anv_CreateDevice(
 
    device = anv_alloc2(&physical_device->instance->alloc, pAllocator,
                        sizeof(*device), 8,
-                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+                       VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
    if (!device)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 

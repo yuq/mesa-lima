@@ -239,7 +239,7 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
 {
    struct wsi_wl_display *display =
       anv_alloc(&wsi->instance->alloc, sizeof(*display), 8,
-                VK_SYSTEM_ALLOCATION_SCOPE_CACHE);
+                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!display)
       return NULL;
 
@@ -820,7 +820,7 @@ anv_wl_init_wsi(struct anv_instance *instance)
    VkResult result;
 
    wsi = anv_alloc(&instance->alloc, sizeof(*wsi), 8,
-                   VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!wsi) {
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       goto fail;
