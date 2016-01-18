@@ -303,6 +303,21 @@ create_color_pipeline(struct anv_device *device, uint32_t frag_output,
                       /*use_repclear*/ false, pipeline);
 }
 
+static void
+free_color_pipelines(struct anv_device *device)
+{
+   for (uint32_t i = 0;
+        i < ARRAY_SIZE(device->meta_state.clear.color_pipelines); ++i) {
+      if (device->meta_state.clear.color_pipelines[i] == NULL)
+         continue;
+
+      ANV_CALL(DestroyPipeline)(
+         anv_device_to_handle(device),
+         anv_pipeline_to_handle(device->meta_state.clear.color_pipelines[i]),
+         &device->meta_state.alloc);
+   }
+}
+
 static VkResult
 init_color_pipelines(struct anv_device *device)
 {
@@ -321,14 +336,7 @@ init_color_pipelines(struct anv_device *device)
    return VK_SUCCESS;
 
 fail:
-   for (uint32_t i = 0; i < n; ++i) {
-      if (pipelines[i] == NULL)
-         break;
-
-      anv_DestroyPipeline(anv_device_to_handle(device),
-                          anv_pipeline_to_handle(pipelines[i]),
-                          &device->meta_state.alloc);
-   }
+   free_color_pipelines(device);
 
    return result;
 }
@@ -677,8 +685,10 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       return result;
 
    result = init_depthstencil_pipelines(device);
-   if (result != VK_SUCCESS)
+   if (result != VK_SUCCESS) {
+      free_color_pipelines(device);
       return result;
+   }
 
    return VK_SUCCESS;
 }
@@ -688,12 +698,7 @@ anv_device_finish_meta_clear_state(struct anv_device *device)
 {
    VkDevice device_h = anv_device_to_handle(device);
 
-   for (uint32_t i = 0;
-        i < ARRAY_SIZE(device->meta_state.clear.color_pipelines); ++i) {
-      ANV_CALL(DestroyPipeline)(device_h,
-         anv_pipeline_to_handle(device->meta_state.clear.color_pipelines[i]),
-         NULL);
-   }
+   free_color_pipelines(device);
 
    ANV_CALL(DestroyPipeline)(device_h,
       anv_pipeline_to_handle(device->meta_state.clear.depth_only_pipeline),

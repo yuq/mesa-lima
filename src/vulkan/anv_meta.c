@@ -1448,8 +1448,10 @@ anv_device_init_meta(struct anv_device *device)
       return result;
 
    result = anv_device_init_meta_blit_state(device);
-   if (result != VK_SUCCESS)
+   if (result != VK_SUCCESS) {
+      anv_device_finish_meta_clear_state(device);
       return result;
+   }
 
    return VK_SUCCESS;
 }
