@@ -176,6 +176,33 @@ INTRINSIC(image_samples, 0, ARR(), true, 1, 1, 0, xx, xx, xx,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 /*
+ * variable atomic intrinsics
+ *
+ * All of these variable atomic memory operations read a value from memory,
+ * compute a new value using one of the operations below, write the new value
+ * to memory, and return the original value read.
+ *
+ * All operations take 1 source except CompSwap that takes 2. These sources
+ * represent:
+ *
+ * 0: The data parameter to the atomic function (i.e. the value to add
+ *    in shared_atomic_add, etc).
+ * 1: For CompSwap only: the second data parameter.
+ *
+ * All operations take 1 variable deref.
+ */
+INTRINSIC(var_atomic_add, 1, ARR(1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(var_atomic_imin, 1, ARR(1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(var_atomic_umin, 1, ARR(1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(var_atomic_imax, 1, ARR(1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(var_atomic_umax, 1, ARR(1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(var_atomic_and, 1, ARR(1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(var_atomic_or, 1, ARR(1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(var_atomic_xor, 1, ARR(1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(var_atomic_exchange, 1, ARR(1), true, 1, 1, 0, xx, xx, xx, 0)
+INTRINSIC(var_atomic_comp_swap, 2, ARR(1, 1), true, 1, 1, 0, xx, xx, xx, 0)
+
+/*
  * SSBO atomic intrinsics
  *
  * All of the SSBO atomic memory operations read a value from memory,
