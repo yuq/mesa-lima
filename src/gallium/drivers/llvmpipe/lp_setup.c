@@ -476,26 +476,29 @@ lp_setup_try_clear_zs(struct lp_setup_context *setup,
    uint64_t zsvalue = 0;
    uint32_t zmask32;
    uint8_t smask8;
+   enum pipe_format format = setup->fb.zsbuf->format;
 
    LP_DBG(DEBUG_SETUP, "%s state %d\n", __FUNCTION__, setup->state);
 
    zmask32 = (flags & PIPE_CLEAR_DEPTH) ? ~0 : 0;
    smask8 = (flags & PIPE_CLEAR_STENCIL) ? ~0 : 0;
 
-   zsvalue = util_pack64_z_stencil(setup->fb.zsbuf->format,
-                                   depth,
-                                   stencil);
+   zsvalue = util_pack64_z_stencil(format, depth, stencil);
 
-   /*
-    * XXX: should make a full mask here for things like D24X8,
-    * otherwise we'll do a read-modify-write clear later which
-    * should be unnecessary.
-    */
-   zsmask = util_pack64_mask_z_stencil(setup->fb.zsbuf->format,
-                                       zmask32,
-                                       smask8);
+   zsmask = util_pack64_mask_z_stencil(format, zmask32, smask8);
 
    zsvalue &= zsmask;
+
+   if (format == PIPE_FORMAT_Z24X8_UNORM ||
+       format == PIPE_FORMAT_X8Z24_UNORM) {
+      /*
+       * Make full mask if there's "X" bits so we can do full
+       * clear (without rmw).
+       */
+      uint32_t zsmask_full = 0;
+      zsmask_full = util_pack_mask_z_stencil(format, ~0, ~0);
+      zsmask |= ~zsmask_full;
+   }
 
    if (setup->state == SETUP_ACTIVE) {
       struct lp_scene *scene = setup->scene;
