@@ -704,6 +704,18 @@ struct pipe_grid_info
     * Determine the layout of the grid (in block units) to be used.
     */
    uint grid[3];
+
+   /* Indirect compute parameters resource: If not NULL, block sizes are taken
+    * from this buffer instead, which is laid out as follows:
+    *
+    *  struct {
+    *     uint32_t num_blocks_x;
+    *     uint32_t num_blocks_y;
+    *     uint32_t num_blocks_z;
+    *  };
+    */
+   struct pipe_resource *indirect;
+   unsigned indirect_offset; /**< must be 4 byte aligned */
 };
 
 /**
