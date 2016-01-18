@@ -95,6 +95,7 @@ void brw_nir_lower_fs_inputs(nir_shader *nir);
 void brw_nir_lower_vue_outputs(nir_shader *nir, bool is_scalar);
 void brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue);
 void brw_nir_lower_fs_outputs(nir_shader *nir);
+void brw_nir_lower_cs_shared(nir_shader *nir);
 
 nir_shader *brw_postprocess_nir(nir_shader *nir,
                                 const struct brw_device_info *devinfo,

@@ -377,6 +377,14 @@ brw_nir_lower_uniforms(nir_shader *nir, bool is_scalar)
    }
 }
 
+void
+brw_nir_lower_cs_shared(nir_shader *nir)
+{
+   nir_assign_var_locations(&nir->shared, &nir->num_shared,
+                            type_size_scalar_bytes);
+   nir_lower_io(nir, nir_var_shared, type_size_scalar_bytes);
+}
+
 #define OPT(pass, ...) ({                                  \
    bool this_progress = false;                             \
    NIR_PASS(this_progress, nir, pass, ##__VA_ARGS__);      \
