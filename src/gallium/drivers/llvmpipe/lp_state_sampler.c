@@ -129,6 +129,15 @@ llvmpipe_set_sampler_views(struct pipe_context *pipe,
        */
       pipe_sampler_view_release(pipe,
                                 &llvmpipe->sampler_views[shader][start + i]);
+      /*
+       * Warn if someone tries to set a view created in a different context
+       * (which is why we need the hack above in the first place).
+       * An assert would be better but st/mesa relies on it...
+       */
+      if (views[i] && views[i]->context != pipe) {
+         debug_printf("Illegal setting of sampler_view %d created in another "
+                      "context\n", i);
+      }
       pipe_sampler_view_reference(&llvmpipe->sampler_views[shader][start + i],
                                   views[i]);
    }
