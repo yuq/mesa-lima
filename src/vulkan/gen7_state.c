@@ -98,6 +98,7 @@ VkResult genX(CreateSampler)(
    struct GEN7_SAMPLER_STATE sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
+      .LODPreClampEnable = OGL,
       .BaseMipLevel = 0.0,
       .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
       .MagModeFilter = filter,

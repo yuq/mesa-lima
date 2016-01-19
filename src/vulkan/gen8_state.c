@@ -386,7 +386,7 @@ VkResult genX(CreateSampler)(
    struct GENX(SAMPLER_STATE) sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
-      .LODPreClampMode = 0,
+      .LODPreClampMode = CLAMP_OGL,
 #if ANV_GEN == 8
       .BaseMipLevel = 0.0,
 #endif
