@@ -28,6 +28,10 @@
 #include "vtn_private.h"
 #include "GLSL.std.450.h"
 
+#define M_PIf   ((float) M_PI)
+#define M_PI_2f ((float) M_PI_2)
+#define M_PI_4f ((float) M_PI_4)
+
 static nir_ssa_def *
 build_mat2_det(nir_builder *b, nir_ssa_def *col[2])
 {
@@ -199,6 +203,22 @@ static nir_ssa_def *
 build_log(nir_builder *b, nir_ssa_def *x)
 {
    return nir_fmul(b, nir_flog2(b, x), nir_imm_float(b, 1.0 / M_LOG2E));
+}
+
+static nir_ssa_def *
+build_asin(nir_builder *b, nir_ssa_def *x)
+{
+   nir_ssa_def *abs_x = nir_fabs(b, x);
+   return nir_fmul(b, nir_fsign(b, x),
+                   nir_fsub(b, nir_imm_float(b, M_PI_2f),
+                            nir_fmul(b, nir_fsqrt(b, nir_fsub(b, nir_imm_float(b, 1.0f), abs_x)),
+                                     nir_fadd(b, nir_imm_float(b, M_PI_2f),
+                                              nir_fmul(b, abs_x,
+                                                       nir_fadd(b, nir_imm_float(b, M_PI_4f - 1.0f),
+                                                                nir_fmul(b, abs_x,
+                                                                         nir_fadd(b, nir_imm_float(b, 0.086566724f),
+                                                                                  nir_fmul(b, abs_x,
+                                                                                           nir_imm_float(b, -0.03102955f))))))))));
 }
 
 static void
@@ -417,7 +437,14 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450FindUMsb:   op = nir_op_ufind_msb;  break;
 
    case GLSLstd450Asin:
+      val->ssa->def = build_asin(nb, src[0]);
+      return;
+
    case GLSLstd450Acos:
+      val->ssa->def = nir_fsub(nb, nir_imm_float(nb, M_PI_2f),
+                                   build_asin(nb, src[0]));
+      return;
+
    case GLSLstd450Atan:
    case GLSLstd450Atan2:
    case GLSLstd450ModfStruct:
