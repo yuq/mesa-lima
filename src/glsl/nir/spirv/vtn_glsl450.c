@@ -221,6 +221,74 @@ build_asin(nir_builder *b, nir_ssa_def *x)
                                                                                            nir_imm_float(b, -0.03102955f))))))))));
 }
 
+/**
+ * Compute xs[0] + xs[1] + xs[2] + ... using fadd.
+ */
+static nir_ssa_def *
+build_fsum(nir_builder *b, nir_ssa_def **xs, int terms)
+{
+   nir_ssa_def *accum = xs[0];
+
+   for (int i = 1; i < terms; i++)
+      accum = nir_fadd(b, accum, xs[i]);
+
+   return accum;
+}
+
+static nir_ssa_def *
+build_atan(nir_builder *b, nir_ssa_def *y_over_x)
+{
+   nir_ssa_def *abs_y_over_x = nir_fabs(b, y_over_x);
+   nir_ssa_def *one = nir_imm_float(b, 1.0f);
+
+   /*
+    * range-reduction, first step:
+    *
+    *      / y_over_x         if |y_over_x| <= 1.0;
+    * x = <
+    *      \ 1.0 / y_over_x   otherwise
+    */
+   nir_ssa_def *x = nir_fdiv(b, nir_fmin(b, abs_y_over_x, one),
+                                nir_fmax(b, abs_y_over_x, one));
+
+   /*
+    * approximate atan by evaluating polynomial:
+    *
+    * x   * 0.9999793128310355 - x^3  * 0.3326756418091246 +
+    * x^5 * 0.1938924977115610 - x^7  * 0.1173503194786851 +
+    * x^9 * 0.0536813784310406 - x^11 * 0.0121323213173444
+    */
+   nir_ssa_def *x_2  = nir_fmul(b, x,   x);
+   nir_ssa_def *x_3  = nir_fmul(b, x_2, x);
+   nir_ssa_def *x_5  = nir_fmul(b, x_3, x_2);
+   nir_ssa_def *x_7  = nir_fmul(b, x_5, x_2);
+   nir_ssa_def *x_9  = nir_fmul(b, x_7, x_2);
+   nir_ssa_def *x_11 = nir_fmul(b, x_9, x_2);
+
+   nir_ssa_def *polynomial_terms[] = {
+      nir_fmul(b, x,    nir_imm_float(b,  0.9999793128310355f)),
+      nir_fmul(b, x_3,  nir_imm_float(b, -0.3326756418091246f)),
+      nir_fmul(b, x_5,  nir_imm_float(b,  0.1938924977115610f)),
+      nir_fmul(b, x_7,  nir_imm_float(b, -0.1173503194786851f)),
+      nir_fmul(b, x_9,  nir_imm_float(b,  0.0536813784310406f)),
+      nir_fmul(b, x_11, nir_imm_float(b, -0.0121323213173444f)),
+   };
+
+   nir_ssa_def *tmp =
+      build_fsum(b, polynomial_terms, ARRAY_SIZE(polynomial_terms));
+
+   /* range-reduction fixup */
+   tmp = nir_fadd(b, tmp,
+                  nir_fmul(b,
+                           nir_b2f(b, nir_flt(b, one, abs_y_over_x)),
+                           nir_fadd(b, nir_fmul(b, tmp,
+                                                nir_imm_float(b, -2.0f)),
+                                       nir_imm_float(b, M_PI_2f))));
+
+   /* sign fixup */
+   return nir_fmul(b, tmp, nir_fsign(b, y_over_x));
+}
+
 static void
 handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                    const uint32_t *w, unsigned count)
@@ -446,6 +514,9 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
 
    case GLSLstd450Atan:
+      val->ssa->def = build_atan(nb, src[0]);
+      return;
+
    case GLSLstd450Atan2:
    case GLSLstd450ModfStruct:
    case GLSLstd450Frexp:
