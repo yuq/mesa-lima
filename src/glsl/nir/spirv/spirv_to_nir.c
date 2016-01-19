@@ -717,6 +717,11 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       unsigned sampled = w[7];
       SpvImageFormat format = w[8];
 
+      if (count > 9)
+         val->type->access_qualifier = w[9];
+      else
+         val->type->access_qualifier = SpvAccessQualifierReadWrite;
+
       assert(!multisampled && "FIXME: Handl multi-sampled textures");
 
       val->type->image_format = translate_image_format(format);
@@ -1915,6 +1920,17 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                if (glsl_type_is_image(interface_type->type)) {
                   b->shader->info.num_images++;
                   var->data.image.format = interface_type->image_format;
+
+                  switch (interface_type->access_qualifier) {
+                  case SpvAccessQualifierReadOnly:
+                     var->data.image.read_only = true;
+                     break;
+                  case SpvAccessQualifierWriteOnly:
+                     var->data.image.write_only = true;
+                     break;
+                  default:
+                     break;
+                  }
                } else if (glsl_type_is_sampler(interface_type->type)) {
                   b->shader->info.num_textures++;
                } else {

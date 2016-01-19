@@ -216,6 +216,9 @@ struct vtn_type {
    /* Image format for image_load_store type images */
    unsigned image_format;
 
+   /* Access qualifier for storage images */
+   SpvAccessQualifier access_qualifier;
+
    /* for arrays and matrices, the array stride */
    unsigned stride;
 
