@@ -6358,7 +6358,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
              qual_stream != block_stream) {
             _mesa_glsl_error(&loc, state, "stream layout qualifier on "
                              "interface block member does not match "
-                             "the interface block (%d vs %d)", qual->stream,
+                             "the interface block (%u vs %u)", qual_stream,
                              block_stream);
          }
       }
