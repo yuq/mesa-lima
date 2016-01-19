@@ -438,6 +438,7 @@ static void si_shader_ps(struct si_shader *shader)
 	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
 	bool has_centroid;
+	bool writes_execmask;
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
@@ -492,10 +493,13 @@ static void si_shader_ps(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
 	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL, spi_ps_in_control);
 
+	writes_execmask = info->uses_kill ||
+			  shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS;
 	si_pm4_set_reg(pm4, R_028710_SPI_SHADER_Z_FORMAT,
 		       info->writes_samplemask ? V_028710_SPI_SHADER_32_ABGR :
 		       info->writes_stencil ? V_028710_SPI_SHADER_32_GR :
 		       info->writes_z ? V_028710_SPI_SHADER_32_R :
+		       (writes_execmask && !info->num_outputs) ? V_028710_SPI_SHADER_32_R :
 		       V_028710_SPI_SHADER_ZERO);
 
 	si_pm4_set_reg(pm4, R_028714_SPI_SHADER_COL_FORMAT, spi_shader_col_format);
