@@ -43,6 +43,7 @@ ir3_tgsi_to_nir(const struct tgsi_token *tokens)
 			.lower_fsat = true,
 			.lower_scmp = true,
 			.lower_flrp32 = true,
+			.lower_flrp64 = true,
 			.lower_ffract = true,
 			.native_integers = true,
 			.vertex_id_zero_based = true,
