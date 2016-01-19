@@ -544,7 +544,8 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       ralloc_steal(mem_ctx, nir);
 
    prog_data->inputs_read = nir->info.inputs_read;
-   pipeline->writes_point_size = nir->info.outputs_written & VARYING_SLOT_PSIZ;
+   if (nir->info.outputs_written & (1ull << VARYING_SLOT_PSIZ))
+      pipeline->writes_point_size = true;
 
    brw_compute_vue_map(&pipeline->device->info,
                        &prog_data->base.vue_map,
@@ -607,6 +608,9 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
    if (module->nir == NULL)
       ralloc_steal(mem_ctx, nir);
+
+   if (nir->info.outputs_written & (1ull << VARYING_SLOT_PSIZ))
+      pipeline->writes_point_size = true;
 
    brw_compute_vue_map(&pipeline->device->info,
                        &prog_data->base.vue_map,
