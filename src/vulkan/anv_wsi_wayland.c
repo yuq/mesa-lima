@@ -584,6 +584,7 @@ wsi_wl_swapchain_queue_present(struct anv_swapchain *anv_chain,
       chain->fifo_ready = false;
    }
 
+   chain->images[image_index].busy = true;
    wl_surface_commit(chain->surface);
    wl_display_flush(chain->display->display);
 
