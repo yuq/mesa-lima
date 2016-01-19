@@ -289,6 +289,54 @@ build_atan(nir_builder *b, nir_ssa_def *y_over_x)
    return nir_fmul(b, tmp, nir_fsign(b, y_over_x));
 }
 
+static nir_ssa_def *
+build_atan2(nir_builder *b, nir_ssa_def *y, nir_ssa_def *x)
+{
+   nir_ssa_def *zero = nir_imm_float(b, 0.0f);
+
+   /* If |x| >= 1.0e-8 * |y|: */
+   nir_if *if_stmt = nir_if_create(b->shader);
+   if_stmt->condition = nir_src_for_ssa(
+      nir_fge(b, nir_fabs(b, x),
+              nir_fmul(b, nir_imm_float(b, 1.0e-8f), nir_fabs(b, y))));
+   nir_builder_cf_insert(b, &if_stmt->cf_node);
+
+   /* Then...call atan(y/x) and fix it up: */
+   b->cursor = nir_after_cf_list(&if_stmt->then_list);
+   nir_ssa_def *atan1 = build_atan(b, nir_fdiv(b, y, x));
+   nir_ssa_def *r_then =
+      nir_bcsel(b, nir_flt(b, x, zero),
+                   nir_fadd(b, atan1,
+                               nir_bcsel(b, nir_fge(b, y, zero),
+                                            nir_imm_float(b, M_PIf),
+                                            nir_imm_float(b, -M_PIf))),
+                   atan1);
+
+   /* Else... */
+   b->cursor = nir_after_cf_list(&if_stmt->else_list);
+   nir_ssa_def *r_else =
+      nir_fmul(b, nir_fsign(b, y), nir_imm_float(b, M_PI_2f));
+
+   b->cursor = nir_after_cf_node(&if_stmt->cf_node);
+
+   nir_phi_instr *phi = nir_phi_instr_create(b->shader);
+   nir_ssa_dest_init(&phi->instr, &phi->dest, r_then->num_components, NULL);
+
+   nir_phi_src *phi_src0 = ralloc(phi, nir_phi_src);
+   nir_phi_src *phi_src1 = ralloc(phi, nir_phi_src);
+
+   phi_src0->pred = nir_cf_node_as_block((nir_cf_node *) exec_list_get_head(&if_stmt->then_list));
+   phi_src0->src = nir_src_for_ssa(r_then);
+   exec_list_push_tail(&phi->srcs, &phi_src0->node);
+   phi_src1->pred = nir_cf_node_as_block((nir_cf_node *) exec_list_get_head(&if_stmt->else_list));
+   phi_src1->src = nir_src_for_ssa(r_else);
+   exec_list_push_tail(&phi->srcs, &phi_src1->node);
+
+   nir_builder_instr_insert(b, &phi->instr);
+
+   return &phi->dest.ssa;
+}
+
 static void
 handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                    const uint32_t *w, unsigned count)
@@ -518,6 +566,9 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
 
    case GLSLstd450Atan2:
+      val->ssa->def = build_atan2(nb, src[0], src[1]);
+      return;
+
    case GLSLstd450ModfStruct:
    case GLSLstd450Frexp:
    case GLSLstd450FrexpStruct:
