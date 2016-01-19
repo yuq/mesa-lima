@@ -266,17 +266,12 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
    ws->info.r600_virtual_address = TRUE;
    ws->info.r600_has_dma = dma.available_rings != 0;
 
-   /* Guess what the maximum compute unit number is by looking at the mask
-    * of enabled CUs.
-    */
+   /* Get the number of good compute units. */
+   ws->info.num_good_compute_units = 0;
    for (i = 0; i < ws->info.max_se; i++)
-      for (j = 0; j < ws->info.max_sh_per_se; j++) {
-         unsigned max = util_last_bit(ws->amdinfo.cu_bitmap[i][j]);
-
-         if (ws->info.num_good_compute_units < max)
-            ws->info.num_good_compute_units = max;
-      }
-   ws->info.num_good_compute_units *= ws->info.max_se * ws->info.max_sh_per_se;
+      for (j = 0; j < ws->info.max_sh_per_se; j++)
+         ws->info.num_good_compute_units +=
+            util_bitcount(ws->amdinfo.cu_bitmap[i][j]);
 
    memcpy(ws->info.si_tile_mode_array, ws->amdinfo.gb_tile_mode,
           sizeof(ws->amdinfo.gb_tile_mode));
