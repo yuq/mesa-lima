@@ -615,6 +615,7 @@ BuildUtil::split64BitOpPostRA(Function *fn, Instruction *i,
          case FILE_MEMORY_CONST:
          case FILE_MEMORY_SHARED:
          case FILE_SHADER_INPUT:
+         case FILE_SHADER_OUTPUT:
             hi->getSrc(s)->reg.data.offset += 4;
             break;
          default:
@@ -625,7 +626,7 @@ BuildUtil::split64BitOpPostRA(Function *fn, Instruction *i,
       }
    }
    if (srcNr == 2) {
-      lo->setDef(1, carry);
+      lo->setFlagsDef(1, carry);
       hi->setFlagsSrc(hi->srcCount(), carry);
    }
    return hi;
