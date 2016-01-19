@@ -815,19 +815,14 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
-anv_cmd_clear_image(VkCommandBuffer cmd_buffer_h,
-                    VkImage image_h,
+anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
+                    struct anv_image *image,
                     VkImageLayout image_layout,
                     const VkClearValue *clear_value,
                     uint32_t range_count,
                     const VkImageSubresourceRange *ranges)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmd_buffer_h);
-   ANV_FROM_HANDLE(anv_image, image, image_h);
-   struct anv_meta_saved_state saved_state;
    VkDevice device_h = anv_device_to_handle(cmd_buffer->device);
-
-   meta_clear_begin(&saved_state, cmd_buffer);
 
    for (uint32_t r = 0; r < range_count; r++) {
       const VkImageSubresourceRange *range = &ranges[r];
@@ -838,7 +833,7 @@ anv_cmd_clear_image(VkCommandBuffer cmd_buffer_h,
             anv_image_view_init(&iview, cmd_buffer->device,
                &(VkImageViewCreateInfo) {
                   .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-                  .image = image_h,
+                  .image = anv_image_to_handle(image),
                   .viewType = anv_meta_get_view_type(image),
                   .format = image->vk_format,
                   .subresourceRange = {
@@ -920,7 +915,7 @@ anv_cmd_clear_image(VkCommandBuffer cmd_buffer_h,
                &cmd_buffer->pool->alloc,
                &pass);
 
-            ANV_CALL(CmdBeginRenderPass)(cmd_buffer_h,
+            ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
                &(VkRenderPassBeginInfo) {
                   .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                   .renderArea = {
@@ -937,7 +932,7 @@ anv_cmd_clear_image(VkCommandBuffer cmd_buffer_h,
                },
                VK_SUBPASS_CONTENTS_INLINE);
 
-            ANV_CALL(CmdEndRenderPass)(cmd_buffer_h);
+            ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
             ANV_CALL(DestroyRenderPass)(device_h, pass,
                                         &cmd_buffer->pool->alloc);
             ANV_CALL(DestroyFramebuffer)(device_h, fb,
@@ -945,34 +940,48 @@ anv_cmd_clear_image(VkCommandBuffer cmd_buffer_h,
          }
       }
    }
-
-   meta_clear_end(&saved_state, cmd_buffer);
 }
 
 void anv_CmdClearColorImage(
     VkCommandBuffer                             commandBuffer,
-    VkImage                                     image,
+    VkImage                                     image_h,
     VkImageLayout                               imageLayout,
     const VkClearColorValue*                    pColor,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
-   anv_cmd_clear_image(commandBuffer, image, imageLayout,
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_image, image, image_h);
+   struct anv_meta_saved_state saved_state;
+
+   meta_clear_begin(&saved_state, cmd_buffer);
+
+   anv_cmd_clear_image(cmd_buffer, image, imageLayout,
                        (const VkClearValue *) pColor,
                        rangeCount, pRanges);
+
+   meta_clear_end(&saved_state, cmd_buffer);
 }
 
 void anv_CmdClearDepthStencilImage(
     VkCommandBuffer                             commandBuffer,
-    VkImage                                     image,
+    VkImage                                     image_h,
     VkImageLayout                               imageLayout,
     const VkClearDepthStencilValue*             pDepthStencil,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
-   anv_cmd_clear_image(commandBuffer, image, imageLayout,
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_image, image, image_h);
+   struct anv_meta_saved_state saved_state;
+
+   meta_clear_begin(&saved_state, cmd_buffer);
+
+   anv_cmd_clear_image(cmd_buffer, image, imageLayout,
                        (const VkClearValue *) pDepthStencil,
                        rangeCount, pRanges);
+
+   meta_clear_end(&saved_state, cmd_buffer);
 }
 
 void anv_CmdClearAttachments(
