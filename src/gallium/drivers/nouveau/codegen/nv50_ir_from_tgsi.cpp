@@ -2253,7 +2253,10 @@ Converter::handleLOAD(Value *dst0[4])
             sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, 4 * c);
          }
 
-         mkLoad(TYPE_U32, dst0[c], sym, off)->cache = tgsi.getCacheMode();
+         Instruction *ld = mkLoad(TYPE_U32, dst0[c], sym, off);
+         ld->cache = tgsi.getCacheMode();
+         if (tgsi.getSrc(0).isIndirect(0))
+            ld->setIndirect(0, 1, fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));
       }
       return;
    }
@@ -2350,8 +2353,10 @@ Converter::handleSTORE()
             sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, 4 * c);
          }
 
-         mkStore(OP_STORE, TYPE_U32, sym, off, fetchSrc(1, c))
-            ->cache = tgsi.getCacheMode();
+         Instruction *st = mkStore(OP_STORE, TYPE_U32, sym, off, fetchSrc(1, c));
+         st->cache = tgsi.getCacheMode();
+         if (tgsi.getDst(0).isIndirect(0))
+            st->setIndirect(0, 1, fetchSrc(tgsi.getDst(0).getIndirect(0), 0, 0));
       }
       return;
    }
@@ -2432,6 +2437,8 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
          insn = mkOp2(OP_ATOM, ty, dst, sym, fetchSrc(2, c));
          if (tgsi.getSrc(1).getFile() != TGSI_FILE_IMMEDIATE)
             insn->setIndirect(0, 0, off);
+         if (tgsi.getSrc(0).isIndirect(0))
+            insn->setIndirect(0, 1, fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));
          insn->subOp = subOp;
          if (subOp == NV50_IR_SUBOP_ATOM_CAS)
             insn->setSrc(2, fetchSrc(3, 0));
@@ -3200,8 +3207,10 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       handleATOM(dst0, dstTy, tgsi::opcodeToSubOp(tgsi.getOpcode()));
       break;
    case TGSI_OPCODE_RESQ:
-      mkOp1(OP_SUQ, TYPE_U32, dst0[0],
-            makeSym(TGSI_FILE_BUFFER, tgsi.getSrc(0).getIndex(0), -1, 0, 0));
+      geni = mkOp1(OP_SUQ, TYPE_U32, dst0[0],
+                   makeSym(TGSI_FILE_BUFFER, tgsi.getSrc(0).getIndex(0), -1, 0, 0));
+      if (tgsi.getSrc(0).isIndirect(0))
+         geni->setIndirect(0, 1, fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));
       break;
    case TGSI_OPCODE_IBFE:
    case TGSI_OPCODE_UBFE:
