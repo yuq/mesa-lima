@@ -536,8 +536,8 @@ wsi_wl_swapchain_acquire_next_image(struct anv_swapchain *anv_chain,
       /* This time we do a blocking dispatch because we can't go
        * anywhere until we get an event.
        */
-      int ret = wl_display_dispatch_queue(chain->display->display,
-                                          chain->queue);
+      int ret = wl_display_roundtrip_queue(chain->display->display,
+                                           chain->queue);
       if (ret < 0)
          return vk_error(VK_ERROR_OUT_OF_DATE_KHR);
    }
