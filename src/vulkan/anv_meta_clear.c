@@ -888,18 +888,9 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
             };
 
             if (range->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
-               att_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-
                subpass_desc.colorAttachmentCount = 1;
                subpass_desc.pColorAttachments = &att_ref;
             } else {
-               if (range->aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
-                  att_desc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-               }
-               if (range->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
-                  att_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-               }
-
                subpass_desc.pDepthStencilAttachment = &att_ref;
             }
 
@@ -927,10 +918,27 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
                   },
                   .renderPass = pass,
                   .framebuffer = fb,
-                  .clearValueCount = 1,
-                  .pClearValues = clear_value,
+                  .clearValueCount = 0,
+                  .pClearValues = NULL,
                },
                VK_SUBPASS_CONTENTS_INLINE);
+
+            VkClearAttachment clear_att = {
+               .aspectMask = range->aspectMask,
+               .colorAttachment = 0,
+               .clearValue = *clear_value,
+            };
+
+            VkClearRect clear_rect = {
+               .rect = {
+                  .offset = { 0, 0 },
+                  .extent = { iview.extent.width, iview.extent.height },
+               },
+               .baseArrayLayer = range->baseArrayLayer,
+               .layerCount = 1, /* FINISHME: clear multi-layer framebuffer */
+            };
+
+            emit_clear(cmd_buffer, &clear_att, &clear_rect);
 
             ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
             ANV_CALL(DestroyRenderPass)(device_h, pass,
