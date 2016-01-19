@@ -514,7 +514,8 @@ compute_delay(struct schedule_node *n)
 }
 
 static void
-schedule_instructions(struct vc4_compile *c, struct schedule_state *state)
+schedule_instructions(struct vc4_compile *c,
+                      struct qblock *block, struct schedule_state *state)
 {
         if (debug) {
                 fprintf(stderr, "initial deps:\n");
@@ -546,7 +547,7 @@ schedule_instructions(struct vc4_compile *c, struct schedule_state *state)
 
                 /* Schedule this instruction back onto the QIR list. */
                 list_del(&chosen->link);
-                list_add(&inst->link, &c->cur_block->instructions);
+                list_add(&inst->link, &block->instructions);
 
                 /* Now that we've scheduled a new instruction, some of its
                  * children can be promoted to the list of instructions ready to
@@ -580,16 +581,12 @@ schedule_instructions(struct vc4_compile *c, struct schedule_state *state)
         }
 }
 
-void
-qir_schedule_instructions(struct vc4_compile *c)
+static void
+qir_schedule_instructions_block(struct vc4_compile *c,
+                                struct qblock *block)
 {
         void *mem_ctx = ralloc_context(NULL);
         struct schedule_state state = { { 0 } };
-
-        if (debug) {
-                fprintf(stderr, "Pre-schedule instructions\n");
-                qir_dump(c);
-        }
 
         state.temp_writes = rzalloc_array(mem_ctx, uint32_t, c->num_temps);
         state.temp_live = rzalloc_array(mem_ctx, BITSET_WORD,
@@ -597,8 +594,7 @@ qir_schedule_instructions(struct vc4_compile *c)
         list_inithead(&state.worklist);
 
         /* Wrap each instruction in a scheduler structure. */
-        list_for_each_entry_safe(struct qinst, inst,
-                                 &c->cur_block->instructions, link) {
+        qir_for_each_inst_safe(inst, block) {
                 struct schedule_node *n = rzalloc(mem_ctx, struct schedule_node);
 
                 n->inst = inst;
@@ -617,12 +613,25 @@ qir_schedule_instructions(struct vc4_compile *c)
         list_for_each_entry(struct schedule_node, n, &state.worklist, link)
                 compute_delay(n);
 
-        schedule_instructions(c, &state);
+        schedule_instructions(c, block, &state);
+
+        ralloc_free(mem_ctx);
+}
+
+void
+qir_schedule_instructions(struct vc4_compile *c)
+{
+
+        if (debug) {
+                fprintf(stderr, "Pre-schedule instructions\n");
+                qir_dump(c);
+        }
+
+        qir_for_each_block(block, c)
+                qir_schedule_instructions_block(c, block);
 
         if (debug) {
                 fprintf(stderr, "Post-schedule instructions\n");
                 qir_dump(c);
         }
-
-        ralloc_free(mem_ctx);
 }
