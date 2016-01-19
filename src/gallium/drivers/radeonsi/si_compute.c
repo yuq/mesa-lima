@@ -61,7 +61,7 @@ static void init_scratch_buffer(struct si_context *sctx, struct si_compute *prog
 
 	/* Compute the scratch buffer size using the maximum number of waves.
 	 * This way we don't need to recompute it for each kernel launch. */
-	unsigned scratch_waves = 32 * sctx->screen->b.info.max_compute_units;
+	unsigned scratch_waves = 32 * sctx->screen->b.info.num_good_compute_units;
 	for (i = 0; i < program->shader.binary.global_symbol_count; i++) {
 		unsigned offset =
 				program->shader.binary.global_symbol_offsets[i];
@@ -402,7 +402,7 @@ static void si_launch_grid(
 
 	num_waves_for_scratch =
 		MIN2(num_waves_for_scratch,
-		     32 * sctx->screen->b.info.max_compute_units);
+		     32 * sctx->screen->b.info.num_good_compute_units);
 	si_pm4_set_reg(pm4, R_00B860_COMPUTE_TMPRING_SIZE,
 		/* The maximum value for WAVES is 32 * num CU.
 		 * If you program this value incorrectly, the GPU will hang if

@@ -273,10 +273,10 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
       for (j = 0; j < ws->info.max_sh_per_se; j++) {
          unsigned max = util_last_bit(ws->amdinfo.cu_bitmap[i][j]);
 
-         if (ws->info.max_compute_units < max)
-            ws->info.max_compute_units = max;
+         if (ws->info.num_good_compute_units < max)
+            ws->info.num_good_compute_units = max;
       }
-   ws->info.max_compute_units *= ws->info.max_se * ws->info.max_sh_per_se;
+   ws->info.num_good_compute_units *= ws->info.max_se * ws->info.max_sh_per_se;
 
    memcpy(ws->info.si_tile_mode_array, ws->amdinfo.gb_tile_mode,
           sizeof(ws->amdinfo.gb_tile_mode));

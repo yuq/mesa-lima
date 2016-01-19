@@ -208,7 +208,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	 * this for non-cs shaders.  Using the wrong value here can result in
 	 * GPU lockups, but the maximum value seems to always work.
 	 */
-	sctx->scratch_waves = 32 * sscreen->b.info.max_compute_units;
+	sctx->scratch_waves = 32 * sscreen->b.info.num_good_compute_units;
 
 #if HAVE_LLVM >= 0x0306
 	/* Initialize LLVM TargetMachine */

@@ -251,7 +251,7 @@ struct radeon_info {
     uint64_t                    gart_size;
     uint64_t                    vram_size;
     uint32_t                    max_sclk;
-    uint32_t                    max_compute_units;
+    uint32_t                    num_good_compute_units;
     uint32_t                    max_se;
     uint32_t                    max_sh_per_se;
 

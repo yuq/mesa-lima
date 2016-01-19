@@ -705,7 +705,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 	case PIPE_COMPUTE_CAP_MAX_COMPUTE_UNITS:
 		if (ret) {
 			uint32_t *max_compute_units = ret;
-			*max_compute_units = rscreen->info.max_compute_units;
+			*max_compute_units = rscreen->info.num_good_compute_units;
 		}
 		return sizeof(uint32_t);
 
@@ -973,7 +973,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		printf("gart_size = %i MB\n", (int)(rscreen->info.gart_size >> 20));
 		printf("vram_size = %i MB\n", (int)(rscreen->info.vram_size >> 20));
 		printf("max_sclk = %i\n", rscreen->info.max_sclk);
-		printf("max_compute_units = %i\n", rscreen->info.max_compute_units);
+		printf("num_good_compute_units = %i\n", rscreen->info.num_good_compute_units);
 		printf("max_se = %i\n", rscreen->info.max_se);
 		printf("max_sh_per_se = %i\n", rscreen->info.max_sh_per_se);
 		printf("drm = %i.%i.%i\n", rscreen->info.drm_major,
