@@ -82,6 +82,7 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
    .lower_uadd_carry = true,                                                  \
    .lower_usub_borrow = true,                                                 \
    .lower_fdiv = true,                                                        \
+   .lower_flrp64 = true,                                                      \
    .native_integers = true,                                                   \
    .vertex_id_zero_based = true
 
