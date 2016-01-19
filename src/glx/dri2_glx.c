@@ -1102,9 +1102,14 @@ dri2BindExtensions(struct dri2_screen *psc, struct glx_display * priv,
       __glXEnableDirectExtension(&psc->base, "GLX_ARB_create_context");
       __glXEnableDirectExtension(&psc->base, "GLX_ARB_create_context_profile");
 
-      if ((mask & (1 << __DRI_API_GLES2)) != 0)
-	 __glXEnableDirectExtension(&psc->base,
-				    "GLX_EXT_create_context_es2_profile");
+      if ((mask & ((1 << __DRI_API_GLES) |
+                   (1 << __DRI_API_GLES2) |
+                   (1 << __DRI_API_GLES3))) != 0) {
+         __glXEnableDirectExtension(&psc->base,
+                                    "GLX_EXT_create_context_es_profile");
+         __glXEnableDirectExtension(&psc->base,
+                                    "GLX_EXT_create_context_es2_profile");
+      }
    }
 
    for (i = 0; extensions[i]; i++) {
