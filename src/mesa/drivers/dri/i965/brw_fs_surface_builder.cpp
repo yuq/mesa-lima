@@ -717,6 +717,15 @@ namespace {
                   bld.emit_minmax(offset(dst, bld, c), offset(dst, bld, c),
                                   brw_imm_d(-(int)scale(widths[c] - s) - 1),
                                   BRW_CONDITIONAL_GE);
+
+               /* Mask off all but the bits we actually want.  Otherwise, if
+                * we pass a negative number into the hardware when it's
+                * expecting something like UINT8, it will happily clamp it to
+                * +255 for us.
+                */
+               if (is_signed && widths[c] < 32)
+                  bld.AND(offset(dst, bld, c), offset(dst, bld, c),
+                          brw_imm_d(scale(widths[c])));
             }
          }
 
@@ -787,6 +796,15 @@ namespace {
                /* Convert to integer. */
                bld.RNDE(offset(fdst, bld, c), offset(fdst, bld, c));
                bld.MOV(offset(dst, bld, c), offset(fdst, bld, c));
+
+               /* Mask off all but the bits we actually want.  Otherwise, if
+                * we pass a negative number into the hardware when it's
+                * expecting something like UINT8, it will happily clamp it to
+                * +255 for us.
+                */
+               if (is_signed && widths[c] < 32)
+                  bld.AND(offset(dst, bld, c), offset(dst, bld, c),
+                          brw_imm_d(scale(widths[c])));
             }
          }
 
