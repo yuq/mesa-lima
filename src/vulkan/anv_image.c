@@ -537,7 +537,8 @@ anv_CreateBufferView(VkDevice _device,
    view->format = format->surface_format;
    view->bo = buffer->bo;
    view->offset = buffer->offset + pCreateInfo->offset;
-   view->range = pCreateInfo->range;
+   view->range = pCreateInfo->range == VK_WHOLE_SIZE ?
+                 buffer->size - view->offset : pCreateInfo->range;
 
    if (buffer->usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
       view->surface_state =
@@ -545,7 +546,7 @@ anv_CreateBufferView(VkDevice _device,
 
       anv_fill_buffer_surface_state(device, view->surface_state.map,
                                     view->format,
-                                    view->offset, pCreateInfo->range,
+                                    view->offset, view->range,
                                     format->isl_layout->bs);
    } else {
       view->surface_state = (struct anv_state){ 0 };
@@ -560,7 +561,7 @@ anv_CreateBufferView(VkDevice _device,
 
       anv_fill_buffer_surface_state(device, view->storage_surface_state.map,
                                     storage_format,
-                                    view->offset, pCreateInfo->range,
+                                    view->offset, view->range,
                                     format->isl_layout->bs);
    } else {
       view->storage_surface_state = (struct anv_state){ 0 };

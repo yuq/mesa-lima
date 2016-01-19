@@ -1101,6 +1101,9 @@ VkResult anv_MapMemory(
       return VK_SUCCESS;
    }
 
+   if (size == VK_WHOLE_SIZE)
+      size = mem->bo.size - offset;
+
    /* FIXME: Is this supposed to be thread safe? Since vkUnmapMemory() only
     * takes a VkDeviceMemory pointer, it seems like only one map of the memory
     * at a time is valid. We could just mmap up front and return an offset

@@ -559,7 +559,8 @@ void anv_UpdateDescriptorSets(
              * range in the surface state and do the actual range-checking
              * in the shader.
              */
-            if (bind_layout->dynamic_offset_index >= 0)
+            if (bind_layout->dynamic_offset_index >= 0 ||
+                write->pBufferInfo[j].range == VK_WHOLE_SIZE)
                view->range = buffer->size - write->pBufferInfo[j].offset;
             else
                view->range = write->pBufferInfo[j].range;
