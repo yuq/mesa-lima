@@ -700,6 +700,10 @@ CodeEmitterGK110::emitIMAD(const Instruction *i)
 
    if (i->subOp == NV50_IR_SUBOP_MUL_HIGH)
       code[1] |= 1 << 25;
+
+   if (i->flagsDef >= 0) code[1] |= 1 << 18;
+   if (i->flagsSrc >= 0) code[1] |= 1 << 20;
+
    SAT_(35);
 }
 
