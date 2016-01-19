@@ -419,7 +419,6 @@ struct vc4_compile {
         enum qstage stage;
         uint32_t num_temps;
         struct list_head instructions;
-        uint32_t immediates[1024];
 
         struct list_head qpu_inst_list;
         uint64_t *qpu_insts;
