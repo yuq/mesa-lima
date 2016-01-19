@@ -1554,11 +1554,13 @@ CodeEmitterGM107::emitLOP()
          break;
       }
       emitPRED (0x30);
+      emitX    (0x2b);
       emitField(0x29, 2, lop);
       emitINV  (0x28, insn->src(1));
       emitINV  (0x27, insn->src(0));
    } else {
       emitInsn (0x04000000);
+      emitX    (0x39);
       emitINV  (0x38, insn->src(1));
       emitINV  (0x37, insn->src(0));
       emitField(0x35, 2, lop);
@@ -1626,9 +1628,11 @@ CodeEmitterGM107::emitIADD()
       emitNEG(0x31, insn->src(0));
       emitNEG(0x30, insn->src(1));
       emitCC (0x2f);
+      emitX  (0x2b);
    } else {
       emitInsn(0x1c000000);
       emitSAT (0x36);
+      emitX   (0x35);
       emitCC  (0x34);
       emitIMMD(0x14, 32, insn->src(1));
    }
