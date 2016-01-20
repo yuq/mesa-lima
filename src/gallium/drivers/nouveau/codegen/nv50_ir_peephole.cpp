@@ -1229,6 +1229,8 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
             adds = 1;
          else
             return;
+         if (si->src(!adds).mod != Modifier(0))
+            return;
          // SHL(ADD(x, y), z) = ADD(SHL(x, z), SHL(y, z))
 
          // This is more operations, but if one of x, y is an immediate, then
