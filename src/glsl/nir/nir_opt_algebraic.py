@@ -305,7 +305,7 @@ def ldexp_to_arith(x, exp):
    exp_width = 8
 
    # Extract the biased exponent from <x>.
-   extracted_biased_exp = ('ushr', ('iabs', x), exp_shift)
+   extracted_biased_exp = ('ushr', ('fabs', x), exp_shift)
    resulting_biased_exp = ('iadd', extracted_biased_exp, exp)
 
    # Test if result is ±0.0, subnormal, or underflow by checking if the
