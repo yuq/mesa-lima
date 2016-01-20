@@ -4001,22 +4001,65 @@ static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary
 
 static void si_shader_dump_stats(struct si_screen *sscreen,
 			         struct si_shader_config *conf,
+				 unsigned num_inputs,
 				 unsigned code_size,
 			         struct pipe_debug_callback *debug,
 			         unsigned processor)
 {
+	unsigned lds_increment = sscreen->b.chip_class >= CIK ? 512 : 256;
+	unsigned lds_per_wave = 0;
+	unsigned max_simd_waves = 10;
+
+	/* Compute LDS usage for PS. */
+	if (processor == TGSI_PROCESSOR_FRAGMENT) {
+		/* The minimum usage per wave is (num_inputs * 36). The maximum
+		 * usage is (num_inputs * 36 * 16).
+		 * We can get anything in between and it varies between waves.
+		 *
+		 * Other stages don't know the size at compile time or don't
+		 * allocate LDS per wave, but instead they do it per thread group.
+		 */
+		lds_per_wave = conf->lds_size * lds_increment +
+			       align(num_inputs * 36, lds_increment);
+	}
+
+	/* Compute the per-SIMD wave counts. */
+	if (conf->num_sgprs) {
+		if (sscreen->b.chip_class >= VI)
+			max_simd_waves = MIN2(max_simd_waves, 800 / conf->num_sgprs);
+		else
+			max_simd_waves = MIN2(max_simd_waves, 512 / conf->num_sgprs);
+	}
+
+	if (conf->num_vgprs)
+		max_simd_waves = MIN2(max_simd_waves, 256 / conf->num_vgprs);
+
+	/* LDS is 64KB per CU (4 SIMDs), divided into 16KB blocks per SIMD
+	 * that PS can use.
+	 */
+	if (lds_per_wave)
+		max_simd_waves = MIN2(max_simd_waves, 16384 / lds_per_wave);
+
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		fprintf(stderr, "*** SHADER STATS ***\n"
-			"SGPRS: %d\nVGPRS: %d\nCode Size: %d bytes\nLDS: %d blocks\n"
-			"Scratch: %d bytes per wave\n********************\n",
+			"SGPRS: %d\n"
+			"VGPRS: %d\n"
+			"Code Size: %d bytes\n"
+			"LDS: %d blocks\n"
+			"Scratch: %d bytes per wave\n"
+			"Max Waves: %d\n"
+			"********************\n",
 			conf->num_sgprs, conf->num_vgprs, code_size,
-			conf->lds_size, conf->scratch_bytes_per_wave);
+			conf->lds_size, conf->scratch_bytes_per_wave,
+			max_simd_waves);
 	}
 
 	pipe_debug_message(debug, SHADER_INFO,
-			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d LDS: %d Scratch: %d",
+			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d "
+			   "LDS: %d Scratch: %d Max Waves: %d",
 			   conf->num_sgprs, conf->num_vgprs, code_size,
-			   conf->lds_size, conf->scratch_bytes_per_wave);
+			   conf->lds_size, conf->scratch_bytes_per_wave,
+			   max_simd_waves);
 }
 
 void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
@@ -4027,6 +4070,7 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 			si_shader_dump_disassembly(&shader->binary, debug);
 
 	si_shader_dump_stats(sscreen, &shader->config,
+                            shader->selector->info.num_inputs,
 			     shader->binary.code_size, debug, processor);
 }
 
