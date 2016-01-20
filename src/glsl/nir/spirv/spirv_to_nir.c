@@ -192,19 +192,37 @@ const uint32_t *
 vtn_foreach_instruction(struct vtn_builder *b, const uint32_t *start,
                         const uint32_t *end, vtn_instruction_handler handler)
 {
+   b->file = NULL;
+   b->line = -1;
+   b->col = -1;
+
    const uint32_t *w = start;
    while (w < end) {
       SpvOp opcode = w[0] & SpvOpCodeMask;
       unsigned count = w[0] >> SpvWordCountShift;
       assert(count >= 1 && w + count <= end);
 
-      if (opcode == SpvOpNop) {
-         w++;
-         continue;
-      }
+      switch (opcode) {
+      case SpvOpNop:
+         break; /* Do nothing */
 
-      if (!handler(b, opcode, w, count))
-         return w;
+      case SpvOpLine:
+         b->file = vtn_value(b, w[1], vtn_value_type_string)->str;
+         b->line = w[2];
+         b->col = w[3];
+         break;
+
+      case SpvOpNoLine:
+         b->file = NULL;
+         b->line = -1;
+         b->col = -1;
+         break;
+
+      default:
+         if (!handler(b, opcode, w, count))
+            return w;
+         break;
+      }
 
       w += count;
    }
@@ -3498,10 +3516,6 @@ vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
       assert(!"Invalid opcode types and variables section");
       break;
 
-   case SpvOpLine:
-   case SpvOpNoLine:
-      break; /* Ignored for now */
-
    case SpvOpTypeVoid:
    case SpvOpTypeBool:
    case SpvOpTypeInt:
@@ -3555,10 +3569,6 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
                             const uint32_t *w, unsigned count)
 {
    switch (opcode) {
-   case SpvOpLine:
-   case SpvOpNoLine:
-      break; /* Ignored for now */
-
    case SpvOpLabel:
       break;
 

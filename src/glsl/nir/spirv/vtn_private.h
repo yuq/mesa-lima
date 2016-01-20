@@ -299,6 +299,12 @@ struct vtn_builder {
    nir_function_impl *impl;
    struct vtn_block *block;
 
+   /* Current file, line, and column.  Useful for debugging.  Set
+    * automatically by vtn_foreach_instruction.
+    */
+   char *file;
+   int line, col;
+
    /*
     * In SPIR-V, constants are global, whereas in NIR, the load_const
     * instruction we use is per-function. So while we parse each function, we
