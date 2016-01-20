@@ -290,13 +290,7 @@
 
 /** For GL_ARB_compute_shader */
 /*@{*/
-#define MAX_COMPUTE_UNIFORM_BLOCKS          12
-#define MAX_COMPUTE_TEXTURE_IMAGE_UNITS     16
-#define MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS  8
-#define MAX_COMPUTE_ATOMIC_COUNTERS         8
 #define MAX_COMPUTE_SHARED_MEMORY_SIZE      32768
-#define MAX_COMPUTE_UNIFORM_COMPONENTS      512
-#define MAX_COMPUTE_IMAGE_UNIFORMS          8
 /*@}*/
 
 /** For GL_ARB_pipeline_statistics_query */

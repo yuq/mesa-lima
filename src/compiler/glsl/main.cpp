@@ -62,6 +62,10 @@ initialize_context(struct gl_context *ctx, gl_api api)
    ctx->Const.Program[MESA_SHADER_COMPUTE].MaxUniformComponents = 1024;
    ctx->Const.Program[MESA_SHADER_COMPUTE].MaxInputComponents = 0; /* not used */
    ctx->Const.Program[MESA_SHADER_COMPUTE].MaxOutputComponents = 0; /* not used */
+   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxAtomicBuffers = 8;
+   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxAtomicCounters = 8;
+   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxImageUniforms = 8;
+   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxUniformBlocks = 12;
 
    switch (ctx->Const.GLSLVersion) {
    case 100:
