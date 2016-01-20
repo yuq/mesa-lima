@@ -29,11 +29,6 @@
 
 #include "anv_private.h"
 
-/* FIXME: We shouldn't be using the actual hardware enum values here.  They
- * change across gens.  Once we get that fixed, this include needs to go.
- */
-#include "gen8_pack.h"
-
 /**
  * The \a format argument is required and overrides any format found in struct
  * anv_image_create_info. Exactly one bit must be set in \a aspect.
