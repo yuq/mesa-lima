@@ -612,8 +612,14 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
    }
 
+   case GLSLstd450FrexpStruct: {
+      assert(glsl_type_is_struct(val->ssa->type));
+      val->ssa->elems[0]->def = build_frexp(nb, src[0],
+                                            &val->ssa->elems[1]->def);
+      return;
+   }
+
    case GLSLstd450ModfStruct:
-   case GLSLstd450FrexpStruct:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
    case GLSLstd450IMix:
