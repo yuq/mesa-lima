@@ -98,7 +98,8 @@ meta_clear(struct gl_context *ctx, GLbitfield buffers, bool glsl);
 static struct blit_shader *
 choose_blit_shader(GLenum target, struct blit_shader_table *table);
 
-static void cleanup_temp_texture(struct temp_texture *tex);
+static void cleanup_temp_texture(struct gl_context *ctx,
+                                 struct temp_texture *tex);
 static void meta_glsl_clear_cleanup(struct gl_context *ctx,
                                     struct clear_state *clear);
 static void meta_decompress_cleanup(struct gl_context *ctx,
@@ -418,7 +419,7 @@ _mesa_meta_free(struct gl_context *ctx)
    _mesa_meta_glsl_blit_cleanup(ctx, &ctx->Meta->Blit);
    meta_glsl_clear_cleanup(ctx, &ctx->Meta->Clear);
    _mesa_meta_glsl_generate_mipmap_cleanup(ctx, &ctx->Meta->Mipmap);
-   cleanup_temp_texture(&ctx->Meta->TempTex);
+   cleanup_temp_texture(ctx, &ctx->Meta->TempTex);
    meta_decompress_cleanup(ctx, &ctx->Meta->Decompress);
    meta_drawpix_cleanup(ctx, &ctx->Meta->DrawPix);
    if (old_context)
@@ -1228,8 +1229,6 @@ invert_z(GLfloat normZ)
 static void
 init_temp_texture(struct gl_context *ctx, struct temp_texture *tex)
 {
-   GLuint texObj;
-
    /* prefer texture rectangle */
    if (_mesa_is_desktop_gl(ctx) && ctx->Extensions.NV_texture_rectangle) {
       tex->Target = GL_TEXTURE_RECTANGLE;
@@ -1245,21 +1244,13 @@ init_temp_texture(struct gl_context *ctx, struct temp_texture *tex)
    tex->MinSize = 16;  /* 16 x 16 at least */
    assert(tex->MaxSize > 0);
 
-   _mesa_CreateTextures(tex->Target, 1, &texObj);
-   tex->tex_obj = NULL;
-
-   if (texObj == 0)
-      return;
-
-   tex->tex_obj = _mesa_lookup_texture(ctx, texObj);
+   tex->tex_obj = ctx->Driver.NewTextureObject(ctx, 0xDEADBEEF, tex->Target);
 }
 
 static void
-cleanup_temp_texture(struct temp_texture *tex)
+cleanup_temp_texture(struct gl_context *ctx, struct temp_texture *tex)
 {
-   if (tex->tex_obj == NULL)
-     return;
-   _mesa_DeleteTextures(1, &tex->tex_obj->Name);
+   _mesa_delete_nameless_texture(ctx, tex->tex_obj);
    tex->tex_obj = NULL;
 }
 

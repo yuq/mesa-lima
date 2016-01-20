@@ -879,9 +879,7 @@ _mesa_meta_fb_tex_blit_end(struct gl_context *ctx, GLenum target,
    _mesa_bind_sampler(ctx, ctx->Texture.CurrentUnit, blit->samp_obj_save);
    _mesa_reference_sampler_object(ctx, &blit->samp_obj_save, NULL);
    _mesa_reference_sampler_object(ctx, &blit->samp_obj, NULL);
-
-   if (blit->temp_tex_obj)
-      _mesa_DeleteTextures(1, &blit->temp_tex_obj->Name);
+   _mesa_delete_nameless_texture(ctx, blit->temp_tex_obj);
 }
 
 struct gl_texture_object *
@@ -890,20 +888,14 @@ _mesa_meta_texture_object_from_renderbuffer(struct gl_context *ctx,
 {
    struct gl_texture_image *texImage;
    struct gl_texture_object *texObj;
-   GLuint tempTex;
    const GLenum target = rb->NumSamples > 1
       ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
-   tempTex = 0;
-   _mesa_CreateTextures(target, 1, &tempTex);
-   if (tempTex == 0)
-      return NULL;
-
-   texObj = _mesa_lookup_texture(ctx, tempTex);
+   texObj = ctx->Driver.NewTextureObject(ctx, 0xDEADBEEF, target);
    texImage = _mesa_get_tex_image(ctx, texObj, target, 0);
 
    if (!ctx->Driver.BindRenderbufferTexImage(ctx, rb, texImage)) {
-      _mesa_DeleteTextures(1, &tempTex);
+      _mesa_delete_nameless_texture(ctx, texObj);
       return NULL;
    }
 
@@ -912,8 +904,6 @@ _mesa_meta_texture_object_from_renderbuffer(struct gl_context *ctx,
       ctx->Driver.FinishRenderTexture(ctx, rb);
    }
 
-   assert(target == texObj->Target);
-   assert(tempTex == texObj->Name);
    return texObj;
 }
 
@@ -1057,7 +1047,7 @@ _mesa_meta_glsl_blit_cleanup(struct gl_context *ctx, struct blit_state *blit)
    _mesa_meta_blit_shader_table_cleanup(ctx, &blit->shaders_without_depth);
 
    if (blit->depthTex.tex_obj != NULL) {
-      _mesa_DeleteTextures(1, &blit->depthTex.tex_obj->Name);
+      _mesa_delete_nameless_texture(ctx, blit->depthTex.tex_obj);
       blit->depthTex.tex_obj = NULL;
    }
 }
