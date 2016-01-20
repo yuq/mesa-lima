@@ -1139,8 +1139,8 @@ void anv_CmdBlitImage(
       if (pRegions[r].srcSubresource.layerCount > 1)
          anv_finishme("FINISHME: copy multiple array layers");
 
-      if (pRegions[r].srcOffsets[0].z != pRegions[r].srcOffsets[1].z ||
-          pRegions[r].dstOffsets[0].z != pRegions[r].dstOffsets[1].z)
+      if (pRegions[r].srcOffsets[0].z + 1 != pRegions[r].srcOffsets[1].z ||
+          pRegions[r].dstOffsets[0].z + 1 != pRegions[r].dstOffsets[1].z)
          anv_finishme("FINISHME: copy multiple depth layers");
 
       struct anv_image_view dest_iview;
