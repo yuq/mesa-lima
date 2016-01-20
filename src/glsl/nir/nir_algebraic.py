@@ -108,7 +108,7 @@ class Constant(Value):
       if isinstance(self.value, (bool)):
          return 'NIR_TRUE' if self.value else 'NIR_FALSE'
       if isinstance(self.value, (int, long)):
-         return hex(struct.unpack('I', struct.pack('i', self.value))[0])
+         return hex(struct.unpack('I', struct.pack('i' if self.value < 0 else 'I', self.value))[0])
       elif isinstance(self.value, float):
          return hex(struct.unpack('I', struct.pack('f', self.value))[0])
       else:
