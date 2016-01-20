@@ -1119,9 +1119,20 @@ static void declare_system_value(
 		value = get_sample_id(radeon_bld);
 		break;
 
-	case TGSI_SEMANTIC_SAMPLEPOS:
-		value = load_sample_position(radeon_bld, get_sample_id(radeon_bld));
+	case TGSI_SEMANTIC_SAMPLEPOS: {
+		LLVMValueRef pos[4] = {
+			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_X_FLOAT),
+			LLVMGetParam(radeon_bld->main_fn, SI_PARAM_POS_Y_FLOAT),
+			lp_build_const_float(gallivm, 0),
+			lp_build_const_float(gallivm, 0)
+		};
+		pos[0] = lp_build_emit_llvm_unary(&radeon_bld->soa.bld_base,
+						  TGSI_OPCODE_FRC, pos[0]);
+		pos[1] = lp_build_emit_llvm_unary(&radeon_bld->soa.bld_base,
+						  TGSI_OPCODE_FRC, pos[1]);
+		value = lp_build_gather_values(gallivm, pos, 4);
 		break;
+	}
 
 	case TGSI_SEMANTIC_SAMPLEMASK:
 		/* Smoothing isn't MSAA in GL, but it's MSAA in hardware.
