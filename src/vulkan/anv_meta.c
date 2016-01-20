@@ -1384,16 +1384,6 @@ void anv_CmdUpdateBuffer(
    stub();
 }
 
-void anv_CmdFillBuffer(
-    VkCommandBuffer                             commandBuffer,
-    VkBuffer                                    destBuffer,
-    VkDeviceSize                                destOffset,
-    VkDeviceSize                                fillSize,
-    uint32_t                                    data)
-{
-   stub();
-}
-
 void anv_CmdResolveImage(
     VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
