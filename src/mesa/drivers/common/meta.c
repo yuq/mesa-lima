@@ -1386,7 +1386,7 @@ _mesa_meta_setup_copypix_texture(struct gl_context *ctx,
 {
    bool newTex;
 
-   _mesa_BindTexture(tex->Target, tex->tex_obj->Name);
+   _mesa_bind_texture(ctx, tex->Target, tex->tex_obj);
    _mesa_texture_parameteriv(ctx, tex->tex_obj, GL_TEXTURE_MIN_FILTER,
                              (GLint *) &filter, false);
    _mesa_texture_parameteriv(ctx, tex->tex_obj, GL_TEXTURE_MAG_FILTER,
@@ -1437,7 +1437,7 @@ _mesa_meta_setup_drawpix_texture(struct gl_context *ctx,
     */
    static const GLint filter = GL_NEAREST;
 
-   _mesa_BindTexture(tex->Target, tex->tex_obj->Name);
+   _mesa_bind_texture(ctx, tex->Target, tex->tex_obj);
    _mesa_texture_parameteriv(ctx, tex->tex_obj, GL_TEXTURE_MIN_FILTER, &filter,
                              false);
    _mesa_texture_parameteriv(ctx, tex->tex_obj, GL_TEXTURE_MAG_FILTER, &filter,
@@ -3176,7 +3176,7 @@ decompress_texture_image(struct gl_context *ctx,
    _mesa_buffer_sub_data(ctx, decompress->buf_obj, 0, sizeof(verts), verts);
 
    /* setup texture state */
-   _mesa_BindTexture(target, texObj->Name);
+   _mesa_bind_texture(ctx, target, texObj);
 
    if (!use_glsl_version)
       _mesa_set_enable(ctx, target, GL_TRUE);
