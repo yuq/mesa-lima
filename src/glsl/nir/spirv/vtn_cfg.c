@@ -451,6 +451,66 @@ vtn_build_cfg(struct vtn_builder *b, const uint32_t *words, const uint32_t *end)
    }
 }
 
+static bool
+vtn_handle_phis_first_pass(struct vtn_builder *b, SpvOp opcode,
+                           const uint32_t *w, unsigned count)
+{
+   if (opcode == SpvOpLabel)
+      return true; /* Nothing to do */
+
+   /* If this isn't a phi node, stop. */
+   if (opcode != SpvOpPhi)
+      return false;
+
+   /* For handling phi nodes, we do a poor-man's out-of-ssa on the spot.
+    * For each phi, we create a variable with the appropreate type and
+    * do a load from that variable.  Then, in a second pass, we add
+    * stores to that variable to each of the predecessor blocks.
+    *
+    * We could do something more intelligent here.  However, in order to
+    * handle loops and things properly, we really need dominance
+    * information.  It would end up basically being the into-SSA
+    * algorithm all over again.  It's easier if we just let
+    * lower_vars_to_ssa do that for us instead of repeating it here.
+    */
+   struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
+
+   struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
+   nir_variable *phi_var =
+      nir_local_variable_create(b->nb.impl, type->type, "phi");
+   _mesa_hash_table_insert(b->phi_table, w, phi_var);
+
+   val->ssa = vtn_variable_load(b, nir_deref_var_create(b, phi_var), type);
+
+   return true;
+}
+
+static bool
+vtn_handle_phi_second_pass(struct vtn_builder *b, SpvOp opcode,
+                           const uint32_t *w, unsigned count)
+{
+   if (opcode != SpvOpPhi)
+      return true;
+
+   struct hash_entry *phi_entry = _mesa_hash_table_search(b->phi_table, w);
+   assert(phi_entry);
+   nir_variable *phi_var = phi_entry->data;
+
+   struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
+
+   for (unsigned i = 3; i < count; i += 2) {
+      struct vtn_ssa_value *src = vtn_ssa_value(b, w[i]);
+      struct vtn_block *pred =
+         vtn_value(b, w[i + 1], vtn_value_type_block)->block;
+
+      b->nb.cursor = nir_after_block_before_jump(pred->end_block);
+
+      vtn_variable_store(b, src, nir_deref_var_create(b, phi_var), type);
+   }
+
+   return true;
+}
+
 static void
 vtn_emit_branch(struct vtn_builder *b, enum vtn_branch_type branch_type,
                 nir_variable *switch_fall_var, bool *has_switch_break)
@@ -492,9 +552,14 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
       case vtn_cf_node_type_block: {
          struct vtn_block *block = (struct vtn_block *)node;
 
-         vtn_foreach_instruction(b, block->label,
-                                 block->merge ? block->merge : block->branch,
-                                 handler);
+         const uint32_t *block_start = block->label;
+         const uint32_t *block_end = block->merge ? block->merge :
+                                                    block->branch;
+
+         block_start = vtn_foreach_instruction(b, block_start, block_end,
+                                               vtn_handle_phis_first_pass);
+
+         vtn_foreach_instruction(b, block_start, block_end, handler);
 
          block->end_block = nir_cursor_current_block(b->nb.cursor);
 
@@ -682,8 +747,13 @@ vtn_function_emit(struct vtn_builder *b, struct vtn_function *func,
    nir_builder_init(&b->nb, func->impl);
    b->nb.cursor = nir_after_cf_list(&func->impl->body);
    b->has_loop_continue = false;
+   b->phi_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
+                                          _mesa_key_pointer_equal);
 
    vtn_emit_cf_list(b, &func->body, NULL, NULL, instruction_handler);
+
+   vtn_foreach_instruction(b, func->start_block->label, func->end,
+                           vtn_handle_phi_second_pass);
 
    /* Continue blocks for loops get inserted before the body of the loop
     * but instructions in the continue may use SSA defs in the loop body.

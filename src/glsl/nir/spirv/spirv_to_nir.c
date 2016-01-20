@@ -148,10 +148,6 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
    return val;
 }
 
-static struct vtn_ssa_value *
-vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
-                  struct vtn_type *src_type);
-
 struct vtn_ssa_value *
 vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
 {
@@ -1751,7 +1747,7 @@ variable_is_external_block(nir_variable *var)
            var->data.mode == nir_var_shader_storage);
 }
 
-static struct vtn_ssa_value *
+struct vtn_ssa_value *
 vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
                   struct vtn_type *src_type)
 {
@@ -3193,61 +3189,6 @@ vtn_handle_barrier(struct vtn_builder *b, SpvOp opcode,
    nir_builder_instr_insert(&b->nb, &intrin->instr);
 }
 
-static void
-vtn_handle_phi_first_pass(struct vtn_builder *b, const uint32_t *w)
-{
-   /* For handling phi nodes, we do a poor-man's out-of-ssa on the spot.
-    * For each phi, we create a variable with the appropreate type and do a
-    * load from that variable.  Then, in a second pass, we add stores to
-    * that variable to each of the predecessor blocks.
-    *
-    * We could do something more intelligent here.  However, in order to
-    * handle loops and things properly, we really need dominance
-    * information.  It would end up basically being the into-SSA algorithm
-    * all over again.  It's easier if we just let lower_vars_to_ssa do that
-    * for us instead of repeating it here.
-    */
-   struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-
-   struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
-   nir_variable *phi_var =
-      nir_local_variable_create(b->nb.impl, type->type, "phi");
-   _mesa_hash_table_insert(b->phi_table, w, phi_var);
-
-   val->ssa = vtn_variable_load(b, nir_deref_var_create(b, phi_var), type);
-}
-
-static bool
-vtn_handle_phi_second_pass(struct vtn_builder *b, SpvOp opcode,
-                           const uint32_t *w, unsigned count)
-{
-   if (opcode == SpvOpLabel) {
-      b->block = vtn_value(b, w[1], vtn_value_type_block)->block;
-      return true;
-   }
-
-   if (opcode != SpvOpPhi)
-      return true;
-
-   struct hash_entry *phi_entry = _mesa_hash_table_search(b->phi_table, w);
-   assert(phi_entry);
-   nir_variable *phi_var = phi_entry->data;
-
-   struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
-
-   for (unsigned i = 3; i < count; i += 2) {
-      struct vtn_ssa_value *src = vtn_ssa_value(b, w[i]);
-      struct vtn_block *pred =
-         vtn_value(b, w[i + 1], vtn_value_type_block)->block;
-
-      b->nb.cursor = nir_after_block_before_jump(pred->end_block);
-
-      vtn_variable_store(b, src, nir_deref_var_create(b, phi_var), type);
-   }
-
-   return true;
-}
-
 static unsigned
 gl_primitive_from_spv_execution_mode(SpvExecutionMode mode)
 {
@@ -3775,10 +3716,6 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       vtn_handle_composite(b, opcode, w, count);
       break;
 
-   case SpvOpPhi:
-      vtn_handle_phi_first_pass(b, w);
-      break;
-
    case SpvOpEmitVertex:
    case SpvOpEndPrimitive:
    case SpvOpEmitStreamVertex:
@@ -3851,11 +3788,8 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
       b->impl = func->impl;
       b->const_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
                                                _mesa_key_pointer_equal);
-      b->phi_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
-                                             _mesa_key_pointer_equal);
+
       vtn_function_emit(b, func, vtn_handle_body_instruction);
-      vtn_foreach_instruction(b, func->start_block->label, func->end,
-                              vtn_handle_phi_second_pass);
    }
 
    assert(b->entry_point->value_type == vtn_value_type_function);

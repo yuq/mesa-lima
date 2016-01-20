@@ -383,6 +383,10 @@ struct vtn_ssa_value *vtn_create_ssa_value(struct vtn_builder *b,
 struct vtn_ssa_value *vtn_ssa_transpose(struct vtn_builder *b,
                                         struct vtn_ssa_value *src);
 
+struct vtn_ssa_value *
+vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
+                  struct vtn_type *src_type);
+
 void vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                         nir_deref_var *dest, struct vtn_type *dest_type);
 
