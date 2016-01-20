@@ -2512,11 +2512,16 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
 
    memcpy(instr->src, srcs, instr->num_srcs * sizeof(*instr->src));
 
-   const struct glsl_type *sampler_type =
-      nir_deref_tail(&sampled.sampler->deref)->type;
-   instr->sampler_dim = glsl_get_sampler_dim(sampler_type);
-   instr->is_array = glsl_sampler_type_is_array(sampler_type);
-   instr->is_shadow = glsl_sampler_type_is_shadow(sampler_type);
+   const struct glsl_type *image_type;
+   if (sampled.image) {
+      image_type = nir_deref_tail(&sampled.image->deref)->type;
+   } else {
+      image_type = nir_deref_tail(&sampled.sampler->deref)->type;
+   }
+
+   instr->sampler_dim = glsl_get_sampler_dim(image_type);
+   instr->is_array = glsl_sampler_type_is_array(image_type);
+   instr->is_shadow = glsl_sampler_type_is_shadow(image_type);
    instr->is_new_style_shadow = instr->is_shadow;
 
    if (has_coord) {
@@ -2544,7 +2549,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       instr->coord_components = 0;
    }
 
-   switch (glsl_get_sampler_result_type(sampler_type)) {
+   switch (glsl_get_sampler_result_type(image_type)) {
    case GLSL_TYPE_FLOAT:   instr->dest_type = nir_type_float;     break;
    case GLSL_TYPE_INT:     instr->dest_type = nir_type_int;       break;
    case GLSL_TYPE_UINT:    instr->dest_type = nir_type_uint;  break;
