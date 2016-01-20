@@ -920,6 +920,7 @@ void anv_CmdUpdateBuffer(
                      copy_size / bs, 1, format);
 
       dataSize -= copy_size;
+      dstOffset += copy_size;
       pData = (void *)pData + copy_size;
    }
 }
