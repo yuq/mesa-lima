@@ -30,6 +30,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
+	-I$(top_srcdir)/src/isl/ \
 	-I$(top_srcdir)/src/vulkan
 
 LDADD = \
