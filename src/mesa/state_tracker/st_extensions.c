@@ -276,7 +276,8 @@ void st_init_limits(struct pipe_screen *screen,
               c->Program[MESA_SHADER_TESS_CTRL].MaxTextureImageUnits +
               c->Program[MESA_SHADER_TESS_EVAL].MaxTextureImageUnits +
               c->Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits +
-              c->Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits,
+              c->Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits +
+              c->Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits,
               MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 
    /* This depends on program constants. */
@@ -336,7 +337,8 @@ void st_init_limits(struct pipe_screen *screen,
          c->Program[MESA_SHADER_TESS_CTRL].MaxUniformBlocks +
          c->Program[MESA_SHADER_TESS_EVAL].MaxUniformBlocks +
          c->Program[MESA_SHADER_GEOMETRY].MaxUniformBlocks +
-         c->Program[MESA_SHADER_FRAGMENT].MaxUniformBlocks;
+         c->Program[MESA_SHADER_FRAGMENT].MaxUniformBlocks +
+         c->Program[MESA_SHADER_COMPUTE].MaxUniformBlocks;
       assert(c->MaxCombinedUniformBlocks <= MAX_COMBINED_UNIFORM_BUFFERS);
    }
 
@@ -1018,4 +1020,31 @@ void st_init_extensions(struct pipe_screen *screen,
    if ((ST_DEBUG & DEBUG_GREMEDY) &&
        screen->get_param(screen, PIPE_CAP_STRING_MARKER))
       extensions->GREMEDY_string_marker = GL_TRUE;
+
+   if (screen->get_param(screen, PIPE_CAP_COMPUTE)) {
+      int compute_supported_irs =
+         screen->get_shader_param(screen, PIPE_SHADER_COMPUTE,
+                                  PIPE_SHADER_CAP_SUPPORTED_IRS);
+      if (compute_supported_irs & (1 << PIPE_SHADER_IR_TGSI)) {
+         uint64_t grid_size[3], block_size[3];
+
+         screen->get_compute_param(screen, PIPE_COMPUTE_CAP_MAX_GRID_SIZE,
+                                   grid_size);
+         screen->get_compute_param(screen, PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE,
+                                   block_size);
+         screen->get_compute_param(screen,
+                                   PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK,
+                                   &consts->MaxComputeWorkGroupInvocations);
+         screen->get_compute_param(screen, PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE,
+                                   &consts->MaxComputeSharedMemorySize);
+
+         for (i = 0; i < 3; i++) {
+            consts->MaxComputeWorkGroupCount[i] = grid_size[i];
+            consts->MaxComputeWorkGroupSize[i] = block_size[i];
+         }
+         /* XXX: ARB_compute_shader is not enabled by default because images
+          * support is still not implemented yet. */
+         /* extensions->ARB_compute_shader = true; */
+      }
+   }
 }
