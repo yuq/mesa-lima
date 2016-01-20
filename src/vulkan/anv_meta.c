@@ -870,6 +870,60 @@ void anv_CmdCopyBuffer(
    meta_finish_blit(cmd_buffer, &saved_state);
 }
 
+void anv_CmdUpdateBuffer(
+    VkCommandBuffer                             commandBuffer,
+    VkBuffer                                    dstBuffer,
+    VkDeviceSize                                dstOffset,
+    VkDeviceSize                                dataSize,
+    const uint32_t*                             pData)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_buffer, dst_buffer, dstBuffer);
+   struct anv_meta_saved_state saved_state;
+
+   meta_prepare_blit(cmd_buffer, &saved_state);
+
+   /* We can't quite grab a full block because the state stream needs a
+    * little data at the top to build its linked list.
+    */
+   const uint32_t max_update_size =
+      cmd_buffer->device->dynamic_state_block_pool.block_size - 64;
+
+   assert(max_update_size < (1 << 14) * 4);
+
+   while (dataSize) {
+      const uint32_t copy_size = MIN2(dataSize, max_update_size);
+
+      struct anv_state tmp_data =
+         anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, copy_size, 64);
+
+      memcpy(tmp_data.map, pData, copy_size);
+
+      VkFormat format;
+      int bs;
+      if ((copy_size & 15) == 0 && (dstOffset & 15) == 0) {
+         format = VK_FORMAT_R32G32B32A32_UINT;
+         bs = 16;
+      } else if ((copy_size & 7) == 0 && (dstOffset & 7) == 0) {
+         format = VK_FORMAT_R32G32_UINT;
+         bs = 8;
+      } else {
+         assert((copy_size & 3) == 0 && (dstOffset & 3) == 0);
+         format = VK_FORMAT_R32_UINT;
+         bs = 4;
+      }
+
+      do_buffer_copy(cmd_buffer,
+                     &cmd_buffer->device->dynamic_state_block_pool.bo,
+                     tmp_data.offset,
+                     dst_buffer->bo, dst_buffer->offset + dstOffset,
+                     copy_size / bs, 1, format);
+
+      dataSize -= copy_size;
+      pData = (void *)pData + copy_size;
+   }
+}
+
 static VkFormat
 choose_iview_format(struct anv_image *image, VkImageAspectFlagBits aspect)
 {
@@ -1372,16 +1426,6 @@ void anv_CmdCopyImageToBuffer(
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
-}
-
-void anv_CmdUpdateBuffer(
-    VkCommandBuffer                             commandBuffer,
-    VkBuffer                                    destBuffer,
-    VkDeviceSize                                destOffset,
-    VkDeviceSize                                dataSize,
-    const uint32_t*                             pData)
-{
-   stub();
 }
 
 void anv_CmdResolveImage(
