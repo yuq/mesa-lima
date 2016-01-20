@@ -122,6 +122,12 @@ anv_gem_get_param(int fd, uint32_t param)
    unreachable("Unused");
 }
 
+bool
+anv_gem_get_bit6_swizzle(int fd, uint32_t tiling)
+{
+   unreachable("Unused");
+}
+
 int
 anv_gem_create_context(struct anv_device *device)
 {
