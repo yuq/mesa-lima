@@ -337,6 +337,39 @@ build_atan2(nir_builder *b, nir_ssa_def *y, nir_ssa_def *x)
    return &phi->dest.ssa;
 }
 
+static nir_ssa_def *
+build_frexp(nir_builder *b, nir_ssa_def *x, nir_ssa_def **exponent)
+{
+   nir_ssa_def *abs_x = nir_fabs(b, x);
+   nir_ssa_def *zero = nir_imm_float(b, 0.0f);
+
+   /* Single-precision floating-point values are stored as
+    *   1 sign bit;
+    *   8 exponent bits;
+    *   23 mantissa bits.
+    *
+    * An exponent shift of 23 will shift the mantissa out, leaving only the
+    * exponent and sign bit (which itself may be zero, if the absolute value
+    * was taken before the bitcast and shift.
+    */
+   nir_ssa_def *exponent_shift = nir_imm_int(b, 23);
+   nir_ssa_def *exponent_bias = nir_imm_int(b, -126);
+
+   nir_ssa_def *sign_mantissa_mask = nir_imm_int(b, 0x807fffffu);
+
+   /* Exponent of floating-point values in the range [0.5, 1.0). */
+   nir_ssa_def *exponent_value = nir_imm_int(b, 0x3f000000u);
+
+   nir_ssa_def *is_not_zero = nir_fne(b, abs_x, zero);
+
+   *exponent =
+      nir_iadd(b, nir_ushr(b, abs_x, exponent_shift),
+                  nir_bcsel(b, is_not_zero, exponent_bias, zero));
+
+   return nir_ior(b, nir_iand(b, x, sign_mantissa_mask),
+                     nir_bcsel(b, is_not_zero, exponent_value, zero));
+}
+
 static void
 handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                    const uint32_t *w, unsigned count)
@@ -569,8 +602,15 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       val->ssa->def = build_atan2(nb, src[0], src[1]);
       return;
 
+   case GLSLstd450Frexp: {
+      nir_ssa_def *exponent;
+      val->ssa->def = build_frexp(nb, src[0], &exponent);
+      nir_deref_var *out = vtn_value(b, w[6], vtn_value_type_deref)->deref;
+      nir_store_deref_var(nb, out, exponent, 0xf);
+      return;
+   }
+
    case GLSLstd450ModfStruct:
-   case GLSLstd450Frexp:
    case GLSLstd450FrexpStruct:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
