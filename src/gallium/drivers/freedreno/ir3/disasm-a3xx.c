@@ -650,7 +650,7 @@ static void print_instr_cat6(instr_t *instr)
 /* size of largest OPC field of all the instruction categories: */
 #define NOPC_BITS 6
 
-struct opc_info {
+static const struct opc_info {
 	uint16_t cat;
 	uint16_t opc;
 	const char *name;
