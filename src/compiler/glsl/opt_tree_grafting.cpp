@@ -361,11 +361,12 @@ tree_grafting_basic_block(ir_instruction *bb_first,
       if (!lhs_var)
 	 continue;
 
-   if (lhs_var->data.mode == ir_var_function_out ||
-       lhs_var->data.mode == ir_var_function_inout ||
-       lhs_var->data.mode == ir_var_shader_out ||
-       lhs_var->data.mode == ir_var_shader_storage)
-      continue;
+      if (lhs_var->data.mode == ir_var_function_out ||
+          lhs_var->data.mode == ir_var_function_inout ||
+          lhs_var->data.mode == ir_var_shader_out ||
+          lhs_var->data.mode == ir_var_shader_storage ||
+          lhs_var->data.mode == ir_var_shader_shared)
+         continue;
 
       ir_variable_refcount_entry *entry = info->refs->get_variable_entry(lhs_var);
 
