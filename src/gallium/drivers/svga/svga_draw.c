@@ -459,6 +459,11 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
       if (ret != PIPE_OK)
          return ret;
 
+      /* Rebind stream output targets */
+      ret = svga_rebind_stream_output_targets(svga);
+      if (ret != PIPE_OK)
+         return ret;
+
       /* Rebind index buffer */
       if (svga->state.hw_draw.ib) {
          struct svga_winsys_context *swc = svga->swc;
