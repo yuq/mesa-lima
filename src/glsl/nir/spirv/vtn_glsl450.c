@@ -375,9 +375,11 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                    const uint32_t *w, unsigned count)
 {
    struct nir_builder *nb = &b->nb;
+   const struct glsl_type *dest_type =
+      vtn_value(b, w[1], vtn_value_type_type)->type->type;
+
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-   val->ssa = rzalloc(b, struct vtn_ssa_value);
-   val->ssa->type = vtn_value(b, w[1], vtn_value_type_type)->type->type;
+   val->ssa = vtn_create_ssa_value(b, dest_type);
 
    /* Collect the various SSA sources */
    unsigned num_inputs = count - 5;
