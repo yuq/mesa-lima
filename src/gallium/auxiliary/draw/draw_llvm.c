@@ -1618,6 +1618,12 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    context_ptr               = LLVMGetParam(variant_func, 0);
    io_ptr                    = LLVMGetParam(variant_func, 1);
    vbuffers_ptr              = LLVMGetParam(variant_func, 2);
+   /*
+    * XXX: stride is actually unused. The stride we use is strictly calculated
+    * from the number of outputs (including the draw_extra outputs).
+    * Should probably fix some day (we need a new vs just because of extra
+    * outputs which the generated vs won't touch).
+    */
    stride                    = LLVMGetParam(variant_func, 5 + (elts ? 1 : 0));
    vb_ptr                    = LLVMGetParam(variant_func, 6 + (elts ? 1 : 0));
    system_values.instance_id = LLVMGetParam(variant_func, 7 + (elts ? 1 : 0));
