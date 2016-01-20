@@ -68,6 +68,38 @@ isl_device_init(struct isl_device *dev,
 }
 
 /**
+ * @brief Query the set of multisamples supported by the device.
+ *
+ * This function always returns non-zero, as ISL_SAMPLE_COUNT_1_BIT is always
+ * supported.
+ */
+isl_sample_count_mask_t ATTRIBUTE_CONST
+isl_device_get_sample_counts(struct isl_device *dev)
+{
+   if (ISL_DEV_GEN(dev) >= 9) {
+      return ISL_SAMPLE_COUNT_1_BIT |
+             ISL_SAMPLE_COUNT_2_BIT |
+             ISL_SAMPLE_COUNT_4_BIT |
+             ISL_SAMPLE_COUNT_8_BIT |
+             ISL_SAMPLE_COUNT_16_BIT;
+   } else if (ISL_DEV_GEN(dev) >= 8) {
+      return ISL_SAMPLE_COUNT_1_BIT |
+             ISL_SAMPLE_COUNT_2_BIT |
+             ISL_SAMPLE_COUNT_4_BIT |
+             ISL_SAMPLE_COUNT_8_BIT;
+   } else if (ISL_DEV_GEN(dev) >= 7) {
+      return ISL_SAMPLE_COUNT_1_BIT |
+             ISL_SAMPLE_COUNT_4_BIT |
+             ISL_SAMPLE_COUNT_8_BIT;
+   } else if (ISL_DEV_GEN(dev) >= 6) {
+      return ISL_SAMPLE_COUNT_1_BIT |
+             ISL_SAMPLE_COUNT_4_BIT;
+   } else {
+      return ISL_SAMPLE_COUNT_1_BIT;
+   }
+}
+
+/**
  * @param[out] info is written only on success
  */
 bool

@@ -458,6 +458,18 @@ typedef uint64_t isl_surf_usage_flags_t;
 /** @} */
 
 /**
+ * Identical to VkSampleCountFlagBits.
+ */
+enum isl_sample_count {
+   ISL_SAMPLE_COUNT_1_BIT     = 1u,
+   ISL_SAMPLE_COUNT_2_BIT     = 2u,
+   ISL_SAMPLE_COUNT_4_BIT     = 4u,
+   ISL_SAMPLE_COUNT_8_BIT     = 8u,
+   ISL_SAMPLE_COUNT_16_BIT    = 16u,
+};
+typedef uint32_t isl_sample_count_mask_t;
+
+/**
  * @brief Multisample Format
  */
 enum isl_msaa_layout {
@@ -689,6 +701,9 @@ void
 isl_device_init(struct isl_device *dev,
                 const struct brw_device_info *info,
                 bool has_bit6_swizzling);
+
+isl_sample_count_mask_t ATTRIBUTE_CONST
+isl_device_get_sample_counts(struct isl_device *dev);
 
 static inline const struct isl_format_layout * ATTRIBUTE_CONST
 isl_format_get_layout(enum isl_format fmt)
