@@ -1245,7 +1245,7 @@ init_temp_texture(struct gl_context *ctx, struct temp_texture *tex)
    tex->MinSize = 16;  /* 16 x 16 at least */
    assert(tex->MaxSize > 0);
 
-   _mesa_GenTextures(1, &texObj);
+   _mesa_CreateTextures(tex->Target, 1, &texObj);
    tex->tex_obj = NULL;
 
    if (texObj == 0)
