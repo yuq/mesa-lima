@@ -1252,8 +1252,24 @@ CodeEmitterGK110::emitPIXLD(const Instruction *i)
 void
 CodeEmitterGK110::emitBAR(const Instruction *i)
 {
-   /* TODO */
-   emitNOP(i);
+   code[0] = 0x00000002;
+   code[1] = 0x85400000;
+
+   switch (i->subOp) {
+   case NV50_IR_SUBOP_BAR_ARRIVE:   code[1] |= 0x08; break;
+   case NV50_IR_SUBOP_BAR_RED_AND:  code[1] |= 0x50; break;
+   case NV50_IR_SUBOP_BAR_RED_OR:   code[1] |= 0x90; break;
+   case NV50_IR_SUBOP_BAR_RED_POPC: code[1] |= 0x10; break;
+   default:
+      code[1] |= 0x20;
+      assert(i->subOp == NV50_IR_SUBOP_BAR_SYNC);
+      break;
+   }
+
+   emitPredicate(i);
+
+   srcId(i->src(0), 10);
+   srcId(i->src(1), 23);
 }
 
 void
