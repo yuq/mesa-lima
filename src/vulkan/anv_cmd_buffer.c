@@ -376,6 +376,8 @@ VkResult anv_BeginCommandBuffer(
    assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY ||
           !(cmd_buffer->usage_flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT));
 
+   anv_cmd_buffer_emit_state_base_address(cmd_buffer);
+
    if (cmd_buffer->usage_flags &
        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
       cmd_buffer->state.framebuffer =
@@ -388,8 +390,6 @@ VkResult anv_BeginCommandBuffer(
 
       anv_cmd_buffer_set_subpass(cmd_buffer, subpass);
    }
-
-   anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
    return VK_SUCCESS;
 }
