@@ -298,8 +298,6 @@ ir_expression::ir_expression(int op, ir_rvalue *op0)
       break;
 
    case ir_unop_noise:
-   case ir_unop_unpack_half_2x16_split_x:
-   case ir_unop_unpack_half_2x16_split_y:
       this->type = glsl_type::float_type;
       break;
 
@@ -420,10 +418,6 @@ ir_expression::ir_expression(int op, ir_rvalue *op0, ir_rvalue *op1)
 
    case ir_binop_dot:
       this->type = op0->type->get_base_type();
-      break;
-
-   case ir_binop_pack_half_2x16_split:
-      this->type = glsl_type::uint_type;
       break;
 
    case ir_binop_imul_high:
@@ -555,8 +549,6 @@ static const char *const operator_strs[] = {
    "unpackUnorm2x16",
    "unpackUnorm4x8",
    "unpackHalf2x16",
-   "unpackHalf2x16_split_x",
-   "unpackHalf2x16_split_y",
    "bitfield_reverse",
    "bit_count",
    "find_msb",
@@ -599,7 +591,6 @@ static const char *const operator_strs[] = {
    "min",
    "max",
    "pow",
-   "packHalf2x16_split",
    "ubo_load",
    "ldexp",
    "vector_extract",

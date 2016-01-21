@@ -372,12 +372,6 @@ ir_validate::visit_leave(ir_expression *ir)
       assert(ir->operands[0]->type == glsl_type::uint_type);
       break;
 
-   case ir_unop_unpack_half_2x16_split_x:
-   case ir_unop_unpack_half_2x16_split_y:
-      assert(ir->type == glsl_type::float_type);
-      assert(ir->operands[0]->type == glsl_type::uint_type);
-      break;
-
    case ir_unop_unpack_double_2x32:
       assert(ir->type == glsl_type::uvec2_type);
       assert(ir->operands[0]->type == glsl_type::double_type);
@@ -565,12 +559,6 @@ ir_validate::visit_leave(ir_expression *ir)
              ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
       assert(ir->operands[0]->type->is_vector());
       assert(ir->operands[0]->type == ir->operands[1]->type);
-      break;
-
-   case ir_binop_pack_half_2x16_split:
-      assert(ir->type == glsl_type::uint_type);
-      assert(ir->operands[0]->type == glsl_type::float_type);
-      assert(ir->operands[1]->type == glsl_type::float_type);
       break;
 
    case ir_binop_ubo_load:
