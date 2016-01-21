@@ -86,6 +86,8 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
 
 static const struct nir_shader_compiler_options scalar_nir_options = {
    COMMON_OPTIONS,
+   .lower_pack_half_2x16 = true,
+   .lower_unpack_half_2x16 = true,
 };
 
 static const struct nir_shader_compiler_options vector_nir_options = {
