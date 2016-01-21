@@ -87,17 +87,7 @@ brw_lower_packing_builtins(struct brw_context *brw,
            | LOWER_PACK_SNORM_4x8;
    }
 
-   if (brw->gen >= 7) {
-      /* Gen7 introduced the f32to16 and f16to32 instructions, which can be
-       * used to execute packHalf2x16 and unpackHalf2x16. For AOS code, no
-       * lowering is needed. For SOA code, the Half2x16 ops must be
-       * scalarized.
-       */
-      if (compiler->scalar_stage[shader_type]) {
-         ops |= LOWER_PACK_HALF_2x16_TO_SPLIT
-             |  LOWER_UNPACK_HALF_2x16_TO_SPLIT;
-      }
-   } else {
+   if (brw->gen < 7) {
       ops |= LOWER_PACK_HALF_2x16
           |  LOWER_UNPACK_HALF_2x16;
    }

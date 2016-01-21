@@ -72,6 +72,9 @@ channel_expressions_predicate(ir_instruction *ir)
       return false;
 
    switch (expr->operation) {
+      case ir_unop_pack_half_2x16:
+         return false;
+
       /* these opcodes need to act on the whole vector,
        * just like texturing.
        */
@@ -162,6 +165,7 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
       return visit_continue;
 
    switch (expr->operation) {
+      case ir_unop_pack_half_2x16:
       case ir_unop_interpolate_at_centroid:
       case ir_binop_interpolate_at_offset:
       case ir_binop_interpolate_at_sample:
