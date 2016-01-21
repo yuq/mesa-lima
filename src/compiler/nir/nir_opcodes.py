@@ -105,7 +105,7 @@ def opcode(name, output_size, output_type, input_sizes, input_types,
    opcodes[name] = Opcode(name, output_size, output_type, input_sizes,
                           input_types, algebraic_properties, const_expr)
 
-def unop_convert(name, in_type, out_type, const_expr):
+def unop_convert(name, out_type, in_type, const_expr):
    opcode(name, 0, out_type, [0], [in_type], "", const_expr)
 
 def unop(name, ty, const_expr):
@@ -155,17 +155,17 @@ unop("frsq", tfloat, "1.0f / sqrtf(src0)")
 unop("fsqrt", tfloat, "sqrtf(src0)")
 unop("fexp2", tfloat, "exp2f(src0)")
 unop("flog2", tfloat, "log2f(src0)")
-unop_convert("f2i", tfloat, tint, "src0") # Float-to-integer conversion.
-unop_convert("f2u", tfloat, tuint, "src0") # Float-to-unsigned conversion
-unop_convert("i2f", tint, tfloat, "src0") # Integer-to-float conversion.
+unop_convert("f2i", tint, tfloat, "src0") # Float-to-integer conversion.
+unop_convert("f2u", tuint, tfloat, "src0") # Float-to-unsigned conversion
+unop_convert("i2f", tfloat, tint, "src0") # Integer-to-float conversion.
 # Float-to-boolean conversion
-unop_convert("f2b", tfloat, tbool, "src0 != 0.0f")
+unop_convert("f2b", tbool, tfloat, "src0 != 0.0f")
 # Boolean-to-float conversion
-unop_convert("b2f", tbool, tfloat, "src0 ? 1.0f : 0.0f")
+unop_convert("b2f", tfloat, tbool, "src0 ? 1.0f : 0.0f")
 # Int-to-boolean conversion
-unop_convert("i2b", tint, tbool, "src0 != 0")
-unop_convert("b2i", tbool, tint, "src0 ? 1 : 0") # Boolean-to-int conversion
-unop_convert("u2f", tuint, tfloat, "src0") # Unsigned-to-float conversion.
+unop_convert("i2b", tbool, tint, "src0 != 0")
+unop_convert("b2i", tint, tbool, "src0 ? 1 : 0") # Boolean-to-int conversion
+unop_convert("u2f", tfloat, tuint, "src0") # Unsigned-to-float conversion.
 
 # Unary floating-point rounding operations.
 
@@ -264,7 +264,7 @@ for (unsigned bit = 0; bit < 32; bit++) {
 }
 """)
 
-unop_convert("ufind_msb", tuint, tint, """
+unop_convert("ufind_msb", tint, tuint, """
 dst = -1;
 for (int bit = 31; bit > 0; bit--) {
    if ((src0 >> bit) & 1) {
