@@ -60,6 +60,22 @@ vtn_access_link_as_ssa(struct vtn_builder *b, struct vtn_access_link link,
    }
 }
 
+static struct vtn_type *
+vtn_access_chain_tail_type(struct vtn_builder *b,
+                           struct vtn_access_chain *chain)
+{
+   struct vtn_type *type = chain->var->type;
+   for (unsigned i = 0; i < chain->length; i++) {
+      if (glsl_type_is_struct(type->type)) {
+         assert(chain->link[i].mode == vtn_access_mode_literal);
+         type = type->members[chain->link[i].id];
+      } else {
+         type = type->array_element;
+      }
+   }
+   return type;
+}
+
 /* Crawls a chain of array derefs and rewrites the types so that the
  * lengths stay the same but the terminal type is the one given by
  * tail_type.  This is useful for split structures.
@@ -332,10 +348,8 @@ vtn_access_chain_to_offset(struct vtn_builder *b,
       case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_BOOL:
          /* Some users may not want matrix or vector derefs */
-         if (stop_at_matrix) {
-            idx++;
+         if (stop_at_matrix)
             goto end;
-         }
          /* Fall through */
 
       case GLSL_TYPE_ARRAY:
@@ -413,7 +427,7 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
                       struct vtn_access_chain *chain, unsigned chain_idx,
                       struct vtn_type *type, struct vtn_ssa_value **inout)
 {
-   if (chain_idx >= chain->length)
+   if (chain && chain_idx >= chain->length)
       chain = NULL;
 
    if (load && chain == NULL && *inout == NULL)
@@ -600,13 +614,69 @@ vtn_variable_is_external_block(struct vtn_variable *var)
           var->mode == vtn_variable_mode_push_constant;
 }
 
+static void
+_vtn_variable_load_store(struct vtn_builder *b, bool load,
+                         struct vtn_access_chain *chain,
+                         struct vtn_type *tail_type,
+                         struct vtn_ssa_value **inout)
+{
+   enum glsl_base_type base_type = glsl_get_base_type(tail_type->type);
+   switch (base_type) {
+   case GLSL_TYPE_UINT:
+   case GLSL_TYPE_INT:
+   case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_BOOL:
+      /* At this point, we have a scalar, vector, or matrix so we know that
+       * there cannot be any structure splitting still in the way.  By
+       * stopping at the matrix level rather than the vector level, we
+       * ensure that matrices get loaded in the optimal way even if they
+       * are storred row-major in a UBO.
+       */
+      if (load) {
+         *inout = vtn_local_load(b, vtn_access_chain_to_deref(b, chain));
+      } else {
+         vtn_local_store(b, *inout, vtn_access_chain_to_deref(b, chain));
+      }
+      return;
+
+   case GLSL_TYPE_ARRAY:
+   case GLSL_TYPE_STRUCT: {
+      struct vtn_access_chain *new_chain =
+         vtn_access_chain_extend(b, chain, 1);
+      new_chain->link[chain->length].mode = vtn_access_mode_literal;
+      unsigned elems = glsl_get_length(tail_type->type);
+      if (load) {
+         assert(*inout == NULL);
+         *inout = rzalloc(b, struct vtn_ssa_value);
+         (*inout)->type = tail_type->type;
+         (*inout)->elems = rzalloc_array(b, struct vtn_ssa_value *, elems);
+      }
+      for (unsigned i = 0; i < elems; i++) {
+         new_chain->link[chain->length].id = i;
+         struct vtn_type *elem_type = base_type == GLSL_TYPE_ARRAY ?
+            tail_type->array_element : tail_type->members[i];
+         _vtn_variable_load_store(b, load, new_chain, elem_type,
+                                  &(*inout)->elems[i]);
+      }
+      return;
+   }
+
+   default:
+      unreachable("Invalid access chain type");
+   }
+}
+
 struct vtn_ssa_value *
 vtn_variable_load(struct vtn_builder *b, struct vtn_access_chain *src)
 {
-   if (vtn_variable_is_external_block(src->var))
+   if (vtn_variable_is_external_block(src->var)) {
       return vtn_block_load(b, src);
-   else
-      return vtn_local_load(b, vtn_access_chain_to_deref(b, src));
+   } else {
+      struct vtn_type *tail_type = vtn_access_chain_tail_type(b, src);
+      struct vtn_ssa_value *val = NULL;
+      _vtn_variable_load_store(b, true, src, tail_type, &val);
+      return val;
+   }
 }
 
 void
@@ -617,7 +687,50 @@ vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
       assert(dest->var->mode == vtn_variable_mode_ssbo);
       vtn_block_store(b, src, dest);
    } else {
-      vtn_local_store(b, src, vtn_access_chain_to_deref(b, dest));
+      struct vtn_type *tail_type = vtn_access_chain_tail_type(b, dest);
+      _vtn_variable_load_store(b, false, dest, tail_type, &src);
+   }
+}
+
+static void
+_vtn_variable_copy(struct vtn_builder *b, struct vtn_access_chain *dest,
+                   struct vtn_access_chain *src, struct vtn_type *tail_type)
+{
+   enum glsl_base_type base_type = glsl_get_base_type(tail_type->type);
+   switch (base_type) {
+   case GLSL_TYPE_UINT:
+   case GLSL_TYPE_INT:
+   case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_BOOL:
+      /* At this point, we have a scalar, vector, or matrix so we know that
+       * there cannot be any structure splitting still in the way.  By
+       * stopping at the matrix level rather than the vector level, we
+       * ensure that matrices get loaded in the optimal way even if they
+       * are storred row-major in a UBO.
+       */
+      vtn_variable_store(b, vtn_variable_load(b, src), dest);
+      return;
+
+   case GLSL_TYPE_ARRAY:
+   case GLSL_TYPE_STRUCT: {
+      struct vtn_access_chain *new_src, *new_dest;
+      new_src = vtn_access_chain_extend(b, src, 1);
+      new_dest = vtn_access_chain_extend(b, dest, 1);
+      new_src->link[src->length].mode = vtn_access_mode_literal;
+      new_dest->link[dest->length].mode = vtn_access_mode_literal;
+      unsigned elems = glsl_get_length(tail_type->type);
+      for (unsigned i = 0; i < elems; i++) {
+         new_src->link[src->length].id = i;
+         new_dest->link[dest->length].id = i;
+         struct vtn_type *elem_type = base_type == GLSL_TYPE_ARRAY ?
+            tail_type->array_element : tail_type->members[i];
+         _vtn_variable_copy(b, new_dest, new_src, elem_type);
+      }
+      return;
+   }
+
+   default:
+      unreachable("Invalid access chain type");
    }
 }
 
@@ -625,24 +738,13 @@ static void
 vtn_variable_copy(struct vtn_builder *b, struct vtn_access_chain *dest,
                   struct vtn_access_chain *src)
 {
-   if (vtn_variable_is_external_block(src->var) ||
-       vtn_variable_is_external_block(dest->var)) {
-      struct vtn_ssa_value *val = vtn_variable_load(b, src);
-      vtn_variable_store(b, val, dest);
-   } else {
-      /* TODO: Handle single components of vectors */
-      nir_deref_var *src_deref = vtn_access_chain_to_deref(b, src);
-      nir_deref_var *dest_deref = vtn_access_chain_to_deref(b, dest);
+   struct vtn_type *tail_type = vtn_access_chain_tail_type(b, src);
+   assert(vtn_access_chain_tail_type(b, dest)->type == tail_type->type);
 
-      nir_intrinsic_instr *copy =
-         nir_intrinsic_instr_create(b->shader, nir_intrinsic_copy_var);
-      copy->variables[0] =
-         nir_deref_as_var(nir_copy_deref(copy, &dest_deref->deref));
-      copy->variables[1] =
-         nir_deref_as_var(nir_copy_deref(copy, &src_deref->deref));
-
-      nir_builder_instr_insert(&b->nb, &copy->instr);
-   }
+   /* TODO: At some point, we should add a special-case for when we can
+    * just emit a copy_var intrinsic.
+    */
+   _vtn_variable_copy(b, dest, src, tail_type);
 }
 
 static void
