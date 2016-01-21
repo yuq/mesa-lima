@@ -546,7 +546,7 @@ brw_compile_tcs(const struct brw_compiler *compiler,
 
    assert(output_size_bytes >= 1);
    if (output_size_bytes > GEN7_MAX_HS_URB_ENTRY_SIZE_BYTES)
-      return false;
+      return NULL;
 
    /* URB entry sizes are stored as a multiple of 64 bytes. */
    vue_prog_data->urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
