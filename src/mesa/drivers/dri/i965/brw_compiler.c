@@ -67,6 +67,37 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
    va_end(args);
 }
 
+#define COMMON_OPTIONS                                                        \
+   /* In order to help allow for better CSE at the NIR level we tell NIR to   \
+    * split all ffma instructions during opt_algebraic and we then re-combine \
+    * them as a later step.                                                   \
+    */                                                                        \
+   .lower_ffma = true,                                                        \
+   .lower_sub = true,                                                         \
+   .lower_fdiv = true,                                                        \
+   .lower_scmp = true,                                                        \
+   .lower_fmod = true,                                                        \
+   .lower_bitfield_extract = true,                                            \
+   .lower_bitfield_insert = true,                                             \
+   .lower_uadd_carry = true,                                                  \
+   .lower_usub_borrow = true,                                                 \
+   .lower_fdiv = true,                                                        \
+   .native_integers = true
+
+static const struct nir_shader_compiler_options scalar_nir_options = {
+   COMMON_OPTIONS,
+};
+
+static const struct nir_shader_compiler_options vector_nir_options = {
+   COMMON_OPTIONS,
+
+   /* In the vec4 backend, our dpN instruction replicates its result to all the
+    * components of a vec4.  We would like NIR to give us replicated fdot
+    * instructions because it can optimize better for us.
+    */
+   .fdot_replicates = true,
+};
+
 struct brw_compiler *
 brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 {
@@ -88,33 +119,6 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", false);
    compiler->scalar_stage[MESA_SHADER_FRAGMENT] = true;
    compiler->scalar_stage[MESA_SHADER_COMPUTE] = true;
-
-   nir_shader_compiler_options *nir_options =
-      rzalloc(compiler, nir_shader_compiler_options);
-   nir_options->native_integers = true;
-   nir_options->lower_fdiv = true;
-   /* In order to help allow for better CSE at the NIR level we tell NIR
-    * to split all ffma instructions during opt_algebraic and we then
-    * re-combine them as a later step.
-    */
-   nir_options->lower_ffma = true;
-   nir_options->lower_sub = true;
-   nir_options->lower_fdiv = true;
-   nir_options->lower_scmp = true;
-   nir_options->lower_fmod = true;
-   nir_options->lower_bitfield_extract = true;
-   nir_options->lower_bitfield_insert = true;
-   nir_options->lower_uadd_carry = true;
-   nir_options->lower_usub_borrow = true;
-
-   /* In the vec4 backend, our dpN instruction replicates its result to all
-    * the components of a vec4.  We would like NIR to give us replicated fdot
-    * instructions because it can optimize better for us.
-    *
-    * For the FS backend, it should be lowered away by the scalarizing pass so
-    * we should never see fdot anyway.
-    */
-   nir_options->fdot_replicates = true;
 
    /* We want the GLSL compiler to emit code that uses condition codes */
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
@@ -139,7 +143,8 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       if (devinfo->gen < 7)
          compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
 
-      compiler->glsl_compiler_options[i].NirOptions = nir_options;
+      compiler->glsl_compiler_options[i].NirOptions =
+         is_scalar ? &scalar_nir_options : &vector_nir_options;
 
       compiler->glsl_compiler_options[i].LowerBufferInterfaceBlocks = true;
    }
