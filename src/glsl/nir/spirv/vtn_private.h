@@ -236,13 +236,23 @@ struct vtn_type {
 
 struct vtn_variable;
 
+enum vtn_access_mode {
+   vtn_access_mode_id,
+   vtn_access_mode_literal,
+};
+
+struct vtn_access_link {
+   enum vtn_access_mode mode;
+   uint32_t id;
+};
+
 struct vtn_access_chain {
    struct vtn_variable *var;
 
    uint32_t length;
 
    /* Struct elements and array offsets */
-   uint32_t ids[0];
+   struct vtn_access_link link[0];
 };
 
 enum vtn_variable_mode {
