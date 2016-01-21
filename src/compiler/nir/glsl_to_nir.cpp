@@ -858,8 +858,9 @@ nir_visitor::visit(ir_call *ir)
          instr->num_components = type->vector_elements;
 
          /* Setup destination register */
+         unsigned bit_size = glsl_get_bit_size(type->base_type);
          nir_ssa_dest_init(&instr->instr, &instr->dest,
-                           type->vector_elements, 32, NULL);
+                           type->vector_elements, bit_size, NULL);
 
          /* Insert the created nir instruction now since in the case of boolean
           * result we will need to emit another instruction after it
@@ -882,7 +883,7 @@ nir_visitor::visit(ir_call *ir)
                load_ssbo_compare->src[1].swizzle[i] = 0;
             nir_ssa_dest_init(&load_ssbo_compare->instr,
                               &load_ssbo_compare->dest.dest,
-                              type->vector_elements, 32, NULL);
+                              type->vector_elements, bit_size, NULL);
             load_ssbo_compare->dest.write_mask = (1 << type->vector_elements) - 1;
             nir_builder_instr_insert(&b, &load_ssbo_compare->instr);
             dest = &load_ssbo_compare->dest.dest;
