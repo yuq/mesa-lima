@@ -204,6 +204,7 @@ anv_image_create(VkDevice _device,
    image->format = anv_format_for_vk_format(pCreateInfo->format);
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arrayLayers;
+   image->samples = pCreateInfo->samples;
    image->usage = anv_image_get_full_usage(pCreateInfo);
    image->tiling = pCreateInfo->tiling;
 

@@ -1522,6 +1522,7 @@ struct anv_image {
    VkExtent3D extent;
    uint32_t levels;
    uint32_t array_size;
+   uint32_t samples; /**< VkImageCreateInfo::samples */
    VkImageUsageFlags usage; /**< Superset of VkImageCreateInfo::usage. */
    VkImageTiling tiling; /** VkImageCreateInfo::tiling */
 
