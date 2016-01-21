@@ -927,7 +927,7 @@ ptn_add_output_stores(struct ptn_compile *c)
       nir_intrinsic_instr *store =
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
       store->num_components = glsl_get_vector_elements(var->type);
-      store->const_index[0] = (1 << store->num_components) - 1;
+      nir_intrinsic_set_write_mask(store, (1 << store->num_components) - 1);
       store->variables[0] =
          nir_deref_var_create(store, c->output_vars[var->data.location]);
 
@@ -998,7 +998,7 @@ setup_registers_and_variables(struct ptn_compile *c)
             nir_intrinsic_instr *store =
                nir_intrinsic_instr_create(shader, nir_intrinsic_store_var);
             store->num_components = 4;
-            store->const_index[0] = WRITEMASK_XYZW;
+            nir_intrinsic_set_write_mask(store, WRITEMASK_XYZW);
             store->variables[0] = nir_deref_var_create(store, fullvar);
             store->src[0] = nir_src_for_ssa(f001);
             nir_builder_instr_insert(b, &store->instr);
