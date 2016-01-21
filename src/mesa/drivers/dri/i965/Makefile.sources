@@ -1,6 +1,7 @@
 i965_compiler_FILES = \
 	brw_cfg.cpp \
 	brw_cfg.h \
+	brw_compiler.c \
 	brw_compiler.h \
 	brw_dead_control_flow.cpp \
 	brw_dead_control_flow.h \
