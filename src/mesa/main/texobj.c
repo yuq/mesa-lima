@@ -868,16 +868,6 @@ _mesa_test_texobj_completeness( const struct gl_context *ctx,
                              img->Depth2);
                   return;
                }
-
-               /* Extra checks for cube textures */
-               if (face > 0) {
-                  /* check that cube faces are the same size */
-                  if (img->Width2 != t->Image[0][i]->Width2 ||
-                      img->Height2 != t->Image[0][i]->Height2) {
-		     incomplete(t, MIPMAP, "CubeMap Image[n][i] bad size");
-		     return;
-		  }
-               }
             }
          }
 
