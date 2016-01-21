@@ -536,6 +536,15 @@ dst.x = src0.x;
 dst.y = src1.x;
 """)
 
+# Byte extraction
+binop("extract_ubyte", tuint, "", "(uint8_t)(src0 >> (src1 * 8))")
+binop("extract_ibyte", tint, "", "(int8_t)(src0 >> (src1 * 8))")
+
+# Word extraction
+binop("extract_uword", tuint, "", "(uint16_t)(src0 >> (src1 * 16))")
+binop("extract_iword", tint, "", "(int16_t)(src0 >> (src1 * 16))")
+
+
 def triop(name, ty, const_expr):
    opcode(name, 0, ty, [0, 0, 0], [ty, ty, ty], "", const_expr)
 def triop_horiz(name, output_size, src1_size, src2_size, src3_size, const_expr):

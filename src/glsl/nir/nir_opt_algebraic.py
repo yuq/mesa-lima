@@ -242,6 +242,22 @@ optimizations = [
     ('bcsel', ('ult', 31, 'bits'), 'value',
               ('ubfe', 'value', 'offset', 'bits')),
     'options->lower_bitfield_extract'),
+
+   (('extract_ibyte', a, b),
+    ('ishr', ('ishl', a, ('imul', ('isub', 3, b), 8)), 8),
+    'options->lower_extract_byte'),
+
+   (('extract_ubyte', a, b),
+    ('iand', ('ushr', a, ('imul', b, 8)), 0xff),
+    'options->lower_extract_byte'),
+
+   (('extract_iword', a, b),
+    ('ishr', ('ishl', a, ('imul', ('isub', 1, b), 16)), 16),
+    'options->lower_extract_word'),
+
+   (('extract_uword', a, b),
+    ('iand', ('ushr', a, ('imul', b, 16)), 0xffff),
+    'options->lower_extract_word'),
 ]
 
 # Add optimizations to handle the case where the result of a ternary is
