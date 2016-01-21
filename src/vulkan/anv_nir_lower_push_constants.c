@@ -43,45 +43,14 @@ lower_push_constants_block(nir_block *block, void *void_state)
       if (intrin->intrinsic != nir_intrinsic_load_push_constant)
          continue;
 
+      /* This wont work for vec4 stages. */
+      assert(state->is_scalar);
+
       assert(intrin->const_index[0] % 4 == 0);
-      unsigned dword_offset = intrin->const_index[0] / 4;
+      assert(intrin->const_index[1] == 128);
 
       /* We just turn them into uniform loads with the appropreate offset */
       intrin->intrinsic = nir_intrinsic_load_uniform;
-      intrin->const_index[0] = 0;
-      if (state->is_scalar) {
-         intrin->const_index[1] = dword_offset;
-      } else {
-         unsigned shift = dword_offset % 4;
-         /* Can't cross the vec4 boundary */
-         assert(shift + intrin->num_components <= 4);
-
-         /* vec4 shifts are in units of vec4's */
-         intrin->const_index[1] = dword_offset / 4;
-
-         if (shift) {
-            /* If there's a non-zero shift then we need to load a whole vec4
-             * and use a move to swizzle it into place.
-             */
-            assert(intrin->dest.is_ssa);
-            nir_alu_instr *mov = nir_alu_instr_create(state->shader,
-                                                      nir_op_imov);
-            mov->src[0].src = nir_src_for_ssa(&intrin->dest.ssa);
-            for (unsigned i = 0; i < intrin->num_components; i++)
-               mov->src[0].swizzle[i] = i + shift;
-            mov->dest.write_mask = (1 << intrin->num_components) - 1;
-            nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
-                              intrin->num_components, NULL);
-
-            nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
-                                     nir_src_for_ssa(&mov->dest.dest.ssa));
-            nir_instr_insert_after(&intrin->instr, &mov->instr);
-
-            /* Stomp the number of components to 4 */
-            intrin->num_components = 4;
-            intrin->dest.ssa.num_components = 4;
-         }
-      }
    }
 
    return true;

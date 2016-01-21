@@ -1515,6 +1515,14 @@ _vtn_load_store_tail(struct vtn_builder *b, nir_intrinsic_op op, bool load,
       instr->src[src++] = nir_src_for_ssa((*inout)->def);
    }
 
+   /* We set the base and size for push constant load to the entire push
+    * constant block for now.
+    */
+   if (op == nir_intrinsic_load_push_constant) {
+      instr->const_index[0] = 0;
+      instr->const_index[1] = 128;
+   }
+
    if (index)
       instr->src[src++] = nir_src_for_ssa(index);
 

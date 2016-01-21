@@ -1992,11 +1992,10 @@ fs_visitor::assign_constant_locations()
     */
    const unsigned int max_push_components = 16 * 8;
 
-   /* We push small arrays, but no bigger than 16 floats.  This is big enough
-    * for a vec4 but hopefully not large enough to push out other stuff.  We
-    * should probably use a better heuristic at some point.
+   /* For vulkan we don't limit the max_chunk_size. We set it to 32 float =
+    * 128 bytes, which is the maximum vulkan push constant size.
     */
-   const unsigned int max_chunk_size = 16;
+   const unsigned int max_chunk_size = 32;
 
    unsigned int num_push_constants = 0;
    unsigned int num_pull_constants = 0;
