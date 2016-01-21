@@ -390,7 +390,24 @@ struct vtn_ssa_value *vtn_create_ssa_value(struct vtn_builder *b,
 struct vtn_ssa_value *vtn_ssa_transpose(struct vtn_builder *b,
                                         struct vtn_ssa_value *src);
 
+nir_ssa_def *vtn_vector_extract(struct vtn_builder *b, nir_ssa_def *src,
+                                unsigned index);
+nir_ssa_def *vtn_vector_extract_dynamic(struct vtn_builder *b, nir_ssa_def *src,
+                                        nir_ssa_def *index);
+nir_ssa_def *vtn_vector_insert(struct vtn_builder *b, nir_ssa_def *src,
+                               nir_ssa_def *insert, unsigned index);
+nir_ssa_def *vtn_vector_insert_dynamic(struct vtn_builder *b, nir_ssa_def *src,
+                                       nir_ssa_def *insert, nir_ssa_def *index);
+
 nir_deref_var *vtn_nir_deref(struct vtn_builder *b, uint32_t id);
+
+nir_deref_var *vtn_access_chain_to_deref(struct vtn_builder *b,
+                                         struct vtn_access_chain *chain);
+nir_ssa_def *
+vtn_access_chain_to_offset(struct vtn_builder *b,
+                           struct vtn_access_chain *chain,
+                           nir_ssa_def **index_out, struct vtn_type **type_out,
+                           unsigned *end_idx_out, bool stop_at_matrix);
 
 struct vtn_ssa_value *vtn_local_load(struct vtn_builder *b, nir_deref_var *src);
 
@@ -402,6 +419,9 @@ vtn_variable_load(struct vtn_builder *b, struct vtn_access_chain *src);
 
 void vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                         struct vtn_access_chain *dest);
+
+void vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
+                          const uint32_t *w, unsigned count);
 
 
 typedef void (*vtn_decoration_foreach_cb)(struct vtn_builder *,
