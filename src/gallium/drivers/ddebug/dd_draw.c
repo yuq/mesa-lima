@@ -602,6 +602,7 @@ static void
 dd_after_draw(struct dd_context *dctx, struct dd_call *call)
 {
    struct dd_screen *dscreen = dd_screen(dctx->base.screen);
+   struct pipe_context *pipe = dctx->pipe;
 
    if (dctx->num_draw_calls >= dscreen->skip_count) {
       switch (dscreen->mode) {
@@ -615,6 +616,8 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
          }
          break;
       case DD_DUMP_ALL_CALLS:
+         if (!dscreen->no_flush)
+            pipe->flush(pipe, NULL, 0);
          dd_dump_call(dctx, call, 0);
          break;
       default:
