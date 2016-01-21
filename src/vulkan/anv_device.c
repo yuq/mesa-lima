@@ -397,10 +397,7 @@ void anv_GetPhysicalDeviceProperties(
    const float time_stamp_base = devinfo->gen >= 9 ? 83.333 : 80.0;
 
    VkSampleCountFlags sample_counts =
-      VK_SAMPLE_COUNT_1_BIT |
-      VK_SAMPLE_COUNT_2_BIT |
-      VK_SAMPLE_COUNT_4_BIT |
-      VK_SAMPLE_COUNT_8_BIT;
+      isl_device_get_sample_counts(&pdevice->isl_dev);
 
    VkPhysicalDeviceLimits limits = {
       .maxImageDimension1D                      = (1 << 14),
