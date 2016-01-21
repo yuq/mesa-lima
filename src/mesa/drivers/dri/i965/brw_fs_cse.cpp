@@ -78,6 +78,8 @@ is_expression(const fs_visitor *v, const fs_inst *const inst)
    case FS_OPCODE_LINTERP:
    case SHADER_OPCODE_FIND_LIVE_CHANNEL:
    case SHADER_OPCODE_BROADCAST:
+   case SHADER_OPCODE_EXTRACT_BYTE:
+   case SHADER_OPCODE_EXTRACT_WORD:
    case SHADER_OPCODE_MOV_INDIRECT:
       return true;
    case SHADER_OPCODE_RCP:
