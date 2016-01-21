@@ -280,17 +280,18 @@ ddebug_screen_create(struct pipe_screen *screen)
       puts("");
       puts("Usage:");
       puts("");
-      puts("  GALLIUM_DDEBUG=\"always [noflush]\"");
+      puts("  GALLIUM_DDEBUG=\"always [noflush] [verbose]\"");
       puts("    Flush and dump context and driver information after every draw call into");
       puts("    $HOME/"DD_DIR"/.");
       puts("");
-      puts("  GALLIUM_DDEBUG=\"[timeout in ms] [noflush]\"");
+      puts("  GALLIUM_DDEBUG=\"[timeout in ms] [noflush] [verbose]\"");
       puts("    Flush and detect a device hang after every draw call based on the given");
       puts("    fence timeout and dump context and driver information into");
       puts("    $HOME/"DD_DIR"/ when a hang is detected.");
       puts("");
       puts("  If 'noflush' is specified, do not flush on every draw call. In hang");
       puts("  detection mode, this only detect hangs in pipe->flush.");
+      puts("  If 'verbose' is specified, additional information is written to stderr.");
       puts("");
       puts("  GALLIUM_DDEBUG_SKIP=[count]");
       puts("    Skip flush and hang detection for the given initial number of draw calls.");
@@ -341,6 +342,7 @@ ddebug_screen_create(struct pipe_screen *screen)
    dscreen->timeout_ms = timeout;
    dscreen->mode = dump_always ? DD_DUMP_ALL_CALLS : DD_DETECT_HANGS;
    dscreen->no_flush = no_flush;
+   dscreen->verbose = strstr(option, "verbose") != NULL;
 
    switch (dscreen->mode) {
    case DD_DUMP_ALL_CALLS:

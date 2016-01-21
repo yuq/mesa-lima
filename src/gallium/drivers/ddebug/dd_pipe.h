@@ -45,6 +45,7 @@ struct dd_screen
    unsigned timeout_ms;
    enum dd_mode mode;
    bool no_flush;
+   bool verbose;
    unsigned skip_count;
 };
 

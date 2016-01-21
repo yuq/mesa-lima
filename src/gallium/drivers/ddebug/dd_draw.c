@@ -88,8 +88,9 @@ struct dd_call
 static FILE *
 dd_get_file_stream(struct dd_context *dctx)
 {
+   struct dd_screen *dscreen = dd_screen(dctx->base.screen);
    struct pipe_screen *screen = dctx->pipe->screen;
-   FILE *f = dd_get_debug_file();
+   FILE *f = dd_get_debug_file(dscreen->verbose);
    if (!f)
       return NULL;
 
