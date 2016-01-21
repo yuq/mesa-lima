@@ -58,17 +58,14 @@ enum lower_packing_builtins_op {
    LOWER_PACK_HALF_2x16                 = 0x0010,
    LOWER_UNPACK_HALF_2x16               = 0x0020,
 
-   LOWER_PACK_HALF_2x16_TO_SPLIT        = 0x0040,
-   LOWER_UNPACK_HALF_2x16_TO_SPLIT      = 0x0080,
+   LOWER_PACK_SNORM_4x8                 = 0x0040,
+   LOWER_UNPACK_SNORM_4x8               = 0x0080,
 
-   LOWER_PACK_SNORM_4x8                 = 0x0100,
-   LOWER_UNPACK_SNORM_4x8               = 0x0200,
+   LOWER_PACK_UNORM_4x8                 = 0x0100,
+   LOWER_UNPACK_UNORM_4x8               = 0x0200,
 
-   LOWER_PACK_UNORM_4x8                 = 0x0400,
-   LOWER_UNPACK_UNORM_4x8               = 0x0800,
-
-   LOWER_PACK_USE_BFI                   = 0x1000,
-   LOWER_PACK_USE_BFE                   = 0x2000,
+   LOWER_PACK_USE_BFI                   = 0x0400,
+   LOWER_PACK_USE_BFE                   = 0x0800,
 };
 
 bool do_common_optimization(exec_list *ir, bool linked,

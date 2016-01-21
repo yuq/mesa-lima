@@ -1402,16 +1402,6 @@ enum ir_expression_operation {
    /*@}*/
 
    /**
-    * \name Lowered floating point unpacking operations.
-    *
-    * \see lower_packing_builtins_visitor::split_unpack_half_2x16
-    */
-   /*@{*/
-   ir_unop_unpack_half_2x16_split_x,
-   ir_unop_unpack_half_2x16_split_y,
-   /*@}*/
-
-   /**
     * \name Bit operations, part of ARB_gpu_shader5.
     */
    /*@{*/
@@ -1540,15 +1530,6 @@ enum ir_expression_operation {
    ir_binop_max,
 
    ir_binop_pow,
-
-   /**
-    * \name Lowered floating point packing operations.
-    *
-    * \see lower_packing_builtins_visitor::split_pack_half_2x16
-    */
-   /*@{*/
-   ir_binop_pack_half_2x16_split,
-   /*@}*/
 
    /**
     * Load a value the size of a given GLSL type from a uniform block.

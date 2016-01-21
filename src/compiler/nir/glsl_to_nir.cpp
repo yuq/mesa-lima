@@ -1429,12 +1429,6 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_unpack_half_2x16:
       result = nir_unpack_half_2x16(&b, srcs[0]);
       break;
-   case ir_unop_unpack_half_2x16_split_x:
-      result = nir_unpack_half_2x16_split_x(&b, srcs[0]);
-      break;
-   case ir_unop_unpack_half_2x16_split_y:
-      result = nir_unpack_half_2x16_split_y(&b, srcs[0]);
-      break;
    case ir_unop_bitfield_reverse:
       result = nir_bitfield_reverse(&b, srcs[0]);
       break;
@@ -1718,9 +1712,6 @@ nir_visitor::visit(ir_expression *ir)
       }
       break;
 
-   case ir_binop_pack_half_2x16_split:
-         result = nir_pack_half_2x16_split(&b, srcs[0], srcs[1]);
-         break;
    case ir_binop_ldexp: result = nir_ldexp(&b, srcs[0], srcs[1]); break;
    case ir_triop_fma:
       result = nir_ffma(&b, srcs[0], srcs[1], srcs[2]);

@@ -43,13 +43,6 @@ public:
       : op_mask(op_mask),
         progress(false)
    {
-      /* Mutually exclusive options. */
-      assert(!((op_mask & LOWER_PACK_HALF_2x16) &&
-               (op_mask & LOWER_PACK_HALF_2x16_TO_SPLIT)));
-
-      assert(!((op_mask & LOWER_UNPACK_HALF_2x16) &&
-               (op_mask & LOWER_UNPACK_HALF_2x16_TO_SPLIT)));
-
       factory.instructions = &factory_instructions;
    }
 
@@ -96,9 +89,6 @@ public:
       case LOWER_PACK_HALF_2x16:
          *rvalue = lower_pack_half_2x16(op0);
          break;
-      case LOWER_PACK_HALF_2x16_TO_SPLIT:
-         *rvalue = split_pack_half_2x16(op0);
-         break;
       case LOWER_UNPACK_SNORM_2x16:
          *rvalue = lower_unpack_snorm_2x16(op0);
          break;
@@ -113,9 +103,6 @@ public:
          break;
       case LOWER_UNPACK_HALF_2x16:
          *rvalue = lower_unpack_half_2x16(op0);
-         break;
-      case LOWER_UNPACK_HALF_2x16_TO_SPLIT:
-         *rvalue = split_unpack_half_2x16(op0);
          break;
       case LOWER_PACK_UNPACK_NONE:
       case LOWER_PACK_USE_BFI:
@@ -161,7 +148,7 @@ private:
          result = op_mask & LOWER_PACK_UNORM_4x8;
          break;
       case ir_unop_pack_half_2x16:
-         result = op_mask & (LOWER_PACK_HALF_2x16 | LOWER_PACK_HALF_2x16_TO_SPLIT);
+         result = op_mask & LOWER_PACK_HALF_2x16;
          break;
       case ir_unop_unpack_snorm_2x16:
          result = op_mask & LOWER_UNPACK_SNORM_2x16;
@@ -176,7 +163,7 @@ private:
          result = op_mask & LOWER_UNPACK_UNORM_4x8;
          break;
       case ir_unop_unpack_half_2x16:
-         result = op_mask & (LOWER_UNPACK_HALF_2x16 | LOWER_UNPACK_HALF_2x16_TO_SPLIT);
+         result = op_mask & LOWER_UNPACK_HALF_2x16;
          break;
       default:
          result = LOWER_PACK_UNPACK_NONE;
@@ -1093,41 +1080,6 @@ private:
    }
 
    /**
-    * \brief Split packHalf2x16's vec2 operand into two floats.
-    *
-    * \param vec2_rval is packHalf2x16's input
-    * \return a uint rvalue
-    *
-    * Some code generators, such as the i965 fragment shader, require that all
-    * vector expressions be lowered to a sequence of scalar expressions.
-    * However, packHalf2x16 cannot be scalarized by the same mechanism as
-    * a true vector operation because its input and output have a differing
-    * number of vector components.
-    *
-    * This method scalarizes packHalf2x16 by transforming it from an unary
-    * operation having vector input to a binary operation having scalar input.
-    * That is, it transforms
-    *
-    *    packHalf2x16(VEC2_RVAL);
-    *
-    * into
-    *
-    *    vec2 v = VEC2_RVAL;
-    *    return packHalf2x16_split(v.x, v.y);
-    */
-   ir_rvalue*
-   split_pack_half_2x16(ir_rvalue *vec2_rval)
-   {
-      assert(vec2_rval->type == glsl_type::vec2_type);
-
-      ir_variable *v = factory.make_temp(glsl_type::vec2_type,
-                                         "tmp_split_pack_half_2x16_v");
-      factory.emit(assign(v, vec2_rval));
-
-      return expr(ir_binop_pack_half_2x16_split, swizzle_x(v), swizzle_y(v));
-   }
-
-   /**
     * \brief Lower the component-wise calculation of unpackHalf2x16.
     *
     * Given a uint that encodes a float16 in its lower 16 bits, this function
@@ -1340,59 +1292,6 @@ private:
       ir_rvalue *result = expr(ir_unop_bitcast_u2f, f32);
       assert(result->type == glsl_type::vec2_type);
       return result;
-   }
-
-   /**
-    * \brief Split unpackHalf2x16 into two operations.
-    *
-    * \param uint_rval is unpackHalf2x16's input
-    * \return a vec2 rvalue
-    *
-    * Some code generators, such as the i965 fragment shader, require that all
-    * vector expressions be lowered to a sequence of scalar expressions.
-    * However, unpackHalf2x16 cannot be scalarized by the same method as
-    * a true vector operation because the number of components of its input
-    * and output differ.
-    *
-    * This method scalarizes unpackHalf2x16 by transforming it from a single
-    * operation having vec2 output to a pair of operations each having float
-    * output. That is, it transforms
-    *
-    *   unpackHalf2x16(UINT_RVAL)
-    *
-    * into
-    *
-    *   uint u = UINT_RVAL;
-    *   vec2 v;
-    *
-    *   v.x = unpackHalf2x16_split_x(u);
-    *   v.y = unpackHalf2x16_split_y(u);
-    *
-    *   return v;
-    */
-   ir_rvalue*
-   split_unpack_half_2x16(ir_rvalue *uint_rval)
-   {
-      assert(uint_rval->type == glsl_type::uint_type);
-
-      /* uint u = uint_rval; */
-      ir_variable *u = factory.make_temp(glsl_type::uint_type,
-                                          "tmp_split_unpack_half_2x16_u");
-      factory.emit(assign(u, uint_rval));
-
-      /* vec2 v; */
-      ir_variable *v = factory.make_temp(glsl_type::vec2_type,
-                                          "tmp_split_unpack_half_2x16_v");
-
-      /* v.x = unpack_half_2x16_split_x(u); */
-      factory.emit(assign(v, expr(ir_unop_unpack_half_2x16_split_x, u),
-                           WRITEMASK_X));
-
-      /* v.y = unpack_half_2x16_split_y(u); */
-      factory.emit(assign(v, expr(ir_unop_unpack_half_2x16_split_y, u),
-                           WRITEMASK_Y));
-
-      return deref(v).val;
    }
 };
 

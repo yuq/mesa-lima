@@ -1244,10 +1244,7 @@ ir_to_mesa_visitor::visit(ir_expression *ir)
    case ir_unop_unpack_unorm_2x16:
    case ir_unop_unpack_unorm_4x8:
    case ir_unop_unpack_half_2x16:
-   case ir_unop_unpack_half_2x16_split_x:
-   case ir_unop_unpack_half_2x16_split_y:
    case ir_unop_unpack_double_2x32:
-   case ir_binop_pack_half_2x16_split:
    case ir_unop_bitfield_reverse:
    case ir_unop_bit_count:
    case ir_unop_find_msb:
