@@ -101,16 +101,9 @@ vtn_access_chain_to_deref(struct vtn_builder *b, struct vtn_access_chain *chain)
       case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_BOOL:
       case GLSL_TYPE_ARRAY: {
-         nir_deref_array *deref_arr = nir_deref_array_create(b);
-         if (base_type == GLSL_TYPE_ARRAY ||
-             glsl_type_is_matrix(deref_type->type)) {
-            deref_type = deref_type->array_element;
-         } else {
-            assert(glsl_type_is_vector(deref_type->type));
-            deref_type = ralloc(b, struct vtn_type);
-            deref_type->type = glsl_scalar_type(base_type);
-         }
+         deref_type = deref_type->array_element;
 
+         nir_deref_array *deref_arr = nir_deref_array_create(b);
          deref_arr->deref.type = deref_type->type;
 
          if (chain->link[i].mode == vtn_access_mode_literal) {
@@ -350,14 +343,7 @@ vtn_access_chain_to_offset(struct vtn_builder *b,
                            vtn_access_link_as_ssa(b, chain->link[idx],
                                                   type->stride));
 
-         if (glsl_type_is_vector(type->type)) {
-            /* This had better be the tail */
-            assert(idx == chain->length - 1);
-            type = rzalloc(b, struct vtn_type);
-            type->type = glsl_scalar_type(base_type);
-         } else {
-            type = type->array_element;
-         }
+         type = type->array_element;
          break;
 
       case GLSL_TYPE_STRUCT: {

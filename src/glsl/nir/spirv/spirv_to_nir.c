@@ -394,21 +394,17 @@ vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
    if (src->is_builtin)
       dest->builtin = src->builtin;
 
-   if (!glsl_type_is_vector_or_scalar(src->type)) {
+   if (!glsl_type_is_scalar(src->type)) {
       switch (glsl_get_base_type(src->type)) {
-      case GLSL_TYPE_ARRAY:
-         dest->array_element = src->array_element;
-         dest->stride = src->stride;
-         break;
-
       case GLSL_TYPE_INT:
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_BOOL:
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_DOUBLE:
-         /* matrices */
+      case GLSL_TYPE_ARRAY:
          dest->row_major = src->row_major;
          dest->stride = src->stride;
+         dest->array_element = src->array_element;
          break;
 
       case GLSL_TYPE_STRUCT: {
