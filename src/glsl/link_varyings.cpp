@@ -1001,23 +1001,20 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
 
    const ir_variable *const var = (producer_var != NULL)
       ? producer_var : consumer_var;
+   const gl_shader_stage stage = (producer_var != NULL)
+      ? producer_stage : consumer_stage;
+   const glsl_type *type = get_varying_type(var, stage);
 
    this->matches[this->num_matches].packing_class
       = this->compute_packing_class(var);
    this->matches[this->num_matches].packing_order
       = this->compute_packing_order(var);
    if (this->disable_varying_packing) {
-      unsigned slots;
-      gl_shader_stage stage =
-         (producer_var != NULL) ? producer_stage : consumer_stage;
-
-      const glsl_type *type = get_varying_type(var, stage);
-
-      slots = type->count_attribute_slots(false);
+      unsigned slots = type->count_attribute_slots(false);
       this->matches[this->num_matches].num_components = slots * 4;
    } else {
       this->matches[this->num_matches].num_components
-         = var->type->component_slots();
+         = type->component_slots();
    }
    this->matches[this->num_matches].producer_var = producer_var;
    this->matches[this->num_matches].consumer_var = consumer_var;
