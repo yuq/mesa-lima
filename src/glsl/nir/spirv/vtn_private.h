@@ -196,6 +196,9 @@ struct vtn_ssa_value {
 struct vtn_type {
    const struct glsl_type *type;
 
+   /* The value that declares this type.  Used for finding decorations */
+   struct vtn_value *val;
+
    /* for matrices, whether the matrix is stored row-major */
    bool row_major;
 

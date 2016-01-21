@@ -585,6 +585,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
    val->type = rzalloc(b, struct vtn_type);
    val->type->is_builtin = false;
+   val->type->val = val;
 
    switch (opcode) {
    case SpvOpTypeVoid:
