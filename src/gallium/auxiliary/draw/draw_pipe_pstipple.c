@@ -153,113 +153,6 @@ generate_pstip_fs(struct pstip_stage *pstip)
 
 
 /**
- * Load texture image with current stipple pattern.
- */
-static void
-pstip_update_texture(struct pstip_stage *pstip)
-{
-   static const uint bit31 = 1 << 31;
-   struct pipe_context *pipe = pstip->pipe;
-   struct pipe_transfer *transfer;
-   const uint *stipple = pstip->state.stipple->stipple;
-   uint i, j;
-   ubyte *data;
-
-   data = pipe_transfer_map(pipe, pstip->texture, 0, 0,
-                                PIPE_TRANSFER_WRITE, 0, 0, 32, 32, &transfer);
-
-   /*
-    * Load alpha texture.
-    * Note: 0 means keep the fragment, 255 means kill it.
-    * We'll negate the texel value and use KILL_IF which kills if value
-    * is negative.
-    */
-   for (i = 0; i < 32; i++) {
-      for (j = 0; j < 32; j++) {
-         if (stipple[i] & (bit31 >> j)) {
-            /* fragment "on" */
-            data[i * transfer->stride + j] = 0;
-         }
-         else {
-            /* fragment "off" */
-            data[i * transfer->stride + j] = 255;
-         }
-      }
-   }
-
-   /* unmap */
-   pipe_transfer_unmap(pipe, transfer);
-}
-
-
-/**
- * Create the texture map we'll use for stippling.
- */
-static boolean
-pstip_create_texture(struct pstip_stage *pstip)
-{
-   struct pipe_context *pipe = pstip->pipe;
-   struct pipe_screen *screen = pipe->screen;
-   struct pipe_resource texTemp;
-   struct pipe_sampler_view viewTempl;
-
-   memset(&texTemp, 0, sizeof(texTemp));
-   texTemp.target = PIPE_TEXTURE_2D;
-   texTemp.format = PIPE_FORMAT_A8_UNORM; /* XXX verify supported by driver! */
-   texTemp.last_level = 0;
-   texTemp.width0 = 32;
-   texTemp.height0 = 32;
-   texTemp.depth0 = 1;
-   texTemp.array_size = 1;
-   texTemp.bind = PIPE_BIND_SAMPLER_VIEW;
-
-   pstip->texture = screen->resource_create(screen, &texTemp);
-   if (pstip->texture == NULL)
-      return FALSE;
-
-   u_sampler_view_default_template(&viewTempl,
-                                   pstip->texture,
-                                   pstip->texture->format);
-   pstip->sampler_view = pipe->create_sampler_view(pipe,
-                                                   pstip->texture,
-                                                   &viewTempl);
-   if (!pstip->sampler_view) {
-      return FALSE;
-   }
-
-   return TRUE;
-}
-
-
-/**
- * Create the sampler CSO that'll be used for stippling.
- */
-static boolean
-pstip_create_sampler(struct pstip_stage *pstip)
-{
-   struct pipe_sampler_state sampler;
-   struct pipe_context *pipe = pstip->pipe;
-
-   memset(&sampler, 0, sizeof(sampler));
-   sampler.wrap_s = PIPE_TEX_WRAP_REPEAT;
-   sampler.wrap_t = PIPE_TEX_WRAP_REPEAT;
-   sampler.wrap_r = PIPE_TEX_WRAP_REPEAT;
-   sampler.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
-   sampler.min_img_filter = PIPE_TEX_FILTER_NEAREST;
-   sampler.mag_img_filter = PIPE_TEX_FILTER_NEAREST;
-   sampler.normalized_coords = 1;
-   sampler.min_lod = 0.0f;
-   sampler.max_lod = 0.0f;
-
-   pstip->sampler_cso = pipe->create_sampler_state(pipe, &sampler);
-   if (pstip->sampler_cso == NULL)
-      return FALSE;
-   
-   return TRUE;
-}
-
-
-/**
  * When we're about to draw our first stipple polygon in a batch, this function
  * is called to tell the driver to bind our modified fragment shader.
  */
@@ -537,7 +430,8 @@ pstip_set_polygon_stipple(struct pipe_context *pipe,
    /* pass-through */
    pstip->driver_set_polygon_stipple(pstip->pipe, stipple);
 
-   pstip_update_texture(pstip);
+   util_pstipple_update_stipple_texture(pstip->pipe, pstip->texture,
+                                        pstip->state.stipple->stipple);
 }
 
 
@@ -573,10 +467,17 @@ draw_install_pstipple_stage(struct draw_context *draw,
    pstip->driver_set_polygon_stipple = pipe->set_polygon_stipple;
 
    /* create special texture, sampler state */
-   if (!pstip_create_texture(pstip))
+   pstip->texture = util_pstipple_create_stipple_texture(pipe, NULL);
+   if (!pstip->texture)
       goto fail;
 
-   if (!pstip_create_sampler(pstip))
+   pstip->sampler_view = util_pstipple_create_sampler_view(pipe,
+                                                           pstip->texture);
+   if (!pstip->sampler_view)
+      goto fail;
+
+   pstip->sampler_cso = util_pstipple_create_sampler(pipe);
+   if (!pstip->sampler_cso)
       goto fail;
 
    /* override the driver's functions */
