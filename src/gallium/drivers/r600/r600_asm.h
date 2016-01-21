@@ -245,8 +245,8 @@ struct r600_bytecode {
 	unsigned	ar_chan;
 	unsigned        ar_handling;
 	unsigned        r6xx_nop_after_rel_dst;
-	bool		index_loaded[2];
-	unsigned 	index_reg[2]; /* indexing register CF_INDEX_[01] */
+	bool            index_loaded[2];
+	unsigned        index_reg[2]; /* indexing register CF_INDEX_[01] */
 	unsigned        debug_id;
 	struct r600_isa* isa;
 };

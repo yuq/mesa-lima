@@ -723,7 +723,7 @@ static void evergreen_set_global_binding(
  * command stream by the start_cs_cmd atom.  However, since the SET_CONTEXT_REG
  * packet requires that the shader type bit be set, we must initialize all
  * context registers needed for compute in this function.  The registers
- * intialized by the start_cs_cmd atom can be found in evereen_state.c in the
+ * initialized by the start_cs_cmd atom can be found in evergreen_state.c in the
  * functions evergreen_init_atom_start_cs or cayman_init_atom_start_cs depending
  * on the GPU family.
  */
@@ -733,7 +733,7 @@ void evergreen_init_atom_start_compute_cs(struct r600_context *ctx)
 	int num_threads;
 	int num_stack_entries;
 
-	/* since all required registers are initialised in the
+	/* since all required registers are initialized in the
 	 * start_compute_cs_cmd atom, we can EMIT_EARLY here.
 	 */
 	r600_init_command_buffer(cb, 256);
@@ -818,7 +818,7 @@ void evergreen_init_atom_start_compute_cs(struct r600_context *ctx)
 		 * R_008E28_SQ_STATIC_THREAD_MGMT3
 		 */
 
-		/* XXX: We may need to adjust the thread and stack resouce
+		/* XXX: We may need to adjust the thread and stack resource
 		 * values for 3D/compute interop */
 
 		r600_store_config_reg_seq(cb, R_008C18_SQ_THREAD_RESOURCE_MGMT_1, 5);

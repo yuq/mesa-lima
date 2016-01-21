@@ -3670,9 +3670,9 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	unsigned id = 1;
 	unsigned i;
 	/* !!!
-	 *  To avoid GPU lockup registers must be emited in a specific order
+	 *  To avoid GPU lockup registers must be emitted in a specific order
 	 * (no kidding ...). The order below is important and have been
-	 * partialy infered from analyzing fglrx command stream.
+	 * partially inferred from analyzing fglrx command stream.
 	 *
 	 * Don't reorder atom without carefully checking the effect (GPU lockup
 	 * or piglit regression).
