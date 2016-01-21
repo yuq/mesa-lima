@@ -424,6 +424,13 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
    }
 
+   case GLSLstd450ModfStruct: {
+      assert(glsl_type_is_struct(val->ssa->type));
+      val->ssa->elems[0]->def = nir_ffract(nb, src[0]);
+      val->ssa->elems[1]->def = nir_ffloor(nb, src[0]);
+      return;
+   }
+
    case GLSLstd450FMin:        op = nir_op_fmin;       break;
    case GLSLstd450UMin:        op = nir_op_umin;       break;
    case GLSLstd450SMin:        op = nir_op_imin;       break;
@@ -618,7 +625,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
    }
 
-   case GLSLstd450ModfStruct:
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
    case GLSLstd450IMix:
