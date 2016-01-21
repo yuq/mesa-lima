@@ -614,7 +614,7 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
       }
 
       nir_ssa_def *offset;
-      if (dim) {
+      if (op == nir_intrinsic_load_ubo) {
          /* UBO loads don't have a const_index[0] base offset. */
          offset = nir_imm_int(b, index);
          if (indirect) {
