@@ -898,6 +898,24 @@ anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
+static uint64_t
+read_reloc(const struct anv_device *device, const void *p)
+{
+   if (device->info.gen >= 8)
+      return *(uint64_t *)p;
+   else
+      return *(uint32_t *)p;
+}
+
+static void
+write_reloc(const struct anv_device *device, void *p, uint64_t v)
+{
+   if (device->info.gen >= 8)
+      *(uint64_t *)p = v;
+   else
+      *(uint32_t *)p = v;
+}
+
 static void
 adjust_relocations_from_block_pool(struct anv_block_pool *pool,
                                    struct anv_reloc_list *relocs)
@@ -911,13 +929,14 @@ adjust_relocations_from_block_pool(struct anv_block_pool *pool,
        * block pool.  Then the kernel will update it for us if needed.
        */
       assert(relocs->relocs[i].offset < pool->state.end);
-      uint32_t *reloc_data = pool->map + relocs->relocs[i].offset;
+      const void *p = pool->map + relocs->relocs[i].offset;
 
       /* We're reading back the relocated value from potentially incoherent
        * memory here. However, any change to the value will be from the kernel
        * writing out relocations, which will keep the CPU cache up to date.
        */
-      relocs->relocs[i].presumed_offset = *reloc_data - relocs->relocs[i].delta;
+      relocs->relocs[i].presumed_offset =
+         read_reloc(pool->device, p) - relocs->relocs[i].delta;
 
       /* All of the relocations from this block pool to other BO's should
        * have been emitted relative to the surface block pool center.  We
@@ -958,9 +977,9 @@ adjust_relocations_to_block_pool(struct anv_block_pool *pool,
           * use by the GPU at the moment.
           */
          assert(relocs->relocs[i].offset < from_bo->size);
-         uint32_t *reloc_data = from_bo->map + relocs->relocs[i].offset;
-         *reloc_data = relocs->relocs[i].presumed_offset +
-                       relocs->relocs[i].delta;
+         write_reloc(pool->device, from_bo->map + relocs->relocs[i].offset,
+                     relocs->relocs[i].presumed_offset +
+                     relocs->relocs[i].delta);
       }
    }
 
