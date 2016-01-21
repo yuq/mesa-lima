@@ -424,7 +424,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
    }
 
-   op = nir_op_fmod;       break;
    case GLSLstd450FMin:        op = nir_op_fmin;       break;
    case GLSLstd450UMin:        op = nir_op_umin;       break;
    case GLSLstd450SMin:        op = nir_op_imin;       break;
