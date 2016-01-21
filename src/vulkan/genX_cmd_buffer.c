@@ -48,7 +48,7 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
       scratch_bo = &device->scratch_block_pool.bo;
 
 /* XXX: Do we need this on more than just BDW? */
-#if (ANV_GEN == 8)
+#if (ANV_GEN >= 8)
    /* Emit a render target cache flush.
     *
     * This isn't documented anywhere in the PRM.  However, it seems to be
@@ -56,7 +56,7 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
     * this, we get GPU hangs when using multi-level command buffers which
     * clear depth, reset state base address, and then go render stuff.
     */
-   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                   .RenderTargetCacheFlushEnable = true);
 #endif
 
