@@ -503,6 +503,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       float tex_coord[3];
    } *vb_data;
 
+   assert(src_image->samples == dest_image->samples);
+
    unsigned vb_size = sizeof(struct anv_vue_header) + 3 * sizeof(*vb_data);
 
    struct anv_state vb_state =
@@ -987,8 +989,14 @@ void anv_CmdCopyImage(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
-
    struct anv_meta_saved_state saved_state;
+
+   /* From the Vulkan 1.0 spec:
+    *
+    *    vkCmdCopyImage can be used to copy image data between multisample
+    *    images, but both images must have the same number of samples.
+    */
+   assert(src_image->samples == dest_image->samples);
 
    meta_prepare_blit(cmd_buffer, &saved_state);
 
@@ -1090,8 +1098,15 @@ void anv_CmdBlitImage(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
-
    struct anv_meta_saved_state saved_state;
+
+   /* From the Vulkan 1.0 spec:
+    *
+    *    vkCmdBlitImage must not be used for multisampled source or
+    *    destination images. Use vkCmdResolveImage for this purpose.
+    */
+   assert(src_image->samples == 1);
+   assert(dest_image->samples == 1);
 
    anv_finishme("respect VkFilter");
 
@@ -1233,6 +1248,11 @@ void anv_CmdCopyBufferToImage(
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    struct anv_meta_saved_state saved_state;
 
+   /* The Vulkan 1.0 spec says "dstImage must have a sample count equal to
+    * VK_SAMPLE_COUNT_1_BIT."
+    */
+   assert(dest_image->samples == 1);
+
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
@@ -1344,6 +1364,12 @@ void anv_CmdCopyImageToBuffer(
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    struct anv_meta_saved_state saved_state;
+
+
+   /* The Vulkan 1.0 spec says "srcImage must have a sample count equal to
+    * VK_SAMPLE_COUNT_1_BIT."
+    */
+   assert(src_image->samples == 1);
 
    meta_prepare_blit(cmd_buffer, &saved_state);
 
