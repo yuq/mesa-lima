@@ -1265,7 +1265,7 @@ _mesa_AttachShader(GLuint program, GLuint shader)
 
 
 void GLAPIENTRY
-_mesa_CompileShader(GLhandleARB shaderObj)
+_mesa_CompileShader(GLuint shaderObj)
 {
    GET_CURRENT_CONTEXT(ctx);
    if (MESA_VERBOSE & VERBOSE_API)
@@ -1479,8 +1479,8 @@ _mesa_GetShaderInfoLog(GLuint shader, GLsizei bufSize,
 
 
 void GLAPIENTRY
-_mesa_GetShaderSource(GLhandleARB shader, GLsizei maxLength,
-                         GLsizei *length, GLcharARB *sourceOut)
+_mesa_GetShaderSource(GLuint shader, GLsizei maxLength,
+                      GLsizei *length, GLchar *sourceOut)
 {
    GET_CURRENT_CONTEXT(ctx);
    get_shader_source(ctx, shader, maxLength, length, sourceOut);
@@ -1512,7 +1512,7 @@ _mesa_IsShader(GLuint name)
 
 
 void GLAPIENTRY
-_mesa_LinkProgram(GLhandleARB programObj)
+_mesa_LinkProgram(GLuint programObj)
 {
    GET_CURRENT_CONTEXT(ctx);
    if (MESA_VERBOSE & VERBOSE_API)
@@ -1641,8 +1641,8 @@ read_shader(const gl_shader_stage stage, const char *source)
  * and pass it to _mesa_shader_source().
  */
 void GLAPIENTRY
-_mesa_ShaderSource(GLhandleARB shaderObj, GLsizei count,
-                   const GLcharARB * const * string, const GLint * length)
+_mesa_ShaderSource(GLuint shaderObj, GLsizei count,
+                   const GLchar * const * string, const GLint * length)
 {
    GET_CURRENT_CONTEXT(ctx);
    GLint *offsets;
@@ -1729,7 +1729,7 @@ _mesa_ShaderSource(GLhandleARB shaderObj, GLsizei count,
 
 
 void GLAPIENTRY
-_mesa_UseProgram(GLhandleARB program)
+_mesa_UseProgram(GLuint program)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg;
@@ -1791,7 +1791,7 @@ _mesa_UseProgram(GLhandleARB program)
 
 
 void GLAPIENTRY
-_mesa_ValidateProgram(GLhandleARB program)
+_mesa_ValidateProgram(GLuint program)
 {
    GET_CURRENT_CONTEXT(ctx);
    validate_program(ctx, program);
