@@ -706,15 +706,13 @@ st_init_pbo_upload(struct st_context *st)
    st->pbo_upload.rgba_only =
       screen->get_param(screen, PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY);
 
-   /* Create the vertex shader */
-   {
-      unsigned semantic_names[] = { TGSI_SEMANTIC_POSITION };
-      unsigned semantic_indexes[] = { 0 };
-
-      st->pbo_upload.vs = util_make_vertex_passthrough_shader(pipe, 1,
-                                                              semantic_names,
-                                                              semantic_indexes,
-                                                              FALSE);
+   if (screen->get_param(screen, PIPE_CAP_TGSI_INSTANCEID)) {
+      if (screen->get_param(screen, PIPE_CAP_TGSI_VS_LAYER_VIEWPORT)) {
+         st->pbo_upload.upload_layers = true;
+      } else if (screen->get_param(screen, PIPE_CAP_MAX_GEOMETRY_OUTPUT_VERTICES) >= 3) {
+         st->pbo_upload.upload_layers = true;
+         st->pbo_upload.use_gs = true;
+      }
    }
 
    /* Blend state */
@@ -732,6 +730,11 @@ st_destroy_pbo_upload(struct st_context *st)
    if (st->pbo_upload.fs) {
       cso_delete_fragment_shader(st->cso_context, st->pbo_upload.fs);
       st->pbo_upload.fs = NULL;
+   }
+
+   if (st->pbo_upload.gs) {
+      cso_delete_geometry_shader(st->cso_context, st->pbo_upload.gs);
+      st->pbo_upload.gs = NULL;
    }
 
    if (st->pbo_upload.vs) {
@@ -1120,7 +1123,92 @@ reinterpret_formats(enum pipe_format *src_format, enum pipe_format *dst_format)
 }
 
 static void *
-create_pbo_upload_shader(struct st_context *st)
+create_pbo_upload_vs(struct st_context *st)
+{
+   struct ureg_program *ureg;
+   struct ureg_src in_pos;
+   struct ureg_src in_instanceid;
+   struct ureg_dst out_pos;
+   struct ureg_dst out_layer;
+
+   ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
+
+   in_pos = ureg_DECL_vs_input(ureg, TGSI_SEMANTIC_POSITION);
+
+   out_pos = ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0);
+
+   if (st->pbo_upload.upload_layers) {
+      in_instanceid = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_INSTANCEID, 0);
+
+      if (!st->pbo_upload.use_gs)
+         out_layer = ureg_DECL_output(ureg, TGSI_SEMANTIC_LAYER, 0);
+   }
+
+   /* out_pos = in_pos */
+   ureg_MOV(ureg, out_pos, in_pos);
+
+   if (st->pbo_upload.upload_layers) {
+      if (st->pbo_upload.use_gs) {
+         /* out_pos.z = i2f(gl_InstanceID) */
+         ureg_I2F(ureg, ureg_writemask(out_pos, TGSI_WRITEMASK_Z),
+                        ureg_scalar(in_instanceid, TGSI_SWIZZLE_X));
+      } else {
+         /* out_layer = gl_InstanceID */
+         ureg_MOV(ureg, out_layer, in_instanceid);
+      }
+   }
+
+   ureg_END(ureg);
+
+   return ureg_create_shader_and_destroy(ureg, st->pipe);
+}
+
+static void *
+create_pbo_upload_gs(struct st_context *st)
+{
+   static const int zero = 0;
+   struct ureg_program *ureg;
+   struct ureg_dst out_pos;
+   struct ureg_dst out_layer;
+   struct ureg_src in_pos;
+   struct ureg_src imm;
+   unsigned i;
+
+   ureg = ureg_create(TGSI_PROCESSOR_GEOMETRY);
+   if (!ureg)
+      return NULL;
+
+   ureg_property(ureg, TGSI_PROPERTY_GS_INPUT_PRIM, PIPE_PRIM_TRIANGLES);
+   ureg_property(ureg, TGSI_PROPERTY_GS_OUTPUT_PRIM, PIPE_PRIM_TRIANGLE_STRIP);
+   ureg_property(ureg, TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES, 3);
+
+   out_pos = ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0);
+   out_layer = ureg_DECL_output(ureg, TGSI_SEMANTIC_LAYER, 0);
+
+   in_pos = ureg_DECL_input(ureg, TGSI_SEMANTIC_POSITION, 0, 0, 1);
+
+   imm = ureg_DECL_immediate_int(ureg, &zero, 1);
+
+   for (i = 0; i < 3; ++i) {
+      struct ureg_src in_pos_vertex = ureg_src_dimension(in_pos, i);
+
+      /* out_pos = in_pos[i] */
+      ureg_MOV(ureg, out_pos, in_pos_vertex);
+
+      /* out_layer.x = f2i(in_pos[i].z) */
+      ureg_F2I(ureg, ureg_writemask(out_layer, TGSI_WRITEMASK_X),
+                     ureg_scalar(in_pos_vertex, TGSI_SWIZZLE_Z));
+
+      ureg_EMIT(ureg, ureg_scalar(imm, TGSI_SWIZZLE_X));
+   }
+
+   ureg_END(ureg);
+
+   return ureg_create_shader_and_destroy(ureg, st->pipe);
+}
+
+static void *
+create_pbo_upload_fs(struct st_context *st)
 {
    struct pipe_context *pipe = st->pipe;
    struct pipe_screen *screen = pipe->screen;
@@ -1128,10 +1216,14 @@ create_pbo_upload_shader(struct st_context *st)
    struct ureg_dst out;
    struct ureg_src sampler;
    struct ureg_src pos;
+   struct ureg_src layer;
    struct ureg_src const0;
    struct ureg_dst temp0;
 
-   ureg    = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+   ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+   if (!ureg)
+      return NULL;
+
    out     = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
    sampler = ureg_DECL_sampler(ureg, 0);
    if (screen->get_param(screen, PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL)) {
@@ -1140,10 +1232,14 @@ create_pbo_upload_shader(struct st_context *st)
       pos = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
                                TGSI_INTERPOLATE_LINEAR);
    }
+   if (st->pbo_upload.upload_layers) {
+      layer = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_LAYER, 0,
+                                       TGSI_INTERPOLATE_CONSTANT);
+   }
    const0  = ureg_DECL_constant(ureg, 0);
    temp0   = ureg_DECL_temporary(ureg);
 
-   /* Note: const0 = [ -xoffset + skip_pixels, -yoffset, stride, 0 ] */
+   /* Note: const0 = [ -xoffset + skip_pixels, -yoffset, stride, image_height ] */
 
    /* temp0.xy = f2i(temp0.xy) */
    ureg_F2I(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_XY),
@@ -1165,6 +1261,14 @@ create_pbo_upload_shader(struct st_context *st)
                    ureg_scalar(const0, TGSI_SWIZZLE_Z),
                    ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_Y),
                    ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X));
+
+   if (st->pbo_upload.upload_layers) {
+      /* temp0.x = const0.w * layer + temp0.x */
+      ureg_UMAD(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_X),
+                      ureg_scalar(const0, TGSI_SWIZZLE_W),
+                      ureg_scalar(layer, TGSI_SWIZZLE_X),
+                      ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X));
+   }
 
    /* out = txf(sampler, temp0.x) */
    ureg_TXF(ureg, out, TGSI_TEXTURE_BUFFER,
@@ -1209,8 +1313,20 @@ try_pbo_upload_common(struct gl_context *ctx,
    }
 
    /* Create the shaders */
+   if (!st->pbo_upload.vs) {
+      st->pbo_upload.vs = create_pbo_upload_vs(st);
+      if (!st->pbo_upload.vs)
+         return false;
+   }
+
+   if (depth != 1 && st->pbo_upload.use_gs && !st->pbo_upload.gs) {
+      st->pbo_upload.gs = create_pbo_upload_gs(st);
+      if (!st->pbo_upload.gs)
+         return false;
+   }
+
    if (!st->pbo_upload.fs) {
-      st->pbo_upload.fs = create_pbo_upload_shader(st);
+      st->pbo_upload.fs = create_pbo_upload_fs(st);
       if (!st->pbo_upload.fs)
          return false;
    }
@@ -1335,13 +1451,13 @@ try_pbo_upload_common(struct gl_context *ctx,
          int32_t xoffset;
          int32_t yoffset;
          int32_t stride;
-         int32_t pad;
+         int32_t image_size;
       } constants;
 
       constants.xoffset = -xoffset + skip_pixels;
       constants.yoffset = -yoffset;
       constants.stride = stride;
-      constants.pad = 0;
+      constants.image_size = stride * image_height;
 
       if (st->constbuf_uploader) {
          cb.buffer = NULL;
@@ -1366,7 +1482,8 @@ try_pbo_upload_common(struct gl_context *ctx,
    cso_set_vertex_shader_handle(st->cso_context, st->pbo_upload.vs);
 
    cso_save_geometry_shader(st->cso_context);
-   cso_set_geometry_shader_handle(st->cso_context, NULL);
+   cso_set_geometry_shader_handle(st->cso_context,
+                                  depth != 1 ? st->pbo_upload.gs : NULL);
 
    cso_save_tessctrl_shader(st->cso_context);
    cso_set_tessctrl_shader_handle(st->cso_context, NULL);
@@ -1381,7 +1498,12 @@ try_pbo_upload_common(struct gl_context *ctx,
    cso_save_stream_outputs(st->cso_context);
    cso_set_stream_outputs(st->cso_context, 0, NULL, 0);
 
-   cso_draw_arrays(st->cso_context, PIPE_PRIM_TRIANGLE_STRIP, 0, 4);
+   if (depth == 1) {
+      cso_draw_arrays(st->cso_context, PIPE_PRIM_TRIANGLE_STRIP, 0, 4);
+   } else {
+      cso_draw_arrays_instanced(st->cso_context, PIPE_PRIM_TRIANGLE_STRIP,
+                                0, 4, 0, depth);
+   }
 
    cso_restore_fragment_sampler_views(st->cso_context);
    cso_restore_framebuffer(st->cso_context);
@@ -1442,8 +1564,7 @@ try_pbo_upload(struct gl_context *ctx, GLuint dims,
       image_height = unpack->ImageHeight > 0 ? unpack->ImageHeight : height;
    }
 
-   /* XXX We only support updating a single layer */
-   if (depth != 1)
+   if (depth != 1 && !st->pbo_upload.upload_layers)
       return false;
 
    /* Choose the source format. Initially, we do so without checking driver

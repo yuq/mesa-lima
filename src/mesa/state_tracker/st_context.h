@@ -209,9 +209,12 @@ struct st_context
       struct pipe_rasterizer_state raster;
       struct pipe_blend_state blend;
       void *vs;
+      void *gs;
       void *fs;
       bool enabled;
       bool rgba_only;
+      bool upload_layers;
+      bool use_gs;
    } pbo_upload;
 
    /** used for anything using util_draw_vertex_buffer */
