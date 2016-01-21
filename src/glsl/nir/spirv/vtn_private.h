@@ -234,14 +234,43 @@ struct vtn_type {
    SpvBuiltIn builtin;
 };
 
+struct vtn_variable;
+
 struct vtn_access_chain {
-   nir_variable *var;
-   struct vtn_type *var_type;
+   struct vtn_variable *var;
 
    uint32_t length;
 
    /* Struct elements and array offsets */
    uint32_t ids[0];
+};
+
+enum vtn_variable_mode {
+   vtn_variable_mode_local,
+   vtn_variable_mode_global,
+   vtn_variable_mode_param,
+   vtn_variable_mode_ubo,
+   vtn_variable_mode_ssbo,
+   vtn_variable_mode_push_constant,
+   vtn_variable_mode_image,
+   vtn_variable_mode_sampler,
+   vtn_variable_mode_workgroup,
+   vtn_variable_mode_input,
+   vtn_variable_mode_output,
+};
+
+struct vtn_variable {
+   enum vtn_variable_mode mode;
+
+   struct vtn_type *type;
+
+   unsigned descriptor_set;
+   unsigned binding;
+
+   nir_variable *var;
+   nir_variable **members;
+
+   struct vtn_access_chain chain;
 };
 
 struct vtn_image_pointer {
@@ -328,14 +357,6 @@ struct vtn_builder {
 
    unsigned num_specializations;
    struct nir_spirv_specialization *specializations;
-
-   /*
-    * NIR variable for each SPIR-V builtin.
-    */
-   struct {
-      nir_variable *in;
-      nir_variable *out;
-   } builtins[42]; /* XXX need symbolic constant from SPIR-V header */
 
    unsigned value_id_bound;
    struct vtn_value *values;

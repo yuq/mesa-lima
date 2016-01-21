@@ -100,11 +100,14 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
                                    val->name);
       b->func->impl->params[idx] = param;
 
-      val->access_chain = ralloc(b, struct vtn_access_chain);
-      val->access_chain->var = param;
-      val->access_chain->length = 0;
-      val->access_chain->var_type =
-         vtn_value(b, w[1], vtn_value_type_type)->type;
+      struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
+      vtn_var->mode = vtn_variable_mode_param;
+      vtn_var->type = vtn_value(b, w[1], vtn_value_type_type)->type;
+      vtn_var->var = param;
+      vtn_var->chain.var = vtn_var;
+      vtn_var->chain.length = 0;
+
+      val->access_chain = &vtn_var->chain;
       break;
    }
 

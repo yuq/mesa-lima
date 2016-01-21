@@ -1319,9 +1319,9 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
 
    const struct glsl_type *image_type;
    if (sampled.image) {
-      image_type = sampled.image->var->interface_type;
+      image_type = sampled.image->var->var->interface_type;
    } else {
-      image_type = sampled.sampler->var->interface_type;
+      image_type = sampled.sampler->var->var->interface_type;
    }
 
    instr->sampler_dim = glsl_get_sampler_dim(image_type);
@@ -1677,13 +1677,14 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
    SpvMemorySemanticsMask semantics = w[5];
    */
 
-   if (chain->var->data.mode == nir_var_shared) {
+   if (chain->var->mode == vtn_variable_mode_workgroup) {
       nir_deref *deref = &vtn_access_chain_to_deref(b, chain)->deref;
       nir_intrinsic_op op = get_shared_nir_atomic_op(opcode);
       atomic = nir_intrinsic_instr_create(b->nb.shader, op);
       atomic->variables[0] = nir_deref_as_var(nir_copy_deref(atomic, deref));
       fill_common_atomic_sources(b, opcode, w, &atomic->src[0]);
    } else {
+      assert(chain->var->mode == vtn_variable_mode_ssbo);
       struct vtn_type *type;
       nir_ssa_def *offset, *index;
       offset = vtn_access_chain_to_offset(b, chain, &index, &type, NULL, false);
@@ -2409,7 +2410,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpImageQuerySize: {
       struct vtn_access_chain *image =
          vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
-      if (glsl_type_is_image(image->var->interface_type)) {
+      if (glsl_type_is_image(image->var->var->interface_type)) {
          vtn_handle_image(b, opcode, w, count);
       } else {
          vtn_handle_texture(b, opcode, w, count);
