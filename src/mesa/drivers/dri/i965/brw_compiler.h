@@ -686,6 +686,9 @@ struct brw_gs_prog_data
 
 /** @} */
 
+struct brw_compiler *
+brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo);
+
 /**
  * Compile a vertex shader.
  *

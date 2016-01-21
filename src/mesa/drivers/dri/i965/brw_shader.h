@@ -259,9 +259,6 @@ struct brw_gs_compile
    unsigned control_data_header_size_bits;
 };
 
-struct brw_compiler *
-brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo);
-
 void
 brw_assign_common_binding_table_offsets(gl_shader_stage stage,
                                         const struct brw_device_info *devinfo,
