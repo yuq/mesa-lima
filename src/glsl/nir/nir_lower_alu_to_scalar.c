@@ -97,6 +97,20 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
        */
       return;
 
+   case nir_op_pack_half_2x16:
+      if (!b->shader->options->lower_pack_half_2x16)
+         return;
+
+      nir_ssa_def *val =
+         nir_pack_half_2x16_split(b, nir_channel(b, instr->src[0].src.ssa,
+                                                 instr->src[0].swizzle[0]),
+                                     nir_channel(b, instr->src[0].src.ssa,
+                                                 instr->src[0].swizzle[1]));
+
+      nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(val));
+      nir_instr_remove(&instr->instr);
+      return;
+
    case nir_op_unpack_unorm_4x8:
    case nir_op_unpack_snorm_4x8:
    case nir_op_unpack_unorm_2x16:
@@ -106,11 +120,19 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
        */
       return;
 
-   case nir_op_unpack_half_2x16:
-      /* We could split this into unpack_half_2x16_split_[xy], but should
-       * we?
-       */
+   case nir_op_unpack_half_2x16: {
+      if (!b->shader->options->lower_unpack_half_2x16)
+         return;
+
+      nir_ssa_def *comps[2];
+      comps[0] = nir_unpack_half_2x16_split_x(b, instr->src[0].src.ssa);
+      comps[1] = nir_unpack_half_2x16_split_y(b, instr->src[0].src.ssa);
+      nir_ssa_def *vec = nir_vec(b, comps, 2);
+
+      nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(vec));
+      nir_instr_remove(&instr->instr);
       return;
+   }
 
    case nir_op_fdph: {
       nir_ssa_def *sum[4];
