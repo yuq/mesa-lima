@@ -30,6 +30,8 @@ unsigned r600_create_shader(struct r600_bytecode *bc,
 		const struct radeon_shader_binary *binary,
 		boolean *use_kill);
 
+void r600_destroy_shader(struct r600_bytecode *bc);
+
 void r600_shader_binary_read_config(const struct radeon_shader_binary *binary,
 		struct r600_bytecode *bc,
 		uint64_t symbol_offset,

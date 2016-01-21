@@ -129,6 +129,9 @@ struct radeon_shader_binary {
 	char *disasm_string;
 };
 
+void radeon_shader_binary_init(struct radeon_shader_binary *b);
+void radeon_shader_binary_clean(struct radeon_shader_binary *b);
+
 struct r600_resource {
 	struct u_resource		b;
 

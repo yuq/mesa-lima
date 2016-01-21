@@ -4423,14 +4423,6 @@ out:
 	return r;
 }
 
-void si_shader_destroy_binary(struct radeon_shader_binary *binary)
-{
-	FREE(binary->code);
-	FREE(binary->rodata);
-	FREE(binary->relocs);
-	FREE(binary->disasm_string);
-}
-
 void si_shader_destroy(struct si_shader *shader)
 {
 	if (shader->gs_copy_shader) {
@@ -4442,5 +4434,6 @@ void si_shader_destroy(struct si_shader *shader)
 		r600_resource_reference(&shader->scratch_bo, NULL);
 
 	r600_resource_reference(&shader->bo, NULL);
-	si_shader_destroy_binary(&shader->binary);
+
+	radeon_shader_binary_clean(&shader->binary);
 }
