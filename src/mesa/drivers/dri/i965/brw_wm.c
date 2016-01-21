@@ -515,6 +515,10 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    /* _NEW_BUFFERS */
    key->nr_color_regions = ctx->DrawBuffer->_NumColorDrawBuffers;
 
+   /* _NEW_COLOR */
+   key->force_dual_color_blend = brw->dual_color_blend_by_location &&
+      (ctx->Color.BlendEnabled & 1) && ctx->Color.Blend[0]._UsesDualSrc;
+
    /* _NEW_MULTISAMPLE, _NEW_COLOR, _NEW_BUFFERS */
    key->replicate_alpha = ctx->DrawBuffer->_NumColorDrawBuffers > 1 &&
       (ctx->Multisample.SampleAlphaToCoverage || ctx->Color.AlphaEnabled);
