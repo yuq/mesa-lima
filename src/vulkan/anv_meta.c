@@ -1508,18 +1508,6 @@ void anv_CmdCopyImageToBuffer(
    meta_finish_blit(cmd_buffer, &saved_state);
 }
 
-void anv_CmdResolveImage(
-    VkCommandBuffer                             commandBuffer,
-    VkImage                                     srcImage,
-    VkImageLayout                               srcImageLayout,
-    VkImage                                     destImage,
-    VkImageLayout                               destImageLayout,
-    uint32_t                                    regionCount,
-    const VkImageResolve*                       pRegions)
-{
-   stub();
-}
-
 static void *
 meta_alloc(void* _device, size_t size, size_t alignment,
            VkSystemAllocationScope allocationScope)
@@ -1549,6 +1537,8 @@ meta_free(void* _device, void *data)
 VkResult
 anv_device_init_meta(struct anv_device *device)
 {
+   VkResult result;
+
    device->meta_state.alloc = (VkAllocationCallbacks) {
       .pUserData = device,
       .pfnAllocation = meta_alloc,
@@ -1556,23 +1546,32 @@ anv_device_init_meta(struct anv_device *device)
       .pfnFree = meta_free,
    };
 
-   VkResult result;
    result = anv_device_init_meta_clear_state(device);
    if (result != VK_SUCCESS)
-      return result;
+      goto fail_clear;
+
+   result = anv_device_init_meta_resolve_state(device);
+   if (result != VK_SUCCESS)
+      goto fail_resolve;
 
    result = anv_device_init_meta_blit_state(device);
-   if (result != VK_SUCCESS) {
-      anv_device_finish_meta_clear_state(device);
-      return result;
-   }
+   if (result != VK_SUCCESS)
+      goto fail_blit;
 
    return VK_SUCCESS;
+
+fail_blit:
+   anv_device_finish_meta_resolve_state(device);
+fail_resolve:
+   anv_device_finish_meta_clear_state(device);
+fail_clear:
+   return result;
 }
 
 void
 anv_device_finish_meta(struct anv_device *device)
 {
+   anv_device_finish_meta_resolve_state(device);
    anv_device_finish_meta_clear_state(device);
 
    /* Blit */

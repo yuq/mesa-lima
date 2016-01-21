@@ -595,6 +595,17 @@ struct anv_meta_state {
       VkPipelineLayout                          pipeline_layout;
       VkDescriptorSetLayout                     ds_layout;
    } blit;
+
+   struct {
+      /**
+       * Use pipeline `i` to resolve an image with `log2(i)` samples.
+       */
+      VkPipeline                                pipelines[4];
+
+      VkRenderPass                              pass;
+      VkPipelineLayout                          pipeline_layout;
+      VkDescriptorSetLayout                     ds_layout;
+   } resolve;
 };
 
 struct anv_queue {
