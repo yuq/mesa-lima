@@ -43,10 +43,10 @@
 #include "util/u_format.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
+#include "util/u_pstipple.h"
 #include "util/u_sampler.h"
 
 #include "tgsi/tgsi_transform.h"
-#include "tgsi/tgsi_dump.h"
 
 #include "draw_context.h"
 #include "draw_pipe.h"
@@ -114,178 +114,6 @@ struct pstip_stage
 };
 
 
-
-/**
- * Subclass of tgsi_transform_context, used for transforming the
- * user's fragment shader to add the extra texture sample and fragment kill
- * instructions.
- */
-struct pstip_transform_context {
-   struct tgsi_transform_context base;
-   uint tempsUsed;  /**< bitmask */
-   int wincoordInput;
-   int maxInput;
-   uint samplersUsed;  /**< bitfield of samplers used */
-   bool hasSview;
-   int freeSampler;  /** an available sampler for the pstipple */
-   int texTemp;  /**< temp registers */
-   int numImmed;
-};
-
-
-/**
- * TGSI declaration transform callback.
- * Look for a free sampler, a free input attrib, and two free temp regs.
- */
-static void
-pstip_transform_decl(struct tgsi_transform_context *ctx,
-                     struct tgsi_full_declaration *decl)
-{
-   struct pstip_transform_context *pctx = (struct pstip_transform_context *) ctx;
-
-   if (decl->Declaration.File == TGSI_FILE_SAMPLER) {
-      uint i;
-      for (i = decl->Range.First;
-           i <= decl->Range.Last; i++) {
-         pctx->samplersUsed |= 1 << i;
-      }
-   }
-   else if (decl->Declaration.File == TGSI_FILE_SAMPLER_VIEW) {
-      pctx->hasSview = true;
-   }
-   else if (decl->Declaration.File == TGSI_FILE_INPUT) {
-      pctx->maxInput = MAX2(pctx->maxInput, (int) decl->Range.Last);
-      if (decl->Semantic.Name == TGSI_SEMANTIC_POSITION)
-         pctx->wincoordInput = (int) decl->Range.First;
-   }
-   else if (decl->Declaration.File == TGSI_FILE_TEMPORARY) {
-      uint i;
-      for (i = decl->Range.First;
-           i <= decl->Range.Last; i++) {
-         pctx->tempsUsed |= (1 << i);
-      }
-   }
-
-   ctx->emit_declaration(ctx, decl);
-}
-
-
-/**
- * TGSI immediate declaration transform callback.
- * We're just counting the number of immediates here.
- */
-static void
-pstip_transform_immed(struct tgsi_transform_context *ctx,
-                      struct tgsi_full_immediate *immed)
-{
-   struct pstip_transform_context *pctx = (struct pstip_transform_context *) ctx;
-   ctx->emit_immediate(ctx, immed); /* emit to output shader */
-   pctx->numImmed++;
-}
-
-
-/**
- * Find the lowest zero bit in the given word, or -1 if bitfield is all ones.
- */
-static int
-free_bit(uint bitfield)
-{
-   return ffs(~bitfield) - 1;
-}
-
-
-/**
- * TGSI transform prolog callback.
- */
-static void
-pstip_transform_prolog(struct tgsi_transform_context *ctx)
-{
-   struct pstip_transform_context *pctx = (struct pstip_transform_context *) ctx;
-   uint i;
-   int wincoordInput;
-
-   /* find free sampler */
-   pctx->freeSampler = free_bit(pctx->samplersUsed);
-   if (pctx->freeSampler >= PIPE_MAX_SAMPLERS)
-      pctx->freeSampler = PIPE_MAX_SAMPLERS - 1;
-
-   if (pctx->wincoordInput < 0)
-      wincoordInput = pctx->maxInput + 1;
-   else
-      wincoordInput = pctx->wincoordInput;
-
-   /* find one free temp reg */
-   for (i = 0; i < 32; i++) {
-      if ((pctx->tempsUsed & (1 << i)) == 0) {
-      /* found a free temp */
-      if (pctx->texTemp < 0)
-         pctx->texTemp  = i;
-      else
-         break;
-      }
-   }
-   assert(pctx->texTemp >= 0);
-
-   if (pctx->wincoordInput < 0) {
-      /* declare new position input reg */
-      tgsi_transform_input_decl(ctx, wincoordInput,
-                                TGSI_SEMANTIC_POSITION, 1,
-                                TGSI_INTERPOLATE_LINEAR);
-   }
-
-   /* declare new sampler */
-   tgsi_transform_sampler_decl(ctx, pctx->freeSampler);
-
-   /* if the src shader has SVIEW decl's for each SAMP decl, we
-    * need to continue the trend and ensure there is a matching
-    * SVIEW for the new SAMP we just created
-    */
-   if (pctx->hasSview) {
-      tgsi_transform_sampler_view_decl(ctx,
-                                       pctx->freeSampler,
-                                       TGSI_TEXTURE_2D,
-                                       TGSI_RETURN_TYPE_FLOAT);
-   }
-
-   /* declare new temp regs */
-   tgsi_transform_temp_decl(ctx, pctx->texTemp);
-
-   /* emit immediate = {1/32, 1/32, 1, 1}
-    * The index/position of this immediate will be pctx->numImmed
-    */
-   tgsi_transform_immediate_decl(ctx, 1.0/32.0, 1.0/32.0, 1.0, 1.0);
-
-   /* 
-    * Insert new MUL/TEX/KILL_IF instructions at start of program
-    * Take gl_FragCoord, divide by 32 (stipple size), sample the
-    * texture and kill fragment if needed.
-    *
-    * We'd like to use non-normalized texcoords to index into a RECT
-    * texture, but we can only use GL_REPEAT wrap mode with normalized
-    * texcoords.  Darn.
-    */
-
-   /* MUL texTemp, INPUT[wincoord], 1/32; */
-   tgsi_transform_op2_inst(ctx, TGSI_OPCODE_MUL,
-                           TGSI_FILE_TEMPORARY, pctx->texTemp,
-                           TGSI_WRITEMASK_XYZW,
-                           TGSI_FILE_INPUT, wincoordInput,
-                           TGSI_FILE_IMMEDIATE, pctx->numImmed);
-
-   /* TEX texTemp, texTemp, sampler; */
-   tgsi_transform_tex_2d_inst(ctx,
-                              TGSI_FILE_TEMPORARY, pctx->texTemp,
-                              TGSI_FILE_TEMPORARY, pctx->texTemp,
-                              pctx->freeSampler);
-
-   /* KILL_IF -texTemp.wwww;   # if -texTemp < 0, KILL fragment */
-   tgsi_transform_kill_inst(ctx,
-                            TGSI_FILE_TEMPORARY, pctx->texTemp,
-                            TGSI_SWIZZLE_W, TRUE);
-}
-
-
-
 /**
  * Generate the frag shader we'll use for doing polygon stipple.
  * This will be the user's shader prefixed with a TEX and KIL instruction.
@@ -293,40 +121,27 @@ pstip_transform_prolog(struct tgsi_transform_context *ctx)
 static boolean
 generate_pstip_fs(struct pstip_stage *pstip)
 {
+   struct pipe_context *pipe = pstip->pipe;
+   struct pipe_screen *screen = pipe->screen;
    const struct pipe_shader_state *orig_fs = &pstip->fs->state;
    /*struct draw_context *draw = pstip->stage.draw;*/
    struct pipe_shader_state pstip_fs;
-   struct pstip_transform_context transform;
-   const uint newLen = tgsi_num_tokens(orig_fs->tokens) + NUM_NEW_TOKENS;
+   enum tgsi_file_type wincoord_file;
+
+   wincoord_file = screen->get_param(screen, PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL) ?
+                   TGSI_FILE_SYSTEM_VALUE : TGSI_FILE_INPUT;
 
    pstip_fs = *orig_fs; /* copy to init */
-   pstip_fs.tokens = tgsi_alloc_tokens(newLen);
+   pstip_fs.tokens = util_pstipple_create_fragment_shader(orig_fs->tokens,
+                                                          &pstip->fs->sampler_unit,
+                                                          0,
+                                                          wincoord_file);
    if (pstip_fs.tokens == NULL)
       return FALSE;
 
-   memset(&transform, 0, sizeof(transform));
-   transform.wincoordInput = -1;
-   transform.maxInput = -1;
-   transform.texTemp = -1;
-   transform.base.prolog = pstip_transform_prolog;
-   transform.base.transform_declaration = pstip_transform_decl;
-   transform.base.transform_immediate = pstip_transform_immed;
-
-   tgsi_transform_shader(orig_fs->tokens,
-                         (struct tgsi_token *) pstip_fs.tokens,
-                         newLen, &transform.base);
-
-#if 0 /* DEBUG */
-   tgsi_dump(orig_fs->tokens, 0);
-   tgsi_dump(pstip_fs.tokens, 0);
-#endif
-
-   assert(pstip->fs);
-
-   pstip->fs->sampler_unit = transform.freeSampler;
    assert(pstip->fs->sampler_unit < PIPE_MAX_SAMPLERS);
 
-   pstip->fs->pstip_fs = pstip->driver_create_fs_state(pstip->pipe, &pstip_fs);
+   pstip->fs->pstip_fs = pstip->driver_create_fs_state(pipe, &pstip_fs);
    
    FREE((void *)pstip_fs.tokens);
 
