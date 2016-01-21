@@ -88,7 +88,8 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpFunctionParameter: {
-      struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
+      struct vtn_value *val =
+         vtn_push_value(b, w[2], vtn_value_type_access_chain);
 
       assert(b->func_param_idx < b->func->impl->num_params);
       unsigned idx = b->func_param_idx++;
@@ -97,10 +98,13 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
          nir_local_variable_create(b->func->impl,
                                    b->func->impl->function->params[idx].type,
                                    val->name);
-
       b->func->impl->params[idx] = param;
-      val->deref = nir_deref_var_create(b, param);
-      val->deref_type = vtn_value(b, w[1], vtn_value_type_type)->type;
+
+      val->access_chain = ralloc(b, struct vtn_access_chain);
+      val->access_chain->var = param;
+      val->access_chain->length = 0;
+      val->access_chain->var_type =
+         vtn_value(b, w[1], vtn_value_type_type)->type;
       break;
    }
 
@@ -480,7 +484,7 @@ vtn_handle_phis_first_pass(struct vtn_builder *b, SpvOp opcode,
       nir_local_variable_create(b->nb.impl, type->type, "phi");
    _mesa_hash_table_insert(b->phi_table, w, phi_var);
 
-   val->ssa = vtn_variable_load(b, nir_deref_var_create(b, phi_var), type);
+   val->ssa = vtn_local_load(b, nir_deref_var_create(b, phi_var));
 
    return true;
 }
@@ -496,8 +500,6 @@ vtn_handle_phi_second_pass(struct vtn_builder *b, SpvOp opcode,
    assert(phi_entry);
    nir_variable *phi_var = phi_entry->data;
 
-   struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
-
    for (unsigned i = 3; i < count; i += 2) {
       struct vtn_ssa_value *src = vtn_ssa_value(b, w[i]);
       struct vtn_block *pred =
@@ -505,7 +507,7 @@ vtn_handle_phi_second_pass(struct vtn_builder *b, SpvOp opcode,
 
       b->nb.cursor = nir_after_block_before_jump(pred->end_block);
 
-      vtn_variable_store(b, src, nir_deref_var_create(b, phi_var), type);
+      vtn_local_store(b, src, nir_deref_var_create(b, phi_var));
    }
 
    return true;
@@ -565,9 +567,8 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
 
          if ((*block->branch & SpvOpCodeMask) == SpvOpReturnValue) {
             struct vtn_ssa_value *src = vtn_ssa_value(b, block->branch[1]);
-            vtn_variable_store(b, src,
-                               nir_deref_var_create(b, b->impl->return_var),
-                               NULL);
+            vtn_local_store(b, src,
+                            nir_deref_var_create(b, b->impl->return_var));
          }
 
          if (block->branch_type != vtn_branch_type_none) {

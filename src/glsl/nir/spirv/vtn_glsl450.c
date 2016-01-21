@@ -419,8 +419,8 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
 
    case GLSLstd450Modf: {
       val->ssa->def = nir_ffract(nb, src[0]);
-      nir_deref_var *out = vtn_value(b, w[6], vtn_value_type_deref)->deref;
-      nir_store_deref_var(nb, out, nir_ffloor(nb, src[0]), 0xf);
+      nir_store_deref_var(nb, vtn_nir_deref(b, w[6]),
+                          nir_ffloor(nb, src[0]), 0xf);
       return;
    }
 
@@ -613,8 +613,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Frexp: {
       nir_ssa_def *exponent;
       val->ssa->def = build_frexp(nb, src[0], &exponent);
-      nir_deref_var *out = vtn_value(b, w[6], vtn_value_type_deref)->deref;
-      nir_store_deref_var(nb, out, exponent, 0xf);
+      nir_store_deref_var(nb, vtn_nir_deref(b, w[6]), exponent, 0xf);
       return;
    }
 

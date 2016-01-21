@@ -41,7 +41,7 @@ enum vtn_value_type {
    vtn_value_type_decoration_group,
    vtn_value_type_type,
    vtn_value_type_constant,
-   vtn_value_type_deref,
+   vtn_value_type_access_chain,
    vtn_value_type_function,
    vtn_value_type_block,
    vtn_value_type_ssa,
@@ -234,15 +234,25 @@ struct vtn_type {
    SpvBuiltIn builtin;
 };
 
+struct vtn_access_chain {
+   nir_variable *var;
+   struct vtn_type *var_type;
+
+   uint32_t length;
+
+   /* Struct elements and array offsets */
+   uint32_t ids[0];
+};
+
 struct vtn_image_pointer {
-   nir_deref_var *deref;
+   struct vtn_access_chain *image;
    nir_ssa_def *coord;
    nir_ssa_def *sample;
 };
 
 struct vtn_sampled_image {
-   nir_deref_var *image; /* Image or array of images */
-   nir_deref_var *sampler; /* Sampler */
+   struct vtn_access_chain *image; /* Image or array of images */
+   struct vtn_access_chain *sampler; /* Sampler */
 };
 
 struct vtn_value {
@@ -257,10 +267,7 @@ struct vtn_value {
          nir_constant *constant;
          const struct glsl_type *const_type;
       };
-      struct {
-         nir_deref_var *deref;
-         struct vtn_type *deref_type;
-      };
+      struct vtn_access_chain *access_chain;
       struct vtn_image_pointer *image;
       struct vtn_sampled_image *sampled_image;
       struct vtn_function *func;
@@ -383,12 +390,18 @@ struct vtn_ssa_value *vtn_create_ssa_value(struct vtn_builder *b,
 struct vtn_ssa_value *vtn_ssa_transpose(struct vtn_builder *b,
                                         struct vtn_ssa_value *src);
 
+nir_deref_var *vtn_nir_deref(struct vtn_builder *b, uint32_t id);
+
+struct vtn_ssa_value *vtn_local_load(struct vtn_builder *b, nir_deref_var *src);
+
+void vtn_local_store(struct vtn_builder *b, struct vtn_ssa_value *src,
+                     nir_deref_var *dest);
+
 struct vtn_ssa_value *
-vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
-                  struct vtn_type *src_type);
+vtn_variable_load(struct vtn_builder *b, struct vtn_access_chain *src);
 
 void vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
-                        nir_deref_var *dest, struct vtn_type *dest_type);
+                        struct vtn_access_chain *dest);
 
 
 typedef void (*vtn_decoration_foreach_cb)(struct vtn_builder *,
