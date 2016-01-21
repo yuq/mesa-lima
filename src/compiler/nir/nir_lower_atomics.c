@@ -70,8 +70,8 @@ lower_instr(nir_intrinsic_instr *instr,
    unsigned uniform_loc = instr->variables[0]->var->data.location;
 
    nir_intrinsic_instr *new_instr = nir_intrinsic_instr_create(mem_ctx, op);
-   new_instr->const_index[0] =
-      state->shader_program->UniformStorage[uniform_loc].opaque[state->shader->stage].index;
+   nir_intrinsic_set_base(new_instr,
+      state->shader_program->UniformStorage[uniform_loc].opaque[state->shader->stage].index);
 
    nir_load_const_instr *offset_const = nir_load_const_instr_create(mem_ctx, 1);
    offset_const->value.u[0] = instr->variables[0]->var->data.offset;

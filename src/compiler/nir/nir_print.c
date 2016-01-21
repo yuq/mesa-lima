@@ -530,7 +530,7 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
    }
 
    nir_foreach_variable(var, var_list) {
-      if ((var->data.driver_location == instr->const_index[0]) &&
+      if ((var->data.driver_location == nir_intrinsic_base(instr)) &&
           var->name) {
          fprintf(fp, "\t/* %s */", var->name);
          break;

@@ -93,7 +93,7 @@ rewrite_emit_vertex(nir_intrinsic_instr *intrin, struct state *state)
    nir_intrinsic_instr *lowered =
       nir_intrinsic_instr_create(b->shader,
                                  nir_intrinsic_emit_vertex_with_counter);
-   lowered->const_index[0] = intrin->const_index[0];
+   nir_intrinsic_set_stream_id(lowered, nir_intrinsic_stream_id(intrin));
    lowered->src[0] = nir_src_for_ssa(count);
    nir_builder_instr_insert(b, &lowered->instr);
 
@@ -121,7 +121,7 @@ rewrite_end_primitive(nir_intrinsic_instr *intrin, struct state *state)
    nir_intrinsic_instr *lowered =
       nir_intrinsic_instr_create(b->shader,
                                  nir_intrinsic_end_primitive_with_counter);
-   lowered->const_index[0] = intrin->const_index[0];
+   nir_intrinsic_set_stream_id(lowered, nir_intrinsic_stream_id(intrin));
    lowered->src[0] = nir_src_for_ssa(count);
    nir_builder_instr_insert(b, &lowered->instr);
 

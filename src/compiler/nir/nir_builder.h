@@ -343,7 +343,7 @@ nir_store_var(nir_builder *build, nir_variable *var, nir_ssa_def *value,
    nir_intrinsic_instr *store =
       nir_intrinsic_instr_create(build->shader, nir_intrinsic_store_var);
    store->num_components = num_components;
-   store->const_index[0] = writemask;
+   nir_intrinsic_set_write_mask(store, writemask);
    store->variables[0] = nir_deref_var_create(store, var);
    store->src[0] = nir_src_for_ssa(value);
    nir_builder_instr_insert(build, &store->instr);

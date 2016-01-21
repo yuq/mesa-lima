@@ -213,8 +213,8 @@ nir_lower_io_block(nir_block *block, void *void_state)
                                        load_op(state, mode, per_vertex));
          load->num_components = intrin->num_components;
 
-         load->const_index[0] =
-            intrin->variables[0]->var->data.driver_location;
+         nir_intrinsic_set_base(load,
+            intrin->variables[0]->var->data.driver_location);
 
          if (per_vertex)
             load->src[0] = nir_src_for_ssa(vertex_index);
@@ -258,11 +258,9 @@ nir_lower_io_block(nir_block *block, void *void_state)
 
          nir_src_copy(&store->src[0], &intrin->src[0], store);
 
-         store->const_index[0] =
-            intrin->variables[0]->var->data.driver_location;
-
-         /* Copy the writemask */
-         store->const_index[1] = intrin->const_index[0];
+         nir_intrinsic_set_base(store,
+            intrin->variables[0]->var->data.driver_location);
+         nir_intrinsic_set_write_mask(store, nir_intrinsic_write_mask(intrin));
 
          if (per_vertex)
             store->src[1] = nir_src_for_ssa(vertex_index);

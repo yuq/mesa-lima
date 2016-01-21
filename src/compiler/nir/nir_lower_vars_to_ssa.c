@@ -682,7 +682,8 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
             nir_ssa_def *new_def;
             b.cursor = nir_before_instr(&intrin->instr);
 
-            if (intrin->const_index[0] == (1 << intrin->num_components) - 1) {
+            unsigned wrmask = nir_intrinsic_write_mask(intrin);
+            if (wrmask == (1 << intrin->num_components) - 1) {
                /* Whole variable store - just copy the source.  Note that
                 * intrin->num_components and intrin->src[0].ssa->num_components
                 * may differ.
@@ -701,7 +702,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
                 */
                nir_ssa_def *srcs[4];
                for (unsigned i = 0; i < intrin->num_components; i++) {
-                  if (intrin->const_index[0] & (1 << i)) {
+                  if (wrmask & (1 << i)) {
                      srcs[i] = nir_channel(&b, intrin->src[0].ssa, i);
                   } else {
                      srcs[i] = nir_channel(&b, old_def, i);
