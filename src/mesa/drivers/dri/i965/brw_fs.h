@@ -272,6 +272,8 @@ public:
    void emit_percomp(const brw::fs_builder &bld, const fs_inst &inst,
                      unsigned wr_mask);
 
+   bool optimize_extract_to_float(nir_alu_instr *instr,
+                                  const fs_reg &result);
    bool optimize_frontfacing_ternary(nir_alu_instr *instr,
                                      const fs_reg &result);
 

@@ -500,6 +500,49 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
    }
 }
 
+/**
+ * Recognizes a parent instruction of nir_op_extract_* and changes the type to
+ * match instr.
+ */
+bool
+fs_visitor::optimize_extract_to_float(nir_alu_instr *instr,
+                                      const fs_reg &result)
+{
+   if (!instr->src[0].src.is_ssa ||
+       !instr->src[0].src.ssa->parent_instr)
+      return false;
+
+   if (instr->src[0].src.ssa->parent_instr->type != nir_instr_type_alu)
+      return false;
+
+   nir_alu_instr *src0 =
+      nir_instr_as_alu(instr->src[0].src.ssa->parent_instr);
+
+   if (src0->op != nir_op_extract_u8 && src0->op != nir_op_extract_u16 &&
+       src0->op != nir_op_extract_i8 && src0->op != nir_op_extract_i16)
+      return false;
+
+   nir_const_value *element = nir_src_as_const_value(src0->src[1].src);
+   assert(element != NULL);
+
+   enum opcode extract_op;
+   if (src0->op == nir_op_extract_u16 || src0->op == nir_op_extract_i16) {
+      assert(element->u[0] <= 1);
+      extract_op = SHADER_OPCODE_EXTRACT_WORD;
+   } else {
+      assert(element->u[0] <= 3);
+      extract_op = SHADER_OPCODE_EXTRACT_BYTE;
+   }
+
+   fs_reg op0 = get_nir_src(src0->src[0].src);
+   op0.type = brw_type_for_nir_type(nir_op_infos[src0->op].input_types[0]);
+   op0 = offset(op0, bld, src0->src[0].swizzle[0]);
+
+   set_saturate(instr->dest.saturate,
+                bld.emit(extract_op, result, op0, brw_imm_ud(element->u[0])));
+   return true;
+}
+
 bool
 fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
                                          const fs_reg &result)
@@ -671,6 +714,9 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    switch (instr->op) {
    case nir_op_i2f:
    case nir_op_u2f:
+      if (optimize_extract_to_float(instr, result))
+         return;
+
       inst = bld.MOV(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
