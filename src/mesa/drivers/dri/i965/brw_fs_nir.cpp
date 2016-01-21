@@ -1075,6 +1075,22 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       inst->predicate = BRW_PREDICATE_NORMAL;
       break;
 
+   case nir_op_extract_ubyte:
+   case nir_op_extract_ibyte: {
+      nir_const_value *byte = nir_src_as_const_value(instr->src[1].src);
+      bld.emit(SHADER_OPCODE_EXTRACT_BYTE,
+               result, op[0], brw_imm_ud(byte->u[0]));
+      break;
+   }
+
+   case nir_op_extract_uword:
+   case nir_op_extract_iword: {
+      nir_const_value *word = nir_src_as_const_value(instr->src[1].src);
+      bld.emit(SHADER_OPCODE_EXTRACT_WORD,
+               result, op[0], brw_imm_ud(word->u[0]));
+      break;
+   }
+
    default:
       unreachable("unhandled instruction");
    }
