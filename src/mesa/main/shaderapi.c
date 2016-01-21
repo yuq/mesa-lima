@@ -1315,7 +1315,7 @@ _mesa_DeleteObjectARB(GLhandleARB obj)
 {
    if (MESA_VERBOSE & VERBOSE_API) {
       GET_CURRENT_CONTEXT(ctx);
-      _mesa_debug(ctx, "glDeleteObjectARB(%u)\n", obj);
+      _mesa_debug(ctx, "glDeleteObjectARB(%lu)\n", (unsigned long)obj);
    }
 
    if (obj) {
