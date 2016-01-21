@@ -58,8 +58,6 @@ public:
     */
    int subreg_offset;
 
-   fs_reg *reladdr;
-
    /** Register region horizontal stride */
    uint8_t stride;
 };
@@ -136,8 +134,7 @@ component(fs_reg reg, unsigned idx)
 static inline bool
 is_uniform(const fs_reg &reg)
 {
-   return (reg.stride == 0 || reg.is_null()) &&
-          (!reg.reladdr || is_uniform(*reg.reladdr));
+   return (reg.stride == 0 || reg.is_null());
 }
 
 /**

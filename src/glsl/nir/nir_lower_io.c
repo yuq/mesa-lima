@@ -277,6 +277,11 @@ nir_lower_io_block(nir_block *block, void *void_state)
          load->const_index[0] =
             intrin->variables[0]->var->data.driver_location;
 
+         if (load->intrinsic == nir_intrinsic_load_uniform) {
+            load->const_index[1] =
+               state->type_size(intrin->variables[0]->var->type);
+         }
+
          if (per_vertex)
             load->src[0] = nir_src_for_ssa(vertex_index);
 

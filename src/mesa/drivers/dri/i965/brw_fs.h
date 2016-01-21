@@ -139,7 +139,7 @@ public:
    void split_virtual_grfs();
    bool compact_virtual_grfs();
    void assign_constant_locations();
-   void demote_pull_constants();
+   void lower_constant_loads();
    void invalidate_live_intervals();
    void calculate_live_intervals();
    void calculate_register_pressure();
@@ -322,8 +322,6 @@ public:
    struct gl_program *prog;
 
    const struct brw_vue_map *input_vue_map;
-
-   int *param_size;
 
    int *virtual_grf_start;
    int *virtual_grf_end;

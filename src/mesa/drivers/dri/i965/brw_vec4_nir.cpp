@@ -132,15 +132,6 @@ void
 vec4_visitor::nir_setup_uniforms()
 {
    uniforms = nir->num_uniforms / 16;
-
-   nir_foreach_variable(var, &nir->uniforms) {
-      /* UBO's and atomics don't take up space in the uniform file */
-      if (var->interface_type != NULL || var->type->contains_atomic())
-         continue;
-
-      if (type_size_vec4(var->type) > 0)
-         uniform_size[var->data.driver_location / 16] = type_size_vec4(var->type);
-   }
 }
 
 void
@@ -710,12 +701,14 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          /* Offsets are in bytes but they should always be multiples of 16 */
          assert(const_offset->u[0] % 16 == 0);
          src.reg_offset = const_offset->u[0] / 16;
-      } else {
-         src_reg tmp = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_D, 1);
-         src.reladdr = new(mem_ctx) src_reg(tmp);
-      }
 
-      emit(MOV(dest, src));
+         emit(MOV(dest, src));
+      } else {
+         src_reg indirect = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_UD, 1);
+
+         emit(SHADER_OPCODE_MOV_INDIRECT, dest, src,
+              indirect, brw_imm_ud(instr->const_index[1]));
+      }
       break;
    }
 

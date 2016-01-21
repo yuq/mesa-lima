@@ -174,7 +174,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
     * CSE can later notice that those loads are all the same and eliminate
     * the redundant ones.
     */
-   fs_reg vec4_offset = vgrf(glsl_type::int_type);
+   fs_reg vec4_offset = vgrf(glsl_type::uint_type);
    bld.ADD(vec4_offset, varying_offset, brw_imm_ud(const_offset & ~0xf));
 
    int scale = 1;
@@ -433,7 +433,6 @@ fs_reg::fs_reg(struct ::brw_reg reg) :
 {
    this->reg_offset = 0;
    this->subreg_offset = 0;
-   this->reladdr = NULL;
    this->stride = 1;
    if (this->file == IMM &&
        (this->type != BRW_REGISTER_TYPE_V &&
@@ -448,7 +447,6 @@ fs_reg::equals(const fs_reg &r) const
 {
    return (this->backend_reg::equals(r) &&
            subreg_offset == r.subreg_offset &&
-           !reladdr && !r.reladdr &&
            stride == r.stride);
 }
 
@@ -851,7 +849,10 @@ fs_inst::regs_read(int arg) const
          assert(src[2].file == IMM);
          unsigned region_length = src[2].ud;
 
-         if (src[0].file == FIXED_GRF) {
+         if (src[0].file == UNIFORM) {
+            assert(region_length % 4 == 0);
+            return region_length / 4;
+         } else if (src[0].file == FIXED_GRF) {
             /* If the start of the region is not register aligned, then
              * there's some portion of the register that's technically
              * unread at the beginning.
@@ -865,7 +866,7 @@ fs_inst::regs_read(int arg) const
              * unread portion at the beginning.
              */
             if (src[0].subnr)
-               region_length += src[0].subnr * type_sz(src[0].type);
+               region_length += src[0].subnr;
 
             return DIV_ROUND_UP(region_length, REG_SIZE);
          } else {
@@ -1021,7 +1022,6 @@ fs_visitor::import_uniforms(fs_visitor *v)
    this->push_constant_loc = v->push_constant_loc;
    this->pull_constant_loc = v->pull_constant_loc;
    this->uniforms = v->uniforms;
-   this->param_size = v->param_size;
 }
 
 fs_reg *
@@ -1930,9 +1930,7 @@ fs_visitor::compact_virtual_grfs()
  * maximum number of fragment shader uniform components (64).  If
  * there are too many of these, they'd fill up all of register space.
  * So, this will push some of them out to the pull constant buffer and
- * update the program to load them.  We also use pull constants for all
- * indirect constant loads because we don't support indirect accesses in
- * registers yet.
+ * update the program to load them.
  */
 void
 fs_visitor::assign_constant_locations()
@@ -1941,20 +1939,21 @@ fs_visitor::assign_constant_locations()
    if (dispatch_width != 8)
       return;
 
-   unsigned int num_pull_constants = 0;
-
-   pull_constant_loc = ralloc_array(mem_ctx, int, uniforms);
-   memset(pull_constant_loc, -1, sizeof(pull_constant_loc[0]) * uniforms);
-
    bool is_live[uniforms];
    memset(is_live, 0, sizeof(is_live));
+
+   /* For each uniform slot, a value of true indicates that the given slot and
+    * the next slot must remain contiguous.  This is used to keep us from
+    * splitting arrays apart.
+    */
+   bool contiguous[uniforms];
+   memset(contiguous, 0, sizeof(contiguous));
 
    /* First, we walk through the instructions and do two things:
     *
     *  1) Figure out which uniforms are live.
     *
-    *  2) Find all indirect access of uniform arrays and flag them as needing
-    *     to go into the pull constant buffer.
+    *  2) Mark any indirectly used ranges of registers as contiguous.
     *
     * Note that we don't move constant-indexed accesses to arrays.  No
     * testing has been done of the performance impact of this choice.
@@ -1964,20 +1963,19 @@ fs_visitor::assign_constant_locations()
          if (inst->src[i].file != UNIFORM)
             continue;
 
-         if (inst->src[i].reladdr) {
-            int uniform = inst->src[i].nr;
+         int constant_nr = inst->src[i].nr + inst->src[i].reg_offset;
 
-            /* If this array isn't already present in the pull constant buffer,
-             * add it.
-             */
-            if (pull_constant_loc[uniform] == -1) {
-               assert(param_size[uniform]);
-               for (int j = 0; j < param_size[uniform]; j++)
-                  pull_constant_loc[uniform + j] = num_pull_constants++;
+         if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0) {
+            assert(inst->src[2].ud % 4 == 0);
+            unsigned last = constant_nr + (inst->src[2].ud / 4) - 1;
+            assert(last < uniforms);
+
+            for (unsigned j = constant_nr; j < last; j++) {
+               is_live[j] = true;
+               contiguous[j] = true;
             }
+            is_live[last] = true;
          } else {
-            /* Mark the the one accessed uniform as live */
-            int constant_nr = inst->src[i].nr + inst->src[i].reg_offset;
             if (constant_nr >= 0 && constant_nr < (int) uniforms)
                is_live[constant_nr] = true;
          }
@@ -1992,29 +1990,49 @@ fs_visitor::assign_constant_locations()
     * If changing this value, note the limitation about total_regs in
     * brw_curbe.c.
     */
-   unsigned int max_push_components = 16 * 8;
+   const unsigned int max_push_components = 16 * 8;
+
+   /* We push small arrays, but no bigger than 16 floats.  This is big enough
+    * for a vec4 but hopefully not large enough to push out other stuff.  We
+    * should probably use a better heuristic at some point.
+    */
+   const unsigned int max_chunk_size = 16;
+
    unsigned int num_push_constants = 0;
+   unsigned int num_pull_constants = 0;
 
    push_constant_loc = ralloc_array(mem_ctx, int, uniforms);
+   pull_constant_loc = ralloc_array(mem_ctx, int, uniforms);
 
-   for (unsigned int i = 0; i < uniforms; i++) {
-      if (!is_live[i] || pull_constant_loc[i] != -1) {
-         /* This UNIFORM register is either dead, or has already been demoted
-          * to a pull const.  Mark it as no longer living in the param[] array.
-          */
-         push_constant_loc[i] = -1;
+   int chunk_start = -1;
+   for (unsigned u = 0; u < uniforms; u++) {
+      push_constant_loc[u] = -1;
+      pull_constant_loc[u] = -1;
+
+      if (!is_live[u])
          continue;
-      }
 
-      if (num_push_constants < max_push_components) {
-         /* Retain as a push constant.  Record the location in the params[]
-          * array.
-          */
-         push_constant_loc[i] = num_push_constants++;
-      } else {
-         /* Demote to a pull constant. */
-         push_constant_loc[i] = -1;
-         pull_constant_loc[i] = num_pull_constants++;
+      /* This is the first live uniform in the chunk */
+      if (chunk_start < 0)
+         chunk_start = u;
+
+      /* If this element does not need to be contiguous with the next, we
+       * split at this point and everthing between chunk_start and u forms a
+       * single chunk.
+       */
+      if (!contiguous[u]) {
+         unsigned chunk_size = u - chunk_start + 1;
+
+         if (num_push_constants + chunk_size <= max_push_components &&
+             chunk_size <= max_chunk_size) {
+            for (unsigned j = chunk_start; j <= u; j++)
+               push_constant_loc[j] = num_push_constants++;
+         } else {
+            for (unsigned j = chunk_start; j <= u; j++)
+               pull_constant_loc[j] = num_pull_constants++;
+         }
+
+         chunk_start = -1;
       }
    }
 
@@ -2045,51 +2063,67 @@ fs_visitor::assign_constant_locations()
  * or VARYING_PULL_CONSTANT_LOAD instructions which load values into VGRFs.
  */
 void
-fs_visitor::demote_pull_constants()
+fs_visitor::lower_constant_loads()
 {
-   foreach_block_and_inst (block, fs_inst, inst, cfg) {
+   const unsigned index = stage_prog_data->binding_table.pull_constants_start;
+
+   foreach_block_and_inst_safe (block, fs_inst, inst, cfg) {
+      /* Set up the annotation tracking for new generated instructions. */
+      const fs_builder ibld(this, block, inst);
+
       for (int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file != UNIFORM)
 	    continue;
 
-         int pull_index;
+         /* We'll handle this case later */
+         if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0)
+            continue;
+
          unsigned location = inst->src[i].nr + inst->src[i].reg_offset;
-         if (location >= uniforms) /* Out of bounds access */
-            pull_index = -1;
-         else
-            pull_index = pull_constant_loc[location];
+         if (location >= uniforms)
+            continue; /* Out of bounds access */
+
+         int pull_index = pull_constant_loc[location];
 
          if (pull_index == -1)
 	    continue;
 
-         /* Set up the annotation tracking for new generated instructions. */
-         const fs_builder ibld(this, block, inst);
-         const unsigned index = stage_prog_data->binding_table.pull_constants_start;
-         fs_reg dst = vgrf(glsl_type::float_type);
-
          assert(inst->src[i].stride == 0);
 
-         /* Generate a pull load into dst. */
-         if (inst->src[i].reladdr) {
-            VARYING_PULL_CONSTANT_LOAD(ibld, dst,
-                                       brw_imm_ud(index),
-                                       *inst->src[i].reladdr,
-                                       pull_index * 4);
-            inst->src[i].reladdr = NULL;
-            inst->src[i].stride = 1;
-         } else {
-            const fs_builder ubld = ibld.exec_all().group(8, 0);
-            struct brw_reg offset = brw_imm_ud((unsigned)(pull_index * 4) & ~15);
-            ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
-                      dst, brw_imm_ud(index), offset);
-            inst->src[i].set_smear(pull_index & 3);
-         }
-         brw_mark_surface_used(prog_data, index);
+         fs_reg dst = vgrf(glsl_type::float_type);
+         const fs_builder ubld = ibld.exec_all().group(8, 0);
+         struct brw_reg offset = brw_imm_ud((unsigned)(pull_index * 4) & ~15);
+         ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
+                   dst, brw_imm_ud(index), offset);
 
          /* Rewrite the instruction to use the temporary VGRF. */
          inst->src[i].file = VGRF;
          inst->src[i].nr = dst.nr;
          inst->src[i].reg_offset = 0;
+         inst->src[i].set_smear(pull_index & 3);
+
+         brw_mark_surface_used(prog_data, index);
+      }
+
+      if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT &&
+          inst->src[0].file == UNIFORM) {
+
+         unsigned location = inst->src[0].nr + inst->src[0].reg_offset;
+         if (location >= uniforms)
+            continue; /* Out of bounds access */
+
+         int pull_index = pull_constant_loc[location];
+
+         if (pull_index == -1)
+	    continue;
+
+         VARYING_PULL_CONSTANT_LOAD(ibld, inst->dst,
+                                    brw_imm_ud(index),
+                                    inst->src[1],
+                                    pull_index * 4);
+         inst->remove(block);
+
+         brw_mark_surface_used(prog_data, index);
       }
    }
    invalidate_live_intervals();
@@ -4462,6 +4496,10 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
    case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
       return 8;
 
+   case SHADER_OPCODE_MOV_INDIRECT:
+      /* Prior to Broadwell, we only have 8 address subregisters */
+      return devinfo->gen < 8 ? 8 : inst->exec_size;
+
    default:
       return inst->exec_size;
    }
@@ -4744,9 +4782,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          break;
       case UNIFORM:
          fprintf(file, "u%d", inst->src[i].nr + inst->src[i].reg_offset);
-         if (inst->src[i].reladdr) {
-            fprintf(file, "+reladdr");
-         } else if (inst->src[i].subreg_offset) {
+         if (inst->src[i].subreg_offset) {
             fprintf(file, "+%d.%d", inst->src[i].reg_offset,
                     inst->src[i].subreg_offset);
          }
@@ -4857,7 +4893,6 @@ fs_visitor::get_instruction_generating_reg(fs_inst *start,
 {
    if (end == start ||
        end->is_partial_write() ||
-       reg.reladdr ||
        !reg.equals(end->dst)) {
       return NULL;
    } else {
@@ -5070,7 +5105,7 @@ fs_visitor::optimize()
    bld = fs_builder(this, 64);
 
    assign_constant_locations();
-   demote_pull_constants();
+   lower_constant_loads();
 
    validate();
 
