@@ -229,6 +229,43 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
       }
    }
 
+   if (state->has_enhanced_layouts()) {
+      if (!this->flags.q.explicit_xfb_buffer) {
+         if (q.flags.q.xfb_buffer) {
+            this->flags.q.xfb_buffer = 1;
+            this->xfb_buffer = q.xfb_buffer;
+         } else if (!this->flags.q.xfb_buffer && this->flags.q.out) {
+            /* Assign global xfb_buffer value */
+            this->flags.q.xfb_buffer = 1;
+            this->xfb_buffer = state->out_qualifier->xfb_buffer;
+         }
+      }
+
+      if (q.flags.q.explicit_xfb_stride)
+         this->xfb_stride = q.xfb_stride;
+
+      /* Merge all we xfb_stride qualifiers into the global out */
+      if (q.flags.q.explicit_xfb_stride || this->flags.q.xfb_stride) {
+
+         /* Set xfb_stride flag to 0 to avoid adding duplicates every time
+          * there is a merge.
+          */
+         this->flags.q.xfb_stride = 0;
+
+         unsigned buff_idx;
+         if (process_qualifier_constant(state, loc, "xfb_buffer",
+                                        this->xfb_buffer, &buff_idx)) {
+            if (state->out_qualifier->out_xfb_stride[buff_idx]) {
+               state->out_qualifier->out_xfb_stride[buff_idx]->merge_qualifier(
+                  new(state) ast_layout_expression(*loc, this->xfb_stride));
+            } else {
+               state->out_qualifier->out_xfb_stride[buff_idx] =
+                  new(state) ast_layout_expression(*loc, this->xfb_stride);
+            }
+         }
+      }
+   }
+
    if (q.flags.q.vertices) {
       if (this->vertices) {
          this->vertices->merge_qualifier(q.vertices);
@@ -300,7 +337,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    if (q.flags.q.explicit_binding)
       this->binding = q.binding;
 
-   if (q.flags.q.explicit_offset)
+   if (q.flags.q.explicit_offset || q.flags.q.explicit_xfb_offset)
       this->offset = q.offset;
 
    if (q.precision != ast_precision_none)
@@ -348,6 +385,10 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
       _mesa_glsl_error(loc, state, "out layout qualifiers only valid in "
                        "tessellation control or geometry shaders");
    }
+
+   /* Allow future assigments of global out's */
+   this->flags.q.explicit_xfb_buffer = 0;
+   this->flags.q.explicit_xfb_stride = 0;
 
    return r;
 }

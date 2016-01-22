@@ -939,6 +939,13 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
       block->layout.stream = state->out_qualifier->stream;
    }
 
+   if (state->has_enhanced_layouts() && block->layout.flags.q.out) {
+      /* Assign global layout's xfb_buffer value. */
+      block->layout.flags.q.xfb_buffer = 1;
+      block->layout.flags.q.explicit_xfb_buffer = 0;
+      block->layout.xfb_buffer = state->out_qualifier->xfb_buffer;
+   }
+
    foreach_list_typed (ast_declarator_list, member, link, &block->declarations) {
       ast_type_qualifier& qualifier = member->type->qualifier;
       if ((qualifier.flags.i & interface_type_mask) == 0) {
