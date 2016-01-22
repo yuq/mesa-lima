@@ -167,7 +167,6 @@ test_bdw_2d_r8g8b8a8_unorm_1024x1024_a6_s1_noaux_y0(void)
 
    t_assert_image_alignment_el(&surf, 4, 4, 1);
    t_assert_image_alignment_sa(&surf, 4, 4, 1);
-   t_assert_image_alignment_sa(&surf, 4, 4, 1);
    t_assert(isl_surf_get_array_pitch_el_rows(&surf) >= 1540);
    t_assert(isl_surf_get_array_pitch_sa_rows(&surf) >= 1540);
 
