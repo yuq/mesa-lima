@@ -535,3 +535,8 @@ private:
 
 bool brw_do_channel_expressions(struct exec_list *instructions);
 bool brw_do_vector_splitting(struct exec_list *instructions);
+
+void shuffle_32bit_load_result_to_64bit_data(const brw::fs_builder &bld,
+                                             const fs_reg &dst,
+                                             const fs_reg &src,
+                                             uint32_t components);
