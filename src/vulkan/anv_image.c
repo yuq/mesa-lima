@@ -401,6 +401,48 @@ anv_validate_CreateImageView(VkDevice _device,
 }
 
 void
+anv_fill_image_surface_state(struct anv_device *device, void *state_map,
+                             struct anv_image_view *iview,
+                             const VkImageViewCreateInfo *pCreateInfo,
+                             VkImageUsageFlagBits usage)
+{
+   switch (device->info.gen) {
+   case 7:
+      if (device->info.is_haswell)
+         gen75_fill_image_surface_state(device, state_map, iview,
+                                        pCreateInfo, usage);
+      else
+         gen7_fill_image_surface_state(device, state_map, iview,
+                                       pCreateInfo, usage);
+      break;
+   case 8:
+      gen8_fill_image_surface_state(device, state_map, iview,
+                                    pCreateInfo, usage);
+      break;
+   case 9:
+      gen9_fill_image_surface_state(device, state_map, iview,
+                                    pCreateInfo, usage);
+      break;
+   default:
+      unreachable("unsupported gen\n");
+   }
+
+   if (!device->info.has_llc)
+      anv_state_clflush(iview->nonrt_surface_state);
+}
+
+static struct anv_state
+alloc_surface_state(struct anv_device *device,
+                    struct anv_cmd_buffer *cmd_buffer)
+{
+      if (cmd_buffer) {
+         return anv_cmd_buffer_alloc_surface_state(cmd_buffer);
+      } else {
+         return anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+      }
+}
+
+void
 anv_image_view_init(struct anv_image_view *iview,
                     struct anv_device *device,
                     const VkImageViewCreateInfo* pCreateInfo,
@@ -447,21 +489,34 @@ anv_image_view_init(struct anv_image_view *iview,
       .depth = anv_minify(image->extent.depth, range->baseMipLevel),
    };
 
-   switch (device->info.gen) {
-   case 7:
-      if (device->info.is_haswell)
-         gen75_image_view_init(iview, device, pCreateInfo, cmd_buffer);
-      else
-         gen7_image_view_init(iview, device, pCreateInfo, cmd_buffer);
-      break;
-   case 8:
-      gen8_image_view_init(iview, device, pCreateInfo, cmd_buffer);
-      break;
-   case 9:
-      gen9_image_view_init(iview, device, pCreateInfo, cmd_buffer);
-      break;
-   default:
-      unreachable("unsupported gen\n");
+   if (image->needs_nonrt_surface_state) {
+      iview->nonrt_surface_state = alloc_surface_state(device, cmd_buffer);
+
+      anv_fill_image_surface_state(device, iview->nonrt_surface_state.map,
+                                   iview, pCreateInfo,
+                                   VK_IMAGE_USAGE_SAMPLED_BIT);
+   } else {
+      iview->nonrt_surface_state.alloc_size = 0;
+   }
+
+   if (image->needs_color_rt_surface_state) {
+      iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
+
+      anv_fill_image_surface_state(device, iview->color_rt_surface_state.map,
+                                   iview, pCreateInfo,
+                                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+   } else {
+      iview->color_rt_surface_state.alloc_size = 0;
+   }
+
+   if (image->needs_storage_surface_state) {
+      iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
+
+      anv_fill_image_surface_state(device, iview->storage_surface_state.map,
+                                   iview, pCreateInfo,
+                                   VK_IMAGE_USAGE_STORAGE_BIT);
+   } else {
+      iview->storage_surface_state.alloc_size = 0;
    }
 }
 

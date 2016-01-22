@@ -78,17 +78,6 @@ static const uint8_t anv_valign[] = {
     [16] = VALIGN16,
 };
 
-static struct anv_state
-alloc_surface_state(struct anv_device *device,
-                    struct anv_cmd_buffer *cmd_buffer)
-{
-      if (cmd_buffer) {
-         return anv_cmd_buffer_alloc_surface_state(cmd_buffer);
-      } else {
-         return anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-      }
-}
-
 /**
  * Get the values to pack into RENDER_SUFFACE_STATE.SurfaceHorizontalAlignment
  * and SurfaceVerticalAlignment.
@@ -162,7 +151,7 @@ get_qpitch(const struct isl_surf *surf)
    }
 }
 
-static void
+void
 genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
                                struct anv_image_view *iview,
                                const VkImageViewCreateInfo *pCreateInfo,
@@ -320,51 +309,6 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
    }
 
    GENX(RENDER_SURFACE_STATE_pack)(NULL, state_map, &template);
-
-   if (!device->info.has_llc)
-      anv_state_clflush(iview->nonrt_surface_state);
-}
-
-void
-genX(image_view_init)(struct anv_image_view *iview,
-                      struct anv_device *device,
-                      const VkImageViewCreateInfo* pCreateInfo,
-                      struct anv_cmd_buffer *cmd_buffer)
-{
-   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-
-   if (image->needs_nonrt_surface_state) {
-      iview->nonrt_surface_state =
-         alloc_surface_state(device, cmd_buffer);
-
-      genX(fill_image_surface_state)(device, iview->nonrt_surface_state.map,
-                                     iview, pCreateInfo,
-                                     VK_IMAGE_USAGE_SAMPLED_BIT);
-   } else {
-      iview->nonrt_surface_state.alloc_size = 0;
-   }
-
-   if (image->needs_color_rt_surface_state) {
-      iview->color_rt_surface_state =
-         alloc_surface_state(device, cmd_buffer);
-
-      genX(fill_image_surface_state)(device, iview->color_rt_surface_state.map,
-                                     iview, pCreateInfo,
-                                     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-   } else {
-      iview->color_rt_surface_state.alloc_size = 0;
-   }
-
-   if (image->needs_storage_surface_state) {
-      iview->storage_surface_state =
-         alloc_surface_state(device, cmd_buffer);
-
-      genX(fill_image_surface_state)(device, iview->storage_surface_state.map,
-                                     iview, pCreateInfo,
-                                     VK_IMAGE_USAGE_STORAGE_BIT);
-   } else {
-      iview->storage_surface_state.alloc_size = 0;
-   }
 }
 
 VkResult genX(CreateSampler)(

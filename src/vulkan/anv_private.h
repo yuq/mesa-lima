@@ -1599,28 +1599,30 @@ void anv_image_view_init(struct anv_image_view *view,
                          struct anv_cmd_buffer *cmd_buffer);
 
 void
-gen7_image_view_init(struct anv_image_view *iview,
-                     struct anv_device *device,
-                     const VkImageViewCreateInfo* pCreateInfo,
-                     struct anv_cmd_buffer *cmd_buffer);
-
+anv_fill_image_surface_state(struct anv_device *device, void *state_map,
+                             struct anv_image_view *iview,
+                             const VkImageViewCreateInfo *pCreateInfo,
+                             VkImageUsageFlagBits usage);
 void
-gen75_image_view_init(struct anv_image_view *iview,
-                      struct anv_device *device,
-                      const VkImageViewCreateInfo* pCreateInfo,
-                      struct anv_cmd_buffer *cmd_buffer);
-
+gen7_fill_image_surface_state(struct anv_device *device, void *state_map,
+                              struct anv_image_view *iview,
+                              const VkImageViewCreateInfo *pCreateInfo,
+                              VkImageUsageFlagBits usage);
 void
-gen8_image_view_init(struct anv_image_view *iview,
-                     struct anv_device *device,
-                     const VkImageViewCreateInfo* pCreateInfo,
-                     struct anv_cmd_buffer *cmd_buffer);
-
+gen75_fill_image_surface_state(struct anv_device *device, void *state_map,
+                               struct anv_image_view *iview,
+                               const VkImageViewCreateInfo *pCreateInfo,
+                               VkImageUsageFlagBits usage);
 void
-gen9_image_view_init(struct anv_image_view *iview,
-                     struct anv_device *device,
-                     const VkImageViewCreateInfo* pCreateInfo,
-                     struct anv_cmd_buffer *cmd_buffer);
+gen8_fill_image_surface_state(struct anv_device *device, void *state_map,
+                              struct anv_image_view *iview,
+                              const VkImageViewCreateInfo *pCreateInfo,
+                              VkImageUsageFlagBits usage);
+void
+gen9_fill_image_surface_state(struct anv_device *device, void *state_map,
+                              struct anv_image_view *iview,
+                              const VkImageViewCreateInfo *pCreateInfo,
+                              VkImageUsageFlagBits usage);
 
 struct anv_buffer_view {
    enum isl_format format; /**< VkBufferViewCreateInfo::format */
