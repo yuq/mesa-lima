@@ -2152,6 +2152,8 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 	struct si_shader_output_values *outputs = NULL;
 	int i,j;
 
+	assert(!si_shader_ctx->is_gs_copy_shader);
+
 	outputs = MALLOC((info->num_outputs + 1) * sizeof(outputs[0]));
 
 	/* Vertex color clamping.
@@ -2160,8 +2162,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 	 * an IF statement is added that clamps all colors if the constant
 	 * is true.
 	 */
-	if (si_shader_ctx->type == TGSI_PROCESSOR_VERTEX &&
-	    !si_shader_ctx->is_gs_copy_shader) {
+	if (si_shader_ctx->type == TGSI_PROCESSOR_VERTEX) {
 		struct lp_build_if_state if_ctx;
 		LLVMValueRef cond = NULL;
 		LLVMValueRef addr, val;
