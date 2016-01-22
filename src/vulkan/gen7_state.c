@@ -153,6 +153,7 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
 
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
+   bool is_storage = (usage == VK_IMAGE_USAGE_STORAGE_BIT);
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
@@ -170,9 +171,7 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
       .SurfaceType = anv_surftype(image, pCreateInfo->viewType,
                                   usage == VK_IMAGE_USAGE_STORAGE_BIT),
       .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = (usage != VK_IMAGE_USAGE_STORAGE_BIT ? iview->format :
-                        isl_lower_storage_image_format(
-                           &device->isl_dev, iview->format)),
+      .SurfaceFormat = anv_surface_format(device, iview->format, is_storage),
       .SurfaceVerticalAlignment = anv_valign[image_align_sa.height],
       .SurfaceHorizontalAlignment = anv_halign[image_align_sa.width],
 

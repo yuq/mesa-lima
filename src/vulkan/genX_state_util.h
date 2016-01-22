@@ -46,6 +46,17 @@ anv_surftype(const struct anv_image *image, VkImageViewType view_type,
    }
 }
 
+static enum isl_format
+anv_surface_format(const struct anv_device *device, enum isl_format format,
+                   bool storage)
+{
+   if (storage) {
+      return isl_lower_storage_image_format(&device->isl_dev, format);
+   } else {
+      return format;
+   }
+}
+
 #if ANV_GEN > 7 || ANV_IS_HASWELL
 static const uint32_t vk_to_gen_swizzle_map[] = {
    [VK_COMPONENT_SWIZZLE_ZERO]                 = SCS_ZERO,
