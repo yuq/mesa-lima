@@ -978,9 +978,11 @@ void si_emit_shader_userdata(struct si_context *sctx, struct r600_atom *atom)
 		si_emit_shader_pointer(sctx, &sctx->const_buffers[i].desc, vs_base, true);
 		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc, vs_base, true);
 
-		/* The TESSEVAL shader needs this for the ESGS ring buffer. */
-		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc,
-				       R_00B330_SPI_SHADER_USER_DATA_ES_0, true);
+		if (sctx->tes_shader.cso) {
+			/* The TESSEVAL shader needs this for the ESGS ring buffer. */
+			si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc,
+					       R_00B330_SPI_SHADER_USER_DATA_ES_0, true);
+		}
 	} else if (sctx->tes_shader.cso) {
 		/* The TESSEVAL shader needs this for streamout. */
 		si_emit_shader_pointer(sctx, &sctx->rw_buffers[PIPE_SHADER_VERTEX].desc,
