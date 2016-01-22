@@ -105,7 +105,8 @@ test_bdw_2d_r8g8b8a8_unorm_512x512_a1_s1_noaux_y0(void)
    bool ok;
 
    struct isl_device dev;
-   isl_device_init(&dev, brw_get_device_info(BDW_GT2_DEVID));
+   isl_device_init(&dev, brw_get_device_info(BDW_GT2_DEVID),
+                   /*bit6_swizzle*/ false);
 
    struct isl_surf surf;
    ok = isl_surf_init(&dev, &surf,
@@ -146,7 +147,8 @@ test_bdw_2d_r8g8b8a8_unorm_1024x1024_a6_s1_noaux_y0(void)
    bool ok;
 
    struct isl_device dev;
-   isl_device_init(&dev, brw_get_device_info(BDW_GT2_DEVID));
+   isl_device_init(&dev, brw_get_device_info(BDW_GT2_DEVID),
+                   /*bit6_swizzle*/ false);
 
    struct isl_surf surf;
    ok = isl_surf_init(&dev, &surf,
