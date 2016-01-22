@@ -89,7 +89,7 @@ convert_block(nir_block *block, void *void_state)
           *    gl_WorkGroupSize.x + gl_LocalInvocationID.x"
           */
          nir_ssa_def *local_id =
-            nir_load_system_value(b, nir_intrinsic_load_invocation_id, 0);
+            nir_load_system_value(b, nir_intrinsic_load_local_invocation_id, 0);
 
          unsigned stride_y = b->shader->info.cs.local_size[0];
          unsigned stride_z = b->shader->info.cs.local_size[0] *
