@@ -193,6 +193,12 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,
       .RenderCacheReadWriteMode = WriteOnlyCache,
+      .CubeFaceEnablePositiveZ = 1,
+      .CubeFaceEnableNegativeZ = 1,
+      .CubeFaceEnablePositiveY = 1,
+      .CubeFaceEnableNegativeY = 1,
+      .CubeFaceEnablePositiveX = 1,
+      .CubeFaceEnableNegativeX = 1,
       .MemoryObjectControlState = GENX(MOCS),
 
       /* The driver sets BaseMipLevel in SAMPLER_STATE, not here in
