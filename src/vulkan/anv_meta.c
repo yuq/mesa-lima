@@ -83,6 +83,14 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
                                                   glsl_vec4_type(), "v_attr");
    tex_pos_in->data.location = VARYING_SLOT_VAR0;
 
+   /* Swizzle the array index which comes in as Z coordinate into the right
+    * position.
+    */
+   unsigned swz[] = { 0, (tex_dim == GLSL_SAMPLER_DIM_1D ? 2 : 1), 2 };
+   nir_ssa_def *const tex_pos =
+      nir_swizzle(&b, nir_load_var(&b, tex_pos_in), swz,
+                  (tex_dim == GLSL_SAMPLER_DIM_1D ? 2 : 3), false);
+
    const struct glsl_type *sampler_type =
       glsl_sampler_type(tex_dim, false, false, glsl_get_base_type(color_type));
    nir_variable *sampler = nir_variable_create(b.shader, nir_var_uniform,
@@ -94,14 +102,13 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    tex->sampler_dim = tex_dim;
    tex->op = nir_texop_tex;
    tex->src[0].src_type = nir_tex_src_coord;
-   tex->src[0].src = nir_src_for_ssa(nir_load_var(&b, tex_pos_in));
+   tex->src[0].src = nir_src_for_ssa(tex_pos);
    tex->dest_type = nir_type_float; /* TODO */
 
    if (tex_dim != GLSL_SAMPLER_DIM_3D)
       tex->is_array = true;
 
-   tex->coord_components = 3;
-
+   tex->coord_components = tex_pos->num_components;
    tex->sampler = nir_deref_var_create(tex, sampler);
 
    nir_ssa_dest_init(&tex->instr, &tex->dest, 4, "tex");
