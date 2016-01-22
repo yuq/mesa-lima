@@ -1201,7 +1201,12 @@ builtin_variable_generator::generate_varyings()
    /* gl_Position and gl_PointSize are not visible from fragment shaders. */
    if (state->stage != MESA_SHADER_FRAGMENT) {
       add_varying(VARYING_SLOT_POS, vec4_t, "gl_Position");
-      add_varying(VARYING_SLOT_PSIZ, float_t, "gl_PointSize");
+      if (!state->es_shader ||
+          state->stage == MESA_SHADER_VERTEX ||
+          (state->stage == MESA_SHADER_GEOMETRY &&
+           state->OES_geometry_point_size_enable)) {
+         add_varying(VARYING_SLOT_PSIZ, float_t, "gl_PointSize");
+      }
    }
 
    if (state->is_version(130, 0)) {
