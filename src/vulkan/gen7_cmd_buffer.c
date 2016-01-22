@@ -47,6 +47,9 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
    VkShaderStageFlags flushed = 0;
 
    anv_foreach_stage(stage, cmd_buffer->state.push_constants_dirty) {
+      if (stage == MESA_SHADER_COMPUTE)
+         continue;
+
       struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
 
       if (state.offset == 0)
@@ -274,7 +277,22 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    if (result != VK_SUCCESS)
       return result;
 
+   struct anv_state push_state = anv_cmd_buffer_cs_push_constants(cmd_buffer);
+
    const struct brw_cs_prog_data *cs_prog_data = &pipeline->cs_prog_data;
+   const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
+
+   unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
+   unsigned push_constant_data_size =
+      (prog_data->nr_params + local_id_dwords) * 4;
+   unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
+   unsigned push_constant_regs = reg_aligned_constant_size / 32;
+
+   if (push_state.alloc_size) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD),
+                     .CURBETotalDataLength = push_state.alloc_size,
+                     .CURBEDataStartAddress = push_state.offset);
+   }
 
    struct anv_state state =
       anv_state_pool_emit(&device->dynamic_state_pool,
@@ -282,6 +300,9 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
                           .KernelStartPointer = pipeline->cs_simd,
                           .BindingTablePointer = surfaces.offset,
                           .SamplerStatePointer = samplers.offset,
+                          .ConstantURBEntryReadLength =
+                             push_constant_regs,
+                          .ConstantURBEntryReadOffset = 0,
                           .BarrierEnable = cs_prog_data->uses_barrier,
                           .NumberofThreadsinGPGPUThreadGroup =
                              pipeline->cs_thread_width_max);
