@@ -4404,7 +4404,6 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	if (si_shader_ctx.type == TGSI_PROCESSOR_GEOMETRY) {
 		shader->gs_copy_shader = CALLOC_STRUCT(si_shader);
 		shader->gs_copy_shader->selector = shader->selector;
-		shader->gs_copy_shader->key = shader->key;
 		si_shader_ctx.shader = shader->gs_copy_shader;
 		if ((r = si_generate_gs_copy_shader(sscreen, &si_shader_ctx,
 						    shader, dump, debug))) {
