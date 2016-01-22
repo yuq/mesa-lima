@@ -68,6 +68,7 @@ struct si_shader_context
 	struct si_shader *shader;
 	struct si_screen *screen;
 	unsigned type; /* TGSI_PROCESSOR_* specifies the type of shader. */
+	bool is_gs_copy_shader;
 	int param_streamout_config;
 	int param_streamout_write_index;
 	int param_streamout_offset[4];
@@ -2160,7 +2161,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 	 * is true.
 	 */
 	if (si_shader_ctx->type == TGSI_PROCESSOR_VERTEX &&
-	    !si_shader_ctx->shader->is_gs_copy_shader) {
+	    !si_shader_ctx->is_gs_copy_shader) {
 		struct lp_build_if_state if_ctx;
 		LLVMValueRef cond = NULL;
 		LLVMValueRef addr, val;
@@ -3554,7 +3555,7 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 			params[SI_PARAM_LS_OUT_LAYOUT] = i32;
 			num_params = SI_PARAM_LS_OUT_LAYOUT+1;
 		} else {
-			if (shader->is_gs_copy_shader) {
+			if (si_shader_ctx->is_gs_copy_shader) {
 				last_array_pointer = SI_PARAM_CONST_BUFFERS;
 				num_params = SI_PARAM_CONST_BUFFERS+1;
 			} else {
@@ -3827,7 +3828,7 @@ static void preload_ring_buffers(struct si_shader_context *si_shader_ctx)
 			build_indexed_load_const(si_shader_ctx, buf_ptr, offset);
 	}
 
-	if (si_shader_ctx->shader->is_gs_copy_shader) {
+	if (si_shader_ctx->is_gs_copy_shader) {
 		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_RING_GSVS);
 
 		si_shader_ctx->gsvs_ring[0] =
@@ -4119,7 +4120,6 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	struct lp_build_tgsi_context *bld_base = &si_shader_ctx->radeon_bld.soa.bld_base;
 	struct lp_build_context *base = &bld_base->base;
 	struct lp_build_context *uint = &bld_base->uint_bld;
-	struct si_shader *shader = si_shader_ctx->shader;
 	struct si_shader_output_values *outputs;
 	struct tgsi_shader_info *gsinfo = &gs->selector->info;
 	LLVMValueRef args[9];
@@ -4128,7 +4128,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	outputs = MALLOC(gsinfo->num_outputs * sizeof(outputs[0]));
 
 	si_shader_ctx->type = TGSI_PROCESSOR_VERTEX;
-	shader->is_gs_copy_shader = true;
+	si_shader_ctx->is_gs_copy_shader = true;
 
 	radeon_llvm_context_init(&si_shader_ctx->radeon_bld);
 
