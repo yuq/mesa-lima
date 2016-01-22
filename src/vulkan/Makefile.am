@@ -100,6 +100,7 @@ BUILT_SOURCES =                                         \
 
 libanv_gen7_la_SOURCES =                                \
 	genX_cmd_buffer.c				\
+	genX_pipeline.c					\
 	gen7_cmd_buffer.c				\
 	gen7_pipeline.c                                 \
 	gen7_state.c
@@ -107,6 +108,7 @@ libanv_gen7_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=70
 
 libanv_gen75_la_SOURCES =                               \
 	genX_cmd_buffer.c				\
+	genX_pipeline.c					\
 	gen7_cmd_buffer.c				\
 	gen7_pipeline.c                                 \
 	gen7_state.c
@@ -114,6 +116,7 @@ libanv_gen75_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=75
 
 libanv_gen8_la_SOURCES =                               	\
 	genX_cmd_buffer.c				\
+	genX_pipeline.c					\
 	gen8_cmd_buffer.c				\
 	gen8_pipeline.c					\
 	gen8_state.c
@@ -121,6 +124,7 @@ libanv_gen8_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=80
 
 libanv_gen9_la_SOURCES =                               	\
 	genX_cmd_buffer.c				\
+	genX_pipeline.c					\
 	gen8_cmd_buffer.c				\
 	gen8_pipeline.c					\
 	gen8_state.c

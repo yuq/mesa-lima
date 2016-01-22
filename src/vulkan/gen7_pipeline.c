@@ -444,15 +444,3 @@ genX(graphics_pipeline_create)(
 
    return VK_SUCCESS;
 }
-
-GENX_FUNC(GEN7, GEN75) VkResult
-genX(compute_pipeline_create)(
-    VkDevice                                    _device,
-    struct anv_pipeline_cache *                 cache,
-    const VkComputePipelineCreateInfo*          pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkPipeline*                                 pPipeline)
-{
-   anv_finishme("primitive_id needs sbe swizzling setup");
-   abort();
-}
