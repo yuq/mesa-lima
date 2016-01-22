@@ -92,7 +92,8 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
                   (tex_dim == GLSL_SAMPLER_DIM_1D ? 2 : 3), false);
 
    const struct glsl_type *sampler_type =
-      glsl_sampler_type(tex_dim, false, false, glsl_get_base_type(color_type));
+      glsl_sampler_type(tex_dim, false, tex_dim != GLSL_SAMPLER_DIM_3D,
+                        glsl_get_base_type(color_type));
    nir_variable *sampler = nir_variable_create(b.shader, nir_var_uniform,
                                                sampler_type, "s_tex");
    sampler->data.descriptor_set = 0;
@@ -104,10 +105,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    tex->src[0].src_type = nir_tex_src_coord;
    tex->src[0].src = nir_src_for_ssa(tex_pos);
    tex->dest_type = nir_type_float; /* TODO */
-
-   if (tex_dim != GLSL_SAMPLER_DIM_3D)
-      tex->is_array = true;
-
+   tex->is_array = glsl_sampler_type_is_array(sampler_type);
    tex->coord_components = tex_pos->num_components;
    tex->sampler = nir_deref_var_create(tex, sampler);
 
