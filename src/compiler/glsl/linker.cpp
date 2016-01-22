@@ -4462,91 +4462,80 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          goto done;
    }
 
-   /* Linking the stages in the opposite order (from fragment to vertex)
-    * ensures that inter-shader outputs written to in an earlier stage are
-    * eliminated if they are (transitively) not used in a later stage.
+   /* If there is no fragment shader we need to set transform feedback.
+    *
+    * For SSO we need also need to assign output locations, we assign them
+    * here because we need to do it for both single stage programs and multi
+    * stage programs.
     */
-   int next;
+   if (last < MESA_SHADER_FRAGMENT &&
+       (num_tfeedback_decls != 0 || prog->SeparateShader)) {
+      if (!assign_varying_locations(ctx, mem_ctx, prog,
+                                    prog->_LinkedShaders[last], NULL,
+                                    num_tfeedback_decls, tfeedback_decls))
+         goto done;
+   }
 
-   if (first < MESA_SHADER_FRAGMENT) {
-      gl_shader *const sh = prog->_LinkedShaders[last];
-
-      if (first != MESA_SHADER_VERTEX) {
-         /* There was no vertex shader, but we still have to assign varying
-          * locations for use by tessellation/geometry shader inputs in SSO.
-          *
-          * If the shader is not separable (i.e., prog->SeparateShader is
-          * false), linking will have already failed when first is not
-          * MESA_SHADER_VERTEX.
-          */
-         if (!assign_varying_locations(ctx, mem_ctx, prog,
-                                       NULL, prog->_LinkedShaders[first],
-                                       num_tfeedback_decls, tfeedback_decls))
-            goto done;
-      }
-
-      if (last != MESA_SHADER_FRAGMENT &&
-         (num_tfeedback_decls != 0 || prog->SeparateShader)) {
-         /* There was no fragment shader, but we still have to assign varying
-          * locations for use by transform feedback.
-          */
-         if (!assign_varying_locations(ctx, mem_ctx, prog,
-                                       sh, NULL,
-                                       num_tfeedback_decls, tfeedback_decls))
-            goto done;
-      }
-
-      do_dead_builtin_varyings(ctx, sh, NULL,
-                               num_tfeedback_decls, tfeedback_decls);
-
-      remove_unused_shader_inputs_and_outputs(prog->SeparateShader, sh,
+   if (last <= MESA_SHADER_FRAGMENT) {
+      /* Remove unused varyings from the first/last stage unless SSO */
+      remove_unused_shader_inputs_and_outputs(prog->SeparateShader,
+                                              prog->_LinkedShaders[first],
+                                              ir_var_shader_in);
+      remove_unused_shader_inputs_and_outputs(prog->SeparateShader,
+                                              prog->_LinkedShaders[last],
                                               ir_var_shader_out);
-   }
-   else if (first == MESA_SHADER_FRAGMENT) {
-      /* If the program only contains a fragment shader...
-       */
-      gl_shader *const sh = prog->_LinkedShaders[first];
 
-      do_dead_builtin_varyings(ctx, NULL, sh,
-                               num_tfeedback_decls, tfeedback_decls);
+      /* If the program is made up of only a single stage */
+      if (first == last) {
 
-      if (prog->SeparateShader) {
-         if (!assign_varying_locations(ctx, mem_ctx, prog,
-                                       NULL /* producer */,
-                                       sh /* consumer */,
-                                       0 /* num_tfeedback_decls */,
-                                       NULL /* tfeedback_decls */))
-            goto done;
+         gl_shader *const sh = prog->_LinkedShaders[last];
+         if (prog->SeparateShader) {
+            /* Assign input locations for SSO, output locations are already
+             * assigned.
+             */
+            if (!assign_varying_locations(ctx, mem_ctx, prog,
+                                          NULL /* producer */,
+                                          sh /* consumer */,
+                                          0 /* num_tfeedback_decls */,
+                                          NULL /* tfeedback_decls */))
+               goto done;
+         }
+
+         do_dead_builtin_varyings(ctx, NULL, sh, 0, NULL);
+         do_dead_builtin_varyings(ctx, sh, NULL, num_tfeedback_decls,
+                                  tfeedback_decls);
       } else {
-         remove_unused_shader_inputs_and_outputs(false, sh,
-                                                 ir_var_shader_in);
+         /* Linking the stages in the opposite order (from fragment to vertex)
+          * ensures that inter-shader outputs written to in an earlier stage
+          * are eliminated if they are (transitively) not used in a later
+          * stage.
+          */
+         int next = last;
+         for (int i = next - 1; i >= 0; i--) {
+            if (prog->_LinkedShaders[i] == NULL)
+               continue;
+
+            gl_shader *const sh_i = prog->_LinkedShaders[i];
+            gl_shader *const sh_next = prog->_LinkedShaders[next];
+
+            if (!assign_varying_locations(ctx, mem_ctx, prog, sh_i, sh_next,
+                      next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
+                      tfeedback_decls))
+               goto done;
+
+            do_dead_builtin_varyings(ctx, sh_i, sh_next,
+                      next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
+                      tfeedback_decls);
+
+            /* This must be done after all dead varyings are eliminated. */
+            if (!check_against_output_limit(ctx, prog, sh_i))
+               goto done;
+            if (!check_against_input_limit(ctx, prog, sh_next))
+               goto done;
+
+            next = i;
+         }
       }
-   }
-
-   next = last;
-   for (int i = next - 1; i >= 0; i--) {
-      if (prog->_LinkedShaders[i] == NULL)
-         continue;
-
-      gl_shader *const sh_i = prog->_LinkedShaders[i];
-      gl_shader *const sh_next = prog->_LinkedShaders[next];
-
-      if (!assign_varying_locations(ctx, mem_ctx, prog, sh_i, sh_next,
-                next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
-                tfeedback_decls))
-         goto done;
-
-      do_dead_builtin_varyings(ctx, sh_i, sh_next,
-                next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
-                tfeedback_decls);
-
-      /* This must be done after all dead varyings are eliminated. */
-      if (!check_against_output_limit(ctx, prog, sh_i))
-         goto done;
-      if (!check_against_input_limit(ctx, prog, sh_next))
-         goto done;
-
-      next = i;
    }
 
    if (!store_tfeedback_info(ctx, prog, num_tfeedback_decls, tfeedback_decls))
