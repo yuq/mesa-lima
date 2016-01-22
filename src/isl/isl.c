@@ -1200,10 +1200,9 @@ get_image_offset_sa_gen4_3d(const struct isl_surf *surf,
    const uint32_t level_d = isl_align_npot(isl_minify(D0, level), image_align_sa.d);
 
    const uint32_t max_layers_horiz = MIN(level_d, 1u << level);
-   const uint32_t max_layers_vert = isl_align_div(level_d, 1u << level);
 
    x += level_w * (logical_z_offset_px % max_layers_horiz);
-   y += level_h * (logical_z_offset_px / max_layers_vert);
+   y += level_h * (logical_z_offset_px / max_layers_horiz);
 
    *x_offset_sa = x;
    *y_offset_sa = y;
