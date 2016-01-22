@@ -28,6 +28,7 @@
 
 #include "brw_device_info.h"
 #include "isl.h"
+#include "isl_priv.h"
 
 #define BDW_GT2_DEVID 0x161a
 
@@ -97,6 +98,25 @@ t_assert_phys_level0_sa(const struct isl_surf *surf, uint32_t width,
                         uint32_t height, uint32_t depth, uint32_t array_len)
 {
    t_assert_extent4d(&surf->phys_level0_sa, width, height, depth, array_len);
+}
+
+static void
+t_assert_gen4_3d_layer(const struct isl_surf *surf,
+                       uint32_t level,
+                       uint32_t aligned_width,
+                       uint32_t aligned_height,
+                       uint32_t depth,
+                       uint32_t horiz_layers,
+                       uint32_t vert_layers,
+                       uint32_t *base_y)
+{
+   for (uint32_t z = 0; z < depth; ++z) {
+      t_assert_offset(surf, level, 0, z,
+                      aligned_width * (z % horiz_layers),
+                      *base_y + aligned_height * (z / horiz_layers));
+   }
+
+   *base_y += aligned_height * vert_layers;
 }
 
 static void
@@ -187,12 +207,55 @@ test_bdw_2d_r8g8b8a8_unorm_1024x1024_a6_s1_noaux_y0(void)
    }
 }
 
+static void
+test_bdw_3d_r8g8b8a8_unorm_256x256x256_levels09_tiley0(void)
+{
+   bool ok;
+
+   struct isl_device dev;
+   isl_device_init(&dev, brw_get_device_info(BDW_GT2_DEVID),
+                   /*bit6_swizzle*/ false);
+
+   struct isl_surf surf;
+   ok = isl_surf_init(&dev, &surf,
+                      .dim = ISL_SURF_DIM_3D,
+                      .format = ISL_FORMAT_R8G8B8A8_UNORM,
+                      .width = 256,
+                      .height = 256,
+                      .depth = 256,
+                      .levels = 9,
+                      .array_len = 1,
+                      .samples = 1,
+                      .usage = ISL_SURF_USAGE_TEXTURE_BIT |
+                               ISL_SURF_USAGE_DISABLE_AUX_BIT,
+                      .tiling_flags = ISL_TILING_Y0_BIT);
+   t_assert(ok);
+
+   t_assert_image_alignment_el(&surf, 4, 4, 1);
+   t_assert_image_alignment_sa(&surf, 4, 4, 1);
+   t_assert(isl_surf_get_array_pitch_el_rows(&surf) == 74916);
+   t_assert(isl_surf_get_array_pitch_sa_rows(&surf) ==
+            isl_surf_get_array_pitch_el_rows(&surf));
+
+   uint32_t base_y = 0;
+
+   t_assert_gen4_3d_layer(&surf, 0, 256, 256, 256,   1, 256, &base_y);
+   t_assert_gen4_3d_layer(&surf, 1, 128, 128, 128,   2,  64, &base_y);
+   t_assert_gen4_3d_layer(&surf, 2,  64,  64,  64,   4,  16, &base_y);
+   t_assert_gen4_3d_layer(&surf, 3,  32,  32,  32,   8,   4, &base_y);
+   t_assert_gen4_3d_layer(&surf, 4,  16,  16,  16,  16,   1, &base_y);
+   t_assert_gen4_3d_layer(&surf, 5,   8,   8,   8,  32,   1, &base_y);
+   t_assert_gen4_3d_layer(&surf, 6,   4,   4,   4,  64,   1, &base_y);
+   t_assert_gen4_3d_layer(&surf, 7,   4,   4,   2, 128,   1, &base_y);
+   t_assert_gen4_3d_layer(&surf, 8,   4,   4,   1, 256,   1, &base_y);
+}
+
 int main(void)
 {
    /* FINISHME: Add tests for npot sizes */
    /* FINISHME: Add tests for 1D surfaces */
-   /* FINISHME: Add tests for 3D surfaces */
 
    test_bdw_2d_r8g8b8a8_unorm_512x512_a1_s1_noaux_y0();
    test_bdw_2d_r8g8b8a8_unorm_1024x1024_a6_s1_noaux_y0();
+   test_bdw_3d_r8g8b8a8_unorm_256x256x256_levels09_tiley0();
 }
