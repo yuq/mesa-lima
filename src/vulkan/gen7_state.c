@@ -148,21 +148,21 @@ static const uint8_t anv_valign[] = {
     [4] = VALIGN_4,
 };
 
-GENX_FUNC(GEN7, GEN75) void
-genX(image_view_init)(struct anv_image_view *iview,
-                      struct anv_device *device,
-                      const VkImageViewCreateInfo* pCreateInfo,
-                      struct anv_cmd_buffer *cmd_buffer)
+static struct GENX(RENDER_SURFACE_STATE)
+surface_state_for_image_view(struct anv_image_view *iview,
+                             struct anv_device *device,
+                             const VkImageViewCreateInfo *pCreateInfo,
+                             VkImageUsageFlagBits usage)
 {
+   assert(usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
+                   VK_IMAGE_USAGE_STORAGE_BIT |
+                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT));
+   assert(util_is_power_of_two(usage));
+
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
-
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
-
-   if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
-      anv_finishme("non-2D image views");
 
    uint32_t depth = 1;
    if (range->layerCount > 1) {
@@ -174,10 +174,13 @@ genX(image_view_init)(struct anv_image_view *iview,
    const struct isl_extent3d image_align_sa =
       isl_surf_get_image_alignment_sa(&surface->isl);
 
-   const struct GENX(RENDER_SURFACE_STATE) template = {
-      .SurfaceType = anv_surftype(image, pCreateInfo->viewType, false),
+   struct GENX(RENDER_SURFACE_STATE) template = {
+      .SurfaceType = anv_surftype(image, pCreateInfo->viewType,
+                                  usage == VK_IMAGE_USAGE_STORAGE_BIT),
       .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = iview->format,
+      .SurfaceFormat = (usage != VK_IMAGE_USAGE_STORAGE_BIT ? iview->format :
+                        isl_lower_storage_image_format(
+                           &device->isl_dev, iview->format)),
       .SurfaceVerticalAlignment = anv_valign[image_align_sa.height],
       .SurfaceHorizontalAlignment = anv_halign[image_align_sa.width],
 
@@ -227,19 +230,44 @@ genX(image_view_init)(struct anv_image_view *iview,
       .SurfaceBaseAddress = { NULL, iview->offset },
    };
 
-   if (image->needs_nonrt_surface_state) {
-      struct GENX(RENDER_SURFACE_STATE) surface_state = template;
-
-      iview->nonrt_surface_state = alloc_surface_state(device, cmd_buffer);
-
-      surface_state.RenderCacheReadWriteMode = false;
-
+   if (usage == VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+      /* For render target surfaces, the hardware interprets field
+       * MIPCount/LOD as LOD. The Broadwell PRM says:
+       *
+       *    MIPCountLOD defines the LOD that will be rendered into.
+       *    SurfaceMinLOD is ignored.
+       */
+      template.MIPCountLOD = range->baseMipLevel;
+      template.SurfaceMinLOD = 0;
+   } else {
       /* For non render target surfaces, the hardware interprets field
        * MIPCount/LOD as MIPCount.  The range of levels accessible by the
        * sampler engine is [SurfaceMinLOD, SurfaceMinLOD + MIPCountLOD].
        */
-      surface_state.SurfaceMinLOD = range->baseMipLevel;
-      surface_state.MIPCountLOD = MAX2(range->levelCount, 1) - 1;
+      template.SurfaceMinLOD = range->baseMipLevel;
+      template.MIPCountLOD = MAX2(range->levelCount, 1) - 1;
+   }
+
+   return template;
+}
+
+GENX_FUNC(GEN7, GEN75) void
+genX(image_view_init)(struct anv_image_view *iview,
+                      struct anv_device *device,
+                      const VkImageViewCreateInfo* pCreateInfo,
+                      struct anv_cmd_buffer *cmd_buffer)
+{
+   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+
+   if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
+      anv_finishme("non-2D image views");
+
+   if (image->needs_nonrt_surface_state) {
+      struct GENX(RENDER_SURFACE_STATE) surface_state =
+         surface_state_for_image_view(iview, device, pCreateInfo,
+                                      VK_IMAGE_USAGE_SAMPLED_BIT);
+
+      iview->nonrt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->nonrt_surface_state.map,
                                       &surface_state);
@@ -251,20 +279,11 @@ genX(image_view_init)(struct anv_image_view *iview,
    }
 
    if (image->needs_color_rt_surface_state) {
-      struct GENX(RENDER_SURFACE_STATE) surface_state = template;
+      struct GENX(RENDER_SURFACE_STATE) surface_state =
+         surface_state_for_image_view(iview, device, pCreateInfo,
+                                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
-
-      surface_state.RenderCacheReadWriteMode = 0; /* Write only */
-
-      /* For render target surfaces, the hardware interprets field MIPCount/LOD as
-       * LOD. The Broadwell PRM says:
-       *
-       *    MIPCountLOD defines the LOD that will be rendered into.
-       *    SurfaceMinLOD is ignored.
-       */
-      surface_state.MIPCountLOD = range->baseMipLevel;
-      surface_state.SurfaceMinLOD = 0;
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->color_rt_surface_state.map,
                                       &surface_state);
@@ -275,18 +294,11 @@ genX(image_view_init)(struct anv_image_view *iview,
    }
 
    if (image->needs_storage_surface_state) {
-      struct GENX(RENDER_SURFACE_STATE) surface_state = template;
+      struct GENX(RENDER_SURFACE_STATE) surface_state =
+         surface_state_for_image_view(iview, device, pCreateInfo,
+                                      VK_IMAGE_USAGE_STORAGE_BIT);
 
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
-
-      surface_state.SurfaceType =
-         anv_surftype(image, pCreateInfo->viewType, true),
-
-      surface_state.SurfaceFormat =
-         isl_lower_storage_image_format(&device->isl_dev, iview->format);
-
-      surface_state.SurfaceMinLOD = range->baseMipLevel;
-      surface_state.MIPCountLOD = MAX2(range->levelCount, 1) - 1;
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->storage_surface_state.map,
                                       &surface_state);
