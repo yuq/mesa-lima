@@ -260,17 +260,10 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
       template.RenderTargetViewExtent = template.Depth;
       break;
    case SURFTYPE_CUBE:
-      #if ANV_GENx10 >= 90
-         /* Like SURFTYPE_2D, but divided by 6. */
-         template.MinimumArrayElement = range->baseArrayLayer / 6;
-         template.Depth = range->layerCount / 6 - 1;
-         template.RenderTargetViewExtent = template.Depth;
-      #else
-         /* Same as SURFTYPE_2D */
-         template.MinimumArrayElement = range->baseArrayLayer;
-         template.Depth = range->layerCount / 6 - 1;
-         template.RenderTargetViewExtent = template.Depth;
-      #endif
+      template.MinimumArrayElement = range->baseArrayLayer;
+      /* Same as SURFTYPE_2D, but divided by 6 */
+      template.Depth = range->layerCount / 6 - 1;
+      template.RenderTargetViewExtent = template.Depth;
       break;
    case SURFTYPE_3D:
       template.MinimumArrayElement = range->baseArrayLayer;
