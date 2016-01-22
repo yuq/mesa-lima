@@ -339,7 +339,7 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
-	if (shader->is_gs_copy_shader) {
+	if (gs) {
 		vgpr_comp_cnt = 0; /* only VertexID is needed for GS-COPY. */
 		num_user_sgprs = SI_GSCOPY_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_VERTEX) {
