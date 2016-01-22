@@ -1379,6 +1379,7 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 	if (desc->layout == UTIL_FORMAT_LAYOUT_ETC &&
 	    sscreen->b.family >= CHIP_STONEY) {
 		switch (format) {
+		case PIPE_FORMAT_ETC1_RGB8:
 		case PIPE_FORMAT_ETC2_RGB8:
 		case PIPE_FORMAT_ETC2_SRGB8:
 			return V_008F14_IMG_DATA_FORMAT_ETC2_RGB;
