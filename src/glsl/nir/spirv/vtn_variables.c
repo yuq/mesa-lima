@@ -771,7 +771,7 @@ vtn_get_builtin_location(struct vtn_builder *b,
       break;
    case SpvBuiltInCullDistance:
       /* XXX figure this out */
-      unreachable("unhandled builtin");
+      break;
    case SpvBuiltInVertexIndex:
       *location = SYSTEM_VALUE_VERTEX_ID;
       set_mode_system_value(mode);
