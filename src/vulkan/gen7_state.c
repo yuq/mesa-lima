@@ -148,11 +148,11 @@ static const uint8_t anv_valign[] = {
     [4] = VALIGN_4,
 };
 
-static struct GENX(RENDER_SURFACE_STATE)
-surface_state_for_image_view(struct anv_image_view *iview,
-                             struct anv_device *device,
-                             const VkImageViewCreateInfo *pCreateInfo,
-                             VkImageUsageFlagBits usage)
+static void
+genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
+                               struct anv_image_view *iview,
+                               const VkImageViewCreateInfo *pCreateInfo,
+                               VkImageUsageFlagBits usage)
 {
    assert(usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
                    VK_IMAGE_USAGE_STORAGE_BIT |
@@ -248,7 +248,10 @@ surface_state_for_image_view(struct anv_image_view *iview,
       template.MIPCountLOD = MAX2(range->levelCount, 1) - 1;
    }
 
-   return template;
+   GENX(RENDER_SURFACE_STATE_pack)(NULL, state_map, &template);
+
+   if (!device->info.has_llc)
+      anv_state_clflush(iview->nonrt_surface_state);
 }
 
 GENX_FUNC(GEN7, GEN75) void
@@ -263,47 +266,31 @@ genX(image_view_init)(struct anv_image_view *iview,
       anv_finishme("non-2D image views");
 
    if (image->needs_nonrt_surface_state) {
-      struct GENX(RENDER_SURFACE_STATE) surface_state =
-         surface_state_for_image_view(iview, device, pCreateInfo,
-                                      VK_IMAGE_USAGE_SAMPLED_BIT);
-
       iview->nonrt_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->nonrt_surface_state.map,
-                                      &surface_state);
-
-      if (!device->info.has_llc)
-         anv_state_clflush(iview->nonrt_surface_state);
+      genX(fill_image_surface_state)(device, iview->nonrt_surface_state.map,
+                                     iview, pCreateInfo,
+                                     VK_IMAGE_USAGE_SAMPLED_BIT);
    } else {
       iview->nonrt_surface_state.alloc_size = 0;
    }
 
    if (image->needs_color_rt_surface_state) {
-      struct GENX(RENDER_SURFACE_STATE) surface_state =
-         surface_state_for_image_view(iview, device, pCreateInfo,
-                                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->color_rt_surface_state.map,
-                                      &surface_state);
-      if (!device->info.has_llc)
-         anv_state_clflush(iview->color_rt_surface_state);
+      genX(fill_image_surface_state)(device, iview->color_rt_surface_state.map,
+                                     iview, pCreateInfo,
+                                     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
    } else {
       iview->color_rt_surface_state.alloc_size = 0;
    }
 
    if (image->needs_storage_surface_state) {
-      struct GENX(RENDER_SURFACE_STATE) surface_state =
-         surface_state_for_image_view(iview, device, pCreateInfo,
-                                      VK_IMAGE_USAGE_STORAGE_BIT);
-
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->storage_surface_state.map,
-                                      &surface_state);
-      if (!device->info.has_llc)
-         anv_state_clflush(iview->storage_surface_state);
+      genX(fill_image_surface_state)(device, iview->storage_surface_state.map,
+                                     iview, pCreateInfo,
+                                     VK_IMAGE_USAGE_STORAGE_BIT);
    } else {
       iview->storage_surface_state.alloc_size = 0;
    }
