@@ -555,11 +555,11 @@ struct isl_channel_layout {
 };
 
 /**
- *   Each format has 3D block extent (width, height, depth). The block extent
- *   of compressed formats is that of the format's compression block. For
- *   example, the block extent of ISL_FORMAT_ETC2_RGB8 is (w=4, h=4, d=1).
- *   The block extent of uncompressed pixel formats, such as
- *   ISL_FORMAT_R8G8B8A8_UNORM, is is (w=1, h=1, d=1).
+ * Each format has 3D block extent (width, height, depth). The block extent of
+ * compressed formats is that of the format's compression block. For example,
+ * the block extent of ISL_FORMAT_ETC2_RGB8 is (w=4, h=4, d=1).  The block
+ * extent of uncompressed pixel formats, such as ISL_FORMAT_R8G8B8A8_UNORM, is
+ * is (w=1, h=1, d=1).
  */
 struct isl_format_layout {
    enum isl_format format;
