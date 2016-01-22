@@ -120,7 +120,7 @@ t_assert_gen4_3d_layer(const struct isl_surf *surf,
 }
 
 static void
-test_bdw_2d_r8g8b8a8_unorm_512x512_a1_s1_noaux_y0(void)
+test_bdw_2d_r8g8b8a8_unorm_512x512_array01_samples01_noaux_tiley0(void)
 {
    bool ok;
 
@@ -162,7 +162,7 @@ test_bdw_2d_r8g8b8a8_unorm_512x512_a1_s1_noaux_y0(void)
 }
 
 static void
-test_bdw_2d_r8g8b8a8_unorm_1024x1024_a6_s1_noaux_y0(void)
+test_bdw_2d_r8g8b8a8_unorm_1024x1024_array06_samples01_noaux_tiley0(void)
 {
    bool ok;
 
@@ -255,7 +255,7 @@ int main(void)
    /* FINISHME: Add tests for npot sizes */
    /* FINISHME: Add tests for 1D surfaces */
 
-   test_bdw_2d_r8g8b8a8_unorm_512x512_a1_s1_noaux_y0();
-   test_bdw_2d_r8g8b8a8_unorm_1024x1024_a6_s1_noaux_y0();
+   test_bdw_2d_r8g8b8a8_unorm_512x512_array01_samples01_noaux_tiley0();
+   test_bdw_2d_r8g8b8a8_unorm_1024x1024_array06_samples01_noaux_tiley0();
    test_bdw_3d_r8g8b8a8_unorm_256x256x256_levels09_tiley0();
 }
