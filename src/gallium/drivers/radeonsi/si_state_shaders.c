@@ -298,7 +298,14 @@ static void si_shader_gs(struct si_shader *shader)
 		       S_00B22C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 }
 
-static void si_shader_vs(struct si_shader *shader)
+/**
+ * Compute the state for \p shader, which will run as a vertex shader on the
+ * hardware.
+ *
+ * If \p gs is non-NULL, it points to the geometry shader for which this shader
+ * is the copy shader.
+ */
+static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 {
 	struct si_pm4_state *pm4;
 	unsigned num_sgprs, num_user_sgprs;
@@ -313,15 +320,21 @@ static void si_shader_vs(struct si_shader *shader)
 	if (!pm4)
 		return;
 
-	/* If this is the GS copy shader, the GS state writes this register.
-	 * Otherwise, the VS state writes it.
+	/* We always write VGT_GS_MODE in the VS state, because every switch
+	 * between different shader pipelines involving a different GS or no
+	 * GS at all involves a switch of the VS (different GS use different
+	 * copy shaders). On the other hand, when the API switches from a GS to
+	 * no GS and then back to the same GS used originally, the GS state is
+	 * not sent again.
 	 */
-	if (!shader->is_gs_copy_shader) {
+	if (!gs) {
 		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE,
 			       S_028A40_MODE(enable_prim_id ? V_028A40_GS_SCENARIO_A : 0));
 		si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, enable_prim_id);
-	} else
+	} else {
+		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, si_vgt_gs_mode(gs));
 		si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, 0);
+	}
 
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
@@ -547,7 +560,7 @@ static void si_shader_init_pm4_state(struct si_shader *shader)
 		else if (shader->key.vs.as_es)
 			si_shader_es(shader);
 		else
-			si_shader_vs(shader);
+			si_shader_vs(shader, NULL);
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		si_shader_hs(shader);
@@ -556,11 +569,11 @@ static void si_shader_init_pm4_state(struct si_shader *shader)
 		if (shader->key.tes.as_es)
 			si_shader_es(shader);
 		else
-			si_shader_vs(shader);
+			si_shader_vs(shader, NULL);
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		si_shader_gs(shader);
-		si_shader_vs(shader->gs_copy_shader);
+		si_shader_vs(shader->gs_copy_shader, shader);
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		si_shader_ps(shader);
