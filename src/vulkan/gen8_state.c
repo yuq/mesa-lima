@@ -372,6 +372,8 @@ genX(image_view_init)(struct anv_image_view *iview,
 
       GENX(RENDER_SURFACE_STATE_pack)(NULL, iview->storage_surface_state.map,
                                       &surface_state);
+      if (!device->info.has_llc)
+         anv_state_clflush(iview->storage_surface_state);
    } else {
       iview->storage_surface_state.alloc_size = 0;
    }
