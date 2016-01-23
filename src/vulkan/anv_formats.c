@@ -420,7 +420,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
     VkImageType                                 type,
     VkImageTiling                               tiling,
     VkImageUsageFlags                           usage,
-    VkImageCreateFlags                          flags,
+    VkImageCreateFlags                          createFlags,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
@@ -479,7 +479,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
        type == VK_IMAGE_TYPE_2D &&
        (format_feature_flags & (VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
                                 VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) &&
-       !(flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) &&
+       !(createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) &&
        !(usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
       sampleCounts = isl_device_get_sample_counts(&physical_device->isl_dev);
    }
