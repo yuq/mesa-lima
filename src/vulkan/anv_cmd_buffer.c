@@ -237,6 +237,9 @@ static VkResult anv_create_cmd_buffer(
    cmd_buffer->level = level;
    cmd_buffer->state.attachments = NULL;
 
+   /* 0 isn't a valid config.  This ensures that we always configure L3$. */
+   cmd_buffer->state.current_l3_config = 0;
+
    result = anv_cmd_buffer_init_batch_bo_chain(cmd_buffer);
    if (result != VK_SUCCESS)
       goto fail;
