@@ -48,7 +48,7 @@ gen8_choose_msaa_layout(const struct isl_device *dev,
     *
     * As usual, though, stencil is special.
     */
-   if (!isl_tiling_is_std_y(tiling) && !isl_surf_usage_is_stencil(info->usage))
+   if (!isl_tiling_is_any_y(tiling) && !isl_surf_usage_is_stencil(info->usage))
       return false;
 
    /* From the Broadwell PRM >> Volume2d: Command Structures >>
