@@ -705,23 +705,21 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 }
 
 /* Select the hw shader variant depending on the current state. */
-static int si_shader_select(struct pipe_context *ctx,
-			    struct si_shader_ctx_state *state)
+static int si_shader_select_with_key(struct pipe_context *ctx,
+				     struct si_shader_ctx_state *state,
+				     union si_shader_key *key)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_shader_selector *sel = state->cso;
 	struct si_shader *current = state->current;
-	union si_shader_key key;
 	struct si_shader *iter, *shader = NULL;
 	int r;
-
-	si_shader_selector_key(ctx, sel, &key);
 
 	/* Check if we don't need to change anything.
 	 * This path is also used for most shaders that don't need multiple
 	 * variants, it will cost just a computation of the key and this
 	 * test. */
-	if (likely(current && memcmp(&current->key, &key, sizeof(key)) == 0))
+	if (likely(current && memcmp(&current->key, key, sizeof(*key)) == 0))
 		return 0;
 
 	pipe_mutex_lock(sel->mutex);
@@ -730,7 +728,7 @@ static int si_shader_select(struct pipe_context *ctx,
 	for (iter = sel->first_variant; iter; iter = iter->next_variant) {
 		/* Don't check the "current" shader. We checked it above. */
 		if (current != iter &&
-		    memcmp(&iter->key, &key, sizeof(key)) == 0) {
+		    memcmp(&iter->key, key, sizeof(*key)) == 0) {
 			state->current = iter;
 			pipe_mutex_unlock(sel->mutex);
 			return 0;
@@ -744,7 +742,7 @@ static int si_shader_select(struct pipe_context *ctx,
 		return -ENOMEM;
 	}
 	shader->selector = sel;
-	shader->key = key;
+	shader->key = *key;
 
 	r = si_shader_create(sctx->screen, sctx->tm, shader, &sctx->b.debug);
 	if (unlikely(r)) {
@@ -766,6 +764,15 @@ static int si_shader_select(struct pipe_context *ctx,
 	state->current = shader;
 	pipe_mutex_unlock(sel->mutex);
 	return 0;
+}
+
+static int si_shader_select(struct pipe_context *ctx,
+			    struct si_shader_ctx_state *state)
+{
+	union si_shader_key key;
+
+	si_shader_selector_key(ctx, state->cso, &key);
+	return si_shader_select_with_key(ctx, state, &key);
 }
 
 static void *si_create_shader_selector(struct pipe_context *ctx,
@@ -888,8 +895,27 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	/* Pre-compilation. */
 	if (sscreen->b.debug_flags & DBG_PRECOMPILE) {
 		struct si_shader_ctx_state state = {sel};
+		union si_shader_key key;
 
-		if (si_shader_select(ctx, &state)) {
+		memset(&key, 0, sizeof(key));
+
+		/* Set reasonable defaults, so that the shader key doesn't
+		 * cause any code to be eliminated.
+		 */
+		switch (sel->type) {
+		case PIPE_SHADER_TESS_CTRL:
+			key.tcs.prim_mode = PIPE_PRIM_TRIANGLES;
+			break;
+		case PIPE_SHADER_FRAGMENT:
+			key.ps.alpha_func = PIPE_FUNC_ALWAYS;
+			for (i = 0; i < 8; i++)
+				if (sel->info.colors_written & (1 << i))
+					key.ps.spi_shader_col_format |=
+						V_028710_SPI_SHADER_FP16_ABGR << (i * 4);
+			break;
+		}
+
+		if (si_shader_select_with_key(ctx, &state, &key)) {
 			fprintf(stderr, "radeonsi: can't create a shader\n");
 			tgsi_free_tokens(sel->tokens);
 			FREE(sel);
