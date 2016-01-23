@@ -1414,6 +1414,9 @@ framebuffer_parameteri(struct gl_context *ctx, struct gl_framebuffer *fb,
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "%s(pname=0x%x)", func, pname);
    }
+
+   invalidate_framebuffer(fb);
+   ctx->NewState |= _NEW_BUFFERS;
 }
 
 void GLAPIENTRY
