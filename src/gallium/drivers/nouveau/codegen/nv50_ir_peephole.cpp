@@ -1539,6 +1539,7 @@ private:
    void handleCVT_CVT(Instruction *);
    void handleCVT_EXTBF(Instruction *);
    void handleSUCLAMP(Instruction *);
+   void handleNEG(Instruction *);
 
    BuildUtil bld;
 };
@@ -2011,6 +2012,34 @@ AlgebraicOpt::handleSUCLAMP(Instruction *insn)
    insn->setSrc(0, add->getSrc(s));
 }
 
+// NEG(AND(SET, 1)) -> SET
+void
+AlgebraicOpt::handleNEG(Instruction *i) {
+   Instruction *src = i->getSrc(0)->getInsn();
+   ImmediateValue imm;
+   int b;
+
+   if (isFloatType(i->sType) || !src || src->op != OP_AND)
+      return;
+
+   if (src->src(0).getImmediate(imm))
+      b = 1;
+   else if (src->src(1).getImmediate(imm))
+      b = 0;
+   else
+      return;
+
+   if (!imm.isInteger(1))
+      return;
+
+   Instruction *set = src->getSrc(b)->getInsn();
+   if ((set->op == OP_SET || set->op == OP_SET_AND ||
+       set->op == OP_SET_OR || set->op == OP_SET_XOR) &&
+       !isFloatType(set->dType)) {
+      i->def(0).replace(set->getDef(0), false);
+   }
+}
+
 bool
 AlgebraicOpt::visit(BasicBlock *bb)
 {
@@ -2047,6 +2076,9 @@ AlgebraicOpt::visit(BasicBlock *bb)
          break;
       case OP_SUCLAMP:
          handleSUCLAMP(i);
+         break;
+      case OP_NEG:
+         handleNEG(i);
          break;
       default:
          break;
