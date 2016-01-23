@@ -187,7 +187,7 @@ anv_image_create(VkDevice _device,
 
    anv_assert(pCreateInfo->mipLevels > 0);
    anv_assert(pCreateInfo->arrayLayers > 0);
-   anv_assert(pCreateInfo->samples == VK_SAMPLE_COUNT_1_BIT);
+   anv_assert(pCreateInfo->samples > 0);
    anv_assert(pCreateInfo->extent.width > 0);
    anv_assert(pCreateInfo->extent.height > 0);
    anv_assert(pCreateInfo->extent.depth > 0);
