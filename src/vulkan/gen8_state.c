@@ -270,7 +270,7 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
       #else
          /* Same as SURFTYPE_2D */
          template.MinimumArrayElement = range->baseArrayLayer;
-         template.Depth = range->layerCount - 1;
+         template.Depth = range->layerCount / 6 - 1;
          template.RenderTargetViewExtent = template.Depth;
       #endif
       break;
