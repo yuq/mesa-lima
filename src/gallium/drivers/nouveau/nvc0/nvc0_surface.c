@@ -1043,6 +1043,8 @@ nvc0_blitctx_pre_blit(struct nvc0_blitctx *ctx)
 
    ctx->saved.fb.width = nvc0->framebuffer.width;
    ctx->saved.fb.height = nvc0->framebuffer.height;
+   ctx->saved.fb.samples = nvc0->framebuffer.samples;
+   ctx->saved.fb.layers = nvc0->framebuffer.layers;
    ctx->saved.fb.nr_cbufs = nvc0->framebuffer.nr_cbufs;
    ctx->saved.fb.cbufs[0] = nvc0->framebuffer.cbufs[0];
    ctx->saved.fb.zsbuf = nvc0->framebuffer.zsbuf;
@@ -1110,6 +1112,8 @@ nvc0_blitctx_post_blit(struct nvc0_blitctx *blit)
 
    nvc0->framebuffer.width = blit->saved.fb.width;
    nvc0->framebuffer.height = blit->saved.fb.height;
+   nvc0->framebuffer.samples = blit->saved.fb.samples;
+   nvc0->framebuffer.layers = blit->saved.fb.layers;
    nvc0->framebuffer.nr_cbufs = blit->saved.fb.nr_cbufs;
    nvc0->framebuffer.cbufs[0] = blit->saved.fb.cbufs[0];
    nvc0->framebuffer.zsbuf = blit->saved.fb.zsbuf;

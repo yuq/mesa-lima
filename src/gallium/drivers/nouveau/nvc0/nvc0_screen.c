@@ -52,6 +52,12 @@ nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
    if (!(0x117 & (1 << sample_count))) /* 0, 1, 2, 4 or 8 */
       return false;
 
+   /* Short-circuit the rest of the logic -- this is used by the state tracker
+    * to determine valid MS levels in a no-attachments scenario.
+    */
+   if (format == PIPE_FORMAT_NONE && bindings & PIPE_BIND_RENDER_TARGET)
+      return true;
+
    if (!util_format_is_supported(format, bindings))
       return false;
 
@@ -218,6 +224,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_QUERY_BUFFER_OBJECT:
    case PIPE_CAP_INVALIDATE_BUFFER:
    case PIPE_CAP_STRING_MARKER:
+   case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
       return 1;
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
       return (class_3d >= NVE4_3D_CLASS) ? 1 : 0;
@@ -251,7 +258,6 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_PCI_BUS:
    case PIPE_CAP_PCI_DEVICE:
    case PIPE_CAP_PCI_FUNCTION:
-   case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
