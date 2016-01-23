@@ -117,6 +117,11 @@ anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
 
    memset(&state->descriptors, 0, sizeof(state->descriptors));
    memset(&state->push_constants, 0, sizeof(state->push_constants));
+   memset(state->binding_tables, 0, sizeof(state->binding_tables));
+   memset(state->samplers, 0, sizeof(state->samplers));
+
+   /* 0 isn't a valid config.  This ensures that we always configure L3$. */
+   cmd_buffer->state.current_l3_config = 0;
 
    state->dirty = ~0;
    state->vb_dirty = 0;
@@ -236,9 +241,6 @@ static VkResult anv_create_cmd_buffer(
    cmd_buffer->pool = pool;
    cmd_buffer->level = level;
    cmd_buffer->state.attachments = NULL;
-
-   /* 0 isn't a valid config.  This ensures that we always configure L3$. */
-   cmd_buffer->state.current_l3_config = 0;
 
    result = anv_cmd_buffer_init_batch_bo_chain(cmd_buffer);
    if (result != VK_SUCCESS)
