@@ -429,6 +429,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
    VkExtent3D maxExtent;
    uint32_t maxMipLevels;
    uint32_t maxArraySize;
+   VkSampleCountFlags sampleCounts = VK_SAMPLE_COUNT_1_BIT;
 
    anv_physical_device_get_format_properties(physical_device, format,
                                              &format_props);
@@ -453,6 +454,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       maxExtent.depth = 1;
       maxMipLevels = 15; /* log2(maxWidth) + 1 */
       maxArraySize = 2048;
+      sampleCounts = VK_SAMPLE_COUNT_1_BIT;
       break;
    case VK_IMAGE_TYPE_2D:
       /* FINISHME: Does this really differ for cube maps? The documentation
@@ -471,6 +473,15 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       maxMipLevels = 12; /* log2(maxWidth) + 1 */
       maxArraySize = 1;
       break;
+   }
+
+   if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+       type == VK_IMAGE_TYPE_2D &&
+       (format_feature_flags & (VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+                                VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) &&
+       !(flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) &&
+       !(usage & VK_IMAGE_USAGE_STORAGE_BIT)) {
+      sampleCounts = isl_device_get_sample_counts(&physical_device->isl_dev);
    }
 
    if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
@@ -529,9 +540,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       .maxExtent = maxExtent,
       .maxMipLevels = maxMipLevels,
       .maxArrayLayers = maxArraySize,
-
-      /* FINISHME: Support multisampling */
-      .sampleCounts = VK_SAMPLE_COUNT_1_BIT,
+      .sampleCounts = sampleCounts,
 
       /* FINISHME: Accurately calculate
        * VkImageFormatProperties::maxResourceSize.
