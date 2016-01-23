@@ -35,6 +35,11 @@
       __VA_ARGS__ \
    }
 
+/* HINT: For array formats, the ISL name should match the VK name.  For
+ * packed formats, they should have the channels in reverse order from each
+ * other.  The reason for this is that, for packed formats, the ISL (and
+ * bspec) names are in LSB -> MSB order while VK formats are MSB -> LSB.
+ */
 static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_UNDEFINED,               ISL_FORMAT_RAW),
    fmt(VK_FORMAT_R4G4_UNORM_PACK8,        ISL_FORMAT_UNSUPPORTED),
