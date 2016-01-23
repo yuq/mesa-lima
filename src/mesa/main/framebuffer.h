@@ -26,7 +26,7 @@
 #ifndef FRAMEBUFFER_H
 #define FRAMEBUFFER_H
 
-#include "glheader.h"
+#include "mtypes.h"
 
 struct gl_config;
 struct gl_context;
