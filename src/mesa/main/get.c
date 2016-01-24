@@ -147,14 +147,11 @@ enum value_extra {
    EXTRA_VALID_CLIP_DISTANCE,
    EXTRA_FLUSH_CURRENT,
    EXTRA_GLSL_130,
-   EXTRA_EXT_UBO_GS,
-   EXTRA_EXT_ATOMICS_GS,
-   EXTRA_EXT_SHADER_IMAGE_GS,
+   EXTRA_EXT_UBO_GS4,
+   EXTRA_EXT_ATOMICS_GS4,
+   EXTRA_EXT_SHADER_IMAGE_GS4,
    EXTRA_EXT_ATOMICS_TESS,
    EXTRA_EXT_SHADER_IMAGE_TESS,
-   EXTRA_EXT_SSBO_GS,
-   EXTRA_EXT_FB_NO_ATTACH_GS,
-   EXTRA_EXT_ES_GS,
 };
 
 #define NO_EXTRA NULL
@@ -311,7 +308,7 @@ static const int extra_ARB_transform_feedback2_api_es3[] = {
 };
 
 static const int extra_ARB_uniform_buffer_object_and_geometry_shader[] = {
-   EXTRA_EXT_UBO_GS,
+   EXTRA_EXT_UBO_GS4,
    EXTRA_END
 };
 
@@ -346,12 +343,12 @@ static const int extra_EXT_texture_array_es3[] = {
 };
 
 static const int extra_ARB_shader_atomic_counters_and_geometry_shader[] = {
-   EXTRA_EXT_ATOMICS_GS,
+   EXTRA_EXT_ATOMICS_GS4,
    EXTRA_END
 };
 
 static const int extra_ARB_shader_image_load_store_and_geometry_shader[] = {
-   EXTRA_EXT_SHADER_IMAGE_GS,
+   EXTRA_EXT_SHADER_IMAGE_GS4,
    EXTRA_END
 };
 
@@ -375,29 +372,6 @@ static const int extra_ARB_compute_shader_es31[] = {
 static const int extra_ARB_shader_storage_buffer_object_es31[] = {
    EXT(ARB_shader_storage_buffer_object),
    EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_shader_storage_buffer_object_and_geometry_shader[] = {
-   EXTRA_EXT_SSBO_GS,
-   EXTRA_END
-};
-
-
-static const int extra_ARB_framebuffer_no_attachments_and_geometry_shader[] = {
-   EXTRA_EXT_FB_NO_ATTACH_GS,
-   EXTRA_END
-};
-
-static const int extra_ARB_viewport_array_or_oes_geometry_shader[] = {
-   EXT(ARB_viewport_array),
-   EXTRA_EXT_ES_GS,
-   EXTRA_END
-};
-
-static const int extra_ARB_gpu_shader5_or_oes_geometry_shader[] = {
-   EXT(ARB_gpu_shader5),
-   EXTRA_EXT_ES_GS,
    EXTRA_END
 };
 
@@ -479,12 +453,6 @@ static const int extra_gl32_es3[] = {
     EXTRA_VERSION_32,
     EXTRA_API_ES3,
     EXTRA_END,
-};
-
-static const int extra_version_32_OES_geometry_shader[] = {
-    EXTRA_VERSION_32,
-    EXTRA_EXT_ES_GS,
-    EXTRA_END
 };
 
 static const int extra_gl40_ARB_sample_shading[] = {
@@ -1186,17 +1154,17 @@ check_extra(struct gl_context *ctx, const char *func, const struct value_desc *d
          if (ctx->Const.GLSLVersion >= 130)
             api_found = GL_TRUE;
 	 break;
-      case EXTRA_EXT_UBO_GS:
+      case EXTRA_EXT_UBO_GS4:
          api_check = GL_TRUE;
          api_found = (ctx->Extensions.ARB_uniform_buffer_object &&
                       _mesa_has_geometry_shaders(ctx));
          break;
-      case EXTRA_EXT_ATOMICS_GS:
+      case EXTRA_EXT_ATOMICS_GS4:
          api_check = GL_TRUE;
          api_found = (ctx->Extensions.ARB_shader_atomic_counters &&
                       _mesa_has_geometry_shaders(ctx));
          break;
-      case EXTRA_EXT_SHADER_IMAGE_GS:
+      case EXTRA_EXT_SHADER_IMAGE_GS4:
          api_check = GL_TRUE;
          api_found = (ctx->Extensions.ARB_shader_image_load_store &&
                       _mesa_has_geometry_shaders(ctx));
@@ -1210,20 +1178,6 @@ check_extra(struct gl_context *ctx, const char *func, const struct value_desc *d
          api_check = GL_TRUE;
          api_found = ctx->Extensions.ARB_shader_image_load_store &&
                      _mesa_has_tessellation(ctx);
-         break;
-      case EXTRA_EXT_SSBO_GS:
-         api_check = GL_TRUE;
-         api_found = (ctx->Extensions.ARB_shader_storage_buffer_object &&
-                      _mesa_has_geometry_shaders(ctx));
-         break;
-      case EXTRA_EXT_FB_NO_ATTACH_GS:
-         api_check = GL_TRUE;
-         api_found = (ctx->Extensions.ARB_framebuffer_no_attachments &&
-                      _mesa_has_geometry_shaders(ctx));
-         break;
-      case EXTRA_EXT_ES_GS:
-         api_check = GL_TRUE;
-         api_found = _mesa_has_OES_geometry_shader(ctx);
          break;
       case EXTRA_END:
 	 break;

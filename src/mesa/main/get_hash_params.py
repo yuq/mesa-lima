@@ -499,37 +499,6 @@ descriptor=[
 { "apis": ["GL_CORE", "GLES31"], "params": [
 # GL_ARB_draw_indirect / GLES 3.1
   [ "DRAW_INDIRECT_BUFFER_BINDING", "LOC_CUSTOM, TYPE_INT, 0, extra_ARB_draw_indirect" ],
-
-# GL 3.2 / GL OES_geometry_shader
-  [ "MAX_GEOMETRY_INPUT_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxInputComponents), extra_version_32_OES_geometry_shader" ],
-  [ "MAX_GEOMETRY_OUTPUT_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents), extra_version_32_OES_geometry_shader" ],
-  [ "MAX_GEOMETRY_TEXTURE_IMAGE_UNITS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits), extra_version_32_OES_geometry_shader" ],
-  [ "MAX_GEOMETRY_OUTPUT_VERTICES", "CONTEXT_INT(Const.MaxGeometryOutputVertices), extra_version_32_OES_geometry_shader" ],
-  [ "MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS", "CONTEXT_INT(Const.MaxGeometryTotalOutputComponents), extra_version_32_OES_geometry_shader" ],
-  [ "MAX_GEOMETRY_UNIFORM_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxUniformComponents), extra_version_32_OES_geometry_shader" ],
-
-# GL_ARB_shader_image_load_store / geometry shader
-  [ "MAX_GEOMETRY_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxImageUniforms), extra_ARB_shader_image_load_store_and_geometry_shader" ],
-
-# GL_ARB_shader_atomic_counters / geometry shader
-  [ "MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers), extra_ARB_shader_atomic_counters_and_geometry_shader " ],
-  [ "MAX_GEOMETRY_ATOMIC_COUNTERS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicCounters), extra_ARB_shader_atomic_counters_and_geometry_shader" ],
-
-# GL_ARB_shader_storage_buffer_object / geometry shader
-  [ "MAX_GEOMETRY_SHADER_STORAGE_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks), extra_ARB_shader_storage_buffer_object_and_geometry_shader" ],
-
-# GL_ARB_uniform_buffer_object / geometry shader
-  [ "MAX_GEOMETRY_UNIFORM_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxUniformBlocks), extra_ARB_uniform_buffer_object_and_geometry_shader" ],
-  [ "MAX_COMBINED_GEOMETRY_UNIFORM_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxCombinedUniformComponents), extra_ARB_uniform_buffer_object_and_geometry_shader" ],
-
-# GL_ARB_framebuffer_no_attachments / geometry shader
-  [ "MAX_FRAMEBUFFER_LAYERS", "CONTEXT_INT(Const.MaxFramebufferLayers), extra_ARB_framebuffer_no_attachments_and_geometry_shader" ],
-
-# GL_ARB_viewport_array / GL_OES_geometry_shader
-  [ "LAYER_PROVOKING_VERTEX", "CONTEXT_ENUM(Light.ProvokingVertex), extra_ARB_viewport_array_or_oes_geometry_shader" ],
-
-# GL_ARB_gpu_shader5 / GL_OES_geometry_shader
-  [ "MAX_GEOMETRY_SHADER_INVOCATIONS", "CONST(MAX_GEOMETRY_SHADER_INVOCATIONS), extra_ARB_gpu_shader5_or_oes_geometry_shader" ],
 ]},
 
 # Remaining enums are only in OpenGL
@@ -821,9 +790,20 @@ descriptor=[
 
 # GL 3.2
   [ "CONTEXT_PROFILE_MASK", "CONTEXT_INT(Const.ProfileMask), extra_version_32" ],
+  [ "MAX_GEOMETRY_INPUT_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxInputComponents), extra_version_32" ],
+  [ "MAX_GEOMETRY_OUTPUT_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents), extra_version_32" ],
+  [ "MAX_GEOMETRY_TEXTURE_IMAGE_UNITS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits), extra_version_32" ],
+  [ "MAX_GEOMETRY_OUTPUT_VERTICES", "CONTEXT_INT(Const.MaxGeometryOutputVertices), extra_version_32" ],
+  [ "MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS", "CONTEXT_INT(Const.MaxGeometryTotalOutputComponents), extra_version_32" ],
+  [ "MAX_GEOMETRY_UNIFORM_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxUniformComponents), extra_version_32" ],
 
 # GL_ARB_robustness
   [ "RESET_NOTIFICATION_STRATEGY_ARB", "CONTEXT_ENUM(Const.ResetStrategy), NO_EXTRA" ],
+
+
+# GL_ARB_uniform_buffer_object
+  [ "MAX_GEOMETRY_UNIFORM_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxUniformBlocks), extra_ARB_uniform_buffer_object_and_geometry_shader" ],
+  [ "MAX_COMBINED_GEOMETRY_UNIFORM_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxCombinedUniformComponents), extra_ARB_uniform_buffer_object_and_geometry_shader" ],
 
 # GL_ARB_timer_query
   [ "TIMESTAMP", "LOC_CUSTOM, TYPE_INT64, 0, extra_ARB_timer_query" ],
@@ -837,14 +817,23 @@ descriptor=[
 # GL_ARB_texture_gather
   [ "MAX_PROGRAM_TEXTURE_GATHER_COMPONENTS_ARB", "CONTEXT_INT(Const.MaxProgramTextureGatherComponents), extra_ARB_texture_gather"],
 
+# GL_ARB_shader_atomic_counters
+  [ "MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers), extra_ARB_shader_atomic_counters_and_geometry_shader" ],
+  [ "MAX_GEOMETRY_ATOMIC_COUNTERS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicCounters), extra_ARB_shader_atomic_counters_and_geometry_shader" ],
+
 # GL_ARB_shader_image_load_store
   [ "MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS", "CONTEXT_INT(Const.MaxCombinedShaderOutputResources), extra_ARB_shader_image_load_store" ],
   [ "MAX_IMAGE_SAMPLES", "CONTEXT_INT(Const.MaxImageSamples), extra_ARB_shader_image_load_store" ],
+  [ "MAX_GEOMETRY_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxImageUniforms), extra_ARB_shader_image_load_store_and_geometry_shader"],
+
+# GL_ARB_framebuffer_no_attachments
+  ["MAX_FRAMEBUFFER_LAYERS", "CONTEXT_INT(Const.MaxFramebufferLayers), extra_ARB_framebuffer_no_attachments"],
 
 # GL_EXT_polygon_offset_clamp
   [ "POLYGON_OFFSET_CLAMP_EXT", "CONTEXT_FLOAT(Polygon.OffsetClamp), extra_EXT_polygon_offset_clamp" ],
 
 # GL_ARB_shader_storage_buffer_object
+  [ "MAX_GEOMETRY_SHADER_STORAGE_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks), extra_ARB_shader_storage_buffer_object" ],
   [ "MAX_TESS_CONTROL_SHADER_STORAGE_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_TESS_CTRL].MaxShaderStorageBlocks), extra_ARB_shader_storage_buffer_object" ],
   [ "MAX_TESS_EVALUATION_SHADER_STORAGE_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_TESS_EVAL].MaxShaderStorageBlocks), extra_ARB_shader_storage_buffer_object" ],
 ]},
@@ -858,6 +847,7 @@ descriptor=[
   [ "MAX_VIEWPORTS", "CONTEXT_INT(Const.MaxViewports), extra_ARB_viewport_array" ],
   [ "VIEWPORT_SUBPIXEL_BITS", "CONTEXT_INT(Const.ViewportSubpixelBits), extra_ARB_viewport_array" ],
   [ "VIEWPORT_BOUNDS_RANGE", "CONTEXT_FLOAT2(Const.ViewportBounds), extra_ARB_viewport_array" ],
+  [ "LAYER_PROVOKING_VERTEX", "CONTEXT_ENUM(Const.LayerAndVPIndexProvokingVertex), extra_ARB_viewport_array" ],
   [ "VIEWPORT_INDEX_PROVOKING_VERTEX", "CONTEXT_ENUM(Const.LayerAndVPIndexProvokingVertex), extra_ARB_viewport_array" ],
 
 # GL_ARB_gpu_shader5
