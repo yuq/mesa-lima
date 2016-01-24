@@ -2287,7 +2287,6 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct lp_build_context *base = &bld_base->base;
-	LLVMValueRef args[9];
 	int i;
 
 	/* Clamp color */
@@ -2309,27 +2308,46 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 		color[3] = si_scale_alpha_by_sample_mask(bld_base, color[3]);
 
 	/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
-	if (index == 0 &&
-	    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
-		for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
+	if (si_shader_ctx->shader->key.ps.last_cbuf > 0) {
+		LLVMValueRef args[8][9];
+		int c, last = -1;
+
+		/* Get the export arguments, also find out what the last one is. */
+		for (c = 0; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
 			si_llvm_init_export_args(bld_base, color,
-						 V_008DFC_SQ_EXP_MRT + c, args);
+						 V_008DFC_SQ_EXP_MRT + c, args[c]);
+			if (args[c][0] != bld_base->uint_bld.zero)
+				last = c;
+		}
+
+		/* Emit all exports. */
+		for (c = 0; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
+			if (is_last && last == c) {
+				args[c][1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
+				args[c][2] = bld_base->uint_bld.one; /* DONE bit */
+			} else if (args[c][0] == bld_base->uint_bld.zero)
+				continue; /* unnecessary NULL export */
+
 			lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
 					   LLVMVoidTypeInContext(base->gallivm->context),
-					   args, 9, 0);
+					   args[c], 9, 0);
 		}
-	}
+	} else {
+		LLVMValueRef args[9];
 
-	/* Export */
-	si_llvm_init_export_args(bld_base, color, V_008DFC_SQ_EXP_MRT + index,
-				 args);
-	if (is_last) {
-		args[1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
-		args[2] = bld_base->uint_bld.one; /* DONE bit */
+		/* Export */
+		si_llvm_init_export_args(bld_base, color, V_008DFC_SQ_EXP_MRT + index,
+					 args);
+		if (is_last) {
+			args[1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
+			args[2] = bld_base->uint_bld.one; /* DONE bit */
+		} else if (args[0] == bld_base->uint_bld.zero)
+			return; /* unnecessary NULL export */
+
+		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+				   LLVMVoidTypeInContext(base->gallivm->context),
+				   args, 9, 0);
 	}
-	lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-			   LLVMVoidTypeInContext(base->gallivm->context),
-			   args, 9, 0);
 }
 
 static void si_export_null(struct lp_build_tgsi_context *bld_base)
@@ -2364,19 +2382,43 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 	int last_color_export = -1;
 	int i;
 
-	/* If there are no outputs, add a dummy export. */
-	if (!info->num_outputs) {
-		si_export_null(bld_base);
-		return;
-	}
-
 	/* Determine the last export. If MRTZ is present, it's always last.
 	 * Otherwise, find the last color export.
 	 */
-	if (!info->writes_z && !info->writes_stencil && !info->writes_samplemask)
-		for (i = 0; i < info->num_outputs; i++)
-			if (info->output_semantic_name[i] == TGSI_SEMANTIC_COLOR)
+	if (!info->writes_z && !info->writes_stencil && !info->writes_samplemask) {
+		unsigned spi_format = shader->key.ps.spi_shader_col_format;
+
+		/* Don't export NULL and return if alpha-test is enabled. */
+		if (shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS &&
+		    shader->key.ps.alpha_func != PIPE_FUNC_NEVER &&
+		    (spi_format & 0xf) == 0)
+			spi_format |= V_028714_SPI_SHADER_32_AR;
+
+		for (i = 0; i < info->num_outputs; i++) {
+			unsigned index = info->output_semantic_index[i];
+
+			if (info->output_semantic_name[i] != TGSI_SEMANTIC_COLOR)
+				continue;
+
+			/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
+			if (shader->key.ps.last_cbuf > 0) {
+				/* Just set this if any of the colorbuffers are enabled. */
+				if (spi_format &
+				    ((1llu << (4 * (shader->key.ps.last_cbuf + 1))) - 1))
+					last_color_export = i;
+				continue;
+			}
+
+			if ((spi_format >> (index * 4)) & 0xf)
 				last_color_export = i;
+		}
+
+		/* If there are no outputs, export NULL. */
+		if (last_color_export == -1) {
+			si_export_null(bld_base);
+			return;
+		}
+	}
 
 	for (i = 0; i < info->num_outputs; i++) {
 		unsigned semantic_name = info->output_semantic_name[i];
