@@ -570,6 +570,51 @@ TRACE_SHADER_STATE(tes)
 
 
 static inline void *
+trace_context_create_compute_state(struct pipe_context *_pipe,
+                                   const struct pipe_compute_state *state)
+{
+   struct trace_context *tr_ctx = trace_context(_pipe);
+   struct pipe_context *pipe = tr_ctx->pipe;
+   void * result;
+
+   trace_dump_call_begin("pipe_context", "create_compute_state");
+   trace_dump_arg(ptr, pipe);
+   trace_dump_arg(compute_state, state);
+   result = pipe->create_compute_state(pipe, state);
+   trace_dump_ret(ptr, result);
+   trace_dump_call_end();
+   return result;
+}
+
+static inline void
+trace_context_bind_compute_state(struct pipe_context *_pipe,
+                                 void *state)
+{
+   struct trace_context *tr_ctx = trace_context(_pipe);
+   struct pipe_context *pipe = tr_ctx->pipe;
+
+   trace_dump_call_begin("pipe_context", "bind_compute_state");
+   trace_dump_arg(ptr, pipe);
+   trace_dump_arg(ptr, state);
+   pipe->bind_compute_state(pipe, state);
+   trace_dump_call_end();
+}
+
+static inline void
+trace_context_delete_compute_state(struct pipe_context *_pipe,
+                                   void *state)
+{
+   struct trace_context *tr_ctx = trace_context(_pipe);
+   struct pipe_context *pipe = tr_ctx->pipe;
+
+   trace_dump_call_begin("pipe_context", "delete_compute_state");
+   trace_dump_arg(ptr, pipe);
+   trace_dump_arg(ptr, state);
+   pipe->delete_compute_state(pipe, state);
+   trace_dump_call_end();
+}
+
+static inline void *
 trace_context_create_vertex_elements_state(struct pipe_context *_pipe,
                                            unsigned num_elements,
                                            const struct  pipe_vertex_element *elements)
@@ -1638,6 +1683,32 @@ static void trace_context_set_shader_buffers(struct pipe_context *_context,
       FREE(_buffers);
 }
 
+static void trace_context_launch_grid(struct pipe_context *_pipe,
+                                      const struct pipe_grid_info *info)
+{
+   struct trace_context *tr_ctx = trace_context(_pipe);
+   struct pipe_context *pipe = tr_ctx->pipe;
+
+   trace_dump_call_begin("pipe_context", "launch_grid");
+
+   trace_dump_arg(ptr,  pipe);
+   trace_dump_arg(grid_info, info);
+
+   trace_dump_trace_flush();
+
+   if (info->indirect) {
+      struct pipe_grid_info _info;
+
+      memcpy(&_info, info, sizeof(_info));
+      _info.indirect = trace_resource_unwrap(tr_ctx, _info.indirect);
+      pipe->launch_grid(pipe, &_info);
+   } else {
+      pipe->launch_grid(pipe, info);
+   }
+
+   trace_dump_call_end();
+}
+
 
 static const struct debug_named_value rbug_blocker_flags[] = {
    {"before", 1, NULL},
@@ -1703,6 +1774,9 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(create_tes_state);
    TR_CTX_INIT(bind_tes_state);
    TR_CTX_INIT(delete_tes_state);
+   TR_CTX_INIT(create_compute_state);
+   TR_CTX_INIT(bind_compute_state);
+   TR_CTX_INIT(delete_compute_state);
    TR_CTX_INIT(create_vertex_elements_state);
    TR_CTX_INIT(bind_vertex_elements_state);
    TR_CTX_INIT(delete_vertex_elements_state);
@@ -1738,6 +1812,7 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(memory_barrier);
    TR_CTX_INIT(set_tess_state);
    TR_CTX_INIT(set_shader_buffers);
+   TR_CTX_INIT(launch_grid);
 
    TR_CTX_INIT(transfer_map);
    TR_CTX_INIT(transfer_unmap);
