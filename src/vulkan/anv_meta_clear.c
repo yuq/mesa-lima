@@ -138,7 +138,7 @@ create_pipeline(struct anv_device *device,
       VK_NULL_HANDLE,
       &(VkGraphicsPipelineCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-         .stageCount = 2,
+         .stageCount = fs_nir ? 2 : 1,
          .pStages = (VkPipelineShaderStageCreateInfo[]) {
             {
                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -430,17 +430,13 @@ emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
 
 
 static void
-build_depthstencil_shaders(struct nir_shader **out_vs,
-                           struct nir_shader **out_fs)
+build_depthstencil_shader(struct nir_shader **out_vs)
 {
    nir_builder vs_b;
-   nir_builder fs_b;
 
    nir_builder_init_simple_shader(&vs_b, NULL, MESA_SHADER_VERTEX, NULL);
-   nir_builder_init_simple_shader(&fs_b, NULL, MESA_SHADER_FRAGMENT, NULL);
 
    vs_b.shader->info.name = ralloc_strdup(vs_b.shader, "meta_clear_depthstencil_vs");
-   fs_b.shader->info.name = ralloc_strdup(fs_b.shader, "meta_clear_depthstencil_fs");
 
    const struct glsl_type *position_type = glsl_vec4_type();
 
@@ -457,7 +453,6 @@ build_depthstencil_shaders(struct nir_shader **out_vs,
    nir_copy_var(&vs_b, vs_out_pos, vs_in_pos);
 
    *out_vs = vs_b.shader;
-   *out_fs = fs_b.shader;
 }
 
 static VkResult
@@ -466,9 +461,8 @@ create_depthstencil_pipeline(struct anv_device *device,
                              struct anv_pipeline **pipeline)
 {
    struct nir_shader *vs_nir;
-   struct nir_shader *fs_nir;
 
-   build_depthstencil_shaders(&vs_nir, &fs_nir);
+   build_depthstencil_shader(&vs_nir);
 
    const VkPipelineVertexInputStateCreateInfo vi_state = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -522,7 +516,7 @@ create_depthstencil_pipeline(struct anv_device *device,
       .pAttachments = NULL,
    };
 
-   return create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
+   return create_pipeline(device, vs_nir, NULL, &vi_state, &ds_state,
                           &cb_state, &device->meta_state.alloc,
                           /*use_repclear*/ true, pipeline);
 }

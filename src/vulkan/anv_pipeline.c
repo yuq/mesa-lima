@@ -1091,6 +1091,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    pipeline->vs_simd8 = NO_KERNEL;
    pipeline->vs_vec4 = NO_KERNEL;
    pipeline->gs_kernel = NO_KERNEL;
+   pipeline->ps_ksp0 = NO_KERNEL;
 
    pipeline->active_stages = 0;
    pipeline->total_scratch = 0;
