@@ -1108,8 +1108,6 @@ void anv_CmdExecuteCommands(
 
    assert(primary->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-   anv_assert(primary->state.subpass == &primary->state.pass->subpasses[0]);
-
    for (uint32_t i = 0; i < commandBufferCount; i++) {
       ANV_FROM_HANDLE(anv_cmd_buffer, secondary, pCmdBuffers[i]);
 
