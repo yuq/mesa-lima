@@ -1344,3 +1344,40 @@ isl_surf_get_image_offset_el(const struct isl_surf *surf,
    *x_offset_el = x_offset_sa / fmtl->bw;
    *y_offset_el = y_offset_sa / fmtl->bh;
 }
+
+void
+isl_surf_get_image_intratile_offset_el(const struct isl_device *dev,
+                                       const struct isl_surf *surf,
+                                       uint32_t level,
+                                       uint32_t logical_array_layer,
+                                       uint32_t logical_z_offset,
+                                       uint32_t *base_address_offset,
+                                       uint32_t *x_offset_el,
+                                       uint32_t *y_offset_el)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
+
+   struct isl_tile_info tile_info;
+   isl_surf_get_tile_info(dev, surf, &tile_info);
+
+   uint32_t total_x_offset_el;
+   uint32_t total_y_offset_el;
+   isl_surf_get_image_offset_el(surf, level,
+                                logical_array_layer,
+                                logical_z_offset,
+                                &total_x_offset_el,
+                                &total_y_offset_el);
+
+   uint32_t small_y_offset_el = total_y_offset_el % tile_info.height;
+   uint32_t big_y_offset_el = total_y_offset_el - small_y_offset_el;
+   uint32_t big_y_offset_B = big_y_offset_el * surf->row_pitch;
+
+   uint32_t total_x_offset_B = total_x_offset_el * fmtl->bs;
+   uint32_t small_x_offset_B = total_x_offset_B % tile_info.width;
+   uint32_t small_x_offset_el = small_x_offset_B / fmtl->bs;
+   uint32_t big_x_offset_B = total_x_offset_B - small_x_offset_B;
+
+   *base_address_offset = big_y_offset_B + big_x_offset_B;
+   *x_offset_el = small_x_offset_el;
+   *y_offset_el = small_y_offset_el;
+}
