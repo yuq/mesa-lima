@@ -3465,7 +3465,9 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 {
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 
-	lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.barrier.local",
+	lp_build_intrinsic(gallivm->builder,
+			HAVE_LLVM >= 0x0309 ? "llvm.amdgcn.s.barrier"
+					    : "llvm.AMDGPU.barrier.local",
 			LLVMVoidTypeInContext(gallivm->context), NULL, 0,
 			LLVMNoUnwindAttribute);
 }
