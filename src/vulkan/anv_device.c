@@ -138,10 +138,6 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->compiler->shader_debug_log = compiler_debug_log;
    device->compiler->shader_perf_log = compiler_perf_log;
 
-   /* Default to use scalar GS on BDW+ */
-   device->compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
-      device->info->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", true);
-
    /* XXX: Actually detect bit6 swizzling */
    isl_device_init(&device->isl_dev, device->info, swizzled);
 
