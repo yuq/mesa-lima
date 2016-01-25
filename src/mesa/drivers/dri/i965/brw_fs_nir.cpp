@@ -4128,3 +4128,35 @@ shuffle_32bit_load_result_to_64bit_data(const fs_builder &bld,
       bld.MOV(offset(dst, bld, i), tmp);
    }
 }
+
+/**
+ * This helper does the inverse operation of
+ * SHUFFLE_32BIT_LOAD_RESULT_TO_64BIT_DATA.
+ *
+ * We need to do this when we are going to use untyped write messsages that
+ * operate with 32-bit components in order to arrange our 64-bit data to be
+ * in the expected layout.
+ *
+ * Notice that callers of this function, unlike in the case of the inverse
+ * operation, would typically need to call this with dst and src being
+ * different registers, since they would otherwise corrupt the original
+ * 64-bit data they are about to write. Because of this the function checks
+ * that the src and dst regions involved in the operation do not overlap.
+ */
+void
+shuffle_64bit_data_for_32bit_write(const fs_builder &bld,
+                                   const fs_reg &dst,
+                                   const fs_reg &src,
+                                   uint32_t components)
+{
+   assert(type_sz(src.type) == 8);
+   assert(type_sz(dst.type) == 4);
+
+   assert(!src.in_range(dst, 2 * components * bld.dispatch_width() / 8));
+
+   for (unsigned i = 0; i < components; i++) {
+      const fs_reg component_i = offset(src, bld, i);
+      bld.MOV(offset(dst, bld, 2 * i), subscript(component_i, dst.type, 0));
+      bld.MOV(offset(dst, bld, 2 * i + 1), subscript(component_i, dst.type, 1));
+   }
+}
