@@ -324,9 +324,6 @@ VkResult genX(CreateSampler)(
    if (!sampler)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   uint32_t filter = vk_to_gen_tex_filter(pCreateInfo->magFilter,
-                                          pCreateInfo->anisotropyEnable);
-
    uint32_t border_color_offset = device->border_colors.offset +
                                   pCreateInfo->borderColor * 64;
 
@@ -338,8 +335,8 @@ VkResult genX(CreateSampler)(
       .BaseMipLevel = 0.0,
 #endif
       .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
-      .MagModeFilter = filter,
-      .MinModeFilter = filter,
+      .MagModeFilter = vk_to_gen_tex_filter(pCreateInfo->magFilter, pCreateInfo->anisotropyEnable),
+      .MinModeFilter = vk_to_gen_tex_filter(pCreateInfo->minFilter, pCreateInfo->anisotropyEnable),
       .TextureLODBias = anv_clamp_f(pCreateInfo->mipLodBias, -16, 15.996),
       .AnisotropicAlgorithm = EWAApproximation,
       .MinLOD = anv_clamp_f(pCreateInfo->minLod, 0, 14),
