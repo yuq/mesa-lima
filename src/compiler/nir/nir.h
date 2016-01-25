@@ -1474,6 +1474,10 @@ typedef struct nir_shader_compiler_options {
    bool lower_pack_unorm_4x8;
    bool lower_pack_snorm_4x8;
    bool lower_unpack_half_2x16;
+   bool lower_unpack_unorm_2x16;
+   bool lower_unpack_snorm_2x16;
+   bool lower_unpack_unorm_4x8;
+   bool lower_unpack_snorm_4x8;
 
    bool lower_extract_byte;
    bool lower_extract_word;
