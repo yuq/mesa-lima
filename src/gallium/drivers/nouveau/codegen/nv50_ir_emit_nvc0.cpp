@@ -1773,7 +1773,13 @@ CodeEmitterNVC0::emitSTORE(const Instruction *i)
    switch (i->src(0).getFile()) {
    case FILE_MEMORY_GLOBAL: opc = 0x90000000; break;
    case FILE_MEMORY_LOCAL:  opc = 0xc8000000; break;
-   case FILE_MEMORY_SHARED: opc = 0xc9000000; break;
+   case FILE_MEMORY_SHARED:
+      opc = 0xc8000000;
+      if (i->subOp == NV50_IR_SUBOP_STORE_UNLOCKED)
+         opc |= (1 << 26);
+      else
+         opc |= (1 << 24);
+      break;
    default:
       assert(!"invalid memory file");
       opc = 0;
@@ -1804,7 +1810,13 @@ CodeEmitterNVC0::emitLOAD(const Instruction *i)
    switch (i->src(0).getFile()) {
    case FILE_MEMORY_GLOBAL: opc = 0x80000000; break;
    case FILE_MEMORY_LOCAL:  opc = 0xc0000000; break;
-   case FILE_MEMORY_SHARED: opc = 0xc1000000; break;
+   case FILE_MEMORY_SHARED:
+      opc = 0xc0000000;
+      if (i->subOp == NV50_IR_SUBOP_LOAD_LOCKED)
+         opc |= (1 << 26);
+      else
+         opc |= (1 << 24);
+      break;
    case FILE_MEMORY_CONST:
       if (!i->src(0).isIndirect(0) && typeSizeof(i->dType) == 4) {
          emitMOV(i); // not sure if this is any better
