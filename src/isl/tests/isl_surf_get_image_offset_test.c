@@ -78,12 +78,12 @@ t_assert_image_alignment_sa(const struct isl_surf *surf,
 }
 
 static void
-t_assert_offset(const struct isl_surf *surf,
-                uint32_t level,
-                uint32_t logical_array_layer,
-                uint32_t logical_z_offset_px,
-                uint32_t expected_x_offset_el,
-                uint32_t expected_y_offset_el)
+t_assert_offset_el(const struct isl_surf *surf,
+                   uint32_t level,
+                   uint32_t logical_array_layer,
+                   uint32_t logical_z_offset_px,
+                   uint32_t expected_x_offset_el,
+                   uint32_t expected_y_offset_el)
 {
    uint32_t x, y;
    isl_surf_get_image_offset_el(surf, level, logical_array_layer,
@@ -111,9 +111,9 @@ t_assert_gen4_3d_layer(const struct isl_surf *surf,
                        uint32_t *base_y)
 {
    for (uint32_t z = 0; z < depth; ++z) {
-      t_assert_offset(surf, level, 0, z,
-                      aligned_width * (z % horiz_layers),
-                      *base_y + aligned_height * (z / horiz_layers));
+      t_assert_offset_el(surf, level, 0, z,
+                        aligned_width * (z % horiz_layers),
+                        *base_y + aligned_height * (z / horiz_layers));
    }
 
    *base_y += aligned_height * vert_layers;
@@ -149,16 +149,16 @@ test_bdw_2d_r8g8b8a8_unorm_512x512_array01_samples01_noaux_tiley0(void)
    t_assert(isl_surf_get_array_pitch_el_rows(&surf) >= 772);
    t_assert(isl_surf_get_array_pitch_sa_rows(&surf) >= 772);
 
-   t_assert_offset(&surf, 0, 0, 0, 0, 0); // +0, +0
-   t_assert_offset(&surf, 1, 0, 0, 0, 512); // +0, +512
-   t_assert_offset(&surf, 2, 0, 0, 256, 512); // +256, +0
-   t_assert_offset(&surf, 3, 0, 0, 256, 640); // +0, +128
-   t_assert_offset(&surf, 4, 0, 0, 256, 704); // +0, +64
-   t_assert_offset(&surf, 5, 0, 0, 256, 736); // +0, +32
-   t_assert_offset(&surf, 6, 0, 0, 256, 752); // +0, +16
-   t_assert_offset(&surf, 7, 0, 0, 256, 760); // +0, +8
-   t_assert_offset(&surf, 8, 0, 0, 256, 764); // +0, +4
-   t_assert_offset(&surf, 9, 0, 0, 256, 768); // +0, +4
+   t_assert_offset_el(&surf, 0, 0, 0, 0, 0); // +0, +0
+   t_assert_offset_el(&surf, 1, 0, 0, 0, 512); // +0, +512
+   t_assert_offset_el(&surf, 2, 0, 0, 256, 512); // +256, +0
+   t_assert_offset_el(&surf, 3, 0, 0, 256, 640); // +0, +128
+   t_assert_offset_el(&surf, 4, 0, 0, 256, 704); // +0, +64
+   t_assert_offset_el(&surf, 5, 0, 0, 256, 736); // +0, +32
+   t_assert_offset_el(&surf, 6, 0, 0, 256, 752); // +0, +16
+   t_assert_offset_el(&surf, 7, 0, 0, 256, 760); // +0, +8
+   t_assert_offset_el(&surf, 8, 0, 0, 256, 764); // +0, +4
+   t_assert_offset_el(&surf, 9, 0, 0, 256, 768); // +0, +4
 }
 
 static void
@@ -193,17 +193,17 @@ test_bdw_2d_r8g8b8a8_unorm_1024x1024_array06_samples01_noaux_tiley0(void)
    for (uint32_t a = 0; a < 6; ++a) {
       uint32_t b = a * isl_surf_get_array_pitch_sa_rows(&surf);
 
-      t_assert_offset(&surf, 0, a, 0, 0, b + 0); // +0, +0
-      t_assert_offset(&surf, 1, a, 0, 0, b + 1024); // +0, +1024
-      t_assert_offset(&surf, 2, a, 0, 512, b + 1024); // +512, +0
-      t_assert_offset(&surf, 3, a, 0, 512, b + 1280); // +0, +256
-      t_assert_offset(&surf, 4, a, 0, 512, b + 1408); // +0, +128
-      t_assert_offset(&surf, 5, a, 0, 512, b + 1472); // +0, +64
-      t_assert_offset(&surf, 6, a, 0, 512, b + 1504); // +0, +32
-      t_assert_offset(&surf, 7, a, 0, 512, b + 1520); // +0, +16
-      t_assert_offset(&surf, 8, a, 0, 512, b + 1528); // +0, +8
-      t_assert_offset(&surf, 9, a, 0, 512, b + 1532); // +0, +4
-      t_assert_offset(&surf, 10, a, 0, 512, b + 1536); // +0, +4
+      t_assert_offset_el(&surf, 0, a, 0, 0, b + 0); // +0, +0
+      t_assert_offset_el(&surf, 1, a, 0, 0, b + 1024); // +0, +1024
+      t_assert_offset_el(&surf, 2, a, 0, 512, b + 1024); // +512, +0
+      t_assert_offset_el(&surf, 3, a, 0, 512, b + 1280); // +0, +256
+      t_assert_offset_el(&surf, 4, a, 0, 512, b + 1408); // +0, +128
+      t_assert_offset_el(&surf, 5, a, 0, 512, b + 1472); // +0, +64
+      t_assert_offset_el(&surf, 6, a, 0, 512, b + 1504); // +0, +32
+      t_assert_offset_el(&surf, 7, a, 0, 512, b + 1520); // +0, +16
+      t_assert_offset_el(&surf, 8, a, 0, 512, b + 1528); // +0, +8
+      t_assert_offset_el(&surf, 9, a, 0, 512, b + 1532); // +0, +4
+      t_assert_offset_el(&surf, 10, a, 0, 512, b + 1536); // +0, +4
    }
 }
 
