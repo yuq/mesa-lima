@@ -237,6 +237,16 @@ unpack_2x16("unorm")
 unpack_4x8("unorm")
 unpack_2x16("half")
 
+unop_horiz("pack_uvec2_to_uint", 1, tuint, 2, tuint, """
+dst.x = (src0.x & 0xffff) | (src0.y >> 16);
+""")
+
+unop_horiz("pack_uvec4_to_uint", 1, tuint, 4, tuint, """
+dst.x = (src0.x <<  0) |
+        (src0.y <<  8) |
+        (src0.z << 16) |
+        (src0.w << 24);
+""")
 
 # Lowered floating point unpacking operations.
 
