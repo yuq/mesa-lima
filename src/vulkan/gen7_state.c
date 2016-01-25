@@ -81,17 +81,16 @@ VkResult genX(CreateSampler)(
    if (!sampler)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   uint32_t filter = vk_to_gen_tex_filter(pCreateInfo->magFilter,
-                                          pCreateInfo->anisotropyEnable);
-
    struct GEN7_SAMPLER_STATE sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
       .LODPreClampEnable = OGL,
       .BaseMipLevel = 0.0,
       .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
-      .MagModeFilter = filter,
-      .MinModeFilter = filter,
+      .MagModeFilter = vk_to_gen_tex_filter(pCreateInfo->magFilter,
+                                            pCreateInfo->anisotropyEnable),
+      .MinModeFilter = vk_to_gen_tex_filter(pCreateInfo->minFilter,
+                                            pCreateInfo->anisotropyEnable),
       .TextureLODBias = pCreateInfo->mipLodBias * 256,
       .AnisotropicAlgorithm = EWAApproximation,
       .MinLOD = pCreateInfo->minLod,
