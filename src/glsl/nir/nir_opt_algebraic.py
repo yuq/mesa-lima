@@ -278,6 +278,34 @@ optimizations = [
      ('pack_uvec4_to_uint',
         ('f2i', ('fround_even', ('fmul', ('fmin', 1.0, ('fmax', -1.0, 'v')), 127.0)))),
      'options->lower_pack_snorm_4x8'),
+
+    (('unpack_unorm_2x16', 'v'),
+     ('fdiv', ('u2f', ('vec4', ('extract_uword', 'v', 0),
+                               ('extract_uword', 'v', 1), 0, 0)),
+              65535.0),
+     'options->lower_unpack_unorm_2x16'),
+
+    (('unpack_unorm_4x8', 'v'),
+     ('fdiv', ('u2f', ('vec4', ('extract_ubyte', 'v', 0),
+                               ('extract_ubyte', 'v', 1),
+                               ('extract_ubyte', 'v', 2),
+                               ('extract_ubyte', 'v', 3))),
+              255.0),
+     'options->lower_unpack_unorm_4x8'),
+
+    (('unpack_snorm_2x16', 'v'),
+     ('fmin', 1.0, ('fmax', -1.0, ('fdiv', ('i2f', ('vec4', ('extract_iword', 'v', 0),
+                                                            ('extract_iword', 'v', 1), 0, 0)),
+                                           32767.0))),
+     'options->lower_unpack_snorm_2x16'),
+
+    (('unpack_snorm_4x8', 'v'),
+     ('fmin', 1.0, ('fmax', -1.0, ('fdiv', ('i2f', ('vec4', ('extract_ibyte', 'v', 0),
+                                                            ('extract_ibyte', 'v', 1),
+                                                            ('extract_ibyte', 'v', 2),
+                                                            ('extract_ibyte', 'v', 3))),
+                                           127.0))),
+     'options->lower_unpack_snorm_4x8'),
 ]
 
 # Add optimizations to handle the case where the result of a ternary is
