@@ -343,7 +343,8 @@ genX(graphics_pipeline_create)(
                   .ForceThreadDispatchEnable = NORMAL,
                   .PointRasterizationRule = RASTRULE_UPPER_RIGHT,
                   .BarycentricInterpolationMode =
-                     pipeline->wm_prog_data.barycentric_interp_modes);
+                     pipeline->ps_ksp0 == NO_KERNEL ?
+                     0 : pipeline->wm_prog_data.barycentric_interp_modes);
 
    uint32_t samples = 1;
    uint32_t log2_samples = __builtin_ffs(samples) - 1;
