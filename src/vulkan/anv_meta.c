@@ -169,10 +169,14 @@ anv_meta_get_view_type(const struct anv_image *image)
    }
 }
 
-static uint32_t
-meta_blit_get_dest_view_base_array_slice(const struct anv_image *dest_image,
-                                         const VkImageSubresourceLayers *dest_subresource,
-                                         const VkOffset3D *dest_offset)
+/**
+ * When creating a destination VkImageView, this function provides the needed
+ * VkImageViewCreateInfo::subresourceRange::baseArrayLayer.
+ */
+uint32_t
+anv_meta_get_iview_layer(const struct anv_image *dest_image,
+                         const VkImageSubresourceLayers *dest_subresource,
+                         const VkOffset3D *dest_offset)
 {
    switch (dest_image->type) {
    case VK_IMAGE_TYPE_1D:
@@ -1078,9 +1082,8 @@ void anv_CmdCopyImage(
       }
 
       const uint32_t dest_base_array_slice =
-         meta_blit_get_dest_view_base_array_slice(dest_image,
-                                                  &pRegions[r].dstSubresource,
-                                                  &pRegions[r].dstOffset);
+         anv_meta_get_iview_layer(dest_image, &pRegions[r].dstSubresource,
+                                  &pRegions[r].dstOffset);
 
       for (unsigned slice = 0; slice < num_slices; slice++) {
          VkOffset3D src_offset = pRegions[r].srcOffset;
@@ -1186,9 +1189,8 @@ void anv_CmdBlitImage(
       };
 
       const uint32_t dest_array_slice =
-         meta_blit_get_dest_view_base_array_slice(dest_image,
-                                                  &pRegions[r].dstSubresource,
-                                                  &pRegions[r].dstOffsets[0]);
+         anv_meta_get_iview_layer(dest_image, &pRegions[r].dstSubresource,
+                                  &pRegions[r].dstOffsets[0]);
 
       if (pRegions[r].srcSubresource.layerCount > 1)
          anv_finishme("FINISHME: copy multiple array layers");
@@ -1304,9 +1306,8 @@ void anv_CmdCopyBufferToImage(
                                &pRegions[r]);
 
       const uint32_t dest_base_array_slice =
-         meta_blit_get_dest_view_base_array_slice(dest_image,
-                                                  &pRegions[r].imageSubresource,
-                                                  &pRegions[r].imageOffset);
+         anv_meta_get_iview_layer(dest_image, &pRegions[r].imageSubresource,
+                                  &pRegions[r].imageOffset);
 
       unsigned num_slices_3d = pRegions[r].imageExtent.depth;
       unsigned num_slices_array = pRegions[r].imageSubresource.layerCount;

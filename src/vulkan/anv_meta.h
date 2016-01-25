@@ -59,6 +59,11 @@ anv_meta_restore(const struct anv_meta_saved_state *state,
 VkImageViewType
 anv_meta_get_view_type(const struct anv_image *image);
 
+uint32_t
+anv_meta_get_iview_layer(const struct anv_image *dest_image,
+                         const VkImageSubresourceLayers *dest_subresource,
+                         const VkOffset3D *dest_offset);
+
 #ifdef __cplusplus
 }
 #endif
