@@ -614,8 +614,11 @@ brw_initialize_context_constants(struct brw_context *brw)
     *      the element in the buffer."
     *
     * However, unaligned accesses are slower, so enforce buffer alignment.
+    *
+    * In order to push UBO data, 3DSTATE_CONSTANT_XS imposes an additional
+    * restriction: the start of the buffer needs to be 32B aligned.
     */
-   ctx->Const.UniformBufferOffsetAlignment = 16;
+   ctx->Const.UniformBufferOffsetAlignment = 32;
 
    /* ShaderStorageBufferOffsetAlignment should be a cacheline (64 bytes) so
     * that we can safely have the CPU and GPU writing the same SSBO on
