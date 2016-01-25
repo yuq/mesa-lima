@@ -1282,13 +1282,21 @@ get_image_offset_sa_gen9_1d(const struct isl_surf *surf,
    *y_offset_sa = layer * isl_surf_get_array_pitch_sa_rows(surf);
 }
 
-void
-isl_surf_get_image_offset_sa(const struct isl_surf *surf,
-                             uint32_t level,
-                             uint32_t logical_array_layer,
-                             uint32_t logical_z_offset_px,
-                             uint32_t *x_offset_sa,
-                             uint32_t *y_offset_sa)
+/**
+ * Calculate the offset, in units of surface samples, to a subimage in the
+ * surface.
+ *
+ * @invariant level < surface levels
+ * @invariant logical_array_layer < logical array length of surface
+ * @invariant logical_z_offset_px < logical depth of surface at level
+ */
+static void
+get_image_offset_sa(const struct isl_surf *surf,
+                    uint32_t level,
+                    uint32_t logical_array_layer,
+                    uint32_t logical_z_offset_px,
+                    uint32_t *x_offset_sa,
+                    uint32_t *y_offset_sa)
 {
    assert(level < surf->levels);
    assert(logical_array_layer < surf->logical_level0_px.array_len);
@@ -1309,4 +1317,30 @@ isl_surf_get_image_offset_sa(const struct isl_surf *surf,
                                   x_offset_sa, y_offset_sa);
       break;
    }
+}
+
+void
+isl_surf_get_image_offset_el(const struct isl_surf *surf,
+                             uint32_t level,
+                             uint32_t logical_array_layer,
+                             uint32_t logical_z_offset_px,
+                             uint32_t *x_offset_el,
+                             uint32_t *y_offset_el)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
+
+   assert(level < surf->levels);
+   assert(logical_array_layer < surf->logical_level0_px.array_len);
+   assert(logical_z_offset_px
+          < isl_minify(surf->logical_level0_px.depth, level));
+
+   uint32_t x_offset_sa, y_offset_sa;
+   get_image_offset_sa(surf, level,
+                       logical_array_layer,
+                       logical_z_offset_px,
+                       &x_offset_sa,
+                       &y_offset_sa);
+
+   *x_offset_el = x_offset_sa / fmtl->bw;
+   *y_offset_el = y_offset_sa / fmtl->bh;
 }
