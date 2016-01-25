@@ -3531,13 +3531,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
 
       /* Read the vector */
-      fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
-                                             1 /* dims */,
-                                             instr->num_components,
-                                             BRW_PREDICATE_NONE);
-      read_result.type = dest.type;
-      for (int i = 0; i < instr->num_components; i++)
-         bld.MOV(offset(dest, bld, i), offset(read_result, bld, i));
+      do_untyped_vector_read(bld, dest, surf_index, offset_reg,
+                             instr->num_components);
 
       break;
    }
