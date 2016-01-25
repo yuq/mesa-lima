@@ -652,7 +652,6 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
        * what surface the Meta Dragons really want.
        */
       if (image->format->depth_format && image->format->has_stencil) {
-         anv_finishme("combined depth stencil formats");
          return &image->depth_surface;
       } else if (image->format->depth_format) {
          return &image->depth_surface;
@@ -670,13 +669,17 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
       return &image->stencil_surface;
    case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
       if (image->format->depth_format && image->format->has_stencil) {
-         /* FINISHME: The Vulkan spec (git a511ba2) requires support for combined
-          * depth stencil formats. Specifically, it states:
+         /* FINISHME: The Vulkan spec (git a511ba2) requires support for
+          * combined depth stencil formats. Specifically, it states:
           *
           *    At least one of ename:VK_FORMAT_D24_UNORM_S8_UINT or
           *    ename:VK_FORMAT_D32_SFLOAT_S8_UINT must be supported.
+          *
+          * Image views with both depth and stencil aspects are only valid for
+          * render target attachments, in which case
+          * cmd_buffer_emit_depth_stencil() will pick out both the depth and
+          * stencil surfaces from the underlying surface.
           */
-         anv_finishme("combined depthstencil aspect");
          return &image->depth_surface;
       } else if (image->format->depth_format) {
          return &image->depth_surface;
