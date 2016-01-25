@@ -236,6 +236,8 @@ typedef struct {
       VAPictureParameterBufferMPEG4 pps;
       uint8_t start_code[32];
    } mpeg4;
+
+   struct vl_deint_filter *deint;
 } vlVaContext;
 
 typedef struct {

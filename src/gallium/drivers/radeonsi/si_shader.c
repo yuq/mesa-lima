@@ -3728,6 +3728,9 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 		case R_0286CC_SPI_PS_INPUT_ENA:
 			conf->spi_ps_input_ena = value;
 			break;
+		case R_0286D0_SPI_PS_INPUT_ADDR:
+			/* Not used yet, but will be in the future */
+			break;
 		case R_0286E8_SPI_TMPRING_SIZE:
 		case R_00B860_COMPUTE_TMPRING_SIZE:
 			/* WAVESIZE is in units of 256 dwords. */
@@ -3735,8 +3738,15 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 				G_00B860_WAVESIZE(value) * 256 * 4 * 1;
 			break;
 		default:
-			fprintf(stderr, "Warning: Compiler emitted unknown "
-				"config register: 0x%x\n", reg);
+			{
+				static bool printed;
+
+				if (!printed) {
+					fprintf(stderr, "Warning: LLVM emitted unknown "
+						"config register: 0x%x\n", reg);
+					printed = true;
+				}
+			}
 			break;
 		}
 	}

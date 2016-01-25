@@ -60,7 +60,7 @@ struct add_const_offset_to_base_params {
 };
 
 static bool
-add_const_offset_to_base(nir_block *block, void *closure)
+add_const_offset_to_base_block(nir_block *block, void *closure)
 {
    struct add_const_offset_to_base_params *params = closure;
    nir_builder *b = &params->b;
@@ -85,7 +85,19 @@ add_const_offset_to_base(nir_block *block, void *closure)
       }
    }
    return true;
+}
 
+static void
+add_const_offset_to_base(nir_shader *nir, nir_variable_mode mode)
+{
+   struct add_const_offset_to_base_params params = { .mode = mode };
+
+   nir_foreach_function(nir, f) {
+      if (f->impl) {
+         nir_builder_init(&params.b, f->impl);
+         nir_foreach_block(f->impl, add_const_offset_to_base_block, &params);
+      }
+   }
 }
 
 static bool
@@ -195,10 +207,6 @@ brw_nir_lower_inputs(nir_shader *nir,
                      const struct brw_device_info *devinfo,
                      bool is_scalar)
 {
-   struct add_const_offset_to_base_params params = {
-      .mode = nir_var_shader_in
-   };
-
    switch (nir->stage) {
    case MESA_SHADER_VERTEX:
       /* Start with the location of the variable's base. */
@@ -212,6 +220,11 @@ brw_nir_lower_inputs(nir_shader *nir,
        */
       nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
 
+      /* This pass needs actual constants */
+      nir_opt_constant_folding(nir);
+
+      add_const_offset_to_base(nir, nir_var_shader_in);
+
       if (is_scalar) {
          /* Finally, translate VERT_ATTRIB_* values into the actual registers.
           *
@@ -221,13 +234,8 @@ brw_nir_lower_inputs(nir_shader *nir,
           */
          GLbitfield64 inputs_read = nir->info.inputs_read;
 
-         /* This pass needs actual constants */
-         nir_opt_constant_folding(nir);
-
          nir_foreach_function(nir, function) {
             if (function->impl) {
-               nir_builder_init(&params.b, function->impl);
-               nir_foreach_block(function->impl, add_const_offset_to_base, &params);
                nir_foreach_block(function->impl, remap_vs_attrs, &inputs_read);
             }
          }
@@ -270,10 +278,10 @@ brw_nir_lower_inputs(nir_shader *nir,
          /* This pass needs actual constants */
          nir_opt_constant_folding(nir);
 
+         add_const_offset_to_base(nir, nir_var_shader_in);
+
          nir_foreach_function(nir, function) {
             if (function->impl) {
-               nir_builder_init(&params.b, function->impl);
-               nir_foreach_block(function->impl, add_const_offset_to_base, &params);
                nir_foreach_block(function->impl, remap_inputs_with_vue_map,
                                  &input_vue_map);
             }
@@ -296,10 +304,10 @@ brw_nir_lower_inputs(nir_shader *nir,
       /* This pass needs actual constants */
       nir_opt_constant_folding(nir);
 
+      add_const_offset_to_base(nir, nir_var_shader_in);
+
       nir_foreach_function(nir, function) {
          if (function->impl) {
-            nir_builder_init(&params.b, function->impl);
-            nir_foreach_block(function->impl, add_const_offset_to_base, &params);
             nir_builder_init(&state.b, function->impl);
             nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
          }
@@ -339,10 +347,6 @@ brw_nir_lower_outputs(nir_shader *nir,
       }
       break;
    case MESA_SHADER_TESS_CTRL: {
-      struct add_const_offset_to_base_params params = {
-         .mode = nir_var_shader_out
-      };
-
       struct remap_patch_urb_offsets_state state;
       brw_compute_tess_vue_map(&state.vue_map, nir->info.outputs_written,
                                nir->info.patch_outputs_written);
@@ -356,10 +360,10 @@ brw_nir_lower_outputs(nir_shader *nir,
       /* This pass needs actual constants */
       nir_opt_constant_folding(nir);
 
+      add_const_offset_to_base(nir, nir_var_shader_out);
+
       nir_foreach_function(nir, function) {
          if (function->impl) {
-            nir_builder_init(&params.b, function->impl);
-            nir_foreach_block(function->impl, add_const_offset_to_base, &params);
             nir_builder_init(&state.b, function->impl);
             nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
          }

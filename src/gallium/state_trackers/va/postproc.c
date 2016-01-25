@@ -29,6 +29,7 @@
 
 #include "vl/vl_defines.h"
 #include "vl/vl_video_buffer.h"
+#include "vl/vl_deint_filter.h"
 
 #include "va_private.h"
 
@@ -174,6 +175,51 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
    return VA_STATUS_SUCCESS;
 }
 
+static struct pipe_video_buffer *
+vlVaApplyDeint(vlVaDriver *drv, vlVaContext *context,
+               VAProcPipelineParameterBuffer *param,
+               struct pipe_video_buffer *current,
+               unsigned field)
+{
+   vlVaSurface *prevprev, *prev, *next;
+
+   if (param->num_forward_references < 1 ||
+       param->num_backward_references < 2)
+      return current;
+
+   prevprev = handle_table_get(drv->htab, param->backward_references[1]);
+   prev = handle_table_get(drv->htab, param->backward_references[0]);
+   next = handle_table_get(drv->htab, param->forward_references[0]);
+
+   if (!prevprev || !prev || !next)
+      return current;
+
+   if (context->deint && (context->deint->video_width != current->width ||
+       context->deint->video_height != current->height)) {
+      vl_deint_filter_cleanup(context->deint);
+      FREE(context->deint);
+      context->deint = NULL;
+   }
+
+   if (!context->deint) {
+      context->deint = MALLOC(sizeof(struct vl_deint_filter));
+      if (!vl_deint_filter_init(context->deint, drv->pipe, current->width,
+                                current->height, false, false)) {
+         FREE(context->deint);
+         context->deint = NULL;
+         return current;
+      }
+   }
+
+   if (!vl_deint_filter_check_buffers(context->deint, prevprev->buffer,
+                                      prev->buffer, current, next->buffer))
+      return current;
+
+   vl_deint_filter_render(context->deint, prevprev->buffer, prev->buffer,
+                          current, next->buffer, field);
+   return context->deint->video_buffer;
+}
+
 VAStatus
 vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
 {
@@ -181,6 +227,7 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    VARectangle def_src_region, def_dst_region;
    const VARectangle *src_region, *dst_region;
    VAProcPipelineParameterBuffer *param;
+   struct pipe_video_buffer *src;
    vlVaSurface *src_surface;
    unsigned i;
 
@@ -198,6 +245,8 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
    src_surface = handle_table_get(drv->htab, param->surface);
    if (!src_surface || !src_surface->buffer)
       return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   src = src_surface->buffer;
 
    for (i = 0; i < param->num_filters; i++) {
       vlVaBuffer *buf = handle_table_get(drv->htab, param->filters[i]);
@@ -222,6 +271,11 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
             deinterlace = VL_COMPOSITOR_WEAVE;
             break;
 
+         case VAProcDeinterlacingMotionAdaptive:
+            src = vlVaApplyDeint(drv, context, param, src,
+				 !!(deint->flags & VA_DEINTERLACING_BOTTOM_FIELD));
+            break;
+
          default:
             return VA_STATUS_ERROR_UNIMPLEMENTED;
          }
@@ -239,10 +293,8 @@ vlVaHandleVAProcPipelineParameterBufferType(vlVaDriver *drv, vlVaContext *contex
 
    if (context->target->buffer_format != PIPE_FORMAT_NV12)
       return vlVaPostProcCompositor(drv, context, src_region, dst_region,
-                                    src_surface->buffer, context->target,
-                                    deinterlace);
+                                    src, context->target, deinterlace);
    else
       return vlVaPostProcBlit(drv, context, src_region, dst_region,
-                              src_surface->buffer, context->target,
-                              deinterlace);
+                              src, context->target, deinterlace);
 }

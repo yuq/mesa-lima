@@ -885,10 +885,18 @@ fd4_emit_restore(struct fd_context *ctx)
 	ctx->needs_rb_fbd = true;
 }
 
+static void
+fd4_emit_ib(struct fd_ringbuffer *ring, struct fd_ringmarker *start,
+		struct fd_ringmarker *end)
+{
+	__OUT_IB(ring, true, start, end);
+}
+
 void
 fd4_emit_init(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
 	ctx->emit_const = fd4_emit_const;
 	ctx->emit_const_bo = fd4_emit_const_bo;
+	ctx->emit_ib = fd4_emit_ib;
 }

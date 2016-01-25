@@ -68,6 +68,7 @@ static const struct debug_named_value r600_debug_options[] = {
 static void r600_destroy_context(struct pipe_context *context)
 {
 	struct r600_context *rctx = (struct r600_context *)context;
+	unsigned sh;
 
 	r600_isa_destroy(rctx->isa);
 
@@ -75,6 +76,11 @@ static void r600_destroy_context(struct pipe_context *context)
 
 	pipe_resource_reference((struct pipe_resource**)&rctx->dummy_cmask, NULL);
 	pipe_resource_reference((struct pipe_resource**)&rctx->dummy_fmask, NULL);
+
+	for (sh = 0; sh < PIPE_SHADER_TYPES; sh++) {
+		rctx->b.b.set_constant_buffer(&rctx->b.b, sh, R600_BUFFER_INFO_CONST_BUFFER, NULL);
+		free(rctx->driver_consts[sh].constants);
+	}
 
 	if (rctx->fixed_func_tcs_shader)
 		rctx->b.b.delete_tcs_state(&rctx->b.b, rctx->fixed_func_tcs_shader);
@@ -357,6 +363,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
 	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_GENERATE_MIPMAP:
+	case PIPE_CAP_STRING_MARKER:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:

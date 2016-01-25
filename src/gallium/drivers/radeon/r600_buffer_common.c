@@ -210,8 +210,8 @@ static void r600_buffer_destroy(struct pipe_screen *screen,
 }
 
 static bool
-r600_do_invalidate_resource(struct r600_common_context *rctx,
-			    struct r600_resource *rbuffer)
+r600_invalidate_buffer(struct r600_common_context *rctx,
+		       struct r600_resource *rbuffer)
 {
 	/* In AMD_pinned_memory, the user pointer association only gets
 	 * broken when the buffer is explicitly re-allocated.
@@ -236,7 +236,9 @@ void r600_invalidate_resource(struct pipe_context *ctx,
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	struct r600_resource *rbuffer = r600_resource(resource);
 
-	(void)r600_do_invalidate_resource(rctx, rbuffer);
+	/* We currently only do anyting here for buffers */
+	if (resource->target == PIPE_BUFFER)
+		(void)r600_invalidate_buffer(rctx, rbuffer);
 }
 
 static void *r600_buffer_get_transfer(struct pipe_context *ctx,
@@ -306,7 +308,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	    !(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
 		assert(usage & PIPE_TRANSFER_WRITE);
 
-		if (r600_do_invalidate_resource(rctx, rbuffer)) {
+		if (r600_invalidate_buffer(rctx, rbuffer)) {
 			/* At this point, the buffer is always idle. */
 			usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
 		}

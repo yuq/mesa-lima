@@ -190,8 +190,10 @@ void llvmpipe_update_derived( struct llvmpipe_context *llvmpipe )
       llvmpipe->tex_timestamp = lp_screen->timestamp;
       llvmpipe->dirty |= LP_NEW_SAMPLER_VIEW;
    }
-      
-   if (llvmpipe->dirty & (LP_NEW_FS |
+
+   /* This needs LP_NEW_RASTERIZER because of draw_prepare_shader_outputs(). */
+   if (llvmpipe->dirty & (LP_NEW_RASTERIZER |
+                          LP_NEW_FS |
                           LP_NEW_VS))
       compute_vertex_info(llvmpipe);
 

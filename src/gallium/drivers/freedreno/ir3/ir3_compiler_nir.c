@@ -46,7 +46,6 @@
 struct ir3_compile {
 	struct ir3_compiler *compiler;
 
-	const struct tgsi_token *tokens;
 	struct nir_shader *s;
 
 	struct ir3 *ir;
@@ -75,8 +74,6 @@ struct ir3_compile {
 	/* mapping from nir_register to defining instruction: */
 	struct hash_table *def_ht;
 
-	/* mapping from nir_variable to ir3_array: */
-	struct hash_table *var_ht;
 	unsigned num_arrays;
 
 	/* a common pattern for indirect addressing is to request the
@@ -142,8 +139,6 @@ compile_init(struct ir3_compiler *compiler,
 	ctx->ir = so->ir;
 	ctx->so = so;
 	ctx->def_ht = _mesa_hash_table_create(ctx,
-			_mesa_hash_pointer, _mesa_key_pointer_equal);
-	ctx->var_ht = _mesa_hash_table_create(ctx,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
 	ctx->block_ht = _mesa_hash_table_create(ctx,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
@@ -221,206 +216,26 @@ compile_free(struct ir3_compile *ctx)
 	ralloc_free(ctx);
 }
 
-/* global per-array information: */
-struct ir3_array {
-	unsigned length, aid;
-};
-
-/* per-block array state: */
-struct ir3_array_value {
-	/* TODO drop length/aid, and just have ptr back to ir3_array */
-	unsigned length, aid;
-	/* initial array element values are phi's, other than for the
-	 * entry block.  The phi src's get added later in a resolve step
-	 * after we have visited all the blocks, to account for back
-	 * edges in the cfg.
-	 */
-	struct ir3_instruction **phis;
-	/* current array element values (as block is processed).  When
-	 * the array phi's are resolved, it will contain the array state
-	 * at exit of block, so successor blocks can use it to add their
-	 * phi srcs.
-	 */
-	struct ir3_instruction *arr[];
-};
-
-/* track array assignments per basic block.  When an array is read
- * outside of the same basic block, we can use NIR's dominance-frontier
- * information to figure out where phi nodes are needed.
- */
-struct ir3_nir_block_data {
-	unsigned foo;
-	/* indexed by array-id (aid): */
-	struct ir3_array_value *arrs[];
-};
-
-static struct ir3_nir_block_data *
-get_block_data(struct ir3_compile *ctx, struct ir3_block *block)
-{
-	if (!block->data) {
-		struct ir3_nir_block_data *bd = ralloc_size(ctx, sizeof(*bd) +
-				((ctx->num_arrays + 1) * sizeof(bd->arrs[0])));
-		block->data = bd;
-	}
-	return block->data;
-}
-
 static void
 declare_var(struct ir3_compile *ctx, nir_variable *var)
 {
 	unsigned length = glsl_get_length(var->type) * 4;  /* always vec4, at least with ttn */
 	struct ir3_array *arr = ralloc(ctx, struct ir3_array);
+	arr->id = ++ctx->num_arrays;
 	arr->length = length;
-	arr->aid = ++ctx->num_arrays;
-	_mesa_hash_table_insert(ctx->var_ht, var, arr);
+	arr->var = var;
+	list_addtail(&arr->node, &ctx->ir->array_list);
 }
 
-static nir_block *
-nir_block_pred(nir_block *block)
-{
-	assert(block->predecessors->entries < 2);
-	if (block->predecessors->entries == 0)
-		return NULL;
-	return (nir_block *)_mesa_set_next_entry(block->predecessors, NULL)->key;
-}
-
-static struct ir3_array_value *
+static struct ir3_array *
 get_var(struct ir3_compile *ctx, nir_variable *var)
 {
-	struct hash_entry *entry = _mesa_hash_table_search(ctx->var_ht, var);
-	struct ir3_block *block = ctx->block;
-	struct ir3_nir_block_data *bd = get_block_data(ctx, block);
-	struct ir3_array *arr = entry->data;
-
-	if (!bd->arrs[arr->aid]) {
-		struct ir3_array_value *av = ralloc_size(bd, sizeof(*av) +
-				(arr->length * sizeof(av->arr[0])));
-		struct ir3_array_value *defn = NULL;
-		nir_block *pred_block;
-
-		av->length = arr->length;
-		av->aid = arr->aid;
-
-		/* For loops, we have to consider that we have not visited some
-		 * of the blocks who should feed into the phi (ie. back-edges in
-		 * the cfg).. for example:
-		 *
-		 *   loop {
-		 *      block { load_var; ... }
-		 *      if then block {} else block {}
-		 *      block { store_var; ... }
-		 *      if then block {} else block {}
-		 *      block {...}
-		 *   }
-		 *
-		 * We can skip the phi if we can chase the block predecessors
-		 * until finding the block previously defining the array without
-		 * crossing a block that has more than one predecessor.
-		 *
-		 * Otherwise create phi's and resolve them as a post-pass after
-		 * all the blocks have been visited (to handle back-edges).
-		 */
-
-		for (pred_block = block->nblock;
-				pred_block && (pred_block->predecessors->entries < 2) && !defn;
-				pred_block = nir_block_pred(pred_block)) {
-			struct ir3_block *pblock = get_block(ctx, pred_block);
-			struct ir3_nir_block_data *pbd = pblock->data;
-			if (!pbd)
-				continue;
-			defn = pbd->arrs[arr->aid];
-		}
-
-		if (defn) {
-			/* only one possible definer: */
-			for (unsigned i = 0; i < arr->length; i++)
-				av->arr[i] = defn->arr[i];
-		} else if (pred_block) {
-			/* not the first block, and multiple potential definers: */
-			av->phis = ralloc_size(av, arr->length * sizeof(av->phis[0]));
-
-			for (unsigned i = 0; i < arr->length; i++) {
-				struct ir3_instruction *phi;
-
-				phi = ir3_instr_create2(block, -1, OPC_META_PHI,
-						1 + ctx->impl->num_blocks);
-				ir3_reg_create(phi, 0, 0);         /* dst */
-
-				/* phi's should go at head of block: */
-				list_delinit(&phi->node);
-				list_add(&phi->node, &block->instr_list);
-
-				av->phis[i] = av->arr[i] = phi;
-			}
-		} else {
-			/* Some shaders end up reading array elements without
-			 * first writing.. so initialize things to prevent null
-			 * instr ptrs later:
-			 */
-			for (unsigned i = 0; i < arr->length; i++)
-				av->arr[i] = create_immed(block, 0);
-		}
-
-		bd->arrs[arr->aid] = av;
+	list_for_each_entry (struct ir3_array, arr, &ctx->ir->array_list, node) {
+		if (arr->var == var)
+			return arr;
 	}
-
-	return bd->arrs[arr->aid];
-}
-
-static void
-add_array_phi_srcs(struct ir3_compile *ctx, nir_block *nblock,
-		struct ir3_array_value *av, BITSET_WORD *visited)
-{
-	struct ir3_block *block;
-	struct ir3_nir_block_data *bd;
-
-	if (BITSET_TEST(visited, nblock->index))
-		return;
-
-	BITSET_SET(visited, nblock->index);
-
-	block = get_block(ctx, nblock);
-	bd = block->data;
-
-	if (bd && bd->arrs[av->aid]) {
-		struct ir3_array_value *dav = bd->arrs[av->aid];
-		for (unsigned i = 0; i < av->length; i++) {
-			ir3_reg_create(av->phis[i], 0, IR3_REG_SSA)->instr =
-					dav->arr[i];
-		}
-	} else {
-		/* didn't find defn, recurse predecessors: */
-		struct set_entry *entry;
-		set_foreach(nblock->predecessors, entry) {
-			add_array_phi_srcs(ctx, (nir_block *)entry->key, av, visited);
-		}
-	}
-}
-
-static void
-resolve_array_phis(struct ir3_compile *ctx, struct ir3_block *block)
-{
-	struct ir3_nir_block_data *bd = block->data;
-	unsigned bitset_words = BITSET_WORDS(ctx->impl->num_blocks);
-
-	if (!bd)
-		return;
-
-	/* TODO use nir dom_frontier to help us with this? */
-
-	for (unsigned i = 1; i <= ctx->num_arrays; i++) {
-		struct ir3_array_value *av = bd->arrs[i];
-		BITSET_WORD visited[bitset_words];
-		struct set_entry *entry;
-
-		if (!(av && av->phis))
-			continue;
-
-		memset(visited, 0, sizeof(visited));
-		set_foreach(block->nblock->predecessors, entry) {
-			add_array_phi_srcs(ctx, (nir_block *)entry->key, av, visited);
-		}
-	}
+	compile_error(ctx, "bogus var: %s\n", var->name);
+	return NULL;
 }
 
 /* allocate a n element value array (to be populated by caller) and
@@ -438,6 +253,7 @@ __get_dst(struct ir3_compile *ctx, void *key, unsigned n)
 static struct ir3_instruction **
 get_dst(struct ir3_compile *ctx, nir_dest *dst, unsigned n)
 {
+	compile_assert(ctx, dst->is_ssa);
 	if (dst->is_ssa) {
 		return __get_dst(ctx, &dst->ssa, n);
 	} else {
@@ -455,6 +271,7 @@ static struct ir3_instruction **
 get_src(struct ir3_compile *ctx, nir_src *src)
 {
 	struct hash_entry *entry;
+	compile_assert(ctx, src->is_ssa);
 	if (src->is_ssa) {
 		entry = _mesa_hash_table_search(ctx->def_ht, src->ssa);
 	} else {
@@ -560,7 +377,7 @@ create_uniform(struct ir3_compile *ctx, unsigned n)
 }
 
 static struct ir3_instruction *
-create_uniform_indirect(struct ir3_compile *ctx, unsigned n,
+create_uniform_indirect(struct ir3_compile *ctx, int n,
 		struct ir3_instruction *address)
 {
 	struct ir3_instruction *mov;
@@ -569,7 +386,7 @@ create_uniform_indirect(struct ir3_compile *ctx, unsigned n,
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
-	ir3_reg_create(mov, n, IR3_REG_CONST | IR3_REG_RELATIV);
+	ir3_reg_create(mov, 0, IR3_REG_CONST | IR3_REG_RELATIV)->array.offset = n;
 
 	ir3_instr_set_address(mov, address);
 
@@ -594,7 +411,7 @@ create_collect(struct ir3_block *block, struct ir3_instruction **arr,
 }
 
 static struct ir3_instruction *
-create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
+create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, int n,
 		struct ir3_instruction *address, struct ir3_instruction *collect)
 {
 	struct ir3_block *block = ctx->block;
@@ -608,17 +425,45 @@ create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
 	src = ir3_reg_create(mov, 0, IR3_REG_SSA | IR3_REG_RELATIV);
 	src->instr = collect;
 	src->size  = arrsz;
-	src->offset = n;
+	src->array.offset = n;
 
 	ir3_instr_set_address(mov, address);
 
 	return mov;
 }
 
+/* relative (indirect) if address!=NULL */
 static struct ir3_instruction *
-create_indirect_store(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
-		struct ir3_instruction *src, struct ir3_instruction *address,
-		struct ir3_instruction *collect)
+create_var_load(struct ir3_compile *ctx, struct ir3_array *arr, int n,
+		struct ir3_instruction *address)
+{
+	struct ir3_block *block = ctx->block;
+	struct ir3_instruction *mov;
+	struct ir3_register *src;
+
+	mov = ir3_instr_create(block, 1, 0);
+	mov->cat1.src_type = TYPE_U32;
+	mov->cat1.dst_type = TYPE_U32;
+	ir3_reg_create(mov, 0, 0);
+	src = ir3_reg_create(mov, 0, IR3_REG_ARRAY |
+			COND(address, IR3_REG_RELATIV));
+	src->instr = arr->last_write;
+	src->size  = arr->length;
+	src->array.id = arr->id;
+	src->array.offset = n;
+
+	if (address)
+		ir3_instr_set_address(mov, address);
+
+	arr->last_access = mov;
+
+	return mov;
+}
+
+/* relative (indirect) if address!=NULL */
+static struct ir3_instruction *
+create_var_store(struct ir3_compile *ctx, struct ir3_array *arr, int n,
+		struct ir3_instruction *src, struct ir3_instruction *address)
 {
 	struct ir3_block *block = ctx->block;
 	struct ir3_instruction *mov;
@@ -627,13 +472,17 @@ create_indirect_store(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
 	mov = ir3_instr_create(block, 1, 0);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
-	dst = ir3_reg_create(mov, 0, IR3_REG_RELATIV);
-	dst->size  = arrsz;
-	dst->offset = n;
+	dst = ir3_reg_create(mov, 0, IR3_REG_ARRAY |
+			COND(address, IR3_REG_RELATIV));
+	dst->instr = arr->last_access;
+	dst->size  = arr->length;
+	dst->array.id = arr->id;
+	dst->array.offset = n;
 	ir3_reg_create(mov, 0, IR3_REG_SSA)->instr = src;
-	mov->fanin = collect;
 
 	ir3_instr_set_address(mov, address);
+
+	arr->last_write = arr->last_access = mov;
 
 	return mov;
 }
@@ -1151,7 +1000,7 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 	nir_const_value *const_offset;
 	/* UBO addresses are the first driver params: */
 	unsigned ubo = regid(ctx->so->first_driver_param + IR3_UBOS_OFF, 0);
-	unsigned off = intr->const_index[0];
+	int off = intr->const_index[0];
 
 	/* First src is ubo index, which could either be an immed or not: */
 	src0 = get_src(ctx, &intr->src[0])[0];
@@ -1199,7 +1048,7 @@ emit_intrinsic_load_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 {
 	nir_deref_var *dvar = intr->variables[0];
 	nir_deref_array *darr = nir_deref_as_array(dvar->deref.child);
-	struct ir3_array_value *arr = get_var(ctx, dvar->var);
+	struct ir3_array *arr = get_var(ctx, dvar->var);
 
 	compile_assert(ctx, dvar->deref.child &&
 		(dvar->deref.child->deref_type == nir_deref_type_array));
@@ -1210,19 +1059,17 @@ emit_intrinsic_load_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 		for (int i = 0; i < intr->num_components; i++) {
 			unsigned n = darr->base_offset * 4 + i;
 			compile_assert(ctx, n < arr->length);
-			dst[i] = arr->arr[n];
+			dst[i] = create_var_load(ctx, arr, n, NULL);
 		}
 		break;
 	case nir_deref_array_type_indirect: {
 		/* for indirect, we need to collect all the array elements: */
-		struct ir3_instruction *collect =
-				create_collect(ctx->block, arr->arr, arr->length);
 		struct ir3_instruction *addr =
 				get_addr(ctx, get_src(ctx, &darr->indirect)[0]);
 		for (int i = 0; i < intr->num_components; i++) {
 			unsigned n = darr->base_offset * 4 + i;
 			compile_assert(ctx, n < arr->length);
-			dst[i] = create_indirect_load(ctx, arr->length, n, addr, collect);
+			dst[i] = create_var_load(ctx, arr, n, addr);
 		}
 		break;
 	}
@@ -1239,8 +1086,9 @@ emit_intrinsic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 {
 	nir_deref_var *dvar = intr->variables[0];
 	nir_deref_array *darr = nir_deref_as_array(dvar->deref.child);
-	struct ir3_array_value *arr = get_var(ctx, dvar->var);
-	struct ir3_instruction **src;
+	struct ir3_array *arr = get_var(ctx, dvar->var);
+	struct ir3_instruction *addr, **src;
+	unsigned wrmask = intr->const_index[0];
 
 	compile_assert(ctx, dvar->deref.child &&
 		(dvar->deref.child->deref_type == nir_deref_type_array));
@@ -1249,65 +1097,23 @@ emit_intrinsic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 
 	switch (darr->deref_array_type) {
 	case nir_deref_array_type_direct:
-		/* direct access does not require anything special: */
-		for (int i = 0; i < intr->num_components; i++) {
-			/* ttn doesn't generate partial writemasks */
-			assert(intr->const_index[0] ==
-			       (1 << intr->num_components) - 1);
-
-			unsigned n = darr->base_offset * 4 + i;
-			compile_assert(ctx, n < arr->length);
-			arr->arr[n] = src[i];
-		}
+		addr = NULL;
 		break;
-	case nir_deref_array_type_indirect: {
-		/* for indirect, create indirect-store and fan that out: */
-		struct ir3_instruction *collect =
-				create_collect(ctx->block, arr->arr, arr->length);
-		struct ir3_instruction *addr =
-				get_addr(ctx, get_src(ctx, &darr->indirect)[0]);
-		for (int i = 0; i < intr->num_components; i++) {
-			/* ttn doesn't generate partial writemasks */
-			assert(intr->const_index[0] ==
-			       (1 << intr->num_components) - 1);
-
-			struct ir3_instruction *store;
-			unsigned n = darr->base_offset * 4 + i;
-			compile_assert(ctx, n < arr->length);
-
-			store = create_indirect_store(ctx, arr->length,
-					n, src[i], addr, collect);
-
-			store->fanin->fi.aid = arr->aid;
-
-			/* TODO: probably split this out to be used for
-			 * store_output_indirect? or move this into
-			 * create_indirect_store()?
-			 */
-			for (int j = i; j < arr->length; j += intr->num_components) {
-				struct ir3_instruction *split;
-
-				split = ir3_instr_create(ctx->block, -1, OPC_META_FO);
-				split->fo.off = j;
-				ir3_reg_create(split, 0, 0);
-				ir3_reg_create(split, 0, IR3_REG_SSA)->instr = store;
-
-				arr->arr[j] = split;
-			}
-		}
-		/* fixup fanout/split neighbors: */
-		for (int i = 0; i < arr->length; i++) {
-			arr->arr[i]->cp.right = (i < (arr->length - 1)) ?
-					arr->arr[i+1] : NULL;
-			arr->arr[i]->cp.left = (i > 0) ?
-					arr->arr[i-1] : NULL;
-		}
+	case nir_deref_array_type_indirect:
+		addr = get_addr(ctx, get_src(ctx, &darr->indirect)[0]);
 		break;
-	}
 	default:
 		compile_error(ctx, "Unhandled store deref type: %u\n",
 				darr->deref_array_type);
 		break;
+	}
+
+	for (int i = 0; i < intr->num_components; i++) {
+		if (!(wrmask & (1 << i)))
+			continue;
+		unsigned n = darr->base_offset * 4 + i;
+		compile_assert(ctx, n < arr->length);
+		create_var_store(ctx, arr, n, src[i], addr);
 	}
 }
 
@@ -1335,7 +1141,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	const nir_intrinsic_info *info = &nir_intrinsic_infos[intr->intrinsic];
 	struct ir3_instruction **dst, **src;
 	struct ir3_block *b = ctx->block;
-	unsigned idx = intr->const_index[0];
+	int idx = intr->const_index[0];
 	nir_const_value *const_offset;
 
 	if (info->has_dest) {
@@ -1356,7 +1162,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		} else {
 			src = get_src(ctx, &intr->src[0]);
 			for (int i = 0; i < intr->num_components; i++) {
-				unsigned n = idx * 4 + i;
+				int n = idx * 4 + i;
 				dst[i] = create_uniform_indirect(ctx, n,
 						get_addr(ctx, src[0]));
 			}
@@ -1836,8 +1642,6 @@ resolve_phis(struct ir3_compile *ctx, struct ir3_block *block)
 			ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = src;
 		}
 	}
-
-	resolve_array_phis(ctx, block);
 }
 
 static void

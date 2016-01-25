@@ -282,6 +282,7 @@ static const struct brw_tracked_state *gen7_compute_atoms[] =
    &brw_cs_abo_surfaces,
    &brw_texture_surfaces,
    &brw_cs_work_groups_surface,
+   &brw_cs_samplers,
    &brw_cs_state,
 };
 
@@ -396,6 +397,7 @@ static const struct brw_tracked_state *gen8_compute_atoms[] =
    &brw_cs_abo_surfaces,
    &brw_texture_surfaces,
    &brw_cs_work_groups_surface,
+   &brw_cs_samplers,
    &brw_cs_state,
 };
 
@@ -664,6 +666,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_COMPUTE_PROGRAM),
    DEFINE_BIT(BRW_NEW_CS_WORK_GROUPS),
    DEFINE_BIT(BRW_NEW_URB_SIZE),
+   DEFINE_BIT(BRW_NEW_CC_STATE),
    {0, 0, 0}
 };
 

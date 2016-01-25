@@ -72,6 +72,13 @@ channel_expressions_predicate(ir_instruction *ir)
       return false;
 
    switch (expr->operation) {
+      case ir_unop_pack_half_2x16:
+      case ir_unop_pack_snorm_2x16:
+      case ir_unop_pack_snorm_4x8:
+      case ir_unop_pack_unorm_2x16:
+      case ir_unop_pack_unorm_4x8:
+         return false;
+
       /* these opcodes need to act on the whole vector,
        * just like texturing.
        */
@@ -162,6 +169,11 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
       return visit_continue;
 
    switch (expr->operation) {
+      case ir_unop_pack_half_2x16:
+      case ir_unop_pack_snorm_2x16:
+      case ir_unop_pack_snorm_4x8:
+      case ir_unop_pack_unorm_2x16:
+      case ir_unop_pack_unorm_4x8:
       case ir_unop_interpolate_at_centroid:
       case ir_binop_interpolate_at_offset:
       case ir_binop_interpolate_at_sample:
@@ -399,9 +411,6 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    case ir_unop_ssbo_unsized_array_length:
       unreachable("should have been lowered");
 
-   case ir_unop_unpack_half_2x16_split_x:
-   case ir_unop_unpack_half_2x16_split_y:
-   case ir_binop_pack_half_2x16_split:
    case ir_unop_interpolate_at_centroid:
    case ir_binop_interpolate_at_offset:
    case ir_binop_interpolate_at_sample:

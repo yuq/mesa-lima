@@ -29,137 +29,6 @@
 #include "brw_vec4_tes.h"
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
-#include "util/debug.h"
-
-static void
-shader_debug_log_mesa(void *data, const char *fmt, ...)
-{
-   struct brw_context *brw = (struct brw_context *)data;
-   va_list args;
-
-   va_start(args, fmt);
-   GLuint msg_id = 0;
-   _mesa_gl_vdebug(&brw->ctx, &msg_id,
-                   MESA_DEBUG_SOURCE_SHADER_COMPILER,
-                   MESA_DEBUG_TYPE_OTHER,
-                   MESA_DEBUG_SEVERITY_NOTIFICATION, fmt, args);
-   va_end(args);
-}
-
-static void
-shader_perf_log_mesa(void *data, const char *fmt, ...)
-{
-   struct brw_context *brw = (struct brw_context *)data;
-
-   va_list args;
-   va_start(args, fmt);
-
-   if (unlikely(INTEL_DEBUG & DEBUG_PERF)) {
-      va_list args_copy;
-      va_copy(args_copy, args);
-      vfprintf(stderr, fmt, args_copy);
-      va_end(args_copy);
-   }
-
-   if (brw->perf_debug) {
-      GLuint msg_id = 0;
-      _mesa_gl_vdebug(&brw->ctx, &msg_id,
-                      MESA_DEBUG_SOURCE_SHADER_COMPILER,
-                      MESA_DEBUG_TYPE_PERFORMANCE,
-                      MESA_DEBUG_SEVERITY_MEDIUM, fmt, args);
-   }
-   va_end(args);
-}
-
-struct brw_compiler *
-brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
-{
-   struct brw_compiler *compiler = rzalloc(mem_ctx, struct brw_compiler);
-
-   compiler->devinfo = devinfo;
-   compiler->shader_debug_log = shader_debug_log_mesa;
-   compiler->shader_perf_log = shader_perf_log_mesa;
-
-   brw_fs_alloc_reg_sets(compiler);
-   brw_vec4_alloc_reg_set(compiler);
-
-   compiler->scalar_stage[MESA_SHADER_VERTEX] =
-      devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS);
-   compiler->scalar_stage[MESA_SHADER_TESS_CTRL] = false;
-   compiler->scalar_stage[MESA_SHADER_TESS_EVAL] =
-      devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_TES", true);
-   compiler->scalar_stage[MESA_SHADER_GEOMETRY] =
-      devinfo->gen >= 8 && env_var_as_boolean("INTEL_SCALAR_GS", false);
-   compiler->scalar_stage[MESA_SHADER_FRAGMENT] = true;
-   compiler->scalar_stage[MESA_SHADER_COMPUTE] = true;
-
-   nir_shader_compiler_options *nir_options =
-      rzalloc(compiler, nir_shader_compiler_options);
-   nir_options->native_integers = true;
-   nir_options->vertex_id_zero_based = true;
-   nir_options->lower_fdiv = true;
-   /* In order to help allow for better CSE at the NIR level we tell NIR
-    * to split all ffma instructions during opt_algebraic and we then
-    * re-combine them as a later step.
-    */
-   nir_options->lower_ffma = true;
-   nir_options->lower_sub = true;
-   nir_options->lower_fdiv = true;
-   nir_options->lower_scmp = true;
-   nir_options->lower_fmod = true;
-   nir_options->lower_bitfield_extract = true;
-   nir_options->lower_bitfield_insert = true;
-   nir_options->lower_uadd_carry = true;
-   nir_options->lower_usub_borrow = true;
-
-   /* In the vec4 backend, our dpN instruction replicates its result to all
-    * the components of a vec4.  We would like NIR to give us replicated fdot
-    * instructions because it can optimize better for us.
-    *
-    * For the FS backend, it should be lowered away by the scalarizing pass so
-    * we should never see fdot anyway.
-    */
-   nir_options->fdot_replicates = true;
-
-   /* We want the GLSL compiler to emit code that uses condition codes */
-   for (int i = 0; i < MESA_SHADER_STAGES; i++) {
-      compiler->glsl_compiler_options[i].MaxUnrollIterations = 32;
-      compiler->glsl_compiler_options[i].MaxIfDepth =
-         devinfo->gen < 6 ? 16 : UINT_MAX;
-
-      compiler->glsl_compiler_options[i].EmitCondCodes = true;
-      compiler->glsl_compiler_options[i].EmitNoNoise = true;
-      compiler->glsl_compiler_options[i].EmitNoMainReturn = true;
-      compiler->glsl_compiler_options[i].EmitNoIndirectInput = true;
-      compiler->glsl_compiler_options[i].EmitNoIndirectUniform = false;
-      compiler->glsl_compiler_options[i].LowerClipDistance = true;
-
-      bool is_scalar = compiler->scalar_stage[i];
-
-      compiler->glsl_compiler_options[i].EmitNoIndirectOutput = is_scalar;
-      compiler->glsl_compiler_options[i].EmitNoIndirectTemp = is_scalar;
-      compiler->glsl_compiler_options[i].OptimizeForAOS = !is_scalar;
-
-      /* !ARB_gpu_shader5 */
-      if (devinfo->gen < 7)
-         compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
-
-      compiler->glsl_compiler_options[i].NirOptions = nir_options;
-
-      compiler->glsl_compiler_options[i].LowerBufferInterfaceBlocks = true;
-   }
-
-   compiler->glsl_compiler_options[MESA_SHADER_TESS_CTRL].EmitNoIndirectInput = false;
-   compiler->glsl_compiler_options[MESA_SHADER_TESS_EVAL].EmitNoIndirectInput = false;
-
-   if (compiler->scalar_stage[MESA_SHADER_GEOMETRY])
-      compiler->glsl_compiler_options[MESA_SHADER_GEOMETRY].EmitNoIndirectInput = false;
-
-   compiler->glsl_compiler_options[MESA_SHADER_COMPUTE]
-      .LowerShaderSharedVariables = true;
-
-   return compiler;
-}
 
 extern "C" struct gl_shader *
 brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
@@ -444,6 +313,10 @@ brw_instruction_name(enum opcode op)
    case SHADER_OPCODE_BROADCAST:
       return "broadcast";
 
+   case SHADER_OPCODE_EXTRACT_BYTE:
+      return "extract_byte";
+   case SHADER_OPCODE_EXTRACT_WORD:
+      return "extract_word";
    case VEC4_OPCODE_MOV_BYTES:
       return "mov_bytes";
    case VEC4_OPCODE_PACK_BYTES:

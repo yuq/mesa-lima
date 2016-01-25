@@ -76,7 +76,7 @@ int ir3_delayslots(struct ir3_instruction *assigner,
 		return 6;
 	} else if ((consumer->category == 3) &&
 			(is_mad(consumer->opc) || is_madsh(consumer->opc)) &&
-			(n == 2)) {
+			(n == 3)) {
 		/* special case, 3rd src to cat3 not required on first cycle */
 		return 1;
 	} else {
@@ -117,6 +117,10 @@ ir3_instr_depth(struct ir3_instruction *instr)
 
 		/* visit child to compute it's depth: */
 		ir3_instr_depth(src);
+
+		/* for array writes, no need to delay on previous write: */
+		if (i == 0)
+			continue;
 
 		sd = ir3_delayslots(src, instr, i) + src->depth;
 

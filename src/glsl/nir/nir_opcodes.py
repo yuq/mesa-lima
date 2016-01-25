@@ -105,7 +105,7 @@ def opcode(name, output_size, output_type, input_sizes, input_types,
    opcodes[name] = Opcode(name, output_size, output_type, input_sizes,
                           input_types, algebraic_properties, const_expr)
 
-def unop_convert(name, in_type, out_type, const_expr):
+def unop_convert(name, out_type, in_type, const_expr):
    opcode(name, 0, out_type, [0], [in_type], "", const_expr)
 
 def unop(name, ty, const_expr):
@@ -155,17 +155,17 @@ unop("frsq", tfloat, "1.0f / sqrtf(src0)")
 unop("fsqrt", tfloat, "sqrtf(src0)")
 unop("fexp2", tfloat, "exp2f(src0)")
 unop("flog2", tfloat, "log2f(src0)")
-unop_convert("f2i", tfloat, tint, "src0") # Float-to-integer conversion.
-unop_convert("f2u", tfloat, tuint, "src0") # Float-to-unsigned conversion
-unop_convert("i2f", tint, tfloat, "src0") # Integer-to-float conversion.
+unop_convert("f2i", tint, tfloat, "src0") # Float-to-integer conversion.
+unop_convert("f2u", tuint, tfloat, "src0") # Float-to-unsigned conversion
+unop_convert("i2f", tfloat, tint, "src0") # Integer-to-float conversion.
 # Float-to-boolean conversion
-unop_convert("f2b", tfloat, tbool, "src0 != 0.0f")
+unop_convert("f2b", tbool, tfloat, "src0 != 0.0f")
 # Boolean-to-float conversion
-unop_convert("b2f", tbool, tfloat, "src0 ? 1.0f : 0.0f")
+unop_convert("b2f", tfloat, tbool, "src0 ? 1.0f : 0.0f")
 # Int-to-boolean conversion
-unop_convert("i2b", tint, tbool, "src0 != 0")
-unop_convert("b2i", tbool, tint, "src0 ? 1 : 0") # Boolean-to-int conversion
-unop_convert("u2f", tuint, tfloat, "src0") # Unsigned-to-float conversion.
+unop_convert("i2b", tbool, tint, "src0 != 0")
+unop_convert("b2i", tint, tbool, "src0 ? 1 : 0") # Boolean-to-int conversion
+unop_convert("u2f", tfloat, tuint, "src0") # Unsigned-to-float conversion.
 
 # Unary floating-point rounding operations.
 
@@ -238,6 +238,16 @@ unpack_2x16("unorm")
 unpack_4x8("unorm")
 unpack_2x16("half")
 
+unop_horiz("pack_uvec2_to_uint", 0, tuint, 2, tuint, """
+dst = (src0.x & 0xffff) | (src0.y >> 16);
+""")
+
+unop_horiz("pack_uvec4_to_uint", 0, tuint, 4, tuint, """
+dst = (src0.x <<  0) |
+      (src0.y <<  8) |
+      (src0.z << 16) |
+      (src0.w << 24);
+""")
 
 # Lowered floating point unpacking operations.
 
@@ -265,7 +275,7 @@ for (unsigned bit = 0; bit < 32; bit++) {
 }
 """)
 
-unop_convert("ufind_msb", tuint, tint, """
+unop_convert("ufind_msb", tint, tuint, """
 dst = -1;
 for (int bit = 31; bit > 0; bit--) {
    if ((src0 >> bit) & 1) {
@@ -550,6 +560,15 @@ binop_horiz("vec2", 2, tuint, 1, tuint, 1, tuint, """
 dst.x = src0.x;
 dst.y = src1.x;
 """)
+
+# Byte extraction
+binop("extract_ubyte", tuint, "", "(uint8_t)(src0 >> (src1 * 8))")
+binop("extract_ibyte", tint, "", "(int8_t)(src0 >> (src1 * 8))")
+
+# Word extraction
+binop("extract_uword", tuint, "", "(uint16_t)(src0 >> (src1 * 16))")
+binop("extract_iword", tint, "", "(int16_t)(src0 >> (src1 * 16))")
+
 
 def triop(name, ty, const_expr):
    opcode(name, 0, ty, [0, 0, 0], [ty, ty, ty], "", const_expr)

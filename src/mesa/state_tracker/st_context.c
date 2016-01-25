@@ -438,6 +438,12 @@ void st_destroy_context( struct st_context *st )
    free(ctx);
 }
 
+static void
+st_emit_string_marker(struct gl_context *ctx, const GLchar *string, GLsizei len)
+{
+   struct st_context *st = ctx->st;
+   st->pipe->emit_string_marker(st->pipe, string, len);
+}
 
 void st_init_driver_functions(struct pipe_screen *screen,
                               struct dd_function_table *functions)
@@ -475,6 +481,9 @@ void st_init_driver_functions(struct pipe_screen *screen,
    st_init_syncobj_functions(functions);
 
    st_init_vdpau_functions(functions);
+
+   if (screen->get_param(screen, PIPE_CAP_STRING_MARKER))
+      functions->EmitStringMarker = st_emit_string_marker;
 
    functions->Enable = st_Enable;
    functions->UpdateState = st_invalidate_state;

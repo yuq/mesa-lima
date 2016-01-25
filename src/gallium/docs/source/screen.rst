@@ -305,6 +305,7 @@ The integer capabilities:
   for buffers is supported.
 * ``PIPE_CAP_GENERATE_MIPMAP``: Indicates whether pipe_context::generate_mipmap
   is supported.
+* ``PIPE_CAP_STRING_MARKER``: Whether pipe->emit_string_marker() is supported.
 
 
 .. _pipe_capf:

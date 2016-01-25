@@ -1018,6 +1018,13 @@ _mesa_DebugMessageInsert(GLenum source, GLenum type, GLuint id,
            gl_enum_to_debug_type(type), id,
            gl_enum_to_debug_severity(severity),
            length, buf);
+
+   if (type == GL_DEBUG_TYPE_MARKER && ctx->Driver.EmitStringMarker) {
+      /* if length not specified, string will be null terminated: */
+      if (length < 0)
+         length = strlen(buf);
+      ctx->Driver.EmitStringMarker(ctx, buf, length);
+   }
 }
 
 
@@ -1276,6 +1283,19 @@ _mesa_free_errors_data(struct gl_context *ctx)
    mtx_destroy(&ctx->DebugMutex);
 }
 
+void GLAPIENTRY
+_mesa_StringMarkerGREMEDY(GLsizei len, const GLvoid *string)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   if (ctx->Extensions.GREMEDY_string_marker) {
+      /* if length not specified, string will be null terminated: */
+      if (len <= 0)
+         len = strlen(string);
+      ctx->Driver.EmitStringMarker(ctx, string, len);
+   } else {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "StringMarkerGREMEDY");
+   }
+}
 
 /**********************************************************************/
 /** \name Diagnostics */

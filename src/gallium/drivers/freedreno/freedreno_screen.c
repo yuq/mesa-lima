@@ -155,6 +155,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_USER_CONSTANT_BUFFERS:
 	case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
 	case PIPE_CAP_VERTEXID_NOBASE:
+	case PIPE_CAP_STRING_MARKER:
 		return 1;
 
 	case PIPE_CAP_SHADER_STENCIL_EXPORT:
@@ -400,9 +401,16 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 		return 1;
 	case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
 	case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
+		/* Technically this should be the same as for TEMP/CONST, since
+		 * everything is just normal registers.  This is just temporary
+		 * hack until load_input/store_output handle arrays in a similar
+		 * way as load_var/store_var..
+		 */
+		return 0;
 	case PIPE_SHADER_CAP_INDIRECT_TEMP_ADDR:
 	case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
-		return 1;
+		/* a2xx compiler doesn't handle indirect: */
+		return is_ir3(screen) ? 1 : 0;
 	case PIPE_SHADER_CAP_SUBROUTINES:
 	case PIPE_SHADER_CAP_DOUBLES:
 	case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
@@ -566,6 +574,7 @@ fd_screen_create(struct fd_device *dev)
 		fd3_screen_init(pscreen);
 		break;
 	case 420:
+	case 430:
 		fd4_screen_init(pscreen);
 		break;
 	default:

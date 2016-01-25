@@ -556,7 +556,7 @@ do_triangle_ccw(struct lp_setup_context *setup,
 
       /* Calculate trivial reject values:
        */
-      eo = vec_sub_epi32(vec_andc(dcdy_neg_mask, dcdy),
+      eo = vec_sub_epi32(vec_andnot_si128(dcdy_neg_mask, dcdy),
                          vec_and(dcdx_neg_mask, dcdx));
 
       /* ei = _mm_sub_epi32(_mm_sub_epi32(dcdy, dcdx), eo); */

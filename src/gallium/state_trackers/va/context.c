@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_handle_table.h"
 #include "util/u_video.h"
+#include "vl/vl_deint_filter.h"
 #include "vl/vl_winsys.h"
 
 #include "va_private.h"
@@ -295,6 +296,10 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
          FREE(context->desc.h265.pps);
       }
       context->decoder->destroy(context->decoder);
+   }
+   if (context->deint) {
+      vl_deint_filter_cleanup(context->deint);
+      FREE(context->deint);
    }
    FREE(context);
    handle_table_remove(drv->htab, context_id);

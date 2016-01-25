@@ -245,6 +245,70 @@ optimizations = [
     ('bcsel', ('ult', 31, 'bits'), 'value',
               ('ubfe', 'value', 'offset', 'bits')),
     'options->lower_bitfield_extract'),
+
+   (('extract_ibyte', a, b),
+    ('ishr', ('ishl', a, ('imul', ('isub', 3, b), 8)), 8),
+    'options->lower_extract_byte'),
+
+   (('extract_ubyte', a, b),
+    ('iand', ('ushr', a, ('imul', b, 8)), 0xff),
+    'options->lower_extract_byte'),
+
+   (('extract_iword', a, b),
+    ('ishr', ('ishl', a, ('imul', ('isub', 1, b), 16)), 16),
+    'options->lower_extract_word'),
+
+   (('extract_uword', a, b),
+    ('iand', ('ushr', a, ('imul', b, 16)), 0xffff),
+    'options->lower_extract_word'),
+
+    (('pack_unorm_2x16', 'v'),
+     ('pack_uvec2_to_uint',
+        ('f2u', ('fround_even', ('fmul', ('fsat', 'v'), 65535.0)))),
+     'options->lower_pack_unorm_2x16'),
+
+    (('pack_unorm_4x8', 'v'),
+     ('pack_uvec4_to_uint',
+        ('f2u', ('fround_even', ('fmul', ('fsat', 'v'), 255.0)))),
+     'options->lower_pack_unorm_4x8'),
+
+    (('pack_snorm_2x16', 'v'),
+     ('pack_uvec2_to_uint',
+        ('f2i', ('fround_even', ('fmul', ('fmin', 1.0, ('fmax', -1.0, 'v')), 32767.0)))),
+     'options->lower_pack_snorm_2x16'),
+
+    (('pack_snorm_4x8', 'v'),
+     ('pack_uvec4_to_uint',
+        ('f2i', ('fround_even', ('fmul', ('fmin', 1.0, ('fmax', -1.0, 'v')), 127.0)))),
+     'options->lower_pack_snorm_4x8'),
+
+    (('unpack_unorm_2x16', 'v'),
+     ('fdiv', ('u2f', ('vec4', ('extract_uword', 'v', 0),
+                               ('extract_uword', 'v', 1), 0, 0)),
+              65535.0),
+     'options->lower_unpack_unorm_2x16'),
+
+    (('unpack_unorm_4x8', 'v'),
+     ('fdiv', ('u2f', ('vec4', ('extract_ubyte', 'v', 0),
+                               ('extract_ubyte', 'v', 1),
+                               ('extract_ubyte', 'v', 2),
+                               ('extract_ubyte', 'v', 3))),
+              255.0),
+     'options->lower_unpack_unorm_4x8'),
+
+    (('unpack_snorm_2x16', 'v'),
+     ('fmin', 1.0, ('fmax', -1.0, ('fdiv', ('i2f', ('vec4', ('extract_iword', 'v', 0),
+                                                            ('extract_iword', 'v', 1), 0, 0)),
+                                           32767.0))),
+     'options->lower_unpack_snorm_2x16'),
+
+    (('unpack_snorm_4x8', 'v'),
+     ('fmin', 1.0, ('fmax', -1.0, ('fdiv', ('i2f', ('vec4', ('extract_ibyte', 'v', 0),
+                                                            ('extract_ibyte', 'v', 1),
+                                                            ('extract_ibyte', 'v', 2),
+                                                            ('extract_ibyte', 'v', 3))),
+                                           127.0))),
+     'options->lower_unpack_snorm_4x8'),
 ]
 
 # Add optimizations to handle the case where the result of a ternary is

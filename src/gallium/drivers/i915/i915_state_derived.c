@@ -184,7 +184,7 @@ static void calculate_vertex_layout(struct i915_context *i915)
 struct i915_tracked_state i915_update_vertex_layout = {
    "vertex_layout",
    calculate_vertex_layout,
-   I915_NEW_FS | I915_NEW_VS
+   I915_NEW_RASTERIZER | I915_NEW_FS | I915_NEW_VS
 };
 
 

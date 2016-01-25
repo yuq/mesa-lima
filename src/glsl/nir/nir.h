@@ -140,7 +140,7 @@ typedef enum {
  * ir_variable - it should be easy to translate between the two.
  */
 
-typedef struct {
+typedef struct nir_variable {
    struct exec_node node;
 
    /**
@@ -383,7 +383,7 @@ nir_variable_get_io_mask(nir_variable *var, gl_shader_stage stage)
    return ((1ull << slots) - 1) << var->data.location;
 }
 
-typedef struct {
+typedef struct nir_register {
    struct exec_node node;
 
    unsigned num_components; /** < number of vector components */
@@ -477,7 +477,7 @@ nir_instr_is_last(nir_instr *instr)
    return exec_node_is_tail_sentinel(exec_node_get_next(&instr->node));
 }
 
-typedef struct {
+typedef struct nir_ssa_def {
    /** for debugging only, can be NULL */
    const char* name;
 
@@ -1529,6 +1529,20 @@ typedef struct nir_shader_compiler_options {
 
    /** lowers ffract to fsub+ffloor: */
    bool lower_ffract;
+
+   bool lower_pack_half_2x16;
+   bool lower_pack_unorm_2x16;
+   bool lower_pack_snorm_2x16;
+   bool lower_pack_unorm_4x8;
+   bool lower_pack_snorm_4x8;
+   bool lower_unpack_half_2x16;
+   bool lower_unpack_unorm_2x16;
+   bool lower_unpack_snorm_2x16;
+   bool lower_unpack_unorm_4x8;
+   bool lower_unpack_snorm_4x8;
+
+   bool lower_extract_byte;
+   bool lower_extract_word;
 
    /**
     * Does the driver support real 32-bit integers?  (Otherwise, integers

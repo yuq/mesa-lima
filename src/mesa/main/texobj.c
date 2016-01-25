@@ -769,7 +769,8 @@ _mesa_test_texobj_completeness( const struct gl_context *ctx,
    }
 
    if (t->Target == GL_TEXTURE_CUBE_MAP_ARB) {
-      /* Make sure that all six cube map level 0 images are the same size.
+      /* Make sure that all six cube map level 0 images are the same size and
+       * format.
        * Note:  we know that the image's width==height (we enforce that
        * at glTexImage time) so we only need to test the width here.
        */
@@ -782,6 +783,15 @@ _mesa_test_texobj_completeness( const struct gl_context *ctx,
          if (t->Image[face][baseLevel] == NULL ||
              t->Image[face][baseLevel]->Width2 != baseImage->Width2) {
             incomplete(t, BASE, "Cube face missing or mismatched size");
+            return;
+         }
+         if (t->Image[face][baseLevel]->InternalFormat !=
+             baseImage->InternalFormat) {
+            incomplete(t, BASE, "Cube face format mismatch");
+            return;
+         }
+         if (t->Image[face][baseLevel]->Border != baseImage->Border) {
+            incomplete(t, BASE, "Cube face border size mismatch");
             return;
          }
       }
@@ -857,16 +867,6 @@ _mesa_test_texobj_completeness( const struct gl_context *ctx,
                   incomplete(t, MIPMAP, "TexImage[%d] bad depth %u", i,
                              img->Depth2);
                   return;
-               }
-
-               /* Extra checks for cube textures */
-               if (face > 0) {
-                  /* check that cube faces are the same size */
-                  if (img->Width2 != t->Image[0][i]->Width2 ||
-                      img->Height2 != t->Image[0][i]->Height2) {
-		     incomplete(t, MIPMAP, "CubeMap Image[n][i] bad size");
-		     return;
-		  }
                }
             }
          }

@@ -940,6 +940,9 @@ const struct function common_desktop_functions_possible[] = {
    { "glGetTextureSubImage", 20, -1 },
    { "glGetCompressedTextureSubImage", 20, -1 },
 
+   /* GL_GREMEDY_string_marker */
+   { "glStringMarkerGREMEDY", 15, -1 },
+
    { NULL, 0, -1 }
 };
 

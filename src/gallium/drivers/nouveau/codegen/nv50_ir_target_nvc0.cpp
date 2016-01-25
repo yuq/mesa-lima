@@ -384,6 +384,16 @@ TargetNVC0::insnCanLoad(const Instruction *i, int s,
 }
 
 bool
+TargetNVC0::insnCanLoadOffset(const Instruction *insn, int s, int offset) const
+{
+   const ValueRef& ref = insn->src(s);
+   if (ref.getFile() == FILE_MEMORY_CONST &&
+       (insn->op != OP_LOAD || insn->subOp != NV50_IR_SUBOP_LDC_IS))
+      return offset >= -0x8000 && offset < 0x8000;
+   return true;
+}
+
+bool
 TargetNVC0::isAccessSupported(DataFile file, DataType ty) const
 {
    if (ty == TYPE_NONE)
