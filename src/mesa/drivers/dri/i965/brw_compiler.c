@@ -87,7 +87,15 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
 static const struct nir_shader_compiler_options scalar_nir_options = {
    COMMON_OPTIONS,
    .lower_pack_half_2x16 = true,
+   .lower_pack_snorm_2x16 = true,
+   .lower_pack_snorm_4x8 = true,
+   .lower_pack_unorm_2x16 = true,
+   .lower_pack_unorm_4x8 = true,
    .lower_unpack_half_2x16 = true,
+   .lower_unpack_snorm_2x16 = true,
+   .lower_unpack_snorm_4x8 = true,
+   .lower_unpack_unorm_2x16 = true,
+   .lower_unpack_unorm_4x8 = true,
 };
 
 static const struct nir_shader_compiler_options vector_nir_options = {
@@ -98,6 +106,13 @@ static const struct nir_shader_compiler_options vector_nir_options = {
     * instructions because it can optimize better for us.
     */
    .fdot_replicates = true,
+
+   .lower_pack_snorm_2x16 = true,
+   .lower_pack_unorm_2x16 = true,
+   .lower_unpack_snorm_2x16 = true,
+   .lower_unpack_unorm_2x16 = true,
+   .lower_extract_byte = true,
+   .lower_extract_word = true,
 };
 
 struct brw_compiler *

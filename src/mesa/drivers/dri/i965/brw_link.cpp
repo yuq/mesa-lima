@@ -73,26 +73,13 @@ brw_lower_packing_builtins(struct brw_context *brw,
                            gl_shader_stage shader_type,
                            exec_list *ir)
 {
-   const struct brw_compiler *compiler = brw->intelScreen->compiler;
+   /* Gens < 7 don't have instructions to convert to or from half-precision,
+    * and Gens < 6 don't expose that functionality.
+    */
+   if (brw->gen != 6)
+      return;
 
-   int ops = LOWER_PACK_SNORM_2x16
-           | LOWER_UNPACK_SNORM_2x16
-           | LOWER_PACK_UNORM_2x16
-           | LOWER_UNPACK_UNORM_2x16;
-
-   if (compiler->scalar_stage[shader_type]) {
-      ops |= LOWER_UNPACK_UNORM_4x8
-           | LOWER_UNPACK_SNORM_4x8
-           | LOWER_PACK_UNORM_4x8
-           | LOWER_PACK_SNORM_4x8;
-   }
-
-   if (brw->gen < 7) {
-      ops |= LOWER_PACK_HALF_2x16
-          |  LOWER_UNPACK_HALF_2x16;
-   }
-
-   lower_packing_builtins(ir, ops);
+   lower_packing_builtins(ir, LOWER_PACK_HALF_2x16 | LOWER_UNPACK_HALF_2x16);
 }
 
 static void

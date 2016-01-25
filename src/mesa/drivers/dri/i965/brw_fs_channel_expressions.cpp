@@ -73,6 +73,10 @@ channel_expressions_predicate(ir_instruction *ir)
 
    switch (expr->operation) {
       case ir_unop_pack_half_2x16:
+      case ir_unop_pack_snorm_2x16:
+      case ir_unop_pack_snorm_4x8:
+      case ir_unop_pack_unorm_2x16:
+      case ir_unop_pack_unorm_4x8:
          return false;
 
       /* these opcodes need to act on the whole vector,
@@ -166,6 +170,10 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
 
    switch (expr->operation) {
       case ir_unop_pack_half_2x16:
+      case ir_unop_pack_snorm_2x16:
+      case ir_unop_pack_snorm_4x8:
+      case ir_unop_pack_unorm_2x16:
+      case ir_unop_pack_unorm_4x8:
       case ir_unop_interpolate_at_centroid:
       case ir_binop_interpolate_at_offset:
       case ir_binop_interpolate_at_sample:
