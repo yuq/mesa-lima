@@ -895,7 +895,7 @@ isl_calc_row_pitch(const struct isl_device *dev,
     *    being used to determine whether additional pages need to be defined.
     */
    assert(phys_slice0_sa->w % fmtl->bw == 0);
-   row_pitch = MAX(row_pitch, fmtl->bs * phys_slice0_sa->w);
+   row_pitch = MAX(row_pitch, fmtl->bs * (phys_slice0_sa->w / fmtl->bw));
 
    switch (tile_info->tiling) {
    case ISL_TILING_LINEAR:
