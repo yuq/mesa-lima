@@ -258,6 +258,26 @@ optimizations = [
    (('extract_uword', a, b),
     ('iand', ('ushr', a, ('imul', b, 16)), 0xffff),
     'options->lower_extract_word'),
+
+    (('pack_unorm_2x16', 'v'),
+     ('pack_uvec2_to_uint',
+        ('f2u', ('fround_even', ('fmul', ('fsat', 'v'), 65535.0)))),
+     'options->lower_pack_unorm_2x16'),
+
+    (('pack_unorm_4x8', 'v'),
+     ('pack_uvec4_to_uint',
+        ('f2u', ('fround_even', ('fmul', ('fsat', 'v'), 255.0)))),
+     'options->lower_pack_unorm_4x8'),
+
+    (('pack_snorm_2x16', 'v'),
+     ('pack_uvec2_to_uint',
+        ('f2i', ('fround_even', ('fmul', ('fmin', 1.0, ('fmax', -1.0, 'v')), 32767.0)))),
+     'options->lower_pack_snorm_2x16'),
+
+    (('pack_snorm_4x8', 'v'),
+     ('pack_uvec4_to_uint',
+        ('f2i', ('fround_even', ('fmul', ('fmin', 1.0, ('fmax', -1.0, 'v')), 127.0)))),
+     'options->lower_pack_snorm_4x8'),
 ]
 
 # Add optimizations to handle the case where the result of a ternary is

@@ -134,6 +134,38 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
       return;
    }
 
+   case nir_op_pack_uvec2_to_uint: {
+      assert(b->shader->options->lower_pack_snorm_2x16 ||
+             b->shader->options->lower_pack_unorm_2x16);
+
+      nir_ssa_def *word =
+         nir_extract_uword(b, instr->src[0].src.ssa, nir_imm_int(b, 0));
+      nir_ssa_def *val =
+         nir_ior(b, nir_ishl(b, nir_channel(b, word, 1), nir_imm_int(b, 16)),
+                                nir_channel(b, word, 0));
+
+      nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(val));
+      nir_instr_remove(&instr->instr);
+      break;
+   }
+
+   case nir_op_pack_uvec4_to_uint: {
+      assert(b->shader->options->lower_pack_snorm_4x8 ||
+             b->shader->options->lower_pack_unorm_4x8);
+
+      nir_ssa_def *byte =
+         nir_extract_ubyte(b, instr->src[0].src.ssa, nir_imm_int(b, 0));
+      nir_ssa_def *val =
+         nir_ior(b, nir_ior(b, nir_ishl(b, nir_channel(b, byte, 3), nir_imm_int(b, 24)),
+                               nir_ishl(b, nir_channel(b, byte, 2), nir_imm_int(b, 16))),
+                    nir_ior(b, nir_ishl(b, nir_channel(b, byte, 1), nir_imm_int(b, 8)),
+                               nir_channel(b, byte, 0)));
+
+      nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(val));
+      nir_instr_remove(&instr->instr);
+      break;
+   }
+
    case nir_op_fdph: {
       nir_ssa_def *sum[4];
       for (unsigned i = 0; i < 3; i++) {
