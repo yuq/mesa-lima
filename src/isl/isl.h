@@ -884,6 +884,11 @@ isl_surf_init_s(const struct isl_device *dev,
                 struct isl_surf *surf,
                 const struct isl_surf_init_info *restrict info);
 
+void
+isl_surf_get_tile_info(const struct isl_device *dev,
+                       const struct isl_surf *surf,
+                       struct isl_tile_info *tile_info);
+
 /**
  * Alignment of the upper-left sample of each subimage, in units of surface
  * elements.

@@ -1150,6 +1150,15 @@ isl_surf_init_s(const struct isl_device *dev,
    return true;
 }
 
+void
+isl_surf_get_tile_info(const struct isl_device *dev,
+                       const struct isl_surf *surf,
+                       struct isl_tile_info *tile_info)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf->format);
+   isl_tiling_get_info(dev, surf->tiling, fmtl->bs, tile_info);
+}
+
 /**
  * A variant of isl_surf_get_image_offset_sa() specific to
  * ISL_DIM_LAYOUT_GEN4_2D.
