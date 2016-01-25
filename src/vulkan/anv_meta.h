@@ -44,6 +44,9 @@ struct anv_meta_saved_state {
    struct anv_dynamic_state dynamic;
 };
 
+VkResult anv_device_init_meta_clear_state(struct anv_device *device);
+void anv_device_finish_meta_clear_state(struct anv_device *device);
+
 void
 anv_meta_save(struct anv_meta_saved_state *state,
               const struct anv_cmd_buffer *cmd_buffer,

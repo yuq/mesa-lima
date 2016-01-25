@@ -28,7 +28,6 @@
 #include <fcntl.h>
 
 #include "anv_meta.h"
-#include "anv_meta_clear.h"
 #include "anv_private.h"
 #include "glsl/nir/nir_builder.h"
 
