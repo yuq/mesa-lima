@@ -4633,8 +4633,6 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                         &prog->NumShaderStorageBlocks,
                         &prog->SsboInterfaceBlockIndex);
 
-   /* FINISHME: Assign fragment shader output locations. */
-
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)
 	 continue;
