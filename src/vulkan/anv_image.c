@@ -530,7 +530,7 @@ anv_image_view_init(struct anv_image_view *iview,
                                       iview, pCreateInfo,
                                       VK_IMAGE_USAGE_STORAGE_BIT);
       else
-         anv_fill_buffer_surface_state(device, iview->storage_surface_state.map,
+         anv_fill_buffer_surface_state(device, iview->storage_surface_state,
                                        ISL_FORMAT_RAW,
                                        iview->offset,
                                        iview->bo->size - iview->offset, 1);
@@ -614,7 +614,7 @@ anv_CreateBufferView(VkDevice _device,
       view->surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
 
-      anv_fill_buffer_surface_state(device, view->surface_state.map,
+      anv_fill_buffer_surface_state(device, view->surface_state,
                                     view->format,
                                     view->offset, view->range,
                                     format->isl_layout->bs);
@@ -631,7 +631,7 @@ anv_CreateBufferView(VkDevice _device,
          isl_lower_storage_image_format(&device->isl_dev, view->format) :
          ISL_FORMAT_RAW;
 
-      anv_fill_buffer_surface_state(device, view->storage_surface_state.map,
+      anv_fill_buffer_surface_state(device, view->storage_surface_state,
                                     storage_format,
                                     view->offset, view->range,
                                     (storage_format == ISL_FORMAT_RAW ? 1 :

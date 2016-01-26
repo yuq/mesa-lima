@@ -565,12 +565,9 @@ void anv_UpdateDescriptorSets(
             else
                view->range = write->pBufferInfo[j].range;
 
-            anv_fill_buffer_surface_state(device, view->surface_state.map,
+            anv_fill_buffer_surface_state(device, view->surface_state,
                                           view->format,
                                           view->offset, view->range, 1);
-
-            if (!device->info.has_llc)
-               anv_state_clflush(view->surface_state);
 
             desc[j] = (struct anv_descriptor) {
                .type = write->descriptorType,

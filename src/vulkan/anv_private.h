@@ -1640,7 +1640,8 @@ struct anv_buffer_view {
 const struct anv_format *
 anv_format_for_descriptor_type(VkDescriptorType type);
 
-void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
+void anv_fill_buffer_surface_state(struct anv_device *device,
+                                   struct anv_state state,
                                    enum isl_format format,
                                    uint32_t offset, uint32_t range,
                                    uint32_t stride);
