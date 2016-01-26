@@ -54,11 +54,12 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
         Format, Pool, pSharedHandle);
 
     user_assert(EdgeLength, D3DERR_INVALIDCALL);
-    user_assert(!pSharedHandle || Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
+
+    /* user_assert(!pSharedHandle || Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL); */
+    user_assert(!pSharedHandle, D3DERR_INVALIDCALL); /* TODO */
+
     user_assert(!(Usage & D3DUSAGE_AUTOGENMIPMAP) ||
                 (Pool != D3DPOOL_SYSTEMMEM && Levels <= 1), D3DERR_INVALIDCALL);
-
-    user_assert(!pSharedHandle, D3DERR_INVALIDCALL); /* TODO */
 
     if (Usage & D3DUSAGE_AUTOGENMIPMAP)
         Levels = 0;

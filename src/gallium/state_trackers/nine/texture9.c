@@ -61,18 +61,22 @@ NineTexture9_ctor( struct NineTexture9 *This,
         d3dformat_to_string(Format), nine_D3DPOOL_to_str(Pool), pSharedHandle);
 
     user_assert(Width && Height, D3DERR_INVALIDCALL);
-    user_assert(!pSharedHandle || pParams->device->ex, D3DERR_INVALIDCALL);
-    /* When is used shared handle, Pool must be
-     * SYSTEMMEM with Levels 1 or DEFAULT with any Levels */
-    user_assert(!pSharedHandle || Pool != D3DPOOL_SYSTEMMEM || Levels == 1,
-                D3DERR_INVALIDCALL);
-    user_assert(!pSharedHandle || Pool == D3DPOOL_SYSTEMMEM || Pool == D3DPOOL_DEFAULT,
-                D3DERR_INVALIDCALL);
-    user_assert((Usage != D3DUSAGE_AUTOGENMIPMAP || Levels <= 1), D3DERR_INVALIDCALL);
-    user_assert(!(Usage & D3DUSAGE_AUTOGENMIPMAP) ||
-                (Pool != D3DPOOL_SYSTEMMEM && Levels <= 1), D3DERR_INVALIDCALL);
 
-    /* TODO: implement buffer sharing (should work with cross process too)
+    /* pSharedHandle: can be non-null for ex only.
+     * D3DPOOL_SYSTEMMEM: Levels must be 1
+     * D3DPOOL_DEFAULT: no restriction for Levels
+     * Other Pools are forbidden. */
+    user_assert(!pSharedHandle || pParams->device->ex, D3DERR_INVALIDCALL);
+    user_assert(!pSharedHandle ||
+                (Pool == D3DPOOL_SYSTEMMEM && Levels == 1) ||
+                Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
+
+    user_assert(!(Usage & D3DUSAGE_AUTOGENMIPMAP) ||
+                (Pool != D3DPOOL_SYSTEMMEM && Pool != D3DPOOL_SCRATCH && Levels <= 1),
+                D3DERR_INVALIDCALL);
+
+    /* TODO: implement pSharedHandle for D3DPOOL_DEFAULT (cross process
+     * buffer sharing).
      *
      * Gem names may have fit but they're depreciated and won't work on render-nodes.
      * One solution is to use shm buffers. We would use a /dev/shm file, fill the first
@@ -85,9 +89,6 @@ NineTexture9_ctor( struct NineTexture9 *This,
      * invalid handle, that we would fail to import. Please note that we don't advertise
      * the flag indicating the support for that feature, but apps seem to not care.
      */
-    user_assert(!pSharedHandle ||
-                Pool == D3DPOOL_SYSTEMMEM ||
-                Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
 
     if (pSharedHandle && Pool == D3DPOOL_DEFAULT) {
         if (!*pSharedHandle) {
