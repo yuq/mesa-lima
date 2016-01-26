@@ -715,13 +715,14 @@ anv_image_view_fill_image_param(struct anv_device *device,
    image_param_defaults(param);
 
    const struct isl_surf *surf = &view->image->color_surface.isl;
-
    const int cpp = isl_format_get_layout(surf->format)->bs;
+   const struct isl_extent3d image_align_sa =
+      isl_surf_get_image_alignment_sa(surf);
 
-   param->size[0] = minify(surf->logical_level0_px.width, view->base_mip);
-   param->size[1] = minify(surf->logical_level0_px.height, view->base_mip);
+   param->size[0] = view->extent.width;
+   param->size[1] = view->extent.height;
    if (surf->dim == ISL_SURF_DIM_3D) {
-      param->size[2] = minify(surf->logical_level0_px.depth, view->base_mip);
+      param->size[2] = view->extent.depth;
    } else {
       param->size[2] = surf->logical_level0_px.array_len - view->base_layer;
    }
@@ -731,9 +732,14 @@ anv_image_view_fill_image_param(struct anv_device *device,
 
    param->stride[0] = cpp;
    param->stride[1] = surf->row_pitch / cpp;
-   if (device->info.gen < 9 && surf->dim == ISL_SURF_DIM_3D)
-      param->stride[2] = util_align_npot(param->size[0], surf->alignment);
-   param->stride[3] = /* TODO */ 0;
+
+   if (device->info.gen < 9 && surf->dim == ISL_SURF_DIM_3D) {
+      param->stride[2] = util_align_npot(param->size[0], image_align_sa.w);
+      param->stride[3] = util_align_npot(param->size[1], image_align_sa.h);
+   } else {
+      param->stride[2] = 0;
+      param->stride[3] = isl_surf_get_array_pitch_el_rows(surf);
+   }
 
    switch (surf->tiling) {
    case ISL_TILING_LINEAR:
@@ -781,7 +787,8 @@ anv_image_view_fill_image_param(struct anv_device *device,
     * brw_fs_surface_builder.cpp) handles this as a sort of tiling with
     * modulus equal to the LOD.
     */
-   param->tiling[2] = (surf->dim == ISL_SURF_DIM_3D) ? view->base_mip : 0;
+   param->tiling[2] = (device->info.gen < 9 && surf->dim == ISL_SURF_DIM_3D ?
+                       view->base_mip : 0);
 }
 
 void
