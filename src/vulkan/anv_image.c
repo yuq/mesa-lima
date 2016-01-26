@@ -128,7 +128,8 @@ make_surface(const struct anv_device *dev,
 
    ok = isl_surf_init(&dev->isl_dev, &anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
-      .format = anv_get_isl_format(vk_info->format, aspect, vk_info->tiling),
+      .format = anv_get_isl_format(vk_info->format, aspect,
+                                   vk_info->tiling, NULL),
       .width = vk_info->extent.width,
       .height = vk_info->extent.height,
       .depth = vk_info->extent.depth,
@@ -454,12 +455,28 @@ has_matching_storage_typed_format(const struct anv_device *device,
 }
 
 static VkComponentSwizzle
-remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component)
+remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component,
+              struct anv_format_swizzle format_swizzle)
 {
    if (swizzle == VK_COMPONENT_SWIZZLE_IDENTITY)
-      return component;
-   else
-      return swizzle;
+      swizzle = component;
+
+   switch (swizzle) {
+   case VK_COMPONENT_SWIZZLE_ZERO:
+      return VK_COMPONENT_SWIZZLE_ZERO;
+   case VK_COMPONENT_SWIZZLE_ONE:
+      return VK_COMPONENT_SWIZZLE_ONE;
+   case VK_COMPONENT_SWIZZLE_R:
+      return VK_COMPONENT_SWIZZLE_R + format_swizzle.r;
+   case VK_COMPONENT_SWIZZLE_G:
+      return VK_COMPONENT_SWIZZLE_R + format_swizzle.g;
+   case VK_COMPONENT_SWIZZLE_B:
+      return VK_COMPONENT_SWIZZLE_R + format_swizzle.b;
+   case VK_COMPONENT_SWIZZLE_A:
+      return VK_COMPONENT_SWIZZLE_R + format_swizzle.a;
+   default:
+      unreachable("Invalid swizzle");
+   }
 }
 
 void
@@ -500,16 +517,18 @@ anv_image_view_init(struct anv_image_view *iview,
 
    iview->aspect_mask = pCreateInfo->subresourceRange.aspectMask;
    iview->vk_format = pCreateInfo->format;
+
+   struct anv_format_swizzle swizzle;
    iview->format = anv_get_isl_format(pCreateInfo->format, iview->aspect_mask,
-                                      image->tiling);
+                                      image->tiling, &swizzle);
    iview->swizzle.r = remap_swizzle(pCreateInfo->components.r,
-                                    VK_COMPONENT_SWIZZLE_R);
+                                    VK_COMPONENT_SWIZZLE_R, swizzle);
    iview->swizzle.g = remap_swizzle(pCreateInfo->components.g,
-                                    VK_COMPONENT_SWIZZLE_G);
+                                    VK_COMPONENT_SWIZZLE_G, swizzle);
    iview->swizzle.b = remap_swizzle(pCreateInfo->components.b,
-                                    VK_COMPONENT_SWIZZLE_B);
+                                    VK_COMPONENT_SWIZZLE_B, swizzle);
    iview->swizzle.a = remap_swizzle(pCreateInfo->components.a,
-                                    VK_COMPONENT_SWIZZLE_A);
+                                    VK_COMPONENT_SWIZZLE_A, swizzle);
 
    iview->base_layer = range->baseArrayLayer;
    iview->base_mip = range->baseMipLevel;

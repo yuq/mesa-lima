@@ -26,14 +26,21 @@
 
 #include "gen7_pack.h"
 
-#define fmt(__vk_fmt, __hw_fmt, ...) \
+#define RGBA ((struct anv_format_swizzle) { 0, 1, 2, 3 })
+#define BGRA ((struct anv_format_swizzle) { 2, 1, 0, 3 })
+
+#define swiz_fmt(__vk_fmt, __hw_fmt, __swizzle, ...)     \
    [__vk_fmt] = { \
       .vk_format = __vk_fmt, \
       .name = #__vk_fmt, \
       .surface_format = __hw_fmt, \
       .isl_layout = &isl_format_layouts[__hw_fmt], \
+      .swizzle = __swizzle, \
       __VA_ARGS__ \
    }
+
+#define fmt(__vk_fmt, __hw_fmt, ...) \
+   swiz_fmt(__vk_fmt, __hw_fmt, RGBA, __VA_ARGS__)
 
 /* HINT: For array formats, the ISL name should match the VK name.  For
  * packed formats, they should have the channels in reverse order from each
@@ -44,9 +51,9 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_UNDEFINED,               ISL_FORMAT_RAW),
    fmt(VK_FORMAT_R4G4_UNORM_PACK8,        ISL_FORMAT_UNSUPPORTED),
    fmt(VK_FORMAT_R4G4B4A4_UNORM_PACK16,   ISL_FORMAT_A4B4G4R4_UNORM),
-   fmt(VK_FORMAT_B4G4R4A4_UNORM_PACK16,   ISL_FORMAT_UNSUPPORTED),
+   swiz_fmt(VK_FORMAT_B4G4R4A4_UNORM_PACK16,   ISL_FORMAT_A4B4G4R4_UNORM,  BGRA),
    fmt(VK_FORMAT_R5G6B5_UNORM_PACK16,     ISL_FORMAT_B5G6R5_UNORM),
-   fmt(VK_FORMAT_B5G6R5_UNORM_PACK16,     ISL_FORMAT_UNSUPPORTED),
+   swiz_fmt(VK_FORMAT_B5G6R5_UNORM_PACK16,     ISL_FORMAT_B5G6R5_UNORM, BGRA),
    fmt(VK_FORMAT_R5G5B5A1_UNORM_PACK16,   ISL_FORMAT_A1B5G5R5_UNORM),
    fmt(VK_FORMAT_B5G5R5A1_UNORM_PACK16,   ISL_FORMAT_UNSUPPORTED),
    fmt(VK_FORMAT_A1R5G5B5_UNORM_PACK16,   ISL_FORMAT_B5G5R5A1_UNORM),
@@ -243,9 +250,12 @@ anv_format_for_vk_format(VkFormat format)
  */
 enum isl_format
 anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
-                   VkImageTiling tiling)
+                   VkImageTiling tiling, struct anv_format_swizzle *swizzle)
 {
    const struct anv_format *anv_fmt = &anv_formats[format];
+
+   if (swizzle)
+      *swizzle = anv_fmt->swizzle;
 
    switch (aspect) {
    case VK_IMAGE_ASPECT_COLOR_BIT:
@@ -296,7 +306,8 @@ void anv_validate_GetPhysicalDeviceFormatProperties(
 
 static VkFormatFeatureFlags
 get_image_format_properties(int gen, enum isl_format base,
-                            enum isl_format actual)
+                            enum isl_format actual,
+                            struct anv_format_swizzle swizzle)
 {
    const struct brw_surface_format_info *info = &surface_formats[actual];
 
@@ -309,12 +320,16 @@ get_image_format_properties(int gen, enum isl_format base,
                VK_FORMAT_FEATURE_BLIT_SRC_BIT;
    }
 
-   if (info->render_target <= gen) {
+   /* We can render to swizzled formats.  However, if the alpha channel is
+    * moved, then blending won't work correctly.  The PRM tells us
+    * straight-up not to render to such a surface.
+    */
+   if (info->render_target <= gen && swizzle.a == 3) {
       flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
                VK_FORMAT_FEATURE_BLIT_DST_BIT;
    }
 
-   if (info->alpha_blend <= gen)
+   if (info->alpha_blend <= gen && swizzle.a == 3)
       flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
 
    /* Load/store is determined based on base format.  This prevents RGB
@@ -374,13 +389,16 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
       }
    } else {
       enum isl_format linear_fmt, tiled_fmt;
+      struct anv_format_swizzle linear_swizzle, tiled_swizzle;
       linear_fmt = anv_get_isl_format(format, VK_IMAGE_ASPECT_COLOR_BIT,
-                                      VK_IMAGE_TILING_LINEAR);
+                                      VK_IMAGE_TILING_LINEAR, &linear_swizzle);
       tiled_fmt = anv_get_isl_format(format, VK_IMAGE_ASPECT_COLOR_BIT,
-                                     VK_IMAGE_TILING_OPTIMAL);
+                                     VK_IMAGE_TILING_OPTIMAL, &tiled_swizzle);
 
-      linear = get_image_format_properties(gen, linear_fmt, linear_fmt);
-      tiled = get_image_format_properties(gen, linear_fmt, tiled_fmt);
+      linear = get_image_format_properties(gen, linear_fmt, linear_fmt,
+                                           linear_swizzle);
+      tiled = get_image_format_properties(gen, linear_fmt, tiled_fmt,
+                                          tiled_swizzle);
       buffer = get_buffer_format_properties(gen, linear_fmt);
 
       /* XXX: We handle 3-channel formats by switching them out for RGBX or

@@ -972,7 +972,8 @@ choose_buffer_format(struct anv_image *image, VkImageAspectFlagBits aspect)
     * work if the buffer is the destination.
     */
    enum isl_format linear_format = anv_get_isl_format(image->vk_format, aspect,
-                                                      VK_IMAGE_TILING_LINEAR);
+                                                      VK_IMAGE_TILING_LINEAR,
+                                                      NULL);
 
    return vk_format_for_size(isl_format_layouts[linear_format].bs);
 }
