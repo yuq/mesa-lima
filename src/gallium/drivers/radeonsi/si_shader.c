@@ -1515,7 +1515,8 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 }
 
 static LLVMValueRef si_scale_alpha_by_sample_mask(struct lp_build_tgsi_context *bld_base,
-						  LLVMValueRef alpha)
+						  LLVMValueRef alpha,
+						  unsigned samplemask_param)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
@@ -1523,7 +1524,7 @@ static LLVMValueRef si_scale_alpha_by_sample_mask(struct lp_build_tgsi_context *
 
 	/* alpha = alpha * popcount(coverage) / SI_NUM_SMOOTH_AA_SAMPLES */
 	coverage = LLVMGetParam(ctx->radeon_bld.main_fn,
-				SI_PARAM_SAMPLE_COVERAGE);
+				samplemask_param);
 	coverage = bitcast(bld_base, TGSI_TYPE_SIGNED, coverage);
 
 	coverage = lp_build_intrinsic(gallivm->builder, "llvm.ctpop.i32",
@@ -2288,6 +2289,7 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 
 static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 				LLVMValueRef *color, unsigned index,
+				unsigned samplemask_param,
 				bool is_last)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
@@ -2310,7 +2312,8 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 
 	/* Line & polygon smoothing */
 	if (ctx->shader->key.ps.epilog.poly_line_smoothing)
-		color[3] = si_scale_alpha_by_sample_mask(bld_base, color[3]);
+		color[3] = si_scale_alpha_by_sample_mask(bld_base, color[3],
+							 samplemask_param);
 
 	/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
 	if (ctx->shader->key.ps.epilog.last_cbuf > 0) {
@@ -2449,6 +2452,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context *bld_base)
 							 ctx->radeon_bld.soa.outputs[i][j], "");
 
 			si_export_mrt_color(bld_base, color, semantic_index,
+					    SI_PARAM_SAMPLE_COVERAGE,
 					    last_color_export == i);
 			break;
 		default:
