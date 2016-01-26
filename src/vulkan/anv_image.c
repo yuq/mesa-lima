@@ -443,6 +443,16 @@ alloc_surface_state(struct anv_device *device,
       }
 }
 
+static bool
+has_matching_storage_typed_format(const struct anv_device *device,
+                                  enum isl_format format)
+{
+   return (isl_format_get_layout(format)->bs <= 4 ||
+           (isl_format_get_layout(format)->bs <= 8 &&
+            (device->info.gen >= 8 || device->info.is_haswell)) ||
+           device->info.gen >= 9);
+}
+
 void
 anv_image_view_init(struct anv_image_view *iview,
                     struct anv_device *device,
@@ -515,9 +525,16 @@ anv_image_view_init(struct anv_image_view *iview,
    if (image->needs_storage_surface_state) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      anv_fill_image_surface_state(device, iview->storage_surface_state.map,
-                                   iview, pCreateInfo,
-                                   VK_IMAGE_USAGE_STORAGE_BIT);
+      if (has_matching_storage_typed_format(device, iview->format))
+         anv_fill_image_surface_state(device, iview->storage_surface_state.map,
+                                      iview, pCreateInfo,
+                                      VK_IMAGE_USAGE_STORAGE_BIT);
+      else
+         anv_fill_buffer_surface_state(device, iview->storage_surface_state.map,
+                                       ISL_FORMAT_RAW,
+                                       iview->offset,
+                                       iview->bo->size - iview->offset, 1);
+
    } else {
       iview->storage_surface_state.alloc_size = 0;
    }
@@ -610,12 +627,16 @@ anv_CreateBufferView(VkDevice _device,
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
 
       enum isl_format storage_format =
-         isl_lower_storage_image_format(&device->isl_dev, view->format);
+         has_matching_storage_typed_format(device, view->format) ?
+         isl_lower_storage_image_format(&device->isl_dev, view->format) :
+         ISL_FORMAT_RAW;
 
       anv_fill_buffer_surface_state(device, view->storage_surface_state.map,
                                     storage_format,
                                     view->offset, view->range,
-                                    format->isl_layout->bs);
+                                    (storage_format == ISL_FORMAT_RAW ? 1 :
+                                     format->isl_layout->bs));
+
    } else {
       view->storage_surface_state = (struct anv_state){ 0 };
    }
