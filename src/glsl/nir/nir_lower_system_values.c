@@ -113,6 +113,12 @@ convert_block(nir_block *block, void *void_state)
          }
          break;
 
+      case SYSTEM_VALUE_INSTANCE_INDEX:
+         sysval = nir_iadd(b,
+            nir_load_system_value(b, nir_intrinsic_load_instance_id, 0),
+            nir_load_system_value(b, nir_intrinsic_load_base_instance, 0));
+         break;
+
       default: {
          nir_intrinsic_op sysval_op =
             nir_intrinsic_from_system_value(var->data.location);
