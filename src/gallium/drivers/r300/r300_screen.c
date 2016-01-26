@@ -211,6 +211,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_GENERATE_MIPMAP:
         case PIPE_CAP_STRING_MARKER:
         case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
+        case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
             return 0;
 
         /* SWTCL-only features. */

@@ -310,6 +310,13 @@ The integer capabilities:
 * ``PIPE_CAP_GENERATE_MIPMAP``: Indicates whether pipe_context::generate_mipmap
   is supported.
 * ``PIPE_CAP_STRING_MARKER``: Whether pipe->emit_string_marker() is supported.
+* ``PIPE_CAP_SURFACE_REINTERPRET_BLOCKS``: Indicates whether
+  pipe_context::create_surface supports reinterpreting a texture as a surface
+  of a format with different block width/height (but same block size in bits).
+  For example, a compressed texture image can be interpreted as a
+  non-compressed surface whose texels are the same number of bits as the
+  compressed blocks, and vice versa. The width and height of the surface is
+  adjusted appropriately.
 
 
 .. _pipe_capf:

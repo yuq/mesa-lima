@@ -230,6 +230,7 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
    case PIPE_CAP_INVALIDATE_BUFFER:
    case PIPE_CAP_GENERATE_MIPMAP:
+   case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
       return 0;
    case PIPE_CAP_VENDOR_ID:
       return 0x1af4;
