@@ -187,6 +187,7 @@ struct r600_framebuffer {
 	bool export_16bpc;
 	bool cb0_is_integer;
 	bool is_msaa_resolve;
+	bool dual_src_blend;
 };
 
 struct r600_sample_mask {

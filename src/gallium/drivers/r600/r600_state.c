@@ -1337,7 +1337,7 @@ static void r600_emit_framebuffer_state(struct r600_context *rctx, struct r600_a
 		radeon_emit(cs, cb[i] ? cb[i]->cb_color_info : 0);
 	}
 	/* set CB_COLOR1_INFO for possible dual-src blending */
-	if (i == 1 && cb[0]) {
+	if (rctx->framebuffer.dual_src_blend && i == 1 && cb[0]) {
 		radeon_emit(cs, cb[0]->cb_color_info);
 		i++;
 	}

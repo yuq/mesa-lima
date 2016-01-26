@@ -1584,7 +1584,7 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 		radeon_emit(cs, reloc);
 	}
 	/* set CB_COLOR1_INFO for possible dual-src blending */
-	if (i == 1 && state->cbufs[0]) {
+	if (rctx->framebuffer.dual_src_blend && i == 1 && state->cbufs[0]) {
 		radeon_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + 1 * 0x3C,
 				       cb->cb_color_info | tex->cb_color_info);
 		i++;

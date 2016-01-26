@@ -187,6 +187,10 @@ static void r600_bind_blend_state_internal(struct r600_context *rctx,
 	if (update_cb) {
 		r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 	}
+	if (rctx->framebuffer.dual_src_blend != blend->dual_src_blend) {
+		rctx->framebuffer.dual_src_blend = blend->dual_src_blend;
+		r600_mark_atom_dirty(rctx, &rctx->framebuffer.atom);
+	}
 }
 
 static void r600_bind_blend_state(struct pipe_context *ctx, void *state)
