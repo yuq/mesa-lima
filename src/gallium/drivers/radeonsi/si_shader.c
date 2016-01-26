@@ -4074,7 +4074,7 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 			si_shader_dump_disassembly(&shader->binary, debug);
 
 	si_shader_dump_stats(sscreen, &shader->config,
-                            shader->selector->info.num_inputs,
+			     shader->selector ? shader->selector->info.num_inputs : 0,
 			     shader->binary.code_size, debug, processor);
 }
 
