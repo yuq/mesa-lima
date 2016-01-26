@@ -178,7 +178,7 @@ create_pipeline(struct anv_device *device,
             .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             .rasterizationSamples = 1, /* FINISHME: Multisampling */
             .sampleShadingEnable = false,
-            .pSampleMask = (VkSampleMask[]) { UINT32_MAX },
+            .pSampleMask = (VkSampleMask[]) { 0x1 },
             .alphaToCoverageEnable = false,
             .alphaToOneEnable = false,
          },
