@@ -48,7 +48,6 @@ NineTexture9_ctor( struct NineTexture9 *This,
 {
     struct pipe_screen *screen = pParams->device->screen;
     struct pipe_resource *info = &This->base.base.info;
-    struct pipe_resource *resource;
     enum pipe_format pf;
     unsigned *level_offsets;
     unsigned l;
@@ -182,11 +181,6 @@ NineTexture9_ctor( struct NineTexture9 *This,
     sfdesc.MultiSampleType = D3DMULTISAMPLE_NONE;
     sfdesc.MultiSampleQuality = 0;
 
-    if (Pool == D3DPOOL_SYSTEMMEM)
-        resource = NULL;
-    else
-        resource = This->base.base.resource;
-
     for (l = 0; l <= info->last_level; ++l) {
         sfdesc.Width = u_minify(Width, l);
         sfdesc.Height = u_minify(Height, l);
@@ -196,7 +190,7 @@ NineTexture9_ctor( struct NineTexture9 *This,
             level_offsets[l] : NULL;
 
         hr = NineSurface9_new(This->base.base.base.device, NineUnknown(This),
-                              resource, user_buffer_for_level,
+                              This->base.base.resource, user_buffer_for_level,
                               D3DRTYPE_TEXTURE, l, 0,
                               &sfdesc, &This->surfaces[l]);
         if (FAILED(hr))
