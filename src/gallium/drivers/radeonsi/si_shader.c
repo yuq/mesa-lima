@@ -4113,7 +4113,7 @@ int si_compile_llvm(struct si_screen *sscreen,
 /* Generate code for the hardware VS shader stage to go with a geometry shader */
 static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 				      struct si_shader_context *si_shader_ctx,
-				      struct si_shader *gs, bool dump,
+				      struct si_shader *gs,
 				      struct pipe_debug_callback *debug)
 {
 	struct gallivm_state *gallivm = &si_shader_ctx->radeon_bld.gallivm;
@@ -4183,7 +4183,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	radeon_llvm_finalize_module(&si_shader_ctx->radeon_bld);
 
-	if (dump)
+	if (r600_can_dump_shader(&sscreen->b, TGSI_PROCESSOR_GEOMETRY))
 		fprintf(stderr, "Copy Vertex Shader for Geometry Shader:\n\n");
 
 	r = si_compile_llvm(sscreen, &si_shader_ctx->shader->binary,
@@ -4317,7 +4317,6 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	int r = 0;
 	bool poly_stipple = sel->type == PIPE_SHADER_FRAGMENT &&
 			    shader->key.ps.poly_stipple;
-	bool dump = r600_can_dump_shader(&sscreen->b, sel->info.processor);
 
 	if (poly_stipple) {
 		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
@@ -4328,7 +4327,8 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
 	 * conversion fails. */
-	if (dump && !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
+	if (r600_can_dump_shader(&sscreen->b, sel->info.processor) &&
+	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
 		si_dump_shader_key(sel->type, &shader->key, stderr);
 		tgsi_dump(tokens, 0);
 		si_dump_streamout(&sel->so);
@@ -4431,7 +4431,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		shader->gs_copy_shader->selector = shader->selector;
 		si_shader_ctx.shader = shader->gs_copy_shader;
 		if ((r = si_generate_gs_copy_shader(sscreen, &si_shader_ctx,
-						    shader, dump, debug))) {
+						    shader, debug))) {
 			free(shader->gs_copy_shader);
 			shader->gs_copy_shader = NULL;
 			goto out;
