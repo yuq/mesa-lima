@@ -784,7 +784,9 @@ vtn_get_builtin_location(struct vtn_builder *b,
       set_mode_system_value(mode);
       break;
    case SpvBuiltInInstanceIndex:
-      /* XXX */
+      *location = SYSTEM_VALUE_INSTANCE_INDEX;
+      set_mode_system_value(mode);
+      break;
    case SpvBuiltInInstanceId:
       *location = SYSTEM_VALUE_INSTANCE_ID;
       set_mode_system_value(mode);
