@@ -146,7 +146,7 @@ anv_meta_restore(const struct anv_meta_saved_state *state,
 
    cmd_buffer->state.vb_dirty |= (1 << ANV_META_VERTEX_BINDING_COUNT) - 1;
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_PIPELINE;
-   cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_VERTEX_BIT;
+   cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
 
    anv_dynamic_state_copy(&cmd_buffer->state.dynamic, &state->dynamic,
                           state->dynamic_mask);
