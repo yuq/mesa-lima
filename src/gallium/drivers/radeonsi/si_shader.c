@@ -4081,7 +4081,8 @@ int si_compile_llvm(struct si_screen *sscreen,
 		    LLVMTargetMachineRef tm,
 		    LLVMModuleRef mod,
 		    struct pipe_debug_callback *debug,
-		    unsigned processor)
+		    unsigned processor,
+		    const char *name)
 {
 	int r = 0;
 	unsigned count = p_atomic_inc_return(&sscreen->b.num_compilations);
@@ -4089,8 +4090,11 @@ int si_compile_llvm(struct si_screen *sscreen,
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		fprintf(stderr, "radeonsi: Compiling shader %d\n", count);
 
-		if (!(sscreen->b.debug_flags & (DBG_NO_IR | DBG_PREOPT_IR)))
+		if (!(sscreen->b.debug_flags & (DBG_NO_IR | DBG_PREOPT_IR))) {
+			fprintf(stderr, "%s LLVM IR:\n\n", name);
 			LLVMDumpModule(mod);
+			fprintf(stderr, "\n");
+		}
 	}
 
 	if (!si_replace_shader(count, binary)) {
@@ -4183,14 +4187,14 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	radeon_llvm_finalize_module(&si_shader_ctx->radeon_bld);
 
-	if (r600_can_dump_shader(&sscreen->b, TGSI_PROCESSOR_GEOMETRY))
-		fprintf(stderr, "Copy Vertex Shader for Geometry Shader:\n\n");
-
 	r = si_compile_llvm(sscreen, &si_shader_ctx->shader->binary,
 			    &si_shader_ctx->shader->config, si_shader_ctx->tm,
 			    bld_base->base.gallivm->module,
-			    debug, TGSI_PROCESSOR_GEOMETRY);
+			    debug, TGSI_PROCESSOR_GEOMETRY,
+			    "GS Copy Shader");
 	if (!r) {
+		if (r600_can_dump_shader(&sscreen->b, TGSI_PROCESSOR_GEOMETRY))
+			fprintf(stderr, "GS Copy Shader:\n");
 		si_shader_dump(sscreen, si_shader_ctx->shader, debug,
 			       TGSI_PROCESSOR_GEOMETRY);
 		r = si_shader_binary_upload(sscreen, si_shader_ctx->shader);
@@ -4410,7 +4414,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	radeon_llvm_finalize_module(&si_shader_ctx.radeon_bld);
 
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
-			    mod, debug, si_shader_ctx.type);
+			    mod, debug, si_shader_ctx.type, "TGSI shader");
 	if (r) {
 		fprintf(stderr, "LLVM failed to compile shader\n");
 		goto out;

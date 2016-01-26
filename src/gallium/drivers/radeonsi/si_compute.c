@@ -124,7 +124,8 @@ static void *si_create_compute_state(
                                                         code, header->num_bytes);
 			si_compile_llvm(sctx->screen, &program->kernels[i].binary,
 					&program->kernels[i].config, sctx->tm,
-					mod, &sctx->b.debug, TGSI_PROCESSOR_COMPUTE);
+					mod, &sctx->b.debug, TGSI_PROCESSOR_COMPUTE,
+					"Compute Shader");
 			si_shader_dump(sctx->screen, &program->kernels[i],
 				       &sctx->b.debug, TGSI_PROCESSOR_COMPUTE);
 			si_shader_binary_upload(sctx->screen, &program->kernels[i]);
