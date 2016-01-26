@@ -47,6 +47,113 @@ vertex_element_comp_control(enum isl_format format, unsigned comp)
    }
 }
 
+static void
+emit_vertex_input(struct anv_pipeline *pipeline,
+                  const VkPipelineVertexInputStateCreateInfo *info,
+                  const struct anv_graphics_pipeline_create_info *extra)
+{
+   uint32_t elements;
+   if (extra && extra->disable_vs) {
+      /* If the VS is disabled, just assume the user knows what they're
+       * doing and apply the layout blindly.  This can only come from
+       * meta, so this *should* be safe.
+       */
+      elements = 0;
+      for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++)
+         elements |= (1 << info->pVertexAttributeDescriptions[i].location);
+   } else {
+      /* Pull inputs_read out of the VS prog data */
+      uint64_t inputs_read = pipeline->vs_prog_data.inputs_read;
+      assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
+      elements = inputs_read >> VERT_ATTRIB_GENERIC0;
+   }
+
+   uint32_t elem_count = __builtin_popcount(elements);
+
+#if ANV_GEN <= 7
+   /* On Haswell and prior, vertex and instance id are created by using the
+    * ComponentControl fields, so we need an element for any of them.
+    */
+   if (pipeline->vs_prog_data.uses_vertexid ||
+       pipeline->vs_prog_data.uses_instanceid)
+      elem_count++;
+#endif
+
+   uint32_t *p;
+   if (elem_count > 0) {
+      const uint32_t num_dwords = 1 + elem_count * 2;
+      p = anv_batch_emitn(&pipeline->batch, num_dwords,
+                          GENX(3DSTATE_VERTEX_ELEMENTS));
+      memset(p + 1, 0, (num_dwords - 1) * 4);
+   }
+
+   for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++) {
+      const VkVertexInputAttributeDescription *desc =
+         &info->pVertexAttributeDescriptions[i];
+      enum isl_format format = anv_get_isl_format(desc->format,
+                                                  VK_IMAGE_ASPECT_COLOR_BIT,
+                                                  VK_IMAGE_TILING_LINEAR);
+
+      assert(desc->binding < 32);
+
+      if ((elements & (1 << desc->location)) == 0)
+         continue; /* Binding unused */
+
+      uint32_t slot = __builtin_popcount(elements & ((1 << desc->location) - 1));
+
+      struct GENX(VERTEX_ELEMENT_STATE) element = {
+         .VertexBufferIndex = desc->binding,
+         .Valid = true,
+         .SourceElementFormat = format,
+         .EdgeFlagEnable = false,
+         .SourceElementOffset = desc->offset,
+         .Component0Control = vertex_element_comp_control(format, 0),
+         .Component1Control = vertex_element_comp_control(format, 1),
+         .Component2Control = vertex_element_comp_control(format, 2),
+         .Component3Control = vertex_element_comp_control(format, 3),
+      };
+      GENX(VERTEX_ELEMENT_STATE_pack)(NULL, &p[1 + slot * 2], &element);
+
+#if ANV_GEN >= 8
+      /* On Broadwell and later, we have a separate VF_INSTANCING packet
+       * that controls instancing.  On Haswell and prior, that's part of
+       * VERTEX_BUFFER_STATE which we emit later.
+       */
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_INSTANCING),
+                     .InstancingEnable = pipeline->instancing_enable[desc->binding],
+                     .VertexElementIndex = slot,
+                     /* Vulkan so far doesn't have an instance divisor, so
+                      * this is always 1 (ignored if not instancing). */
+                     .InstanceDataStepRate = 1);
+#endif
+   }
+
+   const uint32_t id_slot = __builtin_popcount(elements);
+#if ANV_GEN >= 8
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_SGVS),
+                  .VertexIDEnable = pipeline->vs_prog_data.uses_vertexid,
+                  .VertexIDComponentNumber = 2,
+                  .VertexIDElementOffset = id_slot,
+                  .InstanceIDEnable = pipeline->vs_prog_data.uses_instanceid,
+                  .InstanceIDComponentNumber = 3,
+                  .InstanceIDElementOffset = id_slot);
+#else
+   if (pipeline->vs_prog_data.uses_vertexid ||
+       pipeline->vs_prog_data.uses_instanceid) {
+      struct GEN7_VERTEX_ELEMENT_STATE element = {
+         .Valid = true,
+         /* FIXME: Do we need to provide the base vertex as component 0 here
+          * to support the correct base vertex ID? */
+         .Component0Control = VFCOMP_STORE_0,
+         .Component1Control = VFCOMP_STORE_0,
+         .Component2Control = VFCOMP_STORE_VID,
+         .Component3Control = VFCOMP_STORE_IID
+      };
+      GEN7_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + id_slot * 2], &element);
+   }
+#endif
+}
+
 static const uint32_t vk_to_gen_cullmode[] = {
    [VK_CULL_MODE_NONE]                       = CULLMODE_NONE,
    [VK_CULL_MODE_FRONT_BIT]                  = CULLMODE_FRONT,
