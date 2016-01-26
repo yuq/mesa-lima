@@ -925,15 +925,6 @@ NineDevice9_CreateTexture( struct NineDevice9 *This,
              D3DUSAGE_SOFTWAREPROCESSING | D3DUSAGE_TEXTAPI;
 
     *ppTexture = NULL;
-    user_assert(Width && Height, D3DERR_INVALIDCALL);
-    user_assert(!pSharedHandle || This->ex, D3DERR_INVALIDCALL);
-    /* When is used shared handle, Pool must be
-     * SYSTEMMEM with Levels 1 or DEFAULT with any Levels */
-    user_assert(!pSharedHandle || Pool != D3DPOOL_SYSTEMMEM || Levels == 1,
-                D3DERR_INVALIDCALL);
-    user_assert(!pSharedHandle || Pool == D3DPOOL_SYSTEMMEM || Pool == D3DPOOL_DEFAULT,
-                D3DERR_INVALIDCALL);
-    user_assert((Usage != D3DUSAGE_AUTOGENMIPMAP || Levels <= 1), D3DERR_INVALIDCALL);
 
     hr = NineTexture9_new(This, Width, Height, Levels, Usage, Format, Pool,
                           &tex, pSharedHandle);
@@ -967,8 +958,6 @@ NineDevice9_CreateVolumeTexture( struct NineDevice9 *This,
              D3DUSAGE_SOFTWAREPROCESSING;
 
     *ppVolumeTexture = NULL;
-    user_assert(Width && Height && Depth, D3DERR_INVALIDCALL);
-    user_assert(!pSharedHandle || Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
 
     hr = NineVolumeTexture9_new(This, Width, Height, Depth, Levels,
                                 Usage, Format, Pool, &tex, pSharedHandle);
@@ -1001,8 +990,6 @@ NineDevice9_CreateCubeTexture( struct NineDevice9 *This,
              D3DUSAGE_SOFTWAREPROCESSING;
 
     *ppCubeTexture = NULL;
-    user_assert(EdgeLength, D3DERR_INVALIDCALL);
-    user_assert(!pSharedHandle || Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
 
     hr = NineCubeTexture9_new(This, EdgeLength, Levels, Usage, Format, Pool,
                               &tex, pSharedHandle);

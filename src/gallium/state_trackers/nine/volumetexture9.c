@@ -48,6 +48,8 @@ NineVolumeTexture9_ctor( struct NineVolumeTexture9 *This,
         This, pParams, Width, Height, Depth, Levels,
         Usage, Format, Pool, pSharedHandle);
 
+    user_assert(Width && Height && Depth, D3DERR_INVALIDCALL);
+    user_assert(!pSharedHandle || Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
     /* An IDirect3DVolume9 cannot be bound as a render target can it ? */
     user_assert(!(Usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL)),
                 D3DERR_INVALIDCALL);

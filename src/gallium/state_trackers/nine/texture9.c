@@ -60,6 +60,15 @@ NineTexture9_ctor( struct NineTexture9 *This,
         nine_D3DUSAGE_to_str(Usage),
         d3dformat_to_string(Format), nine_D3DPOOL_to_str(Pool), pSharedHandle);
 
+    user_assert(Width && Height, D3DERR_INVALIDCALL);
+    user_assert(!pSharedHandle || pParams->device->ex, D3DERR_INVALIDCALL);
+    /* When is used shared handle, Pool must be
+     * SYSTEMMEM with Levels 1 or DEFAULT with any Levels */
+    user_assert(!pSharedHandle || Pool != D3DPOOL_SYSTEMMEM || Levels == 1,
+                D3DERR_INVALIDCALL);
+    user_assert(!pSharedHandle || Pool == D3DPOOL_SYSTEMMEM || Pool == D3DPOOL_DEFAULT,
+                D3DERR_INVALIDCALL);
+    user_assert((Usage != D3DUSAGE_AUTOGENMIPMAP || Levels <= 1), D3DERR_INVALIDCALL);
     user_assert(!(Usage & D3DUSAGE_AUTOGENMIPMAP) ||
                 (Pool != D3DPOOL_SYSTEMMEM && Levels <= 1), D3DERR_INVALIDCALL);
 
