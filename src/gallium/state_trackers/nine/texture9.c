@@ -140,9 +140,6 @@ NineTexture9_ctor( struct NineTexture9 *This,
         DBG("Application asked for Software Vertex Processing, "
             "but this is unimplemented\n");
 
-    if (pSharedHandle)
-        info->bind |= PIPE_BIND_SHARED;
-
     if (pSharedHandle && *pSharedHandle) { /* Pool == D3DPOOL_SYSTEMMEM */
         user_buffer = (void *)*pSharedHandle;
         level_offsets = alloca(sizeof(unsigned) * (info->last_level + 1));
