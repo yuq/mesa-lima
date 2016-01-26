@@ -1212,10 +1212,30 @@ static struct pipe_surface *r600_create_surface(struct pipe_context *pipe,
 						const struct pipe_surface *templ)
 {
 	unsigned level = templ->u.tex.level;
+	unsigned width = u_minify(tex->width0, level);
+	unsigned height = u_minify(tex->height0, level);
 
-	return r600_create_surface_custom(pipe, tex, templ,
-					  u_minify(tex->width0, level),
-					  u_minify(tex->height0, level));
+	if (templ->format != tex->format) {
+		const struct util_format_description *tex_desc
+			= util_format_description(tex->format);
+		const struct util_format_description *templ_desc
+			= util_format_description(templ->format);
+
+		assert(tex_desc->block.bits == templ_desc->block.bits);
+
+		/* Adjust size of surface if and only if the block width or
+		 * height is changed. */
+		if (tex_desc->block.width != templ_desc->block.width ||
+		    tex_desc->block.height != templ_desc->block.height) {
+			unsigned nblks_x = util_format_get_nblocksx(tex->format, width);
+			unsigned nblks_y = util_format_get_nblocksy(tex->format, height);
+
+			width = nblks_x * templ_desc->block.width;
+			height = nblks_y * templ_desc->block.height;
+		}
+	}
+
+	return r600_create_surface_custom(pipe, tex, templ, width, height);
 }
 
 static void r600_surface_destroy(struct pipe_context *pipe,
