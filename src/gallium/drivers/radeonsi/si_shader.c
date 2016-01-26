@@ -4034,6 +4034,17 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 	}
 }
 
+static unsigned si_get_shader_binary_size(struct si_shader *shader)
+{
+	unsigned size = shader->binary.code_size;
+
+	if (shader->prolog)
+		size += shader->prolog->binary.code_size;
+	if (shader->epilog)
+		size += shader->epilog->binary.code_size;
+	return size;
+}
+
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 {
 	const struct radeon_shader_binary *prolog =
@@ -4041,10 +4052,8 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	const struct radeon_shader_binary *epilog =
 		shader->epilog ? &shader->epilog->binary : NULL;
 	const struct radeon_shader_binary *mainb = &shader->binary;
-	unsigned bo_size =
-		(prolog ? prolog->code_size : 0) +
-		mainb->code_size +
-		(epilog ? epilog->code_size : mainb->rodata_size);
+	unsigned bo_size = si_get_shader_binary_size(shader) +
+			   (!epilog ? mainb->rodata_size : 0);
 	unsigned char *ptr;
 
 	assert(!prolog || !prolog->rodata_size);
@@ -4080,14 +4089,15 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 }
 
 static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary,
-				       struct pipe_debug_callback *debug)
+				       struct pipe_debug_callback *debug,
+				       const char *name)
 {
 	char *line, *p;
 	unsigned i, count;
 
 	if (binary->disasm_string) {
-		fprintf(stderr, "\nShader Disassembly:\n\n");
-		fprintf(stderr, "%s\n", binary->disasm_string);
+		fprintf(stderr, "Shader %s disassembly:\n", name);
+		fprintf(stderr, "%s", binary->disasm_string);
 
 		if (debug && debug->debug_message) {
 			/* Very long debug messages are cut off, so send the
@@ -4117,7 +4127,7 @@ static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary
 					   "Shader Disassembly End");
 		}
 	} else {
-		fprintf(stderr, "SI CODE:\n");
+		fprintf(stderr, "Shader %s binary:\n", name);
 		for (i = 0; i < binary->code_size; i += 4) {
 			fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i,
 				binary->code[i + 3], binary->code[i + 2],
@@ -4199,13 +4209,25 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor)
 {
-	if (r600_can_dump_shader(&sscreen->b, processor))
-		if (!(sscreen->b.debug_flags & DBG_NO_ASM))
-			si_shader_dump_disassembly(&shader->binary, debug);
+	if (r600_can_dump_shader(&sscreen->b, processor) &&
+	    !(sscreen->b.debug_flags & DBG_NO_ASM)) {
+		fprintf(stderr, "\n");
+
+		if (shader->prolog)
+			si_shader_dump_disassembly(&shader->prolog->binary,
+						   debug, "prolog");
+
+		si_shader_dump_disassembly(&shader->binary, debug, "main");
+
+		if (shader->epilog)
+			si_shader_dump_disassembly(&shader->epilog->binary,
+						   debug, "epilog");
+		fprintf(stderr, "\n");
+	}
 
 	si_shader_dump_stats(sscreen, &shader->config,
 			     shader->selector ? shader->selector->info.num_inputs : 0,
-			     shader->binary.code_size, debug, processor);
+			     si_get_shader_binary_size(shader), debug, processor);
 }
 
 int si_compile_llvm(struct si_screen *sscreen,
