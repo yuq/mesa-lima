@@ -4039,6 +4039,13 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 		max_simd_waves = MIN2(max_simd_waves, 16384 / lds_per_wave);
 
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
+		if (processor == TGSI_PROCESSOR_FRAGMENT) {
+			fprintf(stderr, "*** SHADER CONFIG ***\n"
+				"SPI_PS_INPUT_ADDR = 0x%04x\n"
+				"SPI_PS_INPUT_ENA  = 0x%04x\n",
+				conf->spi_ps_input_addr, conf->spi_ps_input_ena);
+		}
+
 		fprintf(stderr, "*** SHADER STATS ***\n"
 			"SGPRS: %d\n"
 			"VGPRS: %d\n"
