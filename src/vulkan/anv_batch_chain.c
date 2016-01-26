@@ -721,6 +721,7 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
    switch (secondary->exec_mode) {
    case ANV_CMD_BUFFER_EXEC_MODE_EMIT:
       anv_batch_emit_batch(&primary->batch, &secondary->batch);
+      anv_cmd_buffer_emit_state_base_address(primary);
       break;
    case ANV_CMD_BUFFER_EXEC_MODE_CHAIN: {
       struct anv_batch_bo *first_bbo =
@@ -761,6 +762,7 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
          }
       }
 
+      anv_cmd_buffer_emit_state_base_address(primary);
       break;
    }
    case ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN: {
