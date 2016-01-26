@@ -116,13 +116,10 @@ NineSurface9_ctor( struct NineSurface9 *This,
             return E_OUTOFMEMORY;
     }
 
-    if (pDesc->Pool == D3DPOOL_SYSTEMMEM) {
-        This->base.info.usage = PIPE_USAGE_STAGING;
-        assert(!pResource);
-    } else {
-        if (pResource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
-            pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
-    }
+    assert(pDesc->Pool != D3DPOOL_SYSTEMMEM || !pResource);
+
+    if (pResource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
+        pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
 
     hr = NineResource9_ctor(&This->base, pParams, pResource, FALSE, D3DRTYPE_SURFACE,
                             pDesc->Pool, pDesc->Usage);

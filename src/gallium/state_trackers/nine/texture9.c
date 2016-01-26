@@ -143,9 +143,6 @@ NineTexture9_ctor( struct NineTexture9 *This,
     if (pSharedHandle)
         info->bind |= PIPE_BIND_SHARED;
 
-    if (Pool == D3DPOOL_SYSTEMMEM)
-        info->usage = PIPE_USAGE_STAGING;
-
     if (pSharedHandle && *pSharedHandle) { /* Pool == D3DPOOL_SYSTEMMEM */
         user_buffer = (void *)*pSharedHandle;
         level_offsets = alloca(sizeof(unsigned) * (info->last_level + 1));

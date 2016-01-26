@@ -116,9 +116,6 @@ NineVolume9_ctor( struct NineVolume9 *This,
     This->layer_stride = util_format_get_2d_size(This->info.format,
                                                  This->stride, pDesc->Height);
 
-    if (pDesc->Pool == D3DPOOL_SYSTEMMEM)
-        This->info.usage = PIPE_USAGE_STAGING;
-
     if (!This->resource) {
         hr = NineVolume9_AllocateData(This);
         if (FAILED(hr))
