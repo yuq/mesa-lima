@@ -97,7 +97,8 @@ NineSurface9_ctor( struct NineSurface9 *This,
                                                          This->base.info.target,
                                                          This->base.info.nr_samples,
                                                          This->base.info.bind,
-                                                         FALSE);
+                                                         FALSE,
+                                                         pDesc->Pool == D3DPOOL_SCRATCH);
 
     if (pDesc->Usage & D3DUSAGE_RENDERTARGET)
         This->base.info.bind |= PIPE_BIND_RENDER_TARGET;

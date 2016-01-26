@@ -65,7 +65,9 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
         Levels = 0;
 
     pf = d3d9_to_pipe_format_checked(screen, Format, PIPE_TEXTURE_CUBE, 0,
-                                     PIPE_BIND_SAMPLER_VIEW, FALSE);
+                                     PIPE_BIND_SAMPLER_VIEW, FALSE,
+                                     Pool == D3DPOOL_SCRATCH);
+
     if (pf == PIPE_FORMAT_NONE)
         return D3DERR_INVALIDCALL;
 

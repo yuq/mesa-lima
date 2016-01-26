@@ -202,7 +202,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
 
     pf = d3d9_to_pipe_format_checked(This->screen, pParams->BackBufferFormat,
                                      PIPE_TEXTURE_2D, pParams->MultiSampleType,
-                                     PIPE_BIND_RENDER_TARGET, FALSE);
+                                     PIPE_BIND_RENDER_TARGET, FALSE, FALSE);
 
     if (This->actx->linear_framebuffer ||
         (pf != PIPE_FORMAT_B8G8R8X8_UNORM &&
@@ -304,7 +304,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
                                                    pParams->BackBufferFormat,
                                                    PIPE_TEXTURE_2D,
                                                    tmplt.nr_samples,
-                                                   tmplt.bind, FALSE);
+                                                   tmplt.bind, FALSE, FALSE);
         if (tmplt.format == PIPE_FORMAT_NONE)
             return D3DERR_INVALIDCALL;
         resource = This->screen->resource_create(This->screen, &tmplt);
@@ -360,7 +360,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
                                                    PIPE_TEXTURE_2D,
                                                    tmplt.nr_samples,
                                                    tmplt.bind,
-                                                   FALSE);
+                                                   FALSE, FALSE);
         if (tmplt.format == PIPE_FORMAT_NONE) {
             tmplt.bind &= ~PIPE_BIND_SAMPLER_VIEW;
             tmplt.format = d3d9_to_pipe_format_checked(This->screen,
@@ -368,7 +368,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
                                                        PIPE_TEXTURE_2D,
                                                        tmplt.nr_samples,
                                                        tmplt.bind,
-                                                       FALSE);
+                                                       FALSE, FALSE);
         }
 
         if (tmplt.format == PIPE_FORMAT_NONE)

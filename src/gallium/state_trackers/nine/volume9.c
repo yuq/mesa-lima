@@ -106,7 +106,8 @@ NineVolume9_ctor( struct NineVolume9 *This,
                                                     pDesc->Format,
                                                     This->info.target,
                                                     This->info.nr_samples,
-                                                    This->info.bind, FALSE);
+                                                    This->info.bind, FALSE,
+                                                    pDesc->Pool == D3DPOOL_SCRATCH);
 
     if (This->info.format == PIPE_FORMAT_NONE)
         return D3DERR_DRIVERINTERNALERROR;

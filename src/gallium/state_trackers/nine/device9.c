@@ -1124,7 +1124,7 @@ create_zs_or_rt_surface(struct NineDevice9 *This,
     }
     templ.format = d3d9_to_pipe_format_checked(screen, Format, templ.target,
                                                templ.nr_samples, templ.bind,
-                                               FALSE);
+                                               FALSE, Pool == D3DPOOL_SCRATCH);
 
     if (templ.format == PIPE_FORMAT_NONE && Format != D3DFMT_NULL)
         return D3DERR_INVALIDCALL;

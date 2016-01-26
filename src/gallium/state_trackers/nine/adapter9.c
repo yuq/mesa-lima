@@ -207,11 +207,11 @@ NineAdapter9_CheckDeviceType( struct NineAdapter9 *This,
     dfmt = d3d9_to_pipe_format_checked(screen, AdapterFormat, PIPE_TEXTURE_2D,
                                        1,
                                        PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE);
+                                       PIPE_BIND_SHARED, FALSE, FALSE);
     bfmt = d3d9_to_pipe_format_checked(screen, BackBufferFormat, PIPE_TEXTURE_2D,
                                        1,
                                        PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE);
+                                       PIPE_BIND_SHARED, FALSE, FALSE);
     if (dfmt == PIPE_FORMAT_NONE || bfmt == PIPE_FORMAT_NONE) {
         DBG("Unsupported Adapter/BackBufferFormat.\n");
         return D3DERR_NOTAVAILABLE;
@@ -270,7 +270,7 @@ NineAdapter9_CheckDeviceFormat( struct NineAdapter9 *This,
         return hr;
     pf = d3d9_to_pipe_format_checked(screen, AdapterFormat, PIPE_TEXTURE_2D, 0,
                                      PIPE_BIND_DISPLAY_TARGET |
-                                     PIPE_BIND_SHARED, FALSE);
+                                     PIPE_BIND_SHARED, FALSE, FALSE);
     if (pf == PIPE_FORMAT_NONE) {
         DBG("AdapterFormat %s not available.\n",
             d3dformat_to_string(AdapterFormat));
@@ -332,7 +332,8 @@ NineAdapter9_CheckDeviceFormat( struct NineAdapter9 *This,
 
 
     srgb = (Usage & (D3DUSAGE_QUERY_SRGBREAD | D3DUSAGE_QUERY_SRGBWRITE)) != 0;
-    pf = d3d9_to_pipe_format_checked(screen, CheckFormat, target, 0, bind, srgb);
+    pf = d3d9_to_pipe_format_checked(screen, CheckFormat, target,
+                                     0, bind, srgb, FALSE);
     if (pf == PIPE_FORMAT_NONE) {
         DBG("NOT AVAILABLE\n");
         return D3DERR_NOTAVAILABLE;
@@ -379,7 +380,7 @@ NineAdapter9_CheckDeviceMultiSampleType( struct NineAdapter9 *This,
                PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_RENDER_TARGET;
 
     pf = d3d9_to_pipe_format_checked(screen, SurfaceFormat, PIPE_TEXTURE_2D,
-                                     MultiSampleType, bind, FALSE);
+                                     MultiSampleType, bind, FALSE, FALSE);
 
     if (pf == PIPE_FORMAT_NONE) {
         DBG("%s with %u samples not available.\n",
@@ -418,16 +419,16 @@ NineAdapter9_CheckDepthStencilMatch( struct NineAdapter9 *This,
 
     dfmt = d3d9_to_pipe_format_checked(screen, AdapterFormat, PIPE_TEXTURE_2D, 0,
                                        PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE);
+                                       PIPE_BIND_SHARED, FALSE, FALSE);
     bfmt = d3d9_to_pipe_format_checked(screen, RenderTargetFormat,
                                        PIPE_TEXTURE_2D, 0,
-                                       PIPE_BIND_RENDER_TARGET, FALSE);
+                                       PIPE_BIND_RENDER_TARGET, FALSE, FALSE);
     if (RenderTargetFormat == D3DFMT_NULL)
         bfmt = dfmt;
     zsfmt = d3d9_to_pipe_format_checked(screen, DepthStencilFormat,
                                         PIPE_TEXTURE_2D, 0,
                                         d3d9_get_pipe_depth_format_bindings(DepthStencilFormat),
-                                        FALSE);
+                                        FALSE, FALSE);
     if (dfmt == PIPE_FORMAT_NONE ||
         bfmt == PIPE_FORMAT_NONE ||
         zsfmt == PIPE_FORMAT_NONE) {
@@ -462,10 +463,10 @@ NineAdapter9_CheckDeviceFormatConversion( struct NineAdapter9 *This,
 
     dfmt = d3d9_to_pipe_format_checked(screen, TargetFormat, PIPE_TEXTURE_2D, 1,
                                        PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE);
+                                       PIPE_BIND_SHARED, FALSE, FALSE);
     bfmt = d3d9_to_pipe_format_checked(screen, SourceFormat, PIPE_TEXTURE_2D, 1,
                                        PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE);
+                                       PIPE_BIND_SHARED, FALSE, FALSE);
 
     if (dfmt == PIPE_FORMAT_NONE || bfmt == PIPE_FORMAT_NONE) {
         DBG("%s to %s not supported.\n",
