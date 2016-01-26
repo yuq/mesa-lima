@@ -629,6 +629,7 @@ NineDevice9_SetCursorProperties( struct NineDevice9 *This,
              "pCursorBitmap=%p\n", This, XHotSpot, YHotSpot, pCursorBitmap);
 
     user_assert(pCursorBitmap, D3DERR_INVALIDCALL);
+    user_assert(surf->desc.Format == D3DFMT_A8R8G8B8, D3DERR_INVALIDCALL);
 
     if (This->swapchains[0]->params.Windowed) {
         This->cursor.w = MIN2(surf->desc.Width, 32);
