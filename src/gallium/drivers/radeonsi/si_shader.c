@@ -3554,6 +3554,30 @@ static const struct lp_build_tgsi_action interp_action = {
 	.emit = build_interp_intrinsic,
 };
 
+static void si_create_function(struct si_shader_context *ctx,
+			       LLVMTypeRef *returns, unsigned num_returns,
+			       LLVMTypeRef *params, unsigned num_params,
+			       int last_array_pointer, int last_sgpr)
+{
+	int i;
+
+	radeon_llvm_create_func(&ctx->radeon_bld, returns, num_returns,
+				params, num_params);
+	radeon_llvm_shader_type(ctx->radeon_bld.main_fn, ctx->type);
+	ctx->return_value = LLVMGetUndef(ctx->radeon_bld.return_type);
+
+	for (i = 0; i <= last_sgpr; ++i) {
+		LLVMValueRef P = LLVMGetParam(ctx->radeon_bld.main_fn, i);
+
+		/* We tell llvm that array inputs are passed by value to allow Sinking pass
+		 * to move load. Inputs are constant so this is fine. */
+		if (i <= last_array_pointer)
+			LLVMAddAttribute(P, LLVMByValAttribute);
+		else
+			LLVMAddAttribute(P, LLVMInRegAttribute);
+	}
+}
+
 static void create_meta_data(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = ctx->radeon_bld.soa.bld_base.base.gallivm;
@@ -3605,6 +3629,27 @@ static unsigned llvm_get_type_size(LLVMTypeRef type)
 		assert(0);
 		return 0;
 	}
+}
+
+static void declare_tess_lds(struct si_shader_context *ctx)
+{
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMTypeRef i32 = ctx->radeon_bld.soa.bld_base.uint_bld.elem_type;
+
+	/* This is the upper bound, maximum is 32 inputs times 32 vertices */
+	unsigned vertex_data_dw_size = 32*32*4;
+	unsigned patch_data_dw_size = 32*4;
+	/* The formula is: TCS inputs + TCS outputs + TCS patch outputs. */
+	unsigned patch_dw_size = vertex_data_dw_size*2 + patch_data_dw_size;
+	unsigned lds_dwords = patch_dw_size;
+
+	/* The actual size is computed outside of the shader to reduce
+	 * the number of shader variants. */
+	ctx->lds =
+		LLVMAddGlobalInAddressSpace(gallivm->module,
+					    LLVMArrayType(i32, lds_dwords),
+					    "tess_lds",
+					    LOCAL_ADDR_SPACE);
 }
 
 static void create_function(struct si_shader_context *ctx)
@@ -3739,26 +3784,15 @@ static void create_function(struct si_shader_context *ctx)
 	}
 
 	assert(num_params <= Elements(params));
-	radeon_llvm_create_func(&ctx->radeon_bld, NULL, 0,
-				params, num_params);
-	radeon_llvm_shader_type(ctx->radeon_bld.main_fn, ctx->type);
-	ctx->return_value = LLVMGetUndef(ctx->radeon_bld.return_type);
+
+	si_create_function(ctx, NULL, 0, params,
+			   num_params, last_array_pointer, last_sgpr);
 
 	shader->num_input_sgprs = 0;
 	shader->num_input_vgprs = 0;
 
-	for (i = 0; i <= last_sgpr; ++i) {
-		LLVMValueRef P = LLVMGetParam(ctx->radeon_bld.main_fn, i);
-
-		/* We tell llvm that array inputs are passed by value to allow Sinking pass
-		 * to move load. Inputs are constant so this is fine. */
-		if (i <= last_array_pointer)
-			LLVMAddAttribute(P, LLVMByValAttribute);
-		else
-			LLVMAddAttribute(P, LLVMInRegAttribute);
-
+	for (i = 0; i <= last_sgpr; ++i)
 		shader->num_input_sgprs += llvm_get_type_size(params[i]) / 4;
-	}
 
 	/* Unused fragment shader inputs are eliminated by the compiler,
 	 * so we don't know yet how many there will be.
@@ -3782,22 +3816,8 @@ static void create_function(struct si_shader_context *ctx)
 
 	if ((ctx->type == TGSI_PROCESSOR_VERTEX && shader->key.vs.as_ls) ||
 	    ctx->type == TGSI_PROCESSOR_TESS_CTRL ||
-	    ctx->type == TGSI_PROCESSOR_TESS_EVAL) {
-		/* This is the upper bound, maximum is 32 inputs times 32 vertices */
-		unsigned vertex_data_dw_size = 32*32*4;
-		unsigned patch_data_dw_size = 32*4;
-		/* The formula is: TCS inputs + TCS outputs + TCS patch outputs. */
-		unsigned patch_dw_size = vertex_data_dw_size*2 + patch_data_dw_size;
-		unsigned lds_dwords = patch_dw_size;
-
-		/* The actual size is computed outside of the shader to reduce
-		 * the number of shader variants. */
-		ctx->lds =
-			LLVMAddGlobalInAddressSpace(gallivm->module,
-						    LLVMArrayType(ctx->i32, lds_dwords),
-						    "tess_lds",
-						    LOCAL_ADDR_SPACE);
-	}
+	    ctx->type == TGSI_PROCESSOR_TESS_EVAL)
+		declare_tess_lds(ctx);
 }
 
 static void preload_constants(struct si_shader_context *ctx)
