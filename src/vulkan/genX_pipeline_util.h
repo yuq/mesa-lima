@@ -68,16 +68,23 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       elements = inputs_read >> VERT_ATTRIB_GENERIC0;
    }
 
-   uint32_t elem_count = __builtin_popcount(elements);
-
-#if ANV_GEN <= 7
+#if ANV_GEN >= 8
+   /* On BDW+, we only need to allocate space for base ids.  Setting up
+    * the actual vertex and instance id is a separate packet.
+    */
+   const bool needs_svgs_elem = pipeline->vs_prog_data.uses_basevertex ||
+                                pipeline->vs_prog_data.uses_baseinstance;
+#else
    /* On Haswell and prior, vertex and instance id are created by using the
     * ComponentControl fields, so we need an element for any of them.
     */
-   if (pipeline->vs_prog_data.uses_vertexid ||
-       pipeline->vs_prog_data.uses_instanceid)
-      elem_count++;
+   const bool needs_svgs_elem = pipeline->vs_prog_data.uses_vertexid ||
+                                pipeline->vs_prog_data.uses_instanceid ||
+                                pipeline->vs_prog_data.uses_basevertex ||
+                                pipeline->vs_prog_data.uses_baseinstance;
 #endif
+
+   uint32_t elem_count = __builtin_popcount(elements) + needs_svgs_elem;
 
    uint32_t *p;
    if (elem_count > 0) {
@@ -129,6 +136,28 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    }
 
    const uint32_t id_slot = __builtin_popcount(elements);
+   if (needs_svgs_elem) {
+      struct GENX(VERTEX_ELEMENT_STATE) element = {
+         .VertexBufferIndex = 32, /* Reserved for this */
+         .Valid = true,
+         .SourceElementFormat = ISL_FORMAT_R32G32_UINT,
+         /* FIXME: Do we need to provide the base vertex as component 0 here
+          * to support the correct base vertex ID? */
+         .Component0Control = pipeline->vs_prog_data.uses_basevertex ?
+                              VFCOMP_STORE_SRC : VFCOMP_STORE_0,
+         .Component1Control = pipeline->vs_prog_data.uses_baseinstance ?
+                              VFCOMP_STORE_SRC : VFCOMP_STORE_0,
+#if ANV_GEN >= 8
+         .Component2Control = VFCOMP_STORE_0,
+         .Component3Control = VFCOMP_STORE_0,
+#else
+         .Component2Control = VFCOMP_STORE_VID,
+         .Component3Control = VFCOMP_STORE_IID,
+#endif
+      };
+      GENX(VERTEX_ELEMENT_STATE_pack)(NULL, &p[1 + id_slot * 2], &element);
+   }
+
 #if ANV_GEN >= 8
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_SGVS),
                   .VertexIDEnable = pipeline->vs_prog_data.uses_vertexid,
@@ -137,20 +166,6 @@ emit_vertex_input(struct anv_pipeline *pipeline,
                   .InstanceIDEnable = pipeline->vs_prog_data.uses_instanceid,
                   .InstanceIDComponentNumber = 3,
                   .InstanceIDElementOffset = id_slot);
-#else
-   if (pipeline->vs_prog_data.uses_vertexid ||
-       pipeline->vs_prog_data.uses_instanceid) {
-      struct GEN7_VERTEX_ELEMENT_STATE element = {
-         .Valid = true,
-         /* FIXME: Do we need to provide the base vertex as component 0 here
-          * to support the correct base vertex ID? */
-         .Component0Control = VFCOMP_STORE_0,
-         .Component1Control = VFCOMP_STORE_0,
-         .Component2Control = VFCOMP_STORE_VID,
-         .Component3Control = VFCOMP_STORE_IID
-      };
-      GEN7_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + id_slot * 2], &element);
-   }
 #endif
 }
 
