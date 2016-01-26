@@ -496,6 +496,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       }
    }
 
+#if 0
    if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
       if (anv_format_for_vk_format(format)->has_stencil) {
          /* Not yet implemented because copying to a W-tiled surface is crazy
@@ -506,6 +507,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
          goto unsupported;
       }
    }
+#endif
 
    if (usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       if (!(format_feature_flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
