@@ -283,7 +283,6 @@ struct si_shader {
 	bool			uses_instanceid;
 	unsigned		nr_pos_exports;
 	unsigned		nr_param_exports;
-	bool			dx10_clamp_mode; /* convert NaNs to 0 */
 };
 
 static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
