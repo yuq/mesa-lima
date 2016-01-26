@@ -221,37 +221,70 @@ struct si_shader_selector {
  * With both:        LS | HS  | ES  | GS | VS | PS
  */
 
+/* Common VS bits between the shader key and the prolog key. */
+struct si_vs_prolog_bits {
+	unsigned	instance_divisors[SI_NUM_VERTEX_BUFFERS];
+};
+
+/* Common VS bits between the shader key and the epilog key. */
+struct si_vs_epilog_bits {
+	unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
+	/* TODO:
+	 * - skip clipdist, culldist (including clipvertex code) exports based
+	 *   on which clip_plane_enable bits are set
+	 * - skip layer, viewport, clipdist, and culldist parameter exports
+	 *   if PS doesn't read them
+	 */
+};
+
+/* Common TCS bits between the shader key and the epilog key. */
+struct si_tcs_epilog_bits {
+	unsigned	prim_mode:3;
+};
+
+/* Common PS bits between the shader key and the prolog key. */
+struct si_ps_prolog_bits {
+	unsigned	color_two_side:1;
+	/* TODO: add a flatshade bit that skips interpolation for colors */
+	unsigned	poly_stipple:1;
+	unsigned	force_persample_interp:1;
+	/* TODO:
+	 * - add force_center_interp if MSAA is disabled and centroid or
+	 *   sample are present
+	 * - add force_center_interp_bc_optimize to force center interpolation
+	 *   based on the bc_optimize SGPR bit if MSAA is enabled, centroid is
+	 *   present and sample isn't present.
+	 */
+};
+
+/* Common PS bits between the shader key and the epilog key. */
+struct si_ps_epilog_bits {
+	unsigned	spi_shader_col_format;
+	unsigned	color_is_int8:8;
+	unsigned	last_cbuf:3;
+	unsigned	alpha_func:3;
+	unsigned	alpha_to_one:1;
+	unsigned	poly_line_smoothing:1;
+	unsigned	clamp_color:1;
+};
+
 union si_shader_key {
 	struct {
-		unsigned	spi_shader_col_format;
-		unsigned	color_is_int8:8;
-		unsigned	last_cbuf:3;
-		unsigned	color_two_side:1;
-		unsigned	alpha_func:3;
-		unsigned	alpha_to_one:1;
-		unsigned	poly_stipple:1;
-		unsigned	poly_line_smoothing:1;
-		unsigned	clamp_color:1;
-		unsigned	force_persample_interp:1;
+		struct si_ps_prolog_bits prolog;
+		struct si_ps_epilog_bits epilog;
 	} ps;
 	struct {
-		unsigned	instance_divisors[SI_NUM_VERTEX_BUFFERS];
-		/* Mask of "get_unique_index" bits - which outputs are read
-		 * by the next stage (needed by ES).
-		 * This describes how outputs are laid out in memory. */
+		struct si_vs_prolog_bits prolog;
+		struct si_vs_epilog_bits epilog;
 		unsigned	as_es:1; /* export shader */
 		unsigned	as_ls:1; /* local shader */
-		unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
 	} vs;
 	struct {
-		unsigned	prim_mode:3;
+		struct si_tcs_epilog_bits epilog;
 	} tcs; /* tessellation control shader */
 	struct {
-		/* Mask of "get_unique_index" bits - which outputs are read
-		 * by the next stage (needed by ES).
-		 * This describes how outputs are laid out in memory. */
+		struct si_vs_epilog_bits epilog; /* same as VS */
 		unsigned	as_es:1; /* export shader */
-		unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
 	} tes; /* tessellation evaluation shader */
 };
 
@@ -314,9 +347,9 @@ static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 static inline bool si_vs_exports_prim_id(struct si_shader *shader)
 {
 	if (shader->selector->type == PIPE_SHADER_VERTEX)
-		return shader->key.vs.export_prim_id;
+		return shader->key.vs.epilog.export_prim_id;
 	else if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
-		return shader->key.tes.export_prim_id;
+		return shader->key.tes.epilog.export_prim_id;
 	else
 		return false;
 }

@@ -415,7 +415,7 @@ static unsigned si_get_ps_num_interp(struct si_shader *ps)
 	unsigned num_colors = !!(info->colors_read & 0x0f) +
 			      !!(info->colors_read & 0xf0);
 	unsigned num_interp = ps->selector->info.num_inputs +
-			      (ps->key.ps.color_two_side ? num_colors : 0);
+			      (ps->key.ps.prolog.color_two_side ? num_colors : 0);
 
 	assert(num_interp <= 32);
 	return MIN2(num_interp, 32);
@@ -423,7 +423,7 @@ static unsigned si_get_ps_num_interp(struct si_shader *ps)
 
 static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
 {
-	unsigned value = shader->key.ps.spi_shader_col_format;
+	unsigned value = shader->key.ps.epilog.spi_shader_col_format;
 	unsigned i, num_targets = (util_last_bit(value) + 3) / 4;
 
 	/* If the i-th target format is set, all previous target formats must
@@ -528,7 +528,7 @@ static void si_shader_ps(struct si_shader *shader)
 	if (!spi_shader_col_format &&
 	    !info->writes_z && !info->writes_stencil && !info->writes_samplemask &&
 	    (shader->selector->info.uses_kill ||
-	     shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS))
+	     shader->key.ps.epilog.alpha_func != PIPE_FUNC_ALWAYS))
 		spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 
 	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, input_ena);
@@ -638,11 +638,13 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 	switch (sel->type) {
 	case PIPE_SHADER_VERTEX:
-		if (sctx->vertex_elements)
-			for (i = 0; i < sctx->vertex_elements->count; ++i)
-				key->vs.instance_divisors[i] =
+		if (sctx->vertex_elements) {
+			unsigned count = MIN2(sel->info.num_inputs,
+					      sctx->vertex_elements->count);
+			for (i = 0; i < count; ++i)
+				key->vs.prolog.instance_divisors[i] =
 					sctx->vertex_elements->elements[i].instance_divisor;
-
+		}
 		if (sctx->tes_shader.cso)
 			key->vs.as_ls = 1;
 		else if (sctx->gs_shader.cso)
@@ -650,17 +652,17 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 		if (!sctx->gs_shader.cso && sctx->ps_shader.cso &&
 		    sctx->ps_shader.cso->info.uses_primid)
-			key->vs.export_prim_id = 1;
+			key->vs.epilog.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
-		key->tcs.prim_mode =
+		key->tcs.epilog.prim_mode =
 			sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		if (sctx->gs_shader.cso)
 			key->tes.as_es = 1;
 		else if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
-			key->tes.export_prim_id = 1;
+			key->tes.epilog.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		break;
@@ -670,13 +672,13 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
 		    sel->info.colors_written == 0x1)
-			key->ps.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
+			key->ps.epilog.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
 
 		if (blend) {
 			/* Select the shader color format based on whether
 			 * blending or alpha are needed.
 			 */
-			key->ps.spi_shader_col_format =
+			key->ps.epilog.spi_shader_col_format =
 				(blend->blend_enable_4bit & blend->need_src_alpha_4bit &
 				 sctx->framebuffer.spi_shader_col_format_blend_alpha) |
 				(blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
@@ -686,26 +688,26 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				(~blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
 				 sctx->framebuffer.spi_shader_col_format);
 		} else
-			key->ps.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
+			key->ps.epilog.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
 
 		/* If alpha-to-coverage is enabled, we have to export alpha
 		 * even if there is no color buffer.
 		 */
-		if (!(key->ps.spi_shader_col_format & 0xf) &&
+		if (!(key->ps.epilog.spi_shader_col_format & 0xf) &&
 		    blend && blend->alpha_to_coverage)
-			key->ps.spi_shader_col_format |= V_028710_SPI_SHADER_32_AR;
+			key->ps.epilog.spi_shader_col_format |= V_028710_SPI_SHADER_32_AR;
 
 		/* On SI and CIK except Hawaii, the CB doesn't clamp outputs
 		 * to the range supported by the type if a channel has less
 		 * than 16 bits and the export format is 16_ABGR.
 		 */
 		if (sctx->b.chip_class <= CIK && sctx->b.family != CHIP_HAWAII)
-			key->ps.color_is_int8 = sctx->framebuffer.color_is_int8;
+			key->ps.epilog.color_is_int8 = sctx->framebuffer.color_is_int8;
 
 		/* Disable unwritten outputs (if WRITE_ALL_CBUFS isn't enabled). */
-		if (!key->ps.last_cbuf) {
-			key->ps.spi_shader_col_format &= sel->colors_written_4bit;
-			key->ps.color_is_int8 &= sel->info.colors_written;
+		if (!key->ps.epilog.last_cbuf) {
+			key->ps.epilog.spi_shader_col_format &= sel->colors_written_4bit;
+			key->ps.epilog.color_is_int8 &= sel->info.colors_written;
 		}
 
 		if (rs) {
@@ -714,31 +716,32 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				       sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY;
 			bool is_line = !is_poly && sctx->current_rast_prim != PIPE_PRIM_POINTS;
 
-			key->ps.color_two_side = rs->two_side && sel->info.colors_read;
+			key->ps.prolog.color_two_side = rs->two_side && sel->info.colors_read;
 
 			if (sctx->queued.named.blend) {
-				key->ps.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
-						       rs->multisample_enable &&
-						       !sctx->framebuffer.cb0_is_integer;
+				key->ps.epilog.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
+							      rs->multisample_enable &&
+							      !sctx->framebuffer.cb0_is_integer;
 			}
 
-			key->ps.poly_stipple = rs->poly_stipple_enable && is_poly;
-			key->ps.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
-						       (is_line && rs->line_smooth)) &&
-						      sctx->framebuffer.nr_samples <= 1;
-			key->ps.clamp_color = rs->clamp_fragment_color;
+			key->ps.prolog.poly_stipple = rs->poly_stipple_enable && is_poly;
+			key->ps.epilog.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
+							      (is_line && rs->line_smooth)) &&
+							     sctx->framebuffer.nr_samples <= 1;
+			key->ps.epilog.clamp_color = rs->clamp_fragment_color;
 
-			key->ps.force_persample_interp = rs->force_persample_interp &&
-							 rs->multisample_enable &&
-							 sctx->framebuffer.nr_samples > 1 &&
-							 sctx->ps_iter_samples > 1 &&
-							 (sel->info.uses_persp_center ||
-							  sel->info.uses_persp_centroid ||
-							  sel->info.uses_linear_center ||
-							  sel->info.uses_linear_centroid);
+			key->ps.prolog.force_persample_interp =
+				rs->force_persample_interp &&
+				rs->multisample_enable &&
+				sctx->framebuffer.nr_samples > 1 &&
+				sctx->ps_iter_samples > 1 &&
+				(sel->info.uses_persp_center ||
+				 sel->info.uses_persp_centroid ||
+				 sel->info.uses_linear_center ||
+				 sel->info.uses_linear_centroid);
 		}
 
-		key->ps.alpha_func = si_get_alpha_test_func(sctx);
+		key->ps.epilog.alpha_func = si_get_alpha_test_func(sctx);
 		break;
 	}
 	default:
@@ -934,13 +937,13 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		 */
 		switch (sel->type) {
 		case PIPE_SHADER_TESS_CTRL:
-			key.tcs.prim_mode = PIPE_PRIM_TRIANGLES;
+			key.tcs.epilog.prim_mode = PIPE_PRIM_TRIANGLES;
 			break;
 		case PIPE_SHADER_FRAGMENT:
-			key.ps.alpha_func = PIPE_FUNC_ALWAYS;
+			key.ps.epilog.alpha_func = PIPE_FUNC_ALWAYS;
 			for (i = 0; i < 8; i++)
 				if (sel->info.colors_written & (1 << i))
-					key.ps.spi_shader_col_format |=
+					key.ps.epilog.spi_shader_col_format |=
 						V_028710_SPI_SHADER_FP16_ABGR << (i * 4);
 			break;
 		}
@@ -1191,7 +1194,7 @@ static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 		}
 	}
 
-	if (ps->key.ps.color_two_side) {
+	if (ps->key.ps.prolog.color_two_side) {
 		unsigned bcol = TGSI_SEMANTIC_BCOLOR;
 
 		for (i = 0; i < 2; i++) {
@@ -1745,8 +1748,8 @@ bool si_update_shaders(struct si_context *sctx)
 			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 		}
 
-		if (sctx->smoothing_enabled != sctx->ps_shader.current->key.ps.poly_line_smoothing) {
-			sctx->smoothing_enabled = sctx->ps_shader.current->key.ps.poly_line_smoothing;
+		if (sctx->smoothing_enabled != sctx->ps_shader.current->key.ps.epilog.poly_line_smoothing) {
+			sctx->smoothing_enabled = sctx->ps_shader.current->key.ps.epilog.poly_line_smoothing;
 			si_mark_atom_dirty(sctx, &sctx->msaa_config);
 
 			if (sctx->b.chip_class == SI)

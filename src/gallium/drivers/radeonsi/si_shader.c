@@ -403,7 +403,8 @@ static void declare_input_vs(
 	struct gallivm_state *gallivm = base->gallivm;
 	struct si_shader_context *ctx =
 		si_shader_context(&radeon_bld->soa.bld_base);
-	unsigned divisor = ctx->shader->key.vs.instance_divisors[input_index];
+	unsigned divisor =
+		ctx->shader->key.vs.prolog.instance_divisors[input_index];
 
 	unsigned chan;
 
@@ -854,7 +855,7 @@ static int lookup_interp_param_index(unsigned interpolate, unsigned location)
 static unsigned select_interp_param(struct si_shader_context *ctx,
 				    unsigned param)
 {
-	if (!ctx->shader->key.ps.force_persample_interp)
+	if (!ctx->shader->key.ps.prolog.force_persample_interp)
 		return param;
 
 	/* If the shader doesn't use center/centroid, just return the parameter.
@@ -924,7 +925,7 @@ static void interp_fs_input(struct si_shader_context *ctx,
 	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
 
 	if (semantic_name == TGSI_SEMANTIC_COLOR &&
-	    ctx->shader->key.ps.color_two_side) {
+	    ctx->shader->key.ps.prolog.color_two_side) {
 		LLVMValueRef args[4];
 		LLVMValueRef is_face_positive;
 		LLVMValueRef back_attr_number;
@@ -1331,12 +1332,12 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 
 	if (ctx->type == TGSI_PROCESSOR_FRAGMENT) {
 		const union si_shader_key *key = &ctx->shader->key;
-		unsigned col_formats = key->ps.spi_shader_col_format;
+		unsigned col_formats = key->ps.epilog.spi_shader_col_format;
 		int cbuf = target - V_008DFC_SQ_EXP_MRT;
 
 		assert(cbuf >= 0 && cbuf < 8);
 		spi_shader_col_format = (col_formats >> (cbuf * 4)) & 0xf;
-		is_int8 = (key->ps.color_is_int8 >> cbuf) & 0x1;
+		is_int8 = (key->ps.epilog.color_is_int8 >> cbuf) & 0x1;
 	}
 
 	args[4] = uint->zero; /* COMPR flag */
@@ -1489,13 +1490,13 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 
-	if (ctx->shader->key.ps.alpha_func != PIPE_FUNC_NEVER) {
+	if (ctx->shader->key.ps.epilog.alpha_func != PIPE_FUNC_NEVER) {
 		LLVMValueRef alpha_ref = LLVMGetParam(ctx->radeon_bld.main_fn,
 				SI_PARAM_ALPHA_REF);
 
 		LLVMValueRef alpha_pass =
 			lp_build_cmp(&bld_base->base,
-				     ctx->shader->key.ps.alpha_func,
+				     ctx->shader->key.ps.epilog.alpha_func,
 				     alpha, alpha_ref);
 		LLVMValueRef arg =
 			lp_build_select(&bld_base->base,
@@ -1990,7 +1991,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 				  invocation_id, bld_base->uint_bld.zero, ""));
 
 	/* Determine the layout of one tess factor element in the buffer. */
-	switch (shader->key.tcs.prim_mode) {
+	switch (shader->key.tcs.epilog.prim_mode) {
 	case PIPE_PRIM_LINES:
 		stride = 2; /* 2 dwords, 1 vec2 store */
 		outer_comps = 2;
@@ -2292,30 +2293,30 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 	int i;
 
 	/* Clamp color */
-	if (ctx->shader->key.ps.clamp_color)
+	if (ctx->shader->key.ps.epilog.clamp_color)
 		for (i = 0; i < 4; i++)
 			color[i] = radeon_llvm_saturate(bld_base, color[i]);
 
 	/* Alpha to one */
-	if (ctx->shader->key.ps.alpha_to_one)
+	if (ctx->shader->key.ps.epilog.alpha_to_one)
 		color[3] = base->one;
 
 	/* Alpha test */
 	if (index == 0 &&
-	    ctx->shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS)
+	    ctx->shader->key.ps.epilog.alpha_func != PIPE_FUNC_ALWAYS)
 		si_alpha_test(bld_base, color[3]);
 
 	/* Line & polygon smoothing */
-	if (ctx->shader->key.ps.poly_line_smoothing)
+	if (ctx->shader->key.ps.epilog.poly_line_smoothing)
 		color[3] = si_scale_alpha_by_sample_mask(bld_base, color[3]);
 
 	/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
-	if (ctx->shader->key.ps.last_cbuf > 0) {
+	if (ctx->shader->key.ps.epilog.last_cbuf > 0) {
 		LLVMValueRef args[8][9];
 		int c, last = -1;
 
 		/* Get the export arguments, also find out what the last one is. */
-		for (c = 0; c <= ctx->shader->key.ps.last_cbuf; c++) {
+		for (c = 0; c <= ctx->shader->key.ps.epilog.last_cbuf; c++) {
 			si_llvm_init_export_args(bld_base, color,
 						 V_008DFC_SQ_EXP_MRT + c, args[c]);
 			if (args[c][0] != bld_base->uint_bld.zero)
@@ -2323,7 +2324,7 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 		}
 
 		/* Emit all exports. */
-		for (c = 0; c <= ctx->shader->key.ps.last_cbuf; c++) {
+		for (c = 0; c <= ctx->shader->key.ps.epilog.last_cbuf; c++) {
 			if (is_last && last == c) {
 				args[c][1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
 				args[c][2] = bld_base->uint_bld.one; /* DONE bit */
@@ -2386,11 +2387,11 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context *bld_base)
 	 * Otherwise, find the last color export.
 	 */
 	if (!info->writes_z && !info->writes_stencil && !info->writes_samplemask) {
-		unsigned spi_format = shader->key.ps.spi_shader_col_format;
+		unsigned spi_format = shader->key.ps.epilog.spi_shader_col_format;
 
 		/* Don't export NULL and return if alpha-test is enabled. */
-		if (shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS &&
-		    shader->key.ps.alpha_func != PIPE_FUNC_NEVER &&
+		if (shader->key.ps.epilog.alpha_func != PIPE_FUNC_ALWAYS &&
+		    shader->key.ps.epilog.alpha_func != PIPE_FUNC_NEVER &&
 		    (spi_format & 0xf) == 0)
 			spi_format |= V_028714_SPI_SHADER_32_AR;
 
@@ -2401,10 +2402,10 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context *bld_base)
 				continue;
 
 			/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
-			if (shader->key.ps.last_cbuf > 0) {
+			if (shader->key.ps.epilog.last_cbuf > 0) {
 				/* Just set this if any of the colorbuffers are enabled. */
 				if (spi_format &
-				    ((1llu << (4 * (shader->key.ps.last_cbuf + 1))) - 1))
+				    ((1llu << (4 * (shader->key.ps.epilog.last_cbuf + 1))) - 1))
 					last_color_export = i;
 				continue;
 			}
@@ -4313,35 +4314,38 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 	switch (shader) {
 	case PIPE_SHADER_VERTEX:
 		fprintf(f, "  instance_divisors = {");
-		for (i = 0; i < Elements(key->vs.instance_divisors); i++)
+		for (i = 0; i < Elements(key->vs.prolog.instance_divisors); i++)
 			fprintf(f, !i ? "%u" : ", %u",
-				key->vs.instance_divisors[i]);
+				key->vs.prolog.instance_divisors[i]);
 		fprintf(f, "}\n");
 		fprintf(f, "  as_es = %u\n", key->vs.as_es);
 		fprintf(f, "  as_ls = %u\n", key->vs.as_ls);
-		fprintf(f, "  export_prim_id = %u\n", key->vs.export_prim_id);
+		fprintf(f, "  export_prim_id = %u\n", key->vs.epilog.export_prim_id);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
-		fprintf(f, "  prim_mode = %u\n", key->tcs.prim_mode);
+		fprintf(f, "  prim_mode = %u\n", key->tcs.epilog.prim_mode);
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
 		fprintf(f, "  as_es = %u\n", key->tes.as_es);
-		fprintf(f, "  export_prim_id = %u\n", key->tes.export_prim_id);
+		fprintf(f, "  export_prim_id = %u\n", key->tes.epilog.export_prim_id);
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
-		fprintf(f, "  spi_shader_col_format = 0x%x\n", key->ps.spi_shader_col_format);
-		fprintf(f, "  last_cbuf = %u\n", key->ps.last_cbuf);
-		fprintf(f, "  color_two_side = %u\n", key->ps.color_two_side);
-		fprintf(f, "  alpha_func = %u\n", key->ps.alpha_func);
-		fprintf(f, "  alpha_to_one = %u\n", key->ps.alpha_to_one);
-		fprintf(f, "  poly_stipple = %u\n", key->ps.poly_stipple);
-		fprintf(f, "  clamp_color = %u\n", key->ps.clamp_color);
+		fprintf(f, "  prolog.color_two_side = %u\n", key->ps.prolog.color_two_side);
+		fprintf(f, "  prolog.poly_stipple = %u\n", key->ps.prolog.poly_stipple);
+		fprintf(f, "  prolog.force_persample_interp = %u\n", key->ps.prolog.force_persample_interp);
+		fprintf(f, "  epilog.spi_shader_col_format = 0x%x\n", key->ps.epilog.spi_shader_col_format);
+		fprintf(f, "  epilog.color_is_int8 = 0x%X\n", key->ps.epilog.color_is_int8);
+		fprintf(f, "  epilog.last_cbuf = %u\n", key->ps.epilog.last_cbuf);
+		fprintf(f, "  epilog.alpha_func = %u\n", key->ps.epilog.alpha_func);
+		fprintf(f, "  epilog.alpha_to_one = %u\n", key->ps.epilog.alpha_to_one);
+		fprintf(f, "  epilog.poly_line_smoothing = %u\n", key->ps.epilog.poly_line_smoothing);
+		fprintf(f, "  epilog.clamp_color = %u\n", key->ps.epilog.clamp_color);
 		break;
 
 	default:
@@ -4427,7 +4431,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	LLVMModuleRef mod;
 	int r = 0;
 	bool poly_stipple = sel->type == PIPE_SHADER_FRAGMENT &&
-			    shader->key.ps.poly_stipple;
+			    shader->key.ps.prolog.poly_stipple;
 
 	if (poly_stipple) {
 		tokens = util_pstipple_create_fragment_shader(tokens, NULL,

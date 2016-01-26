@@ -277,7 +277,7 @@ static void si_emit_cb_render_state(struct si_context *sctx, struct r600_atom *a
 	if (sctx->b.family == CHIP_STONEY) {
 		unsigned spi_shader_col_format =
 			sctx->ps_shader.cso ?
-			sctx->ps_shader.current->key.ps.spi_shader_col_format : 0;
+			sctx->ps_shader.current->key.ps.epilog.spi_shader_col_format : 0;
 		unsigned sx_ps_downconvert = 0;
 		unsigned sx_blend_opt_epsilon = 0;
 		unsigned sx_blend_opt_control = 0;
