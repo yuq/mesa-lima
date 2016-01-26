@@ -1959,20 +1959,19 @@ handle_semantic:
 	}
 }
 
-/* This only writes the tessellation factor levels. */
-static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
+static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
+				  LLVMValueRef rel_patch_id,
+				  LLVMValueRef invocation_id,
+				  LLVMValueRef tcs_out_current_patch_data_offset)
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct si_shader *shader = si_shader_ctx->shader;
 	unsigned tess_inner_index, tess_outer_index;
-	LLVMValueRef lds_base, lds_inner, lds_outer;
-	LLVMValueRef tf_base, rel_patch_id, byteoffset, buffer, rw_buffers;
-	LLVMValueRef out[6], vec0, vec1, invocation_id;
+	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
+	LLVMValueRef out[6], vec0, vec1, rw_buffers, tf_base;
 	unsigned stride, outer_comps, inner_comps, i;
 	struct lp_build_if_state if_ctx;
-
-	invocation_id = unpack_param(si_shader_ctx, SI_PARAM_REL_IDS, 8, 5);
 
 	/* Do this only for invocation 0, because the tess levels are per-patch,
 	 * not per-vertex.
@@ -2012,7 +2011,7 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	tess_inner_index = si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSINNER, 0);
 	tess_outer_index = si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSOUTER, 0);
 
-	lds_base = get_tcs_out_current_patch_data_offset(si_shader_ctx);
+	lds_base = tcs_out_current_patch_data_offset;
 	lds_inner = LLVMBuildAdd(gallivm->builder, lds_base,
 				 lp_build_const_int32(gallivm,
 						      tess_inner_index * 4), "");
@@ -2041,7 +2040,6 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	/* Get the offset. */
 	tf_base = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 			       SI_PARAM_TESS_FACTOR_OFFSET);
-	rel_patch_id = get_rel_patch_id(si_shader_ctx);
 	byteoffset = LLVMBuildMul(gallivm->builder, rel_patch_id,
 				  lp_build_const_int32(gallivm, 4 * stride), "");
 
@@ -2052,6 +2050,20 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 		build_tbuffer_store_dwords(si_shader_ctx, buffer, vec1,
 					   stride - 4, byteoffset, tf_base, 16);
 	lp_build_endif(&if_ctx);
+}
+
+/* This only writes the tessellation factor levels. */
+static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+	LLVMValueRef invocation_id;
+
+	invocation_id = unpack_param(si_shader_ctx, SI_PARAM_REL_IDS, 8, 5);
+
+	si_write_tess_factors(bld_base,
+			      get_rel_patch_id(si_shader_ctx),
+			      invocation_id,
+			      get_tcs_out_current_patch_data_offset(si_shader_ctx));
 }
 
 static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context * bld_base)
