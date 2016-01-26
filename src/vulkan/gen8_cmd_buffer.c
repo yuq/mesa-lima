@@ -476,7 +476,7 @@ emit_base_vertex_instance(struct anv_cmd_buffer *cmd_buffer,
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, 8, 4);
 
    ((uint32_t *)id_state.map)[0] = base_vertex;
-   ((uint32_t *)id_state.map)[0] = base_instance;
+   ((uint32_t *)id_state.map)[1] = base_instance;
 
    if (!cmd_buffer->device->info.has_llc)
       anv_state_clflush(id_state);
