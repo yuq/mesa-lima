@@ -137,16 +137,25 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 
    const uint32_t id_slot = __builtin_popcount(elements);
    if (needs_svgs_elem) {
+      /* From the Broadwell PRM for the 3D_Vertex_Component_Control enum:
+       *    "Within a VERTEX_ELEMENT_STATE structure, if a Component
+       *    Control field is set to something other than VFCOMP_STORE_SRC,
+       *    no higher-numbered Component Control fields may be set to
+       *    VFCOMP_STORE_SRC"
+       *
+       * This means, that if we have BaseInstance, we need BaseVertex as
+       * well.  Just do all or nothing.
+       */
+      uint32_t base_ctrl = (pipeline->vs_prog_data.uses_basevertex ||
+                            pipeline->vs_prog_data.uses_baseinstance) ?
+                           VFCOMP_STORE_SRC : VFCOMP_STORE_0;
+
       struct GENX(VERTEX_ELEMENT_STATE) element = {
          .VertexBufferIndex = 32, /* Reserved for this */
          .Valid = true,
          .SourceElementFormat = ISL_FORMAT_R32G32_UINT,
-         /* FIXME: Do we need to provide the base vertex as component 0 here
-          * to support the correct base vertex ID? */
-         .Component0Control = pipeline->vs_prog_data.uses_basevertex ?
-                              VFCOMP_STORE_SRC : VFCOMP_STORE_0,
-         .Component1Control = pipeline->vs_prog_data.uses_baseinstance ?
-                              VFCOMP_STORE_SRC : VFCOMP_STORE_0,
+         .Component0Control = base_ctrl,
+         .Component1Control = base_ctrl,
 #if ANV_GEN >= 8
          .Component2Control = VFCOMP_STORE_0,
          .Component3Control = VFCOMP_STORE_0,
