@@ -250,6 +250,15 @@ vc4_job_submit(struct vc4_context *vc4)
                 }
         }
 
+        if (vc4->last_emit_seqno - vc4->screen->finished_seqno > 5) {
+                if (!vc4_wait_seqno(vc4->screen,
+                                    vc4->last_emit_seqno - 5,
+                                    PIPE_TIMEOUT_INFINITE,
+                                    "job throttling")) {
+                        fprintf(stderr, "Job throttling failed\n");
+                }
+        }
+
         if (vc4_debug & VC4_DEBUG_ALWAYS_SYNC) {
                 if (!vc4_wait_seqno(vc4->screen, vc4->last_emit_seqno,
                                     PIPE_TIMEOUT_INFINITE, "sync")) {
