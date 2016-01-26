@@ -376,7 +376,7 @@ static LLVMValueRef build_indexed_load_const(
 
 static LLVMValueRef get_instance_index_for_fetch(
 	struct radeon_llvm_context *radeon_bld,
-	unsigned divisor)
+	unsigned param_start_instance, unsigned divisor)
 {
 	struct si_shader_context *ctx =
 		si_shader_context(&radeon_bld->soa.bld_base);
@@ -390,8 +390,8 @@ static LLVMValueRef get_instance_index_for_fetch(
 		result = LLVMBuildUDiv(gallivm->builder, result,
 				lp_build_const_int32(gallivm, divisor), "");
 
-	return LLVMBuildAdd(gallivm->builder, result, LLVMGetParam(
-			radeon_bld->main_fn, SI_PARAM_START_INSTANCE), "");
+	return LLVMBuildAdd(gallivm->builder, result,
+			    LLVMGetParam(radeon_bld->main_fn, param_start_instance), "");
 }
 
 static void declare_input_vs(
@@ -429,7 +429,9 @@ static void declare_input_vs(
 	if (divisor) {
 		/* Build index from instance ID, start instance and divisor */
 		ctx->shader->uses_instanceid = true;
-		buffer_index = get_instance_index_for_fetch(&ctx->radeon_bld, divisor);
+		buffer_index = get_instance_index_for_fetch(&ctx->radeon_bld,
+							    SI_PARAM_START_INSTANCE,
+							    divisor);
 	} else {
 		/* Load the buffer index for vertices. */
 		LLVMValueRef vertex_id = LLVMGetParam(ctx->radeon_bld.main_fn,
