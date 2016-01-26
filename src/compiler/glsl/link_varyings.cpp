@@ -967,11 +967,16 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
       return;
    }
 
-   if ((consumer_var == NULL && producer_var->type->contains_integer()) ||
+   bool needs_flat_qualifier = consumer_var == NULL &&
+      (producer_var->type->contains_integer() ||
+       producer_var->type->contains_double());
+
+   if (needs_flat_qualifier ||
        (consumer_stage != -1 && consumer_stage != MESA_SHADER_FRAGMENT)) {
       /* Since this varying is not being consumed by the fragment shader, its
        * interpolation type varying cannot possibly affect rendering.
-       * Also, this variable is non-flat and is (or contains) an integer.
+       * Also, this variable is non-flat and is (or contains) an integer
+       * or a double.
        * If the consumer stage is unknown, don't modify the interpolation
        * type as it could affect rendering later with separate shaders.
        *
