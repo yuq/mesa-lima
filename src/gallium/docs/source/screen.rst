@@ -138,6 +138,10 @@ The integer capabilities:
 * ``PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT``: Describes the required
   alignment for pipe_sampler_view::u.buf.first_element, in bytes.
   If a driver does not support first/last_element, it should return 0.
+* ``PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY``: Whether the driver only
+  supports R, RG, RGB and RGBA formats for PIPE_BUFFER sampler views.
+  When this is the case it should be assumed that the swizzle parameters
+  in the sampler view have no effect.
 * ``PIPE_CAP_TGSI_TEXCOORD``: This CAP describes a hw limitation.
   If true, the hardware cannot replace arbitrary shader inputs with sprite
   coordinates and hence the inputs that are desired to be replaceable must

@@ -342,6 +342,9 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		/* kernel command checker support is also required */
 		return family >= CHIP_CEDAR && rscreen->b.info.drm_minor >= 41;
 
+	case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
+		return family >= CHIP_CEDAR ? 0 : 1;
+
 	/* Unsupported features. */
 	case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
 	case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER:
