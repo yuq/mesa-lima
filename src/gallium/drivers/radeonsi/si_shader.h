@@ -274,6 +274,10 @@ union si_shader_part_key {
 		unsigned	num_input_sgprs:5;
 		unsigned	last_input:4;
 	} vs_prolog;
+	struct {
+		struct si_vs_epilog_bits states;
+		unsigned	prim_id_param_offset:5;
+	} vs_epilog;
 };
 
 union si_shader_key {

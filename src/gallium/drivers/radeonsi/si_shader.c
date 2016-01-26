@@ -129,6 +129,10 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 			       LLVMTargetMachineRef tm,
 			       struct tgsi_shader_info *info);
 
+/* The VS location of the PrimitiveID input is the same in the epilog,
+ * so that the main shader part doesn't have to move it.
+ */
+#define VS_EPILOG_PRIMID_LOC 2
 
 #define PERSPECTIVE_BASE 0
 #define LINEAR_BASE 9
@@ -2230,16 +2234,26 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 					      "");
 	}
 
-	/* Export PrimitiveID when PS needs it. */
-	if (si_vs_exports_prim_id(ctx->shader)) {
-		outputs[i].name = TGSI_SEMANTIC_PRIMID;
-		outputs[i].sid = 0;
-		outputs[i].values[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
-					       get_primitive_id(bld_base, 0));
-		outputs[i].values[1] = bld_base->base.undef;
-		outputs[i].values[2] = bld_base->base.undef;
-		outputs[i].values[3] = bld_base->base.undef;
-		i++;
+	if (ctx->is_monolithic) {
+		/* Export PrimitiveID when PS needs it. */
+		if (si_vs_exports_prim_id(ctx->shader)) {
+			outputs[i].name = TGSI_SEMANTIC_PRIMID;
+			outputs[i].sid = 0;
+			outputs[i].values[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+						       get_primitive_id(bld_base, 0));
+			outputs[i].values[1] = bld_base->base.undef;
+			outputs[i].values[2] = bld_base->base.undef;
+			outputs[i].values[3] = bld_base->base.undef;
+			i++;
+		}
+	} else {
+		/* Return the primitive ID from the LLVM function. */
+		ctx->return_value =
+			LLVMBuildInsertValue(gallivm->builder,
+					     ctx->return_value,
+					     bitcast(bld_base, TGSI_TYPE_FLOAT,
+						     get_primitive_id(bld_base, 0)),
+					     VS_EPILOG_PRIMID_LOC, "");
 	}
 
 	si_llvm_export_vs(bld_base, outputs, i);
@@ -3724,6 +3738,11 @@ static void create_function(struct si_shader_context *ctx)
 
 			for (i = 0; i < shader->selector->info.num_inputs; i++)
 				params[num_params++] = ctx->i32;
+
+			/* PrimitiveID output. */
+			if (!shader->key.vs.as_es && !shader->key.vs.as_ls)
+				for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
+					returns[num_returns++] = ctx->f32;
 		}
 		break;
 
@@ -3758,6 +3777,11 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_tes_v = num_params++] = ctx->f32;
 		params[ctx->param_tes_rel_patch_id = num_params++] = ctx->i32;
 		params[ctx->param_tes_patch_id = num_params++] = ctx->i32;
+
+		/* PrimitiveID output. */
+		if (!ctx->is_monolithic && !shader->key.tes.as_es)
+			for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
+				returns[num_returns++] = ctx->f32;
 		break;
 
 	case TGSI_PROCESSOR_GEOMETRY:
@@ -4864,6 +4888,111 @@ static bool si_compile_vs_prolog(struct si_screen *sscreen,
 	return status;
 }
 
+/**
+ * Compile the vertex shader epilog. This is also used by the tessellation
+ * evaluation shader compiled as VS.
+ *
+ * The input is PrimitiveID.
+ *
+ * If PrimitiveID is required by the pixel shader, export it.
+ * Otherwise, do nothing.
+ */
+static bool si_compile_vs_epilog(struct si_screen *sscreen,
+				 LLVMTargetMachineRef tm,
+				 struct pipe_debug_callback *debug,
+				 struct si_shader_part *out)
+{
+	union si_shader_part_key *key = &out->key;
+	struct si_shader_context ctx;
+	struct gallivm_state *gallivm = &ctx.radeon_bld.gallivm;
+	struct lp_build_tgsi_context *bld_base = &ctx.radeon_bld.soa.bld_base;
+	LLVMTypeRef params[5];
+	int num_params, i;
+	bool status = true;
+
+	si_init_shader_ctx(&ctx, sscreen, NULL, tm, NULL);
+	ctx.type = TGSI_PROCESSOR_VERTEX;
+
+	/* Declare input VGPRs. */
+	num_params = key->vs_epilog.states.export_prim_id ?
+			   (VS_EPILOG_PRIMID_LOC + 1) : 0;
+	assert(num_params <= ARRAY_SIZE(params));
+
+	for (i = 0; i < num_params; i++)
+		params[i] = ctx.f32;
+
+	/* Create the function. */
+	si_create_function(&ctx, NULL, 0, params, num_params,
+			   -1, -1);
+
+	/* Emit exports. */
+	if (key->vs_epilog.states.export_prim_id) {
+		struct lp_build_context *base = &bld_base->base;
+		struct lp_build_context *uint = &bld_base->uint_bld;
+		LLVMValueRef args[9];
+
+		args[0] = lp_build_const_int32(base->gallivm, 0x0); /* enabled channels */
+		args[1] = uint->zero; /* whether the EXEC mask is valid */
+		args[2] = uint->zero; /* DONE bit */
+		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_PARAM +
+					       key->vs_epilog.prim_id_param_offset);
+		args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
+		args[5] = LLVMGetParam(ctx.radeon_bld.main_fn,
+				       VS_EPILOG_PRIMID_LOC); /* X */
+		args[6] = uint->undef; /* Y */
+		args[7] = uint->undef; /* Z */
+		args[8] = uint->undef; /* W */
+
+		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+				   LLVMVoidTypeInContext(base->gallivm->context),
+				   args, 9, 0);
+	}
+
+	/* Compile. */
+	LLVMBuildRet(gallivm->builder, ctx.return_value);
+	radeon_llvm_finalize_module(&ctx.radeon_bld);
+
+	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
+			    gallivm->module, debug, ctx.type,
+			    "Vertex Shader Epilog"))
+		status = false;
+
+	radeon_llvm_dispose(&ctx.radeon_bld);
+	return status;
+}
+
+/**
+ * Create & compile a vertex shader epilog. This a helper used by VS and TES.
+ */
+static bool si_get_vs_epilog(struct si_screen *sscreen,
+			     LLVMTargetMachineRef tm,
+		             struct si_shader *shader,
+		             struct pipe_debug_callback *debug,
+			     struct si_vs_epilog_bits *states)
+{
+	union si_shader_part_key epilog_key;
+
+	memset(&epilog_key, 0, sizeof(epilog_key));
+	epilog_key.vs_epilog.states = *states;
+
+	/* Set up the PrimitiveID output. */
+	if (shader->key.vs.epilog.export_prim_id) {
+		unsigned index = shader->selector->info.num_outputs;
+		unsigned offset = shader->nr_param_exports++;
+
+		epilog_key.vs_epilog.prim_id_param_offset = offset;
+		shader->vs_output_param_offset[index] = offset;
+	}
+
+	shader->epilog = si_get_shader_part(sscreen, &sscreen->vs_epilogs,
+					    &epilog_key, tm, debug,
+					    si_compile_vs_epilog);
+	return shader->epilog != NULL;
+}
+
+/**
+ * Select and compile (or reuse) vertex shader parts (prolog & epilog).
+ */
 static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 				      LLVMTargetMachineRef tm,
 				      struct si_shader *shader,
@@ -4889,12 +5018,34 @@ static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 			return false;
 	}
 
+	/* Get the epilog. */
+	if (!shader->key.vs.as_es && !shader->key.vs.as_ls &&
+	    !si_get_vs_epilog(sscreen, tm, shader, debug,
+			      &shader->key.vs.epilog))
+		return false;
+
 	/* Set the instanceID flag. */
 	for (i = 0; i < info->num_inputs; i++)
 		if (prolog_key.vs_prolog.states.instance_divisors[i])
 			shader->uses_instanceid = true;
 
 	return true;
+}
+
+/**
+ * Select and compile (or reuse) TES parts (epilog).
+ */
+static bool si_shader_select_tes_parts(struct si_screen *sscreen,
+				       LLVMTargetMachineRef tm,
+				       struct si_shader *shader,
+				       struct pipe_debug_callback *debug)
+{
+	if (shader->key.tes.as_es)
+		return true;
+
+	/* TES compiled as VS. */
+	return si_get_vs_epilog(sscreen, tm, shader, debug,
+				&shader->key.tes.epilog);
 }
 
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
@@ -4913,6 +5064,10 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		switch (shader->selector->type) {
 		case PIPE_SHADER_VERTEX:
 			if (!si_shader_select_vs_parts(sscreen, tm, shader, debug))
+				return -1;
+			break;
+		case PIPE_SHADER_TESS_EVAL:
+			if (!si_shader_select_tes_parts(sscreen, tm, shader, debug))
 				return -1;
 			break;
 		}

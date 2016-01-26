@@ -540,7 +540,7 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	struct si_screen *sscreen = (struct si_screen *)pscreen;
 	struct si_shader_part *parts[] = {
 		sscreen->vs_prologs,
-		/* this will be filled with other shader parts */
+		sscreen->vs_epilogs,
 	};
 	unsigned i;
 
