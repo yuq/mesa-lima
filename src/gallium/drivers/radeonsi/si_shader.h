@@ -281,6 +281,13 @@ union si_shader_part_key {
 	struct {
 		struct si_tcs_epilog_bits states;
 	} tcs_epilog;
+	struct {
+		struct si_ps_epilog_bits states;
+		unsigned	colors_written:8;
+		unsigned	writes_z:1;
+		unsigned	writes_stencil:1;
+		unsigned	writes_samplemask:1;
+	} ps_epilog;
 };
 
 union si_shader_key {

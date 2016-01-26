@@ -131,6 +131,11 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 			       LLVMTargetMachineRef tm,
 			       struct tgsi_shader_info *info);
 
+/* Ideally pass the sample mask input to the PS epilog as v13, which
+ * is its usual location, so that the shader doesn't have to add v_mov.
+ */
+#define PS_EPILOG_SAMPLEMASK_MIN_LOC 13
+
 /* The VS location of the PrimitiveID input is the same in the epilog,
  * so that the main shader part doesn't have to move it.
  */
@@ -2530,6 +2535,100 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context *bld_base)
 		si_export_mrt_z(bld_base, depth, stencil, samplemask);
 }
 
+/**
+ * Return PS outputs in this order:
+ *
+ * v[0:3] = color0.xyzw
+ * v[4:7] = color1.xyzw
+ * ...
+ * vN+0 = Depth
+ * vN+1 = Stencil
+ * vN+2 = SampleMask
+ * vN+3 = SampleMaskIn (used for OpenGL smoothing)
+ *
+ * The alpha-ref SGPR is returned via its original location.
+ */
+static void si_llvm_return_fs_outputs(struct lp_build_tgsi_context *bld_base)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct si_shader *shader = ctx->shader;
+	struct lp_build_context *base = &bld_base->base;
+	struct tgsi_shader_info *info = &shader->selector->info;
+	LLVMBuilderRef builder = base->gallivm->builder;
+	unsigned i, j, first_vgpr, vgpr;
+
+	LLVMValueRef color[8][4] = {};
+	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
+	LLVMValueRef ret;
+
+	/* Read the output values. */
+	for (i = 0; i < info->num_outputs; i++) {
+		unsigned semantic_name = info->output_semantic_name[i];
+		unsigned semantic_index = info->output_semantic_index[i];
+
+		switch (semantic_name) {
+		case TGSI_SEMANTIC_COLOR:
+			assert(semantic_index < 8);
+			for (j = 0; j < 4; j++) {
+				LLVMValueRef ptr = ctx->radeon_bld.soa.outputs[i][j];
+				LLVMValueRef result = LLVMBuildLoad(builder, ptr, "");
+				color[semantic_index][j] = result;
+			}
+			break;
+		case TGSI_SEMANTIC_POSITION:
+			depth = LLVMBuildLoad(builder,
+					      ctx->radeon_bld.soa.outputs[i][2], "");
+			break;
+		case TGSI_SEMANTIC_STENCIL:
+			stencil = LLVMBuildLoad(builder,
+						ctx->radeon_bld.soa.outputs[i][1], "");
+			break;
+		case TGSI_SEMANTIC_SAMPLEMASK:
+			samplemask = LLVMBuildLoad(builder,
+						   ctx->radeon_bld.soa.outputs[i][0], "");
+			break;
+		default:
+			fprintf(stderr, "Warning: SI unhandled fs output type:%d\n",
+				semantic_name);
+		}
+	}
+
+	/* Fill the return structure. */
+	ret = ctx->return_value;
+
+	/* Set SGPRs. */
+	ret = LLVMBuildInsertValue(builder, ret,
+				   bitcast(bld_base, TGSI_TYPE_SIGNED,
+					   LLVMGetParam(ctx->radeon_bld.main_fn,
+							SI_PARAM_ALPHA_REF)),
+				   SI_SGPR_ALPHA_REF, "");
+
+	/* Set VGPRs */
+	first_vgpr = vgpr = SI_SGPR_ALPHA_REF + 1;
+	for (i = 0; i < ARRAY_SIZE(color); i++) {
+		if (!color[i][0])
+			continue;
+
+		for (j = 0; j < 4; j++)
+			ret = LLVMBuildInsertValue(builder, ret, color[i][j], vgpr++, "");
+	}
+	if (depth)
+		ret = LLVMBuildInsertValue(builder, ret, depth, vgpr++, "");
+	if (stencil)
+		ret = LLVMBuildInsertValue(builder, ret, stencil, vgpr++, "");
+	if (samplemask)
+		ret = LLVMBuildInsertValue(builder, ret, samplemask, vgpr++, "");
+
+	/* Add the input sample mask for smoothing at the end. */
+	if (vgpr < first_vgpr + PS_EPILOG_SAMPLEMASK_MIN_LOC)
+		vgpr = first_vgpr + PS_EPILOG_SAMPLEMASK_MIN_LOC;
+	ret = LLVMBuildInsertValue(builder, ret,
+				   LLVMGetParam(ctx->radeon_bld.main_fn,
+						SI_PARAM_SAMPLE_COVERAGE), vgpr++, "");
+
+	ctx->return_value = ret;
+}
+
 static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 				struct lp_build_tgsi_context *bld_base,
 				struct lp_build_emit_data *emit_data);
@@ -3723,7 +3822,7 @@ static void create_function(struct si_shader_context *ctx)
 	struct si_shader *shader = ctx->shader;
 	LLVMTypeRef params[SI_NUM_PARAMS + SI_NUM_VERTEX_BUFFERS], v3i32;
 	LLVMTypeRef returns[16+32*4];
-	unsigned i, last_array_pointer, last_sgpr, num_params;
+	unsigned i, last_array_pointer, last_sgpr, num_params, num_return_sgprs;
 	unsigned num_returns = 0;
 
 	v3i32 = LLVMVectorType(ctx->i32, 3);
@@ -3869,6 +3968,27 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_SAMPLE_COVERAGE] = ctx->f32;
 		params[SI_PARAM_POS_FIXED_PT] = ctx->f32;
 		num_params = SI_PARAM_POS_FIXED_PT+1;
+
+		if (!ctx->is_monolithic) {
+			/* Outputs for the epilog. */
+			num_return_sgprs = SI_SGPR_ALPHA_REF + 1;
+			num_returns =
+				num_return_sgprs +
+				util_bitcount(shader->selector->info.colors_written) * 4 +
+				shader->selector->info.writes_z +
+				shader->selector->info.writes_stencil +
+				shader->selector->info.writes_samplemask +
+				1 /* SampleMaskIn */;
+
+			num_returns = MAX2(num_returns,
+					   num_return_sgprs +
+					   PS_EPILOG_SAMPLEMASK_MIN_LOC + 1);
+
+			for (i = 0; i < num_return_sgprs; i++)
+				returns[i] = ctx->i32;
+			for (; i < num_returns; i++)
+				returns[i] = ctx->f32;
+		}
 		break;
 
 	default:
@@ -4664,7 +4784,10 @@ static int si_compile_tgsi_shader(struct si_screen *sscreen,
 		break;
 	case TGSI_PROCESSOR_FRAGMENT:
 		ctx.radeon_bld.load_input = declare_input_fs;
-		bld_base->emit_epilogue = si_llvm_emit_fs_epilogue;
+		if (is_monolithic)
+			bld_base->emit_epilogue = si_llvm_emit_fs_epilogue;
+		else
+			bld_base->emit_epilogue = si_llvm_return_fs_outputs;
 		break;
 	default:
 		assert(!"Unsupported shader type");
@@ -5181,6 +5304,159 @@ static bool si_shader_select_tcs_parts(struct si_screen *sscreen,
 	return shader->epilog != NULL;
 }
 
+/**
+ * Compile the pixel shader epilog. This handles everything that must be
+ * emulated for pixel shader exports. (alpha-test, format conversions, etc)
+ */
+static bool si_compile_ps_epilog(struct si_screen *sscreen,
+				 LLVMTargetMachineRef tm,
+				 struct pipe_debug_callback *debug,
+				 struct si_shader_part *out)
+{
+	union si_shader_part_key *key = &out->key;
+	struct si_shader shader = {};
+	struct si_shader_context ctx;
+	struct gallivm_state *gallivm = &ctx.radeon_bld.gallivm;
+	struct lp_build_tgsi_context *bld_base = &ctx.radeon_bld.soa.bld_base;
+	LLVMTypeRef params[16+8*4+3];
+	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
+	int last_array_pointer, last_sgpr, num_params, i;
+	bool status = true;
+
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm, NULL);
+	ctx.type = TGSI_PROCESSOR_FRAGMENT;
+	shader.key.ps.epilog = key->ps_epilog.states;
+
+	/* Declare input SGPRs. */
+	params[SI_PARAM_RW_BUFFERS] = ctx.i64;
+	params[SI_PARAM_CONST_BUFFERS] = ctx.i64;
+	params[SI_PARAM_SAMPLERS] = ctx.i64;
+	params[SI_PARAM_UNUSED] = ctx.i64;
+	params[SI_PARAM_ALPHA_REF] = ctx.f32;
+	last_array_pointer = -1;
+	last_sgpr = SI_PARAM_ALPHA_REF;
+
+	/* Declare input VGPRs. */
+	num_params = (last_sgpr + 1) +
+		     util_bitcount(key->ps_epilog.colors_written) * 4 +
+		     key->ps_epilog.writes_z +
+		     key->ps_epilog.writes_stencil +
+		     key->ps_epilog.writes_samplemask;
+
+	num_params = MAX2(num_params,
+			  last_sgpr + 1 + PS_EPILOG_SAMPLEMASK_MIN_LOC + 1);
+
+	assert(num_params <= ARRAY_SIZE(params));
+
+	for (i = last_sgpr + 1; i < num_params; i++)
+		params[i] = ctx.f32;
+
+	/* Create the function. */
+	si_create_function(&ctx, NULL, 0, params, num_params,
+			   last_array_pointer, last_sgpr);
+	/* Disable elimination of unused inputs. */
+	radeon_llvm_add_attribute(ctx.radeon_bld.main_fn,
+				  "InitialPSInputAddr", 0xffffff);
+
+	/* Process colors. */
+	unsigned vgpr = last_sgpr + 1;
+	unsigned colors_written = key->ps_epilog.colors_written;
+	int last_color_export = -1;
+
+	/* Find the last color export. */
+	if (!key->ps_epilog.writes_z &&
+	    !key->ps_epilog.writes_stencil &&
+	    !key->ps_epilog.writes_samplemask) {
+		unsigned spi_format = key->ps_epilog.states.spi_shader_col_format;
+
+		/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
+		if (colors_written == 0x1 && key->ps_epilog.states.last_cbuf > 0) {
+			/* Just set this if any of the colorbuffers are enabled. */
+			if (spi_format &
+			    ((1llu << (4 * (key->ps_epilog.states.last_cbuf + 1))) - 1))
+				last_color_export = 0;
+		} else {
+			for (i = 0; i < 8; i++)
+				if (colors_written & (1 << i) &&
+				    (spi_format >> (i * 4)) & 0xf)
+					last_color_export = i;
+		}
+	}
+
+	while (colors_written) {
+		LLVMValueRef color[4];
+		int mrt = u_bit_scan(&colors_written);
+
+		for (i = 0; i < 4; i++)
+			color[i] = LLVMGetParam(ctx.radeon_bld.main_fn, vgpr++);
+
+		si_export_mrt_color(bld_base, color, mrt,
+				    num_params - 1,
+				    mrt == last_color_export);
+	}
+
+	/* Process depth, stencil, samplemask. */
+	if (key->ps_epilog.writes_z)
+		depth = LLVMGetParam(ctx.radeon_bld.main_fn, vgpr++);
+	if (key->ps_epilog.writes_stencil)
+		stencil = LLVMGetParam(ctx.radeon_bld.main_fn, vgpr++);
+	if (key->ps_epilog.writes_samplemask)
+		samplemask = LLVMGetParam(ctx.radeon_bld.main_fn, vgpr++);
+
+	if (depth || stencil || samplemask)
+		si_export_mrt_z(bld_base, depth, stencil, samplemask);
+	else if (last_color_export == -1)
+		si_export_null(bld_base);
+
+	/* Compile. */
+	LLVMBuildRetVoid(gallivm->builder);
+	radeon_llvm_finalize_module(&ctx.radeon_bld);
+
+	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
+			    gallivm->module, debug, ctx.type,
+			    "Fragment Shader Epilog"))
+		status = false;
+
+	radeon_llvm_dispose(&ctx.radeon_bld);
+	return status;
+}
+
+/**
+ * Select and compile (or reuse) pixel shader parts (prolog & epilog).
+ */
+static bool si_shader_select_ps_parts(struct si_screen *sscreen,
+				      LLVMTargetMachineRef tm,
+				      struct si_shader *shader,
+				      struct pipe_debug_callback *debug)
+{
+	struct tgsi_shader_info *info = &shader->selector->info;
+	union si_shader_part_key epilog_key;
+
+	/* Get the epilog. */
+	memset(&epilog_key, 0, sizeof(epilog_key));
+	epilog_key.ps_epilog.colors_written = info->colors_written;
+	epilog_key.ps_epilog.writes_z = info->writes_z;
+	epilog_key.ps_epilog.writes_stencil = info->writes_stencil;
+	epilog_key.ps_epilog.writes_samplemask = info->writes_samplemask;
+	epilog_key.ps_epilog.states = shader->key.ps.epilog;
+
+	shader->epilog =
+		si_get_shader_part(sscreen, &sscreen->ps_epilogs,
+				   &epilog_key, tm, debug,
+				   si_compile_ps_epilog);
+	if (!shader->epilog)
+		return false;
+
+	/* The sample mask input is always enabled, because the API shader always
+	 * passes it through to the epilog. Disable it here if it's unused.
+	 */
+	if (!shader->key.ps.epilog.poly_line_smoothing &&
+	    !shader->selector->info.reads_samplemask)
+		shader->config.spi_ps_input_ena &= C_0286CC_SAMPLE_COVERAGE_ENA;
+
+	return true;
+}
+
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug)
@@ -5206,6 +5482,16 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		case PIPE_SHADER_TESS_EVAL:
 			if (!si_shader_select_tes_parts(sscreen, tm, shader, debug))
 				return -1;
+			break;
+		case PIPE_SHADER_FRAGMENT:
+			if (!si_shader_select_ps_parts(sscreen, tm, shader, debug))
+				return -1;
+
+			/* Make sure we have at least as many VGPRs as there
+			 * are allocated inputs.
+			 */
+			shader->config.num_vgprs = MAX2(shader->config.num_vgprs,
+							shader->num_input_vgprs);
 			break;
 		}
 
