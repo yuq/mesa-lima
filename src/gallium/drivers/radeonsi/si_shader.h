@@ -278,6 +278,9 @@ union si_shader_part_key {
 		struct si_vs_epilog_bits states;
 		unsigned	prim_id_param_offset:5;
 	} vs_epilog;
+	struct {
+		struct si_tcs_epilog_bits states;
+	} tcs_epilog;
 };
 
 union si_shader_key {

@@ -109,9 +109,11 @@ struct si_shader_context
 	LLVMTypeRef i1;
 	LLVMTypeRef i8;
 	LLVMTypeRef i32;
+	LLVMTypeRef i64;
 	LLVMTypeRef i128;
 	LLVMTypeRef f32;
 	LLVMTypeRef v16i8;
+	LLVMTypeRef v2i32;
 	LLVMTypeRef v4i32;
 	LLVMTypeRef v4f32;
 	LLVMTypeRef v8i32;
@@ -2081,14 +2083,51 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMValueRef invocation_id;
+	LLVMValueRef rel_patch_id, invocation_id, tf_lds_offset;
 
+	rel_patch_id = get_rel_patch_id(ctx);
 	invocation_id = unpack_param(ctx, SI_PARAM_REL_IDS, 8, 5);
+	tf_lds_offset = get_tcs_out_current_patch_data_offset(ctx);
 
-	si_write_tess_factors(bld_base,
-			      get_rel_patch_id(ctx),
-			      invocation_id,
-			      get_tcs_out_current_patch_data_offset(ctx));
+	if (!ctx->is_monolithic) {
+		/* Return epilog parameters from this function. */
+		LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+		LLVMValueRef ret = ctx->return_value;
+		LLVMValueRef rw_buffers, rw0, rw1, tf_soffset;
+		unsigned vgpr;
+
+		/* RW_BUFFERS pointer */
+		rw_buffers = LLVMGetParam(ctx->radeon_bld.main_fn,
+					  SI_PARAM_RW_BUFFERS);
+		rw_buffers = LLVMBuildPtrToInt(builder, rw_buffers, ctx->i64, "");
+		rw_buffers = LLVMBuildBitCast(builder, rw_buffers, ctx->v2i32, "");
+		rw0 = LLVMBuildExtractElement(builder, rw_buffers,
+					      bld_base->uint_bld.zero, "");
+		rw1 = LLVMBuildExtractElement(builder, rw_buffers,
+					      bld_base->uint_bld.one, "");
+		ret = LLVMBuildInsertValue(builder, ret, rw0, 0, "");
+		ret = LLVMBuildInsertValue(builder, ret, rw1, 1, "");
+
+		/* Tess factor buffer soffset is after user SGPRs. */
+		tf_soffset = LLVMGetParam(ctx->radeon_bld.main_fn,
+					  SI_PARAM_TESS_FACTOR_OFFSET);
+		ret = LLVMBuildInsertValue(builder, ret, tf_soffset,
+					   SI_TCS_NUM_USER_SGPR, "");
+
+		/* VGPRs */
+		rel_patch_id = bitcast(bld_base, TGSI_TYPE_FLOAT, rel_patch_id);
+		invocation_id = bitcast(bld_base, TGSI_TYPE_FLOAT, invocation_id);
+		tf_lds_offset = bitcast(bld_base, TGSI_TYPE_FLOAT, tf_lds_offset);
+
+		vgpr = SI_TCS_NUM_USER_SGPR + 1;
+		ret = LLVMBuildInsertValue(builder, ret, rel_patch_id, vgpr++, "");
+		ret = LLVMBuildInsertValue(builder, ret, invocation_id, vgpr++, "");
+		ret = LLVMBuildInsertValue(builder, ret, tf_lds_offset, vgpr++, "");
+		ctx->return_value = ret;
+		return;
+	}
+
+	si_write_tess_factors(bld_base, rel_patch_id, invocation_id, tf_lds_offset);
 }
 
 static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
@@ -3682,12 +3721,11 @@ static void create_function(struct si_shader_context *ctx)
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct si_shader *shader = ctx->shader;
-	LLVMTypeRef params[SI_NUM_PARAMS + SI_NUM_VERTEX_BUFFERS], v2i32, v3i32;
+	LLVMTypeRef params[SI_NUM_PARAMS + SI_NUM_VERTEX_BUFFERS], v3i32;
 	LLVMTypeRef returns[16+32*4];
 	unsigned i, last_array_pointer, last_sgpr, num_params;
 	unsigned num_returns = 0;
 
-	v2i32 = LLVMVectorType(ctx->i32, 2);
 	v3i32 = LLVMVectorType(ctx->i32, 3);
 
 	params[SI_PARAM_RW_BUFFERS] = const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
@@ -3757,6 +3795,15 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_PATCH_ID] = ctx->i32;
 		params[SI_PARAM_REL_IDS] = ctx->i32;
 		num_params = SI_PARAM_REL_IDS+1;
+
+		if (!ctx->is_monolithic) {
+			/* PARAM_TESS_FACTOR_OFFSET is after user SGPRs. */
+			for (i = 0; i <= SI_TCS_NUM_USER_SGPR; i++)
+				returns[num_returns++] = ctx->i32; /* SGPRs */
+
+			for (i = 0; i < 3; i++)
+				returns[num_returns++] = ctx->f32; /* VGPRs */
+		}
 		break;
 
 	case TGSI_PROCESSOR_TESS_EVAL:
@@ -3805,13 +3852,13 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_ALPHA_REF] = ctx->f32;
 		params[SI_PARAM_PRIM_MASK] = ctx->i32;
 		last_sgpr = SI_PARAM_PRIM_MASK;
-		params[SI_PARAM_PERSP_SAMPLE] = v2i32;
-		params[SI_PARAM_PERSP_CENTER] = v2i32;
-		params[SI_PARAM_PERSP_CENTROID] = v2i32;
+		params[SI_PARAM_PERSP_SAMPLE] = ctx->v2i32;
+		params[SI_PARAM_PERSP_CENTER] = ctx->v2i32;
+		params[SI_PARAM_PERSP_CENTROID] = ctx->v2i32;
 		params[SI_PARAM_PERSP_PULL_MODEL] = v3i32;
-		params[SI_PARAM_LINEAR_SAMPLE] = v2i32;
-		params[SI_PARAM_LINEAR_CENTER] = v2i32;
-		params[SI_PARAM_LINEAR_CENTROID] = v2i32;
+		params[SI_PARAM_LINEAR_SAMPLE] = ctx->v2i32;
+		params[SI_PARAM_LINEAR_CENTER] = ctx->v2i32;
+		params[SI_PARAM_LINEAR_CENTROID] = ctx->v2i32;
 		params[SI_PARAM_LINE_STIPPLE_TEX] = ctx->f32;
 		params[SI_PARAM_POS_X_FLOAT] = ctx->f32;
 		params[SI_PARAM_POS_Y_FLOAT] = ctx->f32;
@@ -4501,9 +4548,11 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	ctx->i1 = LLVMInt1TypeInContext(ctx->radeon_bld.gallivm.context);
 	ctx->i8 = LLVMInt8TypeInContext(ctx->radeon_bld.gallivm.context);
 	ctx->i32 = LLVMInt32TypeInContext(ctx->radeon_bld.gallivm.context);
+	ctx->i64 = LLVMInt64TypeInContext(ctx->radeon_bld.gallivm.context);
 	ctx->i128 = LLVMIntTypeInContext(ctx->radeon_bld.gallivm.context, 128);
 	ctx->f32 = LLVMFloatTypeInContext(ctx->radeon_bld.gallivm.context);
 	ctx->v16i8 = LLVMVectorType(ctx->i8, 16);
+	ctx->v2i32 = LLVMVectorType(ctx->i32, 2);
 	ctx->v4i32 = LLVMVectorType(ctx->i32, 4);
 	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
 	ctx->v8i32 = LLVMVectorType(ctx->i32, 8);
@@ -5048,6 +5097,90 @@ static bool si_shader_select_tes_parts(struct si_screen *sscreen,
 				&shader->key.tes.epilog);
 }
 
+/**
+ * Compile the TCS epilog. This writes tesselation factors to memory based on
+ * the output primitive type of the tesselator (determined by TES).
+ */
+static bool si_compile_tcs_epilog(struct si_screen *sscreen,
+				  LLVMTargetMachineRef tm,
+				  struct pipe_debug_callback *debug,
+				  struct si_shader_part *out)
+{
+	union si_shader_part_key *key = &out->key;
+	struct si_shader shader = {};
+	struct si_shader_context ctx;
+	struct gallivm_state *gallivm = &ctx.radeon_bld.gallivm;
+	struct lp_build_tgsi_context *bld_base = &ctx.radeon_bld.soa.bld_base;
+	LLVMTypeRef params[16];
+	LLVMValueRef func;
+	int last_array_pointer, last_sgpr, num_params;
+	bool status = true;
+
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm, NULL);
+	ctx.type = TGSI_PROCESSOR_TESS_CTRL;
+	shader.key.tcs.epilog = key->tcs_epilog.states;
+
+	/* Declare inputs. Only RW_BUFFERS and TESS_FACTOR_OFFSET are used. */
+	params[SI_PARAM_RW_BUFFERS] = const_array(ctx.v16i8, SI_NUM_RW_BUFFERS);
+	last_array_pointer = SI_PARAM_RW_BUFFERS;
+	params[SI_PARAM_CONST_BUFFERS] = ctx.i64;
+	params[SI_PARAM_SAMPLERS] = ctx.i64;
+	params[SI_PARAM_UNUSED] = ctx.i64;
+	params[SI_PARAM_TCS_OUT_OFFSETS] = ctx.i32;
+	params[SI_PARAM_TCS_OUT_LAYOUT] = ctx.i32;
+	params[SI_PARAM_TCS_IN_LAYOUT] = ctx.i32;
+	params[SI_PARAM_TESS_FACTOR_OFFSET] = ctx.i32;
+	last_sgpr = SI_PARAM_TESS_FACTOR_OFFSET;
+	num_params = last_sgpr + 1;
+
+	params[num_params++] = ctx.i32; /* patch index within the wave (REL_PATCH_ID) */
+	params[num_params++] = ctx.i32; /* invocation ID within the patch */
+	params[num_params++] = ctx.i32; /* LDS offset where tess factors should be loaded from */
+
+	/* Create the function. */
+	si_create_function(&ctx, NULL, 0, params, num_params,
+			   last_array_pointer, last_sgpr);
+	declare_tess_lds(&ctx);
+	func = ctx.radeon_bld.main_fn;
+
+	si_write_tess_factors(bld_base,
+			      LLVMGetParam(func, last_sgpr + 1),
+			      LLVMGetParam(func, last_sgpr + 2),
+			      LLVMGetParam(func, last_sgpr + 3));
+
+	/* Compile. */
+	LLVMBuildRet(gallivm->builder, ctx.return_value);
+	radeon_llvm_finalize_module(&ctx.radeon_bld);
+
+	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
+			    gallivm->module, debug, ctx.type,
+			    "Tessellation Control Shader Epilog"))
+		status = false;
+
+	radeon_llvm_dispose(&ctx.radeon_bld);
+	return status;
+}
+
+/**
+ * Select and compile (or reuse) TCS parts (epilog).
+ */
+static bool si_shader_select_tcs_parts(struct si_screen *sscreen,
+				       LLVMTargetMachineRef tm,
+				       struct si_shader *shader,
+				       struct pipe_debug_callback *debug)
+{
+	union si_shader_part_key epilog_key;
+
+	/* Get the epilog. */
+	memset(&epilog_key, 0, sizeof(epilog_key));
+	epilog_key.tcs_epilog.states = shader->key.tcs.epilog;
+
+	shader->epilog = si_get_shader_part(sscreen, &sscreen->tcs_epilogs,
+					    &epilog_key, tm, debug,
+					    si_compile_tcs_epilog);
+	return shader->epilog != NULL;
+}
+
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug)
@@ -5064,6 +5197,10 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		switch (shader->selector->type) {
 		case PIPE_SHADER_VERTEX:
 			if (!si_shader_select_vs_parts(sscreen, tm, shader, debug))
+				return -1;
+			break;
+		case PIPE_SHADER_TESS_CTRL:
+			if (!si_shader_select_tcs_parts(sscreen, tm, shader, debug))
 				return -1;
 			break;
 		case PIPE_SHADER_TESS_EVAL:
