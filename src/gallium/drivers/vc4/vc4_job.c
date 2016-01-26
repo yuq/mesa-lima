@@ -245,10 +245,10 @@ vc4_job_submit(struct vc4_context *vc4)
                         fprintf(stderr, "Draw call returned %s.  "
                                         "Expect corruption.\n", strerror(errno));
                         warned = true;
+                } else if (!ret) {
+                        vc4->last_emit_seqno = submit.seqno;
                 }
         }
-
-        vc4->last_emit_seqno = submit.seqno;
 
         if (vc4_debug & VC4_DEBUG_ALWAYS_SYNC) {
                 if (!vc4_wait_seqno(vc4->screen, vc4->last_emit_seqno,
