@@ -69,10 +69,6 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
     if (pf == PIPE_FORMAT_NONE)
         return D3DERR_INVALIDCALL;
 
-    /* We support ATI1 and ATI2 hacks only for 2D textures */
-    if (Format == D3DFMT_ATI1 || Format == D3DFMT_ATI2)
-        return D3DERR_INVALIDCALL;
-
     if (compressed_format(Format)) {
         const unsigned w = util_format_get_blockwidth(pf);
         const unsigned h = util_format_get_blockheight(pf);
