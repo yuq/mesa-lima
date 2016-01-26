@@ -94,6 +94,31 @@ t_assert_offset_el(const struct isl_surf *surf,
 }
 
 static void
+t_assert_intratile_offset_el(const struct isl_device *dev,
+                             const struct isl_surf *surf,
+                             uint32_t level,
+                             uint32_t logical_array_layer,
+                             uint32_t logical_z_offset_px,
+                             uint32_t expected_base_address_offset,
+                             uint32_t expected_x_offset_el,
+                             uint32_t expected_y_offset_el)
+{
+   uint32_t base_address_offset;
+   uint32_t x_offset_el, y_offset_el;
+   isl_surf_get_image_intratile_offset_el(dev, surf,
+                                          level,
+                                          logical_array_layer,
+                                          logical_z_offset_px,
+                                          &base_address_offset,
+                                          &x_offset_el,
+                                          &y_offset_el);
+
+   t_assert(base_address_offset == expected_base_address_offset);
+   t_assert(x_offset_el == expected_x_offset_el);
+   t_assert(y_offset_el == expected_y_offset_el);
+}
+
+static void
 t_assert_phys_level0_sa(const struct isl_surf *surf, uint32_t width,
                         uint32_t height, uint32_t depth, uint32_t array_len)
 {
@@ -147,7 +172,11 @@ test_bdw_2d_r8g8b8a8_unorm_512x512_array01_samples01_noaux_tiley0(void)
    t_assert_image_alignment_sa(&surf, 4, 4, 1);
    t_assert_phys_level0_sa(&surf, 512, 512, 1, 1);
    t_assert(isl_surf_get_array_pitch_el_rows(&surf) >= 772);
-   t_assert(isl_surf_get_array_pitch_sa_rows(&surf) >= 772);
+   t_assert(isl_surf_get_array_pitch_el_rows(&surf) ==
+            isl_surf_get_array_pitch_sa_rows(&surf));
+
+   /* Row pitch should be minimal possible */
+   t_assert(surf.row_pitch == 2048);
 
    t_assert_offset_el(&surf, 0, 0, 0, 0, 0); // +0, +0
    t_assert_offset_el(&surf, 1, 0, 0, 0, 512); // +0, +512
@@ -159,6 +188,17 @@ test_bdw_2d_r8g8b8a8_unorm_512x512_array01_samples01_noaux_tiley0(void)
    t_assert_offset_el(&surf, 7, 0, 0, 256, 760); // +0, +8
    t_assert_offset_el(&surf, 8, 0, 0, 256, 764); // +0, +4
    t_assert_offset_el(&surf, 9, 0, 0, 256, 768); // +0, +4
+
+   t_assert_intratile_offset_el(&dev, &surf, 0, 0, 0,      0x0, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 1, 0, 0, 0x100000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 2, 0, 0, 0x100400, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 3, 0, 0, 0x140400, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 4, 0, 0, 0x160400, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 5, 0, 0, 0x170400, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 6, 0, 0, 0x170400, 0, 16);
+   t_assert_intratile_offset_el(&dev, &surf, 7, 0, 0, 0x170400, 0, 24);
+   t_assert_intratile_offset_el(&dev, &surf, 8, 0, 0, 0x170400, 0, 28);
+   t_assert_intratile_offset_el(&dev, &surf, 9, 0, 0, 0x180400, 0,  0);
 }
 
 static void
@@ -187,8 +227,13 @@ test_bdw_2d_r8g8b8a8_unorm_1024x1024_array06_samples01_noaux_tiley0(void)
 
    t_assert_image_alignment_el(&surf, 4, 4, 1);
    t_assert_image_alignment_sa(&surf, 4, 4, 1);
+
    t_assert(isl_surf_get_array_pitch_el_rows(&surf) >= 1540);
-   t_assert(isl_surf_get_array_pitch_sa_rows(&surf) >= 1540);
+   t_assert(isl_surf_get_array_pitch_el_rows(&surf) ==
+            isl_surf_get_array_pitch_sa_rows(&surf));
+
+   /* Row pitch should be minimal possible */
+   t_assert(surf.row_pitch == 4096);
 
    for (uint32_t a = 0; a < 6; ++a) {
       uint32_t b = a * isl_surf_get_array_pitch_sa_rows(&surf);
@@ -204,7 +249,54 @@ test_bdw_2d_r8g8b8a8_unorm_1024x1024_array06_samples01_noaux_tiley0(void)
       t_assert_offset_el(&surf, 8, a, 0, 512, b + 1528); // +0, +8
       t_assert_offset_el(&surf, 9, a, 0, 512, b + 1532); // +0, +4
       t_assert_offset_el(&surf, 10, a, 0, 512, b + 1536); // +0, +4
+
    }
+
+   /* The layout below assumes a specific array pitch. It will need updating
+    * if isl's array pitch calculations ever change.
+    */
+   t_assert(isl_surf_get_array_pitch_el_rows(&surf) == 1540);
+
+   /* array layer 0 */
+   t_assert_intratile_offset_el(&dev, &surf,  0, 0, 0,         0x0, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  1, 0, 0,    0x400000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  2, 0, 0,    0x400800, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  3, 0, 0,    0x500800, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  4, 0, 0,    0x580800, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  5, 0, 0,    0x5c0800, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  6, 0, 0,    0x5e0800, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  7, 0, 0,    0x5e0800, 0, 16);
+   t_assert_intratile_offset_el(&dev, &surf,  8, 0, 0,    0x5e0800, 0, 24);
+   t_assert_intratile_offset_el(&dev, &surf,  9, 0, 0,    0x5e0800, 0, 28);
+   t_assert_intratile_offset_el(&dev, &surf, 10, 0, 0,    0x600800, 0,  0);
+
+   /* array layer 1 */
+   t_assert_intratile_offset_el(&dev, &surf,  0, 1, 0,    0x600000, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  1, 1, 0,    0xa00000, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  2, 1, 0,    0xa00800, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  3, 1, 0,    0xb00800, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  4, 1, 0,    0xb80800, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  5, 1, 0,    0xbc0800, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  6, 1, 0,    0xbe0800, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  7, 1, 0,    0xbe0800, 0, 20);
+   t_assert_intratile_offset_el(&dev, &surf,  8, 1, 0,    0xbe0800, 0, 28);
+   t_assert_intratile_offset_el(&dev, &surf,  9, 1, 0,    0xc00800, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 10, 1, 0,    0xc00800, 0,  4);
+
+   /* array layer 2 */
+   t_assert_intratile_offset_el(&dev, &surf,  0, 2, 0,    0xc00000, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  1, 2, 0,   0x1000000, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  2, 2, 0,   0x1000800, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  3, 2, 0,   0x1100800, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  4, 2, 0,   0x1180800, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  5, 2, 0,   0x11c0800, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  6, 2, 0,   0x11e0800, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  7, 2, 0,   0x11e0800, 0, 24);
+   t_assert_intratile_offset_el(&dev, &surf,  8, 2, 0,   0x1200800, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  9, 2, 0,   0x1200800, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf, 10, 2, 0,   0x1200800, 0,  8);
+
+   /* skip the remaining array layers */
 }
 
 static void
