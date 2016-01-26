@@ -292,6 +292,8 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
       request.preferred_heap |= AMDGPU_GEM_DOMAIN_VRAM;
       if (flags & RADEON_FLAG_CPU_ACCESS)
          request.flags |= AMDGPU_GEM_CREATE_CPU_ACCESS_REQUIRED;
+      if (flags & RADEON_FLAG_NO_CPU_ACCESS)
+         request.flags |= AMDGPU_GEM_CREATE_NO_CPU_ACCESS;
    }
    if (initial_domain & RADEON_DOMAIN_GTT) {
       request.preferred_heap |= AMDGPU_GEM_DOMAIN_GTT;
