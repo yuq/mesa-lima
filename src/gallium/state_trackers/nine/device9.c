@@ -1126,6 +1126,9 @@ create_zs_or_rt_surface(struct NineDevice9 *This,
                                                templ.nr_samples, templ.bind,
                                                FALSE);
 
+    if (templ.format == PIPE_FORMAT_NONE && Format != D3DFMT_NULL)
+        return D3DERR_INVALIDCALL;
+
     desc.Format = Format;
     desc.Type = D3DRTYPE_SURFACE;
     desc.Usage = 0;
