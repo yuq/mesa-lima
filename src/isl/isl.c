@@ -1260,7 +1260,7 @@ get_image_offset_sa_gen9_1d(const struct isl_surf *surf,
    const struct isl_extent3d image_align_sa =
       isl_surf_get_image_alignment_sa(surf);
 
-   uint32_t x = layer * isl_surf_get_array_pitch_sa_rows(surf);
+   uint32_t x = 0;
 
    for (uint32_t l = 0; l < level; ++l) {
       uint32_t W = isl_minify(W0, l);
@@ -1270,7 +1270,7 @@ get_image_offset_sa_gen9_1d(const struct isl_surf *surf,
    }
 
    *x_offset_sa = x;
-   *y_offset_sa = 0;
+   *y_offset_sa = layer * isl_surf_get_array_pitch_sa_rows(surf);
 }
 
 void
