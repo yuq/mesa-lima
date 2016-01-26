@@ -4036,25 +4036,44 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 {
-	const struct radeon_shader_binary *binary = &shader->binary;
-	unsigned code_size = binary->code_size + binary->rodata_size;
+	const struct radeon_shader_binary *prolog =
+		shader->prolog ? &shader->prolog->binary : NULL;
+	const struct radeon_shader_binary *epilog =
+		shader->epilog ? &shader->epilog->binary : NULL;
+	const struct radeon_shader_binary *mainb = &shader->binary;
+	unsigned bo_size =
+		(prolog ? prolog->code_size : 0) +
+		mainb->code_size +
+		(epilog ? epilog->code_size : mainb->rodata_size);
 	unsigned char *ptr;
+
+	assert(!prolog || !prolog->rodata_size);
+	assert((!prolog && !epilog) || !mainb->rodata_size);
+	assert(!epilog || !epilog->rodata_size);
 
 	r600_resource_reference(&shader->bo, NULL);
 	shader->bo = si_resource_create_custom(&sscreen->b.b,
 					       PIPE_USAGE_IMMUTABLE,
-					       code_size);
+					       bo_size);
 	if (!shader->bo)
 		return -ENOMEM;
 
+	/* Upload. */
 	ptr = sscreen->b.ws->buffer_map(shader->bo->buf, NULL,
 					PIPE_TRANSFER_READ_WRITE);
-	util_memcpy_cpu_to_le32(ptr, binary->code, binary->code_size);
-	if (binary->rodata_size > 0) {
-		ptr += binary->code_size;
-		util_memcpy_cpu_to_le32(ptr, binary->rodata,
-					binary->rodata_size);
+
+	if (prolog) {
+		util_memcpy_cpu_to_le32(ptr, prolog->code, prolog->code_size);
+		ptr += prolog->code_size;
 	}
+
+	util_memcpy_cpu_to_le32(ptr, mainb->code, mainb->code_size);
+	ptr += mainb->code_size;
+
+	if (epilog)
+		util_memcpy_cpu_to_le32(ptr, epilog->code, epilog->code_size);
+	else if (mainb->rodata_size > 0)
+		util_memcpy_cpu_to_le32(ptr, mainb->rodata, mainb->rodata_size);
 
 	sscreen->b.ws->buffer_unmap(shader->bo->buf);
 	return 0;

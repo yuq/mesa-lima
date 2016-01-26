@@ -304,6 +304,9 @@ struct si_shader {
 	struct si_shader_selector	*selector;
 	struct si_shader		*next_variant;
 
+	struct si_shader_part		*prolog;
+	struct si_shader_part		*epilog;
+
 	struct si_shader		*gs_copy_shader;
 	struct si_pm4_state		*pm4;
 	struct r600_resource		*bo;
@@ -320,6 +323,12 @@ struct si_shader {
 	bool			uses_instanceid;
 	unsigned		nr_pos_exports;
 	unsigned		nr_param_exports;
+};
+
+struct si_shader_part {
+	struct si_shader_part *next;
+	struct radeon_shader_binary binary;
+	struct si_shader_config config;
 };
 
 static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
