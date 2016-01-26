@@ -83,6 +83,7 @@ struct si_shader_context
 	int param_rel_auto_id;
 	int param_vs_prim_id;
 	int param_instance_id;
+	int param_vertex_index0;
 	int param_tes_u;
 	int param_tes_v;
 	int param_tes_rel_patch_id;
@@ -432,7 +433,11 @@ static void declare_input_vs(
 	/* Build the attribute offset */
 	attribute_offset = lp_build_const_int32(gallivm, 0);
 
-	if (divisor) {
+	if (!ctx->is_monolithic) {
+		buffer_index = LLVMGetParam(radeon_bld->main_fn,
+					    ctx->param_vertex_index0 +
+					    input_index);
+	} else if (divisor) {
 		/* Build index from instance ID, start instance and divisor */
 		ctx->shader->uses_instanceid = true;
 		buffer_index = get_instance_index_for_fetch(&ctx->radeon_bld,
@@ -3711,6 +3716,15 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_rel_auto_id = num_params++] = ctx->i32;
 		params[ctx->param_vs_prim_id = num_params++] = ctx->i32;
 		params[ctx->param_instance_id = num_params++] = ctx->i32;
+
+		if (!ctx->is_monolithic &&
+		    !ctx->is_gs_copy_shader) {
+			/* Vertex load indices. */
+			ctx->param_vertex_index0 = num_params;
+
+			for (i = 0; i < shader->selector->info.num_inputs; i++)
+				params[num_params++] = ctx->i32;
+		}
 		break;
 
 	case TGSI_PROCESSOR_TESS_CTRL:
@@ -4685,6 +4699,204 @@ out:
 	return r;
 }
 
+/**
+ * Create, compile and return a shader part (prolog or epilog).
+ *
+ * \param sscreen	screen
+ * \param list		list of shader parts of the same category
+ * \param key		shader part key
+ * \param tm		LLVM target machine
+ * \param debug		debug callback
+ * \param compile	the callback responsible for compilation
+ * \return		non-NULL on success
+ */
+static struct si_shader_part *
+si_get_shader_part(struct si_screen *sscreen,
+		   struct si_shader_part **list,
+		   union si_shader_part_key *key,
+		   LLVMTargetMachineRef tm,
+		   struct pipe_debug_callback *debug,
+		   bool (*compile)(struct si_screen *,
+				   LLVMTargetMachineRef,
+				   struct pipe_debug_callback *,
+				   struct si_shader_part *))
+{
+	struct si_shader_part *result;
+
+	pipe_mutex_lock(sscreen->shader_parts_mutex);
+
+	/* Find existing. */
+	for (result = *list; result; result = result->next) {
+		if (memcmp(&result->key, key, sizeof(*key)) == 0) {
+			pipe_mutex_unlock(sscreen->shader_parts_mutex);
+			return result;
+		}
+	}
+
+	/* Compile a new one. */
+	result = CALLOC_STRUCT(si_shader_part);
+	result->key = *key;
+	if (!compile(sscreen, tm, debug, result)) {
+		FREE(result);
+		pipe_mutex_unlock(sscreen->shader_parts_mutex);
+		return NULL;
+	}
+
+	result->next = *list;
+	*list = result;
+	pipe_mutex_unlock(sscreen->shader_parts_mutex);
+	return result;
+}
+
+/**
+ * Create a vertex shader prolog.
+ *
+ * The inputs are the same as VS (a lot of SGPRs and 4 VGPR system values).
+ * All inputs are returned unmodified. The vertex load indices are
+ * stored after them, which will used by the API VS for fetching inputs.
+ *
+ * For example, the expected outputs for instance_divisors[] = {0, 1, 2} are:
+ *   input_v0,
+ *   input_v1,
+ *   input_v2,
+ *   input_v3,
+ *   (VertexID + BaseVertex),
+ *   (InstanceID + StartInstance),
+ *   (InstanceID / 2 + StartInstance)
+ */
+static bool si_compile_vs_prolog(struct si_screen *sscreen,
+				 LLVMTargetMachineRef tm,
+				 struct pipe_debug_callback *debug,
+				 struct si_shader_part *out)
+{
+	union si_shader_part_key *key = &out->key;
+	struct si_shader shader = {};
+	struct si_shader_context ctx;
+	struct gallivm_state *gallivm = &ctx.radeon_bld.gallivm;
+	LLVMTypeRef *params, *returns;
+	LLVMValueRef ret, func;
+	int last_sgpr, num_params, num_returns, i;
+	bool status = true;
+
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm, NULL);
+	ctx.type = TGSI_PROCESSOR_VERTEX;
+	ctx.param_vertex_id = key->vs_prolog.num_input_sgprs;
+	ctx.param_instance_id = key->vs_prolog.num_input_sgprs + 3;
+
+	/* 4 preloaded VGPRs + vertex load indices as prolog outputs */
+	params = alloca((key->vs_prolog.num_input_sgprs + 4) *
+			sizeof(LLVMTypeRef));
+	returns = alloca((key->vs_prolog.num_input_sgprs + 4 +
+			  key->vs_prolog.last_input + 1) *
+			 sizeof(LLVMTypeRef));
+	num_params = 0;
+	num_returns = 0;
+
+	/* Declare input and output SGPRs. */
+	num_params = 0;
+	for (i = 0; i < key->vs_prolog.num_input_sgprs; i++) {
+		params[num_params++] = ctx.i32;
+		returns[num_returns++] = ctx.i32;
+	}
+	last_sgpr = num_params - 1;
+
+	/* 4 preloaded VGPRs (outputs must be floats) */
+	for (i = 0; i < 4; i++) {
+		params[num_params++] = ctx.i32;
+		returns[num_returns++] = ctx.f32;
+	}
+
+	/* Vertex load indices. */
+	for (i = 0; i <= key->vs_prolog.last_input; i++)
+		returns[num_returns++] = ctx.f32;
+
+	/* Create the function. */
+	si_create_function(&ctx, returns, num_returns, params,
+			   num_params, -1, last_sgpr);
+	func = ctx.radeon_bld.main_fn;
+
+	/* Copy inputs to outputs. This should be no-op, as the registers match,
+	 * but it will prevent the compiler from overwriting them unintentionally.
+	 */
+	ret = ctx.return_value;
+	for (i = 0; i < key->vs_prolog.num_input_sgprs; i++) {
+		LLVMValueRef p = LLVMGetParam(func, i);
+		ret = LLVMBuildInsertValue(gallivm->builder, ret, p, i, "");
+	}
+	for (i = num_params - 4; i < num_params; i++) {
+		LLVMValueRef p = LLVMGetParam(func, i);
+		p = LLVMBuildBitCast(gallivm->builder, p, ctx.f32, "");
+		ret = LLVMBuildInsertValue(gallivm->builder, ret, p, i, "");
+	}
+
+	/* Compute vertex load indices from instance divisors. */
+	for (i = 0; i <= key->vs_prolog.last_input; i++) {
+		unsigned divisor = key->vs_prolog.states.instance_divisors[i];
+		LLVMValueRef index;
+
+		if (divisor) {
+			/* InstanceID / Divisor + StartInstance */
+			index = get_instance_index_for_fetch(&ctx.radeon_bld,
+							     SI_SGPR_START_INSTANCE,
+							     divisor);
+		} else {
+			/* VertexID + BaseVertex */
+			index = LLVMBuildAdd(gallivm->builder,
+					     LLVMGetParam(func, ctx.param_vertex_id),
+					     LLVMGetParam(func, SI_SGPR_BASE_VERTEX), "");
+		}
+
+		index = LLVMBuildBitCast(gallivm->builder, index, ctx.f32, "");
+		ret = LLVMBuildInsertValue(gallivm->builder, ret, index,
+					   num_params++, "");
+	}
+
+	/* Compile. */
+	LLVMBuildRet(gallivm->builder, ret);
+	radeon_llvm_finalize_module(&ctx.radeon_bld);
+
+	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
+			    gallivm->module, debug, ctx.type,
+			    "Vertex Shader Prolog"))
+		status = false;
+
+	radeon_llvm_dispose(&ctx.radeon_bld);
+	return status;
+}
+
+static bool si_shader_select_vs_parts(struct si_screen *sscreen,
+				      LLVMTargetMachineRef tm,
+				      struct si_shader *shader,
+				      struct pipe_debug_callback *debug)
+{
+	struct tgsi_shader_info *info = &shader->selector->info;
+	union si_shader_part_key prolog_key;
+	unsigned i;
+
+	/* Get the prolog. */
+	memset(&prolog_key, 0, sizeof(prolog_key));
+	prolog_key.vs_prolog.states = shader->key.vs.prolog;
+	prolog_key.vs_prolog.num_input_sgprs = shader->num_input_sgprs;
+	prolog_key.vs_prolog.last_input = MAX2(1, info->num_inputs) - 1;
+
+	/* The prolog is a no-op if there are no inputs. */
+	if (info->num_inputs) {
+		shader->prolog =
+			si_get_shader_part(sscreen, &sscreen->vs_prologs,
+					   &prolog_key, tm, debug,
+					   si_compile_vs_prolog);
+		if (!shader->prolog)
+			return false;
+	}
+
+	/* Set the instanceID flag. */
+	for (i = 0; i < info->num_inputs; i++)
+		if (prolog_key.vs_prolog.states.instance_divisors[i])
+			shader->uses_instanceid = true;
+
+	return true;
+}
+
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug)
@@ -4696,6 +4908,29 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 				   sscreen->use_monolithic_shaders, debug);
 	if (r)
 		return r;
+
+	if (!sscreen->use_monolithic_shaders) {
+		switch (shader->selector->type) {
+		case PIPE_SHADER_VERTEX:
+			if (!si_shader_select_vs_parts(sscreen, tm, shader, debug))
+				return -1;
+			break;
+		}
+
+		/* Update SGPR and VGPR counts. */
+		if (shader->prolog) {
+			shader->config.num_sgprs = MAX2(shader->config.num_sgprs,
+							shader->prolog->config.num_sgprs);
+			shader->config.num_vgprs = MAX2(shader->config.num_vgprs,
+							shader->prolog->config.num_vgprs);
+		}
+		if (shader->epilog) {
+			shader->config.num_sgprs = MAX2(shader->config.num_sgprs,
+							shader->epilog->config.num_sgprs);
+			shader->config.num_vgprs = MAX2(shader->config.num_vgprs,
+							shader->epilog->config.num_vgprs);
+		}
+	}
 
 	si_shader_dump(sscreen, shader, debug, shader->selector->info.processor);
 

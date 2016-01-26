@@ -22,6 +22,7 @@
  */
 
 #include "si_pipe.h"
+#include "si_shader.h"
 #include "si_public.h"
 #include "sid.h"
 
@@ -537,12 +538,29 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 static void si_destroy_screen(struct pipe_screen* pscreen)
 {
 	struct si_screen *sscreen = (struct si_screen *)pscreen;
+	struct si_shader_part *parts[] = {
+		sscreen->vs_prologs,
+		/* this will be filled with other shader parts */
+	};
+	unsigned i;
 
 	if (!sscreen)
 		return;
 
 	if (!sscreen->b.ws->unref(sscreen->b.ws))
 		return;
+
+	/* Free shader parts. */
+	for (i = 0; i < ARRAY_SIZE(parts); i++) {
+		while (parts[i]) {
+			struct si_shader_part *part = parts[i];
+
+			parts[i] = part->next;
+			radeon_shader_binary_clean(&part->binary);
+			FREE(part);
+		}
+	}
+	pipe_mutex_destroy(sscreen->shader_parts_mutex);
 
 	r600_destroy_common_screen(&sscreen->b);
 }
@@ -601,6 +619,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
+	pipe_mutex_init(sscreen->shader_parts_mutex);
 	sscreen->use_monolithic_shaders = true;
 
 	if (debug_get_bool_option("RADEON_DUMP_SHADERS", FALSE))

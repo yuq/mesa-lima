@@ -268,6 +268,14 @@ struct si_ps_epilog_bits {
 	unsigned	clamp_color:1;
 };
 
+union si_shader_part_key {
+	struct {
+		struct si_vs_prolog_bits states;
+		unsigned	num_input_sgprs:5;
+		unsigned	last_input:4;
+	} vs_prolog;
+};
+
 union si_shader_key {
 	struct {
 		struct si_ps_prolog_bits prolog;
@@ -327,6 +335,7 @@ struct si_shader {
 
 struct si_shader_part {
 	struct si_shader_part *next;
+	union si_shader_part_key key;
 	struct radeon_shader_binary binary;
 	struct si_shader_config config;
 };
