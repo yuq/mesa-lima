@@ -1602,7 +1602,7 @@ void anv_image_view_init(struct anv_image_view *view,
                          struct anv_cmd_buffer *cmd_buffer);
 
 void
-anv_fill_image_surface_state(struct anv_device *device, void *state_map,
+anv_fill_image_surface_state(struct anv_device *device, struct anv_state state,
                              struct anv_image_view *iview,
                              const VkImageViewCreateInfo *pCreateInfo,
                              VkImageUsageFlagBits usage);

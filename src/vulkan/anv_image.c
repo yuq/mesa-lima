@@ -402,7 +402,7 @@ anv_validate_CreateImageView(VkDevice _device,
 }
 
 void
-anv_fill_image_surface_state(struct anv_device *device, void *state_map,
+anv_fill_image_surface_state(struct anv_device *device, struct anv_state state,
                              struct anv_image_view *iview,
                              const VkImageViewCreateInfo *pCreateInfo,
                              VkImageUsageFlagBits usage)
@@ -410,18 +410,18 @@ anv_fill_image_surface_state(struct anv_device *device, void *state_map,
    switch (device->info.gen) {
    case 7:
       if (device->info.is_haswell)
-         gen75_fill_image_surface_state(device, state_map, iview,
+         gen75_fill_image_surface_state(device, state.map, iview,
                                         pCreateInfo, usage);
       else
-         gen7_fill_image_surface_state(device, state_map, iview,
+         gen7_fill_image_surface_state(device, state.map, iview,
                                        pCreateInfo, usage);
       break;
    case 8:
-      gen8_fill_image_surface_state(device, state_map, iview,
+      gen8_fill_image_surface_state(device, state.map, iview,
                                     pCreateInfo, usage);
       break;
    case 9:
-      gen9_fill_image_surface_state(device, state_map, iview,
+      gen9_fill_image_surface_state(device, state.map, iview,
                                     pCreateInfo, usage);
       break;
    default:
@@ -429,7 +429,7 @@ anv_fill_image_surface_state(struct anv_device *device, void *state_map,
    }
 
    if (!device->info.has_llc)
-      anv_state_clflush(iview->nonrt_surface_state);
+      anv_state_clflush(state);
 }
 
 static struct anv_state
@@ -505,7 +505,7 @@ anv_image_view_init(struct anv_image_view *iview,
    if (image->needs_nonrt_surface_state) {
       iview->nonrt_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      anv_fill_image_surface_state(device, iview->nonrt_surface_state.map,
+      anv_fill_image_surface_state(device, iview->nonrt_surface_state,
                                    iview, pCreateInfo,
                                    VK_IMAGE_USAGE_SAMPLED_BIT);
    } else {
@@ -515,7 +515,7 @@ anv_image_view_init(struct anv_image_view *iview,
    if (image->needs_color_rt_surface_state) {
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      anv_fill_image_surface_state(device, iview->color_rt_surface_state.map,
+      anv_fill_image_surface_state(device, iview->color_rt_surface_state,
                                    iview, pCreateInfo,
                                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
    } else {
@@ -526,7 +526,7 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
       if (has_matching_storage_typed_format(device, iview->format))
-         anv_fill_image_surface_state(device, iview->storage_surface_state.map,
+         anv_fill_image_surface_state(device, iview->storage_surface_state,
                                       iview, pCreateInfo,
                                       VK_IMAGE_USAGE_STORAGE_BIT);
       else
