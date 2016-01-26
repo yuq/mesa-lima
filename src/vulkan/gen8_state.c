@@ -34,6 +34,13 @@
 
 #include "genX_state_util.h"
 
+static const uint32_t
+isl_to_gen_multisample_layout[] = {
+   [ISL_MSAA_LAYOUT_NONE]           = MSS,
+   [ISL_MSAA_LAYOUT_INTERLEAVED]    = DEPTH_STENCIL,
+   [ISL_MSAA_LAYOUT_ARRAY]          = MSS,
+};
+
 void
 genX(fill_buffer_surface_state)(void *state, enum isl_format format,
                                 uint32_t offset, uint32_t range, uint32_t stride)
@@ -225,7 +232,10 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
       .SurfacePitch = surface->isl.row_pitch - 1,
       .RenderTargetViewExtent = 0, /* TEMPLATE */
       .MinimumArrayElement = 0, /* TEMPLATE */
-      .NumberofMultisamples = MULTISAMPLECOUNT_1,
+      .MultisampledSurfaceStorageFormat =
+         isl_to_gen_multisample_layout[surface->isl.msaa_layout],
+      .NumberofMultisamples = ffs(surface->isl.samples) - 1,
+      .MultisamplePositionPaletteIndex = 0, /* UNUSED */
       .XOffset = 0,
       .YOffset = 0,
 
