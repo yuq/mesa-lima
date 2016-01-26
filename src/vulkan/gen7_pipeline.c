@@ -269,6 +269,10 @@ genX(graphics_pipeline_create)(
       .MaximumPointWidth                        = 255.875,
       .MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1);
 
+   if (pCreateInfo->pMultisampleState &&
+       pCreateInfo->pMultisampleState->rasterizationSamples > 1)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO");
+
    uint32_t samples = 1;
    uint32_t log2_samples = __builtin_ffs(samples) - 1;
 

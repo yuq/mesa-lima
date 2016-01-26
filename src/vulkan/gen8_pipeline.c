@@ -46,8 +46,14 @@ emit_ia_state(struct anv_pipeline *pipeline,
 static void
 emit_rs_state(struct anv_pipeline *pipeline,
               const VkPipelineRasterizationStateCreateInfo *info,
+              const VkPipelineMultisampleStateCreateInfo *ms_info,
               const struct anv_graphics_pipeline_create_info *extra)
 {
+   uint32_t samples = 1;
+
+   if (ms_info)
+      samples = ms_info->rasterizationSamples;
+
    struct GENX(3DSTATE_SF) sf = {
       GENX(3DSTATE_SF_header),
       .ViewportTransformEnable = !(extra && extra->disable_viewport),
@@ -64,6 +70,14 @@ emit_rs_state(struct anv_pipeline *pipeline,
 
    struct GENX(3DSTATE_RASTER) raster = {
       GENX(3DSTATE_RASTER_header),
+
+      /* For details on 3DSTATE_RASTER multisample state, see the BSpec table
+       * "Multisample Modes State".
+       */
+      .DXMultisampleRasterizationEnable = samples > 1,
+      .ForcedSampleCount = FSC_NUMRASTSAMPLES_0,
+      .ForceMultisampling = false,
+
       .FrontWinding = vk_to_gen_front_face[info->frontFace],
       .CullMode = vk_to_gen_cullmode[info->cullMode],
       .FrontFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
@@ -193,6 +207,118 @@ emit_ds_state(struct anv_pipeline *pipeline,
    GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, dw, &wm_depth_stencil);
 }
 
+static void
+emit_ms_state(struct anv_pipeline *pipeline,
+              const VkPipelineMultisampleStateCreateInfo *info)
+{
+   uint32_t samples = 1;
+   uint32_t log2_samples = 0;
+
+   /* From the Vulkan 1.0 spec:
+    *    If pSampleMask is NULL, it is treated as if the mask has all bits
+    *    enabled, i.e. no coverage is removed from fragments.
+    *
+    * 3DSTATE_SAMPLE_MASK.SampleMask is 16 bits.
+    */
+   uint32_t sample_mask = 0xffff;
+
+   if (info) {
+      samples = info->rasterizationSamples;
+      log2_samples = __builtin_ffs(samples) - 1;
+   }
+
+   if (info && info->pSampleMask)
+      sample_mask &= info->pSampleMask[0];
+
+   if (info && info->sampleShadingEnable)
+      anv_finishme("VkPipelineMultisampleStateCreateInfo::sampleShadingEnable");
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE),
+
+      /* The PRM says that this bit is valid only for DX9:
+       *
+       *    SW can choose to set this bit only for DX9 API. DX10/OGL API's
+       *    should not have any effect by setting or not setting this bit.
+       */
+      .PixelPositionOffsetEnable = false,
+
+      .PixelLocation = CENTER,
+      .NumberofMultisamples = log2_samples);
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK),
+      .SampleMask = sample_mask);
+
+   /* See the Vulkan 1.0 spec Table 24.1 "Standard sample locations" and
+    * VkPhysicalDeviceFeatures::standardSampleLocations.
+    */
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_PATTERN),
+      ._1xSample0XOffset      = 0.5,
+      ._1xSample0YOffset      = 0.5,
+      ._2xSample0XOffset      = 0.25,
+      ._2xSample0YOffset      = 0.25,
+      ._2xSample1XOffset      = 0.75,
+      ._2xSample1YOffset      = 0.75,
+      ._4xSample0XOffset      = 0.375,
+      ._4xSample0YOffset      = 0.125,
+      ._4xSample1XOffset      = 0.875,
+      ._4xSample1YOffset      = 0.375,
+      ._4xSample2XOffset      = 0.125,
+      ._4xSample2YOffset      = 0.625,
+      ._4xSample3XOffset      = 0.625,
+      ._4xSample3YOffset      = 0.875,
+      ._8xSample0XOffset      = 0.5625,
+      ._8xSample0YOffset      = 0.3125,
+      ._8xSample1XOffset      = 0.4375,
+      ._8xSample1YOffset      = 0.6875,
+      ._8xSample2XOffset      = 0.8125,
+      ._8xSample2YOffset      = 0.5625,
+      ._8xSample3XOffset      = 0.3125,
+      ._8xSample3YOffset      = 0.1875,
+      ._8xSample4XOffset      = 0.1875,
+      ._8xSample4YOffset      = 0.8125,
+      ._8xSample5XOffset      = 0.0625,
+      ._8xSample5YOffset      = 0.4375,
+      ._8xSample6XOffset      = 0.6875,
+      ._8xSample6YOffset      = 0.9375,
+      ._8xSample7XOffset      = 0.9375,
+      ._8xSample7YOffset      = 0.0625,
+#if ANV_GEN >= 9
+      ._16xSample0XOffset     = 0.5625,
+      ._16xSample0YOffset     = 0.5625,
+      ._16xSample1XOffset     = 0.4375,
+      ._16xSample1YOffset     = 0.3125,
+      ._16xSample2XOffset     = 0.3125,
+      ._16xSample2YOffset     = 0.6250,
+      ._16xSample3XOffset     = 0.7500,
+      ._16xSample3YOffset     = 0.4375,
+      ._16xSample4XOffset     = 0.1875,
+      ._16xSample4YOffset     = 0.3750,
+      ._16xSample5XOffset     = 0.6250,
+      ._16xSample5YOffset     = 0.8125,
+      ._16xSample6XOffset     = 0.8125,
+      ._16xSample6YOffset     = 0.6875,
+      ._16xSample7XOffset     = 0.6875,
+      ._16xSample7YOffset     = 0.1875,
+      ._16xSample8XOffset     = 0.3750,
+      ._16xSample8YOffset     = 0.8750,
+      ._16xSample9XOffset     = 0.5000,
+      ._16xSample9YOffset     = 0.0625,
+      ._16xSample10XOffset    = 0.2500,
+      ._16xSample10YOffset    = 0.1250,
+      ._16xSample11XOffset    = 0.1250,
+      ._16xSample11YOffset    = 0.7500,
+      ._16xSample12XOffset    = 0.0000,
+      ._16xSample12YOffset    = 0.5000,
+      ._16xSample13XOffset    = 0.9375,
+      ._16xSample13YOffset    = 0.2500,
+      ._16xSample14XOffset    = 0.8750,
+      ._16xSample14YOffset    = 0.9375,
+      ._16xSample15XOffset    = 0.0625,
+      ._16xSample15YOffset    = 0.0000,
+#endif
+   );
+}
+
 VkResult
 genX(graphics_pipeline_create)(
     VkDevice                                    _device,
@@ -226,7 +352,9 @@ genX(graphics_pipeline_create)(
    assert(pCreateInfo->pInputAssemblyState);
    emit_ia_state(pipeline, pCreateInfo->pInputAssemblyState, extra);
    assert(pCreateInfo->pRasterizationState);
-   emit_rs_state(pipeline, pCreateInfo->pRasterizationState, extra);
+   emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
+                 pCreateInfo->pMultisampleState, extra);
+   emit_ms_state(pipeline, pCreateInfo->pMultisampleState);
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState);
    emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
                            pCreateInfo->pMultisampleState);
@@ -269,18 +397,6 @@ genX(graphics_pipeline_create)(
                   .BarycentricInterpolationMode =
                      pipeline->ps_ksp0 == NO_KERNEL ?
                      0 : pipeline->wm_prog_data.barycentric_interp_modes);
-
-   uint32_t samples = 1;
-   uint32_t log2_samples = __builtin_ffs(samples) - 1;
-   bool enable_sampling = samples > 1 ? true : false;
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE),
-                  .PixelPositionOffsetEnable = enable_sampling,
-                  .PixelLocation = CENTER,
-                  .NumberofMultisamples = log2_samples);
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK),
-                  .SampleMask = 0xffff);
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_VS),
                   .VSURBStartingAddress = pipeline->urb.vs_start,
@@ -530,7 +646,9 @@ genX(graphics_pipeline_create)(
                      .KernelStartPointer1 = 0,
                      .KernelStartPointer2 = pipeline->ps_ksp2);
 
-      bool per_sample_ps = false;
+      bool per_sample_ps = pCreateInfo->pMultisampleState &&
+                           pCreateInfo->pMultisampleState->sampleShadingEnable;
+
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA),
                      .PixelShaderValid = true,
                      .PixelShaderKillsPixel = wm_prog_data->uses_kill,

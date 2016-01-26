@@ -1077,9 +1077,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
 
    if (pCreateInfo->pTessellationState)
       anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO");
-   if (pCreateInfo->pMultisampleState &&
-       pCreateInfo->pMultisampleState->rasterizationSamples > 1)
-      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO");
 
    pipeline->use_repclear = extra && extra->use_repclear;
    pipeline->writes_point_size = false;

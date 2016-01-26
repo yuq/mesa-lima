@@ -502,7 +502,7 @@ void anv_GetPhysicalDeviceProperties(
       .pointSizeGranularity                     = (1.0 / 8.0),
       .lineWidthGranularity                     = (1.0 / 128.0),
       .strictLines                              = false, /* FINISHME */
-      .standardSampleLocations                  = true, /* FINISHME */
+      .standardSampleLocations                  = true,
       .optimalBufferCopyOffsetAlignment         = 128,
       .optimalBufferCopyRowPitchAlignment       = 128,
       .nonCoherentAtomSize                      = 64,
