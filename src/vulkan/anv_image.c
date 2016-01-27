@@ -784,7 +784,7 @@ anv_image_view_fill_image_param(struct anv_device *device,
       param->size[2] = surf->logical_level0_px.array_len - view->base_layer;
    }
 
-   isl_surf_get_image_offset_sa(surf, view->base_mip, view->base_layer, 0,
+   isl_surf_get_image_offset_el(surf, view->base_mip, view->base_layer, 0,
                                 &param->offset[0],  &param->offset[1]);
 
    param->stride[0] = cpp;
