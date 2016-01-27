@@ -401,7 +401,7 @@ void anv_GetPhysicalDeviceProperties(
       .maxImageDimension3D                      = (1 << 10),
       .maxImageDimensionCube                    = (1 << 14),
       .maxImageArrayLayers                      = (1 << 10),
-      .maxTexelBufferElements                   = (1 << 14),
+      .maxTexelBufferElements                   = 128 * 1024 * 1024,
       .maxUniformBufferRange                    = UINT32_MAX,
       .maxStorageBufferRange                    = UINT32_MAX,
       .maxPushConstantsSize                     = MAX_PUSH_CONSTANTS_SIZE,
@@ -427,9 +427,9 @@ void anv_GetPhysicalDeviceProperties(
       .maxDescriptorSetInputAttachments         = 256,
       .maxVertexInputAttributes                 = 32,
       .maxVertexInputBindings                   = 32,
-      .maxVertexInputAttributeOffset            = 256,
-      .maxVertexInputBindingStride              = 256,
-      .maxVertexOutputComponents                = 32,
+      .maxVertexInputAttributeOffset            = 2047,
+      .maxVertexInputBindingStride              = 2048,
+      .maxVertexOutputComponents                = 128,
       .maxTessellationGenerationLevel           = 0,
       .maxTessellationPatchSize                 = 0,
       .maxTessellationControlPerVertexInputComponents = 0,
@@ -438,21 +438,17 @@ void anv_GetPhysicalDeviceProperties(
       .maxTessellationControlTotalOutputComponents = 0,
       .maxTessellationEvaluationInputComponents = 0,
       .maxTessellationEvaluationOutputComponents = 0,
-      .maxGeometryShaderInvocations             = 6,
-      .maxGeometryInputComponents               = 16,
-      .maxGeometryOutputComponents              = 16,
-      .maxGeometryOutputVertices                = 16,
-      .maxGeometryTotalOutputComponents         = 16,
-      .maxFragmentInputComponents               = 16,
+      .maxGeometryShaderInvocations             = 32,
+      .maxGeometryInputComponents               = 64,
+      .maxGeometryOutputComponents              = 128,
+      .maxGeometryOutputVertices                = 256,
+      .maxGeometryTotalOutputComponents         = 1024,
+      .maxFragmentInputComponents               = 128,
       .maxFragmentOutputAttachments             = 8,
       .maxFragmentDualSrcAttachments            = 2,
       .maxFragmentCombinedOutputResources       = 8,
-      .maxComputeSharedMemorySize               = 1024,
-      .maxComputeWorkGroupCount = {
-         16 * devinfo->max_cs_threads,
-         16 * devinfo->max_cs_threads,
-         16 * devinfo->max_cs_threads,
-      },
+      .maxComputeSharedMemorySize               = 32768,
+      .maxComputeWorkGroupCount                 = { 65535, 65535, 65535 },
       .maxComputeWorkGroupInvocations           = 16 * devinfo->max_cs_threads,
       .maxComputeWorkGroupSize = {
          16 * devinfo->max_cs_threads,
@@ -468,16 +464,16 @@ void anv_GetPhysicalDeviceProperties(
       .maxSamplerAnisotropy                     = 16,
       .maxViewports                             = MAX_VIEWPORTS,
       .maxViewportDimensions                    = { (1 << 14), (1 << 14) },
-      .viewportBoundsRange                      = { -1.0, 1.0 }, /* FIXME */
+      .viewportBoundsRange                      = { -16384.0, 16384.0 },
       .viewportSubPixelBits                     = 13, /* We take a float? */
       .minMemoryMapAlignment                    = 4096, /* A page */
       .minTexelBufferOffsetAlignment            = 1,
       .minUniformBufferOffsetAlignment          = 1,
       .minStorageBufferOffsetAlignment          = 1,
-      .minTexelOffset                           = 0, /* FIXME */
-      .maxTexelOffset                           = 0, /* FIXME */
-      .minTexelGatherOffset                     = 0, /* FIXME */
-      .maxTexelGatherOffset                     = 0, /* FIXME */
+      .minTexelOffset                           = -8,
+      .maxTexelOffset                           = 7,
+      .minTexelGatherOffset                     = -8,
+      .maxTexelGatherOffset                     = 7,
       .minInterpolationOffset                   = 0, /* FIXME */
       .maxInterpolationOffset                   = 0, /* FIXME */
       .subPixelInterpolationOffsetBits          = 0, /* FIXME */
