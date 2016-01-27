@@ -128,8 +128,7 @@ static struct si_shader_context *si_shader_context(
 static void si_init_shader_ctx(struct si_shader_context *ctx,
 			       struct si_screen *sscreen,
 			       struct si_shader *shader,
-			       LLVMTargetMachineRef tm,
-			       struct tgsi_shader_info *info);
+			       LLVMTargetMachineRef tm);
 
 /* Ideally pass the sample mask input to the PS epilog as v13, which
  * is its usual location, so that the shader doesn't have to add v_mov.
@@ -214,6 +213,10 @@ static LLVMValueRef unpack_param(struct si_shader_context *ctx,
 	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
 	LLVMValueRef value = LLVMGetParam(ctx->radeon_bld.main_fn,
 					  param);
+
+	if (LLVMGetTypeKind(LLVMTypeOf(value)) == LLVMFloatTypeKind)
+		value = bitcast(&ctx->radeon_bld.soa.bld_base,
+				TGSI_TYPE_UNSIGNED, value);
 
 	if (rshift)
 		value = LLVMBuildLShr(gallivm->builder, value,
@@ -2729,13 +2732,12 @@ static LLVMTypeRef const_array(LLVMTypeRef elem_type, int num_elements)
 /**
  * Load an image view, fmask view. or sampler state descriptor.
  */
-static LLVMValueRef get_sampler_desc(struct si_shader_context *ctx,
-				     LLVMValueRef index, enum desc_type type)
+static LLVMValueRef get_sampler_desc_custom(struct si_shader_context *ctx,
+					    LLVMValueRef list, LLVMValueRef index,
+					    enum desc_type type)
 {
 	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
-	LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn,
-					SI_PARAM_SAMPLERS);
 
 	switch (type) {
 	case DESC_IMAGE:
@@ -2751,12 +2753,21 @@ static LLVMValueRef get_sampler_desc(struct si_shader_context *ctx,
 		/* The sampler state is at [12:15]. */
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 4, 0), "");
 		index = LLVMBuildAdd(builder, index, LLVMConstInt(ctx->i32, 3, 0), "");
-		ptr = LLVMBuildPointerCast(builder, ptr,
-					   const_array(ctx->v4i32, 0), "");
+		list = LLVMBuildPointerCast(builder, list,
+					    const_array(ctx->v4i32, 0), "");
 		break;
 	}
 
-	return build_indexed_load_const(ctx, ptr, index);
+	return build_indexed_load_const(ctx, list, index);
+}
+
+static LLVMValueRef get_sampler_desc(struct si_shader_context *ctx,
+				     LLVMValueRef index, enum desc_type type)
+{
+	LLVMValueRef list = LLVMGetParam(ctx->radeon_bld.main_fn,
+					 SI_PARAM_SAMPLERS);
+
+	return get_sampler_desc_custom(ctx, list, index, type);
 }
 
 static void tex_fetch_ptrs(
@@ -3988,7 +3999,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_FRONT_FACE] = ctx->i32;
 		params[SI_PARAM_ANCILLARY] = ctx->i32;
 		params[SI_PARAM_SAMPLE_COVERAGE] = ctx->f32;
-		params[SI_PARAM_POS_FIXED_PT] = ctx->f32;
+		params[SI_PARAM_POS_FIXED_PT] = ctx->i32;
 		num_params = SI_PARAM_POS_FIXED_PT+1;
 
 		if (!ctx->is_monolithic) {
@@ -4044,7 +4055,8 @@ static void create_function(struct si_shader_context *ctx)
 					  S_0286D0_LINEAR_SAMPLE_ENA(1) |
 					  S_0286D0_LINEAR_CENTER_ENA(1) |
 					  S_0286D0_LINEAR_CENTROID_ENA(1) |
-					  S_0286D0_FRONT_FACE_ENA(1));
+					  S_0286D0_FRONT_FACE_ENA(1) |
+					  S_0286D0_POS_FIXED_PT_ENA(1));
 	}
 
 	shader->num_input_sgprs = 0;
@@ -4206,6 +4218,49 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 				build_indexed_load_const(ctx, buf_ptr, offset);
 		}
 	}
+}
+
+static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
+					 LLVMValueRef param_sampler_views,
+					 unsigned param_pos_fixed_pt)
+{
+	struct lp_build_tgsi_context *bld_base =
+		&ctx->radeon_bld.soa.bld_base;
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	struct lp_build_emit_data result = {};
+	struct tgsi_full_instruction inst = {};
+	LLVMValueRef desc, sampler_index, address[2], pix;
+
+	/* Use the fixed-point gl_FragCoord input.
+	 * Since the stipple pattern is 32x32 and it repeats, just get 5 bits
+	 * per coordinate to get the repeating effect.
+	 */
+	address[0] = unpack_param(ctx, param_pos_fixed_pt, 0, 5);
+	address[1] = unpack_param(ctx, param_pos_fixed_pt, 16, 5);
+
+	/* Load the sampler view descriptor. */
+	sampler_index = lp_build_const_int32(gallivm, SI_POLY_STIPPLE_SAMPLER);
+	desc = get_sampler_desc_custom(ctx, param_sampler_views,
+				       sampler_index, DESC_IMAGE);
+
+	/* Load the texel. */
+	inst.Instruction.Opcode = TGSI_OPCODE_TXF;
+	inst.Texture.Texture = TGSI_TEXTURE_2D_MSAA; /* = use load, not load_mip */
+	result.inst = &inst;
+	set_tex_fetch_args(ctx, &result, TGSI_OPCODE_TXF,
+			   inst.Texture.Texture,
+			   desc, NULL, address, ARRAY_SIZE(address), 0xf);
+	build_tex_intrinsic(&tex_action, bld_base, &result);
+
+	/* Kill the thread accordingly. */
+	pix = LLVMBuildExtractElement(gallivm->builder, result.output[0],
+				      lp_build_const_int32(gallivm, 3), "");
+	pix = bitcast(bld_base, TGSI_TYPE_FLOAT, pix);
+	pix = LLVMBuildFNeg(gallivm->builder, pix, "");
+
+	lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
+			   LLVMVoidTypeInContext(gallivm->context),
+			   &pix, 1, 0);
 }
 
 void si_shader_binary_read_config(struct radeon_shader_binary *binary,
@@ -4571,7 +4626,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	outputs = MALLOC(gsinfo->num_outputs * sizeof(outputs[0]));
 
-	si_init_shader_ctx(ctx, sscreen, ctx->shader, ctx->tm, gsinfo);
+	si_init_shader_ctx(ctx, sscreen, ctx->shader, ctx->tm);
 	ctx->type = TGSI_PROCESSOR_VERTEX;
 	ctx->is_gs_copy_shader = true;
 
@@ -4695,8 +4750,7 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 static void si_init_shader_ctx(struct si_shader_context *ctx,
 			       struct si_screen *sscreen,
 			       struct si_shader *shader,
-			       LLVMTargetMachineRef tm,
-			       struct tgsi_shader_info *info)
+			       LLVMTargetMachineRef tm)
 {
 	struct lp_build_tgsi_context *bld_base;
 
@@ -4724,7 +4778,8 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	ctx->v8i32 = LLVMVectorType(ctx->i32, 8);
 
 	bld_base = &ctx->radeon_bld.soa.bld_base;
-	bld_base->info = info;
+	if (shader && shader->selector)
+		bld_base->info = &shader->selector->info;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;
 
 	bld_base->op_actions[TGSI_OPCODE_INTERP_CENTROID] = interp_action;
@@ -4767,33 +4822,21 @@ static int si_compile_tgsi_shader(struct si_screen *sscreen,
 				  struct pipe_debug_callback *debug)
 {
 	struct si_shader_selector *sel = shader->selector;
-	struct tgsi_token *tokens = sel->tokens;
 	struct si_shader_context ctx;
 	struct lp_build_tgsi_context *bld_base;
-	struct tgsi_shader_info stipple_shader_info;
 	LLVMModuleRef mod;
 	int r = 0;
-	bool poly_stipple = sel->type == PIPE_SHADER_FRAGMENT &&
-			    shader->key.ps.prolog.poly_stipple;
-
-	if (poly_stipple) {
-		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
-						SI_POLY_STIPPLE_SAMPLER,
-						TGSI_FILE_SYSTEM_VALUE);
-		tgsi_scan_shader(tokens, &stipple_shader_info);
-	}
 
 	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
 	 * conversion fails. */
 	if (r600_can_dump_shader(&sscreen->b, sel->info.processor) &&
 	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
 		si_dump_shader_key(sel->type, &shader->key, stderr);
-		tgsi_dump(tokens, 0);
+		tgsi_dump(sel->tokens, 0);
 		si_dump_streamout(&sel->so);
 	}
 
-	si_init_shader_ctx(&ctx, sscreen, shader, tm,
-			   poly_stipple ? &stipple_shader_info : &sel->info);
+	si_init_shader_ctx(&ctx, sscreen, shader, tm);
 	ctx.is_monolithic = is_monolithic;
 
 	shader->uses_instanceid = sel->info.uses_instanceid;
@@ -4847,6 +4890,14 @@ static int si_compile_tgsi_shader(struct si_screen *sscreen,
 	preload_streamout_buffers(&ctx);
 	preload_ring_buffers(&ctx);
 
+	if (ctx.is_monolithic && sel->type == PIPE_SHADER_FRAGMENT &&
+	    shader->key.ps.prolog.poly_stipple) {
+		LLVMValueRef views = LLVMGetParam(ctx.radeon_bld.main_fn,
+						  SI_PARAM_SAMPLERS);
+		si_llvm_emit_polygon_stipple(&ctx, views,
+					     SI_PARAM_POS_FIXED_PT);
+	}
+
 	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
 		int i;
 		for (i = 0; i < 4; i++) {
@@ -4856,7 +4907,7 @@ static int si_compile_tgsi_shader(struct si_screen *sscreen,
 		}
 	}
 
-	if (!lp_build_tgsi_llvm(bld_base, tokens)) {
+	if (!lp_build_tgsi_llvm(bld_base, sel->tokens)) {
 		fprintf(stderr, "Failed to translate shader from TGSI to LLVM\n");
 		goto out;
 	}
@@ -4936,8 +4987,6 @@ static int si_compile_tgsi_shader(struct si_screen *sscreen,
 out:
 	for (int i = 0; i < SI_NUM_CONST_BUFFERS; i++)
 		FREE(ctx.constants[i]);
-	if (poly_stipple)
-		tgsi_free_tokens(tokens);
 	return r;
 }
 
@@ -5020,7 +5069,7 @@ static bool si_compile_vs_prolog(struct si_screen *sscreen,
 	int last_sgpr, num_params, num_returns, i;
 	bool status = true;
 
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm, NULL);
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
 	ctx.type = TGSI_PROCESSOR_VERTEX;
 	ctx.param_vertex_id = key->vs_prolog.num_input_sgprs;
 	ctx.param_instance_id = key->vs_prolog.num_input_sgprs + 3;
@@ -5128,7 +5177,7 @@ static bool si_compile_vs_epilog(struct si_screen *sscreen,
 	int num_params, i;
 	bool status = true;
 
-	si_init_shader_ctx(&ctx, sscreen, NULL, tm, NULL);
+	si_init_shader_ctx(&ctx, sscreen, NULL, tm);
 	ctx.type = TGSI_PROCESSOR_VERTEX;
 
 	/* Declare input VGPRs. */
@@ -5285,7 +5334,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 	int last_array_pointer, last_sgpr, num_params;
 	bool status = true;
 
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm, NULL);
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
 	ctx.type = TGSI_PROCESSOR_TESS_CTRL;
 	shader.key.tcs.epilog = key->tcs_epilog.states;
 
@@ -5374,7 +5423,7 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 	int last_sgpr, num_params, num_returns, i, num_color_channels;
 	bool status = true;
 
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm, NULL);
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
 	ctx.type = TGSI_PROCESSOR_FRAGMENT;
 	shader.key.ps.prolog = key->ps_prolog.states;
 
@@ -5410,6 +5459,24 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 	for (i = 0; i < num_params; i++) {
 		LLVMValueRef p = LLVMGetParam(func, i);
 		ret = LLVMBuildInsertValue(gallivm->builder, ret, p, i, "");
+	}
+
+	/* Polygon stippling. */
+	if (key->ps_prolog.states.poly_stipple) {
+		/* POS_FIXED_PT is always last. */
+		unsigned pos = key->ps_prolog.num_input_sgprs +
+			       key->ps_prolog.num_input_vgprs - 1;
+		LLVMValueRef ptr[2], views;
+
+		/* Get the pointer to sampler views. */
+		ptr[0] = LLVMGetParam(func, SI_SGPR_SAMPLERS);
+		ptr[1] = LLVMGetParam(func, SI_SGPR_SAMPLERS+1);
+		views = lp_build_gather_values(gallivm, ptr, 2);
+		views = LLVMBuildBitCast(gallivm->builder, views, ctx.i64, "");
+		views = LLVMBuildIntToPtr(gallivm->builder, views,
+					  const_array(ctx.v8i32, SI_NUM_SAMPLERS), "");
+
+		si_llvm_emit_polygon_stipple(&ctx, views, pos);
 	}
 
 	/* Interpolate colors. */
@@ -5486,8 +5553,6 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 						   linear_sample[i], base + 10 + i, "");
 	}
 
-	/* TODO: polygon stippling */
-
 	/* Compile. */
 	LLVMBuildRet(gallivm->builder, ret);
 	radeon_llvm_finalize_module(&ctx.radeon_bld);
@@ -5520,7 +5585,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 	int last_array_pointer, last_sgpr, num_params, i;
 	bool status = true;
 
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm, NULL);
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
 	ctx.type = TGSI_PROCESSOR_FRAGMENT;
 	shader.key.ps.epilog = key->ps_epilog.states;
 
@@ -5739,6 +5804,12 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 				   si_compile_ps_epilog);
 	if (!shader->epilog)
 		return false;
+
+	/* Enable POS_FIXED_PT if polygon stippling is enabled. */
+	if (shader->key.ps.prolog.poly_stipple) {
+		shader->config.spi_ps_input_ena |= S_0286CC_POS_FIXED_PT_ENA(1);
+		assert(G_0286CC_POS_FIXED_PT_ENA(shader->config.spi_ps_input_addr));
+	}
 
 	/* Set up the enable bits for per-sample shading if needed. */
 	if (shader->key.ps.prolog.force_persample_interp) {
