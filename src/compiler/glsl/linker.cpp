@@ -4182,50 +4182,48 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    /* Some shaders have to be linked with some other shaders present.
     */
-   if (num_shaders[MESA_SHADER_GEOMETRY] > 0 &&
-       num_shaders[MESA_SHADER_VERTEX] == 0 &&
-       !prog->SeparateShader) {
-      linker_error(prog, "Geometry shader must be linked with "
-		   "vertex shader\n");
-      goto done;
-   }
-   if (num_shaders[MESA_SHADER_TESS_EVAL] > 0 &&
-       num_shaders[MESA_SHADER_VERTEX] == 0 &&
-       !prog->SeparateShader) {
-      linker_error(prog, "Tessellation evaluation shader must be linked with "
-		   "vertex shader\n");
-      goto done;
-   }
-   if (num_shaders[MESA_SHADER_TESS_CTRL] > 0 &&
-       num_shaders[MESA_SHADER_VERTEX] == 0 &&
-       !prog->SeparateShader) {
-      linker_error(prog, "Tessellation control shader must be linked with "
-		   "vertex shader\n");
-      goto done;
-   }
+   if (!prog->SeparateShader) {
+      if (num_shaders[MESA_SHADER_GEOMETRY] > 0 &&
+          num_shaders[MESA_SHADER_VERTEX] == 0) {
+         linker_error(prog, "Geometry shader must be linked with "
+		      "vertex shader\n");
+         goto done;
+      }
+      if (num_shaders[MESA_SHADER_TESS_EVAL] > 0 &&
+          num_shaders[MESA_SHADER_VERTEX] == 0) {
+         linker_error(prog, "Tessellation evaluation shader must be linked "
+		      "with vertex shader\n");
+         goto done;
+      }
+      if (num_shaders[MESA_SHADER_TESS_CTRL] > 0 &&
+          num_shaders[MESA_SHADER_VERTEX] == 0) {
+         linker_error(prog, "Tessellation control shader must be linked with "
+		      "vertex shader\n");
+         goto done;
+      }
 
-   /* The spec is self-contradictory here. It allows linking without a tess
-    * eval shader, but that can only be used with transform feedback and
-    * rasterization disabled. However, transform feedback isn't allowed
-    * with GL_PATCHES, so it can't be used.
-    *
-    * More investigation showed that the idea of transform feedback after
-    * a tess control shader was dropped, because some hw vendors couldn't
-    * support tessellation without a tess eval shader, but the linker section
-    * wasn't updated to reflect that.
-    *
-    * All specifications (ARB_tessellation_shader, GL 4.0-4.5) have this
-    * spec bug.
-    *
-    * Do what's reasonable and always require a tess eval shader if a tess
-    * control shader is present.
-    */
-   if (num_shaders[MESA_SHADER_TESS_CTRL] > 0 &&
-       num_shaders[MESA_SHADER_TESS_EVAL] == 0 &&
-       !prog->SeparateShader) {
-      linker_error(prog, "Tessellation control shader must be linked with "
-		   "tessellation evaluation shader\n");
-      goto done;
+      /* The spec is self-contradictory here. It allows linking without a tess
+       * eval shader, but that can only be used with transform feedback and
+       * rasterization disabled. However, transform feedback isn't allowed
+       * with GL_PATCHES, so it can't be used.
+       *
+       * More investigation showed that the idea of transform feedback after
+       * a tess control shader was dropped, because some hw vendors couldn't
+       * support tessellation without a tess eval shader, but the linker
+       * section wasn't updated to reflect that.
+       *
+       * All specifications (ARB_tessellation_shader, GL 4.0-4.5) have this
+       * spec bug.
+       *
+       * Do what's reasonable and always require a tess eval shader if a tess
+       * control shader is present.
+       */
+      if (num_shaders[MESA_SHADER_TESS_CTRL] > 0 &&
+          num_shaders[MESA_SHADER_TESS_EVAL] == 0) {
+         linker_error(prog, "Tessellation control shader must be linked with "
+		      "tessellation evaluation shader\n");
+         goto done;
+      }
    }
 
    /* Compute shaders have additional restrictions. */
