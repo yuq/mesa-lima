@@ -1426,7 +1426,6 @@ void anv_CmdCopyImageToBuffer(
       VkImageAspectFlags aspect = pRegions[r].imageSubresource.aspectMask;
 
       VkFormat image_format = choose_iview_format(src_image, aspect);
-      VkFormat buffer_format = choose_buffer_format(src_image->vk_format, aspect);
 
       struct anv_image_view src_iview;
       anv_image_view_init(&src_iview, cmd_buffer->device,
@@ -1446,7 +1445,7 @@ void anv_CmdCopyImageToBuffer(
          cmd_buffer, 0);
 
       struct anv_image *dest_image =
-         make_image_for_buffer(vk_device, destBuffer, buffer_format,
+         make_image_for_buffer(vk_device, destBuffer, src_image->vk_format,
                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                                src_image->type, &cmd_buffer->pool->alloc,
                                &pRegions[r]);
@@ -1470,7 +1469,7 @@ void anv_CmdCopyImageToBuffer(
                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                .image = anv_image_to_handle(dest_image),
                .viewType = VK_IMAGE_VIEW_TYPE_2D,
-               .format = buffer_format,
+               .format = dest_image->vk_format,
                .subresourceRange = {
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = 0,
