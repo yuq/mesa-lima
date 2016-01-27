@@ -336,6 +336,7 @@ private:
    void expr(Instruction *, ImmediateValue&, ImmediateValue&);
    void expr(Instruction *, ImmediateValue&, ImmediateValue&, ImmediateValue&);
    void opnd(Instruction *, ImmediateValue&, int s);
+   void opnd3(Instruction *, ImmediateValue&);
 
    void unary(Instruction *, const ImmediateValue&);
 
@@ -388,6 +389,8 @@ ConstantFolding::visit(BasicBlock *bb)
       else
       if (i->srcExists(1) && i->src(1).getImmediate(src1))
          opnd(i, src1, 1);
+      if (i->srcExists(2) && i->src(2).getImmediate(src2))
+         opnd3(i, src2);
    }
    return true;
 }
@@ -869,6 +872,24 @@ ConstantFolding::tryCollapseChainedMULs(Instruction *mul2,
          if (f < 0)
             mul2->src(s2).mod *= Modifier(NV50_IR_MOD_NEG);
       }
+   }
+}
+
+void
+ConstantFolding::opnd3(Instruction *i, ImmediateValue &imm2)
+{
+   switch (i->op) {
+   case OP_MAD:
+   case OP_FMA:
+      if (imm2.isInteger(0)) {
+         i->op = OP_MUL;
+         i->setSrc(2, NULL);
+         foldCount++;
+         return;
+      }
+      break;
+   default:
+      return;
    }
 }
 
