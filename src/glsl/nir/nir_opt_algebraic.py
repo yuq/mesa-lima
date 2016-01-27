@@ -230,6 +230,8 @@ optimizations = [
    (('frem', a, b), ('fsub', a, ('fmul', b, ('ftrunc', ('fdiv', a, b)))), 'options->lower_fmod'),
    (('uadd_carry', a, b), ('b2i', ('ult', ('iadd', a, b), a)), 'options->lower_uadd_carry'),
    (('usub_borrow', a, b), ('b2i', ('ult', a, b)), 'options->lower_usub_borrow'),
+   (('ldexp', 'x', 'exp'),
+    ('fmul', 'x', ('ishl', ('imin', ('imax', ('iadd', 'exp', 0x7f), 0), 0xff), 23))),
 
    (('bitfield_insert', 'base', 'insert', 'offset', 'bits'),
     ('bcsel', ('ilt', 31, 'bits'), 'insert',
@@ -331,68 +333,6 @@ for op in ['flt', 'fge', 'feq', 'fne',
       ((op, '#d', ('bcsel', a, '#b', '#c')),
        ('bcsel', 'a', (op, 'd', 'b'), (op, 'd', 'c'))),
    ]
-
-def ldexp_to_arith(x, exp):
-   """
-   Translates
-      ldexp x exp
-   into
-
-      extracted_biased_exp = rshift(bitcast_f2i(abs(x)), exp_shift);
-      resulting_biased_exp = extracted_biased_exp + exp;
-
-      if (resulting_biased_exp < 1) {
-         return copysign(0.0, x);
-      }
-
-      return bitcast_u2f((bitcast_f2u(x) & sign_mantissa_mask) |
-                         lshift(i2u(resulting_biased_exp), exp_shift));
-
-   which we can't actually implement as such, since NIR doesn't have
-   vectorized if-statements. We actually implement it without branches
-   using conditional-select:
-
-      extracted_biased_exp = rshift(bitcast_f2i(abs(x)), exp_shift);
-      resulting_biased_exp = extracted_biased_exp + exp;
-
-      is_not_zero_or_underflow = gequal(resulting_biased_exp, 1);
-      x = csel(is_not_zero_or_underflow, x, copysign(0.0f, x));
-      resulting_biased_exp = csel(is_not_zero_or_underflow,
-                                  resulting_biased_exp, 0);
-
-      return bitcast_u2f((bitcast_f2u(x) & sign_mantissa_mask) |
-                         lshift(i2u(resulting_biased_exp), exp_shift));
-   """
-
-   sign_mask = 0x80000000
-   exp_shift = 23
-   exp_width = 8
-
-   # Extract the biased exponent from <x>.
-   extracted_biased_exp = ('ushr', ('fabs', x), exp_shift)
-   resulting_biased_exp = ('iadd', extracted_biased_exp, exp)
-
-   # Test if result is ±0.0, subnormal, or underflow by checking if the
-   # resulting biased exponent would be less than 0x1. If so, the result is
-   # 0.0 with the sign of x. (Actually, invert the conditions so that
-   # immediate values are the second arguments, which is better for i965)
-   zero_sign_x = ('iand', x, sign_mask)
-
-   is_not_zero_or_underflow = ('ige', resulting_biased_exp, 0x1)
-
-   # We could test for overflows by checking if the resulting biased exponent
-   # would be greater than 0xFE. Turns out we don't need to because the GLSL
-   # spec says:
-   #
-   #    "If this product is too large to be represented in the
-   #     floating-point type, the result is undefined."
-
-   return ('bitfield_insert',
-           ('bcsel', is_not_zero_or_underflow, x, zero_sign_x),
-           ('bcsel', is_not_zero_or_underflow, resulting_biased_exp, 0),
-           exp_shift, exp_width)
-
-optimizations += [(('ldexp', 'x', 'exp'), ldexp_to_arith('x', 'exp'))]
 
 # This section contains "late" optimizations that should be run after the
 # regular optimizations have finished.  Optimizations should go here if
