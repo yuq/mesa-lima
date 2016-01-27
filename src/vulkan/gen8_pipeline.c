@@ -256,7 +256,8 @@ genX(graphics_pipeline_create)(
                   .ClipEnable = true,
                   .ViewportXYClipTestEnable = !(extra && extra->disable_viewport),
                   .MinimumPointWidth = 0.125,
-                  .MaximumPointWidth = 255.875);
+                  .MaximumPointWidth = 255.875,
+                  .MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1);
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM),
                   .StatisticsEnable = true,

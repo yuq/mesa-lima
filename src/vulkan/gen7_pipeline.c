@@ -266,7 +266,8 @@ genX(graphics_pipeline_create)(
       .LineStripListProvokingVertexSelect       = 0,
       .TriangleFanProvokingVertexSelect         = 0,
       .MinimumPointWidth                        = 0.125,
-      .MaximumPointWidth                        = 255.875);
+      .MaximumPointWidth                        = 255.875,
+      .MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1);
 
    uint32_t samples = 1;
    uint32_t log2_samples = __builtin_ffs(samples) - 1;
