@@ -1182,6 +1182,10 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    if (extra && extra->use_rectlist)
       pipeline->topology = _3DPRIM_RECTLIST;
 
+   while (anv_block_pool_size(&device->scratch_block_pool) <
+          pipeline->total_scratch)
+      anv_block_pool_alloc(&device->scratch_block_pool);
+
    return VK_SUCCESS;
 }
 
