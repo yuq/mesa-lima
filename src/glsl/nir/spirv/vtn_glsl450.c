@@ -418,16 +418,20 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450InverseSqrt: op = nir_op_frsq;       break;
 
    case GLSLstd450Modf: {
-      val->ssa->def = nir_ffract(nb, src[0]);
+      nir_ssa_def *sign = nir_fsign(nb, src[0]);
+      nir_ssa_def *abs = nir_fabs(nb, src[0]);
+      val->ssa->def = nir_fmul(nb, sign, nir_ffract(nb, abs));
       nir_store_deref_var(nb, vtn_nir_deref(b, w[6]),
-                          nir_ffloor(nb, src[0]), 0xf);
+                          nir_fmul(nb, sign, nir_ffloor(nb, abs)), 0xf);
       return;
    }
 
    case GLSLstd450ModfStruct: {
+      nir_ssa_def *sign = nir_fsign(nb, src[0]);
+      nir_ssa_def *abs = nir_fabs(nb, src[0]);
       assert(glsl_type_is_struct(val->ssa->type));
-      val->ssa->elems[0]->def = nir_ffract(nb, src[0]);
-      val->ssa->elems[1]->def = nir_ffloor(nb, src[0]);
+      val->ssa->elems[0]->def = nir_fmul(nb, sign, nir_ffract(nb, abs));
+      val->ssa->elems[1]->def = nir_fmul(nb, sign, nir_ffloor(nb, abs));
       return;
    }
 
