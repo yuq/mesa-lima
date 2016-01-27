@@ -544,12 +544,12 @@ anv_image_view_init(struct anv_image_view *iview,
        * data from a source Image to a destination Image.
        */
       const struct isl_format_layout * isl_layout = image->format->isl_layout;
-      iview->level_0_extent.width  = anv_minify(image->extent.width, range->baseMipLevel);
-      iview->level_0_extent.height = anv_minify(image->extent.height, range->baseMipLevel);
+
       iview->level_0_extent.depth  = anv_minify(image->extent.depth, range->baseMipLevel);
-      iview->level_0_extent.width  = DIV_ROUND_UP(iview->level_0_extent.width, isl_layout->bw);
-      iview->level_0_extent.height = DIV_ROUND_UP(iview->level_0_extent.height, isl_layout->bh);
       iview->level_0_extent.depth  = DIV_ROUND_UP(iview->level_0_extent.depth, isl_layout->bd);
+
+      iview->level_0_extent.height = isl_surf_get_array_pitch_el_rows(&surface->isl);
+      iview->level_0_extent.width  = isl_surf_get_row_pitch_el(&surface->isl);
       mCreateInfo.subresourceRange.baseMipLevel = 0;
       mCreateInfo.subresourceRange.baseArrayLayer = 0;
    } else {
