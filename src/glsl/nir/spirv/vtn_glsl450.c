@@ -626,7 +626,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
 
    case GLSLstd450PackDouble2x32:
    case GLSLstd450UnpackDouble2x32:
-   case GLSLstd450IMix:
    default:
       unreachable("Unhandled opcode");
    }
