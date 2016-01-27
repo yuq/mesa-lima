@@ -147,7 +147,20 @@ get_qpitch(const struct isl_surf *surf)
       #endif
    case ISL_SURF_DIM_2D:
    case ISL_SURF_DIM_3D:
-      return isl_surf_get_array_pitch_el_rows(surf);
+      #if ANV_GEN >= 9
+         return isl_surf_get_array_pitch_el_rows(surf);
+      #else
+         /* From the Broadwell PRM for RENDER_SURFACE_STATE.QPitch
+          *
+          *    "This field must be set to an integer multiple of the Surface
+          *    Vertical Alignment. For compressed textures (BC*, FXT1,
+          *    ETC*, and EAC* Surface Formats), this field is in units of
+          *    rows in the uncompressed surface, and must be set to an
+          *    integer multiple of the vertical alignment parameter "j"
+          *    defined in the Common Surface Formats section."
+          */
+         return isl_surf_get_array_pitch_sa_rows(surf);
+      #endif
    }
 }
 
