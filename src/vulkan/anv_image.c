@@ -483,7 +483,8 @@ void
 anv_image_view_init(struct anv_image_view *iview,
                     struct anv_device *device,
                     const VkImageViewCreateInfo* pCreateInfo,
-                    struct anv_cmd_buffer *cmd_buffer)
+                    struct anv_cmd_buffer *cmd_buffer,
+                    uint32_t offset)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
@@ -513,7 +514,7 @@ anv_image_view_init(struct anv_image_view *iview,
 
    iview->image = image;
    iview->bo = image->bo;
-   iview->offset = image->offset + surface->offset;
+   iview->offset = image->offset + surface->offset + offset;
 
    iview->aspect_mask = pCreateInfo->subresourceRange.aspectMask;
    iview->vk_format = pCreateInfo->format;
@@ -608,7 +609,7 @@ anv_CreateImageView(VkDevice _device,
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   anv_image_view_init(view, device, pCreateInfo, NULL);
+   anv_image_view_init(view, device, pCreateInfo, NULL, 0);
 
    *pView = anv_image_view_to_handle(view);
 
