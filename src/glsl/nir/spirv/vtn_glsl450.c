@@ -545,12 +545,14 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
 
    case GLSLstd450Tanh:
-      /* (e^x - e^(-x)) / (e^x + e^(-x)) */
+      /* (0.5 * (e^x - e^(-x))) / (0.5 * (e^x + e^(-x))) */
       val->ssa->def =
-         nir_fdiv(nb, nir_fsub(nb, build_exp(nb, src[0]),
-                                   build_exp(nb, nir_fneg(nb, src[0]))),
-                      nir_fadd(nb, build_exp(nb, src[0]),
-                                   build_exp(nb, nir_fneg(nb, src[0]))));
+         nir_fdiv(nb, nir_fmul(nb, nir_imm_float(nb, 0.5f),
+                                   nir_fsub(nb, build_exp(nb, src[0]),
+                                                build_exp(nb, nir_fneg(nb, src[0])))),
+                      nir_fmul(nb, nir_imm_float(nb, 0.5f),
+                                   nir_fadd(nb, build_exp(nb, src[0]),
+                                                build_exp(nb, nir_fneg(nb, src[0])))));
       return;
 
    case GLSLstd450Asinh:
