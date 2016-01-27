@@ -202,14 +202,10 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
 
       .MCSEnable = false,
 #  if (ANV_IS_HASWELL)
-      .ShaderChannelSelectR = vk_to_gen_swizzle(pCreateInfo->components.r,
-                                                VK_COMPONENT_SWIZZLE_R),
-      .ShaderChannelSelectG = vk_to_gen_swizzle(pCreateInfo->components.g,
-                                                VK_COMPONENT_SWIZZLE_G),
-      .ShaderChannelSelectB = vk_to_gen_swizzle(pCreateInfo->components.b,
-                                                VK_COMPONENT_SWIZZLE_B),
-      .ShaderChannelSelectA = vk_to_gen_swizzle(pCreateInfo->components.a,
-                                                VK_COMPONENT_SWIZZLE_A),
+      .ShaderChannelSelectR = vk_to_gen_swizzle[iview->swizzle.r],
+      .ShaderChannelSelectG = vk_to_gen_swizzle[iview->swizzle.g],
+      .ShaderChannelSelectB = vk_to_gen_swizzle[iview->swizzle.b],
+      .ShaderChannelSelectA = vk_to_gen_swizzle[iview->swizzle.a],
 #  else /* XXX: Seriously? */
       .RedClearColor = 0,
       .GreenClearColor = 0,

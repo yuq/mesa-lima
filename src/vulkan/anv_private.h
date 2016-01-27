@@ -1566,6 +1566,7 @@ struct anv_image_view {
 
    VkImageAspectFlags aspect_mask;
    VkFormat vk_format;
+   VkComponentMapping swizzle;
    enum isl_format format;
    uint32_t base_layer;
    uint32_t base_mip;

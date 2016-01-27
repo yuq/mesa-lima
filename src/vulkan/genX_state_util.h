@@ -58,7 +58,7 @@ anv_surface_format(const struct anv_device *device, enum isl_format format,
 }
 
 #if ANV_GEN > 7 || ANV_IS_HASWELL
-static const uint32_t vk_to_gen_swizzle_map[] = {
+static const uint32_t vk_to_gen_swizzle[] = {
    [VK_COMPONENT_SWIZZLE_ZERO]                 = SCS_ZERO,
    [VK_COMPONENT_SWIZZLE_ONE]                  = SCS_ONE,
    [VK_COMPONENT_SWIZZLE_R]                    = SCS_RED,
@@ -66,15 +66,6 @@ static const uint32_t vk_to_gen_swizzle_map[] = {
    [VK_COMPONENT_SWIZZLE_B]                    = SCS_BLUE,
    [VK_COMPONENT_SWIZZLE_A]                    = SCS_ALPHA
 };
-
-static inline uint32_t
-vk_to_gen_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component)
-{
-   if (swizzle == VK_COMPONENT_SWIZZLE_IDENTITY)
-      return vk_to_gen_swizzle_map[component];
-   else
-      return vk_to_gen_swizzle_map[swizzle];
-}
 #endif
 
 static inline uint32_t

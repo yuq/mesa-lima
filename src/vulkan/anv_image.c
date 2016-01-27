@@ -453,6 +453,15 @@ has_matching_storage_typed_format(const struct anv_device *device,
            device->info.gen >= 9);
 }
 
+static VkComponentSwizzle
+remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component)
+{
+   if (swizzle == VK_COMPONENT_SWIZZLE_IDENTITY)
+      return component;
+   else
+      return swizzle;
+}
+
 void
 anv_image_view_init(struct anv_image_view *iview,
                     struct anv_device *device,
@@ -493,6 +502,14 @@ anv_image_view_init(struct anv_image_view *iview,
    iview->vk_format = pCreateInfo->format;
    iview->format = anv_get_isl_format(pCreateInfo->format, iview->aspect_mask,
                                       image->tiling);
+   iview->swizzle.r = remap_swizzle(pCreateInfo->components.r,
+                                    VK_COMPONENT_SWIZZLE_R);
+   iview->swizzle.g = remap_swizzle(pCreateInfo->components.g,
+                                    VK_COMPONENT_SWIZZLE_G);
+   iview->swizzle.b = remap_swizzle(pCreateInfo->components.b,
+                                    VK_COMPONENT_SWIZZLE_B);
+   iview->swizzle.a = remap_swizzle(pCreateInfo->components.a,
+                                    VK_COMPONENT_SWIZZLE_A);
 
    iview->base_layer = range->baseArrayLayer;
    iview->base_mip = range->baseMipLevel;
