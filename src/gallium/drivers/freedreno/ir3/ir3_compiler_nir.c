@@ -1405,7 +1405,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 			ddy = get_src(ctx, &tex->src[i].src);
 			break;
 		default:
-			compile_error(ctx, "Unhandled NIR tex serc type: %d\n",
+			compile_error(ctx, "Unhandled NIR tex src type: %d\n",
 					tex->src[i].src_type);
 			return;
 		}
@@ -2081,6 +2081,9 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 		case VARYING_SLOT_CLIP_DIST0:
 		case VARYING_SLOT_CLIP_DIST1:
 			break;
+		case VARYING_SLOT_CLIP_VERTEX:
+			/* handled entirely in nir_lower_clip: */
+			return;
 		default:
 			if (slot >= VARYING_SLOT_VAR0)
 				break;
