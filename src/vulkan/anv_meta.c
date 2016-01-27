@@ -1350,7 +1350,6 @@ void anv_CmdCopyBufferToImage(
             },
             cmd_buffer);
 
-         VkOffset3D src_offset = { 0, 0, slice };
          VkOffset3D dest_offset_el = meta_region_offset_el(dest_image,
                                                       &pRegions[r].imageOffset);
          dest_offset_el.z = 0;
@@ -1360,7 +1359,7 @@ void anv_CmdCopyBufferToImage(
          meta_emit_blit(cmd_buffer,
                         src_image,
                         &src_iview,
-                        src_offset,
+                        (VkOffset3D){0, 0, 0},
                         img_extent_el,
                         dest_image,
                         &dest_iview,
