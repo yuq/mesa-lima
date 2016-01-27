@@ -1306,16 +1306,11 @@ void anv_CmdCopyBufferToImage(
                                                   &pRegions[r].imageSubresource,
                                                   &pRegions[r].imageOffset);
 
-      unsigned num_slices;
-      if (dest_image->type == VK_IMAGE_TYPE_3D) {
-         assert(pRegions[r].imageSubresource.layerCount == 1);
-         num_slices = pRegions[r].imageExtent.depth;
-      } else {
-         assert(pRegions[r].imageExtent.depth == 1);
-         num_slices = pRegions[r].imageSubresource.layerCount;
-      }
-
-      for (unsigned slice = 0; slice < num_slices; slice++) {
+      unsigned num_slices_3d = pRegions[r].imageExtent.depth;
+      unsigned num_slices_array = pRegions[r].imageSubresource.layerCount;
+      unsigned slice_3d = 0;
+      unsigned slice_array = 0;
+      while (slice_3d < num_slices_3d && slice_array < num_slices_array) {
          struct anv_image_view src_iview;
          anv_image_view_init(&src_iview, cmd_buffer->device,
             &(VkImageViewCreateInfo) {
@@ -1344,7 +1339,8 @@ void anv_CmdCopyBufferToImage(
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
                   .levelCount = 1,
-                  .baseArrayLayer = dest_base_array_slice + slice,
+                  .baseArrayLayer = dest_base_array_slice +
+                                    slice_array + slice_3d,
                   .layerCount = 1
                },
             },
@@ -1375,6 +1371,11 @@ void anv_CmdCopyBufferToImage(
          src_image->offset += src_image->extent.width *
                               src_image->extent.height *
                               src_image->format->isl_layout->bs;
+
+         if (dest_image->type == VK_IMAGE_TYPE_3D)
+            slice_3d++;
+         else
+            slice_array++;
       }
 
       anv_DestroyImage(vk_device, anv_image_to_handle(src_image),
