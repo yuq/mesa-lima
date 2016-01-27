@@ -1328,6 +1328,22 @@ void anv_CmdCopyBufferToImage(
             },
             cmd_buffer);
 
+         uint32_t img_x = 0;
+         uint32_t img_y = 0;
+         uint32_t img_o = 0;
+         if (isl_format_is_compressed(dest_image->format->surface_format))
+            isl_surf_get_image_intratile_offset_el(&cmd_buffer->device->isl_dev,
+                                                   &dest_image->color_surface.isl,
+                                                   pRegions[r].imageSubresource.mipLevel,
+                                                   pRegions[r].imageSubresource.baseArrayLayer + slice_array,
+                                                   pRegions[r].imageOffset.z + slice_3d,
+                                                   &img_o, &img_x, &img_y);
+
+         VkOffset3D dest_offset_el = meta_region_offset_el(dest_image, & pRegions[r].imageOffset);
+         dest_offset_el.x += img_x;
+         dest_offset_el.y += img_y;
+         dest_offset_el.z = 0;
+
          struct anv_image_view dest_iview;
          anv_image_view_init(&dest_iview, cmd_buffer->device,
             &(VkImageViewCreateInfo) {
@@ -1346,9 +1362,6 @@ void anv_CmdCopyBufferToImage(
             },
             cmd_buffer);
 
-         VkOffset3D dest_offset_el = meta_region_offset_el(dest_image,
-                                                      &pRegions[r].imageOffset);
-         dest_offset_el.z = 0;
          const VkExtent3D img_extent_el = meta_region_extent_el(dest_image->vk_format,
                                                       &pRegions[r].imageExtent);
 
