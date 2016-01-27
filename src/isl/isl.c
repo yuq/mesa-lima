@@ -1309,7 +1309,8 @@ get_image_offset_sa(const struct isl_surf *surf,
                                   x_offset_sa, y_offset_sa);
       break;
    case ISL_DIM_LAYOUT_GEN4_2D:
-      get_image_offset_sa_gen4_2d(surf, level, logical_array_layer,
+      get_image_offset_sa_gen4_2d(surf, level, logical_array_layer
+                                  + logical_z_offset_px,
                                   x_offset_sa, y_offset_sa);
       break;
    case ISL_DIM_LAYOUT_GEN4_3D:
