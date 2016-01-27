@@ -117,6 +117,7 @@ build_color_shaders(struct nir_shader **out_vs,
 
 static VkResult
 create_pipeline(struct anv_device *device,
+                uint32_t samples,
                 struct nir_shader *vs_nir,
                 struct nir_shader *fs_nir,
                 const VkPipelineVertexInputStateCreateInfo *vi_state,
@@ -175,9 +176,9 @@ create_pipeline(struct anv_device *device,
          },
          .pMultisampleState = &(VkPipelineMultisampleStateCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-            .rasterizationSamples = 1, /* FINISHME: Multisampling */
+            .rasterizationSamples = samples,
             .sampleShadingEnable = false,
-            .pSampleMask = (VkSampleMask[]) { 0x1 },
+            .pSampleMask = (VkSampleMask[]) { ~0 },
             .alphaToCoverageEnable = false,
             .alphaToOneEnable = false,
          },
@@ -226,7 +227,9 @@ create_pipeline(struct anv_device *device,
 }
 
 static VkResult
-create_color_pipeline(struct anv_device *device, uint32_t frag_output,
+create_color_pipeline(struct anv_device *device,
+                      uint32_t samples,
+                      uint32_t frag_output,
                       struct anv_pipeline **pipeline)
 {
    struct nir_shader *vs_nir;
@@ -297,7 +300,7 @@ create_color_pipeline(struct anv_device *device, uint32_t frag_output,
     * but the repclear shader writes to all color attachments.
     */
    return
-      create_pipeline(device, vs_nir, fs_nir, &vi_state, &ds_state,
+      create_pipeline(device, samples, vs_nir, fs_nir, &vi_state, &ds_state,
                       &cb_state, &device->meta_state.alloc,
                       /*use_repclear*/ false, pipeline);
 }
@@ -316,31 +319,17 @@ destroy_pipeline(struct anv_device *device, struct anv_pipeline *pipeline)
 void
 anv_device_finish_meta_clear_state(struct anv_device *device)
 {
-   for (uint32_t j = 0;
-        j < ARRAY_SIZE(device->meta_state.clear.color_pipelines); ++j) {
-      destroy_pipeline(device, device->meta_state.clear.color_pipelines[j]);
+   struct anv_meta_state *state = &device->meta_state;
+
+   for (uint32_t i = 0; i < ARRAY_SIZE(state->clear); ++i) {
+      for (uint32_t j = 0; j < ARRAY_SIZE(state->clear[i].color_pipelines); ++j) {
+         destroy_pipeline(device, state->clear[i].color_pipelines[j]);
+      }
+
+      destroy_pipeline(device, state->clear[i].depth_only_pipeline);
+      destroy_pipeline(device, state->clear[i].stencil_only_pipeline);
+      destroy_pipeline(device, state->clear[i].depthstencil_pipeline);
    }
-
-   destroy_pipeline(device, device->meta_state.clear.depth_only_pipeline);
-   destroy_pipeline(device, device->meta_state.clear.stencil_only_pipeline);
-   destroy_pipeline(device, device->meta_state.clear.depthstencil_pipeline);
-}
-
-static VkResult
-init_color_pipelines(struct anv_device *device)
-{
-   VkResult result;
-   struct anv_pipeline **pipelines = device->meta_state.clear.color_pipelines;
-   uint32_t n = ARRAY_SIZE(device->meta_state.clear.color_pipelines);
-
-   for (uint32_t i = 0; i < n; ++i) {
-      result = create_color_pipeline(device, i, &pipelines[i]);
-      if (result != VK_SUCCESS)
-         return result;
-
-   }
-
-   return VK_SUCCESS;
 }
 
 static void
@@ -351,13 +340,19 @@ emit_color_clear(struct anv_cmd_buffer *cmd_buffer,
    struct anv_device *device = cmd_buffer->device;
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   VkClearColorValue clear_value = clear_att->clearValue.color;
+   const uint32_t subpass_att = clear_att->colorAttachment;
+   const uint32_t pass_att = subpass->color_attachments[subpass_att];
+   const struct anv_image_view *iview = fb->attachments[pass_att];
+   const uint32_t samples = iview->image->samples;
+   const uint32_t samples_log2 = ffs(samples) - 1;
    struct anv_pipeline *pipeline =
-      device->meta_state.clear.color_pipelines[clear_att->colorAttachment];
+      device->meta_state.clear[samples_log2].color_pipelines[subpass_att];
+   VkClearColorValue clear_value = clear_att->clearValue.color;
 
    VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
    VkPipeline pipeline_h = anv_pipeline_to_handle(pipeline);
 
+   assert(samples_log2 < ARRAY_SIZE(device->meta_state.clear));
    assert(clear_att->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
    assert(clear_att->colorAttachment < subpass->color_count);
 
@@ -460,6 +455,7 @@ build_depthstencil_shader(struct nir_shader **out_vs)
 static VkResult
 create_depthstencil_pipeline(struct anv_device *device,
                              VkImageAspectFlags aspects,
+                             uint32_t samples,
                              struct anv_pipeline **pipeline)
 {
    struct nir_shader *vs_nir;
@@ -518,7 +514,7 @@ create_depthstencil_pipeline(struct anv_device *device,
       .pAttachments = NULL,
    };
 
-   return create_pipeline(device, vs_nir, NULL, &vi_state, &ds_state,
+   return create_pipeline(device, samples, vs_nir, NULL, &vi_state, &ds_state,
                           &cb_state, &device->meta_state.alloc,
                           /*use_repclear*/ true, pipeline);
 }
@@ -529,19 +525,24 @@ emit_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
                         const VkClearRect *clear_rect)
 {
    struct anv_device *device = cmd_buffer->device;
+   struct anv_meta_state *meta_state = &device->meta_state;
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   uint32_t attachment = subpass->depth_stencil_attachment;
+   const uint32_t pass_att = subpass->depth_stencil_attachment;
+   const struct anv_image_view *iview = fb->attachments[pass_att];
+   const uint32_t samples = iview->image->samples;
+   const uint32_t samples_log2 = ffs(samples) - 1;
    VkClearDepthStencilValue clear_value = clear_att->clearValue.depthStencil;
    VkImageAspectFlags aspects = clear_att->aspectMask;
 
    VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
 
+   assert(samples_log2 < ARRAY_SIZE(meta_state->clear));
    assert(aspects == VK_IMAGE_ASPECT_DEPTH_BIT ||
           aspects == VK_IMAGE_ASPECT_STENCIL_BIT ||
           aspects == (VK_IMAGE_ASPECT_DEPTH_BIT |
                       VK_IMAGE_ASPECT_STENCIL_BIT));
-   assert(attachment != VK_ATTACHMENT_UNUSED);
+   assert(pass_att != VK_ATTACHMENT_UNUSED);
 
    const struct depthstencil_clear_vattrs vertex_data[3] = {
       {
@@ -611,13 +612,13 @@ emit_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
    struct anv_pipeline *pipeline;
    switch (aspects) {
    case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
-      pipeline = device->meta_state.clear.depthstencil_pipeline;
+      pipeline = meta_state->clear[samples_log2].depthstencil_pipeline;
       break;
    case VK_IMAGE_ASPECT_DEPTH_BIT:
-      pipeline = device->meta_state.clear.depth_only_pipeline;
+      pipeline = meta_state->clear[samples_log2].depth_only_pipeline;
       break;
    case VK_IMAGE_ASPECT_STENCIL_BIT:
-      pipeline = device->meta_state.clear.stencil_only_pipeline;
+      pipeline = meta_state->clear[samples_log2].stencil_only_pipeline;
       break;
    default:
       unreachable("expected depth or stencil aspect");
@@ -631,55 +632,49 @@ emit_depthstencil_clear(struct anv_cmd_buffer *cmd_buffer,
    ANV_CALL(CmdDraw)(cmd_buffer_h, 3, 1, 0, 0);
 }
 
-static VkResult
-init_depthstencil_pipelines(struct anv_device *device)
-{
-   VkResult result;
-   struct anv_meta_state *state = &device->meta_state;
-
-   result =
-      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_DEPTH_BIT,
-                                   &state->clear.depth_only_pipeline);
-   if (result != VK_SUCCESS)
-      return result;
-
-   result =
-      create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_STENCIL_BIT,
-                                   &state->clear.stencil_only_pipeline);
-   if (result != VK_SUCCESS)
-      return result;
-
-   result =
-      create_depthstencil_pipeline(device,
-                                   VK_IMAGE_ASPECT_DEPTH_BIT |
-                                   VK_IMAGE_ASPECT_STENCIL_BIT,
-                                   &state->clear.depthstencil_pipeline);
-   if (result != VK_SUCCESS)
-      return result;
-
-   return result;
-}
-
 VkResult
 anv_device_init_meta_clear_state(struct anv_device *device)
 {
-   VkResult result;
+   VkResult res;
+   struct anv_meta_state *state = &device->meta_state;
 
    zero(device->meta_state.clear);
 
-   result = init_color_pipelines(device);
-   if (result != VK_SUCCESS)
-      goto fail;
+   for (uint32_t i = 0; i < ARRAY_SIZE(state->clear); ++i) {
+      uint32_t samples = 1 << i;
 
-   result = init_depthstencil_pipelines(device);
-   if (result != VK_SUCCESS)
-      goto fail;
+      for (uint32_t j = 0; j < ARRAY_SIZE(state->clear[i].color_pipelines); ++j) {
+         res = create_color_pipeline(device, samples, /* frag_output */ j,
+                                     &state->clear[i].color_pipelines[j]);
+         if (res != VK_SUCCESS)
+            goto fail;
+      }
+
+      res = create_depthstencil_pipeline(device,
+                                         VK_IMAGE_ASPECT_DEPTH_BIT, samples,
+                                         &state->clear[i].depth_only_pipeline);
+      if (res != VK_SUCCESS)
+         goto fail;
+
+      res = create_depthstencil_pipeline(device,
+                                         VK_IMAGE_ASPECT_STENCIL_BIT, samples,
+                                         &state->clear[i].stencil_only_pipeline);
+      if (res != VK_SUCCESS)
+         goto fail;
+
+      res = create_depthstencil_pipeline(device,
+                                         VK_IMAGE_ASPECT_DEPTH_BIT |
+                                         VK_IMAGE_ASPECT_STENCIL_BIT, samples,
+                                         &state->clear[i].depthstencil_pipeline);
+      if (res != VK_SUCCESS)
+         goto fail;
+   }
 
    return VK_SUCCESS;
 
 fail:
    anv_device_finish_meta_clear_state(device);
-   return result;
+   return res;
 }
 
 /**

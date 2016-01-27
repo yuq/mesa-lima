@@ -564,6 +564,9 @@ void anv_finish_wsi(struct anv_instance *instance);
 struct anv_meta_state {
    VkAllocationCallbacks alloc;
 
+   /**
+    * Use array element `i` to clear an image with `log2(i)` samples.
+    */
    struct {
       /**
        * Pipeline N is used to clear color attachment N of the current
@@ -578,7 +581,7 @@ struct anv_meta_state {
       struct anv_pipeline *depth_only_pipeline;
       struct anv_pipeline *stencil_only_pipeline;
       struct anv_pipeline *depthstencil_pipeline;
-   } clear;
+   } clear[4];
 
    struct {
       VkRenderPass render_pass;
