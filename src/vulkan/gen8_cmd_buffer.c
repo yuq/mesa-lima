@@ -58,8 +58,8 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
                      ._3DCommandSubOpcode = push_constant_opcodes[stage],
                      .ConstantBody = {
-                        .PointerToConstantBuffer0 = { .offset = state.offset },
-                        .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
+                        .PointerToConstantBuffer2 = { &cmd_buffer->device->dynamic_state_block_pool.bo, state.offset },
+                        .ConstantBuffer2ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
                      });
 
       flushed |= mesa_to_vk_shader_stage(stage);
