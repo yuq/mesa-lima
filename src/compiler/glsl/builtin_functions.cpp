@@ -661,7 +661,7 @@ private:
    BA1(roundEven)
    BA1(ceil)
    BA1(fract)
-   B2(mod)
+   BA2(mod)
    BA1(modf)
    BA2(min)
    BA2(max)
@@ -1242,23 +1242,23 @@ builtin_builder::create_builtins()
    FD(fract)
 
    add_function("mod",
-                _mod(glsl_type::float_type, glsl_type::float_type),
-                _mod(glsl_type::vec2_type,  glsl_type::float_type),
-                _mod(glsl_type::vec3_type,  glsl_type::float_type),
-                _mod(glsl_type::vec4_type,  glsl_type::float_type),
+                _mod(always_available, glsl_type::float_type, glsl_type::float_type),
+                _mod(always_available, glsl_type::vec2_type,  glsl_type::float_type),
+                _mod(always_available, glsl_type::vec3_type,  glsl_type::float_type),
+                _mod(always_available, glsl_type::vec4_type,  glsl_type::float_type),
 
-                _mod(glsl_type::vec2_type,  glsl_type::vec2_type),
-                _mod(glsl_type::vec3_type,  glsl_type::vec3_type),
-                _mod(glsl_type::vec4_type,  glsl_type::vec4_type),
+                _mod(always_available, glsl_type::vec2_type,  glsl_type::vec2_type),
+                _mod(always_available, glsl_type::vec3_type,  glsl_type::vec3_type),
+                _mod(always_available, glsl_type::vec4_type,  glsl_type::vec4_type),
 
-                _mod(glsl_type::double_type, glsl_type::double_type),
-                _mod(glsl_type::dvec2_type,  glsl_type::double_type),
-                _mod(glsl_type::dvec3_type,  glsl_type::double_type),
-                _mod(glsl_type::dvec4_type,  glsl_type::double_type),
+                _mod(fp64, glsl_type::double_type, glsl_type::double_type),
+                _mod(fp64, glsl_type::dvec2_type,  glsl_type::double_type),
+                _mod(fp64, glsl_type::dvec3_type,  glsl_type::double_type),
+                _mod(fp64, glsl_type::dvec4_type,  glsl_type::double_type),
 
-                _mod(glsl_type::dvec2_type,  glsl_type::dvec2_type),
-                _mod(glsl_type::dvec3_type,  glsl_type::dvec3_type),
-                _mod(glsl_type::dvec4_type,  glsl_type::dvec4_type),
+                _mod(fp64, glsl_type::dvec2_type,  glsl_type::dvec2_type),
+                _mod(fp64, glsl_type::dvec3_type,  glsl_type::dvec3_type),
+                _mod(fp64, glsl_type::dvec4_type,  glsl_type::dvec4_type),
                 NULL);
 
    FD(modf)
@@ -3452,9 +3452,10 @@ UNOPA(ceil,      ir_unop_ceil)
 UNOPA(fract,     ir_unop_fract)
 
 ir_function_signature *
-builtin_builder::_mod(const glsl_type *x_type, const glsl_type *y_type)
+builtin_builder::_mod(builtin_available_predicate avail,
+                      const glsl_type *x_type, const glsl_type *y_type)
 {
-   return binop(always_available, ir_binop_mod, x_type, x_type, y_type);
+   return binop(avail, ir_binop_mod, x_type, x_type, y_type);
 }
 
 ir_function_signature *
