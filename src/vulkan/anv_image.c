@@ -488,6 +488,8 @@ anv_image_view_init(struct anv_image_view *iview,
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
+   VkImageViewCreateInfo mCreateInfo;
+   memcpy(&mCreateInfo, pCreateInfo, sizeof(VkImageViewCreateInfo));
 
    assert(range->layerCount > 0);
    assert(range->baseMipLevel < image->levels);
@@ -545,6 +547,11 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->level_0_extent.width  = DIV_ROUND_UP(image->extent.width , isl_layout->bw);
       iview->level_0_extent.height = DIV_ROUND_UP(image->extent.height, isl_layout->bh);
       iview->level_0_extent.depth  = DIV_ROUND_UP(image->extent.depth , isl_layout->bd);
+      iview->level_0_extent.width  = anv_minify(iview->level_0_extent.width , range->baseMipLevel);
+      iview->level_0_extent.height = anv_minify(iview->level_0_extent.height, range->baseMipLevel);
+      iview->level_0_extent.depth  = anv_minify(iview->level_0_extent.depth , range->baseMipLevel);
+      mCreateInfo.subresourceRange.baseMipLevel = 0;
+      mCreateInfo.subresourceRange.baseArrayLayer = 0;
    } else {
       iview->level_0_extent.width  = image->extent.width ;
       iview->level_0_extent.height = image->extent.height;
@@ -561,7 +568,7 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->nonrt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       anv_fill_image_surface_state(device, iview->nonrt_surface_state,
-                                   iview, pCreateInfo,
+                                   iview, &mCreateInfo,
                                    VK_IMAGE_USAGE_SAMPLED_BIT);
    } else {
       iview->nonrt_surface_state.alloc_size = 0;
@@ -571,7 +578,7 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       anv_fill_image_surface_state(device, iview->color_rt_surface_state,
-                                   iview, pCreateInfo,
+                                   iview, &mCreateInfo,
                                    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
    } else {
       iview->color_rt_surface_state.alloc_size = 0;
@@ -582,7 +589,7 @@ anv_image_view_init(struct anv_image_view *iview,
 
       if (has_matching_storage_typed_format(device, iview->format))
          anv_fill_image_surface_state(device, iview->storage_surface_state,
-                                      iview, pCreateInfo,
+                                      iview, &mCreateInfo,
                                       VK_IMAGE_USAGE_STORAGE_BIT);
       else
          anv_fill_buffer_surface_state(device, iview->storage_surface_state,
