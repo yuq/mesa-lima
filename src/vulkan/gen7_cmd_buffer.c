@@ -170,7 +170,7 @@ emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
                    uint32_t count, const VkRect2D *scissors)
 {
    struct anv_state scissor_state =
-      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 32, 32);
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 8, 32);
 
    for (uint32_t i = 0; i < count; i++) {
       const VkRect2D *s = &scissors[i];
@@ -197,10 +197,10 @@ emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
       };
 
       if (s->extent.width <= 0 || s->extent.height <= 0) {
-         GEN7_SCISSOR_RECT_pack(NULL, scissor_state.map + i * 32,
+         GEN7_SCISSOR_RECT_pack(NULL, scissor_state.map + i * 8,
                                 &empty_scissor);
       } else {
-         GEN7_SCISSOR_RECT_pack(NULL, scissor_state.map + i * 32, &scissor);
+         GEN7_SCISSOR_RECT_pack(NULL, scissor_state.map + i * 8, &scissor);
       }
    }
 
