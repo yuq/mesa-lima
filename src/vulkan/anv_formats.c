@@ -409,7 +409,7 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
        * what most clients will want.
        */
       if (linear_fmt != ISL_FORMAT_UNSUPPORTED &&
-          isl_format_is_rgb(linear_fmt) &&
+          !util_is_power_of_two(isl_format_layouts[linear_fmt].bs) &&
           isl_format_rgb_to_rgbx(linear_fmt) == ISL_FORMAT_UNSUPPORTED) {
          tiled &= ~VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT &
                   ~VK_FORMAT_FEATURE_BLIT_DST_BIT;
