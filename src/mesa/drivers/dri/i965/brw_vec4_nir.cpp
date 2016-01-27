@@ -1086,15 +1086,29 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
-   case nir_op_fsin:
-      inst = emit_math(SHADER_OPCODE_SIN, dst, op[0]);
-      inst->saturate = instr->dest.saturate;
+   case nir_op_fsin: {
+      src_reg tmp = src_reg(this, glsl_type::vec4_type);
+      inst = emit_math(SHADER_OPCODE_SIN, dst_reg(tmp), op[0]);
+      if (instr->dest.saturate) {
+         inst->dst = dst;
+         inst->saturate = true;
+      } else {
+         emit(MUL(dst, tmp, brw_imm_f(0.99997)));
+      }
       break;
+   }
 
-   case nir_op_fcos:
-      inst = emit_math(SHADER_OPCODE_COS, dst, op[0]);
-      inst->saturate = instr->dest.saturate;
+   case nir_op_fcos: {
+      src_reg tmp = src_reg(this, glsl_type::vec4_type);
+      inst = emit_math(SHADER_OPCODE_COS, dst_reg(tmp), op[0]);
+      if (instr->dest.saturate) {
+         inst->dst = dst;
+         inst->saturate = true;
+      } else {
+         emit(MUL(dst, tmp, brw_imm_f(0.99997)));
+      }
       break;
+   }
 
    case nir_op_idiv:
    case nir_op_udiv:
