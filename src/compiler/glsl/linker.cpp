@@ -4149,13 +4149,11 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    unsigned min_version = UINT_MAX;
    unsigned max_version = 0;
-   const bool is_es_prog =
-      (prog->NumShaders > 0 && prog->Shaders[0]->IsES) ? true : false;
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       min_version = MIN2(min_version, prog->Shaders[i]->Version);
       max_version = MAX2(max_version, prog->Shaders[i]->Version);
 
-      if (prog->Shaders[i]->IsES != is_es_prog) {
+      if (prog->Shaders[i]->IsES != prog->Shaders[0]->IsES) {
 	 linker_error(prog, "all shaders must use same shading "
 		      "language version\n");
 	 goto done;
@@ -4173,14 +4171,14 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    /* In desktop GLSL, different shader versions may be linked together.  In
     * GLSL ES, all shader versions must be the same.
     */
-   if (is_es_prog && min_version != max_version) {
+   if (prog->Shaders[0]->IsES && min_version != max_version) {
       linker_error(prog, "all shaders must use same shading "
 		   "language version\n");
       goto done;
    }
 
    prog->Version = max_version;
-   prog->IsES = is_es_prog;
+   prog->IsES = prog->Shaders[0]->IsES;
 
    /* Some shaders have to be linked with some other shaders present.
     */
@@ -4363,7 +4361,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
     *
     * This rule also applies to GLSL ES 3.00.
     */
-   if (max_version >= (is_es_prog ? 300 : 130)) {
+   if (max_version >= (prog->IsES ? 300 : 130)) {
       struct gl_shader *sh = prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
       if (sh) {
 	 lower_discard_flow(sh->ir);
