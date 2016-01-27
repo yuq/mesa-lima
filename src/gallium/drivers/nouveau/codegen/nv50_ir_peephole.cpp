@@ -3187,10 +3187,10 @@ DeadCodeElim::buryAll(Program *prog)
 bool
 DeadCodeElim::visit(BasicBlock *bb)
 {
-   Instruction *next;
+   Instruction *prev;
 
-   for (Instruction *i = bb->getFirst(); i; i = next) {
-      next = i->next;
+   for (Instruction *i = bb->getExit(); i; i = prev) {
+      prev = i->prev;
       if (i->isDead()) {
          ++deadCount;
          delete_Instruction(prog, i);
