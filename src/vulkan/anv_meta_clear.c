@@ -303,18 +303,27 @@ create_color_pipeline(struct anv_device *device, uint32_t frag_output,
 }
 
 static void
-free_color_pipelines(struct anv_device *device)
+destroy_pipeline(struct anv_device *device, struct anv_pipeline *pipeline)
 {
-   for (uint32_t i = 0;
-        i < ARRAY_SIZE(device->meta_state.clear.color_pipelines); ++i) {
-      if (device->meta_state.clear.color_pipelines[i] == NULL)
-         continue;
+   if (!pipeline)
+      return;
 
-      ANV_CALL(DestroyPipeline)(
-         anv_device_to_handle(device),
-         anv_pipeline_to_handle(device->meta_state.clear.color_pipelines[i]),
-         &device->meta_state.alloc);
+   ANV_CALL(DestroyPipeline)(anv_device_to_handle(device),
+                             anv_pipeline_to_handle(pipeline),
+                             &device->meta_state.alloc);
+}
+
+void
+anv_device_finish_meta_clear_state(struct anv_device *device)
+{
+   for (uint32_t j = 0;
+        j < ARRAY_SIZE(device->meta_state.clear.color_pipelines); ++j) {
+      destroy_pipeline(device, device->meta_state.clear.color_pipelines[j]);
    }
+
+   destroy_pipeline(device, device->meta_state.clear.depth_only_pipeline);
+   destroy_pipeline(device, device->meta_state.clear.stencil_only_pipeline);
+   destroy_pipeline(device, device->meta_state.clear.depthstencil_pipeline);
 }
 
 static VkResult
@@ -324,20 +333,14 @@ init_color_pipelines(struct anv_device *device)
    struct anv_pipeline **pipelines = device->meta_state.clear.color_pipelines;
    uint32_t n = ARRAY_SIZE(device->meta_state.clear.color_pipelines);
 
-   zero(device->meta_state.clear.color_pipelines);
-
    for (uint32_t i = 0; i < n; ++i) {
       result = create_color_pipeline(device, i, &pipelines[i]);
-      if (result < 0)
-         goto fail;
+      if (result != VK_SUCCESS)
+         return result;
+
    }
 
    return VK_SUCCESS;
-
-fail:
-   free_color_pipelines(device);
-
-   return result;
 }
 
 static void
@@ -638,13 +641,13 @@ init_depthstencil_pipelines(struct anv_device *device)
       create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_DEPTH_BIT,
                                    &state->clear.depth_only_pipeline);
    if (result != VK_SUCCESS)
-      goto fail;
+      return result;
 
    result =
       create_depthstencil_pipeline(device, VK_IMAGE_ASPECT_STENCIL_BIT,
                                    &state->clear.stencil_only_pipeline);
    if (result != VK_SUCCESS)
-      goto fail_depth_only;
+      return result;
 
    result =
       create_depthstencil_pipeline(device,
@@ -652,19 +655,8 @@ init_depthstencil_pipelines(struct anv_device *device)
                                    VK_IMAGE_ASPECT_STENCIL_BIT,
                                    &state->clear.depthstencil_pipeline);
    if (result != VK_SUCCESS)
-      goto fail_stencil_only;
+      return result;
 
-   return result;
-
- fail_stencil_only:
-   anv_DestroyPipeline(anv_device_to_handle(device),
-                       anv_pipeline_to_handle(state->clear.stencil_only_pipeline),
-                       NULL);
- fail_depth_only:
-   anv_DestroyPipeline(anv_device_to_handle(device),
-                       anv_pipeline_to_handle(state->clear.depth_only_pipeline),
-                       NULL);
- fail:
    return result;
 }
 
@@ -673,35 +665,21 @@ anv_device_init_meta_clear_state(struct anv_device *device)
 {
    VkResult result;
 
+   zero(device->meta_state.clear);
+
    result = init_color_pipelines(device);
    if (result != VK_SUCCESS)
-      return result;
+      goto fail;
 
    result = init_depthstencil_pipelines(device);
-   if (result != VK_SUCCESS) {
-      free_color_pipelines(device);
-      return result;
-   }
+   if (result != VK_SUCCESS)
+      goto fail;
 
    return VK_SUCCESS;
-}
 
-void
-anv_device_finish_meta_clear_state(struct anv_device *device)
-{
-   VkDevice device_h = anv_device_to_handle(device);
-
-   free_color_pipelines(device);
-
-   ANV_CALL(DestroyPipeline)(device_h,
-      anv_pipeline_to_handle(device->meta_state.clear.depth_only_pipeline),
-      NULL);
-   ANV_CALL(DestroyPipeline)(device_h,
-      anv_pipeline_to_handle(device->meta_state.clear.stencil_only_pipeline),
-      NULL);
-   ANV_CALL(DestroyPipeline)(device_h,
-      anv_pipeline_to_handle(device->meta_state.clear.depthstencil_pipeline),
-      NULL);
+fail:
+   anv_device_finish_meta_clear_state(device);
+   return result;
 }
 
 /**
