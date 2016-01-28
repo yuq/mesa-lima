@@ -164,7 +164,7 @@ build_nir_fs(uint32_t num_samples)
 }
 
 static VkResult
-create_pass(struct anv_device *device, VkRenderPass *pass_h)
+create_pass(struct anv_device *device)
 {
    VkResult result;
    VkDevice device_h = anv_device_to_handle(device);
@@ -201,7 +201,7 @@ create_pass(struct anv_device *device, VkRenderPass *pass_h)
          .dependencyCount = 0,
       },
       alloc,
-      pass_h);
+      &device->meta_state.resolve.pass);
 
    return result;
 }
@@ -209,12 +209,11 @@ create_pass(struct anv_device *device, VkRenderPass *pass_h)
 static VkResult
 create_pipeline(struct anv_device *device,
                 uint32_t num_samples,
-                VkShaderModule vs_module_h,
-                VkRenderPass pass_h,
-                VkPipeline *pipeline_h)
+                VkShaderModule vs_module_h)
 {
    VkResult result;
    VkDevice device_h = anv_device_to_handle(device);
+   uint32_t samples_log2 = ffs(num_samples) - 1;
 
    struct anv_shader_module fs_module = {
       .nir = build_nir_fs(num_samples),
@@ -223,7 +222,7 @@ create_pipeline(struct anv_device *device,
    if (!fs_module.nir) {
       /* XXX: Need more accurate error */
       result = VK_ERROR_OUT_OF_HOST_MEMORY;
-      goto fail;
+      goto cleanup;
    }
 
    result = anv_graphics_pipeline_create(device_h,
@@ -328,7 +327,7 @@ create_pipeline(struct anv_device *device,
             },
          },
          .layout = device->meta_state.resolve.pipeline_layout,
-         .renderPass = pass_h,
+         .renderPass = device->meta_state.resolve.pass,
          .subpass = 0,
       },
       &(struct anv_graphics_pipeline_create_info) {
@@ -340,14 +339,11 @@ create_pipeline(struct anv_device *device,
          .use_rectlist = true
       },
       &device->meta_state.alloc,
-      pipeline_h);
+      &device->meta_state.resolve.pipelines[samples_log2]);
    if (result != VK_SUCCESS)
-      goto fail;
+      goto cleanup;
 
    goto cleanup;
-
-fail:
-   *pipeline_h = VK_NULL_HANDLE;
 
 cleanup:
    ralloc_free(fs_module.nir);
@@ -435,11 +431,9 @@ anv_device_init_meta_resolve_state(struct anv_device *device)
    if (res != VK_SUCCESS)
       goto fail;
 
-
-   res = create_pass(device, &device->meta_state.resolve.pass);
+   res = create_pass(device);
    if (res != VK_SUCCESS)
       goto fail;
-
 
    for (uint32_t i = 0;
         i < ARRAY_SIZE(device->meta_state.resolve.pipelines); ++i) {
@@ -448,9 +442,7 @@ anv_device_init_meta_resolve_state(struct anv_device *device)
       if (!(sample_count_mask & sample_count))
          continue;
 
-      res = create_pipeline(device, sample_count, vs_module_h,
-                            device->meta_state.resolve.pass,
-                            &device->meta_state.resolve.pipelines[i]);
+      res = create_pipeline(device, sample_count, vs_module_h);
       if (res != VK_SUCCESS)
          goto fail;
    }
