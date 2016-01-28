@@ -75,6 +75,7 @@ extern "C" {
 #define MAX_PUSH_CONSTANTS_SIZE 128
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_IMAGES 8
+#define MAX_SAMPLES_LOG2 4 /* SKL supports 16 samples */
 
 #define ICD_LOADER_MAGIC   0x01CDC0DE
 
@@ -581,7 +582,7 @@ struct anv_meta_state {
       struct anv_pipeline *depth_only_pipeline;
       struct anv_pipeline *stencil_only_pipeline;
       struct anv_pipeline *depthstencil_pipeline;
-   } clear[4];
+   } clear[1 + MAX_SAMPLES_LOG2];
 
    struct {
       VkRenderPass render_pass;
@@ -603,7 +604,7 @@ struct anv_meta_state {
       /**
        * Use pipeline `i` for images with `2^i` samples.
        */
-      VkPipeline                                pipelines[4];
+      VkPipeline                                pipelines[1 + MAX_SAMPLES_LOG2];
 
       VkRenderPass                              pass;
       VkPipelineLayout                          pipeline_layout;
