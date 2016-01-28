@@ -37,6 +37,25 @@ struct vertex_attrs {
    float tex_position[2];
 };
 
+static void
+meta_resolve_save(struct anv_meta_saved_state *saved_state,
+                  struct anv_cmd_buffer *cmd_buffer)
+{
+   anv_meta_save(saved_state, cmd_buffer,
+                 (1 << VK_DYNAMIC_STATE_VIEWPORT) |
+                 (1 << VK_DYNAMIC_STATE_SCISSOR));
+
+   cmd_buffer->state.dynamic.viewport.count = 0;
+   cmd_buffer->state.dynamic.scissor.count = 0;
+}
+
+static void
+meta_resolve_restore(struct anv_meta_saved_state *saved_state,
+                     struct anv_cmd_buffer *cmd_buffer)
+{
+   anv_meta_restore(saved_state, cmd_buffer);
+}
+
 static nir_shader *
 build_nir_vs(void)
 {
@@ -643,7 +662,7 @@ void anv_CmdResolveImage(
    struct anv_meta_saved_state state;
    VkDevice device_h = anv_device_to_handle(device);
 
-   anv_meta_save(&state, cmd_buffer, 0);
+   meta_resolve_save(&state, cmd_buffer);
 
    assert(src_image->samples > 1);
    assert(dest_image->samples == 1);
@@ -780,5 +799,5 @@ void anv_CmdResolveImage(
       }
    }
 
-   anv_meta_restore(&state, cmd_buffer);
+   meta_resolve_restore(&state, cmd_buffer);
 }
