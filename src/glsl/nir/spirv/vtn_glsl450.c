@@ -228,7 +228,7 @@ static nir_ssa_def *
 build_acos(nir_builder *b, nir_ssa_def *x)
 {
    /*
-    * acos(x) = sign(x) * sqrt(1 - |x|) * (pi / 4 - 1 + |x| * (0.086566724 + |x| * -0.03102955))
+    * poly(x) = sign(x) * sqrt(1 - |x|) * (pi / 2 + |x| * (pi / 4 - 1 + |x| * (0.08132463 + |x| * -0.02363318)))
     */
    nir_ssa_def *abs_x = nir_fabs(b, x);
    nir_ssa_def *poly = nir_fmul(b, nir_fsqrt(b, nir_fsub(b, nir_imm_float(b, 1.0f), abs_x)),
@@ -236,9 +236,9 @@ build_acos(nir_builder *b, nir_ssa_def *x)
                                          nir_fmul(b, abs_x,
                                                   nir_fadd(b, nir_imm_float(b, M_PI_4f - 1.0f),
                                                            nir_fmul(b, abs_x,
-                                                                    nir_fadd(b, nir_imm_float(b, 0.086566724f),
+                                                                    nir_fadd(b, nir_imm_float(b, 0.08132463f),
                                                                              nir_fmul(b, abs_x,
-                                                                                      nir_imm_float(b, -0.03102955f))))))));
+                                                                                      nir_imm_float(b, -0.02363318f))))))));
    return nir_bcsel(b, nir_flt(b, x, nir_imm_float(b, 0)),
                        nir_fsub(b, nir_imm_float(b, M_PI), poly),
                        poly);
