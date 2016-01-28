@@ -420,6 +420,15 @@ brw_try_draw_prims(struct gl_context *ctx,
    if (ctx->NewState)
       _mesa_update_state(ctx);
 
+   /* We have to validate the textures *before* checking for fallbacks;
+    * otherwise, the software fallback won't be able to rely on the
+    * texture state, the firstLevel and lastLevel fields won't be
+    * set in the intel texture object (they'll both be 0), and the
+    * software fallback will segfault if it attempts to access any
+    * texture level other than level 0.
+    */
+   brw_validate_textures(brw);
+
    /* Find the highest sampler unit used by each shader program.  A bit-count
     * won't work since ARB programs use the texture unit number as the sampler
     * index.
@@ -434,15 +443,6 @@ brw_try_draw_prims(struct gl_context *ctx,
       _mesa_fls(ctx->TessCtrlProgram._Current->Base.SamplersUsed) : 0;
    brw->vs.base.sampler_count =
       _mesa_fls(ctx->VertexProgram._Current->Base.SamplersUsed);
-
-   /* We have to validate the textures *before* checking for fallbacks;
-    * otherwise, the software fallback won't be able to rely on the
-    * texture state, the firstLevel and lastLevel fields won't be
-    * set in the intel texture object (they'll both be 0), and the
-    * software fallback will segfault if it attempts to access any
-    * texture level other than level 0.
-    */
-   brw_validate_textures(brw);
 
    intel_prepare_render(brw);
 
