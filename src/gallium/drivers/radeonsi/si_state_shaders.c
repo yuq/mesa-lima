@@ -916,7 +916,8 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	}
 
 	/* Pre-compilation. */
-	if (sscreen->b.debug_flags & DBG_PRECOMPILE) {
+	if (sel->type == PIPE_SHADER_GEOMETRY ||
+	    sscreen->b.debug_flags & DBG_PRECOMPILE) {
 		struct si_shader_ctx_state state = {sel};
 		union si_shader_key key;
 
