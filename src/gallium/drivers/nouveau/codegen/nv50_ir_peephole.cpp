@@ -1635,6 +1635,9 @@ AlgebraicOpt::tryADDToMADOrSAD(Instruction *add, operation toOp)
    if (src->getUniqueInsn() && src->getUniqueInsn()->bb != add->bb)
       return false;
 
+   if (src->getInsn()->saturate)
+      return false;
+
    if (src->getInsn()->postFactor)
       return false;
    if (toOp == OP_SAD) {
