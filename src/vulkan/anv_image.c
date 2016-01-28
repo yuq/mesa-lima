@@ -158,6 +158,12 @@ anv_image_get_full_usage(const VkImageCreateInfo *info)
 {
    VkImageUsageFlags usage = info->usage;
 
+   if (info->samples > 1 &&
+       (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
+      /* Meta will resolve the image by binding it as a texture. */
+      usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+   }
+
    if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
       /* Meta will transfer from the image by binding it as a texture. */
       usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
