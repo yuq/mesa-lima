@@ -136,7 +136,7 @@ NineVolume9_dtor( struct NineVolume9 *This )
         NineVolume9_UnlockBox(This);
 
     if (This->data)
-           FREE(This->data);
+           align_free(This->data);
 
     pipe_resource_reference(&This->resource, NULL);
 

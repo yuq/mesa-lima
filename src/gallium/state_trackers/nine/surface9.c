@@ -165,7 +165,7 @@ NineSurface9_dtor( struct NineSurface9 *This )
 
     /* Release system memory when we have to manage it (no parent) */
     if (!This->base.base.container && This->data)
-        FREE(This->data);
+        align_free(This->data);
     NineResource9_dtor(&This->base);
 }
 

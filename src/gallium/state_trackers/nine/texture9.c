@@ -235,7 +235,7 @@ NineTexture9_dtor( struct NineTexture9 *This )
     }
 
     if (This->managed_buffer)
-        FREE(This->managed_buffer);
+        align_free(This->managed_buffer);
 
     NineBaseTexture9_dtor(&This->base);
 }
