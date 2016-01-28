@@ -565,7 +565,7 @@ struct anv_meta_state {
    VkAllocationCallbacks alloc;
 
    /**
-    * Use array element `i` to clear an image with `log2(i)` samples.
+    * Use array element `i` for images with `2^i` samples.
     */
    struct {
       /**
@@ -601,7 +601,7 @@ struct anv_meta_state {
 
    struct {
       /**
-       * Use pipeline `i` to resolve an image with `log2(i)` samples.
+       * Use pipeline `i` for images with `2^i` samples.
        */
       VkPipeline                                pipelines[4];
 
