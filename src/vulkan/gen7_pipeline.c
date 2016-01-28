@@ -381,64 +381,70 @@ genX(graphics_pipeline_create)(
          .GSEnable                              = true);
    }
 
-   const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
-   if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
-       wm_prog_data->urb_setup[VARYING_SLOT_BFC1] != -1)
-      anv_finishme("two-sided color needs sbe swizzling setup");
-   if (wm_prog_data->urb_setup[VARYING_SLOT_PRIMITIVE_ID] != -1)
-      anv_finishme("primitive_id needs sbe swizzling setup");
+   if (pipeline->ps_ksp0 == NO_KERNEL) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS));
+      anv_finishme("gen7 alternative to "
+                   "3DSTATE_PS_EXTRA.PixelShaderValid = false");
+   } else {
+      const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
+      if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
+          wm_prog_data->urb_setup[VARYING_SLOT_BFC1] != -1)
+         anv_finishme("two-sided color needs sbe swizzling setup");
+      if (wm_prog_data->urb_setup[VARYING_SLOT_PRIMITIVE_ID] != -1)
+         anv_finishme("primitive_id needs sbe swizzling setup");
 
-   /* FIXME: generated header doesn't emit attr swizzle fields */
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_SBE,
-      .NumberofSFOutputAttributes               = pipeline->wm_prog_data.num_varying_inputs,
-      .VertexURBEntryReadLength                 = urb_length,
-      .VertexURBEntryReadOffset                 = urb_offset,
-      .PointSpriteTextureCoordinateOrigin       = UPPERLEFT);
+      /* FIXME: generated header doesn't emit attr swizzle fields */
+      anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_SBE,
+                     .NumberofSFOutputAttributes               = pipeline->wm_prog_data.num_varying_inputs,
+                     .VertexURBEntryReadLength                 = urb_length,
+                     .VertexURBEntryReadOffset                 = urb_offset,
+                     .PointSpriteTextureCoordinateOrigin       = UPPERLEFT);
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
-      .KernelStartPointer0                      = pipeline->ps_ksp0,
-      .ScratchSpaceBasePointer                  = pipeline->scratch_start[MESA_SHADER_FRAGMENT],
-      .PerThreadScratchSpace                    = scratch_space(&wm_prog_data->base),
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
+                     .KernelStartPointer0                      = pipeline->ps_ksp0,
+                     .ScratchSpaceBasePointer                  = pipeline->scratch_start[MESA_SHADER_FRAGMENT],
+                     .PerThreadScratchSpace                    = scratch_space(&wm_prog_data->base),
                   
-      .MaximumNumberofThreads                   = device->info.max_wm_threads - 1,
-      .PushConstantEnable                       = wm_prog_data->base.nr_params > 0,
-      .AttributeEnable                          = wm_prog_data->num_varying_inputs > 0,
-      .oMaskPresenttoRenderTarget               = wm_prog_data->uses_omask,
+                     .MaximumNumberofThreads                   = device->info.max_wm_threads - 1,
+                     .PushConstantEnable                       = wm_prog_data->base.nr_params > 0,
+                     .AttributeEnable                          = wm_prog_data->num_varying_inputs > 0,
+                     .oMaskPresenttoRenderTarget               = wm_prog_data->uses_omask,
 
-      .RenderTargetFastClearEnable              = false,
-      .DualSourceBlendEnable                    = false,
-      .RenderTargetResolveEnable                = false,
+                     .RenderTargetFastClearEnable              = false,
+                     .DualSourceBlendEnable                    = false,
+                     .RenderTargetResolveEnable                = false,
 
-      .PositionXYOffsetSelect                   = wm_prog_data->uses_pos_offset ?
-         POSOFFSET_SAMPLE : POSOFFSET_NONE,
+                     .PositionXYOffsetSelect                   = wm_prog_data->uses_pos_offset ?
+                     POSOFFSET_SAMPLE : POSOFFSET_NONE,
 
-      ._32PixelDispatchEnable                   = false,
-      ._16PixelDispatchEnable                   = pipeline->ps_simd16 != NO_KERNEL,
-      ._8PixelDispatchEnable                    = pipeline->ps_simd8 != NO_KERNEL,
+                     ._32PixelDispatchEnable                   = false,
+                     ._16PixelDispatchEnable                   = pipeline->ps_simd16 != NO_KERNEL,
+                     ._8PixelDispatchEnable                    = pipeline->ps_simd8 != NO_KERNEL,
 
-      .DispatchGRFStartRegisterforConstantSetupData0 = pipeline->ps_grf_start0,
-      .DispatchGRFStartRegisterforConstantSetupData1 = 0,
-      .DispatchGRFStartRegisterforConstantSetupData2 = pipeline->ps_grf_start2,
+                     .DispatchGRFStartRegisterforConstantSetupData0 = pipeline->ps_grf_start0,
+                     .DispatchGRFStartRegisterforConstantSetupData1 = 0,
+                     .DispatchGRFStartRegisterforConstantSetupData2 = pipeline->ps_grf_start2,
 
 #if 0
-   /* Haswell requires the sample mask to be set in this packet as well as
-    * in 3DSTATE_SAMPLE_MASK; the values should match. */
-   /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
+                     /* Haswell requires the sample mask to be set in this packet as well as
+                      * in 3DSTATE_SAMPLE_MASK; the values should match. */
+                     /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
 #endif
 
-      .KernelStartPointer1                      = 0,
-      .KernelStartPointer2                      = pipeline->ps_ksp2);
+                     .KernelStartPointer1                      = 0,
+                     .KernelStartPointer2                      = pipeline->ps_ksp2);
 
-   /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_WM,
-      .StatisticsEnable                         = true,
-      .ThreadDispatchEnable                     = true,
-      .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */
-      .LineAntialiasingRegionWidth              = 1, /* 1.0 pixels */
-      .EarlyDepthStencilControl                 = EDSC_NORMAL,
-      .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT,
-      .PixelShaderComputedDepthMode             = wm_prog_data->computed_depth_mode,
-      .BarycentricInterpolationMode             = wm_prog_data->barycentric_interp_modes);
+      /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
+      anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_WM,
+                     .StatisticsEnable                         = true,
+                     .ThreadDispatchEnable                     = true,
+                     .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */
+                     .LineAntialiasingRegionWidth              = 1, /* 1.0 pixels */
+                     .EarlyDepthStencilControl                 = EDSC_NORMAL,
+                     .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT,
+                     .PixelShaderComputedDepthMode             = wm_prog_data->computed_depth_mode,
+                     .BarycentricInterpolationMode             = wm_prog_data->barycentric_interp_modes);
+   }
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 
