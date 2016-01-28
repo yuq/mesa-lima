@@ -2097,8 +2097,10 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 	color_pitch = S_028C64_TILE_MAX(pitch);
 
+	/* Intensity is implemented as Red, so treat it that way. */
 	color_attrib = S_028C74_TILE_MODE_INDEX(tile_mode_index) |
-		S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1);
+		S_028C74_FORCE_DST_ALPHA_1(desc->swizzle[3] == UTIL_FORMAT_SWIZZLE_1 ||
+					   util_format_is_intensity(surf->base.format));
 
 	if (rtex->resource.b.b.nr_samples > 1) {
 		unsigned log_samples = util_logbase2(rtex->resource.b.b.nr_samples);
