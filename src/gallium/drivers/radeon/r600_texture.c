@@ -533,6 +533,10 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 	    rscreen->info.drm_major == 2 && rscreen->info.drm_minor < 38)
 		return 0;
 
+	/* Overalign HTILE on Stoney to fix piglit/depthstencil-render-miplevels 585. */
+	if (rscreen->family == CHIP_STONEY)
+		num_pipes = 4;
+
 	switch (num_pipes) {
 	case 1:
 		cl_width = 32;
