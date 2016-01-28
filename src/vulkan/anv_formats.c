@@ -318,6 +318,9 @@ get_image_format_properties(int gen, enum isl_format base,
    if (info->sampling <= gen) {
       flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
                VK_FORMAT_FEATURE_BLIT_SRC_BIT;
+
+      if (info->filtering <= gen)
+         flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
    }
 
    /* We can render to swizzled formats.  However, if the alpha channel is
