@@ -358,7 +358,7 @@ anv_device_finish_meta_resolve_state(struct anv_device *device)
    for (uint32_t i = 0; i < ARRAY_SIZE(state->resolve.pipelines); ++i) {
       VkPipeline pipeline_h = state->resolve.pipelines[i];
 
-      if (!pipeline_h) {
+      if (pipeline_h) {
          ANV_CALL(DestroyPipeline)(device_h, pipeline_h, alloc);
       }
    }
