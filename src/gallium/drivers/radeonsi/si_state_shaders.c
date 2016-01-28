@@ -824,6 +824,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 				       const struct pipe_shader_state *state)
 {
 	struct si_screen *sscreen = (struct si_screen *)ctx->screen;
+	struct si_context *sctx = (struct si_context*)ctx;
 	struct si_shader_selector *sel = CALLOC_STRUCT(si_shader_selector);
 	int i;
 
@@ -931,6 +932,24 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		break;
 	}
 
+	/* Compile the main shader part for use with a prolog and/or epilog. */
+	if (sel->type != PIPE_SHADER_GEOMETRY &&
+	    !sscreen->use_monolithic_shaders) {
+		struct si_shader *shader = CALLOC_STRUCT(si_shader);
+
+		if (!shader)
+			goto error;
+
+		shader->selector = sel;
+
+		if (si_compile_tgsi_shader(sscreen, sctx->tm, shader, false,
+					   &sctx->b.debug) != 0) {
+			FREE(shader);
+			goto error;
+		}
+		sel->main_shader_part = shader;
+	}
+
 	/* Pre-compilation. */
 	if (sel->type == PIPE_SHADER_GEOMETRY ||
 	    sscreen->b.debug_flags & DBG_PRECOMPILE) {
@@ -955,16 +974,18 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			break;
 		}
 
-		if (si_shader_select_with_key(ctx, &state, &key)) {
-			fprintf(stderr, "radeonsi: can't create a shader\n");
-			tgsi_free_tokens(sel->tokens);
-			FREE(sel);
-			return NULL;
-		}
+		if (si_shader_select_with_key(ctx, &state, &key))
+			goto error;
 	}
 
 	pipe_mutex_init(sel->mutex);
 	return sel;
+
+error:
+	fprintf(stderr, "radeonsi: can't create a shader\n");
+	tgsi_free_tokens(sel->tokens);
+	FREE(sel);
+	return NULL;
 }
 
 /**
@@ -1128,6 +1149,9 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 		si_delete_shader(sctx, p);
 		p = c;
 	}
+
+	if (sel->main_shader_part)
+		si_delete_shader(sctx, sel->main_shader_part);
 
 	pipe_mutex_destroy(sel->mutex);
 	free(sel->tokens);

@@ -181,6 +181,11 @@ struct si_shader_selector {
 	struct si_shader	*first_variant; /* immutable after the first variant */
 	struct si_shader	*last_variant; /* mutable */
 
+	/* The compiled TGSI shader expecting a prolog and/or epilog (not
+	 * uploaded to a buffer).
+	 */
+	struct si_shader	*main_shader_part;
+
 	struct tgsi_token       *tokens;
 	struct pipe_stream_output_info  so;
 	struct tgsi_shader_info		info;
@@ -347,6 +352,7 @@ struct si_shader {
 	struct r600_resource		*scratch_bo;
 	union si_shader_key		key;
 	struct radeon_shader_binary	binary;
+	bool				is_binary_shared;
 	struct si_shader_config		config;
 
 	ubyte			num_input_sgprs;
@@ -399,6 +405,11 @@ static inline bool si_vs_exports_prim_id(struct si_shader *shader)
 }
 
 /* si_shader.c */
+int si_compile_tgsi_shader(struct si_screen *sscreen,
+			   LLVMTargetMachineRef tm,
+			   struct si_shader *shader,
+			   bool is_monolithic,
+			   struct pipe_debug_callback *debug);
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug);

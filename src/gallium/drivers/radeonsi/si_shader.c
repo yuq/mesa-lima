@@ -4815,11 +4815,11 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_MIN].intr_name = "llvm.minnum.f32";
 }
 
-static int si_compile_tgsi_shader(struct si_screen *sscreen,
-				  LLVMTargetMachineRef tm,
-				  struct si_shader *shader,
-				  bool is_monolithic,
-				  struct pipe_debug_callback *debug)
+int si_compile_tgsi_shader(struct si_screen *sscreen,
+			   LLVMTargetMachineRef tm,
+			   struct si_shader *shader,
+			   bool is_monolithic,
+			   struct pipe_debug_callback *debug)
 {
 	struct si_shader_selector *sel = shader->selector;
 	struct si_shader_context ctx;
@@ -5854,15 +5854,48 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug)
 {
+	struct si_shader *mainp = shader->selector->main_shader_part;
 	int r;
 
-	/* Compile TGSI. */
-	r = si_compile_tgsi_shader(sscreen, tm, shader,
-				   sscreen->use_monolithic_shaders, debug);
-	if (r)
-		return r;
+	/* LS and ES are always compiled on demand. */
+	if (!mainp ||
+	    (shader->selector->type == PIPE_SHADER_VERTEX &&
+	     (shader->key.vs.as_es || shader->key.vs.as_ls)) ||
+	    (shader->selector->type == PIPE_SHADER_TESS_EVAL &&
+	     shader->key.tes.as_es)) {
+		/* Monolithic shader (compiled as a whole, has many variants,
+		 * may take a long time to compile).
+		 */
+		r = si_compile_tgsi_shader(sscreen, tm, shader, true, debug);
+		if (r)
+			return r;
+	} else {
+		/* The shader consists of 2-3 parts:
+		 *
+		 * - the middle part is the user shader, it has 1 variant only
+		 *   and it was compiled during the creation of the shader
+		 *   selector
+		 * - the prolog part is inserted at the beginning
+		 * - the epilog part is inserted at the end
+		 *
+		 * The prolog and epilog have many (but simple) variants.
+		 */
 
-	if (!sscreen->use_monolithic_shaders) {
+		/* Copy the compiled TGSI shader data over. */
+		shader->is_binary_shared = true;
+		shader->binary = mainp->binary;
+		shader->config = mainp->config;
+		shader->num_input_sgprs = mainp->num_input_sgprs;
+		shader->num_input_vgprs = mainp->num_input_vgprs;
+		shader->face_vgpr_index = mainp->face_vgpr_index;
+		memcpy(shader->vs_output_param_offset,
+		       mainp->vs_output_param_offset,
+		       sizeof(mainp->vs_output_param_offset));
+		shader->uses_instanceid = mainp->uses_instanceid;
+		shader->nr_pos_exports = mainp->nr_pos_exports;
+		shader->nr_param_exports = mainp->nr_param_exports;
+
+		/* Select prologs and/or epilogs. */
 		switch (shader->selector->type) {
 		case PIPE_SHADER_VERTEX:
 			if (!si_shader_select_vs_parts(sscreen, tm, shader, debug))
@@ -5927,5 +5960,6 @@ void si_shader_destroy(struct si_shader *shader)
 
 	r600_resource_reference(&shader->bo, NULL);
 
-	radeon_shader_binary_clean(&shader->binary);
+	if (!shader->is_binary_shared)
+		radeon_shader_binary_clean(&shader->binary);
 }
