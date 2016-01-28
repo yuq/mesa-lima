@@ -972,6 +972,7 @@ void genX(CmdNextSubpass)(
 
    assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
+   anv_cmd_buffer_resolve_subpass(cmd_buffer);
    genX(cmd_buffer_set_subpass)(cmd_buffer, cmd_buffer->state.subpass + 1);
    anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
@@ -980,6 +981,8 @@ void genX(CmdEndRenderPass)(
     VkCommandBuffer                             commandBuffer)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+
+   anv_cmd_buffer_resolve_subpass(cmd_buffer);
 
    /* Emit a flushing pipe control at the end of a pass.  This is kind of a
     * hack but it ensures that render targets always actually get written.

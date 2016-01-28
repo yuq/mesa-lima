@@ -802,3 +802,64 @@ void anv_CmdResolveImage(
 
    meta_resolve_restore(&state, cmd_buffer);
 }
+
+/**
+ * Emit any needed resolves for the current subpass.
+ */
+void
+anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+   struct anv_subpass *subpass = cmd_buffer->state.subpass;
+   struct anv_meta_saved_state saved_state;
+
+   /* FINISHME(perf): Skip clears for resolve attachments.
+    *
+    * From the Vulkan 1.0 spec:
+    *
+    *    If the first use of an attachment in a render pass is as a resolve
+    *    attachment, then the loadOp is effectively ignored as the resolve is
+    *    guaranteed to overwrite all pixels in the render area.
+    */
+
+   if (!subpass->has_resolve)
+      return;
+
+   meta_resolve_save(&saved_state, cmd_buffer);
+
+   for (uint32_t i = 0; i < subpass->color_count; ++i) {
+      uint32_t src_att = subpass->color_attachments[i];
+      uint32_t dest_att = subpass->resolve_attachments[i];
+
+      if (dest_att == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      struct anv_image_view *src_iview = fb->attachments[src_att];
+      struct anv_image_view *dest_iview = fb->attachments[dest_att];
+
+      struct anv_subpass resolve_subpass = {
+         .color_count = 1,
+         .color_attachments = (uint32_t[]) { dest_att },
+         .depth_stencil_attachment = VK_ATTACHMENT_UNUSED,
+      };
+
+      anv_cmd_buffer_set_subpass(cmd_buffer, &resolve_subpass);
+
+      /* Subpass resolves must respect the render area. We can ignore the
+       * render area here because vkCmdBeginRenderPass set the render area
+       * with 3DSTATE_DRAWING_RECTANGLE.
+       *
+       * XXX(chadv): Does the hardware really respect
+       * 3DSTATE_DRAWING_RECTANGLE when draing a 3DPRIM_RECTLIST?
+       */
+      emit_resolve(cmd_buffer,
+          src_iview,
+          &(VkOffset2D) { 0, 0 },
+          dest_iview,
+          &(VkOffset2D) { 0, 0 },
+          &(VkExtent2D) { fb->width, fb->height });
+   }
+
+   cmd_buffer->state.subpass = subpass;
+   meta_resolve_restore(&saved_state, cmd_buffer);
+}
