@@ -56,6 +56,17 @@ meta_resolve_restore(struct anv_meta_saved_state *saved_state,
    anv_meta_restore(saved_state, cmd_buffer);
 }
 
+static VkPipeline *                                                                                          
+get_pipeline_h(struct anv_device *device, uint32_t samples)
+{                                                                                                            
+   uint32_t i = ffs(samples) - 2; /* log2(samples) - 1 */                                                        
+
+   assert(samples >= 2);
+   assert(i < ARRAY_SIZE(device->meta_state.resolve.pipelines));                                             
+
+   return &device->meta_state.resolve.pipelines[i];
+}                                                                                                            
+
 static nir_shader *
 build_nir_vs(void)
 {
@@ -213,7 +224,6 @@ create_pipeline(struct anv_device *device,
 {
    VkResult result;
    VkDevice device_h = anv_device_to_handle(device);
-   uint32_t samples_log2 = ffs(num_samples) - 1;
 
    struct anv_shader_module fs_module = {
       .nir = build_nir_fs(num_samples),
@@ -339,7 +349,7 @@ create_pipeline(struct anv_device *device,
          .use_rectlist = true
       },
       &device->meta_state.alloc,
-      &device->meta_state.resolve.pipelines[samples_log2]);
+      get_pipeline_h(device, num_samples));
    if (result != VK_SUCCESS)
       goto cleanup;
 
@@ -437,8 +447,8 @@ anv_device_init_meta_resolve_state(struct anv_device *device)
 
    for (uint32_t i = 0;
         i < ARRAY_SIZE(device->meta_state.resolve.pipelines); ++i) {
-      uint32_t sample_count = 1 << i;
 
+      uint32_t sample_count = 1 << (1 + i);
       if (!(sample_count_mask & sample_count))
          continue;
 
@@ -472,7 +482,6 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_image *src_image = src_iview->image;
    VkDescriptorPool dummy_desc_pool_h = (VkDescriptorPool) 1;
-   uint32_t samples_log2 = ffs(src_image->samples) - 1;
 
    const struct vertex_attrs vertex_data[3] = {
       {
@@ -609,7 +618,7 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
          },
       });
 
-   VkPipeline pipeline_h = device->meta_state.resolve.pipelines[samples_log2];
+   VkPipeline pipeline_h = *get_pipeline_h(device, src_image->samples);
    ANV_FROM_HANDLE(anv_pipeline, pipeline, pipeline_h);
 
    if (cmd_buffer->state.pipeline != pipeline) {

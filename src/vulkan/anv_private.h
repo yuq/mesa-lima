@@ -601,10 +601,8 @@ struct anv_meta_state {
    } blit;
 
    struct {
-      /**
-       * Use pipeline `i` for images with `2^i` samples.
-       */
-      VkPipeline                                pipelines[1 + MAX_SAMPLES_LOG2];
+      /** Pipeline [i] resolves an image with 2^(i+1) samples.  */
+      VkPipeline                                pipelines[MAX_SAMPLES_LOG2];
 
       VkRenderPass                              pass;
       VkPipelineLayout                          pipeline_layout;
