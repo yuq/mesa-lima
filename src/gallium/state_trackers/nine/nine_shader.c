@@ -2042,13 +2042,16 @@ DECL_SPECIAL(DCL)
         }
     } else {
         if (is_input && tx->version.major >= 3) {
+            unsigned interp_location = 0;
             /* SM3 only, SM2 input semantic determined by file */
             assert(sem.reg.idx < Elements(tx->regs.v));
+            if (sem.reg.mod & NINED3DSPDM_CENTROID)
+                interp_location = TGSI_INTERPOLATE_LOC_CENTROID;
             tx->regs.v[sem.reg.idx] = ureg_DECL_fs_input_cyl_centroid(
                 ureg, tgsi.Name, tgsi.Index,
                 nine_tgsi_to_interp_mode(&tgsi),
                 0, /* cylwrap */
-                sem.reg.mod & NINED3DSPDM_CENTROID, 0, 1);
+                interp_location, 0, 1);
         } else
         if (!is_input && 0) { /* declare in COLOROUT/DEPTHOUT case */
             /* FragColor or FragDepth */
