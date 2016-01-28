@@ -1712,6 +1712,9 @@ struct anv_subpass {
    uint32_t *                                   color_attachments;
    uint32_t *                                   resolve_attachments;
    uint32_t                                     depth_stencil_attachment;
+
+   /** Subpass has at least one resolve attachment */
+   bool                                         has_resolve;
 };
 
 struct anv_render_pass_attachment {

@@ -118,8 +118,10 @@ VkResult anv_CreateRenderPass(
          p += desc->colorAttachmentCount;
 
          for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
-            subpass->resolve_attachments[j]
-               = desc->pResolveAttachments[j].attachment;
+            uint32_t a = desc->pResolveAttachments[j].attachment;
+            subpass->resolve_attachments[j] = a;
+            if (a != VK_ATTACHMENT_UNUSED)
+               subpass->has_resolve = true;
          }
       }
 
