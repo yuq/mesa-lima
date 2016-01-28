@@ -30,13 +30,6 @@
 
 #define MIN_NUM_IMAGES 2
 
-struct wsi_wl_surface {
-   struct anv_wsi_surface base;
-
-   struct wl_display *display;
-   struct wl_surface *surface;
-};
-
 struct wsi_wl_display {
    struct wl_display *                          display;
    struct wl_drm *                              drm;
@@ -48,6 +41,8 @@ struct wsi_wl_display {
 };
 
 struct wsi_wayland {
+   struct anv_wsi_interface                     base;
+
    struct anv_instance *                        instance;
 
    pthread_mutex_t                              mutex;
@@ -285,7 +280,8 @@ fail:
 static struct wsi_wl_display *
 wsi_wl_get_display(struct anv_instance *instance, struct wl_display *wl_display)
 {
-   struct wsi_wayland *wsi = instance->wayland_wsi;
+   struct wsi_wayland *wsi =
+      (struct wsi_wayland *)instance->wsi[VK_ICD_WSI_PLATFORM_WAYLAND];
 
    pthread_mutex_lock(&wsi->mutex);
 
@@ -326,7 +322,7 @@ VkBool32 anv_GetPhysicalDeviceWaylandPresentationSupportKHR(
 }
 
 static VkResult
-wsi_wl_surface_get_support(struct anv_wsi_surface *surface,
+wsi_wl_surface_get_support(VkIcdSurfaceBase *surface,
                            struct anv_physical_device *device,
                            uint32_t queueFamilyIndex,
                            VkBool32* pSupported)
@@ -342,7 +338,7 @@ static const VkPresentModeKHR present_modes[] = {
 };
 
 static VkResult
-wsi_wl_surface_get_capabilities(struct anv_wsi_surface *surface,
+wsi_wl_surface_get_capabilities(VkIcdSurfaceBase *surface,
                                 struct anv_physical_device *device,
                                 VkSurfaceCapabilitiesKHR* caps)
 {
@@ -367,12 +363,12 @@ wsi_wl_surface_get_capabilities(struct anv_wsi_surface *surface,
 }
 
 static VkResult
-wsi_wl_surface_get_formats(struct anv_wsi_surface *wsi_surface,
+wsi_wl_surface_get_formats(VkIcdSurfaceBase *icd_surface,
                            struct anv_physical_device *device,
                            uint32_t* pSurfaceFormatCount,
                            VkSurfaceFormatKHR* pSurfaceFormats)
 {
-   struct wsi_wl_surface *surface = (struct wsi_wl_surface *)wsi_surface;
+   VkIcdSurfaceWayland *surface = (VkIcdSurfaceWayland *)icd_surface;
    struct wsi_wl_display *display =
       wsi_wl_get_display(device->instance, surface->display);
 
@@ -399,7 +395,7 @@ wsi_wl_surface_get_formats(struct anv_wsi_surface *wsi_surface,
 }
 
 static VkResult
-wsi_wl_surface_get_present_modes(struct anv_wsi_surface *surface,
+wsi_wl_surface_get_present_modes(VkIcdSurfaceBase *surface,
                                  struct anv_physical_device *device,
                                  uint32_t* pPresentModeCount,
                                  VkPresentModeKHR* pPresentModes)
@@ -416,15 +412,8 @@ wsi_wl_surface_get_present_modes(struct anv_wsi_surface *surface,
    return VK_SUCCESS;
 }
 
-static void
-wsi_wl_surface_destroy(struct anv_wsi_surface *surface,
-                       const VkAllocationCallbacks *pAllocator)
-{
-   anv_free2(&surface->instance->alloc, pAllocator, surface);
-}
-
 static VkResult
-wsi_wl_surface_create_swapchain(struct anv_wsi_surface *surface,
+wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *surface,
                                 struct anv_device *device,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
@@ -436,10 +425,11 @@ VkResult anv_CreateWaylandSurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR);
 
-   ANV_FROM_HANDLE(anv_instance, instance, _instance);
-   struct wsi_wl_surface *surface;
+   VkIcdSurfaceWayland *surface;
 
    surface = anv_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -449,15 +439,7 @@ VkResult anv_CreateWaylandSurfaceKHR(
    surface->display = pCreateInfo->display;
    surface->surface = pCreateInfo->surface;
 
-   surface->base.instance = instance;
-   surface->base.destroy = wsi_wl_surface_destroy;
-   surface->base.get_support = wsi_wl_surface_get_support;
-   surface->base.get_capabilities = wsi_wl_surface_get_capabilities;
-   surface->base.get_formats = wsi_wl_surface_get_formats;
-   surface->base.get_present_modes = wsi_wl_surface_get_present_modes;
-   surface->base.create_swapchain = wsi_wl_surface_create_swapchain;
-
-   *pSurface = anv_wsi_surface_to_handle(&surface->base);
+   *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
 
    return VK_SUCCESS;
 }
@@ -734,13 +716,13 @@ wsi_wl_swapchain_destroy(struct anv_swapchain *anv_chain,
 }
 
 static VkResult
-wsi_wl_surface_create_swapchain(struct anv_wsi_surface *wsi_surface,
+wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                                 struct anv_device *device,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
                                 struct anv_swapchain **swapchain_out)
 {
-   struct wsi_wl_surface *surface = (struct wsi_wl_surface *)wsi_surface;
+   VkIcdSurfaceWayland *surface = (VkIcdSurfaceWayland *)icd_surface;
    struct wsi_wl_swapchain *chain;
    VkResult result;
 
@@ -847,7 +829,13 @@ anv_wl_init_wsi(struct anv_instance *instance)
       goto fail_mutex;
    }
 
-   instance->wayland_wsi = wsi;
+   wsi->base.get_support = wsi_wl_surface_get_support;
+   wsi->base.get_capabilities = wsi_wl_surface_get_capabilities;
+   wsi->base.get_formats = wsi_wl_surface_get_formats;
+   wsi->base.get_present_modes = wsi_wl_surface_get_present_modes;
+   wsi->base.create_swapchain = wsi_wl_surface_create_swapchain;
+
+   instance->wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = &wsi->base;
 
    return VK_SUCCESS;
 
@@ -857,7 +845,7 @@ fail_mutex:
 fail_alloc:
    anv_free(&instance->alloc, wsi);
 fail:
-   instance->wayland_wsi = NULL;
+   instance->wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = NULL;
 
    return result;
 }
@@ -865,7 +853,8 @@ fail:
 void
 anv_wl_finish_wsi(struct anv_instance *instance)
 {
-   struct wsi_wayland *wsi = instance->wayland_wsi;
+   struct wsi_wayland *wsi =
+      (struct wsi_wayland *)instance->wsi[VK_ICD_WSI_PLATFORM_WAYLAND];
 
    if (wsi) {
       _mesa_hash_table_destroy(wsi->displays, NULL);

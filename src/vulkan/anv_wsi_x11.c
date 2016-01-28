@@ -27,13 +27,6 @@
 
 #include "anv_wsi.h"
 
-struct x11_surface {
-   struct anv_wsi_surface base;
-
-   xcb_connection_t *connection;
-   xcb_window_t window;
-};
-
 static const VkSurfaceFormatKHR formats[] = {
    { .format = VK_FORMAT_B8G8R8A8_UNORM, },
 };
@@ -53,11 +46,23 @@ VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
 }
 
 static VkResult
-x11_surface_get_capabilities(struct anv_wsi_surface *wsi_surface,
+x11_surface_get_support(VkIcdSurfaceBase *surface,
+                        struct anv_physical_device *device,
+                        uint32_t queueFamilyIndex,
+                        VkBool32* pSupported)
+{
+   anv_finishme("Check that we actually have DRI3");
+   *pSupported = true;
+
+   return VK_SUCCESS;
+}
+
+static VkResult
+x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
                              struct anv_physical_device *device,
                              VkSurfaceCapabilitiesKHR *caps)
 {
-   struct x11_surface *surface = (struct x11_surface *)wsi_surface;
+   VkIcdSurfaceXcb *surface = (VkIcdSurfaceXcb *)icd_surface;
 
    xcb_get_geometry_cookie_t cookie = xcb_get_geometry(surface->connection,
                                                        surface->window);
@@ -95,7 +100,7 @@ x11_surface_get_capabilities(struct anv_wsi_surface *wsi_surface,
 }
 
 static VkResult
-x11_surface_get_formats(struct anv_wsi_surface *surface,
+x11_surface_get_formats(VkIcdSurfaceBase *surface,
                         struct anv_physical_device *device,
                         uint32_t *pSurfaceFormatCount,
                         VkSurfaceFormatKHR *pSurfaceFormats)
@@ -113,7 +118,7 @@ x11_surface_get_formats(struct anv_wsi_surface *surface,
 }
 
 static VkResult
-x11_surface_get_present_modes(struct anv_wsi_surface *surface,
+x11_surface_get_present_modes(VkIcdSurfaceBase *surface,
                               struct anv_physical_device *device,
                               uint32_t *pPresentModeCount,
                               VkPresentModeKHR *pPresentModes)
@@ -130,19 +135,20 @@ x11_surface_get_present_modes(struct anv_wsi_surface *surface,
    return VK_SUCCESS;
 }
 
-static void
-x11_surface_destroy(struct anv_wsi_surface *surface,
-                    const VkAllocationCallbacks *pAllocator)
-{
-   anv_free2(&surface->instance->alloc, pAllocator, surface);
-}
-
 static VkResult
-x11_surface_create_swapchain(struct anv_wsi_surface *surface,
+x11_surface_create_swapchain(VkIcdSurfaceBase *surface,
                              struct anv_device *device,
                              const VkSwapchainCreateInfoKHR* pCreateInfo,
                              const VkAllocationCallbacks* pAllocator,
                              struct anv_swapchain **swapchain);
+
+static struct anv_wsi_interface x11_interface = {
+   .get_support = x11_surface_get_support,
+   .get_capabilities = x11_surface_get_capabilities,
+   .get_formats = x11_surface_get_formats,
+   .get_present_modes = x11_surface_get_present_modes,
+   .create_swapchain = x11_surface_create_swapchain,
+};
 
 VkResult anv_CreateXcbSurfaceKHR(
     VkInstance                                  _instance,
@@ -150,10 +156,11 @@ VkResult anv_CreateXcbSurfaceKHR(
     const VkAllocationCallbacks*                pAllocator,
     VkSurfaceKHR*                               pSurface)
 {
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR);
 
-   ANV_FROM_HANDLE(anv_instance, instance, _instance);
-   struct x11_surface *surface;
+   VkIcdSurfaceXcb *surface;
 
    surface = anv_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -163,14 +170,7 @@ VkResult anv_CreateXcbSurfaceKHR(
    surface->connection = pCreateInfo->connection;
    surface->window = pCreateInfo->window;
 
-   surface->base.instance = instance;
-   surface->base.destroy = x11_surface_destroy;
-   surface->base.get_capabilities = x11_surface_get_capabilities;
-   surface->base.get_formats = x11_surface_get_formats;
-   surface->base.get_present_modes = x11_surface_get_present_modes;
-   surface->base.create_swapchain = x11_surface_create_swapchain;
-
-   *pSurface = anv_wsi_surface_to_handle(&surface->base);
+   *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
 
    return VK_SUCCESS;
 }
@@ -303,13 +303,13 @@ x11_swapchain_destroy(struct anv_swapchain *anv_chain,
 }
 
 static VkResult
-x11_surface_create_swapchain(struct anv_wsi_surface *wsi_surface,
+x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                              struct anv_device *device,
                              const VkSwapchainCreateInfoKHR *pCreateInfo,
                              const VkAllocationCallbacks* pAllocator,
                              struct anv_swapchain **swapchain_out)
 {
-   struct x11_surface *surface = (struct x11_surface *)wsi_surface;
+   VkIcdSurfaceXcb *surface = (VkIcdSurfaceXcb *)icd_surface;
    struct x11_swapchain *chain;
    xcb_void_cookie_t cookie;
    VkResult result;
@@ -451,6 +451,8 @@ x11_surface_create_swapchain(struct anv_wsi_surface *wsi_surface,
 VkResult
 anv_x11_init_wsi(struct anv_instance *instance)
 {
+   instance->wsi[VK_ICD_WSI_PLATFORM_XCB] = &x11_interface;
+
    return VK_SUCCESS;
 }
 

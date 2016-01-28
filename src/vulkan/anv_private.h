@@ -541,6 +541,10 @@ struct anv_physical_device {
     struct isl_device                           isl_dev;
 };
 
+struct anv_wsi_interaface;
+
+#define VK_ICD_WSI_PLATFORM_MAX 5
+
 struct anv_instance {
     VK_LOADER_DATA                              _loader_data;
 
@@ -550,7 +554,7 @@ struct anv_instance {
     int                                         physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
 
-    void *                                      wayland_wsi;
+    struct anv_wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
 };
 
 VkResult anv_init_wsi(struct anv_instance *instance);

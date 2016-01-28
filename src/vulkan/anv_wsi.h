@@ -27,27 +27,23 @@
 
 struct anv_swapchain;
 
-struct anv_wsi_surface {
-   struct anv_instance *instance;
-
-   void (*destroy)(struct anv_wsi_surface *surface,
-                   const VkAllocationCallbacks *pAllocator);
-   VkResult (*get_support)(struct anv_wsi_surface *surface,
+struct anv_wsi_interface {
+   VkResult (*get_support)(VkIcdSurfaceBase *surface,
                            struct anv_physical_device *device,
                            uint32_t queueFamilyIndex,
                            VkBool32* pSupported);
-   VkResult (*get_capabilities)(struct anv_wsi_surface *surface,
+   VkResult (*get_capabilities)(VkIcdSurfaceBase *surface,
                                 struct anv_physical_device *device,
                                 VkSurfaceCapabilitiesKHR* pSurfaceCapabilities);
-   VkResult (*get_formats)(struct anv_wsi_surface *surface,
+   VkResult (*get_formats)(VkIcdSurfaceBase *surface,
                            struct anv_physical_device *device,
                            uint32_t* pSurfaceFormatCount,
                            VkSurfaceFormatKHR* pSurfaceFormats);
-   VkResult (*get_present_modes)(struct anv_wsi_surface *surface,
+   VkResult (*get_present_modes)(VkIcdSurfaceBase *surface,
                                  struct anv_physical_device *device,
                                  uint32_t* pPresentModeCount,
                                  VkPresentModeKHR* pPresentModes);
-   VkResult (*create_swapchain)(struct anv_wsi_surface *surface,
+   VkResult (*create_swapchain)(VkIcdSurfaceBase *surface,
                                 struct anv_device *device,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
@@ -69,7 +65,7 @@ struct anv_swapchain {
                              uint32_t image_index);
 };
 
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_wsi_surface, VkSurfaceKHR)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(_VkIcdSurfaceBase, VkSurfaceKHR)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_swapchain, VkSwapchainKHR)
 
 VkResult anv_x11_init_wsi(struct anv_instance *instance);

@@ -157,7 +157,7 @@ anv_physical_device_finish(struct anv_physical_device *device)
 static const VkExtensionProperties global_extensions[] = {
    {
       .extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
-      .specVersion = 24,
+      .specVersion = 25,
    },
    {
       .extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
