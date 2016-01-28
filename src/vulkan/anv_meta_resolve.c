@@ -450,25 +450,18 @@ cleanup:
 static void
 emit_resolve(struct anv_cmd_buffer *cmd_buffer,
              struct anv_image_view *src_iview,
-             uint32_t src_level,
              const VkOffset2D *src_offset,
              struct anv_image_view *dest_iview,
-             uint32_t dest_level,
              const VkOffset2D *dest_offset,
              const VkExtent2D *resolve_extent)
 {
    struct anv_device *device = cmd_buffer->device;
    VkDevice device_h = anv_device_to_handle(device);
    VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
+   const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_image *src_image = src_iview->image;
-   const struct anv_image *dest_image = dest_iview->image;
    VkDescriptorPool dummy_desc_pool_h = (VkDescriptorPool) 1;
    uint32_t samples_log2 = ffs(src_image->samples) - 1;
-
-   const VkExtent2D dest_iview_extent = {
-      anv_minify(dest_image->extent.width, dest_level),
-      anv_minify(dest_image->extent.height, dest_level),
-   };
 
    const struct vertex_attrs vertex_data[3] = {
       {
@@ -581,35 +574,6 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
       /*copyCount*/ 0,
       /*copies */ NULL);
 
-   VkFramebuffer fb_h;
-   anv_CreateFramebuffer(device_h,
-      &(VkFramebufferCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-         .attachmentCount = 1,
-         .pAttachments = (VkImageView[]) {
-            anv_image_view_to_handle(dest_iview),
-         },
-         .width = dest_iview_extent.width,
-         .height = dest_iview_extent.height,
-         .layers = 1
-      },
-      &cmd_buffer->pool->alloc,
-      &fb_h);
-
-   ANV_CALL(CmdBeginRenderPass)(cmd_buffer_h,
-      &(VkRenderPassBeginInfo) {
-         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-         .renderPass = device->meta_state.resolve.pass,
-         .framebuffer = fb_h,
-         .renderArea = {
-            .offset = { dest_offset->x, dest_offset->y },
-            .extent = { resolve_extent->width, resolve_extent->height },
-         },
-         .clearValueCount = 0,
-         .pClearValues = NULL,
-      },
-      VK_SUBPASS_CONTENTS_INLINE);
-
    ANV_CALL(CmdSetViewport)(cmd_buffer_h,
       /*firstViewport*/ 0,
       /*viewportCount*/ 1,
@@ -617,8 +581,8 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
          {
             .x = 0,
             .y = 0,
-            .width = dest_iview_extent.width,
-            .height = dest_iview_extent.height,
+            .width = fb->width,
+            .height = fb->height,
             .minDepth = 0.0,
             .maxDepth = 1.0,
          },
@@ -630,7 +594,7 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
       (VkRect2D[]) {
          {
             .offset = { 0, 0 },
-            .extent = dest_iview_extent,
+            .extent = (VkExtent2D) { fb->width, fb->height },
          },
       });
 
@@ -654,7 +618,6 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
       /*copies */ NULL);
 
    ANV_CALL(CmdDraw)(cmd_buffer_h, 3, 1, 0, 0);
-   ANV_CALL(CmdEndRenderPass)(cmd_buffer_h);
 
    /* All objects below are consumed by the draw call. We may safely destroy
     * them.
@@ -662,8 +625,6 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
    anv_descriptor_set_destroy(device, desc_set);
    anv_DestroySampler(device_h, sampler_h,
                       &cmd_buffer->pool->alloc);
-   anv_DestroyFramebuffer(device_h, fb_h,
-                          &cmd_buffer->pool->alloc);
 }
 
 void anv_CmdResolveImage(
@@ -678,7 +639,9 @@ void anv_CmdResolveImage(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmd_buffer_h);
    ANV_FROM_HANDLE(anv_image, src_image, src_image_h);
    ANV_FROM_HANDLE(anv_image, dest_image, dest_image_h);
+   struct anv_device *device = cmd_buffer->device;
    struct anv_meta_saved_state state;
+   VkDevice device_h = anv_device_to_handle(device);
 
    anv_meta_save(&state, cmd_buffer, 0);
 
@@ -757,15 +720,50 @@ void anv_CmdResolveImage(
             },
             cmd_buffer, 0);
 
+         VkFramebuffer fb_h;
+         anv_CreateFramebuffer(device_h,
+            &(VkFramebufferCreateInfo) {
+               .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+               .attachmentCount = 1,
+               .pAttachments = (VkImageView[]) {
+                  anv_image_view_to_handle(&dest_iview),
+               },
+               .width = anv_minify(dest_image->extent.width,
+                                   region->dstSubresource.mipLevel),
+               .height = anv_minify(dest_image->extent.height,
+                                    region->dstSubresource.mipLevel),
+               .layers = 1
+            },
+            &cmd_buffer->pool->alloc,
+            &fb_h);
+
+         ANV_CALL(CmdBeginRenderPass)(cmd_buffer_h,
+            &(VkRenderPassBeginInfo) {
+               .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+               .renderPass = device->meta_state.resolve.pass,
+               .framebuffer = fb_h,
+               .renderArea = {
+                  .offset = {
+                     region->dstOffset.x,
+                     region->dstOffset.y,
+                  },
+                  .extent = {
+                     region->extent.width,
+                     region->extent.height,
+                  }
+               },
+               .clearValueCount = 0,
+               .pClearValues = NULL,
+            },
+            VK_SUBPASS_CONTENTS_INLINE);
+
          emit_resolve(cmd_buffer,
              &src_iview,
-             region->srcSubresource.mipLevel,
              &(VkOffset2D) {
                .x = region->srcOffset.x,
                .y = region->srcOffset.y,
              },
              &dest_iview,
-             region->dstSubresource.mipLevel,
              &(VkOffset2D) {
                .x = region->dstOffset.x,
                .y = region->dstOffset.y,
@@ -774,6 +772,11 @@ void anv_CmdResolveImage(
                .width = region->extent.width,
                .height = region->extent.height,
              });
+
+         ANV_CALL(CmdEndRenderPass)(cmd_buffer_h);
+
+         anv_DestroyFramebuffer(device_h, fb_h,
+                                &cmd_buffer->pool->alloc);
       }
    }
 
