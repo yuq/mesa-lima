@@ -1702,7 +1702,7 @@ struct anv_framebuffer {
    uint32_t                                     layers;
 
    uint32_t                                     attachment_count;
-   const struct anv_image_view *           attachments[0];
+   struct anv_image_view *                      attachments[0];
 };
 
 struct anv_subpass {
