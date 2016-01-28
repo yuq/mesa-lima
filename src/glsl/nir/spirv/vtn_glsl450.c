@@ -208,6 +208,9 @@ build_log(nir_builder *b, nir_ssa_def *x)
 static nir_ssa_def *
 build_asin(nir_builder *b, nir_ssa_def *x)
 {
+   /*
+    * asin(x) = sign(x) * (pi/2 - sqrt(1 - |x|) * (pi / 4 - 1 + |x| * (0.086566724 + |x| * -0.03102955)))
+    */
    nir_ssa_def *abs_x = nir_fabs(b, x);
    return nir_fmul(b, nir_fsign(b, x),
                    nir_fsub(b, nir_imm_float(b, M_PI_2f),
@@ -219,6 +222,26 @@ build_asin(nir_builder *b, nir_ssa_def *x)
                                                                          nir_fadd(b, nir_imm_float(b, 0.086566724f),
                                                                                   nir_fmul(b, abs_x,
                                                                                            nir_imm_float(b, -0.03102955f))))))))));
+}
+
+static nir_ssa_def *
+build_acos(nir_builder *b, nir_ssa_def *x)
+{
+   /*
+    * acos(x) = sign(x) * sqrt(1 - |x|) * (pi / 4 - 1 + |x| * (0.086566724 + |x| * -0.03102955))
+    */
+   nir_ssa_def *abs_x = nir_fabs(b, x);
+   nir_ssa_def *poly = nir_fmul(b, nir_fsqrt(b, nir_fsub(b, nir_imm_float(b, 1.0f), abs_x)),
+                                nir_fadd(b, nir_imm_float(b, M_PI_2f),
+                                         nir_fmul(b, abs_x,
+                                                  nir_fadd(b, nir_imm_float(b, M_PI_4f - 1.0f),
+                                                           nir_fmul(b, abs_x,
+                                                                    nir_fadd(b, nir_imm_float(b, 0.086566724f),
+                                                                             nir_fmul(b, abs_x,
+                                                                                      nir_imm_float(b, -0.03102955f))))))));
+   return nir_bcsel(b, nir_flt(b, x, nir_imm_float(b, 0)),
+                       nir_fsub(b, nir_imm_float(b, M_PI), poly),
+                       poly);
 }
 
 /**
@@ -583,8 +606,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       return;
 
    case GLSLstd450Acos:
-      val->ssa->def = nir_fsub(nb, nir_imm_float(nb, M_PI_2f),
-                                   build_asin(nb, src[0]));
+      val->ssa->def = build_acos(nb, src[0]);
       return;
 
    case GLSLstd450Atan:
