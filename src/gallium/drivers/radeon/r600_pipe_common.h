@@ -89,6 +89,7 @@
 #define DBG_NO_DCC_CLEAR	(1llu << 44)
 #define DBG_NO_RB_PLUS		(1llu << 45)
 #define DBG_SI_SCHED		(1llu << 46)
+#define DBG_MONOLITHIC_SHADERS	(1llu << 47)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 

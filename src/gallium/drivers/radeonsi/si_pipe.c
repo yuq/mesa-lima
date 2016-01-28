@@ -623,7 +623,9 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
 	pipe_mutex_init(sscreen->shader_parts_mutex);
-	sscreen->use_monolithic_shaders = true;
+	sscreen->use_monolithic_shaders =
+		HAVE_LLVM < 0x0308 ||
+		(sscreen->b.debug_flags & DBG_MONOLITHIC_SHADERS) != 0;
 
 	if (debug_get_bool_option("RADEON_DUMP_SHADERS", FALSE))
 		sscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS;
