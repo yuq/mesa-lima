@@ -1053,6 +1053,41 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 	si_mark_atom_dirty(sctx, &sctx->cb_render_state);
 }
 
+static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
+{
+	if (shader->pm4) {
+		switch (shader->selector->type) {
+		case PIPE_SHADER_VERTEX:
+			if (shader->key.vs.as_ls)
+				si_pm4_delete_state(sctx, ls, shader->pm4);
+			else if (shader->key.vs.as_es)
+				si_pm4_delete_state(sctx, es, shader->pm4);
+			else
+				si_pm4_delete_state(sctx, vs, shader->pm4);
+			break;
+		case PIPE_SHADER_TESS_CTRL:
+			si_pm4_delete_state(sctx, hs, shader->pm4);
+			break;
+		case PIPE_SHADER_TESS_EVAL:
+			if (shader->key.tes.as_es)
+				si_pm4_delete_state(sctx, es, shader->pm4);
+			else
+				si_pm4_delete_state(sctx, vs, shader->pm4);
+			break;
+		case PIPE_SHADER_GEOMETRY:
+			si_pm4_delete_state(sctx, gs, shader->pm4);
+			si_pm4_delete_state(sctx, vs, shader->gs_copy_shader->pm4);
+			break;
+		case PIPE_SHADER_FRAGMENT:
+			si_pm4_delete_state(sctx, ps, shader->pm4);
+			break;
+		}
+	}
+
+	si_shader_destroy(shader);
+	free(shader);
+}
+
 static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -1073,35 +1108,7 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 
 	while (p) {
 		c = p->next_variant;
-		switch (sel->type) {
-		case PIPE_SHADER_VERTEX:
-			if (p->key.vs.as_ls)
-				si_pm4_delete_state(sctx, ls, p->pm4);
-			else if (p->key.vs.as_es)
-				si_pm4_delete_state(sctx, es, p->pm4);
-			else
-				si_pm4_delete_state(sctx, vs, p->pm4);
-			break;
-		case PIPE_SHADER_TESS_CTRL:
-			si_pm4_delete_state(sctx, hs, p->pm4);
-			break;
-		case PIPE_SHADER_TESS_EVAL:
-			if (p->key.tes.as_es)
-				si_pm4_delete_state(sctx, es, p->pm4);
-			else
-				si_pm4_delete_state(sctx, vs, p->pm4);
-			break;
-		case PIPE_SHADER_GEOMETRY:
-			si_pm4_delete_state(sctx, gs, p->pm4);
-			si_pm4_delete_state(sctx, vs, p->gs_copy_shader->pm4);
-			break;
-		case PIPE_SHADER_FRAGMENT:
-			si_pm4_delete_state(sctx, ps, p->pm4);
-			break;
-		}
-
-		si_shader_destroy(p);
-		free(p);
+		si_delete_shader(sctx, p);
 		p = c;
 	}
 
