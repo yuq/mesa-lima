@@ -57,6 +57,7 @@ typedef uint32_t xcb_window_t;
 #define VK_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_intel.h>
+#include <vulkan/vk_icd.h>
 
 #include "anv_entrypoints.h"
 #include "anv_gen_macros.h"
@@ -76,13 +77,6 @@ extern "C" {
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_IMAGES 8
 #define MAX_SAMPLES_LOG2 4 /* SKL supports 16 samples */
-
-#define ICD_LOADER_MAGIC   0x01CDC0DE
-
-typedef union _VK_LOADER_DATA {
-  uintptr_t loaderMagic;
-  void *loaderData;
-} VK_LOADER_DATA;
 
 #define anv_noreturn __attribute__((__noreturn__))
 #define anv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
