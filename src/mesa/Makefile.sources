@@ -497,6 +497,8 @@ STATETRACKER_FILES = \
 	state_tracker/st_manager.h \
 	state_tracker/st_mesa_to_tgsi.c \
 	state_tracker/st_mesa_to_tgsi.h \
+	state_tracker/st_nir.h \
+	state_tracker/st_nir_lower_builtin.c \
 	state_tracker/st_program.c \
 	state_tracker/st_program.h \
 	state_tracker/st_texture.c \
