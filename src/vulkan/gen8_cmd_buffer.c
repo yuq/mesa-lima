@@ -225,7 +225,7 @@ flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
-__emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
+__emit_genx_sf_state(struct anv_cmd_buffer *cmd_buffer)
 {
       uint32_t sf_dw[GENX(3DSTATE_SF_length)];
       struct GENX(3DSTATE_SF) sf = {
@@ -236,6 +236,28 @@ __emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
       /* FIXME: gen9.fs */
       anv_batch_emit_merge(&cmd_buffer->batch, sf_dw,
                            cmd_buffer->state.pipeline->gen8.sf);
+}
+static void
+__emit_gen9_sf_state(struct anv_cmd_buffer *cmd_buffer)
+{
+      uint32_t sf_dw[GENX(3DSTATE_SF_length)];
+      struct GEN9_3DSTATE_SF sf = {
+         GEN9_3DSTATE_SF_header,
+         .LineWidth = cmd_buffer->state.dynamic.line_width,
+      };
+      GEN9_3DSTATE_SF_pack(NULL, sf_dw, &sf);
+      /* FIXME: gen9.fs */
+      anv_batch_emit_merge(&cmd_buffer->batch, sf_dw,
+                           cmd_buffer->state.pipeline->gen8.sf);
+}
+
+static void
+__emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
+{
+   if (cmd_buffer->device->info.is_cherryview)
+      __emit_gen9_sf_state(cmd_buffer);
+   else
+      __emit_genx_sf_state(cmd_buffer);
 }
 
 static void
