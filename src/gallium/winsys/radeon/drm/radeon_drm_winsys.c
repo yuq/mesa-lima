@@ -742,7 +742,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     ws->fd = dup(fd);
 
     if (!do_winsys_init(ws))
-        goto fail;
+        goto fail1;
 
     pb_cache_init(&ws->bo_cache, 500000, 2.0f, 0,
                   MIN2(ws->info.vram_size, ws->info.gart_size),
@@ -812,8 +812,9 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     return &ws->base;
 
 fail:
-    pipe_mutex_unlock(fd_tab_mutex);
     pb_cache_deinit(&ws->bo_cache);
+fail1:
+    pipe_mutex_unlock(fd_tab_mutex);
     if (ws->surf_man)
         radeon_surface_manager_free(ws->surf_man);
     if (ws->fd >= 0)
