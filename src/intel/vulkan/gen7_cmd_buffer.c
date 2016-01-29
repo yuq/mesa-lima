@@ -332,6 +332,65 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    return VK_SUCCESS;
 }
 
+static void
+emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
+{
+   anv_batch_emit(batch, GENX(MI_LOAD_REGISTER_IMM),
+                  .RegisterOffset = reg,
+                  .DataDWord = imm);
+}
+
+#define GEN7_L3SQCREG1                     0xb010
+#define GEN7_L3CNTLREG2                    0xb020
+#define GEN7_L3CNTLREG3                    0xb024
+
+static void
+config_l3(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
+{
+   /* References for GL state:
+    *
+    * - commits e307cfa..228d5a3
+    * - src/mesa/drivers/dri/i965/gen7_l3_state.c
+    */
+
+   uint32_t l3c2_val = enable_slm ?
+      /* All = 0 ways; URB = 16 ways; DC and RO = 16; SLM = 1 */
+      /*0x02040021*/0x010000a1 :
+      /* All = 0 ways; URB = 32 ways; DC = 0; RO = 32; SLM = 0 */
+      /*0x04080040*/0x02000030;
+   bool changed = cmd_buffer->state.current_l3_config != l3c2_val;
+
+   if (changed) {
+      /* According to the hardware docs, the L3 partitioning can only be changed
+       * while the pipeline is completely drained and the caches are flushed,
+       * which involves a first PIPE_CONTROL flush which stalls the pipeline and
+       * initiates invalidation of the relevant caches...
+       */
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
+                     .TextureCacheInvalidationEnable = true,
+                     .ConstantCacheInvalidationEnable = true,
+                     .InstructionCacheInvalidateEnable = true,
+                     .DCFlushEnable = true,
+                     .PostSyncOperation = NoWrite,
+                     .CommandStreamerStallEnable = true);
+
+      /* ...followed by a second stalling flush which guarantees that
+       * invalidation is complete when the L3 configuration registers are
+       * modified.
+       */
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
+                     .DCFlushEnable = true,
+                     .PostSyncOperation = NoWrite,
+                     .CommandStreamerStallEnable = true);
+
+      anv_finishme("write GEN7_L3SQCREG1");
+      emit_lri(&cmd_buffer->batch, GEN7_L3CNTLREG2, l3c2_val);
+      emit_lri(&cmd_buffer->batch, GEN7_L3CNTLREG3,
+               enable_slm ? 0x00040810 : 0x00040410);
+      cmd_buffer->state.current_l3_config = l3c2_val;
+   }
+}
+
 void
 genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -339,6 +398,9 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
    VkResult result;
 
    assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
+
+   bool needs_slm = pipeline->cs_prog_data.base.total_shared > 0;
+   config_l3(cmd_buffer, needs_slm);
 
    if (cmd_buffer->state.current_pipeline != GPGPU) {
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
