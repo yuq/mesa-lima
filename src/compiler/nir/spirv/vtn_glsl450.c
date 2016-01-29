@@ -208,12 +208,19 @@ build_log(nir_builder *b, nir_ssa_def *x)
    return nir_fmul(b, nir_flog2(b, x), nir_imm_float(b, 1.0 / M_LOG2E));
 }
 
+/**
+ * Approximate asin(x) by the formula:
+ *    asin~(x) = sign(x) * (pi/2 - sqrt(1 - |x|) * (pi/2 + |x|(pi/4 - 1 + |x|(p0 + |x|p1))))
+ *
+ * which is correct to first order at x=0 and x=±1 regardless of the p
+ * coefficients but can be made second-order correct at both ends by selecting
+ * the fit coefficients appropriately.  Different p coefficients can be used
+ * in the asin and acos implementation to minimize some relative error metric
+ * in each case.
+ */
 static nir_ssa_def *
-build_asin(nir_builder *b, nir_ssa_def *x)
+build_asin(nir_builder *b, nir_ssa_def *x, float p0, float p1)
 {
-   /*
-    * asin(x) = sign(x) * (pi/2 - sqrt(1 - |x|) * (pi / 4 - 1 + |x| * (0.086566724 + |x| * -0.03102955)))
-    */
    nir_ssa_def *abs_x = nir_fabs(b, x);
    return nir_fmul(b, nir_fsign(b, x),
                    nir_fsub(b, nir_imm_float(b, M_PI_2f),
@@ -222,29 +229,9 @@ build_asin(nir_builder *b, nir_ssa_def *x)
                                               nir_fmul(b, abs_x,
                                                        nir_fadd(b, nir_imm_float(b, M_PI_4f - 1.0f),
                                                                 nir_fmul(b, abs_x,
-                                                                         nir_fadd(b, nir_imm_float(b, 0.086566724f),
+                                                                         nir_fadd(b, nir_imm_float(b, p0),
                                                                                   nir_fmul(b, abs_x,
-                                                                                           nir_imm_float(b, -0.03102955f))))))))));
-}
-
-static nir_ssa_def *
-build_acos(nir_builder *b, nir_ssa_def *x)
-{
-   /*
-    * poly(x) = sign(x) * sqrt(1 - |x|) * (pi / 2 + |x| * (pi / 4 - 1 + |x| * (0.08132463 + |x| * -0.02363318)))
-    */
-   nir_ssa_def *abs_x = nir_fabs(b, x);
-   nir_ssa_def *poly = nir_fmul(b, nir_fsqrt(b, nir_fsub(b, nir_imm_float(b, 1.0f), abs_x)),
-                                nir_fadd(b, nir_imm_float(b, M_PI_2f),
-                                         nir_fmul(b, abs_x,
-                                                  nir_fadd(b, nir_imm_float(b, M_PI_4f - 1.0f),
-                                                           nir_fmul(b, abs_x,
-                                                                    nir_fadd(b, nir_imm_float(b, 0.08132463f),
-                                                                             nir_fmul(b, abs_x,
-                                                                                      nir_imm_float(b, -0.02363318f))))))));
-   return nir_bcsel(b, nir_flt(b, x, nir_imm_float(b, 0)),
-                       nir_fsub(b, nir_imm_float(b, M_PI), poly),
-                       poly);
+                                                                                           nir_imm_float(b, p1))))))))));
 }
 
 /**
@@ -605,11 +592,12 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450FindUMsb:   op = nir_op_ufind_msb;  break;
 
    case GLSLstd450Asin:
-      val->ssa->def = build_asin(nb, src[0]);
+      val->ssa->def = build_asin(nb, src[0], 0.086566724, -0.03102955);
       return;
 
    case GLSLstd450Acos:
-      val->ssa->def = build_acos(nb, src[0]);
+      val->ssa->def = nir_fsub(nb, nir_imm_float(nb, M_PI_2f),
+                               build_asin(nb, src[0], 0.08132463, -0.02363318));
       return;
 
    case GLSLstd450Atan:
