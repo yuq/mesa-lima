@@ -334,6 +334,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
 		return 4;
 
+	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
+		return HAVE_LLVM >= 0x0306;
+
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
 		return HAVE_LLVM >= 0x0307 ? 410 : 330;
 
@@ -352,7 +355,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_CLEAR_TEXTURE:
 	case PIPE_CAP_DRAW_PARAMETERS:
-	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
 	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
