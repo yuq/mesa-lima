@@ -1173,7 +1173,7 @@ VkResult anv_FlushMappedMemoryRanges(
       return VK_SUCCESS;
 
    /* Make sure the writes we're flushing have landed. */
-   __builtin_ia32_sfence();
+   __builtin_ia32_mfence();
 
    clflush_mapped_ranges(device, memoryRangeCount, pMemoryRanges);
 
@@ -1193,7 +1193,7 @@ VkResult anv_InvalidateMappedMemoryRanges(
    clflush_mapped_ranges(device, memoryRangeCount, pMemoryRanges);
 
    /* Make sure no reads get moved up above the invalidate. */
-   __builtin_ia32_lfence();
+   __builtin_ia32_mfence();
 
    return VK_SUCCESS;
 }
@@ -1342,7 +1342,7 @@ VkResult anv_CreateFence(
    if (!device->info.has_llc) {
       assert(((uintptr_t) fence->bo.map & CACHELINE_MASK) == 0);
       assert(batch.next - fence->bo.map <= CACHELINE_SIZE);
-      __builtin_ia32_sfence();
+      __builtin_ia32_mfence();
       __builtin_ia32_clflush(fence->bo.map);
    }
 
@@ -1510,7 +1510,7 @@ VkResult anv_CreateEvent(
 
    if (!device->info.has_llc) {
       /* Make sure the writes we're flushing have landed. */
-      __builtin_ia32_sfence();
+      __builtin_ia32_mfence();
       __builtin_ia32_clflush(event);
    }
 
@@ -1538,9 +1538,10 @@ VkResult anv_GetEventStatus(
    ANV_FROM_HANDLE(anv_event, event, _event);
 
    if (!device->info.has_llc) {
-      /* Make sure the writes we're flushing have landed. */
+      /* Invalidate read cache before reading event written by GPU. */
       __builtin_ia32_clflush(event);
-      __builtin_ia32_lfence();
+      __builtin_ia32_mfence();
+
    }
 
    return event->semaphore;
@@ -1557,7 +1558,7 @@ VkResult anv_SetEvent(
 
    if (!device->info.has_llc) {
       /* Make sure the writes we're flushing have landed. */
-      __builtin_ia32_sfence();
+      __builtin_ia32_mfence();
       __builtin_ia32_clflush(event);
    }
 
@@ -1575,7 +1576,7 @@ VkResult anv_ResetEvent(
 
    if (!device->info.has_llc) {
       /* Make sure the writes we're flushing have landed. */
-      __builtin_ia32_sfence();
+      __builtin_ia32_mfence();
       __builtin_ia32_clflush(event);
    }
 

@@ -755,7 +755,7 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
       if (!primary->device->info.has_llc) {
          void *inst = secondary->batch.next - inst_size;
          void *p = (void *) (((uintptr_t) inst) & ~CACHELINE_MASK);
-         __builtin_ia32_sfence();
+         __builtin_ia32_mfence();
          while (p < secondary->batch.next) {
             __builtin_ia32_clflush(p);
             p += CACHELINE_SIZE;
@@ -1047,7 +1047,7 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
    anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
 
    if (!cmd_buffer->device->info.has_llc) {
-      __builtin_ia32_sfence();
+      __builtin_ia32_mfence();
       anv_vector_foreach(bbo, &cmd_buffer->seen_bbos) {
          for (uint32_t i = 0; i < (*bbo)->length; i += CACHELINE_SIZE)
             __builtin_ia32_clflush((*bbo)->bo.map + i);

@@ -433,7 +433,7 @@ anv_state_clflush(struct anv_state state)
    void *end = state.map + state.alloc_size;
    void *p = (void *) (((uintptr_t) state.map) & ~CACHELINE_MASK);
 
-   __builtin_ia32_sfence();
+   __builtin_ia32_mfence();
    while (p < end) {
       __builtin_ia32_clflush(p);
       p += CACHELINE_SIZE;
