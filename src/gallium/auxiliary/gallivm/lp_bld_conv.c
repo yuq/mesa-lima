@@ -130,6 +130,7 @@ lp_build_half_to_float(struct gallivm_state *gallivm,
  *
  * Convert float32 to half floats, preserving Infs and NaNs,
  * with rounding towards zero (trunc).
+ * XXX: For GL, would prefer rounding towards nearest(-even).
  */
 LLVMValueRef
 lp_build_float_to_half(struct gallivm_state *gallivm,
@@ -142,6 +143,15 @@ lp_build_float_to_half(struct gallivm_state *gallivm,
    struct lp_type i32_type = lp_type_int_vec(32, 32 * length);
    struct lp_type i16_type = lp_type_int_vec(16, 16 * length);
    LLVMValueRef result;
+
+   /*
+    * Note: Newer llvm versions (3.6 or so) support fptrunc to 16 bits
+    * directly, without any (x86 or generic) intrinsics.
+    * Albeit the rounding mode cannot be specified (and is undefined,
+    * though in practice on x86 seems to do nearest-even but it may
+    * be dependent on instruction set support), so is essentially
+    * useless.
+    */
 
    if (util_cpu_caps.has_f16c &&
        (length == 4 || length == 8)) {
@@ -187,7 +197,11 @@ lp_build_float_to_half(struct gallivm_state *gallivm,
         LLVMValueRef index = LLVMConstInt(i32t, i, 0);
         LLVMValueRef f32 = LLVMBuildExtractElement(builder, src, index, "");
 #if 0
-        /* XXX: not really supported by backends */
+        /*
+         * XXX: not really supported by backends.
+         * Even if they would now, rounding mode cannot be specified and
+         * is undefined.
+         */
         LLVMValueRef f16 = lp_build_intrinsic_unary(builder, "llvm.convert.to.fp16", i16t, f32);
 #else
         LLVMValueRef f16 = LLVMBuildCall(builder, func, &f32, 1, "");
