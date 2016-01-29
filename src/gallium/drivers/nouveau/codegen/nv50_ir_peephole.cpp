@@ -2533,6 +2533,12 @@ MemoryOpt::runOpt(BasicBlock *bb)
          }
       } else
       if (ldst->op == OP_STORE || ldst->op == OP_EXPORT) {
+         if (typeSizeof(ldst->dType) == 4 &&
+             ldst->src(1).getFile() == FILE_GPR &&
+             ldst->getSrc(1)->getInsn()->op == OP_NOP) {
+            delete_Instruction(prog, ldst);
+            continue;
+         }
          isLoad = false;
       } else {
          // TODO: maybe have all fixed ops act as barrier ?
