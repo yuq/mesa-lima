@@ -82,8 +82,6 @@
 #include "main/enums.h"
 
 
-void linker_error(gl_shader_program *, const char *, ...);
-
 namespace {
 
 /**
