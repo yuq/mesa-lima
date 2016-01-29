@@ -2773,6 +2773,11 @@ intel_miptree_map(struct brw_context *brw,
    } else if (!(mode & GL_MAP_WRITE_BIT) &&
               !mt->compressed && cpu_has_sse4_1 &&
               (mt->pitch % 16 == 0)) {
+      /*
+       * XXX: without sse4_1, in some situations it would be beneficial
+       * to copy regardless (with an ordinary memcpy) as otherwise mesa
+       * may access uncached memory bytewise.
+       */
       intel_miptree_map_movntdqa(brw, mt, map, level, slice);
 #endif
    } else {

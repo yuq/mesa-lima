@@ -36,9 +36,12 @@
 #include "brw_context.h"
 #include "intel_tiled_memcpy.h"
 
-#ifdef __SSSE3__
+#if defined(__SSSE3__)
 #include <tmmintrin.h>
+#elif defined(__SSE2__)
+#include <emmintrin.h>
 #endif
+
 
 #define FILE_DEBUG_FLAG DEBUG_TEXTURE
 
@@ -56,22 +59,64 @@ static const uint32_t ytile_width = 128;
 static const uint32_t ytile_height = 32;
 static const uint32_t ytile_span = 16;
 
-#ifdef __SSSE3__
+#if defined(__SSSE3__)
 static const uint8_t rgba8_permutation[16] =
    { 2,1,0,3, 6,5,4,7, 10,9,8,11, 14,13,12,15 };
 
 /* NOTE: dst must be 16-byte aligned. src may be unaligned. */
-#define rgba8_copy_16_aligned_dst(dst, src)                            \
-   _mm_store_si128((__m128i *)(dst),                                   \
-                   _mm_shuffle_epi8(_mm_loadu_si128((__m128i *)(src)), \
-                                    *(__m128i *) rgba8_permutation))
+static inline void
+rgba8_copy_16_aligned_dst(void *dst, const void *src)
+{
+   _mm_store_si128((__m128i *)(dst),
+                   _mm_shuffle_epi8(_mm_loadu_si128((__m128i *)(src)),
+                                    *(__m128i *)rgba8_permutation));
+}
 
 /* NOTE: src must be 16-byte aligned. dst may be unaligned. */
-#define rgba8_copy_16_aligned_src(dst, src)                            \
-   _mm_storeu_si128((__m128i *)(dst),                                  \
-                    _mm_shuffle_epi8(_mm_load_si128((__m128i *)(src)), \
-                                     *(__m128i *) rgba8_permutation))
+static inline void
+rgba8_copy_16_aligned_src(void *dst, const void *src)
+{
+   _mm_storeu_si128((__m128i *)(dst),
+                    _mm_shuffle_epi8(_mm_load_si128((__m128i *)(src)),
+                                     *(__m128i *)rgba8_permutation));
+}
+
+#elif defined(__SSE2__)
+static inline void
+rgba8_copy_16_aligned_dst(void *dst, const void *src)
+{
+   __m128i srcreg, dstreg, agmask, ag, rb, br;
+
+   agmask = _mm_set1_epi32(0xFF00FF00);
+   srcreg = _mm_loadu_si128((__m128i *)src);
+
+   rb = _mm_andnot_si128(agmask, srcreg);
+   ag = _mm_and_si128(agmask, srcreg);
+   br = _mm_shufflehi_epi16(_mm_shufflelo_epi16(rb, _MM_SHUFFLE(2, 3, 0, 1)),
+                            _MM_SHUFFLE(2, 3, 0, 1));
+   dstreg = _mm_or_si128(ag, br);
+
+   _mm_store_si128((__m128i *)dst, dstreg);
+}
+
+static inline void
+rgba8_copy_16_aligned_src(void *dst, const void *src)
+{
+   __m128i srcreg, dstreg, agmask, ag, rb, br;
+
+   agmask = _mm_set1_epi32(0xFF00FF00);
+   srcreg = _mm_load_si128((__m128i *)src);
+
+   rb = _mm_andnot_si128(agmask, srcreg);
+   ag = _mm_and_si128(agmask, srcreg);
+   br = _mm_shufflehi_epi16(_mm_shufflelo_epi16(rb, _MM_SHUFFLE(2, 3, 0, 1)),
+                            _MM_SHUFFLE(2, 3, 0, 1));
+   dstreg = _mm_or_si128(ag, br);
+
+   _mm_storeu_si128((__m128i *)dst, dstreg);
+}
 #endif
+
 
 /**
  * Copy RGBA to BGRA - swap R and B, with the destination 16-byte aligned.
@@ -82,7 +127,7 @@ rgba8_copy_aligned_dst(void *dst, const void *src, size_t bytes)
    uint8_t *d = dst;
    uint8_t const *s = src;
 
-#ifdef __SSSE3__
+#if defined(__SSSE3__) || defined(__SSE2__)
    if (bytes == 16) {
       assert(!(((uintptr_t)dst) & 0xf));
       rgba8_copy_16_aligned_dst(d+ 0, s+ 0);
@@ -120,7 +165,7 @@ rgba8_copy_aligned_src(void *dst, const void *src, size_t bytes)
    uint8_t *d = dst;
    uint8_t const *s = src;
 
-#ifdef __SSSE3__
+#if defined(__SSSE3__) || defined(__SSE2__)
    if (bytes == 16) {
       assert(!(((uintptr_t)src) & 0xf));
       rgba8_copy_16_aligned_src(d+ 0, s+ 0);
