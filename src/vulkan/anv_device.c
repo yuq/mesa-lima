@@ -1148,7 +1148,12 @@ clflush_mapped_ranges(struct anv_device         *device,
    for (uint32_t i = 0; i < count; i++) {
       ANV_FROM_HANDLE(anv_device_memory, mem, ranges[i].memory);
       void *p = mem->map + (ranges[i].offset & ~CACHELINE_MASK);
-      void *end = mem->map + ranges[i].offset + ranges[i].size;
+      void *end;
+
+      if (ranges[i].offset + ranges[i].size > mem->map_size)
+         end = mem->map + mem->map_size;
+      else
+         end = mem->map + ranges[i].offset + ranges[i].size;
 
       while (p < end) {
          __builtin_ia32_clflush(p);
