@@ -2626,6 +2626,9 @@ extern void _mesa_print_ir(FILE *f, struct exec_list *instructions,
 extern void
 fprint_ir(FILE *f, const void *instruction);
 
+extern const struct gl_builtin_uniform_desc *
+_mesa_glsl_get_builtin_uniform_desc(const char *name);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

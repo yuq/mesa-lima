@@ -527,6 +527,16 @@ builtin_variable_generator::add_variable(const char *name,
    return var;
 }
 
+extern "C" const struct gl_builtin_uniform_desc *
+_mesa_glsl_get_builtin_uniform_desc(const char *name)
+{
+   for (unsigned i = 0; _mesa_builtin_uniform_desc[i].name != NULL; i++) {
+      if (strcmp(_mesa_builtin_uniform_desc[i].name, name) == 0) {
+         return &_mesa_builtin_uniform_desc[i];
+      }
+   }
+   return NULL;
+}
 
 ir_variable *
 builtin_variable_generator::add_uniform(const glsl_type *type,
@@ -534,16 +544,9 @@ builtin_variable_generator::add_uniform(const glsl_type *type,
 {
    ir_variable *const uni = add_variable(name, type, ir_var_uniform, -1);
 
-   unsigned i;
-   for (i = 0; _mesa_builtin_uniform_desc[i].name != NULL; i++) {
-      if (strcmp(_mesa_builtin_uniform_desc[i].name, name) == 0) {
-	 break;
-      }
-   }
-
-   assert(_mesa_builtin_uniform_desc[i].name != NULL);
    const struct gl_builtin_uniform_desc* const statevar =
-      &_mesa_builtin_uniform_desc[i];
+      _mesa_glsl_get_builtin_uniform_desc(name);
+   assert(statevar != NULL);
 
    const unsigned array_count = type->is_array() ? type->length : 1;
 
