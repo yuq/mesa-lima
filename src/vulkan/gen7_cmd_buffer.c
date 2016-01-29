@@ -327,6 +327,23 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
+emit_lrm(struct anv_batch *batch,
+              uint32_t reg, struct anv_bo *bo, uint32_t offset)
+{
+   anv_batch_emit(batch, GEN7_MI_LOAD_REGISTER_MEM,
+                  .RegisterAddress = reg,
+                  .MemoryAddress = { bo, offset });
+}
+
+static void
+emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
+{
+   anv_batch_emit(batch, GEN7_MI_LOAD_REGISTER_IMM,
+                  .RegisterOffset = reg,
+                  .DataDWord = imm);
+}
+
+static void
 cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
@@ -639,23 +656,6 @@ void genX(CmdDrawIndexed)(
                   .BaseVertexLocation = vertexOffset);
 }
 
-static void
-gen7_batch_lrm(struct anv_batch *batch,
-              uint32_t reg, struct anv_bo *bo, uint32_t offset)
-{
-   anv_batch_emit(batch, GEN7_MI_LOAD_REGISTER_MEM,
-                  .RegisterAddress = reg,
-                  .MemoryAddress = { bo, offset });
-}
-
-static void
-gen7_batch_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
-{
-   anv_batch_emit(batch, GEN7_MI_LOAD_REGISTER_IMM,
-                  .RegisterOffset = reg,
-                  .DataDWord = imm);
-}
-
 /* Auto-Draw / Indirect Registers */
 #define GEN7_3DPRIM_END_OFFSET          0x2420
 #define GEN7_3DPRIM_START_VERTEX        0x2430
@@ -683,11 +683,11 @@ void genX(CmdDrawIndirect)(
        cmd_buffer->state.pipeline->vs_prog_data.uses_baseinstance)
       emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 8);
 
-   gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
-   gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
-   gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_VERTEX, bo, bo_offset + 8);
-   gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 12);
-   gen7_batch_lri(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, 0);
+   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
+   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
+   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_VERTEX, bo, bo_offset + 8);
+   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 12);
+   emit_lri(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, 0);
 
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DPRIMITIVE,
                   .IndirectParameterEnable = true,
@@ -714,11 +714,11 @@ void genX(CmdDrawIndexedIndirect)(
        cmd_buffer->state.pipeline->vs_prog_data.uses_baseinstance)
       emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 12);
 
-   gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
-   gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
-   gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_VERTEX, bo, bo_offset + 8);
-   gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, bo, bo_offset + 12);
-   gen7_batch_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 16);
+   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
+   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
+   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_VERTEX, bo, bo_offset + 8);
+   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_BASE_VERTEX, bo, bo_offset + 12);
+   emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_START_INSTANCE, bo, bo_offset + 16);
 
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DPRIMITIVE,
                   .IndirectParameterEnable = true,
@@ -789,9 +789,9 @@ void genX(CmdDispatchIndirect)(
 
    cmd_buffer_flush_compute_state(cmd_buffer);
 
-   gen7_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMX, bo, bo_offset);
-   gen7_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
-   gen7_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
+   emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMX, bo, bo_offset);
+   emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
+   emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
 
    anv_batch_emit(&cmd_buffer->batch, GEN7_GPGPU_WALKER,
                   .IndirectParameterEnable = true,
