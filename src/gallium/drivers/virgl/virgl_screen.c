@@ -557,6 +557,7 @@ virgl_create_screen(struct virgl_winsys *vws)
 
    vws->get_caps(vws, &screen->caps);
 
+   screen->refcnt = 1;
 
    util_format_s3tc_init();
    return &screen->base;
