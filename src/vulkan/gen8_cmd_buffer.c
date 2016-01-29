@@ -225,6 +225,20 @@ flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
+__emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
+{
+      uint32_t sf_dw[GENX(3DSTATE_SF_length)];
+      struct GENX(3DSTATE_SF) sf = {
+         GENX(3DSTATE_SF_header),
+         .LineWidth = cmd_buffer->state.dynamic.line_width,
+      };
+      GENX(3DSTATE_SF_pack)(NULL, sf_dw, &sf);
+      /* FIXME: gen9.fs */
+      anv_batch_emit_merge(&cmd_buffer->batch, sf_dw,
+                           cmd_buffer->state.pipeline->gen8.sf);
+}
+
+static void
 cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
@@ -297,14 +311,7 @@ cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)) {
-      uint32_t sf_dw[GENX(3DSTATE_SF_length)];
-      struct GENX(3DSTATE_SF) sf = {
-         GENX(3DSTATE_SF_header),
-         .LineWidth = cmd_buffer->state.dynamic.line_width,
-      };
-      GENX(3DSTATE_SF_pack)(NULL, sf_dw, &sf);
-      /* FIXME: gen9.fs */
-      anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen8.sf);
+      __emit_sf_state(cmd_buffer);
    }
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
