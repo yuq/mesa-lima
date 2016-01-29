@@ -85,7 +85,7 @@ endif
 
 # virgl
 ifneq ($(filter virgl, $(MESA_GPU_DRIVERS)),)
-SUBDIRS += winsys/virgl/drm drivers/virgl
+SUBDIRS += winsys/virgl/drm winsys/virgl/vtest drivers/virgl
 endif
 
 # vmwgfx
