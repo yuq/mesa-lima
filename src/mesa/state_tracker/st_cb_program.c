@@ -205,18 +205,6 @@ st_delete_program(struct gl_context *ctx, struct gl_program *prog)
 
 
 /**
- * Called via ctx->Driver.IsProgramNative()
- */
-static GLboolean
-st_is_program_native(struct gl_context *ctx,
-                     GLenum target, 
-                     struct gl_program *prog)
-{
-   return GL_TRUE;
-}
-
-
-/**
  * Called via ctx->Driver.ProgramStringNotify()
  * Called when the program's text/code is changed.  We have to free
  * all shader variants and corresponding gallium shaders when this happens.
@@ -303,7 +291,6 @@ st_init_program_functions(struct dd_function_table *functions)
    functions->UseProgram = st_use_program;
    functions->NewProgram = st_new_program;
    functions->DeleteProgram = st_delete_program;
-   functions->IsProgramNative = st_is_program_native;
    functions->ProgramStringNotify = st_program_string_notify;
    
    functions->LinkShader = st_link_shader;
