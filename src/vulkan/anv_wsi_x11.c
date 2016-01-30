@@ -27,6 +27,95 @@
 
 #include "anv_wsi.h"
 
+#include "util/hash_table.h"
+
+struct wsi_x11_connection {
+   bool has_dri3;
+   bool has_present;
+};
+
+struct wsi_x11 {
+   struct anv_wsi_interface base;
+
+   pthread_mutex_t                              mutex;
+   /* Hash table of xcb_connection -> wsi_x11_connection mappings */
+   struct hash_table *connections;
+};
+
+static struct wsi_x11_connection *
+wsi_x11_connection_create(struct anv_instance *instance, xcb_connection_t *conn)
+{
+   xcb_query_extension_cookie_t dri3_cookie, pres_cookie;
+   xcb_query_extension_reply_t *dri3_reply, *pres_reply;
+
+   struct wsi_x11_connection *wsi_conn =
+      anv_alloc(&instance->alloc, sizeof(*wsi_conn), 8,
+                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+   if (!wsi_conn)
+      return NULL;
+
+   dri3_cookie = xcb_query_extension(conn, 4, "DRI3");
+   pres_cookie = xcb_query_extension(conn, 7, "PRESENT");
+
+   dri3_reply = xcb_query_extension_reply(conn, dri3_cookie, NULL);
+   pres_reply = xcb_query_extension_reply(conn, pres_cookie, NULL);
+   if (dri3_reply == NULL || pres_reply == NULL) {
+      free(dri3_reply);
+      free(pres_reply);
+      anv_free(&instance->alloc, wsi_conn);
+      return NULL;
+   }
+
+   wsi_conn->has_dri3 = dri3_reply->present != 0;
+   wsi_conn->has_present = pres_reply->present != 0;
+
+   free(dri3_reply);
+   free(pres_reply);
+
+   return wsi_conn;
+}
+
+static void
+wsi_x11_connection_destroy(struct anv_instance *instance,
+                           struct wsi_x11_connection *conn)
+{
+   anv_free(&instance->alloc, conn);
+}
+
+static struct wsi_x11_connection *
+wsi_x11_get_connection(struct anv_instance *instance, xcb_connection_t *conn)
+{
+   struct wsi_x11 *wsi =
+      (struct wsi_x11 *)instance->wsi[VK_ICD_WSI_PLATFORM_XCB];
+
+   pthread_mutex_lock(&wsi->mutex);
+
+   struct hash_entry *entry = _mesa_hash_table_search(wsi->connections, conn);
+   if (!entry) {
+      /* We're about to make a bunch of blocking calls.  Let's drop the
+       * mutex for now so we don't block up too badly.
+       */
+      pthread_mutex_unlock(&wsi->mutex);
+
+      struct wsi_x11_connection *wsi_conn =
+         wsi_x11_connection_create(instance, conn);
+
+      pthread_mutex_lock(&wsi->mutex);
+
+      entry = _mesa_hash_table_search(wsi->connections, conn);
+      if (entry) {
+         /* Oops, someone raced us to it */
+         wsi_x11_connection_destroy(instance, wsi_conn);
+      } else {
+         entry = _mesa_hash_table_insert(wsi->connections, conn, wsi_conn);
+      }
+   }
+
+   pthread_mutex_unlock(&wsi->mutex);
+
+   return entry->data;
+}
+
 static const VkSurfaceFormatKHR formats[] = {
    { .format = VK_FORMAT_B8G8R8A8_UNORM, },
 };
@@ -41,19 +130,41 @@ VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
     xcb_connection_t*                           connection,
     xcb_visualid_t                              visual_id)
 {
-   anv_finishme("Check that we actually have DRI3");
-   stub_return(true);
+   ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
+
+   struct wsi_x11_connection *wsi_conn =
+      wsi_x11_get_connection(device->instance, connection);
+
+   if (!wsi_conn->has_dri3) {
+      fprintf(stderr, "vulkan: No DRI3 support\n");
+      return false;
+   }
+
+   anv_finishme("Check visuals");
+
+   return true;
 }
 
 static VkResult
-x11_surface_get_support(VkIcdSurfaceBase *surface,
+x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
                         struct anv_physical_device *device,
                         uint32_t queueFamilyIndex,
                         VkBool32* pSupported)
 {
-   anv_finishme("Check that we actually have DRI3");
-   *pSupported = true;
+   VkIcdSurfaceXcb *surface = (VkIcdSurfaceXcb *)icd_surface;
 
+   struct wsi_x11_connection *wsi_conn =
+      wsi_x11_get_connection(device->instance, surface->connection);
+   if (!wsi_conn)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   if (!wsi_conn->has_dri3) {
+      fprintf(stderr, "vulkan: No DRI3 support\n");
+      *pSupported = false;
+      return VK_SUCCESS;
+   }
+
+   *pSupported = true;
    return VK_SUCCESS;
 }
 
@@ -143,14 +254,6 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *surface,
                              const VkSwapchainCreateInfoKHR* pCreateInfo,
                              const VkAllocationCallbacks* pAllocator,
                              struct anv_swapchain **swapchain);
-
-static struct anv_wsi_interface x11_interface = {
-   .get_support = x11_surface_get_support,
-   .get_capabilities = x11_surface_get_capabilities,
-   .get_formats = x11_surface_get_formats,
-   .get_present_modes = x11_surface_get_present_modes,
-   .create_swapchain = x11_surface_create_swapchain,
-};
 
 VkResult anv_CreateXcbSurfaceKHR(
     VkInstance                                  _instance,
@@ -453,11 +556,66 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
 VkResult
 anv_x11_init_wsi(struct anv_instance *instance)
 {
-   instance->wsi[VK_ICD_WSI_PLATFORM_XCB] = &x11_interface;
+   struct wsi_x11 *wsi;
+   VkResult result;
+
+   wsi = anv_alloc(&instance->alloc, sizeof(*wsi), 8,
+                   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+   if (!wsi) {
+      result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      goto fail;
+   }
+
+   int ret = pthread_mutex_init(&wsi->mutex, NULL);
+   if (ret != 0) {
+      if (ret == ENOMEM) {
+         result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      } else {
+         /* FINISHME: Choose a better error. */
+         result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      }
+
+      goto fail_alloc;
+   }
+
+   wsi->connections = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                                              _mesa_key_pointer_equal);
+   if (!wsi->connections) {
+      result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      goto fail_mutex;
+   }
+
+   wsi->base.get_support = x11_surface_get_support;
+   wsi->base.get_capabilities = x11_surface_get_capabilities;
+   wsi->base.get_formats = x11_surface_get_formats;
+   wsi->base.get_present_modes = x11_surface_get_present_modes;
+   wsi->base.create_swapchain = x11_surface_create_swapchain;
+
+   instance->wsi[VK_ICD_WSI_PLATFORM_XCB] = &wsi->base;
 
    return VK_SUCCESS;
+
+fail_mutex:
+   pthread_mutex_destroy(&wsi->mutex);
+fail_alloc:
+   anv_free(&instance->alloc, wsi);
+fail:
+   instance->wsi[VK_ICD_WSI_PLATFORM_XCB] = NULL;
+
+   return result;
 }
 
 void
 anv_x11_finish_wsi(struct anv_instance *instance)
-{ }
+{
+   struct wsi_x11 *wsi =
+      (struct wsi_x11 *)instance->wsi[VK_ICD_WSI_PLATFORM_XCB];
+
+   if (wsi) {
+      _mesa_hash_table_destroy(wsi->connections, NULL);
+
+      pthread_mutex_destroy(&wsi->mutex);
+
+      anv_free(&instance->alloc, wsi);
+   }
+}
