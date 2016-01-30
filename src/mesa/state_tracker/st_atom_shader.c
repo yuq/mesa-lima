@@ -163,7 +163,7 @@ static void
 update_gp( struct st_context *st )
 {
    struct st_geometry_program *stgp;
-   struct st_gp_variant_key key;
+   struct st_basic_variant_key key;
 
    if (!st->ctx->GeometryProgram._Current) {
       cso_set_geometry_shader_handle(st->cso_context, NULL);
@@ -199,7 +199,7 @@ static void
 update_tcp( struct st_context *st )
 {
    struct st_tessctrl_program *sttcp;
-   struct st_tcp_variant_key key;
+   struct st_basic_variant_key key;
 
    if (!st->ctx->TessCtrlProgram._Current) {
       cso_set_tessctrl_shader_handle(st->cso_context, NULL);
@@ -235,7 +235,7 @@ static void
 update_tep( struct st_context *st )
 {
    struct st_tesseval_program *sttep;
-   struct st_tep_variant_key key;
+   struct st_basic_variant_key key;
 
    if (!st->ctx->TessEvalProgram._Current) {
       cso_set_tesseval_shader_handle(st->cso_context, NULL);

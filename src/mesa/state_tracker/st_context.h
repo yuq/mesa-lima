@@ -168,9 +168,9 @@ struct st_context
 
    struct st_vp_variant *vp_variant;
    struct st_fp_variant *fp_variant;
-   struct st_gp_variant *gp_variant;
-   struct st_tcp_variant *tcp_variant;
-   struct st_tep_variant *tep_variant;
+   struct st_basic_variant *gp_variant;
+   struct st_basic_variant *tcp_variant;
+   struct st_basic_variant *tep_variant;
 
    struct gl_texture_object *default_texture;
 
