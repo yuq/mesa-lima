@@ -104,15 +104,16 @@ genX(compute_pipeline_create)(
 #if ANV_GEN > 7
                   .ScratchSpaceBasePointerHigh = 0,
                   .StackSize = 0,
+#else
+                  .GPGPUMode = true,
 #endif
-
                   .MaximumNumberofThreads = device->info.max_cs_threads - 1,
-                  .NumberofURBEntries = 2,
+                  .NumberofURBEntries = ANV_GEN <= 7 ? 0 : 2,
                   .ResetGatewayTimer = true,
 #if ANV_GEN == 8
                   .BypassGatewayControl = true,
 #endif
-                  .URBEntryAllocationSize = 2,
+                  .URBEntryAllocationSize = ANV_GEN <= 7 ? 0 : 2,
                   .CURBEAllocationSize = 0);
 
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
