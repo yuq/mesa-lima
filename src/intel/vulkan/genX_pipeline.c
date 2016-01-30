@@ -83,6 +83,27 @@ genX(compute_pipeline_create)(
    pipeline->use_repclear = false;
 
    const struct brw_cs_prog_data *cs_prog_data = &pipeline->cs_prog_data;
+   const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
+
+   unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
+   unsigned push_constant_data_size =
+      (prog_data->nr_params + local_id_dwords) * 4;
+   unsigned reg_aligned_constant_size = ALIGN(push_constant_data_size, 32);
+   unsigned push_constant_regs = reg_aligned_constant_size / 32;
+
+   uint32_t group_size = cs_prog_data->local_size[0] *
+      cs_prog_data->local_size[1] * cs_prog_data->local_size[2];
+   pipeline->cs_thread_width_max =
+      DIV_ROUND_UP(group_size, cs_prog_data->simd_size);
+   uint32_t remainder = group_size & (cs_prog_data->simd_size - 1);
+
+   if (remainder > 0)
+      pipeline->cs_right_mask = ~0u >> (32 - remainder);
+   else
+      pipeline->cs_right_mask = ~0u >> (32 - cs_prog_data->simd_size);
+
+   const uint32_t vfe_curbe_allocation =
+      push_constant_regs * pipeline->cs_thread_width_max;
 
    anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE),
                   .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_COMPUTE],
@@ -100,19 +121,7 @@ genX(compute_pipeline_create)(
                   .BypassGatewayControl = true,
 #endif
                   .URBEntryAllocationSize = GEN_GEN <= 7 ? 0 : 2,
-                  .CURBEAllocationSize = 0);
-
-   struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
-   uint32_t group_size = prog_data->local_size[0] *
-      prog_data->local_size[1] * prog_data->local_size[2];
-   pipeline->cs_thread_width_max = DIV_ROUND_UP(group_size, prog_data->simd_size);
-   uint32_t remainder = group_size & (prog_data->simd_size - 1);
-
-   if (remainder > 0)
-      pipeline->cs_right_mask = ~0u >> (32 - remainder);
-   else
-      pipeline->cs_right_mask = ~0u >> (32 - prog_data->simd_size);
-
+                  .CURBEAllocationSize = vfe_curbe_allocation);
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 
