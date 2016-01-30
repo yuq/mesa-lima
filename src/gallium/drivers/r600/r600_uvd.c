@@ -160,7 +160,7 @@ static struct pb_buffer* r600_uvd_set_dtb(struct ruvd_msg *msg, struct vl_video_
 	struct r600_texture *chroma = (struct r600_texture *)buf->resources[1];
 
 	msg->body.decode.dt_field_mode = buf->base.interlaced;
-	msg->body.decode.dt_surf_tile_config |= RUVD_NUM_BANKS(eg_num_banks(rscreen->b.tiling_info.num_banks));
+	msg->body.decode.dt_surf_tile_config |= RUVD_NUM_BANKS(eg_num_banks(rscreen->b.info.r600_num_banks));
 
 	ruvd_set_dt_surfaces(msg, &luma->surface, &chroma->surface);
 

@@ -97,7 +97,7 @@ uint32_t si_num_banks(struct si_screen *sscreen, struct r600_texture *tex)
 	}
 
 	/* The old way. */
-	switch (sscreen->b.tiling_info.num_banks) {
+	switch (sscreen->b.info.r600_num_banks) {
 	case 2:
 		return V_02803C_ADDR_SURF_2_BANK;
 	case 4:

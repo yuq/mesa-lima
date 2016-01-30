@@ -282,7 +282,6 @@ struct r600_surface {
 };
 
 struct r600_tiling_info {
-	unsigned num_banks;
 	unsigned group_bytes;
 };
 

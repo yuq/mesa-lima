@@ -772,7 +772,7 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 		if (util_format_get_blocksize(pipe_format) >= 16)
 			non_disp_tiling = 1;
 	}
-	nbanks = eg_num_banks(rscreen->b.tiling_info.num_banks);
+	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
 
 	if (state->target == PIPE_TEXTURE_1D_ARRAY) {
 	        height = 1;
@@ -1098,7 +1098,7 @@ void evergreen_init_color_surface(struct r600_context *rctx,
 		if (util_format_get_blocksize(surf->base.format) >= 16)
 			non_disp_tiling = 1;
 	}
-	nbanks = eg_num_banks(rscreen->b.tiling_info.num_banks);
+	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
 	desc = util_format_description(surf->base.format);
 	for (i = 0; i < 4; i++) {
 		if (desc->channel[i].type != UTIL_FORMAT_TYPE_VOID) {
@@ -1253,7 +1253,7 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 	macro_aspect = eg_macro_tile_aspect(macro_aspect);
 	bankw = eg_bank_wh(bankw);
 	bankh = eg_bank_wh(bankh);
-	nbanks = eg_num_banks(rscreen->b.tiling_info.num_banks);
+	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
 	offset >>= 8;
 
 	surf->db_z_info = S_028040_ARRAY_MODE(array_mode) |
@@ -3467,7 +3467,7 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 	sub_cmd = EG_DMA_COPY_TILED;
 	lbpp = util_logbase2(bpp);
 	pitch_tile_max = ((pitch / bpp) / 8) - 1;
-	nbanks = eg_num_banks(rctx->screen->b.tiling_info.num_banks);
+	nbanks = eg_num_banks(rctx->screen->b.info.r600_num_banks);
 
 	if (dst_mode == RADEON_SURF_MODE_LINEAR) {
 		/* T2L */
