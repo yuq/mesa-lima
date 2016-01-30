@@ -275,6 +275,15 @@ struct pipe_screen {
     */
    void (*query_memory_info)(struct pipe_screen *screen,
                              struct pipe_memory_info *info);
+
+   /**
+    * Get IR specific compiler options struct.  For PIPE_SHADER_IR_NIR this
+    * returns a 'struct nir_shader_compiler_options'.  Drivers reporting
+    * NIR as the preferred IR must implement this.
+    */
+   const void *(*get_compiler_options)(struct pipe_screen *screen,
+                                      enum pipe_shader_ir ir,
+                                      unsigned shader);
 };
 
 

@@ -221,6 +221,11 @@ struct pipe_stream_output_info
  *
  * TODO pipe_compute_state should probably get similar treatment to handle
  * multiple IR's in a cleaner way..
+ *
+ * NOTE: since it is expected that the consumer will want to perform
+ * additional passes on the nir_shader, the driver takes ownership of
+ * the nir_shader.  If state trackers need to hang on to the IR (for
+ * example, variant management), it should use nir_shader_clone().
  */
 struct pipe_shader_state
 {
@@ -230,6 +235,7 @@ struct pipe_shader_state
    union {
       void *llvm;
       void *native;
+      void *nir;
    } ir;
    struct pipe_stream_output_info stream_output;
 };
