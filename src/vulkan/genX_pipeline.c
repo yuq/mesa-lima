@@ -21,12 +21,6 @@
  * IN THE SOFTWARE.
  */
 
-#include <assert.h>
-#include <stdbool.h>
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-
 #include "anv_private.h"
 
 #if (ANV_GEN == 9)
@@ -38,8 +32,6 @@
 #elif (ANV_GEN == 7)
 #  include "gen7_pack.h"
 #endif
-
-#include "genX_pipeline_util.h"
 
 VkResult
 genX(compute_pipeline_create)(
