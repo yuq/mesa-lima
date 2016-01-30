@@ -93,6 +93,8 @@ x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
    caps->maxImageArrayLayers = 1;
    caps->supportedCompositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
    caps->supportedUsageFlags =
+      VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+      VK_IMAGE_USAGE_SAMPLED_BIT |
       VK_IMAGE_USAGE_TRANSFER_DST_BIT |
       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
