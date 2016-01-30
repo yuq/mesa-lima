@@ -102,7 +102,7 @@ genX(compute_pipeline_create)(
                   .MaximumNumberofThreads = device->info.max_cs_threads - 1,
                   .NumberofURBEntries = ANV_GEN <= 7 ? 0 : 2,
                   .ResetGatewayTimer = true,
-#if ANV_GEN == 8
+#if ANV_GEN <= 8
                   .BypassGatewayControl = true,
 #endif
                   .URBEntryAllocationSize = ANV_GEN <= 7 ? 0 : 2,
