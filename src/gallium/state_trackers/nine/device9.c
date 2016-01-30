@@ -3511,7 +3511,8 @@ NineDevice9_SetStreamSource( struct NineDevice9 *This,
         state->vtxbuf[i].stride = Stride;
         state->vtxbuf[i].buffer_offset = OffsetInBytes;
     }
-    state->vtxbuf[i].buffer = pStreamData ? pVBuf9->base.resource : NULL;
+    pipe_resource_reference(&state->vtxbuf[i].buffer,
+                            pStreamData ? pVBuf9->base.resource : NULL);
 
     return D3D_OK;
 }
