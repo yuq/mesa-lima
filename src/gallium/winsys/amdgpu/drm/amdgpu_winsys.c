@@ -265,6 +265,7 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
    ws->info.clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
    ws->info.r600_tiling_config = r600_get_gb_tiling_config(&ws->amdinfo);
    ws->info.num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
+   ws->info.pipe_interleave_bytes = 256 << ((ws->amdinfo.gb_addr_cfg >> 4) & 0x7);
    ws->info.has_virtual_memory = TRUE;
    ws->info.has_sdma = dma.available_rings != 0;
 

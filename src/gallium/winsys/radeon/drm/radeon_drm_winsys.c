@@ -390,6 +390,15 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
                 4 << ((ws->info.r600_tiling_config & 0xf0) >> 4) :
                 4 << ((ws->info.r600_tiling_config & 0x30) >> 4);
 
+        ws->info.pipe_interleave_bytes =
+            ws->info.chip_class >= EVERGREEN ?
+                256 << ((ws->info.r600_tiling_config & 0xf00) >> 8) :
+                256 << ((ws->info.r600_tiling_config & 0xc0) >> 6);
+
+        if (!ws->info.pipe_interleave_bytes)
+            ws->info.pipe_interleave_bytes =
+                ws->info.chip_class >= EVERGREEN ? 512 : 256;
+
         if (ws->info.drm_minor >= 11) {
             radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_TILE_PIPES, NULL,
                                  &ws->info.num_tile_pipes);

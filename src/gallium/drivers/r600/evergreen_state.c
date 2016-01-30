@@ -986,7 +986,7 @@ void evergreen_init_color_surface_rat(struct r600_context *rctx,
 	unsigned block_size =
 		align(util_format_get_blocksize(pipe_buffer->format), 4);
 	unsigned pitch_alignment =
-		MAX2(64, rctx->screen->b.tiling_info.group_bytes / block_size);
+		MAX2(64, rctx->screen->b.info.pipe_interleave_bytes / block_size);
 	unsigned pitch = align(pipe_buffer->width0, pitch_alignment);
 
 	/* XXX: This is copied from evergreen_init_color_surface().  I don't

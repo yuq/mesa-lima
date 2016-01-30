@@ -800,59 +800,6 @@ static boolean r600_fence_finish(struct pipe_screen *screen,
 	return rws->fence_wait(rws, rfence->gfx, timeout);
 }
 
-static bool r600_interpret_tiling(struct r600_common_screen *rscreen,
-				  uint32_t tiling_config)
-{
-	switch ((tiling_config & 0xc0) >> 6) {
-	case 0:
-		rscreen->tiling_info.group_bytes = 256;
-		break;
-	case 1:
-		rscreen->tiling_info.group_bytes = 512;
-		break;
-	default:
-		return false;
-	}
-	return true;
-}
-
-static bool evergreen_interpret_tiling(struct r600_common_screen *rscreen,
-				       uint32_t tiling_config)
-{
-	switch ((tiling_config & 0xf00) >> 8) {
-	case 0:
-		rscreen->tiling_info.group_bytes = 256;
-		break;
-	case 1:
-		rscreen->tiling_info.group_bytes = 512;
-		break;
-	default:
-		return false;
-	}
-	return true;
-}
-
-static bool r600_init_tiling(struct r600_common_screen *rscreen)
-{
-	uint32_t tiling_config = rscreen->info.r600_tiling_config;
-
-	/* set default group bytes, overridden by tiling info ioctl */
-	if (rscreen->chip_class <= R700) {
-		rscreen->tiling_info.group_bytes = 256;
-	} else {
-		rscreen->tiling_info.group_bytes = 512;
-	}
-
-	if (!tiling_config)
-		return true;
-
-	if (rscreen->chip_class <= R700) {
-		return r600_interpret_tiling(rscreen, tiling_config);
-	} else {
-		return evergreen_interpret_tiling(rscreen, tiling_config);
-	}
-}
-
 struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 						  const struct pipe_resource *templ)
 {
@@ -909,9 +856,6 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->chip_class = rscreen->info.chip_class;
 	rscreen->debug_flags = debug_get_flags_option("R600_DEBUG", common_debug_options, 0);
 
-	if (!r600_init_tiling(rscreen)) {
-		return false;
-	}
 	util_format_s3tc_init();
 	pipe_mutex_init(rscreen->aux_context_lock);
 	pipe_mutex_init(rscreen->gpu_load_mutex);
@@ -959,6 +903,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		printf("r600_num_banks = %i\n", rscreen->info.r600_num_banks);
 		printf("num_render_backends = %i\n", rscreen->info.num_render_backends);
 		printf("num_tile_pipes = %i\n", rscreen->info.num_tile_pipes);
+		printf("pipe_interleave_bytes = %i\n", rscreen->info.pipe_interleave_bytes);
 		printf("si_tile_mode_array_valid = %i\n", rscreen->info.si_tile_mode_array_valid);
 		printf("cik_macrotile_mode_array_valid = %i\n", rscreen->info.cik_macrotile_mode_array_valid);
 	}

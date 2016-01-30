@@ -362,7 +362,7 @@ void r600_texture_get_cmask_info(struct r600_common_screen *rscreen,
 	unsigned element_bits = 4;
 	unsigned cmask_cache_bits = 1024;
 	unsigned num_pipes = rscreen->info.num_tile_pipes;
-	unsigned pipe_interleave_bytes = rscreen->tiling_info.group_bytes;
+	unsigned pipe_interleave_bytes = rscreen->info.pipe_interleave_bytes;
 
 	unsigned elements_per_macro_tile = (cmask_cache_bits / element_bits) * num_pipes;
 	unsigned pixels_per_macro_tile = elements_per_macro_tile * cmask_tile_elements;
@@ -394,7 +394,7 @@ static void si_texture_get_cmask_info(struct r600_common_screen *rscreen,
 				      struct r600_texture *rtex,
 				      struct r600_cmask_info *out)
 {
-	unsigned pipe_interleave_bytes = rscreen->tiling_info.group_bytes;
+	unsigned pipe_interleave_bytes = rscreen->info.pipe_interleave_bytes;
 	unsigned num_pipes = rscreen->info.num_tile_pipes;
 	unsigned cl_width, cl_height;
 
@@ -569,7 +569,7 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 	slice_elements = (width * height) / (8 * 8);
 	slice_bytes = slice_elements * 4;
 
-	pipe_interleave_bytes = rscreen->tiling_info.group_bytes;
+	pipe_interleave_bytes = rscreen->info.pipe_interleave_bytes;
 	base_align = num_pipes * pipe_interleave_bytes;
 
 	rtex->htile.pitch = width;

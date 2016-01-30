@@ -281,17 +281,12 @@ struct r600_surface {
 	unsigned pa_su_poly_offset_db_fmt_cntl;
 };
 
-struct r600_tiling_info {
-	unsigned group_bytes;
-};
-
 struct r600_common_screen {
 	struct pipe_screen		b;
 	struct radeon_winsys		*ws;
 	enum radeon_family		family;
 	enum chip_class			chip_class;
 	struct radeon_info		info;
-	struct r600_tiling_info		tiling_info;
 	uint64_t			debug_flags;
 	bool				has_cp_dma;
 	bool				has_streamout;
