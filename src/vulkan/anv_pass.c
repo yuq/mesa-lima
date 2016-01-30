@@ -113,6 +113,7 @@ VkResult anv_CreateRenderPass(
          }
       }
 
+      subpass->has_resolve = false;
       if (desc->pResolveAttachments) {
          subpass->resolve_attachments = p;
          p += desc->colorAttachmentCount;
