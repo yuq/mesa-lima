@@ -350,21 +350,10 @@ st_get_fp_variant(struct st_context *st,
                   struct st_fragment_program *stfp,
                   const struct st_fp_variant_key *key);
 
-
 extern struct st_basic_variant *
-st_get_gp_variant(struct st_context *st,
-                  struct st_geometry_program *stgp,
-                  const struct st_basic_variant_key *key);
-
-extern struct st_basic_variant *
-st_get_tcp_variant(struct st_context *st,
-                   struct st_tessctrl_program *sttcp,
-                   const struct st_basic_variant_key *key);
-
-extern struct st_basic_variant *
-st_get_tep_variant(struct st_context *st,
-                   struct st_tesseval_program *sttep,
-                   const struct st_basic_variant_key *key);
+st_get_basic_variant(struct st_context *st,
+                     struct pipe_shader_state *tgsi,
+                     struct st_basic_variant **variants);
 
 extern void
 st_release_vp_variants( struct st_context *st,

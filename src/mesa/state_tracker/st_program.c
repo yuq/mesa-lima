@@ -1266,53 +1266,43 @@ st_translate_geometry_program(struct st_context *st,
 }
 
 
-static struct st_basic_variant *
-st_create_gp_variant(struct st_context *st,
-                     struct st_geometry_program *stgp,
-                     const struct st_basic_variant_key *key)
-{
-   struct pipe_context *pipe = st->pipe;
-   struct st_basic_variant *gpv;
-
-   gpv = CALLOC_STRUCT(st_basic_variant);
-   if (!gpv)
-      return NULL;
-
-   /* fill in new variant */
-   gpv->driver_shader = pipe->create_gs_state(pipe, &stgp->tgsi);
-   gpv->key = *key;
-   return gpv;
-}
-
-
 /**
- * Get/create geometry program variant.
+ * Get/create a basic program variant.
  */
 struct st_basic_variant *
-st_get_gp_variant(struct st_context *st,
-                  struct st_geometry_program *stgp,
-                  const struct st_basic_variant_key *key)
+st_get_basic_variant(struct st_context *st,
+                     struct pipe_shader_state *tgsi,
+                     struct st_basic_variant **variants)
 {
-   struct st_basic_variant *gpv;
+   struct pipe_context *pipe = st->pipe;
+   struct st_basic_variant *v;
+   struct st_basic_variant_key key;
+
+   memset(&key, 0, sizeof(key));
+   key.st = st->has_shareable_shaders ? NULL : st;
 
    /* Search for existing variant */
-   for (gpv = stgp->variants; gpv; gpv = gpv->next) {
-      if (memcmp(&gpv->key, key, sizeof(*key)) == 0) {
+   for (v = *variants; v; v = v->next) {
+      if (memcmp(&v->key, &key, sizeof(key)) == 0) {
          break;
       }
    }
 
-   if (!gpv) {
+   if (!v) {
       /* create new */
-      gpv = st_create_gp_variant(st, stgp, key);
-      if (gpv) {
+      v = CALLOC_STRUCT(st_basic_variant);
+      if (v) {
+         /* fill in new variant */
+         v->driver_shader = pipe->create_gs_state(pipe, tgsi);
+         v->key = key;
+
          /* insert into list */
-         gpv->next = stgp->variants;
-         stgp->variants = gpv;
+         v->next = *variants;
+         *variants = v;
       }
    }
 
-   return gpv;
+   return v;
 }
 
 
@@ -1338,56 +1328,6 @@ st_translate_tessctrl_program(struct st_context *st,
    free_glsl_to_tgsi_visitor(sttcp->glsl_to_tgsi);
    sttcp->glsl_to_tgsi = NULL;
    return true;
-}
-
-
-static struct st_basic_variant *
-st_create_tcp_variant(struct st_context *st,
-                      struct st_tessctrl_program *sttcp,
-                      const struct st_basic_variant_key *key)
-{
-   struct pipe_context *pipe = st->pipe;
-   struct st_basic_variant *tcpv;
-
-   tcpv = CALLOC_STRUCT(st_basic_variant);
-   if (!tcpv)
-      return NULL;
-
-   /* fill in new variant */
-   tcpv->driver_shader = pipe->create_tcs_state(pipe, &sttcp->tgsi);
-   tcpv->key = *key;
-   return tcpv;
-}
-
-
-/**
- * Get/create tessellation control program variant.
- */
-struct st_basic_variant *
-st_get_tcp_variant(struct st_context *st,
-                  struct st_tessctrl_program *sttcp,
-                  const struct st_basic_variant_key *key)
-{
-   struct st_basic_variant *tcpv;
-
-   /* Search for existing variant */
-   for (tcpv = sttcp->variants; tcpv; tcpv = tcpv->next) {
-      if (memcmp(&tcpv->key, key, sizeof(*key)) == 0) {
-         break;
-      }
-   }
-
-   if (!tcpv) {
-      /* create new */
-      tcpv = st_create_tcp_variant(st, sttcp, key);
-      if (tcpv) {
-         /* insert into list */
-         tcpv->next = sttcp->variants;
-         sttcp->variants = tcpv;
-      }
-   }
-
-   return tcpv;
 }
 
 
@@ -1435,56 +1375,6 @@ st_translate_tesseval_program(struct st_context *st,
    free_glsl_to_tgsi_visitor(sttep->glsl_to_tgsi);
    sttep->glsl_to_tgsi = NULL;
    return true;
-}
-
-
-static struct st_basic_variant *
-st_create_tep_variant(struct st_context *st,
-                      struct st_tesseval_program *sttep,
-                      const struct st_basic_variant_key *key)
-{
-   struct pipe_context *pipe = st->pipe;
-   struct st_basic_variant *tepv;
-
-   tepv = CALLOC_STRUCT(st_basic_variant);
-   if (!tepv)
-      return NULL;
-
-   /* fill in new variant */
-   tepv->driver_shader = pipe->create_tes_state(pipe, &sttep->tgsi);
-   tepv->key = *key;
-   return tepv;
-}
-
-
-/**
- * Get/create tessellation evaluation program variant.
- */
-struct st_basic_variant *
-st_get_tep_variant(struct st_context *st,
-                  struct st_tesseval_program *sttep,
-                  const struct st_basic_variant_key *key)
-{
-   struct st_basic_variant *tepv;
-
-   /* Search for existing variant */
-   for (tepv = sttep->variants; tepv; tepv = tepv->next) {
-      if (memcmp(&tepv->key, key, sizeof(*key)) == 0) {
-         break;
-      }
-   }
-
-   if (!tepv) {
-      /* create new */
-      tepv = st_create_tep_variant(st, sttep, key);
-      if (tepv) {
-         /* insert into list */
-         tepv->next = sttep->variants;
-         sttep->variants = tepv;
-      }
-   }
-
-   return tepv;
 }
 
 
@@ -1731,31 +1621,19 @@ st_precompile_shader_variant(struct st_context *st,
 
    case GL_TESS_CONTROL_PROGRAM_NV: {
       struct st_tessctrl_program *p = (struct st_tessctrl_program *)prog;
-      struct st_basic_variant_key key;
-
-      memset(&key, 0, sizeof(key));
-      key.st = st->has_shareable_shaders ? NULL : st;
-      st_get_tcp_variant(st, p, &key);
+      st_get_basic_variant(st, &p->tgsi, &p->variants);
       break;
    }
 
    case GL_TESS_EVALUATION_PROGRAM_NV: {
       struct st_tesseval_program *p = (struct st_tesseval_program *)prog;
-      struct st_basic_variant_key key;
-
-      memset(&key, 0, sizeof(key));
-      key.st = st->has_shareable_shaders ? NULL : st;
-      st_get_tep_variant(st, p, &key);
+      st_get_basic_variant(st, &p->tgsi, &p->variants);
       break;
    }
 
    case GL_GEOMETRY_PROGRAM_NV: {
       struct st_geometry_program *p = (struct st_geometry_program *)prog;
-      struct st_basic_variant_key key;
-
-      memset(&key, 0, sizeof(key));
-      key.st = st->has_shareable_shaders ? NULL : st;
-      st_get_gp_variant(st, p, &key);
+      st_get_basic_variant(st, &p->tgsi, &p->variants);
       break;
    }
 
