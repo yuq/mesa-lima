@@ -408,6 +408,7 @@ VkResult anv_CreateXcbSurfaceKHR(
    if (surface == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   surface->base.platform = VK_ICD_WSI_PLATFORM_XCB;
    surface->connection = pCreateInfo->connection;
    surface->window = pCreateInfo->window;
 
