@@ -803,23 +803,6 @@ static boolean r600_fence_finish(struct pipe_screen *screen,
 static bool r600_interpret_tiling(struct r600_common_screen *rscreen,
 				  uint32_t tiling_config)
 {
-	switch ((tiling_config & 0xe) >> 1) {
-	case 0:
-		rscreen->tiling_info.num_channels = 1;
-		break;
-	case 1:
-		rscreen->tiling_info.num_channels = 2;
-		break;
-	case 2:
-		rscreen->tiling_info.num_channels = 4;
-		break;
-	case 3:
-		rscreen->tiling_info.num_channels = 8;
-		break;
-	default:
-		return false;
-	}
-
 	switch ((tiling_config & 0x30) >> 4) {
 	case 0:
 		rscreen->tiling_info.num_banks = 4;
@@ -847,23 +830,6 @@ static bool r600_interpret_tiling(struct r600_common_screen *rscreen,
 static bool evergreen_interpret_tiling(struct r600_common_screen *rscreen,
 				       uint32_t tiling_config)
 {
-	switch (tiling_config & 0xf) {
-	case 0:
-		rscreen->tiling_info.num_channels = 1;
-		break;
-	case 1:
-		rscreen->tiling_info.num_channels = 2;
-		break;
-	case 2:
-		rscreen->tiling_info.num_channels = 4;
-		break;
-	case 3:
-		rscreen->tiling_info.num_channels = 8;
-		break;
-	default:
-		return false;
-	}
-
 	switch ((tiling_config & 0xf0) >> 4) {
 	case 0:
 		rscreen->tiling_info.num_banks = 4;

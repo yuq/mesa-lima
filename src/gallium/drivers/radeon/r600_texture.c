@@ -361,7 +361,7 @@ void r600_texture_get_cmask_info(struct r600_common_screen *rscreen,
 	unsigned cmask_tile_elements = cmask_tile_width * cmask_tile_height;
 	unsigned element_bits = 4;
 	unsigned cmask_cache_bits = 1024;
-	unsigned num_pipes = rscreen->tiling_info.num_channels;
+	unsigned num_pipes = rscreen->info.num_tile_pipes;
 	unsigned pipe_interleave_bytes = rscreen->tiling_info.group_bytes;
 
 	unsigned elements_per_macro_tile = (cmask_cache_bits / element_bits) * num_pipes;
@@ -395,7 +395,7 @@ static void si_texture_get_cmask_info(struct r600_common_screen *rscreen,
 				      struct r600_cmask_info *out)
 {
 	unsigned pipe_interleave_bytes = rscreen->tiling_info.group_bytes;
-	unsigned num_pipes = rscreen->tiling_info.num_channels;
+	unsigned num_pipes = rscreen->info.num_tile_pipes;
 	unsigned cl_width, cl_height;
 
 	switch (num_pipes) {
@@ -515,7 +515,7 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 {
 	unsigned cl_width, cl_height, width, height;
 	unsigned slice_elements, slice_bytes, pipe_interleave_bytes, base_align;
-	unsigned num_pipes = rscreen->tiling_info.num_channels;
+	unsigned num_pipes = rscreen->info.num_tile_pipes;
 
 	if (rscreen->chip_class <= EVERGREEN &&
 	    rscreen->info.drm_major == 2 && rscreen->info.drm_minor < 26)

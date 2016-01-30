@@ -392,6 +392,11 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
             if (radeon_get_drm_value(ws->fd, RADEON_INFO_BACKEND_MAP, NULL,
                                       &ws->info.r600_gb_backend_map))
                 ws->info.r600_gb_backend_map_valid = TRUE;
+        } else {
+            ws->info.num_tile_pipes =
+                ws->info.chip_class >= EVERGREEN ?
+                    1 << (ws->info.r600_tiling_config & 0xf) :
+                    1 << ((ws->info.r600_tiling_config & 0xe) >> 1);
         }
 
         ws->info.has_virtual_memory = FALSE;
