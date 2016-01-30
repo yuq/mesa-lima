@@ -1431,65 +1431,31 @@ destroy_program_variants(struct st_context *st, struct gl_program *target)
       }
       break;
    case GL_GEOMETRY_PROGRAM_NV:
-      {
-         struct st_geometry_program *stgp =
-            (struct st_geometry_program *) target;
-         struct st_basic_variant *gpv, **prevPtr = &stgp->variants;
-
-         for (gpv = stgp->variants; gpv; ) {
-            struct st_basic_variant *next = gpv->next;
-            if (gpv->key.st == st) {
-               /* unlink from list */
-               *prevPtr = next;
-               /* destroy this variant */
-               delete_basic_variant(st, gpv, stgp->Base.Base.Target);
-            }
-            else {
-               prevPtr = &gpv->next;
-            }
-            gpv = next;
-         }
-      }
-      break;
    case GL_TESS_CONTROL_PROGRAM_NV:
-      {
-         struct st_tessctrl_program *sttcp =
-            (struct st_tessctrl_program *) target;
-         struct st_basic_variant *tcpv, **prevPtr = &sttcp->variants;
-
-         for (tcpv = sttcp->variants; tcpv; ) {
-            struct st_basic_variant *next = tcpv->next;
-            if (tcpv->key.st == st) {
-               /* unlink from list */
-               *prevPtr = next;
-               /* destroy this variant */
-               delete_basic_variant(st, tcpv, sttcp->Base.Base.Target);
-            }
-            else {
-               prevPtr = &tcpv->next;
-            }
-            tcpv = next;
-         }
-      }
-      break;
    case GL_TESS_EVALUATION_PROGRAM_NV:
       {
-         struct st_tesseval_program *sttep =
-            (struct st_tesseval_program *) target;
-         struct st_basic_variant *tepv, **prevPtr = &sttep->variants;
+         struct st_geometry_program *gp = (struct st_geometry_program*)target;
+         struct st_tessctrl_program *tcp = (struct st_tessctrl_program*)target;
+         struct st_tesseval_program *tep = (struct st_tesseval_program*)target;
+         struct st_basic_variant **variants =
+            target->Target == GL_GEOMETRY_PROGRAM_NV ? &gp->variants :
+            target->Target == GL_TESS_CONTROL_PROGRAM_NV ? &tcp->variants :
+            target->Target == GL_TESS_EVALUATION_PROGRAM_NV ? &tep->variants :
+            NULL;
+         struct st_basic_variant *v, **prevPtr = variants;
 
-         for (tepv = sttep->variants; tepv; ) {
-            struct st_basic_variant *next = tepv->next;
-            if (tepv->key.st == st) {
+         for (v = *variants; v; ) {
+            struct st_basic_variant *next = v->next;
+            if (v->key.st == st) {
                /* unlink from list */
                *prevPtr = next;
                /* destroy this variant */
-               delete_basic_variant(st, tepv, sttep->Base.Base.Target);
+               delete_basic_variant(st, v, target->Target);
             }
             else {
-               prevPtr = &tepv->next;
+               prevPtr = &v->next;
             }
-            tepv = next;
+            v = next;
          }
       }
       break;
