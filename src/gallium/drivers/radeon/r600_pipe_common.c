@@ -271,7 +271,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	rctx->chip_class = rscreen->chip_class;
 
 	if (rscreen->chip_class >= CIK)
-		rctx->max_db = MAX2(8, rscreen->info.r600_num_backends);
+		rctx->max_db = MAX2(8, rscreen->info.num_render_backends);
 	else if (rscreen->chip_class >= EVERGREEN)
 		rctx->max_db = 8;
 	else
@@ -315,7 +315,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	if (!rctx->ctx)
 		return false;
 
-	if (rscreen->info.r600_has_dma && !(rscreen->debug_flags & DBG_NO_ASYNC_DMA)) {
+	if (rscreen->info.has_sdma && !(rscreen->debug_flags & DBG_NO_ASYNC_DMA)) {
 		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
 						   r600_flush_dma_ring,
 						   rctx, NULL);
@@ -720,7 +720,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 	case PIPE_COMPUTE_CAP_MAX_CLOCK_FREQUENCY:
 		if (ret) {
 			uint32_t *max_clock_frequency = ret;
-			*max_clock_frequency = rscreen->info.max_sclk;
+			*max_clock_frequency = rscreen->info.max_shader_clock;
 		}
 		return sizeof(uint32_t);
 
@@ -756,7 +756,7 @@ static uint64_t r600_get_timestamp(struct pipe_screen *screen)
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 
 	return 1000000 * rscreen->ws->query_value(rscreen->ws, RADEON_TIMESTAMP) /
-			rscreen->info.r600_clock_crystal_freq;
+			rscreen->info.clock_crystal_freq;
 }
 
 static void r600_fence_reference(struct pipe_screen *screen,
@@ -990,27 +990,33 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 
 	if (rscreen->debug_flags & DBG_INFO) {
 		printf("pci_id = 0x%x\n", rscreen->info.pci_id);
-		printf("family = %i\n", rscreen->info.family);
+		printf("family = %i (%s)\n", rscreen->info.family,
+		       r600_get_chip_name(rscreen));
 		printf("chip_class = %i\n", rscreen->info.chip_class);
-		printf("gart_size = %i MB\n", (int)(rscreen->info.gart_size >> 20));
-		printf("vram_size = %i MB\n", (int)(rscreen->info.vram_size >> 20));
-		printf("max_sclk = %i\n", rscreen->info.max_sclk);
+		printf("gart_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.gart_size, 1024*1024));
+		printf("vram_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.vram_size, 1024*1024));
+		printf("has_virtual_memory = %i\n", rscreen->info.has_virtual_memory);
+		printf("gfx_ib_pad_with_type2 = %i\n", rscreen->info.gfx_ib_pad_with_type2);
+		printf("has_sdma = %i\n", rscreen->info.has_sdma);
+		printf("has_uvd = %i\n", rscreen->info.has_uvd);
+		printf("vce_fw_version = %i\n", rscreen->info.vce_fw_version);
+		printf("vce_harvest_config = %i\n", rscreen->info.vce_harvest_config);
+		printf("clock_crystal_freq = %i\n", rscreen->info.clock_crystal_freq);
+		printf("drm = %i.%i.%i\n", rscreen->info.drm_major,
+		       rscreen->info.drm_minor, rscreen->info.drm_patchlevel);
+		printf("has_userptr = %i\n", rscreen->info.has_userptr);
+
+		printf("r600_max_quad_pipes = %i\n", rscreen->info.r600_max_quad_pipes);
+		printf("max_shader_clock = %i\n", rscreen->info.max_shader_clock);
 		printf("num_good_compute_units = %i\n", rscreen->info.num_good_compute_units);
 		printf("max_se = %i\n", rscreen->info.max_se);
 		printf("max_sh_per_se = %i\n", rscreen->info.max_sh_per_se);
-		printf("drm = %i.%i.%i\n", rscreen->info.drm_major,
-		       rscreen->info.drm_minor, rscreen->info.drm_patchlevel);
-		printf("has_uvd = %i\n", rscreen->info.has_uvd);
-		printf("vce_fw_version = %i\n", rscreen->info.vce_fw_version);
-		printf("r600_num_backends = %i\n", rscreen->info.r600_num_backends);
-		printf("r600_clock_crystal_freq = %i\n", rscreen->info.r600_clock_crystal_freq);
+
+		printf("r600_gb_backend_map = %i\n", rscreen->info.r600_gb_backend_map);
+		printf("r600_gb_backend_map_valid = %i\n", rscreen->info.r600_gb_backend_map_valid);
 		printf("r600_tiling_config = 0x%x\n", rscreen->info.r600_tiling_config);
-		printf("r600_num_tile_pipes = %i\n", rscreen->info.r600_num_tile_pipes);
-		printf("r600_max_pipes = %i\n", rscreen->info.r600_max_pipes);
-		printf("r600_virtual_address = %i\n", rscreen->info.r600_virtual_address);
-		printf("r600_has_dma = %i\n", rscreen->info.r600_has_dma);
-		printf("r600_backend_map = %i\n", rscreen->info.r600_backend_map);
-		printf("r600_backend_map_valid = %i\n", rscreen->info.r600_backend_map_valid);
+		printf("num_render_backends = %i\n", rscreen->info.num_render_backends);
+		printf("num_tile_pipes = %i\n", rscreen->info.num_tile_pipes);
 		printf("si_tile_mode_array_valid = %i\n", rscreen->info.si_tile_mode_array_valid);
 		printf("cik_macrotile_mode_array_valid = %i\n", rscreen->info.cik_macrotile_mode_array_valid);
 	}

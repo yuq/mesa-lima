@@ -251,20 +251,20 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
    ws->info.gart_size = gtt.heap_size;
    ws->info.vram_size = vram.heap_size;
    /* convert the shader clock from KHz to MHz */
-   ws->info.max_sclk = ws->amdinfo.max_engine_clk / 1000;
+   ws->info.max_shader_clock = ws->amdinfo.max_engine_clk / 1000;
    ws->info.max_se = ws->amdinfo.num_shader_engines;
    ws->info.max_sh_per_se = ws->amdinfo.num_shader_arrays_per_engine;
    ws->info.has_uvd = uvd.available_rings != 0;
    ws->info.vce_fw_version =
          vce.available_rings ? vce_version : 0;
    ws->info.has_userptr = TRUE;
-   ws->info.r600_num_backends = ws->amdinfo.rb_pipes;
-   ws->info.r600_clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
+   ws->info.num_render_backends = ws->amdinfo.rb_pipes;
+   ws->info.clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
    ws->info.r600_tiling_config = r600_get_gb_tiling_config(&ws->amdinfo);
-   ws->info.r600_num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
-   ws->info.r600_max_pipes = ws->amdinfo.max_quad_shader_pipes; /* TODO: is this correct? */
-   ws->info.r600_virtual_address = TRUE;
-   ws->info.r600_has_dma = dma.available_rings != 0;
+   ws->info.num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
+   ws->info.r600_max_quad_pipes = ws->amdinfo.max_quad_shader_pipes; /* TODO: is this correct? */
+   ws->info.has_virtual_memory = TRUE;
+   ws->info.has_sdma = dma.available_rings != 0;
 
    /* Get the number of good compute units. */
    ws->info.num_good_compute_units = 0;
@@ -276,7 +276,7 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
    memcpy(ws->info.si_tile_mode_array, ws->amdinfo.gb_tile_mode,
           sizeof(ws->amdinfo.gb_tile_mode));
    ws->info.si_tile_mode_array_valid = TRUE;
-   ws->info.si_backend_enabled_mask = ws->amdinfo.enabled_rb_pipes_mask;
+   ws->info.enabled_rb_mask = ws->amdinfo.enabled_rb_pipes_mask;
 
    memcpy(ws->info.cik_macrotile_mode_array, ws->amdinfo.gb_macro_tile_mode,
           sizeof(ws->amdinfo.gb_macro_tile_mode));

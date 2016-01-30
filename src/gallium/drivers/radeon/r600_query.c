@@ -174,7 +174,7 @@ static boolean r600_query_sw_get_result(struct r600_common_context *rctx,
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 		/* Convert from cycles per millisecond to cycles per second (Hz). */
 		result->timestamp_disjoint.frequency =
-			(uint64_t)rctx->screen->info.r600_clock_crystal_freq * 1000;
+			(uint64_t)rctx->screen->info.clock_crystal_freq * 1000;
 		result->timestamp_disjoint.disjoint = FALSE;
 		return TRUE;
 	case PIPE_QUERY_GPU_FINISHED: {
@@ -191,7 +191,7 @@ static boolean r600_query_sw_get_result(struct r600_common_context *rctx,
 		result->u32 = rctx->screen->info.num_good_compute_units;
 		return TRUE;
 	case R600_QUERY_GPIN_NUM_RB:
-		result->u32 = rctx->screen->info.r600_num_backends;
+		result->u32 = rctx->screen->info.num_render_backends;
 		return TRUE;
 	case R600_QUERY_GPIN_NUM_SPI:
 		result->u32 = 1; /* all supported chips have one SPI per SE */
@@ -936,7 +936,7 @@ boolean r600_query_hw_get_result(struct r600_common_context *rctx,
 	/* Convert the time to expected units. */
 	if (rquery->type == PIPE_QUERY_TIME_ELAPSED ||
 	    rquery->type == PIPE_QUERY_TIMESTAMP) {
-		result->u64 = (1000000 * result->u64) / rctx->screen->info.r600_clock_crystal_freq;
+		result->u64 = (1000000 * result->u64) / rctx->screen->info.clock_crystal_freq;
 	}
 	return TRUE;
 }
@@ -1049,13 +1049,13 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	struct r600_resource *buffer;
 	uint32_t *results;
-	unsigned num_backends = ctx->screen->info.r600_num_backends;
+	unsigned num_backends = ctx->screen->info.num_render_backends;
 	unsigned i, mask = 0;
 
 	/* if backend_map query is supported by the kernel */
-	if (ctx->screen->info.r600_backend_map_valid) {
-		unsigned num_tile_pipes = ctx->screen->info.r600_num_tile_pipes;
-		unsigned backend_map = ctx->screen->info.r600_backend_map;
+	if (ctx->screen->info.r600_gb_backend_map_valid) {
+		unsigned num_tile_pipes = ctx->screen->info.num_tile_pipes;
+		unsigned backend_map = ctx->screen->info.r600_gb_backend_map;
 		unsigned item_width, item_mask;
 
 		if (ctx->chip_class >= EVERGREEN) {
@@ -1263,7 +1263,7 @@ void r600_query_init(struct r600_common_context *rctx)
 	rctx->b.get_query_result = r600_get_query_result;
 	rctx->render_cond_atom.emit = r600_emit_query_predication;
 
-	if (((struct r600_common_screen*)rctx->b.screen)->info.r600_num_backends > 0)
+	if (((struct r600_common_screen*)rctx->b.screen)->info.num_render_backends > 0)
 	    rctx->b.render_condition = r600_render_condition;
 
 	LIST_INITHEAD(&rctx->active_nontimer_queries);

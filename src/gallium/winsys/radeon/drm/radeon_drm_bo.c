@@ -281,7 +281,7 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
     if (bo->ptr)
         os_munmap(bo->ptr, bo->base.size);
 
-    if (rws->info.r600_virtual_address) {
+    if (rws->info.has_virtual_memory) {
         if (rws->va_unmap_working) {
             struct drm_radeon_gem_va va;
 
@@ -552,7 +552,7 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
     pipe_mutex_init(bo->map_mutex);
     pb_cache_init_entry(&rws->bo_cache, &bo->cache_entry, &bo->base);
 
-    if (rws->info.r600_virtual_address) {
+    if (rws->info.has_virtual_memory) {
         struct drm_radeon_gem_va va;
 
         bo->va = radeon_bomgr_find_va(rws, size, alignment);
@@ -834,7 +834,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
 
     pipe_mutex_unlock(ws->bo_handles_mutex);
 
-    if (ws->info.r600_virtual_address) {
+    if (ws->info.has_virtual_memory) {
         struct drm_radeon_gem_va va;
 
         bo->va = radeon_bomgr_find_va(ws, bo->base.size, 1 << 20);
@@ -966,7 +966,7 @@ done:
     if (stride)
         *stride = whandle->stride;
 
-    if (ws->info.r600_virtual_address && !bo->va) {
+    if (ws->info.has_virtual_memory && !bo->va) {
         struct drm_radeon_gem_va va;
 
         bo->va = radeon_bomgr_find_va(ws, bo->base.size, 1 << 20);

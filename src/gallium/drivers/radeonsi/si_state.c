@@ -189,14 +189,14 @@ unsigned cik_db_pipe_config(struct si_screen *sscreen, unsigned tile_mode)
 
 	/* This is probably broken for a lot of chips, but it's only used
 	 * if the kernel cannot return the tile mode array for CIK. */
-	switch (sscreen->b.info.r600_num_tile_pipes) {
+	switch (sscreen->b.info.num_tile_pipes) {
 	case 16:
 		return V_02803C_X_ADDR_SURF_P16_32X32_16X16;
 	case 8:
 		return V_02803C_X_ADDR_SURF_P8_32X32_16X16;
 	case 4:
 	default:
-		if (sscreen->b.info.r600_num_backends == 4)
+		if (sscreen->b.info.num_render_backends == 4)
 			return V_02803C_X_ADDR_SURF_P4_16X16;
 		else
 			return V_02803C_X_ADDR_SURF_P4_8X16;
@@ -3572,8 +3572,8 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 {
 	unsigned sh_per_se = MAX2(sctx->screen->b.info.max_sh_per_se, 1);
 	unsigned num_se = MAX2(sctx->screen->b.info.max_se, 1);
-	unsigned rb_mask = sctx->screen->b.info.si_backend_enabled_mask;
-	unsigned num_rb = MIN2(sctx->screen->b.info.r600_num_backends, 16);
+	unsigned rb_mask = sctx->screen->b.info.enabled_rb_mask;
+	unsigned num_rb = MIN2(sctx->screen->b.info.num_render_backends, 16);
 	unsigned rb_per_pkr = MIN2(num_rb / num_se / sh_per_se, 2);
 	unsigned rb_per_se = num_rb / num_se;
 	unsigned se_mask[4];
@@ -3702,8 +3702,8 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 static void si_init_config(struct si_context *sctx)
 {
 	struct si_screen *sscreen = sctx->screen;
-	unsigned num_rb = MIN2(sctx->screen->b.info.r600_num_backends, 16);
-	unsigned rb_mask = sctx->screen->b.info.si_backend_enabled_mask;
+	unsigned num_rb = MIN2(sctx->screen->b.info.num_render_backends, 16);
+	unsigned rb_mask = sctx->screen->b.info.enabled_rb_mask;
 	unsigned raster_config, raster_config_1;
 	uint64_t border_color_va = sctx->border_color_buffer->gpu_address;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);

@@ -367,7 +367,7 @@ static void evergreen_emit_direct_dispatch(
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_pipe_compute *shader = rctx->cs_shader_state.shader;
 	unsigned num_waves;
-	unsigned num_pipes = rctx->screen->b.info.r600_max_pipes;
+	unsigned num_pipes = rctx->screen->b.info.r600_max_quad_pipes;
 	unsigned wave_divisor = (16 * num_pipes);
 	int group_size = 1;
 	int grid_size = 1;

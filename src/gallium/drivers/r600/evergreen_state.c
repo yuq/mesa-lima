@@ -3793,7 +3793,7 @@ void evergreen_setup_tess_constants(struct r600_context *rctx, const struct pipe
 	unsigned output_patch0_offset, perpatch_output_offset, lds_size;
 	uint32_t values[16];
 	unsigned num_waves;
-	unsigned num_pipes = rctx->screen->b.info.r600_max_pipes;
+	unsigned num_pipes = rctx->screen->b.info.r600_max_quad_pipes;
 	unsigned wave_divisor = (16 * num_pipes);
 
 	*num_patches = 1;
