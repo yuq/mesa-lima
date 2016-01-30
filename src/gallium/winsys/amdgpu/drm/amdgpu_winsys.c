@@ -68,7 +68,6 @@ static unsigned cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
 
    switch (CIK__GB_TILE_MODE__PIPE_CONFIG(mode2d)) {
    case CIK__PIPE_CONFIG__ADDR_SURF_P2:
-   default:
        return 2;
    case CIK__PIPE_CONFIG__ADDR_SURF_P4_8x16:
    case CIK__PIPE_CONFIG__ADDR_SURF_P4_16x16:
@@ -86,6 +85,10 @@ static unsigned cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
    case CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_8X16:
    case CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_16X16:
        return 16;
+   default:
+       fprintf(stderr, "Invalid CIK pipe configuration, assuming P2\n");
+       assert(!"this should never occur");
+       return 2;
    }
 }
 
