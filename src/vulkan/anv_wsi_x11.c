@@ -118,11 +118,114 @@ wsi_x11_get_connection(struct anv_instance *instance, xcb_connection_t *conn)
 
 static const VkSurfaceFormatKHR formats[] = {
    { .format = VK_FORMAT_B8G8R8A8_UNORM, },
+   { .format = VK_FORMAT_B8G8R8_UNORM, },
 };
 
 static const VkPresentModeKHR present_modes[] = {
    VK_PRESENT_MODE_MAILBOX_KHR,
 };
+
+static xcb_screen_t *
+get_screen_for_root(xcb_connection_t *conn, xcb_window_t root)
+{
+   xcb_screen_iterator_t screen_iter =
+      xcb_setup_roots_iterator(xcb_get_setup(conn));
+
+   for (; screen_iter.rem; xcb_screen_next (&screen_iter)) {
+      if (screen_iter.data->root == root)
+         return screen_iter.data;
+   }
+
+   return NULL;
+}
+
+static xcb_visualtype_t *
+screen_get_visualtype(xcb_screen_t *screen, xcb_visualid_t visual_id,
+                      unsigned *depth)
+{
+   xcb_depth_iterator_t depth_iter =
+      xcb_screen_allowed_depths_iterator(screen);
+
+   for (; depth_iter.rem; xcb_depth_next (&depth_iter)) {
+      xcb_visualtype_iterator_t visual_iter =
+         xcb_depth_visuals_iterator (depth_iter.data);
+
+      for (; visual_iter.rem; xcb_visualtype_next (&visual_iter)) {
+         if (visual_iter.data->visual_id == visual_id) {
+            if (depth)
+               *depth = depth_iter.data->depth;
+            return visual_iter.data;
+         }
+      }
+   }
+
+   return NULL;
+}
+
+static xcb_visualtype_t *
+connection_get_visualtype(xcb_connection_t *conn, xcb_visualid_t visual_id,
+                          unsigned *depth)
+{
+   xcb_screen_iterator_t screen_iter =
+      xcb_setup_roots_iterator(xcb_get_setup(conn));
+
+   /* For this we have to iterate over all of the screens which is rather
+    * annoying.  Fortunately, there is probably only 1.
+    */
+   for (; screen_iter.rem; xcb_screen_next (&screen_iter)) {
+      xcb_visualtype_t *visual = screen_get_visualtype(screen_iter.data,
+                                                       visual_id, depth);
+      if (visual)
+         return visual;
+   }
+
+   return NULL;
+}
+
+static xcb_visualtype_t *
+get_visualtype_for_window(xcb_connection_t *conn, xcb_window_t window,
+                          unsigned *depth)
+{
+   xcb_query_tree_cookie_t tree_cookie;
+   xcb_get_window_attributes_cookie_t attrib_cookie;
+   xcb_query_tree_reply_t *tree;
+   xcb_get_window_attributes_reply_t *attrib;
+
+   tree_cookie = xcb_query_tree(conn, window);
+   attrib_cookie = xcb_get_window_attributes(conn, window);
+
+   tree = xcb_query_tree_reply(conn, tree_cookie, NULL);
+   attrib = xcb_get_window_attributes_reply(conn, attrib_cookie, NULL);
+   if (attrib == NULL || tree == NULL) {
+      free(attrib);
+      free(tree);
+      return NULL;
+   }
+
+   xcb_window_t root = tree->root;
+   xcb_visualid_t visual_id = attrib->visual;
+   free(attrib);
+   free(tree);
+
+   xcb_screen_t *screen = get_screen_for_root(conn, root);
+   if (screen == NULL)
+      return NULL;
+
+   return screen_get_visualtype(screen, visual_id, depth);
+}
+
+static bool
+visual_has_alpha(xcb_visualtype_t *visual, unsigned depth)
+{
+   uint32_t rgb_mask = visual->red_mask |
+                       visual->green_mask |
+                       visual->blue_mask;
+
+   uint32_t all_mask = 0xffffffff >> (32 - depth);
+
+   /* Do we have bits left over after RGB? */
+   return (all_mask & ~rgb_mask) != 0;
+}
 
 VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
     VkPhysicalDevice                            physicalDevice,
@@ -140,7 +243,12 @@ VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
       return false;
    }
 
-   anv_finishme("Check visuals");
+   unsigned visual_depth;
+   if (!connection_get_visualtype(connection, visual_id, &visual_depth))
+      return false;
+
+   if (visual_depth != 24 && visual_depth != 32)
+      return false;
 
    return true;
 }
@@ -164,6 +272,18 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
       return VK_SUCCESS;
    }
 
+   unsigned visual_depth;
+   if (!get_visualtype_for_window(surface->connection, surface->window,
+                                  &visual_depth)) {
+      *pSupported = false;
+      return VK_SUCCESS;
+   }
+
+   if (visual_depth != 24 && visual_depth != 32) {
+      *pSupported = false;
+      return VK_SUCCESS;
+   }
+
    *pSupported = true;
    return VK_SUCCESS;
 }
@@ -174,12 +294,21 @@ x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
                              VkSurfaceCapabilitiesKHR *caps)
 {
    VkIcdSurfaceXcb *surface = (VkIcdSurfaceXcb *)icd_surface;
-
-   xcb_get_geometry_cookie_t cookie = xcb_get_geometry(surface->connection,
-                                                       surface->window);
+   xcb_get_geometry_cookie_t geom_cookie;
    xcb_generic_error_t *err;
-   xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(surface->connection,
-                                                           cookie, &err);
+   xcb_get_geometry_reply_t *geom;
+   unsigned visual_depth;
+
+   geom_cookie = xcb_get_geometry(surface->connection, surface->window);
+
+   /* This does a round-trip.  This is why we do get_geometry first and
+    * wait to read the reply until after we have a visual.
+    */
+   xcb_visualtype_t *visual =
+      get_visualtype_for_window(surface->connection, surface->window,
+                                &visual_depth);
+
+   geom = xcb_get_geometry_reply(surface->connection, geom_cookie, &err);
    if (geom) {
       VkExtent2D extent = { geom->width, geom->height };
       caps->currentExtent = extent;
@@ -197,12 +326,19 @@ x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
    free(err);
    free(geom);
 
+   if (visual_has_alpha(visual, visual_depth)) {
+      caps->supportedCompositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR |
+                                      VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+   } else {
+      caps->supportedCompositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR |
+                                      VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+   }
+
    caps->minImageCount = 2;
    caps->maxImageCount = 4;
    caps->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
    caps->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
    caps->maxImageArrayLayers = 1;
-   caps->supportedCompositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
    caps->supportedUsageFlags =
       VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
       VK_IMAGE_USAGE_SAMPLED_BIT |
