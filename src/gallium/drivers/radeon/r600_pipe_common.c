@@ -899,7 +899,6 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 
 		printf("r600_gb_backend_map = %i\n", rscreen->info.r600_gb_backend_map);
 		printf("r600_gb_backend_map_valid = %i\n", rscreen->info.r600_gb_backend_map_valid);
-		printf("r600_tiling_config = 0x%x\n", rscreen->info.r600_tiling_config);
 		printf("r600_num_banks = %i\n", rscreen->info.r600_num_banks);
 		printf("num_render_backends = %i\n", rscreen->info.num_render_backends);
 		printf("num_tile_pipes = %i\n", rscreen->info.num_tile_pipes);

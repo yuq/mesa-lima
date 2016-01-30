@@ -278,7 +278,6 @@ struct radeon_info {
     uint32_t                    r600_gb_backend_map; /* R600 harvest config */
     boolean                     r600_gb_backend_map_valid;
     uint32_t                    r600_num_banks;
-    uint32_t                    r600_tiling_config;
     uint32_t                    num_render_backends;
     uint32_t                    num_tile_pipes; /* pipe count from PIPE_CONFIG */
     uint32_t                    pipe_interleave_bytes;

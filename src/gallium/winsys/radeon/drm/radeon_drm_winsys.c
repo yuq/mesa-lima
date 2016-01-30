@@ -372,6 +372,8 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
             return FALSE;
     }
     else if (ws->gen >= DRV_R600) {
+        uint32_t tiling_config = 0;
+
         if (ws->info.drm_minor >= 9 &&
             !radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_BACKENDS,
                                   "num backends",
@@ -383,17 +385,17 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
                              &ws->info.clock_crystal_freq);
 
         radeon_get_drm_value(ws->fd, RADEON_INFO_TILING_CONFIG, NULL,
-                             &ws->info.r600_tiling_config);
+                             &tiling_config);
 
         ws->info.r600_num_banks =
             ws->info.chip_class >= EVERGREEN ?
-                4 << ((ws->info.r600_tiling_config & 0xf0) >> 4) :
-                4 << ((ws->info.r600_tiling_config & 0x30) >> 4);
+                4 << ((tiling_config & 0xf0) >> 4) :
+                4 << ((tiling_config & 0x30) >> 4);
 
         ws->info.pipe_interleave_bytes =
             ws->info.chip_class >= EVERGREEN ?
-                256 << ((ws->info.r600_tiling_config & 0xf00) >> 8) :
-                256 << ((ws->info.r600_tiling_config & 0xc0) >> 6);
+                256 << ((tiling_config & 0xf00) >> 8) :
+                256 << ((tiling_config & 0xc0) >> 6);
 
         if (!ws->info.pipe_interleave_bytes)
             ws->info.pipe_interleave_bytes =
@@ -409,8 +411,8 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
         } else {
             ws->info.num_tile_pipes =
                 ws->info.chip_class >= EVERGREEN ?
-                    1 << (ws->info.r600_tiling_config & 0xf) :
-                    1 << ((ws->info.r600_tiling_config & 0xe) >> 1);
+                    1 << (tiling_config & 0xf) :
+                    1 << ((tiling_config & 0xe) >> 1);
         }
 
         ws->info.has_virtual_memory = FALSE;

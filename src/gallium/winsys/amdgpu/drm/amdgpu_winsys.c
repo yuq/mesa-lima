@@ -92,20 +92,6 @@ static unsigned cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
    }
 }
 
-/* Convert Sea Islands register values GB_ADDR_CFG and MC_ADDR_CFG
- * into GB_TILING_CONFIG register which is only present on R600-R700. */
-static unsigned r600_get_gb_tiling_config(struct amdgpu_gpu_info *info)
-{
-   unsigned num_pipes = info->gb_addr_cfg & 0x7;
-   unsigned num_banks = info->mc_arb_ramcfg & 0x3;
-   unsigned pipe_interleave_bytes = (info->gb_addr_cfg >> 4) & 0x7;
-   unsigned row_size = (info->gb_addr_cfg >> 28) & 0x3;
-
-   return num_pipes | (num_banks << 4) |
-         (pipe_interleave_bytes << 8) |
-         (row_size << 12);
-}
-
 /* Helper function to do the ioctls needed for setup and init. */
 static boolean do_winsys_init(struct amdgpu_winsys *ws)
 {
@@ -263,7 +249,6 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
    ws->info.has_userptr = TRUE;
    ws->info.num_render_backends = ws->amdinfo.rb_pipes;
    ws->info.clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
-   ws->info.r600_tiling_config = r600_get_gb_tiling_config(&ws->amdinfo);
    ws->info.num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
    ws->info.pipe_interleave_bytes = 256 << ((ws->amdinfo.gb_addr_cfg >> 4) & 0x7);
    ws->info.has_virtual_memory = TRUE;
