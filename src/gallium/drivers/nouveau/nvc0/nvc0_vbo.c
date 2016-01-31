@@ -789,7 +789,7 @@ nvc0_draw_stream_output(struct nvc0_context *nvc0,
       res->status &= ~NOUVEAU_BUFFER_STATUS_GPU_WRITING;
       PUSH_SPACE(push, 2);
       IMMED_NVC0(push, NVC0_3D(SERIALIZE), 0);
-      nvc0_hw_query_fifo_wait(push, nvc0_query(so->pq));
+      nvc0_hw_query_fifo_wait(nvc0, nvc0_query(so->pq));
       if (nvc0->screen->eng3d->oclass < GM107_3D_CLASS)
          IMMED_NVC0(push, NVC0_3D(VERTEX_ARRAY_FLUSH), 0);
 
