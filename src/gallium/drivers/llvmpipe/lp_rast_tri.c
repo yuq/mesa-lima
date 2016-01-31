@@ -239,7 +239,7 @@ sign_bits4(const __m128i *cstep, int cdiff)
 
 void
 lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
-                      const union lp_rast_cmd_arg arg)
+                         const union lp_rast_cmd_arg arg)
 {
    const struct lp_rast_triangle *tri = arg.triangle.tri;
    const struct lp_rast_plane *plane = GET_PLANES(tri);
@@ -250,26 +250,29 @@ lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
    struct { unsigned mask:16; unsigned i:8; unsigned j:8; } out[16];
    unsigned nr = 0;
 
-   __m128i p0 = lp_plane_to_m128i(&plane[0]); /* c, dcdx, dcdy, eo */
-   __m128i p1 = lp_plane_to_m128i(&plane[1]); /* c, dcdx, dcdy, eo */
-   __m128i p2 = lp_plane_to_m128i(&plane[2]); /* c, dcdx, dcdy, eo */
+   /* p0 and p2 are aligned, p1 is not (plane size 24 bytes). */
+   __m128i p0 = _mm_load_si128((__m128i *)&plane[0]); /* clo, chi, dcdx, dcdy */
+   __m128i p1 = _mm_loadu_si128((__m128i *)&plane[1]);
+   __m128i p2 = _mm_load_si128((__m128i *)&plane[2]);
    __m128i zero = _mm_setzero_si128();
 
-   __m128i c;
-   __m128i dcdx;
-   __m128i dcdy;
-   __m128i rej4;
-
-   __m128i dcdx2;
-   __m128i dcdx3;
+   __m128i c, dcdx, dcdy, rej4;
+   __m128i dcdx_neg_mask, dcdy_neg_mask;
+   __m128i dcdx2, dcdx3;
    
    __m128i span_0;                /* 0,dcdx,2dcdx,3dcdx for plane 0 */
    __m128i span_1;                /* 0,dcdx,2dcdx,3dcdx for plane 1 */
    __m128i span_2;                /* 0,dcdx,2dcdx,3dcdx for plane 2 */
    __m128i unused;
-   
+
    transpose4_epi32(&p0, &p1, &p2, &zero,
-                    &c, &dcdx, &dcdy, &rej4);
+                    &c, &unused, &dcdx, &dcdy);
+
+   /* recalc eo - easier than trying to load as scalars / shuffle... */
+   dcdx_neg_mask = _mm_srai_epi32(dcdx, 31);
+   dcdy_neg_mask = _mm_srai_epi32(dcdy, 31);
+   rej4 = _mm_sub_epi32(_mm_andnot_si128(dcdy_neg_mask, dcdy),
+                        _mm_and_si128(dcdx_neg_mask, dcdx));
 
    /* Adjust dcdx;
     */
@@ -349,32 +352,29 @@ lp_rast_triangle_32_3_16(struct lp_rasterizer_task *task,
 
 void
 lp_rast_triangle_32_3_4(struct lp_rasterizer_task *task,
-                     const union lp_rast_cmd_arg arg)
+                        const union lp_rast_cmd_arg arg)
 {
    const struct lp_rast_triangle *tri = arg.triangle.tri;
    const struct lp_rast_plane *plane = GET_PLANES(tri);
    unsigned x = (arg.triangle.plane_mask & 0xff) + task->x;
    unsigned y = (arg.triangle.plane_mask >> 8) + task->y;
 
-   __m128i p0 = lp_plane_to_m128i(&plane[0]); /* c, dcdx, dcdy, eo */
-   __m128i p1 = lp_plane_to_m128i(&plane[1]); /* c, dcdx, dcdy, eo */
-   __m128i p2 = lp_plane_to_m128i(&plane[2]); /* c, dcdx, dcdy, eo */
+   /* p0 and p2 are aligned, p1 is not (plane size 24 bytes). */
+   __m128i p0 = _mm_load_si128((__m128i *)&plane[0]); /* clo, chi, dcdx, dcdy */
+   __m128i p1 = _mm_loadu_si128((__m128i *)&plane[1]);
+   __m128i p2 = _mm_load_si128((__m128i *)&plane[2]);
    __m128i zero = _mm_setzero_si128();
 
-   __m128i c;
-   __m128i dcdx;
-   __m128i dcdy;
+   __m128i c, dcdx, dcdy;
+   __m128i dcdx2, dcdx3;
 
-   __m128i dcdx2;
-   __m128i dcdx3;
-   
    __m128i span_0;                /* 0,dcdx,2dcdx,3dcdx for plane 0 */
    __m128i span_1;                /* 0,dcdx,2dcdx,3dcdx for plane 1 */
    __m128i span_2;                /* 0,dcdx,2dcdx,3dcdx for plane 2 */
    __m128i unused;
 
    transpose4_epi32(&p0, &p1, &p2, &zero,
-                    &c, &dcdx, &dcdy, &unused);
+                    &c, &unused, &dcdx, &dcdy);
 
    /* Adjust dcdx;
     */
