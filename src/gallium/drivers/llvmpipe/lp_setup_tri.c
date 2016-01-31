@@ -984,17 +984,16 @@ calc_fixed_position(struct lp_setup_context *setup,
     * Both should be acceptable, I think.
     */
 #if defined(PIPE_ARCH_SSE)
-   __m128d v0r, v1r, v2r;
+   __m128 v0r, v1r;
    __m128 vxy0xy2, vxy1xy0;
    __m128i vxy0xy2i, vxy1xy0i;
    __m128i dxdy0120, x0x2y0y2, x1x0y1y0, x0120, y0120;
    __m128 pix_offset = _mm_set1_ps(setup->pixel_offset);
    __m128 fixed_one = _mm_set1_ps((float)FIXED_ONE);
-   v0r = _mm_load_sd((const double *)v0[0]);
-   v1r = _mm_load_sd((const double *)v1[0]);
-   v2r = _mm_load_sd((const double *)v2[0]);
-   vxy0xy2 = _mm_castpd_ps(_mm_unpacklo_pd(v0r, v2r));
-   vxy1xy0 = _mm_castpd_ps(_mm_unpacklo_pd(v1r, v0r));
+   v0r = _mm_castpd_ps(_mm_load_sd((double *)v0[0]));
+   vxy0xy2 = _mm_loadh_pi(v0r, (__m64 *)v2[0]);
+   v1r = _mm_castpd_ps(_mm_load_sd((double *)v1[0]));
+   vxy1xy0 = _mm_movelh_ps(v1r, vxy0xy2);
    vxy0xy2 = _mm_sub_ps(vxy0xy2, pix_offset);
    vxy1xy0 = _mm_sub_ps(vxy1xy0, pix_offset);
    vxy0xy2 = _mm_mul_ps(vxy0xy2, fixed_one);
