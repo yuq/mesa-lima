@@ -2073,14 +2073,9 @@ RegAlloc::InsertConstraintsPass::condenseSrcs(Instruction *insn,
    merge->setDef(0, lval);
    for (int s = a, i = 0; s <= b; ++s, ++i) {
       merge->setSrc(i, insn->getSrc(s));
-      insn->setSrc(s, NULL);
    }
+   insn->moveSources(b + 1, a - b);
    insn->setSrc(a, lval);
-
-   for (int k = a + 1, s = b + 1; insn->srcExists(s); ++s, ++k) {
-      insn->setSrc(k, insn->getSrc(s));
-      insn->setSrc(s, NULL);
-   }
    insn->bb->insertBefore(insn, merge);
 
    insn->putExtraSources(0, save);
