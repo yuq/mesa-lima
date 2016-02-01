@@ -336,7 +336,7 @@ void anv_GetPhysicalDeviceFeatures(
    anv_finishme("Get correct values for PhysicalDeviceFeatures");
 
    *pFeatures = (VkPhysicalDeviceFeatures) {
-      .robustBufferAccess                       = false,
+      .robustBufferAccess                       = true,
       .fullDrawIndexUint32                      = false,
       .imageCubeArray                           = false,
       .independentBlend                         = false,
