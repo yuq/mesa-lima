@@ -202,6 +202,7 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_STRING_MARKER:
         case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
         case PIPE_CAP_QUERY_BUFFER_OBJECT:
+	case PIPE_CAP_QUERY_MEMORY_INFO:
                 return 0;
 
                 /* Stream output. */

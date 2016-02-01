@@ -165,6 +165,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_BARRIER:
 	case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
 	case PIPE_CAP_COMPUTE:
+	case PIPE_CAP_QUERY_MEMORY_INFO:
 		return 0;
 
 	case PIPE_CAP_SM3:
