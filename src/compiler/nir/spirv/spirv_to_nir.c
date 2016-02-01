@@ -594,9 +594,11 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    case SpvOpTypeBool:
       val->type->type = glsl_bool_type();
       break;
-   case SpvOpTypeInt:
-      val->type->type = glsl_int_type();
+   case SpvOpTypeInt: {
+      const bool signedness = w[3];
+      val->type->type = (signedness ? glsl_int_type() : glsl_uint_type());
       break;
+   }
    case SpvOpTypeFloat:
       val->type->type = glsl_float_type();
       break;
