@@ -2374,6 +2374,8 @@ void nir_lower_two_sided_color(nir_shader *shader);
 
 void nir_lower_clamp_color_outputs(nir_shader *shader);
 
+void nir_lower_passthrough_edgeflags(nir_shader *shader);
+
 typedef struct nir_lower_wpos_ytransform_options {
    int state_tokens[5];
    bool fs_coord_origin_upper_left :1;
