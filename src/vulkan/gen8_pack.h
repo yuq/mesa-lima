@@ -47,7 +47,7 @@ union __gen_value {
 static inline uint64_t
 __gen_mbo(uint32_t start, uint32_t end)
 {
-   return (~0ul >> (64 - (end - start + 1))) << start;
+   return (~0ull >> (64 - (end - start + 1))) << start;
 }
 
 static inline uint64_t
@@ -56,7 +56,7 @@ __gen_field(uint64_t v, uint32_t start, uint32_t end)
    __gen_validate_value(v);
 #if DEBUG
    if (end - start + 1 < 64)
-      assert(v < 1ul << (end - start + 1));
+      assert(v < 1ull << (end - start + 1));
 #endif
 
    return v << start;
@@ -97,7 +97,7 @@ __gen_offset(uint64_t v, uint32_t start, uint32_t end)
 {
    __gen_validate_value(v);
 #if DEBUG
-   uint64_t mask = (~0ul >> (64 - (end - start + 1))) << start;
+   uint64_t mask = (~0ull >> (64 - (end - start + 1))) << start;
 
    assert((v & ~mask) == 0);
 #endif
