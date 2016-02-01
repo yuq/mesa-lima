@@ -56,16 +56,16 @@ meta_resolve_restore(struct anv_meta_saved_state *saved_state,
    anv_meta_restore(saved_state, cmd_buffer);
 }
 
-static VkPipeline *                                                                                          
+static VkPipeline *
 get_pipeline_h(struct anv_device *device, uint32_t samples)
-{                                                                                                            
-   uint32_t i = ffs(samples) - 2; /* log2(samples) - 1 */                                                        
+{
+   uint32_t i = ffs(samples) - 2; /* log2(samples) - 1 */
 
    assert(samples >= 2);
-   assert(i < ARRAY_SIZE(device->meta_state.resolve.pipelines));                                             
+   assert(i < ARRAY_SIZE(device->meta_state.resolve.pipelines));
 
    return &device->meta_state.resolve.pipelines[i];
-}                                                                                                            
+}
 
 static nir_shader *
 build_nir_vs(void)
