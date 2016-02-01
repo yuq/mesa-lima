@@ -2409,6 +2409,8 @@ void nir_lower_clip_fs(nir_shader *shader, unsigned ucp_enables);
 
 void nir_lower_two_sided_color(nir_shader *shader);
 
+void nir_lower_clamp_color_outputs(nir_shader *shader);
+
 void nir_lower_atomics(nir_shader *shader,
                        const struct gl_shader_program *shader_program);
 void nir_lower_to_source_mods(nir_shader *shader);

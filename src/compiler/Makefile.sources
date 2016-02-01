@@ -186,6 +186,7 @@ NIR_FILES = \
 	nir/nir_liveness.c \
 	nir/nir_lower_alu_to_scalar.c \
 	nir/nir_lower_atomics.c \
+	nir/nir_lower_clamp_color_outputs.c \
 	nir/nir_lower_clip.c \
 	nir/nir_lower_double_ops.c \
 	nir/nir_lower_double_packing.c \
