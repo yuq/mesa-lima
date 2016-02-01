@@ -131,10 +131,10 @@ Supported Features:
   - VkkSemaphore and VkEvent
   - Shader specialization
   - Storage images
+  - MSAA
 
 Unsupported Features:
    - Tesselation shaders
    - Push constants in GS and VS on HSW and prior
    - Sparse resources
-   - MSAA
    - Input attachments
