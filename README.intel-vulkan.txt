@@ -1,5 +1,5 @@
 Intel's Open Source Vulkan Driver
-Vulkan API Version: 0.210.1
+Vulkan API Version: 1.0.2
 SPIR-V Version: 1.0
 
 Intro
@@ -35,13 +35,19 @@ Chad Versace <chad.versace@intel.com>
 
 Supported Hardware
 ==================
-- Broadwell, main development focus
+- Broadwell & Sky Lake, main development focus
 - Ivybridge
-- Sky Lake
 - Haswell
 - Bay Trail
 - Cherryview
 - Broxton
+
+
+Conformance
+===========
+First-wave conformance has been submitted for Broadwell, Sky Lake, and
+Cherryview.  They all pass 100% of the mustpass tests as of January 30,
+2016.
 
 
 Supported OS Platforms
@@ -112,7 +118,7 @@ Supported Features:
   - Fragment, vertex, geometry, and compute shaders
   - Uniform buffers, sampled images, dynamic uniform buffers
   - Shader storage buffers
-  - Push constants (VS and FS only)
+  - Push constants
   - Color, depth and stencil attachments
   - 1D, 2D, 3D textures, texture arrays
   - Memory barrier
@@ -123,13 +129,12 @@ Supported Features:
     vkCmdCopyImageToBuffer for stencil buffers
   - Occlution query and timestamps
   - VkkSemaphore and VkEvent
+  - Shader specialization
+  - Storage images
 
 Unsupported Features:
-   - Shader specialization
-   - Storage images
    - Tesselation shaders
-   - Push constants in GS and CS (and VS on HSW and prior)
+   - Push constants in GS and VS on HSW and prior
    - Sparse resources
    - MSAA
-   - vkCmdClear commands
    - Input attachments
