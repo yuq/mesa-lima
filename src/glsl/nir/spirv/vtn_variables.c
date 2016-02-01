@@ -487,6 +487,8 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
                   vtn_access_link_as_ssa(b, chain->link[chain_idx + 1],
                                          type->stride);
                offset = nir_iadd(&b->nb, offset, row_offset);
+               if (load)
+                  *inout = vtn_create_ssa_value(b, glsl_scalar_type(base_type));
                _vtn_load_store_tail(b, op, load, index, offset, inout,
                                     glsl_scalar_type(base_type));
             } else {
