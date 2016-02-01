@@ -118,7 +118,6 @@ wsi_x11_get_connection(struct anv_instance *instance, xcb_connection_t *conn)
 
 static const VkSurfaceFormatKHR formats[] = {
    { .format = VK_FORMAT_B8G8R8A8_UNORM, },
-   { .format = VK_FORMAT_B8G8R8_UNORM, },
 };
 
 static const VkPresentModeKHR present_modes[] = {
