@@ -498,19 +498,23 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
                      nir_iadd(&b->nb, offset,
                               nir_imm_int(&b->nb, i * type->stride));
 
-                  struct vtn_ssa_value *comp = NULL, temp_val;
+                  struct vtn_ssa_value *comp, temp_val;
                   if (!load) {
                      temp_val.def = nir_channel(&b->nb, (*inout)->def, i);
                      temp_val.type = glsl_scalar_type(base_type);
-                     comp = &temp_val;
                   }
+                  comp = &temp_val;
                   _vtn_load_store_tail(b, op, load, index, elem_offset,
                                        &comp, glsl_scalar_type(base_type));
                   comps[i] = comp->def;
                }
 
-               if (load)
+               if (load) {
+                  if (*inout == NULL)
+                     *inout = vtn_create_ssa_value(b, type->type);
+
                   (*inout)->def = nir_vec(&b->nb, comps, num_comps);
+               }
             }
          } else {
             /* Column-major with a deref. Fall through to array case. */
