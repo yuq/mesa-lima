@@ -1167,6 +1167,17 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       val->sampled_image->sampler =
          vtn_value(b, w[4], vtn_value_type_access_chain)->access_chain;
       return;
+   } else if (opcode == SpvOpImage) {
+      struct vtn_value *val =
+         vtn_push_value(b, w[2], vtn_value_type_access_chain);
+      struct vtn_value *src_val = vtn_untyped_value(b, w[3]);
+      if (src_val->value_type == vtn_value_type_sampled_image) {
+         val->access_chain = src_val->sampled_image->image;
+      } else {
+         assert(src_val->value_type == vtn_value_type_access_chain);
+         val->access_chain = src_val->access_chain;
+      }
+      return;
    }
 
    struct vtn_type *ret_type = vtn_value(b, w[1], vtn_value_type_type)->type;
@@ -2380,6 +2391,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpSampledImage:
+   case SpvOpImage:
    case SpvOpImageSampleImplicitLod:
    case SpvOpImageSampleExplicitLod:
    case SpvOpImageSampleDrefImplicitLod:
