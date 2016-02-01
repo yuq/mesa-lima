@@ -490,8 +490,11 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
                _vtn_load_store_tail(b, op, load, index, offset, inout,
                                     glsl_scalar_type(base_type));
             } else {
-               /* Picking one element off each column */
+               /* Grabbing a column; picking one element off each row */
                unsigned num_comps = glsl_get_vector_elements(type->type);
+               const struct glsl_type *column_type =
+                  glsl_get_column_type(type->type);
+
                nir_ssa_def *comps[4];
                for (unsigned i = 0; i < num_comps; i++) {
                   nir_ssa_def *elem_offset =
@@ -511,7 +514,7 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
 
                if (load) {
                   if (*inout == NULL)
-                     *inout = vtn_create_ssa_value(b, type->type);
+                     *inout = vtn_create_ssa_value(b, column_type);
 
                   (*inout)->def = nir_vec(&b->nb, comps, num_comps);
                }
