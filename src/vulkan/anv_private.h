@@ -918,9 +918,7 @@ struct anv_descriptor {
 
    union {
       struct {
-         union {
-            struct anv_image_view *image_view;
-         };
+         struct anv_image_view *image_view;
          struct anv_sampler *sampler;
       };
 
