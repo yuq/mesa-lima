@@ -1237,6 +1237,10 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
+   /* For OpImageQuerySizeLod, we always have an LOD */
+   if (opcode == SpvOpImageQuerySizeLod)
+      (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_lod);
+
    /* Figure out the base texture operation */
    nir_texop texop;
    switch (opcode) {
