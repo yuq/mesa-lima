@@ -149,6 +149,8 @@ optimizations = [
    (('ior', a, 0), a),
    (('fxor', a, a), 0.0),
    (('ixor', a, a), 0),
+   (('fxor', a, 0.0), a),
+   (('ixor', a, 0), a),
    (('inot', ('inot', a)), a),
    # DeMorgan's Laws
    (('iand', ('inot', a), ('inot', b)), ('inot', ('ior',  a, b))),
