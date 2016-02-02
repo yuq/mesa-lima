@@ -102,13 +102,10 @@ class Constant(Value):
       self.value = val
 
    def __hex__(self):
-      # Even if it's an integer, we still need to unpack as an unsigned
-      # int.  This is because, without C99, we can only assign to the first
-      # element of a union in an initializer.
       if isinstance(self.value, (bool)):
          return 'NIR_TRUE' if self.value else 'NIR_FALSE'
       if isinstance(self.value, (int, long)):
-         return hex(struct.unpack('I', struct.pack('i', self.value))[0])
+         return hex(self.value)
       elif isinstance(self.value, float):
          return hex(struct.unpack('I', struct.pack('f', self.value))[0])
       else:
