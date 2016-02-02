@@ -347,11 +347,9 @@ do_triangle_ccw(struct lp_setup_context *setup,
     */
    if (setup->scissor_test) {
       /* why not just use draw_regions */
-      struct u_rect *scissor = &setup->scissors[viewport_index];
-      nr_planes += (bbox.x0 < scissor->x0);
-      nr_planes += (bbox.x1 > scissor->x1);
-      nr_planes += (bbox.y0 < scissor->y0);
-      nr_planes += (bbox.y1 > scissor->y1);
+      boolean s_planes[4];
+      scissor_planes_needed(s_planes, &bbox, &setup->scissors[viewport_index]);
+      nr_planes += s_planes[0] + s_planes[1] + s_planes[2] + s_planes[3];
    }
 
    tri = lp_setup_alloc_triangle(scene,
@@ -685,29 +683,31 @@ do_triangle_ccw(struct lp_setup_context *setup,
       /* why not just use draw_regions */
       struct u_rect *scissor = &setup->scissors[viewport_index];
       struct lp_rast_plane *plane_s = &plane[3];
+      boolean s_planes[4];
+      scissor_planes_needed(s_planes, &bbox, scissor);
 
-      if (bbox.x0 < scissor->x0) {
+      if (s_planes[0]) {
          plane_s->dcdx = -1 << 8;
          plane_s->dcdy = 0;
          plane_s->c = (1-scissor->x0) << 8;
          plane_s->eo = 1 << 8;
          plane_s++;
       }
-      if (bbox.x1 > scissor->x1) {
+      if (s_planes[1]) {
          plane_s->dcdx = 1 << 8;
          plane_s->dcdy = 0;
          plane_s->c = (scissor->x1+1) << 8;
          plane_s->eo = 0 << 8;
          plane_s++;
       }
-      if (bbox.y0 < scissor->y0) {
+      if (s_planes[2]) {
          plane_s->dcdx = 0;
          plane_s->dcdy = 1 << 8;
          plane_s->c = (1-scissor->y0) << 8;
          plane_s->eo = 1 << 8;
          plane_s++;
       }
-      if (bbox.y1 > scissor->y1) {
+      if (s_planes[3]) {
          plane_s->dcdx = 0;
          plane_s->dcdy = -1 << 8;
          plane_s->c = (scissor->y1+1) << 8;
