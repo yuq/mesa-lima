@@ -450,6 +450,7 @@ EXTRA_EXT(ARB_tessellation_shader);
 EXTRA_EXT(ARB_shader_subroutine);
 EXTRA_EXT(ARB_shader_storage_buffer_object);
 EXTRA_EXT(ARB_indirect_parameters);
+EXTRA_EXT(ATI_meminfo);
 EXTRA_EXT(NVX_gpu_memory_info);
 
 static const int
@@ -1092,7 +1093,10 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
       break;
    case GL_SAMPLE_BUFFERS:
       v->value_int = _mesa_geometric_samples(ctx->DrawBuffer) > 0;
-   /* GL_NVX_gpu_memory_info */
+   /* GL_ATI_meminfo & GL_NVX_gpu_memory_info */
+   case GL_VBO_FREE_MEMORY_ATI:
+   case GL_TEXTURE_FREE_MEMORY_ATI:
+   case GL_RENDERBUFFER_FREE_MEMORY_ATI:
    case GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX:
    case GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX:
    case GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX:
@@ -1114,6 +1118,26 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
             v->value_int = info.nr_device_memory_evictions;
          else if (d->pname == GL_GPU_MEMORY_INFO_EVICTED_MEMORY_NVX)
             v->value_int = info.device_memory_evicted;
+         else {
+            /* ATI free memory enums.
+             *
+             * Since the GPU memory is (usually) page-table based, every two
+             * consecutive elements are equal. From the GL_ATI_meminfo
+             * specification:
+             *
+             *    "param[0] - total memory free in the pool
+             *     param[1] - largest available free block in the pool
+             *     param[2] - total auxiliary memory free
+             *     param[3] - largest auxiliary free block"
+             *
+             * All three (VBO, TEXTURE, RENDERBUFFER) queries return
+             * the same numbers here.
+             */
+            v->value_int_4[0] = info.avail_device_memory;
+            v->value_int_4[1] = info.avail_device_memory;
+            v->value_int_4[2] = info.avail_staging_memory;
+            v->value_int_4[3] = info.avail_staging_memory;
+         }
       }
       break;
    }

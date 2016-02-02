@@ -12668,6 +12668,12 @@
     <enum name="FRAMEBUFFER_SRGB_CAPABLE_EXT"      value="0x8DBA"/>
 </category>
 
+<category name="GL_ATI_meminfo" number="359">
+    <enum name="VBO_FREE_MEMORY_ATI"          value="0x87FB" />
+    <enum name="TEXTURE_FREE_MEMORY_ATI"      value="0x87FC" />
+    <enum name="RENDERBUFFER_FREE_MEMORY_ATI" value="0x87FD" />
+</category>
+
 <xi:include href="AMD_performance_monitor.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 <category name="GL_APPLE_texture_range" number="367">

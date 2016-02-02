@@ -851,6 +851,11 @@ descriptor=[
 # GL_ARB_query_buffer_object
   [ "QUERY_BUFFER_BINDING", "LOC_CUSTOM, TYPE_INT, 0, extra_ARB_query_buffer_object" ],
 
+# GL_ATI_meminfo
+  [ "VBO_FREE_MEMORY_ATI", "LOC_CUSTOM, TYPE_INT_4, NO_OFFSET, extra_ATI_meminfo" ],
+  [ "TEXTURE_FREE_MEMORY_ATI", "LOC_CUSTOM, TYPE_INT_4, NO_OFFSET, extra_ATI_meminfo" ],
+  [ "RENDERBUFFER_FREE_MEMORY_ATI", "LOC_CUSTOM, TYPE_INT_4, NO_OFFSET, extra_ATI_meminfo" ],
+
 # GL_NVX_gpu_memory_info
   [ "GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX", "LOC_CUSTOM, TYPE_INT, NO_OFFSET, extra_NVX_gpu_memory_info" ],
   [ "GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX", "LOC_CUSTOM, TYPE_INT, NO_OFFSET, extra_NVX_gpu_memory_info" ],
