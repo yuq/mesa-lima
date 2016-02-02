@@ -450,6 +450,7 @@ EXTRA_EXT(ARB_tessellation_shader);
 EXTRA_EXT(ARB_shader_subroutine);
 EXTRA_EXT(ARB_shader_storage_buffer_object);
 EXTRA_EXT(ARB_indirect_parameters);
+EXTRA_EXT(NVX_gpu_memory_info);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {
@@ -1091,6 +1092,29 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
       break;
    case GL_SAMPLE_BUFFERS:
       v->value_int = _mesa_geometric_samples(ctx->DrawBuffer) > 0;
+   /* GL_NVX_gpu_memory_info */
+   case GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX:
+   case GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX:
+   case GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX:
+   case GL_GPU_MEMORY_INFO_EVICTION_COUNT_NVX:
+   case GL_GPU_MEMORY_INFO_EVICTED_MEMORY_NVX:
+      {
+         struct gl_memory_info info;
+
+         ctx->Driver.QueryMemoryInfo(ctx, &info);
+
+         if (d->pname == GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX)
+            v->value_int = info.total_device_memory;
+         else if (d->pname == GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX)
+            v->value_int = info.total_device_memory +
+                           info.total_staging_memory;
+         else if (d->pname == GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX)
+            v->value_int = info.avail_device_memory;
+         else if (d->pname == GL_GPU_MEMORY_INFO_EVICTION_COUNT_NVX)
+            v->value_int = info.nr_device_memory_evictions;
+         else if (d->pname == GL_GPU_MEMORY_INFO_EVICTED_MEMORY_NVX)
+            v->value_int = info.device_memory_evicted;
+      }
       break;
    }
 }
