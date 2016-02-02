@@ -1643,8 +1643,10 @@ assign_varying_locations(struct gl_context *ctx,
                 (output_var->data.stream < MAX_VERTEX_STREAMS &&
                  producer->Stage == MESA_SHADER_GEOMETRY));
 
-         tfeedback_candidate_generator g(mem_ctx, tfeedback_candidates);
-         g.process(output_var);
+         if (num_tfeedback_decls > 0) {
+            tfeedback_candidate_generator g(mem_ctx, tfeedback_candidates);
+            g.process(output_var);
+         }
 
          ir_variable *const input_var =
             linker::get_matching_input(mem_ctx, output_var, consumer_inputs,
