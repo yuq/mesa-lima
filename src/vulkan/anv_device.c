@@ -1369,6 +1369,8 @@ VkResult anv_CreateFence(
    fence->execbuf.rsvd1 = device->context_id;
    fence->execbuf.rsvd2 = 0;
 
+   fence->ready = false;
+
    *pFence = anv_fence_to_handle(fence);
 
    return VK_SUCCESS;
