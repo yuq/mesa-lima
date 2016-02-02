@@ -245,7 +245,10 @@ static const struct {
    /* extensions */
    { EGL_Y_INVERTED_NOK,            ATTRIB_TYPE_BOOLEAN,
                                     ATTRIB_CRITERION_EXACT,
-                                    EGL_DONT_CARE }
+                                    EGL_DONT_CARE },
+   { EGL_FRAMEBUFFER_TARGET_ANDROID, ATTRIB_TYPE_BOOLEAN,
+                                    ATTRIB_CRITERION_EXACT,
+                                    EGL_DONT_CARE },
 };
 
 
@@ -488,6 +491,8 @@ _eglIsConfigAttribValid(_EGLConfig *conf, EGLint attr)
    switch (attr) {
    case EGL_Y_INVERTED_NOK:
       return conf->Display->Extensions.NOK_texture_from_pixmap;
+   case EGL_FRAMEBUFFER_TARGET_ANDROID:
+      return conf->Display->Extensions.ANDROID_framebuffer_target;
    default:
       break;
    }
