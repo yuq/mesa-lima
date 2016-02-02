@@ -273,7 +273,7 @@ lp_build_uninterleave1(struct gallivm_state *gallivm,
    unsigned i;
    assert(num_elems <= LP_MAX_VECTOR_LENGTH);
 
-   for(i = 0; i < num_elems / 2; ++i)
+   for (i = 0; i < num_elems / 2; ++i)
       elems[i] = lp_build_const_int32(gallivm, 2*i + lo_hi);
 
    shuffle = LLVMConstVector(elems, num_elems / 2);

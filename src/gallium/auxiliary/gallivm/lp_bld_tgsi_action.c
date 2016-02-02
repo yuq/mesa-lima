@@ -548,9 +548,10 @@ pk2h_fetch_args(
 }
 
 static void
-pk2h_emit(const struct lp_build_tgsi_action *action,
-          struct lp_build_tgsi_context *bld_base,
-          struct lp_build_emit_data *emit_data)
+pk2h_emit(
+   const struct lp_build_tgsi_action *action,
+   struct lp_build_tgsi_context *bld_base,
+   struct lp_build_emit_data *emit_data)
 {
    struct gallivm_state *gallivm = bld_base->base.gallivm;
    struct lp_type f16i_t;
@@ -575,9 +576,10 @@ static struct lp_build_tgsi_action pk2h_action = {
 /* TGSI_OPCODE_UP2H */
 
 static void
-up2h_emit(const struct lp_build_tgsi_action *action,
-          struct lp_build_tgsi_context *bld_base,
-          struct lp_build_emit_data *emit_data)
+up2h_emit(
+   const struct lp_build_tgsi_action *action,
+   struct lp_build_tgsi_context *bld_base,
+   struct lp_build_emit_data *emit_data)
 {
    struct gallivm_state *gallivm = bld_base->base.gallivm;
    LLVMBuilderRef builder = gallivm->builder;
