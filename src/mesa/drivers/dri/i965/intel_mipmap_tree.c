@@ -2200,7 +2200,7 @@ intel_miptree_updownsample(struct brw_context *brw,
    }
 }
 
-void *
+static void *
 intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
 {
    /* CPU accesses to color buffers don't understand fast color clears, so
@@ -2221,7 +2221,7 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
    return bo->virtual;
 }
 
-void
+static void
 intel_miptree_unmap_raw(struct intel_mipmap_tree *mt)
 {
    drm_intel_bo_unmap(mt->bo);
