@@ -391,7 +391,7 @@ anv_descriptor_set_create(struct anv_device *device,
       set->buffer_views[b].surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
    }
-
+   set->buffer_count = layout->buffer_count;
    *out_set = set;
 
    return VK_SUCCESS;
@@ -402,7 +402,7 @@ anv_descriptor_set_destroy(struct anv_device *device,
                            struct anv_descriptor_set *set)
 {
    /* XXX: Use the pool */
-   for (uint32_t b = 0; b < set->layout->buffer_count; b++)
+   for (uint32_t b = 0; b < set->buffer_count; b++)
       anv_state_pool_free(&device->surface_state_pool,
                           set->buffer_views[b].surface_state);
 
@@ -589,5 +589,6 @@ void anv_UpdateDescriptorSets(
          dest->descriptors[copy->dstBinding + j] =
             src->descriptors[copy->srcBinding + j];
       }
+      dest->buffer_count = src->buffer_count;
    }
 }
