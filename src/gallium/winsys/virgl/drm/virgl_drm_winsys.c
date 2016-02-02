@@ -754,7 +754,7 @@ static void virgl_fence_reference(struct virgl_winsys *vws,
 }
 
 
-struct virgl_winsys *
+static struct virgl_winsys *
 virgl_drm_winsys_create(int drmFD)
 {
    struct virgl_drm_winsys *qdws;
