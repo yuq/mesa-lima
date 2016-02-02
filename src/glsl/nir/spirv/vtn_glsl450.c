@@ -68,8 +68,11 @@ build_mat4_det(nir_builder *b, nir_ssa_def **col)
    nir_ssa_def *subdet[4];
    for (unsigned i = 0; i < 4; i++) {
       unsigned swiz[3];
-      for (unsigned j = 0; j < 4; j++)
-         swiz[j - (j > i)] = j;
+      for (unsigned j = 0, k = 0; j < 3; j++, k++) {
+         if (k == i)
+            k++; /* skip column */
+         swiz[j] = k;
+      }
 
       nir_ssa_def *subcol[3];
       subcol[0] = nir_swizzle(b, col[1], swiz, 3, true);
