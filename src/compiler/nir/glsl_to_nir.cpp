@@ -364,8 +364,6 @@ nir_visitor::visit(ir_variable *ir)
    var->data.explicit_binding = ir->data.explicit_binding;
    var->data.has_initializer = ir->data.has_initializer;
    var->data.location_frac = ir->data.location_frac;
-   var->data.from_named_ifc_block_array = ir->data.from_named_ifc_block_array;
-   var->data.from_named_ifc_block_nonarray = ir->data.from_named_ifc_block_nonarray;
 
    switch (ir->data.depth_layout) {
    case ir_depth_layout_none:
