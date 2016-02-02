@@ -21,13 +21,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-# use c99 compiler by default
-ifeq ($(LOCAL_CC),)
 ifeq ($(LOCAL_IS_HOST_MODULE),true)
-LOCAL_CC := $(HOST_CC) -std=c99 -D_GNU_SOURCE
-else
-LOCAL_CC := $(TARGET_CC) -std=c99
-endif
+LOCAL_CFLAGS += -D_GNU_SOURCE
 endif
 
 LOCAL_C_INCLUDES += \
@@ -59,6 +54,10 @@ LOCAL_CFLAGS += \
 	-DHAVE_PTHREAD=1 \
 	-fvisibility=hidden \
 	-Wno-sign-compare
+
+# mesa requires at least c99 compiler
+LOCAL_CONLYFLAGS += \
+	-std=c99
 
 ifeq ($(strip $(MESA_ENABLE_ASM)),true)
 ifeq ($(TARGET_ARCH),x86)
