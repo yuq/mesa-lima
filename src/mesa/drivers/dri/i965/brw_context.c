@@ -262,6 +262,10 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
              _mesa_get_srgb_format_linear(mt->format) == mt->format)
                continue;
 
+         /* Lossless compression is not supported for SRGB formats, it
+          * should be impossible to get here with such surfaces.
+          */
+         assert(!intel_miptree_is_lossless_compressed(brw, mt));
          intel_miptree_resolve_color(brw, mt, 0);
          brw_render_cache_set_check_flush(brw, mt->bo);
       }
