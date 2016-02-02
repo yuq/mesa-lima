@@ -888,6 +888,15 @@ intel_miptree_used_for_rendering(struct intel_mipmap_tree *mt)
       mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
 }
 
+/**
+ * Flag values telling color resolve pass which special types of buffers
+ * can be ignored.
+ *
+ * INTEL_MIPTREE_IGNORE_CCS_E:   Lossless compressed (single-sample
+ *                               compression scheme since gen9)
+ */
+#define INTEL_MIPTREE_IGNORE_CCS_E (1 << 0)
+
 void
 intel_miptree_resolve_color(struct brw_context *brw,
                             struct intel_mipmap_tree *mt,

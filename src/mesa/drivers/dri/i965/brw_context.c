@@ -208,7 +208,11 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       if (!tex_obj || !tex_obj->mt)
 	 continue;
       intel_miptree_all_slices_resolve_depth(brw, tex_obj->mt);
-      intel_miptree_resolve_color(brw, tex_obj->mt, 0);
+      /* Sampling engine understands lossless compression and resolving
+       * those surfaces should be skipped for performance reasons.
+       */
+      intel_miptree_resolve_color(brw, tex_obj->mt,
+                                  INTEL_MIPTREE_IGNORE_CCS_E);
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
    }
 
@@ -223,6 +227,12 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
             tex_obj = intel_texture_object(u->TexObj);
 
             if (tex_obj && tex_obj->mt) {
+               /* Access to images is implemented using indirect messages
+                * against data port. Normal render target write understands
+                * lossless compression but unfortunately the typed/untyped
+                * read/write interface doesn't. Therefore the compressed
+                * surfaces need to be resolved prior to accessing them.
+                */
                intel_miptree_resolve_color(brw, tex_obj->mt, 0);
                brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
             }

@@ -2041,7 +2041,13 @@ intel_miptree_resolve_color(struct brw_context *brw,
                             struct intel_mipmap_tree *mt,
                             int flags)
 {
-   (void)flags;
+   /* From gen9 onwards there is new compression scheme for single sampled
+    * surfaces called "lossless compressed". These don't need to be always
+    * resolved.
+    */
+   if ((flags & INTEL_MIPTREE_IGNORE_CCS_E) &&
+       intel_miptree_is_lossless_compressed(brw, mt))
+      return;
 
    switch (mt->fast_clear_state) {
    case INTEL_FAST_CLEAR_STATE_NO_MCS:
