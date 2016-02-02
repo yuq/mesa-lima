@@ -97,6 +97,30 @@ static void st_Enable(struct gl_context * ctx, GLenum cap, GLboolean state)
 
 
 /**
+ * Called via ctx->Driver.QueryMemoryInfo()
+ */
+static void
+st_query_memory_info(struct gl_context *ctx, struct gl_memory_info *out)
+{
+   struct pipe_screen *screen = st_context(ctx)->pipe->screen;
+   struct pipe_memory_info info;
+
+   assert(screen->query_memory_info);
+   if (!screen->query_memory_info)
+      return;
+
+   screen->query_memory_info(screen, &info);
+
+   out->total_device_memory = info.total_device_memory;
+   out->avail_device_memory = info.avail_device_memory;
+   out->total_staging_memory = info.total_staging_memory;
+   out->avail_staging_memory = info.avail_staging_memory;
+   out->device_memory_evicted = info.device_memory_evicted;
+   out->nr_device_memory_evictions = info.nr_device_memory_evictions;
+}
+
+
+/**
  * Called via ctx->Driver.UpdateState()
  */
 void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
@@ -491,4 +515,5 @@ void st_init_driver_functions(struct pipe_screen *screen,
 
    functions->Enable = st_Enable;
    functions->UpdateState = st_invalidate_state;
+   functions->QueryMemoryInfo = st_query_memory_info;
 }
