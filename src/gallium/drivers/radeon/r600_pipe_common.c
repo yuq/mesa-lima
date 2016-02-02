@@ -800,6 +800,42 @@ static boolean r600_fence_finish(struct pipe_screen *screen,
 	return rws->fence_wait(rws, rfence->gfx, timeout);
 }
 
+static void r600_query_memory_info(struct pipe_screen *screen,
+				   struct pipe_memory_info *info)
+{
+	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+	struct radeon_winsys *ws = rscreen->ws;
+	unsigned vram_usage, gtt_usage;
+
+	info->total_device_memory = rscreen->info.vram_size / 1024;
+	info->total_staging_memory = rscreen->info.gart_size / 1024;
+
+	/* The real TTM memory usage is somewhat random, because:
+	 *
+	 * 1) TTM delays freeing memory, because it can only free it after
+	 *    fences expire.
+	 *
+	 * 2) The memory usage can be really low if big VRAM evictions are
+	 *    taking place, but the real usage is well above the size of VRAM.
+	 *
+	 * Instead, return statistics of this process.
+	 */
+	vram_usage = ws->query_value(ws, RADEON_REQUESTED_VRAM_MEMORY) / 1024;
+	gtt_usage =  ws->query_value(ws, RADEON_REQUESTED_GTT_MEMORY) / 1024;
+
+	info->avail_device_memory =
+		vram_usage <= info->total_device_memory ?
+				info->total_device_memory - vram_usage : 0;
+	info->avail_staging_memory =
+		gtt_usage <= info->total_staging_memory ?
+				info->total_staging_memory - gtt_usage : 0;
+
+	info->device_memory_evicted =
+		ws->query_value(ws, RADEON_NUM_BYTES_MOVED) / 1024;
+	/* Just return the number of evicted 64KB pages. */
+	info->nr_device_memory_evictions = info->device_memory_evicted / 64;
+}
+
 struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 						  const struct pipe_resource *templ)
 {
@@ -839,6 +875,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->b.fence_reference = r600_fence_reference;
 	rscreen->b.resource_destroy = u_resource_destroy_vtbl;
 	rscreen->b.resource_from_user_memory = r600_buffer_from_user_memory;
+	rscreen->b.query_memory_info = r600_query_memory_info;
 
 	if (rscreen->info.has_uvd) {
 		rscreen->b.get_video_param = rvid_get_video_param;
