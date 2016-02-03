@@ -1356,49 +1356,11 @@ try_pbo_upload_common(struct gl_context *ctx,
       sampler_view = pipe->create_sampler_view(pipe, buffer, &templ);
       if (sampler_view == NULL)
          return false;
+
+      cso_save_fragment_sampler_views(st->cso_context);
+      cso_set_sampler_views(st->cso_context, PIPE_SHADER_FRAGMENT, 1,
+                            &sampler_view);
    }
-
-   /* Begin setting state. This is the point of no return. */
-   cso_save_fragment_sampler_views(st->cso_context);
-   cso_set_sampler_views(st->cso_context, PIPE_SHADER_FRAGMENT, 1,
-                         &sampler_view);
-
-   /* Framebuffer_state */
-   {
-      struct pipe_framebuffer_state fb;
-      memset(&fb, 0, sizeof(fb));
-      fb.width = surface->width;
-      fb.height = surface->height;
-      fb.nr_cbufs = 1;
-      pipe_surface_reference(&fb.cbufs[0], surface);
-
-      cso_save_framebuffer(st->cso_context);
-      cso_set_framebuffer(st->cso_context, &fb);
-
-      pipe_surface_reference(&fb.cbufs[0], NULL);
-   }
-
-   /* Viewport state */
-   {
-      struct pipe_viewport_state vp;
-      vp.scale[0] = 0.5f * surface->width;
-      vp.scale[1] = 0.5f * surface->height;
-      vp.scale[2] = 1.0f;
-      vp.translate[0] = 0.5f * surface->width;
-      vp.translate[1] = 0.5f * surface->height;
-      vp.translate[2] = 0.0f;
-
-      cso_save_viewport(st->cso_context);
-      cso_set_viewport(st->cso_context, &vp);
-   }
-
-   /* Blend state */
-   cso_save_blend(st->cso_context);
-   cso_set_blend(st->cso_context, &st->pbo_upload.blend);
-
-   /* Rasterizer state */
-   cso_save_rasterizer(st->cso_context);
-   cso_set_rasterizer(st->cso_context, &st->pbo_upload.raster);
 
    /* Upload vertices */
    {
@@ -1477,6 +1439,43 @@ try_pbo_upload_common(struct gl_context *ctx,
       cso_set_constant_buffer(st->cso_context, PIPE_SHADER_FRAGMENT, 0, &cb);
    }
 
+   /* Framebuffer_state */
+   {
+      struct pipe_framebuffer_state fb;
+      memset(&fb, 0, sizeof(fb));
+      fb.width = surface->width;
+      fb.height = surface->height;
+      fb.nr_cbufs = 1;
+      pipe_surface_reference(&fb.cbufs[0], surface);
+
+      cso_save_framebuffer(st->cso_context);
+      cso_set_framebuffer(st->cso_context, &fb);
+
+      pipe_surface_reference(&fb.cbufs[0], NULL);
+   }
+
+   /* Viewport state */
+   {
+      struct pipe_viewport_state vp;
+      vp.scale[0] = 0.5f * surface->width;
+      vp.scale[1] = 0.5f * surface->height;
+      vp.scale[2] = 1.0f;
+      vp.translate[0] = 0.5f * surface->width;
+      vp.translate[1] = 0.5f * surface->height;
+      vp.translate[2] = 0.0f;
+
+      cso_save_viewport(st->cso_context);
+      cso_set_viewport(st->cso_context, &vp);
+   }
+
+   /* Blend state */
+   cso_save_blend(st->cso_context);
+   cso_set_blend(st->cso_context, &st->pbo_upload.blend);
+
+   /* Rasterizer state */
+   cso_save_rasterizer(st->cso_context);
+   cso_set_rasterizer(st->cso_context, &st->pbo_upload.raster);
+
    /* Set up the shaders */
    cso_save_vertex_shader(st->cso_context);
    cso_set_vertex_shader_handle(st->cso_context, st->pbo_upload.vs);
@@ -1505,20 +1504,20 @@ try_pbo_upload_common(struct gl_context *ctx,
                                 0, 4, 0, depth);
    }
 
-   cso_restore_fragment_sampler_views(st->cso_context);
    cso_restore_framebuffer(st->cso_context);
    cso_restore_viewport(st->cso_context);
    cso_restore_blend(st->cso_context);
    cso_restore_rasterizer(st->cso_context);
-   cso_restore_vertex_elements(st->cso_context);
-   cso_restore_aux_vertex_buffer_slot(st->cso_context);
-   cso_restore_constant_buffer_slot0(st->cso_context, PIPE_SHADER_FRAGMENT);
    cso_restore_vertex_shader(st->cso_context);
    cso_restore_geometry_shader(st->cso_context);
    cso_restore_tessctrl_shader(st->cso_context);
    cso_restore_tesseval_shader(st->cso_context);
    cso_restore_fragment_shader(st->cso_context);
    cso_restore_stream_outputs(st->cso_context);
+   cso_restore_constant_buffer_slot0(st->cso_context, PIPE_SHADER_FRAGMENT);
+   cso_restore_vertex_elements(st->cso_context);
+   cso_restore_aux_vertex_buffer_slot(st->cso_context);
+   cso_restore_fragment_sampler_views(st->cso_context);
 
    pipe_sampler_view_reference(&sampler_view, NULL);
 
