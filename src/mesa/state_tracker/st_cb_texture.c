@@ -1434,6 +1434,9 @@ try_pbo_upload_common(struct gl_context *ctx,
          u_upload_data(st->constbuf_uploader, 0, sizeof(constants),
                        st->ctx->Const.UniformBufferOffsetAlignment,
                        &constants, &cb.buffer_offset, &cb.buffer);
+         if (!cb.buffer)
+            goto fail_constant_upload;
+
          u_upload_unmap(st->constbuf_uploader);
       } else {
          cb.buffer = NULL;
@@ -1444,6 +1447,8 @@ try_pbo_upload_common(struct gl_context *ctx,
 
       cso_save_constant_buffer_slot0(st->cso_context, PIPE_SHADER_FRAGMENT);
       cso_set_constant_buffer(st->cso_context, PIPE_SHADER_FRAGMENT, 0, &cb);
+
+      pipe_resource_reference(&cb.buffer, NULL);
    }
 
    /* Framebuffer_state */
@@ -1524,6 +1529,7 @@ try_pbo_upload_common(struct gl_context *ctx,
    cso_restore_fragment_shader(st->cso_context);
    cso_restore_stream_outputs(st->cso_context);
    cso_restore_constant_buffer_slot0(st->cso_context, PIPE_SHADER_FRAGMENT);
+fail_constant_upload:
    cso_restore_vertex_elements(st->cso_context);
    cso_restore_aux_vertex_buffer_slot(st->cso_context);
 fail_vertex_upload:
