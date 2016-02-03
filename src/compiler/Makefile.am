@@ -211,9 +211,11 @@ YACC_GEN = $(AM_V_YACC)$(YACC) $(YFLAGS)
 LEX_GEN = $(AM_V_LEX)$(LEX) $(LFLAGS)
 
 glsl/glsl_parser.cpp glsl/glsl_parser.h: glsl/glsl_parser.yy
+	$(MKDIR_GEN)
 	$(YACC_GEN) -o $@ -p "_mesa_glsl_" --defines=$(builddir)/glsl/glsl_parser.h $(srcdir)/glsl/glsl_parser.yy
 
 glsl/glsl_lexer.cpp: glsl/glsl_lexer.ll
+	$(MKDIR_GEN)
 	$(LEX_GEN) -o $@ $(srcdir)/glsl/glsl_lexer.ll
 
 glsl/glcpp/glcpp-parse.c glsl/glcpp/glcpp-parse.h: glsl/glcpp/glcpp-parse.y
