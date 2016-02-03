@@ -2428,19 +2428,22 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
             continue;
 
          Instruction *insn;
-         Value *off = fetchSrc(1, c);
+         Value *off = fetchSrc(1, c), *off2 = NULL;
          Value *sym;
          if (tgsi.getSrc(1).getFile() == TGSI_FILE_IMMEDIATE)
             sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, tgsi.getSrc(1).getValueU32(c, info));
          else
             sym = makeSym(TGSI_FILE_BUFFER, r, -1, c, 0);
-         insn = mkOp2(OP_ATOM, ty, dst, sym, fetchSrc(2, c));
+         if (tgsi.getSrc(0).isIndirect(0))
+            off2 = fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0);
          if (subOp == NV50_IR_SUBOP_ATOM_CAS)
-            insn->setSrc(2, fetchSrc(3, 0));
+            insn = mkOp3(OP_ATOM, ty, dst, sym, fetchSrc(2, c), fetchSrc(3, c));
+         else
+            insn = mkOp2(OP_ATOM, ty, dst, sym, fetchSrc(2, c));
          if (tgsi.getSrc(1).getFile() != TGSI_FILE_IMMEDIATE)
             insn->setIndirect(0, 0, off);
-         if (tgsi.getSrc(0).isIndirect(0))
-            insn->setIndirect(0, 1, fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));
+         if (off2)
+            insn->setIndirect(0, 1, off2);
          insn->subOp = subOp;
       }
       for (int c = 0; c < 4; ++c)
