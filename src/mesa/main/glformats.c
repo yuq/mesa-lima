@@ -3521,6 +3521,27 @@ _mesa_format_from_format_and_type(GLenum format, GLenum type)
    case GL_UNSIGNED_INT_10F_11F_11F_REV:
       if (format == GL_RGB)
          return MESA_FORMAT_R11G11B10_FLOAT;
+      break;
+   case GL_FLOAT:
+      if (format == GL_DEPTH_COMPONENT)
+         return MESA_FORMAT_Z_FLOAT32;
+      break;
+   case GL_UNSIGNED_INT:
+      if (format == GL_DEPTH_COMPONENT)
+         return MESA_FORMAT_Z_UNORM32;
+      break;
+   case GL_UNSIGNED_SHORT:
+      if (format == GL_DEPTH_COMPONENT)
+         return MESA_FORMAT_Z_UNORM16;
+      break;
+   case GL_UNSIGNED_INT_24_8:
+      if (format == GL_DEPTH_STENCIL)
+         return MESA_FORMAT_Z24_UNORM_S8_UINT;
+      break;
+   case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
+      if (format == GL_DEPTH_STENCIL)
+         return MESA_FORMAT_Z32_FLOAT_S8X24_UINT;
+      break;
    default:
       break;
    }
