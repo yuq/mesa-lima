@@ -35,6 +35,7 @@
 
 #include "glheader.h"
 
+struct gl_bitmap_atlas;
 struct gl_buffer_object;
 struct gl_context;
 struct gl_display_list;
@@ -154,6 +155,14 @@ struct dd_function_table {
 		   GLint x, GLint y, GLsizei width, GLsizei height,
 		   const struct gl_pixelstore_attrib *unpack,
 		   const GLubyte *bitmap );
+
+   /**
+    * Called by display list code for optimized glCallLists/glBitmap rendering
+    * The driver must support texture rectangles of width 1024 or more.
+    */
+   void (*DrawAtlasBitmaps)(struct gl_context *ctx,
+                            const struct gl_bitmap_atlas *atlas,
+                            GLuint count, const GLubyte *ids);
    /*@}*/
 
    
