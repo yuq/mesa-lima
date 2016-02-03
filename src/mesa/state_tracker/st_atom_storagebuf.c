@@ -46,10 +46,12 @@ st_bind_ssbos(struct st_context *st, struct gl_shader *shader,
 {
    unsigned i;
    struct pipe_shader_buffer buffers[MAX_SHADER_STORAGE_BUFFERS];
-   struct gl_program_constants *c = &st->ctx->Const.Program[shader->Stage];
+   struct gl_program_constants *c;
 
    if (!shader || !st->pipe->set_shader_buffers)
       return;
+
+   c = &st->ctx->Const.Program[shader->Stage];
 
    for (i = 0; i < shader->NumShaderStorageBlocks; i++) {
       struct gl_shader_storage_buffer_binding *binding;
