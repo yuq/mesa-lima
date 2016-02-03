@@ -324,6 +324,8 @@ static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, e
             return 32;
         case PIPE_SHADER_CAP_PREFERRED_IR:
             return PIPE_SHADER_IR_TGSI;
+        case PIPE_SHADER_CAP_SUPPORTED_IRS:
+            return 0;
         }
         break;
     case PIPE_SHADER_VERTEX:
@@ -383,6 +385,8 @@ static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, e
             return 32;
         case PIPE_SHADER_CAP_PREFERRED_IR:
             return PIPE_SHADER_IR_TGSI;
+        case PIPE_SHADER_CAP_SUPPORTED_IRS:
+            return 0;
         }
         break;
     }

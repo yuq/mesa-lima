@@ -272,6 +272,8 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    switch (param) {
    case PIPE_SHADER_CAP_PREFERRED_IR:
       return PIPE_SHADER_IR_TGSI;
+   case PIPE_SHADER_CAP_SUPPORTED_IRS:
+      return 0;
    case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
    case PIPE_SHADER_CAP_MAX_ALU_INSTRUCTIONS:
    case PIPE_SHADER_CAP_MAX_TEX_INSTRUCTIONS:
