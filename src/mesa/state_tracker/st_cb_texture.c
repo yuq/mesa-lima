@@ -1296,7 +1296,6 @@ try_pbo_upload_common(struct gl_context *ctx,
 {
    struct st_context *st = st_context(ctx);
    struct pipe_context *pipe = st->pipe;
-   struct pipe_sampler_view *sampler_view = NULL;
    unsigned depth = surface->u.tex.last_layer - surface->u.tex.first_layer + 1;
    unsigned skip_pixels = 0;
 
@@ -1337,6 +1336,7 @@ try_pbo_upload_common(struct gl_context *ctx,
       unsigned last_element = buf_offset + skip_pixels + upload_width - 1
          + (upload_height - 1 + (depth - 1) * image_height) * stride;
       struct pipe_sampler_view templ;
+      struct pipe_sampler_view *sampler_view;
 
       /* This should be ensured by Mesa before calling our callbacks */
       assert((last_element + 1) * bytes_per_pixel <= buffer->width0);
@@ -1360,6 +1360,8 @@ try_pbo_upload_common(struct gl_context *ctx,
       cso_save_fragment_sampler_views(st->cso_context);
       cso_set_sampler_views(st->cso_context, PIPE_SHADER_FRAGMENT, 1,
                             &sampler_view);
+
+      pipe_sampler_view_reference(&sampler_view, NULL);
    }
 
    /* Upload vertices */
@@ -1518,8 +1520,6 @@ try_pbo_upload_common(struct gl_context *ctx,
    cso_restore_vertex_elements(st->cso_context);
    cso_restore_aux_vertex_buffer_slot(st->cso_context);
    cso_restore_fragment_sampler_views(st->cso_context);
-
-   pipe_sampler_view_reference(&sampler_view, NULL);
 
    return true;
 }
