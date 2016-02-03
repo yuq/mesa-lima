@@ -176,77 +176,6 @@ make_bitmap_texture(struct gl_context *ctx, GLsizei width, GLsizei height,
    return pt;
 }
 
-static void
-setup_bitmap_vertex_data(struct st_context *st, bool normalized,
-                         int x, int y, int width, int height,
-                         float z, const float color[4],
-			 struct pipe_resource **vbuf,
-			 unsigned *vbuf_offset)
-{
-   const GLfloat fb_width = (GLfloat)st->state.framebuffer.width;
-   const GLfloat fb_height = (GLfloat)st->state.framebuffer.height;
-   const GLfloat x0 = (GLfloat)x;
-   const GLfloat x1 = (GLfloat)(x + width);
-   const GLfloat y0 = (GLfloat)y;
-   const GLfloat y1 = (GLfloat)(y + height);
-   GLfloat sLeft = (GLfloat)0.0, sRight = (GLfloat)1.0;
-   GLfloat tTop = (GLfloat)0.0, tBot = (GLfloat)1.0 - tTop;
-   const GLfloat clip_x0 = (GLfloat)(x0 / fb_width * 2.0 - 1.0);
-   const GLfloat clip_y0 = (GLfloat)(y0 / fb_height * 2.0 - 1.0);
-   const GLfloat clip_x1 = (GLfloat)(x1 / fb_width * 2.0 - 1.0);
-   const GLfloat clip_y1 = (GLfloat)(y1 / fb_height * 2.0 - 1.0);
-   GLuint i;
-   float (*vertices)[3][4];  /**< vertex pos + color + texcoord */
-
-   if (!normalized) {
-      sRight = (GLfloat) width;
-      tBot = (GLfloat) height;
-   }
-
-   u_upload_alloc(st->uploader, 0, 4 * sizeof(vertices[0]), 4,
-                  vbuf_offset, vbuf, (void **) &vertices);
-   if (!*vbuf) {
-      return;
-   }
-
-   /* Positions are in clip coords since we need to do clipping in case
-    * the bitmap quad goes beyond the window bounds.
-    */
-   vertices[0][0][0] = clip_x0;
-   vertices[0][0][1] = clip_y0;
-   vertices[0][2][0] = sLeft;
-   vertices[0][2][1] = tTop;
-
-   vertices[1][0][0] = clip_x1;
-   vertices[1][0][1] = clip_y0;
-   vertices[1][2][0] = sRight;
-   vertices[1][2][1] = tTop;
-   
-   vertices[2][0][0] = clip_x1;
-   vertices[2][0][1] = clip_y1;
-   vertices[2][2][0] = sRight;
-   vertices[2][2][1] = tBot;
-   
-   vertices[3][0][0] = clip_x0;
-   vertices[3][0][1] = clip_y1;
-   vertices[3][2][0] = sLeft;
-   vertices[3][2][1] = tBot;
-   
-   /* same for all verts: */
-   for (i = 0; i < 4; i++) {
-      vertices[i][0][2] = z;
-      vertices[i][0][3] = 1.0f;
-      vertices[i][1][0] = color[0];
-      vertices[i][1][1] = color[1];
-      vertices[i][1][2] = color[2];
-      vertices[i][1][3] = color[3];
-      vertices[i][2][2] = 0.0; /*R*/
-      vertices[i][2][3] = 1.0; /*Q*/
-   }
-
-   u_upload_unmap(st->uploader);
-}
-
 
 /**
  * Setup pipeline state prior to rendering the bitmap textured quad.
@@ -395,35 +324,94 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    struct st_context *st = st_context(ctx);
    struct pipe_context *pipe = st->pipe;
    struct pipe_resource *vbuf = NULL;
-   GLuint maxSize;
-   GLuint offset;
+   const float fb_width = (float) st->state.framebuffer.width;
+   const float fb_height = (float) st->state.framebuffer.height;
+   const float x0 = (float) x;
+   const float x1 = (float) (x + width);
+   const float y0 = (float) y;
+   const float y1 = (float) (y + height);
+   float sLeft = 0.0f, sRight = 1.0f;
+   float tTop = 0.0f, tBot = 1.0f - tTop;
+   const float clip_x0 = x0 / fb_width * 2.0f - 1.0f;
+   const float clip_y0 = y0 / fb_height * 2.0f - 1.0f;
+   const float clip_x1 = x1 / fb_width * 2.0f - 1.0f;
+   const float clip_y1 = y1 / fb_height * 2.0f - 1.0f;
+   float (*vertices)[3][4];  /**< vertex pos + color + texcoord */
+   unsigned offset, i;
 
    /* limit checks */
-   /* XXX if the bitmap is larger than the max texture size, break
-    * it up into chunks.
-    */
-   maxSize = 1 << (pipe->screen->get_param(pipe->screen,
+   {
+      /* XXX if the bitmap is larger than the max texture size, break
+       * it up into chunks.
+       */
+      GLuint maxSize = 1 << (pipe->screen->get_param(pipe->screen,
                                     PIPE_CAP_MAX_TEXTURE_2D_LEVELS) - 1);
-   assert(width <= (GLsizei)maxSize);
-   assert(height <= (GLsizei)maxSize);
+      assert(width <= (GLsizei) maxSize);
+      assert(height <= (GLsizei) maxSize);
+   }
 
    setup_render_state(ctx, sv, color);
 
    /* convert Z from [0,1] to [-1,-1] to match viewport Z scale/bias */
    z = z * 2.0f - 1.0f;
 
-   /* draw textured quad */
-   setup_bitmap_vertex_data(st, sv->texture->target != PIPE_TEXTURE_RECT,
-			    x, y, width, height, z, color, &vbuf, &offset);
-
-   if (vbuf) {
-      util_draw_vertex_buffer(pipe, st->cso_context, vbuf,
-                              cso_get_aux_vertex_buffer_slot(st->cso_context),
-                              offset,
-                              PIPE_PRIM_TRIANGLE_FAN,
-                              4,  /* verts */
-                              3); /* attribs/vert */
+   if (sv->texture->target == PIPE_TEXTURE_RECT) {
+      /* use non-normalized texcoords */
+      sRight = (float) width;
+      tBot = (float) height;
    }
+
+   u_upload_alloc(st->uploader, 0, 4 * sizeof(vertices[0]), 4,
+                  &offset, &vbuf, (void **) &vertices);
+   if (!vbuf) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glBitmap");
+      restore_render_state(ctx);
+      return;
+   }
+
+   /* Positions are in clip coords since we need to do clipping in case
+    * the bitmap quad goes beyond the window bounds.
+    */
+   vertices[0][0][0] = clip_x0;
+   vertices[0][0][1] = clip_y0;
+   vertices[0][2][0] = sLeft;
+   vertices[0][2][1] = tTop;
+
+   vertices[1][0][0] = clip_x1;
+   vertices[1][0][1] = clip_y0;
+   vertices[1][2][0] = sRight;
+   vertices[1][2][1] = tTop;
+
+   vertices[2][0][0] = clip_x1;
+   vertices[2][0][1] = clip_y1;
+   vertices[2][2][0] = sRight;
+   vertices[2][2][1] = tBot;
+
+   vertices[3][0][0] = clip_x0;
+   vertices[3][0][1] = clip_y1;
+   vertices[3][2][0] = sLeft;
+   vertices[3][2][1] = tBot;
+
+   /* same for all verts: */
+   for (i = 0; i < 4; i++) {
+      vertices[i][0][2] = z;
+      vertices[i][0][3] = 1.0f;
+      vertices[i][1][0] = color[0];
+      vertices[i][1][1] = color[1];
+      vertices[i][1][2] = color[2];
+      vertices[i][1][3] = color[3];
+      vertices[i][2][2] = 0.0; /*R*/
+      vertices[i][2][3] = 1.0; /*Q*/
+   }
+
+   u_upload_unmap(st->uploader);
+
+   util_draw_vertex_buffer(pipe, st->cso_context, vbuf,
+                           cso_get_aux_vertex_buffer_slot(st->cso_context),
+                           offset,
+                           PIPE_PRIM_TRIANGLE_FAN,
+                           4,  /* verts */
+                           3); /* attribs/vert */
 
    restore_render_state(ctx);
 
