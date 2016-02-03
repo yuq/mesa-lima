@@ -433,6 +433,7 @@ void anv_CmdBindPipeline(
       cmd_buffer->state.compute_pipeline = pipeline;
       cmd_buffer->state.compute_dirty |= ANV_CMD_DIRTY_PIPELINE;
       cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_COMPUTE_BIT;
+      cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_COMPUTE_BIT;
       break;
 
    case VK_PIPELINE_BIND_POINT_GRAPHICS:
@@ -440,6 +441,7 @@ void anv_CmdBindPipeline(
       cmd_buffer->state.vb_dirty |= pipeline->vb_used;
       cmd_buffer->state.dirty |= ANV_CMD_DIRTY_PIPELINE;
       cmd_buffer->state.push_constants_dirty |= pipeline->active_stages;
+      cmd_buffer->state.descriptors_dirty |= pipeline->active_stages;
 
       /* Apply the dynamic state from the pipeline */
       cmd_buffer->state.dirty |= pipeline->dynamic_state_mask;
@@ -702,39 +704,34 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
-   struct anv_pipeline_layout *layout;
+   struct anv_pipeline_bind_map *map;
    uint32_t color_count, bias, state_offset;
 
    switch (stage) {
    case  MESA_SHADER_FRAGMENT:
-      layout = cmd_buffer->state.pipeline->layout;
+      map = &cmd_buffer->state.pipeline->bindings[stage];
       bias = MAX_RTS;
       color_count = subpass->color_count;
       break;
    case  MESA_SHADER_COMPUTE:
-      layout = cmd_buffer->state.compute_pipeline->layout;
+      map = &cmd_buffer->state.compute_pipeline->bindings[stage];
       bias = 1;
       color_count = 0;
       break;
    default:
-      layout = cmd_buffer->state.pipeline->layout;
+      map = &cmd_buffer->state.pipeline->bindings[stage];
       bias = 0;
       color_count = 0;
       break;
    }
 
-   /* This is a little awkward: layout can be NULL but we still have to
-    * allocate and set a binding table for the PS stage for render
-    * targets. */
-   uint32_t surface_count = layout ? layout->stage[stage].surface_count : 0;
-
-   if (color_count + surface_count == 0) {
+   if (color_count + map->surface_count == 0) {
       *bt_state = (struct anv_state) { 0, };
       return VK_SUCCESS;
    }
 
    *bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer,
-                                                  bias + surface_count,
+                                                  bias + map->surface_count,
                                                   &state_offset);
    uint32_t *bt_map = bt_state->map;
 
@@ -769,10 +766,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
    }
 
-   if (layout == NULL)
+   if (map->surface_count == 0)
       goto out;
 
-   if (layout->stage[stage].image_count > 0) {
+   if (map->image_count > 0) {
       VkResult result =
          anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, images);
       if (result != VK_SUCCESS)
@@ -782,9 +779,8 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    }
 
    uint32_t image = 0;
-   for (uint32_t s = 0; s < layout->stage[stage].surface_count; s++) {
-      struct anv_pipeline_binding *binding =
-         &layout->stage[stage].surface_to_descriptor[s];
+   for (uint32_t s = 0; s < map->surface_count; s++) {
+      struct anv_pipeline_binding *binding = &map->surface_to_descriptor[s];
       struct anv_descriptor_set *set =
          cmd_buffer->state.descriptors[binding->set];
       struct anv_descriptor *desc = &set->descriptors[binding->offset];
@@ -855,7 +851,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       bt_map[bias + s] = surface_state.offset + state_offset;
       add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
    }
-   assert(image == layout->stage[stage].image_count);
+   assert(image == map->image_count);
 
  out:
    if (!cmd_buffer->device->info.has_llc)
@@ -868,29 +864,26 @@ VkResult
 anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
                              gl_shader_stage stage, struct anv_state *state)
 {
-   struct anv_pipeline_layout *layout;
-   uint32_t sampler_count;
+   struct anv_pipeline_bind_map *map;
 
    if (stage == MESA_SHADER_COMPUTE)
-      layout = cmd_buffer->state.compute_pipeline->layout;
+      map = &cmd_buffer->state.compute_pipeline->bindings[stage];
    else
-      layout = cmd_buffer->state.pipeline->layout;
+      map = &cmd_buffer->state.pipeline->bindings[stage];
 
-   sampler_count = layout ? layout->stage[stage].sampler_count : 0;
-   if (sampler_count == 0) {
+   if (map->sampler_count == 0) {
       *state = (struct anv_state) { 0, };
       return VK_SUCCESS;
    }
 
-   uint32_t size = sampler_count * 16;
+   uint32_t size = map->sampler_count * 16;
    *state = anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, size, 32);
 
    if (state->map == NULL)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
-   for (uint32_t s = 0; s < layout->stage[stage].sampler_count; s++) {
-      struct anv_pipeline_binding *binding =
-         &layout->stage[stage].sampler_to_descriptor[s];
+   for (uint32_t s = 0; s < map->sampler_count; s++) {
+      struct anv_pipeline_binding *binding = &map->sampler_to_descriptor[s];
       struct anv_descriptor_set *set =
          cmd_buffer->state.descriptors[binding->set];
       struct anv_descriptor *desc = &set->descriptors[binding->offset];

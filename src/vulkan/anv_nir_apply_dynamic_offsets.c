@@ -28,7 +28,7 @@ struct apply_dynamic_offsets_state {
    nir_shader *shader;
    nir_builder builder;
 
-   struct anv_pipeline_layout *layout;
+   const struct anv_pipeline_layout *layout;
 
    uint32_t indices_start;
 };

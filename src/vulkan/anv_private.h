@@ -1378,6 +1378,15 @@ mesa_to_vk_shader_stage(gl_shader_stage mesa_stage)
         stage = __builtin_ffs(__tmp) - 1, __tmp;                     \
         __tmp &= ~(1 << (stage)))
 
+struct anv_pipeline_bind_map {
+   uint32_t surface_count;
+   uint32_t sampler_count;
+   uint32_t image_count;
+
+   struct anv_pipeline_binding *                surface_to_descriptor;
+   struct anv_pipeline_binding *                sampler_to_descriptor;
+};
+
 struct anv_pipeline {
    struct anv_device *                          device;
    struct anv_batch                             batch;
@@ -1387,6 +1396,8 @@ struct anv_pipeline {
    struct anv_dynamic_state                     dynamic_state;
 
    struct anv_pipeline_layout *                 layout;
+   struct anv_pipeline_bind_map                 bindings[MESA_SHADER_STAGES];
+
    bool                                         use_repclear;
 
    struct brw_vs_prog_data                      vs_prog_data;

@@ -35,9 +35,9 @@ void anv_nir_lower_push_constants(nir_shader *shader, bool is_scalar);
 void anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
                                    nir_shader *shader,
                                    struct brw_stage_prog_data *prog_data);
-bool anv_nir_apply_pipeline_layout(nir_shader *shader,
-                                   struct brw_stage_prog_data *prog_data,
-                                   const struct anv_pipeline_layout *layout);
+void anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
+                                   nir_shader *shader,
+                                   struct brw_stage_prog_data *prog_data);
 
 #ifdef __cplusplus
 }

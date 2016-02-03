@@ -336,8 +336,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (pipeline->layout && pipeline->layout->stage[stage].has_dynamic_offsets)
       prog_data->nr_params += MAX_DYNAMIC_BUFFERS * 2;
 
-   if (pipeline->layout && pipeline->layout->stage[stage].image_count > 0)
-      prog_data->nr_params += pipeline->layout->stage[stage].image_count *
+   if (pipeline->bindings[stage].image_count > 0)
+      prog_data->nr_params += pipeline->bindings[stage].image_count *
                               BRW_IMAGE_PARAM_SIZE;
 
    if (prog_data->nr_params > 0) {
@@ -362,9 +362,13 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    /* Set up dynamic offsets */
    anv_nir_apply_dynamic_offsets(pipeline, nir, prog_data);
 
+   char surface_usage_mask[256], sampler_usage_mask[256];
+   zero(surface_usage_mask);
+   zero(sampler_usage_mask);
+
    /* Apply the actual pipeline layout to UBOs, SSBOs, and textures */
    if (pipeline->layout)
-      anv_nir_apply_pipeline_layout(nir, prog_data, pipeline->layout);
+      anv_nir_apply_pipeline_layout(pipeline, nir, prog_data);
 
    /* All binding table offsets provided by apply_pipeline_layout() are
     * relative to the start of the bindint table (plus MAX_RTS for VS).
@@ -1059,6 +1063,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
     */
    memset(pipeline->prog_data, 0, sizeof(pipeline->prog_data));
    memset(pipeline->scratch_start, 0, sizeof(pipeline->scratch_start));
+   memset(pipeline->bindings, 0, sizeof(pipeline->bindings));
 
    pipeline->vs_simd8 = NO_KERNEL;
    pipeline->vs_vec4 = NO_KERNEL;
