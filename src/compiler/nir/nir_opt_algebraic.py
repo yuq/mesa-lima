@@ -163,6 +163,7 @@ optimizations = [
    (('ushr', 0, a), 0),
    (('ushr', a, 0), a),
    (('iand', 0xff, ('ushr', a, 24)), ('ushr', a, 24)),
+   (('iand', 0xffff, ('ushr', a, 16)), ('ushr', a, 16)),
    # Exponential/logarithmic identities
    (('fexp2', ('flog2', a)), a), # 2^lg2(a) = a
    (('flog2', ('fexp2', a)), a), # lg2(2^a) = a
@@ -219,6 +220,10 @@ optimizations = [
    (('iand', 0xff, ('ushr', a, 16)), ('extract_u8', a, 2), '!options->lower_extract_byte'),
    (('iand', 0xff, ('ushr', a,  8)), ('extract_u8', a, 1), '!options->lower_extract_byte'),
    (('iand', 0xff, a), ('extract_u8', a, 0), '!options->lower_extract_byte'),
+
+    # Word extraction
+   (('ushr', a, 16), ('extract_u16', a, 1), '!options->lower_extract_word'),
+   (('iand', 0xffff, a), ('extract_u16', a, 0), '!options->lower_extract_word'),
 
    # Subtracts
    (('fsub', a, ('fsub', 0.0, b)), ('fadd', a, b)),
