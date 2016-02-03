@@ -248,24 +248,18 @@ setup_bitmap_vertex_data(struct st_context *st, bool normalized,
 }
 
 
-
 /**
- * Render a glBitmap by drawing a textured quad
+ * Setup pipeline state prior to rendering the bitmap textured quad.
  */
 static void
-draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
-                 GLsizei width, GLsizei height,
-                 struct pipe_sampler_view *sv,
-                 const GLfloat *color)
+setup_render_state(struct gl_context *ctx,
+                   struct pipe_sampler_view *sv,
+                   const GLfloat *color)
 {
    struct st_context *st = st_context(ctx);
-   struct pipe_context *pipe = st->pipe;
    struct cso_context *cso = st->cso_context;
    struct st_fp_variant *fpv;
    struct st_fp_variant_key key;
-   GLuint maxSize;
-   GLuint offset;
-   struct pipe_resource *vbuf = NULL;
 
    memset(&key, 0, sizeof(key));
    key.st = st->has_shareable_shaders ? NULL : st;
@@ -290,16 +284,6 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
                           PIPE_SHADER_FRAGMENT);
       COPY_4V(ctx->Current.Attrib[VERT_ATTRIB_COLOR0], colorSave);
    }
-
-
-   /* limit checks */
-   /* XXX if the bitmap is larger than the max texture size, break
-    * it up into chunks.
-    */
-   maxSize = 1 << (pipe->screen->get_param(pipe->screen,
-                                    PIPE_CAP_MAX_TEXTURE_2D_LEVELS) - 1);
-   assert(width <= (GLsizei)maxSize);
-   assert(height <= (GLsizei)maxSize);
 
    cso_save_rasterizer(cso);
    cso_save_fragment_samplers(cso);
@@ -372,6 +356,58 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
 
    cso_set_vertex_elements(cso, 3, st->velems_util_draw);
    cso_set_stream_outputs(st->cso_context, 0, NULL, NULL);
+}
+
+
+/**
+ * Restore pipeline state after rendering the bitmap textured quad.
+ */
+static void
+restore_render_state(struct gl_context *ctx)
+{
+   struct st_context *st = st_context(ctx);
+   struct cso_context *cso = st->cso_context;
+
+   cso_restore_rasterizer(cso);
+   cso_restore_fragment_samplers(cso);
+   cso_restore_fragment_sampler_views(cso);
+   cso_restore_viewport(cso);
+   cso_restore_fragment_shader(cso);
+   cso_restore_vertex_shader(cso);
+   cso_restore_tessctrl_shader(cso);
+   cso_restore_tesseval_shader(cso);
+   cso_restore_geometry_shader(cso);
+   cso_restore_vertex_elements(cso);
+   cso_restore_aux_vertex_buffer_slot(cso);
+   cso_restore_stream_outputs(cso);
+}
+
+
+/**
+ * Render a glBitmap by drawing a textured quad
+ */
+static void
+draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
+                 GLsizei width, GLsizei height,
+                 struct pipe_sampler_view *sv,
+                 const GLfloat *color)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_resource *vbuf = NULL;
+   GLuint maxSize;
+   GLuint offset;
+
+   /* limit checks */
+   /* XXX if the bitmap is larger than the max texture size, break
+    * it up into chunks.
+    */
+   maxSize = 1 << (pipe->screen->get_param(pipe->screen,
+                                    PIPE_CAP_MAX_TEXTURE_2D_LEVELS) - 1);
+   assert(width <= (GLsizei)maxSize);
+   assert(height <= (GLsizei)maxSize);
+
+   setup_render_state(ctx, sv, color);
 
    /* convert Z from [0,1] to [-1,-1] to match viewport Z scale/bias */
    z = z * 2.0f - 1.0f;
@@ -389,19 +425,7 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
                               3); /* attribs/vert */
    }
 
-   /* restore state */
-   cso_restore_rasterizer(cso);
-   cso_restore_fragment_samplers(cso);
-   cso_restore_fragment_sampler_views(cso);
-   cso_restore_viewport(cso);
-   cso_restore_fragment_shader(cso);
-   cso_restore_vertex_shader(cso);
-   cso_restore_tessctrl_shader(cso);
-   cso_restore_tesseval_shader(cso);
-   cso_restore_geometry_shader(cso);
-   cso_restore_vertex_elements(cso);
-   cso_restore_aux_vertex_buffer_slot(cso);
-   cso_restore_stream_outputs(cso);
+   restore_render_state(ctx);
 
    pipe_resource_reference(&vbuf, NULL);
 
