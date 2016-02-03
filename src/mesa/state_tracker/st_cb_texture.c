@@ -1298,6 +1298,7 @@ try_pbo_upload_common(struct gl_context *ctx,
    struct pipe_context *pipe = st->pipe;
    unsigned depth = surface->u.tex.last_layer - surface->u.tex.first_layer + 1;
    unsigned skip_pixels = 0;
+   bool success = false;
 
    /* Check alignment. */
    {
@@ -1382,6 +1383,8 @@ try_pbo_upload_common(struct gl_context *ctx,
 
       u_upload_alloc(st->uploader, 0, 8 * sizeof(float), 4,
                      &vbo.buffer_offset, &vbo.buffer, (void **) &verts);
+      if (!verts)
+         goto fail_vertex_upload;
 
       verts[0] = x0;
       verts[1] = y0;
@@ -1405,6 +1408,8 @@ try_pbo_upload_common(struct gl_context *ctx,
       cso_save_aux_vertex_buffer_slot(st->cso_context);
       cso_set_vertex_buffers(st->cso_context, velem.vertex_buffer_index,
                              1, &vbo);
+
+      pipe_resource_reference(&vbo.buffer, NULL);
    }
 
    /* Upload constants */
@@ -1506,6 +1511,8 @@ try_pbo_upload_common(struct gl_context *ctx,
                                 0, 4, 0, depth);
    }
 
+   success = true;
+
    cso_restore_framebuffer(st->cso_context);
    cso_restore_viewport(st->cso_context);
    cso_restore_blend(st->cso_context);
@@ -1519,9 +1526,10 @@ try_pbo_upload_common(struct gl_context *ctx,
    cso_restore_constant_buffer_slot0(st->cso_context, PIPE_SHADER_FRAGMENT);
    cso_restore_vertex_elements(st->cso_context);
    cso_restore_aux_vertex_buffer_slot(st->cso_context);
+fail_vertex_upload:
    cso_restore_fragment_sampler_views(st->cso_context);
 
-   return true;
+   return success;
 }
 
 static bool
