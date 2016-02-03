@@ -1428,7 +1428,24 @@ bool
 st_translate_compute_program(struct st_context *st,
                              struct st_compute_program *stcp)
 {
-   return false; /* will be updated in the next commit */
+   struct ureg_program *ureg;
+   struct pipe_shader_state prog;
+
+   ureg = ureg_create_with_screen(TGSI_PROCESSOR_COMPUTE, st->pipe->screen);
+   if (ureg == NULL)
+      return false;
+
+   st_translate_program_common(st, &stcp->Base.Base, stcp->glsl_to_tgsi, ureg,
+                               TGSI_PROCESSOR_COMPUTE, &prog);
+
+   stcp->tgsi.prog = prog.tokens;
+   stcp->tgsi.req_local_mem = stcp->Base.SharedSize;
+   stcp->tgsi.req_private_mem = 0;
+   stcp->tgsi.req_input_mem = 0;
+
+   free_glsl_to_tgsi_visitor(stcp->glsl_to_tgsi);
+   stcp->glsl_to_tgsi = NULL;
+   return true;
 }
 
 

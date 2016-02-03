@@ -5710,6 +5710,8 @@ st_translate_program(
          t->inputs[i] = ureg_DECL_vs_input(ureg, i);
       }
       break;
+   case TGSI_PROCESSOR_COMPUTE:
+      break;
    default:
       assert(0);
    }
@@ -5719,6 +5721,7 @@ st_translate_program(
     */
    switch (procType) {
    case TGSI_PROCESSOR_FRAGMENT:
+   case TGSI_PROCESSOR_COMPUTE:
       break;
    case TGSI_PROCESSOR_GEOMETRY:
    case TGSI_PROCESSOR_TESS_EVAL:
@@ -6188,6 +6191,7 @@ get_mesa_program(struct gl_context *ctx,
    struct st_geometry_program *stgp;
    struct st_tessctrl_program *sttcp;
    struct st_tesseval_program *sttep;
+   struct st_compute_program *stcp;
 
    switch (shader->Type) {
    case GL_VERTEX_SHADER:
@@ -6209,6 +6213,10 @@ get_mesa_program(struct gl_context *ctx,
    case GL_TESS_EVALUATION_SHADER:
       sttep = (struct st_tesseval_program *)prog;
       sttep->glsl_to_tgsi = v;
+      break;
+   case GL_COMPUTE_SHADER:
+      stcp = (struct st_compute_program *)prog;
+      stcp->glsl_to_tgsi = v;
       break;
    default:
       assert(!"should not be reached");
