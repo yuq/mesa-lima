@@ -40,7 +40,6 @@
 #include "main/uniforms.h"
 #include "main/shaderapi.h"
 #include "program/prog_instruction.h"
-#include "program/sampler.h"
 
 #include "pipe/p_context.h"
 #include "pipe/p_screen.h"
@@ -257,6 +256,7 @@ public:
    GLboolean cond_update;
    bool saturate;
    st_src_reg sampler; /**< sampler register */
+   int sampler_base;
    int sampler_array_size; /**< 1-based size of sampler array, 1 if not array */
    int tex_target; /**< One of TEXTURE_*_INDEX */
    glsl_base_type tex_type;
@@ -501,6 +501,19 @@ public:
                     st_dst_reg dst, st_src_reg src0, st_src_reg src1);
 
    void emit_arl(ir_instruction *ir, st_dst_reg dst, st_src_reg src0);
+
+   void get_deref_offsets(ir_dereference *ir,
+                          unsigned *array_size,
+                          unsigned *base,
+                          unsigned *index,
+                          st_src_reg *reladdr);
+  void calc_deref_offsets(ir_dereference *head,
+                          ir_dereference *tail,
+                          unsigned *array_elements,
+                          unsigned *base,
+                          unsigned *index,
+                          st_src_reg *indirect,
+                          unsigned *location);
 
    bool try_emit_mad(ir_expression *ir,
               int mul_operand);
@@ -3437,17 +3450,112 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
 }
 
 void
+glsl_to_tgsi_visitor::calc_deref_offsets(ir_dereference *head,
+                                         ir_dereference *tail,
+                                         unsigned *array_elements,
+                                         unsigned *base,
+                                         unsigned *index,
+                                         st_src_reg *indirect,
+                                         unsigned *location)
+{
+   switch (tail->ir_type) {
+   case ir_type_dereference_record: {
+      ir_dereference_record *deref_record = tail->as_dereference_record();
+      const glsl_type *struct_type = deref_record->record->type;
+      int field_index = deref_record->record->type->field_index(deref_record->field);
+
+      calc_deref_offsets(head, deref_record->record->as_dereference(), array_elements, base, index, indirect, location);
+
+      assert(field_index >= 0);
+      *location += struct_type->record_location_offset(field_index);
+      break;
+   }
+
+   case ir_type_dereference_array: {
+      ir_dereference_array *deref_arr = tail->as_dereference_array();
+      ir_constant *array_index = deref_arr->array_index->constant_expression_value();
+
+      if (!array_index) {
+         st_src_reg temp_reg;
+         st_dst_reg temp_dst;
+
+         temp_reg = get_temp(glsl_type::uint_type);
+         temp_dst = st_dst_reg(temp_reg);
+         temp_dst.writemask = 1;
+
+         deref_arr->array_index->accept(this);
+         if (*array_elements != 1)
+            emit_asm(NULL, TGSI_OPCODE_MUL, temp_dst, this->result, st_src_reg_for_int(*array_elements));
+         else
+            emit_asm(NULL, TGSI_OPCODE_MOV, temp_dst, this->result);
+
+         if (indirect->file == PROGRAM_UNDEFINED)
+            *indirect = temp_reg;
+         else {
+            temp_dst = st_dst_reg(*indirect);
+            temp_dst.writemask = 1;
+            emit_asm(NULL, TGSI_OPCODE_ADD, temp_dst, *indirect, temp_reg);
+         }
+      } else
+         *index += array_index->value.u[0] * *array_elements;
+
+      *array_elements *= deref_arr->array->type->length;
+
+      calc_deref_offsets(head, deref_arr->array->as_dereference(), array_elements, base, index, indirect, location);
+      break;
+   }
+   default:
+      break;
+   }
+}
+
+void
+glsl_to_tgsi_visitor::get_deref_offsets(ir_dereference *ir,
+                                        unsigned *array_size,
+                                        unsigned *base,
+                                        unsigned *index,
+                                        st_src_reg *reladdr)
+{
+   GLuint shader = _mesa_program_enum_to_shader_stage(this->prog->Target);
+   unsigned location = 0;
+   ir_variable *var = ir->variable_referenced();
+
+   memset(reladdr, 0, sizeof(*reladdr));
+   reladdr->file = PROGRAM_UNDEFINED;
+
+   *base = 0;
+   *array_size = 1;
+
+   assert(var);
+   location = var->data.location;
+   calc_deref_offsets(ir, ir, array_size, base, index, reladdr, &location);
+
+   /*
+    * If we end up with no indirect then adjust the base to the index,
+    * and set the array size to 1.
+    */
+   if (reladdr->file == PROGRAM_UNDEFINED) {
+      *base = *index;
+      *array_size = 1;
+   }
+
+   if (location != 0xffffffff) {
+      *base += this->shader_program->UniformStorage[location].opaque[shader].index;
+      *index += this->shader_program->UniformStorage[location].opaque[shader].index;
+   }
+}
+
+void
 glsl_to_tgsi_visitor::visit(ir_texture *ir)
 {
    st_src_reg result_src, coord, cube_sc, lod_info, projector, dx, dy;
    st_src_reg offset[MAX_GLSL_TEXTURE_OFFSET], sample_index, component;
-   st_src_reg levels_src;
+   st_src_reg levels_src, reladdr;
    st_dst_reg result_dst, coord_dst, cube_sc_dst;
    glsl_to_tgsi_instruction *inst = NULL;
    unsigned opcode = TGSI_OPCODE_NOP;
    const glsl_type *sampler_type = ir->sampler->type;
-   ir_rvalue *sampler_index =
-      _mesa_get_sampler_array_nonconst_index(ir->sampler);
+   unsigned sampler_array_size = 1, sampler_index = 0, sampler_base = 0;
    bool is_cube_array = false;
    unsigned i;
 
@@ -3669,10 +3777,10 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       coord_dst.writemask = WRITEMASK_XYZW;
    }
 
-   if (sampler_index) {
-      sampler_index->accept(this);
-      emit_arl(ir, sampler_reladdr, this->result);
-   }
+   get_deref_offsets(ir->sampler, &sampler_array_size, &sampler_base,
+                     &sampler_index, &reladdr);
+   if (reladdr.file != PROGRAM_UNDEFINED)
+      emit_arl(ir, sampler_reladdr, reladdr);
 
    if (opcode == TGSI_OPCODE_TXD)
       inst = emit_asm(ir, opcode, result_dst, coord, dx, dy);
@@ -3705,16 +3813,13 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    if (ir->shadow_comparitor)
       inst->tex_shadow = GL_TRUE;
 
-   inst->sampler.index = _mesa_get_sampler_uniform_value(ir->sampler,
-                                                         this->shader_program,
-                                                         this->prog);
-   if (sampler_index) {
+   inst->sampler.index = sampler_index;
+   inst->sampler_array_size = sampler_array_size;
+   inst->sampler_base = sampler_base;
+
+   if (reladdr.file != PROGRAM_UNDEFINED) {
       inst->sampler.reladdr = ralloc(mem_ctx, st_src_reg);
-      memcpy(inst->sampler.reladdr, &sampler_reladdr, sizeof(sampler_reladdr));
-      inst->sampler_array_size =
-         ir->sampler->as_dereference_array()->array->type->array_size();
-   } else {
-      inst->sampler_array_size = 1;
+      memcpy(inst->sampler.reladdr, &reladdr, sizeof(reladdr));
    }
 
    if (ir->offset) {
@@ -3915,7 +4020,7 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
    foreach_in_list(glsl_to_tgsi_instruction, inst, &v->instructions) {
       if (inst->info->is_tex) {
          for (int i = 0; i < inst->sampler_array_size; i++) {
-            unsigned idx = inst->sampler.index + i;
+            unsigned idx = inst->sampler_base + i;
             v->samplers_used |= 1 << idx;
 
             debug_assert(idx < (int)ARRAY_SIZE(v->sampler_types));
