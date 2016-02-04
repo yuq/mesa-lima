@@ -1552,10 +1552,6 @@ struct anv_image {
    struct anv_bo *bo;
    VkDeviceSize offset;
 
-   bool needs_sampler_surface_state:1;
-   bool needs_color_rt_surface_state:1;
-   bool needs_storage_surface_state:1;
-
    /**
     * Image subsurfaces
     *

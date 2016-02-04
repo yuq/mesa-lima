@@ -215,18 +215,6 @@ anv_image_create(VkDevice _device,
    image->usage = anv_image_get_full_usage(pCreateInfo);
    image->tiling = pCreateInfo->tiling;
 
-   if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-      image->needs_sampler_surface_state = true;
-   }
-
-   if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
-      image->needs_color_rt_surface_state = true;
-   }
-
-   if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
-      image->needs_storage_surface_state = true;
-   }
-
    if (likely(anv_format_is_color(image->format))) {
       r = make_surface(device, image, create_info,
                        VK_IMAGE_ASPECT_COLOR_BIT);
@@ -570,7 +558,7 @@ anv_image_view_init(struct anv_image_view *iview,
       .depth  = anv_minify(iview->level_0_extent.depth , range->baseMipLevel),
    };
 
-   if (image->needs_sampler_surface_state) {
+   if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       iview->sampler_surface_state = alloc_surface_state(device, cmd_buffer);
 
       anv_fill_image_surface_state(device, iview->sampler_surface_state,
@@ -580,7 +568,7 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->sampler_surface_state.alloc_size = 0;
    }
 
-   if (image->needs_color_rt_surface_state) {
+   if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       anv_fill_image_surface_state(device, iview->color_rt_surface_state,
@@ -590,7 +578,7 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->color_rt_surface_state.alloc_size = 0;
    }
 
-   if (image->needs_storage_surface_state) {
+   if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
       if (has_matching_storage_typed_format(device, iview->format))
@@ -636,17 +624,17 @@ anv_DestroyImageView(VkDevice _device, VkImageView _iview,
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_image_view, iview, _iview);
 
-   if (iview->image->needs_color_rt_surface_state) {
+   if (iview->color_rt_surface_state.alloc_size > 0) {
       anv_state_pool_free(&device->surface_state_pool,
                           iview->color_rt_surface_state);
    }
 
-   if (iview->image->needs_sampler_surface_state) {
+   if (iview->sampler_surface_state.alloc_size > 0) {
       anv_state_pool_free(&device->surface_state_pool,
                           iview->sampler_surface_state);
    }
 
-   if (iview->image->needs_storage_surface_state) {
+   if (iview->storage_surface_state.alloc_size > 0) {
       anv_state_pool_free(&device->surface_state_pool,
                           iview->storage_surface_state);
    }
