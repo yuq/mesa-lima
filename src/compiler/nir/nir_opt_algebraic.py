@@ -167,6 +167,8 @@ optimizations = [
    (('flog2', ('fexp2', a)), a), # lg2(2^a) = a
    (('fpow', a, b), ('fexp2', ('fmul', ('flog2', a), b)), 'options->lower_fpow'), # a^b = 2^(lg2(a)*b)
    (('fexp2', ('fmul', ('flog2', a), b)), ('fpow', a, b), '!options->lower_fpow'), # 2^(lg2(a)*b) = a^b
+   (('fexp2', ('fadd', ('fmul', ('flog2', a), b), ('fmul', ('flog2', c), d))),
+    ('fmul', ('fpow', a, b), ('fpow', c, d)), '!options->lower_fpow'), # 2^(lg2(a) * b + lg2(c) + d) = a^b * c^d
    (('fpow', a, 1.0), a),
    (('fpow', a, 2.0), ('fmul', a, a)),
    (('fpow', a, 4.0), ('fmul', ('fmul', a, a), ('fmul', a, a))),
