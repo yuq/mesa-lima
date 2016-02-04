@@ -1520,7 +1520,7 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 	}
 }
 
-void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
+void radeon_llvm_context_init(struct radeon_llvm_context * ctx, const char *triple)
 {
 	struct lp_type type;
 
@@ -1534,6 +1534,13 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	ctx->gallivm.context = LLVMContextCreate();
 	ctx->gallivm.module = LLVMModuleCreateWithNameInContext("tgsi",
 						ctx->gallivm.context);
+	LLVMSetTarget(ctx->gallivm.module,
+
+#if HAVE_LLVM < 0x0306
+			"r600--");
+#else
+			triple);
+#endif
 	ctx->gallivm.builder = LLVMCreateBuilderInContext(ctx->gallivm.context);
 
 	struct lp_build_tgsi_context * bld_base = &ctx->soa.bld_base;

@@ -784,7 +784,7 @@ LLVMModuleRef r600_tgsi_llvm(
 {
 	struct tgsi_shader_info shader_info;
 	struct lp_build_tgsi_context * bld_base = &ctx->soa.bld_base;
-	radeon_llvm_context_init(ctx);
+	radeon_llvm_context_init(ctx, "r600--");
 	LLVMTypeRef Arguments[32];
 	unsigned ArgumentsCount = 0;
 	for (unsigned i = 0; i < ctx->inputs_count; i++)

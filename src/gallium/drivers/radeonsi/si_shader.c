@@ -4323,7 +4323,7 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	struct lp_build_tgsi_context *bld_base;
 
 	memset(ctx, 0, sizeof(*ctx));
-	radeon_llvm_context_init(&ctx->radeon_bld);
+	radeon_llvm_context_init(&ctx->radeon_bld, "amdgcn--");
 	ctx->tm = tm;
 	ctx->screen = sscreen;
 	if (shader && shader->selector)

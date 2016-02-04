@@ -158,7 +158,8 @@ void radeon_llvm_emit_prepare_cube_coords(struct lp_build_tgsi_context * bld_bas
 					  LLVMValueRef *coords_arg,
 					  LLVMValueRef *derivs_arg);
 
-void radeon_llvm_context_init(struct radeon_llvm_context * ctx);
+void radeon_llvm_context_init(struct radeon_llvm_context * ctx,
+                              const char *triple);
 
 void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
                              LLVMTypeRef *ParamTypes, unsigned ParamCount);
