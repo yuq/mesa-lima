@@ -167,6 +167,19 @@ intel_viewport(struct gl_context *ctx)
 }
 
 static void
+intel_update_framebuffer(struct gl_context *ctx,
+                         struct gl_framebuffer *fb)
+{
+   struct brw_context *brw = brw_context(ctx);
+
+   /* Quantize the derived default number of samples
+    */
+   fb->DefaultGeometry._NumSamples =
+      intel_quantize_num_samples(brw->intelScreen,
+                                 fb->DefaultGeometry.NumSamples);
+}
+
+static void
 intel_update_state(struct gl_context * ctx, GLuint new_state)
 {
    struct brw_context *brw = brw_context(ctx);
@@ -245,6 +258,12 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
    }
 
    _mesa_lock_context_textures(ctx);
+
+   if (new_state & _NEW_BUFFERS) {
+      intel_update_framebuffer(ctx, ctx->DrawBuffer);
+      if (ctx->DrawBuffer != ctx->ReadBuffer)
+         intel_update_framebuffer(ctx, ctx->ReadBuffer);
+   }
 }
 
 #define flushFront(screen)      ((screen)->image.loader ? (screen)->image.loader->flushFrontBuffer : (screen)->dri2.loader->flushFrontBuffer)

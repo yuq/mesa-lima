@@ -3223,6 +3223,10 @@ struct gl_framebuffer
    struct {
      GLuint Width, Height, Layers, NumSamples;
      GLboolean FixedSampleLocations;
+     /* Derived from NumSamples by the driver so that it can choose a valid
+      * value for the hardware.
+      */
+     GLuint _NumSamples;
    } DefaultGeometry;
 
    /** \name  Drawing bounds (Intersection of buffer size and scissor box)

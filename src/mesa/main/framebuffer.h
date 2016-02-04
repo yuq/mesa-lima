@@ -97,7 +97,8 @@ static inline GLuint
 _mesa_geometric_samples(const struct gl_framebuffer *buffer)
 {
    return buffer->_HasAttachments ?
-      buffer->Visual.samples : buffer->DefaultGeometry.NumSamples;
+      buffer->Visual.samples :
+      buffer->DefaultGeometry._NumSamples;
 }
 
 static inline GLuint
