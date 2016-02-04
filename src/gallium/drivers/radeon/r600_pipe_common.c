@@ -393,6 +393,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "noir", DBG_NO_IR, "Don't print the LLVM IR"},
 	{ "notgsi", DBG_NO_TGSI, "Don't print the TGSI"},
 	{ "noasm", DBG_NO_ASM, "Don't print disassembled shaders"},
+	{ "preoptir", DBG_PREOPT_IR, "Print the LLVM IR before initial optimizations" },
 
 	/* features */
 	{ "nodma", DBG_NO_ASYNC_DMA, "Disable asynchronous DMA" },

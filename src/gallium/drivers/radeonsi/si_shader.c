@@ -4092,7 +4092,7 @@ int si_compile_llvm(struct si_screen *sscreen,
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		fprintf(stderr, "radeonsi: Compiling shader %d\n", count);
 
-		if (!(sscreen->b.debug_flags & DBG_NO_IR))
+		if (!(sscreen->b.debug_flags & (DBG_NO_IR | DBG_PREOPT_IR)))
 			LLVMDumpModule(mod);
 	}
 
@@ -4178,6 +4178,12 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
 
 	LLVMBuildRetVoid(bld_base->base.gallivm->builder);
+
+	/* Dump LLVM IR before any optimization passes */
+	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
+	    r600_can_dump_shader(&sscreen->b, TGSI_PROCESSOR_GEOMETRY))
+		LLVMDumpModule(bld_base->base.gallivm->module);
+
 	radeon_llvm_finalize_module(&si_shader_ctx->radeon_bld);
 
 	if (dump)
@@ -4385,9 +4391,15 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	}
 
 	LLVMBuildRetVoid(bld_base->base.gallivm->builder);
+	mod = bld_base->base.gallivm->module;
+
+	/* Dump LLVM IR before any optimization passes */
+	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
+	    r600_can_dump_shader(&sscreen->b, si_shader_ctx.type))
+		LLVMDumpModule(mod);
+
 	radeon_llvm_finalize_module(&si_shader_ctx.radeon_bld);
 
-	mod = bld_base->base.gallivm->module;
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
 			    mod, debug, si_shader_ctx.type);
 	if (r) {
