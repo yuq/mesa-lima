@@ -1552,7 +1552,7 @@ struct anv_image {
    struct anv_bo *bo;
    VkDeviceSize offset;
 
-   bool needs_nonrt_surface_state:1;
+   bool needs_sampler_surface_state:1;
    bool needs_color_rt_surface_state:1;
    bool needs_storage_surface_state:1;
 
@@ -1595,8 +1595,8 @@ struct anv_image_view {
    /** RENDER_SURFACE_STATE when using image as a color render target. */
    struct anv_state color_rt_surface_state;
 
-   /** RENDER_SURFACE_STATE when using image as a non render target. */
-   struct anv_state nonrt_surface_state;
+   /** RENDER_SURFACE_STATE when using image as a sampler surface. */
+   struct anv_state sampler_surface_state;
 
    /** RENDER_SURFACE_STATE when using image as a storage image. */
    struct anv_state storage_surface_state;

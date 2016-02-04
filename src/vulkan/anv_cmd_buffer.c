@@ -801,7 +801,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-         surface_state = desc->image_view->nonrt_surface_state;
+         surface_state = desc->image_view->sampler_surface_state;
          assert(surface_state.alloc_size);
          bo = desc->image_view->bo;
          bo_offset = desc->image_view->offset;

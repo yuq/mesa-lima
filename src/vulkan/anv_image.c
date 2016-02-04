@@ -216,7 +216,7 @@ anv_image_create(VkDevice _device,
    image->tiling = pCreateInfo->tiling;
 
    if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-      image->needs_nonrt_surface_state = true;
+      image->needs_sampler_surface_state = true;
    }
 
    if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
@@ -570,14 +570,14 @@ anv_image_view_init(struct anv_image_view *iview,
       .depth  = anv_minify(iview->level_0_extent.depth , range->baseMipLevel),
    };
 
-   if (image->needs_nonrt_surface_state) {
-      iview->nonrt_surface_state = alloc_surface_state(device, cmd_buffer);
+   if (image->needs_sampler_surface_state) {
+      iview->sampler_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      anv_fill_image_surface_state(device, iview->nonrt_surface_state,
+      anv_fill_image_surface_state(device, iview->sampler_surface_state,
                                    iview, &mCreateInfo,
                                    VK_IMAGE_USAGE_SAMPLED_BIT);
    } else {
-      iview->nonrt_surface_state.alloc_size = 0;
+      iview->sampler_surface_state.alloc_size = 0;
    }
 
    if (image->needs_color_rt_surface_state) {
@@ -641,9 +641,9 @@ anv_DestroyImageView(VkDevice _device, VkImageView _iview,
                           iview->color_rt_surface_state);
    }
 
-   if (iview->image->needs_nonrt_surface_state) {
+   if (iview->image->needs_sampler_surface_state) {
       anv_state_pool_free(&device->surface_state_pool,
-                          iview->nonrt_surface_state);
+                          iview->sampler_surface_state);
    }
 
    if (iview->image->needs_storage_surface_state) {
