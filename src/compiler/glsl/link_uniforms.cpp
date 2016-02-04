@@ -471,10 +471,11 @@ private:
  */
 class parcel_out_uniform_storage : public program_resource_visitor {
 public:
-   parcel_out_uniform_storage(struct string_to_uint_map *map,
+   parcel_out_uniform_storage(struct gl_shader_program *prog,
+                              struct string_to_uint_map *map,
 			      struct gl_uniform_storage *uniforms,
 			      union gl_constant_value *values)
-      : map(map), uniforms(uniforms), values(values)
+      : prog(prog), map(map), uniforms(uniforms), values(values)
    {
    }
 
@@ -492,8 +493,7 @@ public:
       memset(this->targets, 0, sizeof(this->targets));
    }
 
-   void set_and_process(struct gl_shader_program *prog,
-			ir_variable *var)
+   void set_and_process(ir_variable *var)
    {
       current_var = var;
       field_counter = 0;
@@ -642,6 +642,16 @@ private:
       if (base_type->is_image()) {
          uniform->opaque[shader_type].index = this->next_image;
          uniform->opaque[shader_type].active = true;
+
+         /* Set image access qualifiers */
+         const GLenum access =
+            (current_var->data.image_read_only ? GL_READ_ONLY :
+             current_var->data.image_write_only ? GL_WRITE_ONLY :
+                GL_READ_WRITE);
+
+         for (unsigned j = 0; j < MAX2(1, uniform->array_elements); ++j)
+            prog->_LinkedShaders[shader_type]->
+               ImageAccess[this->next_image + j] = access;
 
          /* Increment the image index by 1 for non-arrays and by the
           * number of array elements for arrays.
@@ -844,6 +854,11 @@ private:
       this->values += values_for_type(type);
    }
 
+   /**
+    * Current program being processed.
+    */
+   struct gl_shader_program *prog;
+
    struct string_to_uint_map *map;
 
    struct gl_uniform_storage *uniforms;
@@ -1007,40 +1022,6 @@ link_update_uniform_buffer_variables(struct gl_shader *shader)
    }
 }
 
-static void
-link_set_image_access_qualifiers(struct gl_shader_program *prog,
-                                 gl_shader *sh, unsigned shader_stage,
-                                 ir_variable *var, const glsl_type *type,
-                                 char **name, size_t name_length)
-{
-   /* Handle arrays of arrays */
-   if (type->is_array() && type->fields.array->is_array()) {
-      for (unsigned i = 0; i < type->length; i++) {
-	 size_t new_length = name_length;
-
-	 /* Append the subscript to the current variable name */
-	 ralloc_asprintf_rewrite_tail(name, &new_length, "[%u]", i);
-
-         link_set_image_access_qualifiers(prog, sh, shader_stage, var,
-                                          type->fields.array, name,
-                                          new_length);
-      }
-   } else {
-      unsigned id = 0;
-      bool found = prog->UniformHash->get(id, *name);
-      assert(found);
-      (void) found;
-      const gl_uniform_storage *storage = &prog->UniformStorage[id];
-      const unsigned index = storage->opaque[shader_stage].index;
-      const GLenum access = (var->data.image_read_only ? GL_READ_ONLY :
-                             var->data.image_write_only ? GL_WRITE_ONLY :
-                             GL_READ_WRITE);
-
-      for (unsigned j = 0; j < MAX2(1, storage->array_elements); ++j)
-         sh->ImageAccess[index + j] = access;
-   }
-}
-
 /**
  * Combine the hidden uniform hash map with the uniform hash map so that the
  * hidden uniforms will be given indicies at the end of the uniform storage
@@ -1148,7 +1129,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
    union gl_constant_value *data_end = &data[num_data_slots];
 #endif
 
-   parcel_out_uniform_storage parcel(prog->UniformHash, uniforms, data);
+   parcel_out_uniform_storage parcel(prog, prog->UniformHash, uniforms, data);
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)
@@ -1163,7 +1144,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
                                var->data.mode != ir_var_shader_storage))
 	    continue;
 
-	 parcel.set_and_process(prog, var);
+	 parcel.set_and_process(var);
       }
 
       prog->_LinkedShaders[i]->active_samplers = parcel.shader_samplers_used;
@@ -1300,29 +1281,6 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
    prog->NumUniformStorage = num_uniforms;
    prog->NumHiddenUniforms = hidden_uniforms;
    prog->UniformStorage = uniforms;
-
-   /**
-    * Scan the program for image uniforms and store image unit access
-    * information into the gl_shader data structure.
-    */
-   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      gl_shader *sh = prog->_LinkedShaders[i];
-
-      if (sh == NULL)
-	 continue;
-
-      foreach_in_list(ir_instruction, node, sh->ir) {
-	 ir_variable *var = node->as_variable();
-
-         if (var && var->data.mode == ir_var_uniform &&
-             var->type->contains_image()) {
-            char *name_copy = ralloc_strdup(NULL, var->name);
-            link_set_image_access_qualifiers(prog, sh, i, var, var->type,
-                                             &name_copy, strlen(var->name));
-            ralloc_free(name_copy);
-         }
-      }
-   }
 
    link_set_uniform_initializers(prog, boolean_true);
 
