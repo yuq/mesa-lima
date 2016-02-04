@@ -1089,6 +1089,9 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
    case GL_SAMPLES:
       v->value_int = _mesa_geometric_samples(ctx->DrawBuffer);
       break;
+   case GL_SAMPLE_BUFFERS:
+      v->value_int = _mesa_geometric_samples(ctx->DrawBuffer) > 0;
+      break;
    }
 }
 

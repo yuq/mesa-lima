@@ -80,7 +80,7 @@ descriptor=[
   [ "SAMPLE_COVERAGE_ARB", "CONTEXT_BOOL(Multisample.SampleCoverage), NO_EXTRA" ],
   [ "SAMPLE_COVERAGE_VALUE_ARB", "CONTEXT_FLOAT(Multisample.SampleCoverageValue), NO_EXTRA" ],
   [ "SAMPLE_COVERAGE_INVERT_ARB", "CONTEXT_BOOL(Multisample.SampleCoverageInvert), NO_EXTRA" ],
-  [ "SAMPLE_BUFFERS_ARB", "BUFFER_INT(Visual.sampleBuffers), extra_new_buffers" ],
+  [ "SAMPLE_BUFFERS_ARB", "LOC_CUSTOM, TYPE_INT, 0, extra_new_buffers" ],
   [ "SAMPLES_ARB", "LOC_CUSTOM, TYPE_INT, 0, extra_new_buffers" ],
 
 # GL_ARB_sample_shading
