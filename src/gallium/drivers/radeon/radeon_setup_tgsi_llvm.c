@@ -1710,11 +1710,9 @@ void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
 void radeon_llvm_finalize_module(struct radeon_llvm_context * ctx)
 {
 	struct gallivm_state * gallivm = ctx->soa.bld_base.base.gallivm;
-	/* End the main function with Return*/
-	LLVMBuildRetVoid(gallivm->builder);
 
 	/* Create the pass manager */
-	ctx->gallivm.passmgr = LLVMCreateFunctionPassManagerForModule(
+	gallivm->passmgr = LLVMCreateFunctionPassManagerForModule(
 							gallivm->module);
 
 	/* This pass should eliminate all the load and store instructions */

@@ -848,6 +848,7 @@ LLVMModuleRef r600_tgsi_llvm(
 
 	lp_build_tgsi_llvm(bld_base, tokens);
 
+	LLVMBuildRetVoid(bld_base->base.gallivm->builder);
 	radeon_llvm_finalize_module(ctx);
 
 	return ctx->gallivm.module;

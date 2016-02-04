@@ -4177,6 +4177,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
 
+	LLVMBuildRetVoid(bld_base->base.gallivm->builder);
 	radeon_llvm_finalize_module(&si_shader_ctx->radeon_bld);
 
 	if (dump)
@@ -4383,6 +4384,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		goto out;
 	}
 
+	LLVMBuildRetVoid(bld_base->base.gallivm->builder);
 	radeon_llvm_finalize_module(&si_shader_ctx.radeon_bld);
 
 	mod = bld_base->base.gallivm->module;
