@@ -1085,6 +1085,10 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
    case GL_DISPATCH_INDIRECT_BUFFER_BINDING:
       v->value_int = ctx->DispatchIndirectBuffer->Name;
       break;
+   /* GL_ARB_multisample */
+   case GL_SAMPLES:
+      v->value_int = _mesa_geometric_samples(ctx->DrawBuffer);
+      break;
    }
 }
 
