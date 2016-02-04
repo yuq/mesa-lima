@@ -30,6 +30,7 @@
 #include "gallivm/lp_bld_flow.h"
 #include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_intr.h"
+#include "gallivm/lp_bld_misc.h"
 #include "gallivm/lp_bld_swizzle.h"
 #include "tgsi/tgsi_info.h"
 #include "tgsi/tgsi_parse.h"
@@ -1717,10 +1718,15 @@ void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
 void radeon_llvm_finalize_module(struct radeon_llvm_context * ctx)
 {
 	struct gallivm_state * gallivm = ctx->soa.bld_base.base.gallivm;
+	const char *triple = LLVMGetTarget(gallivm->module);
+	LLVMTargetLibraryInfoRef target_library_info;
 
 	/* Create the pass manager */
 	gallivm->passmgr = LLVMCreateFunctionPassManagerForModule(
 							gallivm->module);
+
+	target_library_info = gallivm_create_target_library_info(triple);
+	LLVMAddTargetLibraryInfo(target_library_info, gallivm->passmgr);
 
 	/* This pass should eliminate all the load and store instructions */
 	LLVMAddPromoteMemoryToRegisterPass(gallivm->passmgr);
@@ -1737,7 +1743,7 @@ void radeon_llvm_finalize_module(struct radeon_llvm_context * ctx)
 
 	LLVMDisposeBuilder(gallivm->builder);
 	LLVMDisposePassManager(gallivm->passmgr);
-
+	gallivm_dispose_target_library_info(target_library_info);
 }
 
 void radeon_llvm_dispose(struct radeon_llvm_context * ctx)
