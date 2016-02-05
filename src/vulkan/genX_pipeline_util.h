@@ -230,6 +230,12 @@ emit_urb_setup(struct anv_pipeline *pipeline)
       .DSNumberofURBEntries                     = 0);
 }
 
+static inline uint32_t
+scratch_space(const struct brw_stage_prog_data *prog_data)
+{
+   return ffs(prog_data->total_scratch / 2048);
+}
+
 static const uint32_t vk_to_gen_cullmode[] = {
    [VK_CULL_MODE_NONE]                       = CULLMODE_NONE,
    [VK_CULL_MODE_FRONT_BIT]                  = CULLMODE_FRONT,

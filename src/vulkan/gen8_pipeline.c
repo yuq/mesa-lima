@@ -406,7 +406,7 @@ genX(graphics_pipeline_create)(
                      .ExpectedVertexCount = pipeline->gs_vertex_count,
 
                      .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_GEOMETRY],
-                     .PerThreadScratchSpace = ffs(gs_prog_data->base.base.total_scratch / 2048),
+                     .PerThreadScratchSpace = scratch_space(&gs_prog_data->base.base),
 
                      .OutputVertexSize = gs_prog_data->output_vertex_size_hwords * 2 - 1,
                      .OutputTopology = gs_prog_data->output_topology,
@@ -468,7 +468,7 @@ genX(graphics_pipeline_create)(
                      .SoftwareExceptionEnable = false,
 
                      .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_VERTEX],
-                     .PerThreadScratchSpace = ffs(vue_prog_data->base.total_scratch / 2048),
+                     .PerThreadScratchSpace = scratch_space(&vue_prog_data->base),
 
                      .DispatchGRFStartRegisterForURBData =
                      vue_prog_data->base.dispatch_grf_start_reg,
@@ -601,7 +601,7 @@ genX(graphics_pipeline_create)(
                      .SamplerCount = 1,
 
                      .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_FRAGMENT],
-                     .PerThreadScratchSpace = ffs(wm_prog_data->base.total_scratch / 2048),
+                     .PerThreadScratchSpace = scratch_space(&wm_prog_data->base),
 
                      .MaximumNumberofThreadsPerPSD = 64 - num_thread_bias,
                      .PositionXYOffsetSelect = wm_prog_data->uses_pos_offset ?

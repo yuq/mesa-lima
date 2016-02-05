@@ -176,12 +176,6 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
                   .BlendStatePointer = pipeline->blend_state.offset);
 }
 
-static inline uint32_t
-scratch_space(const struct brw_stage_prog_data *prog_data)
-{
-   return ffs(prog_data->total_scratch / 1024);
-}
-
 GENX_FUNC(GEN7, GEN75) VkResult
 genX(graphics_pipeline_create)(
     VkDevice                                    _device,
