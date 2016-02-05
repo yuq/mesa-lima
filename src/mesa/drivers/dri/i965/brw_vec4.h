@@ -79,6 +79,11 @@ public:
       return dst_reg(brw_null_reg());
    }
 
+   dst_reg dst_null_df()
+   {
+      return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_DF));
+   }
+
    dst_reg dst_null_d()
    {
       return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_D));
