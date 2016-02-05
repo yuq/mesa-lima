@@ -1769,24 +1769,58 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       unreachable("not reached: should have been lowered");
 
    case nir_op_fsign:
-      /* AND(val, 0x80000000) gives the sign bit.
-       *
-       * Predicated OR ORs 1.0 (0x3f800000) with the sign bit if val is not
-       * zero.
-       */
-      emit(CMP(dst_null_f(), op[0], brw_imm_f(0.0f), BRW_CONDITIONAL_NZ));
+      if (type_sz(op[0].type) < 8) {
+         /* AND(val, 0x80000000) gives the sign bit.
+          *
+          * Predicated OR ORs 1.0 (0x3f800000) with the sign bit if val is not
+          * zero.
+          */
+         emit(CMP(dst_null_f(), op[0], brw_imm_f(0.0f), BRW_CONDITIONAL_NZ));
 
-      op[0].type = BRW_REGISTER_TYPE_UD;
-      dst.type = BRW_REGISTER_TYPE_UD;
-      emit(AND(dst, op[0], brw_imm_ud(0x80000000u)));
+         op[0].type = BRW_REGISTER_TYPE_UD;
+         dst.type = BRW_REGISTER_TYPE_UD;
+         emit(AND(dst, op[0], brw_imm_ud(0x80000000u)));
 
-      inst = emit(OR(dst, src_reg(dst), brw_imm_ud(0x3f800000u)));
-      inst->predicate = BRW_PREDICATE_NORMAL;
-      dst.type = BRW_REGISTER_TYPE_F;
+         inst = emit(OR(dst, src_reg(dst), brw_imm_ud(0x3f800000u)));
+         inst->predicate = BRW_PREDICATE_NORMAL;
+         dst.type = BRW_REGISTER_TYPE_F;
 
-      if (instr->dest.saturate) {
-         inst = emit(MOV(dst, src_reg(dst)));
-         inst->saturate = true;
+         if (instr->dest.saturate) {
+            inst = emit(MOV(dst, src_reg(dst)));
+            inst->saturate = true;
+         }
+      } else {
+         /* For doubles we do the same but we need to consider:
+          *
+          * - We use a MOV with conditional_mod instead of a CMP so that we can
+          *   skip loading a 0.0 immediate. We use a source modifier on the
+          *   source of the MOV so that we flush denormalized values to 0.
+          *   Since we want to compare against 0, this won't alter the result.
+          * - We need to extract the high 32-bit of each DF where the sign
+          *   is stored.
+          * - We need to produce a DF result.
+          */
+
+         /* Check for zero */
+         src_reg value = op[0];
+         value.abs = true;
+         inst = emit(MOV(dst_null_df(), value));
+         inst->conditional_mod = BRW_CONDITIONAL_NZ;
+
+         /* AND each high 32-bit channel with 0x80000000u */
+         dst_reg tmp = dst_reg(this, glsl_type::uvec4_type);
+         emit(VEC4_OPCODE_PICK_HIGH_32BIT, tmp, op[0]);
+         emit(AND(tmp, src_reg(tmp), brw_imm_ud(0x80000000u)));
+
+         /* Add 1.0 to each channel, predicated to skip the cases where the
+          * channel's value was 0
+          */
+         inst = emit(OR(tmp, src_reg(tmp), brw_imm_ud(0x3f800000u)));
+         inst->predicate = BRW_PREDICATE_NORMAL;
+
+         /* Now convert the result from float to double */
+         emit_conversion_to_double(dst, src_reg(tmp), instr->dest.saturate,
+                                   BRW_REGISTER_TYPE_F);
       }
       break;
 
