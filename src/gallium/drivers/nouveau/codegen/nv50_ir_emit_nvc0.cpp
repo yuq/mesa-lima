@@ -120,7 +120,7 @@ private:
 
    void emitSET(const CmpInstruction *);
    void emitSLCT(const CmpInstruction *);
-   void emitSELP(const Instruction *);
+   void emitSELP(const CmpInstruction *);
 
    void emitTEXBAR(const Instruction *);
    void emitTEX(const TexInstruction *);
@@ -398,6 +398,11 @@ CodeEmitterNVC0::emitForm_A(const Instruction *i, uint64_t opc)
          srcId(i->src(s), s ? ((s == 2) ? 49 : s1) : 20);
          break;
       default:
+         if (i->op == OP_SELP) {
+            // OP_SELP is used to implement shared+atomics on Fermi.
+            assert(s == 2 && i->src(s).getFile() == FILE_PREDICATE);
+            srcId(i->src(s), 49);
+         }
          // ignore here, can be predicate or flags, but must not be address
          break;
       }
@@ -1170,11 +1175,11 @@ CodeEmitterNVC0::emitSLCT(const CmpInstruction *i)
       code[0] |= 1 << 5;
 }
 
-void CodeEmitterNVC0::emitSELP(const Instruction *i)
+void CodeEmitterNVC0::emitSELP(const CmpInstruction *i)
 {
    emitForm_A(i, HEX64(20000000, 00000004));
 
-   if (i->cc == CC_NOT_P || i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
+   if (i->setCond == CC_NOT_P || i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
       code[1] |= 1 << 20;
 }
 
@@ -2433,7 +2438,7 @@ CodeEmitterNVC0::emitInstruction(Instruction *insn)
       emitSET(insn->asCmp());
       break;
    case OP_SELP:
-      emitSELP(insn);
+      emitSELP(insn->asCmp());
       break;
    case OP_SLCT:
       emitSLCT(insn->asCmp());

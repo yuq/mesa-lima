@@ -112,7 +112,7 @@ private:
 
    void emitSET(const CmpInstruction *);
    void emitSLCT(const CmpInstruction *);
-   void emitSELP(const Instruction *);
+   void emitSELP(const CmpInstruction *);
 
    void emitTEXBAR(const Instruction *);
    void emitTEX(const TexInstruction *);
@@ -433,6 +433,10 @@ CodeEmitterGK110::emitForm_21(const Instruction *i, uint32_t opc2,
          srcId(i->src(s), s ? ((s == 2) ? 42 : s1) : 10);
          break;
       default:
+         if (i->op == OP_SELP) {
+            assert(s == 2 && i->src(s).getFile() == FILE_PREDICATE);
+            srcId(i->src(s), 42);
+         }
          // ignore here, can be predicate or flags, but must not be address
          break;
       }
@@ -1041,11 +1045,11 @@ CodeEmitterGK110::emitSLCT(const CmpInstruction *i)
    }
 }
 
-void CodeEmitterGK110::emitSELP(const Instruction *i)
+void CodeEmitterGK110::emitSELP(const CmpInstruction *i)
 {
    emitForm_21(i, 0x250, 0x050);
 
-   if ((i->cc == CC_NOT_P) ^ (bool)(i->src(2).mod & Modifier(NV50_IR_MOD_NOT)))
+   if ((i->setCond == CC_NOT_P) ^ (bool)(i->src(2).mod & Modifier(NV50_IR_MOD_NOT)))
       code[1] |= 1 << 13;
 }
 
@@ -1933,7 +1937,7 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       emitSET(insn->asCmp());
       break;
    case OP_SELP:
-      emitSELP(insn);
+      emitSELP(insn->asCmp());
       break;
    case OP_SLCT:
       emitSLCT(insn->asCmp());
