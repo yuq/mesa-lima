@@ -1374,26 +1374,10 @@ _mesa_DetachShader(GLuint program, GLuint shader)
 
 void GLAPIENTRY
 _mesa_GetAttachedObjectsARB(GLhandleARB container, GLsizei maxCount,
-                            GLsizei * count, GLhandleARB * objARB)
+                            GLsizei * count, GLhandleARB * obj)
 {
-   int i;
-   GLuint *obj;
-
    GET_CURRENT_CONTEXT(ctx);
-
-   obj = calloc(maxCount, sizeof(GLuint));
-   if (!obj) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGetAttachedObjectsARB");
-      return;
-   }
-
    get_attached_shaders(ctx, container, maxCount, count, obj);
-
-   for (i = 0 ; i < *count; i++) {
-      objARB[i] = (GLhandleARB)obj[i];
-   }
-
-   free(obj);
 }
 
 

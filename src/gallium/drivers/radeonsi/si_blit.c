@@ -680,6 +680,14 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	enum pipe_format format = int_to_norm_format(info->dst.format);
 	unsigned sample_mask = ~0;
 
+	/* Hardware MSAA resolve doesn't work if SPI format = NORM16_ABGR and
+	 * the format is R16G16. Use R16A16, which does work.
+	 */
+	if (format == PIPE_FORMAT_R16G16_UNORM)
+		format = PIPE_FORMAT_R16A16_UNORM;
+	if (format == PIPE_FORMAT_R16G16_SNORM)
+		format = PIPE_FORMAT_R16A16_SNORM;
+
 	if (info->src.resource->nr_samples > 1 &&
 	    info->dst.resource->nr_samples <= 1 &&
 	    util_max_layer(info->src.resource, 0) == 0 &&

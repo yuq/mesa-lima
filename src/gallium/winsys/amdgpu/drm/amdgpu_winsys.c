@@ -266,17 +266,12 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
    ws->info.r600_virtual_address = TRUE;
    ws->info.r600_has_dma = dma.available_rings != 0;
 
-   /* Guess what the maximum compute unit number is by looking at the mask
-    * of enabled CUs.
-    */
+   /* Get the number of good compute units. */
+   ws->info.num_good_compute_units = 0;
    for (i = 0; i < ws->info.max_se; i++)
-      for (j = 0; j < ws->info.max_sh_per_se; j++) {
-         unsigned max = util_last_bit(ws->amdinfo.cu_bitmap[i][j]);
-
-         if (ws->info.max_compute_units < max)
-            ws->info.max_compute_units = max;
-      }
-   ws->info.max_compute_units *= ws->info.max_se * ws->info.max_sh_per_se;
+      for (j = 0; j < ws->info.max_sh_per_se; j++)
+         ws->info.num_good_compute_units +=
+            util_bitcount(ws->amdinfo.cu_bitmap[i][j]);
 
    memcpy(ws->info.si_tile_mode_array, ws->amdinfo.gb_tile_mode,
           sizeof(ws->amdinfo.gb_tile_mode));
@@ -305,6 +300,7 @@ static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
 
    pipe_mutex_destroy(ws->bo_fence_lock);
    pb_cache_deinit(&ws->bo_cache);
+   pipe_mutex_destroy(ws->global_bo_list_lock);
    AddrDestroy(ws->addrlib);
    amdgpu_device_deinitialize(ws->dev);
    FREE(rws);
@@ -477,6 +473,8 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
    amdgpu_cs_init_functions(ws);
    amdgpu_surface_init_functions(ws);
 
+   LIST_INITHEAD(&ws->global_bo_list);
+   pipe_mutex_init(ws->global_bo_list_lock);
    pipe_mutex_init(ws->bo_fence_lock);
 
    /* Create the screen at the end. The winsys must be initialized

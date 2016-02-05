@@ -212,13 +212,37 @@ static void si_shader_es(struct si_shader *shader)
 		si_set_tesseval_regs(shader, pm4);
 }
 
+/**
+ * Calculate the appropriate setting of VGT_GS_MODE when \p shader is a
+ * geometry shader.
+ */
+static uint32_t si_vgt_gs_mode(struct si_shader *shader)
+{
+	unsigned gs_max_vert_out = shader->selector->gs_max_out_vertices;
+	unsigned cut_mode;
+
+	if (gs_max_vert_out <= 128) {
+		cut_mode = V_028A40_GS_CUT_128;
+	} else if (gs_max_vert_out <= 256) {
+		cut_mode = V_028A40_GS_CUT_256;
+	} else if (gs_max_vert_out <= 512) {
+		cut_mode = V_028A40_GS_CUT_512;
+	} else {
+		assert(gs_max_vert_out <= 1024);
+		cut_mode = V_028A40_GS_CUT_1024;
+	}
+
+	return S_028A40_MODE(V_028A40_GS_SCENARIO_G) |
+	       S_028A40_CUT_MODE(cut_mode)|
+	       S_028A40_ES_WRITE_OPTIMIZE(1) |
+	       S_028A40_GS_WRITE_OPTIMIZE(1);
+}
+
 static void si_shader_gs(struct si_shader *shader)
 {
 	unsigned gs_vert_itemsize = shader->selector->gsvs_vertex_size;
-	unsigned gs_max_vert_out = shader->selector->gs_max_out_vertices;
 	unsigned gsvs_itemsize = shader->selector->max_gsvs_emit_size >> 2;
 	unsigned gs_num_invocations = shader->selector->gs_num_invocations;
-	unsigned cut_mode;
 	struct si_pm4_state *pm4;
 	unsigned num_sgprs, num_user_sgprs;
 	uint64_t va;
@@ -232,22 +256,7 @@ static void si_shader_gs(struct si_shader *shader)
 	if (!pm4)
 		return;
 
-	if (gs_max_vert_out <= 128) {
-		cut_mode = V_028A40_GS_CUT_128;
-	} else if (gs_max_vert_out <= 256) {
-		cut_mode = V_028A40_GS_CUT_256;
-	} else if (gs_max_vert_out <= 512) {
-		cut_mode = V_028A40_GS_CUT_512;
-	} else {
-		assert(gs_max_vert_out <= 1024);
-		cut_mode = V_028A40_GS_CUT_1024;
-	}
-
-	si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE,
-		       S_028A40_MODE(V_028A40_GS_SCENARIO_G) |
-		       S_028A40_CUT_MODE(cut_mode)|
-		       S_028A40_ES_WRITE_OPTIMIZE(1) |
-		       S_028A40_GS_WRITE_OPTIMIZE(1));
+	si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, si_vgt_gs_mode(shader));
 
 	si_pm4_set_reg(pm4, R_028A60_VGT_GSVS_RING_OFFSET_1, gsvs_itemsize);
 	si_pm4_set_reg(pm4, R_028A64_VGT_GSVS_RING_OFFSET_2, gsvs_itemsize * ((max_stream >= 2) ? 2 : 1));
@@ -255,7 +264,7 @@ static void si_shader_gs(struct si_shader *shader)
 
 	si_pm4_set_reg(pm4, R_028AB0_VGT_GSVS_RING_ITEMSIZE, gsvs_itemsize * (max_stream + 1));
 
-	si_pm4_set_reg(pm4, R_028B38_VGT_GS_MAX_VERT_OUT, gs_max_vert_out);
+	si_pm4_set_reg(pm4, R_028B38_VGT_GS_MAX_VERT_OUT, shader->selector->gs_max_out_vertices);
 
 	si_pm4_set_reg(pm4, R_028B5C_VGT_GS_VERT_ITEMSIZE, gs_vert_itemsize >> 2);
 	si_pm4_set_reg(pm4, R_028B60_VGT_GS_VERT_ITEMSIZE_1, (max_stream >= 1) ? gs_vert_itemsize >> 2 : 0);
@@ -289,7 +298,14 @@ static void si_shader_gs(struct si_shader *shader)
 		       S_00B22C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 }
 
-static void si_shader_vs(struct si_shader *shader)
+/**
+ * Compute the state for \p shader, which will run as a vertex shader on the
+ * hardware.
+ *
+ * If \p gs is non-NULL, it points to the geometry shader for which this shader
+ * is the copy shader.
+ */
+static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 {
 	struct si_pm4_state *pm4;
 	unsigned num_sgprs, num_user_sgprs;
@@ -304,20 +320,26 @@ static void si_shader_vs(struct si_shader *shader)
 	if (!pm4)
 		return;
 
-	/* If this is the GS copy shader, the GS state writes this register.
-	 * Otherwise, the VS state writes it.
+	/* We always write VGT_GS_MODE in the VS state, because every switch
+	 * between different shader pipelines involving a different GS or no
+	 * GS at all involves a switch of the VS (different GS use different
+	 * copy shaders). On the other hand, when the API switches from a GS to
+	 * no GS and then back to the same GS used originally, the GS state is
+	 * not sent again.
 	 */
-	if (!shader->is_gs_copy_shader) {
+	if (!gs) {
 		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE,
 			       S_028A40_MODE(enable_prim_id ? V_028A40_GS_SCENARIO_A : 0));
 		si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, enable_prim_id);
-	} else
+	} else {
+		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, si_vgt_gs_mode(gs));
 		si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, 0);
+	}
 
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
-	if (shader->is_gs_copy_shader) {
+	if (gs) {
 		vgpr_comp_cnt = 0; /* only VertexID is needed for GS-COPY. */
 		num_user_sgprs = SI_GSCOPY_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_VERTEX) {
@@ -382,13 +404,58 @@ static void si_shader_vs(struct si_shader *shader)
 		si_set_tesseval_regs(shader, pm4);
 }
 
+static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
+{
+	unsigned value = shader->key.ps.spi_shader_col_format;
+	unsigned i, num_targets = (util_last_bit(value) + 3) / 4;
+
+	/* If the i-th target format is set, all previous target formats must
+	 * be non-zero to avoid hangs.
+	 */
+	for (i = 0; i < num_targets; i++)
+		if (!(value & (0xf << (i * 4))))
+			value |= V_028714_SPI_SHADER_32_R << (i * 4);
+
+	return value;
+}
+
+static unsigned si_get_cb_shader_mask(unsigned spi_shader_col_format)
+{
+	unsigned i, cb_shader_mask = 0;
+
+	for (i = 0; i < 8; i++) {
+		switch ((spi_shader_col_format >> (i * 4)) & 0xf) {
+		case V_028714_SPI_SHADER_ZERO:
+			break;
+		case V_028714_SPI_SHADER_32_R:
+			cb_shader_mask |= 0x1 << (i * 4);
+			break;
+		case V_028714_SPI_SHADER_32_GR:
+			cb_shader_mask |= 0x3 << (i * 4);
+			break;
+		case V_028714_SPI_SHADER_32_AR:
+			cb_shader_mask |= 0x9 << (i * 4);
+			break;
+		case V_028714_SPI_SHADER_FP16_ABGR:
+		case V_028714_SPI_SHADER_UNORM16_ABGR:
+		case V_028714_SPI_SHADER_SNORM16_ABGR:
+		case V_028714_SPI_SHADER_UINT16_ABGR:
+		case V_028714_SPI_SHADER_SINT16_ABGR:
+		case V_028714_SPI_SHADER_32_ABGR:
+			cb_shader_mask |= 0xf << (i * 4);
+			break;
+		default:
+			assert(0);
+		}
+	}
+	return cb_shader_mask;
+}
+
 static void si_shader_ps(struct si_shader *shader)
 {
 	struct tgsi_shader_info *info = &shader->selector->info;
 	struct si_pm4_state *pm4;
-	unsigned i, spi_ps_in_control;
-	unsigned spi_shader_col_format = 0, cb_shader_mask = 0;
-	unsigned colors_written, export_16bpc;
+	unsigned spi_ps_in_control, spi_shader_col_format, cb_shader_mask;
 	unsigned num_sgprs, num_user_sgprs;
 	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
@@ -423,23 +490,18 @@ static void si_shader_ps(struct si_shader *shader)
 	    TGSI_FS_COORD_PIXEL_CENTER_INTEGER)
 		spi_baryc_cntl |= S_0286E0_POS_FLOAT_ULC(1);
 
-	/* Find out what SPI_SHADER_COL_FORMAT and CB_SHADER_MASK should be. */
-	colors_written = info->colors_written;
-	export_16bpc = shader->key.ps.export_16bpc;
+	spi_shader_col_format = si_get_spi_shader_col_format(shader);
+	cb_shader_mask = si_get_cb_shader_mask(spi_shader_col_format);
 
-	if (info->colors_written == 0x1 &&
-	    info->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS]) {
-		colors_written |= (1 << (shader->key.ps.last_cbuf + 1)) - 1;
-	}
-
-	while (colors_written) {
-		i = u_bit_scan(&colors_written);
-		if (export_16bpc & (1 << i))
-			spi_shader_col_format |= V_028714_SPI_SHADER_FP16_ABGR << (4 * i);
-		else
-			spi_shader_col_format |= V_028714_SPI_SHADER_32_ABGR << (4 * i);
-		cb_shader_mask |= 0xf << (4 * i);
-	}
+	/* This must be non-zero for alpha-test/kill to work.
+	 * The hardware ignores the EXEC mask if no export memory is allocated.
+	 * Don't add this to CB_SHADER_MASK.
+	 */
+	if (!spi_shader_col_format &&
+	    !info->writes_z && !info->writes_stencil && !info->writes_samplemask &&
+	    (shader->selector->info.uses_kill ||
+	     shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS))
+		spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 
 	/* Set interpolation controls. */
 	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena) ||
@@ -498,7 +560,7 @@ static void si_shader_init_pm4_state(struct si_shader *shader)
 		else if (shader->key.vs.as_es)
 			si_shader_es(shader);
 		else
-			si_shader_vs(shader);
+			si_shader_vs(shader, NULL);
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		si_shader_hs(shader);
@@ -507,11 +569,11 @@ static void si_shader_init_pm4_state(struct si_shader *shader)
 		if (shader->key.tes.as_es)
 			si_shader_es(shader);
 		else
-			si_shader_vs(shader);
+			si_shader_vs(shader, NULL);
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		si_shader_gs(shader);
-		si_shader_vs(shader->gs_copy_shader);
+		si_shader_vs(shader->gs_copy_shader, shader);
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		si_shader_ps(shader);
@@ -571,12 +633,47 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		break;
 	case PIPE_SHADER_FRAGMENT: {
 		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
+		struct si_state_blend *blend = sctx->queued.named.blend;
 
 		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
 		    sel->info.colors_written == 0x1)
 			key->ps.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
 
-		key->ps.export_16bpc = sctx->framebuffer.export_16bpc;
+		if (blend) {
+			/* Select the shader color format based on whether
+			 * blending or alpha are needed.
+			 */
+			key->ps.spi_shader_col_format =
+				(blend->blend_enable_4bit & blend->need_src_alpha_4bit &
+				 sctx->framebuffer.spi_shader_col_format_blend_alpha) |
+				(blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
+				 sctx->framebuffer.spi_shader_col_format_blend) |
+				(~blend->blend_enable_4bit & blend->need_src_alpha_4bit &
+				 sctx->framebuffer.spi_shader_col_format_alpha) |
+				(~blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
+				 sctx->framebuffer.spi_shader_col_format);
+		} else
+			key->ps.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
+
+		/* If alpha-to-coverage is enabled, we have to export alpha
+		 * even if there is no color buffer.
+		 */
+		if (!(key->ps.spi_shader_col_format & 0xf) &&
+		    blend && blend->alpha_to_coverage)
+			key->ps.spi_shader_col_format |= V_028710_SPI_SHADER_32_AR;
+
+		/* On SI and CIK except Hawaii, the CB doesn't clamp outputs
+		 * to the range supported by the type if a channel has less
+		 * than 16 bits and the export format is 16_ABGR.
+		 */
+		if (sctx->b.chip_class <= CIK && sctx->b.family != CHIP_HAWAII)
+			key->ps.color_is_int8 = sctx->framebuffer.color_is_int8;
+
+		/* Disable unwritten outputs (if WRITE_ALL_CBUFS isn't enabled). */
+		if (!key->ps.last_cbuf) {
+			key->ps.spi_shader_col_format &= sel->colors_written_4bit;
+			key->ps.color_is_int8 &= sel->info.colors_written;
+		}
 
 		if (rs) {
 			bool is_poly = (sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES &&
@@ -761,6 +858,12 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			}
 		}
 		sel->esgs_itemsize = util_last_bit64(sel->outputs_written) * 16;
+		break;
+
+	case PIPE_SHADER_FRAGMENT:
+		for (i = 0; i < 8; i++)
+			if (sel->info.colors_written & (1 << i))
+				sel->colors_written_4bit |= 0xf << (4 * i);
 		break;
 	}
 

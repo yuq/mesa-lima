@@ -92,6 +92,10 @@ ifneq ($(filter vc4,$(MESA_GPU_DRIVERS)),)
 LOCAL_CFLAGS += -DGALLIUM_VC4
 gallium_DRIVERS += libmesa_winsys_vc4 libmesa_pipe_vc4
 endif
+ifneq ($(filter virgl,$(MESA_GPU_DRIVERS)),)
+LOCAL_CFLAGS += -DGALLIUM_VIRGL
+gallium_DRIVERS += libmesa_winsys_virgl libmesa_pipe_virgl
+endif
 ifneq ($(filter vmwgfx,$(MESA_GPU_DRIVERS)),)
 gallium_DRIVERS += libmesa_winsys_svga libmesa_pipe_svga
 LOCAL_CFLAGS += -DGALLIUM_VMWGFX
@@ -100,7 +104,7 @@ ifneq ($(filter nouveau r600g,$(MESA_GPU_DRIVERS)),)
 LOCAL_SHARED_LIBRARIES += $(if $(filter true,$(MESA_LOLLIPOP_BUILD)),libc++,libstlport)
 endif
 
-LOCAL_STATIC_LIBRARIES := \
+LOCAL_WHOLE_STATIC_LIBRARIES := \
 	$(gallium_DRIVERS) \
 	libmesa_st_dri \
 	libmesa_st_mesa \
@@ -111,6 +115,8 @@ LOCAL_STATIC_LIBRARIES := \
 	libmesa_pipe_loader \
 	libmesa_util \
 	libmesa_loader \
+
+LOCAL_STATIC_LIBRARIES :=
 
 ifeq ($(MESA_ENABLE_LLVM),true)
 LOCAL_STATIC_LIBRARIES += \

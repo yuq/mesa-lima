@@ -419,9 +419,9 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
                          &ws->info.r600_max_pipes);
 
     /* All GPUs have at least one compute unit */
-    ws->info.max_compute_units = 1;
+    ws->info.num_good_compute_units = 1;
     radeon_get_drm_value(ws->fd, RADEON_INFO_ACTIVE_CU_COUNT, NULL,
-                         &ws->info.max_compute_units);
+                         &ws->info.num_good_compute_units);
 
     radeon_get_drm_value(ws->fd, RADEON_INFO_MAX_SE, NULL,
                          &ws->info.max_se);

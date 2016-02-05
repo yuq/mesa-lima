@@ -39,8 +39,14 @@ struct si_shader;
 struct si_state_blend {
 	struct si_pm4_state	pm4;
 	uint32_t		cb_target_mask;
+	bool			alpha_to_coverage;
 	bool			alpha_to_one;
 	bool			dual_src_blend;
+	/* Set 0xf or 0x0 (4 bits) per render target if the following is
+	 * true. ANDed with spi_shader_col_format.
+	 */
+	unsigned		blend_enable_4bit;
+	unsigned		need_src_alpha_4bit;
 };
 
 struct si_state_rasterizer {

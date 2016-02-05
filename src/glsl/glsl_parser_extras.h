@@ -265,6 +265,11 @@ struct _mesa_glsl_parse_state {
       return ARB_compute_shader_enable || is_version(430, 310);
    }
 
+   bool has_geometry_shader() const
+   {
+      return OES_geometry_shader_enable || is_version(150, 320);
+   }
+
    void process_version_directive(YYLTYPE *locp, int version,
                                   const char *ident);
 
@@ -586,6 +591,8 @@ struct _mesa_glsl_parse_state {
     */
    bool OES_EGL_image_external_enable;
    bool OES_EGL_image_external_warn;
+   bool OES_geometry_shader_enable;
+   bool OES_geometry_shader_warn;
    bool OES_standard_derivatives_enable;
    bool OES_standard_derivatives_warn;
    bool OES_texture_3D_enable;

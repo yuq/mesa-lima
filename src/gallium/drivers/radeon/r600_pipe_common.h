@@ -236,6 +236,7 @@ struct r600_surface {
 	/* Misc. color flags. */
 	bool alphatest_bypass;
 	bool export_16bpc;
+	bool color_is_int8;
 
 	/* Color registers. */
 	unsigned cb_color_info;
@@ -252,6 +253,10 @@ struct r600_surface {
 	unsigned cb_color_fmask_slice;	/* EG and later */
 	unsigned cb_color_cmask;	/* CB_COLORn_TILE (r600 only) */
 	unsigned cb_color_mask;		/* R600 only */
+	unsigned spi_shader_col_format;		/* SI+, no blending, no alpha-to-coverage. */
+	unsigned spi_shader_col_format_alpha;	/* SI+, alpha-to-coverage */
+	unsigned spi_shader_col_format_blend;	/* SI+, blending without alpha. */
+	unsigned spi_shader_col_format_blend_alpha; /* SI+, blending with alpha. */
 	unsigned sx_ps_downconvert;	/* Stoney only */
 	unsigned sx_blend_opt_epsilon;	/* Stoney only */
 	struct r600_resource *cb_buffer_fmask; /* Used for FMASK relocations. R600 only */

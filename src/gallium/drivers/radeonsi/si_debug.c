@@ -771,7 +771,7 @@ void si_check_vm_faults(struct si_context *sctx)
 	if (!si_vm_fault_occured(sctx, &addr))
 		return;
 
-	f = dd_get_debug_file();
+	f = dd_get_debug_file(false);
 	if (!f)
 		return;
 

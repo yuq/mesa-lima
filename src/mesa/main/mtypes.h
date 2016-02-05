@@ -3910,6 +3910,7 @@ struct gl_extensions
    GLboolean OES_texture_half_float;
    GLboolean OES_texture_half_float_linear;
    GLboolean OES_compressed_ETC1_RGB8_texture;
+   GLboolean OES_geometry_shader;
    GLboolean extension_sentinel;
    /** The extension string */
    const GLubyte *String;

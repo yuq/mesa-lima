@@ -403,6 +403,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 	if (!blend)
 		return NULL;
 
+	blend->alpha_to_coverage = state->alpha_to_coverage;
 	blend->alpha_to_one = state->alpha_to_one;
 	blend->dual_src_blend = util_blend_state_is_dual(state, 0);
 
@@ -419,6 +420,9 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 		       S_028B70_ALPHA_TO_MASK_OFFSET2(2) |
 		       S_028B70_ALPHA_TO_MASK_OFFSET3(2));
 
+	if (state->alpha_to_coverage)
+		blend->need_src_alpha_4bit |= 0xf;
+
 	blend->cb_target_mask = 0;
 	for (int i = 0; i < 8; i++) {
 		/* state->rt entries > 0 only written if independent blending */
@@ -432,6 +436,9 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 		unsigned dstA = state->rt[j].alpha_dst_factor;
 
 		unsigned blend_cntl = 0;
+
+		if (!state->rt[j].colormask)
+			continue;
 
 		/* we pretend 8 buffer are used, CB_SHADER_MASK will disable unused one */
 		blend->cb_target_mask |= state->rt[j].colormask << (4 * i);
@@ -453,6 +460,17 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 			blend_cntl |= S_028780_ALPHA_DESTBLEND(si_translate_blend_factor(dstA));
 		}
 		si_pm4_set_reg(pm4, R_028780_CB_BLEND0_CONTROL + i * 4, blend_cntl);
+
+		blend->blend_enable_4bit |= 0xf << (i * 4);
+
+		/* This is only important for formats without alpha. */
+		if (srcRGB == PIPE_BLENDFACTOR_SRC_ALPHA ||
+		    dstRGB == PIPE_BLENDFACTOR_SRC_ALPHA ||
+		    srcRGB == PIPE_BLENDFACTOR_SRC_ALPHA_SATURATE ||
+		    dstRGB == PIPE_BLENDFACTOR_SRC_ALPHA_SATURATE ||
+		    srcRGB == PIPE_BLENDFACTOR_INV_SRC_ALPHA ||
+		    dstRGB == PIPE_BLENDFACTOR_INV_SRC_ALPHA)
+			blend->need_src_alpha_4bit |= 0xf << (i * 4);
 	}
 
 	if (blend->cb_target_mask) {
@@ -1266,53 +1284,6 @@ static uint32_t si_colorformat_endian_swap(uint32_t colorformat)
 	}
 }
 
-/* Returns the size in bits of the widest component of a CB format */
-static unsigned si_colorformat_max_comp_size(uint32_t colorformat)
-{
-	switch(colorformat) {
-	case V_028C70_COLOR_4_4_4_4:
-		return 4;
-
-	case V_028C70_COLOR_1_5_5_5:
-	case V_028C70_COLOR_5_5_5_1:
-		return 5;
-
-	case V_028C70_COLOR_5_6_5:
-		return 6;
-
-	case V_028C70_COLOR_8:
-	case V_028C70_COLOR_8_8:
-	case V_028C70_COLOR_8_8_8_8:
-		return 8;
-
-	case V_028C70_COLOR_10_10_10_2:
-	case V_028C70_COLOR_2_10_10_10:
-		return 10;
-
-	case V_028C70_COLOR_10_11_11:
-	case V_028C70_COLOR_11_11_10:
-		return 11;
-
-	case V_028C70_COLOR_16:
-	case V_028C70_COLOR_16_16:
-	case V_028C70_COLOR_16_16_16_16:
-		return 16;
-
-	case V_028C70_COLOR_8_24:
-	case V_028C70_COLOR_24_8:
-		return 24;
-
-	case V_028C70_COLOR_32:
-	case V_028C70_COLOR_32_32:
-	case V_028C70_COLOR_32_32_32_32:
-	case V_028C70_COLOR_X24_8_32_FLOAT:
-		return 32;
-	}
-
-	assert(!"Unknown maximum component size");
-	return 0;
-}
-
 static uint32_t si_translate_dbformat(enum pipe_format format)
 {
 	switch (format) {
@@ -1400,6 +1371,30 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 		case PIPE_FORMAT_RGTC2_UNORM:
 		case PIPE_FORMAT_LATC2_UNORM:
 			return V_008F14_IMG_DATA_FORMAT_BC5;
+		default:
+			goto out_unknown;
+		}
+	}
+
+	if (desc->layout == UTIL_FORMAT_LAYOUT_ETC &&
+	    sscreen->b.family >= CHIP_STONEY) {
+		switch (format) {
+		case PIPE_FORMAT_ETC1_RGB8:
+		case PIPE_FORMAT_ETC2_RGB8:
+		case PIPE_FORMAT_ETC2_SRGB8:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_RGB;
+		case PIPE_FORMAT_ETC2_RGB8A1:
+		case PIPE_FORMAT_ETC2_SRGB8A1:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_RGBA1;
+		case PIPE_FORMAT_ETC2_RGBA8:
+		case PIPE_FORMAT_ETC2_SRGBA8:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_RGBA;
+		case PIPE_FORMAT_ETC2_R11_UNORM:
+		case PIPE_FORMAT_ETC2_R11_SNORM:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_R;
+		case PIPE_FORMAT_ETC2_RG11_UNORM:
+		case PIPE_FORMAT_ETC2_RG11_SNORM:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_RG;
 		default:
 			goto out_unknown;
 		}
@@ -1880,6 +1875,123 @@ unsigned si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool sten
  * framebuffer handling
  */
 
+static void si_choose_spi_color_formats(struct r600_surface *surf,
+					unsigned format, unsigned swap,
+					unsigned ntype, bool is_depth)
+{
+	/* Alpha is needed for alpha-to-coverage.
+	 * Blending may be with or without alpha.
+	 */
+	unsigned normal = 0; /* most optimal, may not support blending or export alpha */
+	unsigned alpha = 0; /* exports alpha, but may not support blending */
+	unsigned blend = 0; /* supports blending, but may not export alpha */
+	unsigned blend_alpha = 0; /* least optimal, supports blending and exports alpha */
+
+	/* Choose the SPI color formats. These are required values for Stoney/RB+.
+	 * Other chips have multiple choices, though they are not necessarily better.
+	 */
+	switch (format) {
+	case V_028C70_COLOR_5_6_5:
+	case V_028C70_COLOR_1_5_5_5:
+	case V_028C70_COLOR_5_5_5_1:
+	case V_028C70_COLOR_4_4_4_4:
+	case V_028C70_COLOR_10_11_11:
+	case V_028C70_COLOR_11_11_10:
+	case V_028C70_COLOR_8:
+	case V_028C70_COLOR_8_8:
+	case V_028C70_COLOR_8_8_8_8:
+	case V_028C70_COLOR_10_10_10_2:
+	case V_028C70_COLOR_2_10_10_10:
+		if (ntype == V_028C70_NUMBER_UINT)
+			alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_UINT16_ABGR;
+		else if (ntype == V_028C70_NUMBER_SINT)
+			alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_SINT16_ABGR;
+		else
+			alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_FP16_ABGR;
+		break;
+
+	case V_028C70_COLOR_16:
+	case V_028C70_COLOR_16_16:
+	case V_028C70_COLOR_16_16_16_16:
+		if (ntype == V_028C70_NUMBER_UNORM ||
+		    ntype == V_028C70_NUMBER_SNORM) {
+			/* UNORM16 and SNORM16 don't support blending */
+			if (ntype == V_028C70_NUMBER_UNORM)
+				normal = alpha = V_028714_SPI_SHADER_UNORM16_ABGR;
+			else
+				normal = alpha = V_028714_SPI_SHADER_SNORM16_ABGR;
+
+			/* Use 32 bits per channel for blending. */
+			if (format == V_028C70_COLOR_16) {
+				if (swap == V_028C70_SWAP_STD) { /* R */
+					blend = V_028714_SPI_SHADER_32_R;
+					blend_alpha = V_028714_SPI_SHADER_32_AR;
+				} else if (swap == V_028C70_SWAP_ALT_REV) /* A */
+					blend = blend_alpha = V_028714_SPI_SHADER_32_AR;
+				else
+					assert(0);
+			} else if (format == V_028C70_COLOR_16_16) {
+				if (swap == V_028C70_SWAP_STD) { /* RG */
+					blend = V_028714_SPI_SHADER_32_GR;
+					blend_alpha = V_028714_SPI_SHADER_32_ABGR;
+				} else if (swap == V_028C70_SWAP_ALT) /* RA */
+					blend = blend_alpha = V_028714_SPI_SHADER_32_AR;
+				else
+					assert(0);
+			} else /* 16_16_16_16 */
+				blend = blend_alpha = V_028714_SPI_SHADER_32_ABGR;
+		} else if (ntype == V_028C70_NUMBER_UINT)
+			alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_UINT16_ABGR;
+		else if (ntype == V_028C70_NUMBER_SINT)
+			alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_SINT16_ABGR;
+		else if (ntype == V_028C70_NUMBER_FLOAT)
+			alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_FP16_ABGR;
+		else
+			assert(0);
+		break;
+
+	case V_028C70_COLOR_32:
+		if (swap == V_028C70_SWAP_STD) { /* R */
+			blend = normal = V_028714_SPI_SHADER_32_R;
+			alpha = blend_alpha = V_028714_SPI_SHADER_32_AR;
+		} else if (swap == V_028C70_SWAP_ALT_REV) /* A */
+			alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_32_AR;
+		else
+			assert(0);
+		break;
+
+	case V_028C70_COLOR_32_32:
+		if (swap == V_028C70_SWAP_STD) { /* RG */
+			blend = normal = V_028714_SPI_SHADER_32_GR;
+			alpha = blend_alpha = V_028714_SPI_SHADER_32_ABGR;
+		} else if (swap == V_028C70_SWAP_ALT) /* RA */
+			alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_32_AR;
+		else
+			assert(0);
+		break;
+
+	case V_028C70_COLOR_32_32_32_32:
+	case V_028C70_COLOR_8_24:
+	case V_028C70_COLOR_24_8:
+	case V_028C70_COLOR_X24_8_32_FLOAT:
+		alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_32_ABGR;
+		break;
+
+	default:
+		assert(0);
+		return;
+	}
+
+	/* The DB->CB copy needs 32_ABGR. */
+	if (is_depth)
+		alpha = blend = blend_alpha = normal = V_028714_SPI_SHADER_32_ABGR;
+
+	surf->spi_shader_col_format = normal;
+	surf->spi_shader_col_format_alpha = alpha;
+	surf->spi_shader_col_format_blend = blend;
+	surf->spi_shader_col_format_blend_alpha = blend_alpha;
+}
+
 static void si_initialize_color_surface(struct si_context *sctx,
 					struct r600_surface *surf)
 {
@@ -1893,7 +2005,6 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	const struct util_format_description *desc;
 	int i;
 	unsigned blend_clamp = 0, blend_bypass = 0;
-	unsigned max_comp_size;
 
 	/* Layered rendering doesn't work with LINEAR_GENERAL.
 	 * (LINEAR_ALIGNED and others work) */
@@ -1970,6 +2081,12 @@ static void si_initialize_color_surface(struct si_context *sctx,
 		blend_clamp = 0;
 		blend_bypass = 1;
 	}
+
+	if ((ntype == V_028C70_NUMBER_UINT || ntype == V_028C70_NUMBER_SINT) &&
+	    (format == V_028C70_COLOR_8 ||
+	     format == V_028C70_COLOR_8_8 ||
+	     format == V_028C70_COLOR_8_8_8_8))
+		surf->color_is_int8 = true;
 
 	color_info = S_028C70_FORMAT(format) |
 		S_028C70_COMP_SWAP(swap) |
@@ -2050,13 +2167,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	}
 
 	/* Determine pixel shader export format */
-	max_comp_size = si_colorformat_max_comp_size(format);
-	if (ntype == V_028C70_NUMBER_SRGB ||
-	    ((ntype == V_028C70_NUMBER_UNORM || ntype == V_028C70_NUMBER_SNORM) &&
-	     max_comp_size <= 10) ||
-	    (ntype == V_028C70_NUMBER_FLOAT && max_comp_size <= 16)) {
-		surf->export_16bpc = true;
-	}
+	si_choose_spi_color_formats(surf, format, swap, ntype, rtex->is_depth);
 
 	if (sctx->b.family == CHIP_STONEY &&
 	    !(sctx->screen->b.debug_flags & DBG_NO_RB_PLUS)) {
@@ -2283,7 +2394,12 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 
 	util_copy_framebuffer_state(&sctx->framebuffer.state, state);
 
-	sctx->framebuffer.export_16bpc = 0;
+	sctx->framebuffer.spi_shader_col_format = 0;
+	sctx->framebuffer.spi_shader_col_format_alpha = 0;
+	sctx->framebuffer.spi_shader_col_format_blend = 0;
+	sctx->framebuffer.spi_shader_col_format_blend_alpha = 0;
+	sctx->framebuffer.color_is_int8 = 0;
+
 	sctx->framebuffer.compressed_cb_mask = 0;
 	sctx->framebuffer.nr_samples = util_framebuffer_get_num_samples(state);
 	sctx->framebuffer.log_samples = util_logbase2(sctx->framebuffer.nr_samples);
@@ -2304,21 +2420,34 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			si_initialize_color_surface(sctx, surf);
 		}
 
-		if (surf->export_16bpc) {
-			sctx->framebuffer.export_16bpc |= 1 << i;
-		}
+		sctx->framebuffer.spi_shader_col_format |=
+			surf->spi_shader_col_format << (i * 4);
+		sctx->framebuffer.spi_shader_col_format_alpha |=
+			surf->spi_shader_col_format_alpha << (i * 4);
+		sctx->framebuffer.spi_shader_col_format_blend |=
+			surf->spi_shader_col_format_blend << (i * 4);
+		sctx->framebuffer.spi_shader_col_format_blend_alpha |=
+			surf->spi_shader_col_format_blend_alpha << (i * 4);
+
+		if (surf->color_is_int8)
+			sctx->framebuffer.color_is_int8 |= 1 << i;
 
 		if (rtex->fmask.size && rtex->cmask.size) {
 			sctx->framebuffer.compressed_cb_mask |= 1 << i;
 		}
 		r600_context_add_resource_size(ctx, surf->base.texture);
 	}
-	/* Set the 16BPC export for possible dual-src blending. */
-	if (i == 1 && surf && surf->export_16bpc) {
-		sctx->framebuffer.export_16bpc |= 1 << 1;
+	/* Set the second SPI format for possible dual-src blending. */
+	if (i == 1 && surf) {
+		sctx->framebuffer.spi_shader_col_format |=
+			surf->spi_shader_col_format << (i * 4);
+		sctx->framebuffer.spi_shader_col_format_alpha |=
+			surf->spi_shader_col_format_alpha << (i * 4);
+		sctx->framebuffer.spi_shader_col_format_blend |=
+			surf->spi_shader_col_format_blend << (i * 4);
+		sctx->framebuffer.spi_shader_col_format_blend_alpha |=
+			surf->spi_shader_col_format_blend_alpha << (i * 4);
 	}
-
-	assert(!(sctx->framebuffer.export_16bpc & ~0xff));
 
 	if (state->zsbuf) {
 		surf = (struct r600_surface*)state->zsbuf;
@@ -2703,12 +2832,17 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 				case PIPE_FORMAT_DXT3_SRGBA:
 				case PIPE_FORMAT_DXT5_SRGBA:
 				case PIPE_FORMAT_BPTC_SRGBA:
+				case PIPE_FORMAT_ETC2_SRGB8:
+				case PIPE_FORMAT_ETC2_SRGB8A1:
+				case PIPE_FORMAT_ETC2_SRGBA8:
 					num_format = V_008F14_IMG_NUM_FORMAT_SRGB;
 					break;
 				case PIPE_FORMAT_RGTC1_SNORM:
 				case PIPE_FORMAT_LATC1_SNORM:
 				case PIPE_FORMAT_RGTC2_SNORM:
 				case PIPE_FORMAT_LATC2_SNORM:
+				case PIPE_FORMAT_ETC2_R11_SNORM:
+				case PIPE_FORMAT_ETC2_RG11_SNORM:
 				/* implies float, so use SNORM/UNORM to determine
 				   whether data is signed or not */
 				case PIPE_FORMAT_BPTC_RGB_FLOAT:
@@ -3596,12 +3730,32 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028408_VGT_INDX_OFFSET, 0);
 
 	if (sctx->b.chip_class >= CIK) {
-		si_pm4_set_reg(pm4, R_00B51C_SPI_SHADER_PGM_RSRC3_LS, S_00B51C_CU_EN(0xfffc));
 		si_pm4_set_reg(pm4, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, 0);
-		si_pm4_set_reg(pm4, R_00B31C_SPI_SHADER_PGM_RSRC3_ES, S_00B31C_CU_EN(0xfffe));
+		si_pm4_set_reg(pm4, R_00B31C_SPI_SHADER_PGM_RSRC3_ES, S_00B31C_CU_EN(0xffff));
 		si_pm4_set_reg(pm4, R_00B21C_SPI_SHADER_PGM_RSRC3_GS, S_00B21C_CU_EN(0xffff));
-		si_pm4_set_reg(pm4, R_00B118_SPI_SHADER_PGM_RSRC3_VS, S_00B118_CU_EN(0xffff));
-		si_pm4_set_reg(pm4, R_00B11C_SPI_SHADER_LATE_ALLOC_VS, S_00B11C_LIMIT(0));
+
+		if (sscreen->b.info.num_good_compute_units /
+		    (sscreen->b.info.max_se * sscreen->b.info.max_sh_per_se) <= 4) {
+			/* Too few available compute units per SH. Disallowing
+			 * VS to run on CU0 could hurt us more than late VS
+			 * allocation would help.
+			 *
+			 * LATE_ALLOC_VS = 2 is the highest safe number.
+			 */
+			si_pm4_set_reg(pm4, R_00B51C_SPI_SHADER_PGM_RSRC3_LS, S_00B51C_CU_EN(0xffff));
+			si_pm4_set_reg(pm4, R_00B118_SPI_SHADER_PGM_RSRC3_VS, S_00B118_CU_EN(0xffff));
+			si_pm4_set_reg(pm4, R_00B11C_SPI_SHADER_LATE_ALLOC_VS, S_00B11C_LIMIT(2));
+		} else {
+			/* Set LATE_ALLOC_VS == 31. It should be less than
+			 * the number of scratch waves. Limitations:
+			 * - VS can't execute on CU0.
+			 * - If HS writes outputs to LDS, LS can't execute on CU0.
+			 */
+			si_pm4_set_reg(pm4, R_00B51C_SPI_SHADER_PGM_RSRC3_LS, S_00B51C_CU_EN(0xfffe));
+			si_pm4_set_reg(pm4, R_00B118_SPI_SHADER_PGM_RSRC3_VS, S_00B118_CU_EN(0xfffe));
+			si_pm4_set_reg(pm4, R_00B11C_SPI_SHADER_LATE_ALLOC_VS, S_00B11C_LIMIT(31));
+		}
+
 		si_pm4_set_reg(pm4, R_00B01C_SPI_SHADER_PGM_RSRC3_PS, S_00B01C_CU_EN(0xffff));
 	}
 

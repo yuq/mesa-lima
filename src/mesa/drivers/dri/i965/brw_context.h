@@ -836,6 +836,7 @@ struct brw_context
    bool always_flush_cache;
    bool disable_throttling;
    bool precompile;
+   bool dual_color_blend_by_location;
 
    driOptionCache optionCache;
    /** @} */

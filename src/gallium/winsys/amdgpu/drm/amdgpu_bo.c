@@ -128,6 +128,11 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
    int i;
 
+   pipe_mutex_lock(bo->ws->global_bo_list_lock);
+   LIST_DEL(&bo->global_list_item);
+   bo->ws->num_buffers--;
+   pipe_mutex_unlock(bo->ws->global_bo_list_lock);
+
    amdgpu_bo_va_op(bo->bo, 0, bo->base.size, bo->va, 0, AMDGPU_VA_OP_UNMAP);
    amdgpu_va_range_free(bo->va_handle);
    amdgpu_bo_free(bo->bo);
@@ -249,6 +254,16 @@ static const struct pb_vtbl amdgpu_winsys_bo_vtbl = {
    /* other functions are never called */
 };
 
+static void amdgpu_add_buffer_to_global_list(struct amdgpu_winsys_bo *bo)
+{
+   struct amdgpu_winsys *ws = bo->ws;
+
+   pipe_mutex_lock(ws->global_bo_list_lock);
+   LIST_ADDTAIL(&bo->global_list_item, &ws->global_bo_list);
+   ws->num_buffers++;
+   pipe_mutex_unlock(ws->global_bo_list_lock);
+}
+
 static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
                                                  unsigned size,
                                                  unsigned alignment,
@@ -318,6 +333,8 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
       ws->allocated_vram += align(size, ws->gart_page_size);
    else if (initial_domain & RADEON_DOMAIN_GTT)
       ws->allocated_gtt += align(size, ws->gart_page_size);
+
+   amdgpu_add_buffer_to_global_list(bo);
 
    return bo;
 
@@ -588,6 +605,8 @@ static struct pb_buffer *amdgpu_bo_from_handle(struct radeon_winsys *rws,
    else if (bo->initial_domain & RADEON_DOMAIN_GTT)
       ws->allocated_gtt += align(bo->base.size, ws->gart_page_size);
 
+   amdgpu_add_buffer_to_global_list(bo);
+
    return &bo->base;
 
 error_va_map:
@@ -672,6 +691,8 @@ static struct pb_buffer *amdgpu_bo_from_ptr(struct radeon_winsys *rws,
     bo->unique_id = __sync_fetch_and_add(&ws->next_bo_unique_id, 1);
 
     ws->allocated_gtt += align(bo->base.size, ws->gart_page_size);
+
+    amdgpu_add_buffer_to_global_list(bo);
 
     return (struct pb_buffer*)bo;
 

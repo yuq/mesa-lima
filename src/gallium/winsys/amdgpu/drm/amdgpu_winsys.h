@@ -63,6 +63,11 @@ struct amdgpu_winsys {
    ADDR_HANDLE addrlib;
    uint32_t rev_id;
    unsigned family;
+
+   /* List of all allocated buffers */
+   pipe_mutex global_bo_list_lock;
+   struct list_head global_bo_list;
+   unsigned num_buffers;
 };
 
 static inline struct amdgpu_winsys *

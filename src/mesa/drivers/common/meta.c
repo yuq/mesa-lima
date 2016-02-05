@@ -3179,8 +3179,10 @@ decompress_texture_image(struct gl_context *ctx,
 
       /* restrict sampling to the texture level of interest */
       if (target != GL_TEXTURE_RECTANGLE_ARB) {
-         _mesa_TexParameteri(target, GL_TEXTURE_BASE_LEVEL, texImage->Level);
-         _mesa_TexParameteri(target, GL_TEXTURE_MAX_LEVEL, texImage->Level);
+         _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_BASE_LEVEL,
+                                   (GLint *) &texImage->Level, false);
+         _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_MAX_LEVEL,
+                                   (GLint *) &texImage->Level, false);
       }
 
       /* render quad w/ texture into renderbuffer */
@@ -3190,8 +3192,10 @@ decompress_texture_image(struct gl_context *ctx,
        * be restored by _mesa_meta_end().
        */
       if (target != GL_TEXTURE_RECTANGLE_ARB) {
-         _mesa_TexParameteri(target, GL_TEXTURE_BASE_LEVEL, baseLevelSave);
-         _mesa_TexParameteri(target, GL_TEXTURE_MAX_LEVEL, maxLevelSave);
+         _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_BASE_LEVEL,
+                                   &baseLevelSave, false);
+         _mesa_texture_parameteriv(ctx, texObj, GL_TEXTURE_MAX_LEVEL,
+                                   &maxLevelSave, false);
       }
 
    }

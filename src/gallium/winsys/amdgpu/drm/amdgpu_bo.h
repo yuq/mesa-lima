@@ -60,6 +60,8 @@ struct amdgpu_winsys_bo {
 
    /* Fences for buffer synchronization. */
    struct pipe_fence_handle *fence[RING_LAST];
+
+   struct list_head global_list_item;
 };
 
 bool amdgpu_bo_can_reclaim(struct pb_buffer *_buf);

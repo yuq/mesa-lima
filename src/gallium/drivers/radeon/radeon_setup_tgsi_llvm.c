@@ -1511,12 +1511,14 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_BFI].emit = emit_bfi;
 	bld_base->op_actions[TGSI_OPCODE_BGNLOOP].emit = bgnloop_emit;
 	bld_base->op_actions[TGSI_OPCODE_BREV].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_BREV].intr_name = "llvm.AMDGPU.brev";
+	bld_base->op_actions[TGSI_OPCODE_BREV].intr_name =
+		HAVE_LLVM >= 0x0308 ? "llvm.bitreverse.i32" : "llvm.AMDGPU.brev";
 	bld_base->op_actions[TGSI_OPCODE_BRK].emit = brk_emit;
 	bld_base->op_actions[TGSI_OPCODE_CEIL].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_CEIL].intr_name = "llvm.ceil.f32";
 	bld_base->op_actions[TGSI_OPCODE_CLAMP].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_CLAMP].intr_name = "llvm.AMDIL.clamp.";
+	bld_base->op_actions[TGSI_OPCODE_CLAMP].intr_name =
+		HAVE_LLVM >= 0x0308 ? "llvm.AMDGPU.clamp." : "llvm.AMDIL.clamp.";
 	bld_base->op_actions[TGSI_OPCODE_CMP].emit = emit_cmp;
 	bld_base->op_actions[TGSI_OPCODE_CONT].emit = cont_emit;
 	bld_base->op_actions[TGSI_OPCODE_COS].emit = build_tgsi_intrinsic_nomem;
@@ -1539,7 +1541,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_ENDIF].emit = endif_emit;
 	bld_base->op_actions[TGSI_OPCODE_ENDLOOP].emit = endloop_emit;
 	bld_base->op_actions[TGSI_OPCODE_EX2].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_EX2].intr_name = "llvm.AMDIL.exp.";
+	bld_base->op_actions[TGSI_OPCODE_EX2].intr_name =
+		HAVE_LLVM >= 0x0308 ? "llvm.exp2.f32" : "llvm.AMDIL.exp.";
 	bld_base->op_actions[TGSI_OPCODE_FLR].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_FLR].intr_name = "llvm.floor.f32";
 	bld_base->op_actions[TGSI_OPCODE_FMA].emit = build_tgsi_intrinsic_nomem;

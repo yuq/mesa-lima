@@ -3267,7 +3267,7 @@ builtin_builder::_atan2(const glsl_type *type)
       ir_factory outer_then(&outer_if->then_instructions, mem_ctx);
 
       /* Then...call atan(y/x) */
-      do_atan(body, glsl_type::float_type, r, div(y, x));
+      do_atan(outer_then, glsl_type::float_type, r, div(y, x));
 
       /*     ...and fix it up: */
       ir_if *inner_if = new(mem_ctx) ir_if(less(x, imm(0.0f)));

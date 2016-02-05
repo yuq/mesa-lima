@@ -311,6 +311,7 @@ EXT(OES_element_index_uint                  , dummy_true                        
 EXT(OES_fbo_render_mipmap                   , dummy_true                             ,  x ,  x , ES1, ES2, 2005)
 EXT(OES_fixed_point                         , dummy_true                             ,  x ,  x , ES1,  x , 2002)
 EXT(OES_framebuffer_object                  , dummy_true                             ,  x ,  x , ES1,  x , 2005)
+EXT(OES_geometry_shader                     , OES_geometry_shader                    ,  x ,  x ,  x ,  31, 2015)
 EXT(OES_get_program_binary                  , dummy_true                             ,  x ,  x ,  x , ES2, 2008)
 EXT(OES_mapbuffer                           , dummy_true                             ,  x ,  x , ES1, ES2, 2005)
 EXT(OES_packed_depth_stencil                , dummy_true                             ,  x ,  x , ES1, ES2, 2007)
