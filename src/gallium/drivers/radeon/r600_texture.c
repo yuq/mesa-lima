@@ -1219,7 +1219,7 @@ static struct pipe_surface *r600_create_surface(struct pipe_context *pipe,
 	unsigned width = u_minify(tex->width0, level);
 	unsigned height = u_minify(tex->height0, level);
 
-	if (templ->format != tex->format) {
+	if (tex->target != PIPE_BUFFER && templ->format != tex->format) {
 		const struct util_format_description *tex_desc
 			= util_format_description(tex->format);
 		const struct util_format_description *templ_desc
