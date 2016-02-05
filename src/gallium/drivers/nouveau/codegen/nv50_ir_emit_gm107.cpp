@@ -673,7 +673,12 @@ CodeEmitterGM107::emitMOV()
        (insn->sType != TYPE_F32 && !longIMMD(insn->src(0)))) {
       switch (insn->src(0).getFile()) {
       case FILE_GPR:
-         emitInsn(0x5c980000);
+         if (insn->def(0).getFile() == FILE_PREDICATE) {
+            emitInsn(0x5b6a0000);
+            emitGPR (0x08);
+         } else {
+            emitInsn(0x5c980000);
+         }
          emitGPR (0x14, insn->src(0));
          break;
       case FILE_MEMORY_CONST:
@@ -684,18 +689,32 @@ CodeEmitterGM107::emitMOV()
          emitInsn(0x38980000);
          emitIMMD(0x14, 19, insn->src(0));
          break;
+      case FILE_PREDICATE:
+         emitInsn(0x50880000);
+         emitPRED(0x0c, insn->src(0));
+         emitPRED(0x1d);
+         emitPRED(0x27);
+         break;
       default:
          assert(!"bad src file");
          break;
       }
-      emitField(0x27, 4, insn->lanes);
+      if (insn->def(0).getFile() != FILE_PREDICATE &&
+          insn->src(0).getFile() != FILE_PREDICATE)
+         emitField(0x27, 4, insn->lanes);
    } else {
       emitInsn (0x01000000);
       emitIMMD (0x14, 32, insn->src(0));
       emitField(0x0c, 4, insn->lanes);
    }
 
-   emitGPR(0x00, insn->def(0));
+   if (insn->def(0).getFile() == FILE_PREDICATE) {
+      emitPRED(0x27);
+      emitPRED(0x03, insn->def(0));
+      emitPRED(0x00);
+   } else {
+      emitGPR(0x00, insn->def(0));
+   }
 }
 
 void
@@ -2684,11 +2703,7 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       emitRAM();
       break;
    case OP_MOV:
-      if (insn->def(0).getFile() == FILE_GPR &&
-          insn->src(0).getFile() != FILE_PREDICATE)
-         emitMOV();
-      else
-         assert(!"R2P/P2R");
+      emitMOV();
       break;
    case OP_RDSV:
       emitS2R();
@@ -2700,7 +2715,10 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
    case OP_CEIL:
    case OP_TRUNC:
    case OP_CVT:
-      if (isFloatType(insn->dType)) {
+      if (insn->op == OP_CVT && (insn->def(0).getFile() == FILE_PREDICATE ||
+                                 insn->src(0).getFile() == FILE_PREDICATE)) {
+         emitMOV();
+      } else if (isFloatType(insn->dType)) {
          if (isFloatType(insn->sType))
             emitF2F();
          else
