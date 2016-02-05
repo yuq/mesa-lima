@@ -237,6 +237,7 @@ int rvid_get_video_param(struct pipe_screen *screen,
 	case PIPE_VIDEO_CAP_SUPPORTED:
 		switch (codec) {
 		case PIPE_VIDEO_FORMAT_MPEG12:
+			return profile != PIPE_VIDEO_PROFILE_MPEG1;
 		case PIPE_VIDEO_FORMAT_MPEG4:
 		case PIPE_VIDEO_FORMAT_MPEG4_AVC:
 			if (rscreen->family < CHIP_PALM)
