@@ -2161,7 +2161,12 @@ gallium_require_drm_loader() {
     fi
 }
 
+dnl This is for Glamor. Skip this if OpenGL is disabled.
 require_egl_drm() {
+    if test "x$enable_opengl" = xno; then
+        return 0
+    fi
+
     case "$with_egl_platforms" in
         *drm*)
             ;;

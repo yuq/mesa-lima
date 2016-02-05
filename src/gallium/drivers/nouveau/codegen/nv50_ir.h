@@ -132,6 +132,7 @@ enum operation
    OP_SUBFM,   // surface bitfield manipulation
    OP_SUCLAMP, // clamp surface coordinates
    OP_SUEAU,   // surface effective address
+   OP_SUQ,     // surface query
    OP_MADSP,   // special integer multiply-add
    OP_TEXBAR, // texture dependency barrier
    OP_DFDX,

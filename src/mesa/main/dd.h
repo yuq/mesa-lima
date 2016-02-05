@@ -48,6 +48,7 @@ struct gl_shader;
 struct gl_shader_program;
 struct gl_texture_image;
 struct gl_texture_object;
+struct gl_memory_info;
 
 /* GL_ARB_vertex_buffer_object */
 /* Modifies GL_MAP_UNSYNCHRONIZED_BIT to allow driver to fail (return
@@ -726,6 +727,15 @@ struct dd_function_table {
    void (*EndQuery)(struct gl_context *ctx, struct gl_query_object *q);
    void (*CheckQuery)(struct gl_context *ctx, struct gl_query_object *q);
    void (*WaitQuery)(struct gl_context *ctx, struct gl_query_object *q);
+   /*
+    * \pname the value requested to be written (GL_QUERY_RESULT, etc)
+    * \ptype the type of the value requested to be written:
+    *    GL_UNSIGNED_INT, GL_UNSIGNED_INT64_ARB,
+    *    GL_INT, GL_INT64_ARB
+    */
+   void (*StoreQueryResult)(struct gl_context *ctx, struct gl_query_object *q,
+                            struct gl_buffer_object *buf, intptr_t offset,
+                            GLenum pname, GLenum ptype);
    /*@}*/
 
    /**
@@ -939,6 +949,13 @@ struct dd_function_table {
    void (*DispatchCompute)(struct gl_context *ctx, const GLuint *num_groups);
    void (*DispatchComputeIndirect)(struct gl_context *ctx, GLintptr indirect);
    /*@}*/
+
+   /**
+    * Query information about memory. Device memory is e.g. VRAM. Staging
+    * memory is e.g. GART. All sizes are in kilobytes.
+    */
+   void (*QueryMemoryInfo)(struct gl_context *ctx,
+                           struct gl_memory_info *info);
 };
 
 

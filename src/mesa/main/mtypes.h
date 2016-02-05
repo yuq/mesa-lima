@@ -1253,6 +1253,9 @@ typedef enum {
    USAGE_TEXTURE_BUFFER = 0x2,
    USAGE_ATOMIC_COUNTER_BUFFER = 0x4,
    USAGE_SHADER_STORAGE_BUFFER = 0x8,
+   USAGE_TRANSFORM_FEEDBACK_BUFFER = 0x10,
+   USAGE_PIXEL_PACK_BUFFER = 0x20,
+   USAGE_DISABLE_MINMAX_CACHE = 0x40,
 } gl_buffer_usage;
 
 
@@ -1280,6 +1283,12 @@ struct gl_buffer_object
    GLuint NumMapBufferWriteCalls;
 
    struct gl_buffer_mapping Mappings[MAP_COUNT];
+
+   /** Memoization of min/max index computations for static index buffers */
+   struct hash_table *MinMaxCache;
+   unsigned MinMaxCacheHitIndices;
+   unsigned MinMaxCacheMissIndices;
+   bool MinMaxCacheDirty;
 };
 
 
@@ -1861,6 +1870,8 @@ typedef enum
    PROGRAM_SAMPLER,     /**< for shader samplers, compile-time only */
    PROGRAM_SYSTEM_VALUE,/**< InstanceId, PrimitiveID, etc. */
    PROGRAM_UNDEFINED,   /**< Invalid/TBD value */
+   PROGRAM_IMMEDIATE,   /**< Immediate value, used by TGSI */
+   PROGRAM_BUFFER,      /**< for shader buffers, compile-time only */
    PROGRAM_FILE_MAX
 } gl_register_file;
 
@@ -3217,6 +3228,10 @@ struct gl_framebuffer
    struct {
      GLuint Width, Height, Layers, NumSamples;
      GLboolean FixedSampleLocations;
+     /* Derived from NumSamples by the driver so that it can choose a valid
+      * value for the hardware.
+      */
+     GLuint _NumSamples;
    } DefaultGeometry;
 
    /** \name  Drawing bounds (Intersection of buffer size and scissor box)
@@ -3785,6 +3800,7 @@ struct gl_extensions
    GLboolean ARB_occlusion_query2;
    GLboolean ARB_pipeline_statistics_query;
    GLboolean ARB_point_sprite;
+   GLboolean ARB_query_buffer_object;
    GLboolean ARB_sample_shading;
    GLboolean ARB_seamless_cube_map;
    GLboolean ARB_shader_atomic_counters;
@@ -3880,6 +3896,7 @@ struct gl_extensions
    GLboolean AMD_vertex_shader_layer;
    GLboolean AMD_vertex_shader_viewport_index;
    GLboolean APPLE_object_purgeable;
+   GLboolean ATI_meminfo;
    GLboolean ATI_texture_compression_3dc;
    GLboolean ATI_texture_mirror_once;
    GLboolean ATI_texture_env_combine3;
@@ -3900,6 +3917,7 @@ struct gl_extensions
    GLboolean NV_texture_env_combine4;
    GLboolean NV_texture_rectangle;
    GLboolean NV_vdpau_interop;
+   GLboolean NVX_gpu_memory_info;
    GLboolean TDFX_texture_compression_FXT1;
    GLboolean OES_EGL_image;
    GLboolean OES_draw_texture;
@@ -4434,6 +4452,8 @@ struct gl_context
    struct gl_buffer_object *CopyReadBuffer; /**< GL_ARB_copy_buffer */
    struct gl_buffer_object *CopyWriteBuffer; /**< GL_ARB_copy_buffer */
 
+   struct gl_buffer_object *QueryBuffer; /**< GL_ARB_query_buffer_object */
+
    /**
     * Current GL_ARB_uniform_buffer_object binding referenced by
     * GL_UNIFORM_BUFFER target for glBufferData, glMapBuffer, etc.
@@ -4576,6 +4596,18 @@ struct gl_context
    GLboolean ShareGroupReset;
 };
 
+/**
+ * Information about memory usage. All sizes are in kilobytes.
+ */
+struct gl_memory_info
+{
+   unsigned total_device_memory; /**< size of device memory, e.g. VRAM */
+   unsigned avail_device_memory; /**< free device memory at the moment */
+   unsigned total_staging_memory; /**< size of staging memory, e.g. GART */
+   unsigned avail_staging_memory; /**< free staging memory at the moment */
+   unsigned device_memory_evicted; /**< size of memory evicted (monotonic counter) */
+   unsigned nr_device_memory_evictions; /**< # of evictions (monotonic counter) */
+};
 
 #ifdef DEBUG
 extern int MESA_VERBOSE;

@@ -556,6 +556,10 @@ create_frag_coord(struct ir3_compile *ctx, unsigned comp)
 	}
 }
 
+/* NOTE: this creates the "TGSI" style fragface (ie. input slot
+ * VARYING_SLOT_FACE).  For NIR style nir_intrinsic_load_front_face
+ * we can just use the value from hw directly (since it is boolean)
+ */
 static struct ir3_instruction *
 create_frag_face(struct ir3_compile *ctx, unsigned comp)
 {
@@ -1224,7 +1228,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_vertex_id_zero_base:
 		if (!ctx->vertex_id) {
-			ctx->vertex_id = create_input(ctx->block, 0);
+			ctx->vertex_id = create_input(b, 0);
 			add_sysval_input(ctx, SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
 					ctx->vertex_id);
 		}
@@ -1232,7 +1236,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_instance_id:
 		if (!ctx->instance_id) {
-			ctx->instance_id = create_input(ctx->block, 0);
+			ctx->instance_id = create_input(b, 0);
 			add_sysval_input(ctx, SYSTEM_VALUE_INSTANCE_ID,
 					ctx->instance_id);
 		}
@@ -1243,6 +1247,14 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			unsigned n = idx * 4 + i;
 			dst[i] = create_driver_param(ctx, IR3_DP_UCP0_X + n);
 		}
+		break;
+	case nir_intrinsic_load_front_face:
+		if (!ctx->frag_face) {
+			ctx->so->frag_face = true;
+			ctx->frag_face = create_input(b, 0);
+			ctx->frag_face->regs[0]->flags |= IR3_REG_HALF;
+		}
+		dst[0] = ir3_ADD_S(b, ctx->frag_face, 0, create_immed(b, 1), 0);
 		break;
 	case nir_intrinsic_discard_if:
 	case nir_intrinsic_discard: {
@@ -1349,6 +1361,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction **dst, *sam, *src0[12], *src1[4];
 	struct ir3_instruction **coord, *lod, *compare, *proj, **off, **ddx, **ddy;
+	struct ir3_instruction *const_off[4];
 	bool has_bias = false, has_lod = false, has_proj = false, has_off = false;
 	unsigned i, coords, flags;
 	unsigned nsrc0 = 0, nsrc1 = 0;
@@ -1392,7 +1405,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 			ddy = get_src(ctx, &tex->src[i].src);
 			break;
 		default:
-			compile_error(ctx, "Unhandled NIR tex serc type: %d\n",
+			compile_error(ctx, "Unhandled NIR tex src type: %d\n",
 					tex->src[i].src_type);
 			return;
 		}
@@ -1416,6 +1429,21 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	}
 
 	tex_info(tex, &flags, &coords);
+
+	if (!has_off) {
+		/* could still have a constant offset: */
+		if (tex->const_offset[0] || tex->const_offset[1] ||
+				tex->const_offset[2] || tex->const_offset[3]) {
+			off = const_off;
+
+			off[0] = create_immed(b, tex->const_offset[0]);
+			off[1] = create_immed(b, tex->const_offset[1]);
+			off[2] = create_immed(b, tex->const_offset[2]);
+			off[3] = create_immed(b, tex->const_offset[3]);
+
+			has_off = true;
+		}
+	}
 
 	/* scale up integer coords for TXF based on the LOD */
 	if (ctx->unminify_coords && (opc == OPC_ISAML)) {
@@ -2053,6 +2081,9 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 		case VARYING_SLOT_CLIP_DIST0:
 		case VARYING_SLOT_CLIP_DIST1:
 			break;
+		case VARYING_SLOT_CLIP_VERTEX:
+			/* handled entirely in nir_lower_clip: */
+			return;
 		default:
 			if (slot >= VARYING_SLOT_VAR0)
 				break;
@@ -2135,8 +2166,14 @@ emit_instructions(struct ir3_compile *ctx)
 		setup_output(ctx, var);
 	}
 
-	/* Setup variables (which should only be arrays): */
+	/* Setup global variables (which should only be arrays): */
 	nir_foreach_variable(var, &ctx->s->globals) {
+		declare_var(ctx, var);
+	}
+
+	/* Setup local variables (which should only be arrays): */
+	/* NOTE: need to do something more clever when we support >1 fxn */
+	nir_foreach_variable(var, &fxn->locals) {
 		declare_var(ctx, var);
 	}
 

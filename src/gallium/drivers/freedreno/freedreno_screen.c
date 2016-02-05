@@ -165,6 +165,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_BARRIER:
 	case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
 	case PIPE_CAP_COMPUTE:
+	case PIPE_CAP_QUERY_MEMORY_INFO:
 		return 0;
 
 	case PIPE_CAP_SM3:
@@ -183,6 +184,8 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_CLIP_HALFZ:
 		return is_a3xx(screen) || is_a4xx(screen);
 
+	case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
+		return 0;
 	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
 		if (is_a3xx(screen)) return 16;
 		if (is_a4xx(screen)) return 32;
@@ -248,6 +251,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_INVALIDATE_BUFFER:
 	case PIPE_CAP_GENERATE_MIPMAP:
+	case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:
@@ -296,6 +300,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	/* Queries. */
 	case PIPE_CAP_QUERY_TIME_ELAPSED:
 	case PIPE_CAP_QUERY_TIMESTAMP:
+	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 		return 0;
 	case PIPE_CAP_OCCLUSION_QUERY:
 		return is_a3xx(screen) || is_a4xx(screen);

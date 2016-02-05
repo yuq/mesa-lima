@@ -1243,11 +1243,50 @@ nvc0_set_shader_images(struct pipe_context *pipe, unsigned shader,
                        unsigned start_slot, unsigned count,
                        struct pipe_image_view **views)
 {
-#if 0
-   nvc0_bind_surfaces_range(nvc0_context(pipe), 0, start, nr, views);
+}
 
-   nvc0_context(pipe)->dirty |= NVC0_NEW_SURFACES;
-#endif
+static void
+nvc0_bind_buffers_range(struct nvc0_context *nvc0, const unsigned t,
+                         unsigned start, unsigned nr,
+                         struct pipe_shader_buffer *pbuffers)
+{
+   const unsigned end = start + nr;
+   const unsigned mask = ((1 << nr) - 1) << start;
+   unsigned i;
+
+   assert(t < 5);
+
+   if (pbuffers) {
+      for (i = start; i < end; ++i) {
+         const unsigned p = i - start;
+         if (pbuffers[p].buffer)
+            nvc0->buffers_valid[t] |= (1 << i);
+         else
+            nvc0->buffers_valid[t] &= ~(1 << i);
+         nvc0->buffers[t][i].buffer_offset = pbuffers[p].buffer_offset;
+         nvc0->buffers[t][i].buffer_size = pbuffers[p].buffer_size;
+         pipe_resource_reference(&nvc0->buffers[t][i].buffer, pbuffers[p].buffer);
+      }
+   } else {
+      for (i = start; i < end; ++i)
+         pipe_resource_reference(&nvc0->buffers[t][i].buffer, NULL);
+      nvc0->buffers_valid[t] &= ~mask;
+   }
+   nvc0->buffers_dirty[t] |= mask;
+
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_BUF);
+}
+
+static void
+nvc0_set_shader_buffers(struct pipe_context *pipe,
+                        unsigned shader,
+                        unsigned start, unsigned nr,
+                        struct pipe_shader_buffer *buffers)
+{
+   const unsigned s = nvc0_shader_stage(shader);
+   nvc0_bind_buffers_range(nvc0_context(pipe), s, start, nr, buffers);
+
+   nvc0_context(pipe)->dirty |= NVC0_NEW_BUFFERS;
 }
 
 static inline void
@@ -1377,6 +1416,7 @@ nvc0_init_state_functions(struct nvc0_context *nvc0)
    pipe->set_global_binding = nvc0_set_global_bindings;
    pipe->set_compute_resources = nvc0_set_compute_resources;
    pipe->set_shader_images = nvc0_set_shader_images;
+   pipe->set_shader_buffers = nvc0_set_shader_buffers;
 
    nvc0->sample_mask = ~0;
    nvc0->min_samples = 1;

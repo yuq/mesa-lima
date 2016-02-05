@@ -152,6 +152,9 @@ fd_emit_string_marker(struct pipe_context *pctx, const char *string, int len)
 	struct fd_ringbuffer *ring = ctx->ring;
 	const uint32_t *buf = (const void *)string;
 
+	/* max packet size is 0x3fff dwords: */
+	len = MIN2(len, 0x3fff * 4);
+
 	OUT_PKT3(ring, CP_NOP, align(len, 4) / 4);
 	while (len >= 4) {
 		OUT_RING(ring, *buf);

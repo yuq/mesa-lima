@@ -563,7 +563,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
                                D3DPIPECAP(INDEP_BLEND_ENABLE, D3DPMISCCAPS_INDEPENDENTWRITEMASKS) |
                                /*D3DPMISCCAPS_PERSTAGECONSTANT |*/ /* TODO */
                                /*D3DPMISCCAPS_POSTBLENDSRGBCONVERT |*/ /* TODO */
-                               D3DPMISCCAPS_FOGANDSPECULARALPHA |
+                               D3DPMISCCAPS_FOGANDSPECULARALPHA | /* Note: documentation of the flag is wrong */
                                D3DPIPECAP(BLEND_EQUATION_SEPARATE, D3DPMISCCAPS_SEPARATEALPHABLEND) |
                                D3DPIPECAP(MIXED_COLORBUFFER_FORMATS, D3DPMISCCAPS_MRTINDEPENDENTBITDEPTHS) |
                                D3DPMISCCAPS_MRTPOSTPIXELSHADERBLENDING |
@@ -618,7 +618,8 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
 
     pCaps->DestBlendCaps = pCaps->SrcBlendCaps;
 
-    pCaps->AlphaCmpCaps = D3DPCMPCAPS_LESS |
+    pCaps->AlphaCmpCaps = D3DPCMPCAPS_NEVER |
+                          D3DPCMPCAPS_LESS |
                           D3DPCMPCAPS_EQUAL |
                           D3DPCMPCAPS_LESSEQUAL |
                           D3DPCMPCAPS_GREATER |
@@ -980,7 +981,8 @@ NineAdapter9_CreateDevice( struct NineAdapter9 *This,
 
     hr = NineDevice9_new(screen, &params, &caps, pPresentationParameters,
                          pD3D9, pPresentationGroup, This->ctx, FALSE, NULL,
-                         (struct NineDevice9 **)ppReturnedDeviceInterface);
+                         (struct NineDevice9 **)ppReturnedDeviceInterface,
+                         minor);
     if (FAILED(hr)) {
         DBG("Failed to create device.\n");
         return hr;
@@ -1041,7 +1043,8 @@ NineAdapter9_CreateDeviceEx( struct NineAdapter9 *This,
     hr = NineDevice9Ex_new(screen, &params, &caps, pPresentationParameters,
                            pFullscreenDisplayMode,
                            pD3D9Ex, pPresentationGroup, This->ctx,
-                           (struct NineDevice9Ex **)ppReturnedDeviceInterface);
+                           (struct NineDevice9Ex **)ppReturnedDeviceInterface,
+                           minor);
     if (FAILED(hr)) {
         DBG("Failed to create device.\n");
         return hr;

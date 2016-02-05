@@ -4074,7 +4074,7 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 			si_shader_dump_disassembly(&shader->binary, debug);
 
 	si_shader_dump_stats(sscreen, &shader->config,
-                            shader->selector->info.num_inputs,
+			     shader->selector ? shader->selector->info.num_inputs : 0,
 			     shader->binary.code_size, debug, processor);
 }
 
@@ -4092,7 +4092,7 @@ int si_compile_llvm(struct si_screen *sscreen,
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		fprintf(stderr, "radeonsi: Compiling shader %d\n", count);
 
-		if (!(sscreen->b.debug_flags & DBG_NO_IR))
+		if (!(sscreen->b.debug_flags & (DBG_NO_IR | DBG_PREOPT_IR)))
 			LLVMDumpModule(mod);
 	}
 
@@ -4176,6 +4176,13 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	}
 
 	si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
+
+	LLVMBuildRetVoid(bld_base->base.gallivm->builder);
+
+	/* Dump LLVM IR before any optimization passes */
+	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
+	    r600_can_dump_shader(&sscreen->b, TGSI_PROCESSOR_GEOMETRY))
+		LLVMDumpModule(bld_base->base.gallivm->module);
 
 	radeon_llvm_finalize_module(&si_shader_ctx->radeon_bld);
 
@@ -4383,9 +4390,16 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		goto out;
 	}
 
+	LLVMBuildRetVoid(bld_base->base.gallivm->builder);
+	mod = bld_base->base.gallivm->module;
+
+	/* Dump LLVM IR before any optimization passes */
+	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
+	    r600_can_dump_shader(&sscreen->b, si_shader_ctx.type))
+		LLVMDumpModule(mod);
+
 	radeon_llvm_finalize_module(&si_shader_ctx.radeon_bld);
 
-	mod = bld_base->base.gallivm->module;
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
 			    mod, debug, si_shader_ctx.type);
 	if (r) {
@@ -4423,14 +4437,6 @@ out:
 	return r;
 }
 
-void si_shader_destroy_binary(struct radeon_shader_binary *binary)
-{
-	FREE(binary->code);
-	FREE(binary->rodata);
-	FREE(binary->relocs);
-	FREE(binary->disasm_string);
-}
-
 void si_shader_destroy(struct si_shader *shader)
 {
 	if (shader->gs_copy_shader) {
@@ -4442,5 +4448,6 @@ void si_shader_destroy(struct si_shader *shader)
 		r600_resource_reference(&shader->scratch_bo, NULL);
 
 	r600_resource_reference(&shader->bo, NULL);
-	si_shader_destroy_binary(&shader->binary);
+
+	radeon_shader_binary_clean(&shader->binary);
 }

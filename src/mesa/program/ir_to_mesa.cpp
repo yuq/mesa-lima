@@ -2293,6 +2293,10 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
 
    (void) row_major;
 
+   /* atomics don't get real storage */
+   if (type->contains_atomic())
+      return;
+
    if (type->is_vector() || type->is_scalar()) {
       size = type->vector_elements;
       if (type->is_double())

@@ -139,4 +139,7 @@ HRESULT WINAPI
 NineSwapChain9_GetPresentParameters( struct NineSwapChain9 *This,
                                      D3DPRESENT_PARAMETERS *pPresentationParameters );
 
+BOOL
+NineSwapChain9_GetOccluded( struct NineSwapChain9 *This );
+
 #endif /* _NINE_SWAPCHAIN9_H_ */

@@ -336,6 +336,7 @@ private:
    void expr(Instruction *, ImmediateValue&, ImmediateValue&);
    void expr(Instruction *, ImmediateValue&, ImmediateValue&, ImmediateValue&);
    void opnd(Instruction *, ImmediateValue&, int s);
+   void opnd3(Instruction *, ImmediateValue&);
 
    void unary(Instruction *, const ImmediateValue&);
 
@@ -388,6 +389,8 @@ ConstantFolding::visit(BasicBlock *bb)
       else
       if (i->srcExists(1) && i->src(1).getImmediate(src1))
          opnd(i, src1, 1);
+      if (i->srcExists(2) && i->src(2).getImmediate(src2))
+         opnd3(i, src2);
    }
    return true;
 }
@@ -873,6 +876,24 @@ ConstantFolding::tryCollapseChainedMULs(Instruction *mul2,
 }
 
 void
+ConstantFolding::opnd3(Instruction *i, ImmediateValue &imm2)
+{
+   switch (i->op) {
+   case OP_MAD:
+   case OP_FMA:
+      if (imm2.isInteger(0)) {
+         i->op = OP_MUL;
+         i->setSrc(2, NULL);
+         foldCount++;
+         return;
+      }
+      break;
+   default:
+      return;
+   }
+}
+
+void
 ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
 {
    const int t = !s;
@@ -1200,6 +1221,14 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
             bld.setPosition(i, false);
             i->setSrc(0, si->getSrc(0));
             i->setSrc(1, bld.loadImm(NULL, imm0.reg.data.u32 + imm1.reg.data.u32));
+         }
+         break;
+      case OP_SHR:
+         if (si->src(1).getImmediate(imm1) && imm0.reg.data.u32 == imm1.reg.data.u32) {
+            bld.setPosition(i, false);
+            i->op = OP_AND;
+            i->setSrc(0, si->getSrc(0));
+            i->setSrc(1, bld.loadImm(NULL, ~((1 << imm0.reg.data.u32) - 1)));
          }
          break;
       case OP_MUL:
@@ -2504,6 +2533,12 @@ MemoryOpt::runOpt(BasicBlock *bb)
          }
       } else
       if (ldst->op == OP_STORE || ldst->op == OP_EXPORT) {
+         if (typeSizeof(ldst->dType) == 4 &&
+             ldst->src(1).getFile() == FILE_GPR &&
+             ldst->getSrc(1)->getInsn()->op == OP_NOP) {
+            delete_Instruction(prog, ldst);
+            continue;
+         }
          isLoad = false;
       } else {
          // TODO: maybe have all fixed ops act as barrier ?
@@ -3015,7 +3050,7 @@ Instruction::isResultEqual(const Instruction *that) const
    if (that->srcExists(s))
       return false;
 
-   if (op == OP_LOAD || op == OP_VFETCH) {
+   if (op == OP_LOAD || op == OP_VFETCH || op == OP_ATOM) {
       switch (src(0).getFile()) {
       case FILE_MEMORY_CONST:
       case FILE_SHADER_INPUT:
@@ -3046,6 +3081,8 @@ GlobalCSE::visit(BasicBlock *bb)
       ik = phi->getSrc(0)->getInsn();
       if (!ik)
          continue; // probably a function input
+      if (ik->defCount(0xff) > 1)
+         continue; // too painful to check if we can really push this forward
       for (s = 1; phi->srcExists(s); ++s) {
          if (phi->getSrc(s)->refCount() > 1)
             break;
@@ -3179,10 +3216,10 @@ DeadCodeElim::buryAll(Program *prog)
 bool
 DeadCodeElim::visit(BasicBlock *bb)
 {
-   Instruction *next;
+   Instruction *prev;
 
-   for (Instruction *i = bb->getFirst(); i; i = next) {
-      next = i->next;
+   for (Instruction *i = bb->getExit(); i; i = prev) {
+      prev = i->prev;
       if (i->isDead()) {
          ++deadCount;
          delete_Instruction(prog, i);

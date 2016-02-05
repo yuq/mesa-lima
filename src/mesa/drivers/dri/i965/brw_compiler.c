@@ -23,7 +23,7 @@
 
 #include "brw_compiler.h"
 #include "brw_context.h"
-#include "nir.h"
+#include "compiler/nir/nir.h"
 #include "main/errors.h"
 #include "util/debug.h"
 

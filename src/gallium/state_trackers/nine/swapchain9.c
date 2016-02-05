@@ -118,6 +118,14 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
 
     DBG("This=%p pParams=%p\n", This, pParams);
     user_assert(pParams != NULL, E_POINTER);
+    user_assert(pParams->SwapEffect, D3DERR_INVALIDCALL);
+    user_assert((pParams->SwapEffect != D3DSWAPEFFECT_COPY) ||
+                (pParams->BackBufferCount <= 1), D3DERR_INVALIDCALL);
+    user_assert(pDevice->ex || pParams->BackBufferCount <= 3, D3DERR_INVALIDCALL);
+    user_assert(pDevice->ex ||
+                (pParams->SwapEffect == D3DSWAPEFFECT_FLIP) ||
+                (pParams->SwapEffect == D3DSWAPEFFECT_COPY) ||
+                (pParams->SwapEffect == D3DSWAPEFFECT_DISCARD), D3DERR_INVALIDCALL);
 
     DBG("pParams(%p):\n"
         "BackBufferWidth: %u\n"
@@ -144,11 +152,6 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         nine_D3DPRESENTFLAG_to_str(pParams->Flags),
         pParams->FullScreen_RefreshRateInHz,
         pParams->PresentationInterval);
-
-    if (pParams->SwapEffect == D3DSWAPEFFECT_COPY &&
-        pParams->BackBufferCount > 1) {
-        pParams->BackBufferCount = 1;
-    }
 
     if (pParams->BackBufferCount > 3) {
         pParams->BackBufferCount = 3;
@@ -713,6 +716,10 @@ present( struct NineSwapChain9 *This,
         This->pipe->blit(This->pipe, &blit);
     }
 
+    /* The resource we present has to resolve fast clears
+     * if needed (and other things) */
+    This->pipe->flush_resource(This->pipe, resource);
+
     if (This->params.SwapEffect != D3DSWAPEFFECT_DISCARD)
         handle_draw_cursor_and_hud(This, resource);
 
@@ -737,12 +744,6 @@ bypass_rendering:
         if (still_draw)
             return D3DERR_WASSTILLDRAWING;
     }
-
-    if (This->present_buffers)
-        resource = This->present_buffers[0];
-    else
-        resource = This->buffers[0]->base.resource;
-    This->pipe->flush_resource(This->pipe, resource);
 
     if (!This->enable_threadpool) {
         This->tasks[0]=NULL;
@@ -785,6 +786,19 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
 
     if (hr == D3DERR_WASSTILLDRAWING)
         return hr;
+
+    if (This->base.device->ex) {
+        if (NineSwapChain9_GetOccluded(This)) {
+            return S_PRESENT_OCCLUDED;
+        }
+    } else {
+        if (NineSwapChain9_GetOccluded(This)) {
+            This->base.device->device_needs_reset = TRUE;
+        }
+        if (This->base.device->device_needs_reset) {
+            return D3DERR_DEVICELOST;
+        }
+    }
 
     switch (This->params.SwapEffect) {
         case D3DSWAPEFFECT_FLIP:
@@ -840,7 +854,6 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
     ID3DPresent_WaitBufferReleased(This->present, This->present_handles[0]);
 
     This->base.device->state.changed.group |= NINE_STATE_FB;
-    nine_update_state_framebuffer(This->base.device);
 
     return hr;
 }
@@ -907,8 +920,9 @@ NineSwapChain9_GetBackBuffer( struct NineSwapChain9 *This,
     DBG("GetBackBuffer: This=%p iBackBuffer=%d Type=%d ppBackBuffer=%p\n",
         This, iBackBuffer, Type, ppBackBuffer);
     (void)user_error(Type == D3DBACKBUFFER_TYPE_MONO);
+    /* don't touch ppBackBuffer on error */
+    user_assert(ppBackBuffer != NULL, D3DERR_INVALIDCALL);
     user_assert(iBackBuffer < This->params.BackBufferCount, D3DERR_INVALIDCALL);
-    user_assert(ppBackBuffer != NULL, E_POINTER);
 
     NineUnknown_AddRef(NineUnknown(This->buffers[iBackBuffer]));
     *ppBackBuffer = (IDirect3DSurface9 *)This->buffers[iBackBuffer];
@@ -989,4 +1003,14 @@ NineSwapChain9_new( struct NineDevice9 *pDevice,
     NINE_DEVICE_CHILD_NEW(SwapChain9, ppOut, pDevice, /* args */
                           implicit, pPresent, pPresentationParameters,
                           pCTX, hFocusWindow, NULL);
+}
+
+BOOL
+NineSwapChain9_GetOccluded( struct NineSwapChain9 *This )
+{
+    if (This->base.device->minor_version_num > 0) {
+        return ID3DPresent_GetWindowOccluded(This->present);
+    }
+
+    return FALSE;
 }

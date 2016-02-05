@@ -22,6 +22,8 @@
 
 #define NVC0_MAX_VIEWPORTS 16
 
+#define NVC0_MAX_BUFFERS 32
+
 
 struct nvc0_context;
 

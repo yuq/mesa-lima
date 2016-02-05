@@ -164,6 +164,11 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
       this->fields.structure[i].sample = fields[i].sample;
       this->fields.structure[i].matrix_layout = fields[i].matrix_layout;
       this->fields.structure[i].patch = fields[i].patch;
+      this->fields.structure[i].image_read_only = fields[i].image_read_only;
+      this->fields.structure[i].image_write_only = fields[i].image_write_only;
+      this->fields.structure[i].image_coherent = fields[i].image_coherent;
+      this->fields.structure[i].image_volatile = fields[i].image_volatile;
+      this->fields.structure[i].image_restrict = fields[i].image_restrict;
       this->fields.structure[i].precision = fields[i].precision;
    }
 
@@ -1329,6 +1334,13 @@ glsl_type::can_implicitly_convert_to(const glsl_type *desired,
 {
    if (this == desired)
       return true;
+
+   /* ESSL does not allow implicit conversions. If there is no state, we're
+    * doing intra-stage function linking where these checks have already been
+    * done.
+    */
+   if (state && state->es_shader)
+      return false;
 
    /* There is no conversion among matrix types. */
    if (this->matrix_columns > 1 || desired->matrix_columns > 1)

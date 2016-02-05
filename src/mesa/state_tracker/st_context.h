@@ -62,6 +62,8 @@ struct u_upload_mgr;
 #define ST_NEW_TESSCTRL_PROGRAM        (1 << 9)
 #define ST_NEW_TESSEVAL_PROGRAM        (1 << 10)
 #define ST_NEW_SAMPLER_VIEWS           (1 << 11)
+#define ST_NEW_ATOMIC_BUFFER           (1 << 12)
+#define ST_NEW_STORAGE_BUFFER          (1 << 13)
 
 
 struct st_state_flags {
@@ -201,6 +203,19 @@ struct st_context
       void *vs_layered;
       void *gs_layered;
    } clear;
+
+   /* For gl(Compressed)Tex(Sub)Image */
+   struct {
+      struct pipe_rasterizer_state raster;
+      struct pipe_blend_state blend;
+      void *vs;
+      void *gs;
+      void *fs;
+      bool enabled;
+      bool rgba_only;
+      bool upload_layers;
+      bool use_gs;
+   } pbo_upload;
 
    /** used for anything using util_draw_vertex_buffer */
    struct pipe_vertex_element velems_util_draw[3];

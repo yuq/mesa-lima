@@ -58,7 +58,8 @@ struct nine_ff_vs_key
             uint32_t color0in_one : 1;
             uint32_t color1in_one : 1;
             uint32_t fog : 1;
-            uint32_t pad1 : 7;
+            uint32_t specular_enable : 1;
+            uint32_t pad1 : 6;
             uint32_t tc_dim_input: 16; /* 8 * 2 bits */
             uint32_t pad2 : 16;
             uint32_t tc_dim_output: 24; /* 8 * 3 bits */
@@ -466,6 +467,10 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MAD(ureg, tmp, vs->aInd, ureg_imm1f(ureg, 4.0f), ureg_imm1f(ureg, 224.0f));
             ureg_ARL(ureg, AR, ureg_src(tmp));
         }
+
+        ureg_MOV(ureg, r[2], ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 0.0f));
+        ureg_MOV(ureg, r[3], ureg_imm4f(ureg, 1.0f, 1.0f, 1.0f, 1.0f));
+
         for (i = 0; i < key->vertexblend; ++i) {
             for (c = 0; c < 4; ++c) {
                 cWM[c] = ureg_src_register(TGSI_FILE_CONSTANT, (224 + i * 4) * !key->vertexblend_indexed + c);
@@ -473,22 +478,27 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
                     cWM[c] = ureg_src_indirect(cWM[c], ureg_scalar(ureg_src(AR), i));
             }
             /* multiply by WORLD(index) */
-            ureg_MUL(ureg, r[0], _XXXX(vs->aVtx), cWM[0]);
-            ureg_MAD(ureg, r[0], _YYYY(vs->aVtx), cWM[1], ureg_src(r[0]));
-            ureg_MAD(ureg, r[0], _ZZZZ(vs->aVtx), cWM[2], ureg_src(r[0]));
-            ureg_MAD(ureg, r[0], _WWWW(vs->aVtx), cWM[3], ureg_src(r[0]));
+            ureg_MUL(ureg, tmp, _XXXX(vs->aVtx), cWM[0]);
+            ureg_MAD(ureg, tmp, _YYYY(vs->aVtx), cWM[1], ureg_src(tmp));
+            ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), cWM[2], ureg_src(tmp));
+            ureg_MAD(ureg, tmp, _WWWW(vs->aVtx), cWM[3], ureg_src(tmp));
 
-            /* accumulate weighted position value */
-            if (i)
-                ureg_MAD(ureg, r[2], ureg_src(r[0]), ureg_scalar(vs->aWgt, i), ureg_src(r[2]));
-            else
-                ureg_MUL(ureg, r[2], ureg_src(r[0]), ureg_scalar(vs->aWgt, 0));
+            if (i < (key->vertexblend - 1)) {
+                /* accumulate weighted position value */
+                ureg_MAD(ureg, r[2], ureg_src(tmp), ureg_scalar(vs->aWgt, i), ureg_src(r[2]));
+                /* subtract weighted position value for last value */
+                ureg_SUB(ureg, r[3], ureg_src(r[3]), ureg_scalar(vs->aWgt, i));
+            }
         }
+
+        /* the last weighted position is always 1 - sum_of_previous_weights */
+        ureg_MAD(ureg, r[2], ureg_src(tmp), ureg_scalar(ureg_src(r[3]), key->vertexblend - 1), ureg_src(r[2]));
+
         /* multiply by VIEW_PROJ */
-        ureg_MUL(ureg, r[0], _X(r[2]), _CONST(8));
-        ureg_MAD(ureg, r[0], _Y(r[2]), _CONST(9),  ureg_src(r[0]));
-        ureg_MAD(ureg, r[0], _Z(r[2]), _CONST(10), ureg_src(r[0]));
-        ureg_MAD(ureg, oPos, _W(r[2]), _CONST(11), ureg_src(r[0]));
+        ureg_MUL(ureg, tmp, _X(r[2]), _CONST(8));
+        ureg_MAD(ureg, tmp, _Y(r[2]), _CONST(9),  ureg_src(tmp));
+        ureg_MAD(ureg, tmp, _Z(r[2]), _CONST(10), ureg_src(tmp));
+        ureg_MAD(ureg, oPos, _W(r[2]), _CONST(11), ureg_src(tmp));
 
         if (need_rVtx)
             vs->aVtx = ureg_src(r[2]);
@@ -515,10 +525,10 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_MOV(ureg, oPos, ureg_src(tmp));
     } else {
         /* position = vertex * WORLD_VIEW_PROJ */
-        ureg_MUL(ureg, r[0], _XXXX(vs->aVtx), _CONST(0));
-        ureg_MAD(ureg, r[0], _YYYY(vs->aVtx), _CONST(1), ureg_src(r[0]));
-        ureg_MAD(ureg, r[0], _ZZZZ(vs->aVtx), _CONST(2), ureg_src(r[0]));
-        ureg_MAD(ureg, oPos, _WWWW(vs->aVtx), _CONST(3), ureg_src(r[0]));
+        ureg_MUL(ureg, tmp, _XXXX(vs->aVtx), _CONST(0));
+        ureg_MAD(ureg, tmp, _YYYY(vs->aVtx), _CONST(1), ureg_src(tmp));
+        ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), _CONST(2), ureg_src(tmp));
+        ureg_MAD(ureg, oPos, _WWWW(vs->aVtx), _CONST(3), ureg_src(tmp));
     }
 
     if (need_rVtx) {
@@ -746,12 +756,10 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         {
             /* hitDir = light.position - eyeVtx
              * d = length(hitDir)
-             * hitDir /= d
              */
             ureg_SUB(ureg, rHit, cLPos, ureg_src(rVtx));
             ureg_DP3(ureg, tmp_x, ureg_src(rHit), ureg_src(rHit));
             ureg_RSQ(ureg, tmp_y, _X(tmp));
-            ureg_MUL(ureg, rHit, ureg_src(rHit), _Y(tmp)); /* normalize */
             ureg_MUL(ureg, tmp_x, _X(tmp), _Y(tmp)); /* length */
 
             /* att = 1.0 / (light.att0 + (light.att1 + light.att2 * d) * d) */
@@ -764,6 +772,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         }
         ureg_fixup_label(ureg, label[l-1], ureg_get_instruction_number(ureg));
         ureg_ENDIF(ureg);
+
+        /* normalize hitDir */
+        ureg_normalize3(ureg, rHit, ureg_src(rHit), tmp);
 
         /* if (SPOT light) */
         ureg_SEQ(ureg, tmp_x, cLKind, ureg_imm1f(ureg, D3DLIGHT_SPOT));
@@ -799,9 +810,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             /* midVec = normalize(hitDir + eyeDir) */
             if (key->localviewer) {
                 ureg_normalize3(ureg, rMid, ureg_src(rVtx), tmp);
-                ureg_ADD(ureg, rMid, ureg_src(rHit), ureg_negate(ureg_src(rMid)));
+                ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_src(rMid));
             } else {
-                ureg_ADD(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, 1.0f));
+                ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, 1.0f));
             }
             ureg_normalize3(ureg, rMid, ureg_src(rMid), tmp);
             ureg_DP3(ureg, ureg_saturate(tmp_y), ureg_src(rNrm), ureg_src(rMid));
@@ -849,7 +860,14 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), vs->mtlA, ureg_src(tmp), vs->mtlE);
             ureg_ADD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_W  ), vs->mtlA, vs->mtlE);
         }
-        ureg_MAD(ureg, oCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
+
+        if (key->specular_enable) {
+            /* add oCol[1] to oCol[0] */
+            ureg_MAD(ureg, tmp, ureg_src(rD), vs->mtlD, ureg_src(tmp));
+            ureg_MAD(ureg, oCol[0], ureg_src(rS), vs->mtlS, ureg_src(tmp));
+        } else {
+            ureg_MAD(ureg, oCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
+        }
         ureg_MUL(ureg, oCol[1], ureg_src(rS), vs->mtlS);
     } else
     /* COLOR */
@@ -1012,10 +1030,10 @@ ps_get_ts_arg(struct ps_build_ctx *ps, unsigned ta)
         reg = (ps->stage.index == ps->stage.index_pre_mod) ? ureg_src(ps->rMod) : ps->rCurSrc;
         break;
     case D3DTA_DIFFUSE:
-        reg = ureg_DECL_fs_input(ps->ureg, TGSI_SEMANTIC_COLOR, 0, TGSI_INTERPOLATE_PERSPECTIVE);
+        reg = ureg_DECL_fs_input(ps->ureg, TGSI_SEMANTIC_COLOR, 0, TGSI_INTERPOLATE_COLOR);
         break;
     case D3DTA_SPECULAR:
-        reg = ureg_DECL_fs_input(ps->ureg, TGSI_SEMANTIC_COLOR, 1, TGSI_INTERPOLATE_PERSPECTIVE);
+        reg = ureg_DECL_fs_input(ps->ureg, TGSI_SEMANTIC_COLOR, 1, TGSI_INTERPOLATE_COLOR);
         break;
     case D3DTA_TEMP:
         reg = ps->rTmpSrc;
@@ -1222,7 +1240,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
     ps.ureg = ureg;
     ps.stage.index_pre_mod = -1;
 
-    ps.vC[0] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 0, TGSI_INTERPOLATE_PERSPECTIVE);
+    ps.vC[0] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 0, TGSI_INTERPOLATE_COLOR);
 
     /* Declare all TEMPs we might need, serious drivers have a register allocator. */
     for (i = 0; i < Elements(ps.r); ++i)
@@ -1241,7 +1259,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             if (key->ts[s].colorarg0 == D3DTA_SPECULAR ||
                 key->ts[s].colorarg1 == D3DTA_SPECULAR ||
                 key->ts[s].colorarg2 == D3DTA_SPECULAR)
-                ps.vC[1] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 1, TGSI_INTERPOLATE_PERSPECTIVE);
+                ps.vC[1] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 1, TGSI_INTERPOLATE_COLOR);
 
             if (key->ts[s].colorarg0 == D3DTA_TEXTURE ||
                 key->ts[s].colorarg1 == D3DTA_TEXTURE ||
@@ -1258,7 +1276,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             if (key->ts[s].alphaarg0 == D3DTA_SPECULAR ||
                 key->ts[s].alphaarg1 == D3DTA_SPECULAR ||
                 key->ts[s].alphaarg2 == D3DTA_SPECULAR)
-                ps.vC[1] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 1, TGSI_INTERPOLATE_PERSPECTIVE);
+                ps.vC[1] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 1, TGSI_INTERPOLATE_COLOR);
 
             if (key->ts[s].alphaarg0 == D3DTA_TEXTURE ||
                 key->ts[s].alphaarg1 == D3DTA_TEXTURE ||
@@ -1269,7 +1287,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
         }
     }
     if (key->specular)
-        ps.vC[1] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 1, TGSI_INTERPOLATE_PERSPECTIVE);
+        ps.vC[1] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 1, TGSI_INTERPOLATE_COLOR);
 
     oCol = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
 
@@ -1499,6 +1517,9 @@ nine_ff_get_vs(struct NineDevice9 *device)
     key.fog_mode = state->rs[D3DRS_FOGENABLE] ? state->rs[D3DRS_FOGVERTEXMODE] : 0;
     if (key.fog_mode)
         key.fog_range = !key.position_t && state->rs[D3DRS_RANGEFOGENABLE];
+
+    key.localviewer = !!state->rs[D3DRS_LOCALVIEWER];
+    key.specular_enable = !!state->rs[D3DRS_SPECULARENABLE];
 
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
         key.vertexblend_indexed = !!state->rs[D3DRS_INDEXEDVERTEXBLENDENABLE];
@@ -1847,7 +1868,7 @@ nine_ff_update(struct NineDevice9 *device)
     DBG("vs=%p ps=%p\n", device->state.vs, device->state.ps);
 
     /* NOTE: the only reference belongs to the hash table */
-    if (!device->state.vs) {
+    if (!state->programmable_vs) {
         device->ff.vs = nine_ff_get_vs(device);
         device->state.changed.group |= NINE_STATE_VS;
     }
@@ -1856,7 +1877,7 @@ nine_ff_update(struct NineDevice9 *device)
         device->state.changed.group |= NINE_STATE_PS;
     }
 
-    if (!device->state.vs) {
+    if (!state->programmable_vs) {
         nine_ff_load_vs_transforms(device);
         nine_ff_load_tex_matrices(device);
         nine_ff_load_lights(device);

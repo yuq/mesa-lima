@@ -22,8 +22,8 @@
 
 #ifndef _NINE_VERTEXBUFFER9_H_
 #define _NINE_VERTEXBUFFER9_H_
-
 #include "resource9.h"
+#include "buffer9.h"
 
 struct pipe_screen;
 struct pipe_context;
@@ -31,13 +31,10 @@ struct pipe_transfer;
 
 struct NineVertexBuffer9
 {
-    struct NineResource9 base;
+    struct NineBuffer9 base;
 
     /* G3D */
     struct pipe_context *pipe;
-    struct pipe_transfer **maps;
-    int nmaps, maxmaps;
-
     D3DVERTEXBUFFER_DESC desc;
 };
 static inline struct NineVertexBuffer9 *
@@ -58,6 +55,12 @@ NineVertexBuffer9_ctor( struct NineVertexBuffer9 *This,
 
 void
 NineVertexBuffer9_dtor( struct NineVertexBuffer9 *This );
+/*** Nine private ***/
+
+struct pipe_resource *
+NineVertexBuffer9_GetResource( struct NineVertexBuffer9 *This );
+
+/*** Direct3D public ***/
 
 HRESULT WINAPI
 NineVertexBuffer9_Lock( struct NineVertexBuffer9 *This,

@@ -266,7 +266,9 @@ nouveau_vp3_bsp_next(struct nouveau_vp3_decoder *dec, unsigned num_buffers,
    int i;
 
    for (i = 0; i < num_buffers; ++i) {
+#ifndef NDEBUG
       assert(bsp_bo->size >= str_bsp->w0[0] + num_bytes[i]);
+#endif
       memcpy(dec->bsp_ptr, data[i], num_bytes[i]);
       dec->bsp_ptr += num_bytes[i];
       str_bsp->w0[0] += num_bytes[i];

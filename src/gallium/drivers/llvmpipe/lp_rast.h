@@ -308,17 +308,4 @@ void
 lp_debug_draw_bins_by_coverage( struct lp_scene *scene );
 
 
-#ifdef PIPE_ARCH_SSE
-#include <emmintrin.h>
-#include "util/u_sse.h"
-
-static inline __m128i
-lp_plane_to_m128i(const struct lp_rast_plane *plane)
-{
-   return _mm_setr_epi32((int32_t)plane->c, (int32_t)plane->dcdx,
-                         (int32_t)plane->dcdy, (int32_t)plane->eo);
-}
-
-#endif
-
 #endif

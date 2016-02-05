@@ -78,6 +78,8 @@ void trace_dump_vertex_element(const struct pipe_vertex_element *state);
 
 void trace_dump_constant_buffer(const struct pipe_constant_buffer *state);
 
+void trace_dump_shader_buffer(const struct pipe_shader_buffer *buffer);
+
 void trace_dump_draw_info(const struct pipe_draw_info *state);
 
 void trace_dump_blit_info(const struct pipe_blit_info *);

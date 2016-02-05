@@ -461,9 +461,6 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 		LLVMContextDispose(program->llvm_ctx);
 	}
 #else
-	FREE(program->shader.binary.config);
-	FREE(program->shader.binary.rodata);
-	FREE(program->shader.binary.global_symbol_offsets);
 	si_shader_destroy(&program->shader);
 #endif
 

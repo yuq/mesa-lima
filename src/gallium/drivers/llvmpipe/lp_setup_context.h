@@ -168,6 +168,21 @@ struct lp_setup_context
                      const float (*v2)[4]);
 };
 
+static inline void
+scissor_planes_needed(boolean scis_planes[4], struct u_rect *bbox,
+                      struct u_rect *scissor)
+{
+   /* left */
+   scis_planes[0] = (bbox->x0 < scissor->x0);
+   /* right */
+   scis_planes[1] = (bbox->x1 > scissor->x1);
+   /* top */
+   scis_planes[2] = (bbox->y0 < scissor->y0);
+   /* bottom */
+   scis_planes[3] = (bbox->y1 > scissor->y1);
+}
+
+
 void lp_setup_choose_triangle( struct lp_setup_context *setup );
 void lp_setup_choose_line( struct lp_setup_context *setup );
 void lp_setup_choose_point( struct lp_setup_context *setup );

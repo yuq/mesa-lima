@@ -363,3 +363,8 @@ DRI_CONF_OPT_END
 DRI_CONF_OPT_BEGIN_B(thread_submit, def) \
         DRI_CONF_DESC(en,gettext("Use an additional thread to submit buffers.")) \
 DRI_CONF_OPT_END
+
+#define DRI_CONF_NINE_OVERRIDEVENDOR(def) \
+DRI_CONF_OPT_BEGIN(override_vendorid, int, def) \
+        DRI_CONF_DESC(en,"Define the vendor_id to report. This allows faking another hardware vendor.") \
+DRI_CONF_OPT_END

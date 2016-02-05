@@ -57,6 +57,7 @@ public:
    void setup_buffer_access(void *mem_ctx, ir_variable *var, ir_rvalue *deref,
                             ir_rvalue **offset, unsigned *const_offset,
                             bool *row_major, int *matrix_columns,
+                            const glsl_struct_field **struct_field,
                             unsigned packing);
 };
 

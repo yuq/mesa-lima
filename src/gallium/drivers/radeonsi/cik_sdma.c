@@ -308,7 +308,7 @@ void cik_sdma_copy(struct pipe_context *ctx,
 			}
 
 			mtilew = (8 * rsrc->surface.bankw *
-				  sctx->screen->b.tiling_info.num_channels) *
+				  sctx->screen->b.info.num_tile_pipes) *
 				rsrc->surface.mtilea;
 			assert(!(mtilew & (mtilew - 1)));
 			mtileh = (8 * rsrc->surface.bankh * num_banks) /

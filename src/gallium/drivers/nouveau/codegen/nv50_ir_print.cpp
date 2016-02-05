@@ -161,6 +161,7 @@ const char *operationStr[OP_LAST + 1] =
    "subfm",
    "suclamp",
    "sueau",
+   "suq",
    "madsp",
    "texbar",
    "dfdx",

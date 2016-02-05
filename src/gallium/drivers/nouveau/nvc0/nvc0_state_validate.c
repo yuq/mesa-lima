@@ -183,9 +183,9 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
 
     ms = 1 << ms_mode;
     BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-    PUSH_DATA (push, 512);
-    PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (4 << 9));
-    PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (4 << 9));
+    PUSH_DATA (push, 1024);
+    PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (4 << 10));
+    PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (4 << 10));
     BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 2 * ms);
     PUSH_DATA (push, 256 + 128);
     for (i = 0; i < ms; i++) {
@@ -317,9 +317,9 @@ nvc0_upload_uclip_planes(struct nvc0_context *nvc0, unsigned s)
    struct nouveau_bo *bo = nvc0->screen->uniform_bo;
 
    BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
-   PUSH_DATA (push, 512);
-   PUSH_DATAh(push, bo->offset + (5 << 16) + (s << 9));
-   PUSH_DATA (push, bo->offset + (5 << 16) + (s << 9));
+   PUSH_DATA (push, 1024);
+   PUSH_DATAh(push, bo->offset + (5 << 16) + (s << 10));
+   PUSH_DATA (push, bo->offset + (5 << 16) + (s << 10));
    BEGIN_1IC0(push, NVC0_3D(CB_POS), PIPE_MAX_CLIP_PLANES * 4 + 1);
    PUSH_DATA (push, 256);
    PUSH_DATAp(push, &nvc0->clip.ucp[0][0], PIPE_MAX_CLIP_PLANES * 4);
@@ -468,6 +468,39 @@ nvc0_constbufs_validate(struct nvc0_context *nvc0)
          }
       }
    }
+}
+
+static void
+nvc0_validate_buffers(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   int i, s;
+
+   for (s = 0; s < 5; s++) {
+      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+      PUSH_DATA (push, 1024);
+      PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (s << 10));
+      PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (s << 10));
+      BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 4 * NVC0_MAX_BUFFERS);
+      PUSH_DATA (push, 512);
+      for (i = 0; i < NVC0_MAX_BUFFERS; i++) {
+         if (nvc0->buffers[s][i].buffer) {
+            struct nv04_resource *res =
+               nv04_resource(nvc0->buffers[s][i].buffer);
+            PUSH_DATA (push, res->address + nvc0->buffers[s][i].buffer_offset);
+            PUSH_DATAh(push, res->address + nvc0->buffers[s][i].buffer_offset);
+            PUSH_DATA (push, nvc0->buffers[s][i].buffer_size);
+            PUSH_DATA (push, 0);
+            BCTX_REFN(nvc0->bufctx_3d, BUF, res, RDWR);
+         } else {
+            PUSH_DATA (push, 0);
+            PUSH_DATA (push, 0);
+            PUSH_DATA (push, 0);
+            PUSH_DATA (push, 0);
+         }
+      }
+   }
+
 }
 
 static void
@@ -663,6 +696,7 @@ static struct state_validate {
     { nve4_set_tex_handles,        NVC0_NEW_TEXTURES | NVC0_NEW_SAMPLERS },
     { nvc0_vertex_arrays_validate, NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS },
     { nvc0_validate_surfaces,      NVC0_NEW_SURFACES },
+    { nvc0_validate_buffers,       NVC0_NEW_BUFFERS },
     { nvc0_idxbuf_validate,        NVC0_NEW_IDXBUF },
     { nvc0_tfb_validate,           NVC0_NEW_TFB_TARGETS | NVC0_NEW_GMTYPROG },
     { nvc0_validate_min_samples,   NVC0_NEW_MIN_SAMPLES },

@@ -939,7 +939,7 @@ fs_visitor::emit_barrier()
    /* Clear the message payload */
    pbld.MOV(payload, brw_imm_ud(0u));
 
-   /* Copy bits 27:24 of r0.2 (barrier id) to the message payload reg.2 */
+   /* Copy the barrier id from r0.2 to the message payload reg.2 */
    fs_reg r0_2 = fs_reg(retype(brw_vec1_grf(0, 2), BRW_REGISTER_TYPE_UD));
    pbld.AND(component(payload, 2), r0_2, brw_imm_ud(barrier_id_mask));
 

@@ -46,6 +46,8 @@ struct NineVertexDeclaration9
 
     D3DVERTEXELEMENT9 *decls;
     DWORD fvf;
+
+    BOOL position_t;
 };
 static inline struct NineVertexDeclaration9 *
 NineVertexDeclaration9( void *data )

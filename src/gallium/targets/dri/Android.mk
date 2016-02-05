@@ -94,7 +94,7 @@ gallium_DRIVERS += libmesa_winsys_vc4 libmesa_pipe_vc4
 endif
 ifneq ($(filter virgl,$(MESA_GPU_DRIVERS)),)
 LOCAL_CFLAGS += -DGALLIUM_VIRGL
-gallium_DRIVERS += libmesa_winsys_virgl libmesa_pipe_virgl
+gallium_DRIVERS += libmesa_winsys_virgl libmesa_winsys_virgl_vtest libmesa_pipe_virgl
 endif
 ifneq ($(filter vmwgfx,$(MESA_GPU_DRIVERS)),)
 gallium_DRIVERS += libmesa_winsys_svga libmesa_pipe_svga

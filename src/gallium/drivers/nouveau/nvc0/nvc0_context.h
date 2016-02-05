@@ -56,6 +56,7 @@
 #define NVC0_NEW_SURFACES     (1 << 23)
 #define NVC0_NEW_MIN_SAMPLES  (1 << 24)
 #define NVC0_NEW_TESSFACTOR   (1 << 25)
+#define NVC0_NEW_BUFFERS      (1 << 26)
 
 #define NVC0_NEW_CP_PROGRAM   (1 << 0)
 #define NVC0_NEW_CP_SURFACES  (1 << 1)
@@ -73,9 +74,10 @@
 #define NVC0_BIND_CB(s, i)   (164 + 16 * (s) + (i))
 #define NVC0_BIND_TFB         244
 #define NVC0_BIND_SUF         245
-#define NVC0_BIND_SCREEN      246
-#define NVC0_BIND_TLS         247
-#define NVC0_BIND_3D_COUNT    248
+#define NVC0_BIND_BUF         246
+#define NVC0_BIND_SCREEN      247
+#define NVC0_BIND_TLS         249
+#define NVC0_BIND_3D_COUNT    250
 
 /* compute bufctx (during launch_grid) */
 #define NVC0_BIND_CP_CB(i)     (  0 + (i))
@@ -187,9 +189,14 @@ struct nvc0_context {
 
    struct nvc0_blitctx *blit;
 
+   /* NOTE: some of these surfaces may reference buffers */
    struct pipe_surface *surfaces[2][NVC0_MAX_SURFACE_SLOTS];
    uint16_t surfaces_dirty[2];
    uint16_t surfaces_valid[2];
+
+   struct pipe_shader_buffer buffers[6][NVC0_MAX_BUFFERS];
+   uint32_t buffers_dirty[6];
+   uint32_t buffers_valid[6];
 
    struct util_dynarray global_residents;
 };

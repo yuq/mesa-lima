@@ -139,7 +139,7 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
              b->shader->options->lower_pack_unorm_2x16);
 
       nir_ssa_def *word =
-         nir_extract_uword(b, instr->src[0].src.ssa, nir_imm_int(b, 0));
+         nir_extract_u16(b, instr->src[0].src.ssa, nir_imm_int(b, 0));
       nir_ssa_def *val =
          nir_ior(b, nir_ishl(b, nir_channel(b, word, 1), nir_imm_int(b, 16)),
                                 nir_channel(b, word, 0));
@@ -154,7 +154,7 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
              b->shader->options->lower_pack_unorm_4x8);
 
       nir_ssa_def *byte =
-         nir_extract_ubyte(b, instr->src[0].src.ssa, nir_imm_int(b, 0));
+         nir_extract_u8(b, instr->src[0].src.ssa, nir_imm_int(b, 0));
       nir_ssa_def *val =
          nir_ior(b, nir_ior(b, nir_ishl(b, nir_channel(b, byte, 3), nir_imm_int(b, 24)),
                                nir_ishl(b, nir_channel(b, byte, 2), nir_imm_int(b, 16))),

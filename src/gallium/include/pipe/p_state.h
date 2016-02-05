@@ -720,6 +720,19 @@ struct pipe_debug_callback
    void *data;
 };
 
+/**
+ * Information about memory usage. All sizes are in kilobytes.
+ */
+struct pipe_memory_info
+{
+   unsigned total_device_memory; /**< size of device memory, e.g. VRAM */
+   unsigned avail_device_memory; /**< free device memory at the moment */
+   unsigned total_staging_memory; /**< size of staging memory, e.g. GART */
+   unsigned avail_staging_memory; /**< free staging memory at the moment */
+   unsigned device_memory_evicted; /**< size of memory evicted (monotonic counter) */
+   unsigned nr_device_memory_evictions; /**< # of evictions (monotonic counter) */
+};
+
 #ifdef __cplusplus
 }
 #endif

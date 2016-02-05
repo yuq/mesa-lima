@@ -302,13 +302,6 @@ do_triangle_ccw(struct lp_setup_context *setup,
       layer = MIN2(layer, scene->fb_max_layer);
    }
 
-   if (setup->scissor_test) {
-      nr_planes = 7;
-   }
-   else {
-      nr_planes = 3;
-   }
-
    /* Bounding rectangle (in pixels) */
    {
       /* Yes this is necessary to accurately calculate bounding boxes
@@ -347,6 +340,18 @@ do_triangle_ccw(struct lp_setup_context *setup,
    bbox.x0 = MAX2(bbox.x0, 0);
    bbox.y0 = MAX2(bbox.y0, 0);
 
+   nr_planes = 3;
+   /*
+    * Determine how many scissor planes we need, that is drop scissor
+    * edges if the bounding box of the tri is fully inside that edge.
+    */
+   if (setup->scissor_test) {
+      /* why not just use draw_regions */
+      boolean s_planes[4];
+      scissor_planes_needed(s_planes, &bbox, &setup->scissors[viewport_index]);
+      nr_planes += s_planes[0] + s_planes[1] + s_planes[2] + s_planes[3];
+   }
+
    tri = lp_setup_alloc_triangle(scene,
                                  key->num_inputs,
                                  nr_planes,
@@ -367,13 +372,11 @@ do_triangle_ccw(struct lp_setup_context *setup,
 
    /* Setup parameter interpolants:
     */
-   setup->setup.variant->jit_function( v0,
-				       v1,
-				       v2,
-				       frontfacing,
-				       GET_A0(&tri->inputs),
-				       GET_DADX(&tri->inputs),
-				       GET_DADY(&tri->inputs) );
+   setup->setup.variant->jit_function(v0, v1, v2,
+                                      frontfacing,
+                                      GET_A0(&tri->inputs),
+                                      GET_DADX(&tri->inputs),
+                                      GET_DADY(&tri->inputs));
 
    tri->inputs.frontfacing = frontfacing;
    tri->inputs.disable = FALSE;
@@ -383,9 +386,9 @@ do_triangle_ccw(struct lp_setup_context *setup,
 
    if (0)
       lp_dump_setup_coef(&setup->setup.variant->key,
-			 (const float (*)[4])GET_A0(&tri->inputs),
-			 (const float (*)[4])GET_DADX(&tri->inputs),
-			 (const float (*)[4])GET_DADY(&tri->inputs));
+                         (const float (*)[4])GET_A0(&tri->inputs),
+                         (const float (*)[4])GET_DADX(&tri->inputs),
+                         (const float (*)[4])GET_DADY(&tri->inputs));
 
    plane = GET_PLANES(tri);
 
@@ -672,29 +675,46 @@ do_triangle_ccw(struct lp_setup_context *setup,
     * Note that otherwise, the scissor planes only vary in 'C' value,
     * and even then only on state-changes.  Could alternatively store
     * these planes elsewhere.
+    * (Or only store the c value together with a bit indicating which
+    * scissor edge this is, so rasterization would treat them differently
+    * (easier to evaluate) to ordinary planes.)
     */
-   if (nr_planes == 7) {
-      const struct u_rect *scissor = &setup->scissors[viewport_index];
+   if (nr_planes > 3) {
+      /* why not just use draw_regions */
+      struct u_rect *scissor = &setup->scissors[viewport_index];
+      struct lp_rast_plane *plane_s = &plane[3];
+      boolean s_planes[4];
+      scissor_planes_needed(s_planes, &bbox, scissor);
 
-      plane[3].dcdx = -1 << 8;
-      plane[3].dcdy = 0;
-      plane[3].c = (1-scissor->x0) << 8;
-      plane[3].eo = 1 << 8;
-
-      plane[4].dcdx = 1 << 8;
-      plane[4].dcdy = 0;
-      plane[4].c = (scissor->x1+1) << 8;
-      plane[4].eo = 0;
-
-      plane[5].dcdx = 0;
-      plane[5].dcdy = 1 << 8;
-      plane[5].c = (1-scissor->y0) << 8;
-      plane[5].eo = 1 << 8;
-
-      plane[6].dcdx = 0;
-      plane[6].dcdy = -1 << 8;
-      plane[6].c = (scissor->y1+1) << 8;
-      plane[6].eo = 0;
+      if (s_planes[0]) {
+         plane_s->dcdx = -1 << 8;
+         plane_s->dcdy = 0;
+         plane_s->c = (1-scissor->x0) << 8;
+         plane_s->eo = 1 << 8;
+         plane_s++;
+      }
+      if (s_planes[1]) {
+         plane_s->dcdx = 1 << 8;
+         plane_s->dcdy = 0;
+         plane_s->c = (scissor->x1+1) << 8;
+         plane_s->eo = 0 << 8;
+         plane_s++;
+      }
+      if (s_planes[2]) {
+         plane_s->dcdx = 0;
+         plane_s->dcdy = 1 << 8;
+         plane_s->c = (1-scissor->y0) << 8;
+         plane_s->eo = 1 << 8;
+         plane_s++;
+      }
+      if (s_planes[3]) {
+         plane_s->dcdx = 0;
+         plane_s->dcdy = -1 << 8;
+         plane_s->c = (scissor->y1+1) << 8;
+         plane_s->eo = 0;
+         plane_s++;
+      }
+      assert(plane_s == &plane[nr_planes]);
    }
 
    return lp_setup_bin_triangle(setup, tri, &bbox, nr_planes, viewport_index);
@@ -984,17 +1004,16 @@ calc_fixed_position(struct lp_setup_context *setup,
     * Both should be acceptable, I think.
     */
 #if defined(PIPE_ARCH_SSE)
-   __m128d v0r, v1r, v2r;
+   __m128 v0r, v1r;
    __m128 vxy0xy2, vxy1xy0;
    __m128i vxy0xy2i, vxy1xy0i;
    __m128i dxdy0120, x0x2y0y2, x1x0y1y0, x0120, y0120;
    __m128 pix_offset = _mm_set1_ps(setup->pixel_offset);
    __m128 fixed_one = _mm_set1_ps((float)FIXED_ONE);
-   v0r = _mm_load_sd((const double *)v0[0]);
-   v1r = _mm_load_sd((const double *)v1[0]);
-   v2r = _mm_load_sd((const double *)v2[0]);
-   vxy0xy2 = _mm_castpd_ps(_mm_unpacklo_pd(v0r, v2r));
-   vxy1xy0 = _mm_castpd_ps(_mm_unpacklo_pd(v1r, v0r));
+   v0r = _mm_castpd_ps(_mm_load_sd((double *)v0[0]));
+   vxy0xy2 = _mm_loadh_pi(v0r, (__m64 *)v2[0]);
+   v1r = _mm_castpd_ps(_mm_load_sd((double *)v1[0]));
+   vxy1xy0 = _mm_movelh_ps(v1r, vxy0xy2);
    vxy0xy2 = _mm_sub_ps(vxy0xy2, pix_offset);
    vxy1xy0 = _mm_sub_ps(vxy1xy0, pix_offset);
    vxy0xy2 = _mm_mul_ps(vxy0xy2, fixed_one);

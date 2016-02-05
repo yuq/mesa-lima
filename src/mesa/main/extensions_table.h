@@ -88,6 +88,7 @@ EXT(ARB_point_parameters                    , EXT_point_parameters              
 EXT(ARB_point_sprite                        , ARB_point_sprite                       , GLL, GLC,  x ,  x , 2003)
 EXT(ARB_program_interface_query             , dummy_true                             , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_provoking_vertex                    , EXT_provoking_vertex                   , GLL, GLC,  x ,  x , 2009)
+EXT(ARB_query_buffer_object                 , ARB_query_buffer_object                , GLL, GLC,  x ,  x , 2013)
 EXT(ARB_robustness                          , dummy_true                             , GLL, GLC,  x ,  x , 2010)
 EXT(ARB_sample_shading                      , ARB_sample_shading                     , GLL, GLC,  x ,  x , 2009)
 EXT(ARB_sampler_objects                     , dummy_true                             , GLL, GLC,  x ,  x , 2009)
@@ -165,6 +166,7 @@ EXT(ARB_window_pos                          , dummy_true                        
 EXT(ATI_blend_equation_separate             , EXT_blend_equation_separate            , GLL, GLC,  x ,  x , 2003)
 EXT(ATI_draw_buffers                        , dummy_true                             , GLL,  x ,  x ,  x , 2002)
 EXT(ATI_fragment_shader                     , ATI_fragment_shader                    , GLL,  x ,  x ,  x , 2001)
+EXT(ATI_meminfo                             , ATI_meminfo                            , GLL, GLC,  x ,  x , 2009)
 EXT(ATI_separate_stencil                    , ATI_separate_stencil                   , GLL,  x ,  x ,  x , 2006)
 EXT(ATI_texture_compression_3dc             , ATI_texture_compression_3dc            , GLL,  x ,  x ,  x , 2004)
 EXT(ATI_texture_env_combine3                , ATI_texture_env_combine3               , GLL,  x ,  x ,  x , 2002)
@@ -291,6 +293,7 @@ EXT(NV_texture_barrier                      , NV_texture_barrier                
 EXT(NV_texture_env_combine4                 , NV_texture_env_combine4                , GLL,  x ,  x ,  x , 1999)
 EXT(NV_texture_rectangle                    , NV_texture_rectangle                   , GLL,  x ,  x ,  x , 2000)
 EXT(NV_vdpau_interop                        , NV_vdpau_interop                       , GLL, GLC,  x ,  x , 2010)
+EXT(NVX_gpu_memory_info                     , NVX_gpu_memory_info                    , GLL, GLC,  x ,  x , 2013)
 
 EXT(OES_EGL_image                           , OES_EGL_image                          , GLL, GLC, ES1, ES2, 2006) /* FIXME: Mesa expects GL_OES_EGL_image to be available in OpenGL contexts. */
 EXT(OES_EGL_image_external                  , OES_EGL_image_external                 ,  x ,  x , ES1, ES2, 2010)
@@ -311,6 +314,7 @@ EXT(OES_element_index_uint                  , dummy_true                        
 EXT(OES_fbo_render_mipmap                   , dummy_true                             ,  x ,  x , ES1, ES2, 2005)
 EXT(OES_fixed_point                         , dummy_true                             ,  x ,  x , ES1,  x , 2002)
 EXT(OES_framebuffer_object                  , dummy_true                             ,  x ,  x , ES1,  x , 2005)
+EXT(OES_geometry_point_size                 , OES_geometry_shader                    ,  x ,  x ,  x ,  31, 2015)
 EXT(OES_geometry_shader                     , OES_geometry_shader                    ,  x ,  x ,  x ,  31, 2015)
 EXT(OES_get_program_binary                  , dummy_true                             ,  x ,  x ,  x , ES2, 2008)
 EXT(OES_mapbuffer                           , dummy_true                             ,  x ,  x , ES1, ES2, 2005)

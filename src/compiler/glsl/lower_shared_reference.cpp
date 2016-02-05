@@ -142,7 +142,7 @@ lower_shared_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
 
    setup_buffer_access(mem_ctx, var, deref,
                        &offset, &const_offset,
-                       &row_major, &matrix_columns, packing);
+                       &row_major, &matrix_columns, NULL, packing);
 
    /* Now that we've calculated the offset to the start of the
     * dereference, walk over the type and emit loads into a temporary.
@@ -210,7 +210,7 @@ lower_shared_reference_visitor::handle_assignment(ir_assignment *ir)
 
    setup_buffer_access(mem_ctx, var, deref,
                        &offset, &const_offset,
-                       &row_major, &matrix_columns, packing);
+                       &row_major, &matrix_columns, NULL, packing);
 
    deref = new(mem_ctx) ir_dereference_variable(store_var);
 
@@ -370,7 +370,7 @@ lower_shared_reference_visitor::lower_shared_atomic_intrinsic(ir_call *ir)
 
    setup_buffer_access(mem_ctx, var, deref,
                        &offset, &const_offset,
-                       &row_major, &matrix_columns, packing);
+                       &row_major, &matrix_columns, NULL, packing);
 
    assert(offset);
    assert(!row_major);

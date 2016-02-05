@@ -316,7 +316,7 @@ nvc0_tfb_validate(struct nvc0_context *nvc0)
          continue;
 
       if (!targ->clean)
-         nvc0_hw_query_fifo_wait(push, nvc0_query(targ->pq));
+         nvc0_hw_query_fifo_wait(nvc0, nvc0_query(targ->pq));
       nouveau_pushbuf_space(push, 0, 0, 1);
       BEGIN_NVC0(push, NVC0_3D(TFB_BUFFER_ENABLE(b)), 5);
       PUSH_DATA (push, 1);

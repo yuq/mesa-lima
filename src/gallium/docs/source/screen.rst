@@ -138,6 +138,10 @@ The integer capabilities:
 * ``PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT``: Describes the required
   alignment for pipe_sampler_view::u.buf.first_element, in bytes.
   If a driver does not support first/last_element, it should return 0.
+* ``PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY``: Whether the driver only
+  supports R, RG, RGB and RGBA formats for PIPE_BUFFER sampler views.
+  When this is the case it should be assumed that the swizzle parameters
+  in the sampler view have no effect.
 * ``PIPE_CAP_TGSI_TEXCOORD``: This CAP describes a hw limitation.
   If true, the hardware cannot replace arbitrary shader inputs with sprite
   coordinates and hence the inputs that are desired to be replaceable must
@@ -164,7 +168,7 @@ The integer capabilities:
   view it is intended to be used with, or herein undefined results may occur
   for permutational swizzles.
 * ``PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE``: The maximum accessible size with
-  a buffer sampler view, in bytes.
+  a buffer sampler view, in texels.
 * ``PIPE_CAP_MAX_VIEWPORTS``: The maximum number of viewports (and scissors
   since they are linked) a driver can support. Returning 0 is equivalent
   to returning 1 because every driver has to support at least a single
@@ -306,6 +310,15 @@ The integer capabilities:
 * ``PIPE_CAP_GENERATE_MIPMAP``: Indicates whether pipe_context::generate_mipmap
   is supported.
 * ``PIPE_CAP_STRING_MARKER``: Whether pipe->emit_string_marker() is supported.
+* ``PIPE_CAP_SURFACE_REINTERPRET_BLOCKS``: Indicates whether
+  pipe_context::create_surface supports reinterpreting a texture as a surface
+  of a format with different block width/height (but same block size in bits).
+  For example, a compressed texture image can be interpreted as a
+  non-compressed surface whose texels are the same number of bits as the
+  compressed blocks, and vice versa. The width and height of the surface is
+  adjusted appropriately.
+* ``PIPE_CAP_QUERY_BUFFER_OBJECT``: Driver supports
+  context::get_query_result_resource callback.
 
 
 .. _pipe_capf:

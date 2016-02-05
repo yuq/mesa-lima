@@ -319,7 +319,7 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
 
             if (tex->dirty_box.width) {
                 for (l = min_level_dirty; l <= last_level; ++l) {
-                    u_box_minify_2d(&box, &tex->dirty_box, l);
+                    u_box_minify_3d(&box, &tex->dirty_box, l);
                     NineVolume9_UploadSelf(tex->volumes[l], &box);
                 }
                 memset(&tex->dirty_box, 0, sizeof(tex->dirty_box));

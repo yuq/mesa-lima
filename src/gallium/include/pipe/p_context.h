@@ -150,6 +150,28 @@ struct pipe_context {
                                struct pipe_query *q,
                                boolean wait,
                                union pipe_query_result *result);
+
+   /**
+    * Get results of a query, storing into resource. Note that this may not
+    * be used with batch queries.
+    *
+    * \param wait  if true, this query will block until the result is ready
+    * \param result_type  the type of the value being stored:
+    * \param index  for queries that return multiple pieces of data, which
+    *               item of that data to store (e.g. for
+    *               PIPE_QUERY_PIPELINE_STATISTICS).
+    *               When the index is -1, instead of the value of the query
+    *               the driver should instead write a 1/0 to the appropriate
+    *               location with 1 meaning that the query result is available.
+    */
+   void (*get_query_result_resource)(struct pipe_context *pipe,
+                                     struct pipe_query *q,
+                                     boolean wait,
+                                     enum pipe_query_value_type result_type,
+                                     int index,
+                                     struct pipe_resource *resource,
+                                     unsigned offset);
+
    /*@}*/
 
    /**

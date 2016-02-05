@@ -38,6 +38,7 @@
 #include "nine_pipe.h"
 #include "nine_ff.h"
 #include "nine_dump.h"
+#include "nine_limits.h"
 
 #include "pipe/p_screen.h"
 #include "pipe/p_context.h"
@@ -81,7 +82,7 @@ static void nine_setup_fpu(void)
 
 #endif
 
-static void
+void
 NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
 {
     struct NineSurface9 *refSurf = NULL;
@@ -112,8 +113,10 @@ NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
         This->state.scissor.maxy = refSurf->desc.Height;
     }
 
-    if (This->nswapchains && This->swapchains[0]->params.EnableAutoDepthStencil)
+    if (This->nswapchains && This->swapchains[0]->params.EnableAutoDepthStencil) {
         This->state.rs[D3DRS_ZENABLE] = TRUE;
+        This->state.rs_advertised[D3DRS_ZENABLE] = TRUE;
+    }
     if (This->state.rs[D3DRS_ZENABLE])
         NineDevice9_SetDepthStencilSurface(
             This, (IDirect3DSurface9 *)This->swapchains[0]->zsbuf);
@@ -131,7 +134,8 @@ NineDevice9_ctor( struct NineDevice9 *This,
                   ID3DPresentGroup *pPresentationGroup,
                   struct d3dadapter9_context *pCTX,
                   boolean ex,
-                  D3DDISPLAYMODEEX *pFullscreenDisplayMode )
+                  D3DDISPLAYMODEEX *pFullscreenDisplayMode,
+                  int minorVersionNum )
 {
     unsigned i;
     HRESULT hr = NineUnknown_ctor(&This->base, pParams);
@@ -152,6 +156,8 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->params = *pCreationParameters;
     This->ex = ex;
     This->present = pPresentationGroup;
+    This->minor_version_num = minorVersionNum;
+
     IDirect3D9_AddRef(This->d3d9);
     ID3DPresentGroup_AddRef(This->present);
 
@@ -171,6 +177,19 @@ NineDevice9_ctor( struct NineDevice9 *This,
 
     /* Create first, it messes up our state. */
     This->hud = hud_create(This->pipe, This->cso); /* NULL result is fine */
+
+    /* Available memory counter. Updated only for allocations with this device
+     * instance. This is the Win 7 behavior.
+     * Win XP shares this counter across multiple devices. */
+    This->available_texture_mem = This->screen->get_param(This->screen, PIPE_CAP_VIDEO_MEMORY);
+    if (This->available_texture_mem < 4096)
+        This->available_texture_mem <<= 20;
+    else
+        This->available_texture_mem = UINT_MAX;
+    /* We cap texture memory usage to 80% of what is reported free initially
+     * This helps get closer Win behaviour. For example VertexBuffer allocation
+     * still succeeds when texture allocation fails. */
+    This->available_texture_limit = This->available_texture_mem * 20LL / 100LL;
 
     /* create implicit swapchains */
     This->nswapchains = ID3DPresentGroup_GetMultiheadCount(This->present);
@@ -460,7 +479,8 @@ NineDevice9_dtor( struct NineDevice9 *This )
 
     if (This->swapchains) {
         for (i = 0; i < This->nswapchains; ++i)
-            NineUnknown_Unbind(NineUnknown(This->swapchains[i]));
+            if (This->swapchains[i])
+                NineUnknown_Unbind(NineUnknown(This->swapchains[i]));
         FREE(This->swapchains);
     }
 
@@ -523,17 +543,20 @@ NineDevice9_ResumeRecording( struct NineDevice9 *This )
 HRESULT WINAPI
 NineDevice9_TestCooperativeLevel( struct NineDevice9 *This )
 {
-    return D3D_OK; /* TODO */
+    if (NineSwapChain9_GetOccluded(This->swapchains[0])) {
+        This->device_needs_reset = TRUE;
+        return D3DERR_DEVICELOST;
+    } else if (This->device_needs_reset) {
+        return D3DERR_DEVICENOTRESET;
+    }
+
+    return D3D_OK;
 }
 
 UINT WINAPI
 NineDevice9_GetAvailableTextureMem( struct NineDevice9 *This )
 {
-   const unsigned mem = This->screen->get_param(This->screen, PIPE_CAP_VIDEO_MEMORY);
-   if (mem < 4096)
-      return mem << 20;
-   else
-      return UINT_MAX;
+    return This->available_texture_mem;
 }
 
 HRESULT WINAPI
@@ -606,6 +629,7 @@ NineDevice9_SetCursorProperties( struct NineDevice9 *This,
              "pCursorBitmap=%p\n", This, XHotSpot, YHotSpot, pCursorBitmap);
 
     user_assert(pCursorBitmap, D3DERR_INVALIDCALL);
+    user_assert(surf->desc.Format == D3DFMT_A8R8G8B8, D3DERR_INVALIDCALL);
 
     if (This->swapchains[0]->params.Windowed) {
         This->cursor.w = MIN2(surf->desc.Width, 32);
@@ -709,6 +733,11 @@ NineDevice9_CreateAdditionalSwapChain( struct NineDevice9 *This,
         This, pPresentationParameters, pSwapChain);
 
     user_assert(pPresentationParameters, D3DERR_INVALIDCALL);
+    user_assert(tmplt->params.Windowed && pPresentationParameters->Windowed, D3DERR_INVALIDCALL);
+
+    /* TODO: this deserves more tests */
+    if (!pPresentationParameters->hDeviceWindow)
+        pPresentationParameters->hDeviceWindow = This->params.hFocusWindow;
 
     hr = ID3DPresentGroup_CreateAdditionalPresent(This->present, pPresentationParameters, &present);
 
@@ -757,11 +786,16 @@ NineDevice9_Reset( struct NineDevice9 *This,
 
     DBG("This=%p pPresentationParameters=%p\n", This, pPresentationParameters);
 
+    if (NineSwapChain9_GetOccluded(This->swapchains[0])) {
+        This->device_needs_reset = TRUE;
+        return D3DERR_DEVICELOST;
+    }
+
     for (i = 0; i < This->nswapchains; ++i) {
         D3DPRESENT_PARAMETERS *params = &pPresentationParameters[i];
         hr = NineSwapChain9_Resize(This->swapchains[i], params, NULL);
         if (hr != D3D_OK)
-            return hr;
+            break;
     }
 
     nine_pipe_context_clear(This);
@@ -772,6 +806,7 @@ NineDevice9_Reset( struct NineDevice9 *This,
         This, 0, (IDirect3DSurface9 *)This->swapchains[0]->buffers[0]);
     /* XXX: better use GetBackBuffer here ? */
 
+    This->device_needs_reset = (hr != D3D_OK);
     return hr;
 }
 
@@ -806,6 +841,8 @@ NineDevice9_GetBackBuffer( struct NineDevice9 *This,
                            IDirect3DSurface9 **ppBackBuffer )
 {
     user_assert(ppBackBuffer != NULL, D3DERR_INVALIDCALL);
+    /* return NULL on error */
+    *ppBackBuffer = NULL;
     user_assert(iSwapChain < This->nswapchains, D3DERR_INVALIDCALL);
 
     return NineSwapChain9_GetBackBuffer(This->swapchains[iSwapChain],
@@ -1455,7 +1492,7 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
     struct NineSurface9 *src = NineSurface9(pSourceSurface);
     struct pipe_resource *dst_res = NineSurface9_GetResource(dst);
     struct pipe_resource *src_res = NineSurface9_GetResource(src);
-    const boolean zs = util_format_is_depth_or_stencil(dst_res->format);
+    boolean zs;
     struct pipe_blit_info blit;
     boolean scaled, clamped, ms, flip_x = FALSE, flip_y = FALSE;
 
@@ -1470,6 +1507,9 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
         DBG("pDestRect=(%u,%u)-(%u,%u)\n", pDestRect->left, pDestRect->top,
             pDestRect->right, pDestRect->bottom);
 
+    user_assert(dst->base.pool == D3DPOOL_DEFAULT &&
+                src->base.pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
+    zs = util_format_is_depth_or_stencil(dst_res->format);
     user_assert(!zs || !This->in_scene, D3DERR_INVALIDCALL);
     user_assert(!zs || !pSourceRect ||
                 (pSourceRect->left == 0 &&
@@ -1493,8 +1533,6 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
                                             src_res->nr_samples,
                                             PIPE_BIND_SAMPLER_VIEW),
                 D3DERR_INVALIDCALL);
-    user_assert(dst->base.pool == D3DPOOL_DEFAULT &&
-                src->base.pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
 
     /* We might want to permit these, but wine thinks we shouldn't. */
     user_assert(!pDestRect ||
@@ -1667,6 +1705,8 @@ NineDevice9_ColorFill( struct NineDevice9 *This,
 
     user_assert((surf->base.usage & D3DUSAGE_RENDERTARGET) ||
                 NineSurface9_IsOffscreenPlain(surf), D3DERR_INVALIDCALL);
+
+    user_assert(surf->desc.Format != D3DFMT_NULL, D3D_OK);
 
     if (pRect) {
         x = pRect->left;
@@ -1884,14 +1924,17 @@ NineDevice9_Clear( struct NineDevice9 *This,
         Count = 0;
 #endif
 
+    nine_update_state_framebuffer_clear(This);
+
     if (Flags & D3DCLEAR_TARGET) bufs |= PIPE_CLEAR_COLOR;
-    if (Flags & D3DCLEAR_ZBUFFER) bufs |= PIPE_CLEAR_DEPTH;
-    if (Flags & D3DCLEAR_STENCIL) bufs |= PIPE_CLEAR_STENCIL;
+    /* Ignore Z buffer if not bound */
+    if (This->state.fb.zsbuf != NULL) {
+        if (Flags & D3DCLEAR_ZBUFFER) bufs |= PIPE_CLEAR_DEPTH;
+        if (Flags & D3DCLEAR_STENCIL) bufs |= PIPE_CLEAR_STENCIL;
+    }
     if (!bufs)
         return D3D_OK;
     d3dcolor_to_pipe_color_union(&rgba, Color);
-
-    nine_update_state_framebuffer(This);
 
     rect.x1 = This->state.viewport.X;
     rect.y1 = This->state.viewport.Y;
@@ -1935,7 +1978,6 @@ NineDevice9_Clear( struct NineDevice9 *This,
         /* Case we clear depth buffer (and eventually rt too).
          * depth buffer size is always >= rt size. Compare to clear region */
         ((bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
-         This->state.fb.zsbuf != NULL &&
          rect.x2 >= zsbuf_surf->desc.Width &&
          rect.y2 >= zsbuf_surf->desc.Height))) {
         DBG("Clear fast path\n");
@@ -2342,8 +2384,15 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
     DBG("This=%p State=%u(%s) Value=%08x\n", This,
         State, nine_d3drs_to_string(State), Value);
 
+    user_assert(State < D3DRS_COUNT, D3DERR_INVALIDCALL);
+
+    if (state->rs_advertised[State] == Value && likely(!This->is_recording))
+        return D3D_OK;
+
+    state->rs_advertised[State] = Value;
+
     /* Amd hacks (equivalent to GL extensions) */
-    if (State == D3DRS_POINTSIZE) {
+    if (unlikely(State == D3DRS_POINTSIZE)) {
         if (Value == RESZ_CODE)
             return NineDevice9_ResolveZ(This);
 
@@ -2356,20 +2405,17 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
     }
 
     /* NV hack */
-    if (State == D3DRS_ADAPTIVETESS_Y &&
-        (Value == D3DFMT_ATOC || (Value == D3DFMT_UNKNOWN && state->rs[NINED3DRS_ALPHACOVERAGE]))) {
+    if (unlikely(State == D3DRS_ADAPTIVETESS_Y)) {
+        if (Value == D3DFMT_ATOC || (Value == D3DFMT_UNKNOWN && state->rs[NINED3DRS_ALPHACOVERAGE])) {
             state->rs[NINED3DRS_ALPHACOVERAGE] = (Value == D3DFMT_ATOC);
             state->changed.group |= NINE_STATE_BLEND;
             return D3D_OK;
+        }
     }
 
-    user_assert(State < Elements(state->rs), D3DERR_INVALIDCALL);
-
-    if (likely(state->rs[State] != Value) || unlikely(This->is_recording)) {
-        state->rs[State] = Value;
-        state->changed.rs[State / 32] |= 1 << (State % 32);
-        state->changed.group |= nine_render_state_group[State];
-    }
+    state->rs[State] = nine_fix_render_state_value(State, Value);
+    state->changed.rs[State / 32] |= 1 << (State % 32);
+    state->changed.group |= nine_render_state_group[State];
 
     return D3D_OK;
 }
@@ -2379,9 +2425,9 @@ NineDevice9_GetRenderState( struct NineDevice9 *This,
                             D3DRENDERSTATETYPE State,
                             DWORD *pValue )
 {
-    user_assert(State < Elements(This->state.rs), D3DERR_INVALIDCALL);
+    user_assert(State < D3DRS_COUNT, D3DERR_INVALIDCALL);
 
-    *pValue = This->state.rs[State];
+    *pValue = This->state.rs_advertised[State];
     return D3D_OK;
 }
 
@@ -3122,7 +3168,7 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
         buffer_offset = 0;
     } else {
         /* SO matches vertex declaration */
-        resource = dst->base.resource;
+        resource = NineVertexBuffer9_GetResource(dst);
         buffer_offset = DestIndex * vs->so->stride[0];
     }
     target = This->pipe->create_stream_output_target(This->pipe, resource,
@@ -3184,12 +3230,20 @@ NineDevice9_SetVertexDeclaration( struct NineDevice9 *This,
                                   IDirect3DVertexDeclaration9 *pDecl )
 {
     struct nine_state *state = This->update;
+    BOOL was_programmable_vs = This->state.programmable_vs;
 
     DBG("This=%p pDecl=%p\n", This, pDecl);
 
     if (likely(!This->is_recording) && state->vdecl == NineVertexDeclaration9(pDecl))
         return D3D_OK;
+
     nine_bind(&state->vdecl, pDecl);
+
+    This->state.programmable_vs = This->state.vs && !(This->state.vdecl && This->state.vdecl->position_t);
+    if (likely(!This->is_recording) && was_programmable_vs != This->state.programmable_vs) {
+        state->commit |= NINE_STATE_COMMIT_CONST_VS;
+        state->changed.group |= NINE_STATE_VS;
+    }
 
     state->changed.group |= NINE_STATE_VDECL;
 
@@ -3262,17 +3316,20 @@ NineDevice9_SetVertexShader( struct NineDevice9 *This,
                              IDirect3DVertexShader9 *pShader )
 {
     struct nine_state *state = This->update;
+    BOOL was_programmable_vs = This->state.programmable_vs;
 
     DBG("This=%p pShader=%p\n", This, pShader);
 
     if (!This->is_recording && state->vs == (struct NineVertexShader9*)pShader)
       return D3D_OK;
 
-    /* ff -> non-ff: commit back non-ff constants */
-    if (!state->vs && pShader)
-        state->commit |= NINE_STATE_COMMIT_CONST_VS;
-
     nine_bind(&state->vs, pShader);
+
+    This->state.programmable_vs = This->state.vs && !(This->state.vdecl && This->state.vdecl->position_t);
+
+    /* ff -> non-ff: commit back non-ff constants */
+    if (!was_programmable_vs && This->state.programmable_vs)
+        state->commit |= NINE_STATE_COMMIT_CONST_VS;
 
     state->changed.group |= NINE_STATE_VS;
 
@@ -3499,7 +3556,8 @@ NineDevice9_SetStreamSource( struct NineDevice9 *This,
         state->vtxbuf[i].stride = Stride;
         state->vtxbuf[i].buffer_offset = OffsetInBytes;
     }
-    state->vtxbuf[i].buffer = pStreamData ? pVBuf9->base.resource : NULL;
+    pipe_resource_reference(&state->vtxbuf[i].buffer,
+                            pStreamData ? NineVertexBuffer9_GetResource(pVBuf9) : NULL);
 
     return D3D_OK;
 }
@@ -3542,6 +3600,9 @@ NineDevice9_SetStreamSourceFreq( struct NineDevice9 *This,
                   (Setting & D3DSTREAMSOURCE_INDEXEDDATA)), D3DERR_INVALIDCALL);
     user_assert(Setting, D3DERR_INVALIDCALL);
 
+    if (likely(!This->is_recording) && state->stream_freq[StreamNumber] == Setting)
+        return D3D_OK;
+
     state->stream_freq[StreamNumber] = Setting;
 
     if (Setting & D3DSTREAMSOURCE_INSTANCEDATA)
@@ -3549,7 +3610,9 @@ NineDevice9_SetStreamSourceFreq( struct NineDevice9 *This,
     else
         state->stream_instancedata_mask &= ~(1 << StreamNumber);
 
-    state->changed.stream_freq |= 1 << StreamNumber;
+    state->changed.stream_freq |= 1 << StreamNumber; /* Used for stateblocks */
+    if (StreamNumber != 0)
+        state->changed.group |= NINE_STATE_STREAMFREQ;
     return D3D_OK;
 }
 
@@ -4013,7 +4076,8 @@ NineDevice9_new( struct pipe_screen *pScreen,
                  struct d3dadapter9_context *pCTX,
                  boolean ex,
                  D3DDISPLAYMODEEX *pFullscreenDisplayMode,
-                 struct NineDevice9 **ppOut )
+                 struct NineDevice9 **ppOut,
+                 int minorVersionNum )
 {
     BOOL lock;
     lock = !!(pCreationParameters->BehaviorFlags & D3DCREATE_MULTITHREADED);
@@ -4021,5 +4085,5 @@ NineDevice9_new( struct pipe_screen *pScreen,
     NINE_NEW(Device9, ppOut, lock, /* args */
              pScreen, pCreationParameters, pCaps,
              pPresentationParameters, pD3D9, pPresentationGroup, pCTX,
-             ex, pFullscreenDisplayMode);
+             ex, pFullscreenDisplayMode, minorVersionNum );
 }

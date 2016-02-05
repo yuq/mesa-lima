@@ -688,6 +688,24 @@ void trace_dump_constant_buffer(const struct pipe_constant_buffer *state)
 }
 
 
+void trace_dump_shader_buffer(const struct pipe_shader_buffer *state)
+{
+   if (!trace_dumping_enabled_locked())
+      return;
+
+   if(!state) {
+      trace_dump_null();
+      return;
+   }
+
+   trace_dump_struct_begin("pipe_shader_buffer");
+   trace_dump_member(resource_ptr, state, buffer);
+   trace_dump_member(uint, state, buffer_offset);
+   trace_dump_member(uint, state, buffer_size);
+   trace_dump_struct_end();
+}
+
+
 void trace_dump_draw_info(const struct pipe_draw_info *state)
 {
    if (!trace_dumping_enabled_locked())

@@ -298,10 +298,10 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
     }
 
     /* Check for dma */
-    ws->info.r600_has_dma = FALSE;
+    ws->info.has_sdma = FALSE;
     /* DMA is disabled on R700. There is IB corruption and hangs. */
     if (ws->info.chip_class >= EVERGREEN && ws->info.drm_minor >= 27) {
-        ws->info.r600_has_dma = TRUE;
+        ws->info.has_sdma = TRUE;
     }
 
     /* Check for UVD and VCE */
@@ -351,11 +351,11 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
 
     /* Get max clock frequency info and convert it to MHz */
     radeon_get_drm_value(ws->fd, RADEON_INFO_MAX_SCLK, NULL,
-                         &ws->info.max_sclk);
-    ws->info.max_sclk /= 1000;
+                         &ws->info.max_shader_clock);
+    ws->info.max_shader_clock /= 1000;
 
     radeon_get_drm_value(ws->fd, RADEON_INFO_SI_BACKEND_ENABLED_MASK, NULL,
-                         &ws->info.si_backend_enabled_mask);
+                         &ws->info.enabled_rb_mask);
 
     ws->num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
@@ -372,51 +372,72 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
             return FALSE;
     }
     else if (ws->gen >= DRV_R600) {
+        uint32_t tiling_config = 0;
+
         if (ws->info.drm_minor >= 9 &&
             !radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_BACKENDS,
                                   "num backends",
-                                  &ws->info.r600_num_backends))
+                                  &ws->info.num_render_backends))
             return FALSE;
 
         /* get the GPU counter frequency, failure is not fatal */
         radeon_get_drm_value(ws->fd, RADEON_INFO_CLOCK_CRYSTAL_FREQ, NULL,
-                             &ws->info.r600_clock_crystal_freq);
+                             &ws->info.clock_crystal_freq);
 
         radeon_get_drm_value(ws->fd, RADEON_INFO_TILING_CONFIG, NULL,
-                             &ws->info.r600_tiling_config);
+                             &tiling_config);
+
+        ws->info.r600_num_banks =
+            ws->info.chip_class >= EVERGREEN ?
+                4 << ((tiling_config & 0xf0) >> 4) :
+                4 << ((tiling_config & 0x30) >> 4);
+
+        ws->info.pipe_interleave_bytes =
+            ws->info.chip_class >= EVERGREEN ?
+                256 << ((tiling_config & 0xf00) >> 8) :
+                256 << ((tiling_config & 0xc0) >> 6);
+
+        if (!ws->info.pipe_interleave_bytes)
+            ws->info.pipe_interleave_bytes =
+                ws->info.chip_class >= EVERGREEN ? 512 : 256;
 
         if (ws->info.drm_minor >= 11) {
             radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_TILE_PIPES, NULL,
-                                 &ws->info.r600_num_tile_pipes);
+                                 &ws->info.num_tile_pipes);
 
             if (radeon_get_drm_value(ws->fd, RADEON_INFO_BACKEND_MAP, NULL,
-                                      &ws->info.r600_backend_map))
-                ws->info.r600_backend_map_valid = TRUE;
+                                      &ws->info.r600_gb_backend_map))
+                ws->info.r600_gb_backend_map_valid = TRUE;
+        } else {
+            ws->info.num_tile_pipes =
+                ws->info.chip_class >= EVERGREEN ?
+                    1 << (tiling_config & 0xf) :
+                    1 << ((tiling_config & 0xe) >> 1);
         }
 
-        ws->info.r600_virtual_address = FALSE;
+        ws->info.has_virtual_memory = FALSE;
         if (ws->info.drm_minor >= 13) {
             uint32_t ib_vm_max_size;
 
-            ws->info.r600_virtual_address = TRUE;
+            ws->info.has_virtual_memory = TRUE;
             if (!radeon_get_drm_value(ws->fd, RADEON_INFO_VA_START, NULL,
                                       &ws->va_start))
-                ws->info.r600_virtual_address = FALSE;
+                ws->info.has_virtual_memory = FALSE;
             if (!radeon_get_drm_value(ws->fd, RADEON_INFO_IB_VM_MAX_SIZE, NULL,
                                       &ib_vm_max_size))
-                ws->info.r600_virtual_address = FALSE;
+                ws->info.has_virtual_memory = FALSE;
             radeon_get_drm_value(ws->fd, RADEON_INFO_VA_UNMAP_WORKING, NULL,
                                  &ws->va_unmap_working);
         }
 	if (ws->gen == DRV_R600 && !debug_get_bool_option("RADEON_VA", FALSE))
-		ws->info.r600_virtual_address = FALSE;
+		ws->info.has_virtual_memory = FALSE;
     }
 
     /* Get max pipes, this is only needed for compute shaders.  All evergreen+
      * chips have at least 2 pipes, so we use 2 as a default. */
-    ws->info.r600_max_pipes = 2;
+    ws->info.r600_max_quad_pipes = 2;
     radeon_get_drm_value(ws->fd, RADEON_INFO_MAX_PIPES, NULL,
-                         &ws->info.r600_max_pipes);
+                         &ws->info.r600_max_quad_pipes);
 
     /* All GPUs have at least one compute unit */
     ws->info.num_good_compute_units = 1;
@@ -742,7 +763,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     ws->fd = dup(fd);
 
     if (!do_winsys_init(ws))
-        goto fail;
+        goto fail1;
 
     pb_cache_init(&ws->bo_cache, 500000, 2.0f, 0,
                   MIN2(ws->info.vram_size, ws->info.gart_size),
@@ -812,8 +833,9 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     return &ws->base;
 
 fail:
-    pipe_mutex_unlock(fd_tab_mutex);
     pb_cache_deinit(&ws->bo_cache);
+fail1:
+    pipe_mutex_unlock(fd_tab_mutex);
     if (ws->surf_man)
         radeon_surface_manager_free(ws->surf_man);
     if (ws->fd >= 0)

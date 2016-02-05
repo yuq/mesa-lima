@@ -56,6 +56,8 @@ enum si_pc_reg_layout {
 
 	/* Registers are laid out in decreasing rather than increasing order. */
 	SI_PC_REG_REVERSE = 4,
+
+	SI_PC_FAKE = 8,
 };
 
 struct si_pc_block_base {
@@ -79,6 +81,23 @@ struct si_pc_block {
 	unsigned instances;
 };
 
+/* The order is chosen to be compatible with GPUPerfStudio's hardcoding of
+ * performance counter group IDs.
+ */
+static const char * const si_pc_shader_type_suffixes[] = {
+	"", "_ES", "_GS", "_VS", "_PS", "_LS", "_HS", "_CS"
+};
+
+static const unsigned si_pc_shader_type_bits[] = {
+	0x7f,
+	S_036780_ES_EN(1),
+	S_036780_GS_EN(1),
+	S_036780_VS_EN(1),
+	S_036780_PS_EN(1),
+	S_036780_LS_EN(1),
+	S_036780_HS_EN(1),
+	S_036780_CS_EN(1),
+};
 
 static struct si_pc_block_base cik_CB = {
 	.name = "CB",
@@ -308,56 +327,80 @@ static struct si_pc_block_base cik_WD = {
 	.counter0_lo = R_034200_WD_PERFCOUNTER0_LO,
 };
 
+static struct si_pc_block_base cik_MC = {
+	.name = "MC",
+	.num_counters = 4,
+
+	.layout = SI_PC_FAKE,
+};
+
+static struct si_pc_block_base cik_SRBM = {
+	.name = "SRBM",
+	.num_counters = 2,
+
+	.layout = SI_PC_FAKE,
+};
+
 /* Both the number of instances and selectors varies between chips of the same
  * class. We only differentiate by class here and simply expose the maximum
  * number over all chips in a class.
+ *
+ * Unfortunately, GPUPerfStudio uses the order of performance counter groups
+ * blindly once it believes it has identified the hardware, so the order of
+ * blocks here matters.
  */
 static struct si_pc_block groups_CIK[] = {
 	{ &cik_CB, 226, 4 },
-	{ &cik_CPC, 22 },
 	{ &cik_CPF, 17 },
-	{ &cik_CPG, 46 },
 	{ &cik_DB, 257, 4 },
-	{ &cik_GDS, 121 },
 	{ &cik_GRBM, 34 },
 	{ &cik_GRBMSE, 15 },
-	{ &cik_IA, 22 },
-	{ &cik_PA_SC, 395 },
 	{ &cik_PA_SU, 153 },
+	{ &cik_PA_SC, 395 },
 	{ &cik_SPI, 186 },
 	{ &cik_SQ, 252 },
 	{ &cik_SX, 32 },
 	{ &cik_TA, 111, 11 },
 	{ &cik_TCA, 39, 2 },
 	{ &cik_TCC, 160, 16 },
-	{ &cik_TCP, 154, 11 },
 	{ &cik_TD, 55, 11 },
+	{ &cik_TCP, 154, 11 },
+	{ &cik_GDS, 121 },
 	{ &cik_VGT, 140 },
+	{ &cik_IA, 22 },
+	{ &cik_MC, 22 },
+	{ &cik_SRBM, 19 },
 	{ &cik_WD, 22 },
+	{ &cik_CPG, 46 },
+	{ &cik_CPC, 22 },
+
 };
 
 static struct si_pc_block groups_VI[] = {
 	{ &cik_CB, 396, 4 },
-	{ &cik_CPC, 24 },
 	{ &cik_CPF, 19 },
-	{ &cik_CPG, 48 },
 	{ &cik_DB, 257, 4 },
-	{ &cik_GDS, 121 },
 	{ &cik_GRBM, 34 },
 	{ &cik_GRBMSE, 15 },
-	{ &cik_IA, 24 },
-	{ &cik_PA_SC, 397 },
 	{ &cik_PA_SU, 153 },
+	{ &cik_PA_SC, 397 },
 	{ &cik_SPI, 197 },
 	{ &cik_SQ, 273 },
 	{ &cik_SX, 34 },
 	{ &cik_TA, 119, 16 },
 	{ &cik_TCA, 35, 2 },
 	{ &cik_TCC, 192, 16 },
-	{ &cik_TCP, 180, 16 },
 	{ &cik_TD, 55, 16 },
+	{ &cik_TCP, 180, 16 },
+	{ &cik_GDS, 121 },
 	{ &cik_VGT, 147 },
+	{ &cik_IA, 24 },
+	{ &cik_MC, 22 },
+	{ &cik_SRBM, 27 },
 	{ &cik_WD, 37 },
+	{ &cik_CPG, 48 },
+	{ &cik_CPC, 24 },
+
 };
 
 static void si_pc_get_size(struct r600_perfcounter_block *group,
@@ -368,7 +411,9 @@ static void si_pc_get_size(struct r600_perfcounter_block *group,
 	struct si_pc_block_base *regs = sigroup->b;
 	unsigned layout_multi = regs->layout & SI_PC_MULTI_MASK;
 
-	if (layout_multi == SI_PC_MULTI_BLOCK) {
+	if (regs->layout & SI_PC_FAKE) {
+		*num_select_dw = 0;
+	} else if (layout_multi == SI_PC_MULTI_BLOCK) {
 		if (count < regs->num_multi)
 			*num_select_dw = 2 * (count + 2) + regs->num_prelude;
 		else
@@ -430,6 +475,9 @@ static void si_pc_emit_select(struct r600_common_context *ctx,
 	unsigned dw;
 
 	assert(count <= regs->num_counters);
+
+	if (regs->layout & SI_PC_FAKE)
+		return;
 
 	if (layout_multi == SI_PC_MULTI_BLOCK) {
 		assert(!(regs->layout & SI_PC_REG_REVERSE));
@@ -590,22 +638,35 @@ static void si_pc_emit_read(struct r600_common_context *ctx,
 	unsigned reg = regs->counter0_lo;
 	unsigned reg_delta = 8;
 
-	if (regs->layout & SI_PC_REG_REVERSE)
-		reg_delta = -reg_delta;
+	if (!(regs->layout & SI_PC_FAKE)) {
+		if (regs->layout & SI_PC_REG_REVERSE)
+			reg_delta = -reg_delta;
 
-	for (idx = 0; idx < count; ++idx) {
-		if (regs->counters)
-			reg = regs->counters[idx];
+		for (idx = 0; idx < count; ++idx) {
+			if (regs->counters)
+				reg = regs->counters[idx];
 
-		radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
-		radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_PERF) |
-				COPY_DATA_DST_SEL(COPY_DATA_MEM));
-		radeon_emit(cs, reg >> 2);
-		radeon_emit(cs, 0); /* unused */
-		radeon_emit(cs, va);
-		radeon_emit(cs, va >> 32);
-		va += 4;
-		reg += reg_delta;
+			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_PERF) |
+					COPY_DATA_DST_SEL(COPY_DATA_MEM));
+			radeon_emit(cs, reg >> 2);
+			radeon_emit(cs, 0); /* unused */
+			radeon_emit(cs, va);
+			radeon_emit(cs, va >> 32);
+			va += 4;
+			reg += reg_delta;
+		}
+	} else {
+		for (idx = 0; idx < count; ++idx) {
+			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+			radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_IMM) |
+					COPY_DATA_DST_SEL(COPY_DATA_MEM));
+			radeon_emit(cs, 0); /* immediate */
+			radeon_emit(cs, 0); /* unused */
+			radeon_emit(cs, va);
+			radeon_emit(cs, va >> 32);
+			va += 4;
+		}
 	}
 }
 
@@ -655,6 +716,10 @@ void si_init_perfcounters(struct si_screen *screen)
 	if (screen->b.chip_class == CIK) {
 		pc->num_stop_cs_dwords += 6;
 	}
+
+	pc->num_shader_types = ARRAY_SIZE(si_pc_shader_type_bits);
+	pc->shader_type_suffixes = si_pc_shader_type_suffixes;
+	pc->shader_type_bits = si_pc_shader_type_bits;
 
 	pc->get_size = si_pc_get_size;
 	pc->emit_instance = si_pc_emit_instance;

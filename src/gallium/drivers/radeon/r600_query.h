@@ -54,7 +54,17 @@ struct r600_resource;
 #define R600_QUERY_GPU_LOAD		(PIPE_QUERY_DRIVER_SPECIFIC + 11)
 #define R600_QUERY_NUM_COMPILATIONS	(PIPE_QUERY_DRIVER_SPECIFIC + 12)
 #define R600_QUERY_NUM_SHADERS_CREATED	(PIPE_QUERY_DRIVER_SPECIFIC + 13)
+#define R600_QUERY_GPIN_ASIC_ID		(PIPE_QUERY_DRIVER_SPECIFIC + 14)
+#define R600_QUERY_GPIN_NUM_SIMD	(PIPE_QUERY_DRIVER_SPECIFIC + 15)
+#define R600_QUERY_GPIN_NUM_RB		(PIPE_QUERY_DRIVER_SPECIFIC + 16)
+#define R600_QUERY_GPIN_NUM_SPI		(PIPE_QUERY_DRIVER_SPECIFIC + 17)
+#define R600_QUERY_GPIN_NUM_SE		(PIPE_QUERY_DRIVER_SPECIFIC + 18)
 #define R600_QUERY_FIRST_PERFCOUNTER	(PIPE_QUERY_DRIVER_SPECIFIC + 100)
+
+enum {
+	R600_QUERY_GROUP_GPIN = 0,
+	R600_NUM_SW_QUERY_GROUPS
+};
 
 struct r600_query_ops {
 	void (*destroy)(struct r600_common_context *, struct r600_query *);
@@ -156,24 +166,6 @@ enum {
 	R600_PC_BLOCK_SHADER_WINDOWED = (1 << 4),
 };
 
-/* Shader enable bits. Chosen to coincide with SQ_PERFCOUNTER_CTRL values */
-enum {
-	R600_PC_SHADER_PS = (1 << 0),
-	R600_PC_SHADER_VS = (1 << 1),
-	R600_PC_SHADER_GS = (1 << 2),
-	R600_PC_SHADER_ES = (1 << 3),
-	R600_PC_SHADER_HS = (1 << 4),
-	R600_PC_SHADER_LS = (1 << 5),
-	R600_PC_SHADER_CS = (1 << 6),
-
-	R600_PC_SHADER_ALL = R600_PC_SHADER_PS | R600_PC_SHADER_VS |
-			     R600_PC_SHADER_GS | R600_PC_SHADER_ES |
-			     R600_PC_SHADER_HS | R600_PC_SHADER_LS |
-			     R600_PC_SHADER_CS,
-
-	R600_PC_SHADER_WINDOWING = (1 << 31),
-};
-
 /* Describes a hardware block with performance counters. Multiple instances of
  * each block, possibly per-SE, may exist on the chip. Depending on the block
  * and on the user's configuration, we either
@@ -209,6 +201,10 @@ struct r600_perfcounters {
 	unsigned num_stop_cs_dwords;
 	unsigned num_instance_cs_dwords;
 	unsigned num_shaders_cs_dwords;
+
+	unsigned num_shader_types;
+	const char * const *shader_type_suffixes;
+	const unsigned *shader_type_bits;
 
 	void (*get_size)(struct r600_perfcounter_block *,
 			 unsigned count, unsigned *selectors,

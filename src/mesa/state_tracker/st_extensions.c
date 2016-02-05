@@ -218,6 +218,11 @@ void st_init_limits(struct pipe_screen *screen,
                                           c->MaxUniformBlockSize / 4 *
                                           pc->MaxUniformBlocks);
 
+      pc->MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
+      pc->MaxAtomicBuffers = screen->get_shader_param(
+            screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS) / 2;
+      pc->MaxShaderStorageBlocks = pc->MaxAtomicBuffers;
+
       /* Gallium doesn't really care about local vs. env parameters so use the
        * same limits.
        */
@@ -333,6 +338,31 @@ void st_init_limits(struct pipe_screen *screen,
       screen->get_param(screen, PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL);
    c->GLSLFrontFacingIsSysVal =
       screen->get_param(screen, PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL);
+
+   c->MaxAtomicBufferBindings =
+         c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+   c->MaxCombinedAtomicBuffers =
+         c->Program[MESA_SHADER_VERTEX].MaxAtomicBuffers +
+         c->Program[MESA_SHADER_TESS_CTRL].MaxAtomicBuffers +
+         c->Program[MESA_SHADER_TESS_EVAL].MaxAtomicBuffers +
+         c->Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers +
+         c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+   assert(c->MaxCombinedAtomicBuffers <= MAX_COMBINED_ATOMIC_BUFFERS);
+
+   if (c->MaxCombinedAtomicBuffers > 0)
+      extensions->ARB_shader_atomic_counters = GL_TRUE;
+
+   c->MaxCombinedShaderOutputResources = c->MaxDrawBuffers;
+   c->ShaderStorageBufferOffsetAlignment =
+      screen->get_param(screen, PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT);
+   if (c->ShaderStorageBufferOffsetAlignment) {
+      c->MaxCombinedShaderStorageBlocks = c->MaxShaderStorageBufferBindings =
+         c->MaxCombinedAtomicBuffers;
+      c->MaxCombinedShaderOutputResources +=
+         c->MaxCombinedShaderStorageBlocks;
+      c->MaxShaderStorageBlockSize = 1 << 27;
+      extensions->ARB_shader_storage_buffer_object = GL_TRUE;
+   }
 }
 
 
@@ -465,6 +495,7 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(ARB_occlusion_query2),             PIPE_CAP_OCCLUSION_QUERY                  },
       { o(ARB_pipeline_statistics_query),    PIPE_CAP_QUERY_PIPELINE_STATISTICS        },
       { o(ARB_point_sprite),                 PIPE_CAP_POINT_SPRITE                     },
+      { o(ARB_query_buffer_object),          PIPE_CAP_QUERY_BUFFER_OBJECT              },
       { o(ARB_sample_shading),               PIPE_CAP_SAMPLE_SHADING                   },
       { o(ARB_seamless_cube_map),            PIPE_CAP_SEAMLESS_CUBE_MAP                },
       { o(ARB_shader_draw_parameters),       PIPE_CAP_DRAW_PARAMETERS                  },
@@ -496,12 +527,14 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(EXT_transform_feedback),           PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS        },
 
       { o(AMD_pinned_memory),                PIPE_CAP_RESOURCE_FROM_USER_MEMORY        },
+      { o(ATI_meminfo),                      PIPE_CAP_QUERY_MEMORY_INFO                },
       { o(AMD_seamless_cubemap_per_texture), PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE    },
       { o(ATI_separate_stencil),             PIPE_CAP_TWO_SIDED_STENCIL                },
       { o(ATI_texture_mirror_once),          PIPE_CAP_TEXTURE_MIRROR_CLAMP             },
       { o(NV_conditional_render),            PIPE_CAP_CONDITIONAL_RENDER               },
       { o(NV_primitive_restart),             PIPE_CAP_PRIMITIVE_RESTART                },
       { o(NV_texture_barrier),               PIPE_CAP_TEXTURE_BARRIER                  },
+      { o(NVX_gpu_memory_info),              PIPE_CAP_QUERY_MEMORY_INFO                },
       /* GL_NV_point_sprite is not supported by gallium because we don't
        * support the GL_POINT_SPRITE_R_MODE_NV option. */
 

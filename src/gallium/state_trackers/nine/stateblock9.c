@@ -24,6 +24,7 @@
 #include "device9.h"
 #include "basetexture9.h"
 #include "nine_helpers.h"
+#include "vertexdeclaration9.h"
 
 #define DBG_CHANNEL DBG_STATEBLOCK
 
@@ -179,6 +180,7 @@ nine_state_copy_common(struct nine_state *dst,
             const int r = ffs(m) - 1;
             m &= ~(1 << r);
             dst->rs[i * 32 + r] = src->rs[i * 32 + r];
+            dst->rs_advertised[i * 32 + r] = src->rs_advertised[i * 32 + r];
         }
     }
 
@@ -223,7 +225,7 @@ nine_state_copy_common(struct nine_state *dst,
                 nine_bind(&dst->stream[i], src->stream[i]);
                 if (src->stream[i]) {
                     dst->vtxbuf[i].buffer_offset = src->vtxbuf[i].buffer_offset;
-                    dst->vtxbuf[i].buffer = src->vtxbuf[i].buffer;
+                    pipe_resource_reference(&dst->vtxbuf[i].buffer, src->vtxbuf[i].buffer);
                     dst->vtxbuf[i].stride = src->vtxbuf[i].stride;
                 }
             }
@@ -269,6 +271,10 @@ nine_state_copy_common(struct nine_state *dst,
             dst->ff.light = REALLOC(dst->ff.light,
                                     dst->ff.num_lights * sizeof(D3DLIGHT9),
                                     mask->ff.num_lights * sizeof(D3DLIGHT9));
+            for (i = dst->ff.num_lights; i < mask->ff.num_lights; ++i) {
+                memset(&dst->ff.light[i], 0, sizeof(D3DLIGHT9));
+                dst->ff.light[i].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
+            }
             dst->ff.num_lights = mask->ff.num_lights;
         }
         for (i = 0; i < mask->ff.num_lights; ++i)
@@ -353,6 +359,7 @@ nine_state_copy_common_all(struct nine_state *dst,
 
     /* Render states. */
     memcpy(dst->rs, src->rs, sizeof(dst->rs));
+    memcpy(dst->rs_advertised, src->rs_advertised, sizeof(dst->rs_advertised));
     if (apply)
         memcpy(dst->changed.rs, src->changed.rs, sizeof(dst->changed.rs));
 
@@ -377,7 +384,7 @@ nine_state_copy_common_all(struct nine_state *dst,
             nine_bind(&dst->stream[i], src->stream[i]);
             if (src->stream[i]) {
                 dst->vtxbuf[i].buffer_offset = src->vtxbuf[i].buffer_offset;
-                dst->vtxbuf[i].buffer = src->vtxbuf[i].buffer;
+                pipe_resource_reference(&dst->vtxbuf[i].buffer, src->vtxbuf[i].buffer);
                 dst->vtxbuf[i].stride = src->vtxbuf[i].stride;
             }
             dst->stream_freq[i] = src->stream_freq[i];
@@ -486,7 +493,10 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
         nine_state_copy_common(dst, src, src, TRUE, pool);
 
     if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
-        nine_bind(&dst->vdecl, src->vdecl);
+        NineDevice9_SetVertexDeclaration(This->base.device, (IDirect3DVertexDeclaration9 *)src->vdecl);
+
+    /* Recomputing it is needed if we changed vs but not vdecl */
+    dst->programmable_vs = dst->vs && !(dst->vdecl && dst->vdecl->position_t);
 
     /* Textures */
     if (src->changed.texture) {

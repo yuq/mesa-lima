@@ -225,7 +225,7 @@ void *evergreen_create_compute_state(
 		}
 	}
 #else
-	memset(&shader->binary, 0, sizeof(shader->binary));
+	radeon_shader_binary_init(&shader->binary);
 	radeon_elf_read(code, header->num_bytes, &shader->binary);
 	r600_create_shader(&shader->bc, &shader->binary, &use_kill);
 
@@ -245,13 +245,31 @@ void *evergreen_create_compute_state(
 	return shader;
 }
 
-void evergreen_delete_compute_state(struct pipe_context *ctx, void* state)
+void evergreen_delete_compute_state(struct pipe_context *ctx_, void* state)
 {
-	struct r600_pipe_compute *shader = (struct r600_pipe_compute *)state;
+	struct r600_context *ctx = (struct r600_context *)ctx_;
+	COMPUTE_DBG(ctx->screen, "*** evergreen_delete_compute_state\n");
+	struct r600_pipe_compute *shader = state;
 
 	if (!shader)
 		return;
 
+#ifdef HAVE_OPENCL
+#if HAVE_LLVM < 0x0306
+	for (unsigned i = 0; i < shader->num_kernels; i++) {
+		struct r600_kernel *kernel = &shader->kernels[i];
+		LLVMDisposeModule(module);
+	}
+	FREE(shader->kernels);
+	LLVMContextDispose(shader->llvm_ctx);
+#else
+	radeon_shader_binary_clean(&shader->binary);
+	r600_destroy_shader(&shader->bc);
+
+	/* TODO destroy shader->code_bo, shader->const_bo
+	 * we'll need something like r600_buffer_free */
+#endif
+#endif
 	FREE(shader);
 }
 
@@ -349,7 +367,7 @@ static void evergreen_emit_direct_dispatch(
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_pipe_compute *shader = rctx->cs_shader_state.shader;
 	unsigned num_waves;
-	unsigned num_pipes = rctx->screen->b.info.r600_max_pipes;
+	unsigned num_pipes = rctx->screen->b.info.r600_max_quad_pipes;
 	unsigned wave_divisor = (16 * num_pipes);
 	int group_size = 1;
 	int grid_size = 1;
@@ -723,7 +741,7 @@ static void evergreen_set_global_binding(
  * command stream by the start_cs_cmd atom.  However, since the SET_CONTEXT_REG
  * packet requires that the shader type bit be set, we must initialize all
  * context registers needed for compute in this function.  The registers
- * intialized by the start_cs_cmd atom can be found in evereen_state.c in the
+ * initialized by the start_cs_cmd atom can be found in evergreen_state.c in the
  * functions evergreen_init_atom_start_cs or cayman_init_atom_start_cs depending
  * on the GPU family.
  */
@@ -733,7 +751,7 @@ void evergreen_init_atom_start_compute_cs(struct r600_context *ctx)
 	int num_threads;
 	int num_stack_entries;
 
-	/* since all required registers are initialised in the
+	/* since all required registers are initialized in the
 	 * start_compute_cs_cmd atom, we can EMIT_EARLY here.
 	 */
 	r600_init_command_buffer(cb, 256);
@@ -818,7 +836,7 @@ void evergreen_init_atom_start_compute_cs(struct r600_context *ctx)
 		 * R_008E28_SQ_STATIC_THREAD_MGMT3
 		 */
 
-		/* XXX: We may need to adjust the thread and stack resouce
+		/* XXX: We may need to adjust the thread and stack resource
 		 * values for 3D/compute interop */
 
 		r600_store_config_reg_seq(cb, R_008C18_SQ_THREAD_RESOURCE_MGMT_1, 5);

@@ -210,7 +210,7 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
 {
    const unsigned depth = max_layer - min_layer;
    struct intel_mipmap_tree *aux_mt = NULL;
-   uint32_t aux_mode = 0;
+   uint32_t aux_mode = GEN8_SURFACE_AUX_MODE_NONE;
    uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
    int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
    unsigned tiling_mode, pitch;
@@ -425,7 +425,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
    struct intel_mipmap_tree *mt = irb->mt;
    struct intel_mipmap_tree *aux_mt = NULL;
-   uint32_t aux_mode = 0;
+   uint32_t aux_mode = GEN8_SURFACE_AUX_MODE_NONE;
    unsigned width = mt->logical_width0;
    unsigned height = mt->logical_height0;
    unsigned pitch = mt->pitch;

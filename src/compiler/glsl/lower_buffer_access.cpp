@@ -327,6 +327,7 @@ lower_buffer_access::setup_buffer_access(void *mem_ctx,
                                          unsigned *const_offset,
                                          bool *row_major,
                                          int *matrix_columns,
+                                         const glsl_struct_field **struct_field,
                                          unsigned packing)
 {
    *offset = new(mem_ctx) ir_constant(0u);
@@ -442,8 +443,11 @@ lower_buffer_access::setup_buffer_access(void *mem_ctx,
             intra_struct_offset = glsl_align(intra_struct_offset, field_align);
 
             if (strcmp(struct_type->fields.structure[i].name,
-                       deref_record->field) == 0)
+                       deref_record->field) == 0) {
+               if (struct_field)
+                  *struct_field = &struct_type->fields.structure[i];
                break;
+            }
 
             if (packing == GLSL_INTERFACE_PACKING_STD430)
                intra_struct_offset += type->std430_size(field_row_major);

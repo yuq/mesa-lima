@@ -71,6 +71,7 @@
 #define DBG_NO_IR		(1 << 12)
 #define DBG_NO_TGSI		(1 << 13)
 #define DBG_NO_ASM		(1 << 14)
+#define DBG_PREOPT_IR		(1 << 15)
 /* Bits 21-31 are reserved for the r600g driver. */
 /* features */
 #define DBG_NO_ASYNC_DMA	(1llu << 32)
@@ -87,6 +88,7 @@
 #define DBG_NO_DCC		(1llu << 43)
 #define DBG_NO_DCC_CLEAR	(1llu << 44)
 #define DBG_NO_RB_PLUS		(1llu << 45)
+#define DBG_SI_SCHED		(1llu << 46)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
@@ -128,6 +130,9 @@ struct radeon_shader_binary {
 	/** Disassembled shader in a string. */
 	char *disasm_string;
 };
+
+void radeon_shader_binary_init(struct radeon_shader_binary *b);
+void radeon_shader_binary_clean(struct radeon_shader_binary *b);
 
 struct r600_resource {
 	struct u_resource		b;
@@ -257,8 +262,6 @@ struct r600_surface {
 	unsigned spi_shader_col_format_alpha;	/* SI+, alpha-to-coverage */
 	unsigned spi_shader_col_format_blend;	/* SI+, blending without alpha. */
 	unsigned spi_shader_col_format_blend_alpha; /* SI+, blending with alpha. */
-	unsigned sx_ps_downconvert;	/* Stoney only */
-	unsigned sx_blend_opt_epsilon;	/* Stoney only */
 	struct r600_resource *cb_buffer_fmask; /* Used for FMASK relocations. R600 only */
 	struct r600_resource *cb_buffer_cmask; /* Used for CMASK relocations. R600 only */
 
@@ -278,19 +281,12 @@ struct r600_surface {
 	unsigned pa_su_poly_offset_db_fmt_cntl;
 };
 
-struct r600_tiling_info {
-	unsigned num_channels;
-	unsigned num_banks;
-	unsigned group_bytes;
-};
-
 struct r600_common_screen {
 	struct pipe_screen		b;
 	struct radeon_winsys		*ws;
 	enum radeon_family		family;
 	enum chip_class			chip_class;
 	struct radeon_info		info;
-	struct r600_tiling_info		tiling_info;
 	uint64_t			debug_flags;
 	bool				has_cp_dma;
 	bool				has_streamout;

@@ -1,4 +1,3 @@
-glsl_compiler
 glsl_lexer.cpp
 glsl_parser.cpp
 glsl_parser.h

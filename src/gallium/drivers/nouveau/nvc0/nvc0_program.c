@@ -554,6 +554,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
       }
       info->io.resInfoCBSlot = 15;
       info->io.sampleInfoBase = 256 + 128;
+      info->io.suInfoBase = 512;
       info->io.msInfoCBSlot = 15;
       info->io.msInfoBase = 0; /* TODO */
    }
@@ -635,6 +636,8 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    }
    */
    if (info->io.globalAccess)
+      prog->hdr[0] |= 1 << 26;
+   if (info->io.globalAccess & 0x2)
       prog->hdr[0] |= 1 << 16;
    if (info->io.fp64)
       prog->hdr[0] |= 1 << 27;

@@ -238,15 +238,15 @@ unpack_2x16("unorm")
 unpack_4x8("unorm")
 unpack_2x16("half")
 
-unop_horiz("pack_uvec2_to_uint", 0, tuint, 2, tuint, """
-dst = (src0.x & 0xffff) | (src0.y >> 16);
+unop_horiz("pack_uvec2_to_uint", 1, tuint, 2, tuint, """
+dst.x = (src0.x & 0xffff) | (src0.y >> 16);
 """)
 
-unop_horiz("pack_uvec4_to_uint", 0, tuint, 4, tuint, """
-dst = (src0.x <<  0) |
-      (src0.y <<  8) |
-      (src0.z << 16) |
-      (src0.w << 24);
+unop_horiz("pack_uvec4_to_uint", 1, tuint, 4, tuint, """
+dst.x = (src0.x <<  0) |
+        (src0.y <<  8) |
+        (src0.z << 16) |
+        (src0.w << 24);
 """)
 
 # Lowered floating point unpacking operations.
@@ -562,12 +562,12 @@ dst.y = src1.x;
 """)
 
 # Byte extraction
-binop("extract_ubyte", tuint, "", "(uint8_t)(src0 >> (src1 * 8))")
-binop("extract_ibyte", tint, "", "(int8_t)(src0 >> (src1 * 8))")
+binop("extract_u8", tuint, "", "(uint8_t)(src0 >> (src1 * 8))")
+binop("extract_i8", tint, "", "(int8_t)(src0 >> (src1 * 8))")
 
 # Word extraction
-binop("extract_uword", tuint, "", "(uint16_t)(src0 >> (src1 * 16))")
-binop("extract_iword", tint, "", "(int16_t)(src0 >> (src1 * 16))")
+binop("extract_u16", tuint, "", "(uint16_t)(src0 >> (src1 * 16))")
+binop("extract_i16", tint, "", "(int16_t)(src0 >> (src1 * 16))")
 
 
 def triop(name, ty, const_expr):

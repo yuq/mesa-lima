@@ -772,7 +772,7 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 		if (util_format_get_blocksize(pipe_format) >= 16)
 			non_disp_tiling = 1;
 	}
-	nbanks = eg_num_banks(rscreen->b.tiling_info.num_banks);
+	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
 
 	if (state->target == PIPE_TEXTURE_1D_ARRAY) {
 	        height = 1;
@@ -986,7 +986,7 @@ void evergreen_init_color_surface_rat(struct r600_context *rctx,
 	unsigned block_size =
 		align(util_format_get_blocksize(pipe_buffer->format), 4);
 	unsigned pitch_alignment =
-		MAX2(64, rctx->screen->b.tiling_info.group_bytes / block_size);
+		MAX2(64, rctx->screen->b.info.pipe_interleave_bytes / block_size);
 	unsigned pitch = align(pipe_buffer->width0, pitch_alignment);
 
 	/* XXX: This is copied from evergreen_init_color_surface().  I don't
@@ -1098,7 +1098,7 @@ void evergreen_init_color_surface(struct r600_context *rctx,
 		if (util_format_get_blocksize(surf->base.format) >= 16)
 			non_disp_tiling = 1;
 	}
-	nbanks = eg_num_banks(rscreen->b.tiling_info.num_banks);
+	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
 	desc = util_format_description(surf->base.format);
 	for (i = 0; i < 4; i++) {
 		if (desc->channel[i].type != UTIL_FORMAT_TYPE_VOID) {
@@ -1253,7 +1253,7 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 	macro_aspect = eg_macro_tile_aspect(macro_aspect);
 	bankw = eg_bank_wh(bankw);
 	bankh = eg_bank_wh(bankh);
-	nbanks = eg_num_banks(rscreen->b.tiling_info.num_banks);
+	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
 	offset >>= 8;
 
 	surf->db_z_info = S_028040_ARRAY_MODE(array_mode) |
@@ -3467,7 +3467,7 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 	sub_cmd = EG_DMA_COPY_TILED;
 	lbpp = util_logbase2(bpp);
 	pitch_tile_max = ((pitch / bpp) / 8) - 1;
-	nbanks = eg_num_banks(rctx->screen->b.tiling_info.num_banks);
+	nbanks = eg_num_banks(rctx->screen->b.info.r600_num_banks);
 
 	if (dst_mode == RADEON_SURF_MODE_LINEAR) {
 		/* T2L */
@@ -3670,9 +3670,9 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	unsigned id = 1;
 	unsigned i;
 	/* !!!
-	 *  To avoid GPU lockup registers must be emited in a specific order
+	 *  To avoid GPU lockup registers must be emitted in a specific order
 	 * (no kidding ...). The order below is important and have been
-	 * partialy infered from analyzing fglrx command stream.
+	 * partially inferred from analyzing fglrx command stream.
 	 *
 	 * Don't reorder atom without carefully checking the effect (GPU lockup
 	 * or piglit regression).
@@ -3793,7 +3793,7 @@ void evergreen_setup_tess_constants(struct r600_context *rctx, const struct pipe
 	unsigned output_patch0_offset, perpatch_output_offset, lds_size;
 	uint32_t values[16];
 	unsigned num_waves;
-	unsigned num_pipes = rctx->screen->b.info.r600_max_pipes;
+	unsigned num_pipes = rctx->screen->b.info.r600_max_quad_pipes;
 	unsigned wave_divisor = (16 * num_pipes);
 
 	*num_patches = 1;

@@ -1452,6 +1452,74 @@ static void emit_minmax_int(const struct lp_build_tgsi_action *action,
 				emit_data->args[1], "");
 }
 
+static void pk2h_fetch_args(struct lp_build_tgsi_context * bld_base,
+			    struct lp_build_emit_data * emit_data)
+{
+	emit_data->args[0] = lp_build_emit_fetch(bld_base, emit_data->inst,
+						 0, TGSI_CHAN_X);
+	emit_data->args[1] = lp_build_emit_fetch(bld_base, emit_data->inst,
+						 0, TGSI_CHAN_Y);
+}
+
+static void emit_pk2h(const struct lp_build_tgsi_action *action,
+		      struct lp_build_tgsi_context *bld_base,
+		      struct lp_build_emit_data *emit_data)
+{
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	LLVMContextRef context = bld_base->base.gallivm->context;
+	struct lp_build_context *uint_bld = &bld_base->uint_bld;
+	LLVMTypeRef fp16, i16;
+	LLVMValueRef const16, comp[2];
+	unsigned i;
+
+	fp16 = LLVMHalfTypeInContext(context);
+	i16 = LLVMInt16TypeInContext(context);
+	const16 = lp_build_const_int32(uint_bld->gallivm, 16);
+
+	for (i = 0; i < 2; i++) {
+		comp[i] = LLVMBuildFPTrunc(builder, emit_data->args[i], fp16, "");
+		comp[i] = LLVMBuildBitCast(builder, comp[i], i16, "");
+		comp[i] = LLVMBuildZExt(builder, comp[i], uint_bld->elem_type, "");
+	}
+
+	comp[1] = LLVMBuildShl(builder, comp[1], const16, "");
+	comp[0] = LLVMBuildOr(builder, comp[0], comp[1], "");
+
+	emit_data->output[emit_data->chan] = comp[0];
+}
+
+static void up2h_fetch_args(struct lp_build_tgsi_context * bld_base,
+			    struct lp_build_emit_data * emit_data)
+{
+	emit_data->args[0] = lp_build_emit_fetch(bld_base, emit_data->inst,
+						 0, TGSI_CHAN_X);
+}
+
+static void emit_up2h(const struct lp_build_tgsi_action *action,
+		      struct lp_build_tgsi_context *bld_base,
+		      struct lp_build_emit_data *emit_data)
+{
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	LLVMContextRef context = bld_base->base.gallivm->context;
+	struct lp_build_context *uint_bld = &bld_base->uint_bld;
+	LLVMTypeRef fp16, i16;
+	LLVMValueRef const16, input, val;
+	unsigned i;
+
+	fp16 = LLVMHalfTypeInContext(context);
+	i16 = LLVMInt16TypeInContext(context);
+	const16 = lp_build_const_int32(uint_bld->gallivm, 16);
+	input = emit_data->args[0];
+
+	for (i = 0; i < 2; i++) {
+		val = i == 1 ? LLVMBuildLShr(builder, input, const16, "") : input;
+		val = LLVMBuildTrunc(builder, val, i16, "");
+		val = LLVMBuildBitCast(builder, val, fp16, "");
+		emit_data->output[i] =
+			LLVMBuildFPExt(builder, val, bld_base->base.elem_type, "");
+	}
+}
+
 void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 {
 	struct lp_type type;
@@ -1581,6 +1649,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_UMSB].emit = emit_umsb;
 	bld_base->op_actions[TGSI_OPCODE_NOT].emit = emit_not;
 	bld_base->op_actions[TGSI_OPCODE_OR].emit = emit_or;
+	bld_base->op_actions[TGSI_OPCODE_PK2H].fetch_args = pk2h_fetch_args;
+	bld_base->op_actions[TGSI_OPCODE_PK2H].emit = emit_pk2h;
 	bld_base->op_actions[TGSI_OPCODE_POPC].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_POPC].intr_name = "llvm.ctpop.i32";
 	bld_base->op_actions[TGSI_OPCODE_POW].emit = build_tgsi_intrinsic_nomem;
@@ -1618,6 +1688,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_U2F].emit = emit_u2f;
 	bld_base->op_actions[TGSI_OPCODE_XOR].emit = emit_xor;
 	bld_base->op_actions[TGSI_OPCODE_UCMP].emit = emit_ucmp;
+	bld_base->op_actions[TGSI_OPCODE_UP2H].fetch_args = up2h_fetch_args;
+	bld_base->op_actions[TGSI_OPCODE_UP2H].emit = emit_up2h;
 }
 
 void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
@@ -1638,11 +1710,9 @@ void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
 void radeon_llvm_finalize_module(struct radeon_llvm_context * ctx)
 {
 	struct gallivm_state * gallivm = ctx->soa.bld_base.base.gallivm;
-	/* End the main function with Return*/
-	LLVMBuildRetVoid(gallivm->builder);
 
 	/* Create the pass manager */
-	ctx->gallivm.passmgr = LLVMCreateFunctionPassManagerForModule(
+	gallivm->passmgr = LLVMCreateFunctionPassManagerForModule(
 							gallivm->module);
 
 	/* This pass should eliminate all the load and store instructions */

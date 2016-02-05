@@ -68,7 +68,6 @@ static unsigned cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
 
    switch (CIK__GB_TILE_MODE__PIPE_CONFIG(mode2d)) {
    case CIK__PIPE_CONFIG__ADDR_SURF_P2:
-   default:
        return 2;
    case CIK__PIPE_CONFIG__ADDR_SURF_P4_8x16:
    case CIK__PIPE_CONFIG__ADDR_SURF_P4_16x16:
@@ -86,21 +85,11 @@ static unsigned cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
    case CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_8X16:
    case CIK__PIPE_CONFIG__ADDR_SURF_P16_32X32_16X16:
        return 16;
+   default:
+       fprintf(stderr, "Invalid CIK pipe configuration, assuming P2\n");
+       assert(!"this should never occur");
+       return 2;
    }
-}
-
-/* Convert Sea Islands register values GB_ADDR_CFG and MC_ADDR_CFG
- * into GB_TILING_CONFIG register which is only present on R600-R700. */
-static unsigned r600_get_gb_tiling_config(struct amdgpu_gpu_info *info)
-{
-   unsigned num_pipes = info->gb_addr_cfg & 0x7;
-   unsigned num_banks = info->mc_arb_ramcfg & 0x3;
-   unsigned pipe_interleave_bytes = (info->gb_addr_cfg >> 4) & 0x7;
-   unsigned row_size = (info->gb_addr_cfg >> 28) & 0x3;
-
-   return num_pipes | (num_banks << 4) |
-         (pipe_interleave_bytes << 8) |
-         (row_size << 12);
 }
 
 /* Helper function to do the ioctls needed for setup and init. */
@@ -251,20 +240,19 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
    ws->info.gart_size = gtt.heap_size;
    ws->info.vram_size = vram.heap_size;
    /* convert the shader clock from KHz to MHz */
-   ws->info.max_sclk = ws->amdinfo.max_engine_clk / 1000;
+   ws->info.max_shader_clock = ws->amdinfo.max_engine_clk / 1000;
    ws->info.max_se = ws->amdinfo.num_shader_engines;
    ws->info.max_sh_per_se = ws->amdinfo.num_shader_arrays_per_engine;
    ws->info.has_uvd = uvd.available_rings != 0;
    ws->info.vce_fw_version =
          vce.available_rings ? vce_version : 0;
    ws->info.has_userptr = TRUE;
-   ws->info.r600_num_backends = ws->amdinfo.rb_pipes;
-   ws->info.r600_clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
-   ws->info.r600_tiling_config = r600_get_gb_tiling_config(&ws->amdinfo);
-   ws->info.r600_num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
-   ws->info.r600_max_pipes = ws->amdinfo.max_quad_shader_pipes; /* TODO: is this correct? */
-   ws->info.r600_virtual_address = TRUE;
-   ws->info.r600_has_dma = dma.available_rings != 0;
+   ws->info.num_render_backends = ws->amdinfo.rb_pipes;
+   ws->info.clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
+   ws->info.num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
+   ws->info.pipe_interleave_bytes = 256 << ((ws->amdinfo.gb_addr_cfg >> 4) & 0x7);
+   ws->info.has_virtual_memory = TRUE;
+   ws->info.has_sdma = dma.available_rings != 0;
 
    /* Get the number of good compute units. */
    ws->info.num_good_compute_units = 0;
@@ -276,7 +264,7 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
    memcpy(ws->info.si_tile_mode_array, ws->amdinfo.gb_tile_mode,
           sizeof(ws->amdinfo.gb_tile_mode));
    ws->info.si_tile_mode_array_valid = TRUE;
-   ws->info.si_backend_enabled_mask = ws->amdinfo.enabled_rb_pipes_mask;
+   ws->info.enabled_rb_mask = ws->amdinfo.enabled_rb_pipes_mask;
 
    memcpy(ws->info.cik_macrotile_mode_array, ws->amdinfo.gb_macro_tile_mode,
           sizeof(ws->amdinfo.gb_macro_tile_mode));

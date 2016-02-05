@@ -283,7 +283,7 @@ static unsigned radeon_add_buffer(struct radeon_drm_cs *cs,
          * This doesn't have to be done if virtual memory is enabled,
          * because there is no offset patching with virtual memory.
          */
-        if (cs->base.ring_type != RING_DMA || cs->ws->info.r600_virtual_address) {
+        if (cs->base.ring_type != RING_DMA || cs->ws->info.has_virtual_memory) {
             return i;
         }
     }
@@ -540,7 +540,7 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
             cs->cst->flags[0] = 0;
             cs->cst->flags[1] = RADEON_CS_RING_DMA;
             cs->cst->cs.num_chunks = 3;
-            if (cs->ws->info.r600_virtual_address) {
+            if (cs->ws->info.has_virtual_memory) {
                 cs->cst->flags[0] |= RADEON_CS_USE_VM;
             }
             break;
@@ -567,7 +567,7 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
                 cs->cst->flags[0] |= RADEON_CS_KEEP_TILING_FLAGS;
                 cs->cst->cs.num_chunks = 3;
             }
-            if (cs->ws->info.r600_virtual_address) {
+            if (cs->ws->info.has_virtual_memory) {
                 cs->cst->flags[0] |= RADEON_CS_USE_VM;
                 cs->cst->cs.num_chunks = 3;
             }
