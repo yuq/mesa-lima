@@ -4210,33 +4210,46 @@ ast_declarator_list::hir(exec_list *instructions,
          _mesa_glsl_error(&loc, state,
                           "invalid type `%s' in empty declaration",
                           type_name);
-      } else if (decl_type->base_type == GLSL_TYPE_ATOMIC_UINT) {
-         /* Empty atomic counter declarations are allowed and useful
-          * to set the default offset qualifier.
-          */
-         return NULL;
-      } else if (this->type->qualifier.precision != ast_precision_none) {
-         if (this->type->specifier->structure != NULL) {
-            _mesa_glsl_error(&loc, state,
-                             "precision qualifiers can't be applied "
-                             "to structures");
-         } else {
-            static const char *const precision_names[] = {
-               "highp",
-               "highp",
-               "mediump",
-               "lowp"
-            };
-
-            _mesa_glsl_warning(&loc, state,
-                               "empty declaration with precision qualifier, "
-                               "to set the default precision, use "
-                               "`precision %s %s;'",
-                               precision_names[this->type->qualifier.precision],
-                               type_name);
+      } else {
+         if (decl_type->base_type == GLSL_TYPE_ARRAY) {
+            /* From Section 4.12 (Empty Declarations) of the GLSL 4.5 spec:
+             *
+             *    "The combinations of types and qualifiers that cause
+             *    compile-time or link-time errors are the same whether or not
+             *    the declaration is empty."
+             */
+            validate_array_dimensions(decl_type, state, &loc);
          }
-      } else if (this->type->specifier->structure == NULL) {
-         _mesa_glsl_warning(&loc, state, "empty declaration");
+
+         if (decl_type->base_type == GLSL_TYPE_ATOMIC_UINT) {
+            /* Empty atomic counter declarations are allowed and useful
+             * to set the default offset qualifier.
+             */
+            return NULL;
+         } else if (this->type->qualifier.precision != ast_precision_none) {
+            if (this->type->specifier->structure != NULL) {
+               _mesa_glsl_error(&loc, state,
+                                "precision qualifiers can't be applied "
+                                "to structures");
+            } else {
+               static const char *const precision_names[] = {
+                  "highp",
+                  "highp",
+                  "mediump",
+                  "lowp"
+               };
+
+               _mesa_glsl_warning(&loc, state,
+                                  "empty declaration with precision "
+                                  "qualifier, to set the default precision, "
+                                  "use `precision %s %s;'",
+                                  precision_names[this->type->
+                                     qualifier.precision],
+                                  type_name);
+            }
+         } else if (this->type->specifier->structure == NULL) {
+            _mesa_glsl_warning(&loc, state, "empty declaration");
+         }
       }
    }
 
