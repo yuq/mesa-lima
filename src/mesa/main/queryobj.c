@@ -807,11 +807,6 @@ invalid_enum:
       return;
    }
 
-   /* TODO: Have the driver be required to handle this fixup. */
-   if (q->Target == GL_ANY_SAMPLES_PASSED ||
-       q->Target == GL_ANY_SAMPLES_PASSED_CONSERVATIVE)
-      value = !!value;
-
    switch (ptype) {
    case GL_INT: {
       GLint *param = (GLint *)offset;
