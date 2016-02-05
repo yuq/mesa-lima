@@ -2845,6 +2845,9 @@
 #define   S_00B028_FLOAT_MODE(x)                                      (((x) & 0xFF) << 12)
 #define   G_00B028_FLOAT_MODE(x)                                      (((x) >> 12) & 0xFF)
 #define   C_00B028_FLOAT_MODE                                         0xFFF00FFF
+#define     V_00B028_FP_32_DENORMS					0x30
+#define     V_00B028_FP_64_DENORMS					0xc0
+#define     V_00B028_FP_ALL_DENORMS					0xf0
 #define   S_00B028_PRIV(x)                                            (((x) & 0x1) << 20)
 #define   G_00B028_PRIV(x)                                            (((x) >> 20) & 0x1)
 #define   C_00B028_PRIV                                               0xFFEFFFFF
