@@ -4520,12 +4520,44 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			   max_simd_waves);
 }
 
+static const char *si_get_shader_name(struct si_shader *shader,
+				      unsigned processor)
+{
+	switch (processor) {
+	case TGSI_PROCESSOR_VERTEX:
+		if (shader->key.vs.as_es)
+			return "Vertex Shader as ES";
+		else if (shader->key.vs.as_ls)
+			return "Vertex Shader as LS";
+		else
+			return "Vertex Shader as VS";
+	case TGSI_PROCESSOR_TESS_CTRL:
+		return "Tessellation Control Shader";
+	case TGSI_PROCESSOR_TESS_EVAL:
+		if (shader->key.tes.as_es)
+			return "Tessellation Evaluation Shader as ES";
+		else
+			return "Tessellation Evaluation Shader as VS";
+	case TGSI_PROCESSOR_GEOMETRY:
+		if (shader->gs_copy_shader == NULL)
+			return "GS Copy Shader as VS";
+		else
+			return "Geometry Shader";
+	case TGSI_PROCESSOR_FRAGMENT:
+		return "Pixel Shader";
+	case TGSI_PROCESSOR_COMPUTE:
+		return "Compute Shader";
+	default:
+		return "Unknown Shader";
+	}
+}
+
 void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor)
 {
 	if (r600_can_dump_shader(&sscreen->b, processor) &&
 	    !(sscreen->b.debug_flags & DBG_NO_ASM)) {
-		fprintf(stderr, "\n");
+		fprintf(stderr, "\n%s:\n", si_get_shader_name(shader, processor));
 
 		if (shader->prolog)
 			si_shader_dump_disassembly(&shader->prolog->binary,
