@@ -227,28 +227,7 @@ genX(graphics_pipeline_create)(
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_DS, .DSFunctionEnable = false);
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_STREAMOUT, .SOFunctionEnable = false);
 
-   /* From the IVB PRM Vol. 2, Part 1, Section 3.2.1:
-    *
-    *    "A PIPE_CONTROL with Post-Sync Operation set to 1h and a depth stall
-    *    needs to be sent just prior to any 3DSTATE_VS, 3DSTATE_URB_VS,
-    *    3DSTATE_CONSTANT_VS, 3DSTATE_BINDING_TABLE_POINTER_VS,
-    *    3DSTATE_SAMPLER_STATE_POINTER_VS command.  Only one PIPE_CONTROL
-    *    needs to be sent before any combination of VS associated 3DSTATE."
-    */
-   anv_batch_emit(&pipeline->batch, GEN7_PIPE_CONTROL,
-                  .DepthStallEnable = true,
-                  .PostSyncOperation = WriteImmediateData,
-                  .Address = { &device->workaround_bo, 0 });
-
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS,
-                  .ConstantBufferOffset = 0,
-                  .ConstantBufferSize = 4);
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS,
-                  .ConstantBufferOffset = 4,
-                  .ConstantBufferSize = 4);
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS,
-                  .ConstantBufferOffset = 8,
-                  .ConstantBufferSize = 4);
+   emit_urb_setup(pipeline);
 
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_AA_LINE_PARAMETERS);
 
@@ -282,26 +261,6 @@ genX(graphics_pipeline_create)(
 
    anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_SAMPLE_MASK,
       .SampleMask                               = 0xff);
-
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_URB_VS,
-      .VSURBStartingAddress                     = pipeline->urb.vs_start,
-      .VSURBEntryAllocationSize                 = pipeline->urb.vs_size - 1,
-      .VSNumberofURBEntries                     = pipeline->urb.nr_vs_entries);
-
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_URB_GS,
-      .GSURBStartingAddress                     = pipeline->urb.gs_start,
-      .GSURBEntryAllocationSize                 = pipeline->urb.gs_size - 1,
-      .GSNumberofURBEntries                     = pipeline->urb.nr_gs_entries);
-
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_URB_HS,
-      .HSURBStartingAddress                     = pipeline->urb.vs_start,
-      .HSURBEntryAllocationSize                 = 0,
-      .HSNumberofURBEntries                     = 0);
-
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_URB_DS,
-      .DSURBStartingAddress                     = pipeline->urb.vs_start,
-      .DSURBEntryAllocationSize                 = 0,
-      .DSNumberofURBEntries                     = 0);
 
    const struct brw_vue_prog_data *vue_prog_data = &pipeline->vs_prog_data.base;
    /* The last geometry producing stage will set urb_offset and urb_length,

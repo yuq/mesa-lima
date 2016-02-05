@@ -366,15 +366,7 @@ genX(graphics_pipeline_create)(
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_DS), .FunctionEnable = false);
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_STREAMOUT), .SOFunctionEnable = false);
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PUSH_CONSTANT_ALLOC_VS),
-                  .ConstantBufferOffset = 0,
-                  .ConstantBufferSize = 4);
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PUSH_CONSTANT_ALLOC_GS),
-                  .ConstantBufferOffset = 4,
-                  .ConstantBufferSize = 4);
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PUSH_CONSTANT_ALLOC_PS),
-                  .ConstantBufferOffset = 8,
-                  .ConstantBufferSize = 4);
+   emit_urb_setup(pipeline);
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM_CHROMAKEY),
                   .ChromaKeyKillEnable = false);
@@ -397,26 +389,6 @@ genX(graphics_pipeline_create)(
                   .BarycentricInterpolationMode =
                      pipeline->ps_ksp0 == NO_KERNEL ?
                      0 : pipeline->wm_prog_data.barycentric_interp_modes);
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_VS),
-                  .VSURBStartingAddress = pipeline->urb.vs_start,
-                  .VSURBEntryAllocationSize = pipeline->urb.vs_size - 1,
-                  .VSNumberofURBEntries = pipeline->urb.nr_vs_entries);
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_GS),
-                  .GSURBStartingAddress = pipeline->urb.gs_start,
-                  .GSURBEntryAllocationSize = pipeline->urb.gs_size - 1,
-                  .GSNumberofURBEntries = pipeline->urb.nr_gs_entries);
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_HS),
-                  .HSURBStartingAddress = pipeline->urb.vs_start,
-                  .HSURBEntryAllocationSize = 0,
-                  .HSNumberofURBEntries = 0);
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_DS),
-                  .DSURBStartingAddress = pipeline->urb.vs_start,
-                  .DSURBEntryAllocationSize = 0,
-                  .DSNumberofURBEntries = 0);
 
    const struct brw_gs_prog_data *gs_prog_data = &pipeline->gs_prog_data;
    offset = 1;
