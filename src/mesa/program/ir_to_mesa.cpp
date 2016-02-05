@@ -1539,6 +1539,82 @@ get_assignment_lhs(ir_dereference *ir, ir_to_mesa_visitor *v)
    return dst_reg(v->result);
 }
 
+/* Calculate the sampler index and also calculate the base uniform location
+ * for struct members.
+ */
+static void
+calc_sampler_offsets(struct gl_shader_program *prog, ir_dereference *deref,
+                     unsigned *offset, unsigned *array_elements,
+                     unsigned *location)
+{
+   if (deref->ir_type == ir_type_dereference_variable)
+      return;
+
+   switch (deref->ir_type) {
+   case ir_type_dereference_array: {
+      ir_dereference_array *deref_arr = deref->as_dereference_array();
+      ir_constant *array_index =
+         deref_arr->array_index->constant_expression_value();
+
+      if (!array_index) {
+	 /* GLSL 1.10 and 1.20 allowed variable sampler array indices,
+	  * while GLSL 1.30 requires that the array indices be
+	  * constant integer expressions.  We don't expect any driver
+	  * to actually work with a really variable array index, so
+	  * all that would work would be an unrolled loop counter that ends
+	  * up being constant above.
+	  */
+	 ralloc_strcat(&prog->InfoLog,
+		       "warning: Variable sampler array index unsupported.\n"
+		       "This feature of the language was removed in GLSL 1.20 "
+		       "and is unlikely to be supported for 1.10 in Mesa.\n");
+      } else {
+         *offset += array_index->value.u[0] * *array_elements;
+      }
+
+      *array_elements *= deref_arr->array->type->length;
+
+      calc_sampler_offsets(prog, deref_arr->array->as_dereference(),
+                           offset, array_elements, location);
+      break;
+   }
+
+   case ir_type_dereference_record: {
+      ir_dereference_record *deref_record = deref->as_dereference_record();
+      unsigned field_index =
+         deref_record->record->type->field_index(deref_record->field);
+      *location +=
+         deref_record->record->type->record_location_offset(field_index);
+      calc_sampler_offsets(prog, deref_record->record->as_dereference(),
+                           offset, array_elements, location);
+      break;
+   }
+
+   default:
+      unreachable("Invalid deref type");
+      break;
+   }
+}
+
+static int
+get_sampler_uniform_value(class ir_dereference *sampler,
+                          struct gl_shader_program *shader_program,
+                          const struct gl_program *prog)
+{
+   GLuint shader = _mesa_program_enum_to_shader_stage(prog->Target);
+   ir_variable *var = sampler->variable_referenced();
+   unsigned location = var->data.location;
+   unsigned array_elements = 1;
+   unsigned offset = 0;
+
+   calc_sampler_offsets(shader_program, sampler, &offset, &array_elements,
+                        &location);
+
+   assert(shader_program->UniformStorage[location].opaque[shader].active);
+   return shader_program->UniformStorage[location].opaque[shader].index +
+          offset;
+}
+
 /**
  * Process the condition of a conditional assignment
  *
@@ -1988,9 +2064,8 @@ ir_to_mesa_visitor::visit(ir_texture *ir)
    if (ir->shadow_comparitor)
       inst->tex_shadow = GL_TRUE;
 
-   inst->sampler = _mesa_get_sampler_uniform_value(ir->sampler,
-						   this->shader_program,
-						   this->prog);
+   inst->sampler = get_sampler_uniform_value(ir->sampler, shader_program,
+                                             prog);
 
    switch (sampler_type->sampler_dimensionality) {
    case GLSL_SAMPLER_DIM_1D:
