@@ -673,6 +673,67 @@ anv_device_init_border_colors(struct anv_device *device)
                                                     border_colors);
 }
 
+static VkResult
+submit_simple_batch(struct anv_device *device, struct anv_batch *batch)
+{
+   struct anv_state state;
+   struct drm_i915_gem_execbuffer2 execbuf;
+   struct drm_i915_gem_exec_object2 exec2_objects[1];
+   struct anv_bo *bo = NULL;
+   VkResult result = VK_SUCCESS;
+   uint32_t size;
+   int64_t timeout;
+   int ret;
+
+   size = align_u32(batch->next - batch->start, 8);
+   state = anv_state_pool_alloc(&device->dynamic_state_pool, MAX(size, 64), 32);
+   bo = &device->dynamic_state_pool.block_pool->bo;
+   memcpy(state.map, batch->start, size);
+
+   exec2_objects[0].handle = bo->gem_handle;
+   exec2_objects[0].relocation_count = 0;
+   exec2_objects[0].relocs_ptr = 0;
+   exec2_objects[0].alignment = 0;
+   exec2_objects[0].offset = bo->offset;
+   exec2_objects[0].flags = 0;
+   exec2_objects[0].rsvd1 = 0;
+   exec2_objects[0].rsvd2 = 0;
+
+   execbuf.buffers_ptr = (uintptr_t) exec2_objects;
+   execbuf.buffer_count = 1;
+   execbuf.batch_start_offset = state.offset;
+   execbuf.batch_len = batch->next - state.map;
+   execbuf.cliprects_ptr = 0;
+   execbuf.num_cliprects = 0;
+   execbuf.DR1 = 0;
+   execbuf.DR4 = 0;
+
+   execbuf.flags =
+      I915_EXEC_HANDLE_LUT | I915_EXEC_NO_RELOC | I915_EXEC_RENDER;
+   execbuf.rsvd1 = device->context_id;
+   execbuf.rsvd2 = 0;
+
+   ret = anv_gem_execbuffer(device, &execbuf);
+   if (ret != 0) {
+      /* We don't know the real error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
+      goto fail;
+   }
+
+   timeout = INT64_MAX;
+   ret = anv_gem_wait(device, bo->gem_handle, &timeout);
+   if (ret != 0) {
+      /* We don't know the real error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
+      goto fail;
+   }
+
+ fail:
+   anv_state_pool_free(&device->dynamic_state_pool, state);
+
+   return result;
+}
+
 VkResult anv_CreateDevice(
     VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
@@ -936,71 +997,16 @@ VkResult anv_DeviceWaitIdle(
     VkDevice                                    _device)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_state state;
    struct anv_batch batch;
-   struct drm_i915_gem_execbuffer2 execbuf;
-   struct drm_i915_gem_exec_object2 exec2_objects[1];
-   struct anv_bo *bo = NULL;
-   VkResult result;
-   int64_t timeout;
-   int ret;
 
-   state = anv_state_pool_alloc(&device->dynamic_state_pool, 32, 32);
-   bo = &device->dynamic_state_pool.block_pool->bo;
-   batch.start = batch.next = state.map;
-   batch.end = state.map + 32;
+   uint32_t cmds[8];
+   batch.start = batch.next = cmds;
+   batch.end = (void *) cmds + sizeof(cmds);
+
    anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
    anv_batch_emit(&batch, GEN7_MI_NOOP);
 
-   if (!device->info.has_llc)
-      anv_state_clflush(state);
-
-   exec2_objects[0].handle = bo->gem_handle;
-   exec2_objects[0].relocation_count = 0;
-   exec2_objects[0].relocs_ptr = 0;
-   exec2_objects[0].alignment = 0;
-   exec2_objects[0].offset = bo->offset;
-   exec2_objects[0].flags = 0;
-   exec2_objects[0].rsvd1 = 0;
-   exec2_objects[0].rsvd2 = 0;
-
-   execbuf.buffers_ptr = (uintptr_t) exec2_objects;
-   execbuf.buffer_count = 1;
-   execbuf.batch_start_offset = state.offset;
-   execbuf.batch_len = batch.next - state.map;
-   execbuf.cliprects_ptr = 0;
-   execbuf.num_cliprects = 0;
-   execbuf.DR1 = 0;
-   execbuf.DR4 = 0;
-
-   execbuf.flags =
-      I915_EXEC_HANDLE_LUT | I915_EXEC_NO_RELOC | I915_EXEC_RENDER;
-   execbuf.rsvd1 = device->context_id;
-   execbuf.rsvd2 = 0;
-
-   ret = anv_gem_execbuffer(device, &execbuf);
-   if (ret != 0) {
-      /* We don't know the real error. */
-      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
-      goto fail;
-   }
-
-   timeout = INT64_MAX;
-   ret = anv_gem_wait(device, bo->gem_handle, &timeout);
-   if (ret != 0) {
-      /* We don't know the real error. */
-      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
-      goto fail;
-   }
-
-   anv_state_pool_free(&device->dynamic_state_pool, state);
-
-   return VK_SUCCESS;
-
- fail:
-   anv_state_pool_free(&device->dynamic_state_pool, state);
-
-   return result;
+   return submit_simple_batch(device, &batch);
 }
 
 VkResult
