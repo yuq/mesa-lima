@@ -417,6 +417,7 @@ nvc0_validate_vertex_buffers_shared(struct nvc0_context *nvc0)
    /* If there are more elements than buffers, we might not have unset
     * fetching on the later elements.
     */
+   PUSH_SPACE(push, nvc0->vertex->num_elements - b);
    for (; b < nvc0->vertex->num_elements; ++b)
       IMMED_NVC0(push, NVC0_3D(VERTEX_ARRAY_FETCH(b)), 0);
 
@@ -690,7 +691,7 @@ nvc0_draw_elements_inline_u32_short(struct nouveau_pushbuf *push,
 
    if (count & 1) {
       count--;
-      PUSH_SPACE(push, 1);
+      PUSH_SPACE(push, 2);
       BEGIN_NVC0(push, NVC0_3D(VB_ELEMENT_U32), 1);
       PUSH_DATA (push, *map++);
    }
@@ -820,6 +821,8 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
    struct nv04_resource *buf_count = nv04_resource(info->indirect_params);
    unsigned size, macro, count = info->indirect_count, drawid = info->drawid;
    uint32_t offset = buf->offset + info->indirect_offset;
+
+   PUSH_SPACE(push, 7);
 
    /* must make FIFO wait for engines idle before continuing to process */
    if ((buf->fence_wr && !nouveau_fence_signalled(buf->fence_wr)) ||
@@ -961,6 +964,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    if (info->mode == PIPE_PRIM_PATCHES &&
        nvc0->state.patch_vertices != info->vertices_per_patch) {
       nvc0->state.patch_vertices = info->vertices_per_patch;
+      PUSH_SPACE(push, 1);
       IMMED_NVC0(push, NVC0_3D(PATCH_VERTICES), nvc0->state.patch_vertices);
    }
 
@@ -968,6 +972,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    nvc0_state_validate(nvc0, ~0, 8);
 
    if (nvc0->vertprog->vp.need_draw_parameters) {
+      PUSH_SPACE(push, 9);
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
       PUSH_DATA (push, 512);
       PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
@@ -989,6 +994,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    }
 
    if (nvc0->cb_dirty) {
+      PUSH_SPACE(push, 1);
       IMMED_NVC0(push, NVC0_3D(MEM_BARRIER), 0x1011);
       nvc0->cb_dirty = false;
    }
@@ -996,6 +1002,8 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    for (s = 0; s < 5; ++s) {
       if (!nvc0->textures_coherent[s])
          continue;
+
+      PUSH_SPACE(push, nvc0->num_textures[s] * 2);
 
       for (int i = 0; i < nvc0->num_textures[s]; ++i) {
          struct nv50_tic_entry *tic = nv50_tic_entry(nvc0->textures[s][i]);
