@@ -23,7 +23,7 @@
 
 #include "anv_nir.h"
 #include "program/prog_parameter.h"
-#include "glsl/nir/nir_builder.h"
+#include "nir/nir_builder.h"
 
 struct apply_pipeline_layout_state {
    nir_shader *shader;

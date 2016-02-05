@@ -142,7 +142,7 @@
 #include "sparc/sparc.h"
 #endif
 
-#include "glsl_parser_extras.h"
+#include "compiler/glsl/glsl_parser_extras.h"
 #include <stdbool.h>
 
 

@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "glsl/nir/nir.h"
+#include "nir/nir.h"
 #include "anv_private.h"
 
 #ifdef __cplusplus

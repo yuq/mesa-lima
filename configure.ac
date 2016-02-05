@@ -2445,6 +2445,7 @@ CXXFLAGS="$CXXFLAGS $USER_CXXFLAGS"
 dnl Substitute the config
 AC_CONFIG_FILES([Makefile
 		src/Makefile
+		src/compiler/Makefile
 		src/egl/Makefile
 		src/egl/main/egl.pc
 		src/egl/wayland/wayland-drm/Makefile
@@ -2514,7 +2515,6 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/winsys/virgl/vtest/Makefile
 		src/gbm/Makefile
 		src/gbm/main/gbm.pc
-		src/glsl/Makefile
 		src/glx/Makefile
 		src/glx/apple/Makefile
 		src/glx/tests/Makefile

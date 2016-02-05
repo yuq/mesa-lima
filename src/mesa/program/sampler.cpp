@@ -24,11 +24,11 @@
  */
 
 #include "main/mtypes.h"
-#include "glsl/nir/glsl_types.h"
-#include "glsl/ir.h"
-#include "glsl/ir_uniform.h"
-#include "glsl/ir_visitor.h"
-#include "glsl/program.h"
+#include "compiler/glsl_types.h"
+#include "compiler/glsl/ir.h"
+#include "compiler/glsl/ir_uniform.h"
+#include "compiler/glsl/ir_visitor.h"
+#include "compiler/glsl/program.h"
 #include "program/hash_table.h"
 #include "program/prog_parameter.h"
 #include "program/program.h"

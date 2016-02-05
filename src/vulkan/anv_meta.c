@@ -29,7 +29,7 @@
 
 #include "anv_meta.h"
 #include "anv_private.h"
-#include "glsl/nir/nir_builder.h"
+#include "nir/nir_builder.h"
 
 struct anv_render_pass anv_meta_dummy_renderpass = {0};
 

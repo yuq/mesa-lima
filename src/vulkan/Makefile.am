@@ -54,7 +54,7 @@ AM_CPPFLAGS = \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src \
-	-I$(top_srcdir)/src/glsl/nir \
+	-I$(top_srcdir)/src/compiler \
 	-I$(top_srcdir)/src/mapi \
 	-I$(top_srcdir)/src/mesa \
 	-I$(top_srcdir)/src/mesa/drivers/dri/common \
@@ -63,7 +63,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/include \
 	-I$(top_srcdir)/src/isl/ \
 	-I$(top_builddir)/src \
-	-I$(top_builddir)/src/glsl/nir \
+	-I$(top_builddir)/src/compiler \
 	-I$(top_builddir)/src/vulkan
 
 libvulkan_la_CFLAGS = $(CFLAGS) -Wno-override-init

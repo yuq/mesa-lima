@@ -29,8 +29,8 @@
 #ifndef IR3_NIR_H_
 #define IR3_NIR_H_
 
-#include "glsl/nir/nir.h"
-#include "glsl/nir/shader_enums.h"
+#include "compiler/nir/nir.h"
+#include "compiler/shader_enums.h"
 
 #include "ir3_shader.h"
 

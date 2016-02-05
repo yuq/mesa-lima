@@ -32,7 +32,7 @@
 #include <string.h>
 
 #include "util/macros.h"
-#include "glsl/nir/nir.h"
+#include "compiler/nir/nir.h"
 #include "util/list.h"
 #include "util/u_math.h"
 

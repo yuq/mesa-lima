@@ -38,7 +38,7 @@
 #include "brw_cfg.h"
 #include "brw_program.h"
 #include "brw_dead_control_flow.h"
-#include "glsl/nir/glsl_types.h"
+#include "compiler/glsl_types.h"
 
 using namespace brw;
 

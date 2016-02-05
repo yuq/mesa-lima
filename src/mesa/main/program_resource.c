@@ -30,7 +30,7 @@
 #include "main/shaderobj.h"
 #include "main/context.h"
 #include "program_resource.h"
-#include "ir_uniform.h"
+#include "compiler/glsl/ir_uniform.h"
 static bool
 supported_interface_enum(struct gl_context *ctx, GLenum iface)
 {

@@ -23,8 +23,8 @@
 
 #include "brw_nir.h"
 #include "brw_shader.h"
-#include "glsl/nir/glsl_to_nir.h"
-#include "glsl/nir/nir_builder.h"
+#include "compiler/nir/glsl_to_nir.h"
+#include "compiler/nir/nir_builder.h"
 #include "program/prog_to_nir.h"
 
 static bool

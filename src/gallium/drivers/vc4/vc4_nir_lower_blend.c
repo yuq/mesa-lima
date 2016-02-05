@@ -41,7 +41,7 @@
  */
 #include "util/u_format.h"
 #include "vc4_qir.h"
-#include "glsl/nir/nir_builder.h"
+#include "compiler/nir/nir_builder.h"
 #include "vc4_context.h"
 
 static bool

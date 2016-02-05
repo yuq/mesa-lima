@@ -30,8 +30,8 @@
 #include "brw_shader.h"
 #include "brw_ir_fs.h"
 #include "brw_fs_builder.h"
-#include "glsl/ir.h"
-#include "glsl/nir/nir.h"
+#include "compiler/glsl/ir.h"
+#include "compiler/nir/nir.h"
 
 struct bblock_t;
 namespace {

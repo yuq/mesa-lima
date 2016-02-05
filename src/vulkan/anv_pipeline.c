@@ -30,7 +30,7 @@
 #include "anv_private.h"
 #include "brw_nir.h"
 #include "anv_nir.h"
-#include "glsl/nir/spirv/nir_spirv.h"
+#include "nir/spirv/nir_spirv.h"
 
 /* Needed for SWIZZLE macros */
 #include "program/prog_instruction.h"

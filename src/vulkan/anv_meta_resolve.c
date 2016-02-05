@@ -26,7 +26,7 @@
 
 #include "anv_meta.h"
 #include "anv_private.h"
-#include "glsl/nir/nir_builder.h"
+#include "nir/nir_builder.h"
 
 /**
  * Vertex attributes used by all pipelines.

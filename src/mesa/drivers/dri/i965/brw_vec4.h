@@ -31,8 +31,8 @@
 #include "brw_ir_vec4.h"
 #endif
 
-#include "glsl/ir.h"
-#include "glsl/nir/nir.h"
+#include "compiler/glsl/ir.h"
+#include "compiler/nir/nir.h"
 
 
 #ifdef __cplusplus

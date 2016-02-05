@@ -25,7 +25,7 @@
 #include "brw_eu.h"
 #include "intel_debug.h"
 #include "intel_asm_annotation.h"
-#include "glsl/nir/nir.h"
+#include "compiler/nir/nir.h"
 
 void
 dump_assembly(void *assembly, int num_annotations, struct annotation *annotation,

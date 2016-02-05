@@ -28,7 +28,7 @@
  * in the GLSL IR or in the native code.
  */
 #include "brw_fs.h"
-#include "glsl/nir/glsl_types.h"
+#include "compiler/glsl_types.h"
 
 using namespace brw;
 

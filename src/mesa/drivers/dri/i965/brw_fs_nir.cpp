@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "glsl/ir.h"
+#include "compiler/glsl/ir.h"
 #include "main/shaderimage.h"
 #include "brw_fs.h"
 #include "brw_fs_surface_builder.h"

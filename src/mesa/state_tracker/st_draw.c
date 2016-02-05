@@ -42,7 +42,7 @@
 #include "main/macros.h"
 #include "main/varray.h"
 
-#include "glsl/ir_uniform.h"
+#include "compiler/glsl/ir_uniform.h"
 
 #include "vbo/vbo.h"
 
