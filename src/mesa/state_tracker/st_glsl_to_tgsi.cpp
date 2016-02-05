@@ -3160,19 +3160,17 @@ glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
 
    /* Calculate the surface offset */
    st_src_reg offset;
-   ir_dereference_array *deref_array = deref->as_dereference_array();
+   unsigned array_size = 0, base = 0, index = 0;
 
-   if (deref_array) {
-      offset = get_temp(glsl_type::uint_type);
+   get_deref_offsets(deref, &array_size, &base, &index, &offset);
 
-      deref_array->array_index->accept(this);
-
+   if (offset.file != PROGRAM_UNDEFINED) {
       emit_asm(ir, TGSI_OPCODE_MUL, st_dst_reg(offset),
-               this->result, st_src_reg_for_int(ATOMIC_COUNTER_SIZE));
+               offset, st_src_reg_for_int(ATOMIC_COUNTER_SIZE));
       emit_asm(ir, TGSI_OPCODE_ADD, st_dst_reg(offset),
-               offset, st_src_reg_for_int(location->data.offset));
+               offset, st_src_reg_for_int(location->data.offset + index * ATOMIC_COUNTER_SIZE));
    } else {
-      offset = st_src_reg_for_int(location->data.offset);
+      offset = st_src_reg_for_int(location->data.offset + index * ATOMIC_COUNTER_SIZE);
    }
 
    ir->return_deref->accept(this);
