@@ -214,16 +214,7 @@ genX(graphics_pipeline_create)(
    gen7_emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
                                 pCreateInfo->pMultisampleState);
 
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_VF_STATISTICS,
-                   .StatisticsEnable = true);
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_HS, .Enable = false);
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_TE, .TEEnable = false);
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_DS, .DSFunctionEnable = false);
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_STREAMOUT, .SOFunctionEnable = false);
-
    emit_urb_setup(pipeline);
-
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_AA_LINE_PARAMETERS);
 
    const VkPipelineRasterizationStateCreateInfo *rs_info =
       pCreateInfo->pRasterizationState;

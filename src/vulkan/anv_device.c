@@ -673,8 +673,9 @@ anv_device_init_border_colors(struct anv_device *device)
                                                     border_colors);
 }
 
-static VkResult
-submit_simple_batch(struct anv_device *device, struct anv_batch *batch)
+VkResult
+anv_device_submit_simple_batch(struct anv_device *device,
+                               struct anv_batch *batch)
 {
    struct anv_state state;
    struct drm_i915_gem_execbuffer2 execbuf;
@@ -685,6 +686,7 @@ submit_simple_batch(struct anv_device *device, struct anv_batch *batch)
    int64_t timeout;
    int ret;
 
+   /* Kernel driver requires 8 byte aligned batch length */
    size = align_u32(batch->next - batch->start, 8);
    state = anv_state_pool_alloc(&device->dynamic_state_pool, MAX(size, 64), 32);
    bo = &device->dynamic_state_pool.block_pool->bo;
@@ -702,7 +704,7 @@ submit_simple_batch(struct anv_device *device, struct anv_batch *batch)
    execbuf.buffers_ptr = (uintptr_t) exec2_objects;
    execbuf.buffer_count = 1;
    execbuf.batch_start_offset = state.offset;
-   execbuf.batch_len = batch->next - state.map;
+   execbuf.batch_len = size;
    execbuf.cliprects_ptr = 0;
    execbuf.num_cliprects = 0;
    execbuf.DR1 = 0;
@@ -813,6 +815,23 @@ VkResult anv_CreateDevice(
    anv_block_pool_init(&device->scratch_block_pool, device, 0x10000);
 
    anv_queue_init(device, &device->queue);
+
+   switch (device->info.gen) {
+   case 7:
+      if (!device->info.is_haswell)
+         result = gen7_init_device_state(device);
+      else
+         result = gen75_init_device_state(device);
+      break;
+   case 8:
+      result = gen8_init_device_state(device);
+      break;
+   case 9:
+      result = gen9_init_device_state(device);
+      break;
+   }
+   if (result != VK_SUCCESS)
+      goto fail_fd;
 
    result = anv_device_init_meta(device);
    if (result != VK_SUCCESS)
@@ -1006,7 +1025,7 @@ VkResult anv_DeviceWaitIdle(
    anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
    anv_batch_emit(&batch, GEN7_MI_NOOP);
 
-   return submit_simple_batch(device, &batch);
+   return anv_device_submit_simple_batch(device, &batch);
 }
 
 VkResult

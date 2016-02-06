@@ -34,6 +34,32 @@
 
 #include "genX_state_util.h"
 
+VkResult
+genX(init_device_state)(struct anv_device *device)
+{
+   struct anv_batch batch;
+
+   uint32_t cmds[64];
+   batch.start = batch.next = cmds;
+   batch.end = (void *) cmds + sizeof(cmds);
+
+   anv_batch_emit(&batch, GEN7_PIPELINE_SELECT,
+                  .PipelineSelection = GPGPU);
+
+   anv_batch_emit(&batch, GENX(3DSTATE_VF_STATISTICS),
+                  .StatisticsEnable = true);
+   anv_batch_emit(&batch, GENX(3DSTATE_HS), .Enable = false);
+   anv_batch_emit(&batch, GENX(3DSTATE_TE), .TEEnable = false);
+   anv_batch_emit(&batch, GENX(3DSTATE_DS), .DSFunctionEnable = false);
+   anv_batch_emit(&batch, GENX(3DSTATE_STREAMOUT), .SOFunctionEnable = false);
+   anv_batch_emit(&batch, GEN7_3DSTATE_AA_LINE_PARAMETERS);
+   anv_batch_emit(&batch, GENX(MI_BATCH_BUFFER_END));
+
+   assert(batch.next <= batch.end);
+
+   return anv_device_submit_simple_batch(device, &batch);
+}
+
 GENX_FUNC(GEN7, GEN75) void
 genX(fill_buffer_surface_state)(void *state, enum isl_format format,
                                 uint32_t offset, uint32_t range,

@@ -662,6 +662,11 @@ struct anv_device {
     pthread_mutex_t                             mutex;
 };
 
+VkResult gen7_init_device_state(struct anv_device *device);
+VkResult gen75_init_device_state(struct anv_device *device);
+VkResult gen8_init_device_state(struct anv_device *device);
+VkResult gen9_init_device_state(struct anv_device *device);
+
 void* anv_gem_mmap(struct anv_device *device,
                    uint32_t gem_handle, uint64_t offset, uint64_t size, uint32_t flags);
 void anv_gem_munmap(void *p, uint64_t size);
@@ -738,6 +743,8 @@ void *anv_batch_emit_dwords(struct anv_batch *batch, int num_dwords);
 void anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other);
 uint64_t anv_batch_emit_reloc(struct anv_batch *batch,
                               void *location, struct anv_bo *bo, uint32_t offset);
+VkResult anv_device_submit_simple_batch(struct anv_device *device,
+                                        struct anv_batch *batch);
 
 struct anv_address {
    struct anv_bo *bo;
