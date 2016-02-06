@@ -1872,6 +1872,7 @@ typedef enum
    PROGRAM_UNDEFINED,   /**< Invalid/TBD value */
    PROGRAM_IMMEDIATE,   /**< Immediate value, used by TGSI */
    PROGRAM_BUFFER,      /**< for shader buffers, compile-time only */
+   PROGRAM_MEMORY,      /**< for shared, global and local memory */
    PROGRAM_FILE_MAX
 } gl_register_file;
 
