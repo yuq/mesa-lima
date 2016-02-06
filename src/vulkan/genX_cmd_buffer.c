@@ -455,3 +455,83 @@ void genX(CmdDrawIndexedIndirect)(
       .VertexAccessType                         = RANDOM,
       .PrimitiveTopologyType                    = pipeline->topology);
 }
+
+
+void genX(CmdDispatch)(
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    x,
+    uint32_t                                    y,
+    uint32_t                                    z)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+   struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
+
+   if (prog_data->uses_num_work_groups) {
+      struct anv_state state =
+         anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, 12, 4);
+      uint32_t *sizes = state.map;
+      sizes[0] = x;
+      sizes[1] = y;
+      sizes[2] = z;
+      if (!cmd_buffer->device->info.has_llc)
+         anv_state_clflush(state);
+      cmd_buffer->state.num_workgroups_offset = state.offset;
+      cmd_buffer->state.num_workgroups_bo =
+         &cmd_buffer->device->dynamic_state_block_pool.bo;
+   }
+
+   genX(cmd_buffer_flush_compute_state)(cmd_buffer);
+
+   anv_batch_emit(&cmd_buffer->batch, GENX(GPGPU_WALKER),
+                  .SIMDSize = prog_data->simd_size / 16,
+                  .ThreadDepthCounterMaximum = 0,
+                  .ThreadHeightCounterMaximum = 0,
+                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max - 1,
+                  .ThreadGroupIDXDimension = x,
+                  .ThreadGroupIDYDimension = y,
+                  .ThreadGroupIDZDimension = z,
+                  .RightExecutionMask = pipeline->cs_right_mask,
+                  .BottomExecutionMask = 0xffffffff);
+
+   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH));
+}
+
+#define GPGPU_DISPATCHDIMX 0x2500
+#define GPGPU_DISPATCHDIMY 0x2504
+#define GPGPU_DISPATCHDIMZ 0x2508
+
+void genX(CmdDispatchIndirect)(
+    VkCommandBuffer                             commandBuffer,
+    VkBuffer                                    _buffer,
+    VkDeviceSize                                offset)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
+   struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+   struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
+   struct anv_bo *bo = buffer->bo;
+   uint32_t bo_offset = buffer->offset + offset;
+
+   if (prog_data->uses_num_work_groups) {
+      cmd_buffer->state.num_workgroups_offset = bo_offset;
+      cmd_buffer->state.num_workgroups_bo = bo;
+   }
+
+   genX(cmd_buffer_flush_compute_state)(cmd_buffer);
+
+   emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMX, bo, bo_offset);
+   emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
+   emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
+
+   anv_batch_emit(&cmd_buffer->batch, GENX(GPGPU_WALKER),
+                  .IndirectParameterEnable = true,
+                  .SIMDSize = prog_data->simd_size / 16,
+                  .ThreadDepthCounterMaximum = 0,
+                  .ThreadHeightCounterMaximum = 0,
+                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max - 1,
+                  .RightExecutionMask = pipeline->cs_right_mask,
+                  .BottomExecutionMask = 0xffffffff);
+
+   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH));
+}

@@ -1279,6 +1279,11 @@ void gen75_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);
 void gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);
 void gen9_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);
 
+void gen7_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer);
+void gen75_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer);
+void gen8_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer);
+void gen9_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer);
+
 struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
                               gl_shader_stage stage);
