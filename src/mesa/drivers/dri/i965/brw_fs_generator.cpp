@@ -2078,7 +2078,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_TG4:
       case SHADER_OPCODE_TG4_OFFSET:
       case SHADER_OPCODE_SAMPLEINFO:
-	 generate_tex(inst, dst, src[0], src[1], src[1]);
+	 generate_tex(inst, dst, src[0], src[1], src[2]);
 	 break;
       case FS_OPCODE_DDX_COARSE:
       case FS_OPCODE_DDX_FINE:

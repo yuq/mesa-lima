@@ -207,6 +207,8 @@ public:
                      fs_reg mcs,
                      int gather_component,
                      bool is_cube_array,
+                     uint32_t surface,
+                     fs_reg surface_reg,
                      uint32_t sampler,
                      fs_reg sampler_reg);
    fs_reg emit_mcs_fetch(const fs_reg &coordinate, unsigned components,

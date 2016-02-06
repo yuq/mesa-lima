@@ -3653,6 +3653,7 @@ lower_sampler_logical_send_gen4(const fs_builder &bld, fs_inst *inst, opcode op,
                                 const fs_reg &coordinate,
                                 const fs_reg &shadow_c,
                                 const fs_reg &lod, const fs_reg &lod2,
+                                const fs_reg &surface,
                                 const fs_reg &sampler,
                                 unsigned coord_components,
                                 unsigned grad_components)
@@ -3745,8 +3746,9 @@ lower_sampler_logical_send_gen4(const fs_builder &bld, fs_inst *inst, opcode op,
 
    inst->opcode = op;
    inst->src[0] = reg_undef;
-   inst->src[1] = sampler;
-   inst->resize_sources(2);
+   inst->src[1] = surface;
+   inst->src[2] = sampler;
+   inst->resize_sources(3);
    inst->base_mrf = msg_begin.nr;
    inst->mlen = msg_end.nr - msg_begin.nr;
    inst->header_size = 1;
@@ -3758,6 +3760,7 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
                                 const fs_reg &shadow_c,
                                 fs_reg lod, fs_reg lod2,
                                 const fs_reg &sample_index,
+                                const fs_reg &surface,
                                 const fs_reg &sampler,
                                 const fs_reg &offset_value,
                                 unsigned coord_components,
@@ -3840,8 +3843,9 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
 
    inst->opcode = op;
    inst->src[0] = reg_undef;
-   inst->src[1] = sampler;
-   inst->resize_sources(2);
+   inst->src[1] = surface;
+   inst->src[2] = sampler;
+   inst->resize_sources(3);
    inst->base_mrf = message.nr;
    inst->mlen = msg_end.nr - message.nr;
    inst->header_size = header_size;
@@ -3865,7 +3869,9 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
                                 const fs_reg &shadow_c,
                                 fs_reg lod, fs_reg lod2,
                                 const fs_reg &sample_index,
-                                const fs_reg &mcs, const fs_reg &sampler,
+                                const fs_reg &mcs,
+                                const fs_reg &surface,
+                                const fs_reg &sampler,
                                 fs_reg offset_value,
                                 unsigned coord_components,
                                 unsigned grad_components)
@@ -4068,8 +4074,9 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
    /* Generate the SEND. */
    inst->opcode = op;
    inst->src[0] = src_payload;
-   inst->src[1] = sampler;
-   inst->resize_sources(2);
+   inst->src[1] = surface;
+   inst->src[2] = sampler;
+   inst->resize_sources(3);
    inst->base_mrf = -1;
    inst->mlen = mlen;
    inst->header_size = header_size;
@@ -4088,6 +4095,7 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
    const fs_reg &lod2 = inst->src[TEX_LOGICAL_SRC_LOD2];
    const fs_reg &sample_index = inst->src[TEX_LOGICAL_SRC_SAMPLE_INDEX];
    const fs_reg &mcs = inst->src[TEX_LOGICAL_SRC_MCS];
+   const fs_reg &surface = inst->src[TEX_LOGICAL_SRC_SURFACE];
    const fs_reg &sampler = inst->src[TEX_LOGICAL_SRC_SAMPLER];
    const fs_reg &offset_value = inst->src[TEX_LOGICAL_SRC_OFFSET_VALUE];
    assert(inst->src[TEX_LOGICAL_SRC_COORD_COMPONENTS].file == IMM);
@@ -4098,16 +4106,17 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
    if (devinfo->gen >= 7) {
       lower_sampler_logical_send_gen7(bld, inst, op, coordinate,
                                       shadow_c, lod, lod2, sample_index,
-                                      mcs, sampler, offset_value,
+                                      mcs, surface, sampler, offset_value,
                                       coord_components, grad_components);
    } else if (devinfo->gen >= 5) {
       lower_sampler_logical_send_gen5(bld, inst, op, coordinate,
                                       shadow_c, lod, lod2, sample_index,
-                                      sampler, offset_value,
+                                      surface, sampler, offset_value,
                                       coord_components, grad_components);
    } else {
       lower_sampler_logical_send_gen4(bld, inst, op, coordinate,
-                                      shadow_c, lod, lod2, sampler,
+                                      shadow_c, lod, lod2,
+                                      surface, sampler,
                                       coord_components, grad_components);
    }
 }

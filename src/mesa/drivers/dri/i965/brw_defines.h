@@ -1406,7 +1406,9 @@ enum tex_logical_srcs {
    TEX_LOGICAL_SRC_SAMPLE_INDEX,
    /** MCS data */
    TEX_LOGICAL_SRC_MCS,
-   /** REQUIRED: Texture sampler */
+   /** REQUIRED: Texture surface index */
+   TEX_LOGICAL_SRC_SURFACE,
+   /** Texture sampler index */
    TEX_LOGICAL_SRC_SAMPLER,
    /** Texel offset for gathers */
    TEX_LOGICAL_SRC_OFFSET_VALUE,

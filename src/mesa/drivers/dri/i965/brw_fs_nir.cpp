@@ -2941,7 +2941,9 @@ void
 fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 {
    unsigned texture = instr->texture_index;
+   unsigned sampler = instr->sampler_index;
    fs_reg texture_reg(brw_imm_ud(texture));
+   fs_reg sampler_reg(brw_imm_ud(sampler));
 
    int gather_component = instr->component;
 
@@ -3024,8 +3026,13 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          break;
       }
 
-      case nir_tex_src_sampler_offset:
-         break; /* Ignored for now */
+      case nir_tex_src_sampler_offset: {
+         /* Emit code to evaluate the actual indexing expression */
+         sampler_reg = vgrf(glsl_type::uint_type);
+         bld.ADD(sampler_reg, src, brw_imm_ud(sampler));
+         sampler_reg = bld.emit_uniformize(sampler_reg);
+         break;
+      }
 
       default:
          unreachable("unknown texture source");
@@ -3073,7 +3080,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       fs_reg dst = retype(get_nir_dest(instr->dest), BRW_REGISTER_TYPE_D);
       fs_inst *inst = bld.emit(SHADER_OPCODE_SAMPLEINFO, dst,
                                bld.vgrf(BRW_REGISTER_TYPE_D, 1),
-                               texture_reg);
+                               texture_reg, texture_reg);
       inst->mlen = 1;
       inst->header_size = 1;
       inst->base_mrf = -1;
@@ -3086,8 +3093,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
-                tex_offset, mcs, gather_component,
-                is_cube_array, texture, texture_reg);
+                tex_offset, mcs, gather_component, is_cube_array,
+                texture, texture_reg, sampler, sampler_reg);
 
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;
