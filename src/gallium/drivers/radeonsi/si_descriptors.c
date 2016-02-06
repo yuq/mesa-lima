@@ -191,7 +191,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 	if (view) {
 		struct si_sampler_view *rview =
 			(struct si_sampler_view*)view;
-		struct r600_texture *rtex = (struct r600_texture*)view->texture;
+		struct r600_texture *rtex = (struct r600_texture *)view->texture;
 
 		si_sampler_view_add_buffer(sctx, view->texture);
 

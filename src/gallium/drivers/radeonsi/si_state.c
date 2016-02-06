@@ -2843,7 +2843,6 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	}
 
 	pipe_resource_reference(&view->base.texture, texture);
-	view->resource = &tmp->resource;
 
 	if (state->format == PIPE_FORMAT_X24S8_UINT ||
 	    state->format == PIPE_FORMAT_S8X24_UINT ||
@@ -3135,7 +3134,7 @@ static void si_sampler_view_destroy(struct pipe_context *ctx,
 {
 	struct si_sampler_view *view = (struct si_sampler_view *)state;
 
-	if (view->resource && view->resource->b.b.target == PIPE_BUFFER)
+	if (state->texture && state->texture->target == PIPE_BUFFER)
 		LIST_DELINIT(&view->list);
 
 	pipe_resource_reference(&state->texture, NULL);
