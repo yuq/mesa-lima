@@ -622,6 +622,16 @@ util_copy_constant_buffer(struct pipe_constant_buffer *dst,
    }
 }
 
+static inline void
+util_copy_image_view(struct pipe_image_view *dst,
+                     const struct pipe_image_view *src)
+{
+   pipe_resource_reference(&dst->resource, src->resource);
+   dst->format = src->format;
+   dst->access = src->access;
+   dst->u = src->u;
+}
+
 static inline unsigned
 util_max_layer(const struct pipe_resource *r, unsigned level)
 {
