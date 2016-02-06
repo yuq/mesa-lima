@@ -2797,7 +2797,7 @@ static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
  * Build the sampler view descriptor for a buffer texture.
  * @param state 256-bit descriptor; only the high 128 bits are filled in
  */
-static void
+void
 si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 			  enum pipe_format format,
 			  unsigned first_element, unsigned last_element,
@@ -2838,9 +2838,10 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 /**
  * Build the sampler view descriptor for a texture.
  */
-static void
+void
 si_make_texture_descriptor(struct si_screen *screen,
 			   struct r600_texture *tex,
+			   bool sampler,
 			   enum pipe_texture_target target,
 			   enum pipe_format pipe_format,
 			   const unsigned char state_swizzle[4],
@@ -2855,7 +2856,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 	const struct util_format_description *desc;
 	unsigned char swizzle[4];
 	int first_non_void;
-	unsigned num_format, data_format;
+	unsigned num_format, data_format, type;
 	uint32_t pitch;
 	uint64_t va;
 
@@ -2973,12 +2974,29 @@ si_make_texture_descriptor(struct si_screen *screen,
 		data_format = 0;
 	}
 
-	if (res->target == PIPE_TEXTURE_1D_ARRAY) {
+	if (!sampler &&
+	    (res->target == PIPE_TEXTURE_CUBE ||
+	     res->target == PIPE_TEXTURE_CUBE_ARRAY ||
+	     res->target == PIPE_TEXTURE_3D)) {
+		/* For the purpose of shader images, treat cube maps and 3D
+		 * textures as 2D arrays. For 3D textures, the address
+		 * calculations for mipmaps are different, so we rely on the
+		 * caller to effectively disable mipmaps.
+		 */
+		type = V_008F1C_SQ_RSRC_IMG_2D_ARRAY;
+
+		assert(res->target != PIPE_TEXTURE_3D || (first_level == 0 && last_level == 0));
+	} else {
+		type = si_tex_dim(res->target, target, res->nr_samples);
+	}
+
+	if (type == V_008F1C_SQ_RSRC_IMG_1D_ARRAY) {
 	        height = 1;
 		depth = res->array_size;
-	} else if (res->target == PIPE_TEXTURE_2D_ARRAY) {
-		depth = res->array_size;
-	} else if (res->target == PIPE_TEXTURE_CUBE_ARRAY)
+	} else if (type == V_008F1C_SQ_RSRC_IMG_2D_ARRAY) {
+		if (sampler || res->target != PIPE_TEXTURE_3D)
+			depth = res->array_size;
+	} else if (type == V_008F1C_SQ_RSRC_IMG_CUBE)
 		depth = res->array_size / 6;
 
 	pitch = surflevel[base_level].nblk_x * util_format_get_blockwidth(pipe_format);
@@ -3001,7 +3019,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 					last_level) |
 		    S_008F1C_TILING_INDEX(si_tile_mode_index(tex, base_level, false)) |
 		    S_008F1C_POW2_PAD(res->last_level > 0) |
-		    S_008F1C_TYPE(si_tex_dim(res->target, target, res->nr_samples)));
+		    S_008F1C_TYPE(type));
 	state[4] = (S_008F20_DEPTH(depth - 1) | S_008F20_PITCH(pitch - 1));
 	state[5] = (S_008F24_BASE_ARRAY(first_layer) |
 		    S_008F24_LAST_ARRAY(last_layer));
@@ -3155,7 +3173,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	    state->target == PIPE_TEXTURE_CUBE)
 		last_layer = state->u.tex.first_layer;
 
-	si_make_texture_descriptor(sctx->screen, tmp, state->target,
+	si_make_texture_descriptor(sctx->screen, tmp, true, state->target,
 				   state->format, state_swizzle,
 				   base_level, first_level, last_level,
 				   state->u.tex.first_layer, last_layer,
@@ -3637,7 +3655,8 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 	/* TILE_MODE_INDEX is ambiguous without a PCI ID. */
 	md->metadata[1] = (ATI_VENDOR_ID << 16) | rscreen->info.pci_id;
 
-	si_make_texture_descriptor(sscreen, rtex, res->target, res->format,
+	si_make_texture_descriptor(sscreen, rtex, true,
+				   res->target, res->format,
 				   swizzle, 0, 0, res->last_level, 0,
 				   is_array ? res->array_size - 1 : 0,
 				   res->width0, res->height0, res->depth0,

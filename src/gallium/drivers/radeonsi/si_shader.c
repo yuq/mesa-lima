@@ -3865,8 +3865,8 @@ static void create_function(struct si_shader_context *ctx)
 	params[SI_PARAM_RW_BUFFERS] = const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
 	params[SI_PARAM_CONST_BUFFERS] = const_array(ctx->v16i8, SI_NUM_CONST_BUFFERS);
 	params[SI_PARAM_SAMPLERS] = const_array(ctx->v8i32, SI_NUM_SAMPLERS);
-	params[SI_PARAM_UNUSED] = LLVMPointerType(ctx->i32, CONST_ADDR_SPACE);
-	last_array_pointer = SI_PARAM_UNUSED;
+	params[SI_PARAM_IMAGES] = const_array(ctx->v8i32, SI_NUM_IMAGES);
+	last_array_pointer = SI_PARAM_IMAGES;
 
 	switch (ctx->type) {
 	case TGSI_PROCESSOR_VERTEX:
@@ -5383,7 +5383,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 	last_array_pointer = SI_PARAM_RW_BUFFERS;
 	params[SI_PARAM_CONST_BUFFERS] = ctx.i64;
 	params[SI_PARAM_SAMPLERS] = ctx.i64;
-	params[SI_PARAM_UNUSED] = ctx.i64;
+	params[SI_PARAM_IMAGES] = ctx.i64;
 	params[SI_PARAM_TCS_OUT_OFFSETS] = ctx.i32;
 	params[SI_PARAM_TCS_OUT_LAYOUT] = ctx.i32;
 	params[SI_PARAM_TCS_IN_LAYOUT] = ctx.i32;
@@ -5633,7 +5633,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 	params[SI_PARAM_RW_BUFFERS] = ctx.i64;
 	params[SI_PARAM_CONST_BUFFERS] = ctx.i64;
 	params[SI_PARAM_SAMPLERS] = ctx.i64;
-	params[SI_PARAM_UNUSED] = ctx.i64;
+	params[SI_PARAM_IMAGES] = ctx.i64;
 	params[SI_PARAM_ALPHA_REF] = ctx.f32;
 	last_array_pointer = -1;
 	last_sgpr = SI_PARAM_ALPHA_REF;
