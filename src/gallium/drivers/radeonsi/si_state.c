@@ -2793,6 +2793,48 @@ static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
  */
 
 /**
+ * Build the sampler view descriptor for a buffer texture.
+ * @param state 256-bit descriptor; only the high 128 bits are filled in
+ */
+static void
+si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
+			  enum pipe_format format,
+			  unsigned first_element, unsigned last_element,
+			  uint32_t *state)
+{
+	const struct util_format_description *desc;
+	int first_non_void;
+	uint64_t va;
+	unsigned stride;
+	unsigned num_records;
+	unsigned num_format, data_format;
+
+	desc = util_format_description(format);
+	first_non_void = util_format_get_first_non_void_channel(format);
+	stride = desc->block.bits / 8;
+	va = buf->gpu_address + first_element * stride;
+	num_format = si_translate_buffer_numformat(&screen->b.b, desc, first_non_void);
+	data_format = si_translate_buffer_dataformat(&screen->b.b, desc, first_non_void);
+
+	num_records = last_element + 1 - first_element;
+	num_records = MIN2(num_records, buf->b.b.width0 / stride);
+
+	if (screen->b.chip_class >= VI)
+		num_records *= stride;
+
+	state[4] = va;
+	state[5] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
+		   S_008F04_STRIDE(stride);
+	state[6] = num_records;
+	state[7] = S_008F0C_DST_SEL_X(si_map_swizzle(desc->swizzle[0])) |
+		   S_008F0C_DST_SEL_Y(si_map_swizzle(desc->swizzle[1])) |
+		   S_008F0C_DST_SEL_Z(si_map_swizzle(desc->swizzle[2])) |
+		   S_008F0C_DST_SEL_W(si_map_swizzle(desc->swizzle[3])) |
+		   S_008F0C_NUM_FORMAT(num_format) |
+		   S_008F0C_DATA_FORMAT(data_format);
+}
+
+/**
  * Create a sampler view.
  *
  * @param ctx		context
@@ -2852,31 +2894,12 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 
 	/* Buffer resource. */
 	if (texture->target == PIPE_BUFFER) {
-		unsigned stride, num_records;
-
-		desc = util_format_description(state->format);
-		first_non_void = util_format_get_first_non_void_channel(state->format);
-		stride = desc->block.bits / 8;
-		va = tmp->resource.gpu_address + state->u.buf.first_element*stride;
-		format = si_translate_buffer_dataformat(ctx->screen, desc, first_non_void);
-		num_format = si_translate_buffer_numformat(ctx->screen, desc, first_non_void);
-
-		num_records = state->u.buf.last_element + 1 - state->u.buf.first_element;
-		num_records = MIN2(num_records, texture->width0 / stride);
-
-		if (sctx->b.chip_class >= VI)
-			num_records *= stride;
-
-		view->state[4] = va;
-		view->state[5] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
-				 S_008F04_STRIDE(stride);
-		view->state[6] = num_records;
-		view->state[7] = S_008F0C_DST_SEL_X(si_map_swizzle(desc->swizzle[0])) |
-				 S_008F0C_DST_SEL_Y(si_map_swizzle(desc->swizzle[1])) |
-				 S_008F0C_DST_SEL_Z(si_map_swizzle(desc->swizzle[2])) |
-				 S_008F0C_DST_SEL_W(si_map_swizzle(desc->swizzle[3])) |
-				 S_008F0C_NUM_FORMAT(num_format) |
-				 S_008F0C_DATA_FORMAT(format);
+		si_make_buffer_descriptor(sctx->screen,
+					  (struct r600_resource *)texture,
+					  state->format,
+					  state->u.buf.first_element,
+					  state->u.buf.last_element,
+					  view->state);
 
 		LIST_ADDTAIL(&view->list, &sctx->b.texture_buffers);
 		return &view->base;
