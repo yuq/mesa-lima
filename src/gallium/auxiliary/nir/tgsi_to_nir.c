@@ -1309,13 +1309,13 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
       instr->coord_components++;
 
    assert(tgsi_inst->Src[samp].Register.File == TGSI_FILE_SAMPLER);
-   instr->sampler_index = tgsi_inst->Src[samp].Register.Index;
+   instr->texture_index = tgsi_inst->Src[samp].Register.Index;
 
    /* TODO if we supported any opc's which take an explicit SVIEW
     * src, we would use that here instead.  But for the "legacy"
     * texture opc's the SVIEW index is same as SAMP index:
     */
-   sview = instr->sampler_index;
+   sview = instr->texture_index;
 
    if (op == nir_texop_lod) {
       instr->dest_type = nir_type_float;
@@ -1456,8 +1456,8 @@ ttn_txq(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    setup_texture_info(qlv, tgsi_inst->Texture.Texture);
 
    assert(tgsi_inst->Src[1].Register.File == TGSI_FILE_SAMPLER);
-   txs->sampler_index = tgsi_inst->Src[1].Register.Index;
-   qlv->sampler_index = tgsi_inst->Src[1].Register.Index;
+   txs->texture_index = tgsi_inst->Src[1].Register.Index;
+   qlv->texture_index = tgsi_inst->Src[1].Register.Index;
 
    /* only single src, the lod: */
    txs->src[0].src = nir_src_for_ssa(ttn_channel(b, src[0], X));

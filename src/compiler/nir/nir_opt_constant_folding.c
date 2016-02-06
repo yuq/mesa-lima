@@ -136,8 +136,8 @@ constant_fold_intrinsic_instr(nir_intrinsic_instr *instr)
 static bool
 constant_fold_tex_instr(nir_tex_instr *instr)
 {
-   if (instr->sampler)
-      return constant_fold_deref(&instr->instr, instr->sampler);
+   if (instr->texture)
+      return constant_fold_deref(&instr->instr, instr->texture);
    else
       return false;
 }

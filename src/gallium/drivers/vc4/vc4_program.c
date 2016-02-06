@@ -296,7 +296,7 @@ ntq_emit_txf(struct vc4_compile *c, nir_tex_instr *instr)
         uint32_t tile_size = (tile_height * tile_width *
                               VC4_MAX_SAMPLES * sizeof(uint32_t));
 
-        unsigned unit = instr->sampler_index;
+        unsigned unit = instr->texture_index;
         uint32_t w = align(c->key->tex[unit].msaa_width, tile_width);
         uint32_t w_tiles = w / tile_width;
         uint32_t h = align(c->key->tex[unit].msaa_height, tile_height);
@@ -339,7 +339,7 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
 {
         struct qreg s, t, r, lod, proj, compare;
         bool is_txb = false, is_txl = false, has_proj = false;
-        unsigned unit = instr->sampler_index;
+        unsigned unit = instr->texture_index;
 
         if (instr->op == nir_texop_txf) {
                 ntq_emit_txf(c, instr);

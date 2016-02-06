@@ -1852,7 +1852,7 @@ nir_visitor::visit(ir_texture *ir)
       unreachable("not reached");
    }
 
-   instr->sampler = evaluate_deref(&instr->instr, ir->sampler);
+   instr->texture = evaluate_deref(&instr->instr, ir->sampler);
 
    unsigned src_number = 0;
 

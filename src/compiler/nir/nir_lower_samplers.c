@@ -52,7 +52,7 @@ calc_sampler_offsets(nir_deref *tail, nir_tex_instr *instr,
 
       calc_sampler_offsets(tail->child, instr, array_elements,
                            indirect, b, location);
-      instr->sampler_index += deref_array->base_offset * *array_elements;
+      instr->texture_index += deref_array->base_offset * *array_elements;
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          nir_ssa_def *mul =
@@ -91,16 +91,16 @@ static void
 lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_program,
               gl_shader_stage stage, nir_builder *builder)
 {
-   if (instr->sampler == NULL)
+   if (instr->texture == NULL)
       return;
 
-   instr->sampler_index = 0;
-   unsigned location = instr->sampler->var->data.location;
+   instr->texture_index = 0;
+   unsigned location = instr->texture->var->data.location;
    unsigned array_elements = 1;
    nir_ssa_def *indirect = NULL;
 
    builder->cursor = nir_before_instr(&instr->instr);
-   calc_sampler_offsets(&instr->sampler->deref, instr, &array_elements,
+   calc_sampler_offsets(&instr->texture->deref, instr, &array_elements,
                         &indirect, builder, &location);
 
    if (indirect) {
@@ -120,13 +120,13 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
       /* Now we can go ahead and move the source over to being a
        * first-class texture source.
        */
-      instr->src[instr->num_srcs].src_type = nir_tex_src_sampler_offset;
+      instr->src[instr->num_srcs].src_type = nir_tex_src_texture_offset;
       instr->num_srcs++;
       nir_instr_rewrite_src(&instr->instr,
                             &instr->src[instr->num_srcs - 1].src,
                             nir_src_for_ssa(indirect));
 
-      instr->sampler_array_size = array_elements;
+      instr->texture_array_size = array_elements;
    }
 
    if (location > shader_program->NumUniformStorage - 1 ||
@@ -135,10 +135,10 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
       return;
    }
 
-   instr->sampler_index +=
+   instr->texture_index +=
       shader_program->UniformStorage[location].opaque[stage].index;
 
-   instr->sampler = NULL;
+   instr->texture = NULL;
 }
 
 typedef struct {

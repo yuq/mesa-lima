@@ -445,8 +445,8 @@ validate_tex_instr(nir_tex_instr *instr, validate_state *state)
       validate_src(&instr->src[i].src, state);
    }
 
-   if (instr->sampler != NULL)
-      validate_deref_var(instr, instr->sampler, state);
+   if (instr->texture != NULL)
+      validate_deref_var(instr, instr->texture, state);
 
    validate_dest(&instr->dest, state);
 }

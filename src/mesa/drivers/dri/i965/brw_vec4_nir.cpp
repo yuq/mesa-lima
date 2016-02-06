@@ -1639,8 +1639,8 @@ glsl_type_for_nir_alu_type(nir_alu_type alu_type,
 void
 vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 {
-   unsigned sampler = instr->sampler_index;
-   src_reg sampler_reg = brw_imm_ud(sampler);
+   unsigned texture = instr->texture_index;
+   src_reg texture_reg = brw_imm_ud(texture);
    src_reg coordinate;
    const glsl_type *coord_type = NULL;
    src_reg shadow_comparitor;
@@ -1715,13 +1715,13 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          offset_value = get_nir_src(instr->src[i].src, BRW_REGISTER_TYPE_D, 2);
          break;
 
-      case nir_tex_src_sampler_offset: {
-         /* The highest sampler which may be used by this operation is
+      case nir_tex_src_texture_offset: {
+         /* The highest texture which may be used by this operation is
           * the last element of the array. Mark it here, because the generator
           * doesn't have enough information to determine the bound.
           */
-         uint32_t array_size = instr->sampler_array_size;
-         uint32_t max_used = sampler + array_size - 1;
+         uint32_t array_size = instr->texture_array_size;
+         uint32_t max_used = texture + array_size - 1;
          if (instr->op == nir_texop_tg4) {
             max_used += prog_data->base.binding_table.gather_texture_start;
          } else {
@@ -1733,8 +1733,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          /* Emit code to evaluate the actual indexing expression */
          src_reg src = get_nir_src(instr->src[i].src, 1);
          src_reg temp(this, glsl_type::uint_type);
-         emit(ADD(dst_reg(temp), src, brw_imm_ud(sampler)));
-         sampler_reg = emit_uniformize(temp);
+         emit(ADD(dst_reg(temp), src, brw_imm_ud(texture)));
+         texture_reg = emit_uniformize(temp);
          break;
       }
 
@@ -1753,8 +1753,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
        instr->op == nir_texop_samples_identical) {
       assert(coord_type != NULL);
       if (devinfo->gen >= 7 &&
-          key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
-         mcs = emit_mcs_fetch(coord_type, coordinate, sampler_reg);
+          key_tex->compressed_multisample_layout_mask & (1 << texture)) {
+         mcs = emit_mcs_fetch(coord_type, coordinate, texture_reg);
       } else {
          mcs = brw_imm_ud(0u);
       }
@@ -1771,7 +1771,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
    /* Stuff the channel select bits in the top of the texture offset */
    if (instr->op == nir_texop_tg4) {
       if (instr->component == 1 &&
-          (key_tex->gather_channel_quirk_mask & (1 << sampler))) {
+          (key_tex->gather_channel_quirk_mask & (1 << texture))) {
          /* gather4 sampler is broken for green channel on RG32F --
           * we must ask for blue instead.
           */
@@ -1792,7 +1792,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
                 shadow_comparitor,
                 lod, lod2, sample_index,
                 constant_offset, offset_value,
-                mcs, is_cube_array, sampler, sampler_reg);
+                mcs, is_cube_array, texture, texture_reg);
 }
 
 void

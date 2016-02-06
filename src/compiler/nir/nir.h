@@ -965,7 +965,7 @@ typedef enum {
    nir_tex_src_ms_index, /* MSAA sample index */
    nir_tex_src_ddx,
    nir_tex_src_ddy,
-   nir_tex_src_sampler_offset, /* < dynamically uniform indirect offset */
+   nir_tex_src_texture_offset, /* < dynamically uniform indirect offset */
    nir_num_tex_src_types
 } nir_tex_src_type;
 
@@ -1015,17 +1015,17 @@ typedef struct {
    /* gather component selector */
    unsigned component : 2;
 
-   /** The sampler index
+   /** The texture index
     *
-    * If this texture instruction has a nir_tex_src_sampler_offset source,
-    * then the sampler index is given by sampler_index + sampler_offset.
+    * If this texture instruction has a nir_tex_src_texture_offset source,
+    * then the texture index is given by texture_index + texture_offset.
     */
-   unsigned sampler_index;
+   unsigned texture_index;
 
-   /** The size of the sampler array or 0 if it's not an array */
-   unsigned sampler_array_size;
+   /** The size of the texture array or 0 if it's not an array */
+   unsigned texture_array_size;
 
-   nir_deref_var *sampler; /* if this is NULL, use sampler_index instead */
+   nir_deref_var *texture; /* if this is NULL, use texture_index instead */
 } nir_tex_instr;
 
 static inline unsigned
@@ -2091,15 +2091,15 @@ typedef struct nir_lower_tex_options {
    unsigned saturate_t;
    unsigned saturate_r;
 
-   /* Bitmask of samplers that need swizzling.
+   /* Bitmask of textures that need swizzling.
     *
-    * If (swizzle_result & (1 << sampler_index)), then the swizzle in
-    * swizzles[sampler_index] is applied to the result of the texturing
+    * If (swizzle_result & (1 << texture_index)), then the swizzle in
+    * swizzles[texture_index] is applied to the result of the texturing
     * operation.
     */
    unsigned swizzle_result;
 
-   /* A swizzle for each sampler.  Values 0-3 represent x, y, z, or w swizzles
+   /* A swizzle for each texture.  Values 0-3 represent x, y, z, or w swizzles
     * while 4 and 5 represent 0 and 1 respectively.
     */
    uint8_t swizzles[32][4];
