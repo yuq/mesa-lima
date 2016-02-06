@@ -402,6 +402,7 @@ public:
    bool native_integers;
    bool have_sqrt;
    bool have_fma;
+   bool use_shared_memory;
 
    variable_storage *find_variable_storage(ir_variable *var);
 
@@ -4083,6 +4084,7 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    options = NULL;
    have_sqrt = false;
    have_fma = false;
+   use_shared_memory = false;
 }
 
 glsl_to_tgsi_visitor::~glsl_to_tgsi_visitor()
@@ -4128,6 +4130,8 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
                 inst->op == TGSI_OPCODE_STORE)) {
          if (inst->buffer.file == PROGRAM_BUFFER)
             v->buffers_used |= 1 << inst->buffer.index;
+         if (inst->buffer.file == PROGRAM_MEMORY)
+            v->use_shared_memory = true;
       }
    }
    prog->SamplersUsed = v->samplers_used;
@@ -4911,6 +4915,7 @@ struct st_translate {
    struct ureg_src samplers[PIPE_MAX_SAMPLERS];
    struct ureg_src buffers[PIPE_MAX_SHADER_BUFFERS];
    struct ureg_src systemValues[SYSTEM_VALUE_MAX];
+   struct ureg_src shared_memory;
    struct tgsi_texture_offset tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
    unsigned *array_sizes;
    struct array_decl *input_arrays;
@@ -5399,7 +5404,10 @@ compile_tgsi_instruction(struct st_translate *t,
       for (i = num_src - 1; i >= 0; i--)
          src[i + 1] = src[i];
       num_src++;
-      src[0] = t->buffers[inst->buffer.index];
+      if (inst->buffer.file == PROGRAM_MEMORY)
+         src[0] = t->shared_memory;
+      else
+         src[0] = t->buffers[inst->buffer.index];
       if (inst->buffer.reladdr)
          src[0] = ureg_src_indirect(src[0], ureg_src(t->address[2]));
       assert(src[0].File != TGSI_FILE_NULL);
@@ -5408,7 +5416,11 @@ compile_tgsi_instruction(struct st_translate *t,
       break;
 
    case TGSI_OPCODE_STORE:
-      dst[0] = ureg_writemask(ureg_dst(t->buffers[inst->buffer.index]), inst->dst[0].writemask);
+      if (inst->buffer.file == PROGRAM_MEMORY)
+         dst[0] = ureg_dst(t->shared_memory);
+      else
+         dst[0] = ureg_dst(t->buffers[inst->buffer.index]);
+      dst[0] = ureg_writemask(dst[0], inst->dst[0].writemask);
       if (inst->buffer.reladdr)
          dst[0] = ureg_dst_indirect(dst[0], ureg_src(t->address[2]));
       assert(dst[0].File != TGSI_FILE_NULL);
@@ -6063,7 +6075,8 @@ st_translate_program(
       }
    }
 
-
+   if (program->use_shared_memory)
+      t->shared_memory = ureg_DECL_shared_memory(ureg);
 
    /* Emit each instruction in turn:
     */
