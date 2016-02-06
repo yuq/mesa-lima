@@ -1109,7 +1109,7 @@ emit_intrinsic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	default:
 		compile_error(ctx, "Unhandled store deref type: %u\n",
 				darr->deref_array_type);
-		break;
+		return;
 	}
 
 	for (int i = 0; i < intr->num_components; i++) {
