@@ -2125,6 +2125,7 @@ link_intrastage_shaders(void *mem_ctx,
 
       if (ok) {
          memcpy(linking_shaders, shader_list, num_shaders * sizeof(gl_shader *));
+         _mesa_glsl_initialize_builtin_functions();
          linking_shaders[num_shaders] = _mesa_glsl_get_builtin_function_shader();
 
          ok = link_function_calls(prog, linked, linking_shaders, num_shaders + 1);
