@@ -861,38 +861,38 @@ _mesa_readpixels(struct gl_context *ctx,
    if (ctx->NewState)
       _mesa_update_state(ctx);
 
-      pixels = _mesa_map_pbo_dest(ctx, packing, pixels);
+   pixels = _mesa_map_pbo_dest(ctx, packing, pixels);
 
-      if (pixels) {
-         /* Try memcpy first. */
-         if (readpixels_memcpy(ctx, x, y, width, height, format, type,
-                               pixels, packing)) {
-            _mesa_unmap_pbo_dest(ctx, packing);
-            return;
-         }
-
-         /* Otherwise take the slow path. */
-         switch (format) {
-         case GL_STENCIL_INDEX:
-            read_stencil_pixels(ctx, x, y, width, height, type, pixels,
-                                packing);
-            break;
-         case GL_DEPTH_COMPONENT:
-            read_depth_pixels(ctx, x, y, width, height, type, pixels,
-                              packing);
-            break;
-         case GL_DEPTH_STENCIL_EXT:
-            read_depth_stencil_pixels(ctx, x, y, width, height, type, pixels,
-                                      packing);
-            break;
-         default:
-            /* all other formats should be color formats */
-            read_rgba_pixels(ctx, x, y, width, height, format, type, pixels,
-                             packing);
-         }
-
+   if (pixels) {
+      /* Try memcpy first. */
+      if (readpixels_memcpy(ctx, x, y, width, height, format, type,
+                            pixels, packing)) {
          _mesa_unmap_pbo_dest(ctx, packing);
+         return;
       }
+
+      /* Otherwise take the slow path. */
+      switch (format) {
+      case GL_STENCIL_INDEX:
+         read_stencil_pixels(ctx, x, y, width, height, type, pixels,
+                             packing);
+         break;
+      case GL_DEPTH_COMPONENT:
+         read_depth_pixels(ctx, x, y, width, height, type, pixels,
+                           packing);
+         break;
+      case GL_DEPTH_STENCIL_EXT:
+         read_depth_stencil_pixels(ctx, x, y, width, height, type, pixels,
+                                   packing);
+         break;
+      default:
+         /* all other formats should be color formats */
+         read_rgba_pixels(ctx, x, y, width, height, format, type, pixels,
+                          packing);
+      }
+
+      _mesa_unmap_pbo_dest(ctx, packing);
+   }
 }
 
 
