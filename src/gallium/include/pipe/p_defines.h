@@ -349,6 +349,12 @@ enum pipe_flush_flags
 #define PIPE_CONTEXT_DEBUG             (1 << 1)
 
 /**
+ * Whether out-of-bounds shader loads must return zero and out-of-bounds
+ * shader stores must be dropped.
+ */
+#define PIPE_CONTEXT_ROBUST_BUFFER_ACCESS (1 << 2)
+
+/**
  * Flags for pipe_context::memory_barrier.
  */
 #define PIPE_BARRIER_MAPPED_BUFFER     (1 << 0)

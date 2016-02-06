@@ -636,6 +636,7 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
    struct pipe_context *pipe;
    struct gl_config mode;
    gl_api api;
+   unsigned ctx_flags = 0;
 
    if (!(stapi->profile_mask & (1 << attribs->profile)))
       return NULL;
@@ -659,7 +660,10 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
       break;
    }
 
-   pipe = smapi->screen->context_create(smapi->screen, NULL, 0);
+   if (attribs->flags & ST_CONTEXT_FLAG_ROBUST_ACCESS)
+      ctx_flags |= PIPE_CONTEXT_ROBUST_BUFFER_ACCESS;
+
+   pipe = smapi->screen->context_create(smapi->screen, NULL, ctx_flags);
    if (!pipe) {
       *error = ST_CONTEXT_ERROR_NO_MEMORY;
       return NULL;
