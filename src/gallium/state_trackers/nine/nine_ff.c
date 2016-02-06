@@ -563,7 +563,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         struct ureg_src cPsz2 = ureg_DECL_constant(ureg, 27);
 
         ureg_DP3(ureg, tmp_x, ureg_src(r[1]), ureg_src(r[1]));
-        ureg_SQRT(ureg, tmp_y, _X(tmp));
+        ureg_RSQ(ureg, tmp_y, _X(tmp));
+        ureg_MUL(ureg, tmp_y, _Y(tmp), _X(tmp));
+        ureg_CMP(ureg, tmp_y, ureg_negate(_Y(tmp)), _Y(tmp), ureg_imm1f(ureg, 0.0f));
         ureg_MAD(ureg, tmp_x, _Y(tmp), _YYYY(cPsz2), _XXXX(cPsz2));
         ureg_MAD(ureg, tmp_x, _Y(tmp), _X(tmp), _WWWW(cPsz1));
         ureg_RCP(ureg, tmp_x, ureg_src(tmp));
