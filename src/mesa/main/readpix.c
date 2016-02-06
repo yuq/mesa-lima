@@ -993,6 +993,7 @@ _mesa_ReadnPixelsARB( GLint x, GLint y, GLsizei width, GLsizei height,
 {
    GLenum err = GL_NO_ERROR;
    struct gl_renderbuffer *rb;
+   struct gl_pixelstore_attrib clippedPacking;
 
    GET_CURRENT_CONTEXT(ctx);
 
@@ -1094,7 +1095,9 @@ _mesa_ReadnPixelsARB( GLint x, GLint y, GLsizei width, GLsizei height,
       }
    }
 
-   if (width == 0 || height == 0)
+   /* Do all needed clipping here, so that we can forget about it later */
+   clippedPacking = ctx->Pack;
+   if (!_mesa_clip_readpixels(ctx, &x, &y, &width, &height, &clippedPacking))
       return; /* nothing to do */
 
    if (!_mesa_validate_pbo_access(2, &ctx->Pack, width, height, 1,
@@ -1118,7 +1121,7 @@ _mesa_ReadnPixelsARB( GLint x, GLint y, GLsizei width, GLsizei height,
    }
 
    ctx->Driver.ReadPixels(ctx, x, y, width, height,
-			  format, type, &ctx->Pack, pixels);
+                          format, type, &clippedPacking, pixels);
 }
 
 void GLAPIENTRY
