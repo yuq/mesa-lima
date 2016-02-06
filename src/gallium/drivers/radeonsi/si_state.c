@@ -2835,85 +2835,31 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 }
 
 /**
- * Create a sampler view.
- *
- * @param ctx		context
- * @param texture	texture
- * @param state		sampler view template
- * @param width0	width0 override (for compressed textures as int)
- * @param height0	height0 override (for compressed textures as int)
- * @param force_level   set the base address to the level (for compressed textures)
+ * Build the sampler view descriptor for a texture.
  */
-struct pipe_sampler_view *
-si_create_sampler_view_custom(struct pipe_context *ctx,
-			      struct pipe_resource *texture,
-			      const struct pipe_sampler_view *state,
-			      unsigned width0, unsigned height0,
-			      unsigned force_level)
+static void
+si_make_texture_descriptor(struct si_screen *screen,
+			   struct r600_texture *tex,
+			   enum pipe_texture_target target,
+			   enum pipe_format pipe_format,
+			   const unsigned char state_swizzle[4],
+			   unsigned base_level, unsigned first_level, unsigned last_level,
+			   unsigned first_layer, unsigned last_layer,
+			   unsigned width, unsigned height, unsigned depth,
+			   uint32_t *state,
+			   uint32_t *fmask_state)
 {
-	struct si_context *sctx = (struct si_context*)ctx;
-	struct si_sampler_view *view = CALLOC_STRUCT(si_sampler_view);
-	struct r600_texture *tmp = (struct r600_texture*)texture;
+	struct pipe_resource *res = &tex->resource.b.b;
+	const struct radeon_surf_level *surflevel = tex->surface.level;
 	const struct util_format_description *desc;
-	unsigned format, num_format, base_level, first_level, last_level;
-	uint32_t pitch = 0;
-	unsigned char state_swizzle[4], swizzle[4];
-	unsigned height, depth, width;
-	enum pipe_format pipe_format = state->format;
-	struct radeon_surf_level *surflevel;
+	unsigned char swizzle[4];
 	int first_non_void;
+	unsigned num_format, data_format;
+	uint32_t pitch;
 	uint64_t va;
-	unsigned last_layer = state->u.tex.last_layer;
-
-	if (!view)
-		return NULL;
-
-	/* initialize base object */
-	view->base = *state;
-	view->base.texture = NULL;
-	view->base.reference.count = 1;
-	view->base.context = ctx;
-
-	/* NULL resource, obey swizzle (only ZERO and ONE make sense). */
-	if (!texture) {
-		view->state[3] = S_008F1C_DST_SEL_X(si_map_swizzle(state->swizzle_r)) |
-				 S_008F1C_DST_SEL_Y(si_map_swizzle(state->swizzle_g)) |
-				 S_008F1C_DST_SEL_Z(si_map_swizzle(state->swizzle_b)) |
-				 S_008F1C_DST_SEL_W(si_map_swizzle(state->swizzle_a)) |
-				 S_008F1C_TYPE(V_008F1C_SQ_RSRC_IMG_1D);
-		return &view->base;
-	}
-
-	pipe_resource_reference(&view->base.texture, texture);
-
-	if (state->format == PIPE_FORMAT_X24S8_UINT ||
-	    state->format == PIPE_FORMAT_S8X24_UINT ||
-	    state->format == PIPE_FORMAT_X32_S8X24_UINT ||
-	    state->format == PIPE_FORMAT_S8_UINT)
-		view->is_stencil_sampler = true;
-
-	/* Buffer resource. */
-	if (texture->target == PIPE_BUFFER) {
-		si_make_buffer_descriptor(sctx->screen,
-					  (struct r600_resource *)texture,
-					  state->format,
-					  state->u.buf.first_element,
-					  state->u.buf.last_element,
-					  view->state);
-
-		LIST_ADDTAIL(&view->list, &sctx->b.texture_buffers);
-		return &view->base;
-	}
-
-	state_swizzle[0] = state->swizzle_r;
-	state_swizzle[1] = state->swizzle_g;
-	state_swizzle[2] = state->swizzle_b;
-	state_swizzle[3] = state->swizzle_a;
-
-	surflevel = tmp->surface.level;
 
 	/* Texturing with separate depth and stencil. */
-	if (tmp->is_depth && !tmp->is_flushing_texture) {
+	if (tex->is_depth && !tex->is_flushing_texture) {
 		switch (pipe_format) {
 		case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
 			pipe_format = PIPE_FORMAT_Z32_FLOAT;
@@ -2927,7 +2873,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 		case PIPE_FORMAT_S8X24_UINT:
 		case PIPE_FORMAT_X32_S8X24_UINT:
 			pipe_format = PIPE_FORMAT_S8_UINT;
-			surflevel = tmp->surface.stencil_level;
+			surflevel = tex->surface.stencil_level;
 			break;
 		default:;
 		}
@@ -3021,10 +2967,167 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 		}
 	}
 
-	format = si_translate_texformat(ctx->screen, pipe_format, desc, first_non_void);
-	if (format == ~0) {
-		format = 0;
+	data_format = si_translate_texformat(&screen->b.b, pipe_format, desc, first_non_void);
+	if (data_format == ~0) {
+		data_format = 0;
 	}
+
+	if (res->target == PIPE_TEXTURE_1D_ARRAY) {
+	        height = 1;
+		depth = res->array_size;
+	} else if (res->target == PIPE_TEXTURE_2D_ARRAY) {
+		depth = res->array_size;
+	} else if (res->target == PIPE_TEXTURE_CUBE_ARRAY)
+		depth = res->array_size / 6;
+
+	pitch = surflevel[base_level].nblk_x * util_format_get_blockwidth(pipe_format);
+	va = tex->resource.gpu_address + surflevel[base_level].offset;
+
+	state[0] = va >> 8;
+	state[1] = (S_008F14_BASE_ADDRESS_HI(va >> 40) |
+		    S_008F14_DATA_FORMAT(data_format) |
+		    S_008F14_NUM_FORMAT(num_format));
+	state[2] = (S_008F18_WIDTH(width - 1) |
+		    S_008F18_HEIGHT(height - 1));
+	state[3] = (S_008F1C_DST_SEL_X(si_map_swizzle(swizzle[0])) |
+		    S_008F1C_DST_SEL_Y(si_map_swizzle(swizzle[1])) |
+		    S_008F1C_DST_SEL_Z(si_map_swizzle(swizzle[2])) |
+		    S_008F1C_DST_SEL_W(si_map_swizzle(swizzle[3])) |
+		    S_008F1C_BASE_LEVEL(res->nr_samples > 1 ?
+					0 : first_level) |
+		    S_008F1C_LAST_LEVEL(res->nr_samples > 1 ?
+					util_logbase2(res->nr_samples) :
+					last_level) |
+		    S_008F1C_TILING_INDEX(si_tile_mode_index(tex, base_level, false)) |
+		    S_008F1C_POW2_PAD(res->last_level > 0) |
+		    S_008F1C_TYPE(si_tex_dim(res->target, target, res->nr_samples)));
+	state[4] = (S_008F20_DEPTH(depth - 1) | S_008F20_PITCH(pitch - 1));
+	state[5] = (S_008F24_BASE_ARRAY(first_layer) |
+		    S_008F24_LAST_ARRAY(last_layer));
+
+	if (tex->dcc_offset) {
+		unsigned swap = r600_translate_colorswap(pipe_format);
+
+		state[6] = S_008F28_COMPRESSION_EN(1) | S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
+		state[7] = (tex->resource.gpu_address +
+			    tex->dcc_offset +
+			    surflevel[base_level].dcc_offset) >> 8;
+	} else {
+		state[6] = 0;
+		state[7] = 0;
+	}
+
+	/* Initialize the sampler view for FMASK. */
+	if (tex->fmask.size) {
+		uint32_t fmask_format;
+
+		va = tex->resource.gpu_address + tex->fmask.offset;
+
+		switch (res->nr_samples) {
+		case 2:
+			fmask_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S2_F2;
+			break;
+		case 4:
+			fmask_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S4_F4;
+			break;
+		case 8:
+			fmask_format = V_008F14_IMG_DATA_FORMAT_FMASK32_S8_F8;
+			break;
+		default:
+			assert(0);
+			fmask_format = V_008F14_IMG_DATA_FORMAT_INVALID;
+		}
+
+		fmask_state[0] = va >> 8;
+		fmask_state[1] = S_008F14_BASE_ADDRESS_HI(va >> 40) |
+				 S_008F14_DATA_FORMAT(fmask_format) |
+				 S_008F14_NUM_FORMAT(V_008F14_IMG_NUM_FORMAT_UINT);
+		fmask_state[2] = S_008F18_WIDTH(width - 1) |
+				 S_008F18_HEIGHT(height - 1);
+		fmask_state[3] = S_008F1C_DST_SEL_X(V_008F1C_SQ_SEL_X) |
+				 S_008F1C_DST_SEL_Y(V_008F1C_SQ_SEL_X) |
+				 S_008F1C_DST_SEL_Z(V_008F1C_SQ_SEL_X) |
+				 S_008F1C_DST_SEL_W(V_008F1C_SQ_SEL_X) |
+				 S_008F1C_TILING_INDEX(tex->fmask.tile_mode_index) |
+				 S_008F1C_TYPE(si_tex_dim(res->target, target, 0));
+		fmask_state[4] = S_008F20_DEPTH(depth - 1) |
+				 S_008F20_PITCH(tex->fmask.pitch_in_pixels - 1);
+		fmask_state[5] = S_008F24_BASE_ARRAY(first_layer) |
+				 S_008F24_LAST_ARRAY(last_layer);
+		fmask_state[6] = 0;
+		fmask_state[7] = 0;
+	}
+}
+
+/**
+ * Create a sampler view.
+ *
+ * @param ctx		context
+ * @param texture	texture
+ * @param state		sampler view template
+ * @param width0	width0 override (for compressed textures as int)
+ * @param height0	height0 override (for compressed textures as int)
+ * @param force_level   set the base address to the level (for compressed textures)
+ */
+struct pipe_sampler_view *
+si_create_sampler_view_custom(struct pipe_context *ctx,
+			      struct pipe_resource *texture,
+			      const struct pipe_sampler_view *state,
+			      unsigned width0, unsigned height0,
+			      unsigned force_level)
+{
+	struct si_context *sctx = (struct si_context*)ctx;
+	struct si_sampler_view *view = CALLOC_STRUCT(si_sampler_view);
+	struct r600_texture *tmp = (struct r600_texture*)texture;
+	unsigned base_level, first_level, last_level;
+	unsigned char state_swizzle[4];
+	unsigned height, depth, width;
+	unsigned last_layer = state->u.tex.last_layer;
+
+	if (!view)
+		return NULL;
+
+	/* initialize base object */
+	view->base = *state;
+	view->base.texture = NULL;
+	view->base.reference.count = 1;
+	view->base.context = ctx;
+
+	/* NULL resource, obey swizzle (only ZERO and ONE make sense). */
+	if (!texture) {
+		view->state[3] = S_008F1C_DST_SEL_X(si_map_swizzle(state->swizzle_r)) |
+				 S_008F1C_DST_SEL_Y(si_map_swizzle(state->swizzle_g)) |
+				 S_008F1C_DST_SEL_Z(si_map_swizzle(state->swizzle_b)) |
+				 S_008F1C_DST_SEL_W(si_map_swizzle(state->swizzle_a)) |
+				 S_008F1C_TYPE(V_008F1C_SQ_RSRC_IMG_1D);
+		return &view->base;
+	}
+
+	pipe_resource_reference(&view->base.texture, texture);
+
+	if (state->format == PIPE_FORMAT_X24S8_UINT ||
+	    state->format == PIPE_FORMAT_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_X32_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_S8_UINT)
+		view->is_stencil_sampler = true;
+
+	/* Buffer resource. */
+	if (texture->target == PIPE_BUFFER) {
+		si_make_buffer_descriptor(sctx->screen,
+					  (struct r600_resource *)texture,
+					  state->format,
+					  state->u.buf.first_element,
+					  state->u.buf.last_element,
+					  view->state);
+
+		LIST_ADDTAIL(&view->list, &sctx->b.texture_buffers);
+		return &view->base;
+	}
+
+	state_swizzle[0] = state->swizzle_r;
+	state_swizzle[1] = state->swizzle_g;
+	state_swizzle[2] = state->swizzle_b;
+	state_swizzle[3] = state->swizzle_a;
 
 	base_level = 0;
 	first_level = state->u.tex.first_level;
@@ -3044,16 +3147,6 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 		depth = u_minify(depth, force_level);
 	}
 
-	pitch = surflevel[base_level].nblk_x * util_format_get_blockwidth(pipe_format);
-
-	if (texture->target == PIPE_TEXTURE_1D_ARRAY) {
-	        height = 1;
-		depth = texture->array_size;
-	} else if (texture->target == PIPE_TEXTURE_2D_ARRAY) {
-		depth = texture->array_size;
-	} else if (texture->target == PIPE_TEXTURE_CUBE_ARRAY)
-		depth = texture->array_size / 6;
-
 	/* This is not needed if state trackers set last_layer correctly. */
 	if (state->target == PIPE_TEXTURE_1D ||
 	    state->target == PIPE_TEXTURE_2D ||
@@ -3061,83 +3154,12 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	    state->target == PIPE_TEXTURE_CUBE)
 		last_layer = state->u.tex.first_layer;
 
-	va = tmp->resource.gpu_address + surflevel[base_level].offset;
-
-	view->state[0] = va >> 8;
-	view->state[1] = (S_008F14_BASE_ADDRESS_HI(va >> 40) |
-			  S_008F14_DATA_FORMAT(format) |
-			  S_008F14_NUM_FORMAT(num_format));
-	view->state[2] = (S_008F18_WIDTH(width - 1) |
-			  S_008F18_HEIGHT(height - 1));
-	view->state[3] = (S_008F1C_DST_SEL_X(si_map_swizzle(swizzle[0])) |
-			  S_008F1C_DST_SEL_Y(si_map_swizzle(swizzle[1])) |
-			  S_008F1C_DST_SEL_Z(si_map_swizzle(swizzle[2])) |
-			  S_008F1C_DST_SEL_W(si_map_swizzle(swizzle[3])) |
-			  S_008F1C_BASE_LEVEL(texture->nr_samples > 1 ?
-						      0 : first_level) |
-			  S_008F1C_LAST_LEVEL(texture->nr_samples > 1 ?
-						      util_logbase2(texture->nr_samples) :
-						      last_level) |
-			  S_008F1C_TILING_INDEX(si_tile_mode_index(tmp, base_level, false)) |
-			  S_008F1C_POW2_PAD(texture->last_level > 0) |
-			  S_008F1C_TYPE(si_tex_dim(texture->target, state->target,
-						   texture->nr_samples)));
-	view->state[4] = (S_008F20_DEPTH(depth - 1) | S_008F20_PITCH(pitch - 1));
-	view->state[5] = (S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
-			  S_008F24_LAST_ARRAY(last_layer));
-
-	if (tmp->dcc_offset) {
-		unsigned swap = r600_translate_colorswap(pipe_format);
-
-		view->state[6] = S_008F28_COMPRESSION_EN(1) | S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
-		view->state[7] = (tmp->resource.gpu_address +
-				  tmp->dcc_offset +
-				  surflevel[base_level].dcc_offset) >> 8;
-	} else {
-		view->state[6] = 0;
-		view->state[7] = 0;
-	}
-
-	/* Initialize the sampler view for FMASK. */
-	if (tmp->fmask.size) {
-		uint64_t va = tmp->resource.gpu_address + tmp->fmask.offset;
-		uint32_t fmask_format;
-
-		switch (texture->nr_samples) {
-		case 2:
-			fmask_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S2_F2;
-			break;
-		case 4:
-			fmask_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S4_F4;
-			break;
-		case 8:
-			fmask_format = V_008F14_IMG_DATA_FORMAT_FMASK32_S8_F8;
-			break;
-		default:
-			assert(0);
-			fmask_format = V_008F14_IMG_DATA_FORMAT_INVALID;
-		}
-
-		view->fmask_state[0] = va >> 8;
-		view->fmask_state[1] = S_008F14_BASE_ADDRESS_HI(va >> 40) |
-				       S_008F14_DATA_FORMAT(fmask_format) |
-				       S_008F14_NUM_FORMAT(V_008F14_IMG_NUM_FORMAT_UINT);
-		view->fmask_state[2] = S_008F18_WIDTH(width - 1) |
-				       S_008F18_HEIGHT(height - 1);
-		view->fmask_state[3] = S_008F1C_DST_SEL_X(V_008F1C_SQ_SEL_X) |
-				       S_008F1C_DST_SEL_Y(V_008F1C_SQ_SEL_X) |
-				       S_008F1C_DST_SEL_Z(V_008F1C_SQ_SEL_X) |
-				       S_008F1C_DST_SEL_W(V_008F1C_SQ_SEL_X) |
-				       S_008F1C_TILING_INDEX(tmp->fmask.tile_mode_index) |
-				       S_008F1C_TYPE(si_tex_dim(texture->target,
-								state->target, 0));
-		view->fmask_state[4] = S_008F20_DEPTH(depth - 1) |
-				       S_008F20_PITCH(tmp->fmask.pitch_in_pixels - 1);
-		view->fmask_state[5] = S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
-				       S_008F24_LAST_ARRAY(last_layer);
-		view->fmask_state[6] = 0;
-		view->fmask_state[7] = 0;
-	}
+	si_make_texture_descriptor(sctx->screen, tmp, state->target,
+				   state->format, state_swizzle,
+				   base_level, first_level, last_level,
+				   state->u.tex.first_layer, last_layer,
+				   width, height, depth,
+				   view->state, view->fmask_state);
 
 	return &view->base;
 }
