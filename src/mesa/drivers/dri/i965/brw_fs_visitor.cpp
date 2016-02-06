@@ -82,10 +82,13 @@ fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
                            const fs_reg &sampler)
 {
    const fs_reg dest = vgrf(glsl_type::uvec4_type);
-   const fs_reg srcs[] = {
-      coordinate, fs_reg(), fs_reg(), fs_reg(), fs_reg(), fs_reg(),
-      sampler, fs_reg(), brw_imm_ud(components), brw_imm_d(0)
-   };
+
+   fs_reg srcs[TEX_LOGICAL_NUM_SRCS];
+   srcs[TEX_LOGICAL_SRC_COORDINATE] = coordinate;
+   srcs[TEX_LOGICAL_SRC_SAMPLER] = sampler;
+   srcs[TEX_LOGICAL_SRC_COORD_COMPONENTS] = brw_imm_d(components);
+   srcs[TEX_LOGICAL_SRC_GRAD_COMPONENTS] = brw_imm_d(0);
+
    fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS_LOGICAL, dest, srcs,
                             ARRAY_SIZE(srcs));
 
@@ -145,13 +148,20 @@ fs_visitor::emit_texture(ir_texture_opcode op,
     * samples, so don't worry about them.
     */
    fs_reg dst = vgrf(glsl_type::get_instance(dest_type->base_type, 4, 1));
-   const fs_reg srcs[] = {
-      coordinate, shadow_c, lod, lod2,
-      sample_index, mcs, sampler_reg, offset_value,
-      brw_imm_d(coord_components), brw_imm_d(grad_components)
-   };
-   enum opcode opcode;
 
+   fs_reg srcs[TEX_LOGICAL_NUM_SRCS];
+   srcs[TEX_LOGICAL_SRC_COORDINATE] = coordinate;
+   srcs[TEX_LOGICAL_SRC_SHADOW_C] = shadow_c;
+   srcs[TEX_LOGICAL_SRC_LOD] = lod;
+   srcs[TEX_LOGICAL_SRC_LOD2] = lod2;
+   srcs[TEX_LOGICAL_SRC_SAMPLE_INDEX] = sample_index;
+   srcs[TEX_LOGICAL_SRC_MCS] = mcs;
+   srcs[TEX_LOGICAL_SRC_SAMPLER] = sampler_reg;
+   srcs[TEX_LOGICAL_SRC_OFFSET_VALUE] = offset_value;
+   srcs[TEX_LOGICAL_SRC_COORD_COMPONENTS] = brw_imm_d(coord_components);
+   srcs[TEX_LOGICAL_SRC_GRAD_COMPONENTS] = brw_imm_d(grad_components);
+
+   enum opcode opcode;
    switch (op) {
    case ir_tex:
       opcode = SHADER_OPCODE_TEX_LOGICAL;

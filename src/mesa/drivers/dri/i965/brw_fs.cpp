@@ -739,18 +739,20 @@ fs_inst::components_read(unsigned i) const
    case SHADER_OPCODE_LOD_LOGICAL:
    case SHADER_OPCODE_TG4_LOGICAL:
    case SHADER_OPCODE_TG4_OFFSET_LOGICAL:
-      assert(src[8].file == IMM && src[9].file == IMM);
+      assert(src[TEX_LOGICAL_SRC_COORD_COMPONENTS].file == IMM &&
+             src[TEX_LOGICAL_SRC_GRAD_COMPONENTS].file == IMM);
       /* Texture coordinates. */
-      if (i == 0)
-         return src[8].ud;
+      if (i == TEX_LOGICAL_SRC_COORDINATE)
+         return src[TEX_LOGICAL_SRC_COORD_COMPONENTS].ud;
       /* Texture derivatives. */
-      else if ((i == 2 || i == 3) && opcode == SHADER_OPCODE_TXD_LOGICAL)
-         return src[9].ud;
+      else if ((i == TEX_LOGICAL_SRC_LOD || i == TEX_LOGICAL_SRC_LOD2) &&
+               opcode == SHADER_OPCODE_TXD_LOGICAL)
+         return src[TEX_LOGICAL_SRC_GRAD_COMPONENTS].ud;
       /* Texture offset. */
-      else if (i == 7)
+      else if (i == TEX_LOGICAL_SRC_OFFSET_VALUE)
          return 2;
       /* MCS */
-      else if (i == 5 && opcode == SHADER_OPCODE_TXF_CMS_W_LOGICAL)
+      else if (i == TEX_LOGICAL_SRC_MCS && opcode == SHADER_OPCODE_TXF_CMS_W_LOGICAL)
          return 2;
       else
          return 1;
@@ -4080,17 +4082,18 @@ static void
 lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
 {
    const brw_device_info *devinfo = bld.shader->devinfo;
-   const fs_reg &coordinate = inst->src[0];
-   const fs_reg &shadow_c = inst->src[1];
-   const fs_reg &lod = inst->src[2];
-   const fs_reg &lod2 = inst->src[3];
-   const fs_reg &sample_index = inst->src[4];
-   const fs_reg &mcs = inst->src[5];
-   const fs_reg &sampler = inst->src[6];
-   const fs_reg &offset_value = inst->src[7];
-   assert(inst->src[8].file == IMM && inst->src[9].file == IMM);
-   const unsigned coord_components = inst->src[8].ud;
-   const unsigned grad_components = inst->src[9].ud;
+   const fs_reg &coordinate = inst->src[TEX_LOGICAL_SRC_COORDINATE];
+   const fs_reg &shadow_c = inst->src[TEX_LOGICAL_SRC_SHADOW_C];
+   const fs_reg &lod = inst->src[TEX_LOGICAL_SRC_LOD];
+   const fs_reg &lod2 = inst->src[TEX_LOGICAL_SRC_LOD2];
+   const fs_reg &sample_index = inst->src[TEX_LOGICAL_SRC_SAMPLE_INDEX];
+   const fs_reg &mcs = inst->src[TEX_LOGICAL_SRC_MCS];
+   const fs_reg &sampler = inst->src[TEX_LOGICAL_SRC_SAMPLER];
+   const fs_reg &offset_value = inst->src[TEX_LOGICAL_SRC_OFFSET_VALUE];
+   assert(inst->src[TEX_LOGICAL_SRC_COORD_COMPONENTS].file == IMM);
+   const unsigned coord_components = inst->src[TEX_LOGICAL_SRC_COORD_COMPONENTS].ud;
+   assert(inst->src[TEX_LOGICAL_SRC_GRAD_COMPONENTS].file == IMM);
+   const unsigned grad_components = inst->src[TEX_LOGICAL_SRC_GRAD_COMPONENTS].ud;
 
    if (devinfo->gen >= 7) {
       lower_sampler_logical_send_gen7(bld, inst, op, coordinate,
@@ -4384,7 +4387,7 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
 
    case SHADER_OPCODE_TG4_OFFSET_LOGICAL: {
       /* gather4_po_c is unsupported in SIMD16 mode. */
-      const fs_reg &shadow_c = inst->src[1];
+      const fs_reg &shadow_c = inst->src[TEX_LOGICAL_SRC_SHADOW_C];
       return (shadow_c.file != BAD_FILE ? 8 : inst->exec_size);
    }
    case SHADER_OPCODE_TXL_LOGICAL:
@@ -4393,7 +4396,7 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
        * Gen4-6 can't support TXL and TXB with shadow comparison in SIMD16
        * mode because the message exceeds the maximum length of 11.
        */
-      const fs_reg &shadow_c = inst->src[1];
+      const fs_reg &shadow_c = inst->src[TEX_LOGICAL_SRC_SHADOW_C];
       if (devinfo->gen == 4 && shadow_c.file == BAD_FILE)
          return 16;
       else if (devinfo->gen < 7 && shadow_c.file != BAD_FILE)
@@ -4416,7 +4419,8 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
        * circumstances it can end up with a message that is too long in SIMD16
        * mode.
        */
-      const unsigned coord_components = inst->src[8].ud;
+      const unsigned coord_components =
+         inst->src[TEX_LOGICAL_SRC_COORD_COMPONENTS].ud;
       /* First three arguments are the sample index and the two arguments for
        * the MCS data.
        */

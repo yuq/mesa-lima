@@ -968,19 +968,8 @@ enum opcode {
     *
     * LOGICAL opcodes are eventually translated to the matching non-LOGICAL
     * opcode but instead of taking a single payload blob they expect their
-    * arguments separately as individual sources:
-    *
-    * Source 0: [optional] Texture coordinates.
-    * Source 1: [optional] Shadow comparitor.
-    * Source 2: [optional] dPdx if the operation takes explicit derivatives,
-    *                      otherwise LOD value.
-    * Source 3: [optional] dPdy if the operation takes explicit derivatives.
-    * Source 4: [optional] Sample index.
-    * Source 5: [optional] MCS data.
-    * Source 6: [required] Texture sampler.
-    * Source 7: [optional] Texel offset.
-    * Source 8: [required] Number of coordinate components (as UD immediate).
-    * Source 9: [required] Number derivative components (as UD immediate).
+    * arguments separately as individual sources. The position/ordering of the
+    * arguments are defined by the enum tex_logical_srcs.
     */
    SHADER_OPCODE_TEX,
    SHADER_OPCODE_TEX_LOGICAL,
@@ -1402,6 +1391,31 @@ enum fb_write_logical_srcs {
    FB_WRITE_LOGICAL_SRC_SRC_STENCIL, /* gl_FragStencilRefARB */
    FB_WRITE_LOGICAL_SRC_OMASK,       /* Sample Mask (gl_SampleMask) */
    FB_WRITE_LOGICAL_SRC_COMPONENTS,  /* REQUIRED */
+};
+
+enum tex_logical_srcs {
+   /** Texture coordinates */
+   TEX_LOGICAL_SRC_COORDINATE,
+   /** Shadow comparitor */
+   TEX_LOGICAL_SRC_SHADOW_C,
+   /** dPdx if the operation takes explicit derivatives, otherwise LOD value */
+   TEX_LOGICAL_SRC_LOD,
+   /** dPdy if the operation takes explicit derivatives */
+   TEX_LOGICAL_SRC_LOD2,
+   /** Sample index */
+   TEX_LOGICAL_SRC_SAMPLE_INDEX,
+   /** MCS data */
+   TEX_LOGICAL_SRC_MCS,
+   /** REQUIRED: Texture sampler */
+   TEX_LOGICAL_SRC_SAMPLER,
+   /** Texel offset for gathers */
+   TEX_LOGICAL_SRC_OFFSET_VALUE,
+   /** REQUIRED: Number of coordinate components (as UD immediate) */
+   TEX_LOGICAL_SRC_COORD_COMPONENTS,
+   /** REQUIRED: Number of derivative components (as UD immediate) */
+   TEX_LOGICAL_SRC_GRAD_COMPONENTS,
+
+   TEX_LOGICAL_NUM_SRCS,
 };
 
 #ifdef __cplusplus
