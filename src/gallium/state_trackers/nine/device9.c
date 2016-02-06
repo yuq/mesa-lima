@@ -147,7 +147,9 @@ NineDevice9_ctor( struct NineDevice9 *This,
 
     if (FAILED(hr)) { return hr; }
 
+    list_inithead(&This->update_buffers);
     list_inithead(&This->update_textures);
+    list_inithead(&This->managed_buffers);
     list_inithead(&This->managed_textures);
 
     This->screen = pScreen;
@@ -563,10 +565,19 @@ HRESULT NINE_WINAPI
 NineDevice9_EvictManagedResources( struct NineDevice9 *This )
 {
     struct NineBaseTexture9 *tex;
+    struct NineBuffer9 *buf;
 
     DBG("This=%p\n", This);
     LIST_FOR_EACH_ENTRY(tex, &This->managed_textures, list2) {
         NineBaseTexture9_UnLoad(tex);
+    }
+    /* Vertex/index buffers don't take a lot of space and aren't accounted
+     * for d3d memory usage. Instead of actually freeing from memory,
+     * just mark the buffer dirty to trigger a re-upload later. We
+     * could just ignore, but some bad behaving apps could rely on it (if
+     * they write outside the locked regions typically). */
+    LIST_FOR_EACH_ENTRY(buf, &This->managed_buffers, managed.list2) {
+        NineBuffer9_SetDirty(buf);
     }
 
     return D3D_OK;

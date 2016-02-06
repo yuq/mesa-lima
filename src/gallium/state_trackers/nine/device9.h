@@ -68,7 +68,9 @@ struct NineDevice9
     struct nine_state *update; /* state to update (&state / &record->state) */
     struct nine_state state;   /* device state */
 
+    struct list_head update_buffers;
     struct list_head update_textures;
+    struct list_head managed_buffers;
     struct list_head managed_textures;
 
     boolean is_recording;
