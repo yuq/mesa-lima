@@ -541,7 +541,9 @@ ureg_memory_insn(struct ureg_program *ureg,
                  unsigned nr_dst,
                  const struct ureg_src *src,
                  unsigned nr_src,
-                 unsigned qualifier);
+                 unsigned qualifier,
+                 unsigned texture,
+                 unsigned format);
 
 /***********************************************************************
  * Internal instruction helpers, don't call these directly:
@@ -582,7 +584,9 @@ ureg_emit_texture_offset(struct ureg_program *ureg,
 void
 ureg_emit_memory(struct ureg_program *ureg,
                  unsigned insn_token,
-                 unsigned qualifier);
+                 unsigned qualifier,
+                 unsigned texture,
+                 unsigned format);
 
 void 
 ureg_emit_dst( struct ureg_program *ureg,

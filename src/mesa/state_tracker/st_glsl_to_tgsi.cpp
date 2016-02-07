@@ -5572,7 +5572,7 @@ compile_tgsi_instruction(struct st_translate *t,
 
    int num_dst;
    int num_src;
-   unsigned tex_target;
+   unsigned tex_target = 0;
 
    num_dst = num_inst_dst_regs(inst);
    num_src = num_inst_src_regs(inst);
@@ -5647,32 +5647,38 @@ compile_tgsi_instruction(struct st_translate *t,
       for (i = num_src - 1; i >= 0; i--)
          src[i + 1] = src[i];
       num_src++;
-      if (inst->buffer.file == PROGRAM_MEMORY)
+      if (inst->buffer.file == PROGRAM_MEMORY) {
          src[0] = t->shared_memory;
-      else if (inst->buffer.file == PROGRAM_BUFFER)
+      } else if (inst->buffer.file == PROGRAM_BUFFER) {
          src[0] = t->buffers[inst->buffer.index];
-      else
+      } else {
          src[0] = t->images[inst->buffer.index];
+         tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
+      }
       if (inst->buffer.reladdr)
          src[0] = ureg_src_indirect(src[0], ureg_src(t->address[2]));
       assert(src[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
-                       inst->buffer_access);
+                       inst->buffer_access,
+                       tex_target, inst->image_format);
       break;
 
    case TGSI_OPCODE_STORE:
-      if (inst->buffer.file == PROGRAM_MEMORY)
+      if (inst->buffer.file == PROGRAM_MEMORY) {
          dst[0] = ureg_dst(t->shared_memory);
-      else if (inst->buffer.file == PROGRAM_BUFFER)
+      } else if (inst->buffer.file == PROGRAM_BUFFER) {
          dst[0] = ureg_dst(t->buffers[inst->buffer.index]);
-      else
+      } else {
          dst[0] = ureg_dst(t->images[inst->buffer.index]);
+         tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
+      }
       dst[0] = ureg_writemask(dst[0], inst->dst[0].writemask);
       if (inst->buffer.reladdr)
          dst[0] = ureg_dst_indirect(dst[0], ureg_src(t->address[2]));
       assert(dst[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
-                       inst->buffer_access);
+                       inst->buffer_access,
+                       tex_target, inst->image_format);
       break;
 
    case TGSI_OPCODE_SCS:
