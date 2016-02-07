@@ -1280,6 +1280,33 @@ trace_context_clear_depth_stencil(struct pipe_context *_pipe,
 }
 
 static inline void
+trace_context_clear_texture(struct pipe_context *_pipe,
+                            struct pipe_resource *res,
+                            unsigned level,
+                            const struct pipe_box *box,
+                            const void *data)
+{
+   struct trace_context *tr_ctx = trace_context(_pipe);
+   struct pipe_context *pipe = tr_ctx->pipe;
+
+   res = trace_resource_unwrap(tr_ctx, res);
+
+   trace_dump_call_begin("pipe_context", "clear_texture");
+
+   trace_dump_arg(ptr, pipe);
+   trace_dump_arg(ptr, res);
+   trace_dump_arg(uint, level);
+   trace_dump_arg_begin("box");
+   trace_dump_box(box);
+   trace_dump_arg_end();
+   trace_dump_arg(ptr, data);
+
+   pipe->clear_texture(pipe, res, level, box, data);
+
+   trace_dump_call_end();
+}
+
+static inline void
 trace_context_flush(struct pipe_context *_pipe,
                     struct pipe_fence_handle **fence,
                     unsigned flags)
@@ -1704,6 +1731,7 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(clear);
    TR_CTX_INIT(clear_render_target);
    TR_CTX_INIT(clear_depth_stencil);
+   TR_CTX_INIT(clear_texture);
    TR_CTX_INIT(flush);
    TR_CTX_INIT(generate_mipmap);
    TR_CTX_INIT(texture_barrier);
