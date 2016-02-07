@@ -99,6 +99,7 @@ struct si_shader_context
 	LLVMValueRef sampler_views[SI_NUM_SAMPLERS];
 	LLVMValueRef sampler_states[SI_NUM_SAMPLERS];
 	LLVMValueRef fmasks[SI_NUM_USER_SAMPLERS];
+	LLVMValueRef images[SI_NUM_IMAGES];
 	LLVMValueRef so_buffers[4];
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring[4];
@@ -2705,6 +2706,109 @@ static bool tgsi_is_array_sampler(unsigned target)
 	       target == TGSI_TEXTURE_2D_ARRAY_MSAA;
 }
 
+static bool tgsi_is_array_image(unsigned target)
+{
+	return target == TGSI_TEXTURE_3D ||
+	       target == TGSI_TEXTURE_CUBE ||
+	       target == TGSI_TEXTURE_1D_ARRAY ||
+	       target == TGSI_TEXTURE_2D_ARRAY ||
+	       target == TGSI_TEXTURE_CUBE_ARRAY ||
+	       target == TGSI_TEXTURE_2D_ARRAY_MSAA;
+}
+
+/**
+ * Load the resource descriptor for \p image.
+ */
+static void
+image_fetch_rsrc(
+	struct lp_build_tgsi_context *bld_base,
+	const struct tgsi_full_src_register *image,
+	LLVMValueRef *rsrc)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+
+	assert(image->Register.File == TGSI_FILE_IMAGE);
+
+	if (!image->Register.Indirect) {
+		/* Fast path: use preloaded resources */
+		*rsrc = ctx->images[image->Register.Index];
+	} else {
+		/* Indexing and manual load */
+		LLVMValueRef ind_index;
+		LLVMValueRef rsrc_ptr;
+
+		ind_index = get_indirect_index(ctx, &image->Indirect, image->Register.Index);
+
+		rsrc_ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_IMAGES);
+		*rsrc = build_indexed_load_const(ctx, rsrc_ptr, ind_index);
+	}
+}
+
+static void resq_fetch_args(
+		struct lp_build_tgsi_context * bld_base,
+		struct lp_build_emit_data * emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	const struct tgsi_full_src_register *reg = &inst->Src[0];
+	unsigned tex_target = inst->Memory.Texture;
+
+	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
+
+	if (tex_target == TGSI_TEXTURE_BUFFER) {
+		image_fetch_rsrc(bld_base, reg, &emit_data->args[0]);
+		emit_data->arg_count = 1;
+	} else {
+		emit_data->args[0] = bld_base->uint_bld.zero; /* mip level */
+		image_fetch_rsrc(bld_base, reg, &emit_data->args[1]);
+		emit_data->args[2] = lp_build_const_int32(gallivm, 15); /* dmask */
+		emit_data->args[3] = bld_base->uint_bld.zero; /* unorm */
+		emit_data->args[4] = bld_base->uint_bld.zero; /* r128 */
+		emit_data->args[5] = tgsi_is_array_image(tex_target) ?
+			bld_base->uint_bld.one : bld_base->uint_bld.zero; /* da */
+		emit_data->args[6] = bld_base->uint_bld.zero; /* glc */
+		emit_data->args[7] = bld_base->uint_bld.zero; /* slc */
+		emit_data->args[8] = bld_base->uint_bld.zero; /* tfe */
+		emit_data->args[9] = bld_base->uint_bld.zero; /* lwe */
+		emit_data->arg_count = 10;
+	}
+}
+
+static void resq_emit(
+		const struct lp_build_tgsi_action *action,
+		struct lp_build_tgsi_context *bld_base,
+		struct lp_build_emit_data *emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	unsigned target = inst->Memory.Texture;
+	LLVMValueRef out;
+
+	if (target == TGSI_TEXTURE_BUFFER) {
+		out = get_buffer_size(bld_base, emit_data->args[0]);
+	} else {
+		out = lp_build_intrinsic(
+			builder, "llvm.SI.getresinfo.i32", emit_data->dst_type,
+			emit_data->args, emit_data->arg_count,
+			LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+
+		/* Divide the number of layers by 6 to get the number of cubes. */
+		if (target == TGSI_TEXTURE_CUBE_ARRAY) {
+			LLVMValueRef imm2 = lp_build_const_int32(gallivm, 2);
+			LLVMValueRef imm6 = lp_build_const_int32(gallivm, 6);
+
+			LLVMValueRef z = LLVMBuildExtractElement(builder, out, imm2, "");
+			z = LLVMBuildBitCast(builder, z, bld_base->uint_bld.elem_type, "");
+			z = LLVMBuildSDiv(builder, z, imm6, "");
+			z = LLVMBuildBitCast(builder, z, bld_base->base.elem_type, "");
+			out = LLVMBuildInsertElement(builder, out, z, imm2, "");
+		}
+	}
+
+	emit_data->output[emit_data->chan] = out;
+}
+
 static void set_tex_fetch_args(struct si_shader_context *ctx,
 			       struct lp_build_emit_data *emit_data,
 			       unsigned opcode, unsigned target,
@@ -4168,6 +4272,27 @@ static void preload_samplers(struct si_shader_context *ctx)
 	}
 }
 
+static void preload_images(struct si_shader_context *ctx)
+{
+	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	unsigned num_images = bld_base->info->file_max[TGSI_FILE_IMAGE] + 1;
+	LLVMValueRef res_ptr;
+	unsigned i;
+
+	if (num_images == 0)
+		return;
+
+	res_ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_IMAGES);
+
+	for (i = 0; i < num_images; ++i) {
+		/* Rely on LLVM to shrink the load for buffer resources. */
+		ctx->images[i] =
+			build_indexed_load_const(ctx, res_ptr,
+						 lp_build_const_int32(gallivm, i));
+	}
+}
+
 static void preload_streamout_buffers(struct si_shader_context *ctx)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
@@ -4854,6 +4979,9 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_LODQ] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXQS].emit = si_llvm_emit_txqs;
 
+	bld_base->op_actions[TGSI_OPCODE_RESQ].fetch_args = resq_fetch_args;
+	bld_base->op_actions[TGSI_OPCODE_RESQ].emit = resq_emit;
+
 	bld_base->op_actions[TGSI_OPCODE_DDX].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDY].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDX_FINE].emit = si_llvm_emit_ddxy;
@@ -4941,6 +5069,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	create_function(&ctx);
 	preload_constants(&ctx);
 	preload_samplers(&ctx);
+	preload_images(&ctx);
 	preload_streamout_buffers(&ctx);
 	preload_ring_buffers(&ctx);
 
