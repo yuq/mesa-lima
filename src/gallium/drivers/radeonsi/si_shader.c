@@ -2656,6 +2656,40 @@ static void si_llvm_return_fs_outputs(struct lp_build_tgsi_context *bld_base)
 	ctx->return_value = ret;
 }
 
+/**
+ * Given a v8i32 resource descriptor for a buffer, extract the size of the
+ * buffer in number of elements and return it as an i32.
+ */
+static LLVMValueRef get_buffer_size(
+	struct lp_build_tgsi_context *bld_base,
+	LLVMValueRef descriptor)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef size =
+		LLVMBuildExtractElement(builder, descriptor,
+					lp_build_const_int32(gallivm, 6), "");
+
+	if (ctx->screen->b.chip_class >= VI) {
+		/* On VI, the descriptor contains the size in bytes,
+		 * but TXQ must return the size in elements.
+		 * The stride is always non-zero for resources using TXQ.
+		 */
+		LLVMValueRef stride =
+			LLVMBuildExtractElement(builder, descriptor,
+						lp_build_const_int32(gallivm, 5), "");
+		stride = LLVMBuildLShr(builder, stride,
+				       lp_build_const_int32(gallivm, 16), "");
+		stride = LLVMBuildAnd(builder, stride,
+				      lp_build_const_int32(gallivm, 0x3FFF), "");
+
+		size = LLVMBuildUDiv(builder, size, stride, "");
+	}
+
+	return size;
+}
+
 static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 				struct lp_build_tgsi_context *bld_base,
 				struct lp_build_emit_data *emit_data);
@@ -2836,26 +2870,7 @@ static void tex_fetch_args(
 		if (target == TGSI_TEXTURE_BUFFER) {
 			/* Read the size from the buffer descriptor directly. */
 			LLVMValueRef res = LLVMBuildBitCast(builder, res_ptr, ctx->v8i32, "");
-			LLVMValueRef size = LLVMBuildExtractElement(builder, res,
-							lp_build_const_int32(gallivm, 6), "");
-
-			if (ctx->screen->b.chip_class >= VI) {
-				/* On VI, the descriptor contains the size in bytes,
-				 * but TXQ must return the size in elements.
-				 * The stride is always non-zero for resources using TXQ.
-				 */
-				LLVMValueRef stride =
-					LLVMBuildExtractElement(builder, res,
-								lp_build_const_int32(gallivm, 5), "");
-				stride = LLVMBuildLShr(builder, stride,
-						       lp_build_const_int32(gallivm, 16), "");
-				stride = LLVMBuildAnd(builder, stride,
-						      lp_build_const_int32(gallivm, 0x3FFF), "");
-
-				size = LLVMBuildUDiv(builder, size, stride, "");
-			}
-
-			emit_data->args[0] = size;
+			emit_data->args[0] = get_buffer_size(bld_base, res);
 			return;
 		}
 
