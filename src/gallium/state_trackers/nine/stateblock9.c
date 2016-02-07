@@ -470,7 +470,7 @@ nine_state_copy_common_all(struct nine_state *dst,
 /* Capture those bits of current device state that have been changed between
  * BeginStateBlock and EndStateBlock.
  */
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineStateBlock9_Capture( struct NineStateBlock9 *This )
 {
     struct nine_state *dst = &This->state;
@@ -500,7 +500,7 @@ NineStateBlock9_Capture( struct NineStateBlock9 *This )
 }
 
 /* Set state managed by this StateBlock as current device state. */
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineStateBlock9_Apply( struct NineStateBlock9 *This )
 {
     struct nine_state *dst = &This->base.device->state;

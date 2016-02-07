@@ -150,7 +150,7 @@ NineVolumeTexture9_dtor( struct NineVolumeTexture9 *This )
     NineBaseTexture9_dtor(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolumeTexture9_GetLevelDesc( struct NineVolumeTexture9 *This,
                                  UINT Level,
                                  D3DVOLUME_DESC *pDesc )
@@ -162,7 +162,7 @@ NineVolumeTexture9_GetLevelDesc( struct NineVolumeTexture9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolumeTexture9_GetVolumeLevel( struct NineVolumeTexture9 *This,
                                    UINT Level,
                                    IDirect3DVolume9 **ppVolumeLevel )
@@ -175,7 +175,7 @@ NineVolumeTexture9_GetVolumeLevel( struct NineVolumeTexture9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolumeTexture9_LockBox( struct NineVolumeTexture9 *This,
                             UINT Level,
                             D3DLOCKED_BOX *pLockedVolume,
@@ -191,7 +191,7 @@ NineVolumeTexture9_LockBox( struct NineVolumeTexture9 *This,
                                Flags);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolumeTexture9_UnlockBox( struct NineVolumeTexture9 *This,
                               UINT Level )
 {
@@ -202,7 +202,7 @@ NineVolumeTexture9_UnlockBox( struct NineVolumeTexture9 *This,
     return NineVolume9_UnlockBox(This->volumes[Level]);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolumeTexture9_AddDirtyBox( struct NineVolumeTexture9 *This,
                                 const D3DBOX *pDirtyBox )
 {

@@ -115,7 +115,7 @@ NineBuffer9_GetResource( struct NineBuffer9 *This )
     return NineResource9_GetResource(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineBuffer9_Lock( struct NineBuffer9 *This,
                         UINT OffsetToLock,
                         UINT SizeToLock,
@@ -178,7 +178,7 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineBuffer9_Unlock( struct NineBuffer9 *This )
 {
     DBG("This=%p\n", This);

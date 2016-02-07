@@ -62,17 +62,17 @@ NineVertexBuffer9_GetResource( struct NineVertexBuffer9 *This );
 
 /*** Direct3D public ***/
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVertexBuffer9_Lock( struct NineVertexBuffer9 *This,
                         UINT OffsetToLock,
                         UINT SizeToLock,
                         void **ppbData,
                         DWORD Flags );
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVertexBuffer9_Unlock( struct NineVertexBuffer9 *This );
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVertexBuffer9_GetDesc( struct NineVertexBuffer9 *This,
                            D3DVERTEXBUFFER_DESC *pDesc );
 

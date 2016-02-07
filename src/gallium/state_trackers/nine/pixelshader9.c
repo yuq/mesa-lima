@@ -116,7 +116,7 @@ NinePixelShader9_dtor( struct NinePixelShader9 *This )
     NineUnknown_dtor(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NinePixelShader9_GetFunction( struct NinePixelShader9 *This,
                               void *pData,
                               UINT *pSizeOfData )

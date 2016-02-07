@@ -70,17 +70,17 @@ struct pipe_resource *
 NineIndexBuffer9_GetResource( struct NineIndexBuffer9 *This );
 /*** Direct3D public ***/
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineIndexBuffer9_Lock( struct NineIndexBuffer9 *This,
                        UINT OffsetToLock,
                        UINT SizeToLock,
                        void **ppbData,
                        DWORD Flags );
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineIndexBuffer9_Unlock( struct NineIndexBuffer9 *This );
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineIndexBuffer9_GetDesc( struct NineIndexBuffer9 *This,
                           D3DINDEXBUFFER_DESC *pDesc );
 

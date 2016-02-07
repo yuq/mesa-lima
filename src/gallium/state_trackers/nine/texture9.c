@@ -240,7 +240,7 @@ NineTexture9_dtor( struct NineTexture9 *This )
     NineBaseTexture9_dtor(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineTexture9_GetLevelDesc( struct NineTexture9 *This,
                            UINT Level,
                            D3DSURFACE_DESC *pDesc )
@@ -254,7 +254,7 @@ NineTexture9_GetLevelDesc( struct NineTexture9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineTexture9_GetSurfaceLevel( struct NineTexture9 *This,
                               UINT Level,
                               IDirect3DSurface9 **ppSurfaceLevel )
@@ -269,7 +269,7 @@ NineTexture9_GetSurfaceLevel( struct NineTexture9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineTexture9_LockRect( struct NineTexture9 *This,
                        UINT Level,
                        D3DLOCKED_RECT *pLockedRect,
@@ -287,7 +287,7 @@ NineTexture9_LockRect( struct NineTexture9 *This,
                                  pRect, Flags);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineTexture9_UnlockRect( struct NineTexture9 *This,
                          UINT Level )
 {
@@ -298,7 +298,7 @@ NineTexture9_UnlockRect( struct NineTexture9 *This,
     return NineSurface9_UnlockRect(This->surfaces[Level]);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineTexture9_AddDirtyRect( struct NineTexture9 *This,
                            const RECT *pDirtyRect )
 {

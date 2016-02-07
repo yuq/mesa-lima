@@ -60,14 +60,14 @@ NineBuffer9_dtor( struct NineBuffer9 *This );
 struct pipe_resource *
 NineBuffer9_GetResource( struct NineBuffer9 *This );
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineBuffer9_Lock( struct NineBuffer9 *This,
                         UINT OffsetToLock,
                         UINT SizeToLock,
                         void **ppbData,
                         DWORD Flags );
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineBuffer9_Unlock( struct NineBuffer9 *This );
 
 #endif /* _NINE_BUFFER9_H_ */
