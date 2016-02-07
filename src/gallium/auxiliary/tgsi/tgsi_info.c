@@ -142,7 +142,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 0, 0, 0, 0, 0, 1, 0, NONE, "ENDSUB", TGSI_OPCODE_ENDSUB },
    { 1, 1, 1, 0, 0, 0, 0, OTHR, "TXQ_LZ", TGSI_OPCODE_TXQ_LZ },
    { 1, 1, 1, 0, 0, 0, 0, OTHR, "TXQS", TGSI_OPCODE_TXQS },
-   { 1, 1, 0, 0, 0, 0, 0, NONE, "RESQ", TGSI_OPCODE_RESQ },
+   { 1, 1, 0, 0, 0, 0, 0, OTHR, "RESQ", TGSI_OPCODE_RESQ },
    { 0, 0, 0, 0, 0, 0, 0, NONE, "", 106 },     /* removed */
    { 0, 0, 0, 0, 0, 0, 0, NONE, "NOP", TGSI_OPCODE_NOP },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "FSEQ", TGSI_OPCODE_FSEQ },
