@@ -34,6 +34,7 @@
 #include "util/u_inlines.h"
 #include "util/u_surface.h"
 
+#include "st_cb_texture.h"
 #include "st_debug.h"
 #include "st_texture.h"
 #include "st_context.h"
@@ -57,10 +58,13 @@ st_bind_images(struct st_context *st, struct gl_shader *shader,
       struct st_texture_object *stObj = st_texture_object(u->TexObj);
       struct pipe_image_view *img = &images[i];
 
-      if (!stObj || !stObj->pt) {
+      if (!stObj ||
+          !st_finalize_texture(st->ctx, st->pipe, u->TexObj) ||
+          !stObj->pt) {
          memset(img, 0, sizeof(*img));
          continue;
       }
+
       img->resource = stObj->pt;
       img->format = st_mesa_format_to_pipe_format(st, u->_ActualFormat);
       if (stObj->pt->target == PIPE_BUFFER) {
