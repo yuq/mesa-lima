@@ -120,18 +120,13 @@ trace_context_draw_vbo(struct pipe_context *_pipe,
    trace_dump_trace_flush();
 
    if (info->indirect) {
-      struct pipe_draw_info *_info = NULL;
+      struct pipe_draw_info _info;
 
-      _info = MALLOC(sizeof(*_info));
-      if (!_info)
-         return;
-
-      memcpy(_info, info, sizeof(*_info));
-      _info->indirect = trace_resource_unwrap(tr_ctx, _info->indirect);
-      _info->indirect_params = trace_resource_unwrap(tr_ctx,
-                                                     _info->indirect_params);
-      pipe->draw_vbo(pipe, _info);
-      FREE(_info);
+      memcpy(&_info, info, sizeof(_info));
+      _info.indirect = trace_resource_unwrap(tr_ctx, _info.indirect);
+      _info.indirect_params = trace_resource_unwrap(tr_ctx,
+                                                    _info.indirect_params);
+      pipe->draw_vbo(pipe, &_info);
    } else {
       pipe->draw_vbo(pipe, info);
    }
