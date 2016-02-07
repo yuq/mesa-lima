@@ -405,6 +405,12 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
             radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_TILE_PIPES, NULL,
                                  &ws->info.num_tile_pipes);
 
+            /* The kernel returns 12 for some cards for an unknown reason.
+             * I thought this was supposed to be a power of two.
+             */
+            if (ws->gen == DRV_SI && ws->info.num_tile_pipes == 12)
+                ws->info.num_tile_pipes = 8;
+
             if (radeon_get_drm_value(ws->fd, RADEON_INFO_BACKEND_MAP, NULL,
                                       &ws->info.r600_gb_backend_map))
                 ws->info.r600_gb_backend_map_valid = TRUE;
