@@ -57,6 +57,8 @@ MAIN_FILES = \
 	main/dd.h \
 	main/debug.c \
 	main/debug.h \
+	main/debug_output.c \
+	main/debug_output.h \
 	main/depth.c \
 	main/depth.h \
 	main/dlist.c \

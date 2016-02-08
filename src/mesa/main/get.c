@@ -26,6 +26,7 @@
 #include "glheader.h"
 #include "context.h"
 #include "blend.h"
+#include "debug_output.h"
 #include "enable.h"
 #include "enums.h"
 #include "errors.h"

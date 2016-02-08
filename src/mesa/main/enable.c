@@ -31,6 +31,7 @@
 #include "glheader.h"
 #include "clip.h"
 #include "context.h"
+#include "debug_output.h"
 #include "enable.h"
 #include "errors.h"
 #include "light.h"

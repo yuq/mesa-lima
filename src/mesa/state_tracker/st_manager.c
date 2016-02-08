@@ -28,6 +28,7 @@
 #include "main/mtypes.h"
 #include "main/extensions.h"
 #include "main/context.h"
+#include "main/debug_output.h"
 #include "main/texobj.h"
 #include "main/teximage.h"
 #include "main/texstate.h"
