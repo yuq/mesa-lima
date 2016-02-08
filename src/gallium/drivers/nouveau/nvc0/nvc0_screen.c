@@ -291,7 +291,8 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_CAP_PREFERRED_IR:
       return PIPE_SHADER_IR_TGSI;
    case PIPE_SHADER_CAP_SUPPORTED_IRS:
-      if (class_3d >= NVE4_3D_CLASS)
+      if (class_3d == NVF0_3D_CLASS &&
+          !debug_get_bool_option("NVF0_COMPUTE", false))
          return 0;
       return 1 << PIPE_SHADER_IR_TGSI;
    case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
