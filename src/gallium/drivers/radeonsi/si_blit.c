@@ -241,8 +241,9 @@ static void si_blit_decompress_depth_in_place(struct si_context *sctx,
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 }
 
-void si_flush_depth_textures(struct si_context *sctx,
-			     struct si_textures_info *textures)
+static void
+si_flush_depth_textures(struct si_context *sctx,
+			struct si_textures_info *textures)
 {
 	unsigned i;
 	unsigned mask = textures->depth_texture_mask;
@@ -323,8 +324,9 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 	}
 }
 
-void si_decompress_color_textures(struct si_context *sctx,
-				  struct si_textures_info *textures)
+static void
+si_decompress_color_textures(struct si_context *sctx,
+			     struct si_textures_info *textures)
 {
 	unsigned i;
 	unsigned mask = textures->compressed_colortex_mask;
@@ -345,6 +347,22 @@ void si_decompress_color_textures(struct si_context *sctx,
 					 view->u.tex.first_level, view->u.tex.last_level,
 					 0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level),
 					 false);
+	}
+}
+
+void si_decompress_textures(struct si_context *sctx)
+{
+	if (sctx->blitter->running)
+		return;
+
+	/* Flush depth textures which need to be flushed. */
+	for (int i = 0; i < SI_NUM_SHADERS; i++) {
+		if (sctx->samplers[i].depth_texture_mask) {
+			si_flush_depth_textures(sctx, &sctx->samplers[i]);
+		}
+		if (sctx->samplers[i].compressed_colortex_mask) {
+			si_decompress_color_textures(sctx, &sctx->samplers[i]);
+		}
 	}
 }
 

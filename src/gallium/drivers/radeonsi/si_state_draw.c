@@ -33,21 +33,6 @@
 #include "util/u_upload_mgr.h"
 #include "util/u_prim.h"
 
-static void si_decompress_textures(struct si_context *sctx)
-{
-	if (!sctx->blitter->running) {
-		/* Flush depth textures which need to be flushed. */
-		for (int i = 0; i < SI_NUM_SHADERS; i++) {
-			if (sctx->samplers[i].depth_texture_mask) {
-				si_flush_depth_textures(sctx, &sctx->samplers[i]);
-			}
-			if (sctx->samplers[i].compressed_colortex_mask) {
-				si_decompress_color_textures(sctx, &sctx->samplers[i]);
-			}
-		}
-	}
-}
-
 static unsigned si_conv_pipe_prim(unsigned mode)
 {
         static const unsigned prim_conv[] = {
