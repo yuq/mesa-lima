@@ -77,13 +77,27 @@
 
 const char *const brw_vendor_string = "Intel Open Source Technology Center";
 
+static const char *
+get_bsw_model(const struct intel_screen *intelScreen)
+{
+   switch (intelScreen->eu_total) {
+   case 16:
+      return "405";
+   case 12:
+      return "400";
+   default:
+      return "   ";
+   }
+}
+
 const char *
-brw_get_renderer_string(unsigned deviceID)
+brw_get_renderer_string(const struct intel_screen *intelScreen)
 {
    const char *chipset;
    static char buffer[128];
+   char *bsw = NULL;
 
-   switch (deviceID) {
+   switch (intelScreen->deviceID) {
 #undef CHIPSET
 #define CHIPSET(id, symbol, str) case id: chipset = str; break;
 #include "pci_ids/i965_pci_ids.h"
@@ -92,7 +106,18 @@ brw_get_renderer_string(unsigned deviceID)
       break;
    }
 
+   /* Braswell branding is funny, so we have to fix it up here */
+   if (intelScreen->deviceID == 0x22B1) {
+      bsw = strdup(chipset);
+      char *needle = strstr(bsw, "XXX");
+      if (needle) {
+         memcpy(needle, get_bsw_model(intelScreen), 3);
+         chipset = bsw;
+      }
+   }
+
    (void) driGetRendererString(buffer, chipset, 0);
+   free(bsw);
    return buffer;
 }
 
@@ -107,7 +132,7 @@ intel_get_string(struct gl_context * ctx, GLenum name)
 
    case GL_RENDERER:
       return
-         (GLubyte *) brw_get_renderer_string(brw->intelScreen->deviceID);
+         (GLubyte *) brw_get_renderer_string(brw->intelScreen);
 
    default:
       return NULL;

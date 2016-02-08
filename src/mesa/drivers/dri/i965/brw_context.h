@@ -1341,7 +1341,8 @@ extern void intelInitClearFuncs(struct dd_function_table *functions);
  */
 extern const char *const brw_vendor_string;
 
-extern const char *brw_get_renderer_string(unsigned deviceID);
+extern const char *
+brw_get_renderer_string(const struct intel_screen *intelScreen);
 
 enum {
    DRI_CONF_BO_REUSE_DISABLED,

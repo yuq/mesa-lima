@@ -891,7 +891,7 @@ brw_query_renderer_string(__DRIscreen *psp, int param, const char **value)
       value[0] = brw_vendor_string;
       return 0;
    case __DRI2_RENDERER_DEVICE_ID:
-      value[0] = brw_get_renderer_string(intelScreen->deviceID);
+      value[0] = brw_get_renderer_string(intelScreen);
       return 0;
    default:
       break;
