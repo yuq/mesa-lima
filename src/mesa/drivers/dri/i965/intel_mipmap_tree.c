@@ -294,6 +294,32 @@ intel_miptree_is_lossless_compressed(const struct brw_context *brw,
    return mt->num_samples <= 1;
 }
 
+bool
+intel_miptree_supports_lossless_compressed(struct brw_context *brw,
+                                           const struct intel_mipmap_tree *mt)
+{
+   /* For now compression is only enabled for integer formats even though
+    * there exist supported floating point formats also. This is a heuristic
+    * decision based on current public benchmarks. In none of the cases these
+    * formats provided any improvement but a few cases were seen to regress.
+    * Hence these are left to to be enabled in the future when they are known
+    * to improve things.
+    */
+   if (_mesa_get_format_datatype(mt->format) == GL_FLOAT)
+      return false;
+
+   /* Fast clear mechanism and lossless compression go hand in hand. */
+   if (!intel_miptree_supports_non_msrt_fast_clear(brw, mt))
+      return false;
+
+   /* Fast clear can be also used to clear srgb surfaces by using equivalent
+    * linear format. This trick, however, can't be extended to be used with
+    * lossless compression and therefore a check is needed to see if the format
+    * really is linear.
+    */
+   return _mesa_get_srgb_format_linear(mt->format) == mt->format;
+}
+
 /**
  * Determine depth format corresponding to a depth+stencil format,
  * for separate stencil.

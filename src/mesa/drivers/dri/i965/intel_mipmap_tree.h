@@ -679,6 +679,10 @@ intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
                                            const struct intel_mipmap_tree *mt);
 
 bool
+intel_miptree_supports_lossless_compressed(struct brw_context *brw,
+                                           const struct intel_mipmap_tree *mt);
+
+bool
 intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt);
 
