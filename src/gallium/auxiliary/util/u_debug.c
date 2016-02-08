@@ -1,9 +1,9 @@
 /**************************************************************************
- * 
+ *
  * Copyright 2008 VMware, Inc.
  * Copyright (c) 2008 VMware, Inc.
  * All Rights Reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -11,11 +11,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -23,22 +23,22 @@
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
+ *
  **************************************************************************/
 
 
-#include "pipe/p_config.h" 
+#include "pipe/p_config.h"
 
 #include "pipe/p_compiler.h"
-#include "util/u_debug.h" 
-#include "pipe/p_format.h" 
-#include "pipe/p_state.h" 
-#include "util/u_inlines.h" 
+#include "util/u_debug.h"
+#include "pipe/p_format.h"
+#include "pipe/p_state.h"
+#include "util/u_inlines.h"
 #include "util/u_format.h"
-#include "util/u_memory.h" 
-#include "util/u_string.h" 
-#include "util/u_math.h" 
-#include "util/u_tile.h" 
+#include "util/u_memory.h"
+#include "util/u_string.h"
+#include "util/u_math.h"
+#include "util/u_tile.h"
 #include "util/u_prim.h"
 #include "util/u_surface.h"
 #include <inttypes.h>
@@ -53,14 +53,15 @@
 #endif
 
 
-void _debug_vprintf(const char *format, va_list ap)
+void
+_debug_vprintf(const char *format, va_list ap)
 {
    static char buf[4096] = {'\0'};
 #if defined(PIPE_OS_WINDOWS) || defined(PIPE_SUBSYSTEM_EMBEDDED)
    /* We buffer until we find a newline. */
    size_t len = strlen(buf);
    int ret = util_vsnprintf(buf + len, sizeof(buf) - len, format, ap);
-   if(ret > (int)(sizeof(buf) - len - 1) || util_strchr(buf + len, '\n')) {
+   if (ret > (int)(sizeof(buf) - len - 1) || util_strchr(buf + len, '\n')) {
       os_log_message(buf);
       buf[0] = '\0';
    }
@@ -70,12 +71,12 @@ void _debug_vprintf(const char *format, va_list ap)
 #endif
 }
 
+
 void
-_pipe_debug_message(
-   struct pipe_debug_callback *cb,
-   unsigned *id,
-   enum pipe_debug_type type,
-   const char *fmt, ...)
+_pipe_debug_message(struct pipe_debug_callback *cb,
+                    unsigned *id,
+                    enum pipe_debug_type type,
+                    const char *fmt, ...)
 {
    va_list args;
    va_start(args, fmt);
@@ -112,9 +113,8 @@ debug_disable_error_message_boxes(void)
 
 
 #ifdef DEBUG
-void debug_print_blob( const char *name,
-                       const void *blob,
-                       unsigned size )
+void
+debug_print_blob(const char *name, const void *blob, unsigned size)
 {
    const unsigned *ublob = (const unsigned *)blob;
    unsigned i;
@@ -147,6 +147,7 @@ debug_get_option_should_print(void)
    return value;
 }
 
+
 const char *
 debug_get_option(const char *name, const char *dfault)
 {
@@ -157,39 +158,42 @@ debug_get_option(const char *name, const char *dfault)
       result = dfault;
 
    if (debug_get_option_should_print())
-      debug_printf("%s: %s = %s\n", __FUNCTION__, name, result ? result : "(null)");
-   
+      debug_printf("%s: %s = %s\n", __FUNCTION__, name,
+                   result ? result : "(null)");
+
    return result;
 }
+
 
 boolean
 debug_get_bool_option(const char *name, boolean dfault)
 {
    const char *str = os_get_option(name);
    boolean result;
-   
-   if(str == NULL)
+
+   if (str == NULL)
       result = dfault;
-   else if(!util_strcmp(str, "n"))
+   else if (!util_strcmp(str, "n"))
       result = FALSE;
-   else if(!util_strcmp(str, "no"))
+   else if (!util_strcmp(str, "no"))
       result = FALSE;
-   else if(!util_strcmp(str, "0"))
+   else if (!util_strcmp(str, "0"))
       result = FALSE;
-   else if(!util_strcmp(str, "f"))
+   else if (!util_strcmp(str, "f"))
       result = FALSE;
-   else if(!util_strcmp(str, "F"))
+   else if (!util_strcmp(str, "F"))
       result = FALSE;
-   else if(!util_strcmp(str, "false"))
+   else if (!util_strcmp(str, "false"))
       result = FALSE;
-   else if(!util_strcmp(str, "FALSE"))
+   else if (!util_strcmp(str, "FALSE"))
       result = FALSE;
    else
       result = TRUE;
 
    if (debug_get_option_should_print())
-      debug_printf("%s: %s = %s\n", __FUNCTION__, name, result ? "TRUE" : "FALSE");
-   
+      debug_printf("%s: %s = %s\n", __FUNCTION__, name,
+                   result ? "TRUE" : "FALSE");
+
    return result;
 }
 
@@ -199,23 +203,23 @@ debug_get_num_option(const char *name, long dfault)
 {
    long result;
    const char *str;
-   
+
    str = os_get_option(name);
-   if(!str)
+   if (!str)
       result = dfault;
    else {
       long sign;
       char c;
       c = *str++;
-      if(c == '-') {
+      if (c == '-') {
 	 sign = -1;
 	 c = *str++;
-      } 
+      }
       else {
 	 sign = 1;
       }
       result = 0;
-      while('0' <= c && c <= '9') {
+      while ('0' <= c && c <= '9') {
 	 result = result*10 + (c - '0');
 	 c = *str++;
       }
@@ -228,7 +232,9 @@ debug_get_num_option(const char *name, long dfault)
    return result;
 }
 
-static boolean str_has_option(const char *str, const char *name)
+
+static boolean
+str_has_option(const char *str, const char *name)
 {
    /* Empty string. */
    if (!*str) {
@@ -271,8 +277,9 @@ static boolean str_has_option(const char *str, const char *name)
    return FALSE;
 }
 
+
 uint64_t
-debug_get_flags_option(const char *name, 
+debug_get_flags_option(const char *name,
                        const struct debug_named_value *flags,
                        uint64_t dfault)
 {
@@ -280,9 +287,9 @@ debug_get_flags_option(const char *name,
    const char *str;
    const struct debug_named_value *orig = flags;
    unsigned namealign = 0;
-   
+
    str = os_get_option(name);
-   if(!str)
+   if (!str)
       result = dfault;
    else if (!util_strcmp(str, "help")) {
       result = dfault;
@@ -296,7 +303,7 @@ debug_get_flags_option(const char *name,
    }
    else {
       result = 0;
-      while( flags->name ) {
+      while (flags->name) {
 	 if (str_has_option(str, flags->name))
 	    result |= flags->value;
 	 ++flags;
@@ -305,7 +312,8 @@ debug_get_flags_option(const char *name,
 
    if (debug_get_option_should_print()) {
       if (str) {
-         debug_printf("%s: %s = 0x%"PRIx64" (%s)\n", __FUNCTION__, name, result, str);
+         debug_printf("%s: %s = 0x%"PRIx64" (%s)\n",
+                      __FUNCTION__, name, result, str);
       } else {
          debug_printf("%s: %s = 0x%"PRIx64"\n", __FUNCTION__, name, result);
       }
@@ -315,24 +323,24 @@ debug_get_flags_option(const char *name,
 }
 
 
-void _debug_assert_fail(const char *expr, 
-                        const char *file, 
-                        unsigned line, 
-                        const char *function) 
+void
+_debug_assert_fail(const char *expr, const char *file, unsigned line,
+                   const char *function)
 {
-   _debug_printf("%s:%u:%s: Assertion `%s' failed.\n", file, line, function, expr);
+   _debug_printf("%s:%u:%s: Assertion `%s' failed.\n",
+                 file, line, function, expr);
    os_abort();
 }
 
 
 const char *
-debug_dump_enum(const struct debug_named_value *names, 
+debug_dump_enum(const struct debug_named_value *names,
                 unsigned long value)
 {
    static char rest[64];
-   
-   while(names->name) {
-      if(names->value == value)
+
+   while (names->name) {
+      if (names->value == value)
 	 return names->name;
       ++names;
    }
@@ -343,14 +351,14 @@ debug_dump_enum(const struct debug_named_value *names,
 
 
 const char *
-debug_dump_enum_noprefix(const struct debug_named_value *names, 
+debug_dump_enum_noprefix(const struct debug_named_value *names,
                          const char *prefix,
                          unsigned long value)
 {
    static char rest[64];
-   
-   while(names->name) {
-      if(names->value == value) {
+
+   while (names->name) {
+      if (names->value == value) {
          const char *name = names->name;
          while (*name == *prefix) {
             name++;
@@ -361,16 +369,13 @@ debug_dump_enum_noprefix(const struct debug_named_value *names,
       ++names;
    }
 
-   
-
    util_snprintf(rest, sizeof(rest), "0x%08lx", value);
    return rest;
 }
 
 
 const char *
-debug_dump_flags(const struct debug_named_value *names, 
-                 unsigned long value)
+debug_dump_flags(const struct debug_named_value *names, unsigned long value)
 {
    static char output[4096];
    static char rest[256];
@@ -378,8 +383,8 @@ debug_dump_flags(const struct debug_named_value *names,
 
    output[0] = '\0';
 
-   while(names->name) {
-      if((names->value & value) == names->value) {
+   while (names->name) {
+      if ((names->value & value) == names->value) {
 	 if (!first)
 	    util_strncat(output, "|", sizeof(output) - strlen(output) - 1);
 	 else
@@ -390,27 +395,28 @@ debug_dump_flags(const struct debug_named_value *names,
       }
       ++names;
    }
-   
+
    if (value) {
       if (!first)
 	 util_strncat(output, "|", sizeof(output) - strlen(output) - 1);
       else
 	 first = 0;
-      
+
       util_snprintf(rest, sizeof(rest), "0x%08lx", value);
       util_strncat(output, rest, sizeof(output) - strlen(output) - 1);
       output[sizeof(output) - 1] = '\0';
    }
-   
-   if(first)
+
+   if (first)
       return "0";
-   
+
    return output;
 }
 
 
 #ifdef DEBUG
-void debug_print_format(const char *msg, unsigned fmt )
+void
+debug_print_format(const char *msg, unsigned fmt )
 {
    debug_printf("%s: %s\n", msg, util_format_name(fmt));
 }
@@ -447,7 +453,8 @@ u_prim_name(unsigned prim)
 int fl_indent = 0;
 const char* fl_function[1024];
 
-int debug_funclog_enter(const char* f, const int line, const char* file)
+int
+debug_funclog_enter(const char* f, const int line, const char* file)
 {
    int i;
 
@@ -461,14 +468,16 @@ int debug_funclog_enter(const char* f, const int line, const char* file)
    return 0;
 }
 
-void debug_funclog_exit(const char* f, const int line, const char* file)
+void
+debug_funclog_exit(const char* f, const int line, const char* file)
 {
    --fl_indent;
    assert(fl_indent >= 0);
    assert(fl_function[fl_indent] == f);
 }
 
-void debug_funclog_enter_exit(const char* f, const int line, const char* file)
+void
+debug_funclog_enter_exit(const char* f, const int line, const char* file)
 {
    int i;
    for (i = 0; i < fl_indent; i++)
@@ -488,11 +497,12 @@ void debug_funclog_enter_exit(const char* f, const int line, const char* file)
  * \param height height in pixels
  * \param stride  row stride in bytes
  */
-void debug_dump_image(const char *prefix,
-                      enum pipe_format format, unsigned cpp,
-                      unsigned width, unsigned height,
-                      unsigned stride,
-                      const void *data)     
+void
+debug_dump_image(const char *prefix,
+                 enum pipe_format format, unsigned cpp,
+                 unsigned width, unsigned height,
+                 unsigned stride,
+                 const void *data)
 {
    /* write a ppm file */
    char filename[256];
@@ -533,10 +543,12 @@ void debug_dump_image(const char *prefix,
    FREE(rgb8);
 }
 
+
 /* FIXME: dump resources, not surfaces... */
-void debug_dump_surface(struct pipe_context *pipe,
-                        const char *prefix,
-                        struct pipe_surface *surface)
+void
+debug_dump_surface(struct pipe_context *pipe,
+                   const char *prefix,
+                   struct pipe_surface *surface)
 {
    struct pipe_resource *texture;
    struct pipe_transfer *transfer;
@@ -572,9 +584,10 @@ void debug_dump_surface(struct pipe_context *pipe,
 }
 
 
-void debug_dump_texture(struct pipe_context *pipe,
-                        const char *prefix,
-                        struct pipe_resource *texture)
+void
+debug_dump_texture(struct pipe_context *pipe,
+                   const char *prefix,
+                   struct pipe_resource *texture)
 {
    struct pipe_surface *surface, surf_tmpl;
 
@@ -709,10 +722,9 @@ debug_dump_float_rgba_bmp(const char *filename,
    fwrite(&bmih, 40, 1, stream);
 
    y = height;
-   while(y--) {
+   while (y--) {
       float *ptr = rgba + (stride * y * 4);
-      for(x = 0; x < width; ++x)
-      {
+      for (x = 0; x < width; ++x) {
          struct bmp_rgb_quad pixel;
          pixel.rgbRed   = float_to_ubyte(ptr[x*4 + 0]);
          pixel.rgbGreen = float_to_ubyte(ptr[x*4 + 1]);
@@ -738,7 +750,7 @@ debug_dump_ubyte_rgba_bmp(const char *filename,
    unsigned x, y;
 
    assert(rgba);
-   if(!rgba)
+   if (!rgba)
       goto error1;
 
    bmfh.bfType = 0x4d42;
@@ -761,17 +773,16 @@ debug_dump_ubyte_rgba_bmp(const char *filename,
 
    stream = fopen(filename, "wb");
    assert(stream);
-   if(!stream)
+   if (!stream)
       goto error1;
 
    fwrite(&bmfh, 14, 1, stream);
    fwrite(&bmih, 40, 1, stream);
 
    y = height;
-   while(y--) {
+   while (y--) {
       const ubyte *ptr = rgba + (stride * y * 4);
-      for(x = 0; x < width; ++x)
-      {
+      for (x = 0; x < width; ++x) {
          struct bmp_rgb_quad pixel;
          pixel.rgbRed   = ptr[x*4 + 0];
          pixel.rgbGreen = ptr[x*4 + 1];
