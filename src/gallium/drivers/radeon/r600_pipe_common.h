@@ -335,6 +335,12 @@ struct r600_common_screen {
 	 */
 	unsigned			dirty_fb_counter;
 
+	/* Atomically increment this counter when an existing texture's
+	 * metadata is enabled or disabled in a way that requires changing
+	 * contexts' compressed texture binding masks.
+	 */
+	unsigned			compressed_colortex_counter;
+
 	void (*query_opaque_metadata)(struct r600_common_screen *rscreen,
 				      struct r600_texture *rtex,
 				      struct radeon_bo_metadata *md);
@@ -406,6 +412,7 @@ struct r600_common_context {
 	unsigned			initial_gfx_cs_size;
 	unsigned			gpu_reset_counter;
 	unsigned			last_dirty_fb_counter;
+	unsigned			last_compressed_colortex_counter;
 
 	struct u_upload_mgr		*uploader;
 	struct u_suballocator		*allocator_so_filled_size;
