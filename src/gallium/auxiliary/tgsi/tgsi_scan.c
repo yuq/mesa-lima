@@ -307,28 +307,35 @@ scan_declaration(struct tgsi_shader_info *info,
          info->system_value_semantic_name[index] = semName;
          info->num_system_values = MAX2(info->num_system_values, index + 1);
 
-         if (semName == TGSI_SEMANTIC_INSTANCEID) {
+         switch (semName) {
+         case TGSI_SEMANTIC_INSTANCEID:
             info->uses_instanceid = TRUE;
-         }
-         else if (semName == TGSI_SEMANTIC_VERTEXID) {
+            break;
+         case TGSI_SEMANTIC_VERTEXID:
             info->uses_vertexid = TRUE;
-         }
-         else if (semName == TGSI_SEMANTIC_VERTEXID_NOBASE) {
+            break;
+         case TGSI_SEMANTIC_VERTEXID_NOBASE:
             info->uses_vertexid_nobase = TRUE;
-         }
-         else if (semName == TGSI_SEMANTIC_BASEVERTEX) {
+            break;
+         case TGSI_SEMANTIC_BASEVERTEX:
             info->uses_basevertex = TRUE;
-         }
-         else if (semName == TGSI_SEMANTIC_PRIMID) {
+            break;
+         case TGSI_SEMANTIC_PRIMID:
             info->uses_primid = TRUE;
-         } else if (semName == TGSI_SEMANTIC_INVOCATIONID) {
+            break;
+         case TGSI_SEMANTIC_INVOCATIONID:
             info->uses_invocationid = TRUE;
-         } else if (semName == TGSI_SEMANTIC_POSITION)
+            break;
+         case TGSI_SEMANTIC_POSITION:
             info->reads_position = TRUE;
-         else if (semName == TGSI_SEMANTIC_FACE)
+            break;
+         case TGSI_SEMANTIC_FACE:
             info->uses_frontface = TRUE;
-         else if (semName == TGSI_SEMANTIC_SAMPLEMASK)
+            break;
+         case TGSI_SEMANTIC_SAMPLEMASK:
             info->reads_samplemask = TRUE;
+            break;
+         }
       }
       else if (file == TGSI_FILE_OUTPUT) {
          info->output_semantic_name[reg] = (ubyte) semName;
@@ -342,28 +349,33 @@ scan_declaration(struct tgsi_shader_info *info,
              procType == TGSI_PROCESSOR_GEOMETRY ||
              procType == TGSI_PROCESSOR_TESS_CTRL ||
              procType == TGSI_PROCESSOR_TESS_EVAL) {
-            if (semName == TGSI_SEMANTIC_VIEWPORT_INDEX) {
+            switch (semName) {
+            case TGSI_SEMANTIC_VIEWPORT_INDEX:
                info->writes_viewport_index = TRUE;
-            }
-            else if (semName == TGSI_SEMANTIC_LAYER) {
+               break;
+            case TGSI_SEMANTIC_LAYER:
                info->writes_layer = TRUE;
-            }
-            else if (semName == TGSI_SEMANTIC_PSIZE) {
+               break;
+            case TGSI_SEMANTIC_PSIZE:
                info->writes_psize = TRUE;
-            }
-            else if (semName == TGSI_SEMANTIC_CLIPVERTEX) {
+               break;
+            case TGSI_SEMANTIC_CLIPVERTEX:
                info->writes_clipvertex = TRUE;
+               break;
             }
          }
 
          if (procType == TGSI_PROCESSOR_FRAGMENT) {
-            if (semName == TGSI_SEMANTIC_POSITION) {
+            switch (semName) {
+            case TGSI_SEMANTIC_POSITION:
                info->writes_z = TRUE;
-            }
-            else if (semName == TGSI_SEMANTIC_STENCIL) {
+               break;
+            case TGSI_SEMANTIC_STENCIL:
                info->writes_stencil = TRUE;
-            } else if (semName == TGSI_SEMANTIC_SAMPLEMASK) {
+               break;
+            case TGSI_SEMANTIC_SAMPLEMASK:
                info->writes_samplemask = TRUE;
+               break;
             }
          }
 
