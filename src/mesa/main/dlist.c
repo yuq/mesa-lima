@@ -9105,6 +9105,14 @@ _mesa_CallLists(GLsizei n, GLenum type, const GLvoid * lists)
       return;
    }
 
+   if (n < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glCallLists(n < 0)");
+      return;
+   } else if (n == 0 || lists == NULL) {
+      /* nothing to do */
+      return;
+   }
+
    /* Save the CompileFlag status, turn it off, execute display list,
     * and restore the CompileFlag.
     */
