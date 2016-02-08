@@ -538,7 +538,7 @@ x11_swapchain_destroy(struct anv_swapchain *anv_chain,
       /* TODO: Delete images and free memory */
    }
 
-   anv_free(NULL /* XXX: pAllocator */, chain);
+   anv_free2(&chain->base.device->alloc, pAllocator, chain);
 
    return VK_SUCCESS;
 }
