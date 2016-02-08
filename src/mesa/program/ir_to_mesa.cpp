@@ -1389,7 +1389,7 @@ ir_to_mesa_visitor::visit(ir_dereference_variable *ir)
       switch (var->data.mode) {
       case ir_var_uniform:
 	 entry = new(mem_ctx) variable_storage(var, PROGRAM_UNIFORM,
-					       var->data.location);
+					       var->data.param_index);
 	 this->variables.push_tail(entry);
 	 break;
       case ir_var_shader_in:
@@ -2268,8 +2268,7 @@ public:
    {
       this->idx = -1;
       this->program_resource_visitor::process(var);
-
-      var->data.location = this->idx;
+      var->data.param_index = this->idx;
    }
 
 private:
