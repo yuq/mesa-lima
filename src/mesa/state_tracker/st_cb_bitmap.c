@@ -198,8 +198,7 @@ setup_bitmap_vertex_data(struct st_context *st, bool normalized,
    GLuint i;
    float (*vertices)[3][4];  /**< vertex pos + color + texcoord */
 
-   if(!normalized)
-   {
+   if (!normalized) {
       sRight = (GLfloat) width;
       tBot = (GLfloat) height;
    }
@@ -488,7 +487,6 @@ st_flush_bitmap_cache(struct st_context *st)
 {
    if (!st->bitmap.cache->empty) {
       struct bitmap_cache *cache = st->bitmap.cache;
-
       struct pipe_context *pipe = st->pipe;
       struct pipe_sampler_view *sv;
 
