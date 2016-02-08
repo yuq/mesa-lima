@@ -462,12 +462,10 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
           procType == TGSI_PROCESSOR_COMPUTE);
    info->processor = procType;
 
-
    /**
     ** Loop over incoming program tokens/instructions
     */
-   while( !tgsi_parse_end_of_tokens( &parse ) ) {
-
+   while (!tgsi_parse_end_of_tokens(&parse)) {
       info->num_tokens++;
 
       tgsi_parse_token( &parse );
@@ -510,7 +508,7 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
       }
    }
 
-   tgsi_parse_free (&parse);
+   tgsi_parse_free(&parse);
 }
 
 
