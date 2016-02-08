@@ -89,13 +89,13 @@ scan_instruction(struct tgsi_shader_info *info,
       case TGSI_INTERPOLATE_PERSPECTIVE:
          switch (fullinst->Instruction.Opcode) {
          case TGSI_OPCODE_INTERP_CENTROID:
-            info->uses_persp_opcode_interp_centroid = true;
+            info->uses_persp_opcode_interp_centroid = TRUE;
             break;
          case TGSI_OPCODE_INTERP_OFFSET:
-            info->uses_persp_opcode_interp_offset = true;
+            info->uses_persp_opcode_interp_offset = TRUE;
             break;
          case TGSI_OPCODE_INTERP_SAMPLE:
-            info->uses_persp_opcode_interp_sample = true;
+            info->uses_persp_opcode_interp_sample = TRUE;
             break;
          }
          break;
@@ -103,13 +103,13 @@ scan_instruction(struct tgsi_shader_info *info,
       case TGSI_INTERPOLATE_LINEAR:
          switch (fullinst->Instruction.Opcode) {
          case TGSI_OPCODE_INTERP_CENTROID:
-            info->uses_linear_opcode_interp_centroid = true;
+            info->uses_linear_opcode_interp_centroid = TRUE;
             break;
          case TGSI_OPCODE_INTERP_OFFSET:
-            info->uses_linear_opcode_interp_offset = true;
+            info->uses_linear_opcode_interp_offset = TRUE;
             break;
          case TGSI_OPCODE_INTERP_SAMPLE:
-            info->uses_linear_opcode_interp_sample = true;
+            info->uses_linear_opcode_interp_sample = TRUE;
             break;
          }
          break;
@@ -118,7 +118,7 @@ scan_instruction(struct tgsi_shader_info *info,
 
    if (fullinst->Instruction.Opcode >= TGSI_OPCODE_F2D &&
        fullinst->Instruction.Opcode <= TGSI_OPCODE_DSSG)
-      info->uses_doubles = true;
+      info->uses_doubles = TRUE;
 
    for (i = 0; i < fullinst->Instruction.NumSrcRegs; i++) {
       const struct tgsi_full_src_register *src = &fullinst->Src[i];
@@ -265,26 +265,26 @@ scan_declaration(struct tgsi_shader_info *info,
             case TGSI_INTERPOLATE_PERSPECTIVE:
                switch (fulldecl->Interp.Location) {
                case TGSI_INTERPOLATE_LOC_CENTER:
-                  info->uses_persp_center = true;
+                  info->uses_persp_center = TRUE;
                   break;
                case TGSI_INTERPOLATE_LOC_CENTROID:
-                  info->uses_persp_centroid = true;
+                  info->uses_persp_centroid = TRUE;
                   break;
                case TGSI_INTERPOLATE_LOC_SAMPLE:
-                  info->uses_persp_sample = true;
+                  info->uses_persp_sample = TRUE;
                   break;
                }
                break;
             case TGSI_INTERPOLATE_LINEAR:
                switch (fulldecl->Interp.Location) {
                case TGSI_INTERPOLATE_LOC_CENTER:
-                  info->uses_linear_center = true;
+                  info->uses_linear_center = TRUE;
                   break;
                case TGSI_INTERPOLATE_LOC_CENTROID:
-                  info->uses_linear_centroid = true;
+                  info->uses_linear_centroid = TRUE;
                   break;
                case TGSI_INTERPOLATE_LOC_SAMPLE:
-                  info->uses_linear_sample = true;
+                  info->uses_linear_sample = TRUE;
                   break;
                }
                break;
