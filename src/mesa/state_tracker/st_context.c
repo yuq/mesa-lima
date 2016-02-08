@@ -231,7 +231,6 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    st->cso_context = cso_create_context(pipe);
 
    st_init_atoms( st );
-   st_init_bitmap(st);
    st_init_clear(st);
    st_init_draw( st );
    st_init_pbo_upload(st);

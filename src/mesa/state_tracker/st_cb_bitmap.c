@@ -497,8 +497,9 @@ create_cache_trans(struct st_context *st)
 void
 st_flush_bitmap_cache(struct st_context *st)
 {
-   if (!st->bitmap.cache->empty) {
-      struct bitmap_cache *cache = st->bitmap.cache;
+   struct bitmap_cache *cache = st->bitmap.cache;
+
+   if (cache && !cache->empty) {
       struct pipe_context *pipe = st->pipe;
       struct pipe_sampler_view *sv;
 
@@ -617,82 +618,21 @@ accum_bitmap(struct gl_context *ctx,
 }
 
 
-
 /**
- * Called via ctx->Driver.Bitmap()
+ * One-time init for drawing bitmaps.
  */
 static void
-st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
-          GLsizei width, GLsizei height,
-          const struct gl_pixelstore_attrib *unpack, const GLubyte *bitmap )
-{
-   struct st_context *st = st_context(ctx);
-   struct pipe_resource *pt;
-
-   assert(width > 0);
-   assert(height > 0);
-
-   /* We only need to validate state of the st dirty flags are set or
-    * any non-_NEW_PROGRAM_CONSTANTS mesa flags are set.  The VS we use
-    * for bitmap drawing uses no constants and the FS constants are
-    * explicitly uploaded in the draw_bitmap_quad() function.
-    */
-   if ((st->dirty.mesa & ~_NEW_PROGRAM_CONSTANTS) || st->dirty.st) {
-      st_validate_state(st);
-   }
-
-   if (!st->bitmap.vs) {
-      /* create pass-through vertex shader now */
-      const uint semantic_names[] = { TGSI_SEMANTIC_POSITION,
-                                      TGSI_SEMANTIC_COLOR,
-        st->needs_texcoord_semantic ? TGSI_SEMANTIC_TEXCOORD :
-                                      TGSI_SEMANTIC_GENERIC };
-      const uint semantic_indexes[] = { 0, 0, 0 };
-      st->bitmap.vs = util_make_vertex_passthrough_shader(st->pipe, 3,
-                                                          semantic_names,
-                                                          semantic_indexes,
-                                                          FALSE);
-   }
-
-   if (UseBitmapCache && accum_bitmap(ctx, x, y, width, height, unpack, bitmap))
-      return;
-
-   pt = make_bitmap_texture(ctx, width, height, unpack, bitmap);
-   if (pt) {
-      struct pipe_sampler_view *sv =
-         st_create_texture_sampler_view(st->pipe, pt);
-
-      assert(pt->target == PIPE_TEXTURE_2D || pt->target == PIPE_TEXTURE_RECT);
-
-      if (sv) {
-         draw_bitmap_quad(ctx, x, y, ctx->Current.RasterPos[2],
-                          width, height, sv,
-                          st->ctx->Current.RasterColor);
-
-         pipe_sampler_view_reference(&sv, NULL);
-      }
-
-      /* release/free the texture */
-      pipe_resource_reference(&pt, NULL);
-   }
-}
-
-
-/** Per-context init */
-void
-st_init_bitmap_functions(struct dd_function_table *functions)
-{
-   functions->Bitmap = st_Bitmap;
-}
-
-
-/** Per-context init */
-void
-st_init_bitmap(struct st_context *st)
+init_bitmap_state(struct st_context *st)
 {
    struct pipe_sampler_state *sampler = &st->bitmap.samplers[0];
    struct pipe_context *pipe = st->pipe;
    struct pipe_screen *screen = pipe->screen;
+
+   /* This function should only be called once */
+   assert(st->bitmap.cache == NULL);
+
+   /* alloc bitmap cache object */
+   st->bitmap.cache = ST_CALLOC_STRUCT(bitmap_cache);
 
    /* init sampler state once */
    memset(sampler, 0, sizeof(*sampler));
@@ -732,10 +672,79 @@ st_init_bitmap(struct st_context *st)
       assert(0);
    }
 
-   /* alloc bitmap cache object */
-   st->bitmap.cache = ST_CALLOC_STRUCT(bitmap_cache);
+   /* Create the vertex shader */
+   {
+      const uint semantic_names[] = { TGSI_SEMANTIC_POSITION,
+                                      TGSI_SEMANTIC_COLOR,
+        st->needs_texcoord_semantic ? TGSI_SEMANTIC_TEXCOORD :
+                                      TGSI_SEMANTIC_GENERIC };
+      const uint semantic_indexes[] = { 0, 0, 0 };
+      st->bitmap.vs = util_make_vertex_passthrough_shader(st->pipe, 3,
+                                                          semantic_names,
+                                                          semantic_indexes,
+                                                          FALSE);
+   }
 
    reset_cache(st);
+}
+
+
+/**
+ * Called via ctx->Driver.Bitmap()
+ */
+static void
+st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
+          GLsizei width, GLsizei height,
+          const struct gl_pixelstore_attrib *unpack, const GLubyte *bitmap )
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_resource *pt;
+
+   assert(width > 0);
+   assert(height > 0);
+
+   if (!st->bitmap.cache) {
+      init_bitmap_state(st);
+   }
+
+   /* We only need to validate state of the st dirty flags are set or
+    * any non-_NEW_PROGRAM_CONSTANTS mesa flags are set.  The VS we use
+    * for bitmap drawing uses no constants and the FS constants are
+    * explicitly uploaded in the draw_bitmap_quad() function.
+    */
+   if ((st->dirty.mesa & ~_NEW_PROGRAM_CONSTANTS) || st->dirty.st) {
+      st_validate_state(st);
+   }
+
+   if (UseBitmapCache && accum_bitmap(ctx, x, y, width, height, unpack, bitmap))
+      return;
+
+   pt = make_bitmap_texture(ctx, width, height, unpack, bitmap);
+   if (pt) {
+      struct pipe_sampler_view *sv =
+         st_create_texture_sampler_view(st->pipe, pt);
+
+      assert(pt->target == PIPE_TEXTURE_2D || pt->target == PIPE_TEXTURE_RECT);
+
+      if (sv) {
+         draw_bitmap_quad(ctx, x, y, ctx->Current.RasterPos[2],
+                          width, height, sv,
+                          st->ctx->Current.RasterColor);
+
+         pipe_sampler_view_reference(&sv, NULL);
+      }
+
+      /* release/free the texture */
+      pipe_resource_reference(&pt, NULL);
+   }
+}
+
+
+/** Per-context init */
+void
+st_init_bitmap_functions(struct dd_function_table *functions)
+{
+   functions->Bitmap = st_Bitmap;
 }
 
 
