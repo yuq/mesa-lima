@@ -650,7 +650,8 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
       if (fpv) {
          /* drawing a color image */
          const struct pipe_sampler_state *samplers[PIPE_MAX_SAMPLERS];
-         uint num = MAX2(MAX2(fpv->drawpix_sampler, fpv->pixelmap_sampler) + 1,
+         uint num = MAX3(fpv->drawpix_sampler + 1,
+                         fpv->pixelmap_sampler + 1,
                          st->state.num_samplers[PIPE_SHADER_FRAGMENT]);
          uint i;
 
