@@ -2052,11 +2052,13 @@ DECL_SPECIAL(DCL)
             unsigned interp_location = 0;
             /* SM3 only, SM2 input semantic determined by file */
             assert(sem.reg.idx < ARRAY_SIZE(tx->regs.v));
+            /* PositionT and tessfactor forbidden */
+            if (sem.usage == D3DDECLUSAGE_POSITIONT || sem.usage == D3DDECLUSAGE_TESSFACTOR)
+                return D3DERR_INVALIDCALL;
 
             if (tgsi.Name == TGSI_SEMANTIC_POSITION) {
-                /* Position0/PositionT0 are forbidden (likely because vPos already does that) */
-                if (sem.usage == D3DDECLUSAGE_POSITION ||
-                    sem.usage == D3DDECLUSAGE_POSITIONT)
+                /* Position0 is forbidden (likely because vPos already does that) */
+                if (sem.usage == D3DDECLUSAGE_POSITION)
                     return D3DERR_INVALIDCALL;
                 /* Following code is for depth */
                 tx->regs.v[sem.reg.idx] = nine_get_position_input(tx);
