@@ -1334,7 +1334,7 @@ void anv_CmdCopyBufferToImage(
          uint32_t img_x = 0;
          uint32_t img_y = 0;
          uint32_t img_o = 0;
-         if (isl_format_is_compressed(dest_image->format->surface_format))
+         if (isl_format_is_compressed(dest_image->format->isl_format))
             isl_surf_get_image_intratile_offset_el(&cmd_buffer->device->isl_dev,
                                                    &dest_image->color_surface.isl,
                                                    pRegions[r].imageSubresource.mipLevel,

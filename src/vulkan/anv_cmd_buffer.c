@@ -763,7 +763,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       const struct anv_format *format =
          anv_format_for_descriptor_type(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
       anv_fill_buffer_surface_state(cmd_buffer->device, surface_state,
-                                    format->surface_format, bo_offset, 12, 1);
+                                    format->isl_format, bo_offset, 12, 1);
 
       bt_map[0] = surface_state.offset + state_offset;
       add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);

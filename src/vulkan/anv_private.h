@@ -1510,7 +1510,7 @@ struct anv_format_swizzle {
 struct anv_format {
    const VkFormat vk_format;
    const char *name;
-   enum isl_format surface_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
+   enum isl_format isl_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
    const struct isl_format_layout *isl_layout;
    uint16_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
    struct anv_format_swizzle swizzle;

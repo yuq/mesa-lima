@@ -33,7 +33,7 @@
    [__vk_fmt] = { \
       .vk_format = __vk_fmt, \
       .name = #__vk_fmt, \
-      .surface_format = __hw_fmt, \
+      .isl_format = __hw_fmt, \
       .isl_layout = &isl_format_layouts[__hw_fmt], \
       .swizzle = __swizzle, \
       __VA_ARGS__ \
@@ -259,7 +259,7 @@ anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
 
    switch (aspect) {
    case VK_IMAGE_ASPECT_COLOR_BIT:
-      if (anv_fmt->surface_format == ISL_FORMAT_UNSUPPORTED) {
+      if (anv_fmt->isl_format == ISL_FORMAT_UNSUPPORTED) {
          return ISL_FORMAT_UNSUPPORTED;
       } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
                  !util_is_power_of_two(anv_fmt->isl_layout->bs)) {
@@ -268,19 +268,19 @@ anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
           * this by switching them over to RGBX or RGBA formats under the
           * hood.
           */
-         enum isl_format rgbx = isl_format_rgb_to_rgbx(anv_fmt->surface_format);
+         enum isl_format rgbx = isl_format_rgb_to_rgbx(anv_fmt->isl_format);
          if (rgbx != ISL_FORMAT_UNSUPPORTED)
             return rgbx;
          else
-            return isl_format_rgb_to_rgba(anv_fmt->surface_format);
+            return isl_format_rgb_to_rgba(anv_fmt->isl_format);
       } else {
-         return anv_fmt->surface_format;
+         return anv_fmt->isl_format;
       }
 
    case VK_IMAGE_ASPECT_DEPTH_BIT:
    case (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT):
       assert(anv_fmt->depth_format != 0);
-      return anv_fmt->surface_format;
+      return anv_fmt->isl_format;
 
    case VK_IMAGE_ASPECT_STENCIL_BIT:
       assert(anv_fmt->has_stencil);

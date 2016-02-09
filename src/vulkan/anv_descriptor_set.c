@@ -551,7 +551,7 @@ void anv_UpdateDescriptorSets(
             const struct anv_format *format =
                anv_format_for_descriptor_type(write->descriptorType);
 
-            view->format = format->surface_format;
+            view->format = format->isl_format;
             view->bo = buffer->bo;
             view->offset = buffer->offset + write->pBufferInfo[j].offset;
 

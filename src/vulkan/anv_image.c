@@ -531,7 +531,7 @@ anv_image_view_init(struct anv_image_view *iview,
    iview->base_mip = range->baseMipLevel;
 
    if (!isl_format_is_compressed(iview->format) &&
-       isl_format_is_compressed(image->format->surface_format)) {
+       isl_format_is_compressed(image->format->isl_format)) {
       /* Scale the ImageView extent by the backing Image. This is used
        * internally when an uncompressed ImageView is created on a
        * compressed Image. The ImageView can therefore be used for copying
@@ -660,7 +660,7 @@ anv_CreateBufferView(VkDevice _device,
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   view->format = format->surface_format;
+   view->format = format->isl_format;
    view->bo = buffer->bo;
    view->offset = buffer->offset + pCreateInfo->offset;
    view->range = pCreateInfo->range == VK_WHOLE_SIZE ?
