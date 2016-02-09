@@ -1318,51 +1318,61 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
     struct NineBaseTexture9 *dstb = NineBaseTexture9(pDestinationTexture);
     struct NineBaseTexture9 *srcb = NineBaseTexture9(pSourceTexture);
     unsigned l, m;
-    unsigned last_level = dstb->base.info.last_level;
+    unsigned last_src_level, last_dst_level;
     RECT rect;
 
     DBG("This=%p pSourceTexture=%p pDestinationTexture=%p\n", This,
         pSourceTexture, pDestinationTexture);
 
+    user_assert(pSourceTexture && pDestinationTexture, D3DERR_INVALIDCALL);
     user_assert(pSourceTexture != pDestinationTexture, D3DERR_INVALIDCALL);
 
     user_assert(dstb->base.pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
     user_assert(srcb->base.pool == D3DPOOL_SYSTEMMEM, D3DERR_INVALIDCALL);
-
-    if (dstb->base.usage & D3DUSAGE_AUTOGENMIPMAP) {
-        /* Only the first level is updated, the others regenerated. */
-        last_level = 0;
-        /* if the source has D3DUSAGE_AUTOGENMIPMAP, we have to ignore
-         * the sublevels, thus level 0 has to match */
-        user_assert(!(srcb->base.usage & D3DUSAGE_AUTOGENMIPMAP) ||
-                    (srcb->base.info.width0 == dstb->base.info.width0 &&
-                     srcb->base.info.height0 == dstb->base.info.height0 &&
-                     srcb->base.info.depth0 == dstb->base.info.depth0),
-                    D3DERR_INVALIDCALL);
-    } else {
-        user_assert(!(srcb->base.usage & D3DUSAGE_AUTOGENMIPMAP), D3DERR_INVALIDCALL);
-    }
-
     user_assert(dstb->base.type == srcb->base.type, D3DERR_INVALIDCALL);
+    user_assert(!(srcb->base.usage & D3DUSAGE_AUTOGENMIPMAP) ||
+                dstb->base.usage & D3DUSAGE_AUTOGENMIPMAP, D3DERR_INVALIDCALL);
 
-    /* Find src level that matches dst level 0: */
-    user_assert(srcb->base.info.width0 >= dstb->base.info.width0 &&
-                srcb->base.info.height0 >= dstb->base.info.height0 &&
-                srcb->base.info.depth0 >= dstb->base.info.depth0,
-                D3DERR_INVALIDCALL);
-    for (m = 0; m <= srcb->base.info.last_level; ++m) {
+    /* Spec: Failure if
+     * . Different formats
+     * . Fewer src levels than dst levels (if the opposite, only matching levels
+     *   are supposed to be copied)
+     * . Levels do not match
+     * DDI: Actually the above should pass because of legacy applications
+     * Do what you want about these, but you shouldn't crash.
+     * However driver can expect that the top dimension is greater for src than dst.
+     * Wine tests: Every combination that passes the initial checks should pass.
+     * . Different formats => conversion driver and format dependent.
+     * . 1 level, but size not matching => copy is done (and even crash if src bigger
+     * than dst. For the case where dst bigger, wine doesn't test if a stretch is applied
+     * or if a subrect is copied).
+     * . 8x8 4 sublevels -> 7x7 2 sublevels => driver dependent, On NV seems to be 4x4 subrect
+     * copied to 7x7.
+     *
+     * From these, the proposal is:
+     * . Different formats -> use util_format_translate to translate if possible for surfaces.
+     * Accept ARGB/XRGB for Volumes. Do nothing for the other combinations
+     * . First level copied -> the first level such that src is smaller or equal to dst first level
+     * . number of levels copied -> as long as it fits and textures have levels
+     * That should satisfy the constraints (and instead of crashing for some cases we return D3D_OK)
+     */
+
+    last_src_level = (srcb->base.usage & D3DUSAGE_AUTOGENMIPMAP) ? 0 : srcb->base.info.last_level;
+    last_dst_level = (dstb->base.usage & D3DUSAGE_AUTOGENMIPMAP) ? 0 : dstb->base.info.last_level;
+
+    for (m = 0; m <= last_src_level; ++m) {
         unsigned w = u_minify(srcb->base.info.width0, m);
         unsigned h = u_minify(srcb->base.info.height0, m);
         unsigned d = u_minify(srcb->base.info.depth0, m);
 
-        if (w == dstb->base.info.width0 &&
-            h == dstb->base.info.height0 &&
-            d == dstb->base.info.depth0)
+        if (w <= dstb->base.info.width0 &&
+            h <= dstb->base.info.height0 &&
+            d <= dstb->base.info.depth0)
             break;
     }
-    user_assert(m <= srcb->base.info.last_level, D3DERR_INVALIDCALL);
+    user_assert(m <= last_src_level, D3D_OK);
 
-    last_level = MIN2(last_level, srcb->base.info.last_level - m);
+    last_dst_level = MIN2(srcb->base.info.last_level - m, last_dst_level);
 
     if (dstb->base.type == D3DRTYPE_TEXTURE) {
         struct NineTexture9 *dst = NineTexture9(dstb);
@@ -1375,7 +1385,7 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
         for (l = 0; l < m; ++l)
             rect_minify_inclusive(&rect);
 
-        for (l = 0; l <= last_level; ++l, ++m) {
+        for (l = 0; l <= last_dst_level; ++l, ++m) {
             fit_rect_format_inclusive(dst->base.base.info.format,
                                       &rect,
                                       dst->surfaces[l]->desc.Width,
@@ -1402,7 +1412,7 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
             for (l = 0; l < m; ++l)
                 rect_minify_inclusive(&rect);
 
-            for (l = 0; l <= last_level; ++l, ++m) {
+            for (l = 0; l <= last_dst_level; ++l, ++m) {
                 fit_rect_format_inclusive(dst->base.base.info.format,
                                           &rect,
                                           dst->surfaces[l * 6 + z]->desc.Width,
@@ -1421,9 +1431,17 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
         struct NineVolumeTexture9 *dst = NineVolumeTexture9(dstb);
         struct NineVolumeTexture9 *src = NineVolumeTexture9(srcb);
 
+        /* Wine tests say XRGB -> ARGB should actually do something.
+         * For now do this improper conversion, but in the future it
+         * would be better to implement it properly */
+        user_assert(srcb->format == dstb->format ||
+                    (srcb->format == D3DFMT_A8R8G8B8 && dstb->format == D3DFMT_X8R8G8B8) ||
+                    (srcb->format == D3DFMT_X8R8G8B8 && dstb->format == D3DFMT_A8R8G8B8),
+                    D3D_OK);
+
         if (src->dirty_box.width == 0)
             return D3D_OK;
-        for (l = 0; l <= last_level; ++l, ++m)
+        for (l = 0; l <= last_dst_level; ++l, ++m)
             NineVolume9_CopyMemToDefault(dst->volumes[l],
                                          src->volumes[m], 0, 0, 0, NULL);
         u_box_3d(0, 0, 0, 0, 0, 0, &src->dirty_box);

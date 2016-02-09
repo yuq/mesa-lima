@@ -480,9 +480,10 @@ NineSurface9_CopyMemToDefault( struct NineSurface9 *This,
                                const RECT *pSourceRect )
 {
     struct pipe_context *pipe = This->pipe;
+    struct pipe_transfer *transfer = NULL;
     struct pipe_resource *r_dst = This->base.resource;
     struct pipe_box dst_box;
-    const uint8_t *p_src;
+    uint8_t *map = NULL;
     int src_x, src_y, dst_x, dst_y, copy_width, copy_height;
 
     assert(This->base.pool == D3DPOOL_DEFAULT &&
@@ -511,11 +512,25 @@ NineSurface9_CopyMemToDefault( struct NineSurface9 *This,
     u_box_2d_zslice(dst_x, dst_y, This->layer,
                     copy_width, copy_height, &dst_box);
 
-    p_src = NineSurface9_GetSystemMemPointer(From, src_x, src_y);
+    map = pipe->transfer_map(pipe,
+                             r_dst,
+                             This->level,
+                             PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_RANGE,
+                             &dst_box, &transfer);
+    if (!map)
+        return;
 
-    pipe->transfer_inline_write(pipe, r_dst, This->level,
-                                0, /* WRITE|DISCARD are implicit */
-                                &dst_box, p_src, From->stride, 0);
+    /* Note: if formats are the sames, it will revert
+     * to normal memcpy */
+    (void) util_format_translate(r_dst->format,
+                                 map, transfer->stride,
+                                 0, 0,
+                                 From->base.info.format,
+                                 From->data, From->stride,
+                                 src_x, src_y,
+                                 copy_width, copy_height);
+
+    pipe_transfer_unmap(pipe, transfer);
 
     NineSurface9_MarkContainerDirty(This);
 }
