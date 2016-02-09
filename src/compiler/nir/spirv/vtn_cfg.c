@@ -87,18 +87,35 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       struct vtn_value *val =
          vtn_push_value(b, w[2], vtn_value_type_access_chain);
 
+      struct vtn_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
+
       assert(b->func_param_idx < b->func->impl->num_params);
       nir_variable *param = b->func->impl->params[b->func_param_idx++];
+
+      assert(param->type == type->type);
 
       /* Name the parameter so it shows up nicely in NIR */
       param->name = ralloc_strdup(param, val->name);
 
       struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
-      vtn_var->mode = vtn_variable_mode_param;
-      vtn_var->type = vtn_value(b, w[1], vtn_value_type_type)->type;
+      vtn_var->type = type;
       vtn_var->var = param;
       vtn_var->chain.var = vtn_var;
       vtn_var->chain.length = 0;
+
+      struct vtn_type *without_array = type;
+      while(glsl_type_is_array(without_array->type))
+         without_array = without_array->array_element;
+
+      if (glsl_type_is_image(without_array->type)) {
+         vtn_var->mode = vtn_variable_mode_image;
+         param->interface_type = without_array->type;
+      } else if (glsl_type_is_sampler(without_array->type)) {
+         vtn_var->mode = vtn_variable_mode_sampler;
+         param->interface_type = without_array->type;
+      } else {
+         vtn_var->mode = vtn_variable_mode_param;
+      }
 
       val->access_chain = &vtn_var->chain;
       break;
