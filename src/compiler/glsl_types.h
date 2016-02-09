@@ -121,7 +121,7 @@ struct glsl_type {
    unsigned sampler_dimensionality:3; /**< \see glsl_sampler_dim */
    unsigned sampler_shadow:1;
    unsigned sampler_array:1;
-   unsigned sampler_type:2;    /**< Type of data returned using this
+   unsigned sampled_type:2;    /**< Type of data returned using this
 				* sampler or image.  Only \c
 				* GLSL_TYPE_FLOAT, \c GLSL_TYPE_INT,
 				* and \c GLSL_TYPE_UINT are valid.

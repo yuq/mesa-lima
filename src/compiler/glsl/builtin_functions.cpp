@@ -2921,7 +2921,7 @@ builtin_builder::add_image_function(const char *name,
    ir_function *f = new(mem_ctx) ir_function(name);
 
    for (unsigned i = 0; i < ARRAY_SIZE(types); ++i) {
-      if ((types[i]->sampler_type != GLSL_TYPE_FLOAT ||
+      if ((types[i]->sampled_type != GLSL_TYPE_FLOAT ||
            (flags & IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE)) &&
           (types[i]->sampler_dimensionality == GLSL_SAMPLER_DIM_MS ||
            !(flags & IMAGE_FUNCTION_MS_ONLY)))
@@ -5238,7 +5238,7 @@ builtin_builder::_image_prototype(const glsl_type *image_type,
                                   unsigned flags)
 {
    const glsl_type *data_type = glsl_type::get_instance(
-      image_type->sampler_type,
+      image_type->sampled_type,
       (flags & IMAGE_FUNCTION_HAS_VECTOR_DATA_TYPE ? 4 : 1),
       1);
    const glsl_type *ret_type = (flags & IMAGE_FUNCTION_RETURNS_VOID ?

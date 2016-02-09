@@ -2267,7 +2267,7 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
          type->sampler_array + 2 * type->sampler_shadow;
       const unsigned offset = type->base_type == GLSL_TYPE_SAMPLER ? 0 : 4;
       assert(type_idx < 4);
-      switch (type->sampler_type) {
+      switch (type->sampled_type) {
       case GLSL_TYPE_FLOAT:
          switch (type->sampler_dimensionality) {
          case GLSL_SAMPLER_DIM_1D: {
@@ -2953,7 +2953,7 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
                              "used on image function parameters");
          }
 
-         if (qual->image_base_type != base_type->sampler_type) {
+         if (qual->image_base_type != base_type->sampled_type) {
             _mesa_glsl_error(loc, state, "format qualifier doesn't match the "
                              "base data type of the image");
          }

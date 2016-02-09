@@ -1235,7 +1235,7 @@ fs_visitor::emit_percomp(const fs_builder &bld, const fs_inst &inst,
 static brw_reg_type
 get_image_base_type(const glsl_type *type)
 {
-   switch ((glsl_base_type)type->sampler_type) {
+   switch ((glsl_base_type)type->sampled_type) {
    case GLSL_TYPE_UINT:
       return BRW_REGISTER_TYPE_UD;
    case GLSL_TYPE_INT:

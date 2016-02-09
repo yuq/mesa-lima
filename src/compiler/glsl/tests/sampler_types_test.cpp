@@ -43,7 +43,7 @@ TEST(sampler_types, TYPE)                                   \
    const glsl_type *type = glsl_type::TYPE##_type;          \
    EXPECT_EQ(GLSL_TYPE_SAMPLER, type->base_type);           \
    EXPECT_EQ(DIM, type->sampler_dimensionality);            \
-   EXPECT_EQ(DATA_TYPE, type->sampler_type);                \
+   EXPECT_EQ(DATA_TYPE, type->sampled_type);                \
    ARR;                                                     \
    SHAD;                                                    \
    EXPECT_EQ(COMPS, type->coordinate_components());         \
