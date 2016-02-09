@@ -3116,6 +3116,7 @@ static void
 sm1_parse_instruction(struct shader_translator *tx)
 {
     struct sm1_instruction *insn = &tx->insn;
+    HRESULT hr;
     DWORD tok;
     struct sm1_op_info *info = NULL;
     unsigned i;
@@ -3180,11 +3181,13 @@ sm1_parse_instruction(struct shader_translator *tx)
     sm1_instruction_check(insn);
 
     if (info->handler)
-        info->handler(tx);
+        hr = info->handler(tx);
     else
-       NineTranslateInstruction_Generic(tx);
+        hr = NineTranslateInstruction_Generic(tx);
     tx_apply_dst0_modifiers(tx);
 
+    if (hr != D3D_OK)
+        tx->failure = TRUE;
     tx->num_scratch = 0; /* reset */
 
     TOKEN_JUMP(tx);
