@@ -34,28 +34,27 @@
  * anv_image_create_info. Exactly one bit must be set in \a aspect.
  */
 static isl_surf_usage_flags_t
-choose_isl_surf_usage(const struct anv_image_create_info *info,
+choose_isl_surf_usage(VkImageUsageFlags vk_usage,
                       VkImageAspectFlags aspect)
 {
-   const VkImageCreateInfo *vk_info = info->vk_info;
    isl_surf_usage_flags_t isl_flags = 0;
 
    /* FINISHME: Support aux surfaces */
    isl_flags |= ISL_SURF_USAGE_DISABLE_AUX_BIT;
 
-   if (vk_info->usage & VK_IMAGE_USAGE_SAMPLED_BIT)
+   if (vk_usage & VK_IMAGE_USAGE_SAMPLED_BIT)
       isl_flags |= ISL_SURF_USAGE_TEXTURE_BIT;
 
-   if (vk_info->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
+   if (vk_usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
       isl_flags |= ISL_SURF_USAGE_TEXTURE_BIT;
 
-   if (vk_info->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+   if (vk_usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
       isl_flags |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
 
-   if (vk_info->flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+   if (vk_usage & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
       isl_flags |= ISL_SURF_USAGE_CUBE_BIT;
 
-   if (vk_info->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+   if (vk_usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
       switch (aspect) {
       default:
          unreachable("bad VkImageAspect");
@@ -68,12 +67,12 @@ choose_isl_surf_usage(const struct anv_image_create_info *info,
       }
    }
 
-   if (vk_info->usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
+   if (vk_usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
       /* Meta implements transfers by sampling from the source image. */
       isl_flags |= ISL_SURF_USAGE_TEXTURE_BIT;
    }
 
-   if (vk_info->usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
+   if (vk_usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
       /* Meta implements transfers by rendering into the destination image. */
       isl_flags |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
    }
@@ -138,7 +137,7 @@ make_surface(const struct anv_device *dev,
       .samples = vk_info->samples,
       .min_alignment = 0,
       .min_pitch = 0,
-      .usage = choose_isl_surf_usage(anv_info, aspect),
+      .usage = choose_isl_surf_usage(image->usage, aspect),
       .tiling_flags = tiling_flags);
 
    /* isl_surf_init() will fail only if provided invalid input. Invalid input
