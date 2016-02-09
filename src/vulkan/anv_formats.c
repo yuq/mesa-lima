@@ -159,13 +159,13 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_B10G11R11_UFLOAT_PACK32, ISL_FORMAT_R11G11B10_FLOAT),
    fmt(VK_FORMAT_E5B9G9R9_UFLOAT_PACK32,  ISL_FORMAT_R9G9B9E5_SHAREDEXP),
 
-   fmt(VK_FORMAT_D16_UNORM,               ISL_FORMAT_R16_UNORM,               .depth_format = D16_UNORM),
-   fmt(VK_FORMAT_X8_D24_UNORM_PACK32,     ISL_FORMAT_R24_UNORM_X8_TYPELESS,   .depth_format = D24_UNORM_X8_UINT),
-   fmt(VK_FORMAT_D32_SFLOAT,              ISL_FORMAT_R32_FLOAT,               .depth_format = D32_FLOAT),
-   fmt(VK_FORMAT_S8_UINT,                 ISL_FORMAT_R8_UINT,                                                       .has_stencil = true),
-   fmt(VK_FORMAT_D16_UNORM_S8_UINT,       ISL_FORMAT_R16_UNORM,               .depth_format = D16_UNORM,            .has_stencil = true),
-   fmt(VK_FORMAT_D24_UNORM_S8_UINT,       ISL_FORMAT_R24_UNORM_X8_TYPELESS,   .depth_format = D24_UNORM_X8_UINT,    .has_stencil = true),
-   fmt(VK_FORMAT_D32_SFLOAT_S8_UINT,      ISL_FORMAT_R32_FLOAT,               .depth_format = D32_FLOAT,            .has_stencil = true),
+   fmt(VK_FORMAT_D16_UNORM,               ISL_FORMAT_R16_UNORM,               .has_depth = true),
+   fmt(VK_FORMAT_X8_D24_UNORM_PACK32,     ISL_FORMAT_R24_UNORM_X8_TYPELESS,   .has_depth = true),
+   fmt(VK_FORMAT_D32_SFLOAT,              ISL_FORMAT_R32_FLOAT,               .has_depth = true),
+   fmt(VK_FORMAT_S8_UINT,                 ISL_FORMAT_R8_UINT,                                      .has_stencil = true),
+   fmt(VK_FORMAT_D16_UNORM_S8_UINT,       ISL_FORMAT_R16_UNORM,               .has_depth = true,   .has_stencil = true),
+   fmt(VK_FORMAT_D24_UNORM_S8_UINT,       ISL_FORMAT_R24_UNORM_X8_TYPELESS,   .has_depth = true,   .has_stencil = true),
+   fmt(VK_FORMAT_D32_SFLOAT_S8_UINT,      ISL_FORMAT_R32_FLOAT,               .has_depth = true,   .has_stencil = true),
 
    fmt(VK_FORMAT_BC1_RGB_UNORM_BLOCK,     ISL_FORMAT_DXT1_RGB),
    fmt(VK_FORMAT_BC1_RGB_SRGB_BLOCK,      ISL_FORMAT_DXT1_RGB_SRGB),
@@ -279,7 +279,7 @@ anv_get_isl_format(VkFormat format, VkImageAspectFlags aspect,
 
    case VK_IMAGE_ASPECT_DEPTH_BIT:
    case (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT):
-      assert(anv_fmt->depth_format != 0);
+      assert(anv_fmt->has_depth);
       return anv_fmt->isl_format;
 
    case VK_IMAGE_ASPECT_STENCIL_BIT:
@@ -387,7 +387,7 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
          tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
          tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT;
       }
-      if (anv_formats[format].depth_format) {
+      if (anv_formats[format].has_depth) {
          tiled |= VK_FORMAT_FEATURE_BLIT_DST_BIT;
       }
    } else {

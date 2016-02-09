@@ -177,7 +177,7 @@ anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
          }
       } else {
          /* depthstencil attachment */
-         if (att->format->depth_format &&
+         if (att->format->has_depth &&
              att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
             clear_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
          }

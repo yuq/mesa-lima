@@ -554,16 +554,14 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 static void
 cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
+   struct anv_device *device = cmd_buffer->device;
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_image_view *iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
    const struct anv_image *image = iview ? iview->image : NULL;
-
-   /* XXX: isl needs to grow depth format support */
    const struct anv_format *anv_format =
       iview ? anv_format_for_vk_format(iview->vk_format) : NULL;
-
-   const bool has_depth = iview && anv_format->depth_format;
+   const bool has_depth = iview && anv_format->has_depth;
    const bool has_stencil = iview && anv_format->has_stencil;
 
    /* Emit 3DSTATE_DEPTH_BUFFER */
@@ -573,7 +571,8 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .DepthWriteEnable = true,
          .StencilWriteEnable = has_stencil,
          .HierarchicalDepthBufferEnable = false,
-         .SurfaceFormat = anv_format->depth_format,
+         .SurfaceFormat = isl_surf_get_depth_format(&device->isl_dev,
+                                                    &image->depth_surface.isl),
          .SurfacePitch = image->depth_surface.isl.row_pitch - 1,
          .SurfaceBaseAddress = {
             .bo = image->bo,

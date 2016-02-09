@@ -221,7 +221,7 @@ anv_image_create(VkDevice _device,
       if (r != VK_SUCCESS)
          goto fail;
    } else {
-      if (image->format->depth_format) {
+      if (image->format->has_depth) {
          r = make_surface(device, image, create_info,
                           VK_IMAGE_ASPECT_DEPTH_BIT);
          if (r != VK_SUCCESS)
@@ -368,9 +368,9 @@ anv_validate_CreateImageView(VkDevice _device,
    /* Validate format. */
    if (subresource->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
       assert(subresource->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
-      assert(!image->format->depth_format);
+      assert(!image->format->has_depth);
       assert(!image->format->has_stencil);
-      assert(!view_format_info->depth_format);
+      assert(!view_format_info->has_depth);
       assert(!view_format_info->has_stencil);
       assert(view_format_info->isl_layout->bs ==
              image->format->isl_layout->bs);
@@ -378,8 +378,8 @@ anv_validate_CreateImageView(VkDevice _device,
       assert((subresource->aspectMask & ~ds_flags) == 0);
 
       if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
-         assert(image->format->depth_format);
-         assert(view_format_info->depth_format);
+         assert(image->format->has_depth);
+         assert(view_format_info->has_depth);
          assert(view_format_info->isl_layout->bs ==
                 image->format->isl_layout->bs);
       }
@@ -730,9 +730,9 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
        * Meta attaches all destination surfaces as color render targets. Guess
        * what surface the Meta Dragons really want.
        */
-      if (image->format->depth_format && image->format->has_stencil) {
+      if (image->format->has_depth && image->format->has_stencil) {
          return &image->depth_surface;
-      } else if (image->format->depth_format) {
+      } else if (image->format->has_depth) {
          return &image->depth_surface;
       } else if (image->format->has_stencil) {
          return &image->stencil_surface;
@@ -741,13 +741,13 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
       }
       break;
    case VK_IMAGE_ASPECT_DEPTH_BIT:
-      assert(image->format->depth_format);
+      assert(image->format->has_depth);
       return &image->depth_surface;
    case VK_IMAGE_ASPECT_STENCIL_BIT:
       assert(image->format->has_stencil);
       return &image->stencil_surface;
    case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
-      if (image->format->depth_format && image->format->has_stencil) {
+      if (image->format->has_depth && image->format->has_stencil) {
          /* FINISHME: The Vulkan spec (git a511ba2) requires support for
           * combined depth stencil formats. Specifically, it states:
           *
@@ -760,7 +760,7 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
           * stencil surfaces from the underlying surface.
           */
          return &image->depth_surface;
-      } else if (image->format->depth_format) {
+      } else if (image->format->has_depth) {
          return &image->depth_surface;
       } else if (image->format->has_stencil) {
          return &image->stencil_surface;
