@@ -637,20 +637,6 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
       fprintf(fp, ", ");
    }
 
-   bool has_nonzero_offset = false;
-   for (unsigned i = 0; i < 4; i++) {
-      if (instr->const_offset[i] != 0) {
-         has_nonzero_offset = true;
-         break;
-      }
-   }
-
-   if (has_nonzero_offset) {
-      fprintf(fp, "[%i %i %i %i] (offset), ",
-              instr->const_offset[0], instr->const_offset[1],
-              instr->const_offset[2], instr->const_offset[3]);
-   }
-
    if (instr->op == nir_texop_tg4) {
       fprintf(fp, "%u (gather_component), ", instr->component);
    }

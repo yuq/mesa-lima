@@ -355,7 +355,6 @@ clone_tex(clone_state *state, const nir_tex_instr *tex)
    ntex->is_array = tex->is_array;
    ntex->is_shadow = tex->is_shadow;
    ntex->is_new_style_shadow = tex->is_new_style_shadow;
-   memcpy(ntex->const_offset, tex->const_offset, sizeof(ntex->const_offset));
    ntex->component = tex->component;
 
    ntex->texture_index = tex->texture_index;

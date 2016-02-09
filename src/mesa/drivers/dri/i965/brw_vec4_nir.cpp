@@ -1657,6 +1657,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
    dst_reg dest = get_nir_dest(instr->dest, instr->dest_type);
 
    /* Load the texture operation sources */
+   uint32_t constant_offset = 0;
    for (unsigned i = 0; i < instr->num_srcs; i++) {
       switch (instr->src[i].src_type) {
       case nir_tex_src_comparitor:
@@ -1713,9 +1714,17 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          break;
       }
 
-      case nir_tex_src_offset:
-         offset_value = get_nir_src(instr->src[i].src, BRW_REGISTER_TYPE_D, 2);
+      case nir_tex_src_offset: {
+         nir_const_value *const_offset =
+            nir_src_as_const_value(instr->src[i].src);
+         if (const_offset) {
+            constant_offset = brw_texture_offset(const_offset->i, 3);
+         } else {
+            offset_value =
+               get_nir_src(instr->src[i].src, BRW_REGISTER_TYPE_D, 2);
+         }
          break;
+      }
 
       case nir_tex_src_texture_offset: {
          /* The highest texture which may be used by this operation is
@@ -1768,14 +1777,6 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          mcs = emit_mcs_fetch(coord_type, coordinate, texture_reg);
       } else {
          mcs = brw_imm_ud(0u);
-      }
-   }
-
-   uint32_t constant_offset = 0;
-   for (unsigned i = 0; i < 3; i++) {
-      if (instr->const_offset[i] != 0) {
-         constant_offset = brw_texture_offset(instr->const_offset, 3);
-         break;
       }
    }
 

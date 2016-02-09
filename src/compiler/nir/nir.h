@@ -1010,9 +1010,6 @@ typedef struct {
     */
    bool is_new_style_shadow;
 
-   /* constant offset - must be 0 if the offset source is used */
-   int const_offset[4];
-
    /* gather component selector */
    unsigned component : 2;
 

@@ -1434,21 +1434,6 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 
 	tex_info(tex, &flags, &coords);
 
-	if (!has_off) {
-		/* could still have a constant offset: */
-		if (tex->const_offset[0] || tex->const_offset[1] ||
-				tex->const_offset[2] || tex->const_offset[3]) {
-			off = const_off;
-
-			off[0] = create_immed(b, tex->const_offset[0]);
-			off[1] = create_immed(b, tex->const_offset[1]);
-			off[2] = create_immed(b, tex->const_offset[2]);
-			off[3] = create_immed(b, tex->const_offset[3]);
-
-			has_off = true;
-		}
-	}
-
 	/* scale up integer coords for TXF based on the LOD */
 	if (ctx->unminify_coords && (opc == OPC_ISAML)) {
 		assert(has_lod);
