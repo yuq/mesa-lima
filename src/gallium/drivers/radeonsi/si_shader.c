@@ -2691,6 +2691,23 @@ static LLVMValueRef get_buffer_size(
 	return size;
 }
 
+/**
+ * Given the i32 or vNi32 \p type, generate the textual name (e.g. for use with
+ * intrinsic names).
+ */
+static void build_int_type_name(
+	LLVMTypeRef type,
+	char *buf, unsigned bufsize)
+{
+	assert(bufsize >= 6);
+
+	if (LLVMGetTypeKind(type) == LLVMVectorTypeKind)
+		snprintf(buf, bufsize, "v%ui32",
+			 LLVMGetVectorSize(type));
+	else
+		strcpy(buf, "i32");
+}
+
 static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 				struct lp_build_tgsi_context *bld_base,
 				struct lp_build_emit_data *emit_data);
@@ -3355,14 +3372,9 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 		return;
 	}
 
-	if (LLVMGetTypeKind(LLVMTypeOf(emit_data->args[0])) == LLVMVectorTypeKind)
-		sprintf(type, ".v%ui32",
-			LLVMGetVectorSize(LLVMTypeOf(emit_data->args[0])));
-	else
-		strcpy(type, ".i32");
-
 	/* Add the type and suffixes .c, .o if needed. */
-	sprintf(intr_name, "%s%s%s%s%s",
+	build_int_type_name(LLVMTypeOf(emit_data->args[0]), type, sizeof(type));
+	sprintf(intr_name, "%s%s%s%s.%s",
 		name, is_shadow ? ".c" : "", infix,
 		has_offset ? ".o" : "", type);
 
