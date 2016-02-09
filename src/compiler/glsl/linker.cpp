@@ -4446,9 +4446,10 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
        *     non-zero, but the program object has no vertex or geometry
        *     shader;
        */
-      if (first == MESA_SHADER_FRAGMENT) {
+      if (first >= MESA_SHADER_FRAGMENT) {
          linker_error(prog, "Transform feedback varyings specified, but "
-                      "no vertex or geometry shader is present.\n");
+                      "no vertex, tessellation, or geometry shader is "
+                      "present.\n");
          goto done;
       }
 
