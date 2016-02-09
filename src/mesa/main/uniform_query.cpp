@@ -993,7 +993,7 @@ _mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
    elements = components * vectors;
 
    if (!transpose) {
-      memcpy(&uni->storage[elements * offset], values,
+      memcpy(&uni->storage[size_mul * elements * offset], values,
 	     sizeof(uni->storage[0]) * elements * count * size_mul);
    } else if (basicType == GLSL_TYPE_FLOAT) {
       /* Copy and transpose the matrix.
