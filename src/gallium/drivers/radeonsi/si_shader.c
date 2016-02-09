@@ -40,6 +40,7 @@
 #include "util/u_memory.h"
 #include "util/u_pstipple.h"
 #include "tgsi/tgsi_parse.h"
+#include "tgsi/tgsi_build.h"
 #include "tgsi/tgsi_util.h"
 #include "tgsi/tgsi_dump.h"
 
@@ -2763,7 +2764,8 @@ image_fetch_rsrc(
 
 static LLVMValueRef image_fetch_coords(
 		struct lp_build_tgsi_context *bld_base,
-		const struct tgsi_full_instruction *inst)
+		const struct tgsi_full_instruction *inst,
+		unsigned src)
 {
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
@@ -2775,7 +2777,7 @@ static LLVMValueRef image_fetch_coords(
 	int chan;
 
 	for (chan = 0; chan < num_coords; ++chan) {
-		tmp = lp_build_emit_fetch(bld_base, inst, 1, chan);
+		tmp = lp_build_emit_fetch(bld_base, inst, src, chan);
 		tmp = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
 		coords[chan] = tmp;
 	}
@@ -2852,7 +2854,7 @@ static void load_fetch_args(
 	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
 
 	image_fetch_rsrc(bld_base, &inst->Src[0], &rsrc);
-	coords = image_fetch_coords(bld_base, inst);
+	coords = image_fetch_coords(bld_base, inst, 1);
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		buffer_append_args(ctx, emit_data, rsrc, coords);
@@ -2895,6 +2897,79 @@ static void load_emit(
 				builder, intrinsic_name, emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
 				LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
+	}
+}
+
+static void store_fetch_args(
+		struct lp_build_tgsi_context * bld_base,
+		struct lp_build_emit_data * emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	struct tgsi_full_src_register image;
+	unsigned target = inst->Memory.Texture;
+	LLVMValueRef chans[4];
+	LLVMValueRef data;
+	LLVMValueRef coords;
+	LLVMValueRef rsrc;
+	unsigned chan;
+
+	emit_data->dst_type = LLVMVoidTypeInContext(gallivm->context);
+
+	image = tgsi_full_src_register_from_dst(&inst->Dst[0]);
+	image_fetch_rsrc(bld_base, &image, &rsrc);
+	coords = image_fetch_coords(bld_base, inst, 0);
+
+	for (chan = 0; chan < 4; ++chan) {
+		chans[chan] = lp_build_emit_fetch(bld_base, inst, 1, chan);
+	}
+	data = lp_build_gather_values(gallivm, chans, 4);
+
+	if (target == TGSI_TEXTURE_BUFFER) {
+		emit_data->args[0] = data;
+		emit_data->arg_count = 1;
+
+		buffer_append_args(ctx, emit_data, rsrc, coords);
+	} else {
+		emit_data->args[0] = data;
+		emit_data->args[1] = coords;
+		emit_data->args[2] = rsrc;
+		emit_data->args[3] = lp_build_const_int32(gallivm, 15); /* dmask */
+		emit_data->arg_count = 4;
+
+		image_append_args(ctx, emit_data, target);
+	}
+}
+
+static void store_emit(
+		const struct lp_build_tgsi_action *action,
+		struct lp_build_tgsi_context *bld_base,
+		struct lp_build_emit_data *emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	unsigned target = inst->Memory.Texture;
+	char intrinsic_name[32];
+	char coords_type[8];
+
+	if (target == TGSI_TEXTURE_BUFFER) {
+		emit_data->output[emit_data->chan] = lp_build_intrinsic(
+			builder, "llvm.amdgcn.buffer.store.format.v4f32",
+			emit_data->dst_type, emit_data->args, emit_data->arg_count,
+			LLVMNoUnwindAttribute);
+	} else {
+		build_int_type_name(LLVMTypeOf(emit_data->args[1]),
+				    coords_type, sizeof(coords_type));
+		snprintf(intrinsic_name, sizeof(intrinsic_name),
+			 "llvm.amdgcn.image.store.%s", coords_type);
+
+		emit_data->output[emit_data->chan] =
+			lp_build_intrinsic(
+				builder, intrinsic_name, emit_data->dst_type,
+				emit_data->args, emit_data->arg_count,
+				LLVMNoUnwindAttribute);
 	}
 }
 
@@ -5130,6 +5205,8 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 
 	bld_base->op_actions[TGSI_OPCODE_LOAD].fetch_args = load_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_LOAD].emit = load_emit;
+	bld_base->op_actions[TGSI_OPCODE_STORE].fetch_args = store_fetch_args;
+	bld_base->op_actions[TGSI_OPCODE_STORE].emit = store_emit;
 	bld_base->op_actions[TGSI_OPCODE_RESQ].fetch_args = resq_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_RESQ].emit = resq_emit;
 
