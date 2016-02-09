@@ -151,8 +151,12 @@ make_surface(const struct anv_device *dev,
    return VK_SUCCESS;
 }
 
+/**
+ * Parameter @a format is required and overrides VkImageCreateInfo::format.
+ */
 static VkImageUsageFlags
-anv_image_get_full_usage(const VkImageCreateInfo *info)
+anv_image_get_full_usage(const VkImageCreateInfo *info,
+                         const struct anv_format *format)
 {
    VkImageUsageFlags usage = info->usage;
 
@@ -168,10 +172,21 @@ anv_image_get_full_usage(const VkImageCreateInfo *info)
    }
 
    if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
-      /* Meta will transfer to the image by binding it as a color attachment,
-       * even if the image format is not a color format.
+      /* For non-clear transfer operations, meta will transfer to the image by
+       * binding it as a color attachment, even if the image format is not
+       * a color format.
        */
       usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+      if (anv_format_is_depth_or_stencil(format)) {
+         /* vkCmdClearDepthStencilImage() only requires that
+          * VK_IMAGE_USAGE_TRANSFER_SRC_BIT be set. In particular, it does
+          * not require VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT. Meta
+          * clears the image, though, by binding it as a depthstencil
+          * attachment.
+          */
+         usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+      }
    }
 
    return usage;
@@ -186,6 +201,7 @@ anv_image_create(VkDevice _device,
    ANV_FROM_HANDLE(anv_device, device, _device);
    const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
    struct anv_image *image = NULL;
+   const struct anv_format *format = anv_format_for_vk_format(pCreateInfo->format);
    VkResult r;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
@@ -206,14 +222,14 @@ anv_image_create(VkDevice _device,
    image->type = pCreateInfo->imageType;
    image->extent = pCreateInfo->extent;
    image->vk_format = pCreateInfo->format;
-   image->format = anv_format_for_vk_format(pCreateInfo->format);
+   image->format = format;
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arrayLayers;
    image->samples = pCreateInfo->samples;
-   image->usage = anv_image_get_full_usage(pCreateInfo);
+   image->usage = anv_image_get_full_usage(pCreateInfo, format);
    image->tiling = pCreateInfo->tiling;
 
-   if (likely(anv_format_is_color(image->format))) {
+   if (likely(anv_format_is_color(format))) {
       r = make_surface(device, image, create_info,
                        VK_IMAGE_ASPECT_COLOR_BIT);
       if (r != VK_SUCCESS)
