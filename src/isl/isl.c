@@ -1397,9 +1397,11 @@ isl_surf_get_depth_format(const struct isl_device *dev,
     * Format (p321).
     */
 
+   bool has_stencil = surf->usage & ISL_SURF_USAGE_STENCIL_BIT;
+
    assert(surf->usage & ISL_SURF_USAGE_DEPTH_BIT);
 
-   if (surf->usage & ISL_SURF_USAGE_STENCIL_BIT)
+   if (has_stencil)
       assert(ISL_DEV_GEN(dev) < 7);
 
    switch (surf->format) {
@@ -1409,9 +1411,10 @@ isl_surf_get_depth_format(const struct isl_device *dev,
       assert(ISL_DEV_GEN(dev) < 7);
       return 0; /* D32_FLOAT_S8X24_UINT */
    case ISL_FORMAT_R32_FLOAT:
+      assert(!has_stencil);
       return 1; /* D32_FLOAT */
    case ISL_FORMAT_R24_UNORM_X8_TYPELESS:
-      if (surf->usage & ISL_SURF_USAGE_STENCIL_BIT) {
+      if (has_stencil) {
          assert(ISL_DEV_GEN(dev) < 7);
          return 2; /* D24_UNORM_S8_UINT */
       } else {
@@ -1419,6 +1422,7 @@ isl_surf_get_depth_format(const struct isl_device *dev,
          return 3; /* D24_UNORM_X8_UINT */
       }
    case ISL_FORMAT_R16_UNORM:
+      assert(!has_stencil);
       return 5; /* D16_UNORM */
    }
 }
