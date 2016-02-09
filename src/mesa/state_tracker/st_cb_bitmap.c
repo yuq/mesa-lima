@@ -251,8 +251,7 @@ setup_render_state(struct gl_context *ctx,
       for (i = 0; i < st->state.num_samplers[PIPE_SHADER_FRAGMENT]; i++) {
          samplers[i] = &st->state.samplers[PIPE_SHADER_FRAGMENT][i];
       }
-      samplers[fpv->bitmap_sampler] =
-         &st->bitmap.samplers[sv->texture->target != PIPE_TEXTURE_RECT];
+      samplers[fpv->bitmap_sampler] = &st->bitmap.sampler;
       cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, num,
                        (const struct pipe_sampler_state **) samplers);
    }
@@ -438,7 +437,7 @@ reset_cache(struct st_context *st)
    assert(!cache->texture);
 
    /* allocate a new texture */
-   cache->texture = st_texture_create(st, PIPE_TEXTURE_2D,
+   cache->texture = st_texture_create(st, st->internal_target,
                                       st->bitmap.tex_format, 0,
                                       BITMAP_CACHE_WIDTH, BITMAP_CACHE_HEIGHT,
                                       1, 1, 0,
@@ -624,26 +623,27 @@ accum_bitmap(struct gl_context *ctx,
 static void
 init_bitmap_state(struct st_context *st)
 {
-   struct pipe_sampler_state *sampler = &st->bitmap.samplers[0];
    struct pipe_context *pipe = st->pipe;
    struct pipe_screen *screen = pipe->screen;
 
    /* This function should only be called once */
    assert(st->bitmap.cache == NULL);
 
+   assert(st->internal_target == PIPE_TEXTURE_2D ||
+          st->internal_target == PIPE_TEXTURE_RECT);
+
    /* alloc bitmap cache object */
    st->bitmap.cache = ST_CALLOC_STRUCT(bitmap_cache);
 
    /* init sampler state once */
-   memset(sampler, 0, sizeof(*sampler));
-   sampler->wrap_s = PIPE_TEX_WRAP_CLAMP;
-   sampler->wrap_t = PIPE_TEX_WRAP_CLAMP;
-   sampler->wrap_r = PIPE_TEX_WRAP_CLAMP;
-   sampler->min_img_filter = PIPE_TEX_FILTER_NEAREST;
-   sampler->min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
-   sampler->mag_img_filter = PIPE_TEX_FILTER_NEAREST;
-   st->bitmap.samplers[1] = *sampler;
-   st->bitmap.samplers[1].normalized_coords = 1;
+   memset(&st->bitmap.sampler, 0, sizeof(st->bitmap.sampler));
+   st->bitmap.sampler.wrap_s = PIPE_TEX_WRAP_CLAMP;
+   st->bitmap.sampler.wrap_t = PIPE_TEX_WRAP_CLAMP;
+   st->bitmap.sampler.wrap_r = PIPE_TEX_WRAP_CLAMP;
+   st->bitmap.sampler.min_img_filter = PIPE_TEX_FILTER_NEAREST;
+   st->bitmap.sampler.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
+   st->bitmap.sampler.mag_img_filter = PIPE_TEX_FILTER_NEAREST;
+   st->bitmap.sampler.normalized_coords = st->internal_target == PIPE_TEXTURE_2D;
 
    /* init baseline rasterizer state once */
    memset(&st->bitmap.rasterizer, 0, sizeof(st->bitmap.rasterizer));
@@ -653,17 +653,17 @@ init_bitmap_state(struct st_context *st)
 
    /* find a usable texture format */
    if (screen->is_format_supported(screen, PIPE_FORMAT_I8_UNORM,
-                                   PIPE_TEXTURE_2D, 0,
+                                   st->internal_target, 0,
                                    PIPE_BIND_SAMPLER_VIEW)) {
       st->bitmap.tex_format = PIPE_FORMAT_I8_UNORM;
    }
    else if (screen->is_format_supported(screen, PIPE_FORMAT_A8_UNORM,
-                                        PIPE_TEXTURE_2D, 0,
+                                        st->internal_target, 0,
                                         PIPE_BIND_SAMPLER_VIEW)) {
       st->bitmap.tex_format = PIPE_FORMAT_A8_UNORM;
    }
    else if (screen->is_format_supported(screen, PIPE_FORMAT_L8_UNORM,
-                                        PIPE_TEXTURE_2D, 0,
+                                        st->internal_target, 0,
                                         PIPE_BIND_SAMPLER_VIEW)) {
       st->bitmap.tex_format = PIPE_FORMAT_L8_UNORM;
    }
