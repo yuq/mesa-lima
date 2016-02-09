@@ -359,6 +359,8 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
 {
    void *mem_ctx = state;
    const bool r = this->merge_qualifier(loc, state, q, false);
+   ast_type_qualifier valid_out_mask;
+   valid_out_mask.flags.i = 0;
 
    if (state->stage == MESA_SHADER_GEOMETRY) {
       if (q.flags.q.prim_type) {
@@ -377,19 +379,46 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
 
       /* Allow future assigments of global out's stream id value */
       this->flags.q.explicit_stream = 0;
+
+      valid_out_mask.flags.q.stream = 1;
+      valid_out_mask.flags.q.explicit_stream = 1;
+      valid_out_mask.flags.q.explicit_xfb_buffer = 1;
+      valid_out_mask.flags.q.xfb_buffer = 1;
+      valid_out_mask.flags.q.explicit_xfb_stride = 1;
+      valid_out_mask.flags.q.xfb_stride = 1;
+      valid_out_mask.flags.q.max_vertices = 1;
+      valid_out_mask.flags.q.prim_type = 1;
    } else if (state->stage == MESA_SHADER_TESS_CTRL) {
       if (create_node) {
          node = new(mem_ctx) ast_tcs_output_layout(*loc);
       }
-   } else if (!(state->stage == MESA_SHADER_TESS_EVAL ||
-                state->stage == MESA_SHADER_VERTEX)) {
+      valid_out_mask.flags.q.vertices = 1;
+      valid_out_mask.flags.q.explicit_xfb_buffer = 1;
+      valid_out_mask.flags.q.xfb_buffer = 1;
+      valid_out_mask.flags.q.explicit_xfb_stride = 1;
+      valid_out_mask.flags.q.xfb_stride = 1;
+   } else if (state->stage == MESA_SHADER_TESS_EVAL ||
+              state->stage == MESA_SHADER_VERTEX) {
+      valid_out_mask.flags.q.explicit_xfb_buffer = 1;
+      valid_out_mask.flags.q.xfb_buffer = 1;
+      valid_out_mask.flags.q.explicit_xfb_stride = 1;
+      valid_out_mask.flags.q.xfb_stride = 1;
+   } else {
       _mesa_glsl_error(loc, state, "out layout qualifiers only valid in "
                        "geometry, tessellation and vertex shaders");
+      return false;
    }
 
    /* Allow future assigments of global out's */
    this->flags.q.explicit_xfb_buffer = 0;
    this->flags.q.explicit_xfb_stride = 0;
+
+   /* Generate an error when invalid input layout qualifiers are used. */
+   if ((q.flags.i & ~valid_out_mask.flags.i) != 0) {
+      _mesa_glsl_error(loc, state,
+		       "invalid output layout qualifiers used");
+      return false;
+   }
 
    return r;
 }
