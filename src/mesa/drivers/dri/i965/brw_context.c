@@ -934,6 +934,10 @@ brwCreateContext(gl_api api,
        screen->subslice_total > 0 && screen->eu_total > 0) {
       /* Logical CS threads = EUs per subslice * 7 threads per EU */
       brw->max_cs_threads = screen->eu_total / screen->subslice_total * 7;
+
+      /* Fuse configurations may give more threads than expected, never less. */
+      if (brw->max_cs_threads < devinfo->max_cs_threads)
+         brw->max_cs_threads = devinfo->max_cs_threads;
    } else {
       brw->max_cs_threads = devinfo->max_cs_threads;
    }

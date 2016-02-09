@@ -71,6 +71,11 @@ struct brw_device_info
    /**
     * Total number of slices present on the device whether or not they've been
     * fused off.
+    *
+    * XXX: CS thread counts are limited by the inability to do cross subslice
+    * communication. It is the effectively the number of logical threads which
+    * can be executed in a subslice. Fuse configurations may cause this number
+    * to change, so we program @max_cs_threads as the lower maximum.
     */
    unsigned num_slices;
    unsigned max_vs_threads;
