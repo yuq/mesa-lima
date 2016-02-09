@@ -358,8 +358,8 @@ make_texture(struct st_context *st,
       GLenum intFormat = internal_format(ctx, format, type);
 
       pipeFormat = st_choose_format(st, intFormat, format, type,
-                                    PIPE_TEXTURE_2D, 0, PIPE_BIND_SAMPLER_VIEW,
-                                    FALSE);
+                                    st->internal_target, 0,
+                                    PIPE_BIND_SAMPLER_VIEW, FALSE);
       assert(pipeFormat != PIPE_FORMAT_NONE);
    }
 
@@ -556,7 +556,9 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    struct cso_context *cso = st->cso_context;
    GLfloat x0, y0, x1, y1;
    GLsizei maxSize;
-   boolean normalized = sv[0]->texture->target != PIPE_TEXTURE_RECT;
+   boolean normalized = sv[0]->texture->target == PIPE_TEXTURE_2D;
+
+   assert(sv[0]->texture->target == st->internal_target);
 
    /* limit checks */
    /* XXX if DrawPixels image is larger than max texture size, break
