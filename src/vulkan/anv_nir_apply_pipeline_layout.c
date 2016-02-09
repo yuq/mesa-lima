@@ -58,21 +58,18 @@ get_surface_index(unsigned set, unsigned binding,
 }
 
 static uint32_t
-get_sampler_index(unsigned set, unsigned binding, nir_texop tex_op,
+get_sampler_index(unsigned set, unsigned binding,
                   struct apply_pipeline_layout_state *state)
 {
    assert(set < state->layout->num_sets);
    struct anv_descriptor_set_layout *set_layout =
       state->layout->set[set].layout;
 
-   assert(binding < set_layout->binding_count);
-
    gl_shader_stage stage = state->shader->stage;
 
-   if (set_layout->binding[binding].stage[stage].sampler_index < 0) {
-      assert(tex_op == nir_texop_txf);
-      return 0;
-   }
+   assert(binding < set_layout->binding_count);
+
+   assert(set_layout->binding[binding].stage[stage].sampler_index >= 0);
 
    uint32_t sampler_index =
       state->layout->set[set].stage[stage].sampler_start +
@@ -188,29 +185,30 @@ static void
 lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
 {
    /* No one should have come by and lowered it already */
-   assert(tex->sampler);
+   assert(tex->texture);
 
-   nir_deref_var *tex_deref = tex->texture ? tex->texture : tex->sampler;
    tex->texture_index =
-      get_surface_index(tex_deref->var->data.descriptor_set,
-                        tex_deref->var->data.binding, state);
-   lower_tex_deref(tex, tex_deref, &tex->texture_index,
+      get_surface_index(tex->texture->var->data.descriptor_set,
+                        tex->texture->var->data.binding, state);
+   lower_tex_deref(tex, tex->texture, &tex->texture_index,
                    nir_tex_src_texture_offset, state);
 
-   tex->sampler_index =
-      get_sampler_index(tex->sampler->var->data.descriptor_set,
-                        tex->sampler->var->data.binding, tex->op, state);
-   lower_tex_deref(tex, tex->sampler, &tex->sampler_index,
-                   nir_tex_src_sampler_offset, state);
+   if (tex->sampler) {
+      tex->sampler_index =
+         get_sampler_index(tex->sampler->var->data.descriptor_set,
+                           tex->sampler->var->data.binding, state);
+      lower_tex_deref(tex, tex->sampler, &tex->sampler_index,
+                      nir_tex_src_sampler_offset, state);
+   }
 
    /* The backend only ever uses this to mark used surfaces.  We don't care
     * about that little optimization so it just needs to be non-zero.
     */
    tex->texture_array_size = 1;
 
-   if (tex->texture)
-      cleanup_tex_deref(tex, tex->texture);
-   cleanup_tex_deref(tex, tex->sampler);
+   cleanup_tex_deref(tex, tex->texture);
+   if (tex->sampler)
+      cleanup_tex_deref(tex, tex->sampler);
    tex->texture = NULL;
    tex->sampler = NULL;
 }

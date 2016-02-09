@@ -152,6 +152,7 @@ build_nir_fs(uint32_t num_samples)
       nir_tex_instr *tex;
 
       tex = nir_tex_instr_create(b.shader, /*num_srcs*/ 2);
+      tex->texture = nir_deref_var_create(tex, u_tex);
       tex->sampler = nir_deref_var_create(tex, u_tex);
       tex->sampler_dim = GLSL_SAMPLER_DIM_MS;
       tex->op = nir_texop_txf_ms;

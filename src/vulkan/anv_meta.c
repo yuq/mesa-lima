@@ -106,6 +106,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    tex->dest_type = nir_type_float; /* TODO */
    tex->is_array = glsl_sampler_type_is_array(sampler_type);
    tex->coord_components = tex_pos->num_components;
+   tex->texture = nir_deref_var_create(tex, sampler);
    tex->sampler = nir_deref_var_create(tex, sampler);
 
    nir_ssa_dest_init(&tex->instr, &tex->dest, 4, "tex");

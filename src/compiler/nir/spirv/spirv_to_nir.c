@@ -1389,12 +1389,32 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    }
 
    nir_deref_var *sampler = vtn_access_chain_to_deref(b, sampled.sampler);
-   instr->sampler = nir_deref_as_var(nir_copy_deref(instr, &sampler->deref));
    if (sampled.image) {
       nir_deref_var *image = vtn_access_chain_to_deref(b, sampled.image);
       instr->texture = nir_deref_as_var(nir_copy_deref(instr, &image->deref));
    } else {
-      instr->texture = NULL;
+      instr->texture = nir_deref_as_var(nir_copy_deref(instr, &sampler->deref));
+   }
+
+   switch (instr->op) {
+   case nir_texop_tex:
+   case nir_texop_txb:
+   case nir_texop_txl:
+   case nir_texop_txd:
+      /* These operations require a sampler */
+      instr->sampler = nir_deref_as_var(nir_copy_deref(instr, &sampler->deref));
+      break;
+   case nir_texop_txf:
+   case nir_texop_txf_ms:
+   case nir_texop_txs:
+   case nir_texop_lod:
+   case nir_texop_tg4:
+   case nir_texop_query_levels:
+   case nir_texop_texture_samples:
+   case nir_texop_samples_identical:
+      /* These don't */
+      instr->sampler = NULL;
+      break;
    }
 
    nir_ssa_dest_init(&instr->instr, &instr->dest,
