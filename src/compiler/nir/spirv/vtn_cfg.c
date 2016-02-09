@@ -73,10 +73,6 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
       func->return_type = glsl_get_function_return_type(func_type);
 
       b->func->impl = nir_function_impl_create(func);
-      if (!glsl_type_is_void(func->return_type)) {
-         b->func->impl->return_var =
-            nir_local_variable_create(b->func->impl, func->return_type, "ret");
-      }
 
       b->func_param_idx = 0;
       break;
@@ -92,13 +88,10 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
          vtn_push_value(b, w[2], vtn_value_type_access_chain);
 
       assert(b->func_param_idx < b->func->impl->num_params);
-      unsigned idx = b->func_param_idx++;
+      nir_variable *param = b->func->impl->params[b->func_param_idx++];
 
-      nir_variable *param =
-         nir_local_variable_create(b->func->impl,
-                                   b->func->impl->function->params[idx].type,
-                                   val->name);
-      b->func->impl->params[idx] = param;
+      /* Name the parameter so it shows up nicely in NIR */
+      param->name = ralloc_strdup(param, val->name);
 
       struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
       vtn_var->mode = vtn_variable_mode_param;

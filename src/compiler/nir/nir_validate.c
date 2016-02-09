@@ -864,7 +864,7 @@ postvalidate_reg_decl(nir_register *reg, validate_state *state)
 static void
 validate_var_decl(nir_variable *var, bool is_global, validate_state *state)
 {
-   assert(is_global != (var->data.mode == nir_var_local));
+   assert(is_global == nir_variable_is_global(var));
 
    /*
     * TODO validate some things ir_validate.cpp does (requires more GLSL type
@@ -933,13 +933,19 @@ validate_function_impl(nir_function_impl *impl, validate_state *state)
    assert(impl->cf_node.parent == NULL);
 
    assert(impl->num_params == impl->function->num_params);
-   for (unsigned i = 0; i < impl->num_params; i++)
+   for (unsigned i = 0; i < impl->num_params; i++) {
       assert(impl->params[i]->type == impl->function->params[i].type);
+      assert(impl->params[i]->data.location == i);
+      validate_var_decl(impl->params[i], false, state);
+   }
 
-   if (glsl_type_is_void(impl->function->return_type))
+   if (glsl_type_is_void(impl->function->return_type)) {
       assert(impl->return_var == NULL);
-   else
+   } else {
       assert(impl->return_var->type == impl->function->return_type);
+      assert(impl->return_var->data.location == -1);
+      validate_var_decl(impl->return_var, false, state);
+   }
 
    assert(exec_list_is_empty(&impl->end_block->instr_list));
    assert(impl->end_block->successors[0] == NULL);

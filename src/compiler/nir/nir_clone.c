@@ -106,7 +106,7 @@ remap_reg(clone_state *state, const nir_register *reg)
 static nir_variable *
 remap_var(clone_state *state, const nir_variable *var)
 {
-   return _lookup_ptr(state, var, var->data.mode != nir_var_local);
+   return _lookup_ptr(state, var, nir_variable_is_global(var));
 }
 
 nir_constant *
@@ -591,9 +591,10 @@ clone_function_impl(clone_state *state, const nir_function_impl *fi)
    nfi->num_params = fi->num_params;
    nfi->params = ralloc_array(state->ns, nir_variable *, fi->num_params);
    for (unsigned i = 0; i < fi->num_params; i++) {
-      nfi->params[i] = remap_local(state, fi->params[i]);
+      nfi->params[i] = clone_variable(state, fi->params[i]);
    }
-   nfi->return_var = remap_local(state, fi->return_var);
+   if (fi->return_var)
+      nfi->return_var = clone_variable(state, fi->return_var);
 
    assert(list_empty(&state->phi_srcs));
 

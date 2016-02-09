@@ -117,6 +117,10 @@ nir_shader_add_variable(nir_shader *shader, nir_variable *var)
       assert(!"nir_shader_add_variable cannot be used for local variables");
       break;
 
+   case nir_var_param:
+      assert(!"nir_shader_add_variable cannot be used for function parameters");
+      break;
+
    case nir_var_global:
       exec_list_push_tail(&shader->globals, &var->node);
       break;
@@ -306,6 +310,20 @@ nir_function_impl_create(nir_function *function)
    impl->num_params = function->num_params;
    impl->params = ralloc_array(function->shader,
                                nir_variable *, impl->num_params);
+
+   for (unsigned i = 0; i < impl->num_params; i++) {
+      impl->params[i] = rzalloc(function->shader, nir_variable);
+      impl->params[i]->type = function->params[i].type;
+      impl->params[i]->data.mode = nir_var_param;
+      impl->params[i]->data.location = i;
+   }
+
+   if (!glsl_type_is_void(function->return_type)) {
+      impl->return_var = rzalloc(function->shader, nir_variable);
+      impl->return_var->type = function->return_type;
+      impl->return_var->data.mode = nir_var_param;
+      impl->return_var->data.location = -1;
+   }
 
    return impl;
 }

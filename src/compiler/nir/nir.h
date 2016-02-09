@@ -89,7 +89,8 @@ typedef enum {
    nir_var_uniform,
    nir_var_shader_storage,
    nir_var_shared,
-   nir_var_system_value
+   nir_var_system_value,
+   nir_var_param,
 } nir_variable_mode;
 
 /**
@@ -172,7 +173,7 @@ typedef struct nir_variable {
        *
        * \sa nir_variable_mode
        */
-      nir_variable_mode mode:4;
+      nir_variable_mode mode:5;
 
       /**
        * Interpolation mode for shader inputs / outputs
@@ -354,6 +355,12 @@ typedef struct nir_variable {
 
 #define nir_foreach_variable(var, var_list) \
    foreach_list_typed(nir_variable, var, node, var_list)
+
+static inline bool
+nir_variable_is_global(const nir_variable *var)
+{
+   return var->data.mode != nir_var_local && var->data.mode != nir_var_param;
+}
 
 /**
  * Returns the bits in the inputs_read, outputs_written, or

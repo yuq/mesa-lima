@@ -69,12 +69,17 @@ inline_functions_block(nir_block *block, void *void_state)
       /* Add copies of all in parameters */
       assert(call->num_params == callee_copy->num_params);
       for (unsigned i = 0; i < callee_copy->num_params; i++) {
+         nir_variable *param = callee_copy->params[i];
+
+         /* Turn it into a local variable */
+         param->data.mode = nir_var_local;
+         exec_list_push_head(&b->impl->locals, &param->node);
+
          /* Only in or inout parameters */
          if (call->callee->params[i].param_type == nir_parameter_out)
             continue;
 
-         nir_copy_deref_var(b, nir_deref_var_create(b->shader,
-                                                    callee_copy->params[i]),
+         nir_copy_deref_var(b, nir_deref_var_create(b->shader, param),
                                call->params[i]);
       }
 
@@ -97,6 +102,10 @@ inline_functions_block(nir_block *block, void *void_state)
                                                     callee_copy->params[i]));
       }
       if (!glsl_type_is_void(call->callee->return_type)) {
+         /* Turn it into a local variable */
+         callee_copy->return_var->data.mode = nir_var_local;
+         exec_list_push_head(&b->impl->locals, &callee_copy->return_var->node);
+
          nir_copy_deref_var(b, call->return_deref,
                                nir_deref_var_create(b->shader,
                                                     callee_copy->return_var));
