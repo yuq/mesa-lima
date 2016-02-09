@@ -57,6 +57,8 @@ MAIN_FILES = \
 	main/dd.h \
 	main/debug.c \
 	main/debug.h \
+	main/debug_output.c \
+	main/debug_output.h \
 	main/depth.c \
 	main/depth.h \
 	main/dlist.c \
@@ -530,8 +532,6 @@ PROGRAM_FILES = \
 	program/program_parser.h \
 	program/prog_statevars.c \
 	program/prog_statevars.h \
-	program/sampler.cpp \
-	program/sampler.h \
 	program/string_to_uint_map.cpp \
 	program/symbol_table.c \
 	program/symbol_table.h

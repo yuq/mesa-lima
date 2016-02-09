@@ -151,6 +151,8 @@ optimizations = [
    (('ior', a, 0), a),
    (('fxor', a, a), 0.0),
    (('ixor', a, a), 0),
+   (('fxor', a, 0.0), a),
+   (('ixor', a, 0), a),
    (('inot', ('inot', a)), a),
    # DeMorgan's Laws
    (('iand', ('inot', a), ('inot', b)), ('inot', ('ior',  a, b))),
@@ -167,6 +169,8 @@ optimizations = [
    (('flog2', ('fexp2', a)), a), # lg2(2^a) = a
    (('fpow', a, b), ('fexp2', ('fmul', ('flog2', a), b)), 'options->lower_fpow'), # a^b = 2^(lg2(a)*b)
    (('fexp2', ('fmul', ('flog2', a), b)), ('fpow', a, b), '!options->lower_fpow'), # 2^(lg2(a)*b) = a^b
+   (('fexp2', ('fadd', ('fmul', ('flog2', a), b), ('fmul', ('flog2', c), d))),
+    ('fmul', ('fpow', a, b), ('fpow', c, d)), '!options->lower_fpow'), # 2^(lg2(a) * b + lg2(c) + d) = a^b * c^d
    (('fpow', a, 1.0), a),
    (('fpow', a, 2.0), ('fmul', a, a)),
    (('fpow', a, 4.0), ('fmul', ('fmul', a, a), ('fmul', a, a))),
@@ -312,6 +316,19 @@ optimizations = [
                                            127.0))),
      'options->lower_unpack_snorm_4x8'),
 ]
+
+# Unreal Engine 4 demo applications open-codes bitfieldReverse()
+def bitfield_reverse(u):
+    step1 = ('ior', ('ishl', u, 16), ('ushr', u, 16))
+    step2 = ('ior', ('ishl', ('iand', step1, 0x00ff00ff), 8), ('ushr', ('iand', step1, 0xff00ff00), 8))
+    step3 = ('ior', ('ishl', ('iand', step2, 0x0f0f0f0f), 4), ('ushr', ('iand', step2, 0xf0f0f0f0), 4))
+    step4 = ('ior', ('ishl', ('iand', step3, 0x33333333), 2), ('ushr', ('iand', step3, 0xcccccccc), 2))
+    step5 = ('ior', ('ishl', ('iand', step4, 0x55555555), 1), ('ushr', ('iand', step4, 0xaaaaaaaa), 1))
+
+    return step5
+
+optimizations += [(bitfield_reverse('x'), ('bitfield_reverse', 'x'))]
+
 
 # Add optimizations to handle the case where the result of a ternary is
 # compared to a constant.  This way we can take things like

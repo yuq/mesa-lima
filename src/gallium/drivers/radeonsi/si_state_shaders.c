@@ -124,7 +124,8 @@ static void si_shader_ls(struct si_shader *shader)
 	shader->config.rsrc1 = S_00B528_VGPRS((shader->config.num_vgprs - 1) / 4) |
 			   S_00B528_SGPRS((num_sgprs - 1) / 8) |
 		           S_00B528_VGPR_COMP_CNT(vgpr_comp_cnt) |
-			   S_00B528_DX10_CLAMP(shader->dx10_clamp_mode);
+			   S_00B528_DX10_CLAMP(1) |
+			   S_00B528_FLOAT_MODE(shader->config.float_mode);
 	shader->config.rsrc2 = S_00B52C_USER_SGPR(num_user_sgprs) |
 			   S_00B52C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
 }
@@ -157,7 +158,8 @@ static void si_shader_hs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B428_SPI_SHADER_PGM_RSRC1_HS,
 		       S_00B428_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B428_SGPRS((num_sgprs - 1) / 8) |
-		       S_00B428_DX10_CLAMP(shader->dx10_clamp_mode));
+		       S_00B428_DX10_CLAMP(1) |
+		       S_00B428_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
 		       S_00B42C_USER_SGPR(num_user_sgprs) |
 		       S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
@@ -203,7 +205,8 @@ static void si_shader_es(struct si_shader *shader)
 		       S_00B328_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B328_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B328_VGPR_COMP_CNT(vgpr_comp_cnt) |
-		       S_00B328_DX10_CLAMP(shader->dx10_clamp_mode));
+		       S_00B328_DX10_CLAMP(1) |
+		       S_00B328_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B32C_SPI_SHADER_PGM_RSRC2_ES,
 		       S_00B32C_USER_SGPR(num_user_sgprs) |
 		       S_00B32C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
@@ -292,7 +295,8 @@ static void si_shader_gs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B228_SPI_SHADER_PGM_RSRC1_GS,
 		       S_00B228_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B228_SGPRS((num_sgprs - 1) / 8) |
-		       S_00B228_DX10_CLAMP(shader->dx10_clamp_mode));
+		       S_00B228_DX10_CLAMP(1) |
+		       S_00B228_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B22C_SPI_SHADER_PGM_RSRC2_GS,
 		       S_00B22C_USER_SGPR(num_user_sgprs) |
 		       S_00B22C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
@@ -381,7 +385,8 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 		       S_00B128_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B128_SGPRS((num_sgprs - 1) / 8) |
 		       S_00B128_VGPR_COMP_CNT(vgpr_comp_cnt) |
-		       S_00B128_DX10_CLAMP(shader->dx10_clamp_mode));
+		       S_00B128_DX10_CLAMP(1) |
+		       S_00B128_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B12C_SPI_SHADER_PGM_RSRC2_VS,
 		       S_00B12C_USER_SGPR(num_user_sgprs) |
 		       S_00B12C_SO_BASE0_EN(!!shader->selector->so.stride[0]) |
@@ -402,6 +407,18 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 
 	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
 		si_set_tesseval_regs(shader, pm4);
+}
+
+static unsigned si_get_ps_num_interp(struct si_shader *ps)
+{
+	struct tgsi_shader_info *info = &ps->selector->info;
+	unsigned num_colors = !!(info->colors_read & 0x0f) +
+			      !!(info->colors_read & 0xf0);
+	unsigned num_interp = ps->selector->info.num_inputs +
+			      (ps->key.ps.color_two_side ? num_colors : 0);
+
+	assert(num_interp <= 32);
+	return MIN2(num_interp, 32);
 }
 
 static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
@@ -460,6 +477,17 @@ static void si_shader_ps(struct si_shader *shader)
 	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	uint64_t va;
 	bool has_centroid;
+	unsigned input_ena = shader->config.spi_ps_input_ena;
+
+	/* we need to enable at least one of them, otherwise we hang the GPU */
+	assert(G_0286CC_PERSP_SAMPLE_ENA(input_ena) ||
+	       G_0286CC_PERSP_CENTER_ENA(input_ena) ||
+	       G_0286CC_PERSP_CENTROID_ENA(input_ena) ||
+	       G_0286CC_PERSP_PULL_MODEL_ENA(input_ena) ||
+	       G_0286CC_LINEAR_SAMPLE_ENA(input_ena) ||
+	       G_0286CC_LINEAR_CENTER_ENA(input_ena) ||
+	       G_0286CC_LINEAR_CENTROID_ENA(input_ena) ||
+	       G_0286CC_LINE_STIPPLE_TEX_ENA(input_ena));
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
@@ -503,11 +531,15 @@ static void si_shader_ps(struct si_shader *shader)
 	     shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS))
 		spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 
+	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, input_ena);
+	si_pm4_set_reg(pm4, R_0286D0_SPI_PS_INPUT_ADDR,
+		       shader->config.spi_ps_input_addr);
+
 	/* Set interpolation controls. */
 	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena) ||
 		       G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena);
 
-	spi_ps_in_control = S_0286D8_NUM_INTERP(shader->nparam) |
+	spi_ps_in_control = S_0286D8_NUM_INTERP(si_get_ps_num_interp(shader)) |
 			    S_0286D8_BC_OPTIMIZE_DISABLE(has_centroid);
 
 	/* Set registers. */
@@ -540,7 +572,8 @@ static void si_shader_ps(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B028_SPI_SHADER_PGM_RSRC1_PS,
 		       S_00B028_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B028_SGPRS((num_sgprs - 1) / 8) |
-		       S_00B028_DX10_CLAMP(shader->dx10_clamp_mode));
+		       S_00B028_DX10_CLAMP(1) |
+		       S_00B028_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B02C_SPI_SHADER_PGM_RSRC2_PS,
 		       S_00B02C_EXTRA_LDS_SIZE(shader->config.lds_size) |
 		       S_00B02C_USER_SGPR(num_user_sgprs) |
@@ -681,7 +714,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				       sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY;
 			bool is_line = !is_poly && sctx->current_rast_prim != PIPE_PRIM_POINTS;
 
-			key->ps.color_two_side = rs->two_side;
+			key->ps.color_two_side = rs->two_side && sel->info.colors_read;
 
 			if (sctx->queued.named.blend) {
 				key->ps.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
@@ -694,6 +727,15 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 						       (is_line && rs->line_smooth)) &&
 						      sctx->framebuffer.nr_samples <= 1;
 			key->ps.clamp_color = rs->clamp_fragment_color;
+
+			key->ps.force_persample_interp = rs->force_persample_interp &&
+							 rs->multisample_enable &&
+							 sctx->framebuffer.nr_samples > 1 &&
+							 sctx->ps_iter_samples > 1 &&
+							 (sel->info.uses_persp_center ||
+							  sel->info.uses_persp_centroid ||
+							  sel->info.uses_linear_center ||
+							  sel->info.uses_linear_centroid);
 		}
 
 		key->ps.alpha_func = si_get_alpha_test_func(sctx);
@@ -796,7 +838,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	sel->type = util_pipe_shader_from_tgsi_processor(sel->info.processor);
 	p_atomic_inc(&sscreen->b.num_shaders_created);
 
-	/* First set which opcode uses which (i,j) pair. */
+	/* Set which opcode uses which (i,j) pair. */
 	if (sel->info.uses_persp_opcode_interp_centroid)
 		sel->info.uses_persp_centroid = true;
 
@@ -810,19 +852,6 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	if (sel->info.uses_linear_opcode_interp_offset ||
 	    sel->info.uses_linear_opcode_interp_sample)
 		sel->info.uses_linear_center = true;
-
-	/* Determine if the shader has to use a conditional assignment when
-	 * emulating force_persample_interp.
-	 */
-	sel->forces_persample_interp_for_persp =
-		sel->info.uses_persp_center +
-		sel->info.uses_persp_centroid +
-		sel->info.uses_persp_sample >= 2;
-
-	sel->forces_persample_interp_for_linear =
-		sel->info.uses_linear_center +
-		sel->info.uses_linear_centroid +
-		sel->info.uses_linear_sample >= 2;
 
 	switch (sel->type) {
 	case PIPE_SHADER_GEOMETRY:
@@ -893,7 +922,8 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	}
 
 	/* Pre-compilation. */
-	if (sscreen->b.debug_flags & DBG_PRECOMPILE) {
+	if (sel->type == PIPE_SHADER_GEOMETRY ||
+	    sscreen->b.debug_flags & DBG_PRECOMPILE) {
 		struct si_shader_ctx_state state = {sel};
 		union si_shader_key key;
 
@@ -1030,6 +1060,41 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 	si_mark_atom_dirty(sctx, &sctx->cb_render_state);
 }
 
+static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
+{
+	if (shader->pm4) {
+		switch (shader->selector->type) {
+		case PIPE_SHADER_VERTEX:
+			if (shader->key.vs.as_ls)
+				si_pm4_delete_state(sctx, ls, shader->pm4);
+			else if (shader->key.vs.as_es)
+				si_pm4_delete_state(sctx, es, shader->pm4);
+			else
+				si_pm4_delete_state(sctx, vs, shader->pm4);
+			break;
+		case PIPE_SHADER_TESS_CTRL:
+			si_pm4_delete_state(sctx, hs, shader->pm4);
+			break;
+		case PIPE_SHADER_TESS_EVAL:
+			if (shader->key.tes.as_es)
+				si_pm4_delete_state(sctx, es, shader->pm4);
+			else
+				si_pm4_delete_state(sctx, vs, shader->pm4);
+			break;
+		case PIPE_SHADER_GEOMETRY:
+			si_pm4_delete_state(sctx, gs, shader->pm4);
+			si_pm4_delete_state(sctx, vs, shader->gs_copy_shader->pm4);
+			break;
+		case PIPE_SHADER_FRAGMENT:
+			si_pm4_delete_state(sctx, ps, shader->pm4);
+			break;
+		}
+	}
+
+	si_shader_destroy(shader);
+	free(shader);
+}
+
 static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -1050,35 +1115,7 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 
 	while (p) {
 		c = p->next_variant;
-		switch (sel->type) {
-		case PIPE_SHADER_VERTEX:
-			if (p->key.vs.as_ls)
-				si_pm4_delete_state(sctx, ls, p->pm4);
-			else if (p->key.vs.as_es)
-				si_pm4_delete_state(sctx, es, p->pm4);
-			else
-				si_pm4_delete_state(sctx, vs, p->pm4);
-			break;
-		case PIPE_SHADER_TESS_CTRL:
-			si_pm4_delete_state(sctx, hs, p->pm4);
-			break;
-		case PIPE_SHADER_TESS_EVAL:
-			if (p->key.tes.as_es)
-				si_pm4_delete_state(sctx, es, p->pm4);
-			else
-				si_pm4_delete_state(sctx, vs, p->pm4);
-			break;
-		case PIPE_SHADER_GEOMETRY:
-			si_pm4_delete_state(sctx, gs, p->pm4);
-			si_pm4_delete_state(sctx, vs, p->gs_copy_shader->pm4);
-			break;
-		case PIPE_SHADER_FRAGMENT:
-			si_pm4_delete_state(sctx, ps, p->pm4);
-			break;
-		}
-
-		si_shader_destroy(p);
-		free(p);
+		si_delete_shader(sctx, p);
 		p = c;
 	}
 
@@ -1087,132 +1124,86 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 	free(sel);
 }
 
+static unsigned si_get_ps_input_cntl(struct si_context *sctx,
+				     struct si_shader *vs, unsigned name,
+				     unsigned index, unsigned interpolate)
+{
+	struct tgsi_shader_info *vsinfo = &vs->selector->info;
+	unsigned j, ps_input_cntl = 0;
+
+	if (interpolate == TGSI_INTERPOLATE_CONSTANT ||
+	    (interpolate == TGSI_INTERPOLATE_COLOR && sctx->flatshade))
+		ps_input_cntl |= S_028644_FLAT_SHADE(1);
+
+	if (name == TGSI_SEMANTIC_PCOORD ||
+	    (name == TGSI_SEMANTIC_TEXCOORD &&
+	     sctx->sprite_coord_enable & (1 << index))) {
+		ps_input_cntl |= S_028644_PT_SPRITE_TEX(1);
+	}
+
+	for (j = 0; j < vsinfo->num_outputs; j++) {
+		if (name == vsinfo->output_semantic_name[j] &&
+		    index == vsinfo->output_semantic_index[j]) {
+			ps_input_cntl |= S_028644_OFFSET(vs->vs_output_param_offset[j]);
+			break;
+		}
+	}
+
+	if (name == TGSI_SEMANTIC_PRIMID)
+		/* PrimID is written after the last output. */
+		ps_input_cntl |= S_028644_OFFSET(vs->vs_output_param_offset[vsinfo->num_outputs]);
+	else if (j == vsinfo->num_outputs && !G_028644_PT_SPRITE_TEX(ps_input_cntl)) {
+		/* No corresponding output found, load defaults into input.
+		 * Don't set any other bits.
+		 * (FLAT_SHADE=1 completely changes behavior) */
+		ps_input_cntl = S_028644_OFFSET(0x20);
+	}
+	return ps_input_cntl;
+}
+
 static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_shader *ps = sctx->ps_shader.current;
 	struct si_shader *vs = si_get_vs_state(sctx);
-	struct tgsi_shader_info *psinfo;
-	struct tgsi_shader_info *vsinfo = &vs->selector->info;
-	unsigned i, j, tmp, num_written = 0;
+	struct tgsi_shader_info *psinfo = ps ? &ps->selector->info : NULL;
+	unsigned i, num_interp, num_written = 0, bcol_interp[2];
 
-	if (!ps || !ps->nparam)
+	if (!ps || !ps->selector->info.num_inputs)
 		return;
 
-	psinfo = &ps->selector->info;
-
-	radeon_set_context_reg_seq(cs, R_028644_SPI_PS_INPUT_CNTL_0, ps->nparam);
+	num_interp = si_get_ps_num_interp(ps);
+	assert(num_interp > 0);
+	radeon_set_context_reg_seq(cs, R_028644_SPI_PS_INPUT_CNTL_0, num_interp);
 
 	for (i = 0; i < psinfo->num_inputs; i++) {
 		unsigned name = psinfo->input_semantic_name[i];
 		unsigned index = psinfo->input_semantic_index[i];
 		unsigned interpolate = psinfo->input_interpolate[i];
-		unsigned param_offset = ps->ps_input_param_offset[i];
-bcolor:
-		tmp = 0;
 
-		if (interpolate == TGSI_INTERPOLATE_CONSTANT ||
-		    (interpolate == TGSI_INTERPOLATE_COLOR && sctx->flatshade))
-			tmp |= S_028644_FLAT_SHADE(1);
-
-		if (name == TGSI_SEMANTIC_PCOORD ||
-		    (name == TGSI_SEMANTIC_TEXCOORD &&
-		     sctx->sprite_coord_enable & (1 << index))) {
-			tmp |= S_028644_PT_SPRITE_TEX(1);
-		}
-
-		for (j = 0; j < vsinfo->num_outputs; j++) {
-			if (name == vsinfo->output_semantic_name[j] &&
-			    index == vsinfo->output_semantic_index[j]) {
-				tmp |= S_028644_OFFSET(vs->vs_output_param_offset[j]);
-				break;
-			}
-		}
-
-		if (name == TGSI_SEMANTIC_PRIMID)
-			/* PrimID is written after the last output. */
-			tmp |= S_028644_OFFSET(vs->vs_output_param_offset[vsinfo->num_outputs]);
-		else if (j == vsinfo->num_outputs && !G_028644_PT_SPRITE_TEX(tmp)) {
-			/* No corresponding output found, load defaults into input.
-			 * Don't set any other bits.
-			 * (FLAT_SHADE=1 completely changes behavior) */
-			tmp = S_028644_OFFSET(0x20);
-		}
-
-		assert(param_offset == num_written);
-		radeon_emit(cs, tmp);
+		radeon_emit(cs, si_get_ps_input_cntl(sctx, vs, name, index,
+						     interpolate));
 		num_written++;
 
-		if (name == TGSI_SEMANTIC_COLOR &&
-		    ps->key.ps.color_two_side) {
-			name = TGSI_SEMANTIC_BCOLOR;
-			param_offset++;
-			goto bcolor;
+		if (name == TGSI_SEMANTIC_COLOR) {
+			assert(index < ARRAY_SIZE(bcol_interp));
+			bcol_interp[index] = interpolate;
 		}
 	}
-	assert(ps->nparam == num_written);
-}
 
-static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom)
-{
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	struct si_shader *ps = sctx->ps_shader.current;
-	unsigned input_ena;
+	if (ps->key.ps.color_two_side) {
+		unsigned bcol = TGSI_SEMANTIC_BCOLOR;
 
-	if (!ps)
-		return;
+		for (i = 0; i < 2; i++) {
+			if (!(psinfo->colors_read & (0xf << (i * 4))))
+				continue;
 
-	input_ena = ps->config.spi_ps_input_ena;
-
-	/* we need to enable at least one of them, otherwise we hang the GPU */
-	assert(G_0286CC_PERSP_SAMPLE_ENA(input_ena) ||
-	    G_0286CC_PERSP_CENTER_ENA(input_ena) ||
-	    G_0286CC_PERSP_CENTROID_ENA(input_ena) ||
-	    G_0286CC_PERSP_PULL_MODEL_ENA(input_ena) ||
-	    G_0286CC_LINEAR_SAMPLE_ENA(input_ena) ||
-	    G_0286CC_LINEAR_CENTER_ENA(input_ena) ||
-	    G_0286CC_LINEAR_CENTROID_ENA(input_ena) ||
-	    G_0286CC_LINE_STIPPLE_TEX_ENA(input_ena));
-
-	if (sctx->force_persample_interp) {
-		unsigned num_persp = G_0286CC_PERSP_SAMPLE_ENA(input_ena) +
-				     G_0286CC_PERSP_CENTER_ENA(input_ena) +
-				     G_0286CC_PERSP_CENTROID_ENA(input_ena);
-		unsigned num_linear = G_0286CC_LINEAR_SAMPLE_ENA(input_ena) +
-				      G_0286CC_LINEAR_CENTER_ENA(input_ena) +
-				      G_0286CC_LINEAR_CENTROID_ENA(input_ena);
-
-		/* If only one set of (i,j) coordinates is used, we can disable
-		 * CENTER/CENTROID, enable SAMPLE and it will load SAMPLE coordinates
-		 * where CENTER/CENTROID are expected, effectively forcing per-sample
-		 * interpolation.
-		 */
-		if (num_persp == 1) {
-			input_ena &= C_0286CC_PERSP_CENTER_ENA;
-			input_ena &= C_0286CC_PERSP_CENTROID_ENA;
-			input_ena |= G_0286CC_PERSP_SAMPLE_ENA(1);
+			radeon_emit(cs, si_get_ps_input_cntl(sctx, vs, bcol,
+							     i, bcol_interp[i]));
+			num_written++;
 		}
-		if (num_linear == 1) {
-			input_ena &= C_0286CC_LINEAR_CENTER_ENA;
-			input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
-			input_ena |= G_0286CC_LINEAR_SAMPLE_ENA(1);
-		}
-
-		/* If at least 2 sets of coordinates are used, we can't use this
-		 * trick and have to select SAMPLE using a conditional assignment
-		 * in the shader with "force_persample_interp" being a shader constant.
-		 */
 	}
-
-	radeon_set_context_reg_seq(cs, R_0286CC_SPI_PS_INPUT_ENA, 2);
-	radeon_emit(cs, input_ena);
-	radeon_emit(cs, input_ena);
-
-	if (ps->selector->forces_persample_interp_for_persp ||
-	    ps->selector->forces_persample_interp_for_linear)
-		radeon_set_sh_reg(cs, R_00B030_SPI_SHADER_USER_DATA_PS_0 +
-				      SI_SGPR_PS_STATE_BITS * 4,
-				  sctx->force_persample_interp);
+	assert(num_interp == num_written);
 }
 
 /**
@@ -1746,12 +1737,6 @@ bool si_update_shaders(struct si_context *sctx)
 			si_mark_atom_dirty(sctx, &sctx->spi_map);
 		}
 
-		if (si_pm4_state_changed(sctx, ps) ||
-		    sctx->force_persample_interp != rs->force_persample_interp) {
-			sctx->force_persample_interp = rs->force_persample_interp;
-			si_mark_atom_dirty(sctx, &sctx->spi_ps_input);
-		}
-
 		if (sctx->b.family == CHIP_STONEY && si_pm4_state_changed(sctx, ps))
 			si_mark_atom_dirty(sctx, &sctx->cb_render_state);
 
@@ -1784,7 +1769,6 @@ bool si_update_shaders(struct si_context *sctx)
 void si_init_shader_functions(struct si_context *sctx)
 {
 	si_init_atom(sctx, &sctx->spi_map, &sctx->atoms.s.spi_map, si_emit_spi_map);
-	si_init_atom(sctx, &sctx->spi_ps_input, &sctx->atoms.s.spi_ps_input, si_emit_spi_ps_input);
 
 	sctx->b.b.create_vs_state = si_create_shader_selector;
 	sctx->b.b.create_tcs_state = si_create_shader_selector;

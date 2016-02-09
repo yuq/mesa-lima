@@ -209,7 +209,7 @@ static void
 brw_memory_barrier(struct gl_context *ctx, GLbitfield barriers)
 {
    struct brw_context *brw = brw_context(ctx);
-   unsigned bits = (PIPE_CONTROL_DATA_CACHE_INVALIDATE |
+   unsigned bits = (PIPE_CONTROL_DATA_CACHE_FLUSH |
                     PIPE_CONTROL_NO_WRITE |
                     PIPE_CONTROL_CS_STALL);
    assert(brw->gen >= 7 && brw->gen <= 9);

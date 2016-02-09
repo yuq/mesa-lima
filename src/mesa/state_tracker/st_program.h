@@ -171,25 +171,24 @@ struct st_vertex_program
 
 
 
-/** Geometry program variant key */
-struct st_gp_variant_key
+/** Key shared by all shaders except VP, FP */
+struct st_basic_variant_key
 {
    struct st_context *st;          /**< variants are per-context */
-   /* no other fields yet */
 };
 
 
 /**
  * Geometry program variant.
  */
-struct st_gp_variant
+struct st_basic_variant
 {
    /* Parameters which generated this variant. */
-   struct st_gp_variant_key key;
+   struct st_basic_variant_key key;
 
    void *driver_shader;
 
-   struct st_gp_variant *next;
+   struct st_basic_variant *next;
 };
 
 
@@ -202,30 +201,7 @@ struct st_geometry_program
    struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
-   struct st_gp_variant *variants;
-};
-
-
-
-/** Tessellation control program variant key */
-struct st_tcp_variant_key
-{
-   struct st_context *st;          /**< variants are per-context */
-   /* no other fields yet */
-};
-
-
-/**
- * Tessellation control program variant.
- */
-struct st_tcp_variant
-{
-   /* Parameters which generated this variant. */
-   struct st_tcp_variant_key key;
-
-   void *driver_shader;
-
-   struct st_tcp_variant *next;
+   struct st_basic_variant *variants;
 };
 
 
@@ -238,30 +214,7 @@ struct st_tessctrl_program
    struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
-   struct st_tcp_variant *variants;
-};
-
-
-
-/** Tessellation evaluation program variant key */
-struct st_tep_variant_key
-{
-   struct st_context *st;          /**< variants are per-context */
-   /* no other fields yet */
-};
-
-
-/**
- * Tessellation evaluation program variant.
- */
-struct st_tep_variant
-{
-   /* Parameters which generated this variant. */
-   struct st_tep_variant_key key;
-
-   void *driver_shader;
-
-   struct st_tep_variant *next;
+   struct st_basic_variant *variants;
 };
 
 
@@ -274,7 +227,7 @@ struct st_tesseval_program
    struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
-   struct st_tep_variant *variants;
+   struct st_basic_variant *variants;
 };
 
 
@@ -397,21 +350,10 @@ st_get_fp_variant(struct st_context *st,
                   struct st_fragment_program *stfp,
                   const struct st_fp_variant_key *key);
 
-
-extern struct st_gp_variant *
-st_get_gp_variant(struct st_context *st,
-                  struct st_geometry_program *stgp,
-                  const struct st_gp_variant_key *key);
-
-extern struct st_tcp_variant *
-st_get_tcp_variant(struct st_context *st,
-                   struct st_tessctrl_program *sttcp,
-                   const struct st_tcp_variant_key *key);
-
-extern struct st_tep_variant *
-st_get_tep_variant(struct st_context *st,
-                   struct st_tesseval_program *sttep,
-                   const struct st_tep_variant_key *key);
+extern struct st_basic_variant *
+st_get_basic_variant(struct st_context *st,
+                     struct pipe_shader_state *tgsi,
+                     struct st_basic_variant **variants);
 
 extern void
 st_release_vp_variants( struct st_context *st,
@@ -422,16 +364,9 @@ st_release_fp_variants( struct st_context *st,
                         struct st_fragment_program *stfp );
 
 extern void
-st_release_gp_variants(struct st_context *st,
-                       struct st_geometry_program *stgp);
-
-extern void
-st_release_tcp_variants(struct st_context *st,
-                        struct st_tessctrl_program *sttcp);
-
-extern void
-st_release_tep_variants(struct st_context *st,
-                        struct st_tesseval_program *sttep);
+st_release_basic_variants(struct st_context *st, GLenum target,
+                          struct st_basic_variant **variants,
+                          struct pipe_shader_state *tgsi);
 
 extern void
 st_destroy_program_variants(struct st_context *st);

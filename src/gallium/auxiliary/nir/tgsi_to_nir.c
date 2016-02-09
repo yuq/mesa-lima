@@ -614,8 +614,8 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
       }
 
       nir_ssa_def *offset;
-      if (dim) {
-         /* UBO loads don't have a const_index[0] base offset. */
+      if (op == nir_intrinsic_load_ubo) {
+         /* UBO loads don't have a base offset. */
          offset = nir_imm_int(b, index);
          if (indirect) {
             offset = nir_iadd(b, offset, ttn_src_for_indirect(c, indirect));
@@ -623,7 +623,7 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
          /* UBO offsets are in bytes, but TGSI gives them to us in vec4's */
          offset = nir_ishl(b, offset, nir_imm_int(b, 4));
       } else {
-         load->const_index[0] = index;
+         nir_intrinsic_set_base(load, index);
          if (indirect) {
             offset = ttn_src_for_indirect(c, indirect);
          } else {
@@ -1875,7 +1875,7 @@ ttn_emit_instruction(struct ttn_compile *c)
                                            &tgsi_dst->Indirect : NULL;
 
       store->num_components = 4;
-      store->const_index[0] = dest.write_mask;
+      nir_intrinsic_set_write_mask(store, dest.write_mask);
       store->variables[0] = ttn_array_deref(c, store, var, offset, indirect);
       store->src[0] = nir_src_for_reg(dest.dest.reg.reg);
 
@@ -1907,8 +1907,8 @@ ttn_add_output_stores(struct ttn_compile *c)
          store->num_components = 4;
          store->src[0].reg.reg = c->output_regs[loc].reg;
          store->src[0].reg.base_offset = c->output_regs[loc].offset;
-         store->const_index[0] = loc;
-         store->const_index[1] = 0xf;  /* writemask */
+         nir_intrinsic_set_base(store, loc);
+         nir_intrinsic_set_write_mask(store, 0xf);
          store->src[1] = nir_src_for_ssa(nir_imm_int(b, 0));
          nir_builder_instr_insert(b, &store->instr);
       }

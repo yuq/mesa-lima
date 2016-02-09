@@ -560,7 +560,8 @@ done:
 	    state->symbols->add_global_function(f);
 	    emit_function(state, f);
 	 }
-	 f->add_signature(sig->clone_prototype(f, NULL));
+	 sig = sig->clone_prototype(f, NULL);
+	 f->add_signature(sig);
       }
    }
    return sig;

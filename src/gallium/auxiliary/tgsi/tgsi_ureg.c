@@ -1593,7 +1593,7 @@ emit_decl_sampler_view(struct ureg_program *ureg,
    out[0].decl.Type = TGSI_TOKEN_TYPE_DECLARATION;
    out[0].decl.NrTokens = 3;
    out[0].decl.File = TGSI_FILE_SAMPLER_VIEW;
-   out[0].decl.UsageMask = 0xf;
+   out[0].decl.UsageMask = TGSI_WRITEMASK_XYZW;
 
    out[1].value = 0;
    out[1].decl_range.First = index;
@@ -1621,7 +1621,7 @@ emit_decl_image(struct ureg_program *ureg,
    out[0].decl.Type = TGSI_TOKEN_TYPE_DECLARATION;
    out[0].decl.NrTokens = 3;
    out[0].decl.File = TGSI_FILE_IMAGE;
-   out[0].decl.UsageMask = 0xf;
+   out[0].decl.UsageMask = TGSI_WRITEMASK_XYZW;
 
    out[1].value = 0;
    out[1].decl_range.First = index;
@@ -1645,7 +1645,7 @@ emit_decl_buffer(struct ureg_program *ureg,
    out[0].decl.Type = TGSI_TOKEN_TYPE_DECLARATION;
    out[0].decl.NrTokens = 2;
    out[0].decl.File = TGSI_FILE_BUFFER;
-   out[0].decl.UsageMask = 0xf;
+   out[0].decl.UsageMask = TGSI_WRITEMASK_XYZW;
    out[0].decl.Atomic = atomic;
 
    out[1].value = 0;

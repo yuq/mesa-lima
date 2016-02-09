@@ -490,6 +490,10 @@ brw_preprocess_nir(nir_shader *nir, bool is_scalar)
 
    nir = nir_optimize(nir, is_scalar);
 
+   if (is_scalar) {
+      OPT_V(nir_lower_load_const_to_scalar);
+   }
+
    /* Lower a bunch of stuff */
    OPT_V(nir_lower_var_copies);
 

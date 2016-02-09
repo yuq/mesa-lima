@@ -833,14 +833,11 @@ static int lookup_interp_param_index(unsigned interpolate, unsigned location)
 }
 
 /* This shouldn't be used by explicit INTERP opcodes. */
-static LLVMValueRef get_interp_param(struct si_shader_context *si_shader_ctx,
-				     unsigned param)
+static unsigned select_interp_param(struct si_shader_context *si_shader_ctx,
+				    unsigned param)
 {
-	struct gallivm_state *gallivm = &si_shader_ctx->radeon_bld.gallivm;
-	unsigned sample_param = 0;
-	LLVMValueRef default_ij, sample_ij, force_sample;
-
-	default_ij = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, param);
+	if (!si_shader_ctx->shader->key.ps.force_persample_interp)
+		return param;
 
 	/* If the shader doesn't use center/centroid, just return the parameter.
 	 *
@@ -850,79 +847,52 @@ static LLVMValueRef get_interp_param(struct si_shader_context *si_shader_ctx,
 	switch (param) {
 	case SI_PARAM_PERSP_CENTROID:
 	case SI_PARAM_PERSP_CENTER:
-		if (!si_shader_ctx->shader->selector->forces_persample_interp_for_persp)
-			return default_ij;
-
-		sample_param = SI_PARAM_PERSP_SAMPLE;
-		break;
+		return SI_PARAM_PERSP_SAMPLE;
 
 	case SI_PARAM_LINEAR_CENTROID:
 	case SI_PARAM_LINEAR_CENTER:
-		if (!si_shader_ctx->shader->selector->forces_persample_interp_for_linear)
-			return default_ij;
-
-		sample_param = SI_PARAM_LINEAR_SAMPLE;
-		break;
+		return SI_PARAM_LINEAR_SAMPLE;
 
 	default:
-		return default_ij;
+		return param;
 	}
-
-	/* Otherwise, we have to select (i,j) based on a user data SGPR. */
-	sample_ij = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, sample_param);
-
-	/* TODO: this can be done more efficiently by switching between
-	 * 2 prologs.
-	 */
-	force_sample = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
-				    SI_PARAM_PS_STATE_BITS);
-	force_sample = LLVMBuildTrunc(gallivm->builder, force_sample,
-				      LLVMInt1TypeInContext(gallivm->context), "");
-	return LLVMBuildSelect(gallivm->builder, force_sample,
-			       sample_ij, default_ij, "");
 }
 
-static void declare_input_fs(
-	struct radeon_llvm_context *radeon_bld,
-	unsigned input_index,
-	const struct tgsi_full_declaration *decl)
+/**
+ * Interpolate a fragment shader input.
+ *
+ * @param si_shader_ctx		context
+ * @param input_index		index of the input in hardware
+ * @param semantic_name		TGSI_SEMANTIC_*
+ * @param semantic_index	semantic index
+ * @param num_interp_inputs	number of all interpolated inputs (= BCOLOR offset)
+ * @param colors_read_mask	color components read (4 bits for each color, 8 bits in total)
+ * @param interp_param		interpolation weights (i,j)
+ * @param prim_mask		SI_PARAM_PRIM_MASK
+ * @param face			SI_PARAM_FRONT_FACE
+ * @param result		the return value (4 components)
+ */
+static void interp_fs_input(struct si_shader_context *si_shader_ctx,
+			    unsigned input_index,
+			    unsigned semantic_name,
+			    unsigned semantic_index,
+			    unsigned num_interp_inputs,
+			    unsigned colors_read_mask,
+			    LLVMValueRef interp_param,
+			    LLVMValueRef prim_mask,
+			    LLVMValueRef face,
+			    LLVMValueRef result[4])
 {
-	struct lp_build_context *base = &radeon_bld->soa.bld_base.base;
-	struct si_shader_context *si_shader_ctx =
-		si_shader_context(&radeon_bld->soa.bld_base);
-	struct si_shader *shader = si_shader_ctx->shader;
-	struct lp_build_context *uint =	&radeon_bld->soa.bld_base.uint_bld;
+	struct lp_build_context *base = &si_shader_ctx->radeon_bld.soa.bld_base.base;
+	struct lp_build_context *uint =	&si_shader_ctx->radeon_bld.soa.bld_base.uint_bld;
 	struct gallivm_state *gallivm = base->gallivm;
 	LLVMTypeRef input_type = LLVMFloatTypeInContext(gallivm->context);
-	LLVMValueRef main_fn = radeon_bld->main_fn;
-
-	LLVMValueRef interp_param = NULL;
-	int interp_param_idx;
 	const char * intr_name;
-
-	/* This value is:
-	 * [15:0] NewPrimMask (Bit mask for each quad.  It is set it the
-	 *                     quad begins a new primitive.  Bit 0 always needs
-	 *                     to be unset)
-	 * [32:16] ParamOffset
-	 *
-	 */
-	LLVMValueRef params = LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK);
 	LLVMValueRef attr_number;
 
 	unsigned chan;
 
-	shader->ps_input_param_offset[input_index] = shader->nparam++;
-	attr_number = lp_build_const_int32(gallivm,
-					   shader->ps_input_param_offset[input_index]);
-
-	shader->ps_input_interpolate[input_index] = decl->Interp.Interpolate;
-	interp_param_idx = lookup_interp_param_index(decl->Interp.Interpolate,
-						     decl->Interp.Location);
-	if (interp_param_idx == -1)
-		return;
-	else if (interp_param_idx)
-		interp_param = get_interp_param(si_shader_ctx, interp_param_idx);
+	attr_number = lp_build_const_int32(gallivm, input_index);
 
 	/* fs.constant returns the param from the middle vertex, so it's not
 	 * really useful for flat shading. It's meant to be used for custom
@@ -936,24 +906,28 @@ static void declare_input_fs(
 	 */
 	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
 
-	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
+	if (semantic_name == TGSI_SEMANTIC_COLOR &&
 	    si_shader_ctx->shader->key.ps.color_two_side) {
 		LLVMValueRef args[4];
-		LLVMValueRef face, is_face_positive;
-		LLVMValueRef back_attr_number =
-			lp_build_const_int32(gallivm,
-					     shader->ps_input_param_offset[input_index] + 1);
+		LLVMValueRef is_face_positive;
+		LLVMValueRef back_attr_number;
 
-		face = LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE);
+		/* If BCOLOR0 is used, BCOLOR1 is at offset "num_inputs + 1",
+		 * otherwise it's at offset "num_inputs".
+		 */
+		unsigned back_attr_offset = num_interp_inputs;
+		if (semantic_index == 1 && colors_read_mask & 0xf)
+			back_attr_offset += 1;
+
+		back_attr_number = lp_build_const_int32(gallivm, back_attr_offset);
 
 		is_face_positive = LLVMBuildICmp(gallivm->builder, LLVMIntNE,
 						 face, uint->zero, "");
 
-		args[2] = params;
+		args[2] = prim_mask;
 		args[3] = interp_param;
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 			LLVMValueRef llvm_chan = lp_build_const_int32(gallivm, chan);
-			unsigned soa_index = radeon_llvm_reg_index_soa(input_index, chan);
 			LLVMValueRef front, back;
 
 			args[0] = llvm_chan;
@@ -967,46 +941,69 @@ static void declare_input_fs(
 					       input_type, args, args[3] ? 4 : 3,
 					       LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 
-			radeon_bld->inputs[soa_index] =
-				LLVMBuildSelect(gallivm->builder,
+			result[chan] = LLVMBuildSelect(gallivm->builder,
 						is_face_positive,
 						front,
 						back,
 						"");
 		}
-
-		shader->nparam++;
-	} else if (decl->Semantic.Name == TGSI_SEMANTIC_FOG) {
+	} else if (semantic_name == TGSI_SEMANTIC_FOG) {
 		LLVMValueRef args[4];
 
 		args[0] = uint->zero;
 		args[1] = attr_number;
-		args[2] = params;
+		args[2] = prim_mask;
 		args[3] = interp_param;
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)] =
-			lp_build_intrinsic(gallivm->builder, intr_name,
+		result[0] = lp_build_intrinsic(gallivm->builder, intr_name,
 					input_type, args, args[3] ? 4 : 3,
 					LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 1)] =
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 2)] =
-			lp_build_const_float(gallivm, 0.0f);
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 3)] =
-			lp_build_const_float(gallivm, 1.0f);
+		result[1] =
+		result[2] = lp_build_const_float(gallivm, 0.0f);
+		result[3] = lp_build_const_float(gallivm, 1.0f);
 	} else {
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 			LLVMValueRef args[4];
 			LLVMValueRef llvm_chan = lp_build_const_int32(gallivm, chan);
-			unsigned soa_index = radeon_llvm_reg_index_soa(input_index, chan);
+
 			args[0] = llvm_chan;
 			args[1] = attr_number;
-			args[2] = params;
+			args[2] = prim_mask;
 			args[3] = interp_param;
-			radeon_bld->inputs[soa_index] =
-				lp_build_intrinsic(gallivm->builder, intr_name,
+			result[chan] = lp_build_intrinsic(gallivm->builder, intr_name,
 						input_type, args, args[3] ? 4 : 3,
 						LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 		}
 	}
+}
+
+static void declare_input_fs(
+	struct radeon_llvm_context *radeon_bld,
+	unsigned input_index,
+	const struct tgsi_full_declaration *decl)
+{
+	struct si_shader_context *si_shader_ctx =
+		si_shader_context(&radeon_bld->soa.bld_base);
+	struct si_shader *shader = si_shader_ctx->shader;
+	LLVMValueRef main_fn = radeon_bld->main_fn;
+	LLVMValueRef interp_param = NULL;
+	int interp_param_idx;
+
+	interp_param_idx = lookup_interp_param_index(decl->Interp.Interpolate,
+						     decl->Interp.Location);
+	if (interp_param_idx == -1)
+		return;
+	else if (interp_param_idx) {
+		interp_param_idx = select_interp_param(si_shader_ctx,
+						       interp_param_idx);
+		interp_param = LLVMGetParam(main_fn, interp_param_idx);
+	}
+
+	interp_fs_input(si_shader_ctx, input_index, decl->Semantic.Name,
+			decl->Semantic.Index, shader->selector->info.num_inputs,
+			shader->selector->info.colors_read, interp_param,
+			LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK),
+			LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE),
+			&radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)]);
 }
 
 static LLVMValueRef get_sample_id(struct radeon_llvm_context *radeon_bld)
@@ -1060,7 +1057,6 @@ static void declare_system_value(
 	struct si_shader_context *si_shader_ctx =
 		si_shader_context(&radeon_bld->soa.bld_base);
 	struct lp_build_context *bld = &radeon_bld->soa.bld_base.base;
-	struct lp_build_context *uint_bld = &radeon_bld->soa.bld_base.uint_bld;
 	struct gallivm_state *gallivm = &radeon_bld->gallivm;
 	LLVMValueRef value = 0;
 
@@ -1136,12 +1132,10 @@ static void declare_system_value(
 	}
 
 	case TGSI_SEMANTIC_SAMPLEMASK:
-		/* Smoothing isn't MSAA in GL, but it's MSAA in hardware.
-		 * Therefore, force gl_SampleMaskIn to 1 for GL. */
-		if (si_shader_ctx->shader->key.ps.poly_line_smoothing)
-			value = uint_bld->one;
-		else
-			value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_SAMPLE_COVERAGE);
+		/* This can only occur with the OpenGL Core profile, which
+		 * doesn't support smoothing.
+		 */
+		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_SAMPLE_COVERAGE);
 		break;
 
 	case TGSI_SEMANTIC_TESSCOORD:
@@ -1965,20 +1959,19 @@ handle_semantic:
 	}
 }
 
-/* This only writes the tessellation factor levels. */
-static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
+static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
+				  LLVMValueRef rel_patch_id,
+				  LLVMValueRef invocation_id,
+				  LLVMValueRef tcs_out_current_patch_data_offset)
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct si_shader *shader = si_shader_ctx->shader;
 	unsigned tess_inner_index, tess_outer_index;
-	LLVMValueRef lds_base, lds_inner, lds_outer;
-	LLVMValueRef tf_base, rel_patch_id, byteoffset, buffer, rw_buffers;
-	LLVMValueRef out[6], vec0, vec1, invocation_id;
+	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
+	LLVMValueRef out[6], vec0, vec1, rw_buffers, tf_base;
 	unsigned stride, outer_comps, inner_comps, i;
 	struct lp_build_if_state if_ctx;
-
-	invocation_id = unpack_param(si_shader_ctx, SI_PARAM_REL_IDS, 8, 5);
 
 	/* Do this only for invocation 0, because the tess levels are per-patch,
 	 * not per-vertex.
@@ -2018,7 +2011,7 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	tess_inner_index = si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSINNER, 0);
 	tess_outer_index = si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSOUTER, 0);
 
-	lds_base = get_tcs_out_current_patch_data_offset(si_shader_ctx);
+	lds_base = tcs_out_current_patch_data_offset;
 	lds_inner = LLVMBuildAdd(gallivm->builder, lds_base,
 				 lp_build_const_int32(gallivm,
 						      tess_inner_index * 4), "");
@@ -2047,7 +2040,6 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	/* Get the offset. */
 	tf_base = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 			       SI_PARAM_TESS_FACTOR_OFFSET);
-	rel_patch_id = get_rel_patch_id(si_shader_ctx);
 	byteoffset = LLVMBuildMul(gallivm->builder, rel_patch_id,
 				  lp_build_const_int32(gallivm, 4 * stride), "");
 
@@ -2058,6 +2050,20 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 		build_tbuffer_store_dwords(si_shader_ctx, buffer, vec1,
 					   stride - 4, byteoffset, tf_base, 16);
 	lp_build_endif(&if_ctx);
+}
+
+/* This only writes the tessellation factor levels. */
+static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+	LLVMValueRef invocation_id;
+
+	invocation_id = unpack_param(si_shader_ctx, SI_PARAM_REL_IDS, 8, 5);
+
+	si_write_tess_factors(bld_base,
+			      get_rel_patch_id(si_shader_ctx),
+			      invocation_id,
+			      get_tcs_out_current_patch_data_offset(si_shader_ctx));
 }
 
 static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context * bld_base)
@@ -3253,17 +3259,17 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	LLVMValueRef interp_param;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	const char *intr_name;
-	int input_index;
+	int input_index = inst->Src[0].Register.Index;
 	int chan;
 	int i;
 	LLVMValueRef attr_number;
 	LLVMTypeRef input_type = LLVMFloatTypeInContext(gallivm->context);
 	LLVMValueRef params = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_PRIM_MASK);
 	int interp_param_idx;
+	unsigned interp = shader->selector->info.input_interpolate[input_index];
 	unsigned location;
 
 	assert(inst->Src[0].Register.File == TGSI_FILE_INPUT);
-	input_index = inst->Src[0].Register.Index;
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
 	    inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE)
@@ -3271,8 +3277,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	else
 		location = TGSI_INTERPOLATE_LOC_CENTROID;
 
-	interp_param_idx = lookup_interp_param_index(shader->ps_input_interpolate[input_index],
-						     location);
+	interp_param_idx = lookup_interp_param_index(interp, location);
 	if (interp_param_idx == -1)
 		return;
 	else if (interp_param_idx)
@@ -3280,8 +3285,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	else
 		interp_param = NULL;
 
-	attr_number = lp_build_const_int32(gallivm,
-					   shader->ps_input_param_offset[input_index]);
+	attr_number = lp_build_const_int32(gallivm, input_index);
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
 	    inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
@@ -3632,7 +3636,6 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 
 	case TGSI_PROCESSOR_FRAGMENT:
 		params[SI_PARAM_ALPHA_REF] = f32;
-		params[SI_PARAM_PS_STATE_BITS] = i32;
 		params[SI_PARAM_PRIM_MASK] = i32;
 		last_sgpr = SI_PARAM_PRIM_MASK;
 		params[SI_PARAM_PERSP_SAMPLE] = v2i32;
@@ -3662,10 +3665,6 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 	assert(num_params <= Elements(params));
 	radeon_llvm_create_func(&si_shader_ctx->radeon_bld, params, num_params);
 	radeon_llvm_shader_type(si_shader_ctx->radeon_bld.main_fn, si_shader_ctx->type);
-
-	if (shader->dx10_clamp_mode)
-		LLVMAddTargetDependentFunctionAttr(si_shader_ctx->radeon_bld.main_fn,
-						   "enable-no-nans-fp-math", "true");
 
 	for (i = 0; i <= last_sgpr; ++i) {
 		LLVMValueRef P = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, i);
@@ -3884,7 +3883,7 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 			conf->spi_ps_input_ena = value;
 			break;
 		case R_0286D0_SPI_PS_INPUT_ADDR:
-			/* Not used yet, but will be in the future */
+			conf->spi_ps_input_addr = value;
 			break;
 		case R_0286E8_SPI_TMPRING_SIZE:
 		case R_00B860_COMPUTE_TMPRING_SIZE:
@@ -3904,6 +3903,9 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 			}
 			break;
 		}
+
+		if (!conf->spi_ps_input_addr)
+			conf->spi_ps_input_addr = conf->spi_ps_input_ena;
 	}
 }
 
@@ -4045,6 +4047,13 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 		max_simd_waves = MIN2(max_simd_waves, 16384 / lds_per_wave);
 
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
+		if (processor == TGSI_PROCESSOR_FRAGMENT) {
+			fprintf(stderr, "*** SHADER CONFIG ***\n"
+				"SPI_PS_INPUT_ADDR = 0x%04x\n"
+				"SPI_PS_INPUT_ENA  = 0x%04x\n",
+				conf->spi_ps_input_addr, conf->spi_ps_input_ena);
+		}
+
 		fprintf(stderr, "*** SHADER STATS ***\n"
 			"SGPRS: %d\n"
 			"VGPRS: %d\n"
@@ -4084,7 +4093,8 @@ int si_compile_llvm(struct si_screen *sscreen,
 		    LLVMTargetMachineRef tm,
 		    LLVMModuleRef mod,
 		    struct pipe_debug_callback *debug,
-		    unsigned processor)
+		    unsigned processor,
+		    const char *name)
 {
 	int r = 0;
 	unsigned count = p_atomic_inc_return(&sscreen->b.num_compilations);
@@ -4092,8 +4102,11 @@ int si_compile_llvm(struct si_screen *sscreen,
 	if (r600_can_dump_shader(&sscreen->b, processor)) {
 		fprintf(stderr, "radeonsi: Compiling shader %d\n", count);
 
-		if (!(sscreen->b.debug_flags & (DBG_NO_IR | DBG_PREOPT_IR)))
+		if (!(sscreen->b.debug_flags & (DBG_NO_IR | DBG_PREOPT_IR))) {
+			fprintf(stderr, "%s LLVM IR:\n\n", name);
 			LLVMDumpModule(mod);
+			fprintf(stderr, "\n");
+		}
 	}
 
 	if (!si_replace_shader(count, binary)) {
@@ -4106,6 +4119,20 @@ int si_compile_llvm(struct si_screen *sscreen,
 
 	si_shader_binary_read_config(binary, conf, 0);
 
+	/* Enable 64-bit and 16-bit denormals, because there is no performance
+	 * cost.
+	 *
+	 * If denormals are enabled, all floating-point output modifiers are
+	 * ignored.
+	 *
+	 * Don't enable denormals for 32-bit floats, because:
+	 * - Floating-point output modifiers would be ignored by the hw.
+	 * - Some opcodes don't support denormals, such as v_mad_f32. We would
+	 *   have to stop using those.
+	 * - SI & CI would be very slow.
+	 */
+	conf->float_mode |= V_00B028_FP_64_DENORMS;
+
 	FREE(binary->config);
 	FREE(binary->global_symbol_offsets);
 	binary->config = NULL;
@@ -4116,7 +4143,7 @@ int si_compile_llvm(struct si_screen *sscreen,
 /* Generate code for the hardware VS shader stage to go with a geometry shader */
 static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 				      struct si_shader_context *si_shader_ctx,
-				      struct si_shader *gs, bool dump,
+				      struct si_shader *gs,
 				      struct pipe_debug_callback *debug)
 {
 	struct gallivm_state *gallivm = &si_shader_ctx->radeon_bld.gallivm;
@@ -4186,14 +4213,14 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	radeon_llvm_finalize_module(&si_shader_ctx->radeon_bld);
 
-	if (dump)
-		fprintf(stderr, "Copy Vertex Shader for Geometry Shader:\n\n");
-
 	r = si_compile_llvm(sscreen, &si_shader_ctx->shader->binary,
 			    &si_shader_ctx->shader->config, si_shader_ctx->tm,
 			    bld_base->base.gallivm->module,
-			    debug, TGSI_PROCESSOR_GEOMETRY);
+			    debug, TGSI_PROCESSOR_GEOMETRY,
+			    "GS Copy Shader");
 	if (!r) {
+		if (r600_can_dump_shader(&sscreen->b, TGSI_PROCESSOR_GEOMETRY))
+			fprintf(stderr, "GS Copy Shader:\n");
 		si_shader_dump(sscreen, si_shader_ctx->shader, debug,
 			       TGSI_PROCESSOR_GEOMETRY);
 		r = si_shader_binary_upload(sscreen, si_shader_ctx->shader);
@@ -4250,47 +4277,26 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 	}
 }
 
-int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
-		     struct si_shader *shader,
-		     struct pipe_debug_callback *debug)
+static void si_init_shader_ctx(struct si_shader_context *ctx,
+			       struct si_screen *sscreen,
+			       struct si_shader *shader,
+			       LLVMTargetMachineRef tm,
+			       struct tgsi_shader_info *info)
 {
-	struct si_shader_selector *sel = shader->selector;
-	struct tgsi_token *tokens = sel->tokens;
-	struct si_shader_context si_shader_ctx;
-	struct lp_build_tgsi_context * bld_base;
-	struct tgsi_shader_info stipple_shader_info;
-	LLVMModuleRef mod;
-	int r = 0;
-	bool poly_stipple = sel->type == PIPE_SHADER_FRAGMENT &&
-			    shader->key.ps.poly_stipple;
-	bool dump = r600_can_dump_shader(&sscreen->b, sel->info.processor);
+	struct lp_build_tgsi_context *bld_base;
 
-	if (poly_stipple) {
-		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
-						SI_POLY_STIPPLE_SAMPLER,
-						TGSI_FILE_SYSTEM_VALUE);
-		tgsi_scan_shader(tokens, &stipple_shader_info);
-	}
+	memset(ctx, 0, sizeof(*ctx));
+	radeon_llvm_context_init(&ctx->radeon_bld);
+	ctx->tm = tm;
+	ctx->screen = sscreen;
+	if (shader && shader->selector)
+		ctx->type = shader->selector->info.processor;
+	else
+		ctx->type = -1;
+	ctx->shader = shader;
 
-	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
-	 * conversion fails. */
-	if (dump && !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
-		si_dump_shader_key(sel->type, &shader->key, stderr);
-		tgsi_dump(tokens, 0);
-		si_dump_streamout(&sel->so);
-	}
-
-	assert(shader->nparam == 0);
-
-	memset(&si_shader_ctx, 0, sizeof(si_shader_ctx));
-	radeon_llvm_context_init(&si_shader_ctx.radeon_bld);
-	bld_base = &si_shader_ctx.radeon_bld.soa.bld_base;
-
-	if (sel->type != PIPE_SHADER_COMPUTE)
-		shader->dx10_clamp_mode = true;
-
-	shader->uses_instanceid = sel->info.uses_instanceid;
-	bld_base->info = poly_stipple ? &stipple_shader_info : &sel->info;
+	bld_base = &ctx->radeon_bld.soa.bld_base;
+	bld_base->info = info;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;
 
 	bld_base->op_actions[TGSI_OPCODE_INTERP_CENTROID] = interp_action;
@@ -4326,12 +4332,45 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		bld_base->op_actions[TGSI_OPCODE_MIN].emit = build_tgsi_intrinsic_nomem;
 		bld_base->op_actions[TGSI_OPCODE_MIN].intr_name = "llvm.minnum.f32";
 	}
+}
 
+int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
+		     struct si_shader *shader,
+		     struct pipe_debug_callback *debug)
+{
+	struct si_shader_selector *sel = shader->selector;
+	struct tgsi_token *tokens = sel->tokens;
+	struct si_shader_context si_shader_ctx;
+	struct lp_build_tgsi_context * bld_base;
+	struct tgsi_shader_info stipple_shader_info;
+	LLVMModuleRef mod;
+	int r = 0;
+	bool poly_stipple = sel->type == PIPE_SHADER_FRAGMENT &&
+			    shader->key.ps.poly_stipple;
+
+	if (poly_stipple) {
+		tokens = util_pstipple_create_fragment_shader(tokens, NULL,
+						SI_POLY_STIPPLE_SAMPLER,
+						TGSI_FILE_SYSTEM_VALUE);
+		tgsi_scan_shader(tokens, &stipple_shader_info);
+	}
+
+	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
+	 * conversion fails. */
+	if (r600_can_dump_shader(&sscreen->b, sel->info.processor) &&
+	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
+		si_dump_shader_key(sel->type, &shader->key, stderr);
+		tgsi_dump(tokens, 0);
+		si_dump_streamout(&sel->so);
+	}
+
+	si_init_shader_ctx(&si_shader_ctx, sscreen, shader, tm,
+			   poly_stipple ? &stipple_shader_info : &sel->info);
+
+	shader->uses_instanceid = sel->info.uses_instanceid;
+
+	bld_base = &si_shader_ctx.radeon_bld.soa.bld_base;
 	si_shader_ctx.radeon_bld.load_system_value = declare_system_value;
-	si_shader_ctx.shader = shader;
-	si_shader_ctx.type = tgsi_get_processor_type(tokens);
-	si_shader_ctx.screen = sscreen;
-	si_shader_ctx.tm = tm;
 
 	switch (si_shader_ctx.type) {
 	case TGSI_PROCESSOR_VERTEX:
@@ -4401,7 +4440,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	radeon_llvm_finalize_module(&si_shader_ctx.radeon_bld);
 
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
-			    mod, debug, si_shader_ctx.type);
+			    mod, debug, si_shader_ctx.type, "TGSI shader");
 	if (r) {
 		fprintf(stderr, "LLVM failed to compile shader\n");
 		goto out;
@@ -4422,7 +4461,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		shader->gs_copy_shader->selector = shader->selector;
 		si_shader_ctx.shader = shader->gs_copy_shader;
 		if ((r = si_generate_gs_copy_shader(sscreen, &si_shader_ctx,
-						    shader, dump, debug))) {
+						    shader, debug))) {
 			free(shader->gs_copy_shader);
 			shader->gs_copy_shader = NULL;
 			goto out;

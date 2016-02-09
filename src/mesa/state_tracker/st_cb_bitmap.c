@@ -176,97 +176,19 @@ make_bitmap_texture(struct gl_context *ctx, GLsizei width, GLsizei height,
    return pt;
 }
 
-static void
-setup_bitmap_vertex_data(struct st_context *st, bool normalized,
-                         int x, int y, int width, int height,
-                         float z, const float color[4],
-			 struct pipe_resource **vbuf,
-			 unsigned *vbuf_offset)
-{
-   const GLfloat fb_width = (GLfloat)st->state.framebuffer.width;
-   const GLfloat fb_height = (GLfloat)st->state.framebuffer.height;
-   const GLfloat x0 = (GLfloat)x;
-   const GLfloat x1 = (GLfloat)(x + width);
-   const GLfloat y0 = (GLfloat)y;
-   const GLfloat y1 = (GLfloat)(y + height);
-   GLfloat sLeft = (GLfloat)0.0, sRight = (GLfloat)1.0;
-   GLfloat tTop = (GLfloat)0.0, tBot = (GLfloat)1.0 - tTop;
-   const GLfloat clip_x0 = (GLfloat)(x0 / fb_width * 2.0 - 1.0);
-   const GLfloat clip_y0 = (GLfloat)(y0 / fb_height * 2.0 - 1.0);
-   const GLfloat clip_x1 = (GLfloat)(x1 / fb_width * 2.0 - 1.0);
-   const GLfloat clip_y1 = (GLfloat)(y1 / fb_height * 2.0 - 1.0);
-   GLuint i;
-   float (*vertices)[3][4];  /**< vertex pos + color + texcoord */
-
-   if(!normalized)
-   {
-      sRight = (GLfloat) width;
-      tBot = (GLfloat) height;
-   }
-
-   u_upload_alloc(st->uploader, 0, 4 * sizeof(vertices[0]), 4,
-                  vbuf_offset, vbuf, (void **) &vertices);
-   if (!*vbuf) {
-      return;
-   }
-
-   /* Positions are in clip coords since we need to do clipping in case
-    * the bitmap quad goes beyond the window bounds.
-    */
-   vertices[0][0][0] = clip_x0;
-   vertices[0][0][1] = clip_y0;
-   vertices[0][2][0] = sLeft;
-   vertices[0][2][1] = tTop;
-
-   vertices[1][0][0] = clip_x1;
-   vertices[1][0][1] = clip_y0;
-   vertices[1][2][0] = sRight;
-   vertices[1][2][1] = tTop;
-   
-   vertices[2][0][0] = clip_x1;
-   vertices[2][0][1] = clip_y1;
-   vertices[2][2][0] = sRight;
-   vertices[2][2][1] = tBot;
-   
-   vertices[3][0][0] = clip_x0;
-   vertices[3][0][1] = clip_y1;
-   vertices[3][2][0] = sLeft;
-   vertices[3][2][1] = tBot;
-   
-   /* same for all verts: */
-   for (i = 0; i < 4; i++) {
-      vertices[i][0][2] = z;
-      vertices[i][0][3] = 1.0f;
-      vertices[i][1][0] = color[0];
-      vertices[i][1][1] = color[1];
-      vertices[i][1][2] = color[2];
-      vertices[i][1][3] = color[3];
-      vertices[i][2][2] = 0.0; /*R*/
-      vertices[i][2][3] = 1.0; /*Q*/
-   }
-
-   u_upload_unmap(st->uploader);
-}
-
-
 
 /**
- * Render a glBitmap by drawing a textured quad
+ * Setup pipeline state prior to rendering the bitmap textured quad.
  */
 static void
-draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
-                 GLsizei width, GLsizei height,
-                 struct pipe_sampler_view *sv,
-                 const GLfloat *color)
+setup_render_state(struct gl_context *ctx,
+                   struct pipe_sampler_view *sv,
+                   const GLfloat *color)
 {
    struct st_context *st = st_context(ctx);
-   struct pipe_context *pipe = st->pipe;
    struct cso_context *cso = st->cso_context;
    struct st_fp_variant *fpv;
    struct st_fp_variant_key key;
-   GLuint maxSize;
-   GLuint offset;
-   struct pipe_resource *vbuf = NULL;
 
    memset(&key, 0, sizeof(key));
    key.st = st->has_shareable_shaders ? NULL : st;
@@ -291,16 +213,6 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
                           PIPE_SHADER_FRAGMENT);
       COPY_4V(ctx->Current.Attrib[VERT_ATTRIB_COLOR0], colorSave);
    }
-
-
-   /* limit checks */
-   /* XXX if the bitmap is larger than the max texture size, break
-    * it up into chunks.
-    */
-   maxSize = 1 << (pipe->screen->get_param(pipe->screen,
-                                    PIPE_CAP_MAX_TEXTURE_2D_LEVELS) - 1);
-   assert(width <= (GLsizei)maxSize);
-   assert(height <= (GLsizei)maxSize);
 
    cso_save_rasterizer(cso);
    cso_save_fragment_samplers(cso);
@@ -373,24 +285,18 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
 
    cso_set_vertex_elements(cso, 3, st->velems_util_draw);
    cso_set_stream_outputs(st->cso_context, 0, NULL, NULL);
+}
 
-   /* convert Z from [0,1] to [-1,-1] to match viewport Z scale/bias */
-   z = z * 2.0f - 1.0f;
 
-   /* draw textured quad */
-   setup_bitmap_vertex_data(st, sv->texture->target != PIPE_TEXTURE_RECT,
-			    x, y, width, height, z, color, &vbuf, &offset);
+/**
+ * Restore pipeline state after rendering the bitmap textured quad.
+ */
+static void
+restore_render_state(struct gl_context *ctx)
+{
+   struct st_context *st = st_context(ctx);
+   struct cso_context *cso = st->cso_context;
 
-   if (vbuf) {
-      util_draw_vertex_buffer(pipe, st->cso_context, vbuf,
-                              cso_get_aux_vertex_buffer_slot(st->cso_context),
-                              offset,
-                              PIPE_PRIM_TRIANGLE_FAN,
-                              4,  /* verts */
-                              3); /* attribs/vert */
-   }
-
-   /* restore state */
    cso_restore_rasterizer(cso);
    cso_restore_fragment_samplers(cso);
    cso_restore_fragment_sampler_views(cso);
@@ -403,6 +309,111 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    cso_restore_vertex_elements(cso);
    cso_restore_aux_vertex_buffer_slot(cso);
    cso_restore_stream_outputs(cso);
+}
+
+
+/**
+ * Render a glBitmap by drawing a textured quad
+ */
+static void
+draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
+                 GLsizei width, GLsizei height,
+                 struct pipe_sampler_view *sv,
+                 const GLfloat *color)
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_context *pipe = st->pipe;
+   struct pipe_resource *vbuf = NULL;
+   const float fb_width = (float) st->state.framebuffer.width;
+   const float fb_height = (float) st->state.framebuffer.height;
+   const float x0 = (float) x;
+   const float x1 = (float) (x + width);
+   const float y0 = (float) y;
+   const float y1 = (float) (y + height);
+   float sLeft = 0.0f, sRight = 1.0f;
+   float tTop = 0.0f, tBot = 1.0f - tTop;
+   const float clip_x0 = x0 / fb_width * 2.0f - 1.0f;
+   const float clip_y0 = y0 / fb_height * 2.0f - 1.0f;
+   const float clip_x1 = x1 / fb_width * 2.0f - 1.0f;
+   const float clip_y1 = y1 / fb_height * 2.0f - 1.0f;
+   float (*vertices)[3][4];  /**< vertex pos + color + texcoord */
+   unsigned offset, i;
+
+   /* limit checks */
+   {
+      /* XXX if the bitmap is larger than the max texture size, break
+       * it up into chunks.
+       */
+      GLuint maxSize = 1 << (pipe->screen->get_param(pipe->screen,
+                                    PIPE_CAP_MAX_TEXTURE_2D_LEVELS) - 1);
+      assert(width <= (GLsizei) maxSize);
+      assert(height <= (GLsizei) maxSize);
+   }
+
+   setup_render_state(ctx, sv, color);
+
+   /* convert Z from [0,1] to [-1,-1] to match viewport Z scale/bias */
+   z = z * 2.0f - 1.0f;
+
+   if (sv->texture->target == PIPE_TEXTURE_RECT) {
+      /* use non-normalized texcoords */
+      sRight = (float) width;
+      tBot = (float) height;
+   }
+
+   u_upload_alloc(st->uploader, 0, 4 * sizeof(vertices[0]), 4,
+                  &offset, &vbuf, (void **) &vertices);
+   if (!vbuf) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glBitmap");
+      restore_render_state(ctx);
+      return;
+   }
+
+   /* Positions are in clip coords since we need to do clipping in case
+    * the bitmap quad goes beyond the window bounds.
+    */
+   vertices[0][0][0] = clip_x0;
+   vertices[0][0][1] = clip_y0;
+   vertices[0][2][0] = sLeft;
+   vertices[0][2][1] = tTop;
+
+   vertices[1][0][0] = clip_x1;
+   vertices[1][0][1] = clip_y0;
+   vertices[1][2][0] = sRight;
+   vertices[1][2][1] = tTop;
+
+   vertices[2][0][0] = clip_x1;
+   vertices[2][0][1] = clip_y1;
+   vertices[2][2][0] = sRight;
+   vertices[2][2][1] = tBot;
+
+   vertices[3][0][0] = clip_x0;
+   vertices[3][0][1] = clip_y1;
+   vertices[3][2][0] = sLeft;
+   vertices[3][2][1] = tBot;
+
+   /* same for all verts: */
+   for (i = 0; i < 4; i++) {
+      vertices[i][0][2] = z;
+      vertices[i][0][3] = 1.0f;
+      vertices[i][1][0] = color[0];
+      vertices[i][1][1] = color[1];
+      vertices[i][1][2] = color[2];
+      vertices[i][1][3] = color[3];
+      vertices[i][2][2] = 0.0; /*R*/
+      vertices[i][2][3] = 1.0; /*Q*/
+   }
+
+   u_upload_unmap(st->uploader);
+
+   util_draw_vertex_buffer(pipe, st->cso_context, vbuf,
+                           cso_get_aux_vertex_buffer_slot(st->cso_context),
+                           offset,
+                           PIPE_PRIM_TRIANGLE_FAN,
+                           4,  /* verts */
+                           3); /* attribs/vert */
+
+   restore_render_state(ctx);
 
    pipe_resource_reference(&vbuf, NULL);
 
@@ -486,9 +497,9 @@ create_cache_trans(struct st_context *st)
 void
 st_flush_bitmap_cache(struct st_context *st)
 {
-   if (!st->bitmap.cache->empty) {
-      struct bitmap_cache *cache = st->bitmap.cache;
+   struct bitmap_cache *cache = st->bitmap.cache;
 
+   if (cache && !cache->empty) {
       struct pipe_context *pipe = st->pipe;
       struct pipe_sampler_view *sv;
 
@@ -607,82 +618,21 @@ accum_bitmap(struct gl_context *ctx,
 }
 
 
-
 /**
- * Called via ctx->Driver.Bitmap()
+ * One-time init for drawing bitmaps.
  */
 static void
-st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
-          GLsizei width, GLsizei height,
-          const struct gl_pixelstore_attrib *unpack, const GLubyte *bitmap )
-{
-   struct st_context *st = st_context(ctx);
-   struct pipe_resource *pt;
-
-   assert(width > 0);
-   assert(height > 0);
-
-   /* We only need to validate state of the st dirty flags are set or
-    * any non-_NEW_PROGRAM_CONSTANTS mesa flags are set.  The VS we use
-    * for bitmap drawing uses no constants and the FS constants are
-    * explicitly uploaded in the draw_bitmap_quad() function.
-    */
-   if ((st->dirty.mesa & ~_NEW_PROGRAM_CONSTANTS) || st->dirty.st) {
-      st_validate_state(st);
-   }
-
-   if (!st->bitmap.vs) {
-      /* create pass-through vertex shader now */
-      const uint semantic_names[] = { TGSI_SEMANTIC_POSITION,
-                                      TGSI_SEMANTIC_COLOR,
-        st->needs_texcoord_semantic ? TGSI_SEMANTIC_TEXCOORD :
-                                      TGSI_SEMANTIC_GENERIC };
-      const uint semantic_indexes[] = { 0, 0, 0 };
-      st->bitmap.vs = util_make_vertex_passthrough_shader(st->pipe, 3,
-                                                          semantic_names,
-                                                          semantic_indexes,
-                                                          FALSE);
-   }
-
-   if (UseBitmapCache && accum_bitmap(ctx, x, y, width, height, unpack, bitmap))
-      return;
-
-   pt = make_bitmap_texture(ctx, width, height, unpack, bitmap);
-   if (pt) {
-      struct pipe_sampler_view *sv =
-         st_create_texture_sampler_view(st->pipe, pt);
-
-      assert(pt->target == PIPE_TEXTURE_2D || pt->target == PIPE_TEXTURE_RECT);
-
-      if (sv) {
-         draw_bitmap_quad(ctx, x, y, ctx->Current.RasterPos[2],
-                          width, height, sv,
-                          st->ctx->Current.RasterColor);
-
-         pipe_sampler_view_reference(&sv, NULL);
-      }
-
-      /* release/free the texture */
-      pipe_resource_reference(&pt, NULL);
-   }
-}
-
-
-/** Per-context init */
-void
-st_init_bitmap_functions(struct dd_function_table *functions)
-{
-   functions->Bitmap = st_Bitmap;
-}
-
-
-/** Per-context init */
-void
-st_init_bitmap(struct st_context *st)
+init_bitmap_state(struct st_context *st)
 {
    struct pipe_sampler_state *sampler = &st->bitmap.samplers[0];
    struct pipe_context *pipe = st->pipe;
    struct pipe_screen *screen = pipe->screen;
+
+   /* This function should only be called once */
+   assert(st->bitmap.cache == NULL);
+
+   /* alloc bitmap cache object */
+   st->bitmap.cache = ST_CALLOC_STRUCT(bitmap_cache);
 
    /* init sampler state once */
    memset(sampler, 0, sizeof(*sampler));
@@ -722,10 +672,79 @@ st_init_bitmap(struct st_context *st)
       assert(0);
    }
 
-   /* alloc bitmap cache object */
-   st->bitmap.cache = ST_CALLOC_STRUCT(bitmap_cache);
+   /* Create the vertex shader */
+   {
+      const uint semantic_names[] = { TGSI_SEMANTIC_POSITION,
+                                      TGSI_SEMANTIC_COLOR,
+        st->needs_texcoord_semantic ? TGSI_SEMANTIC_TEXCOORD :
+                                      TGSI_SEMANTIC_GENERIC };
+      const uint semantic_indexes[] = { 0, 0, 0 };
+      st->bitmap.vs = util_make_vertex_passthrough_shader(st->pipe, 3,
+                                                          semantic_names,
+                                                          semantic_indexes,
+                                                          FALSE);
+   }
 
    reset_cache(st);
+}
+
+
+/**
+ * Called via ctx->Driver.Bitmap()
+ */
+static void
+st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
+          GLsizei width, GLsizei height,
+          const struct gl_pixelstore_attrib *unpack, const GLubyte *bitmap )
+{
+   struct st_context *st = st_context(ctx);
+   struct pipe_resource *pt;
+
+   assert(width > 0);
+   assert(height > 0);
+
+   if (!st->bitmap.cache) {
+      init_bitmap_state(st);
+   }
+
+   /* We only need to validate state of the st dirty flags are set or
+    * any non-_NEW_PROGRAM_CONSTANTS mesa flags are set.  The VS we use
+    * for bitmap drawing uses no constants and the FS constants are
+    * explicitly uploaded in the draw_bitmap_quad() function.
+    */
+   if ((st->dirty.mesa & ~_NEW_PROGRAM_CONSTANTS) || st->dirty.st) {
+      st_validate_state(st);
+   }
+
+   if (UseBitmapCache && accum_bitmap(ctx, x, y, width, height, unpack, bitmap))
+      return;
+
+   pt = make_bitmap_texture(ctx, width, height, unpack, bitmap);
+   if (pt) {
+      struct pipe_sampler_view *sv =
+         st_create_texture_sampler_view(st->pipe, pt);
+
+      assert(pt->target == PIPE_TEXTURE_2D || pt->target == PIPE_TEXTURE_RECT);
+
+      if (sv) {
+         draw_bitmap_quad(ctx, x, y, ctx->Current.RasterPos[2],
+                          width, height, sv,
+                          st->ctx->Current.RasterColor);
+
+         pipe_sampler_view_reference(&sv, NULL);
+      }
+
+      /* release/free the texture */
+      pipe_resource_reference(&pt, NULL);
+   }
+}
+
+
+/** Per-context init */
+void
+st_init_bitmap_functions(struct dd_function_table *functions)
+{
+   functions->Bitmap = st_Bitmap;
 }
 
 

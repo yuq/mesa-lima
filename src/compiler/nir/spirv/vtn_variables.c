@@ -319,8 +319,8 @@ get_vulkan_resource_index(struct vtn_builder *b, struct vtn_access_chain *chain,
       nir_intrinsic_instr_create(b->nb.shader,
                                  nir_intrinsic_vulkan_resource_index);
    instr->src[0] = nir_src_for_ssa(array_index);
-   instr->const_index[0] = chain->var->descriptor_set;
-   instr->const_index[1] = chain->var->binding;
+   nir_intrinsic_set_desc_set(instr, chain->var->descriptor_set);
+   nir_intrinsic_set_binding(instr, chain->var->binding);
 
    nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
    nir_builder_instr_insert(&b->nb, &instr->instr);

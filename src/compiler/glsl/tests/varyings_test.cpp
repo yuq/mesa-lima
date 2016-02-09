@@ -156,11 +156,11 @@ TEST_F(link_varyings, single_simple_input)
 
    ir.push_tail(v);
 
-   ASSERT_TRUE(linker::populate_consumer_input_sets(mem_ctx,
-                                                    &ir,
-                                                    consumer_inputs,
-                                                    consumer_interface_inputs,
-                                                    junk));
+   linker::populate_consumer_input_sets(mem_ctx,
+                                        &ir,
+                                        consumer_inputs,
+                                        consumer_interface_inputs,
+                                        junk);
 
    EXPECT_EQ((void *) v, hash_table_find(consumer_inputs, "a"));
    EXPECT_EQ(1u, num_elements(consumer_inputs));
@@ -183,11 +183,11 @@ TEST_F(link_varyings, gl_ClipDistance)
 
    ir.push_tail(clipdistance);
 
-   ASSERT_TRUE(linker::populate_consumer_input_sets(mem_ctx,
-                                                    &ir,
-                                                    consumer_inputs,
-                                                    consumer_interface_inputs,
-                                                    junk));
+   linker::populate_consumer_input_sets(mem_ctx,
+                                        &ir,
+                                        consumer_inputs,
+                                        consumer_interface_inputs,
+                                        junk);
 
    EXPECT_EQ(clipdistance, junk[VARYING_SLOT_CLIP_DIST0]);
    EXPECT_TRUE(is_empty(consumer_inputs));
@@ -205,11 +205,11 @@ TEST_F(link_varyings, single_interface_input)
 
    ir.push_tail(v);
 
-   ASSERT_TRUE(linker::populate_consumer_input_sets(mem_ctx,
-                                                    &ir,
-                                                    consumer_inputs,
-                                                    consumer_interface_inputs,
-                                                    junk));
+   linker::populate_consumer_input_sets(mem_ctx,
+                                        &ir,
+                                        consumer_inputs,
+                                        consumer_interface_inputs,
+                                        junk);
    char *const full_name = interface_field_name(simple_interface);
 
    EXPECT_EQ((void *) v, hash_table_find(consumer_interface_inputs, full_name));
@@ -236,11 +236,11 @@ TEST_F(link_varyings, one_interface_and_one_simple_input)
 
    ir.push_tail(iface);
 
-   ASSERT_TRUE(linker::populate_consumer_input_sets(mem_ctx,
-                                                    &ir,
-                                                    consumer_inputs,
-                                                    consumer_interface_inputs,
-                                                    junk));
+   linker::populate_consumer_input_sets(mem_ctx,
+                                        &ir,
+                                        consumer_inputs,
+                                        consumer_interface_inputs,
+                                        junk);
 
    char *const iface_field_name = interface_field_name(simple_interface);
 
@@ -250,24 +250,6 @@ TEST_F(link_varyings, one_interface_and_one_simple_input)
 
    EXPECT_EQ((void *) v, hash_table_find(consumer_inputs, "a"));
    EXPECT_EQ(1u, num_elements(consumer_inputs));
-}
-
-TEST_F(link_varyings, invalid_interface_input)
-{
-   ir_variable *const v =
-      new(mem_ctx) ir_variable(simple_interface,
-                               "named_interface",
-                               ir_var_shader_in);
-
-   ASSERT_EQ(simple_interface, v->get_interface_type());
-
-   ir.push_tail(v);
-
-   EXPECT_FALSE(linker::populate_consumer_input_sets(mem_ctx,
-                                                    &ir,
-                                                    consumer_inputs,
-                                                     consumer_interface_inputs,
-                                                     junk));
 }
 
 TEST_F(link_varyings, interface_field_doesnt_match_noninterface)
@@ -283,11 +265,11 @@ TEST_F(link_varyings, interface_field_doesnt_match_noninterface)
 
    ir.push_tail(in_v);
 
-   ASSERT_TRUE(linker::populate_consumer_input_sets(mem_ctx,
-                                                    &ir,
-                                                    consumer_inputs,
-                                                    consumer_interface_inputs,
-                                                    junk));
+   linker::populate_consumer_input_sets(mem_ctx,
+                                        &ir,
+                                        consumer_inputs,
+                                        consumer_interface_inputs,
+                                        junk);
 
    /* Create an output variable, "v", that is part of an interface block named
     * "a".  They should not match.
@@ -325,11 +307,11 @@ TEST_F(link_varyings, interface_field_doesnt_match_noninterface_vice_versa)
 
    ir.push_tail(in_v);
 
-   ASSERT_TRUE(linker::populate_consumer_input_sets(mem_ctx,
-                                                    &ir,
-                                                    consumer_inputs,
-                                                    consumer_interface_inputs,
-                                                    junk));
+   linker::populate_consumer_input_sets(mem_ctx,
+                                        &ir,
+                                        consumer_inputs,
+                                        consumer_interface_inputs,
+                                        junk);
 
    /* Create an output variable "a.v".  They should not match.
     */

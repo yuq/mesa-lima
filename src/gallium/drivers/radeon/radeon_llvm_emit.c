@@ -55,6 +55,14 @@ enum radeon_llvm_shader_type {
 	RADEON_LLVM_SHADER_CS = 3,
 };
 
+void radeon_llvm_add_attribute(LLVMValueRef F, const char *name, int value)
+{
+	char str[16];
+
+	snprintf(str, sizeof(str), "%i", value);
+	LLVMAddTargetDependentFunctionAttr(F, name, str);
+}
+
 /**
  * Set the shader type we want to compile
  *
@@ -62,7 +70,6 @@ enum radeon_llvm_shader_type {
  */
 void radeon_llvm_shader_type(LLVMValueRef F, unsigned type)
 {
-	char Str[2];
 	enum radeon_llvm_shader_type llvm_type;
 
 	switch (type) {
@@ -84,9 +91,7 @@ void radeon_llvm_shader_type(LLVMValueRef F, unsigned type)
 		assert(0);
 	}
 
-	sprintf(Str, "%1d", llvm_type);
-
-	LLVMAddTargetDependentFunctionAttr(F, "ShaderType", Str);
+	radeon_llvm_add_attribute(F, "ShaderType", llvm_type);
 }
 
 static void init_r600_target()

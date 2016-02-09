@@ -864,6 +864,14 @@ public:
       int location;
 
       /**
+       * for glsl->tgsi/mesa IR we need to store the index into the
+       * parameters for uniforms, initially the code overloaded location
+       * but this causes problems with indirect samplers and AoA.
+       * This is assigned in _mesa_generate_parameters_list_for_uniforms.
+       */
+      int param_index;
+
+      /**
        * Vertex stream output identifier.
        */
       unsigned stream;

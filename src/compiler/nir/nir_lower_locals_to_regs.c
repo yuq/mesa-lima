@@ -243,7 +243,7 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
 
          nir_alu_instr *mov = nir_alu_instr_create(state->shader, nir_op_imov);
          nir_src_copy(&mov->src[0].src, &intrin->src[0], mov);
-         mov->dest.write_mask = intrin->const_index[0];
+         mov->dest.write_mask = nir_intrinsic_write_mask(intrin);
          mov->dest.dest.is_ssa = false;
          mov->dest.dest.reg.reg = reg_src.reg.reg;
          mov->dest.dest.reg.base_offset = reg_src.reg.base_offset;

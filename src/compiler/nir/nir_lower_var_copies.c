@@ -128,7 +128,7 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
       nir_intrinsic_instr *store =
          nir_intrinsic_instr_create(mem_ctx, nir_intrinsic_store_var);
       store->num_components = num_components;
-      store->const_index[0] = (1 << num_components) - 1;
+      nir_intrinsic_set_write_mask(store, (1 << num_components) - 1);
       store->variables[0] = nir_deref_as_var(nir_copy_deref(store, &dest_head->deref));
 
       store->src[0].is_ssa = true;

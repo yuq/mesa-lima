@@ -51,7 +51,7 @@ gen8_add_cs_stall_workaround_bits(uint32_t *flags)
                       PIPE_CONTROL_WRITE_TIMESTAMP |
                       PIPE_CONTROL_STALL_AT_SCOREBOARD |
                       PIPE_CONTROL_DEPTH_STALL |
-                      PIPE_CONTROL_DATA_CACHE_INVALIDATE;
+                      PIPE_CONTROL_DATA_CACHE_FLUSH;
 
    /* If we're doing a CS stall, and don't already have one of the
     * workaround bits set, add "Stall at Pixel Scoreboard."

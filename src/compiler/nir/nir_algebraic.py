@@ -102,13 +102,10 @@ class Constant(Value):
       self.value = val
 
    def __hex__(self):
-      # Even if it's an integer, we still need to unpack as an unsigned
-      # int.  This is because, without C99, we can only assign to the first
-      # element of a union in an initializer.
       if isinstance(self.value, (bool)):
          return 'NIR_TRUE' if self.value else 'NIR_FALSE'
       if isinstance(self.value, (int, long)):
-         return hex(struct.unpack('I', struct.pack('i' if self.value < 0 else 'I', self.value))[0])
+         return hex(self.value)
       elif isinstance(self.value, float):
          return hex(struct.unpack('I', struct.pack('f', self.value))[0])
       else:
@@ -216,7 +213,7 @@ ${pass_name}_block(nir_block *block, void *void_state)
 {
    struct opt_state *state = void_state;
 
-   nir_foreach_instr_safe(block, instr) {
+   nir_foreach_instr_reverse_safe(block, instr) {
       if (instr->type != nir_instr_type_alu)
          continue;
 
@@ -255,7 +252,7 @@ ${pass_name}_impl(nir_function_impl *impl, const bool *condition_flags)
    state.progress = false;
    state.condition_flags = condition_flags;
 
-   nir_foreach_block(impl, ${pass_name}_block, &state);
+   nir_foreach_block_reverse(impl, ${pass_name}_block, &state);
 
    if (state.progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |

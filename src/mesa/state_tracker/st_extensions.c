@@ -808,6 +808,7 @@ void st_init_extensions(struct pipe_screen *screen,
       }
 
       extensions->EXT_shader_integer_mix = GL_TRUE;
+      extensions->ARB_arrays_of_arrays = GL_TRUE;
    } else {
       /* Optional integer support for GLSL 1.2. */
       if (screen->get_shader_param(screen, PIPE_SHADER_VERTEX,

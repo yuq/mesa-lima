@@ -376,8 +376,6 @@ nir_visitor::visit(ir_variable *ir)
    var->data.explicit_binding = ir->data.explicit_binding;
    var->data.has_initializer = ir->data.has_initializer;
    var->data.location_frac = ir->data.location_frac;
-   var->data.from_named_ifc_block_array = ir->data.from_named_ifc_block_array;
-   var->data.from_named_ifc_block_nonarray = ir->data.from_named_ifc_block_nonarray;
 
    switch (ir->data.depth_layout) {
    case ir_depth_layout_none:
@@ -600,7 +598,7 @@ nir_visitor::visit(ir_emit_vertex *ir)
 {
    nir_intrinsic_instr *instr =
       nir_intrinsic_instr_create(this->shader, nir_intrinsic_emit_vertex);
-   instr->const_index[0] = ir->stream_id();
+   nir_intrinsic_set_stream_id(instr, ir->stream_id());
    nir_builder_instr_insert(&b, &instr->instr);
 }
 
@@ -609,7 +607,7 @@ nir_visitor::visit(ir_end_primitive *ir)
 {
    nir_intrinsic_instr *instr =
       nir_intrinsic_instr_create(this->shader, nir_intrinsic_end_primitive);
-   instr->const_index[0] = ir->stream_id();
+   nir_intrinsic_set_stream_id(instr, ir->stream_id());
    nir_builder_instr_insert(&b, &instr->instr);
 }
 
@@ -889,7 +887,7 @@ nir_visitor::visit(ir_call *ir)
          instr->src[0] = nir_src_for_ssa(evaluate_rvalue(val));
          instr->src[1] = nir_src_for_ssa(evaluate_rvalue(block));
          instr->src[2] = nir_src_for_ssa(evaluate_rvalue(offset));
-         instr->const_index[0] = write_mask->value.u[0];
+         nir_intrinsic_set_write_mask(instr, write_mask->value.u[0]);
          instr->num_components = val->type->vector_elements;
 
          nir_builder_instr_insert(&b, &instr->instr);
@@ -987,7 +985,7 @@ nir_visitor::visit(ir_call *ir)
          exec_node *param = ir->actual_parameters.get_head();
          ir_rvalue *offset = ((ir_instruction *)param)->as_rvalue();
 
-         instr->const_index[0] = 0;
+         nir_intrinsic_set_base(instr, 0);
          instr->src[0] = nir_src_for_ssa(evaluate_rvalue(offset));
 
          const glsl_type *type = ir->return_deref->var->type;
@@ -1011,10 +1009,10 @@ nir_visitor::visit(ir_call *ir)
          ir_constant *write_mask = ((ir_instruction *)param)->as_constant();
          assert(write_mask);
 
-         instr->const_index[0] = 0;
+         nir_intrinsic_set_base(instr, 0);
          instr->src[1] = nir_src_for_ssa(evaluate_rvalue(offset));
 
-         instr->const_index[1] = write_mask->value.u[0];
+         nir_intrinsic_set_write_mask(instr, write_mask->value.u[0]);
 
          instr->src[0] = nir_src_for_ssa(evaluate_rvalue(val));
          instr->num_components = val->type->vector_elements;
@@ -1069,7 +1067,8 @@ nir_visitor::visit(ir_call *ir)
          nir_intrinsic_instr *store_instr =
             nir_intrinsic_instr_create(shader, nir_intrinsic_store_var);
          store_instr->num_components = ir->return_deref->type->vector_elements;
-         store_instr->const_index[0] = (1 << store_instr->num_components) - 1;
+         nir_intrinsic_set_write_mask(store_instr,
+                                      (1 << store_instr->num_components) - 1);
 
          store_instr->variables[0] =
             evaluate_deref(&store_instr->instr, ir->return_deref);
@@ -1147,7 +1146,7 @@ nir_visitor::visit(ir_assignment *ir)
    nir_intrinsic_instr *store =
       nir_intrinsic_instr_create(this->shader, nir_intrinsic_store_var);
    store->num_components = ir->lhs->type->vector_elements;
-   store->const_index[0] = ir->write_mask;
+   nir_intrinsic_set_write_mask(store, ir->write_mask);
    nir_deref *store_deref = nir_copy_deref(store, &lhs_deref->deref);
    store->variables[0] = nir_deref_as_var(store_deref);
    store->src[0] = nir_src_for_ssa(src);

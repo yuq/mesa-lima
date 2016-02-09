@@ -961,8 +961,8 @@ struct pipe_resource *r600_compute_global_buffer_create(
 			templ->array_size);
 
 	result->base.b.vtbl = &r600_global_buffer_vtbl;
-	result->base.b.b.screen = screen;
 	result->base.b.b = *templ;
+	result->base.b.b.screen = screen;
 	pipe_reference_init(&result->base.b.b.reference, 1);
 
 	size_in_dw = (templ->width0+3) / 4;

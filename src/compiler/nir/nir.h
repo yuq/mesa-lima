@@ -226,24 +226,6 @@ typedef struct nir_variable {
       unsigned location_frac:2;
 
       /**
-       * Non-zero if this variable was created by lowering a named interface
-       * block which was not an array.
-       *
-       * Note that this variable and \c from_named_ifc_block_array will never
-       * both be non-zero.
-       */
-      unsigned from_named_ifc_block_nonarray:1;
-
-      /**
-       * Non-zero if this variable was created by lowering a named interface
-       * block which was an array.
-       *
-       * Note that this variable and \c from_named_ifc_block_nonarray will never
-       * both be non-zero.
-       */
-      unsigned from_named_ifc_block_array:1;
-
-      /**
        * \brief Layout qualifier for gl_FragDepth.
        *
        * This is not equal to \c ir_depth_layout_none if and only if this
@@ -835,7 +817,7 @@ typedef struct {
 } nir_call_instr;
 
 #define INTRINSIC(name, num_srcs, src_components, has_dest, dest_components, \
-                  num_variables, num_indices, flags) \
+                  num_variables, num_indices, idx0, idx1, idx2, flags) \
    nir_intrinsic_##name,
 
 #define LAST_INTRINSIC(name) nir_last_intrinsic = nir_intrinsic_##name,
@@ -847,6 +829,8 @@ typedef enum {
 
 #undef INTRINSIC
 #undef LAST_INTRINSIC
+
+#define NIR_INTRINSIC_MAX_CONST_INDEX 3
 
 /** Represents an intrinsic
  *
@@ -891,7 +875,7 @@ typedef struct {
     */
    uint8_t num_components;
 
-   int const_index[3];
+   int const_index[NIR_INTRINSIC_MAX_CONST_INDEX];
 
    nir_deref_var *variables[2];
 
@@ -919,6 +903,55 @@ typedef enum {
     */
    NIR_INTRINSIC_CAN_REORDER = (1 << 1),
 } nir_intrinsic_semantic_flag;
+
+/**
+ * \name NIR intrinsics const-index flag
+ *
+ * Indicates the usage of a const_index slot.
+ *
+ * \sa nir_intrinsic_info::index_map
+ */
+typedef enum {
+   /**
+    * Generally instructions that take a offset src argument, can encode
+    * a constant 'base' value which is added to the offset.
+    */
+   NIR_INTRINSIC_BASE = 1,
+
+   /**
+    * For store instructions, a writemask for the store.
+    */
+   NIR_INTRINSIC_WRMASK = 2,
+
+   /**
+    * The stream-id for GS emit_vertex/end_primitive intrinsics.
+    */
+   NIR_INTRINSIC_STREAM_ID = 3,
+
+   /**
+    * The clip-plane id for load_user_clip_plane intrinsic.
+    */
+   NIR_INTRINSIC_UCP_ID = 4,
+
+   /**
+    * The range of a load operation.  This specifies the maximum amount of
+    * data starting at the base offset (if any) that can be accessed.
+    */
+   NIR_INTRINSIC_RANGE = 5,
+
+   /**
+    * The Vulkan descriptor set for vulkan_resource_index intrinsic.
+    */
+   NIR_INTRINSIC_DESC_SET = 6,
+
+   /**
+    * The Vulkan descriptor set binding for vulkan_resource_index intrinsic.
+    */
+   NIR_INTRINSIC_BINDING = 7,
+
+   NIR_INTRINSIC_NUM_INDEX_FLAGS,
+
+} nir_intrinsic_index_flag;
 
 #define NIR_INTRINSIC_MAX_INPUTS 4
 
@@ -949,11 +982,39 @@ typedef struct {
    /** the number of constant indices used by the intrinsic */
    unsigned num_indices;
 
+   /** indicates the usage of intr->const_index[n] */
+   unsigned index_map[NIR_INTRINSIC_NUM_INDEX_FLAGS];
+
    /** semantic flags for calls to this intrinsic */
    nir_intrinsic_semantic_flag flags;
 } nir_intrinsic_info;
 
 extern const nir_intrinsic_info nir_intrinsic_infos[nir_num_intrinsics];
+
+
+#define INTRINSIC_IDX_ACCESSORS(name, flag, type)                             \
+static inline type                                                            \
+nir_intrinsic_##name(nir_intrinsic_instr *instr)                              \
+{                                                                             \
+   const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];   \
+   assert(info->index_map[NIR_INTRINSIC_##flag] > 0);                         \
+   return instr->const_index[info->index_map[NIR_INTRINSIC_##flag] - 1];      \
+}                                                                             \
+static inline void                                                            \
+nir_intrinsic_set_##name(nir_intrinsic_instr *instr, type val)                \
+{                                                                             \
+   const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];   \
+   assert(info->index_map[NIR_INTRINSIC_##flag] > 0);                         \
+   instr->const_index[info->index_map[NIR_INTRINSIC_##flag] - 1] = val;       \
+}
+
+INTRINSIC_IDX_ACCESSORS(write_mask, WRMASK, unsigned)
+INTRINSIC_IDX_ACCESSORS(base, BASE, int)
+INTRINSIC_IDX_ACCESSORS(stream_id, STREAM_ID, unsigned)
+INTRINSIC_IDX_ACCESSORS(ucp_id, UCP_ID, unsigned)
+INTRINSIC_IDX_ACCESSORS(range, RANGE, unsigned)
+INTRINSIC_IDX_ACCESSORS(desc_set, DESC_SET, unsigned)
+INTRINSIC_IDX_ACCESSORS(binding, BINDING, unsigned)
 
 /**
  * \group texture information

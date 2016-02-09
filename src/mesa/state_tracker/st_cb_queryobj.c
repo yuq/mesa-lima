@@ -96,7 +96,8 @@ st_BeginQuery(struct gl_context *ctx, struct gl_query_object *q)
    switch (q->Target) {
    case GL_ANY_SAMPLES_PASSED:
    case GL_ANY_SAMPLES_PASSED_CONSERVATIVE:
-      /* fall-through */
+      type = PIPE_QUERY_OCCLUSION_PREDICATE;
+      break;
    case GL_SAMPLES_PASSED_ARB:
       type = PIPE_QUERY_OCCLUSION_COUNTER;
       break;
@@ -240,7 +241,14 @@ get_query_result(struct pipe_context *pipe,
       stq->base.Result = data.pipeline_statistics.c_primitives;
       break;
    default:
-      stq->base.Result = data.u64;
+      switch (stq->type) {
+      case PIPE_QUERY_OCCLUSION_PREDICATE:
+         stq->base.Result = !!data.b;
+         break;
+      default:
+         stq->base.Result = data.u64;
+         break;
+      }
       break;
    }
 

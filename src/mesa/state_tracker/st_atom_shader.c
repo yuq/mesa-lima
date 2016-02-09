@@ -163,7 +163,6 @@ static void
 update_gp( struct st_context *st )
 {
    struct st_geometry_program *stgp;
-   struct st_gp_variant_key key;
 
    if (!st->ctx->GeometryProgram._Current) {
       cso_set_geometry_shader_handle(st->cso_context, NULL);
@@ -173,10 +172,7 @@ update_gp( struct st_context *st )
    stgp = st_geometry_program(st->ctx->GeometryProgram._Current);
    assert(stgp->Base.Base.Target == GL_GEOMETRY_PROGRAM_NV);
 
-   memset(&key, 0, sizeof(key));
-   key.st = st->has_shareable_shaders ? NULL : st;
-
-   st->gp_variant = st_get_gp_variant(st, stgp, &key);
+   st->gp_variant = st_get_basic_variant(st, &stgp->tgsi, &stgp->variants);
 
    st_reference_geomprog(st, &st->gp, stgp);
 
@@ -199,7 +195,6 @@ static void
 update_tcp( struct st_context *st )
 {
    struct st_tessctrl_program *sttcp;
-   struct st_tcp_variant_key key;
 
    if (!st->ctx->TessCtrlProgram._Current) {
       cso_set_tessctrl_shader_handle(st->cso_context, NULL);
@@ -209,10 +204,7 @@ update_tcp( struct st_context *st )
    sttcp = st_tessctrl_program(st->ctx->TessCtrlProgram._Current);
    assert(sttcp->Base.Base.Target == GL_TESS_CONTROL_PROGRAM_NV);
 
-   memset(&key, 0, sizeof(key));
-   key.st = st->has_shareable_shaders ? NULL : st;
-
-   st->tcp_variant = st_get_tcp_variant(st, sttcp, &key);
+   st->tcp_variant = st_get_basic_variant(st, &sttcp->tgsi, &sttcp->variants);
 
    st_reference_tesscprog(st, &st->tcp, sttcp);
 
@@ -235,7 +227,6 @@ static void
 update_tep( struct st_context *st )
 {
    struct st_tesseval_program *sttep;
-   struct st_tep_variant_key key;
 
    if (!st->ctx->TessEvalProgram._Current) {
       cso_set_tesseval_shader_handle(st->cso_context, NULL);
@@ -245,10 +236,7 @@ update_tep( struct st_context *st )
    sttep = st_tesseval_program(st->ctx->TessEvalProgram._Current);
    assert(sttep->Base.Base.Target == GL_TESS_EVALUATION_PROGRAM_NV);
 
-   memset(&key, 0, sizeof(key));
-   key.st = st->has_shareable_shaders ? NULL : st;
-
-   st->tep_variant = st_get_tep_variant(st, sttep, &key);
+   st->tep_variant = st_get_basic_variant(st, &sttep->tgsi, &sttep->variants);
 
    st_reference_tesseprog(st, &st->tep, sttep);
 
