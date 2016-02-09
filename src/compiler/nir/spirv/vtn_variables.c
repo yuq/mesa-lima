@@ -193,7 +193,7 @@ _vtn_local_load_store(struct vtn_builder *b, bool load, nir_deref_var *deref,
                            intrin->num_components, NULL);
          inout->def = &intrin->dest.ssa;
       } else {
-         intrin->const_index[0] = (1 << intrin->num_components) - 1;
+         nir_intrinsic_set_write_mask(intrin, (1 << intrin->num_components) - 1);
          intrin->src[0] = nir_src_for_ssa(inout->def);
       }
 
@@ -392,7 +392,7 @@ _vtn_load_store_tail(struct vtn_builder *b, nir_intrinsic_op op, bool load,
 
    int src = 0;
    if (!load) {
-      instr->const_index[0] = (1 << instr->num_components) - 1; /* write mask */
+      nir_intrinsic_set_write_mask(instr, (1 << instr->num_components) - 1);
       instr->src[src++] = nir_src_for_ssa((*inout)->def);
    }
 
@@ -400,8 +400,8 @@ _vtn_load_store_tail(struct vtn_builder *b, nir_intrinsic_op op, bool load,
     * constant block for now.
     */
    if (op == nir_intrinsic_load_push_constant) {
-      instr->const_index[0] = 0;
-      instr->const_index[1] = 128;
+      nir_intrinsic_set_base(instr, 0);
+      nir_intrinsic_set_range(instr, 128);
    }
 
    if (index)

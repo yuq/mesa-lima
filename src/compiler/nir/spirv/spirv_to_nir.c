@@ -2048,7 +2048,7 @@ vtn_handle_barrier(struct vtn_builder *b, SpvOp opcode,
       nir_intrinsic_instr_create(b->shader, intrinsic_op);
 
    if (opcode == SpvOpEmitStreamVertex || opcode == SpvOpEndStreamPrimitive)
-      intrin->const_index[0] = w[1];
+      nir_intrinsic_set_stream_id(intrin, w[1]);
 
    nir_builder_instr_insert(&b->nb, &intrin->instr);
 }
