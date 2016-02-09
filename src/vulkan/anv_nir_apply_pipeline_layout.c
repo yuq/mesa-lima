@@ -114,8 +114,8 @@ lower_res_index_intrinsic(nir_intrinsic_instr *intrin,
 
    b->cursor = nir_before_instr(&intrin->instr);
 
-   uint32_t set = intrin->const_index[0];
-   uint32_t binding = intrin->const_index[1];
+   uint32_t set = nir_intrinsic_desc_set(intrin);
+   uint32_t binding = nir_intrinsic_binding(intrin);
 
    uint32_t surface_index = get_surface_index(set, binding, state);
 
