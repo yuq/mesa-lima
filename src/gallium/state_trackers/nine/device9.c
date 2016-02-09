@@ -1994,7 +1994,7 @@ NineDevice9_Clear( struct NineDevice9 *This,
     for (i = 0; i < This->caps.NumSimultaneousRTs; ++i) {
         rt = This->state.rt[i];
         if (!rt || rt->desc.Format == D3DFMT_NULL ||
-            !(Flags & D3DCLEAR_TARGET))
+            !(bufs & PIPE_CLEAR_COLOR))
             continue; /* save space, compiler should hoist this */
         cbuf = NineSurface9_GetSurface(rt, sRGB);
         for (r = 0; r < Count; ++r) {
@@ -2019,7 +2019,7 @@ NineDevice9_Clear( struct NineDevice9 *This,
                                       x1, y1, x2 - x1, y2 - y1);
         }
     }
-    if (!(Flags & NINED3DCLEAR_DEPTHSTENCIL))
+    if (!(bufs & PIPE_CLEAR_DEPTHSTENCIL))
         return D3D_OK;
 
     bufs &= PIPE_CLEAR_DEPTHSTENCIL;
