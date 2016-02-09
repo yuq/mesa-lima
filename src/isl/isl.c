@@ -1382,3 +1382,43 @@ isl_surf_get_image_intratile_offset_el(const struct isl_device *dev,
    *x_offset_el = small_x_offset_el;
    *y_offset_el = small_y_offset_el;
 }
+
+uint32_t
+isl_surf_get_depth_format(const struct isl_device *dev,
+                          const struct isl_surf *surf)
+{
+   /* Support for separate stencil buffers began in gen5. Support for
+    * interleaved depthstencil buffers ceased in gen7. The intermediate gens,
+    * those that supported separate and interleaved stencil, were gen5 and
+    * gen6.
+    *
+    * For a list of all available formats, see the Sandybridge PRM >> Volume
+    * 2 Part 1: 3D/Media - 3D Pipeline >> 3DSTATE_DEPTH_BUFFER >> Surface
+    * Format (p321).
+    */
+
+   assert(surf->usage & ISL_SURF_USAGE_DEPTH_BIT);
+
+   if (surf->usage & ISL_SURF_USAGE_STENCIL_BIT)
+      assert(ISL_DEV_GEN(dev) < 7);
+
+   switch (surf->format) {
+   default:
+      unreachable("bad isl depth format");
+   case ISL_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+      assert(ISL_DEV_GEN(dev) < 7);
+      return 0; /* D32_FLOAT_S8X24_UINT */
+   case ISL_FORMAT_R32_FLOAT:
+      return 1; /* D32_FLOAT */
+   case ISL_FORMAT_R24_UNORM_X8_TYPELESS:
+      if (surf->usage & ISL_SURF_USAGE_STENCIL_BIT) {
+         assert(ISL_DEV_GEN(dev) < 7);
+         return 2; /* D24_UNORM_S8_UINT */
+      } else {
+         assert(ISL_DEV_GEN(dev) >= 5);
+         return 3; /* D24_UNORM_X8_UINT */
+      }
+   case ISL_FORMAT_R16_UNORM:
+      return 5; /* D16_UNORM */
+   }
+}
