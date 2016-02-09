@@ -1732,6 +1732,14 @@ NineDevice9_ColorFill( struct NineDevice9 *This,
         y = pRect->top;
         w = pRect->right - pRect->left;
         h = pRect->bottom - pRect->top;
+        /* Wine tests: */
+        if (compressed_format(surf->desc.Format)) {
+           const unsigned bw = util_format_get_blockwidth(surf->base.info.format);
+           const unsigned bh = util_format_get_blockheight(surf->base.info.format);
+
+           user_assert(!(x % bw) && !(y % bh) && !(w % bw) && !(h % bh),
+                       D3DERR_INVALIDCALL);
+        }
     } else{
         x = 0;
         y = 0;
