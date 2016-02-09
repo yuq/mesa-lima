@@ -792,7 +792,7 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       void *__dst = anv_batch_emit_dwords(batch, n);    \
       struct cmd __template = {                         \
          __anv_cmd_header(cmd),                         \
-        .DwordLength = n - __anv_cmd_length_bias(cmd),  \
+        .DWordLength = n - __anv_cmd_length_bias(cmd),  \
          __VA_ARGS__                                    \
       };                                                \
       __anv_cmd_pack(cmd)(batch, __dst, &__template);   \

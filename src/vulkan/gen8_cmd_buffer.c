@@ -903,9 +903,9 @@ void genX(CmdWriteTimestamp)(
    emit_query_availability(&cmd_buffer->batch, &pool->bo, query + 16);
 }
 
-#define alu_opcode(v)   __gen_field((v),  20, 31)
-#define alu_operand1(v) __gen_field((v),  10, 19)
-#define alu_operand2(v) __gen_field((v),   0,  9)
+#define alu_opcode(v)   __gen_uint((v),  20, 31)
+#define alu_operand1(v) __gen_uint((v),  10, 19)
+#define alu_operand2(v) __gen_uint((v),   0,  9)
 #define alu(opcode, operand1, operand2) \
    alu_opcode(opcode) | alu_operand1(operand1) | alu_operand2(operand2)
 
@@ -1083,7 +1083,7 @@ void genX(CmdWaitEvents)(
 
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_SEMAPHORE_WAIT),
                      .WaitMode = PollingMode,
-                     .CompareOperation = SAD_EQUAL_SDD,
+                     .CompareOperation = COMPARE_SAD_EQUAL_SDD,
                      .SemaphoreDataDword = VK_EVENT_SET,
                      .SemaphoreAddress = {
                         &cmd_buffer->device->dynamic_state_block_pool.bo,

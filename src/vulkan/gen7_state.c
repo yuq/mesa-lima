@@ -80,10 +80,10 @@ genX(fill_buffer_surface_state)(void *state, enum isl_format format,
       .Depth                                    = ((num_elements - 1) >> 21) & 0x3f,
       .SurfacePitch                             = stride - 1,
 #  if (ANV_IS_HASWELL)
-      .ShaderChannelSelectR                     = SCS_RED,
-      .ShaderChannelSelectG                     = SCS_GREEN,
-      .ShaderChannelSelectB                     = SCS_BLUE,
-      .ShaderChannelSelectA                     = SCS_ALPHA,
+      .ShaderChannelSelectRed                   = SCS_RED,
+      .ShaderChannelSelectGreen                 = SCS_GREEN,
+      .ShaderChannelSelectBlue                  = SCS_BLUE,
+      .ShaderChannelSelectAlpha                 = SCS_ALPHA,
 #  endif
       .SurfaceBaseAddress                       = { NULL, offset },
    };
@@ -110,7 +110,7 @@ VkResult genX(CreateSampler)(
    struct GEN7_SAMPLER_STATE sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
-      .LODPreClampEnable = OGL,
+      .LODPreClampEnable = CLAMP_ENABLE_OGL,
       .BaseMipLevel = 0.0,
       .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
       .MagModeFilter = vk_to_gen_tex_filter(pCreateInfo->magFilter,
@@ -228,10 +228,10 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
 
       .MCSEnable = false,
 #  if (ANV_IS_HASWELL)
-      .ShaderChannelSelectR = vk_to_gen_swizzle[iview->swizzle.r],
-      .ShaderChannelSelectG = vk_to_gen_swizzle[iview->swizzle.g],
-      .ShaderChannelSelectB = vk_to_gen_swizzle[iview->swizzle.b],
-      .ShaderChannelSelectA = vk_to_gen_swizzle[iview->swizzle.a],
+      .ShaderChannelSelectRed = vk_to_gen_swizzle[iview->swizzle.r],
+      .ShaderChannelSelectGreen = vk_to_gen_swizzle[iview->swizzle.g],
+      .ShaderChannelSelectBlue = vk_to_gen_swizzle[iview->swizzle.b],
+      .ShaderChannelSelectAlpha = vk_to_gen_swizzle[iview->swizzle.a],
 #  else /* XXX: Seriously? */
       .RedClearColor = 0,
       .GreenClearColor = 0,

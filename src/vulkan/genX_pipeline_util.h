@@ -244,9 +244,9 @@ static const uint32_t vk_to_gen_cullmode[] = {
 };
 
 static const uint32_t vk_to_gen_fillmode[] = {
-   [VK_POLYGON_MODE_FILL]                    = RASTER_SOLID,
-   [VK_POLYGON_MODE_LINE]                    = RASTER_WIREFRAME,
-   [VK_POLYGON_MODE_POINT]                   = RASTER_POINT,
+   [VK_POLYGON_MODE_FILL]                    = FILL_MODE_SOLID,
+   [VK_POLYGON_MODE_LINE]                    = FILL_MODE_WIREFRAME,
+   [VK_POLYGON_MODE_POINT]                   = FILL_MODE_POINT,
 };
 
 static const uint32_t vk_to_gen_front_face[] = {
