@@ -30,54 +30,53 @@
 #include "anv_private.h"
 
 /**
- * The \a format argument is required and overrides any format found in struct
- * anv_image_create_info. Exactly one bit must be set in \a aspect.
+ * Exactly one bit must be set in \a aspect.
  */
 static isl_surf_usage_flags_t
 choose_isl_surf_usage(VkImageUsageFlags vk_usage,
                       VkImageAspectFlags aspect)
 {
-   isl_surf_usage_flags_t isl_flags = 0;
+   isl_surf_usage_flags_t isl_usage = 0;
 
    /* FINISHME: Support aux surfaces */
-   isl_flags |= ISL_SURF_USAGE_DISABLE_AUX_BIT;
+   isl_usage |= ISL_SURF_USAGE_DISABLE_AUX_BIT;
 
    if (vk_usage & VK_IMAGE_USAGE_SAMPLED_BIT)
-      isl_flags |= ISL_SURF_USAGE_TEXTURE_BIT;
+      isl_usage |= ISL_SURF_USAGE_TEXTURE_BIT;
 
    if (vk_usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
-      isl_flags |= ISL_SURF_USAGE_TEXTURE_BIT;
+      isl_usage |= ISL_SURF_USAGE_TEXTURE_BIT;
 
    if (vk_usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-      isl_flags |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
+      isl_usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
 
    if (vk_usage & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
-      isl_flags |= ISL_SURF_USAGE_CUBE_BIT;
+      isl_usage |= ISL_SURF_USAGE_CUBE_BIT;
 
    if (vk_usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
       switch (aspect) {
       default:
          unreachable("bad VkImageAspect");
       case VK_IMAGE_ASPECT_DEPTH_BIT:
-         isl_flags |= ISL_SURF_USAGE_DEPTH_BIT;
+         isl_usage |= ISL_SURF_USAGE_DEPTH_BIT;
          break;
       case VK_IMAGE_ASPECT_STENCIL_BIT:
-         isl_flags |= ISL_SURF_USAGE_STENCIL_BIT;
+         isl_usage |= ISL_SURF_USAGE_STENCIL_BIT;
          break;
       }
    }
 
    if (vk_usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
       /* Meta implements transfers by sampling from the source image. */
-      isl_flags |= ISL_SURF_USAGE_TEXTURE_BIT;
+      isl_usage |= ISL_SURF_USAGE_TEXTURE_BIT;
    }
 
    if (vk_usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
       /* Meta implements transfers by rendering into the destination image. */
-      isl_flags |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
+      isl_usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
    }
 
-   return isl_flags;
+   return isl_usage;
 }
 
 /**
