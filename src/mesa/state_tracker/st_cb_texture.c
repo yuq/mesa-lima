@@ -1132,6 +1132,8 @@ create_pbo_upload_vs(struct st_context *st)
    struct ureg_dst out_layer;
 
    ureg = ureg_create(TGSI_PROCESSOR_VERTEX);
+   if (!ureg)
+      return NULL;
 
    in_pos = ureg_DECL_vs_input(ureg, TGSI_SEMANTIC_POSITION);
 
