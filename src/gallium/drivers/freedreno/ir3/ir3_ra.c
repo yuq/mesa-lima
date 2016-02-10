@@ -605,21 +605,21 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 	struct ir3_ra_block_data *bd;
 	unsigned bitset_words = BITSET_WORDS(ctx->alloc_count);
 
-	void def(unsigned name, struct ir3_instruction *instr)
-	{
-		/* defined on first write: */
-		if (!ctx->def[name])
-			ctx->def[name] = instr->ip;
-		ctx->use[name] = instr->ip;
-		BITSET_SET(bd->def, name);
-	}
+#define def(name, instr) \
+		do { \
+			/* defined on first write: */ \
+			if (!ctx->def[name]) \
+				ctx->def[name] = instr->ip; \
+			ctx->use[name] = instr->ip; \
+			BITSET_SET(bd->def, name); \
+		} while(0);
 
-	void use(unsigned name, struct ir3_instruction *instr)
-	{
-		ctx->use[name] = MAX2(ctx->use[name], instr->ip);
-		if (!BITSET_TEST(bd->def, name))
-			BITSET_SET(bd->use, name);
-	}
+#define use(name, instr) \
+		do { \
+			ctx->use[name] = MAX2(ctx->use[name], instr->ip); \
+			if (!BITSET_TEST(bd->def, name)) \
+				BITSET_SET(bd->use, name); \
+		} while(0);
 
 	bd = rzalloc(ctx->g, struct ir3_ra_block_data);
 
