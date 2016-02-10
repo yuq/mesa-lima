@@ -778,16 +778,12 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
     D3DWindowBuffer *handle_temp;
     struct threadpool_task *task_temp;
     int i;
-    HRESULT hr = present(This, pSourceRect, pDestRect,
-                         hDestWindowOverride, pDirtyRegion, dwFlags);
+    HRESULT hr;
 
     DBG("This=%p pSourceRect=%p pDestRect=%p hDestWindowOverride=%p "
         "pDirtyRegion=%p dwFlags=%d\n",
         This, pSourceRect, pDestRect, hDestWindowOverride,
         pDirtyRegion,dwFlags);
-
-    if (hr == D3DERR_WASSTILLDRAWING)
-        return hr;
 
     if (This->base.device->ex) {
         if (NineSwapChain9_GetOccluded(This)) {
@@ -802,6 +798,11 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
             return D3DERR_DEVICELOST;
         }
     }
+
+    hr = present(This, pSourceRect, pDestRect,
+                 hDestWindowOverride, pDirtyRegion, dwFlags);
+    if (hr == D3DERR_WASSTILLDRAWING)
+        return hr;
 
     switch (This->params.SwapEffect) {
         case D3DSWAPEFFECT_FLIP:
