@@ -298,7 +298,12 @@ static struct brw_l3_weights
 get_pipeline_state_l3_weights(const struct brw_context *brw)
 {
    const struct brw_stage_state *stage_states[] = {
-      &brw->vs.base, &brw->gs.base, &brw->wm.base, &brw->cs.base
+      [MESA_SHADER_VERTEX] = &brw->vs.base,
+      [MESA_SHADER_TESS_CTRL] = &brw->tcs.base,
+      [MESA_SHADER_TESS_EVAL] = &brw->tes.base,
+      [MESA_SHADER_GEOMETRY] = &brw->gs.base,
+      [MESA_SHADER_FRAGMENT] = &brw->wm.base,
+      [MESA_SHADER_COMPUTE] = &brw->cs.base
    };
    bool needs_dc = false, needs_slm = false;
 
