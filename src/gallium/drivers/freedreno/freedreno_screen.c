@@ -537,6 +537,16 @@ fd_screen_create(struct fd_device *dev)
 	}
 	screen->device_id = val;
 
+	if (fd_pipe_get_param(screen->pipe, FD_MAX_FREQ, &val)) {
+		DBG("could not get gpu freq");
+		/* this limits what performance related queries are
+		 * supported but is not fatal
+		 */
+		screen->max_freq = 0;
+	} else {
+		screen->max_freq = val;
+	}
+
 	if (fd_pipe_get_param(screen->pipe, FD_GPU_ID, &val)) {
 		DBG("could not get gpu-id");
 		goto fail;
