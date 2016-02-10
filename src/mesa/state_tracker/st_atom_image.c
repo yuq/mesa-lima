@@ -84,13 +84,23 @@ st_bind_images(struct st_context *st, struct gl_shader *shader,
          img->u.buf.last_element  = f + (n - 1);
       } else {
          img->u.tex.level = u->Level + stObj->base.MinLevel;
-         img->u.tex.first_layer = u->_Layer + stObj->base.MinLayer;
-         img->u.tex.last_layer = u->_Layer + stObj->base.MinLayer;
-         if (u->Layered && img->resource->array_size > 1) {
-            if (stObj->base.Immutable)
-               img->u.tex.last_layer += stObj->base.NumLayers - 1;
-            else
-               img->u.tex.last_layer += img->resource->array_size - 1;
+         if (stObj->pt->target == PIPE_TEXTURE_3D) {
+            if (u->Layered) {
+               img->u.tex.first_layer = 0;
+               img->u.tex.last_layer = u_minify(stObj->pt->depth0, img->u.tex.level) - 1;
+            } else {
+               img->u.tex.first_layer = u->_Layer;
+               img->u.tex.last_layer = u->_Layer;
+            }
+         } else {
+            img->u.tex.first_layer = u->_Layer + stObj->base.MinLayer;
+            img->u.tex.last_layer = u->_Layer + stObj->base.MinLayer;
+            if (u->Layered && img->resource->array_size > 1) {
+               if (stObj->base.Immutable)
+                  img->u.tex.last_layer += stObj->base.NumLayers - 1;
+               else
+                  img->u.tex.last_layer += img->resource->array_size - 1;
+            }
          }
       }
    }
