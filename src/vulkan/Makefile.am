@@ -90,6 +90,7 @@ VULKAN_SOURCES =                                        \
 	anv_nir_lower_push_constants.c                  \
 	anv_pass.c					\
 	anv_pipeline.c                                  \
+	anv_pipeline_cache.c                            \
 	anv_private.h                                   \
 	anv_query.c                                     \
 	anv_util.c                                      \

@@ -623,11 +623,24 @@ struct anv_pipeline_cache {
    struct anv_device *                          device;
    struct anv_state_stream                      program_stream;
    pthread_mutex_t                              mutex;
+
+   uint32_t                                     total_size;
+   uint32_t                                     table_size;
+   uint32_t                                     kernel_count;
+   uint32_t                                    *table;
 };
 
 void anv_pipeline_cache_init(struct anv_pipeline_cache *cache,
                              struct anv_device *device);
 void anv_pipeline_cache_finish(struct anv_pipeline_cache *cache);
+uint32_t anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
+                                   const unsigned char *sha1, void *prog_data);
+uint32_t anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
+                                          const unsigned char *sha1,
+                                          const void *kernel,
+                                          size_t kernel_size,
+                                          const void *prog_data,
+                                          size_t prog_data_size);
 
 struct anv_device {
     VK_LOADER_DATA                              _loader_data;
@@ -669,6 +682,9 @@ VkResult gen7_init_device_state(struct anv_device *device);
 VkResult gen75_init_device_state(struct anv_device *device);
 VkResult gen8_init_device_state(struct anv_device *device);
 VkResult gen9_init_device_state(struct anv_device *device);
+
+void anv_device_get_cache_uuid(void *uuid);
+
 
 void* anv_gem_mmap(struct anv_device *device,
                    uint32_t gem_handle, uint64_t offset, uint64_t size, uint32_t flags);
@@ -1318,9 +1334,15 @@ struct nir_shader;
 struct anv_shader_module {
    struct nir_shader *                          nir;
 
+   unsigned char                                sha1[20];
    uint32_t                                     size;
    char                                         data[0];
 };
+
+void anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
+                     struct anv_shader_module *module,
+                     const char *entrypoint,
+                     const VkSpecializationInfo *spec_info);
 
 static inline gl_shader_stage
 vk_to_mesa_shader_stage(VkShaderStageFlagBits vk_stage)

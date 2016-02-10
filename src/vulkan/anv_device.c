@@ -388,6 +388,13 @@ void anv_GetPhysicalDeviceFeatures(
    };
 }
 
+void
+anv_device_get_cache_uuid(void *uuid)
+{
+   memset(uuid, 0, VK_UUID_SIZE);
+   snprintf(uuid, VK_UUID_SIZE, "anv-%s", MESA_GIT_SHA1 + 4);
+}
+
 void anv_GetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceProperties*                 pProperties)
@@ -526,8 +533,7 @@ void anv_GetPhysicalDeviceProperties(
    };
 
    strcpy(pProperties->deviceName, pdevice->name);
-   snprintf((char *)pProperties->pipelineCacheUUID, VK_UUID_SIZE,
-            "anv-%s", MESA_GIT_SHA1 + 4);
+   anv_device_get_cache_uuid(pProperties->pipelineCacheUUID);
 }
 
 void anv_GetPhysicalDeviceQueueFamilyProperties(
@@ -789,6 +795,7 @@ VkResult anv_CreateDevice(
 
    device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = physical_device->instance;
+   device->chipset_id = physical_device->chipset_id;
 
    if (pAllocator)
       device->alloc = *pAllocator;

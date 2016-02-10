@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include "util/mesa-sha1.h"
 #include "anv_private.h"
 #include "brw_nir.h"
 #include "anv_nir.h"
@@ -58,6 +59,8 @@ VkResult anv_CreateShaderModule(
    module->nir = NULL;
    module->size = pCreateInfo->codeSize;
    memcpy(module->data, pCreateInfo->pCode, module->size);
+
+   _mesa_sha1_compute(module->data, module->size, module->sha1);
 
    *pShaderModule = anv_shader_module_to_handle(module);
 
@@ -180,102 +183,6 @@ anv_shader_compile_to_nir(struct anv_device *device,
    nir_lower_indirect_derefs(nir, indirect_mask);
 
    return nir;
-}
-
-void
-anv_pipeline_cache_init(struct anv_pipeline_cache *cache,
-                        struct anv_device *device)
-{
-   cache->device = device;
-   anv_state_stream_init(&cache->program_stream,
-                         &device->instruction_block_pool);
-   pthread_mutex_init(&cache->mutex, NULL);
-}
-
-void
-anv_pipeline_cache_finish(struct anv_pipeline_cache *cache)
-{
-   anv_state_stream_finish(&cache->program_stream);
-   pthread_mutex_destroy(&cache->mutex);
-}
-
-static uint32_t
-anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
-                                 const void *data, size_t size)
-{
-   pthread_mutex_lock(&cache->mutex);
-
-   struct anv_state state =
-      anv_state_stream_alloc(&cache->program_stream, size, 64);
-
-   pthread_mutex_unlock(&cache->mutex);
-
-   assert(size < cache->program_stream.block_pool->block_size);
-
-   memcpy(state.map, data, size);
-
-   if (!cache->device->info.has_llc)
-      anv_state_clflush(state);
-
-   return state.offset;
-}
-
-VkResult anv_CreatePipelineCache(
-    VkDevice                                    _device,
-    const VkPipelineCacheCreateInfo*            pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkPipelineCache*                            pPipelineCache)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_pipeline_cache *cache;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO);
-   assert(pCreateInfo->flags == 0);
-
-   cache = anv_alloc2(&device->alloc, pAllocator,
-                       sizeof(*cache), 8,
-                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (cache == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   anv_pipeline_cache_init(cache, device);
-
-   *pPipelineCache = anv_pipeline_cache_to_handle(cache);
-
-   return VK_SUCCESS;
-}
-
-void anv_DestroyPipelineCache(
-    VkDevice                                    _device,
-    VkPipelineCache                             _cache,
-    const VkAllocationCallbacks*                pAllocator)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_pipeline_cache, cache, _cache);
-
-   anv_pipeline_cache_finish(cache);
-
-   anv_free2(&device->alloc, pAllocator, cache);
-}
-
-VkResult anv_GetPipelineCacheData(
-    VkDevice                                    device,
-    VkPipelineCache                             pipelineCache,
-    size_t*                                     pDataSize,
-    void*                                       pData)
-{
-   *pDataSize = 0;
-
-   return VK_SUCCESS;
-}
-
-VkResult anv_MergePipelineCaches(
-    VkDevice                                    device,
-    VkPipelineCache                             destCache,
-    uint32_t                                    srcCacheCount,
-    const VkPipelineCache*                      pSrcCaches)
-{
-   stub_return(VK_SUCCESS);
 }
 
 void anv_DestroyPipeline(
@@ -531,53 +438,64 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    struct brw_vs_prog_data *prog_data = &pipeline->vs_prog_data;
    struct brw_vs_prog_key key;
+   uint32_t kernel;
+   unsigned char sha1[20], *hash;
 
    populate_vs_prog_key(&pipeline->device->info, &key);
 
-   /* TODO: Look up shader in cache */
-
-   memset(prog_data, 0, sizeof(*prog_data));
-
-   nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          MESA_SHADER_VERTEX, spec_info,
-                                          &prog_data->base.base);
-   if (nir == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   void *mem_ctx = ralloc_context(NULL);
-
-   if (module->nir == NULL)
-      ralloc_steal(mem_ctx, nir);
-
-   prog_data->inputs_read = nir->info.inputs_read;
-   if (nir->info.outputs_written & (1ull << VARYING_SLOT_PSIZ))
-      pipeline->writes_point_size = true;
-
-   brw_compute_vue_map(&pipeline->device->info,
-                       &prog_data->base.vue_map,
-                       nir->info.outputs_written,
-                       nir->info.separate_shader);
-
-   unsigned code_size;
-   const unsigned *shader_code =
-      brw_compile_vs(compiler, NULL, mem_ctx, &key, prog_data, nir,
-                     NULL, false, -1, &code_size, NULL);
-   if (shader_code == NULL) {
-      ralloc_free(mem_ctx);
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   if (module->size > 0) {
+      hash = sha1;
+      anv_hash_shader(hash, &key, sizeof(key), module, entrypoint, spec_info);
+      kernel = anv_pipeline_cache_search(cache, hash, prog_data);
+   } else {
+      hash = NULL;
    }
 
-   const uint32_t offset =
-      anv_pipeline_cache_upload_kernel(cache, shader_code, code_size);
+   if (module->size == 0 || kernel == NO_KERNEL) {
+      memset(prog_data, 0, sizeof(*prog_data));
+
+      nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
+                                             MESA_SHADER_VERTEX, spec_info,
+                                             &prog_data->base.base);
+      if (nir == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      void *mem_ctx = ralloc_context(NULL);
+
+      if (module->nir == NULL)
+         ralloc_steal(mem_ctx, nir);
+
+      prog_data->inputs_read = nir->info.inputs_read;
+      if (nir->info.outputs_written & (1ull << VARYING_SLOT_PSIZ))
+         pipeline->writes_point_size = true;
+
+      brw_compute_vue_map(&pipeline->device->info,
+                          &prog_data->base.vue_map,
+                          nir->info.outputs_written,
+                          nir->info.separate_shader);
+
+      unsigned code_size;
+      const unsigned *shader_code =
+         brw_compile_vs(compiler, NULL, mem_ctx, &key, prog_data, nir,
+                        NULL, false, -1, &code_size, NULL);
+      if (shader_code == NULL) {
+         ralloc_free(mem_ctx);
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      }
+
+      kernel = anv_pipeline_cache_upload_kernel(cache, hash,
+                                                shader_code, code_size,
+                                                prog_data, sizeof(*prog_data));
+      ralloc_free(mem_ctx);
+   }
+
    if (prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8) {
-      pipeline->vs_simd8 = offset;
+      pipeline->vs_simd8 = kernel;
       pipeline->vs_vec4 = NO_KERNEL;
    } else {
       pipeline->vs_simd8 = NO_KERNEL;
-      pipeline->vs_vec4 = offset;
+      pipeline->vs_vec4 = kernel;
    }
-
-   ralloc_free(mem_ctx);
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_VERTEX,
                                    &prog_data->base.base);
@@ -597,46 +515,59 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    struct brw_gs_prog_data *prog_data = &pipeline->gs_prog_data;
    struct brw_gs_prog_key key;
+   uint32_t kernel;
+   unsigned char sha1[20], *hash;
 
    populate_gs_prog_key(&pipeline->device->info, &key);
 
-   /* TODO: Look up shader in cache */
-
-   memset(prog_data, 0, sizeof(*prog_data));
-
-   nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          MESA_SHADER_GEOMETRY, spec_info,
-                                          &prog_data->base.base);
-   if (nir == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   void *mem_ctx = ralloc_context(NULL);
-
-   if (module->nir == NULL)
-      ralloc_steal(mem_ctx, nir);
-
-   if (nir->info.outputs_written & (1ull << VARYING_SLOT_PSIZ))
-      pipeline->writes_point_size = true;
-
-   brw_compute_vue_map(&pipeline->device->info,
-                       &prog_data->base.vue_map,
-                       nir->info.outputs_written,
-                       nir->info.separate_shader);
-
-   unsigned code_size;
-   const unsigned *shader_code =
-      brw_compile_gs(compiler, NULL, mem_ctx, &key, prog_data, nir,
-                     NULL, -1, &code_size, NULL);
-   if (shader_code == NULL) {
-      ralloc_free(mem_ctx);
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   if (module->size > 0) {
+      hash = sha1;
+      anv_hash_shader(hash, &key, sizeof(key), module, entrypoint, spec_info);
+      kernel = anv_pipeline_cache_search(cache, hash, prog_data);
+   } else {
+      hash = NULL;
    }
 
-   /* TODO: SIMD8 GS */
-   pipeline->gs_kernel =
-      anv_pipeline_cache_upload_kernel(cache, shader_code, code_size);
+   if (module->size == 0 || kernel == NO_KERNEL) {
+      memset(prog_data, 0, sizeof(*prog_data));
 
-   ralloc_free(mem_ctx);
+      nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
+                                             MESA_SHADER_GEOMETRY, spec_info,
+                                             &prog_data->base.base);
+      if (nir == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      void *mem_ctx = ralloc_context(NULL);
+
+      if (module->nir == NULL)
+         ralloc_steal(mem_ctx, nir);
+
+      if (nir->info.outputs_written & (1ull << VARYING_SLOT_PSIZ))
+         pipeline->writes_point_size = true;
+
+      brw_compute_vue_map(&pipeline->device->info,
+                          &prog_data->base.vue_map,
+                          nir->info.outputs_written,
+                          nir->info.separate_shader);
+
+      unsigned code_size;
+      const unsigned *shader_code =
+         brw_compile_gs(compiler, NULL, mem_ctx, &key, prog_data, nir,
+                        NULL, -1, &code_size, NULL);
+      if (shader_code == NULL) {
+         ralloc_free(mem_ctx);
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      }
+
+      /* TODO: SIMD8 GS */
+      kernel = anv_pipeline_cache_upload_kernel(cache, hash,
+                                                shader_code, code_size,
+                                                prog_data, sizeof(*prog_data));
+
+      ralloc_free(mem_ctx);
+   }
+
+   pipeline->gs_kernel = kernel;
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_GEOMETRY,
                                    &prog_data->base.base);
@@ -657,47 +588,61 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    struct brw_wm_prog_data *prog_data = &pipeline->wm_prog_data;
    struct brw_wm_prog_key key;
+   uint32_t kernel;
+   unsigned char sha1[20], *hash;
 
    populate_wm_prog_key(&pipeline->device->info, info, extra, &key);
 
    if (pipeline->use_repclear)
       key.nr_color_regions = 1;
 
-   /* TODO: Look up shader in cache */
-
-   memset(prog_data, 0, sizeof(*prog_data));
-
-   prog_data->binding_table.render_target_start = 0;
-
-   nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          MESA_SHADER_FRAGMENT, spec_info,
-                                          &prog_data->base);
-   if (nir == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   void *mem_ctx = ralloc_context(NULL);
-
-   if (module->nir == NULL)
-      ralloc_steal(mem_ctx, nir);
-
-   unsigned code_size;
-   const unsigned *shader_code =
-      brw_compile_fs(compiler, NULL, mem_ctx, &key, prog_data, nir,
-                     NULL, -1, -1, pipeline->use_repclear, &code_size, NULL);
-   if (shader_code == NULL) {
-      ralloc_free(mem_ctx);
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   if (module->size > 0) {
+      hash = sha1;
+      anv_hash_shader(hash, &key, sizeof(key), module, entrypoint, spec_info);
+      kernel = anv_pipeline_cache_search(cache, hash, prog_data);
+   } else {
+      hash = NULL;
    }
 
-   uint32_t offset =
-      anv_pipeline_cache_upload_kernel(cache, shader_code, code_size);
+   if (module->size == 0 || kernel == NO_KERNEL) {
+      memset(prog_data, 0, sizeof(*prog_data));
+
+      prog_data->binding_table.render_target_start = 0;
+
+      nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
+                                             MESA_SHADER_FRAGMENT, spec_info,
+                                             &prog_data->base);
+      if (nir == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      void *mem_ctx = ralloc_context(NULL);
+
+      if (module->nir == NULL)
+         ralloc_steal(mem_ctx, nir);
+
+      unsigned code_size;
+      const unsigned *shader_code =
+         brw_compile_fs(compiler, NULL, mem_ctx, &key, prog_data, nir,
+                        NULL, -1, -1, pipeline->use_repclear, &code_size, NULL);
+      if (shader_code == NULL) {
+         ralloc_free(mem_ctx);
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      }
+
+      kernel = anv_pipeline_cache_upload_kernel(cache, hash,
+                                                shader_code, code_size,
+                                                prog_data, sizeof(*prog_data));
+
+      ralloc_free(mem_ctx);
+   }
+
    if (prog_data->no_8)
       pipeline->ps_simd8 = NO_KERNEL;
    else
-      pipeline->ps_simd8 = offset;
+      pipeline->ps_simd8 = kernel;
 
    if (prog_data->no_8 || prog_data->prog_offset_16) {
-      pipeline->ps_simd16 = offset + prog_data->prog_offset_16;
+      pipeline->ps_simd16 = kernel + prog_data->prog_offset_16;
    } else {
       pipeline->ps_simd16 = NO_KERNEL;
    }
@@ -715,8 +660,6 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       pipeline->ps_ksp0 = pipeline->ps_simd16;
       pipeline->ps_grf_start0 = prog_data->dispatch_grf_start_reg_16;
    }
-
-   ralloc_free(mem_ctx);
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_FRAGMENT,
                                    &prog_data->base);
@@ -736,40 +679,53 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
    struct brw_cs_prog_key key;
+   uint32_t kernel;
+   unsigned char sha1[20], *hash;
 
    populate_cs_prog_key(&pipeline->device->info, &key);
 
-   /* TODO: Look up shader in cache */
-
-   memset(prog_data, 0, sizeof(*prog_data));
-
-   prog_data->binding_table.work_groups_start = 0;
-
-   nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
-                                          MESA_SHADER_COMPUTE, spec_info,
-                                          &prog_data->base);
-   if (nir == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   prog_data->base.total_shared = nir->num_shared;
-
-   void *mem_ctx = ralloc_context(NULL);
-
-   if (module->nir == NULL)
-      ralloc_steal(mem_ctx, nir);
-
-   unsigned code_size;
-   const unsigned *shader_code =
-      brw_compile_cs(compiler, NULL, mem_ctx, &key, prog_data, nir,
-                     -1, &code_size, NULL);
-   if (shader_code == NULL) {
-      ralloc_free(mem_ctx);
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   if (module->size > 0) {
+      hash = sha1;
+      anv_hash_shader(hash, &key, sizeof(key), module, entrypoint, spec_info);
+      kernel = anv_pipeline_cache_search(cache, hash, prog_data);
+   } else {
+      hash = NULL;
    }
 
-   pipeline->cs_simd =
-      anv_pipeline_cache_upload_kernel(cache, shader_code, code_size);
-   ralloc_free(mem_ctx);
+   if (module->size == 0 || kernel == NO_KERNEL) {
+      memset(prog_data, 0, sizeof(*prog_data));
+
+      prog_data->binding_table.work_groups_start = 0;
+
+      nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
+                                             MESA_SHADER_COMPUTE, spec_info,
+                                             &prog_data->base);
+      if (nir == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      prog_data->base.total_shared = nir->num_shared;
+
+      void *mem_ctx = ralloc_context(NULL);
+
+      if (module->nir == NULL)
+         ralloc_steal(mem_ctx, nir);
+
+      unsigned code_size;
+      const unsigned *shader_code =
+         brw_compile_cs(compiler, NULL, mem_ctx, &key, prog_data, nir,
+                        -1, &code_size, NULL);
+      if (shader_code == NULL) {
+         ralloc_free(mem_ctx);
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      }
+
+      kernel = anv_pipeline_cache_upload_kernel(cache, hash,
+                                                shader_code, code_size,
+                                                prog_data, sizeof(*prog_data));
+      ralloc_free(mem_ctx);
+   }
+
+   pipeline->cs_simd = kernel;
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_COMPUTE,
                                    &prog_data->base);
