@@ -246,9 +246,7 @@ r300_texture_transfer_map(struct pipe_context *ctx,
 void r300_texture_transfer_unmap(struct pipe_context *ctx,
 				 struct pipe_transfer *transfer)
 {
-    struct radeon_winsys *rws = r300_context(ctx)->rws;
     struct r300_transfer *trans = r300_transfer(transfer);
-    struct r300_resource *tex = r300_resource(transfer->resource);
 
     if (trans->linear_texture) {
         if (transfer->usage & PIPE_TRANSFER_WRITE) {
