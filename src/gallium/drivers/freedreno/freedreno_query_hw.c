@@ -47,6 +47,8 @@ static int pidx(unsigned query_type)
 		return 0;
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		return 1;
+	case PIPE_QUERY_TIME_ELAPSED:
+		return 2;
 	default:
 		return -1;
 	}
