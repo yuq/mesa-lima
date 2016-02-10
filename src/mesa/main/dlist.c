@@ -607,7 +607,7 @@ void mesa_print_display_list(GLuint list);
 
 /**
  * Allocate a gl_display_list object with an initial block of storage.
- * \param count  how many display list nodes/tokes to allocate
+ * \param count  how many display list nodes/tokens to allocate
  */
 static struct gl_display_list *
 make_list(GLuint name, GLuint count)
