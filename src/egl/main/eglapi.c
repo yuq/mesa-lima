@@ -405,7 +405,6 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(KHR_image_pixmap);
    _EGL_CHECK_EXTENSION(KHR_reusable_sync);
    _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
-   _EGL_CHECK_EXTENSION(KHR_vg_parent_image);
    _EGL_CHECK_EXTENSION(KHR_wait_sync);
 
    _EGL_CHECK_EXTENSION(MESA_configless_context);
