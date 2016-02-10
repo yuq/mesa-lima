@@ -548,6 +548,9 @@ NineDevice9_TestCooperativeLevel( struct NineDevice9 *This )
     if (NineSwapChain9_GetOccluded(This->swapchains[0])) {
         This->device_needs_reset = TRUE;
         return D3DERR_DEVICELOST;
+    } else if (NineSwapChain9_ResolutionMismatch(This->swapchains[0])) {
+        This->device_needs_reset = TRUE;
+        return D3DERR_DEVICENOTRESET;
     } else if (This->device_needs_reset) {
         return D3DERR_DEVICENOTRESET;
     }
