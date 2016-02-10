@@ -1630,6 +1630,29 @@ glXCreateNewContext(Display * dpy, GLXFBConfig fbconfig,
                     int renderType, GLXContext shareList, Bool allowDirect)
 {
    struct glx_config *config = (struct glx_config *) fbconfig;
+   int screen = DefaultScreen(dpy);
+   struct glx_config **config_list;
+   int list_size;
+   unsigned i;
+
+   if (!config) {
+       __glXSendError(dpy, GLXBadFBConfig, 0, X_GLXCreateNewContext, false);
+       return NULL;
+   }
+
+   config_list = (struct glx_config **)
+      glXGetFBConfigs(dpy, screen, &list_size);
+
+   for (i = 0; i < list_size; i++) {
+       if (config_list[i] == config)
+           break;
+   }
+   free(config_list);
+
+   if (i == list_size) {
+       __glXSendError(dpy, GLXBadFBConfig, 0, X_GLXCreateNewContext, false);
+       return NULL;
+   }
 
    return CreateContext(dpy, config->fbconfigID, config, shareList,
 			allowDirect, X_GLXCreateNewContext, renderType,
