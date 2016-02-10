@@ -179,6 +179,11 @@ glsl_glsl_test_LDADD =					\
 spirv2nir_SOURCES = \
 	nir/spirv2nir.c
 
+spirv2nir_CPPFLAGS =					\
+	$(AM_CPPFLAGS)					\
+	-I$(top_builddir)/src/compiler/nir		\
+	-I$(top_srcdir)/src/compiler/nir
+
 spirv2nir_LDADD =					\
 	nir/libnir.la					\
 	$(top_builddir)/src/util/libmesautil.la		\
