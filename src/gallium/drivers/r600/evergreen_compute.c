@@ -208,23 +208,6 @@ void *evergreen_create_compute_state(
 	COMPUTE_DBG(ctx->screen, "*** evergreen_create_compute_state\n");
 	header = cso->prog;
 	code = cso->prog + sizeof(struct pipe_llvm_program_header);
-#if HAVE_LLVM < 0x0306
-        (void)use_kill;
-	(void)p;
-	shader->llvm_ctx = LLVMContextCreate();
-	shader->num_kernels = radeon_llvm_get_num_kernels(shader->llvm_ctx,
-				code, header->num_bytes);
-	shader->kernels = CALLOC(sizeof(struct r600_kernel),
-				shader->num_kernels);
-	{
-		unsigned i;
-		for (i = 0; i < shader->num_kernels; i++) {
-			struct r600_kernel *kernel = &shader->kernels[i];
-			kernel->llvm_module = radeon_llvm_get_kernel_module(
-				shader->llvm_ctx, i, code, header->num_bytes);
-		}
-	}
-#else
 	radeon_shader_binary_init(&shader->binary);
 	radeon_elf_read(code, header->num_bytes, &shader->binary);
 	r600_create_shader(&shader->bc, &shader->binary, &use_kill);
@@ -234,7 +217,6 @@ void *evergreen_create_compute_state(
 	p = r600_buffer_map_sync_with_rings(&ctx->b, shader->code_bo, PIPE_TRANSFER_WRITE);
 	memcpy(p, shader->bc.bytecode, shader->bc.ndw * 4);
 	ctx->b.ws->buffer_unmap(shader->code_bo->buf);
-#endif
 #endif
 
 	shader->ctx = ctx;
@@ -255,20 +237,11 @@ void evergreen_delete_compute_state(struct pipe_context *ctx_, void* state)
 		return;
 
 #ifdef HAVE_OPENCL
-#if HAVE_LLVM < 0x0306
-	for (unsigned i = 0; i < shader->num_kernels; i++) {
-		struct r600_kernel *kernel = &shader->kernels[i];
-		LLVMDisposeModule(module);
-	}
-	FREE(shader->kernels);
-	LLVMContextDispose(shader->llvm_ctx);
-#else
 	radeon_shader_binary_clean(&shader->binary);
 	r600_destroy_shader(&shader->bc);
 
 	/* TODO destroy shader->code_bo, shader->const_bo
 	 * we'll need something like r600_buffer_free */
-#endif
 #endif
 	FREE(shader);
 }
@@ -372,11 +345,7 @@ static void evergreen_emit_direct_dispatch(
 	int group_size = 1;
 	int grid_size = 1;
 	unsigned lds_size = shader->local_size / 4 +
-#if HAVE_LLVM < 0x0306
-		shader->active_kernel->bc.nlds_dw;
-#else
 		shader->bc.nlds_dw;
-#endif
 
 
 	/* Calculate group_size/grid_size */
@@ -565,18 +534,10 @@ void evergreen_emit_cs_shader(
 	struct r600_resource *code_bo;
 	unsigned ngpr, nstack;
 
-#if HAVE_LLVM < 0x0306
-	struct r600_kernel *kernel = &shader->kernels[state->kernel_index];
-	code_bo = kernel->code_bo;
-	va = kernel->code_bo->gpu_address;
-	ngpr = kernel->bc.ngpr;
-	nstack = kernel->bc.nstack;
-#else
 	code_bo = shader->code_bo;
 	va = shader->code_bo->gpu_address + state->pc;
 	ngpr = shader->bc.ngpr;
 	nstack = shader->bc.nstack;
-#endif
 
 	radeon_compute_set_context_reg_seq(cs, R_0288D0_SQ_PGM_START_LS, 3);
 	radeon_emit(cs, va >> 8); /* R_0288D0_SQ_PGM_START_LS */
@@ -601,45 +562,9 @@ static void evergreen_launch_grid(
 	struct r600_pipe_compute *shader = ctx->cs_shader_state.shader;
 	boolean use_kill;
 
-#if HAVE_LLVM < 0x0306
-	struct r600_kernel *kernel = &shader->kernels[pc];
-	(void)use_kill;
-        if (!kernel->code_bo) {
-                void *p;
-                struct r600_bytecode *bc = &kernel->bc;
-                LLVMModuleRef mod = kernel->llvm_module;
-                boolean use_kill = false;
-                bool dump = (ctx->screen->b.debug_flags & DBG_CS) != 0;
-                unsigned use_sb = ctx->screen->b.debug_flags & DBG_SB_CS;
-                unsigned sb_disasm = use_sb ||
-                        (ctx->screen->b.debug_flags & DBG_SB_DISASM);
-
-                r600_bytecode_init(bc, ctx->b.chip_class, ctx->b.family,
-                           ctx->screen->has_compressed_msaa_texturing);
-                bc->type = TGSI_PROCESSOR_COMPUTE;
-                bc->isa = ctx->isa;
-                r600_llvm_compile(mod, ctx->b.family, bc, &use_kill, dump, &ctx->b.debug);
-
-                if (dump && !sb_disasm) {
-                        r600_bytecode_disasm(bc);
-                } else if ((dump && sb_disasm) || use_sb) {
-                        if (r600_sb_bytecode_process(ctx, bc, NULL, dump, use_sb))
-                                R600_ERR("r600_sb_bytecode_process failed!\n");
-                }
-
-                kernel->code_bo = r600_compute_buffer_alloc_vram(ctx->screen,
-                                                        kernel->bc.ndw * 4);
-                p = r600_buffer_map_sync_with_rings(&ctx->b, kernel->code_bo, PIPE_TRANSFER_WRITE);
-                memcpy(p, kernel->bc.bytecode, kernel->bc.ndw * 4);
-                ctx->b.ws->buffer_unmap(kernel->code_bo->buf);
-        }
-	shader->active_kernel = kernel;
-	ctx->cs_shader_state.kernel_index = pc;
-#else
 	ctx->cs_shader_state.pc = pc;
 	/* Get the config information for this kernel. */
 	r600_shader_binary_read_config(&shader->binary, &shader->bc, pc, &use_kill);
-#endif
 #endif
 
 	COMPUTE_DBG(ctx->screen, "*** evergreen_launch_grid: pc = %u\n", pc);
