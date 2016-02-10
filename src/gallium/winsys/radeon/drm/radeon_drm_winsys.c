@@ -406,9 +406,9 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
                                  &ws->info.num_tile_pipes);
 
             /* "num_tiles_pipes" must be equal to the number of pipes (Px) in the
-            /* pipe config field of the GB_TILE_MODE array. Only one card (Tahiti)
-            /* reports a different value (12). Fix it by setting what's in the
-            /* GB_TILE_MODE array (8).
+             * pipe config field of the GB_TILE_MODE array. Only one card (Tahiti)
+             * reports a different value (12). Fix it by setting what's in the
+             * GB_TILE_MODE array (8).
              */
             if (ws->gen == DRV_SI && ws->info.num_tile_pipes == 12)
                 ws->info.num_tile_pipes = 8;
