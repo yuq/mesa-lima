@@ -47,8 +47,8 @@ vc4_nir_lower_txf_ms_instr(struct vc4_compile *c, nir_builder *b,
 
         nir_tex_instr *txf = nir_tex_instr_create(c->s, 1);
         txf->op = nir_texop_txf;
-        txf->sampler = txf_ms->sampler;
-        txf->sampler_index = txf_ms->sampler_index;
+        txf->texture = txf_ms->texture;
+        txf->texture_index = txf_ms->texture_index;
         txf->coord_components = txf_ms->coord_components;
         txf->is_shadow = txf_ms->is_shadow;
         txf->is_new_style_shadow = txf_ms->is_new_style_shadow;
@@ -80,7 +80,7 @@ vc4_nir_lower_txf_ms_instr(struct vc4_compile *c, nir_builder *b,
         uint32_t tile_h_shift = 5;
         uint32_t tile_size = (tile_h * tile_w *
                               VC4_MAX_SAMPLES * sizeof(uint32_t));
-        unsigned unit = txf_ms->sampler_index;
+        unsigned unit = txf_ms->texture_index;
         uint32_t w = align(c->key->tex[unit].msaa_width, tile_w);
         uint32_t w_tiles = w / tile_w;
 

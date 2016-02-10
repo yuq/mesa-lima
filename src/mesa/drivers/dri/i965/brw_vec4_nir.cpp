@@ -1790,7 +1790,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
           * the last element of the array. Mark it here, because the generator
           * doesn't have enough information to determine the bound.
           */
-         uint32_t max_used = texture + instr->texture_array_size - 1;
+         uint32_t array_size = instr->texture_array_size;
+         uint32_t max_used = texture + array_size - 1;
          if (instr->op == nir_texop_tg4) {
             max_used += prog_data->base.binding_table.gather_texture_start;
          } else {
@@ -1831,8 +1832,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
        instr->op == nir_texop_samples_identical) {
       assert(coord_type != NULL);
       if (devinfo->gen >= 7 &&
-          key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
-         mcs = emit_mcs_fetch(coord_type, coordinate, sampler_reg);
+          key_tex->compressed_multisample_layout_mask & (1 << texture)) {
+         mcs = emit_mcs_fetch(coord_type, coordinate, texture_reg);
       } else {
          mcs = brw_imm_ud(0u);
       }

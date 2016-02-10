@@ -262,7 +262,7 @@ public:
                      uint32_t sampler, src_reg sampler_reg);
 
    src_reg emit_mcs_fetch(const glsl_type *coordinate_type, src_reg coordinate,
-                          src_reg sampler);
+                          src_reg surface);
    void emit_gen6_gather_wa(uint8_t wa, dst_reg dst);
 
    void emit_ndc_computation();

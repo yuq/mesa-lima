@@ -666,14 +666,14 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
    }
 
    if (instr->texture) {
-      assert(instr->sampler);
+      print_deref(instr->texture, state);
       fprintf(fp, " (texture)");
-   }
-   if (instr->sampler) {
-      print_deref(instr->sampler, state);
-      fprintf(fp, " (sampler)");
+      if (instr->sampler) {
+         print_deref(instr->sampler, state);
+         fprintf(fp, " (sampler)");
+      }
    } else {
-      assert(instr->texture == NULL);
+      assert(instr->sampler == NULL);
       fprintf(fp, "%u (texture) %u (sampler)",
               instr->texture_index, instr->sampler_index);
    }

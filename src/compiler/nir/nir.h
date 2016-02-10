@@ -1096,13 +1096,22 @@ typedef struct {
 
    /** The texture deref
     *
-    * If both this and `sampler` are both NULL, use texture_index instead.
-    * If `texture` is NULL, but `sampler` is non-NULL, then the texture is
-    * implied from the sampler.
+    * If this is null, use texture_index instead.
     */
    nir_deref_var *texture;
 
    /** The sampler index
+    *
+    * The following operations do not require a sampler and, as such, this
+    * field should be ignored:
+    *    - nir_texop_txf
+    *    - nir_texop_txf_ms
+    *    - nir_texop_txs
+    *    - nir_texop_lod
+    *    - nir_texop_tg4
+    *    - nir_texop_query_levels
+    *    - nir_texop_texture_samples
+    *    - nir_texop_samples_identical
     *
     * If this texture instruction has a nir_tex_src_sampler_offset source,
     * then the sampler index is given by sampler_index + sampler_offset.
@@ -2228,15 +2237,15 @@ typedef struct nir_lower_tex_options {
    unsigned saturate_t;
    unsigned saturate_r;
 
-   /* Bitmask of samplers that need swizzling.
+   /* Bitmask of textures that need swizzling.
     *
-    * If (swizzle_result & (1 << sampler_index)), then the swizzle in
-    * swizzles[sampler_index] is applied to the result of the texturing
+    * If (swizzle_result & (1 << texture_index)), then the swizzle in
+    * swizzles[texture_index] is applied to the result of the texturing
     * operation.
     */
    unsigned swizzle_result;
 
-   /* A swizzle for each sampler.  Values 0-3 represent x, y, z, or w swizzles
+   /* A swizzle for each texture.  Values 0-3 represent x, y, z, or w swizzles
     * while 4 and 5 represent 0 and 1 respectively.
     */
    uint8_t swizzles[32][4];

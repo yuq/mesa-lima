@@ -816,13 +816,14 @@ vec4_visitor::emit_uniformize(const src_reg &src)
 
 src_reg
 vec4_visitor::emit_mcs_fetch(const glsl_type *coordinate_type,
-                             src_reg coordinate, src_reg sampler)
+                             src_reg coordinate, src_reg surface)
 {
    vec4_instruction *inst =
       new(mem_ctx) vec4_instruction(SHADER_OPCODE_TXF_MCS,
                                     dst_reg(this, glsl_type::uvec4_type));
    inst->base_mrf = 2;
-   inst->src[1] = sampler;
+   inst->src[1] = surface;
+   inst->src[2] = surface;
 
    int param_base;
 

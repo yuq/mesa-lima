@@ -133,7 +133,7 @@ get_texture_size(nir_builder *b, nir_tex_instr *tex)
    txs = nir_tex_instr_create(b->shader, 1);
    txs->op = nir_texop_txs;
    txs->sampler_dim = GLSL_SAMPLER_DIM_RECT;
-   txs->sampler_index = tex->sampler_index;
+   txs->texture_index = tex->texture_index;
    txs->dest_type = nir_type_int;
 
    /* only single src, the lod: */
@@ -317,10 +317,10 @@ nir_lower_tex_block(nir_block *block, void *void_state)
          state->progress = true;
       }
 
-      if (((1 << tex->sampler_index) & state->options->swizzle_result) &&
+      if (((1 << tex->texture_index) & state->options->swizzle_result) &&
           !nir_tex_instr_is_query(tex) &&
           !(tex->is_shadow && tex->is_new_style_shadow)) {
-         swizzle_result(b, tex, state->options->swizzles[tex->sampler_index]);
+         swizzle_result(b, tex, state->options->swizzles[tex->texture_index]);
          state->progress = true;
       }
    }

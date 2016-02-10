@@ -159,7 +159,7 @@ hash_tex(uint32_t hash, const nir_tex_instr *instr)
    hash = HASH(hash, instr->texture_array_size);
    hash = HASH(hash, instr->sampler_index);
 
-   assert(!instr->sampler);
+   assert(!instr->texture && !instr->sampler);
 
    return hash;
 }

@@ -3196,8 +3196,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
-                tex_offset, mcs, gather_component,
-                is_cube_array, texture, texture_reg, sampler, sampler_reg);
+                tex_offset, mcs, gather_component, is_cube_array,
+                texture, texture_reg, sampler, sampler_reg);
 
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;
