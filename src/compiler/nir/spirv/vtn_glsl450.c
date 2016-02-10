@@ -121,8 +121,11 @@ build_mat_subdet(struct nir_builder *b, struct vtn_ssa_value *src,
    } else {
       /* Swizzle to get all but the specified row */
       unsigned swiz[3];
-      for (unsigned j = 0; j < 4; j++)
-         swiz[j - (j > row)] = j;
+      for (unsigned j = 0, k = 0; j < 3; j++, k++) {
+         if (k == row)
+            k++; /* skip column */
+         swiz[j] = k;
+      }
 
       /* Grab all but the specified column */
       nir_ssa_def *subcol[3];
