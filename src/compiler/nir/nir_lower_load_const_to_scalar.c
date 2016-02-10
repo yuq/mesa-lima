@@ -49,8 +49,12 @@ lower_load_const_instr_scalar(nir_load_const_instr *lower)
    nir_ssa_def *loads[4];
    for (unsigned i = 0; i < lower->def.num_components; i++) {
       nir_load_const_instr *load_comp =
-         nir_load_const_instr_create(b.shader, 1, 32);
-      load_comp->value.u32[0] = lower->value.u32[i];
+         nir_load_const_instr_create(b.shader, 1, lower->def.bit_size);
+      if (lower->def.bit_size == 64)
+         load_comp->value.f64[0] = lower->value.f64[i];
+      else
+         load_comp->value.u32[0] = lower->value.u32[i];
+      assert(lower->def.bit_size == 64 || lower->def.bit_size == 32);
       nir_builder_instr_insert(&b, &load_comp->instr);
       loads[i] = &load_comp->def;
    }
