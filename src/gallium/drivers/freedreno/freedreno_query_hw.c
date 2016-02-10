@@ -89,7 +89,9 @@ static void
 resume_query(struct fd_context *ctx, struct fd_hw_query *hq,
 		struct fd_ringbuffer *ring)
 {
+	int idx = pidx(hq->provider->query_type);
 	assert(!hq->period);
+	ctx->active_providers |= (1 << idx);
 	hq->period = util_slab_alloc(&ctx->sample_period_pool);
 	list_inithead(&hq->period->list);
 	hq->period->start = get_sample(ctx, ring, hq->base.type);
@@ -101,7 +103,9 @@ static void
 pause_query(struct fd_context *ctx, struct fd_hw_query *hq,
 		struct fd_ringbuffer *ring)
 {
+	int idx = pidx(hq->provider->query_type);
 	assert(hq->period && !hq->period->end);
+	assert(ctx->active_providers & (1 << idx));
 	hq->period->end = get_sample(ctx, ring, hq->base.type);
 	list_addtail(&hq->period->list, &hq->current_periods);
 	hq->period = NULL;
@@ -429,6 +433,23 @@ fd_hw_query_set_stage(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	}
 	clear_sample_cache(ctx);
 	ctx->stage = stage;
+}
+
+/* call the provider->enable() for all the hw queries that were active
+ * in the current batch.  This sets up perfctr selector regs statically
+ * for the duration of the batch.
+ */
+void
+fd_hw_query_enable(struct fd_context *ctx, struct fd_ringbuffer *ring)
+{
+	for (int idx = 0; idx < MAX_HW_SAMPLE_PROVIDERS; idx++) {
+		if (ctx->active_providers & (1 << idx)) {
+			assert(ctx->sample_providers[idx]);
+			if (ctx->sample_providers[idx]->enable)
+				ctx->sample_providers[idx]->enable(ctx, ring);
+		}
+	}
+	ctx->active_providers = 0;  /* clear it for next frame */
 }
 
 void

@@ -33,6 +33,7 @@
 #include "util/u_format.h"
 
 #include "freedreno_resource.h"
+#include "freedreno_query_hw.h"
 
 #include "fd4_emit.h"
 #include "fd4_blend.h"
@@ -881,6 +882,8 @@ fd4_emit_restore(struct fd_context *ctx)
 
 	OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
 	OUT_RING(ring, 0x0);
+
+	fd_hw_query_enable(ctx, ring);
 
 	ctx->needs_rb_fbd = true;
 }

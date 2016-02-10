@@ -33,6 +33,7 @@
 #include "util/u_format.h"
 
 #include "freedreno_resource.h"
+#include "freedreno_query_hw.h"
 
 #include "fd3_emit.h"
 #include "fd3_blend.h"
@@ -887,6 +888,8 @@ fd3_emit_restore(struct fd_context *ctx)
 	OUT_RING(ring, 0x00000000);
 
 	fd_wfi(ctx, ring);
+
+	fd_hw_query_enable(ctx, ring);
 
 	ctx->needs_rb_fbd = true;
 }

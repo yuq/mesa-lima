@@ -164,6 +164,9 @@ struct fd_context {
 	 */
 	struct fd_hw_sample *sample_cache[MAX_HW_SAMPLE_PROVIDERS];
 
+	/* which sample providers were active in the current batch: */
+	uint32_t active_providers;
+
 	/* tracking for current stage, to know when to start/stop
 	 * any active queries:
 	 */
