@@ -820,6 +820,10 @@ private:
    /*@}*/
 };
 
+#undef DECL_TYPE
+#undef STRUCT_TYPE
+#endif /* __cplusplus */
+
 struct glsl_struct_field {
    const struct glsl_type *type;
    const char *name;
@@ -877,6 +881,7 @@ struct glsl_struct_field {
    unsigned image_volatile:1;
    unsigned image_restrict:1;
 
+#ifdef __cplusplus
    glsl_struct_field(const struct glsl_type *_type, const char *_name)
       : type(_type), name(_name), location(-1), interpolation(0), centroid(0),
         sample(0), matrix_layout(GLSL_MATRIX_LAYOUT_INHERITED), patch(0),
@@ -890,6 +895,7 @@ struct glsl_struct_field {
    {
       /* empty */
    }
+#endif
 };
 
 struct glsl_function_param {
@@ -904,9 +910,5 @@ glsl_align(unsigned int a, unsigned int align)
 {
    return (a + align - 1) / align * align;
 }
-
-#undef DECL_TYPE
-#undef STRUCT_TYPE
-#endif /* __cplusplus */
 
 #endif /* GLSL_TYPES_H */
