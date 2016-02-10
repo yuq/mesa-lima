@@ -379,6 +379,7 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
 }
 
 struct member_decoration_ctx {
+   unsigned num_fields;
    struct glsl_struct_field *fields;
    struct vtn_type *type;
 };
@@ -452,6 +453,8 @@ struct_member_decoration_cb(struct vtn_builder *b,
 
    if (member < 0)
       return;
+
+   assert(member < ctx->num_fields);
 
    switch (dec->decoration) {
    case SpvDecorationRelaxedPrecision:
@@ -671,6 +674,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       }
 
       struct member_decoration_ctx ctx = {
+         .num_fields = num_fields,
          .fields = fields,
          .type = val->type
       };
