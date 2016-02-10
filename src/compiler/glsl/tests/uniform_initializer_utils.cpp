@@ -103,6 +103,7 @@ generate_data_element(void *mem_ctx, const glsl_type *type,
       case GLSL_TYPE_ERROR:
       case GLSL_TYPE_INTERFACE:
       case GLSL_TYPE_SUBROUTINE:
+      case GLSL_TYPE_FUNCTION:
 	 ASSERT_TRUE(false);
 	 break;
       }
@@ -136,6 +137,7 @@ generate_data_element(void *mem_ctx, const glsl_type *type,
       case GLSL_TYPE_ERROR:
       case GLSL_TYPE_INTERFACE:
       case GLSL_TYPE_SUBROUTINE:
+      case GLSL_TYPE_FUNCTION:
 	 ASSERT_TRUE(false);
 	 break;
       }
@@ -241,6 +243,7 @@ verify_data(gl_constant_value *storage, unsigned storage_array_size,
 	 case GLSL_TYPE_ERROR:
 	 case GLSL_TYPE_INTERFACE:
 	 case GLSL_TYPE_SUBROUTINE:
+         case GLSL_TYPE_FUNCTION:
 	    ASSERT_TRUE(false);
 	    break;
 	 }

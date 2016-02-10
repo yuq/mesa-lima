@@ -90,6 +90,7 @@ copy_constant_to_storage(union gl_constant_value *storage,
       case GLSL_TYPE_INTERFACE:
       case GLSL_TYPE_VOID:
       case GLSL_TYPE_SUBROUTINE:
+      case GLSL_TYPE_FUNCTION:
       case GLSL_TYPE_ERROR:
 	 /* All other types should have already been filtered by other
 	  * paths in the caller.

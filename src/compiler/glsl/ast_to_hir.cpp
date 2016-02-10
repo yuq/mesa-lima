@@ -1135,6 +1135,7 @@ do_comparison(void *mem_ctx, int operation, ir_rvalue *op0, ir_rvalue *op1)
    case GLSL_TYPE_INTERFACE:
    case GLSL_TYPE_ATOMIC_UINT:
    case GLSL_TYPE_SUBROUTINE:
+   case GLSL_TYPE_FUNCTION:
       /* I assume a comparison of a struct containing a sampler just
        * ignores the sampler present in the type.
        */
