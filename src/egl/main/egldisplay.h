@@ -115,7 +115,6 @@ struct _egl_extensions
    EGLBoolean KHR_wait_sync;
 
    EGLBoolean MESA_configless_context;
-   EGLBoolean MESA_drm_display;
    EGLBoolean MESA_drm_image;
    EGLBoolean MESA_image_dma_buf_export;
 
