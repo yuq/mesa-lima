@@ -872,16 +872,12 @@ brw_update_texture_surfaces(struct brw_context *brw)
    /* BRW_NEW_FRAGMENT_PROGRAM */
    struct gl_program *fs = (struct gl_program *) brw->fragment_program;
 
-   /* BRW_NEW_COMPUTE_PROGRAM */
-   struct gl_program *cs = (struct gl_program *) brw->compute_program;
-
    /* _NEW_TEXTURE */
    update_stage_texture_surfaces(brw, vs, &brw->vs.base, false);
    update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, false);
    update_stage_texture_surfaces(brw, tes, &brw->tes.base, false);
    update_stage_texture_surfaces(brw, gs, &brw->gs.base, false);
    update_stage_texture_surfaces(brw, fs, &brw->wm.base, false);
-   update_stage_texture_surfaces(brw, cs, &brw->cs.base, false);
 
    /* emit alternate set of surface state for gather. this
     * allows the surface format to be overriden for only the
@@ -897,8 +893,6 @@ brw_update_texture_surfaces(struct brw_context *brw)
          update_stage_texture_surfaces(brw, gs, &brw->gs.base, true);
       if (fs && fs->UsesGather)
          update_stage_texture_surfaces(brw, fs, &brw->wm.base, true);
-      if (cs && cs->UsesGather)
-         update_stage_texture_surfaces(brw, cs, &brw->cs.base, true);
    }
 
    brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
@@ -908,7 +902,6 @@ const struct brw_tracked_state brw_texture_surfaces = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_COMPUTE_PROGRAM |
              BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_FS_PROG_DATA |
              BRW_NEW_GEOMETRY_PROGRAM |
@@ -922,6 +915,37 @@ const struct brw_tracked_state brw_texture_surfaces = {
    },
    .emit = brw_update_texture_surfaces,
 };
+
+static void
+brw_update_cs_texture_surfaces(struct brw_context *brw)
+{
+   /* BRW_NEW_COMPUTE_PROGRAM */
+   struct gl_program *cs = (struct gl_program *) brw->compute_program;
+
+   /* _NEW_TEXTURE */
+   update_stage_texture_surfaces(brw, cs, &brw->cs.base, false);
+
+   /* emit alternate set of surface state for gather. this
+    * allows the surface format to be overriden for only the
+    * gather4 messages.
+    */
+   if (brw->gen < 8) {
+      if (cs && cs->UsesGather)
+         update_stage_texture_surfaces(brw, cs, &brw->cs.base, true);
+   }
+
+   brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
+}
+
+const struct brw_tracked_state brw_cs_texture_surfaces = {
+   .dirty = {
+      .mesa = _NEW_TEXTURE,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_COMPUTE_PROGRAM,
+   },
+   .emit = brw_update_cs_texture_surfaces,
+};
+
 
 void
 brw_upload_ubo_surfaces(struct brw_context *brw,
