@@ -109,6 +109,8 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_st_dri \
 	libmesa_st_mesa \
 	libmesa_glsl \
+	libmesa_compiler \
+	libmesa_nir \
 	libmesa_dri_common \
 	libmesa_megadriver_stub \
 	libmesa_gallium \
