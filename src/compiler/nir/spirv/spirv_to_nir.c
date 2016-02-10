@@ -363,7 +363,7 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
          if (opcode == SpvOpGroupDecorate) {
             dec->scope = VTN_DEC_DECORATION;
          } else {
-            dec->scope = VTN_DEC_STRUCT_MEMBER0 + *(w++);
+            dec->scope = VTN_DEC_STRUCT_MEMBER0 + *(++w);
          }
 
          /* Link into the list */
