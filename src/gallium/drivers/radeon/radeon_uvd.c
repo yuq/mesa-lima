@@ -402,6 +402,9 @@ static struct ruvd_h264 get_h264_msg(struct ruvd_decoder *dec, struct pipe_h264_
 	result.log2_max_pic_order_cnt_lsb_minus4 = pic->pps->sps->log2_max_pic_order_cnt_lsb_minus4;
 
 	switch (dec->base.chroma_format) {
+	case PIPE_VIDEO_CHROMA_FORMAT_NONE:
+		/* TODO: assert? */
+		break;
 	case PIPE_VIDEO_CHROMA_FORMAT_400:
 		result.chroma_format = 0;
 		break;
