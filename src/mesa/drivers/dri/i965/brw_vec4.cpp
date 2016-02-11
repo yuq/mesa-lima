@@ -26,6 +26,7 @@
 #include "brw_cfg.h"
 #include "brw_vs.h"
 #include "brw_nir.h"
+#include "brw_vec4_builder.h"
 #include "brw_vec4_live_variables.h"
 #include "brw_dead_control_flow.h"
 #include "program/prog_parameter.h"
@@ -1632,6 +1633,36 @@ vec4_vs_visitor::setup_payload(void)
    this->first_non_payload_grf = reg;
 }
 
+bool
+vec4_visitor::lower_minmax()
+{
+   assert(devinfo->gen < 6);
+
+   bool progress = false;
+
+   foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
+      const vec4_builder ibld(this, block, inst);
+
+      if (inst->opcode == BRW_OPCODE_SEL &&
+          inst->predicate == BRW_PREDICATE_NONE) {
+         /* FIXME: Using CMP doesn't preserve the NaN propagation semantics of
+          *        the original SEL.L/GE instruction
+          */
+         ibld.CMP(ibld.null_reg_d(), inst->src[0], inst->src[1],
+                  inst->conditional_mod);
+         inst->predicate = BRW_PREDICATE_NORMAL;
+         inst->conditional_mod = BRW_CONDITIONAL_NONE;
+
+         progress = true;
+      }
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 src_reg
 vec4_visitor::get_timestamp()
 {
@@ -1901,6 +1932,13 @@ vec4_visitor::run()
       OPT(opt_cse);
       OPT(opt_copy_propagation, false);
       OPT(opt_copy_propagation, true);
+      OPT(dead_code_eliminate);
+   }
+
+   if (devinfo->gen <= 5 && OPT(lower_minmax)) {
+      OPT(opt_cmod_propagation);
+      OPT(opt_cse);
+      OPT(opt_copy_propagation);
       OPT(dead_code_eliminate);
    }
 

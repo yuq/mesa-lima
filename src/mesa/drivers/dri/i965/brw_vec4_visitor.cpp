@@ -679,18 +679,8 @@ vec4_instruction *
 vec4_visitor::emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
                           src_reg src0, src_reg src1)
 {
-   vec4_instruction *inst;
-
-   if (devinfo->gen >= 6) {
-      inst = emit(BRW_OPCODE_SEL, dst, src0, src1);
-      inst->conditional_mod = conditionalmod;
-   } else {
-      emit(CMP(dst, src0, src1, conditionalmod));
-
-      inst = emit(BRW_OPCODE_SEL, dst, src0, src1);
-      inst->predicate = BRW_PREDICATE_NORMAL;
-   }
-
+   vec4_instruction *inst = emit(BRW_OPCODE_SEL, dst, src0, src1);
+   inst->conditional_mod = conditionalmod;
    return inst;
 }
 

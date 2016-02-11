@@ -303,14 +303,8 @@ namespace brw {
       emit_minmax(const dst_reg &dst, const src_reg &src0,
                   const src_reg &src1, brw_conditional_mod mod) const
       {
-         if (shader->devinfo->gen >= 6) {
-            set_condmod(mod, SEL(dst, fix_unsigned_negate(src0),
-                                 fix_unsigned_negate(src1)));
-         } else {
-            CMP(null_reg_d(), src0, src1, mod);
-            set_predicate(BRW_PREDICATE_NORMAL,
-                          SEL(dst, src0, src1));
-         }
+         set_condmod(mod, SEL(dst, fix_unsigned_negate(src0),
+                              fix_unsigned_negate(src1)));
       }
 
       /**

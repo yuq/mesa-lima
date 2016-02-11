@@ -307,6 +307,8 @@ public:
 
    void resolve_ud_negate(src_reg *reg);
 
+   bool lower_minmax();
+
    src_reg get_timestamp();
 
    void dump_instruction(backend_instruction *inst);

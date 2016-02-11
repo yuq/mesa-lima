@@ -375,14 +375,8 @@ namespace brw {
       {
          assert(mod == BRW_CONDITIONAL_GE || mod == BRW_CONDITIONAL_L);
 
-         if (shader->devinfo->gen >= 6) {
-            set_condmod(mod, SEL(dst, fix_unsigned_negate(src0),
-                                 fix_unsigned_negate(src1)));
-         } else {
-            CMP(null_reg_d(), src0, src1, mod);
-            set_predicate(BRW_PREDICATE_NORMAL,
-                          SEL(dst, src0, src1));
-         }
+         set_condmod(mod, SEL(dst, fix_unsigned_negate(src0),
+                              fix_unsigned_negate(src1)));
       }
 
       /**

@@ -3476,6 +3476,36 @@ fs_visitor::lower_integer_multiplication()
    return progress;
 }
 
+bool
+fs_visitor::lower_minmax()
+{
+   assert(devinfo->gen < 6);
+
+   bool progress = false;
+
+   foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
+      const fs_builder ibld(this, block, inst);
+
+      if (inst->opcode == BRW_OPCODE_SEL &&
+          inst->predicate == BRW_PREDICATE_NONE) {
+         /* FIXME: Using CMP doesn't preserve the NaN propagation semantics of
+          *        the original SEL.L/GE instruction
+          */
+         ibld.CMP(ibld.null_reg_d(), inst->src[0], inst->src[1],
+                  inst->conditional_mod);
+         inst->predicate = BRW_PREDICATE_NORMAL;
+         inst->conditional_mod = BRW_CONDITIONAL_NONE;
+
+         progress = true;
+      }
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 static void
 setup_color_payload(const fs_builder &bld, const brw_wm_prog_key *key,
                     fs_reg *dst, fs_reg color, unsigned components)
@@ -5137,6 +5167,13 @@ fs_visitor::optimize()
 
    OPT(opt_combine_constants);
    OPT(lower_integer_multiplication);
+
+   if (devinfo->gen <= 5 && OPT(lower_minmax)) {
+      OPT(opt_cmod_propagation);
+      OPT(opt_cse);
+      OPT(opt_copy_propagate);
+      OPT(dead_code_eliminate);
+   }
 
    lower_uniform_pull_constant_loads();
 
