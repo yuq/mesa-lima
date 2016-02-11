@@ -283,6 +283,22 @@ try_constant_propagate(const struct gen_device_info *devinfo,
 }
 
 static bool
+is_align1_opcode(unsigned opcode)
+{
+   switch (opcode) {
+   case VEC4_OPCODE_DOUBLE_TO_FLOAT:
+   case VEC4_OPCODE_FLOAT_TO_DOUBLE:
+   case VEC4_OPCODE_PICK_LOW_32BIT:
+   case VEC4_OPCODE_PICK_HIGH_32BIT:
+   case VEC4_OPCODE_SET_LOW_32BIT:
+   case VEC4_OPCODE_SET_HIGH_32BIT:
+      return true;
+   default:
+      return false;
+   }
+}
+
+static bool
 try_copy_propagate(const struct gen_device_info *devinfo,
                    vec4_instruction *inst, int arg,
                    const copy_entry *entry, int attributes_per_reg)
@@ -326,6 +342,14 @@ try_copy_propagate(const struct gen_device_info *devinfo,
 
    unsigned composed_swizzle = brw_compose_swizzle(inst->src[arg].swizzle,
                                                    value.swizzle);
+
+   /* Instructions that operate on vectors in ALIGN1 mode will ignore swizzles
+    * so copy-propagation won't be safe if the composed swizzle is anything
+    * other than the identity.
+    */
+   if (is_align1_opcode(inst->opcode) && composed_swizzle != BRW_SWIZZLE_XYZW)
+      return false;
+
    if (inst->is_3src(devinfo) &&
        (value.file == UNIFORM ||
         (value.file == ATTR && attributes_per_reg != 1)) &&
