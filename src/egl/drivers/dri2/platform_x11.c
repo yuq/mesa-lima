@@ -472,6 +472,8 @@ dri2_x11_get_buffers(__DRIdrawable * driDrawable,
 					    dri2_surf->drawable,
 					    count, count, attachments);
    reply = xcb_dri2_get_buffers_reply (dri2_dpy->conn, cookie, NULL);
+   if (reply == NULL)
+      return NULL;
    buffers = xcb_dri2_get_buffers_buffers (reply);
    if (buffers == NULL)
       return NULL;
