@@ -5084,7 +5084,7 @@ fs_visitor::optimize()
 
    if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
       char filename[64];
-      snprintf(filename, 64, "%s%d-%s-00-start",
+      snprintf(filename, 64, "%s%d-%s-00-00-start",
                stage_abbrev, dispatch_width, nir->info.name);
 
       backend_shader::dump_instructions(filename);

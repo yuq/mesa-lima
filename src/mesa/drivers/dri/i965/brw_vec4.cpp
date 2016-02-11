@@ -1869,7 +1869,7 @@ vec4_visitor::run()
 
    if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
       char filename[64];
-      snprintf(filename, 64, "%s-%s-00-start",
+      snprintf(filename, 64, "%s-%s-00-00-start",
                stage_abbrev, nir->info.name);
 
       backend_shader::dump_instructions(filename);
