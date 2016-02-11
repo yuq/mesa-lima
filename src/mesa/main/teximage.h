@@ -49,6 +49,23 @@ _mesa_is_cube_face(GLenum target)
 
 
 /**
+ * If the target is GL_TEXTURE_CUBE_MAP, return one of the
+ * GL_TEXTURE_CUBE_MAP_POSITIVE/NEGATIVE_X/Y/Z targets corresponding to
+ * the face parameter.
+ * Else, return target as-is.
+ */
+static inline GLenum
+_mesa_cube_face_target(GLenum target, unsigned face)
+{
+   assert(face < 6);
+   if (target == GL_TEXTURE_CUBE_MAP)
+      return GL_TEXTURE_CUBE_MAP_POSITIVE_X + face;
+   else
+      return target;
+}
+
+
+/**
  * For cube map faces, return a face index in [0,5].
  * For other targets return 0;
  */
