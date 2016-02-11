@@ -1271,6 +1271,7 @@ st_translate_geometry_program(struct st_context *st,
  */
 struct st_basic_variant *
 st_get_basic_variant(struct st_context *st,
+                     unsigned pipe_shader,
                      struct pipe_shader_state *tgsi,
                      struct st_basic_variant **variants)
 {
@@ -1293,7 +1294,22 @@ st_get_basic_variant(struct st_context *st,
       v = CALLOC_STRUCT(st_basic_variant);
       if (v) {
          /* fill in new variant */
-         v->driver_shader = pipe->create_gs_state(pipe, tgsi);
+         switch (pipe_shader) {
+         case PIPE_SHADER_TESS_CTRL:
+            v->driver_shader = pipe->create_tcs_state(pipe, tgsi);
+            break;
+         case PIPE_SHADER_TESS_EVAL:
+            v->driver_shader = pipe->create_tes_state(pipe, tgsi);
+            break;
+         case PIPE_SHADER_GEOMETRY:
+            v->driver_shader = pipe->create_gs_state(pipe, tgsi);
+            break;
+         default:
+            assert(!"unhandled shader type");
+            free(v);
+            return NULL;
+         }
+
          v->key = key;
 
          /* insert into list */
@@ -1587,19 +1603,19 @@ st_precompile_shader_variant(struct st_context *st,
 
    case GL_TESS_CONTROL_PROGRAM_NV: {
       struct st_tessctrl_program *p = (struct st_tessctrl_program *)prog;
-      st_get_basic_variant(st, &p->tgsi, &p->variants);
+      st_get_basic_variant(st, PIPE_SHADER_TESS_CTRL, &p->tgsi, &p->variants);
       break;
    }
 
    case GL_TESS_EVALUATION_PROGRAM_NV: {
       struct st_tesseval_program *p = (struct st_tesseval_program *)prog;
-      st_get_basic_variant(st, &p->tgsi, &p->variants);
+      st_get_basic_variant(st, PIPE_SHADER_TESS_EVAL, &p->tgsi, &p->variants);
       break;
    }
 
    case GL_GEOMETRY_PROGRAM_NV: {
       struct st_geometry_program *p = (struct st_geometry_program *)prog;
-      st_get_basic_variant(st, &p->tgsi, &p->variants);
+      st_get_basic_variant(st, PIPE_SHADER_GEOMETRY, &p->tgsi, &p->variants);
       break;
    }
 

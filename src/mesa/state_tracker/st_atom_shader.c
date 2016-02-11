@@ -172,7 +172,8 @@ update_gp( struct st_context *st )
    stgp = st_geometry_program(st->ctx->GeometryProgram._Current);
    assert(stgp->Base.Base.Target == GL_GEOMETRY_PROGRAM_NV);
 
-   st->gp_variant = st_get_basic_variant(st, &stgp->tgsi, &stgp->variants);
+   st->gp_variant = st_get_basic_variant(st, PIPE_SHADER_GEOMETRY,
+                                         &stgp->tgsi, &stgp->variants);
 
    st_reference_geomprog(st, &st->gp, stgp);
 
@@ -204,7 +205,8 @@ update_tcp( struct st_context *st )
    sttcp = st_tessctrl_program(st->ctx->TessCtrlProgram._Current);
    assert(sttcp->Base.Base.Target == GL_TESS_CONTROL_PROGRAM_NV);
 
-   st->tcp_variant = st_get_basic_variant(st, &sttcp->tgsi, &sttcp->variants);
+   st->tcp_variant = st_get_basic_variant(st, PIPE_SHADER_TESS_CTRL,
+                                          &sttcp->tgsi, &sttcp->variants);
 
    st_reference_tesscprog(st, &st->tcp, sttcp);
 
@@ -236,7 +238,8 @@ update_tep( struct st_context *st )
    sttep = st_tesseval_program(st->ctx->TessEvalProgram._Current);
    assert(sttep->Base.Base.Target == GL_TESS_EVALUATION_PROGRAM_NV);
 
-   st->tep_variant = st_get_basic_variant(st, &sttep->tgsi, &sttep->variants);
+   st->tep_variant = st_get_basic_variant(st, PIPE_SHADER_TESS_EVAL,
+                                          &sttep->tgsi, &sttep->variants);
 
    st_reference_tesseprog(st, &st->tep, sttep);
 
