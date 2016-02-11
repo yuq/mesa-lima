@@ -861,20 +861,22 @@ _mesa_format_image_size(mesa_format format, GLsizei width,
                         GLsizei height, GLsizei depth)
 {
    const struct gl_format_info *info = _mesa_get_format_info(format);
+   GLuint sz;
    /* Strictly speaking, a conditional isn't needed here */
-   if (info->BlockWidth > 1 || info->BlockHeight > 1) {
+   if (info->BlockWidth > 1 || info->BlockHeight > 1 || info->BlockDepth > 1) {
       /* compressed format (2D only for now) */
-      const GLuint bw = info->BlockWidth, bh = info->BlockHeight;
+      const GLuint bw = info->BlockWidth;
+      const GLuint bh = info->BlockHeight;
+      const GLuint bd = info->BlockDepth;
       const GLuint wblocks = (width + bw - 1) / bw;
       const GLuint hblocks = (height + bh - 1) / bh;
-      const GLuint sz = wblocks * hblocks * info->BytesPerBlock;
-      return sz * depth;
-   }
-   else {
+      const GLuint dblocks = (depth + bd - 1) / bd;
+      sz = wblocks * hblocks * dblocks * info->BytesPerBlock;
+   } else
       /* non-compressed */
-      const GLuint sz = width * height * depth * info->BytesPerBlock;
-      return sz;
-   }
+      sz = width * height * depth * info->BytesPerBlock;
+
+   return sz;
 }
 
 
@@ -887,23 +889,23 @@ _mesa_format_image_size64(mesa_format format, GLsizei width,
                           GLsizei height, GLsizei depth)
 {
    const struct gl_format_info *info = _mesa_get_format_info(format);
+   uint64_t sz;
    /* Strictly speaking, a conditional isn't needed here */
-   if (info->BlockWidth > 1 || info->BlockHeight > 1) {
+   if (info->BlockWidth > 1 || info->BlockHeight > 1 || info->BlockDepth > 1) {
       /* compressed format (2D only for now) */
-      const uint64_t bw = info->BlockWidth, bh = info->BlockHeight;
+      const uint64_t bw = info->BlockWidth;
+      const uint64_t bh = info->BlockHeight;
+      const uint64_t bd = info->BlockDepth;
       const uint64_t wblocks = (width + bw - 1) / bw;
       const uint64_t hblocks = (height + bh - 1) / bh;
-      const uint64_t sz = wblocks * hblocks * info->BytesPerBlock;
-      return sz * depth;
-   }
-   else {
+      const uint64_t dblocks = (depth + bd - 1) / bd;
+      sz = wblocks * hblocks * dblocks * info->BytesPerBlock;
+   } else
       /* non-compressed */
-      const uint64_t sz = ((uint64_t) width *
-                           (uint64_t) height *
-                           (uint64_t) depth *
-                           info->BytesPerBlock);
-      return sz;
-   }
+      sz = ((uint64_t) width * (uint64_t) height *
+            (uint64_t) depth * info->BytesPerBlock);
+
+   return sz;
 }
 
 
