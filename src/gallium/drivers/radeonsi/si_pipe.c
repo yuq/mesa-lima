@@ -564,7 +564,7 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 		}
 	}
 	pipe_mutex_destroy(sscreen->shader_parts_mutex);
-
+	si_destroy_shader_cache(sscreen);
 	r600_destroy_common_screen(&sscreen->b);
 }
 
@@ -612,7 +612,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->b.b.resource_create = r600_resource_create_common;
 
 	if (!r600_common_screen_init(&sscreen->b, ws) ||
-	    !si_init_gs_info(sscreen)) {
+	    !si_init_gs_info(sscreen) ||
+	    !si_init_shader_cache(sscreen)) {
 		FREE(sscreen);
 		return NULL;
 	}

@@ -32,9 +32,220 @@
 
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_ureg.h"
+#include "util/hash_table.h"
+#include "util/u_hash.h"
 #include "util/u_memory.h"
 #include "util/u_prim.h"
 #include "util/u_simple_shaders.h"
+
+/* SHADER_CACHE */
+
+/**
+ * Return the TGSI binary in a buffer. The first 4 bytes contain its size as
+ * integer.
+ */
+static void *si_get_tgsi_binary(struct si_shader_selector *sel)
+{
+	unsigned tgsi_size = tgsi_num_tokens(sel->tokens) *
+			     sizeof(struct tgsi_token);
+	unsigned size = 4 + tgsi_size + sizeof(sel->so);
+	char *result = (char*)MALLOC(size);
+
+	if (!result)
+		return NULL;
+
+	*((uint32_t*)result) = size;
+	memcpy(result + 4, sel->tokens, tgsi_size);
+	memcpy(result + 4 + tgsi_size, &sel->so, sizeof(sel->so));
+	return result;
+}
+
+/** Copy "data" to "ptr" and return the next dword following copied data. */
+static uint32_t *write_data(uint32_t *ptr, const void *data, unsigned size)
+{
+	memcpy(ptr, data, size);
+	ptr += DIV_ROUND_UP(size, 4);
+	return ptr;
+}
+
+/** Read data from "ptr". Return the next dword following the data. */
+static uint32_t *read_data(uint32_t *ptr, void *data, unsigned size)
+{
+	memcpy(data, ptr, size);
+	ptr += DIV_ROUND_UP(size, 4);
+	return ptr;
+}
+
+/**
+ * Write the size as uint followed by the data. Return the next dword
+ * following the copied data.
+ */
+static uint32_t *write_chunk(uint32_t *ptr, const void *data, unsigned size)
+{
+	*ptr++ = size;
+	return write_data(ptr, data, size);
+}
+
+/**
+ * Read the size as uint followed by the data. Return both via parameters.
+ * Return the next dword following the data.
+ */
+static uint32_t *read_chunk(uint32_t *ptr, void **data, unsigned *size)
+{
+	*size = *ptr++;
+	assert(*data == NULL);
+	*data = malloc(*size);
+	return read_data(ptr, *data, *size);
+}
+
+/**
+ * Return the shader binary in a buffer. The first 4 bytes contain its size
+ * as integer.
+ */
+static void *si_get_shader_binary(struct si_shader *shader)
+{
+	/* There is always a size of data followed by the data itself. */
+	unsigned relocs_size = shader->binary.reloc_count *
+			       sizeof(shader->binary.relocs[0]);
+	unsigned disasm_size = strlen(shader->binary.disasm_string) + 1;
+	unsigned size =
+		4 + /* total size */
+		4 + /* CRC32 of the data below */
+		align(sizeof(shader->config), 4) +
+		align(sizeof(shader->info), 4) +
+		4 + align(shader->binary.code_size, 4) +
+		4 + align(shader->binary.rodata_size, 4) +
+		4 + align(relocs_size, 4) +
+		4 + align(disasm_size, 4);
+	void *buffer = CALLOC(1, size);
+	uint32_t *ptr = (uint32_t*)buffer;
+
+	if (!buffer)
+		return NULL;
+
+	*ptr++ = size;
+	ptr++; /* CRC32 is calculated at the end. */
+
+	ptr = write_data(ptr, &shader->config, sizeof(shader->config));
+	ptr = write_data(ptr, &shader->info, sizeof(shader->info));
+	ptr = write_chunk(ptr, shader->binary.code, shader->binary.code_size);
+	ptr = write_chunk(ptr, shader->binary.rodata, shader->binary.rodata_size);
+	ptr = write_chunk(ptr, shader->binary.relocs, relocs_size);
+	ptr = write_chunk(ptr, shader->binary.disasm_string, disasm_size);
+	assert((char *)ptr - (char *)buffer == size);
+
+	/* Compute CRC32. */
+	ptr = (uint32_t*)buffer;
+	ptr++;
+	*ptr = util_hash_crc32(ptr + 1, size - 8);
+
+	return buffer;
+}
+
+static bool si_load_shader_binary(struct si_shader *shader, void *binary)
+{
+	uint32_t *ptr = (uint32_t*)binary;
+	uint32_t size = *ptr++;
+	uint32_t crc32 = *ptr++;
+	unsigned chunk_size;
+
+	if (util_hash_crc32(ptr, size - 8) != crc32) {
+		fprintf(stderr, "radeonsi: binary shader has invalid CRC32\n");
+		return false;
+	}
+
+	ptr = read_data(ptr, &shader->config, sizeof(shader->config));
+	ptr = read_data(ptr, &shader->info, sizeof(shader->info));
+	ptr = read_chunk(ptr, (void**)&shader->binary.code,
+			 &shader->binary.code_size);
+	ptr = read_chunk(ptr, (void**)&shader->binary.rodata,
+			 &shader->binary.rodata_size);
+	ptr = read_chunk(ptr, (void**)&shader->binary.relocs, &chunk_size);
+	shader->binary.reloc_count = chunk_size / sizeof(shader->binary.relocs[0]);
+	ptr = read_chunk(ptr, (void**)&shader->binary.disasm_string, &chunk_size);
+
+	return true;
+}
+
+/**
+ * Insert a shader into the cache. It's assumed the shader is not in the cache.
+ * Use si_shader_cache_load_shader before calling this.
+ *
+ * Returns false on failure, in which case the tgsi_binary should be freed.
+ */
+static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
+					  void *tgsi_binary,
+					  struct si_shader *shader)
+{
+	void *hw_binary = si_get_shader_binary(shader);
+
+	if (!hw_binary)
+		return false;
+
+	if (_mesa_hash_table_insert(sscreen->shader_cache, tgsi_binary,
+				    hw_binary) == NULL) {
+		FREE(hw_binary);
+		return false;
+	}
+
+	return true;
+}
+
+static bool si_shader_cache_load_shader(struct si_screen *sscreen,
+					void *tgsi_binary,
+				        struct si_shader *shader)
+{
+	struct hash_entry *entry =
+		_mesa_hash_table_search(sscreen->shader_cache, tgsi_binary);
+	if (!entry)
+		return false;
+
+	return si_load_shader_binary(shader, entry->data);
+}
+
+static uint32_t si_shader_cache_key_hash(const void *key)
+{
+	/* The first dword is the key size. */
+	return util_hash_crc32(key, *(uint32_t*)key);
+}
+
+static bool si_shader_cache_key_equals(const void *a, const void *b)
+{
+	uint32_t *keya = (uint32_t*)a;
+	uint32_t *keyb = (uint32_t*)b;
+
+	/* The first dword is the key size. */
+	if (*keya != *keyb)
+		return false;
+
+	return memcmp(keya, keyb, *keya) == 0;
+}
+
+static void si_destroy_shader_cache_entry(struct hash_entry *entry)
+{
+	FREE((void*)entry->key);
+	FREE(entry->data);
+}
+
+bool si_init_shader_cache(struct si_screen *sscreen)
+{
+	pipe_mutex_init(sscreen->shader_cache_mutex);
+	sscreen->shader_cache =
+		_mesa_hash_table_create(NULL,
+					si_shader_cache_key_hash,
+					si_shader_cache_key_equals);
+	return sscreen->shader_cache != NULL;
+}
+
+void si_destroy_shader_cache(struct si_screen *sscreen)
+{
+	if (sscreen->shader_cache)
+		_mesa_hash_table_destroy(sscreen->shader_cache,
+					 si_destroy_shader_cache_entry);
+	pipe_mutex_destroy(sscreen->shader_cache_mutex);
+}
+
+/* SHADER STATES */
 
 static void si_set_tesseval_regs(struct si_shader *shader,
 				 struct si_pm4_state *pm4)
@@ -936,17 +1147,37 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	if (sel->type != PIPE_SHADER_GEOMETRY &&
 	    !sscreen->use_monolithic_shaders) {
 		struct si_shader *shader = CALLOC_STRUCT(si_shader);
+		void *tgsi_binary;
 
 		if (!shader)
 			goto error;
 
 		shader->selector = sel;
 
-		if (si_compile_tgsi_shader(sscreen, sctx->tm, shader, false,
-					   &sctx->b.debug) != 0) {
-			FREE(shader);
-			goto error;
+		tgsi_binary = si_get_tgsi_binary(sel);
+
+		/* Try to load the shader from the shader cache. */
+		pipe_mutex_lock(sscreen->shader_cache_mutex);
+
+		if (tgsi_binary &&
+		    si_shader_cache_load_shader(sscreen, tgsi_binary, shader)) {
+			FREE(tgsi_binary);
+		} else {
+			/* Compile the shader if it hasn't been loaded from the cache. */
+			if (si_compile_tgsi_shader(sscreen, sctx->tm, shader, false,
+						   &sctx->b.debug) != 0) {
+				FREE(shader);
+				FREE(tgsi_binary);
+				pipe_mutex_unlock(sscreen->shader_cache_mutex);
+				goto error;
+			}
+
+			if (tgsi_binary &&
+			    !si_shader_cache_insert_shader(sscreen, tgsi_binary, shader))
+				FREE(tgsi_binary);
 		}
+		pipe_mutex_unlock(sscreen->shader_cache_mutex);
+
 		sel->main_shader_part = shader;
 	}
 
