@@ -266,6 +266,32 @@ intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
       return true;
 }
 
+/* On Gen9 support for color buffer compression was extended to single
+ * sampled surfaces. This is a helper considering both auxiliary buffer
+ * type and number of samples telling if the given miptree represents
+ * the new single sampled case - also called lossless compression.
+ */
+bool
+intel_miptree_is_lossless_compressed(const struct brw_context *brw,
+                                     const struct intel_mipmap_tree *mt)
+{
+   /* Only available from Gen9 onwards. */
+   if (brw->gen < 9)
+      return false;
+
+   /* Compression always requires auxiliary buffer. */
+   if (!mt->mcs_mt)
+      return false;
+
+   /* Single sample compression is represented re-using msaa compression
+    * layout type: "Compressed Multisampled Surfaces".
+    */
+   if (mt->msaa_layout != INTEL_MSAA_LAYOUT_CMS)
+      return false;
+
+   /* And finally distinguish between msaa and single sample case. */
+   return mt->num_samples <= 1;
+}
 
 /**
  * Determine depth format corresponding to a depth+stencil format,

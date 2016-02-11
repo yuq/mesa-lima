@@ -667,6 +667,10 @@ intel_get_non_msrt_mcs_alignment(struct intel_mipmap_tree *mt,
                                  unsigned *width_px, unsigned *height);
 
 bool
+intel_miptree_is_lossless_compressed(const struct brw_context *brw,
+                                     const struct intel_mipmap_tree *mt);
+
+bool
 intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt);
 
