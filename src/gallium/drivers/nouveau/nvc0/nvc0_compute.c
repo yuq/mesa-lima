@@ -90,13 +90,13 @@ nvc0_screen_compute_setup(struct nvc0_screen *screen,
    BEGIN_NVC0(push, NVC0_COMPUTE(WARP_TEMP_ALLOC), 1);
    PUSH_DATA (push, 0);
    BEGIN_NVC0(push, NVC0_COMPUTE(LOCAL_BASE), 1);
-   PUSH_DATA (push, 1 << 24);
+   PUSH_DATA (push, 0xff << 24);
 
    /* shared memory setup */
    BEGIN_NVC0(push, NVC0_COMPUTE(CACHE_SPLIT), 1);
    PUSH_DATA (push, NVC0_COMPUTE_CACHE_SPLIT_48K_SHARED_16K_L1);
    BEGIN_NVC0(push, NVC0_COMPUTE(SHARED_BASE), 1);
-   PUSH_DATA (push, 2 << 24);
+   PUSH_DATA (push, 0xfe << 24);
    BEGIN_NVC0(push, NVC0_COMPUTE(SHARED_SIZE), 1);
    PUSH_DATA (push, 0);
 
