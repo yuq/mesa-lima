@@ -120,7 +120,7 @@ static const struct {
  * \param line_aa  AA_NEVER, AA_ALWAYS or AA_SOMETIMES
  * \param lookup  bitmask of IZ_* flags
  */
-void fs_visitor::setup_payload_gen4()
+void fs_visitor::setup_fs_payload_gen4()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;

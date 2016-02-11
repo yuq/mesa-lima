@@ -4848,8 +4848,12 @@ fs_visitor::get_instruction_generating_reg(fs_inst *start,
 }
 
 void
-fs_visitor::setup_payload_gen6()
+fs_visitor::setup_fs_payload_gen6()
 {
+   assert(stage == MESA_SHADER_FRAGMENT);
+   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
+
    bool uses_depth =
       (nir->info.inputs_read & (1 << VARYING_SLOT_POS)) != 0;
    unsigned barycentric_interp_modes =
@@ -4898,15 +4902,11 @@ fs_visitor::setup_payload_gen6()
       }
    }
 
-   if (stage == MESA_SHADER_FRAGMENT) {
-      brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-      brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-      prog_data->uses_pos_offset = key->compute_pos_offset;
-      /* R31: MSAA position offsets. */
-      if (prog_data->uses_pos_offset) {
-         payload.sample_pos_reg = payload.num_regs;
-         payload.num_regs++;
-      }
+   prog_data->uses_pos_offset = key->compute_pos_offset;
+   /* R31: MSAA position offsets. */
+   if (prog_data->uses_pos_offset) {
+      payload.sample_pos_reg = payload.num_regs;
+      payload.num_regs++;
    }
 
    /* R32: MSAA input coverage mask */
@@ -5347,9 +5347,9 @@ fs_visitor::run_fs(bool do_rep_send)
    assert(stage == MESA_SHADER_FRAGMENT);
 
    if (devinfo->gen >= 6)
-      setup_payload_gen6();
+      setup_fs_payload_gen6();
    else
-      setup_payload_gen4();
+      setup_fs_payload_gen4();
 
    if (0) {
       emit_dummy_fs();
