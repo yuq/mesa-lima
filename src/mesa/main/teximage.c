@@ -1112,7 +1112,7 @@ error_check_subtexture_dimensions(struct gl_context *ctx, GLuint dims,
                                   GLsizei subDepth, const char *func)
 {
    const GLenum target = destImage->TexObject->Target;
-   GLuint bw, bh;
+   GLuint bw, bh, bd;
 
    /* Check size */
    if (subWidth < 0) {
@@ -1185,14 +1185,14 @@ error_check_subtexture_dimensions(struct gl_context *ctx, GLuint dims,
     * compressed formats supported by Mesa allow sub-textures to be updated
     * along compressed block boundaries.
     */
-   _mesa_get_format_block_size(destImage->TexFormat, &bw, &bh);
+   _mesa_get_format_block_size_3d(destImage->TexFormat, &bw, &bh, &bd);
 
-   if (bw != 1 || bh != 1) {
+   if (bw != 1 || bh != 1 || bd != 1) {
       /* offset must be multiple of block size */
-      if ((xoffset % bw != 0) || (yoffset % bh != 0)) {
+      if ((xoffset % bw != 0) || (yoffset % bh != 0) || (zoffset % bd != 0)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "%s(xoffset = %d, yoffset = %d)",
-                     func, xoffset, yoffset);
+                     "%s(xoffset = %d, yoffset = %d, zoffset = %d)",
+                     func, xoffset, yoffset, zoffset);
          return GL_TRUE;
       }
 
@@ -1212,6 +1212,13 @@ error_check_subtexture_dimensions(struct gl_context *ctx, GLuint dims,
           (yoffset + subHeight != (GLint) destImage->Height)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "%s(height = %d)", func, subHeight);
+         return GL_TRUE;
+      }
+
+      if ((subDepth % bd != 0) &&
+          (zoffset + subDepth != (GLint) destImage->Depth)) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(depth = %d)", func, subDepth);
          return GL_TRUE;
       }
    }
