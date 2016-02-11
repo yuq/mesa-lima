@@ -126,8 +126,13 @@ ADDR_HANDLE amdgpu_addr_create(struct amdgpu_winsys *ws)
    regValue.backendDisables = ws->amdinfo.backend_disable[0];
    regValue.pTileConfig = ws->amdinfo.gb_tile_mode;
    regValue.noOfEntries = ARRAY_SIZE(ws->amdinfo.gb_tile_mode);
-   regValue.pMacroTileConfig = ws->amdinfo.gb_macro_tile_mode;
-   regValue.noOfMacroEntries = ARRAY_SIZE(ws->amdinfo.gb_macro_tile_mode);
+   if (ws->info.chip_class == SI) {
+      regValue.pMacroTileConfig = NULL;
+      regValue.noOfMacroEntries = 0;
+   } else {
+      regValue.pMacroTileConfig = ws->amdinfo.gb_macro_tile_mode;
+      regValue.noOfMacroEntries = ARRAY_SIZE(ws->amdinfo.gb_macro_tile_mode);
+   }
 
    createFlags.value = 0;
    createFlags.useTileIndex = 1;

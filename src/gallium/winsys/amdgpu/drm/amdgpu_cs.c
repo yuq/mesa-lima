@@ -980,13 +980,23 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    switch (cs->ring_type) {
    case RING_DMA:
       /* pad DMA ring to 8 DWs */
-      while (rcs->current.cdw & 7)
-         OUT_CS(rcs, 0x00000000); /* NOP packet */
+      if (ws->info.chip_class <= SI) {
+         while (rcs->current.cdw & 7)
+            OUT_CS(rcs, 0xf0000000); /* NOP packet */
+      } else {
+         while (rcs->current.cdw & 7)
+            OUT_CS(rcs, 0x00000000); /* NOP packet */
+      }
       break;
    case RING_GFX:
       /* pad GFX ring to 8 DWs to meet CP fetch alignment requirements */
-      while (rcs->current.cdw & 7)
-         OUT_CS(rcs, 0xffff1000); /* type3 nop packet */
+      if (ws->info.gfx_ib_pad_with_type2) {
+         while (rcs->current.cdw & 7)
+            OUT_CS(rcs, 0x80000000); /* type2 nop packet */
+      } else {
+         while (rcs->current.cdw & 7)
+            OUT_CS(rcs, 0xffff1000); /* type3 nop packet */
+      }
 
       /* Also pad the const IB. */
       if (cs->const_ib.ib_mapped)

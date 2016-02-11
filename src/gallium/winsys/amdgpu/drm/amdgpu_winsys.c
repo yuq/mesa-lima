@@ -215,6 +215,8 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
       ws->info.chip_class = VI;
    else if (ws->info.family >= CHIP_BONAIRE)
       ws->info.chip_class = CIK;
+   else if (ws->info.family >= CHIP_TAHITI)
+      ws->info.chip_class = SI;
    else {
       fprintf(stderr, "amdgpu: Unknown family.\n");
       goto fail;
@@ -230,6 +232,26 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
 
    /* family and rev_id are for addrlib */
    switch (ws->info.family) {
+   case CHIP_TAHITI:
+      ws->family = FAMILY_SI;
+      ws->rev_id = SI_TAHITI_P_A0;
+      break;
+   case CHIP_PITCAIRN:
+      ws->family = FAMILY_SI;
+      ws->rev_id = SI_PITCAIRN_PM_A0;
+      break;
+   case CHIP_VERDE:
+      ws->family = FAMILY_SI;
+      ws->rev_id = SI_CAPEVERDE_M_A0;
+      break;
+   case CHIP_OLAND:
+      ws->family = FAMILY_SI;
+      ws->rev_id = SI_OLAND_M_A0;
+      break;
+   case CHIP_HAINAN:
+      ws->family = FAMILY_SI;
+      ws->rev_id = SI_HAINAN_V_A0;
+      break;
    case CHIP_BONAIRE:
       ws->family = FAMILY_CI;
       ws->rev_id = CI_BONAIRE_M_A0;
@@ -330,6 +352,9 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
           sizeof(ws->amdinfo.gb_macro_tile_mode));
 
    ws->info.gart_page_size = alignment_info.size_remote;
+
+   if (ws->info.chip_class == SI)
+      ws->info.gfx_ib_pad_with_type2 = TRUE;
 
    ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
 
