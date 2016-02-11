@@ -823,10 +823,10 @@ _mesa_is_enum_format_signed_int(GLenum format)
 }
 
 /**
- * Test if the given format is an ASTC format.
+ * Test if the given format is an ASTC 2D format.
  */
-GLboolean
-_mesa_is_astc_format(GLenum internalFormat)
+static bool
+is_astc_2d_format(GLenum internalFormat)
 {
    switch (internalFormat) {
    case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
@@ -894,6 +894,16 @@ is_astc_3d_format(GLenum internalFormat)
    default:
       return false;
    }
+}
+
+/**
+ * Test if the given format is an ASTC format.
+ */
+GLboolean
+_mesa_is_astc_format(GLenum internalFormat)
+{
+   return is_astc_2d_format(internalFormat) ||
+          is_astc_3d_format(internalFormat);
 }
 
 /**
