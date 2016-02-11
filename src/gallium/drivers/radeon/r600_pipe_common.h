@@ -97,7 +97,7 @@ struct r600_common_context;
 struct r600_perfcounters;
 
 struct radeon_shader_reloc {
-	char *name;
+	char name[32];
 	uint64_t offset;
 };
 
