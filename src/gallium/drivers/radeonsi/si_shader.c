@@ -4239,6 +4239,19 @@ int si_compile_llvm(struct si_screen *sscreen,
 	FREE(binary->global_symbol_offsets);
 	binary->config = NULL;
 	binary->global_symbol_offsets = NULL;
+
+	/* Some shaders can't have rodata because their binaries can be
+	 * concatenated.
+	 */
+	if (binary->rodata_size &&
+	    (processor == TGSI_PROCESSOR_VERTEX ||
+	     processor == TGSI_PROCESSOR_TESS_CTRL ||
+	     processor == TGSI_PROCESSOR_TESS_EVAL ||
+	     processor == TGSI_PROCESSOR_FRAGMENT)) {
+		fprintf(stderr, "radeonsi: The shader can't have rodata.");
+		return -EINVAL;
+	}
+
 	return r;
 }
 
