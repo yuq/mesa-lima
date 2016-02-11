@@ -80,7 +80,7 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 	if (op & SI_SAVE_TEXTURES) {
 		util_blitter_save_fragment_sampler_states(
 			sctx->blitter, 2,
-			sctx->samplers[PIPE_SHADER_FRAGMENT].states.saved_states);
+			sctx->samplers[PIPE_SHADER_FRAGMENT].views.sampler_states);
 
 		util_blitter_save_fragment_sampler_views(sctx->blitter, 2,
 			sctx->samplers[PIPE_SHADER_FRAGMENT].views.views);

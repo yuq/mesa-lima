@@ -152,7 +152,6 @@ hash_tex(uint32_t hash, const nir_tex_instr *instr)
    hash = HASH(hash, instr->is_array);
    hash = HASH(hash, instr->is_shadow);
    hash = HASH(hash, instr->is_new_style_shadow);
-   hash = HASH(hash, instr->const_offset);
    unsigned component = instr->component;
    hash = HASH(hash, component);
    hash = HASH(hash, instr->texture_index);
@@ -303,8 +302,6 @@ nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
           tex1->is_array != tex2->is_array ||
           tex1->is_shadow != tex2->is_shadow ||
           tex1->is_new_style_shadow != tex2->is_new_style_shadow ||
-          memcmp(tex1->const_offset, tex2->const_offset,
-                 sizeof(tex1->const_offset)) != 0 ||
           tex1->component != tex2->component ||
          tex1->texture_index != tex2->texture_index ||
          tex1->texture_array_size != tex2->texture_array_size ||

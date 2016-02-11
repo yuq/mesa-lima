@@ -1291,8 +1291,6 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       unreachable("Unhandled opcode");
    }
 
-   nir_constant *const_offset = NULL;
-
    /* Now we need to handle some number of optional arguments */
    if (idx < count) {
       uint32_t operands = w[idx++];
@@ -1316,12 +1314,8 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ddy);
       }
 
-      if (operands & SpvImageOperandsConstOffsetMask) {
-         const_offset =
-            vtn_value(b, w[idx++], vtn_value_type_constant)->constant;
-      }
-
-      if (operands & SpvImageOperandsOffsetMask)
+      if (operands & SpvImageOperandsOffsetMask ||
+          operands & SpvImageOperandsConstOffsetMask)
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_offset);
 
       if (operands & SpvImageOperandsConstOffsetsMask)
@@ -1352,11 +1346,6 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    instr->is_array = glsl_sampler_type_is_array(image_type);
    instr->is_shadow = glsl_sampler_type_is_shadow(image_type);
    instr->is_new_style_shadow = instr->is_shadow;
-
-   if (const_offset) {
-      for (unsigned i = 0; i < 4; i++)
-         instr->const_offset[i] = const_offset->value.u[i];
-   }
 
    if (has_coord) {
       switch (instr->sampler_dim) {

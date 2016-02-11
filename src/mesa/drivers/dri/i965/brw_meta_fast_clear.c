@@ -36,6 +36,7 @@
 #include "main/varray.h"
 #include "main/uniforms.h"
 #include "main/fbobject.h"
+#include "main/renderbuffer.h"
 #include "main/texobj.h"
 
 #include "main/api_validate.h"
@@ -845,7 +846,8 @@ brw_meta_resolve_color(struct brw_context *brw,
                        struct intel_mipmap_tree *mt)
 {
    struct gl_context *ctx = &brw->ctx;
-   GLuint fbo, rbo;
+   GLuint fbo;
+   struct gl_renderbuffer *rb;
    struct rect rect;
 
    brw_emit_mi_flush(brw);
@@ -853,12 +855,11 @@ brw_meta_resolve_color(struct brw_context *brw,
    _mesa_meta_begin(ctx, MESA_META_ALL);
 
    _mesa_GenFramebuffers(1, &fbo);
-   rbo = brw_get_rb_for_slice(brw, mt, 0, 0, false);
+   rb = brw_get_rb_for_slice(brw, mt, 0, 0, false);
 
    _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
-   _mesa_FramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,
-                                 GL_COLOR_ATTACHMENT0,
-                                 GL_RENDERBUFFER, rbo);
+   _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, GL_COLOR_ATTACHMENT0,
+                                  rb);
    _mesa_DrawBuffer(GL_COLOR_ATTACHMENT0);
 
    brw_fast_clear_init(brw);
@@ -881,7 +882,7 @@ brw_meta_resolve_color(struct brw_context *brw,
    set_fast_clear_op(brw, 0);
    use_rectlist(brw, false);
 
-   _mesa_DeleteRenderbuffers(1, &rbo);
+   _mesa_reference_renderbuffer(&rb, NULL);
    _mesa_DeleteFramebuffers(1, &fbo);
 
    _mesa_meta_end(ctx);

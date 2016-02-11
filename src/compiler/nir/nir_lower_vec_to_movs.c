@@ -83,6 +83,8 @@ insert_mov(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
       }
    }
 
+   unsigned channels_handled = mov->dest.write_mask;
+
    /* In some situations (if the vecN is involved in a phi-web), we can end
     * up with a mov from a register to itself.  Some of those channels may end
     * up doing nothing and there's no reason to have them as part of the mov.
@@ -103,7 +105,7 @@ insert_mov(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
       ralloc_free(mov);
    }
 
-   return mov->dest.write_mask;
+   return channels_handled;
 }
 
 static bool

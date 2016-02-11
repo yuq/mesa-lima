@@ -243,12 +243,6 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
        */
       if (brw->gen >= 9 || mt->num_samples == 1)
          assert(mt->halign == 16);
-
-      if (brw->gen >= 9) {
-         assert(mt->num_samples > 1 ||
-                brw_losslessly_compressible_format(brw, surf_type));
-      }
-
    }
 
    uint32_t *surf = allocate_surface_state(brw, surf_offset, surf_index);

@@ -77,8 +77,8 @@ struct radeon_shader_reloc;
 
 #define SI_SGPR_RW_BUFFERS	0  /* rings (& stream-out, VS only) */
 #define SI_SGPR_CONST_BUFFERS	2
-#define SI_SGPR_SAMPLER_STATES	4
-#define SI_SGPR_SAMPLER_VIEWS	6
+#define SI_SGPR_SAMPLERS	4  /* images & sampler states interleaved */
+/* TODO: gap */
 #define SI_SGPR_VERTEX_BUFFERS	8  /* VS only */
 #define SI_SGPR_BASE_VERTEX	10 /* VS only */
 #define SI_SGPR_START_INSTANCE	11 /* VS only */
@@ -101,8 +101,8 @@ struct radeon_shader_reloc;
 /* LLVM function parameter indices */
 #define SI_PARAM_RW_BUFFERS	0
 #define SI_PARAM_CONST_BUFFERS	1
-#define SI_PARAM_SAMPLER_STATES	2
-#define SI_PARAM_SAMPLER_VIEWS	3
+#define SI_PARAM_SAMPLERS	2
+#define SI_PARAM_UNUSED		3 /* TODO: use */
 
 /* VS only parameters */
 #define SI_PARAM_VERTEX_BUFFERS	4

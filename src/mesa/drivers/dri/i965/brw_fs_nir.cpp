@@ -3050,7 +3050,6 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
                         instr->is_array;
 
    int lod_components = 0;
-   int UNUSED offset_components = 0;
 
    fs_reg coordinate, shadow_comparitor, lod, lod2, sample_index, mcs, tex_offset;
 
@@ -3102,13 +3101,18 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       case nir_tex_src_ms_index:
          sample_index = retype(src, BRW_REGISTER_TYPE_UD);
          break;
-      case nir_tex_src_offset:
-         tex_offset = retype(src, BRW_REGISTER_TYPE_D);
-         if (instr->is_array)
-            offset_components = instr->coord_components - 1;
-         else
-            offset_components = instr->coord_components;
+
+      case nir_tex_src_offset: {
+         nir_const_value *const_offset =
+            nir_src_as_const_value(instr->src[i].src);
+         if (const_offset) {
+            tex_offset = brw_imm_ud(brw_texture_offset(const_offset->i, 3));
+         } else {
+            tex_offset = retype(src, BRW_REGISTER_TYPE_D);
+         }
          break;
+      }
+
       case nir_tex_src_projector:
          unreachable("should be lowered");
 
@@ -3149,14 +3153,6 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          mcs = emit_mcs_fetch(coordinate, instr->coord_components, texture_reg);
       } else {
          mcs = brw_imm_ud(0u);
-      }
-   }
-
-   for (unsigned i = 0; i < 3; i++) {
-      if (instr->const_offset[i] != 0) {
-         assert(offset_components == 0);
-         tex_offset = brw_imm_ud(brw_texture_offset(instr->const_offset, 3));
-         break;
       }
    }
 

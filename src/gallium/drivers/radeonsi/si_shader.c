@@ -86,8 +86,9 @@ struct si_shader_context
 	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef lds;
 	LLVMValueRef *constants[SI_NUM_CONST_BUFFERS];
-	LLVMValueRef sampler_views[SI_NUM_SAMPLER_VIEWS];
-	LLVMValueRef sampler_states[SI_NUM_SAMPLER_STATES];
+	LLVMValueRef sampler_views[SI_NUM_SAMPLERS];
+	LLVMValueRef sampler_states[SI_NUM_SAMPLERS];
+	LLVMValueRef fmasks[SI_NUM_USER_SAMPLERS];
 	LLVMValueRef so_buffers[4];
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring[4];
@@ -2286,7 +2287,6 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct lp_build_context *base = &bld_base->base;
-	LLVMValueRef args[9];
 	int i;
 
 	/* Clamp color */
@@ -2308,27 +2308,46 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 		color[3] = si_scale_alpha_by_sample_mask(bld_base, color[3]);
 
 	/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
-	if (index == 0 &&
-	    si_shader_ctx->shader->key.ps.last_cbuf > 0) {
-		for (int c = 1; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
+	if (si_shader_ctx->shader->key.ps.last_cbuf > 0) {
+		LLVMValueRef args[8][9];
+		int c, last = -1;
+
+		/* Get the export arguments, also find out what the last one is. */
+		for (c = 0; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
 			si_llvm_init_export_args(bld_base, color,
-						 V_008DFC_SQ_EXP_MRT + c, args);
+						 V_008DFC_SQ_EXP_MRT + c, args[c]);
+			if (args[c][0] != bld_base->uint_bld.zero)
+				last = c;
+		}
+
+		/* Emit all exports. */
+		for (c = 0; c <= si_shader_ctx->shader->key.ps.last_cbuf; c++) {
+			if (is_last && last == c) {
+				args[c][1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
+				args[c][2] = bld_base->uint_bld.one; /* DONE bit */
+			} else if (args[c][0] == bld_base->uint_bld.zero)
+				continue; /* unnecessary NULL export */
+
 			lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
 					   LLVMVoidTypeInContext(base->gallivm->context),
-					   args, 9, 0);
+					   args[c], 9, 0);
 		}
-	}
+	} else {
+		LLVMValueRef args[9];
 
-	/* Export */
-	si_llvm_init_export_args(bld_base, color, V_008DFC_SQ_EXP_MRT + index,
-				 args);
-	if (is_last) {
-		args[1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
-		args[2] = bld_base->uint_bld.one; /* DONE bit */
+		/* Export */
+		si_llvm_init_export_args(bld_base, color, V_008DFC_SQ_EXP_MRT + index,
+					 args);
+		if (is_last) {
+			args[1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
+			args[2] = bld_base->uint_bld.one; /* DONE bit */
+		} else if (args[0] == bld_base->uint_bld.zero)
+			return; /* unnecessary NULL export */
+
+		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
+				   LLVMVoidTypeInContext(base->gallivm->context),
+				   args, 9, 0);
 	}
-	lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-			   LLVMVoidTypeInContext(base->gallivm->context),
-			   args, 9, 0);
 }
 
 static void si_export_null(struct lp_build_tgsi_context *bld_base)
@@ -2363,19 +2382,43 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 	int last_color_export = -1;
 	int i;
 
-	/* If there are no outputs, add a dummy export. */
-	if (!info->num_outputs) {
-		si_export_null(bld_base);
-		return;
-	}
-
 	/* Determine the last export. If MRTZ is present, it's always last.
 	 * Otherwise, find the last color export.
 	 */
-	if (!info->writes_z && !info->writes_stencil && !info->writes_samplemask)
-		for (i = 0; i < info->num_outputs; i++)
-			if (info->output_semantic_name[i] == TGSI_SEMANTIC_COLOR)
+	if (!info->writes_z && !info->writes_stencil && !info->writes_samplemask) {
+		unsigned spi_format = shader->key.ps.spi_shader_col_format;
+
+		/* Don't export NULL and return if alpha-test is enabled. */
+		if (shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS &&
+		    shader->key.ps.alpha_func != PIPE_FUNC_NEVER &&
+		    (spi_format & 0xf) == 0)
+			spi_format |= V_028714_SPI_SHADER_32_AR;
+
+		for (i = 0; i < info->num_outputs; i++) {
+			unsigned index = info->output_semantic_index[i];
+
+			if (info->output_semantic_name[i] != TGSI_SEMANTIC_COLOR)
+				continue;
+
+			/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
+			if (shader->key.ps.last_cbuf > 0) {
+				/* Just set this if any of the colorbuffers are enabled. */
+				if (spi_format &
+				    ((1llu << (4 * (shader->key.ps.last_cbuf + 1))) - 1))
+					last_color_export = i;
+				continue;
+			}
+
+			if ((spi_format >> (index * 4)) & 0xf)
 				last_color_export = i;
+		}
+
+		/* If there are no outputs, export NULL. */
+		if (last_color_export == -1) {
+			si_export_null(bld_base);
+			return;
+		}
+	}
 
 	for (i = 0; i < info->num_outputs; i++) {
 		unsigned semantic_name = info->output_semantic_name[i];
@@ -2480,13 +2523,58 @@ static void set_tex_fetch_args(struct gallivm_state *gallivm,
 
 static const struct lp_build_tgsi_action tex_action;
 
+enum desc_type {
+	DESC_IMAGE,
+	DESC_FMASK,
+	DESC_SAMPLER
+};
+
+static LLVMTypeRef const_array(LLVMTypeRef elem_type, int num_elements)
+{
+	return LLVMPointerType(LLVMArrayType(elem_type, num_elements),
+			       CONST_ADDR_SPACE);
+}
+
+/**
+ * Load an image view, fmask view. or sampler state descriptor.
+ */
+static LLVMValueRef get_sampler_desc(struct si_shader_context *si_shader_ctx,
+				     LLVMValueRef index, enum desc_type type)
+{
+	struct gallivm_state *gallivm = &si_shader_ctx->radeon_bld.gallivm;
+	LLVMTypeRef i32 = LLVMInt32TypeInContext(gallivm->context);
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
+					SI_PARAM_SAMPLERS);
+
+	switch (type) {
+	case DESC_IMAGE:
+		/* The image is at [0:7]. */
+		index = LLVMBuildMul(builder, index, LLVMConstInt(i32, 2, 0), "");
+		break;
+	case DESC_FMASK:
+		/* The FMASK is at [8:15]. */
+		index = LLVMBuildMul(builder, index, LLVMConstInt(i32, 2, 0), "");
+		index = LLVMBuildAdd(builder, index, LLVMConstInt(i32, 1, 0), "");
+		break;
+	case DESC_SAMPLER:
+		/* The sampler state is at [12:15]. */
+		index = LLVMBuildMul(builder, index, LLVMConstInt(i32, 4, 0), "");
+		index = LLVMBuildAdd(builder, index, LLVMConstInt(i32, 3, 0), "");
+		ptr = LLVMBuildPointerCast(builder, ptr,
+					   const_array(LLVMVectorType(i32, 4), 0), "");
+		break;
+	}
+
+	return build_indexed_load_const(si_shader_ctx, ptr, index);
+}
+
 static void tex_fetch_ptrs(
 	struct lp_build_tgsi_context * bld_base,
 	struct lp_build_emit_data * emit_data,
 	LLVMValueRef *res_ptr, LLVMValueRef *samp_ptr, LLVMValueRef *fmask_ptr)
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	unsigned target = inst->Texture.Texture;
 	unsigned sampler_src;
@@ -2501,24 +2589,20 @@ static void tex_fetch_ptrs(
 
 		ind_index = get_indirect_index(si_shader_ctx, &reg->Indirect, reg->Register.Index);
 
-		*res_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_SAMPLER_VIEWS);
-		*res_ptr = build_indexed_load_const(si_shader_ctx, *res_ptr, ind_index);
-
-		*samp_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_SAMPLER_STATES);
-		*samp_ptr = build_indexed_load_const(si_shader_ctx, *samp_ptr, ind_index);
+		*res_ptr = get_sampler_desc(si_shader_ctx, ind_index, DESC_IMAGE);
 
 		if (target == TGSI_TEXTURE_2D_MSAA ||
 		    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
-			ind_index = LLVMBuildAdd(gallivm->builder, ind_index,
-						 lp_build_const_int32(gallivm,
-								      SI_FMASK_TEX_OFFSET), "");
-			*fmask_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_SAMPLER_VIEWS);
-			*fmask_ptr = build_indexed_load_const(si_shader_ctx, *fmask_ptr, ind_index);
+			*samp_ptr = NULL;
+			*fmask_ptr = get_sampler_desc(si_shader_ctx, ind_index, DESC_FMASK);
+		} else {
+			*samp_ptr = get_sampler_desc(si_shader_ctx, ind_index, DESC_SAMPLER);
+			*fmask_ptr = NULL;
 		}
 	} else {
 		*res_ptr = si_shader_ctx->sampler_views[sampler_index];
 		*samp_ptr = si_shader_ctx->sampler_states[sampler_index];
-		*fmask_ptr = si_shader_ctx->sampler_views[SI_FMASK_TEX_OFFSET + sampler_index];
+		*fmask_ptr = si_shader_ctx->fmasks[sampler_index];
 	}
 }
 
@@ -3498,12 +3582,6 @@ static void create_meta_data(struct si_shader_context *si_shader_ctx)
 	si_shader_ctx->const_md = LLVMMDNodeInContext(gallivm->context, args, 3);
 }
 
-static LLVMTypeRef const_array(LLVMTypeRef elem_type, int num_elements)
-{
-	return LLVMPointerType(LLVMArrayType(elem_type, num_elements),
-			       CONST_ADDR_SPACE);
-}
-
 static void declare_streamout_params(struct si_shader_context *si_shader_ctx,
 				     struct pipe_stream_output_info *so,
 				     LLVMTypeRef *params, LLVMTypeRef i32,
@@ -3530,7 +3608,7 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 	struct lp_build_tgsi_context *bld_base = &si_shader_ctx->radeon_bld.soa.bld_base;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct si_shader *shader = si_shader_ctx->shader;
-	LLVMTypeRef params[SI_NUM_PARAMS], f32, i8, i32, v2i32, v3i32, v16i8, v4i32, v8i32;
+	LLVMTypeRef params[SI_NUM_PARAMS], f32, i8, i32, v2i32, v3i32, v16i8, v8i32;
 	unsigned i, last_array_pointer, last_sgpr, num_params;
 
 	i8 = LLVMInt8TypeInContext(gallivm->context);
@@ -3538,15 +3616,14 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 	f32 = LLVMFloatTypeInContext(gallivm->context);
 	v2i32 = LLVMVectorType(i32, 2);
 	v3i32 = LLVMVectorType(i32, 3);
-	v4i32 = LLVMVectorType(i32, 4);
 	v8i32 = LLVMVectorType(i32, 8);
 	v16i8 = LLVMVectorType(i8, 16);
 
 	params[SI_PARAM_RW_BUFFERS] = const_array(v16i8, SI_NUM_RW_BUFFERS);
 	params[SI_PARAM_CONST_BUFFERS] = const_array(v16i8, SI_NUM_CONST_BUFFERS);
-	params[SI_PARAM_SAMPLER_STATES] = const_array(v4i32, SI_NUM_SAMPLER_STATES);
-	params[SI_PARAM_SAMPLER_VIEWS] = const_array(v8i32, SI_NUM_SAMPLER_VIEWS);
-	last_array_pointer = SI_PARAM_SAMPLER_VIEWS;
+	params[SI_PARAM_SAMPLERS] = const_array(v8i32, SI_NUM_SAMPLERS);
+	params[SI_PARAM_UNUSED] = LLVMPointerType(i32, CONST_ADDR_SPACE);
+	last_array_pointer = SI_PARAM_UNUSED;
 
 	switch (si_shader_ctx->type) {
 	case TGSI_PROCESSOR_VERTEX:
@@ -3747,34 +3824,26 @@ static void preload_samplers(struct si_shader_context *si_shader_ctx)
 	struct lp_build_tgsi_context * bld_base = &si_shader_ctx->radeon_bld.soa.bld_base;
 	struct gallivm_state * gallivm = bld_base->base.gallivm;
 	const struct tgsi_shader_info * info = bld_base->info;
-
 	unsigned i, num_samplers = info->file_max[TGSI_FILE_SAMPLER] + 1;
-
-	LLVMValueRef res_ptr, samp_ptr;
 	LLVMValueRef offset;
 
 	if (num_samplers == 0)
 		return;
 
-	res_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_SAMPLER_VIEWS);
-	samp_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_SAMPLER_STATES);
-
 	/* Load the resources and samplers, we rely on the code sinking to do the rest */
 	for (i = 0; i < num_samplers; ++i) {
 		/* Resource */
 		offset = lp_build_const_int32(gallivm, i);
-		si_shader_ctx->sampler_views[i] = build_indexed_load_const(si_shader_ctx, res_ptr, offset);
-
-		/* Sampler */
-		offset = lp_build_const_int32(gallivm, i);
-		si_shader_ctx->sampler_states[i] = build_indexed_load_const(si_shader_ctx, samp_ptr, offset);
+		si_shader_ctx->sampler_views[i] =
+			get_sampler_desc(si_shader_ctx, offset, DESC_IMAGE);
 
 		/* FMASK resource */
-		if (info->is_msaa_sampler[i]) {
-			offset = lp_build_const_int32(gallivm, SI_FMASK_TEX_OFFSET + i);
-			si_shader_ctx->sampler_views[SI_FMASK_TEX_OFFSET + i] =
-				build_indexed_load_const(si_shader_ctx, res_ptr, offset);
-		}
+		if (info->is_msaa_sampler[i])
+			si_shader_ctx->fmasks[i] =
+				get_sampler_desc(si_shader_ctx, offset, DESC_FMASK);
+		else
+			si_shader_ctx->sampler_states[i] =
+				get_sampler_desc(si_shader_ctx, offset, DESC_SAMPLER);
 	}
 }
 

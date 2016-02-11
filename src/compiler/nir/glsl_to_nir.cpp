@@ -1838,7 +1838,7 @@ nir_visitor::visit(ir_texture *ir)
       num_srcs++;
    if (ir->shadow_comparitor != NULL)
       num_srcs++;
-   if (ir->offset != NULL && ir->offset->as_constant() == NULL)
+   if (ir->offset != NULL)
       num_srcs++;
 
    nir_tex_instr *instr = nir_tex_instr_create(this->shader, num_srcs);
@@ -1895,16 +1895,10 @@ nir_visitor::visit(ir_texture *ir)
       /* we don't support multiple offsets yet */
       assert(ir->offset->type->is_vector() || ir->offset->type->is_scalar());
 
-      ir_constant *const_offset = ir->offset->as_constant();
-      if (const_offset != NULL) {
-         for (unsigned i = 0; i < const_offset->type->vector_elements; i++)
-            instr->const_offset[i] = const_offset->value.i[i];
-      } else {
-         instr->src[src_number].src =
-            nir_src_for_ssa(evaluate_rvalue(ir->offset));
-         instr->src[src_number].src_type = nir_tex_src_offset;
-         src_number++;
-      }
+      instr->src[src_number].src =
+         nir_src_for_ssa(evaluate_rvalue(ir->offset));
+      instr->src[src_number].src_type = nir_tex_src_offset;
+      src_number++;
    }
 
    switch (ir->op) {
