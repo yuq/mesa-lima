@@ -510,7 +510,7 @@ static struct state_validate {
 };
 
 bool
-nv50_state_validate(struct nv50_context *nv50, uint32_t mask, unsigned words)
+nv50_state_validate(struct nv50_context *nv50, uint32_t mask)
 {
    uint32_t state_mask;
    int ret;

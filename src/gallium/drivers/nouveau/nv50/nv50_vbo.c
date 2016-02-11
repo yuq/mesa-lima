@@ -790,7 +790,7 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    if (unlikely(nv50->num_so_targets && !nv50->gmtyprog))
       nv50->state.prim_size = nv50_pipe_prim_to_prim_size[info->mode];
 
-   nv50_state_validate(nv50, ~0, 8); /* 8 as minimum, we use flush_notify */
+   nv50_state_validate(nv50, ~0);
 
    push->kick_notify = nv50_draw_vbo_kick_notify;
 
