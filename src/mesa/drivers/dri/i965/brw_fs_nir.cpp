@@ -950,16 +950,14 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_fmin:
    case nir_op_imin:
    case nir_op_umin:
-      inst = bld.emit(BRW_OPCODE_SEL, result, op[0], op[1]);
-      inst->conditional_mod = BRW_CONDITIONAL_L;
+      inst = bld.emit_minmax(result, op[0], op[1], BRW_CONDITIONAL_L);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fmax:
    case nir_op_imax:
    case nir_op_umax:
-      inst = bld.emit(BRW_OPCODE_SEL, result, op[0], op[1]);
-      inst->conditional_mod = BRW_CONDITIONAL_GE;
+      inst = bld.emit_minmax(result, op[0], op[1], BRW_CONDITIONAL_GE);
       inst->saturate = instr->dest.saturate;
       break;
 
