@@ -4336,7 +4336,7 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	ctx->i1 = LLVMInt1TypeInContext(ctx->radeon_bld.gallivm.context);
 	ctx->i8 = LLVMInt8TypeInContext(ctx->radeon_bld.gallivm.context);
 	ctx->i32 = LLVMInt32TypeInContext(ctx->radeon_bld.gallivm.context);
-	ctx->i128 = LLVMInt128TypeInContext(ctx->radeon_bld.gallivm.context);
+	ctx->i128 = LLVMIntTypeInContext(ctx->radeon_bld.gallivm.context, 128);
 	ctx->f32 = LLVMFloatTypeInContext(ctx->radeon_bld.gallivm.context);
 	ctx->v16i8 = LLVMVectorType(ctx->i8, 16);
 	ctx->v4i32 = LLVMVectorType(ctx->i32, 4);
