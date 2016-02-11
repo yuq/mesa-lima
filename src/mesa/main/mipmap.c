@@ -1838,12 +1838,7 @@ _mesa_prepare_mipmap_level(struct gl_context *ctx,
 
    for (face = 0; face < numFaces; face++) {
       struct gl_texture_image *dstImage;
-      GLenum target;
-
-      if (numFaces == 1)
-         target = texObj->Target;
-      else
-         target = GL_TEXTURE_CUBE_MAP_POSITIVE_X + face;
+      const GLenum target = _mesa_cube_face_target(texObj->Target, face);
 
       dstImage = _mesa_get_tex_image(ctx, texObj, target, level);
       if (!dstImage) {

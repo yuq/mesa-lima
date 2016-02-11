@@ -1036,12 +1036,7 @@ _mesa_get_fallback_texture(struct gl_context *ctx, gl_texture_index tex)
 
       /* need a loop here just for cube maps */
       for (face = 0; face < numFaces; face++) {
-         GLenum faceTarget;
-
-         if (target == GL_TEXTURE_CUBE_MAP)
-            faceTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X + face;
-         else
-            faceTarget = target;
+         const GLenum faceTarget = _mesa_cube_face_target(target, face);
 
          /* initialize level[0] texture image */
          texImage = _mesa_get_tex_image(ctx, texObj, faceTarget, 0);
