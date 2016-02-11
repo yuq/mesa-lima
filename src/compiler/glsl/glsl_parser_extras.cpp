@@ -69,8 +69,6 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->error = false;
    this->loop_nesting_ast = NULL;
 
-   this->struct_specifier_depth = 0;
-
    this->uses_builtin_functions = false;
 
    /* Set default language version and extensions */

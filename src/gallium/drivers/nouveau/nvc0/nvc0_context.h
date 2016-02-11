@@ -258,8 +258,7 @@ extern void nvc0_init_state_functions(struct nvc0_context *);
 /* nvc0_state_validate.c */
 void nvc0_validate_global_residents(struct nvc0_context *,
                                     struct nouveau_bufctx *, int bin);
-extern bool nvc0_state_validate(struct nvc0_context *, uint32_t state_mask,
-                                unsigned space_words);
+bool nvc0_state_validate(struct nvc0_context *, uint32_t state_mask);
 
 /* nvc0_surface.c */
 extern void nvc0_clear(struct pipe_context *, unsigned buffers,

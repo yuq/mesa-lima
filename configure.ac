@@ -305,8 +305,7 @@ if test "x$GCC" = xyes; then
 
     # Flags to help ensure that certain portions of the code -- and only those
     # portions -- can be built with MSVC:
-    # - src/util, src/gallium/auxiliary, and src/gallium/drivers/llvmpipe needs
-    #   to build with Windows SDK 7.0.7600, which bundles MSVC 2008
+    # - src/util, src/gallium/auxiliary, rc/gallium/drivers/llvmpipe, and
     # - non-Linux/Posix OpenGL portions needs to build on MSVC 2013 (which
     #   supports most of C99)
     # - the rest has no compiler compiler restrictions
@@ -323,9 +322,6 @@ if test "x$GCC" = xyes; then
 		    AC_MSG_RESULT([yes])],
 		    AC_MSG_RESULT([no]));
     CFLAGS="$save_CFLAGS"
-
-    MSVC2008_COMPAT_CFLAGS="$MSVC2013_COMPAT_CFLAGS -Werror=declaration-after-statement"
-    MSVC2008_COMPAT_CXXFLAGS="$MSVC2013_COMPAT_CXXFLAGS"
 fi
 if test "x$GXX" = xyes; then
     CXXFLAGS="$CXXFLAGS -Wall"
@@ -353,8 +349,6 @@ fi
 
 AC_SUBST([MSVC2013_COMPAT_CFLAGS])
 AC_SUBST([MSVC2013_COMPAT_CXXFLAGS])
-AC_SUBST([MSVC2008_COMPAT_CFLAGS])
-AC_SUBST([MSVC2008_COMPAT_CXXFLAGS])
 
 dnl even if the compiler appears to support it, using visibility attributes isn't
 dnl going to do anything useful currently on cygwin apart from emit lots of warnings
@@ -2188,7 +2182,7 @@ radeon_llvm_check() {
     if test "x$enable_gallium_llvm" != "xyes"; then
         AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
     fi
-    llvm_check_version_for "3" "5" "0" $1
+    llvm_check_version_for "3" "6" "0" $1
     if test true && $LLVM_CONFIG --targets-built | grep -iqvw $amdgpu_llvm_target_name ; then
         AC_MSG_ERROR([LLVM $amdgpu_llvm_target_name not enabled in your LLVM build.])
     fi

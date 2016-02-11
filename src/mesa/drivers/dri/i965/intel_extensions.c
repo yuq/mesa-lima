@@ -346,7 +346,8 @@ intelInitExtensions(struct gl_context *ctx)
          ctx->Extensions.ARB_transform_feedback3 = true;
          ctx->Extensions.ARB_transform_feedback_instanced = true;
 
-         if (ctx->Const.MaxComputeWorkGroupSize[0] >= 1024)
+         if ((brw->gen >= 8 || brw->intelScreen->cmd_parser_version >= 5) &&
+             ctx->Const.MaxComputeWorkGroupSize[0] >= 1024)
             ctx->Extensions.ARB_compute_shader = true;
 
          if (brw->intelScreen->cmd_parser_version >= 2)

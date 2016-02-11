@@ -203,7 +203,8 @@ static void si_set_sampler_view(struct si_context *sctx,
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(views->desc.list + slot * 16, rview->state, 8*4);
 
-		if (rtex && rtex->fmask.size) {
+		if (view->texture && view->texture->target != PIPE_BUFFER &&
+		    rtex->fmask.size) {
 			memcpy(views->desc.list + slot*16 + 8,
 			       rview->fmask_state, 8*4);
 		} else {

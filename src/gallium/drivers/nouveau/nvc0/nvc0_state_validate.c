@@ -703,7 +703,7 @@ static struct state_validate {
 };
 
 bool
-nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask, unsigned words)
+nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask)
 {
    uint32_t state_mask;
    int ret;

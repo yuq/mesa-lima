@@ -34,6 +34,7 @@
 
 #include "compiler/glsl/glsl_parser_extras.h"
 #include "compiler/glsl/ir_optimization.h"
+#include "compiler/glsl/program.h"
 
 #include "main/errors.h"
 #include "main/shaderobj.h"
@@ -6148,6 +6149,10 @@ get_mesa_program(struct gl_context *ctx,
                              prog->OutputsWritten, 0ULL, prog->PatchOutputsWritten);
    count_resources(v, prog);
 
+   /* The GLSL IR won't be needed anymore. */
+   ralloc_free(shader->ir);
+   shader->ir = NULL;
+
    /* This must be done before the uniform storage is associated. */
    if (shader->Type == GL_FRAGMENT_SHADER &&
        (prog->InputsRead & VARYING_BIT_POS ||
@@ -6379,6 +6384,8 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 
       validate_ir_tree(ir);
    }
+
+   build_program_resource_list(prog);
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_program *linked_prog;

@@ -115,8 +115,8 @@ public:
    bool run_cs();
    void optimize();
    void allocate_registers();
-   void setup_payload_gen4();
-   void setup_payload_gen6();
+   void setup_fs_payload_gen4();
+   void setup_fs_payload_gen6();
    void setup_vs_payload();
    void setup_gs_payload();
    void setup_cs_payload();

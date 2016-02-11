@@ -525,7 +525,7 @@ nv50_clear(struct pipe_context *pipe, unsigned buffers,
    uint32_t mode = 0;
 
    /* don't need NEW_BLEND, COLOR_MASK doesn't affect CLEAR_BUFFERS */
-   if (!nv50_state_validate(nv50, NV50_NEW_FRAMEBUFFER, 9 + (fb->nr_cbufs * 2)))
+   if (!nv50_state_validate(nv50, NV50_NEW_FRAMEBUFFER))
       return;
 
    /* We have to clear ALL of the layers, not up to the min number of layers
@@ -1340,7 +1340,7 @@ nv50_blit_3d(struct nv50_context *nv50, const struct pipe_blit_info *info)
 
    nv50_blitctx_prepare_state(blit);
 
-   nv50_state_validate(nv50, ~0, 36);
+   nv50_state_validate(nv50, ~0);
 
    x_range = (float)info->src.box.width / (float)info->dst.box.width;
    y_range = (float)info->src.box.height / (float)info->dst.box.height;

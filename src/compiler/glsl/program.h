@@ -22,11 +22,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "main/core.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct gl_context;
+struct gl_shader;
+struct gl_shader_program;
 
 extern void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,

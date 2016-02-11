@@ -283,8 +283,7 @@ PIPE_ALIGN_STACK static inline boolean sse2_has_daz(void)
    fxarea.mxcsr_mask = 0;
 #if defined(PIPE_CC_GCC)
    __asm __volatile ("fxsave %0" : "+m" (fxarea));
-#elif (defined(PIPE_CC_MSVC) && _MSC_VER >= 1700) || defined(PIPE_CC_ICL)
-   /* 1700 = Visual Studio 2012 */
+#elif defined(PIPE_CC_MSVC) || defined(PIPE_CC_ICL)
    _fxsave(&fxarea);
 #else
    fxarea.mxcsr_mask = 0;

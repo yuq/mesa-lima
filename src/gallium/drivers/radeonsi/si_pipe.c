@@ -74,9 +74,7 @@ static void si_destroy_context(struct pipe_context *context)
 
 	r600_common_context_cleanup(&sctx->b);
 
-#if HAVE_LLVM >= 0x0306
 	LLVMDisposeTargetMachine(sctx->tm);
-#endif
 
 	r600_resource_reference(&sctx->trace_buf, NULL);
 	r600_resource_reference(&sctx->last_trace_buf, NULL);
@@ -104,9 +102,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	struct si_screen* sscreen = (struct si_screen *)screen;
 	struct radeon_winsys *ws = sscreen->b.ws;
 	LLVMTargetRef r600_target;
-#if HAVE_LLVM >= 0x0306
 	const char *triple = "amdgcn--";
-#endif
 	int shader, i;
 
 	if (!sctx)
@@ -210,7 +206,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	 */
 	sctx->scratch_waves = 32 * sscreen->b.info.num_good_compute_units;
 
-#if HAVE_LLVM >= 0x0306
 	/* Initialize LLVM TargetMachine */
 	r600_target = radeon_llvm_get_r600_target(triple);
 	sctx->tm = LLVMCreateTargetMachine(r600_target, triple,
@@ -223,7 +218,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 					   LLVMCodeGenLevelDefault,
 					   LLVMRelocDefault,
 					   LLVMCodeModelDefault);
-#endif
 
 	return &sctx->b.b;
 fail:
@@ -310,6 +304,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_INVALIDATE_BUFFER:
 	case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
 	case PIPE_CAP_QUERY_MEMORY_INFO:
+	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
@@ -334,9 +329,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
 		return 4;
-
-	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
-		return HAVE_LLVM >= 0x0306;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
 		return HAVE_LLVM >= 0x0307 ? 410 : 330;
@@ -449,18 +441,13 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_TESS_CTRL:
 	case PIPE_SHADER_TESS_EVAL:
 		/* LLVM 3.6.2 is required for tessellation because of bug fixes there */
-		if (HAVE_LLVM < 0x0306 ||
-		    (HAVE_LLVM == 0x0306 && MESA_LLVM_VERSION_PATCH < 2))
+		if (HAVE_LLVM == 0x0306 && MESA_LLVM_VERSION_PATCH < 2)
 			return 0;
 		break;
 	case PIPE_SHADER_COMPUTE:
 		switch (param) {
 		case PIPE_SHADER_CAP_PREFERRED_IR:
-#if HAVE_LLVM < 0x0306
-			return PIPE_SHADER_IR_LLVM;
-#else
 			return PIPE_SHADER_IR_NATIVE;
-#endif
 		case PIPE_SHADER_CAP_DOUBLES:
 			return HAVE_LLVM >= 0x0307;
 
