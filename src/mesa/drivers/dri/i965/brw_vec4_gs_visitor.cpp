@@ -773,6 +773,8 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    prog_data->output_topology =
       get_hw_prim_for_gl_prim(shader->info.gs.output_primitive);
 
+   prog_data->vertices_in = shader->info.gs.vertices_in;
+
    /* The GLSL linker will have already matched up GS inputs and the outputs
     * of prior stages.  The driver does extend VS outputs in some cases, but
     * only for legacy OpenGL or Gen4-5 hardware, neither of which offer

@@ -626,6 +626,8 @@ struct brw_gs_prog_data
 {
    struct brw_vue_prog_data base;
 
+   unsigned vertices_in;
+
    /**
     * Size of an output vertex, measured in HWORDS (32 bytes).
     */
