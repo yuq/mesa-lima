@@ -68,9 +68,9 @@ struct gl_format_info
    bool IsSRGBFormat;
 
    /**
-    * To describe compressed formats.  If not compressed, Width=Height=1.
+    * To describe compressed formats.  If not compressed, Width=Height=Depth=1.
     */
-   GLubyte BlockWidth, BlockHeight;
+   GLubyte BlockWidth, BlockHeight, BlockDepth;
    GLubyte BytesPerBlock;
 
    uint8_t Swizzle[4];
