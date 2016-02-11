@@ -75,6 +75,8 @@
 struct radeon_shader_binary;
 struct radeon_shader_reloc;
 
+#define SI_MAX_VS_OUTPUTS	40
+
 #define SI_SGPR_RW_BUFFERS	0  /* rings (& stream-out, VS only) */
 #define SI_SGPR_CONST_BUFFERS	2
 #define SI_SGPR_SAMPLERS	4  /* images & sampler states interleaved */
@@ -359,10 +361,10 @@ struct si_shader {
 	ubyte			num_input_vgprs;
 	char			face_vgpr_index;
 
-	unsigned		vs_output_param_offset[PIPE_MAX_SHADER_OUTPUTS];
+	ubyte			vs_output_param_offset[SI_MAX_VS_OUTPUTS];
 	bool			uses_instanceid;
-	unsigned		nr_pos_exports;
-	unsigned		nr_param_exports;
+	ubyte			nr_pos_exports;
+	ubyte			nr_param_exports;
 };
 
 struct si_shader_part {

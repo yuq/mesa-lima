@@ -1893,6 +1893,7 @@ handle_semantic:
 		case TGSI_SEMANTIC_COLOR:
 		case TGSI_SEMANTIC_BCOLOR:
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
+			assert(i < ARRAY_SIZE(shader->vs_output_param_offset));
 			shader->vs_output_param_offset[i] = param_count;
 			param_count++;
 			break;
@@ -1907,6 +1908,7 @@ handle_semantic:
 		case TGSI_SEMANTIC_TEXCOORD:
 		case TGSI_SEMANTIC_GENERIC:
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
+			assert(i < ARRAY_SIZE(shader->vs_output_param_offset));
 			shader->vs_output_param_offset[i] = param_count;
 			param_count++;
 			break;
@@ -5280,6 +5282,7 @@ static bool si_get_vs_epilog(struct si_screen *sscreen,
 		unsigned offset = shader->nr_param_exports++;
 
 		epilog_key.vs_epilog.prim_id_param_offset = offset;
+		assert(index < ARRAY_SIZE(shader->vs_output_param_offset));
 		shader->vs_output_param_offset[index] = offset;
 	}
 
