@@ -2153,6 +2153,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityMatrix:
       case SpvCapabilityShader:
       case SpvCapabilityGeometry:
+      case SpvCapabilityClipDistance:
          break;
       default:
          assert(!"Unsupported capability");
