@@ -358,8 +358,8 @@ make_texture(struct st_context *st,
       GLenum intFormat = internal_format(ctx, format, type);
 
       pipeFormat = st_choose_format(st, intFormat, format, type,
-                                    PIPE_TEXTURE_2D, 0, PIPE_BIND_SAMPLER_VIEW,
-                                    FALSE);
+                                    st->internal_target, 0,
+                                    PIPE_BIND_SAMPLER_VIEW, FALSE);
       assert(pipeFormat != PIPE_FORMAT_NONE);
    }
 
@@ -556,7 +556,9 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    struct cso_context *cso = st->cso_context;
    GLfloat x0, y0, x1, y1;
    GLsizei maxSize;
-   boolean normalized = sv[0]->texture->target != PIPE_TEXTURE_RECT;
+   boolean normalized = sv[0]->texture->target == PIPE_TEXTURE_2D;
+
+   assert(sv[0]->texture->target == st->internal_target);
 
    /* limit checks */
    /* XXX if DrawPixels image is larger than max texture size, break
@@ -648,8 +650,10 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
       sampler.normalized_coords = normalized;
 
       if (fpv) {
+         /* drawing a color image */
          const struct pipe_sampler_state *samplers[PIPE_MAX_SAMPLERS];
-         uint num = MAX2(MAX2(fpv->drawpix_sampler, fpv->pixelmap_sampler) + 1,
+         uint num = MAX3(fpv->drawpix_sampler + 1,
+                         fpv->pixelmap_sampler + 1,
                          st->state.num_samplers[PIPE_SHADER_FRAGMENT]);
          uint i;
 
@@ -662,10 +666,31 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
 
          cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, num, samplers);
       } else {
+         /* drawing a depth/stencil image */
          const struct pipe_sampler_state *samplers[2] = {&sampler, &sampler};
 
          cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, num_sampler_view, samplers);
       }
+   }
+
+   /* user textures, plus the drawpix textures */
+   if (fpv) {
+      /* drawing a color image */
+      struct pipe_sampler_view *sampler_views[PIPE_MAX_SAMPLERS];
+      uint num = MAX3(fpv->drawpix_sampler + 1,
+                      fpv->pixelmap_sampler + 1,
+                      st->state.num_sampler_views[PIPE_SHADER_FRAGMENT]);
+
+      memcpy(sampler_views, st->state.sampler_views[PIPE_SHADER_FRAGMENT],
+             sizeof(sampler_views));
+
+      sampler_views[fpv->drawpix_sampler] = sv[0];
+      if (sv[1])
+         sampler_views[fpv->pixelmap_sampler] = sv[1];
+      cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, num, sampler_views);
+   } else {
+      /* drawing a depth/stencil image */
+      cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, num_sampler_view, sv);
    }
 
    /* viewport state: viewport matching window dims */
@@ -684,23 +709,6 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
 
    cso_set_vertex_elements(cso, 3, st->velems_util_draw);
    cso_set_stream_outputs(st->cso_context, 0, NULL, NULL);
-
-   /* user textures, plus the drawpix textures */
-   if (fpv) {
-      struct pipe_sampler_view *sampler_views[PIPE_MAX_SAMPLERS];
-      uint num = MAX3(fpv->drawpix_sampler + 1,
-                      fpv->pixelmap_sampler + 1,
-                      st->state.num_sampler_views[PIPE_SHADER_FRAGMENT]);
-
-      memcpy(sampler_views, st->state.sampler_views[PIPE_SHADER_FRAGMENT],
-             sizeof(sampler_views));
-
-      sampler_views[fpv->drawpix_sampler] = sv[0];
-      if (sv[1])
-         sampler_views[fpv->pixelmap_sampler] = sv[1];
-      cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, num, sampler_views);
-   } else
-      cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, num_sampler_view, sv);
 
    /* Compute Gallium window coords (y=0=top) with pixel zoom.
     * Recall that these coords are transformed by the current

@@ -1516,22 +1516,6 @@ vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
                                           bool interleaved)
 {
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      /* We have to support ATTR as a destination for GL_FIXED fixup. */
-      if (inst->dst.file == ATTR) {
-         int grf = attribute_map[inst->dst.nr + inst->dst.reg_offset];
-
-         /* All attributes used in the shader need to have been assigned a
-          * hardware register by the caller
-          */
-         assert(grf != 0);
-
-	 struct brw_reg reg = attribute_to_hw_reg(grf, interleaved);
-	 reg.type = inst->dst.type;
-	 reg.writemask = inst->dst.writemask;
-
-         inst->dst = reg;
-      }
-
       for (int i = 0; i < 3; i++) {
 	 if (inst->src[i].file != ATTR)
 	    continue;
@@ -1984,6 +1968,9 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
                                       is_scalar);
+   shader = brw_nir_lower_io(shader, compiler->devinfo, is_scalar,
+                             use_legacy_snorm_formula,
+                             key->gl_attrib_wa_flags);
    shader = brw_postprocess_nir(shader, compiler->devinfo, is_scalar);
 
    const unsigned *assembly = NULL;

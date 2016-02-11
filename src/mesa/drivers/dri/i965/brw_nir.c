@@ -205,7 +205,9 @@ remap_patch_urb_offsets(nir_block *block, void *closure)
 static void
 brw_nir_lower_inputs(nir_shader *nir,
                      const struct brw_device_info *devinfo,
-                     bool is_scalar)
+                     bool is_scalar,
+                     bool use_legacy_snorm_formula,
+                     const uint8_t *vs_attrib_wa_flags)
 {
    switch (nir->stage) {
    case MESA_SHADER_VERTEX:
@@ -224,6 +226,9 @@ brw_nir_lower_inputs(nir_shader *nir,
       nir_opt_constant_folding(nir);
 
       add_const_offset_to_base(nir, nir_var_shader_in);
+
+      brw_nir_apply_attribute_workarounds(nir, use_legacy_snorm_formula,
+                                          vs_attrib_wa_flags);
 
       if (is_scalar) {
          /* Finally, translate VERT_ATTRIB_* values into the actual registers.
@@ -509,12 +514,15 @@ brw_preprocess_nir(nir_shader *nir, bool is_scalar)
 nir_shader *
 brw_nir_lower_io(nir_shader *nir,
                  const struct brw_device_info *devinfo,
-                 bool is_scalar)
+                 bool is_scalar,
+                 bool use_legacy_snorm_formula,
+                 const uint8_t *vs_attrib_wa_flags)
 {
    bool progress; /* Written by OPT and OPT_V */
    (void)progress;
 
-   OPT_V(brw_nir_lower_inputs, devinfo, is_scalar);
+   OPT_V(brw_nir_lower_inputs, devinfo, is_scalar,
+         use_legacy_snorm_formula, vs_attrib_wa_flags);
    OPT_V(brw_nir_lower_outputs, devinfo, is_scalar);
    if (nir->stage == MESA_SHADER_COMPUTE)
       OPT_V(brw_nir_lower_shared);
@@ -627,9 +635,10 @@ brw_create_nir(struct brw_context *brw,
       OPT_V(nir_lower_atomics, shader_prog);
    }
 
-   if (nir->stage != MESA_SHADER_TESS_CTRL &&
+   if (nir->stage != MESA_SHADER_VERTEX &&
+       nir->stage != MESA_SHADER_TESS_CTRL &&
        nir->stage != MESA_SHADER_TESS_EVAL) {
-      nir = brw_nir_lower_io(nir, devinfo, is_scalar);
+      nir = brw_nir_lower_io(nir, devinfo, is_scalar, false, NULL);
    }
 
    return nir;

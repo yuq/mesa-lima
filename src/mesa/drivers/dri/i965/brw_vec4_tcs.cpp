@@ -514,7 +514,7 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
    nir->info.outputs_written = key->outputs_written;
    nir->info.patch_outputs_written = key->patch_outputs_written;
-   nir = brw_nir_lower_io(nir, compiler->devinfo, is_scalar);
+   nir = brw_nir_lower_io(nir, compiler->devinfo, is_scalar, false, NULL);
    nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
 
    prog_data->instances = DIV_ROUND_UP(nir->info.tcs.vertices_out, 2);

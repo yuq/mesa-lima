@@ -182,7 +182,7 @@ struct st_context
    /** for glBitmap */
    struct {
       struct pipe_rasterizer_state rasterizer;
-      struct pipe_sampler_state samplers[2];
+      struct pipe_sampler_state sampler;
       enum pipe_format tex_format;
       void *vs;
       struct bitmap_cache *cache;

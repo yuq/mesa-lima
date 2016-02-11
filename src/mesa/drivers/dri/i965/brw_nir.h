@@ -84,11 +84,16 @@ nir_shader *brw_create_nir(struct brw_context *brw,
 nir_shader *brw_preprocess_nir(nir_shader *nir, bool is_scalar);
 nir_shader *brw_nir_lower_io(nir_shader *nir,
                             const struct brw_device_info *devinfo,
-                            bool is_scalar);
+                            bool is_scalar,
+                            bool use_legacy_snorm_formula,
+                            const uint8_t *vs_attrib_wa_flags);
 nir_shader *brw_postprocess_nir(nir_shader *nir,
                                 const struct brw_device_info *devinfo,
                                 bool is_scalar);
 
+bool brw_nir_apply_attribute_workarounds(nir_shader *nir,
+                                         bool use_legacy_snorm_formula,
+                                         const uint8_t *attrib_wa_flags);
 
 nir_shader *brw_nir_apply_sampler_key(nir_shader *nir,
                                       const struct brw_device_info *devinfo,

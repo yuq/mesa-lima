@@ -670,7 +670,7 @@ _mesa_clip_drawpixels(const struct gl_context *ctx,
  * so that the image region is entirely within the window bounds.
  * Note: this is different from _mesa_clip_drawpixels() in that the
  * scissor box is ignored, and we use the bounds of the current readbuffer
- * surface.
+ * surface or the attached image.
  *
  * \return  GL_TRUE if region to read is in bounds
  *          GL_FALSE if region is completely out of bounds (nothing to read)
@@ -682,6 +682,18 @@ _mesa_clip_readpixels(const struct gl_context *ctx,
                       struct gl_pixelstore_attrib *pack)
 {
    const struct gl_framebuffer *buffer = ctx->ReadBuffer;
+   struct gl_renderbuffer *rb = buffer->_ColorReadBuffer;
+   GLsizei clip_width;
+   GLsizei clip_height;
+
+   if (rb) {
+      clip_width = rb->Width;
+      clip_height = rb->Height;
+   } else {
+      clip_width = buffer->Width;
+      clip_height = buffer->Height;
+   }
+
 
    if (pack->RowLength == 0) {
       pack->RowLength = *width;
@@ -694,8 +706,8 @@ _mesa_clip_readpixels(const struct gl_context *ctx,
       *srcX = 0;
    }
    /* right clipping */
-   if (*srcX + *width > (GLsizei) buffer->Width)
-      *width -= (*srcX + *width - buffer->Width);
+   if (*srcX + *width > clip_width)
+      *width -= (*srcX + *width - clip_width);
 
    if (*width <= 0)
       return GL_FALSE;
@@ -707,8 +719,8 @@ _mesa_clip_readpixels(const struct gl_context *ctx,
       *srcY = 0;
    }
    /* top clipping */
-   if (*srcY + *height > (GLsizei) buffer->Height)
-      *height -= (*srcY + *height - buffer->Height);
+   if (*srcY + *height > clip_height)
+      *height -= (*srcY + *height - clip_height);
 
    if (*height <= 0)
       return GL_FALSE;

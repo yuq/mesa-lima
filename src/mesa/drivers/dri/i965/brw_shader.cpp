@@ -1230,7 +1230,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
    nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
    nir->info.inputs_read = key->inputs_read;
    nir->info.patch_inputs_read = key->patch_inputs_read;
-   nir = brw_nir_lower_io(nir, compiler->devinfo, is_scalar);
+   nir = brw_nir_lower_io(nir, compiler->devinfo, is_scalar, false, NULL);
    nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
 
    brw_compute_vue_map(devinfo, &prog_data->base.vue_map,
