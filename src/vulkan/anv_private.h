@@ -1379,7 +1379,6 @@ struct anv_pipeline {
    uint32_t                                     ps_grf_start0;
    uint32_t                                     ps_grf_start2;
    uint32_t                                     gs_kernel;
-   uint32_t                                     gs_vertex_count;
    uint32_t                                     cs_simd;
 
    uint32_t                                     vb_used;

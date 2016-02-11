@@ -322,7 +322,7 @@ genX(graphics_pipeline_create)(
                      .VectorMaskEnable = false,
                      .SamplerCount = 0,
                      .BindingTableEntryCount = 0,
-                     .ExpectedVertexCount = pipeline->gs_vertex_count,
+                     .ExpectedVertexCount = gs_prog_data->vertices_in,
 
                      .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_GEOMETRY],
                      .PerThreadScratchSpace = scratch_space(&gs_prog_data->base.base),
