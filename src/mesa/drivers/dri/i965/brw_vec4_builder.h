@@ -66,7 +66,8 @@ namespace brw {
        * instruction passed as argument.
        */
       vec4_builder(backend_shader *shader, bblock_t *block, instruction *inst) :
-         shader(shader), block(block), cursor(inst)
+         shader(shader), block(block), cursor(inst),
+         force_writemask_all(inst->force_writemask_all)
       {
          annotation.str = inst->annotation;
          annotation.ir = inst->ir;
