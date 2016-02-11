@@ -547,9 +547,15 @@ genX(graphics_pipeline_create)(
                      .AttributeEnable = wm_prog_data->num_varying_inputs > 0,
                      .oMaskPresenttoRenderTarget = wm_prog_data->uses_omask,
                      .PixelShaderIsPerSample = per_sample_ps,
+                     .PixelShaderUsesSourceDepth = wm_prog_data->uses_src_depth,
+                     .PixelShaderUsesSourceW = wm_prog_data->uses_src_w,
 #if ANV_GEN >= 9
                      .PixelShaderPullsBary = wm_prog_data->pulls_bary,
-                     .InputCoverageMaskState = ICMS_NONE
+                     .InputCoverageMaskState = wm_prog_data->uses_sample_mask ?
+                        ICMS_INNER_CONSERVATIVE : ICMS_NONE,
+#else
+                     .PixelShaderUsesInputCoverageMask =
+                        wm_prog_data->uses_sample_mask,
 #endif
          );
    }

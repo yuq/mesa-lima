@@ -387,6 +387,9 @@ genX(graphics_pipeline_create)(
                      .EarlyDepthStencilControl                 = EDSC_NORMAL,
                      .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT,
                      .PixelShaderComputedDepthMode             = wm_prog_data->computed_depth_mode,
+                     .PixelShaderUsesSourceDepth               = wm_prog_data->uses_src_depth,
+                     .PixelShaderUsesSourceW                   = wm_prog_data->uses_src_w,
+                     .PixelShaderUsesInputCoverageMask         = wm_prog_data->uses_sample_mask,
                      .BarycentricInterpolationMode             = wm_prog_data->barycentric_interp_modes);
    }
 
