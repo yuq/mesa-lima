@@ -1215,12 +1215,12 @@ legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target,
       return GL_TRUE;
    case GL_TEXTURE_2D_ARRAY_EXT:
       return ctx->Extensions.EXT_texture_array;
-   case GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB:
-   case GL_TEXTURE_CUBE_MAP_NEGATIVE_X_ARB:
-   case GL_TEXTURE_CUBE_MAP_POSITIVE_Y_ARB:
-   case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB:
-   case GL_TEXTURE_CUBE_MAP_POSITIVE_Z_ARB:
-   case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB:
+   case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+   case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+   case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+   case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+   case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+   case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
       return ctx->Extensions.ARB_texture_cube_map;
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
@@ -1237,7 +1237,7 @@ legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target,
    case GL_PROXY_TEXTURE_2D:
    case GL_PROXY_TEXTURE_3D:
       return GL_TRUE;
-   case GL_PROXY_TEXTURE_CUBE_MAP_ARB:
+   case GL_PROXY_TEXTURE_CUBE_MAP:
       return ctx->Extensions.ARB_texture_cube_map;
    case GL_TEXTURE_CUBE_MAP_ARRAY_ARB:
    case GL_PROXY_TEXTURE_CUBE_MAP_ARRAY_ARB:

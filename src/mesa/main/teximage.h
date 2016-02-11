@@ -43,8 +43,8 @@ extern "C" {
 static inline GLboolean
 _mesa_is_cube_face(GLenum target)
 {
-   return (target >= GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB &&
-           target <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB);
+   return (target >= GL_TEXTURE_CUBE_MAP_POSITIVE_X &&
+           target <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
 }
 
 /** Are any of the dimensions of given texture equal to zero? */
