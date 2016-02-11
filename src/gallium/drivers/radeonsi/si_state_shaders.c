@@ -108,7 +108,7 @@ static void si_shader_ls(struct si_shader *shader)
 
 	/* We need at least 2 components for LS.
 	 * VGPR0-3: (VertexID, RelAutoindex, ???, InstanceID). */
-	vgpr_comp_cnt = shader->uses_instanceid ? 3 : 1;
+	vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 1;
 
 	num_user_sgprs = SI_LS_NUM_USER_SGPR;
 	num_sgprs = shader->config.num_sgprs;
@@ -181,7 +181,7 @@ static void si_shader_es(struct si_shader *shader)
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
 	if (shader->selector->type == PIPE_SHADER_VERTEX) {
-		vgpr_comp_cnt = shader->uses_instanceid ? 3 : 0;
+		vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 0;
 		num_user_sgprs = SI_ES_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = 3; /* all components are needed for TES */
@@ -347,7 +347,7 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 		vgpr_comp_cnt = 0; /* only VertexID is needed for GS-COPY. */
 		num_user_sgprs = SI_GSCOPY_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_VERTEX) {
-		vgpr_comp_cnt = shader->uses_instanceid ? 3 : (enable_prim_id ? 2 : 0);
+		vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : (enable_prim_id ? 2 : 0);
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = 3; /* all components are needed for TES */
@@ -363,19 +363,19 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 	assert(num_sgprs <= 104);
 
 	/* VS is required to export at least one param. */
-	nparams = MAX2(shader->nr_param_exports, 1);
+	nparams = MAX2(shader->info.nr_param_exports, 1);
 	si_pm4_set_reg(pm4, R_0286C4_SPI_VS_OUT_CONFIG,
 		       S_0286C4_VS_EXPORT_COUNT(nparams - 1));
 
 	si_pm4_set_reg(pm4, R_02870C_SPI_SHADER_POS_FORMAT,
 		       S_02870C_POS0_EXPORT_FORMAT(V_02870C_SPI_SHADER_4COMP) |
-		       S_02870C_POS1_EXPORT_FORMAT(shader->nr_pos_exports > 1 ?
+		       S_02870C_POS1_EXPORT_FORMAT(shader->info.nr_pos_exports > 1 ?
 						   V_02870C_SPI_SHADER_4COMP :
 						   V_02870C_SPI_SHADER_NONE) |
-		       S_02870C_POS2_EXPORT_FORMAT(shader->nr_pos_exports > 2 ?
+		       S_02870C_POS2_EXPORT_FORMAT(shader->info.nr_pos_exports > 2 ?
 						   V_02870C_SPI_SHADER_4COMP :
 						   V_02870C_SPI_SHADER_NONE) |
-		       S_02870C_POS3_EXPORT_FORMAT(shader->nr_pos_exports > 3 ?
+		       S_02870C_POS3_EXPORT_FORMAT(shader->info.nr_pos_exports > 3 ?
 						   V_02870C_SPI_SHADER_4COMP :
 						   V_02870C_SPI_SHADER_NONE));
 
@@ -1178,14 +1178,14 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 	for (j = 0; j < vsinfo->num_outputs; j++) {
 		if (name == vsinfo->output_semantic_name[j] &&
 		    index == vsinfo->output_semantic_index[j]) {
-			ps_input_cntl |= S_028644_OFFSET(vs->vs_output_param_offset[j]);
+			ps_input_cntl |= S_028644_OFFSET(vs->info.vs_output_param_offset[j]);
 			break;
 		}
 	}
 
 	if (name == TGSI_SEMANTIC_PRIMID)
 		/* PrimID is written after the last output. */
-		ps_input_cntl |= S_028644_OFFSET(vs->vs_output_param_offset[vsinfo->num_outputs]);
+		ps_input_cntl |= S_028644_OFFSET(vs->info.vs_output_param_offset[vsinfo->num_outputs]);
 	else if (j == vsinfo->num_outputs && !G_028644_PT_SPRITE_TEX(ps_input_cntl)) {
 		/* No corresponding output found, load defaults into input.
 		 * Don't set any other bits.

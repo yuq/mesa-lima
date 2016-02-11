@@ -453,7 +453,7 @@ static void declare_input_vs(
 					    input_index);
 	} else if (divisor) {
 		/* Build index from instance ID, start instance and divisor */
-		ctx->shader->uses_instanceid = true;
+		ctx->shader->info.uses_instanceid = true;
 		buffer_index = get_instance_index_for_fetch(&ctx->radeon_bld,
 							    SI_PARAM_START_INSTANCE,
 							    divisor);
@@ -1893,8 +1893,8 @@ handle_semantic:
 		case TGSI_SEMANTIC_COLOR:
 		case TGSI_SEMANTIC_BCOLOR:
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
-			assert(i < ARRAY_SIZE(shader->vs_output_param_offset));
-			shader->vs_output_param_offset[i] = param_count;
+			assert(i < ARRAY_SIZE(shader->info.vs_output_param_offset));
+			shader->info.vs_output_param_offset[i] = param_count;
 			param_count++;
 			break;
 		case TGSI_SEMANTIC_CLIPDIST:
@@ -1908,8 +1908,8 @@ handle_semantic:
 		case TGSI_SEMANTIC_TEXCOORD:
 		case TGSI_SEMANTIC_GENERIC:
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
-			assert(i < ARRAY_SIZE(shader->vs_output_param_offset));
-			shader->vs_output_param_offset[i] = param_count;
+			assert(i < ARRAY_SIZE(shader->info.vs_output_param_offset));
+			shader->info.vs_output_param_offset[i] = param_count;
 			param_count++;
 			break;
 		default:
@@ -1937,7 +1937,7 @@ handle_semantic:
 		}
 	}
 
-	shader->nr_param_exports = param_count;
+	shader->info.nr_param_exports = param_count;
 
 	/* We need to add the position output manually if it's missing. */
 	if (!pos_args[0][0]) {
@@ -1999,7 +1999,7 @@ handle_semantic:
 
 	for (i = 0; i < 4; i++)
 		if (pos_args[i][0])
-			shader->nr_pos_exports++;
+			shader->info.nr_pos_exports++;
 
 	pos_idx = 0;
 	for (i = 0; i < 4; i++) {
@@ -2009,7 +2009,7 @@ handle_semantic:
 		/* Specify the target we are exporting */
 		pos_args[i][3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_POS + pos_idx++);
 
-		if (pos_idx == shader->nr_pos_exports)
+		if (pos_idx == shader->info.nr_pos_exports)
 			/* Specify that this is the last export */
 			pos_args[i][2] = uint->one;
 
@@ -4061,18 +4061,18 @@ static void create_function(struct si_shader_context *ctx)
 					  S_0286D0_POS_FIXED_PT_ENA(1));
 	}
 
-	shader->num_input_sgprs = 0;
-	shader->num_input_vgprs = 0;
+	shader->info.num_input_sgprs = 0;
+	shader->info.num_input_vgprs = 0;
 
 	for (i = 0; i <= last_sgpr; ++i)
-		shader->num_input_sgprs += llvm_get_type_size(params[i]) / 4;
+		shader->info.num_input_sgprs += llvm_get_type_size(params[i]) / 4;
 
 	/* Unused fragment shader inputs are eliminated by the compiler,
 	 * so we don't know yet how many there will be.
 	 */
 	if (ctx->type != TGSI_PROCESSOR_FRAGMENT)
 		for (; i < num_params; ++i)
-			shader->num_input_vgprs += llvm_get_type_size(params[i]) / 4;
+			shader->info.num_input_vgprs += llvm_get_type_size(params[i]) / 4;
 
 	if (bld_base->info &&
 	    (bld_base->info->opcode_count[TGSI_OPCODE_DDX] > 0 ||
@@ -4873,7 +4873,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	si_init_shader_ctx(&ctx, sscreen, shader, tm);
 	ctx.is_monolithic = is_monolithic;
 
-	shader->uses_instanceid = sel->info.uses_instanceid;
+	shader->info.uses_instanceid = sel->info.uses_instanceid;
 
 	bld_base = &ctx.radeon_bld.soa.bld_base;
 	ctx.radeon_bld.load_system_value = declare_system_value;
@@ -4967,43 +4967,43 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	/* Calculate the number of fragment input VGPRs. */
 	if (ctx.type == TGSI_PROCESSOR_FRAGMENT) {
-		shader->num_input_vgprs = 0;
-		shader->face_vgpr_index = -1;
+		shader->info.num_input_vgprs = 0;
+		shader->info.face_vgpr_index = -1;
 
 		if (G_0286CC_PERSP_SAMPLE_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 2;
+			shader->info.num_input_vgprs += 2;
 		if (G_0286CC_PERSP_CENTER_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 2;
+			shader->info.num_input_vgprs += 2;
 		if (G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 2;
+			shader->info.num_input_vgprs += 2;
 		if (G_0286CC_PERSP_PULL_MODEL_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 3;
+			shader->info.num_input_vgprs += 3;
 		if (G_0286CC_LINEAR_SAMPLE_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 2;
+			shader->info.num_input_vgprs += 2;
 		if (G_0286CC_LINEAR_CENTER_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 2;
+			shader->info.num_input_vgprs += 2;
 		if (G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 2;
+			shader->info.num_input_vgprs += 2;
 		if (G_0286CC_LINE_STIPPLE_TEX_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 1;
+			shader->info.num_input_vgprs += 1;
 		if (G_0286CC_POS_X_FLOAT_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 1;
+			shader->info.num_input_vgprs += 1;
 		if (G_0286CC_POS_Y_FLOAT_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 1;
+			shader->info.num_input_vgprs += 1;
 		if (G_0286CC_POS_Z_FLOAT_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 1;
+			shader->info.num_input_vgprs += 1;
 		if (G_0286CC_POS_W_FLOAT_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 1;
+			shader->info.num_input_vgprs += 1;
 		if (G_0286CC_FRONT_FACE_ENA(shader->config.spi_ps_input_addr)) {
-			shader->face_vgpr_index = shader->num_input_vgprs;
-			shader->num_input_vgprs += 1;
+			shader->info.face_vgpr_index = shader->info.num_input_vgprs;
+			shader->info.num_input_vgprs += 1;
 		}
 		if (G_0286CC_ANCILLARY_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 1;
+			shader->info.num_input_vgprs += 1;
 		if (G_0286CC_SAMPLE_COVERAGE_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 1;
+			shader->info.num_input_vgprs += 1;
 		if (G_0286CC_POS_FIXED_PT_ENA(shader->config.spi_ps_input_addr))
-			shader->num_input_vgprs += 1;
+			shader->info.num_input_vgprs += 1;
 	}
 
 	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
@@ -5279,11 +5279,11 @@ static bool si_get_vs_epilog(struct si_screen *sscreen,
 	/* Set up the PrimitiveID output. */
 	if (shader->key.vs.epilog.export_prim_id) {
 		unsigned index = shader->selector->info.num_outputs;
-		unsigned offset = shader->nr_param_exports++;
+		unsigned offset = shader->info.nr_param_exports++;
 
 		epilog_key.vs_epilog.prim_id_param_offset = offset;
-		assert(index < ARRAY_SIZE(shader->vs_output_param_offset));
-		shader->vs_output_param_offset[index] = offset;
+		assert(index < ARRAY_SIZE(shader->info.vs_output_param_offset));
+		shader->info.vs_output_param_offset[index] = offset;
 	}
 
 	shader->epilog = si_get_shader_part(sscreen, &sscreen->vs_epilogs,
@@ -5307,7 +5307,7 @@ static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 	/* Get the prolog. */
 	memset(&prolog_key, 0, sizeof(prolog_key));
 	prolog_key.vs_prolog.states = shader->key.vs.prolog;
-	prolog_key.vs_prolog.num_input_sgprs = shader->num_input_sgprs;
+	prolog_key.vs_prolog.num_input_sgprs = shader->info.num_input_sgprs;
 	prolog_key.vs_prolog.last_input = MAX2(1, info->num_inputs) - 1;
 
 	/* The prolog is a no-op if there are no inputs. */
@@ -5329,7 +5329,7 @@ static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 	/* Set the instanceID flag. */
 	for (i = 0; i < info->num_inputs; i++)
 		if (prolog_key.vs_prolog.states.instance_divisors[i])
-			shader->uses_instanceid = true;
+			shader->info.uses_instanceid = true;
 
 	return true;
 }
@@ -5735,8 +5735,8 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	memset(&prolog_key, 0, sizeof(prolog_key));
 	prolog_key.ps_prolog.states = shader->key.ps.prolog;
 	prolog_key.ps_prolog.colors_read = info->colors_read;
-	prolog_key.ps_prolog.num_input_sgprs = shader->num_input_sgprs;
-	prolog_key.ps_prolog.num_input_vgprs = shader->num_input_vgprs;
+	prolog_key.ps_prolog.num_input_sgprs = shader->info.num_input_sgprs;
+	prolog_key.ps_prolog.num_input_vgprs = shader->info.num_input_vgprs;
 
 	if (info->colors_read) {
 		unsigned *color = shader->selector->color_attr_index;
@@ -5744,7 +5744,7 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 		if (shader->key.ps.prolog.color_two_side) {
 			/* BCOLORs are stored after the last input. */
 			prolog_key.ps_prolog.num_interp_inputs = info->num_inputs;
-			prolog_key.ps_prolog.face_vgpr_index = shader->face_vgpr_index;
+			prolog_key.ps_prolog.face_vgpr_index = shader->info.face_vgpr_index;
 			shader->config.spi_ps_input_ena |= S_0286CC_FRONT_FACE_ENA(1);
 		}
 
@@ -5920,15 +5920,15 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		shader->is_binary_shared = true;
 		shader->binary = mainp->binary;
 		shader->config = mainp->config;
-		shader->num_input_sgprs = mainp->num_input_sgprs;
-		shader->num_input_vgprs = mainp->num_input_vgprs;
-		shader->face_vgpr_index = mainp->face_vgpr_index;
-		memcpy(shader->vs_output_param_offset,
-		       mainp->vs_output_param_offset,
-		       sizeof(mainp->vs_output_param_offset));
-		shader->uses_instanceid = mainp->uses_instanceid;
-		shader->nr_pos_exports = mainp->nr_pos_exports;
-		shader->nr_param_exports = mainp->nr_param_exports;
+		shader->info.num_input_sgprs = mainp->info.num_input_sgprs;
+		shader->info.num_input_vgprs = mainp->info.num_input_vgprs;
+		shader->info.face_vgpr_index = mainp->info.face_vgpr_index;
+		memcpy(shader->info.vs_output_param_offset,
+		       mainp->info.vs_output_param_offset,
+		       sizeof(mainp->info.vs_output_param_offset));
+		shader->info.uses_instanceid = mainp->info.uses_instanceid;
+		shader->info.nr_pos_exports = mainp->info.nr_pos_exports;
+		shader->info.nr_param_exports = mainp->info.nr_param_exports;
 
 		/* Select prologs and/or epilogs. */
 		switch (shader->selector->type) {
@@ -5952,7 +5952,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 			 * are allocated inputs.
 			 */
 			shader->config.num_vgprs = MAX2(shader->config.num_vgprs,
-							shader->num_input_vgprs);
+							shader->info.num_input_vgprs);
 			break;
 		}
 

@@ -341,6 +341,17 @@ struct si_shader_config {
 	unsigned			rsrc2;
 };
 
+/* GCN-specific shader info. */
+struct si_shader_info {
+	ubyte			vs_output_param_offset[SI_MAX_VS_OUTPUTS];
+	ubyte			num_input_sgprs;
+	ubyte			num_input_vgprs;
+	char			face_vgpr_index;
+	bool			uses_instanceid;
+	ubyte			nr_pos_exports;
+	ubyte			nr_param_exports;
+};
+
 struct si_shader {
 	struct si_shader_selector	*selector;
 	struct si_shader		*next_variant;
@@ -356,15 +367,7 @@ struct si_shader {
 	struct radeon_shader_binary	binary;
 	bool				is_binary_shared;
 	struct si_shader_config		config;
-
-	ubyte			num_input_sgprs;
-	ubyte			num_input_vgprs;
-	char			face_vgpr_index;
-
-	ubyte			vs_output_param_offset[SI_MAX_VS_OUTPUTS];
-	bool			uses_instanceid;
-	ubyte			nr_pos_exports;
-	ubyte			nr_param_exports;
+	struct si_shader_info		info;
 };
 
 struct si_shader_part {
