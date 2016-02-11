@@ -317,13 +317,16 @@ class Group:
                 # assert dwords[index].address == None
                 dwords[index].address = field
 
-            # Does this field extend into the next dword?
-            if index < field.end // 32 and dwords[index].size == 32:
-                if index + 1 in dwords:
-                    assert dwords[index + 1].size == 32
+            # Coalesce all the dwords covered by this field. The two cases we
+            # handle are where multiple fields are in a 64 bit word (typically
+            # and address and a few bits) or where a single struct field
+            # completely covers multiple dwords.
+            while index < (start + field.end) // 32:
+                if index + 1 in dwords and not dwords[index] == dwords[index + 1]:
                     dwords[index].fields.extend(dwords[index + 1].fields)
                 dwords[index].size = 64
                 dwords[index + 1] = dwords[index]
+                index = index + 1
 
     def emit_pack_function(self, start):
         dwords = {}
