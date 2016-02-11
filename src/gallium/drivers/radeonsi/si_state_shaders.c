@@ -213,7 +213,11 @@ static bool si_shader_cache_load_shader(struct si_screen *sscreen,
 	if (!entry)
 		return false;
 
-	return si_load_shader_binary(shader, entry->data);
+	if (!si_load_shader_binary(shader, entry->data))
+		return false;
+
+	p_atomic_inc(&sscreen->b.num_shader_cache_hits);
+	return true;
 }
 
 static uint32_t si_shader_cache_key_hash(const void *key)

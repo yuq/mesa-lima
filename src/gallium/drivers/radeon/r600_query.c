@@ -139,6 +139,10 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_NUM_SHADERS_CREATED:
 		query->begin_result = p_atomic_read(&rctx->screen->num_shaders_created);
 		break;
+	case R600_QUERY_NUM_SHADER_CACHE_HITS:
+		query->begin_result =
+			p_atomic_read(&rctx->screen->num_shader_cache_hits);
+		break;
 	case R600_QUERY_GPIN_ASIC_ID:
 	case R600_QUERY_GPIN_NUM_SIMD:
 	case R600_QUERY_GPIN_NUM_RB:
@@ -217,6 +221,10 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		break;
 	case R600_QUERY_BACK_BUFFER_PS_DRAW_RATIO:
 		query->end_result = rctx->last_tex_ps_draw_ratio;
+		break;
+	case R600_QUERY_NUM_SHADER_CACHE_HITS:
+		query->end_result =
+			p_atomic_read(&rctx->screen->num_shader_cache_hits);
 		break;
 	case R600_QUERY_GPIN_ASIC_ID:
 	case R600_QUERY_GPIN_NUM_SIMD:
@@ -1641,6 +1649,7 @@ err:
 static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("num-compilations",		NUM_COMPILATIONS,	UINT64, CUMULATIVE),
 	X("num-shaders-created",	NUM_SHADERS_CREATED,	UINT64, CUMULATIVE),
+	X("num-shader-cache-hits",	NUM_SHADER_CACHE_HITS,	UINT64, CUMULATIVE),
 	X("draw-calls",			DRAW_CALLS,		UINT64, AVERAGE),
 	X("spill-draw-calls",		SPILL_DRAW_CALLS,	UINT64, AVERAGE),
 	X("compute-calls",		COMPUTE_CALLS,		UINT64, AVERAGE),

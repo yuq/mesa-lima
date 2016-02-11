@@ -380,6 +380,7 @@ struct r600_common_screen {
 	 * are loading shaders on demand. This is a monotonic counter.
 	 */
 	unsigned			num_shaders_created;
+	unsigned			num_shader_cache_hits;
 
 	/* GPU load thread. */
 	pipe_mutex			gpu_load_mutex;
