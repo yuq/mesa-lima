@@ -46,14 +46,17 @@ gen8_upload_ps_extra(struct brw_context *brw,
    if (prog_data->num_varying_inputs != 0)
       dw1 |= GEN8_PSX_ATTRIBUTE_ENABLE;
 
-   if (fp->Base.InputsRead & VARYING_BIT_POS)
-      dw1 |= GEN8_PSX_USES_SOURCE_DEPTH | GEN8_PSX_USES_SOURCE_W;
+   if (prog_data->uses_src_depth)
+      dw1 |= GEN8_PSX_USES_SOURCE_DEPTH;
+
+   if (prog_data->uses_src_w)
+      dw1 |= GEN8_PSX_USES_SOURCE_W;
 
    if (multisampled_fbo &&
        _mesa_get_min_invocations_per_fragment(ctx, fp, false) > 1)
       dw1 |= GEN8_PSX_SHADER_IS_PER_SAMPLE;
 
-   if (fp->Base.SystemValuesRead & SYSTEM_BIT_SAMPLE_MASK_IN) {
+   if (prog_data->uses_sample_mask) {
       if (brw->gen >= 9)
          dw1 |= BRW_PSICMS_INNER << GEN9_PSX_SHADER_NORMAL_COVERAGE_MASK_SHIFT;
       else

@@ -37,9 +37,6 @@ static void
 upload_wm_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct brw_fragment_program *fp =
-      brw_fragment_program_const(brw->fragment_program);
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
    bool writes_depth = prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF;
@@ -61,8 +58,11 @@ upload_wm_state(struct brw_context *brw)
    if (ctx->Polygon.StippleFlag)
       dw1 |= GEN7_WM_POLYGON_STIPPLE_ENABLE;
 
-   if (fp->program.Base.InputsRead & VARYING_BIT_POS)
-      dw1 |= GEN7_WM_USES_SOURCE_DEPTH | GEN7_WM_USES_SOURCE_W;
+   if (prog_data->uses_src_depth)
+      dw1 |= GEN7_WM_USES_SOURCE_DEPTH;
+
+   if (prog_data->uses_src_w)
+      dw1 |= GEN7_WM_USES_SOURCE_W;
 
    dw1 |= prog_data->computed_depth_mode << GEN7_WM_COMPUTED_DEPTH_MODE_SHIFT;
    dw1 |= prog_data->barycentric_interp_modes <<
@@ -100,7 +100,7 @@ upload_wm_state(struct brw_context *brw)
       dw2 |= GEN7_WM_MSDISPMODE_PERSAMPLE;
    }
 
-   if (fp->program.Base.SystemValuesRead & SYSTEM_BIT_SAMPLE_MASK_IN) {
+   if (prog_data->uses_sample_mask) {
       dw1 |= GEN7_WM_USES_INPUT_COVERAGE_MASK;
    }
 
@@ -138,7 +138,6 @@ const struct brw_tracked_state gen7_wm_state = {
                _NEW_MULTISAMPLE |
                _NEW_POLYGON,
       .brw   = BRW_NEW_BATCH |
-               BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_wm_state,
