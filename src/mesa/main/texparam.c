@@ -1310,6 +1310,7 @@ get_tex_level_parameter_image(struct gl_context *ctx,
       dummy_image.TexFormat = MESA_FORMAT_NONE;
       dummy_image.InternalFormat = GL_RGBA;
       dummy_image._BaseFormat = GL_NONE;
+      dummy_image.FixedSampleLocations = GL_TRUE;
 
       img = &dummy_image;
    }
