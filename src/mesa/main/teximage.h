@@ -49,6 +49,25 @@ _mesa_is_cube_face(GLenum target)
 
 
 /**
+ * Return number of faces for a texture target.  This will be 6 for
+ * cube maps and 1 otherwise.
+ * NOTE: this function is not used for cube map arrays which operate
+ * more like 2D arrays than cube maps.
+ */
+static inline GLuint
+_mesa_num_tex_faces(GLenum target)
+{
+   switch (target) {
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_PROXY_TEXTURE_CUBE_MAP:
+      return 6;
+   default:
+      return 1;
+   }
+}
+
+
+/**
  * If the target is GL_TEXTURE_CUBE_MAP, return one of the
  * GL_TEXTURE_CUBE_MAP_POSITIVE/NEGATIVE_X/Y/Z targets corresponding to
  * the face parameter.
