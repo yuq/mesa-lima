@@ -195,22 +195,3 @@ const unsigned char *radeon_shader_binary_config_start(
 	}
 	return binary->config;
 }
-
-void radeon_shader_binary_free_relocs(struct radeon_shader_reloc *relocs,
-					unsigned reloc_count)
-{
-	FREE(relocs);
-}
-
-void radeon_shader_binary_free_members(struct radeon_shader_binary *binary,
-					unsigned free_relocs)
-{
-	FREE(binary->code);
-	FREE(binary->config);
-	FREE(binary->rodata);
-
-	if (free_relocs) {
-		radeon_shader_binary_free_relocs(binary->relocs,
-						binary->reloc_count);
-	}
-}
