@@ -2388,8 +2388,10 @@ _mesa_base_tex_format(const struct gl_context *ctx, GLint internalFormat)
             return base_compressed;
    }
 
-   if (ctx->Extensions.KHR_texture_compression_astc_ldr &&
-      _mesa_is_astc_format(internalFormat))
+   if ((ctx->Extensions.KHR_texture_compression_astc_ldr &&
+        is_astc_2d_format(internalFormat)) ||
+       (ctx->Extensions.OES_texture_compression_astc &&
+        is_astc_3d_format(internalFormat)))
         return GL_RGBA;
 
    if (ctx->Extensions.MESA_ycbcr_texture) {
