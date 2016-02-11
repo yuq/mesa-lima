@@ -329,11 +329,27 @@ class Group:
         dwords = {}
         self.collect_dwords(dwords, 0, "")
 
-        for index, dw in dwords.items():
+        # Determine number of dwords in this group. If we have a size, use
+        # that, since that'll account for MBZ dwords at the end of a group
+        # (like dword 8 on BDW+ 3DSTATE_HS). Otherwise, use the largest dword
+        # index we've seen plus one.
+        if self.size > 0:
+            length = self.size // 32
+        else:
+            length = max(dwords.keys()) + 1
+
+        for index in range(length):
+            # Handle MBZ dwords
+            if not index in dwords:
+                print("")
+                print("   dw[%d] = 0;" % index)
+                continue
+
             # For 64 bit dwords, we aliased the two dword entries in the dword
             # dict it occupies. Now that we're emitting the pack function,
             # skip the duplicate entries.
-            if index > 0 and index - 1 in dwords and dwords[index - 1] == dwords[index]:
+            dw = dwords[index]
+            if index > 0 and index - 1 in dwords and dw == dwords[index - 1]:
                 continue
 
             # Special case: only one field and it's a struct at the beginning
@@ -453,21 +469,26 @@ class Parser:
             self.gen = attrs["gen"].replace('.', '')
             print(pack_header % {'license': license, 'platform': self.platform})
         elif name == "instruction":
-            self.group = Group(self, None, 0, 1, 0)
             self.instruction = safe_name(attrs["name"])
             self.length_bias = int(attrs["bias"])
             if "length" in attrs:
                 self.length = int(attrs["length"])
+                size = self.length * 32
             else:
                 self.length = None
+                size = 0
+            self.group = Group(self, None, 0, 1, size)
         elif name == "struct":
-            self.group = Group(self, None, 0, 1, 0)
             self.struct = safe_name(attrs["name"])
             self.structs[attrs["name"]] = 1
             if "length" in attrs:
                 self.length = int(attrs["length"])
+                size = self.length * 32
             else:
                 self.length = None
+                size = 0
+            self.group = Group(self, None, 0, 1, size)
+
         elif name == "group":
             group = Group(self, self.group,
                           int(attrs["start"]), int(attrs["count"]), int(attrs["size"]))
