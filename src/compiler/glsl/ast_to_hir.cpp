@@ -6303,30 +6303,28 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
        */
       assert(decl_type);
 
-      if (is_interface && decl_type->contains_opaque()) {
-         _mesa_glsl_error(&loc, state,
-                          "uniform/buffer in non-default interface block contains "
-                          "opaque variable");
-      }
+      if (is_interface) {
+         if (decl_type->contains_opaque()) {
+            _mesa_glsl_error(&loc, state, "uniform/buffer in non-default "
+                             "interface block contains opaque variable");
+         }
+      } else {
+         if (decl_type->contains_atomic()) {
+            /* From section 4.1.7.3 of the GLSL 4.40 spec:
+             *
+             *    "Members of structures cannot be declared as atomic counter
+             *     types."
+             */
+            _mesa_glsl_error(&loc, state, "atomic counter in structure");
+         }
 
-      if (decl_type->contains_atomic()) {
-         /* From section 4.1.7.3 of the GLSL 4.40 spec:
-          *
-          *    "Members of structures cannot be declared as atomic counter
-          *     types."
-          */
-         _mesa_glsl_error(&loc, state, "atomic counter in structure, "
-                          "shader storage block or uniform block");
-      }
-
-      if (decl_type->contains_image()) {
-         /* FINISHME: Same problem as with atomic counters.
-          * FINISHME: Request clarification from Khronos and add
-          * FINISHME: spec quotation here.
-          */
-         _mesa_glsl_error(&loc, state,
-                          "image in structure, shader storage block or "
-                          "uniform block");
+         if (decl_type->contains_image()) {
+            /* FINISHME: Same problem as with atomic counters.
+             * FINISHME: Request clarification from Khronos and add
+             * FINISHME: spec quotation here.
+             */
+            _mesa_glsl_error(&loc, state, "image in structure");
+         }
       }
 
       if (qual->flags.q.explicit_binding) {
