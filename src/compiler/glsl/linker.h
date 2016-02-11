@@ -35,7 +35,9 @@ link_invalidate_variable_locations(exec_list *ir);
 
 extern void
 link_assign_uniform_locations(struct gl_shader_program *prog,
-                              unsigned int boolean_true);
+                              unsigned int boolean_true,
+                              unsigned int num_explicit_uniform_locs,
+                              unsigned int max_uniform_locs);
 
 extern void
 link_set_uniform_initializers(struct gl_shader_program *prog,
@@ -201,5 +203,18 @@ linker_error(gl_shader_program *prog, const char *fmt, ...);
 
 void
 linker_warning(gl_shader_program *prog, const char *fmt, ...);
+
+/**
+ * Sometimes there are empty slots left over in UniformRemapTable after we
+ * allocate slots to explicit locations. This struct represents a single
+ * continouous block of empty slots in UniformRemapTable.
+ */
+struct empty_uniform_block {
+   struct exec_node link;
+   /* The start location of the block */
+   unsigned start;
+   /* The number of slots in the block */
+   unsigned slots;
+};
 
 #endif /* GLSL_LINKER_H */

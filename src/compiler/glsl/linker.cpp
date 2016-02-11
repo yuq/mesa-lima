@@ -3008,12 +3008,13 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
  * for a variable, checks for overlaps between other uniforms using explicit
  * locations.
  */
-static bool
+static int
 reserve_explicit_locations(struct gl_shader_program *prog,
                            string_to_uint_map *map, ir_variable *var)
 {
    unsigned slots = var->type->uniform_locations();
    unsigned max_loc = var->data.location + slots - 1;
+   unsigned return_value = slots;
 
    /* Resize remap table if locations do not fit in the current one. */
    if (max_loc + 1 > prog->NumUniformRemapTable) {
@@ -3024,7 +3025,7 @@ reserve_explicit_locations(struct gl_shader_program *prog,
 
       if (!prog->UniformRemapTable) {
          linker_error(prog, "Out of memory during linking.\n");
-         return false;
+         return -1;
       }
 
       /* Initialize allocated space. */
@@ -3042,8 +3043,10 @@ reserve_explicit_locations(struct gl_shader_program *prog,
 
          /* Possibly same uniform from a different stage, this is ok. */
          unsigned hash_loc;
-         if (map->get(hash_loc, var->name) && hash_loc == loc - i)
-               continue;
+         if (map->get(hash_loc, var->name) && hash_loc == loc - i) {
+            return_value = 0;
+            continue;
+         }
 
          /* ARB_explicit_uniform_location specification states:
           *
@@ -3055,7 +3058,7 @@ reserve_explicit_locations(struct gl_shader_program *prog,
                       "location qualifier for uniform %s overlaps "
                       "previously used location\n",
                       var->name);
-         return false;
+         return -1;
       }
 
       /* Initialize location as inactive before optimization
@@ -3067,7 +3070,7 @@ reserve_explicit_locations(struct gl_shader_program *prog,
    /* Note, base location used for arrays. */
    map->put(var->data.location, var->name);
 
-   return true;
+   return return_value;
 }
 
 static bool
@@ -3128,12 +3131,12 @@ reserve_subroutine_explicit_locations(struct gl_shader_program *prog,
  * any optimizations happen to handle also inactive uniforms and
  * inactive array elements that may get trimmed away.
  */
-static void
+static int
 check_explicit_uniform_locations(struct gl_context *ctx,
                                  struct gl_shader_program *prog)
 {
    if (!ctx->Extensions.ARB_explicit_uniform_location)
-      return;
+      return -1;
 
    /* This map is used to detect if overlapping explicit locations
     * occur with the same uniform (from different stage) or a different one.
@@ -3142,7 +3145,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
 
    if (!uniform_map) {
       linker_error(prog, "Out of memory during linking.\n");
-      return;
+      return -1;
    }
 
    unsigned entries_total = 0;
@@ -3157,31 +3160,47 @@ check_explicit_uniform_locations(struct gl_context *ctx,
          if (!var || var->data.mode != ir_var_uniform)
             continue;
 
-         entries_total += var->type->uniform_locations();
-
          if (var->data.explicit_location) {
-            bool ret;
+            bool ret = false;
             if (var->type->without_array()->is_subroutine())
                ret = reserve_subroutine_explicit_locations(prog, sh, var);
-            else
-               ret = reserve_explicit_locations(prog, uniform_map, var);
+            else {
+               int slots = reserve_explicit_locations(prog, uniform_map,
+                                                      var);
+               if (slots != -1) {
+                  ret = true;
+                  entries_total += slots;
+               }
+            }
             if (!ret) {
                delete uniform_map;
-               return;
+               return -1;
             }
          }
       }
    }
 
-   /* Verify that total amount of entries for explicit and implicit locations
-    * is less than MAX_UNIFORM_LOCATIONS.
-    */
-   if (entries_total >= ctx->Const.MaxUserAssignableUniformLocations) {
-      linker_error(prog, "count of uniform locations >= MAX_UNIFORM_LOCATIONS"
-                   "(%u >= %u)", entries_total,
-                   ctx->Const.MaxUserAssignableUniformLocations);
+   exec_list_make_empty(&prog->EmptyUniformLocations);
+   struct empty_uniform_block *current_block = NULL;
+
+   for (unsigned i = 0; i < prog->NumUniformRemapTable; i++) {
+      /* We found empty space in UniformRemapTable. */
+      if (prog->UniformRemapTable[i] == NULL) {
+         /* We've found the beginning of a new continous block of empty slots */
+         if (!current_block || current_block->start + current_block->slots != i) {
+            current_block = rzalloc(prog, struct empty_uniform_block);
+            current_block->start = i;
+            exec_list_push_tail(&prog->EmptyUniformLocations,
+                                &current_block->link);
+         }
+
+         /* The current block continues, so we simply increment its slots */
+         current_block->slots++;
+      }
    }
+
    delete uniform_map;
+   return entries_total;
 }
 
 static bool
@@ -4129,6 +4148,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    tfeedback_decl *tfeedback_decls = NULL;
    unsigned num_tfeedback_decls = prog->TransformFeedback.NumVarying;
+   unsigned int num_explicit_uniform_locs = 0;
 
    void *mem_ctx = ralloc_context(NULL); // temporary linker context
 
@@ -4310,7 +4330,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       last = i;
    }
 
-   check_explicit_uniform_locations(ctx, prog);
+   num_explicit_uniform_locs = check_explicit_uniform_locations(ctx, prog);
    link_assign_subroutine_types(prog);
 
    if (!prog->LinkStatus)
@@ -4541,7 +4561,9 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       goto done;
 
    update_array_sizes(prog);
-   link_assign_uniform_locations(prog, ctx->Const.UniformBooleanTrue);
+   link_assign_uniform_locations(prog, ctx->Const.UniformBooleanTrue,
+                                 num_explicit_uniform_locs,
+                                 ctx->Const.MaxUserAssignableUniformLocations);
    link_assign_atomic_counter_resources(ctx, prog);
    store_fragdepth_layout(prog);
 
