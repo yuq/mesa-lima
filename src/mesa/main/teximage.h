@@ -47,6 +47,21 @@ _mesa_is_cube_face(GLenum target)
            target <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
 }
 
+
+/**
+ * For cube map faces, return a face index in [0,5].
+ * For other targets return 0;
+ */
+static inline GLuint
+_mesa_tex_target_to_face(GLenum target)
+{
+   if (_mesa_is_cube_face(target))
+      return (GLuint) target - (GLuint) GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+   else
+      return 0;
+}
+
+
 /** Are any of the dimensions of given texture equal to zero? */
 static inline GLboolean
 _mesa_is_zero_size_texture(const struct gl_texture_image *texImage)
@@ -130,9 +145,6 @@ _mesa_test_proxy_teximage(struct gl_context *ctx, GLenum target, GLint level,
 extern GLboolean
 _mesa_target_can_be_compressed(const struct gl_context *ctx, GLenum target,
                                GLenum intFormat, GLenum *error);
-
-extern GLuint
-_mesa_tex_target_to_face(GLenum target);
 
 extern GLint
 _mesa_get_texture_dimensions(GLenum target);

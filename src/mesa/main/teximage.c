@@ -116,20 +116,6 @@ adjust_for_oes_float_texture(GLenum format, GLenum type)
    return format;
 }
 
-/**
- * For cube map faces, return a face index in [0,5].
- * For other targets return 0;
- */
-GLuint
-_mesa_tex_target_to_face(GLenum target)
-{
-   if (_mesa_is_cube_face(target))
-      return (GLuint) target - (GLuint) GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-   else
-      return 0;
-}
-
-
 
 /**
  * Install gl_texture_image in a gl_texture_object according to the target
