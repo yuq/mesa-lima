@@ -611,6 +611,20 @@ PFN_vkVoidFunction anv_GetInstanceProcAddr(
    return anv_lookup_entrypoint(pName);
 }
 
+/* The loader wants us to expose a second GetInstanceProcAddr function
+ * to work around certain LD_PRELOAD issues seen in apps.
+ */
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_icdGetInstanceProcAddr(
+    VkInstance                                  instance,
+    const char*                                 pName);
+
+VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_icdGetInstanceProcAddr(
+    VkInstance                                  instance,
+    const char*                                 pName)
+{
+   return anv_GetInstanceProcAddr(instance, pName);
+}
+
 PFN_vkVoidFunction anv_GetDeviceProcAddr(
     VkDevice                                    device,
     const char*                                 pName)
