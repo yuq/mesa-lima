@@ -244,17 +244,67 @@ void anv_DestroyPipelineLayout(
 }
 
 /*
- * Descriptor pools.  These are a no-op for now.
+ * Descriptor pools.
+ *
+ * These are implemented using a big pool of memory and a free-list for the
+ * host memory allocations and a state_stream and a free list for the buffer
+ * view surface state. The spec allows us to fail to allocate due to
+ * fragmentation in all cases but two: 1) after pool reset, allocating up
+ * until the pool size with no freeing must succeed and 2) allocating and
+ * freeing only descriptor sets with the same layout. Case 1) is easy enogh,
+ * and the free lists lets us recycle blocks for case 2).
  */
 
+#define EMPTY 1
+
 VkResult anv_CreateDescriptorPool(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkDescriptorPool*                           pDescriptorPool)
 {
-   anv_finishme("VkDescriptorPool is a stub");
-   *pDescriptorPool = (VkDescriptorPool)1;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_descriptor_pool *pool;
+
+   uint32_t descriptor_count = 0;
+   uint32_t buffer_count = 0;
+   for (uint32_t i = 0; i < pCreateInfo->poolSizeCount; i++) {
+      switch (pCreateInfo->pPoolSizes[i].type) {
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+         buffer_count += pCreateInfo->pPoolSizes[i].descriptorCount;
+      default:
+         descriptor_count += pCreateInfo->pPoolSizes[i].descriptorCount;
+         break;
+      }
+   }
+
+   const size_t set_size =
+      sizeof(struct anv_descriptor_set) +
+      descriptor_count * sizeof(struct anv_descriptor) +
+      buffer_count * sizeof(struct anv_buffer_view);
+
+   const size_t size =
+      sizeof(*pool) +
+      pCreateInfo->maxSets * set_size;
+
+   pool = anv_alloc2(&device->alloc, pAllocator, size, 8,
+                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (!pool)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   pool->size = size;
+   pool->next = 0;
+   pool->free_list = EMPTY;
+
+   anv_state_stream_init(&pool->surface_state_stream,
+                         &device->surface_state_block_pool);
+   pool->surface_state_free_list = NULL;
+
+   *pDescriptorPool = anv_descriptor_pool_to_handle(pool);
+
    return VK_SUCCESS;
 }
 
@@ -263,37 +313,85 @@ void anv_DestroyDescriptorPool(
     VkDescriptorPool                            _pool,
     const VkAllocationCallbacks*                pAllocator)
 {
-   anv_finishme("VkDescriptorPool is a stub: free the pool's descriptor sets");
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_descriptor_pool, pool, _pool);
+
+   anv_state_stream_finish(&pool->surface_state_stream);
+   anv_free2(&device->alloc, pAllocator, pool);
 }
 
 VkResult anv_ResetDescriptorPool(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     VkDescriptorPool                            descriptorPool,
     VkDescriptorPoolResetFlags                  flags)
 {
-   anv_finishme("VkDescriptorPool is a stub: free the pool's descriptor sets");
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_descriptor_pool, pool, descriptorPool);
+
+   pool->next = 0;
+   pool->free_list = EMPTY;
+   anv_state_stream_finish(&pool->surface_state_stream);
+   anv_state_stream_init(&pool->surface_state_stream,
+                         &device->surface_state_block_pool);
+   pool->surface_state_free_list = NULL;
+
    return VK_SUCCESS;
 }
 
+struct pool_free_list_entry {
+   uint32_t next;
+   uint32_t size;
+};
+
+static size_t
+layout_size(const struct anv_descriptor_set_layout *layout)
+{
+   return
+      sizeof(struct anv_descriptor_set) +
+      layout->size * sizeof(struct anv_descriptor) +
+      layout->buffer_count * sizeof(struct anv_buffer_view);
+}
+
+struct surface_state_free_list_entry {
+   void *next;
+   uint32_t offset;
+};
+
 VkResult
 anv_descriptor_set_create(struct anv_device *device,
+                          struct anv_descriptor_pool *pool,
                           const struct anv_descriptor_set_layout *layout,
                           struct anv_descriptor_set **out_set)
 {
    struct anv_descriptor_set *set;
-   size_t size = sizeof(*set) + layout->size * sizeof(set->descriptors[0]);
+   const size_t size = layout_size(layout);
 
-   set = anv_alloc(&device->alloc /* XXX: Use the pool */, size, 8,
-                   VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (!set)
+   set = NULL;
+   if (size <= pool->size - pool->next) {
+      set = (struct anv_descriptor_set *) (pool->data + pool->next);
+      pool->next += size;
+   } else {
+      struct pool_free_list_entry *entry;
+      uint32_t *link = &pool->free_list;
+      for (uint32_t f = pool->free_list; f != EMPTY; f = entry->next) {
+         entry = (struct pool_free_list_entry *) (pool->data + f);
+         if (size <= entry->size) {
+            *link = entry->next;
+            set = (struct anv_descriptor_set *) entry;
+            break;
+         }
+         link = &entry->next;
+      }
+   }
+
+   if (set == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   /* A descriptor set may not be 100% filled. Clear the set so we can can
-    * later detect holes in it.
-    */
-   memset(set, 0, size);
-
+   set->size = size;
    set->layout = layout;
+   set->buffer_views =
+      (struct anv_buffer_view *) &set->descriptors[layout->size];
+   set->buffer_count = layout->buffer_count;
 
    /* Go through and fill out immutable samplers if we have any */
    struct anv_descriptor *desc = set->descriptors;
@@ -305,21 +403,24 @@ anv_descriptor_set_create(struct anv_device *device,
       desc += layout->binding[b].array_size;
    }
 
-   /* XXX: Use the pool */
-   set->buffer_views =
-      anv_alloc(&device->alloc,
-                sizeof(set->buffer_views[0]) * layout->buffer_count, 8,
-                VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (!set->buffer_views) {
-      anv_free(&device->alloc, set);
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   /* Allocate surface state for the buffer views. */
+   for (uint32_t b = 0; b < layout->buffer_count; b++) {
+      struct surface_state_free_list_entry *entry =
+         pool->surface_state_free_list;
+      struct anv_state state;
+
+      if (entry) {
+         state.map = entry;
+         state.offset = entry->offset;
+         state.alloc_size = 64;
+         pool->surface_state_free_list = entry->next;
+      } else {
+         state = anv_state_stream_alloc(&pool->surface_state_stream, 64, 64);
+      }
+
+      set->buffer_views[b].surface_state = state;
    }
 
-   for (uint32_t b = 0; b < layout->buffer_count; b++) {
-      set->buffer_views[b].surface_state =
-         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-   }
-   set->buffer_count = layout->buffer_count;
    *out_set = set;
 
    return VK_SUCCESS;
@@ -327,15 +428,27 @@ anv_descriptor_set_create(struct anv_device *device,
 
 void
 anv_descriptor_set_destroy(struct anv_device *device,
+                           struct anv_descriptor_pool *pool,
                            struct anv_descriptor_set *set)
 {
-   /* XXX: Use the pool */
-   for (uint32_t b = 0; b < set->buffer_count; b++)
-      anv_state_pool_free(&device->surface_state_pool,
-                          set->buffer_views[b].surface_state);
+   /* Put the buffer view surface state back on the free list. */
+   for (uint32_t b = 0; b < set->buffer_count; b++) {
+      struct surface_state_free_list_entry *entry =
+         set->buffer_views[b].surface_state.map;
+      entry->next = pool->surface_state_free_list;
+      pool->surface_state_free_list = entry;
+   }
 
-   anv_free(&device->alloc, set->buffer_views);
-   anv_free(&device->alloc, set);
+   /* Put the descriptor set allocation back on the free list. */
+   const uint32_t index = (char *) set - pool->data;
+   if (index + set->size == pool->next) {
+      pool->next = index;
+   } else {
+      struct pool_free_list_entry *entry = (struct pool_free_list_entry *) set;
+      entry->next = pool->free_list;
+      entry->size = set->size;
+      pool->free_list = (char *) entry - pool->data;
+   }
 }
 
 VkResult anv_AllocateDescriptorSets(
@@ -344,6 +457,7 @@ VkResult anv_AllocateDescriptorSets(
     VkDescriptorSet*                            pDescriptorSets)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_descriptor_pool, pool, pAllocateInfo->descriptorPool);
 
    VkResult result = VK_SUCCESS;
    struct anv_descriptor_set *set;
@@ -353,7 +467,7 @@ VkResult anv_AllocateDescriptorSets(
       ANV_FROM_HANDLE(anv_descriptor_set_layout, layout,
                       pAllocateInfo->pSetLayouts[i]);
 
-      result = anv_descriptor_set_create(device, layout, &set);
+      result = anv_descriptor_set_create(device, pool, layout, &set);
       if (result != VK_SUCCESS)
          break;
 
@@ -374,11 +488,12 @@ VkResult anv_FreeDescriptorSets(
     const VkDescriptorSet*                      pDescriptorSets)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_descriptor_pool, pool, descriptorPool);
 
    for (uint32_t i = 0; i < count; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
 
-      anv_descriptor_set_destroy(device, set);
+      anv_descriptor_set_destroy(device, pool, set);
    }
 
    return VK_SUCCESS;

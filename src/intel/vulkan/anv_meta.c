@@ -138,6 +138,27 @@ anv_device_init_meta(struct anv_device *device)
       .pfnFree = meta_free,
    };
 
+   const VkDescriptorPoolCreateInfo create_info = {
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+      .pNext = NULL,
+      .flags = 0,
+      .maxSets = 1,
+      .poolSizeCount = 1,
+      .pPoolSizes = (VkDescriptorPoolSize[]) {
+         {
+            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1
+         },
+      }
+   };
+
+   result = anv_CreateDescriptorPool(anv_device_to_handle(device),
+                                     &create_info,
+                                     &device->meta_state.alloc,
+                                     &device->meta_state.desc_pool);
+   if (result != VK_SUCCESS)
+      goto fail_desc_pool;
+
    result = anv_device_init_meta_clear_state(device);
    if (result != VK_SUCCESS)
       goto fail_clear;
@@ -157,6 +178,10 @@ fail_blit:
 fail_resolve:
    anv_device_finish_meta_clear_state(device);
 fail_clear:
+   anv_DestroyDescriptorPool(anv_device_to_handle(device),
+                             device->meta_state.desc_pool,
+                             &device->meta_state.alloc);
+fail_desc_pool:
    return result;
 }
 

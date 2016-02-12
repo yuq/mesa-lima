@@ -483,7 +483,6 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
    VkCommandBuffer cmd_buffer_h = anv_cmd_buffer_to_handle(cmd_buffer);
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_image *src_image = src_iview->image;
-   VkDescriptorPool dummy_desc_pool_h = (VkDescriptorPool) 1;
 
    const struct vertex_attrs vertex_data[3] = {
       {
@@ -564,15 +563,13 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
    anv_AllocateDescriptorSets(device_h,
       &(VkDescriptorSetAllocateInfo) {
          .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = dummy_desc_pool_h,
+         .descriptorPool = device->meta_state.desc_pool,
          .descriptorSetCount = 1,
          .pSetLayouts = (VkDescriptorSetLayout[]) {
             device->meta_state.resolve.ds_layout,
          },
       },
       &desc_set_h);
-
-   ANV_FROM_HANDLE(anv_descriptor_set, desc_set, desc_set_h);
 
    anv_UpdateDescriptorSets(device_h,
       /*writeCount*/ 1,
@@ -644,7 +641,8 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
    /* All objects below are consumed by the draw call. We may safely destroy
     * them.
     */
-   anv_descriptor_set_destroy(device, desc_set);
+   anv_ResetDescriptorPool(anv_device_to_handle(device),
+                           device->meta_state.desc_pool, 0);
    anv_DestroySampler(device_h, sampler_h,
                       &cmd_buffer->pool->alloc);
 }

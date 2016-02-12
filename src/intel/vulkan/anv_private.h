@@ -571,6 +571,8 @@ void anv_finish_wsi(struct anv_instance *instance);
 struct anv_meta_state {
    VkAllocationCallbacks alloc;
 
+   VkDescriptorPool desc_pool;
+
    /**
     * Use array element `i` for images with `2^i` samples.
     */
@@ -959,18 +961,32 @@ struct anv_descriptor {
 
 struct anv_descriptor_set {
    const struct anv_descriptor_set_layout *layout;
+   uint32_t size;
    uint32_t buffer_count;
    struct anv_buffer_view *buffer_views;
    struct anv_descriptor descriptors[0];
 };
 
+struct anv_descriptor_pool {
+   uint32_t size;
+   uint32_t next;
+   uint32_t free_list;
+
+   struct anv_state_stream surface_state_stream;
+   void *surface_state_free_list;
+
+   char data[0];
+};
+
 VkResult
 anv_descriptor_set_create(struct anv_device *device,
+                          struct anv_descriptor_pool *pool,
                           const struct anv_descriptor_set_layout *layout,
                           struct anv_descriptor_set **out_set);
 
 void
 anv_descriptor_set_destroy(struct anv_device *device,
+                           struct anv_descriptor_pool *pool,
                            struct anv_descriptor_set *set);
 
 struct anv_pipeline_binding {
@@ -1839,6 +1855,7 @@ ANV_DEFINE_HANDLE_CASTS(anv_queue, VkQueue)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_cmd_pool, VkCommandPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer, VkBuffer)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer_view, VkBufferView)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_pool, VkDescriptorPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set, VkDescriptorSet)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set_layout, VkDescriptorSetLayout)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_device_memory, VkDeviceMemory)

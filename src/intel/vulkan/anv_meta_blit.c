@@ -165,7 +165,6 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                VkFilter blit_filter)
 {
    struct anv_device *device = cmd_buffer->device;
-   VkDescriptorPool dummy_desc_pool = (VkDescriptorPool)1;
 
    struct blit_vb_data {
       float pos[2];
@@ -248,7 +247,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    anv_AllocateDescriptorSets(anv_device_to_handle(device),
       &(VkDescriptorSetAllocateInfo) {
          .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = dummy_desc_pool,
+         .descriptorPool = device->meta_state.desc_pool,
          .descriptorSetCount = 1,
          .pSetLayouts = &device->meta_state.blit.ds_layout
       }, &set);
@@ -341,7 +340,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    /* At the point where we emit the draw call, all data from the
     * descriptor sets, etc. has been used.  We are free to delete it.
     */
-   anv_descriptor_set_destroy(device, anv_descriptor_set_from_handle(set));
+   anv_ResetDescriptorPool(anv_device_to_handle(device),
+                           device->meta_state.desc_pool, 0);
    anv_DestroySampler(anv_device_to_handle(device), sampler,
                       &cmd_buffer->pool->alloc);
    anv_DestroyFramebuffer(anv_device_to_handle(device), fb,
