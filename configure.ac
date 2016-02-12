@@ -2295,6 +2295,9 @@ dnl in LLVM_LIBS.
 
 if test "x$MESA_LLVM" != x0; then
 
+    if ! $LLVM_CONFIG --libs ${LLVM_COMPONENTS} >/dev/null; then
+       AC_MSG_ERROR([Calling ${LLVM_CONFIG} failed])
+    fi
     LLVM_LIBS="`$LLVM_CONFIG --libs ${LLVM_COMPONENTS}`"
 
     dnl llvm-config may not give the right answer when llvm is a built as a
