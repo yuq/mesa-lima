@@ -691,10 +691,9 @@ VkResult
 anv_device_submit_simple_batch(struct anv_device *device,
                                struct anv_batch *batch)
 {
-   struct anv_state state;
    struct drm_i915_gem_execbuffer2 execbuf;
    struct drm_i915_gem_exec_object2 exec2_objects[1];
-   struct anv_bo *bo = NULL;
+   struct anv_bo bo;
    VkResult result = VK_SUCCESS;
    uint32_t size;
    int64_t timeout;
@@ -702,22 +701,25 @@ anv_device_submit_simple_batch(struct anv_device *device,
 
    /* Kernel driver requires 8 byte aligned batch length */
    size = align_u32(batch->next - batch->start, 8);
-   state = anv_state_pool_alloc(&device->dynamic_state_pool, MAX(size, 64), 32);
-   bo = &device->dynamic_state_pool.block_pool->bo;
-   memcpy(state.map, batch->start, size);
+   assert(size < device->batch_bo_pool.bo_size);
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &bo);
+   if (result != VK_SUCCESS)
+      return result;
 
-   exec2_objects[0].handle = bo->gem_handle;
+   memcpy(bo.map, batch->start, size);
+
+   exec2_objects[0].handle = bo.gem_handle;
    exec2_objects[0].relocation_count = 0;
    exec2_objects[0].relocs_ptr = 0;
    exec2_objects[0].alignment = 0;
-   exec2_objects[0].offset = bo->offset;
+   exec2_objects[0].offset = bo.offset;
    exec2_objects[0].flags = 0;
    exec2_objects[0].rsvd1 = 0;
    exec2_objects[0].rsvd2 = 0;
 
    execbuf.buffers_ptr = (uintptr_t) exec2_objects;
    execbuf.buffer_count = 1;
-   execbuf.batch_start_offset = state.offset;
+   execbuf.batch_start_offset = 0;
    execbuf.batch_len = size;
    execbuf.cliprects_ptr = 0;
    execbuf.num_cliprects = 0;
@@ -737,7 +739,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
    }
 
    timeout = INT64_MAX;
-   ret = anv_gem_wait(device, bo->gem_handle, &timeout);
+   ret = anv_gem_wait(device, bo.gem_handle, &timeout);
    if (ret != 0) {
       /* We don't know the real error. */
       result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
@@ -745,7 +747,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
    }
 
  fail:
-   anv_state_pool_free(&device->dynamic_state_pool, state);
+   anv_bo_pool_free(&device->batch_bo_pool, &bo);
 
    return result;
 }
