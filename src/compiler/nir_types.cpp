@@ -158,6 +158,12 @@ glsl_type_is_void(const glsl_type *type)
 }
 
 bool
+glsl_type_is_error(const glsl_type *type)
+{
+   return type->is_error();
+}
+
+bool
 glsl_type_is_vector(const struct glsl_type *type)
 {
    return type->is_vector();
@@ -179,6 +185,18 @@ bool
 glsl_type_is_matrix(const struct glsl_type *type)
 {
    return type->is_matrix();
+}
+
+bool
+glsl_type_is_array(const struct glsl_type *type)
+{
+   return type->is_array();
+}
+
+bool
+glsl_type_is_struct(const struct glsl_type *type)
+{
+   return type->is_record() || type->is_interface();
 }
 
 bool

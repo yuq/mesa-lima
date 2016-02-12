@@ -78,10 +78,13 @@ unsigned glsl_get_record_location_offset(const struct glsl_type *type,
                                          unsigned length);
 
 bool glsl_type_is_void(const struct glsl_type *type);
+bool glsl_type_is_error(const struct glsl_type *type);
 bool glsl_type_is_vector(const struct glsl_type *type);
 bool glsl_type_is_scalar(const struct glsl_type *type);
 bool glsl_type_is_vector_or_scalar(const struct glsl_type *type);
 bool glsl_type_is_matrix(const struct glsl_type *type);
+bool glsl_type_is_array(const struct glsl_type *type);
+bool glsl_type_is_struct(const struct glsl_type *type);
 bool glsl_type_is_sampler(const struct glsl_type *type);
 bool glsl_type_is_image(const struct glsl_type *type);
 bool glsl_sampler_type_is_shadow(const struct glsl_type *type);
