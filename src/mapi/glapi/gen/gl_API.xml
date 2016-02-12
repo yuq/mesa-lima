@@ -8271,6 +8271,8 @@
 
 <!-- ARB extensions 162 - 163 -->
 
+<xi:include href="OES_texture_compression_astc.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+
 <xi:include href="ARB_direct_state_access.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 <xi:include href="ARB_get_texture_sub_image.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
