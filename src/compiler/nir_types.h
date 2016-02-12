@@ -94,9 +94,19 @@ const struct glsl_type *glsl_void_type(void);
 const struct glsl_type *glsl_float_type(void);
 const struct glsl_type *glsl_vec_type(unsigned n);
 const struct glsl_type *glsl_vec4_type(void);
+const struct glsl_type *glsl_int_type(void);
 const struct glsl_type *glsl_uint_type(void);
+const struct glsl_type *glsl_bool_type(void);
+
+const struct glsl_type *glsl_scalar_type(enum glsl_base_type base_type);
+const struct glsl_type *glsl_vector_type(enum glsl_base_type base_type,
+                                         unsigned components);
+const struct glsl_type *glsl_matrix_type(enum glsl_base_type base_type,
+                                         unsigned rows, unsigned columns);
 const struct glsl_type *glsl_array_type(const struct glsl_type *base,
                                         unsigned elements);
+const struct glsl_type *glsl_struct_type(const struct glsl_struct_field *fields,
+                                         unsigned num_fields, const char *name);
 const struct glsl_type *glsl_sampler_type(enum glsl_sampler_dim dim,
                                           bool is_shadow, bool is_array,
                                           enum glsl_base_type base_type);
@@ -107,6 +117,8 @@ const struct glsl_type *glsl_image_type(enum glsl_sampler_dim dim,
 const struct glsl_type * glsl_function_type(const struct glsl_type *return_type,
                                             const struct glsl_function_param *params,
                                             unsigned num_params);
+
+const struct glsl_type *glsl_transposed_type(const struct glsl_type *type);
 
 #ifdef __cplusplus
 }
