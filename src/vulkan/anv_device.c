@@ -1012,17 +1012,17 @@ VkResult anv_QueueSubmit(
                              "execbuf2 failed: %m");
          }
 
-         if (fence) {
-            ret = anv_gem_execbuffer(device, &fence->execbuf);
-            if (ret != 0) {
-               /* We don't know the real error. */
-               return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
-                                "execbuf2 failed: %m");
-            }
-         }
-
          for (uint32_t k = 0; k < cmd_buffer->execbuf2.bo_count; k++)
             cmd_buffer->execbuf2.bos[k]->offset = cmd_buffer->execbuf2.objects[k].offset;
+      }
+   }
+
+   if (fence) {
+      ret = anv_gem_execbuffer(device, &fence->execbuf);
+      if (ret != 0) {
+         /* We don't know the real error. */
+         return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                          "execbuf2 failed: %m");
       }
    }
 
