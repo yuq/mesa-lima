@@ -420,8 +420,8 @@ anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
    struct brw_device_info *devinfo = &pipeline->device->info;
    uint32_t max_threads[] = {
       [MESA_SHADER_VERTEX]                  = devinfo->max_vs_threads,
-      [MESA_SHADER_TESS_CTRL]               = 0,
-      [MESA_SHADER_TESS_EVAL]               = 0,
+      [MESA_SHADER_TESS_CTRL]               = devinfo->max_hs_threads,
+      [MESA_SHADER_TESS_EVAL]               = devinfo->max_ds_threads,
       [MESA_SHADER_GEOMETRY]                = devinfo->max_gs_threads,
       [MESA_SHADER_FRAGMENT]                = devinfo->max_wm_threads,
       [MESA_SHADER_COMPUTE]                 = devinfo->max_cs_threads,
