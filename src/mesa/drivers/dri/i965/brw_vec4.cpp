@@ -393,6 +393,7 @@ vec4_visitor::opt_vector_float()
              inst->src[0].file == IMM &&
              inst->predicate == BRW_PREDICATE_NONE &&
              inst->dst.writemask != WRITEMASK_XYZW &&
+             type_sz(inst->src[0].type) < 8 &&
              (inst->src[0].type == inst->dst.type || inst->src[0].d == 0)) {
 
             vf = brw_float_to_vf(inst->src[0].d);
