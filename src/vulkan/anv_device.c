@@ -707,6 +707,8 @@ anv_device_submit_simple_batch(struct anv_device *device,
       return result;
 
    memcpy(bo.map, batch->start, size);
+   if (!device->info.has_llc)
+      anv_clflush_range(bo.map, size);
 
    exec2_objects[0].handle = bo.gem_handle;
    exec2_objects[0].relocation_count = 0;
