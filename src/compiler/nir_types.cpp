@@ -70,6 +70,18 @@ glsl_get_struct_field(const glsl_type *type, unsigned index)
    return type->fields.structure[index].type;
 }
 
+const glsl_type *
+glsl_get_function_return_type(const glsl_type *type)
+{
+   return type->fields.parameters[0].type;
+}
+
+const glsl_function_param *
+glsl_get_function_param(const glsl_type *type, unsigned index)
+{
+   return &type->fields.parameters[index + 1];
+}
+
 const struct glsl_type *
 glsl_get_column_type(const struct glsl_type *type)
 {
@@ -189,4 +201,11 @@ const glsl_type *
 glsl_array_type(const glsl_type *base, unsigned elements)
 {
    return glsl_type::get_array_instance(base, elements);
+}
+
+const glsl_type *
+glsl_function_type(const glsl_type *return_type,
+                   const glsl_function_param *params, unsigned num_params)
+{
+   return glsl_type::get_function_instance(return_type, params, num_params);
 }

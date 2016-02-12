@@ -50,6 +50,12 @@ const struct glsl_type *glsl_get_array_element(const struct glsl_type *type);
 
 const struct glsl_type *glsl_get_column_type(const struct glsl_type *type);
 
+const struct glsl_type *
+glsl_get_function_return_type(const struct glsl_type *type);
+
+const struct glsl_function_param *
+glsl_get_function_param(const struct glsl_type *type, unsigned index);
+
 enum glsl_base_type glsl_get_base_type(const struct glsl_type *type);
 
 unsigned glsl_get_vector_elements(const struct glsl_type *type);
@@ -81,6 +87,9 @@ const struct glsl_type *glsl_vec4_type(void);
 const struct glsl_type *glsl_uint_type(void);
 const struct glsl_type *glsl_array_type(const struct glsl_type *base,
                                         unsigned elements);
+const struct glsl_type * glsl_function_type(const struct glsl_type *return_type,
+                                            const struct glsl_function_param *params,
+                                            unsigned num_params);
 
 #ifdef __cplusplus
 }
