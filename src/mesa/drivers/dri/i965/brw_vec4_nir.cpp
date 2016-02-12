@@ -503,7 +503,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       }
 
       /* Value */
-      src_reg val_reg = get_nir_src(instr->src[0], 4);
+      src_reg val_reg = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_F, 4);
 
       /* Writemask */
       unsigned write_mask = instr->const_index[0];
@@ -549,24 +549,47 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       const vec4_builder bld = vec4_builder(this).at_end()
                                .annotate(current_annotation, base_ir);
 
-      int swizzle[4] = { 0, 0, 0, 0};
+      unsigned type_slots = nir_src_bit_size(instr->src[0]) / 32;
+      if (type_slots == 2) {
+         dst_reg tmp = dst_reg(this, glsl_type::dvec4_type);
+         shuffle_64bit_data(tmp, retype(val_reg, tmp.type), true);
+         val_reg = src_reg(retype(tmp, BRW_REGISTER_TYPE_F));
+      }
+
+      uint8_t swizzle[4] = { 0, 0, 0, 0};
       int num_channels = 0;
       unsigned skipped_channels = 0;
       int num_components = instr->num_components;
       for (int i = 0; i < num_components; i++) {
+         /* Read components Z/W of a dvec from the appropriate place. We will
+          * also have to adjust the swizzle (we do that with the '% 4' below)
+          */
+         if (i == 2 && type_slots == 2)
+            val_reg = byte_offset(val_reg, REG_SIZE);
+
          /* Check if this channel needs to be written. If so, record the
           * channel we need to take the data from in the swizzle array
           */
          int component_mask = 1 << i;
          int write_test = write_mask & component_mask;
-         if (write_test)
-            swizzle[num_channels++] = i;
+         if (write_test) {
+            /* If we are writing doubles we have to write 2 channels worth of
+             * of data (64 bits) for each double component.
+             */
+            swizzle[num_channels++] = (i * type_slots) % 4;
+            if (type_slots == 2)
+               swizzle[num_channels++] = (i * type_slots + 1) % 4;
+         }
 
          /* If we don't have to write this channel it means we have a gap in the
           * vector, so write the channels we accumulated until now, if any. Do
-          * the same if this was the last component in the vector.
+          * the same if this was the last component in the vector, if we have
+          * enough channels for a full vec4 write or if we have processed
+          * components XY of a dvec (since components ZW are not in the same
+          * SIMD register)
           */
-         if (!write_test || i == num_components - 1) {
+         if (!write_test || i == num_components - 1 || num_channels == 4 ||
+             (i == 1 && type_slots == 2)) {
             if (num_channels > 0) {
                /* We have channels to write, so update the offset we need to
                 * write at to skip the channels we skipped, if any.
@@ -600,8 +623,9 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                num_channels = 0;
             }
 
-            /* We did not write the current channel, so increase skipped count */
-            skipped_channels++;
+            /* If we didn't write the channel, increase skipped count */
+            if (!write_test)
+               skipped_channels += type_slots;
          }
       }
 
