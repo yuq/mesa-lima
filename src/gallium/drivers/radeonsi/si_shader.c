@@ -2800,7 +2800,8 @@ static LLVMValueRef image_fetch_coords(
 static void image_append_args(
 		struct si_shader_context *ctx,
 		struct lp_build_emit_data * emit_data,
-		unsigned target)
+		unsigned target,
+		bool atomic)
 {
 	LLVMValueRef i1false = LLVMConstInt(ctx->i1, 0, 0);
 	LLVMValueRef i1true = LLVMConstInt(ctx->i1, 1, 0);
@@ -2808,7 +2809,8 @@ static void image_append_args(
 	emit_data->args[emit_data->arg_count++] = i1false; /* r128 */
 	emit_data->args[emit_data->arg_count++] =
 		tgsi_is_array_image(target) ? i1true : i1false; /* da */
-	emit_data->args[emit_data->arg_count++] = i1false; /* glc */
+	if (!atomic)
+		emit_data->args[emit_data->arg_count++] = i1false; /* glc */
 	emit_data->args[emit_data->arg_count++] = i1false; /* slc */
 }
 
@@ -2822,7 +2824,8 @@ static void buffer_append_args(
 		struct si_shader_context *ctx,
 		struct lp_build_emit_data *emit_data,
 		LLVMValueRef rsrc,
-		LLVMValueRef index)
+		LLVMValueRef index,
+		bool atomic)
 {
 	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
@@ -2836,7 +2839,8 @@ static void buffer_append_args(
 	emit_data->args[emit_data->arg_count++] = rsrc;
 	emit_data->args[emit_data->arg_count++] = index; /* vindex */
 	emit_data->args[emit_data->arg_count++] = bld_base->uint_bld.zero; /* voffset */
-	emit_data->args[emit_data->arg_count++] = i1false; /* glc */
+	if (!atomic)
+		emit_data->args[emit_data->arg_count++] = i1false; /* glc */
 	emit_data->args[emit_data->arg_count++] = i1false; /* slc */
 }
 
@@ -2857,14 +2861,14 @@ static void load_fetch_args(
 	coords = image_fetch_coords(bld_base, inst, 1);
 
 	if (target == TGSI_TEXTURE_BUFFER) {
-		buffer_append_args(ctx, emit_data, rsrc, coords);
+		buffer_append_args(ctx, emit_data, rsrc, coords, false);
 	} else {
 		emit_data->args[0] = coords;
 		emit_data->args[1] = rsrc;
 		emit_data->args[2] = lp_build_const_int32(gallivm, 15); /* dmask */
 		emit_data->arg_count = 3;
 
-		image_append_args(ctx, emit_data, target);
+		image_append_args(ctx, emit_data, target, false);
 	}
 }
 
@@ -2930,7 +2934,7 @@ static void store_fetch_args(
 		emit_data->args[0] = data;
 		emit_data->arg_count = 1;
 
-		buffer_append_args(ctx, emit_data, rsrc, coords);
+		buffer_append_args(ctx, emit_data, rsrc, coords, false);
 	} else {
 		emit_data->args[0] = data;
 		emit_data->args[1] = coords;
@@ -2938,7 +2942,7 @@ static void store_fetch_args(
 		emit_data->args[3] = lp_build_const_int32(gallivm, 15); /* dmask */
 		emit_data->arg_count = 4;
 
-		image_append_args(ctx, emit_data, target);
+		image_append_args(ctx, emit_data, target, false);
 	}
 }
 
@@ -2971,6 +2975,83 @@ static void store_emit(
 				emit_data->args, emit_data->arg_count,
 				LLVMNoUnwindAttribute);
 	}
+}
+
+static void atomic_fetch_args(
+		struct lp_build_tgsi_context * bld_base,
+		struct lp_build_emit_data * emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	unsigned target = inst->Memory.Texture;
+	LLVMValueRef data1, data2;
+	LLVMValueRef coords;
+	LLVMValueRef rsrc;
+	LLVMValueRef tmp;
+
+	emit_data->dst_type = bld_base->base.elem_type;
+
+	image_fetch_rsrc(bld_base, &inst->Src[0], &rsrc);
+	coords = image_fetch_coords(bld_base, inst, 1);
+
+	tmp = lp_build_emit_fetch(bld_base, inst, 2, 0);
+	data1 = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+
+	if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS) {
+		tmp = lp_build_emit_fetch(bld_base, inst, 3, 0);
+		data2 = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+	}
+
+	/* llvm.amdgcn.image/buffer.atomic.cmpswap reflect the hardware order
+	 * of arguments, which is reversed relative to TGSI (and GLSL)
+	 */
+	if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS)
+		emit_data->args[emit_data->arg_count++] = data2;
+	emit_data->args[emit_data->arg_count++] = data1;
+
+	if (target == TGSI_TEXTURE_BUFFER) {
+		buffer_append_args(ctx, emit_data, rsrc, coords, true);
+	} else {
+		emit_data->args[emit_data->arg_count++] = coords;
+		emit_data->args[emit_data->arg_count++] = rsrc;
+
+		image_append_args(ctx, emit_data, target, true);
+	}
+}
+
+static void atomic_emit(
+		const struct lp_build_tgsi_action *action,
+		struct lp_build_tgsi_context *bld_base,
+		struct lp_build_emit_data *emit_data)
+{
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	const struct tgsi_full_instruction * inst = emit_data->inst;
+	unsigned target = inst->Memory.Texture;
+	char intrinsic_name[40];
+	LLVMValueRef tmp;
+
+	if (target == TGSI_TEXTURE_BUFFER) {
+		snprintf(intrinsic_name, sizeof(intrinsic_name),
+			 "llvm.amdgcn.buffer.atomic.%s", action->intr_name);
+	} else {
+		char coords_type[8];
+
+		build_int_type_name(LLVMTypeOf(emit_data->args[1]),
+				    coords_type, sizeof(coords_type));
+		snprintf(intrinsic_name, sizeof(intrinsic_name),
+			 "llvm.amdgcn.image.atomic.%s.%s",
+			 action->intr_name, coords_type);
+	}
+
+	tmp = lp_build_intrinsic(
+		builder, intrinsic_name, bld_base->uint_bld.elem_type,
+		emit_data->args, emit_data->arg_count,
+		LLVMNoUnwindAttribute);
+	emit_data->output[emit_data->chan] =
+		LLVMBuildBitCast(builder, tmp, bld_base->base.elem_type, "");
 }
 
 static void resq_fetch_args(
@@ -5156,6 +5237,7 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 			       LLVMTargetMachineRef tm)
 {
 	struct lp_build_tgsi_context *bld_base;
+	struct lp_build_tgsi_action tmpl;
 
 	memset(ctx, 0, sizeof(*ctx));
 	radeon_llvm_context_init(&ctx->radeon_bld, "amdgcn--");
@@ -5209,6 +5291,29 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_STORE].emit = store_emit;
 	bld_base->op_actions[TGSI_OPCODE_RESQ].fetch_args = resq_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_RESQ].emit = resq_emit;
+
+	tmpl.fetch_args = atomic_fetch_args;
+	tmpl.emit = atomic_emit;
+	bld_base->op_actions[TGSI_OPCODE_ATOMUADD] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMUADD].intr_name = "add";
+	bld_base->op_actions[TGSI_OPCODE_ATOMXCHG] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMXCHG].intr_name = "swap";
+	bld_base->op_actions[TGSI_OPCODE_ATOMCAS] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMCAS].intr_name = "cmpswap";
+	bld_base->op_actions[TGSI_OPCODE_ATOMAND] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMAND].intr_name = "and";
+	bld_base->op_actions[TGSI_OPCODE_ATOMOR] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMOR].intr_name = "or";
+	bld_base->op_actions[TGSI_OPCODE_ATOMXOR] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMXOR].intr_name = "xor";
+	bld_base->op_actions[TGSI_OPCODE_ATOMUMIN] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMUMIN].intr_name = "umin";
+	bld_base->op_actions[TGSI_OPCODE_ATOMUMAX] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMUMAX].intr_name = "umax";
+	bld_base->op_actions[TGSI_OPCODE_ATOMIMIN] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMIMIN].intr_name = "smin";
+	bld_base->op_actions[TGSI_OPCODE_ATOMIMAX] = tmpl;
+	bld_base->op_actions[TGSI_OPCODE_ATOMIMAX].intr_name = "smax";
 
 	bld_base->op_actions[TGSI_OPCODE_DDX].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDY].emit = si_llvm_emit_ddxy;
