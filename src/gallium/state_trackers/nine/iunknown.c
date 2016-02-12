@@ -48,6 +48,8 @@ NineUnknown_ctor( struct NineUnknown *This,
 void
 NineUnknown_dtor( struct NineUnknown *This )
 {
+    if (This->refs && This->device) /* Possible only if early exit after a ctor failed */
+        (void) NineUnknown_Release(NineUnknown(This->device));
     FREE(This);
 }
 
