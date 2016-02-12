@@ -3007,8 +3007,8 @@ set_atomic_buffer_binding(struct gl_context *ctx,
    _mesa_reference_buffer_object(ctx, &binding->BufferObject, bufObj);
 
    if (bufObj == ctx->Shared->NullBufferObj) {
-      binding->Offset = -1;
-      binding->Size = -1;
+      binding->Offset = 0;
+      binding->Size = 0;
    } else {
       binding->Offset = offset;
       binding->Size = size;
