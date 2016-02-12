@@ -48,17 +48,14 @@ build_nir_vertex_shader(void)
    pos_out->data.location = VARYING_SLOT_POS;
    nir_copy_var(&b, pos_out, pos_in);
 
-   /* Add one more pass-through attribute.  For clear shaders, this is used
-    * to store the color and for blit shaders it's the texture coordinate.
-    */
-   nir_variable *attr_in = nir_variable_create(b.shader, nir_var_shader_in,
-                                               vec4, "a_attr");
-   attr_in->data.location = VERT_ATTRIB_GENERIC1;
-   nir_variable *attr_out = nir_variable_create(b.shader, nir_var_shader_out,
-                                                vec4, "v_attr");
-   attr_out->data.location = VARYING_SLOT_VAR0;
-   attr_out->data.interpolation = INTERP_QUALIFIER_SMOOTH;
-   nir_copy_var(&b, attr_out, attr_in);
+   nir_variable *tex_pos_in = nir_variable_create(b.shader, nir_var_shader_in,
+                                                  vec4, "a_tex_pos");
+   tex_pos_in->data.location = VERT_ATTRIB_GENERIC1;
+   nir_variable *tex_pos_out = nir_variable_create(b.shader, nir_var_shader_out,
+                                                   vec4, "v_tex_pos");
+   tex_pos_out->data.location = VARYING_SLOT_VAR0;
+   tex_pos_out->data.interpolation = INTERP_QUALIFIER_SMOOTH;
+   nir_copy_var(&b, tex_pos_out, tex_pos_in);
 
    return b.shader;
 }
@@ -73,7 +70,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    b.shader->info.name = ralloc_strdup(b.shader, "meta_blit_fs");
 
    nir_variable *tex_pos_in = nir_variable_create(b.shader, nir_var_shader_in,
-                                                  vec4, "v_attr");
+                                                  vec4, "v_tex_pos");
    tex_pos_in->data.location = VARYING_SLOT_VAR0;
 
    /* Swizzle the array index which comes in as Z coordinate into the right
@@ -1205,7 +1202,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    if (result != VK_SUCCESS)
       goto fail;
 
-   /* We don't use a vertex shader for clearing, but instead build and pass
+   /* We don't use a vertex shader for blitting, but instead build and pass
     * the VUEs directly to the rasterization backend.  However, we do need
     * to provide GLSL source for the vertex shader so that the compiler
     * does not dead-code our inputs.
