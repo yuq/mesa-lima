@@ -418,20 +418,23 @@ struct anv_state_stream {
 #define CACHELINE_SIZE 64
 #define CACHELINE_MASK 63
 
-static void inline
-anv_state_clflush(struct anv_state state)
+static inline void
+anv_clflush_range(void *start, size_t size)
 {
-   /* state.map may not be cacheline aligned, so round down the start pointer
-    * to a cacheline boundary so we flush all pages that contain the state.
-    */
-   void *end = state.map + state.alloc_size;
-   void *p = (void *) (((uintptr_t) state.map) & ~CACHELINE_MASK);
+   void *p = (void *) (((uintptr_t) start) & ~CACHELINE_MASK);
+   void *end = start + size;
 
    __builtin_ia32_mfence();
    while (p < end) {
       __builtin_ia32_clflush(p);
       p += CACHELINE_SIZE;
    }
+}
+
+static void inline
+anv_state_clflush(struct anv_state state)
+{
+   anv_clflush_range(state.map, state.alloc_size);
 }
 
 void anv_block_pool_init(struct anv_block_pool *pool,
