@@ -1534,7 +1534,7 @@ VkResult anv_CreateEvent(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_EVENT_CREATE_INFO);
 
    state = anv_state_pool_alloc(&device->dynamic_state_pool,
-                                sizeof(*event), 4);
+                                sizeof(*event), 8);
    event = state.map;
    event->state = state;
    event->semaphore = VK_EVENT_RESET;

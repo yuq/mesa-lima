@@ -1306,7 +1306,7 @@ struct anv_fence {
 };
 
 struct anv_event {
-   uint32_t                                     semaphore;
+   uint64_t                                     semaphore;
    struct anv_state                             state;
 };
 
