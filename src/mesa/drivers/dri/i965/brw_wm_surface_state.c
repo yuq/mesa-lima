@@ -1364,6 +1364,11 @@ brw_upload_image_surfaces(struct brw_context *brw,
       }
 
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
+      /* This may have changed the image metadata dependent on the context
+       * image unit state and passed to the program as uniforms, make sure
+       * that push and pull constants are reuploaded.
+       */
+      brw->NewGLState |= _NEW_PROGRAM_CONSTANTS;
    }
 }
 
