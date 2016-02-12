@@ -68,11 +68,8 @@ build_mat4_det(nir_builder *b, nir_ssa_def **col)
    nir_ssa_def *subdet[4];
    for (unsigned i = 0; i < 4; i++) {
       unsigned swiz[3];
-      for (unsigned j = 0, k = 0; j < 3; j++, k++) {
-         if (k == i)
-            k++; /* skip column */
-         swiz[j] = k;
-      }
+      for (unsigned j = 0; j < 3; j++)
+         swiz[j] = j + (j >= i);
 
       nir_ssa_def *subcol[3];
       subcol[0] = nir_swizzle(b, col[1], swiz, 3, true);
@@ -121,11 +118,8 @@ build_mat_subdet(struct nir_builder *b, struct vtn_ssa_value *src,
    } else {
       /* Swizzle to get all but the specified row */
       unsigned swiz[3];
-      for (unsigned j = 0, k = 0; j < 3; j++, k++) {
-         if (k == row)
-            k++; /* skip column */
-         swiz[j] = k;
-      }
+      for (unsigned j = 0; j < 3; j++)
+         swiz[j] = j + (j >= row);
 
       /* Grab all but the specified column */
       nir_ssa_def *subcol[3];
