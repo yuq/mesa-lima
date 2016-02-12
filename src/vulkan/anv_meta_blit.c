@@ -34,30 +34,28 @@ struct blit_region {
 static nir_shader *
 build_nir_vertex_shader(void)
 {
+   const struct glsl_type *vec4 = glsl_vec4_type();
    nir_builder b;
-
-   const struct glsl_type *vertex_type = glsl_vec4_type();
 
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
    b.shader->info.name = ralloc_strdup(b.shader, "meta_blit_vs");
 
    nir_variable *pos_in = nir_variable_create(b.shader, nir_var_shader_in,
-                                              vertex_type, "a_pos");
+                                              vec4, "a_pos");
    pos_in->data.location = VERT_ATTRIB_GENERIC0;
    nir_variable *pos_out = nir_variable_create(b.shader, nir_var_shader_out,
-                                               vertex_type, "gl_Position");
+                                               vec4, "gl_Position");
    pos_out->data.location = VARYING_SLOT_POS;
    nir_copy_var(&b, pos_out, pos_in);
 
    /* Add one more pass-through attribute.  For clear shaders, this is used
     * to store the color and for blit shaders it's the texture coordinate.
     */
-   const struct glsl_type *attr_type = glsl_vec4_type();
    nir_variable *attr_in = nir_variable_create(b.shader, nir_var_shader_in,
-                                               attr_type, "a_attr");
+                                               vec4, "a_attr");
    attr_in->data.location = VERT_ATTRIB_GENERIC1;
    nir_variable *attr_out = nir_variable_create(b.shader, nir_var_shader_out,
-                                                attr_type, "v_attr");
+                                                vec4, "v_attr");
    attr_out->data.location = VARYING_SLOT_VAR0;
    attr_out->data.interpolation = INTERP_QUALIFIER_SMOOTH;
    nir_copy_var(&b, attr_out, attr_in);
@@ -68,15 +66,14 @@ build_nir_vertex_shader(void)
 static nir_shader *
 build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
 {
+   const struct glsl_type *vec4 = glsl_vec4_type();
    nir_builder b;
 
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
    b.shader->info.name = ralloc_strdup(b.shader, "meta_blit_fs");
 
-   const struct glsl_type *color_type = glsl_vec4_type();
-
    nir_variable *tex_pos_in = nir_variable_create(b.shader, nir_var_shader_in,
-                                                  glsl_vec4_type(), "v_attr");
+                                                  vec4, "v_attr");
    tex_pos_in->data.location = VARYING_SLOT_VAR0;
 
    /* Swizzle the array index which comes in as Z coordinate into the right
@@ -89,7 +86,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
 
    const struct glsl_type *sampler_type =
       glsl_sampler_type(tex_dim, false, tex_dim != GLSL_SAMPLER_DIM_3D,
-                        glsl_get_base_type(color_type));
+                        glsl_get_base_type(vec4));
    nir_variable *sampler = nir_variable_create(b.shader, nir_var_uniform,
                                                sampler_type, "s_tex");
    sampler->data.descriptor_set = 0;
@@ -110,7 +107,7 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    nir_builder_instr_insert(&b, &tex->instr);
 
    nir_variable *color_out = nir_variable_create(b.shader, nir_var_shader_out,
-                                                 color_type, "f_color");
+                                                 vec4, "f_color");
    color_out->data.location = FRAG_RESULT_DATA0;
    nir_store_var(&b, color_out, &tex->dest.ssa, 4);
 
