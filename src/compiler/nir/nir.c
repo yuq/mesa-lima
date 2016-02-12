@@ -115,6 +115,10 @@ nir_shader_add_variable(nir_shader *shader, nir_variable *var)
       assert(!"nir_shader_add_variable cannot be used for local variables");
       break;
 
+   case nir_var_param:
+      assert(!"nir_shader_add_variable cannot be used for function parameters");
+      break;
+
    case nir_var_global:
       exec_list_push_tail(&shader->globals, &var->node);
       break;

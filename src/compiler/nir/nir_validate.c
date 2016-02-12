@@ -867,7 +867,7 @@ postvalidate_reg_decl(nir_register *reg, validate_state *state)
 static void
 validate_var_decl(nir_variable *var, bool is_global, validate_state *state)
 {
-   assert(is_global != (var->data.mode == nir_var_local));
+   assert(is_global == nir_variable_is_global(var));
 
    /*
     * TODO validate some things ir_validate.cpp does (requires more GLSL type
