@@ -964,8 +964,5 @@ _mesa_GetProgramPipelineInfoLog(GLuint pipeline, GLsizei bufSize,
       return;
    }
 
-   if (pipe->InfoLog)
-      _mesa_copy_string(infoLog, bufSize, length, pipe->InfoLog);
-   else
-      *length = 0;
+   _mesa_copy_string(infoLog, bufSize, length, pipe->InfoLog);
 }
