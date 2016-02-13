@@ -4690,8 +4690,7 @@ ast_declarator_list::hir(exec_list *instructions,
           && this->type->qualifier.has_interpolation()
           && this->type->qualifier.flags.q.varying) {
 
-         const char *i = this->type->qualifier.interpolation_string();
-         assert(i != NULL);
+         const char *i = interpolation_string(var->data.interpolation);
          const char *s;
          if (this->type->qualifier.flags.q.centroid)
             s = "centroid varying";
@@ -4721,9 +4720,7 @@ ast_declarator_list::hir(exec_list *instructions,
       if (state->is_version(130, 300)
           && this->type->qualifier.has_interpolation()) {
 
-         const char *i = this->type->qualifier.interpolation_string();
-         assert(i != NULL);
-
+         const char *i = interpolation_string(var->data.interpolation);
          switch (state->stage) {
          case MESA_SHADER_VERTEX:
             if (this->type->qualifier.flags.q.in) {

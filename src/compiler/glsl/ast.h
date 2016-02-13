@@ -685,18 +685,6 @@ struct ast_type_qualifier {
     */
    bool has_auxiliary_storage() const;
 
-   /**
-    * \brief Return string representation of interpolation qualifier.
-    *
-    * If an interpolation qualifier is present, then return that qualifier's
-    * string representation. Otherwise, return null. For example, if the
-    * noperspective bit is set, then this returns "noperspective".
-    *
-    * If multiple interpolation qualifiers are somehow present, then the
-    * returned string is undefined but not null.
-    */
-   const char *interpolation_string() const;
-
    bool merge_qualifier(YYLTYPE *loc,
 			_mesa_glsl_parse_state *state,
                         const ast_type_qualifier &q,

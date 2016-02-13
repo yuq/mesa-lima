@@ -102,19 +102,6 @@ ast_type_qualifier::has_auxiliary_storage() const
           || this->flags.q.patch;
 }
 
-const char*
-ast_type_qualifier::interpolation_string() const
-{
-   if (this->flags.q.smooth)
-      return "smooth";
-   else if (this->flags.q.flat)
-      return "flat";
-   else if (this->flags.q.noperspective)
-      return "noperspective";
-   else
-      return NULL;
-}
-
 /**
  * This function merges both duplicate identifies within a single layout and
  * multiple layout qualifiers on a single variable declaration. The
