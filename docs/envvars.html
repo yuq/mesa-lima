@@ -253,6 +253,25 @@ for details.
 </ul>
 
 
+<h3>VC4 driver environment variables</h3>
+<ul>
+<li>VC4_DEBUG - a comma-separated list of named flags, which do various things:
+<ul>
+   <li>cl - dump command list during creation</li>
+   <li>qpu - dump generated QPU instructions</li>
+   <li>qir - dump QPU IR during program compile</li>
+   <li>nir - dump NIR during program compile</li>
+   <li>tgsi - dump TGSI during program compile</li>
+   <li>shaderdb - dump program compile information for shader-db analysis</li>
+   <li>perf - print during performance-related events</li>
+   <li>norast - skip actual hardware execution of commands</li>
+   <li>always_flush - flush after each draw call</li>
+   <li>always_sync - wait for finish after each flush</li>
+   <li>dump - write a GPU command stream trace file (VC4 simulator only)</li>
+</ul>
+</ul>
+
+
 <p>
 Other Gallium drivers have their own environment variables.  These may change
 frequently so the source code should be consulted for details.
