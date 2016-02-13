@@ -42,7 +42,7 @@ static void st_dispatch_compute_common(struct gl_context *ctx,
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
    struct st_context *st = st_context(ctx);
    struct pipe_context *pipe = st->pipe;
-   struct pipe_grid_info info = {};
+   struct pipe_grid_info info = { 0 };
 
    if (ctx->NewState)
       _mesa_update_state(ctx);
