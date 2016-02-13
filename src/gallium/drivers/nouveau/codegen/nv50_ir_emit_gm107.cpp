@@ -193,6 +193,8 @@ private:
    void emitNOP();
    void emitKIL();
    void emitOUT();
+
+   void emitMEMBAR();
 };
 
 /*******************************************************************************
@@ -2627,6 +2629,13 @@ CodeEmitterGM107::emitOUT()
    emitGPR  (0x00, insn->def(0));
 }
 
+void
+CodeEmitterGM107::emitMEMBAR()
+{
+   emitInsn (0xef980000);
+   emitField(0x08, 2, insn->subOp >> 2);
+}
+
 /*******************************************************************************
  * assembler front-end
  ******************************************************************************/
@@ -2925,6 +2934,9 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
    case OP_EMIT:
    case OP_RESTART:
       emitOUT();
+      break;
+   case OP_MEMBAR:
+      emitMEMBAR();
       break;
    default:
       assert(!"invalid opcode");
