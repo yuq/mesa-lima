@@ -1561,11 +1561,6 @@ vec4_vs_visitor::setup_attributes(int payload_reg)
       }
    }
 
-   if (vs_prog_data->uses_drawid) {
-      attribute_map[VERT_ATTRIB_MAX + 1] = payload_reg + nr_attributes;
-      nr_attributes++;
-   }
-
    /* VertexID is stored by the VF as the last vertex element, but we
     * don't represent it with a flag in inputs_read, so we call it
     * VERT_ATTRIB_MAX.
@@ -1573,6 +1568,11 @@ vec4_vs_visitor::setup_attributes(int payload_reg)
    if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid ||
        vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance) {
       attribute_map[VERT_ATTRIB_MAX] = payload_reg + nr_attributes;
+      nr_attributes++;
+   }
+
+   if (vs_prog_data->uses_drawid) {
+      attribute_map[VERT_ATTRIB_MAX + 1] = payload_reg + nr_attributes;
       nr_attributes++;
    }
 
