@@ -76,9 +76,9 @@ kernel::launch(command_queue &q,
                               exec.g_buffers.data(), g_handles.data());
 
    // Fill information for the launch_grid() call.
-   info.block = pad_vector(q, block_size, 1).data(),
-   info.grid = pad_vector(q, reduced_grid_size, 1).data(),
-   info.pc = find(name_equals(_name), m.sysm).offset;
+   copy(pad_vector(q, block_size, 1), info.block);
+   copy(pad_vector(q, reduced_grid_size, 1), info.grid);
+   info.pc = find(name_equals(_name), m.syms).offset;
    info.input = exec.input.data();
 
    q.pipe->launch_grid(q.pipe, &info);
