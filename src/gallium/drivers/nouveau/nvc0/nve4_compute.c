@@ -39,7 +39,7 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
 {
    struct nouveau_device *dev = screen->base.device;
    struct nouveau_object *chan = screen->base.channel;
-   unsigned i;
+   int i;
    int ret;
    uint32_t obj_class;
 
@@ -115,13 +115,14 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
    PUSH_DATA (push, NVC0_TSC_MAX_ENTRIES - 1);
 
    if (obj_class >= NVF0_COMPUTE_CLASS) {
-      BEGIN_NVC0(push, SUBC_COMPUTE(0x0248), 1);
-      PUSH_DATA (push, 0x100);
-      BEGIN_NIC0(push, SUBC_COMPUTE(0x0248), 63);
-      for (i = 63; i >= 1; --i)
+      /* The blob calls GK110_COMPUTE.FIRMWARE[0x6], along with the args (0x1)
+       * passed with GK110_COMPUTE.GRAPH.SCRATCH[0x2]. This is currently
+       * disabled because our firmware doesn't support these commands and the
+       * GPU hangs if they are used. */
+      BEGIN_NIC0(push, SUBC_COMPUTE(0x0248), 64);
+      for (i = 63; i >= 0; i--)
          PUSH_DATA(push, 0x38000 | i);
       IMMED_NVC0(push, SUBC_COMPUTE(NV50_GRAPH_SERIALIZE), 0);
-      IMMED_NVC0(push, SUBC_COMPUTE(0x518), 0);
    }
 
    BEGIN_NVC0(push, NVE4_COMPUTE(TEX_CB_INDEX), 1);
