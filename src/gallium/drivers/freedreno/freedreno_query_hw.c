@@ -295,6 +295,8 @@ fd_hw_sample_init(struct fd_context *ctx, uint32_t size)
 	struct fd_hw_sample *samp = util_slab_alloc(&ctx->sample_pool);
 	pipe_reference_init(&samp->reference, 1);
 	samp->size = size;
+	debug_assert(util_is_power_of_two(size));
+	ctx->next_sample_offset = align(ctx->next_sample_offset, size);
 	samp->offset = ctx->next_sample_offset;
 	/* NOTE: util_slab_alloc() does not zero out the buffer: */
 	samp->bo = NULL;
