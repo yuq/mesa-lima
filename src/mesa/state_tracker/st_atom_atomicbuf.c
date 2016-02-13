@@ -58,9 +58,11 @@ st_bind_atomics(struct st_context *st,
          st_buffer_object(binding->BufferObject);
       struct pipe_shader_buffer sb = { 0 };
 
-      sb.buffer = st_obj->buffer;
-      sb.buffer_offset = binding->Offset;
-      sb.buffer_size = st_obj->buffer->width0 - binding->Offset;
+      if (st_obj && st_obj->buffer) {
+         sb.buffer = st_obj->buffer;
+         sb.buffer_offset = binding->Offset;
+         sb.buffer_size = st_obj->buffer->width0 - binding->Offset;
+      }
 
       st->pipe->set_shader_buffers(st->pipe, shader_type,
                                    atomic->Binding, 1, &sb);
