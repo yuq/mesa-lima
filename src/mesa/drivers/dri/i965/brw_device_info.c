@@ -384,20 +384,19 @@ static const struct brw_device_info brw_device_info_bxt = {
    .gt = 1,
    .has_llc = false,
 
-   /* XXX: These are preliminary thread counts and URB sizes. */
    .num_slices = 1,
-   .max_vs_threads = 56,
-   .max_hs_threads = 56,
-   .max_ds_threads = 56,
-   .max_gs_threads = 56,
+   .max_vs_threads = 112,
+   .max_hs_threads = 112,
+   .max_ds_threads = 112,
+   .max_gs_threads = 112,
    .max_wm_threads = 64 * 3,
-   .max_cs_threads = 28,
+   .max_cs_threads = 6 * 6,
    .urb = {
-      .size = 64,
+      .size = 192,
       .min_vs_entries = 34,
-      .max_vs_entries = 640,
-      .max_hs_entries = 80,
-      .max_ds_entries = 80,
+      .max_vs_entries = 704,
+      .max_hs_entries = 256,
+      .max_ds_entries = 416,
       .max_gs_entries = 256,
    }
 };
