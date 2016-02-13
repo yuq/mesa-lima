@@ -3246,6 +3246,15 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
       }
    }
 
+   if (qual->flags.q.explicit_xfb_stride) {
+      unsigned qual_xfb_stride;
+      if (process_qualifier_constant(state, loc, "xfb_stride",
+                                     qual->xfb_stride, &qual_xfb_stride)) {
+         var->data.xfb_stride = qual_xfb_stride;
+         var->data.explicit_xfb_stride = true;
+      }
+   }
+
    if (var->type->contains_atomic()) {
       if (var->data.mode == ir_var_uniform) {
          if (var->data.explicit_binding) {
@@ -6535,6 +6544,15 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          xfb_buffer = (int) block_xfb_buffer;
       }
 
+      int xfb_stride = -1;
+      if (qual->flags.q.explicit_xfb_stride) {
+         unsigned qual_xfb_stride;
+         if (process_qualifier_constant(state, &loc, "xfb_stride",
+                                        qual->xfb_stride, &qual_xfb_stride)) {
+            xfb_stride = (int) qual_xfb_stride;
+         }
+      }
+
       if (qual->flags.q.uniform && qual->has_interpolation()) {
          _mesa_glsl_error(&loc, state,
                           "interpolation qualifiers cannot be used "
@@ -6583,6 +6601,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          fields[i].offset = -1;
          fields[i].explicit_xfb_buffer = explicit_xfb_buffer;
          fields[i].xfb_buffer = xfb_buffer;
+         fields[i].xfb_stride = xfb_stride;
 
          if (qual->flags.q.explicit_location) {
             unsigned qual_location;
@@ -6968,6 +6987,14 @@ ast_interface_block::hir(exec_list *instructions,
    if (layout.flags.q.explicit_xfb_offset) {
       if (!process_qualifier_constant(state, &loc, "xfb_offset",
                                       layout.offset, &qual_xfb_offset)) {
+         return NULL;
+      }
+   }
+
+   unsigned qual_xfb_stride;
+   if (layout.flags.q.explicit_xfb_stride) {
+      if (!process_qualifier_constant(state, &loc, "xfb_stride",
+                                      layout.xfb_stride, &qual_xfb_stride)) {
          return NULL;
       }
    }
