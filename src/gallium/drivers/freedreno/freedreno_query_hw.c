@@ -330,7 +330,7 @@ prepare_sample(struct fd_hw_sample *samp, struct fd_bo *bo,
 		assert(samp->tile_stride == tile_stride);
 		return;
 	}
-	samp->bo = bo;
+	samp->bo = fd_bo_ref(bo);
 	samp->num_tiles = num_tiles;
 	samp->tile_stride = tile_stride;
 }
