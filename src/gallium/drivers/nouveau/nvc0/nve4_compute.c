@@ -51,6 +51,9 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
    case 0xe0:
       obj_class = NVE4_COMPUTE_CLASS; /* GK104 */
       break;
+   case 0x110:
+      obj_class = GM107_COMPUTE_CLASS;
+      break;
    default:
       NOUVEAU_ERR("unsupported chipset: NV%02x\n", dev->chipset);
       return -1;
@@ -128,7 +131,7 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
    BEGIN_NVC0(push, NVE4_COMPUTE(TEX_CB_INDEX), 1);
    PUSH_DATA (push, 0); /* does not interefere with 3D */
 
-   if (obj_class >= NVF0_COMPUTE_CLASS)
+   if (obj_class == NVF0_COMPUTE_CLASS)
       IMMED_NVC0(push, SUBC_COMPUTE(0x02c4), 1);
 
    /* MS sample coordinate offsets: these do not work with _ALT modes ! */
