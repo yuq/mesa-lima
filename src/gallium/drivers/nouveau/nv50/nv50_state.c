@@ -21,6 +21,7 @@
  */
 
 #include "pipe/p_defines.h"
+#include "util/u_framebuffer.h"
 #include "util/u_helpers.h"
 #include "util/u_inlines.h"
 #include "util/u_transfer.h"
@@ -936,21 +937,10 @@ nv50_set_framebuffer_state(struct pipe_context *pipe,
                            const struct pipe_framebuffer_state *fb)
 {
    struct nv50_context *nv50 = nv50_context(pipe);
-   unsigned i;
 
    nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
 
-   for (i = 0; i < fb->nr_cbufs; ++i)
-      pipe_surface_reference(&nv50->framebuffer.cbufs[i], fb->cbufs[i]);
-   for (; i < nv50->framebuffer.nr_cbufs; ++i)
-      pipe_surface_reference(&nv50->framebuffer.cbufs[i], NULL);
-
-   nv50->framebuffer.nr_cbufs = fb->nr_cbufs;
-
-   nv50->framebuffer.width = fb->width;
-   nv50->framebuffer.height = fb->height;
-
-   pipe_surface_reference(&nv50->framebuffer.zsbuf, fb->zsbuf);
+   util_copy_framebuffer_state(&nv50->framebuffer, fb);
 
    nv50->dirty |= NV50_NEW_FRAMEBUFFER;
 }
