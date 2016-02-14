@@ -1061,10 +1061,9 @@ public:
 
 class ast_interface_block : public ast_node {
 public:
-   ast_interface_block(ast_type_qualifier layout,
-                       const char *instance_name,
+   ast_interface_block(const char *instance_name,
                        ast_array_specifier *array_specifier)
-   : layout(layout), block_name(NULL), instance_name(instance_name),
+   : block_name(NULL), instance_name(instance_name),
      array_specifier(array_specifier)
    {
    }
