@@ -85,14 +85,15 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 #endif
 
    uint32_t elem_count = __builtin_popcount(elements) + needs_svgs_elem;
+   if (elem_count == 0)
+      return;
 
    uint32_t *p;
-   if (elem_count > 0) {
-      const uint32_t num_dwords = 1 + elem_count * 2;
-      p = anv_batch_emitn(&pipeline->batch, num_dwords,
-                          GENX(3DSTATE_VERTEX_ELEMENTS));
-      memset(p + 1, 0, (num_dwords - 1) * 4);
-   }
+
+   const uint32_t num_dwords = 1 + elem_count * 2;
+   p = anv_batch_emitn(&pipeline->batch, num_dwords,
+                       GENX(3DSTATE_VERTEX_ELEMENTS));
+   memset(p + 1, 0, (num_dwords - 1) * 4);
 
    for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++) {
       const VkVertexInputAttributeDescription *desc =
