@@ -160,6 +160,12 @@ static void
 fd_hw_end_query(struct fd_context *ctx, struct fd_query *q)
 {
 	struct fd_hw_query *hq = fd_hw_query(q);
+	/* there are a couple special cases, which don't have
+	 * a matching ->begin_query():
+	 */
+	if (skip_begin_query(q->type) && !q->active) {
+		fd_hw_begin_query(ctx, q);
+	}
 	if (!q->active)
 		return;
 	if (is_active(hq, ctx->stage))
