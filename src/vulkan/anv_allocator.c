@@ -712,7 +712,7 @@ anv_state_stream_init(struct anv_state_stream *stream,
 void
 anv_state_stream_finish(struct anv_state_stream *stream)
 {
-   const uint32_t block_size = stream->block_pool->block_size;
+   VG(const uint32_t block_size = stream->block_pool->block_size);
 
    struct anv_state_stream_block *next = stream->block;
    while (next != NULL) {

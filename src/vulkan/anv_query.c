@@ -133,14 +133,13 @@ VkResult anv_GetQueryPoolResults(
          break;
       }
       case VK_QUERY_TYPE_PIPELINE_STATISTICS:
-         /* Not yet implemented */
-         break;
+         unreachable("pipeline stats not supported");
       case VK_QUERY_TYPE_TIMESTAMP: {
          result = slot[firstQuery + i].begin;
          break;
       }
       default:
-         assert(!"Invalid query type");
+         unreachable("invalid pool type");
       }
 
       if (flags & VK_QUERY_RESULT_64_BIT) {

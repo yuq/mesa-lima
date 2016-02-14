@@ -355,7 +355,7 @@ anv_batch_bo_list_clone(const struct list_head *list,
 
    struct anv_batch_bo *prev_bbo = NULL;
    list_for_each_entry(struct anv_batch_bo, bbo, list, link) {
-      struct anv_batch_bo *new_bbo;
+      struct anv_batch_bo *new_bbo = NULL;
       result = anv_batch_bo_clone(cmd_buffer, bbo, &new_bbo);
       if (result != VK_SUCCESS)
          break;

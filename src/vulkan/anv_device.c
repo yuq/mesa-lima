@@ -854,6 +854,10 @@ VkResult anv_CreateDevice(
    case 9:
       result = gen9_init_device_state(device);
       break;
+   default:
+      /* Shouldn't get here as we don't create physical devices for any other
+       * gens. */
+      unreachable("unhandled gen");
    }
    if (result != VK_SUCCESS)
       goto fail_fd;
