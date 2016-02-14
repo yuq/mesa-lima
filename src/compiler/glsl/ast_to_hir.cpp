@@ -6465,8 +6465,10 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
           * the structure may contain a structure that contains ... a matrix
           * that need the proper layout.
           */
-         if (field_type->without_array()->is_matrix()
-             || field_type->without_array()->is_record()) {
+         if (is_interface &&
+             (layout->flags.q.uniform || layout->flags.q.buffer) &&
+             (field_type->without_array()->is_matrix()
+              || field_type->without_array()->is_record())) {
             /* If no layout is specified for the field, inherit the layout
              * from the block.
              */
@@ -6477,11 +6479,10 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             else if (qual->flags.q.column_major)
                fields[i].matrix_layout = GLSL_MATRIX_LAYOUT_COLUMN_MAJOR;
 
-            /* If we're processing an interface block, the matrix layout must
-             * be decided by this point.
+            /* If we're processing an uniform or buffer block, the matrix
+             * layout must be decided by this point.
              */
-            assert(!is_interface
-                   || fields[i].matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR
+            assert(fields[i].matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR
                    || fields[i].matrix_layout == GLSL_MATRIX_LAYOUT_COLUMN_MAJOR);
          }
 
