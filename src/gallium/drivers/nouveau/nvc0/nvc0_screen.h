@@ -53,6 +53,7 @@ struct nvc0_graph_state {
    uint32_t clip_mode;
    uint32_t uniform_buffer_bound[5];
    struct nvc0_transform_feedback_state *tfb;
+   bool seamless_cube_map;
 };
 
 struct nvc0_screen {

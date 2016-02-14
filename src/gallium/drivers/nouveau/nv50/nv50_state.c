@@ -516,6 +516,8 @@ nv50_sampler_state_create(struct pipe_context *pipe,
          so->tsc[1] |= GK104_TSC_1_CUBEMAP_INTERFACE_FILTERING;
       if (!cso->normalized_coords)
          so->tsc[1] |= GK104_TSC_1_FLOAT_COORD_NORMALIZATION_FORCE_UNNORMALIZED_COORDS;
+   } else {
+      so->seamless_cube_map = cso->seamless_cube_map;
    }
 
    if (cso->max_anisotropy >= 16)

@@ -595,6 +595,7 @@ nvc0_validate_tsc(struct nvc0_context *nvc0, int s)
          commands[n++] = (i << 4) | 0;
          continue;
       }
+      nvc0->seamless_cube_map = tsc->seamless_cube_map;
       if (tsc->id < 0) {
          tsc->id = nvc0_screen_tsc_alloc(nvc0->screen, tsc);
 

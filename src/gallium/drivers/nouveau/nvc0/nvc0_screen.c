@@ -876,8 +876,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    BEGIN_NVC0(push, NVC0_3D(SHADE_MODEL), 1);
    PUSH_DATA (push, NVC0_3D_SHADE_MODEL_SMOOTH);
    if (screen->eng3d->oclass < NVE4_3D_CLASS) {
-      BEGIN_NVC0(push, NVC0_3D(TEX_MISC), 1);
-      PUSH_DATA (push, NVC0_3D_TEX_MISC_SEAMLESS_CUBE_MAP);
+      IMMED_NVC0(push, NVC0_3D(TEX_MISC), 0);
    } else {
       BEGIN_NVC0(push, NVE4_3D(TEX_CB_INDEX), 1);
       PUSH_DATA (push, 15);

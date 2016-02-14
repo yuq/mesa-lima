@@ -816,6 +816,13 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       PUSH_DATA (push, 0x20);
    }
 
+   if (nv50->screen->base.class_3d >= NVA0_3D_CLASS &&
+       nv50->seamless_cube_map != nv50->state.seamless_cube_map) {
+      nv50->state.seamless_cube_map = nv50->seamless_cube_map;
+      BEGIN_NV04(push, SUBC_3D(NVA0_3D_TEX_MISC), 1);
+      PUSH_DATA (push, nv50->seamless_cube_map ? NVA0_3D_TEX_MISC_SEAMLESS_CUBE_MAP : 0);
+   }
+
    if (nv50->vbo_fifo) {
       nv50_push_vbo(nv50, info);
       push->kick_notify = nv50_default_kick_notify;

@@ -984,6 +984,14 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       }
    }
 
+   if (nvc0->screen->base.class_3d < NVE4_3D_CLASS &&
+       nvc0->seamless_cube_map != nvc0->state.seamless_cube_map) {
+      nvc0->state.seamless_cube_map = nvc0->seamless_cube_map;
+      PUSH_SPACE(push, 1);
+      IMMED_NVC0(push, NVC0_3D(TEX_MISC),
+                 nvc0->seamless_cube_map ? NVC0_3D_TEX_MISC_SEAMLESS_CUBE_MAP : 0);
+   }
+
    push->kick_notify = nvc0_draw_vbo_kick_notify;
 
    for (s = 0; s < 5 && !nvc0->cb_dirty; ++s) {

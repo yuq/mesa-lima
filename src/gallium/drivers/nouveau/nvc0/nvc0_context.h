@@ -157,6 +157,7 @@ struct nvc0_context {
    struct nv50_tsc_entry *samplers[6][PIPE_MAX_SAMPLERS];
    unsigned num_samplers[6];
    uint16_t samplers_dirty[6];
+   bool seamless_cube_map;
 
    uint32_t tex_handles[6][PIPE_MAX_SAMPLERS]; /* for nve4 */
 

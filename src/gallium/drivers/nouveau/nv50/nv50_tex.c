@@ -361,6 +361,7 @@ nv50_validate_tsc(struct nv50_context *nv50, int s)
          PUSH_DATA (push, (i << 4) | 0);
          continue;
       }
+      nv50->seamless_cube_map = tsc->seamless_cube_map;
       if (tsc->id < 0) {
          tsc->id = nv50_screen_tsc_alloc(nv50->screen, tsc);
 

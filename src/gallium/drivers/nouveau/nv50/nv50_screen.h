@@ -50,6 +50,7 @@ struct nv50_graph_state {
    uint8_t num_samplers[3];
    uint8_t prim_size;
    uint16_t scissor;
+   bool seamless_cube_map;
 };
 
 struct nv50_screen {
