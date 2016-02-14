@@ -81,7 +81,12 @@ static uint64_t
 count_samples(const struct fd_rb_samp_ctrs *start,
 		const struct fd_rb_samp_ctrs *end)
 {
-	return end->ctr[0] - start->ctr[0];
+	uint64_t n = 0;
+
+	for (unsigned i = 0; i < 16; i += 4)
+		n += end->ctr[i] - start->ctr[i];
+
+	return n / 2;
 }
 
 static void
