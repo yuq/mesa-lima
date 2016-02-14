@@ -2146,6 +2146,9 @@ int nir_gs_count_vertices(const nir_shader *shader);
 
 bool nir_split_var_copies(nir_shader *shader);
 
+bool nir_lower_returns_impl(nir_function_impl *impl);
+bool nir_lower_returns(nir_shader *shader);
+
 void nir_lower_var_copy_instr(nir_intrinsic_instr *copy, void *mem_ctx);
 void nir_lower_var_copies(nir_shader *shader);
 
