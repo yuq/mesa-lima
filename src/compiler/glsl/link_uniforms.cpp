@@ -649,15 +649,15 @@ private:
              current_var->data.image_write_only ? GL_WRITE_ONLY :
                 GL_READ_WRITE);
 
-         for (unsigned j = 0; j < MAX2(1, uniform->array_elements); ++j)
-            prog->_LinkedShaders[shader_type]->
-               ImageAccess[this->next_image + j] = access;
+         const unsigned first = this->next_image;
 
          /* Increment the image index by 1 for non-arrays and by the
           * number of array elements for arrays.
           */
          this->next_image += MAX2(1, uniform->array_elements);
 
+         for (unsigned i = first; i < MIN2(next_image, MAX_IMAGE_UNIFORMS); i++)
+            prog->_LinkedShaders[shader_type]->ImageAccess[i] = access;
       }
    }
 
