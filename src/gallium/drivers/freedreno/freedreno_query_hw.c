@@ -47,8 +47,13 @@ static int pidx(unsigned query_type)
 		return 0;
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		return 1;
+	/* TODO currently queries only emitted in main pass (not in binning pass)..
+	 * which is fine for occlusion query, but pretty much not anything else.
+	 */
 	case PIPE_QUERY_TIME_ELAPSED:
 		return 2;
+	case PIPE_QUERY_TIMESTAMP:
+		return 3;
 	default:
 		return -1;
 	}

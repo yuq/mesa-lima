@@ -224,6 +224,19 @@ time_elapsed_accumulate_result(struct fd_context *ctx,
 	result->u64 += n * 1000000000 / ctx->screen->max_freq;
 }
 
+static void
+timestamp_accumulate_result(struct fd_context *ctx,
+		const void *start, const void *end,
+		union pipe_query_result *result)
+{
+	/* just return the value from fist tile: */
+	if (result->u64 != 0)
+		return;
+	uint64_t n = *(uint64_t *)start;
+	/* max_freq is in Hz, convert cycle count to ns: */
+	result->u64 = n * 1000000000 / ctx->screen->max_freq;
+}
+
 static const struct fd_hw_sample_provider occlusion_counter = {
 		.query_type = PIPE_QUERY_OCCLUSION_COUNTER,
 		.active = FD_STAGE_DRAW,
@@ -246,9 +259,24 @@ static const struct fd_hw_sample_provider time_elapsed = {
 		.accumulate_result = time_elapsed_accumulate_result,
 };
 
+/* NOTE: timestamp query isn't going to give terribly sensible results
+ * on a tiler.  But it is needed by qapitrace profile heatmap.  If you
+ * add in a binning pass, the results get even more non-sensical.  So
+ * we just return the timestamp on the first tile and hope that is
+ * kind of good enough.
+ */
+static const struct fd_hw_sample_provider timestamp = {
+		.query_type = PIPE_QUERY_TIMESTAMP,
+		.active = FD_STAGE_ALL,
+		.enable = time_elapsed_enable,
+		.get_sample = time_elapsed_get_sample,
+		.accumulate_result = timestamp_accumulate_result,
+};
+
 void fd4_query_context_init(struct pipe_context *pctx)
 {
 	fd_hw_query_register_provider(pctx, &occlusion_counter);
 	fd_hw_query_register_provider(pctx, &occlusion_predicate);
 	fd_hw_query_register_provider(pctx, &time_elapsed);
+	fd_hw_query_register_provider(pctx, &timestamp);
 }
