@@ -76,11 +76,13 @@ _mesa_num_tex_faces(GLenum target)
 static inline GLenum
 _mesa_cube_face_target(GLenum target, unsigned face)
 {
-   assert(face < 6);
-   if (target == GL_TEXTURE_CUBE_MAP)
+   if (target == GL_TEXTURE_CUBE_MAP) {
+      assert(face < 6);
       return GL_TEXTURE_CUBE_MAP_POSITIVE_X + face;
-   else
+   }
+   else {
       return target;
+   }
 }
 
 
