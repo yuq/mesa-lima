@@ -393,4 +393,11 @@ nir_load_system_value(nir_builder *build, nir_intrinsic_op op, int index)
    return &load->dest.ssa;
 }
 
+static inline void
+nir_jump(nir_builder *build, nir_jump_type jump_type)
+{
+   nir_jump_instr *jump = nir_jump_instr_create(build->shader, jump_type);
+   nir_builder_instr_insert(build, &jump->instr);
+}
+
 #endif /* NIR_BUILDER_H */
