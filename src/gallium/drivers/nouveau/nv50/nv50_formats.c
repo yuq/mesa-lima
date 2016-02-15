@@ -28,7 +28,7 @@
 # include "nv50/nv50_3d.xml.h"
 #endif
 #include "nv50/nv50_texture.xml.h"
-#include "nv50/nv50_defs.xml.h"
+#include "nv50/g80_defs.xml.h"
 
 #include "pipe/p_defines.h"
 
@@ -59,8 +59,8 @@
 # define U_t   0
 #endif
 
-#define NV50_ZETA_FORMAT_NONE    0
-#define NV50_SURFACE_FORMAT_NONE 0
+#define G80_ZETA_FORMAT_NONE    0
+#define G80_SURFACE_FORMAT_NONE 0
 
 #define SF_A(sz) NV50_TIC_0_FMT_##sz
 #define SF_C(sz) NVC0_TIC_0_FMT_##sz
@@ -79,19 +79,19 @@
    }
 
 #define C4(c, p, n, r, g, b, a, t, s, u)                                \
-   SF(c, p, NV50_SURFACE_FORMAT_##n, r, g, b, a, t, t, t, t, s, u)
+   SF(c, p, G80_SURFACE_FORMAT_##n, r, g, b, a, t, t, t, t, s, u)
 
 #define ZX(c, p, n, r, g, b, a, t, s, u)                                \
-   SF(c, p, NV50_ZETA_FORMAT_##n,                                       \
+   SF(c, p, G80_ZETA_FORMAT_##n,                                        \
       r, g, b, ONE_FLOAT, t, UINT, UINT, UINT, s, u)
 #define ZS(c, p, n, r, g, b, a, t, s, u)                                \
-   SF(c, p, NV50_ZETA_FORMAT_##n,                                       \
+   SF(c, p, G80_ZETA_FORMAT_##n,                                        \
       r, g, b, ONE_FLOAT, t, UINT, UINT, UINT, s, u)
 #define SZ(c, p, n, r, g, b, a, t, s, u)                                \
-   SF(c, p, NV50_ZETA_FORMAT_##n,                                       \
+   SF(c, p, G80_ZETA_FORMAT_##n,                                        \
       r, g, b, ONE_FLOAT, UINT, t, UINT, UINT, s, u)
 #define SX(c, p, r, s, u)                                               \
-   SF(c, p, NV50_ZETA_FORMAT_NONE,                                      \
+   SF(c, p, G80_ZETA_FORMAT_NONE,                                       \
       r, r, r, r, UINT, UINT, UINT, UINT, s, u)
 
 #define F3(c, p, n, r, g, b, a, t, s, u)         \
