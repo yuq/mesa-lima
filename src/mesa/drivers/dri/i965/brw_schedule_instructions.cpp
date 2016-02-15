@@ -964,10 +964,7 @@ fs_instruction_scheduler::calculate_deps()
             }
          } else if (inst->src[i].is_accumulator()) {
             add_dep(last_accumulator_write, n);
-         } else if (inst->src[i].file != BAD_FILE &&
-                    inst->src[i].file != IMM &&
-                    inst->src[i].file != UNIFORM) {
-            assert(inst->src[i].file != MRF);
+         } else if (inst->src[i].file == ARF) {
             add_barrier_deps(n);
          }
       }
@@ -1026,8 +1023,7 @@ fs_instruction_scheduler::calculate_deps()
       } else if (inst->dst.is_accumulator()) {
          add_dep(last_accumulator_write, n);
          last_accumulator_write = n;
-      } else if (inst->dst.file != BAD_FILE &&
-                 !inst->dst.is_null()) {
+      } else if (inst->dst.file == ARF && !inst->dst.is_null()) {
          add_barrier_deps(n);
       }
 
@@ -1080,10 +1076,7 @@ fs_instruction_scheduler::calculate_deps()
             }
          } else if (inst->src[i].is_accumulator()) {
             add_dep(n, last_accumulator_write, 0);
-         } else if (inst->src[i].file != BAD_FILE &&
-                    inst->src[i].file != IMM &&
-                    inst->src[i].file != UNIFORM) {
-            assert(inst->src[i].file != MRF);
+         } else if (inst->src[i].file == ARF) {
             add_barrier_deps(n);
          }
       }
@@ -1140,8 +1133,7 @@ fs_instruction_scheduler::calculate_deps()
          }
       } else if (inst->dst.is_accumulator()) {
          last_accumulator_write = n;
-      } else if (inst->dst.file != BAD_FILE &&
-                 !inst->dst.is_null()) {
+      } else if (inst->dst.file == ARF && !inst->dst.is_null()) {
          add_barrier_deps(n);
       }
 
@@ -1204,12 +1196,7 @@ vec4_instruction_scheduler::calculate_deps()
          } else if (inst->src[i].is_accumulator()) {
             assert(last_accumulator_write);
             add_dep(last_accumulator_write, n);
-         } else if (inst->src[i].file != BAD_FILE &&
-                    inst->src[i].file != IMM &&
-                    inst->src[i].file != UNIFORM) {
-            /* No reads from MRF, and ATTR is already translated away */
-            assert(inst->src[i].file != MRF &&
-                   inst->src[i].file != ATTR);
+         } else if (inst->src[i].file == ARF) {
             add_barrier_deps(n);
          }
       }
@@ -1248,8 +1235,7 @@ vec4_instruction_scheduler::calculate_deps()
       } else if (inst->dst.is_accumulator()) {
          add_dep(last_accumulator_write, n);
          last_accumulator_write = n;
-      } else if (inst->dst.file != BAD_FILE &&
-                 !inst->dst.is_null()) {
+      } else if (inst->dst.file == ARF && !inst->dst.is_null()) {
          add_barrier_deps(n);
       }
 
@@ -1291,11 +1277,7 @@ vec4_instruction_scheduler::calculate_deps()
             add_dep(n, last_fixed_grf_write);
          } else if (inst->src[i].is_accumulator()) {
             add_dep(n, last_accumulator_write);
-         } else if (inst->src[i].file != BAD_FILE &&
-                    inst->src[i].file != IMM &&
-                    inst->src[i].file != UNIFORM) {
-            assert(inst->src[i].file != MRF &&
-                   inst->src[i].file != ATTR);
+         } else if (inst->src[i].file == ARF) {
             add_barrier_deps(n);
          }
       }
@@ -1330,8 +1312,7 @@ vec4_instruction_scheduler::calculate_deps()
          last_fixed_grf_write = n;
       } else if (inst->dst.is_accumulator()) {
          last_accumulator_write = n;
-      } else if (inst->dst.file != BAD_FILE &&
-                 !inst->dst.is_null()) {
+      } else if (inst->dst.file == ARF && !inst->dst.is_null()) {
          add_barrier_deps(n);
       }
 
