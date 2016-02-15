@@ -323,9 +323,23 @@ genX(graphics_pipeline_create)(
    }
 
    if (pipeline->ps_ksp0 == NO_KERNEL) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS));
-      anv_finishme("gen7 alternative to "
-                   "3DSTATE_PS_EXTRA.PixelShaderValid = false");
+     anv_finishme("disabling ps");
+
+     /* FIXME: generated header doesn't emit attr swizzle fields */
+     anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_SBE);
+
+     /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
+     anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_WM,
+		    .StatisticsEnable                         = true,
+		    .ThreadDispatchEnable                     = false,
+		    .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */
+		    .LineAntialiasingRegionWidth              = 1, /* 1.0 pixels */
+		    .EarlyDepthStencilControl                 = EDSC_NORMAL,
+		    .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT);
+
+
+     anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS));
+
    } else {
       const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
       if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
