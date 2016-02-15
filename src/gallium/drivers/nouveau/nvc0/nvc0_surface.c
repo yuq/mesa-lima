@@ -34,7 +34,7 @@
 #include "nvc0/nvc0_context.h"
 #include "nvc0/nvc0_resource.h"
 
-#include "nv50/nv50_defs.xml.h"
+#include "nv50/g80_defs.xml.h"
 #include "nv50/nv50_texture.xml.h"
 
 /* these are used in nv50_blit.h */
@@ -54,7 +54,7 @@ nvc0_2d_format(enum pipe_format format, bool dst, bool dst_src_equal)
 
    /* A8_UNORM is treated as I8_UNORM as far as the 2D engine is concerned. */
    if (!dst && unlikely(format == PIPE_FORMAT_I8_UNORM) && !dst_src_equal)
-      return NV50_SURFACE_FORMAT_A8_UNORM;
+      return G80_SURFACE_FORMAT_A8_UNORM;
 
    /* Hardware values for color formats range from 0xc0 to 0xff,
     * but the 2D engine doesn't support all of them.
@@ -65,15 +65,15 @@ nvc0_2d_format(enum pipe_format format, bool dst, bool dst_src_equal)
 
    switch (util_format_get_blocksize(format)) {
    case 1:
-      return NV50_SURFACE_FORMAT_R8_UNORM;
+      return G80_SURFACE_FORMAT_R8_UNORM;
    case 2:
-      return NV50_SURFACE_FORMAT_RG8_UNORM;
+      return G80_SURFACE_FORMAT_RG8_UNORM;
    case 4:
-      return NV50_SURFACE_FORMAT_BGRA8_UNORM;
+      return G80_SURFACE_FORMAT_BGRA8_UNORM;
    case 8:
-      return NV50_SURFACE_FORMAT_RGBA16_UNORM;
+      return G80_SURFACE_FORMAT_RGBA16_UNORM;
    case 16:
-      return NV50_SURFACE_FORMAT_RGBA32_FLOAT;
+      return G80_SURFACE_FORMAT_RGBA32_FLOAT;
    default:
       assert(0);
       return 0;
