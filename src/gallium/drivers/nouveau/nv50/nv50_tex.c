@@ -23,7 +23,7 @@
 #include "nv50/nv50_context.h"
 #include "nv50/nv50_resource.h"
 #include "nv50/nv50_texture.xml.h"
-#include "nv50/nv50_defs.xml.h"
+#include "nv50/g80_defs.xml.h"
 
 #include "util/u_format.h"
 
@@ -265,7 +265,7 @@ nv50_validate_tic(struct nv50_context *nv50, int s)
          tic->id = nv50_screen_tic_alloc(nv50->screen, tic);
 
          BEGIN_NV04(push, NV50_2D(DST_FORMAT), 2);
-         PUSH_DATA (push, NV50_SURFACE_FORMAT_R8_UNORM);
+         PUSH_DATA (push, G80_SURFACE_FORMAT_R8_UNORM);
          PUSH_DATA (push, 1);
          BEGIN_NV04(push, NV50_2D(DST_PITCH), 5);
          PUSH_DATA (push, 262144);
@@ -275,7 +275,7 @@ nv50_validate_tic(struct nv50_context *nv50, int s)
          PUSH_DATA (push, txc->offset);
          BEGIN_NV04(push, NV50_2D(SIFC_BITMAP_ENABLE), 2);
          PUSH_DATA (push, 0);
-         PUSH_DATA (push, NV50_SURFACE_FORMAT_R8_UNORM);
+         PUSH_DATA (push, G80_SURFACE_FORMAT_R8_UNORM);
          BEGIN_NV04(push, NV50_2D(SIFC_WIDTH), 10);
          PUSH_DATA (push, 32);
          PUSH_DATA (push, 1);
