@@ -84,6 +84,9 @@ struct si_compute;
 struct si_screen {
 	struct r600_common_screen	b;
 	unsigned			gs_table_depth;
+
+	/* Whether shaders are monolithic (1-part) or separate (3-part). */
+	bool				use_monolithic_shaders;
 };
 
 struct si_blend_color {

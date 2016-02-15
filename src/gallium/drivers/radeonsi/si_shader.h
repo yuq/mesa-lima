@@ -363,7 +363,7 @@ static inline bool si_vs_exports_prim_id(struct si_shader *shader)
 		return false;
 }
 
-/* radeonsi_shader.c */
+/* si_shader.c */
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug);

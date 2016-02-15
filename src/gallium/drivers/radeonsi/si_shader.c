@@ -70,6 +70,12 @@ struct si_shader_context
 
 	unsigned type; /* TGSI_PROCESSOR_* specifies the type of shader. */
 	bool is_gs_copy_shader;
+
+	/* Whether to generate the optimized shader variant compiled as a whole
+	 * (without a prolog and epilog)
+	 */
+	bool is_monolithic;
+
 	int param_streamout_config;
 	int param_streamout_write_index;
 	int param_streamout_offset[4];
@@ -3657,8 +3663,10 @@ static void create_function(struct si_shader_context *ctx)
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct si_shader *shader = ctx->shader;
-	LLVMTypeRef params[SI_NUM_PARAMS], v2i32, v3i32;
+	LLVMTypeRef params[SI_NUM_PARAMS + SI_NUM_VERTEX_BUFFERS], v2i32, v3i32;
+	LLVMTypeRef returns[16+32*4];
 	unsigned i, last_array_pointer, last_sgpr, num_params;
+	unsigned num_returns = 0;
 
 	v2i32 = LLVMVectorType(ctx->i32, 2);
 	v3i32 = LLVMVectorType(ctx->i32, 3);
@@ -3785,7 +3793,7 @@ static void create_function(struct si_shader_context *ctx)
 
 	assert(num_params <= Elements(params));
 
-	si_create_function(ctx, NULL, 0, params,
+	si_create_function(ctx, returns, num_returns, params,
 			   num_params, last_array_pointer, last_sgpr);
 
 	shader->num_input_sgprs = 0;
@@ -4499,9 +4507,11 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_MIN].intr_name = "llvm.minnum.f32";
 }
 
-int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
-		     struct si_shader *shader,
-		     struct pipe_debug_callback *debug)
+static int si_compile_tgsi_shader(struct si_screen *sscreen,
+				  LLVMTargetMachineRef tm,
+				  struct si_shader *shader,
+				  bool is_monolithic,
+				  struct pipe_debug_callback *debug)
 {
 	struct si_shader_selector *sel = shader->selector;
 	struct tgsi_token *tokens = sel->tokens;
@@ -4531,6 +4541,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 	si_init_shader_ctx(&ctx, sscreen, shader, tm,
 			   poly_stipple ? &stipple_shader_info : &sel->info);
+	ctx.is_monolithic = is_monolithic;
 
 	shader->uses_instanceid = sel->info.uses_instanceid;
 
@@ -4611,14 +4622,6 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		goto out;
 	}
 
-	si_shader_dump(sscreen, shader, debug, ctx.type);
-
-	r = si_shader_binary_upload(sscreen, shader);
-	if (r) {
-		fprintf(stderr, "LLVM failed to upload shader\n");
-		goto out;
-	}
-
 	radeon_llvm_dispose(&ctx.radeon_bld);
 
 	/* Calculate the number of fragment input VGPRs. */
@@ -4680,6 +4683,30 @@ out:
 	if (poly_stipple)
 		tgsi_free_tokens(tokens);
 	return r;
+}
+
+int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
+		     struct si_shader *shader,
+		     struct pipe_debug_callback *debug)
+{
+	int r;
+
+	/* Compile TGSI. */
+	r = si_compile_tgsi_shader(sscreen, tm, shader,
+				   sscreen->use_monolithic_shaders, debug);
+	if (r)
+		return r;
+
+	si_shader_dump(sscreen, shader, debug, shader->selector->info.processor);
+
+	/* Upload. */
+	r = si_shader_binary_upload(sscreen, shader);
+	if (r) {
+		fprintf(stderr, "LLVM failed to upload shader\n");
+		return r;
+	}
+
+	return 0;
 }
 
 void si_shader_destroy(struct si_shader *shader)
