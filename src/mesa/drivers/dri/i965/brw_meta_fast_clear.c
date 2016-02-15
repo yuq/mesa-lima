@@ -887,15 +887,6 @@ brw_meta_resolve_color(struct brw_context *brw,
 
    _mesa_meta_end(ctx);
 
-   /* Restore in case we were called in the middle of brw_try_draw_prims().
-    * But only in case the just restored context really uses vertex buffer
-    * objects.
-    */
-   if (ctx->API != API_OPENGLES) {
-      ctx->vbo_context->exec.array.recalculate_inputs = true;
-      vbo_bind_arrays(ctx);
-   }
-
    /* We're typically called from intel_update_state() and we're supposed to
     * return with the state all updated to what it was before
     * brw_meta_resolve_color() was called.  The meta rendering will have
