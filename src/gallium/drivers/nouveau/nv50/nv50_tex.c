@@ -22,32 +22,32 @@
 
 #include "nv50/nv50_context.h"
 #include "nv50/nv50_resource.h"
-#include "nv50/nv50_texture.xml.h"
+#include "nv50/g80_texture.xml.h"
 #include "nv50/g80_defs.xml.h"
 
 #include "util/u_format.h"
 
-#define NV50_TIC_0_SWIZZLE__MASK                      \
-   (NV50_TIC_0_MAPA__MASK | NV50_TIC_0_MAPB__MASK |   \
-    NV50_TIC_0_MAPG__MASK | NV50_TIC_0_MAPR__MASK)
+#define G80_TIC_0_SWIZZLE__MASK                      \
+   (G80_TIC_0_W_SOURCE__MASK | G80_TIC_0_Z_SOURCE__MASK |   \
+    G80_TIC_0_Y_SOURCE__MASK | G80_TIC_0_X_SOURCE__MASK)
 
 static inline uint32_t
 nv50_tic_swizzle(uint32_t tc, unsigned swz, bool tex_int)
 {
    switch (swz) {
    case PIPE_SWIZZLE_RED:
-      return (tc & NV50_TIC_0_MAPR__MASK) >> NV50_TIC_0_MAPR__SHIFT;
+      return (tc & G80_TIC_0_X_SOURCE__MASK) >> G80_TIC_0_X_SOURCE__SHIFT;
    case PIPE_SWIZZLE_GREEN:
-      return (tc & NV50_TIC_0_MAPG__MASK) >> NV50_TIC_0_MAPG__SHIFT;
+      return (tc & G80_TIC_0_Y_SOURCE__MASK) >> G80_TIC_0_Y_SOURCE__SHIFT;
    case PIPE_SWIZZLE_BLUE:
-      return (tc & NV50_TIC_0_MAPB__MASK) >> NV50_TIC_0_MAPB__SHIFT;
+      return (tc & G80_TIC_0_Z_SOURCE__MASK) >> G80_TIC_0_Z_SOURCE__SHIFT;
    case PIPE_SWIZZLE_ALPHA:
-      return (tc & NV50_TIC_0_MAPA__MASK) >> NV50_TIC_0_MAPA__SHIFT;
+      return (tc & G80_TIC_0_W_SOURCE__MASK) >> G80_TIC_0_W_SOURCE__SHIFT;
    case PIPE_SWIZZLE_ONE:
-      return tex_int ? NV50_TIC_MAP_ONE_INT : NV50_TIC_MAP_ONE_FLOAT;
+      return tex_int ? G80_TIC_SOURCE_ONE_INT : G80_TIC_SOURCE_ONE_FLOAT;
    case PIPE_SWIZZLE_ZERO:
    default:
-      return NV50_TIC_MAP_ZERO;
+      return G80_TIC_SOURCE_ZERO;
    }
 }
 
@@ -108,11 +108,11 @@ nv50_create_texture_view(struct pipe_context *pipe,
    swz[1] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_g, tex_int);
    swz[2] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_b, tex_int);
    swz[3] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_a, tex_int);
-   tic[0] = (tic[0] & ~NV50_TIC_0_SWIZZLE__MASK) |
-      (swz[0] << NV50_TIC_0_MAPR__SHIFT) |
-      (swz[1] << NV50_TIC_0_MAPG__SHIFT) |
-      (swz[2] << NV50_TIC_0_MAPB__SHIFT) |
-      (swz[3] << NV50_TIC_0_MAPA__SHIFT);
+   tic[0] = (tic[0] & ~G80_TIC_0_SWIZZLE__MASK) |
+      (swz[0] << G80_TIC_0_X_SOURCE__SHIFT) |
+      (swz[1] << G80_TIC_0_Y_SOURCE__SHIFT) |
+      (swz[2] << G80_TIC_0_Z_SOURCE__SHIFT) |
+      (swz[3] << G80_TIC_0_W_SOURCE__SHIFT);
 
    addr = mt->base.address;
 
@@ -124,24 +124,24 @@ nv50_create_texture_view(struct pipe_context *pipe,
       depth = view->pipe.u.tex.last_layer - view->pipe.u.tex.first_layer + 1;
    }
 
-   tic[2] = 0x10001000 | NV50_TIC_2_NO_BORDER;
+   tic[2] = 0x10001000 | G80_TIC_2_BORDER_SOURCE_COLOR;
 
    if (desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB)
-      tic[2] |= NV50_TIC_2_COLORSPACE_SRGB;
+      tic[2] |= G80_TIC_2_SRGB_CONVERSION;
 
    if (!(flags & NV50_TEXVIEW_SCALED_COORDS))
-      tic[2] |= NV50_TIC_2_NORMALIZED_COORDS;
+      tic[2] |= G80_TIC_2_NORMALIZED_COORDS;
 
    if (unlikely(!nouveau_bo_memtype(nv04_resource(texture)->bo))) {
       if (target == PIPE_BUFFER) {
          addr += view->pipe.u.buf.first_element * desc->block.bits / 8;
-         tic[2] |= NV50_TIC_2_LINEAR | NV50_TIC_2_TARGET_BUFFER;
+         tic[2] |= G80_TIC_2_LAYOUT_PITCH | G80_TIC_2_TEXTURE_TYPE_ONE_D_BUFFER;
          tic[3] = 0;
          tic[4] = /* width */
             view->pipe.u.buf.last_element - view->pipe.u.buf.first_element + 1;
          tic[5] = 0;
       } else {
-         tic[2] |= NV50_TIC_2_LINEAR | NV50_TIC_2_TARGET_RECT;
+         tic[2] |= G80_TIC_2_LAYOUT_PITCH | G80_TIC_2_TEXTURE_TYPE_TWO_D_NO_MIPMAP;
          tic[3] = mt->level[0].pitch;
          tic[4] = mt->base.base.width0;
          tic[5] = (1 << 16) | (mt->base.base.height0);
@@ -162,34 +162,34 @@ nv50_create_texture_view(struct pipe_context *pipe,
 
    switch (target) {
    case PIPE_TEXTURE_1D:
-      tic[2] |= NV50_TIC_2_TARGET_1D;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_ONE_D;
       break;
    case PIPE_TEXTURE_2D:
-      tic[2] |= NV50_TIC_2_TARGET_2D;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_TWO_D;
       break;
    case PIPE_TEXTURE_RECT:
-      tic[2] |= NV50_TIC_2_TARGET_RECT;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_TWO_D_NO_MIPMAP;
       break;
    case PIPE_TEXTURE_3D:
-      tic[2] |= NV50_TIC_2_TARGET_3D;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_THREE_D;
       break;
    case PIPE_TEXTURE_CUBE:
       depth /= 6;
-      tic[2] |= NV50_TIC_2_TARGET_CUBE;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_CUBEMAP;
       break;
    case PIPE_TEXTURE_1D_ARRAY:
-      tic[2] |= NV50_TIC_2_TARGET_1D_ARRAY;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_ONE_D_ARRAY;
       break;
    case PIPE_TEXTURE_2D_ARRAY:
-      tic[2] |= NV50_TIC_2_TARGET_2D_ARRAY;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_TWO_D_ARRAY;
       break;
    case PIPE_TEXTURE_CUBE_ARRAY:
       depth /= 6;
-      tic[2] |= NV50_TIC_2_TARGET_CUBE_ARRAY;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_CUBE_ARRAY;
       break;
    case PIPE_BUFFER:
       assert(0); /* should be linear and handled above ! */
-      tic[2] |= NV50_TIC_2_TARGET_BUFFER | NV50_TIC_2_LINEAR;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_ONE_D_BUFFER | G80_TIC_2_LAYOUT_PITCH;
       break;
    default:
       unreachable("unexpected/invalid texture target");
@@ -202,9 +202,9 @@ nv50_create_texture_view(struct pipe_context *pipe,
    tic[5] = (mt->base.base.height0 << mt->ms_y) & 0xffff;
    tic[5] |= depth << 16;
    if (class_3d > NV50_3D_CLASS)
-      tic[5] |= mt->base.base.last_level << NV50_TIC_5_LAST_LEVEL__SHIFT;
+      tic[5] |= mt->base.base.last_level << G80_TIC_5_MAP_MIP_LEVEL__SHIFT;
    else
-      tic[5] |= view->pipe.u.tex.last_level << NV50_TIC_5_LAST_LEVEL__SHIFT;
+      tic[5] |= view->pipe.u.tex.last_level << G80_TIC_5_MAP_MIP_LEVEL__SHIFT;
 
    tic[6] = (mt->ms_x > 1) ? 0x88000000 : 0x03000000; /* sampling points */
 
@@ -213,9 +213,9 @@ nv50_create_texture_view(struct pipe_context *pipe,
    else
       tic[7] = 0;
 
-   if (unlikely(!(tic[2] & NV50_TIC_2_NORMALIZED_COORDS)))
+   if (unlikely(!(tic[2] & G80_TIC_2_NORMALIZED_COORDS)))
       if (mt->base.base.last_level)
-         tic[5] &= ~NV50_TIC_5_LAST_LEVEL__MASK;
+         tic[5] &= ~G80_TIC_5_MAP_MIP_LEVEL__MASK;
 
    return &view->pipe;
 }
