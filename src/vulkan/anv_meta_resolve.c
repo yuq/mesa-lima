@@ -134,6 +134,7 @@ build_nir_fs(uint32_t num_samples)
    v_position = nir_variable_create(b.shader, nir_var_shader_in, vec4,
                                      "v_position");
    v_position->data.location = VARYING_SLOT_POS;
+   v_position->data.origin_upper_left = true;
 
    v_tex_position = nir_variable_create(b.shader, nir_var_shader_in, vec4,
                                     "v_tex_position");
