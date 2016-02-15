@@ -2938,6 +2938,7 @@ enum brw_wm_barycentric_interp_mode {
 #define GPGPU_WALKER                            0x7105
 /* GEN7 DW0 */
 # define GEN7_GPGPU_INDIRECT_PARAMETER_ENABLE   (1 << 10)
+# define GEN7_GPGPU_PREDICATE_ENABLE            (1 << 8)
 /* GEN8+ DW2 */
 # define GPGPU_WALKER_INDIRECT_LENGTH_SHIFT     0
 # define GPGPU_WALKER_INDIRECT_LENGTH_MASK      INTEL_MASK(15, 0)
