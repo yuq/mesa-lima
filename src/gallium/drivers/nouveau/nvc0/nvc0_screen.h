@@ -164,7 +164,17 @@ nvc0_resource_validate(struct nv04_resource *res, uint32_t flags)
 
 struct nvc0_format {
    uint32_t rt;
-   uint32_t tic;
+   struct {
+      unsigned format:7;
+      unsigned type_r:3;
+      unsigned type_g:3;
+      unsigned type_b:3;
+      unsigned type_a:3;
+      unsigned src_x:3;
+      unsigned src_y:3;
+      unsigned src_z:3;
+      unsigned src_w:3;
+   } tic;
    uint32_t usage;
 };
 

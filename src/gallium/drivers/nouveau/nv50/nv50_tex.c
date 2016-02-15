@@ -27,22 +27,14 @@
 
 #include "util/u_format.h"
 
-#define G80_TIC_0_SWIZZLE__MASK                      \
-   (G80_TIC_0_W_SOURCE__MASK | G80_TIC_0_Z_SOURCE__MASK |   \
-    G80_TIC_0_Y_SOURCE__MASK | G80_TIC_0_X_SOURCE__MASK)
-
 static inline uint32_t
-nv50_tic_swizzle(uint32_t tc, unsigned swz, bool tex_int)
+nv50_tic_swizzle(const struct nv50_format *fmt, unsigned swz, bool tex_int)
 {
    switch (swz) {
-   case PIPE_SWIZZLE_RED:
-      return (tc & G80_TIC_0_X_SOURCE__MASK) >> G80_TIC_0_X_SOURCE__SHIFT;
-   case PIPE_SWIZZLE_GREEN:
-      return (tc & G80_TIC_0_Y_SOURCE__MASK) >> G80_TIC_0_Y_SOURCE__SHIFT;
-   case PIPE_SWIZZLE_BLUE:
-      return (tc & G80_TIC_0_Z_SOURCE__MASK) >> G80_TIC_0_Z_SOURCE__SHIFT;
-   case PIPE_SWIZZLE_ALPHA:
-      return (tc & G80_TIC_0_W_SOURCE__MASK) >> G80_TIC_0_W_SOURCE__SHIFT;
+   case PIPE_SWIZZLE_RED  : return fmt->tic.src_x;
+   case PIPE_SWIZZLE_GREEN: return fmt->tic.src_y;
+   case PIPE_SWIZZLE_BLUE : return fmt->tic.src_z;
+   case PIPE_SWIZZLE_ALPHA: return fmt->tic.src_w;
    case PIPE_SWIZZLE_ONE:
       return tex_int ? G80_TIC_SOURCE_ONE_INT : G80_TIC_SOURCE_ONE_FLOAT;
    case PIPE_SWIZZLE_ZERO:
@@ -73,6 +65,7 @@ nv50_create_texture_view(struct pipe_context *pipe,
 {
    const uint32_t class_3d = nouveau_context(pipe)->screen->class_3d;
    const struct util_format_description *desc;
+   const struct nv50_format *fmt;
    uint64_t addr;
    uint32_t *tic;
    uint32_t swz[4];
@@ -100,19 +93,23 @@ nv50_create_texture_view(struct pipe_context *pipe,
 
    /* TIC[0] */
 
-   tic[0] = nv50_format_table[view->pipe.format].tic;
+   fmt = &nv50_format_table[view->pipe.format];
 
    tex_int = util_format_is_pure_integer(view->pipe.format);
 
-   swz[0] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_r, tex_int);
-   swz[1] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_g, tex_int);
-   swz[2] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_b, tex_int);
-   swz[3] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_a, tex_int);
-   tic[0] = (tic[0] & ~G80_TIC_0_SWIZZLE__MASK) |
-      (swz[0] << G80_TIC_0_X_SOURCE__SHIFT) |
-      (swz[1] << G80_TIC_0_Y_SOURCE__SHIFT) |
-      (swz[2] << G80_TIC_0_Z_SOURCE__SHIFT) |
-      (swz[3] << G80_TIC_0_W_SOURCE__SHIFT);
+   swz[0] = nv50_tic_swizzle(fmt, view->pipe.swizzle_r, tex_int);
+   swz[1] = nv50_tic_swizzle(fmt, view->pipe.swizzle_g, tex_int);
+   swz[2] = nv50_tic_swizzle(fmt, view->pipe.swizzle_b, tex_int);
+   swz[3] = nv50_tic_swizzle(fmt, view->pipe.swizzle_a, tex_int);
+   tic[0] = (fmt->tic.format << G80_TIC_0_COMPONENTS_SIZES__SHIFT) |
+            (fmt->tic.type_r << G80_TIC_0_R_DATA_TYPE__SHIFT) |
+            (fmt->tic.type_g << G80_TIC_0_G_DATA_TYPE__SHIFT) |
+            (fmt->tic.type_b << G80_TIC_0_B_DATA_TYPE__SHIFT) |
+            (fmt->tic.type_a << G80_TIC_0_A_DATA_TYPE__SHIFT) |
+            (swz[0] << G80_TIC_0_X_SOURCE__SHIFT) |
+            (swz[1] << G80_TIC_0_Y_SOURCE__SHIFT) |
+            (swz[2] << G80_TIC_0_Z_SOURCE__SHIFT) |
+            (swz[3] << G80_TIC_0_W_SOURCE__SHIFT);
 
    addr = mt->base.address;
 

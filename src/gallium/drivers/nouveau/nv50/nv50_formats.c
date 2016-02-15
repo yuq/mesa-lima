@@ -67,16 +67,17 @@
 #define SF_C(sz) GF100_TIC_0_COMPONENTS_SIZES_##sz
 #define SF(c, pf, sf, r, g, b, a, t0, t1, t2, t3, sz, u)                \
    [PIPE_FORMAT_##pf] = {                                               \
-      sf,                                                               \
-      (G80_TIC_SOURCE_##r << G80_TIC_0_X_SOURCE__SHIFT) |               \
-      (G80_TIC_SOURCE_##g << G80_TIC_0_Y_SOURCE__SHIFT) |               \
-      (G80_TIC_SOURCE_##b << G80_TIC_0_Z_SOURCE__SHIFT) |               \
-      (G80_TIC_SOURCE_##a << G80_TIC_0_W_SOURCE__SHIFT) |               \
-      (G80_TIC_TYPE_##t0 << G80_TIC_0_R_DATA_TYPE__SHIFT) |             \
-      (G80_TIC_TYPE_##t1 << G80_TIC_0_G_DATA_TYPE__SHIFT) |             \
-      (G80_TIC_TYPE_##t2 << G80_TIC_0_B_DATA_TYPE__SHIFT) |             \
-      (G80_TIC_TYPE_##t3 << G80_TIC_0_A_DATA_TYPE__SHIFT) |             \
-      SF_##c(sz), U_##u                                                 \
+      sf, {                                                             \
+         SF_##c(sz),                                                    \
+         G80_TIC_TYPE_##t0,                                             \
+         G80_TIC_TYPE_##t1,                                             \
+         G80_TIC_TYPE_##t2,                                             \
+         G80_TIC_TYPE_##t3,                                             \
+         G80_TIC_SOURCE_##r,                                            \
+         G80_TIC_SOURCE_##g,                                            \
+         G80_TIC_SOURCE_##b,                                            \
+         G80_TIC_SOURCE_##a,                                            \
+      }, U_##u                                                          \
    }
 
 #define C4(c, p, n, r, g, b, a, t, s, u)                                \
