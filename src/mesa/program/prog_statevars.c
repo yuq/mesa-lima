@@ -40,7 +40,7 @@
 #include "prog_statevars.h"
 #include "prog_parameter.h"
 #include "main/samplerobj.h"
-#include "framebuffer.h"
+#include "main/framebuffer.h"
 
 
 #define ONE_DIV_SQRT_LN2 (1.201122408786449815)
