@@ -923,15 +923,6 @@ fs_instruction_scheduler::calculate_deps()
     */
    schedule_node *last_fixed_grf_write = NULL;
 
-   /* The last instruction always needs to still be the last
-    * instruction.  Either it's flow control (IF, ELSE, ENDIF, DO,
-    * WHILE) and scheduling other things after it would disturb the
-    * basic block, or it's FB_WRITE and we should do a better job at
-    * dead code elimination anyway.
-    */
-   schedule_node *last = (schedule_node *)instructions.get_tail();
-   add_barrier_deps(last);
-
    memset(last_grf_write, 0, sizeof(last_grf_write));
    memset(last_mrf_write, 0, sizeof(last_mrf_write));
 
@@ -940,7 +931,8 @@ fs_instruction_scheduler::calculate_deps()
       fs_inst *inst = (fs_inst *)n->inst;
 
       if (inst->opcode == FS_OPCODE_PLACEHOLDER_HALT ||
-         inst->has_side_effects())
+          inst->is_control_flow() ||
+          inst->has_side_effects())
          add_barrier_deps(n);
 
       /* read-after-write deps. */
@@ -1166,15 +1158,6 @@ vec4_instruction_scheduler::calculate_deps()
     */
    schedule_node *last_fixed_grf_write = NULL;
 
-   /* The last instruction always needs to still be the last instruction.
-    * Either it's flow control (IF, ELSE, ENDIF, DO, WHILE) and scheduling
-    * other things after it would disturb the basic block, or it's the EOT
-    * URB_WRITE and we should do a better job at dead code eliminating
-    * anything that could have been scheduled after it.
-    */
-   schedule_node *last = (schedule_node *)instructions.get_tail();
-   add_barrier_deps(last);
-
    memset(last_grf_write, 0, sizeof(last_grf_write));
    memset(last_mrf_write, 0, sizeof(last_mrf_write));
 
@@ -1182,7 +1165,7 @@ vec4_instruction_scheduler::calculate_deps()
    foreach_in_list(schedule_node, n, &instructions) {
       vec4_instruction *inst = (vec4_instruction *)n->inst;
 
-      if (inst->has_side_effects())
+      if (inst->is_control_flow() || inst->has_side_effects())
          add_barrier_deps(n);
 
       /* read-after-write deps. */
