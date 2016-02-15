@@ -603,6 +603,7 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
    case 0xf0:
    case 0x100:
    case 0x110:
+   case 0x120:
       return 0;
    default:
       return -1;
@@ -665,6 +666,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    case 0xf0:
    case 0x100:
    case 0x110:
+   case 0x120:
       break;
    default:
       return NULL;
@@ -733,6 +735,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, screen->nvsw->handle);
 
    switch (dev->chipset & ~0xf) {
+   case 0x120:
    case 0x110:
    case 0x100:
    case 0xf0:
@@ -784,6 +787,9 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, screen->fence.bo->offset + 16);
 
    switch (dev->chipset & ~0xf) {
+   case 0x120:
+      obj_class = GM200_3D_CLASS;
+      break;
    case 0x110:
       obj_class = GM107_3D_CLASS;
       break;
