@@ -22,7 +22,7 @@
 
 #include "nvc0/nvc0_context.h"
 #include "nvc0/nvc0_resource.h"
-#include "nv50/nv50_texture.xml.h"
+#include "nv50/g80_texture.xml.h"
 #include "nv50/g80_defs.xml.h"
 
 #include "util/u_format.h"
@@ -30,27 +30,27 @@
 #define NVE4_TIC_ENTRY_INVALID 0x000fffff
 #define NVE4_TSC_ENTRY_INVALID 0xfff00000
 
-#define NV50_TIC_0_SWIZZLE__MASK                      \
-   (NV50_TIC_0_MAPA__MASK | NV50_TIC_0_MAPB__MASK |   \
-    NV50_TIC_0_MAPG__MASK | NV50_TIC_0_MAPR__MASK)
+#define G80_TIC_0_SWIZZLE__MASK                             \
+   (G80_TIC_0_W_SOURCE__MASK | G80_TIC_0_Z_SOURCE__MASK |   \
+    G80_TIC_0_Y_SOURCE__MASK | G80_TIC_0_X_SOURCE__MASK)
 
 static inline uint32_t
 nv50_tic_swizzle(uint32_t tc, unsigned swz, bool tex_int)
 {
    switch (swz) {
    case PIPE_SWIZZLE_RED:
-      return (tc & NV50_TIC_0_MAPR__MASK) >> NV50_TIC_0_MAPR__SHIFT;
+      return (tc & G80_TIC_0_X_SOURCE__MASK) >> G80_TIC_0_X_SOURCE__SHIFT;
    case PIPE_SWIZZLE_GREEN:
-      return (tc & NV50_TIC_0_MAPG__MASK) >> NV50_TIC_0_MAPG__SHIFT;
+      return (tc & G80_TIC_0_Y_SOURCE__MASK) >> G80_TIC_0_Y_SOURCE__SHIFT;
    case PIPE_SWIZZLE_BLUE:
-      return (tc & NV50_TIC_0_MAPB__MASK) >> NV50_TIC_0_MAPB__SHIFT;
+      return (tc & G80_TIC_0_Z_SOURCE__MASK) >> G80_TIC_0_Z_SOURCE__SHIFT;
    case PIPE_SWIZZLE_ALPHA:
-      return (tc & NV50_TIC_0_MAPA__MASK) >> NV50_TIC_0_MAPA__SHIFT;
+      return (tc & G80_TIC_0_W_SOURCE__MASK) >> G80_TIC_0_W_SOURCE__SHIFT;
    case PIPE_SWIZZLE_ONE:
-      return tex_int ? NV50_TIC_MAP_ONE_INT : NV50_TIC_MAP_ONE_FLOAT;
+      return tex_int ? G80_TIC_SOURCE_ONE_INT : G80_TIC_SOURCE_ONE_FLOAT;
    case PIPE_SWIZZLE_ZERO:
    default:
-      return NV50_TIC_MAP_ZERO;
+      return G80_TIC_SOURCE_ZERO;
    }
 }
 
@@ -110,36 +110,36 @@ nvc0_create_texture_view(struct pipe_context *pipe,
    swz[1] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_g, tex_int);
    swz[2] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_b, tex_int);
    swz[3] = nv50_tic_swizzle(tic[0], view->pipe.swizzle_a, tex_int);
-   tic[0] = (tic[0] & ~NV50_TIC_0_SWIZZLE__MASK) |
-      (swz[0] << NV50_TIC_0_MAPR__SHIFT) |
-      (swz[1] << NV50_TIC_0_MAPG__SHIFT) |
-      (swz[2] << NV50_TIC_0_MAPB__SHIFT) |
-      (swz[3] << NV50_TIC_0_MAPA__SHIFT);
+   tic[0] = (tic[0] & ~G80_TIC_0_SWIZZLE__MASK) |
+      (swz[0] << G80_TIC_0_X_SOURCE__SHIFT) |
+      (swz[1] << G80_TIC_0_Y_SOURCE__SHIFT) |
+      (swz[2] << G80_TIC_0_Z_SOURCE__SHIFT) |
+      (swz[3] << G80_TIC_0_W_SOURCE__SHIFT);
 
    address = mt->base.address;
 
-   tic[2] = 0x10001000 | NV50_TIC_2_NO_BORDER;
+   tic[2] = 0x10001000 | G80_TIC_2_BORDER_SOURCE_COLOR;
 
    if (desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB)
-      tic[2] |= NV50_TIC_2_COLORSPACE_SRGB;
+      tic[2] |= G80_TIC_2_SRGB_CONVERSION;
 
    if (!(flags & NV50_TEXVIEW_SCALED_COORDS))
-      tic[2] |= NV50_TIC_2_NORMALIZED_COORDS;
+      tic[2] |= G80_TIC_2_NORMALIZED_COORDS;
 
    /* check for linear storage type */
    if (unlikely(!nouveau_bo_memtype(nv04_resource(texture)->bo))) {
       if (texture->target == PIPE_BUFFER) {
-         assert(!(tic[2] & NV50_TIC_2_NORMALIZED_COORDS));
+         assert(!(tic[2] & G80_TIC_2_NORMALIZED_COORDS));
          address +=
             view->pipe.u.buf.first_element * desc->block.bits / 8;
-         tic[2] |= NV50_TIC_2_LINEAR | NV50_TIC_2_TARGET_BUFFER;
+         tic[2] |= G80_TIC_2_LAYOUT_PITCH | G80_TIC_2_TEXTURE_TYPE_ONE_D_BUFFER;
          tic[3] = 0;
          tic[4] = /* width */
             view->pipe.u.buf.last_element - view->pipe.u.buf.first_element + 1;
          tic[5] = 0;
       } else {
          /* must be 2D texture without mip maps */
-         tic[2] |= NV50_TIC_2_LINEAR | NV50_TIC_2_TARGET_RECT;
+         tic[2] |= G80_TIC_2_LAYOUT_PITCH | G80_TIC_2_TEXTURE_TYPE_TWO_D_NO_MIPMAP;
          tic[3] = mt->level[0].pitch;
          tic[4] = mt->base.base.width0;
          tic[5] = (1 << 16) | mt->base.base.height0;
@@ -167,30 +167,30 @@ nvc0_create_texture_view(struct pipe_context *pipe,
 
    switch (target) {
    case PIPE_TEXTURE_1D:
-      tic[2] |= NV50_TIC_2_TARGET_1D;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_ONE_D;
       break;
    case PIPE_TEXTURE_2D:
-      tic[2] |= NV50_TIC_2_TARGET_2D;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_TWO_D;
       break;
    case PIPE_TEXTURE_RECT:
-      tic[2] |= NV50_TIC_2_TARGET_2D;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_TWO_D;
       break;
    case PIPE_TEXTURE_3D:
-      tic[2] |= NV50_TIC_2_TARGET_3D;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_THREE_D;
       break;
    case PIPE_TEXTURE_CUBE:
       depth /= 6;
-      tic[2] |= NV50_TIC_2_TARGET_CUBE;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_CUBEMAP;
       break;
    case PIPE_TEXTURE_1D_ARRAY:
-      tic[2] |= NV50_TIC_2_TARGET_1D_ARRAY;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_ONE_D_ARRAY;
       break;
    case PIPE_TEXTURE_2D_ARRAY:
-      tic[2] |= NV50_TIC_2_TARGET_2D_ARRAY;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_TWO_D_ARRAY;
       break;
    case PIPE_TEXTURE_CUBE_ARRAY:
       depth /= 6;
-      tic[2] |= NV50_TIC_2_TARGET_CUBE_ARRAY;
+      tic[2] |= G80_TIC_2_TEXTURE_TYPE_CUBE_ARRAY;
       break;
    default:
       unreachable("unexpected/invalid texture target");
