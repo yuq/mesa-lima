@@ -2,7 +2,6 @@
 #include "util/u_format.h"
 
 #include "nv50/nv50_context.h"
-#include "nv50/nv50_defs.xml.h"
 
 static inline void
 nv50_fb_set_null_rt(struct nouveau_pushbuf *push, unsigned i)
