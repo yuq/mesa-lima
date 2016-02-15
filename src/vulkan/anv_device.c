@@ -216,7 +216,7 @@ VkResult anv_CreateInstance(
 
    uint32_t client_version = pCreateInfo->pApplicationInfo->apiVersion;
    if (VK_MAKE_VERSION(1, 0, 0) > client_version ||
-       client_version > VK_MAKE_VERSION(1, 0, 2)) {
+       client_version > VK_MAKE_VERSION(1, 0, 3)) {
       return vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
                        "Client requested version %d.%d.%d",
                        VK_VERSION_MAJOR(client_version),
