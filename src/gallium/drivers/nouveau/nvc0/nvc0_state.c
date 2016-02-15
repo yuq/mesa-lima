@@ -33,7 +33,6 @@
 #include "nvc0/nvc0_query_hw.h"
 
 #include "nvc0/nvc0_3d.xml.h"
-#include "nv50/nv50_texture.xml.h"
 
 #include "nouveau_gldefs.h"
 

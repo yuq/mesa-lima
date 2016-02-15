@@ -3,7 +3,6 @@
 #include "util/u_math.h"
 
 #include "nvc0/nvc0_context.h"
-#include "nv50/nv50_defs.xml.h"
 
 #if 0
 static void
