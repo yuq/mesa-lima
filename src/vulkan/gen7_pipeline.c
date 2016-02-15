@@ -42,9 +42,6 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
    struct GEN7_3DSTATE_SF sf = {
       GEN7_3DSTATE_SF_header,
 
-      /* FIXME: Get this from pass info */
-      .DepthBufferSurfaceFormat                 = D24_UNORM_X8_UINT,
-
       /* LegacyGlobalDepthBiasEnable */
 
       .StatisticsEnable                         = true,

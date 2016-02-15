@@ -442,15 +442,24 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
       gen7_cmd_buffer_emit_scissor(cmd_buffer);
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_RENDER_TARGETS |
                                   ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH |
                                   ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)) {
 
       bool enable_bias = cmd_buffer->state.dynamic.depth_bias.bias != 0.0f ||
          cmd_buffer->state.dynamic.depth_bias.slope != 0.0f;
 
+      const struct anv_image_view *iview =
+         anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
+      const struct anv_image *image = iview ? iview->image : NULL;
+      const uint32_t depth_format = image ?
+         isl_surf_get_depth_format(&cmd_buffer->device->isl_dev,
+                                   &image->depth_surface.isl) : D16_UNORM;
+
       uint32_t sf_dw[GEN7_3DSTATE_SF_length];
       struct GEN7_3DSTATE_SF sf = {
          GEN7_3DSTATE_SF_header,
+         .DepthBufferSurfaceFormat = depth_format,
          .LineWidth = cmd_buffer->state.dynamic.line_width,
          .GlobalDepthOffsetEnableSolid = enable_bias,
          .GlobalDepthOffsetEnableWireframe = enable_bias,
