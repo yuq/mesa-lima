@@ -44,7 +44,7 @@ genX(init_device_state)(struct anv_device *device)
    batch.end = (void *) cmds + sizeof(cmds);
 
    anv_batch_emit(&batch, GEN7_PIPELINE_SELECT,
-                  .PipelineSelection = GPGPU);
+                  .PipelineSelection = _3D);
 
    anv_batch_emit(&batch, GENX(3DSTATE_VF_STATISTICS),
                   .StatisticsEnable = true);
