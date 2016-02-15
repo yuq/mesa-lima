@@ -1696,21 +1696,6 @@ interpolation_string(unsigned interpolation)
    return "";
 }
 
-
-glsl_interp_qualifier
-ir_variable::determine_interpolation_mode(bool flat_shade)
-{
-   if (this->data.interpolation != INTERP_QUALIFIER_NONE)
-      return (glsl_interp_qualifier) this->data.interpolation;
-   int location = this->data.location;
-   bool is_gl_Color =
-      location == VARYING_SLOT_COL0 || location == VARYING_SLOT_COL1;
-   if (flat_shade && is_gl_Color)
-      return INTERP_QUALIFIER_FLAT;
-   else
-      return INTERP_QUALIFIER_SMOOTH;
-}
-
 const char *const ir_variable::warn_extension_table[] = {
    "",
    "GL_ARB_shader_stencil_export",

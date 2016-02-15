@@ -432,17 +432,6 @@ public:
 
 
    /**
-    * Determine how this variable should be interpolated based on its
-    * interpolation qualifier (if present), whether it is gl_Color or
-    * gl_SecondaryColor, and whether flatshading is enabled in the current GL
-    * state.
-    *
-    * The return value will always be either INTERP_QUALIFIER_SMOOTH,
-    * INTERP_QUALIFIER_NOPERSPECTIVE, or INTERP_QUALIFIER_FLAT.
-    */
-   glsl_interp_qualifier determine_interpolation_mode(bool flat_shade);
-
-   /**
     * Determine whether or not a variable is part of a uniform or
     * shader storage block.
     */
