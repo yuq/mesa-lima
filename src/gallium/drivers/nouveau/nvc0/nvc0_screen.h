@@ -83,6 +83,7 @@ struct nvc0_screen {
       void **entries;
       int next;
       uint32_t lock[NVC0_TIC_MAX_ENTRIES / 32];
+      bool maxwell;
    } tic;
 
    struct {

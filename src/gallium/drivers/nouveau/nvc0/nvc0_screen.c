@@ -993,6 +993,14 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATAh(push, screen->txc->offset);
    PUSH_DATA (push, screen->txc->offset);
    PUSH_DATA (push, NVC0_TIC_MAX_ENTRIES - 1);
+   if (screen->eng3d->oclass >= GM107_3D_CLASS) {
+      screen->tic.maxwell = true;
+      if (screen->eng3d->oclass == GM107_3D_CLASS) {
+         screen->tic.maxwell =
+            debug_get_bool_option("NOUVEAU_MAXWELL_TIC", true);
+         IMMED_NVC0(push, SUBC_3D(0x0f10), screen->tic.maxwell);
+      }
+   }
 
    BEGIN_NVC0(push, NVC0_3D(TSC_ADDRESS_HIGH), 3);
    PUSH_DATAh(push, screen->txc->offset + 65536);

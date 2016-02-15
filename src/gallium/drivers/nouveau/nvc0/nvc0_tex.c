@@ -22,6 +22,7 @@
 
 #include "nvc0/nvc0_context.h"
 #include "nvc0/nvc0_resource.h"
+#include "nvc0/gm107_texture.xml.h"
 #include "nv50/g80_texture.xml.h"
 #include "nv50/g80_defs.xml.h"
 
@@ -59,12 +60,187 @@ nvc0_create_sampler_view(struct pipe_context *pipe,
    return nvc0_create_texture_view(pipe, res, templ, flags, templ->target);
 }
 
-struct pipe_sampler_view *
-nvc0_create_texture_view(struct pipe_context *pipe,
-                         struct pipe_resource *texture,
-                         const struct pipe_sampler_view *templ,
-                         uint32_t flags,
-                         enum pipe_texture_target target)
+static struct pipe_sampler_view *
+gm107_create_texture_view(struct pipe_context *pipe,
+                          struct pipe_resource *texture,
+                          const struct pipe_sampler_view *templ,
+                          uint32_t flags,
+                          enum pipe_texture_target target)
+{
+   const struct util_format_description *desc;
+   const struct nvc0_format *fmt;
+   uint64_t address;
+   uint32_t *tic;
+   uint32_t swz[4];
+   uint32_t width, height;
+   uint32_t depth;
+   struct nv50_tic_entry *view;
+   struct nv50_miptree *mt;
+   bool tex_int;
+
+   view = MALLOC_STRUCT(nv50_tic_entry);
+   if (!view)
+      return NULL;
+   mt = nv50_miptree(texture);
+
+   view->pipe = *templ;
+   view->pipe.reference.count = 1;
+   view->pipe.texture = NULL;
+   view->pipe.context = pipe;
+
+   view->id = -1;
+
+   pipe_resource_reference(&view->pipe.texture, texture);
+
+   tic = &view->tic[0];
+
+   desc = util_format_description(view->pipe.format);
+   tex_int = util_format_is_pure_integer(view->pipe.format);
+
+   fmt = &nvc0_format_table[view->pipe.format];
+   swz[0] = nv50_tic_swizzle(fmt, view->pipe.swizzle_r, tex_int);
+   swz[1] = nv50_tic_swizzle(fmt, view->pipe.swizzle_g, tex_int);
+   swz[2] = nv50_tic_swizzle(fmt, view->pipe.swizzle_b, tex_int);
+   swz[3] = nv50_tic_swizzle(fmt, view->pipe.swizzle_a, tex_int);
+
+   tic[0]  = fmt->tic.format << GM107_TIC2_0_COMPONENTS_SIZES__SHIFT;
+   tic[0] |= fmt->tic.type_r << GM107_TIC2_0_R_DATA_TYPE__SHIFT;
+   tic[0] |= fmt->tic.type_g << GM107_TIC2_0_G_DATA_TYPE__SHIFT;
+   tic[0] |= fmt->tic.type_b << GM107_TIC2_0_B_DATA_TYPE__SHIFT;
+   tic[0] |= fmt->tic.type_a << GM107_TIC2_0_A_DATA_TYPE__SHIFT;
+   tic[0] |= swz[0] << GM107_TIC2_0_X_SOURCE__SHIFT;
+   tic[0] |= swz[1] << GM107_TIC2_0_Y_SOURCE__SHIFT;
+   tic[0] |= swz[2] << GM107_TIC2_0_Z_SOURCE__SHIFT;
+   tic[0] |= swz[3] << GM107_TIC2_0_W_SOURCE__SHIFT;
+
+   address = mt->base.address;
+
+   tic[3]  = GM107_TIC2_3_LOD_ANISO_QUALITY_2;
+   tic[4]  = GM107_TIC2_4_SECTOR_PROMOTION_PROMOTE_TO_2_V;
+   tic[4] |= GM107_TIC2_4_BORDER_SIZE_SAMPLER_COLOR;
+
+   if (desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB)
+      tic[4] |= GM107_TIC2_4_SRGB_CONVERSION;
+
+   if (!(flags & NV50_TEXVIEW_SCALED_COORDS))
+      tic[5] = GM107_TIC2_5_NORMALIZED_COORDS;
+   else
+      tic[5] = 0;
+
+   /* check for linear storage type */
+   if (unlikely(!nouveau_bo_memtype(nv04_resource(texture)->bo))) {
+      if (texture->target == PIPE_BUFFER) {
+         assert(!(tic[5] & GM107_TIC2_5_NORMALIZED_COORDS));
+         width = view->pipe.u.buf.last_element - view->pipe.u.buf.first_element;
+         address +=
+            view->pipe.u.buf.first_element * desc->block.bits / 8;
+         tic[2]  = GM107_TIC2_2_HEADER_VERSION_ONE_D_BUFFER;
+         tic[3] |= width >> 16;
+         tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_ONE_D_BUFFER;
+         tic[4] |= width & 0xffff;
+      } else {
+         assert(!(mt->level[0].pitch & 0x1f));
+         /* must be 2D texture without mip maps */
+         tic[2]  = GM107_TIC2_2_HEADER_VERSION_PITCH;
+         tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_TWO_D_NO_MIPMAP;
+         tic[3] |= mt->level[0].pitch >> 5;
+         tic[4] |= mt->base.base.width0 - 1;
+         tic[5] |= 0 << GM107_TIC2_5_DEPTH_MINUS_ONE__SHIFT;
+         tic[5] |= mt->base.base.height0 - 1;
+      }
+      tic[1]  = address;
+      tic[2] |= address >> 32;
+      tic[6]  = 0;
+      tic[7]  = 0;
+      return &view->pipe;
+   }
+
+   tic[2]  = GM107_TIC2_2_HEADER_VERSION_BLOCKLINEAR;
+   tic[3] |=
+      ((mt->level[0].tile_mode & 0x0f0) >> 4 << 3) |
+      ((mt->level[0].tile_mode & 0xf00) >> 8 << 6);
+
+   depth = MAX2(mt->base.base.array_size, mt->base.base.depth0);
+
+   if (mt->base.base.array_size > 1) {
+      /* there doesn't seem to be a base layer field in TIC */
+      address += view->pipe.u.tex.first_layer * mt->layer_stride;
+      depth = view->pipe.u.tex.last_layer - view->pipe.u.tex.first_layer + 1;
+   }
+   tic[1]  = address;
+   tic[2] |= address >> 32;
+
+   switch (target) {
+   case PIPE_TEXTURE_1D:
+      tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_ONE_D;
+      break;
+   case PIPE_TEXTURE_2D:
+      tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_TWO_D;
+      break;
+   case PIPE_TEXTURE_RECT:
+      tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_TWO_D;
+      break;
+   case PIPE_TEXTURE_3D:
+      tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_THREE_D;
+      break;
+   case PIPE_TEXTURE_CUBE:
+      depth /= 6;
+      tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_CUBEMAP;
+      break;
+   case PIPE_TEXTURE_1D_ARRAY:
+      tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_ONE_D_ARRAY;
+      break;
+   case PIPE_TEXTURE_2D_ARRAY:
+      tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_TWO_D_ARRAY;
+      break;
+   case PIPE_TEXTURE_CUBE_ARRAY:
+      depth /= 6;
+      tic[4] |= GM107_TIC2_4_TEXTURE_TYPE_CUBE_ARRAY;
+      break;
+   default:
+      unreachable("unexpected/invalid texture target");
+   }
+
+   tic[3] |= (flags & NV50_TEXVIEW_FILTER_MSAA8) ?
+             GM107_TIC2_3_USE_HEADER_OPT_CONTROL :
+             GM107_TIC2_3_LOD_ANISO_QUALITY_HIGH |
+             GM107_TIC2_3_LOD_ISO_QUALITY_HIGH;
+
+   if (flags & NV50_TEXVIEW_ACCESS_RESOLVE) {
+      width = mt->base.base.width0 << mt->ms_x;
+      height = mt->base.base.height0 << mt->ms_y;
+   } else {
+      width = mt->base.base.width0;
+      height = mt->base.base.height0;
+   }
+
+   tic[4] |= width - 1;
+
+   tic[5] |= (height - 1) & 0xffff;
+   tic[5] |= (depth - 1) << GM107_TIC2_5_DEPTH_MINUS_ONE__SHIFT;
+   tic[3] |= mt->base.base.last_level << GM107_TIC2_3_MAX_MIP_LEVEL__SHIFT;
+
+   /* sampling points: (?) */
+   if ((flags & NV50_TEXVIEW_ACCESS_RESOLVE) && mt->ms_x > 1) {
+      tic[6]  = GM107_TIC2_6_ANISO_FINE_SPREAD_MODIFIER_CONST_TWO;
+      tic[6] |= GM107_TIC2_6_MAX_ANISOTROPY_2_TO_1;
+   } else {
+      tic[6]  = GM107_TIC2_6_ANISO_FINE_SPREAD_FUNC_TWO;
+      tic[6] |= GM107_TIC2_6_ANISO_COARSE_SPREAD_FUNC_ONE;
+   }
+
+   tic[7]  = (view->pipe.u.tex.last_level << 4) | view->pipe.u.tex.first_level;
+   tic[7] |= mt->ms_mode << GM107_TIC2_7_MULTI_SAMPLE_COUNT__SHIFT;
+
+   return &view->pipe;
+}
+
+static struct pipe_sampler_view *
+gf100_create_texture_view(struct pipe_context *pipe,
+                          struct pipe_resource *texture,
+                          const struct pipe_sampler_view *templ,
+                          uint32_t flags,
+                          enum pipe_texture_target target)
 {
    const struct util_format_description *desc;
    const struct nvc0_format *fmt;
@@ -219,6 +395,18 @@ nvc0_create_texture_view(struct pipe_context *pipe,
    tic[7] |= mt->ms_mode << 12;
 
    return &view->pipe;
+}
+
+struct pipe_sampler_view *
+nvc0_create_texture_view(struct pipe_context *pipe,
+                         struct pipe_resource *texture,
+                         const struct pipe_sampler_view *templ,
+                         uint32_t flags,
+                         enum pipe_texture_target target)
+{
+   if (nvc0_context(pipe)->screen->tic.maxwell)
+      return gm107_create_texture_view(pipe, texture, templ, flags, target);
+   return gf100_create_texture_view(pipe, texture, templ, flags, target);
 }
 
 static void
