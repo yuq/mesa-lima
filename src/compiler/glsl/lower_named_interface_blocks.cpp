@@ -179,6 +179,13 @@ flatten_named_interface_blocks_declarations::run(exec_list *instructions)
             }
             new_var->data.location = iface_t->fields.structure[i].location;
             new_var->data.explicit_location = (new_var->data.location >= 0);
+            new_var->data.offset = iface_t->fields.structure[i].offset;
+            new_var->data.explicit_xfb_offset =
+               (iface_t->fields.structure[i].offset >= 0);
+            new_var->data.xfb_buffer =
+               iface_t->fields.structure[i].xfb_buffer;
+            new_var->data.explicit_xfb_buffer =
+               iface_t->fields.structure[i].explicit_xfb_buffer;
             new_var->data.interpolation =
                iface_t->fields.structure[i].interpolation;
             new_var->data.centroid = iface_t->fields.structure[i].centroid;
