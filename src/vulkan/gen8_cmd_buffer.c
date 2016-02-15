@@ -201,21 +201,6 @@ config_l3(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
 }
 
 static void
-flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer)
-{
-   config_l3(cmd_buffer, false);
-
-   if (cmd_buffer->state.current_pipeline != _3D) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
-#if ANV_GEN >= 9
-                     .MaskBits = 3,
-#endif
-                     .PipelineSelection = _3D);
-      cmd_buffer->state.current_pipeline = _3D;
-   }
-}
-
-static void
 __emit_genx_sf_state(struct anv_cmd_buffer *cmd_buffer)
 {
       uint32_t sf_dw[GENX(3DSTATE_SF_length)];
@@ -261,7 +246,9 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 
    assert((pipeline->active_stages & VK_SHADER_STAGE_COMPUTE_BIT) == 0);
 
-   flush_pipeline_select_3d(cmd_buffer);
+   config_l3(cmd_buffer, false);
+
+   genX(flush_pipeline_select_3d)(cmd_buffer);
 
    if (vb_emit) {
       const uint32_t num_buffers = __builtin_popcount(vb_emit);
@@ -735,7 +722,7 @@ void genX(CmdBeginRenderPass)(
    cmd_buffer->state.pass = pass;
    anv_cmd_state_setup_attachments(cmd_buffer, pRenderPassBegin);
 
-   flush_pipeline_select_3d(cmd_buffer);
+   genX(flush_pipeline_select_3d)(cmd_buffer);
 
    const VkRect2D *render_area = &pRenderPassBegin->renderArea;
 

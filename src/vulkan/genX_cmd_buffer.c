@@ -535,3 +535,16 @@ void genX(CmdDispatchIndirect)(
 
    anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH));
 }
+
+void
+genX(flush_pipeline_select_3d)(struct anv_cmd_buffer *cmd_buffer)
+{
+   if (cmd_buffer->state.current_pipeline != _3D) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
+#if ANV_GEN >= 9
+                     .MaskBits = 3,
+#endif
+                     .PipelineSelection = _3D);
+      cmd_buffer->state.current_pipeline = _3D;
+   }
+}

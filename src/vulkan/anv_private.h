@@ -1293,6 +1293,11 @@ void gen9_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
 void anv_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
                                   struct anv_subpass *subpass);
 
+void gen7_flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer);
+void gen75_flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer);
+void gen8_flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer);
+void gen9_flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer);
+
 void gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);
 void gen75_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);
 void gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);

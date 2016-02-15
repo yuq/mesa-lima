@@ -364,11 +364,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 
    assert((pipeline->active_stages & VK_SHADER_STAGE_COMPUTE_BIT) == 0);
 
-   if (cmd_buffer->state.current_pipeline != _3D) {
-      anv_batch_emit(&cmd_buffer->batch, GEN7_PIPELINE_SELECT,
-                     .PipelineSelection = _3D);
-      cmd_buffer->state.current_pipeline = _3D;
-   }
+   genX(flush_pipeline_select_3d)(cmd_buffer);
 
    if (vb_emit) {
       const uint32_t num_buffers = __builtin_popcount(vb_emit);
