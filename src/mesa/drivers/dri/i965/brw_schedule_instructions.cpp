@@ -783,26 +783,13 @@ schedule_node::schedule_node(backend_instruction *inst,
 void
 instruction_scheduler::add_insts_from_block(bblock_t *block)
 {
-   /* Removing the last instruction from a basic block removes the block as
-    * well, so put a NOP at the end to keep it alive.
-    */
-   if (!block->end()->is_control_flow()) {
-      backend_instruction *nop = new(mem_ctx) backend_instruction();
-      nop->opcode = BRW_OPCODE_NOP;
-      block->end()->insert_after(block, nop);
-   }
-
-   foreach_inst_in_block_safe(backend_instruction, inst, block) {
-      if (inst->opcode == BRW_OPCODE_NOP || inst->is_control_flow())
-         continue;
-
+   foreach_inst_in_block(backend_instruction, inst, block) {
       schedule_node *n = new(mem_ctx) schedule_node(inst, this);
 
-      this->instructions_to_schedule++;
-
-      inst->remove(block);
       instructions.push_tail(n);
    }
+
+   this->instructions_to_schedule = block->end_ip - block->start_ip + 1;
 }
 
 /** Recursive computation of the delay member of a node. */
@@ -1463,7 +1450,6 @@ void
 instruction_scheduler::schedule_instructions(bblock_t *block)
 {
    const struct brw_device_info *devinfo = bs->devinfo;
-   backend_instruction *inst = block->end();
    time = 0;
    if (!post_reg_alloc)
       reg_pressure = reg_pressure_in[block->num];
@@ -1482,7 +1468,8 @@ instruction_scheduler::schedule_instructions(bblock_t *block)
       /* Schedule this instruction. */
       assert(chosen);
       chosen->remove();
-      inst->insert_before(block, chosen->inst);
+      chosen->inst->exec_node::remove();
+      block->instructions.push_tail(chosen->inst);
       instructions_to_schedule--;
 
       if (!post_reg_alloc) {
@@ -1551,8 +1538,6 @@ instruction_scheduler::schedule_instructions(bblock_t *block)
       }
    }
 
-   if (block->end()->opcode == BRW_OPCODE_NOP)
-      block->end()->remove(block);
    assert(instructions_to_schedule == 0);
 
    block->cycle_count = time;
