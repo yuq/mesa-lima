@@ -903,6 +903,13 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		for (i = 0; i < 8; i++)
 			if (sel->info.colors_written & (1 << i))
 				sel->colors_written_4bit |= 0xf << (4 * i);
+
+		for (i = 0; i < sel->info.num_inputs; i++) {
+			if (sel->info.input_semantic_name[i] == TGSI_SEMANTIC_COLOR) {
+				int index = sel->info.input_semantic_index[i];
+				sel->color_attr_index[index] = i;
+			}
+		}
 		break;
 	}
 

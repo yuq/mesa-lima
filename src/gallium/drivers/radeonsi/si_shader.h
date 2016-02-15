@@ -169,7 +169,7 @@ struct radeon_shader_reloc;
 #define SI_PARAM_SAMPLE_COVERAGE	20
 #define SI_PARAM_POS_FIXED_PT		21
 
-#define SI_NUM_PARAMS (SI_PARAM_POS_FIXED_PT + 1)
+#define SI_NUM_PARAMS (SI_PARAM_POS_FIXED_PT + 9) /* +8 for COLOR[0..1] */
 
 struct si_shader;
 
@@ -199,6 +199,7 @@ struct si_shader_selector {
 	unsigned	max_gsvs_emit_size;
 
 	/* PS parameters. */
+	unsigned	color_attr_index[2];
 	unsigned	db_shader_control;
 	/* Set 0xf or 0x0 (4 bits) per each written output.
 	 * ANDed with spi_shader_col_format.
@@ -281,6 +282,17 @@ union si_shader_part_key {
 	struct {
 		struct si_tcs_epilog_bits states;
 	} tcs_epilog;
+	struct {
+		struct si_ps_prolog_bits states;
+		unsigned	num_input_sgprs:5;
+		unsigned	num_input_vgprs:5;
+		/* Color interpolation and two-side color selection. */
+		unsigned	colors_read:8; /* color input components read */
+		unsigned	num_interp_inputs:5; /* BCOLOR is at this location */
+		unsigned	face_vgpr_index:5;
+		char		color_attr_index[2];
+		char		color_interp_vgpr_index[2]; /* -1 == constant */
+	} ps_prolog;
 	struct {
 		struct si_ps_epilog_bits states;
 		unsigned	colors_written:8;

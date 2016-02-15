@@ -879,7 +879,8 @@ static int lookup_interp_param_index(unsigned interpolate, unsigned location)
 static unsigned select_interp_param(struct si_shader_context *ctx,
 				    unsigned param)
 {
-	if (!ctx->shader->key.ps.prolog.force_persample_interp)
+	if (!ctx->shader->key.ps.prolog.force_persample_interp ||
+	    !ctx->is_monolithic)
 		return param;
 
 	/* If the shader doesn't use center/centroid, just return the parameter.
@@ -1023,12 +1024,33 @@ static void declare_input_fs(
 	unsigned input_index,
 	const struct tgsi_full_declaration *decl)
 {
+	struct lp_build_context *base = &radeon_bld->soa.bld_base.base;
 	struct si_shader_context *ctx =
 		si_shader_context(&radeon_bld->soa.bld_base);
 	struct si_shader *shader = ctx->shader;
 	LLVMValueRef main_fn = radeon_bld->main_fn;
 	LLVMValueRef interp_param = NULL;
 	int interp_param_idx;
+
+	/* Get colors from input VGPRs (set by the prolog). */
+	if (!ctx->is_monolithic &&
+	    decl->Semantic.Name == TGSI_SEMANTIC_COLOR) {
+		unsigned i = decl->Semantic.Index;
+		unsigned colors_read = shader->selector->info.colors_read;
+		unsigned mask = colors_read >> (i * 4);
+		unsigned offset = SI_PARAM_POS_FIXED_PT + 1 +
+				  (i ? util_bitcount(colors_read & 0xf) : 0);
+
+		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)] =
+			mask & 0x1 ? LLVMGetParam(main_fn, offset++) : base->undef;
+		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 1)] =
+			mask & 0x2 ? LLVMGetParam(main_fn, offset++) : base->undef;
+		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 2)] =
+			mask & 0x4 ? LLVMGetParam(main_fn, offset++) : base->undef;
+		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 3)] =
+			mask & 0x8 ? LLVMGetParam(main_fn, offset++) : base->undef;
+		return;
+	}
 
 	interp_param_idx = lookup_interp_param_index(decl->Interp.Interpolate,
 						     decl->Interp.Location);
@@ -3970,6 +3992,16 @@ static void create_function(struct si_shader_context *ctx)
 		num_params = SI_PARAM_POS_FIXED_PT+1;
 
 		if (!ctx->is_monolithic) {
+			/* Color inputs from the prolog. */
+			if (shader->selector->info.colors_read) {
+				unsigned num_color_elements =
+					util_bitcount(shader->selector->info.colors_read);
+
+				assert(num_params + num_color_elements <= ARRAY_SIZE(params));
+				for (i = 0; i < num_color_elements; i++)
+					params[num_params++] = ctx->f32;
+			}
+
 			/* Outputs for the epilog. */
 			num_return_sgprs = SI_SGPR_ALPHA_REF + 1;
 			num_returns =
@@ -4000,6 +4032,20 @@ static void create_function(struct si_shader_context *ctx)
 
 	si_create_function(ctx, returns, num_returns, params,
 			   num_params, last_array_pointer, last_sgpr);
+
+	/* Reserve register locations for VGPR inputs the PS prolog may need. */
+	if (ctx->type == TGSI_PROCESSOR_FRAGMENT &&
+	    !ctx->is_monolithic) {
+		radeon_llvm_add_attribute(ctx->radeon_bld.main_fn,
+					  "InitialPSInputAddr",
+					  S_0286D0_PERSP_SAMPLE_ENA(1) |
+					  S_0286D0_PERSP_CENTER_ENA(1) |
+					  S_0286D0_PERSP_CENTROID_ENA(1) |
+					  S_0286D0_LINEAR_SAMPLE_ENA(1) |
+					  S_0286D0_LINEAR_CENTER_ENA(1) |
+					  S_0286D0_LINEAR_CENTROID_ENA(1) |
+					  S_0286D0_FRONT_FACE_ENA(1));
+	}
 
 	shader->num_input_sgprs = 0;
 	shader->num_input_vgprs = 0;
@@ -5305,6 +5351,157 @@ static bool si_shader_select_tcs_parts(struct si_screen *sscreen,
 }
 
 /**
+ * Compile the pixel shader prolog. This handles:
+ * - two-side color selection and interpolation
+ * - overriding interpolation parameters for the API PS
+ * - polygon stippling
+ *
+ * All preloaded SGPRs and VGPRs are passed through unmodified unless they are
+ * overriden by other states. (e.g. per-sample interpolation)
+ * Interpolated colors are stored after the preloaded VGPRs.
+ */
+static bool si_compile_ps_prolog(struct si_screen *sscreen,
+				 LLVMTargetMachineRef tm,
+				 struct pipe_debug_callback *debug,
+				 struct si_shader_part *out)
+{
+	union si_shader_part_key *key = &out->key;
+	struct si_shader shader = {};
+	struct si_shader_context ctx;
+	struct gallivm_state *gallivm = &ctx.radeon_bld.gallivm;
+	LLVMTypeRef *params;
+	LLVMValueRef ret, func;
+	int last_sgpr, num_params, num_returns, i, num_color_channels;
+	bool status = true;
+
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm, NULL);
+	ctx.type = TGSI_PROCESSOR_FRAGMENT;
+	shader.key.ps.prolog = key->ps_prolog.states;
+
+	/* Number of inputs + 8 color elements. */
+	params = alloca((key->ps_prolog.num_input_sgprs +
+			 key->ps_prolog.num_input_vgprs + 8) *
+			sizeof(LLVMTypeRef));
+
+	/* Declare inputs. */
+	num_params = 0;
+	for (i = 0; i < key->ps_prolog.num_input_sgprs; i++)
+		params[num_params++] = ctx.i32;
+	last_sgpr = num_params - 1;
+
+	for (i = 0; i < key->ps_prolog.num_input_vgprs; i++)
+		params[num_params++] = ctx.f32;
+
+	/* Declare outputs (same as inputs + add colors if needed) */
+	num_returns = num_params;
+	num_color_channels = util_bitcount(key->ps_prolog.colors_read);
+	for (i = 0; i < num_color_channels; i++)
+		params[num_returns++] = ctx.f32;
+
+	/* Create the function. */
+	si_create_function(&ctx, params, num_returns, params,
+			   num_params, -1, last_sgpr);
+	func = ctx.radeon_bld.main_fn;
+
+	/* Copy inputs to outputs. This should be no-op, as the registers match,
+	 * but it will prevent the compiler from overwriting them unintentionally.
+	 */
+	ret = ctx.return_value;
+	for (i = 0; i < num_params; i++) {
+		LLVMValueRef p = LLVMGetParam(func, i);
+		ret = LLVMBuildInsertValue(gallivm->builder, ret, p, i, "");
+	}
+
+	/* Interpolate colors. */
+	for (i = 0; i < 2; i++) {
+		unsigned writemask = (key->ps_prolog.colors_read >> (i * 4)) & 0xf;
+		unsigned face_vgpr = key->ps_prolog.num_input_sgprs +
+				     key->ps_prolog.face_vgpr_index;
+		LLVMValueRef interp[2], color[4];
+		LLVMValueRef interp_ij = NULL, prim_mask = NULL, face = NULL;
+
+		if (!writemask)
+			continue;
+
+		/* If the interpolation qualifier is not CONSTANT (-1). */
+		if (key->ps_prolog.color_interp_vgpr_index[i] != -1) {
+			unsigned interp_vgpr = key->ps_prolog.num_input_sgprs +
+					       key->ps_prolog.color_interp_vgpr_index[i];
+
+			interp[0] = LLVMGetParam(func, interp_vgpr);
+			interp[1] = LLVMGetParam(func, interp_vgpr + 1);
+			interp_ij = lp_build_gather_values(gallivm, interp, 2);
+			interp_ij = LLVMBuildBitCast(gallivm->builder, interp_ij,
+						     ctx.v2i32, "");
+		}
+
+		/* Use the absolute location of the input. */
+		prim_mask = LLVMGetParam(func, SI_PS_NUM_USER_SGPR);
+
+		if (key->ps_prolog.states.color_two_side) {
+			face = LLVMGetParam(func, face_vgpr);
+			face = LLVMBuildBitCast(gallivm->builder, face, ctx.i32, "");
+		}
+
+		interp_fs_input(&ctx,
+				key->ps_prolog.color_attr_index[i],
+				TGSI_SEMANTIC_COLOR, i,
+				key->ps_prolog.num_interp_inputs,
+				key->ps_prolog.colors_read, interp_ij,
+				prim_mask, face, color);
+
+		while (writemask) {
+			unsigned chan = u_bit_scan(&writemask);
+			ret = LLVMBuildInsertValue(gallivm->builder, ret, color[chan],
+						   num_params++, "");
+		}
+	}
+
+	/* Force per-sample interpolation. */
+	if (key->ps_prolog.states.force_persample_interp) {
+		unsigned i, base = key->ps_prolog.num_input_sgprs;
+		LLVMValueRef persp_sample[2], linear_sample[2];
+
+		/* Read PERSP_SAMPLE. */
+		for (i = 0; i < 2; i++)
+			persp_sample[i] = LLVMGetParam(func, base + i);
+		/* Overwrite PERSP_CENTER. */
+		for (i = 0; i < 2; i++)
+			ret = LLVMBuildInsertValue(gallivm->builder, ret,
+						   persp_sample[i], base + 2 + i, "");
+		/* Overwrite PERSP_CENTROID. */
+		for (i = 0; i < 2; i++)
+			ret = LLVMBuildInsertValue(gallivm->builder, ret,
+						   persp_sample[i], base + 4 + i, "");
+		/* Read LINEAR_SAMPLE. */
+		for (i = 0; i < 2; i++)
+			linear_sample[i] = LLVMGetParam(func, base + 6 + i);
+		/* Overwrite LINEAR_CENTER. */
+		for (i = 0; i < 2; i++)
+			ret = LLVMBuildInsertValue(gallivm->builder, ret,
+						   linear_sample[i], base + 8 + i, "");
+		/* Overwrite LINEAR_CENTROID. */
+		for (i = 0; i < 2; i++)
+			ret = LLVMBuildInsertValue(gallivm->builder, ret,
+						   linear_sample[i], base + 10 + i, "");
+	}
+
+	/* TODO: polygon stippling */
+
+	/* Compile. */
+	LLVMBuildRet(gallivm->builder, ret);
+	radeon_llvm_finalize_module(&ctx.radeon_bld);
+
+	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
+			    gallivm->module, debug, ctx.type,
+			    "Fragment Shader Prolog"))
+		status = false;
+
+	radeon_llvm_dispose(&ctx.radeon_bld);
+	return status;
+}
+
+/**
  * Compile the pixel shader epilog. This handles everything that must be
  * emulated for pixel shader exports. (alpha-test, format conversions, etc)
  */
@@ -5430,7 +5627,103 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 				      struct pipe_debug_callback *debug)
 {
 	struct tgsi_shader_info *info = &shader->selector->info;
+	union si_shader_part_key prolog_key;
 	union si_shader_part_key epilog_key;
+	unsigned i;
+
+	/* Get the prolog. */
+	memset(&prolog_key, 0, sizeof(prolog_key));
+	prolog_key.ps_prolog.states = shader->key.ps.prolog;
+	prolog_key.ps_prolog.colors_read = info->colors_read;
+	prolog_key.ps_prolog.num_input_sgprs = shader->num_input_sgprs;
+	prolog_key.ps_prolog.num_input_vgprs = shader->num_input_vgprs;
+
+	if (info->colors_read) {
+		unsigned *color = shader->selector->color_attr_index;
+
+		if (shader->key.ps.prolog.color_two_side) {
+			/* BCOLORs are stored after the last input. */
+			prolog_key.ps_prolog.num_interp_inputs = info->num_inputs;
+			prolog_key.ps_prolog.face_vgpr_index = shader->face_vgpr_index;
+			shader->config.spi_ps_input_ena |= S_0286CC_FRONT_FACE_ENA(1);
+		}
+
+		for (i = 0; i < 2; i++) {
+			unsigned location = info->input_interpolate_loc[color[i]];
+
+			if (!(info->colors_read & (0xf << i*4)))
+				continue;
+
+			prolog_key.ps_prolog.color_attr_index[i] = color[i];
+
+			/* Force per-sample interpolation for the colors here. */
+			if (shader->key.ps.prolog.force_persample_interp)
+				location = TGSI_INTERPOLATE_LOC_SAMPLE;
+
+			switch (info->input_interpolate[color[i]]) {
+			case TGSI_INTERPOLATE_CONSTANT:
+				prolog_key.ps_prolog.color_interp_vgpr_index[i] = -1;
+				break;
+			case TGSI_INTERPOLATE_PERSPECTIVE:
+			case TGSI_INTERPOLATE_COLOR:
+				switch (location) {
+				case TGSI_INTERPOLATE_LOC_SAMPLE:
+					prolog_key.ps_prolog.color_interp_vgpr_index[i] = 0;
+					shader->config.spi_ps_input_ena |=
+						S_0286CC_PERSP_SAMPLE_ENA(1);
+					break;
+				case TGSI_INTERPOLATE_LOC_CENTER:
+					prolog_key.ps_prolog.color_interp_vgpr_index[i] = 2;
+					shader->config.spi_ps_input_ena |=
+						S_0286CC_PERSP_CENTER_ENA(1);
+					break;
+				case TGSI_INTERPOLATE_LOC_CENTROID:
+					prolog_key.ps_prolog.color_interp_vgpr_index[i] = 4;
+					shader->config.spi_ps_input_ena |=
+						S_0286CC_PERSP_CENTROID_ENA(1);
+					break;
+				default:
+					assert(0);
+				}
+				break;
+			case TGSI_INTERPOLATE_LINEAR:
+				switch (location) {
+				case TGSI_INTERPOLATE_LOC_SAMPLE:
+					prolog_key.ps_prolog.color_interp_vgpr_index[i] = 6;
+					shader->config.spi_ps_input_ena |=
+						S_0286CC_LINEAR_SAMPLE_ENA(1);
+					break;
+				case TGSI_INTERPOLATE_LOC_CENTER:
+					prolog_key.ps_prolog.color_interp_vgpr_index[i] = 8;
+					shader->config.spi_ps_input_ena |=
+						S_0286CC_LINEAR_CENTER_ENA(1);
+					break;
+				case TGSI_INTERPOLATE_LOC_CENTROID:
+					prolog_key.ps_prolog.color_interp_vgpr_index[i] = 10;
+					shader->config.spi_ps_input_ena |=
+						S_0286CC_LINEAR_CENTROID_ENA(1);
+					break;
+				default:
+					assert(0);
+				}
+				break;
+			default:
+				assert(0);
+			}
+		}
+	}
+
+	/* The prolog is a no-op if these aren't set. */
+	if (prolog_key.ps_prolog.colors_read ||
+	    prolog_key.ps_prolog.states.force_persample_interp ||
+	    prolog_key.ps_prolog.states.poly_stipple) {
+		shader->prolog =
+			si_get_shader_part(sscreen, &sscreen->ps_prologs,
+					   &prolog_key, tm, debug,
+					   si_compile_ps_prolog);
+		if (!shader->prolog)
+			return false;
+	}
 
 	/* Get the epilog. */
 	memset(&epilog_key, 0, sizeof(epilog_key));
@@ -5446,6 +5739,35 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 				   si_compile_ps_epilog);
 	if (!shader->epilog)
 		return false;
+
+	/* Set up the enable bits for per-sample shading if needed. */
+	if (shader->key.ps.prolog.force_persample_interp) {
+		if (G_0286CC_PERSP_CENTER_ENA(shader->config.spi_ps_input_ena) ||
+		    G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena)) {
+			shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTER_ENA;
+			shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTROID_ENA;
+			shader->config.spi_ps_input_ena |= S_0286CC_PERSP_SAMPLE_ENA(1);
+		}
+		if (G_0286CC_LINEAR_CENTER_ENA(shader->config.spi_ps_input_ena) ||
+		    G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena)) {
+			shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTER_ENA;
+			shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
+			shader->config.spi_ps_input_ena |= S_0286CC_LINEAR_SAMPLE_ENA(1);
+		}
+	}
+
+	/* POW_W_FLOAT requires that one of the perspective weights is enabled. */
+	if (G_0286CC_POS_W_FLOAT_ENA(shader->config.spi_ps_input_ena) &&
+	    !(shader->config.spi_ps_input_ena & 0xf)) {
+		shader->config.spi_ps_input_ena |= S_0286CC_PERSP_CENTER_ENA(1);
+		assert(G_0286CC_PERSP_CENTER_ENA(shader->config.spi_ps_input_addr));
+	}
+
+	/* At least one pair of interpolation weights must be enabled. */
+	if (!(shader->config.spi_ps_input_ena & 0x7f)) {
+		shader->config.spi_ps_input_ena |= S_0286CC_LINEAR_CENTER_ENA(1);
+		assert(G_0286CC_LINEAR_CENTER_ENA(shader->config.spi_ps_input_addr));
+	}
 
 	/* The sample mask input is always enabled, because the API shader always
 	 * passes it through to the epilog. Disable it here if it's unused.
