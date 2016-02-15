@@ -75,6 +75,7 @@ static int _clamp(int a, int min, int max)
 void st_init_limits(struct pipe_screen *screen,
                     struct gl_constants *c, struct gl_extensions *extensions)
 {
+   int supported_irs;
    unsigned sh;
    boolean can_ubo = TRUE;
 
@@ -177,6 +178,13 @@ void st_init_limits(struct pipe_screen *screen,
       case PIPE_SHADER_COMPUTE:
          pc = &c->Program[MESA_SHADER_COMPUTE];
          options = &c->ShaderCompilerOptions[MESA_SHADER_COMPUTE];
+
+         if (!screen->get_param(screen, PIPE_CAP_COMPUTE))
+            continue;
+         supported_irs =
+            screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_SUPPORTED_IRS);
+         if (!(supported_irs & (1 << PIPE_SHADER_IR_TGSI)))
+            continue;
          break;
       default:
          assert(0);
