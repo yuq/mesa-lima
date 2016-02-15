@@ -2080,7 +2080,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
 void
 vec4_visitor::nir_emit_undef(nir_ssa_undef_instr *instr)
 {
-   nir_ssa_values[instr->def.index] = dst_reg(VGRF, alloc.allocate(1));
+   nir_ssa_values[instr->def.index] =
+      dst_reg(VGRF, alloc.allocate(DIV_ROUND_UP(instr->def.bit_size, 32)));
 }
 
 }
