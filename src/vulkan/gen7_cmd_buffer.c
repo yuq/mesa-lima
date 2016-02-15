@@ -664,6 +664,8 @@ void genX(CmdBeginRenderPass)(
    cmd_buffer->state.pass = pass;
    anv_cmd_state_setup_attachments(cmd_buffer, pRenderPassBegin);
 
+   genX(flush_pipeline_select_3d)(cmd_buffer);
+
    const VkRect2D *render_area = &pRenderPassBegin->renderArea;
 
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DRAWING_RECTANGLE,
