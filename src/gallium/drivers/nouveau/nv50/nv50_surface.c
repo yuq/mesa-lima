@@ -37,7 +37,7 @@
 #include "nv50/nv50_context.h"
 #include "nv50/nv50_resource.h"
 
-#include "nv50/nv50_defs.xml.h"
+#include "nv50/g80_defs.xml.h"
 #include "nv50/nv50_texture.xml.h"
 
 /* these are used in nv50_blit.h */
@@ -64,15 +64,15 @@ nv50_2d_format(enum pipe_format format, bool dst, bool dst_src_equal)
 
    switch (util_format_get_blocksize(format)) {
    case 1:
-      return NV50_SURFACE_FORMAT_R8_UNORM;
+      return G80_SURFACE_FORMAT_R8_UNORM;
    case 2:
-      return NV50_SURFACE_FORMAT_R16_UNORM;
+      return G80_SURFACE_FORMAT_R16_UNORM;
    case 4:
-      return NV50_SURFACE_FORMAT_BGRA8_UNORM;
+      return G80_SURFACE_FORMAT_BGRA8_UNORM;
    case 8:
-      return NV50_SURFACE_FORMAT_RGBA16_FLOAT;
+      return G80_SURFACE_FORMAT_RGBA16_FLOAT;
    case 16:
-      return NV50_SURFACE_FORMAT_RGBA32_FLOAT;
+      return G80_SURFACE_FORMAT_RGBA32_FLOAT;
    default:
       return 0;
    }
@@ -628,7 +628,7 @@ nv50_clear_buffer_push(struct pipe_context *pipe,
    offset &= ~0xff;
 
    BEGIN_NV04(push, NV50_2D(DST_FORMAT), 2);
-   PUSH_DATA (push, NV50_SURFACE_FORMAT_R8_UNORM);
+   PUSH_DATA (push, G80_SURFACE_FORMAT_R8_UNORM);
    PUSH_DATA (push, 1);
    BEGIN_NV04(push, NV50_2D(DST_PITCH), 5);
    PUSH_DATA (push, 262144);
@@ -638,7 +638,7 @@ nv50_clear_buffer_push(struct pipe_context *pipe,
    PUSH_DATA (push, buf->address + offset);
    BEGIN_NV04(push, NV50_2D(SIFC_BITMAP_ENABLE), 2);
    PUSH_DATA (push, 0);
-   PUSH_DATA (push, NV50_SURFACE_FORMAT_R8_UNORM);
+   PUSH_DATA (push, G80_SURFACE_FORMAT_R8_UNORM);
    BEGIN_NV04(push, NV50_2D(SIFC_WIDTH), 10);
    PUSH_DATA (push, size);
    PUSH_DATA (push, 1);
