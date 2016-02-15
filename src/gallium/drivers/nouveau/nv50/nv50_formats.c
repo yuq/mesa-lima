@@ -39,10 +39,9 @@
  * C: render target (color), blendable only on nvc0
  * D: scanout/display target, blendable
  * Z: depth/stencil
- * V: vertex fetch
  * I: image / surface, implies T
  */
-#define U_V   PIPE_BIND_VERTEX_BUFFER
+#define U_V   0
 #define U_T   PIPE_BIND_SAMPLER_VIEW
 #define U_I   PIPE_BIND_SHADER_BUFFER | PIPE_BIND_SHADER_IMAGE | PIPE_BIND_COMPUTE_RESOURCE
 #define U_TR  PIPE_BIND_RENDER_TARGET | U_T
@@ -103,10 +102,7 @@
       (NV50_TIC_TYPE_##t1 << NV50_TIC_0_TYPE1__SHIFT) |                 \
       (NV50_TIC_TYPE_##t2 << NV50_TIC_0_TYPE2__SHIFT) |                 \
       (NV50_TIC_TYPE_##t3 << NV50_TIC_0_TYPE3__SHIFT) |                 \
-      NV50_TIC_0_FMT_##sz,                                              \
-      NVXX_3D_VAF_SIZE(sz) |                                            \
-      NVXX_3D_VAF_TYPE(t0) | (br << 31),                                \
-      U_##u                                                             \
+      NV50_TIC_0_FMT_##sz, U_##u                                        \
    }
 
 #define TBLENT_B_(pf, sf, r, g, b, a, t0, t1, t2, t3, sz, u)            \
@@ -120,7 +116,7 @@
       (NV50_TIC_TYPE_##t1 << NV50_TIC_0_TYPE1__SHIFT) |                 \
       (NV50_TIC_TYPE_##t2 << NV50_TIC_0_TYPE2__SHIFT) |                 \
       (NV50_TIC_TYPE_##t3 << NV50_TIC_0_TYPE3__SHIFT) |                 \
-      NV50_TIC_0_FMT_##sz, 0, U_##u                                     \
+      NV50_TIC_0_FMT_##sz, U_##u                                        \
    }
 
 #define C4A(p, n, r, g, b, a, t, s, u, br)                              \
@@ -308,6 +304,10 @@ const struct nv50_format nv50_format_table[PIPE_FORMAT_COUNT] =
    I3B(R32G32B32X32_SINT, RGBX32_SINT, C0, C1, C2, xx, SINT, 32_32_32_32, TR),
    I3B(R32G32B32X32_UINT, RGBX32_UINT, C0, C1, C2, xx, UINT, 32_32_32_32, TR),
 
+   F3A(R32G32B32_FLOAT, NONE, C0, C1, C2, xx, FLOAT, 32_32_32, tV),
+   I3A(R32G32B32_SINT, NONE, C0, C1, C2, xx, SINT, 32_32_32, tV),
+   I3A(R32G32B32_UINT, NONE, C0, C1, C2, xx, UINT, 32_32_32, tV),
+
    F2A(R32G32_FLOAT, RG32_FLOAT, C0, C1, xx, xx, FLOAT, 32_32, IBV),
    F2A(R32G32_UNORM, NONE, C0, C1, xx, xx, UNORM, 32_32, TV),
    F2A(R32G32_SNORM, NONE, C0, C1, xx, xx, SNORM, 32_32, TV),
@@ -381,64 +381,191 @@ const struct nv50_format nv50_format_table[PIPE_FORMAT_COUNT] =
              C0, C1, C2, ONE_FLOAT, SNORM, SNORM, UNORM, UNORM, 8_8_8_8, T),
    TBLENT_B_(R5SG5SB6U_NORM, 0,
              C0, C1, C2, ONE_FLOAT, SNORM, SNORM, UNORM, UNORM, 5_5_6, T),
+};
 
-   /* vertex-only formats: */
+#define V_TBLENT_A_(pf, sf, r, g, b, a, t0, t1, t2, t3, sz, u, br)      \
+   [PIPE_FORMAT_##pf] = {                                               \
+      NVXX_3D_VAF_SIZE(sz) | NVXX_3D_VAF_TYPE(t0) | (br << 31),         \
+      PIPE_BIND_VERTEX_BUFFER                                           \
+   }
 
-   C4A(R32G32B32A32_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 32_32_32_32, V, 0),
-   C4A(R32G32B32A32_USCALED, NONE, C0, C1, C2, C3, USCALED, 32_32_32_32, V, 0),
-   F3A(R32G32B32_FLOAT, NONE, C0, C1, C2, xx, FLOAT, 32_32_32, tV),
-   F3A(R32G32B32_UNORM, NONE, C0, C1, C2, xx, UNORM, 32_32_32, V),
-   F3A(R32G32B32_SNORM, NONE, C0, C1, C2, xx, SNORM, 32_32_32, V),
-   I3A(R32G32B32_SINT, NONE, C0, C1, C2, xx, SINT, 32_32_32, tV),
-   I3A(R32G32B32_UINT, NONE, C0, C1, C2, xx, UINT, 32_32_32, tV),
-   F3A(R32G32B32_SSCALED, NONE, C0, C1, C2, xx, SSCALED, 32_32_32, V),
-   F3A(R32G32B32_USCALED, NONE, C0, C1, C2, xx, USCALED, 32_32_32, V),
-   F2A(R32G32_SSCALED, NONE, C0, C1, xx, xx, SSCALED, 32_32, V),
-   F2A(R32G32_USCALED, NONE, C0, C1, xx, xx, USCALED, 32_32, V),
-   F1A(R32_SSCALED, NONE, C0, xx, xx, xx, SSCALED, 32, V),
-   F1A(R32_USCALED, NONE, C0, xx, xx, xx, USCALED, 32, V),
+#define V_TBLENT_B_(pf, sf, r, g, b, a, t0, t1, t2, t3, sz, u)          \
+   [PIPE_FORMAT_##pf] = {                                               \
+      0,                                                                \
+      PIPE_BIND_VERTEX_BUFFER                                           \
+   }
 
-   C4A(R16G16B16A16_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 16_16_16_16, V, 0),
-   C4A(R16G16B16A16_USCALED, NONE, C0, C1, C2, C3, USCALED, 16_16_16_16, V, 0),
-   F3A(R16G16B16_FLOAT, NONE, C0, C1, C2, xx, FLOAT, 16_16_16, V),
-   F3A(R16G16B16_UNORM, NONE, C0, C1, C2, xx, UNORM, 16_16_16, V),
-   F3A(R16G16B16_SNORM, NONE, C0, C1, C2, xx, SNORM, 16_16_16, V),
-   I3A(R16G16B16_SINT, NONE, C0, C1, C2, xx, SINT, 16_16_16, V),
-   I3A(R16G16B16_UINT, NONE, C0, C1, C2, xx, UINT, 16_16_16, V),
-   F3A(R16G16B16_SSCALED, NONE, C0, C1, C2, xx, SSCALED, 16_16_16, V),
-   F3A(R16G16B16_USCALED, NONE, C0, C1, C2, xx, USCALED, 16_16_16, V),
-   F2A(R16G16_SSCALED, NONE, C0, C1, xx, xx, SSCALED, 16_16, V),
-   F2A(R16G16_USCALED, NONE, C0, C1, xx, xx, USCALED, 16_16, V),
-   F1A(R16_SSCALED, NONE, C0, xx, xx, xx, SSCALED, 16, V),
-   F1A(R16_USCALED, NONE, C0, xx, xx, xx, USCALED, 16, V),
+#define V_C4A(p, n, r, g, b, a, t, s, u, br)                              \
+   V_TBLENT_A_(p, NV50_SURFACE_FORMAT_##n, r, g, b, a, t, t, t, t, s, u, br)
+#define V_C4B(p, n, r, g, b, a, t, s, u)                                  \
+   V_TBLENT_B_(p, NV50_SURFACE_FORMAT_##n, r, g, b, a, t, t, t, t, s, u)
 
-   C4A(R10G10B10A2_USCALED, NONE, C0, C1, C2, C3, USCALED, 10_10_10_2, V, 0),
-   C4A(R10G10B10A2_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 10_10_10_2, V, 0),
-   C4A(B10G10R10A2_USCALED, NONE, C0, C1, C2, C3, USCALED, 10_10_10_2, V, 1),
-   C4A(B10G10R10A2_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 10_10_10_2, V, 1),
+#define V_ZXB(p, n, r, g, b, a, t, s, u)                                  \
+   V_TBLENT_B_(p, NV50_ZETA_FORMAT_##n,                                   \
+             r, g, b, ONE_FLOAT, t, UINT, UINT, UINT, s, u)
+#define V_ZSB(p, n, r, g, b, a, t, s, u)                                  \
+   V_TBLENT_B_(p, NV50_ZETA_FORMAT_##n,                                   \
+             r, g, b, ONE_FLOAT, t, UINT, UINT, UINT, s, u)
+#define V_SZB(p, n, r, g, b, a, t, s, u)                                  \
+   V_TBLENT_B_(p, NV50_ZETA_FORMAT_##n,                                   \
+             r, g, b, ONE_FLOAT, UINT, t, UINT, UINT, s, u)
+#define V_SXB(p, r, s, u)                                                 \
+   V_TBLENT_B_(p, NV50_ZETA_FORMAT_NONE,                                  \
+             r, r, r, r, UINT, UINT, UINT, UINT, s, u)
 
-   C4A(R8G8B8A8_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 8_8_8_8, V, 0),
-   C4A(R8G8B8A8_USCALED, NONE, C0, C1, C2, C3, USCALED, 8_8_8_8, V, 0),
-   F3A(R8G8B8_UNORM, NONE, C0, C1, C2, xx, UNORM, 8_8_8, V),
-   F3A(R8G8B8_SNORM, NONE, C0, C1, C2, xx, SNORM, 8_8_8, V),
-   I2A(R8G8B8_SINT, NONE, C0, C1, C2, xx, SINT, 8_8_8, V),
-   I2A(R8G8B8_UINT, NONE, C0, C1, C2, xx, UINT, 8_8_8, V),
-   F3A(R8G8B8_SSCALED, NONE, C0, C1, C2, xx, SSCALED, 8_8_8, V),
-   F3A(R8G8B8_USCALED, NONE, C0, C1, C2, xx, USCALED, 8_8_8, V),
-   F2A(R8G8_SSCALED, NONE, C0, C1, xx, xx, SSCALED, 8_8, V),
-   F2A(R8G8_USCALED, NONE, C0, C1, xx, xx, USCALED, 8_8, V),
-   F1A(R8_SSCALED, NONE, C0, xx, xx, xx, SSCALED, 8, V),
-   F1A(R8_USCALED, NONE, C0, xx, xx, xx, USCALED, 8, V),
+#define V_F3A(p, n, r, g, b, a, t, s, u)          \
+   V_C4A(p, n, r, g, b, ONE_FLOAT, t, s, u, 0)
+#define V_I3A(p, n, r, g, b, a, t, s, u)          \
+   V_C4A(p, n, r, g, b, ONE_INT, t, s, u, 0)
+#define V_F3B(p, n, r, g, b, a, t, s, u)          \
+   V_C4B(p, n, r, g, b, ONE_FLOAT, t, s, u)
+#define V_I3B(p, n, r, g, b, a, t, s, u)          \
+   V_C4B(p, n, r, g, b, ONE_INT, t, s, u)
+
+#define V_F2A(p, n, r, g, b, a, t, s, u)          \
+   V_C4A(p, n, r, g, ZERO, ONE_FLOAT, t, s, u, 0)
+#define V_I2A(p, n, r, g, b, a, t, s, u)          \
+   V_C4A(p, n, r, g, ZERO, ONE_INT, t, s, u, 0)
+#define V_F2B(p, n, r, g, b, a, t, s, u)          \
+   V_C4B(p, n, r, g, ZERO, ONE_FLOAT, t, s, u)
+#define V_I2B(p, n, r, g, b, a, t, s, u)          \
+   V_C4B(p, n, r, g, ZERO, ONE_INT, t, s, u)
+
+#define V_F1A(p, n, r, g, b, a, t, s, u)             \
+   V_C4A(p, n, r, ZERO, ZERO, ONE_FLOAT, t, s, u, 0)
+#define V_I1A(p, n, r, g, b, a, t, s, u)             \
+   V_C4A(p, n, r, ZERO, ZERO, ONE_INT, t, s, u, 0)
+#define V_F1B(p, n, r, g, b, a, t, s, u)          \
+   V_C4B(p, n, r, ZERO, ZERO, ONE_FLOAT, t, s, u)
+#define V_I1B(p, n, r, g, b, a, t, s, u)          \
+   V_C4B(p, n, r, ZERO, ZERO, ONE_INT, t, s, u)
+
+#define V_A1B(p, n, r, g, b, a, t, s, u)          \
+   V_C4B(p, n, ZERO, ZERO, ZERO, a, t, s, u)
+
+#if NOUVEAU_DRIVER == 0xc0
+const struct nvc0_vertex_format nvc0_vertex_format[PIPE_FORMAT_COUNT] =
+#else
+const struct nv50_vertex_format nv50_vertex_format[PIPE_FORMAT_COUNT] =
+#endif
+{
+   V_C4A(B8G8R8A8_UNORM, BGRA8_UNORM, C2, C1, C0, C3, UNORM, 8_8_8_8, TDV, 1),
+   V_C4A(R8G8B8A8_UNORM, RGBA8_UNORM, C0, C1, C2, C3, UNORM, 8_8_8_8, IBV, 0),
+
+   V_C4A(R10G10B10A2_UNORM, RGB10_A2_UNORM, C0, C1, C2, C3, UNORM, 10_10_10_2, IBV, 0),
+   V_C4A(B10G10R10A2_UNORM, BGR10_A2_UNORM, C2, C1, C0, C3, UNORM, 10_10_10_2, TDV, 1),
+   V_C4A(R10G10B10A2_SNORM, NONE, C0, C1, C2, C3, SNORM, 10_10_10_2, TV, 0),
+   V_C4A(B10G10R10A2_SNORM, NONE, C2, C1, C0, C3, SNORM, 10_10_10_2, TV, 1),
+   V_C4A(R10G10B10A2_UINT, RGB10_A2_UINT, C0, C1, C2, C3, UINT, 10_10_10_2, TRV, 0),
+   V_C4A(B10G10R10A2_UINT, RGB10_A2_UINT, C2, C1, C0, C3, UINT, 10_10_10_2, TV, 0),
+
+   V_F3A(R11G11B10_FLOAT, R11G11B10_FLOAT, C0, C1, C2, xx, FLOAT, 11_11_10, IBV),
+
+   V_C4A(R32G32B32A32_FLOAT, RGBA32_FLOAT, C0, C1, C2, C3, FLOAT, 32_32_32_32, IBV, 0),
+   V_C4A(R32G32B32A32_UNORM, NONE, C0, C1, C2, C3, UNORM, 32_32_32_32, TV, 0),
+   V_C4A(R32G32B32A32_SNORM, NONE, C0, C1, C2, C3, SNORM, 32_32_32_32, TV, 0),
+   V_C4A(R32G32B32A32_SINT, RGBA32_SINT, C0, C1, C2, C3, SINT, 32_32_32_32, IRV, 0),
+   V_C4A(R32G32B32A32_UINT, RGBA32_UINT, C0, C1, C2, C3, UINT, 32_32_32_32, IRV, 0),
+
+   V_F2A(R32G32_FLOAT, RG32_FLOAT, C0, C1, xx, xx, FLOAT, 32_32, IBV),
+   V_F2A(R32G32_UNORM, NONE, C0, C1, xx, xx, UNORM, 32_32, TV),
+   V_F2A(R32G32_SNORM, NONE, C0, C1, xx, xx, SNORM, 32_32, TV),
+   V_I2A(R32G32_SINT, RG32_SINT, C0, C1, xx, xx, SINT, 32_32, IRV),
+   V_I2A(R32G32_UINT, RG32_UINT, C0, C1, xx, xx, UINT, 32_32, IRV),
+
+   V_F1A(R32_FLOAT, R32_FLOAT, C0, xx, xx, xx, FLOAT, 32, IBV),
+   V_F1A(R32_UNORM, NONE, C0, xx, xx, xx, UNORM, 32, TV),
+   V_F1A(R32_SNORM, NONE, C0, xx, xx, xx, SNORM, 32, TV),
+   V_I1A(R32_SINT, R32_SINT, C0, xx, xx, xx, SINT, 32, IRV),
+   V_I1A(R32_UINT, R32_UINT, C0, xx, xx, xx, UINT, 32, IRV),
+
+   V_C4A(R16G16B16A16_FLOAT, RGBA16_FLOAT, C0, C1, C2, C3, FLOAT, 16_16_16_16, IBV, 0),
+   V_C4A(R16G16B16A16_UNORM, RGBA16_UNORM, C0, C1, C2, C3, UNORM, 16_16_16_16, ICV, 0),
+   V_C4A(R16G16B16A16_SNORM, RGBA16_SNORM, C0, C1, C2, C3, SNORM, 16_16_16_16, ICV, 0),
+   V_C4A(R16G16B16A16_SINT, RGBA16_SINT, C0, C1, C2, C3, SINT, 16_16_16_16, IRV, 0),
+   V_C4A(R16G16B16A16_UINT, RGBA16_UINT, C0, C1, C2, C3, UINT, 16_16_16_16, IRV, 0),
+
+   V_F2A(R16G16_FLOAT, RG16_FLOAT, C0, C1, xx, xx, FLOAT, 16_16, IBV),
+   V_F2A(R16G16_UNORM, RG16_UNORM, C0, C1, xx, xx, UNORM, 16_16, ICV),
+   V_F2A(R16G16_SNORM, RG16_SNORM, C0, C1, xx, xx, SNORM, 16_16, ICV),
+   V_I2A(R16G16_SINT, RG16_SINT, C0, C1, xx, xx, SINT, 16_16, IRV),
+   V_I2A(R16G16_UINT, RG16_UINT, C0, C1, xx, xx, UINT, 16_16, IRV),
+
+   V_F1A(R16_FLOAT, R16_FLOAT, C0, xx, xx, xx, FLOAT, 16, IBV),
+   V_F1A(R16_UNORM, R16_UNORM, C0, xx, xx, xx, UNORM, 16, ICV),
+   V_F1A(R16_SNORM, R16_SNORM, C0, xx, xx, xx, SNORM, 16, ICV),
+   V_I1A(R16_SINT, R16_SINT, C0, xx, xx, xx, SINT, 16, IRV),
+   V_I1A(R16_UINT, R16_UINT, C0, xx, xx, xx, UINT, 16, IRV),
+
+   V_C4A(R8G8B8A8_SNORM, RGBA8_SNORM, C0, C1, C2, C3, SNORM, 8_8_8_8, ICV, 0),
+   V_C4A(R8G8B8A8_SINT, RGBA8_SINT, C0, C1, C2, C3, SINT, 8_8_8_8, IRV, 0),
+   V_C4A(R8G8B8A8_UINT, RGBA8_UINT, C0, C1, C2, C3, UINT, 8_8_8_8, IRV, 0),
+
+   V_F2A(R8G8_UNORM, RG8_UNORM, C0, C1, xx, xx, UNORM, 8_8, IBV),
+   V_F2A(R8G8_SNORM, RG8_SNORM, C0, C1, xx, xx, SNORM, 8_8, ICV),
+   V_I2A(R8G8_SINT, RG8_SINT, C0, C1, xx, xx, SINT, 8_8, IRV),
+   V_I2A(R8G8_UINT, RG8_UINT, C0, C1, xx, xx, UINT, 8_8, IRV),
+
+   V_F1A(R8_UNORM, R8_UNORM, C0, xx, xx, xx, UNORM, 8, IBV),
+   V_F1A(R8_SNORM, R8_SNORM, C0, xx, xx, xx, SNORM, 8, ICV),
+   V_I1A(R8_SINT, R8_SINT, C0, xx, xx, xx, SINT, 8, IRV),
+   V_I1A(R8_UINT, R8_UINT, C0, xx, xx, xx, UINT, 8, IRV),
+
+   V_C4A(R32G32B32A32_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 32_32_32_32, V, 0),
+   V_C4A(R32G32B32A32_USCALED, NONE, C0, C1, C2, C3, USCALED, 32_32_32_32, V, 0),
+   V_F3A(R32G32B32_FLOAT, NONE, C0, C1, C2, xx, FLOAT, 32_32_32, tV),
+   V_F3A(R32G32B32_UNORM, NONE, C0, C1, C2, xx, UNORM, 32_32_32, V),
+   V_F3A(R32G32B32_SNORM, NONE, C0, C1, C2, xx, SNORM, 32_32_32, V),
+   V_I3A(R32G32B32_SINT, NONE, C0, C1, C2, xx, SINT, 32_32_32, tV),
+   V_I3A(R32G32B32_UINT, NONE, C0, C1, C2, xx, UINT, 32_32_32, tV),
+   V_F3A(R32G32B32_SSCALED, NONE, C0, C1, C2, xx, SSCALED, 32_32_32, V),
+   V_F3A(R32G32B32_USCALED, NONE, C0, C1, C2, xx, USCALED, 32_32_32, V),
+   V_F2A(R32G32_SSCALED, NONE, C0, C1, xx, xx, SSCALED, 32_32, V),
+   V_F2A(R32G32_USCALED, NONE, C0, C1, xx, xx, USCALED, 32_32, V),
+   V_F1A(R32_SSCALED, NONE, C0, xx, xx, xx, SSCALED, 32, V),
+   V_F1A(R32_USCALED, NONE, C0, xx, xx, xx, USCALED, 32, V),
+
+   V_C4A(R16G16B16A16_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 16_16_16_16, V, 0),
+   V_C4A(R16G16B16A16_USCALED, NONE, C0, C1, C2, C3, USCALED, 16_16_16_16, V, 0),
+   V_F3A(R16G16B16_FLOAT, NONE, C0, C1, C2, xx, FLOAT, 16_16_16, V),
+   V_F3A(R16G16B16_UNORM, NONE, C0, C1, C2, xx, UNORM, 16_16_16, V),
+   V_F3A(R16G16B16_SNORM, NONE, C0, C1, C2, xx, SNORM, 16_16_16, V),
+   V_I3A(R16G16B16_SINT, NONE, C0, C1, C2, xx, SINT, 16_16_16, V),
+   V_I3A(R16G16B16_UINT, NONE, C0, C1, C2, xx, UINT, 16_16_16, V),
+   V_F3A(R16G16B16_SSCALED, NONE, C0, C1, C2, xx, SSCALED, 16_16_16, V),
+   V_F3A(R16G16B16_USCALED, NONE, C0, C1, C2, xx, USCALED, 16_16_16, V),
+   V_F2A(R16G16_SSCALED, NONE, C0, C1, xx, xx, SSCALED, 16_16, V),
+   V_F2A(R16G16_USCALED, NONE, C0, C1, xx, xx, USCALED, 16_16, V),
+   V_F1A(R16_SSCALED, NONE, C0, xx, xx, xx, SSCALED, 16, V),
+   V_F1A(R16_USCALED, NONE, C0, xx, xx, xx, USCALED, 16, V),
+
+   V_C4A(R10G10B10A2_USCALED, NONE, C0, C1, C2, C3, USCALED, 10_10_10_2, V, 0),
+   V_C4A(R10G10B10A2_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 10_10_10_2, V, 0),
+   V_C4A(B10G10R10A2_USCALED, NONE, C0, C1, C2, C3, USCALED, 10_10_10_2, V, 1),
+   V_C4A(B10G10R10A2_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 10_10_10_2, V, 1),
+
+   V_C4A(R8G8B8A8_SSCALED, NONE, C0, C1, C2, C3, SSCALED, 8_8_8_8, V, 0),
+   V_C4A(R8G8B8A8_USCALED, NONE, C0, C1, C2, C3, USCALED, 8_8_8_8, V, 0),
+   V_F3A(R8G8B8_UNORM, NONE, C0, C1, C2, xx, UNORM, 8_8_8, V),
+   V_F3A(R8G8B8_SNORM, NONE, C0, C1, C2, xx, SNORM, 8_8_8, V),
+   V_I2A(R8G8B8_SINT, NONE, C0, C1, C2, xx, SINT, 8_8_8, V),
+   V_I2A(R8G8B8_UINT, NONE, C0, C1, C2, xx, UINT, 8_8_8, V),
+   V_F3A(R8G8B8_SSCALED, NONE, C0, C1, C2, xx, SSCALED, 8_8_8, V),
+   V_F3A(R8G8B8_USCALED, NONE, C0, C1, C2, xx, USCALED, 8_8_8, V),
+   V_F2A(R8G8_SSCALED, NONE, C0, C1, xx, xx, SSCALED, 8_8, V),
+   V_F2A(R8G8_USCALED, NONE, C0, C1, xx, xx, USCALED, 8_8, V),
+   V_F1A(R8_SSCALED, NONE, C0, xx, xx, xx, SSCALED, 8, V),
+   V_F1A(R8_USCALED, NONE, C0, xx, xx, xx, USCALED, 8, V),
 
    /* FIXED types: not supported natively, converted on VBO push */
 
-   C4B(R32G32B32A32_FIXED, NONE, C0, C1, C2, C3, FLOAT, 32_32_32_32, V),
-   F3B(R32G32B32_FIXED, NONE, C0, C1, C2, xx, FLOAT, 32_32_32, V),
-   F2B(R32G32_FIXED, NONE, C0, C1, xx, xx, FLOAT, 32_32, V),
-   F1B(R32_FIXED, NONE, C0, xx, xx, xx, FLOAT, 32, V),
+   V_C4B(R32G32B32A32_FIXED, NONE, C0, C1, C2, C3, FLOAT, 32_32_32_32, V),
+   V_F3B(R32G32B32_FIXED, NONE, C0, C1, C2, xx, FLOAT, 32_32_32, V),
+   V_F2B(R32G32_FIXED, NONE, C0, C1, xx, xx, FLOAT, 32_32, V),
+   V_F1B(R32_FIXED, NONE, C0, xx, xx, xx, FLOAT, 32, V),
 
-   C4B(R64G64B64A64_FLOAT, NONE, C0, C1, C2, C3, FLOAT, 32_32_32_32, V),
-   F3B(R64G64B64_FLOAT, NONE, C0, C1, C2, xx, FLOAT, 32_32_32, V),
-   F2B(R64G64_FLOAT, NONE, C0, C1, xx, xx, FLOAT, 32_32, V),
-   F1B(R64_FLOAT, NONE, C0, xx, xx, xx, FLOAT, 32, V),
+   V_C4B(R64G64B64A64_FLOAT, NONE, C0, C1, C2, C3, FLOAT, 32_32_32_32, V),
+   V_F3B(R64G64B64_FLOAT, NONE, C0, C1, C2, xx, FLOAT, 32_32_32, V),
+   V_F2B(R64G64_FLOAT, NONE, C0, C1, xx, xx, FLOAT, 32_32, V),
+   V_F1B(R64_FLOAT, NONE, C0, xx, xx, xx, FLOAT, 32, V),
 };

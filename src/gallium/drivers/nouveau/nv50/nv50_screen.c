@@ -72,7 +72,8 @@ nv50_screen_is_format_supported(struct pipe_screen *pscreen,
                  PIPE_BIND_TRANSFER_WRITE |
                  PIPE_BIND_SHARED);
 
-   return (nv50_format_table[format].usage & bindings) == bindings;
+   return (( nv50_format_table[format].usage |
+            nv50_vertex_format[format].usage) & bindings) == bindings;
 }
 
 static int

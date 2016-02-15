@@ -165,11 +165,16 @@ nvc0_resource_validate(struct nv04_resource *res, uint32_t flags)
 struct nvc0_format {
    uint32_t rt;
    uint32_t tic;
+   uint32_t usage;
+};
+
+struct nvc0_vertex_format {
    uint32_t vtx;
    uint32_t usage;
 };
 
 extern const struct nvc0_format nvc0_format_table[];
+extern const struct nvc0_vertex_format nvc0_vertex_format[];
 
 static inline void
 nvc0_screen_tic_unlock(struct nvc0_screen *screen, struct nv50_tic_entry *tic)

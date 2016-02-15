@@ -76,7 +76,7 @@ nv50_vertex_state_create(struct pipe_context *pipe,
         enum pipe_format fmt = ve->src_format;
 
         so->element[i].pipe = elements[i];
-        so->element[i].state = nv50_format_table[fmt].vtx;
+        so->element[i].state = nv50_vertex_format[fmt].vtx;
 
         if (!so->element[i].state) {
             switch (util_format_get_nr_components(fmt)) {
@@ -89,7 +89,7 @@ nv50_vertex_state_create(struct pipe_context *pipe,
                 FREE(so);
                 return NULL;
             }
-            so->element[i].state = nv50_format_table[fmt].vtx;
+            so->element[i].state = nv50_vertex_format[fmt].vtx;
             so->need_conversion = true;
             pipe_debug_message(&nouveau_context(pipe)->debug, FALLBACK,
                                "Converting vertex element %d, no hw format %s",
