@@ -6267,7 +6267,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                                   decl_count);
 
    bool first_member = true;
-   bool first_member_has_explicit_location;
+   bool first_member_has_explicit_location = false;
 
    unsigned i = 0;
    foreach_list_typed (ast_declarator_list, decl_list, link, declarations) {
