@@ -87,7 +87,7 @@ public:
    void setup_initial_values();
    void run();
 
-   void dump_block_data() const;
+   void dump_block_data() const UNUSED;
 
    void *mem_ctx;
    cfg_t *cfg;
