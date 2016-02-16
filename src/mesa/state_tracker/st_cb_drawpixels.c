@@ -636,7 +636,7 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
       const float tTop = invertTex ? maxYcoord : 0.0f;
       const float tBot = invertTex ? 0.0f : maxYcoord;
 
-      if (!st_draw_quad(ctx->st, clip_x0, clip_y0, clip_x1, clip_y1, z,
+      if (!st_draw_quad(st, clip_x0, clip_y0, clip_x1, clip_y1, z,
                         sLeft, tBot, sRight, tTop, color, 0)) {
          _mesa_error(ctx, GL_OUT_OF_MEMORY, "glDrawPixels");
       }
@@ -852,7 +852,7 @@ get_color_fp_variant(struct st_context *st)
                        ctx->Pixel.AlphaScale != 1.0);
    key.pixelMaps = ctx->Pixel.MapColorFlag;
    key.clamp_color = st->clamp_frag_color_in_shader &&
-                     st->ctx->Color._ClampFragmentColor;
+                     ctx->Color._ClampFragmentColor;
 
    fpv = st_get_fp_variant(st, st->fp, &key);
 

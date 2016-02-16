@@ -283,9 +283,9 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
 
    /* Need these flags:
     */
-   st->ctx->FragmentProgram._MaintainTexEnvProgram = GL_TRUE;
+   ctx->FragmentProgram._MaintainTexEnvProgram = GL_TRUE;
 
-   st->ctx->VertexProgram._MaintainTnlProgram = GL_TRUE;
+   ctx->VertexProgram._MaintainTnlProgram = GL_TRUE;
 
    st->has_stencil_export =
       screen->get_param(screen, PIPE_CAP_SHADER_STENCIL_EXPORT);
@@ -349,8 +349,8 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    /* called after _mesa_create_context/_mesa_init_point, fix default user
     * settable max point size up
     */
-   st->ctx->Point.MaxSize = MAX2(ctx->Const.MaxPointSize,
-                                 ctx->Const.MaxPointSizeAA);
+   ctx->Point.MaxSize = MAX2(ctx->Const.MaxPointSize,
+                             ctx->Const.MaxPointSizeAA);
    /* For vertex shaders, make sure not to emit saturate when SM 3.0 is not supported */
    ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].EmitNoSat = !st->has_shader_model3;
 
@@ -472,7 +472,7 @@ void st_destroy_context( struct st_context *st )
    pipe_sampler_view_reference(&st->pixel_xfer.pixelmap_sampler_view, NULL);
    pipe_resource_reference(&st->pixel_xfer.pixelmap_texture, NULL);
 
-   _vbo_DestroyContext(st->ctx);
+   _vbo_DestroyContext(ctx);
 
    st_destroy_program_variants(st);
 

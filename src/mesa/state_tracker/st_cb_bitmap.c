@@ -193,7 +193,7 @@ setup_render_state(struct gl_context *ctx,
    key.st = st->has_shareable_shaders ? NULL : st;
    key.bitmap = GL_TRUE;
    key.clamp_color = st->clamp_frag_color_in_shader &&
-                     st->ctx->Color._ClampFragmentColor;
+                     ctx->Color._ClampFragmentColor;
 
    fpv = st_get_fp_variant(st, st->fp, &key);
 
@@ -482,7 +482,7 @@ accum_bitmap(struct gl_context *ctx,
    struct st_context *st = ctx->st;
    struct bitmap_cache *cache = st->bitmap.cache;
    int px = -999, py = -999;
-   const GLfloat z = st->ctx->Current.RasterPos[2];
+   const GLfloat z = ctx->Current.RasterPos[2];
 
    if (width > BITMAP_CACHE_WIDTH ||
        height > BITMAP_CACHE_HEIGHT)
@@ -493,7 +493,7 @@ accum_bitmap(struct gl_context *ctx,
       py = y - cache->ypos;
       if (px < 0 || px + width > BITMAP_CACHE_WIDTH ||
           py < 0 || py + height > BITMAP_CACHE_HEIGHT ||
-          !TEST_EQ_4V(st->ctx->Current.RasterColor, cache->color) ||
+          !TEST_EQ_4V(ctx->Current.RasterColor, cache->color) ||
           ((fabs(z - cache->zpos) > Z_EPSILON))) {
          /* This bitmap would extend beyond cache bounds, or the bitmap
           * color is changing
@@ -511,7 +511,7 @@ accum_bitmap(struct gl_context *ctx,
       cache->ypos = y - py;
       cache->zpos = z;
       cache->empty = GL_FALSE;
-      COPY_4FV(cache->color, st->ctx->Current.RasterColor);
+      COPY_4FV(cache->color, ctx->Current.RasterColor);
    }
 
    assert(px != -999);
@@ -655,8 +655,7 @@ st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
 
       if (sv) {
          draw_bitmap_quad(ctx, x, y, ctx->Current.RasterPos[2],
-                          width, height, sv,
-                          st->ctx->Current.RasterColor);
+                          width, height, sv, ctx->Current.RasterColor);
 
          pipe_sampler_view_reference(&sv, NULL);
       }

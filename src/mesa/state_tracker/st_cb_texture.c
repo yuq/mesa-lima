@@ -1446,7 +1446,7 @@ try_pbo_upload_common(struct gl_context *ctx,
          cb.buffer = NULL;
          cb.user_buffer = NULL;
          u_upload_data(st->constbuf_uploader, 0, sizeof(constants),
-                       st->ctx->Const.UniformBufferOffsetAlignment,
+                       ctx->Const.UniformBufferOffsetAlignment,
                        &constants, &cb.buffer_offset, &cb.buffer);
          if (!cb.buffer)
             goto fail;

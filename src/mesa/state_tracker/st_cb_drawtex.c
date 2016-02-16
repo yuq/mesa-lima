@@ -107,7 +107,7 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
 {
    struct st_context *st = ctx->st;
    struct pipe_context *pipe = st->pipe;
-   struct cso_context *cso = ctx->st->cso_context;
+   struct cso_context *cso = st->cso_context;
    struct pipe_resource *vbuffer = NULL;
    GLuint i, numTexCoords, numAttribs;
    GLboolean emitColor;
@@ -165,7 +165,7 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
 
       /* positions (in clip coords) */
       {
-         const struct gl_framebuffer *fb = st->ctx->DrawBuffer;
+         const struct gl_framebuffer *fb = ctx->DrawBuffer;
          const GLfloat fb_width = (GLfloat)fb->Width;
          const GLfloat fb_height = (GLfloat)fb->Height;
 
@@ -260,7 +260,7 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
 
    /* viewport state: viewport matching window dims */
    {
-      const struct gl_framebuffer *fb = st->ctx->DrawBuffer;
+      const struct gl_framebuffer *fb = ctx->DrawBuffer;
       const GLboolean invert = (st_fb_orientation(fb) == Y_0_TOP);
       const GLfloat width = (GLfloat)fb->Width;
       const GLfloat height = (GLfloat)fb->Height;

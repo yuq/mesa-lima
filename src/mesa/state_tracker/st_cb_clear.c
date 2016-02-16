@@ -237,7 +237,7 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
                blend.rt[i].colormask |= PIPE_MASK_A;
          }
 
-         if (st->ctx->Color.DitherFlag)
+         if (ctx->Color.DitherFlag)
             blend.dither = 1;
       }
       cso_set_blend(cso, &blend);
