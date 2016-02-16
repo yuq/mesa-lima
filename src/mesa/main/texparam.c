@@ -72,7 +72,7 @@ validate_texture_wrap_mode(struct gl_context * ctx, GLenum target, GLenum wrap)
       break;
 
    case GL_CLAMP_TO_BORDER:
-      supported = is_desktop_gl && e->ARB_texture_border_clamp
+      supported = ctx->API != API_OPENGLES && e->ARB_texture_border_clamp
          && (target != GL_TEXTURE_EXTERNAL_OES);
       break;
 
@@ -717,7 +717,8 @@ set_tex_parameterf(struct gl_context *ctx,
       break;
 
    case GL_TEXTURE_BORDER_COLOR:
-      if (!_mesa_is_desktop_gl(ctx))
+      if (ctx->API == API_OPENGLES ||
+          !ctx->Extensions.ARB_texture_border_clamp)
          goto invalid_pname;
 
       if (!target_allows_setting_sampler_parameters(texObj->Target))
@@ -1735,7 +1736,8 @@ get_tex_parameterfv(struct gl_context *ctx,
          *params = ENUM_TO_FLOAT(obj->Sampler.WrapR);
          break;
       case GL_TEXTURE_BORDER_COLOR:
-         if (!_mesa_is_desktop_gl(ctx))
+         if (ctx->API == API_OPENGLES ||
+             !ctx->Extensions.ARB_texture_border_clamp)
             goto invalid_pname;
 
          if (ctx->NewState & (_NEW_BUFFERS | _NEW_FRAG_CLAMP))
@@ -1969,7 +1971,8 @@ get_tex_parameteriv(struct gl_context *ctx,
          *params = (GLint) obj->Sampler.WrapR;
          break;
       case GL_TEXTURE_BORDER_COLOR:
-         if (!_mesa_is_desktop_gl(ctx))
+         if (ctx->API == API_OPENGLES ||
+             !ctx->Extensions.ARB_texture_border_clamp)
             goto invalid_pname;
 
          {

@@ -333,6 +333,7 @@ EXT(OES_stencil8                            , dummy_true                        
 EXT(OES_stencil_wrap                        , dummy_true                             ,  x ,  x , ES1,  x , 2002)
 EXT(OES_surfaceless_context                 , dummy_true                             ,  x ,  x , ES1, ES2, 2012)
 EXT(OES_texture_3D                          , dummy_true                             ,  x ,  x ,  x , ES2, 2005)
+EXT(OES_texture_border_clamp                , ARB_texture_border_clamp               ,  x ,  x ,  x , ES2, 2014)
 EXT(OES_texture_cube_map                    , ARB_texture_cube_map                   ,  x ,  x , ES1,  x , 2007)
 EXT(OES_texture_env_crossbar                , ARB_texture_env_crossbar               ,  x ,  x , ES1,  x , 2005)
 EXT(OES_texture_float                       , OES_texture_float                      ,  x ,  x ,  x , ES2, 2005)
