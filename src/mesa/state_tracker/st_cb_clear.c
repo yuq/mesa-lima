@@ -176,6 +176,7 @@ static void
 clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
 {
    struct st_context *st = st_context(ctx);
+   struct cso_context *cso = st->cso_context;
    const struct gl_framebuffer *fb = ctx->DrawBuffer;
    const GLfloat fb_width = (GLfloat) fb->Width;
    const GLfloat fb_height = (GLfloat) fb->Height;
@@ -195,21 +196,21 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
 	  x1, y1);
    */
 
-   cso_save_blend(st->cso_context);
-   cso_save_stencil_ref(st->cso_context);
-   cso_save_depth_stencil_alpha(st->cso_context);
-   cso_save_rasterizer(st->cso_context);
-   cso_save_sample_mask(st->cso_context);
-   cso_save_min_samples(st->cso_context);
-   cso_save_viewport(st->cso_context);
-   cso_save_fragment_shader(st->cso_context);
-   cso_save_stream_outputs(st->cso_context);
-   cso_save_vertex_shader(st->cso_context);
-   cso_save_tessctrl_shader(st->cso_context);
-   cso_save_tesseval_shader(st->cso_context);
-   cso_save_geometry_shader(st->cso_context);
-   cso_save_vertex_elements(st->cso_context);
-   cso_save_aux_vertex_buffer_slot(st->cso_context);
+   cso_save_blend(cso);
+   cso_save_stencil_ref(cso);
+   cso_save_depth_stencil_alpha(cso);
+   cso_save_rasterizer(cso);
+   cso_save_sample_mask(cso);
+   cso_save_min_samples(cso);
+   cso_save_viewport(cso);
+   cso_save_fragment_shader(cso);
+   cso_save_stream_outputs(cso);
+   cso_save_vertex_shader(cso);
+   cso_save_tessctrl_shader(cso);
+   cso_save_tesseval_shader(cso);
+   cso_save_geometry_shader(cso);
+   cso_save_vertex_elements(cso);
+   cso_save_aux_vertex_buffer_slot(cso);
 
    /* blend state: RGBA masking */
    {
@@ -239,7 +240,7 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
          if (st->ctx->Color.DitherFlag)
             blend.dither = 1;
       }
-      cso_set_blend(st->cso_context, &blend);
+      cso_set_blend(cso, &blend);
    }
 
    /* depth_stencil state: always pass/set to ref value */
@@ -263,17 +264,17 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
          depth_stencil.stencil[0].valuemask = 0xff;
          depth_stencil.stencil[0].writemask = ctx->Stencil.WriteMask[0] & 0xff;
          stencil_ref.ref_value[0] = ctx->Stencil.Clear;
-         cso_set_stencil_ref(st->cso_context, &stencil_ref);
+         cso_set_stencil_ref(cso, &stencil_ref);
       }
 
-      cso_set_depth_stencil_alpha(st->cso_context, &depth_stencil);
+      cso_set_depth_stencil_alpha(cso, &depth_stencil);
    }
 
-   cso_set_vertex_elements(st->cso_context, 2, st->util_velems);
-   cso_set_stream_outputs(st->cso_context, 0, NULL, NULL);
-   cso_set_sample_mask(st->cso_context, ~0);
-   cso_set_min_samples(st->cso_context, 1);
-   cso_set_rasterizer(st->cso_context, &st->clear.raster);
+   cso_set_vertex_elements(cso, 2, st->util_velems);
+   cso_set_stream_outputs(cso, 0, NULL, NULL);
+   cso_set_sample_mask(cso, ~0);
+   cso_set_min_samples(cso, 1);
+   cso_set_rasterizer(cso, &st->clear.raster);
 
    /* viewport state: viewport matching window dims */
    {
@@ -285,12 +286,12 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
       vp.translate[0] = 0.5f * fb_width;
       vp.translate[1] = 0.5f * fb_height;
       vp.translate[2] = 0.5f;
-      cso_set_viewport(st->cso_context, &vp);
+      cso_set_viewport(cso, &vp);
    }
 
    set_fragment_shader(st);
-   cso_set_tessctrl_shader_handle(st->cso_context, NULL);
-   cso_set_tesseval_shader_handle(st->cso_context, NULL);
+   cso_set_tessctrl_shader_handle(cso, NULL);
+   cso_set_tesseval_shader_handle(cso, NULL);
 
    if (num_layers > 1)
       set_vertex_shader_layered(st);
@@ -314,21 +315,21 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
    }
 
    /* Restore pipe state */
-   cso_restore_blend(st->cso_context);
-   cso_restore_stencil_ref(st->cso_context);
-   cso_restore_depth_stencil_alpha(st->cso_context);
-   cso_restore_rasterizer(st->cso_context);
-   cso_restore_sample_mask(st->cso_context);
-   cso_restore_min_samples(st->cso_context);
-   cso_restore_viewport(st->cso_context);
-   cso_restore_fragment_shader(st->cso_context);
-   cso_restore_vertex_shader(st->cso_context);
-   cso_restore_tessctrl_shader(st->cso_context);
-   cso_restore_tesseval_shader(st->cso_context);
-   cso_restore_geometry_shader(st->cso_context);
-   cso_restore_vertex_elements(st->cso_context);
-   cso_restore_aux_vertex_buffer_slot(st->cso_context);
-   cso_restore_stream_outputs(st->cso_context);
+   cso_restore_blend(cso);
+   cso_restore_stencil_ref(cso);
+   cso_restore_depth_stencil_alpha(cso);
+   cso_restore_rasterizer(cso);
+   cso_restore_sample_mask(cso);
+   cso_restore_min_samples(cso);
+   cso_restore_viewport(cso);
+   cso_restore_fragment_shader(cso);
+   cso_restore_vertex_shader(cso);
+   cso_restore_tessctrl_shader(cso);
+   cso_restore_tesseval_shader(cso);
+   cso_restore_geometry_shader(cso);
+   cso_restore_vertex_elements(cso);
+   cso_restore_aux_vertex_buffer_slot(cso);
+   cso_restore_stream_outputs(cso);
 }
 
 
