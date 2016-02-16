@@ -49,6 +49,7 @@ struct cached_shader
 /**
  * Simple linear list cache.
  * Most of the time there'll only be one cached shader.
+ * XXX This should be per-st_context state.
  */
 static struct cached_shader CachedShaders[MAX_SHADERS];
 static GLuint NumCachedShaders = 0;
@@ -98,6 +99,7 @@ lookup_shader(struct pipe_context *pipe,
 
    return CachedShaders[i].handle;
 }
+
 
 static void
 st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
@@ -158,7 +160,7 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
       if (!vbuffer) {
          return;
       }
-      
+
       z = CLAMP(z, 0.0f, 1.0f);
 
       /* positions (in clip coords) */
@@ -272,14 +274,12 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
       cso_set_viewport(cso, &vp);
    }
 
-
    util_draw_vertex_buffer(pipe, cso, vbuffer,
 			   cso_get_aux_vertex_buffer_slot(cso),
                            offset,  /* offset */
                            PIPE_PRIM_TRIANGLE_FAN,
                            4,  /* verts */
                            numAttribs); /* attribs/vert */
-
 
    pipe_resource_reference(&vbuffer, NULL);
 
