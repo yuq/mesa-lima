@@ -1709,13 +1709,6 @@ static void trace_context_launch_grid(struct pipe_context *_pipe,
    trace_dump_call_end();
 }
 
-
-static const struct debug_named_value rbug_blocker_flags[] = {
-   {"before", 1, NULL},
-   {"after", 2, NULL},
-   DEBUG_NAMED_VALUE_END
-};
-
 struct pipe_context *
 trace_context_create(struct trace_screen *tr_scr,
                      struct pipe_context *pipe)
