@@ -1535,7 +1535,10 @@ CodeEmitterGM107::emitFSWZADD()
    emitRND  (0x27);
    emitField(0x26, 1, insn->lanes); /* abused for .ndv */
    emitField(0x1c, 8, insn->subOp);
-   emitGPR  (0x14, insn->src(1));
+   if (insn->predSrc != 1)
+      emitGPR  (0x14, insn->src(1));
+   else
+      emitGPR  (0x14);
    emitGPR  (0x08, insn->src(0));
    emitGPR  (0x00, insn->def(0));
 }
