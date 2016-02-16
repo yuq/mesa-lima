@@ -1474,18 +1474,7 @@ try_pbo_upload_common(struct gl_context *ctx,
       pipe_surface_reference(&fb.cbufs[0], NULL);
    }
 
-   /* Viewport state */
-   {
-      struct pipe_viewport_state vp;
-      vp.scale[0] = 0.5f * surface->width;
-      vp.scale[1] = 0.5f * surface->height;
-      vp.scale[2] = 1.0f;
-      vp.translate[0] = 0.5f * surface->width;
-      vp.translate[1] = 0.5f * surface->height;
-      vp.translate[2] = 0.0f;
-
-      cso_set_viewport(cso, &vp);
-   }
+   cso_set_viewport_dims(cso, surface->width, surface->height, FALSE);
 
    /* Blend state */
    cso_set_blend(cso, &st->pbo_upload.blend);
