@@ -2750,6 +2750,17 @@ interpret_interpolation_qualifier(const struct ast_type_qualifier *qual,
                           "vertex shader inputs or fragment shader outputs",
                           interpolation_string(interpolation));
       }
+   } else if (state->es_shader &&
+              ((mode == ir_var_shader_in &&
+                state->stage != MESA_SHADER_VERTEX) ||
+               (mode == ir_var_shader_out &&
+                state->stage != MESA_SHADER_FRAGMENT))) {
+      /* Section 4.3.9 (Interpolation) of the GLSL ES 3.00 spec says:
+       *
+       *    "When no interpolation qualifier is present, smooth interpolation
+       *    is used."
+       */
+      interpolation = INTERP_QUALIFIER_SMOOTH;
    }
 
    return interpolation;
