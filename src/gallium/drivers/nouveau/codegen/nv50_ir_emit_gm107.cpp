@@ -2331,22 +2331,34 @@ void
 CodeEmitterGM107::emitATOM()
 {
    unsigned dType, subOp;
-   switch (insn->dType) {
-   case TYPE_U32: dType = 0; break;
-   case TYPE_S32: dType = 1; break;
-   case TYPE_U64: dType = 2; break;
-   case TYPE_F32: dType = 3; break;
-   case TYPE_B128: dType = 4; break;
-   case TYPE_S64: dType = 5; break;
-   default: assert(!"unexpected dType"); dType = 0; break;
-   }
-   if (insn->subOp == NV50_IR_SUBOP_ATOM_EXCH)
-      subOp = 8;
-   else
-      subOp = insn->subOp;
-   assert(insn->subOp != NV50_IR_SUBOP_ATOM_CAS); /* XXX */
 
-   emitInsn (0xed000000);
+   if (insn->subOp == NV50_IR_SUBOP_ATOM_CAS) {
+      switch (insn->dType) {
+      case TYPE_U32: dType = 0; break;
+      case TYPE_U64: dType = 1; break;
+      default: assert(!"unexpected dType"); dType = 0; break;
+      }
+      subOp = 15;
+
+      emitInsn (0xee000000);
+   } else {
+      switch (insn->dType) {
+      case TYPE_U32: dType = 0; break;
+      case TYPE_S32: dType = 1; break;
+      case TYPE_U64: dType = 2; break;
+      case TYPE_F32: dType = 3; break;
+      case TYPE_B128: dType = 4; break;
+      case TYPE_S64: dType = 5; break;
+      default: assert(!"unexpected dType"); dType = 0; break;
+      }
+      if (insn->subOp == NV50_IR_SUBOP_ATOM_EXCH)
+         subOp = 8;
+      else
+         subOp = insn->subOp;
+
+      emitInsn (0xed000000);
+   }
+
    emitField(0x34, 4, subOp);
    emitField(0x31, 3, dType);
    emitField(0x30, 1, insn->src(0).getIndirect(0)->getSize() == 8);
