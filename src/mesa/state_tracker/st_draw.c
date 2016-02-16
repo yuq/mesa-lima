@@ -60,7 +60,7 @@
 #include "util/u_inlines.h"
 #include "util/u_format.h"
 #include "util/u_prim.h"
-#include "util/u_draw_quad.h"
+#include "util/u_draw.h"
 #include "util/u_upload_mgr.h"
 #include "draw/draw_context.h"
 #include "cso_cache/cso_context.h"
