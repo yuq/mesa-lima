@@ -152,7 +152,7 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
 
       const GLfloat x0 = x, y0 = y, x1 = x + width, y1 = y + height;
       GLfloat *vbuf = NULL;
-      GLuint attr;
+      GLuint tex_attr;
 
       u_upload_alloc(st->uploader, 0,
                      numAttribs * 4 * 4 * sizeof(GLfloat), 4,
@@ -192,10 +192,10 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
          SET_ATTRIB(3, 1, c[0], c[1], c[2], c[3]);
          semantic_names[1] = TGSI_SEMANTIC_COLOR;
          semantic_indexes[1] = 0;
-         attr = 2;
+         tex_attr = 2;
       }
       else {
-         attr = 1;
+         tex_attr = 1;
       }
 
       /* texcoords */
@@ -212,17 +212,17 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
             const GLfloat t1 = (obj->CropRect[1] + obj->CropRect[3]) / ht;
 
             /*printf("crop texcoords: %g, %g .. %g, %g\n", s0, t0, s1, t1);*/
-            SET_ATTRIB(0, attr, s0, t0, 0.0f, 1.0f);  /* lower left */
-            SET_ATTRIB(1, attr, s1, t0, 0.0f, 1.0f);  /* lower right */
-            SET_ATTRIB(2, attr, s1, t1, 0.0f, 1.0f);  /* upper right */
-            SET_ATTRIB(3, attr, s0, t1, 0.0f, 1.0f);  /* upper left */
+            SET_ATTRIB(0, tex_attr, s0, t0, 0.0f, 1.0f);  /* lower left */
+            SET_ATTRIB(1, tex_attr, s1, t0, 0.0f, 1.0f);  /* lower right */
+            SET_ATTRIB(2, tex_attr, s1, t1, 0.0f, 1.0f);  /* upper right */
+            SET_ATTRIB(3, tex_attr, s0, t1, 0.0f, 1.0f);  /* upper left */
 
-            semantic_names[attr] = st->needs_texcoord_semantic ?
+            semantic_names[tex_attr] = st->needs_texcoord_semantic ?
                TGSI_SEMANTIC_TEXCOORD : TGSI_SEMANTIC_GENERIC;
             /* XXX: should this use semantic index i instead of 0 ? */
-            semantic_indexes[attr] = 0;
+            semantic_indexes[tex_attr] = 0;
 
-            attr++;
+            tex_attr++;
          }
       }
 
