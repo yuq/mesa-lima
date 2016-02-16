@@ -147,9 +147,7 @@ compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
       else
          return SWIZZLE_XYZW;
    case GL_STENCIL_INDEX:
-      return SWIZZLE_XYZW;
    case GL_DEPTH_STENCIL:
-      /* fall-through */
    case GL_DEPTH_COMPONENT:
       /* Now examine the depth mode */
       switch (depthMode) {
