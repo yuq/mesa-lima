@@ -2,7 +2,7 @@
     "file_format_version": "1.0.0",
     "ICD": {
         "library_path": "@abs_top_builddir@/@LIB_DIR@/libvulkan.so.0.0.0",
-        "abi_versions": "0.210.1"
+        "abi_versions": "1.0.3"
     }
 }
 
