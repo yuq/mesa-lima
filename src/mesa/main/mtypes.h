@@ -3911,6 +3911,7 @@ struct gl_extensions
    GLboolean EXT_transform_feedback;
    GLboolean EXT_timer_query;
    GLboolean EXT_vertex_array_bgra;
+   GLboolean OES_sample_variables;
    GLboolean OES_standard_derivatives;
    GLboolean OES_texture_buffer;
    /* vendor extensions */

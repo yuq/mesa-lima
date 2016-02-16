@@ -330,6 +330,7 @@ EXT(OES_point_sprite                        , ARB_point_sprite                  
 EXT(OES_query_matrix                        , dummy_true                             ,  x ,  x , ES1,  x , 2003)
 EXT(OES_read_format                         , dummy_true                             , GLL, GLC, ES1,  x , 2003)
 EXT(OES_rgb8_rgba8                          , dummy_true                             ,  x ,  x , ES1, ES2, 2005)
+EXT(OES_sample_variables                    , OES_sample_variables                   ,  x ,  x ,  x ,  30, 2014)
 EXT(OES_shader_image_atomic                 , ARB_shader_image_load_store            ,  x ,  x ,  x ,  31, 2015)
 EXT(OES_single_precision                    , dummy_true                             ,  x ,  x , ES1,  x , 2003)
 EXT(OES_standard_derivatives                , OES_standard_derivatives               ,  x ,  x ,  x , ES2, 2005)
