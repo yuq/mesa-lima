@@ -339,13 +339,13 @@ void anv_GetPhysicalDeviceFeatures(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceFeatures*                   pFeatures)
 {
-   anv_finishme("Get correct values for PhysicalDeviceFeatures");
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
 
    *pFeatures = (VkPhysicalDeviceFeatures) {
       .robustBufferAccess                       = true,
-      .fullDrawIndexUint32                      = false,
+      .fullDrawIndexUint32                      = true,
       .imageCubeArray                           = false,
-      .independentBlend                         = false,
+      .independentBlend                         = pdevice->info->gen >= 8,
       .geometryShader                           = true,
       .tessellationShader                       = false,
       .sampleRateShading                        = false,
@@ -365,18 +365,18 @@ void anv_GetPhysicalDeviceFeatures(
       .textureCompressionETC2                   = true,
       .textureCompressionASTC_LDR               = true,
       .textureCompressionBC                     = true,
-      .occlusionQueryPrecise                    = false, /* FINISHME */
+      .occlusionQueryPrecise                    = true,
       .pipelineStatisticsQuery                  = true,
-      .vertexPipelineStoresAndAtomics           = false,
+      .vertexPipelineStoresAndAtomics           = pdevice->info->gen >= 8,
       .fragmentStoresAndAtomics                 = true,
       .shaderTessellationAndGeometryPointSize   = true,
       .shaderImageGatherExtended                = true,
       .shaderStorageImageExtendedFormats        = false,
       .shaderStorageImageMultisample            = false,
       .shaderUniformBufferArrayDynamicIndexing  = true,
-      .shaderSampledImageArrayDynamicIndexing   = false,
-      .shaderStorageBufferArrayDynamicIndexing  = false,
-      .shaderStorageImageArrayDynamicIndexing   = false,
+      .shaderSampledImageArrayDynamicIndexing   = true,
+      .shaderStorageBufferArrayDynamicIndexing  = true,
+      .shaderStorageImageArrayDynamicIndexing   = true,
       .shaderStorageImageReadWithoutFormat      = false,
       .shaderStorageImageWriteWithoutFormat     = true,
       .shaderClipDistance                       = false,
