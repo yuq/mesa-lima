@@ -341,6 +341,7 @@ EXT(OES_texture_half_float                  , OES_texture_half_float            
 EXT(OES_texture_half_float_linear           , OES_texture_half_float_linear          ,  x ,  x ,  x , ES2, 2005)
 EXT(OES_texture_mirrored_repeat             , dummy_true                             ,  x ,  x , ES1,  x , 2005)
 EXT(OES_texture_npot                        , ARB_texture_non_power_of_two           ,  x ,  x , ES1, ES2, 2005)
+EXT(OES_texture_stencil8                    , ARB_texture_stencil8                   ,  x ,  x ,  x ,  30, 2014)
 EXT(OES_texture_storage_multisample_2d_array, ARB_texture_multisample                ,  x ,  x , ES1,  31, 2014)
 EXT(OES_vertex_array_object                 , dummy_true                             ,  x ,  x , ES1, ES2, 2010)
 

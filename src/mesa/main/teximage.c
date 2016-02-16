@@ -2285,8 +2285,10 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
       }
       if (baseFormat == GL_DEPTH_COMPONENT ||
           baseFormat == GL_DEPTH_STENCIL ||
+          baseFormat == GL_STENCIL_INDEX ||
           rb_base_format == GL_DEPTH_COMPONENT ||
           rb_base_format == GL_DEPTH_STENCIL ||
+          rb_base_format == GL_STENCIL_INDEX ||
           ((baseFormat == GL_LUMINANCE_ALPHA ||
             baseFormat == GL_ALPHA) &&
            rb_base_format != GL_RGBA) ||

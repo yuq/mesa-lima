@@ -256,7 +256,7 @@ GLES3.2, GLSL ES 3.2
   GL_OES_texture_border_clamp                          not started (based on GL_ARB_texture_border_clamp, which is done)
   GL_OES_texture_buffer                                not started (based on GL_ARB_texture_buffer_object, GL_ARB_texture_buffer_range, and GL_ARB_texture_buffer_object_rgb32 that are all done)
   GL_OES_texture_cube_map_array                        not started (based on GL_ARB_texture_cube_map_array, which is done for all drivers)
-  GL_OES_texture_stencil8                              not started (based on GL_ARB_texture_stencil8, which is done for some drivers)
+  GL_OES_texture_stencil8                              DONE (all drivers that support GL_ARB_texture_stencil8)
   GL_OES_texture_storage_multisample_2d_array          DONE (all drivers that support GL_ARB_texture_multisample)
 
 More info about these features and the work involved can be found at
