@@ -798,6 +798,12 @@
     </function>
 </category>
 
+<category name="GL_OES_sample_shading" number="169">
+    <function name="MinSampleShadingOES" alias="MinSampleShading" es2="3.0">
+        <param name="value" type="GLfloat"/>
+    </function>
+</category>
+
 <!-- 174. GL_OES_texture_storage_multisample_2d_array -->
 <category name="GL_OES_texture_storage_multisample_2d_array" number="174">
     <enum name="TEXTURE_2D_MULTISAMPLE_ARRAY_OES"              value="0x9102"/>

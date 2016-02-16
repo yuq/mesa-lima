@@ -2454,6 +2454,9 @@ const struct function gles3_functions_possible[] = {
    { "glTexBufferOES", 31, -1 },
    { "glTexBufferRangeOES", 31, -1 },
 
+   /* GL_OES_sample_shading */
+   { "glMinSampleShadingOES", 30, -1 },
+
    { NULL, 0, -1 }
 };
 

@@ -807,7 +807,7 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
 
       /* GL_ARB_sample_shading */
       case GL_SAMPLE_SHADING:
-         if (!_mesa_is_desktop_gl(ctx))
+         if (!_mesa_is_desktop_gl(ctx) && !_mesa_is_gles3(ctx))
             goto invalid_enum_error;
          CHECK_EXTENSION(ARB_sample_shading, cap);
          if (ctx->Multisample.SampleShading == state)
@@ -1606,7 +1606,7 @@ _mesa_IsEnabled( GLenum cap )
 
       /* ARB_sample_shading */
       case GL_SAMPLE_SHADING:
-         if (!_mesa_is_desktop_gl(ctx))
+         if (!_mesa_is_desktop_gl(ctx) && !_mesa_is_gles3(ctx))
             goto invalid_enum_error;
          CHECK_EXTENSION(ARB_sample_shading);
          return ctx->Multisample.SampleShading;
