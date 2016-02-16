@@ -1365,7 +1365,6 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction **dst, *sam, *src0[12], *src1[4];
 	struct ir3_instruction **coord, *lod, *compare, *proj, **off, **ddx, **ddy;
-	struct ir3_instruction *const_off[4];
 	bool has_bias = false, has_lod = false, has_proj = false, has_off = false;
 	unsigned i, coords, flags;
 	unsigned nsrc0 = 0, nsrc1 = 0;
