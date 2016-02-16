@@ -56,6 +56,7 @@
 #include "st_cb_fbo.h"
 #include "st_context.h"
 #include "st_debug.h"
+#include "st_draw.h"
 #include "st_format.h"
 #include "st_program.h"
 #include "st_texture.h"
@@ -67,7 +68,6 @@
 #include "util/u_inlines.h"
 #include "util/u_math.h"
 #include "util/u_tile.h"
-#include "util/u_upload_mgr.h"
 #include "cso_cache/cso_context.h"
 
 
@@ -440,100 +440,6 @@ make_texture(struct st_context *st,
 }
 
 
-/**
- * Draw quad with texcoords and optional color.
- * Coords are gallium window coords with y=0=top.
- * \param color  may be null
- * \param invertTex  if true, flip texcoords vertically
- */
-static void
-draw_quad(struct gl_context *ctx, GLfloat x0, GLfloat y0, GLfloat z,
-          GLfloat x1, GLfloat y1, const GLfloat *color,
-          GLboolean invertTex, GLfloat maxXcoord, GLfloat maxYcoord)
-{
-   struct st_context *st = st_context(ctx);
-   struct pipe_vertex_buffer vb = {0};
-   struct st_util_vertex *verts;
-
-   vb.stride = sizeof(struct st_util_vertex);
-
-   u_upload_alloc(st->uploader, 0, 4 * sizeof(struct st_util_vertex), 4,
-                  &vb.buffer_offset, &vb.buffer, (void **) &verts);
-   if (!vb.buffer) {
-      return;
-   }
-
-   /* setup vertex data */
-   {
-      const struct gl_framebuffer *fb = st->ctx->DrawBuffer;
-      const GLfloat fb_width = (GLfloat) fb->Width;
-      const GLfloat fb_height = (GLfloat) fb->Height;
-      const GLfloat clip_x0 = x0 / fb_width * 2.0f - 1.0f;
-      const GLfloat clip_y0 = y0 / fb_height * 2.0f - 1.0f;
-      const GLfloat clip_x1 = x1 / fb_width * 2.0f - 1.0f;
-      const GLfloat clip_y1 = y1 / fb_height * 2.0f - 1.0f;
-      const GLfloat sLeft = 0.0f, sRight = maxXcoord;
-      const GLfloat tTop = invertTex ? maxYcoord : 0.0f;
-      const GLfloat tBot = invertTex ? 0.0f : maxYcoord;
-
-      /* upper-left */
-      verts[0].x = clip_x0;
-      verts[0].y = clip_y0;
-      verts[0].z = z;
-      verts[0].r = color[0];
-      verts[0].g = color[1];
-      verts[0].b = color[2];
-      verts[0].a = color[3];
-      verts[0].s = sLeft;
-      verts[0].t = tTop;
-
-      /* upper-right */
-      verts[1].x = clip_x1;
-      verts[1].y = clip_y0;
-      verts[1].z = z;
-      verts[1].r = color[0];
-      verts[1].g = color[1];
-      verts[1].b = color[2];
-      verts[1].a = color[3];
-      verts[1].s = sRight;
-      verts[1].t = tTop;
-
-      /* lower-right */
-      verts[2].x = clip_x1;
-      verts[2].y = clip_y1;
-      verts[2].z = z;
-      verts[2].r = color[0];
-      verts[2].g = color[1];
-      verts[2].b = color[2];
-      verts[2].a = color[3];
-      verts[2].s = sRight;
-      verts[2].t = tBot;
-
-      /* lower-left */
-      verts[3].x = clip_x0;
-      verts[3].y = clip_y1;
-      verts[3].z = z;
-      verts[3].r = color[0];
-      verts[3].g = color[1];
-      verts[3].b = color[2];
-      verts[3].a = color[3];
-      verts[3].s = sLeft;
-      verts[3].t = tBot;
-   }
-
-   u_upload_unmap(st->uploader);
-
-   cso_set_vertex_buffers(st->cso_context,
-                          cso_get_aux_vertex_buffer_slot(st->cso_context),
-                          1, &vb);
-
-   cso_draw_arrays(st->cso_context, PIPE_PRIM_QUADS, 0, 4);
-
-   pipe_resource_reference(&vb.buffer, NULL);
-}
-
-
-
 static void
 draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
                    GLsizei width, GLsizei height,
@@ -723,9 +629,27 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    /* convert Z from [0,1] to [-1,-1] to match viewport Z scale/bias */
    z = z * 2.0f - 1.0f;
 
-   draw_quad(ctx, x0, y0, z, x1, y1, color, invertTex,
-             normalized ? ((GLfloat) width / sv[0]->texture->width0) : (GLfloat)width,
-             normalized ? ((GLfloat) height / sv[0]->texture->height0) : (GLfloat)height);
+   {
+      const struct gl_framebuffer *fb = ctx->DrawBuffer;
+      const float fb_width = (float) fb->Width;
+      const float fb_height = (float) fb->Height;
+      const float clip_x0 = x0 / fb_width * 2.0f - 1.0f;
+      const float clip_y0 = y0 / fb_height * 2.0f - 1.0f;
+      const float clip_x1 = x1 / fb_width * 2.0f - 1.0f;
+      const float clip_y1 = y1 / fb_height * 2.0f - 1.0f;
+      const float maxXcoord = normalized ?
+         ((float) width / sv[0]->texture->width0) : (float) width;
+      const float maxYcoord = normalized
+         ? ((float) height / sv[0]->texture->height0) : (float) height;
+      const float sLeft = 0.0f, sRight = maxXcoord;
+      const float tTop = invertTex ? maxYcoord : 0.0f;
+      const float tBot = invertTex ? 0.0f : maxYcoord;
+
+      if (!st_draw_quad(ctx->st, clip_x0, clip_y0, clip_x1, clip_y1, z,
+                        sLeft, tBot, sRight, tTop, color, 0)) {
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "glDrawPixels");
+      }
+   }
 
    /* restore state */
    cso_restore_rasterizer(cso);

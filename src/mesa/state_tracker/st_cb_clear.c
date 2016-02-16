@@ -44,6 +44,7 @@
 #include "st_cb_bitmap.h"
 #include "st_cb_clear.h"
 #include "st_cb_fbo.h"
+#include "st_draw.h"
 #include "st_format.h"
 #include "st_program.h"
 
@@ -55,7 +56,6 @@
 #include "util/u_framebuffer.h"
 #include "util/u_inlines.h"
 #include "util/u_simple_shaders.h"
-#include "util/u_upload_mgr.h"
 
 #include "cso_cache/cso_context.h"
 
@@ -165,77 +165,6 @@ set_vertex_shader_layered(struct st_context *st)
    cso_set_vertex_shader_handle(st->cso_context, st->clear.vs_layered);
    cso_set_geometry_shader_handle(st->cso_context, st->clear.gs_layered);
 }
-
-
-/**
- * Draw a screen-aligned quadrilateral.
- * Coords are clip coords with y=0=bottom.
- */
-static void
-draw_quad(struct st_context *st,
-          float x0, float y0, float x1, float y1, GLfloat z,
-          unsigned num_instances,
-          const union pipe_color_union *color)
-{
-   struct cso_context *cso = st->cso_context;
-   struct pipe_vertex_buffer vb = {0};
-   struct st_util_vertex *verts;
-
-   vb.stride = sizeof(struct st_util_vertex);
-
-   u_upload_alloc(st->uploader, 0, 4 * sizeof(struct st_util_vertex), 4,
-                  &vb.buffer_offset, &vb.buffer, (void **) &verts);
-   if (!vb.buffer) {
-      return;
-   }
-
-   /* Convert Z from [0,1] to [-1,1] range */
-   z = z * 2.0f - 1.0f;
-
-   /* Note: if we're only clearing depth/stencil we still setup vertices
-    * with color, but they'll be ignored.
-    */
-   verts[0].x = x0;
-   verts[0].y = y0;
-   verts[0].z = z;
-   verts[0].r = color->f[0];
-   verts[0].g = color->f[1];
-   verts[0].b = color->f[2];
-   verts[0].a = color->f[3];
-
-   verts[1].x = x1;
-   verts[1].y = y0;
-   verts[1].z = z;
-   verts[1].r = color->f[0];
-   verts[1].g = color->f[1];
-   verts[1].b = color->f[2];
-   verts[1].a = color->f[3];
-
-   verts[2].x = x1;
-   verts[2].y = y1;
-   verts[2].z = z;
-   verts[2].r = color->f[0];
-   verts[2].g = color->f[1];
-   verts[2].b = color->f[2];
-   verts[2].a = color->f[3];
-
-   verts[3].x = x0;
-   verts[3].y = y1;
-   verts[3].z = z;
-   verts[3].r = color->f[0];
-   verts[3].g = color->f[1];
-   verts[3].b = color->f[2];
-   verts[3].a = color->f[3];
-
-   u_upload_unmap(st->uploader);
-
-   /* draw */
-   cso_set_vertex_buffers(cso, cso_get_aux_vertex_buffer_slot(cso), 1, &vb);
-   cso_draw_arrays_instanced(cso, PIPE_PRIM_TRIANGLE_FAN, 0, 4,
-                             0, num_instances);
-   pipe_resource_reference(&vb.buffer, NULL);
-}
-
 
 
 /**
@@ -368,13 +297,21 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
    else
       set_vertex_shader(st);
 
-   /* We can't translate the clear color to the colorbuffer format,
+   /* draw quad matching scissor rect.
+    *
+    * Note: if we're only clearing depth/stencil we still setup vertices
+    * with color, but they'll be ignored.
+    *
+    * We can't translate the clear color to the colorbuffer format,
     * because different colorbuffers may have different formats.
     */
-
-   /* draw quad matching scissor rect */
-   draw_quad(st, x0, y0, x1, y1, (GLfloat) ctx->Depth.Clear, num_layers,
-             (union pipe_color_union*)&ctx->Color.ClearColor);
+   if (!st_draw_quad(st, x0, y0, x1, y1,
+                     ctx->Depth.Clear * 2.0f - 1.0f,
+                     0.0f, 0.0f, 0.0f, 0.0f,
+                     (const float *) &ctx->Color.ClearColor.f,
+                     num_layers)) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glClear");
+   }
 
    /* Restore pipe state */
    cso_restore_blend(st->cso_context);

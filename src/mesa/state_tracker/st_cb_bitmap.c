@@ -41,6 +41,7 @@
 #include "st_context.h"
 #include "st_atom.h"
 #include "st_atom_constbuf.h"
+#include "st_draw.h"
 #include "st_program.h"
 #include "st_cb_bitmap.h"
 #include "st_texture.h"
@@ -50,7 +51,6 @@
 #include "pipe/p_shader_tokens.h"
 #include "util/u_inlines.h"
 #include "util/u_simple_shaders.h"
-#include "util/u_upload_mgr.h"
 #include "program/prog_instruction.h"
 #include "cso_cache/cso_context.h"
 
@@ -322,7 +322,6 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
 {
    struct st_context *st = st_context(ctx);
    struct pipe_context *pipe = st->pipe;
-   struct pipe_vertex_buffer vb = {0};
    const float fb_width = (float) st->state.framebuffer.width;
    const float fb_height = (float) st->state.framebuffer.height;
    const float x0 = (float) x;
@@ -335,7 +334,6 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    const float clip_y0 = y0 / fb_height * 2.0f - 1.0f;
    const float clip_x1 = x1 / fb_width * 2.0f - 1.0f;
    const float clip_y1 = y1 / fb_height * 2.0f - 1.0f;
-   struct st_util_vertex *verts;
 
    /* limit checks */
    {
@@ -359,70 +357,12 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
       tBot = (float) height;
    }
 
-   vb.stride = sizeof(struct st_util_vertex);
-
-   u_upload_alloc(st->uploader, 0, 4 * sizeof(struct st_util_vertex), 4,
-                  &vb.buffer_offset, &vb.buffer, (void **) &verts);
-   if (!vb.buffer) {
+   if (!st_draw_quad(st, clip_x0, clip_y0, clip_x1, clip_y1, z,
+                     sLeft, tBot, sRight, tTop, color, 0)) {
       _mesa_error(ctx, GL_OUT_OF_MEMORY, "glBitmap");
-      restore_render_state(ctx);
-      return;
    }
 
-   /* Positions are in clip coords since we need to do clipping in case
-    * the bitmap quad goes beyond the window bounds.
-    */
-   verts[0].x = clip_x0;
-   verts[0].y = clip_y0;
-   verts[0].z = z;
-   verts[0].r = color[0];
-   verts[0].g = color[1];
-   verts[0].b = color[2];
-   verts[0].a = color[3];
-   verts[0].s = sLeft;
-   verts[0].t = tTop;
-
-   verts[1].x = clip_x1;
-   verts[1].y = clip_y0;
-   verts[1].z = z;
-   verts[1].r = color[0];
-   verts[1].g = color[1];
-   verts[1].b = color[2];
-   verts[1].a = color[3];
-   verts[1].s = sRight;
-   verts[1].t = tTop;
-
-   verts[2].x = clip_x1;
-   verts[2].y = clip_y1;
-   verts[2].z = z;
-   verts[2].r = color[0];
-   verts[2].g = color[1];
-   verts[2].b = color[2];
-   verts[2].a = color[3];
-   verts[2].s = sRight;
-   verts[2].t = tBot;
-
-   verts[3].x = clip_x0;
-   verts[3].y = clip_y1;
-   verts[3].z = z;
-   verts[3].r = color[0];
-   verts[3].g = color[1];
-   verts[3].b = color[2];
-   verts[3].a = color[3];
-   verts[3].s = sLeft;
-   verts[3].t = tBot;
-
-   u_upload_unmap(st->uploader);
-
-   cso_set_vertex_buffers(st->cso_context,
-                          cso_get_aux_vertex_buffer_slot(st->cso_context),
-                          1, &vb);
-
-   cso_draw_arrays(st->cso_context, PIPE_PRIM_TRIANGLE_FAN, 0, 4);
-
    restore_render_state(ctx);
-
-   pipe_resource_reference(&vb.buffer, NULL);
 
    /* We uploaded modified constants, need to invalidate them. */
    st->dirty.mesa |= _NEW_PROGRAM_CONSTANTS;
