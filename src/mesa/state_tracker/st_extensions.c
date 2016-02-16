@@ -927,6 +927,17 @@ void st_init_extensions(struct pipe_screen *screen,
    extensions->OES_sample_variables = extensions->ARB_sample_shading &&
       extensions->ARB_gpu_shader5;
 
+   /* If we don't have native ETC2 support, we don't keep track of the
+    * original ETC2 data. This is necessary to be able to copy images between
+    * compatible view classes.
+    */
+   if (extensions->ARB_copy_image && screen->is_format_supported(
+             screen, PIPE_FORMAT_ETC2_RGB8,
+             PIPE_TEXTURE_2D, 0,
+             PIPE_BIND_SAMPLER_VIEW)) {
+      extensions->OES_copy_image = GL_TRUE;
+   }
+
    /* Maximum sample count. */
    {
       enum pipe_format color_formats[] = {

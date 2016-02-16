@@ -2457,6 +2457,9 @@ const struct function gles3_functions_possible[] = {
    /* GL_OES_sample_shading */
    { "glMinSampleShadingOES", 30, -1 },
 
+   /* GL_OES_copy_image */
+   { "glCopyImageSubDataOES", 30, -1 },
+
    { NULL, 0, -1 }
 };
 

@@ -1013,6 +1013,28 @@
 
 </category>
 
+<category name="GL_OES_copy_image" number="208">
+
+    <function name="CopyImageSubDataOES" alias="CopyImageSubData" es2="3.0">
+        <param name="srcName" type="GLuint"/>
+        <param name="srcTarget" type="GLenum"/>
+        <param name="srcLevel" type="GLint"/>
+        <param name="srcX" type="GLint"/>
+        <param name="srcY" type="GLint"/>
+        <param name="srcZ" type="GLint"/>
+        <param name="dstName" type="GLuint"/>
+        <param name="dstTarget" type="GLenum"/>
+        <param name="dstLevel" type="GLint"/>
+        <param name="dstX" type="GLint"/>
+        <param name="dstY" type="GLint"/>
+        <param name="dstZ" type="GLint"/>
+        <param name="srcWidth" type="GLsizei"/>
+        <param name="srcHeight" type="GLsizei"/>
+        <param name="srcDepth" type="GLsizei"/>
+    </function>
+
+</category>
+
 <!-- 175. GL_OES_geometry_shader -->
 <category name="GL_OES_geometry_shader" number="210">
     <enum name="GEOMETRY_SHADER_OES"                             value="0x8DD9"/>

@@ -25,6 +25,7 @@
  *    Jason Ekstrand <jason.ekstrand@intel.com>
  */
 
+#include "context.h"
 #include "glheader.h"
 #include "errors.h"
 #include "enums.h"
@@ -360,8 +361,32 @@ compressed_format_compatible(const struct gl_context *ctx,
       case GL_COMPRESSED_SIGNED_RED_RGTC1:
          compressedClass = BLOCK_CLASS_64_BITS;
          break;
+      case GL_COMPRESSED_RGBA8_ETC2_EAC:
+      case GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC:
+      case GL_COMPRESSED_RG11_EAC:
+      case GL_COMPRESSED_SIGNED_RG11_EAC:
+         if (_mesa_is_gles(ctx))
+            compressedClass = BLOCK_CLASS_128_BITS;
+         else
+            return false;
+         break;
+      case GL_COMPRESSED_RGB8_ETC2:
+      case GL_COMPRESSED_SRGB8_ETC2:
+      case GL_COMPRESSED_R11_EAC:
+      case GL_COMPRESSED_SIGNED_R11_EAC:
+      case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
+      case GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2:
+         if (_mesa_is_gles(ctx))
+            compressedClass = BLOCK_CLASS_64_BITS;
+         else
+            return false;
+         break;
       default:
-         return false;
+         if (_mesa_is_gles(ctx) && _mesa_is_astc_format(compressedFormat))
+            compressedClass = BLOCK_CLASS_128_BITS;
+         else
+            return false;
+         break;
    }
 
    switch (otherFormat) {

@@ -309,6 +309,7 @@ EXT(OES_blend_subtract                      , dummy_true                        
 EXT(OES_byte_coordinates                    , dummy_true                             ,  x ,  x , ES1,  x , 2002)
 EXT(OES_compressed_ETC1_RGB8_texture        , OES_compressed_ETC1_RGB8_texture       ,  x ,  x , ES1, ES2, 2005)
 EXT(OES_compressed_paletted_texture         , dummy_true                             ,  x ,  x , ES1,  x , 2003)
+EXT(OES_copy_image                          , OES_copy_image                         ,  x ,  x ,  x ,  30, 2014)
 EXT(OES_depth24                             , dummy_true                             ,  x ,  x , ES1, ES2, 2005)
 EXT(OES_depth32                             , dummy_false                            ,  x ,  x ,  x ,  x , 2005)
 EXT(OES_depth_texture                       , ARB_depth_texture                      ,  x ,  x ,  x , ES2, 2006)

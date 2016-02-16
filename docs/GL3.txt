@@ -256,7 +256,7 @@ GLES3.2, GLSL ES 3.2
   GL_KHR_debug                                          DONE (all drivers)
   GL_KHR_robustness                                     not started (90% done with the ARB variant)
   GL_KHR_texture_compression_astc_ldr                   DONE (i965/gen9+)
-  GL_OES_copy_image                                     not started (based on GL_ARB_copy_image, which is done for some drivers)
+  GL_OES_copy_image                                     DONE (core only)
   GL_OES_draw_buffers_indexed                           not started
   GL_OES_draw_elements_base_vertex                      DONE (all drivers)
   GL_OES_geometry_shader                                started (Marta)
