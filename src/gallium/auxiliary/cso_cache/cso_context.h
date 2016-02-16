@@ -163,6 +163,8 @@ void cso_restore_framebuffer(struct cso_context *cso);
 
 void cso_set_viewport(struct cso_context *cso,
                       const struct pipe_viewport_state *vp);
+void cso_set_viewport_dims(struct cso_context *ctx,
+                           float width, float height, boolean invert);
 void cso_save_viewport(struct cso_context *cso);
 void cso_restore_viewport(struct cso_context *cso);
 

@@ -674,6 +674,24 @@ void cso_set_viewport(struct cso_context *ctx,
    }
 }
 
+/**
+ * Setup viewport state for given width and height (position is always (0,0)).
+ * Invert the Y axis if 'invert' is true.
+ */
+void
+cso_set_viewport_dims(struct cso_context *ctx,
+                      float width, float height, boolean invert)
+{
+   struct pipe_viewport_state vp;
+   vp.scale[0] = width * 0.5f;
+   vp.scale[1] = height * (invert ? -0.5f : 0.5f);
+   vp.scale[2] = 0.5f;
+   vp.translate[0] = 0.5f * width;
+   vp.translate[1] = 0.5f * height;
+   vp.translate[2] = 0.5f;
+   cso_set_viewport(ctx, &vp);
+}
+
 void cso_save_viewport(struct cso_context *ctx)
 {
    ctx->vp_saved = ctx->vp;
