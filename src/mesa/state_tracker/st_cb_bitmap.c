@@ -217,14 +217,11 @@ setup_render_state(struct gl_context *ctx,
                         CSO_BIT_FRAGMENT_SAMPLERS |
                         CSO_BIT_FRAGMENT_SAMPLER_VIEWS |
                         CSO_BIT_VIEWPORT |
-                        CSO_BIT_FRAGMENT_SHADER |
                         CSO_BIT_STREAM_OUTPUTS |
-                        CSO_BIT_TESSCTRL_SHADER |
-                        CSO_BIT_TESSEVAL_SHADER |
-                        CSO_BIT_GEOMETRY_SHADER |
                         CSO_BIT_VERTEX_ELEMENTS |
-                        CSO_BIT_VERTEX_SHADER |
-                        CSO_BIT_AUX_VERTEX_BUFFER_SLOT));
+                        CSO_BIT_AUX_VERTEX_BUFFER_SLOT |
+                        CSO_BITS_ALL_SHADERS));
+
 
    /* rasterizer state: just scissor */
    st->bitmap.rasterizer.scissor = ctx->Scissor.EnableFlags & 1;

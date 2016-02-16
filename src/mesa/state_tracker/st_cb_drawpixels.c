@@ -479,14 +479,10 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
                      CSO_BIT_VIEWPORT |
                      CSO_BIT_FRAGMENT_SAMPLERS |
                      CSO_BIT_FRAGMENT_SAMPLER_VIEWS |
-                     CSO_BIT_FRAGMENT_SHADER |
                      CSO_BIT_STREAM_OUTPUTS |
-                     CSO_BIT_VERTEX_SHADER |
-                     CSO_BIT_TESSCTRL_SHADER |
-                     CSO_BIT_TESSEVAL_SHADER |
-                     CSO_BIT_GEOMETRY_SHADER |
                      CSO_BIT_VERTEX_ELEMENTS |
-                     CSO_BIT_AUX_VERTEX_BUFFER_SLOT);
+                     CSO_BIT_AUX_VERTEX_BUFFER_SLOT |
+                     CSO_BITS_ALL_SHADERS);
    if (write_stencil) {
       cso_state_mask |= (CSO_BIT_DEPTH_STENCIL_ALPHA |
                          CSO_BIT_BLEND);

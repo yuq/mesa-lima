@@ -1341,12 +1341,8 @@ try_pbo_upload_common(struct gl_context *ctx,
                         CSO_BIT_VIEWPORT |
                         CSO_BIT_BLEND |
                         CSO_BIT_RASTERIZER |
-                        CSO_BIT_VERTEX_SHADER |
-                        CSO_BIT_GEOMETRY_SHADER |
-                        CSO_BIT_TESSCTRL_SHADER |
-                        CSO_BIT_TESSEVAL_SHADER |
-                        CSO_BIT_FRAGMENT_SHADER |
-                        CSO_BIT_STREAM_OUTPUTS));
+                        CSO_BIT_STREAM_OUTPUTS |
+                        CSO_BITS_ALL_SHADERS));
    cso_save_constant_buffer_slot0(cso, PIPE_SHADER_FRAGMENT);
 
 
