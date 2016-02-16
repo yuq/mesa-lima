@@ -1184,8 +1184,10 @@ nvc0_set_transform_feedback_targets(struct pipe_context *pipe,
    }
    nvc0->num_tfbbufs = num_targets;
 
-   if (nvc0->tfbbuf_dirty)
+   if (nvc0->tfbbuf_dirty) {
+      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TFB);
       nvc0->dirty_3d |= NVC0_NEW_3D_TFB_TARGETS;
+   }
 }
 
 static void
