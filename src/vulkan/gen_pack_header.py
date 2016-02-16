@@ -206,7 +206,8 @@ class Field:
 
     def __init__(self, parser, attrs):
         self.parser = parser
-        self.name = safe_name(attrs["name"])
+        if "name" in attrs:
+            self.name = safe_name(attrs["name"])
         self.start = int(attrs["start"])
         self.end = int(attrs["end"])
         self.type = attrs["type"]
@@ -225,7 +226,7 @@ class Field:
         if ufixed_match:
             self.type = 'ufixed'
             self.fractional_size = int(ufixed_match.group(2))
-            
+
         sfixed_match = Field.sfixed_pattern.match(self.type)
         if sfixed_match:
             self.type = 'sfixed'
@@ -252,9 +253,11 @@ class Field:
             type = 'uint32_t'
         elif self.type in self.parser.structs:
             type = 'struct ' + self.parser.gen_prefix(safe_name(self.type))
+        elif self.type == 'mbo':
+            return
         else:
             print("#error unhandled type: %s" % self.type)
-            
+
         print("   %-36s %s%s;" % (type, self.name, dim))
 
         if len(self.values) > 0 and self.default == None:
@@ -398,7 +401,9 @@ class Group:
 
             field_index = 0
             for field in dw.fields:
-                name = field.name + field.dim
+                if field.type != "mbo":
+                    name = field.name + field.dim
+
                 if field.type == "mbo":
                     s = "__gen_mbo(%d, %d)" % \
                         (field.start - dword_start, field.end - dword_start)
@@ -537,7 +542,7 @@ class Parser:
         print("struct %s {" % self.gen_prefix(name))
         group.emit_template_struct("")
         print("};\n")
-        
+
     def emit_pack_function(self, name, group):
         name = self.gen_prefix(name)
         print("static inline void\n%s_pack(__gen_user_data *data, void * restrict dst,\n%sconst struct %s * restrict values)\n{" %
@@ -593,7 +598,7 @@ class Parser:
                 name = value.name
             print('#define %-36s %4d' % (name.upper(), value.value))
         print('')
-                        
+
     def parse(self, filename):
         file = open(filename, "rb")
         self.parser.ParseFile(file)

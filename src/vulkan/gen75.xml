@@ -982,6 +982,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="36"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="0"/>
     <field name="Blend State Pointer" start="38" end="63" type="offset"/>
+    <field start="32" end="32" type="mbo"/>
   </instruction>
 
   <instruction name="3DSTATE_CC_STATE_POINTERS" bias="2" length="2">
@@ -991,6 +992,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="14"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="0"/>
     <field name="Color Calc State Pointer" start="38" end="63" type="offset"/>
+    <field start="32" end="32" type="mbo"/>
   </instruction>
 
   <instruction name="3DSTATE_CHROMA_KEY" bias="2" length="4">
@@ -1154,6 +1156,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="37"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="0"/>
     <field name="Pointer to DEPTH_STENCIL_STATE" start="38" end="63" type="offset"/>
+    <field start="32" end="32" type="mbo"/>
   </instruction>
 
   <instruction name="3DSTATE_DRAWING_RECTANGLE" bias="2" length="4">
@@ -1299,6 +1302,7 @@
     <field name="DWord Length" start="0" end="7" type="uint" default="1"/>
     <field name="Gather Pool Base Address" start="44" end="63" type="address"/>
     <field name="Gather Pool Enable" start="43" end="43" type="bool"/>
+    <field start="36" end="37" type="mbo"/>
     <field name="Memory Object Control State" start="32" end="35" type="MEMORY_OBJECT_CONTROL_STATE"/>
     <field name="Gather Pool Upper Bound" start="76" end="95" type="address"/>
   </instruction>
