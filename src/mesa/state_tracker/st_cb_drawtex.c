@@ -256,7 +256,7 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
       velements[i].src_format = PIPE_FORMAT_R32G32B32A32_FLOAT;
    }
    cso_set_vertex_elements(cso, numAttribs, velements);
-   cso_set_stream_outputs(st->cso_context, 0, NULL, NULL);
+   cso_set_stream_outputs(cso, 0, NULL, NULL);
 
    /* viewport state: viewport matching window dims */
    {
