@@ -921,6 +921,12 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->ARB_sync = GL_TRUE;
    }
 
+   /* Needs PIPE_CAP_SAMPLE_SHADING + all the sample-related bits of
+    * ARB_gpu_shader5. This enables all the per-sample shading ES extensions.
+    */
+   extensions->OES_sample_variables = extensions->ARB_sample_shading &&
+      extensions->ARB_gpu_shader5;
+
    /* Maximum sample count. */
    {
       enum pipe_format color_formats[] = {
