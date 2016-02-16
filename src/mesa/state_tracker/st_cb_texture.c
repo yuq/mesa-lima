@@ -1334,6 +1334,22 @@ try_pbo_upload_common(struct gl_context *ctx,
          return false;
    }
 
+   cso_save_state(cso, (CSO_BIT_FRAGMENT_SAMPLER_VIEWS |
+                        CSO_BIT_VERTEX_ELEMENTS |
+                        CSO_BIT_AUX_VERTEX_BUFFER_SLOT |
+                        CSO_BIT_FRAMEBUFFER |
+                        CSO_BIT_VIEWPORT |
+                        CSO_BIT_BLEND |
+                        CSO_BIT_RASTERIZER |
+                        CSO_BIT_VERTEX_SHADER |
+                        CSO_BIT_GEOMETRY_SHADER |
+                        CSO_BIT_TESSCTRL_SHADER |
+                        CSO_BIT_TESSEVAL_SHADER |
+                        CSO_BIT_FRAGMENT_SHADER |
+                        CSO_BIT_STREAM_OUTPUTS));
+   cso_save_constant_buffer_slot0(cso, PIPE_SHADER_FRAGMENT);
+
+
    /* Set up the sampler_view */
    {
       unsigned first_element = buf_offset;
@@ -1346,7 +1362,7 @@ try_pbo_upload_common(struct gl_context *ctx,
       assert((last_element + 1) * bytes_per_pixel <= buffer->width0);
 
       if (last_element - first_element > ctx->Const.MaxTextureBufferSize - 1)
-         return false;
+         goto fail;
 
       memset(&templ, 0, sizeof(templ));
       templ.format = src_format;
@@ -1359,9 +1375,8 @@ try_pbo_upload_common(struct gl_context *ctx,
 
       sampler_view = pipe->create_sampler_view(pipe, buffer, &templ);
       if (sampler_view == NULL)
-         return false;
+         goto fail;
 
-      cso_save_fragment_sampler_views(cso);
       cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, 1, &sampler_view);
 
       pipe_sampler_view_reference(&sampler_view, NULL);
@@ -1386,7 +1401,7 @@ try_pbo_upload_common(struct gl_context *ctx,
       u_upload_alloc(st->uploader, 0, 8 * sizeof(float), 4,
                      &vbo.buffer_offset, &vbo.buffer, (void **) &verts);
       if (!verts)
-         goto fail_vertex_upload;
+         goto fail;
 
       verts[0] = x0;
       verts[1] = y0;
@@ -1404,10 +1419,8 @@ try_pbo_upload_common(struct gl_context *ctx,
       velem.vertex_buffer_index = cso_get_aux_vertex_buffer_slot(cso);
       velem.src_format = PIPE_FORMAT_R32G32_FLOAT;
 
-      cso_save_vertex_elements(cso);
       cso_set_vertex_elements(cso, 1, &velem);
 
-      cso_save_aux_vertex_buffer_slot(cso);
       cso_set_vertex_buffers(cso, velem.vertex_buffer_index, 1, &vbo);
 
       pipe_resource_reference(&vbo.buffer, NULL);
@@ -1436,7 +1449,7 @@ try_pbo_upload_common(struct gl_context *ctx,
                        st->ctx->Const.UniformBufferOffsetAlignment,
                        &constants, &cb.buffer_offset, &cb.buffer);
          if (!cb.buffer)
-            goto fail_constant_upload;
+            goto fail;
 
          u_upload_unmap(st->constbuf_uploader);
       } else {
@@ -1446,7 +1459,6 @@ try_pbo_upload_common(struct gl_context *ctx,
       }
       cb.buffer_size = sizeof(constants);
 
-      cso_save_constant_buffer_slot0(cso, PIPE_SHADER_FRAGMENT);
       cso_set_constant_buffer(cso, PIPE_SHADER_FRAGMENT, 0, &cb);
 
       pipe_resource_reference(&cb.buffer, NULL);
@@ -1461,7 +1473,6 @@ try_pbo_upload_common(struct gl_context *ctx,
       fb.nr_cbufs = 1;
       pipe_surface_reference(&fb.cbufs[0], surface);
 
-      cso_save_framebuffer(cso);
       cso_set_framebuffer(cso, &fb);
 
       pipe_surface_reference(&fb.cbufs[0], NULL);
@@ -1477,36 +1488,27 @@ try_pbo_upload_common(struct gl_context *ctx,
       vp.translate[1] = 0.5f * surface->height;
       vp.translate[2] = 0.0f;
 
-      cso_save_viewport(cso);
       cso_set_viewport(cso, &vp);
    }
 
    /* Blend state */
-   cso_save_blend(cso);
    cso_set_blend(cso, &st->pbo_upload.blend);
 
    /* Rasterizer state */
-   cso_save_rasterizer(cso);
    cso_set_rasterizer(cso, &st->pbo_upload.raster);
 
    /* Set up the shaders */
-   cso_save_vertex_shader(cso);
    cso_set_vertex_shader_handle(cso, st->pbo_upload.vs);
 
-   cso_save_geometry_shader(cso);
    cso_set_geometry_shader_handle(cso, depth != 1 ? st->pbo_upload.gs : NULL);
 
-   cso_save_tessctrl_shader(cso);
    cso_set_tessctrl_shader_handle(cso, NULL);
 
-   cso_save_tesseval_shader(cso);
    cso_set_tesseval_shader_handle(cso, NULL);
 
-   cso_save_fragment_shader(cso);
    cso_set_fragment_shader_handle(cso, st->pbo_upload.fs);
 
    /* Disable stream output */
-   cso_save_stream_outputs(cso);
    cso_set_stream_outputs(cso, 0, NULL, 0);
 
    if (depth == 1) {
@@ -1518,22 +1520,9 @@ try_pbo_upload_common(struct gl_context *ctx,
 
    success = true;
 
-   cso_restore_framebuffer(cso);
-   cso_restore_viewport(cso);
-   cso_restore_blend(cso);
-   cso_restore_rasterizer(cso);
-   cso_restore_vertex_shader(cso);
-   cso_restore_geometry_shader(cso);
-   cso_restore_tessctrl_shader(cso);
-   cso_restore_tesseval_shader(cso);
-   cso_restore_fragment_shader(cso);
-   cso_restore_stream_outputs(cso);
+fail:
+   cso_restore_state(cso);
    cso_restore_constant_buffer_slot0(cso, PIPE_SHADER_FRAGMENT);
-fail_constant_upload:
-   cso_restore_vertex_elements(cso);
-   cso_restore_aux_vertex_buffer_slot(cso);
-fail_vertex_upload:
-   cso_restore_fragment_sampler_views(cso);
 
    return success;
 }
