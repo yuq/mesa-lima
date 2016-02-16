@@ -2739,7 +2739,7 @@ st_finalize_texture(struct gl_context *ctx,
 {
    struct st_context *st = st_context(ctx);
    struct st_texture_object *stObj = st_texture_object(tObj);
-   const GLuint nr_faces = (stObj->base.Target == GL_TEXTURE_CUBE_MAP) ? 6 : 1;
+   const GLuint nr_faces = _mesa_num_tex_faces(stObj->base.Target);
    GLuint face;
    const struct st_texture_image *firstImage;
    enum pipe_format firstImageFormat;
