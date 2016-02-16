@@ -704,8 +704,10 @@ test "x$enable_asm" = xno && AC_MSG_RESULT([no])
 if test "x$enable_asm" = xyes -a "x$cross_compiling" = xyes; then
     case "$host_cpu" in
     i?86 | x86_64 | amd64)
-        enable_asm=no
-        AC_MSG_RESULT([no, cross compiling])
+        if test "x$host_cpu" != "x$target_cpu"; then
+            enable_asm=no
+            AC_MSG_RESULT([no, cross compiling])
+        fi
         ;;
     esac
 fi
