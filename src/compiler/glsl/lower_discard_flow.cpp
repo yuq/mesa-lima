@@ -62,8 +62,8 @@ public:
    {
    }
 
+   ir_visitor_status visit(ir_loop_jump *ir);
    ir_visitor_status visit_enter(ir_discard *ir);
-   ir_visitor_status visit_enter(ir_loop_jump *ir);
    ir_visitor_status visit_enter(ir_loop *ir);
    ir_visitor_status visit_enter(ir_function_signature *ir);
 
@@ -76,7 +76,7 @@ public:
 } /* anonymous namespace */
 
 ir_visitor_status
-lower_discard_flow_visitor::visit_enter(ir_loop_jump *ir)
+lower_discard_flow_visitor::visit(ir_loop_jump *ir)
 {
    if (ir->mode != ir_loop_jump::jump_continue)
       return visit_continue;
