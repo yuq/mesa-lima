@@ -1979,6 +1979,7 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
    case ir_unop_u2i:
       /* Converting between signed and unsigned integers is a no-op. */
       result_src = op[0];
+      result_src.type = result_dst.type;
       break;
    case ir_unop_b2i:
       if (native_integers) {
