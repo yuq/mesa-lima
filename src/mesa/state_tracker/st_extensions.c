@@ -382,6 +382,7 @@ void st_init_limits(struct pipe_screen *screen,
          c->Program[MESA_SHADER_GEOMETRY].MaxImageUniforms +
          c->Program[MESA_SHADER_FRAGMENT].MaxImageUniforms +
          c->Program[MESA_SHADER_COMPUTE].MaxImageUniforms;
+   c->MaxCombinedShaderOutputResources += c->MaxCombinedImageUniforms;
    c->MaxImageUnits = MAX_IMAGE_UNITS;
    c->MaxImageSamples = 0; /* XXX */
    if (c->MaxCombinedImageUniforms) {
