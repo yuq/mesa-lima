@@ -192,6 +192,30 @@ void cso_save_render_condition(struct cso_context *cso);
 void cso_restore_render_condition(struct cso_context *cso);
 
 
+#define CSO_BIT_AUX_VERTEX_BUFFER_SLOT    0x1
+#define CSO_BIT_BLEND                     0x2
+#define CSO_BIT_DEPTH_STENCIL_ALPHA       0x4
+#define CSO_BIT_FRAGMENT_SAMPLERS         0x8
+#define CSO_BIT_FRAGMENT_SAMPLER_VIEWS   0x10
+#define CSO_BIT_FRAGMENT_SHADER          0x20
+#define CSO_BIT_FRAMEBUFFER              0x40
+#define CSO_BIT_GEOMETRY_SHADER          0x80
+#define CSO_BIT_MIN_SAMPLES             0x100
+#define CSO_BIT_RASTERIZER              0x200
+#define CSO_BIT_RENDER_CONDITION        0x400
+#define CSO_BIT_SAMPLE_MASK             0x800
+#define CSO_BIT_STENCIL_REF            0x1000
+#define CSO_BIT_STREAM_OUTPUTS         0x2000
+#define CSO_BIT_TESSCTRL_SHADER        0x4000
+#define CSO_BIT_TESSEVAL_SHADER        0x8000
+#define CSO_BIT_VERTEX_ELEMENTS       0x10000
+#define CSO_BIT_VERTEX_SHADER         0x20000
+#define CSO_BIT_VIEWPORT              0x40000
+
+void cso_save_state(struct cso_context *cso, unsigned state_mask);
+void cso_restore_state(struct cso_context *cso);
+
+
 /* sampler view state */
 
 void

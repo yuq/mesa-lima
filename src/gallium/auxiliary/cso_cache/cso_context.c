@@ -72,6 +72,8 @@ struct cso_context {
    boolean has_compute_shader;
    boolean has_streamout;
 
+   unsigned saved_state;  /**< bitmask of CSO_BIT_x flags */
+
    struct pipe_sampler_view *fragment_views[PIPE_MAX_SHADER_SAMPLER_VIEWS];
    unsigned nr_fragment_views;
 
@@ -1449,6 +1451,113 @@ cso_restore_constant_buffer_slot0(struct cso_context *cso,
    pipe_resource_reference(&cso->aux_constbuf_saved[shader_stage].buffer,
                            NULL);
 }
+
+
+/**
+ * Save all the CSO state items specified by the state_mask bitmask
+ * of CSO_BIT_x flags.
+ */
+void
+cso_save_state(struct cso_context *cso, unsigned state_mask)
+{
+   assert(cso->saved_state == 0);
+
+   cso->saved_state = state_mask;
+
+   if (state_mask & CSO_BIT_AUX_VERTEX_BUFFER_SLOT)
+      cso_save_aux_vertex_buffer_slot(cso);
+   if (state_mask & CSO_BIT_BLEND)
+      cso_save_blend(cso);
+   if (state_mask & CSO_BIT_DEPTH_STENCIL_ALPHA)
+      cso_save_depth_stencil_alpha(cso);
+   if (state_mask & CSO_BIT_FRAGMENT_SAMPLERS)
+      cso_save_fragment_samplers(cso);
+   if (state_mask & CSO_BIT_FRAGMENT_SAMPLER_VIEWS)
+      cso_save_fragment_sampler_views(cso);
+   if (state_mask & CSO_BIT_FRAGMENT_SHADER)
+      cso_save_fragment_shader(cso);
+   if (state_mask & CSO_BIT_FRAMEBUFFER)
+      cso_save_framebuffer(cso);
+   if (state_mask & CSO_BIT_GEOMETRY_SHADER)
+      cso_save_geometry_shader(cso);
+   if (state_mask & CSO_BIT_MIN_SAMPLES)
+      cso_save_min_samples(cso);
+   if (state_mask & CSO_BIT_RASTERIZER)
+      cso_save_rasterizer(cso);
+   if (state_mask & CSO_BIT_RENDER_CONDITION)
+      cso_save_render_condition(cso);
+   if (state_mask & CSO_BIT_SAMPLE_MASK)
+      cso_save_sample_mask(cso);
+   if (state_mask & CSO_BIT_STENCIL_REF)
+      cso_save_stencil_ref(cso);
+   if (state_mask & CSO_BIT_STREAM_OUTPUTS)
+      cso_save_stream_outputs(cso);
+   if (state_mask & CSO_BIT_TESSCTRL_SHADER)
+      cso_save_tessctrl_shader(cso);
+   if (state_mask & CSO_BIT_TESSEVAL_SHADER)
+      cso_save_tesseval_shader(cso);
+   if (state_mask & CSO_BIT_VERTEX_ELEMENTS)
+      cso_save_vertex_elements(cso);
+   if (state_mask & CSO_BIT_VERTEX_SHADER)
+      cso_save_vertex_shader(cso);
+   if (state_mask & CSO_BIT_VIEWPORT)
+      cso_save_viewport(cso);
+}
+
+
+/**
+ * Restore the state which was saved by cso_save_state().
+ */
+void
+cso_restore_state(struct cso_context *cso)
+{
+   unsigned state_mask = cso->saved_state;
+
+   assert(state_mask);
+
+   if (state_mask & CSO_BIT_AUX_VERTEX_BUFFER_SLOT)
+      cso_restore_aux_vertex_buffer_slot(cso);
+   if (state_mask & CSO_BIT_BLEND)
+      cso_restore_blend(cso);
+   if (state_mask & CSO_BIT_DEPTH_STENCIL_ALPHA)
+      cso_restore_depth_stencil_alpha(cso);
+   if (state_mask & CSO_BIT_FRAGMENT_SAMPLERS)
+      cso_restore_fragment_samplers(cso);
+   if (state_mask & CSO_BIT_FRAGMENT_SAMPLER_VIEWS)
+      cso_restore_fragment_sampler_views(cso);
+   if (state_mask & CSO_BIT_FRAGMENT_SHADER)
+      cso_restore_fragment_shader(cso);
+   if (state_mask & CSO_BIT_FRAMEBUFFER)
+      cso_restore_framebuffer(cso);
+   if (state_mask & CSO_BIT_GEOMETRY_SHADER)
+      cso_restore_geometry_shader(cso);
+   if (state_mask & CSO_BIT_MIN_SAMPLES)
+      cso_restore_min_samples(cso);
+   if (state_mask & CSO_BIT_RASTERIZER)
+      cso_restore_rasterizer(cso);
+   if (state_mask & CSO_BIT_RENDER_CONDITION)
+      cso_restore_render_condition(cso);
+   if (state_mask & CSO_BIT_SAMPLE_MASK)
+      cso_restore_sample_mask(cso);
+   if (state_mask & CSO_BIT_STENCIL_REF)
+      cso_restore_stencil_ref(cso);
+   if (state_mask & CSO_BIT_STREAM_OUTPUTS)
+      cso_restore_stream_outputs(cso);
+   if (state_mask & CSO_BIT_TESSCTRL_SHADER)
+      cso_restore_tessctrl_shader(cso);
+   if (state_mask & CSO_BIT_TESSEVAL_SHADER)
+      cso_restore_tesseval_shader(cso);
+   if (state_mask & CSO_BIT_VERTEX_ELEMENTS)
+      cso_restore_vertex_elements(cso);
+   if (state_mask & CSO_BIT_VERTEX_SHADER)
+      cso_restore_vertex_shader(cso);
+   if (state_mask & CSO_BIT_VIEWPORT)
+      cso_restore_viewport(cso);
+
+   cso->saved_state = 0;
+}
+
+
 
 /* drawing */
 
