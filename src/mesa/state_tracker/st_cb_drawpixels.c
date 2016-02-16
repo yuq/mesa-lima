@@ -596,18 +596,8 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    }
 
    /* viewport state: viewport matching window dims */
-   {
-      const float w = (float) ctx->DrawBuffer->Width;
-      const float h = (float) ctx->DrawBuffer->Height;
-      struct pipe_viewport_state vp;
-      vp.scale[0] =  0.5f * w;
-      vp.scale[1] = -0.5f * h;
-      vp.scale[2] = 0.5f;
-      vp.translate[0] = 0.5f * w;
-      vp.translate[1] = 0.5f * h;
-      vp.translate[2] = 0.5f;
-      cso_set_viewport(cso, &vp);
-   }
+   cso_set_viewport_dims(cso, ctx->DrawBuffer->Width,
+                         ctx->DrawBuffer->Height, TRUE);
 
    cso_set_vertex_elements(cso, 3, st->util_velems);
    cso_set_stream_outputs(cso, 0, NULL, NULL);

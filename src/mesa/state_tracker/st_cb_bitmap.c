@@ -267,19 +267,9 @@ setup_render_state(struct gl_context *ctx,
    }
 
    /* viewport state: viewport matching window dims */
-   {
-      const GLboolean invert = st->state.fb_orientation == Y_0_TOP;
-      const GLfloat width = (GLfloat)st->state.framebuffer.width;
-      const GLfloat height = (GLfloat)st->state.framebuffer.height;
-      struct pipe_viewport_state vp;
-      vp.scale[0] =  0.5f * width;
-      vp.scale[1] = height * (invert ? -0.5f : 0.5f);
-      vp.scale[2] = 0.5f;
-      vp.translate[0] = 0.5f * width;
-      vp.translate[1] = 0.5f * height;
-      vp.translate[2] = 0.5f;
-      cso_set_viewport(cso, &vp);
-   }
+   cso_set_viewport_dims(cso, st->state.framebuffer.width,
+                         st->state.framebuffer.height,
+                         st->state.fb_orientation == Y_0_TOP);
 
    cso_set_vertex_elements(cso, 3, st->util_velems);
 

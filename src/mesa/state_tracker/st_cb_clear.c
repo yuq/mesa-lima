@@ -277,17 +277,8 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
    cso_set_rasterizer(cso, &st->clear.raster);
 
    /* viewport state: viewport matching window dims */
-   {
-      const GLboolean invert = (st_fb_orientation(fb) == Y_0_TOP);
-      struct pipe_viewport_state vp;
-      vp.scale[0] = 0.5f * fb_width;
-      vp.scale[1] = fb_height * (invert ? -0.5f : 0.5f);
-      vp.scale[2] = 0.5f;
-      vp.translate[0] = 0.5f * fb_width;
-      vp.translate[1] = 0.5f * fb_height;
-      vp.translate[2] = 0.5f;
-      cso_set_viewport(cso, &vp);
-   }
+   cso_set_viewport_dims(st->cso_context, fb_width, fb_height,
+                         st_fb_orientation(fb) == Y_0_TOP);
 
    set_fragment_shader(st);
    cso_set_tessctrl_shader_handle(cso, NULL);
