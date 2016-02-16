@@ -459,6 +459,7 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    GLfloat x0, y0, x1, y1;
    GLsizei maxSize;
    boolean normalized = sv[0]->texture->target == PIPE_TEXTURE_2D;
+   unsigned cso_state_mask;
 
    assert(sv[0]->texture->target == st->internal_target);
 
@@ -471,22 +472,23 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    assert(width <= maxSize);
    assert(height <= maxSize);
 
-   cso_save_rasterizer(cso);
-   cso_save_viewport(cso);
-   cso_save_fragment_samplers(cso);
-   cso_save_fragment_sampler_views(cso);
-   cso_save_fragment_shader(cso);
-   cso_save_stream_outputs(cso);
-   cso_save_vertex_shader(cso);
-   cso_save_tessctrl_shader(cso);
-   cso_save_tesseval_shader(cso);
-   cso_save_geometry_shader(cso);
-   cso_save_vertex_elements(cso);
-   cso_save_aux_vertex_buffer_slot(cso);
+   cso_state_mask = (CSO_BIT_RASTERIZER |
+                     CSO_BIT_VIEWPORT |
+                     CSO_BIT_FRAGMENT_SAMPLERS |
+                     CSO_BIT_FRAGMENT_SAMPLER_VIEWS |
+                     CSO_BIT_FRAGMENT_SHADER |
+                     CSO_BIT_STREAM_OUTPUTS |
+                     CSO_BIT_VERTEX_SHADER |
+                     CSO_BIT_TESSCTRL_SHADER |
+                     CSO_BIT_TESSEVAL_SHADER |
+                     CSO_BIT_GEOMETRY_SHADER |
+                     CSO_BIT_VERTEX_ELEMENTS |
+                     CSO_BIT_AUX_VERTEX_BUFFER_SLOT);
    if (write_stencil) {
-      cso_save_depth_stencil_alpha(cso);
-      cso_save_blend(cso);
+      cso_state_mask |= (CSO_BIT_DEPTH_STENCIL_ALPHA |
+                         CSO_BIT_BLEND);
    }
+   cso_save_state(cso, cso_state_mask);
 
    /* rasterizer state: just scissor */
    {
@@ -642,22 +644,7 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    }
 
    /* restore state */
-   cso_restore_rasterizer(cso);
-   cso_restore_viewport(cso);
-   cso_restore_fragment_samplers(cso);
-   cso_restore_fragment_sampler_views(cso);
-   cso_restore_fragment_shader(cso);
-   cso_restore_vertex_shader(cso);
-   cso_restore_tessctrl_shader(cso);
-   cso_restore_tesseval_shader(cso);
-   cso_restore_geometry_shader(cso);
-   cso_restore_vertex_elements(cso);
-   cso_restore_aux_vertex_buffer_slot(cso);
-   cso_restore_stream_outputs(cso);
-   if (write_stencil) {
-      cso_restore_depth_stencil_alpha(cso);
-      cso_restore_blend(cso);
-   }
+   cso_restore_state(cso);
 }
 
 

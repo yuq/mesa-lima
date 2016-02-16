@@ -229,15 +229,14 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
 #undef SET_ATTRIB
    }
 
-
-   cso_save_viewport(cso);
-   cso_save_stream_outputs(cso);
-   cso_save_vertex_shader(cso);
-   cso_save_tessctrl_shader(cso);
-   cso_save_tesseval_shader(cso);
-   cso_save_geometry_shader(cso);
-   cso_save_vertex_elements(cso);
-   cso_save_aux_vertex_buffer_slot(cso);
+   cso_save_state(cso, (CSO_BIT_VIEWPORT |
+                        CSO_BIT_STREAM_OUTPUTS |
+                        CSO_BIT_VERTEX_SHADER |
+                        CSO_BIT_TESSCTRL_SHADER |
+                        CSO_BIT_TESSEVAL_SHADER |
+                        CSO_BIT_GEOMETRY_SHADER |
+                        CSO_BIT_VERTEX_ELEMENTS |
+                        CSO_BIT_AUX_VERTEX_BUFFER_SLOT));
 
    {
       void *vs = lookup_shader(pipe, numAttribs,
@@ -285,14 +284,7 @@ st_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,
    pipe_resource_reference(&vbuffer, NULL);
 
    /* restore state */
-   cso_restore_viewport(cso);
-   cso_restore_vertex_shader(cso);
-   cso_restore_tessctrl_shader(cso);
-   cso_restore_tesseval_shader(cso);
-   cso_restore_geometry_shader(cso);
-   cso_restore_vertex_elements(cso);
-   cso_restore_aux_vertex_buffer_slot(cso);
-   cso_restore_stream_outputs(cso);
+   cso_restore_state(cso);
 }
 
 

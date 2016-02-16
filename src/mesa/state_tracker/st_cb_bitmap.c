@@ -213,18 +213,18 @@ setup_render_state(struct gl_context *ctx,
       COPY_4V(ctx->Current.Attrib[VERT_ATTRIB_COLOR0], colorSave);
    }
 
-   cso_save_rasterizer(cso);
-   cso_save_fragment_samplers(cso);
-   cso_save_fragment_sampler_views(cso);
-   cso_save_viewport(cso);
-   cso_save_fragment_shader(cso);
-   cso_save_stream_outputs(cso);
-   cso_save_vertex_shader(cso);
-   cso_save_tessctrl_shader(cso);
-   cso_save_tesseval_shader(cso);
-   cso_save_geometry_shader(cso);
-   cso_save_vertex_elements(cso);
-   cso_save_aux_vertex_buffer_slot(cso);
+   cso_save_state(cso, (CSO_BIT_RASTERIZER |
+                        CSO_BIT_FRAGMENT_SAMPLERS |
+                        CSO_BIT_FRAGMENT_SAMPLER_VIEWS |
+                        CSO_BIT_VIEWPORT |
+                        CSO_BIT_FRAGMENT_SHADER |
+                        CSO_BIT_STREAM_OUTPUTS |
+                        CSO_BIT_TESSCTRL_SHADER |
+                        CSO_BIT_TESSEVAL_SHADER |
+                        CSO_BIT_GEOMETRY_SHADER |
+                        CSO_BIT_VERTEX_ELEMENTS |
+                        CSO_BIT_VERTEX_SHADER |
+                        CSO_BIT_AUX_VERTEX_BUFFER_SLOT));
 
    /* rasterizer state: just scissor */
    st->bitmap.rasterizer.scissor = ctx->Scissor.EnableFlags & 1;
@@ -286,18 +286,7 @@ restore_render_state(struct gl_context *ctx)
    struct st_context *st = st_context(ctx);
    struct cso_context *cso = st->cso_context;
 
-   cso_restore_rasterizer(cso);
-   cso_restore_fragment_samplers(cso);
-   cso_restore_fragment_sampler_views(cso);
-   cso_restore_viewport(cso);
-   cso_restore_fragment_shader(cso);
-   cso_restore_vertex_shader(cso);
-   cso_restore_tessctrl_shader(cso);
-   cso_restore_tesseval_shader(cso);
-   cso_restore_geometry_shader(cso);
-   cso_restore_vertex_elements(cso);
-   cso_restore_aux_vertex_buffer_slot(cso);
-   cso_restore_stream_outputs(cso);
+   cso_restore_state(cso);
 }
 
 

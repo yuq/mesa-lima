@@ -196,21 +196,21 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
 	  x1, y1);
    */
 
-   cso_save_blend(cso);
-   cso_save_stencil_ref(cso);
-   cso_save_depth_stencil_alpha(cso);
-   cso_save_rasterizer(cso);
-   cso_save_sample_mask(cso);
-   cso_save_min_samples(cso);
-   cso_save_viewport(cso);
-   cso_save_fragment_shader(cso);
-   cso_save_stream_outputs(cso);
-   cso_save_vertex_shader(cso);
-   cso_save_tessctrl_shader(cso);
-   cso_save_tesseval_shader(cso);
-   cso_save_geometry_shader(cso);
-   cso_save_vertex_elements(cso);
-   cso_save_aux_vertex_buffer_slot(cso);
+   cso_save_state(cso, (CSO_BIT_BLEND |
+                        CSO_BIT_STENCIL_REF |
+                        CSO_BIT_DEPTH_STENCIL_ALPHA |
+                        CSO_BIT_RASTERIZER |
+                        CSO_BIT_SAMPLE_MASK |
+                        CSO_BIT_MIN_SAMPLES |
+                        CSO_BIT_VIEWPORT |
+                        CSO_BIT_FRAGMENT_SHADER |
+                        CSO_BIT_STREAM_OUTPUTS |
+                        CSO_BIT_VERTEX_SHADER |
+                        CSO_BIT_TESSCTRL_SHADER |
+                        CSO_BIT_TESSEVAL_SHADER |
+                        CSO_BIT_GEOMETRY_SHADER |
+                        CSO_BIT_VERTEX_ELEMENTS |
+                        CSO_BIT_AUX_VERTEX_BUFFER_SLOT));
 
    /* blend state: RGBA masking */
    {
@@ -306,21 +306,7 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
    }
 
    /* Restore pipe state */
-   cso_restore_blend(cso);
-   cso_restore_stencil_ref(cso);
-   cso_restore_depth_stencil_alpha(cso);
-   cso_restore_rasterizer(cso);
-   cso_restore_sample_mask(cso);
-   cso_restore_min_samples(cso);
-   cso_restore_viewport(cso);
-   cso_restore_fragment_shader(cso);
-   cso_restore_vertex_shader(cso);
-   cso_restore_tessctrl_shader(cso);
-   cso_restore_tesseval_shader(cso);
-   cso_restore_geometry_shader(cso);
-   cso_restore_vertex_elements(cso);
-   cso_restore_aux_vertex_buffer_slot(cso);
-   cso_restore_stream_outputs(cso);
+   cso_restore_state(cso);
 }
 
 
