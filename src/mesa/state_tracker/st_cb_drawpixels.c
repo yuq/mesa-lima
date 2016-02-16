@@ -35,6 +35,7 @@
 #include "main/bufferobj.h"
 #include "main/blit.h"
 #include "main/format_pack.h"
+#include "main/framebuffer.h"
 #include "main/macros.h"
 #include "main/mtypes.h"
 #include "main/pack.h"
@@ -456,6 +457,8 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    struct st_context *st = st_context(ctx);
    struct pipe_context *pipe = st->pipe;
    struct cso_context *cso = st->cso_context;
+   const unsigned fb_width = _mesa_geometric_width(ctx->DrawBuffer);
+   const unsigned fb_height = _mesa_geometric_height(ctx->DrawBuffer);
    GLfloat x0, y0, x1, y1;
    GLsizei maxSize;
    boolean normalized = sv[0]->texture->target == PIPE_TEXTURE_2D;
@@ -598,8 +601,7 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    }
 
    /* viewport state: viewport matching window dims */
-   cso_set_viewport_dims(cso, ctx->DrawBuffer->Width,
-                         ctx->DrawBuffer->Height, TRUE);
+   cso_set_viewport_dims(cso, fb_width, fb_height, TRUE);
 
    cso_set_vertex_elements(cso, 3, st->util_velems);
    cso_set_stream_outputs(cso, 0, NULL, NULL);
@@ -609,7 +611,7 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
     * vertex shader and viewport transformation.
     */
    if (st_fb_orientation(ctx->DrawBuffer) == Y_0_BOTTOM) {
-      y = ctx->DrawBuffer->Height - (int) (y + height * ctx->Pixel.ZoomY);
+      y = fb_height - (int) (y + height * ctx->Pixel.ZoomY);
       invertTex = !invertTex;
    }
 
@@ -622,13 +624,10 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    z = z * 2.0f - 1.0f;
 
    {
-      const struct gl_framebuffer *fb = ctx->DrawBuffer;
-      const float fb_width = (float) fb->Width;
-      const float fb_height = (float) fb->Height;
-      const float clip_x0 = x0 / fb_width * 2.0f - 1.0f;
-      const float clip_y0 = y0 / fb_height * 2.0f - 1.0f;
-      const float clip_x1 = x1 / fb_width * 2.0f - 1.0f;
-      const float clip_y1 = y1 / fb_height * 2.0f - 1.0f;
+      const float clip_x0 = x0 / (float) fb_width * 2.0f - 1.0f;
+      const float clip_y0 = y0 / (float) fb_height * 2.0f - 1.0f;
+      const float clip_x1 = x1 / (float) fb_width * 2.0f - 1.0f;
+      const float clip_y1 = y1 / (float) fb_height * 2.0f - 1.0f;
       const float maxXcoord = normalized ?
          ((float) width / sv[0]->texture->width0) : (float) width;
       const float maxYcoord = normalized
