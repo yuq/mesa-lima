@@ -63,7 +63,6 @@
 #include "pipe/p_context.h"
 #include "pipe/p_defines.h"
 #include "tgsi/tgsi_ureg.h"
-#include "util/u_draw_quad.h"
 #include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_math.h"
@@ -162,21 +161,21 @@ make_passthrough_vertex_shader(struct st_context *st,
          return NULL;
 
       /* MOV result.pos, vertex.pos; */
-      ureg_MOV(ureg, 
+      ureg_MOV(ureg,
                ureg_DECL_output( ureg, TGSI_SEMANTIC_POSITION, 0 ),
                ureg_DECL_vs_input( ureg, 0 ));
-      
-      /* MOV result.texcoord0, vertex.attr[1]; */
-      ureg_MOV(ureg, 
-               ureg_DECL_output( ureg, texcoord_semantic, 0 ),
-               ureg_DECL_vs_input( ureg, 1 ));
-      
+
       if (passColor) {
-         /* MOV result.color0, vertex.attr[2]; */
-         ureg_MOV(ureg, 
+         /* MOV result.color0, vertex.attr[1]; */
+         ureg_MOV(ureg,
                   ureg_DECL_output( ureg, TGSI_SEMANTIC_COLOR, 0 ),
-                  ureg_DECL_vs_input( ureg, 2 ));
+                  ureg_DECL_vs_input( ureg, 1 ));
       }
+
+      /* MOV result.texcoord0, vertex.attr[2]; */
+      ureg_MOV(ureg,
+               ureg_DECL_output( ureg, texcoord_semantic, 0 ),
+               ureg_DECL_vs_input( ureg, 2 ));
 
       ureg_END( ureg );
       
@@ -453,14 +452,14 @@ draw_quad(struct gl_context *ctx, GLfloat x0, GLfloat y0, GLfloat z,
           GLboolean invertTex, GLfloat maxXcoord, GLfloat maxYcoord)
 {
    struct st_context *st = st_context(ctx);
-   struct pipe_context *pipe = st->pipe;
-   GLfloat (*verts)[3][4]; /* four verts, three attribs, XYZW */
-   struct pipe_resource *buf = NULL;
-   unsigned offset;
+   struct pipe_vertex_buffer vb = {0};
+   struct st_util_vertex *verts;
 
-   u_upload_alloc(st->uploader, 0, 4 * sizeof(verts[0]), 4, &offset,
-                  &buf, (void **) &verts);
-   if (!buf) {
+   vb.stride = sizeof(struct st_util_vertex);
+
+   u_upload_alloc(st->uploader, 0, 4 * sizeof(struct st_util_vertex), 4,
+                  &vb.buffer_offset, &vb.buffer, (void **) &verts);
+   if (!vb.buffer) {
       return;
    }
 
@@ -476,64 +475,61 @@ draw_quad(struct gl_context *ctx, GLfloat x0, GLfloat y0, GLfloat z,
       const GLfloat sLeft = 0.0f, sRight = maxXcoord;
       const GLfloat tTop = invertTex ? maxYcoord : 0.0f;
       const GLfloat tBot = invertTex ? 0.0f : maxYcoord;
-      GLuint i;
 
       /* upper-left */
-      verts[0][0][0] = clip_x0;    /* v[0].attr[0].x */
-      verts[0][0][1] = clip_y0;    /* v[0].attr[0].y */
+      verts[0].x = clip_x0;
+      verts[0].y = clip_y0;
+      verts[0].z = z;
+      verts[0].r = color[0];
+      verts[0].g = color[1];
+      verts[0].b = color[2];
+      verts[0].a = color[3];
+      verts[0].s = sLeft;
+      verts[0].t = tTop;
 
       /* upper-right */
-      verts[1][0][0] = clip_x1;
-      verts[1][0][1] = clip_y0;
+      verts[1].x = clip_x1;
+      verts[1].y = clip_y0;
+      verts[1].z = z;
+      verts[1].r = color[0];
+      verts[1].g = color[1];
+      verts[1].b = color[2];
+      verts[1].a = color[3];
+      verts[1].s = sRight;
+      verts[1].t = tTop;
 
       /* lower-right */
-      verts[2][0][0] = clip_x1;
-      verts[2][0][1] = clip_y1;
+      verts[2].x = clip_x1;
+      verts[2].y = clip_y1;
+      verts[2].z = z;
+      verts[2].r = color[0];
+      verts[2].g = color[1];
+      verts[2].b = color[2];
+      verts[2].a = color[3];
+      verts[2].s = sRight;
+      verts[2].t = tBot;
 
       /* lower-left */
-      verts[3][0][0] = clip_x0;
-      verts[3][0][1] = clip_y1;
-
-      verts[0][1][0] = sLeft; /* v[0].attr[1].S */
-      verts[0][1][1] = tTop;  /* v[0].attr[1].T */
-      verts[1][1][0] = sRight;
-      verts[1][1][1] = tTop;
-      verts[2][1][0] = sRight;
-      verts[2][1][1] = tBot;
-      verts[3][1][0] = sLeft;
-      verts[3][1][1] = tBot;
-
-      /* same for all verts: */
-      if (color) {
-         for (i = 0; i < 4; i++) {
-            verts[i][0][2] = z;         /* v[i].attr[0].z */
-            verts[i][0][3] = 1.0f;      /* v[i].attr[0].w */
-            verts[i][2][0] = color[0];  /* v[i].attr[2].r */
-            verts[i][2][1] = color[1];  /* v[i].attr[2].g */
-            verts[i][2][2] = color[2];  /* v[i].attr[2].b */
-            verts[i][2][3] = color[3];  /* v[i].attr[2].a */
-            verts[i][1][2] = 0.0f;      /* v[i].attr[1].R */
-            verts[i][1][3] = 1.0f;      /* v[i].attr[1].Q */
-         }
-      }
-      else {
-         for (i = 0; i < 4; i++) {
-            verts[i][0][2] = z;    /*Z*/
-            verts[i][0][3] = 1.0f; /*W*/
-            verts[i][1][2] = 0.0f; /*R*/
-            verts[i][1][3] = 1.0f; /*Q*/
-         }
-      }
+      verts[3].x = clip_x0;
+      verts[3].y = clip_y1;
+      verts[3].z = z;
+      verts[3].r = color[0];
+      verts[3].g = color[1];
+      verts[3].b = color[2];
+      verts[3].a = color[3];
+      verts[3].s = sLeft;
+      verts[3].t = tBot;
    }
 
    u_upload_unmap(st->uploader);
-   util_draw_vertex_buffer(pipe, st->cso_context, buf,
-                           cso_get_aux_vertex_buffer_slot(st->cso_context),
-                           offset,
-			   PIPE_PRIM_QUADS,
-			   4,  /* verts */
-			   3); /* attribs/vert */
-   pipe_resource_reference(&buf, NULL);
+
+   cso_set_vertex_buffers(st->cso_context,
+                          cso_get_aux_vertex_buffer_slot(st->cso_context),
+                          1, &vb);
+
+   cso_draw_arrays(st->cso_context, PIPE_PRIM_QUADS, 0, 4);
+
+   pipe_resource_reference(&vb.buffer, NULL);
 }
 
 
@@ -707,7 +703,7 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
       cso_set_viewport(cso, &vp);
    }
 
-   cso_set_vertex_elements(cso, 3, st->velems_util_draw);
+   cso_set_vertex_elements(cso, 3, st->util_velems);
    cso_set_stream_outputs(st->cso_context, 0, NULL, NULL);
 
    /* Compute Gallium window coords (y=0=top) with pixel zoom.
@@ -1060,7 +1056,6 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
 {
    void *driver_vp, *driver_fp;
    struct st_context *st = st_context(ctx);
-   const GLfloat *color;
    struct pipe_context *pipe = st->pipe;
    GLboolean write_stencil = GL_FALSE, write_depth = GL_FALSE;
    struct pipe_sampler_view *sv[2] = { NULL };
@@ -1106,7 +1101,6 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
       driver_fp = get_drawpix_z_stencil_program(st, write_depth,
                                                 write_stencil);
       driver_vp = make_passthrough_vertex_shader(st, GL_TRUE);
-      color = ctx->Current.RasterColor;
    }
    else {
       fpv = get_color_fp_variant(st);
@@ -1114,7 +1108,6 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
       driver_fp = fpv->driver_shader;
       driver_vp = make_passthrough_vertex_shader(st, GL_FALSE);
 
-      color = NULL;
       if (ctx->Pixel.MapColorFlag) {
          pipe_sampler_view_reference(&sv[1],
                                      st->pixel_xfer.pixelmap_sampler_view);
@@ -1172,7 +1165,8 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
                       num_sampler_view,
                       driver_vp,
                       driver_fp, fpv,
-                      color, GL_FALSE, write_depth, write_stencil);
+                      ctx->Current.RasterColor,
+                      GL_FALSE, write_depth, write_stencil);
    pipe_sampler_view_reference(&sv[0], NULL);
    if (num_sampler_view > 1)
       pipe_sampler_view_reference(&sv[1], NULL);
@@ -1427,7 +1421,6 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
    struct pipe_sampler_view *sv[2] = { NULL };
    struct st_fp_variant *fpv = NULL;
    int num_sampler_view = 1;
-   GLfloat *color;
    enum pipe_format srcFormat;
    unsigned srcBind;
    GLboolean invertTex = GL_FALSE;
@@ -1469,7 +1462,6 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
       fpv = get_color_fp_variant(st);
 
       rbRead = st_get_color_read_renderbuffer(ctx);
-      color = NULL;
 
       driver_fp = fpv->driver_shader;
       driver_vp = make_passthrough_vertex_shader(st, GL_FALSE);
@@ -1490,7 +1482,6 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
       assert(type == GL_DEPTH);
       rbRead = st_renderbuffer(ctx->ReadBuffer->
                                Attachment[BUFFER_DEPTH].Renderbuffer);
-      color = ctx->Current.Attrib[VERT_ATTRIB_COLOR0];
 
       driver_fp = get_drawpix_z_stencil_program(st, GL_TRUE, GL_FALSE);
       driver_vp = make_passthrough_vertex_shader(st, GL_TRUE);
@@ -1622,7 +1613,8 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
                       num_sampler_view,
                       driver_vp, 
                       driver_fp, fpv,
-                      color, invertTex, GL_FALSE, GL_FALSE);
+                      ctx->Current.Attrib[VERT_ATTRIB_COLOR0],
+                      invertTex, GL_FALSE, GL_FALSE);
 
    pipe_resource_reference(&pt, NULL);
    pipe_sampler_view_reference(&sv[0], NULL);

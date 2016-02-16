@@ -248,16 +248,30 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    else
       st->internal_target = PIPE_TEXTURE_RECT;
 
-   /* Vertex element objects used for drawing rectangles for glBitmap,
-    * glDrawPixels, glClear, etc.
+   /* Setup vertex element info for 'struct st_util_vertex'.
     */
-   for (i = 0; i < ARRAY_SIZE(st->velems_util_draw); i++) {
-      memset(&st->velems_util_draw[i], 0, sizeof(struct pipe_vertex_element));
-      st->velems_util_draw[i].src_offset = i * 4 * sizeof(float);
-      st->velems_util_draw[i].instance_divisor = 0;
-      st->velems_util_draw[i].vertex_buffer_index =
-            cso_get_aux_vertex_buffer_slot(st->cso_context);
-      st->velems_util_draw[i].src_format = PIPE_FORMAT_R32G32B32A32_FLOAT;
+   {
+      const unsigned slot = cso_get_aux_vertex_buffer_slot(st->cso_context);
+
+      /* If this assertion ever fails all state tracker calls to
+       * cso_get_aux_vertex_buffer_slot() should be audited.  This
+       * particular call would have to be moved to just before each
+       * drawing call.
+       */
+      assert(slot == 0);
+
+      STATIC_ASSERT(sizeof(struct st_util_vertex) == 9 * sizeof(float));
+
+      memset(&st->util_velems, 0, sizeof(st->util_velems));
+      st->util_velems[0].src_offset = 0;
+      st->util_velems[0].vertex_buffer_index = slot;
+      st->util_velems[0].src_format = PIPE_FORMAT_R32G32B32_FLOAT;
+      st->util_velems[1].src_offset = 3 * sizeof(float);
+      st->util_velems[1].vertex_buffer_index = slot;
+      st->util_velems[1].src_format = PIPE_FORMAT_R32G32B32A32_FLOAT;
+      st->util_velems[2].src_offset = 7 * sizeof(float);
+      st->util_velems[2].vertex_buffer_index = slot;
+      st->util_velems[2].src_format = PIPE_FORMAT_R32G32_FLOAT;
    }
 
    /* we want all vertex data to be placed in buffer objects */

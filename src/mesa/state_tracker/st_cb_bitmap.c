@@ -49,7 +49,6 @@
 #include "pipe/p_defines.h"
 #include "pipe/p_shader_tokens.h"
 #include "util/u_inlines.h"
-#include "util/u_draw_quad.h"
 #include "util/u_simple_shaders.h"
 #include "util/u_upload_mgr.h"
 #include "program/prog_instruction.h"
@@ -282,7 +281,8 @@ setup_render_state(struct gl_context *ctx,
       cso_set_viewport(cso, &vp);
    }
 
-   cso_set_vertex_elements(cso, 3, st->velems_util_draw);
+   cso_set_vertex_elements(cso, 3, st->util_velems);
+
    cso_set_stream_outputs(st->cso_context, 0, NULL, NULL);
 }
 
@@ -322,7 +322,7 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
 {
    struct st_context *st = st_context(ctx);
    struct pipe_context *pipe = st->pipe;
-   struct pipe_resource *vbuf = NULL;
+   struct pipe_vertex_buffer vb = {0};
    const float fb_width = (float) st->state.framebuffer.width;
    const float fb_height = (float) st->state.framebuffer.height;
    const float x0 = (float) x;
@@ -335,8 +335,7 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    const float clip_y0 = y0 / fb_height * 2.0f - 1.0f;
    const float clip_x1 = x1 / fb_width * 2.0f - 1.0f;
    const float clip_y1 = y1 / fb_height * 2.0f - 1.0f;
-   float (*vertices)[3][4];  /**< vertex pos + color + texcoord */
-   unsigned offset, i;
+   struct st_util_vertex *verts;
 
    /* limit checks */
    {
@@ -360,9 +359,11 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
       tBot = (float) height;
    }
 
-   u_upload_alloc(st->uploader, 0, 4 * sizeof(vertices[0]), 4,
-                  &offset, &vbuf, (void **) &vertices);
-   if (!vbuf) {
+   vb.stride = sizeof(struct st_util_vertex);
+
+   u_upload_alloc(st->uploader, 0, 4 * sizeof(struct st_util_vertex), 4,
+                  &vb.buffer_offset, &vb.buffer, (void **) &verts);
+   if (!vb.buffer) {
       _mesa_error(ctx, GL_OUT_OF_MEMORY, "glBitmap");
       restore_render_state(ctx);
       return;
@@ -371,50 +372,57 @@ draw_bitmap_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    /* Positions are in clip coords since we need to do clipping in case
     * the bitmap quad goes beyond the window bounds.
     */
-   vertices[0][0][0] = clip_x0;
-   vertices[0][0][1] = clip_y0;
-   vertices[0][2][0] = sLeft;
-   vertices[0][2][1] = tTop;
+   verts[0].x = clip_x0;
+   verts[0].y = clip_y0;
+   verts[0].z = z;
+   verts[0].r = color[0];
+   verts[0].g = color[1];
+   verts[0].b = color[2];
+   verts[0].a = color[3];
+   verts[0].s = sLeft;
+   verts[0].t = tTop;
 
-   vertices[1][0][0] = clip_x1;
-   vertices[1][0][1] = clip_y0;
-   vertices[1][2][0] = sRight;
-   vertices[1][2][1] = tTop;
+   verts[1].x = clip_x1;
+   verts[1].y = clip_y0;
+   verts[1].z = z;
+   verts[1].r = color[0];
+   verts[1].g = color[1];
+   verts[1].b = color[2];
+   verts[1].a = color[3];
+   verts[1].s = sRight;
+   verts[1].t = tTop;
 
-   vertices[2][0][0] = clip_x1;
-   vertices[2][0][1] = clip_y1;
-   vertices[2][2][0] = sRight;
-   vertices[2][2][1] = tBot;
+   verts[2].x = clip_x1;
+   verts[2].y = clip_y1;
+   verts[2].z = z;
+   verts[2].r = color[0];
+   verts[2].g = color[1];
+   verts[2].b = color[2];
+   verts[2].a = color[3];
+   verts[2].s = sRight;
+   verts[2].t = tBot;
 
-   vertices[3][0][0] = clip_x0;
-   vertices[3][0][1] = clip_y1;
-   vertices[3][2][0] = sLeft;
-   vertices[3][2][1] = tBot;
-
-   /* same for all verts: */
-   for (i = 0; i < 4; i++) {
-      vertices[i][0][2] = z;
-      vertices[i][0][3] = 1.0f;
-      vertices[i][1][0] = color[0];
-      vertices[i][1][1] = color[1];
-      vertices[i][1][2] = color[2];
-      vertices[i][1][3] = color[3];
-      vertices[i][2][2] = 0.0; /*R*/
-      vertices[i][2][3] = 1.0; /*Q*/
-   }
+   verts[3].x = clip_x0;
+   verts[3].y = clip_y1;
+   verts[3].z = z;
+   verts[3].r = color[0];
+   verts[3].g = color[1];
+   verts[3].b = color[2];
+   verts[3].a = color[3];
+   verts[3].s = sLeft;
+   verts[3].t = tBot;
 
    u_upload_unmap(st->uploader);
 
-   util_draw_vertex_buffer(pipe, st->cso_context, vbuf,
-                           cso_get_aux_vertex_buffer_slot(st->cso_context),
-                           offset,
-                           PIPE_PRIM_TRIANGLE_FAN,
-                           4,  /* verts */
-                           3); /* attribs/vert */
+   cso_set_vertex_buffers(st->cso_context,
+                          cso_get_aux_vertex_buffer_slot(st->cso_context),
+                          1, &vb);
+
+   cso_draw_arrays(st->cso_context, PIPE_PRIM_TRIANGLE_FAN, 0, 4);
 
    restore_render_state(ctx);
 
-   pipe_resource_reference(&vbuf, NULL);
+   pipe_resource_reference(&vb.buffer, NULL);
 
    /* We uploaded modified constants, need to invalidate them. */
    st->dirty.mesa |= _NEW_PROGRAM_CONSTANTS;

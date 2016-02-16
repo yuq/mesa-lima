@@ -55,7 +55,6 @@
 #include "util/u_framebuffer.h"
 #include "util/u_inlines.h"
 #include "util/u_simple_shaders.h"
-#include "util/u_draw_quad.h"
 #include "util/u_upload_mgr.h"
 
 #include "cso_cache/cso_context.h"
@@ -180,14 +179,12 @@ draw_quad(struct st_context *st,
 {
    struct cso_context *cso = st->cso_context;
    struct pipe_vertex_buffer vb = {0};
-   GLuint i;
-   float (*vertices)[2][4];  /**< vertex pos + color */
+   struct st_util_vertex *verts;
 
-   vb.stride = 8 * sizeof(float);
+   vb.stride = sizeof(struct st_util_vertex);
 
-   u_upload_alloc(st->uploader, 0, 4 * sizeof(vertices[0]), 4,
-                  &vb.buffer_offset, &vb.buffer,
-                  (void **) &vertices);
+   u_upload_alloc(st->uploader, 0, 4 * sizeof(struct st_util_vertex), 4,
+                  &vb.buffer_offset, &vb.buffer, (void **) &verts);
    if (!vb.buffer) {
       return;
    }
@@ -195,28 +192,40 @@ draw_quad(struct st_context *st,
    /* Convert Z from [0,1] to [-1,1] range */
    z = z * 2.0f - 1.0f;
 
-   /* positions */
-   vertices[0][0][0] = x0;
-   vertices[0][0][1] = y0;
+   /* Note: if we're only clearing depth/stencil we still setup vertices
+    * with color, but they'll be ignored.
+    */
+   verts[0].x = x0;
+   verts[0].y = y0;
+   verts[0].z = z;
+   verts[0].r = color->f[0];
+   verts[0].g = color->f[1];
+   verts[0].b = color->f[2];
+   verts[0].a = color->f[3];
 
-   vertices[1][0][0] = x1;
-   vertices[1][0][1] = y0;
+   verts[1].x = x1;
+   verts[1].y = y0;
+   verts[1].z = z;
+   verts[1].r = color->f[0];
+   verts[1].g = color->f[1];
+   verts[1].b = color->f[2];
+   verts[1].a = color->f[3];
 
-   vertices[2][0][0] = x1;
-   vertices[2][0][1] = y1;
+   verts[2].x = x1;
+   verts[2].y = y1;
+   verts[2].z = z;
+   verts[2].r = color->f[0];
+   verts[2].g = color->f[1];
+   verts[2].b = color->f[2];
+   verts[2].a = color->f[3];
 
-   vertices[3][0][0] = x0;
-   vertices[3][0][1] = y1;
-
-   /* same for all verts: */
-   for (i = 0; i < 4; i++) {
-      vertices[i][0][2] = z;
-      vertices[i][0][3] = 1.0;
-      vertices[i][1][0] = color->f[0];
-      vertices[i][1][1] = color->f[1];
-      vertices[i][1][2] = color->f[2];
-      vertices[i][1][3] = color->f[3];
-   }
+   verts[3].x = x0;
+   verts[3].y = y1;
+   verts[3].z = z;
+   verts[3].r = color->f[0];
+   verts[3].g = color->f[1];
+   verts[3].b = color->f[2];
+   verts[3].a = color->f[3];
 
    u_upload_unmap(st->uploader);
 
@@ -331,7 +340,7 @@ clear_with_quad(struct gl_context *ctx, unsigned clear_buffers)
       cso_set_depth_stencil_alpha(st->cso_context, &depth_stencil);
    }
 
-   cso_set_vertex_elements(st->cso_context, 2, st->velems_util_draw);
+   cso_set_vertex_elements(st->cso_context, 2, st->util_velems);
    cso_set_stream_outputs(st->cso_context, 0, NULL, NULL);
    cso_set_sample_mask(st->cso_context, ~0);
    cso_set_min_samples(st->cso_context, 1);

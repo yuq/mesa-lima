@@ -89,6 +89,15 @@ enum st_pipeline {
 };
 
 
+/** For drawing quads for glClear, glDraw/CopyPixels, glBitmap, etc. */
+struct st_util_vertex
+{
+   float x, y, z;
+   float r, g, b, a;
+   float s, t;
+};
+
+
 struct st_context
 {
    struct st_context_iface iface;
@@ -230,8 +239,8 @@ struct st_context
       bool use_gs;
    } pbo_upload;
 
-   /** used for anything using util_draw_vertex_buffer */
-   struct pipe_vertex_element velems_util_draw[3];
+   /** for drawing with st_util_vertex */
+   struct pipe_vertex_element util_velems[3];
 
    void *passthrough_fs;  /**< simple pass-through frag shader */
 
