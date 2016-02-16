@@ -214,7 +214,9 @@ VkResult anv_CreateInstance(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
-   uint32_t client_version = pCreateInfo->pApplicationInfo->apiVersion;
+   uint32_t client_version = pCreateInfo->pApplicationInfo ?
+                             pCreateInfo->pApplicationInfo->apiVersion :
+                             VK_MAKE_VERSION(1, 0, 0);
    if (VK_MAKE_VERSION(1, 0, 0) > client_version ||
        client_version > VK_MAKE_VERSION(1, 0, 3)) {
       return vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
@@ -249,7 +251,7 @@ VkResult anv_CreateInstance(
    else
       instance->alloc = default_alloc;
 
-   instance->apiVersion = pCreateInfo->pApplicationInfo->apiVersion;
+   instance->apiVersion = client_version;
    instance->physicalDeviceCount = -1;
 
    _mesa_locale_init();
