@@ -6,14 +6,7 @@ Intro
 =====
 The Open Source Technology Center 3D graphics team at Intel has
 been working on a Vulkan implementation based on the Mesa open source
-OpenGL implementation. At this point we're ready to share what we have
-with our Khronos friends, in the hope that an early preview will be
-useful.
-
-When the Vulkan specification goes public, we will continue the work
-in the Mesa public git repository, but in the interim we will share
-our progress on the 'vulkan' branch in the 'mesa' repository in
-Khronos gitlab.
+OpenGL implementation.
 
 The Mesa project source and our driver implementation is under the MIT
 license [1], but is also covered by the Khronos IP framework as it
