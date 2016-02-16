@@ -80,6 +80,11 @@ static inline void ConvertEnvToKnob(const char* pOverride, float& knobValue)
     }
 }
 
+static inline void ConvertEnvToKnob(const char* pOverride, std::string& knobValue)
+{
+    knobValue = pOverride;
+}
+
 template <typename T>
 static inline void InitKnob(T& knob)
 {

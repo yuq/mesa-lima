@@ -77,7 +77,11 @@ struct GlobalKnobs
     % for line in knob[1]['desc']:
     // ${line}
     % endfor
+    % if knob[1]['type'] == 'std::string':
+    DEFINE_KNOB(${knob[0]}, ${knob[1]['type']}, "${repr(knob[1]['default'])[1:-1]}");
+    % else:
     DEFINE_KNOB(${knob[0]}, ${knob[1]['type']}, ${knob[1]['default']});
+    % endif
 
     % endfor
     GlobalKnobs();
@@ -125,7 +129,7 @@ std::string GlobalKnobs::ToString(const char* optPerLinePrefix)
     str << optPerLinePrefix << "KNOB_${knob[0]}:${space_knob(knob[0])}";
     % if knob[1]['type'] == 'bool':
     str << (KNOB_${knob[0]} ? "+\n" : "-\n");
-    % elif knob[1]['type'] != 'float':
+    % elif knob[1]['type'] != 'float' and knob[1]['type'] != 'std::string':
     str << std::hex << std::setw(11) << std::left << KNOB_${knob[0]};
     str << std::dec << KNOB_${knob[0]} << "\n";
     % else:
