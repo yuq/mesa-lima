@@ -236,7 +236,6 @@ cso_draw_arrays_instanced(struct cso_context *cso, uint mode,
                           uint start, uint count,
                           uint start_instance, uint instance_count);
 
-/* helper drawing function */
 void
 cso_draw_arrays(struct cso_context *cso, uint mode, uint start, uint count);
 
