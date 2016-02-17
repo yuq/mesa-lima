@@ -153,47 +153,6 @@ void genX(CmdPipelineBarrier)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    uint32_t b, *dw;
 
-   struct GENX(PIPE_CONTROL) cmd = {
-      GENX(PIPE_CONTROL_header),
-      .PostSyncOperation = NoWrite,
-   };
-
-   /* XXX: I think waitEvent is a no-op on our HW.  We should verify that. */
-
-   if (anv_clear_mask(&srcStageMask, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)) {
-      /* This is just what PIPE_CONTROL does */
-   }
-
-   if (anv_clear_mask(&srcStageMask,
-                      VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
-                      VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
-                      VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-                      VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT |
-                      VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
-                      VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
-                      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
-                      VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
-                      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)) {
-      cmd.StallAtPixelScoreboard = true;
-   }
-
-   if (anv_clear_mask(&srcStageMask,
-                      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
-                      VK_PIPELINE_STAGE_TRANSFER_BIT)) {
-      cmd.CommandStreamerStallEnable = true;
-   }
-
-   if (anv_clear_mask(&srcStageMask, VK_PIPELINE_STAGE_HOST_BIT)) {
-      anv_finishme("VK_PIPE_EVENT_CPU_SIGNAL_BIT");
-   }
-
-   /* On our hardware, all stages will wait for execution as needed. */
-   (void)destStageMask;
-
-   /* We checked all known VkPipeEventFlags. */
-   anv_assert(srcStageMask == 0);
-
    /* XXX: Right now, we're really dumb and just flush whatever categories
     * the app asks for.  One of these days we may make this a bit better
     * but right now that's all the hardware allows for in most areas.
@@ -216,62 +175,105 @@ void genX(CmdPipelineBarrier)(
       dst_flags |= pImageMemoryBarriers[i].dstAccessMask;
    }
 
+   /* Mask out the Source access flags we care about */
+   const uint32_t src_mask =
+      VK_ACCESS_SHADER_WRITE_BIT |
+      VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+      VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+      VK_ACCESS_TRANSFER_WRITE_BIT;
+
+   src_flags = src_flags & src_mask;
+
+   /* Mask out the destination access flags we care about */
+   const uint32_t dst_mask =
+      VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+      VK_ACCESS_INDEX_READ_BIT |
+      VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+      VK_ACCESS_UNIFORM_READ_BIT |
+      VK_ACCESS_SHADER_READ_BIT |
+      VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+      VK_ACCESS_TRANSFER_READ_BIT;
+
+   dst_flags = dst_flags & dst_mask;
+
    /* The src flags represent how things were used previously.  This is
     * what we use for doing flushes.
     */
+   struct GENX(PIPE_CONTROL) flush_cmd = {
+      GENX(PIPE_CONTROL_header),
+      .PostSyncOperation = NoWrite,
+   };
+
    for_each_bit(b, src_flags) {
       switch ((VkAccessFlagBits)(1 << b)) {
       case VK_ACCESS_SHADER_WRITE_BIT:
-         cmd.DCFlushEnable = true;
+         flush_cmd.DCFlushEnable = true;
          break;
       case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
-         cmd.RenderTargetCacheFlushEnable = true;
+         flush_cmd.RenderTargetCacheFlushEnable = true;
          break;
       case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
-         cmd.DepthCacheFlushEnable = true;
+         flush_cmd.DepthCacheFlushEnable = true;
          break;
       case VK_ACCESS_TRANSFER_WRITE_BIT:
-         cmd.RenderTargetCacheFlushEnable = true;
-         cmd.DepthCacheFlushEnable = true;
+         flush_cmd.RenderTargetCacheFlushEnable = true;
+         flush_cmd.DepthCacheFlushEnable = true;
          break;
       default:
-         /* Doesn't require a flush */
-         break;
+         unreachable("should've masked this out by now");
       }
    }
 
-   /* The dst flags represent how things will be used in the fugure.  This
+   /* If we end up doing two PIPE_CONTROLs, the first, flusing one also has to
+    * stall and wait for the flushing to finish, so we don't re-dirty the
+    * caches with in-flight rendering after the second PIPE_CONTROL
+    * invalidates.
+    */
+
+   if (dst_flags)
+      flush_cmd.CommandStreamerStallEnable = true;
+
+   if (src_flags && dst_flags) {
+      dw = anv_batch_emit_dwords(&cmd_buffer->batch, GENX(PIPE_CONTROL_length));
+      GENX(PIPE_CONTROL_pack)(&cmd_buffer->batch, dw, &flush_cmd);
+   }
+
+   /* The dst flags represent how things will be used in the future.  This
     * is what we use for doing cache invalidations.
     */
+   struct GENX(PIPE_CONTROL) invalidate_cmd = {
+      GENX(PIPE_CONTROL_header),
+      .PostSyncOperation = NoWrite,
+   };
+
    for_each_bit(b, dst_flags) {
       switch ((VkAccessFlagBits)(1 << b)) {
       case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
       case VK_ACCESS_INDEX_READ_BIT:
       case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
-         cmd.VFCacheInvalidationEnable = true;
+         invalidate_cmd.VFCacheInvalidationEnable = true;
          break;
       case VK_ACCESS_UNIFORM_READ_BIT:
-         cmd.ConstantCacheInvalidationEnable = true;
+         invalidate_cmd.ConstantCacheInvalidationEnable = true;
          /* fallthrough */
       case VK_ACCESS_SHADER_READ_BIT:
-         cmd.TextureCacheInvalidationEnable = true;
+         invalidate_cmd.TextureCacheInvalidationEnable = true;
          break;
       case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:
-         cmd.TextureCacheInvalidationEnable = true;
+         invalidate_cmd.TextureCacheInvalidationEnable = true;
          break;
       case VK_ACCESS_TRANSFER_READ_BIT:
-         cmd.TextureCacheInvalidationEnable = true;
+         invalidate_cmd.TextureCacheInvalidationEnable = true;
          break;
-      case VK_ACCESS_MEMORY_READ_BIT:
-         break; /* XXX: What is this? */
       default:
-         /* Doesn't require a flush */
-         break;
+         unreachable("should've masked this out by now");
       }
    }
 
-   dw = anv_batch_emit_dwords(&cmd_buffer->batch, GENX(PIPE_CONTROL_length));
-   GENX(PIPE_CONTROL_pack)(&cmd_buffer->batch, dw, &cmd);
+   if (dst_flags) {
+      dw = anv_batch_emit_dwords(&cmd_buffer->batch, GENX(PIPE_CONTROL_length));
+      GENX(PIPE_CONTROL_pack)(&cmd_buffer->batch, dw, &invalidate_cmd);
+   }
 }
 
 static void
