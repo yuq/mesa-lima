@@ -286,8 +286,8 @@ static bool
 is_align1_opcode(unsigned opcode)
 {
    switch (opcode) {
-   case VEC4_OPCODE_DOUBLE_TO_FLOAT:
-   case VEC4_OPCODE_FLOAT_TO_DOUBLE:
+   case VEC4_OPCODE_FROM_DOUBLE:
+   case VEC4_OPCODE_TO_DOUBLE:
    case VEC4_OPCODE_PICK_LOW_32BIT:
    case VEC4_OPCODE_PICK_HIGH_32BIT:
    case VEC4_OPCODE_SET_LOW_32BIT:
