@@ -441,6 +441,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
       goto fail;
    cleanup->gem_handle = gem_handle;
 
+#if 0
    /* Regular objects are created I915_CACHING_CACHED on LLC platforms and
     * I915_CACHING_NONE on non-LLC platforms. However, userptr objects are
     * always created as I915_CACHING_CACHED, which on non-LLC means
@@ -452,6 +453,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
       anv_gem_set_domain(pool->device, gem_handle,
                          I915_GEM_DOMAIN_GTT, I915_GEM_DOMAIN_GTT);
    }
+#endif
 
    /* Now that we successfull allocated everything, we can write the new
     * values back into pool. */
