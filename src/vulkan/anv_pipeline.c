@@ -616,6 +616,19 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       if (nir == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+      nir_function_impl *impl = nir_shader_get_entrypoint(nir)->impl;
+      nir_foreach_variable_safe(var, &nir->outputs) {
+         if (var->data.location < FRAG_RESULT_DATA0)
+            continue;
+
+         unsigned rt = var->data.location - FRAG_RESULT_DATA0;
+         if (rt >= key.nr_color_regions) {
+            var->data.mode = nir_var_local;
+            exec_node_remove(&var->node);
+            exec_list_push_tail(&impl->locals, &var->node);
+         }
+      }
+
       void *mem_ctx = ralloc_context(NULL);
 
       if (module->nir == NULL)
