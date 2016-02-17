@@ -1005,6 +1005,11 @@ uint32_t MaxVertsPerDraw(
         }
         break;
 
+    // The Primitive Assembly code can only handle 1 RECT at a time.
+    case TOP_RECT_LIST:
+        vertsPerDraw = 3;
+        break;
+
     default:
         // We are not splitting up draws for other topologies.
         break;
