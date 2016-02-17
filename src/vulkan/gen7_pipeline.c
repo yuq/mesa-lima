@@ -113,15 +113,15 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
 {
    struct anv_device *device = pipeline->device;
 
-   if (info->pAttachments == NULL) {
+   if (info == NULL || info->attachmentCount == 0) {
       pipeline->blend_state =
          anv_state_pool_emit(&device->dynamic_state_pool,
             GEN7_BLEND_STATE, 64,
             .ColorBufferBlendEnable = false,
-            .WriteDisableAlpha = false,
-            .WriteDisableRed = false,
-            .WriteDisableGreen = false,
-            .WriteDisableBlue = false);
+            .WriteDisableAlpha = true,
+            .WriteDisableRed = true,
+            .WriteDisableGreen = true,
+            .WriteDisableBlue = true);
    } else {
       /* FIXME-GEN7: All render targets share blend state settings on gen7, we
        * can't implement this.
