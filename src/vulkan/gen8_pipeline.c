@@ -158,6 +158,13 @@ emit_cb_state(struct anv_pipeline *pipeline,
       }
    }
 
+   for (uint32_t i = info->attachmentCount; i < 8; i++) {
+      blend_state.Entry[i].WriteDisableAlpha = true;
+      blend_state.Entry[i].WriteDisableRed = true;
+      blend_state.Entry[i].WriteDisableGreen = true;
+      blend_state.Entry[i].WriteDisableBlue = true;
+   }
+
    GENX(BLEND_STATE_pack)(NULL, pipeline->blend_state.map, &blend_state);
    if (!device->info.has_llc)
       anv_state_clflush(pipeline->blend_state);
