@@ -62,11 +62,10 @@ __gen_mbo(uint32_t start, uint32_t end)
 static inline uint64_t
 __gen_uint(uint64_t v, uint32_t start, uint32_t end)
 {
-   const int width = end - start + 1;
-
    __gen_validate_value(v);
 
 #if DEBUG
+   const int width = end - start + 1;
    if (width < 64) {
       const uint64_t max = (1ull << width) - 1;
       assert(v <= max);
