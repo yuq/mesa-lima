@@ -32,6 +32,7 @@
   */
 
 
+#include "main/context.h"
 #include "main/macros.h"
 #include "main/mtypes.h"
 #include "main/samplerobj.h"
@@ -191,15 +192,29 @@ compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
 
 
 static unsigned
-get_texture_format_swizzle(const struct st_texture_object *stObj,
+get_texture_format_swizzle(const struct st_context *st,
+                           const struct st_texture_object *stObj,
                            unsigned glsl_version)
 {
    GLenum baseFormat = _mesa_texture_base_format(&stObj->base);
    unsigned tex_swizzle;
 
    if (baseFormat != GL_NONE) {
+      GLenum depth_mode = stObj->base.DepthMode;
+      /* In ES 3.0, DEPTH_TEXTURE_MODE is expected to be GL_RED for textures
+       * with depth component data specified with a sized internal format.
+       */
+      if (_mesa_is_gles3(st->ctx) &&
+          util_format_is_depth_or_stencil(stObj->pt->format)) {
+         const struct st_texture_image *firstImage =
+            st_texture_image_const(_mesa_base_tex_image(&stObj->base));
+         if (firstImage->base.InternalFormat != GL_DEPTH_COMPONENT &&
+             firstImage->base.InternalFormat != GL_DEPTH_STENCIL &&
+             firstImage->base.InternalFormat != GL_STENCIL_INDEX)
+            depth_mode = GL_RED;
+      }
       tex_swizzle = compute_texture_format_swizzle(baseFormat,
-                                                   stObj->base.DepthMode,
+                                                   depth_mode,
                                                    stObj->pt->format,
                                                    glsl_version);
    }
@@ -219,10 +234,11 @@ get_texture_format_swizzle(const struct st_texture_object *stObj,
  * \param stObj  the st texture object,
  */
 static boolean
-check_sampler_swizzle(const struct st_texture_object *stObj,
+check_sampler_swizzle(const struct st_context *st,
+                      const struct st_texture_object *stObj,
 		      struct pipe_sampler_view *sv, unsigned glsl_version)
 {
-   unsigned swizzle = get_texture_format_swizzle(stObj, glsl_version);
+   unsigned swizzle = get_texture_format_swizzle(st, stObj, glsl_version);
 
    return ((sv->swizzle_r != GET_SWZ(swizzle, 0)) ||
            (sv->swizzle_g != GET_SWZ(swizzle, 1)) ||
@@ -249,13 +265,13 @@ static unsigned last_layer(struct st_texture_object *stObj)
 }
 
 static struct pipe_sampler_view *
-st_create_texture_sampler_view_from_stobj(struct pipe_context *pipe,
+st_create_texture_sampler_view_from_stobj(struct st_context *st,
 					  struct st_texture_object *stObj,
 					  enum pipe_format format,
                                           unsigned glsl_version)
 {
    struct pipe_sampler_view templ;
-   unsigned swizzle = get_texture_format_swizzle(stObj, glsl_version);
+   unsigned swizzle = get_texture_format_swizzle(st, stObj, glsl_version);
 
    u_sampler_view_default_template(&templ,
                                    stObj->pt,
@@ -295,7 +311,7 @@ st_create_texture_sampler_view_from_stobj(struct pipe_context *pipe,
       templ.swizzle_a = GET_SWZ(swizzle, 3);
    }
 
-   return pipe->create_sampler_view(pipe, stObj->pt, &templ);
+   return st->pipe->create_sampler_view(st->pipe, stObj->pt, &templ);
 }
 
 
@@ -325,7 +341,7 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
 
    /* if sampler view has changed dereference it */
    if (*sv) {
-      if (check_sampler_swizzle(stObj, *sv, glsl_version) ||
+      if (check_sampler_swizzle(st, stObj, *sv, glsl_version) ||
 	  (format != (*sv)->format) ||
           gl_target_to_pipe(stObj->base.Target) != (*sv)->target ||
           stObj->base.MinLevel + stObj->base.BaseLevel != (*sv)->u.tex.first_level ||
@@ -337,7 +353,7 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
    }
 
    if (!*sv) {
-      *sv = st_create_texture_sampler_view_from_stobj(st->pipe, stObj,
+      *sv = st_create_texture_sampler_view_from_stobj(st, stObj,
                                                       format, glsl_version);
 
    } else if ((*sv)->context != st->pipe) {
