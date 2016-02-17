@@ -203,7 +203,7 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
          src_tex_image = wrap_renderbuffer(ctx, src_renderbuffer);
       }
       if (!make_view(ctx, src_tex_image, &src_view_tex_image, &src_view_texture,
-                     dst_tex_image->InternalFormat))
+                     dst_internal_format))
          goto cleanup;
    }
 
