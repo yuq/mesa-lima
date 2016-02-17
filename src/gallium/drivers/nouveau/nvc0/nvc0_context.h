@@ -57,6 +57,7 @@
 #define NVC0_NEW_MIN_SAMPLES  (1 << 24)
 #define NVC0_NEW_TESSFACTOR   (1 << 25)
 #define NVC0_NEW_BUFFERS      (1 << 26)
+#define NVC0_NEW_DRIVERCONST  (1 << 27)
 
 #define NVC0_NEW_CP_PROGRAM   (1 << 0)
 #define NVC0_NEW_CP_SURFACES  (1 << 1)

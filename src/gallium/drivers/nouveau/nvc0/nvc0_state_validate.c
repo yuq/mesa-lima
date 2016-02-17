@@ -540,6 +540,23 @@ nvc0_validate_min_samples(struct nvc0_context *nvc0)
    IMMED_NVC0(push, NVC0_3D(SAMPLE_SHADING), samples);
 }
 
+static void
+nvc0_validate_driverconst(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_screen *screen = nvc0->screen;
+   int i;
+
+   for (i = 0; i < 5; ++i) {
+      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+      PUSH_DATA (push, 1024);
+      PUSH_DATAh(push, screen->uniform_bo->offset + (6 << 16) + (i << 10));
+      PUSH_DATA (push, screen->uniform_bo->offset + (6 << 16) + (i << 10));
+      BEGIN_NVC0(push, NVC0_3D(CB_BIND(i)), 1);
+      PUSH_DATA (push, (15 << 4) | 1);
+   }
+}
+
 void
 nvc0_validate_global_residents(struct nvc0_context *nvc0,
                                struct nouveau_bufctx *bctx, int bin)
@@ -705,6 +722,7 @@ static struct state_validate {
     { nvc0_idxbuf_validate,        NVC0_NEW_IDXBUF },
     { nvc0_tfb_validate,           NVC0_NEW_TFB_TARGETS | NVC0_NEW_GMTYPROG },
     { nvc0_validate_min_samples,   NVC0_NEW_MIN_SAMPLES },
+    { nvc0_validate_driverconst,   NVC0_NEW_DRIVERCONST },
 };
 
 bool
