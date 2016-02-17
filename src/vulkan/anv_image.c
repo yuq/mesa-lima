@@ -124,13 +124,28 @@ make_surface(const struct anv_device *dev,
 
    struct anv_surface *anv_surf = get_surface(image, aspect);
 
+   VkExtent3D extent;
+   switch (vk_info->imageType) {
+   case VK_IMAGE_TYPE_1D:
+      extent = (VkExtent3D) { vk_info->extent.width, 1, 1 };
+      break;
+   case VK_IMAGE_TYPE_2D:
+      extent = (VkExtent3D) { vk_info->extent.width, vk_info->extent.height, 1 };
+      break;
+   case VK_IMAGE_TYPE_3D:
+      extent = vk_info->extent;
+      break;
+   default:
+      unreachable("invalid image type");
+   }
+
    ok = isl_surf_init(&dev->isl_dev, &anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
       .format = anv_get_isl_format(vk_info->format, aspect,
                                    vk_info->tiling, NULL),
-      .width = vk_info->extent.width,
-      .height = vk_info->extent.height,
-      .depth = vk_info->extent.depth,
+      .width = extent.width,
+      .height = extent.height,
+      .depth = extent.depth,
       .levels = vk_info->mipLevels,
       .array_len = vk_info->arrayLayers,
       .samples = vk_info->samples,
