@@ -255,6 +255,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_INVALIDATE_BUFFER:
 	case PIPE_CAP_GENERATE_MIPMAP:
 	case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
+	case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:
