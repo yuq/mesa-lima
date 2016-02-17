@@ -714,18 +714,4 @@ void genX(CmdEndRenderPass)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
-
-   /* Emit a flushing pipe control at the end of a pass.  This is kind of a
-    * hack but it ensures that render targets always actually get written.
-    * Eventually, we should do flushing based on image format transitions
-    * or something of that nature.
-    */
-   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                  .PostSyncOperation = NoWrite,
-                  .RenderTargetCacheFlushEnable = true,
-                  .InstructionCacheInvalidateEnable = true,
-                  .DepthCacheFlushEnable = true,
-                  .VFCacheInvalidationEnable = true,
-                  .TextureCacheInvalidationEnable = true,
-                  .CommandStreamerStallEnable = true);
 }
