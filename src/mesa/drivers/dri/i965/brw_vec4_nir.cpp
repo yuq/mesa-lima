@@ -1161,6 +1161,20 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
                                 BRW_REGISTER_TYPE_F);
       break;
 
+   case nir_op_d2i:
+   case nir_op_d2u:
+      emit_conversion_from_double(dst, op[0], instr->dest.saturate,
+                                  instr->op == nir_op_d2i ? BRW_REGISTER_TYPE_D :
+                                                            BRW_REGISTER_TYPE_UD);
+      break;
+
+   case nir_op_i2d:
+   case nir_op_u2d:
+      emit_conversion_to_double(dst, op[0], instr->dest.saturate,
+                                instr->op == nir_op_i2d ? BRW_REGISTER_TYPE_D :
+                                                          BRW_REGISTER_TYPE_UD);
+      break;
+
    case nir_op_iadd:
       assert(nir_dest_bit_size(instr->dest.dest) < 64);
    case nir_op_fadd:
