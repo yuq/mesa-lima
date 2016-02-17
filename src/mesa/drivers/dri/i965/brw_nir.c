@@ -637,7 +637,8 @@ brw_create_nir(struct brw_context *brw,
 
    if (nir->stage != MESA_SHADER_VERTEX &&
        nir->stage != MESA_SHADER_TESS_CTRL &&
-       nir->stage != MESA_SHADER_TESS_EVAL) {
+       nir->stage != MESA_SHADER_TESS_EVAL &&
+       nir->stage != MESA_SHADER_FRAGMENT) {
       nir = brw_nir_lower_io(nir, devinfo, is_scalar, false, NULL);
    }
 

@@ -390,7 +390,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    /* Finish the optimization and compilation process */
    if (nir->stage != MESA_SHADER_VERTEX &&
        nir->stage != MESA_SHADER_TESS_CTRL &&
-       nir->stage != MESA_SHADER_TESS_EVAL) {
+       nir->stage != MESA_SHADER_TESS_EVAL &&
+       nir->stage != MESA_SHADER_FRAGMENT) {
       nir = brw_nir_lower_io(nir, &pipeline->device->info,
                              compiler->scalar_stage[stage], false, NULL);
    }
