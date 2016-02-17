@@ -224,6 +224,7 @@ EXT(EXT_subtexture                          , dummy_true                        
 EXT(EXT_texture                             , dummy_true                             , GLL,  x ,  x ,  x , 1996)
 EXT(EXT_texture3D                           , dummy_true                             , GLL,  x ,  x ,  x , 1996)
 EXT(EXT_texture_array                       , EXT_texture_array                      , GLL, GLC,  x ,  x , 2006)
+EXT(EXT_texture_border_clamp                , ARB_texture_border_clamp               ,  x ,  x ,  x , ES2, 2014)
 EXT(EXT_texture_compression_dxt1            , ANGLE_texture_compression_dxt          , GLL, GLC, ES1, ES2, 2004)
 EXT(EXT_texture_compression_latc            , EXT_texture_compression_latc           , GLL,  x ,  x ,  x , 2006)
 EXT(EXT_texture_compression_rgtc            , ARB_texture_compression_rgtc           , GLL, GLC,  x ,  x , 2004)
