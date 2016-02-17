@@ -278,7 +278,12 @@ struct cso_context *cso_create_context( struct pipe_context *pipe )
    }
    if (pipe->screen->get_shader_param(pipe->screen, PIPE_SHADER_COMPUTE,
                                       PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
-      ctx->has_compute_shader = TRUE;
+      int supported_irs =
+         pipe->screen->get_shader_param(pipe->screen, PIPE_SHADER_COMPUTE,
+                                        PIPE_SHADER_CAP_SUPPORTED_IRS);
+      if (supported_irs & (1 << PIPE_SHADER_IR_TGSI)) {
+         ctx->has_compute_shader = TRUE;
+      }
    }
    if (pipe->screen->get_param(pipe->screen,
                                PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS) != 0) {
