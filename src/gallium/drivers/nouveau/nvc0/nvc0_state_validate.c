@@ -653,10 +653,11 @@ nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
       ctx_to->state = ctx_to->screen->save_state;
 
    ctx_to->dirty = ~0;
+   ctx_to->dirty_cp = ~0;
    ctx_to->viewports_dirty = ~0;
    ctx_to->scissors_dirty = ~0;
 
-   for (s = 0; s < 5; ++s) {
+   for (s = 0; s < 6; ++s) {
       ctx_to->samplers_dirty[s] = ~0;
       ctx_to->textures_dirty[s] = ~0;
       ctx_to->constbuf_dirty[s] = (1 << NVC0_MAX_PIPE_CONSTBUFS) - 1;
