@@ -1443,13 +1443,23 @@ vec4_visitor::get_scratch_offset(bblock_t *block, vec4_instruction *inst,
       message_header_scale *= 16;
 
    if (reladdr) {
+      /* A vec4 is 16 bytes and a dvec4 is 32 bytes so for doubles we have
+       * to multiply the reladdr by 2. Notice that the reg_offset part
+       * is in units of 16 bytes and is used to select the low/high 16-byte
+       * chunk of a full dvec4, so we don't want to multiply that part.
+       */
       src_reg index = src_reg(this, glsl_type::int_type);
-
-      emit_before(block, inst, ADD(dst_reg(index), *reladdr,
-                                   brw_imm_d(reg_offset)));
-      emit_before(block, inst, MUL(dst_reg(index), index,
-                                   brw_imm_d(message_header_scale)));
-
+      if (type_sz(inst->dst.type) < 8) {
+         emit_before(block, inst, ADD(dst_reg(index), *reladdr,
+                                      brw_imm_d(reg_offset)));
+         emit_before(block, inst, MUL(dst_reg(index), index,
+                                      brw_imm_d(message_header_scale)));
+      } else {
+         emit_before(block, inst, MUL(dst_reg(index), *reladdr,
+                                      brw_imm_d(message_header_scale * 2)));
+         emit_before(block, inst, ADD(dst_reg(index), index,
+                                      brw_imm_d(reg_offset * message_header_scale)));
+      }
       return index;
    } else {
       return brw_imm_d(reg_offset * message_header_scale);
