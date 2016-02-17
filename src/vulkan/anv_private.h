@@ -297,6 +297,12 @@ struct anv_bo {
 
    uint64_t size;
    void *map;
+
+   /* We need to set the WRITE flag on winsys bos so GEM will know we're
+    * writing to them and synchronize uses on other rings (eg if the display
+    * server uses the blitter ring).
+    */
+   bool is_winsys_bo;
 };
 
 /* Represents a lock-free linked list of "free" things.  This is used by

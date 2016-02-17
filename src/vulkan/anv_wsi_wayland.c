@@ -656,6 +656,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
       goto fail_image;
 
    image->memory = anv_device_memory_from_handle(vk_memory);
+   image->memory->bo.is_winsys_bo = true;
 
    result = anv_BindImageMemory(vk_device, vk_image, vk_memory, 0);
 

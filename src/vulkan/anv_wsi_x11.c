@@ -624,6 +624,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
          &memory_h);
 
       memory = anv_device_memory_from_handle(memory_h);
+      memory->bo.is_winsys_bo = true;
 
       anv_BindImageMemory(VK_NULL_HANDLE, anv_image_to_handle(image),
                           memory_h, 0);

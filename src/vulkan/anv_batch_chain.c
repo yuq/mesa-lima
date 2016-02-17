@@ -147,6 +147,9 @@ anv_reloc_list_add(struct anv_reloc_list *list,
    struct drm_i915_gem_relocation_entry *entry;
    int index;
 
+   const uint32_t domain =
+      target_bo->is_winsys_bo ? I915_GEM_DOMAIN_RENDER : 0;
+
    anv_reloc_list_grow(list, alloc, 1);
    /* TODO: Handle failure */
 
@@ -158,8 +161,8 @@ anv_reloc_list_add(struct anv_reloc_list *list,
    entry->delta = delta;
    entry->offset = offset;
    entry->presumed_offset = target_bo->offset;
-   entry->read_domains = 0;
-   entry->write_domain = 0;
+   entry->read_domains = domain;
+   entry->write_domain = domain;
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(entry, sizeof(*entry)));
 
    return target_bo->offset + delta;
@@ -854,7 +857,7 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
       obj->relocs_ptr = 0;
       obj->alignment = 0;
       obj->offset = bo->offset;
-      obj->flags = 0;
+      obj->flags = bo->is_winsys_bo ? EXEC_OBJECT_WRITE : 0;
       obj->rsvd1 = 0;
       obj->rsvd2 = 0;
    }

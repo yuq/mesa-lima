@@ -1070,6 +1070,7 @@ anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size)
    bo->index = 0;
    bo->offset = 0;
    bo->size = size;
+   bo->is_winsys_bo = false;
 
    return VK_SUCCESS;
 }
