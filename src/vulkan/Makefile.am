@@ -34,7 +34,7 @@ VULKAN_ENTRYPOINT_CPPFLAGS = \
    -DVK_USE_PLATFORM_XCB_KHR \
    -DVK_USE_PLATFORM_WAYLAND_KHR
 
-lib_LTLIBRARIES = libvulkan.la
+lib_LTLIBRARIES = libvulkan_intel.la
 
 check_LTLIBRARIES = libvulkan-test.la
 
@@ -67,7 +67,7 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_builddir)/src/vulkan
 
-libvulkan_la_CFLAGS = $(CFLAGS) -Wno-override-init
+libvulkan_intel_la_CFLAGS = $(CFLAGS) -Wno-override-init
 
 VULKAN_SOURCES =                                        \
 	anv_allocator.c                                 \
@@ -111,7 +111,7 @@ libanv_gen7_la_SOURCES =                                \
 	gen7_cmd_buffer.c				\
 	gen7_pipeline.c                                 \
 	gen7_state.c
-libanv_gen7_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=70
+libanv_gen7_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DANV_GENx10=70
 
 libanv_gen75_la_SOURCES =                               \
 	genX_cmd_buffer.c				\
@@ -119,7 +119,7 @@ libanv_gen75_la_SOURCES =                               \
 	gen7_cmd_buffer.c				\
 	gen7_pipeline.c                                 \
 	gen7_state.c
-libanv_gen75_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=75
+libanv_gen75_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DANV_GENx10=75
 
 libanv_gen8_la_SOURCES =                               	\
 	genX_cmd_buffer.c				\
@@ -127,7 +127,7 @@ libanv_gen8_la_SOURCES =                               	\
 	gen8_cmd_buffer.c				\
 	gen8_pipeline.c					\
 	gen8_state.c
-libanv_gen8_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=80
+libanv_gen8_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DANV_GENx10=80
 
 libanv_gen9_la_SOURCES =                               	\
 	genX_cmd_buffer.c				\
@@ -135,7 +135,7 @@ libanv_gen9_la_SOURCES =                               	\
 	gen8_cmd_buffer.c				\
 	gen8_pipeline.c					\
 	gen8_state.c
-libanv_gen9_la_CFLAGS = $(libvulkan_la_CFLAGS) -DANV_GENx10=90
+libanv_gen9_la_CFLAGS = $(libvulkan_intel_la_CFLAGS) -DANV_GENx10=90
 
 if HAVE_EGL_PLATFORM_WAYLAND
 BUILT_SOURCES += \
@@ -152,10 +152,10 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/egl/wayland/wayland-drm
 VULKAN_SOURCES += \
 	wayland-drm-protocol.c \
 	anv_wsi_wayland.c
-libvulkan_la_CFLAGS += -DHAVE_WAYLAND_PLATFORM
+libvulkan_intel_la_CFLAGS += -DHAVE_WAYLAND_PLATFORM
 endif
 
-libvulkan_la_SOURCES =                                  \
+libvulkan_intel_la_SOURCES =                            \
 	$(VULKAN_SOURCES)                               \
 	anv_gem.c
 
@@ -170,13 +170,33 @@ anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 
 CLEANFILES = $(BUILT_SOURCES)
 
-libvulkan_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
+libvulkan_intel_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
 	$(top_builddir)/src/isl/libisl.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	../mesa/libmesa.la \
 	../mesa/drivers/dri/common/libdri_test_stubs.la \
 	-lpthread -ldl -lstdc++ \
         $(PER_GEN_LIBS)
+
+libvulkan_intel_la_LDFLAGS = \
+        -module -avoid-version -shared -shrext .so
+
+
+# Generate icd files. It would be nice to just be able to add these to
+# AC_CONFIG_FILES, but @libdir@ typically expands to '${exec_prefix}/lib64',
+# which we can't put in the icd file. When running sed from the Makefile we
+# can use ${libdir}, which expands completely and we avoid putting Makefile
+# variables in the icd file.
+
+icdconfdir=$(sysconfdir)/vulkan/icd.d
+icdconf_DATA = intel_icd.json
+noinst_DATA = dev_icd.json
+
+%.json : %.json.in
+	$(AM_V_GEN) $(SED) \
+		-e "s#@build_libdir@#${abs_top_builddir}/${LIB_DIR}#" \
+		-e "s#@install_libdir@#${libdir}#" < $< > $@
+
 
 # Libvulkan with dummy gem. Used for unit tests.
 

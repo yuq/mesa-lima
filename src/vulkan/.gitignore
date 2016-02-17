@@ -4,5 +4,6 @@
 /anv_entrypoints.h
 /wayland-drm-protocol.c
 /wayland-drm-client-protocol.h
-/anv_icd.json
+/dev_icd.json
+/intel_icd.json
 /gen*_pack.h
