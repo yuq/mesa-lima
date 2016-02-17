@@ -186,6 +186,7 @@ EXT(EXT_blend_subtract                      , dummy_true                        
 EXT(EXT_buffer_storage                      , ARB_buffer_storage                     ,  x ,  x ,  x ,  31, 2015)
 EXT(EXT_color_buffer_float                  , dummy_true                             ,  x ,  x , ES1,  30, 2013)
 EXT(EXT_compiled_vertex_array               , dummy_true                             , GLL,  x ,  x ,  x , 1996)
+EXT(EXT_copy_image                          , OES_copy_image                         ,  x ,  x ,  x ,  30, 2014)
 EXT(EXT_copy_texture                        , dummy_true                             , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_depth_bounds_test                   , EXT_depth_bounds_test                  , GLL, GLC,  x ,  x , 2002)
 EXT(EXT_discard_framebuffer                 , dummy_true                             ,  x ,  x , ES1, ES2, 2009)
