@@ -1003,8 +1003,10 @@ vec4_visitor::optimize_predicate(nir_alu_instr *instr,
    src_reg op[2];
    assert(nir_op_infos[cmp_instr->op].num_inputs == 2);
    for (unsigned i = 0; i < 2; i++) {
-      op[i] = get_nir_src(cmp_instr->src[i].src,
-                          nir_op_infos[cmp_instr->op].input_types[i], 4);
+      nir_alu_type type = nir_op_infos[cmp_instr->op].input_types[i];
+      unsigned bit_size = nir_src_bit_size(cmp_instr->src[i].src);
+      type = (nir_alu_type) (((unsigned) type) | bit_size);
+      op[i] = get_nir_src(cmp_instr->src[i].src, type, 4);
       unsigned base_swizzle =
          brw_swizzle_for_nir_swizzle(cmp_instr->src[i].swizzle);
       op[i].swizzle = brw_compose_swizzle(size_swizzle, base_swizzle);
