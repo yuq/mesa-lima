@@ -105,5 +105,22 @@ nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
    foreach_list_typed(nir_variable, var, node, &shader->system_values)
       shader->info.system_values_read |= nir_variable_get_io_mask(var, shader->stage);
 
+   shader->info.num_textures = 0;
+   shader->info.num_images = 0;
+   nir_foreach_variable(var, &shader->uniforms) {
+      const struct glsl_type *type = var->type;
+      unsigned count = 1;
+      if (glsl_type_is_array(type)) {
+         count = glsl_get_length(type);
+         type = glsl_get_array_element(type);
+      }
+
+      if (glsl_type_is_image(type)) {
+         shader->info.num_images += count;
+      } else if (glsl_type_is_sampler(type)) {
+         shader->info.num_textures += count;
+      }
+   }
+
    nir_foreach_block(entrypoint, gather_info_block, shader);
 }
