@@ -1782,7 +1782,7 @@ alloc_immediate_int4(struct svga_shader_emitter_v10 *emit,
 static unsigned
 alloc_system_value_index(struct svga_shader_emitter_v10 *emit, unsigned index)
 {
-   const unsigned n = emit->info.num_inputs + index;
+   const unsigned n = emit->info.file_max[TGSI_FILE_INPUT] + 1 + index;
    assert(index < Elements(emit->system_value_indexes));
    emit->system_value_indexes[index] = n;
    return n;
@@ -2446,7 +2446,7 @@ emit_input_declarations(struct svga_shader_emitter_v10 *emit)
    else {
       assert(emit->unit == PIPE_SHADER_VERTEX);
 
-      for (i = 0; i < emit->info.num_inputs; i++) {
+      for (i = 0; i < emit->info.file_max[TGSI_FILE_INPUT] + 1; i++) {
          unsigned usage_mask = emit->info.input_usage_mask[i];
          unsigned index = i;
 
