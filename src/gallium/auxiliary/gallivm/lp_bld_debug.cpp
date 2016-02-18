@@ -200,9 +200,11 @@ disassemble(const void* func, std::stringstream &buffer)
        * XXX: This currently assumes x86
        */
 
+#if defined(PIPE_ARCH_X86) || defined(PIPE_ARCH_X86_64)
       if (Size == 1 && bytes[pc] == 0xc3) {
          break;
       }
+#endif
 
       /*
        * Advance.
