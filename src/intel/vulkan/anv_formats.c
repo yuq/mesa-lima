@@ -24,8 +24,8 @@
 #include "anv_private.h"
 #include "brw_surface_formats.h"
 
-#define RGBA ((struct anv_format_swizzle) { 0, 1, 2, 3 })
-#define BGRA ((struct anv_format_swizzle) { 2, 1, 0, 3 })
+#define RGBA { 0, 1, 2, 3 }
+#define BGRA { 2, 1, 0, 3 }
 
 #define swiz_fmt(__vk_fmt, __hw_fmt, __swizzle, ...)     \
    [__vk_fmt] = { \
