@@ -65,6 +65,7 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src \
 	-I$(top_builddir)/src/compiler \
 	-I$(top_builddir)/src/compiler/nir \
+	-I$(top_builddir)/src/intel \
 	-I$(top_builddir)/src/vulkan
 
 libvulkan_intel_la_CFLAGS = $(CFLAGS) -Wno-override-init
