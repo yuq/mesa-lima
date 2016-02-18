@@ -253,6 +253,7 @@ anv_block_pool_init(struct anv_block_pool *pool,
    pool->bo.gem_handle = 0;
    pool->bo.offset = 0;
    pool->bo.size = 0;
+   pool->bo.is_winsys_bo = false;
    pool->block_size = block_size;
    pool->free_list = ANV_FREE_LIST_EMPTY;
    pool->back_free_list = ANV_FREE_LIST_EMPTY;
