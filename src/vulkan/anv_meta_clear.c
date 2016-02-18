@@ -280,19 +280,20 @@ create_color_pipeline(struct anv_device *device,
       .stencilTestEnable = false,
    };
 
+   VkPipelineColorBlendAttachmentState blend_attachment_state[MAX_RTS] = { 0 };
+   blend_attachment_state[frag_output] = (VkPipelineColorBlendAttachmentState) {
+      .blendEnable = false,
+      .colorWriteMask = VK_COLOR_COMPONENT_A_BIT |
+                        VK_COLOR_COMPONENT_R_BIT |
+                        VK_COLOR_COMPONENT_G_BIT |
+                        VK_COLOR_COMPONENT_B_BIT,
+   };
+
    const VkPipelineColorBlendStateCreateInfo cb_state = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
       .logicOpEnable = false,
-      .attachmentCount = 1,
-      .pAttachments = (VkPipelineColorBlendAttachmentState []) {
-         {
-            .blendEnable = false,
-            .colorWriteMask = VK_COLOR_COMPONENT_A_BIT |
-                              VK_COLOR_COMPONENT_R_BIT |
-                              VK_COLOR_COMPONENT_G_BIT |
-                              VK_COLOR_COMPONENT_B_BIT,
-         },
-      },
+      .attachmentCount = MAX_RTS,
+      .pAttachments = blend_attachment_state
    };
 
    /* Disable repclear because we do not want the compiler to replace the
