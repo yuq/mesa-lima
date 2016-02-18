@@ -194,7 +194,7 @@ lower_tex(nir_tex_instr *tex, struct apply_pipeline_layout_state *state)
    if (tex->sampler) {
       unsigned set = tex->sampler->var->data.descriptor_set;
       unsigned binding = tex->sampler->var->data.binding;
-      tex->sampler_index = state->set[set].surface_offsets[binding];
+      tex->sampler_index = state->set[set].sampler_offsets[binding];
       lower_tex_deref(tex, tex->sampler, &tex->sampler_index,
                       nir_tex_src_sampler_offset, state);
    }
