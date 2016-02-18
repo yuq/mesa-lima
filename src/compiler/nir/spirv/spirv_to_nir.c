@@ -2148,17 +2148,24 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       /* Unhandled, but these are for debug so that's ok. */
       break;
 
-   case SpvOpCapability:
-      switch ((SpvCapability)w[1]) {
+   case SpvOpCapability: {
+      SpvCapability cap = w[1];
+      switch (cap) {
       case SpvCapabilityMatrix:
       case SpvCapabilityShader:
       case SpvCapabilityGeometry:
+      case SpvCapabilityUniformBufferArrayDynamicIndexing:
+      case SpvCapabilitySampledImageArrayDynamicIndexing:
+      case SpvCapabilityStorageBufferArrayDynamicIndexing:
+      case SpvCapabilityStorageImageArrayDynamicIndexing:
       case SpvCapabilityClipDistance:
+      case SpvCapabilityImageQuery:
          break;
       default:
          assert(!"Unsupported capability");
       }
       break;
+   }
 
    case SpvOpExtInstImport:
       vtn_handle_extension(b, opcode, w, count);
