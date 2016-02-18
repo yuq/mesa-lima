@@ -2096,6 +2096,9 @@ _check_for_reserved_macro_name (glcpp_parser_t *parser, YYLTYPE *loc,
 	if (strncmp(identifier, "GL_", 3) == 0) {
 		glcpp_error (loc, parser, "Macro names starting with \"GL_\" are reserved.\n");
 	}
+	if (strcmp(identifier, "defined") == 0) {
+		glcpp_error (loc, parser, "\"defined\" cannot be used as a macro name");
+	}
 }
 
 static int
