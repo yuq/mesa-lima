@@ -193,6 +193,11 @@ void anv_DestroyPipeline(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_pipeline, pipeline, _pipeline);
 
+   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
+      free(pipeline->bindings[s].surface_to_descriptor);
+      free(pipeline->bindings[s].sampler_to_descriptor);
+   }
+
    anv_reloc_list_finish(&pipeline->batch_relocs,
                          pAllocator ? pAllocator : &device->alloc);
    if (pipeline->blend_state.map)

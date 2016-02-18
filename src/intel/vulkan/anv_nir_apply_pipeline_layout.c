@@ -391,4 +391,6 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
 
       shader->num_uniforms += map.image_count * BRW_IMAGE_PARAM_SIZE * 4;
    }
+
+   ralloc_free(mem_ctx);
 }

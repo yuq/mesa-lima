@@ -72,6 +72,7 @@ genX(compute_pipeline_create)(
     */
    memset(pipeline->prog_data, 0, sizeof(pipeline->prog_data));
    memset(pipeline->scratch_start, 0, sizeof(pipeline->scratch_start));
+   memset(pipeline->bindings, 0, sizeof(pipeline->bindings));
 
    pipeline->vs_simd8 = NO_KERNEL;
    pipeline->vs_vec4 = NO_KERNEL;
