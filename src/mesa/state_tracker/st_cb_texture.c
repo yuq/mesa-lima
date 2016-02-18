@@ -1272,10 +1272,11 @@ create_pbo_upload_fs(struct st_context *st)
                       ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X));
    }
 
+   /* temp0.w = 0 */
+   ureg_MOV(ureg, ureg_writemask(temp0, TGSI_WRITEMASK_W), ureg_imm1u(ureg, 0));
+
    /* out = txf(sampler, temp0.x) */
-   ureg_TXF(ureg, out, TGSI_TEXTURE_BUFFER,
-                  ureg_scalar(ureg_src(temp0), TGSI_SWIZZLE_X),
-                  sampler);
+   ureg_TXF(ureg, out, TGSI_TEXTURE_BUFFER, ureg_src(temp0), sampler);
 
    ureg_release_temporary(ureg, temp0);
 
@@ -1335,6 +1336,7 @@ try_pbo_upload_common(struct gl_context *ctx,
    }
 
    cso_save_state(cso, (CSO_BIT_FRAGMENT_SAMPLER_VIEWS |
+                        CSO_BIT_FRAGMENT_SAMPLERS |
                         CSO_BIT_VERTEX_ELEMENTS |
                         CSO_BIT_AUX_VERTEX_BUFFER_SLOT |
                         CSO_BIT_FRAMEBUFFER |
@@ -1354,6 +1356,8 @@ try_pbo_upload_common(struct gl_context *ctx,
          + (upload_height - 1 + (depth - 1) * image_height) * stride;
       struct pipe_sampler_view templ;
       struct pipe_sampler_view *sampler_view;
+      struct pipe_sampler_state sampler = {0};
+      const struct pipe_sampler_state *samplers[1] = {&sampler};
 
       /* This should be ensured by Mesa before calling our callbacks */
       assert((last_element + 1) * bytes_per_pixel <= buffer->width0);
@@ -1362,6 +1366,7 @@ try_pbo_upload_common(struct gl_context *ctx,
          goto fail;
 
       memset(&templ, 0, sizeof(templ));
+      templ.target = PIPE_BUFFER;
       templ.format = src_format;
       templ.u.buf.first_element = first_element;
       templ.u.buf.last_element = last_element;
@@ -1377,6 +1382,8 @@ try_pbo_upload_common(struct gl_context *ctx,
       cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, 1, &sampler_view);
 
       pipe_sampler_view_reference(&sampler_view, NULL);
+
+      cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, 1, samplers);
    }
 
    /* Upload vertices */
@@ -1424,15 +1431,16 @@ try_pbo_upload_common(struct gl_context *ctx,
    }
 
    /* Upload constants */
+   /* Note: the user buffer must be valid until draw time */
+   struct {
+      int32_t xoffset;
+      int32_t yoffset;
+      int32_t stride;
+      int32_t image_size;
+   } constants;
+
    {
       struct pipe_constant_buffer cb;
-
-      struct {
-         int32_t xoffset;
-         int32_t yoffset;
-         int32_t stride;
-         int32_t image_size;
-      } constants;
 
       constants.xoffset = -xoffset + skip_pixels;
       constants.yoffset = -yoffset;
