@@ -62,7 +62,7 @@ typedef uint32_t xcb_window_t;
 #include "anv_entrypoints.h"
 #include "anv_gen_macros.h"
 #include "brw_context.h"
-#include "isl.h"
+#include "isl/isl.h"
 
 #ifdef __cplusplus
 extern "C" {

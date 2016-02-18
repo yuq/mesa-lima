@@ -62,7 +62,6 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
 	-I$(top_srcdir)/src/intel/ \
-	-I$(top_srcdir)/src/isl/ \
 	-I$(top_builddir)/src \
 	-I$(top_builddir)/src/compiler \
 	-I$(top_builddir)/src/compiler/nir \
@@ -165,7 +164,7 @@ anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 CLEANFILES = $(BUILT_SOURCES)
 
 libvulkan_intel_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
-	$(top_builddir)/src/isl/libisl.la \
+	$(top_builddir)/src/intel/isl/libisl.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	../mesa/libmesa.la \
 	../mesa/drivers/dri/common/libdri_test_stubs.la \

@@ -58,7 +58,6 @@ AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS)
 
 if HAVE_VULKAN
 SUBDIRS += intel
-SUBDIRS += isl
 SUBDIRS += vulkan
 endif
 
