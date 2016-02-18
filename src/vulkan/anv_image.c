@@ -139,6 +139,8 @@ make_surface(const struct anv_device *dev,
       unreachable("invalid image type");
    }
 
+   image->extent = extent;
+
    ok = isl_surf_init(&dev->isl_dev, &anv_surf->isl,
       .dim = vk_to_isl_surf_dim[vk_info->imageType],
       .format = anv_get_isl_format(vk_info->format, aspect,
