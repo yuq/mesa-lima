@@ -29,8 +29,8 @@
 
 #include "anv_private.h"
 
-#include "gen7_pack.h"
-#include "gen8_pack.h"
+#include "genxml/gen7_pack.h"
+#include "genxml/gen8_pack.h"
 
 /** \file anv_batch_chain.c
  *

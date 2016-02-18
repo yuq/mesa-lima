@@ -32,7 +32,7 @@
 #include "util/strtod.h"
 #include "util/debug.h"
 
-#include "gen7_pack.h"
+#include "genxml/gen7_pack.h"
 
 struct anv_dispatch_table dtable;
 

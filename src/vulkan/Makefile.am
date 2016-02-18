@@ -61,6 +61,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
+	-I$(top_srcdir)/src/intel/ \
 	-I$(top_srcdir)/src/isl/ \
 	-I$(top_builddir)/src \
 	-I$(top_builddir)/src/compiler \
@@ -99,11 +100,7 @@ VULKAN_SOURCES =                                        \
 
 BUILT_SOURCES =                                         \
 	anv_entrypoints.h                               \
-	anv_entrypoints.c				\
-	gen7_pack.h					\
-	gen75_pack.h					\
-	gen8_pack.h					\
-	gen9_pack.h
+	anv_entrypoints.c
 
 libanv_gen7_la_SOURCES =                                \
 	genX_cmd_buffer.c				\
@@ -164,9 +161,6 @@ anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 
 anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN) cat $(vulkan_include_HEADERS) | $(CPP) $(VULKAN_ENTRYPOINT_CPPFLAGS) - | $(PYTHON2) $< code > $@
-
-%_pack.h : %.xml gen_pack_header.py
-	$(AM_V_GEN) $(srcdir)/gen_pack_header.py $< > $@
 
 CLEANFILES = $(BUILT_SOURCES)
 

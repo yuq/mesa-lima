@@ -29,8 +29,8 @@
 
 #include "anv_private.h"
 
-#include "gen7_pack.h"
-#include "gen75_pack.h"
+#include "genxml/gen7_pack.h"
+#include "genxml/gen75_pack.h"
 
 static uint32_t
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)

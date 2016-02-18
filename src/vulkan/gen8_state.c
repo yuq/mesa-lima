@@ -29,8 +29,8 @@
 
 #include "anv_private.h"
 
-#include "gen8_pack.h"
-#include "gen9_pack.h"
+#include "genxml/gen8_pack.h"
+#include "genxml/gen9_pack.h"
 
 #include "genX_state_util.h"
 

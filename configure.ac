@@ -2518,6 +2518,8 @@ AC_CONFIG_FILES([Makefile
 		src/glx/apple/Makefile
 		src/glx/tests/Makefile
 		src/gtest/Makefile
+		src/intel/Makefile
+		src/intel/genxml/Makefile
 		src/isl/Makefile
 		src/loader/Makefile
 		src/mapi/Makefile

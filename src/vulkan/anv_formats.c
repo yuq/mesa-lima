@@ -24,8 +24,6 @@
 #include "anv_private.h"
 #include "brw_surface_formats.h"
 
-#include "gen7_pack.h"
-
 #define RGBA ((struct anv_format_swizzle) { 0, 1, 2, 3 })
 #define BGRA ((struct anv_format_swizzle) { 2, 1, 0, 3 })
 

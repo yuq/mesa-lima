@@ -27,13 +27,13 @@
 #include "anv_private.h"
 
 #if (ANV_GEN == 9)
-#  include "gen9_pack.h"
+#  include "genxml/gen9_pack.h"
 #elif (ANV_GEN == 8)
-#  include "gen8_pack.h"
+#  include "genxml/gen8_pack.h"
 #elif (ANV_IS_HASWELL)
-#  include "gen75_pack.h"
+#  include "genxml/gen75_pack.h"
 #elif (ANV_GEN == 7)
-#  include "gen7_pack.h"
+#  include "genxml/gen7_pack.h"
 #endif
 
 void
