@@ -2521,6 +2521,8 @@ AC_CONFIG_FILES([Makefile
 		src/intel/Makefile
 		src/intel/genxml/Makefile
 		src/intel/isl/Makefile
+		src/intel/vulkan/Makefile
+		src/intel/vulkan/tests/Makefile
 		src/loader/Makefile
 		src/mapi/Makefile
 		src/mapi/es1api/glesv1_cm.pc
@@ -2542,8 +2544,6 @@ AC_CONFIG_FILES([Makefile
 		src/mesa/drivers/osmesa/osmesa.pc
 		src/mesa/drivers/x11/Makefile
 		src/mesa/main/tests/Makefile
-		src/vulkan/Makefile
-		src/vulkan/tests/Makefile
 		src/util/Makefile
 		src/util/tests/hash_table/Makefile])
 

@@ -166,8 +166,8 @@ CLEANFILES = $(BUILT_SOURCES)
 libvulkan_intel_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
 	$(top_builddir)/src/intel/isl/libisl.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
-	../mesa/libmesa.la \
-	../mesa/drivers/dri/common/libdri_test_stubs.la \
+	$(top_builddir)/src/mesa/libmesa.la \
+	$(top_builddir)/src/mesa/drivers/dri/common/libdri_test_stubs.la \
 	-lpthread -ldl -lstdc++ \
         $(PER_GEN_LIBS)
 
