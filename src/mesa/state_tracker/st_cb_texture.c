@@ -1340,6 +1340,7 @@ try_pbo_upload_common(struct gl_context *ctx,
                         CSO_BIT_FRAMEBUFFER |
                         CSO_BIT_VIEWPORT |
                         CSO_BIT_BLEND |
+                        CSO_BIT_DEPTH_STENCIL_ALPHA |
                         CSO_BIT_RASTERIZER |
                         CSO_BIT_STREAM_OUTPUTS |
                         CSO_BITS_ALL_SHADERS));
@@ -1478,6 +1479,13 @@ try_pbo_upload_common(struct gl_context *ctx,
 
    /* Blend state */
    cso_set_blend(cso, &st->pbo_upload.blend);
+
+   /* Depth/stencil/alpha state */
+   {
+      struct pipe_depth_stencil_alpha_state dsa;
+      memset(&dsa, 0, sizeof(dsa));
+      cso_set_depth_stencil_alpha(cso, &dsa);
+   }
 
    /* Rasterizer state */
    cso_set_rasterizer(cso, &st->pbo_upload.raster);
