@@ -567,7 +567,7 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
          .descriptorPool = dummy_desc_pool_h,
          .descriptorSetCount = 1,
          .pSetLayouts = (VkDescriptorSetLayout[]) {
-            device->meta_state.blit.ds_layout,
+            device->meta_state.resolve.ds_layout,
          },
       },
       &desc_set_h);
