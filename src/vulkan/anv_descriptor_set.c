@@ -197,107 +197,35 @@ VkResult anv_CreatePipelineLayout(
     VkPipelineLayout*                           pPipelineLayout)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_pipeline_layout l, *layout;
+   struct anv_pipeline_layout *layout;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO);
 
-   l.num_sets = pCreateInfo->setLayoutCount;
-
-   unsigned dynamic_offset_count = 0;
-
-   memset(l.stage, 0, sizeof(l.stage));
-   for (uint32_t set = 0; set < pCreateInfo->setLayoutCount; set++) {
-      ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout,
-                      pCreateInfo->pSetLayouts[set]);
-      l.set[set].layout = set_layout;
-
-      l.set[set].dynamic_offset_start = dynamic_offset_count;
-      for (uint32_t b = 0; b < set_layout->binding_count; b++) {
-         if (set_layout->binding[b].dynamic_offset_index >= 0)
-            dynamic_offset_count += set_layout->binding[b].array_size;
-      }
-
-      for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++) {
-         l.set[set].stage[s].surface_start = l.stage[s].surface_count;
-         l.set[set].stage[s].sampler_start = l.stage[s].sampler_count;
-         l.set[set].stage[s].image_start = l.stage[s].image_count;
-
-         for (uint32_t b = 0; b < set_layout->binding_count; b++) {
-            unsigned array_size = set_layout->binding[b].array_size;
-
-            if (set_layout->binding[b].stage[s].surface_index >= 0) {
-               l.stage[s].surface_count += array_size;
-
-               if (set_layout->binding[b].dynamic_offset_index >= 0)
-                  l.stage[s].has_dynamic_offsets = true;
-            }
-
-            if (set_layout->binding[b].stage[s].sampler_index >= 0)
-               l.stage[s].sampler_count += array_size;
-
-            if (set_layout->binding[b].stage[s].image_index >= 0)
-               l.stage[s].image_count += array_size;
-         }
-      }
-   }
-
-   unsigned num_bindings = 0;
-   for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++) {
-      num_bindings += l.stage[s].surface_count +
-                      l.stage[s].sampler_count +
-                      l.stage[s].image_count;
-   }
-
-   size_t size = sizeof(*layout) + num_bindings * sizeof(layout->entries[0]);
-
-   layout = anv_alloc2(&device->alloc, pAllocator, size, 8,
+   layout = anv_alloc2(&device->alloc, pAllocator, sizeof(*layout), 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (layout == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   /* Now we can actually build our surface and sampler maps */
-   struct anv_pipeline_binding *entry = layout->entries;
-   for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++) {
-      l.stage[s].surface_to_descriptor = entry;
-      entry += l.stage[s].surface_count;
-      l.stage[s].sampler_to_descriptor = entry;
-      entry += l.stage[s].sampler_count;
-      entry += l.stage[s].image_count;
+   layout->num_sets = pCreateInfo->setLayoutCount;
 
-      int surface = 0;
-      int sampler = 0;
-      for (uint32_t set = 0; set < pCreateInfo->setLayoutCount; set++) {
-         struct anv_descriptor_set_layout *set_layout = l.set[set].layout;
+   unsigned dynamic_offset_count = 0;
 
-         for (uint32_t b = 0; b < set_layout->binding_count; b++) {
-            unsigned array_size = set_layout->binding[b].array_size;
-            unsigned set_offset = set_layout->binding[b].descriptor_index;
+   memset(layout->stage, 0, sizeof(layout->stage));
+   for (uint32_t set = 0; set < pCreateInfo->setLayoutCount; set++) {
+      ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout,
+                      pCreateInfo->pSetLayouts[set]);
+      layout->set[set].layout = set_layout;
 
-            if (set_layout->binding[b].stage[s].surface_index >= 0) {
-               assert(surface == l.set[set].stage[s].surface_start +
-                                 set_layout->binding[b].stage[s].surface_index);
-               for (unsigned i = 0; i < array_size; i++) {
-                  l.stage[s].surface_to_descriptor[surface + i].set = set;
-                  l.stage[s].surface_to_descriptor[surface + i].offset = set_offset + i;
-               }
-               surface += array_size;
-            }
-
-            if (set_layout->binding[b].stage[s].sampler_index >= 0) {
-               assert(sampler == l.set[set].stage[s].sampler_start +
-                                 set_layout->binding[b].stage[s].sampler_index);
-               for (unsigned i = 0; i < array_size; i++) {
-                  l.stage[s].sampler_to_descriptor[sampler + i].set = set;
-                  l.stage[s].sampler_to_descriptor[sampler + i].offset = set_offset + i;
-               }
-               sampler += array_size;
-            }
+      layout->set[set].dynamic_offset_start = dynamic_offset_count;
+      for (uint32_t b = 0; b < set_layout->binding_count; b++) {
+         if (set_layout->binding[b].dynamic_offset_index >= 0)
+            dynamic_offset_count += set_layout->binding[b].array_size;
+         for (gl_shader_stage s = 0; s < MESA_SHADER_STAGES; s++) {
+            if (set_layout->binding[b].stage[s].surface_index >= 0)
+               layout->stage[s].has_dynamic_offsets = true;
          }
       }
    }
-
-   /* Finally, we're done setting it up, copy into the allocated version */
-   *layout = l;
 
    *pPipelineLayout = anv_pipeline_layout_to_handle(layout);
 

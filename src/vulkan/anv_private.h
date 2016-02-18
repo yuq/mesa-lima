@@ -986,25 +986,13 @@ struct anv_pipeline_layout {
    struct {
       struct anv_descriptor_set_layout *layout;
       uint32_t dynamic_offset_start;
-      struct {
-         uint32_t surface_start;
-         uint32_t sampler_start;
-         uint32_t image_start;
-      } stage[MESA_SHADER_STAGES];
    } set[MAX_SETS];
 
    uint32_t num_sets;
 
    struct {
       bool has_dynamic_offsets;
-      uint32_t surface_count;
-      struct anv_pipeline_binding *surface_to_descriptor;
-      uint32_t sampler_count;
-      struct anv_pipeline_binding *sampler_to_descriptor;
-      uint32_t image_count;
    } stage[MESA_SHADER_STAGES];
-
-   struct anv_pipeline_binding entries[0];
 };
 
 struct anv_buffer {
