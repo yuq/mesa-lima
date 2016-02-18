@@ -280,6 +280,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
    struct anv_pipeline_bind_map map = {
       .surface_count = 0,
       .sampler_count = 0,
+      .image_count = 0,
    };
 
    for (uint32_t set = 0; set < layout->num_sets; set++) {
@@ -351,6 +352,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
    }
 
    if (map.image_count > 0) {
+      assert(map.image_count <= MAX_IMAGES);
       nir_foreach_variable(var, &shader->uniforms) {
          if (glsl_type_is_image(var->type) ||
              (glsl_type_is_array(var->type) &&
@@ -369,7 +371,8 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       }
 
       struct anv_push_constants *null_data = NULL;
-      const gl_constant_value **param = prog_data->param + shader->num_uniforms;
+      const gl_constant_value **param =
+         prog_data->param + (shader->num_uniforms / 4);
       const struct brw_image_param *image_param = null_data->images;
       for (uint32_t i = 0; i < map.image_count; i++) {
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,

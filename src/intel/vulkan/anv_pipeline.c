@@ -341,9 +341,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (pipeline->layout && pipeline->layout->stage[stage].has_dynamic_offsets)
       prog_data->nr_params += MAX_DYNAMIC_BUFFERS * 2;
 
-   if (pipeline->bindings[stage].image_count > 0)
-      prog_data->nr_params += pipeline->bindings[stage].image_count *
-                              BRW_IMAGE_PARAM_SIZE;
+   if (nir->info.num_images > 0)
+      prog_data->nr_params += nir->info.num_images * BRW_IMAGE_PARAM_SIZE;
 
    if (prog_data->nr_params > 0) {
       /* XXX: I think we're leaking this */
