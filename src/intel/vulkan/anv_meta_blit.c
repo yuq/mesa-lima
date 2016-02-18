@@ -696,31 +696,34 @@ void anv_CmdCopyImage(
          },
          cmd_buffer, 0);
 
-      const VkOffset3D dest_offset = {
-         .x = pRegions[r].dstOffset.x,
-         .y = pRegions[r].dstOffset.y,
-         .z = 0,
-      };
-
-      unsigned num_slices;
-      if (src_image->type == VK_IMAGE_TYPE_3D) {
-         assert(pRegions[r].srcSubresource.layerCount == 1 &&
-                pRegions[r].dstSubresource.layerCount == 1);
-         num_slices = pRegions[r].extent.depth;
-      } else {
-         assert(pRegions[r].srcSubresource.layerCount ==
-                pRegions[r].dstSubresource.layerCount);
-         assert(pRegions[r].extent.depth == 1);
-         num_slices = pRegions[r].dstSubresource.layerCount;
-      }
-
       const uint32_t dest_base_array_slice =
          anv_meta_get_iview_layer(dest_image, &pRegions[r].dstSubresource,
                                   &pRegions[r].dstOffset);
 
-      for (unsigned slice = 0; slice < num_slices; slice++) {
+
+      unsigned num_slices_3d = pRegions[r].extent.depth;
+      unsigned num_slices_array = pRegions[r].dstSubresource.layerCount;
+      unsigned slice_3d = 0;
+      unsigned slice_array = 0;
+      while (slice_3d < num_slices_3d && slice_array < num_slices_array) {
          VkOffset3D src_offset = pRegions[r].srcOffset;
-         src_offset.z += slice;
+         src_offset.z += slice_3d + slice_array;
+
+         uint32_t img_x = 0;
+         uint32_t img_y = 0;
+         uint32_t img_o = 0;
+         if (isl_format_is_compressed(dest_image->format->isl_format))
+            isl_surf_get_image_intratile_offset_el(&cmd_buffer->device->isl_dev,
+                                                   &dest_image->color_surface.isl,
+                                                   pRegions[r].dstSubresource.mipLevel,
+                                                   pRegions[r].dstSubresource.baseArrayLayer + slice_array,
+                                                   pRegions[r].dstOffset.z + slice_3d,
+                                                   &img_o, &img_x, &img_y);
+
+         VkOffset3D dest_offset_el = meta_region_offset_el(dest_image, &pRegions[r].dstOffset);
+         dest_offset_el.x += img_x;
+         dest_offset_el.y += img_y;
+         dest_offset_el.z = 0;
 
          struct anv_image_view dest_iview;
          anv_image_view_init(&dest_iview, cmd_buffer->device,
@@ -733,20 +736,29 @@ void anv_CmdCopyImage(
                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                   .baseMipLevel = pRegions[r].dstSubresource.mipLevel,
                   .levelCount = 1,
-                  .baseArrayLayer = dest_base_array_slice + slice,
+                  .baseArrayLayer = dest_base_array_slice +
+                                    slice_array + slice_3d,
                   .layerCount = 1
                },
             },
-            cmd_buffer, 0);
+            cmd_buffer, img_o);
+
+         const VkExtent3D img_extent_el = meta_region_extent_el(dest_image->vk_format,
+                                                                &pRegions[r].extent);
 
          meta_emit_blit(cmd_buffer,
                         src_image, &src_iview,
                         src_offset,
-                        pRegions[r].extent,
+                        img_extent_el,
                         dest_image, &dest_iview,
-                        dest_offset,
-                        pRegions[r].extent,
+                        dest_offset_el,
+                        img_extent_el,
                         VK_FILTER_NEAREST);
+
+         if (dest_image->type == VK_IMAGE_TYPE_3D)
+            slice_3d++;
+         else
+            slice_array++;
       }
    }
 
