@@ -299,8 +299,8 @@ public:
         uint32_t x, y;
         MacroTileMgr::getTileIndices(macroID, x, y);
 
-        assert(x < KNOB_NUM_HOT_TILES_X);
-        assert(y < KNOB_NUM_HOT_TILES_Y);
+        SWR_ASSERT(x < KNOB_NUM_HOT_TILES_X);
+        SWR_ASSERT(y < KNOB_NUM_HOT_TILES_Y);
 
         HotTileSet &tile = mHotTiles[x][y];
         HOTTILE& hotTile = tile.Attachment[attachment];
@@ -326,7 +326,7 @@ public:
             {
                 // tile should be either uninitialized or resolved if we're deleting and switching to a 
                 // new sample count
-                assert((hotTile.state == HOTTILE_INVALID) ||
+                SWR_ASSERT((hotTile.state == HOTTILE_INVALID) ||
                        (hotTile.state == HOTTILE_RESOLVED) || 
                        (hotTile.state == HOTTILE_CLEAR));
                 _aligned_free(hotTile.pBuffer);
@@ -377,8 +377,8 @@ public:
     {
         uint32_t x, y;
         MacroTileMgr::getTileIndices(macroID, x, y);
-        assert(x < KNOB_NUM_HOT_TILES_X);
-        assert(y < KNOB_NUM_HOT_TILES_Y);
+        SWR_ASSERT(x < KNOB_NUM_HOT_TILES_X);
+        SWR_ASSERT(y < KNOB_NUM_HOT_TILES_Y);
 
         return mHotTiles[x][y];
     }
