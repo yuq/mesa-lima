@@ -50,7 +50,8 @@ struct trace_query
 
 
 static inline struct trace_query *
-trace_query(struct pipe_query *query) {
+trace_query(struct pipe_query *query)
+{
    return (struct trace_query *)query;
 }
 
@@ -93,7 +94,7 @@ trace_surface_unwrap(struct trace_context *tr_ctx,
       return NULL;
 
    assert(surface->texture);
-   if(!surface->texture)
+   if (!surface->texture)
       return surface;
 
    tr_surf = trace_surface(surface);
@@ -788,9 +789,9 @@ trace_context_set_framebuffer_state(struct pipe_context *_pipe,
 
    /* Unwrap the input state */
    memcpy(&unwrapped_state, state, sizeof(unwrapped_state));
-   for(i = 0; i < state->nr_cbufs; ++i)
+   for (i = 0; i < state->nr_cbufs; ++i)
       unwrapped_state.cbufs[i] = trace_surface_unwrap(tr_ctx, state->cbufs[i]);
-   for(i = state->nr_cbufs; i < PIPE_MAX_COLOR_BUFS; ++i)
+   for (i = state->nr_cbufs; i < PIPE_MAX_COLOR_BUFS; ++i)
       unwrapped_state.cbufs[i] = NULL;
    unwrapped_state.zsbuf = trace_surface_unwrap(tr_ctx, state->zsbuf);
    state = &unwrapped_state;
@@ -870,8 +871,8 @@ trace_context_set_viewport_states(struct pipe_context *_pipe,
 
 static struct pipe_sampler_view *
 trace_context_create_sampler_view(struct pipe_context *_pipe,
-                          struct pipe_resource *_resource,
-                          const struct pipe_sampler_view *templ)
+                                  struct pipe_resource *_resource,
+                                  const struct pipe_sampler_view *templ)
 {
    struct trace_context *tr_ctx = trace_context(_pipe);
    struct trace_resource *tr_res = trace_resource(_resource);
@@ -913,7 +914,7 @@ trace_context_create_sampler_view(struct pipe_context *_pipe,
 
 static void
 trace_context_sampler_view_destroy(struct pipe_context *_pipe,
-                           struct pipe_sampler_view *_view)
+                                   struct pipe_sampler_view *_view)
 {
    struct trace_context *tr_ctx = trace_context(_pipe);
    struct trace_sampler_view *tr_view = trace_sampler_view(_view);
@@ -955,7 +956,7 @@ trace_context_create_surface(struct pipe_context *_pipe,
 
    trace_dump_arg(ptr, pipe);
    trace_dump_arg(ptr, resource);
-   
+
    trace_dump_arg_begin("surf_tmpl");
    trace_dump_surface_template(surf_tmpl, resource->target);
    trace_dump_arg_end();
@@ -1009,7 +1010,7 @@ trace_context_set_sampler_views(struct pipe_context *_pipe,
    /* remove this when we have pipe->set_sampler_views(..., start, ...) */
    assert(start == 0);
 
-   for(i = 0; i < num; ++i) {
+   for (i = 0; i < num; ++i) {
       tr_view = trace_sampler_view(views[i]);
       unwrapped_views[i] = tr_view ? tr_view->sampler_view : NULL;
    }
@@ -1459,7 +1460,7 @@ trace_context_transfer_map(struct pipe_context *_context,
    *transfer = trace_transfer_create(tr_context, tr_res, result);
 
    if (map) {
-      if(usage & PIPE_TRANSFER_WRITE) {
+      if (usage & PIPE_TRANSFER_WRITE) {
          trace_transfer(*transfer)->map = map;
       }
    }
@@ -1477,9 +1478,7 @@ trace_context_transfer_flush_region( struct pipe_context *_context,
    struct pipe_context *context = tr_context->pipe;
    struct pipe_transfer *transfer = tr_transfer->transfer;
 
-   context->transfer_flush_region(context,
-				  transfer,
-				  box);
+   context->transfer_flush_region(context, transfer, box);
 }
 
 static void
@@ -1491,7 +1490,7 @@ trace_context_transfer_unmap(struct pipe_context *_context,
    struct pipe_context *context = tr_ctx->pipe;
    struct pipe_transfer *transfer = tr_trans->transfer;
 
-   if(tr_trans->map) {
+   if (tr_trans->map) {
       /*
        * Fake a transfer_inline_write
        */
@@ -1570,15 +1569,16 @@ trace_context_transfer_inline_write(struct pipe_context *_context,
 
    trace_dump_call_end();
 
-   context->transfer_inline_write(context, resource,
-                                  level, usage, box, data, stride, layer_stride);
+   context->transfer_inline_write(context, resource, level, usage, box,
+                                  data, stride, layer_stride);
 }
 
 
-static void trace_context_render_condition(struct pipe_context *_context,
-                                           struct pipe_query *query,
-                                           boolean condition,
-                                           uint mode)
+static void
+trace_context_render_condition(struct pipe_context *_context,
+                               struct pipe_query *query,
+                               boolean condition,
+                               uint mode)
 {
    struct trace_context *tr_context = trace_context(_context);
    struct pipe_context *context = tr_context->pipe;
@@ -1598,7 +1598,8 @@ static void trace_context_render_condition(struct pipe_context *_context,
 }
 
 
-static void trace_context_texture_barrier(struct pipe_context *_context)
+static void
+trace_context_texture_barrier(struct pipe_context *_context)
 {
    struct trace_context *tr_context = trace_context(_context);
    struct pipe_context *context = tr_context->pipe;
@@ -1613,8 +1614,9 @@ static void trace_context_texture_barrier(struct pipe_context *_context)
 }
 
 
-static void trace_context_memory_barrier(struct pipe_context *_context,
-                                         unsigned flags)
+static void
+trace_context_memory_barrier(struct pipe_context *_context,
+                             unsigned flags)
 {
    struct trace_context *tr_context = trace_context(_context);
    struct pipe_context *context = tr_context->pipe;
@@ -1628,9 +1630,10 @@ static void trace_context_memory_barrier(struct pipe_context *_context,
 }
 
 
-static void trace_context_set_tess_state(struct pipe_context *_context,
-                                         const float default_outer_level[4],
-                                         const float default_inner_level[2])
+static void
+trace_context_set_tess_state(struct pipe_context *_context,
+                             const float default_outer_level[4],
+                             const float default_inner_level[2])
 {
    struct trace_context *tr_context = trace_context(_context);
    struct pipe_context *context = tr_context->pipe;
@@ -1718,7 +1721,7 @@ trace_context_create(struct trace_screen *tr_scr,
    if (!pipe)
       goto error1;
 
-   if(!trace_enabled())
+   if (!trace_enabled())
       goto error1;
 
    tr_ctx = CALLOC_STRUCT(trace_context);
@@ -1824,7 +1827,7 @@ error1:
 
 
 /**
- * Sanity checker: check that the given context really is a 
+ * Sanity checker: check that the given context really is a
  * trace context (and not the wrapped driver's context).
  */
 void
@@ -1833,4 +1836,3 @@ trace_context_check(const struct pipe_context *pipe)
    struct trace_context *tr_ctx = (struct trace_context *) pipe;
    assert(tr_ctx->base.destroy == trace_context_destroy);
 }
-
