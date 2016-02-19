@@ -186,6 +186,10 @@ st_destroy_context_priv(struct st_context *st)
       u_upload_destroy(st->constbuf_uploader);
    }
 
+   /* free glDrawPixels cache data */
+   free(st->drawpix_cache.image);
+   pipe_resource_reference(&st->drawpix_cache.texture, NULL);
+
    cso_destroy_context(st->cso_context);
    free( st );
 }

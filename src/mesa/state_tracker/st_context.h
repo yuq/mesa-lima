@@ -217,6 +217,14 @@ struct st_context
       void *vert_shaders[2];   /**< ureg shaders */
    } drawpix;
 
+   struct {
+      GLsizei width, height;
+      GLenum format, type;
+      const void *user_pointer;  /**< Last user 'pixels' pointer */
+      void *image;               /**< Copy of the glDrawPixels image data */
+      struct pipe_resource *texture;
+   } drawpix_cache;
+
    /** for glClear */
    struct {
       struct pipe_rasterizer_state raster;

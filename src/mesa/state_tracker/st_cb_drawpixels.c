@@ -73,6 +73,37 @@
 
 
 /**
+ * We have a simple glDrawPixels cache to try to optimize the case where the
+ * same image is drawn over and over again.  It basically works as follows:
+ *
+ * 1. After we construct a texture map with the image and draw it, we do
+ *    not discard the texture.  We keep it around, plus we note the
+ *    glDrawPixels width, height, format, etc. parameters and keep a copy
+ *    of the image in a malloc'd buffer.
+ *
+ * 2. On the next glDrawPixels we check if the parameters match the previous
+ *    call.  If those match, we check if the image matches the previous image
+ *    via a memcmp() call.  If everything matches, we re-use the previous
+ *    texture, thereby avoiding the cost creating a new texture and copying
+ *    the image to it.
+ *
+ * The effectiveness of this cache depends upon:
+ * 1. If the memcmp() finds a difference, it happens relatively quickly.
+      Hopefully, not just the last pixels differ!
+ * 2. If the memcmp() finds no difference, doing that check is faster than
+ *    creating and loading a texture.
+ *
+ * Notes:
+ * 1. We don't support any pixel unpacking parameters.
+ * 2. We don't try to cache images in Pixel Buffer Objects.
+ * 3. Instead of saving the whole image, perhaps some sort of reliable
+ *    checksum function could be used instead.
+ */
+#define USE_DRAWPIXELS_CACHE 1
+
+
+
+/**
  * Create fragment program that does a TEX() instruction to get a Z and/or
  * stencil value value, then writes to FRAG_RESULT_DEPTH/FRAG_RESULT_STENCIL.
  * Used for glDrawPixels(GL_DEPTH_COMPONENT / GL_STENCIL_INDEX).
@@ -347,6 +378,39 @@ make_texture(struct st_context *st,
    enum pipe_format pipeFormat;
    GLenum baseInternalFormat;
 
+#if USE_DRAWPIXELS_CACHE
+   const GLint bpp = _mesa_bytes_per_pixel(format, type);
+
+   /* Check if the glDrawPixels() parameters and state matches the cache */
+   if (width == st->drawpix_cache.width &&
+       height == st->drawpix_cache.height &&
+       format == st->drawpix_cache.format &&
+       type == st->drawpix_cache.type &&
+       pixels == st->drawpix_cache.user_pointer &&
+       !_mesa_is_bufferobj(unpack->BufferObj) &&
+       (unpack->RowLength == 0 || unpack->RowLength == width) &&
+       unpack->SkipPixels == 0 &&
+       unpack->SkipRows == 0 &&
+       unpack->SwapBytes == GL_FALSE &&
+       st->drawpix_cache.image) {
+      /* check if the pixel data is the same */
+      if (memcmp(pixels, st->drawpix_cache.image, width * height * bpp) == 0) {
+         /* OK, re-use the cached texture */
+         return st->drawpix_cache.texture;
+      }
+   }
+
+   /* discard the cached image and texture (if there is one) */
+   st->drawpix_cache.width = 0;
+   st->drawpix_cache.height = 0;
+   st->drawpix_cache.user_pointer = NULL;
+   if (st->drawpix_cache.image) {
+      free(st->drawpix_cache.image);
+      st->drawpix_cache.image = NULL;
+   }
+   pipe_resource_reference(&st->drawpix_cache.texture, NULL);
+#endif
+
    /* Choose a pixel format for the temp texture which will hold the
     * image to draw.
     */
@@ -436,6 +500,25 @@ make_texture(struct st_context *st,
    }
 
    _mesa_unmap_pbo_source(ctx, unpack);
+
+#if USE_DRAWPIXELS_CACHE
+   /* Save the glDrawPixels parameter and image in the cache */
+   if ((unpack->RowLength == 0 || unpack->RowLength == width) &&
+       unpack->SkipPixels == 0 &&
+       unpack->SkipRows == 0) {
+      st->drawpix_cache.width = width;
+      st->drawpix_cache.height = height;
+      st->drawpix_cache.format = format;
+      st->drawpix_cache.type = type;
+      st->drawpix_cache.user_pointer = pixels;
+      assert(!st->drawpix_cache.image);
+      st->drawpix_cache.image = malloc(width * height * bpp);
+      if (st->drawpix_cache.image) {
+         memcpy(st->drawpix_cache.image, pixels, width * height * bpp);
+      }
+      st->drawpix_cache.texture = pt;
+   }
+#endif
 
    return pt;
 }
@@ -1067,7 +1150,9 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
    if (num_sampler_view > 1)
       pipe_sampler_view_reference(&sv[1], NULL);
 
+#if !USE_DRAWPIXELS_CACHE
    pipe_resource_reference(&pt, NULL);
+#endif
 }
 
 
