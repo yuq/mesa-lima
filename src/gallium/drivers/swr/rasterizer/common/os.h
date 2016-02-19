@@ -192,6 +192,7 @@ unsigned int _mm_popcnt_u32(unsigned int v)
 #define InterlockedCompareExchange(Dest, Exchange, Comparand) __sync_val_compare_and_swap(Dest, Comparand, Exchange)
 #define InterlockedExchangeAdd(Addend, Value) __sync_fetch_and_add(Addend, Value)
 #define InterlockedDecrement(Append) __sync_sub_and_fetch(Append, 1)
+#define InterlockedDecrement64(Append) __sync_sub_and_fetch(Append, 1)
 #define InterlockedIncrement(Append) __sync_add_and_fetch(Append, 1)
 #define _ReadWriteBarrier() asm volatile("" ::: "memory")
 #define __stdcall

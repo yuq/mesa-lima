@@ -61,11 +61,8 @@ HANDLE SwrCreateContext(
     pContext->driverType = pCreateInfo->driver;
     pContext->privateStateSize = pCreateInfo->privateStateSize;
 
-    pContext->dcRing = (DRAW_CONTEXT*)_aligned_malloc(sizeof(DRAW_CONTEXT)*KNOB_MAX_DRAWS_IN_FLIGHT, 64);
-    memset(pContext->dcRing, 0, sizeof(DRAW_CONTEXT)*KNOB_MAX_DRAWS_IN_FLIGHT);
-
-    pContext->dsRing = (DRAW_STATE*)_aligned_malloc(sizeof(DRAW_STATE)*KNOB_MAX_DRAWS_IN_FLIGHT, 64);
-    memset(pContext->dsRing, 0, sizeof(DRAW_STATE)*KNOB_MAX_DRAWS_IN_FLIGHT);
+    pContext->dcRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
+    pContext->dsRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
 
     pContext->numSubContexts = pCreateInfo->maxSubContexts;
     if (pContext->numSubContexts > 1)
@@ -77,7 +74,6 @@ HANDLE SwrCreateContext(
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
         pContext->dcRing[dc].pArena = new Arena();
-        pContext->dcRing[dc].inUse = false;
         pContext->dcRing[dc].pTileMgr = new MacroTileMgr(*(pContext->dcRing[dc].pArena));
         pContext->dcRing[dc].pDispatch = new DispatchQueue(); /// @todo Could lazily allocate this if Dispatch seen.
 
@@ -107,9 +103,6 @@ HANDLE SwrCreateContext(
         ///@todo Use numa API for allocations using numa information from thread data (if exists).
         pContext->pScratch[i] = (uint8_t*)_aligned_malloc((32 * 1024), KNOB_SIMD_WIDTH * 4);
     }
-
-    pContext->nextDrawId = 1;
-    pContext->DrawEnqueued = 1;
 
     // State setup AFTER context is fully initialized
     SetupDefaultState(pContext);
@@ -148,8 +141,6 @@ void SwrDestroyContext(HANDLE hContext)
         _aligned_free(pContext->pScratch[i]);
     }
 
-    _aligned_free(pContext->dcRing);
-    _aligned_free(pContext->dsRing);
     _aligned_free(pContext->subCtxSave);
 
     delete(pContext->pHotTileMgr);
@@ -168,49 +159,28 @@ void WakeAllThreads(SWR_CONTEXT *pContext)
     pContext->FifosNotEmpty.notify_all();
 }
 
-bool StillDrawing(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC)
+template<bool IsDraw>
+void QueueWork(SWR_CONTEXT *pContext)
 {
-    // For single thread nothing should still be drawing.
-    if (KNOB_SINGLE_THREADED) { return false; }
-
-    if (pDC->isCompute)
+    if (IsDraw)
     {
-        if (pDC->doneCompute)
-        {
-            pDC->inUse = false;
-            return false;
-        }
+        // Each worker thread looks at a DC for both FE and BE work at different times and so we
+        // multiply threadDone by 2.  When the threadDone counter has reached 0 then all workers
+        // have moved past this DC. (i.e. Each worker has checked this DC for both FE and BE work and
+        // then moved on if all work is done.)
+        pContext->pCurDrawContext->threadsDone =
+            pContext->NumWorkerThreads ? pContext->NumWorkerThreads * 2 : 2;
     }
-
-    // Check if backend work is done. First make sure all triangles have been binned.
-    if (pDC->doneFE == true)
+    else
     {
-        // ensure workers have all moved passed this draw
-        if (pDC->threadsDoneFE != pContext->NumWorkerThreads)
-        {
-            return true;
-        }
-
-        if (pDC->threadsDoneBE != pContext->NumWorkerThreads)
-        {
-            return true;
-        }
-
-        pDC->inUse = false;    // all work is done.
+        pContext->pCurDrawContext->threadsDone =
+            pContext->NumWorkerThreads ? pContext->NumWorkerThreads : 1;
     }
-
-    return pDC->inUse;
-}
-
-void QueueDraw(SWR_CONTEXT *pContext)
-{
-    SWR_ASSERT(pContext->pCurDrawContext->inUse == false);
-    pContext->pCurDrawContext->inUse = true;
 
     _ReadWriteBarrier();
     {
         std::unique_lock<std::mutex> lock(pContext->WaitLock);
-        pContext->DrawEnqueued++;
+        pContext->dcRing.Enqueue();
     }
 
     if (KNOB_SINGLE_THREADED)
@@ -219,10 +189,24 @@ void QueueDraw(SWR_CONTEXT *pContext)
         uint32_t mxcsr = _mm_getcsr();
         _mm_setcsr(mxcsr | _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON);
 
-        std::unordered_set<uint32_t> lockedTiles;
-        uint64_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
-        WorkOnFifoFE(pContext, 0, curDraw[0], 0);
-        WorkOnFifoBE(pContext, 0, curDraw[1], lockedTiles);
+        if (IsDraw)
+        {
+            std::unordered_set<uint32_t> lockedTiles;
+            uint64_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
+            WorkOnFifoFE(pContext, 0, curDraw[0], 0);
+            WorkOnFifoBE(pContext, 0, curDraw[1], lockedTiles);
+        }
+        else
+        {
+            uint64_t curDispatch = pContext->pCurDrawContext->drawId;
+            WorkOnCompute(pContext, 0, curDispatch);
+        }
+
+        // Dequeue the work here, if not already done, since we're single threaded (i.e. no workers).
+        if (!pContext->dcRing.IsEmpty())
+        {
+            pContext->dcRing.Dequeue();
+        }
 
         // restore csr
         _mm_setcsr(mxcsr);
@@ -239,40 +223,14 @@ void QueueDraw(SWR_CONTEXT *pContext)
     pContext->pCurDrawContext = nullptr;
 }
 
-///@todo Combine this with QueueDraw
-void QueueDispatch(SWR_CONTEXT *pContext)
+INLINE void QueueDraw(SWR_CONTEXT* pContext)
 {
-    SWR_ASSERT(pContext->pCurDrawContext->inUse == false);
-    pContext->pCurDrawContext->inUse = true;
+    QueueWork<true>(pContext);
+}
 
-    _ReadWriteBarrier();
-    {
-        std::unique_lock<std::mutex> lock(pContext->WaitLock);
-        pContext->DrawEnqueued++;
-    }
-
-    if (KNOB_SINGLE_THREADED)
-    {
-        // flush denormals to 0
-        uint32_t mxcsr = _mm_getcsr();
-        _mm_setcsr(mxcsr | _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON);
-
-        uint64_t curDispatch = pContext->pCurDrawContext->drawId;
-        WorkOnCompute(pContext, 0, curDispatch);
-
-        // restore csr
-        _mm_setcsr(mxcsr);
-    }
-    else
-    {
-        RDTSC_START(APIDrawWakeAllThreads);
-        WakeAllThreads(pContext);
-        RDTSC_STOP(APIDrawWakeAllThreads, 1, 0);
-    }
-
-    // Set current draw context to NULL so that next state call forces a new draw context to be created and populated.
-    pContext->pPrevDrawContext = pContext->pCurDrawContext;
-    pContext->pCurDrawContext = nullptr;
+INLINE void QueueDispatch(SWR_CONTEXT* pContext)
+{
+    QueueWork<false>(pContext);
 }
 
 DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
@@ -281,16 +239,16 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
     // If current draw context is null then need to obtain a new draw context to use from ring.
     if (pContext->pCurDrawContext == nullptr)
     {
-        uint32_t dcIndex = pContext->nextDrawId % KNOB_MAX_DRAWS_IN_FLIGHT;
-
-        DRAW_CONTEXT* pCurDrawContext = &pContext->dcRing[dcIndex];
-        pContext->pCurDrawContext = pCurDrawContext;
-
-        // Need to wait until this draw context is available to use.
-        while (StillDrawing(pContext, pCurDrawContext))
+        // Need to wait for a free entry.
+        while (pContext->dcRing.IsFull())
         {
             _mm_pause();
         }
+
+        uint32_t dcIndex = pContext->dcRing.GetHead() % KNOB_MAX_DRAWS_IN_FLIGHT;
+
+        DRAW_CONTEXT* pCurDrawContext = &pContext->dcRing[dcIndex];
+        pContext->pCurDrawContext = pCurDrawContext;
 
         // Assign next available entry in DS ring to this DC.
         uint32_t dsIndex = pContext->curStateId % KNOB_MAX_DRAWS_IN_FLIGHT;
@@ -332,18 +290,15 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pCurDrawContext->pArena->Reset();
         pCurDrawContext->pContext = pContext;
         pCurDrawContext->isCompute = false; // Dispatch has to set this to true.
-        pCurDrawContext->inUse = false;
 
-        pCurDrawContext->doneCompute = false;
         pCurDrawContext->doneFE = false;
         pCurDrawContext->FeLock = 0;
-        pCurDrawContext->threadsDoneFE = 0;
-        pCurDrawContext->threadsDoneBE = 0;
+        pCurDrawContext->threadsDone = 0;
 
         pCurDrawContext->pTileMgr->initialize();
 
         // Assign unique drawId for this DC
-        pCurDrawContext->drawId = pContext->nextDrawId++;
+        pCurDrawContext->drawId = pContext->dcRing.GetHead();
     }
     else
     {
@@ -431,16 +386,12 @@ void SwrWaitForIdle(HANDLE hContext)
     SWR_CONTEXT *pContext = GetContext(hContext);
 
     RDTSC_START(APIWaitForIdle);
-    // Wait for all work to complete.
-    for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
-    {
-        DRAW_CONTEXT *pDC = &pContext->dcRing[dc];
 
-        while (StillDrawing(pContext, pDC))
-        {
-            _mm_pause();
-        }
+    while (!pContext->dcRing.IsEmpty())
+    {
+        _mm_pause();
     }
+
     RDTSC_STOP(APIWaitForIdle, 1, 0);
 }
 

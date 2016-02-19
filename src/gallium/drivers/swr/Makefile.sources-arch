@@ -83,6 +83,7 @@ CORE_CXX_SOURCES := \
 	rasterizer/core/rasterizer.h \
 	rasterizer/core/rdtsc_core.cpp \
 	rasterizer/core/rdtsc_core.h \
+	rasterizer/core/ringbuffer.h \
 	rasterizer/core/state.h \
 	rasterizer/core/threads.cpp \
 	rasterizer/core/threads.h \

@@ -265,9 +265,7 @@ void bindThread(uint32_t threadId, uint32_t procGroupId = 0, bool bindProcGroup=
 INLINE
 uint64_t GetEnqueuedDraw(SWR_CONTEXT *pContext)
 {
-    //uint64_t result = _InterlockedCompareExchange64((volatile __int64*)&pContext->DrawEnqueued, 0, 0);
-    //return result;
-    return pContext->DrawEnqueued;
+    return pContext->dcRing.GetHead();
 }
 
 INLINE
@@ -449,6 +447,18 @@ void InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macro
     }
 }
 
+INLINE void CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+{
+    int64_t result = InterlockedDecrement64(&pDC->threadsDone);
+
+    if (result == 0)
+    {
+        _ReadWriteBarrier();
+
+        pContext->dcRing.Dequeue();  // Remove from tail
+    }
+}
+
 INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint64_t& curDrawBE)
 {
     // increment our current draw id to the first incomplete draw
@@ -466,7 +476,7 @@ INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint64_t& curDrawBE)
         if (isWorkComplete)
         {
             curDrawBE++;
-            InterlockedIncrement(&pDC->threadsDoneBE);
+            CompleteDrawContext(pContext, pDC);
         }
         else
         {
@@ -579,7 +589,7 @@ void WorkOnFifoBE(
                         {
                             // We can increment the current BE and safely move to next draw since we know this draw is complete.
                             curDrawBE++;
-                            InterlockedIncrement(&pDC->threadsDoneBE);
+                            CompleteDrawContext(pContext, pDC);
 
                             lastRetiredDraw++;
 
@@ -608,8 +618,8 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE,
         DRAW_CONTEXT *pDC = &pContext->dcRing[dcSlot];
         if (pDC->isCompute || pDC->doneFE || pDC->FeLock)
         {
+            CompleteDrawContext(pContext, pDC);
             curDrawFE++;
-            InterlockedIncrement(&pDC->threadsDoneFE);
         }
         else
         {
@@ -673,22 +683,12 @@ void WorkOnCompute(
     // Is there any work remaining?
     if (queue.getNumQueued() > 0)
     {
-        bool lastToComplete = false;
-
         uint32_t threadGroupId = 0;
         while (queue.getWork(threadGroupId))
         {
             ProcessComputeBE(pDC, workerId, threadGroupId);
 
-            lastToComplete = queue.finishedWork();
-        }
-
-        _ReadWriteBarrier();
-
-        if (lastToComplete)
-        {
-            SWR_ASSERT(queue.isWorkComplete() == true);
-            pDC->doneCompute = true;
+            queue.finishedWork();
         }
     }
 }
@@ -732,10 +732,10 @@ DWORD workerThreadMain(LPVOID pData)
     //    the worker can safely increment its oldestDraw counter and move on to the next draw.
     std::unique_lock<std::mutex> lock(pContext->WaitLock, std::defer_lock);
 
-    auto threadHasWork = [&](uint64_t curDraw) { return curDraw != pContext->DrawEnqueued; };
+    auto threadHasWork = [&](uint64_t curDraw) { return curDraw != pContext->dcRing.GetHead(); };
 
-    uint64_t curDrawBE = 1;
-    uint64_t curDrawFE = 1;
+    uint64_t curDrawBE = 0;
+    uint64_t curDrawFE = 0;
 
     while (pContext->threadPool.inThreadShutdown == false)
     {

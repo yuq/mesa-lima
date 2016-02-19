@@ -41,6 +41,7 @@
 #include "core/knobs.h"
 #include "common/simdintrin.h"
 #include "core/threads.h"
+#include "ringbuffer.h"
 
 // x.8 fixed point precision values
 #define FIXED_POINT_SHIFT 8
@@ -381,19 +382,14 @@ struct DRAW_CONTEXT
 
     FE_WORK FeWork;
     volatile OSALIGNLINE(uint32_t) FeLock;
-    volatile OSALIGNLINE(bool) inUse;
     volatile OSALIGNLINE(bool) doneFE;    // Is FE work done for this draw?
-
-    // Have all worker threads moved past draw in DC ring?
-    volatile OSALIGNLINE(uint32_t) threadsDoneFE;
-    volatile OSALIGNLINE(uint32_t) threadsDoneBE;
+    volatile OSALIGNLINE(int64_t) threadsDone;
 
     uint64_t dependency;
 
     MacroTileMgr* pTileMgr;
 
     // The following fields are valid if isCompute is true.
-    volatile OSALIGNLINE(bool) doneCompute; // Is this dispatch done?   (isCompute)
     DispatchQueue* pDispatch;               // Queue for thread groups. (isCompute)
 
     DRAW_STATE* pState;
@@ -438,7 +434,7 @@ struct SWR_CONTEXT
     //  3. State - When an applications sets state after draw
     //     a. Same as step 1.
     //     b. State is copied from prev draw context to current.
-    DRAW_CONTEXT* dcRing;
+    RingBuffer<DRAW_CONTEXT> dcRing;
 
     DRAW_CONTEXT *pCurDrawContext;    // This points to DC entry in ring for an unsubmitted draw.
     DRAW_CONTEXT *pPrevDrawContext;   // This points to DC entry for the previous context submitted that we can copy state from.
@@ -448,7 +444,7 @@ struct SWR_CONTEXT
     //  These split draws all have identical state. So instead of storing the state directly
     //  in the Draw Context (DC) we instead store it in a Draw State (DS). This allows multiple DCs
     //  to reference a single entry in the DS ring.
-    DRAW_STATE*   dsRing;
+    RingBuffer<DRAW_STATE> dsRing;
 
     uint32_t curStateId;               // Current index to the next available entry in the DS ring.
 
@@ -462,13 +458,6 @@ struct SWR_CONTEXT
 
     std::condition_variable FifosNotEmpty;
     std::mutex WaitLock;
-
-    // Draw Contexts will get a unique drawId generated from this
-    uint64_t nextDrawId;
-
-    // most recent draw id enqueued by the API thread
-    // written by api thread, read by multiple workers
-    OSALIGNLINE(volatile uint64_t) DrawEnqueued;
 
     DRIVER_TYPE driverType;
 
