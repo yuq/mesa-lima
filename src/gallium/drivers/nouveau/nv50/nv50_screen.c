@@ -264,8 +264,8 @@ nv50_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_VERTEX:
    case PIPE_SHADER_GEOMETRY:
    case PIPE_SHADER_FRAGMENT:
-   case PIPE_SHADER_COMPUTE:
       break;
+   case PIPE_SHADER_COMPUTE:
    default:
       return 0;
    }
