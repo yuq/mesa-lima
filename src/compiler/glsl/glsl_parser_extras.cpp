@@ -179,6 +179,9 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->Const.MaxTessControlUniformComponents = ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxUniformComponents;
    this->Const.MaxTessEvaluationUniformComponents = ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxUniformComponents;
 
+   /* GL 4.5 / OES_sample_variables */
+   this->Const.MaxSamples = ctx->Const.MaxSamples;
+
    this->current_function = NULL;
    this->toplevel_ir = NULL;
    this->found_return = false;

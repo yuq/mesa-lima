@@ -461,6 +461,9 @@ struct _mesa_glsl_parse_state {
       unsigned MaxTessControlTotalOutputComponents;
       unsigned MaxTessControlUniformComponents;
       unsigned MaxTessEvaluationUniformComponents;
+
+      /* GL 4.5 / OES_sample_variables */
+      unsigned MaxSamples;
    } Const;
 
    /**

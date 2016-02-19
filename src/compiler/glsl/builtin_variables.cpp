@@ -878,6 +878,9 @@ builtin_variable_generator::generate_constants()
       add_const("gl_MaxTessControlUniformComponents", state->Const.MaxTessControlUniformComponents);
       add_const("gl_MaxTessEvaluationUniformComponents", state->Const.MaxTessEvaluationUniformComponents);
    }
+
+   if (state->is_version(450, 320))
+      add_const("gl_MaxSamples", state->Const.MaxSamples);
 }
 
 
