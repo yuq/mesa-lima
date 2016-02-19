@@ -615,6 +615,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(OES_geometry_point_size,        false, true,      OES_geometry_shader),
    EXT(OES_geometry_shader,            false, true,      OES_geometry_shader),
    EXT(OES_gpu_shader5,                false, true,      ARB_gpu_shader5),
+   EXT(OES_sample_variables,           false, true,      OES_sample_variables),
    EXT(OES_shader_image_atomic,        false, true,      ARB_shader_image_load_store),
    EXT(OES_standard_derivatives,       false, true,      OES_standard_derivatives),
    EXT(OES_texture_3D,                 false, true,      dummy_true),

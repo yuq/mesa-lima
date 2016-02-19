@@ -604,6 +604,8 @@ struct _mesa_glsl_parse_state {
    bool OES_geometry_shader_warn;
    bool OES_gpu_shader5_enable;
    bool OES_gpu_shader5_warn;
+   bool OES_sample_variables_enable;
+   bool OES_sample_variables_warn;
    bool OES_shader_image_atomic_enable;
    bool OES_shader_image_atomic_warn;
    bool OES_standard_derivatives_enable;

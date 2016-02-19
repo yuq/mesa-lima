@@ -879,7 +879,8 @@ builtin_variable_generator::generate_constants()
       add_const("gl_MaxTessEvaluationUniformComponents", state->Const.MaxTessEvaluationUniformComponents);
    }
 
-   if (state->is_version(450, 320))
+   if (state->is_version(450, 320) ||
+       state->OES_sample_variables_enable)
       add_const("gl_MaxSamples", state->Const.MaxSamples);
 }
 
@@ -890,7 +891,9 @@ builtin_variable_generator::generate_constants()
 void
 builtin_variable_generator::generate_uniforms()
 {
-   if (state->is_version(400, 0) || state->ARB_sample_shading_enable)
+   if (state->is_version(400, 320) ||
+       state->ARB_sample_shading_enable ||
+       state->OES_sample_variables_enable)
       add_uniform(int_t, "gl_NumSamples");
    add_uniform(type("gl_DepthRangeParameters"), "gl_DepthRange");
    add_uniform(array(vec4_t, VERT_ATTRIB_MAX), "gl_CurrentAttribVertMESA");
@@ -1143,7 +1146,9 @@ builtin_variable_generator::generate_fs_special_vars()
          var->enable_extension_warning("GL_AMD_shader_stencil_export");
    }
 
-   if (state->is_version(400, 0) || state->ARB_sample_shading_enable) {
+   if (state->is_version(400, 320) ||
+       state->ARB_sample_shading_enable ||
+       state->OES_sample_variables_enable) {
       add_system_value(SYSTEM_VALUE_SAMPLE_ID, int_t, "gl_SampleID");
       add_system_value(SYSTEM_VALUE_SAMPLE_POS, vec2_t, "gl_SamplePosition");
       /* From the ARB_sample_shading specification:
@@ -1156,7 +1161,9 @@ builtin_variable_generator::generate_fs_special_vars()
       add_output(FRAG_RESULT_SAMPLE_MASK, array(int_t, 1), "gl_SampleMask");
    }
 
-   if (state->is_version(400, 0) || state->ARB_gpu_shader5_enable) {
+   if (state->is_version(400, 320) ||
+       state->ARB_gpu_shader5_enable ||
+       state->OES_sample_variables_enable) {
       add_system_value(SYSTEM_VALUE_SAMPLE_MASK_IN, array(int_t, 1), "gl_SampleMaskIn");
    }
 
