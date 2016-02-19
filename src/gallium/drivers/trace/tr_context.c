@@ -105,7 +105,7 @@ trace_surface_unwrap(struct trace_context *tr_ctx,
 }
 
 
-static inline void
+static void
 trace_context_draw_vbo(struct pipe_context *_pipe,
                        const struct pipe_draw_info *info)
 {
@@ -135,7 +135,7 @@ trace_context_draw_vbo(struct pipe_context *_pipe,
 }
 
 
-static inline struct pipe_query *
+static struct pipe_query *
 trace_context_create_query(struct pipe_context *_pipe,
                            unsigned query_type,
                            unsigned index)
@@ -173,7 +173,7 @@ trace_context_create_query(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_destroy_query(struct pipe_context *_pipe,
                             struct pipe_query *_query)
 {
@@ -195,7 +195,7 @@ trace_context_destroy_query(struct pipe_context *_pipe,
 }
 
 
-static inline boolean
+static boolean
 trace_context_begin_query(struct pipe_context *_pipe,
                           struct pipe_query *query)
 {
@@ -217,7 +217,7 @@ trace_context_begin_query(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_end_query(struct pipe_context *_pipe,
                         struct pipe_query *query)
 {
@@ -237,7 +237,7 @@ trace_context_end_query(struct pipe_context *_pipe,
 }
 
 
-static inline boolean
+static boolean
 trace_context_get_query_result(struct pipe_context *_pipe,
                                struct pipe_query *_query,
                                boolean wait,
@@ -272,7 +272,7 @@ trace_context_get_query_result(struct pipe_context *_pipe,
 }
 
 
-static inline void *
+static void *
 trace_context_create_blend_state(struct pipe_context *_pipe,
                                  const struct pipe_blend_state *state)
 {
@@ -295,7 +295,7 @@ trace_context_create_blend_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_bind_blend_state(struct pipe_context *_pipe,
                                void *state)
 {
@@ -313,7 +313,7 @@ trace_context_bind_blend_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_delete_blend_state(struct pipe_context *_pipe,
                                  void *state)
 {
@@ -331,7 +331,7 @@ trace_context_delete_blend_state(struct pipe_context *_pipe,
 }
 
 
-static inline void *
+static void *
 trace_context_create_sampler_state(struct pipe_context *_pipe,
                                    const struct pipe_sampler_state *state)
 {
@@ -354,7 +354,7 @@ trace_context_create_sampler_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_bind_sampler_states(struct pipe_context *_pipe,
                                   unsigned shader,
                                   unsigned start,
@@ -381,7 +381,7 @@ trace_context_bind_sampler_states(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_delete_sampler_state(struct pipe_context *_pipe,
                                    void *state)
 {
@@ -399,7 +399,7 @@ trace_context_delete_sampler_state(struct pipe_context *_pipe,
 }
 
 
-static inline void *
+static void *
 trace_context_create_rasterizer_state(struct pipe_context *_pipe,
                                       const struct pipe_rasterizer_state *state)
 {
@@ -422,7 +422,7 @@ trace_context_create_rasterizer_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_bind_rasterizer_state(struct pipe_context *_pipe,
                                     void *state)
 {
@@ -440,7 +440,7 @@ trace_context_bind_rasterizer_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_delete_rasterizer_state(struct pipe_context *_pipe,
                                       void *state)
 {
@@ -458,7 +458,7 @@ trace_context_delete_rasterizer_state(struct pipe_context *_pipe,
 }
 
 
-static inline void *
+static void *
 trace_context_create_depth_stencil_alpha_state(struct pipe_context *_pipe,
                                                const struct pipe_depth_stencil_alpha_state *state)
 {
@@ -481,7 +481,7 @@ trace_context_create_depth_stencil_alpha_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_bind_depth_stencil_alpha_state(struct pipe_context *_pipe,
                                              void *state)
 {
@@ -499,7 +499,7 @@ trace_context_bind_depth_stencil_alpha_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_delete_depth_stencil_alpha_state(struct pipe_context *_pipe,
                                                void *state)
 {
@@ -518,7 +518,7 @@ trace_context_delete_depth_stencil_alpha_state(struct pipe_context *_pipe,
 
 
 #define TRACE_SHADER_STATE(shader_type) \
-   static inline void * \
+   static void * \
    trace_context_create_##shader_type##_state(struct pipe_context *_pipe, \
                                  const struct pipe_shader_state *state) \
    { \
@@ -534,7 +534,7 @@ trace_context_delete_depth_stencil_alpha_state(struct pipe_context *_pipe,
       return result; \
    } \
     \
-   static inline void \
+   static void \
    trace_context_bind_##shader_type##_state(struct pipe_context *_pipe, \
                                void *state) \
    { \
@@ -547,7 +547,7 @@ trace_context_delete_depth_stencil_alpha_state(struct pipe_context *_pipe,
       trace_dump_call_end(); \
    } \
     \
-   static inline void \
+   static void \
    trace_context_delete_##shader_type##_state(struct pipe_context *_pipe, \
                                  void *state) \
    { \
@@ -614,7 +614,7 @@ trace_context_delete_compute_state(struct pipe_context *_pipe,
    trace_dump_call_end();
 }
 
-static inline void *
+static void *
 trace_context_create_vertex_elements_state(struct pipe_context *_pipe,
                                            unsigned num_elements,
                                            const struct  pipe_vertex_element *elements)
@@ -642,7 +642,7 @@ trace_context_create_vertex_elements_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_bind_vertex_elements_state(struct pipe_context *_pipe,
                                          void *state)
 {
@@ -660,7 +660,7 @@ trace_context_bind_vertex_elements_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_delete_vertex_elements_state(struct pipe_context *_pipe,
                                            void *state)
 {
@@ -678,7 +678,7 @@ trace_context_delete_vertex_elements_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_blend_color(struct pipe_context *_pipe,
                               const struct pipe_blend_color *state)
 {
@@ -696,7 +696,7 @@ trace_context_set_blend_color(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_stencil_ref(struct pipe_context *_pipe,
                               const struct pipe_stencil_ref *state)
 {
@@ -714,7 +714,7 @@ trace_context_set_stencil_ref(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_clip_state(struct pipe_context *_pipe,
                              const struct pipe_clip_state *state)
 {
@@ -731,7 +731,7 @@ trace_context_set_clip_state(struct pipe_context *_pipe,
    trace_dump_call_end();
 }
 
-static inline void
+static void
 trace_context_set_sample_mask(struct pipe_context *_pipe,
                               unsigned sample_mask)
 {
@@ -748,7 +748,7 @@ trace_context_set_sample_mask(struct pipe_context *_pipe,
    trace_dump_call_end();
 }
 
-static inline void
+static void
 trace_context_set_constant_buffer(struct pipe_context *_pipe,
                                   uint shader, uint index,
                                   struct pipe_constant_buffer *constant_buffer)
@@ -776,7 +776,7 @@ trace_context_set_constant_buffer(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_framebuffer_state(struct pipe_context *_pipe,
                                     const struct pipe_framebuffer_state *state)
 {
@@ -806,7 +806,7 @@ trace_context_set_framebuffer_state(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_polygon_stipple(struct pipe_context *_pipe,
                                   const struct pipe_poly_stipple *state)
 {
@@ -824,7 +824,7 @@ trace_context_set_polygon_stipple(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_scissor_states(struct pipe_context *_pipe,
                                  unsigned start_slot,
                                  unsigned num_scissors,
@@ -846,7 +846,7 @@ trace_context_set_scissor_states(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_viewport_states(struct pipe_context *_pipe,
                                   unsigned start_slot,
                                   unsigned num_viewports,
@@ -993,7 +993,7 @@ trace_context_surface_destroy(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_sampler_views(struct pipe_context *_pipe,
                                 unsigned shader,
                                 unsigned start,
@@ -1029,7 +1029,7 @@ trace_context_set_sampler_views(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_vertex_buffers(struct pipe_context *_pipe,
                                  unsigned start_slot, unsigned num_buffers,
                                  const struct pipe_vertex_buffer *buffers)
@@ -1063,7 +1063,7 @@ trace_context_set_vertex_buffers(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_set_index_buffer(struct pipe_context *_pipe,
                                const struct pipe_index_buffer *ib)
 {
@@ -1088,7 +1088,7 @@ trace_context_set_index_buffer(struct pipe_context *_pipe,
 }
 
 
-static inline struct pipe_stream_output_target *
+static struct pipe_stream_output_target *
 trace_context_create_stream_output_target(struct pipe_context *_pipe,
                                           struct pipe_resource *res,
                                           unsigned buffer_offset,
@@ -1118,7 +1118,7 @@ trace_context_create_stream_output_target(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_stream_output_target_destroy(
    struct pipe_context *_pipe,
    struct pipe_stream_output_target *target)
@@ -1137,7 +1137,7 @@ trace_context_stream_output_target_destroy(
 }
 
 
-static inline void
+static void
 trace_context_set_stream_output_targets(struct pipe_context *_pipe,
                                         unsigned num_targets,
                                         struct pipe_stream_output_target **tgs,
@@ -1159,7 +1159,7 @@ trace_context_set_stream_output_targets(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_resource_copy_region(struct pipe_context *_pipe,
                                    struct pipe_resource *dst,
                                    unsigned dst_level,
@@ -1194,7 +1194,7 @@ trace_context_resource_copy_region(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_blit(struct pipe_context *_pipe,
                    const struct pipe_blit_info *_info)
 {
@@ -1236,7 +1236,7 @@ trace_context_flush_resource(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_clear(struct pipe_context *_pipe,
                     unsigned buffers,
                     const union pipe_color_union *color,
@@ -1265,7 +1265,7 @@ trace_context_clear(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_clear_render_target(struct pipe_context *_pipe,
                                   struct pipe_surface *dst,
                                   const union pipe_color_union *color,
@@ -1292,7 +1292,7 @@ trace_context_clear_render_target(struct pipe_context *_pipe,
    trace_dump_call_end();
 }
 
-static inline void
+static void
 trace_context_clear_depth_stencil(struct pipe_context *_pipe,
                                   struct pipe_surface *dst,
                                   unsigned clear_flags,
@@ -1351,7 +1351,7 @@ trace_context_clear_texture(struct pipe_context *_pipe,
    trace_dump_call_end();
 }
 
-static inline void
+static void
 trace_context_flush(struct pipe_context *_pipe,
                     struct pipe_fence_handle **fence,
                     unsigned flags)
@@ -1409,7 +1409,7 @@ trace_context_generate_mipmap(struct pipe_context *_pipe,
 }
 
 
-static inline void
+static void
 trace_context_destroy(struct pipe_context *_pipe)
 {
    struct trace_context *tr_ctx = trace_context(_pipe);
