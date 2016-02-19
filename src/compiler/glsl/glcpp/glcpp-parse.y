@@ -2340,6 +2340,9 @@ _glcpp_parser_handle_version_declaration(glcpp_parser_t *parser, intmax_t versio
          if (extensions->EXT_texture_array)
             add_builtin_define(parser, "GL_EXT_texture_array", 1);
 
+         if (extensions->ARB_ES3_1_compatibility)
+            add_builtin_define(parser, "GL_ARB_ES3_1_compatibility", 1);
+
          if (extensions->ARB_arrays_of_arrays)
              add_builtin_define(parser, "GL_ARB_arrays_of_arrays", 1);
 

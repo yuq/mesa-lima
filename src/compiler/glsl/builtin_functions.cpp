@@ -210,6 +210,7 @@ static bool
 shader_integer_mix(const _mesa_glsl_parse_state *state)
 {
    return state->is_version(450, 310) ||
+          state->ARB_ES3_1_compatibility_enable ||
           (v130(state) && state->EXT_shader_integer_mix_enable);
 }
 
@@ -478,6 +479,7 @@ static bool
 shader_image_atomic_exchange_float(const _mesa_glsl_parse_state *state)
 {
    return (state->is_version(450, 320) ||
+           state->ARB_ES3_1_compatibility_enable ||
            state->OES_shader_image_atomic_enable);
 }
 
