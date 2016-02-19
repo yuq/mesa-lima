@@ -719,7 +719,7 @@ try_setup_line( struct lp_setup_context *setup,
     */
    if (nr_planes > 4) {
       /* why not just use draw_regions */
-      struct u_rect *scissor = &setup->scissors[viewport_index];
+      const struct u_rect *scissor = &setup->scissors[viewport_index];
       struct lp_rast_plane *plane_s = &plane[4];
       boolean s_planes[4];
       scissor_planes_needed(s_planes, &bbox, scissor);

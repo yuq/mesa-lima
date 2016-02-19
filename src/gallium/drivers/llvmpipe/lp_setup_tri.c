@@ -681,7 +681,7 @@ do_triangle_ccw(struct lp_setup_context *setup,
     */
    if (nr_planes > 3) {
       /* why not just use draw_regions */
-      struct u_rect *scissor = &setup->scissors[viewport_index];
+      const struct u_rect *scissor = &setup->scissors[viewport_index];
       struct lp_rast_plane *plane_s = &plane[3];
       boolean s_planes[4];
       scissor_planes_needed(s_planes, &bbox, scissor);

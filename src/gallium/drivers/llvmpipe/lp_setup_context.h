@@ -169,8 +169,8 @@ struct lp_setup_context
 };
 
 static inline void
-scissor_planes_needed(boolean scis_planes[4], struct u_rect *bbox,
-                      struct u_rect *scissor)
+scissor_planes_needed(boolean scis_planes[4], const struct u_rect *bbox,
+                      const struct u_rect *scissor)
 {
    /* left */
    scis_planes[0] = (bbox->x0 < scissor->x0);
