@@ -1484,12 +1484,12 @@ emit_inline_matrix_constructor(const glsl_type *type,
          for (/* empty */; col < var->type->matrix_columns; col++) {
             ir_constant_data ident;
 
-            ident.f[0] = 0.0;
-            ident.f[1] = 0.0;
-            ident.f[2] = 0.0;
-            ident.f[3] = 0.0;
+            ident.f[0] = 0.0f;
+            ident.f[1] = 0.0f;
+            ident.f[2] = 0.0f;
+            ident.f[3] = 0.0f;
 
-            ident.f[col] = 1.0;
+            ident.f[col] = 1.0f;
 
             ir_rvalue *const rhs = new(ctx) ir_constant(col_type, &ident);
 
