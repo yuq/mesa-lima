@@ -48,6 +48,10 @@
 #include "tgsi/tgsi_scan.h"
 #include "tgsi/tgsi_info.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define LP_CHAN_ALL ~0
 
 #define LP_MAX_INSTRUCTIONS 256
@@ -662,5 +666,9 @@ boolean
 lp_build_tgsi_llvm(
    struct lp_build_tgsi_context * bld_base,
    const struct tgsi_token *tokens);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LP_BLD_TGSI_H */
