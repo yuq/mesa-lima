@@ -5470,6 +5470,13 @@ fs_visitor::run_cs()
    if (shader_time_index >= 0)
       emit_shader_time_begin();
 
+   if (devinfo->is_haswell && prog_data->total_shared > 0) {
+      /* Move SLM index from g0.0[27:24] to sr0.1[11:8] */
+      const fs_builder abld = bld.exec_all().group(1, 0);
+      abld.MOV(retype(suboffset(brw_sr0_reg(), 1), BRW_REGISTER_TYPE_UW),
+               suboffset(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UW), 1));
+   }
+
    emit_nir_code();
 
    if (failed)
