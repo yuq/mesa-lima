@@ -21,7 +21,14 @@
 
 SUBDIRS = .
 
-noinst_LTLIBRARIES = libisl.la
+
+ISL_GEN_LIBS =                                           \
+	libisl-gen7.la                                   \
+	libisl-gen8.la                                   \
+	libisl-gen9.la                                   \
+	$(NULL)
+
+noinst_LTLIBRARIES = $(ISL_GEN_LIBS) libisl.la
 
 EXTRA_DIST = tests
 
@@ -42,6 +49,8 @@ AM_CPPFLAGS = \
 
 libisl_la_CFLAGS = $(CFLAGS) -Wno-override-init
 
+libisl_la_LIBADD = $(ISL_GEN_LIBS)
+
 libisl_la_SOURCES =                                     \
 	isl.c                                           \
 	isl.h                                           \
@@ -51,14 +60,26 @@ libisl_la_SOURCES =                                     \
 	isl_gen4.h                                      \
 	isl_gen6.c                                      \
 	isl_gen6.h                                      \
-	isl_gen7.c                                      \
-	isl_gen7.h                                      \
-	isl_gen8.c                                      \
-	isl_gen8.h                                      \
-	isl_gen9.c                                      \
-	isl_gen9.h                                      \
 	isl_image.c                                     \
 	$(NULL)
+
+libisl_gen7_la_SOURCES =                                \
+	isl_gen7.c                                      \
+	isl_gen7.h                                      \
+	$(NULL)
+libisl_gen7_la_CFLAGS = $(libisl_la_CFLAGS)
+
+libisl_gen8_la_SOURCES =                                \
+	isl_gen8.c                                      \
+	isl_gen8.h                                      \
+	$(NULL)
+libisl_gen8_la_CFLAGS = $(libisl_la_CFLAGS)
+
+libisl_gen9_la_SOURCES =                                \
+	isl_gen9.c                                      \
+	isl_gen9.h                                      \
+	$(NULL)
+libisl_gen9_la_CFLAGS = $(libisl_la_CFLAGS)
 
 BUILT_SOURCES =                                         \
 	isl_format_layout.c
