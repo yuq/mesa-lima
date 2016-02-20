@@ -70,9 +70,10 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
    return flushed;
 }
 
-GENX_FUNC(GEN7, GEN7) void
-genX(cmd_buffer_emit_descriptor_pointers)(struct anv_cmd_buffer *cmd_buffer,
-                                          uint32_t stages)
+#if GEN_GEN == 7 && !GEN_IS_HASWELL
+void
+gen7_cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
+                                         uint32_t stages)
 {
    static const uint32_t sampler_state_opcodes[] = {
       [MESA_SHADER_VERTEX]                      = 43,
@@ -109,8 +110,8 @@ genX(cmd_buffer_emit_descriptor_pointers)(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
-GENX_FUNC(GEN7, GEN7) uint32_t
-genX(cmd_buffer_flush_descriptor_sets)(struct anv_cmd_buffer *cmd_buffer)
+uint32_t
+gen7_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 {
    VkShaderStageFlags dirty = cmd_buffer->state.descriptors_dirty &
                               cmd_buffer->state.pipeline->active_stages;
@@ -156,6 +157,7 @@ genX(cmd_buffer_flush_descriptor_sets)(struct anv_cmd_buffer *cmd_buffer)
 
    return dirty;
 }
+#endif /* GEN_GEN == 7 && !GEN_IS_HASWELL */
 
 static inline int64_t
 clamp_int64(int64_t x, int64_t min, int64_t max)
