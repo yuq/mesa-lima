@@ -24,6 +24,7 @@ SUBDIRS = .
 
 ISL_GEN_LIBS =                                           \
 	libisl-gen7.la                                   \
+	libisl-gen75.la                                  \
 	libisl-gen8.la                                   \
 	libisl-gen9.la                                   \
 	$(NULL)
@@ -39,13 +40,15 @@ AM_CPPFLAGS = \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/src/intel \
 	-I$(top_srcdir)/src/mapi \
 	-I$(top_srcdir)/src/mesa \
 	-I$(top_srcdir)/src/mesa/drivers/dri/common \
 	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
-	-I$(top_builddir)/src
+	-I$(top_builddir)/src \
+	-I$(top_builddir)/src/intel
 
 libisl_la_CFLAGS = $(CFLAGS) -Wno-override-init
 
@@ -66,20 +69,28 @@ libisl_la_SOURCES =                                     \
 libisl_gen7_la_SOURCES =                                \
 	isl_gen7.c                                      \
 	isl_gen7.h                                      \
+        isl_surface_state.c                             \
 	$(NULL)
-libisl_gen7_la_CFLAGS = $(libisl_la_CFLAGS)
+libisl_gen7_la_CFLAGS = $(libisl_la_CFLAGS) -DGEN_VERSIONx10=70
+
+libisl_gen75_la_SOURCES =                               \
+        isl_surface_state.c                             \
+	$(NULL)
+libisl_gen75_la_CFLAGS = $(libisl_la_CFLAGS) -DGEN_VERSIONx10=75
 
 libisl_gen8_la_SOURCES =                                \
 	isl_gen8.c                                      \
 	isl_gen8.h                                      \
+        isl_surface_state.c                             \
 	$(NULL)
-libisl_gen8_la_CFLAGS = $(libisl_la_CFLAGS)
+libisl_gen8_la_CFLAGS = $(libisl_la_CFLAGS) -DGEN_VERSIONx10=80
 
 libisl_gen9_la_SOURCES =                                \
 	isl_gen9.c                                      \
 	isl_gen9.h                                      \
+        isl_surface_state.c                             \
 	$(NULL)
-libisl_gen9_la_CFLAGS = $(libisl_la_CFLAGS)
+libisl_gen9_la_CFLAGS = $(libisl_la_CFLAGS) -DGEN_VERSIONx10=90
 
 BUILT_SOURCES =                                         \
 	isl_format_layout.c

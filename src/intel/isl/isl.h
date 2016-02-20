@@ -60,6 +60,16 @@ struct brw_image_param;
 #define ISL_DEV_GEN(__dev) ((__dev)->info->gen)
 #endif
 
+#ifndef ISL_DEV_IS_HASWELL
+/**
+ * @brief Get the hardware generation of isl_device.
+ *
+ * You can define this as a compile-time constant in the CFLAGS. For example,
+ * `gcc -DISL_DEV_GEN(dev)=9 ...`.
+ */
+#define ISL_DEV_IS_HASWELL(__dev) ((__dev)->info->is_haswell)
+#endif
+
 #ifndef ISL_DEV_USE_SEPARATE_STENCIL
 /**
  * You can define this as a compile-time constant in the CFLAGS. For example,
@@ -455,7 +465,20 @@ typedef uint64_t isl_surf_usage_flags_t;
 #define ISL_SURF_USAGE_DISPLAY_ROTATE_270_BIT  (1u << 9)
 #define ISL_SURF_USAGE_DISPLAY_FLIP_X_BIT      (1u << 10)
 #define ISL_SURF_USAGE_DISPLAY_FLIP_Y_BIT      (1u << 11)
+#define ISL_SURF_USAGE_STORAGE_BIT             (1u << 12)
 /** @} */
+
+/**
+ * @brief A channel select (also known as texture swizzle) value
+ */
+enum isl_channel_select {
+   ISL_CHANNEL_SELECT_ZERO = 0,
+   ISL_CHANNEL_SELECT_ONE = 1,
+   ISL_CHANNEL_SELECT_RED = 4,
+   ISL_CHANNEL_SELECT_GREEN = 5,
+   ISL_CHANNEL_SELECT_BLUE = 6,
+   ISL_CHANNEL_SELECT_ALPHA = 7,
+};
 
 /**
  * Identical to VkSampleCountFlagBits.
@@ -695,6 +718,77 @@ struct isl_surf {
    isl_surf_usage_flags_t usage;
 };
 
+struct isl_view {
+   /**
+    * Indicates the usage of the particular view
+    *
+    * Normally, this is one bit.  However, for a cube map texture, it
+    * should be ISL_SURF_USAGE_TEXTURE_BIT | ISL_SURF_USAGE_CUBE_BIT.
+    */
+   isl_surf_usage_flags_t usage;
+
+   /**
+    * The format to use in the view
+    *
+    * This may differ from the format of the actual isl_surf but must have
+    * the same block size.
+    */
+   enum isl_format format;
+
+   uint32_t base_level;
+   uint32_t levels;
+
+   /**
+    * Base array layer
+    *
+    * For cube maps, both base_array_layer and array_len should be
+    * specified in terms of 2-D layers and must be a multiple of 6.
+    */
+   uint32_t base_array_layer;
+   uint32_t array_len;
+
+   enum isl_channel_select channel_select[4];
+};
+
+union isl_color_value {
+   float f32[4];
+   uint32_t u32[4];
+   int32_t i32[4];
+};
+
+struct isl_surf_fill_state_info {
+   const struct isl_surf *surf;
+   const struct isl_view *view;
+
+   /**
+    * The address of the surface in GPU memory.
+    */
+   uint64_t address;
+
+   /**
+    * The Memory Object Control state for the filled surface state.
+    *
+    * The exact format of this value depends on hardware generation.
+    */
+   uint32_t mocs;
+
+   /**
+    * This allows the caller to over-ride the dimensions of the surface.
+    * This is used at the moment for compressed surfaces to let us hack
+    * around the fact that we can't actually render to them.
+    *
+    * FIXME: We really need to get rid of this.  It's a lie.
+    */
+   struct isl_extent4d level0_extent_px;
+
+   /**
+    * The clear color for this surface
+    *
+    * Valid values depend on hardware generation.
+    */
+   union isl_color_value clear_color;
+};
+
 extern const struct isl_format_layout isl_format_layouts[];
 
 void
@@ -888,6 +982,14 @@ void
 isl_surf_get_tile_info(const struct isl_device *dev,
                        const struct isl_surf *surf,
                        struct isl_tile_info *tile_info);
+
+#define isl_surf_fill_state(dev, state, ...) \
+   isl_surf_fill_state_s((dev), (state), \
+                         &(struct isl_surf_fill_state_info) {  __VA_ARGS__ });
+
+void
+isl_surf_fill_state_s(const struct isl_device *dev, void *state,
+                      const struct isl_surf_fill_state_info *restrict info);
 
 /**
  * Alignment of the upper-left sample of each subimage, in units of surface

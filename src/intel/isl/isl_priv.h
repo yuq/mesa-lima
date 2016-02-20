@@ -138,3 +138,17 @@ isl_extent3d_el_to_sa(enum isl_format fmt, struct isl_extent3d extent_el)
       .d = extent_el.d * fmtl->bd,
    };
 }
+
+void
+isl_gen7_surf_fill_state_s(const struct isl_device *dev, void *state,
+                           const struct isl_surf_fill_state_info *restrict info);
+
+void
+isl_gen75_surf_fill_state_s(const struct isl_device *dev, void *state,
+                            const struct isl_surf_fill_state_info *restrict info);
+void
+isl_gen8_surf_fill_state_s(const struct isl_device *dev, void *state,
+                           const struct isl_surf_fill_state_info *restrict info);
+void
+isl_gen9_surf_fill_state_s(const struct isl_device *dev, void *state,
+                           const struct isl_surf_fill_state_info *restrict info);

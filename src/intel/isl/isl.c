@@ -1161,6 +1161,48 @@ isl_surf_get_tile_info(const struct isl_device *dev,
    isl_tiling_get_info(dev, surf->tiling, fmtl->bs, tile_info);
 }
 
+void
+isl_surf_fill_state_s(const struct isl_device *dev, void *state,
+                      const struct isl_surf_fill_state_info *restrict info)
+{
+#ifndef NDEBUG
+   isl_surf_usage_flags_t _base_usage =
+      info->view->usage & (ISL_SURF_USAGE_RENDER_TARGET_BIT |
+                           ISL_SURF_USAGE_TEXTURE_BIT |
+                           ISL_SURF_USAGE_STORAGE_BIT);
+   /* They may only specify one of the above bits at a time */
+   assert(__builtin_popcount(_base_usage) == 1);
+   /* The only other allowed bit is ISL_SURF_USAGE_CUBE_BIT */
+   assert((info->view->usage & ~ISL_SURF_USAGE_CUBE_BIT) == _base_usage);
+#endif
+
+   if (info->surf->dim == ISL_SURF_DIM_3D) {
+      assert(info->view->base_array_layer + info->view->array_len <=
+             info->surf->logical_level0_px.depth);
+   } else {
+      assert(info->view->base_array_layer + info->view->array_len <=
+             info->surf->logical_level0_px.array_len);
+   }
+
+   switch (ISL_DEV_GEN(dev)) {
+   case 7:
+      if (ISL_DEV_IS_HASWELL(dev)) {
+         isl_gen75_surf_fill_state_s(dev, state, info);
+      } else {
+         isl_gen7_surf_fill_state_s(dev, state, info);
+      }
+      break;
+   case 8:
+      isl_gen8_surf_fill_state_s(dev, state, info);
+      break;
+   case 9:
+      isl_gen9_surf_fill_state_s(dev, state, info);
+      break;
+   default:
+      assert(!"Cannot fill surface state for this gen");
+   }
+}
+
 /**
  * A variant of isl_surf_get_image_offset_sa() specific to
  * ISL_DIM_LAYOUT_GEN4_2D.
