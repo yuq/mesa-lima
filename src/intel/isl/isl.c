@@ -22,6 +22,8 @@
  */
 
 #include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 #include "isl.h"
 #include "isl_gen4.h"

@@ -26,7 +26,6 @@
 #include <assert.h>
 
 #include "brw_device_info.h"
-#include "mesa/main/imports.h"
 #include "util/macros.h"
 
 #include "isl.h"
