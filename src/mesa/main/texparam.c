@@ -568,8 +568,7 @@ set_tex_parameteri(struct gl_context *ctx,
       goto invalid_pname;
 
    case GL_TEXTURE_SRGB_DECODE_EXT:
-      if (_mesa_is_desktop_gl(ctx)
-          && ctx->Extensions.EXT_texture_sRGB_decode) {
+      if (ctx->Extensions.EXT_texture_sRGB_decode) {
          GLenum decode = params[0];
 
          if (!target_allows_setting_sampler_parameters(texObj->Target))

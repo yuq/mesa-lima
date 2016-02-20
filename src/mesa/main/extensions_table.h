@@ -243,7 +243,7 @@ EXT(EXT_texture_object                      , dummy_true                        
 EXT(EXT_texture_rectangle                   , NV_texture_rectangle                   , GLL,  x ,  x ,  x , 2004)
 EXT(EXT_texture_rg                          , ARB_texture_rg                         ,  x ,  x ,  x , ES2, 2011)
 EXT(EXT_texture_sRGB                        , EXT_texture_sRGB                       , GLL, GLC,  x ,  x , 2004)
-EXT(EXT_texture_sRGB_decode                 , EXT_texture_sRGB_decode                , GLL, GLC,  x ,  x , 2006)
+EXT(EXT_texture_sRGB_decode                 , EXT_texture_sRGB_decode                , GLL, GLC,  x ,  30, 2006)
 EXT(EXT_texture_shared_exponent             , EXT_texture_shared_exponent            , GLL, GLC,  x ,  x , 2004)
 EXT(EXT_texture_snorm                       , EXT_texture_snorm                      , GLL, GLC,  x ,  x , 2009)
 EXT(EXT_texture_swizzle                     , EXT_texture_swizzle                    , GLL, GLC,  x ,  x , 2008)
