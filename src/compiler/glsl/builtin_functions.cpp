@@ -264,10 +264,12 @@ shader_packing_or_es31_or_gpu_shader5(const _mesa_glsl_parse_state *state)
 }
 
 static bool
-fs_gpu_shader5(const _mesa_glsl_parse_state *state)
+fs_interpolate_at(const _mesa_glsl_parse_state *state)
 {
    return state->stage == MESA_SHADER_FRAGMENT &&
-          (state->is_version(400, 0) || state->ARB_gpu_shader5_enable);
+          (state->is_version(400, 320) ||
+           state->ARB_gpu_shader5_enable ||
+           state->OES_shader_multisample_interpolation_enable);
 }
 
 
@@ -5165,7 +5167,7 @@ builtin_builder::_interpolateAtCentroid(const glsl_type *type)
 {
    ir_variable *interpolant = in_var(type, "interpolant");
    interpolant->data.must_be_shader_input = 1;
-   MAKE_SIG(type, fs_gpu_shader5, 1, interpolant);
+   MAKE_SIG(type, fs_interpolate_at, 1, interpolant);
 
    body.emit(ret(interpolate_at_centroid(interpolant)));
 
@@ -5178,7 +5180,7 @@ builtin_builder::_interpolateAtOffset(const glsl_type *type)
    ir_variable *interpolant = in_var(type, "interpolant");
    interpolant->data.must_be_shader_input = 1;
    ir_variable *offset = in_var(glsl_type::vec2_type, "offset");
-   MAKE_SIG(type, fs_gpu_shader5, 2, interpolant, offset);
+   MAKE_SIG(type, fs_interpolate_at, 2, interpolant, offset);
 
    body.emit(ret(interpolate_at_offset(interpolant, offset)));
 
@@ -5191,7 +5193,7 @@ builtin_builder::_interpolateAtSample(const glsl_type *type)
    ir_variable *interpolant = in_var(type, "interpolant");
    interpolant->data.must_be_shader_input = 1;
    ir_variable *sample_num = in_var(glsl_type::int_type, "sample_num");
-   MAKE_SIG(type, fs_gpu_shader5, 2, interpolant, sample_num);
+   MAKE_SIG(type, fs_interpolate_at, 2, interpolant, sample_num);
 
    body.emit(ret(interpolate_at_sample(interpolant, sample_num)));
 

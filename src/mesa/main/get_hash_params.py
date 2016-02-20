@@ -503,6 +503,14 @@ descriptor=[
   [ "MAX_COMBINED_SHADER_OUTPUT_RESOURCES", "CONTEXT_INT(Const.MaxCombinedShaderOutputResources), extra_ARB_shader_image_load_store_shader_storage_buffer_object_es31" ],
 ]},
 
+# Enums in OpenGL Core profile and ES 3.0
+{ "apis": ["GL_CORE", "GLES3"], "params": [
+  # GL_ARB_gpu_shader5 / GL_OES_shader_multisample_interpolation
+  [ "MIN_FRAGMENT_INTERPOLATION_OFFSET", "CONTEXT_FLOAT(Const.MinFragmentInterpolationOffset), extra_ARB_gpu_shader5_or_OES_sample_variables" ],
+  [ "MAX_FRAGMENT_INTERPOLATION_OFFSET", "CONTEXT_FLOAT(Const.MaxFragmentInterpolationOffset), extra_ARB_gpu_shader5_or_OES_sample_variables" ],
+  [ "FRAGMENT_INTERPOLATION_OFFSET_BITS", "CONST(FRAGMENT_INTERPOLATION_OFFSET_BITS), extra_ARB_gpu_shader5_or_OES_sample_variables" ],
+]},
+
 # Enums in OpenGL Core profile and ES 3.1
 { "apis": ["GL_CORE", "GLES31"], "params": [
 # GL_ARB_draw_indirect / GLES 3.1
@@ -882,9 +890,6 @@ descriptor=[
 
 # GL_ARB_gpu_shader5
   [ "MAX_GEOMETRY_SHADER_INVOCATIONS", "CONST(MAX_GEOMETRY_SHADER_INVOCATIONS), extra_ARB_gpu_shader5" ],
-  [ "MIN_FRAGMENT_INTERPOLATION_OFFSET", "CONTEXT_FLOAT(Const.MinFragmentInterpolationOffset), extra_ARB_gpu_shader5" ],
-  [ "MAX_FRAGMENT_INTERPOLATION_OFFSET", "CONTEXT_FLOAT(Const.MaxFragmentInterpolationOffset), extra_ARB_gpu_shader5" ],
-  [ "FRAGMENT_INTERPOLATION_OFFSET_BITS", "CONST(FRAGMENT_INTERPOLATION_OFFSET_BITS), extra_ARB_gpu_shader5" ],
 
 # GL_ARB_tessellation_shader
   [ "PATCH_VERTICES", "CONTEXT_INT(TessCtrlProgram.patch_vertices), extra_ARB_tessellation_shader" ],

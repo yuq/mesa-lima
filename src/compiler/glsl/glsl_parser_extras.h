@@ -608,6 +608,8 @@ struct _mesa_glsl_parse_state {
    bool OES_sample_variables_warn;
    bool OES_shader_image_atomic_enable;
    bool OES_shader_image_atomic_warn;
+   bool OES_shader_multisample_interpolation_enable;
+   bool OES_shader_multisample_interpolation_warn;
    bool OES_standard_derivatives_enable;
    bool OES_standard_derivatives_warn;
    bool OES_texture_3D_enable;

@@ -584,7 +584,7 @@ usamplerBuffer	KEYWORD_WITH_ALT(140, 300, 140, 320, yyextra->EXT_texture_buffer_
 
     /* Additional reserved words in GLSL ES 3.00 */
 resource	KEYWORD(0, 300, 0, 0, RESOURCE);
-sample		KEYWORD_WITH_ALT(400, 300, 400, 0, yyextra->ARB_gpu_shader5_enable, SAMPLE);
+sample		KEYWORD_WITH_ALT(400, 300, 400, 320, yyextra->ARB_gpu_shader5_enable || yyextra->OES_shader_multisample_interpolation_enable, SAMPLE);
 subroutine	KEYWORD_WITH_ALT(400, 300, 400, 0, yyextra->ARB_shader_subroutine_enable, SUBROUTINE);
 
 
