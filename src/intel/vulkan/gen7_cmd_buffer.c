@@ -29,8 +29,8 @@
 
 #include "anv_private.h"
 
-#include "genxml/gen7_pack.h"
-#include "genxml/gen75_pack.h"
+#include "genxml/gen_macros.h"
+#include "genxml/genX_pack.h"
 
 static uint32_t
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
@@ -55,7 +55,7 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
       if (state.offset == 0)
          continue;
 
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_CONSTANT_VS,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
                      ._3DCommandSubOpcode = push_constant_opcodes[stage],
                      .ConstantBody = {
                         .PointerToConstantBuffer0 = { .offset = state.offset },
@@ -95,7 +95,7 @@ genX(cmd_buffer_emit_descriptor_pointers)(struct anv_cmd_buffer *cmd_buffer,
    anv_foreach_stage(s, stages) {
       if (cmd_buffer->state.samplers[s].alloc_size > 0) {
          anv_batch_emit(&cmd_buffer->batch,
-                        GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS,
+                        GENX(3DSTATE_SAMPLER_STATE_POINTERS_VS),
                         ._3DCommandSubOpcode  = sampler_state_opcodes[s],
                         .PointertoVSSamplerState = cmd_buffer->state.samplers[s].offset);
       }
@@ -103,7 +103,7 @@ genX(cmd_buffer_emit_descriptor_pointers)(struct anv_cmd_buffer *cmd_buffer,
       /* Always emit binding table pointers if we're asked to, since on SKL
        * this is what flushes push constants. */
       anv_batch_emit(&cmd_buffer->batch,
-                     GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS,
+                     GENX(3DSTATE_BINDING_TABLE_POINTERS_VS),
                      ._3DCommandSubOpcode  = binding_table_opcodes[s],
                      .PointertoVSBindingTable = cmd_buffer->state.binding_tables[s].offset);
    }
@@ -168,6 +168,7 @@ clamp_int64(int64_t x, int64_t min, int64_t max)
       return max;
 }
 
+#if GEN_GEN == 7 && !GEN_IS_HASWELL
 static void
 emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
                    uint32_t count, const VkRect2D *scissors)
@@ -214,8 +215,8 @@ emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
       anv_state_clflush(scissor_state);
 }
 
-GENX_FUNC(GEN7, GEN7) void
-genX(cmd_buffer_emit_scissor)(struct anv_cmd_buffer *cmd_buffer)
+void
+gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
 {
    if (cmd_buffer->state.dynamic.scissor.count > 0) {
       emit_scissor_state(cmd_buffer, cmd_buffer->state.dynamic.scissor.count,
@@ -232,6 +233,7 @@ genX(cmd_buffer_emit_scissor)(struct anv_cmd_buffer *cmd_buffer)
                          });
    }
 }
+#endif
 
 static const uint32_t vk_to_gen_index_type[] = {
    [VK_INDEX_TYPE_UINT16]                       = INDEX_WORD,
@@ -253,7 +255,7 @@ void genX(CmdBindIndexBuffer)(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
-   if (ANV_IS_HASWELL)
+   if (GEN_IS_HASWELL)
       cmd_buffer->state.restart_index = restart_index_for_type[indexType];
    cmd_buffer->state.gen7.index_buffer = buffer;
    cmd_buffer->state.gen7.index_type = vk_to_gen_index_type[indexType];
@@ -306,20 +308,22 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 
    struct anv_state state =
       anv_state_pool_emit(&device->dynamic_state_pool,
-                          GEN7_INTERFACE_DESCRIPTOR_DATA, 64,
+                          GENX(INTERFACE_DESCRIPTOR_DATA), 64,
                           .KernelStartPointer = pipeline->cs_simd,
                           .BindingTablePointer = surfaces.offset,
                           .SamplerStatePointer = samplers.offset,
                           .ConstantURBEntryReadLength =
                              push_constant_regs,
+#if !GEN_IS_HASWELL
                           .ConstantURBEntryReadOffset = 0,
+#endif
                           .BarrierEnable = cs_prog_data->uses_barrier,
                           .SharedLocalMemorySize = slm_size,
                           .NumberofThreadsinGPGPUThreadGroup =
                              pipeline->cs_thread_width_max);
 
-   const uint32_t size = GEN7_INTERFACE_DESCRIPTOR_DATA_length * sizeof(uint32_t);
-   anv_batch_emit(&cmd_buffer->batch, GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD,
+   const uint32_t size = GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
+   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_INTERFACE_DESCRIPTOR_LOAD),
                   .InterfaceDescriptorTotalLength = size,
                   .InterfaceDescriptorDataStartAddress = state.offset);
 
@@ -335,7 +339,7 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
    assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
 
    if (cmd_buffer->state.current_pipeline != GPGPU) {
-      anv_batch_emit(&cmd_buffer->batch, GEN7_PIPELINE_SELECT,
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
                      .PipelineSelection = GPGPU);
       cmd_buffer->state.current_pipeline = GPGPU;
    }
@@ -371,16 +375,16 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
       const uint32_t num_dwords = 1 + num_buffers * 4;
 
       p = anv_batch_emitn(&cmd_buffer->batch, num_dwords,
-                          GEN7_3DSTATE_VERTEX_BUFFERS);
+                          GENX(3DSTATE_VERTEX_BUFFERS));
       uint32_t vb, i = 0;
       for_each_bit(vb, vb_emit) {
          struct anv_buffer *buffer = cmd_buffer->state.vertex_bindings[vb].buffer;
          uint32_t offset = cmd_buffer->state.vertex_bindings[vb].offset;
 
-         struct GEN7_VERTEX_BUFFER_STATE state = {
+         struct GENX(VERTEX_BUFFER_STATE) state = {
             .VertexBufferIndex = vb,
             .BufferAccessType = pipeline->instancing_enable[vb] ? INSTANCEDATA : VERTEXDATA,
-            .VertexBufferMemoryObjectControlState = GEN7_MOCS,
+            .VertexBufferMemoryObjectControlState = GENX(MOCS),
             .AddressModifyEnable = true,
             .BufferPitch = pipeline->binding_stride[vb],
             .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
@@ -388,7 +392,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
             .InstanceDataStepRate = 1
          };
 
-         GEN7_VERTEX_BUFFER_STATE_pack(&cmd_buffer->batch, &p[1 + i * 4], &state);
+         GENX(VERTEX_BUFFER_STATE_pack)(&cmd_buffer->batch, &p[1 + i * 4], &state);
          i++;
       }
    }
@@ -416,7 +420,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
        *    PIPE_CONTROL needs to be sent before any combination of VS
        *    associated 3DSTATE."
        */
-      anv_batch_emit(&cmd_buffer->batch, GEN7_PIPE_CONTROL,
+      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
                      .DepthStallEnable = true,
                      .PostSyncOperation = WriteImmediateData,
                      .Address = { &cmd_buffer->device->workaround_bo, 0 });
@@ -456,9 +460,9 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          isl_surf_get_depth_format(&cmd_buffer->device->isl_dev,
                                    &image->depth_surface.isl) : D16_UNORM;
 
-      uint32_t sf_dw[GEN7_3DSTATE_SF_length];
-      struct GEN7_3DSTATE_SF sf = {
-         GEN7_3DSTATE_SF_header,
+      uint32_t sf_dw[GENX(3DSTATE_SF_length)];
+      struct GENX(3DSTATE_SF) sf = {
+         GENX(3DSTATE_SF_header),
          .DepthBufferSurfaceFormat = depth_format,
          .LineWidth = cmd_buffer->state.dynamic.line_width,
          .GlobalDepthOffsetEnableSolid = enable_bias,
@@ -468,7 +472,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          .GlobalDepthOffsetScale = cmd_buffer->state.dynamic.depth_bias.slope,
          .GlobalDepthOffsetClamp = cmd_buffer->state.dynamic.depth_bias.clamp
       };
-      GEN7_3DSTATE_SF_pack(NULL, sf_dw, &sf);
+      GENX(3DSTATE_SF_pack)(NULL, sf_dw, &sf);
 
       anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen7.sf);
    }
@@ -477,9 +481,9 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
-                                            GEN7_COLOR_CALC_STATE_length * 4,
+                                            GENX(COLOR_CALC_STATE_length) * 4,
                                             64);
-      struct GEN7_COLOR_CALC_STATE cc = {
+      struct GENX(COLOR_CALC_STATE) cc = {
          .BlendConstantColorRed = cmd_buffer->state.dynamic.blend_constants[0],
          .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
          .BlendConstantColorBlue = cmd_buffer->state.dynamic.blend_constants[2],
@@ -489,12 +493,12 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          .BackFaceStencilReferenceValue =
             cmd_buffer->state.dynamic.stencil_reference.back,
       };
-      GEN7_COLOR_CALC_STATE_pack(NULL, cc_state.map, &cc);
+      GENX(COLOR_CALC_STATE_pack)(NULL, cc_state.map, &cc);
       if (!cmd_buffer->device->info.has_llc)
          anv_state_clflush(cc_state);
 
       anv_batch_emit(&cmd_buffer->batch,
-                     GEN7_3DSTATE_CC_STATE_POINTERS,
+                     GENX(3DSTATE_CC_STATE_POINTERS),
                      .ColorCalcStatePointer = cc_state.offset);
    }
 
@@ -502,12 +506,12 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
                                   ANV_CMD_DIRTY_RENDER_TARGETS |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
-      uint32_t depth_stencil_dw[GEN7_DEPTH_STENCIL_STATE_length];
+      uint32_t depth_stencil_dw[GENX(DEPTH_STENCIL_STATE_length)];
 
       const struct anv_image_view *iview =
          anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
 
-      struct GEN7_DEPTH_STENCIL_STATE depth_stencil = {
+      struct GENX(DEPTH_STENCIL_STATE) depth_stencil = {
          .StencilBufferWriteEnable = iview && (iview->aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT),
 
          .StencilTestMask =
@@ -520,15 +524,15 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          .BackfaceStencilWriteMask =
             cmd_buffer->state.dynamic.stencil_write_mask.back & 0xff,
       };
-      GEN7_DEPTH_STENCIL_STATE_pack(NULL, depth_stencil_dw, &depth_stencil);
+      GENX(DEPTH_STENCIL_STATE_pack)(NULL, depth_stencil_dw, &depth_stencil);
 
       struct anv_state ds_state =
          anv_cmd_buffer_merge_dynamic(cmd_buffer, depth_stencil_dw,
                                       pipeline->gen7.depth_stencil_state,
-                                      GEN7_DEPTH_STENCIL_STATE_length, 64);
+                                      GENX(DEPTH_STENCIL_STATE_length), 64);
 
       anv_batch_emit(&cmd_buffer->batch,
-                     GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
+                     GENX(3DSTATE_DEPTH_STENCIL_STATE_POINTERS),
                      .PointertoDEPTH_STENCIL_STATE = ds_state.offset);
    }
 
@@ -538,16 +542,18 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
       struct anv_buffer *buffer = cmd_buffer->state.gen7.index_buffer;
       uint32_t offset = cmd_buffer->state.gen7.index_offset;
 
-      if (ANV_IS_HASWELL) {
-         anv_batch_emit(&cmd_buffer->batch, GEN75_3DSTATE_VF,
-                        .IndexedDrawCutIndexEnable = pipeline->primitive_restart,
-                        .CutIndex = cmd_buffer->state.restart_index);
-      }
+#if GEN_IS_HASWELL
+      anv_batch_emit(&cmd_buffer->batch, GEN75_3DSTATE_VF,
+                     .IndexedDrawCutIndexEnable = pipeline->primitive_restart,
+                     .CutIndex = cmd_buffer->state.restart_index);
+#endif
 
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_INDEX_BUFFER,
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_INDEX_BUFFER),
+#if !GEN_IS_HASWELL
                      .CutIndexEnable = pipeline->primitive_restart,
+#endif
                      .IndexFormat = cmd_buffer->state.gen7.index_type,
-                     .MemoryObjectControlState = GEN7_MOCS,
+                     .MemoryObjectControlState = GENX(MOCS),
                      .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
                      .BufferEndingAddress = { buffer->bo, buffer->offset + buffer->size });
    }

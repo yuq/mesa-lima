@@ -29,8 +29,8 @@
 
 #include "anv_private.h"
 
-#include "genxml/gen8_pack.h"
-#include "genxml/gen9_pack.h"
+#include "genxml/gen_macros.h"
+#include "genxml/genX_pack.h"
 
 #include "genX_pipeline_util.h"
 
@@ -83,7 +83,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .FrontFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
       .BackFaceFillMode = vk_to_gen_fillmode[info->polygonMode],
       .ScissorRectangleEnable = !(extra && extra->disable_scissor),
-#if ANV_GEN == 8
+#if GEN_GEN == 8
       .ViewportZClipTestEnable = true,
 #else
       /* GEN9+ splits ViewportZClipTestEnable into near and far enable bits */
@@ -178,7 +178,7 @@ static void
 emit_ds_state(struct anv_pipeline *pipeline,
               const VkPipelineDepthStencilStateCreateInfo *info)
 {
-   uint32_t *dw = ANV_GEN == 8 ?
+   uint32_t *dw = GEN_GEN == 8 ?
       pipeline->gen8.wm_depth_stencil : pipeline->gen9.wm_depth_stencil;
 
    if (info == NULL) {
@@ -414,7 +414,7 @@ genX(graphics_pipeline_create)(
 
    const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
 
-   const int num_thread_bias = ANV_GEN == 8 ? 2 : 1;
+   const int num_thread_bias = GEN_GEN == 8 ? 2 : 1;
    if (pipeline->ps_ksp0 == NO_KERNEL) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS));
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA),
@@ -477,7 +477,7 @@ genX(graphics_pipeline_create)(
                      .NumberofSFOutputAttributes =
                      wm_prog_data->num_varying_inputs,
 
-#if ANV_GEN >= 9
+#if GEN_GEN >= 9
                      .Attribute0ActiveComponentFormat = ACF_XYZW,
                      .Attribute1ActiveComponentFormat = ACF_XYZW,
                      .Attribute2ActiveComponentFormat = ACF_XYZW,
@@ -556,7 +556,7 @@ genX(graphics_pipeline_create)(
                      .PixelShaderIsPerSample = per_sample_ps,
                      .PixelShaderUsesSourceDepth = wm_prog_data->uses_src_depth,
                      .PixelShaderUsesSourceW = wm_prog_data->uses_src_w,
-#if ANV_GEN >= 9
+#if GEN_GEN >= 9
                      .PixelShaderPullsBary = wm_prog_data->pulls_bary,
                      .InputCoverageMaskState = wm_prog_data->uses_sample_mask ?
                         ICMS_INNER_CONSERVATIVE : ICMS_NONE,

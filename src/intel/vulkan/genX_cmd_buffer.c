@@ -26,15 +26,8 @@
 
 #include "anv_private.h"
 
-#if (ANV_GEN == 9)
-#  include "genxml/gen9_pack.h"
-#elif (ANV_GEN == 8)
-#  include "genxml/gen8_pack.h"
-#elif (ANV_IS_HASWELL)
-#  include "genxml/gen75_pack.h"
-#elif (ANV_GEN == 7)
-#  include "genxml/gen7_pack.h"
-#endif
+#include "genxml/gen_macros.h"
+#include "genxml/genX_pack.h"
 
 void
 genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
@@ -48,7 +41,7 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
       scratch_bo = &device->scratch_block_pool.bo;
 
 /* XXX: Do we need this on more than just BDW? */
-#if (ANV_GEN >= 8)
+#if (GEN_GEN >= 8)
    /* Emit a render target cache flush.
     *
     * This isn't documented anywhere in the PRM.  However, it seems to be
@@ -81,7 +74,7 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
       .InstructionMemoryObjectControlState = GENX(MOCS),
       .InstructionBaseAddressModifyEnable = true,
 
-#  if (ANV_GEN >= 8)
+#  if (GEN_GEN >= 8)
       /* Broadwell requires that we specify a buffer size for a bunch of
        * these fields.  However, since we will be growing the BO's live, we
        * just set them all to the maximum.
@@ -288,7 +281,7 @@ emit_base_vertex_instance_bo(struct anv_cmd_buffer *cmd_buffer,
          .VertexBufferIndex = 32, /* Reserved for this */
          .AddressModifyEnable = true,
          .BufferPitch = 0,
-#if (ANV_GEN >= 8)
+#if (GEN_GEN >= 8)
          .MemoryObjectControlState = GENX(MOCS),
          .BufferStartingAddress = { bo, offset },
          .BufferSize = 8
@@ -543,7 +536,7 @@ genX(flush_pipeline_select_3d)(struct anv_cmd_buffer *cmd_buffer)
 {
    if (cmd_buffer->state.current_pipeline != _3D) {
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
-#if ANV_GEN >= 9
+#if GEN_GEN >= 9
                      .MaskBits = 3,
 #endif
                      .PipelineSelection = _3D);
@@ -587,7 +580,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .Depth = 1 - 1,
          .MinimumArrayElement = 0,
          .DepthBufferObjectControlState = GENX(MOCS),
-#if ANV_GEN >= 8
+#if GEN_GEN >= 8
          .SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->depth_surface.isl) >> 2,
 #endif
          .RenderTargetViewExtent = 1 - 1);
@@ -620,7 +613,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    /* Emit 3DSTATE_STENCIL_BUFFER */
    if (has_stencil) {
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER),
-#if ANV_GEN >= 8 || ANV_IS_HASWELL
+#if GEN_GEN >= 8 || GEN_IS_HASWELL
          .StencilBufferEnable = true,
 #endif
          .StencilBufferObjectControlState = GENX(MOCS),
@@ -632,7 +625,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
           */
          .SurfacePitch = 2 * image->stencil_surface.isl.row_pitch - 1,
 
-#if ANV_GEN >= 8
+#if GEN_GEN >= 8
          .SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->stencil_surface.isl) >> 2,
 #endif
          .SurfaceBaseAddress = {

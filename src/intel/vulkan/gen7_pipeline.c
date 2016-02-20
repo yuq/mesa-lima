@@ -29,8 +29,8 @@
 
 #include "anv_private.h"
 
-#include "genxml/gen7_pack.h"
-#include "genxml/gen75_pack.h"
+#include "genxml/gen_macros.h"
+#include "genxml/genX_pack.h"
 
 #include "genX_pipeline_util.h"
 
@@ -39,8 +39,8 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
                    const VkPipelineRasterizationStateCreateInfo *info,
                    const struct anv_graphics_pipeline_create_info *extra)
 {
-   struct GEN7_3DSTATE_SF sf = {
-      GEN7_3DSTATE_SF_header,
+   struct GENX(3DSTATE_SF) sf = {
+      GENX(3DSTATE_SF_header),
 
       /* LegacyGlobalDepthBiasEnable */
 
@@ -69,7 +69,7 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
       .PointWidth                               = 1.0,
    };
 
-   GEN7_3DSTATE_SF_pack(NULL, &pipeline->gen7.sf, &sf);
+   GENX(3DSTATE_SF_pack)(NULL, &pipeline->gen7.sf, &sf);
 }
 
 static void
@@ -85,7 +85,7 @@ gen7_emit_ds_state(struct anv_pipeline *pipeline,
       return;
    }
 
-   struct GEN7_DEPTH_STENCIL_STATE state = {
+   struct GENX(DEPTH_STENCIL_STATE) state = {
       .DepthTestEnable = info->depthTestEnable,
       .DepthBufferWriteEnable = info->depthWriteEnable,
       .DepthTestFunction = vk_to_gen_compare_op[info->depthCompareOp],
@@ -103,7 +103,7 @@ gen7_emit_ds_state(struct anv_pipeline *pipeline,
       .BackFaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
    };
 
-   GEN7_DEPTH_STENCIL_STATE_pack(NULL, &pipeline->gen7.depth_stencil_state, &state);
+   GENX(DEPTH_STENCIL_STATE_pack)(NULL, &pipeline->gen7.depth_stencil_state, &state);
 }
 
 static void
@@ -116,7 +116,7 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
    if (info == NULL || info->attachmentCount == 0) {
       pipeline->blend_state =
          anv_state_pool_emit(&device->dynamic_state_pool,
-            GEN7_BLEND_STATE, 64,
+            GENX(BLEND_STATE), 64,
             .ColorBufferBlendEnable = false,
             .WriteDisableAlpha = true,
             .WriteDisableRed = true,
@@ -129,7 +129,7 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
       const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[0];
       pipeline->blend_state =
          anv_state_pool_emit(&device->dynamic_state_pool,
-            GEN7_BLEND_STATE, 64,
+            GENX(BLEND_STATE), 64,
 
             .ColorBufferBlendEnable = a->blendEnable,
             .IndependentAlphaBlendEnable = true, /* FIXME: yes? */
@@ -169,11 +169,11 @@ gen7_emit_cb_state(struct anv_pipeline *pipeline,
             );
     }
 
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_BLEND_STATE_POINTERS,
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_BLEND_STATE_POINTERS),
                   .BlendStatePointer = pipeline->blend_state.offset);
 }
 
-GENX_FUNC(GEN7, GEN75) VkResult
+VkResult
 genX(graphics_pipeline_create)(
     VkDevice                                    _device,
     struct anv_pipeline_cache *                 cache,
@@ -216,7 +216,7 @@ genX(graphics_pipeline_create)(
    const VkPipelineRasterizationStateCreateInfo *rs_info =
       pCreateInfo->pRasterizationState;
 
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_CLIP,
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP),
       .FrontWinding                             = vk_to_gen_front_face[rs_info->frontFace],
       .CullMode                                 = vk_to_gen_cullmode[rs_info->cullMode],
       .ClipEnable                               = true,
@@ -237,11 +237,11 @@ genX(graphics_pipeline_create)(
    uint32_t samples = 1;
    uint32_t log2_samples = __builtin_ffs(samples) - 1;
 
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_MULTISAMPLE,
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_MULTISAMPLE),
       .PixelLocation                            = PIXLOC_CENTER,
       .NumberofMultisamples                     = log2_samples);
 
-   anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_SAMPLE_MASK,
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK),
       .SampleMask                               = 0xff);
 
    const struct brw_vue_prog_data *vue_prog_data = &pipeline->vs_prog_data.base;
@@ -314,7 +314,7 @@ genX(graphics_pipeline_create)(
          .DispatchMode                          = gs_prog_data->base.dispatch_mode,
          .GSStatisticsEnable                    = true,
          .IncludePrimitiveID                    = gs_prog_data->include_primitive_id,
-#     if (ANV_IS_HASWELL)
+#     if (GEN_IS_HASWELL)
          .ReorderMode                           = REORDER_TRAILING,
 #     else
          .ReorderEnable                         = true,
@@ -326,10 +326,10 @@ genX(graphics_pipeline_create)(
      anv_finishme("disabling ps");
 
      /* FIXME: generated header doesn't emit attr swizzle fields */
-     anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_SBE);
+     anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE));
 
      /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
-     anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_WM,
+     anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM),
 		    .StatisticsEnable                         = true,
 		    .ThreadDispatchEnable                     = false,
 		    .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */
@@ -349,7 +349,7 @@ genX(graphics_pipeline_create)(
          anv_finishme("primitive_id needs sbe swizzling setup");
 
       /* FIXME: generated header doesn't emit attr swizzle fields */
-      anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_SBE,
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE),
                      .NumberofSFOutputAttributes               = pipeline->wm_prog_data.num_varying_inputs,
                      .VertexURBEntryReadLength                 = urb_length,
                      .VertexURBEntryReadOffset                 = urb_offset,
@@ -390,7 +390,7 @@ genX(graphics_pipeline_create)(
                      .KernelStartPointer2                      = pipeline->ps_ksp2);
 
       /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
-      anv_batch_emit(&pipeline->batch, GEN7_3DSTATE_WM,
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM),
                      .StatisticsEnable                         = true,
                      .ThreadDispatchEnable                     = true,
                      .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */

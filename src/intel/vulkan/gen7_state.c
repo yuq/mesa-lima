@@ -29,8 +29,8 @@
 
 #include "anv_private.h"
 
-#include "genxml/gen7_pack.h"
-#include "genxml/gen75_pack.h"
+#include "genxml/gen_macros.h"
+#include "genxml/genX_pack.h"
 
 #include "genX_state_util.h"
 
@@ -43,7 +43,7 @@ genX(init_device_state)(struct anv_device *device)
    batch.start = batch.next = cmds;
    batch.end = (void *) cmds + sizeof(cmds);
 
-   anv_batch_emit(&batch, GEN7_PIPELINE_SELECT,
+   anv_batch_emit(&batch, GENX(PIPELINE_SELECT),
                   .PipelineSelection = _3D);
 
    anv_batch_emit(&batch, GENX(3DSTATE_VF_STATISTICS),
@@ -52,7 +52,7 @@ genX(init_device_state)(struct anv_device *device)
    anv_batch_emit(&batch, GENX(3DSTATE_TE), .TEEnable = false);
    anv_batch_emit(&batch, GENX(3DSTATE_DS), .DSFunctionEnable = false);
    anv_batch_emit(&batch, GENX(3DSTATE_STREAMOUT), .SOFunctionEnable = false);
-   anv_batch_emit(&batch, GEN7_3DSTATE_AA_LINE_PARAMETERS);
+   anv_batch_emit(&batch, GENX(3DSTATE_AA_LINE_PARAMETERS));
    anv_batch_emit(&batch, GENX(MI_BATCH_BUFFER_END));
 
    assert(batch.next <= batch.end);
@@ -60,7 +60,7 @@ genX(init_device_state)(struct anv_device *device)
    return anv_device_submit_simple_batch(device, &batch);
 }
 
-GENX_FUNC(GEN7, GEN75) void
+void
 genX(fill_buffer_surface_state)(void *state, enum isl_format format,
                                 uint32_t offset, uint32_t range,
                                 uint32_t stride)
@@ -79,7 +79,7 @@ genX(fill_buffer_surface_state)(void *state, enum isl_format format,
       .Width                                    = (num_elements - 1) & 0x7f,
       .Depth                                    = ((num_elements - 1) >> 21) & 0x3f,
       .SurfacePitch                             = stride - 1,
-#  if (ANV_IS_HASWELL)
+#  if (GEN_IS_HASWELL)
       .ShaderChannelSelectRed                   = SCS_RED,
       .ShaderChannelSelectGreen                 = SCS_GREEN,
       .ShaderChannelSelectBlue                  = SCS_BLUE,
@@ -107,7 +107,7 @@ VkResult genX(CreateSampler)(
    if (!sampler)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   struct GEN7_SAMPLER_STATE sampler_state = {
+   struct GENX(SAMPLER_STATE) sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
       .LODPreClampEnable = CLAMP_ENABLE_OGL,
@@ -145,7 +145,7 @@ VkResult genX(CreateSampler)(
       .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeW],
    };
 
-   GEN7_SAMPLER_STATE_pack(NULL, sampler->state, &sampler_state);
+   GENX(SAMPLER_STATE_pack)(NULL, sampler->state, &sampler_state);
 
    *pSampler = anv_sampler_to_handle(sampler);
 
@@ -227,7 +227,7 @@ genX(fill_image_surface_state)(struct anv_device *device, void *state_map,
       .SurfaceMinLOD = 0, /* TEMPLATE */
 
       .MCSEnable = false,
-#  if (ANV_IS_HASWELL)
+#  if (GEN_IS_HASWELL)
       .ShaderChannelSelectRed = vk_to_gen_swizzle[iview->swizzle.r],
       .ShaderChannelSelectGreen = vk_to_gen_swizzle[iview->swizzle.g],
       .ShaderChannelSelectBlue = vk_to_gen_swizzle[iview->swizzle.b],

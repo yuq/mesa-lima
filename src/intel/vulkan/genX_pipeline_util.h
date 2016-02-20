@@ -68,7 +68,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       elements = inputs_read >> VERT_ATTRIB_GENERIC0;
    }
 
-#if ANV_GEN >= 8
+#if GEN_GEN >= 8
    /* On BDW+, we only need to allocate space for base ids.  Setting up
     * the actual vertex and instance id is a separate packet.
     */
@@ -123,7 +123,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       };
       GENX(VERTEX_ELEMENT_STATE_pack)(NULL, &p[1 + slot * 2], &element);
 
-#if ANV_GEN >= 8
+#if GEN_GEN >= 8
       /* On Broadwell and later, we have a separate VF_INSTANCING packet
        * that controls instancing.  On Haswell and prior, that's part of
        * VERTEX_BUFFER_STATE which we emit later.
@@ -158,7 +158,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
          .SourceElementFormat = ISL_FORMAT_R32G32_UINT,
          .Component0Control = base_ctrl,
          .Component1Control = base_ctrl,
-#if ANV_GEN >= 8
+#if GEN_GEN >= 8
          .Component2Control = VFCOMP_STORE_0,
          .Component3Control = VFCOMP_STORE_0,
 #else
@@ -169,7 +169,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       GENX(VERTEX_ELEMENT_STATE_pack)(NULL, &p[1 + id_slot * 2], &element);
    }
 
-#if ANV_GEN >= 8
+#if GEN_GEN >= 8
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_SGVS),
                   .VertexIDEnable = pipeline->vs_prog_data.uses_vertexid,
                   .VertexIDComponentNumber = 2,
@@ -183,7 +183,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 static inline void
 emit_urb_setup(struct anv_pipeline *pipeline)
 {
-#if ANV_GEN == 7
+#if GEN_GEN == 7 && !GEN_IS_HASWELL
    struct anv_device *device = pipeline->device;
 
    /* From the IVB PRM Vol. 2, Part 1, Section 3.2.1:

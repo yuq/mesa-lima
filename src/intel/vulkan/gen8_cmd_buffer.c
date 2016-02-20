@@ -29,8 +29,8 @@
 
 #include "anv_private.h"
 
-#include "genxml/gen8_pack.h"
-#include "genxml/gen9_pack.h"
+#include "genxml/gen_macros.h"
+#include "genxml/genX_pack.h"
 
 static uint32_t
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
@@ -70,7 +70,7 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
    return flushed;
 }
 
-#if ANV_GEN == 8
+#if GEN_GEN == 8
 static void
 emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
                     uint32_t count, const VkViewport *viewports)
@@ -213,6 +213,8 @@ __emit_genx_sf_state(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_merge(&cmd_buffer->batch, sf_dw,
                            cmd_buffer->state.pipeline->gen8.sf);
 }
+
+#include "genxml/gen9_pack.h"
 static void
 __emit_gen9_sf_state(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -339,14 +341,14 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
     * across different state packets for gen8 and gen9. We handle that by
     * using a big old #if switch here.
     */
-#if ANV_GEN == 8
+#if GEN_GEN == 8
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
-                                            GEN8_COLOR_CALC_STATE_length * 4,
+                                            GENX(COLOR_CALC_STATE_length) * 4,
                                             64);
-      struct GEN8_COLOR_CALC_STATE cc = {
+      struct GENX(COLOR_CALC_STATE) cc = {
          .BlendConstantColorRed = cmd_buffer->state.dynamic.blend_constants[0],
          .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
          .BlendConstantColorBlue = cmd_buffer->state.dynamic.blend_constants[2],
@@ -356,13 +358,13 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          .BackFaceStencilReferenceValue =
             cmd_buffer->state.dynamic.stencil_reference.back,
       };
-      GEN8_COLOR_CALC_STATE_pack(NULL, cc_state.map, &cc);
+      GENX(COLOR_CALC_STATE_pack)(NULL, cc_state.map, &cc);
 
       if (!cmd_buffer->device->info.has_llc)
          anv_state_clflush(cc_state);
 
       anv_batch_emit(&cmd_buffer->batch,
-                     GEN8_3DSTATE_CC_STATE_POINTERS,
+                     GENX(3DSTATE_CC_STATE_POINTERS),
                      .ColorCalcStatePointer = cc_state.offset,
                      .ColorCalcStatePointerValid = true);
    }
@@ -370,10 +372,10 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
-      uint32_t wm_depth_stencil_dw[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
+      uint32_t wm_depth_stencil_dw[GENX(3DSTATE_WM_DEPTH_STENCIL_length)];
 
-      struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
-         GEN8_3DSTATE_WM_DEPTH_STENCIL_header,
+      struct GENX(3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil) = {
+         GENX(3DSTATE_WM_DEPTH_STENCIL_header),
 
          /* Is this what we need to do? */
          .StencilBufferWriteEnable =
@@ -389,8 +391,8 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          .BackfaceStencilWriteMask =
             cmd_buffer->state.dynamic.stencil_write_mask.back & 0xff,
       };
-      GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, wm_depth_stencil_dw,
-                                         &wm_depth_stencil);
+      GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, wm_depth_stencil_dw,
+                                          &wm_depth_stencil);
 
       anv_batch_emit_merge(&cmd_buffer->batch, wm_depth_stencil_dw,
                            pipeline->gen8.wm_depth_stencil);
@@ -568,7 +570,7 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
    config_l3(cmd_buffer, needs_slm);
 
    if (cmd_buffer->state.current_pipeline != GPGPU) {
-#if ANV_GEN < 10
+#if GEN_GEN < 10
       /* From the Broadwell PRM, Volume 2a: Instructions, PIPELINE_SELECT:
        *
        *   Software must clear the COLOR_CALC_STATE Valid field in
@@ -583,7 +585,7 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
 #endif
 
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
-#if ANV_GEN >= 9
+#if GEN_GEN >= 9
                      .MaskBits = 3,
 #endif
                      .PipelineSelection = GPGPU);

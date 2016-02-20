@@ -57,7 +57,7 @@ anv_surface_format(const struct anv_device *device, enum isl_format format,
    }
 }
 
-#if ANV_GEN > 7 || ANV_IS_HASWELL
+#if GEN_GEN > 7 || GEN_IS_HASWELL
 static const uint32_t vk_to_gen_swizzle[] = {
    [VK_COMPONENT_SWIZZLE_ZERO]                 = SCS_ZERO,
    [VK_COMPONENT_SWIZZLE_ONE]                  = SCS_ONE,

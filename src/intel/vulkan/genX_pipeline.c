@@ -23,15 +23,8 @@
 
 #include "anv_private.h"
 
-#if (ANV_GEN == 9)
-#  include "genxml/gen9_pack.h"
-#elif (ANV_GEN == 8)
-#  include "genxml/gen8_pack.h"
-#elif (ANV_IS_HASWELL)
-#  include "genxml/gen75_pack.h"
-#elif (ANV_GEN == 7)
-#  include "genxml/gen7_pack.h"
-#endif
+#include "genxml/gen_macros.h"
+#include "genxml/genX_pack.h"
 
 VkResult
 genX(compute_pipeline_create)(
@@ -94,19 +87,19 @@ genX(compute_pipeline_create)(
    anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE),
                   .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_COMPUTE],
                   .PerThreadScratchSpace = ffs(cs_prog_data->base.total_scratch / 2048),
-#if ANV_GEN > 7
+#if GEN_GEN > 7
                   .ScratchSpaceBasePointerHigh = 0,
                   .StackSize = 0,
 #else
                   .GPGPUMode = true,
 #endif
                   .MaximumNumberofThreads = device->info.max_cs_threads - 1,
-                  .NumberofURBEntries = ANV_GEN <= 7 ? 0 : 2,
+                  .NumberofURBEntries = GEN_GEN <= 7 ? 0 : 2,
                   .ResetGatewayTimer = true,
-#if ANV_GEN <= 8
+#if GEN_GEN <= 8
                   .BypassGatewayControl = true,
 #endif
-                  .URBEntryAllocationSize = ANV_GEN <= 7 ? 0 : 2,
+                  .URBEntryAllocationSize = GEN_GEN <= 7 ? 0 : 2,
                   .CURBEAllocationSize = 0);
 
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
