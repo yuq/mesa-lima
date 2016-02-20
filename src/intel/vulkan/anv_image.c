@@ -427,37 +427,6 @@ anv_validate_CreateImageView(VkDevice _device,
    return anv_CreateImageView(_device, pCreateInfo, pAllocator, pView);
 }
 
-void
-anv_fill_image_surface_state(struct anv_device *device, struct anv_state state,
-                             struct anv_image_view *iview,
-                             const VkImageViewCreateInfo *pCreateInfo,
-                             VkImageUsageFlagBits usage)
-{
-   switch (device->info.gen) {
-   case 7:
-      if (device->info.is_haswell)
-         gen75_fill_image_surface_state(device, state.map, iview,
-                                        pCreateInfo, usage);
-      else
-         gen7_fill_image_surface_state(device, state.map, iview,
-                                       pCreateInfo, usage);
-      break;
-   case 8:
-      gen8_fill_image_surface_state(device, state.map, iview,
-                                    pCreateInfo, usage);
-      break;
-   case 9:
-      gen9_fill_image_surface_state(device, state.map, iview,
-                                    pCreateInfo, usage);
-      break;
-   default:
-      unreachable("unsupported gen\n");
-   }
-
-   if (!device->info.has_llc)
-      anv_state_clflush(state);
-}
-
 static struct anv_state
 alloc_surface_state(struct anv_device *device,
                     struct anv_cmd_buffer *cmd_buffer)
@@ -479,7 +448,7 @@ has_matching_storage_typed_format(const struct anv_device *device,
            device->info.gen >= 9);
 }
 
-static VkComponentSwizzle
+static enum isl_channel_select
 remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component,
               struct anv_format_swizzle format_swizzle)
 {
@@ -488,17 +457,17 @@ remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component,
 
    switch (swizzle) {
    case VK_COMPONENT_SWIZZLE_ZERO:
-      return VK_COMPONENT_SWIZZLE_ZERO;
+      return ISL_CHANNEL_SELECT_ZERO;
    case VK_COMPONENT_SWIZZLE_ONE:
-      return VK_COMPONENT_SWIZZLE_ONE;
+      return ISL_CHANNEL_SELECT_ONE;
    case VK_COMPONENT_SWIZZLE_R:
-      return VK_COMPONENT_SWIZZLE_R + format_swizzle.r;
+      return ISL_CHANNEL_SELECT_RED + format_swizzle.r;
    case VK_COMPONENT_SWIZZLE_G:
-      return VK_COMPONENT_SWIZZLE_R + format_swizzle.g;
+      return ISL_CHANNEL_SELECT_RED + format_swizzle.g;
    case VK_COMPONENT_SWIZZLE_B:
-      return VK_COMPONENT_SWIZZLE_R + format_swizzle.b;
+      return ISL_CHANNEL_SELECT_RED + format_swizzle.b;
    case VK_COMPONENT_SWIZZLE_A:
-      return VK_COMPONENT_SWIZZLE_R + format_swizzle.a;
+      return ISL_CHANNEL_SELECT_RED + format_swizzle.a;
    default:
       unreachable("Invalid swizzle");
    }
@@ -513,8 +482,6 @@ anv_image_view_init(struct anv_image_view *iview,
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
-   VkImageViewCreateInfo mCreateInfo;
-   memcpy(&mCreateInfo, pCreateInfo, sizeof(VkImageViewCreateInfo));
 
    assert(range->layerCount > 0);
    assert(range->baseMipLevel < image->levels);
@@ -549,17 +516,29 @@ anv_image_view_init(struct anv_image_view *iview,
    struct anv_format_swizzle swizzle;
    iview->format = anv_get_isl_format(pCreateInfo->format, iview->aspect_mask,
                                       image->tiling, &swizzle);
-   iview->swizzle.r = remap_swizzle(pCreateInfo->components.r,
-                                    VK_COMPONENT_SWIZZLE_R, swizzle);
-   iview->swizzle.g = remap_swizzle(pCreateInfo->components.g,
-                                    VK_COMPONENT_SWIZZLE_G, swizzle);
-   iview->swizzle.b = remap_swizzle(pCreateInfo->components.b,
-                                    VK_COMPONENT_SWIZZLE_B, swizzle);
-   iview->swizzle.a = remap_swizzle(pCreateInfo->components.a,
-                                    VK_COMPONENT_SWIZZLE_A, swizzle);
 
    iview->base_layer = range->baseArrayLayer;
    iview->base_mip = range->baseMipLevel;
+
+   struct isl_view isl_view = {
+      .format = iview->format,
+      .base_level = range->baseMipLevel,
+      .levels = range->levelCount,
+      .base_array_layer = range->baseArrayLayer,
+      .array_len = range->layerCount,
+      .channel_select = {
+         remap_swizzle(pCreateInfo->components.r,
+                       VK_COMPONENT_SWIZZLE_R, swizzle),
+         remap_swizzle(pCreateInfo->components.g,
+                       VK_COMPONENT_SWIZZLE_G, swizzle),
+         remap_swizzle(pCreateInfo->components.b,
+                       VK_COMPONENT_SWIZZLE_B, swizzle),
+         remap_swizzle(pCreateInfo->components.a,
+                       VK_COMPONENT_SWIZZLE_A, swizzle),
+      },
+   };
+
+   struct isl_extent4d level0_extent_px;
 
    if (!isl_format_is_compressed(iview->format) &&
        isl_format_is_compressed(image->format->isl_format)) {
@@ -570,31 +549,46 @@ anv_image_view_init(struct anv_image_view *iview,
        */
       const struct isl_format_layout * isl_layout = image->format->isl_layout;
 
-      iview->level_0_extent.depth  = anv_minify(image->extent.depth, range->baseMipLevel);
-      iview->level_0_extent.depth  = DIV_ROUND_UP(iview->level_0_extent.depth, isl_layout->bd);
+      level0_extent_px.depth  = anv_minify(image->extent.depth, range->baseMipLevel);
+      level0_extent_px.depth  = DIV_ROUND_UP(level0_extent_px.depth, isl_layout->bd);
 
-      iview->level_0_extent.height = isl_surf_get_array_pitch_el_rows(&surface->isl) * image->array_size;
-      iview->level_0_extent.width  = isl_surf_get_row_pitch_el(&surface->isl);
-      mCreateInfo.subresourceRange.baseMipLevel = 0;
-      mCreateInfo.subresourceRange.baseArrayLayer = 0;
+      level0_extent_px.height = isl_surf_get_array_pitch_el_rows(&surface->isl) * image->array_size;
+      level0_extent_px.width  = isl_surf_get_row_pitch_el(&surface->isl);
+      isl_view.base_level = 0;
+      isl_view.base_array_layer = 0;
    } else {
-      iview->level_0_extent.width  = image->extent.width;
-      iview->level_0_extent.height = image->extent.height;
-      iview->level_0_extent.depth  = image->extent.depth;
+      level0_extent_px.width  = image->extent.width;
+      level0_extent_px.height = image->extent.height;
+      level0_extent_px.depth  = image->extent.depth;
    }
 
    iview->extent = (VkExtent3D) {
-      .width  = anv_minify(iview->level_0_extent.width , range->baseMipLevel),
-      .height = anv_minify(iview->level_0_extent.height, range->baseMipLevel),
-      .depth  = anv_minify(iview->level_0_extent.depth , range->baseMipLevel),
+      .width  = anv_minify(image->extent.width , range->baseMipLevel),
+      .height = anv_minify(image->extent.height, range->baseMipLevel),
+      .depth  = anv_minify(image->extent.depth , range->baseMipLevel),
    };
+
+   isl_surf_usage_flags_t cube_usage;
+   if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE ||
+       pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
+      cube_usage = ISL_SURF_USAGE_CUBE_BIT;
+   } else {
+      cube_usage = 0;
+   }
 
    if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       iview->sampler_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      anv_fill_image_surface_state(device, iview->sampler_surface_state,
-                                   iview, &mCreateInfo,
-                                   VK_IMAGE_USAGE_SAMPLED_BIT);
+      isl_view.usage = cube_usage | ISL_SURF_USAGE_TEXTURE_BIT;
+      isl_surf_fill_state(&device->isl_dev,
+                          iview->sampler_surface_state.map,
+                          .surf = &surface->isl,
+                          .view = &isl_view,
+                          .mocs = device->default_mocs,
+                          .level0_extent_px = level0_extent_px);
+
+      if (!device->info.has_llc)
+         anv_state_clflush(iview->sampler_surface_state);
    } else {
       iview->sampler_surface_state.alloc_size = 0;
    }
@@ -602,9 +596,16 @@ anv_image_view_init(struct anv_image_view *iview,
    if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      anv_fill_image_surface_state(device, iview->color_rt_surface_state,
-                                   iview, &mCreateInfo,
-                                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+      isl_view.usage = cube_usage | ISL_SURF_USAGE_RENDER_TARGET_BIT;
+      isl_surf_fill_state(&device->isl_dev,
+                          iview->color_rt_surface_state.map,
+                          .surf = &surface->isl,
+                          .view = &isl_view,
+                          .mocs = device->default_mocs,
+                          .level0_extent_px = level0_extent_px);
+
+      if (!device->info.has_llc)
+         anv_state_clflush(iview->color_rt_surface_state);
    } else {
       iview->color_rt_surface_state.alloc_size = 0;
    }
@@ -612,16 +613,23 @@ anv_image_view_init(struct anv_image_view *iview,
    if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      if (has_matching_storage_typed_format(device, iview->format))
-         anv_fill_image_surface_state(device, iview->storage_surface_state,
-                                      iview, &mCreateInfo,
-                                      VK_IMAGE_USAGE_STORAGE_BIT);
-      else
+      if (has_matching_storage_typed_format(device, iview->format)) {
+         isl_view.usage = cube_usage | ISL_SURF_USAGE_STORAGE_BIT;
+         isl_surf_fill_state(&device->isl_dev,
+                             iview->storage_surface_state.map,
+                             .surf = &surface->isl,
+                             .view = &isl_view,
+                             .mocs = device->default_mocs,
+                             .level0_extent_px = level0_extent_px);
+      } else {
          anv_fill_buffer_surface_state(device, iview->storage_surface_state,
                                        ISL_FORMAT_RAW,
                                        iview->offset,
                                        iview->bo->size - iview->offset, 1);
+      }
 
+      if (!device->info.has_llc)
+         anv_state_clflush(iview->storage_surface_state);
    } else {
       iview->storage_surface_state.alloc_size = 0;
    }
