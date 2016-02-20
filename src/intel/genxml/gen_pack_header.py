@@ -39,7 +39,10 @@ pack_header = """%(license)s
 #pragma once
 
 #include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <assert.h>
+#include <math.h>
 
 #ifndef __gen_validate_value
 #define __gen_validate_value(x)
