@@ -690,9 +690,10 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
     // Evaluate edge equations at sample positions of each of the 4 corners of a raster tile
     // used to for testing if entire raster tile is inside a triangle
-    vEdgeFix16[0] = _mm256_add_pd(vEdgeFix16[0], rastEdges[0].vRasterTileOffsets);
-    vEdgeFix16[1] = _mm256_add_pd(vEdgeFix16[1], rastEdges[1].vRasterTileOffsets);
-    vEdgeFix16[2] = _mm256_add_pd(vEdgeFix16[2], rastEdges[2].vRasterTileOffsets);
+    for (uint32_t e = 0; e < numEdges; ++e)
+    {
+        vEdgeFix16[e] = _mm256_add_pd(vEdgeFix16[e], rastEdges[e].vRasterTileOffsets);
+    }
 
     // at this point vEdge has been evaluated at the UL pixel corners of raster tile bbox
     // step sample positions to the raster tile bbox of multisample points
@@ -700,7 +701,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     //                             |      |
     //                             |      |
     // min(xSamples),max(ySamples)  ------  max(xSamples),max(ySamples)
-    __m256d vEdge0TileBbox, vEdge1TileBbox, vEdge2TileBbox;
+    __m256d vEdgeTileBbox[3];
     if (sampleCount > SWR_MULTISAMPLE_1X)
     {
         __m128i vTileSampleBBoxXh = MultisampleTraits<sampleCount>::TileSampleOffsetsX();
@@ -711,17 +712,12 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
         // step edge equation tests from Tile
         // used to for testing if entire raster tile is inside a triangle
-        __m256d vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[0].a), vTileSampleBBoxXFix8);
-        __m256d vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[0].b), vTileSampleBBoxYFix8);
-        vEdge0TileBbox = _mm256_add_pd(vResultAxFix16, vResultByFix16);
-
-        vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[1].a), vTileSampleBBoxXFix8);
-        vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[1].b), vTileSampleBBoxYFix8);
-        vEdge1TileBbox = _mm256_add_pd(vResultAxFix16, vResultByFix16);
-
-        vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[2].a), vTileSampleBBoxXFix8);
-        vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[2].b), vTileSampleBBoxYFix8);
-        vEdge2TileBbox = _mm256_add_pd(vResultAxFix16, vResultByFix16);
+        for (uint32_t e = 0; e < 3; ++e)
+        {
+            __m256d vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[e].a), vTileSampleBBoxXFix8);
+            __m256d vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[e].b), vTileSampleBBoxYFix8);
+            vEdgeTileBbox[e] = _mm256_add_pd(vResultAxFix16, vResultByFix16);
+        }
     }
 
     RDTSC_STOP(BEStepSetup, 0, pDC->drawId);
@@ -770,9 +766,9 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
             {
                 __m256d vSampleBboxTest0, vSampleBboxTest1, vSampleBboxTest2;
                 // evaluate edge equations at the tile multisample bounding box
-                vSampleBboxTest0 = _mm256_add_pd(vEdge0TileBbox, vEdgeFix16[0]);
-                vSampleBboxTest1 = _mm256_add_pd(vEdge1TileBbox, vEdgeFix16[1]);
-                vSampleBboxTest2 = _mm256_add_pd(vEdge2TileBbox, vEdgeFix16[2]);
+                vSampleBboxTest0 = _mm256_add_pd(vEdgeTileBbox[0], vEdgeFix16[0]);
+                vSampleBboxTest1 = _mm256_add_pd(vEdgeTileBbox[1], vEdgeFix16[1]);
+                vSampleBboxTest2 = _mm256_add_pd(vEdgeTileBbox[2], vEdgeFix16[2]);
                 mask0 = _mm256_movemask_pd(vSampleBboxTest0);
                 mask1 = _mm256_movemask_pd(vSampleBboxTest1);
                 mask2 = _mm256_movemask_pd(vSampleBboxTest2);
@@ -796,13 +792,14 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                     }
                     else
                     {
-                        __m256d vEdge0AtSample, vEdge1AtSample, vEdge2AtSample; 
+                        __m256d vEdgeAtSample[numEdges];
                         if(sampleCount == SWR_MULTISAMPLE_1X)
                         {
                             // should get optimized out for single sample case (global value numbering or copy propagation)
-                            vEdge0AtSample = vEdgeFix16[0];
-                            vEdge1AtSample = vEdgeFix16[1];
-                            vEdge2AtSample = vEdgeFix16[2];
+                            for (uint32_t e = 0; e < numEdges; ++e)
+                            {
+                                vEdgeAtSample[e] = vEdgeFix16[e];
+                            }
                         }
                         else
                         {
@@ -815,31 +812,20 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                             // for each edge and broadcasts it before offsetting to individual pixel quads
 
                             // step edge equation tests from UL tile corner to pixel sample position
-                            __m256d vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[0].a), vSampleOffsetX);
-                            __m256d vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[0].b), vSampleOffsetY);
-                            vEdge0AtSample = _mm256_add_pd(vResultAxFix16, vResultByFix16);
-                            vEdge0AtSample = _mm256_add_pd(vEdgeFix16[0], vEdge0AtSample);
-
-                            vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[1].a), vSampleOffsetX);
-                            vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[1].b), vSampleOffsetY);
-                            vEdge1AtSample = _mm256_add_pd(vResultAxFix16, vResultByFix16);
-                            vEdge1AtSample = _mm256_add_pd(vEdgeFix16[1], vEdge1AtSample);
-
-                            vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[2].a), vSampleOffsetX);
-                            vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[2].b), vSampleOffsetY);
-                            vEdge2AtSample = _mm256_add_pd(vResultAxFix16, vResultByFix16);
-                            vEdge2AtSample = _mm256_add_pd(vEdgeFix16[2], vEdge2AtSample);
+                            for (uint32_t e = 0; e < numEdges; ++e)
+                            {
+                                __m256d vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[e].a), vSampleOffsetX);
+                                __m256d vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[e].b), vSampleOffsetY);
+                                vEdgeAtSample[e] = _mm256_add_pd(vResultAxFix16, vResultByFix16);
+                                vEdgeAtSample[e] = _mm256_add_pd(vEdgeFix16[e], vEdgeAtSample[e]);
+                            }
                         }
 
                         double startQuadEdges[numEdges];
                         const __m256i vLane0Mask = _mm256_set_epi32(0, 0, 0, 0, 0, 0, -1, -1);
-                        _mm256_maskstore_pd(&startQuadEdges[0], vLane0Mask, vEdge0AtSample);
-                        _mm256_maskstore_pd(&startQuadEdges[1], vLane0Mask, vEdge1AtSample);
-                        _mm256_maskstore_pd(&startQuadEdges[2], vLane0Mask, vEdge2AtSample);
-
-                        for (uint32_t e = 3; e < numEdges; ++e)
+                        for (uint32_t e = 0; e < numEdges; ++e)
                         {
-                            _mm256_maskstore_pd(&startQuadEdges[e], vLane0Mask, vEdgeFix16[e]);
+                            _mm256_maskstore_pd(&startQuadEdges[e], vLane0Mask, vEdgeAtSample[e]);
                         }
 
                         // not trivial accept or reject, must rasterize full tile
