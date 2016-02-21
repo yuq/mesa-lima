@@ -846,15 +846,15 @@ nve4_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 
       /* configure and reset the counter(s) */
      if (d == 0)
-        BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_A_SIGSEL(c & 3)), 1);
+        BEGIN_NVC0(push, NVE4_CP(MP_PM_A_SIGSEL(c & 3)), 1);
      else
-        BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_B_SIGSEL(c & 3)), 1);
+        BEGIN_NVC0(push, NVE4_CP(MP_PM_B_SIGSEL(c & 3)), 1);
      PUSH_DATA (push, cfg->ctr[i].sig_sel);
-     BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_SRCSEL(c)), 1);
+     BEGIN_NVC0(push, NVE4_CP(MP_PM_SRCSEL(c)), 1);
      PUSH_DATA (push, cfg->ctr[i].src_sel + 0x2108421 * (c & 3));
-     BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_FUNC(c)), 1);
+     BEGIN_NVC0(push, NVE4_CP(MP_PM_FUNC(c)), 1);
      PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
-     BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_SET(c)), 1);
+     BEGIN_NVC0(push, NVE4_CP(MP_PM_SET(c)), 1);
      PUSH_DATA (push, 0);
    }
    return true;
@@ -917,13 +917,13 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
       mask_sel &= cfg->ctr[i].src_mask;
 
       /* configure and reset the counter(s) */
-      BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SIGSEL(c)), 1);
+      BEGIN_NVC0(push, NVC0_CP(MP_PM_SIGSEL(c)), 1);
       PUSH_DATA (push, cfg->ctr[i].sig_sel);
-      BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SRCSEL(c)), 1);
+      BEGIN_NVC0(push, NVC0_CP(MP_PM_SRCSEL(c)), 1);
       PUSH_DATA (push, cfg->ctr[i].src_sel | mask_sel);
-      BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_OP(c)), 1);
+      BEGIN_NVC0(push, NVC0_CP(MP_PM_OP(c)), 1);
       PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
-      BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SET(c)), 1);
+      BEGIN_NVC0(push, NVC0_CP(MP_PM_SET(c)), 1);
       PUSH_DATA (push, 0);
    }
    return true;
@@ -966,9 +966,9 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    for (c = 0; c < 8; ++c)
       if (screen->pm.mp_counter[c]) {
          if (is_nve4) {
-            IMMED_NVC0(push, NVE4_COMPUTE(MP_PM_FUNC(c)), 0);
+            IMMED_NVC0(push, NVE4_CP(MP_PM_FUNC(c)), 0);
          } else {
-            IMMED_NVC0(push, NVC0_COMPUTE(MP_PM_OP(c)), 0);
+            IMMED_NVC0(push, NVC0_CP(MP_PM_OP(c)), 0);
          }
       }
    /* release counters for this query */
@@ -984,7 +984,7 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
                 hq->bo);
 
    PUSH_SPACE(push, 1);
-   IMMED_NVC0(push, SUBC_COMPUTE(NV50_GRAPH_SERIALIZE), 0);
+   IMMED_NVC0(push, SUBC_CP(NV50_GRAPH_SERIALIZE), 0);
 
    pipe->bind_compute_state(pipe, screen->pm.prog);
    input[0] = (hq->bo->offset + hq->base_offset);
@@ -1018,9 +1018,9 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
             break;
          mask |= 1 << hsq->ctr[i];
          if (is_nve4) {
-            BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_FUNC(hsq->ctr[i])), 1);
+            BEGIN_NVC0(push, NVE4_CP(MP_PM_FUNC(hsq->ctr[i])), 1);
          } else {
-            BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_OP(hsq->ctr[i])), 1);
+            BEGIN_NVC0(push, NVC0_CP(MP_PM_OP(hsq->ctr[i])), 1);
          }
          PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
       }

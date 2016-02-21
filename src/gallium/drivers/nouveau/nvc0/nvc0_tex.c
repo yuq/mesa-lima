@@ -472,7 +472,7 @@ nvc0_validate_tic(struct nvc0_context *nvc0, int s)
       } else
       if (res->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
          if (unlikely(s == 5))
-            BEGIN_NVC0(push, NVC0_COMPUTE(TEX_CACHE_CTL), 1);
+            BEGIN_NVC0(push, NVC0_CP(TEX_CACHE_CTL), 1);
          else
             BEGIN_NVC0(push, NVC0_3D(TEX_CACHE_CTL), 1);
          PUSH_DATA (push, (tic->id << 4) | 1);
@@ -499,7 +499,7 @@ nvc0_validate_tic(struct nvc0_context *nvc0, int s)
 
    if (n) {
       if (unlikely(s == 5))
-         BEGIN_NIC0(push, NVC0_COMPUTE(BIND_TIC), n);
+         BEGIN_NIC0(push, NVC0_CP(BIND_TIC), n);
       else
          BEGIN_NIC0(push, NVC0_3D(BIND_TIC(s)), n);
       PUSH_DATAp(push, commands, n);
@@ -625,7 +625,7 @@ nvc0_validate_tsc(struct nvc0_context *nvc0, int s)
 
    if (n) {
       if (unlikely(s == 5))
-         BEGIN_NIC0(push, NVC0_COMPUTE(BIND_TSC), n);
+         BEGIN_NIC0(push, NVC0_CP(BIND_TSC), n);
       else
          BEGIN_NIC0(push, NVC0_3D(BIND_TSC(s)), n);
       PUSH_DATAp(push, commands, n);
