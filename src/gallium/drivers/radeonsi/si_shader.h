@@ -365,6 +365,7 @@ struct si_shader {
 	struct r600_resource		*scratch_bo;
 	union si_shader_key		key;
 	bool				is_binary_shared;
+	unsigned			z_order;
 
 	/* The following data is all that's needed for binary shaders. */
 	struct radeon_shader_binary	binary;

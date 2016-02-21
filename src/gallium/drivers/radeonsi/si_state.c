@@ -1339,10 +1339,10 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 		            sctx->ps_db_shader_control;
 
 	/* Bug workaround for smoothing (overrasterization) on SI. */
-	if (sctx->b.chip_class == SI && sctx->smoothing_enabled)
+	if (sctx->b.chip_class == SI && sctx->smoothing_enabled) {
+		db_shader_control &= C_02880C_Z_ORDER;
 		db_shader_control |= S_02880C_Z_ORDER(V_02880C_LATE_Z);
-	else
-		db_shader_control |= S_02880C_Z_ORDER(V_02880C_EARLY_Z_THEN_LATE_Z);
+	}
 
 	/* Disable the gl_SampleMask fragment shader output if MSAA is disabled. */
 	if (sctx->framebuffer.nr_samples <= 1 || (rs && !rs->multisample_enable))
