@@ -118,7 +118,7 @@ struct nvc0_context {
                           const struct nv50_m2mf_rect *src,
                           uint32_t nblocksx, uint32_t nblocksy);
 
-   uint32_t dirty;
+   uint32_t dirty_3d; /* dirty flags for 3d state */
    uint32_t dirty_cp; /* dirty flags for compute state */
 
    struct nvc0_graph_state state;

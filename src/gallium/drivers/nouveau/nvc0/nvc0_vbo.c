@@ -446,7 +446,7 @@ nvc0_vertex_arrays_validate(struct nvc0_context *nvc0)
    }
    const_vbos = vbo_mode ? 0 : nvc0->constant_vbos;
 
-   update_vertex = (nvc0->dirty & NVC0_NEW_VERTEX) ||
+   update_vertex = (nvc0->dirty_3d & NVC0_NEW_VERTEX) ||
       (const_vbos != nvc0->state.constant_vbos) ||
       (vbo_mode != nvc0->state.vbo_mode);
 
@@ -949,12 +949,12 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       info->indexed && (nvc0->vb_elt_limit >= (info->count * 2));
 
    /* Check whether we want to switch vertex-submission mode. */
-   if (nvc0->vbo_user && !(nvc0->dirty & (NVC0_NEW_ARRAYS | NVC0_NEW_VERTEX))) {
+   if (nvc0->vbo_user && !(nvc0->dirty_3d & (NVC0_NEW_ARRAYS | NVC0_NEW_VERTEX))) {
       if (nvc0->vbo_push_hint != !!nvc0->state.vbo_mode)
          if (nvc0->state.vbo_mode != 3)
-            nvc0->dirty |= NVC0_NEW_ARRAYS;
+            nvc0->dirty_3d |= NVC0_NEW_ARRAYS;
 
-      if (!(nvc0->dirty & NVC0_NEW_ARRAYS) && nvc0->state.vbo_mode == 0) {
+      if (!(nvc0->dirty_3d & NVC0_NEW_ARRAYS) && nvc0->state.vbo_mode == 0) {
          if (nvc0->vertex->shared_slots)
             nvc0_update_user_vbufs_shared(nvc0);
          else

@@ -239,7 +239,7 @@ nvc0_validate_scissor(struct nvc0_context *nvc0)
    int i;
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
 
-   if (!(nvc0->dirty & NVC0_NEW_SCISSOR) &&
+   if (!(nvc0->dirty_3d & NVC0_NEW_SCISSOR) &&
       nvc0->rast->pipe.scissor == nvc0->state.scissor)
       return;
 
@@ -367,7 +367,7 @@ nvc0_validate_clip(struct nvc0_context *nvc0)
    if (clip_enable && vp->vp.num_ucps < PIPE_MAX_CLIP_PLANES)
       nvc0_check_program_ucps(nvc0, vp, clip_enable);
 
-   if (nvc0->dirty & (NVC0_NEW_CLIP | (NVC0_NEW_VERTPROG << stage)))
+   if (nvc0->dirty_3d & (NVC0_NEW_CLIP | (NVC0_NEW_VERTPROG << stage)))
       if (vp->vp.num_ucps > 0 && vp->vp.num_ucps <= PIPE_MAX_CLIP_PLANES)
          nvc0_upload_uclip_planes(nvc0, stage);
 
@@ -652,7 +652,7 @@ nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
    else
       ctx_to->state = ctx_to->screen->save_state;
 
-   ctx_to->dirty = ~0;
+   ctx_to->dirty_3d = ~0;
    ctx_to->dirty_cp = ~0;
    ctx_to->viewports_dirty = ~0;
    ctx_to->scissors_dirty = ~0;
@@ -668,21 +668,21 @@ nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
    ctx_to->state.tfb = NULL;
 
    if (!ctx_to->vertex)
-      ctx_to->dirty &= ~(NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS);
+      ctx_to->dirty_3d &= ~(NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS);
    if (!ctx_to->idxbuf.buffer)
-      ctx_to->dirty &= ~NVC0_NEW_IDXBUF;
+      ctx_to->dirty_3d &= ~NVC0_NEW_IDXBUF;
 
    if (!ctx_to->vertprog)
-      ctx_to->dirty &= ~NVC0_NEW_VERTPROG;
+      ctx_to->dirty_3d &= ~NVC0_NEW_VERTPROG;
    if (!ctx_to->fragprog)
-      ctx_to->dirty &= ~NVC0_NEW_FRAGPROG;
+      ctx_to->dirty_3d &= ~NVC0_NEW_FRAGPROG;
 
    if (!ctx_to->blend)
-      ctx_to->dirty &= ~NVC0_NEW_BLEND;
+      ctx_to->dirty_3d &= ~NVC0_NEW_BLEND;
    if (!ctx_to->rast)
-      ctx_to->dirty &= ~(NVC0_NEW_RASTERIZER | NVC0_NEW_SCISSOR);
+      ctx_to->dirty_3d &= ~(NVC0_NEW_RASTERIZER | NVC0_NEW_SCISSOR);
    if (!ctx_to->zsa)
-      ctx_to->dirty &= ~NVC0_NEW_ZSA;
+      ctx_to->dirty_3d &= ~NVC0_NEW_ZSA;
 
    ctx_to->screen->cur_ctx = ctx_to;
 }
@@ -738,7 +738,7 @@ nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask)
    if (nvc0->screen->cur_ctx != nvc0)
       nvc0_switch_pipe_context(nvc0);
 
-   state_mask = nvc0->dirty & mask;
+   state_mask = nvc0->dirty_3d & mask;
 
    if (state_mask) {
       for (i = 0; i < ARRAY_SIZE(validate_list); ++i) {
@@ -747,7 +747,7 @@ nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask)
          if (state_mask & validate->states)
             validate->func(nvc0);
       }
-      nvc0->dirty &= ~state_mask;
+      nvc0->dirty_3d &= ~state_mask;
 
       nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, false);
    }

@@ -152,7 +152,7 @@ nvc0_fragprog_validate(struct nvc0_context *nvc0)
                                      NVC0_3D_SHADE_MODEL_SMOOTH);
    }
 
-   if (fp->mem && !(nvc0->dirty & NVC0_NEW_FRAGPROG)) {
+   if (fp->mem && !(nvc0->dirty_3d & NVC0_NEW_FRAGPROG)) {
       return;
    }
 
@@ -292,7 +292,7 @@ nvc0_tfb_validate(struct nvc0_context *nvc0)
    }
    nvc0->state.tfb = tfb;
 
-   if (!(nvc0->dirty & NVC0_NEW_TFB_TARGETS))
+   if (!(nvc0->dirty_3d & NVC0_NEW_TFB_TARGETS))
       return;
    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TFB);
 

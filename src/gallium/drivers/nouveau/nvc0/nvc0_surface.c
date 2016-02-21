@@ -353,7 +353,7 @@ nvc0_clear_render_target(struct pipe_context *pipe,
 
    IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
-   nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty_3d |= NVC0_NEW_FRAMEBUFFER;
 }
 
 static void
@@ -609,7 +609,7 @@ nvc0_clear_buffer(struct pipe_context *pipe,
                              data, data_size);
    }
 
-   nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty_3d |= NVC0_NEW_FRAMEBUFFER;
 }
 
 static void
@@ -678,7 +678,7 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
 
    IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
-   nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty_3d |= NVC0_NEW_FRAMEBUFFER;
 }
 
 void
@@ -793,7 +793,7 @@ struct nvc0_blitctx
       struct pipe_sampler_view *texture[2];
       struct nv50_tsc_entry *sampler[2];
       unsigned min_samples;
-      uint32_t dirty;
+      uint32_t dirty_3d;
    } saved;
    struct nvc0_rasterizer_stateobj rast;
 };
@@ -1085,7 +1085,7 @@ nvc0_blitctx_pre_blit(struct nvc0_blitctx *ctx)
 
    nvc0->min_samples = 1;
 
-   ctx->saved.dirty = nvc0->dirty;
+   ctx->saved.dirty_3d = nvc0->dirty_3d;
 
    nvc0->textures_dirty[4] |= 3;
    nvc0->samplers_dirty[4] |= 3;
@@ -1094,7 +1094,7 @@ nvc0_blitctx_pre_blit(struct nvc0_blitctx *ctx)
    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(4, 0));
    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(4, 1));
 
-   nvc0->dirty = NVC0_NEW_FRAMEBUFFER | NVC0_NEW_MIN_SAMPLES |
+   nvc0->dirty_3d = NVC0_NEW_FRAMEBUFFER | NVC0_NEW_MIN_SAMPLES |
       NVC0_NEW_VERTPROG | NVC0_NEW_FRAGPROG |
       NVC0_NEW_TCTLPROG | NVC0_NEW_TEVLPROG | NVC0_NEW_GMTYPROG |
       NVC0_NEW_TEXTURES | NVC0_NEW_SAMPLERS;
@@ -1151,7 +1151,7 @@ nvc0_blitctx_post_blit(struct nvc0_blitctx *blit)
    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(4, 1));
    nouveau_scratch_done(&nvc0->base);
 
-   nvc0->dirty = blit->saved.dirty |
+   nvc0->dirty_3d = blit->saved.dirty_3d |
       (NVC0_NEW_FRAMEBUFFER | NVC0_NEW_SCISSOR | NVC0_NEW_SAMPLE_MASK |
        NVC0_NEW_RASTERIZER | NVC0_NEW_ZSA | NVC0_NEW_BLEND |
        NVC0_NEW_VIEWPORT |

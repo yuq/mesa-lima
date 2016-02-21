@@ -194,7 +194,7 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
       for (i = 0; i < nvc0->framebuffer.nr_cbufs; ++i) {
          if (nvc0->framebuffer.cbufs[i] &&
              nvc0->framebuffer.cbufs[i]->texture == res) {
-            nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
+            nvc0->dirty_3d |= NVC0_NEW_FRAMEBUFFER;
             nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_FB);
             if (!--ref)
                return ref;
@@ -204,7 +204,7 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
    if (res->bind & PIPE_BIND_DEPTH_STENCIL) {
       if (nvc0->framebuffer.zsbuf &&
           nvc0->framebuffer.zsbuf->texture == res) {
-         nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
+         nvc0->dirty_3d |= NVC0_NEW_FRAMEBUFFER;
          nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_FB);
          if (!--ref)
             return ref;
@@ -214,7 +214,7 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
    if (res->target == PIPE_BUFFER) {
       for (i = 0; i < nvc0->num_vtxbufs; ++i) {
          if (nvc0->vtxbuf[i].buffer == res) {
-            nvc0->dirty |= NVC0_NEW_ARRAYS;
+            nvc0->dirty_3d |= NVC0_NEW_ARRAYS;
             nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX);
             if (!--ref)
                return ref;
@@ -222,7 +222,7 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
       }
 
       if (nvc0->idxbuf.buffer == res) {
-         nvc0->dirty |= NVC0_NEW_IDXBUF;
+         nvc0->dirty_3d |= NVC0_NEW_IDXBUF;
          nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_IDX);
          if (!--ref)
             return ref;
@@ -233,7 +233,7 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
          if (nvc0->textures[s][i] &&
              nvc0->textures[s][i]->texture == res) {
             nvc0->textures_dirty[s] |= 1 << i;
-            nvc0->dirty |= NVC0_NEW_TEXTURES;
+            nvc0->dirty_3d |= NVC0_NEW_TEXTURES;
             nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(s, i));
             if (!--ref)
                return ref;
@@ -252,7 +252,7 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
                nvc0->dirty_cp |= NVC0_NEW_CP_CONSTBUF;
                nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_CB(i));
             } else {
-               nvc0->dirty |= NVC0_NEW_CONSTBUF;
+               nvc0->dirty_3d |= NVC0_NEW_CONSTBUF;
                nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_CB(s, i));
             }
             if (!--ref)
@@ -269,7 +269,7 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
                nvc0->dirty_cp |= NVC0_NEW_CP_BUFFERS;
                nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_BUF);
             } else {
-               nvc0->dirty |= NVC0_NEW_BUFFERS;
+               nvc0->dirty_3d |= NVC0_NEW_BUFFERS;
                nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_BUF);
             }
             if (!--ref)
@@ -352,7 +352,7 @@ nvc0_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
    if (!nvc0->tcp_empty)
       goto out_err;
    /* set the empty tctl prog on next draw in case one is never set */
-   nvc0->dirty |= NVC0_NEW_TCTLPROG;
+   nvc0->dirty_3d |= NVC0_NEW_TCTLPROG;
 
    /* Do not bind the COMPUTE driver constbuf at screen initialization because
     * CBs are aliased between 3D and COMPUTE, but make sure it will be bound if
