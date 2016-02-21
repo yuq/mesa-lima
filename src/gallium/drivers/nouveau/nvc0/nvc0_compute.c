@@ -376,7 +376,7 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    if (unlikely(info->indirect)) {
       struct nv04_resource *res = nv04_resource(info->indirect);
       uint32_t offset = res->offset + info->indirect_offset;
-      unsigned macro = NVC0_COMPUTE_MACRO_LAUNCH_GRID_INDIRECT;
+      unsigned macro = NVC0_CP_MACRO_LAUNCH_GRID_INDIRECT;
 
       nouveau_pushbuf_space(push, 16, 0, 1);
       PUSH_REFN(push, res->bo, NOUVEAU_BO_RD | res->domain);

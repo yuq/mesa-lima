@@ -1077,7 +1077,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    MK_MACRO(NVC0_3D_MACRO_DRAW_ARRAYS_INDIRECT_COUNT, mme9097_draw_arrays_indirect_count);
    MK_MACRO(NVC0_3D_MACRO_DRAW_ELEMENTS_INDIRECT_COUNT, mme9097_draw_elts_indirect_count);
    MK_MACRO(NVC0_3D_MACRO_QUERY_BUFFER_WRITE, mme9097_query_buffer_write);
-   MK_MACRO(NVC0_COMPUTE_MACRO_LAUNCH_GRID_INDIRECT, mme90c0_launch_grid_indirect);
+   MK_MACRO(NVC0_CP_MACRO_LAUNCH_GRID_INDIRECT, mme90c0_launch_grid_indirect);
 
    BEGIN_NVC0(push, NVC0_3D(RASTERIZE_ENABLE), 1);
    PUSH_DATA (push, 1);
