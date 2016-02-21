@@ -254,6 +254,8 @@ VkResult anv_CreateInstance(
    instance->apiVersion = client_version;
    instance->physicalDeviceCount = -1;
 
+   memset(instance->wsi, 0, sizeof(instance->wsi));
+
    _mesa_locale_init();
 
    VG(VALGRIND_CREATE_MEMPOOL(instance, 0, false));
