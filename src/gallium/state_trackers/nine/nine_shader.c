@@ -830,6 +830,18 @@ nine_ureg_dst_register(unsigned file, int index)
     return ureg_dst(ureg_src_register(file, index));
 }
 
+static inline struct ureg_src
+nine_get_position_input(struct shader_translator *tx)
+{
+    struct ureg_program *ureg = tx->ureg;
+
+    if (tx->wpos_is_sysval)
+        return ureg_DECL_system_value(ureg, TGSI_SEMANTIC_POSITION, 0);
+    else
+        return ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION,
+                                  0, TGSI_INTERPOLATE_LINEAR);
+}
+
 static struct ureg_src
 tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
 {
@@ -955,16 +967,8 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
     case D3DSPR_MISCTYPE:
         switch (param->idx) {
         case D3DSMO_POSITION:
-           if (ureg_src_is_undef(tx->regs.vPos)) {
-              if (tx->wpos_is_sysval) {
-                  tx->regs.vPos =
-                      ureg_DECL_system_value(ureg, TGSI_SEMANTIC_POSITION, 0);
-              } else {
-                  tx->regs.vPos =
-                      ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
-                                         TGSI_INTERPOLATE_LINEAR);
-              }
-           }
+           if (ureg_src_is_undef(tx->regs.vPos))
+              tx->regs.vPos = nine_get_position_input(tx);
            if (tx->shift_wpos) {
                /* TODO: do this only once */
                struct ureg_dst wpos = tx_scratch(tx);
@@ -3269,12 +3273,7 @@ shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
     }
 
     if (tx->info->fog_mode != D3DFOG_NONE) {
-        if (tx->wpos_is_sysval) {
-            depth = ureg_DECL_system_value(ureg, TGSI_SEMANTIC_POSITION, 0);
-        } else {
-            depth = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_POSITION, 0,
-                                       TGSI_INTERPOLATE_LINEAR);
-        }
+        depth = nine_get_position_input(tx);
         depth = ureg_scalar(depth, TGSI_SWIZZLE_Z);
     }
 
