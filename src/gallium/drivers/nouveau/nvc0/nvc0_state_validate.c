@@ -239,7 +239,7 @@ nvc0_validate_scissor(struct nvc0_context *nvc0)
    int i;
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
 
-   if (!(nvc0->dirty_3d & NVC0_NEW_SCISSOR) &&
+   if (!(nvc0->dirty_3d & NVC0_NEW_3D_SCISSOR) &&
       nvc0->rast->pipe.scissor == nvc0->state.scissor)
       return;
 
@@ -367,7 +367,7 @@ nvc0_validate_clip(struct nvc0_context *nvc0)
    if (clip_enable && vp->vp.num_ucps < PIPE_MAX_CLIP_PLANES)
       nvc0_check_program_ucps(nvc0, vp, clip_enable);
 
-   if (nvc0->dirty_3d & (NVC0_NEW_CLIP | (NVC0_NEW_VERTPROG << stage)))
+   if (nvc0->dirty_3d & (NVC0_NEW_3D_CLIP | (NVC0_NEW_3D_VERTPROG << stage)))
       if (vp->vp.num_ucps > 0 && vp->vp.num_ucps <= PIPE_MAX_CLIP_PLANES)
          nvc0_upload_uclip_planes(nvc0, stage);
 
@@ -668,21 +668,21 @@ nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
    ctx_to->state.tfb = NULL;
 
    if (!ctx_to->vertex)
-      ctx_to->dirty_3d &= ~(NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS);
+      ctx_to->dirty_3d &= ~(NVC0_NEW_3D_VERTEX | NVC0_NEW_3D_ARRAYS);
    if (!ctx_to->idxbuf.buffer)
-      ctx_to->dirty_3d &= ~NVC0_NEW_IDXBUF;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_IDXBUF;
 
    if (!ctx_to->vertprog)
-      ctx_to->dirty_3d &= ~NVC0_NEW_VERTPROG;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_VERTPROG;
    if (!ctx_to->fragprog)
-      ctx_to->dirty_3d &= ~NVC0_NEW_FRAGPROG;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_FRAGPROG;
 
    if (!ctx_to->blend)
-      ctx_to->dirty_3d &= ~NVC0_NEW_BLEND;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_BLEND;
    if (!ctx_to->rast)
-      ctx_to->dirty_3d &= ~(NVC0_NEW_RASTERIZER | NVC0_NEW_SCISSOR);
+      ctx_to->dirty_3d &= ~(NVC0_NEW_3D_RASTERIZER | NVC0_NEW_3D_SCISSOR);
    if (!ctx_to->zsa)
-      ctx_to->dirty_3d &= ~NVC0_NEW_ZSA;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_ZSA;
 
    ctx_to->screen->cur_ctx = ctx_to;
 }
@@ -691,41 +691,41 @@ static struct state_validate {
     void (*func)(struct nvc0_context *);
     uint32_t states;
 } validate_list[] = {
-    { nvc0_validate_fb,            NVC0_NEW_FRAMEBUFFER },
-    { nvc0_validate_blend,         NVC0_NEW_BLEND },
-    { nvc0_validate_zsa,           NVC0_NEW_ZSA },
-    { nvc0_validate_sample_mask,   NVC0_NEW_SAMPLE_MASK },
-    { nvc0_validate_rasterizer,    NVC0_NEW_RASTERIZER },
-    { nvc0_validate_blend_colour,  NVC0_NEW_BLEND_COLOUR },
-    { nvc0_validate_stencil_ref,   NVC0_NEW_STENCIL_REF },
-    { nvc0_validate_stipple,       NVC0_NEW_STIPPLE },
-    { nvc0_validate_scissor,       NVC0_NEW_SCISSOR | NVC0_NEW_RASTERIZER },
-    { nvc0_validate_viewport,      NVC0_NEW_VIEWPORT },
-    { nvc0_vertprog_validate,      NVC0_NEW_VERTPROG },
-    { nvc0_tctlprog_validate,      NVC0_NEW_TCTLPROG },
-    { nvc0_tevlprog_validate,      NVC0_NEW_TEVLPROG },
-    { nvc0_validate_tess_state,    NVC0_NEW_TESSFACTOR },
-    { nvc0_gmtyprog_validate,      NVC0_NEW_GMTYPROG },
-    { nvc0_fragprog_validate,      NVC0_NEW_FRAGPROG | NVC0_NEW_RASTERIZER },
-    { nvc0_validate_derived_1,     NVC0_NEW_FRAGPROG | NVC0_NEW_ZSA |
-                                   NVC0_NEW_RASTERIZER },
-    { nvc0_validate_derived_2,     NVC0_NEW_ZSA | NVC0_NEW_FRAMEBUFFER },
-    { nvc0_validate_derived_3,     NVC0_NEW_BLEND | NVC0_NEW_FRAMEBUFFER },
-    { nvc0_validate_clip,          NVC0_NEW_CLIP | NVC0_NEW_RASTERIZER |
-                                   NVC0_NEW_VERTPROG |
-                                   NVC0_NEW_TEVLPROG |
-                                   NVC0_NEW_GMTYPROG },
-    { nvc0_constbufs_validate,     NVC0_NEW_CONSTBUF },
-    { nvc0_validate_textures,      NVC0_NEW_TEXTURES },
-    { nvc0_validate_samplers,      NVC0_NEW_SAMPLERS },
-    { nve4_set_tex_handles,        NVC0_NEW_TEXTURES | NVC0_NEW_SAMPLERS },
-    { nvc0_vertex_arrays_validate, NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS },
-    { nvc0_validate_surfaces,      NVC0_NEW_SURFACES },
-    { nvc0_validate_buffers,       NVC0_NEW_BUFFERS },
-    { nvc0_idxbuf_validate,        NVC0_NEW_IDXBUF },
-    { nvc0_tfb_validate,           NVC0_NEW_TFB_TARGETS | NVC0_NEW_GMTYPROG },
-    { nvc0_validate_min_samples,   NVC0_NEW_MIN_SAMPLES },
-    { nvc0_validate_driverconst,   NVC0_NEW_DRIVERCONST },
+    { nvc0_validate_fb,            NVC0_NEW_3D_FRAMEBUFFER },
+    { nvc0_validate_blend,         NVC0_NEW_3D_BLEND },
+    { nvc0_validate_zsa,           NVC0_NEW_3D_ZSA },
+    { nvc0_validate_sample_mask,   NVC0_NEW_3D_SAMPLE_MASK },
+    { nvc0_validate_rasterizer,    NVC0_NEW_3D_RASTERIZER },
+    { nvc0_validate_blend_colour,  NVC0_NEW_3D_BLEND_COLOUR },
+    { nvc0_validate_stencil_ref,   NVC0_NEW_3D_STENCIL_REF },
+    { nvc0_validate_stipple,       NVC0_NEW_3D_STIPPLE },
+    { nvc0_validate_scissor,       NVC0_NEW_3D_SCISSOR | NVC0_NEW_3D_RASTERIZER },
+    { nvc0_validate_viewport,      NVC0_NEW_3D_VIEWPORT },
+    { nvc0_vertprog_validate,      NVC0_NEW_3D_VERTPROG },
+    { nvc0_tctlprog_validate,      NVC0_NEW_3D_TCTLPROG },
+    { nvc0_tevlprog_validate,      NVC0_NEW_3D_TEVLPROG },
+    { nvc0_validate_tess_state,    NVC0_NEW_3D_TESSFACTOR },
+    { nvc0_gmtyprog_validate,      NVC0_NEW_3D_GMTYPROG },
+    { nvc0_fragprog_validate,      NVC0_NEW_3D_FRAGPROG | NVC0_NEW_3D_RASTERIZER },
+    { nvc0_validate_derived_1,     NVC0_NEW_3D_FRAGPROG | NVC0_NEW_3D_ZSA |
+                                   NVC0_NEW_3D_RASTERIZER },
+    { nvc0_validate_derived_2,     NVC0_NEW_3D_ZSA | NVC0_NEW_3D_FRAMEBUFFER },
+    { nvc0_validate_derived_3,     NVC0_NEW_3D_BLEND | NVC0_NEW_3D_FRAMEBUFFER },
+    { nvc0_validate_clip,          NVC0_NEW_3D_CLIP | NVC0_NEW_3D_RASTERIZER |
+                                   NVC0_NEW_3D_VERTPROG |
+                                   NVC0_NEW_3D_TEVLPROG |
+                                   NVC0_NEW_3D_GMTYPROG },
+    { nvc0_constbufs_validate,     NVC0_NEW_3D_CONSTBUF },
+    { nvc0_validate_textures,      NVC0_NEW_3D_TEXTURES },
+    { nvc0_validate_samplers,      NVC0_NEW_3D_SAMPLERS },
+    { nve4_set_tex_handles,        NVC0_NEW_3D_TEXTURES | NVC0_NEW_3D_SAMPLERS },
+    { nvc0_vertex_arrays_validate, NVC0_NEW_3D_VERTEX | NVC0_NEW_3D_ARRAYS },
+    { nvc0_validate_surfaces,      NVC0_NEW_3D_SURFACES },
+    { nvc0_validate_buffers,       NVC0_NEW_3D_BUFFERS },
+    { nvc0_idxbuf_validate,        NVC0_NEW_3D_IDXBUF },
+    { nvc0_tfb_validate,           NVC0_NEW_3D_TFB_TARGETS | NVC0_NEW_3D_GMTYPROG },
+    { nvc0_validate_min_samples,   NVC0_NEW_3D_MIN_SAMPLES },
+    { nvc0_validate_driverconst,   NVC0_NEW_3D_DRIVERCONST },
 };
 
 bool

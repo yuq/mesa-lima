@@ -239,7 +239,7 @@ nvc0_compute_validate_driverconst(struct nvc0_context *nvc0)
    BEGIN_NVC0(push, NVC0_CP(CB_BIND), 1);
    PUSH_DATA (push, (15 << 8) | 1);
 
-   nvc0->dirty_3d |= NVC0_NEW_DRIVERCONST;
+   nvc0->dirty_3d |= NVC0_NEW_3D_DRIVERCONST;
 }
 
 static void
@@ -403,7 +403,7 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    }
 
    /* Invalidate all 3D constbufs because they are aliased with COMPUTE. */
-   nvc0->dirty_3d |= NVC0_NEW_CONSTBUF;
+   nvc0->dirty_3d |= NVC0_NEW_3D_CONSTBUF;
    for (s = 0; s < 5; s++) {
       nvc0->constbuf_dirty[s] |= nvc0->constbuf_valid[s];
       nvc0->state.uniform_buffer_bound[s] = 0;

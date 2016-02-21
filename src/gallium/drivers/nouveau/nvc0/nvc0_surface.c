@@ -353,7 +353,7 @@ nvc0_clear_render_target(struct pipe_context *pipe,
 
    IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
-   nvc0->dirty_3d |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER;
 }
 
 static void
@@ -609,7 +609,7 @@ nvc0_clear_buffer(struct pipe_context *pipe,
                              data, data_size);
    }
 
-   nvc0->dirty_3d |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER;
 }
 
 static void
@@ -678,7 +678,7 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
 
    IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
-   nvc0->dirty_3d |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER;
 }
 
 void
@@ -693,7 +693,7 @@ nvc0_clear(struct pipe_context *pipe, unsigned buffers,
    uint32_t mode = 0;
 
    /* don't need NEW_BLEND, COLOR_MASK doesn't affect CLEAR_BUFFERS */
-   if (!nvc0_state_validate(nvc0, NVC0_NEW_FRAMEBUFFER))
+   if (!nvc0_state_validate(nvc0, NVC0_NEW_3D_FRAMEBUFFER))
       return;
 
    if (buffers & PIPE_CLEAR_COLOR && fb->nr_cbufs) {
@@ -1094,10 +1094,10 @@ nvc0_blitctx_pre_blit(struct nvc0_blitctx *ctx)
    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(4, 0));
    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(4, 1));
 
-   nvc0->dirty_3d = NVC0_NEW_FRAMEBUFFER | NVC0_NEW_MIN_SAMPLES |
-      NVC0_NEW_VERTPROG | NVC0_NEW_FRAGPROG |
-      NVC0_NEW_TCTLPROG | NVC0_NEW_TEVLPROG | NVC0_NEW_GMTYPROG |
-      NVC0_NEW_TEXTURES | NVC0_NEW_SAMPLERS;
+   nvc0->dirty_3d = NVC0_NEW_3D_FRAMEBUFFER | NVC0_NEW_3D_MIN_SAMPLES |
+      NVC0_NEW_3D_VERTPROG | NVC0_NEW_3D_FRAGPROG |
+      NVC0_NEW_3D_TCTLPROG | NVC0_NEW_3D_TEVLPROG | NVC0_NEW_3D_GMTYPROG |
+      NVC0_NEW_3D_TEXTURES | NVC0_NEW_3D_SAMPLERS;
 }
 
 static void
@@ -1152,13 +1152,13 @@ nvc0_blitctx_post_blit(struct nvc0_blitctx *blit)
    nouveau_scratch_done(&nvc0->base);
 
    nvc0->dirty_3d = blit->saved.dirty_3d |
-      (NVC0_NEW_FRAMEBUFFER | NVC0_NEW_SCISSOR | NVC0_NEW_SAMPLE_MASK |
-       NVC0_NEW_RASTERIZER | NVC0_NEW_ZSA | NVC0_NEW_BLEND |
-       NVC0_NEW_VIEWPORT |
-       NVC0_NEW_TEXTURES | NVC0_NEW_SAMPLERS |
-       NVC0_NEW_VERTPROG | NVC0_NEW_FRAGPROG |
-       NVC0_NEW_TCTLPROG | NVC0_NEW_TEVLPROG | NVC0_NEW_GMTYPROG |
-       NVC0_NEW_TFB_TARGETS | NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS);
+      (NVC0_NEW_3D_FRAMEBUFFER | NVC0_NEW_3D_SCISSOR | NVC0_NEW_3D_SAMPLE_MASK |
+       NVC0_NEW_3D_RASTERIZER | NVC0_NEW_3D_ZSA | NVC0_NEW_3D_BLEND |
+       NVC0_NEW_3D_VIEWPORT |
+       NVC0_NEW_3D_TEXTURES | NVC0_NEW_3D_SAMPLERS |
+       NVC0_NEW_3D_VERTPROG | NVC0_NEW_3D_FRAGPROG |
+       NVC0_NEW_3D_TCTLPROG | NVC0_NEW_3D_TEVLPROG | NVC0_NEW_3D_GMTYPROG |
+       NVC0_NEW_3D_TFB_TARGETS | NVC0_NEW_3D_VERTEX | NVC0_NEW_3D_ARRAYS);
    nvc0->scissors_dirty |= 1;
    nvc0->viewports_dirty |= 1;
 
