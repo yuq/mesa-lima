@@ -21,53 +21,6 @@
  * IN THE SOFTWARE.
  */
 
-static const uint8_t
-anv_surftype(const struct anv_image *image, VkImageViewType view_type,
-             bool storage)
-{
-   switch (view_type) {
-   default:
-      unreachable("bad VkImageViewType");
-   case VK_IMAGE_VIEW_TYPE_1D:
-   case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
-      assert(image->type == VK_IMAGE_TYPE_1D);
-      return SURFTYPE_1D;
-   case VK_IMAGE_VIEW_TYPE_CUBE:
-   case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
-      assert(image->type == VK_IMAGE_TYPE_2D);
-      return storage ? SURFTYPE_2D : SURFTYPE_CUBE;
-   case VK_IMAGE_VIEW_TYPE_2D:
-   case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
-      assert(image->type == VK_IMAGE_TYPE_2D);
-      return SURFTYPE_2D;
-   case VK_IMAGE_VIEW_TYPE_3D:
-      assert(image->type == VK_IMAGE_TYPE_3D);
-      return SURFTYPE_3D;
-   }
-}
-
-static enum isl_format
-anv_surface_format(const struct anv_device *device, enum isl_format format,
-                   bool storage)
-{
-   if (storage) {
-      return isl_lower_storage_image_format(&device->isl_dev, format);
-   } else {
-      return format;
-   }
-}
-
-#if GEN_GEN > 7 || GEN_IS_HASWELL
-static const uint32_t vk_to_gen_swizzle[] = {
-   [VK_COMPONENT_SWIZZLE_ZERO]                 = SCS_ZERO,
-   [VK_COMPONENT_SWIZZLE_ONE]                  = SCS_ONE,
-   [VK_COMPONENT_SWIZZLE_R]                    = SCS_RED,
-   [VK_COMPONENT_SWIZZLE_G]                    = SCS_GREEN,
-   [VK_COMPONENT_SWIZZLE_B]                    = SCS_BLUE,
-   [VK_COMPONENT_SWIZZLE_A]                    = SCS_ALPHA
-};
-#endif
-
 static inline uint32_t
 vk_to_gen_tex_filter(VkFilter filter, bool anisotropyEnable)
 {
