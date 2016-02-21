@@ -514,14 +514,15 @@ anv_image_view_init(struct anv_image_view *iview,
    iview->vk_format = pCreateInfo->format;
 
    struct anv_format_swizzle swizzle;
-   iview->format = anv_get_isl_format(pCreateInfo->format, iview->aspect_mask,
-                                      image->tiling, &swizzle);
+   enum isl_format format = anv_get_isl_format(pCreateInfo->format,
+                                               range->aspectMask,
+                                               image->tiling, &swizzle);
 
    iview->base_layer = range->baseArrayLayer;
    iview->base_mip = range->baseMipLevel;
 
    struct isl_view isl_view = {
-      .format = iview->format,
+      .format = format,
       .base_level = range->baseMipLevel,
       .levels = range->levelCount,
       .base_array_layer = range->baseArrayLayer,
@@ -540,7 +541,7 @@ anv_image_view_init(struct anv_image_view *iview,
 
    struct isl_extent4d level0_extent_px;
 
-   if (!isl_format_is_compressed(iview->format) &&
+   if (!isl_format_is_compressed(format) &&
        isl_format_is_compressed(image->format->isl_format)) {
       /* Scale the ImageView extent by the backing Image. This is used
        * internally when an uncompressed ImageView is created on a
@@ -613,7 +614,7 @@ anv_image_view_init(struct anv_image_view *iview,
    if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      if (has_matching_storage_typed_format(device, iview->format)) {
+      if (has_matching_storage_typed_format(device, format)) {
          isl_view.usage = cube_usage | ISL_SURF_USAGE_STORAGE_BIT;
          isl_surf_fill_state(&device->isl_dev,
                              iview->storage_surface_state.map,

@@ -1647,11 +1647,8 @@ struct anv_image_view {
 
    VkImageAspectFlags aspect_mask;
    VkFormat vk_format;
-   VkComponentMapping swizzle;
-   enum isl_format format;
    uint32_t base_layer;
    uint32_t base_mip;
-   VkExtent3D level_0_extent; /**< Extent of ::image's level 0 adjusted for ::vk_format. */
    VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
 
    /** RENDER_SURFACE_STATE when using image as a color render target. */
