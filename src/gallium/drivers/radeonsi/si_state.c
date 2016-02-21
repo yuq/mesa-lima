@@ -2318,9 +2318,8 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	surf->cb_color_info = color_info;
 	surf->cb_color_attrib = color_attrib;
 
-	if (sctx->b.chip_class >= VI && rtex->dcc_buffer) {
+	if (sctx->b.chip_class >= VI && rtex->dcc_offset) {
 		unsigned max_uncompressed_block_size = 2;
-		uint64_t dcc_offset = rtex->surface.level[level].dcc_offset;
 
 		if (rtex->surface.nsamples > 1) {
 			if (rtex->surface.bpe == 1)
@@ -2331,7 +2330,9 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 		surf->cb_dcc_control = S_028C78_MAX_UNCOMPRESSED_BLOCK_SIZE(max_uncompressed_block_size) |
 		                       S_028C78_INDEPENDENT_64B_BLOCKS(1);
-		surf->cb_dcc_base = (rtex->dcc_buffer->gpu_address + dcc_offset) >> 8;
+		surf->cb_dcc_base = (rtex->resource.gpu_address +
+				     rtex->dcc_offset +
+				     rtex->surface.level[level].dcc_offset) >> 8;
 	}
 
 	if (rtex->fmask.size) {
@@ -2668,12 +2669,6 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				tex->cmask_buffer, RADEON_USAGE_READWRITE,
 				RADEON_PRIO_CMASK);
-		}
-
-		if (tex->dcc_buffer && tex->dcc_buffer != &tex->resource) {
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-				tex->dcc_buffer, RADEON_USAGE_READWRITE,
-				RADEON_PRIO_DCC);
 		}
 
 		radeon_set_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C,
@@ -3069,13 +3064,13 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	view->state[5] = (S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
 			  S_008F24_LAST_ARRAY(last_layer));
 
-	if (tmp->dcc_buffer) {
-		uint64_t dcc_offset = surflevel[base_level].dcc_offset;
+	if (tmp->dcc_offset) {
 		unsigned swap = r600_translate_colorswap(pipe_format);
 
 		view->state[6] = S_008F28_COMPRESSION_EN(1) | S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
-		view->state[7] = (tmp->dcc_buffer->gpu_address + dcc_offset) >> 8;
-		view->dcc_buffer = tmp->dcc_buffer;
+		view->state[7] = (tmp->resource.gpu_address +
+				  tmp->dcc_offset +
+				  surflevel[base_level].dcc_offset) >> 8;
 	} else {
 		view->state[6] = 0;
 		view->state[7] = 0;

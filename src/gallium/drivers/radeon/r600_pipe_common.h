@@ -222,7 +222,7 @@ struct r600_texture {
 	struct r600_fmask_info		fmask;
 	struct r600_cmask_info		cmask;
 	struct r600_resource		*cmask_buffer;
-	struct r600_resource		*dcc_buffer;
+	unsigned			dcc_offset; /* 0 = disabled */
 	unsigned			cb_color_info; /* fast clear enable bit */
 	unsigned			color_clear_value[2];
 

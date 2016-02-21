@@ -346,7 +346,6 @@ static void r600_texture_destroy(struct pipe_screen *screen,
 	if (rtex->cmask_buffer != &rtex->resource) {
 	    pipe_resource_reference((struct pipe_resource**)&rtex->cmask_buffer, NULL);
 	}
-	pipe_resource_reference((struct pipe_resource**)&rtex->dcc_buffer, NULL);
 	pb_reference(&resource->buf, NULL);
 	FREE(rtex);
 }
@@ -569,25 +568,6 @@ static void r600_texture_alloc_cmask_separate(struct r600_common_screen *rscreen
 		rtex->cb_color_info |= EG_S_028C70_FAST_CLEAR(1);
 }
 
-static void vi_texture_alloc_dcc_separate(struct r600_common_screen *rscreen,
-					      struct r600_texture *rtex)
-{
-	if (rscreen->debug_flags & DBG_NO_DCC)
-		return;
-
-	rtex->dcc_buffer = (struct r600_resource *)
-		r600_aligned_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
-				   PIPE_USAGE_DEFAULT, rtex->surface.dcc_size, rtex->surface.dcc_alignment);
-	if (rtex->dcc_buffer == NULL) {
-		return;
-	}
-
-	r600_screen_clear_buffer(rscreen, &rtex->dcc_buffer->b.b, 0, rtex->surface.dcc_size,
-				 0xFFFFFFFF, true);
-
-	rtex->cb_color_info |= VI_S_028C70_DCC_ENABLE(1);
-}
-
 static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 					    struct r600_texture *rtex)
 {
@@ -722,10 +702,10 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->htile_buffer->buf->alignment, rtex->htile.pitch,
 			rtex->htile.height, rtex->htile.xalign, rtex->htile.yalign);
 
-	if (rtex->dcc_buffer) {
-		fprintf(f, "  DCC: size=%u, alignment=%u\n",
-			rtex->dcc_buffer->b.b.width0,
-			rtex->dcc_buffer->buf->alignment);
+	if (rtex->dcc_offset) {
+		fprintf(f, "  DCC: offset=%u, size=%"PRIu64", alignment=%"PRIu64"\n",
+			rtex->dcc_offset, rtex->surface.dcc_size,
+			rtex->surface.dcc_alignment);
 		for (i = 0; i <= rtex->surface.last_level; i++)
 			fprintf(f, "  DCCLevel[%i]: offset=%"PRIu64"\n",
 				i, rtex->surface.level[i].dcc_offset);
@@ -823,8 +803,14 @@ r600_texture_create_object(struct pipe_screen *screen,
 				return NULL;
 			}
 		}
-		if (rtex->surface.dcc_size)
-			vi_texture_alloc_dcc_separate(rscreen, rtex);
+
+		if (!buf && rtex->surface.dcc_size &&
+		    !(rscreen->debug_flags & DBG_NO_DCC)) {
+			/* Reserve space for the DCC buffer. */
+			rtex->dcc_offset = align(rtex->size, rtex->surface.dcc_alignment);
+			rtex->size = rtex->dcc_offset + rtex->surface.dcc_size;
+			rtex->cb_color_info |= VI_S_028C70_DCC_ENABLE(1);
+		}
 	}
 
 	/* Now create the backing buffer. */
@@ -845,6 +831,12 @@ r600_texture_create_object(struct pipe_screen *screen,
 		r600_screen_clear_buffer(rscreen, &rtex->cmask_buffer->b.b,
 					 rtex->cmask.offset, rtex->cmask.size,
 					 0xCCCCCCCC, true);
+	}
+	if (rtex->dcc_offset) {
+		r600_screen_clear_buffer(rscreen, &rtex->resource.b.b,
+					 rtex->dcc_offset,
+					 rtex->surface.dcc_size,
+					 0xFFFFFFFF, true);
 	}
 
 	/* Initialize the CMASK base register value. */
@@ -1553,7 +1545,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			continue;
 		}
 
-		if (tex->dcc_buffer) {
+		if (tex->dcc_offset) {
 			uint32_t reset_value;
 			bool clear_words_needed;
 
@@ -1562,8 +1554,9 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 
 			vi_get_fast_clear_parameters(fb->cbufs[i]->format, color, &reset_value, &clear_words_needed);
 
-			rctx->clear_buffer(&rctx->b, &tex->dcc_buffer->b.b,
-					0, tex->surface.dcc_size, reset_value, true);
+			rctx->clear_buffer(&rctx->b, &tex->resource.b.b,
+					   tex->dcc_offset, tex->surface.dcc_size,
+					   reset_value, true);
 
 			if (clear_words_needed)
 				tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;

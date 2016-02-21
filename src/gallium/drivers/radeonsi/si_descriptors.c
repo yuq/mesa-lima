@@ -158,12 +158,6 @@ static void si_sampler_view_add_buffers(struct si_context *sctx,
 			rview->resource, RADEON_USAGE_READ,
 			r600_get_sampler_view_priority(rview->resource));
 	}
-
-	if (rview->dcc_buffer && rview->dcc_buffer != rview->resource) {
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-			rview->dcc_buffer, RADEON_USAGE_READ,
-			RADEON_PRIO_DCC);
-	}
 }
 
 static void si_sampler_views_begin_new_cs(struct si_context *sctx,
@@ -263,7 +257,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 				samplers->depth_texture_mask &= ~(1 << slot);
 			}
 			if (rtex->cmask.size || rtex->fmask.size ||
-			    (rtex->dcc_buffer && rtex->dirty_level_mask)) {
+			    (rtex->dcc_offset && rtex->dirty_level_mask)) {
 				samplers->compressed_colortex_mask |= 1 << slot;
 			} else {
 				samplers->compressed_colortex_mask &= ~(1 << slot);
