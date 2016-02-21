@@ -225,7 +225,7 @@ nvc0_push_setup_vertex_array(struct nvc0_context *nvc0, const unsigned count)
    PUSH_DATAh(push, va + size - 1);
    PUSH_DATA (push, va + size - 1);
 
-   BCTX_REFN_bo(nvc0->bufctx_3d, VTX_TMP, NOUVEAU_BO_GART | NOUVEAU_BO_RD,
+   BCTX_REFN_bo(nvc0->bufctx_3d, 3D_VTX_TMP, NOUVEAU_BO_GART | NOUVEAU_BO_RD,
                 bo);
    nouveau_pushbuf_validate(push);
 
@@ -554,7 +554,7 @@ nvc0_push_vbo(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
          prim |= NVC0_3D_VERTEX_BEGIN_GL_INSTANCE_NEXT;
          ++ctx.instance_id;
       }
-      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX_TMP);
+      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_VTX_TMP);
       nouveau_scratch_done(&nvc0->base);
    } while (inst_count);
 
@@ -629,7 +629,7 @@ nvc0_push_upload_vertex_ids(struct push_context *ctx,
    data = (uint32_t *)nouveau_scratch_get(&nvc0->base,
                                           info->count * index_size, &va, &bo);
 
-   BCTX_REFN_bo(nvc0->bufctx_3d, VTX_TMP, NOUVEAU_BO_GART | NOUVEAU_BO_RD,
+   BCTX_REFN_bo(nvc0->bufctx_3d, 3D_VTX_TMP, NOUVEAU_BO_GART | NOUVEAU_BO_RD,
                 bo);
    nouveau_pushbuf_validate(push);
 

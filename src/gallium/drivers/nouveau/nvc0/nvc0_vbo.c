@@ -222,7 +222,7 @@ static inline void
 nvc0_release_user_vbufs(struct nvc0_context *nvc0)
 {
    if (nvc0->vbo_user) {
-      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX_TMP);
+      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_VTX_TMP);
       nouveau_scratch_done(&nvc0->base);
    }
 }
@@ -257,7 +257,7 @@ nvc0_update_user_vbufs(struct nvc0_context *nvc0)
          address[b] = nouveau_scratch_data(&nvc0->base, vb->user_buffer,
                                            base, size, &bo);
          if (bo)
-            BCTX_REFN_bo(nvc0->bufctx_3d, VTX_TMP, bo_flags, bo);
+            BCTX_REFN_bo(nvc0->bufctx_3d, 3D_VTX_TMP, bo_flags, bo);
 
          NOUVEAU_DRV_STAT(&nvc0->screen->base, user_buffer_upload_bytes, size);
       }
@@ -292,7 +292,7 @@ nvc0_update_user_vbufs_shared(struct nvc0_context *nvc0)
       address = nouveau_scratch_data(&nvc0->base, nvc0->vtxbuf[b].user_buffer,
                                      base, size, &bo);
       if (bo)
-         BCTX_REFN_bo(nvc0->bufctx_3d, VTX_TMP, bo_flags, bo);
+         BCTX_REFN_bo(nvc0->bufctx_3d, 3D_VTX_TMP, bo_flags, bo);
 
       BEGIN_1IC0(push, NVC0_3D(MACRO_VERTEX_ARRAY_SELECT), 5);
       PUSH_DATA (push, b);
@@ -368,7 +368,7 @@ nvc0_validate_vertex_buffers(struct nvc0_context *nvc0)
 
       if (!(refd & (1 << b))) {
          refd |= 1 << b;
-         BCTX_REFN(nvc0->bufctx_3d, VTX, res, RD);
+         BCTX_REFN(nvc0->bufctx_3d, 3D_VTX, res, RD);
       }
    }
    if (nvc0->vbo_user)
@@ -412,7 +412,7 @@ nvc0_validate_vertex_buffers_shared(struct nvc0_context *nvc0)
       PUSH_DATAh(push, buf->address + limit);
       PUSH_DATA (push, buf->address + limit);
 
-      BCTX_REFN(nvc0->bufctx_3d, VTX, buf, RD);
+      BCTX_REFN(nvc0->bufctx_3d, 3D_VTX, buf, RD);
    }
    /* If there are more elements than buffers, we might not have unset
     * fetching on the later elements.
@@ -435,7 +435,7 @@ nvc0_vertex_arrays_validate(struct nvc0_context *nvc0)
    uint8_t vbo_mode;
    bool update_vertex;
 
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX);
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_VTX);
 
    assert(vertex);
    if (unlikely(vertex->need_conversion) ||
@@ -537,7 +537,7 @@ nvc0_idxbuf_validate(struct nvc0_context *nvc0)
    PUSH_DATA (push, buf->address + buf->base.width0 - 1);
    PUSH_DATA (push, nvc0->idxbuf.index_size >> 1);
 
-   BCTX_REFN(nvc0->bufctx_3d, IDX, buf, RD);
+   BCTX_REFN(nvc0->bufctx_3d, 3D_IDX, buf, RD);
 }
 
 #define NVC0_PRIM_GL_CASE(n) \

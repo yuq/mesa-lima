@@ -566,7 +566,7 @@ nvc0_stage_set_sampler_views(struct nvc0_context *nvc0, int s,
       }
 
       if (old) {
-         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(s, i));
+         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(s, i));
          nvc0_screen_tic_unlock(nvc0->screen, old);
       }
 
@@ -576,7 +576,7 @@ nvc0_stage_set_sampler_views(struct nvc0_context *nvc0, int s,
    for (i = nr; i < nvc0->num_textures[s]; ++i) {
       struct nv50_tic_entry *old = nv50_tic_entry(nvc0->textures[s][i]);
       if (old) {
-         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(s, i));
+         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(s, i));
          nvc0_screen_tic_unlock(nvc0->screen, old);
          pipe_sampler_view_reference(&nvc0->textures[s][i], NULL);
       }
@@ -594,7 +594,7 @@ nvc0_stage_set_sampler_views_range(struct nvc0_context *nvc0, const unsigned s,
 {
    struct nouveau_bufctx *bctx = (s == 5) ? nvc0->bufctx_cp : nvc0->bufctx_3d;
    const unsigned end = start + nr;
-   const unsigned bin = (s == 5) ? NVC0_BIND_CP_TEX(0) : NVC0_BIND_TEX(s, 0);
+   const unsigned bin = (s == 5) ? NVC0_BIND_CP_TEX(0) : NVC0_BIND_3D_TEX(s, 0);
    int last_valid = -1;
    unsigned i;
 
@@ -851,7 +851,7 @@ nvc0_set_constant_buffer(struct pipe_context *pipe, uint shader, uint index,
          nvc0->constbuf[s][i].u.buf = NULL;
       else
       if (nvc0->constbuf[s][i].u.buf)
-         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_CB(s, i));
+         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_CB(s, i));
 
       nvc0->dirty_3d |= NVC0_NEW_3D_CONSTBUF;
    }
@@ -943,7 +943,7 @@ nvc0_set_framebuffer_state(struct pipe_context *pipe,
 {
     struct nvc0_context *nvc0 = nvc0_context(pipe);
 
-    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_FB);
+    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_FB);
 
     util_copy_framebuffer_state(&nvc0->framebuffer, fb);
 
@@ -1019,7 +1019,7 @@ nvc0_set_vertex_buffers(struct pipe_context *pipe,
     struct nvc0_context *nvc0 = nvc0_context(pipe);
     unsigned i;
 
-    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX);
+    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_VTX);
     nvc0->dirty_3d |= NVC0_NEW_3D_ARRAYS;
 
     util_set_vertex_buffers_count(nvc0->vtxbuf, &nvc0->num_vtxbufs, vb,
@@ -1062,7 +1062,7 @@ nvc0_set_index_buffer(struct pipe_context *pipe,
     struct nvc0_context *nvc0 = nvc0_context(pipe);
 
     if (nvc0->idxbuf.buffer)
-       nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_IDX);
+       nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_IDX);
 
     if (ib) {
        pipe_resource_reference(&nvc0->idxbuf.buffer, ib->buffer);
@@ -1214,7 +1214,7 @@ nvc0_bind_surfaces_range(struct nvc0_context *nvc0, const unsigned t,
    nvc0->surfaces_dirty[t] |= mask;
 
    if (t == 0)
-      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_SUF);
+      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_SUF);
    else
       nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_SUF);
 }
@@ -1268,7 +1268,7 @@ nvc0_bind_buffers_range(struct nvc0_context *nvc0, const unsigned t,
    if (t == 5)
       nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_BUF);
    else
-      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_BUF);
+      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_BUF);
 
 }
 

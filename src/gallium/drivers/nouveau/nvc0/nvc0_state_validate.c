@@ -76,7 +76,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
     unsigned ms_mode = NVC0_3D_MULTISAMPLE_MODE_MS1;
     bool serialize = false;
 
-    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_FB);
+    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_FB);
 
     BEGIN_NVC0(push, NVC0_3D(RT_CONTROL), 1);
     PUSH_DATA (push, (076543210 << 4) | fb->nr_cbufs);
@@ -141,7 +141,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
         res->status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
         /* only register for writing, otherwise we'd always serialize here */
-        BCTX_REFN(nvc0->bufctx_3d, FB, res, WR);
+        BCTX_REFN(nvc0->bufctx_3d, 3D_FB, res, WR);
     }
 
     if (fb->zsbuf) {
@@ -172,7 +172,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
         mt->base.status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
         mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
-        BCTX_REFN(nvc0->bufctx_3d, FB, &mt->base, WR);
+        BCTX_REFN(nvc0->bufctx_3d, 3D_FB, &mt->base, WR);
     } else {
         BEGIN_NVC0(push, NVC0_3D(ZETA_ENABLE), 1);
         PUSH_DATA (push, 0);
@@ -454,7 +454,7 @@ nvc0_constbufs_validate(struct nvc0_context *nvc0)
                BEGIN_NVC0(push, NVC0_3D(CB_BIND(s)), 1);
                PUSH_DATA (push, (i << 4) | 1);
 
-               BCTX_REFN(nvc0->bufctx_3d, CB(s, i), res, RD);
+               BCTX_REFN(nvc0->bufctx_3d, 3D_CB(s, i), res, RD);
 
                nvc0->cb_dirty = 1; /* Force cache flush for UBO. */
                res->cb_bindings[s] |= 1 << i;
@@ -495,7 +495,7 @@ nvc0_validate_buffers(struct nvc0_context *nvc0)
             PUSH_DATAh(push, res->address + nvc0->buffers[s][i].buffer_offset);
             PUSH_DATA (push, nvc0->buffers[s][i].buffer_size);
             PUSH_DATA (push, 0);
-            BCTX_REFN(nvc0->bufctx_3d, BUF, res, RDWR);
+            BCTX_REFN(nvc0->bufctx_3d, 3D_BUF, res, RDWR);
          } else {
             PUSH_DATA (push, 0);
             PUSH_DATA (push, 0);

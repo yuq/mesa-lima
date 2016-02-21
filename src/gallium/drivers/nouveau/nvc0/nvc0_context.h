@@ -69,18 +69,18 @@
 #define NVC0_NEW_CP_BUFFERS   (1 << 7)
 
 /* 3d bufctx (during draw_vbo, blit_3d) */
-#define NVC0_BIND_FB            0
-#define NVC0_BIND_VTX           1
-#define NVC0_BIND_VTX_TMP       2
-#define NVC0_BIND_IDX           3
-#define NVC0_BIND_TEX(s, i)  (  4 + 32 * (s) + (i))
-#define NVC0_BIND_CB(s, i)   (164 + 16 * (s) + (i))
-#define NVC0_BIND_TFB         244
-#define NVC0_BIND_SUF         245
-#define NVC0_BIND_BUF         246
-#define NVC0_BIND_SCREEN      247
-#define NVC0_BIND_TLS         249
-#define NVC0_BIND_3D_COUNT    250
+#define NVC0_BIND_3D_FB            0
+#define NVC0_BIND_3D_VTX           1
+#define NVC0_BIND_3D_VTX_TMP       2
+#define NVC0_BIND_3D_IDX           3
+#define NVC0_BIND_3D_TEX(s, i)  (  4 + 32 * (s) + (i))
+#define NVC0_BIND_3D_CB(s, i)   (164 + 16 * (s) + (i))
+#define NVC0_BIND_3D_TFB         244
+#define NVC0_BIND_3D_SUF         245
+#define NVC0_BIND_3D_BUF         246
+#define NVC0_BIND_3D_SCREEN      247
+#define NVC0_BIND_3D_TLS         249
+#define NVC0_BIND_3D_COUNT       250
 
 /* compute bufctx (during launch_grid) */
 #define NVC0_BIND_CP_CB(i)     (  0 + (i))
