@@ -2054,6 +2054,11 @@ DECL_SPECIAL(DCL)
             assert(sem.reg.idx < ARRAY_SIZE(tx->regs.v));
 
             if (tgsi.Name == TGSI_SEMANTIC_POSITION) {
+                /* Position0/PositionT0 are forbidden (likely because vPos already does that) */
+                if (sem.usage == D3DDECLUSAGE_POSITION ||
+                    sem.usage == D3DDECLUSAGE_POSITIONT)
+                    return D3DERR_INVALIDCALL;
+                /* Following code is for depth */
                 tx->regs.v[sem.reg.idx] = nine_get_position_input(tx);
                 return D3D_OK;
             }
