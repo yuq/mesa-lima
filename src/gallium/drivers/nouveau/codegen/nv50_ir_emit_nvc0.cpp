@@ -1779,11 +1779,14 @@ CodeEmitterNVC0::emitSTORE(const Instruction *i)
    case FILE_MEMORY_GLOBAL: opc = 0x90000000; break;
    case FILE_MEMORY_LOCAL:  opc = 0xc8000000; break;
    case FILE_MEMORY_SHARED:
-      opc = 0xc8000000;
-      if (i->subOp == NV50_IR_SUBOP_STORE_UNLOCKED)
-         opc |= (1 << 26);
-      else
-         opc |= (1 << 24);
+      if (i->subOp == NV50_IR_SUBOP_STORE_UNLOCKED) {
+         if (targ->getChipset() >= NVISA_GK104_CHIPSET)
+            opc = 0xb8000000;
+         else
+            opc = 0xcc000000;
+      } else {
+         opc = 0xc9000000;
+      }
       break;
    default:
       assert(!"invalid memory file");
@@ -1792,6 +1795,15 @@ CodeEmitterNVC0::emitSTORE(const Instruction *i)
    }
    code[0] = 0x00000005;
    code[1] = opc;
+
+   if (targ->getChipset() >= NVISA_GK104_CHIPSET) {
+      // Unlocked store on shared memory can fail.
+      if (i->src(0).getFile() == FILE_MEMORY_SHARED &&
+          i->subOp == NV50_IR_SUBOP_STORE_UNLOCKED) {
+         assert(i->defExists(0));
+         defId(i->def(0), 8);
+      }
+   }
 
    setAddressByFile(i->src(0));
    srcId(i->src(1), 14);
@@ -1816,11 +1828,14 @@ CodeEmitterNVC0::emitLOAD(const Instruction *i)
    case FILE_MEMORY_GLOBAL: opc = 0x80000000; break;
    case FILE_MEMORY_LOCAL:  opc = 0xc0000000; break;
    case FILE_MEMORY_SHARED:
-      opc = 0xc0000000;
-      if (i->subOp == NV50_IR_SUBOP_LOAD_LOCKED)
-         opc |= (1 << 26);
-      else
-         opc |= (1 << 24);
+      if (i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
+         if (targ->getChipset() >= NVISA_GK104_CHIPSET)
+            opc = 0xa8000000;
+         else
+            opc = 0xc4000000;
+      } else {
+         opc = 0xc1000000;
+      }
       break;
    case FILE_MEMORY_CONST:
       if (!i->src(0).isIndirect(0) && typeSizeof(i->dType) == 4) {
