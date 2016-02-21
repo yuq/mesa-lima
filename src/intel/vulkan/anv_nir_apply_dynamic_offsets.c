@@ -161,9 +161,9 @@ anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
 
    struct anv_push_constants *null_data = NULL;
    for (unsigned i = 0; i < MAX_DYNAMIC_BUFFERS; i++) {
-      prog_data->param[i * 2 + shader->num_uniforms] =
+      prog_data->param[i * 2 + shader->num_uniforms / 4] =
          (const union gl_constant_value *)&null_data->dynamic[i].offset;
-      prog_data->param[i * 2 + 1 + shader->num_uniforms] =
+      prog_data->param[i * 2 + 1 + shader->num_uniforms / 4] =
          (const union gl_constant_value *)&null_data->dynamic[i].range;
    }
 
