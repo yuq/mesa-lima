@@ -1067,10 +1067,10 @@ NVC0LoweringPass::handleSharedATOM(Instruction *atom)
                    TYPE_U32, ld->getDef(0), atom->getSrc(1));
       set->setPredicate(CC_P, ld->getDef(1));
 
-      CmpInstruction *selp =
-         bld.mkCmp(OP_SELP, CC_NOT_P, TYPE_U32, bld.getSSA(4, FILE_ADDRESS),
-                   TYPE_U32, ld->getDef(0), atom->getSrc(2),
-                   set->getDef(0));
+      Instruction *selp =
+         bld.mkOp3(OP_SELP, TYPE_U32, bld.getSSA(), ld->getDef(0),
+                   atom->getSrc(2), set->getDef(0));
+      selp->src(2).mod = Modifier(NV50_IR_MOD_NOT);
       selp->setPredicate(CC_P, ld->getDef(1));
 
       stVal = selp->getDef(0);

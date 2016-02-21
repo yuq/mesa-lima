@@ -112,7 +112,7 @@ private:
 
    void emitSET(const CmpInstruction *);
    void emitSLCT(const CmpInstruction *);
-   void emitSELP(const CmpInstruction *);
+   void emitSELP(const Instruction *);
 
    void emitTEXBAR(const Instruction *);
    void emitTEX(const TexInstruction *);
@@ -1045,11 +1045,11 @@ CodeEmitterGK110::emitSLCT(const CmpInstruction *i)
    }
 }
 
-void CodeEmitterGK110::emitSELP(const CmpInstruction *i)
+void CodeEmitterGK110::emitSELP(const Instruction *i)
 {
    emitForm_21(i, 0x250, 0x050);
 
-   if ((i->setCond == CC_NOT_P) ^ (bool)(i->src(2).mod & Modifier(NV50_IR_MOD_NOT)))
+   if (i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
       code[1] |= 1 << 13;
 }
 
@@ -1937,7 +1937,7 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       emitSET(insn->asCmp());
       break;
    case OP_SELP:
-      emitSELP(insn->asCmp());
+      emitSELP(insn);
       break;
    case OP_SLCT:
       emitSLCT(insn->asCmp());

@@ -120,7 +120,7 @@ private:
 
    void emitSET(const CmpInstruction *);
    void emitSLCT(const CmpInstruction *);
-   void emitSELP(const CmpInstruction *);
+   void emitSELP(const Instruction *);
 
    void emitTEXBAR(const Instruction *);
    void emitTEX(const TexInstruction *);
@@ -1175,11 +1175,11 @@ CodeEmitterNVC0::emitSLCT(const CmpInstruction *i)
       code[0] |= 1 << 5;
 }
 
-void CodeEmitterNVC0::emitSELP(const CmpInstruction *i)
+void CodeEmitterNVC0::emitSELP(const Instruction *i)
 {
    emitForm_A(i, HEX64(20000000, 00000004));
 
-   if (i->setCond == CC_NOT_P || i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
+   if (i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
       code[1] |= 1 << 20;
 }
 
@@ -2438,7 +2438,7 @@ CodeEmitterNVC0::emitInstruction(Instruction *insn)
       emitSET(insn->asCmp());
       break;
    case OP_SELP:
-      emitSELP(insn->asCmp());
+      emitSELP(insn);
       break;
    case OP_SLCT:
       emitSLCT(insn->asCmp());
