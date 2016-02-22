@@ -96,9 +96,9 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
     *  accessible. We cannot prevent that at the moment, so expect failure.
     */
    BEGIN_NVC0(push, NVE4_CP(LOCAL_BASE), 1);
-   PUSH_DATA (push, 1 << 24);
+   PUSH_DATA (push, 0xff << 24);
    BEGIN_NVC0(push, NVE4_CP(SHARED_BASE), 1);
-   PUSH_DATA (push, 2 << 24);
+   PUSH_DATA (push, 0xfe << 24);
 
    BEGIN_NVC0(push, NVE4_CP(CODE_ADDRESS_HIGH), 2);
    PUSH_DATAh(push, screen->text->offset);
