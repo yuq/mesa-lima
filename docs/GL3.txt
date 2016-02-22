@@ -249,7 +249,7 @@ GLES3.2, GLSL ES 3.2
   GL_OES_primitive_bounding box                        not started
   GL_OES_sample_shading                                not started (based on parts of GL_ARB_sample_shading, which is done for some drivers)
   GL_OES_sample_variables                              not started (based on parts of GL_ARB_sample_shading, which is done for some drivers)
-  GL_OES_shader_image_atomic                           not started (based on parts of GL_ARB_shader_image_load_store, which is done for some drivers)
+  GL_OES_shader_image_atomic                           DONE (all drivers that support GL_ARB_shader_image_load_store)
   GL_OES_shader_io_blocks                              not started (based on parts of GLSL 1.50, which is done)
   GL_OES_shader_multisample_interpolation              not started (based on parts of GL_ARB_gpu_shader5, which is done)
   GL_OES_tessellation_shader                           not started (based on GL_ARB_tessellation_shader, which is done for some drivers)
