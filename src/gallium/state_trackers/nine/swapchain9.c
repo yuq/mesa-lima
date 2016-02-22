@@ -241,12 +241,12 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     desc.Height = pParams->BackBufferHeight;
 
     if (This->pool) {
-        _mesa_threadpool_destroy(This->pool);
+        _mesa_threadpool_destroy(This, This->pool);
         This->pool = NULL;
     }
     This->enable_threadpool = This->actx->thread_submit && (pParams->SwapEffect != D3DSWAPEFFECT_COPY);
     if (This->enable_threadpool)
-        This->pool = _mesa_threadpool_create();
+        This->pool = _mesa_threadpool_create(This);
     if (!This->pool)
         This->enable_threadpool = FALSE;
 
@@ -504,7 +504,7 @@ NineSwapChain9_dtor( struct NineSwapChain9 *This )
     DBG("This=%p\n", This);
 
     if (This->pool)
-        _mesa_threadpool_destroy(This->pool);
+        _mesa_threadpool_destroy(This, This->pool);
 
     if (This->buffers) {
         for (i = 0; i < This->params.BackBufferCount; i++) {
@@ -1027,4 +1027,25 @@ NineSwapChain9_ResolutionMismatch( struct NineSwapChain9 *This )
     }
 
     return FALSE;
+}
+
+HANDLE
+NineSwapChain9_CreateThread( struct NineSwapChain9 *This,
+                                 void *pFuncAddress,
+                                 void *pParam )
+{
+    if (This->base.device->minor_version_num > 1) {
+        return ID3DPresent_CreateThread(This->present, pFuncAddress, pParam);
+    }
+
+    return NULL;
+}
+
+void
+NineSwapChain9_WaitForThread( struct NineSwapChain9 *This,
+                                  HANDLE thread )
+{
+    if (This->base.device->minor_version_num > 1) {
+        (void) ID3DPresent_WaitForThread(This->present, thread);
+    }
 }
