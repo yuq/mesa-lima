@@ -1852,6 +1852,13 @@ CodeEmitterNVC0::emitLOAD(const Instruction *i)
    }
    code[1] = opc;
 
+   if (i->src(0).getFile() == FILE_MEMORY_SHARED) {
+      if (i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
+         assert(i->defExists(1));
+         defId(i->def(1), 32 + 18);
+      }
+   }
+
    defId(i->def(0), 14);
 
    setAddressByFile(i->src(0));
