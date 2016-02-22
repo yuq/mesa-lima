@@ -1858,7 +1858,10 @@ CodeEmitterNVC0::emitLOAD(const Instruction *i)
    if (i->src(0).getFile() == FILE_MEMORY_SHARED) {
       if (i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
          assert(i->defExists(1));
-         defId(i->def(1), 32 + 18);
+         if (targ->getChipset() >= NVISA_GK104_CHIPSET)
+            defId(i->def(1), 8);
+         else
+            defId(i->def(1), 32 + 18);
       }
    }
 
