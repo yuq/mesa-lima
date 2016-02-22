@@ -5228,7 +5228,7 @@ fs_visitor::allocate_registers()
        * SIMD8.  There's probably actually some intermediate point where
        * SIMD16 with a couple of spills is still better.
        */
-      if (dispatch_width == 16) {
+      if (dispatch_width == 16 && min_dispatch_width <= 8) {
          fail("Failure to register allocate.  Reduce number of "
               "live scalar values to avoid this.");
       } else {
