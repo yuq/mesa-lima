@@ -231,6 +231,12 @@ struct radeon_winsys_cs {
 };
 
 struct radeon_info {
+    /* PCI info: domain:bus:dev:func */
+    uint32_t                    pci_domain;
+    uint32_t                    pci_bus;
+    uint32_t                    pci_dev;
+    uint32_t                    pci_func;
+
     /* Device info. */
     uint32_t                    pci_id;
     enum radeon_family          family;
