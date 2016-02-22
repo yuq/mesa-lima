@@ -139,6 +139,8 @@ operands_match(const fs_inst *a, const fs_inst *b, bool *negate)
       ys[1].f = ys1_imm;
 
       *negate = (xs0_negate != xs1_negate) != (ys0_negate != ys1_negate);
+      if (*negate && (a->saturate || b->saturate))
+         return false;
       return ret;
    } else if (!a->is_commutative()) {
       bool match = true;
