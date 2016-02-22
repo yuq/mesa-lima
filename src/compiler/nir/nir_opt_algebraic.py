@@ -269,6 +269,10 @@ optimizations = [
    (('fabs', ('fsub', 0.0, a)), ('fabs', a)),
    (('iabs', ('isub', 0, a)), ('iabs', a)),
 
+   # Propagate negation up multiplication chains
+   (('fmul', ('fneg', a), b), ('fneg', ('fmul', a, b))),
+   (('imul', ('ineg', a), b), ('ineg', ('fmul', a, b))),
+
    # Misc. lowering
    (('fmod', a, b), ('fsub', a, ('fmul', b, ('ffloor', ('fdiv', a, b)))), 'options->lower_fmod'),
    (('uadd_carry', a, b), ('b2i', ('ult', ('iadd', a, b), a)), 'options->lower_uadd_carry'),
