@@ -1410,12 +1410,9 @@ struct anv_pipeline {
    uint32_t                                     scratch_start[MESA_SHADER_STAGES];
    uint32_t                                     total_scratch;
    struct {
-      uint32_t                                  vs_start;
-      uint32_t                                  vs_size;
-      uint32_t                                  nr_vs_entries;
-      uint32_t                                  gs_start;
-      uint32_t                                  gs_size;
-      uint32_t                                  nr_gs_entries;
+      uint32_t                                  start[MESA_SHADER_GEOMETRY + 1];
+      uint32_t                                  size[MESA_SHADER_GEOMETRY + 1];
+      uint32_t                                  entries[MESA_SHADER_GEOMETRY + 1];
    } urb;
 
    VkShaderStageFlags                           active_stages;

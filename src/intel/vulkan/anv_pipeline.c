@@ -870,13 +870,21 @@ gen7_compute_urb_partition(struct anv_pipeline *pipeline)
     * - VS
     * - GS
     */
-   pipeline->urb.vs_start = push_constant_chunks;
-   pipeline->urb.vs_size = vs_size;
-   pipeline->urb.nr_vs_entries = nr_vs_entries;
+   pipeline->urb.start[MESA_SHADER_VERTEX] = push_constant_chunks;
+   pipeline->urb.size[MESA_SHADER_VERTEX] = vs_size;
+   pipeline->urb.entries[MESA_SHADER_VERTEX] = nr_vs_entries;
 
-   pipeline->urb.gs_start = push_constant_chunks + vs_chunks;
-   pipeline->urb.gs_size = gs_size;
-   pipeline->urb.nr_gs_entries = nr_gs_entries;
+   pipeline->urb.start[MESA_SHADER_GEOMETRY] = push_constant_chunks + vs_chunks;
+   pipeline->urb.size[MESA_SHADER_GEOMETRY] = gs_size;
+   pipeline->urb.entries[MESA_SHADER_GEOMETRY] = nr_gs_entries;
+
+   pipeline->urb.start[MESA_SHADER_TESS_CTRL] = push_constant_chunks;
+   pipeline->urb.size[MESA_SHADER_TESS_CTRL] = 1;
+   pipeline->urb.entries[MESA_SHADER_TESS_CTRL] = 0;
+
+   pipeline->urb.start[MESA_SHADER_TESS_EVAL] = push_constant_chunks;
+   pipeline->urb.size[MESA_SHADER_TESS_EVAL] = 1;
+   pipeline->urb.entries[MESA_SHADER_TESS_EVAL] = 0;
 }
 
 static void

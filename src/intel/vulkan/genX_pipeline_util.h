@@ -210,25 +210,13 @@ emit_urb_setup(struct anv_pipeline *pipeline)
       .ConstantBufferOffset                     = 8,
       .ConstantBufferSize                       = 4);
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_VS),
-      .VSURBStartingAddress                     = pipeline->urb.vs_start,
-      .VSURBEntryAllocationSize                 = pipeline->urb.vs_size - 1,
-      .VSNumberofURBEntries                     = pipeline->urb.nr_vs_entries);
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_GS),
-      .GSURBStartingAddress                     = pipeline->urb.gs_start,
-      .GSURBEntryAllocationSize                 = pipeline->urb.gs_size - 1,
-      .GSNumberofURBEntries                     = pipeline->urb.nr_gs_entries);
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_HS),
-      .HSURBStartingAddress                     = pipeline->urb.vs_start,
-      .HSURBEntryAllocationSize                 = 0,
-      .HSNumberofURBEntries                     = 0);
-
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_DS),
-      .DSURBStartingAddress                     = pipeline->urb.vs_start,
-      .DSURBEntryAllocationSize                 = 0,
-      .DSNumberofURBEntries                     = 0);
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_VS),
+         ._3DCommandSubOpcode                   = 48 + i,
+         .VSURBStartingAddress                  = pipeline->urb.start[i],
+         .VSURBEntryAllocationSize              = pipeline->urb.size[i] - 1,
+         .VSNumberofURBEntries                  = pipeline->urb.entries[i]);
+   }
 }
 
 static inline uint32_t
