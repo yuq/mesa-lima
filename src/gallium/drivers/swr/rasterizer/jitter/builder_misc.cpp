@@ -1286,8 +1286,10 @@ void Builder::SCATTERPS(Value* pDst, Value* vSrc, Value* vOffsets, Value* vMask)
 {
     Value* pStack = STACKSAVE();
 
+    Type* pSrcTy = vSrc->getType()->getVectorElementType();
+
     // allocate tmp stack for masked off lanes
-    Value* vTmpPtr = ALLOCA(vSrc->getType()->getVectorElementType());
+    Value* vTmpPtr = ALLOCA(pSrcTy);
 
     Value *mask = MASK(vMask);
     for (uint32_t i = 0; i < JM()->mVWidth; ++i)
@@ -1295,7 +1297,7 @@ void Builder::SCATTERPS(Value* pDst, Value* vSrc, Value* vOffsets, Value* vMask)
         Value *offset = VEXTRACT(vOffsets, C(i));
         // byte pointer to component
         Value *storeAddress = GEP(pDst, offset);
-        storeAddress = BITCAST(storeAddress, PointerType::get(mFP32Ty, 0));
+        storeAddress = BITCAST(storeAddress, PointerType::get(pSrcTy, 0));
         Value *selMask = VEXTRACT(mask, C(i));
         Value *srcElem = VEXTRACT(vSrc, C(i));
         // switch in a safe address to load if we're trying to access a vertex 
