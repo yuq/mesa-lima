@@ -535,7 +535,11 @@ x11_swapchain_destroy(struct anv_swapchain *anv_chain,
       cookie = xcb_free_pixmap(chain->conn, image->pixmap);
       xcb_discard_reply(chain->conn, cookie.sequence);
 
-      /* TODO: Delete images and free memory */
+      anv_DestroyImage(anv_device_to_handle(chain->base.device),
+                       anv_image_to_handle(image->image), pAllocator);
+
+      anv_FreeMemory(anv_device_to_handle(chain->base.device),
+                     anv_device_memory_to_handle(image->memory), pAllocator);
    }
 
    anv_free2(&chain->base.device->alloc, pAllocator, chain);
