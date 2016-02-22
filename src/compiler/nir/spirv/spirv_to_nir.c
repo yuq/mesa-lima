@@ -739,7 +739,10 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       else
          val->type->access_qualifier = SpvAccessQualifierReadWrite;
 
-      assert(!multisampled && "FIXME: Handl multi-sampled textures");
+      if (multisampled) {
+         assert(dim == GLSL_SAMPLER_DIM_2D);
+         dim = GLSL_SAMPLER_DIM_MS;
+      }
 
       val->type->image_format = translate_image_format(format);
 
@@ -1199,6 +1202,13 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       sampled.sampler = sampled_val->access_chain;
    }
 
+   const struct glsl_type *image_type;
+   if (sampled.image) {
+      image_type = sampled.image->var->var->interface_type;
+   } else {
+      image_type = sampled.sampler->var->var->interface_type;
+   }
+
    nir_tex_src srcs[8]; /* 8 should be enough */
    nir_tex_src *p = srcs;
 
@@ -1265,7 +1275,11 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpImageFetch:
-      texop = nir_texop_txf;
+      if (glsl_get_sampler_dim(image_type) == GLSL_SAMPLER_DIM_MS) {
+         texop = nir_texop_txf_ms;
+      } else {
+         texop = nir_texop_txf;
+      }
       break;
 
    case SpvOpImageGather:
@@ -1303,7 +1317,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
 
       if (operands & SpvImageOperandsLodMask) {
          assert(texop == nir_texop_txl || texop == nir_texop_txf ||
-                texop == nir_texop_txs);
+                texop == nir_texop_txf_ms || texop == nir_texop_txs);
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_lod);
       }
 
@@ -1322,7 +1336,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
          assert(!"Constant offsets to texture gather not yet implemented");
 
       if (operands & SpvImageOperandsSampleMask) {
-         assert(texop == nir_texop_txf);
+         assert(texop == nir_texop_txf_ms);
          texop = nir_texop_txf_ms;
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ms_index);
       }
@@ -1334,13 +1348,6 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    instr->op = texop;
 
    memcpy(instr->src, srcs, instr->num_srcs * sizeof(*instr->src));
-
-   const struct glsl_type *image_type;
-   if (sampled.image) {
-      image_type = sampled.image->var->var->interface_type;
-   } else {
-      image_type = sampled.sampler->var->var->interface_type;
-   }
 
    instr->sampler_dim = glsl_get_sampler_dim(image_type);
    instr->is_array = glsl_sampler_type_is_array(image_type);
@@ -1355,11 +1362,11 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
          break;
       case GLSL_SAMPLER_DIM_2D:
       case GLSL_SAMPLER_DIM_RECT:
+      case GLSL_SAMPLER_DIM_MS:
          instr->coord_components = 2;
          break;
       case GLSL_SAMPLER_DIM_3D:
       case GLSL_SAMPLER_DIM_CUBE:
-      case GLSL_SAMPLER_DIM_MS:
          instr->coord_components = 3;
          break;
       default:
