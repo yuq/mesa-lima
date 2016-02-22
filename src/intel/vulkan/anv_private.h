@@ -1410,6 +1410,7 @@ struct anv_pipeline {
    uint32_t                                     scratch_start[MESA_SHADER_STAGES];
    uint32_t                                     total_scratch;
    struct {
+      uint8_t                                   push_size[MESA_SHADER_FRAGMENT + 1];
       uint32_t                                  start[MESA_SHADER_GEOMETRY + 1];
       uint32_t                                  size[MESA_SHADER_GEOMETRY + 1];
       uint32_t                                  entries[MESA_SHADER_GEOMETRY + 1];

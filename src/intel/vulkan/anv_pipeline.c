@@ -885,6 +885,12 @@ gen7_compute_urb_partition(struct anv_pipeline *pipeline)
    pipeline->urb.start[MESA_SHADER_TESS_EVAL] = push_constant_chunks;
    pipeline->urb.size[MESA_SHADER_TESS_EVAL] = 1;
    pipeline->urb.entries[MESA_SHADER_TESS_EVAL] = 0;
+
+   pipeline->urb.push_size[MESA_SHADER_VERTEX] = 4;
+   pipeline->urb.push_size[MESA_SHADER_TESS_CTRL] = 0;
+   pipeline->urb.push_size[MESA_SHADER_TESS_EVAL] = 0;
+   pipeline->urb.push_size[MESA_SHADER_GEOMETRY] = 4;
+   pipeline->urb.push_size[MESA_SHADER_FRAGMENT] = 4;
 }
 
 static void

@@ -200,15 +200,14 @@ emit_urb_setup(struct anv_pipeline *pipeline)
                   .Address = { &device->workaround_bo, 0 });
 #endif
 
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PUSH_CONSTANT_ALLOC_VS),
-      .ConstantBufferOffset                     = 0,
-      .ConstantBufferSize                       = 4);
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PUSH_CONSTANT_ALLOC_GS),
-      .ConstantBufferOffset                     = 4,
-      .ConstantBufferSize                       = 4);
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PUSH_CONSTANT_ALLOC_PS),
-      .ConstantBufferOffset                     = 8,
-      .ConstantBufferSize                       = 4);
+   unsigned push_start = 0;
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_FRAGMENT; i++) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PUSH_CONSTANT_ALLOC_VS),
+         ._3DCommandSubOpcode                   = 18 + i,
+         .ConstantBufferOffset                  = push_start,
+         .ConstantBufferSize                    = pipeline->urb.push_size[i]);
+      push_start += pipeline->urb.push_size[i];
+   }
 
    for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_URB_VS),
