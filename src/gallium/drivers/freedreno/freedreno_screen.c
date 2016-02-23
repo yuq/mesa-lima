@@ -109,8 +109,18 @@ fd_screen_get_device_vendor(struct pipe_screen *pscreen)
 static uint64_t
 fd_screen_get_timestamp(struct pipe_screen *pscreen)
 {
-	int64_t cpu_time = os_time_get() * 1000;
-	return cpu_time + fd_screen(pscreen)->cpu_gpu_time_delta;
+	struct fd_screen *screen = fd_screen(pscreen);
+
+	if (screen->has_timestamp) {
+		uint64_t n;
+		fd_pipe_get_param(screen->pipe, FD_TIMESTAMP, &n);
+		debug_assert(screen->max_freq > 0);
+		return n * 1000000000 / screen->max_freq;
+	} else {
+		int64_t cpu_time = os_time_get() * 1000;
+		return cpu_time + screen->cpu_gpu_time_delta;
+	}
+
 }
 
 static void
@@ -595,6 +605,8 @@ fd_screen_create(struct fd_device *dev)
 		screen->max_freq = 0;
 	} else {
 		screen->max_freq = val;
+		if (fd_pipe_get_param(screen->pipe, FD_TIMESTAMP, &val) == 0)
+			screen->has_timestamp = true;
 	}
 
 	if (fd_pipe_get_param(screen->pipe, FD_GPU_ID, &val)) {
