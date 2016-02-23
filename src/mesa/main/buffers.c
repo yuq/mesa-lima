@@ -227,7 +227,7 @@ read_buffer_enum_to_index(GLenum buffer)
 
 
 /**
- * Called by glDrawBuffer().
+ * Called by glDrawBuffer() and glNamedFramebufferDrawBuffer().
  * Specify which renderbuffer(s) to draw into for the first color output.
  * <buffer> can name zero, one, two or four renderbuffers!
  * \sa _mesa_DrawBuffers
@@ -248,9 +248,9 @@ read_buffer_enum_to_index(GLenum buffer)
  *
  * See the GL_EXT_framebuffer_object spec for more info.
  */
-void
-_mesa_draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
-                  GLenum buffer, const char *caller)
+static void
+draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
+            GLenum buffer, const char *caller)
 {
    GLbitfield destMask;
 
@@ -299,7 +299,7 @@ void GLAPIENTRY
 _mesa_DrawBuffer(GLenum buffer)
 {
    GET_CURRENT_CONTEXT(ctx);
-   _mesa_draw_buffer(ctx, ctx->DrawBuffer, buffer, "glDrawBuffer");
+   draw_buffer(ctx, ctx->DrawBuffer, buffer, "glDrawBuffer");
 }
 
 
@@ -318,7 +318,7 @@ _mesa_NamedFramebufferDrawBuffer(GLuint framebuffer, GLenum buf)
    else
       fb = ctx->WinSysDrawBuffer;
 
-   _mesa_draw_buffer(ctx, fb, buf, "glNamedFramebufferDrawBuffer");
+   draw_buffer(ctx, fb, buf, "glNamedFramebufferDrawBuffer");
 }
 
 

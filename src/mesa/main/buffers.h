@@ -39,9 +39,6 @@
 struct gl_context;
 struct gl_framebuffer;
 
-extern void
-_mesa_draw_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
-                  GLenum buffer, const char *caller);
 
 extern void GLAPIENTRY
 _mesa_DrawBuffer( GLenum mode );
