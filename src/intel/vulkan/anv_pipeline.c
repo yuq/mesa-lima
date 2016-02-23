@@ -891,11 +891,17 @@ gen7_compute_urb_partition(struct anv_pipeline *pipeline)
    pipeline->urb.size[MESA_SHADER_TESS_EVAL] = 1;
    pipeline->urb.entries[MESA_SHADER_TESS_EVAL] = 0;
 
-   pipeline->urb.push_size[MESA_SHADER_VERTEX] = 4;
-   pipeline->urb.push_size[MESA_SHADER_TESS_CTRL] = 0;
-   pipeline->urb.push_size[MESA_SHADER_TESS_EVAL] = 0;
-   pipeline->urb.push_size[MESA_SHADER_GEOMETRY] = 4;
-   pipeline->urb.push_size[MESA_SHADER_FRAGMENT] = 4;
+   const unsigned stages =
+      _mesa_bitcount(pipeline->active_stages & VK_SHADER_STAGE_ALL_GRAPHICS);
+   const unsigned size_per_stage = push_constant_kb / stages;
+
+   for (int i = MESA_SHADER_VERTEX; i < MESA_SHADER_FRAGMENT; i++) {
+      pipeline->urb.push_size[i] =
+         (pipeline->active_stages & (1 << i)) ? size_per_stage : 1;
+   }
+
+   pipeline->urb.push_size[MESA_SHADER_FRAGMENT] =
+      push_constant_kb - size_per_stage * (stages - 1);
 }
 
 static void
