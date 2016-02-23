@@ -551,8 +551,8 @@ updated_drawbuffers(struct gl_context *ctx, struct gl_framebuffer *fb)
 
 
 /**
- * Helper function to set the GL_DRAW_BUFFER state in the context and
- * current FBO.  Called via glDrawBuffer(), glDrawBuffersARB()
+ * Helper function to set the GL_DRAW_BUFFER state for the given context and
+ * FBO.  Called via glDrawBuffer(), glDrawBuffersARB()
  *
  * All error checking will have been done prior to calling this function
  * so nothing should go wrong at this point.
@@ -668,8 +668,11 @@ _mesa_update_draw_buffers(struct gl_context *ctx)
 
 /**
  * Like \sa _mesa_drawbuffers(), this is a helper function for setting
- * GL_READ_BUFFER state in the context and current FBO.
+ * GL_READ_BUFFER state for the given context and FBO.
+ * Note that all error checking should have been done before calling
+ * this function.
  * \param ctx  the rendering context
+ * \param fb  the framebuffer object to update
  * \param buffer  GL_FRONT, GL_BACK, GL_COLOR_ATTACHMENT0, etc.
  * \param bufferIndex  the numerical index corresponding to 'buffer'
  */
