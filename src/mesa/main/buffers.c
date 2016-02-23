@@ -693,12 +693,13 @@ _mesa_readbuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
 
 
 /**
- * Called by glReadBuffer to set the source renderbuffer for reading pixels.
+ * Called by glReadBuffer and glNamedFramebufferReadBuffer to set the source
+ * renderbuffer for reading pixels.
  * \param mode color buffer such as GL_FRONT, GL_BACK, etc.
  */
-void
-_mesa_read_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
-                  GLenum buffer, const char *caller)
+static void
+read_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
+            GLenum buffer, const char *caller)
 {
    GLbitfield supportedMask;
    gl_buffer_index srcBuffer;
@@ -746,7 +747,7 @@ void GLAPIENTRY
 _mesa_ReadBuffer(GLenum buffer)
 {
    GET_CURRENT_CONTEXT(ctx);
-   _mesa_read_buffer(ctx, ctx->ReadBuffer, buffer, "glReadBuffer");
+   read_buffer(ctx, ctx->ReadBuffer, buffer, "glReadBuffer");
 }
 
 
@@ -765,5 +766,5 @@ _mesa_NamedFramebufferReadBuffer(GLuint framebuffer, GLenum src)
    else
       fb = ctx->WinSysReadBuffer;
 
-   _mesa_read_buffer(ctx, fb, src, "glNamedFramebufferReadBuffer");
+   read_buffer(ctx, fb, src, "glNamedFramebufferReadBuffer");
 }

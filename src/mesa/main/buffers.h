@@ -73,10 +73,6 @@ extern void
 _mesa_update_draw_buffers(struct gl_context *ctx);
 
 
-extern void
-_mesa_read_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
-                  GLenum buffer, const char *caller);
-
 extern void GLAPIENTRY
 _mesa_ReadBuffer( GLenum mode );
 
