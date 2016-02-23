@@ -63,37 +63,6 @@ genX(init_device_state)(struct anv_device *device)
    return anv_device_submit_simple_batch(device, &batch);
 }
 
-void
-genX(fill_buffer_surface_state)(void *state, enum isl_format format,
-                                uint32_t offset, uint32_t range,
-                                uint32_t stride)
-{
-   uint32_t num_elements = range / stride;
-
-   struct GENX(RENDER_SURFACE_STATE) surface_state = {
-      .SurfaceType                              = SURFTYPE_BUFFER,
-      .SurfaceFormat                            = format,
-      .SurfaceVerticalAlignment                 = VALIGN_4,
-      .SurfaceHorizontalAlignment               = HALIGN_4,
-      .TiledSurface                             = false,
-      .RenderCacheReadWriteMode                 = false,
-      .SurfaceObjectControlState                = GENX(MOCS),
-      .Height                                   = ((num_elements - 1) >> 7) & 0x3fff,
-      .Width                                    = (num_elements - 1) & 0x7f,
-      .Depth                                    = ((num_elements - 1) >> 21) & 0x3f,
-      .SurfacePitch                             = stride - 1,
-#  if (GEN_IS_HASWELL)
-      .ShaderChannelSelectRed                   = SCS_RED,
-      .ShaderChannelSelectGreen                 = SCS_GREEN,
-      .ShaderChannelSelectBlue                  = SCS_BLUE,
-      .ShaderChannelSelectAlpha                 = SCS_ALPHA,
-#  endif
-      .SurfaceBaseAddress                       = { NULL, offset },
-   };
-
-   GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &surface_state);
-}
-
 VkResult genX(CreateSampler)(
     VkDevice                                    _device,
     const VkSamplerCreateInfo*                  pCreateInfo,

@@ -1697,24 +1697,12 @@ anv_fill_buffer_surface_state(struct anv_device *device, struct anv_state state,
                               enum isl_format format,
                               uint32_t offset, uint32_t range, uint32_t stride)
 {
-   switch (device->info.gen) {
-   case 7:
-      if (device->info.is_haswell)
-         gen75_fill_buffer_surface_state(state.map, format, offset, range,
-                                         stride);
-      else
-         gen7_fill_buffer_surface_state(state.map, format, offset, range,
-                                        stride);
-      break;
-   case 8:
-      gen8_fill_buffer_surface_state(state.map, format, offset, range, stride);
-      break;
-   case 9:
-      gen9_fill_buffer_surface_state(state.map, format, offset, range, stride);
-      break;
-   default:
-      unreachable("unsupported gen\n");
-   }
+   isl_buffer_fill_state(&device->isl_dev, state.map,
+                         .address = offset,
+                         .mocs = device->default_mocs,
+                         .size = range,
+                         .format = format,
+                         .stride = stride);
 
    if (!device->info.has_llc)
       anv_state_clflush(state);
