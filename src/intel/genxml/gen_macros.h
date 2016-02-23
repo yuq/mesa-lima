@@ -44,7 +44,7 @@
  *
  * You can do pseudo-runtime checks in your function such as
  *
- * if (ANV_GEN > 8 || ANV_IS_HASWELL) {
+ * if (GEN_GEN > 8 || GEN_IS_HASWELL) {
  *    // Do something
  * }
  *
@@ -54,7 +54,7 @@
  * For places where you really do have a compile-time conflict, you can
  * use preprocessor logic:
  *
- * #if (ANV_GEN > 8 || ANV_IS_HASWELL)
+ * #if (GEN_GEN > 8 || GEN_IS_HASWELL)
  *    // Do something
  * #endif
  *
