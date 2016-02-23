@@ -789,6 +789,35 @@ struct isl_surf_fill_state_info {
    union isl_color_value clear_color;
 };
 
+struct isl_buffer_fill_state_info {
+   /**
+    * The address of the surface in GPU memory.
+    */
+   uint64_t address;
+
+   /**
+    * The size of the buffer
+    */
+   uint64_t size;
+
+   /**
+    * The Memory Object Control state for the filled surface state.
+    *
+    * The exact format of this value depends on hardware generation.
+    */
+   uint32_t mocs;
+
+   /**
+    * The format to use in the surface state
+    *
+    * This may differ from the format of the actual isl_surf but have the
+    * same block size.
+    */
+   enum isl_format format;
+
+   uint32_t stride;
+};
+
 extern const struct isl_format_layout isl_format_layouts[];
 
 void
@@ -990,6 +1019,14 @@ isl_surf_get_tile_info(const struct isl_device *dev,
 void
 isl_surf_fill_state_s(const struct isl_device *dev, void *state,
                       const struct isl_surf_fill_state_info *restrict info);
+
+#define isl_buffer_fill_state(dev, state, ...) \
+   isl_buffer_fill_state_s((dev), (state), \
+                           &(struct isl_buffer_fill_state_info) {  __VA_ARGS__ });
+
+void
+isl_buffer_fill_state_s(const struct isl_device *dev, void *state,
+                        const struct isl_buffer_fill_state_info *restrict info);
 
 /**
  * Alignment of the upper-left sample of each subimage, in units of surface

@@ -152,3 +152,19 @@ isl_gen8_surf_fill_state_s(const struct isl_device *dev, void *state,
 void
 isl_gen9_surf_fill_state_s(const struct isl_device *dev, void *state,
                            const struct isl_surf_fill_state_info *restrict info);
+
+void
+isl_gen7_buffer_fill_state_s(void *state,
+                             const struct isl_buffer_fill_state_info *restrict info);
+
+void
+isl_gen75_buffer_fill_state_s(void *state,
+                              const struct isl_buffer_fill_state_info *restrict info);
+
+void
+isl_gen8_buffer_fill_state_s(void *state,
+                             const struct isl_buffer_fill_state_info *restrict info);
+
+void
+isl_gen9_buffer_fill_state_s(void *state,
+                             const struct isl_buffer_fill_state_info *restrict info);

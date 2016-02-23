@@ -392,3 +392,48 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 
    GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &s);
 }
+
+void
+isl_genX(buffer_fill_state_s)(void *state,
+                              const struct isl_buffer_fill_state_info *restrict info)
+{
+   uint32_t num_elements = info->size / info->stride;
+
+   struct GENX(RENDER_SURFACE_STATE) surface_state = {
+      .SurfaceType = SURFTYPE_BUFFER,
+      .SurfaceArray = false,
+      .SurfaceFormat = info->format,
+      .SurfaceVerticalAlignment = isl_to_gen_valign[4],
+      .SurfaceHorizontalAlignment = isl_to_gen_halign[4],
+      .Height = ((num_elements - 1) >> 7) & 0x3fff,
+      .Width = (num_elements - 1) & 0x7f,
+      .Depth = ((num_elements - 1) >> 21) & 0x3f,
+      .SurfacePitch = info->stride - 1,
+      .NumberofMultisamples = MULTISAMPLECOUNT_1,
+
+#if (GEN_GEN >= 8)
+      .TileMode = LINEAR,
+#else
+      .TiledSurface = false,
+#endif
+
+#if (GEN_GEN >= 8)
+      .SamplerL2BypassModeDisable = true,
+      .RenderCacheReadWriteMode = WriteOnlyCache,
+#else
+      .RenderCacheReadWriteMode = 0,
+#endif
+
+      .MOCS = info->mocs,
+
+#if (GEN_GEN >= 8 || GEN_IS_HASWELL)
+      .ShaderChannelSelectRed = SCS_RED,
+      .ShaderChannelSelectGreen = SCS_GREEN,
+      .ShaderChannelSelectBlue = SCS_BLUE,
+      .ShaderChannelSelectAlpha = SCS_ALPHA,
+#endif
+      .SurfaceBaseAddress = info->address,
+   };
+
+   GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &surface_state);
+}

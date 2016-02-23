@@ -1203,6 +1203,29 @@ isl_surf_fill_state_s(const struct isl_device *dev, void *state,
    }
 }
 
+void
+isl_buffer_fill_state_s(const struct isl_device *dev, void *state,
+                        const struct isl_buffer_fill_state_info *restrict info)
+{
+   switch (ISL_DEV_GEN(dev)) {
+   case 7:
+      if (ISL_DEV_IS_HASWELL(dev)) {
+         isl_gen75_buffer_fill_state_s(state, info);
+      } else {
+         isl_gen7_buffer_fill_state_s(state, info);
+      }
+      break;
+   case 8:
+      isl_gen8_buffer_fill_state_s(state, info);
+      break;
+   case 9:
+      isl_gen9_buffer_fill_state_s(state, info);
+      break;
+   default:
+      assert(!"Cannot fill surface state for this gen");
+   }
+}
+
 /**
  * A variant of isl_surf_get_image_offset_sa() specific to
  * ISL_DIM_LAYOUT_GEN4_2D.
