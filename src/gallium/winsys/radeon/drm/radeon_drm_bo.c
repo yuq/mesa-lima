@@ -637,13 +637,7 @@ static unsigned eg_tile_split_rev(unsigned eg_tile_split)
 }
 
 static void radeon_bo_get_tiling(struct pb_buffer *_buf,
-                                 enum radeon_bo_layout *microtiled,
-                                 enum radeon_bo_layout *macrotiled,
-                                 unsigned *bankw, unsigned *bankh,
-                                 unsigned *tile_split,
-                                 unsigned *stencil_tile_split,
-                                 unsigned *mtilea,
-                                 bool *scanout)
+				 struct radeon_bo_metadata *md)
 {
     struct radeon_bo *bo = radeon_bo(_buf);
     struct drm_radeon_gem_set_tiling args;
@@ -657,38 +651,28 @@ static void radeon_bo_get_tiling(struct pb_buffer *_buf,
                         &args,
                         sizeof(args));
 
-    *microtiled = RADEON_LAYOUT_LINEAR;
-    *macrotiled = RADEON_LAYOUT_LINEAR;
+    md->microtile = RADEON_LAYOUT_LINEAR;
+    md->macrotile = RADEON_LAYOUT_LINEAR;
     if (args.tiling_flags & RADEON_TILING_MICRO)
-        *microtiled = RADEON_LAYOUT_TILED;
+        md->microtile = RADEON_LAYOUT_TILED;
     else if (args.tiling_flags & RADEON_TILING_MICRO_SQUARE)
-        *microtiled = RADEON_LAYOUT_SQUARETILED;
+        md->microtile = RADEON_LAYOUT_SQUARETILED;
 
     if (args.tiling_flags & RADEON_TILING_MACRO)
-        *macrotiled = RADEON_LAYOUT_TILED;
-    if (bankw && tile_split && stencil_tile_split && mtilea && tile_split) {
-        *bankw = (args.tiling_flags >> RADEON_TILING_EG_BANKW_SHIFT) & RADEON_TILING_EG_BANKW_MASK;
-        *bankh = (args.tiling_flags >> RADEON_TILING_EG_BANKH_SHIFT) & RADEON_TILING_EG_BANKH_MASK;
-        *tile_split = (args.tiling_flags >> RADEON_TILING_EG_TILE_SPLIT_SHIFT) & RADEON_TILING_EG_TILE_SPLIT_MASK;
-        *stencil_tile_split = (args.tiling_flags >> RADEON_TILING_EG_STENCIL_TILE_SPLIT_SHIFT) & RADEON_TILING_EG_STENCIL_TILE_SPLIT_MASK;
-        *mtilea = (args.tiling_flags >> RADEON_TILING_EG_MACRO_TILE_ASPECT_SHIFT) & RADEON_TILING_EG_MACRO_TILE_ASPECT_MASK;
-        *tile_split = eg_tile_split(*tile_split);
-    }
-    if (scanout)
-        *scanout = bo->rws->gen >= DRV_SI && !(args.tiling_flags & RADEON_TILING_R600_NO_SCANOUT);
+        md->macrotile = RADEON_LAYOUT_TILED;
+
+    md->bankw = (args.tiling_flags >> RADEON_TILING_EG_BANKW_SHIFT) & RADEON_TILING_EG_BANKW_MASK;
+    md->bankh = (args.tiling_flags >> RADEON_TILING_EG_BANKH_SHIFT) & RADEON_TILING_EG_BANKH_MASK;
+    md->tile_split = (args.tiling_flags >> RADEON_TILING_EG_TILE_SPLIT_SHIFT) & RADEON_TILING_EG_TILE_SPLIT_MASK;
+    md->stencil_tile_split = (args.tiling_flags >> RADEON_TILING_EG_STENCIL_TILE_SPLIT_SHIFT) & RADEON_TILING_EG_STENCIL_TILE_SPLIT_MASK;
+    md->mtilea = (args.tiling_flags >> RADEON_TILING_EG_MACRO_TILE_ASPECT_SHIFT) & RADEON_TILING_EG_MACRO_TILE_ASPECT_MASK;
+    md->tile_split = eg_tile_split(md->tile_split);
+    md->scanout = bo->rws->gen >= DRV_SI && !(args.tiling_flags & RADEON_TILING_R600_NO_SCANOUT);
 }
 
 static void radeon_bo_set_tiling(struct pb_buffer *_buf,
                                  struct radeon_winsys_cs *rcs,
-                                 enum radeon_bo_layout microtiled,
-                                 enum radeon_bo_layout macrotiled,
-                                 unsigned pipe_config,
-                                 unsigned bankw, unsigned bankh,
-                                 unsigned tile_split,
-                                 unsigned stencil_tile_split,
-                                 unsigned mtilea, unsigned num_banks,
-                                 uint32_t pitch,
-                                 bool scanout)
+				 struct radeon_bo_metadata *md)
 {
     struct radeon_bo *bo = radeon_bo(_buf);
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
@@ -704,34 +688,34 @@ static void radeon_bo_set_tiling(struct pb_buffer *_buf,
 
     os_wait_until_zero(&bo->num_active_ioctls, PIPE_TIMEOUT_INFINITE);
 
-    if (microtiled == RADEON_LAYOUT_TILED)
+    if (md->microtile == RADEON_LAYOUT_TILED)
         args.tiling_flags |= RADEON_TILING_MICRO;
-    else if (microtiled == RADEON_LAYOUT_SQUARETILED)
+    else if (md->microtile == RADEON_LAYOUT_SQUARETILED)
         args.tiling_flags |= RADEON_TILING_MICRO_SQUARE;
 
-    if (macrotiled == RADEON_LAYOUT_TILED)
+    if (md->macrotile == RADEON_LAYOUT_TILED)
         args.tiling_flags |= RADEON_TILING_MACRO;
 
-    args.tiling_flags |= (bankw & RADEON_TILING_EG_BANKW_MASK) <<
+    args.tiling_flags |= (md->bankw & RADEON_TILING_EG_BANKW_MASK) <<
         RADEON_TILING_EG_BANKW_SHIFT;
-    args.tiling_flags |= (bankh & RADEON_TILING_EG_BANKH_MASK) <<
+    args.tiling_flags |= (md->bankh & RADEON_TILING_EG_BANKH_MASK) <<
         RADEON_TILING_EG_BANKH_SHIFT;
-    if (tile_split) {
-	args.tiling_flags |= (eg_tile_split_rev(tile_split) &
+    if (md->tile_split) {
+	args.tiling_flags |= (eg_tile_split_rev(md->tile_split) &
 			      RADEON_TILING_EG_TILE_SPLIT_MASK) <<
 	    RADEON_TILING_EG_TILE_SPLIT_SHIFT;
     }
-    args.tiling_flags |= (stencil_tile_split &
+    args.tiling_flags |= (md->stencil_tile_split &
 			  RADEON_TILING_EG_STENCIL_TILE_SPLIT_MASK) <<
         RADEON_TILING_EG_STENCIL_TILE_SPLIT_SHIFT;
-    args.tiling_flags |= (mtilea & RADEON_TILING_EG_MACRO_TILE_ASPECT_MASK) <<
+    args.tiling_flags |= (md->mtilea & RADEON_TILING_EG_MACRO_TILE_ASPECT_MASK) <<
         RADEON_TILING_EG_MACRO_TILE_ASPECT_SHIFT;
 
-    if (bo->rws->gen >= DRV_SI && !scanout)
+    if (bo->rws->gen >= DRV_SI && !md->scanout)
         args.tiling_flags |= RADEON_TILING_R600_NO_SCANOUT;
 
     args.handle = bo->handle;
-    args.pitch = pitch;
+    args.pitch = md->stride;
 
     drmCommandWriteRead(bo->rws->fd,
                         DRM_RADEON_GEM_SET_TILING,

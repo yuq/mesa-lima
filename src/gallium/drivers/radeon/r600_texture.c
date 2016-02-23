@@ -237,20 +237,23 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	struct r600_resource *resource = &rtex->resource;
 	struct radeon_surf *surface = &rtex->surface;
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+	struct radeon_bo_metadata metadata = {};
 
-	rscreen->ws->buffer_set_tiling(resource->buf,
-				       NULL,
-				       surface->level[0].mode >= RADEON_SURF_MODE_1D ?
-				       RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR,
-				       surface->level[0].mode >= RADEON_SURF_MODE_2D ?
-				       RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR,
-				       surface->pipe_config,
-				       surface->bankw, surface->bankh,
-				       surface->tile_split,
-				       surface->stencil_tile_split,
-				       surface->mtilea, surface->num_banks,
-				       surface->level[0].pitch_bytes,
-				       (surface->flags & RADEON_SURF_SCANOUT) != 0);
+	metadata.microtile = surface->level[0].mode >= RADEON_SURF_MODE_1D ?
+				   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
+	metadata.macrotile = surface->level[0].mode >= RADEON_SURF_MODE_2D ?
+				   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
+	metadata.pipe_config = surface->pipe_config;
+	metadata.bankw = surface->bankw;
+	metadata.bankh = surface->bankh;
+	metadata.tile_split = surface->tile_split;
+	metadata.stencil_tile_split = surface->stencil_tile_split;
+	metadata.mtilea = surface->mtilea;
+	metadata.num_banks = surface->num_banks;
+	metadata.stride = surface->level[0].pitch_bytes;
+	metadata.scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
+
+	rscreen->ws->buffer_set_tiling(resource->buf, NULL, &metadata);
 
 	return rscreen->ws->buffer_get_handle(resource->buf,
 						surface->level[0].pitch_bytes, whandle);
@@ -885,10 +888,9 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	struct pb_buffer *buf = NULL;
 	unsigned stride = 0;
 	unsigned array_mode;
-	enum radeon_bo_layout micro, macro;
 	struct radeon_surf surface;
-	bool scanout;
 	int r;
+	struct radeon_bo_metadata metadata = {};
 
 	/* Support only 2D textures without mipmaps */
 	if ((templ->target != PIPE_TEXTURE_2D && templ->target != PIPE_TEXTURE_RECT) ||
@@ -899,15 +901,17 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	if (!buf)
 		return NULL;
 
-	rscreen->ws->buffer_get_tiling(buf, &micro, &macro,
-				       &surface.bankw, &surface.bankh,
-				       &surface.tile_split,
-				       &surface.stencil_tile_split,
-				       &surface.mtilea, &scanout);
+	rscreen->ws->buffer_get_tiling(buf, &metadata);
 
-	if (macro == RADEON_LAYOUT_TILED)
+	surface.bankw = metadata.bankw;
+	surface.bankh = metadata.bankh;
+	surface.tile_split = metadata.tile_split;
+	surface.stencil_tile_split = metadata.stencil_tile_split;
+	surface.mtilea = metadata.mtilea;
+
+	if (metadata.macrotile == RADEON_LAYOUT_TILED)
 		array_mode = RADEON_SURF_MODE_2D;
-	else if (micro == RADEON_LAYOUT_TILED)
+	else if (metadata.microtile == RADEON_LAYOUT_TILED)
 		array_mode = RADEON_SURF_MODE_1D;
 	else
 		array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
@@ -917,7 +921,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 		return NULL;
 	}
 
-	if (scanout)
+	if (metadata.scanout)
 		surface.flags |= RADEON_SURF_SCANOUT;
 
 	return (struct pipe_resource *)r600_texture_create_object(screen, templ,
