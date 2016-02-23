@@ -399,8 +399,17 @@ anv_descriptor_set_create(struct anv_device *device,
    struct anv_descriptor *desc = set->descriptors;
    for (uint32_t b = 0; b < layout->binding_count; b++) {
       if (layout->binding[b].immutable_samplers) {
-         for (uint32_t i = 0; i < layout->binding[b].array_size; i++)
-            desc[i].sampler = layout->binding[b].immutable_samplers[i];
+         for (uint32_t i = 0; i < layout->binding[b].array_size; i++) {
+            /* The type will get changed to COMBINED_IMAGE_SAMPLER in
+             * UpdateDescriptorSets if needed.  However, if the descriptor
+             * set has an immutable sampler, UpdateDescriptorSets may never
+             * touch it, so we need to make sure it's 100% valid now.
+             */
+            desc[i] = (struct anv_descriptor) {
+               .type = VK_DESCRIPTOR_TYPE_SAMPLER,
+               .sampler = layout->binding[b].immutable_samplers[i],
+            };
+         }
       }
       desc += layout->binding[b].array_size;
    }
