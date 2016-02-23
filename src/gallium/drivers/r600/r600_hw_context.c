@@ -270,9 +270,7 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 	}
 
 	/* force to keep tiling flags */
-	if (ctx->keep_tiling_flags) {
-		flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
-	}
+	flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
 
 	/* Flush the CS. */
 	ctx->b.ws->cs_flush(cs, flags, fence, ctx->screen->b.cs_count++);

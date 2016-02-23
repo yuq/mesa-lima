@@ -447,24 +447,15 @@ static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0)); /* R_028C60_CB_COLOR0_BASE */
 		radeon_emit(cs, reloc);
 
-		if (!ctx->keep_tiling_flags) {
-			radeon_emit(cs, PKT3(PKT3_NOP, 0, 0)); /* R_028C70_CB_COLOR0_INFO */
-			radeon_emit(cs, reloc);
-		}
-
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0)); /* R_028C74_CB_COLOR0_ATTRIB */
 		radeon_emit(cs, reloc);
 	}
-	if (ctx->keep_tiling_flags) {
-		for (; i < 8 ; i++) {
-			radeon_compute_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C,
-						       S_028C70_FORMAT(V_028C70_COLOR_INVALID));
-		}
-		for (; i < 12; i++) {
-			radeon_compute_set_context_reg(cs, R_028E50_CB_COLOR8_INFO + (i - 8) * 0x1C,
-						       S_028C70_FORMAT(V_028C70_COLOR_INVALID));
-		}
-	}
+	for (; i < 8 ; i++)
+		radeon_compute_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C,
+					       S_028C70_FORMAT(V_028C70_COLOR_INVALID));
+	for (; i < 12; i++)
+		radeon_compute_set_context_reg(cs, R_028E50_CB_COLOR8_INFO + (i - 8) * 0x1C,
+					       S_028C70_FORMAT(V_028C70_COLOR_INVALID));
 
 	/* Set CB_TARGET_MASK  XXX: Use cb_misc_state */
 	radeon_compute_set_context_reg(cs, R_028238_CB_TARGET_MASK,

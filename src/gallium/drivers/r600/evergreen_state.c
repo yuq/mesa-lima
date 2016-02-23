@@ -1466,15 +1466,13 @@ static void evergreen_set_framebuffer_state(struct pipe_context *ctx,
 
 	/* Colorbuffers. */
 	rctx->framebuffer.atom.num_dw += state->nr_cbufs * 23;
-	if (rctx->keep_tiling_flags)
-		rctx->framebuffer.atom.num_dw += state->nr_cbufs * 2;
+	rctx->framebuffer.atom.num_dw += state->nr_cbufs * 2;
 	rctx->framebuffer.atom.num_dw += (12 - state->nr_cbufs) * 3;
 
 	/* ZS buffer. */
 	if (state->zsbuf) {
 		rctx->framebuffer.atom.num_dw += 24;
-		if (rctx->keep_tiling_flags)
-			rctx->framebuffer.atom.num_dw += 2;
+		rctx->framebuffer.atom.num_dw += 2;
 	} else if (rctx->screen->b.info.drm_minor >= 18) {
 		rctx->framebuffer.atom.num_dw += 4;
 	}
@@ -1656,11 +1654,6 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0)); /* R_028C60_CB_COLOR0_BASE */
 		radeon_emit(cs, reloc);
 
-		if (!rctx->keep_tiling_flags) {
-			radeon_emit(cs, PKT3(PKT3_NOP, 0, 0)); /* R_028C70_CB_COLOR0_INFO */
-			radeon_emit(cs, reloc);
-		}
-
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0)); /* R_028C74_CB_COLOR0_ATTRIB */
 		radeon_emit(cs, reloc);
 
@@ -1674,27 +1667,12 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 	if (i == 1 && state->cbufs[0]) {
 		radeon_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + 1 * 0x3C,
 				       cb->cb_color_info | tex->cb_color_info);
-
-		if (!rctx->keep_tiling_flags) {
-			unsigned reloc = radeon_add_to_buffer_list(&rctx->b,
-							       &rctx->b.gfx,
-							       (struct r600_resource*)state->cbufs[0]->texture,
-							       RADEON_USAGE_READWRITE,
-							       RADEON_PRIO_COLOR_BUFFER);
-
-			radeon_emit(cs, PKT3(PKT3_NOP, 0, 0)); /* R_028C70_CB_COLOR0_INFO */
-			radeon_emit(cs, reloc);
-		}
 		i++;
 	}
-	if (rctx->keep_tiling_flags) {
-		for (; i < 8 ; i++) {
-			radeon_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C, 0);
-		}
-		for (; i < 12; i++) {
-			radeon_set_context_reg(cs, R_028E50_CB_COLOR8_INFO + (i - 8) * 0x1C, 0);
-		}
-	}
+	for (; i < 8 ; i++)
+		radeon_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C, 0);
+	for (; i < 12; i++)
+		radeon_set_context_reg(cs, R_028E50_CB_COLOR8_INFO + (i - 8) * 0x1C, 0);
 
 	/* ZS buffer. */
 	if (state->zsbuf) {
@@ -1720,11 +1698,6 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 		radeon_emit(cs, zb->db_stencil_base);	/* R_028054_DB_STENCIL_WRITE_BASE */
 		radeon_emit(cs, zb->db_depth_size);	/* R_028058_DB_DEPTH_SIZE */
 		radeon_emit(cs, zb->db_depth_slice);	/* R_02805C_DB_DEPTH_SLICE */
-
-		if (!rctx->keep_tiling_flags) {
-			radeon_emit(cs, PKT3(PKT3_NOP, 0, 0)); /* R_028040_DB_Z_INFO */
-			radeon_emit(cs, reloc);
-		}
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0)); /* R_028048_DB_Z_READ_BASE */
 		radeon_emit(cs, reloc);
@@ -3680,8 +3653,7 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	 */
 	if (rctx->b.chip_class == EVERGREEN) {
 		r600_init_atom(rctx, &rctx->config_state.atom, id++, evergreen_emit_config_state, 11);
-		if (rctx->screen->b.info.drm_minor >= 7)
-			rctx->config_state.dyn_gpr_enabled = true;
+		rctx->config_state.dyn_gpr_enabled = true;
 	}
 	r600_init_atom(rctx, &rctx->framebuffer.atom, id++, evergreen_emit_framebuffer_state, 0);
 	/* shader const */
@@ -3933,7 +3905,7 @@ bool evergreen_adjust_gprs(struct r600_context *rctx)
 	max_gprs += def_num_clause_temp_gprs * 2;
 
 	/* if we have no TESS and dyn gpr is enabled then do nothing. */
-	if (!rctx->hw_shader_stages[EG_HW_STAGE_HS].shader || rctx->screen->b.info.drm_minor < 7) {
+	if (!rctx->hw_shader_stages[EG_HW_STAGE_HS].shader) {
 		if (rctx->config_state.dyn_gpr_enabled)
 			return true;
 

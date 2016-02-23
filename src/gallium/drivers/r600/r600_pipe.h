@@ -442,7 +442,6 @@ struct r600_context {
 
 	/* Hardware info. */
 	boolean				has_vertex_cache;
-	boolean				keep_tiling_flags;
 	unsigned			default_gprs[EG_NUM_HW_STAGES];
 	unsigned                        current_gprs[EG_NUM_HW_STAGES];
 	unsigned			r6xx_num_clause_temp_gprs;
