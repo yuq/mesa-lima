@@ -386,8 +386,13 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
       struct intel_renderbuffer *irb =
          intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
-      if (irb)
+      if (irb) {
          brw_render_cache_set_add_bo(brw, irb->mt->bo);
+
+         if (intel_miptree_is_lossless_compressed(brw, irb->mt)) {
+            irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
+         }
+      }
    }
 }
 

@@ -2232,4 +2232,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    brw_blorp_exec(brw, &params);
 
    intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_layer);
+
+   if (intel_miptree_is_lossless_compressed(brw, dst_mt))
+      dst_mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
 }
