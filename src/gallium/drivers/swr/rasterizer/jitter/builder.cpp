@@ -38,6 +38,8 @@ using namespace llvm;
 Builder::Builder(JitManager *pJitMgr)
     : mpJitMgr(pJitMgr)
 {
+    mVWidth = pJitMgr->mVWidth;
+
     mpIRBuilder = &pJitMgr->mBuilder;
 
     mVoidTy = Type::getVoidTy(pJitMgr->mContext);
@@ -48,14 +50,18 @@ Builder::Builder(JitManager *pJitMgr)
     mInt8Ty = Type::getInt8Ty(pJitMgr->mContext);
     mInt16Ty = Type::getInt16Ty(pJitMgr->mContext);
     mInt32Ty = Type::getInt32Ty(pJitMgr->mContext);
+    mInt8PtrTy = PointerType::get(mInt8Ty, 0);
+    mInt16PtrTy = PointerType::get(mInt16Ty, 0);
+    mInt32PtrTy = PointerType::get(mInt32Ty, 0);
     mInt64Ty = Type::getInt64Ty(pJitMgr->mContext);
     mV4FP32Ty = StructType::get(pJitMgr->mContext, std::vector<Type*>(4, mFP32Ty), false); // vector4 float type (represented as structure)
     mV4Int32Ty = StructType::get(pJitMgr->mContext, std::vector<Type*>(4, mInt32Ty), false); // vector4 int type
-    mSimdInt16Ty = VectorType::get(mInt16Ty, mpJitMgr->mVWidth);
-    mSimdInt32Ty = VectorType::get(mInt32Ty, mpJitMgr->mVWidth);
-    mSimdInt64Ty = VectorType::get(mInt64Ty, mpJitMgr->mVWidth);
-    mSimdFP16Ty = VectorType::get(mFP16Ty, mpJitMgr->mVWidth);
-    mSimdFP32Ty = VectorType::get(mFP32Ty, mpJitMgr->mVWidth);
+    mSimdInt16Ty = VectorType::get(mInt16Ty, mVWidth);
+    mSimdInt32Ty = VectorType::get(mInt32Ty, mVWidth);
+    mSimdInt64Ty = VectorType::get(mInt64Ty, mVWidth);
+    mSimdFP16Ty = VectorType::get(mFP16Ty, mVWidth);
+    mSimdFP32Ty = VectorType::get(mFP32Ty, mVWidth);
+    mSimdVectorTy = StructType::get(pJitMgr->mContext, std::vector<Type*>(4, mSimdFP32Ty), false);
 
     if (sizeof(uint32_t*) == 4)
     {

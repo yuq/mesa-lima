@@ -189,32 +189,32 @@ Constant *Builder::PRED(bool pred)
 
 Value *Builder::VIMMED1(int i)
 {
-    return ConstantVector::getSplat(JM()->mVWidth, cast<ConstantInt>(C(i)));
+    return ConstantVector::getSplat(mVWidth, cast<ConstantInt>(C(i)));
 }
 
 Value *Builder::VIMMED1(uint32_t i)
 {
-    return ConstantVector::getSplat(JM()->mVWidth, cast<ConstantInt>(C(i)));
+    return ConstantVector::getSplat(mVWidth, cast<ConstantInt>(C(i)));
 }
 
 Value *Builder::VIMMED1(float i)
 {
-    return ConstantVector::getSplat(JM()->mVWidth, cast<ConstantFP>(C(i)));
+    return ConstantVector::getSplat(mVWidth, cast<ConstantFP>(C(i)));
 }
 
 Value *Builder::VIMMED1(bool i)
 {
-    return ConstantVector::getSplat(JM()->mVWidth, cast<ConstantInt>(C(i)));
+    return ConstantVector::getSplat(mVWidth, cast<ConstantInt>(C(i)));
 }
 
 Value *Builder::VUNDEF_IPTR()
 {
-    return UndefValue::get(VectorType::get(PointerType::get(mInt32Ty, 0),JM()->mVWidth));
+    return UndefValue::get(VectorType::get(mInt32PtrTy,mVWidth));
 }
 
 Value *Builder::VUNDEF_I()
 {
-    return UndefValue::get(VectorType::get(mInt32Ty, JM()->mVWidth));
+    return UndefValue::get(VectorType::get(mInt32Ty, mVWidth));
 }
 
 Value *Builder::VUNDEF(Type *ty, uint32_t size)
@@ -224,12 +224,12 @@ Value *Builder::VUNDEF(Type *ty, uint32_t size)
 
 Value *Builder::VUNDEF_F()
 {
-    return UndefValue::get(VectorType::get(mFP32Ty, JM()->mVWidth));
+    return UndefValue::get(VectorType::get(mFP32Ty, mVWidth));
 }
 
 Value *Builder::VUNDEF(Type* t)
 {
-    return UndefValue::get(VectorType::get(t, JM()->mVWidth));
+    return UndefValue::get(VectorType::get(t, mVWidth));
 }
 
 #if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
@@ -247,7 +247,7 @@ Value *Builder::VBROADCAST(Value *src)
         return src;
     }
 
-    return VECTOR_SPLAT(JM()->mVWidth, src);
+    return VECTOR_SPLAT(mVWidth, src);
 }
 
 uint32_t Builder::IMMED(Value* v)
@@ -342,8 +342,8 @@ Value *Builder::MASKLOADD(Value* src,Value* mask)
     else
     {
         Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule,Intrinsic::x86_avx_maskload_ps_256);
-        Value* fMask = BITCAST(mask,VectorType::get(mFP32Ty,JM()->mVWidth));
-        vResult = BITCAST(CALL(func,{src,fMask}), VectorType::get(mInt32Ty,JM()->mVWidth));
+        Value* fMask = BITCAST(mask,VectorType::get(mFP32Ty,mVWidth));
+        vResult = BITCAST(CALL(func,{src,fMask}), VectorType::get(mInt32Ty,mVWidth));
     }
     return vResult;
 }
@@ -575,7 +575,7 @@ Value *Builder::GATHERPS(Value* vSrc, Value* pBase, Value* vIndices, Value* vMas
         Value *vScaleVec = VBROADCAST(Z_EXT(scale,mInt32Ty));
         Value *vOffsets = MUL(vIndices,vScaleVec);
         Value *mask = MASK(vMask);
-        for(uint32_t i = 0; i < JM()->mVWidth; ++i)
+        for(uint32_t i = 0; i < mVWidth; ++i)
         {
             // single component byte index
             Value *offset = VEXTRACT(vOffsets,C(i));
@@ -625,7 +625,7 @@ Value *Builder::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMas
         Value *vScaleVec = VBROADCAST(Z_EXT(scale, mInt32Ty));
         Value *vOffsets = MUL(vIndices, vScaleVec);
         Value *mask = MASK(vMask);
-        for(uint32_t i = 0; i < JM()->mVWidth; ++i)
+        for(uint32_t i = 0; i < mVWidth; ++i)
         {
             // single component byte index
             Value *offset = VEXTRACT(vOffsets, C(i));
@@ -800,7 +800,7 @@ Value *Builder::CVTPH2PS(Value* a)
         }
 
         Value* pResult = UndefValue::get(mSimdFP32Ty);
-        for (uint32_t i = 0; i < JM()->mVWidth; ++i)
+        for (uint32_t i = 0; i < mVWidth; ++i)
         {
             Value* pSrc = VEXTRACT(a, C(i));
             Value* pConv = CALL(pCvtPh2Ps, std::initializer_list<Value*>{pSrc});
@@ -833,7 +833,7 @@ Value *Builder::CVTPS2PH(Value* a, Value* rounding)
         }
 
         Value* pResult = UndefValue::get(mSimdInt16Ty);
-        for (uint32_t i = 0; i < JM()->mVWidth; ++i)
+        for (uint32_t i = 0; i < mVWidth; ++i)
         {
             Value* pSrc = VEXTRACT(a, C(i));
             Value* pConv = CALL(pCvtPs2Ph, std::initializer_list<Value*>{pSrc});
@@ -1085,8 +1085,8 @@ void Builder::GATHER4DD(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byt
 void Builder::Shuffle16bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInput[2], Value* vGatherOutput[4], bool bPackedOutput)
 {
     // cast types
-    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), JM()->mVWidth);
-    Type* v32x8Ty = VectorType::get(mInt8Ty, JM()->mVWidth * 4); // vwidth is units of 32 bits
+    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), mVWidth);
+    Type* v32x8Ty = VectorType::get(mInt8Ty, mVWidth * 4); // vwidth is units of 32 bits
 
     // input could either be float or int vector; do shuffle work in int
     vGatherInput[0] = BITCAST(vGatherInput[0], mSimdInt32Ty);
@@ -1094,7 +1094,7 @@ void Builder::Shuffle16bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInp
 
     if(bPackedOutput) 
     {
-        Type* v128bitTy = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), JM()->mVWidth / 4); // vwidth is units of 32 bits
+        Type* v128bitTy = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), mVWidth / 4); // vwidth is units of 32 bits
 
         // shuffle mask
         Value* vConstMask = C<char>({0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15,
@@ -1179,12 +1179,12 @@ void Builder::Shuffle16bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInp
 void Builder::Shuffle8bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInput, Value* vGatherOutput[], bool bPackedOutput)
 {
     // cast types
-    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), JM()->mVWidth);
-    Type* v32x8Ty =  VectorType::get(mInt8Ty, JM()->mVWidth * 4 ); // vwidth is units of 32 bits
+    Type* vGatherTy = VectorType::get(IntegerType::getInt32Ty(JM()->mContext), mVWidth);
+    Type* v32x8Ty =  VectorType::get(mInt8Ty, mVWidth * 4 ); // vwidth is units of 32 bits
 
     if(bPackedOutput)
     {
-        Type* v128Ty = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), JM()->mVWidth / 4); // vwidth is units of 32 bits
+        Type* v128Ty = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), mVWidth / 4); // vwidth is units of 32 bits
         // shuffle mask
         Value* vConstMask = C<char>({0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
                                      0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15});
@@ -1292,7 +1292,7 @@ void Builder::SCATTERPS(Value* pDst, Value* vSrc, Value* vOffsets, Value* vMask)
     Value* vTmpPtr = ALLOCA(pSrcTy);
 
     Value *mask = MASK(vMask);
-    for (uint32_t i = 0; i < JM()->mVWidth; ++i)
+    for (uint32_t i = 0; i < mVWidth; ++i)
     {
         Value *offset = VEXTRACT(vOffsets, C(i));
         // byte pointer to component
@@ -1415,8 +1415,8 @@ Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)
 #else
     bool flag = !imm8->isZeroValue();
     SmallVector<Constant*,8> idx;
-    for (unsigned i = 0; i < JM()->mVWidth / 2; i++) {
-        idx.push_back(C(flag ? i + JM()->mVWidth / 2 : i));
+    for (unsigned i = 0; i < mVWidth / 2; i++) {
+        idx.push_back(C(flag ? i + mVWidth / 2 : i));
     }
     return VSHUFFLE(a, VUNDEF_I(), ConstantVector::get(idx));
 #endif
@@ -1432,17 +1432,17 @@ Value *Builder::VINSERTI128(Value* a, Value* b, Constant* imm8)
 #else
     bool flag = !imm8->isZeroValue();
     SmallVector<Constant*,8> idx;
-    for (unsigned i = 0; i < JM()->mVWidth; i++) {
+    for (unsigned i = 0; i < mVWidth; i++) {
         idx.push_back(C(i));
     }
     Value *inter = VSHUFFLE(b, VUNDEF_I(), ConstantVector::get(idx));
 
     SmallVector<Constant*,8> idx2;
-    for (unsigned i = 0; i < JM()->mVWidth / 2; i++) {
-        idx2.push_back(C(flag ? i : i + JM()->mVWidth));
+    for (unsigned i = 0; i < mVWidth / 2; i++) {
+        idx2.push_back(C(flag ? i : i + mVWidth));
     }
-    for (unsigned i = JM()->mVWidth / 2; i < JM()->mVWidth; i++) {
-        idx2.push_back(C(flag ? i + JM()->mVWidth / 2 : i));
+    for (unsigned i = mVWidth / 2; i < mVWidth; i++) {
+        idx2.push_back(C(flag ? i + mVWidth / 2 : i));
     }
     return VSHUFFLE(a, inter, ConstantVector::get(idx2));
 #endif
