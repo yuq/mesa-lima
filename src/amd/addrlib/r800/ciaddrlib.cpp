@@ -1384,6 +1384,9 @@ VOID CiLib::HwlSetupTileInfo(
                                      tileInfo.bankWidth * tileInfo.bankHeight;
 
                     ADDR_ASSERT(macroTileBytes == PrtTileBytes);
+
+                    pOut->tcCompatible = FALSE;
+                    pOut->dccUnsupport = TRUE;
                 }
             }
         }
@@ -1396,10 +1399,30 @@ VOID CiLib::HwlSetupTileInfo(
 
         // pass tile type back for post tile index compute
         pOut->tileType = inTileType;
+
+        if (flags.depth || flags.stencil)
+        {
+            // tileSize = thickness * bpp * numSamples * 8 * 8 / 8
+            UINT_32 tileSize = thickness * bpp * numSamples * 8;
+
+            // Turn off tc compatible if row_size is smaller than tile size (tile split occurs).
+            if (m_rowSize < tileSize)
+            {
+                flags.tcCompatible = FALSE;
+                pOut->tcCompatible = FALSE;
+            }
+        }
+
+        UINT_32 numPipes = GetPipePerSurf(pTileInfo->pipeConfig);
+
+        if (m_pipes != numPipes)
+        {
+            pOut->dccUnsupport = TRUE;
+        }
     }
 
     // We only need to set up tile info if there is a valid index but macroModeIndex is invalid
-    if (index != TileIndexInvalid && macroModeIndex == TileIndexInvalid)
+    if ((index != TileIndexInvalid) && (macroModeIndex == TileIndexInvalid))
     {
         macroModeIndex = HwlComputeMacroModeIndex(index, flags, bpp, numSamples, pTileInfo);
 

@@ -277,6 +277,8 @@ protected:
     // Initialize equation table
     VOID InitEquationTable();
 
+    UINT_32 GetPipePerSurf(AddrPipeCfg pipeConfig) const;
+
     static const UINT_32    TileTableSize = 32;
     TileConfig          m_tileTable[TileTableSize];
     UINT_32                 m_noOfEntries;
@@ -296,8 +298,6 @@ protected:
     UINT_32                 m_equationLookupTable[MaxNumElementBytes][TileTableSize];
 
 private:
-
-    UINT_32 GetPipePerSurf(AddrPipeCfg pipeConfig) const;
 
     VOID ReadGbTileMode(UINT_32 regValue, TileConfig* pCfg) const;
     BOOL_32 InitTileSettingTable(const UINT_32 *pSetting, UINT_32 noOfEntries);

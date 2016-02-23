@@ -609,7 +609,8 @@ typedef struct _ADDR_COMPUTE_SURFACE_INFO_OUTPUT
         UINT_32     last2DLevel  : 1;  ///< TRUE if this is the last 2D(3D) tiled
                                        ///< Only meaningful when create flag checkLast2DLevel is set
         UINT_32     tcCompatible : 1;  ///< If the surface can be shader compatible
-        UINT_32     reserved     :30;  ///< Reserved bits
+        UINT_32     dccUnsupport : 1;  ///< If the surface can support DCC compressed rendering
+        UINT_32     reserved     :29;  ///< Reserved bits
     };
 
     UINT_32         equationIndex;     ///< Equation index in the equation table;
