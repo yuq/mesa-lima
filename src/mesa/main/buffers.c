@@ -323,17 +323,17 @@ _mesa_NamedFramebufferDrawBuffer(GLuint framebuffer, GLenum buf)
 
 
 /**
- * Called by glDrawBuffersARB; specifies the destination color renderbuffers
- * for N fragment program color outputs.
+ * Called by glDrawBuffersARB() and glNamedFramebufferDrawBuffers() to specify
+ * the destination color renderbuffers for N fragment program color outputs.
  * \sa _mesa_DrawBuffer
  * \param n  number of outputs
  * \param buffers  array [n] of renderbuffer names.  Unlike glDrawBuffer, the
  *                 names cannot specify more than one buffer.  For example,
  *                 GL_FRONT_AND_BACK is illegal.
  */
-void
-_mesa_draw_buffers(struct gl_context *ctx, struct gl_framebuffer *fb,
-                   GLsizei n, const GLenum *buffers, const char *caller)
+static void
+draw_buffers(struct gl_context *ctx, struct gl_framebuffer *fb,
+             GLsizei n, const GLenum *buffers, const char *caller)
 {
    GLuint output;
    GLbitfield usedBufferMask, supportedMask;
@@ -508,7 +508,7 @@ void GLAPIENTRY
 _mesa_DrawBuffers(GLsizei n, const GLenum *buffers)
 {
    GET_CURRENT_CONTEXT(ctx);
-   _mesa_draw_buffers(ctx, ctx->DrawBuffer, n, buffers, "glDrawBuffers");
+   draw_buffers(ctx, ctx->DrawBuffer, n, buffers, "glDrawBuffers");
 }
 
 
@@ -528,7 +528,7 @@ _mesa_NamedFramebufferDrawBuffers(GLuint framebuffer, GLsizei n,
    else
       fb = ctx->WinSysDrawBuffer;
 
-   _mesa_draw_buffers(ctx, fb, n, bufs, "glNamedFramebufferDrawBuffers");
+   draw_buffers(ctx, fb, n, bufs, "glNamedFramebufferDrawBuffers");
 }
 
 
