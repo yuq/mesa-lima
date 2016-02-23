@@ -34,6 +34,7 @@
 
 
 #include "glheader.h"
+#include "mtypes.h"
 
 struct gl_context;
 struct gl_framebuffer;
@@ -66,7 +67,7 @@ _mesa_drawbuffers(struct gl_context *ctx, struct gl_framebuffer *fb,
 
 extern void
 _mesa_readbuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
-                 GLenum buffer, GLint bufferIndex);
+                 GLenum buffer, gl_buffer_index bufferIndex);
 
 extern void
 _mesa_update_draw_buffers(struct gl_context *ctx);

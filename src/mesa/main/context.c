@@ -1601,7 +1601,6 @@ static void
 handle_first_current(struct gl_context *ctx)
 {
    GLenum buffer;
-   GLint bufferIndex;
 
    if (ctx->Version == 0) {
       /* probably in the process of tearing down the context */
@@ -1627,6 +1626,7 @@ handle_first_current(struct gl_context *ctx)
       }
 
       if (ctx->ReadBuffer != _mesa_get_incomplete_framebuffer()) {
+         gl_buffer_index bufferIndex;
          if (ctx->ReadBuffer->Visual.doubleBufferMode) {
             buffer = GL_BACK;
             bufferIndex = BUFFER_BACK_LEFT;

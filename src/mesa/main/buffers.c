@@ -174,7 +174,7 @@ draw_buffer_enum_to_bitmask(const struct gl_context *ctx, GLenum buffer)
  * renderbuffer (a BUFFER_* value).
  * return -1 for an invalid buffer.
  */
-static GLint
+static gl_buffer_index
 read_buffer_enum_to_index(GLenum buffer)
 {
    switch (buffer) {
@@ -675,7 +675,7 @@ _mesa_update_draw_buffers(struct gl_context *ctx)
  */
 void
 _mesa_readbuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
-                 GLenum buffer, GLint bufferIndex)
+                 GLenum buffer, gl_buffer_index bufferIndex)
 {
    if ((fb == ctx->ReadBuffer) && _mesa_is_winsys_fbo(fb)) {
       /* Only update the per-context READ_BUFFER state if we're bound to
@@ -701,7 +701,7 @@ _mesa_read_buffer(struct gl_context *ctx, struct gl_framebuffer *fb,
                   GLenum buffer, const char *caller)
 {
    GLbitfield supportedMask;
-   GLint srcBuffer;
+   gl_buffer_index srcBuffer;
 
    FLUSH_VERTICES(ctx, 0);
 
