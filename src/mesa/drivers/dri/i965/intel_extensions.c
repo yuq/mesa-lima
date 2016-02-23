@@ -267,7 +267,9 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.OES_texture_half_float = true;
    ctx->Extensions.OES_texture_half_float_linear = true;
 
-   if (brw->gen >= 6)
+   if (brw->gen >= 8)
+      ctx->Const.GLSLVersion = 400;
+   else if (brw->gen >= 6)
       ctx->Const.GLSLVersion = 330;
    else
       ctx->Const.GLSLVersion = 120;
