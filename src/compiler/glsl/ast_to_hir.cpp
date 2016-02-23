@@ -1901,6 +1901,13 @@ ast_expression::do_hir(exec_list *instructions,
       if (var != NULL) {
          var->data.used = true;
          result = new(ctx) ir_dereference_variable(var);
+
+         if ((var->data.mode == ir_var_auto || var->data.mode == ir_var_shader_out)
+             && !this->is_lhs
+             && result->variable_referenced()->data.assigned != true) {
+            _mesa_glsl_warning(&loc, state, "`%s' used uninitialized",
+                               this->primary_expression.identifier);
+         }
       } else {
          _mesa_glsl_error(& loc, state, "`%s' undeclared",
                           this->primary_expression.identifier);
