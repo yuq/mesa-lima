@@ -29,7 +29,9 @@
 #include <unordered_map>
 
 #include "fifo.hpp"
-#include "tilemgr.h"
+#include "core/tilemgr.h"
+#include "core/multisample.h"
+#include "rdtsc_core.h"
 
 #define TILE_ID(x,y) ((x << 16 | y))
 
@@ -102,4 +104,252 @@ void MacroTileMgr::markTileComplete(uint32_t id)
     // this prevents worker threads from constantly locking a completed macro tile
     tile.mWorkItemsFE = 0;
     tile.mWorkItemsBE = 0;
+}
+
+HOTTILE* HotTileMgr::GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID, SWR_RENDERTARGET_ATTACHMENT attachment, bool create, uint32_t numSamples,
+    uint32_t renderTargetArrayIndex)
+{
+    uint32_t x, y;
+    MacroTileMgr::getTileIndices(macroID, x, y);
+
+    SWR_ASSERT(x < KNOB_NUM_HOT_TILES_X);
+    SWR_ASSERT(y < KNOB_NUM_HOT_TILES_Y);
+
+    HotTileSet &tile = mHotTiles[x][y];
+    HOTTILE& hotTile = tile.Attachment[attachment];
+    if (hotTile.pBuffer == NULL)
+    {
+        if (create)
+        {
+            uint32_t size = numSamples * mHotTileSize[attachment];
+            hotTile.pBuffer = (BYTE*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
+            hotTile.state = HOTTILE_INVALID;
+            hotTile.numSamples = numSamples;
+            hotTile.renderTargetArrayIndex = renderTargetArrayIndex;
+        }
+        else
+        {
+            return NULL;
+        }
+    }
+    else
+    {
+        // free the old tile and create a new one with enough space to hold all samples
+        if (numSamples > hotTile.numSamples)
+        {
+            // tile should be either uninitialized or resolved if we're deleting and switching to a 
+            // new sample count
+            SWR_ASSERT((hotTile.state == HOTTILE_INVALID) ||
+                (hotTile.state == HOTTILE_RESOLVED) ||
+                (hotTile.state == HOTTILE_CLEAR));
+            _aligned_free(hotTile.pBuffer);
+
+            uint32_t size = numSamples * mHotTileSize[attachment];
+            hotTile.pBuffer = (BYTE*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
+            hotTile.state = HOTTILE_INVALID;
+            hotTile.numSamples = numSamples;
+        }
+
+        // if requested render target array index isn't currently loaded, need to store out the current hottile 
+        // and load the requested array slice
+        if (renderTargetArrayIndex != hotTile.renderTargetArrayIndex)
+        {
+            SWR_FORMAT format;
+            switch (attachment)
+            {
+            case SWR_ATTACHMENT_COLOR0:
+            case SWR_ATTACHMENT_COLOR1:
+            case SWR_ATTACHMENT_COLOR2:
+            case SWR_ATTACHMENT_COLOR3:
+            case SWR_ATTACHMENT_COLOR4:
+            case SWR_ATTACHMENT_COLOR5:
+            case SWR_ATTACHMENT_COLOR6:
+            case SWR_ATTACHMENT_COLOR7: format = KNOB_COLOR_HOT_TILE_FORMAT; break;
+            case SWR_ATTACHMENT_DEPTH: format = KNOB_DEPTH_HOT_TILE_FORMAT; break;
+            case SWR_ATTACHMENT_STENCIL: format = KNOB_STENCIL_HOT_TILE_FORMAT; break;
+            default: SWR_ASSERT(false, "Unknown attachment: %d", attachment); format = KNOB_COLOR_HOT_TILE_FORMAT; break;
+            }
+
+            if (hotTile.state == HOTTILE_DIRTY)
+            {
+                pContext->pfnStoreTile(GetPrivateState(pDC), format, attachment,
+                    x * KNOB_MACROTILE_X_DIM, y * KNOB_MACROTILE_Y_DIM, hotTile.renderTargetArrayIndex, hotTile.pBuffer);
+            }
+
+            pContext->pfnLoadTile(GetPrivateState(pDC), format, attachment,
+                x * KNOB_MACROTILE_X_DIM, y * KNOB_MACROTILE_Y_DIM, renderTargetArrayIndex, hotTile.pBuffer);
+
+            hotTile.renderTargetArrayIndex = renderTargetArrayIndex;
+            hotTile.state = HOTTILE_DIRTY;
+        }
+    }
+    return &tile.Attachment[attachment];
+}
+
+void HotTileMgr::ClearColorHotTile(const HOTTILE* pHotTile)  // clear a macro tile from float4 clear data.
+{
+    // Load clear color into SIMD register...
+    float *pClearData = (float*)(pHotTile->clearData);
+    simdscalar valR = _simd_broadcast_ss(&pClearData[0]);
+    simdscalar valG = _simd_broadcast_ss(&pClearData[1]);
+    simdscalar valB = _simd_broadcast_ss(&pClearData[2]);
+    simdscalar valA = _simd_broadcast_ss(&pClearData[3]);
+
+    float *pfBuf = (float*)pHotTile->pBuffer;
+    uint32_t numSamples = pHotTile->numSamples;
+
+    for (uint32_t row = 0; row < KNOB_MACROTILE_Y_DIM; row += KNOB_TILE_Y_DIM)
+    {
+        for (uint32_t col = 0; col < KNOB_MACROTILE_X_DIM; col += KNOB_TILE_X_DIM)
+        {
+            for (uint32_t si = 0; si < (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * numSamples); si += SIMD_TILE_X_DIM * SIMD_TILE_Y_DIM) //SIMD_TILE_X_DIM * SIMD_TILE_Y_DIM); si++)
+            {
+                _simd_store_ps(pfBuf, valR);
+                pfBuf += KNOB_SIMD_WIDTH;
+                _simd_store_ps(pfBuf, valG);
+                pfBuf += KNOB_SIMD_WIDTH;
+                _simd_store_ps(pfBuf, valB);
+                pfBuf += KNOB_SIMD_WIDTH;
+                _simd_store_ps(pfBuf, valA);
+                pfBuf += KNOB_SIMD_WIDTH;
+            }
+        }
+    }
+}
+
+void HotTileMgr::ClearDepthHotTile(const HOTTILE* pHotTile)  // clear a macro tile from float4 clear data.
+{
+    // Load clear color into SIMD register...
+    float *pClearData = (float*)(pHotTile->clearData);
+    simdscalar valZ = _simd_broadcast_ss(&pClearData[0]);
+
+    float *pfBuf = (float*)pHotTile->pBuffer;
+    uint32_t numSamples = pHotTile->numSamples;
+
+    for (uint32_t row = 0; row < KNOB_MACROTILE_Y_DIM; row += KNOB_TILE_Y_DIM)
+    {
+        for (uint32_t col = 0; col < KNOB_MACROTILE_X_DIM; col += KNOB_TILE_X_DIM)
+        {
+            for (uint32_t si = 0; si < (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * numSamples); si += SIMD_TILE_X_DIM * SIMD_TILE_Y_DIM)
+            {
+                _simd_store_ps(pfBuf, valZ);
+                pfBuf += KNOB_SIMD_WIDTH;
+            }
+        }
+    }
+}
+
+void HotTileMgr::ClearStencilHotTile(const HOTTILE* pHotTile)
+{
+    // convert from F32 to U8.
+    uint8_t clearVal = (uint8_t)(pHotTile->clearData[0]);
+    //broadcast 32x into __m256i...
+    simdscalari valS = _simd_set1_epi8(clearVal);
+
+    simdscalari* pBuf = (simdscalari*)pHotTile->pBuffer;
+    uint32_t numSamples = pHotTile->numSamples;
+
+    for (uint32_t row = 0; row < KNOB_MACROTILE_Y_DIM; row += KNOB_TILE_Y_DIM)
+    {
+        for (uint32_t col = 0; col < KNOB_MACROTILE_X_DIM; col += KNOB_TILE_X_DIM)
+        {
+            // We're putting 4 pixels in each of the 32-bit slots, so increment 4 times as quickly.
+            for (uint32_t si = 0; si < (KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * numSamples); si += SIMD_TILE_X_DIM * SIMD_TILE_Y_DIM * 4)
+            {
+                _simd_store_si(pBuf, valS);
+                pBuf += 1;
+            }
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief InitializeHotTiles
+/// for draw calls, we initialize the active hot tiles and perform deferred
+/// load on them if tile is in invalid state. we do this in the outer thread
+/// loop instead of inside the draw routine itself mainly for performance,
+/// to avoid unnecessary setup every triangle
+/// @todo support deferred clear
+/// @param pCreateInfo - pointer to creation info.
+void HotTileMgr::InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID)
+{
+    const API_STATE& state = GetApiState(pDC);
+    HotTileMgr *pHotTileMgr = pContext->pHotTileMgr;
+
+    uint32_t x, y;
+    MacroTileMgr::getTileIndices(macroID, x, y);
+    x *= KNOB_MACROTILE_X_DIM;
+    y *= KNOB_MACROTILE_Y_DIM;
+
+    uint32_t numSamples = GetNumSamples(state.rastState.sampleCount);
+
+    // check RT if enabled
+    unsigned long rtSlot = 0;
+    uint32_t colorHottileEnableMask = state.colorHottileEnable;
+    while (_BitScanForward(&rtSlot, colorHottileEnableMask))
+    {
+        HOTTILE* pHotTile = GetHotTile(pContext, pDC, macroID, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rtSlot), true, numSamples);
+
+        if (pHotTile->state == HOTTILE_INVALID)
+        {
+            RDTSC_START(BELoadTiles);
+            // invalid hottile before draw requires a load from surface before we can draw to it
+            pContext->pfnLoadTile(GetPrivateState(pDC), KNOB_COLOR_HOT_TILE_FORMAT, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rtSlot), x, y, pHotTile->renderTargetArrayIndex, pHotTile->pBuffer);
+            pHotTile->state = HOTTILE_DIRTY;
+            RDTSC_STOP(BELoadTiles, 0, 0);
+        }
+        else if (pHotTile->state == HOTTILE_CLEAR)
+        {
+            RDTSC_START(BELoadTiles);
+            // Clear the tile.
+            ClearColorHotTile(pHotTile);
+            pHotTile->state = HOTTILE_DIRTY;
+            RDTSC_STOP(BELoadTiles, 0, 0);
+        }
+        colorHottileEnableMask &= ~(1 << rtSlot);
+    }
+
+    // check depth if enabled
+    if (state.depthHottileEnable)
+    {
+        HOTTILE* pHotTile = GetHotTile(pContext, pDC, macroID, SWR_ATTACHMENT_DEPTH, true, numSamples);
+        if (pHotTile->state == HOTTILE_INVALID)
+        {
+            RDTSC_START(BELoadTiles);
+            // invalid hottile before draw requires a load from surface before we can draw to it
+            pContext->pfnLoadTile(GetPrivateState(pDC), KNOB_DEPTH_HOT_TILE_FORMAT, SWR_ATTACHMENT_DEPTH, x, y, pHotTile->renderTargetArrayIndex, pHotTile->pBuffer);
+            pHotTile->state = HOTTILE_DIRTY;
+            RDTSC_STOP(BELoadTiles, 0, 0);
+        }
+        else if (pHotTile->state == HOTTILE_CLEAR)
+        {
+            RDTSC_START(BELoadTiles);
+            // Clear the tile.
+            ClearDepthHotTile(pHotTile);
+            pHotTile->state = HOTTILE_DIRTY;
+            RDTSC_STOP(BELoadTiles, 0, 0);
+        }
+    }
+
+    // check stencil if enabled
+    if (state.stencilHottileEnable)
+    {
+        HOTTILE* pHotTile = GetHotTile(pContext, pDC, macroID, SWR_ATTACHMENT_STENCIL, true, numSamples);
+        if (pHotTile->state == HOTTILE_INVALID)
+        {
+            RDTSC_START(BELoadTiles);
+            // invalid hottile before draw requires a load from surface before we can draw to it
+            pContext->pfnLoadTile(GetPrivateState(pDC), KNOB_STENCIL_HOT_TILE_FORMAT, SWR_ATTACHMENT_STENCIL, x, y, pHotTile->renderTargetArrayIndex, pHotTile->pBuffer);
+            pHotTile->state = HOTTILE_DIRTY;
+            RDTSC_STOP(BELoadTiles, 0, 0);
+        }
+        else if (pHotTile->state == HOTTILE_CLEAR)
+        {
+            RDTSC_START(BELoadTiles);
+            // Clear the tile.
+            ClearStencilHotTile(pHotTile);
+            pHotTile->state = HOTTILE_DIRTY;
+            RDTSC_STOP(BELoadTiles, 0, 0);
+        }
+    }
 }

@@ -293,95 +293,14 @@ public:
         }
     }
 
-    HOTTILE *GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID, SWR_RENDERTARGET_ATTACHMENT attachment, bool create, uint32_t numSamples = 1, 
-        uint32_t renderTargetArrayIndex = 0)
-    {
-        uint32_t x, y;
-        MacroTileMgr::getTileIndices(macroID, x, y);
+    void InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID);
 
-        SWR_ASSERT(x < KNOB_NUM_HOT_TILES_X);
-        SWR_ASSERT(y < KNOB_NUM_HOT_TILES_Y);
+    HOTTILE *GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID, SWR_RENDERTARGET_ATTACHMENT attachment, bool create, uint32_t numSamples = 1,
+        uint32_t renderTargetArrayIndex = 0);
 
-        HotTileSet &tile = mHotTiles[x][y];
-        HOTTILE& hotTile = tile.Attachment[attachment];
-        if (hotTile.pBuffer == NULL)
-        {
-            if (create)
-            {
-                uint32_t size = numSamples * mHotTileSize[attachment];
-                hotTile.pBuffer = (BYTE*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
-                hotTile.state = HOTTILE_INVALID;
-                hotTile.numSamples = numSamples;
-                hotTile.renderTargetArrayIndex = renderTargetArrayIndex;
-            }
-            else
-            {
-                return NULL;
-            }
-        }
-        else
-        {
-            // free the old tile and create a new one with enough space to hold all samples
-            if (numSamples > hotTile.numSamples)
-            {
-                // tile should be either uninitialized or resolved if we're deleting and switching to a 
-                // new sample count
-                SWR_ASSERT((hotTile.state == HOTTILE_INVALID) ||
-                       (hotTile.state == HOTTILE_RESOLVED) || 
-                       (hotTile.state == HOTTILE_CLEAR));
-                _aligned_free(hotTile.pBuffer);
-
-                uint32_t size = numSamples * mHotTileSize[attachment];
-                hotTile.pBuffer = (BYTE*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
-                hotTile.state = HOTTILE_INVALID;
-                hotTile.numSamples = numSamples;
-            }
-
-            // if requested render target array index isn't currently loaded, need to store out the current hottile 
-            // and load the requested array slice
-            if (renderTargetArrayIndex != hotTile.renderTargetArrayIndex)
-            {
-                SWR_FORMAT format;
-                switch (attachment)
-                {
-                case SWR_ATTACHMENT_COLOR0:
-                case SWR_ATTACHMENT_COLOR1:
-                case SWR_ATTACHMENT_COLOR2:
-                case SWR_ATTACHMENT_COLOR3:
-                case SWR_ATTACHMENT_COLOR4:
-                case SWR_ATTACHMENT_COLOR5:
-                case SWR_ATTACHMENT_COLOR6:
-                case SWR_ATTACHMENT_COLOR7: format = KNOB_COLOR_HOT_TILE_FORMAT; break;
-                case SWR_ATTACHMENT_DEPTH: format = KNOB_DEPTH_HOT_TILE_FORMAT; break;
-                case SWR_ATTACHMENT_STENCIL: format = KNOB_STENCIL_HOT_TILE_FORMAT; break;
-                default: SWR_ASSERT(false, "Unknown attachment: %d", attachment); format = KNOB_COLOR_HOT_TILE_FORMAT; break;
-                }
-
-                if (hotTile.state == HOTTILE_DIRTY)
-                {
-                    pContext->pfnStoreTile(GetPrivateState(pDC), format, attachment,
-                        x * KNOB_MACROTILE_X_DIM, y * KNOB_MACROTILE_Y_DIM, hotTile.renderTargetArrayIndex, hotTile.pBuffer);
-                }
-
-                pContext->pfnLoadTile(GetPrivateState(pDC), format, attachment,
-                    x * KNOB_MACROTILE_X_DIM, y * KNOB_MACROTILE_Y_DIM, renderTargetArrayIndex, hotTile.pBuffer);
-
-                hotTile.renderTargetArrayIndex = renderTargetArrayIndex;
-                hotTile.state = HOTTILE_DIRTY;
-            }
-        }
-        return &tile.Attachment[attachment];
-    }
-
-    HotTileSet &GetHotTile(uint32_t macroID)
-    {
-        uint32_t x, y;
-        MacroTileMgr::getTileIndices(macroID, x, y);
-        SWR_ASSERT(x < KNOB_NUM_HOT_TILES_X);
-        SWR_ASSERT(y < KNOB_NUM_HOT_TILES_Y);
-
-        return mHotTiles[x][y];
-    }
+    static void ClearColorHotTile(const HOTTILE* pHotTile);
+    static void ClearDepthHotTile(const HOTTILE* pHotTile);
+    static void ClearStencilHotTile(const HOTTILE* pHotTile);
 
 private:
     HotTileSet mHotTiles[KNOB_NUM_HOT_TILES_X][KNOB_NUM_HOT_TILES_Y];
