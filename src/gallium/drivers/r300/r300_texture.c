@@ -1064,7 +1064,7 @@ r300_texture_create_object(struct r300_screen *rscreen,
     tiling.microtile = tex->tex.microtile;
     tiling.macrotile = tex->tex.macrotile[0];
     tiling.stride = tex->tex.stride_in_bytes[0];
-    rws->buffer_set_tiling(tex->buf, NULL, &tiling);
+    rws->buffer_set_tiling(tex->buf, &tiling);
 
     return tex;
 

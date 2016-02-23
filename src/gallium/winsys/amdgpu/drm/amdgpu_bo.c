@@ -420,7 +420,6 @@ static void amdgpu_bo_get_tiling(struct pb_buffer *_buf,
 }
 
 static void amdgpu_bo_set_tiling(struct pb_buffer *_buf,
-                                 struct radeon_winsys_cs *rcs,
 				 struct radeon_bo_metadata *md)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);

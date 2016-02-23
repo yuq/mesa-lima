@@ -253,7 +253,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	metadata.stride = surface->level[0].pitch_bytes;
 	metadata.scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
 
-	rscreen->ws->buffer_set_tiling(resource->buf, NULL, &metadata);
+	rscreen->ws->buffer_set_tiling(resource->buf, &metadata);
 
 	return rscreen->ws->buffer_get_handle(resource->buf,
 						surface->level[0].pitch_bytes, whandle);

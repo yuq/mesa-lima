@@ -671,20 +671,12 @@ static void radeon_bo_get_tiling(struct pb_buffer *_buf,
 }
 
 static void radeon_bo_set_tiling(struct pb_buffer *_buf,
-                                 struct radeon_winsys_cs *rcs,
 				 struct radeon_bo_metadata *md)
 {
     struct radeon_bo *bo = radeon_bo(_buf);
-    struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
     struct drm_radeon_gem_set_tiling args;
 
     memset(&args, 0, sizeof(args));
-
-    /* Tiling determines how DRM treats the buffer data.
-     * We must flush CS when changing it if the buffer is referenced. */
-    if (cs && radeon_bo_is_referenced_by_cs(cs, bo)) {
-        cs->flush_cs(cs->flush_data, 0, NULL);
-    }
 
     os_wait_until_zero(&bo->num_active_ioctls, PIPE_TIMEOUT_INFINITE);
 

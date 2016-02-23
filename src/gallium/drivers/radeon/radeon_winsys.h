@@ -483,11 +483,9 @@ struct radeon_winsys {
      * (tiling info for display code, DRI sharing, and other data)
      *
      * \param buf       A winsys buffer object to set the flags for.
-     * \param cs        A command stream to flush if the buffer is referenced by it.
      * \param md        Metadata
      */
     void (*buffer_set_tiling)(struct pb_buffer *buf,
-                              struct radeon_winsys_cs *rcs,
                               struct radeon_bo_metadata *md);
 
     /**
