@@ -44,7 +44,7 @@ genX(init_device_state)(struct anv_device *device)
    batch.end = (void *) cmds + sizeof(cmds);
 
    anv_batch_emit(&batch, GENX(PIPELINE_SELECT),
-#if ANV_GEN >= 9
+#if GEN_GEN >= 9
                   .MaskBits = 3,
 #endif
                   .PipelineSelection = _3D);
@@ -93,7 +93,7 @@ genX(init_device_state)(struct anv_device *device)
       ._8xSample6YOffset      = 0.9375,
       ._8xSample7XOffset      = 0.9375,
       ._8xSample7YOffset      = 0.0625,
-#if ANV_GEN >= 9
+#if GEN_GEN >= 9
       ._16xSample0XOffset     = 0.5625,
       ._16xSample0YOffset     = 0.5625,
       ._16xSample1XOffset     = 0.4375,
@@ -194,7 +194,7 @@ static const uint8_t anv_valign[] = {
 static void
 get_halign_valign(const struct isl_surf *surf, uint32_t *halign, uint32_t *valign)
 {
-   #if ANV_GENx10 >= 90
+   #if GEN_GEN >= 9
       if (isl_tiling_is_std_y(surf->tiling) ||
           surf->dim_layout == ISL_DIM_LAYOUT_GEN9_1D) {
          /* The hardware ignores the alignment values. Anyway, the surface's
@@ -239,7 +239,7 @@ get_qpitch(const struct isl_surf *surf)
    default:
       unreachable(!"bad isl_surf_dim");
    case ISL_SURF_DIM_1D:
-      #if ANV_GENx10 >= 90
+      #if GEN_GEN >= 9
          /* QPitch is usually expressed as rows of surface elements (where
           * a surface element is an compression block or a single surface
           * sample). Skylake 1D is an outlier.
@@ -256,7 +256,7 @@ get_qpitch(const struct isl_surf *surf)
       #endif
    case ISL_SURF_DIM_2D:
    case ISL_SURF_DIM_3D:
-      #if ANV_GEN >= 9
+      #if GEN_GEN >= 9
          return isl_surf_get_array_pitch_el_rows(surf);
       #else
          /* From the Broadwell PRM for RENDER_SURFACE_STATE.QPitch
@@ -452,7 +452,7 @@ VkResult genX(CreateSampler)(
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
       .LODPreClampMode = CLAMP_MODE_OGL,
-#if ANV_GEN == 8
+#if GEN_GEN == 8
       .BaseMipLevel = 0.0,
 #endif
       .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
