@@ -132,6 +132,8 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
       this->fields.structure[i].image_volatile = fields[i].image_volatile;
       this->fields.structure[i].image_restrict = fields[i].image_restrict;
       this->fields.structure[i].precision = fields[i].precision;
+      this->fields.structure[i].explicit_xfb_buffer =
+         fields[i].explicit_xfb_buffer;
       this->fields.structure[i].xfb_buffer = fields[i].xfb_buffer;
       this->fields.structure[i].xfb_stride = fields[i].xfb_stride;
    }
@@ -174,6 +176,8 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
       this->fields.structure[i].image_volatile = fields[i].image_volatile;
       this->fields.structure[i].image_restrict = fields[i].image_restrict;
       this->fields.structure[i].precision = fields[i].precision;
+      this->fields.structure[i].explicit_xfb_buffer =
+         fields[i].explicit_xfb_buffer;
       this->fields.structure[i].xfb_buffer = fields[i].xfb_buffer;
       this->fields.structure[i].xfb_stride = fields[i].xfb_stride;
    }
@@ -918,6 +922,9 @@ glsl_type::record_compare(const glsl_type *b) const
          return false;
       if (this->fields.structure[i].precision
           != b->fields.structure[i].precision)
+         return false;
+      if (this->fields.structure[i].explicit_xfb_buffer
+          != b->fields.structure[i].explicit_xfb_buffer)
          return false;
       if (this->fields.structure[i].xfb_buffer
           != b->fields.structure[i].xfb_buffer)

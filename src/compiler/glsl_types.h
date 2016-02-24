@@ -901,6 +901,13 @@ struct glsl_struct_field {
    unsigned image_volatile:1;
    unsigned image_restrict:1;
 
+   /**
+    * Any of the xfb_* qualifiers trigger the shader to be in transform
+    * feedback mode so we need to keep track of whether the buffer was
+    * explicitly set or if its just been assigned the default global value.
+    */
+   unsigned explicit_xfb_buffer:1;
+
 #ifdef __cplusplus
    glsl_struct_field(const struct glsl_type *_type, const char *_name)
       : type(_type), name(_name), location(-1), interpolation(0), centroid(0),
