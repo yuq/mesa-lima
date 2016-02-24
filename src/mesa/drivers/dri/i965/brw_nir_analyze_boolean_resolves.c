@@ -165,7 +165,7 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
          }
 
          default:
-            if (nir_op_infos[alu->op].output_type == nir_type_bool) {
+            if (nir_alu_type_get_base_type(nir_op_infos[alu->op].output_type) == nir_type_bool) {
                /* This instructions will turn into a CMP when we actually emit
                 * them so the result will have to be resolved before it can be
                 * used.
