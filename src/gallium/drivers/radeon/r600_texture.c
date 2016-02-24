@@ -259,6 +259,13 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	struct r600_texture *rtex = (struct r600_texture*)resource;
 	struct radeon_bo_metadata metadata;
 
+	/* This is not supported now, but it might be required for OpenCL
+	 * interop in the future.
+	 */
+	if (resource->target != PIPE_BUFFER &&
+	    (resource->nr_samples > 1 || rtex->is_depth))
+		return NULL;
+
 	if (!res->is_shared) {
 		res->is_shared = true;
 		res->external_usage = usage;
