@@ -1487,6 +1487,14 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			continue;
 		}
 
+		/* shared textures can't use fast clear without an explicit flush,
+		 * because there is no way to communicate the clear color among
+		 * all clients
+		 */
+		if (tex->resource.is_shared &&
+		    !(tex->resource.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH))
+			continue;
+
 		/* fast color clear with 1D tiling doesn't work on old kernels and CIK */
 		if (tex->surface.level[0].mode == RADEON_SURF_MODE_1D &&
 		    rctx->chip_class >= CIK &&
