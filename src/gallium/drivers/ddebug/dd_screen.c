@@ -179,11 +179,12 @@ dd_screen_resource_create(struct pipe_screen *_screen,
 static struct pipe_resource *
 dd_screen_resource_from_handle(struct pipe_screen *_screen,
                                const struct pipe_resource *templ,
-                               struct winsys_handle *handle)
+                               struct winsys_handle *handle,
+                               unsigned usage)
 {
    struct pipe_screen *screen = dd_screen(_screen)->screen;
    struct pipe_resource *res =
-      screen->resource_from_handle(screen, templ, handle);
+      screen->resource_from_handle(screen, templ, handle, usage);
 
    if (!res)
       return NULL;
@@ -218,11 +219,12 @@ dd_screen_resource_destroy(struct pipe_screen *_screen,
 static boolean
 dd_screen_resource_get_handle(struct pipe_screen *_screen,
                               struct pipe_resource *resource,
-                              struct winsys_handle *handle)
+                              struct winsys_handle *handle,
+                              unsigned usage)
 {
    struct pipe_screen *screen = dd_screen(_screen)->screen;
 
-   return screen->resource_get_handle(screen, resource, handle);
+   return screen->resource_get_handle(screen, resource, handle, usage);
 }
 
 

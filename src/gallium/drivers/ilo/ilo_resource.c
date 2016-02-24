@@ -714,7 +714,8 @@ ilo_resource_create(struct pipe_screen *screen,
 static struct pipe_resource *
 ilo_resource_from_handle(struct pipe_screen *screen,
                          const struct pipe_resource *templ,
-                         struct winsys_handle *handle)
+                         struct winsys_handle *handle,
+                         unsigned usage)
 {
    if (templ->target == PIPE_BUFFER)
       return NULL;
@@ -725,7 +726,8 @@ ilo_resource_from_handle(struct pipe_screen *screen,
 static boolean
 ilo_resource_get_handle(struct pipe_screen *screen,
                         struct pipe_resource *res,
-                        struct winsys_handle *handle)
+                        struct winsys_handle *handle,
+                        unsigned usage)
 {
    if (res->target == PIPE_BUFFER)
       return false;

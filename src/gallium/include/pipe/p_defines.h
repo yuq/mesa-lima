@@ -530,6 +530,17 @@ enum pipe_reset_status
 
 
 /**
+ * resource_get_handle flags.
+ */
+/* Requires pipe_context::flush_resource before external use. */
+#define PIPE_HANDLE_USAGE_EXPLICIT_FLUSH  (1 << 0)
+/* Expected external use of the resource: */
+#define PIPE_HANDLE_USAGE_READ            (1 << 1)
+#define PIPE_HANDLE_USAGE_WRITE           (1 << 2)
+#define PIPE_HANDLE_USAGE_READ_WRITE      (PIPE_HANDLE_USAGE_READ | \
+                                           PIPE_HANDLE_USAGE_WRITE)
+
+/**
  * Implementation capabilities/limits which are queried through
  * pipe_screen::get_param()
  */

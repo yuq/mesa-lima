@@ -87,7 +87,9 @@ D3DWindowBuffer_create(struct NineSwapChain9 *This,
 
     memset(&whandle, 0, sizeof(whandle));
     whandle.type = DRM_API_HANDLE_TYPE_FD;
-    This->screen->resource_get_handle(This->screen, resource, &whandle);
+    This->screen->resource_get_handle(This->screen, resource, &whandle,
+                                      PIPE_HANDLE_USAGE_EXPLICIT_FLUSH |
+                                      PIPE_HANDLE_USAGE_READ);
     stride = whandle.stride;
     dmaBufFd = whandle.handle;
     ID3DPresent_NewD3DWindowBufferFromDmaBuf(This->present,

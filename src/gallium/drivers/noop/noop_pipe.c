@@ -114,14 +114,15 @@ static struct pipe_resource *noop_resource_create(struct pipe_screen *screen,
 
 static struct pipe_resource *noop_resource_from_handle(struct pipe_screen *screen,
 							const struct pipe_resource *templ,
-							struct winsys_handle *handle)
+							struct winsys_handle *handle,
+                                                       unsigned usage)
 {
 	struct noop_pipe_screen *noop_screen = (struct noop_pipe_screen*)screen;
 	struct pipe_screen *oscreen = noop_screen->oscreen;
 	struct pipe_resource *result;
 	struct pipe_resource *noop_resource;
 
-	result = oscreen->resource_from_handle(oscreen, templ, handle);
+	result = oscreen->resource_from_handle(oscreen, templ, handle, usage);
 	noop_resource = noop_resource_create(screen, result);
 	pipe_resource_reference(&result, NULL);
 	return noop_resource;
@@ -129,7 +130,8 @@ static struct pipe_resource *noop_resource_from_handle(struct pipe_screen *scree
 
 static boolean noop_resource_get_handle(struct pipe_screen *screen,
 					struct pipe_resource *resource,
-					struct winsys_handle *handle)
+					struct winsys_handle *handle,
+                                        unsigned usage)
 {
 	return FALSE;
 }

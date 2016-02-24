@@ -230,7 +230,8 @@ static int r600_setup_surface(struct pipe_screen *screen,
 
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
 				       struct pipe_resource *ptex,
-				       struct winsys_handle *whandle)
+				       struct winsys_handle *whandle,
+                                       unsigned usage)
 {
 	struct r600_texture *rtex = (struct r600_texture*)ptex;
 	struct r600_resource *resource = &rtex->resource;
@@ -877,7 +878,8 @@ struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 
 static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen,
 						      const struct pipe_resource *templ,
-						      struct winsys_handle *whandle)
+						      struct winsys_handle *whandle,
+                                                      unsigned usage)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct pb_buffer *buf = NULL;

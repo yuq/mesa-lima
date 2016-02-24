@@ -637,7 +637,8 @@ fail:
 static struct pipe_resource *
 fd_resource_from_handle(struct pipe_screen *pscreen,
 		const struct pipe_resource *tmpl,
-		struct winsys_handle *handle)
+		struct winsys_handle *handle,
+                unsigned usage)
 {
 	struct fd_resource *rsc = CALLOC_STRUCT(fd_resource);
 	struct fd_resource_slice *slice = &rsc->slices[0];
