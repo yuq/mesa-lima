@@ -571,8 +571,6 @@ void anv_finish_wsi(struct anv_instance *instance);
 struct anv_meta_state {
    VkAllocationCallbacks alloc;
 
-   VkDescriptorPool desc_pool;
-
    /**
     * Use array element `i` for images with `2^i` samples.
     */

@@ -559,11 +559,27 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
       &cmd_buffer->pool->alloc,
       &sampler_h);
 
+   VkDescriptorPool desc_pool;
+   anv_CreateDescriptorPool(anv_device_to_handle(device),
+      &(const VkDescriptorPoolCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+         .pNext = NULL,
+         .flags = 0,
+         .maxSets = 1,
+         .poolSizeCount = 1,
+         .pPoolSizes = (VkDescriptorPoolSize[]) {
+            {
+               .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+               .descriptorCount = 1
+            },
+         }
+      }, &cmd_buffer->pool->alloc, &desc_pool);
+
    VkDescriptorSet desc_set_h;
    anv_AllocateDescriptorSets(device_h,
       &(VkDescriptorSetAllocateInfo) {
          .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-         .descriptorPool = device->meta_state.desc_pool,
+         .descriptorPool = desc_pool,
          .descriptorSetCount = 1,
          .pSetLayouts = (VkDescriptorSetLayout[]) {
             device->meta_state.resolve.ds_layout,
@@ -641,8 +657,8 @@ emit_resolve(struct anv_cmd_buffer *cmd_buffer,
    /* All objects below are consumed by the draw call. We may safely destroy
     * them.
     */
-   anv_ResetDescriptorPool(anv_device_to_handle(device),
-                           device->meta_state.desc_pool, 0);
+   anv_DestroyDescriptorPool(anv_device_to_handle(device),
+                             desc_pool, &cmd_buffer->pool->alloc);
    anv_DestroySampler(device_h, sampler_h,
                       &cmd_buffer->pool->alloc);
 }
