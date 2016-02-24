@@ -23,7 +23,6 @@
  */
 
 #include "nvc0/nvc0_context.h"
-#include "nvc0/nvc0_compute.h"
 #include "nvc0/nve4_compute.h"
 
 #include "codegen/nv50_ir_driver.h"
@@ -306,8 +305,7 @@ nve4_compute_set_tex_handles(struct nvc0_context *nvc0)
 static bool
 nve4_compute_state_validate(struct nvc0_context *nvc0)
 {
-   if (!nvc0_compute_validate_program(nvc0))
-      return false;
+   nvc0_compprog_validate(nvc0);
    if (nvc0->dirty_cp & NVC0_NEW_CP_TEXTURES)
       nve4_compute_validate_textures(nvc0);
    if (nvc0->dirty_cp & NVC0_NEW_CP_SAMPLERS)

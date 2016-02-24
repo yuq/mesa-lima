@@ -23,7 +23,8 @@
  */
 
 #include "nvc0/nvc0_context.h"
-#include "nvc0/nvc0_compute.h"
+
+#include "nvc0/nvc0_compute.xml.h"
 
 int
 nvc0_screen_compute_setup(struct nvc0_screen *screen,
@@ -118,34 +119,6 @@ nvc0_screen_compute_setup(struct nvc0_screen *screen,
    PUSH_DATA (push, NVC0_TSC_MAX_ENTRIES - 1);
 
    return 0;
-}
-
-bool
-nvc0_compute_validate_program(struct nvc0_context *nvc0)
-{
-   struct nvc0_program *prog = nvc0->compprog;
-
-   if (prog->mem)
-      return true;
-
-   if (!prog->translated) {
-      prog->translated = nvc0_program_translate(
-         prog, nvc0->screen->base.device->chipset, &nvc0->base.debug);
-      if (!prog->translated)
-         return false;
-   }
-   if (unlikely(!prog->code_size))
-      return false;
-
-   if (likely(prog->code_size)) {
-      if (nvc0_program_upload_code(nvc0, prog)) {
-         struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-         BEGIN_NVC0(push, NVC0_CP(FLUSH), 1);
-         PUSH_DATA (push, NVC0_COMPUTE_FLUSH_CODE);
-         return true;
-      }
-   }
-   return false;
 }
 
 static void
@@ -292,8 +265,7 @@ nvc0_compute_validate_globals(struct nvc0_context *nvc0)
 static bool
 nvc0_compute_state_validate(struct nvc0_context *nvc0)
 {
-   if (!nvc0_compute_validate_program(nvc0))
-      return false;
+   nvc0_compprog_validate(nvc0);
    if (nvc0->dirty_cp & NVC0_NEW_CP_CONSTBUF)
       nvc0_compute_validate_constbufs(nvc0);
    if (nvc0->dirty_cp & NVC0_NEW_CP_DRIVERCONST)

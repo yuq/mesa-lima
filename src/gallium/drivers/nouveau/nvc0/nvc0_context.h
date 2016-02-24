@@ -254,6 +254,7 @@ void nvc0_tctlprog_validate(struct nvc0_context *);
 void nvc0_tevlprog_validate(struct nvc0_context *);
 void nvc0_gmtyprog_validate(struct nvc0_context *);
 void nvc0_fragprog_validate(struct nvc0_context *);
+void nvc0_compprog_validate(struct nvc0_context *);
 
 void nvc0_tfb_validate(struct nvc0_context *);
 
