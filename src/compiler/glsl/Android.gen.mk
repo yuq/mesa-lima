@@ -51,6 +51,8 @@ define glsl_local-y-to-c-and-h
 	$(hide) $(YACC) -o $@ -p "glcpp_parser_" $<
 endef
 
+YACC_HEADER_SUFFIX := .hpp
+
 define local-yy-to-cpp-and-h
 	@mkdir -p $(dir $@)
 	@echo "Mesa Yacc: $(PRIVATE_MODULE) <= $<"
