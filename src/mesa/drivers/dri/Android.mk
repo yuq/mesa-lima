@@ -28,9 +28,6 @@ include $(LOCAL_PATH)/common/Makefile.sources
 #-----------------------------------------------
 # Variables common to all DRI drivers
 
-MESA_DRI_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/dri
-MESA_DRI_MODULE_UNSTRIPPED_PATH := $(TARGET_OUT_SHARED_LIBRARIES_UNSTRIPPED)/dri
-
 MESA_DRI_CFLAGS := \
 	-DHAVE_ANDROID_PLATFORM
 
