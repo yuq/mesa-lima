@@ -249,6 +249,11 @@ static void r600_texture_init_metadata(struct r600_texture *rtex,
 	metadata->scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
 }
 
+static void r600_dirty_all_framebuffer_states(struct r600_common_screen *rscreen)
+{
+	p_atomic_inc(&rscreen->dirty_fb_counter);
+}
+
 static void r600_eliminate_fast_color_clear(struct r600_common_screen *rscreen,
 				      struct r600_texture *rtex)
 {
@@ -258,6 +263,30 @@ static void r600_eliminate_fast_color_clear(struct r600_common_screen *rscreen,
 	ctx->flush_resource(ctx, &rtex->resource.b.b);
 	ctx->flush(ctx, NULL, 0);
 	pipe_mutex_unlock(rscreen->aux_context_lock);
+}
+
+static void r600_texture_disable_cmask(struct r600_common_screen *rscreen,
+				       struct r600_texture *rtex)
+{
+	if (!rtex->cmask.size)
+		return;
+
+	assert(rtex->resource.b.b.nr_samples <= 1);
+
+	/* Disable CMASK. */
+	memset(&rtex->cmask, 0, sizeof(rtex->cmask));
+	rtex->cmask.base_address_reg = rtex->resource.gpu_address >> 8;
+
+	if (rscreen->chip_class >= SI)
+		rtex->cb_color_info &= ~SI_S_028C70_FAST_CLEAR(1);
+	else
+		rtex->cb_color_info &= ~EG_S_028C70_FAST_CLEAR(1);
+
+	if (rtex->cmask_buffer != &rtex->resource)
+	    pipe_resource_reference((struct pipe_resource**)&rtex->cmask_buffer, NULL);
+
+	/* Notify all contexts about the change. */
+	r600_dirty_all_framebuffer_states(rscreen);
 }
 
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
@@ -285,6 +314,11 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 			if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH)) {
 				/* Eliminate fast clear (both CMASK and DCC) */
 				r600_eliminate_fast_color_clear(rscreen, rtex);
+
+				/* Disable CMASK if flush_resource isn't going
+				 * to be called.
+				 */
+				r600_texture_disable_cmask(rscreen, rtex);
 			}
 
 			r600_texture_init_metadata(rtex, &metadata);

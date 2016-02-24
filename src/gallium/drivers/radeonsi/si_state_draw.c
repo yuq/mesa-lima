@@ -763,7 +763,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	struct pipe_index_buffer ib = {};
-	unsigned mask;
+	unsigned mask, dirty_fb_counter;
 
 	if (!info->count && !info->indirect &&
 	    (info->indexed || !info->count_from_stream_output))
@@ -780,6 +780,16 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (!!sctx->tes_shader.cso != (info->mode == PIPE_PRIM_PATCHES)) {
 		assert(0);
 		return;
+	}
+
+	/* Re-emit the framebuffer state if needed. */
+	dirty_fb_counter = p_atomic_read(&sctx->b.screen->dirty_fb_counter);
+	if (dirty_fb_counter != sctx->b.last_dirty_fb_counter) {
+		sctx->b.last_dirty_fb_counter = dirty_fb_counter;
+		sctx->framebuffer.dirty_cbufs |=
+			((1 << sctx->framebuffer.state.nr_cbufs) - 1);
+		sctx->framebuffer.dirty_zsbuf = true;
+		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
 	}
 
 	si_decompress_textures(sctx);

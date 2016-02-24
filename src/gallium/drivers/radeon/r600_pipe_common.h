@@ -325,6 +325,13 @@ struct r600_common_screen {
 
 	/* Performance counters. */
 	struct r600_perfcounters	*perfcounters;
+
+	/* If pipe_screen wants to re-emit the framebuffer state of all
+	 * contexts, it should atomically increment this. Each context will
+	 * compare this with its own last known value of the counter before
+	 * drawing and re-emit the framebuffer state accordingly.
+	 */
+	unsigned			dirty_fb_counter;
 };
 
 /* This encapsulates a state or an operation which can emitted into the GPU
@@ -392,6 +399,7 @@ struct r600_common_context {
 	struct pipe_fence_handle	*last_sdma_fence;
 	unsigned			initial_gfx_cs_size;
 	unsigned			gpu_reset_counter;
+	unsigned			last_dirty_fb_counter;
 
 	struct u_upload_mgr		*uploader;
 	struct u_suballocator		*allocator_so_filled_size;
