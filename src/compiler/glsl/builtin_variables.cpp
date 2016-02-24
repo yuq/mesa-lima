@@ -334,6 +334,8 @@ per_vertex_accumulator::add_field(int slot, const glsl_type *type,
    this->fields[this->num_fields].image_coherent = 0;
    this->fields[this->num_fields].image_volatile = 0;
    this->fields[this->num_fields].image_restrict = 0;
+   this->fields[this->num_fields].xfb_buffer = -1;
+   this->fields[this->num_fields].xfb_stride = -1;
    this->num_fields++;
 }
 

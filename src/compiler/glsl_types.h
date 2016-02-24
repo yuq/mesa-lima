@@ -839,11 +839,23 @@ struct glsl_struct_field {
 
    /**
     * For interface blocks, members may have an explicit byte offset
-    * specified; -1 otherwise.
+    * specified; -1 otherwise. Also used for xfb_offset layout qualifier.
     *
-    * Ignored for structs.
+    * Unless used for xfb_offset this field is ignored for structs.
     */
    int offset;
+
+   /**
+    * For interface blocks, members may define a transform feedback buffer;
+    * -1 otherwise.
+    */
+   int xfb_buffer;
+
+   /**
+    * For interface blocks, members may define a transform feedback stride;
+    * -1 otherwise.
+    */
+   int xfb_stride;
 
    /**
     * For interface blocks, the interpolation mode (as in
