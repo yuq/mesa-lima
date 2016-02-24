@@ -106,6 +106,72 @@ create_xfb_varying_names(void *mem_ctx, const glsl_type *t, char **name,
    }
 }
 
+bool
+process_xfb_layout_qualifiers(void *mem_ctx, const gl_shader *sh,
+                              unsigned *num_tfeedback_decls,
+                              char ***varying_names)
+{
+   bool has_xfb_qualifiers = false;
+
+   foreach_in_list(ir_instruction, node, sh->ir) {
+      ir_variable *var = node->as_variable();
+      if (!var || var->data.mode != ir_var_shader_out)
+         continue;
+
+      /* From the ARB_enhanced_layouts spec:
+       *
+       *    "Any shader making any static use (after preprocessing) of any of
+       *     these *xfb_* qualifiers will cause the shader to be in a
+       *     transform feedback capturing mode and hence responsible for
+       *     describing the transform feedback setup.  This mode will capture
+       *     any output selected by *xfb_offset*, directly or indirectly, to
+       *     a transform feedback buffer."
+       */
+      if (var->data.explicit_xfb_buffer || var->data.explicit_xfb_stride) {
+         has_xfb_qualifiers = true;
+      }
+
+      if (var->data.explicit_xfb_offset) {
+         *num_tfeedback_decls += var->type->varying_count();
+         has_xfb_qualifiers = true;
+      }
+   }
+
+   if (*num_tfeedback_decls == 0)
+      return has_xfb_qualifiers;
+
+   unsigned i = 0;
+   *varying_names = ralloc_array(mem_ctx, char *, *num_tfeedback_decls);
+   foreach_in_list(ir_instruction, node, sh->ir) {
+      ir_variable *var = node->as_variable();
+      if (!var || var->data.mode != ir_var_shader_out)
+         continue;
+
+      if (var->data.explicit_xfb_offset) {
+         char *name;
+         const glsl_type *type, *member_type;
+
+         if (var->data.from_named_ifc_block) {
+            type = var->get_interface_type();
+            /* Find the member type before it was altered by lowering */
+            member_type =
+               type->fields.structure[type->field_index(var->name)].type;
+            name = ralloc_strdup(NULL, type->without_array()->name);
+         } else {
+            type = var->type;
+            member_type = NULL;
+            name = ralloc_strdup(NULL, var->name);
+         }
+         create_xfb_varying_names(mem_ctx, type, &name, strlen(name), &i,
+                                  var->name, member_type, varying_names);
+         ralloc_free(name);
+      }
+   }
+
+   assert(i == *num_tfeedback_decls);
+   return has_xfb_qualifiers;
+}
+
 /**
  * Validate the types and qualifiers of an output from one stage against the
  * matching input to another stage.

@@ -268,6 +268,11 @@ parse_tfeedback_decls(struct gl_context *ctx, struct gl_shader_program *prog,
                       const void *mem_ctx, unsigned num_names,
                       char **varying_names, tfeedback_decl *decls);
 
+bool
+process_xfb_layout_qualifiers(void *mem_ctx, const gl_shader *sh,
+                              unsigned *num_tfeedback_decls,
+                              char ***varying_names);
+
 void
 remove_unused_shader_inputs_and_outputs(bool is_separate_shader_object,
                                         gl_shader *sh,
