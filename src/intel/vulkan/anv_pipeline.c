@@ -1108,29 +1108,33 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    pipeline->active_stages = 0;
    pipeline->total_scratch = 0;
 
+   const VkPipelineShaderStageCreateInfo *pStages[MESA_SHADER_STAGES] = { 0, };
+   struct anv_shader_module *modules[MESA_SHADER_STAGES] = { 0, };
    for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-      ANV_FROM_HANDLE(anv_shader_module, module,
-                      pCreateInfo->pStages[i].module);
+      gl_shader_stage stage = ffs(pCreateInfo->pStages[i].stage) - 1;
+      pStages[stage] = &pCreateInfo->pStages[i];
+      modules[stage] = anv_shader_module_from_handle(pStages[stage]->module);
+   }
 
-      switch (pCreateInfo->pStages[i].stage) {
-      case VK_SHADER_STAGE_VERTEX_BIT:
-         anv_pipeline_compile_vs(pipeline, cache, pCreateInfo, module,
-                                 pCreateInfo->pStages[i].pName,
-                                 pCreateInfo->pStages[i].pSpecializationInfo);
-         break;
-      case VK_SHADER_STAGE_GEOMETRY_BIT:
-         anv_pipeline_compile_gs(pipeline, cache, pCreateInfo, module,
-                                 pCreateInfo->pStages[i].pName,
-                                 pCreateInfo->pStages[i].pSpecializationInfo);
-         break;
-      case VK_SHADER_STAGE_FRAGMENT_BIT:
-         anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, extra, module,
-                                 pCreateInfo->pStages[i].pName,
-                                 pCreateInfo->pStages[i].pSpecializationInfo);
-         break;
-      default:
-         anv_finishme("Unsupported shader stage");
-      }
+   if (modules[MESA_SHADER_VERTEX]) {
+      anv_pipeline_compile_vs(pipeline, cache, pCreateInfo,
+                              modules[MESA_SHADER_VERTEX],
+                              pStages[MESA_SHADER_VERTEX]->pName,
+                              pStages[MESA_SHADER_VERTEX]->pSpecializationInfo);
+   }
+
+   if (modules[MESA_SHADER_GEOMETRY]) {
+      anv_pipeline_compile_gs(pipeline, cache, pCreateInfo,
+                              modules[MESA_SHADER_GEOMETRY],
+                              pStages[MESA_SHADER_GEOMETRY]->pName,
+                              pStages[MESA_SHADER_GEOMETRY]->pSpecializationInfo);
+   }
+
+   if (modules[MESA_SHADER_FRAGMENT]) {
+      anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, extra,
+                              modules[MESA_SHADER_FRAGMENT],
+                              pStages[MESA_SHADER_FRAGMENT]->pName,
+                              pStages[MESA_SHADER_FRAGMENT]->pSpecializationInfo);
    }
 
    if (!(pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT)) {
