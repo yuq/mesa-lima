@@ -2161,11 +2161,20 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityMatrix:
       case SpvCapabilityShader:
       case SpvCapabilityGeometry:
+      case SpvCapabilityTessellationPointSize:
+      case SpvCapabilityGeometryPointSize:
       case SpvCapabilityUniformBufferArrayDynamicIndexing:
       case SpvCapabilitySampledImageArrayDynamicIndexing:
       case SpvCapabilityStorageBufferArrayDynamicIndexing:
       case SpvCapabilityStorageImageArrayDynamicIndexing:
       case SpvCapabilityClipDistance:
+      case SpvCapabilityImageRect:
+      case SpvCapabilitySampledRect:
+      case SpvCapabilitySampled1D:
+      case SpvCapabilityImage1D:
+      case SpvCapabilitySampledCubeArray:
+      case SpvCapabilitySampledBuffer:
+      case SpvCapabilityImageBuffer:
       case SpvCapabilityImageQuery:
          break;
       default:
