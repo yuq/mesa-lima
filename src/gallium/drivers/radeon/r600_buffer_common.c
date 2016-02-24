@@ -294,6 +294,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	 * in which case it can be mapped unsynchronized. */
 	if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED) &&
 	    usage & PIPE_TRANSFER_WRITE &&
+	    !rbuffer->is_shared &&
 	    !util_ranges_intersect(&rbuffer->valid_buffer_range, box->x, box->x + box->width)) {
 		usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
 	}
