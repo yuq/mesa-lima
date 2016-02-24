@@ -41,6 +41,7 @@
 #endif
 
 #include "brw_device_info.h"
+#include "brw_compiler.h"
 #include "util/macros.h"
 #include "util/list.h"
 
@@ -1659,6 +1660,8 @@ struct anv_image_view {
 
    /** RENDER_SURFACE_STATE when using image as a storage image. */
    struct anv_state storage_surface_state;
+
+   struct brw_image_param storage_image_param;
 };
 
 struct anv_image_create_info {
@@ -1717,6 +1720,8 @@ struct anv_buffer_view {
 
    struct anv_state surface_state;
    struct anv_state storage_surface_state;
+
+   struct brw_image_param storage_image_param;
 };
 
 const struct anv_format *

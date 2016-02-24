@@ -630,6 +630,9 @@ anv_image_view_init(struct anv_image_view *iview,
                                        iview->bo->size - iview->offset, 1);
       }
 
+      anv_image_view_fill_image_param(device, iview,
+                                      &iview->storage_image_param);
+
       if (!device->info.has_llc)
          anv_state_clflush(iview->storage_surface_state);
    } else {
@@ -734,6 +737,8 @@ anv_CreateBufferView(VkDevice _device,
                                     (storage_format == ISL_FORMAT_RAW ? 1 :
                                      format->isl_layout->bs));
 
+      anv_buffer_view_fill_image_param(device, view,
+                                       &view->storage_image_param);
    } else {
       view->storage_surface_state = (struct anv_state){ 0 };
    }

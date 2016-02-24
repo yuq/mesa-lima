@@ -812,8 +812,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          struct brw_image_param *image_param =
             &cmd_buffer->state.push_constants[stage]->images[image++];
 
-         anv_image_view_fill_image_param(cmd_buffer->device, desc->image_view,
-                                         image_param);
+         *image_param = desc->image_view->storage_image_param;
          image_param->surface_idx = bias + s;
          break;
       }
@@ -838,8 +837,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          struct brw_image_param *image_param =
             &cmd_buffer->state.push_constants[stage]->images[image++];
 
-         anv_buffer_view_fill_image_param(cmd_buffer->device, desc->buffer_view,
-                                          image_param);
+         *image_param = desc->buffer_view->storage_image_param;
          image_param->surface_idx = bias + s;
          break;
 
