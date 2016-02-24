@@ -417,6 +417,9 @@ static void amdgpu_buffer_get_metadata(struct pb_buffer *_buf,
    md->tile_split = eg_tile_split(AMDGPU_TILING_GET(tiling_flags, TILE_SPLIT));
    md->mtilea = 1 << AMDGPU_TILING_GET(tiling_flags, MACRO_TILE_ASPECT);
    md->scanout = AMDGPU_TILING_GET(tiling_flags, MICRO_TILE_MODE) == 0; /* DISPLAY */
+
+   md->size_metadata = info.metadata.size_metadata;
+   memcpy(md->metadata, info.metadata.umd_metadata, sizeof(md->metadata));
 }
 
 static void amdgpu_buffer_set_metadata(struct pb_buffer *_buf,
@@ -447,6 +450,8 @@ static void amdgpu_buffer_set_metadata(struct pb_buffer *_buf,
       tiling_flags |= AMDGPU_TILING_SET(MICRO_TILE_MODE, 1); /* THIN_MICRO_TILING */
 
    metadata.tiling_info = tiling_flags;
+   metadata.size_metadata = md->size_metadata;
+   memcpy(metadata.umd_metadata, md->metadata, sizeof(md->metadata));
 
    amdgpu_bo_set_metadata(bo->bo, &metadata);
 }

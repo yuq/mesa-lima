@@ -278,6 +278,9 @@ struct radeon_info {
 
 /* Tiling info for display code, DRI sharing, and other data. */
 struct radeon_bo_metadata {
+    /* Tiling flags describing the texture layout for display code
+     * and DRI sharing.
+     */
     enum radeon_bo_layout   microtile;
     enum radeon_bo_layout   macrotile;
     unsigned                pipe_config;
@@ -289,6 +292,13 @@ struct radeon_bo_metadata {
     unsigned                num_banks;
     unsigned                stride;
     bool                    scanout;
+
+    /* Additional metadata associated with the buffer, in bytes.
+     * The maximum size is 64 * 4. This is opaque for the winsys & kernel.
+     * Supported by amdgpu only.
+     */
+    uint32_t                size_metadata;
+    uint32_t                metadata[64];
 };
 
 enum radeon_feature_id {
