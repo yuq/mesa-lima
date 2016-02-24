@@ -122,6 +122,16 @@ public:
       return this->stream_id;
    }
 
+   unsigned get_buffer() const
+   {
+      return this->buffer;
+   }
+
+   unsigned get_offset() const
+   {
+      return this->offset;
+   }
+
    /**
     * The total number of varying components taken up by this variable.  Only
     * valid if assign_location() has been called.
@@ -200,6 +210,16 @@ private:
     * variable.  -1 if a location hasn't been assigned yet.
     */
    int location;
+
+   /**
+    * Used to store the buffer assigned by xfb_buffer.
+    */
+   unsigned buffer;
+
+   /**
+    * Used to store the offset assigned by xfb_offset.
+    */
+   unsigned offset;
 
    /**
     * If non-zero, then this variable may be packed along with other variables

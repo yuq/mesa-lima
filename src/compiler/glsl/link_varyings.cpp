@@ -506,6 +506,8 @@ tfeedback_decl::init(struct gl_context *ctx, const void *mem_ctx,
    this->next_buffer_separator = false;
    this->matched_candidate = NULL;
    this->stream_id = 0;
+   this->buffer = 0;
+   this->offset = 0;
 
    if (ctx->Extensions.ARB_transform_feedback3) {
       /* Parse gl_NextBuffer. */
@@ -598,6 +600,8 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
       = this->matched_candidate->toplevel_var->data.location * 4
       + this->matched_candidate->toplevel_var->data.location_frac
       + this->matched_candidate->offset;
+   const unsigned dmul =
+      this->matched_candidate->type->without_array()->is_double() ? 2 : 1;
 
    if (this->matched_candidate->type->is_array()) {
       /* Array variable */
@@ -605,8 +609,6 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
          this->matched_candidate->type->fields.array->matrix_columns;
       const unsigned vector_elements =
          this->matched_candidate->type->fields.array->vector_elements;
-      const unsigned dmul =
-         this->matched_candidate->type->fields.array->is_double() ? 2 : 1;
       unsigned actual_array_size;
       switch (this->lowered_builtin_array_variable) {
       case clip_distance:
@@ -683,6 +685,12 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
     * so assign the stream id here.
     */
    this->stream_id = this->matched_candidate->toplevel_var->data.stream;
+
+   unsigned array_offset = this->array_subscript * 4 * dmul;
+   unsigned struct_offset = this->matched_candidate->offset * 4 * dmul;
+   this->buffer = this->matched_candidate->toplevel_var->data.xfb_buffer;
+   this->offset = this->matched_candidate->toplevel_var->data.offset +
+      array_offset + struct_offset;
 
    return true;
 }
