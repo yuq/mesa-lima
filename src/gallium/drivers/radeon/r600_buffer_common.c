@@ -213,6 +213,10 @@ static bool
 r600_invalidate_buffer(struct r600_common_context *rctx,
 		       struct r600_resource *rbuffer)
 {
+	/* Shared buffers can't be reallocated. */
+	if (rbuffer->is_shared)
+		return false;
+
 	/* In AMD_pinned_memory, the user pointer association only gets
 	 * broken when the buffer is explicitly re-allocated.
 	 */
