@@ -261,8 +261,11 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 
 	if (!res->is_shared) {
 		res->is_shared = true;
-		r600_texture_init_metadata(rtex, &metadata);
-		rscreen->ws->buffer_set_metadata(res->buf, &metadata);
+
+		if (resource->target != PIPE_BUFFER) {
+			r600_texture_init_metadata(rtex, &metadata);
+			rscreen->ws->buffer_set_metadata(res->buf, &metadata);
+		}
 	}
 
 	return rscreen->ws->buffer_get_handle(res->buf,
