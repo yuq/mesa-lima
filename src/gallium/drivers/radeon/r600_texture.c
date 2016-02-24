@@ -259,8 +259,11 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	struct r600_texture *rtex = (struct r600_texture*)resource;
 	struct radeon_bo_metadata metadata;
 
-	r600_texture_init_metadata(rtex, &metadata);
-	rscreen->ws->buffer_set_metadata(res->buf, &metadata);
+	if (!res->is_shared) {
+		res->is_shared = true;
+		r600_texture_init_metadata(rtex, &metadata);
+		rscreen->ws->buffer_set_metadata(res->buf, &metadata);
+	}
 
 	return rscreen->ws->buffer_get_handle(res->buf,
 					      rtex->surface.level[0].pitch_bytes,

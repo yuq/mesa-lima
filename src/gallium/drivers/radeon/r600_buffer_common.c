@@ -455,6 +455,7 @@ r600_alloc_buffer_struct(struct pipe_screen *screen,
 	rbuffer->b.vtbl = &r600_buffer_vtbl;
 	rbuffer->buf = NULL;
 	rbuffer->TC_L2_dirty = false;
+	rbuffer->is_shared = false;
 	util_range_init(&rbuffer->valid_buffer_range);
 	return rbuffer;
 }

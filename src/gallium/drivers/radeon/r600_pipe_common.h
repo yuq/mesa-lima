@@ -166,6 +166,9 @@ struct r600_resource {
 	 * use TC L2.
 	 */
 	bool				TC_L2_dirty;
+
+	/* Whether the resource has been exported via resource_get_handle. */
+	bool				is_shared;
 };
 
 struct r600_transfer {
