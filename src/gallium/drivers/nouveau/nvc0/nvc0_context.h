@@ -261,8 +261,6 @@ void nvc0_tfb_validate(struct nvc0_context *);
 extern void nvc0_init_state_functions(struct nvc0_context *);
 
 /* nvc0_state_validate.c */
-void nvc0_validate_global_residents(struct nvc0_context *,
-                                    struct nouveau_bufctx *, int bin);
 bool nvc0_state_validate(struct nvc0_context *, uint32_t state_mask);
 
 /* nvc0_surface.c */
@@ -342,5 +340,6 @@ void nve4_launch_grid(struct pipe_context *, const struct pipe_grid_info *);
 
 /* nvc0_compute.c */
 void nvc0_launch_grid(struct pipe_context *, const struct pipe_grid_info *);
+void nvc0_compute_validate_globals(struct nvc0_context *);
 
 #endif

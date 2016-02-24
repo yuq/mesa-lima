@@ -317,8 +317,7 @@ nve4_compute_state_validate(struct nvc0_context *nvc0)
    if (nvc0->dirty_cp & NVC0_NEW_CP_SURFACES)
       nve4_compute_validate_surfaces(nvc0);
    if (nvc0->dirty_cp & NVC0_NEW_CP_GLOBALS)
-      nvc0_validate_global_residents(nvc0,
-                                     nvc0->bufctx_cp, NVC0_BIND_CP_GLOBAL);
+      nvc0_compute_validate_globals(nvc0);
 
    nvc0_bufctx_fence(nvc0, nvc0->bufctx_cp, false);
 

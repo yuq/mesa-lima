@@ -274,6 +274,21 @@ nvc0_compute_validate_buffers(struct nvc0_context *nvc0)
    }
 }
 
+void
+nvc0_compute_validate_globals(struct nvc0_context *nvc0)
+{
+   unsigned i;
+
+   for (i = 0; i < nvc0->global_residents.size / sizeof(struct pipe_resource *);
+        ++i) {
+      struct pipe_resource *res = *util_dynarray_element(
+         &nvc0->global_residents, struct pipe_resource *, i);
+      if (res)
+         nvc0_add_resident(nvc0->bufctx_cp, NVC0_BIND_CP_GLOBAL,
+                           nv04_resource(res), NOUVEAU_BO_RDWR);
+   }
+}
+
 static bool
 nvc0_compute_state_validate(struct nvc0_context *nvc0)
 {
