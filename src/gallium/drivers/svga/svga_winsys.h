@@ -48,6 +48,7 @@ struct svga_winsys_screen;
 struct svga_winsys_buffer;
 struct pipe_screen;
 struct pipe_context;
+struct pipe_debug_callback;
 struct pipe_fence_handle;
 struct pipe_resource;
 struct svga_region;
@@ -286,6 +287,9 @@ struct svga_winsys_context
                       struct svga_winsys_surface *surface,
                       struct svga_winsys_gb_shader *shader,
                       unsigned flags);
+
+   /** To report perf/conformance/etc issues to the state tracker */
+   struct pipe_debug_callback *debug_callback;
 };
 
 
