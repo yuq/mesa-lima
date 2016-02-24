@@ -89,3 +89,6 @@ LOCAL_CPPFLAGS += \
 ifeq ($(strip $(LOCAL_MODULE_TAGS)),)
 LOCAL_MODULE_TAGS := optional
 endif
+
+# Quiet down the build system and remove any .h files from the sources
+LOCAL_SRC_FILES := $(patsubst %.h, , $(LOCAL_SRC_FILES))
