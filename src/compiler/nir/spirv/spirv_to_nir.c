@@ -2167,7 +2167,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilitySampledImageArrayDynamicIndexing:
       case SpvCapabilityStorageBufferArrayDynamicIndexing:
       case SpvCapabilityStorageImageArrayDynamicIndexing:
-      case SpvCapabilityClipDistance:
       case SpvCapabilityImageRect:
       case SpvCapabilitySampledRect:
       case SpvCapabilitySampled1D:
@@ -2176,6 +2175,11 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilitySampledBuffer:
       case SpvCapabilityImageBuffer:
       case SpvCapabilityImageQuery:
+         break;
+      case SpvCapabilityClipDistance:
+      case SpvCapabilityCullDistance:
+      case SpvCapabilityGeometryStreams:
+         fprintf(stderr, "WARNING: Unsupported SPIR-V Capability\n");
          break;
       default:
          assert(!"Unsupported capability");
