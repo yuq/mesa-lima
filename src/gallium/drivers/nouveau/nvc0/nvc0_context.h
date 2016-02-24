@@ -110,6 +110,12 @@
 /* 32 textures handles, at 1 32-bits integer each */
 #define NVC0_CB_AUX_TEX_INFO(i)     0x020 + (i) * 4
 #define NVC0_CB_AUX_TEX_SIZE        (32 * 4)
+/* 8 sets of 32-bits coordinate offsets */
+#define NVC0_CB_AUX_MS_INFO         0x0a0 /* CP */
+#define NVC0_CB_AUX_MS_SIZE         (8 * 2 * 4)
+/* block/grid size, at 3 32-bits integers each and gridid */
+#define NVC0_CB_AUX_GRID_INFO       0x0e0 /* CP */
+#define NVC0_CB_AUX_GRID_SIZE       (7 * 4)
 /* 8 user clip planes, at 4 32-bits floats each */
 #define NVC0_CB_AUX_UCP_INFO        0x100
 #define NVC0_CB_AUX_UCP_SIZE        (PIPE_MAX_CLIP_PLANES * 4 * 4)

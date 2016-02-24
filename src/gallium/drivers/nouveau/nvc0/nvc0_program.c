@@ -540,17 +540,16 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
 
    if (prog->type == PIPE_SHADER_COMPUTE) {
       if (chipset >= NVISA_GK104_CHIPSET) {
-         info->io.auxCBSlot = 0;
-         info->io.texBindBase = NVE4_CP_INPUT_TEX(0);
-         info->io.suInfoBase = NVE4_CP_INPUT_SUF(0);
-         info->prop.cp.gridInfoBase = NVE4_CP_INPUT_GRID_INFO(0);
+         info->io.auxCBSlot = 7;
+         info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
+         info->prop.cp.gridInfoBase = NVC0_CB_AUX_GRID_INFO;
          info->io.bufInfoBase = 0; /* TODO */
       } else {
          info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
-         info->io.suInfoBase = 0; /* TODO */
       }
       info->io.msInfoCBSlot = 0;
-      info->io.msInfoBase = NVE4_CP_INPUT_MS_OFFSETS;
+      info->io.msInfoBase = NVC0_CB_AUX_MS_INFO;
+      info->io.suInfoBase = 0; /* TODO */
    } else {
       if (chipset >= NVISA_GK104_CHIPSET) {
          info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
