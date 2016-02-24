@@ -169,6 +169,7 @@ struct r600_resource {
 
 	/* Whether the resource has been exported via resource_get_handle. */
 	bool				is_shared;
+	unsigned			external_usage; /* PIPE_HANDLE_USAGE_* */
 };
 
 struct r600_transfer {
