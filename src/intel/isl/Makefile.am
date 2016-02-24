@@ -63,7 +63,7 @@ libisl_la_SOURCES =                                     \
 	isl_gen4.h                                      \
 	isl_gen6.c                                      \
 	isl_gen6.h                                      \
-	isl_image.c                                     \
+	isl_storage_image.c                             \
 	$(NULL)
 
 libisl_gen7_la_SOURCES =                                \
