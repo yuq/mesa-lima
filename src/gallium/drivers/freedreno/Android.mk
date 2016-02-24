@@ -32,8 +32,8 @@ LOCAL_SRC_FILES := \
 	$(a4xx_SOURCES) \
 	$(ir3_SOURCES)
 
-LOCAL_CFLAGS := \
-	-Wno-packed-bitfield-compat
+#LOCAL_CFLAGS := \
+#	-Wno-packed-bitfield-compat
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/ir3
