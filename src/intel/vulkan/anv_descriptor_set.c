@@ -283,14 +283,11 @@ VkResult anv_CreateDescriptorPool(
       }
    }
 
-   const size_t set_size =
-      sizeof(struct anv_descriptor_set) +
-      descriptor_count * sizeof(struct anv_descriptor) +
-      buffer_count * sizeof(struct anv_buffer_view);
-
    const size_t size =
       sizeof(*pool) +
-      pCreateInfo->maxSets * set_size;
+      pCreateInfo->maxSets * sizeof(struct anv_descriptor_set) +
+      descriptor_count * sizeof(struct anv_descriptor) +
+      buffer_count * sizeof(struct anv_buffer_view);
 
    pool = anv_alloc2(&device->alloc, pAllocator, size, 8,
                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
