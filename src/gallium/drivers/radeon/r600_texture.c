@@ -250,21 +250,21 @@ static void r600_texture_init_metadata(struct r600_texture *rtex,
 }
 
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
-				       struct pipe_resource *ptex,
+				       struct pipe_resource *resource,
 				       struct winsys_handle *whandle,
                                        unsigned usage)
 {
-	struct r600_texture *rtex = (struct r600_texture*)ptex;
-	struct r600_resource *resource = &rtex->resource;
-	struct radeon_surf *surface = &rtex->surface;
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+	struct r600_resource *res = (struct r600_resource*)resource;
+	struct r600_texture *rtex = (struct r600_texture*)resource;
 	struct radeon_bo_metadata metadata;
 
 	r600_texture_init_metadata(rtex, &metadata);
-	rscreen->ws->buffer_set_metadata(resource->buf, &metadata);
+	rscreen->ws->buffer_set_metadata(res->buf, &metadata);
 
-	return rscreen->ws->buffer_get_handle(resource->buf,
-						surface->level[0].pitch_bytes, whandle);
+	return rscreen->ws->buffer_get_handle(res->buf,
+					      rtex->surface.level[0].pitch_bytes,
+					      whandle);
 }
 
 static void r600_texture_destroy(struct pipe_screen *screen,
