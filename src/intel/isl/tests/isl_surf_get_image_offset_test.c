@@ -191,14 +191,14 @@ test_bdw_2d_r8g8b8a8_unorm_512x512_array01_samples01_noaux_tiley0(void)
 
    t_assert_intratile_offset_el(&dev, &surf, 0, 0, 0,      0x0, 0,  0);
    t_assert_intratile_offset_el(&dev, &surf, 1, 0, 0, 0x100000, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf, 2, 0, 0, 0x100400, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf, 3, 0, 0, 0x140400, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf, 4, 0, 0, 0x160400, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf, 5, 0, 0, 0x170400, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf, 6, 0, 0, 0x170400, 0, 16);
-   t_assert_intratile_offset_el(&dev, &surf, 7, 0, 0, 0x170400, 0, 24);
-   t_assert_intratile_offset_el(&dev, &surf, 8, 0, 0, 0x170400, 0, 28);
-   t_assert_intratile_offset_el(&dev, &surf, 9, 0, 0, 0x180400, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 2, 0, 0, 0x108000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 3, 0, 0, 0x148000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 4, 0, 0, 0x168000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 5, 0, 0, 0x178000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 6, 0, 0, 0x178000, 0, 16);
+   t_assert_intratile_offset_el(&dev, &surf, 7, 0, 0, 0x178000, 0, 24);
+   t_assert_intratile_offset_el(&dev, &surf, 8, 0, 0, 0x178000, 0, 28);
+   t_assert_intratile_offset_el(&dev, &surf, 9, 0, 0, 0x188000, 0,  0);
 }
 
 static void
@@ -260,41 +260,41 @@ test_bdw_2d_r8g8b8a8_unorm_1024x1024_array06_samples01_noaux_tiley0(void)
    /* array layer 0 */
    t_assert_intratile_offset_el(&dev, &surf,  0, 0, 0,         0x0, 0,  0);
    t_assert_intratile_offset_el(&dev, &surf,  1, 0, 0,    0x400000, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf,  2, 0, 0,    0x400800, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf,  3, 0, 0,    0x500800, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf,  4, 0, 0,    0x580800, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf,  5, 0, 0,    0x5c0800, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf,  6, 0, 0,    0x5e0800, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf,  7, 0, 0,    0x5e0800, 0, 16);
-   t_assert_intratile_offset_el(&dev, &surf,  8, 0, 0,    0x5e0800, 0, 24);
-   t_assert_intratile_offset_el(&dev, &surf,  9, 0, 0,    0x5e0800, 0, 28);
-   t_assert_intratile_offset_el(&dev, &surf, 10, 0, 0,    0x600800, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  2, 0, 0,    0x410000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  3, 0, 0,    0x510000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  4, 0, 0,    0x590000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  5, 0, 0,    0x5d0000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  6, 0, 0,    0x5f0000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  7, 0, 0,    0x5f0000, 0, 16);
+   t_assert_intratile_offset_el(&dev, &surf,  8, 0, 0,    0x5f0000, 0, 24);
+   t_assert_intratile_offset_el(&dev, &surf,  9, 0, 0,    0x5f0000, 0, 28);
+   t_assert_intratile_offset_el(&dev, &surf, 10, 0, 0,    0x610000, 0,  0);
 
    /* array layer 1 */
    t_assert_intratile_offset_el(&dev, &surf,  0, 1, 0,    0x600000, 0,  4);
    t_assert_intratile_offset_el(&dev, &surf,  1, 1, 0,    0xa00000, 0,  4);
-   t_assert_intratile_offset_el(&dev, &surf,  2, 1, 0,    0xa00800, 0,  4);
-   t_assert_intratile_offset_el(&dev, &surf,  3, 1, 0,    0xb00800, 0,  4);
-   t_assert_intratile_offset_el(&dev, &surf,  4, 1, 0,    0xb80800, 0,  4);
-   t_assert_intratile_offset_el(&dev, &surf,  5, 1, 0,    0xbc0800, 0,  4);
-   t_assert_intratile_offset_el(&dev, &surf,  6, 1, 0,    0xbe0800, 0,  4);
-   t_assert_intratile_offset_el(&dev, &surf,  7, 1, 0,    0xbe0800, 0, 20);
-   t_assert_intratile_offset_el(&dev, &surf,  8, 1, 0,    0xbe0800, 0, 28);
-   t_assert_intratile_offset_el(&dev, &surf,  9, 1, 0,    0xc00800, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf, 10, 1, 0,    0xc00800, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  2, 1, 0,    0xa10000, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  3, 1, 0,    0xb10000, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  4, 1, 0,    0xb90000, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  5, 1, 0,    0xbd0000, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  6, 1, 0,    0xbf0000, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf,  7, 1, 0,    0xbf0000, 0, 20);
+   t_assert_intratile_offset_el(&dev, &surf,  8, 1, 0,    0xbf0000, 0, 28);
+   t_assert_intratile_offset_el(&dev, &surf,  9, 1, 0,    0xc10000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf, 10, 1, 0,    0xc10000, 0,  4);
 
    /* array layer 2 */
    t_assert_intratile_offset_el(&dev, &surf,  0, 2, 0,    0xc00000, 0,  8);
    t_assert_intratile_offset_el(&dev, &surf,  1, 2, 0,   0x1000000, 0,  8);
-   t_assert_intratile_offset_el(&dev, &surf,  2, 2, 0,   0x1000800, 0,  8);
-   t_assert_intratile_offset_el(&dev, &surf,  3, 2, 0,   0x1100800, 0,  8);
-   t_assert_intratile_offset_el(&dev, &surf,  4, 2, 0,   0x1180800, 0,  8);
-   t_assert_intratile_offset_el(&dev, &surf,  5, 2, 0,   0x11c0800, 0,  8);
-   t_assert_intratile_offset_el(&dev, &surf,  6, 2, 0,   0x11e0800, 0,  8);
-   t_assert_intratile_offset_el(&dev, &surf,  7, 2, 0,   0x11e0800, 0, 24);
-   t_assert_intratile_offset_el(&dev, &surf,  8, 2, 0,   0x1200800, 0,  0);
-   t_assert_intratile_offset_el(&dev, &surf,  9, 2, 0,   0x1200800, 0,  4);
-   t_assert_intratile_offset_el(&dev, &surf, 10, 2, 0,   0x1200800, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  2, 2, 0,   0x1010000, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  3, 2, 0,   0x1110000, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  4, 2, 0,   0x1190000, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  5, 2, 0,   0x11d0000, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  6, 2, 0,   0x11f0000, 0,  8);
+   t_assert_intratile_offset_el(&dev, &surf,  7, 2, 0,   0x11f0000, 0, 24);
+   t_assert_intratile_offset_el(&dev, &surf,  8, 2, 0,   0x1210000, 0,  0);
+   t_assert_intratile_offset_el(&dev, &surf,  9, 2, 0,   0x1210000, 0,  4);
+   t_assert_intratile_offset_el(&dev, &surf, 10, 2, 0,   0x1210000, 0,  8);
 
    /* skip the remaining array layers */
 }

@@ -1378,7 +1378,7 @@ isl_surf_get_image_intratile_offset_el(const struct isl_device *dev,
    uint32_t total_x_offset_B = total_x_offset_el * fmtl->bs;
    uint32_t small_x_offset_B = total_x_offset_B % tile_info.width;
    uint32_t small_x_offset_el = small_x_offset_B / fmtl->bs;
-   uint32_t big_x_offset_B = total_x_offset_B - small_x_offset_B;
+   uint32_t big_x_offset_B = (total_x_offset_B / tile_info.width) * tile_info.size;
 
    *base_address_offset = big_y_offset_B + big_x_offset_B;
    *x_offset_el = small_x_offset_el;
