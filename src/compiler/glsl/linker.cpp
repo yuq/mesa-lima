@@ -4169,9 +4169,11 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       return;
    }
 
-   tfeedback_decl *tfeedback_decls = NULL;
-   unsigned num_tfeedback_decls = prog->TransformFeedback.NumVarying;
+   unsigned num_tfeedback_decls = 0;
    unsigned int num_explicit_uniform_locs = 0;
+   bool has_xfb_qualifiers = false;
+   char **varying_names = NULL;
+   tfeedback_decl *tfeedback_decls = NULL;
 
    void *mem_ctx = ralloc_context(NULL); // temporary linker context
 
@@ -4481,6 +4483,30 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       goto done;
    }
 
+   /* From the ARB_enhanced_layouts spec:
+    *
+    *    "If the shader used to record output variables for transform feedback
+    *    varyings uses the "xfb_buffer", "xfb_offset", or "xfb_stride" layout
+    *    qualifiers, the values specified by TransformFeedbackVaryings are
+    *    ignored, and the set of variables captured for transform feedback is
+    *    instead derived from the specified layout qualifiers."
+    */
+   for (int i = MESA_SHADER_FRAGMENT - 1; i >= 0; i--) {
+      /* Find last stage before fragment shader */
+      if (prog->_LinkedShaders[i]) {
+         has_xfb_qualifiers =
+            process_xfb_layout_qualifiers(mem_ctx, prog->_LinkedShaders[i],
+                                          &num_tfeedback_decls,
+                                          &varying_names);
+         break;
+      }
+   }
+
+   if (!has_xfb_qualifiers) {
+      num_tfeedback_decls = prog->TransformFeedback.NumVarying;
+      varying_names = prog->TransformFeedback.VaryingNames;
+   }
+
    if (num_tfeedback_decls != 0) {
       /* From GL_EXT_transform_feedback:
        *   A program will fail to link if:
@@ -4497,10 +4523,9 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       }
 
       tfeedback_decls = ralloc_array(mem_ctx, tfeedback_decl,
-                                     prog->TransformFeedback.NumVarying);
+                                     num_tfeedback_decls);
       if (!parse_tfeedback_decls(ctx, prog, mem_ctx, num_tfeedback_decls,
-                                 prog->TransformFeedback.VaryingNames,
-                                 tfeedback_decls))
+                                 varying_names, tfeedback_decls))
          goto done;
    }
 
@@ -4580,7 +4605,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       }
    }
 
-   if (!store_tfeedback_info(ctx, prog, num_tfeedback_decls, tfeedback_decls))
+   if (!store_tfeedback_info(ctx, prog, num_tfeedback_decls, tfeedback_decls,
+                             has_xfb_qualifiers))
       goto done;
 
    update_array_sizes(prog);

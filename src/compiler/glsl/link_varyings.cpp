@@ -715,7 +715,8 @@ tfeedback_decl::get_num_outputs() const
 bool
 tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
                       struct gl_transform_feedback_info *info,
-                      unsigned buffer, const unsigned max_outputs) const
+                      unsigned buffer, const unsigned max_outputs,
+                      bool has_xfb_qualifiers) const
 {
    assert(!this->next_buffer_separator);
 
@@ -858,7 +859,7 @@ parse_tfeedback_decls(struct gl_context *ctx, struct gl_shader_program *prog,
 bool
 store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                      unsigned num_tfeedback_decls,
-                     tfeedback_decl *tfeedback_decls)
+                     tfeedback_decl *tfeedback_decls, bool has_xfb_qualifiers)
 {
    bool separate_attribs_mode =
       prog->TransformFeedback.BufferMode == GL_SEPARATE_ATTRIBS;
@@ -885,11 +886,12 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
 
    unsigned num_buffers = 0;
 
-   if (separate_attribs_mode) {
+   if (!has_xfb_qualifiers && separate_attribs_mode) {
       /* GL_SEPARATE_ATTRIBS */
       for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
          if (!tfeedback_decls[i].store(ctx, prog, &prog->LinkedTransformFeedback,
-                                       num_buffers, num_outputs))
+                                       num_buffers, num_outputs,
+                                       has_xfb_qualifiers))
             return false;
 
          num_buffers++;
@@ -898,6 +900,9 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
    else {
       /* GL_INVERLEAVED_ATTRIBS */
       int buffer_stream_id = -1;
+      unsigned buffer =
+         num_tfeedback_decls ? tfeedback_decls[0].get_buffer() : 0;
+
       for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
          if (tfeedback_decls[i].is_next_buffer_separator()) {
             num_buffers++;
@@ -920,9 +925,16 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
             return false;
          }
 
+         if (has_xfb_qualifiers) {
+            buffer = tfeedback_decls[i].get_buffer();
+         } else {
+            buffer = num_buffers;
+         }
+
          if (!tfeedback_decls[i].store(ctx, prog,
                                        &prog->LinkedTransformFeedback,
-                                       num_buffers, num_outputs))
+                                       num_buffers, num_outputs,
+                                       has_xfb_qualifiers))
             return false;
       }
       num_buffers++;

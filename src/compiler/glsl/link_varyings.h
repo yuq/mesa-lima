@@ -98,7 +98,7 @@ public:
    unsigned get_num_outputs() const;
    bool store(struct gl_context *ctx, struct gl_shader_program *prog,
               struct gl_transform_feedback_info *info, unsigned buffer,
-              const unsigned max_outputs) const;
+              const unsigned max_outputs, bool has_xfb_qualifiers) const;
    const tfeedback_candidate *find_candidate(gl_shader_program *prog,
                                              hash_table *tfeedback_candidates);
 
@@ -301,7 +301,8 @@ remove_unused_shader_inputs_and_outputs(bool is_separate_shader_object,
 bool
 store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                      unsigned num_tfeedback_decls,
-                     tfeedback_decl *tfeedback_decls);
+                     tfeedback_decl *tfeedback_decls,
+                     bool has_xfb_qualifiers);
 
 bool
 assign_varying_locations(struct gl_context *ctx,
