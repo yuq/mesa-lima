@@ -136,6 +136,8 @@ __m256i func(__m256i a, __m256i b)\
 #define _simd_add_epi8 _simdemu_add_epi8
 #define _simd_cmpeq_epi64 _simdemu_cmpeq_epi64
 #define _simd_cmpgt_epi64 _simdemu_cmpgt_epi64
+#define _simd_cmpgt_epi8 _simdemu_cmpgt_epi8
+#define _simd_cmpgt_epi16 _simdemu_cmpgt_epi16
 #define _simd_movemask_epi8 _simdemu_movemask_epi8
 
 SIMD_EMU_EPI(_simdemu_mul_epi32, _mm_mul_epi32)
@@ -158,6 +160,8 @@ SIMD_EMU_EPI(_simdemu_subs_epu8, _mm_subs_epu8)
 SIMD_EMU_EPI(_simdemu_add_epi8, _mm_add_epi8)
 SIMD_EMU_EPI(_simdemu_cmpeq_epi64, _mm_cmpeq_epi64)
 SIMD_EMU_EPI(_simdemu_cmpgt_epi64, _mm_cmpgt_epi64)
+SIMD_EMU_EPI(_simdemu_cmpgt_epi8, _mm_cmpgt_epi8)
+SIMD_EMU_EPI(_simdemu_cmpgt_epi16, _mm_cmpgt_epi16)
 
 #define _simd_unpacklo_epi32(a, b) _mm256_castps_si256(_mm256_unpacklo_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)))
 #define _simd_unpackhi_epi32(a, b) _mm256_castps_si256(_mm256_unpackhi_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)))
@@ -295,6 +299,8 @@ int _simdemu_movemask_epi8(__m256i a)
 
 #define _simd_cmpeq_epi64 _mm256_cmpeq_epi64
 #define _simd_cmpgt_epi64 _mm256_cmpgt_epi64
+#define _simd_cmpgt_epi8  _mm256_cmpgt_epi8
+#define _simd_cmpgt_epi16  _mm256_cmpgt_epi16
 #define _simd_movemask_epi8 _mm256_movemask_epi8
 #endif
 
@@ -783,5 +789,61 @@ static INLINE simdscalar InterpolateComponent(simdscalar vI, simdscalar vJ, cons
     return vplaneps(vA, vB, vC, vI, vJ);
 }
 
+INLINE
+UINT pdep_u32(UINT a, UINT mask)
+{
+#if KNOB_ARCH==KNOB_ARCH_AVX2
+    return _pdep_u32(a, mask);
+#else
+    UINT result = 0;
+
+    // copied from http://wm.ite.pl/articles/pdep-soft-emu.html 
+    // using bsf instead of funky loop
+    DWORD maskIndex;
+    while (_BitScanForward(&maskIndex, mask))
+    {
+        // 1. isolate lowest set bit of mask
+        const UINT lowest = 1 << maskIndex;
+
+        // 2. populate LSB from src
+        const UINT LSB = (UINT)((int)(a << 31) >> 31);
+
+        // 3. copy bit from mask
+        result |= LSB & lowest;
+
+        // 4. clear lowest bit
+        mask &= ~lowest;
+
+        // 5. prepare for next iteration
+        a >>= 1;
+    }
+
+    return result;
+#endif
+}
+
+INLINE
+UINT pext_u32(UINT a, UINT mask)
+{
+#if KNOB_ARCH==KNOB_ARCH_AVX2
+    return _pext_u32(a, mask);
+#else
+    UINT result = 0;
+    DWORD maskIndex;
+    uint32_t currentBit = 0;
+    while (_BitScanForward(&maskIndex, mask))
+    {
+        // 1. isolate lowest set bit of mask
+        const UINT lowest = 1 << maskIndex;
+
+        // 2. copy bit from mask
+        result |= ((a & lowest) > 0) << currentBit++;
+
+        // 3. clear lowest bit
+        mask &= ~lowest;
+    }
+    return result;
+#endif
+}
 
 #endif//__SWR_SIMDINTRIN_H__

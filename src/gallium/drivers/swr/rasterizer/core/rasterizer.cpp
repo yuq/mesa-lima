@@ -752,7 +752,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
         for (uint32_t tileX = tX; tileX <= maxX; ++tileX)
         {
-            uint64_t anyCoveredSamples = 0;
+            triDesc.anyCoveredSamples = 0;
 
             // is the corner of the edge outside of the raster tile? (vEdge < 0)
             int mask0, mask1, mask2;
@@ -785,7 +785,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                     triDesc.coverageMask[sampleNum] = 0xffffffffffffffffULL;
                     if ((mask0 & mask1 & mask2) == 0xf)
                     {
-                        anyCoveredSamples = triDesc.coverageMask[sampleNum];
+                        triDesc.anyCoveredSamples = triDesc.coverageMask[sampleNum];
                         // trivial accept, all 4 corners of all 3 edges are negative 
                         // i.e. raster tile completely inside triangle
                         RDTSC_EVENT(BETrivialAccept, 1, 0);
@@ -840,7 +840,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                         }
                         RDTSC_STOP(BERasterizePartial, 0, 0);
 
-                        anyCoveredSamples |= triDesc.coverageMask[sampleNum]; 
+                        triDesc.anyCoveredSamples |= triDesc.coverageMask[sampleNum]; 
                     }
                 }
                 else
@@ -861,7 +861,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
             }
             else
 #endif
-            if(anyCoveredSamples)
+            if(triDesc.anyCoveredSamples)
             {
                 RDTSC_START(BEPixelBackend);
                 backendFuncs.pfnBackend(pDC, workerId, tileX << KNOB_TILE_X_DIM_SHIFT, tileY << KNOB_TILE_Y_DIM_SHIFT, triDesc, renderBuffers);

@@ -721,16 +721,25 @@ void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
         pState->scissorInFixedPoint.bottom = bottom * FIXED_POINT_SCALE - 1;
     }
 }
-
+// templated backend function tables
+extern PFN_BACKEND_FUNC gBackendNullPs[SWR_MULTISAMPLE_TYPE_MAX];
+extern PFN_BACKEND_FUNC gBackendSingleSample[2][2];
+extern PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_MAX][SWR_MSAA_SAMPLE_PATTERN_MAX][SWR_INPUT_COVERAGE_MAX][2][2];
+extern PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_MAX][SWR_INPUT_COVERAGE_MAX][2];
+extern PFN_OUTPUT_MERGER gBackendOutputMergerTable[SWR_NUM_RENDERTARGETS + 1][SWR_MULTISAMPLE_TYPE_MAX];
+extern PFN_CALC_PIXEL_BARYCENTRICS gPixelBarycentricTable[2];
+extern PFN_CALC_SAMPLE_BARYCENTRICS gSampleBarycentricTable[2];
+extern PFN_CALC_CENTROID_BARYCENTRICS gCentroidBarycentricTable[SWR_MULTISAMPLE_TYPE_MAX][2][2][2];
 void SetupPipeline(DRAW_CONTEXT *pDC)
 {
     DRAW_STATE* pState = pDC->pState;
     const SWR_RASTSTATE &rastState = pState->state.rastState;
+    const SWR_PS_STATE &psState = pState->state.psState;
     BACKEND_FUNCS& backendFuncs = pState->backendFuncs;
     const uint32_t forcedSampleCount = (rastState.bForcedSampleCount) ? 1 : 0;
 
     // setup backend
-    if (pState->state.psState.pfnPixelShader == nullptr)
+    if (psState.pfnPixelShader == nullptr)
     {
         backendFuncs.pfnBackend = gBackendNullPs[pState->state.rastState.sampleCount];
         // always need to generate I & J per sample for Z interpolation
@@ -739,41 +748,40 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     else
     {
         const bool bMultisampleEnable = ((rastState.sampleCount > SWR_MULTISAMPLE_1X) || rastState.bForcedSampleCount) ? 1 : 0;
-        const uint32_t centroid = ((pState->state.psState.barycentricsMask & SWR_BARYCENTRIC_CENTROID_MASK) > 0) ? 1 : 0;
+        const uint32_t centroid = ((psState.barycentricsMask & SWR_BARYCENTRIC_CENTROID_MASK) > 0) ? 1 : 0;
 
         // currently only support 'normal' input coverage
-        SWR_ASSERT(pState->state.psState.inputCoverage == SWR_INPUT_COVERAGE_NORMAL ||
-                   pState->state.psState.inputCoverage == SWR_INPUT_COVERAGE_NONE);
+        SWR_ASSERT(psState.inputCoverage == SWR_INPUT_COVERAGE_NORMAL ||
+                   psState.inputCoverage == SWR_INPUT_COVERAGE_NONE);
      
-        SWR_BARYCENTRICS_MASK barycentricsMask = (SWR_BARYCENTRICS_MASK)pState->state.psState.barycentricsMask;
+        SWR_BARYCENTRICS_MASK barycentricsMask = (SWR_BARYCENTRICS_MASK)psState.barycentricsMask;
         
         // select backend function
-        switch(pState->state.psState.shadingRate)
+        switch(psState.shadingRate)
         {
         case SWR_SHADING_RATE_PIXEL:
             if(bMultisampleEnable)
             {
                 // always need to generate I & J per sample for Z interpolation
                 barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_SAMPLE_MASK);
-                backendFuncs.pfnBackend = gBackendPixelRateTable[rastState.sampleCount][rastState.samplePattern][pState->state.psState.inputCoverage][centroid][forcedSampleCount];
-                backendFuncs.pfnOutputMerger = gBackendOutputMergerTable[pState->state.psState.numRenderTargets][pState->state.blendState.sampleCount];
+                backendFuncs.pfnBackend = gBackendPixelRateTable[rastState.sampleCount][rastState.samplePattern][psState.inputCoverage][centroid][forcedSampleCount];
+                backendFuncs.pfnOutputMerger = gBackendOutputMergerTable[psState.numRenderTargets][pState->state.blendState.sampleCount];
             }
             else
             {
                 // always need to generate I & J per pixel for Z interpolation
                 barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_PIXEL_MASK);
-                backendFuncs.pfnBackend = gBackendSingleSample[pState->state.psState.inputCoverage][centroid];
-                backendFuncs.pfnOutputMerger = gBackendOutputMergerTable[pState->state.psState.numRenderTargets][SWR_MULTISAMPLE_1X];
+                backendFuncs.pfnBackend = gBackendSingleSample[psState.inputCoverage][centroid];
+                backendFuncs.pfnOutputMerger = gBackendOutputMergerTable[psState.numRenderTargets][SWR_MULTISAMPLE_1X];
             }
             break;
         case SWR_SHADING_RATE_SAMPLE:
             SWR_ASSERT(rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN);
             // always need to generate I & J per sample for Z interpolation
             barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_SAMPLE_MASK);
-            backendFuncs.pfnBackend = gBackendSampleRateTable[rastState.sampleCount][pState->state.psState.inputCoverage][centroid];
-            backendFuncs.pfnOutputMerger = gBackendOutputMergerTable[pState->state.psState.numRenderTargets][pState->state.blendState.sampleCount];
+            backendFuncs.pfnBackend = gBackendSampleRateTable[rastState.sampleCount][psState.inputCoverage][centroid];
+            backendFuncs.pfnOutputMerger = gBackendOutputMergerTable[psState.numRenderTargets][pState->state.blendState.sampleCount];
             break;
-        case SWR_SHADING_RATE_COARSE:
         default:
             SWR_ASSERT(0 && "Invalid shading rate");
             break;
@@ -864,7 +872,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
 
     uint32_t numRTs = pState->state.psState.numRenderTargets;
     pState->state.colorHottileEnable = 0;
-    if(pState->state.psState.pfnPixelShader != nullptr)
+    if (psState.pfnPixelShader != nullptr)
     {
         for (uint32_t rt = 0; rt < numRTs; ++rt)
         {

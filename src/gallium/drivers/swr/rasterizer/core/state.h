@@ -307,6 +307,8 @@ struct PixelPositions
     simdscalar centroid;
 };
 
+#define SWR_MAX_NUM_MULTISAMPLES 16
+
 //////////////////////////////////////////////////////////////////////////
 /// SWR_PS_CONTEXT
 /// @brief Input to pixel shader.
@@ -338,6 +340,7 @@ struct SWR_PS_CONTEXT
     uint32_t frontFace;         // IN: front- 1, back- 0
     uint32_t primID;            // IN: primitive ID
     uint32_t sampleIndex;       // IN: sampleIndex
+
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -748,7 +751,6 @@ struct SWR_RENDER_TARGET_BLEND_STATE
 };
 static_assert(sizeof(SWR_RENDER_TARGET_BLEND_STATE) == 1, "Invalid SWR_RENDER_TARGET_BLEND_STATE size");
 
-#define SWR_MAX_NUM_MULTISAMPLES 16
 enum SWR_MULTISAMPLE_COUNT
 {
     SWR_MULTISAMPLE_1X = 0,
@@ -786,6 +788,7 @@ typedef void(__cdecl *PFN_GS_FUNC)(HANDLE hPrivateData, SWR_GS_CONTEXT* pGsConte
 typedef void(__cdecl *PFN_CS_FUNC)(HANDLE hPrivateData, SWR_CS_CONTEXT* pCsContext);
 typedef void(__cdecl *PFN_SO_FUNC)(SWR_STREAMOUT_CONTEXT& soContext);
 typedef void(__cdecl *PFN_PIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pContext);
+typedef void(__cdecl *PFN_CPIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pContext);
 typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, uint32_t, BYTE*, simdvector&, simdscalari*, simdscalari*);
 
 //////////////////////////////////////////////////////////////////////////
@@ -941,6 +944,7 @@ struct SWR_BACKEND_STATE
     uint8_t numComponents[KNOB_NUM_ATTRIBUTES];
 };
 
+
 union SWR_DEPTH_STENCIL_STATE
 {
     struct
@@ -980,7 +984,6 @@ enum SWR_SHADING_RATE
 {
     SWR_SHADING_RATE_PIXEL,
     SWR_SHADING_RATE_SAMPLE,
-    SWR_SHADING_RATE_COARSE,
     SWR_SHADING_RATE_MAX,
 };
 
@@ -1024,4 +1027,5 @@ struct SWR_PS_STATE
     uint32_t barycentricsMask   : 3;    // which type(s) of barycentric coords does the PS interpolate attributes with
     uint32_t usesUAV            : 1;    // pixel shader accesses UAV 
     uint32_t forceEarlyZ        : 1;    // force execution of early depth/stencil test
+
 };
