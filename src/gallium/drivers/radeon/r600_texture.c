@@ -908,6 +908,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	struct radeon_surf surface;
 	int r;
 	struct radeon_bo_metadata metadata = {};
+	struct r600_texture *rtex;
 
 	/* Support only 2D textures without mipmaps */
 	if ((templ->target != PIPE_TEXTURE_2D && templ->target != PIPE_TEXTURE_RECT) ||
@@ -941,8 +942,14 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	if (metadata.scanout)
 		surface.flags |= RADEON_SURF_SCANOUT;
 
-	return (struct pipe_resource *)r600_texture_create_object(screen, templ,
-								  stride, buf, &surface);
+	rtex = r600_texture_create_object(screen, templ,
+					  stride, buf, &surface);
+	if (!rtex)
+		return NULL;
+
+	rtex->resource.is_shared = true;
+	rtex->resource.external_usage = usage;
+	return &rtex->resource.b.b;
 }
 
 bool r600_init_flushed_depth_texture(struct pipe_context *ctx,
