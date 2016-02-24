@@ -63,6 +63,49 @@ get_varying_type(const ir_variable *var, gl_shader_stage stage)
    return type;
 }
 
+static void
+create_xfb_varying_names(void *mem_ctx, const glsl_type *t, char **name,
+                         size_t name_length, unsigned *count,
+                         const char *ifc_member_name,
+                         const glsl_type *ifc_member_t, char ***varying_names)
+{
+   if (t->is_interface()) {
+      size_t new_length = name_length;
+
+      assert(ifc_member_name && ifc_member_t);
+      ralloc_asprintf_rewrite_tail(name, &new_length, ".%s", ifc_member_name);
+
+      create_xfb_varying_names(mem_ctx, ifc_member_t, name, new_length, count,
+                               NULL, NULL, varying_names);
+   } else if (t->is_record()) {
+      for (unsigned i = 0; i < t->length; i++) {
+         const char *field = t->fields.structure[i].name;
+         size_t new_length = name_length;
+
+         ralloc_asprintf_rewrite_tail(name, &new_length, ".%s", field);
+
+         create_xfb_varying_names(mem_ctx, t->fields.structure[i].type, name,
+                                  new_length, count, NULL, NULL,
+                                  varying_names);
+      }
+   } else if (t->without_array()->is_record() ||
+              t->without_array()->is_interface() ||
+              (t->is_array() && t->fields.array->is_array())) {
+      for (unsigned i = 0; i < t->length; i++) {
+         size_t new_length = name_length;
+
+         /* Append the subscript to the current variable name */
+         ralloc_asprintf_rewrite_tail(name, &new_length, "[%u]", i);
+
+         create_xfb_varying_names(mem_ctx, t->fields.array, name, new_length,
+                                  count, ifc_member_name, ifc_member_t,
+                                  varying_names);
+      }
+   } else {
+      (*varying_names)[(*count)++] = ralloc_strdup(mem_ctx, *name);
+   }
+}
+
 /**
  * Validate the types and qualifiers of an output from one stage against the
  * matching input to another stage.
