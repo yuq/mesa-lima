@@ -1028,6 +1028,18 @@ void
 isl_buffer_fill_state_s(const struct isl_device *dev, void *state,
                         const struct isl_buffer_fill_state_info *restrict info);
 
+void
+isl_surf_fill_image_param(const struct isl_device *dev,
+                          struct brw_image_param *param,
+                          const struct isl_surf *surf,
+                          const struct isl_view *view);
+
+void
+isl_buffer_fill_image_param(const struct isl_device *dev,
+                            struct brw_image_param *param,
+                            enum isl_format format,
+                            uint64_t size);
+
 /**
  * Alignment of the upper-left sample of each subimage, in units of surface
  * elements.

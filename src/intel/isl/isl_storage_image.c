@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "isl.h"
+#include "isl_priv.h"
 #include "brw_compiler.h"
 
 bool
@@ -185,4 +185,109 @@ isl_lower_storage_image_format(const struct isl_device *dev,
       assert(!"Unknown image format");
       return ISL_FORMAT_UNSUPPORTED;
    }
+}
+
+static const struct brw_image_param image_param_defaults = {
+   /* Set the swizzling shifts to all-ones to effectively disable
+    * swizzling -- See emit_address_calculation() in
+    * brw_fs_surface_builder.cpp for a more detailed explanation of
+    * these parameters.
+    */
+   .swizzling = { 0xff, 0xff },
+};
+
+void
+isl_surf_fill_image_param(const struct isl_device *dev,
+                          struct brw_image_param *param,
+                          const struct isl_surf *surf,
+                          const struct isl_view *view)
+{
+   *param = image_param_defaults;
+
+   param->size[0] = isl_minify(surf->logical_level0_px.w, view->base_level);
+   param->size[1] = isl_minify(surf->logical_level0_px.h, view->base_level);
+   if (surf->dim == ISL_SURF_DIM_3D) {
+      param->size[2] = isl_minify(surf->logical_level0_px.d, view->base_level);
+   } else {
+      param->size[2] = surf->logical_level0_px.array_len -
+                       view->base_array_layer;
+   }
+
+   isl_surf_get_image_offset_el(surf, view->base_level, view->base_array_layer,
+                                0, &param->offset[0],  &param->offset[1]);
+
+   const int cpp = isl_format_get_layout(surf->format)->bs;
+   param->stride[0] = cpp;
+   param->stride[1] = surf->row_pitch / cpp;
+
+   const struct isl_extent3d image_align_sa =
+      isl_surf_get_image_alignment_sa(surf);
+   if (ISL_DEV_GEN(dev) < 9 && surf->dim == ISL_SURF_DIM_3D) {
+      param->stride[2] = isl_align_npot(param->size[0], image_align_sa.w);
+      param->stride[3] = isl_align_npot(param->size[1], image_align_sa.h);
+   } else {
+      param->stride[2] = 0;
+      param->stride[3] = isl_surf_get_array_pitch_el_rows(surf);
+   }
+
+   switch (surf->tiling) {
+   case ISL_TILING_LINEAR:
+      /* image_param_defaults is good enough */
+      break;
+
+   case ISL_TILING_X:
+      /* An X tile is a rectangular block of 512x8 bytes. */
+      param->tiling[0] = isl_log2u(512 / cpp);
+      param->tiling[1] = isl_log2u(8);
+
+      if (dev->has_bit6_swizzling) {
+         /* Right shifts required to swizzle bits 9 and 10 of the memory
+          * address with bit 6.
+          */
+         param->swizzling[0] = 3;
+         param->swizzling[1] = 4;
+      }
+      break;
+
+   case ISL_TILING_Y0:
+      /* The layout of a Y-tiled surface in memory isn't really fundamentally
+       * different to the layout of an X-tiled surface, we simply pretend that
+       * the surface is broken up in a number of smaller 16Bx32 tiles, each
+       * one arranged in X-major order just like is the case for X-tiling.
+       */
+      param->tiling[0] = isl_log2u(16 / cpp);
+      param->tiling[1] = isl_log2u(32);
+
+      if (dev->has_bit6_swizzling) {
+         /* Right shift required to swizzle bit 9 of the memory address with
+          * bit 6.
+          */
+         param->swizzling[0] = 3;
+         param->swizzling[1] = 0xff;
+      }
+      break;
+
+   default:
+      assert(!"Unhandled storage image tiling");
+   }
+
+   /* 3D textures are arranged in 2D in memory with 2^lod slices per row.  The
+    * address calculation algorithm (emit_address_calculation() in
+    * brw_fs_surface_builder.cpp) handles this as a sort of tiling with
+    * modulus equal to the LOD.
+    */
+   param->tiling[2] = (ISL_DEV_GEN(dev) < 9 && surf->dim == ISL_SURF_DIM_3D ?
+                       view->base_level : 0);
+}
+
+void
+isl_buffer_fill_image_param(const struct isl_device *dev,
+                            struct brw_image_param *param,
+                            enum isl_format format,
+                            uint64_t size)
+{
+   *param = image_param_defaults;
+
+   param->stride[0] = isl_format_layouts[format].bs;
+   param->size[0] = size / param->stride[0];
 }
