@@ -228,6 +228,27 @@ static int r600_setup_surface(struct pipe_screen *screen,
 	return 0;
 }
 
+static void r600_texture_init_metadata(struct r600_texture *rtex,
+				       struct radeon_bo_metadata *metadata)
+{
+	struct radeon_surf *surface = &rtex->surface;
+
+	memset(metadata, 0, sizeof(*metadata));
+	metadata->microtile = surface->level[0].mode >= RADEON_SURF_MODE_1D ?
+				   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
+	metadata->macrotile = surface->level[0].mode >= RADEON_SURF_MODE_2D ?
+				   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
+	metadata->pipe_config = surface->pipe_config;
+	metadata->bankw = surface->bankw;
+	metadata->bankh = surface->bankh;
+	metadata->tile_split = surface->tile_split;
+	metadata->stencil_tile_split = surface->stencil_tile_split;
+	metadata->mtilea = surface->mtilea;
+	metadata->num_banks = surface->num_banks;
+	metadata->stride = surface->level[0].pitch_bytes;
+	metadata->scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
+}
+
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
 				       struct pipe_resource *ptex,
 				       struct winsys_handle *whandle,
@@ -237,22 +258,9 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	struct r600_resource *resource = &rtex->resource;
 	struct radeon_surf *surface = &rtex->surface;
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
-	struct radeon_bo_metadata metadata = {};
+	struct radeon_bo_metadata metadata;
 
-	metadata.microtile = surface->level[0].mode >= RADEON_SURF_MODE_1D ?
-				   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
-	metadata.macrotile = surface->level[0].mode >= RADEON_SURF_MODE_2D ?
-				   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
-	metadata.pipe_config = surface->pipe_config;
-	metadata.bankw = surface->bankw;
-	metadata.bankh = surface->bankh;
-	metadata.tile_split = surface->tile_split;
-	metadata.stencil_tile_split = surface->stencil_tile_split;
-	metadata.mtilea = surface->mtilea;
-	metadata.num_banks = surface->num_banks;
-	metadata.stride = surface->level[0].pitch_bytes;
-	metadata.scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
-
+	r600_texture_init_metadata(rtex, &metadata);
 	rscreen->ws->buffer_set_metadata(resource->buf, &metadata);
 
 	return rscreen->ws->buffer_get_handle(resource->buf,
