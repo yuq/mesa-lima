@@ -777,6 +777,17 @@ static void si_flush_resource(struct pipe_context *ctx,
 	}
 }
 
+static void si_decompress_dcc(struct pipe_context *ctx,
+			      struct r600_texture *rtex)
+{
+	if (!rtex->dcc_offset)
+		return;
+
+	si_blit_decompress_color(ctx, rtex, 0, rtex->resource.b.b.last_level,
+				 0, util_max_layer(&rtex->resource.b.b, 0),
+				 true);
+}
+
 static void si_pipe_clear_buffer(struct pipe_context *ctx,
 				 struct pipe_resource *dst,
 				 unsigned offset, unsigned size,
@@ -846,4 +857,5 @@ void si_init_blit_functions(struct si_context *sctx)
 	sctx->b.b.blit = si_blit;
 	sctx->b.b.flush_resource = si_flush_resource;
 	sctx->b.blit_decompress_depth = si_blit_decompress_depth;
+	sctx->b.decompress_dcc = si_decompress_dcc;
 }

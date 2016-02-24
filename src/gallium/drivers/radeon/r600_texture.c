@@ -289,6 +289,31 @@ static void r600_texture_disable_cmask(struct r600_common_screen *rscreen,
 	r600_dirty_all_framebuffer_states(rscreen);
 }
 
+static void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
+				     struct r600_texture *rtex)
+{
+	struct r600_common_context *rctx =
+		(struct r600_common_context *)rscreen->aux_context;
+
+	if (!rtex->dcc_offset)
+		return;
+
+	/* Decompress DCC. */
+	pipe_mutex_lock(rscreen->aux_context_lock);
+	rctx->decompress_dcc(&rctx->b, rtex);
+	rctx->b.flush(&rctx->b, NULL, 0);
+	pipe_mutex_unlock(rscreen->aux_context_lock);
+
+	/* Disable DCC. */
+	rtex->dcc_offset = 0;
+	rtex->cb_color_info &= ~VI_S_028C70_DCC_ENABLE(1);
+
+	/* Notify all contexts about the change. */
+	r600_dirty_all_framebuffer_states(rscreen);
+
+	/* TODO: re-set all sampler views and images, but how? */
+}
+
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
 				       struct pipe_resource *resource,
 				       struct winsys_handle *whandle,
@@ -311,6 +336,13 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		res->external_usage = usage;
 
 		if (resource->target != PIPE_BUFFER) {
+			/* Since shader image stores don't support DCC on VI,
+			 * disable it for external clients that want write
+			 * access.
+			 */
+			if (usage & PIPE_HANDLE_USAGE_WRITE)
+				r600_texture_disable_dcc(rscreen, rtex);
+
 			if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH)) {
 				/* Eliminate fast clear (both CMASK and DCC) */
 				r600_eliminate_fast_color_clear(rscreen, rtex);
@@ -321,6 +353,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 				r600_texture_disable_cmask(rscreen, rtex);
 			}
 
+			/* Set metadata. */
 			r600_texture_init_metadata(rtex, &metadata);
 			rscreen->ws->buffer_set_metadata(res->buf, &metadata);
 		}
