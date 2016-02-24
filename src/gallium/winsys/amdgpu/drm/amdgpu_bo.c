@@ -390,8 +390,8 @@ static unsigned eg_tile_split_rev(unsigned eg_tile_split)
    }
 }
 
-static void amdgpu_bo_get_tiling(struct pb_buffer *_buf,
-				 struct radeon_bo_metadata *md)
+static void amdgpu_buffer_get_metadata(struct pb_buffer *_buf,
+                                       struct radeon_bo_metadata *md)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
    struct amdgpu_bo_info info = {0};
@@ -419,8 +419,8 @@ static void amdgpu_bo_get_tiling(struct pb_buffer *_buf,
    md->scanout = AMDGPU_TILING_GET(tiling_flags, MICRO_TILE_MODE) == 0; /* DISPLAY */
 }
 
-static void amdgpu_bo_set_tiling(struct pb_buffer *_buf,
-				 struct radeon_bo_metadata *md)
+static void amdgpu_buffer_set_metadata(struct pb_buffer *_buf,
+                                       struct radeon_bo_metadata *md)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
    struct amdgpu_bo_metadata metadata = {0};
@@ -702,8 +702,8 @@ static uint64_t amdgpu_bo_get_va(struct pb_buffer *buf)
 
 void amdgpu_bo_init_functions(struct amdgpu_winsys *ws)
 {
-   ws->base.buffer_set_tiling = amdgpu_bo_set_tiling;
-   ws->base.buffer_get_tiling = amdgpu_bo_get_tiling;
+   ws->base.buffer_set_metadata = amdgpu_buffer_set_metadata;
+   ws->base.buffer_get_metadata = amdgpu_buffer_get_metadata;
    ws->base.buffer_map = amdgpu_bo_map;
    ws->base.buffer_unmap = amdgpu_bo_unmap;
    ws->base.buffer_wait = amdgpu_bo_wait;

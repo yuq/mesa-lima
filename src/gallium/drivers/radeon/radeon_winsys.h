@@ -475,8 +475,8 @@ struct radeon_winsys {
      * \param buf       A winsys buffer object to get the flags from.
      * \param md        Metadata
      */
-    void (*buffer_get_tiling)(struct pb_buffer *buf,
-                              struct radeon_bo_metadata *md);
+    void (*buffer_get_metadata)(struct pb_buffer *buf,
+                                struct radeon_bo_metadata *md);
 
     /**
      * Set buffer metadata.
@@ -485,8 +485,8 @@ struct radeon_winsys {
      * \param buf       A winsys buffer object to set the flags for.
      * \param md        Metadata
      */
-    void (*buffer_set_tiling)(struct pb_buffer *buf,
-                              struct radeon_bo_metadata *md);
+    void (*buffer_set_metadata)(struct pb_buffer *buf,
+                                struct radeon_bo_metadata *md);
 
     /**
      * Get a winsys buffer from a winsys handle. The internal structure

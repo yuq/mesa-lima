@@ -636,8 +636,8 @@ static unsigned eg_tile_split_rev(unsigned eg_tile_split)
     }
 }
 
-static void radeon_bo_get_tiling(struct pb_buffer *_buf,
-				 struct radeon_bo_metadata *md)
+static void radeon_bo_get_metadata(struct pb_buffer *_buf,
+				   struct radeon_bo_metadata *md)
 {
     struct radeon_bo *bo = radeon_bo(_buf);
     struct drm_radeon_gem_set_tiling args;
@@ -670,8 +670,8 @@ static void radeon_bo_get_tiling(struct pb_buffer *_buf,
     md->scanout = bo->rws->gen >= DRV_SI && !(args.tiling_flags & RADEON_TILING_R600_NO_SCANOUT);
 }
 
-static void radeon_bo_set_tiling(struct pb_buffer *_buf,
-				 struct radeon_bo_metadata *md)
+static void radeon_bo_set_metadata(struct pb_buffer *_buf,
+                                   struct radeon_bo_metadata *md)
 {
     struct radeon_bo *bo = radeon_bo(_buf);
     struct drm_radeon_gem_set_tiling args;
@@ -1040,8 +1040,8 @@ static uint64_t radeon_winsys_bo_va(struct pb_buffer *buf)
 
 void radeon_drm_bo_init_functions(struct radeon_drm_winsys *ws)
 {
-    ws->base.buffer_set_tiling = radeon_bo_set_tiling;
-    ws->base.buffer_get_tiling = radeon_bo_get_tiling;
+    ws->base.buffer_set_metadata = radeon_bo_set_metadata;
+    ws->base.buffer_get_metadata = radeon_bo_get_metadata;
     ws->base.buffer_map = radeon_bo_map;
     ws->base.buffer_unmap = radeon_bo_unmap;
     ws->base.buffer_wait = radeon_bo_wait;
