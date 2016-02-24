@@ -2600,6 +2600,67 @@ validate_xfb_buffer_qualifier(YYLTYPE *loc,
    return true;
 }
 
+/* From the ARB_enhanced_layouts spec:
+ *
+ *    "Variables and block members qualified with *xfb_offset* can be
+ *    scalars, vectors, matrices, structures, and (sized) arrays of these.
+ *    The offset must be a multiple of the size of the first component of
+ *    the first qualified variable or block member, or a compile-time error
+ *    results.  Further, if applied to an aggregate containing a double,
+ *    the offset must also be a multiple of 8, and the space taken in the
+ *    buffer will be a multiple of 8.
+ */
+static bool
+validate_xfb_offset_qualifier(YYLTYPE *loc,
+                              struct _mesa_glsl_parse_state *state,
+                              int xfb_offset, const glsl_type *type,
+                              unsigned component_size) {
+  const glsl_type *t_without_array = type->without_array();
+
+   if (xfb_offset != -1 && type->is_unsized_array()) {
+      _mesa_glsl_error(loc, state,
+                       "xfb_offset can't be used with unsized arrays.");
+      return false;
+   }
+
+   /* Make sure nested structs don't contain unsized arrays, and validate
+    * any xfb_offsets on interface members.
+    */
+   if (t_without_array->is_record() || t_without_array->is_interface())
+      for (unsigned int i = 0; i < t_without_array->length; i++) {
+         const glsl_type *member_t = t_without_array->fields.structure[i].type;
+
+         /* When the interface block doesn't have an xfb_offset qualifier then
+          * we apply the component size rules at the member level.
+          */
+         if (xfb_offset == -1)
+            component_size = member_t->contains_double() ? 8 : 4;
+
+         int xfb_offset = t_without_array->fields.structure[i].offset;
+         validate_xfb_offset_qualifier(loc, state, xfb_offset, member_t,
+                                       component_size);
+      }
+
+  /* Nested structs or interface block without offset may not have had an
+   * offset applied yet so return.
+   */
+   if (xfb_offset == -1) {
+     return true;
+   }
+
+   if (xfb_offset % component_size) {
+      _mesa_glsl_error(loc, state,
+                       "invalid qualifier xfb_offset=%d must be a multiple "
+                       "of the first component size of the first qualified "
+                       "variable or block member. Or double if an aggregate "
+                       "that contains a double (%d).",
+                       xfb_offset, component_size);
+      return false;
+   }
+
+   return true;
+}
+
 static bool
 validate_stream_qualifier(YYLTYPE *loc, struct _mesa_glsl_parse_state *state,
                           unsigned stream)
@@ -3169,6 +3230,19 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
          var->data.xfb_buffer = qual_xfb_buffer;
          if (qual->flags.q.explicit_xfb_buffer)
             var->data.explicit_xfb_buffer = true;
+      }
+   }
+
+   if (qual->flags.q.explicit_xfb_offset) {
+      unsigned qual_xfb_offset;
+      unsigned component_size = var->type->contains_double() ? 8 : 4;
+
+      if (process_qualifier_constant(state, loc, "xfb_offset",
+                                     qual->offset, &qual_xfb_offset) &&
+          validate_xfb_offset_qualifier(loc, state, (int) qual_xfb_offset,
+                                        var->type, component_size)) {
+         var->data.offset = qual_xfb_offset;
+         var->data.explicit_xfb_offset = true;
       }
    }
 
@@ -6285,6 +6359,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                           ast_type_qualifier *layout,
                                           unsigned block_stream,
                                           unsigned block_xfb_buffer,
+                                          unsigned block_xfb_offset,
                                           unsigned expl_location,
                                           unsigned expl_align)
 {
@@ -6505,6 +6580,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          fields[i].sample = qual->flags.q.sample ? 1 : 0;
          fields[i].patch = qual->flags.q.patch ? 1 : 0;
          fields[i].precision = qual->precision;
+         fields[i].offset = -1;
          fields[i].explicit_xfb_buffer = explicit_xfb_buffer;
          fields[i].xfb_buffer = xfb_buffer;
 
@@ -6569,8 +6645,6 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                    "with std430 and std140 layouts");
                }
             }
-         } else {
-            fields[i].offset = -1;
          }
 
          if (qual->flags.q.explicit_align || expl_align != 0) {
@@ -6601,6 +6675,31 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          if (!qual->flags.q.explicit_offset) {
             if (align != 0 && size != 0)
                next_offset = glsl_align(next_offset + size, align);
+         }
+
+         /* From the ARB_enhanced_layouts spec:
+          *
+          *    "The given offset applies to the first component of the first
+          *    member of the qualified entity.  Then, within the qualified
+          *    entity, subsequent components are each assigned, in order, to
+          *    the next available offset aligned to a multiple of that
+          *    component's size.  Aggregate types are flattened down to the
+          *    component level to get this sequence of components."
+          */
+         if (qual->flags.q.explicit_xfb_offset) {
+            unsigned xfb_offset;
+            if (process_qualifier_constant(state, &loc, "xfb_offset",
+                                           qual->offset, &xfb_offset)) {
+               fields[i].offset = xfb_offset;
+               block_xfb_offset = fields[i].offset +
+                  4 * field_type->component_slots();
+            }
+         } else {
+            if (layout && layout->flags.q.explicit_xfb_offset) {
+               unsigned align = field_type->is_double() ? 8 : 4;
+               fields[i].offset = glsl_align(block_xfb_offset, align);
+               block_xfb_offset += 4 * field_type->component_slots();
+            }
          }
 
          /* Propogate row- / column-major information down the fields of the
@@ -6696,6 +6795,7 @@ ast_struct_specifier::hir(exec_list *instructions,
                                                 false /* allow_reserved_names */,
                                                 ir_var_auto,
                                                 layout,
+                                                0, /* for interface only */
                                                 0, /* for interface only */
                                                 0, /* for interface only */
                                                 expl_location,
@@ -6864,6 +6964,14 @@ ast_interface_block::hir(exec_list *instructions,
       return NULL;
    }
 
+   unsigned qual_xfb_offset;
+   if (layout.flags.q.explicit_xfb_offset) {
+      if (!process_qualifier_constant(state, &loc, "xfb_offset",
+                                      layout.offset, &qual_xfb_offset)) {
+         return NULL;
+      }
+   }
+
    unsigned expl_location = 0;
    if (layout.flags.q.explicit_location) {
       if (!process_qualifier_constant(state, &loc, "location",
@@ -6900,6 +7008,7 @@ ast_interface_block::hir(exec_list *instructions,
                                                 &this->layout,
                                                 qual_stream,
                                                 qual_xfb_buffer,
+                                                qual_xfb_offset,
                                                 expl_location,
                                                 expl_align);
 
@@ -7018,6 +7127,8 @@ ast_interface_block::hir(exec_list *instructions,
                earlier_per_vertex->fields.structure[j].explicit_xfb_buffer;
             fields[i].xfb_buffer =
                earlier_per_vertex->fields.structure[j].xfb_buffer;
+            fields[i].xfb_stride =
+               earlier_per_vertex->fields.structure[j].xfb_stride;
          }
       }
 
@@ -7047,6 +7158,12 @@ ast_interface_block::hir(exec_list *instructions,
                                         num_variables,
                                         packing,
                                         this->block_name);
+
+   unsigned component_size = block_type->contains_double() ? 8 : 4;
+   int xfb_offset =
+      layout.flags.q.explicit_xfb_offset ? (int) qual_xfb_offset : -1;
+   validate_xfb_offset_qualifier(&loc, state, xfb_offset, block_type,
+                                 component_size);
 
    if (!state->symbols->add_interface(block_type->name, block_type, var_mode)) {
       YYLTYPE loc = this->get_location();
@@ -7275,6 +7392,10 @@ ast_interface_block::hir(exec_list *instructions,
 
          var->data.explicit_xfb_buffer = fields[i].explicit_xfb_buffer;
          var->data.xfb_buffer = fields[i].xfb_buffer;
+
+         if (fields[i].offset != -1)
+            var->data.explicit_xfb_offset = true;
+         var->data.offset = fields[i].offset;
 
          var->init_interface_type(block_type);
 
