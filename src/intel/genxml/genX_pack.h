@@ -28,13 +28,13 @@
 #endif
 
 #if (GEN_VERSIONx10 == 70)
-#  include "gen7_pack.h"
+#  include "genxml/gen7_pack.h"
 #elif (GEN_VERSIONx10 == 75)
-#  include "gen75_pack.h"
+#  include "genxml/gen75_pack.h"
 #elif (GEN_VERSIONx10 == 80)
-#  include "gen8_pack.h"
+#  include "genxml/gen8_pack.h"
 #elif (GEN_VERSIONx10 == 90)
-#  include "gen9_pack.h"
+#  include "genxml/gen9_pack.h"
 #else
 #  error "Need to add a pack header include for this gen"
 #endif
