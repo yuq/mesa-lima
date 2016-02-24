@@ -298,12 +298,14 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return is_a3xx(screen) ? 1 : 0;
 
 	/* Queries. */
-	case PIPE_CAP_QUERY_TIME_ELAPSED:
 	case PIPE_CAP_QUERY_TIMESTAMP:
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 		return 0;
 	case PIPE_CAP_OCCLUSION_QUERY:
 		return is_a3xx(screen) || is_a4xx(screen);
+	case PIPE_CAP_QUERY_TIME_ELAPSED:
+		/* only a4xx, requires new enough kernel so we know max_freq: */
+		return (screen->max_freq > 0) && is_a4xx(screen);
 
 	case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
 	case PIPE_CAP_MIN_TEXEL_OFFSET:
@@ -434,9 +436,12 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 		return 16;
 	case PIPE_SHADER_CAP_PREFERRED_IR:
 		return PIPE_SHADER_IR_TGSI;
+	case PIPE_SHADER_CAP_SUPPORTED_IRS:
+		return 0;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 		return 0;
 	}
 	debug_printf("unknown shader param %d\n", param);
@@ -533,6 +538,16 @@ fd_screen_create(struct fd_device *dev)
 		goto fail;
 	}
 	screen->device_id = val;
+
+	if (fd_pipe_get_param(screen->pipe, FD_MAX_FREQ, &val)) {
+		DBG("could not get gpu freq");
+		/* this limits what performance related queries are
+		 * supported but is not fatal
+		 */
+		screen->max_freq = 0;
+	} else {
+		screen->max_freq = val;
+	}
 
 	if (fd_pipe_get_param(screen->pipe, FD_GPU_ID, &val)) {
 		DBG("could not get gpu-id");

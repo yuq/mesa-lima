@@ -148,7 +148,7 @@ glsl_base_type
 glsl_get_sampler_result_type(const struct glsl_type *type)
 {
    assert(glsl_type_is_sampler(type) || glsl_type_is_image(type));
-   return (glsl_base_type)type->sampler_type;
+   return (glsl_base_type)type->sampled_type;
 }
 
 unsigned
@@ -315,6 +315,12 @@ glsl_sampler_type(enum glsl_sampler_dim dim, bool is_shadow, bool is_array,
 }
 
 const struct glsl_type *
+glsl_bare_sampler_type()
+{
+   return glsl_type::sampler_type;
+}
+
+const struct glsl_type *
 glsl_image_type(enum glsl_sampler_dim dim, bool is_array,
                 enum glsl_base_type base_type)
 {
@@ -331,6 +337,7 @@ glsl_function_type(const glsl_type *return_type,
 const glsl_type *
 glsl_transposed_type(const struct glsl_type *type)
 {
+   assert(glsl_type_is_matrix(type));
    return glsl_type::get_instance(type->base_type, type->matrix_columns,
                                   type->vector_elements);
 }

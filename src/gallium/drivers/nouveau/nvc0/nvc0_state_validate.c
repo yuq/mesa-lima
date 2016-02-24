@@ -3,7 +3,6 @@
 #include "util/u_math.h"
 
 #include "nvc0/nvc0_context.h"
-#include "nv50/nv50_defs.xml.h"
 
 #if 0
 static void
@@ -77,7 +76,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
     unsigned ms_mode = NVC0_3D_MULTISAMPLE_MODE_MS1;
     bool serialize = false;
 
-    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_FB);
+    nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_FB);
 
     BEGIN_NVC0(push, NVC0_3D(RT_CONTROL), 1);
     PUSH_DATA (push, (076543210 << 4) | fb->nr_cbufs);
@@ -142,7 +141,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
         res->status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
         /* only register for writing, otherwise we'd always serialize here */
-        BCTX_REFN(nvc0->bufctx_3d, FB, res, WR);
+        BCTX_REFN(nvc0->bufctx_3d, 3D_FB, res, WR);
     }
 
     if (fb->zsbuf) {
@@ -173,7 +172,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
         mt->base.status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
         mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
-        BCTX_REFN(nvc0->bufctx_3d, FB, &mt->base, WR);
+        BCTX_REFN(nvc0->bufctx_3d, 3D_FB, &mt->base, WR);
     } else {
         BEGIN_NVC0(push, NVC0_3D(ZETA_ENABLE), 1);
         PUSH_DATA (push, 0);
@@ -184,8 +183,8 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
     ms = 1 << ms_mode;
     BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
     PUSH_DATA (push, 1024);
-    PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (4 << 10));
-    PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (4 << 10));
+    PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (6 << 16) + (4 << 10));
+    PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (6 << 16) + (4 << 10));
     BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 2 * ms);
     PUSH_DATA (push, 256 + 128);
     for (i = 0; i < ms; i++) {
@@ -240,7 +239,7 @@ nvc0_validate_scissor(struct nvc0_context *nvc0)
    int i;
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
 
-   if (!(nvc0->dirty & NVC0_NEW_SCISSOR) &&
+   if (!(nvc0->dirty_3d & NVC0_NEW_3D_SCISSOR) &&
       nvc0->rast->pipe.scissor == nvc0->state.scissor)
       return;
 
@@ -318,8 +317,8 @@ nvc0_upload_uclip_planes(struct nvc0_context *nvc0, unsigned s)
 
    BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
    PUSH_DATA (push, 1024);
-   PUSH_DATAh(push, bo->offset + (5 << 16) + (s << 10));
-   PUSH_DATA (push, bo->offset + (5 << 16) + (s << 10));
+   PUSH_DATAh(push, bo->offset + (6 << 16) + (s << 10));
+   PUSH_DATA (push, bo->offset + (6 << 16) + (s << 10));
    BEGIN_1IC0(push, NVC0_3D(CB_POS), PIPE_MAX_CLIP_PLANES * 4 + 1);
    PUSH_DATA (push, 256);
    PUSH_DATAp(push, &nvc0->clip.ucp[0][0], PIPE_MAX_CLIP_PLANES * 4);
@@ -368,7 +367,7 @@ nvc0_validate_clip(struct nvc0_context *nvc0)
    if (clip_enable && vp->vp.num_ucps < PIPE_MAX_CLIP_PLANES)
       nvc0_check_program_ucps(nvc0, vp, clip_enable);
 
-   if (nvc0->dirty & (NVC0_NEW_CLIP | (NVC0_NEW_VERTPROG << stage)))
+   if (nvc0->dirty_3d & (NVC0_NEW_3D_CLIP | (NVC0_NEW_3D_VERTPROG << stage)))
       if (vp->vp.num_ucps > 0 && vp->vp.num_ucps <= PIPE_MAX_CLIP_PLANES)
          nvc0_upload_uclip_planes(nvc0, stage);
 
@@ -455,7 +454,7 @@ nvc0_constbufs_validate(struct nvc0_context *nvc0)
                BEGIN_NVC0(push, NVC0_3D(CB_BIND(s)), 1);
                PUSH_DATA (push, (i << 4) | 1);
 
-               BCTX_REFN(nvc0->bufctx_3d, CB(s, i), res, RD);
+               BCTX_REFN(nvc0->bufctx_3d, 3D_CB(s, i), res, RD);
 
                nvc0->cb_dirty = 1; /* Force cache flush for UBO. */
                res->cb_bindings[s] |= 1 << i;
@@ -468,6 +467,11 @@ nvc0_constbufs_validate(struct nvc0_context *nvc0)
          }
       }
    }
+
+   /* Invalidate all COMPUTE constbufs because they are aliased with 3D. */
+   nvc0->dirty_cp |= NVC0_NEW_CP_CONSTBUF;
+   nvc0->constbuf_dirty[5] |= nvc0->constbuf_valid[5];
+   nvc0->state.uniform_buffer_bound[5] = 0;
 }
 
 static void
@@ -479,8 +483,8 @@ nvc0_validate_buffers(struct nvc0_context *nvc0)
    for (s = 0; s < 5; s++) {
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
       PUSH_DATA (push, 1024);
-      PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (s << 10));
-      PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (s << 10));
+      PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (6 << 16) + (s << 10));
+      PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (6 << 16) + (s << 10));
       BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 4 * NVC0_MAX_BUFFERS);
       PUSH_DATA (push, 512);
       for (i = 0; i < NVC0_MAX_BUFFERS; i++) {
@@ -491,7 +495,7 @@ nvc0_validate_buffers(struct nvc0_context *nvc0)
             PUSH_DATAh(push, res->address + nvc0->buffers[s][i].buffer_offset);
             PUSH_DATA (push, nvc0->buffers[s][i].buffer_size);
             PUSH_DATA (push, 0);
-            BCTX_REFN(nvc0->bufctx_3d, BUF, res, RDWR);
+            BCTX_REFN(nvc0->bufctx_3d, 3D_BUF, res, RDWR);
          } else {
             PUSH_DATA (push, 0);
             PUSH_DATA (push, 0);
@@ -534,6 +538,25 @@ nvc0_validate_min_samples(struct nvc0_context *nvc0)
       samples |= NVC0_3D_SAMPLE_SHADING_ENABLE;
 
    IMMED_NVC0(push, NVC0_3D(SAMPLE_SHADING), samples);
+}
+
+static void
+nvc0_validate_driverconst(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_screen *screen = nvc0->screen;
+   int i;
+
+   for (i = 0; i < 5; ++i) {
+      BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
+      PUSH_DATA (push, 1024);
+      PUSH_DATAh(push, screen->uniform_bo->offset + (6 << 16) + (i << 10));
+      PUSH_DATA (push, screen->uniform_bo->offset + (6 << 16) + (i << 10));
+      BEGIN_NVC0(push, NVC0_3D(CB_BIND(i)), 1);
+      PUSH_DATA (push, (15 << 4) | 1);
+   }
+
+   nvc0->dirty_cp |= NVC0_NEW_CP_DRIVERCONST;
 }
 
 void
@@ -629,35 +652,37 @@ nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
    else
       ctx_to->state = ctx_to->screen->save_state;
 
-   ctx_to->dirty = ~0;
+   ctx_to->dirty_3d = ~0;
+   ctx_to->dirty_cp = ~0;
    ctx_to->viewports_dirty = ~0;
    ctx_to->scissors_dirty = ~0;
 
-   for (s = 0; s < 5; ++s) {
+   for (s = 0; s < 6; ++s) {
       ctx_to->samplers_dirty[s] = ~0;
       ctx_to->textures_dirty[s] = ~0;
       ctx_to->constbuf_dirty[s] = (1 << NVC0_MAX_PIPE_CONSTBUFS) - 1;
+      ctx_to->buffers_dirty[s]  = ~0;
    }
 
    /* Reset tfb as the shader that owns it may have been deleted. */
    ctx_to->state.tfb = NULL;
 
    if (!ctx_to->vertex)
-      ctx_to->dirty &= ~(NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS);
+      ctx_to->dirty_3d &= ~(NVC0_NEW_3D_VERTEX | NVC0_NEW_3D_ARRAYS);
    if (!ctx_to->idxbuf.buffer)
-      ctx_to->dirty &= ~NVC0_NEW_IDXBUF;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_IDXBUF;
 
    if (!ctx_to->vertprog)
-      ctx_to->dirty &= ~NVC0_NEW_VERTPROG;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_VERTPROG;
    if (!ctx_to->fragprog)
-      ctx_to->dirty &= ~NVC0_NEW_FRAGPROG;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_FRAGPROG;
 
    if (!ctx_to->blend)
-      ctx_to->dirty &= ~NVC0_NEW_BLEND;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_BLEND;
    if (!ctx_to->rast)
-      ctx_to->dirty &= ~(NVC0_NEW_RASTERIZER | NVC0_NEW_SCISSOR);
+      ctx_to->dirty_3d &= ~(NVC0_NEW_3D_RASTERIZER | NVC0_NEW_3D_SCISSOR);
    if (!ctx_to->zsa)
-      ctx_to->dirty &= ~NVC0_NEW_ZSA;
+      ctx_to->dirty_3d &= ~NVC0_NEW_3D_ZSA;
 
    ctx_to->screen->cur_ctx = ctx_to;
 }
@@ -666,40 +691,41 @@ static struct state_validate {
     void (*func)(struct nvc0_context *);
     uint32_t states;
 } validate_list[] = {
-    { nvc0_validate_fb,            NVC0_NEW_FRAMEBUFFER },
-    { nvc0_validate_blend,         NVC0_NEW_BLEND },
-    { nvc0_validate_zsa,           NVC0_NEW_ZSA },
-    { nvc0_validate_sample_mask,   NVC0_NEW_SAMPLE_MASK },
-    { nvc0_validate_rasterizer,    NVC0_NEW_RASTERIZER },
-    { nvc0_validate_blend_colour,  NVC0_NEW_BLEND_COLOUR },
-    { nvc0_validate_stencil_ref,   NVC0_NEW_STENCIL_REF },
-    { nvc0_validate_stipple,       NVC0_NEW_STIPPLE },
-    { nvc0_validate_scissor,       NVC0_NEW_SCISSOR | NVC0_NEW_RASTERIZER },
-    { nvc0_validate_viewport,      NVC0_NEW_VIEWPORT },
-    { nvc0_vertprog_validate,      NVC0_NEW_VERTPROG },
-    { nvc0_tctlprog_validate,      NVC0_NEW_TCTLPROG },
-    { nvc0_tevlprog_validate,      NVC0_NEW_TEVLPROG },
-    { nvc0_validate_tess_state,    NVC0_NEW_TESSFACTOR },
-    { nvc0_gmtyprog_validate,      NVC0_NEW_GMTYPROG },
-    { nvc0_fragprog_validate,      NVC0_NEW_FRAGPROG | NVC0_NEW_RASTERIZER },
-    { nvc0_validate_derived_1,     NVC0_NEW_FRAGPROG | NVC0_NEW_ZSA |
-                                   NVC0_NEW_RASTERIZER },
-    { nvc0_validate_derived_2,     NVC0_NEW_ZSA | NVC0_NEW_FRAMEBUFFER },
-    { nvc0_validate_derived_3,     NVC0_NEW_BLEND | NVC0_NEW_FRAMEBUFFER },
-    { nvc0_validate_clip,          NVC0_NEW_CLIP | NVC0_NEW_RASTERIZER |
-                                   NVC0_NEW_VERTPROG |
-                                   NVC0_NEW_TEVLPROG |
-                                   NVC0_NEW_GMTYPROG },
-    { nvc0_constbufs_validate,     NVC0_NEW_CONSTBUF },
-    { nvc0_validate_textures,      NVC0_NEW_TEXTURES },
-    { nvc0_validate_samplers,      NVC0_NEW_SAMPLERS },
-    { nve4_set_tex_handles,        NVC0_NEW_TEXTURES | NVC0_NEW_SAMPLERS },
-    { nvc0_vertex_arrays_validate, NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS },
-    { nvc0_validate_surfaces,      NVC0_NEW_SURFACES },
-    { nvc0_validate_buffers,       NVC0_NEW_BUFFERS },
-    { nvc0_idxbuf_validate,        NVC0_NEW_IDXBUF },
-    { nvc0_tfb_validate,           NVC0_NEW_TFB_TARGETS | NVC0_NEW_GMTYPROG },
-    { nvc0_validate_min_samples,   NVC0_NEW_MIN_SAMPLES },
+    { nvc0_validate_fb,            NVC0_NEW_3D_FRAMEBUFFER },
+    { nvc0_validate_blend,         NVC0_NEW_3D_BLEND },
+    { nvc0_validate_zsa,           NVC0_NEW_3D_ZSA },
+    { nvc0_validate_sample_mask,   NVC0_NEW_3D_SAMPLE_MASK },
+    { nvc0_validate_rasterizer,    NVC0_NEW_3D_RASTERIZER },
+    { nvc0_validate_blend_colour,  NVC0_NEW_3D_BLEND_COLOUR },
+    { nvc0_validate_stencil_ref,   NVC0_NEW_3D_STENCIL_REF },
+    { nvc0_validate_stipple,       NVC0_NEW_3D_STIPPLE },
+    { nvc0_validate_scissor,       NVC0_NEW_3D_SCISSOR | NVC0_NEW_3D_RASTERIZER },
+    { nvc0_validate_viewport,      NVC0_NEW_3D_VIEWPORT },
+    { nvc0_vertprog_validate,      NVC0_NEW_3D_VERTPROG },
+    { nvc0_tctlprog_validate,      NVC0_NEW_3D_TCTLPROG },
+    { nvc0_tevlprog_validate,      NVC0_NEW_3D_TEVLPROG },
+    { nvc0_validate_tess_state,    NVC0_NEW_3D_TESSFACTOR },
+    { nvc0_gmtyprog_validate,      NVC0_NEW_3D_GMTYPROG },
+    { nvc0_fragprog_validate,      NVC0_NEW_3D_FRAGPROG | NVC0_NEW_3D_RASTERIZER },
+    { nvc0_validate_derived_1,     NVC0_NEW_3D_FRAGPROG | NVC0_NEW_3D_ZSA |
+                                   NVC0_NEW_3D_RASTERIZER },
+    { nvc0_validate_derived_2,     NVC0_NEW_3D_ZSA | NVC0_NEW_3D_FRAMEBUFFER },
+    { nvc0_validate_derived_3,     NVC0_NEW_3D_BLEND | NVC0_NEW_3D_FRAMEBUFFER },
+    { nvc0_validate_clip,          NVC0_NEW_3D_CLIP | NVC0_NEW_3D_RASTERIZER |
+                                   NVC0_NEW_3D_VERTPROG |
+                                   NVC0_NEW_3D_TEVLPROG |
+                                   NVC0_NEW_3D_GMTYPROG },
+    { nvc0_constbufs_validate,     NVC0_NEW_3D_CONSTBUF },
+    { nvc0_validate_textures,      NVC0_NEW_3D_TEXTURES },
+    { nvc0_validate_samplers,      NVC0_NEW_3D_SAMPLERS },
+    { nve4_set_tex_handles,        NVC0_NEW_3D_TEXTURES | NVC0_NEW_3D_SAMPLERS },
+    { nvc0_vertex_arrays_validate, NVC0_NEW_3D_VERTEX | NVC0_NEW_3D_ARRAYS },
+    { nvc0_validate_surfaces,      NVC0_NEW_3D_SURFACES },
+    { nvc0_validate_buffers,       NVC0_NEW_3D_BUFFERS },
+    { nvc0_idxbuf_validate,        NVC0_NEW_3D_IDXBUF },
+    { nvc0_tfb_validate,           NVC0_NEW_3D_TFB_TARGETS | NVC0_NEW_3D_GMTYPROG },
+    { nvc0_validate_min_samples,   NVC0_NEW_3D_MIN_SAMPLES },
+    { nvc0_validate_driverconst,   NVC0_NEW_3D_DRIVERCONST },
 };
 
 bool
@@ -712,7 +738,7 @@ nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask)
    if (nvc0->screen->cur_ctx != nvc0)
       nvc0_switch_pipe_context(nvc0);
 
-   state_mask = nvc0->dirty & mask;
+   state_mask = nvc0->dirty_3d & mask;
 
    if (state_mask) {
       for (i = 0; i < ARRAY_SIZE(validate_list); ++i) {
@@ -721,7 +747,7 @@ nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask)
          if (state_mask & validate->states)
             validate->func(nvc0);
       }
-      nvc0->dirty &= ~state_mask;
+      nvc0->dirty_3d &= ~state_mask;
 
       nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, false);
    }

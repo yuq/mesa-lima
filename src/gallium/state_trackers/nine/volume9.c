@@ -106,7 +106,8 @@ NineVolume9_ctor( struct NineVolume9 *This,
                                                     pDesc->Format,
                                                     This->info.target,
                                                     This->info.nr_samples,
-                                                    This->info.bind, FALSE);
+                                                    This->info.bind, FALSE,
+                                                    pDesc->Pool == D3DPOOL_SCRATCH);
 
     if (This->info.format == PIPE_FORMAT_NONE)
         return D3DERR_DRIVERINTERNALERROR;
@@ -115,9 +116,6 @@ NineVolume9_ctor( struct NineVolume9 *This,
     This->stride = align(This->stride, 4);
     This->layer_stride = util_format_get_2d_size(This->info.format,
                                                  This->stride, pDesc->Height);
-
-    if (pDesc->Pool == D3DPOOL_SYSTEMMEM)
-        This->info.usage = PIPE_USAGE_STAGING;
 
     if (!This->resource) {
         hr = NineVolume9_AllocateData(This);
@@ -143,7 +141,7 @@ NineVolume9_dtor( struct NineVolume9 *This )
     NineUnknown_dtor(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolume9_GetContainer( struct NineVolume9 *This,
                           REFIID riid,
                           void **ppContainer )
@@ -174,7 +172,7 @@ NineVolume9_MarkContainerDirty( struct NineVolume9 *This )
     BASETEX_REGISTER_UPDATE(tex);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolume9_GetDesc( struct NineVolume9 *This,
                      D3DVOLUME_DESC *pDesc )
 {
@@ -214,7 +212,7 @@ NineVolume9_GetSystemMemPointer(struct NineVolume9 *This, int x, int y, int z)
     return This->data + (z * This->layer_stride + y * This->stride + x_offset);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolume9_LockBox( struct NineVolume9 *This,
                      D3DLOCKED_BOX *pLockedVolume,
                      const D3DBOX *pBox,
@@ -308,7 +306,7 @@ NineVolume9_LockBox( struct NineVolume9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolume9_UnlockBox( struct NineVolume9 *This )
 {
     DBG("This=%p lock_count=%u\n", This, This->lock_count);
@@ -443,7 +441,7 @@ NineVolume9_new( struct NineDevice9 *pDevice,
 
 /*** The boring stuff. TODO: Unify with Resource. ***/
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolume9_SetPrivateData( struct NineVolume9 *This,
                             REFGUID refguid,
                             const void *pData,
@@ -490,7 +488,7 @@ NineVolume9_SetPrivateData( struct NineVolume9 *This,
     return D3DERR_DRIVERINTERNALERROR;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolume9_GetPrivateData( struct NineVolume9 *This,
                             REFGUID refguid,
                             void *pData,
@@ -517,7 +515,7 @@ NineVolume9_GetPrivateData( struct NineVolume9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVolume9_FreePrivateData( struct NineVolume9 *This,
                              REFGUID refguid )
 {

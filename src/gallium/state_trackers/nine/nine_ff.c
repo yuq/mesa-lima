@@ -24,8 +24,6 @@
 #include "util/u_hash_table.h"
 #include "util/u_upload_mgr.h"
 
-#define NINE_TGSI_LAZY_DEVS 1
-
 #define DBG_CHANNEL DBG_FF
 
 #define NINE_FF_NUM_VS_CONST 256
@@ -319,15 +317,11 @@ ureg_normalize3(struct ureg_program *ureg,
                 struct ureg_dst dst, struct ureg_src src,
                 struct ureg_dst tmp)
 {
-#ifdef NINE_TGSI_LAZY_DEVS
     struct ureg_dst tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
 
     ureg_DP3(ureg, tmp_x, src, src);
     ureg_RSQ(ureg, tmp_x, _X(tmp));
     ureg_MUL(ureg, dst, src, _X(tmp));
-#else
-    ureg_NRM(ureg, dst, src);
-#endif
 }
 
 static void *
@@ -549,34 +543,22 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
      */
     if (key->vertexpointsize) {
         struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
-#ifdef NINE_TGSI_LAZY_DEVS
-        struct ureg_dst tmp_clamp = ureg_DECL_temporary(ureg);
-
-        ureg_MAX(ureg, tmp_clamp, vs->aPsz, _XXXX(cPsz1));
-        ureg_MIN(ureg, oPsz, ureg_src(tmp_clamp), _YYYY(cPsz1));
-        ureg_release_temporary(ureg, tmp_clamp);
-#else
-        ureg_CLAMP(ureg, oPsz, vs->aPsz, _XXXX(cPsz1), _YYYY(cPsz1));
-#endif
+        ureg_MAX(ureg, tmp_x, _XXXX(vs->aPsz), _XXXX(cPsz1));
+        ureg_MIN(ureg, oPsz, _X(tmp), _YYYY(cPsz1));
     } else if (key->pointscale) {
         struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
         struct ureg_src cPsz2 = ureg_DECL_constant(ureg, 27);
 
         ureg_DP3(ureg, tmp_x, ureg_src(r[1]), ureg_src(r[1]));
-        ureg_SQRT(ureg, tmp_y, _X(tmp));
+        ureg_RSQ(ureg, tmp_y, _X(tmp));
+        ureg_MUL(ureg, tmp_y, _Y(tmp), _X(tmp));
+        ureg_CMP(ureg, tmp_y, ureg_negate(_Y(tmp)), _Y(tmp), ureg_imm1f(ureg, 0.0f));
         ureg_MAD(ureg, tmp_x, _Y(tmp), _YYYY(cPsz2), _XXXX(cPsz2));
         ureg_MAD(ureg, tmp_x, _Y(tmp), _X(tmp), _WWWW(cPsz1));
         ureg_RCP(ureg, tmp_x, ureg_src(tmp));
         ureg_MUL(ureg, tmp_x, ureg_src(tmp), _ZZZZ(cPsz1));
-#ifdef NINE_TGSI_LAZY_DEVS
-        struct ureg_dst tmp_clamp = ureg_DECL_temporary(ureg);
-
-        ureg_MAX(ureg, tmp_clamp, _X(tmp), _XXXX(cPsz1));
-        ureg_MIN(ureg, oPsz, ureg_src(tmp_clamp), _YYYY(cPsz1));
-        ureg_release_temporary(ureg, tmp_clamp);
-#else
-        ureg_CLAMP(ureg, oPsz, _X(tmp), _XXXX(cPsz1), _YYYY(cPsz1));
-#endif
+        ureg_MAX(ureg, tmp_x, _X(tmp), _XXXX(cPsz1));
+        ureg_MIN(ureg, oPsz, _X(tmp), _YYYY(cPsz1));
     }
 
     for (i = 0; i < 8; ++i) {

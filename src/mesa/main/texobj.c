@@ -171,16 +171,16 @@ _mesa_get_current_tex_object(struct gl_context *ctx, GLenum target)
          return texUnit->CurrentTex[TEXTURE_3D_INDEX];
       case GL_PROXY_TEXTURE_3D:
          return ctx->Texture.ProxyTex[TEXTURE_3D_INDEX];
-      case GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB:
-      case GL_TEXTURE_CUBE_MAP_NEGATIVE_X_ARB:
-      case GL_TEXTURE_CUBE_MAP_POSITIVE_Y_ARB:
-      case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_ARB:
-      case GL_TEXTURE_CUBE_MAP_POSITIVE_Z_ARB:
-      case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB:
-      case GL_TEXTURE_CUBE_MAP_ARB:
+      case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+      case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+      case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+      case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+      case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+      case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
+      case GL_TEXTURE_CUBE_MAP:
          return ctx->Extensions.ARB_texture_cube_map
                 ? texUnit->CurrentTex[TEXTURE_CUBE_INDEX] : NULL;
-      case GL_PROXY_TEXTURE_CUBE_MAP_ARB:
+      case GL_PROXY_TEXTURE_CUBE_MAP:
          return ctx->Extensions.ARB_texture_cube_map
                 ? ctx->Texture.ProxyTex[TEXTURE_CUBE_INDEX] : NULL;
       case GL_TEXTURE_CUBE_MAP_ARRAY:
@@ -239,7 +239,7 @@ _mesa_get_current_tex_object(struct gl_context *ctx, GLenum target)
  * \param shared the shared GL state structure to contain the texture object
  * \param name integer name for the texture object
  * \param target either GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D,
- * GL_TEXTURE_CUBE_MAP_ARB or GL_TEXTURE_RECTANGLE_NV.  zero is ok for the sake
+ * GL_TEXTURE_CUBE_MAP or GL_TEXTURE_RECTANGLE_NV.  zero is ok for the sake
  * of GenTextures()
  *
  * \return pointer to new texture object.
@@ -270,7 +270,7 @@ _mesa_initialize_texture_object( struct gl_context *ctx,
           target == GL_TEXTURE_1D ||
           target == GL_TEXTURE_2D ||
           target == GL_TEXTURE_3D ||
-          target == GL_TEXTURE_CUBE_MAP_ARB ||
+          target == GL_TEXTURE_CUBE_MAP ||
           target == GL_TEXTURE_RECTANGLE_NV ||
           target == GL_TEXTURE_1D_ARRAY_EXT ||
           target == GL_TEXTURE_2D_ARRAY_EXT ||
@@ -513,7 +513,7 @@ valid_texture_object(const struct gl_texture_object *tex)
    case GL_TEXTURE_1D:
    case GL_TEXTURE_2D:
    case GL_TEXTURE_3D:
-   case GL_TEXTURE_CUBE_MAP_ARB:
+   case GL_TEXTURE_CUBE_MAP:
    case GL_TEXTURE_RECTANGLE_NV:
    case GL_TEXTURE_1D_ARRAY_EXT:
    case GL_TEXTURE_2D_ARRAY_EXT:
@@ -725,7 +725,7 @@ _mesa_test_texobj_completeness( const struct gl_context *ctx,
    case GL_TEXTURE_3D:
       maxLevels = ctx->Const.Max3DTextureLevels;
       break;
-   case GL_TEXTURE_CUBE_MAP_ARB:
+   case GL_TEXTURE_CUBE_MAP:
    case GL_TEXTURE_CUBE_MAP_ARRAY:
       maxLevels = ctx->Const.MaxCubeTextureLevels;
       break;
@@ -768,7 +768,7 @@ _mesa_test_texobj_completeness( const struct gl_context *ctx,
       return;
    }
 
-   if (t->Target == GL_TEXTURE_CUBE_MAP_ARB) {
+   if (t->Target == GL_TEXTURE_CUBE_MAP) {
       /* Make sure that all six cube map level 0 images are the same size and
        * format.
        * Note:  we know that the image's width==height (we enforce that
@@ -1036,12 +1036,7 @@ _mesa_get_fallback_texture(struct gl_context *ctx, gl_texture_index tex)
 
       /* need a loop here just for cube maps */
       for (face = 0; face < numFaces; face++) {
-         GLenum faceTarget;
-
-         if (target == GL_TEXTURE_CUBE_MAP)
-            faceTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X + face;
-         else
-            faceTarget = target;
+         const GLenum faceTarget = _mesa_cube_face_target(target, face);
 
          /* initialize level[0] texture image */
          texImage = _mesa_get_tex_image(ctx, texObj, faceTarget, 0);

@@ -312,7 +312,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         break;
                 }
 
-                bool handled_qinst_cond = true;
+                bool handled_qinst_cond = false;
 
                 switch (qinst->op) {
                 case QOP_RCP:

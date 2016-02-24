@@ -448,8 +448,16 @@ shader_image_load_store(const _mesa_glsl_parse_state *state)
 static bool
 shader_image_atomic(const _mesa_glsl_parse_state *state)
 {
-   return (state->is_version(420, 0) ||
-           state->ARB_shader_image_load_store_enable);
+   return (state->is_version(420, 320) ||
+           state->ARB_shader_image_load_store_enable ||
+           state->OES_shader_image_atomic_enable);
+}
+
+static bool
+shader_image_atomic_exchange_float(const _mesa_glsl_parse_state *state)
+{
+   return (state->is_version(450, 320) ||
+           state->OES_shader_image_atomic_enable);
 }
 
 static bool
@@ -576,17 +584,6 @@ private:
    typedef ir_function_signature *(builtin_builder::*image_prototype_ctr)(const glsl_type *image_type,
                                                                           unsigned num_arguments,
                                                                           unsigned flags);
-
-   enum image_function_flags {
-      IMAGE_FUNCTION_EMIT_STUB = (1 << 0),
-      IMAGE_FUNCTION_RETURNS_VOID = (1 << 1),
-      IMAGE_FUNCTION_HAS_VECTOR_DATA_TYPE = (1 << 2),
-      IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE = (1 << 3),
-      IMAGE_FUNCTION_READ_ONLY = (1 << 4),
-      IMAGE_FUNCTION_WRITE_ONLY = (1 << 5),
-      IMAGE_FUNCTION_AVAIL_ATOMIC = (1 << 6),
-      IMAGE_FUNCTION_MS_ONLY = (1 << 7),
-   };
 
    /**
     * Create a new image built-in function for all known image types.
@@ -834,6 +831,18 @@ private:
 #undef BA1
 #undef BA2
    /** @} */
+};
+
+enum image_function_flags {
+   IMAGE_FUNCTION_EMIT_STUB = (1 << 0),
+   IMAGE_FUNCTION_RETURNS_VOID = (1 << 1),
+   IMAGE_FUNCTION_HAS_VECTOR_DATA_TYPE = (1 << 2),
+   IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE = (1 << 3),
+   IMAGE_FUNCTION_READ_ONLY = (1 << 4),
+   IMAGE_FUNCTION_WRITE_ONLY = (1 << 5),
+   IMAGE_FUNCTION_AVAIL_ATOMIC = (1 << 6),
+   IMAGE_FUNCTION_MS_ONLY = (1 << 7),
+   IMAGE_FUNCTION_AVAIL_ATOMIC_EXCHANGE = (1 << 8)
 };
 
 } /* anonymous namespace */
@@ -2921,7 +2930,7 @@ builtin_builder::add_image_function(const char *name,
    ir_function *f = new(mem_ctx) ir_function(name);
 
    for (unsigned i = 0; i < ARRAY_SIZE(types); ++i) {
-      if ((types[i]->sampler_type != GLSL_TYPE_FLOAT ||
+      if ((types[i]->sampled_type != GLSL_TYPE_FLOAT ||
            (flags & IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE)) &&
           (types[i]->sampler_dimensionality == GLSL_SAMPLER_DIM_MS ||
            !(flags & IMAGE_FUNCTION_MS_ONLY)))
@@ -2981,7 +2990,9 @@ builtin_builder::add_image_functions(bool glsl)
    add_image_function((glsl ? "imageAtomicExchange" :
                        "__intrinsic_image_atomic_exchange"),
                       "__intrinsic_image_atomic_exchange",
-                      &builtin_builder::_image_prototype, 1, atom_flags);
+                      &builtin_builder::_image_prototype, 1,
+                      (flags | IMAGE_FUNCTION_AVAIL_ATOMIC_EXCHANGE |
+                       IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE));
 
    add_image_function((glsl ? "imageAtomicCompSwap" :
                        "__intrinsic_image_atomic_comp_swap"),
@@ -5232,13 +5243,28 @@ builtin_builder::_mid3(const glsl_type *type)
    return sig;
 }
 
+static builtin_available_predicate
+get_image_available_predicate(const glsl_type *type, unsigned flags)
+{
+   if ((flags & IMAGE_FUNCTION_AVAIL_ATOMIC_EXCHANGE) &&
+       type->sampled_type == GLSL_TYPE_FLOAT)
+      return shader_image_atomic_exchange_float;
+
+   else if (flags & (IMAGE_FUNCTION_AVAIL_ATOMIC_EXCHANGE |
+                     IMAGE_FUNCTION_AVAIL_ATOMIC))
+      return shader_image_atomic;
+
+   else
+      return shader_image_load_store;
+}
+
 ir_function_signature *
 builtin_builder::_image_prototype(const glsl_type *image_type,
                                   unsigned num_arguments,
                                   unsigned flags)
 {
    const glsl_type *data_type = glsl_type::get_instance(
-      image_type->sampler_type,
+      image_type->sampled_type,
       (flags & IMAGE_FUNCTION_HAS_VECTOR_DATA_TYPE ? 4 : 1),
       1);
    const glsl_type *ret_type = (flags & IMAGE_FUNCTION_RETURNS_VOID ?
@@ -5249,10 +5275,9 @@ builtin_builder::_image_prototype(const glsl_type *image_type,
    ir_variable *coord = in_var(
       glsl_type::ivec(image_type->coordinate_components()), "coord");
 
-   const builtin_available_predicate avail =
-      (flags & IMAGE_FUNCTION_AVAIL_ATOMIC ? shader_image_atomic :
-       shader_image_load_store);
-   ir_function_signature *sig = new_sig(ret_type, avail, 2, image, coord);
+   ir_function_signature *sig = new_sig(
+      ret_type, get_image_available_predicate(image_type, flags),
+      2, image, coord);
 
    /* Sample index for multisample images. */
    if (image_type->sampler_dimensionality == GLSL_SAMPLER_DIM_MS)

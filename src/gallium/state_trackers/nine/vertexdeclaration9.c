@@ -233,7 +233,7 @@ NineVertexDeclaration9_dtor( struct NineVertexDeclaration9 *This )
     NineUnknown_dtor(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVertexDeclaration9_GetDeclaration( struct NineVertexDeclaration9 *This,
                                        D3DVERTEXELEMENT9 *pElement,
                                        UINT *pNumElements )

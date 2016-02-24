@@ -86,7 +86,7 @@ NineStateBlock9_dtor( struct NineStateBlock9 *This )
  */
 static void
 nine_state_copy_common(struct nine_state *dst,
-                       const struct nine_state *src,
+                       struct nine_state *src,
                        struct nine_state *mask, /* aliases either src or dst */
                        const boolean apply,
                        struct nine_range_pool *pool)
@@ -267,17 +267,41 @@ nine_state_copy_common(struct nine_state *dst,
         }
     }
     if (mask->changed.group & NINE_STATE_FF_LIGHTING) {
-        if (dst->ff.num_lights < mask->ff.num_lights) {
+        unsigned num_lights = MAX2(dst->ff.num_lights, src->ff.num_lights);
+        /* Can happen in Capture() if device state has created new lights after
+         * the stateblock was created.
+         * Can happen in Apply() if the stateblock had recorded the creation of
+         * new lights. */
+        if (dst->ff.num_lights < num_lights) {
             dst->ff.light = REALLOC(dst->ff.light,
                                     dst->ff.num_lights * sizeof(D3DLIGHT9),
-                                    mask->ff.num_lights * sizeof(D3DLIGHT9));
-            for (i = dst->ff.num_lights; i < mask->ff.num_lights; ++i) {
-                memset(&dst->ff.light[i], 0, sizeof(D3DLIGHT9));
-                dst->ff.light[i].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
+                                    num_lights * sizeof(D3DLIGHT9));
+            memset(&dst->ff.light[dst->ff.num_lights], 0, (num_lights - dst->ff.num_lights) * sizeof(D3DLIGHT9));
+            /* if mask == dst, a Type of 0 will trigger
+             * "dst->ff.light[i] = src->ff.light[i];" later,
+             * which is what we want in that case. */
+            if (mask != dst) {
+                for (i = src->ff.num_lights; i < num_lights; ++i)
+                    src->ff.light[i].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
             }
-            dst->ff.num_lights = mask->ff.num_lights;
+            dst->ff.num_lights = num_lights;
         }
-        for (i = 0; i < mask->ff.num_lights; ++i)
+        /* Can happen in Capture() if the stateblock had recorded the creation of
+         * new lights.
+         * Can happen in Apply() if device state has created new lights after
+         * the stateblock was created. */
+        if (src->ff.num_lights < num_lights) {
+            src->ff.light = REALLOC(src->ff.light,
+                                    src->ff.num_lights * sizeof(D3DLIGHT9),
+                                    num_lights * sizeof(D3DLIGHT9));
+            memset(&src->ff.light[src->ff.num_lights], 0, (num_lights - src->ff.num_lights) * sizeof(D3DLIGHT9));
+            for (i = src->ff.num_lights; i < num_lights; ++i)
+                src->ff.light[i].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
+            src->ff.num_lights = num_lights;
+        }
+        /* Note: mask is either src or dst, so at this point src, dst and mask
+         * have num_lights lights. */
+        for (i = 0; i < num_lights; ++i)
             if (mask->ff.light[i].Type != NINED3DLIGHT_INVALID)
                 dst->ff.light[i] = src->ff.light[i];
 
@@ -446,7 +470,7 @@ nine_state_copy_common_all(struct nine_state *dst,
 /* Capture those bits of current device state that have been changed between
  * BeginStateBlock and EndStateBlock.
  */
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineStateBlock9_Capture( struct NineStateBlock9 *This )
 {
     struct nine_state *dst = &This->state;
@@ -476,7 +500,7 @@ NineStateBlock9_Capture( struct NineStateBlock9 *This )
 }
 
 /* Set state managed by this StateBlock as current device state. */
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineStateBlock9_Apply( struct NineStateBlock9 *This )
 {
     struct nine_state *dst = &This->base.device->state;

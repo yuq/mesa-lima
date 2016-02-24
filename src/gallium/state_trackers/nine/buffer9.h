@@ -25,6 +25,9 @@
 #define _NINE_BUFFER9_H_
 
 #include "resource9.h"
+#include "pipe/p_context.h"
+#include "pipe/p_state.h"
+#include "util/list.h"
 
 struct pipe_screen;
 struct pipe_context;
@@ -39,6 +42,15 @@ struct NineBuffer9
     struct pipe_transfer **maps;
     int nmaps, maxmaps;
     UINT size;
+
+    /* Specific to managed buffers */
+    struct {
+        void *data;
+        boolean dirty;
+        struct pipe_box dirty_box;
+        struct list_head list; /* for update_buffers */
+        struct list_head list2; /* for managed_buffers */
+    } managed;
 };
 static inline struct NineBuffer9 *
 NineBuffer9( void *data )
@@ -60,14 +72,30 @@ NineBuffer9_dtor( struct NineBuffer9 *This );
 struct pipe_resource *
 NineBuffer9_GetResource( struct NineBuffer9 *This );
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineBuffer9_Lock( struct NineBuffer9 *This,
                         UINT OffsetToLock,
                         UINT SizeToLock,
                         void **ppbData,
                         DWORD Flags );
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineBuffer9_Unlock( struct NineBuffer9 *This );
+
+static inline void
+NineBuffer9_Upload( struct NineBuffer9 *This )
+{
+    struct pipe_context *pipe = This->pipe;
+
+    assert(This->base.pool == D3DPOOL_MANAGED && This->managed.dirty);
+    pipe->transfer_inline_write(pipe, This->base.resource, 0, 0,
+                                &This->managed.dirty_box,
+                                (char *)This->managed.data + This->managed.dirty_box.x,
+                                This->size, This->size);
+    This->managed.dirty = FALSE;
+}
+
+void
+NineBuffer9_SetDirty( struct NineBuffer9 *This );
 
 #endif /* _NINE_BUFFER9_H_ */

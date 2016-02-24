@@ -208,7 +208,11 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       if (!tex_obj || !tex_obj->mt)
 	 continue;
       intel_miptree_all_slices_resolve_depth(brw, tex_obj->mt);
-      intel_miptree_resolve_color(brw, tex_obj->mt);
+      /* Sampling engine understands lossless compression and resolving
+       * those surfaces should be skipped for performance reasons.
+       */
+      intel_miptree_resolve_color(brw, tex_obj->mt,
+                                  INTEL_MIPTREE_IGNORE_CCS_E);
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
    }
 
@@ -223,7 +227,13 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
             tex_obj = intel_texture_object(u->TexObj);
 
             if (tex_obj && tex_obj->mt) {
-               intel_miptree_resolve_color(brw, tex_obj->mt);
+               /* Access to images is implemented using indirect messages
+                * against data port. Normal render target write understands
+                * lossless compression but unfortunately the typed/untyped
+                * read/write interface doesn't. Therefore the compressed
+                * surfaces need to be resolved prior to accessing them.
+                */
+               intel_miptree_resolve_color(brw, tex_obj->mt, 0);
                brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
             }
          }
@@ -252,7 +262,11 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
              _mesa_get_srgb_format_linear(mt->format) == mt->format)
                continue;
 
-         intel_miptree_resolve_color(brw, mt);
+         /* Lossless compression is not supported for SRGB formats, it
+          * should be impossible to get here with such surfaces.
+          */
+         assert(!intel_miptree_is_lossless_compressed(brw, mt));
+         intel_miptree_resolve_color(brw, mt, 0);
          brw_render_cache_set_check_flush(brw, mt->bo);
       }
    }
@@ -710,6 +724,7 @@ brw_initialize_cs_context_constants(struct brw_context *brw, unsigned max_thread
    ctx->Const.MaxComputeWorkGroupSize[1] = max_invocations;
    ctx->Const.MaxComputeWorkGroupSize[2] = max_invocations;
    ctx->Const.MaxComputeWorkGroupInvocations = max_invocations;
+   ctx->Const.MaxComputeSharedMemorySize = 64 * 1024;
 }
 
 /**
@@ -1227,7 +1242,7 @@ intel_resolve_for_dri2_flush(struct brw_context *brw,
       if (rb == NULL || rb->mt == NULL)
          continue;
       if (rb->mt->num_samples <= 1)
-         intel_miptree_resolve_color(brw, rb->mt);
+         intel_miptree_resolve_color(brw, rb->mt, 0);
       else
          intel_renderbuffer_downsample(brw, rb);
    }

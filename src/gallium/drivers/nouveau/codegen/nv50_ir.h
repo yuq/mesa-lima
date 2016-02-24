@@ -232,6 +232,8 @@ enum operation
 #define NV50_IR_SUBOP_SHFL_UP   1
 #define NV50_IR_SUBOP_SHFL_DOWN 2
 #define NV50_IR_SUBOP_SHFL_BFLY 3
+#define NV50_IR_SUBOP_LOAD_LOCKED    1
+#define NV50_IR_SUBOP_STORE_UNLOCKED 2
 #define NV50_IR_SUBOP_MADSP_SD     0xffff
 // Yes, we could represent those with DataType.
 // Or put the type into operation and have a couple 1000 values in that enum.

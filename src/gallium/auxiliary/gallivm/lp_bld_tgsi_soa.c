@@ -2592,7 +2592,10 @@ emit_fetch_texels( struct lp_build_tgsi_soa_context *bld,
       explicit_lod = lp_build_emit_fetch(&bld->bld_base, inst, 0, 3);
       lod_property = lp_build_lod_property(&bld->bld_base, inst, 0);
    }
-   /* XXX: for real msaa support, the w component would be the sample index. */
+   /*
+    * XXX: for real msaa support, the w component (or src2.x for sample_i_ms)
+    * would be the sample index.
+    */
 
    for (i = 0; i < dims; i++) {
       coords[i] = lp_build_emit_fetch(&bld->bld_base, inst, 0, i);
@@ -2742,6 +2745,7 @@ near_end_of_shader(struct lp_build_tgsi_soa_context *bld,
          opcode == TGSI_OPCODE_SAMPLE_C_LZ ||
          opcode == TGSI_OPCODE_SAMPLE_D ||
          opcode == TGSI_OPCODE_SAMPLE_I ||
+         opcode == TGSI_OPCODE_SAMPLE_I_MS ||
          opcode == TGSI_OPCODE_SAMPLE_L ||
          opcode == TGSI_OPCODE_SVIEWINFO ||
          opcode == TGSI_OPCODE_CAL ||
@@ -3989,6 +3993,7 @@ lp_build_tgsi_soa(struct gallivm_state *gallivm,
    bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE_C_LZ].emit = sample_c_lz_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE_D].emit = sample_d_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE_I].emit = sample_i_emit;
+   bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE_I_MS].emit = sample_i_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE_L].emit = sample_l_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_SVIEWINFO].emit = sviewinfo_emit;
 

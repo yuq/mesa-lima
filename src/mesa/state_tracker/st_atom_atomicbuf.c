@@ -58,9 +58,11 @@ st_bind_atomics(struct st_context *st,
          st_buffer_object(binding->BufferObject);
       struct pipe_shader_buffer sb = { 0 };
 
-      sb.buffer = st_obj->buffer;
-      sb.buffer_offset = binding->Offset;
-      sb.buffer_size = st_obj->buffer->width0 - binding->Offset;
+      if (st_obj && st_obj->buffer) {
+         sb.buffer = st_obj->buffer;
+         sb.buffer_offset = binding->Offset;
+         sb.buffer_size = st_obj->buffer->width0 - binding->Offset;
+      }
 
       st->pipe->set_shader_buffers(st->pipe, shader_type,
                                    atomic->Binding, 1, &sb);
@@ -155,4 +157,22 @@ const struct st_tracked_state st_bind_tes_atomics = {
       ST_NEW_TESSEVAL_PROGRAM | ST_NEW_ATOMIC_BUFFER,
    },
    bind_tes_atomics
+};
+
+static void
+bind_cs_atomics(struct st_context *st)
+{
+   struct gl_shader_program *prog =
+      st->ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+
+   st_bind_atomics(st, prog, PIPE_SHADER_COMPUTE);
+}
+
+const struct st_tracked_state st_bind_cs_atomics = {
+   "st_bind_cs_atomics",
+   {
+      0,
+      ST_NEW_COMPUTE_PROGRAM | ST_NEW_ATOMIC_BUFFER,
+   },
+   bind_cs_atomics
 };

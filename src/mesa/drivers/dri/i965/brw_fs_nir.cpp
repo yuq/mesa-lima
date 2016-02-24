@@ -1015,28 +1015,14 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_fmin:
    case nir_op_imin:
    case nir_op_umin:
-      if (devinfo->gen >= 6) {
-         inst = bld.emit(BRW_OPCODE_SEL, result, op[0], op[1]);
-         inst->conditional_mod = BRW_CONDITIONAL_L;
-      } else {
-         bld.CMP(bld.null_reg_d(), op[0], op[1], BRW_CONDITIONAL_L);
-         inst = bld.SEL(result, op[0], op[1]);
-         inst->predicate = BRW_PREDICATE_NORMAL;
-      }
+      inst = bld.emit_minmax(result, op[0], op[1], BRW_CONDITIONAL_L);
       inst->saturate = instr->dest.saturate;
       break;
 
    case nir_op_fmax:
    case nir_op_imax:
    case nir_op_umax:
-      if (devinfo->gen >= 6) {
-         inst = bld.emit(BRW_OPCODE_SEL, result, op[0], op[1]);
-         inst->conditional_mod = BRW_CONDITIONAL_GE;
-      } else {
-         bld.CMP(bld.null_reg_d(), op[0], op[1], BRW_CONDITIONAL_GE);
-         inst = bld.SEL(result, op[0], op[1]);
-         inst->predicate = BRW_PREDICATE_NORMAL;
-      }
+      inst = bld.emit_minmax(result, op[0], op[1], BRW_CONDITIONAL_GE);
       inst->saturate = instr->dest.saturate;
       break;
 
@@ -1318,7 +1304,7 @@ fs_visitor::emit_percomp(const fs_builder &bld, const fs_inst &inst,
 static brw_reg_type
 get_image_base_type(const glsl_type *type)
 {
-   switch ((glsl_base_type)type->sampler_type) {
+   switch ((glsl_base_type)type->sampled_type) {
    case GLSL_TYPE_UINT:
       return BRW_REGISTER_TYPE_UD;
    case GLSL_TYPE_INT:

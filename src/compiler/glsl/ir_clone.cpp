@@ -366,7 +366,6 @@ ir_constant::clone(void *mem_ctx, struct hash_table *ht) const
       return c;
    }
 
-   case GLSL_TYPE_FUNCTION:
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_IMAGE:
    case GLSL_TYPE_ATOMIC_UINT:
@@ -374,6 +373,7 @@ ir_constant::clone(void *mem_ctx, struct hash_table *ht) const
    case GLSL_TYPE_ERROR:
    case GLSL_TYPE_SUBROUTINE:
    case GLSL_TYPE_INTERFACE:
+   case GLSL_TYPE_FUNCTION:
       assert(!"Should not get here.");
       break;
    }

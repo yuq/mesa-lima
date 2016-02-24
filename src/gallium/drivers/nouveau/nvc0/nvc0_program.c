@@ -544,6 +544,9 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
          info->io.texBindBase = NVE4_CP_INPUT_TEX(0);
          info->io.suInfoBase = NVE4_CP_INPUT_SUF(0);
          info->prop.cp.gridInfoBase = NVE4_CP_INPUT_GRID_INFO(0);
+      } else {
+         info->io.resInfoCBSlot = 15;
+         info->io.suInfoBase = 512;
       }
       info->io.msInfoCBSlot = 0;
       info->io.msInfoBase = NVE4_CP_INPUT_MS_OFFSETS;

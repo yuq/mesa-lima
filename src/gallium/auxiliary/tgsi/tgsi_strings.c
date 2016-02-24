@@ -57,6 +57,7 @@ static const char *tgsi_file_names[] =
    "IMAGE",
    "SVIEW",
    "BUFFER",
+   "MEMORY",
 };
 
 const char *tgsi_semantic_names[TGSI_SEMANTIC_COUNT] =

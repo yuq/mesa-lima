@@ -590,6 +590,16 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
    }
    else {
       /* non-indexed drawing */
+      if (svga->state.hw_draw.ib_format != SVGA3D_FORMAT_INVALID) {
+         /* Unbind previously bound index buffer */
+         ret = SVGA3D_vgpu10_SetIndexBuffer(svga->swc, NULL,
+                                            SVGA3D_FORMAT_INVALID, 0);
+         if (ret != PIPE_OK)
+            return ret;
+         svga->state.hw_draw.ib_format = SVGA3D_FORMAT_INVALID;
+         svga->state.hw_draw.ib = NULL;
+      }
+
       if (instance_count > 1) {
          ret = SVGA3D_vgpu10_DrawInstanced(svga->swc,
                                            vcount,

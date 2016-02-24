@@ -85,7 +85,7 @@ NineIndexBuffer9_GetResource( struct NineIndexBuffer9 *This )
     return NineBuffer9_GetResource(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineIndexBuffer9_Lock( struct NineIndexBuffer9 *This,
                        UINT OffsetToLock,
                        UINT SizeToLock,
@@ -95,13 +95,13 @@ NineIndexBuffer9_Lock( struct NineIndexBuffer9 *This,
     return NineBuffer9_Lock(&This->base, OffsetToLock, SizeToLock, ppbData, Flags);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineIndexBuffer9_Unlock( struct NineIndexBuffer9 *This )
 {
     return NineBuffer9_Unlock(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineIndexBuffer9_GetDesc( struct NineIndexBuffer9 *This,
                           D3DINDEXBUFFER_DESC *pDesc )
 {

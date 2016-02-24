@@ -2096,6 +2096,9 @@ _check_for_reserved_macro_name (glcpp_parser_t *parser, YYLTYPE *loc,
 	if (strncmp(identifier, "GL_", 3) == 0) {
 		glcpp_error (loc, parser, "Macro names starting with \"GL_\" are reserved.\n");
 	}
+	if (strcmp(identifier, "defined") == 0) {
+		glcpp_error (loc, parser, "\"defined\" cannot be used as a macro name");
+	}
 }
 
 static int
@@ -2388,6 +2391,9 @@ _glcpp_parser_handle_version_declaration(glcpp_parser_t *parser, intmax_t versio
                  add_builtin_define(parser, "GL_EXT_blend_func_extended", 1);
 
               if (version >= 310) {
+                 if (extensions->ARB_shader_image_load_store)
+                    add_builtin_define(parser, "GL_OES_shader_image_atomic", 1);
+
                  if (extensions->OES_geometry_shader) {
                     add_builtin_define(parser, "GL_OES_geometry_point_size", 1);
                     add_builtin_define(parser, "GL_OES_geometry_shader", 1);

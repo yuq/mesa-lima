@@ -649,15 +649,15 @@ private:
              current_var->data.image_write_only ? GL_WRITE_ONLY :
                 GL_READ_WRITE);
 
-         for (unsigned j = 0; j < MAX2(1, uniform->array_elements); ++j)
-            prog->_LinkedShaders[shader_type]->
-               ImageAccess[this->next_image + j] = access;
+         const unsigned first = this->next_image;
 
          /* Increment the image index by 1 for non-arrays and by the
           * number of array elements for arrays.
           */
          this->next_image += MAX2(1, uniform->array_elements);
 
+         for (unsigned i = first; i < MIN2(next_image, MAX_IMAGE_UNIFORMS); i++)
+            prog->_LinkedShaders[shader_type]->ImageAccess[i] = access;
       }
    }
 
@@ -1038,9 +1038,43 @@ assign_hidden_uniform_slot_id(const char *name, unsigned hidden_id,
    uniform_size->map->put(hidden_uniform_start + hidden_id, name);
 }
 
+/**
+ * Search through the list of empty blocks to find one that fits the current
+ * uniform.
+ */
+static int
+find_empty_block(struct gl_shader_program *prog,
+                 struct gl_uniform_storage *uniform)
+{
+   const unsigned entries = MAX2(1, uniform->array_elements);
+
+   foreach_list_typed(struct empty_uniform_block, block, link,
+                      &prog->EmptyUniformLocations) {
+      /* Found a block with enough slots to fit the uniform */
+      if (block->slots == entries) {
+         unsigned start = block->start;
+         exec_node_remove(&block->link);
+         ralloc_free(block);
+
+         return start;
+      /* Found a block with more slots than needed. It can still be used. */
+      } else if (block->slots > entries) {
+         unsigned start = block->start;
+         block->start += entries;
+         block->slots -= entries;
+
+         return start;
+      }
+   }
+
+   return -1;
+}
+
 void
 link_assign_uniform_locations(struct gl_shader_program *prog,
-                              unsigned int boolean_true)
+                              unsigned int boolean_true,
+                              unsigned int num_explicit_uniform_locs,
+                              unsigned int max_uniform_locs)
 {
    ralloc_free(prog->UniformStorage);
    prog->UniformStorage = NULL;
@@ -1131,6 +1165,9 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
 
    parcel_out_uniform_storage parcel(prog, prog->UniformHash, uniforms, data);
 
+   unsigned total_entries = num_explicit_uniform_locs;
+   unsigned empty_locs = prog->NumUniformRemapTable - num_explicit_uniform_locs;
+
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)
 	 continue;
@@ -1194,21 +1231,44 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       /* how many new entries for this uniform? */
       const unsigned entries = MAX2(1, uniforms[i].array_elements);
 
-      /* resize remap table to fit new entries */
-      prog->UniformRemapTable =
-         reralloc(prog,
-                  prog->UniformRemapTable,
-                  gl_uniform_storage *,
-                  prog->NumUniformRemapTable + entries);
+      /* Find UniformRemapTable for empty blocks where we can fit this uniform. */
+      int chosen_location = -1;
+
+      if (empty_locs)
+         chosen_location = find_empty_block(prog, &uniforms[i]);
+
+      /* Add new entries to the total amount of entries. */
+      total_entries += entries;
+
+      if (chosen_location != -1) {
+         empty_locs -= entries;
+      } else {
+         chosen_location = prog->NumUniformRemapTable;
+
+         /* resize remap table to fit new entries */
+         prog->UniformRemapTable =
+            reralloc(prog,
+                     prog->UniformRemapTable,
+                     gl_uniform_storage *,
+                     prog->NumUniformRemapTable + entries);
+         prog->NumUniformRemapTable += entries;
+      }
 
       /* set pointers for this uniform */
       for (unsigned j = 0; j < entries; j++)
-         prog->UniformRemapTable[prog->NumUniformRemapTable+j] = &uniforms[i];
+         prog->UniformRemapTable[chosen_location + j] = &uniforms[i];
 
       /* set the base location in remap table for the uniform */
-      uniforms[i].remap_location = prog->NumUniformRemapTable;
+      uniforms[i].remap_location = chosen_location;
+   }
 
-      prog->NumUniformRemapTable += entries;
+   /* Verify that total amount of entries for explicit and implicit locations
+    * is less than MAX_UNIFORM_LOCATIONS.
+    */
+
+   if (total_entries > max_uniform_locs) {
+      linker_error(prog, "count of uniform locations > MAX_UNIFORM_LOCATIONS"
+                   "(%u > %u)", total_entries, max_uniform_locs);
    }
 
    /* Reserve all the explicit locations of the active subroutine uniforms. */

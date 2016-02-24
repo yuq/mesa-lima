@@ -97,7 +97,8 @@ NineSurface9_ctor( struct NineSurface9 *This,
                                                          This->base.info.target,
                                                          This->base.info.nr_samples,
                                                          This->base.info.bind,
-                                                         FALSE);
+                                                         FALSE,
+                                                         pDesc->Pool == D3DPOOL_SCRATCH);
 
     if (pDesc->Usage & D3DUSAGE_RENDERTARGET)
         This->base.info.bind |= PIPE_BIND_RENDER_TARGET;
@@ -116,13 +117,10 @@ NineSurface9_ctor( struct NineSurface9 *This,
             return E_OUTOFMEMORY;
     }
 
-    if (pDesc->Pool == D3DPOOL_SYSTEMMEM) {
-        This->base.info.usage = PIPE_USAGE_STAGING;
-        assert(!pResource);
-    } else {
-        if (pResource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
-            pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
-    }
+    assert(pDesc->Pool != D3DPOOL_SYSTEMMEM || !pResource);
+
+    if (pResource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
+        pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
 
     hr = NineResource9_ctor(&This->base, pParams, pResource, FALSE, D3DRTYPE_SURFACE,
                             pDesc->Pool, pDesc->Usage);
@@ -227,7 +225,7 @@ NineSurface9_Dump( struct NineSurface9 *This )
 }
 #endif /* DEBUG */
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineSurface9_GetContainer( struct NineSurface9 *This,
                            REFIID riid,
                            void **ppContainer )
@@ -260,7 +258,7 @@ NineSurface9_MarkContainerDirty( struct NineSurface9 *This )
     }
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineSurface9_GetDesc( struct NineSurface9 *This,
                       D3DSURFACE_DESC *pDesc )
 {
@@ -315,7 +313,7 @@ NineSurface9_GetSystemMemPointer(struct NineSurface9 *This, int x, int y)
     return This->data + (y * This->stride + x_offset);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineSurface9_LockRect( struct NineSurface9 *This,
                        D3DLOCKED_RECT *pLockedRect,
                        const RECT *pRect,
@@ -426,7 +424,7 @@ NineSurface9_LockRect( struct NineSurface9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineSurface9_UnlockRect( struct NineSurface9 *This )
 {
     DBG("This=%p lock_count=%u\n", This, This->lock_count);
@@ -439,14 +437,14 @@ NineSurface9_UnlockRect( struct NineSurface9 *This )
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineSurface9_GetDC( struct NineSurface9 *This,
                     HDC *phdc )
 {
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineSurface9_ReleaseDC( struct NineSurface9 *This,
                         HDC hdc )
 {

@@ -153,6 +153,7 @@ struct nv50_context {
    uint32_t textures_coherent[3];
    struct nv50_tsc_entry *samplers[3][PIPE_MAX_SAMPLERS];
    unsigned num_samplers[3];
+   bool seamless_cube_map;
 
    uint8_t num_so_targets;
    uint8_t so_targets_dirty;
@@ -322,7 +323,6 @@ nv98_video_buffer_create(struct pipe_context *pipe,
 
 /* nv50_compute.c */
 void
-nv50_launch_grid(struct pipe_context *, const uint *, const uint *,
-                 uint32_t, const void *);
+nv50_launch_grid(struct pipe_context *, const struct pipe_grid_info *);
 
 #endif

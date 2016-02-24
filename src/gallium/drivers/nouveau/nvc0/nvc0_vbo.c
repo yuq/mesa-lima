@@ -80,7 +80,7 @@ nvc0_vertex_state_create(struct pipe_context *pipe,
         enum pipe_format fmt = ve->src_format;
 
         so->element[i].pipe = elements[i];
-        so->element[i].state = nvc0_format_table[fmt].vtx;
+        so->element[i].state = nvc0_vertex_format[fmt].vtx;
 
         if (!so->element[i].state) {
             switch (util_format_get_nr_components(fmt)) {
@@ -93,7 +93,7 @@ nvc0_vertex_state_create(struct pipe_context *pipe,
                 FREE(so);
                 return NULL;
             }
-            so->element[i].state = nvc0_format_table[fmt].vtx;
+            so->element[i].state = nvc0_vertex_format[fmt].vtx;
             so->need_conversion = true;
             pipe_debug_message(&nouveau_context(pipe)->debug, FALLBACK,
                                "Converting vertex element %d, no hw format %s",
@@ -222,7 +222,7 @@ static inline void
 nvc0_release_user_vbufs(struct nvc0_context *nvc0)
 {
    if (nvc0->vbo_user) {
-      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX_TMP);
+      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_VTX_TMP);
       nouveau_scratch_done(&nvc0->base);
    }
 }
@@ -257,7 +257,7 @@ nvc0_update_user_vbufs(struct nvc0_context *nvc0)
          address[b] = nouveau_scratch_data(&nvc0->base, vb->user_buffer,
                                            base, size, &bo);
          if (bo)
-            BCTX_REFN_bo(nvc0->bufctx_3d, VTX_TMP, bo_flags, bo);
+            BCTX_REFN_bo(nvc0->bufctx_3d, 3D_VTX_TMP, bo_flags, bo);
 
          NOUVEAU_DRV_STAT(&nvc0->screen->base, user_buffer_upload_bytes, size);
       }
@@ -292,7 +292,7 @@ nvc0_update_user_vbufs_shared(struct nvc0_context *nvc0)
       address = nouveau_scratch_data(&nvc0->base, nvc0->vtxbuf[b].user_buffer,
                                      base, size, &bo);
       if (bo)
-         BCTX_REFN_bo(nvc0->bufctx_3d, VTX_TMP, bo_flags, bo);
+         BCTX_REFN_bo(nvc0->bufctx_3d, 3D_VTX_TMP, bo_flags, bo);
 
       BEGIN_1IC0(push, NVC0_3D(MACRO_VERTEX_ARRAY_SELECT), 5);
       PUSH_DATA (push, b);
@@ -368,7 +368,7 @@ nvc0_validate_vertex_buffers(struct nvc0_context *nvc0)
 
       if (!(refd & (1 << b))) {
          refd |= 1 << b;
-         BCTX_REFN(nvc0->bufctx_3d, VTX, res, RD);
+         BCTX_REFN(nvc0->bufctx_3d, 3D_VTX, res, RD);
       }
    }
    if (nvc0->vbo_user)
@@ -412,7 +412,7 @@ nvc0_validate_vertex_buffers_shared(struct nvc0_context *nvc0)
       PUSH_DATAh(push, buf->address + limit);
       PUSH_DATA (push, buf->address + limit);
 
-      BCTX_REFN(nvc0->bufctx_3d, VTX, buf, RD);
+      BCTX_REFN(nvc0->bufctx_3d, 3D_VTX, buf, RD);
    }
    /* If there are more elements than buffers, we might not have unset
     * fetching on the later elements.
@@ -435,7 +435,7 @@ nvc0_vertex_arrays_validate(struct nvc0_context *nvc0)
    uint8_t vbo_mode;
    bool update_vertex;
 
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX);
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_VTX);
 
    assert(vertex);
    if (unlikely(vertex->need_conversion) ||
@@ -446,7 +446,7 @@ nvc0_vertex_arrays_validate(struct nvc0_context *nvc0)
    }
    const_vbos = vbo_mode ? 0 : nvc0->constant_vbos;
 
-   update_vertex = (nvc0->dirty & NVC0_NEW_VERTEX) ||
+   update_vertex = (nvc0->dirty_3d & NVC0_NEW_3D_VERTEX) ||
       (const_vbos != nvc0->state.constant_vbos) ||
       (vbo_mode != nvc0->state.vbo_mode);
 
@@ -537,7 +537,7 @@ nvc0_idxbuf_validate(struct nvc0_context *nvc0)
    PUSH_DATA (push, buf->address + buf->base.width0 - 1);
    PUSH_DATA (push, nvc0->idxbuf.index_size >> 1);
 
-   BCTX_REFN(nvc0->bufctx_3d, IDX, buf, RD);
+   BCTX_REFN(nvc0->bufctx_3d, 3D_IDX, buf, RD);
 }
 
 #define NVC0_PRIM_GL_CASE(n) \
@@ -833,8 +833,10 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
    /* Queue things up to let the macros write params to the driver constbuf */
    BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
    PUSH_DATA (push, 512);
-   PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
-   PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+   PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (6 << 16) + (0 << 9));
+   PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (6 << 16) + (0 << 9));
+   BEGIN_NVC0(push, NVC0_3D(CB_POS), 1);
+   PUSH_DATA (push, 256 + 128);
 
    if (info->indexed) {
       assert(nvc0->idxbuf.buffer);
@@ -947,12 +949,12 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       info->indexed && (nvc0->vb_elt_limit >= (info->count * 2));
 
    /* Check whether we want to switch vertex-submission mode. */
-   if (nvc0->vbo_user && !(nvc0->dirty & (NVC0_NEW_ARRAYS | NVC0_NEW_VERTEX))) {
+   if (nvc0->vbo_user && !(nvc0->dirty_3d & (NVC0_NEW_3D_ARRAYS | NVC0_NEW_3D_VERTEX))) {
       if (nvc0->vbo_push_hint != !!nvc0->state.vbo_mode)
          if (nvc0->state.vbo_mode != 3)
-            nvc0->dirty |= NVC0_NEW_ARRAYS;
+            nvc0->dirty_3d |= NVC0_NEW_3D_ARRAYS;
 
-      if (!(nvc0->dirty & NVC0_NEW_ARRAYS) && nvc0->state.vbo_mode == 0) {
+      if (!(nvc0->dirty_3d & NVC0_NEW_3D_ARRAYS) && nvc0->state.vbo_mode == 0) {
          if (nvc0->vertex->shared_slots)
             nvc0_update_user_vbufs_shared(nvc0);
          else
@@ -973,8 +975,8 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       PUSH_SPACE(push, 9);
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
       PUSH_DATA (push, 512);
-      PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
-      PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (5 << 16) + (0 << 9));
+      PUSH_DATAh(push, nvc0->screen->uniform_bo->offset + (6 << 16) + (0 << 9));
+      PUSH_DATA (push, nvc0->screen->uniform_bo->offset + (6 << 16) + (0 << 9));
       if (!info->indirect) {
          BEGIN_1IC0(push, NVC0_3D(CB_POS), 1 + 3);
          PUSH_DATA (push, 256 + 128);
@@ -982,6 +984,14 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
          PUSH_DATA (push, info->start_instance);
          PUSH_DATA (push, info->drawid);
       }
+   }
+
+   if (nvc0->screen->base.class_3d < NVE4_3D_CLASS &&
+       nvc0->seamless_cube_map != nvc0->state.seamless_cube_map) {
+      nvc0->state.seamless_cube_map = nvc0->seamless_cube_map;
+      PUSH_SPACE(push, 1);
+      IMMED_NVC0(push, NVC0_3D(TEX_MISC),
+                 nvc0->seamless_cube_map ? NVC0_3D_TEX_MISC_SEAMLESS_CUBE_MAP : 0);
    }
 
    push->kick_notify = nvc0_draw_vbo_kick_notify;

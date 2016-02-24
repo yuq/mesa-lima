@@ -68,7 +68,7 @@ NineVertexBuffer9_GetResource( struct NineVertexBuffer9 *This )
     return NineBuffer9_GetResource(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVertexBuffer9_Lock( struct NineVertexBuffer9 *This,
                        UINT OffsetToLock,
                        UINT SizeToLock,
@@ -78,13 +78,13 @@ NineVertexBuffer9_Lock( struct NineVertexBuffer9 *This,
     return NineBuffer9_Lock(&This->base, OffsetToLock, SizeToLock, ppbData, Flags);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVertexBuffer9_Unlock( struct NineVertexBuffer9 *This )
 {
     return NineBuffer9_Unlock(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineVertexBuffer9_GetDesc( struct NineVertexBuffer9 *This,
                            D3DVERTEXBUFFER_DESC *pDesc )
 {

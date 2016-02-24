@@ -280,6 +280,8 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 /* si_state_shader.c */
 bool si_update_shaders(struct si_context *sctx);
 void si_init_shader_functions(struct si_context *sctx);
+bool si_init_shader_cache(struct si_screen *sscreen);
+void si_destroy_shader_cache(struct si_screen *sscreen);
 
 /* si_state_draw.c */
 void si_emit_cache_flush(struct si_context *sctx, struct r600_atom *atom);

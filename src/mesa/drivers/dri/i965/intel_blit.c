@@ -317,8 +317,8 @@ intel_miptree_blit(struct brw_context *brw,
     */
    intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_slice);
    intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_slice);
-   intel_miptree_resolve_color(brw, src_mt);
-   intel_miptree_resolve_color(brw, dst_mt);
+   intel_miptree_resolve_color(brw, src_mt, 0);
+   intel_miptree_resolve_color(brw, dst_mt, 0);
 
    if (src_flip)
       src_y = minify(src_mt->physical_height0, src_level - src_mt->first_level) - src_y - height;

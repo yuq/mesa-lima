@@ -36,6 +36,7 @@
 #include "nvc0/nvc0_screen.h"
 
 #include "nvc0/mme/com9097.mme.h"
+#include "nvc0/mme/com90c0.mme.h"
 
 static boolean
 nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
@@ -61,7 +62,8 @@ nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
                  PIPE_BIND_TRANSFER_WRITE |
                  PIPE_BIND_SHARED);
 
-   return (nvc0_format_table[format].usage & bindings) == bindings;
+   return (( nvc0_format_table[format].usage |
+            nvc0_vertex_format[format].usage) & bindings) == bindings;
 }
 
 static int
@@ -196,6 +198,8 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
       return (class_3d >= NVE4_3D_CLASS) ? 1 : 0;
    case PIPE_CAP_COMPUTE:
+      if (debug_get_bool_option("NVF0_COMPUTE", false))
+         return 1;
       return (class_3d <= NVE4_3D_CLASS) ? 1 : 0;
    case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
       return nouveau_screen(pscreen)->vram_domain & NOUVEAU_BO_VRAM ? 1 : 0;
@@ -262,8 +266,9 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
          return 0;
       break;
    case PIPE_SHADER_COMPUTE:
-      if (class_3d > NVE4_3D_CLASS)
-         return 0;
+      if (!debug_get_bool_option("NVF0_COMPUTE", false))
+         if (class_3d > NVE4_3D_CLASS)
+            return 0;
       break;
    default:
       return 0;
@@ -272,6 +277,10 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    switch (param) {
    case PIPE_SHADER_CAP_PREFERRED_IR:
       return PIPE_SHADER_IR_TGSI;
+   case PIPE_SHADER_CAP_SUPPORTED_IRS:
+      if (class_3d >= NVE4_3D_CLASS)
+         return 0;
+      return 1 << PIPE_SHADER_IR_TGSI;
    case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
    case PIPE_SHADER_CAP_MAX_ALU_INSTRUCTIONS:
    case PIPE_SHADER_CAP_MAX_TEX_INSTRUCTIONS:
@@ -336,6 +345,8 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
       return 16; /* XXX not sure if more are really safe */
    case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
       return 32;
+   case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
+      return 0;
    default:
       NOUVEAU_ERR("unknown PIPE_SHADER_CAP %d\n", param);
       return 0;
@@ -598,6 +609,9 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
    case 0xf0:
    case 0x100:
    case 0x110:
+      if (debug_get_bool_option("NVF0_COMPUTE", false))
+         return nve4_screen_compute_setup(screen, screen->base.pushbuf);
+   case 0x120:
       return 0;
    default:
       return -1;
@@ -660,6 +674,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    case 0xf0:
    case 0x100:
    case 0x110:
+   case 0x120:
       break;
    default:
       return NULL;
@@ -728,6 +743,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, screen->nvsw->handle);
 
    switch (dev->chipset & ~0xf) {
+   case 0x120:
    case 0x110:
    case 0x100:
    case 0xf0:
@@ -779,6 +795,9 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, screen->fence.bo->offset + 16);
 
    switch (dev->chipset & ~0xf) {
+   case 0x120:
+      obj_class = GM200_3D_CLASS;
+      break;
    case 0x110:
       obj_class = GM107_3D_CLASS;
       break;
@@ -860,8 +879,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    BEGIN_NVC0(push, NVC0_3D(SHADE_MODEL), 1);
    PUSH_DATA (push, NVC0_3D_SHADE_MODEL_SMOOTH);
    if (screen->eng3d->oclass < NVE4_3D_CLASS) {
-      BEGIN_NVC0(push, NVC0_3D(TEX_MISC), 1);
-      PUSH_DATA (push, NVC0_3D_TEX_MISC_SEAMLESS_CUBE_MAP);
+      IMMED_NVC0(push, NVC0_3D(TEX_MISC), 0);
    } else {
       BEGIN_NVC0(push, NVE4_3D(TEX_CB_INDEX), 1);
       PUSH_DATA (push, 15);
@@ -887,7 +905,7 @@ nvc0_screen_create(struct nouveau_device *dev)
     */
    nouveau_heap_init(&screen->text_heap, 0, (1 << 20) - 0x100);
 
-   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 12, 6 << 16, NULL,
+   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 12, 7 << 16, NULL,
                         &screen->uniform_bo);
    if (ret)
       goto fail;
@@ -899,8 +917,8 @@ nvc0_screen_create(struct nouveau_device *dev)
       /* auxiliary constants (6 user clip planes, base instance id) */
       BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
       PUSH_DATA (push, 1024);
-      PUSH_DATAh(push, screen->uniform_bo->offset + (5 << 16) + (i << 10));
-      PUSH_DATA (push, screen->uniform_bo->offset + (5 << 16) + (i << 10));
+      PUSH_DATAh(push, screen->uniform_bo->offset + (6 << 16) + (i << 10));
+      PUSH_DATA (push, screen->uniform_bo->offset + (6 << 16) + (i << 10));
       BEGIN_NVC0(push, NVC0_3D(CB_BIND(i)), 1);
       PUSH_DATA (push, (15 << 4) | 1);
       if (screen->eng3d->oclass >= NVE4_3D_CLASS) {
@@ -920,8 +938,8 @@ nvc0_screen_create(struct nouveau_device *dev)
    /* return { 0.0, 0.0, 0.0, 0.0 } for out-of-bounds vtxbuf access */
    BEGIN_NVC0(push, NVC0_3D(CB_SIZE), 3);
    PUSH_DATA (push, 256);
-   PUSH_DATAh(push, screen->uniform_bo->offset + (5 << 16) + (6 << 10));
-   PUSH_DATA (push, screen->uniform_bo->offset + (5 << 16) + (6 << 10));
+   PUSH_DATAh(push, screen->uniform_bo->offset + (6 << 16) + (6 << 10));
+   PUSH_DATA (push, screen->uniform_bo->offset + (6 << 16) + (6 << 10));
    BEGIN_1IC0(push, NVC0_3D(CB_POS), 5);
    PUSH_DATA (push, 0);
    PUSH_DATAf(push, 0.0f);
@@ -929,8 +947,8 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATAf(push, 0.0f);
    PUSH_DATAf(push, 0.0f);
    BEGIN_NVC0(push, NVC0_3D(VERTEX_RUNOUT_ADDRESS_HIGH), 2);
-   PUSH_DATAh(push, screen->uniform_bo->offset + (5 << 16) + (6 << 10));
-   PUSH_DATA (push, screen->uniform_bo->offset + (5 << 16) + (6 << 10));
+   PUSH_DATAh(push, screen->uniform_bo->offset + (6 << 16) + (6 << 10));
+   PUSH_DATA (push, screen->uniform_bo->offset + (6 << 16) + (6 << 10));
 
    if (screen->base.drm->version >= 0x01000101) {
       ret = nouveau_getparam(dev, NOUVEAU_GETPARAM_GRAPH_UNITS, &value);
@@ -988,6 +1006,14 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATAh(push, screen->txc->offset);
    PUSH_DATA (push, screen->txc->offset);
    PUSH_DATA (push, NVC0_TIC_MAX_ENTRIES - 1);
+   if (screen->eng3d->oclass >= GM107_3D_CLASS) {
+      screen->tic.maxwell = true;
+      if (screen->eng3d->oclass == GM107_3D_CLASS) {
+         screen->tic.maxwell =
+            debug_get_bool_option("NOUVEAU_MAXWELL_TIC", true);
+         IMMED_NVC0(push, SUBC_3D(0x0f10), screen->tic.maxwell);
+      }
+   }
 
    BEGIN_NVC0(push, NVC0_3D(TSC_ADDRESS_HIGH), 3);
    PUSH_DATAh(push, screen->txc->offset + 65536);
@@ -1051,6 +1077,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    MK_MACRO(NVC0_3D_MACRO_DRAW_ARRAYS_INDIRECT_COUNT, mme9097_draw_arrays_indirect_count);
    MK_MACRO(NVC0_3D_MACRO_DRAW_ELEMENTS_INDIRECT_COUNT, mme9097_draw_elts_indirect_count);
    MK_MACRO(NVC0_3D_MACRO_QUERY_BUFFER_WRITE, mme9097_query_buffer_write);
+   MK_MACRO(NVC0_CP_MACRO_LAUNCH_GRID_INDIRECT, mme90c0_launch_grid_indirect);
 
    BEGIN_NVC0(push, NVC0_3D(RASTERIZE_ENABLE), 1);
    PUSH_DATA (push, 1);

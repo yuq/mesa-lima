@@ -193,6 +193,7 @@ qir_is_raw_mov(struct qinst *inst)
         return ((inst->op == QOP_MOV ||
                  inst->op == QOP_FMOV ||
                  inst->op == QOP_MMOV) &&
+                inst->cond == QPU_COND_ALWAYS &&
                 !inst->dst.pack &&
                 !inst->src[0].pack);
 }

@@ -575,7 +575,7 @@ void
 qir_schedule_instructions(struct vc4_compile *c)
 {
         void *mem_ctx = ralloc_context(NULL);
-        struct schedule_state state = { 0 };
+        struct schedule_state state = { { 0 } };
 
         if (debug) {
                 fprintf(stderr, "Pre-schedule instructions\n");

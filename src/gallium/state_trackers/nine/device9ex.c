@@ -62,7 +62,7 @@ NineDevice9Ex_dtor( struct NineDevice9Ex *This )
     NineDevice9_dtor(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_SetConvolutionMonoKernel( struct NineDevice9Ex *This,
                                         UINT width,
                                         UINT height,
@@ -72,7 +72,7 @@ NineDevice9Ex_SetConvolutionMonoKernel( struct NineDevice9Ex *This,
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_ComposeRects( struct NineDevice9Ex *This,
                             IDirect3DSurface9 *pSrc,
                             IDirect3DSurface9 *pDst,
@@ -86,7 +86,7 @@ NineDevice9Ex_ComposeRects( struct NineDevice9Ex *This,
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_PresentEx( struct NineDevice9Ex *This,
                          const RECT *pSourceRect,
                          const RECT *pDestRect,
@@ -111,28 +111,28 @@ NineDevice9Ex_PresentEx( struct NineDevice9Ex *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_GetGPUThreadPriority( struct NineDevice9Ex *This,
                                     INT *pPriority )
 {
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_SetGPUThreadPriority( struct NineDevice9Ex *This,
                                     INT Priority )
 {
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_WaitForVBlank( struct NineDevice9Ex *This,
                              UINT iSwapChain )
 {
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_CheckResourceResidency( struct NineDevice9Ex *This,
                                       IDirect3DResource9 **pResourceArray,
                                       UINT32 NumResources )
@@ -140,21 +140,21 @@ NineDevice9Ex_CheckResourceResidency( struct NineDevice9Ex *This,
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_SetMaximumFrameLatency( struct NineDevice9Ex *This,
                                       UINT MaxLatency )
 {
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_GetMaximumFrameLatency( struct NineDevice9Ex *This,
                                       UINT *pMaxLatency )
 {
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_CheckDeviceState( struct NineDevice9Ex *This,
                                 HWND hDestinationWindow )
 {
@@ -173,7 +173,7 @@ NineDevice9Ex_CheckDeviceState( struct NineDevice9Ex *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_CreateRenderTargetEx( struct NineDevice9Ex *This,
                                     UINT Width,
                                     UINT Height,
@@ -188,7 +188,7 @@ NineDevice9Ex_CreateRenderTargetEx( struct NineDevice9Ex *This,
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_CreateOffscreenPlainSurfaceEx( struct NineDevice9Ex *This,
                                              UINT Width,
                                              UINT Height,
@@ -201,7 +201,7 @@ NineDevice9Ex_CreateOffscreenPlainSurfaceEx( struct NineDevice9Ex *This,
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_CreateDepthStencilSurfaceEx( struct NineDevice9Ex *This,
                                            UINT Width,
                                            UINT Height,
@@ -216,7 +216,7 @@ NineDevice9Ex_CreateDepthStencilSurfaceEx( struct NineDevice9Ex *This,
     STUB(D3DERR_INVALIDCALL);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_ResetEx( struct NineDevice9Ex *This,
                        D3DPRESENT_PARAMETERS *pPresentationParameters,
                        D3DDISPLAYMODEEX *pFullscreenDisplayMode )
@@ -241,7 +241,7 @@ NineDevice9Ex_ResetEx( struct NineDevice9Ex *This,
     return hr;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_Reset( struct NineDevice9Ex *This,
                      D3DPRESENT_PARAMETERS *pPresentationParameters )
 {
@@ -267,7 +267,7 @@ NineDevice9Ex_Reset( struct NineDevice9Ex *This,
     return hr;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_GetDisplayModeEx( struct NineDevice9Ex *This,
                                 UINT iSwapChain,
                                 D3DDISPLAYMODEEX *pMode,
@@ -284,7 +284,7 @@ NineDevice9Ex_GetDisplayModeEx( struct NineDevice9Ex *This,
     return NineSwapChain9Ex_GetDisplayModeEx(swapchain, pMode, pRotation);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineDevice9Ex_TestCooperativeLevel( struct NineDevice9Ex *This )
 {
     return D3D_OK;

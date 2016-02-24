@@ -1442,7 +1442,7 @@ ir_texture::set_sampler(ir_dereference *sampler, const glsl_type *type)
       assert(sampler->type->base_type == GLSL_TYPE_SAMPLER);
       assert(sampler->type->sampler_dimensionality == GLSL_SAMPLER_DIM_MS);
    } else {
-      assert(sampler->type->sampler_type == (int) type->base_type);
+      assert(sampler->type->sampled_type == (int) type->base_type);
       if (sampler->type->sampler_shadow)
 	 assert(type->vector_elements == 4 || type->vector_elements == 1);
       else
@@ -1694,21 +1694,6 @@ interpolation_string(unsigned interpolation)
 
    assert(!"Should not get here.");
    return "";
-}
-
-
-glsl_interp_qualifier
-ir_variable::determine_interpolation_mode(bool flat_shade)
-{
-   if (this->data.interpolation != INTERP_QUALIFIER_NONE)
-      return (glsl_interp_qualifier) this->data.interpolation;
-   int location = this->data.location;
-   bool is_gl_Color =
-      location == VARYING_SLOT_COL0 || location == VARYING_SLOT_COL1;
-   if (flat_shade && is_gl_Color)
-      return INTERP_QUALIFIER_FLAT;
-   else
-      return INTERP_QUALIFIER_SMOOTH;
 }
 
 const char *const ir_variable::warn_extension_table[] = {

@@ -455,13 +455,13 @@ descriptor=[
 
 # GL_ARB_compute_shader / GLES 3.1
   [ "MAX_COMPUTE_WORK_GROUP_INVOCATIONS", "CONTEXT_INT(Const.MaxComputeWorkGroupInvocations), extra_ARB_compute_shader_es31" ],
-  [ "MAX_COMPUTE_UNIFORM_BLOCKS", "CONST(MAX_COMPUTE_UNIFORM_BLOCKS), extra_ARB_compute_shader_es31" ],
-  [ "MAX_COMPUTE_TEXTURE_IMAGE_UNITS", "CONST(MAX_COMPUTE_TEXTURE_IMAGE_UNITS), extra_ARB_compute_shader_es31" ],
-  [ "MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS", "CONST(MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS), extra_ARB_compute_shader_es31" ],
-  [ "MAX_COMPUTE_ATOMIC_COUNTERS", "CONST(MAX_COMPUTE_ATOMIC_COUNTERS), extra_ARB_compute_shader_es31" ],
-  [ "MAX_COMPUTE_SHARED_MEMORY_SIZE", "CONST(MAX_COMPUTE_SHARED_MEMORY_SIZE), extra_ARB_compute_shader_es31" ],
-  [ "MAX_COMPUTE_UNIFORM_COMPONENTS", "CONST(MAX_COMPUTE_UNIFORM_COMPONENTS), extra_ARB_compute_shader_es31" ],
-  [ "MAX_COMPUTE_IMAGE_UNIFORMS", "CONST(MAX_COMPUTE_IMAGE_UNIFORMS), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_UNIFORM_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_COMPUTE].MaxUniformBlocks), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_TEXTURE_IMAGE_UNITS", "CONTEXT_INT(Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS", "CONTEXT_INT(Const.Program[MESA_SHADER_COMPUTE].MaxAtomicBuffers), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_ATOMIC_COUNTERS", "CONTEXT_INT(Const.Program[MESA_SHADER_COMPUTE].MaxAtomicCounters), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_SHARED_MEMORY_SIZE", "CONTEXT_INT(Const.MaxComputeSharedMemorySize), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_UNIFORM_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_COMPUTE].MaxUniformComponents), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_COMPUTE].MaxImageUniforms), extra_ARB_compute_shader_es31" ],
   [ "DISPATCH_INDIRECT_BUFFER_BINDING", "LOC_CUSTOM, TYPE_INT, 0, extra_ARB_compute_shader_es31" ],
   [ "MAX_COMBINED_COMPUTE_UNIFORM_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_COMPUTE].MaxCombinedUniformComponents), extra_ARB_compute_shader_es31" ],
 

@@ -2729,6 +2729,7 @@ enum brw_wm_barycentric_interp_mode {
 # define GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE	(1 << 8)
 # define GEN7_PS_DUAL_SOURCE_BLEND_ENABLE		(1 << 7)
 # define GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE		(1 << 6)
+# define GEN9_PS_RENDER_TARGET_RESOLVE_FULL             (3 << 6)
 # define HSW_PS_UAV_ACCESS_ENABLE			(1 << 5)
 # define GEN7_PS_POSOFFSET_NONE				(0 << 3)
 # define GEN7_PS_POSOFFSET_CENTROID			(2 << 3)
@@ -2939,6 +2940,7 @@ enum brw_wm_barycentric_interp_mode {
 #define GPGPU_WALKER                            0x7105
 /* GEN7 DW0 */
 # define GEN7_GPGPU_INDIRECT_PARAMETER_ENABLE   (1 << 10)
+# define GEN7_GPGPU_PREDICATE_ENABLE            (1 << 8)
 /* GEN8+ DW2 */
 # define GPGPU_WALKER_INDIRECT_LENGTH_SHIFT     0
 # define GPGPU_WALKER_INDIRECT_LENGTH_MASK      INTEL_MASK(15, 0)

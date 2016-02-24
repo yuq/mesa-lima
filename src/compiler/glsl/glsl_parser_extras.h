@@ -422,6 +422,11 @@ struct _mesa_glsl_parse_state {
       unsigned MaxAtomicCounterBufferSize;
 
       /* ARB_compute_shader */
+      unsigned MaxComputeAtomicCounterBuffers;
+      unsigned MaxComputeAtomicCounters;
+      unsigned MaxComputeImageUniforms;
+      unsigned MaxComputeTextureImageUnits;
+      unsigned MaxComputeUniformComponents;
       unsigned MaxComputeWorkGroupCount[3];
       unsigned MaxComputeWorkGroupSize[3];
 
@@ -588,6 +593,8 @@ struct _mesa_glsl_parse_state {
    bool OES_geometry_point_size_warn;
    bool OES_geometry_shader_enable;
    bool OES_geometry_shader_warn;
+   bool OES_shader_image_atomic_enable;
+   bool OES_shader_image_atomic_warn;
    bool OES_standard_derivatives_enable;
    bool OES_standard_derivatives_warn;
    bool OES_texture_3D_enable;

@@ -194,3 +194,24 @@ const struct st_tracked_state st_bind_tes_ssbos = {
    },
    bind_tes_ssbos
 };
+
+static void bind_cs_ssbos(struct st_context *st)
+{
+   struct gl_shader_program *prog =
+      st->ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+
+   if (!prog)
+      return;
+
+   st_bind_ssbos(st, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
+                 PIPE_SHADER_COMPUTE);
+}
+
+const struct st_tracked_state st_bind_cs_ssbos = {
+   "st_bind_cs_ssbos",
+   {
+      0,
+      ST_NEW_COMPUTE_PROGRAM | ST_NEW_STORAGE_BUFFER,
+   },
+   bind_cs_ssbos
+};

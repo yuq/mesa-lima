@@ -393,14 +393,12 @@ struct pipe_sampler_view
 
 
 /**
- * A view into a writable buffer or texture that can be bound to a shader
+ * A description of a writable buffer or texture that can be bound to a shader
  * stage.
  */
 struct pipe_image_view
 {
-   struct pipe_reference reference;
    struct pipe_resource *resource; /**< resource into which this is a view  */
-   struct pipe_context *context; /**< context this view belongs to */
    enum pipe_format format;      /**< typed PIPE_FORMAT_x */
 
    union {
@@ -678,6 +676,45 @@ struct pipe_blit_info
    boolean alpha_blend; /* dst.rgb = src.rgb * src.a + dst.rgb * (1 - src.a) */
 };
 
+/**
+ * Information to describe a launch_grid call.
+ */
+struct pipe_grid_info
+{
+   /**
+    * For drivers that use PIPE_SHADER_IR_LLVM as their prefered IR, this value
+    * will be the index of the kernel in the opencl.kernels metadata list.
+    */
+   uint32_t pc;
+
+   /**
+    * Will be used to initialize the INPUT resource, and it should point to a
+    * buffer of at least pipe_compute_state::req_input_mem bytes.
+    */
+   void *input;
+
+   /**
+    * Determine the layout of the working block (in thread units) to be used.
+    */
+   uint block[3];
+
+   /**
+    * Determine the layout of the grid (in block units) to be used.
+    */
+   uint grid[3];
+
+   /* Indirect compute parameters resource: If not NULL, block sizes are taken
+    * from this buffer instead, which is laid out as follows:
+    *
+    *  struct {
+    *     uint32_t num_blocks_x;
+    *     uint32_t num_blocks_y;
+    *     uint32_t num_blocks_z;
+    *  };
+    */
+   struct pipe_resource *indirect;
+   unsigned indirect_offset; /**< must be 4 byte aligned */
+};
 
 /**
  * Structure used as a header for serialized LLVM programs.

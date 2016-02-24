@@ -44,6 +44,7 @@
 #include "math/m_matrix.h"	/* GLmatrix */
 #include "compiler/shader_enums.h"
 #include "main/formats.h"       /* MESA_FORMAT_COUNT */
+#include "compiler/glsl/list.h"
 
 
 #ifdef __cplusplus
@@ -1872,6 +1873,8 @@ typedef enum
    PROGRAM_UNDEFINED,   /**< Invalid/TBD value */
    PROGRAM_IMMEDIATE,   /**< Immediate value, used by TGSI */
    PROGRAM_BUFFER,      /**< for shader buffers, compile-time only */
+   PROGRAM_MEMORY,      /**< for shared, global and local memory */
+   PROGRAM_IMAGE,       /**< for shader images, compile-time only */
    PROGRAM_FILE_MAX
 } gl_register_file;
 
@@ -2044,6 +2047,11 @@ struct gl_compute_program
     * Size specified using local_size_{x,y,z}.
     */
    unsigned LocalSize[3];
+
+   /**
+    * Size of shared variables accessed by the compute shader.
+    */
+   unsigned SharedSize;
 };
 
 
@@ -2769,6 +2777,13 @@ struct gl_shader_program
    struct gl_uniform_storage **UniformRemapTable;
 
    /**
+    * Sometimes there are empty slots left over in UniformRemapTable after we
+    * allocate slots to explicit locations. This list stores the blocks of
+    * continuous empty slots inside UniformRemapTable.
+    */
+   struct exec_list EmptyUniformLocations;
+
+   /**
     * Size of the gl_ClipDistance array that is output from the last pipeline
     * stage before the fragment shader.
     */
@@ -3044,6 +3059,7 @@ struct gl_shared_state
    mtx_t Mutex;		   /**< for thread safety */
    GLint RefCount;			   /**< Reference count */
    struct _mesa_HashTable *DisplayList;	   /**< Display lists hash table */
+   struct _mesa_HashTable *BitmapAtlas;    /**< For optimized glBitmap text */
    struct _mesa_HashTable *TexObjects;	   /**< Texture objects hash table */
 
    /** Default texture objects (shared by all texture units) */
@@ -3727,6 +3743,7 @@ struct gl_constants
    GLuint MaxComputeWorkGroupCount[3]; /* Array of x, y, z dimensions */
    GLuint MaxComputeWorkGroupSize[3]; /* Array of x, y, z dimensions */
    GLuint MaxComputeWorkGroupInvocations;
+   GLuint MaxComputeSharedMemorySize;
 
    /** GL_ARB_gpu_shader5 */
    GLfloat MinFragmentInterpolationOffset;

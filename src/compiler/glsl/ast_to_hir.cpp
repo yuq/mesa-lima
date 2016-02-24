@@ -1133,9 +1133,9 @@ do_comparison(void *mem_ctx, int operation, ir_rvalue *op0, ir_rvalue *op1)
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_IMAGE:
    case GLSL_TYPE_INTERFACE:
-   case GLSL_TYPE_FUNCTION:
    case GLSL_TYPE_ATOMIC_UINT:
    case GLSL_TYPE_SUBROUTINE:
+   case GLSL_TYPE_FUNCTION:
       /* I assume a comparison of a struct containing a sampler just
        * ignores the sampler present in the type.
        */
@@ -2268,7 +2268,7 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
          type->sampler_array + 2 * type->sampler_shadow;
       const unsigned offset = type->base_type == GLSL_TYPE_SAMPLER ? 0 : 4;
       assert(type_idx < 4);
-      switch (type->sampler_type) {
+      switch (type->sampled_type) {
       case GLSL_TYPE_FLOAT:
          switch (type->sampler_dimensionality) {
          case GLSL_SAMPLER_DIM_1D: {
@@ -2750,6 +2750,17 @@ interpret_interpolation_qualifier(const struct ast_type_qualifier *qual,
                           "vertex shader inputs or fragment shader outputs",
                           interpolation_string(interpolation));
       }
+   } else if (state->es_shader &&
+              ((mode == ir_var_shader_in &&
+                state->stage != MESA_SHADER_VERTEX) ||
+               (mode == ir_var_shader_out &&
+                state->stage != MESA_SHADER_FRAGMENT))) {
+      /* Section 4.3.9 (Interpolation) of the GLSL ES 3.00 spec says:
+       *
+       *    "When no interpolation qualifier is present, smooth interpolation
+       *    is used."
+       */
+      interpolation = INTERP_QUALIFIER_SMOOTH;
    }
 
    return interpolation;
@@ -2954,7 +2965,7 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
                              "used on image function parameters");
          }
 
-         if (qual->image_base_type != base_type->sampler_type) {
+         if (qual->image_base_type != base_type->sampled_type) {
             _mesa_glsl_error(loc, state, "format qualifier doesn't match the "
                              "base data type of the image");
          }
@@ -4679,8 +4690,7 @@ ast_declarator_list::hir(exec_list *instructions,
           && this->type->qualifier.has_interpolation()
           && this->type->qualifier.flags.q.varying) {
 
-         const char *i = this->type->qualifier.interpolation_string();
-         assert(i != NULL);
+         const char *i = interpolation_string(var->data.interpolation);
          const char *s;
          if (this->type->qualifier.flags.q.centroid)
             s = "centroid varying";
@@ -4710,9 +4720,7 @@ ast_declarator_list::hir(exec_list *instructions,
       if (state->is_version(130, 300)
           && this->type->qualifier.has_interpolation()) {
 
-         const char *i = this->type->qualifier.interpolation_string();
-         assert(i != NULL);
-
+         const char *i = interpolation_string(var->data.interpolation);
          switch (state->stage) {
          case MESA_SHADER_VERTEX:
             if (this->type->qualifier.flags.q.in) {
@@ -6259,7 +6267,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                                   decl_count);
 
    bool first_member = true;
-   bool first_member_has_explicit_location;
+   bool first_member_has_explicit_location = false;
 
    unsigned i = 0;
    foreach_list_typed (ast_declarator_list, decl_list, link, declarations) {

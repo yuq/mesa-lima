@@ -2300,7 +2300,8 @@ exec_txf(struct tgsi_exec_machine *mach,
 
    IFETCH(&r[3], 0, TGSI_CHAN_W);
 
-   if (inst->Instruction.Opcode == TGSI_OPCODE_SAMPLE_I) {
+   if (inst->Instruction.Opcode == TGSI_OPCODE_SAMPLE_I ||
+       inst->Instruction.Opcode == TGSI_OPCODE_SAMPLE_I_MS) {
       target = mach->SamplerViews[unit].Resource;
    }
    else {
@@ -2342,7 +2343,8 @@ exec_txf(struct tgsi_exec_machine *mach,
       r[3].f[j] = rgba[3][j];
    }
 
-   if (inst->Instruction.Opcode == TGSI_OPCODE_SAMPLE_I) {
+   if (inst->Instruction.Opcode == TGSI_OPCODE_SAMPLE_I ||
+       inst->Instruction.Opcode == TGSI_OPCODE_SAMPLE_I_MS) {
       unsigned char swizzles[4];
       swizzles[0] = inst->Src[1].Register.SwizzleX;
       swizzles[1] = inst->Src[1].Register.SwizzleY;
@@ -4967,7 +4969,7 @@ exec_instruction(
       break;
 
    case TGSI_OPCODE_SAMPLE_I_MS:
-      assert(0);
+      exec_txf(mach, inst);
       break;
 
    case TGSI_OPCODE_SAMPLE:

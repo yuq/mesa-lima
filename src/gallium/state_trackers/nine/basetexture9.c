@@ -109,7 +109,7 @@ NineBaseTexture9_dtor( struct NineBaseTexture9 *This )
     NineResource9_dtor(&This->base);
 }
 
-DWORD WINAPI
+DWORD NINE_WINAPI
 NineBaseTexture9_SetLOD( struct NineBaseTexture9 *This,
                          DWORD LODNew )
 {
@@ -130,7 +130,7 @@ NineBaseTexture9_SetLOD( struct NineBaseTexture9 *This,
     return old;
 }
 
-DWORD WINAPI
+DWORD NINE_WINAPI
 NineBaseTexture9_GetLOD( struct NineBaseTexture9 *This )
 {
     DBG("This=%p\n", This);
@@ -138,7 +138,7 @@ NineBaseTexture9_GetLOD( struct NineBaseTexture9 *This )
     return This->managed.lod;
 }
 
-DWORD WINAPI
+DWORD NINE_WINAPI
 NineBaseTexture9_GetLevelCount( struct NineBaseTexture9 *This )
 {
     DBG("This=%p\n", This);
@@ -148,7 +148,7 @@ NineBaseTexture9_GetLevelCount( struct NineBaseTexture9 *This )
     return This->base.info.last_level + 1;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineBaseTexture9_SetAutoGenFilterType( struct NineBaseTexture9 *This,
                                        D3DTEXTUREFILTERTYPE FilterType )
 {
@@ -165,7 +165,7 @@ NineBaseTexture9_SetAutoGenFilterType( struct NineBaseTexture9 *This,
     return D3D_OK;
 }
 
-D3DTEXTUREFILTERTYPE WINAPI
+D3DTEXTUREFILTERTYPE NINE_WINAPI
 NineBaseTexture9_GetAutoGenFilterType( struct NineBaseTexture9 *This )
 {
     DBG("This=%p\n", This);
@@ -383,7 +383,7 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
     return D3D_OK;
 }
 
-void WINAPI
+void NINE_WINAPI
 NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This )
 {
     struct pipe_resource *resource;
@@ -580,7 +580,7 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
     return This->view ? D3D_OK : D3DERR_DRIVERINTERNALERROR;
 }
 
-void WINAPI
+void NINE_WINAPI
 NineBaseTexture9_PreLoad( struct NineBaseTexture9 *This )
 {
     DBG("This=%p\n", This);

@@ -408,9 +408,7 @@ _mesa_expand_bitmap(GLsizei width, GLsizei height,
    const GLint srcStride = _mesa_image_row_stride(unpack, width,
                                                   GL_COLOR_INDEX, GL_BITMAP);
    GLint row, col;
-
-#define SET_PIXEL(COL, ROW) \
-   destBuffer[(ROW) * destStride + (COL)] = onValue;
+   GLubyte *dstRow = destBuffer;
 
    for (row = 0; row < height; row++) {
       const GLubyte *src = srcRow;
@@ -421,7 +419,7 @@ _mesa_expand_bitmap(GLsizei width, GLsizei height,
          for (col = 0; col < width; col++) {
 
             if (*src & mask) {
-               SET_PIXEL(col, row);
+               dstRow[col] = onValue;
             }
 
             if (mask == 128U) {
@@ -443,7 +441,7 @@ _mesa_expand_bitmap(GLsizei width, GLsizei height,
          for (col = 0; col < width; col++) {
 
             if (*src & mask) {
-               SET_PIXEL(col, row);
+               dstRow[col] = onValue;
             }
 
             if (mask == 1U) {
@@ -461,9 +459,8 @@ _mesa_expand_bitmap(GLsizei width, GLsizei height,
       }
 
       srcRow += srcStride;
+      dstRow += destStride;
    } /* row */
-
-#undef SET_PIXEL
 }
 
 

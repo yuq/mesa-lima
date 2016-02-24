@@ -189,6 +189,8 @@ struct ureg_program
    unsigned nr_instructions;
 
    struct ureg_tokens domain[2];
+
+   bool use_shared_memory;
 };
 
 static union tgsi_any_token error_tokens[32];
@@ -724,6 +726,16 @@ struct ureg_src ureg_DECL_buffer(struct ureg_program *ureg, unsigned nr,
    }
 
    assert(0);
+   return reg;
+}
+
+/* Allocate a shared memory area.
+ */
+struct ureg_src ureg_DECL_shared_memory(struct ureg_program *ureg)
+{
+   struct ureg_src reg = ureg_src_register(TGSI_FILE_MEMORY, 0);
+
+   ureg->use_shared_memory = true;
    return reg;
 }
 
@@ -1654,6 +1666,23 @@ emit_decl_buffer(struct ureg_program *ureg,
 }
 
 static void
+emit_decl_shared_memory(struct ureg_program *ureg)
+{
+   union tgsi_any_token *out = get_tokens(ureg, DOMAIN_DECL, 2);
+
+   out[0].value = 0;
+   out[0].decl.Type = TGSI_TOKEN_TYPE_DECLARATION;
+   out[0].decl.NrTokens = 2;
+   out[0].decl.File = TGSI_FILE_MEMORY;
+   out[0].decl.UsageMask = TGSI_WRITEMASK_XYZW;
+   out[0].decl.Shared = true;
+
+   out[1].value = 0;
+   out[1].decl_range.First = 0;
+   out[1].decl_range.Last = 0;
+}
+
+static void
 emit_immediate( struct ureg_program *ureg,
                 const unsigned *v,
                 unsigned type )
@@ -1824,6 +1853,9 @@ static void emit_decls( struct ureg_program *ureg )
    for (i = 0; i < ureg->nr_buffers; i++) {
       emit_decl_buffer(ureg, ureg->buffer[i].index, ureg->buffer[i].atomic);
    }
+
+   if (ureg->use_shared_memory)
+      emit_decl_shared_memory(ureg);
 
    if (ureg->const_decls.nr_constant_ranges) {
       for (i = 0; i < ureg->const_decls.nr_constant_ranges; i++) {

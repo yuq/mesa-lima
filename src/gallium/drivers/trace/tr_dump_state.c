@@ -305,6 +305,36 @@ void trace_dump_shader_state(const struct pipe_shader_state *state)
 }
 
 
+void trace_dump_compute_state(const struct pipe_compute_state *state)
+{
+   if (!trace_dumping_enabled_locked())
+      return;
+
+   if (!state) {
+      trace_dump_null();
+      return;
+   }
+
+   trace_dump_struct_begin("pipe_compute_state");
+
+   trace_dump_member_begin("prog");
+   if (state->prog) {
+      static char str[64 * 1024];
+      tgsi_dump_str(state->prog, 0, str, sizeof(str));
+      trace_dump_string(str);
+   } else {
+      trace_dump_null();
+   }
+   trace_dump_member_end();
+
+   trace_dump_member(uint, state, req_local_mem);
+   trace_dump_member(uint, state, req_private_mem);
+   trace_dump_member(uint, state, req_input_mem);
+
+   trace_dump_struct_end();
+}
+
+
 void trace_dump_depth_stencil_alpha_state(const struct pipe_depth_stencil_alpha_state *state)
 {
    unsigned i;
@@ -864,3 +894,33 @@ trace_dump_query_result(unsigned query_type,
       break;
    }
 }
+
+void trace_dump_grid_info(const struct pipe_grid_info *state)
+{
+   if (!trace_dumping_enabled_locked())
+      return;
+
+   if (!state) {
+      trace_dump_null();
+      return;
+   }
+
+   trace_dump_struct_begin("pipe_grid_info");
+
+   trace_dump_member(uint, state, pc);
+   trace_dump_member(ptr, state, input);
+
+   trace_dump_member_begin("block");
+   trace_dump_array(uint, state->block, Elements(state->block));
+   trace_dump_member_end();
+
+   trace_dump_member_begin("grid");
+   trace_dump_array(uint, state->grid, Elements(state->grid));
+   trace_dump_member_end();
+
+   trace_dump_member(ptr, state, indirect);
+   trace_dump_member(uint, state, indirect_offset);
+
+   trace_dump_struct_end();
+}
+

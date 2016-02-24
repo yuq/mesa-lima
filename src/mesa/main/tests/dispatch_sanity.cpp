@@ -2436,6 +2436,16 @@ const struct function gles3_functions_possible[] = {
    { "glGetFragDataIndexEXT", 30, -1 },
    { "glBindFragDataLocationEXT", 30, -1 },
 
+   /* GL_OES_texture_border_clamp */
+   { "glTexParameterIivOES", 30, -1 },
+   { "glTexParameterIuivOES", 30, -1 },
+   { "glGetTexParameterIivOES", 30, -1 },
+   { "glGetTexParameterIuivOES", 30, -1 },
+   { "glSamplerParameterIivOES", 30, -1 },
+   { "glSamplerParameterIuivOES", 30, -1 },
+   { "glGetSamplerParameterIivOES", 30, -1 },
+   { "glGetSamplerParameterIuivOES", 30, -1 },
+
    { NULL, 0, -1 }
 };
 

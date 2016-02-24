@@ -357,10 +357,6 @@ _mesa_GetProgramResourceiv(GLuint program, GLenum programInterface,
       return;
    }
 
-   /* No need to write any properties, user requested none. */
-   if (bufSize == 0)
-      return;
-
    _mesa_get_program_resourceiv(shProg, programInterface, index,
                                 propCount, props, bufSize, length, params);
 }

@@ -72,7 +72,8 @@ nv50_screen_is_format_supported(struct pipe_screen *pscreen,
                  PIPE_BIND_TRANSFER_WRITE |
                  PIPE_BIND_SHARED);
 
-   return (nv50_format_table[format].usage & bindings) == bindings;
+   return (( nv50_format_table[format].usage |
+            nv50_vertex_format[format].usage) & bindings) == bindings;
 }
 
 static int
@@ -263,8 +264,8 @@ nv50_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_VERTEX:
    case PIPE_SHADER_GEOMETRY:
    case PIPE_SHADER_FRAGMENT:
-   case PIPE_SHADER_COMPUTE:
       break;
+   case PIPE_SHADER_COMPUTE:
    default:
       return 0;
    }
@@ -315,6 +316,8 @@ nv50_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
    case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
    case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+   case PIPE_SHADER_CAP_SUPPORTED_IRS:
+   case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
       return 0;
    case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
       return 32;
@@ -562,7 +565,7 @@ nv50_screen_init_hwctx(struct nv50_screen *screen)
 
    if (screen->tesla->oclass >= NVA0_3D_CLASS) {
       BEGIN_NV04(push, SUBC_3D(NVA0_3D_TEX_MISC), 1);
-      PUSH_DATA (push, NVA0_3D_TEX_MISC_SEAMLESS_CUBE_MAP);
+      PUSH_DATA (push, 0);
    }
 
    BEGIN_NV04(push, NV50_3D(SCREEN_Y_CONTROL), 1);

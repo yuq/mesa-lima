@@ -93,7 +93,26 @@ NineBuffer9_ctor( struct NineBuffer9 *This,
 
     hr = NineResource9_ctor(&This->base, pParams, NULL, TRUE,
                             Type, Pool, Usage);
-    return hr;
+
+    if (FAILED(hr))
+        return hr;
+
+    if (Pool == D3DPOOL_MANAGED) {
+        This->managed.data = align_malloc(
+            nine_format_get_level_alloc_size(This->base.info.format,
+                                             Size, 1, 0), 32);
+        if (!This->managed.data)
+            return E_OUTOFMEMORY;
+        memset(This->managed.data, 0, Size);
+        This->managed.dirty = TRUE;
+        u_box_1d(0, Size, &This->managed.dirty_box);
+        list_inithead(&This->managed.list);
+        list_inithead(&This->managed.list2);
+        list_add(&This->managed.list, &pParams->device->update_buffers);
+        list_add(&This->managed.list2, &pParams->device->managed_buffers);
+    }
+
+    return D3D_OK;
 }
 
 void
@@ -106,6 +125,15 @@ NineBuffer9_dtor( struct NineBuffer9 *This )
         FREE(This->maps);
     }
 
+    if (This->base.pool == D3DPOOL_MANAGED) {
+        if (This->managed.data)
+            align_free(This->managed.data);
+        if (This->managed.list.prev != NULL && This->managed.list.next != NULL)
+            list_del(&This->managed.list);
+        if (This->managed.list2.prev != NULL && This->managed.list2.next != NULL)
+            list_del(&This->managed.list2);
+    }
+
     NineResource9_dtor(&This->base);
 }
 
@@ -115,7 +143,7 @@ NineBuffer9_GetResource( struct NineBuffer9 *This )
     return NineResource9_GetResource(&This->base);
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineBuffer9_Lock( struct NineBuffer9 *This,
                         UINT OffsetToLock,
                         UINT SizeToLock,
@@ -138,6 +166,28 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
                             D3DLOCK_READONLY |
                             D3DLOCK_NOOVERWRITE)), D3DERR_INVALIDCALL);
 
+    if (SizeToLock == 0) {
+        SizeToLock = This->size - OffsetToLock;
+        user_warn(OffsetToLock != 0);
+    }
+
+    u_box_1d(OffsetToLock, SizeToLock, &box);
+
+    if (This->base.pool == D3DPOOL_MANAGED) {
+        if (!This->managed.dirty) {
+            assert(LIST_IS_EMPTY(&This->managed.list));
+            list_add(&This->managed.list, &This->base.base.device->update_buffers);
+            This->managed.dirty = TRUE;
+            This->managed.dirty_box = box;
+        } else {
+            u_box_union_2d(&This->managed.dirty_box, &This->managed.dirty_box, &box);
+        }
+        *ppbData = (char *)This->managed.data + OffsetToLock;
+        DBG("returning pointer %p\n", *ppbData);
+        This->nmaps++;
+        return D3D_OK;
+    }
+
     if (This->nmaps == This->maxmaps) {
         struct pipe_transfer **newmaps =
             REALLOC(This->maps, sizeof(struct pipe_transfer *)*This->maxmaps,
@@ -148,13 +198,6 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
         This->maxmaps <<= 1;
         This->maps = newmaps;
     }
-
-    if (SizeToLock == 0) {
-        SizeToLock = This->size - OffsetToLock;
-        user_warn(OffsetToLock != 0);
-    }
-
-    u_box_1d(OffsetToLock, SizeToLock, &box);
 
     data = This->pipe->transfer_map(This->pipe, This->base.resource, 0,
                                     usage, &box, &This->maps[This->nmaps]);
@@ -178,12 +221,28 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineBuffer9_Unlock( struct NineBuffer9 *This )
 {
     DBG("This=%p\n", This);
 
     user_assert(This->nmaps > 0, D3DERR_INVALIDCALL);
-    This->pipe->transfer_unmap(This->pipe, This->maps[--(This->nmaps)]);
+    if (This->base.pool != D3DPOOL_MANAGED)
+        This->pipe->transfer_unmap(This->pipe, This->maps[--(This->nmaps)]);
+    else
+        This->nmaps--;
     return D3D_OK;
+}
+
+void
+NineBuffer9_SetDirty( struct NineBuffer9 *This )
+{
+    assert(This->base.pool == D3DPOOL_MANAGED);
+
+    if (!This->managed.dirty) {
+        assert(LIST_IS_EMPTY(&This->managed.list));
+        list_add(&This->managed.list, &This->base.base.device->update_buffers);
+        This->managed.dirty = TRUE;
+    }
+    u_box_1d(0, This->size, &This->managed.dirty_box);
 }

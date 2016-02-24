@@ -433,6 +433,10 @@ CodeEmitterGK110::emitForm_21(const Instruction *i, uint32_t opc2,
          srcId(i->src(s), s ? ((s == 2) ? 42 : s1) : 10);
          break;
       default:
+         if (i->op == OP_SELP) {
+            assert(s == 2 && i->src(s).getFile() == FILE_PREDICATE);
+            srcId(i->src(s), 42);
+         }
          // ignore here, can be predicate or flags, but must not be address
          break;
       }
@@ -1045,7 +1049,7 @@ void CodeEmitterGK110::emitSELP(const Instruction *i)
 {
    emitForm_21(i, 0x250, 0x050);
 
-   if ((i->cc == CC_NOT_P) ^ (bool)(i->src(2).mod & Modifier(NV50_IR_MOD_NOT)))
+   if (i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
       code[1] |= 1 << 13;
 }
 
@@ -1239,7 +1243,7 @@ CodeEmitterGK110::emitQUADOP(const Instruction *i, uint8_t qOp, uint8_t laneMask
 
    defId(i->def(0), 2);
    srcId(i->src(0), 10);
-   srcId(i->srcExists(1) ? i->src(1) : i->src(0), 23);
+   srcId((i->srcExists(1) && i->predSrc != 1) ? i->src(1) : i->src(0), 23);
 
    if (i->op == OP_QUADOP && progType != Program::TYPE_FRAGMENT)
       code[1] |= 1 << 9; // dall

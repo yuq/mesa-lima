@@ -23,6 +23,7 @@
 
 #include "device9.h"
 #include "basetexture9.h"
+#include "buffer9.h"
 #include "indexbuffer9.h"
 #include "surface9.h"
 #include "vertexdeclaration9.h"
@@ -935,6 +936,16 @@ validate_textures(struct NineDevice9 *device)
     }
 }
 
+static void
+update_managed_buffers(struct NineDevice9 *device)
+{
+    struct NineBuffer9 *buf, *ptr;
+    LIST_FOR_EACH_ENTRY_SAFE(buf, ptr, &device->update_buffers, managed.list) {
+        list_delinit(&buf->managed.list);
+        NineBuffer9_Upload(buf);
+    }
+}
+
 void
 nine_update_state_framebuffer_clear(struct NineDevice9 *device)
 {
@@ -962,6 +973,7 @@ nine_update_state(struct NineDevice9 *device)
      * may be dirty anyway, even if no texture bindings changed.
      */
     validate_textures(device); /* may clobber state */
+    update_managed_buffers(device);
 
     /* ff_update may change VS/PS dirty bits */
     if (unlikely(!state->programmable_vs || !state->ps))

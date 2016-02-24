@@ -22,6 +22,7 @@
  */
 
 #include "si_pipe.h"
+#include "si_shader.h"
 #include "si_public.h"
 #include "sid.h"
 
@@ -448,6 +449,10 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 		switch (param) {
 		case PIPE_SHADER_CAP_PREFERRED_IR:
 			return PIPE_SHADER_IR_NATIVE;
+
+		case PIPE_SHADER_CAP_SUPPORTED_IRS:
+			return 0;
+
 		case PIPE_SHADER_CAP_DOUBLES:
 			return HAVE_LLVM >= 0x0307;
 
@@ -511,6 +516,8 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 		return 16;
 	case PIPE_SHADER_CAP_PREFERRED_IR:
 		return PIPE_SHADER_IR_TGSI;
+	case PIPE_SHADER_CAP_SUPPORTED_IRS:
+		return 0;
 	case PIPE_SHADER_CAP_DOUBLES:
 		return HAVE_LLVM >= 0x0307;
 	case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
@@ -522,6 +529,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 		return 0;
 	}
 	return 0;
@@ -530,6 +538,14 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 static void si_destroy_screen(struct pipe_screen* pscreen)
 {
 	struct si_screen *sscreen = (struct si_screen *)pscreen;
+	struct si_shader_part *parts[] = {
+		sscreen->vs_prologs,
+		sscreen->vs_epilogs,
+		sscreen->tcs_epilogs,
+		sscreen->ps_prologs,
+		sscreen->ps_epilogs
+	};
+	unsigned i;
 
 	if (!sscreen)
 		return;
@@ -537,6 +553,18 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	if (!sscreen->b.ws->unref(sscreen->b.ws))
 		return;
 
+	/* Free shader parts. */
+	for (i = 0; i < ARRAY_SIZE(parts); i++) {
+		while (parts[i]) {
+			struct si_shader_part *part = parts[i];
+
+			parts[i] = part->next;
+			radeon_shader_binary_clean(&part->binary);
+			FREE(part);
+		}
+	}
+	pipe_mutex_destroy(sscreen->shader_parts_mutex);
+	si_destroy_shader_cache(sscreen);
 	r600_destroy_common_screen(&sscreen->b);
 }
 
@@ -584,7 +612,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->b.b.resource_create = r600_resource_create_common;
 
 	if (!r600_common_screen_init(&sscreen->b, ws) ||
-	    !si_init_gs_info(sscreen)) {
+	    !si_init_gs_info(sscreen) ||
+	    !si_init_shader_cache(sscreen)) {
 		FREE(sscreen);
 		return NULL;
 	}
@@ -594,6 +623,10 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
+	pipe_mutex_init(sscreen->shader_parts_mutex);
+	sscreen->use_monolithic_shaders =
+		HAVE_LLVM < 0x0308 ||
+		(sscreen->b.debug_flags & DBG_MONOLITHIC_SHADERS) != 0;
 
 	if (debug_get_bool_option("RADEON_DUMP_SHADERS", FALSE))
 		sscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS;

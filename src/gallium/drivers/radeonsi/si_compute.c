@@ -196,9 +196,7 @@ static unsigned compute_num_waves_for_scratch(
 }
 
 static void si_launch_grid(
-		struct pipe_context *ctx,
-		const uint *block_layout, const uint *grid_layout,
-		uint32_t pc, const void *input)
+		struct pipe_context *ctx, const struct pipe_grid_info *info)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
@@ -232,7 +230,7 @@ static void si_launch_grid(
 	pm4->compute_pkt = true;
 
 	/* Read the config information */
-	si_shader_binary_read_config(&shader->binary, &shader->config, pc);
+	si_shader_binary_read_config(&shader->binary, &shader->config, info->pc);
 
 	/* Upload the kernel arguments */
 
@@ -242,15 +240,16 @@ static void si_launch_grid(
 	kernel_args = sctx->b.ws->buffer_map(input_buffer->buf,
 			sctx->b.gfx.cs, PIPE_TRANSFER_WRITE);
 	for (i = 0; i < 3; i++) {
-		kernel_args[i] = grid_layout[i];
-		kernel_args[i + 3] = grid_layout[i] * block_layout[i];
-		kernel_args[i + 6] = block_layout[i];
+		kernel_args[i] = info->grid[i];
+		kernel_args[i + 3] = info->grid[i] * info->block[i];
+		kernel_args[i + 6] = info->block[i];
 	}
 
 	num_waves_for_scratch =	compute_num_waves_for_scratch(
-		&sctx->screen->b.info, block_layout, grid_layout);
+		&sctx->screen->b.info, info->block, info->grid);
 
-	memcpy(kernel_args + (num_work_size_bytes / 4), input, program->input_size);
+	memcpy(kernel_args + (num_work_size_bytes / 4), info->input,
+          program->input_size);
 
 	if (shader->config.scratch_bytes_per_wave > 0) {
 
@@ -291,11 +290,11 @@ static void si_launch_grid(
 	si_pm4_set_reg(pm4, R_00B818_COMPUTE_START_Z, 0);
 
 	si_pm4_set_reg(pm4, R_00B81C_COMPUTE_NUM_THREAD_X,
-				S_00B81C_NUM_THREAD_FULL(block_layout[0]));
+				S_00B81C_NUM_THREAD_FULL(info->block[0]));
 	si_pm4_set_reg(pm4, R_00B820_COMPUTE_NUM_THREAD_Y,
-				S_00B820_NUM_THREAD_FULL(block_layout[1]));
+				S_00B820_NUM_THREAD_FULL(info->block[1]));
 	si_pm4_set_reg(pm4, R_00B824_COMPUTE_NUM_THREAD_Z,
-				S_00B824_NUM_THREAD_FULL(block_layout[2]));
+				S_00B824_NUM_THREAD_FULL(info->block[2]));
 
 	/* Global buffers */
 	for (i = 0; i < MAX_GLOBAL_BUFFERS; i++) {
@@ -323,7 +322,7 @@ static void si_launch_grid(
 	}
 
 	shader_va = shader->bo->gpu_address;
-	shader_va += pc;
+	shader_va += info->pc;
 
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, shader->bo,
 				  RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
@@ -375,9 +374,9 @@ static void si_launch_grid(
 		;
 
 	si_pm4_cmd_begin(pm4, PKT3_DISPATCH_DIRECT);
-	si_pm4_cmd_add(pm4, grid_layout[0]); /* Thread groups DIM_X */
-	si_pm4_cmd_add(pm4, grid_layout[1]); /* Thread groups DIM_Y */
-	si_pm4_cmd_add(pm4, grid_layout[2]); /* Thread gropus DIM_Z */
+	si_pm4_cmd_add(pm4, info->grid[0]); /* Thread groups DIM_X */
+	si_pm4_cmd_add(pm4, info->grid[1]); /* Thread groups DIM_Y */
+	si_pm4_cmd_add(pm4, info->grid[2]); /* Thread gropus DIM_Z */
 	si_pm4_cmd_add(pm4, 1); /* DISPATCH_INITIATOR */
         si_pm4_cmd_end(pm4, false);
 

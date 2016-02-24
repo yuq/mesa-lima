@@ -247,7 +247,14 @@ scan_declaration(struct tgsi_shader_info *info,
          info->input_interpolate[reg] = (ubyte)fulldecl->Interp.Interpolate;
          info->input_interpolate_loc[reg] = (ubyte)fulldecl->Interp.Location;
          info->input_cylindrical_wrap[reg] = (ubyte)fulldecl->Interp.CylindricalWrap;
-         info->num_inputs++;
+
+         /* Vertex shaders can have inputs with holes between them. */
+         if (info->processor == TGSI_PROCESSOR_VERTEX)
+            info->num_inputs = MAX2(info->num_inputs, reg + 1);
+         else {
+            info->num_inputs++;
+            assert(reg < info->num_inputs);
+         }
 
          /* Only interpolated varyings. Don't include POSITION.
           * Don't include integer varyings, because they are not
@@ -341,6 +348,7 @@ scan_declaration(struct tgsi_shader_info *info,
          info->output_semantic_name[reg] = (ubyte) semName;
          info->output_semantic_index[reg] = (ubyte) semIndex;
          info->num_outputs++;
+         assert(reg < info->num_outputs);
 
          if (semName == TGSI_SEMANTIC_COLOR)
             info->colors_written |= 1 << semIndex;

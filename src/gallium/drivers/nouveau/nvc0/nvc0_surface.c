@@ -34,8 +34,8 @@
 #include "nvc0/nvc0_context.h"
 #include "nvc0/nvc0_resource.h"
 
-#include "nv50/nv50_defs.xml.h"
-#include "nv50/nv50_texture.xml.h"
+#include "nv50/g80_defs.xml.h"
+#include "nv50/g80_texture.xml.h"
 
 /* these are used in nv50_blit.h */
 #define NV50_ENG2D_SUPPORTED_FORMATS 0xff9ccfe1cce3ccc9ULL
@@ -54,7 +54,7 @@ nvc0_2d_format(enum pipe_format format, bool dst, bool dst_src_equal)
 
    /* A8_UNORM is treated as I8_UNORM as far as the 2D engine is concerned. */
    if (!dst && unlikely(format == PIPE_FORMAT_I8_UNORM) && !dst_src_equal)
-      return NV50_SURFACE_FORMAT_A8_UNORM;
+      return G80_SURFACE_FORMAT_A8_UNORM;
 
    /* Hardware values for color formats range from 0xc0 to 0xff,
     * but the 2D engine doesn't support all of them.
@@ -65,15 +65,15 @@ nvc0_2d_format(enum pipe_format format, bool dst, bool dst_src_equal)
 
    switch (util_format_get_blocksize(format)) {
    case 1:
-      return NV50_SURFACE_FORMAT_R8_UNORM;
+      return G80_SURFACE_FORMAT_R8_UNORM;
    case 2:
-      return NV50_SURFACE_FORMAT_RG8_UNORM;
+      return G80_SURFACE_FORMAT_RG8_UNORM;
    case 4:
-      return NV50_SURFACE_FORMAT_BGRA8_UNORM;
+      return G80_SURFACE_FORMAT_BGRA8_UNORM;
    case 8:
-      return NV50_SURFACE_FORMAT_RGBA16_UNORM;
+      return G80_SURFACE_FORMAT_RGBA16_UNORM;
    case 16:
-      return NV50_SURFACE_FORMAT_RGBA32_FLOAT;
+      return G80_SURFACE_FORMAT_RGBA32_FLOAT;
    default:
       assert(0);
       return 0;
@@ -353,7 +353,7 @@ nvc0_clear_render_target(struct pipe_context *pipe,
 
    IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
-   nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER;
 }
 
 static void
@@ -609,7 +609,7 @@ nvc0_clear_buffer(struct pipe_context *pipe,
                              data, data_size);
    }
 
-   nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER;
 }
 
 static void
@@ -678,7 +678,7 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
 
    IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
-   nvc0->dirty |= NVC0_NEW_FRAMEBUFFER;
+   nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER;
 }
 
 void
@@ -693,7 +693,7 @@ nvc0_clear(struct pipe_context *pipe, unsigned buffers,
    uint32_t mode = 0;
 
    /* don't need NEW_BLEND, COLOR_MASK doesn't affect CLEAR_BUFFERS */
-   if (!nvc0_state_validate(nvc0, NVC0_NEW_FRAMEBUFFER))
+   if (!nvc0_state_validate(nvc0, NVC0_NEW_3D_FRAMEBUFFER))
       return;
 
    if (buffers & PIPE_CLEAR_COLOR && fb->nr_cbufs) {
@@ -793,7 +793,7 @@ struct nvc0_blitctx
       struct pipe_sampler_view *texture[2];
       struct nv50_tsc_entry *sampler[2];
       unsigned min_samples;
-      uint32_t dirty;
+      uint32_t dirty_3d;
    } saved;
    struct nvc0_rasterizer_stateobj rast;
 };
@@ -871,12 +871,14 @@ nvc0_blitter_make_sampler(struct nvc0_blitter *blit)
 
    blit->sampler[0].id = -1;
 
-   blit->sampler[0].tsc[0] = NV50_TSC_0_SRGB_CONVERSION_ALLOWED |
-      (NV50_TSC_WRAP_CLAMP_TO_EDGE << NV50_TSC_0_WRAPS__SHIFT) |
-      (NV50_TSC_WRAP_CLAMP_TO_EDGE << NV50_TSC_0_WRAPT__SHIFT) |
-      (NV50_TSC_WRAP_CLAMP_TO_EDGE << NV50_TSC_0_WRAPR__SHIFT);
+   blit->sampler[0].tsc[0] = G80_TSC_0_SRGB_CONVERSION |
+      (G80_TSC_WRAP_CLAMP_TO_EDGE << G80_TSC_0_ADDRESS_U__SHIFT) |
+      (G80_TSC_WRAP_CLAMP_TO_EDGE << G80_TSC_0_ADDRESS_V__SHIFT) |
+      (G80_TSC_WRAP_CLAMP_TO_EDGE << G80_TSC_0_ADDRESS_P__SHIFT);
    blit->sampler[0].tsc[1] =
-      NV50_TSC_1_MAGF_NEAREST | NV50_TSC_1_MINF_NEAREST | NV50_TSC_1_MIPF_NONE;
+      G80_TSC_1_MAG_FILTER_NEAREST |
+      G80_TSC_1_MIN_FILTER_NEAREST |
+      G80_TSC_1_MIP_FILTER_NONE;
 
    /* clamp to edge, min/max lod = 0, bilinear filtering */
 
@@ -884,7 +886,9 @@ nvc0_blitter_make_sampler(struct nvc0_blitter *blit)
 
    blit->sampler[1].tsc[0] = blit->sampler[0].tsc[0];
    blit->sampler[1].tsc[1] =
-      NV50_TSC_1_MAGF_LINEAR | NV50_TSC_1_MINF_LINEAR | NV50_TSC_1_MIPF_NONE;
+      G80_TSC_1_MAG_FILTER_LINEAR |
+      G80_TSC_1_MIN_FILTER_LINEAR |
+      G80_TSC_1_MIP_FILTER_NONE;
 }
 
 static void
@@ -1081,19 +1085,19 @@ nvc0_blitctx_pre_blit(struct nvc0_blitctx *ctx)
 
    nvc0->min_samples = 1;
 
-   ctx->saved.dirty = nvc0->dirty;
+   ctx->saved.dirty_3d = nvc0->dirty_3d;
 
    nvc0->textures_dirty[4] |= 3;
    nvc0->samplers_dirty[4] |= 3;
 
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_FB);
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(4, 0));
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(4, 1));
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_FB);
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(4, 0));
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(4, 1));
 
-   nvc0->dirty = NVC0_NEW_FRAMEBUFFER | NVC0_NEW_MIN_SAMPLES |
-      NVC0_NEW_VERTPROG | NVC0_NEW_FRAGPROG |
-      NVC0_NEW_TCTLPROG | NVC0_NEW_TEVLPROG | NVC0_NEW_GMTYPROG |
-      NVC0_NEW_TEXTURES | NVC0_NEW_SAMPLERS;
+   nvc0->dirty_3d = NVC0_NEW_3D_FRAMEBUFFER | NVC0_NEW_3D_MIN_SAMPLES |
+      NVC0_NEW_3D_VERTPROG | NVC0_NEW_3D_FRAGPROG |
+      NVC0_NEW_3D_TCTLPROG | NVC0_NEW_3D_TEVLPROG | NVC0_NEW_3D_GMTYPROG |
+      NVC0_NEW_3D_TEXTURES | NVC0_NEW_3D_SAMPLERS;
 }
 
 static void
@@ -1141,20 +1145,20 @@ nvc0_blitctx_post_blit(struct nvc0_blitctx *blit)
       nvc0->base.pipe.render_condition(&nvc0->base.pipe, nvc0->cond_query,
                                        nvc0->cond_cond, nvc0->cond_mode);
 
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_VTX_TMP);
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_FB);
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(4, 0));
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_TEX(4, 1));
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_VTX_TMP);
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_FB);
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(4, 0));
+   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(4, 1));
    nouveau_scratch_done(&nvc0->base);
 
-   nvc0->dirty = blit->saved.dirty |
-      (NVC0_NEW_FRAMEBUFFER | NVC0_NEW_SCISSOR | NVC0_NEW_SAMPLE_MASK |
-       NVC0_NEW_RASTERIZER | NVC0_NEW_ZSA | NVC0_NEW_BLEND |
-       NVC0_NEW_VIEWPORT |
-       NVC0_NEW_TEXTURES | NVC0_NEW_SAMPLERS |
-       NVC0_NEW_VERTPROG | NVC0_NEW_FRAGPROG |
-       NVC0_NEW_TCTLPROG | NVC0_NEW_TEVLPROG | NVC0_NEW_GMTYPROG |
-       NVC0_NEW_TFB_TARGETS | NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS);
+   nvc0->dirty_3d = blit->saved.dirty_3d |
+      (NVC0_NEW_3D_FRAMEBUFFER | NVC0_NEW_3D_SCISSOR | NVC0_NEW_3D_SAMPLE_MASK |
+       NVC0_NEW_3D_RASTERIZER | NVC0_NEW_3D_ZSA | NVC0_NEW_3D_BLEND |
+       NVC0_NEW_3D_VIEWPORT |
+       NVC0_NEW_3D_TEXTURES | NVC0_NEW_3D_SAMPLERS |
+       NVC0_NEW_3D_VERTPROG | NVC0_NEW_3D_FRAGPROG |
+       NVC0_NEW_3D_TCTLPROG | NVC0_NEW_3D_TEVLPROG | NVC0_NEW_3D_GMTYPROG |
+       NVC0_NEW_3D_TFB_TARGETS | NVC0_NEW_3D_VERTEX | NVC0_NEW_3D_ARRAYS);
    nvc0->scissors_dirty |= 1;
    nvc0->viewports_dirty |= 1;
 
@@ -1263,7 +1267,8 @@ nvc0_blit_3d(struct nvc0_context *nvc0, const struct pipe_blit_info *info)
       return;
    }
 
-   BCTX_REFN_bo(nvc0->bufctx_3d, VTX_TMP, NOUVEAU_BO_GART | NOUVEAU_BO_RD, vtxbuf_bo);
+   BCTX_REFN_bo(nvc0->bufctx_3d, 3D_VTX_TMP,
+                NOUVEAU_BO_GART | NOUVEAU_BO_RD, vtxbuf_bo);
    nouveau_pushbuf_validate(push);
 
    BEGIN_NVC0(push, NVC0_3D(VERTEX_ARRAY_FETCH(0)), 4);

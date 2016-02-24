@@ -30,6 +30,7 @@
 #include "gallivm/lp_bld_flow.h"
 #include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_intr.h"
+#include "gallivm/lp_bld_misc.h"
 #include "gallivm/lp_bld_swizzle.h"
 #include "tgsi/tgsi_info.h"
 #include "tgsi/tgsi_parse.h"
@@ -1520,7 +1521,7 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 	}
 }
 
-void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
+void radeon_llvm_context_init(struct radeon_llvm_context * ctx, const char *triple)
 {
 	struct lp_type type;
 
@@ -1534,6 +1535,13 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	ctx->gallivm.context = LLVMContextCreate();
 	ctx->gallivm.module = LLVMModuleCreateWithNameInContext("tgsi",
 						ctx->gallivm.context);
+	LLVMSetTarget(ctx->gallivm.module,
+
+#if HAVE_LLVM < 0x0306
+			"r600--");
+#else
+			triple);
+#endif
 	ctx->gallivm.builder = LLVMCreateBuilderInContext(ctx->gallivm.context);
 
 	struct lp_build_tgsi_context * bld_base = &ctx->soa.bld_base;
@@ -1693,14 +1701,22 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 }
 
 void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
+			     LLVMTypeRef *return_types, unsigned num_return_elems,
 			     LLVMTypeRef *ParamTypes, unsigned ParamCount)
 {
-	LLVMTypeRef main_fn_type;
+	LLVMTypeRef main_fn_type, ret_type;
 	LLVMBasicBlockRef main_fn_body;
 
+	if (num_return_elems)
+		ret_type = LLVMStructTypeInContext(ctx->gallivm.context,
+						   return_types,
+						   num_return_elems, true);
+	else
+		ret_type = LLVMVoidTypeInContext(ctx->gallivm.context);
+
 	/* Setup the function */
-	main_fn_type = LLVMFunctionType(LLVMVoidTypeInContext(ctx->gallivm.context),
-					ParamTypes, ParamCount, 0);
+	ctx->return_type = ret_type;
+	main_fn_type = LLVMFunctionType(ret_type, ParamTypes, ParamCount, 0);
 	ctx->main_fn = LLVMAddFunction(ctx->gallivm.module, "main", main_fn_type);
 	main_fn_body = LLVMAppendBasicBlockInContext(ctx->gallivm.context,
 			ctx->main_fn, "main_body");
@@ -1710,10 +1726,15 @@ void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
 void radeon_llvm_finalize_module(struct radeon_llvm_context * ctx)
 {
 	struct gallivm_state * gallivm = ctx->soa.bld_base.base.gallivm;
+	const char *triple = LLVMGetTarget(gallivm->module);
+	LLVMTargetLibraryInfoRef target_library_info;
 
 	/* Create the pass manager */
 	gallivm->passmgr = LLVMCreateFunctionPassManagerForModule(
 							gallivm->module);
+
+	target_library_info = gallivm_create_target_library_info(triple);
+	LLVMAddTargetLibraryInfo(target_library_info, gallivm->passmgr);
 
 	/* This pass should eliminate all the load and store instructions */
 	LLVMAddPromoteMemoryToRegisterPass(gallivm->passmgr);
@@ -1730,7 +1751,7 @@ void radeon_llvm_finalize_module(struct radeon_llvm_context * ctx)
 
 	LLVMDisposeBuilder(gallivm->builder);
 	LLVMDisposePassManager(gallivm->passmgr);
-
+	gallivm_dispose_target_library_info(target_library_info);
 }
 
 void radeon_llvm_dispose(struct radeon_llvm_context * ctx)

@@ -108,7 +108,9 @@ static inline uint32_t _mesa_hash_pointer(const void *pointer)
    return _mesa_hash_data(&pointer, sizeof(pointer));
 }
 
-static const uint32_t _mesa_fnv32_1a_offset_bias = 2166136261u;
+enum {
+   _mesa_fnv32_1a_offset_bias = 2166136261u,
+};
 
 static inline uint32_t
 _mesa_fnv32_1a_accumulate_block(uint32_t hash, const void *data, size_t size)

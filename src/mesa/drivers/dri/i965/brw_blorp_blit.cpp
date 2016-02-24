@@ -70,8 +70,13 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     * the destination buffer because we use the standard render path to render
     * to destination color buffers, and the standard render path is
     * fast-color-aware.
+    * Lossless compression is only introduced for gen9 onwards whereas
+    * blorp is not supported even for gen8. Therefore it should be impossible
+    * to end up here with single sampled compressed surfaces.
     */
-   intel_miptree_resolve_color(brw, src_mt);
+   assert(!intel_miptree_is_lossless_compressed(brw, src_mt));
+   assert(!intel_miptree_is_lossless_compressed(brw, dst_mt));
+   intel_miptree_resolve_color(brw, src_mt, 0);
    intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_layer);
    intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_layer);
 

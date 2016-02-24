@@ -231,6 +231,18 @@ struct st_tesseval_program
 };
 
 
+/**
+ * Derived from Mesa gl_compute_program:
+ */
+struct st_compute_program
+{
+   struct gl_compute_program Base;  /**< The Mesa compute program */
+   struct pipe_compute_state tgsi;
+   struct glsl_to_tgsi_visitor* glsl_to_tgsi;
+
+   struct st_basic_variant *variants;
+};
+
 
 static inline struct st_fragment_program *
 st_fragment_program( struct gl_fragment_program *fp )
@@ -261,6 +273,12 @@ static inline struct st_tesseval_program *
 st_tesseval_program( struct gl_tess_eval_program *tep )
 {
    return (struct st_tesseval_program *)tep;
+}
+
+static inline struct st_compute_program *
+st_compute_program( struct gl_compute_program *cp )
+{
+   return (struct st_compute_program *)cp;
 }
 
 static inline void
@@ -313,6 +331,16 @@ st_reference_tesseprog(struct st_context *st,
                            (struct gl_program *) prog);
 }
 
+static inline void
+st_reference_compprog(struct st_context *st,
+                      struct st_compute_program **ptr,
+                      struct st_compute_program *prog)
+{
+   _mesa_reference_program(st->ctx,
+                           (struct gl_program **) ptr,
+                           (struct gl_program *) prog);
+}
+
 /**
  * This defines mapping from Mesa VARYING_SLOTs to TGSI GENERIC slots.
  */
@@ -351,6 +379,11 @@ st_get_fp_variant(struct st_context *st,
                   const struct st_fp_variant_key *key);
 
 extern struct st_basic_variant *
+st_get_cp_variant(struct st_context *st,
+                  struct pipe_compute_state *tgsi,
+                  struct st_basic_variant **variants);
+
+extern struct st_basic_variant *
 st_get_basic_variant(struct st_context *st,
                      unsigned pipe_shader,
                      struct pipe_shader_state *tgsi,
@@ -363,6 +396,10 @@ st_release_vp_variants( struct st_context *st,
 extern void
 st_release_fp_variants( struct st_context *st,
                         struct st_fragment_program *stfp );
+
+extern void
+st_release_cp_variants(struct st_context *st,
+                        struct st_compute_program *stcp);
 
 extern void
 st_release_basic_variants(struct st_context *st, GLenum target,
@@ -391,6 +428,10 @@ st_translate_tessctrl_program(struct st_context *st,
 extern bool
 st_translate_tesseval_program(struct st_context *st,
                               struct st_tesseval_program *sttep);
+
+extern bool
+st_translate_compute_program(struct st_context *st,
+                             struct st_compute_program *stcp);
 
 extern void
 st_print_current_vertex_program(void);

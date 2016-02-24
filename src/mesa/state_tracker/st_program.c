@@ -158,6 +158,9 @@ delete_basic_variant(struct st_context *st, struct st_basic_variant *v,
       case GL_GEOMETRY_PROGRAM_NV:
          cso_delete_geometry_shader(st->cso_context, v->driver_shader);
          break;
+      case GL_COMPUTE_PROGRAM_NV:
+         cso_delete_compute_shader(st->cso_context, v->driver_shader);
+         break;
       default:
          assert(!"this shouldn't occur");
       }
@@ -188,6 +191,30 @@ st_release_basic_variants(struct st_context *st, GLenum target,
    if (tgsi->tokens) {
       ureg_free_tokens(tgsi->tokens);
       tgsi->tokens = NULL;
+   }
+}
+
+
+/**
+ * Free all variants of a compute program.
+ */
+void
+st_release_cp_variants(struct st_context *st, struct st_compute_program *stcp)
+{
+   struct st_basic_variant **variants = &stcp->variants;
+   struct st_basic_variant *v;
+
+   for (v = *variants; v; ) {
+      struct st_basic_variant *next = v->next;
+      delete_basic_variant(st, v, stcp->Base.Base.Target);
+      v = next;
+   }
+
+   *variants = NULL;
+
+   if (stcp->tgsi.prog) {
+      ureg_free_tokens(stcp->tgsi.prog);
+      stcp->tgsi.prog = NULL;
    }
 }
 
@@ -1395,6 +1422,74 @@ st_translate_tesseval_program(struct st_context *st,
 
 
 /**
+ * Translate a compute program to create a new variant.
+ */
+bool
+st_translate_compute_program(struct st_context *st,
+                             struct st_compute_program *stcp)
+{
+   struct ureg_program *ureg;
+   struct pipe_shader_state prog;
+
+   ureg = ureg_create_with_screen(TGSI_PROCESSOR_COMPUTE, st->pipe->screen);
+   if (ureg == NULL)
+      return false;
+
+   st_translate_program_common(st, &stcp->Base.Base, stcp->glsl_to_tgsi, ureg,
+                               TGSI_PROCESSOR_COMPUTE, &prog);
+
+   stcp->tgsi.prog = prog.tokens;
+   stcp->tgsi.req_local_mem = stcp->Base.SharedSize;
+   stcp->tgsi.req_private_mem = 0;
+   stcp->tgsi.req_input_mem = 0;
+
+   free_glsl_to_tgsi_visitor(stcp->glsl_to_tgsi);
+   stcp->glsl_to_tgsi = NULL;
+   return true;
+}
+
+
+/**
+ * Get/create compute program variant.
+ */
+struct st_basic_variant *
+st_get_cp_variant(struct st_context *st,
+                  struct pipe_compute_state *tgsi,
+                  struct st_basic_variant **variants)
+{
+   struct pipe_context *pipe = st->pipe;
+   struct st_basic_variant *v;
+   struct st_basic_variant_key key;
+
+   memset(&key, 0, sizeof(key));
+   key.st = st->has_shareable_shaders ? NULL : st;
+
+   /* Search for existing variant */
+   for (v = *variants; v; v = v->next) {
+      if (memcmp(&v->key, &key, sizeof(key)) == 0) {
+         break;
+      }
+   }
+
+   if (!v) {
+      /* create new */
+      v = CALLOC_STRUCT(st_basic_variant);
+      if (v) {
+         /* fill in new variant */
+         v->driver_shader = pipe->create_compute_state(pipe, tgsi);
+         v->key = key;
+
+         /* insert into list */
+         v->next = *variants;
+         *variants = v;
+      }
+   }
+
+   return v;
+}
+
+
+/**
  * Vert/Geom/Frag programs have per-context variants.  Free all the
  * variants attached to the given program which match the given context.
  */
@@ -1449,14 +1544,17 @@ destroy_program_variants(struct st_context *st, struct gl_program *target)
    case GL_GEOMETRY_PROGRAM_NV:
    case GL_TESS_CONTROL_PROGRAM_NV:
    case GL_TESS_EVALUATION_PROGRAM_NV:
+   case GL_COMPUTE_PROGRAM_NV:
       {
          struct st_geometry_program *gp = (struct st_geometry_program*)target;
          struct st_tessctrl_program *tcp = (struct st_tessctrl_program*)target;
          struct st_tesseval_program *tep = (struct st_tesseval_program*)target;
+         struct st_compute_program *cp = (struct st_compute_program*)target;
          struct st_basic_variant **variants =
             target->Target == GL_GEOMETRY_PROGRAM_NV ? &gp->variants :
             target->Target == GL_TESS_CONTROL_PROGRAM_NV ? &tcp->variants :
             target->Target == GL_TESS_EVALUATION_PROGRAM_NV ? &tep->variants :
+            target->Target == GL_COMPUTE_PROGRAM_NV ? &cp->variants :
             NULL;
          struct st_basic_variant *v, **prevPtr = variants;
 
@@ -1513,6 +1611,7 @@ destroy_shader_program_variants_cb(GLuint key, void *data, void *userData)
    case GL_GEOMETRY_SHADER:
    case GL_TESS_CONTROL_SHADER:
    case GL_TESS_EVALUATION_SHADER:
+   case GL_COMPUTE_SHADER:
       {
          destroy_program_variants(st, shader->Program);
       }
@@ -1626,6 +1725,12 @@ st_precompile_shader_variant(struct st_context *st,
       memset(&key, 0, sizeof(key));
       key.st = st->has_shareable_shaders ? NULL : st;
       st_get_fp_variant(st, p, &key);
+      break;
+   }
+
+   case GL_COMPUTE_PROGRAM_NV: {
+      struct st_compute_program *p = (struct st_compute_program *)prog;
+      st_get_cp_variant(st, &p->tgsi, &p->variants);
       break;
    }
 

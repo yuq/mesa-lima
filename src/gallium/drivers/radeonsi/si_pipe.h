@@ -80,10 +80,36 @@
 #define SI_MAX_BORDER_COLORS	4096
 
 struct si_compute;
+struct hash_table;
 
 struct si_screen {
 	struct r600_common_screen	b;
 	unsigned			gs_table_depth;
+
+	/* Whether shaders are monolithic (1-part) or separate (3-part). */
+	bool				use_monolithic_shaders;
+
+	pipe_mutex			shader_parts_mutex;
+	struct si_shader_part		*vs_prologs;
+	struct si_shader_part		*vs_epilogs;
+	struct si_shader_part		*tcs_epilogs;
+	struct si_shader_part		*ps_prologs;
+	struct si_shader_part		*ps_epilogs;
+
+	/* Shader cache in memory.
+	 *
+	 * Design & limitations:
+	 * - The shader cache is per screen (= per process), never saved to
+	 *   disk, and skips redundant shader compilations from TGSI to bytecode.
+	 * - It can only be used with one-variant-per-shader support, in which
+	 *   case only the main (typically middle) part of shaders is cached.
+	 * - Only VS, TCS, TES, PS are cached, out of which only the hw VS
+	 *   variants of VS and TES are cached, so LS and ES aren't.
+	 * - GS and CS aren't cached, but it's certainly possible to cache
+	 *   those as well.
+	 */
+	pipe_mutex			shader_cache_mutex;
+	struct hash_table		*shader_cache;
 };
 
 struct si_blend_color {

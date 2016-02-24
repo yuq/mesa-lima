@@ -76,7 +76,7 @@ nv50_vertex_state_create(struct pipe_context *pipe,
         enum pipe_format fmt = ve->src_format;
 
         so->element[i].pipe = elements[i];
-        so->element[i].state = nv50_format_table[fmt].vtx;
+        so->element[i].state = nv50_vertex_format[fmt].vtx;
 
         if (!so->element[i].state) {
             switch (util_format_get_nr_components(fmt)) {
@@ -89,7 +89,7 @@ nv50_vertex_state_create(struct pipe_context *pipe,
                 FREE(so);
                 return NULL;
             }
-            so->element[i].state = nv50_format_table[fmt].vtx;
+            so->element[i].state = nv50_vertex_format[fmt].vtx;
             so->need_conversion = true;
             pipe_debug_message(&nouveau_context(pipe)->debug, FALLBACK,
                                "Converting vertex element %d, no hw format %s",
@@ -814,6 +814,13 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    if (tex_dirty) {
       BEGIN_NV04(push, NV50_3D(TEX_CACHE_CTL), 1);
       PUSH_DATA (push, 0x20);
+   }
+
+   if (nv50->screen->base.class_3d >= NVA0_3D_CLASS &&
+       nv50->seamless_cube_map != nv50->state.seamless_cube_map) {
+      nv50->state.seamless_cube_map = nv50->seamless_cube_map;
+      BEGIN_NV04(push, SUBC_3D(NVA0_3D_TEX_MISC), 1);
+      PUSH_DATA (push, nv50->seamless_cube_map ? NVA0_3D_TEX_MISC_SEAMLESS_CUBE_MAP : 0);
    }
 
    if (nv50->vbo_fifo) {

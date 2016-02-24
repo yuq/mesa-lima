@@ -527,7 +527,8 @@ CodeEmitterNV50::emitForm_ADD(const Instruction *i)
 
    setSrcFileBits(i, NV50_OP_ENC_LONG_ALT);
    setSrc(i, 0, 0);
-   setSrc(i, 1, 2);
+   if (i->predSrc != 1)
+      setSrc(i, 1, 2);
 
    if (i->getIndirect(0, 0)) {
       assert(!i->getIndirect(1, 0));
@@ -840,7 +841,7 @@ CodeEmitterNV50::emitQUADOP(const Instruction *i, uint8_t lane, uint8_t quOp)
 
    emitForm_ADD(i);
 
-   if (!i->srcExists(1))
+   if (!i->srcExists(1) || i->predSrc == 1)
       srcId(i->src(0), 32 + 14);
 }
 

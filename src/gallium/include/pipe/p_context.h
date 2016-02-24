@@ -48,6 +48,7 @@ struct pipe_constant_buffer;
 struct pipe_debug_callback;
 struct pipe_depth_stencil_alpha_state;
 struct pipe_draw_info;
+struct pipe_grid_info;
 struct pipe_fence_handle;
 struct pipe_framebuffer_state;
 struct pipe_image_view;
@@ -312,14 +313,14 @@ struct pipe_context {
     * \param shader     selects shader stage
     * \param start_slot first image slot to bind.
     * \param count      number of consecutive images to bind.
-    * \param buffers    array of pointers to the images to bind, it
+    * \param buffers    array of the images to bind, it
     *                   should contain at least \a count elements
     *                   unless it's NULL, in which case no images will
     *                   be bound.
     */
    void (*set_shader_images)(struct pipe_context *, unsigned shader,
                              unsigned start_slot, unsigned count,
-                             struct pipe_image_view **images);
+                             struct pipe_image_view *images);
 
    void (*set_vertex_buffers)( struct pipe_context *,
                                unsigned start_slot,
@@ -477,16 +478,6 @@ struct pipe_context {
    void (*surface_destroy)(struct pipe_context *ctx,
                            struct pipe_surface *);
 
-   /**
-    * Create an image view into a buffer or texture to be used with load,
-    * store, and atomic instructions by a shader stage.
-    */
-   struct pipe_image_view * (*create_image_view)(struct pipe_context *ctx,
-                                                 struct pipe_resource *texture,
-                                                 const struct pipe_image_view *templat);
-
-   void (*image_view_destroy)(struct pipe_context *ctx,
-                              struct pipe_image_view *view);
 
    /**
     * Map a resource.
@@ -618,23 +609,9 @@ struct pipe_context {
    /**
     * Launch the compute kernel starting from instruction \a pc of the
     * currently bound compute program.
-    *
-    * \a grid_layout and \a block_layout are arrays of size \a
-    * PIPE_COMPUTE_CAP_GRID_DIMENSION that determine the layout of the
-    * grid (in block units) and working block (in thread units) to be
-    * used, respectively.
-    *
-    * \a pc For drivers that use PIPE_SHADER_IR_LLVM as their prefered IR,
-    * this value will be the index of the kernel in the opencl.kernels
-    * metadata list.
-    *
-    * \a input will be used to initialize the INPUT resource, and it
-    * should point to a buffer of at least
-    * pipe_compute_state::req_input_mem bytes.
     */
    void (*launch_grid)(struct pipe_context *context,
-                       const uint *block_layout, const uint *grid_layout,
-                       uint32_t pc, const void *input);
+                       const struct pipe_grid_info *info);
    /*@}*/
 
    /**

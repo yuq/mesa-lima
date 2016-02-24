@@ -43,6 +43,7 @@
 #include "st_cb_blit.h"
 #include "st_cb_bufferobjects.h"
 #include "st_cb_clear.h"
+#include "st_cb_compute.h"
 #include "st_cb_condrender.h"
 #include "st_cb_copyimage.h"
 #include "st_cb_drawpixels.h"
@@ -138,8 +139,11 @@ void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
       st->dirty.st |= ST_NEW_VERTEX_PROGRAM;
    }
 
+   /* Invalidate render and compute pipelines. */
    st->dirty.mesa |= new_state;
    st->dirty.st |= ST_NEW_MESA;
+   st->dirty_cp.mesa |= new_state;
+   st->dirty_cp.st |= ST_NEW_MESA;
 
    /* This is the only core Mesa module we depend upon.
     * No longer use swrast, swsetup, tnl.
@@ -182,6 +186,10 @@ st_destroy_context_priv(struct st_context *st)
       u_upload_destroy(st->constbuf_uploader);
    }
 
+   /* free glDrawPixels cache data */
+   free(st->drawpix_cache.image);
+   pipe_resource_reference(&st->drawpix_cache.texture, NULL);
+
    cso_destroy_context(st->cso_context);
    free( st );
 }
@@ -208,8 +216,11 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    /* state tracker needs the VBO module */
    _vbo_CreateContext(ctx);
 
+   /* Initialize render and compute pipelines flags */
    st->dirty.mesa = ~0;
    st->dirty.st = ~0;
+   st->dirty_cp.mesa = ~0;
+   st->dirty_cp.st = ~0;
 
    /* Create upload manager for vertex data for glBitmap, glDrawPixels,
     * glClear, etc.
@@ -241,16 +252,30 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    else
       st->internal_target = PIPE_TEXTURE_RECT;
 
-   /* Vertex element objects used for drawing rectangles for glBitmap,
-    * glDrawPixels, glClear, etc.
+   /* Setup vertex element info for 'struct st_util_vertex'.
     */
-   for (i = 0; i < ARRAY_SIZE(st->velems_util_draw); i++) {
-      memset(&st->velems_util_draw[i], 0, sizeof(struct pipe_vertex_element));
-      st->velems_util_draw[i].src_offset = i * 4 * sizeof(float);
-      st->velems_util_draw[i].instance_divisor = 0;
-      st->velems_util_draw[i].vertex_buffer_index =
-            cso_get_aux_vertex_buffer_slot(st->cso_context);
-      st->velems_util_draw[i].src_format = PIPE_FORMAT_R32G32B32A32_FLOAT;
+   {
+      const unsigned slot = cso_get_aux_vertex_buffer_slot(st->cso_context);
+
+      /* If this assertion ever fails all state tracker calls to
+       * cso_get_aux_vertex_buffer_slot() should be audited.  This
+       * particular call would have to be moved to just before each
+       * drawing call.
+       */
+      assert(slot == 0);
+
+      STATIC_ASSERT(sizeof(struct st_util_vertex) == 9 * sizeof(float));
+
+      memset(&st->util_velems, 0, sizeof(st->util_velems));
+      st->util_velems[0].src_offset = 0;
+      st->util_velems[0].vertex_buffer_index = slot;
+      st->util_velems[0].src_format = PIPE_FORMAT_R32G32B32_FLOAT;
+      st->util_velems[1].src_offset = 3 * sizeof(float);
+      st->util_velems[1].vertex_buffer_index = slot;
+      st->util_velems[1].src_format = PIPE_FORMAT_R32G32B32A32_FLOAT;
+      st->util_velems[2].src_offset = 7 * sizeof(float);
+      st->util_velems[2].vertex_buffer_index = slot;
+      st->util_velems[2].src_format = PIPE_FORMAT_R32G32_FLOAT;
    }
 
    /* we want all vertex data to be placed in buffer objects */
@@ -262,9 +287,9 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
 
    /* Need these flags:
     */
-   st->ctx->FragmentProgram._MaintainTexEnvProgram = GL_TRUE;
+   ctx->FragmentProgram._MaintainTexEnvProgram = GL_TRUE;
 
-   st->ctx->VertexProgram._MaintainTnlProgram = GL_TRUE;
+   ctx->VertexProgram._MaintainTnlProgram = GL_TRUE;
 
    st->has_stencil_export =
       screen->get_param(screen, PIPE_CAP_SHADER_STENCIL_EXPORT);
@@ -328,8 +353,8 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    /* called after _mesa_create_context/_mesa_init_point, fix default user
     * settable max point size up
     */
-   st->ctx->Point.MaxSize = MAX2(ctx->Const.MaxPointSize,
-                                 ctx->Const.MaxPointSizeAA);
+   ctx->Point.MaxSize = MAX2(ctx->Const.MaxPointSize,
+                             ctx->Const.MaxPointSizeAA);
    /* For vertex shaders, make sure not to emit saturate when SM 3.0 is not supported */
    ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].EmitNoSat = !st->has_shader_model3;
 
@@ -377,6 +402,7 @@ static void st_init_driver_flags(struct gl_driver_flags *f)
    f->NewTextureBuffer = ST_NEW_SAMPLER_VIEWS;
    f->NewAtomicBuffer = ST_NEW_ATOMIC_BUFFER;
    f->NewShaderStorageBuffer = ST_NEW_STORAGE_BUFFER;
+   f->NewImageUnits = ST_NEW_IMAGE_UNITS;
 }
 
 struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
@@ -440,6 +466,7 @@ void st_destroy_context( struct st_context *st )
    st_reference_vertprog(st, &st->vp, NULL);
    st_reference_tesscprog(st, &st->tcp, NULL);
    st_reference_tesseprog(st, &st->tep, NULL);
+   st_reference_compprog(st, &st->cp, NULL);
 
    /* release framebuffer surfaces */
    for (i = 0; i < PIPE_MAX_COLOR_BUFS; i++) {
@@ -449,7 +476,7 @@ void st_destroy_context( struct st_context *st )
    pipe_sampler_view_reference(&st->pixel_xfer.pixelmap_sampler_view, NULL);
    pipe_resource_reference(&st->pixel_xfer.pixelmap_texture, NULL);
 
-   _vbo_DestroyContext(st->ctx);
+   _vbo_DestroyContext(ctx);
 
    st_destroy_program_variants(st);
 
@@ -503,6 +530,7 @@ void st_init_driver_functions(struct pipe_screen *screen,
    st_init_flush_functions(screen, functions);
    st_init_string_functions(functions);
    st_init_viewport_functions(functions);
+   st_init_compute_functions(functions);
 
    st_init_xformfb_functions(functions);
    st_init_syncobj_functions(functions);

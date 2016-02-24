@@ -51,7 +51,7 @@ glsl_type::glsl_type(GLenum gl_type,
    gl_type(gl_type),
    base_type(base_type),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampler_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0),
    vector_elements(vector_elements), matrix_columns(matrix_columns),
    length(0)
 {
@@ -75,7 +75,7 @@ glsl_type::glsl_type(GLenum gl_type, glsl_base_type base_type,
    gl_type(gl_type),
    base_type(base_type),
    sampler_dimensionality(dim), sampler_shadow(shadow),
-   sampler_array(array), sampler_type(type), interface_packing(0),
+   sampler_array(array), sampled_type(type), interface_packing(0),
    length(0)
 {
    mtx_lock(&glsl_type::mutex);
@@ -101,7 +101,7 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
    gl_type(0),
    base_type(GLSL_TYPE_STRUCT),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampler_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0),
    vector_elements(0), matrix_columns(0),
    length(num_fields)
 {
@@ -141,7 +141,7 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
    gl_type(0),
    base_type(GLSL_TYPE_INTERFACE),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampler_type(0), interface_packing((unsigned) packing),
+   sampled_type(0), interface_packing((unsigned) packing),
    vector_elements(0), matrix_columns(0),
    length(num_fields)
 {
@@ -180,7 +180,7 @@ glsl_type::glsl_type(const glsl_type *return_type,
    gl_type(0),
    base_type(GLSL_TYPE_FUNCTION),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampler_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0),
    vector_elements(0), matrix_columns(0),
    length(num_params)
 {
@@ -212,7 +212,7 @@ glsl_type::glsl_type(const char *subroutine_name) :
    gl_type(0),
    base_type(GLSL_TYPE_SUBROUTINE),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampler_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0),
    vector_elements(1), matrix_columns(1),
    length(0)
 {
@@ -428,7 +428,7 @@ _mesa_glsl_release_types(void)
 glsl_type::glsl_type(const glsl_type *array, unsigned length) :
    base_type(GLSL_TYPE_ARRAY),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampler_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0),
    vector_elements(0), matrix_columns(0),
    length(length), name(NULL)
 {

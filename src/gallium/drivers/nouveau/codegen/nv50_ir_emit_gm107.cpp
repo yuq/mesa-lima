@@ -193,6 +193,8 @@ private:
    void emitNOP();
    void emitKIL();
    void emitOUT();
+
+   void emitMEMBAR();
 };
 
 /*******************************************************************************
@@ -248,6 +250,8 @@ CodeEmitterGM107::emitSYS(int pos, const Value *val)
    case SV_INVOCATION_ID  : id = 0x11; break;
    case SV_THREAD_KILL    : id = 0x13; break;
    case SV_INVOCATION_INFO: id = 0x1d; break;
+   case SV_TID            : id = 0x21 + val->reg.data.sv.index; break;
+   case SV_CTAID          : id = 0x25 + val->reg.data.sv.index; break;
    default:
       assert(!"invalid system value");
       id = 0;
@@ -1531,7 +1535,10 @@ CodeEmitterGM107::emitFSWZADD()
    emitRND  (0x27);
    emitField(0x26, 1, insn->lanes); /* abused for .ndv */
    emitField(0x1c, 8, insn->subOp);
-   emitGPR  (0x14, insn->src(1));
+   if (insn->predSrc != 1)
+      emitGPR  (0x14, insn->src(1));
+   else
+      emitGPR  (0x14);
    emitGPR  (0x08, insn->src(0));
    emitGPR  (0x00, insn->def(0));
 }
@@ -2327,22 +2334,34 @@ void
 CodeEmitterGM107::emitATOM()
 {
    unsigned dType, subOp;
-   switch (insn->dType) {
-   case TYPE_U32: dType = 0; break;
-   case TYPE_S32: dType = 1; break;
-   case TYPE_U64: dType = 2; break;
-   case TYPE_F32: dType = 3; break;
-   case TYPE_B128: dType = 4; break;
-   case TYPE_S64: dType = 5; break;
-   default: assert(!"unexpected dType"); dType = 0; break;
-   }
-   if (insn->subOp == NV50_IR_SUBOP_ATOM_EXCH)
-      subOp = 8;
-   else
-      subOp = insn->subOp;
-   assert(insn->subOp != NV50_IR_SUBOP_ATOM_CAS); /* XXX */
 
-   emitInsn (0xed000000);
+   if (insn->subOp == NV50_IR_SUBOP_ATOM_CAS) {
+      switch (insn->dType) {
+      case TYPE_U32: dType = 0; break;
+      case TYPE_U64: dType = 1; break;
+      default: assert(!"unexpected dType"); dType = 0; break;
+      }
+      subOp = 15;
+
+      emitInsn (0xee000000);
+   } else {
+      switch (insn->dType) {
+      case TYPE_U32: dType = 0; break;
+      case TYPE_S32: dType = 1; break;
+      case TYPE_U64: dType = 2; break;
+      case TYPE_F32: dType = 3; break;
+      case TYPE_B128: dType = 4; break;
+      case TYPE_S64: dType = 5; break;
+      default: assert(!"unexpected dType"); dType = 0; break;
+      }
+      if (insn->subOp == NV50_IR_SUBOP_ATOM_EXCH)
+         subOp = 8;
+      else
+         subOp = insn->subOp;
+
+      emitInsn (0xed000000);
+   }
+
    emitField(0x34, 4, subOp);
    emitField(0x31, 3, dType);
    emitField(0x30, 1, insn->src(0).getIndirect(0)->getSize() == 8);
@@ -2625,6 +2644,13 @@ CodeEmitterGM107::emitOUT()
    emitField(0x27, 2, (cut << 1) | emit);
    emitGPR  (0x08, insn->src(0));
    emitGPR  (0x00, insn->def(0));
+}
+
+void
+CodeEmitterGM107::emitMEMBAR()
+{
+   emitInsn (0xef980000);
+   emitField(0x08, 2, insn->subOp >> 2);
 }
 
 /*******************************************************************************
@@ -2925,6 +2951,9 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
    case OP_EMIT:
    case OP_RESTART:
       emitOUT();
+      break;
+   case OP_MEMBAR:
+      emitMEMBAR();
       break;
    default:
       assert(!"invalid opcode");

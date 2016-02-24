@@ -352,7 +352,7 @@ iter_declaration(
       TXT(", ");
       ENM(decl->Image.Resource, tgsi_texture_names);
       TXT(", ");
-      UID(decl->Image.Format);
+      TXT(util_format_name(decl->Image.Format));
       if (decl->Image.Writable)
          TXT(", WR");
       if (decl->Image.Raw)
@@ -362,6 +362,11 @@ iter_declaration(
    if (decl->Declaration.File == TGSI_FILE_BUFFER) {
       if (decl->Declaration.Atomic)
          TXT(", ATOMIC");
+   }
+
+   if (decl->Declaration.File == TGSI_FILE_MEMORY) {
+      if (decl->Declaration.Shared)
+         TXT(", SHARED");
    }
 
    if (decl->Declaration.File == TGSI_FILE_SAMPLER_VIEW) {

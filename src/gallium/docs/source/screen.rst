@@ -415,6 +415,9 @@ to be 0.
   (also used to implement atomic counters). Having this be non-0 also
   implies support for the ``LOAD``, ``STORE``, and ``ATOM*`` TGSI
   opcodes.
+* ``PIPE_SHADER_CAP_SUPPORTED_IRS``: Supported representations of the
+  program.  It should be a mask of ``pipe_shader_ir`` bits.
+* ``PIPE_SHADER_CAP_MAX_SHADER_IMAGES``: Maximum number of image units.
 
 
 .. _pipe_compute_cap:

@@ -1405,9 +1405,9 @@ emit_inline_matrix_constructor(const glsl_type *type,
             zero.d[i] = 0.0;
 
       ir_instruction *inst =
-	 new(ctx) ir_assignment(new(ctx) ir_dereference_variable(rhs_var),
-				new(ctx) ir_constant(rhs_var->type, &zero),
-				NULL);
+         new(ctx) ir_assignment(new(ctx) ir_dereference_variable(rhs_var),
+                                new(ctx) ir_constant(rhs_var->type, &zero),
+                                NULL);
       instructions->push_tail(inst);
 
       ir_dereference *const rhs_ref = new(ctx) ir_dereference_variable(rhs_var);
@@ -1422,36 +1422,36 @@ emit_inline_matrix_constructor(const glsl_type *type,
        * columns than rows).
        */
       static const unsigned rhs_swiz[4][4] = {
-	 { 0, 1, 1, 1 },
-	 { 1, 0, 1, 1 },
-	 { 1, 1, 0, 1 },
-	 { 1, 1, 1, 0 }
+         { 0, 1, 1, 1 },
+         { 1, 0, 1, 1 },
+         { 1, 1, 0, 1 },
+         { 1, 1, 1, 0 }
       };
 
       const unsigned cols_to_init = MIN2(type->matrix_columns,
-					 type->vector_elements);
+                                         type->vector_elements);
       for (unsigned i = 0; i < cols_to_init; i++) {
-	 ir_constant *const col_idx = new(ctx) ir_constant(i);
-	 ir_rvalue *const col_ref = new(ctx) ir_dereference_array(var, col_idx);
+         ir_constant *const col_idx = new(ctx) ir_constant(i);
+         ir_rvalue *const col_ref = new(ctx) ir_dereference_array(var, col_idx);
 
-	 ir_rvalue *const rhs_ref = new(ctx) ir_dereference_variable(rhs_var);
-	 ir_rvalue *const rhs = new(ctx) ir_swizzle(rhs_ref, rhs_swiz[i],
-						    type->vector_elements);
+         ir_rvalue *const rhs_ref = new(ctx) ir_dereference_variable(rhs_var);
+         ir_rvalue *const rhs = new(ctx) ir_swizzle(rhs_ref, rhs_swiz[i],
+                                                    type->vector_elements);
 
-	 inst = new(ctx) ir_assignment(col_ref, rhs, NULL);
-	 instructions->push_tail(inst);
+         inst = new(ctx) ir_assignment(col_ref, rhs, NULL);
+         instructions->push_tail(inst);
       }
 
       for (unsigned i = cols_to_init; i < type->matrix_columns; i++) {
-	 ir_constant *const col_idx = new(ctx) ir_constant(i);
-	 ir_rvalue *const col_ref = new(ctx) ir_dereference_array(var, col_idx);
+         ir_constant *const col_idx = new(ctx) ir_constant(i);
+         ir_rvalue *const col_ref = new(ctx) ir_dereference_array(var, col_idx);
 
-	 ir_rvalue *const rhs_ref = new(ctx) ir_dereference_variable(rhs_var);
-	 ir_rvalue *const rhs = new(ctx) ir_swizzle(rhs_ref, 1, 1, 1, 1,
-						    type->vector_elements);
+         ir_rvalue *const rhs_ref = new(ctx) ir_dereference_variable(rhs_var);
+         ir_rvalue *const rhs = new(ctx) ir_swizzle(rhs_ref, 1, 1, 1, 1,
+                                                    type->vector_elements);
 
-	 inst = new(ctx) ir_assignment(col_ref, rhs, NULL);
-	 instructions->push_tail(inst);
+         inst = new(ctx) ir_assignment(col_ref, rhs, NULL);
+         instructions->push_tail(inst);
       }
    } else if (first_param->type->is_matrix()) {
       /* From page 50 (56 of the PDF) of the GLSL 1.50 spec:
@@ -1469,36 +1469,43 @@ emit_inline_matrix_constructor(const glsl_type *type,
       /* If the source matrix is smaller, pre-initialize the relavent parts of
        * the destination matrix to the identity matrix.
        */
-      if ((src_matrix->type->matrix_columns < var->type->matrix_columns)
-	  || (src_matrix->type->vector_elements < var->type->vector_elements)) {
+      if ((src_matrix->type->matrix_columns < var->type->matrix_columns) ||
+          (src_matrix->type->vector_elements < var->type->vector_elements)) {
 
-	 /* If the source matrix has fewer rows, every column of the destination
-	  * must be initialized.  Otherwise only the columns in the destination
-	  * that do not exist in the source must be initialized.
-	  */
-	 unsigned col =
-	    (src_matrix->type->vector_elements < var->type->vector_elements)
-	    ? 0 : src_matrix->type->matrix_columns;
+         /* If the source matrix has fewer rows, every column of the destination
+          * must be initialized.  Otherwise only the columns in the destination
+          * that do not exist in the source must be initialized.
+          */
+         unsigned col =
+            (src_matrix->type->vector_elements < var->type->vector_elements)
+            ? 0 : src_matrix->type->matrix_columns;
 
-	 const glsl_type *const col_type = var->type->column_type();
-	 for (/* empty */; col < var->type->matrix_columns; col++) {
-	    ir_constant_data ident;
+         const glsl_type *const col_type = var->type->column_type();
+         for (/* empty */; col < var->type->matrix_columns; col++) {
+            ir_constant_data ident;
 
-	    ident.f[0] = 0.0;
-	    ident.f[1] = 0.0;
-	    ident.f[2] = 0.0;
-	    ident.f[3] = 0.0;
+            if (!col_type->is_double()) {
+               ident.f[0] = 0.0f;
+               ident.f[1] = 0.0f;
+               ident.f[2] = 0.0f;
+               ident.f[3] = 0.0f;
+               ident.f[col] = 1.0f;
+            } else {
+               ident.d[0] = 0.0;
+               ident.d[1] = 0.0;
+               ident.d[2] = 0.0;
+               ident.d[3] = 0.0;
+               ident.d[col] = 1.0;
+            }
 
-	    ident.f[col] = 1.0;
+            ir_rvalue *const rhs = new(ctx) ir_constant(col_type, &ident);
 
-	    ir_rvalue *const rhs = new(ctx) ir_constant(col_type, &ident);
+            ir_rvalue *const lhs =
+               new(ctx) ir_dereference_array(var, new(ctx) ir_constant(col));
 
-	    ir_rvalue *const lhs =
-	       new(ctx) ir_dereference_array(var, new(ctx) ir_constant(col));
-
-	    ir_instruction *inst = new(ctx) ir_assignment(lhs, rhs, NULL);
-	    instructions->push_tail(inst);
-	 }
+            ir_instruction *inst = new(ctx) ir_assignment(lhs, rhs, NULL);
+            instructions->push_tail(inst);
+         }
       }
 
       /* Assign columns from the source matrix to the destination matrix.
@@ -1507,51 +1514,51 @@ emit_inline_matrix_constructor(const glsl_type *type,
        * generate a temporary and copy the paramter there.
        */
       ir_variable *const rhs_var =
-	 new(ctx) ir_variable(first_param->type, "mat_ctor_mat",
-			      ir_var_temporary);
+         new(ctx) ir_variable(first_param->type, "mat_ctor_mat",
+                              ir_var_temporary);
       instructions->push_tail(rhs_var);
 
       ir_dereference *const rhs_var_ref =
-	 new(ctx) ir_dereference_variable(rhs_var);
+         new(ctx) ir_dereference_variable(rhs_var);
       ir_instruction *const inst =
-	 new(ctx) ir_assignment(rhs_var_ref, first_param, NULL);
+         new(ctx) ir_assignment(rhs_var_ref, first_param, NULL);
       instructions->push_tail(inst);
 
       const unsigned last_row = MIN2(src_matrix->type->vector_elements,
-				     var->type->vector_elements);
+                                     var->type->vector_elements);
       const unsigned last_col = MIN2(src_matrix->type->matrix_columns,
-				     var->type->matrix_columns);
+                                     var->type->matrix_columns);
 
       unsigned swiz[4] = { 0, 0, 0, 0 };
       for (unsigned i = 1; i < last_row; i++)
-	 swiz[i] = i;
+         swiz[i] = i;
 
-      const unsigned write_mask = (1U << last_row) - 1;
+         const unsigned write_mask = (1U << last_row) - 1;
 
       for (unsigned i = 0; i < last_col; i++) {
-	 ir_dereference *const lhs =
-	    new(ctx) ir_dereference_array(var, new(ctx) ir_constant(i));
-	 ir_rvalue *const rhs_col =
-	    new(ctx) ir_dereference_array(rhs_var, new(ctx) ir_constant(i));
+         ir_dereference *const lhs =
+            new(ctx) ir_dereference_array(var, new(ctx) ir_constant(i));
+         ir_rvalue *const rhs_col =
+            new(ctx) ir_dereference_array(rhs_var, new(ctx) ir_constant(i));
 
-	 /* If one matrix has columns that are smaller than the columns of the
-	  * other matrix, wrap the column access of the larger with a swizzle
-	  * so that the LHS and RHS of the assignment have the same size (and
-	  * therefore have the same type).
-	  *
-	  * It would be perfectly valid to unconditionally generate the
-	  * swizzles, this this will typically result in a more compact IR tree.
-	  */
-	 ir_rvalue *rhs;
-	 if (lhs->type->vector_elements != rhs_col->type->vector_elements) {
-	    rhs = new(ctx) ir_swizzle(rhs_col, swiz, last_row);
-	 } else {
-	    rhs = rhs_col;
-	 }
+         /* If one matrix has columns that are smaller than the columns of the
+          * other matrix, wrap the column access of the larger with a swizzle
+          * so that the LHS and RHS of the assignment have the same size (and
+          * therefore have the same type).
+          *
+          * It would be perfectly valid to unconditionally generate the
+          * swizzles, this this will typically result in a more compact IR tree.
+          */
+         ir_rvalue *rhs;
+         if (lhs->type->vector_elements != rhs_col->type->vector_elements) {
+            rhs = new(ctx) ir_swizzle(rhs_col, swiz, last_row);
+         } else {
+            rhs = rhs_col;
+         }
 
-	 ir_instruction *inst =
-	    new(ctx) ir_assignment(lhs, rhs, NULL, write_mask);
-	 instructions->push_tail(inst);
+         ir_instruction *inst =
+            new(ctx) ir_assignment(lhs, rhs, NULL, write_mask);
+         instructions->push_tail(inst);
       }
    } else {
       const unsigned cols = type->matrix_columns;

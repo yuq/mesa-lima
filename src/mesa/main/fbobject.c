@@ -811,7 +811,7 @@ test_attachment_completeness(const struct gl_context *ctx, GLenum format,
          break;
       }
 
-      baseFormat = _mesa_get_format_base_format(texImage->TexFormat);
+      baseFormat = texImage->_BaseFormat;
 
       if (format == GL_COLOR) {
          if (!_mesa_is_legal_color_format(ctx, baseFormat)) {
@@ -868,8 +868,7 @@ test_attachment_completeness(const struct gl_context *ctx, GLenum format,
       }
    }
    else if (att->Type == GL_RENDERBUFFER_EXT) {
-      const GLenum baseFormat =
-         _mesa_get_format_base_format(att->Renderbuffer->Format);
+      const GLenum baseFormat = att->Renderbuffer->_BaseFormat;
 
       assert(att->Renderbuffer);
       if (!att->Renderbuffer->InternalFormat ||

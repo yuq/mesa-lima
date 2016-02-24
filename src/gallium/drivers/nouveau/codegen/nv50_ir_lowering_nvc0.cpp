@@ -1033,6 +1033,100 @@ NVC0LoweringPass::handleSUQ(Instruction *suq)
    return true;
 }
 
+void
+NVC0LoweringPass::handleSharedATOM(Instruction *atom)
+{
+   assert(atom->src(0).getFile() == FILE_MEMORY_SHARED);
+
+   BasicBlock *currBB = atom->bb;
+   BasicBlock *tryLockAndSetBB = atom->bb->splitBefore(atom, false);
+   BasicBlock *joinBB = atom->bb->splitAfter(atom);
+
+   bld.setPosition(currBB, true);
+   assert(!currBB->joinAt);
+   currBB->joinAt = bld.mkFlow(OP_JOINAT, joinBB, CC_ALWAYS, NULL);
+
+   bld.mkFlow(OP_BRA, tryLockAndSetBB, CC_ALWAYS, NULL);
+   currBB->cfg.attach(&tryLockAndSetBB->cfg, Graph::Edge::TREE);
+
+   bld.setPosition(tryLockAndSetBB, true);
+
+   Instruction *ld =
+      bld.mkLoad(TYPE_U32, atom->getDef(0),
+                 bld.mkSymbol(FILE_MEMORY_SHARED, 0, TYPE_U32, 0), NULL);
+   ld->setDef(1, bld.getSSA(1, FILE_PREDICATE));
+   ld->subOp = NV50_IR_SUBOP_LOAD_LOCKED;
+
+   Value *stVal;
+   if (atom->subOp == NV50_IR_SUBOP_ATOM_EXCH) {
+      // Read the old value, and write the new one.
+      stVal = atom->getSrc(1);
+   } else if (atom->subOp == NV50_IR_SUBOP_ATOM_CAS) {
+      CmpInstruction *set =
+         bld.mkCmp(OP_SET, CC_EQ, TYPE_U32, bld.getSSA(1, FILE_PREDICATE),
+                   TYPE_U32, ld->getDef(0), atom->getSrc(1));
+      set->setPredicate(CC_P, ld->getDef(1));
+
+      Instruction *selp =
+         bld.mkOp3(OP_SELP, TYPE_U32, bld.getSSA(), ld->getDef(0),
+                   atom->getSrc(2), set->getDef(0));
+      selp->src(2).mod = Modifier(NV50_IR_MOD_NOT);
+      selp->setPredicate(CC_P, ld->getDef(1));
+
+      stVal = selp->getDef(0);
+   } else {
+      operation op;
+
+      switch (atom->subOp) {
+      case NV50_IR_SUBOP_ATOM_ADD:
+         op = OP_ADD;
+         break;
+      case NV50_IR_SUBOP_ATOM_AND:
+         op = OP_AND;
+         break;
+      case NV50_IR_SUBOP_ATOM_OR:
+         op = OP_OR;
+         break;
+      case NV50_IR_SUBOP_ATOM_XOR:
+         op = OP_XOR;
+         break;
+      case NV50_IR_SUBOP_ATOM_MIN:
+         op = OP_MIN;
+         break;
+      case NV50_IR_SUBOP_ATOM_MAX:
+         op = OP_MAX;
+         break;
+      default:
+         assert(0);
+      }
+
+      Instruction *i =
+         bld.mkOp2(op, atom->dType, bld.getSSA(), ld->getDef(0),
+                   atom->getSrc(1));
+      i->setPredicate(CC_P, ld->getDef(1));
+
+      stVal = i->getDef(0);
+   }
+
+   Instruction *st =
+      bld.mkStore(OP_STORE, TYPE_U32,
+                  bld.mkSymbol(FILE_MEMORY_SHARED, 0, TYPE_U32, 0),
+                  NULL, stVal);
+   st->setPredicate(CC_P, ld->getDef(1));
+   st->subOp = NV50_IR_SUBOP_STORE_UNLOCKED;
+
+   // Loop until the lock is acquired.
+   bld.mkFlow(OP_BRA, tryLockAndSetBB, CC_NOT_P, ld->getDef(1));
+   tryLockAndSetBB->cfg.attach(&tryLockAndSetBB->cfg, Graph::Edge::BACK);
+   tryLockAndSetBB->cfg.attach(&joinBB->cfg, Graph::Edge::CROSS);
+   bld.mkFlow(OP_BRA, joinBB, CC_ALWAYS, NULL);
+
+   bld.remove(atom);
+
+   bld.setPosition(joinBB, false);
+   bld.mkFlow(OP_JOIN, NULL, CC_ALWAYS, NULL)->fixed = 1;
+}
+
 bool
 NVC0LoweringPass::handleATOM(Instruction *atom)
 {
@@ -1044,8 +1138,8 @@ NVC0LoweringPass::handleATOM(Instruction *atom)
       sv = SV_LBASE;
       break;
    case FILE_MEMORY_SHARED:
-      sv = SV_SBASE;
-      break;
+      handleSharedATOM(atom);
+      return true;
    default:
       assert(atom->src(0).getFile() == FILE_MEMORY_GLOBAL);
       base = loadResInfo64(ind, atom->getSrc(0)->reg.fileIndex * 16);
@@ -1072,6 +1166,11 @@ NVC0LoweringPass::handleATOM(Instruction *atom)
 bool
 NVC0LoweringPass::handleCasExch(Instruction *cas, bool needCctl)
 {
+   if (cas->src(0).getFile() == FILE_MEMORY_SHARED) {
+      // ATOM_CAS and ATOM_EXCH are handled in handleSharedATOM().
+      return false;
+   }
+
    if (cas->subOp != NV50_IR_SUBOP_ATOM_CAS &&
        cas->subOp != NV50_IR_SUBOP_ATOM_EXCH)
       return false;

@@ -398,6 +398,11 @@ CodeEmitterNVC0::emitForm_A(const Instruction *i, uint64_t opc)
          srcId(i->src(s), s ? ((s == 2) ? 49 : s1) : 20);
          break;
       default:
+         if (i->op == OP_SELP) {
+            // OP_SELP is used to implement shared+atomics on Fermi.
+            assert(s == 2 && i->src(s).getFile() == FILE_PREDICATE);
+            srcId(i->src(s), 49);
+         }
          // ignore here, can be predicate or flags, but must not be address
          break;
       }
@@ -1174,7 +1179,7 @@ void CodeEmitterNVC0::emitSELP(const Instruction *i)
 {
    emitForm_A(i, HEX64(20000000, 00000004));
 
-   if (i->cc == CC_NOT_P || i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
+   if (i->src(2).mod & Modifier(NV50_IR_MOD_NOT))
       code[1] |= 1 << 20;
 }
 
@@ -1334,7 +1339,7 @@ CodeEmitterNVC0::emitQUADOP(const Instruction *i, uint8_t qOp, uint8_t laneMask)
 
    defId(i->def(0), 14);
    srcId(i->src(0), 20);
-   srcId(i->srcExists(1) ? i->src(1) : i->src(0), 26);
+   srcId((i->srcExists(1) && i->predSrc != 1) ? i->src(1) : i->src(0), 26);
 
    if (i->op == OP_QUADOP && progType != Program::TYPE_FRAGMENT)
       code[0] |= 1 << 9; // dall
@@ -1773,7 +1778,16 @@ CodeEmitterNVC0::emitSTORE(const Instruction *i)
    switch (i->src(0).getFile()) {
    case FILE_MEMORY_GLOBAL: opc = 0x90000000; break;
    case FILE_MEMORY_LOCAL:  opc = 0xc8000000; break;
-   case FILE_MEMORY_SHARED: opc = 0xc9000000; break;
+   case FILE_MEMORY_SHARED:
+      if (i->subOp == NV50_IR_SUBOP_STORE_UNLOCKED) {
+         if (targ->getChipset() >= NVISA_GK104_CHIPSET)
+            opc = 0xb8000000;
+         else
+            opc = 0xcc000000;
+      } else {
+         opc = 0xc9000000;
+      }
+      break;
    default:
       assert(!"invalid memory file");
       opc = 0;
@@ -1781,6 +1795,15 @@ CodeEmitterNVC0::emitSTORE(const Instruction *i)
    }
    code[0] = 0x00000005;
    code[1] = opc;
+
+   if (targ->getChipset() >= NVISA_GK104_CHIPSET) {
+      // Unlocked store on shared memory can fail.
+      if (i->src(0).getFile() == FILE_MEMORY_SHARED &&
+          i->subOp == NV50_IR_SUBOP_STORE_UNLOCKED) {
+         assert(i->defExists(0));
+         defId(i->def(0), 8);
+      }
+   }
 
    setAddressByFile(i->src(0));
    srcId(i->src(1), 14);
@@ -1804,7 +1827,16 @@ CodeEmitterNVC0::emitLOAD(const Instruction *i)
    switch (i->src(0).getFile()) {
    case FILE_MEMORY_GLOBAL: opc = 0x80000000; break;
    case FILE_MEMORY_LOCAL:  opc = 0xc0000000; break;
-   case FILE_MEMORY_SHARED: opc = 0xc1000000; break;
+   case FILE_MEMORY_SHARED:
+      if (i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
+         if (targ->getChipset() >= NVISA_GK104_CHIPSET)
+            opc = 0xa8000000;
+         else
+            opc = 0xc4000000;
+      } else {
+         opc = 0xc1000000;
+      }
+      break;
    case FILE_MEMORY_CONST:
       if (!i->src(0).isIndirect(0) && typeSizeof(i->dType) == 4) {
          emitMOV(i); // not sure if this is any better
@@ -1819,6 +1851,13 @@ CodeEmitterNVC0::emitLOAD(const Instruction *i)
       break;
    }
    code[1] = opc;
+
+   if (i->src(0).getFile() == FILE_MEMORY_SHARED) {
+      if (i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
+         assert(i->defExists(1));
+         defId(i->def(1), 32 + 18);
+      }
+   }
 
    defId(i->def(0), 14);
 

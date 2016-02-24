@@ -75,6 +75,7 @@ static int _clamp(int a, int min, int max)
 void st_init_limits(struct pipe_screen *screen,
                     struct gl_constants *c, struct gl_extensions *extensions)
 {
+   int supported_irs;
    unsigned sh;
    boolean can_ubo = TRUE;
 
@@ -174,9 +175,19 @@ void st_init_limits(struct pipe_screen *screen,
          pc = &c->Program[MESA_SHADER_TESS_EVAL];
          options = &c->ShaderCompilerOptions[MESA_SHADER_TESS_EVAL];
          break;
+      case PIPE_SHADER_COMPUTE:
+         pc = &c->Program[MESA_SHADER_COMPUTE];
+         options = &c->ShaderCompilerOptions[MESA_SHADER_COMPUTE];
+
+         if (!screen->get_param(screen, PIPE_CAP_COMPUTE))
+            continue;
+         supported_irs =
+            screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_SUPPORTED_IRS);
+         if (!(supported_irs & (1 << PIPE_SHADER_IR_TGSI)))
+            continue;
+         break;
       default:
-         /* compute shader, etc. */
-         continue;
+         assert(0);
       }
 
       pc->MaxTextureImageUnits =
@@ -223,6 +234,9 @@ void st_init_limits(struct pipe_screen *screen,
             screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS) / 2;
       pc->MaxShaderStorageBlocks = pc->MaxAtomicBuffers;
 
+      pc->MaxImageUniforms = screen->get_shader_param(
+            screen, sh, PIPE_SHADER_CAP_MAX_SHADER_IMAGES);
+
       /* Gallium doesn't really care about local vs. env parameters so use the
        * same limits.
        */
@@ -261,6 +275,9 @@ void st_init_limits(struct pipe_screen *screen,
 
       options->LowerClipDistance = true;
       options->LowerBufferInterfaceBlocks = true;
+
+      if (sh == PIPE_SHADER_COMPUTE)
+         options->LowerShaderSharedVariables = true;
    }
 
    c->LowerTessLevel = true;
@@ -270,7 +287,8 @@ void st_init_limits(struct pipe_screen *screen,
               c->Program[MESA_SHADER_TESS_CTRL].MaxTextureImageUnits +
               c->Program[MESA_SHADER_TESS_EVAL].MaxTextureImageUnits +
               c->Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits +
-              c->Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits,
+              c->Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits +
+              c->Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits,
               MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 
    /* This depends on program constants. */
@@ -330,7 +348,8 @@ void st_init_limits(struct pipe_screen *screen,
          c->Program[MESA_SHADER_TESS_CTRL].MaxUniformBlocks +
          c->Program[MESA_SHADER_TESS_EVAL].MaxUniformBlocks +
          c->Program[MESA_SHADER_GEOMETRY].MaxUniformBlocks +
-         c->Program[MESA_SHADER_FRAGMENT].MaxUniformBlocks;
+         c->Program[MESA_SHADER_FRAGMENT].MaxUniformBlocks +
+         c->Program[MESA_SHADER_COMPUTE].MaxUniformBlocks;
       assert(c->MaxCombinedUniformBlocks <= MAX_COMBINED_UNIFORM_BUFFERS);
    }
 
@@ -362,6 +381,21 @@ void st_init_limits(struct pipe_screen *screen,
          c->MaxCombinedShaderStorageBlocks;
       c->MaxShaderStorageBlockSize = 1 << 27;
       extensions->ARB_shader_storage_buffer_object = GL_TRUE;
+   }
+
+   c->MaxCombinedImageUniforms =
+         c->Program[MESA_SHADER_VERTEX].MaxImageUniforms +
+         c->Program[MESA_SHADER_TESS_CTRL].MaxImageUniforms +
+         c->Program[MESA_SHADER_TESS_EVAL].MaxImageUniforms +
+         c->Program[MESA_SHADER_GEOMETRY].MaxImageUniforms +
+         c->Program[MESA_SHADER_FRAGMENT].MaxImageUniforms +
+         c->Program[MESA_SHADER_COMPUTE].MaxImageUniforms;
+   c->MaxCombinedShaderOutputResources += c->MaxCombinedImageUniforms;
+   c->MaxImageUnits = MAX_IMAGE_UNITS;
+   c->MaxImageSamples = 0; /* XXX */
+   if (c->MaxCombinedImageUniforms) {
+      extensions->ARB_shader_image_load_store = GL_TRUE;
+      extensions->ARB_shader_image_size = GL_TRUE;
    }
 }
 
@@ -1012,4 +1046,31 @@ void st_init_extensions(struct pipe_screen *screen,
    if ((ST_DEBUG & DEBUG_GREMEDY) &&
        screen->get_param(screen, PIPE_CAP_STRING_MARKER))
       extensions->GREMEDY_string_marker = GL_TRUE;
+
+   if (screen->get_param(screen, PIPE_CAP_COMPUTE)) {
+      int compute_supported_irs =
+         screen->get_shader_param(screen, PIPE_SHADER_COMPUTE,
+                                  PIPE_SHADER_CAP_SUPPORTED_IRS);
+      if (compute_supported_irs & (1 << PIPE_SHADER_IR_TGSI)) {
+         uint64_t grid_size[3], block_size[3];
+
+         screen->get_compute_param(screen, PIPE_COMPUTE_CAP_MAX_GRID_SIZE,
+                                   grid_size);
+         screen->get_compute_param(screen, PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE,
+                                   block_size);
+         screen->get_compute_param(screen,
+                                   PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK,
+                                   &consts->MaxComputeWorkGroupInvocations);
+         screen->get_compute_param(screen, PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE,
+                                   &consts->MaxComputeSharedMemorySize);
+
+         for (i = 0; i < 3; i++) {
+            consts->MaxComputeWorkGroupCount[i] = grid_size[i];
+            consts->MaxComputeWorkGroupSize[i] = block_size[i];
+         }
+         /* XXX: ARB_compute_shader is not enabled by default because images
+          * support is still not implemented yet. */
+         /* extensions->ARB_compute_shader = true; */
+      }
+   }
 }

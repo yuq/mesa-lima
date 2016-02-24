@@ -138,7 +138,7 @@ NineResource9_GetPool( struct NineResource9 *This )
     return This->pool;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineResource9_SetPrivateData( struct NineResource9 *This,
                               REFGUID refguid,
                               const void *pData,
@@ -187,7 +187,7 @@ NineResource9_SetPrivateData( struct NineResource9 *This,
     return D3DERR_DRIVERINTERNALERROR;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineResource9_GetPrivateData( struct NineResource9 *This,
                               REFGUID refguid,
                               void *pData,
@@ -220,7 +220,7 @@ NineResource9_GetPrivateData( struct NineResource9 *This,
     return D3D_OK;
 }
 
-HRESULT WINAPI
+HRESULT NINE_WINAPI
 NineResource9_FreePrivateData( struct NineResource9 *This,
                                REFGUID refguid )
 {
@@ -239,7 +239,7 @@ NineResource9_FreePrivateData( struct NineResource9 *This,
     return D3D_OK;
 }
 
-DWORD WINAPI
+DWORD NINE_WINAPI
 NineResource9_SetPriority( struct NineResource9 *This,
                            DWORD PriorityNew )
 {
@@ -254,7 +254,7 @@ NineResource9_SetPriority( struct NineResource9 *This,
     return prev;
 }
 
-DWORD WINAPI
+DWORD NINE_WINAPI
 NineResource9_GetPriority( struct NineResource9 *This )
 {
     if (This->pool != D3DPOOL_MANAGED || This->type == D3DRTYPE_SURFACE)
@@ -264,7 +264,7 @@ NineResource9_GetPriority( struct NineResource9 *This )
 }
 
 /* NOTE: Don't forget to adjust locked vtable if you change this ! */
-void WINAPI
+void NINE_WINAPI
 NineResource9_PreLoad( struct NineResource9 *This )
 {
     if (This->pool != D3DPOOL_MANAGED)
@@ -275,7 +275,7 @@ NineResource9_PreLoad( struct NineResource9 *This )
      */
 }
 
-D3DRESOURCETYPE WINAPI
+D3DRESOURCETYPE NINE_WINAPI
 NineResource9_GetType( struct NineResource9 *This )
 {
     return This->type;

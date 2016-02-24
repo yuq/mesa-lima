@@ -405,6 +405,7 @@ STATETRACKER_FILES = \
 	state_tracker/st_atom_depth.c \
 	state_tracker/st_atom_framebuffer.c \
 	state_tracker/st_atom.h \
+	state_tracker/st_atom_image.c \
 	state_tracker/st_atom_msaa.c \
 	state_tracker/st_atom_pixeltransfer.c \
 	state_tracker/st_atom_rasterizer.c \
@@ -427,6 +428,8 @@ STATETRACKER_FILES = \
 	state_tracker/st_cb_bufferobjects.h \
 	state_tracker/st_cb_clear.c \
 	state_tracker/st_cb_clear.h \
+	state_tracker/st_cb_compute.c \
+	state_tracker/st_cb_compute.h \
 	state_tracker/st_cb_condrender.c \
 	state_tracker/st_cb_condrender.h \
 	state_tracker/st_cb_copyimage.c \

@@ -32,9 +32,220 @@
 
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_ureg.h"
+#include "util/hash_table.h"
+#include "util/u_hash.h"
 #include "util/u_memory.h"
 #include "util/u_prim.h"
 #include "util/u_simple_shaders.h"
+
+/* SHADER_CACHE */
+
+/**
+ * Return the TGSI binary in a buffer. The first 4 bytes contain its size as
+ * integer.
+ */
+static void *si_get_tgsi_binary(struct si_shader_selector *sel)
+{
+	unsigned tgsi_size = tgsi_num_tokens(sel->tokens) *
+			     sizeof(struct tgsi_token);
+	unsigned size = 4 + tgsi_size + sizeof(sel->so);
+	char *result = (char*)MALLOC(size);
+
+	if (!result)
+		return NULL;
+
+	*((uint32_t*)result) = size;
+	memcpy(result + 4, sel->tokens, tgsi_size);
+	memcpy(result + 4 + tgsi_size, &sel->so, sizeof(sel->so));
+	return result;
+}
+
+/** Copy "data" to "ptr" and return the next dword following copied data. */
+static uint32_t *write_data(uint32_t *ptr, const void *data, unsigned size)
+{
+	memcpy(ptr, data, size);
+	ptr += DIV_ROUND_UP(size, 4);
+	return ptr;
+}
+
+/** Read data from "ptr". Return the next dword following the data. */
+static uint32_t *read_data(uint32_t *ptr, void *data, unsigned size)
+{
+	memcpy(data, ptr, size);
+	ptr += DIV_ROUND_UP(size, 4);
+	return ptr;
+}
+
+/**
+ * Write the size as uint followed by the data. Return the next dword
+ * following the copied data.
+ */
+static uint32_t *write_chunk(uint32_t *ptr, const void *data, unsigned size)
+{
+	*ptr++ = size;
+	return write_data(ptr, data, size);
+}
+
+/**
+ * Read the size as uint followed by the data. Return both via parameters.
+ * Return the next dword following the data.
+ */
+static uint32_t *read_chunk(uint32_t *ptr, void **data, unsigned *size)
+{
+	*size = *ptr++;
+	assert(*data == NULL);
+	*data = malloc(*size);
+	return read_data(ptr, *data, *size);
+}
+
+/**
+ * Return the shader binary in a buffer. The first 4 bytes contain its size
+ * as integer.
+ */
+static void *si_get_shader_binary(struct si_shader *shader)
+{
+	/* There is always a size of data followed by the data itself. */
+	unsigned relocs_size = shader->binary.reloc_count *
+			       sizeof(shader->binary.relocs[0]);
+	unsigned disasm_size = strlen(shader->binary.disasm_string) + 1;
+	unsigned size =
+		4 + /* total size */
+		4 + /* CRC32 of the data below */
+		align(sizeof(shader->config), 4) +
+		align(sizeof(shader->info), 4) +
+		4 + align(shader->binary.code_size, 4) +
+		4 + align(shader->binary.rodata_size, 4) +
+		4 + align(relocs_size, 4) +
+		4 + align(disasm_size, 4);
+	void *buffer = CALLOC(1, size);
+	uint32_t *ptr = (uint32_t*)buffer;
+
+	if (!buffer)
+		return NULL;
+
+	*ptr++ = size;
+	ptr++; /* CRC32 is calculated at the end. */
+
+	ptr = write_data(ptr, &shader->config, sizeof(shader->config));
+	ptr = write_data(ptr, &shader->info, sizeof(shader->info));
+	ptr = write_chunk(ptr, shader->binary.code, shader->binary.code_size);
+	ptr = write_chunk(ptr, shader->binary.rodata, shader->binary.rodata_size);
+	ptr = write_chunk(ptr, shader->binary.relocs, relocs_size);
+	ptr = write_chunk(ptr, shader->binary.disasm_string, disasm_size);
+	assert((char *)ptr - (char *)buffer == size);
+
+	/* Compute CRC32. */
+	ptr = (uint32_t*)buffer;
+	ptr++;
+	*ptr = util_hash_crc32(ptr + 1, size - 8);
+
+	return buffer;
+}
+
+static bool si_load_shader_binary(struct si_shader *shader, void *binary)
+{
+	uint32_t *ptr = (uint32_t*)binary;
+	uint32_t size = *ptr++;
+	uint32_t crc32 = *ptr++;
+	unsigned chunk_size;
+
+	if (util_hash_crc32(ptr, size - 8) != crc32) {
+		fprintf(stderr, "radeonsi: binary shader has invalid CRC32\n");
+		return false;
+	}
+
+	ptr = read_data(ptr, &shader->config, sizeof(shader->config));
+	ptr = read_data(ptr, &shader->info, sizeof(shader->info));
+	ptr = read_chunk(ptr, (void**)&shader->binary.code,
+			 &shader->binary.code_size);
+	ptr = read_chunk(ptr, (void**)&shader->binary.rodata,
+			 &shader->binary.rodata_size);
+	ptr = read_chunk(ptr, (void**)&shader->binary.relocs, &chunk_size);
+	shader->binary.reloc_count = chunk_size / sizeof(shader->binary.relocs[0]);
+	ptr = read_chunk(ptr, (void**)&shader->binary.disasm_string, &chunk_size);
+
+	return true;
+}
+
+/**
+ * Insert a shader into the cache. It's assumed the shader is not in the cache.
+ * Use si_shader_cache_load_shader before calling this.
+ *
+ * Returns false on failure, in which case the tgsi_binary should be freed.
+ */
+static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
+					  void *tgsi_binary,
+					  struct si_shader *shader)
+{
+	void *hw_binary = si_get_shader_binary(shader);
+
+	if (!hw_binary)
+		return false;
+
+	if (_mesa_hash_table_insert(sscreen->shader_cache, tgsi_binary,
+				    hw_binary) == NULL) {
+		FREE(hw_binary);
+		return false;
+	}
+
+	return true;
+}
+
+static bool si_shader_cache_load_shader(struct si_screen *sscreen,
+					void *tgsi_binary,
+				        struct si_shader *shader)
+{
+	struct hash_entry *entry =
+		_mesa_hash_table_search(sscreen->shader_cache, tgsi_binary);
+	if (!entry)
+		return false;
+
+	return si_load_shader_binary(shader, entry->data);
+}
+
+static uint32_t si_shader_cache_key_hash(const void *key)
+{
+	/* The first dword is the key size. */
+	return util_hash_crc32(key, *(uint32_t*)key);
+}
+
+static bool si_shader_cache_key_equals(const void *a, const void *b)
+{
+	uint32_t *keya = (uint32_t*)a;
+	uint32_t *keyb = (uint32_t*)b;
+
+	/* The first dword is the key size. */
+	if (*keya != *keyb)
+		return false;
+
+	return memcmp(keya, keyb, *keya) == 0;
+}
+
+static void si_destroy_shader_cache_entry(struct hash_entry *entry)
+{
+	FREE((void*)entry->key);
+	FREE(entry->data);
+}
+
+bool si_init_shader_cache(struct si_screen *sscreen)
+{
+	pipe_mutex_init(sscreen->shader_cache_mutex);
+	sscreen->shader_cache =
+		_mesa_hash_table_create(NULL,
+					si_shader_cache_key_hash,
+					si_shader_cache_key_equals);
+	return sscreen->shader_cache != NULL;
+}
+
+void si_destroy_shader_cache(struct si_screen *sscreen)
+{
+	if (sscreen->shader_cache)
+		_mesa_hash_table_destroy(sscreen->shader_cache,
+					 si_destroy_shader_cache_entry);
+	pipe_mutex_destroy(sscreen->shader_cache_mutex);
+}
+
+/* SHADER STATES */
 
 static void si_set_tesseval_regs(struct si_shader *shader,
 				 struct si_pm4_state *pm4)
@@ -108,7 +319,7 @@ static void si_shader_ls(struct si_shader *shader)
 
 	/* We need at least 2 components for LS.
 	 * VGPR0-3: (VertexID, RelAutoindex, ???, InstanceID). */
-	vgpr_comp_cnt = shader->uses_instanceid ? 3 : 1;
+	vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 1;
 
 	num_user_sgprs = SI_LS_NUM_USER_SGPR;
 	num_sgprs = shader->config.num_sgprs;
@@ -181,7 +392,7 @@ static void si_shader_es(struct si_shader *shader)
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
 	if (shader->selector->type == PIPE_SHADER_VERTEX) {
-		vgpr_comp_cnt = shader->uses_instanceid ? 3 : 0;
+		vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 0;
 		num_user_sgprs = SI_ES_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = 3; /* all components are needed for TES */
@@ -347,7 +558,7 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 		vgpr_comp_cnt = 0; /* only VertexID is needed for GS-COPY. */
 		num_user_sgprs = SI_GSCOPY_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_VERTEX) {
-		vgpr_comp_cnt = shader->uses_instanceid ? 3 : (enable_prim_id ? 2 : 0);
+		vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : (enable_prim_id ? 2 : 0);
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = 3; /* all components are needed for TES */
@@ -363,19 +574,19 @@ static void si_shader_vs(struct si_shader *shader, struct si_shader *gs)
 	assert(num_sgprs <= 104);
 
 	/* VS is required to export at least one param. */
-	nparams = MAX2(shader->nr_param_exports, 1);
+	nparams = MAX2(shader->info.nr_param_exports, 1);
 	si_pm4_set_reg(pm4, R_0286C4_SPI_VS_OUT_CONFIG,
 		       S_0286C4_VS_EXPORT_COUNT(nparams - 1));
 
 	si_pm4_set_reg(pm4, R_02870C_SPI_SHADER_POS_FORMAT,
 		       S_02870C_POS0_EXPORT_FORMAT(V_02870C_SPI_SHADER_4COMP) |
-		       S_02870C_POS1_EXPORT_FORMAT(shader->nr_pos_exports > 1 ?
+		       S_02870C_POS1_EXPORT_FORMAT(shader->info.nr_pos_exports > 1 ?
 						   V_02870C_SPI_SHADER_4COMP :
 						   V_02870C_SPI_SHADER_NONE) |
-		       S_02870C_POS2_EXPORT_FORMAT(shader->nr_pos_exports > 2 ?
+		       S_02870C_POS2_EXPORT_FORMAT(shader->info.nr_pos_exports > 2 ?
 						   V_02870C_SPI_SHADER_4COMP :
 						   V_02870C_SPI_SHADER_NONE) |
-		       S_02870C_POS3_EXPORT_FORMAT(shader->nr_pos_exports > 3 ?
+		       S_02870C_POS3_EXPORT_FORMAT(shader->info.nr_pos_exports > 3 ?
 						   V_02870C_SPI_SHADER_4COMP :
 						   V_02870C_SPI_SHADER_NONE));
 
@@ -415,7 +626,7 @@ static unsigned si_get_ps_num_interp(struct si_shader *ps)
 	unsigned num_colors = !!(info->colors_read & 0x0f) +
 			      !!(info->colors_read & 0xf0);
 	unsigned num_interp = ps->selector->info.num_inputs +
-			      (ps->key.ps.color_two_side ? num_colors : 0);
+			      (ps->key.ps.prolog.color_two_side ? num_colors : 0);
 
 	assert(num_interp <= 32);
 	return MIN2(num_interp, 32);
@@ -423,7 +634,7 @@ static unsigned si_get_ps_num_interp(struct si_shader *ps)
 
 static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
 {
-	unsigned value = shader->key.ps.spi_shader_col_format;
+	unsigned value = shader->key.ps.epilog.spi_shader_col_format;
 	unsigned i, num_targets = (util_last_bit(value) + 3) / 4;
 
 	/* If the i-th target format is set, all previous target formats must
@@ -528,7 +739,7 @@ static void si_shader_ps(struct si_shader *shader)
 	if (!spi_shader_col_format &&
 	    !info->writes_z && !info->writes_stencil && !info->writes_samplemask &&
 	    (shader->selector->info.uses_kill ||
-	     shader->key.ps.alpha_func != PIPE_FUNC_ALWAYS))
+	     shader->key.ps.epilog.alpha_func != PIPE_FUNC_ALWAYS))
 		spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 
 	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, input_ena);
@@ -638,11 +849,13 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 	switch (sel->type) {
 	case PIPE_SHADER_VERTEX:
-		if (sctx->vertex_elements)
-			for (i = 0; i < sctx->vertex_elements->count; ++i)
-				key->vs.instance_divisors[i] =
+		if (sctx->vertex_elements) {
+			unsigned count = MIN2(sel->info.num_inputs,
+					      sctx->vertex_elements->count);
+			for (i = 0; i < count; ++i)
+				key->vs.prolog.instance_divisors[i] =
 					sctx->vertex_elements->elements[i].instance_divisor;
-
+		}
 		if (sctx->tes_shader.cso)
 			key->vs.as_ls = 1;
 		else if (sctx->gs_shader.cso)
@@ -650,17 +863,17 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 		if (!sctx->gs_shader.cso && sctx->ps_shader.cso &&
 		    sctx->ps_shader.cso->info.uses_primid)
-			key->vs.export_prim_id = 1;
+			key->vs.epilog.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
-		key->tcs.prim_mode =
+		key->tcs.epilog.prim_mode =
 			sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		if (sctx->gs_shader.cso)
 			key->tes.as_es = 1;
 		else if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
-			key->tes.export_prim_id = 1;
+			key->tes.epilog.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		break;
@@ -670,13 +883,13 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
 		    sel->info.colors_written == 0x1)
-			key->ps.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
+			key->ps.epilog.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
 
 		if (blend) {
 			/* Select the shader color format based on whether
 			 * blending or alpha are needed.
 			 */
-			key->ps.spi_shader_col_format =
+			key->ps.epilog.spi_shader_col_format =
 				(blend->blend_enable_4bit & blend->need_src_alpha_4bit &
 				 sctx->framebuffer.spi_shader_col_format_blend_alpha) |
 				(blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
@@ -686,26 +899,26 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				(~blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
 				 sctx->framebuffer.spi_shader_col_format);
 		} else
-			key->ps.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
+			key->ps.epilog.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
 
 		/* If alpha-to-coverage is enabled, we have to export alpha
 		 * even if there is no color buffer.
 		 */
-		if (!(key->ps.spi_shader_col_format & 0xf) &&
+		if (!(key->ps.epilog.spi_shader_col_format & 0xf) &&
 		    blend && blend->alpha_to_coverage)
-			key->ps.spi_shader_col_format |= V_028710_SPI_SHADER_32_AR;
+			key->ps.epilog.spi_shader_col_format |= V_028710_SPI_SHADER_32_AR;
 
 		/* On SI and CIK except Hawaii, the CB doesn't clamp outputs
 		 * to the range supported by the type if a channel has less
 		 * than 16 bits and the export format is 16_ABGR.
 		 */
 		if (sctx->b.chip_class <= CIK && sctx->b.family != CHIP_HAWAII)
-			key->ps.color_is_int8 = sctx->framebuffer.color_is_int8;
+			key->ps.epilog.color_is_int8 = sctx->framebuffer.color_is_int8;
 
 		/* Disable unwritten outputs (if WRITE_ALL_CBUFS isn't enabled). */
-		if (!key->ps.last_cbuf) {
-			key->ps.spi_shader_col_format &= sel->colors_written_4bit;
-			key->ps.color_is_int8 &= sel->info.colors_written;
+		if (!key->ps.epilog.last_cbuf) {
+			key->ps.epilog.spi_shader_col_format &= sel->colors_written_4bit;
+			key->ps.epilog.color_is_int8 &= sel->info.colors_written;
 		}
 
 		if (rs) {
@@ -714,31 +927,32 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				       sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY;
 			bool is_line = !is_poly && sctx->current_rast_prim != PIPE_PRIM_POINTS;
 
-			key->ps.color_two_side = rs->two_side && sel->info.colors_read;
+			key->ps.prolog.color_two_side = rs->two_side && sel->info.colors_read;
 
 			if (sctx->queued.named.blend) {
-				key->ps.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
-						       rs->multisample_enable &&
-						       !sctx->framebuffer.cb0_is_integer;
+				key->ps.epilog.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
+							      rs->multisample_enable &&
+							      !sctx->framebuffer.cb0_is_integer;
 			}
 
-			key->ps.poly_stipple = rs->poly_stipple_enable && is_poly;
-			key->ps.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
-						       (is_line && rs->line_smooth)) &&
-						      sctx->framebuffer.nr_samples <= 1;
-			key->ps.clamp_color = rs->clamp_fragment_color;
+			key->ps.prolog.poly_stipple = rs->poly_stipple_enable && is_poly;
+			key->ps.epilog.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
+							      (is_line && rs->line_smooth)) &&
+							     sctx->framebuffer.nr_samples <= 1;
+			key->ps.epilog.clamp_color = rs->clamp_fragment_color;
 
-			key->ps.force_persample_interp = rs->force_persample_interp &&
-							 rs->multisample_enable &&
-							 sctx->framebuffer.nr_samples > 1 &&
-							 sctx->ps_iter_samples > 1 &&
-							 (sel->info.uses_persp_center ||
-							  sel->info.uses_persp_centroid ||
-							  sel->info.uses_linear_center ||
-							  sel->info.uses_linear_centroid);
+			key->ps.prolog.force_persample_interp =
+				rs->force_persample_interp &&
+				rs->multisample_enable &&
+				sctx->framebuffer.nr_samples > 1 &&
+				sctx->ps_iter_samples > 1 &&
+				(sel->info.uses_persp_center ||
+				 sel->info.uses_persp_centroid ||
+				 sel->info.uses_linear_center ||
+				 sel->info.uses_linear_centroid);
 		}
 
-		key->ps.alpha_func = si_get_alpha_test_func(sctx);
+		key->ps.epilog.alpha_func = si_get_alpha_test_func(sctx);
 		break;
 	}
 	default:
@@ -821,6 +1035,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 				       const struct pipe_shader_state *state)
 {
 	struct si_screen *sscreen = (struct si_screen *)ctx->screen;
+	struct si_context *sctx = (struct si_context*)ctx;
 	struct si_shader_selector *sel = CALLOC_STRUCT(si_shader_selector);
 	int i;
 
@@ -900,6 +1115,13 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		for (i = 0; i < 8; i++)
 			if (sel->info.colors_written & (1 << i))
 				sel->colors_written_4bit |= 0xf << (4 * i);
+
+		for (i = 0; i < sel->info.num_inputs; i++) {
+			if (sel->info.input_semantic_name[i] == TGSI_SEMANTIC_COLOR) {
+				int index = sel->info.input_semantic_index[i];
+				sel->color_attr_index[index] = i;
+			}
+		}
 		break;
 	}
 
@@ -921,6 +1143,44 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		break;
 	}
 
+	/* Compile the main shader part for use with a prolog and/or epilog. */
+	if (sel->type != PIPE_SHADER_GEOMETRY &&
+	    !sscreen->use_monolithic_shaders) {
+		struct si_shader *shader = CALLOC_STRUCT(si_shader);
+		void *tgsi_binary;
+
+		if (!shader)
+			goto error;
+
+		shader->selector = sel;
+
+		tgsi_binary = si_get_tgsi_binary(sel);
+
+		/* Try to load the shader from the shader cache. */
+		pipe_mutex_lock(sscreen->shader_cache_mutex);
+
+		if (tgsi_binary &&
+		    si_shader_cache_load_shader(sscreen, tgsi_binary, shader)) {
+			FREE(tgsi_binary);
+		} else {
+			/* Compile the shader if it hasn't been loaded from the cache. */
+			if (si_compile_tgsi_shader(sscreen, sctx->tm, shader, false,
+						   &sctx->b.debug) != 0) {
+				FREE(shader);
+				FREE(tgsi_binary);
+				pipe_mutex_unlock(sscreen->shader_cache_mutex);
+				goto error;
+			}
+
+			if (tgsi_binary &&
+			    !si_shader_cache_insert_shader(sscreen, tgsi_binary, shader))
+				FREE(tgsi_binary);
+		}
+		pipe_mutex_unlock(sscreen->shader_cache_mutex);
+
+		sel->main_shader_part = shader;
+	}
+
 	/* Pre-compilation. */
 	if (sel->type == PIPE_SHADER_GEOMETRY ||
 	    sscreen->b.debug_flags & DBG_PRECOMPILE) {
@@ -934,27 +1194,29 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		 */
 		switch (sel->type) {
 		case PIPE_SHADER_TESS_CTRL:
-			key.tcs.prim_mode = PIPE_PRIM_TRIANGLES;
+			key.tcs.epilog.prim_mode = PIPE_PRIM_TRIANGLES;
 			break;
 		case PIPE_SHADER_FRAGMENT:
-			key.ps.alpha_func = PIPE_FUNC_ALWAYS;
+			key.ps.epilog.alpha_func = PIPE_FUNC_ALWAYS;
 			for (i = 0; i < 8; i++)
 				if (sel->info.colors_written & (1 << i))
-					key.ps.spi_shader_col_format |=
+					key.ps.epilog.spi_shader_col_format |=
 						V_028710_SPI_SHADER_FP16_ABGR << (i * 4);
 			break;
 		}
 
-		if (si_shader_select_with_key(ctx, &state, &key)) {
-			fprintf(stderr, "radeonsi: can't create a shader\n");
-			tgsi_free_tokens(sel->tokens);
-			FREE(sel);
-			return NULL;
-		}
+		if (si_shader_select_with_key(ctx, &state, &key))
+			goto error;
 	}
 
 	pipe_mutex_init(sel->mutex);
 	return sel;
+
+error:
+	fprintf(stderr, "radeonsi: can't create a shader\n");
+	tgsi_free_tokens(sel->tokens);
+	FREE(sel);
+	return NULL;
 }
 
 /**
@@ -1119,6 +1381,9 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 		p = c;
 	}
 
+	if (sel->main_shader_part)
+		si_delete_shader(sctx, sel->main_shader_part);
+
 	pipe_mutex_destroy(sel->mutex);
 	free(sel->tokens);
 	free(sel);
@@ -1144,14 +1409,14 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 	for (j = 0; j < vsinfo->num_outputs; j++) {
 		if (name == vsinfo->output_semantic_name[j] &&
 		    index == vsinfo->output_semantic_index[j]) {
-			ps_input_cntl |= S_028644_OFFSET(vs->vs_output_param_offset[j]);
+			ps_input_cntl |= S_028644_OFFSET(vs->info.vs_output_param_offset[j]);
 			break;
 		}
 	}
 
 	if (name == TGSI_SEMANTIC_PRIMID)
 		/* PrimID is written after the last output. */
-		ps_input_cntl |= S_028644_OFFSET(vs->vs_output_param_offset[vsinfo->num_outputs]);
+		ps_input_cntl |= S_028644_OFFSET(vs->info.vs_output_param_offset[vsinfo->num_outputs]);
 	else if (j == vsinfo->num_outputs && !G_028644_PT_SPRITE_TEX(ps_input_cntl)) {
 		/* No corresponding output found, load defaults into input.
 		 * Don't set any other bits.
@@ -1191,7 +1456,7 @@ static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 		}
 	}
 
-	if (ps->key.ps.color_two_side) {
+	if (ps->key.ps.prolog.color_two_side) {
 		unsigned bcol = TGSI_SEMANTIC_BCOLOR;
 
 		for (i = 0; i < 2; i++) {
@@ -1745,8 +2010,8 @@ bool si_update_shaders(struct si_context *sctx)
 			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 		}
 
-		if (sctx->smoothing_enabled != sctx->ps_shader.current->key.ps.poly_line_smoothing) {
-			sctx->smoothing_enabled = sctx->ps_shader.current->key.ps.poly_line_smoothing;
+		if (sctx->smoothing_enabled != sctx->ps_shader.current->key.ps.epilog.poly_line_smoothing) {
+			sctx->smoothing_enabled = sctx->ps_shader.current->key.ps.epilog.poly_line_smoothing;
 			si_mark_atom_dirty(sctx, &sctx->msaa_config);
 
 			if (sctx->b.chip_class == SI)

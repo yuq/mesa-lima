@@ -76,6 +76,7 @@ extern const struct brw_tracked_state brw_tcs_samplers;
 extern const struct brw_tracked_state brw_tes_samplers;
 extern const struct brw_tracked_state brw_gs_samplers;
 extern const struct brw_tracked_state brw_cs_samplers;
+extern const struct brw_tracked_state brw_cs_texture_surfaces;
 extern const struct brw_tracked_state brw_vs_ubo_surfaces;
 extern const struct brw_tracked_state brw_vs_abo_surfaces;
 extern const struct brw_tracked_state brw_vs_image_surfaces;

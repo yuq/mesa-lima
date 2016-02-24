@@ -1290,8 +1290,6 @@ static boolean parse_declaration( struct translate_ctx *ctx )
             return FALSE;
          }
 
-         /* XXX format */
-
          cur2 = cur;
          eat_opt_white(&cur2);
          while (*cur2 == ',') {
@@ -1304,7 +1302,16 @@ static boolean parse_declaration( struct translate_ctx *ctx )
                decl.Image.Writable = 1;
 
             } else {
-               break;
+               for (i = 0; i < PIPE_FORMAT_COUNT; i++) {
+                  const struct util_format_description *desc =
+                     util_format_description(i);
+                  if (desc && str_match_nocase_whole(&cur2, desc->name)) {
+                     decl.Image.Format = i;
+                     break;
+                  }
+               }
+               if (i == PIPE_FORMAT_COUNT)
+                  break;
             }
             cur = cur2;
             eat_opt_white(&cur2);
@@ -1380,6 +1387,9 @@ static boolean parse_declaration( struct translate_ctx *ctx )
       } else if (file == TGSI_FILE_BUFFER) {
          if (str_match_nocase_whole(&cur, "ATOMIC")) {
             decl.Declaration.Atomic = 1;
+            ctx->cur = cur;
+         } else if (str_match_nocase_whole(&cur, "SHARED")) {
+            decl.Declaration.Shared = 1;
             ctx->cur = cur;
          }
       } else {

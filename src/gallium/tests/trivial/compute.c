@@ -424,8 +424,17 @@ static void launch_grid(struct context *ctx, const uint *block_layout,
                         const void *input)
 {
         struct pipe_context *pipe = ctx->pipe;
+        struct pipe_grid_info info;
+        int i;
 
-        pipe->launch_grid(pipe, block_layout, grid_layout, pc, input);
+        for (i = 0; i < 3; i++) {
+                info.block[i] = block_layout[i];
+                info.grid[i] = grid_layout[i];
+        }
+        info.pc = pc;
+        info.input = input;
+
+        pipe->launch_grid(pipe, &info);
 }
 
 static void test_default_init(void *p, int s, int x, int y)
