@@ -598,6 +598,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
                                       is_scalar);
+   shader = brw_nir_lower_io(shader, compiler->devinfo, is_scalar, false, NULL);
    shader = brw_postprocess_nir(shader, compiler->devinfo, is_scalar);
 
    prog_data->include_primitive_id =

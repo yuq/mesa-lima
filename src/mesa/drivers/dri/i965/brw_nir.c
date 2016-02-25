@@ -598,7 +598,6 @@ brw_create_nir(struct brw_context *brw,
                bool is_scalar)
 {
    struct gl_context *ctx = &brw->ctx;
-   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
    const nir_shader_compiler_options *options =
       ctx->Const.ShaderCompilerOptions[stage].NirOptions;
    bool progress;
@@ -623,13 +622,6 @@ brw_create_nir(struct brw_context *brw,
    if (shader_prog) {
       OPT_V(nir_lower_samplers, shader_prog);
       OPT_V(nir_lower_atomics, shader_prog);
-   }
-
-   if (nir->stage != MESA_SHADER_VERTEX &&
-       nir->stage != MESA_SHADER_TESS_CTRL &&
-       nir->stage != MESA_SHADER_TESS_EVAL &&
-       nir->stage != MESA_SHADER_FRAGMENT) {
-      nir = brw_nir_lower_io(nir, devinfo, is_scalar, false, NULL);
    }
 
    return nir;
