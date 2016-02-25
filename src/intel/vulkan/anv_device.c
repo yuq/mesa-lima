@@ -214,9 +214,14 @@ VkResult anv_CreateInstance(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
-   uint32_t client_version = pCreateInfo->pApplicationInfo ?
-                             pCreateInfo->pApplicationInfo->apiVersion :
-                             VK_MAKE_VERSION(1, 0, 0);
+   uint32_t client_version;
+   if (pCreateInfo->pApplicationInfo &&
+       pCreateInfo->pApplicationInfo->apiVersion != 0) {
+      client_version = pCreateInfo->pApplicationInfo->apiVersion;
+   } else {
+      client_version = VK_MAKE_VERSION(1, 0, 0);
+   }
+
    if (VK_MAKE_VERSION(1, 0, 0) > client_version ||
        client_version > VK_MAKE_VERSION(1, 0, 3)) {
       return vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
