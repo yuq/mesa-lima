@@ -1248,6 +1248,24 @@ ast_expression::hir_no_rvalue(exec_list *instructions,
    do_hir(instructions, state, false);
 }
 
+void
+ast_expression::set_is_lhs(bool new_value)
+{
+   /* is_lhs is tracked only to print "variable used uninitialized" warnings,
+    * if we lack a identifier we can just skip it.
+    */
+   if (this->primary_expression.identifier == NULL)
+      return;
+
+   this->is_lhs = new_value;
+
+   /* We need to go through the subexpressions tree to cover cases like
+    * ast_field_selection
+    */
+   if (this->subexpressions[0] != NULL)
+      this->subexpressions[0]->set_is_lhs(new_value);
+}
+
 ir_rvalue *
 ast_expression::do_hir(exec_list *instructions,
                        struct _mesa_glsl_parse_state *state,
@@ -1323,6 +1341,7 @@ ast_expression::do_hir(exec_list *instructions,
       break;
 
    case ast_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
 
@@ -1592,6 +1611,7 @@ ast_expression::do_hir(exec_list *instructions,
    case ast_div_assign:
    case ast_add_assign:
    case ast_sub_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
 
@@ -1618,6 +1638,7 @@ ast_expression::do_hir(exec_list *instructions,
    }
 
    case ast_mod_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
 
@@ -1640,6 +1661,7 @@ ast_expression::do_hir(exec_list *instructions,
 
    case ast_ls_assign:
    case ast_rs_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
       type = shift_result_type(op[0]->type, op[1]->type, this->oper, state,
@@ -1658,6 +1680,7 @@ ast_expression::do_hir(exec_list *instructions,
    case ast_and_assign:
    case ast_xor_assign:
    case ast_or_assign: {
+      this->subexpressions[0]->set_is_lhs(true);
       op[0] = this->subexpressions[0]->hir(instructions, state);
       op[1] = this->subexpressions[1]->hir(instructions, state);
       type = bit_logic_result_type(op[0], op[1], this->oper, state, &loc);
@@ -1839,6 +1862,11 @@ ast_expression::do_hir(exec_list *instructions,
    case ast_array_index: {
       YYLTYPE index_loc = subexpressions[1]->get_location();
 
+      /* Getting if an array is being used uninitialized is beyond what we get
+       * from ir_value.data.assigned. Setting is_lhs as true would force to
+       * not raise a uninitialized warning when using an array
+       */
+      subexpressions[0]->set_is_lhs(true);
       op[0] = subexpressions[0]->hir(instructions, state);
       op[1] = subexpressions[1]->hir(instructions, state);
 
@@ -5746,6 +5774,11 @@ ast_switch_statement::test_to_hir(exec_list *instructions,
 {
    void *ctx = state;
 
+   /* set to true to avoid a duplicate "use of uninitialized variable" warning
+    * on the switch test case. The first one would be already raised when
+    * getting the test_expression at ast_switch_statement::hir
+    */
+   test_expression->set_is_lhs(true);
    /* Cache value of test expression. */
    ir_rvalue *const test_val =
       test_expression->hir(instructions,

@@ -1206,6 +1206,7 @@ ast_expression::ast_expression(int oper,
    this->subexpressions[1] = ex1;
    this->subexpressions[2] = ex2;
    this->non_lvalue_description = NULL;
+   this->is_lhs = false;
 }
 
 

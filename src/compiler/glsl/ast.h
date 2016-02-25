@@ -214,6 +214,7 @@ public:
       subexpressions[2] = NULL;
       primary_expression.identifier = identifier;
       this->non_lvalue_description = NULL;
+      this->is_lhs = false;
    }
 
    static const char *operator_string(enum ast_operators op);
@@ -263,6 +264,11 @@ public:
     * This pointer may be \c NULL.
     */
    const char *non_lvalue_description;
+
+   void set_is_lhs(bool new_value);
+
+private:
+   bool is_lhs;
 };
 
 class ast_expression_bin : public ast_expression {

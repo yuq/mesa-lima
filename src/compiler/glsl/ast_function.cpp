@@ -1727,6 +1727,10 @@ ast_function_expression::handle_method(exec_list *instructions,
    const char *method;
    method = field->primary_expression.identifier;
 
+   /* This would prevent to raise "uninitialized variable" warnings when
+    * calling array.length.
+    */
+   field->subexpressions[0]->set_is_lhs(true);
    op = field->subexpressions[0]->hir(instructions, state);
    if (strcmp(method, "length") == 0) {
       if (!this->expressions.is_empty()) {
