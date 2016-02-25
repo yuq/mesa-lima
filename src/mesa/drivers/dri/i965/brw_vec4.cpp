@@ -2014,9 +2014,9 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
                                       is_scalar);
-   shader = brw_nir_lower_io(shader, compiler->devinfo, is_scalar,
-                             use_legacy_snorm_formula,
-                             key->gl_attrib_wa_flags);
+   brw_nir_lower_vs_inputs(shader, compiler->devinfo, is_scalar,
+                           use_legacy_snorm_formula, key->gl_attrib_wa_flags);
+   brw_nir_lower_vue_outputs(shader, is_scalar);
    shader = brw_postprocess_nir(shader, compiler->devinfo, is_scalar);
 
    const unsigned *assembly = NULL;

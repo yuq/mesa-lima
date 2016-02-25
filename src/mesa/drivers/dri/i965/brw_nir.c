@@ -202,7 +202,7 @@ remap_patch_urb_offsets(nir_block *block, void *closure)
    return true;
 }
 
-static void
+void
 brw_nir_lower_vs_inputs(nir_shader *nir,
                         const struct brw_device_info *devinfo,
                         bool is_scalar,
@@ -245,7 +245,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
    }
 }
 
-static void
+void
 brw_nir_lower_vue_inputs(nir_shader *nir,
                          const struct brw_device_info *devinfo,
                          bool is_scalar)
@@ -297,7 +297,7 @@ brw_nir_lower_vue_inputs(nir_shader *nir,
    }
 }
 
-static void
+void
 brw_nir_lower_tes_inputs(nir_shader *nir)
 {
    struct remap_patch_urb_offsets_state state;
@@ -324,46 +324,14 @@ brw_nir_lower_tes_inputs(nir_shader *nir)
    }
 }
 
-static void
+void
 brw_nir_lower_fs_inputs(nir_shader *nir)
 {
    nir_assign_var_locations(&nir->inputs, &nir->num_inputs, type_size_scalar);
    nir_lower_io(nir, nir_var_shader_in, type_size_scalar);
 }
 
-static void
-brw_nir_lower_inputs(nir_shader *nir,
-                     const struct brw_device_info *devinfo,
-                     bool is_scalar,
-                     bool use_legacy_snorm_formula,
-                     const uint8_t *vs_attrib_wa_flags)
-{
-   switch (nir->stage) {
-   case MESA_SHADER_VERTEX:
-      brw_nir_lower_vs_inputs(nir, devinfo, is_scalar, use_legacy_snorm_formula,
-                              vs_attrib_wa_flags);
-      break;
-   case MESA_SHADER_TESS_CTRL:
-   case MESA_SHADER_GEOMETRY:
-      brw_nir_lower_vue_inputs(nir, devinfo, is_scalar);
-      break;
-   case MESA_SHADER_TESS_EVAL:
-      brw_nir_lower_tes_inputs(nir);
-      break;
-   case MESA_SHADER_FRAGMENT:
-      assert(is_scalar);
-      brw_nir_lower_fs_inputs(nir);
-      break;
-   case MESA_SHADER_COMPUTE:
-      /* Compute shaders have no inputs. */
-      assert(exec_list_is_empty(&nir->inputs));
-      break;
-   default:
-      unreachable("unsupported shader stage");
-   }
-}
-
-static void
+void
 brw_nir_lower_vue_outputs(nir_shader *nir,
                           bool is_scalar)
 {
@@ -378,7 +346,7 @@ brw_nir_lower_vue_outputs(nir_shader *nir,
    }
 }
 
-static void
+void
 brw_nir_lower_tcs_outputs(nir_shader *nir)
 {
    struct remap_patch_urb_offsets_state state;
@@ -404,36 +372,12 @@ brw_nir_lower_tcs_outputs(nir_shader *nir)
    }
 }
 
-static void
+void
 brw_nir_lower_fs_outputs(nir_shader *nir)
 {
    nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
                             type_size_scalar);
    nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
-}
-
-static void
-brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
-{
-   switch (nir->stage) {
-   case MESA_SHADER_VERTEX:
-   case MESA_SHADER_TESS_EVAL:
-   case MESA_SHADER_GEOMETRY:
-      brw_nir_lower_vue_outputs(nir, is_scalar);
-      break;
-   case MESA_SHADER_TESS_CTRL:
-      brw_nir_lower_tcs_outputs(nir);
-      break;
-   case MESA_SHADER_FRAGMENT:
-      brw_nir_lower_fs_outputs(nir);
-      break;
-   case MESA_SHADER_COMPUTE:
-      /* Compute shaders have no outputs. */
-      assert(exec_list_is_empty(&nir->outputs));
-      break;
-   default:
-      unreachable("unsupported shader stage");
-   }
 }
 
 static int
@@ -546,24 +490,6 @@ brw_preprocess_nir(nir_shader *nir, bool is_scalar)
    nir = nir_optimize(nir, is_scalar);
 
    OPT(nir_remove_dead_variables);
-
-   return nir;
-}
-
-/** Lower input and output loads and stores for i965. */
-nir_shader *
-brw_nir_lower_io(nir_shader *nir,
-                 const struct brw_device_info *devinfo,
-                 bool is_scalar,
-                 bool use_legacy_snorm_formula,
-                 const uint8_t *vs_attrib_wa_flags)
-{
-   bool progress; /* Written by OPT and OPT_V */
-   (void)progress;
-
-   OPT_V(brw_nir_lower_inputs, devinfo, is_scalar,
-         use_legacy_snorm_formula, vs_attrib_wa_flags);
-   OPT_V(brw_nir_lower_outputs, is_scalar);
 
    return nir;
 }
