@@ -465,7 +465,7 @@ void anv_CmdSetViewport(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    const uint32_t total_count = firstViewport + viewportCount;
-   if (cmd_buffer->state.dynamic.viewport.count < total_count);
+   if (cmd_buffer->state.dynamic.viewport.count < total_count)
       cmd_buffer->state.dynamic.viewport.count = total_count;
 
    memcpy(cmd_buffer->state.dynamic.viewport.viewports + firstViewport,
@@ -483,7 +483,7 @@ void anv_CmdSetScissor(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    const uint32_t total_count = firstScissor + scissorCount;
-   if (cmd_buffer->state.dynamic.scissor.count < total_count);
+   if (cmd_buffer->state.dynamic.scissor.count < total_count)
       cmd_buffer->state.dynamic.scissor.count = total_count;
 
    memcpy(cmd_buffer->state.dynamic.scissor.scissors + firstScissor,
