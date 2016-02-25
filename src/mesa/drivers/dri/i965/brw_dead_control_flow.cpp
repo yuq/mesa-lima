@@ -48,67 +48,50 @@ dead_control_flow_eliminate(backend_shader *s)
       /* ENDIF instructions, by definition, can only be found at the start of
        * basic blocks.
        */
-      if (inst->opcode == BRW_OPCODE_ENDIF) {
-         bool found = false;
-         bblock_t *if_block = NULL, *else_block = NULL, *endif_block = block;
-         backend_instruction *endif_inst = inst;
+      if (inst->opcode == BRW_OPCODE_ENDIF &&
+          prev_inst->opcode == BRW_OPCODE_ELSE) {
+         bblock_t *const else_block = prev_block;
+         backend_instruction *const else_inst = prev_inst;
 
-         backend_instruction *if_inst = NULL, *else_inst = NULL;
-         if (prev_inst->opcode == BRW_OPCODE_ELSE) {
-            else_inst = prev_inst;
-            else_block = endif_block->prev();
-            found = true;
+         else_inst->remove(else_block);
+         progress = true;
+      } else if (inst->opcode == BRW_OPCODE_ENDIF &&
+                 prev_inst->opcode == BRW_OPCODE_IF) {
+         bblock_t *const endif_block = block;
+         bblock_t *const if_block = prev_block;
+         backend_instruction *const endif_inst = inst;
+         backend_instruction *const if_inst = prev_inst;
 
-            /* Don't remove the ENDIF if we didn't find a dead IF. */
-            endif_inst = NULL;
+         bblock_t *earlier_block = NULL, *later_block = NULL;
+
+         if (if_block->start_ip == if_block->end_ip) {
+            earlier_block = if_block->prev();
+         } else {
+            earlier_block = if_block;
+         }
+         if_inst->remove(if_block);
+
+         if (endif_block->start_ip == endif_block->end_ip) {
+            later_block = endif_block->next();
+         } else {
+            later_block = endif_block;
+         }
+         endif_inst->remove(endif_block);
+
+         assert((earlier_block == NULL) == (later_block == NULL));
+         if (earlier_block && earlier_block->can_combine_with(later_block)) {
+            earlier_block->combine_with(later_block);
+
+            /* If ENDIF was in its own block, then we've now deleted it and
+             * merged the two surrounding blocks, the latter of which the
+             * __next block pointer was pointing to.
+             */
+            if (endif_block != later_block) {
+               __next = earlier_block->next();
+            }
          }
 
-         if (prev_inst->opcode == BRW_OPCODE_IF) {
-            if_inst = prev_inst;
-            if_block = prev_block;
-            found = true;
-         }
-
-         if (found) {
-            bblock_t *earlier_block = NULL, *later_block = NULL;
-
-            if (if_inst) {
-               if (if_block->start_ip == if_block->end_ip) {
-                  earlier_block = if_block->prev();
-               } else {
-                  earlier_block = if_block;
-               }
-               if_inst->remove(if_block);
-            }
-
-            if (else_inst) {
-               else_inst->remove(else_block);
-            }
-
-            if (endif_inst) {
-               if (endif_block->start_ip == endif_block->end_ip) {
-                  later_block = endif_block->next();
-               } else {
-                  later_block = endif_block;
-               }
-               endif_inst->remove(endif_block);
-            }
-
-            assert((earlier_block == NULL) == (later_block == NULL));
-            if (earlier_block && earlier_block->can_combine_with(later_block)) {
-               earlier_block->combine_with(later_block);
-
-               /* If ENDIF was in its own block, then we've now deleted it and
-                * merged the two surrounding blocks, the latter of which the
-                * __next block pointer was pointing to.
-                */
-               if (endif_block != later_block) {
-                  __next = earlier_block->next();
-               }
-            }
-
-            progress = true;
-         }
+         progress = true;
       } else if (inst->opcode == BRW_OPCODE_ELSE &&
                  prev_inst->opcode == BRW_OPCODE_IF) {
          bblock_t *const else_block = block;
