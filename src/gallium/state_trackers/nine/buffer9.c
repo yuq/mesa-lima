@@ -178,7 +178,6 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
         if (!(Flags & D3DLOCK_READONLY)) {
             if (!This->managed.dirty) {
                 assert(LIST_IS_EMPTY(&This->managed.list));
-                list_add(&This->managed.list, &This->base.base.device->update_buffers);
                 This->managed.dirty = TRUE;
                 This->managed.dirty_box = box;
             } else {
@@ -232,8 +231,13 @@ NineBuffer9_Unlock( struct NineBuffer9 *This )
     user_assert(This->nmaps > 0, D3DERR_INVALIDCALL);
     if (This->base.pool != D3DPOOL_MANAGED)
         This->pipe->transfer_unmap(This->pipe, This->maps[--(This->nmaps)]);
-    else
+    else {
         This->nmaps--;
+        /* TODO: Fix this to upload at the first draw call needing the data,
+         * instead of at the next draw call */
+        if (!This->nmaps && This->managed.dirty && LIST_IS_EMPTY(&This->managed.list))
+            list_add(&This->managed.list, &This->base.base.device->update_buffers);
+    }
     return D3D_OK;
 }
 
