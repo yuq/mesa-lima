@@ -1390,7 +1390,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
    if (is_scalar) {
       fs_visitor v(compiler, log_data, mem_ctx, (void *) key,
-                   &prog_data->base.base, prog, nir, 8,
+                   &prog_data->base.base, NULL, nir, 8,
                    shader_time_index, &input_vue_map);
       if (!v.run_tes()) {
          if (error_str)
