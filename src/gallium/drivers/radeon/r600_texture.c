@@ -1293,25 +1293,14 @@ unsigned r600_translate_colorswap(enum pipe_format format)
 		break;
 	case 4:
 		/* check the middle channels, the 1st and 4th channel can be NONE */
-#ifdef PIPE_ARCH_LITTLE_ENDIAN
 		if (HAS_SWIZZLE(1,Y) && HAS_SWIZZLE(2,Z))
 			return V_0280A0_SWAP_STD; /* XYZW */
 		else if (HAS_SWIZZLE(1,Z) && HAS_SWIZZLE(2,Y))
 			return V_0280A0_SWAP_STD_REV; /* WZYX */
 		else if (HAS_SWIZZLE(1,Y) && HAS_SWIZZLE(2,X))
 			return V_0280A0_SWAP_ALT; /* ZYXW */
-		else if (HAS_SWIZZLE(1,X) && HAS_SWIZZLE(2,Y))
-			return V_0280A0_SWAP_ALT_REV; /* WXYZ */
-#else
-		if (HAS_SWIZZLE(1,W) && HAS_SWIZZLE(2,X))
-			return V_0280A0_SWAP_STD_REV; /* ZWXY */
-		else if (HAS_SWIZZLE(1,X) && HAS_SWIZZLE(2,W))
-			return V_0280A0_SWAP_STD; /* YXWZ */
-		else if (HAS_SWIZZLE(1,W) && HAS_SWIZZLE(2,Z))
-			return V_0280A0_SWAP_ALT_REV; /* XWZY */
 		else if (HAS_SWIZZLE(1,Z) && HAS_SWIZZLE(2,W))
-			return V_0280A0_SWAP_ALT; /* YZWX */
-#endif
+			return V_0280A0_SWAP_ALT_REV; /* YZWX */
 		break;
 	}
 	return ~0U;
