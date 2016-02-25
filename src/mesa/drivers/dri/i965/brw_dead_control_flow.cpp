@@ -34,6 +34,7 @@
  *   - if/endif
  *   . else in else/endif
  *   - if/else/endif
+ *   - else in if/else
  */
 bool
 dead_control_flow_eliminate(backend_shader *s)
@@ -114,6 +115,19 @@ dead_control_flow_eliminate(backend_shader *s)
 
             progress = true;
          }
+      } else if (inst->opcode == BRW_OPCODE_ELSE &&
+                 prev_inst->opcode == BRW_OPCODE_IF) {
+         bblock_t *const else_block = block;
+         backend_instruction *const if_inst = prev_inst;
+         backend_instruction *const else_inst = inst;
+
+         /* Since the else-branch is becoming the new then-branch, the
+          * condition has to be inverted.
+          */
+         if_inst->predicate_inverse = !if_inst->predicate_inverse;
+         else_inst->remove(else_block);
+
+         progress = true;
       }
    }
 
