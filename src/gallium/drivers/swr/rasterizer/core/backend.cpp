@@ -766,6 +766,8 @@ void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_REND
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     static const SWR_MULTISAMPLE_COUNT sampleCount = (SWR_MULTISAMPLE_COUNT)sampleCountT;
     uint32_t rasterTileColorOffset = MultisampleTraits<sampleCount>::RasterTileColorOffset(sample);
+    simdvector blendOut;
+
     for(uint32_t rt = 0; rt < NumRT; ++rt)
     {
         uint8_t *pColorSample;
@@ -779,6 +781,9 @@ void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_REND
         }
 
         const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
+        // pfnBlendFunc may not update all channels.  Initialize with PS output.
+        /// TODO: move this into the blend JIT.
+        blendOut = psContext.shaded[rt];
 
         // Blend outputs and update coverage mask for alpha test
         if(pfnBlendFunc[rt] != nullptr)
@@ -789,7 +794,7 @@ void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_REND
                 psContext.shaded[1],
                 sample,
                 pColorSample,
-                psContext.shaded[rt],
+                blendOut,
                 &psContext.oMask,
                 (simdscalari*)&coverageMask);
         }
@@ -805,19 +810,19 @@ void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_REND
         // store with color mask
         if(!pRTBlend->writeDisableRed)
         {
-            _simd_maskstore_ps((float*)pColorSample, outputMask, psContext.shaded[rt].x);
+            _simd_maskstore_ps((float*)pColorSample, outputMask, blendOut.x);
         }
         if(!pRTBlend->writeDisableGreen)
         {
-            _simd_maskstore_ps((float*)(pColorSample + simd), outputMask, psContext.shaded[rt].y);
+            _simd_maskstore_ps((float*)(pColorSample + simd), outputMask, blendOut.y);
         }
         if(!pRTBlend->writeDisableBlue)
         {
-            _simd_maskstore_ps((float*)(pColorSample + simd * 2), outputMask, psContext.shaded[rt].z);
+            _simd_maskstore_ps((float*)(pColorSample + simd * 2), outputMask, blendOut.z);
         }
         if(!pRTBlend->writeDisableAlpha)
         {
-            _simd_maskstore_ps((float*)(pColorSample + simd * 3), outputMask, psContext.shaded[rt].w);
+            _simd_maskstore_ps((float*)(pColorSample + simd * 3), outputMask, blendOut.w);
         }
     }
 }
