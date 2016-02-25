@@ -252,6 +252,7 @@ brw_nir_lower_inputs(nir_shader *nir,
          foreach_list_typed(nir_variable, var, node, &nir->inputs) {
             var->data.driver_location = var->data.location;
          }
+         nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
       } else {
          /* The GLSL linker will have already matched up GS inputs and
           * the outputs of prior stages.  The driver does extend VS outputs
@@ -323,6 +324,7 @@ brw_nir_lower_inputs(nir_shader *nir,
       assert(is_scalar);
       nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
                                type_size_scalar);
+      nir_lower_io(nir, nir_var_shader_in, type_size_scalar);
       break;
    case MESA_SHADER_COMPUTE:
       /* Compute shaders have no inputs. */
@@ -349,6 +351,7 @@ brw_nir_lower_outputs(nir_shader *nir,
       } else {
          nir_foreach_variable(var, &nir->outputs)
             var->data.driver_location = var->data.location;
+         nir_lower_io(nir, nir_var_shader_out, type_size_vec4);
       }
       break;
    case MESA_SHADER_TESS_CTRL: {
@@ -378,6 +381,7 @@ brw_nir_lower_outputs(nir_shader *nir,
    case MESA_SHADER_FRAGMENT:
       nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
                                type_size_scalar);
+      nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
       break;
    case MESA_SHADER_COMPUTE:
       /* Compute shaders have no outputs. */
@@ -516,7 +520,6 @@ brw_nir_lower_io(nir_shader *nir,
    OPT_V(brw_nir_lower_inputs, devinfo, is_scalar,
          use_legacy_snorm_formula, vs_attrib_wa_flags);
    OPT_V(brw_nir_lower_outputs, devinfo, is_scalar);
-   OPT_V(nir_lower_io, nir_var_all, is_scalar ? type_size_scalar : type_size_vec4);
 
    return nir;
 }
