@@ -769,12 +769,8 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
        * thrown away the moment you combine it with an image.  What really
        * matters is that it's a sampler type as opposed to an integer type
        * so the backend knows what to do.
-       *
-       * TODO: Eventually we should consider adding a "bare sampler" type
-       * to glsl_types.
        */
-      val->type->type = glsl_sampler_type(GLSL_SAMPLER_DIM_2D, false, false,
-                                          GLSL_TYPE_FLOAT);
+      val->type->type = glsl_bare_sampler_type();
       break;
 
    case SpvOpTypeOpaque:
