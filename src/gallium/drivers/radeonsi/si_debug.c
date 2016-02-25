@@ -781,8 +781,7 @@ void si_check_vm_faults(struct si_context *sctx)
 	fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
 	fprintf(f, "Failing VM page: 0x%08x\n\n", addr);
 
-	si_dump_last_bo_list(sctx, f);
-	si_dump_last_ib(sctx, f);
+	si_dump_debug_state(&sctx->b.b, f, 0);
 	fclose(f);
 
 	fprintf(stderr, "Detected a VM fault, exiting...\n");
