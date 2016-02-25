@@ -2721,6 +2721,13 @@ uint32_t r600_colorformat_endian_swap(uint32_t colorformat)
 
 		/* 32-bit buffers. */
 		case V_0280A0_COLOR_8_8_8_8:
+			/*
+			 * No need to do endian swaps on four 8-bits components,
+			 * as mesa<-->pipe formats conversion take into account
+			 * the endianess
+			 */
+			return ENDIAN_NONE;
+
 		case V_0280A0_COLOR_2_10_10_10:
 		case V_0280A0_COLOR_8_24:
 		case V_0280A0_COLOR_24_8:
