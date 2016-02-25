@@ -513,18 +513,19 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_TESS_CTRL];
 
    nir_shader *nir = nir_shader_clone(mem_ctx, src_shader);
-   nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
    nir->info.outputs_written = key->outputs_written;
    nir->info.patch_outputs_written = key->patch_outputs_written;
-   brw_nir_lower_vue_inputs(nir, compiler->devinfo, is_scalar);
-   brw_nir_lower_tcs_outputs(nir);
-   nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
-
-   prog_data->instances = DIV_ROUND_UP(nir->info.tcs.vertices_out, 2);
 
    brw_compute_tess_vue_map(&vue_prog_data->vue_map,
                             nir->info.outputs_written,
                             nir->info.patch_outputs_written);
+
+   nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
+   brw_nir_lower_vue_inputs(nir, compiler->devinfo, is_scalar);
+   brw_nir_lower_tcs_outputs(nir, &vue_prog_data->vue_map);
+   nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
+
+   prog_data->instances = DIV_ROUND_UP(nir->info.tcs.vertices_out, 2);
 
    /* Compute URB entry size.  The maximum allowed URB entry size is 32k.
     * That divides up as follows:

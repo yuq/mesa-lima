@@ -149,7 +149,7 @@ remap_inputs_with_vue_map(nir_block *block, void *closure)
 
 struct remap_patch_urb_offsets_state {
    nir_builder b;
-   struct brw_vue_map vue_map;
+   const struct brw_vue_map *vue_map;
 };
 
 static bool
@@ -167,7 +167,7 @@ remap_patch_urb_offsets(nir_block *block, void *closure)
 
       if ((stage == MESA_SHADER_TESS_CTRL && is_output(intrin)) ||
           (stage == MESA_SHADER_TESS_EVAL && is_input(intrin))) {
-         int vue_slot = state->vue_map.varying_to_slot[intrin->const_index[0]];
+         int vue_slot = state->vue_map->varying_to_slot[intrin->const_index[0]];
          assert(vue_slot != -1);
          intrin->const_index[0] = vue_slot;
 
@@ -176,7 +176,7 @@ remap_patch_urb_offsets(nir_block *block, void *closure)
             nir_const_value *const_vertex = nir_src_as_const_value(*vertex);
             if (const_vertex) {
                intrin->const_index[0] += const_vertex->u[0] *
-                                         state->vue_map.num_per_vertex_slots;
+                                         state->vue_map->num_per_vertex_slots;
             } else {
                state->b.cursor = nir_before_instr(&intrin->instr);
 
@@ -185,7 +185,7 @@ remap_patch_urb_offsets(nir_block *block, void *closure)
                   nir_imul(&state->b,
                            nir_ssa_for_src(&state->b, *vertex, 1),
                            nir_imm_int(&state->b,
-                                       state->vue_map.num_per_vertex_slots));
+                                       state->vue_map->num_per_vertex_slots));
 
                /* Add it to the existing offset */
                nir_src *offset = nir_get_io_offset_src(intrin);
@@ -298,12 +298,10 @@ brw_nir_lower_vue_inputs(nir_shader *nir,
 }
 
 void
-brw_nir_lower_tes_inputs(nir_shader *nir)
+brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
 {
    struct remap_patch_urb_offsets_state state;
-   brw_compute_tess_vue_map(&state.vue_map,
-                            nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
-                            nir->info.patch_inputs_read);
+   state.vue_map = vue_map;
 
    foreach_list_typed(nir_variable, var, node, &nir->inputs) {
       var->data.driver_location = var->data.location;
@@ -347,11 +345,10 @@ brw_nir_lower_vue_outputs(nir_shader *nir,
 }
 
 void
-brw_nir_lower_tcs_outputs(nir_shader *nir)
+brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue_map)
 {
    struct remap_patch_urb_offsets_state state;
-   brw_compute_tess_vue_map(&state.vue_map, nir->info.outputs_written,
-                            nir->info.patch_outputs_written);
+   state.vue_map = vue_map;
 
    nir_foreach_variable(var, &nir->outputs) {
       var->data.driver_location = var->data.location;
