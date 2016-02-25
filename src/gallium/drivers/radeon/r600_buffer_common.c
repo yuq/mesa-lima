@@ -312,13 +312,17 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		if (r600_invalidate_buffer(rctx, rbuffer)) {
 			/* At this point, the buffer is always idle. */
 			usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
+		} else {
+			/* Fall back to a temporary buffer. */
+			usage |= PIPE_TRANSFER_DISCARD_RANGE;
 		}
 	}
-	else if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
-		 !(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
-			    PIPE_TRANSFER_PERSISTENT)) &&
-		 !(rscreen->debug_flags & DBG_NO_DISCARD_RANGE) &&
-		 r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) {
+
+	if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
+	    !(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
+		       PIPE_TRANSFER_PERSISTENT)) &&
+	    !(rscreen->debug_flags & DBG_NO_DISCARD_RANGE) &&
+	    r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) {
 		assert(usage & PIPE_TRANSFER_WRITE);
 
 		/* Check if mapping this buffer would cause waiting for the GPU. */
