@@ -203,108 +203,84 @@ remap_patch_urb_offsets(nir_block *block, void *closure)
 }
 
 static void
-brw_nir_lower_inputs(nir_shader *nir,
-                     const struct brw_device_info *devinfo,
-                     bool is_scalar,
-                     bool use_legacy_snorm_formula,
-                     const uint8_t *vs_attrib_wa_flags)
+brw_nir_lower_vs_inputs(nir_shader *nir,
+                        const struct brw_device_info *devinfo,
+                        bool is_scalar,
+                        bool use_legacy_snorm_formula,
+                        const uint8_t *vs_attrib_wa_flags)
 {
-   switch (nir->stage) {
-   case MESA_SHADER_VERTEX:
-      /* Start with the location of the variable's base. */
-      foreach_list_typed(nir_variable, var, node, &nir->inputs) {
-         var->data.driver_location = var->data.location;
-      }
-
-      /* Now use nir_lower_io to walk dereference chains.  Attribute arrays
-       * are loaded as one vec4 per element (or matrix column), so we use
-       * type_size_vec4 here.
-       */
-      nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
-
-      /* This pass needs actual constants */
-      nir_opt_constant_folding(nir);
-
-      add_const_offset_to_base(nir, nir_var_shader_in);
-
-      brw_nir_apply_attribute_workarounds(nir, use_legacy_snorm_formula,
-                                          vs_attrib_wa_flags);
-
-      if (is_scalar) {
-         /* Finally, translate VERT_ATTRIB_* values into the actual registers.
-          *
-          * Note that we can use nir->info.inputs_read instead of
-          * key->inputs_read since the two are identical aside from Gen4-5
-          * edge flag differences.
-          */
-         GLbitfield64 inputs_read = nir->info.inputs_read;
-
-         nir_foreach_function(nir, function) {
-            if (function->impl) {
-               nir_foreach_block(function->impl, remap_vs_attrs, &inputs_read);
-            }
-         }
-      }
-      break;
-   case MESA_SHADER_TESS_CTRL:
-   case MESA_SHADER_GEOMETRY: {
-      if (!is_scalar && nir->stage == MESA_SHADER_GEOMETRY) {
-         foreach_list_typed(nir_variable, var, node, &nir->inputs) {
-            var->data.driver_location = var->data.location;
-         }
-         nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
-      } else {
-         /* The GLSL linker will have already matched up GS inputs and
-          * the outputs of prior stages.  The driver does extend VS outputs
-          * in some cases, but only for legacy OpenGL or Gen4-5 hardware,
-          * neither of which offer geometry shader support.  So we can
-          * safely ignore that.
-          *
-          * For SSO pipelines, we use a fixed VUE map layout based on variable
-          * locations, so we can rely on rendezvous-by-location to make this
-          * work.
-          *
-          * However, we need to ignore VARYING_SLOT_PRIMITIVE_ID, as it's not
-          * written by previous stages and shows up via payload magic.
-          */
-         struct brw_vue_map input_vue_map;
-         GLbitfield64 inputs_read =
-            nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
-         brw_compute_vue_map(devinfo, &input_vue_map, inputs_read,
-                             nir->info.separate_shader ||
-                             nir->stage == MESA_SHADER_TESS_CTRL);
-
-         foreach_list_typed(nir_variable, var, node, &nir->inputs) {
-            var->data.driver_location = var->data.location;
-         }
-
-         /* Inputs are stored in vec4 slots, so use type_size_vec4(). */
-         nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
-
-         /* This pass needs actual constants */
-         nir_opt_constant_folding(nir);
-
-         add_const_offset_to_base(nir, nir_var_shader_in);
-
-         nir_foreach_function(nir, function) {
-            if (function->impl) {
-               nir_foreach_block(function->impl, remap_inputs_with_vue_map,
-                                 &input_vue_map);
-            }
-         }
-      }
-      break;
+   /* Start with the location of the variable's base. */
+   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+      var->data.driver_location = var->data.location;
    }
-   case MESA_SHADER_TESS_EVAL: {
-      struct remap_patch_urb_offsets_state state;
-      brw_compute_tess_vue_map(&state.vue_map,
-                               nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
-                               nir->info.patch_inputs_read);
+
+   /* Now use nir_lower_io to walk dereference chains.  Attribute arrays
+    * are loaded as one vec4 per element (or matrix column), so we use
+    * type_size_vec4 here.
+    */
+   nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+
+   /* This pass needs actual constants */
+   nir_opt_constant_folding(nir);
+
+   add_const_offset_to_base(nir, nir_var_shader_in);
+
+   brw_nir_apply_attribute_workarounds(nir, use_legacy_snorm_formula,
+                                       vs_attrib_wa_flags);
+
+   if (is_scalar) {
+      /* Finally, translate VERT_ATTRIB_* values into the actual registers.
+       *
+       * Note that we can use nir->info.inputs_read instead of
+       * key->inputs_read since the two are identical aside from Gen4-5
+       * edge flag differences.
+       */
+      GLbitfield64 inputs_read = nir->info.inputs_read;
+
+      nir_foreach_function(nir, function) {
+         if (function->impl) {
+            nir_foreach_block(function->impl, remap_vs_attrs, &inputs_read);
+         }
+      }
+   }
+}
+
+static void
+brw_nir_lower_vue_inputs(nir_shader *nir,
+                         const struct brw_device_info *devinfo,
+                         bool is_scalar)
+{
+   if (!is_scalar && nir->stage == MESA_SHADER_GEOMETRY) {
+      foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+         var->data.driver_location = var->data.location;
+      }
+      nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+   } else {
+      /* The GLSL linker will have already matched up GS inputs and
+       * the outputs of prior stages.  The driver does extend VS outputs
+       * in some cases, but only for legacy OpenGL or Gen4-5 hardware,
+       * neither of which offer geometry shader support.  So we can
+       * safely ignore that.
+       *
+       * For SSO pipelines, we use a fixed VUE map layout based on variable
+       * locations, so we can rely on rendezvous-by-location to make this
+       * work.
+       *
+       * However, we need to ignore VARYING_SLOT_PRIMITIVE_ID, as it's not
+       * written by previous stages and shows up via payload magic.
+       */
+      struct brw_vue_map input_vue_map;
+      GLbitfield64 inputs_read =
+         nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
+      brw_compute_vue_map(devinfo, &input_vue_map, inputs_read,
+                          nir->info.separate_shader ||
+                          nir->stage == MESA_SHADER_TESS_CTRL);
 
       foreach_list_typed(nir_variable, var, node, &nir->inputs) {
          var->data.driver_location = var->data.location;
       }
 
+      /* Inputs are stored in vec4 slots, so use type_size_vec4(). */
       nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
 
       /* This pass needs actual constants */
@@ -314,17 +290,69 @@ brw_nir_lower_inputs(nir_shader *nir,
 
       nir_foreach_function(nir, function) {
          if (function->impl) {
-            nir_builder_init(&state.b, function->impl);
-            nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
+            nir_foreach_block(function->impl, remap_inputs_with_vue_map,
+                              &input_vue_map);
          }
       }
-      break;
    }
+}
+
+static void
+brw_nir_lower_tes_inputs(nir_shader *nir)
+{
+   struct remap_patch_urb_offsets_state state;
+   brw_compute_tess_vue_map(&state.vue_map,
+                            nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
+                            nir->info.patch_inputs_read);
+
+   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+      var->data.driver_location = var->data.location;
+   }
+
+   nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+
+   /* This pass needs actual constants */
+   nir_opt_constant_folding(nir);
+
+   add_const_offset_to_base(nir, nir_var_shader_in);
+
+   nir_foreach_function(nir, function) {
+      if (function->impl) {
+         nir_builder_init(&state.b, function->impl);
+         nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
+      }
+   }
+}
+
+static void
+brw_nir_lower_fs_inputs(nir_shader *nir)
+{
+   nir_assign_var_locations(&nir->inputs, &nir->num_inputs, type_size_scalar);
+   nir_lower_io(nir, nir_var_shader_in, type_size_scalar);
+}
+
+static void
+brw_nir_lower_inputs(nir_shader *nir,
+                     const struct brw_device_info *devinfo,
+                     bool is_scalar,
+                     bool use_legacy_snorm_formula,
+                     const uint8_t *vs_attrib_wa_flags)
+{
+   switch (nir->stage) {
+   case MESA_SHADER_VERTEX:
+      brw_nir_lower_vs_inputs(nir, devinfo, is_scalar, use_legacy_snorm_formula,
+                              vs_attrib_wa_flags);
+      break;
+   case MESA_SHADER_TESS_CTRL:
+   case MESA_SHADER_GEOMETRY:
+      brw_nir_lower_vue_inputs(nir, devinfo, is_scalar);
+      break;
+   case MESA_SHADER_TESS_EVAL:
+      brw_nir_lower_tes_inputs(nir);
+      break;
    case MESA_SHADER_FRAGMENT:
       assert(is_scalar);
-      nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
-                               type_size_scalar);
-      nir_lower_io(nir, nir_var_shader_in, type_size_scalar);
+      brw_nir_lower_fs_inputs(nir);
       break;
    case MESA_SHADER_COMPUTE:
       /* Compute shaders have no inputs. */
@@ -336,52 +364,68 @@ brw_nir_lower_inputs(nir_shader *nir,
 }
 
 static void
-brw_nir_lower_outputs(nir_shader *nir,
-                      const struct brw_device_info *devinfo,
-                      bool is_scalar)
+brw_nir_lower_vue_outputs(nir_shader *nir,
+                          bool is_scalar)
+{
+   if (is_scalar) {
+      nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
+                               type_size_vec4_times_4);
+      nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4);
+   } else {
+      nir_foreach_variable(var, &nir->outputs)
+         var->data.driver_location = var->data.location;
+      nir_lower_io(nir, nir_var_shader_out, type_size_vec4);
+   }
+}
+
+static void
+brw_nir_lower_tcs_outputs(nir_shader *nir)
+{
+   struct remap_patch_urb_offsets_state state;
+   brw_compute_tess_vue_map(&state.vue_map, nir->info.outputs_written,
+                            nir->info.patch_outputs_written);
+
+   nir_foreach_variable(var, &nir->outputs) {
+      var->data.driver_location = var->data.location;
+   }
+
+   nir_lower_io(nir, nir_var_shader_out, type_size_vec4);
+
+   /* This pass needs actual constants */
+   nir_opt_constant_folding(nir);
+
+   add_const_offset_to_base(nir, nir_var_shader_out);
+
+   nir_foreach_function(nir, function) {
+      if (function->impl) {
+         nir_builder_init(&state.b, function->impl);
+         nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
+      }
+   }
+}
+
+static void
+brw_nir_lower_fs_outputs(nir_shader *nir)
+{
+   nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
+                            type_size_scalar);
+   nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
+}
+
+static void
+brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
 {
    switch (nir->stage) {
    case MESA_SHADER_VERTEX:
    case MESA_SHADER_TESS_EVAL:
    case MESA_SHADER_GEOMETRY:
-      if (is_scalar) {
-         nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
-                                  type_size_vec4_times_4);
-         nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4);
-      } else {
-         nir_foreach_variable(var, &nir->outputs)
-            var->data.driver_location = var->data.location;
-         nir_lower_io(nir, nir_var_shader_out, type_size_vec4);
-      }
+      brw_nir_lower_vue_outputs(nir, is_scalar);
       break;
-   case MESA_SHADER_TESS_CTRL: {
-      struct remap_patch_urb_offsets_state state;
-      brw_compute_tess_vue_map(&state.vue_map, nir->info.outputs_written,
-                               nir->info.patch_outputs_written);
-
-      nir_foreach_variable(var, &nir->outputs) {
-         var->data.driver_location = var->data.location;
-      }
-
-      nir_lower_io(nir, nir_var_shader_out, type_size_vec4);
-
-      /* This pass needs actual constants */
-      nir_opt_constant_folding(nir);
-
-      add_const_offset_to_base(nir, nir_var_shader_out);
-
-      nir_foreach_function(nir, function) {
-         if (function->impl) {
-            nir_builder_init(&state.b, function->impl);
-            nir_foreach_block(function->impl, remap_patch_urb_offsets, &state);
-         }
-      }
+   case MESA_SHADER_TESS_CTRL:
+      brw_nir_lower_tcs_outputs(nir);
       break;
-   }
    case MESA_SHADER_FRAGMENT:
-      nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
-                               type_size_scalar);
-      nir_lower_io(nir, nir_var_shader_out, type_size_scalar);
+      brw_nir_lower_fs_outputs(nir);
       break;
    case MESA_SHADER_COMPUTE:
       /* Compute shaders have no outputs. */
@@ -519,7 +563,7 @@ brw_nir_lower_io(nir_shader *nir,
 
    OPT_V(brw_nir_lower_inputs, devinfo, is_scalar,
          use_legacy_snorm_formula, vs_attrib_wa_flags);
-   OPT_V(brw_nir_lower_outputs, devinfo, is_scalar);
+   OPT_V(brw_nir_lower_outputs, is_scalar);
 
    return nir;
 }
