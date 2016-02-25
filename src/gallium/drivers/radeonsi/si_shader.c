@@ -4406,14 +4406,14 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 
 static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary,
 				       struct pipe_debug_callback *debug,
-				       const char *name)
+				       const char *name, FILE *file)
 {
 	char *line, *p;
 	unsigned i, count;
 
 	if (binary->disasm_string) {
-		fprintf(stderr, "Shader %s disassembly:\n", name);
-		fprintf(stderr, "%s", binary->disasm_string);
+		fprintf(file, "Shader %s disassembly:\n", name);
+		fprintf(file, "%s", binary->disasm_string);
 
 		if (debug && debug->debug_message) {
 			/* Very long debug messages are cut off, so send the
@@ -4443,9 +4443,9 @@ static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary
 					   "Shader Disassembly End");
 		}
 	} else {
-		fprintf(stderr, "Shader %s binary:\n", name);
+		fprintf(file, "Shader %s binary:\n", name);
 		for (i = 0; i < binary->code_size; i += 4) {
-			fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i,
+			fprintf(file, "@0x%x: %02x%02x%02x%02x\n", i,
 				binary->code[i + 3], binary->code[i + 2],
 				binary->code[i + 1], binary->code[i]);
 		}
@@ -4457,7 +4457,8 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 				 unsigned num_inputs,
 				 unsigned code_size,
 			         struct pipe_debug_callback *debug,
-			         unsigned processor)
+			         unsigned processor,
+				 FILE *file)
 {
 	unsigned lds_increment = sscreen->b.chip_class >= CIK ? 512 : 256;
 	unsigned lds_per_wave = 0;
@@ -4493,15 +4494,16 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	if (lds_per_wave)
 		max_simd_waves = MIN2(max_simd_waves, 16384 / lds_per_wave);
 
-	if (r600_can_dump_shader(&sscreen->b, processor)) {
+	if (file != stderr ||
+	    r600_can_dump_shader(&sscreen->b, processor)) {
 		if (processor == TGSI_PROCESSOR_FRAGMENT) {
-			fprintf(stderr, "*** SHADER CONFIG ***\n"
+			fprintf(file, "*** SHADER CONFIG ***\n"
 				"SPI_PS_INPUT_ADDR = 0x%04x\n"
 				"SPI_PS_INPUT_ENA  = 0x%04x\n",
 				conf->spi_ps_input_addr, conf->spi_ps_input_ena);
 		}
 
-		fprintf(stderr, "*** SHADER STATS ***\n"
+		fprintf(file, "*** SHADER STATS ***\n"
 			"SGPRS: %d\n"
 			"VGPRS: %d\n"
 			"Code Size: %d bytes\n"
@@ -4555,27 +4557,30 @@ static const char *si_get_shader_name(struct si_shader *shader,
 }
 
 void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
-		    struct pipe_debug_callback *debug, unsigned processor)
+		    struct pipe_debug_callback *debug, unsigned processor,
+		    FILE *file)
 {
-	if (r600_can_dump_shader(&sscreen->b, processor) &&
-	    !(sscreen->b.debug_flags & DBG_NO_ASM)) {
-		fprintf(stderr, "\n%s:\n", si_get_shader_name(shader, processor));
+	if (file != stderr ||
+	    (r600_can_dump_shader(&sscreen->b, processor) &&
+	     !(sscreen->b.debug_flags & DBG_NO_ASM))) {
+		fprintf(file, "\n%s:\n", si_get_shader_name(shader, processor));
 
 		if (shader->prolog)
 			si_shader_dump_disassembly(&shader->prolog->binary,
-						   debug, "prolog");
+						   debug, "prolog", file);
 
-		si_shader_dump_disassembly(&shader->binary, debug, "main");
+		si_shader_dump_disassembly(&shader->binary, debug, "main", file);
 
 		if (shader->epilog)
 			si_shader_dump_disassembly(&shader->epilog->binary,
-						   debug, "epilog");
-		fprintf(stderr, "\n");
+						   debug, "epilog", file);
+		fprintf(file, "\n");
 	}
 
 	si_shader_dump_stats(sscreen, &shader->config,
 			     shader->selector ? shader->selector->info.num_inputs : 0,
-			     si_get_shader_binary_size(shader), debug, processor);
+			     si_get_shader_binary_size(shader), debug, processor,
+			     file);
 }
 
 int si_compile_llvm(struct si_screen *sscreen,
@@ -4723,7 +4728,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 		if (r600_can_dump_shader(&sscreen->b, TGSI_PROCESSOR_GEOMETRY))
 			fprintf(stderr, "GS Copy Shader:\n");
 		si_shader_dump(sscreen, ctx->shader, debug,
-			       TGSI_PROCESSOR_GEOMETRY);
+			       TGSI_PROCESSOR_GEOMETRY, stderr);
 		r = si_shader_binary_upload(sscreen, ctx->shader);
 	}
 
@@ -5971,7 +5976,8 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		}
 	}
 
-	si_shader_dump(sscreen, shader, debug, shader->selector->info.processor);
+	si_shader_dump(sscreen, shader, debug, shader->selector->info.processor,
+		       stderr);
 
 	/* Upload. */
 	r = si_shader_binary_upload(sscreen, shader);
