@@ -246,9 +246,8 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
 }
 
 void
-brw_nir_lower_vue_inputs(nir_shader *nir,
-                         const struct brw_device_info *devinfo,
-                         bool is_scalar)
+brw_nir_lower_vue_inputs(nir_shader *nir, bool is_scalar,
+                         const struct brw_vue_map *vue_map)
 {
    if (!is_scalar && nir->stage == MESA_SHADER_GEOMETRY) {
       foreach_list_typed(nir_variable, var, node, &nir->inputs) {
@@ -256,26 +255,6 @@ brw_nir_lower_vue_inputs(nir_shader *nir,
       }
       nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
    } else {
-      /* The GLSL linker will have already matched up GS inputs and
-       * the outputs of prior stages.  The driver does extend VS outputs
-       * in some cases, but only for legacy OpenGL or Gen4-5 hardware,
-       * neither of which offer geometry shader support.  So we can
-       * safely ignore that.
-       *
-       * For SSO pipelines, we use a fixed VUE map layout based on variable
-       * locations, so we can rely on rendezvous-by-location to make this
-       * work.
-       *
-       * However, we need to ignore VARYING_SLOT_PRIMITIVE_ID, as it's not
-       * written by previous stages and shows up via payload magic.
-       */
-      struct brw_vue_map input_vue_map;
-      GLbitfield64 inputs_read =
-         nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
-      brw_compute_vue_map(devinfo, &input_vue_map, inputs_read,
-                          nir->info.separate_shader ||
-                          nir->stage == MESA_SHADER_TESS_CTRL);
-
       foreach_list_typed(nir_variable, var, node, &nir->inputs) {
          var->data.driver_location = var->data.location;
       }
@@ -291,7 +270,7 @@ brw_nir_lower_vue_inputs(nir_shader *nir,
       nir_foreach_function(nir, function) {
          if (function->impl) {
             nir_foreach_block(function->impl, remap_inputs_with_vue_map,
-                              &input_vue_map);
+                              (void *) vue_map);
          }
       }
    }

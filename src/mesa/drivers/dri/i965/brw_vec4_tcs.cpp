@@ -516,12 +516,17 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    nir->info.outputs_written = key->outputs_written;
    nir->info.patch_outputs_written = key->patch_outputs_written;
 
+   struct brw_vue_map input_vue_map;
+   brw_compute_vue_map(devinfo, &input_vue_map,
+                       nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
+                       true);
+
    brw_compute_tess_vue_map(&vue_prog_data->vue_map,
                             nir->info.outputs_written,
                             nir->info.patch_outputs_written);
 
    nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
-   brw_nir_lower_vue_inputs(nir, compiler->devinfo, is_scalar);
+   brw_nir_lower_vue_inputs(nir, is_scalar, &input_vue_map);
    brw_nir_lower_tcs_outputs(nir, &vue_prog_data->vue_map);
    nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
 
@@ -552,11 +557,6 @@ brw_compile_tcs(const struct brw_compiler *compiler,
 
    /* URB entry sizes are stored as a multiple of 64 bytes. */
    vue_prog_data->urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
-
-   struct brw_vue_map input_vue_map;
-   brw_compute_vue_map(devinfo, &input_vue_map,
-                       nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
-                       true);
 
    /* HS does not use the usual payload pushing from URB to GRFs,
     * because we don't have enough registers for a full-size payload, and
