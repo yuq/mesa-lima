@@ -22,15 +22,20 @@
 SUBDIRS = src
 
 AM_DISTCHECK_CONFIGURE_FLAGS = \
+	--enable-dri \
 	--enable-dri3 \
+	--enable-egl \
 	--enable-gallium-tests \
 	--enable-gallium-osmesa \
+	--enable-gallium-llvm \
 	--enable-gbm \
 	--enable-gles1 \
 	--enable-gles2 \
+	--enable-glx \
 	--enable-glx-tls \
 	--enable-nine \
 	--enable-opencl \
+	--enable-opengl \
 	--enable-va \
 	--enable-vdpau \
 	--enable-xa \
