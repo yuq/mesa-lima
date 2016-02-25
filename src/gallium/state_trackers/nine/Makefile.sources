@@ -35,6 +35,7 @@ C_SOURCES := \
 	nine_flags.h \
 	nine_helpers.c \
 	nine_helpers.h \
+	nine_limits.h \
 	nine_lock.c \
 	nine_lock.h \
 	nine_pdata.h \
