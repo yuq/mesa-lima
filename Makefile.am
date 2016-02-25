@@ -28,6 +28,7 @@ AM_DISTCHECK_CONFIGURE_FLAGS = \
 	--enable-gles1 \
 	--enable-gles2 \
 	--enable-glx-tls \
+	--enable-nine \
 	--enable-va \
 	--enable-vdpau \
 	--enable-xa \
