@@ -33,8 +33,7 @@
  *
  *   - if/endif
  *   . else in else/endif
- *   - if/else/endif
- *   - else in if/else
+ *   - then in if/else/endif
  */
 bool
 dead_control_flow_eliminate(backend_shader *s)
@@ -44,7 +43,7 @@ dead_control_flow_eliminate(backend_shader *s)
    foreach_block_safe (block, s->cfg) {
       bblock_t *prev_block = block->prev();
       backend_instruction *const inst = block->start();
-      backend_instruction *prev_inst = prev_block->end();
+      backend_instruction *const prev_inst = prev_block->end();
 
       /* ENDIF instructions, by definition, can only be found at the start of
        * basic blocks.
@@ -60,19 +59,14 @@ dead_control_flow_eliminate(backend_shader *s)
             else_block = endif_block->prev();
             found = true;
 
-            if (else_block->start_ip == else_block->end_ip) {
-               prev_block = prev_block->prev();
-               prev_inst = prev_block->end();
-            }
+            /* Don't remove the ENDIF if we didn't find a dead IF. */
+            endif_inst = NULL;
          }
 
          if (prev_inst->opcode == BRW_OPCODE_IF) {
             if_inst = prev_inst;
             if_block = prev_block;
             found = true;
-         } else {
-            /* Don't remove the ENDIF if we didn't find a dead IF. */
-            endif_inst = NULL;
          }
 
          if (found) {
