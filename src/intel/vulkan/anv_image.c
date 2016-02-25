@@ -478,7 +478,8 @@ anv_image_view_init(struct anv_image_view *iview,
                     struct anv_device *device,
                     const VkImageViewCreateInfo* pCreateInfo,
                     struct anv_cmd_buffer *cmd_buffer,
-                    uint32_t offset)
+                    uint32_t offset,
+                    VkImageUsageFlags usage_mask)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
@@ -577,7 +578,7 @@ anv_image_view_init(struct anv_image_view *iview,
       cube_usage = 0;
    }
 
-   if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+   if (image->usage & usage_mask & VK_IMAGE_USAGE_SAMPLED_BIT) {
       iview->sampler_surface_state = alloc_surface_state(device, cmd_buffer);
 
       isl_view.usage = cube_usage | ISL_SURF_USAGE_TEXTURE_BIT;
@@ -594,7 +595,7 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->sampler_surface_state.alloc_size = 0;
    }
 
-   if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+   if (image->usage & usage_mask & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       isl_view.usage = cube_usage | ISL_SURF_USAGE_RENDER_TARGET_BIT;
@@ -611,7 +612,7 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->color_rt_surface_state.alloc_size = 0;
    }
 
-   if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+   if (image->usage & usage_mask & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
       if (has_matching_storage_typed_format(device, format)) {
@@ -650,7 +651,7 @@ anv_CreateImageView(VkDevice _device,
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   anv_image_view_init(view, device, pCreateInfo, NULL, 0);
+   anv_image_view_init(view, device, pCreateInfo, NULL, 0, ~0);
 
    *pView = anv_image_view_to_handle(view);
 

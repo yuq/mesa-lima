@@ -1680,7 +1680,8 @@ void anv_image_view_init(struct anv_image_view *view,
                          struct anv_device *device,
                          const VkImageViewCreateInfo* pCreateInfo,
                          struct anv_cmd_buffer *cmd_buffer,
-                         uint32_t offset);
+                         uint32_t offset,
+                         VkImageUsageFlags usage_mask);
 
 void
 anv_fill_image_surface_state(struct anv_device *device, struct anv_state state,

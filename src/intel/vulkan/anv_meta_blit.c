@@ -451,7 +451,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
             .layerCount = 1
          },
       },
-      cmd_buffer, 0);
+      cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
 
    struct anv_image_view dest_iview;
    anv_image_view_init(&dest_iview, cmd_buffer->device,
@@ -468,7 +468,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
             .layerCount = 1,
          },
       },
-      cmd_buffer, 0);
+      cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
    meta_emit_blit(cmd_buffer,
                   anv_image_from_handle(src_image),
@@ -711,7 +711,7 @@ void anv_CmdCopyImage(
                .layerCount = pRegions[r].dstSubresource.layerCount,
             },
          },
-         cmd_buffer, 0);
+         cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
 
       const uint32_t dest_base_array_slice =
          anv_meta_get_iview_layer(dest_image, &pRegions[r].dstSubresource,
@@ -758,7 +758,7 @@ void anv_CmdCopyImage(
                   .layerCount = 1
                },
             },
-            cmd_buffer, img_o);
+            cmd_buffer, img_o, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
          const VkExtent3D img_extent_el = meta_region_extent_el(dest_image->vk_format,
                                                                 &pRegions[r].extent);
@@ -826,7 +826,7 @@ void anv_CmdBlitImage(
                .layerCount = 1
             },
          },
-         cmd_buffer, 0);
+         cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
 
       const VkOffset3D dest_offset = {
          .x = pRegions[r].dstOffsets[0].x,
@@ -876,7 +876,7 @@ void anv_CmdBlitImage(
                .layerCount = 1
             },
          },
-         cmd_buffer, 0);
+         cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
       meta_emit_blit(cmd_buffer,
                      src_image, &src_iview,
@@ -991,7 +991,7 @@ void anv_CmdCopyBufferToImage(
                   .layerCount = 1,
                },
             },
-            cmd_buffer, 0);
+            cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
 
          uint32_t img_x = 0;
          uint32_t img_y = 0;
@@ -1025,7 +1025,7 @@ void anv_CmdCopyBufferToImage(
                   .layerCount = 1
                },
             },
-            cmd_buffer, img_o);
+            cmd_buffer, img_o, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
          const VkExtent3D img_extent_el = meta_region_extent_el(dest_image->vk_format,
                                                       &pRegions[r].imageExtent);
@@ -1104,7 +1104,7 @@ void anv_CmdCopyImageToBuffer(
                .layerCount = pRegions[r].imageSubresource.layerCount,
             },
          },
-         cmd_buffer, 0);
+         cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
 
       struct anv_image *dest_image =
          make_image_for_buffer(vk_device, destBuffer, src_image->vk_format,
@@ -1140,7 +1140,7 @@ void anv_CmdCopyImageToBuffer(
                   .layerCount = 1
                },
             },
-            cmd_buffer, 0);
+            cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
          meta_emit_blit(cmd_buffer,
                         anv_image_from_handle(srcImage),

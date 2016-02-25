@@ -737,7 +737,7 @@ void anv_CmdResolveImage(
                   .layerCount = 1,
                },
             },
-            cmd_buffer, 0);
+            cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
 
          struct anv_image_view dest_iview;
          anv_image_view_init(&dest_iview, cmd_buffer->device,
@@ -754,7 +754,7 @@ void anv_CmdResolveImage(
                   .layerCount = 1,
                },
             },
-            cmd_buffer, 0);
+            cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
          VkFramebuffer fb_h;
          anv_CreateFramebuffer(device_h,
