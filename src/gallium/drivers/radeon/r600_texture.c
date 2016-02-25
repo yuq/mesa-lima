@@ -355,6 +355,10 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 
 			/* Set metadata. */
 			r600_texture_init_metadata(rtex, &metadata);
+			if (rscreen->query_opaque_metadata)
+				rscreen->query_opaque_metadata(rscreen, rtex,
+							       &metadata);
+
 			rscreen->ws->buffer_set_metadata(res->buf, &metadata);
 		}
 	} else {

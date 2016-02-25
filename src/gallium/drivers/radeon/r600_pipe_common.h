@@ -43,6 +43,8 @@
 #include "util/u_suballoc.h"
 #include "util/u_transfer.h"
 
+#define ATI_VENDOR_ID 0x1002
+
 #define R600_RESOURCE_FLAG_TRANSFER		(PIPE_RESOURCE_FLAG_DRV_PRIV << 0)
 #define R600_RESOURCE_FLAG_FLUSHED_DEPTH	(PIPE_RESOURCE_FLAG_DRV_PRIV << 1)
 #define R600_RESOURCE_FLAG_FORCE_TILING		(PIPE_RESOURCE_FLAG_DRV_PRIV << 2)
@@ -332,6 +334,10 @@ struct r600_common_screen {
 	 * drawing and re-emit the framebuffer state accordingly.
 	 */
 	unsigned			dirty_fb_counter;
+
+	void (*query_opaque_metadata)(struct r600_common_screen *rscreen,
+				      struct r600_texture *rtex,
+				      struct radeon_bo_metadata *md);
 };
 
 /* This encapsulates a state or an operation which can emitted into the GPU

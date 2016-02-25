@@ -34,6 +34,7 @@
 #include "util/u_format_s3tc.h"
 #include "util/u_memory.h"
 #include "util/u_pstipple.h"
+#include "util/u_resource.h"
 
 /* Initialize an external atom (owned by ../radeon). */
 static void
@@ -3598,6 +3599,68 @@ void si_init_state_functions(struct si_context *sctx)
 	}
 
 	si_init_config(sctx);
+}
+
+static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
+				     struct r600_texture *rtex,
+			             struct radeon_bo_metadata *md)
+{
+	struct si_screen *sscreen = (struct si_screen*)rscreen;
+	struct pipe_resource *res = &rtex->resource.b.b;
+	static const unsigned char swizzle[] = {
+		PIPE_SWIZZLE_RED,
+		PIPE_SWIZZLE_GREEN,
+		PIPE_SWIZZLE_BLUE,
+		PIPE_SWIZZLE_ALPHA
+	};
+	uint32_t desc[8], i;
+	bool is_array = util_resource_is_array_texture(res);
+
+	/* DRM 2.x.x doesn't support this. */
+	if (rscreen->info.drm_major != 3)
+		return;
+
+	assert(rtex->fmask.size == 0);
+
+	/* Metadata image format format version 1:
+	 * [0] = 1 (metadata format identifier)
+	 * [1] = (VENDOR_ID << 16) | PCI_ID
+	 * [2:9] = image descriptor for the whole resource
+	 *         [2] is always 0, because the base address is cleared
+	 *         [9] is the DCC offset bits [39:8] from the beginning of
+	 *             the buffer
+	 * [10:10+LAST_LEVEL] = mipmap level offset bits [39:8] for each level
+	 */
+
+	md->metadata[0] = 1; /* metadata image format version 1 */
+
+	/* TILE_MODE_INDEX is ambiguous without a PCI ID. */
+	md->metadata[1] = (ATI_VENDOR_ID << 16) | rscreen->info.pci_id;
+
+	si_make_texture_descriptor(sscreen, rtex, res->target, res->format,
+				   swizzle, 0, 0, res->last_level, 0,
+				   is_array ? res->array_size - 1 : 0,
+				   res->width0, res->height0, res->depth0,
+				   desc, NULL);
+
+	/* Clear the base address and set the relative DCC offset. */
+	desc[0] = 0;
+	desc[1] &= C_008F14_BASE_ADDRESS_HI;
+	desc[7] = rtex->dcc_offset >> 8;
+
+	/* Dwords [2:9] contain the image descriptor. */
+	memcpy(&md->metadata[2], desc, sizeof(desc));
+
+	/* Dwords [10:..] contain the mipmap level offsets. */
+	for (i = 0; i <= res->last_level; i++)
+		md->metadata[10+i] = rtex->surface.level[i].offset >> 8;
+
+	md->size_metadata = (11 + res->last_level) * 4;
+}
+
+void si_init_screen_state_functions(struct si_screen *sscreen)
+{
+	sscreen->b.query_opaque_metadata = si_query_opaque_metadata;
 }
 
 static void

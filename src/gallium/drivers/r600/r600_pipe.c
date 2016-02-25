@@ -439,7 +439,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return PIPE_ENDIAN_LITTLE;
 
 	case PIPE_CAP_VENDOR_ID:
-		return 0x1002;
+		return ATI_VENDOR_ID;
 	case PIPE_CAP_DEVICE_ID:
 		return rscreen->b.info.pci_id;
 	case PIPE_CAP_ACCELERATED:
