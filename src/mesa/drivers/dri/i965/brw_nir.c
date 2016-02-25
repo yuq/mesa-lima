@@ -518,7 +518,7 @@ brw_nir_lower_io(nir_shader *nir,
    OPT_V(brw_nir_lower_outputs, devinfo, is_scalar);
    OPT_V(nir_lower_io, nir_var_all, is_scalar ? type_size_scalar : type_size_vec4);
 
-   return nir_optimize(nir, is_scalar);
+   return nir;
 }
 
 /* Prepare the given shader for codegen
@@ -538,6 +538,8 @@ brw_postprocess_nir(nir_shader *nir,
 
    bool progress; /* Written by OPT and OPT_V */
    (void)progress;
+
+   nir = nir_optimize(nir, is_scalar);
 
    if (devinfo->gen >= 6) {
       /* Try and fuse multiply-adds */
