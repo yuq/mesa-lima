@@ -85,7 +85,8 @@ public:
     /// Creates CiLib object
     static Addr::Lib* CreateObj(const Client* pClient)
     {
-        return new(pClient) CiLib(pClient);
+        VOID* pMem = Object::ClientAlloc(sizeof(CiLib), pClient);
+        return (pMem != NULL) ? new (pMem) CiLib(pClient) : NULL;
     }
 
 private:

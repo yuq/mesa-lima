@@ -110,7 +110,11 @@ ElemLib* ElemLib::Create(
 
     if (pAddrLib)
     {
-        pElemLib = new(pAddrLib->GetClient()) ElemLib(const_cast<Lib* const>(pAddrLib));
+        VOID* pObj = Object::ClientAlloc(sizeof(ElemLib), pAddrLib->GetClient());
+        if (pObj)
+        {
+            pElemLib = new(pObj) ElemLib(const_cast<Lib* const>(pAddrLib));
+        }
     }
 
     return pElemLib;

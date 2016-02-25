@@ -87,7 +87,7 @@ Object::~Object()
 ****************************************************************************************************
 */
 VOID* Object::ClientAlloc(
-    size_t             objSize,    ///< [in] Size to allocate
+    size_t         objSize,    ///< [in] Size to allocate
     const Client*  pClient)    ///< [in] Client pointer
 {
     VOID* pObjMem = NULL;
@@ -116,7 +116,8 @@ VOID* Object::ClientAlloc(
 ****************************************************************************************************
 */
 VOID* Object::Alloc(
-    size_t objSize) const   ///< [in] Size to allocate
+    size_t objSize      ///< [in] Size to allocate
+    ) const
 {
     return ClientAlloc(objSize, &m_client);
 }
@@ -130,7 +131,7 @@ VOID* Object::Alloc(
 ****************************************************************************************************
 */
 VOID Object::ClientFree(
-    VOID*              pObjMem,    ///< [in] User virtual address to free.
+    VOID*          pObjMem,    ///< [in] User virtual address to free.
     const Client*  pClient)    ///< [in] Client pointer
 {
     if (pClient->callbacks.freeSysMem != NULL)
@@ -157,7 +158,8 @@ VOID Object::ClientFree(
 ****************************************************************************************************
 */
 VOID Object::Free(
-    VOID* pObjMem) const                 ///< [in] User virtual address to free.
+    VOID* pObjMem       ///< [in] User virtual address to free.
+    ) const
 {
     ClientFree(pObjMem, &m_client);
 }
@@ -167,33 +169,17 @@ VOID Object::Free(
 *   Object::operator new
 *
 *   @brief
-*       Allocates memory needed for Object object. (with ADDR_CLIENT_HANDLE)
+*       Placement new operator. (with pre-allocated memory pointer)
 *
 *   @return
-*       Returns NULL if unsuccessful.
+*       Returns pre-allocated memory pointer.
 ****************************************************************************************************
 */
 VOID* Object::operator new(
-    size_t             objSize,    ///< [in] Size to allocate
-    const Client*  pClient)    ///< [in] Client pointer
+    size_t objSize,     ///< [in] Size to allocate
+    VOID*  pMem)        ///< [in] Pre-allocated pointer
 {
-    return ClientAlloc(objSize, pClient);
-}
-
-
-/**
-****************************************************************************************************
-*   Object::operator delete
-*
-*   @brief
-*       Frees Object object memory.
-****************************************************************************************************
-*/
-VOID Object::operator delete(
-    VOID* pObjMem,              ///< [in] User virtual address to free.
-    const Client* pClient)  ///< [in] Client handle
-{
-    ClientFree(pObjMem, pClient);
+    return pMem;
 }
 
 /**
@@ -205,7 +191,7 @@ VOID Object::operator delete(
 ****************************************************************************************************
 */
 VOID Object::operator delete(
-    VOID* pObjMem)                  ///< [in] User virtual address to free.
+    VOID* pObjMem)      ///< [in] User virtual address to free.
 {
     Object* pObj = static_cast<Object*>(pObjMem);
     ClientFree(pObjMem, &pObj->m_client);
@@ -224,7 +210,8 @@ VOID Object::operator delete(
 */
 VOID Object::DebugPrint(
     const CHAR* pDebugString,     ///< [in] Debug string
-    ...) const
+    ...
+    ) const
 {
 #if DEBUG
     if (m_client.callbacks.debugPrint != NULL)

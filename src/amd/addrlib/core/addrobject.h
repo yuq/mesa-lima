@@ -62,25 +62,27 @@ public:
     Object(const Client* pClient);
     virtual ~Object();
 
-    VOID* operator new(size_t size, const Client* pClient);
-    VOID  operator delete(VOID* pObj, const Client* pClient);
+    VOID* operator new(size_t size, VOID* pMem);
     VOID  operator delete(VOID* pObj);
+    /// Microsoft compiler requires a matching delete implementation, which seems to be called when
+    /// bad_alloc is thrown. But currently C++ exception isn't allowed so a dummy implementation is
+    /// added to eliminate the warning.
+    VOID  operator delete(VOID* pObj, VOID* pMem) { ADDR_ASSERT_ALWAYS(); }
+
     VOID* Alloc(size_t size) const;
     VOID  Free(VOID* pObj) const;
 
-    VOID DebugPrint(
-        const CHAR* pDebugString,
-        ...) const;
+    VOID DebugPrint(const CHAR* pDebugString, ...) const;
 
     const Client* GetClient() const {return &m_client;}
 
 protected:
     Client m_client;
 
-private:
     static VOID* ClientAlloc(size_t size, const Client* pClient);
     static VOID  ClientFree(VOID* pObj, const Client* pClient);
 
+private:
     // disallow the copy constructor
     Object(const Object& a);
 

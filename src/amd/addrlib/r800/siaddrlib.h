@@ -85,7 +85,8 @@ public:
     /// Creates SiLib object
     static Addr::Lib* CreateObj(const Client* pClient)
     {
-        return new(pClient) SiLib(pClient);
+        VOID* pMem = Object::ClientAlloc(sizeof(SiLib), pClient);
+        return (pMem != NULL) ? new (pMem) SiLib(pClient) : NULL;
     }
 
 protected:
