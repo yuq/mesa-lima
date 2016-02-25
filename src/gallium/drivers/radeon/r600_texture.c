@@ -1408,6 +1408,11 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 {
 	int i;
 
+	/* This function is broken in BE, so just disable this path for now */
+#ifdef PIPE_ARCH_BIG_ENDIAN
+	return;
+#endif
+
 	if (rctx->render_cond)
 		return;
 
