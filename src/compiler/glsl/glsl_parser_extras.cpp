@@ -924,7 +924,8 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
    block->layout.flags.i |= block_interface_qualifier;
 
    if (state->stage == MESA_SHADER_GEOMETRY &&
-       state->has_explicit_attrib_stream()) {
+       state->has_explicit_attrib_stream() &&
+       block->layout.flags.q.out) {
       /* Assign global layout's stream value. */
       block->layout.flags.q.stream = 1;
       block->layout.flags.q.explicit_stream = 0;
