@@ -381,21 +381,17 @@ ADDR_E_RETURNCODE Lib::ComputeSurfaceInfo(
             if (localIn.format != ADDR_FMT_INVALID)
             {
                 //
-                // 96 bits surface of level 1+ requires element pitch of 32 bits instead
-                // In hwl function we skip multiplication of 3 then we should skip division of 3
-                // We keep pitch that represents 32 bit element instead of 96 bits since we
-                // will get an odd number if divided by 3.
+                // Note: For 96 bit surface, the pixelPitch returned might be an odd number, but it
+                // is okay to program texture pitch as HW's mip calculator would multiply 3 first,
+                // then do the appropriate paddings (linear alignment requirement and possible the
+                // nearest power-of-two for mipmaps), which results in the original pitch.
                 //
-                if (!((expandX == 3) && (localIn.mipLevel > 0)))
-                {
-
-                    GetElemLib()->RestoreSurfaceInfo(elemMode,
-                                                     expandX,
-                                                     expandY,
-                                                     &localIn.bpp,
-                                                     &pOut->pixelPitch,
-                                                     &pOut->pixelHeight);
-                }
+                GetElemLib()->RestoreSurfaceInfo(elemMode,
+                                                 expandX,
+                                                 expandY,
+                                                 &localIn.bpp,
+                                                 &pOut->pixelPitch,
+                                                 &pOut->pixelHeight);
             }
 
             if (localIn.flags.qbStereo)
