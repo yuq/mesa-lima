@@ -682,6 +682,11 @@ brw_initialize_context_constants(struct brw_context *brw)
          brw->intelScreen->compiler->glsl_compiler_options[i];
    }
 
+   if (brw->gen >= 7) {
+      ctx->Const.MaxViewportWidth = 32768;
+      ctx->Const.MaxViewportHeight = 32768;
+   }
+
    /* ARB_viewport_array */
    if (brw->gen >= 6 && ctx->API == API_OPENGL_CORE) {
       ctx->Const.MaxViewports = GEN6_NUM_VIEWPORTS;
