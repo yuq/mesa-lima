@@ -1162,6 +1162,18 @@ isl_surf_get_image_intratile_offset_el(const struct isl_device *dev,
                                        uint32_t *y_offset_el);
 
 /**
+ * See above.
+ */
+void
+isl_surf_get_image_intratile_offset_el_xy(const struct isl_device *dev,
+                                       const struct isl_surf *surf,
+                                       uint32_t total_x_offset_el,
+                                       uint32_t total_y_offset_el,
+                                       uint32_t *base_address_offset,
+                                       uint32_t *x_offset_el,
+                                       uint32_t *y_offset_el);
+
+/**
  * @brief Get value of 3DSTATE_DEPTH_BUFFER.SurfaceFormat
  *
  * @pre surf->usage has ISL_SURF_USAGE_DEPTH_BIT
