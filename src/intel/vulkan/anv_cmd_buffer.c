@@ -705,6 +705,26 @@ anv_format_for_descriptor_type(VkDescriptorType type)
    }
 }
 
+static struct anv_state
+anv_cmd_buffer_alloc_null_surface_state(struct anv_cmd_buffer *cmd_buffer,
+                                        struct anv_framebuffer *fb)
+{
+   switch (cmd_buffer->device->info.gen) {
+   case 7:
+      if (cmd_buffer->device->info.is_haswell) {
+         return gen75_cmd_buffer_alloc_null_surface_state(cmd_buffer, fb);
+      } else {
+         return gen7_cmd_buffer_alloc_null_surface_state(cmd_buffer, fb);
+      }
+   case 8:
+      return gen8_cmd_buffer_alloc_null_surface_state(cmd_buffer, fb);
+   case 9:
+      return gen9_cmd_buffer_alloc_null_surface_state(cmd_buffer, fb);
+   default:
+      unreachable("Invalid hardware generation");
+   }
+}
+
 VkResult
 anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                   gl_shader_stage stage,
@@ -713,27 +733,24 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
    struct anv_pipeline_bind_map *map;
-   uint32_t color_count, bias, state_offset;
+   uint32_t bias, state_offset;
 
    switch (stage) {
    case  MESA_SHADER_FRAGMENT:
       map = &cmd_buffer->state.pipeline->bindings[stage];
       bias = MAX_RTS;
-      color_count = subpass->color_count;
       break;
    case  MESA_SHADER_COMPUTE:
       map = &cmd_buffer->state.compute_pipeline->bindings[stage];
       bias = 1;
-      color_count = 0;
       break;
    default:
       map = &cmd_buffer->state.pipeline->bindings[stage];
       bias = 0;
-      color_count = 0;
       break;
    }
 
-   if (color_count + map->surface_count == 0) {
+   if (bias + map->surface_count == 0) {
       *bt_state = (struct anv_state) { 0, };
       return VK_SUCCESS;
    }
@@ -746,14 +763,23 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    if (bt_state->map == NULL)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
-   for (uint32_t a = 0; a < color_count; a++) {
-      const struct anv_image_view *iview =
-         fb->attachments[subpass->color_attachments[a]];
+   if (stage == MESA_SHADER_FRAGMENT) {
+      if (subpass->color_count == 0) {
+         struct anv_state null_surface =
+            anv_cmd_buffer_alloc_null_surface_state(cmd_buffer,
+                                                    cmd_buffer->state.framebuffer);
+         bt_map[0] = null_surface.offset + state_offset;
+      } else {
+         for (uint32_t a = 0; a < subpass->color_count; a++) {
+            const struct anv_image_view *iview =
+               fb->attachments[subpass->color_attachments[a]];
 
-      assert(iview->color_rt_surface_state.alloc_size);
-      bt_map[a] = iview->color_rt_surface_state.offset + state_offset;
-      add_surface_state_reloc(cmd_buffer, iview->color_rt_surface_state,
-                              iview->bo, iview->offset);
+            assert(iview->color_rt_surface_state.alloc_size);
+            bt_map[a] = iview->color_rt_surface_state.offset + state_offset;
+            add_surface_state_reloc(cmd_buffer, iview->color_rt_surface_state,
+                                    iview->bo, iview->offset);
+         }
+      }
    }
 
    if (stage == MESA_SHADER_COMPUTE &&

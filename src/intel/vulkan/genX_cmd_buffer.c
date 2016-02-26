@@ -590,6 +590,36 @@ genX(flush_pipeline_select_3d)(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
+struct anv_state
+genX(cmd_buffer_alloc_null_surface_state)(struct anv_cmd_buffer *cmd_buffer,
+                                          struct anv_framebuffer *fb)
+{
+   struct anv_state state =
+      anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
+
+   struct GENX(RENDER_SURFACE_STATE) null_ss = {
+      .SurfaceType = SURFTYPE_NULL,
+      .SurfaceArray = fb->layers > 0,
+      .SurfaceFormat = ISL_FORMAT_R8G8B8A8_UNORM,
+#if GEN_GEN >= 8
+      .TileMode = YMAJOR,
+#else
+      .TiledSurface = true,
+#endif
+      .Width = fb->width - 1,
+      .Height = fb->height - 1,
+      .Depth = fb->layers - 1,
+      .RenderTargetViewExtent = fb->layers - 1,
+   };
+
+   GENX(RENDER_SURFACE_STATE_pack)(NULL, state.map, &null_ss);
+
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(state);
+
+   return state;
+}
+
 static void
 cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
