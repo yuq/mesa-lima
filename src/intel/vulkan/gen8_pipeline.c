@@ -111,6 +111,7 @@ emit_cb_state(struct anv_pipeline *pipeline,
       .AlphaToOneEnable = ms_info && ms_info->alphaToOneEnable,
    };
 
+   bool has_writeable_rt = false;
    for (uint32_t i = 0; i < info->attachmentCount; i++) {
       const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[i];
 
@@ -140,6 +141,9 @@ emit_cb_state(struct anv_pipeline *pipeline,
          .WriteDisableBlue = !(a->colorWriteMask & VK_COLOR_COMPONENT_B_BIT),
       };
 
+      if (a->colorWriteMask != 0)
+         has_writeable_rt = true;
+
       /* Our hardware applies the blend factor prior to the blend function
        * regardless of what function is used.  Technically, this means the
        * hardware can do MORE than GL or Vulkan specify.  However, it also
@@ -163,6 +167,25 @@ emit_cb_state(struct anv_pipeline *pipeline,
       blend_state.Entry[i].WriteDisableRed = true;
       blend_state.Entry[i].WriteDisableGreen = true;
       blend_state.Entry[i].WriteDisableBlue = true;
+   }
+
+   if (info->attachmentCount > 0) {
+      struct GENX(BLEND_STATE_ENTRY) *bs = &blend_state.Entry[0];
+
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_BLEND),
+                     .AlphaToCoverageEnable = blend_state.AlphaToCoverageEnable,
+                     .HasWriteableRT = has_writeable_rt,
+                     .ColorBufferBlendEnable = bs->ColorBufferBlendEnable,
+                     .SourceAlphaBlendFactor = bs->SourceAlphaBlendFactor,
+                     .DestinationAlphaBlendFactor =
+                        bs->DestinationAlphaBlendFactor,
+                     .SourceBlendFactor = bs->SourceBlendFactor,
+                     .DestinationBlendFactor = bs->DestinationBlendFactor,
+                     .AlphaTestEnable = false,
+                     .IndependentAlphaBlendEnable =
+                        blend_state.IndependentAlphaBlendEnable);
+   } else {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_BLEND));
    }
 
    GENX(BLEND_STATE_pack)(NULL, pipeline->blend_state.map, &blend_state);
