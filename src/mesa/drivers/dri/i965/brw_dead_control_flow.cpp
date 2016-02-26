@@ -32,7 +32,7 @@
 /* Look for and eliminate dead control flow:
  *
  *   - if/endif
- *   . else in else/endif
+ *   - else in else/endif
  *   - then in if/else/endif
  */
 bool
