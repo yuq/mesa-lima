@@ -150,14 +150,17 @@ static void si_release_sampler_views(struct si_sampler_views *views)
 	si_release_descriptors(&views->desc);
 }
 
-static void si_sampler_view_add_buffers(struct si_context *sctx,
-					struct si_sampler_view *rview)
+static void si_sampler_view_add_buffer(struct si_context *sctx,
+				       struct pipe_resource *resource)
 {
-	if (rview->resource) {
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-			rview->resource, RADEON_USAGE_READ,
-			r600_get_sampler_view_priority(rview->resource));
-	}
+	struct r600_resource *rres = (struct r600_resource*)resource;
+
+	if (!resource)
+		return;
+
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, rres,
+				  RADEON_USAGE_READ,
+				  r600_get_sampler_view_priority(rres));
 }
 
 static void si_sampler_views_begin_new_cs(struct si_context *sctx,
@@ -168,10 +171,8 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 	/* Add buffers to the CS. */
 	while (mask) {
 		int i = u_bit_scan64(&mask);
-		struct si_sampler_view *rview =
-			(struct si_sampler_view*)views->views[i];
 
-		si_sampler_view_add_buffers(sctx, rview);
+		si_sampler_view_add_buffer(sctx, views->views[i]->texture);
 	}
 
 	if (!views->desc.buffer)
@@ -192,7 +193,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 			(struct si_sampler_view*)view;
 		struct r600_texture *rtex = (struct r600_texture*)view->texture;
 
-		si_sampler_view_add_buffers(sctx, rview);
+		si_sampler_view_add_buffer(sctx, view->texture);
 
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(views->desc.list + slot * 16, rview->state, 8*4);
