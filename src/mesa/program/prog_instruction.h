@@ -173,7 +173,6 @@ enum prog_opcode {
    OPCODE_TXD,       /*                            X         X   */
    OPCODE_TXL,       /*                    3       2         X   */
    OPCODE_TXP,       /*            X                         X   */
-   OPCODE_TXP_NV,    /*                    3       X             */
    OPCODE_TRUNC,     /*                                      X   */
    OPCODE_XPD,       /*   X        X                             */
    MAX_OPCODE

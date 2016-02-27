@@ -592,11 +592,6 @@ ptn_tex(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src,
       op = nir_texop_tex;
       num_srcs = 2;
       break;
-   case OPCODE_TXP_NV:
-      assert(!"not handled");
-      op = nir_texop_tex;
-      num_srcs = 2;
-      break;
    default:
       fprintf(stderr, "unknown tex op %d\n", prog_inst->Opcode);
       abort();
@@ -743,7 +738,6 @@ static const nir_op op_trans[MAX_OPCODE] = {
    [OPCODE_TXD] = 0,
    [OPCODE_TXL] = 0,
    [OPCODE_TXP] = 0,
-   [OPCODE_TXP_NV] = 0,
    [OPCODE_XPD] = 0,
 };
 
@@ -882,7 +876,6 @@ ptn_emit_instruction(struct ptn_compile *c, struct prog_instruction *prog_inst)
    case OPCODE_TXD:
    case OPCODE_TXL:
    case OPCODE_TXP:
-   case OPCODE_TXP_NV:
       ptn_tex(b, dest, src, prog_inst);
       break;
 

@@ -184,7 +184,6 @@ static const struct instruction_info InstInfo[MAX_OPCODE] = {
    { OPCODE_TXD,    "TXD",     3, 1 },
    { OPCODE_TXL,    "TXL",     1, 1 },
    { OPCODE_TXP,    "TXP",     1, 1 },
-   { OPCODE_TXP_NV, "TXP_NV",  1, 1 },
    { OPCODE_TRUNC,  "TRUNC",   1, 1 },
    { OPCODE_XPD,    "XPD",     2, 1 }
 };

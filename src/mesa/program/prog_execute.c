@@ -1253,26 +1253,6 @@ _mesa_execute_program(struct gl_context * ctx,
             store_vector4(inst, machine, color);
          }
          break;
-      case OPCODE_TXP_NV:      /* GL_NV_fragment_program only */
-         /* Texture lookup w/ projective divide, as above, but do not
-          * do the divide by w if sampling from a cube map.
-          */
-         {
-            GLfloat texcoord[4], color[4];
-
-            fetch_vector4(&inst->SrcReg[0], machine, texcoord);
-            if (inst->TexSrcTarget != TEXTURE_CUBE_INDEX &&
-                texcoord[3] != 0.0F) {
-               texcoord[0] /= texcoord[3];
-               texcoord[1] /= texcoord[3];
-               texcoord[2] /= texcoord[3];
-            }
-
-            fetch_texel(ctx, machine, inst, texcoord, 0.0, color);
-
-            store_vector4(inst, machine, color);
-         }
-         break;
       case OPCODE_TRUNC:       /* truncate toward zero */
          {
             GLfloat a[4], result[4];
