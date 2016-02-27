@@ -60,49 +60,47 @@ get_src_arg_mask(const struct prog_instruction *inst,
    assert(arg < _mesa_num_inst_src_regs(inst->Opcode));
 
    /* Form the dst register, find the written channels */
-   {
-      switch (inst->Opcode) {
-      case OPCODE_MOV:
-      case OPCODE_MIN:
-      case OPCODE_MAX:
-      case OPCODE_ABS:
-      case OPCODE_ADD:
-      case OPCODE_MAD:
-      case OPCODE_MUL:
-      case OPCODE_SUB:
-      case OPCODE_CMP:
-      case OPCODE_FLR:
-      case OPCODE_FRC:
-      case OPCODE_LRP:
-      case OPCODE_SEQ:
-      case OPCODE_SGE:
-      case OPCODE_SGT:
-      case OPCODE_SLE:
-      case OPCODE_SLT:
-      case OPCODE_SNE:
-      case OPCODE_SSG:
-         channel_mask = inst->DstReg.WriteMask & dst_mask;
-         break;
-      case OPCODE_RCP:
-      case OPCODE_SIN:
-      case OPCODE_COS:
-      case OPCODE_RSQ:
-      case OPCODE_POW:
-      case OPCODE_EX2:
-      case OPCODE_LOG:
-         channel_mask = WRITEMASK_X;
-         break;
-      case OPCODE_DP2:
-         channel_mask = WRITEMASK_XY;
-         break;
-      case OPCODE_DP3:
-      case OPCODE_XPD:
-         channel_mask = WRITEMASK_XYZ;
-         break;
-      default:
-         channel_mask = WRITEMASK_XYZW;
-         break;
-      }
+   switch (inst->Opcode) {
+   case OPCODE_MOV:
+   case OPCODE_MIN:
+   case OPCODE_MAX:
+   case OPCODE_ABS:
+   case OPCODE_ADD:
+   case OPCODE_MAD:
+   case OPCODE_MUL:
+   case OPCODE_SUB:
+   case OPCODE_CMP:
+   case OPCODE_FLR:
+   case OPCODE_FRC:
+   case OPCODE_LRP:
+   case OPCODE_SEQ:
+   case OPCODE_SGE:
+   case OPCODE_SGT:
+   case OPCODE_SLE:
+   case OPCODE_SLT:
+   case OPCODE_SNE:
+   case OPCODE_SSG:
+      channel_mask = inst->DstReg.WriteMask & dst_mask;
+      break;
+   case OPCODE_RCP:
+   case OPCODE_SIN:
+   case OPCODE_COS:
+   case OPCODE_RSQ:
+   case OPCODE_POW:
+   case OPCODE_EX2:
+   case OPCODE_LOG:
+      channel_mask = WRITEMASK_X;
+      break;
+   case OPCODE_DP2:
+      channel_mask = WRITEMASK_XY;
+      break;
+   case OPCODE_DP3:
+   case OPCODE_XPD:
+      channel_mask = WRITEMASK_XYZ;
+      break;
+   default:
+      channel_mask = WRITEMASK_XYZW;
+      break;
    }
 
    /* Now, given the src swizzle and the written channels, find which
