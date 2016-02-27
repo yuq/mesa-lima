@@ -1203,7 +1203,7 @@ _mesa_execute_program(struct gl_context * ctx,
             store_vector4(inst, machine, color);
          }
          break;
-      case OPCODE_TXD:         /* GL_NV_fragment_program only */
+      case OPCODE_TXD:
          /* Texture lookup w/ partial derivatives for LOD */
          {
             GLfloat texcoord[4], dtdx[4], dtdy[4], color[4];
