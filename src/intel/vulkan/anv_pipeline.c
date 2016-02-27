@@ -783,13 +783,14 @@ gen7_compute_urb_partition(struct anv_pipeline *pipeline)
    unsigned urb_chunks = devinfo->urb.size * 1024 / chunk_size_bytes;
 
    /* Reserve space for push constants */
-#if GEN_GEN >= 8
-   unsigned push_constant_kb = 32;
-#elif GEN_IS_HASWELL
-   unsigned push_constant_kb = pipeline->device->info.gt == 3 ? 32 : 16;
-#else
-   unsigned push_constant_kb = 16;
-#endif
+   unsigned push_constant_kb;
+   if (pipeline->device->info.gen >= 8)
+      push_constant_kb = 32;
+   else if (pipeline->device->info.is_haswell)
+      push_constant_kb = pipeline->device->info.gt == 3 ? 32 : 16;
+   else
+      push_constant_kb = 16;
+
    unsigned push_constant_bytes = push_constant_kb * 1024;
    unsigned push_constant_chunks =
       push_constant_bytes / chunk_size_bytes;
