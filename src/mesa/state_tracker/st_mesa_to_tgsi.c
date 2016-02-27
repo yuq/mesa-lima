@@ -311,15 +311,6 @@ translate_src( struct st_translate *t,
 {
    struct ureg_src src = src_register( t, SrcReg->File, SrcReg->Index );
 
-   if (t->procType == TGSI_PROCESSOR_GEOMETRY && SrcReg->HasIndex2) {
-      src = src_register( t, SrcReg->File, SrcReg->Index2 );
-      if (SrcReg->RelAddr2)
-         src = ureg_src_dimension_indirect( src, ureg_src(t->address[0]),
-                                            SrcReg->Index);
-      else
-         src = ureg_src_dimension( src, SrcReg->Index);
-   }
-
    src = ureg_swizzle( src,
                        GET_SWZ( SrcReg->Swizzle, 0 ) & 0x3,
                        GET_SWZ( SrcReg->Swizzle, 1 ) & 0x3,

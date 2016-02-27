@@ -465,8 +465,6 @@ can_downward_mov_be_modifed(const struct prog_instruction *mov)
       mov->SrcReg[0].RelAddr == 0 &&
       mov->SrcReg[0].Negate == 0 &&
       mov->SrcReg[0].Abs == 0 &&
-      mov->SrcReg[0].HasIndex2 == 0 &&
-      mov->SrcReg[0].RelAddr2 == 0 &&
       mov->DstReg.RelAddr == 0 &&
       mov->DstReg.CondMask == COND_TR;
 }
