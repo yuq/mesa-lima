@@ -453,8 +453,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 
          if (do_constant_prop && try_constant_propagate(devinfo, inst, i, &entry))
             progress = true;
-
-         if (try_copy_propagate(devinfo, inst, i, &entry, attributes_per_reg))
+         else if (try_copy_propagate(devinfo, inst, i, &entry, attributes_per_reg))
 	    progress = true;
       }
 
