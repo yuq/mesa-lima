@@ -611,6 +611,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(OES_shader_image_atomic,        false, true,      ARB_shader_image_load_store),
    EXT(OES_standard_derivatives,       false, true,      OES_standard_derivatives),
    EXT(OES_texture_3D,                 false, true,      dummy_true),
+   EXT(OES_texture_buffer,             false, true,      OES_texture_buffer),
    EXT(OES_texture_storage_multisample_2d_array, false, true, ARB_texture_multisample),
 
    /* All other extensions go here, sorted alphabetically.
@@ -627,6 +628,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(EXT_shader_integer_mix,         true,  true,      EXT_shader_integer_mix),
    EXT(EXT_shader_samples_identical,   true,  true,      EXT_shader_samples_identical),
    EXT(EXT_texture_array,              true,  false,     EXT_texture_array),
+   EXT(EXT_texture_buffer,             false, true,      OES_texture_buffer),
 };
 
 #undef EXT

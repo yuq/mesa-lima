@@ -603,6 +603,8 @@ struct _mesa_glsl_parse_state {
    bool OES_standard_derivatives_warn;
    bool OES_texture_3D_enable;
    bool OES_texture_3D_warn;
+   bool OES_texture_buffer_enable;
+   bool OES_texture_buffer_warn;
    bool OES_texture_storage_multisample_2d_array_enable;
    bool OES_texture_storage_multisample_2d_array_warn;
 
@@ -632,6 +634,8 @@ struct _mesa_glsl_parse_state {
    bool EXT_shader_samples_identical_warn;
    bool EXT_texture_array_enable;
    bool EXT_texture_array_warn;
+   bool EXT_texture_buffer_enable;
+   bool EXT_texture_buffer_warn;
    /*@}*/
 
    /** Extensions supported by the OpenGL implementation. */

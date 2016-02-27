@@ -130,12 +130,6 @@ v130_fs_only(const _mesa_glsl_parse_state *state)
 }
 
 static bool
-v140(const _mesa_glsl_parse_state *state)
-{
-   return state->is_version(140, 0);
-}
-
-static bool
 v140_or_es3(const _mesa_glsl_parse_state *state)
 {
    return state->is_version(140, 300);
@@ -181,6 +175,14 @@ static bool
 v110_lod(const _mesa_glsl_parse_state *state)
 {
    return !state->es_shader && lod_exists_in_stage(state);
+}
+
+static bool
+texture_buffer(const _mesa_glsl_parse_state *state)
+{
+   return state->is_version(140, 320) ||
+      state->EXT_texture_buffer_enable ||
+      state->OES_texture_buffer_enable;
 }
 
 static bool
@@ -1581,9 +1583,9 @@ builtin_builder::create_builtins()
                 _textureSize(v130, glsl_type::ivec2_type, glsl_type::usampler2DRect_type),
                 _textureSize(v130, glsl_type::ivec2_type, glsl_type::sampler2DRectShadow_type),
 
-                _textureSize(v140, glsl_type::int_type,   glsl_type::samplerBuffer_type),
-                _textureSize(v140, glsl_type::int_type,   glsl_type::isamplerBuffer_type),
-                _textureSize(v140, glsl_type::int_type,   glsl_type::usamplerBuffer_type),
+                _textureSize(texture_buffer, glsl_type::int_type,   glsl_type::samplerBuffer_type),
+                _textureSize(texture_buffer, glsl_type::int_type,   glsl_type::isamplerBuffer_type),
+                _textureSize(texture_buffer, glsl_type::int_type,   glsl_type::usamplerBuffer_type),
                 _textureSize(texture_multisample, glsl_type::ivec2_type, glsl_type::sampler2DMS_type),
                 _textureSize(texture_multisample, glsl_type::ivec2_type, glsl_type::isampler2DMS_type),
                 _textureSize(texture_multisample, glsl_type::ivec2_type, glsl_type::usampler2DMS_type),
@@ -1855,9 +1857,9 @@ builtin_builder::create_builtins()
                 _texelFetch(v130, glsl_type::ivec4_type, glsl_type::isampler2DArray_type, glsl_type::ivec3_type),
                 _texelFetch(v130, glsl_type::uvec4_type, glsl_type::usampler2DArray_type, glsl_type::ivec3_type),
 
-                _texelFetch(v140, glsl_type::vec4_type,  glsl_type::samplerBuffer_type,  glsl_type::int_type),
-                _texelFetch(v140, glsl_type::ivec4_type, glsl_type::isamplerBuffer_type, glsl_type::int_type),
-                _texelFetch(v140, glsl_type::uvec4_type, glsl_type::usamplerBuffer_type, glsl_type::int_type),
+                _texelFetch(texture_buffer, glsl_type::vec4_type,  glsl_type::samplerBuffer_type,  glsl_type::int_type),
+                _texelFetch(texture_buffer, glsl_type::ivec4_type, glsl_type::isamplerBuffer_type, glsl_type::int_type),
+                _texelFetch(texture_buffer, glsl_type::uvec4_type, glsl_type::usamplerBuffer_type, glsl_type::int_type),
 
                 _texelFetch(texture_multisample, glsl_type::vec4_type,  glsl_type::sampler2DMS_type,  glsl_type::ivec2_type),
                 _texelFetch(texture_multisample, glsl_type::ivec4_type, glsl_type::isampler2DMS_type, glsl_type::ivec2_type),
