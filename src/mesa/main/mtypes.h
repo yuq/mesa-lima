@@ -3921,7 +3921,6 @@ struct gl_extensions
    GLboolean MESA_ycbcr_texture;
    GLboolean NV_conditional_render;
    GLboolean NV_fog_distance;
-   GLboolean NV_fragment_program_option;
    GLboolean NV_point_sprite;
    GLboolean NV_primitive_restart;
    GLboolean NV_texture_barrier;
