@@ -212,8 +212,6 @@ static struct asm_instruction *asm_instruction_copy_ctor(
 %type <sym> addrReg
 %type <swiz_mask> addrComponent addrWriteMask
 
-%type <dst_reg> ccMaskRule ccTest ccMaskRule2 ccTest2 optionalCcMask
-
 %type <result> resultBinding resultColBinding
 %type <integer> optFaceType optColorType
 %type <integer> optResultFaceType optResultColorType
@@ -631,12 +629,10 @@ swizzleSrcReg: optionalSign srcReg swizzleSuffix
 
 	;
 
-maskedDstReg: dstReg optionalMask optionalCcMask
+maskedDstReg: dstReg optionalMask
 	{
 	   $$ = $1;
 	   $$.WriteMask = $2.mask;
-	   $$.CondMask = $3.CondMask;
-	   $$.CondSwizzle = $3.CondSwizzle;
 
 	   if ($$.File == PROGRAM_OUTPUT) {
 	      /* Technically speaking, this should check that it is in
@@ -1020,79 +1016,6 @@ swizzleSuffix: MASK1
 
 optionalMask: MASK4 | MASK3 | MASK2 | MASK1 
 	|              { $$.swizzle = SWIZZLE_NOOP; $$.mask = WRITEMASK_XYZW; }
-	;
-
-optionalCcMask: '(' ccTest ')'
-	{
-	   $$ = $2;
-	}
-	| '(' ccTest2 ')'
-	{
-	   $$ = $2;
-	}
-	|
-	{
-	   $$.CondMask = COND_TR;
-	   $$.CondSwizzle = SWIZZLE_NOOP;
-	}
-	;
-
-ccTest: ccMaskRule swizzleSuffix
-	{
-	   $$ = $1;
-	   $$.CondSwizzle = $2.swizzle;
-	}
-	;
-
-ccTest2: ccMaskRule2 swizzleSuffix
-	{
-	   $$ = $1;
-	   $$.CondSwizzle = $2.swizzle;
-	}
-	;
-
-ccMaskRule: IDENTIFIER
-	{
-	   const int cond = _mesa_parse_cc($1);
-	   if ((cond == 0) || ($1[2] != '\0')) {
-	      char *const err_str =
-		 make_error_string("invalid condition code \"%s\"", $1);
-
-	      yyerror(& @1, state, (err_str != NULL)
-		      ? err_str : "invalid condition code");
-
-	      if (err_str != NULL) {
-		 free(err_str);
-	      }
-
-	      YYERROR;
-	   }
-
-	   $$.CondMask = cond;
-	   $$.CondSwizzle = SWIZZLE_NOOP;
-	}
-	;
-
-ccMaskRule2: USED_IDENTIFIER
-	{
-	   const int cond = _mesa_parse_cc($1);
-	   if ((cond == 0) || ($1[2] != '\0')) {
-	      char *const err_str =
-		 make_error_string("invalid condition code \"%s\"", $1);
-
-	      yyerror(& @1, state, (err_str != NULL)
-		      ? err_str : "invalid condition code");
-
-	      if (err_str != NULL) {
-		 free(err_str);
-	      }
-
-	      YYERROR;
-	   }
-
-	   $$.CondMask = cond;
-	   $$.CondSwizzle = SWIZZLE_NOOP;
-	}
 	;
 
 namingStatement: ATTRIB_statement
@@ -2241,9 +2164,6 @@ asm_instruction_set_operands(struct asm_instruction *inst,
       inst->Base.DstReg = *dst;
    }
 
-   /* The only instruction that doesn't have any source registers is the
-    * condition-code based KIL instruction added by NV_fragment_program_option.
-    */
    if (src0 != NULL) {
       inst->Base.SrcReg[0] = src0->Base;
       inst->SrcReg[0] = *src0;
@@ -2299,10 +2219,7 @@ asm_instruction_copy_ctor(const struct prog_instruction *base,
    if (inst) {
       _mesa_init_instructions(& inst->Base, 1);
       inst->Base.Opcode = base->Opcode;
-      inst->Base.CondUpdate = base->CondUpdate;
-      inst->Base.CondDst = base->CondDst;
       inst->Base.Saturate = base->Saturate;
-      inst->Base.Precision = base->Precision;
 
       asm_instruction_set_operands(inst, dst, src0, src1, src2);
    }
@@ -2317,8 +2234,6 @@ init_dst_reg(struct prog_dst_register *r)
    memset(r, 0, sizeof(*r));
    r->File = PROGRAM_UNDEFINED;
    r->WriteMask = WRITEMASK_XYZW;
-   r->CondMask = COND_TR;
-   r->CondSwizzle = SWIZZLE_NOOP;
 }
 
 
@@ -2339,8 +2254,6 @@ set_dst_reg(struct prog_dst_register *r, gl_register_file file, GLint index)
    r->File = file;
    r->Index = index;
    r->WriteMask = WRITEMASK_XYZW;
-   r->CondMask = COND_TR;
-   r->CondSwizzle = SWIZZLE_NOOP;
 }
 
 

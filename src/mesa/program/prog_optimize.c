@@ -60,10 +60,7 @@ get_src_arg_mask(const struct prog_instruction *inst,
    assert(arg < _mesa_num_inst_src_regs(inst->Opcode));
 
    /* Form the dst register, find the written channels */
-   if (inst->CondUpdate) {
-      channel_mask = WRITEMASK_XYZW;
-   }
-   else {
+   {
       switch (inst->Opcode) {
       case OPCODE_MOV:
       case OPCODE_MIN:
@@ -302,17 +299,6 @@ _mesa_remove_dead_code_global(struct gl_program *prog)
                printf("abort remove dead code (indirect temp)\n");
             goto done;
          }
-
-         if (inst->CondUpdate) {
-            /* If we're writing to this register and setting condition
-             * codes we cannot remove the instruction.  Prevent removal
-             * by setting the 'read' flag.
-             */
-            tempRead[index][0] = GL_TRUE;
-            tempRead[index][1] = GL_TRUE;
-            tempRead[index][2] = GL_TRUE;
-            tempRead[index][3] = GL_TRUE;
-         }
       }
    }
 
@@ -461,12 +447,10 @@ can_downward_mov_be_modifed(const struct prog_instruction *mov)
 {
    return
       mov->Opcode == OPCODE_MOV &&
-      mov->CondUpdate == GL_FALSE &&
       mov->SrcReg[0].RelAddr == 0 &&
       mov->SrcReg[0].Negate == 0 &&
       mov->SrcReg[0].Abs == 0 &&
-      mov->DstReg.RelAddr == 0 &&
-      mov->DstReg.CondMask == COND_TR;
+      mov->DstReg.RelAddr == 0;
 }
 
 
@@ -784,8 +768,7 @@ _mesa_remove_extra_moves(struct gl_program *prog)
 
             if (prevInst->DstReg.File == PROGRAM_TEMPORARY &&
                 prevInst->DstReg.Index == id &&
-                prevInst->DstReg.RelAddr == 0 &&
-                prevInst->DstReg.CondMask == COND_TR) {
+                prevInst->DstReg.RelAddr == 0) {
 
                const GLuint dst_mask = prevInst->DstReg.WriteMask;
                enum inst_use next_use = find_next_use(prog, i+1, id, dst_mask);

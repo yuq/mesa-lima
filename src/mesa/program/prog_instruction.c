@@ -52,11 +52,8 @@ _mesa_init_instructions(struct prog_instruction *inst, GLuint count)
 
       inst[i].DstReg.File = PROGRAM_UNDEFINED;
       inst[i].DstReg.WriteMask = WRITEMASK_XYZW;
-      inst[i].DstReg.CondMask = COND_TR;
-      inst[i].DstReg.CondSwizzle = SWIZZLE_NOOP;
 
       inst[i].Saturate = GL_FALSE;
-      inst[i].Precision = FLOAT32;
    }
 }
 
