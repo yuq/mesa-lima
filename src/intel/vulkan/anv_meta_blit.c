@@ -446,39 +446,29 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
    anv_image_from_handle(dest_image)->bo = dest;
    anv_image_from_handle(dest_image)->offset = dest_offset;
 
-   struct anv_image_view src_iview;
-   anv_image_view_init(&src_iview, cmd_buffer->device,
-      &(VkImageViewCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-         .image = src_image,
-         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-         .format = copy_format,
-         .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-         },
+   VkImageViewCreateInfo iview_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+      .image = 0, /* TEMPLATE */
+      .viewType = VK_IMAGE_VIEW_TYPE_2D,
+      .format = copy_format,
+      .subresourceRange = {
+         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+         .baseMipLevel = 0,
+         .levelCount = 1,
+         .baseArrayLayer = 0,
+         .layerCount = 1
       },
-      cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
+   };
+
+   struct anv_image_view src_iview;
+   iview_info.image = src_image;
+   anv_image_view_init(&src_iview, cmd_buffer->device,
+      &iview_info, cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
 
    struct anv_image_view dest_iview;
+   iview_info.image = dest_image;
    anv_image_view_init(&dest_iview, cmd_buffer->device,
-      &(VkImageViewCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-         .image = dest_image,
-         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-         .format = copy_format,
-         .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-         },
-      },
-      cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+      &iview_info, cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
    meta_emit_blit(cmd_buffer,
                   anv_image_from_handle(src_image),
