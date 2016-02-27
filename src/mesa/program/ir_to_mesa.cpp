@@ -2124,32 +2124,12 @@ ir_to_mesa_visitor::visit(ir_discard *ir)
 void
 ir_to_mesa_visitor::visit(ir_if *ir)
 {
-   ir_to_mesa_instruction *cond_inst, *if_inst;
-   ir_to_mesa_instruction *prev_inst;
-
-   prev_inst = (ir_to_mesa_instruction *)this->instructions.get_tail();
+   ir_to_mesa_instruction *if_inst;
 
    ir->condition->accept(this);
    assert(this->result.file != PROGRAM_UNDEFINED);
 
-   if (this->options->EmitCondCodes) {
-      cond_inst = (ir_to_mesa_instruction *)this->instructions.get_tail();
-
-      /* See if we actually generated any instruction for generating
-       * the condition.  If not, then cook up a move to a temp so we
-       * have something to set cond_update on.
-       */
-      if (cond_inst == prev_inst) {
-	 src_reg temp = get_temp(glsl_type::bool_type);
-	 cond_inst = emit(ir->condition, OPCODE_MOV, dst_reg(temp), result);
-      }
-      cond_inst->cond_update = GL_TRUE;
-
-      if_inst = emit(ir->condition, OPCODE_IF);
-      if_inst->dst.cond_mask = COND_NE;
-   } else {
-      if_inst = emit(ir->condition, OPCODE_IF, undef_dst, this->result);
-   }
+   if_inst = emit(ir->condition, OPCODE_IF, undef_dst, this->result);
 
    this->instructions.push_tail(if_inst);
 
