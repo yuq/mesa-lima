@@ -76,22 +76,6 @@ is_channel_updated(vec4_instruction *inst, src_reg *values[4], int ch)
            inst->dst.writemask & (1 << BRW_GET_SWZ(src->swizzle, ch)));
 }
 
-static unsigned
-swizzle_vf_imm(unsigned vf4, unsigned swizzle)
-{
-   union {
-      unsigned vf4;
-      uint8_t vf[4];
-   } v = { vf4 }, ret;
-
-   ret.vf[0] = v.vf[BRW_GET_SWZ(swizzle, 0)];
-   ret.vf[1] = v.vf[BRW_GET_SWZ(swizzle, 1)];
-   ret.vf[2] = v.vf[BRW_GET_SWZ(swizzle, 2)];
-   ret.vf[3] = v.vf[BRW_GET_SWZ(swizzle, 3)];
-
-   return ret.vf4;
-}
-
 static bool
 is_logic_op(enum opcode opcode)
 {
@@ -144,8 +128,7 @@ try_constant_propagate(const struct brw_device_info *devinfo,
       }
    }
 
-   if (value.type == BRW_REGISTER_TYPE_VF)
-      value.ud = swizzle_vf_imm(value.ud, inst->src[arg].swizzle);
+   value = swizzle(value, inst->src[arg].swizzle);
 
    switch (inst->opcode) {
    case BRW_OPCODE_MOV:
