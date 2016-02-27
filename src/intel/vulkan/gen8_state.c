@@ -37,6 +37,9 @@
 VkResult
 genX(init_device_state)(struct anv_device *device)
 {
+   GENX(MEMORY_OBJECT_CONTROL_STATE_pack)(NULL, &device->default_mocs,
+                                          &GENX(MOCS));
+
    struct anv_batch batch;
 
    uint32_t cmds[64];
