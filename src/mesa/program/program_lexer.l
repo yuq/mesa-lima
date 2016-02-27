@@ -32,7 +32,6 @@
 
 #define require_ARB_vp (yyextra->mode == ARB_vertex)
 #define require_ARB_fp (yyextra->mode == ARB_fragment)
-#define require_NV_fp  (yyextra->option.NV_fragment)
 #define require_shadow (yyextra->option.Shadow)
 #define require_rect   (yyextra->option.TexRect)
 #define require_texarray        (yyextra->option.TexArray)
@@ -188,8 +187,6 @@ ARL                { return_opcode(require_ARB_vp, ARL, ARL, 3); }
 CMP{sat}           { return_opcode(require_ARB_fp, TRI_OP, CMP, 3); }
 COS{sat}           { return_opcode(require_ARB_fp, SCALAR_OP, COS, 3); }
 
-DDX{sat}           { return_opcode(require_NV_fp,  VECTOR_OP, DDX, 3); }
-DDY{sat}           { return_opcode(require_NV_fp,  VECTOR_OP, DDY, 3); }
 DP3{sat}           { return_opcode(             1, BIN_OP, DP3, 3); }
 DP4{sat}           { return_opcode(             1, BIN_OP, DP4, 3); }
 DPH{sat}           { return_opcode(             1, BIN_OP, DPH, 3); }
@@ -220,19 +217,14 @@ RCP{sat}           { return_opcode(             1, SCALAR_OP, RCP, 3); }
 RSQ{sat}           { return_opcode(             1, SCALAR_OP, RSQ, 3); }
 
 SCS{sat}           { return_opcode(require_ARB_fp, SCALAR_OP, SCS, 3); }
-SEQ{sat}           { return_opcode(require_NV_fp,  BIN_OP, SEQ, 3); }
 SGE{sat}           { return_opcode(             1, BIN_OP, SGE, 3); }
-SGT{sat}           { return_opcode(require_NV_fp,  BIN_OP, SGT, 3); }
 SIN{sat}           { return_opcode(require_ARB_fp, SCALAR_OP, SIN, 3); }
-SLE{sat}           { return_opcode(require_NV_fp,  BIN_OP, SLE, 3); }
 SLT{sat}           { return_opcode(             1, BIN_OP, SLT, 3); }
-SNE{sat}           { return_opcode(require_NV_fp,  BIN_OP, SNE, 3); }
 SUB{sat}           { return_opcode(             1, BIN_OP, SUB, 3); }
 SWZ{sat}           { return_opcode(             1, SWZ, SWZ, 3); }
 
 TEX{sat}           { return_opcode(require_ARB_fp, SAMPLE_OP, TEX, 3); }
 TXB{sat}           { return_opcode(require_ARB_fp, SAMPLE_OP, TXB, 3); }
-TXD{sat}           { return_opcode(require_NV_fp,  TXD_OP, TXD, 3); }
 TXP{sat}           { return_opcode(require_ARB_fp, SAMPLE_OP, TXP, 3); }
 
 XPD{sat}           { return_opcode(             1, BIN_OP, XPD, 3); }
