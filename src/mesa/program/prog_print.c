@@ -706,16 +706,6 @@ _mesa_fprint_instruction_opt(FILE *f,
       fprint_src_reg(f, &inst->SrcReg[0], mode, prog);
       fprint_comment(f, inst);
       break;
-   case OPCODE_KIL_NV:
-      fprintf(f, "%s", _mesa_opcode_string(inst->Opcode));
-      fprintf(f, " ");
-      fprintf(f, "%s.%s",
-	      _mesa_condcode_string(inst->DstReg.CondMask),
-	      _mesa_swizzle_string(inst->DstReg.CondSwizzle,
-				   GL_FALSE, GL_FALSE));
-      fprint_comment(f, inst);
-      break;
-
    case OPCODE_ARL:
       fprintf(f, "ARL ");
       fprint_dst_reg(f, &inst->DstReg, mode, prog);

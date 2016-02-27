@@ -166,7 +166,6 @@ enum prog_opcode {
    OPCODE_FRC,       /*   X        X       2       X         X   */
    OPCODE_IF,        /*                                     opt  */
    OPCODE_KIL,       /*            X                         X   */
-   OPCODE_KIL_NV,    /*                            X         X   */
    OPCODE_LG2,       /*   X        X       2       X         X   */
    OPCODE_LIT,       /*   X        X       X       X             */
    OPCODE_LOG,       /*   X                X                     */

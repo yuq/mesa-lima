@@ -471,13 +471,6 @@ KIL_instruction: KIL swizzleSrcReg
 	   $$ = asm_instruction_ctor(OPCODE_KIL, NULL, & $2, NULL, NULL);
 	   state->fragment.UsesKill = 1;
 	}
-	| KIL ccTest
-	{
-	   $$ = asm_instruction_ctor(OPCODE_KIL_NV, NULL, NULL, NULL, NULL);
-	   $$->Base.DstReg.CondMask = $2.CondMask;
-	   $$->Base.DstReg.CondSwizzle = $2.CondSwizzle;
-	   state->fragment.UsesKill = 1;
-	}
 	;
 
 TXD_instruction: TXD_OP maskedDstReg ',' swizzleSrcReg ',' swizzleSrcReg ',' swizzleSrcReg ',' texImageUnit ',' texTarget

@@ -805,11 +805,6 @@ _mesa_execute_program(struct gl_context * ctx,
       case OPCODE_ENDIF:
          /* nothing */
          break;
-      case OPCODE_KIL_NV:      /* NV_f_p only (conditional) */
-         if (eval_condition(machine, inst)) {
-            return GL_FALSE;
-         }
-         break;
       case OPCODE_KIL:         /* ARB_f_p only */
          {
             GLfloat a[4];

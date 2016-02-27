@@ -526,9 +526,6 @@ translate_opcode( unsigned op )
       return TGSI_OPCODE_TRUNC;
    case OPCODE_KIL:
       return TGSI_OPCODE_KILL_IF;
-   case OPCODE_KIL_NV:
-      /* XXX we don't support condition codes in TGSI */
-      return TGSI_OPCODE_KILL;
    case OPCODE_LG2:
       return TGSI_OPCODE_LG2;
    case OPCODE_LOG:

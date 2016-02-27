@@ -2112,13 +2112,12 @@ ir_to_mesa_visitor::visit(ir_return *ir)
 void
 ir_to_mesa_visitor::visit(ir_discard *ir)
 {
-   if (ir->condition) {
-      ir->condition->accept(this);
-      this->result.negate = ~this->result.negate;
-      emit(ir, OPCODE_KIL, undef_dst, this->result);
-   } else {
-      emit(ir, OPCODE_KIL_NV);
-   }
+   if (!ir->condition)
+      ir->condition = new(mem_ctx) ir_constant(true);
+
+   ir->condition->accept(this);
+   this->result.negate = ~this->result.negate;
+   emit(ir, OPCODE_KIL, undef_dst, this->result);
 }
 
 void
