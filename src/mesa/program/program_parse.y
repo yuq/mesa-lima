@@ -1813,46 +1813,7 @@ optionalSign: '+'        { $$ = FALSE; }
 	|                { $$ = FALSE; }
 	;
 
-TEMP_statement: optVarSize TEMP { $<integer>$ = $2; } varNameList
-	;
-
-optVarSize: string
-	{
-	   /* NV_fragment_program_option defines the size qualifiers in a
-	    * fairly broken way.  "SHORT" or "LONG" can optionally be used
-	    * before TEMP or OUTPUT.  However, neither is a reserved word!
-	    * This means that we have to parse it as an identifier, then check
-	    * to make sure it's one of the valid values.  *sigh*
-	    *
-	    * In addition, the grammar in the extension spec does *not* allow
-	    * the size specifier to be optional, but all known implementations
-	    * do.
-	    */
-	   if (!state->option.NV_fragment) {
-	      yyerror(& @1, state, "unexpected IDENTIFIER");
-	      YYERROR;
-	   }
-
-	   if (strcmp("SHORT", $1) == 0) {
-	   } else if (strcmp("LONG", $1) == 0) {
-	   } else {
-	      char *const err_str =
-		 make_error_string("invalid storage size specifier \"%s\"",
-				   $1);
-
-	      yyerror(& @1, state, (err_str != NULL)
-		      ? err_str : "invalid storage size specifier");
-
-	      if (err_str != NULL) {
-		 free(err_str);
-	      }
-
-	      YYERROR;
-	   }
-	}
-	|
-	{
-	}
+TEMP_statement: TEMP { $<integer>$ = $1; } varNameList
 	;
 
 ADDRESS_statement: ADDRESS { $<integer>$ = $1; } varNameList
@@ -1874,16 +1835,16 @@ varNameList: varNameList ',' IDENTIFIER
 	}
 	;
 
-OUTPUT_statement: optVarSize OUTPUT IDENTIFIER '=' resultBinding
+OUTPUT_statement: OUTPUT IDENTIFIER '=' resultBinding
 	{
 	   struct asm_symbol *const s =
-	      declare_variable(state, $3, at_output, & @3);
+	      declare_variable(state, $2, at_output, & @2);
 
 	   if (s == NULL) {
-	      free($3);
+	      free($2);
 	      YYERROR;
 	   } else {
-	      s->output_binding = $5;
+	      s->output_binding = $4;
 	   }
 	}
 	;
