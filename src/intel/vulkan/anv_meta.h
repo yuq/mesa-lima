@@ -90,18 +90,18 @@ struct anv_meta_blit2d_rect {
    uint32_t width, height;
 };
 
-static void
+void
 anv_meta_begin_blit2d(struct anv_cmd_buffer *cmd_buffer,
                       struct anv_meta_saved_state *save);
 
-static void
+void
 anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
                 struct anv_meta_blit2d_surf *src,
                 struct anv_meta_blit2d_surf *dst,
                 unsigned num_rects,
                 struct anv_meta_blit2d_rect *rects);
 
-static void
+void
 anv_meta_end_blit2d(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_meta_saved_state *save);
 
