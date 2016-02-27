@@ -110,6 +110,50 @@ brw_swap_cmod(uint32_t cmod)
    }
 }
 
+/**
+ * Get the least significant bit offset of the i+1-th component of immediate
+ * type \p type.  For \p i equal to the two's complement of j, return the
+ * offset of the j-th component starting from the end of the vector.  For
+ * scalar register types return zero.
+ */
+static unsigned
+imm_shift(enum brw_reg_type type, unsigned i)
+{
+   assert(type != BRW_REGISTER_TYPE_UV && type != BRW_REGISTER_TYPE_V &&
+          "Not implemented.");
+
+   if (type == BRW_REGISTER_TYPE_VF)
+      return 8 * (i & 3);
+   else
+      return 0;
+}
+
+/**
+ * Swizzle an arbitrary immediate \p x of the given type according to the
+ * permutation specified as \p swz.
+ */
+uint32_t
+brw_swizzle_immediate(enum brw_reg_type type, uint32_t x, unsigned swz)
+{
+   if (imm_shift(type, 1)) {
+      const unsigned n = 32 / imm_shift(type, 1);
+      uint32_t y = 0;
+
+      for (unsigned i = 0; i < n; i++) {
+         /* Shift the specified component all the way to the right and left to
+          * discard any undesired L/MSBs, then shift it right into component i.
+          */
+         y |= x >> imm_shift(type, (i & ~3) + BRW_GET_SWZ(swz, i & 3))
+                << imm_shift(type, ~0u)
+                >> imm_shift(type, ~0u - i);
+      }
+
+      return y;
+   } else {
+      return x;
+   }
+}
+
 void
 brw_set_default_exec_size(struct brw_codegen *p, unsigned value)
 {

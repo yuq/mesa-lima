@@ -223,6 +223,7 @@ enum PACKED brw_reg_type {
 unsigned brw_reg_type_to_hw_type(const struct brw_device_info *devinfo,
                                  enum brw_reg_type type, enum brw_reg_file file);
 const char *brw_reg_type_letters(unsigned brw_reg_type);
+uint32_t brw_swizzle_immediate(enum brw_reg_type type, uint32_t x, unsigned swz);
 
 #define REG_SIZE (8*4)
 
@@ -876,9 +877,11 @@ get_element_d(struct brw_reg reg, unsigned elt)
 static inline struct brw_reg
 brw_swizzle(struct brw_reg reg, unsigned swz)
 {
-   assert(reg.file != BRW_IMMEDIATE_VALUE);
+   if (reg.file == BRW_IMMEDIATE_VALUE)
+      reg.ud = brw_swizzle_immediate(reg.type, reg.ud, swz);
+   else
+      reg.swizzle = brw_compose_swizzle(swz, reg.swizzle);
 
-   reg.swizzle = brw_compose_swizzle(swz, reg.swizzle);
    return reg;
 }
 

@@ -76,7 +76,11 @@ offset(src_reg reg, unsigned delta)
 static inline src_reg
 swizzle(src_reg reg, unsigned swizzle)
 {
-   reg.swizzle = brw_compose_swizzle(swizzle, reg.swizzle);
+   if (reg.file == IMM)
+      reg.ud = brw_swizzle_immediate(reg.type, reg.ud, swizzle);
+   else
+      reg.swizzle = brw_compose_swizzle(swizzle, reg.swizzle);
+
    return reg;
 }
 
