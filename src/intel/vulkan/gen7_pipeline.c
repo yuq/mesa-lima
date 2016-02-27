@@ -323,27 +323,21 @@ genX(graphics_pipeline_create)(
    }
 
    if (pipeline->ps_ksp0 == NO_KERNEL) {
-     anv_finishme("disabling ps");
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE));
 
-     /* FIXME: generated header doesn't emit attr swizzle fields */
-     anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE));
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM),
+                     .StatisticsEnable                         = true,
+                     .ThreadDispatchEnable                     = false,
+                     .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */
+                     .LineAntialiasingRegionWidth              = 1, /* 1.0 pixels */
+                     .EarlyDepthStencilControl                 = EDSC_NORMAL,
+                     .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT);
 
-     /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
-     anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM),
-		    .StatisticsEnable                         = true,
-		    .ThreadDispatchEnable                     = false,
-		    .LineEndCapAntialiasingRegionWidth        = 0, /* 0.5 pixels */
-		    .LineAntialiasingRegionWidth              = 1, /* 1.0 pixels */
-		    .EarlyDepthStencilControl                 = EDSC_NORMAL,
-		    .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT);
-
-
-     /* Even if no fragments are ever dispatched, the hardware hangs if we
-      * don't at least set the maximum number of threads.
-      */
-     anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
-                    .MaximumNumberofThreads                   = device->info.max_wm_threads - 1);
-
+      /* Even if no fragments are ever dispatched, the hardware hangs if we
+       * don't at least set the maximum number of threads.
+       */
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
+                     .MaximumNumberofThreads                   = device->info.max_wm_threads - 1);
    } else {
       const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
       if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
