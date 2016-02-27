@@ -406,9 +406,10 @@ static void
 do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
                struct anv_bo *src, uint64_t src_offset,
                struct anv_bo *dest, uint64_t dest_offset,
-               int width, int height, VkFormat copy_format)
+               int width, int height, int bs)
 {
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
+   VkFormat copy_format = vk_format_for_size(bs);
 
    VkImageCreateInfo image_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -534,8 +535,6 @@ void anv_CmdCopyBuffer(
          bs = MIN2(bs, 1 << fs);
       assert(pRegions[r].size % bs == 0);
 
-      VkFormat copy_format = vk_format_for_size(bs);
-
       /* This is maximum possible width/height our HW can handle */
       uint64_t max_surface_dim = 1 << 14;
 
@@ -544,7 +543,7 @@ void anv_CmdCopyBuffer(
       while (copy_size >= max_copy_size) {
          do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
                         dest_buffer->bo, dest_offset,
-                        max_surface_dim, max_surface_dim, copy_format);
+                        max_surface_dim, max_surface_dim, bs);
          copy_size -= max_copy_size;
          src_offset += max_copy_size;
          dest_offset += max_copy_size;
@@ -556,7 +555,7 @@ void anv_CmdCopyBuffer(
          uint64_t rect_copy_size = height * max_surface_dim * bs;
          do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
                         dest_buffer->bo, dest_offset,
-                        max_surface_dim, height, copy_format);
+                        max_surface_dim, height, bs);
          copy_size -= rect_copy_size;
          src_offset += rect_copy_size;
          dest_offset += rect_copy_size;
@@ -565,7 +564,7 @@ void anv_CmdCopyBuffer(
       if (copy_size != 0) {
          do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
                         dest_buffer->bo, dest_offset,
-                        copy_size / bs, 1, copy_format);
+                        copy_size / bs, 1, bs);
       }
    }
 
@@ -601,17 +600,13 @@ void anv_CmdUpdateBuffer(
 
       memcpy(tmp_data.map, pData, copy_size);
 
-      VkFormat format;
       int bs;
       if ((copy_size & 15) == 0 && (dstOffset & 15) == 0) {
-         format = VK_FORMAT_R32G32B32A32_UINT;
          bs = 16;
       } else if ((copy_size & 7) == 0 && (dstOffset & 7) == 0) {
-         format = VK_FORMAT_R32G32_UINT;
          bs = 8;
       } else {
          assert((copy_size & 3) == 0 && (dstOffset & 3) == 0);
-         format = VK_FORMAT_R32_UINT;
          bs = 4;
       }
 
@@ -619,7 +614,7 @@ void anv_CmdUpdateBuffer(
                      &cmd_buffer->device->dynamic_state_block_pool.bo,
                      tmp_data.offset,
                      dst_buffer->bo, dst_buffer->offset + dstOffset,
-                     copy_size / bs, 1, format);
+                     copy_size / bs, 1, bs);
 
       dataSize -= copy_size;
       dstOffset += copy_size;
