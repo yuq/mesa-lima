@@ -146,7 +146,6 @@ struct nv50_ir_prog_info
          bool earlyFragTests;
          bool separateFragData;
          bool usesDiscard;
-         bool sampleInterp;      /* perform sample interp on all fp inputs */
       } fp;
       struct {
          uint32_t inputOffset; /* base address for user args */

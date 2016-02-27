@@ -1182,10 +1182,6 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       case TGSI_SEMANTIC_VERTEXID:
          info->io.vertexId = first;
          break;
-      case TGSI_SEMANTIC_SAMPLEID:
-      case TGSI_SEMANTIC_SAMPLEPOS:
-         info->prop.fp.sampleInterp = 1;
-         break;
       case TGSI_SEMANTIC_BASEVERTEX:
       case TGSI_SEMANTIC_BASEINSTANCE:
       case TGSI_SEMANTIC_DRAWID:
@@ -1564,7 +1560,7 @@ Converter::translateInterpMode(const struct nv50_ir_varying *var, operation& op)
    op = (mode == NV50_IR_INTERP_PERSPECTIVE || mode == NV50_IR_INTERP_SC)
       ? OP_PINTERP : OP_LINTERP;
 
-   if (var->centroid || info->prop.fp.sampleInterp)
+   if (var->centroid)
       mode |= NV50_IR_INTERP_CENTROID;
 
    return mode;
