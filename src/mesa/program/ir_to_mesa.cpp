@@ -2180,7 +2180,6 @@ mesa_src_reg_from_ir_src_reg(src_reg reg)
    mesa_reg.Swizzle = reg.swizzle;
    mesa_reg.RelAddr = reg.reladdr != NULL;
    mesa_reg.Negate = reg.negate;
-   mesa_reg.Abs = 0;
 
    return mesa_reg;
 }

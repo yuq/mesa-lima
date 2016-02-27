@@ -320,9 +320,6 @@ translate_src( struct st_translate *t,
    if (SrcReg->Negate == NEGATE_XYZW)
       src = ureg_negate(src);
 
-   if (SrcReg->Abs) 
-      src = ureg_abs(src);
-
    if (SrcReg->RelAddr) {
       src = ureg_src_indirect( src, ureg_src(t->address[0]));
       if (SrcReg->File != PROGRAM_INPUT &&

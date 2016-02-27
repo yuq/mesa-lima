@@ -198,11 +198,8 @@ struct prog_src_register
    GLuint Swizzle:12;
    GLuint RelAddr:1;
 
-   /** Take the component-wise absolute value */
-   GLuint Abs:1;
-
    /**
-    * Post-Abs negation.
+    * Negation.
     * This will either be NEGATE_NONE or NEGATE_XYZW, except for the SWZ
     * instruction which allows per-component negation.
     */

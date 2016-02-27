@@ -528,15 +528,11 @@ fprint_src_reg(FILE *f,
                gl_prog_print_mode mode,
                const struct gl_program *prog)
 {
-   const char *abs = srcReg->Abs ? "|" : "";
-
-   fprintf(f, "%s%s%s%s",
-	   abs,
+   fprintf(f, "%s%s",
 	   reg_string((gl_register_file) srcReg->File,
 		      srcReg->Index, mode, srcReg->RelAddr, prog),
 	   _mesa_swizzle_string(srcReg->Swizzle,
-				srcReg->Negate, GL_FALSE),
-	   abs);
+				srcReg->Negate, GL_FALSE));
 #if 0
    fprintf(f, "%s[%d]%s",
 	   _mesa_register_file_name((gl_register_file) srcReg->File),

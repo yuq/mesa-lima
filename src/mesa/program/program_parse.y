@@ -555,21 +555,6 @@ scalarSrcReg: optionalSign scalarUse
 	      $$.Base.Negate = ~$$.Base.Negate;
 	   }
 	}
-	| optionalSign '|' scalarUse '|'
-	{
-	   $$ = $3;
-
-	   if (!state->option.NV_fragment) {
-	      yyerror(& @2, state, "unexpected character '|'");
-	      YYERROR;
-	   }
-
-	   if ($1) {
-	      $$.Base.Negate = ~$$.Base.Negate;
-	   }
-
-	   $$.Base.Abs = 1;
-	}
 	;
 
 scalarUse:  srcReg scalarSuffix
@@ -609,24 +594,6 @@ swizzleSrcReg: optionalSign srcReg swizzleSuffix
 	   $$.Base.Swizzle = _mesa_combine_swizzles($$.Base.Swizzle,
 						    $3.swizzle);
 	}
-	| optionalSign '|' srcReg swizzleSuffix '|'
-	{
-	   $$ = $3;
-
-	   if (!state->option.NV_fragment) {
-	      yyerror(& @2, state, "unexpected character '|'");
-	      YYERROR;
-	   }
-
-	   if ($1) {
-	      $$.Base.Negate = ~$$.Base.Negate;
-	   }
-
-	   $$.Base.Abs = 1;
-	   $$.Base.Swizzle = _mesa_combine_swizzles($$.Base.Swizzle,
-						    $4.swizzle);
-	}
-
 	;
 
 maskedDstReg: dstReg optionalMask

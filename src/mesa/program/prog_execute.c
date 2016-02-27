@@ -200,12 +200,6 @@ fetch_vector4(const struct prog_src_register *source,
       result[3] = src[GET_SWZ(source->Swizzle, 3)];
    }
 
-   if (source->Abs) {
-      result[0] = fabsf(result[0]);
-      result[1] = fabsf(result[1]);
-      result[2] = fabsf(result[2]);
-      result[3] = fabsf(result[3]);
-   }
    if (source->Negate) {
       assert(source->Negate == NEGATE_XYZW);
       result[0] = -result[0];
@@ -258,12 +252,6 @@ fetch_vector4_deriv(struct gl_context * ctx,
       result[2] = deriv[GET_SWZ(source->Swizzle, 2)];
       result[3] = deriv[GET_SWZ(source->Swizzle, 3)];
       
-      if (source->Abs) {
-         result[0] = fabsf(result[0]);
-         result[1] = fabsf(result[1]);
-         result[2] = fabsf(result[2]);
-         result[3] = fabsf(result[3]);
-      }
       if (source->Negate) {
          assert(source->Negate == NEGATE_XYZW);
          result[0] = -result[0];
@@ -289,9 +277,6 @@ fetch_vector1(const struct prog_src_register *source,
 
    result[0] = src[GET_SWZ(source->Swizzle, 0)];
 
-   if (source->Abs) {
-      result[0] = fabsf(result[0]);
-   }
    if (source->Negate) {
       result[0] = -result[0];
    }

@@ -230,9 +230,6 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
 
       def = nir_fmov_alu(b, src, 4);
 
-      if (prog_src->Abs)
-         def = nir_fabs(b, def);
-
       if (prog_src->Negate)
          def = nir_fneg(b, def);
    } else {
@@ -257,9 +254,6 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
 
             chans[i] = &mov->dest.dest.ssa;
          }
-
-         if (prog_src->Abs)
-            chans[i] = nir_fabs(b, chans[i]);
 
          if (prog_src->Negate & (1 << i))
             chans[i] = nir_fneg(b, chans[i]);

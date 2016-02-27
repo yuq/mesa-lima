@@ -447,7 +447,6 @@ can_downward_mov_be_modifed(const struct prog_instruction *mov)
       mov->Opcode == OPCODE_MOV &&
       mov->SrcReg[0].RelAddr == 0 &&
       mov->SrcReg[0].Negate == 0 &&
-      mov->SrcReg[0].Abs == 0 &&
       mov->DstReg.RelAddr == 0;
 }
 
@@ -516,8 +515,7 @@ _mesa_remove_extra_move_use(struct gl_program *prog)
 
 	    if (inst2->SrcReg[arg].File != mov->DstReg.File ||
 		inst2->SrcReg[arg].Index != mov->DstReg.Index ||
-		inst2->SrcReg[arg].RelAddr ||
-		inst2->SrcReg[arg].Abs)
+		inst2->SrcReg[arg].RelAddr)
 	       continue;
             read_mask = get_src_arg_mask(inst2, arg, NO_MASK);
 
