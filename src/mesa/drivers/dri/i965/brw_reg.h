@@ -81,7 +81,9 @@ struct brw_device_info;
 #define BRW_SWIZZLE_ZZZZ      BRW_SWIZZLE4(2,2,2,2)
 #define BRW_SWIZZLE_WWWW      BRW_SWIZZLE4(3,3,3,3)
 #define BRW_SWIZZLE_XYXY      BRW_SWIZZLE4(0,1,0,1)
+#define BRW_SWIZZLE_XZXZ      BRW_SWIZZLE4(0,2,0,2)
 #define BRW_SWIZZLE_YZXW      BRW_SWIZZLE4(1,2,0,3)
+#define BRW_SWIZZLE_YWYW      BRW_SWIZZLE4(1,3,1,3)
 #define BRW_SWIZZLE_ZXYW      BRW_SWIZZLE4(2,0,1,3)
 #define BRW_SWIZZLE_ZWZW      BRW_SWIZZLE4(2,3,2,3)
 #define BRW_SWIZZLE_WZYX      BRW_SWIZZLE4(3,2,1,0)
@@ -871,22 +873,13 @@ get_element_d(struct brw_reg reg, unsigned elt)
    return vec1(suboffset(retype(reg, BRW_REGISTER_TYPE_D), elt));
 }
 
-
 static inline struct brw_reg
-brw_swizzle(struct brw_reg reg, unsigned x, unsigned y, unsigned z, unsigned w)
+brw_swizzle(struct brw_reg reg, unsigned swz)
 {
    assert(reg.file != BRW_IMMEDIATE_VALUE);
 
-   reg.swizzle = brw_compose_swizzle(BRW_SWIZZLE4(x, y, z, w),
-                                              reg.swizzle);
+   reg.swizzle = brw_compose_swizzle(swz, reg.swizzle);
    return reg;
-}
-
-
-static inline struct brw_reg
-brw_swizzle1(struct brw_reg reg, unsigned x)
-{
-   return brw_swizzle(reg, x, x, x, x);
 }
 
 static inline struct brw_reg
