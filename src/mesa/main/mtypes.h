@@ -3895,6 +3895,7 @@ struct gl_extensions
    GLboolean EXT_timer_query;
    GLboolean EXT_vertex_array_bgra;
    GLboolean OES_standard_derivatives;
+   GLboolean OES_texture_buffer;
    /* vendor extensions */
    GLboolean AMD_performance_monitor;
    GLboolean AMD_pinned_memory;
