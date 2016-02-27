@@ -338,7 +338,11 @@ genX(graphics_pipeline_create)(
 		    .PointRasterizationRule                   = RASTRULE_UPPER_RIGHT);
 
 
-     anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS));
+     /* Even if no fragments are ever dispatched, the hardware hangs if we
+      * don't at least set the maximum number of threads.
+      */
+     anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
+                    .MaximumNumberofThreads                   = device->info.max_wm_threads - 1);
 
    } else {
       const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
