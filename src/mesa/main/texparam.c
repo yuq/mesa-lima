@@ -1447,6 +1447,29 @@ get_tex_level_parameter_image(struct gl_context *ctx,
          *params = img->FixedSampleLocations;
          break;
 
+      /* There is never a buffer data store here, but these pnames still have
+       * to work.
+       */
+
+      /* GL_ARB_texture_buffer_object */
+      case GL_TEXTURE_BUFFER_DATA_STORE_BINDING:
+         if (!ctx->Extensions.ARB_texture_buffer_object)
+            goto invalid_pname;
+         *params = 0;
+         break;
+
+      /* GL_ARB_texture_buffer_range */
+      case GL_TEXTURE_BUFFER_OFFSET:
+         if (!ctx->Extensions.ARB_texture_buffer_range)
+            goto invalid_pname;
+         *params = 0;
+         break;
+      case GL_TEXTURE_BUFFER_SIZE:
+         if (!ctx->Extensions.ARB_texture_buffer_range)
+            goto invalid_pname;
+         *params = 0;
+         break;
+
       default:
          goto invalid_pname;
    }
@@ -1468,13 +1491,24 @@ get_tex_level_parameter_buffer(struct gl_context *ctx,
 {
    const struct gl_buffer_object *bo = texObj->BufferObject;
    mesa_format texFormat = texObj->_BufferObjectFormat;
+   int bytes = MAX2(1, _mesa_get_format_bytes(texFormat));
    GLenum internalFormat = texObj->BufferObjectFormat;
    GLenum baseFormat = _mesa_get_format_base_format(texFormat);
    const char *suffix = dsa ? "ture" : "";
 
    if (!bo) {
       /* undefined texture buffer object */
-      *params = pname == GL_TEXTURE_COMPONENTS ? 1 : 0;
+      switch (pname) {
+      case GL_TEXTURE_FIXED_SAMPLE_LOCATIONS:
+         *params = GL_TRUE;
+         break;
+      case GL_TEXTURE_INTERNAL_FORMAT:
+         *params = internalFormat;
+         break;
+      default:
+         *params = 0;
+         break;
+      }
       return;
    }
 
@@ -1483,10 +1517,13 @@ get_tex_level_parameter_buffer(struct gl_context *ctx,
          *params = bo->Name;
          break;
       case GL_TEXTURE_WIDTH:
-         *params = bo->Size;
+         *params = ((texObj->BufferSize == -1) ? bo->Size : texObj->BufferSize)
+            / bytes;
          break;
       case GL_TEXTURE_HEIGHT:
       case GL_TEXTURE_DEPTH:
+         *params = 1;
+         break;
       case GL_TEXTURE_BORDER:
       case GL_TEXTURE_SHARED_SIZE:
       case GL_TEXTURE_COMPRESSED:
@@ -1534,6 +1571,19 @@ get_tex_level_parameter_buffer(struct gl_context *ctx,
          if (!ctx->Extensions.ARB_texture_buffer_range)
             goto invalid_pname;
          *params = (texObj->BufferSize == -1) ? bo->Size : texObj->BufferSize;
+         break;
+
+      /* GL_ARB_texture_multisample */
+      case GL_TEXTURE_SAMPLES:
+         if (!ctx->Extensions.ARB_texture_multisample)
+            goto invalid_pname;
+         *params = 0;
+         break;
+
+      case GL_TEXTURE_FIXED_SAMPLE_LOCATIONS:
+         if (!ctx->Extensions.ARB_texture_multisample)
+            goto invalid_pname;
+         *params = GL_TRUE;
          break;
 
       /* GL_ARB_texture_compression */
