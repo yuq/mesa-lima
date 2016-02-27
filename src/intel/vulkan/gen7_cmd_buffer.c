@@ -458,7 +458,10 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
       const struct anv_image_view *iview =
          anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
       const struct anv_image *image = iview ? iview->image : NULL;
-      const uint32_t depth_format = image ?
+      const struct anv_format *anv_format =
+         iview ? anv_format_for_vk_format(iview->vk_format) : NULL;
+      const bool has_depth = iview && anv_format->has_depth;
+      const uint32_t depth_format = has_depth ?
          isl_surf_get_depth_format(&cmd_buffer->device->isl_dev,
                                    &image->depth_surface.isl) : D16_UNORM;
 
