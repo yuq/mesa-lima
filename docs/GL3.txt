@@ -269,7 +269,7 @@ GLES3.2, GLSL ES 3.2
   GL_OES_shader_multisample_interpolation               not started (based on parts of GL_ARB_gpu_shader5, which is done)
   GL_OES_tessellation_shader                            not started (based on GL_ARB_tessellation_shader, which is done for some drivers)
   GL_OES_texture_border_clamp                           DONE (all drivers)
-  GL_OES_texture_buffer                                 not started (based on GL_ARB_texture_buffer_object, GL_ARB_texture_buffer_range, and GL_ARB_texture_buffer_object_rgb32 that are all done)
+  GL_OES_texture_buffer                                 DONE (core only)
   GL_OES_texture_cube_map_array                         not started (based on GL_ARB_texture_cube_map_array, which is done for all drivers)
   GL_OES_texture_stencil8                               DONE (all drivers that support GL_ARB_texture_stencil8)
   GL_OES_texture_storage_multisample_2d_array           DONE (all drivers that support GL_ARB_texture_multisample)

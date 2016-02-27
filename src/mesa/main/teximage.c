@@ -499,8 +499,8 @@ _mesa_max_texture_levels(struct gl_context *ctx, GLenum target)
       return ctx->Extensions.ARB_texture_cube_map_array
          ? ctx->Const.MaxCubeTextureLevels : 0;
    case GL_TEXTURE_BUFFER:
-      return ctx->API == API_OPENGL_CORE &&
-             ctx->Extensions.ARB_texture_buffer_object ? 1 : 0;
+      return (_mesa_has_ARB_texture_buffer_object(ctx) ||
+              _mesa_has_OES_texture_buffer(ctx)) ? 1 : 0;
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_PROXY_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
@@ -4717,7 +4717,7 @@ _mesa_CompressedTextureSubImage3D(GLuint texture, GLint level, GLint xoffset,
 static mesa_format
 get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
 {
-   if (ctx->API != API_OPENGL_CORE) {
+   if (ctx->API == API_OPENGL_COMPAT) {
       switch (internalFormat) {
       case GL_ALPHA8:
          return MESA_FORMAT_A_UNORM8;
@@ -4804,8 +4804,8 @@ get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
       }
    }
 
-   if (ctx->API == API_OPENGL_CORE &&
-       ctx->Extensions.ARB_texture_buffer_object_rgb32) {
+   if (_mesa_has_ARB_texture_buffer_object_rgb32(ctx) ||
+       _mesa_has_OES_texture_buffer(ctx)) {
       switch (internalFormat) {
       case GL_RGB32F:
          return MESA_FORMAT_RGB_FLOAT32;
@@ -4822,6 +4822,8 @@ get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
    case GL_RGBA8:
       return MESA_FORMAT_R8G8B8A8_UNORM;
    case GL_RGBA16:
+      if (_mesa_is_gles(ctx))
+         return MESA_FORMAT_NONE;
       return MESA_FORMAT_RGBA_UNORM16;
    case GL_RGBA16F_ARB:
       return MESA_FORMAT_RGBA_FLOAT16;
@@ -4843,6 +4845,8 @@ get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
    case GL_RG8:
       return MESA_FORMAT_R8G8_UNORM;
    case GL_RG16:
+      if (_mesa_is_gles(ctx))
+         return MESA_FORMAT_NONE;
       return MESA_FORMAT_R16G16_UNORM;
    case GL_RG16F:
       return MESA_FORMAT_RG_FLOAT16;
@@ -4864,6 +4868,8 @@ get_texbuffer_format(const struct gl_context *ctx, GLenum internalFormat)
    case GL_R8:
       return MESA_FORMAT_R_UNORM8;
    case GL_R16:
+      if (_mesa_is_gles(ctx))
+         return MESA_FORMAT_NONE;
       return MESA_FORMAT_R_UNORM16;
    case GL_R16F:
       return MESA_FORMAT_R_FLOAT16;
@@ -4941,8 +4947,8 @@ _mesa_texture_buffer_range(struct gl_context *ctx,
    /* NOTE: ARB_texture_buffer_object has interactions with
     * the compatibility profile that are not implemented.
     */
-   if (!(ctx->API == API_OPENGL_CORE &&
-         ctx->Extensions.ARB_texture_buffer_object)) {
+   if (!_mesa_has_ARB_texture_buffer_object(ctx) &&
+       !_mesa_has_OES_texture_buffer(ctx)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(ARB_texture_buffer_object is not"
                   " implemented for the compatibility profile)", caller);

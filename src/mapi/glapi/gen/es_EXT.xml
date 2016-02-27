@@ -847,6 +847,24 @@
 
 </category>
 
+<category name="GL_EXT_texture_buffer" number="183">
+
+    <function name="TexBufferEXT" es2="3.1" alias="TexBuffer">
+        <param name="target" type="GLenum"/>
+        <param name="internalFormat" type="GLenum"/>
+        <param name="buffer" type="GLuint"/>
+    </function>
+
+    <function name="TexBufferRangeEXT" es2="3.1" alias="TexBufferRange">
+        <param name="target" type="GLenum"/>
+        <param name="internalformat" type="GLenum"/>
+        <param name="buffer" type="GLuint"/>
+        <param name="offset" type="GLintptr"/>
+        <param name="size" type="GLsizeiptr"/>
+    </function>
+
+</category>
+
 <category name="GL_EXT_draw_elements_base_vertex" number="204">
 
     <function name="DrawElementsBaseVertexEXT" alias="DrawElementsBaseVertex"
@@ -887,6 +905,24 @@
         <param name="indices" type="const GLvoid *"/>
         <param name="primcount" type="GLsizei"/>
         <param name="basevertex" type="GLint"/>
+    </function>
+
+</category>
+
+<category name="GL_OES_texture_buffer" number="216">
+
+    <function name="TexBufferOES" es2="3.1" alias="TexBuffer">
+        <param name="target" type="GLenum"/>
+        <param name="internalFormat" type="GLenum"/>
+        <param name="buffer" type="GLuint"/>
+    </function>
+
+    <function name="TexBufferRangeOES" es2="3.1" alias="TexBufferRange">
+        <param name="target" type="GLenum"/>
+        <param name="internalformat" type="GLenum"/>
+        <param name="buffer" type="GLuint"/>
+        <param name="offset" type="GLintptr"/>
+        <param name="size" type="GLsizeiptr"/>
     </function>
 
 </category>
