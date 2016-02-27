@@ -182,6 +182,9 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
                 This->managed.dirty_box = box;
             } else {
                 u_box_union_2d(&This->managed.dirty_box, &This->managed.dirty_box, &box);
+                /* Do not upload while we are locking, we'll add it back later */
+                if (!LIST_IS_EMPTY(&This->managed.list))
+                    list_delinit(&This->managed.list);
             }
         }
         *ppbData = (char *)This->managed.data + OffsetToLock;
