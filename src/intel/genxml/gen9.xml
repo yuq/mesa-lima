@@ -298,6 +298,7 @@
     <field name="Cube Face Enable - Positive X" start="4" end="4" type="bool"/>
     <field name="Cube Face Enable - Negative X" start="5" end="5" type="bool"/>
     <field name="Memory Object Control State" start="56" end="62" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="MOCS" start="56" end="62" type="uint"/>
     <field name="Base Mip Level" start="51" end="55" type="u4.1"/>
     <field name="Surface QPitch" start="32" end="46" type="uint"/>
     <field name="Height" start="80" end="93" type="uint"/>

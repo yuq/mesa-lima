@@ -381,6 +381,7 @@
     <field name="X Offset" start="185" end="191" type="offset"/>
     <field name="Y Offset" start="180" end="183" type="offset"/>
     <field name="Surface Object Control State" start="176" end="179" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="MOCS" start="176" end="179" type="uint"/>
     <field name="Surface Min LOD" start="164" end="167" type="uint"/>
     <field name="MIP Count / LOD" start="160" end="163" type="uint"/>
     <field name="MCS Base Address" start="204" end="223" type="address"/>
