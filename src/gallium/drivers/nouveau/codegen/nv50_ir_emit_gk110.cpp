@@ -1279,8 +1279,27 @@ CodeEmitterGK110::emitBAR(const Instruction *i)
 
    emitPredicate(i);
 
-   srcId(i->src(0), 10);
-   srcId(i->src(1), 23);
+   // barrier id
+   if (i->src(0).getFile() == FILE_GPR) {
+      srcId(i->src(0), 10);
+   } else {
+      ImmediateValue *imm = i->getSrc(0)->asImm();
+      assert(imm);
+      code[0] |= imm->reg.data.u32 << 10;
+      code[1] |= 0x8000;
+   }
+
+   // thread count
+   if (i->src(1).getFile() == FILE_GPR) {
+      srcId(i->src(1), 23);
+   } else {
+      ImmediateValue *imm = i->getSrc(0)->asImm();
+      assert(imm);
+      assert(imm->reg.data.u32 <= 0xfff);
+      code[0] |= imm->reg.data.u32 << 23;
+      code[1] |= imm->reg.data.u32 >> 9;
+      code[1] |= 0x4000;
+   }
 }
 
 void CodeEmitterGK110::emitMEMBAR(const Instruction *i)
