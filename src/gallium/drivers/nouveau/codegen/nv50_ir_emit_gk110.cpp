@@ -1300,6 +1300,14 @@ CodeEmitterGK110::emitBAR(const Instruction *i)
       code[1] |= imm->reg.data.u32 >> 9;
       code[1] |= 0x4000;
    }
+
+   if (i->srcExists(2) && (i->predSrc != 2)) {
+      srcId(i->src(2), 32 + 10);
+      if (i->src(2).mod == Modifier(NV50_IR_MOD_NOT))
+         code[1] |= 1 << 13;
+   } else {
+      code[1] |= 7 << 10;
+   }
 }
 
 void CodeEmitterGK110::emitMEMBAR(const Instruction *i)
