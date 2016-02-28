@@ -202,10 +202,11 @@ emit_urb_setup(struct anv_pipeline *pipeline)
 
    unsigned push_start = 0;
    for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_FRAGMENT; i++) {
+      unsigned push_size = pipeline->urb.push_size[i];
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PUSH_CONSTANT_ALLOC_VS),
          ._3DCommandSubOpcode                   = 18 + i,
-         .ConstantBufferOffset                  = push_start,
-         .ConstantBufferSize                    = pipeline->urb.push_size[i]);
+         .ConstantBufferOffset                  = (push_size > 0) ? push_start : 0,
+         .ConstantBufferSize                    = push_size);
       push_start += pipeline->urb.push_size[i];
    }
 
