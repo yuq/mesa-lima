@@ -190,6 +190,7 @@ const char *operationStr[OP_LAST + 1] =
    "vsel",
    "cctl",
    "shfl",
+   "vote",
    "(invalid)"
 };
 

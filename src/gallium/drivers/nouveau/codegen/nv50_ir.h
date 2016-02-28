@@ -161,6 +161,7 @@ enum operation
    OP_VSEL,
    OP_CCTL, // cache control
    OP_SHFL, // warp shuffle
+   OP_VOTE,
    OP_LAST
 };
 
@@ -244,6 +245,9 @@ enum operation
 #define NV50_IR_SUBOP_V2(d,a,b)    (((d) << 10) | ((b) << 5) | (a) | 0x4000)
 #define NV50_IR_SUBOP_V4(d,a,b)    (((d) << 10) | ((b) << 5) | (a) | 0x8000)
 #define NV50_IR_SUBOP_Vn(n)        ((n) >> 14)
+#define NV50_IR_SUBOP_VOTE_ALL 0
+#define NV50_IR_SUBOP_VOTE_ANY 1
+#define NV50_IR_SUBOP_VOTE_UNI 2
 
 enum DataType
 {

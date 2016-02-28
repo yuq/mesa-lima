@@ -55,6 +55,7 @@ const uint8_t Target::operationSrcNr[] =
    2, 2, 2, 2, 3, 2,       // VADD, VAVG, VMIN, VMAX, VSAD, VSET,
    2, 2, 2, 1,             // VSHR, VSHL, VSEL, CCTL
    3,                      // SHFL
+   1,                      // VOTE
    0
 };
 
@@ -128,6 +129,8 @@ const OpClass Target::operationClass[] =
    // VSEL, CCTL
    OPCLASS_VECTOR, OPCLASS_CONTROL,
    // SHFL
+   OPCLASS_OTHER,
+   // VOTE
    OPCLASS_OTHER,
    OPCLASS_PSEUDO // LAST
 };

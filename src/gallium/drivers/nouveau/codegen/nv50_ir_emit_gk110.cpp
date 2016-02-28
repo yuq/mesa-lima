@@ -128,6 +128,8 @@ private:
 
    void emitFlow(const Instruction *);
 
+   void emitVOTE(const Instruction *);
+
    inline void defId(const ValueDef&, const int pos);
    inline void srcId(const ValueRef&, const int pos);
    inline void srcId(const ValueRef *, const int pos);
@@ -1371,6 +1373,24 @@ CodeEmitterGK110::emitFlow(const Instruction *i)
 }
 
 void
+CodeEmitterGK110::emitVOTE(const Instruction *i)
+{
+   assert(i->src(0).getFile() == FILE_PREDICATE &&
+          i->def(1).getFile() == FILE_PREDICATE);
+
+   code[0] = 0x00000002;
+   code[1] = 0x86c00000 | (i->subOp << 19);
+
+   emitPredicate(i);
+
+   defId(i->def(0), 2);
+   defId(i->def(1), 48);
+   if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
+      code[0] |= 1 << 45;
+   srcId(i->src(0), 42);
+}
+
+void
 CodeEmitterGK110::emitAFETCH(const Instruction *i)
 {
    uint32_t offset = i->src(0).get()->reg.data.offset & 0x7ff;
@@ -2079,6 +2099,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_CCTL:
       emitCCTL(insn);
+      break;
+   case OP_VOTE:
+      emitVOTE(insn);
       break;
    case OP_PHI:
    case OP_UNION:
