@@ -1597,7 +1597,13 @@ CodeEmitterGK110::emitSTORE(const Instruction *i)
    switch (i->src(0).getFile()) {
    case FILE_MEMORY_GLOBAL: code[1] = 0xe0000000; code[0] = 0x00000000; break;
    case FILE_MEMORY_LOCAL:  code[1] = 0x7a800000; code[0] = 0x00000002; break;
-   case FILE_MEMORY_SHARED: code[1] = 0x7ac00000; code[0] = 0x00000002; break;
+   case FILE_MEMORY_SHARED:
+      code[0] = 0x00000002;
+      if (i->subOp == NV50_IR_SUBOP_STORE_UNLOCKED)
+         code[1] = 0x78400000;
+      else
+         code[1] = 0x7ac00000;
+      break;
    default:
       assert(!"invalid memory file");
       break;
@@ -1617,6 +1623,13 @@ CodeEmitterGK110::emitSTORE(const Instruction *i)
    code[0] |= offset << 23;
    code[1] |= offset >> 9;
 
+   // Unlocked store on shared memory can fail.
+   if (i->src(0).getFile() == FILE_MEMORY_SHARED &&
+       i->subOp == NV50_IR_SUBOP_STORE_UNLOCKED) {
+      assert(i->defExists(0));
+      defId(i->def(0), 32 + 16);
+   }
+
    emitPredicate(i);
 
    srcId(i->src(1), 2);
@@ -1635,7 +1648,13 @@ CodeEmitterGK110::emitLOAD(const Instruction *i)
    switch (i->src(0).getFile()) {
    case FILE_MEMORY_GLOBAL: code[1] = 0xc0000000; code[0] = 0x00000000; break;
    case FILE_MEMORY_LOCAL:  code[1] = 0x7a000000; code[0] = 0x00000002; break;
-   case FILE_MEMORY_SHARED: code[1] = 0x7a400000; code[0] = 0x00000002; break;
+   case FILE_MEMORY_SHARED:
+      code[0] = 0x00000002;
+      if (i->subOp == NV50_IR_SUBOP_LOAD_LOCKED)
+         code[1] = 0x77400000;
+      else
+         code[1] = 0x7a400000;
+      break;
    case FILE_MEMORY_CONST:
       if (!i->src(0).isIndirect(0) && typeSizeof(i->dType) == 4) {
          emitMOV(i);
@@ -1662,6 +1681,13 @@ CodeEmitterGK110::emitLOAD(const Instruction *i)
    }
    code[0] |= offset << 23;
    code[1] |= offset >> 9;
+
+   // Locked store on shared memory can fail.
+   if (i->src(0).getFile() == FILE_MEMORY_SHARED &&
+       i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
+      assert(i->defExists(1));
+      defId(i->def(1), 32 + 16);
+   }
 
    emitPredicate(i);
 
