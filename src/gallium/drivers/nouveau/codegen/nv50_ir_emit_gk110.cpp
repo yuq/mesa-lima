@@ -1273,7 +1273,6 @@ CodeEmitterGK110::emitBAR(const Instruction *i)
    case NV50_IR_SUBOP_BAR_RED_OR:   code[1] |= 0x90; break;
    case NV50_IR_SUBOP_BAR_RED_POPC: code[1] |= 0x10; break;
    default:
-      code[1] |= 0x20;
       assert(i->subOp == NV50_IR_SUBOP_BAR_SYNC);
       break;
    }
