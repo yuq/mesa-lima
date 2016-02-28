@@ -897,7 +897,7 @@ gen7_compute_urb_partition(struct anv_pipeline *pipeline)
 
    for (int i = MESA_SHADER_VERTEX; i < MESA_SHADER_FRAGMENT; i++) {
       pipeline->urb.push_size[i] =
-         (pipeline->active_stages & (1 << i)) ? size_per_stage : 1;
+         (pipeline->active_stages & (1 << i)) ? size_per_stage : 0;
    }
 
    pipeline->urb.push_size[MESA_SHADER_FRAGMENT] =
