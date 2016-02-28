@@ -563,81 +563,29 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
                struct anv_bo *dest, uint64_t dest_offset,
                int width, int height, int bs)
 {
-   VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
-   VkFormat copy_format = vk_format_for_size(bs);
-
-   VkImageCreateInfo image_info = {
-      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-      .imageType = VK_IMAGE_TYPE_2D,
-      .format = copy_format,
-      .extent = {
-         .width = width,
-         .height = height,
-         .depth = 1,
-      },
-      .mipLevels = 1,
-      .arrayLayers = 1,
-      .samples = 1,
-      .tiling = VK_IMAGE_TILING_LINEAR,
-      .usage = 0,
-      .flags = 0,
+   struct anv_meta_blit2d_surf b_src = {
+            .bo = src,
+            .tiling = ISL_TILING_LINEAR,
+            .base_offset = src_offset,
+            .bs = bs,
+            .pitch = width * bs,
    };
-
-   VkImage src_image;
-   image_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-   anv_CreateImage(vk_device, &image_info,
-                   &cmd_buffer->pool->alloc, &src_image);
-
-   VkImage dest_image;
-   image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-   anv_CreateImage(vk_device, &image_info,
-                   &cmd_buffer->pool->alloc, &dest_image);
-
-   /* We could use a vk call to bind memory, but that would require
-    * creating a dummy memory object etc. so there's really no point.
-    */
-   anv_image_from_handle(src_image)->bo = src;
-   anv_image_from_handle(src_image)->offset = src_offset;
-   anv_image_from_handle(dest_image)->bo = dest;
-   anv_image_from_handle(dest_image)->offset = dest_offset;
-
-   VkImageViewCreateInfo iview_info = {
-      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-      .image = 0, /* TEMPLATE */
-      .viewType = VK_IMAGE_VIEW_TYPE_2D,
-      .format = copy_format,
-      .subresourceRange = {
-         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-         .baseMipLevel = 0,
-         .levelCount = 1,
-         .baseArrayLayer = 0,
-         .layerCount = 1
-      },
+   struct anv_meta_blit2d_surf b_dst = {
+            .bo = dest,
+            .tiling = ISL_TILING_LINEAR,
+            .base_offset = dest_offset,
+            .bs = bs,
+            .pitch = width * bs,
    };
-
-   struct anv_image_view src_iview;
-   iview_info.image = src_image;
-   anv_image_view_init(&src_iview, cmd_buffer->device,
-      &iview_info, cmd_buffer, 0, VK_IMAGE_USAGE_SAMPLED_BIT);
-
-   struct anv_image_view dest_iview;
-   iview_info.image = dest_image;
-   anv_image_view_init(&dest_iview, cmd_buffer->device,
-      &iview_info, cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-
-   meta_emit_blit(cmd_buffer,
-                  anv_image_from_handle(src_image),
-                  &src_iview,
-                  (VkOffset3D) { 0, 0, 0 },
-                  (VkExtent3D) { width, height, 1 },
-                  anv_image_from_handle(dest_image),
-                  &dest_iview,
-                  (VkOffset3D) { 0, 0, 0 },
-                  (VkExtent3D) { width, height, 1 },
-                  VK_FILTER_NEAREST);
-
-   anv_DestroyImage(vk_device, src_image, &cmd_buffer->pool->alloc);
-   anv_DestroyImage(vk_device, dest_image, &cmd_buffer->pool->alloc);
+   struct anv_meta_blit2d_rect rect = {
+      .width = width,
+      .height = height,
+   };
+   anv_meta_blit2d(cmd_buffer,
+                  &b_src,
+                  &b_dst,
+                  1,
+                  &rect);
 }
 
 void anv_CmdCopyBuffer(
