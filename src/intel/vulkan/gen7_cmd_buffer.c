@@ -52,20 +52,20 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 
       struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
 
-      if (state.offset == 0)
-         continue;
-
-      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
-                     ._3DCommandSubOpcode = push_constant_opcodes[stage],
-                     .ConstantBody = {
-                        .PointerToConstantBuffer0 = { .offset = state.offset },
-                        .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
-                     });
-
-      flushed |= mesa_to_vk_shader_stage(stage);
+      if (state.offset == 0) {
+         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
+                        ._3DCommandSubOpcode = push_constant_opcodes[stage]);
+      } else {
+         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
+                        ._3DCommandSubOpcode = push_constant_opcodes[stage],
+                        .ConstantBody = {
+                           .PointerToConstantBuffer0 = { .offset = state.offset },
+                           .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
+                        });
+      }
    }
 
-   cmd_buffer->state.push_constants_dirty &= ~flushed;
+   cmd_buffer->state.push_constants_dirty &= ~VK_SHADER_STAGE_ALL_GRAPHICS;
 
    return flushed;
 }
