@@ -1038,7 +1038,12 @@ svga_texture_generate_mipmap(struct pipe_context *pipe,
       return FALSE;
 
    sv = svga_pipe_sampler_view(psv);
-   svga_validate_pipe_sampler_view(svga, sv);
+   ret = svga_validate_pipe_sampler_view(svga, sv);
+   if (ret != PIPE_OK) {
+      svga_context_flush(svga, NULL);
+      ret = svga_validate_pipe_sampler_view(svga, sv);
+      assert(ret == PIPE_OK);
+   }
 
    ret = SVGA3D_vgpu10_GenMips(svga->swc, sv->id, tex->handle);
    if (ret != PIPE_OK) {
