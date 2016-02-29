@@ -429,6 +429,14 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return sscreen->b.info.vram_size >> 20;
 	case PIPE_CAP_UMA:
 		return 0;
+	case PIPE_CAP_PCI_GROUP:
+		return sscreen->b.info.pci_domain;
+	case PIPE_CAP_PCI_BUS:
+		return sscreen->b.info.pci_bus;
+	case PIPE_CAP_PCI_DEVICE:
+		return sscreen->b.info.pci_dev;
+	case PIPE_CAP_PCI_FUNCTION:
+		return sscreen->b.info.pci_func;
 	}
 	return 0;
 }

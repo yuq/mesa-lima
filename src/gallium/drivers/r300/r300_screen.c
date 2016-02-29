@@ -259,6 +259,14 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
                 return r300screen->info.vram_size >> 20;
         case PIPE_CAP_UMA:
                 return 0;
+        case PIPE_CAP_PCI_GROUP:
+            return r300screen->info.pci_domain;
+        case PIPE_CAP_PCI_BUS:
+            return r300screen->info.pci_bus;
+        case PIPE_CAP_PCI_DEVICE:
+            return r300screen->info.pci_dev;
+        case PIPE_CAP_PCI_FUNCTION:
+            return r300screen->info.pci_func;
     }
     return 0;
 }
