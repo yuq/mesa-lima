@@ -140,8 +140,8 @@ vec4_visitor::nir_emit_impl(nir_function_impl *impl)
    foreach_list_typed(nir_register, reg, node, &impl->registers) {
       unsigned array_elems =
          reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
-
-      nir_locals[reg->index] = dst_reg(VGRF, alloc.allocate(array_elems));
+      const unsigned num_regs = array_elems * DIV_ROUND_UP(reg->bit_size, 32);
+      nir_locals[reg->index] = dst_reg(VGRF, alloc.allocate(num_regs));
    }
 
    nir_ssa_values = ralloc_array(mem_ctx, dst_reg, impl->ssa_alloc);
@@ -270,7 +270,8 @@ dst_reg
 vec4_visitor::get_nir_dest(const nir_dest &dest)
 {
    if (dest.is_ssa) {
-      dst_reg dst = dst_reg(VGRF, alloc.allocate(1));
+      dst_reg dst =
+         dst_reg(VGRF, alloc.allocate(DIV_ROUND_UP(dest.ssa.bit_size, 32)));
       nir_ssa_values[dest.ssa.index] = dst;
       return dst;
    } else {
