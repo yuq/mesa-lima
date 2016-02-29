@@ -373,7 +373,7 @@ void anv_GetPhysicalDeviceFeatures(
       .textureCompressionASTC_LDR               = true,
       .textureCompressionBC                     = true,
       .occlusionQueryPrecise                    = true,
-      .pipelineStatisticsQuery                  = true,
+      .pipelineStatisticsQuery                  = false,
       .vertexPipelineStoresAndAtomics           = pdevice->info->gen >= 8,
       .fragmentStoresAndAtomics                 = true,
       .shaderTessellationAndGeometryPointSize   = true,
