@@ -717,52 +717,6 @@ void anv_CmdUpdateBuffer(
    anv_meta_end_blit2d(cmd_buffer, &saved_state);
 }
 
-static VkFormat
-choose_iview_format(struct anv_image *image, VkImageAspectFlagBits aspect)
-{
-   assert(__builtin_popcount(aspect) == 1);
-
-   struct isl_surf *surf =
-      &anv_image_get_surface_for_aspect_mask(image, aspect)->isl;
-
-   /* vkCmdCopyImage behaves like memcpy. Therefore we choose identical UINT
-    * formats for the source and destination image views.
-    *
-    * From the Vulkan spec (2015-12-30):
-    *
-    *    vkCmdCopyImage performs image copies in a similar manner to a host
-    *    memcpy. It does not perform general-purpose conversions such as
-    *    scaling, resizing, blending, color-space conversion, or format
-    *    conversions.  Rather, it simply copies raw image data. vkCmdCopyImage
-    *    can copy between images with different formats, provided the formats
-    *    are compatible as defined below.
-    *
-    *    [The spec later defines compatibility as having the same number of
-    *    bytes per block].
-    */
-   return vk_format_for_size(isl_format_layouts[surf->format].bs);
-}
-
-static VkFormat
-choose_buffer_format(VkFormat format, VkImageAspectFlagBits aspect)
-{
-   assert(__builtin_popcount(aspect) == 1);
-
-   /* vkCmdCopy* commands behave like memcpy. Therefore we choose
-    * compatable UINT formats for the source and destination image views.
-    *
-    * For the buffer, we go back to the original image format and get a
-    * the format as if it were linear.  This way, for RGB formats, we get
-    * an RGB format here even if the tiled image is RGBA. XXX: This doesn't
-    * work if the buffer is the destination.
-    */
-   enum isl_format linear_format = anv_get_isl_format(format, aspect,
-                                                      VK_IMAGE_TILING_LINEAR,
-                                                      NULL);
-
-   return vk_format_for_size(isl_format_layouts[linear_format].bs);
-}
-
 void anv_CmdCopyImage(
     VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
@@ -1049,53 +1003,6 @@ meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
       }
    }
    anv_meta_end_blit2d(cmd_buffer, &saved_state);
-}
-
-static struct anv_image *
-make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
-                      VkImageUsageFlags usage,
-                      VkImageType image_type,
-                      const VkAllocationCallbacks *alloc,
-                      const VkBufferImageCopy *copy)
-{
-   ANV_FROM_HANDLE(anv_buffer, buffer, vk_buffer);
-
-   VkExtent3D extent = copy->imageExtent;
-   if (copy->bufferRowLength)
-      extent.width = copy->bufferRowLength;
-   if (copy->bufferImageHeight)
-      extent.height = copy->bufferImageHeight;
-   extent.depth = 1;
-   extent = meta_region_extent_el(format, &extent);
-
-   VkImageAspectFlags aspect = copy->imageSubresource.aspectMask;
-   VkFormat buffer_format = choose_buffer_format(format, aspect);
-
-   VkImage vk_image;
-   VkResult result = anv_CreateImage(vk_device,
-      &(VkImageCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-         .imageType = VK_IMAGE_TYPE_2D,
-         .format = buffer_format,
-         .extent = extent,
-         .mipLevels = 1,
-         .arrayLayers = 1,
-         .samples = 1,
-         .tiling = VK_IMAGE_TILING_LINEAR,
-         .usage = usage,
-         .flags = 0,
-      }, alloc, &vk_image);
-   assert(result == VK_SUCCESS);
-
-   ANV_FROM_HANDLE(anv_image, image, vk_image);
-
-   /* We could use a vk call to bind memory, but that would require
-    * creating a dummy memory object etc. so there's really no point.
-    */
-   image->bo = buffer->bo;
-   image->offset = buffer->offset + copy->bufferOffset;
-
-   return image;
 }
 
 void anv_CmdCopyBufferToImage(
