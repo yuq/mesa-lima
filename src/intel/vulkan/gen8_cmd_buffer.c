@@ -286,6 +286,17 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
+
+      /* From the BDW PRM for 3DSTATE_PUSH_CONSTANT_ALLOC_VS:
+       *
+       *    "The 3DSTATE_CONSTANT_VS must be reprogrammed prior to
+       *    the next 3DPRIMITIVE command after programming the
+       *    3DSTATE_PUSH_CONSTANT_ALLOC_VS"
+       *
+       * Since 3DSTATE_PUSH_CONSTANT_ALLOC_VS is programmed as part of
+       * pipeline setup, we need to dirty push constants.
+       */
+      cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
    }
 
    /* We emit the binding tables and sampler tables first, then emit push
