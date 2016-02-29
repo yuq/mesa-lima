@@ -307,6 +307,9 @@ void svga_context_flush( struct svga_context *svga,
     */
    svga_context_flush_buffers(svga);
 
+   svga->hud.command_buffer_size +=
+      svga->swc->get_command_buffer_size(svga->swc);
+
    /* Flush pending commands to hardware:
     */
    svga->swc->flush(svga->swc, &fence);

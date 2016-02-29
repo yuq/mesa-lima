@@ -727,6 +727,7 @@ svga_create_query(struct pipe_context *pipe,
    case SVGA_QUERY_MAP_BUFFER_TIME:
    case SVGA_QUERY_NUM_RESOURCES_MAPPED:
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
+   case SVGA_QUERY_COMMAND_BUFFER_SIZE:
    case SVGA_QUERY_MEMORY_USED:
    case SVGA_QUERY_NUM_SHADERS:
    case SVGA_QUERY_NUM_RESOURCES:
@@ -796,6 +797,7 @@ svga_destroy_query(struct pipe_context *pipe, struct pipe_query *q)
    case SVGA_QUERY_MAP_BUFFER_TIME:
    case SVGA_QUERY_NUM_RESOURCES_MAPPED:
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
+   case SVGA_QUERY_COMMAND_BUFFER_SIZE:
    case SVGA_QUERY_MEMORY_USED:
    case SVGA_QUERY_NUM_SHADERS:
    case SVGA_QUERY_NUM_RESOURCES:
@@ -883,6 +885,9 @@ svga_begin_query(struct pipe_context *pipe, struct pipe_query *q)
       break;
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
       sq->begin_count = svga->hud.num_bytes_uploaded;
+      break;
+   case SVGA_QUERY_COMMAND_BUFFER_SIZE:
+      sq->begin_count = svga->hud.command_buffer_size;
       break;
    case SVGA_QUERY_MEMORY_USED:
    case SVGA_QUERY_NUM_SHADERS:
@@ -977,6 +982,9 @@ svga_end_query(struct pipe_context *pipe, struct pipe_query *q)
       break;
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
       sq->end_count = svga->hud.num_bytes_uploaded;
+      break;
+   case SVGA_QUERY_COMMAND_BUFFER_SIZE:
+      sq->end_count = svga->hud.command_buffer_size;
       break;
    case SVGA_QUERY_MEMORY_USED:
    case SVGA_QUERY_NUM_SHADERS:
@@ -1076,6 +1084,7 @@ svga_get_query_result(struct pipe_context *pipe,
    case SVGA_QUERY_MAP_BUFFER_TIME:
    case SVGA_QUERY_NUM_RESOURCES_MAPPED:
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
+   case SVGA_QUERY_COMMAND_BUFFER_SIZE:
       vresult->u64 = sq->end_count - sq->begin_count;
       break;
    /* These are running total counters */
