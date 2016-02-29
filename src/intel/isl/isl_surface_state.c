@@ -227,6 +227,11 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
 
+#if (GEN_GEN == 7)
+      .SurfaceArraySpacing = info->surf->array_pitch_span ==
+                             ISL_ARRAY_PITCH_SPAN_COMPACT,
+#endif
+
 #if GEN_GEN >= 8
       .SamplerL2BypassModeDisable = true,
 #endif
