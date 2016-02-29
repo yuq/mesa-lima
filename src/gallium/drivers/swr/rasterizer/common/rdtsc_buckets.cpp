@@ -64,8 +64,10 @@ void BucketManager::RegisterThread(const std::string& name)
 
 UINT BucketManager::RegisterBucket(const BUCKET_DESC& desc)
 {
+    mThreadMutex.lock();
     size_t id = mBuckets.size();
     mBuckets.push_back(desc);
+    mThreadMutex.unlock();
     return (UINT)id;
 }
 
@@ -185,4 +187,14 @@ void BucketManager::PrintReport(const std::string& filename)
 
         fclose(f);
     }
+}
+
+void BucketManager_StartBucket(BucketManager* pBucketMgr, uint32_t id)
+{
+    pBucketMgr->StartBucket(id);
+}
+
+void BucketManager_StopBucket(BucketManager* pBucketMgr, uint32_t id)
+{
+    pBucketMgr->StopBucket(id);
 }

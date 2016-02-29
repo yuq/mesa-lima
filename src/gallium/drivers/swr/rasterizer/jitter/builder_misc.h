@@ -147,3 +147,7 @@ Value* INT3() { return INTERRUPT(C((uint8_t)3)); }
 
 Value *VEXTRACTI128(Value* a, Constant* imm8);
 Value *VINSERTI128(Value* a, Value* b, Constant* imm8);
+
+// rdtsc buckets macros
+void RDTSC_START(Value* pBucketMgr, Value* pId);
+void RDTSC_STOP(Value* pBucketMgr, Value* pId);

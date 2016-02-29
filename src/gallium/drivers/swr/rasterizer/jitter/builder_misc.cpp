@@ -28,6 +28,8 @@
 * 
 ******************************************************************************/
 #include "builder.h"
+#include "common/rdtsc_buckets.h"
+
 #include "llvm/Support/DynamicLibrary.h"
 
 void __cdecl CallPrint(const char* fmt, ...);
@@ -1447,3 +1449,39 @@ Value *Builder::VINSERTI128(Value* a, Value* b, Constant* imm8)
     return VSHUFFLE(a, inter, ConstantVector::get(idx2));
 #endif
 }
+
+// rdtsc buckets macros
+void Builder::RDTSC_START(Value* pBucketMgr, Value* pId)
+{
+    std::vector<Type*> args{
+        PointerType::get(mInt32Ty, 0),   // pBucketMgr
+        mInt32Ty                        // id
+    };
+
+    FunctionType* pFuncTy = FunctionType::get(Type::getVoidTy(JM()->mContext), args, false);
+    Function* pFunc = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("BucketManager_StartBucket", pFuncTy));
+    if (sys::DynamicLibrary::SearchForAddressOfSymbol("BucketManager_StartBucket") == nullptr)
+    {
+        sys::DynamicLibrary::AddSymbol("BucketManager_StartBucket", (void*)&BucketManager_StartBucket);
+    }
+
+    CALL(pFunc, { pBucketMgr, pId });
+}
+
+void Builder::RDTSC_STOP(Value* pBucketMgr, Value* pId)
+{
+    std::vector<Type*> args{
+        PointerType::get(mInt32Ty, 0),   // pBucketMgr
+        mInt32Ty                        // id
+    };
+
+    FunctionType* pFuncTy = FunctionType::get(Type::getVoidTy(JM()->mContext), args, false);
+    Function* pFunc = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("BucketManager_StopBucket", pFuncTy));
+    if (sys::DynamicLibrary::SearchForAddressOfSymbol("BucketManager_StopBucket") == nullptr)
+    {
+        sys::DynamicLibrary::AddSymbol("BucketManager_StopBucket", (void*)&BucketManager_StopBucket);
+    }
+
+    CALL(pFunc, { pBucketMgr, pId });
+}
+

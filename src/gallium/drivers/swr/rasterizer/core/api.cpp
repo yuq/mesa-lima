@@ -49,7 +49,7 @@ void SetupDefaultState(SWR_CONTEXT *pContext);
 /// @brief Create SWR Context.
 /// @param pCreateInfo - pointer to creation info.
 HANDLE SwrCreateContext(
-    const SWR_CREATECONTEXT_INFO* pCreateInfo)
+    SWR_CREATECONTEXT_INFO* pCreateInfo)
 {
     RDTSC_RESET();
     RDTSC_INIT(0);
@@ -117,6 +117,11 @@ HANDLE SwrCreateContext(
     pContext->pfnLoadTile = pCreateInfo->pfnLoadTile;
     pContext->pfnStoreTile = pCreateInfo->pfnStoreTile;
     pContext->pfnClearTile = pCreateInfo->pfnClearTile;
+
+    // pass pointer to bucket manager back to caller
+#ifdef KNOB_ENABLE_RDTSC
+    pCreateInfo->pBucketMgr = &gBucketMgr;
+#endif
 
     return (HANDLE)pContext;
 }

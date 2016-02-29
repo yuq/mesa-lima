@@ -77,6 +77,8 @@ typedef void(SWR_API *PFN_CLEAR_TILE)(HANDLE hPrivateContext,
     SWR_RENDERTARGET_ATTACHMENT rtIndex,
     uint32_t x, uint32_t y, const float* pClearColor);
 
+class BucketManager;
+
 //////////////////////////////////////////////////////////////////////////
 /// SWR_CREATECONTEXT_INFO
 /////////////////////////////////////////////////////////////////////////
@@ -91,10 +93,14 @@ struct SWR_CREATECONTEXT_INFO
     // Each SWR context can have multiple sets of active state
     uint32_t maxSubContexts;
 
-    // tile manipulation functions
+    // Tile manipulation functions
     PFN_LOAD_TILE pfnLoadTile;
     PFN_STORE_TILE pfnStoreTile;
     PFN_CLEAR_TILE pfnClearTile;
+
+    // Pointer to rdtsc buckets mgr returned to the caller.
+    // Only populated when KNOB_ENABLE_RDTSC is set
+    BucketManager* pBucketMgr;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -112,7 +118,7 @@ struct SWR_RECT
 /// @brief Create SWR Context.
 /// @param pCreateInfo - pointer to creation info.
 HANDLE SWR_API SwrCreateContext(
-    const SWR_CREATECONTEXT_INFO* pCreateInfo);
+    SWR_CREATECONTEXT_INFO* pCreateInfo);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Destroys SWR Context.
