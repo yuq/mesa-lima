@@ -2815,6 +2815,7 @@ reuse_framebuffer_texture_attachment(struct gl_framebuffer *fb,
    dst_att->Complete = src_att->Complete;
    dst_att->TextureLevel = src_att->TextureLevel;
    dst_att->Zoffset = src_att->Zoffset;
+   dst_att->Layered = src_att->Layered;
 }
 
 
