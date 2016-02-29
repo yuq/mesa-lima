@@ -177,9 +177,7 @@ protected:
 
     virtual VOID HwlComputeSurfaceAlignmentsMacroTiled(
         AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
-        UINT_32 mipLevel, UINT_32 numSamples, ADDR_TILEINFO* pTileInfo,
-        UINT_32* pBaseAlign, UINT_32* pPitchAlign, UINT_32* pHeightAlign,
-        UINT_32* pMacroTileWidth, UINT_32* pMacroTileHeight) const;
+        UINT_32 mipLevel, UINT_32 numSamples, ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut) const;
 
 private:
     VOID ReadGbTileMode(
@@ -207,6 +205,8 @@ private:
         UINT_32 numOfSamplesPerSplit) const;
 
     static const UINT_32    MacroTileTableSize = 16;
+    static const UINT_32    PrtMacroModeOffset = MacroTileTableSize / 2;
+
     ADDR_TILEINFO           m_macroTileTable[MacroTileTableSize];
     UINT_32                 m_noOfMacroEntries;
     BOOL_32                 m_allowNonDispThickModes;

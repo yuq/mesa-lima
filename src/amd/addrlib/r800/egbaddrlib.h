@@ -303,9 +303,7 @@ protected:
 
     virtual VOID HwlComputeSurfaceAlignmentsMacroTiled(
         AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
-        UINT_32 mipLevel, UINT_32 numSamples, ADDR_TILEINFO* pTileInfo,
-        UINT_32* pBaseAlign, UINT_32* pPitchAlign, UINT_32* pHeightAlign,
-        UINT_32* pMacroTileWidth, UINT_32* pMacroTileHeight) const
+        UINT_32 mipLevel, UINT_32 numSamples, ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut) const
     {
     }
 
@@ -340,9 +338,7 @@ private:
     BOOL_32 ComputeSurfaceAlignmentsMacroTiled(
         AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
         UINT_32 mipLevel, UINT_32 numSamples,
-        ADDR_TILEINFO* pTileInfo,
-        UINT_32* pBaseAlign, UINT_32* pPitchAlign, UINT_32* pHeightAlign,
-        UINT_32* pMacroTileWidth, UINT_32* pMacroTileHeight) const;
+        ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut) const;
 
     /// Surface addressing functions
     UINT_64 DispatchComputeSurfaceAddrFromCoord(

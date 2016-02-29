@@ -463,12 +463,7 @@ BOOL_32 EgBasedLib::ComputeSurfaceInfoMacroTiled(
                                                pIn->flags,
                                                pIn->mipLevel,
                                                numSamples,
-                                               pOut->pTileInfo,
-                                               &pOut->baseAlign,
-                                               &pOut->pitchAlign,
-                                               &pOut->heightAlign,
-                                               &pOut->blockWidth,
-                                               &pOut->blockHeight);
+                                               pOut);
 
     if (valid)
     {
@@ -521,12 +516,7 @@ BOOL_32 EgBasedLib::ComputeSurfaceInfoMacroTiled(
                                                        pIn->flags,
                                                        pIn->mipLevel,
                                                        numSamples,
-                                                       pOut->pTileInfo,
-                                                       &pOut->baseAlign,
-                                                       &pOut->pitchAlign,
-                                                       &pOut->heightAlign,
-                                                       &pOut->blockWidth,
-                                                       &pOut->blockHeight);
+                                                       pOut);
         }
 
         //
@@ -854,19 +844,16 @@ BOOL_32 EgBasedLib::HwlReduceBankWidthHeight(
 ****************************************************************************************************
 */
 BOOL_32 EgBasedLib::ComputeSurfaceAlignmentsMacroTiled(
-    AddrTileMode        tileMode,           ///< [in] tile mode
-    UINT_32             bpp,                ///< [in] bits per pixel
-    ADDR_SURFACE_FLAGS  flags,              ///< [in] surface flags
-    UINT_32             mipLevel,           ///< [in] mip level
-    UINT_32             numSamples,         ///< [in] number of samples
-    ADDR_TILEINFO*      pTileInfo,          ///< [in,out] bank structure.
-    UINT_32*            pBaseAlign,         ///< [out] base address alignment in bytes
-    UINT_32*            pPitchAlign,        ///< [out] pitch alignment in pixels
-    UINT_32*            pHeightAlign,       ///< [out] height alignment in pixels
-    UINT_32*            pMacroTileWidth,    ///< [out] macro tile width in pixels
-    UINT_32*            pMacroTileHeight    ///< [out] macro tile height in pixels
+    AddrTileMode                      tileMode,           ///< [in] tile mode
+    UINT_32                           bpp,                ///< [in] bits per pixel
+    ADDR_SURFACE_FLAGS                flags,              ///< [in] surface flags
+    UINT_32                           mipLevel,           ///< [in] mip level
+    UINT_32                           numSamples,         ///< [in] number of samples
+    ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut                ///< [in,out] Surface output
     ) const
 {
+    ADDR_TILEINFO* pTileInfo = pOut->pTileInfo;
+
     BOOL_32 valid = SanityCheckMacroTiled(pTileInfo);
 
     if (valid)
@@ -924,10 +911,10 @@ BOOL_32 EgBasedLib::ComputeSurfaceAlignmentsMacroTiled(
         macroTileWidth = MicroTileWidth * pTileInfo->bankWidth * pipes *
             pTileInfo->macroAspectRatio;
 
-        *pPitchAlign = macroTileWidth;
-        *pMacroTileWidth = macroTileWidth;
+        pOut->pitchAlign = macroTileWidth;
+        pOut->blockWidth = macroTileWidth;
 
-        AdjustPitchAlignment(flags, pPitchAlign);
+        AdjustPitchAlignment(flags, &pOut->pitchAlign);
 
         //
         // The required granularity for height is the macro tile height.
@@ -935,18 +922,16 @@ BOOL_32 EgBasedLib::ComputeSurfaceAlignmentsMacroTiled(
         macroTileHeight = MicroTileHeight * pTileInfo->bankHeight * pTileInfo->banks /
             pTileInfo->macroAspectRatio;
 
-        *pHeightAlign = macroTileHeight;
-        *pMacroTileHeight = macroTileHeight;
+        pOut->heightAlign = macroTileHeight;
+        pOut->blockHeight = macroTileHeight;
 
         //
         // Compute base alignment
         //
-        *pBaseAlign = pipes *
-            pTileInfo->bankWidth * pTileInfo->banks * pTileInfo->bankHeight * tileSize;
+        pOut->baseAlign =
+            pipes * pTileInfo->bankWidth * pTileInfo->banks * pTileInfo->bankHeight * tileSize;
 
-        HwlComputeSurfaceAlignmentsMacroTiled(tileMode, bpp, flags, mipLevel, numSamples,
-                                              pTileInfo, pBaseAlign, pPitchAlign, pHeightAlign,
-                                              pMacroTileWidth, pMacroTileHeight);
+        HwlComputeSurfaceAlignmentsMacroTiled(tileMode, bpp, flags, mipLevel, numSamples, pOut);
     }
 
     return valid;
@@ -1169,16 +1154,12 @@ BOOL_32 EgBasedLib::HwlGetAlignmentInfoMacroTiled(
 
     ADDR_ASSERT(IsMacroTiled(pIn->tileMode));
 
-    UINT_32 baseAlign;
-    UINT_32 pitchAlign;
-    UINT_32 heightAlign;
-    UINT_32 macroTileWidth;
-    UINT_32 macroTileHeight;
     UINT_32 numSamples = (pIn->numFrags == 0) ? pIn->numSamples : pIn->numFrags;
 
     ADDR_ASSERT(pIn->pTileInfo);
     ADDR_TILEINFO tileInfo = *pIn->pTileInfo;
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT out = {0};
+    out.pTileInfo = &tileInfo;
 
     if (UseTileIndex(pIn->tileIndex))
     {
@@ -1202,18 +1183,13 @@ BOOL_32 EgBasedLib::HwlGetAlignmentInfoMacroTiled(
                                                pIn->flags,
                                                pIn->mipLevel,
                                                numSamples,
-                                               &tileInfo,
-                                               &baseAlign,
-                                               &pitchAlign,
-                                               &heightAlign,
-                                               &macroTileWidth,
-                                               &macroTileHeight);
+                                               &out);
 
     if (valid)
     {
-        *pPitchAlign = pitchAlign;
-        *pHeightAlign = heightAlign;
-        *pSizeAlign = baseAlign;
+        *pPitchAlign  = out.pitchAlign;
+        *pHeightAlign = out.heightAlign;
+        *pSizeAlign   = out.baseAlign;
     }
 
     return valid;

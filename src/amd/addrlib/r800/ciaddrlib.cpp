@@ -896,7 +896,7 @@ VOID CiLib::HwlOptimizeTileMode(
     {
         UINT_32 thickness = Thickness(tileMode);
 
-        if (pInOut->maxBaseAlign < Block64K)
+        if ((pInOut->maxBaseAlign != 0) && (pInOut->maxBaseAlign < Block64K))
         {
             tileMode = (thickness == 1) ? ADDR_TM_1D_TILED_THIN1 : ADDR_TM_1D_TILED_THICK;
         }
@@ -1213,7 +1213,7 @@ VOID CiLib::HwlSetupTileInfo(
     INT macroModeIndex = TileIndexInvalid;
 
     // Fail-safe code
-    if (!IsLinear(tileMode))
+    if (IsLinear(tileMode) == FALSE)
     {
         // Thick tile modes must use thick micro tile mode but Bonaire does not support due to
         // old derived netlists (UBTS 404321)
@@ -1825,9 +1825,6 @@ INT_32 CiLib::HwlComputeMacroModeIndex(
 
         if (flags.prt || IsPrtTileMode(tileMode))
         {
-            // Unknown - assume it is 1/2 of table size
-            const UINT_32 PrtMacroModeOffset = MacroTileTableSize / 2;
-
             macroModeIndex += PrtMacroModeOffset;
             *pTileInfo = m_macroTileTable[macroModeIndex];
         }
@@ -2027,25 +2024,27 @@ UINT_64 CiLib::HwlComputeMetadataNibbleAddress(
 ****************************************************************************************************
 */
 VOID CiLib::HwlComputeSurfaceAlignmentsMacroTiled(
-    AddrTileMode        tileMode,           ///< [in] tile mode
-    UINT_32             bpp,                ///< [in] bits per pixel
-    ADDR_SURFACE_FLAGS  flags,              ///< [in] surface flags
-    UINT_32             mipLevel,           ///< [in] mip level
-    UINT_32             numSamples,         ///< [in] number of samples
-    ADDR_TILEINFO*      pTileInfo,          ///< [in,out] bank structure.
-    UINT_32*            pBaseAlign,         ///< [out] base address alignment in bytes
-    UINT_32*            pPitchAlign,        ///< [out] pitch alignment in pixels
-    UINT_32*            pHeightAlign,       ///< [out] height alignment in pixels
-    UINT_32*            pMacroTileWidth,    ///< [out] macro tile width in pixels
-    UINT_32*            pMacroTileHeight    ///< [out] macro tile height in pixels
+    AddrTileMode                      tileMode,           ///< [in] tile mode
+    UINT_32                           bpp,                ///< [in] bits per pixel
+    ADDR_SURFACE_FLAGS                flags,              ///< [in] surface flags
+    UINT_32                           mipLevel,           ///< [in] mip level
+    UINT_32                           numSamples,         ///< [in] number of samples
+    ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut                ///< [in,out] Surface output
     ) const
 {
+    // This is to workaround a H/W limitation that DCC doesn't work when pipe config is switched to
+    // P4. In theory, all asics that have such switching should be patched but we now only know what
+    // to pad for Fiji.
     if ((m_settings.isFiji == TRUE) &&
         (flags.dccCompatible == TRUE) &&
+        (flags.prt == FALSE) &&
         (mipLevel == 0) &&
-        (tileMode == ADDR_TM_PRT_TILED_THIN1))
+        (tileMode == ADDR_TM_PRT_TILED_THIN1) &&
+        (pOut->dccUnsupport == TRUE))
     {
-        *pPitchAlign = PowTwoAlign(*pPitchAlign, 256);
+        pOut->pitchAlign   = PowTwoAlign(pOut->pitchAlign, 256);
+        // In case the client still requests DCC usage.
+        pOut->dccUnsupport = FALSE;
     }
 }
 

@@ -249,9 +249,7 @@ protected:
 
     virtual VOID HwlComputeSurfaceAlignmentsMacroTiled(
         AddrTileMode tileMode, UINT_32 bpp, ADDR_SURFACE_FLAGS flags,
-        UINT_32 mipLevel, UINT_32 numSamples, ADDR_TILEINFO* pTileInfo,
-        UINT_32* pBaseAlign, UINT_32* pPitchAlign, UINT_32* pHeightAlign,
-        UINT_32* pMacroTileWidth, UINT_32* pMacroTileHeight) const;
+        UINT_32 mipLevel, UINT_32 numSamples, ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut) const;
 
     // Get equation table pointer and number of equations
     virtual UINT_32 HwlGetEquationTableInfo(const ADDR_EQUATION** ppEquationTable) const
@@ -286,7 +284,7 @@ protected:
     UINT_32 GetPipePerSurf(AddrPipeCfg pipeConfig) const;
 
     static const UINT_32    TileTableSize = 32;
-    TileConfig          m_tileTable[TileTableSize];
+    TileConfig              m_tileTable[TileTableSize];
     UINT_32                 m_noOfEntries;
 
     // Max number of bpp (8bpp/16bpp/32bpp/64bpp/128bpp)

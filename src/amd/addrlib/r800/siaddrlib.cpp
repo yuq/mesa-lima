@@ -3381,22 +3381,17 @@ ADDR_E_RETURNCODE SiLib::HwlGetMaxAlignments(
 ****************************************************************************************************
 */
 VOID SiLib::HwlComputeSurfaceAlignmentsMacroTiled(
-    AddrTileMode        tileMode,           ///< [in] tile mode
-    UINT_32             bpp,                ///< [in] bits per pixel
-    ADDR_SURFACE_FLAGS  flags,              ///< [in] surface flags
-    UINT_32             mipLevel,           ///< [in] mip level
-    UINT_32             numSamples,         ///< [in] number of samples
-    ADDR_TILEINFO*      pTileInfo,          ///< [in,out] bank structure.
-    UINT_32*            pBaseAlign,         ///< [out] base address alignment in bytes
-    UINT_32*            pPitchAlign,        ///< [out] pitch alignment in pixels
-    UINT_32*            pHeightAlign,       ///< [out] height alignment in pixels
-    UINT_32*            pMacroTileWidth,    ///< [out] macro tile width in pixels
-    UINT_32*            pMacroTileHeight    ///< [out] macro tile height in pixels
+    AddrTileMode                      tileMode,           ///< [in] tile mode
+    UINT_32                           bpp,                ///< [in] bits per pixel
+    ADDR_SURFACE_FLAGS                flags,              ///< [in] surface flags
+    UINT_32                           mipLevel,           ///< [in] mip level
+    UINT_32                           numSamples,         ///< [in] number of samples
+    ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut                ///< [in,out] Surface output
     ) const
 {
     if ((mipLevel == 0) && (flags.prt))
     {
-        UINT_32 macroTileSize = (*pMacroTileWidth) * (*pMacroTileHeight) * numSamples * bpp / 8;
+        UINT_32 macroTileSize = pOut->blockWidth * pOut->blockHeight * numSamples * bpp / 8;
 
         if (macroTileSize < PrtTileSize)
         {
@@ -3404,8 +3399,8 @@ VOID SiLib::HwlComputeSurfaceAlignmentsMacroTiled(
 
             ADDR_ASSERT((PrtTileSize % macroTileSize) == 0);
 
-            *pPitchAlign *= numMacroTiles;
-            *pBaseAlign  *= numMacroTiles;
+            pOut->pitchAlign *= numMacroTiles;
+            pOut->baseAlign  *= numMacroTiles;
         }
     }
 }
