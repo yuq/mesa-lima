@@ -1040,6 +1040,98 @@ void anv_CmdBlitImage(
    meta_finish_blit(cmd_buffer, &saved_state);
 }
 
+static void
+meta_copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
+                          struct anv_buffer* buffer,
+                          struct anv_image* image,
+                          uint32_t regionCount,
+                          const VkBufferImageCopy* pRegions,
+                          bool forward)
+{
+   struct anv_meta_saved_state saved_state;
+
+   /* The Vulkan 1.0 spec says "dstImage must have a sample count equal to
+    * VK_SAMPLE_COUNT_1_BIT."
+    */
+   assert(image->samples == 1);
+
+   anv_meta_begin_blit2d(cmd_buffer, &saved_state);
+
+   for (unsigned r = 0; r < regionCount; r++) {
+
+      /* Start creating blit rect */
+      const VkOffset3D img_offset_el = meta_region_offset_el(image, &pRegions[r].imageOffset);
+      const VkExtent3D bufferExtent = {
+         .width = pRegions[r].bufferRowLength,
+         .height = pRegions[r].bufferImageHeight,
+      };
+      const VkExtent3D buf_extent_el = meta_region_extent_el(image->vk_format, &bufferExtent);
+      const VkExtent3D img_extent_el = meta_region_extent_el(image->vk_format,
+                                                               &pRegions[r].imageExtent);
+      struct anv_meta_blit2d_rect rect = {
+         .width = MAX2(buf_extent_el.width, img_extent_el.width),
+         .height = MAX2(buf_extent_el.height, img_extent_el.height),
+      };
+
+      /* Create blit surfaces */
+      VkImageAspectFlags aspect = pRegions[r].imageSubresource.aspectMask;
+      const struct isl_surf *img_isl_surf =
+         &anv_image_get_surface_for_aspect_mask(image, aspect)->isl;
+      struct anv_meta_blit2d_surf img_bsurf = blit_surf_for_image(image, img_isl_surf);
+      struct anv_meta_blit2d_surf buf_bsurf = {
+         .bo = buffer->bo,
+         .tiling = ISL_TILING_LINEAR,
+         .base_offset = buffer->offset + pRegions[r].bufferOffset,
+         .bs = forward ? image->format->isl_layout->bs : img_bsurf.bs,
+         .pitch = rect.width * buf_bsurf.bs,
+      };
+
+      /* Set direction-dependent variables */
+      struct anv_meta_blit2d_surf *dst_bsurf = forward ? &img_bsurf : &buf_bsurf;
+      struct anv_meta_blit2d_surf *src_bsurf = forward ? &buf_bsurf : &img_bsurf;
+      uint32_t *x_offset = forward ? &rect.dst_x : &rect.src_x;
+      uint32_t *y_offset = forward ? &rect.dst_y : &rect.src_y;
+
+      /* Loop through each 3D or array slice */
+      unsigned num_slices_3d = pRegions[r].imageExtent.depth;
+      unsigned num_slices_array = pRegions[r].imageSubresource.layerCount;
+      unsigned slice_3d = 0;
+      unsigned slice_array = 0;
+      while (slice_3d < num_slices_3d && slice_array < num_slices_array) {
+
+         /* Finish creating blit rect */
+         isl_surf_get_image_offset_el(img_isl_surf,
+                                    pRegions[r].imageSubresource.mipLevel,
+                                    pRegions[r].imageSubresource.baseArrayLayer + slice_array,
+                                    pRegions[r].imageOffset.z + slice_3d,
+                                    x_offset,
+                                    y_offset);
+         *x_offset += img_offset_el.x;
+         *y_offset += img_offset_el.y;
+
+         /* Perform Blit */
+         anv_meta_blit2d(cmd_buffer,
+                        src_bsurf,
+                        dst_bsurf,
+                        1,
+                        &rect);
+
+         /* Once we've done the blit, all of the actual information about
+          * the image is embedded in the command buffer so we can just
+          * increment the offset directly in the image effectively
+          * re-binding it to different backing memory.
+          */
+         buf_bsurf.base_offset += rect.width * rect.height * buf_bsurf.bs;
+
+         if (image->type == VK_IMAGE_TYPE_3D)
+            slice_3d++;
+         else
+            slice_array++;
+      }
+   }
+   anv_meta_end_blit2d(cmd_buffer, &saved_state);
+}
+
 static struct anv_image *
 make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
                       VkImageUsageFlags usage,
