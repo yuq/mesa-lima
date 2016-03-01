@@ -3557,9 +3557,12 @@ VOID Lib::OptimizeTileMode(
     ) const
 {
     AddrTileMode tileMode = pInOut->tileMode;
+
     BOOL_32 doOpt = (pInOut->flags.opt4Space == TRUE) ||
                     (pInOut->flags.minimizeAlignment == TRUE) ||
                     (pInOut->maxBaseAlign != 0);
+
+    BOOL_32 convertToPrt = FALSE;
 
     // Optimization can only be done on level 0 and samples <= 1
     if ((doOpt == TRUE)                     &&
@@ -3570,7 +3573,6 @@ VOID Lib::OptimizeTileMode(
         UINT_32 width = pInOut->width;
         UINT_32 height = pInOut->height;
         UINT_32 thickness = Thickness(tileMode);
-        BOOL_32 convertToPrt = FALSE;
         BOOL_32 macroTiledOK = TRUE;
         UINT_32 macroWidthAlign = 0;
         UINT_32 macroHeightAlign = 0;
@@ -3680,15 +3682,22 @@ VOID Lib::OptimizeTileMode(
                 }
             }
         }
+    }
 
-        if (convertToPrt)
+    if (convertToPrt)
+    {
+        if ((pInOut->flags.matchStencilTileCfg == TRUE) && (pInOut->numSamples <= 1))
+        {
+            pInOut->tileMode = ADDR_TM_1D_TILED_THIN1;
+        }
+        else
         {
             HwlSetPrtTileMode(pInOut);
         }
-        else if (tileMode != pInOut->tileMode)
-        {
-            pInOut->tileMode = tileMode;
-        }
+    }
+    else if (tileMode != pInOut->tileMode)
+    {
+        pInOut->tileMode = tileMode;
     }
 
     HwlOptimizeTileMode(pInOut);

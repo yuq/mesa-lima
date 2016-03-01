@@ -519,7 +519,9 @@ typedef union _ADDR_SURFACE_FLAGS
         UINT_32 rotateDisplay        : 1; ///< Rotate micro tile type
         UINT_32 minimizeAlignment    : 1; ///< Minimize alignment
         UINT_32 preferEquation       : 1; ///< Return equation index without adjusting tile mode
-        UINT_32 reserved             : 4; ///< Reserved bits
+        UINT_32 matchStencilTileCfg  : 1; ///< Select tile index of stencil as well as depth surface
+                                          ///  to make sure they share same tile config parameters
+        UINT_32 reserved             : 3; ///< Reserved bits
     };
 
     UINT_32 value;
@@ -628,6 +630,8 @@ typedef struct _ADDR_COMPUTE_SURFACE_INFO_OUTPUT
 
     /// Stereo info
     ADDR_QBSTEREOINFO*  pStereoInfo;///< Stereo information, needed when .qbStereo flag is TRUE
+
+    INT_32          stencilTileIdx; ///< stencil tile index output when matchStencilTileCfg was set
 } ADDR_COMPUTE_SURFACE_INFO_OUTPUT;
 
 /**

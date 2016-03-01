@@ -204,8 +204,15 @@ private:
         UINT_32 numOfBanks,
         UINT_32 numOfSamplesPerSplit) const;
 
+    BOOL_32 DepthStencilTileCfgMatch(
+        const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,
+        ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut) const;
+
     static const UINT_32    MacroTileTableSize = 16;
     static const UINT_32    PrtMacroModeOffset = MacroTileTableSize / 2;
+    static const INT_32     MinDepth2DThinIndex = 0;
+    static const INT_32     MaxDepth2DThinIndex = 4;
+    static const INT_32     Depth1DThinIndex = 5;
 
     ADDR_TILEINFO           m_macroTileTable[MacroTileTableSize];
     UINT_32                 m_noOfMacroEntries;

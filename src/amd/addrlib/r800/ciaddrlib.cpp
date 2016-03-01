@@ -709,14 +709,58 @@ ADDR_E_RETURNCODE CiLib::HwlComputeSurfaceInfo(
         pOut->macroModeIndex = TileIndexInvalid;
     }
 
-    // Pass tcCompatible flag from input to output; and turn off it if tile split occurs
-    pOut->tcCompatible = pIn->flags.tcCompatible;
-
-    ADDR_E_RETURNCODE retCode = SiLib::HwlComputeSurfaceInfo(pIn,pOut);
+    ADDR_E_RETURNCODE retCode = SiLib::HwlComputeSurfaceInfo(pIn, pOut);
 
     if (pOut->macroModeIndex == TileIndexNoMacroIndex)
     {
         pOut->macroModeIndex = TileIndexInvalid;
+    }
+
+    if ((pIn->flags.matchStencilTileCfg == TRUE) &&
+        (pIn->flags.depth == TRUE))
+    {
+        pOut->stencilTileIdx = TileIndexInvalid;
+
+        if ((MinDepth2DThinIndex <= pOut->tileIndex) &&
+            (MaxDepth2DThinIndex >= pOut->tileIndex))
+        {
+            BOOL_32 depthStencil2DTileConfigMatch = DepthStencilTileCfgMatch(pIn, pOut);
+
+            if ((depthStencil2DTileConfigMatch == FALSE) &&
+                (pOut->tcCompatible == TRUE))
+            {
+                pOut->macroModeIndex = TileIndexInvalid;
+
+                ADDR_COMPUTE_SURFACE_INFO_INPUT localIn = *pIn;
+                localIn.tileIndex = TileIndexInvalid;
+                localIn.pTileInfo = NULL;
+                localIn.flags.tcCompatible = FALSE;
+
+                SiLib::HwlComputeSurfaceInfo(&localIn, pOut);
+
+                ADDR_ASSERT((MinDepth2DThinIndex <= pOut->tileIndex) && (MaxDepth2DThinIndex >= pOut->tileIndex));
+
+                depthStencil2DTileConfigMatch = DepthStencilTileCfgMatch(pIn, pOut);
+            }
+
+            if ((depthStencil2DTileConfigMatch == FALSE) &&
+                (pIn->numSamples <= 1))
+            {
+                pOut->macroModeIndex = TileIndexInvalid;
+
+                ADDR_COMPUTE_SURFACE_INFO_INPUT localIn = *pIn;
+                localIn.tileMode = ADDR_TM_1D_TILED_THIN1;
+                localIn.tileIndex = TileIndexInvalid;
+                localIn.pTileInfo = NULL;
+
+                retCode = SiLib::HwlComputeSurfaceInfo(&localIn, pOut);
+            }
+        }
+
+        if (pOut->tileIndex == Depth1DThinIndex)
+        {
+            pOut->stencilTileIdx = Depth1DThinIndex;
+        }
     }
 
     return retCode;
@@ -1150,10 +1194,10 @@ VOID CiLib::HwlSelectTileMode(
     {
         pInOut->flags.opt4Space = TRUE;
         pInOut->maxBaseAlign = Block64K;
-
-        // Optimize tile mode if possible
-        OptimizeTileMode(pInOut);
     }
+
+    // Optimize tile mode if possible
+    OptimizeTileMode(pInOut);
 
     HwlOverrideTileMode(pInOut);
 }
@@ -1256,6 +1300,12 @@ VOID CiLib::HwlSetupTileInfo(
         }
     }
 
+    // tcCompatible flag is only meaningful for gfx8.
+    if (m_settings.isVolcanicIslands == FALSE)
+    {
+        flags.tcCompatible = FALSE;
+    }
+
     if (IsTileInfoAllZero(pTileInfo))
     {
         // See table entries 0-4
@@ -1268,14 +1318,16 @@ VOID CiLib::HwlSetupTileInfo(
             if (m_rowSize < tileSize)
             {
                 flags.tcCompatible = FALSE;
-                pOut->tcCompatible = FALSE;
             }
 
-            if (flags.depth && (flags.nonSplit || flags.tcCompatible || flags.needEquation))
+            if (flags.nonSplit | flags.tcCompatible | flags.needEquation)
             {
                 // Texture readable depth surface should not be split
                 switch (tileSize)
                 {
+                    case 64:
+                        index = 0;
+                        break;
                     case 128:
                         index = 1;
                         break;
@@ -1451,7 +1503,7 @@ VOID CiLib::HwlSetupTileInfo(
 
                     ADDR_ASSERT(macroTileBytes == PrtTileBytes);
 
-                    pOut->tcCompatible = FALSE;
+                    flags.tcCompatible = FALSE;
                     pOut->dccUnsupport = TRUE;
                 }
             }
@@ -1475,7 +1527,6 @@ VOID CiLib::HwlSetupTileInfo(
             if (m_rowSize < tileSize)
             {
                 flags.tcCompatible = FALSE;
-                pOut->tcCompatible = FALSE;
             }
         }
 
@@ -1510,7 +1561,7 @@ VOID CiLib::HwlSetupTileInfo(
         *pTileInfo = m_tileTable[8].info;
     }
 
-    if (pOut->tcCompatible)
+    if (flags.tcCompatible)
     {
         if (IsMacroTiled(tileMode))
         {
@@ -1535,7 +1586,7 @@ VOID CiLib::HwlSetupTileInfo(
 
                     if (m_rowSize < colorTileSplit)
                     {
-                        pOut->tcCompatible = FALSE;
+                        flags.tcCompatible = FALSE;
                     }
                 }
             }
@@ -1543,9 +1594,11 @@ VOID CiLib::HwlSetupTileInfo(
         else
         {
             // Client should not enable tc compatible for linear and 1D tile modes.
-            pOut->tcCompatible = FALSE;
+            flags.tcCompatible = FALSE;
         }
     }
+
+    pOut->tcCompatible = flags.tcCompatible;
 }
 
 /**
@@ -2175,6 +2228,65 @@ ADDR_E_RETURNCODE CiLib::HwlGetMaxAlignments(
     }
 
     return ADDR_OK;
+}
+
+/**
+****************************************************************************************************
+*   CiLib::DepthStencilTileCfgMatch
+*
+*   @brief
+*       Try to find a tile index for stencil which makes its tile config parameters matches to depth
+*   @return
+*       TRUE if such tile index for stencil can be found
+****************************************************************************************************
+*/
+BOOL_32 CiLib::DepthStencilTileCfgMatch(
+    const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,    ///< [in] input structure
+    ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut    ///< [out] output structure
+    ) const
+{
+    BOOL_32 depthStencil2DTileConfigMatch = FALSE;
+
+    for (INT_32 stencilTileIndex = MinDepth2DThinIndex;
+         stencilTileIndex <= MaxDepth2DThinIndex;
+         stencilTileIndex++)
+    {
+        ADDR_TILEINFO tileInfo = {0};
+        INT_32 stencilMacroIndex = HwlComputeMacroModeIndex(stencilTileIndex,
+                                                            pIn->flags,
+                                                            8,
+                                                            pIn->numSamples,
+                                                            &tileInfo);
+
+        if (stencilMacroIndex != TileIndexNoMacroIndex)
+        {
+            if ((m_macroTileTable[stencilMacroIndex].banks ==
+                 m_macroTileTable[pOut->macroModeIndex].banks) &&
+                (m_macroTileTable[stencilMacroIndex].bankWidth ==
+                 m_macroTileTable[pOut->macroModeIndex].bankWidth) &&
+                (m_macroTileTable[stencilMacroIndex].bankHeight ==
+                 m_macroTileTable[pOut->macroModeIndex].bankHeight) &&
+                (m_macroTileTable[stencilMacroIndex].macroAspectRatio ==
+                 m_macroTileTable[pOut->macroModeIndex].macroAspectRatio) &&
+                (m_macroTileTable[stencilMacroIndex].pipeConfig ==
+                 m_macroTileTable[pOut->macroModeIndex].pipeConfig))
+            {
+                if ((pOut->tcCompatible == FALSE) ||
+                    (tileInfo.tileSplitBytes >= MicroTileWidth * MicroTileHeight * pIn->numSamples))
+                {
+                    depthStencil2DTileConfigMatch = TRUE;
+                    pOut->stencilTileIdx = stencilTileIndex;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            ADDR_ASSERT_ALWAYS();
+        }
+    }
+
+    return depthStencil2DTileConfigMatch;
 }
 
 } // V1
