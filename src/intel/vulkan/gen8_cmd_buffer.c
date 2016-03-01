@@ -355,6 +355,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 #if GEN_GEN == 8
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
+      struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
                                             GENX(COLOR_CALC_STATE_length) * 4,
@@ -364,10 +365,8 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
          .BlendConstantColorBlue = cmd_buffer->state.dynamic.blend_constants[2],
          .BlendConstantColorAlpha = cmd_buffer->state.dynamic.blend_constants[3],
-         .StencilReferenceValue =
-            cmd_buffer->state.dynamic.stencil_reference.front,
-         .BackFaceStencilReferenceValue =
-            cmd_buffer->state.dynamic.stencil_reference.back,
+         .StencilReferenceValue = d->stencil_reference.front,
+         .BackFaceStencilReferenceValue = d->stencil_reference.back,
       };
       GENX(COLOR_CALC_STATE_pack)(NULL, cc_state.map, &cc);
 
@@ -384,23 +383,19 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
       uint32_t wm_depth_stencil_dw[GENX(3DSTATE_WM_DEPTH_STENCIL_length)];
+      struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
 
       struct GENX(3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil) = {
          GENX(3DSTATE_WM_DEPTH_STENCIL_header),
 
          /* Is this what we need to do? */
-         .StencilBufferWriteEnable =
-            cmd_buffer->state.dynamic.stencil_write_mask.front != 0,
+         .StencilBufferWriteEnable = d->stencil_write_mask.front != 0,
 
-         .StencilTestMask =
-            cmd_buffer->state.dynamic.stencil_compare_mask.front & 0xff,
-         .StencilWriteMask =
-            cmd_buffer->state.dynamic.stencil_write_mask.front & 0xff,
+         .StencilTestMask = d->stencil_compare_mask.front & 0xff,
+         .StencilWriteMask = d->stencil_write_mask.front & 0xff,
 
-         .BackfaceStencilTestMask =
-            cmd_buffer->state.dynamic.stencil_compare_mask.back & 0xff,
-         .BackfaceStencilWriteMask =
-            cmd_buffer->state.dynamic.stencil_write_mask.back & 0xff,
+         .BackfaceStencilTestMask = d->stencil_compare_mask.back & 0xff,
+         .BackfaceStencilWriteMask = d->stencil_write_mask.back & 0xff,
       };
       GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, wm_depth_stencil_dw,
                                           &wm_depth_stencil);
