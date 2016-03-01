@@ -32,8 +32,6 @@
 #include "genxml/gen_macros.h"
 #include "genxml/genX_pack.h"
 
-#include "genX_state_util.h"
-
 VkResult
 genX(init_device_state)(struct anv_device *device)
 {
@@ -54,13 +52,16 @@ genX(init_device_state)(struct anv_device *device)
 
    anv_batch_emit(&batch, GENX(3DSTATE_VF_STATISTICS),
                   .StatisticsEnable = true);
-   anv_batch_emit(&batch, GENX(3DSTATE_HS), .Enable = false);
-   anv_batch_emit(&batch, GENX(3DSTATE_TE), .TEEnable = false);
-   anv_batch_emit(&batch, GENX(3DSTATE_DS), .FunctionEnable = false);
+   anv_batch_emit(&batch, GENX(3DSTATE_HS));
+   anv_batch_emit(&batch, GENX(3DSTATE_TE));
+   anv_batch_emit(&batch, GENX(3DSTATE_DS));
+
    anv_batch_emit(&batch, GENX(3DSTATE_STREAMOUT), .SOFunctionEnable = false);
+   anv_batch_emit(&batch, GENX(3DSTATE_AA_LINE_PARAMETERS));
+
+#if GEN_GEN >= 8
    anv_batch_emit(&batch, GENX(3DSTATE_WM_CHROMAKEY),
                   .ChromaKeyKillEnable = false);
-   anv_batch_emit(&batch, GENX(3DSTATE_AA_LINE_PARAMETERS));
 
    /* See the Vulkan 1.0 spec Table 24.1 "Standard sample locations" and
     * VkPhysicalDeviceFeatures::standardSampleLocations.
@@ -131,6 +132,7 @@ genX(init_device_state)(struct anv_device *device)
       ._16xSample15YOffset    = 0.0000,
 #endif
    );
+#endif
 
    anv_batch_emit(&batch, GENX(MI_BATCH_BUFFER_END));
 
@@ -138,6 +140,49 @@ genX(init_device_state)(struct anv_device *device)
 
    return anv_device_submit_simple_batch(device, &batch);
 }
+
+static inline uint32_t
+vk_to_gen_tex_filter(VkFilter filter, bool anisotropyEnable)
+{
+   switch (filter) {
+   default:
+      assert(!"Invalid filter");
+   case VK_FILTER_NEAREST:
+      return MAPFILTER_NEAREST;
+   case VK_FILTER_LINEAR:
+      return anisotropyEnable ? MAPFILTER_ANISOTROPIC : MAPFILTER_LINEAR;
+   }
+}
+
+static inline uint32_t
+vk_to_gen_max_anisotropy(float ratio)
+{
+   return (anv_clamp_f(ratio, 2, 16) - 2) / 2;
+}
+
+static const uint32_t vk_to_gen_mipmap_mode[] = {
+   [VK_SAMPLER_MIPMAP_MODE_NEAREST]          = MIPFILTER_NEAREST,
+   [VK_SAMPLER_MIPMAP_MODE_LINEAR]           = MIPFILTER_LINEAR
+};
+
+static const uint32_t vk_to_gen_tex_address[] = {
+   [VK_SAMPLER_ADDRESS_MODE_REPEAT]          = TCM_WRAP,
+   [VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT] = TCM_MIRROR,
+   [VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE]   = TCM_CLAMP,
+   [VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE] = TCM_MIRROR_ONCE,
+   [VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER] = TCM_CLAMP_BORDER,
+};
+
+static const uint32_t vk_to_gen_compare_op[] = {
+   [VK_COMPARE_OP_NEVER]                     = PREFILTEROPNEVER,
+   [VK_COMPARE_OP_LESS]                      = PREFILTEROPLESS,
+   [VK_COMPARE_OP_EQUAL]                     = PREFILTEROPEQUAL,
+   [VK_COMPARE_OP_LESS_OR_EQUAL]             = PREFILTEROPLEQUAL,
+   [VK_COMPARE_OP_GREATER]                   = PREFILTEROPGREATER,
+   [VK_COMPARE_OP_NOT_EQUAL]                 = PREFILTEROPNOTEQUAL,
+   [VK_COMPARE_OP_GREATER_OR_EQUAL]          = PREFILTEROPGEQUAL,
+   [VK_COMPARE_OP_ALWAYS]                    = PREFILTEROPALWAYS,
+};
 
 VkResult genX(CreateSampler)(
     VkDevice                                    _device,
@@ -161,13 +206,21 @@ VkResult genX(CreateSampler)(
    struct GENX(SAMPLER_STATE) sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
+
+#if GEN_GEN >= 8
       .LODPreClampMode = CLAMP_MODE_OGL,
+#else
+      .LODPreClampEnable = CLAMP_ENABLE_OGL,
+#endif
+
 #if GEN_GEN == 8
       .BaseMipLevel = 0.0,
 #endif
       .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
-      .MagModeFilter = vk_to_gen_tex_filter(pCreateInfo->magFilter, pCreateInfo->anisotropyEnable),
-      .MinModeFilter = vk_to_gen_tex_filter(pCreateInfo->minFilter, pCreateInfo->anisotropyEnable),
+      .MagModeFilter = vk_to_gen_tex_filter(pCreateInfo->magFilter,
+                                            pCreateInfo->anisotropyEnable),
+      .MinModeFilter = vk_to_gen_tex_filter(pCreateInfo->minFilter,
+                                            pCreateInfo->anisotropyEnable),
       .TextureLODBias = anv_clamp_f(pCreateInfo->mipLodBias, -16, 15.996),
       .AnisotropicAlgorithm = EWAApproximation,
       .MinLOD = anv_clamp_f(pCreateInfo->minLod, 0, 14),
@@ -178,9 +231,16 @@ VkResult genX(CreateSampler)(
       .ShadowFunction = vk_to_gen_compare_op[pCreateInfo->compareOp],
       .CubeSurfaceControlMode = OVERRIDE,
 
+#if GEN_GEN >= 8
       .IndirectStatePointer = border_color_offset >> 6,
+#else
+      .BorderColorPointer = border_color_offset >> 5,
+#endif
 
+#if GEN_GEN >= 8
       .LODClampMagnificationMode = MIPNONE,
+#endif
+
       .MaximumAnisotropy = vk_to_gen_max_anisotropy(pCreateInfo->maxAnisotropy),
       .RAddressMinFilterRoundingEnable = 0,
       .RAddressMagFilterRoundingEnable = 0,
