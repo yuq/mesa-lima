@@ -69,6 +69,27 @@
     <field name="Stream 0 Decl" start="0" end="15" type="SO_DECL"/>
   </struct>
 
+  <struct name="SF_OUTPUT_ATTRIBUTE_DETAIL" length="1">
+    <field name="Component Override W" start="15" end="15" type="bool"/>
+    <field name="Component Override Z" start="14" end="14" type="bool"/>
+    <field name="Component Override Y" start="13" end="13" type="bool"/>
+    <field name="Component Override X" start="12" end="12" type="bool"/>
+    <field name="Swizzle Control Mode" start="11" end="11" type="uint"/>
+    <field name="Constant Source" start="9" end="10" type="uint">
+      <value name="CONST_0000" value="0"/>
+      <value name="CONST_0001_FLOAT" value="1"/>
+      <value name="CONST_1111_FLOAT" value="2"/>
+      <value name="PRIM_ID" value="3"/>
+    </field>
+    <field name="Swizzle Select" start="6" end="7" type="uint">
+      <value name="INPUTATTR" value="0"/>
+      <value name="INPUTATTR_FACING" value="1"/>
+      <value name="INPUTATTR_W" value="2"/>
+      <value name="INPUTATTR_FACING_W" value="3"/>
+    </field>
+    <field name="Source Attribute" start="0" end="4" type="uint"/>
+  </struct>
+
   <struct name="SCISSOR_RECT" length="2">
     <field name="Scissor Rectangle Y Min" start="16" end="31" type="uint"/>
     <field name="Scissor Rectangle X Min" start="0" end="15" type="uint"/>
@@ -1765,41 +1786,8 @@
     </field>
     <field name="Vertex URB Entry Read Length" start="43" end="47" type="uint"/>
     <field name="Vertex URB Entry Read Offset" start="36" end="41" type="uint"/>
-    <group count="8" start="64" size="32">
-      <field name="Attribute [2n+1] Component Override W" start="31" end="31" type="bool"/>
-      <field name="Attribute [2n+1] Component Override Z" start="30" end="30" type="bool"/>
-      <field name="Attribute [2n+1] Component Override Y" start="29" end="29" type="bool"/>
-      <field name="Attribute [2n+1] Component Override X" start="28" end="28" type="bool"/>
-      <field name="Attribute [2n+1] Constant Source" start="25" end="26" type="uint">
-        <value name="CONST_0000" value="0"/>
-        <value name="CONST_0001_FLOAT" value="1"/>
-        <value name="CONST_1111_FLOAT" value="2"/>
-        <value name="PRIM_ID" value="3"/>
-      </field>
-      <field name="Attribute [2n+1] Swizzle Select" start="22" end="23" type="uint">
-        <value name="INPUTATTR" value="0"/>
-        <value name="INPUTATTR_FACING" value="1"/>
-        <value name="INPUTATTR_W" value="2"/>
-        <value name="INPUTATTR_FACING_W" value="3"/>
-      </field>
-      <field name="Attribute [2n+1] Source Attribute" start="16" end="20" type="uint"/>
-      <field name="Attribute [2n] Component Override W" start="15" end="15" type="bool"/>
-      <field name="Attribute [2n] Component Override Z" start="14" end="14" type="bool"/>
-      <field name="Attribute [2n] Component Override Y" start="13" end="13" type="bool"/>
-      <field name="Attribute [2n] Component Override X" start="12" end="12" type="bool"/>
-      <field name="Attribute [2n] Constant Source" start="9" end="10" type="uint">
-        <value name="CONST_0000" value="0"/>
-        <value name="CONST_0001_FLOAT" value="1"/>
-        <value name="CONST_1111_FLOAT" value="2"/>
-        <value name="PRIM_ID" value="3"/>
-      </field>
-      <field name="Attribute [2n] Swizzle Select" start="6" end="7" type="uint">
-        <value name="INPUTATTR" value="0"/>
-        <value name="INPUTATTR_FACING" value="1"/>
-        <value name="INPUTATTR_W" value="2"/>
-        <value name="INPUTATTR_FACING_W" value="3"/>
-      </field>
-      <field name="Attribute [2n] Source Attribute" start="0" end="4" type="uint"/>
+    <group count="16" start="64" size="16">
+      <field name="Attribute" start="0" end="15" type="SF_OUTPUT_ATTRIBUTE_DETAIL"/>
     </group>
     <field name="Point Sprite Texture Coordinate Enable" start="320" end="351" type="uint"/>
     <field name="Constant Interpolation Enable[31:0]" start="352" end="383" type="uint"/>
