@@ -463,10 +463,9 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 #include "freedreno_resource.h"
 
 static void
-emit_user_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
-		struct fd_constbuf_stateobj *constbuf)
+emit_user_consts(struct fd_context *ctx, struct ir3_shader_variant *v,
+		struct fd_ringbuffer *ring, struct fd_constbuf_stateobj *constbuf)
 {
-	struct fd_context *ctx = fd_context(v->shader->pctx);
 	const unsigned index = 0;     /* user consts are index 0 */
 	/* TODO save/restore dirty_mask for binning pass instead: */
 	uint32_t dirty_mask = constbuf->enabled_mask;
@@ -502,12 +501,11 @@ emit_user_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 }
 
 static void
-emit_ubos(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
-		struct fd_constbuf_stateobj *constbuf)
+emit_ubos(struct fd_context *ctx, struct ir3_shader_variant *v,
+		struct fd_ringbuffer *ring, struct fd_constbuf_stateobj *constbuf)
 {
 	uint32_t offset = v->first_driver_param + IR3_UBOS_OFF;
 	if (v->constlen > offset) {
-		struct fd_context *ctx = fd_context(v->shader->pctx);
 		uint32_t params = MIN2(4, v->constlen - offset) * 4;
 		uint32_t offsets[params];
 		struct fd_bo *bos[params];
@@ -532,9 +530,9 @@ emit_ubos(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 }
 
 static void
-emit_immediates(struct ir3_shader_variant *v, struct fd_ringbuffer *ring)
+emit_immediates(struct fd_context *ctx, struct ir3_shader_variant *v,
+		struct fd_ringbuffer *ring)
 {
-	struct fd_context *ctx = fd_context(v->shader->pctx);
 	int size = v->immediates_count;
 	uint32_t base = v->first_immediate;
 
@@ -556,12 +554,12 @@ emit_immediates(struct ir3_shader_variant *v, struct fd_ringbuffer *ring)
 
 /* emit stream-out buffers: */
 static void
-emit_tfbos(struct ir3_shader_variant *v, struct fd_ringbuffer *ring)
+emit_tfbos(struct fd_context *ctx, struct ir3_shader_variant *v,
+		struct fd_ringbuffer *ring)
 {
 	/* streamout addresses after driver-params: */
 	uint32_t offset = v->first_driver_param + IR3_TFBOS_OFF;
 	if (v->constlen > offset) {
-		struct fd_context *ctx = fd_context(v->shader->pctx);
 		struct fd_streamout_stateobj *so = &ctx->streamout;
 		struct pipe_stream_output_info *info = &v->shader->stream_output;
 		uint32_t params = 4;
@@ -587,9 +585,8 @@ emit_tfbos(struct ir3_shader_variant *v, struct fd_ringbuffer *ring)
 }
 
 static uint32_t
-max_tf_vtx(struct ir3_shader_variant *v)
+max_tf_vtx(struct fd_context *ctx, struct ir3_shader_variant *v)
 {
-	struct fd_context *ctx = fd_context(v->shader->pctx);
 	struct fd_streamout_stateobj *so = &ctx->streamout;
 	struct pipe_stream_output_info *info = &v->shader->stream_output;
 	uint32_t maxvtxcnt = 0x7fffffff;
@@ -634,10 +631,8 @@ max_tf_vtx(struct ir3_shader_variant *v)
 
 void
 ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
-		const struct pipe_draw_info *info, uint32_t dirty)
+		struct fd_context *ctx, const struct pipe_draw_info *info, uint32_t dirty)
 {
-	struct fd_context *ctx = fd_context(v->shader->pctx);
-
 	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) {
 		struct fd_constbuf_stateobj *constbuf;
 		bool shader_dirty;
@@ -653,10 +648,10 @@ ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 			return;
 		}
 
-		emit_user_consts(v, ring, constbuf);
-		emit_ubos(v, ring, constbuf);
+		emit_user_consts(ctx, v, ring, constbuf);
+		emit_ubos(ctx, v, ring, constbuf);
 		if (shader_dirty)
-			emit_immediates(v, ring);
+			emit_immediates(ctx, v, ring);
 	}
 
 	/* emit driver params every time: */
@@ -667,7 +662,7 @@ ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 			uint32_t vertex_params[IR3_DP_COUNT] = {
 				[IR3_DP_VTXID_BASE] = info->indexed ?
 						info->index_bias : info->start,
-				[IR3_DP_VTXCNT_MAX] = max_tf_vtx(v),
+				[IR3_DP_VTXCNT_MAX] = max_tf_vtx(ctx, v),
 			};
 			/* if no user-clip-planes, we don't need to emit the
 			 * entire thing:
@@ -692,7 +687,7 @@ ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 
 			/* if needed, emit stream-out buffer addresses: */
 			if (vertex_params[IR3_DP_VTXCNT_MAX] > 0) {
-				emit_tfbos(v, ring);
+				emit_tfbos(ctx, v, ring);
 			}
 		}
 	}
