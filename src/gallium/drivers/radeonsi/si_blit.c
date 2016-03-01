@@ -761,7 +761,7 @@ static void si_flush_resource(struct pipe_context *ctx,
 
 	assert(res->target != PIPE_BUFFER);
 
-	if (!rtex->is_depth && rtex->cmask.size) {
+	if (!rtex->is_depth && (rtex->cmask.size || rtex->dcc_buffer)) {
 		si_blit_decompress_color(ctx, rtex, 0, res->last_level,
 					 0, util_max_layer(res, 0));
 	}

@@ -249,6 +249,17 @@ static void r600_texture_init_metadata(struct r600_texture *rtex,
 	metadata->scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
 }
 
+static void r600_eliminate_fast_color_clear(struct r600_common_screen *rscreen,
+				      struct r600_texture *rtex)
+{
+	struct pipe_context *ctx = rscreen->aux_context;
+
+	pipe_mutex_lock(rscreen->aux_context_lock);
+	ctx->flush_resource(ctx, &rtex->resource.b.b);
+	ctx->flush(ctx, NULL, 0);
+	pipe_mutex_unlock(rscreen->aux_context_lock);
+}
+
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
 				       struct pipe_resource *resource,
 				       struct winsys_handle *whandle,
@@ -271,6 +282,11 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		res->external_usage = usage;
 
 		if (resource->target != PIPE_BUFFER) {
+			if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH)) {
+				/* Eliminate fast clear (both CMASK and DCC) */
+				r600_eliminate_fast_color_clear(rscreen, rtex);
+			}
+
 			r600_texture_init_metadata(rtex, &metadata);
 			rscreen->ws->buffer_set_metadata(res->buf, &metadata);
 		}
