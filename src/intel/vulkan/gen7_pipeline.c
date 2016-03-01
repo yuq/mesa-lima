@@ -245,10 +245,6 @@ genX(graphics_pipeline_create)(
       .SampleMask                               = 0xff);
 
    const struct brw_vue_prog_data *vue_prog_data = &pipeline->vs_prog_data.base;
-   /* The last geometry producing stage will set urb_offset and urb_length,
-    * which we use in 3DSTATE_SBE. Skip the VUE header and position slots. */
-   uint32_t urb_offset = 1;
-   uint32_t urb_length = (vue_prog_data->vue_map.num_slots + 1) / 2 - urb_offset;
 
 #if 0 
    /* From gen7_vs_state.c */
@@ -291,9 +287,6 @@ genX(graphics_pipeline_create)(
    if (pipeline->gs_kernel == NO_KERNEL || (extra && extra->disable_vs)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), .GSEnable = false);
    } else {
-      urb_offset = 1;
-      urb_length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - urb_offset;
-
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS),
          .KernelStartPointer                    = pipeline->gs_kernel,
          .ScratchSpaceBasePointer               = pipeline->scratch_start[MESA_SHADER_GEOMETRY],
@@ -346,12 +339,7 @@ genX(graphics_pipeline_create)(
       if (wm_prog_data->urb_setup[VARYING_SLOT_PRIMITIVE_ID] != -1)
          anv_finishme("primitive_id needs sbe swizzling setup");
 
-      /* FIXME: generated header doesn't emit attr swizzle fields */
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE),
-                     .NumberofSFOutputAttributes               = pipeline->wm_prog_data.num_varying_inputs,
-                     .VertexURBEntryReadLength                 = urb_length,
-                     .VertexURBEntryReadOffset                 = urb_offset,
-                     .PointSpriteTextureCoordinateOrigin       = UPPERLEFT);
+      emit_3dstate_sbe(pipeline);
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
                      .KernelStartPointer0                      = pipeline->ps_ksp0,
