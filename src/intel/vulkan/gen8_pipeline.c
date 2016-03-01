@@ -326,7 +326,21 @@ genX(graphics_pipeline_create)(
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP),
                   .ClipEnable = true,
+                  .EarlyCullEnable = true,
+                  .APIMode = 1, /* D3D */
                   .ViewportXYClipTestEnable = !(extra && extra->disable_viewport),
+
+                  .ClipMode =
+                     pCreateInfo->pRasterizationState->rasterizerDiscardEnable ?
+                     REJECT_ALL : NORMAL,
+
+                  .NonPerspectiveBarycentricEnable =
+                     (pipeline->wm_prog_data.barycentric_interp_modes & 0x38) != 0,
+
+                  .TriangleStripListProvokingVertexSelect = 0,
+                  .LineStripListProvokingVertexSelect = 0,
+                  .TriangleFanProvokingVertexSelect = 1,
+
                   .MinimumPointWidth = 0.125,
                   .MaximumPointWidth = 255.875,
                   .MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1);
