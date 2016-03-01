@@ -266,14 +266,13 @@ ir3_shader_destroy(struct ir3_shader *shader)
 }
 
 struct ir3_shader *
-ir3_shader_create(struct pipe_context *pctx,
+ir3_shader_create(struct ir3_compiler *compiler,
 		const struct pipe_shader_state *cso,
 		enum shader_t type)
 {
 	struct ir3_shader *shader = CALLOC_STRUCT(ir3_shader);
-	shader->compiler = fd_context(pctx)->screen->compiler;
+	shader->compiler = compiler;
 	shader->id = ++shader->compiler->shader_count;
-	shader->pctx = pctx;
 	shader->type = type;
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		DBG("dump tgsi: type=%d", shader->type);
