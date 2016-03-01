@@ -194,6 +194,7 @@ private:
    void emitKIL();
    void emitOUT();
 
+   void emitBAR();
    void emitMEMBAR();
 
    void emitVOTE();
@@ -2649,6 +2650,54 @@ CodeEmitterGM107::emitOUT()
 }
 
 void
+CodeEmitterGM107::emitBAR()
+{
+   uint8_t subop;
+
+   emitInsn (0xf0a80000);
+
+   switch (insn->subOp) {
+   case NV50_IR_SUBOP_BAR_RED_POPC: subop = 0x02; break;
+   case NV50_IR_SUBOP_BAR_RED_AND:  subop = 0x0a; break;
+   case NV50_IR_SUBOP_BAR_RED_OR:   subop = 0x12; break;
+   case NV50_IR_SUBOP_BAR_ARRIVE:   subop = 0x81; break;
+   default:
+      subop = 0x80;
+      assert(insn->subOp == NV50_IR_SUBOP_BAR_SYNC);
+      break;
+   }
+
+   emitField(0x20, 8, subop);
+
+   // barrier id
+   if (insn->src(0).getFile() == FILE_GPR) {
+      emitGPR(0x08, insn->src(0));
+   } else {
+      ImmediateValue *imm = insn->getSrc(0)->asImm();
+      assert(imm);
+      emitField(0x08, 8, imm->reg.data.u32);
+      emitField(0x2b, 1, 1);
+   }
+
+   // thread count
+   if (insn->src(1).getFile() == FILE_GPR) {
+      emitGPR(0x14, insn->src(1));
+   } else {
+      ImmediateValue *imm = insn->getSrc(0)->asImm();
+      assert(imm);
+      emitField(0x14, 12, imm->reg.data.u32);
+      emitField(0x2c, 1, 1);
+   }
+
+   if (insn->srcExists(2) && (insn->predSrc != 2)) {
+      emitPRED (0x27, insn->src(2));
+      emitField(0x2a, 1, insn->src(2).mod == Modifier(NV50_IR_MOD_NOT));
+   } else {
+      emitField(0x27, 3, 7);
+   }
+}
+
+void
 CodeEmitterGM107::emitMEMBAR()
 {
    emitInsn (0xef980000);
@@ -2977,6 +3026,9 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
    case OP_EMIT:
    case OP_RESTART:
       emitOUT();
+      break;
+   case OP_BAR:
+      emitBAR();
       break;
    case OP_MEMBAR:
       emitMEMBAR();
