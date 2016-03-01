@@ -4170,7 +4170,8 @@ _mesa_InvalidateFramebuffer(GLenum target, GLsizei numAttachments,
     */
    invalidate_framebuffer_storage(ctx, fb, numAttachments, attachments,
                                   0, 0,
-                                  MAX_VIEWPORT_WIDTH, MAX_VIEWPORT_HEIGHT,
+                                  ctx->Const.MaxViewportWidth,
+                                  ctx->Const.MaxViewportHeight,
                                   "glInvalidateFramebuffer");
 }
 
@@ -4210,7 +4211,8 @@ _mesa_InvalidateNamedFramebufferData(GLuint framebuffer,
     */
    invalidate_framebuffer_storage(ctx, fb, numAttachments, attachments,
                                   0, 0,
-                                  MAX_VIEWPORT_WIDTH, MAX_VIEWPORT_HEIGHT,
+                                  ctx->Const.MaxViewportWidth,
+                                  ctx->Const.MaxViewportHeight,
                                   "glInvalidateNamedFramebufferData");
 }
 
