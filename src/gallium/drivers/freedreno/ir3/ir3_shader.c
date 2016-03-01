@@ -127,14 +127,14 @@ void * ir3_shader_assemble(struct ir3_shader_variant *v, uint32_t gpu_id)
 static void
 assemble_variant(struct ir3_shader_variant *v)
 {
-	struct fd_context *ctx = fd_context(v->shader->pctx);
-	uint32_t gpu_id = v->shader->compiler->gpu_id;
+	struct ir3_compiler *compiler = v->shader->compiler;
+	uint32_t gpu_id = compiler->gpu_id;
 	uint32_t sz, *bin;
 
 	bin = ir3_shader_assemble(v, gpu_id);
 	sz = v->info.sizedwords * 4;
 
-	v->bo = fd_bo_new(ctx->dev, sz,
+	v->bo = fd_bo_new(compiler->dev, sz,
 			DRM_FREEDRENO_GEM_CACHE_WCOMBINE |
 			DRM_FREEDRENO_GEM_TYPE_KMEM);
 
