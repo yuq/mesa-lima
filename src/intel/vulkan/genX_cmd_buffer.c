@@ -572,7 +572,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .SurfacePitch = image->depth_surface.isl.row_pitch - 1,
          .SurfaceBaseAddress = {
             .bo = image->bo,
-            .offset = image->depth_surface.offset,
+            .offset = image->offset + image->depth_surface.offset,
          },
          .Height = fb->height - 1,
          .Width = fb->width - 1,
