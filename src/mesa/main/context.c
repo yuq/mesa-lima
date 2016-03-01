@@ -582,8 +582,8 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
    consts->MaxLights = MAX_LIGHTS;
    consts->MaxShininess = 128.0;
    consts->MaxSpotExponent = 128.0;
-   consts->MaxViewportWidth = MAX_VIEWPORT_WIDTH;
-   consts->MaxViewportHeight = MAX_VIEWPORT_HEIGHT;
+   consts->MaxViewportWidth = 16384;
+   consts->MaxViewportHeight = 16384;
    consts->MinMapBufferAlignment = 64;
 
    /* Driver must override these values if ARB_viewport_array is supported. */
