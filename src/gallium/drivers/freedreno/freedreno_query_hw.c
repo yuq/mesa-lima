@@ -66,6 +66,7 @@ get_sample(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	if (!ctx->sample_cache[idx]) {
 		ctx->sample_cache[idx] =
 			ctx->sample_providers[idx]->get_sample(ctx, ring);
+		ctx->needs_flush = true;
 	}
 
 	fd_hw_sample_reference(ctx, &samp, ctx->sample_cache[idx]);
