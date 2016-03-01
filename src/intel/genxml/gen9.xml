@@ -437,7 +437,7 @@
       <value name="PROGRAMMED" value="0"/>
       <value name="OVERRIDE" value="1"/>
     </field>
-    <field name="Indirect State Pointer" start="70" end="87" type="uint"/>
+    <field name="Border Color Pointer" start="70" end="87" type="offset"/>
     <field name="LOD Clamp Magnification Mode" start="64" end="64" type="uint">
       <value name="MIPNONE" value="0"/>
       <value name="MIPFILTER" value="1"/>

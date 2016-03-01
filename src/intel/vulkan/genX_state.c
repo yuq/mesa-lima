@@ -231,11 +231,7 @@ VkResult genX(CreateSampler)(
       .ShadowFunction = vk_to_gen_compare_op[pCreateInfo->compareOp],
       .CubeSurfaceControlMode = OVERRIDE,
 
-#if GEN_GEN >= 8
-      .IndirectStatePointer = border_color_offset >> 6,
-#else
-      .BorderColorPointer = border_color_offset >> 5,
-#endif
+      .BorderColorPointer = border_color_offset,
 
 #if GEN_GEN >= 8
       .LODClampMagnificationMode = MIPNONE,
