@@ -507,6 +507,7 @@ void genX(CmdDispatchIndirect)(
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
+   struct anv_batch *batch = &cmd_buffer->batch;
 
    if (prog_data->uses_num_work_groups) {
       cmd_buffer->state.num_workgroups_offset = bo_offset;
@@ -515,11 +516,11 @@ void genX(CmdDispatchIndirect)(
 
    genX(cmd_buffer_flush_compute_state)(cmd_buffer);
 
-   emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMX, bo, bo_offset);
-   emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
-   emit_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
+   emit_lrm(batch, GPGPU_DISPATCHDIMX, bo, bo_offset);
+   emit_lrm(batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
+   emit_lrm(batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(GPGPU_WALKER),
+   anv_batch_emit(batch, GENX(GPGPU_WALKER),
                   .IndirectParameterEnable = true,
                   .SIMDSize = prog_data->simd_size / 16,
                   .ThreadDepthCounterMaximum = 0,
@@ -528,7 +529,7 @@ void genX(CmdDispatchIndirect)(
                   .RightExecutionMask = pipeline->cs_right_mask,
                   .BottomExecutionMask = 0xffffffff);
 
-   anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_STATE_FLUSH));
+   anv_batch_emit(batch, GENX(MEDIA_STATE_FLUSH));
 }
 
 void
