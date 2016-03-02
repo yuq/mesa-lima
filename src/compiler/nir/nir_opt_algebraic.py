@@ -604,6 +604,21 @@ for op in ['flt', 'fge', 'feq', 'fne',
        ('bcsel', 'a', (op, 'd', 'b'), (op, 'd', 'c'))),
    ]
 
+
+# For example, this converts things like
+#
+#    1 + mix(0, a - 1, condition)
+#
+# into
+#
+#    mix(1, (a-1)+1, condition)
+#
+# Other optimizations will rearrange the constants.
+for op in ['fadd', 'fmul', 'iadd', 'imul']:
+   optimizations += [
+      ((op, ('bcsel(is_used_once)', a, '#b', c), '#d'), ('bcsel', a, (op, b, d), (op, c, d)))
+   ]
+
 # This section contains "late" optimizations that should be run before
 # creating ffmas and calling regular optimizations for the final time.
 # Optimizations should go here if they help code generation and conflict
