@@ -625,6 +625,8 @@ void anv_CmdUpdateBuffer(
       dstOffset += copy_size;
       pData = (void *)pData + copy_size;
    }
+
+   meta_finish_blit(cmd_buffer, &saved_state);
 }
 
 static VkFormat
