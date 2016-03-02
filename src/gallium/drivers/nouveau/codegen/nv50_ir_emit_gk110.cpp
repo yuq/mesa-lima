@@ -1386,7 +1386,7 @@ CodeEmitterGK110::emitVOTE(const Instruction *i)
    defId(i->def(0), 2);
    defId(i->def(1), 48);
    if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
-      code[0] |= 1 << 45;
+      code[1] |= 1 << 13;
    srcId(i->src(0), 42);
 }
 
