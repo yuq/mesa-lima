@@ -2250,11 +2250,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	}
 	assert(format != V_028C70_COLOR_INVALID);
 	swap = r600_translate_colorswap(surf->base.format);
-	if (rtex->resource.b.b.usage == PIPE_USAGE_STAGING) {
-		endian = V_028C70_ENDIAN_NONE;
-	} else {
-		endian = si_colorformat_endian_swap(format);
-	}
+	endian = si_colorformat_endian_swap(format);
 
 	/* blend clamp should be set for all NORM/SRGB types */
 	if (ntype == V_028C70_NUMBER_UNORM ||
