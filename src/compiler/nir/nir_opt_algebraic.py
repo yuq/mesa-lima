@@ -108,6 +108,12 @@ optimizations = [
    # inot(a)
    (('fge', 0.0, ('b2f', a)), ('inot', a)),
 
+   # 0.0 < fabs(a)
+   # fabs(a) > 0.0
+   # fabs(a) != 0.0 because fabs(a) must be >= 0
+   # a != 0.0
+   (('flt', 0.0, ('fabs', a)), ('fne', a, 0.0)),
+
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
    (('bcsel', ('flt', a, b), a, b), ('fmin', a, b)),
    (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
