@@ -930,11 +930,7 @@ static void r600_init_color_surface(struct r600_context *rctx,
 	swap = r600_translate_colorswap(surf->base.format);
 	assert(swap != ~0);
 
-	if (rtex->resource.b.b.usage == PIPE_USAGE_STAGING) {
-		endian = ENDIAN_NONE;
-	} else {
-		endian = r600_colorformat_endian_swap(format);
-	}
+	endian = r600_colorformat_endian_swap(format);
 
 	/* set blend bypass according to docs if SINT/UINT or
 	   8/24 COLOR variants */
