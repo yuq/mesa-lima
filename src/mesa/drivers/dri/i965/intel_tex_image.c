@@ -111,7 +111,6 @@ intelTexImage(struct gl_context * ctx,
                                    texImage->Width, texImage->Height,
                                    texImage->Depth,
                                    format, type, pixels,
-                                   false /*allocate_storage*/,
                                    tex_busy, unpack);
    if (ok)
       return;

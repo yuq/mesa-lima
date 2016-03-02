@@ -175,7 +175,7 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
                            int xoffset, int yoffset, int zoffset,
                            int width, int height, int depth,
                            GLenum format, GLenum type, const void *pixels,
-                           bool allocate_storage, bool create_pbo,
+                           bool create_pbo,
                            const struct gl_pixelstore_attrib *packing)
 {
    struct gl_buffer_object *pbo = NULL;
@@ -226,9 +226,6 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
       _mesa_meta_end(ctx);
       return false;
    }
-
-   if (allocate_storage)
-      ctx->Driver.AllocTextureImageBuffer(ctx, tex_image);
 
    readFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
    if (readFb == NULL)
