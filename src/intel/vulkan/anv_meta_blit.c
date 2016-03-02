@@ -601,7 +601,7 @@ void anv_CmdCopyBuffer(
 
    struct anv_meta_saved_state saved_state;
 
-   meta_prepare_blit(cmd_buffer, &saved_state);
+   anv_meta_begin_blit2d(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
       uint64_t src_offset = src_buffer->offset + pRegions[r].srcOffset;
@@ -661,7 +661,7 @@ void anv_CmdCopyBuffer(
       }
    }
 
-   meta_finish_blit(cmd_buffer, &saved_state);
+   anv_meta_end_blit2d(cmd_buffer, &saved_state);
 }
 
 void anv_CmdUpdateBuffer(
@@ -675,7 +675,7 @@ void anv_CmdUpdateBuffer(
    ANV_FROM_HANDLE(anv_buffer, dst_buffer, dstBuffer);
    struct anv_meta_saved_state saved_state;
 
-   meta_prepare_blit(cmd_buffer, &saved_state);
+   anv_meta_begin_blit2d(cmd_buffer, &saved_state);
 
    /* We can't quite grab a full block because the state stream needs a
     * little data at the top to build its linked list.
@@ -714,7 +714,7 @@ void anv_CmdUpdateBuffer(
       pData = (void *)pData + copy_size;
    }
 
-   meta_finish_blit(cmd_buffer, &saved_state);
+   anv_meta_end_blit2d(cmd_buffer, &saved_state);
 }
 
 static VkFormat
