@@ -289,8 +289,7 @@ _mesa_remove_dead_code_global(struct gl_program *prog)
 
       /* check dst reg */
       if (inst->DstReg.File == PROGRAM_TEMPORARY) {
-         const GLuint index = inst->DstReg.Index;
-         assert(index < REG_ALLOCATE_MAX_PROGRAM_TEMPS);
+         assert(inst->DstReg.Index < REG_ALLOCATE_MAX_PROGRAM_TEMPS);
 
          if (inst->DstReg.RelAddr) {
             if (dbg)
