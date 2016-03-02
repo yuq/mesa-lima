@@ -496,6 +496,9 @@ void genX(CmdDispatch)(
 #define GPGPU_DISPATCHDIMY 0x2504
 #define GPGPU_DISPATCHDIMZ 0x2508
 
+#define MI_PREDICATE_SRC0  0x2400
+#define MI_PREDICATE_SRC1  0x2408
+
 void genX(CmdDispatchIndirect)(
     VkCommandBuffer                             commandBuffer,
     VkBuffer                                    _buffer,
@@ -520,8 +523,50 @@ void genX(CmdDispatchIndirect)(
    emit_lrm(batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
    emit_lrm(batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
 
+#if GEN_GEN <= 7
+   /* Clear upper 32-bits of SRC0 and all 64-bits of SRC1 */
+   emit_lri(batch, MI_PREDICATE_SRC0 + 4, 0);
+   emit_lri(batch, MI_PREDICATE_SRC1 + 0, 0);
+   emit_lri(batch, MI_PREDICATE_SRC1 + 4, 0);
+
+   /* Load compute_dispatch_indirect_x_size into SRC0 */
+   emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 0);
+
+   /* predicate = (compute_dispatch_indirect_x_size == 0); */
+   anv_batch_emit(batch, GENX(MI_PREDICATE),
+                  .LoadOperation = LOAD_LOAD,
+                  .CombineOperation = COMBINE_SET,
+                  .CompareOperation = COMPARE_SRCS_EQUAL);
+
+   /* Load compute_dispatch_indirect_y_size into SRC0 */
+   emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 4);
+
+   /* predicate |= (compute_dispatch_indirect_y_size == 0); */
+   anv_batch_emit(batch, GENX(MI_PREDICATE),
+                  .LoadOperation = LOAD_LOAD,
+                  .CombineOperation = COMBINE_OR,
+                  .CompareOperation = COMPARE_SRCS_EQUAL);
+
+   /* Load compute_dispatch_indirect_z_size into SRC0 */
+   emit_lrm(batch, MI_PREDICATE_SRC0, bo, bo_offset + 8);
+
+   /* predicate |= (compute_dispatch_indirect_z_size == 0); */
+   anv_batch_emit(batch, GENX(MI_PREDICATE),
+                  .LoadOperation = LOAD_LOAD,
+                  .CombineOperation = COMBINE_OR,
+                  .CompareOperation = COMPARE_SRCS_EQUAL);
+
+   /* predicate = !predicate; */
+#define COMPARE_FALSE                           1
+   anv_batch_emit(batch, GENX(MI_PREDICATE),
+                  .LoadOperation = LOAD_LOADINV,
+                  .CombineOperation = COMBINE_OR,
+                  .CompareOperation = COMPARE_FALSE);
+#endif
+
    anv_batch_emit(batch, GENX(GPGPU_WALKER),
                   .IndirectParameterEnable = true,
+                  .PredicateEnable = GEN_GEN <= 7,
                   .SIMDSize = prog_data->simd_size / 16,
                   .ThreadDepthCounterMaximum = 0,
                   .ThreadHeightCounterMaximum = 0,
