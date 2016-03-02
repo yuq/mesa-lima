@@ -43,6 +43,15 @@
 #include "tgsi/tgsi_scan.h"
 
 
+static bool
+is_memory_file(unsigned file)
+{
+   return file == TGSI_FILE_SAMPLER ||
+          file == TGSI_FILE_SAMPLER_VIEW ||
+          file == TGSI_FILE_IMAGE ||
+          file == TGSI_FILE_BUFFER;
+}
+
 
 static void
 scan_instruction(struct tgsi_shader_info *info,
@@ -50,6 +59,7 @@ scan_instruction(struct tgsi_shader_info *info,
                  unsigned *current_depth)
 {
    unsigned i;
+   bool is_mem_inst = false;
 
    assert(fullinst->Instruction.Opcode < TGSI_OPCODE_LAST);
    info->opcode_count[fullinst->Instruction.Opcode]++;
@@ -181,6 +191,9 @@ scan_instruction(struct tgsi_shader_info *info,
             info->is_msaa_sampler[src->Register.Index] = TRUE;
          }
       }
+
+      if (is_memory_file(src->Register.File))
+         is_mem_inst = true;
    }
 
    /* check for indirect register writes */
@@ -190,7 +203,13 @@ scan_instruction(struct tgsi_shader_info *info,
          info->indirect_files |= (1 << dst->Register.File);
          info->indirect_files_written |= (1 << dst->Register.File);
       }
+
+      if (is_memory_file(dst->Register.File))
+         is_mem_inst = true;
    }
+
+   if (is_mem_inst)
+      info->num_memory_instructions++;
 
    info->num_instructions++;
 }

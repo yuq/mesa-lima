@@ -594,11 +594,31 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    memset(&c, 0, sizeof(c));
    c.key = *key;
 
+   const bool is_scalar = compiler->scalar_stage[MESA_SHADER_GEOMETRY];
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+
+   /* The GLSL linker will have already matched up GS inputs and the outputs
+    * of prior stages.  The driver does extend VS outputs in some cases, but
+    * only for legacy OpenGL or Gen4-5 hardware, neither of which offer
+    * geometry shader support.  So we can safely ignore that.
+    *
+    * For SSO pipelines, we use a fixed VUE map layout based on variable
+    * locations, so we can rely on rendezvous-by-location making this work.
+    *
+    * However, we need to ignore VARYING_SLOT_PRIMITIVE_ID, as it's not
+    * written by previous stages and shows up via payload magic.
+    */
+   GLbitfield64 inputs_read =
+      shader->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
+   brw_compute_vue_map(compiler->devinfo,
+                       &c.input_vue_map, inputs_read,
+                       shader->info.separate_shader);
+
    shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
-                                      compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
-   shader = brw_postprocess_nir(shader, compiler->devinfo,
-                                compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
+                                      is_scalar);
+   brw_nir_lower_vue_inputs(shader, is_scalar, &c.input_vue_map);
+   brw_nir_lower_vue_outputs(shader, is_scalar);
+   shader = brw_postprocess_nir(shader, compiler->devinfo, is_scalar);
 
    prog_data->include_primitive_id =
       (shader->info.inputs_read & VARYING_BIT_PRIMITIVE_ID) != 0;
@@ -775,23 +795,6 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
 
    prog_data->vertices_in = shader->info.gs.vertices_in;
 
-   /* The GLSL linker will have already matched up GS inputs and the outputs
-    * of prior stages.  The driver does extend VS outputs in some cases, but
-    * only for legacy OpenGL or Gen4-5 hardware, neither of which offer
-    * geometry shader support.  So we can safely ignore that.
-    *
-    * For SSO pipelines, we use a fixed VUE map layout based on variable
-    * locations, so we can rely on rendezvous-by-location making this work.
-    *
-    * However, we need to ignore VARYING_SLOT_PRIMITIVE_ID, as it's not
-    * written by previous stages and shows up via payload magic.
-    */
-   GLbitfield64 inputs_read =
-      shader->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
-   brw_compute_vue_map(compiler->devinfo,
-                       &c.input_vue_map, inputs_read,
-                       shader->info.separate_shader);
-
    /* GS inputs are read from the VUE 256 bits (2 vec4's) at a time, so we
     * need to program a URB read length of ceiling(num_slots / 2).
     */
@@ -807,7 +810,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
       brw_print_vue_map(stderr, &prog_data->base.vue_map);
    }
 
-   if (compiler->scalar_stage[MESA_SHADER_GEOMETRY]) {
+   if (is_scalar) {
       /* TODO: Support instanced GS.  We have basically no tests... */
       assert(prog_data->invocations == 1);
 

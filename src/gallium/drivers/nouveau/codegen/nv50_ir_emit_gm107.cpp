@@ -195,6 +195,8 @@ private:
    void emitOUT();
 
    void emitMEMBAR();
+
+   void emitVOTE();
 };
 
 /*******************************************************************************
@@ -2653,6 +2655,30 @@ CodeEmitterGM107::emitMEMBAR()
    emitField(0x08, 2, insn->subOp >> 2);
 }
 
+void
+CodeEmitterGM107::emitVOTE()
+{
+   int subOp;
+
+   assert(insn->src(0).getFile() == FILE_PREDICATE &&
+          insn->def(1).getFile() == FILE_PREDICATE);
+
+   switch (insn->subOp) {
+   case NV50_IR_SUBOP_VOTE_ANY: subOp = 1; break;
+   default:
+      assert(insn->subOp == NV50_IR_SUBOP_VOTE_ALL);
+      subOp = 0;
+      break;
+   }
+
+   emitInsn (0x50d80000);
+   emitField(0x30, 2, subOp);
+   emitGPR  (0x00, insn->def(0));
+   emitPRED (0x2d, insn->def(1));
+   emitField(0x2a, 1, insn->src(0).mod == Modifier(NV50_IR_MOD_NOT));
+   emitPRED (0x27, insn->src(0));
+}
+
 /*******************************************************************************
  * assembler front-end
  ******************************************************************************/
@@ -2954,6 +2980,9 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       break;
    case OP_MEMBAR:
       emitMEMBAR();
+      break;
+   case OP_VOTE:
+      emitVOTE();
       break;
    default:
       assert(!"invalid opcode");

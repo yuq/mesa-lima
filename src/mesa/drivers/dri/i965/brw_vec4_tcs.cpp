@@ -511,17 +511,24 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_TESS_CTRL];
 
    nir_shader *nir = nir_shader_clone(mem_ctx, src_shader);
-   nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
    nir->info.outputs_written = key->outputs_written;
    nir->info.patch_outputs_written = key->patch_outputs_written;
-   nir = brw_nir_lower_io(nir, compiler->devinfo, is_scalar, false, NULL);
-   nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
 
-   prog_data->instances = DIV_ROUND_UP(nir->info.tcs.vertices_out, 2);
+   struct brw_vue_map input_vue_map;
+   brw_compute_vue_map(devinfo, &input_vue_map,
+                       nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
+                       true);
 
    brw_compute_tess_vue_map(&vue_prog_data->vue_map,
                             nir->info.outputs_written,
                             nir->info.patch_outputs_written);
+
+   nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
+   brw_nir_lower_vue_inputs(nir, is_scalar, &input_vue_map);
+   brw_nir_lower_tcs_outputs(nir, &vue_prog_data->vue_map);
+   nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
+
+   prog_data->instances = DIV_ROUND_UP(nir->info.tcs.vertices_out, 2);
 
    /* Compute URB entry size.  The maximum allowed URB entry size is 32k.
     * That divides up as follows:
@@ -548,11 +555,6 @@ brw_compile_tcs(const struct brw_compiler *compiler,
 
    /* URB entry sizes are stored as a multiple of 64 bytes. */
    vue_prog_data->urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
-
-   struct brw_vue_map input_vue_map;
-   brw_compute_vue_map(devinfo, &input_vue_map,
-                       nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
-                       true);
 
    /* HS does not use the usual payload pushing from URB to GRFs,
     * because we don't have enough registers for a full-size payload, and

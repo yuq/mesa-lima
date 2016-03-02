@@ -174,13 +174,18 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
     u_box_1d(OffsetToLock, SizeToLock, &box);
 
     if (This->base.pool == D3DPOOL_MANAGED) {
-        if (!This->managed.dirty) {
-            assert(LIST_IS_EMPTY(&This->managed.list));
-            list_add(&This->managed.list, &This->base.base.device->update_buffers);
-            This->managed.dirty = TRUE;
-            This->managed.dirty_box = box;
-        } else {
-            u_box_union_2d(&This->managed.dirty_box, &This->managed.dirty_box, &box);
+        /* READONLY doesn't dirty the buffer */
+        if (!(Flags & D3DLOCK_READONLY)) {
+            if (!This->managed.dirty) {
+                assert(LIST_IS_EMPTY(&This->managed.list));
+                This->managed.dirty = TRUE;
+                This->managed.dirty_box = box;
+            } else {
+                u_box_union_2d(&This->managed.dirty_box, &This->managed.dirty_box, &box);
+                /* Do not upload while we are locking, we'll add it back later */
+                if (!LIST_IS_EMPTY(&This->managed.list))
+                    list_delinit(&This->managed.list);
+            }
         }
         *ppbData = (char *)This->managed.data + OffsetToLock;
         DBG("returning pointer %p\n", *ppbData);
@@ -229,8 +234,13 @@ NineBuffer9_Unlock( struct NineBuffer9 *This )
     user_assert(This->nmaps > 0, D3DERR_INVALIDCALL);
     if (This->base.pool != D3DPOOL_MANAGED)
         This->pipe->transfer_unmap(This->pipe, This->maps[--(This->nmaps)]);
-    else
+    else {
         This->nmaps--;
+        /* TODO: Fix this to upload at the first draw call needing the data,
+         * instead of at the next draw call */
+        if (!This->nmaps && This->managed.dirty && LIST_IS_EMPTY(&This->managed.list))
+            list_add(&This->managed.list, &This->base.base.device->update_buffers);
+    }
     return D3D_OK;
 }
 

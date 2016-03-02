@@ -174,9 +174,9 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
     /* Get DRM version. */
     version = drmGetVersion(ws->fd);
     if (version->version_major != 2 ||
-        version->version_minor < 3) {
+        version->version_minor < 12) {
         fprintf(stderr, "%s: DRM version is %d.%d.%d but this driver is "
-                "only compatible with 2.3.x (kernel 2.6.34) or later.\n",
+                "only compatible with 2.12.0 (kernel 3.2) or later.\n",
                 __FUNCTION__,
                 version->version_major,
                 version->version_minor,
@@ -374,8 +374,7 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
     else if (ws->gen >= DRV_R600) {
         uint32_t tiling_config = 0;
 
-        if (ws->info.drm_minor >= 9 &&
-            !radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_BACKENDS,
+        if (!radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_BACKENDS,
                                   "num backends",
                                   &ws->info.num_render_backends))
             return FALSE;
@@ -401,27 +400,20 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
             ws->info.pipe_interleave_bytes =
                 ws->info.chip_class >= EVERGREEN ? 512 : 256;
 
-        if (ws->info.drm_minor >= 11) {
-            radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_TILE_PIPES, NULL,
-                                 &ws->info.num_tile_pipes);
+        radeon_get_drm_value(ws->fd, RADEON_INFO_NUM_TILE_PIPES, NULL,
+                             &ws->info.num_tile_pipes);
 
-            /* "num_tiles_pipes" must be equal to the number of pipes (Px) in the
-             * pipe config field of the GB_TILE_MODE array. Only one card (Tahiti)
-             * reports a different value (12). Fix it by setting what's in the
-             * GB_TILE_MODE array (8).
-             */
-            if (ws->gen == DRV_SI && ws->info.num_tile_pipes == 12)
-                ws->info.num_tile_pipes = 8;
+        /* "num_tiles_pipes" must be equal to the number of pipes (Px) in the
+         * pipe config field of the GB_TILE_MODE array. Only one card (Tahiti)
+         * reports a different value (12). Fix it by setting what's in the
+         * GB_TILE_MODE array (8).
+         */
+        if (ws->gen == DRV_SI && ws->info.num_tile_pipes == 12)
+            ws->info.num_tile_pipes = 8;
 
-            if (radeon_get_drm_value(ws->fd, RADEON_INFO_BACKEND_MAP, NULL,
-                                      &ws->info.r600_gb_backend_map))
-                ws->info.r600_gb_backend_map_valid = TRUE;
-        } else {
-            ws->info.num_tile_pipes =
-                ws->info.chip_class >= EVERGREEN ?
-                    1 << (tiling_config & 0xf) :
-                    1 << ((tiling_config & 0xe) >> 1);
-        }
+        if (radeon_get_drm_value(ws->fd, RADEON_INFO_BACKEND_MAP, NULL,
+                                  &ws->info.r600_gb_backend_map))
+            ws->info.r600_gb_backend_map_valid = TRUE;
 
         ws->info.has_virtual_memory = FALSE;
         if (ws->info.drm_minor >= 13) {

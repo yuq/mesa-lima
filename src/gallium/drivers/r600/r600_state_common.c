@@ -2235,7 +2235,6 @@ uint32_t r600_translate_texformat(struct pipe_screen *screen,
 	uint32_t result = 0, word4 = 0, yuv_format = 0;
 	const struct util_format_description *desc;
 	boolean uniform = TRUE;
-	bool enable_s3tc = rscreen->b.info.drm_minor >= 9;
 	bool is_srgb_valid = FALSE;
 	const unsigned char swizzle_xxxx[4] = {0, 0, 0, 0};
 	const unsigned char swizzle_yyyy[4] = {1, 1, 1, 1};
@@ -2330,9 +2329,6 @@ uint32_t r600_translate_texformat(struct pipe_screen *screen,
 	}
 
 	if (desc->layout == UTIL_FORMAT_LAYOUT_RGTC) {
-		if (!enable_s3tc)
-			goto out_unknown;
-
 		switch (format) {
 		case PIPE_FORMAT_RGTC1_SNORM:
 		case PIPE_FORMAT_LATC1_SNORM:
@@ -2354,10 +2350,6 @@ uint32_t r600_translate_texformat(struct pipe_screen *screen,
 	}
 
 	if (desc->layout == UTIL_FORMAT_LAYOUT_S3TC) {
-
-		if (!enable_s3tc)
-			goto out_unknown;
-
 		if (!util_format_s3tc_enabled) {
 			goto out_unknown;
 		}
@@ -2386,9 +2378,6 @@ uint32_t r600_translate_texformat(struct pipe_screen *screen,
 	}
 
 	if (desc->layout == UTIL_FORMAT_LAYOUT_BPTC) {
-		if (!enable_s3tc)
-			goto out_unknown;
-
 		if (rscreen->b.chip_class < EVERGREEN)
 			goto out_unknown;
 
@@ -2721,6 +2710,13 @@ uint32_t r600_colorformat_endian_swap(uint32_t colorformat)
 
 		/* 32-bit buffers. */
 		case V_0280A0_COLOR_8_8_8_8:
+			/*
+			 * No need to do endian swaps on four 8-bits components,
+			 * as mesa<-->pipe formats conversion take into account
+			 * the endianess
+			 */
+			return ENDIAN_NONE;
+
 		case V_0280A0_COLOR_2_10_10_10:
 		case V_0280A0_COLOR_8_24:
 		case V_0280A0_COLOR_24_8:

@@ -45,7 +45,7 @@ static void r300_flush_and_cleanup(struct r300_context *r300, unsigned flags,
         r500_emit_index_bias(r300, 0);
 
     /* The DDX doesn't set these regs. */
-    if (r300->screen->info.drm_minor >= 6) {
+    {
         CS_LOCALS(r300);
         OUT_CS_REG_SEQ(R300_GB_MSPOS0, 2);
         OUT_CS(0x66666666);
@@ -78,9 +78,7 @@ void r300_flush(struct pipe_context *pipe,
 {
     struct r300_context *r300 = r300_context(pipe);
 
-    if (r300->screen->info.drm_minor >= 12) {
-        flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
-    }
+    flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
 
     if (r300->dirty_hw) {
         r300_flush_and_cleanup(r300, flags, fence);

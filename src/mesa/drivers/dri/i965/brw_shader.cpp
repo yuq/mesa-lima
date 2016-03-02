@@ -1227,10 +1227,17 @@ brw_compile_tes(const struct brw_compiler *compiler,
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_TESS_EVAL];
 
    nir_shader *nir = nir_shader_clone(mem_ctx, src_shader);
-   nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
    nir->info.inputs_read = key->inputs_read;
    nir->info.patch_inputs_read = key->patch_inputs_read;
-   nir = brw_nir_lower_io(nir, compiler->devinfo, is_scalar, false, NULL);
+
+   struct brw_vue_map input_vue_map;
+   brw_compute_tess_vue_map(&input_vue_map,
+                            nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
+                            nir->info.patch_inputs_read);
+
+   nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
+   brw_nir_lower_tes_inputs(nir, &input_vue_map);
+   brw_nir_lower_vue_outputs(nir, is_scalar);
    nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
 
    brw_compute_vue_map(devinfo, &prog_data->base.vue_map,
@@ -1248,11 +1255,6 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
    /* URB entry sizes are stored as a multiple of 64 bytes. */
    prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
-
-   struct brw_vue_map input_vue_map;
-   brw_compute_tess_vue_map(&input_vue_map,
-                            nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
-                            nir->info.patch_inputs_read);
 
    bool need_patch_header = nir->info.system_values_read &
       (BITFIELD64_BIT(SYSTEM_VALUE_TESS_LEVEL_OUTER) |

@@ -49,6 +49,7 @@
 #include "main/blit.h"
 #include "main/buffers.h"
 #include "main/fbobject.h"
+#include "main/framebuffer.h"
 #include "main/uniforms.h"
 #include "main/texparam.h"
 #include "main/texobj.h"
@@ -424,8 +425,9 @@ brw_meta_stencil_blit(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    struct blit_dims dims = *orig_dims;
    struct fb_tex_blit_state blit;
-   GLuint prog, fbo;
-   struct gl_renderbuffer *rb;
+   GLuint prog;
+   struct gl_framebuffer *drawFb = NULL;
+   struct gl_renderbuffer *rb = NULL;
    GLenum target;
 
    _mesa_meta_fb_tex_blit_begin(ctx, &blit);
@@ -436,13 +438,18 @@ brw_meta_stencil_blit(struct brw_context *brw,
    assert(ctx->Extensions.ARB_texture_stencil8 == false);
    ctx->Extensions.ARB_texture_stencil8 = true;
 
-   _mesa_GenFramebuffers(1, &fbo);
+   drawFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   if (drawFb == NULL) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "in %s", __func__);
+      goto error;
+   }
+
    /* Force the surface to be configured for level zero. */
    rb = brw_get_rb_for_slice(brw, dst_mt, 0, dst_layer, true);
    adjust_msaa(&dims, dst_mt->num_samples);
    adjust_tiling(&dims, dst_mt->num_samples);
 
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+   _mesa_bind_framebuffers(ctx, drawFb, ctx->ReadBuffer);
    _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, GL_COLOR_ATTACHMENT0,
                                   rb);
    _mesa_DrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -477,7 +484,7 @@ error:
    _mesa_meta_end(ctx);
 
    _mesa_reference_renderbuffer(&rb, NULL);
-   _mesa_DeleteFramebuffers(1, &fbo);
+   _mesa_reference_framebuffer(&drawFb, NULL);
 }
 
 void
@@ -534,19 +541,22 @@ brw_meta_stencil_updownsample(struct brw_context *brw,
       .dst_x0 = 0, .dst_y0 = 0,
       .dst_x1 = dst->logical_width0, .dst_y1 = dst->logical_height0,
       .mirror_x = 0, .mirror_y = 0 };
-   GLuint fbo;
+   struct gl_framebuffer *readFb;
    struct gl_renderbuffer *rb;
 
    if (dst->stencil_mt)
       dst = dst->stencil_mt;
 
+   readFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   if (readFb == NULL)
+      return;
+
    brw_emit_mi_flush(brw);
    _mesa_meta_begin(ctx, MESA_META_ALL);
 
-   _mesa_GenFramebuffers(1, &fbo);
    rb = brw_get_rb_for_slice(brw, src, 0, 0, false);
 
-   _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+   _mesa_bind_framebuffers(ctx, ctx->DrawBuffer, readFb);
    _mesa_framebuffer_renderbuffer(ctx, ctx->ReadBuffer, GL_STENCIL_ATTACHMENT,
                                   rb);
 
@@ -554,5 +564,5 @@ brw_meta_stencil_updownsample(struct brw_context *brw,
    brw_emit_mi_flush(brw);
 
    _mesa_reference_renderbuffer(&rb, NULL);
-   _mesa_DeleteFramebuffers(1, &fbo);
+   _mesa_reference_framebuffer(&readFb, NULL);
 }

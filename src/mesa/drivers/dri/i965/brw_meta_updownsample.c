@@ -29,6 +29,7 @@
 #include "main/buffers.h"
 #include "main/enums.h"
 #include "main/fbobject.h"
+#include "main/framebuffer.h"
 #include "main/renderbuffer.h"
 
 #include "drivers/common/meta.h"
@@ -93,7 +94,8 @@ brw_meta_updownsample(struct brw_context *brw,
                       struct intel_mipmap_tree *dst_mt)
 {
    struct gl_context *ctx = &brw->ctx;
-   GLuint fbos[2], src_fbo, dst_fbo;
+   struct gl_framebuffer *src_fb;
+   struct gl_framebuffer *dst_fb;
    struct gl_renderbuffer *src_rb;
    struct gl_renderbuffer *dst_rb;
    GLenum drawbuffer;
@@ -113,17 +115,20 @@ brw_meta_updownsample(struct brw_context *brw,
    brw_emit_mi_flush(brw);
 
    _mesa_meta_begin(ctx, MESA_META_ALL);
-   _mesa_GenFramebuffers(2, fbos);
    src_rb = brw_get_rb_for_slice(brw, src_mt, 0, 0, false);
    dst_rb = brw_get_rb_for_slice(brw, dst_mt, 0, 0, false);
-   src_fbo = fbos[0];
-   dst_fbo = fbos[1];
+   src_fb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   dst_fb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
 
-   _mesa_BindFramebuffer(GL_READ_FRAMEBUFFER, src_fbo);
+   if (src_fb == NULL || dst_fb == NULL || src_rb == NULL || dst_rb == NULL) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "in %s", __func__);
+      goto error;
+   }
+
+   _mesa_bind_framebuffers(ctx, dst_fb, src_fb);
    _mesa_framebuffer_renderbuffer(ctx, ctx->ReadBuffer, attachment, src_rb);
    _mesa_ReadBuffer(drawbuffer);
 
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, dst_fbo);
    _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, attachment, dst_rb);
    _mesa_DrawBuffer(drawbuffer);
 
@@ -133,9 +138,11 @@ brw_meta_updownsample(struct brw_context *brw,
                          dst_mt->logical_width0, dst_mt->logical_height0,
                          blit_bit, GL_NEAREST);
 
+error:
    _mesa_reference_renderbuffer(&src_rb, NULL);
    _mesa_reference_renderbuffer(&dst_rb, NULL);
-   _mesa_DeleteFramebuffers(2, fbos);
+   _mesa_reference_framebuffer(&src_fb, NULL);
+   _mesa_reference_framebuffer(&dst_fb, NULL);
 
    _mesa_meta_end(ctx);
 

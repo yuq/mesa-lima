@@ -231,15 +231,14 @@ _mesa_ast_to_hir(exec_list *instructions, struct _mesa_glsl_parse_state *state)
 
 
 static ir_expression_operation
-get_conversion_operation(const glsl_type *to, const glsl_type *from,
-                         struct _mesa_glsl_parse_state *state)
+get_implicit_conversion_operation(const glsl_type *to, const glsl_type *from,
+                                  struct _mesa_glsl_parse_state *state)
 {
    switch (to->base_type) {
    case GLSL_TYPE_FLOAT:
       switch (from->base_type) {
       case GLSL_TYPE_INT: return ir_unop_i2f;
       case GLSL_TYPE_UINT: return ir_unop_u2f;
-      case GLSL_TYPE_DOUBLE: return ir_unop_d2f;
       default: return (ir_expression_operation)0;
       }
 
@@ -311,7 +310,7 @@ apply_implicit_conversion(const glsl_type *to, ir_rvalue * &from,
    to = glsl_type::get_instance(to->base_type, from->type->vector_elements,
                                 from->type->matrix_columns);
 
-   ir_expression_operation op = get_conversion_operation(to, from->type, state);
+   ir_expression_operation op = get_implicit_conversion_operation(to, from->type, state);
    if (op) {
       from = new(ctx) ir_expression(op, to, from, NULL);
       return true;

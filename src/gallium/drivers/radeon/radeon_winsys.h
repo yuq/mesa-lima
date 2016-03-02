@@ -26,24 +26,10 @@
 
 /* The public winsys interface header for the radeon driver. */
 
-/* R300 features in DRM.
- *
- * 2.6.0:
- * - Hyper-Z
- * - GB_Z_PEQ_CONFIG on rv350->r4xx
- * - R500 FG_ALPHA_VALUE
- *
- * 2.8.0:
- * - R500 US_FORMAT regs
- * - R500 ARGB2101010 colorbuffer
- * - CMask and AA regs
- * - R16F/RG16F
- */
-
 #include "pipebuffer/pb_buffer.h"
 
 #define RADEON_FLUSH_ASYNC		(1 << 0)
-#define RADEON_FLUSH_KEEP_TILING_FLAGS	(1 << 1) /* needs DRM 2.12.0 */
+#define RADEON_FLUSH_KEEP_TILING_FLAGS	(1 << 1)
 #define RADEON_FLUSH_END_OF_FRAME       (1 << 2)
 
 /* Tiling flags. */

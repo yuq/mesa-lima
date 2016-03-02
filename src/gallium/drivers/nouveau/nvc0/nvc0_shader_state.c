@@ -28,6 +28,8 @@
 #include "nvc0/nvc0_context.h"
 #include "nvc0/nvc0_query_hw.h"
 
+#include "nvc0/nvc0_compute.xml.h"
+
 static inline void
 nvc0_program_update_context_state(struct nvc0_context *nvc0,
                                   struct nvc0_program *prog, int stage)
@@ -254,6 +256,19 @@ nvc0_gmtyprog_validate(struct nvc0_context *nvc0)
       PUSH_DATA (push, 0x40);
    }
    nvc0_program_update_context_state(nvc0, gp, 3);
+}
+
+void
+nvc0_compprog_validate(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_program *cp = nvc0->compprog;
+
+   if (cp && !nvc0_program_validate(nvc0, cp))
+      return;
+
+   BEGIN_NVC0(push, NVC0_CP(FLUSH), 1);
+   PUSH_DATA (push, NVC0_COMPUTE_FLUSH_CODE);
 }
 
 void

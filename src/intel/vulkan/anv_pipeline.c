@@ -396,13 +396,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    prog_data->binding_table.image_start = bias;
 
    /* Finish the optimization and compilation process */
-   if (nir->stage != MESA_SHADER_VERTEX &&
-       nir->stage != MESA_SHADER_TESS_CTRL &&
-       nir->stage != MESA_SHADER_TESS_EVAL &&
-       nir->stage != MESA_SHADER_FRAGMENT) {
-      nir = brw_nir_lower_io(nir, &pipeline->device->info,
-                             compiler->scalar_stage[stage], false, NULL);
-   }
+   if (nir->stage == MESA_SHADER_COMPUTE)
+      brw_nir_lower_shared(nir);
 
    /* nir_lower_io will only handle the push constants; we need to set this
     * to the full number of possible uniforms.

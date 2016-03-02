@@ -365,6 +365,7 @@ struct si_shader {
 	struct r600_resource		*scratch_bo;
 	union si_shader_key		key;
 	bool				is_binary_shared;
+	unsigned			z_order;
 
 	/* The following data is all that's needed for binary shaders. */
 	struct radeon_shader_binary	binary;
@@ -433,7 +434,8 @@ void si_shader_destroy(struct si_shader *shader);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
 void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
-		    struct pipe_debug_callback *debug, unsigned processor);
+		    struct pipe_debug_callback *debug, unsigned processor,
+		    FILE *f);
 void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			struct si_shader *shader,
 			uint64_t scratch_va);

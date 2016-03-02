@@ -121,7 +121,7 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
       return 256;
    case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
-      return 1; /* 256 for binding as RT, but that's not possible in GL */
+      return 16; /* 256 for binding as RT, but that's not possible in GL */
    case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:
       return NOUVEAU_MIN_BUFFER_MAP_ALIGN;
    case PIPE_CAP_MAX_VIEWPORTS:

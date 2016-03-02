@@ -142,6 +142,8 @@ private:
 
    void emitPIXLD(const Instruction *);
 
+   void emitVOTE(const Instruction *);
+
    inline void defId(const ValueDef&, const int pos);
    inline void defId(const Instruction *, int d, const int pos);
    inline void srcId(const ValueRef&, const int pos);
@@ -2334,6 +2336,24 @@ CodeEmitterNVC0::emitPIXLD(const Instruction *i)
    code[1] |= 0x00e00000;
 }
 
+void
+CodeEmitterNVC0::emitVOTE(const Instruction *i)
+{
+   assert(i->src(0).getFile() == FILE_PREDICATE &&
+          i->def(1).getFile() == FILE_PREDICATE);
+
+   code[0] = 0x00000004 | (i->subOp << 5);
+   code[1] = 0x48000000;
+
+   emitPredicate(i);
+
+   defId(i->def(0), 14);
+   defId(i->def(1), 32 + 22);
+   if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
+      code[0] |= 1 << 23;
+   srcId(i->src(0), 20);
+}
+
 bool
 CodeEmitterNVC0::emitInstruction(Instruction *insn)
 {
@@ -2603,6 +2623,9 @@ CodeEmitterNVC0::emitInstruction(Instruction *insn)
       break;
    case OP_PIXLD:
       emitPIXLD(insn);
+      break;
+   case OP_VOTE:
+      emitVOTE(insn);
       break;
    case OP_PHI:
    case OP_UNION:

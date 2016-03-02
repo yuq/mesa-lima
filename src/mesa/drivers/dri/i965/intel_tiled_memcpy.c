@@ -757,7 +757,9 @@ bool intel_get_memcpy(mesa_format tiledFormat, GLenum format,
       *cpp = 1;
       *mem_copy = memcpy;
    } else if ((tiledFormat == MESA_FORMAT_B8G8R8A8_UNORM) ||
-              (tiledFormat == MESA_FORMAT_B8G8R8X8_UNORM)) {
+              (tiledFormat == MESA_FORMAT_B8G8R8X8_UNORM) ||
+              (tiledFormat == MESA_FORMAT_B8G8R8A8_SRGB) ||
+              (tiledFormat == MESA_FORMAT_B8G8R8X8_SRGB)) {
       *cpp = 4;
       if (format == GL_BGRA) {
          *mem_copy = memcpy;
@@ -766,7 +768,9 @@ bool intel_get_memcpy(mesa_format tiledFormat, GLenum format,
                                                : rgba8_copy_aligned_src;
       }
    } else if ((tiledFormat == MESA_FORMAT_R8G8B8A8_UNORM) ||
-              (tiledFormat == MESA_FORMAT_R8G8B8X8_UNORM)) {
+              (tiledFormat == MESA_FORMAT_R8G8B8X8_UNORM) ||
+              (tiledFormat == MESA_FORMAT_R8G8B8A8_SRGB) ||
+              (tiledFormat == MESA_FORMAT_R8G8B8X8_SRGB)) {
       *cpp = 4;
       if (format == GL_BGRA) {
          /* Copying from RGBA to BGRA is the same as BGRA to RGBA so we can

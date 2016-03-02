@@ -2951,7 +2951,6 @@ struct gl_pipeline_shader_state
 struct gl_shader_compiler_options
 {
    /** Driver-selectable options: */
-   GLboolean EmitCondCodes;             /**< Use condition codes? */
    GLboolean EmitNoLoops;
    GLboolean EmitNoFunctions;
    GLboolean EmitNoCont;                  /**< Emit CONT opcode? */
@@ -3927,7 +3926,6 @@ struct gl_extensions
    GLboolean MESA_ycbcr_texture;
    GLboolean NV_conditional_render;
    GLboolean NV_fog_distance;
-   GLboolean NV_fragment_program_option;
    GLboolean NV_point_sprite;
    GLboolean NV_primitive_restart;
    GLboolean NV_texture_barrier;

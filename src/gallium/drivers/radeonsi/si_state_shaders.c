@@ -789,6 +789,17 @@ static void si_shader_ps(struct si_shader *shader)
 		       S_00B02C_EXTRA_LDS_SIZE(shader->config.lds_size) |
 		       S_00B02C_USER_SGPR(num_user_sgprs) |
 		       S_00B32C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
+
+	/* Prefer RE_Z if the shader is complex enough. The requirement is either:
+	 * - the shader uses at least 2 VMEM instructions, or
+	 * - the code size is at least 50 2-dword instructions or 100 1-dword
+	 *   instructions.
+	 */
+	if (info->num_memory_instructions >= 2 ||
+	    shader->binary.code_size > 100*4)
+		shader->z_order = V_02880C_EARLY_Z_THEN_RE_Z;
+	else
+		shader->z_order = V_02880C_EARLY_Z_THEN_LATE_Z;
 }
 
 static void si_shader_init_pm4_state(struct si_shader *shader)
@@ -1985,14 +1996,17 @@ bool si_update_shaders(struct si_context *sctx)
 	si_update_vgt_shader_config(sctx);
 
 	if (sctx->ps_shader.cso) {
-		unsigned db_shader_control =
-			sctx->ps_shader.cso->db_shader_control |
-			S_02880C_KILL_ENABLE(si_get_alpha_test_func(sctx) != PIPE_FUNC_ALWAYS);
+		unsigned db_shader_control;
 
 		r = si_shader_select(ctx, &sctx->ps_shader);
 		if (r)
 			return false;
 		si_pm4_bind_state(sctx, ps, sctx->ps_shader.current->pm4);
+
+		db_shader_control =
+			sctx->ps_shader.cso->db_shader_control |
+			S_02880C_KILL_ENABLE(si_get_alpha_test_func(sctx) != PIPE_FUNC_ALWAYS) |
+			S_02880C_Z_ORDER(sctx->ps_shader.current->z_order);
 
 		if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
 		    sctx->sprite_coord_enable != rs->sprite_coord_enable ||

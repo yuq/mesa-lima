@@ -2398,6 +2398,10 @@ _glcpp_parser_handle_version_declaration(glcpp_parser_t *parser, intmax_t versio
                     add_builtin_define(parser, "GL_OES_geometry_point_size", 1);
                     add_builtin_define(parser, "GL_OES_geometry_shader", 1);
                  }
+                 if (extensions->ARB_gpu_shader5) {
+                    add_builtin_define(parser, "GL_EXT_gpu_shader5", 1);
+                    add_builtin_define(parser, "GL_OES_gpu_shader5", 1);
+                 }
               }
 	   }
 	} else {

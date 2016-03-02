@@ -36,6 +36,7 @@
 #include "main/varray.h"
 #include "main/uniforms.h"
 #include "main/fbobject.h"
+#include "main/framebuffer.h"
 #include "main/renderbuffer.h"
 #include "main/texobj.h"
 
@@ -848,18 +849,23 @@ brw_meta_resolve_color(struct brw_context *brw,
                        struct intel_mipmap_tree *mt)
 {
    struct gl_context *ctx = &brw->ctx;
-   GLuint fbo;
+   struct gl_framebuffer *drawFb;
    struct gl_renderbuffer *rb;
    struct rect rect;
 
    brw_emit_mi_flush(brw);
 
+   drawFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
+   if (drawFb == NULL) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "in %s", __func__);
+      return;
+   }
+
    _mesa_meta_begin(ctx, MESA_META_ALL);
 
-   _mesa_GenFramebuffers(1, &fbo);
    rb = brw_get_rb_for_slice(brw, mt, 0, 0, false);
 
-   _mesa_BindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+   _mesa_bind_framebuffers(ctx, drawFb, ctx->ReadBuffer);
    _mesa_framebuffer_renderbuffer(ctx, ctx->DrawBuffer, GL_COLOR_ATTACHMENT0,
                                   rb);
    _mesa_DrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -888,7 +894,7 @@ brw_meta_resolve_color(struct brw_context *brw,
    use_rectlist(brw, false);
 
    _mesa_reference_renderbuffer(&rb, NULL);
-   _mesa_DeleteFramebuffers(1, &fbo);
+   _mesa_reference_framebuffer(&drawFb, NULL);
 
    _mesa_meta_end(ctx);
 

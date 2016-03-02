@@ -28,9 +28,10 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := gallium_dri
 
 ifeq ($(MESA_LOLLIPOP_BUILD),true)
-LOCAL_MODULE_RELATIVE_PATH := $(notdir $(MESA_DRI_MODULE_PATH))
+LOCAL_MODULE_RELATIVE_PATH := $(MESA_DRI_MODULE_REL_PATH)
 else
 LOCAL_MODULE_PATH := $(MESA_DRI_MODULE_PATH)
+LOCAL_UNSTRIPPED_PATH := $(MESA_DRI_MODULE_UNSTRIPPED_PATH)
 endif
 
 LOCAL_SRC_FILES := target.c
@@ -109,6 +110,8 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_st_dri \
 	libmesa_st_mesa \
 	libmesa_glsl \
+	libmesa_compiler \
+	libmesa_nir \
 	libmesa_dri_common \
 	libmesa_megadriver_stub \
 	libmesa_gallium \

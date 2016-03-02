@@ -34,15 +34,15 @@
 
 DEBUG_GET_ONCE_OPTION(replace_shaders, "RADEON_REPLACE_SHADERS", NULL)
 
-static void si_dump_shader(struct si_shader_ctx_state *state, const char *name,
-			   FILE *f)
+static void si_dump_shader(struct si_screen *sscreen,
+			   struct si_shader_ctx_state *state, FILE *f)
 {
 	if (!state->cso || !state->current)
 		return;
 
-	fprintf(f, "%s shader disassembly:\n", name);
 	si_dump_shader_key(state->cso->type, &state->current->key, f);
-	fprintf(f, "%s\n\n", state->current->binary.disasm_string);
+	si_shader_dump(sscreen, state->current, NULL,
+		       state->cso->info.processor, f);
 }
 
 /**
@@ -670,11 +670,11 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		si_dump_debug_registers(sctx, f);
 
 	si_dump_framebuffer(sctx, f);
-	si_dump_shader(&sctx->vs_shader, "Vertex", f);
-	si_dump_shader(&sctx->tcs_shader, "Tessellation control", f);
-	si_dump_shader(&sctx->tes_shader, "Tessellation evaluation", f);
-	si_dump_shader(&sctx->gs_shader, "Geometry", f);
-	si_dump_shader(&sctx->ps_shader, "Fragment", f);
+	si_dump_shader(sctx->screen, &sctx->vs_shader, f);
+	si_dump_shader(sctx->screen, &sctx->tcs_shader, f);
+	si_dump_shader(sctx->screen, &sctx->tes_shader, f);
+	si_dump_shader(sctx->screen, &sctx->gs_shader, f);
+	si_dump_shader(sctx->screen, &sctx->ps_shader, f);
 
 	si_dump_last_bo_list(sctx, f);
 	si_dump_last_ib(sctx, f);
@@ -781,8 +781,7 @@ void si_check_vm_faults(struct si_context *sctx)
 	fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
 	fprintf(f, "Failing VM page: 0x%08x\n\n", addr);
 
-	si_dump_last_bo_list(sctx, f);
-	si_dump_last_ib(sctx, f);
+	si_dump_debug_state(&sctx->b.b, f, 0);
 	fclose(f);
 
 	fprintf(stderr, "Detected a VM fault, exiting...\n");

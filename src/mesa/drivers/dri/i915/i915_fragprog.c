@@ -598,26 +598,6 @@ upload_program(struct i915_fragment_program *p)
                          0, src0, T0_TEXKILL);
          break;
 
-      case OPCODE_KIL_NV:
-	 if (inst->DstReg.CondMask == COND_TR) {
-	    tmp = i915_get_utemp(p);
-
-	    /* The KIL instruction discards the fragment if any component of
-	     * the source is < 0.  Emit an immediate operand of {-1}.xywz.
-	     */
-	    i915_emit_texld(p, get_live_regs(p, inst),
-			    tmp, A0_DEST_CHANNEL_ALL,
-			    0, /* use a dummy dest reg */
-			    negate(swizzle(tmp, ONE, ONE, ONE, ONE),
-				   1, 1, 1, 1),
-			    T0_TEXKILL);
-	 } else {
-	    p->error = 1;
-	    i915_program_error(p, "Unsupported KIL_NV condition code: %d",
-			       inst->DstReg.CondMask);
-	 }
-	 break;
-
       case OPCODE_LG2:
          src0 = src_vector(p, &inst->SrcReg[0], program);
 

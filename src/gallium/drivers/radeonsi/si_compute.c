@@ -115,7 +115,7 @@ static void *si_create_compute_state(
 	si_shader_binary_read_config(&program->shader.binary,
 				     &program->shader.config, 0);
 	si_shader_dump(sctx->screen, &program->shader, &sctx->b.debug,
-		       TGSI_PROCESSOR_COMPUTE);
+		       TGSI_PROCESSOR_COMPUTE, stderr);
 	si_shader_binary_upload(sctx->screen, &program->shader);
 
 	program->input_buffer =	si_resource_create_custom(sctx->b.b.screen,

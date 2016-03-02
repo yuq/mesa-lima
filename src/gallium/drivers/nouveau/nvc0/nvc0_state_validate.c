@@ -559,21 +559,6 @@ nvc0_validate_driverconst(struct nvc0_context *nvc0)
    nvc0->dirty_cp |= NVC0_NEW_CP_DRIVERCONST;
 }
 
-void
-nvc0_validate_global_residents(struct nvc0_context *nvc0,
-                               struct nouveau_bufctx *bctx, int bin)
-{
-   unsigned i;
-
-   for (i = 0; i < nvc0->global_residents.size / sizeof(struct pipe_resource *);
-        ++i) {
-      struct pipe_resource *res = *util_dynarray_element(
-         &nvc0->global_residents, struct pipe_resource *, i);
-      if (res)
-         nvc0_add_resident(bctx, bin, nv04_resource(res), NOUVEAU_BO_RDWR);
-   }
-}
-
 static void
 nvc0_validate_derived_1(struct nvc0_context *nvc0)
 {
