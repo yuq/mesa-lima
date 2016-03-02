@@ -232,6 +232,8 @@ optimizations = [
    (('f2u', ('ftrunc', a)), ('f2u', a)),
    (('i2b', ('ineg', a)), ('i2b', a)),
    (('i2b', ('iabs', a)), ('i2b', a)),
+   (('fabs', ('b2f', a)), ('b2f', a)),
+   (('iabs', ('b2i', a)), ('b2i', a)),
 
    # Byte extraction
    (('ushr', a, 24), ('extract_u8', a, 3), '!options->lower_extract_byte'),
