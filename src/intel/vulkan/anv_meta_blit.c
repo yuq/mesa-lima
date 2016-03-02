@@ -417,6 +417,19 @@ vk_format_for_size(int bs)
    }
 }
 
+static struct anv_meta_blit2d_surf
+blit_surf_for_image(const struct anv_image* image,
+                    const struct isl_surf *img_isl_surf)
+{
+   return (struct anv_meta_blit2d_surf) {
+            .bo = image->bo,
+            .tiling = img_isl_surf->tiling,
+            .base_offset = image->offset,
+            .bs = isl_format_get_layout(img_isl_surf->format)->bs,
+            .pitch = isl_surf_get_row_pitch(img_isl_surf),
+   };
+}
+
 void
 anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
                 struct anv_meta_blit2d_surf *src,
