@@ -110,6 +110,7 @@ check_PROGRAMS = $(TESTS)
 
 # Link tests to lib965_compiler.la for brw_get_device_info().
 tests_ldadd =						\
+	-lm						\
 	libisl.la					\
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la
 
