@@ -101,6 +101,13 @@ optimizations = [
    (('inot', ('ige', a, b)), ('ilt', a, b)),
    (('inot', ('ieq', a, b)), ('ine', a, b)),
    (('inot', ('ine', a, b)), ('ieq', a, b)),
+
+   # 0.0 >= b2f(a)
+   # b2f(a) <= 0.0
+   # b2f(a) == 0.0 because b2f(a) can only be 0 or 1
+   # inot(a)
+   (('fge', 0.0, ('b2f', a)), ('inot', a)),
+
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
    (('bcsel', ('flt', a, b), a, b), ('fmin', a, b)),
    (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
