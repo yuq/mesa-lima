@@ -120,7 +120,7 @@ make_surface(const struct anv_device *dev,
 
    isl_tiling_flags_t tiling_flags = anv_info->isl_tiling_flags;
    if (vk_info->tiling == VK_IMAGE_TILING_LINEAR)
-      tiling_flags &= ISL_TILING_LINEAR_BIT;
+      tiling_flags = ISL_TILING_LINEAR_BIT;
 
    struct anv_surface *anv_surf = get_surface(image, aspect);
 
