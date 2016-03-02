@@ -30,11 +30,12 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
-	-I$(top_srcdir)/src/isl/ \
-	-I$(top_srcdir)/src/vulkan
+	-I$(top_srcdir)/src/intel \
+	-I$(top_srcdir)/src/intel/vulkan \
+	-I$(top_builddir)/src/intel/vulkan
 
 LDADD = \
-	$(top_builddir)/src/vulkan/libvulkan-test.la \
+	$(top_builddir)/src/intel/vulkan/libvulkan-test.la \
 	$(PTHREAD_LIBS) -lm -lstdc++
 
 check_PROGRAMS = \
