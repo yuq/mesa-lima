@@ -872,6 +872,11 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                      unsigned num_tfeedback_decls,
                      tfeedback_decl *tfeedback_decls, bool has_xfb_qualifiers)
 {
+   /* Make sure MaxTransformFeedbackBuffers is less than 32 so the bitmask for
+    * tracking the number of buffers doesn't overflow.
+    */
+   assert(ctx->Const.MaxTransformFeedbackBuffers < 32);
+
    bool separate_attribs_mode =
       prog->TransformFeedback.BufferMode == GL_SEPARATE_ATTRIBS;
 
@@ -904,6 +909,7 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                     num_outputs);
 
    unsigned num_buffers = 0;
+   unsigned buffers = 0;
 
    if (!has_xfb_qualifiers && separate_attribs_mode) {
       /* GL_SEPARATE_ATTRIBS */
@@ -913,6 +919,7 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                                        has_xfb_qualifiers))
             return false;
 
+         buffers |= 1 << num_buffers;
          num_buffers++;
       }
    }
@@ -949,6 +956,7 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
          } else {
             buffer = num_buffers;
          }
+         buffers |= 1 << num_buffers;
 
          if (!tfeedback_decls[i].store(ctx, prog,
                                        &prog->LinkedTransformFeedback,
@@ -956,12 +964,11 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                                        has_xfb_qualifiers))
             return false;
       }
-      num_buffers++;
    }
 
    assert(prog->LinkedTransformFeedback.NumOutputs == num_outputs);
 
-   prog->LinkedTransformFeedback.NumBuffers = num_buffers;
+   prog->LinkedTransformFeedback.ActiveBuffers = buffers;
    return true;
 }
 

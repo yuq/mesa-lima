@@ -256,7 +256,7 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
     * overflowing any of the buffers currently being used for feedback.
     */
    unsigned max_index
-      = _mesa_compute_max_transform_feedback_vertices(xfb_obj,
+      = _mesa_compute_max_transform_feedback_vertices(ctx, xfb_obj,
                                                       linked_xfb_info);
 
    /* Initialize the SVBI 0 register to zero and set the maximum index. */

@@ -1649,10 +1649,8 @@ struct gl_transform_feedback_info
 {
    unsigned NumOutputs;
 
-   /**
-    * Number of transform feedback buffers in use by this program.
-    */
-   unsigned NumBuffers;
+   /* Bitmask of active buffer indices. */
+   unsigned ActiveBuffers;
 
    struct gl_transform_feedback_output *Outputs;
 
