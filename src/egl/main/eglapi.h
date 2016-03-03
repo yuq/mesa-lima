@@ -42,6 +42,9 @@ extern "C" {
 typedef void (*_EGLProc)(void);
 
 struct wl_display;
+typedef struct _mesa_glinterop_device_info mesa_glinterop_device_info;
+typedef struct _mesa_glinterop_export_in mesa_glinterop_export_in;
+typedef struct _mesa_glinterop_export_out mesa_glinterop_export_out;
 
 /**
  * The API dispatcher jumps through these functions
@@ -188,6 +191,12 @@ struct _egl_api
    EGLBoolean (*ExportDMABUFImageMESA)(_EGLDriver *drv, _EGLDisplay *disp,
                                        _EGLImage *img, EGLint *fds,
                                        EGLint *strides, EGLint *offsets);
+
+   int (*GLInteropQueryDeviceInfo)(_EGLDisplay *dpy, _EGLContext *ctx,
+                                   mesa_glinterop_device_info *out);
+   int (*GLInteropExportObject)(_EGLDisplay *dpy, _EGLContext *ctx,
+                                const mesa_glinterop_export_in *in,
+                                mesa_glinterop_export_out *out);
 };
 
 

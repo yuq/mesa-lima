@@ -46,6 +46,7 @@
 #endif
 #include <GL/gl.h>
 #include <GL/internal/dri_interface.h>
+#include "GL/mesa_glinterop.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -740,6 +741,8 @@ dri2_create_screen(_EGLDisplay *disp)
       if (strcmp(extensions[i]->name, __DRI2_RENDERER_QUERY) == 0) {
          dri2_dpy->rendererQuery = (__DRI2rendererQueryExtension *) extensions[i];
       }
+      if (strcmp(extensions[i]->name, __DRI2_INTEROP) == 0)
+         dri2_dpy->interop = (__DRI2interopExtension *) extensions[i];
    }
 
    dri2_setup_screen(disp);
@@ -2691,6 +2694,33 @@ dri2_server_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync)
    return EGL_TRUE;
 }
 
+static int
+dri2_interop_query_device_info(_EGLDisplay *dpy, _EGLContext *ctx,
+                               mesa_glinterop_device_info *out)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
+
+   if (!dri2_dpy->interop)
+      return MESA_GLINTEROP_UNSUPPORTED;
+
+   return dri2_dpy->interop->query_device_info(dri2_ctx->dri_context, out);
+}
+
+static int
+dri2_interop_export_object(_EGLDisplay *dpy, _EGLContext *ctx,
+                           const mesa_glinterop_export_in *in,
+                           mesa_glinterop_export_out *out)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
+
+   if (!dri2_dpy->interop)
+      return MESA_GLINTEROP_UNSUPPORTED;
+
+   return dri2_dpy->interop->export_object(dri2_ctx->dri_context, in, out);
+}
+
 static void
 dri2_unload(_EGLDriver *drv)
 {
@@ -2802,6 +2832,8 @@ _eglBuiltInDriverDRI2(const char *args)
    dri2_drv->base.API.SignalSyncKHR = dri2_signal_sync;
    dri2_drv->base.API.WaitSyncKHR = dri2_server_wait_sync;
    dri2_drv->base.API.DestroySyncKHR = dri2_destroy_sync;
+   dri2_drv->base.API.GLInteropQueryDeviceInfo = dri2_interop_query_device_info;
+   dri2_drv->base.API.GLInteropExportObject = dri2_interop_export_object;
 
    dri2_drv->base.Name = "DRI2";
    dri2_drv->base.Unload = dri2_unload;
