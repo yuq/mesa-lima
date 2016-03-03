@@ -126,7 +126,6 @@ xmesa_get_param(struct st_manager *smapi,
 typedef struct _XMesaExtDisplayInfo {
    struct _XMesaExtDisplayInfo *next;
    Display *display;
-   XExtCodes *codes;
    struct xmesa_display mesaDisplay;
 } XMesaExtDisplayInfo;
 
@@ -138,8 +137,8 @@ typedef struct _XMesaExtInfo {
 static XMesaExtInfo MesaExtInfo;
 
 /* hook to delete XMesaDisplay on XDestroyDisplay */
-static int
-xmesa_close_display(Display *display, XExtCodes *codes)
+extern void
+xmesa_close_display(Display *display)
 {
    XMesaExtDisplayInfo *info, *prev;
 
@@ -159,7 +158,7 @@ xmesa_close_display(Display *display, XExtCodes *codes)
    if (info == NULL) {
       /* no display found */
       _XUnlockMutex(_Xglobal_lock);
-      return 0;
+      return;
    }
 
    /* remove display entry from list */
@@ -181,7 +180,6 @@ xmesa_close_display(Display *display, XExtCodes *codes)
    free(xmdpy->smapi);
 
    XFree((char *) info);
-   return 1;
 }
 
 static XMesaDisplay
@@ -218,14 +216,6 @@ xmesa_init_display( Display *display )
       return NULL;
    }
    info->display = display;
-   info->codes = XAddExtension(display);
-   if (info->codes == NULL) {
-      /* could not allocate extension.  Fail */
-      Xfree(info);
-      pipe_mutex_unlock(init_mutex);
-      return NULL;
-   }
-   XESetCloseDisplay(display, info->codes->extension, xmesa_close_display);
    xmdpy = &info->mesaDisplay; /* to be filled out below */
 
    /* chain to the list of displays */
@@ -236,32 +226,30 @@ xmesa_init_display( Display *display )
    _XUnlockMutex(_Xglobal_lock);
 
    /* now create the new XMesaDisplay info */
-   if (display) {
-      xmdpy->display = display;
-      xmdpy->screen = driver.create_pipe_screen(display);
-      xmdpy->smapi = CALLOC_STRUCT(st_manager);
-      xmdpy->pipe = NULL;
-      if (xmdpy->smapi) {
-         xmdpy->smapi->screen = xmdpy->screen;
-         xmdpy->smapi->get_param = xmesa_get_param;
-      }
+   assert(display);
 
-      if (xmdpy->screen && xmdpy->smapi) {
-         pipe_mutex_init(xmdpy->mutex);
-      }
-      else {
-         if (xmdpy->screen) {
-            xmdpy->screen->destroy(xmdpy->screen);
-            xmdpy->screen = NULL;
-         }
-         free(xmdpy->smapi);
-         xmdpy->smapi = NULL;
-
-         xmdpy->display = NULL;
-      }
+   xmdpy->display = display;
+   xmdpy->screen = driver.create_pipe_screen(display);
+   xmdpy->smapi = CALLOC_STRUCT(st_manager);
+   xmdpy->pipe = NULL;
+   if (xmdpy->smapi) {
+      xmdpy->smapi->screen = xmdpy->screen;
+      xmdpy->smapi->get_param = xmesa_get_param;
    }
-   if (!xmdpy->display || xmdpy->display != display)
-      xmdpy = NULL;
+
+   if (xmdpy->screen && xmdpy->smapi) {
+      pipe_mutex_init(xmdpy->mutex);
+   }
+   else {
+      if (xmdpy->screen) {
+         xmdpy->screen->destroy(xmdpy->screen);
+         xmdpy->screen = NULL;
+      }
+      free(xmdpy->smapi);
+      xmdpy->smapi = NULL;
+
+      xmdpy->display = NULL;
+   }
 
    pipe_mutex_unlock(init_mutex);
 
