@@ -3262,7 +3262,7 @@ builtin_builder::_acos(const glsl_type *type)
    ir_variable *x = in_var(type, "x");
    MAKE_SIG(type, always_available, 1, x);
 
-   body.emit(ret(sub(imm(M_PI_2f), asin_expr(x, 0.086566724f, -0.03102955f))));
+   body.emit(ret(sub(imm(M_PI_2f), asin_expr(x, 0.08132463f, -0.02363318f))));
 
    return sig;
 }
