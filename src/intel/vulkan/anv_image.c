@@ -540,30 +540,6 @@ anv_image_view_init(struct anv_image_view *iview,
       },
    };
 
-   struct isl_extent4d level0_extent_px;
-
-   if (!isl_format_is_compressed(format) &&
-       isl_format_is_compressed(image->format->isl_format)) {
-      /* Scale the ImageView extent by the backing Image. This is used
-       * internally when an uncompressed ImageView is created on a
-       * compressed Image. The ImageView can therefore be used for copying
-       * data from a source Image to a destination Image.
-       */
-      const struct isl_format_layout * isl_layout = image->format->isl_layout;
-
-      level0_extent_px.depth  = anv_minify(image->extent.depth, range->baseMipLevel);
-      level0_extent_px.depth  = DIV_ROUND_UP(level0_extent_px.depth, isl_layout->bd);
-
-      level0_extent_px.height = isl_surf_get_array_pitch_el_rows(&surface->isl) * image->array_size;
-      level0_extent_px.width  = isl_surf_get_row_pitch_el(&surface->isl);
-      isl_view.base_level = 0;
-      isl_view.base_array_layer = 0;
-   } else {
-      level0_extent_px.width  = image->extent.width;
-      level0_extent_px.height = image->extent.height;
-      level0_extent_px.depth  = image->extent.depth;
-   }
-
    iview->extent = (VkExtent3D) {
       .width  = anv_minify(image->extent.width , range->baseMipLevel),
       .height = anv_minify(image->extent.height, range->baseMipLevel),
@@ -586,8 +562,7 @@ anv_image_view_init(struct anv_image_view *iview,
                           iview->sampler_surface_state.map,
                           .surf = &surface->isl,
                           .view = &isl_view,
-                          .mocs = device->default_mocs,
-                          .level0_extent_px = level0_extent_px);
+                          .mocs = device->default_mocs);
 
       if (!device->info.has_llc)
          anv_state_clflush(iview->sampler_surface_state);
@@ -603,8 +578,7 @@ anv_image_view_init(struct anv_image_view *iview,
                           iview->color_rt_surface_state.map,
                           .surf = &surface->isl,
                           .view = &isl_view,
-                          .mocs = device->default_mocs,
-                          .level0_extent_px = level0_extent_px);
+                          .mocs = device->default_mocs);
 
       if (!device->info.has_llc)
          anv_state_clflush(iview->color_rt_surface_state);
@@ -621,8 +595,7 @@ anv_image_view_init(struct anv_image_view *iview,
                              iview->storage_surface_state.map,
                              .surf = &surface->isl,
                              .view = &isl_view,
-                             .mocs = device->default_mocs,
-                             .level0_extent_px = level0_extent_px);
+                             .mocs = device->default_mocs);
       } else {
          anv_fill_buffer_surface_state(device, iview->storage_surface_state,
                                        ISL_FORMAT_RAW,

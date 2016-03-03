@@ -257,8 +257,8 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       .SurfaceQPitch = get_qpitch(info->surf) >> 2,
 #endif
 
-      .Width = info->level0_extent_px.width - 1,
-      .Height = info->level0_extent_px.height - 1,
+      .Width = info->surf->logical_level0_px.width - 1,
+      .Height = info->surf->logical_level0_px.height - 1,
       .Depth = 0, /* TEMPLATE */
 
       .SurfacePitch = info->surf->row_pitch - 1,
@@ -338,7 +338,7 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        *    If the volume texture is MIP-mapped, this field specifies the
        *    depth of the base MIP level.
        */
-      s.Depth = info->level0_extent_px.depth - 1;
+      s.Depth = info->surf->logical_level0_px.depth - 1;
 
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
        *
@@ -346,7 +346,7 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        *    indicates the extent of the accessible 'R' coordinates minus 1 on
        *    the LOD currently being rendered to.
        */
-      s.RenderTargetViewExtent = info->level0_extent_px.depth - 1;
+      s.RenderTargetViewExtent = info->surf->logical_level0_px.depth - 1;
       break;
    default:
       unreachable(!"bad SurfaceType");

@@ -773,15 +773,6 @@ struct isl_surf_fill_state_info {
    uint32_t mocs;
 
    /**
-    * This allows the caller to over-ride the dimensions of the surface.
-    * This is used at the moment for compressed surfaces to let us hack
-    * around the fact that we can't actually render to them.
-    *
-    * FIXME: We really need to get rid of this.  It's a lie.
-    */
-   struct isl_extent4d level0_extent_px;
-
-   /**
     * The clear color for this surface
     *
     * Valid values depend on hardware generation.
