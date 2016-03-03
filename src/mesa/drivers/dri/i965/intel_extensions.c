@@ -368,6 +368,7 @@ intelInitExtensions(struct gl_context *ctx)
 
    if (brw->gen >= 8) {
       ctx->Extensions.ARB_stencil_texturing = true;
+      ctx->Extensions.ARB_texture_stencil8 = true;
    }
 
    if (brw->gen >= 9) {

@@ -436,12 +436,6 @@ brw_meta_stencil_blit(struct brw_context *brw,
    GLenum target = 0;
 
    _mesa_meta_fb_tex_blit_begin(ctx, &blit);
-   /* XXX: Pretend to support stencil textures so _mesa_base_tex_format()
-    * returns a valid format.  When we properly support the extension, we
-    * should remove this.
-    */
-   assert(ctx->Extensions.ARB_texture_stencil8 == false);
-   ctx->Extensions.ARB_texture_stencil8 = true;
 
    drawFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
    if (drawFb == NULL) {
@@ -484,7 +478,6 @@ brw_meta_stencil_blit(struct brw_context *brw,
    _mesa_DrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
 error:
-   ctx->Extensions.ARB_texture_stencil8 = false;
    _mesa_meta_fb_tex_blit_end(ctx, target, &blit);
    _mesa_meta_end(ctx);
 

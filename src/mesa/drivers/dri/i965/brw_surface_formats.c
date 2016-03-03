@@ -704,6 +704,7 @@ brw_init_surface_formats(struct brw_context *brw)
    ctx->TextureFormatSupported[MESA_FORMAT_Z24_UNORM_X8_UINT] = true;
    ctx->TextureFormatSupported[MESA_FORMAT_Z_FLOAT32] = true;
    ctx->TextureFormatSupported[MESA_FORMAT_Z32_FLOAT_S8X24_UINT] = true;
+   ctx->TextureFormatSupported[MESA_FORMAT_S_UINT8] = true;
 
    /* Benchmarking shows that Z16 is slower than Z24, so there's no reason to
     * use it unless you're under memory (not memory bandwidth) pressure.
