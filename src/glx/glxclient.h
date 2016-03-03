@@ -208,6 +208,10 @@ typedef struct __GLXattributeMachineRec
    __GLXattribute **stackPointer;
 } __GLXattributeMachine;
 
+typedef struct _mesa_glinterop_device_info mesa_glinterop_device_info;
+typedef struct _mesa_glinterop_export_in mesa_glinterop_export_in;
+typedef struct _mesa_glinterop_export_out mesa_glinterop_export_out;
+
 struct glx_context_vtable {
    void (*destroy)(struct glx_context *ctx);
    int (*bind)(struct glx_context *context, struct glx_context *old,
@@ -222,6 +226,11 @@ struct glx_context_vtable {
 			  int buffer, const int *attrib_list);
    void (*release_tex_image)(Display * dpy, GLXDrawable drawable, int buffer);
    void * (*get_proc_address)(const char *symbol);
+   int (*interop_query_device_info)(struct glx_context *ctx,
+                                    mesa_glinterop_device_info *out);
+   int (*interop_export_object)(struct glx_context *ctx,
+                                const mesa_glinterop_export_in *in,
+                                mesa_glinterop_export_out *out);
 };
 
 /**

@@ -113,6 +113,7 @@ libglx_la_SOURCES += \
 	dri_common.c \
 	dri_common.h \
 	dri_common_query_renderer.c \
+	dri_common_interop.c \
 	xfont.c
 endif
 

@@ -43,12 +43,19 @@ struct dri2_screen {
    const __DRItexBufferExtension *texBuffer;
    const __DRI2throttleExtension *throttle;
    const __DRI2rendererQueryExtension *rendererQuery;
+   const __DRI2interopExtension *interop;
    const __DRIconfig **driver_configs;
 
    void *driver;
    int fd;
 
    int show_fps_interval;
+};
+
+struct dri2_context
+{
+   struct glx_context base;
+   __DRIcontext *driContext;
 };
 
 _X_HIDDEN int
@@ -58,3 +65,12 @@ dri2_query_renderer_integer(struct glx_screen *base, int attribute,
 _X_HIDDEN int
 dri2_query_renderer_string(struct glx_screen *base, int attribute,
                            const char **value);
+
+_X_HIDDEN int
+dri2_interop_query_device_info(struct glx_context *ctx,
+                               mesa_glinterop_device_info *out);
+
+_X_HIDDEN int
+dri2_interop_export_object(struct glx_context *ctx,
+                           const mesa_glinterop_export_in *in,
+                           mesa_glinterop_export_out *out);
