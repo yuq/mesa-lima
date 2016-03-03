@@ -304,9 +304,11 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
                               uint32_t const *source_pitches)
 {
    enum pipe_format pformat = FormatYCBCRToPipe(source_ycbcr_format);
+   enum getbits_conversion conversion = CONVERSION_NONE;
    struct pipe_context *pipe;
    struct pipe_sampler_view **sampler_views;
    unsigned i, j;
+   unsigned usage = PIPE_TRANSFER_WRITE;
 
    vlVdpSurface *p_surf = vlGetDataHTAB(surface);
    if (!p_surf)
@@ -320,24 +322,53 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
        return VDP_STATUS_INVALID_POINTER;
 
    pipe_mutex_lock(p_surf->device->mutex);
-   if (p_surf->video_buffer == NULL || pformat != p_surf->video_buffer->buffer_format) {
 
-      /* destroy the old one */
-      if (p_surf->video_buffer)
-         p_surf->video_buffer->destroy(p_surf->video_buffer);
+   if (p_surf->video_buffer == NULL ||
+       ((pformat != p_surf->video_buffer->buffer_format))) {
+      enum pipe_format nformat = pformat;
+      struct pipe_screen *screen = pipe->screen;
 
-      /* adjust the template parameters */
-      p_surf->templat.buffer_format = pformat;
-
-      /* and try to create the video buffer with the new format */
-      p_surf->video_buffer = pipe->create_video_buffer(pipe, &p_surf->templat);
-
-      /* stil no luck? ok forget it we don't support it */
-      if (!p_surf->video_buffer) {
-         pipe_mutex_unlock(p_surf->device->mutex);
-         return VDP_STATUS_NO_IMPLEMENTATION;
+      /* Determine the most suitable format for the new surface */
+      if (!screen->is_video_format_supported(screen, nformat,
+                                             PIPE_VIDEO_PROFILE_UNKNOWN,
+                                             PIPE_VIDEO_ENTRYPOINT_BITSTREAM)) {
+         nformat = screen->get_video_param(screen,
+                                           PIPE_VIDEO_PROFILE_UNKNOWN,
+                                           PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+                                           PIPE_VIDEO_CAP_PREFERED_FORMAT);
+         if (nformat == PIPE_FORMAT_NONE) {
+            pipe_mutex_unlock(p_surf->device->mutex);
+            return VDP_STATUS_NO_IMPLEMENTATION;
+         }
       }
-      vlVdpVideoSurfaceClear(p_surf);
+
+      if (p_surf->video_buffer == NULL  ||
+          nformat != p_surf->video_buffer->buffer_format) {
+         /* destroy the old one */
+         if (p_surf->video_buffer)
+            p_surf->video_buffer->destroy(p_surf->video_buffer);
+
+         /* adjust the template parameters */
+         p_surf->templat.buffer_format = nformat;
+
+         /* and try to create the video buffer with the new format */
+         p_surf->video_buffer = pipe->create_video_buffer(pipe, &p_surf->templat);
+
+         /* stil no luck? ok forget it we don't support it */
+         if (!p_surf->video_buffer) {
+            pipe_mutex_unlock(p_surf->device->mutex);
+            return VDP_STATUS_NO_IMPLEMENTATION;
+         }
+         vlVdpVideoSurfaceClear(p_surf);
+      }
+   }
+
+   if (pformat != p_surf->video_buffer->buffer_format) {
+      if (pformat == PIPE_FORMAT_YV12 &&
+          p_surf->video_buffer->buffer_format == PIPE_FORMAT_NV12)
+         conversion = CONVERSION_YV12_TO_NV12;
+      else
+         return VDP_STATUS_NO_IMPLEMENTATION;
    }
 
    sampler_views = p_surf->video_buffer->get_sampler_view_planes(p_surf->video_buffer);
@@ -349,21 +380,46 @@ vlVdpVideoSurfacePutBitsYCbCr(VdpVideoSurface surface,
    for (i = 0; i < 3; ++i) {
       unsigned width, height;
       struct pipe_sampler_view *sv = sampler_views[i];
+      struct pipe_resource *tex;
       if (!sv || !source_pitches[i]) continue;
 
+      tex = sv->texture;
       vlVdpVideoSurfaceSize(p_surf, i, &width, &height);
 
-      for (j = 0; j < sv->texture->array_size; ++j) {
+      for (j = 0; j < tex->array_size; ++j) {
          struct pipe_box dst_box = {
             0, 0, j,
             width, height, 1
          };
 
-         pipe->texture_subdata(pipe, sv->texture, 0,
-                               PIPE_TRANSFER_WRITE, &dst_box,
-                               source_data[i] + source_pitches[i] * j,
-                               source_pitches[i] * sv->texture->array_size,
-                               0);
+         if (conversion == CONVERSION_YV12_TO_NV12 && i == 1) {
+            struct pipe_transfer *transfer;
+            uint8_t *map;
+
+            map = pipe->transfer_map(pipe, tex, 0, usage,
+                                     &dst_box, &transfer);
+            if (!map) {
+               pipe_mutex_unlock(p_surf->device->mutex);
+               return VDP_STATUS_RESOURCES;
+            }
+
+            u_copy_nv12_from_yv12(source_data, source_pitches,
+                                  i, j, transfer->stride, tex->array_size,
+                                  map, dst_box.width, dst_box.height);
+
+            pipe_transfer_unmap(pipe, transfer);
+         } else {
+            pipe->texture_subdata(pipe, tex, 0,
+                                  PIPE_TRANSFER_WRITE, &dst_box,
+                                  source_data[i] + source_pitches[i] * j,
+                                  source_pitches[i] * tex->array_size,
+                                  0);
+         }
+         /*
+          * This surface has already been synced
+          * by the first map.
+          */
+         usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
       }
    }
    pipe_mutex_unlock(p_surf->device->mutex);

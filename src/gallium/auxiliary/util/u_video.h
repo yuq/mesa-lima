@@ -107,6 +107,48 @@ u_copy_nv12_to_yv12(void *const *destination_data,
    }
 }
 
+/**
+ * \brief  Copy YV12 chroma data while converting it NV12
+ *
+ * Given a set of YV12 source pointers and -pitches, copy the data to a
+ * layout typical for NV12 video buffers.
+ *
+ * \param source data[in]  The plane data pointers. Array of 3.
+ * \param source_pitches[in]  The plane pitches. Array of 3.
+ * \param dst_plane[in]  The destination plane to copy to. For NV12 always 1.
+ * \param dst_field[in]  The destination field if interlaced.
+ * \param dst_stride[in]  The destination stride for this plane.
+ * \param num_fields[in]  The number of fields in the video buffer.
+ * \param dst[in]  The destination plane pointer.
+ * \param width[in]  The source plane width.
+ * \param height[in]  The source plane height.
+ */
+static inline void
+u_copy_nv12_from_yv12(const void *const *source_data,
+                      uint32_t const *source_pitches,
+                      int dst_plane, int dst_field,
+                      int dst_stride, int num_fields,
+                      uint8_t *dst,
+                      int width, int height)
+{
+   int x, y;
+   unsigned u_stride = source_pitches[2] * num_fields;
+   unsigned v_stride = source_pitches[1] * num_fields;
+   uint8_t *u_src = (uint8_t *)source_data[2] + source_pitches[2] * dst_field;
+   uint8_t *v_src = (uint8_t *)source_data[1] + source_pitches[1] * dst_field;
+
+   /* TODO: SIMD */
+   for (y = 0; y < height; y++) {
+      for (x = 0; x < width; x++) {
+         dst[2*x] = u_src[x];
+         dst[2*x+1] = v_src[x];
+      }
+      u_src += u_stride;
+      v_src += v_stride;
+      dst += dst_stride;
+   }
+}
+
 static inline void
 u_copy_yv12_to_nv12(void *const *destination_data,
                     uint32_t const *destination_pitches,

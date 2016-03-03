@@ -123,8 +123,21 @@ vlVdpVideoSurfaceQueryGetPutBitsYCbCrCapabilities(VdpDevice device, VdpChromaTyp
 
    switch(bits_ycbcr_format) {
    case VDP_YCBCR_FORMAT_NV12:
+      *is_supported = surface_chroma_type == VDP_CHROMA_TYPE_420;
+      break;
+
    case VDP_YCBCR_FORMAT_YV12:
       *is_supported = surface_chroma_type == VDP_CHROMA_TYPE_420;
+
+      /* We can convert YV12 to NV12 on the fly! */
+      if (*is_supported &&
+          pscreen->is_video_format_supported(pscreen,
+                                             PIPE_FORMAT_NV12,
+                                             PIPE_VIDEO_PROFILE_UNKNOWN,
+                                             PIPE_VIDEO_ENTRYPOINT_BITSTREAM)) {
+         pipe_mutex_unlock(dev->mutex);
+         return VDP_STATUS_OK;
+      }
       break;
 
    case VDP_YCBCR_FORMAT_UYVY:
