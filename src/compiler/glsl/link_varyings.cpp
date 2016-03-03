@@ -716,7 +716,7 @@ bool
 tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
                       struct gl_transform_feedback_info *info,
                       unsigned buffer, const unsigned max_outputs,
-                      bool has_xfb_qualifiers) const
+                      bool *explicit_stride, bool has_xfb_qualifiers) const
 {
    assert(!this->next_buffer_separator);
 
@@ -724,6 +724,13 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
    if (this->skip_components) {
       info->Buffers[buffer].Stride += this->skip_components;
       return true;
+   }
+
+   unsigned xfb_offset = 0;
+   if (has_xfb_qualifiers) {
+      xfb_offset = this->offset / 4;
+   } else {
+      xfb_offset = info->Buffers[buffer].Stride;
    }
 
    /* From GL_EXT_transform_feedback:
@@ -752,17 +759,38 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
       info->Outputs[info->NumOutputs].NumComponents = output_size;
       info->Outputs[info->NumOutputs].StreamId = stream_id;
       info->Outputs[info->NumOutputs].OutputBuffer = buffer;
-      info->Outputs[info->NumOutputs].DstOffset =
-         info->Buffers[buffer].Stride;
+      info->Outputs[info->NumOutputs].DstOffset = xfb_offset;
       ++info->NumOutputs;
-      info->Buffers[buffer].Stride += output_size;
       info->Buffers[buffer].Stream = this->stream_id;
+      xfb_offset += output_size;
+
       num_components -= output_size;
       location++;
       location_frac = 0;
    }
 
-   info->Varyings[info->NumVarying].Name = ralloc_strdup(prog, this->orig_name);
+   if (explicit_stride && explicit_stride[buffer]) {
+      if (this->is_double() && info->Buffers[buffer].Stride % 2) {
+         linker_error(prog, "invalid qualifier xfb_stride=%d must be a "
+                      "multiple of 8 as its applied to a type that is or "
+                      "contains a double.",
+                      info->Buffers[buffer].Stride * 4);
+         return false;
+      }
+
+      if ((this->offset / 4) / info->Buffers[buffer].Stride !=
+          (xfb_offset - 1) / info->Buffers[buffer].Stride) {
+         linker_error(prog, "xfb_offset (%d) overflows xfb_stride (%d) for "
+                      "buffer (%d)", xfb_offset * 4,
+                      info->Buffers[buffer].Stride * 4, buffer);
+         return false;
+      }
+   } else {
+      info->Buffers[buffer].Stride = xfb_offset;
+   }
+
+   info->Varyings[info->NumVarying].Name = ralloc_strdup(prog,
+                                                         this->orig_name);
    info->Varyings[info->NumVarying].Type = this->type;
    info->Varyings[info->NumVarying].Size = this->size;
    info->NumVarying++;
@@ -916,7 +944,7 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
       /* GL_SEPARATE_ATTRIBS */
       for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
          if (!tfeedback_decls[i].store(ctx, prog, &prog->LinkedTransformFeedback,
-                                       num_buffers, num_outputs,
+                                       num_buffers, num_outputs, NULL,
                                        has_xfb_qualifiers))
             return false;
 
@@ -929,12 +957,14 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
       int buffer_stream_id = -1;
       unsigned buffer =
          num_tfeedback_decls ? tfeedback_decls[0].get_buffer() : 0;
+      bool explicit_stride[MAX_FEEDBACK_BUFFERS] = { false };
 
       /* Apply any xfb_stride global qualifiers */
       if (has_xfb_qualifiers) {
          for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
             if (prog->TransformFeedback.BufferStride[j]) {
                buffers |= 1 << j;
+               explicit_stride[j] = true;
                prog->LinkedTransformFeedback.Buffers[j].Stride =
                   prog->TransformFeedback.BufferStride[j] / 4;
             }
@@ -973,7 +1003,7 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
          if (!tfeedback_decls[i].store(ctx, prog,
                                        &prog->LinkedTransformFeedback,
                                        num_buffers, num_outputs,
-                                       has_xfb_qualifiers))
+                                       explicit_stride, has_xfb_qualifiers))
             return false;
       }
    }

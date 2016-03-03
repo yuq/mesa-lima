@@ -98,7 +98,8 @@ public:
    unsigned get_num_outputs() const;
    bool store(struct gl_context *ctx, struct gl_shader_program *prog,
               struct gl_transform_feedback_info *info, unsigned buffer,
-              const unsigned max_outputs, bool has_xfb_qualifiers) const;
+              const unsigned max_outputs, bool *explicit_stride,
+              bool has_xfb_qualifiers) const;
    const tfeedback_candidate *find_candidate(gl_shader_program *prog,
                                              hash_table *tfeedback_candidates);
 
