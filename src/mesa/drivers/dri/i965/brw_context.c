@@ -665,8 +665,8 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.MaxVertexStreams = MIN2(4, MAX_VERTEX_STREAMS);
 
    /* ARB_framebuffer_no_attachments */
-   ctx->Const.MaxFramebufferWidth = ctx->Const.MaxViewportWidth;
-   ctx->Const.MaxFramebufferHeight = ctx->Const.MaxViewportHeight;
+   ctx->Const.MaxFramebufferWidth = 16384;
+   ctx->Const.MaxFramebufferHeight = 16384;
    ctx->Const.MaxFramebufferLayers = ctx->Const.MaxArrayTextureLayers;
    ctx->Const.MaxFramebufferSamples = max_samples;
 }
