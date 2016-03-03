@@ -185,8 +185,18 @@ ir_array_reference_visitor::visit_enter(ir_dereference_array *ir)
    /* If the access to the array has a variable index, we wouldn't
     * know which split variable this dereference should go to.
     */
-   if (entry && !ir->array_index->as_constant())
-      entry->split = false;
+   if (!ir->array_index->as_constant()) {
+      if (entry)
+         entry->split = false;
+      /* This variable indexing could come from a different array dereference
+       * that also has variable indexing, that is, something like a[b[a[b[0]]]].
+       * If we return visit_continue_with_parent here for the first appearence
+       * of a, then we can miss that b also has indirect indexing (if this is
+       * the only place in the program where such indirect indexing into b
+       * happens), so keep going.
+       */
+      return visit_continue;
+   }
 
    /* If the index is also array dereference, visit index. */
    if (ir->array_index->as_dereference_array())
