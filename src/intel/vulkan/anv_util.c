@@ -144,7 +144,7 @@ anv_vector_init(struct anv_vector *vector, uint32_t element_size, uint32_t size)
 void *
 anv_vector_add(struct anv_vector *vector)
 {
-   uint32_t offset, size, split, tail;
+   uint32_t offset, size, split, src_tail, dst_tail;
    void *data;
 
    if (vector->head - vector->tail == vector->size) {
@@ -152,18 +152,25 @@ anv_vector_add(struct anv_vector *vector)
       data = malloc(size);
       if (data == NULL)
          return NULL;
-      split = align_u32(vector->tail, vector->size);
-      tail = vector->tail & (vector->size - 1);
-      if (vector->head - split < vector->size) {
-         memcpy(data + tail,
-                vector->data + tail,
-                split - vector->tail);
-         memcpy(data + vector->size,
-                vector->data, vector->head - split);
+      src_tail = vector->tail & (vector->size - 1);
+      dst_tail = vector->tail & (size - 1);
+      if (src_tail == 0) {
+         /* Since we know that the vector is full, this means that it's
+          * linear from start to end so we can do one copy.
+          */
+         memcpy(data + dst_tail, vector->data, vector->size);
       } else {
-         memcpy(data + tail,
-                vector->data + tail,
-                vector->head - vector->tail);
+         /* In this case, the vector is split into two pieces and we have
+          * to do two copies.  We have to be careful to make sure each
+          * piece goes to the right locations.  Thanks to the change in
+          * size, it may or may not still wrap around.
+          */
+         split = align_u32(vector->tail, vector->size);
+         assert(vector->tail <= split && split < vector->head);
+         memcpy(data + dst_tail, vector->data + src_tail,
+                split - vector->tail);
+         memcpy(data + (split & (size - 1)), vector->data,
+                vector->head - split);
       }
       free(vector->data);
       vector->data = data;
