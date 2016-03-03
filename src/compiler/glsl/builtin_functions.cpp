@@ -578,7 +578,7 @@ private:
    ir_dereference_array *array_ref(ir_variable *var, int i);
    ir_swizzle *matrix_elt(ir_variable *var, int col, int row);
 
-   ir_expression *asin_expr(ir_variable *x);
+   ir_expression *asin_expr(ir_variable *x, float p0, float p1);
    void do_atan(ir_factory &body, const glsl_type *type, ir_variable *res, operand y_over_x);
 
    /**
@@ -3212,7 +3212,7 @@ builtin_builder::_tan(const glsl_type *type)
 }
 
 ir_expression *
-builtin_builder::asin_expr(ir_variable *x)
+builtin_builder::asin_expr(ir_variable *x, float p0, float p1)
 {
    return mul(sign(x),
               sub(imm(M_PI_2f),
@@ -3221,8 +3221,8 @@ builtin_builder::asin_expr(ir_variable *x)
                           mul(abs(x),
                               add(imm(M_PI_4f - 1.0f),
                                   mul(abs(x),
-                                      add(imm(0.086566724f),
-                                          mul(abs(x), imm(-0.03102955f))))))))));
+                                      add(imm(p0),
+                                          mul(abs(x), imm(p1))))))))));
 }
 
 ir_call *
@@ -3251,7 +3251,7 @@ builtin_builder::_asin(const glsl_type *type)
    ir_variable *x = in_var(type, "x");
    MAKE_SIG(type, always_available, 1, x);
 
-   body.emit(ret(asin_expr(x)));
+   body.emit(ret(asin_expr(x, 0.086566724f, -0.03102955f)));
 
    return sig;
 }
@@ -3262,7 +3262,7 @@ builtin_builder::_acos(const glsl_type *type)
    ir_variable *x = in_var(type, "x");
    MAKE_SIG(type, always_available, 1, x);
 
-   body.emit(ret(sub(imm(M_PI_2f), asin_expr(x))));
+   body.emit(ret(sub(imm(M_PI_2f), asin_expr(x, 0.086566724f, -0.03102955f))));
 
    return sig;
 }
