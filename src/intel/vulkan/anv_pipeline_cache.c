@@ -54,7 +54,8 @@ anv_pipeline_cache_init(struct anv_pipeline_cache *cache,
 
    /* We don't consider allocation failure fatal, we just start with a 0-sized
     * cache. */
-   if (cache->hash_table == NULL)
+   if (cache->hash_table == NULL ||
+       !env_var_as_boolean("ANV_ENABLE_PIPELINE_CACHE", true))
       cache->table_size = 0;
    else
       memset(cache->hash_table, 0xff, byte_size);
@@ -299,7 +300,7 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
           map->sampler_count * sizeof(struct anv_pipeline_binding));
    map->sampler_to_descriptor = p;
 
-   if (sha1 && env_var_as_boolean("ANV_ENABLE_PIPELINE_CACHE", false)) {
+   if (sha1) {
       assert(anv_pipeline_cache_search_unlocked(cache, sha1,
                                                 NULL, NULL) == NO_KERNEL);
 
