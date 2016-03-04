@@ -42,14 +42,14 @@ bool
 _mesa_is_valid_generate_texture_mipmap_target(struct gl_context *ctx,
                                               GLenum target)
 {
-   GLboolean error;
+   bool error;
 
    switch (target) {
    case GL_TEXTURE_1D:
       error = _mesa_is_gles(ctx);
       break;
    case GL_TEXTURE_2D:
-      error = GL_FALSE;
+      error = false;
       break;
    case GL_TEXTURE_3D:
       error = ctx->API == API_OPENGLES;
@@ -69,10 +69,10 @@ _mesa_is_valid_generate_texture_mipmap_target(struct gl_context *ctx,
               !ctx->Extensions.ARB_texture_cube_map_array;
       break;
    default:
-      error = GL_TRUE;
+      error = true;
    }
 
-   return (error != GL_TRUE);
+   return !error;
 }
 
 bool
