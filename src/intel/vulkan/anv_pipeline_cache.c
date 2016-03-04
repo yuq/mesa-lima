@@ -140,7 +140,7 @@ anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
 }
 
 static void
-anv_pipeline_cache_add_entry(struct anv_pipeline_cache *cache,
+anv_pipeline_cache_set_entry(struct anv_pipeline_cache *cache,
                              struct cache_entry *entry, uint32_t entry_offset)
 {
    const uint32_t mask = cache->table_size - 1;
@@ -187,7 +187,7 @@ anv_pipeline_cache_grow(struct anv_pipeline_cache *cache)
 
       struct cache_entry *entry =
          cache->program_stream.block_pool->map + offset;
-      anv_pipeline_cache_add_entry(cache, entry, offset);
+      anv_pipeline_cache_set_entry(cache, entry, offset);
    }
 
    free(old_table);
@@ -231,7 +231,7 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
        * have enough space to add this new kernel. Only add it if there's room.
        */
       if (cache->kernel_count < cache->table_size / 2)
-         anv_pipeline_cache_add_entry(cache, entry, state.offset);
+         anv_pipeline_cache_set_entry(cache, entry, state.offset);
    }
 
    pthread_mutex_unlock(&cache->mutex);
