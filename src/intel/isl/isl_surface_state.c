@@ -370,6 +370,28 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       s.MIPCountLOD = MAX(info->view->levels, 1) - 1;
    }
 
+#if GEN_GEN >= 8
+   /* From the CHV PRM, Volume 2d, page 321 (RENDER_SURFACE_STATE dword 0
+    * bit 9 "Sampler L2 Bypass Mode Disable" Programming Notes):
+    *
+    *    This bit must be set for the following surface types: BC2_UNORM
+    *    BC3_UNORM BC5_UNORM BC5_SNORM BC7_UNORM
+    */
+   if (GEN_GEN >= 9 || dev->info->is_cherryview) {
+      switch (info->view->format) {
+      case ISL_FORMAT_BC2_UNORM:
+      case ISL_FORMAT_BC3_UNORM:
+      case ISL_FORMAT_BC5_UNORM:
+      case ISL_FORMAT_BC5_SNORM:
+      case ISL_FORMAT_BC7_UNORM:
+         s.SamplerL2BypassModeDisable = true;
+         break;
+      default:
+         break;
+      }
+   }
+#endif
+
 #if 0
    if (GEN_GEN == 8) {
       if (isl_format_is_integer(info->view->format)) {
