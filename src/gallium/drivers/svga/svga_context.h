@@ -53,16 +53,17 @@
 #define SVGA_QUERY_NUM_RESOURCES_MAPPED    (PIPE_QUERY_DRIVER_SPECIFIC + 5)
 #define SVGA_QUERY_NUM_BYTES_UPLOADED      (PIPE_QUERY_DRIVER_SPECIFIC + 6)
 #define SVGA_QUERY_COMMAND_BUFFER_SIZE     (PIPE_QUERY_DRIVER_SPECIFIC + 7)
+#define SVGA_QUERY_FLUSH_TIME              (PIPE_QUERY_DRIVER_SPECIFIC + 8)
 
 /* running total counters */
-#define SVGA_QUERY_MEMORY_USED             (PIPE_QUERY_DRIVER_SPECIFIC + 8)
-#define SVGA_QUERY_NUM_SHADERS             (PIPE_QUERY_DRIVER_SPECIFIC + 9)
-#define SVGA_QUERY_NUM_RESOURCES           (PIPE_QUERY_DRIVER_SPECIFIC + 10)
-#define SVGA_QUERY_NUM_STATE_OBJECTS       (PIPE_QUERY_DRIVER_SPECIFIC + 11)
-#define SVGA_QUERY_NUM_SURFACE_VIEWS       (PIPE_QUERY_DRIVER_SPECIFIC + 12)
-#define SVGA_QUERY_NUM_GENERATE_MIPMAP     (PIPE_QUERY_DRIVER_SPECIFIC + 13)
+#define SVGA_QUERY_MEMORY_USED             (PIPE_QUERY_DRIVER_SPECIFIC + 9)
+#define SVGA_QUERY_NUM_SHADERS             (PIPE_QUERY_DRIVER_SPECIFIC + 10)
+#define SVGA_QUERY_NUM_RESOURCES           (PIPE_QUERY_DRIVER_SPECIFIC + 11)
+#define SVGA_QUERY_NUM_STATE_OBJECTS       (PIPE_QUERY_DRIVER_SPECIFIC + 12)
+#define SVGA_QUERY_NUM_SURFACE_VIEWS       (PIPE_QUERY_DRIVER_SPECIFIC + 13)
+#define SVGA_QUERY_NUM_GENERATE_MIPMAP     (PIPE_QUERY_DRIVER_SPECIFIC + 14)
 /*SVGA_QUERY_MAX has to be last because it is size of an array*/
-#define SVGA_QUERY_MAX                     (PIPE_QUERY_DRIVER_SPECIFIC + 14)
+#define SVGA_QUERY_MAX                     (PIPE_QUERY_DRIVER_SPECIFIC + 15)
 
 /**
  * Maximum supported number of constant buffers per shader
@@ -504,6 +505,7 @@ struct svga_context
       uint64_t map_buffer_time;      /**< SVGA_QUERY_MAP_BUFFER_TIME */
       uint64_t num_resources_mapped; /**< SVGA_QUERY_NUM_RESOURCES_MAPPED */
       uint64_t command_buffer_size;  /**< SVGA_QUERY_COMMAND_BUFFER_SIZE */
+      uint64_t flush_time;           /**< SVGA_QUERY_FLUSH_TIME */
       uint64_t num_shaders;          /**< SVGA_QUERY_NUM_SHADERS */
       uint64_t num_state_objects;    /**< SVGA_QUERY_NUM_STATE_OBJECTS */
       uint64_t num_surface_views;    /**< SVGA_QUERY_NUM_SURFACE_VIEWS */
