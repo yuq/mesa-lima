@@ -261,7 +261,7 @@ protected:
 
     // Check if it is supported for given bpp and tile config to generate an equation
     BOOL_32 IsEquationSupported(
-        UINT_32 bpp, TileConfig tileConfig, INT_32 tileIndex) const;
+        UINT_32 bpp, TileConfig tileConfig, INT_32 tileIndex, UINT_32 elementBytesLog2) const;
 
     // Protected non-virtual functions
     VOID ComputeTileCoordFromPipeAndElemIdx(
@@ -289,10 +289,19 @@ protected:
 
     // Max number of bpp (8bpp/16bpp/32bpp/64bpp/128bpp)
     static const UINT_32    MaxNumElementBytes  = 5;
+
+    static const BOOL_32    m_EquationSupport[TileTableSize][MaxNumElementBytes];
+
+    // Prt tile mode index mask
+    static const UINT_32    SiPrtTileIndexMask = ((1 << 3)  | (1 << 5)  | (1 << 6)  | (1 << 7)  |
+                                                  (1 << 21) | (1 << 22) | (1 << 23) | (1 << 24) |
+                                                  (1 << 25) | (1 << 30));
+
     // More than half slots in tile mode table can't support equation
-    static const UINT_32    EquationTableSize = (MaxNumElementBytes * TileTableSize) / 2;
+    static const UINT_32    EquationTableSize   = (MaxNumElementBytes * TileTableSize) / 2;
     // Equation table
     ADDR_EQUATION           m_equationTable[EquationTableSize];
+    UINT_32                 m_numMacroBits[EquationTableSize];
     UINT_32                 m_blockWidth[EquationTableSize];
     UINT_32                 m_blockHeight[EquationTableSize];
     UINT_32                 m_blockSlices[EquationTableSize];
@@ -300,6 +309,8 @@ protected:
     UINT_32                 m_numEquations;
     // Equation lookup table according to bpp and tile index
     UINT_32                 m_equationLookupTable[MaxNumElementBytes][TileTableSize];
+
+    UINT_32                 m_uncompressDepthEqIndex;
 
 private:
 

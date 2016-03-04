@@ -67,6 +67,43 @@ Lib* SiHwlInit(const Client* pClient)
 namespace V1
 {
 
+// We don't support MSAA for equation
+const BOOL_32 SiLib::m_EquationSupport[SiLib::TileTableSize][SiLib::MaxNumElementBytes] =
+{
+    {TRUE,  TRUE,  TRUE,  FALSE, FALSE},    //  0, non-AA compressed depth or any stencil
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    //  1, 2xAA/4xAA compressed depth with or without stencil
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    //  2, 8xAA compressed depth with or without stencil
+    {FALSE, TRUE,  FALSE, FALSE, FALSE},    //  3, 16 bpp depth PRT (non-MSAA), don't support uncompressed depth
+    {TRUE,  TRUE,  TRUE,  FALSE, FALSE},    //  4, 1D depth
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    //  5, 16 bpp depth PRT (4xMSAA)
+    {FALSE, FALSE, TRUE,  FALSE, FALSE},    //  6, 32 bpp depth PRT (non-MSAA)
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    //  7, 32 bpp depth PRT (4xMSAA)
+    {TRUE,  TRUE,  TRUE,  TRUE,  TRUE },    //  8, Linear
+    {TRUE,  TRUE,  TRUE,  TRUE,  TRUE },    //  9, 1D display
+    {TRUE,  FALSE, FALSE, FALSE, FALSE},    // 10, 8 bpp color (displayable)
+    {FALSE, TRUE,  FALSE, FALSE, FALSE},    // 11, 16 bpp color (displayable)
+    {FALSE, FALSE, TRUE,  TRUE,  FALSE},    // 12, 32/64 bpp color (displayable)
+    {TRUE,  TRUE,  TRUE,  TRUE,  TRUE },    // 13, 1D thin
+    {TRUE,  FALSE, FALSE, FALSE, FALSE},    // 14, 8 bpp color non-displayable
+    {FALSE, TRUE,  FALSE, FALSE, FALSE},    // 15, 16 bpp color non-displayable
+    {FALSE, FALSE, TRUE,  FALSE, FALSE},    // 16, 32 bpp color non-displayable
+    {FALSE, FALSE, FALSE, TRUE,  TRUE },    // 17, 64/128 bpp color non-displayable
+    {TRUE,  TRUE,  TRUE,  TRUE,  TRUE },    // 18, 1D THICK
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    // 19, 2D XTHICK
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    // 20, 2D THICK
+    {TRUE,  FALSE, FALSE, FALSE, FALSE},    // 21, 8 bpp 2D PRTs (non-MSAA)
+    {FALSE, TRUE,  FALSE, FALSE, FALSE},    // 22, 16 bpp 2D PRTs (non-MSAA)
+    {FALSE, FALSE, TRUE,  FALSE, FALSE},    // 23, 32 bpp 2D PRTs (non-MSAA)
+    {FALSE, FALSE, FALSE, TRUE,  FALSE},    // 24, 64 bpp 2D PRTs (non-MSAA)
+    {FALSE, FALSE, FALSE, FALSE, TRUE },    // 25, 128bpp 2D PRTs (non-MSAA)
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    // 26, none
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    // 27, none
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    // 28, none
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    // 29, none
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    // 30, 64bpp 2D PRTs (4xMSAA)
+    {FALSE, FALSE, FALSE, FALSE, FALSE},    // 31, none
+};
+
 /**
 ****************************************************************************************************
 *   SiLib::SiLib
@@ -219,37 +256,132 @@ ADDR_E_RETURNCODE SiLib::ComputeBankEquation(
     switch (pTileInfo->banks)
     {
         case 16:
-            pEquation->addr[0] = y6;
-            pEquation->xor1[0] = x3;
-            pEquation->addr[1] = y5;
-            pEquation->xor1[1] = y6;
-            pEquation->xor2[1] = x4;
-            pEquation->addr[2] = y4;
-            pEquation->xor1[2] = x5;
-            pEquation->addr[3] = y3;
-            pEquation->xor1[3] = x6;
+            if (pTileInfo->macroAspectRatio == 1)
+            {
+                pEquation->addr[0] = y6;
+                pEquation->xor1[0] = x3;
+                pEquation->addr[1] = y5;
+                pEquation->xor1[1] = y6;
+                pEquation->xor2[1] = x4;
+                pEquation->addr[2] = y4;
+                pEquation->xor1[2] = x5;
+                pEquation->addr[3] = y3;
+                pEquation->xor1[3] = x6;
+            }
+            else if (pTileInfo->macroAspectRatio == 2)
+            {
+                pEquation->addr[0] = x3;
+                pEquation->xor1[0] = y6;
+                pEquation->addr[1] = y5;
+                pEquation->xor1[1] = y6;
+                pEquation->xor2[1] = x4;
+                pEquation->addr[2] = y4;
+                pEquation->xor1[2] = x5;
+                pEquation->addr[3] = y3;
+                pEquation->xor1[3] = x6;
+            }
+            else if (pTileInfo->macroAspectRatio == 4)
+            {
+                pEquation->addr[0] = x3;
+                pEquation->xor1[0] = y6;
+                pEquation->addr[1] = x4;
+                pEquation->xor1[1] = y5;
+                pEquation->xor2[1] = y6;
+                pEquation->addr[2] = y4;
+                pEquation->xor1[2] = x5;
+                pEquation->addr[3] = y3;
+                pEquation->xor1[3] = x6;
+            }
+            else if (pTileInfo->macroAspectRatio == 8)
+            {
+                pEquation->addr[0] = x3;
+                pEquation->xor1[0] = y6;
+                pEquation->addr[1] = x4;
+                pEquation->xor1[1] = y5;
+                pEquation->xor2[1] = y6;
+                pEquation->addr[2] = x5;
+                pEquation->xor1[2] = y4;
+                pEquation->addr[3] = y3;
+                pEquation->xor1[3] = x6;
+            }
+            else
+            {
+                ADDR_ASSERT_ALWAYS();
+            }
             pEquation->numBits = 4;
             break;
         case 8:
-            pEquation->addr[0] = y5;
-            pEquation->xor1[0] = x3;
-            pEquation->addr[1] = y4;
-            pEquation->xor1[1] = y5;
-            pEquation->xor2[1] = x4;
-            pEquation->addr[2] = y3;
-            pEquation->xor1[2] = x5;
+            if (pTileInfo->macroAspectRatio == 1)
+            {
+                pEquation->addr[0] = y5;
+                pEquation->xor1[0] = x3;
+                pEquation->addr[1] = y4;
+                pEquation->xor1[1] = y5;
+                pEquation->xor2[1] = x4;
+                pEquation->addr[2] = y3;
+                pEquation->xor1[2] = x5;
+            }
+            else if (pTileInfo->macroAspectRatio == 2)
+            {
+                pEquation->addr[0] = x3;
+                pEquation->xor1[0] = y5;
+                pEquation->addr[1] = y4;
+                pEquation->xor1[1] = y5;
+                pEquation->xor2[1] = x4;
+                pEquation->addr[2] = y3;
+                pEquation->xor1[2] = x5;
+            }
+            else if (pTileInfo->macroAspectRatio == 4)
+            {
+                pEquation->addr[0] = x3;
+                pEquation->xor1[0] = y5;
+                pEquation->addr[1] = x4;
+                pEquation->xor1[1] = y4;
+                pEquation->xor2[1] = y5;
+                pEquation->addr[2] = y3;
+                pEquation->xor1[2] = x5;
+            }
+            else
+            {
+                ADDR_ASSERT_ALWAYS();
+            }
             pEquation->numBits = 3;
             break;
         case 4:
-            pEquation->addr[0] = y4;
-            pEquation->xor1[0] = x3;
-            pEquation->addr[1] = y3;
-            pEquation->xor1[1] = x4;
+            if (pTileInfo->macroAspectRatio == 1)
+            {
+                pEquation->addr[0] = y4;
+                pEquation->xor1[0] = x3;
+                pEquation->addr[1] = y3;
+                pEquation->xor1[1] = x4;
+            }
+            else if (pTileInfo->macroAspectRatio == 2)
+            {
+                pEquation->addr[0] = x3;
+                pEquation->xor1[0] = y4;
+                pEquation->addr[1] = y3;
+                pEquation->xor1[1] = x4;
+            }
+            else
+            {
+                pEquation->addr[0] = x3;
+                pEquation->xor1[0] = y4;
+                pEquation->addr[1] = x4;
+                pEquation->xor1[1] = y3;
+            }
             pEquation->numBits = 2;
             break;
         case 2:
-            pEquation->addr[0] = y3;
-            pEquation->xor1[0] = x3;
+            if (pTileInfo->macroAspectRatio == 1)
+            {
+                pEquation->addr[0] = y3;
+                pEquation->xor1[0] = x3;
+            }
+            else
+            {
+                pEquation->addr[0] = x3;
+                pEquation->xor1[0] = y3;
+            }
             pEquation->numBits = 1;
             break;
         default:
@@ -2522,11 +2654,24 @@ ADDR_E_RETURNCODE SiLib::HwlComputeSurfaceInfo(
 
     UINT_32 tileIndex = static_cast<UINT_32>(pOut->tileIndex);
 
-    if ((pIn->flags.needEquation == TRUE) &&
+    if (((pIn->flags.needEquation   == TRUE) ||
+         (pIn->flags.preferEquation == TRUE)) &&
         (pIn->numSamples <= 1) &&
         (tileIndex < TileTableSize))
     {
-        pOut->equationIndex = m_equationLookupTable[Log2(pIn->bpp >> 3)][tileIndex];
+        static const UINT_32 SiUncompressDepthTileIndex = 3;
+
+        if ((pIn->flags.prt == FALSE) &&
+            (m_uncompressDepthEqIndex != 0) &&
+            (tileIndex == SiUncompressDepthTileIndex))
+        {
+            pOut->equationIndex = m_uncompressDepthEqIndex + Log2(pIn->bpp >> 3);
+        }
+        else
+        {
+
+            pOut->equationIndex = m_equationLookupTable[Log2(pIn->bpp >> 3)][tileIndex];
+        }
 
         if (pOut->equationIndex != ADDR_INVALID_EQUATION_INDEX)
         {
@@ -3157,8 +3302,6 @@ VOID SiLib::HwlOptimizeTileMode(
     {
         UINT_32 thickness = Thickness(tileMode);
 
-        pInOut->flags.prt = TRUE;
-
         if (thickness > 1)
         {
             tileMode = ADDR_TM_1D_TILED_THICK;
@@ -3449,7 +3592,7 @@ VOID SiLib::InitEquationTable()
             HwlComputeMacroModeIndex(tileIndex, flags, bpp, 1, &tileConfig.info, NULL, NULL);
 
             // Check if the input is supported
-            if (IsEquationSupported(bpp, tileConfig, tileIndex) == TRUE)
+            if (IsEquationSupported(bpp, tileConfig, tileIndex, log2ElementBytes) == TRUE)
             {
                 ADDR_EQUATION_KEY  key   = {{0}};
 
@@ -3461,10 +3604,12 @@ VOID SiLib::InitEquationTable()
                 key.fields.microTileType    = (tileConfig.type == ADDR_DEPTH_SAMPLE_ORDER) ?
                                               ADDR_NON_DISPLAYABLE : tileConfig.type;
                 key.fields.pipeConfig       = tileConfig.info.pipeConfig;
-                key.fields.numBanks         = tileConfig.info.banks;
+                key.fields.numBanksLog2     = Log2(tileConfig.info.banks);
                 key.fields.bankWidth        = tileConfig.info.bankWidth;
                 key.fields.bankHeight       = tileConfig.info.bankHeight;
                 key.fields.macroAspectRatio = tileConfig.info.macroAspectRatio;
+                key.fields.prt              = ((m_chipFamily == ADDR_CHIP_FAMILY_SI) &&
+                                               ((1 << tileIndex) & SiPrtTileIndexMask)) ? 1 : 0;
 
                 // Find in the table if the equation has been built based on the key
                 for (UINT_32 i = 0; i < m_numEquations; i++)
@@ -3528,7 +3673,7 @@ VOID SiLib::InitEquationTable()
                                 MicroTileHeight * pTileInfo->bankHeight * pTileInfo->banks /
                                 pTileInfo->macroAspectRatio;
 
-                            if (m_chipFamily == ADDR_CHIP_FAMILY_SI)
+                            if (key.fields.prt)
                             {
                                 UINT_32 macroTileSize =
                                     m_blockWidth[equationIndex] * m_blockHeight[equationIndex] *
@@ -3571,6 +3716,48 @@ VOID SiLib::InitEquationTable()
             // fill the invalid equation index
             m_equationLookupTable[log2ElementBytes][tileIndex] = equationIndex;
         }
+
+        if (m_chipFamily == ADDR_CHIP_FAMILY_SI)
+        {
+            // For tile index 3 which is shared between PRT depth and uncompressed depth
+            m_uncompressDepthEqIndex = m_numEquations;
+
+            for (UINT_32 log2ElemBytes = 0; log2ElemBytes < MaxNumElementBytes; log2ElemBytes++)
+            {
+                TileConfig        tileConfig = m_tileTable[3];
+                ADDR_EQUATION     equation;
+                ADDR_E_RETURNCODE retCode;
+
+                memset(&equation, 0, sizeof(ADDR_EQUATION));
+
+                retCode = ComputeMacroTileEquation(log2ElemBytes,
+                                                   tileConfig.mode,
+                                                   tileConfig.type,
+                                                   &tileConfig.info,
+                                                   &equation);
+
+                if (retCode == ADDR_OK)
+                {
+                    UINT_32 equationIndex = m_numEquations;
+                    ADDR_ASSERT(equationIndex < EquationTableSize);
+
+                    m_blockSlices[equationIndex] = 1;
+
+                    const ADDR_TILEINFO* pTileInfo = &tileConfig.info;
+
+                    m_blockWidth[equationIndex]  =
+                        HwlGetPipes(pTileInfo) * MicroTileWidth * pTileInfo->bankWidth *
+                        pTileInfo->macroAspectRatio;
+                    m_blockHeight[equationIndex] =
+                        MicroTileHeight * pTileInfo->bankHeight * pTileInfo->banks /
+                        pTileInfo->macroAspectRatio;
+
+                    m_equationTable[equationIndex] = equation;
+
+                    m_numEquations++;
+                }
+            }
+        }
     }
 }
 
@@ -3586,9 +3773,10 @@ VOID SiLib::InitEquationTable()
 ****************************************************************************************************
 */
 BOOL_32 SiLib::IsEquationSupported(
-    UINT_32    bpp,         ///< Bits per pixel
-    TileConfig tileConfig,  ///< Tile config
-    INT_32     tileIndex    ///< Tile index
+    UINT_32    bpp,             ///< Bits per pixel
+    TileConfig tileConfig,      ///< Tile config
+    INT_32     tileIndex,       ///< Tile index
+    UINT_32    elementBytesLog2 ///< Log2 of element bytes
     ) const
 {
     BOOL_32 supported = TRUE;
@@ -3624,24 +3812,7 @@ BOOL_32 SiLib::IsEquationSupported(
 
         if ((supported == TRUE) && (m_chipFamily == ADDR_CHIP_FAMILY_SI))
         {
-            // Please refer to SiLib::HwlSetupTileInfo for PRT tile index selecting
-            // Tile index 3, 6, 21-25 are for PRT single sample
-            if (tileIndex == 3)
-            {
-                supported = (bpp == 16);
-            }
-            else if (tileIndex == 6)
-            {
-                supported = (bpp == 32);
-            }
-            else if ((tileIndex >= 21) && (tileIndex <= 25))
-            {
-                supported = (bpp == 8u * (1u << (static_cast<UINT_32>(tileIndex) - 21u)));
-            }
-            else
-            {
-                supported = FALSE;
-            }
+            supported = m_EquationSupport[tileIndex][elementBytesLog2];
         }
     }
 

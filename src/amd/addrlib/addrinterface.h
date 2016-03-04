@@ -146,10 +146,12 @@ typedef union _ADDR_EQUATION_KEY
         UINT_32 tileMode         : 5; ///< Tile mode
         UINT_32 microTileType    : 3; ///< Micro tile type
         UINT_32 pipeConfig       : 5; ///< pipe config
-        UINT_32 numBanks         : 5; ///< Number of banks
+        UINT_32 numBanksLog2     : 3; ///< Number of banks log2
         UINT_32 bankWidth        : 4; ///< Bank width
         UINT_32 bankHeight       : 4; ///< Bank height
         UINT_32 macroAspectRatio : 3; ///< Macro tile aspect ratio
+        UINT_32 prt              : 1; ///< SI only, indicate whether this equation is for prt
+        UINT_32 reserved         : 1; ///< Reserved bit
     } fields;
     UINT_32 value;
 } ADDR_EQUATION_KEY;
@@ -516,7 +518,8 @@ typedef union _ADDR_SURFACE_FLAGS
         UINT_32 skipIndicesOutput    : 1; ///< Skipping indices in output.
         UINT_32 rotateDisplay        : 1; ///< Rotate micro tile type
         UINT_32 minimizeAlignment    : 1; ///< Minimize alignment
-        UINT_32 reserved             : 5; ///< Reserved bits
+        UINT_32 preferEquation       : 1; ///< Return equation index without adjusting tile mode
+        UINT_32 reserved             : 4; ///< Reserved bits
     };
 
     UINT_32 value;
