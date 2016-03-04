@@ -878,12 +878,11 @@ vec4_visitor::nir_emit_ssbo_atomic(int op, nir_intrinsic_instr *instr)
    const vec4_builder bld =
       vec4_builder(this).at_end().annotate(current_annotation, base_ir);
 
-   src_reg atomic_result =
-      surface_access::emit_untyped_atomic(bld, surface, offset,
-                                          data1, data2,
-                                          1 /* dims */, 1 /* rsize */,
-                                          op,
-                                          BRW_PREDICATE_NONE);
+   src_reg atomic_result = emit_untyped_atomic(bld, surface, offset,
+                                               data1, data2,
+                                               1 /* dims */, 1 /* rsize */,
+                                               op,
+                                               BRW_PREDICATE_NONE);
    dest.type = atomic_result.type;
    bld.MOV(dest, atomic_result);
 }
