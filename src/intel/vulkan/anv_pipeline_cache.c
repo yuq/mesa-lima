@@ -86,7 +86,7 @@ anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
    struct mesa_sha1 *ctx;
 
    ctx = _mesa_sha1_init();
-   _mesa_sha1_update(ctx, &key, sizeof(key));
+   _mesa_sha1_update(ctx, key, key_size);
    _mesa_sha1_update(ctx, module->sha1, sizeof(module->sha1));
    _mesa_sha1_update(ctx, entrypoint, strlen(entrypoint));
    /* hash in shader stage, pipeline layout? */
