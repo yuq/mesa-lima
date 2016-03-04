@@ -361,8 +361,8 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
          .BlendConstantColorBlue = cmd_buffer->state.dynamic.blend_constants[2],
          .BlendConstantColorAlpha = cmd_buffer->state.dynamic.blend_constants[3],
-         .StencilReferenceValue = d->stencil_reference.front,
-         .BackFaceStencilReferenceValue = d->stencil_reference.back,
+         .StencilReferenceValue = d->stencil_reference.front & 0xff,
+         .BackFaceStencilReferenceValue = d->stencil_reference.back & 0xff,
       };
       GENX(COLOR_CALC_STATE_pack)(NULL, cc_state.map, &cc);
 
@@ -437,8 +437,8 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          .BackfaceStencilTestMask = d->stencil_compare_mask.back & 0xff,
          .BackfaceStencilWriteMask = d->stencil_write_mask.back & 0xff,
 
-         .StencilReferenceValue = d->stencil_reference.front,
-         .BackfaceStencilReferenceValue = d->stencil_reference.back
+         .StencilReferenceValue = d->stencil_reference.front & 0xff,
+         .BackfaceStencilReferenceValue = d->stencil_reference.back & 0xff,
       };
       GEN9_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, dwords, &wm_depth_stencil);
 
