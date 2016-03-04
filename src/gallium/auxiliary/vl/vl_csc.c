@@ -158,6 +158,7 @@ void vl_csc_get_matrix(enum VL_CSC_COLOR_STANDARD cs,
    float s = p->saturation;
    float b = p->brightness;
    float h = p->hue;
+   float x, y;
 
    const vl_csc_matrix *cstd;
 
@@ -166,6 +167,10 @@ void vl_csc_get_matrix(enum VL_CSC_COLOR_STANDARD cs,
       b *= 1.164f;              /* Adjust for the y range */
       b -= c * 16.0f  / 255.0f; /* Adjust for the y bias */
    }
+
+   /* Parameter substitutions */
+   x = c * s * cosf(h);
+   y = c * s * sinf(h);
 
    assert(matrix);
 
@@ -187,23 +192,23 @@ void vl_csc_get_matrix(enum VL_CSC_COLOR_STANDARD cs,
    }
 
    (*matrix)[0][0] = c * (*cstd)[0][0];
-   (*matrix)[0][1] = c * (*cstd)[0][1] * s * cosf(h) - c * (*cstd)[0][2] * s * sinf(h);
-   (*matrix)[0][2] = c * (*cstd)[0][2] * s * cosf(h) + c * (*cstd)[0][1] * s * sinf(h);
+   (*matrix)[0][1] = (*cstd)[0][1] * x - (*cstd)[0][2] * y;
+   (*matrix)[0][2] = (*cstd)[0][2] * x + (*cstd)[0][1] * y;
    (*matrix)[0][3] = (*cstd)[0][3] + (*cstd)[0][0] * b +
-                     (*cstd)[0][1] * (c * cbbias * s * cosf(h) + c * crbias * s * sinf(h)) +
-                     (*cstd)[0][2] * (c * crbias * s * cosf(h) - c * cbbias * s * sinf(h));
+                     (*cstd)[0][1] * (x * cbbias + y * crbias) +
+                     (*cstd)[0][2] * (x * crbias - y * cbbias);
 
    (*matrix)[1][0] = c * (*cstd)[1][0];
-   (*matrix)[1][1] = c * (*cstd)[1][1] * s * cosf(h) - c * (*cstd)[1][2] * s * sinf(h);
-   (*matrix)[1][2] = c * (*cstd)[1][2] * s * cosf(h) + c * (*cstd)[1][1] * s * sinf(h);
+   (*matrix)[1][1] = (*cstd)[1][1] * x - (*cstd)[1][2] * y;
+   (*matrix)[1][2] = (*cstd)[1][2] * x + (*cstd)[1][1] * y;
    (*matrix)[1][3] = (*cstd)[1][3] + (*cstd)[1][0] * b +
-                     (*cstd)[1][1] * (c * cbbias * s * cosf(h) + c * crbias * s * sinf(h)) +
-                     (*cstd)[1][2] * (c * crbias * s * cosf(h) - c * cbbias * s * sinf(h));
+                     (*cstd)[1][1] * (x * cbbias + y * crbias) +
+                     (*cstd)[1][2] * (x * crbias - y * cbbias);
 
    (*matrix)[2][0] = c * (*cstd)[2][0];
-   (*matrix)[2][1] = c * (*cstd)[2][1] * s * cosf(h) - c * (*cstd)[2][2] * s * sinf(h);
-   (*matrix)[2][2] = c * (*cstd)[2][2] * s * cosf(h) + c * (*cstd)[2][1] * s * sinf(h);
+   (*matrix)[2][1] = (*cstd)[2][1] * x - (*cstd)[2][2] * y;
+   (*matrix)[2][2] = (*cstd)[2][2] * x + (*cstd)[2][1] * y;
    (*matrix)[2][3] = (*cstd)[2][3] + (*cstd)[2][0] * b +
-                     (*cstd)[2][1] * (c * cbbias * s * cosf(h) + c * crbias * s * sinf(h)) +
-                     (*cstd)[2][2] * (c * crbias * s * cosf(h) - c * cbbias * s * sinf(h));
+                     (*cstd)[2][1] * (x * cbbias + y * crbias) +
+                     (*cstd)[2][2] * (x * crbias - y * cbbias);
 }
