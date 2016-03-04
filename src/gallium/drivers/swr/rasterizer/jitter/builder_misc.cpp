@@ -776,8 +776,57 @@ Value *Builder::PERMD(Value* a, Value* idx)
     }
     else
     {
-        res = VSHUFFLE(a, a, idx);
+        if (isa<Constant>(idx))
+        {
+            res = VSHUFFLE(a, a, idx);
+        }
+        else
+        {
+            res = VUNDEF_I();
+            for (uint32_t l = 0; l < JM()->mVWidth; ++l)
+            {
+                Value* pIndex = VEXTRACT(idx, C(l));
+                Value* pVal = VEXTRACT(a, pIndex);
+                res = VINSERT(res, pVal, C(l));
+            }
+        }
     }
+    return res;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Generate a VPERMPS operation (shuffle 32 bit float values 
+/// across 128 bit lanes) in LLVM IR.  If not supported on the underlying 
+/// platform, emulate it
+/// @param a - 256bit SIMD lane(8x32bit) of float values.
+/// @param idx - 256bit SIMD lane(8x32bit) of 3 bit lane index values
+Value *Builder::PERMPS(Value* a, Value* idx)
+{
+    Value* res;
+    // use avx2 permute instruction if available
+    if (JM()->mArch.AVX2())
+    {
+        // llvm 3.6.0 swapped the order of the args to vpermd
+        res = VPERMPS(idx, a);
+    }
+    else
+    {
+        if (isa<Constant>(idx))
+        {
+            res = VSHUFFLE(a, a, idx);
+        }
+        else
+        {
+            res = VUNDEF_F();
+            for (uint32_t l = 0; l < JM()->mVWidth; ++l)
+            {
+                Value* pIndex = VEXTRACT(idx, C(l));
+                Value* pVal = VEXTRACT(a, pIndex);
+                res = VINSERT(res, pVal, C(l));
+            }
+        }
+    }
+
     return res;
 }
 

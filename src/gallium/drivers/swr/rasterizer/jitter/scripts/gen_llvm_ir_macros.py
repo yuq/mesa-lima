@@ -103,6 +103,7 @@ intrinsics = [
         ["VPMOVSXBD", "x86_avx2_pmovsxbd", ["a"]],  # sign extend packed 8bit components
         ["VPMOVSXWD", "x86_avx2_pmovsxwd", ["a"]],  # sign extend packed 16bit components
         ["VPERMD", "x86_avx2_permd", ["idx", "a"]],
+        ["VPERMPS", "x86_avx2_permps", ["idx", "a"]],
         ["VCVTPH2PS", "x86_vcvtph2ps_256", ["a"]],
         ["VCVTPS2PH", "x86_vcvtps2ph_256", ["a", "round"]],
         ["VHSUBPS", "x86_avx_hsub_ps_256", ["a", "b"]],
