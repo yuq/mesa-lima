@@ -165,7 +165,7 @@ anv_pipeline_cache_grow(struct anv_pipeline_cache *cache)
    table = malloc(byte_size);
    if (table == NULL)
       return VK_ERROR_OUT_OF_HOST_MEMORY;
-   
+
    cache->table = table;
    cache->table_size = table_size;
    cache->kernel_count = 0;
@@ -176,7 +176,7 @@ anv_pipeline_cache_grow(struct anv_pipeline_cache *cache)
       const uint32_t offset = old_table[i];
       if (offset == ~0)
          continue;
-      
+
       struct cache_entry *entry =
          cache->program_stream.block_pool->map + offset;
       anv_pipeline_cache_add_entry(cache, entry, offset);
@@ -228,7 +228,7 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
    }
 
    pthread_mutex_unlock(&cache->mutex);
-   
+
    memcpy(state.map + preamble_size, kernel, kernel_size);
 
    if (!cache->device->info.has_llc)
@@ -240,14 +240,14 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
 static void
 anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
                         const void *data, size_t size)
-{                        
+{
    struct anv_device *device = cache->device;
    uint8_t uuid[VK_UUID_SIZE];
    struct {
       uint32_t device_id;
       uint8_t uuid[VK_UUID_SIZE];
    } header;
-   
+
    if (size < sizeof(header))
       return;
    memcpy(&header, data, sizeof(header));
@@ -259,7 +259,7 @@ anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
 
    const void *end = data + size;
    const void *p = data + sizeof(header);
-   
+
    while (p < end) {
       /* The kernels aren't 64 byte aligned in the serialized format so
        * they're always right after the prog_data.
@@ -327,7 +327,7 @@ VkResult anv_GetPipelineCacheData(
    ANV_FROM_HANDLE(anv_pipeline_cache, cache, _cache);
 
    const size_t size = 4 + VK_UUID_SIZE + cache->total_size;
-      
+
    if (pData == NULL) {
       *pDataSize = size;
       return VK_SUCCESS;
@@ -341,10 +341,10 @@ VkResult anv_GetPipelineCacheData(
    void *p = pData;
    memcpy(p, &device->chipset_id, sizeof(device->chipset_id));
    p += sizeof(device->chipset_id);
-   
+
    anv_device_get_cache_uuid(p);
    p += VK_UUID_SIZE;
-   
+
    struct cache_entry *entry;
    for (uint32_t i = 0; i < cache->table_size; i++) {
       if (cache->table[i] == ~0)
@@ -357,7 +357,7 @@ VkResult anv_GetPipelineCacheData(
 
       void *kernel = (void *) entry +
          align_u32(sizeof(*entry) + entry->prog_data_size, 64);
-      
+
       memcpy(p, kernel, entry->kernel_size);
       p += entry->kernel_size;
    }
@@ -375,7 +375,7 @@ anv_pipeline_cache_merge(struct anv_pipeline_cache *dst,
 
       struct cache_entry *entry =
          src->program_stream.block_pool->map + src->table[i];
-      
+
       if (anv_pipeline_cache_search(dst, entry->sha1, NULL) != NO_KERNEL)
          continue;
 
@@ -400,6 +400,6 @@ VkResult anv_MergePipelineCaches(
 
       anv_pipeline_cache_merge(dst, src);
    }
-   
+
    return VK_SUCCESS;
 }
