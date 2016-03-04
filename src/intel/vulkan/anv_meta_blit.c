@@ -450,8 +450,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
          .format = 0, /* TEMPLATE */
          .extent = {
             .width = 0, /* TEMPLATE */
-            /* Pad to highest tile height to compensate for a vertical intratile offset */
-            .height = MIN(rects[r].height + 64, 1 << 14),
+            .height = 0, /* TEMPLATE */
             .depth = 1,
          },
          .mipLevels = 1,
@@ -465,11 +464,19 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
          .isl_tiling_flags = 0, /* TEMPLATE */
       };
 
+      /* The image height is the rect height + src/dst y-offset from the
+       * tile-aligned base address.
+       */
+      struct isl_tile_info tile_info;
+
       anv_image_info.isl_tiling_flags = 1 << src->tiling;
       image_info.tiling = anv_image_info.isl_tiling_flags == ISL_TILING_LINEAR_BIT ?
                         VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
       image_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
       image_info.format = src_format,
+      isl_tiling_get_info(&cmd_buffer->device->isl_dev, src->tiling, src->bs, &tile_info);
+      image_info.extent.height = rects[r].height +
+                                 rects[r].src_y % tile_info.height;
       image_info.extent.width = src->pitch / src->bs;
       VkImage src_image;
       anv_image_create(vk_device, &anv_image_info,
@@ -480,6 +487,9 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
                         VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
       image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
       image_info.format = dst_format,
+      isl_tiling_get_info(&cmd_buffer->device->isl_dev, dst->tiling, dst->bs, &tile_info);
+      image_info.extent.height = rects[r].height +
+                                 rects[r].dst_y % tile_info.height;
       image_info.extent.width = dst->pitch / dst->bs;
       VkImage dst_image;
       anv_image_create(vk_device, &anv_image_info,
