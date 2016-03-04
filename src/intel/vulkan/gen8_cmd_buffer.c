@@ -428,9 +428,6 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
       struct GEN9_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
          GEN9_3DSTATE_WM_DEPTH_STENCIL_header,
 
-         .StencilBufferWriteEnable = d->stencil_write_mask.front != 0 ||
-                                     d->stencil_write_mask.back != 0,
-
          .StencilTestMask = d->stencil_compare_mask.front & 0xff,
          .StencilWriteMask = d->stencil_write_mask.front & 0xff,
 
