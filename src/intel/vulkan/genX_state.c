@@ -173,15 +173,26 @@ static const uint32_t vk_to_gen_tex_address[] = {
    [VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER] = TCM_CLAMP_BORDER,
 };
 
-static const uint32_t vk_to_gen_compare_op[] = {
-   [VK_COMPARE_OP_NEVER]                     = PREFILTEROPNEVER,
-   [VK_COMPARE_OP_LESS]                      = PREFILTEROPLESS,
-   [VK_COMPARE_OP_EQUAL]                     = PREFILTEROPEQUAL,
-   [VK_COMPARE_OP_LESS_OR_EQUAL]             = PREFILTEROPLEQUAL,
-   [VK_COMPARE_OP_GREATER]                   = PREFILTEROPGREATER,
-   [VK_COMPARE_OP_NOT_EQUAL]                 = PREFILTEROPNOTEQUAL,
-   [VK_COMPARE_OP_GREATER_OR_EQUAL]          = PREFILTEROPGEQUAL,
-   [VK_COMPARE_OP_ALWAYS]                    = PREFILTEROPALWAYS,
+/* Vulkan specifies the result of shadow comparisons as:
+ *     1     if   ref <op> texel,
+ *     0     otherwise.
+ *
+ * The hardware does:
+ *     0     if texel <op> ref,
+ *     1     otherwise.
+ *
+ * So, these look a bit strange because there's both a negation
+ * and swapping of the arguments involved.
+ */
+static const uint32_t vk_to_gen_shadow_compare_op[] = {
+   [VK_COMPARE_OP_NEVER]                        = PREFILTEROPALWAYS,
+   [VK_COMPARE_OP_LESS]                         = PREFILTEROPLEQUAL,
+   [VK_COMPARE_OP_EQUAL]                        = PREFILTEROPNOTEQUAL,
+   [VK_COMPARE_OP_LESS_OR_EQUAL]                = PREFILTEROPLESS,
+   [VK_COMPARE_OP_GREATER]                      = PREFILTEROPGEQUAL,
+   [VK_COMPARE_OP_NOT_EQUAL]                    = PREFILTEROPEQUAL,
+   [VK_COMPARE_OP_GREATER_OR_EQUAL]             = PREFILTEROPGREATER,
+   [VK_COMPARE_OP_ALWAYS]                       = PREFILTEROPNEVER,
 };
 
 VkResult genX(CreateSampler)(
@@ -228,7 +239,7 @@ VkResult genX(CreateSampler)(
       .ChromaKeyEnable = 0,
       .ChromaKeyIndex = 0,
       .ChromaKeyMode = 0,
-      .ShadowFunction = vk_to_gen_compare_op[pCreateInfo->compareOp],
+      .ShadowFunction = vk_to_gen_shadow_compare_op[pCreateInfo->compareOp],
       .CubeSurfaceControlMode = OVERRIDE,
 
       .BorderColorPointer = border_color_offset,
