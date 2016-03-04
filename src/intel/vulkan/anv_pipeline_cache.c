@@ -237,20 +237,31 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
    return state.offset + preamble_size;
 }
 
+struct cache_header {
+   uint32_t header_size;
+   uint32_t header_version;
+   uint32_t vendor_id;
+   uint32_t device_id;
+   uint8_t  uuid[VK_UUID_SIZE];
+};
+
 static void
 anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
                         const void *data, size_t size)
 {
    struct anv_device *device = cache->device;
+   struct cache_header header;
    uint8_t uuid[VK_UUID_SIZE];
-   struct {
-      uint32_t device_id;
-      uint8_t uuid[VK_UUID_SIZE];
-   } header;
 
    if (size < sizeof(header))
       return;
    memcpy(&header, data, sizeof(header));
+   if (header.header_size < sizeof(header))
+      return;
+   if (header.header_version != VK_PIPELINE_CACHE_HEADER_VERSION_ONE)
+      return;
+   if (header.vendor_id != 0x8086)
+      return;
    if (header.device_id != device->chipset_id)
       return;
    anv_device_get_cache_uuid(uuid);
@@ -258,7 +269,7 @@ anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
       return;
 
    const void *end = data + size;
-   const void *p = data + sizeof(header);
+   const void *p = data + header.header_size;
 
    while (p < end) {
       /* The kernels aren't 64 byte aligned in the serialized format so
@@ -325,8 +336,9 @@ VkResult anv_GetPipelineCacheData(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_pipeline_cache, cache, _cache);
+   struct cache_header *header;
 
-   const size_t size = 4 + VK_UUID_SIZE + cache->total_size;
+   const size_t size = sizeof(*header) + cache->total_size;
 
    if (pData == NULL) {
       *pDataSize = size;
@@ -339,11 +351,13 @@ VkResult anv_GetPipelineCacheData(
    }
 
    void *p = pData;
-   memcpy(p, &device->chipset_id, sizeof(device->chipset_id));
-   p += sizeof(device->chipset_id);
-
-   anv_device_get_cache_uuid(p);
-   p += VK_UUID_SIZE;
+   header = p;
+   header->header_size = sizeof(*header);
+   header->header_version = VK_PIPELINE_CACHE_HEADER_VERSION_ONE;
+   header->vendor_id = 0x8086;
+   header->device_id = device->chipset_id;
+   anv_device_get_cache_uuid(header->uuid);
+   p += header->header_size;
 
    struct cache_entry *entry;
    for (uint32_t i = 0; i < cache->table_size; i++) {
