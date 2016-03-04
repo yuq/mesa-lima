@@ -525,9 +525,6 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
                                   ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH |
                                   ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)) {
 
-      bool enable_bias = cmd_buffer->state.dynamic.depth_bias.bias != 0.0f ||
-         cmd_buffer->state.dynamic.depth_bias.slope != 0.0f;
-
       const struct anv_image_view *iview =
          anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
       const struct anv_image *image = iview ? iview->image : NULL;
@@ -543,9 +540,6 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
          GENX(3DSTATE_SF_header),
          .DepthBufferSurfaceFormat = depth_format,
          .LineWidth = cmd_buffer->state.dynamic.line_width,
-         .GlobalDepthOffsetEnableSolid = enable_bias,
-         .GlobalDepthOffsetEnableWireframe = enable_bias,
-         .GlobalDepthOffsetEnablePoint = enable_bias,
          .GlobalDepthOffsetConstant = cmd_buffer->state.dynamic.depth_bias.bias,
          .GlobalDepthOffsetScale = cmd_buffer->state.dynamic.depth_bias.slope,
          .GlobalDepthOffsetClamp = cmd_buffer->state.dynamic.depth_bias.clamp

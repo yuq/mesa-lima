@@ -67,6 +67,9 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
       /* uint32_t                                     VertexSubPixelPrecisionSelect; */
       .UsePointWidthState                       = !pipeline->writes_point_size,
       .PointWidth                               = 1.0,
+      .GlobalDepthOffsetConstant                = info->depthBiasEnable,
+      .GlobalDepthOffsetScale                   = info->depthBiasEnable,
+      .GlobalDepthOffsetClamp                   = info->depthBiasEnable,
    };
 
    GENX(3DSTATE_SF_pack)(NULL, &pipeline->gen7.sf, &sf);

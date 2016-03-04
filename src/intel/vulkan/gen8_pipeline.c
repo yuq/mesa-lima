@@ -90,6 +90,9 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .ViewportZFarClipTestEnable = true,
       .ViewportZNearClipTestEnable = true,
 #endif
+      .GlobalDepthOffsetEnableSolid = info->depthBiasEnable,
+      .GlobalDepthOffsetEnableWireframe = info->depthBiasEnable,
+      .GlobalDepthOffsetEnablePoint = info->depthBiasEnable,
    };
 
    GENX(3DSTATE_RASTER_pack)(NULL, pipeline->gen8.raster, &raster);

@@ -331,15 +331,9 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)){
-      bool enable_bias = cmd_buffer->state.dynamic.depth_bias.bias != 0.0f ||
-         cmd_buffer->state.dynamic.depth_bias.slope != 0.0f;
-
       uint32_t raster_dw[GENX(3DSTATE_RASTER_length)];
       struct GENX(3DSTATE_RASTER) raster = {
          GENX(3DSTATE_RASTER_header),
-         .GlobalDepthOffsetEnableSolid = enable_bias,
-         .GlobalDepthOffsetEnableWireframe = enable_bias,
-         .GlobalDepthOffsetEnablePoint = enable_bias,
          .GlobalDepthOffsetConstant = cmd_buffer->state.dynamic.depth_bias.bias,
          .GlobalDepthOffsetScale = cmd_buffer->state.dynamic.depth_bias.slope,
          .GlobalDepthOffsetClamp = cmd_buffer->state.dynamic.depth_bias.clamp
