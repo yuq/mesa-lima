@@ -463,8 +463,10 @@ svga_texture_transfer_map(struct pipe_context *pipe,
 	 assert(transfer->usage & PIPE_TRANSFER_WRITE);
 	 if ((transfer->usage & PIPE_TRANSFER_UNSYNCHRONIZED) == 0) {
             svga_surfaces_flush(svga);
-            if (!sws->surface_is_flushed(sws, surf))
+            if (!sws->surface_is_flushed(sws, surf)) {
+               svga->hud.surface_write_flushes++;
                svga_context_flush(svga, NULL);
+            }
 	 }
       }
    }

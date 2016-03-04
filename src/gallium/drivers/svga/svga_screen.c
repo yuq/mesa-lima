@@ -831,6 +831,8 @@ svga_get_driver_query_info(struct pipe_screen *screen,
             PIPE_DRIVER_QUERY_TYPE_BYTES),
       QUERY("flush-time", SVGA_QUERY_FLUSH_TIME,
             PIPE_DRIVER_QUERY_TYPE_MICROSECONDS),
+      QUERY("surface-write-flushes", SVGA_QUERY_SURFACE_WRITE_FLUSHES,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
 
       /* running total counters */
       QUERY("memory-used", SVGA_QUERY_MEMORY_USED,
