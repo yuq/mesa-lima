@@ -581,9 +581,6 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
       struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
 
       struct GENX(DEPTH_STENCIL_STATE) depth_stencil = {
-         .StencilBufferWriteEnable = d->stencil_write_mask.front != 0 ||
-                                     d->stencil_write_mask.back != 0,
-
          .StencilTestMask = d->stencil_compare_mask.front & 0xff,
          .StencilWriteMask = d->stencil_write_mask.front & 0xff,
 

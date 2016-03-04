@@ -95,6 +95,7 @@ gen7_emit_ds_state(struct anv_pipeline *pipeline,
       .DoubleSidedStencilEnable = true,
 
       .StencilTestEnable = info->stencilTestEnable,
+      .StencilBufferWriteEnable = info->stencilTestEnable,
       .StencilFailOp = vk_to_gen_stencil_op[info->front.failOp],
       .StencilPassDepthPassOp = vk_to_gen_stencil_op[info->front.passOp],
       .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.depthFailOp],
