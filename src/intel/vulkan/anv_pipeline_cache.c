@@ -406,23 +406,17 @@ anv_pipeline_cache_merge(struct anv_pipeline_cache *dst,
                          struct anv_pipeline_cache *src)
 {
    for (uint32_t i = 0; i < src->table_size; i++) {
-      if (src->hash_table[i] == ~0)
+      const uint32_t offset = src->hash_table[i];
+      if (offset == ~0)
          continue;
 
       struct cache_entry *entry =
-         src->program_stream.block_pool->map + src->hash_table[i];
+         src->program_stream.block_pool->map + offset;
 
       if (anv_pipeline_cache_search(dst, entry->sha1, NULL) != NO_KERNEL)
          continue;
 
-      const void *kernel = (void *) entry +
-         align_u32(sizeof(*entry) + entry->prog_data_size, 64);
-      const struct brw_stage_prog_data *prog_data =
-         (const struct brw_stage_prog_data *) entry->prog_data;
-
-      anv_pipeline_cache_upload_kernel(dst, entry->sha1,
-                                       kernel, entry->kernel_size,
-                                       &prog_data, entry->prog_data_size);
+      anv_pipeline_cache_add_entry(dst, entry, offset);
    }
 }
 
