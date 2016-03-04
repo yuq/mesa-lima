@@ -45,7 +45,8 @@ meta_clear_begin(struct anv_meta_saved_state *saved_state,
    anv_meta_save(saved_state, cmd_buffer,
                  (1 << VK_DYNAMIC_STATE_VIEWPORT) |
                  (1 << VK_DYNAMIC_STATE_SCISSOR) |
-                 (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE));
+                 (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE) |
+                 (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK));
 
    cmd_buffer->state.dynamic.viewport.count = 0;
    cmd_buffer->state.dynamic.scissor.count = 0;
@@ -193,6 +194,7 @@ create_pipeline(struct anv_device *device,
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
             .dynamicStateCount = 9,
             .pDynamicStates = (VkDynamicState[]) {
+               /* Everything except stencil write mask */
                VK_DYNAMIC_STATE_VIEWPORT,
                VK_DYNAMIC_STATE_SCISSOR,
                VK_DYNAMIC_STATE_LINE_WIDTH,
@@ -200,7 +202,6 @@ create_pipeline(struct anv_device *device,
                VK_DYNAMIC_STATE_BLEND_CONSTANTS,
                VK_DYNAMIC_STATE_DEPTH_BOUNDS,
                VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
-               VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
                VK_DYNAMIC_STATE_STENCIL_REFERENCE,
             },
          },
