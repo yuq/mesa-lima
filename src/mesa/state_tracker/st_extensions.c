@@ -790,6 +790,7 @@ void st_init_extensions(struct pipe_screen *screen,
    extensions->ARB_fragment_shader = GL_TRUE;
    extensions->ARB_half_float_vertex = GL_TRUE;
    extensions->ARB_internalformat_query = GL_TRUE;
+   extensions->ARB_internalformat_query2 = GL_TRUE;
    extensions->ARB_map_buffer_range = GL_TRUE;
    extensions->ARB_texture_border_clamp = GL_TRUE; /* XXX temp */
    extensions->ARB_texture_cube_map = GL_TRUE;

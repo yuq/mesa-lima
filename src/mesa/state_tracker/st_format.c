@@ -2201,7 +2201,15 @@ st_ChooseTextureFormat(struct gl_context *ctx, GLenum target,
    enum pipe_format pFormat;
    mesa_format mFormat;
    unsigned bindings;
-   enum pipe_texture_target pTarget = gl_target_to_pipe(target);
+   bool is_renderbuffer = false;
+   enum pipe_texture_target pTarget;
+
+   if (target == GL_RENDERBUFFER) {
+      pTarget = PIPE_TEXTURE_2D;
+      is_renderbuffer = true;
+   } else {
+      pTarget = gl_target_to_pipe(target);
+   }
 
    if (target == GL_TEXTURE_1D || target == GL_TEXTURE_1D_ARRAY) {
       /* We don't do compression for these texture targets because of
@@ -2219,7 +2227,7 @@ st_ChooseTextureFormat(struct gl_context *ctx, GLenum target,
    bindings = PIPE_BIND_SAMPLER_VIEW;
    if (_mesa_is_depth_or_stencil_format(internalFormat))
       bindings |= PIPE_BIND_DEPTH_STENCIL;
-   else if (internalFormat == 3 || internalFormat == 4 ||
+   else if (is_renderbuffer || internalFormat == 3 || internalFormat == 4 ||
             internalFormat == GL_RGB || internalFormat == GL_RGBA ||
             internalFormat == GL_RGB8 || internalFormat == GL_RGBA8 ||
             internalFormat == GL_BGRA ||
@@ -2252,19 +2260,21 @@ st_ChooseTextureFormat(struct gl_context *ctx, GLenum target,
          if (pFormat != PIPE_FORMAT_NONE)
             return st_pipe_format_to_mesa_format(pFormat);
 
-         /* try choosing format again, this time without render target bindings */
-         pFormat = st_choose_matching_format(st, PIPE_BIND_SAMPLER_VIEW,
-                                             format, type,
-                                             ctx->Unpack.SwapBytes);
-         if (pFormat != PIPE_FORMAT_NONE)
-            return st_pipe_format_to_mesa_format(pFormat);
+         if (!is_renderbuffer) {
+            /* try choosing format again, this time without render target bindings */
+            pFormat = st_choose_matching_format(st, PIPE_BIND_SAMPLER_VIEW,
+                                                format, type,
+                                                ctx->Unpack.SwapBytes);
+            if (pFormat != PIPE_FORMAT_NONE)
+               return st_pipe_format_to_mesa_format(pFormat);
+         }
       }
    }
 
    pFormat = st_choose_format(st, internalFormat, format, type,
                               pTarget, 0, bindings, ctx->Mesa_DXTn);
 
-   if (pFormat == PIPE_FORMAT_NONE) {
+   if (pFormat == PIPE_FORMAT_NONE && !is_renderbuffer) {
       /* try choosing format again, this time without render target bindings */
       pFormat = st_choose_format(st, internalFormat, format, type,
                                  pTarget, 0, PIPE_BIND_SAMPLER_VIEW,
@@ -2342,6 +2352,7 @@ void
 st_QueryInternalFormat(struct gl_context *ctx, GLenum target,
                        GLenum internalFormat, GLenum pname, GLint *params)
 {
+   struct st_context *st = st_context(ctx);
    /* The API entry-point gives us a temporary params buffer that is non-NULL
     * and guaranteed to have at least 16 elements.
     */
@@ -2359,7 +2370,30 @@ st_QueryInternalFormat(struct gl_context *ctx, GLenum target,
       params[0] = (GLint) num_samples;
       break;
    }
+   case GL_INTERNALFORMAT_PREFERRED: {
+      params[0] = GL_NONE;
 
+      /* We need to resolve an internal format that is compatible with
+       * the passed internal format, and optimal to the driver. By now,
+       * we just validate that the passed internal format is supported by
+       * the driver, and if so return the same internal format, otherwise
+       * return GL_NONE.
+       */
+      uint usage;
+      if (_mesa_is_depth_or_stencil_format(internalFormat))
+         usage = PIPE_BIND_DEPTH_STENCIL;
+      else
+         usage = PIPE_BIND_RENDER_TARGET;
+      enum pipe_format pformat = st_choose_format(st,
+                                                  internalFormat,
+                                                  GL_NONE,
+                                                  GL_NONE,
+                                                  PIPE_TEXTURE_2D, 1,
+                                                  usage, FALSE);
+      if (pformat)
+         params[0] = internalFormat;
+      break;
+   }
    default:
       /* For the rest of the pnames, we call back the Mesa's default
        * function for drivers that don't implement ARB_internalformat_query2.
