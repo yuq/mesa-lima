@@ -319,11 +319,11 @@ void genX(CmdDraw)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
+   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
 
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
-   if (cmd_buffer->state.pipeline->vs_prog_data.uses_basevertex ||
-       cmd_buffer->state.pipeline->vs_prog_data.uses_baseinstance)
+   if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance(cmd_buffer, firstVertex, firstInstance);
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
@@ -346,11 +346,11 @@ void genX(CmdDrawIndexed)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
+   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
 
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
-   if (cmd_buffer->state.pipeline->vs_prog_data.uses_basevertex ||
-       cmd_buffer->state.pipeline->vs_prog_data.uses_baseinstance)
+   if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance(cmd_buffer, vertexOffset, firstInstance);
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE),
@@ -398,13 +398,13 @@ void genX(CmdDrawIndirect)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
+   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
-   if (cmd_buffer->state.pipeline->vs_prog_data.uses_basevertex ||
-       cmd_buffer->state.pipeline->vs_prog_data.uses_baseinstance)
+   if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 8);
 
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
@@ -429,14 +429,14 @@ void genX(CmdDrawIndexedIndirect)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
+   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
    genX(cmd_buffer_flush_state)(cmd_buffer);
 
    /* TODO: We need to stomp base vertex to 0 somehow */
-   if (cmd_buffer->state.pipeline->vs_prog_data.uses_basevertex ||
-       cmd_buffer->state.pipeline->vs_prog_data.uses_baseinstance)
+   if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 12);
 
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
@@ -460,7 +460,7 @@ void genX(CmdDispatch)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
-   struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
+   const struct brw_cs_prog_data *prog_data = get_cs_prog_data(pipeline);
 
    if (prog_data->uses_num_work_groups) {
       struct anv_state state =
@@ -507,7 +507,7 @@ void genX(CmdDispatchIndirect)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
-   struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
+   const struct brw_cs_prog_data *prog_data = get_cs_prog_data(pipeline);
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
    struct anv_batch *batch = &cmd_buffer->batch;

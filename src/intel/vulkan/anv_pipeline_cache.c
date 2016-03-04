@@ -110,7 +110,8 @@ anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
 
 uint32_t
 anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
-                          const unsigned char *sha1, void *prog_data)
+                          const unsigned char *sha1,
+                          const struct brw_stage_prog_data **prog_data)
 {
    const uint32_t mask = cache->table_size - 1;
    const uint32_t start = (*(uint32_t *) sha1);
@@ -126,7 +127,7 @@ anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
          cache->program_stream.block_pool->map + offset;
       if (memcmp(entry->sha1, sha1, sizeof(entry->sha1)) == 0) {
          if (prog_data)
-            memcpy(prog_data, entry->prog_data, entry->prog_data_size);
+            *prog_data = (const struct brw_stage_prog_data *) entry->prog_data;
 
          const uint32_t preamble_size =
             align_u32(sizeof(*entry) + entry->prog_data_size, 64);
@@ -198,17 +199,14 @@ uint32_t
 anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
                                  const unsigned char *sha1,
                                  const void *kernel, size_t kernel_size,
-                                 const void *prog_data, size_t prog_data_size)
+                                 const struct brw_stage_prog_data **prog_data,
+                                 size_t prog_data_size)
 {
    pthread_mutex_lock(&cache->mutex);
    struct cache_entry *entry;
 
-   /* Meta pipelines don't have SPIR-V, so we can't hash them.
-    * Consequentally, they just don't get cached.
-    */
-   const uint32_t preamble_size = sha1 ?
-      align_u32(sizeof(*entry) + prog_data_size, 64) :
-      0;
+   const uint32_t preamble_size =
+      align_u32(sizeof(*entry) + prog_data_size, 64);
 
    const uint32_t size = preamble_size + kernel_size;
 
@@ -216,14 +214,16 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
    const struct anv_state state =
       anv_state_stream_alloc(&cache->program_stream, size, 64);
 
+   entry = state.map;
+   entry->prog_data_size = prog_data_size;
+   memcpy(entry->prog_data, *prog_data, prog_data_size);
+   *prog_data = (const struct brw_stage_prog_data *) entry->prog_data;
+   entry->kernel_size = kernel_size;
+
    if (sha1 && env_var_as_boolean("ANV_ENABLE_PIPELINE_CACHE", false)) {
       assert(anv_pipeline_cache_search(cache, sha1, NULL) == NO_KERNEL);
-      entry = state.map;
-      memcpy(entry->sha1, sha1, sizeof(entry->sha1));
-      entry->prog_data_size = prog_data_size;
-      memcpy(entry->prog_data, prog_data, prog_data_size);
-      entry->kernel_size = kernel_size;
 
+      memcpy(entry->sha1, sha1, sizeof(entry->sha1));
       if (cache->kernel_count == cache->table_size / 2)
          anv_pipeline_cache_grow(cache);
 
@@ -285,9 +285,13 @@ anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
       const struct cache_entry *entry = p;
       const void *kernel = &entry->prog_data[entry->prog_data_size];
 
+      const struct brw_stage_prog_data *prog_data =
+         (const struct brw_stage_prog_data *) entry->prog_data;
+
       anv_pipeline_cache_upload_kernel(cache, entry->sha1,
                                        kernel, entry->kernel_size,
-                                       entry->prog_data, entry->prog_data_size);
+                                       &prog_data,
+                                       entry->prog_data_size);
       p = kernel + entry->kernel_size;
    }
 }
@@ -406,9 +410,12 @@ anv_pipeline_cache_merge(struct anv_pipeline_cache *dst,
 
       const void *kernel = (void *) entry +
          align_u32(sizeof(*entry) + entry->prog_data_size, 64);
+      const struct brw_stage_prog_data *prog_data =
+         (const struct brw_stage_prog_data *) entry->prog_data;
+
       anv_pipeline_cache_upload_kernel(dst, entry->sha1,
                                        kernel, entry->kernel_size,
-                                       entry->prog_data, entry->prog_data_size);
+                                       &prog_data, entry->prog_data_size);
    }
 }
 

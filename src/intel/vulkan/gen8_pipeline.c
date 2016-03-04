@@ -354,6 +354,7 @@ genX(graphics_pipeline_create)(
                   .MaximumPointWidth = 255.875,
                   .MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1);
 
+   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM),
                   .StatisticsEnable = true,
                   .LineEndCapAntialiasingRegionWidth = _05pixels,
@@ -363,15 +364,15 @@ genX(graphics_pipeline_create)(
                   .PointRasterizationRule = RASTRULE_UPPER_RIGHT,
                   .BarycentricInterpolationMode =
                      pipeline->ps_ksp0 == NO_KERNEL ?
-                     0 : pipeline->wm_prog_data.barycentric_interp_modes);
+                     0 : wm_prog_data->barycentric_interp_modes);
 
-   const struct brw_gs_prog_data *gs_prog_data = &pipeline->gs_prog_data;
-   offset = 1;
-   length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
-
-   if (pipeline->gs_kernel == NO_KERNEL)
+   if (pipeline->gs_kernel == NO_KERNEL) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), .Enable = false);
-   else
+   } else {
+      const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
+      offset = 1;
+      length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
+
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS),
                      .SingleProgramFlow = false,
                      .KernelStartPointer = pipeline->gs_kernel,
@@ -412,11 +413,12 @@ genX(graphics_pipeline_create)(
 
                      .VertexURBEntryOutputReadOffset = offset,
                      .VertexURBEntryOutputLength = length);
+   }
 
-   const struct brw_vue_prog_data *vue_prog_data = &pipeline->vs_prog_data.base;
+   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
    /* Skip the VUE header and position slots */
    offset = 1;
-   length = (vue_prog_data->vue_map.num_slots + 1) / 2 - offset;
+   length = (vs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
 
    uint32_t vs_start = pipeline->vs_simd8 != NO_KERNEL ? pipeline->vs_simd8 :
                                                          pipeline->vs_vec4;
@@ -435,7 +437,7 @@ genX(graphics_pipeline_create)(
                      .VectorMaskEnable = false,
                      .SamplerCount = 0,
                      .BindingTableEntryCount =
-                     vue_prog_data->base.binding_table.size_bytes / 4,
+                        vs_prog_data->base.base.binding_table.size_bytes / 4,
                      .ThreadDispatchPriority = false,
                      .FloatingPointMode = IEEE754,
                      .IllegalOpcodeExceptionEnable = false,
@@ -443,11 +445,11 @@ genX(graphics_pipeline_create)(
                      .SoftwareExceptionEnable = false,
 
                      .ScratchSpaceBasePointer = pipeline->scratch_start[MESA_SHADER_VERTEX],
-                     .PerThreadScratchSpace = scratch_space(&vue_prog_data->base),
+                     .PerThreadScratchSpace = scratch_space(&vs_prog_data->base.base),
 
                      .DispatchGRFStartRegisterForURBData =
-                     vue_prog_data->base.dispatch_grf_start_reg,
-                     .VertexURBEntryReadLength = vue_prog_data->urb_read_length,
+                        vs_prog_data->base.base.dispatch_grf_start_reg,
+                     .VertexURBEntryReadLength = vs_prog_data->base.urb_read_length,
                      .VertexURBEntryReadOffset = 0,
 
                      .MaximumNumberofThreads = device->info.max_vs_threads - 1,
@@ -460,8 +462,6 @@ genX(graphics_pipeline_create)(
                      .VertexURBEntryOutputLength = length,
                      .UserClipDistanceClipTestEnableBitmask = 0,
                      .UserClipDistanceCullTestEnableBitmask = 0);
-
-   const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
 
    const int num_thread_bias = GEN_GEN == 8 ? 2 : 1;
    if (pipeline->ps_ksp0 == NO_KERNEL) {

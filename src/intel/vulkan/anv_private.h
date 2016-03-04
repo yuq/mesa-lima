@@ -640,12 +640,13 @@ void anv_pipeline_cache_init(struct anv_pipeline_cache *cache,
                              struct anv_device *device);
 void anv_pipeline_cache_finish(struct anv_pipeline_cache *cache);
 uint32_t anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
-                                   const unsigned char *sha1, void *prog_data);
+                                   const unsigned char *sha1,
+                                   const struct brw_stage_prog_data **prog_data);
 uint32_t anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
                                           const unsigned char *sha1,
                                           const void *kernel,
                                           size_t kernel_size,
-                                          const void *prog_data,
+                                          const struct brw_stage_prog_data **prog_data,
                                           size_t prog_data_size);
 
 struct anv_device {
@@ -1404,12 +1405,8 @@ struct anv_pipeline {
 
    bool                                         use_repclear;
 
-   struct brw_vs_prog_data                      vs_prog_data;
-   struct brw_wm_prog_data                      wm_prog_data;
-   struct brw_gs_prog_data                      gs_prog_data;
-   struct brw_cs_prog_data                      cs_prog_data;
    bool                                         writes_point_size;
-   struct brw_stage_prog_data *                 prog_data[MESA_SHADER_STAGES];
+   const struct brw_stage_prog_data *           prog_data[MESA_SHADER_STAGES];
    uint32_t                                     scratch_start[MESA_SHADER_STAGES];
    uint32_t                                     total_scratch;
    struct {
@@ -1456,6 +1453,30 @@ struct anv_pipeline {
       uint32_t                                  wm_depth_stencil[4];
    } gen9;
 };
+
+static inline const struct brw_vs_prog_data *
+get_vs_prog_data(struct anv_pipeline *pipeline)
+{
+   return (const struct brw_vs_prog_data *) pipeline->prog_data[MESA_SHADER_VERTEX];
+}
+
+static inline const struct brw_gs_prog_data *
+get_gs_prog_data(struct anv_pipeline *pipeline)
+{
+   return (const struct brw_gs_prog_data *) pipeline->prog_data[MESA_SHADER_GEOMETRY];
+}
+
+static inline const struct brw_wm_prog_data *
+get_wm_prog_data(struct anv_pipeline *pipeline)
+{
+   return (const struct brw_wm_prog_data *) pipeline->prog_data[MESA_SHADER_FRAGMENT];
+}
+
+static inline const struct brw_cs_prog_data *
+get_cs_prog_data(struct anv_pipeline *pipeline)
+{
+   return (const struct brw_cs_prog_data *) pipeline->prog_data[MESA_SHADER_COMPUTE];
+}
 
 struct anv_graphics_pipeline_create_info {
    /**

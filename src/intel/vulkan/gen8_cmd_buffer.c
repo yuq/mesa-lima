@@ -505,7 +505,7 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 
    struct anv_state push_state = anv_cmd_buffer_cs_push_constants(cmd_buffer);
 
-   const struct brw_cs_prog_data *cs_prog_data = &pipeline->cs_prog_data;
+   const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
    const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
 
    unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
@@ -558,11 +558,12 @@ void
 genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+   const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
    VkResult result;
 
    assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
 
-   bool needs_slm = pipeline->cs_prog_data.base.total_shared > 0;
+   bool needs_slm = cs_prog_data->base.total_shared > 0;
    config_l3(cmd_buffer, needs_slm);
 
    if (cmd_buffer->state.current_pipeline != GPGPU) {

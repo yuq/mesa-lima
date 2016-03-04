@@ -757,7 +757,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    }
 
    if (stage == MESA_SHADER_COMPUTE &&
-       cmd_buffer->state.compute_pipeline->cs_prog_data.uses_num_work_groups) {
+       get_cs_prog_data(cmd_buffer->state.compute_pipeline)->uses_num_work_groups) {
       struct anv_bo *bo = cmd_buffer->state.num_workgroups_bo;
       uint32_t bo_offset = cmd_buffer->state.num_workgroups_offset;
 
@@ -996,7 +996,7 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_push_constants *data =
       cmd_buffer->state.push_constants[stage];
-   struct brw_stage_prog_data *prog_data =
+   const struct brw_stage_prog_data *prog_data =
       cmd_buffer->state.pipeline->prog_data[stage];
 
    /* If we don't actually have any push constants, bail. */
@@ -1027,7 +1027,7 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
    struct anv_push_constants *data =
       cmd_buffer->state.push_constants[MESA_SHADER_COMPUTE];
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
-   const struct brw_cs_prog_data *cs_prog_data = &pipeline->cs_prog_data;
+   const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
    const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
 
    const unsigned local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;

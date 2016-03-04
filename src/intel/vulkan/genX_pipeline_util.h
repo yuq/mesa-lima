@@ -52,6 +52,8 @@ emit_vertex_input(struct anv_pipeline *pipeline,
                   const VkPipelineVertexInputStateCreateInfo *info,
                   const struct anv_graphics_pipeline_create_info *extra)
 {
+   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
+
    uint32_t elements;
    if (extra && extra->disable_vs) {
       /* If the VS is disabled, just assume the user knows what they're
@@ -63,7 +65,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
          elements |= (1 << info->pVertexAttributeDescriptions[i].location);
    } else {
       /* Pull inputs_read out of the VS prog data */
-      uint64_t inputs_read = pipeline->vs_prog_data.inputs_read;
+      uint64_t inputs_read = vs_prog_data->inputs_read;
       assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
       elements = inputs_read >> VERT_ATTRIB_GENERIC0;
    }
@@ -72,16 +74,16 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    /* On BDW+, we only need to allocate space for base ids.  Setting up
     * the actual vertex and instance id is a separate packet.
     */
-   const bool needs_svgs_elem = pipeline->vs_prog_data.uses_basevertex ||
-                                pipeline->vs_prog_data.uses_baseinstance;
+   const bool needs_svgs_elem = vs_prog_data->uses_basevertex ||
+                                vs_prog_data->uses_baseinstance;
 #else
    /* On Haswell and prior, vertex and instance id are created by using the
     * ComponentControl fields, so we need an element for any of them.
     */
-   const bool needs_svgs_elem = pipeline->vs_prog_data.uses_vertexid ||
-                                pipeline->vs_prog_data.uses_instanceid ||
-                                pipeline->vs_prog_data.uses_basevertex ||
-                                pipeline->vs_prog_data.uses_baseinstance;
+   const bool needs_svgs_elem = vs_prog_data->uses_vertexid ||
+                                vs_prog_data->uses_instanceid ||
+                                vs_prog_data->uses_basevertex ||
+                                vs_prog_data->uses_baseinstance;
 #endif
 
    uint32_t elem_count = __builtin_popcount(elements) + needs_svgs_elem;
@@ -148,8 +150,8 @@ emit_vertex_input(struct anv_pipeline *pipeline,
        * This means, that if we have BaseInstance, we need BaseVertex as
        * well.  Just do all or nothing.
        */
-      uint32_t base_ctrl = (pipeline->vs_prog_data.uses_basevertex ||
-                            pipeline->vs_prog_data.uses_baseinstance) ?
+      uint32_t base_ctrl = (vs_prog_data->uses_basevertex ||
+                            vs_prog_data->uses_baseinstance) ?
                            VFCOMP_STORE_SRC : VFCOMP_STORE_0;
 
       struct GENX(VERTEX_ELEMENT_STATE) element = {
@@ -171,10 +173,10 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 
 #if GEN_GEN >= 8
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_SGVS),
-                  .VertexIDEnable = pipeline->vs_prog_data.uses_vertexid,
+                  .VertexIDEnable = vs_prog_data->uses_vertexid,
                   .VertexIDComponentNumber = 2,
                   .VertexIDElementOffset = id_slot,
-                  .InstanceIDEnable = pipeline->vs_prog_data.uses_instanceid,
+                  .InstanceIDEnable = vs_prog_data->uses_instanceid,
                   .InstanceIDComponentNumber = 3,
                   .InstanceIDElementOffset = id_slot);
 #endif
@@ -222,17 +224,21 @@ emit_urb_setup(struct anv_pipeline *pipeline)
 static void
 emit_3dstate_sbe(struct anv_pipeline *pipeline)
 {
+   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
+   const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
+   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    const struct brw_vue_map *fs_input_map;
+
    if (pipeline->gs_kernel == NO_KERNEL)
-      fs_input_map = &pipeline->vs_prog_data.base.vue_map;
+      fs_input_map = &vs_prog_data->base.vue_map;
    else
-      fs_input_map = &pipeline->gs_prog_data.base.vue_map;
+      fs_input_map = &gs_prog_data->base.vue_map;
 
    struct GENX(3DSTATE_SBE) sbe = {
       GENX(3DSTATE_SBE_header),
       .AttributeSwizzleEnable = true,
       .PointSpriteTextureCoordinateOrigin = UPPERLEFT,
-      .NumberofSFOutputAttributes = pipeline->wm_prog_data.num_varying_inputs,
+      .NumberofSFOutputAttributes = wm_prog_data->num_varying_inputs,
 
 #if GEN_GEN >= 9
       .Attribute0ActiveComponentFormat = ACF_XYZW,
@@ -283,7 +289,7 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
 
    int max_source_attr = 0;
    for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-      int input_index = pipeline->wm_prog_data.urb_setup[attr];
+      int input_index = wm_prog_data->urb_setup[attr];
 
       if (input_index < 0)
          continue;

@@ -250,7 +250,7 @@ genX(graphics_pipeline_create)(
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SAMPLE_MASK),
       .SampleMask                               = 0xff);
 
-   const struct brw_vue_prog_data *vue_prog_data = &pipeline->vs_prog_data.base;
+   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
 
 #if 0 
    /* From gen7_vs_state.c */
@@ -277,18 +277,18 @@ genX(graphics_pipeline_create)(
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS),
          .KernelStartPointer                    = pipeline->vs_vec4,
          .ScratchSpaceBaseOffset                = pipeline->scratch_start[MESA_SHADER_VERTEX],
-         .PerThreadScratchSpace                 = scratch_space(&vue_prog_data->base),
+         .PerThreadScratchSpace                 = scratch_space(&vs_prog_data->base.base),
 
          .DispatchGRFStartRegisterforURBData    =
-            vue_prog_data->base.dispatch_grf_start_reg,
-         .VertexURBEntryReadLength              = vue_prog_data->urb_read_length,
+            vs_prog_data->base.base.dispatch_grf_start_reg,
+         .VertexURBEntryReadLength              = vs_prog_data->base.urb_read_length,
          .VertexURBEntryReadOffset              = 0,
 
          .MaximumNumberofThreads                = device->info.max_vs_threads - 1,
          .StatisticsEnable                      = true,
          .VSFunctionEnable                      = true);
 
-   const struct brw_gs_prog_data *gs_prog_data = &pipeline->gs_prog_data;
+   const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
 
    if (pipeline->gs_kernel == NO_KERNEL || (extra && extra->disable_vs)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), .GSEnable = false);
@@ -338,7 +338,7 @@ genX(graphics_pipeline_create)(
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS),
                      .MaximumNumberofThreads                   = device->info.max_wm_threads - 1);
    } else {
-      const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
+      const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
       if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
           wm_prog_data->urb_setup[VARYING_SLOT_BFC1] != -1)
          anv_finishme("two-sided color needs sbe swizzling setup");
