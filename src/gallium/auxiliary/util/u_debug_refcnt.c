@@ -26,9 +26,14 @@
 
 #if defined(DEBUG)
 
-/* see http://www.mozilla.org/performance/refcnt-balancer.html for what do with the output
- * on Linux, use tools/addr2line.sh to postprocess it before anything else
- **/
+/**
+ * If the GALLIUM_REFCNT_LOG env var is defined as a filename, gallium
+ * reference counting will be logged to the file.
+ *
+ * See http://www-archive.mozilla.org/performance/refcnt-balancer.html
+ * for what to do with the output on Linux, use tools/addr2line.sh to
+ * postprocess it before anything else.
+ */
 
 #include <stdio.h>
 
@@ -201,4 +206,5 @@ debug_reference_slowpath(const struct pipe_reference *p,
       fflush(stream);
    }
 }
-#endif
+
+#endif /* DEBUG */
