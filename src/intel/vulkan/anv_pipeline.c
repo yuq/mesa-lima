@@ -438,20 +438,17 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    const struct brw_stage_prog_data *stage_prog_data;
    struct brw_vs_prog_key key;
-   uint32_t kernel;
-   unsigned char sha1[20], *hash;
+   uint32_t kernel = NO_KERNEL;
+   unsigned char sha1[20];
 
    populate_vs_prog_key(&pipeline->device->info, &key);
 
    if (module->size > 0) {
-      hash = sha1;
-      anv_hash_shader(hash, &key, sizeof(key), module, entrypoint, spec_info);
-      kernel = anv_pipeline_cache_search(cache, hash, &stage_prog_data);
-   } else {
-      hash = NULL;
+      anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
+      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data);
    }
 
-   if (module->size == 0 || kernel == NO_KERNEL) {
+   if (kernel == NO_KERNEL) {
       struct brw_vs_prog_data prog_data = { 0, };
 
       nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
@@ -484,7 +481,8 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       }
 
       stage_prog_data = &prog_data.base.base;
-      kernel = anv_pipeline_cache_upload_kernel(cache, hash,
+      kernel = anv_pipeline_cache_upload_kernel(cache,
+                                                module->size > 0 ? sha1 : NULL,
                                                 shader_code, code_size,
                                                 &stage_prog_data,
                                                 sizeof(prog_data));
@@ -520,20 +518,17 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    const struct brw_stage_prog_data *stage_prog_data;
    struct brw_gs_prog_key key;
-   uint32_t kernel;
-   unsigned char sha1[20], *hash;
+   uint32_t kernel = NO_KERNEL;
+   unsigned char sha1[20];
 
    populate_gs_prog_key(&pipeline->device->info, &key);
 
    if (module->size > 0) {
-      hash = sha1;
-      anv_hash_shader(hash, &key, sizeof(key), module, entrypoint, spec_info);
-      kernel = anv_pipeline_cache_search(cache, hash, &stage_prog_data);
-   } else {
-      hash = NULL;
+      anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
+      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data);
    }
 
-   if (module->size == 0 || kernel == NO_KERNEL) {
+   if (kernel == NO_KERNEL) {
       struct brw_gs_prog_data prog_data = { 0, };
 
       nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
@@ -566,7 +561,8 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
       /* TODO: SIMD8 GS */
       stage_prog_data = &prog_data.base.base;
-      kernel = anv_pipeline_cache_upload_kernel(cache, hash,
+      kernel = anv_pipeline_cache_upload_kernel(cache,
+                                                module->size > 0 ? sha1 : NULL,
                                                 shader_code, code_size,
                                                 &stage_prog_data, sizeof(prog_data));
 
@@ -594,8 +590,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    const struct brw_stage_prog_data *stage_prog_data;
    struct brw_wm_prog_key key;
-   uint32_t kernel;
-   unsigned char sha1[20], *hash;
+   uint32_t kernel = NO_KERNEL;
+   unsigned char sha1[20];
 
    populate_wm_prog_key(&pipeline->device->info, info, extra, &key);
 
@@ -603,14 +599,11 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       key.nr_color_regions = 1;
 
    if (module->size > 0) {
-      hash = sha1;
-      anv_hash_shader(hash, &key, sizeof(key), module, entrypoint, spec_info);
-      kernel = anv_pipeline_cache_search(cache, hash, &stage_prog_data);
-   } else {
-      hash = NULL;
+      anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
+      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data);
    }
 
-   if (module->size == 0 || kernel == NO_KERNEL) {
+   if (kernel == NO_KERNEL) {
       struct brw_wm_prog_data prog_data = { 0, };
 
       prog_data.binding_table.render_target_start = 0;
@@ -649,7 +642,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       }
 
       stage_prog_data = &prog_data.base;
-      kernel = anv_pipeline_cache_upload_kernel(cache, hash,
+      kernel = anv_pipeline_cache_upload_kernel(cache,
+                                                module->size > 0 ? sha1 : NULL,
                                                 shader_code, code_size,
                                                 &stage_prog_data, sizeof(prog_data));
 
@@ -702,17 +696,14 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       pipeline->device->instance->physicalDevice.compiler;
    const struct brw_stage_prog_data *stage_prog_data;
    struct brw_cs_prog_key key;
-   uint32_t kernel;
-   unsigned char sha1[20], *hash;
+   uint32_t kernel = NO_KERNEL;
+   unsigned char sha1[20];
 
    populate_cs_prog_key(&pipeline->device->info, &key);
 
    if (module->size > 0) {
-      hash = sha1;
-      anv_hash_shader(hash, &key, sizeof(key), module, entrypoint, spec_info);
-      kernel = anv_pipeline_cache_search(cache, hash, &stage_prog_data);
-   } else {
-      hash = NULL;
+      anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
+      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data);
    }
 
    if (module->size == 0 || kernel == NO_KERNEL) {
@@ -743,7 +734,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       }
 
       stage_prog_data = &prog_data.base;
-      kernel = anv_pipeline_cache_upload_kernel(cache, hash,
+      kernel = anv_pipeline_cache_upload_kernel(cache,
+                                                module->size > 0 ? sha1 : NULL,
                                                 shader_code, code_size,
                                                 &stage_prog_data, sizeof(prog_data));
       ralloc_free(mem_ctx);
