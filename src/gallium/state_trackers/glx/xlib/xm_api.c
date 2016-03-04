@@ -174,9 +174,13 @@ xmesa_close_display(Display *display)
    /* don't forget to clean up mesaDisplay */
    XMesaDisplay xmdpy = &info->mesaDisplay;
 
-   if (xmdpy->screen) {
-      xmdpy->screen->destroy(xmdpy->screen);
-   }
+   /**
+    * XXX: Don't destroy the screens here, since there may still
+    * be some dangling screen pointers that are used after this point
+    * if (xmdpy->screen) {
+    *    xmdpy->screen->destroy(xmdpy->screen);
+    * }
+    */
    free(xmdpy->smapi);
 
    XFree((char *) info);
