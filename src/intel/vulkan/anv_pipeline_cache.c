@@ -195,6 +195,20 @@ anv_pipeline_cache_grow(struct anv_pipeline_cache *cache)
    return VK_SUCCESS;
 }
 
+static void
+anv_pipeline_cache_add_entry(struct anv_pipeline_cache *cache,
+                             struct cache_entry *entry, uint32_t entry_offset)
+{
+   if (cache->kernel_count == cache->table_size / 2)
+      anv_pipeline_cache_grow(cache);
+
+   /* Failing to grow that hash table isn't fatal, but may mean we don't
+    * have enough space to add this new kernel. Only add it if there's room.
+    */
+   if (cache->kernel_count < cache->table_size / 2)
+      anv_pipeline_cache_set_entry(cache, entry, entry_offset);
+}
+
 uint32_t
 anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
                                  const unsigned char *sha1,
@@ -224,14 +238,7 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
       assert(anv_pipeline_cache_search(cache, sha1, NULL) == NO_KERNEL);
 
       memcpy(entry->sha1, sha1, sizeof(entry->sha1));
-      if (cache->kernel_count == cache->table_size / 2)
-         anv_pipeline_cache_grow(cache);
-
-      /* Failing to grow that hash table isn't fatal, but may mean we don't
-       * have enough space to add this new kernel. Only add it if there's room.
-       */
-      if (cache->kernel_count < cache->table_size / 2)
-         anv_pipeline_cache_set_entry(cache, entry, state.offset);
+      anv_pipeline_cache_add_entry(cache, entry, state.offset);
    }
 
    pthread_mutex_unlock(&cache->mutex);
