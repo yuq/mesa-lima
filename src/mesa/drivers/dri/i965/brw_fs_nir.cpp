@@ -2345,8 +2345,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_atomic_counter_inc:
    case nir_intrinsic_atomic_counter_dec:
    case nir_intrinsic_atomic_counter_read: {
-      using namespace surface_access;
-
       /* Get the arguments of the atomic intrinsic. */
       const fs_reg offset = get_nir_src(instr->src[0]);
       const unsigned surface = (stage_prog_data->binding_table.abo_start +
@@ -2932,12 +2930,11 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
 
    /* Emit the actual atomic operation operation */
 
-   fs_reg atomic_result =
-      surface_access::emit_untyped_atomic(bld, surface, offset,
-                                          data1, data2,
-                                          1 /* dims */, 1 /* rsize */,
-                                          op,
-                                          BRW_PREDICATE_NONE);
+   fs_reg atomic_result = emit_untyped_atomic(bld, surface, offset,
+                                              data1, data2,
+                                              1 /* dims */, 1 /* rsize */,
+                                              op,
+                                              BRW_PREDICATE_NONE);
    dest.type = atomic_result.type;
    bld.MOV(dest, atomic_result);
 }
@@ -2959,12 +2956,11 @@ fs_visitor::nir_emit_shared_atomic(const fs_builder &bld,
 
    /* Emit the actual atomic operation operation */
 
-   fs_reg atomic_result =
-      surface_access::emit_untyped_atomic(bld, surface, offset,
-                                          data1, data2,
-                                          1 /* dims */, 1 /* rsize */,
-                                          op,
-                                          BRW_PREDICATE_NONE);
+   fs_reg atomic_result = emit_untyped_atomic(bld, surface, offset,
+                                              data1, data2,
+                                              1 /* dims */, 1 /* rsize */,
+                                              op,
+                                              BRW_PREDICATE_NONE);
    dest.type = atomic_result.type;
    bld.MOV(dest, atomic_result);
 }
