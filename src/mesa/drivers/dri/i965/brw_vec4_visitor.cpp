@@ -1115,61 +1115,6 @@ vec4_visitor::gs_end_primitive()
 }
 
 void
-vec4_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
-                                  dst_reg dst, src_reg surf_offset,
-                                  src_reg src0, src_reg src1)
-{
-   unsigned mlen = 1 + (src0.file != BAD_FILE) + (src1.file != BAD_FILE);
-   src_reg src_payload(this, glsl_type::uint_type, mlen);
-   dst_reg payload(src_payload);
-   payload.writemask = WRITEMASK_X;
-
-   /* Set the atomic operation offset. */
-   emit(MOV(offset(payload, 0), surf_offset));
-   unsigned i = 1;
-
-   /* Set the atomic operation arguments. */
-   if (src0.file != BAD_FILE) {
-      emit(MOV(offset(payload, i), src0));
-      i++;
-   }
-
-   if (src1.file != BAD_FILE) {
-      emit(MOV(offset(payload, i), src1));
-      i++;
-   }
-
-   /* Emit the instruction.  Note that this maps to the normal SIMD8
-    * untyped atomic message on Ivy Bridge, but that's OK because
-    * unused channels will be masked out.
-    */
-   vec4_instruction *inst = emit(SHADER_OPCODE_UNTYPED_ATOMIC, dst,
-                                 src_payload,
-                                 brw_imm_ud(surf_index), brw_imm_ud(atomic_op));
-   inst->mlen = mlen;
-}
-
-void
-vec4_visitor::emit_untyped_surface_read(unsigned surf_index, dst_reg dst,
-                                        src_reg surf_offset)
-{
-   dst_reg offset(this, glsl_type::uint_type);
-   offset.writemask = WRITEMASK_X;
-
-   /* Set the surface read offset. */
-   emit(MOV(offset, surf_offset));
-
-   /* Emit the instruction.  Note that this maps to the normal SIMD8
-    * untyped surface read message, but that's OK because unused
-    * channels will be masked out.
-    */
-   vec4_instruction *inst = emit(SHADER_OPCODE_UNTYPED_SURFACE_READ, dst,
-                                 src_reg(offset),
-                                 brw_imm_ud(surf_index), brw_imm_d(1));
-   inst->mlen = 1;
-}
-
-void
 vec4_visitor::emit_ndc_computation()
 {
    if (output_reg[VARYING_SLOT_POS].file == BAD_FILE)

@@ -724,24 +724,34 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
          (unsigned) instr->const_index[0];
       src_reg offset = get_nir_src(instr->src[0], nir_type_int,
                                    instr->num_components);
+      const src_reg surface = brw_imm_ud(surf_index);
+      const vec4_builder bld =
+         vec4_builder(this).at_end().annotate(current_annotation, base_ir);
+      src_reg tmp;
+
       dest = get_nir_dest(instr->dest);
 
       switch (instr->intrinsic) {
-         case nir_intrinsic_atomic_counter_inc:
-            emit_untyped_atomic(BRW_AOP_INC, surf_index, dest, offset,
-                                src_reg(), src_reg());
-            break;
-         case nir_intrinsic_atomic_counter_dec:
-            emit_untyped_atomic(BRW_AOP_PREDEC, surf_index, dest, offset,
-                                src_reg(), src_reg());
-            break;
-         case nir_intrinsic_atomic_counter_read:
-            emit_untyped_surface_read(surf_index, dest, offset);
-            break;
-         default:
-            unreachable("Unreachable");
+      case nir_intrinsic_atomic_counter_inc:
+         tmp = emit_untyped_atomic(bld, surface, offset,
+                                   src_reg(), src_reg(),
+                                   1, 1,
+                                   BRW_AOP_INC);
+         break;
+      case nir_intrinsic_atomic_counter_dec:
+         tmp = emit_untyped_atomic(bld, surface, offset,
+                                   src_reg(), src_reg(),
+                                   1, 1,
+                                   BRW_AOP_PREDEC);
+         break;
+      case nir_intrinsic_atomic_counter_read:
+         tmp = emit_untyped_read(bld, surface, offset, 1, 1);
+         break;
+      default:
+         unreachable("Unreachable");
       }
 
+      bld.MOV(retype(dest, tmp.type), tmp);
       brw_mark_surface_used(stage_prog_data, surf_index);
       break;
    }
