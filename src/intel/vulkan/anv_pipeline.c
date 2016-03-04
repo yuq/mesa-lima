@@ -366,10 +366,6 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    /* Set up dynamic offsets */
    anv_nir_apply_dynamic_offsets(pipeline, nir, prog_data);
 
-   char surface_usage_mask[256], sampler_usage_mask[256];
-   zero(surface_usage_mask);
-   zero(sampler_usage_mask);
-
    /* Apply the actual pipeline layout to UBOs, SSBOs, and textures */
    if (pipeline->layout)
       anv_nir_apply_pipeline_layout(pipeline, nir, prog_data);
