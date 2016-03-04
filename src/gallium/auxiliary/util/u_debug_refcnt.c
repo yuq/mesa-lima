@@ -42,7 +42,7 @@
 
 int debug_refcnt_state;
 
-FILE *stream;
+static FILE *stream;
 
 /* TODO: maybe move this serial machinery to a stand-alone module and
  * expose it?
