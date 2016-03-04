@@ -77,6 +77,16 @@ struct cache_entry {
    /* kernel follows prog_data at next 64 byte aligned address */
 };
 
+static uint32_t
+entry_size(struct cache_entry *entry)
+{
+   /* This returns the number of bytes needed to serialize an entry, which
+    * doesn't include the alignment padding bytes.
+    */
+
+   return sizeof(*entry) + entry->prog_data_size + entry->kernel_size;
+}
+
 void
 anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
                 struct anv_shader_module *module,
@@ -146,10 +156,7 @@ anv_pipeline_cache_add_entry(struct anv_pipeline_cache *cache,
       }
    }
 
-   /* We don't include the alignment padding bytes when we serialize, so
-    * don't include taht in the the total size. */
-   cache->total_size +=
-      sizeof(*entry) + entry->prog_data_size + entry->kernel_size;
+   cache->total_size += entry_size(entry);
    cache->kernel_count++;
 }
 
@@ -345,12 +352,12 @@ VkResult anv_GetPipelineCacheData(
       return VK_SUCCESS;
    }
 
-   if (*pDataSize < size) {
+   if (*pDataSize < sizeof(*header)) {
       *pDataSize = 0;
       return VK_INCOMPLETE;
    }
 
-   void *p = pData;
+   void *p = pData, *end = pData + *pDataSize;
    header = p;
    header->header_size = sizeof(*header);
    header->header_version = VK_PIPELINE_CACHE_HEADER_VERSION_ONE;
@@ -365,6 +372,8 @@ VkResult anv_GetPipelineCacheData(
          continue;
 
       entry = cache->program_stream.block_pool->map + cache->table[i];
+      if (end < p + entry_size(entry))
+         break;
 
       memcpy(p, entry, sizeof(*entry) + entry->prog_data_size);
       p += sizeof(*entry) + entry->prog_data_size;
@@ -375,6 +384,8 @@ VkResult anv_GetPipelineCacheData(
       memcpy(p, kernel, entry->kernel_size);
       p += entry->kernel_size;
    }
+
+   *pDataSize = p - pData;
 
    return VK_SUCCESS;
 }
