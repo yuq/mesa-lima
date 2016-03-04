@@ -49,15 +49,15 @@ anv_pipeline_cache_init(struct anv_pipeline_cache *cache,
    cache->kernel_count = 0;
    cache->total_size = 0;
    cache->table_size = 1024;
-   const size_t byte_size = cache->table_size * sizeof(cache->table[0]);
-   cache->table = malloc(byte_size);
+   const size_t byte_size = cache->table_size * sizeof(cache->hash_table[0]);
+   cache->hash_table = malloc(byte_size);
 
    /* We don't consider allocation failure fatal, we just start with a 0-sized
     * cache. */
-   if (cache->table == NULL)
+   if (cache->hash_table == NULL)
       cache->table_size = 0;
    else
-      memset(cache->table, 0xff, byte_size);
+      memset(cache->hash_table, 0xff, byte_size);
 }
 
 void
@@ -65,7 +65,7 @@ anv_pipeline_cache_finish(struct anv_pipeline_cache *cache)
 {
    anv_state_stream_finish(&cache->program_stream);
    pthread_mutex_destroy(&cache->mutex);
-   free(cache->table);
+   free(cache->hash_table);
 }
 
 struct cache_entry {
@@ -117,7 +117,7 @@ anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
 
    for (uint32_t i = 0; i < cache->table_size; i++) {
       const uint32_t index = (start + i) & mask;
-      const uint32_t offset = cache->table[index];
+      const uint32_t offset = cache->hash_table[index];
 
       if (offset == ~0)
          return NO_KERNEL;
@@ -150,8 +150,8 @@ anv_pipeline_cache_add_entry(struct anv_pipeline_cache *cache,
 
    for (uint32_t i = 0; i < cache->table_size; i++) {
       const uint32_t index = (start + i) & mask;
-      if (cache->table[index] == ~0) {
-         cache->table[index] = entry_offset;
+      if (cache->hash_table[index] == ~0) {
+         cache->hash_table[index] = entry_offset;
          break;
       }
    }
@@ -165,20 +165,20 @@ anv_pipeline_cache_grow(struct anv_pipeline_cache *cache)
 {
    const uint32_t table_size = cache->table_size * 2;
    const uint32_t old_table_size = cache->table_size;
-   const size_t byte_size = table_size * sizeof(cache->table[0]);
+   const size_t byte_size = table_size * sizeof(cache->hash_table[0]);
    uint32_t *table;
-   uint32_t *old_table = cache->table;
+   uint32_t *old_table = cache->hash_table;
 
    table = malloc(byte_size);
    if (table == NULL)
       return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-   cache->table = table;
+   cache->hash_table = table;
    cache->table_size = table_size;
    cache->kernel_count = 0;
    cache->total_size = 0;
 
-   memset(cache->table, 0xff, byte_size);
+   memset(cache->hash_table, 0xff, byte_size);
    for (uint32_t i = 0; i < old_table_size; i++) {
       const uint32_t offset = old_table[i];
       if (offset == ~0)
@@ -368,10 +368,10 @@ VkResult anv_GetPipelineCacheData(
 
    struct cache_entry *entry;
    for (uint32_t i = 0; i < cache->table_size; i++) {
-      if (cache->table[i] == ~0)
+      if (cache->hash_table[i] == ~0)
          continue;
 
-      entry = cache->program_stream.block_pool->map + cache->table[i];
+      entry = cache->program_stream.block_pool->map + cache->hash_table[i];
       if (end < p + entry_size(entry))
          break;
 
@@ -395,11 +395,11 @@ anv_pipeline_cache_merge(struct anv_pipeline_cache *dst,
                          struct anv_pipeline_cache *src)
 {
    for (uint32_t i = 0; i < src->table_size; i++) {
-      if (src->table[i] == ~0)
+      if (src->hash_table[i] == ~0)
          continue;
 
       struct cache_entry *entry =
-         src->program_stream.block_pool->map + src->table[i];
+         src->program_stream.block_pool->map + src->hash_table[i];
 
       if (anv_pipeline_cache_search(dst, entry->sha1, NULL) != NO_KERNEL)
          continue;

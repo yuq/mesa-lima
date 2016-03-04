@@ -633,7 +633,7 @@ struct anv_pipeline_cache {
    uint32_t                                     total_size;
    uint32_t                                     table_size;
    uint32_t                                     kernel_count;
-   uint32_t                                    *table;
+   uint32_t *                                   hash_table;
 };
 
 void anv_pipeline_cache_init(struct anv_pipeline_cache *cache,
