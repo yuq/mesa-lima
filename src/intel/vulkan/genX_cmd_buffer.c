@@ -721,8 +721,8 @@ void genX(CmdBeginRenderPass)(
    const VkRect2D *render_area = &pRenderPassBegin->renderArea;
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DRAWING_RECTANGLE),
-                  .ClippedDrawingRectangleYMin = render_area->offset.y,
-                  .ClippedDrawingRectangleXMin = render_area->offset.x,
+                  .ClippedDrawingRectangleYMin = MAX2(render_area->offset.y, 0),
+                  .ClippedDrawingRectangleXMin = MAX2(render_area->offset.x, 0),
                   .ClippedDrawingRectangleYMax =
                      render_area->offset.y + render_area->extent.height - 1,
                   .ClippedDrawingRectangleXMax =
