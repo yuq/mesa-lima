@@ -59,7 +59,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .ViewportTransformEnable = !(extra && extra->disable_viewport),
       .TriangleStripListProvokingVertexSelect = 0,
       .LineStripListProvokingVertexSelect = 0,
-      .TriangleFanProvokingVertexSelect = 0,
+      .TriangleFanProvokingVertexSelect = 1,
       .PointWidthSource = pipeline->writes_point_size ? Vertex : State,
       .PointWidth = 1.0,
    };

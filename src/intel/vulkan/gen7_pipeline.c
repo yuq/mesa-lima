@@ -61,7 +61,7 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
 
       .TriangleStripListProvokingVertexSelect   = 0,
       .LineStripListProvokingVertexSelect       = 0,
-      .TriangleFanProvokingVertexSelect         = 0,
+      .TriangleFanProvokingVertexSelect         = 1,
 
       /* uint32_t                                     AALineDistanceMode; */
       /* uint32_t                                     VertexSubPixelPrecisionSelect; */
@@ -230,7 +230,7 @@ genX(graphics_pipeline_create)(
       .ClipMode                                 = CLIPMODE_NORMAL,
       .TriangleStripListProvokingVertexSelect   = 0,
       .LineStripListProvokingVertexSelect       = 0,
-      .TriangleFanProvokingVertexSelect         = 0,
+      .TriangleFanProvokingVertexSelect         = 1,
       .MinimumPointWidth                        = 0.125,
       .MaximumPointWidth                        = 255.875,
       .MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1);
