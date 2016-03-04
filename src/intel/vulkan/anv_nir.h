@@ -37,7 +37,8 @@ void anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
                                    struct brw_stage_prog_data *prog_data);
 void anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
                                    nir_shader *shader,
-                                   struct brw_stage_prog_data *prog_data);
+                                   struct brw_stage_prog_data *prog_data,
+                                   struct anv_pipeline_bind_map *map);
 
 #ifdef __cplusplus
 }

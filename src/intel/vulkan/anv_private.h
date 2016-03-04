@@ -636,18 +636,22 @@ struct anv_pipeline_cache {
    uint32_t *                                   hash_table;
 };
 
+struct anv_pipeline_bind_map;
+
 void anv_pipeline_cache_init(struct anv_pipeline_cache *cache,
                              struct anv_device *device);
 void anv_pipeline_cache_finish(struct anv_pipeline_cache *cache);
 uint32_t anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
                                    const unsigned char *sha1,
-                                   const struct brw_stage_prog_data **prog_data);
+                                   const struct brw_stage_prog_data **prog_data,
+                                   struct anv_pipeline_bind_map *map);
 uint32_t anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
                                           const unsigned char *sha1,
                                           const void *kernel,
                                           size_t kernel_size,
                                           const struct brw_stage_prog_data **prog_data,
-                                          size_t prog_data_size);
+                                          size_t prog_data_size,
+                                          struct anv_pipeline_bind_map *map);
 
 struct anv_device {
     VK_LOADER_DATA                              _loader_data;

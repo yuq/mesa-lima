@@ -193,11 +193,6 @@ void anv_DestroyPipeline(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_pipeline, pipeline, _pipeline);
 
-   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
-      free(pipeline->bindings[s].surface_to_descriptor);
-      free(pipeline->bindings[s].sampler_to_descriptor);
-   }
-
    anv_reloc_list_finish(&pipeline->batch_relocs,
                          pAllocator ? pAllocator : &device->alloc);
    if (pipeline->blend_state.map)
@@ -315,7 +310,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
                      const char *entrypoint,
                      gl_shader_stage stage,
                      const VkSpecializationInfo *spec_info,
-                     struct brw_stage_prog_data *prog_data)
+                     struct brw_stage_prog_data *prog_data,
+                     struct anv_pipeline_bind_map *map)
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
@@ -368,7 +364,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
 
    /* Apply the actual pipeline layout to UBOs, SSBOs, and textures */
    if (pipeline->layout)
-      anv_nir_apply_pipeline_layout(pipeline, nir, prog_data);
+      anv_nir_apply_pipeline_layout(pipeline, nir, prog_data, map);
 
    /* All binding table offsets provided by apply_pipeline_layout() are
     * relative to the start of the bindint table (plus MAX_RTS for VS).
@@ -406,7 +402,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
 static void
 anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
                                 gl_shader_stage stage,
-                                const struct brw_stage_prog_data *prog_data)
+                                const struct brw_stage_prog_data *prog_data,
+                                struct anv_pipeline_bind_map *map)
 {
    struct brw_device_info *devinfo = &pipeline->device->info;
    uint32_t max_threads[] = {
@@ -424,6 +421,7 @@ anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
    pipeline->total_scratch =
       align_u32(pipeline->total_scratch, 1024) +
       prog_data->total_scratch * max_threads[stage];
+   pipeline->bindings[stage] = *map;
 }
 
 static VkResult
@@ -437,6 +435,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
    const struct brw_stage_prog_data *stage_prog_data;
+   struct anv_pipeline_bind_map map;
    struct brw_vs_prog_key key;
    uint32_t kernel = NO_KERNEL;
    unsigned char sha1[20];
@@ -445,15 +444,22 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 
    if (module->size > 0) {
       anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
-      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data);
+      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data, &map);
    }
 
    if (kernel == NO_KERNEL) {
       struct brw_vs_prog_data prog_data = { 0, };
+      struct anv_pipeline_binding surface_to_descriptor[256];
+      struct anv_pipeline_binding sampler_to_descriptor[256];
+
+      map = (struct anv_pipeline_bind_map) {
+         .surface_to_descriptor = surface_to_descriptor,
+         .sampler_to_descriptor = sampler_to_descriptor
+      };
 
       nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
                                              MESA_SHADER_VERTEX, spec_info,
-                                             &prog_data.base.base);
+                                             &prog_data.base.base, &map);
       if (nir == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -484,8 +490,8 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       kernel = anv_pipeline_cache_upload_kernel(cache,
                                                 module->size > 0 ? sha1 : NULL,
                                                 shader_code, code_size,
-                                                &stage_prog_data,
-                                                sizeof(prog_data));
+                                                &stage_prog_data, sizeof(prog_data),
+                                                &map);
       ralloc_free(mem_ctx);
    }
 
@@ -501,7 +507,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
    }
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_VERTEX,
-                                   stage_prog_data);
+                                   stage_prog_data, &map);
 
    return VK_SUCCESS;
 }
@@ -517,6 +523,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
    const struct brw_stage_prog_data *stage_prog_data;
+   struct anv_pipeline_bind_map map;
    struct brw_gs_prog_key key;
    uint32_t kernel = NO_KERNEL;
    unsigned char sha1[20];
@@ -525,15 +532,22 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
    if (module->size > 0) {
       anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
-      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data);
+      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data, &map);
    }
 
    if (kernel == NO_KERNEL) {
       struct brw_gs_prog_data prog_data = { 0, };
+      struct anv_pipeline_binding surface_to_descriptor[256];
+      struct anv_pipeline_binding sampler_to_descriptor[256];
+
+      map = (struct anv_pipeline_bind_map) {
+         .surface_to_descriptor = surface_to_descriptor,
+         .sampler_to_descriptor = sampler_to_descriptor
+      };
 
       nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
                                              MESA_SHADER_GEOMETRY, spec_info,
-                                             &prog_data.base.base);
+                                             &prog_data.base.base, &map);
       if (nir == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -564,7 +578,8 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
       kernel = anv_pipeline_cache_upload_kernel(cache,
                                                 module->size > 0 ? sha1 : NULL,
                                                 shader_code, code_size,
-                                                &stage_prog_data, sizeof(prog_data));
+                                                &stage_prog_data, sizeof(prog_data),
+                                                &map);
 
       ralloc_free(mem_ctx);
    }
@@ -572,7 +587,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
    pipeline->gs_kernel = kernel;
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_GEOMETRY,
-                                   stage_prog_data);
+                                   stage_prog_data, &map);
 
    return VK_SUCCESS;
 }
@@ -589,6 +604,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
    const struct brw_stage_prog_data *stage_prog_data;
+   struct anv_pipeline_bind_map map;
    struct brw_wm_prog_key key;
    uint32_t kernel = NO_KERNEL;
    unsigned char sha1[20];
@@ -600,17 +616,22 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
    if (module->size > 0) {
       anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
-      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data);
+      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data, &map);
    }
 
    if (kernel == NO_KERNEL) {
       struct brw_wm_prog_data prog_data = { 0, };
+      struct anv_pipeline_binding surface_to_descriptor[256];
+      struct anv_pipeline_binding sampler_to_descriptor[256];
 
-      prog_data.binding_table.render_target_start = 0;
+      map = (struct anv_pipeline_bind_map) {
+         .surface_to_descriptor = surface_to_descriptor,
+         .sampler_to_descriptor = sampler_to_descriptor
+      };
 
       nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
                                              MESA_SHADER_FRAGMENT, spec_info,
-                                             &prog_data.base);
+                                             &prog_data.base, &map);
       if (nir == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -645,7 +666,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       kernel = anv_pipeline_cache_upload_kernel(cache,
                                                 module->size > 0 ? sha1 : NULL,
                                                 shader_code, code_size,
-                                                &stage_prog_data, sizeof(prog_data));
+                                                &stage_prog_data, sizeof(prog_data),
+                                                &map);
 
       ralloc_free(mem_ctx);
    }
@@ -679,7 +701,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    }
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_FRAGMENT,
-                                   stage_prog_data);
+                                   stage_prog_data, &map);
 
    return VK_SUCCESS;
 }
@@ -695,6 +717,7 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
    const struct brw_stage_prog_data *stage_prog_data;
+   struct anv_pipeline_bind_map map;
    struct brw_cs_prog_key key;
    uint32_t kernel = NO_KERNEL;
    unsigned char sha1[20];
@@ -703,17 +726,22 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 
    if (module->size > 0) {
       anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
-      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data);
+      kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data, &map);
    }
 
    if (module->size == 0 || kernel == NO_KERNEL) {
       struct brw_cs_prog_data prog_data = { 0, };
+      struct anv_pipeline_binding surface_to_descriptor[256];
+      struct anv_pipeline_binding sampler_to_descriptor[256];
 
-      prog_data.binding_table.work_groups_start = 0;
+      map = (struct anv_pipeline_bind_map) {
+         .surface_to_descriptor = surface_to_descriptor,
+         .sampler_to_descriptor = sampler_to_descriptor
+      };
 
       nir_shader *nir = anv_pipeline_compile(pipeline, module, entrypoint,
                                              MESA_SHADER_COMPUTE, spec_info,
-                                             &prog_data.base);
+                                             &prog_data.base, &map);
       if (nir == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -737,14 +765,16 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       kernel = anv_pipeline_cache_upload_kernel(cache,
                                                 module->size > 0 ? sha1 : NULL,
                                                 shader_code, code_size,
-                                                &stage_prog_data, sizeof(prog_data));
+                                                &stage_prog_data, sizeof(prog_data),
+                                                &map);
+
       ralloc_free(mem_ctx);
    }
 
    pipeline->cs_simd = kernel;
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_COMPUTE,
-                                   stage_prog_data);
+                                   stage_prog_data, &map);
 
    return VK_SUCCESS;
 }

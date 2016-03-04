@@ -253,7 +253,8 @@ setup_vec4_uniform_value(const union gl_constant_value **params,
 void
 anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
                               nir_shader *shader,
-                              struct brw_stage_prog_data *prog_data)
+                              struct brw_stage_prog_data *prog_data,
+                              struct anv_pipeline_bind_map *map)
 {
    struct anv_pipeline_layout *layout = pipeline->layout;
 
@@ -277,12 +278,6 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          nir_foreach_block(function->impl, get_used_bindings_block, &state);
    }
 
-   struct anv_pipeline_bind_map map = {
-      .surface_count = 0,
-      .sampler_count = 0,
-      .image_count = 0,
-   };
-
    for (uint32_t set = 0; set < layout->num_sets; set++) {
       struct anv_descriptor_set_layout *set_layout = layout->set[set].layout;
 
@@ -290,20 +285,13 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       BITSET_FOREACH_SET(b, _tmp, state.set[set].used,
                          set_layout->binding_count) {
          if (set_layout->binding[b].stage[shader->stage].surface_index >= 0)
-            map.surface_count += set_layout->binding[b].array_size;
+            map->surface_count += set_layout->binding[b].array_size;
          if (set_layout->binding[b].stage[shader->stage].sampler_index >= 0)
-            map.sampler_count += set_layout->binding[b].array_size;
+            map->sampler_count += set_layout->binding[b].array_size;
          if (set_layout->binding[b].stage[shader->stage].image_index >= 0)
-            map.image_count += set_layout->binding[b].array_size;
+            map->image_count += set_layout->binding[b].array_size;
       }
    }
-
-   map.surface_to_descriptor =
-      malloc(map.surface_count * sizeof(struct anv_pipeline_binding));
-   map.sampler_to_descriptor =
-      malloc(map.sampler_count * sizeof(struct anv_pipeline_binding));
-
-   pipeline->bindings[shader->stage] = map;
 
    unsigned surface = 0;
    unsigned sampler = 0;
@@ -320,8 +308,8 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          if (set_layout->binding[b].stage[shader->stage].surface_index >= 0) {
             state.set[set].surface_offsets[b] = surface;
             for (unsigned i = 0; i < array_size; i++) {
-               map.surface_to_descriptor[surface + i].set = set;
-               map.surface_to_descriptor[surface + i].offset = set_offset + i;
+               map->surface_to_descriptor[surface + i].set = set;
+               map->surface_to_descriptor[surface + i].offset = set_offset + i;
             }
             surface += array_size;
          }
@@ -329,8 +317,8 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          if (set_layout->binding[b].stage[shader->stage].sampler_index >= 0) {
             state.set[set].sampler_offsets[b] = sampler;
             for (unsigned i = 0; i < array_size; i++) {
-               map.sampler_to_descriptor[sampler + i].set = set;
-               map.sampler_to_descriptor[sampler + i].offset = set_offset + i;
+               map->sampler_to_descriptor[sampler + i].set = set;
+               map->sampler_to_descriptor[sampler + i].offset = set_offset + i;
             }
             sampler += array_size;
          }
@@ -351,8 +339,8 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       }
    }
 
-   if (map.image_count > 0) {
-      assert(map.image_count <= MAX_IMAGES);
+   if (map->image_count > 0) {
+      assert(map->image_count <= MAX_IMAGES);
       nir_foreach_variable(var, &shader->uniforms) {
          if (glsl_type_is_image(var->type) ||
              (glsl_type_is_array(var->type) &&
@@ -374,7 +362,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       const gl_constant_value **param =
          prog_data->param + (shader->num_uniforms / 4);
       const struct brw_image_param *image_param = null_data->images;
-      for (uint32_t i = 0; i < map.image_count; i++) {
+      for (uint32_t i = 0; i < map->image_count; i++) {
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
             (const union gl_constant_value *)&image_param->surface_idx, 1);
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_OFFSET_OFFSET,
@@ -392,7 +380,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          image_param ++;
       }
 
-      shader->num_uniforms += map.image_count * BRW_IMAGE_PARAM_SIZE * 4;
+      shader->num_uniforms += map->image_count * BRW_IMAGE_PARAM_SIZE * 4;
    }
 
    ralloc_free(mem_ctx);

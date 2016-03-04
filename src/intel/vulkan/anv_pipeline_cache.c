@@ -72,6 +72,10 @@ struct cache_entry {
    unsigned char sha1[20];
    uint32_t prog_data_size;
    uint32_t kernel_size;
+   uint32_t surface_count;
+   uint32_t sampler_count;
+   uint32_t image_count;
+
    char prog_data[0];
 
    /* kernel follows prog_data at next 64 byte aligned address */
@@ -84,7 +88,11 @@ entry_size(struct cache_entry *entry)
     * doesn't include the alignment padding bytes.
     */
 
-   return sizeof(*entry) + entry->prog_data_size + entry->kernel_size;
+   const uint32_t map_size =
+      entry->surface_count * sizeof(struct anv_pipeline_binding) +
+      entry->sampler_count * sizeof(struct anv_pipeline_binding);
+
+   return sizeof(*entry) + entry->prog_data_size + map_size;
 }
 
 void
@@ -111,7 +119,8 @@ anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
 uint32_t
 anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
                           const unsigned char *sha1,
-                          const struct brw_stage_prog_data **prog_data)
+                          const struct brw_stage_prog_data **prog_data,
+                          struct anv_pipeline_bind_map *map)
 {
    const uint32_t mask = cache->table_size - 1;
    const uint32_t start = (*(uint32_t *) sha1);
@@ -126,13 +135,20 @@ anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
       struct cache_entry *entry =
          cache->program_stream.block_pool->map + offset;
       if (memcmp(entry->sha1, sha1, sizeof(entry->sha1)) == 0) {
-         if (prog_data)
-            *prog_data = (const struct brw_stage_prog_data *) entry->prog_data;
+         if (prog_data) {
+            assert(map);
+            void *p = entry->prog_data;
+            *prog_data = p;
+            p += entry->prog_data_size;
+            map->surface_count = entry->surface_count;
+            map->sampler_count = entry->sampler_count;
+            map->image_count = entry->image_count;
+            map->surface_to_descriptor = p;
+            p += map->surface_count * sizeof(struct anv_pipeline_binding);
+            map->sampler_to_descriptor = p;
+         }
 
-         const uint32_t preamble_size =
-            align_u32(sizeof(*entry) + entry->prog_data_size, 64);
-
-         return offset + preamble_size;
+         return offset + align_u32(entry_size(entry), 64);
       }
    }
 
@@ -157,7 +173,7 @@ anv_pipeline_cache_set_entry(struct anv_pipeline_cache *cache,
       }
    }
 
-   cache->total_size += entry_size(entry);
+   cache->total_size += entry_size(entry) + entry->kernel_size;
    cache->kernel_count++;
 }
 
@@ -214,13 +230,18 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
                                  const unsigned char *sha1,
                                  const void *kernel, size_t kernel_size,
                                  const struct brw_stage_prog_data **prog_data,
-                                 size_t prog_data_size)
+                                 size_t prog_data_size,
+                                 struct anv_pipeline_bind_map *map)
 {
    pthread_mutex_lock(&cache->mutex);
    struct cache_entry *entry;
 
+   const uint32_t map_size =
+      map->surface_count * sizeof(struct anv_pipeline_binding) +
+      map->sampler_count * sizeof(struct anv_pipeline_binding);
+
    const uint32_t preamble_size =
-      align_u32(sizeof(*entry) + prog_data_size, 64);
+      align_u32(sizeof(*entry) + prog_data_size + map_size, 64);
 
    const uint32_t size = preamble_size + kernel_size;
 
@@ -230,12 +251,26 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
 
    entry = state.map;
    entry->prog_data_size = prog_data_size;
-   memcpy(entry->prog_data, *prog_data, prog_data_size);
-   *prog_data = (const struct brw_stage_prog_data *) entry->prog_data;
+   entry->surface_count = map->surface_count;
+   entry->sampler_count = map->sampler_count;
+   entry->image_count = map->image_count;
    entry->kernel_size = kernel_size;
 
+   void *p = entry->prog_data;
+   memcpy(p, *prog_data, prog_data_size);
+   p += prog_data_size;
+
+   memcpy(p, map->surface_to_descriptor,
+          map->surface_count * sizeof(struct anv_pipeline_binding));
+   map->surface_to_descriptor = p;
+   p += map->surface_count * sizeof(struct anv_pipeline_binding);
+
+   memcpy(p, map->sampler_to_descriptor,
+          map->sampler_count * sizeof(struct anv_pipeline_binding));
+   map->sampler_to_descriptor = p;
+
    if (sha1 && env_var_as_boolean("ANV_ENABLE_PIPELINE_CACHE", false)) {
-      assert(anv_pipeline_cache_search(cache, sha1, NULL) == NO_KERNEL);
+      assert(anv_pipeline_cache_search(cache, sha1, NULL, NULL) == NO_KERNEL);
 
       memcpy(entry->sha1, sha1, sizeof(entry->sha1));
       anv_pipeline_cache_add_entry(cache, entry, state.offset);
@@ -247,6 +282,8 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
 
    if (!cache->device->info.has_llc)
       anv_state_clflush(state);
+
+   *prog_data = (const struct brw_stage_prog_data *) entry->prog_data;
 
    return state.offset + preamble_size;
 }
@@ -282,23 +319,34 @@ anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
    if (memcmp(header.uuid, uuid, VK_UUID_SIZE) != 0)
       return;
 
-   const void *end = data + size;
-   const void *p = data + header.header_size;
+   void *end = (void *) data + size;
+   void *p = (void *) data + header.header_size;
 
    while (p < end) {
-      /* The kernels aren't 64 byte aligned in the serialized format so
-       * they're always right after the prog_data.
-       */
-      const struct cache_entry *entry = p;
-      const void *kernel = &entry->prog_data[entry->prog_data_size];
+      struct cache_entry *entry = p;
 
-      const struct brw_stage_prog_data *prog_data =
-         (const struct brw_stage_prog_data *) entry->prog_data;
+      void *data = entry->prog_data;
+      const struct brw_stage_prog_data *prog_data = data;
+      data += entry->prog_data_size;
+
+      struct anv_pipeline_binding *surface_to_descriptor = data;
+      data += entry->surface_count * sizeof(struct anv_pipeline_binding);
+      struct anv_pipeline_binding *sampler_to_descriptor = data;
+      data += entry->sampler_count * sizeof(struct anv_pipeline_binding);
+      void *kernel = data;
+
+      struct anv_pipeline_bind_map map = {
+         .surface_count = entry->surface_count,
+         .sampler_count = entry->sampler_count,
+         .image_count = entry->image_count,
+         .surface_to_descriptor = surface_to_descriptor,
+         .sampler_to_descriptor = sampler_to_descriptor
+      };
 
       anv_pipeline_cache_upload_kernel(cache, entry->sha1,
                                        kernel, entry->kernel_size,
                                        &prog_data,
-                                       entry->prog_data_size);
+                                       entry->prog_data_size, &map);
       p = kernel + entry->kernel_size;
    }
 }
@@ -383,14 +431,14 @@ VkResult anv_GetPipelineCacheData(
          continue;
 
       entry = cache->program_stream.block_pool->map + cache->hash_table[i];
-      if (end < p + entry_size(entry))
+      const uint32_t size = entry_size(entry);
+      if (end < p + size + entry->kernel_size)
          break;
 
-      memcpy(p, entry, sizeof(*entry) + entry->prog_data_size);
-      p += sizeof(*entry) + entry->prog_data_size;
+      memcpy(p, entry, size);
+      p += size;
 
-      void *kernel = (void *) entry +
-         align_u32(sizeof(*entry) + entry->prog_data_size, 64);
+      void *kernel = (void *) entry + align_u32(size, 64);
 
       memcpy(p, kernel, entry->kernel_size);
       p += entry->kernel_size;
@@ -413,7 +461,7 @@ anv_pipeline_cache_merge(struct anv_pipeline_cache *dst,
       struct cache_entry *entry =
          src->program_stream.block_pool->map + offset;
 
-      if (anv_pipeline_cache_search(dst, entry->sha1, NULL) != NO_KERNEL)
+      if (anv_pipeline_cache_search(dst, entry->sha1, NULL, NULL) != NO_KERNEL)
          continue;
 
       anv_pipeline_cache_add_entry(dst, entry, offset);
