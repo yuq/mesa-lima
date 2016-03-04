@@ -965,7 +965,11 @@ anv_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
 {
    switch (cmd_buffer->device->info.gen) {
    case 7:
-      gen7_cmd_buffer_set_subpass(cmd_buffer, subpass);
+      if (cmd_buffer->device->info.is_haswell) {
+         gen75_cmd_buffer_set_subpass(cmd_buffer, subpass);
+      } else {
+         gen7_cmd_buffer_set_subpass(cmd_buffer, subpass);
+      }
       break;
    case 8:
       gen8_cmd_buffer_set_subpass(cmd_buffer, subpass);
