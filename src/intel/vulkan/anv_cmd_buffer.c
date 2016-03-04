@@ -333,6 +333,14 @@ VkResult anv_ResetCommandBuffer(
    anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
    anv_cmd_state_reset(cmd_buffer);
 
+   anv_state_stream_finish(&cmd_buffer->surface_state_stream);
+   anv_state_stream_init(&cmd_buffer->surface_state_stream,
+                         &cmd_buffer->device->surface_state_block_pool);
+
+   anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
+   anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
+                         &cmd_buffer->device->dynamic_state_block_pool);
+
    return VK_SUCCESS;
 }
 
