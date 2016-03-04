@@ -77,6 +77,9 @@ compare_ptr(void *a, void *b)
 }
 
 
+/**
+ * Return a small integer serial number for the given pointer.
+ */
 static boolean
 debug_serial(void *p, unsigned *pserial)
 {
@@ -117,6 +120,9 @@ debug_serial(void *p, unsigned *pserial)
 }
 
 
+/**
+ * Free the serial number for the given pointer.
+ */
 static void
 debug_serial_delete(void *p)
 {
@@ -140,10 +146,24 @@ dump_stack(const char *symbols[STACK_LEN])
 }
 
 
+/**
+ * Log a reference count change to the log file (if enabled).
+ * This is called via the pipe_reference() and debug_reference() functions,
+ * basically whenever a reference count is initialized or changed.
+ *
+ * \param p  the refcount being changed (the value is not changed here)
+ * \param get_desc  a function which will be called to print an object's
+ *                  name/pointer into a string buffer during logging
+ * \param change  the reference count change which must be +/-1 or 0 when
+ *                creating the object and initializing the refcount.
+ */
 void
 debug_reference_slowpath(const struct pipe_reference *p,
                          debug_reference_descriptor get_desc, int change)
 {
+   assert(change >= -1);
+   assert(change <= 1);
+
    if (debug_refcnt_state < 0)
       return;
 
