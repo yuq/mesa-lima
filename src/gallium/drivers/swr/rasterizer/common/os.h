@@ -81,7 +81,6 @@ typedef CARD8			BOOL;
 typedef wchar_t			WCHAR;
 typedef uint16_t		UINT16;
 typedef int				INT;
-typedef int             INT32;
 typedef unsigned int	UINT;
 typedef uint32_t		UINT32;
 typedef uint64_t		UINT64;

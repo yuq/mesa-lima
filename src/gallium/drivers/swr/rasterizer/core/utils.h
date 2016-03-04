@@ -676,7 +676,7 @@ struct UnrollerL<End, End, Step> {
 INLINE
 uint32_t ComputeCRC(uint32_t crc, const void *pData, uint32_t size)
 {
-#if defined(_WIN64) || defined(__linux__) || defined(__gnu_linux__)
+#if defined(_WIN64) || defined(__x86_64__)
     uint32_t sizeInQwords = size / sizeof(uint64_t);
     uint32_t sizeRemainderBytes = size % sizeof(uint64_t);
     uint64_t* pDataWords = (uint64_t*)pData;
