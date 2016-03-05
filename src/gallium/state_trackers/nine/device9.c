@@ -3676,8 +3676,7 @@ NineDevice9_SetIndices( struct NineDevice9 *This,
  */
 HRESULT NINE_WINAPI
 NineDevice9_GetIndices( struct NineDevice9 *This,
-                        IDirect3DIndexBuffer9 **ppIndexData /*,
-                        UINT *pBaseVertexIndex */ )
+                        IDirect3DIndexBuffer9 **ppIndexData)
 {
     user_assert(ppIndexData, D3DERR_INVALIDCALL);
     nine_reference_set(ppIndexData, This->state.idxbuf);
