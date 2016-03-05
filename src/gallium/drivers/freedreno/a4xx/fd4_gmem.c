@@ -502,18 +502,6 @@ patch_draws(struct fd_context *ctx, enum pc_di_vis_cull_mode vismode)
 	util_dynarray_resize(&ctx->draw_patches, 0);
 }
 
-static void
-patch_rbrc(struct fd_context *ctx, uint32_t val)
-{
-	struct fd4_context *fd4_ctx = fd4_context(ctx);
-	unsigned i;
-	for (i = 0; i < fd_patch_num_elements(&fd4_ctx->rbrc_patches); i++) {
-		struct fd_cs_patch *patch = fd_patch_element(&fd4_ctx->rbrc_patches, i);
-		*patch->cs = patch->val | val;
-	}
-	util_dynarray_resize(&fd4_ctx->rbrc_patches, 0);
-}
-
 /* for rendering directly to system memory: */
 static void
 fd4_emit_sysmem_prep(struct fd_context *ctx)
@@ -545,8 +533,10 @@ fd4_emit_sysmem_prep(struct fd_context *ctx)
 			A4XX_RB_MODE_CONTROL_HEIGHT(0) |
 			0x00c00000);  /* XXX */
 
+	OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL, 1);
+	OUT_RING(ring, 0x8);
+
 	patch_draws(ctx, IGNORE_VISIBILITY);
-	patch_rbrc(ctx, 0);  // XXX
 }
 
 static void
@@ -591,7 +581,6 @@ fd4_emit_tile_init(struct fd_context *ctx)
 {
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
-	uint32_t rb_render_control;
 
 	fd4_emit_restore(ctx);
 
@@ -607,8 +596,8 @@ fd4_emit_tile_init(struct fd_context *ctx)
 	update_vsc_pipe(ctx);
 	patch_draws(ctx, IGNORE_VISIBILITY);
 
-	rb_render_control = 0; // XXX or BINNING_PASS.. but maybe we can emit only from gmem
-	patch_rbrc(ctx, rb_render_control);
+	OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL, 1);
+	OUT_RING(ring, 0x8);
 }
 
 /* before mem2gmem */
@@ -696,6 +685,9 @@ fd4_emit_tile_renderprep(struct fd_context *ctx, struct fd_tile *tile)
 			A4XX_GRAS_SC_SCREEN_SCISSOR_TL_Y(y1));
 	OUT_RING(ring, A4XX_GRAS_SC_SCREEN_SCISSOR_BR_X(x2) |
 			A4XX_GRAS_SC_SCREEN_SCISSOR_BR_Y(y2));
+
+	OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL, 1);
+	OUT_RING(ring, 0x8);
 }
 
 void

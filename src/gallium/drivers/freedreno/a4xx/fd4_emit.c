@@ -485,19 +485,6 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A4XX_RB_RENDER_COMPONENTS_RT7(mrt_comp[7]));
 	}
 
-	if ((dirty & (FD_DIRTY_ZSA | FD_DIRTY_PROG)) && !emit->key.binning_pass) {
-		uint32_t val = fd4_zsa_stateobj(ctx->zsa)->rb_render_control;
-
-		/* I suppose if we needed to (which I don't *think* we need
-		 * to), we could emit this for binning pass too.  But we
-		 * would need to keep a different patch-list for binning
-		 * vs render pass.
-		 */
-
-		OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL, 1);
-		OUT_RINGP(ring, val, &fd4_context(ctx)->rbrc_patches);
-	}
-
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_FRAMEBUFFER)) {
 		struct fd4_zsa_stateobj *zsa = fd4_zsa_stateobj(ctx->zsa);
 		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
