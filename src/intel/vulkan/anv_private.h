@@ -1409,7 +1409,6 @@ struct anv_pipeline {
 
    bool                                         use_repclear;
 
-   bool                                         writes_point_size;
    const struct brw_stage_prog_data *           prog_data[MESA_SHADER_STAGES];
    uint32_t                                     scratch_start[MESA_SHADER_STAGES];
    uint32_t                                     total_scratch;

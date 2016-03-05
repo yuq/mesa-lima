@@ -60,7 +60,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .TriangleStripListProvokingVertexSelect = 0,
       .LineStripListProvokingVertexSelect = 0,
       .TriangleFanProvokingVertexSelect = 1,
-      .PointWidthSource = pipeline->writes_point_size ? Vertex : State,
+      .PointWidthSource = Vertex,
       .PointWidth = 1.0,
    };
 

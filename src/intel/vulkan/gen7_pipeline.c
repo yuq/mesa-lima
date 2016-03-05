@@ -65,7 +65,7 @@ gen7_emit_rs_state(struct anv_pipeline *pipeline,
 
       /* uint32_t                                     AALineDistanceMode; */
       /* uint32_t                                     VertexSubPixelPrecisionSelect; */
-      .UsePointWidthState                       = !pipeline->writes_point_size,
+      .UsePointWidthState                       = false,
       .PointWidth                               = 1.0,
       .GlobalDepthOffsetEnableSolid             = info->depthBiasEnable,
       .GlobalDepthOffsetEnableWireframe         = info->depthBiasEnable,
