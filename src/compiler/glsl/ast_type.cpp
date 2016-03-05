@@ -146,6 +146,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    input_layout_mask.flags.q.centroid = 1;
    /* Function params can have constant */
    input_layout_mask.flags.q.constant = 1;
+   input_layout_mask.flags.q.explicit_component = 1;
    input_layout_mask.flags.q.explicit_location = 1;
    input_layout_mask.flags.q.flat = 1;
    input_layout_mask.flags.q.in = 1;
