@@ -288,13 +288,12 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
       if (input_index < 0)
          continue;
 
-      int source_attr = fs_input_map->varying_to_slot[attr];
-      max_source_attr = MAX2(max_source_attr, source_attr);
+      const int slot = fs_input_map->varying_to_slot[attr];
 
       if (input_index >= 16)
          continue;
 
-      if (source_attr == -1) {
+      if (slot == -1) {
          /* This attribute does not exist in the VUE--that means that the
           * vertex shader did not write to it.  It could be that it's a
           * regular varying read by the fragment shader but not written by
@@ -308,10 +307,13 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
          swiz.Attribute[input_index].ComponentOverrideZ = true;
          swiz.Attribute[input_index].ComponentOverrideW = true;
       } else {
+         assert(slot >= 2);
+         const int source_attr = slot - 2;
+         max_source_attr = MAX2(max_source_attr, source_attr);
          /* We have to subtract two slots to accout for the URB entry output
           * read offset in the VS and GS stages.
           */
-         swiz.Attribute[input_index].SourceAttribute = source_attr - 2;
+         swiz.Attribute[input_index].SourceAttribute = source_attr;
       }
    }
 
