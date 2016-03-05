@@ -646,11 +646,12 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
        *
        * The PRM is wrong, though. The width and height must be programmed to
        * actual framebuffer's width and height, even when neither depth buffer
-       * nor stencil buffer is present.
+       * nor stencil buffer is present.  Also, D16_UNORM is not allowed to
+       * be combined with a stencil buffer so we use D32_FLOAT instead.
        */
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER),
          .SurfaceType = SURFTYPE_2D,
-         .SurfaceFormat = D16_UNORM,
+         .SurfaceFormat = D32_FLOAT,
          .Width = fb->width - 1,
          .Height = fb->height - 1,
          .StencilWriteEnable = has_stencil);

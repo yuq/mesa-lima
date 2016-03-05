@@ -161,7 +161,7 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_X8_D24_UNORM_PACK32,     ISL_FORMAT_R24_UNORM_X8_TYPELESS,   .has_depth = true),
    fmt(VK_FORMAT_D32_SFLOAT,              ISL_FORMAT_R32_FLOAT,               .has_depth = true),
    fmt(VK_FORMAT_S8_UINT,                 ISL_FORMAT_R8_UINT,                                      .has_stencil = true),
-   fmt(VK_FORMAT_D16_UNORM_S8_UINT,       ISL_FORMAT_R16_UNORM,               .has_depth = true,   .has_stencil = true),
+   fmt(VK_FORMAT_D16_UNORM_S8_UINT,       ISL_FORMAT_UNSUPPORTED),
    fmt(VK_FORMAT_D24_UNORM_S8_UINT,       ISL_FORMAT_R24_UNORM_X8_TYPELESS,   .has_depth = true,   .has_stencil = true),
    fmt(VK_FORMAT_D32_SFLOAT_S8_UINT,      ISL_FORMAT_R32_FLOAT,               .has_depth = true,   .has_stencil = true),
 
