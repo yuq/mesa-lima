@@ -344,8 +344,8 @@ genX(graphics_pipeline_create)(
                      pCreateInfo->pRasterizationState->rasterizerDiscardEnable ?
                      REJECT_ALL : NORMAL,
 
-                  .NonPerspectiveBarycentricEnable =
-                     (wm_prog_data->barycentric_interp_modes & 0x38) != 0,
+                  .NonPerspectiveBarycentricEnable = wm_prog_data ?
+                     (wm_prog_data->barycentric_interp_modes & 0x38) != 0 : 0,
 
                   .TriangleStripListProvokingVertexSelect = 0,
                   .LineStripListProvokingVertexSelect = 0,
