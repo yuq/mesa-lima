@@ -1205,4 +1205,10 @@ extern void _mesa_ast_process_interface_block(YYLTYPE *locp,
                                               ast_interface_block *const block,
                                               const struct ast_type_qualifier &q);
 
+extern bool
+process_qualifier_constant(struct _mesa_glsl_parse_state *state,
+                           YYLTYPE *loc,
+                           const char *qual_indentifier,
+                           ast_expression *const_expression,
+                           unsigned *value);
 #endif /* AST_H */
