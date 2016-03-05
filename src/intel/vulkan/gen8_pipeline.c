@@ -333,6 +333,7 @@ genX(graphics_pipeline_create)(
 
    emit_urb_setup(pipeline);
 
+   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP),
                   .ClipEnable = true,
                   .EarlyCullEnable = true,
@@ -344,7 +345,7 @@ genX(graphics_pipeline_create)(
                      REJECT_ALL : NORMAL,
 
                   .NonPerspectiveBarycentricEnable =
-                     (pipeline->wm_prog_data.barycentric_interp_modes & 0x38) != 0,
+                     (wm_prog_data->barycentric_interp_modes & 0x38) != 0,
 
                   .TriangleStripListProvokingVertexSelect = 0,
                   .LineStripListProvokingVertexSelect = 0,
@@ -354,7 +355,6 @@ genX(graphics_pipeline_create)(
                   .MaximumPointWidth = 255.875,
                   .MaximumVPIndex = pCreateInfo->pViewportState->viewportCount - 1);
 
-   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM),
                   .StatisticsEnable = true,
                   .LineEndCapAntialiasingRegionWidth = _05pixels,
