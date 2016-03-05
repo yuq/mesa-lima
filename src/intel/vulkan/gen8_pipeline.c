@@ -238,6 +238,14 @@ emit_ds_state(struct anv_pipeline *pipeline,
       .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
    };
 
+   /* From the Broadwell PRM:
+    *
+    *    "If Depth_Test_Enable = 1 AND Depth_Test_func = EQUAL, the
+    *    Depth_Write_Enable must be set to 0."
+    */
+   if (info->depthTestEnable && info->depthCompareOp == VK_COMPARE_OP_EQUAL)
+      wm_depth_stencil.DepthBufferWriteEnable = false;
+
    GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, dw, &wm_depth_stencil);
 }
 
