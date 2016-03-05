@@ -795,8 +795,8 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
    for (uint32_t r = 0; r < range_count; r++) {
       const VkImageSubresourceRange *range = &ranges[r];
 
-      for (uint32_t l = 0; l < range->levelCount; ++l) {
-         for (uint32_t s = 0; s < range->layerCount; ++s) {
+      for (uint32_t l = 0; l < anv_get_levelCount(image, range); ++l) {
+         for (uint32_t s = 0; s < anv_get_layerCount(image, range); ++s) {
             struct anv_image_view iview;
             anv_image_view_init(&iview, cmd_buffer->device,
                &(VkImageViewCreateInfo) {

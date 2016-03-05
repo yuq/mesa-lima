@@ -1641,6 +1641,23 @@ struct anv_image {
    };
 };
 
+static inline uint32_t
+anv_get_layerCount(const struct anv_image *image,
+                   const VkImageSubresourceRange *range)
+{
+   return range->layerCount == VK_REMAINING_ARRAY_LAYERS ?
+          image->array_size - range->baseArrayLayer : range->layerCount;
+}
+
+static inline uint32_t
+anv_get_levelCount(const struct anv_image *image,
+                   const VkImageSubresourceRange *range)
+{
+   return range->levelCount == VK_REMAINING_MIP_LEVELS ?
+          image->levels - range->baseMipLevel : range->levelCount;
+}
+
+
 struct anv_image_view {
    const struct anv_image *image; /**< VkImageViewCreateInfo::image */
    struct anv_bo *bo;

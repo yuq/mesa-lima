@@ -388,9 +388,9 @@ anv_validate_CreateImageView(VkDevice _device,
    assert(subresource->levelCount > 0);
    assert(subresource->layerCount > 0);
    assert(subresource->baseMipLevel < image->levels);
-   assert(subresource->baseMipLevel + subresource->levelCount <= image->levels);
+   assert(subresource->baseMipLevel + anv_get_levelCount(image, subresource) <= image->levels);
    assert(subresource->baseArrayLayer < image->array_size);
-   assert(subresource->baseArrayLayer + subresource->layerCount <= image->array_size);
+   assert(subresource->baseArrayLayer + anv_get_layerCount(image, subresource) <= image->array_size);
    assert(pView);
 
    const VkImageAspectFlags ds_flags = VK_IMAGE_ASPECT_DEPTH_BIT
@@ -496,10 +496,10 @@ anv_image_view_init(struct anv_image_view *iview,
       unreachable("bad VkImageType");
    case VK_IMAGE_TYPE_1D:
    case VK_IMAGE_TYPE_2D:
-      assert(range->baseArrayLayer + range->layerCount - 1 <= image->array_size);
+      assert(range->baseArrayLayer + anv_get_layerCount(image, range) - 1 <= image->array_size);
       break;
    case VK_IMAGE_TYPE_3D:
-      assert(range->baseArrayLayer + range->layerCount - 1
+      assert(range->baseArrayLayer + anv_get_layerCount(image, range) - 1
              <= anv_minify(image->extent.depth, range->baseMipLevel));
       break;
    }
@@ -525,9 +525,9 @@ anv_image_view_init(struct anv_image_view *iview,
    struct isl_view isl_view = {
       .format = format,
       .base_level = range->baseMipLevel,
-      .levels = range->levelCount,
+      .levels = anv_get_levelCount(image, range),
       .base_array_layer = range->baseArrayLayer,
-      .array_len = range->layerCount,
+      .array_len = anv_get_layerCount(image, range),
       .channel_select = {
          remap_swizzle(pCreateInfo->components.r,
                        VK_COMPONENT_SWIZZLE_R, swizzle),
