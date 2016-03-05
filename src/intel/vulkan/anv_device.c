@@ -421,9 +421,9 @@ void anv_GetPhysicalDeviceProperties(
    VkPhysicalDeviceLimits limits = {
       .maxImageDimension1D                      = (1 << 14),
       .maxImageDimension2D                      = (1 << 14),
-      .maxImageDimension3D                      = (1 << 10),
+      .maxImageDimension3D                      = (1 << 11),
       .maxImageDimensionCube                    = (1 << 14),
-      .maxImageArrayLayers                      = (1 << 10),
+      .maxImageArrayLayers                      = (1 << 11),
       .maxTexelBufferElements                   = 128 * 1024 * 1024,
       .maxUniformBufferRange                    = UINT32_MAX,
       .maxStorageBufferRange                    = UINT32_MAX,
