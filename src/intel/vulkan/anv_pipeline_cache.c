@@ -116,11 +116,11 @@ anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
    _mesa_sha1_final(ctx, hash);
 }
 
-uint32_t
-anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
-                          const unsigned char *sha1,
-                          const struct brw_stage_prog_data **prog_data,
-                          struct anv_pipeline_bind_map *map)
+static uint32_t
+anv_pipeline_cache_search_unlocked(struct anv_pipeline_cache *cache,
+                                   const unsigned char *sha1,
+                                   const struct brw_stage_prog_data **prog_data,
+                                   struct anv_pipeline_bind_map *map)
 {
    const uint32_t mask = cache->table_size - 1;
    const uint32_t start = (*(uint32_t *) sha1);
@@ -152,7 +152,24 @@ anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
       }
    }
 
-   return NO_KERNEL;
+   unreachable("hash table should never be full");
+}
+
+uint32_t
+anv_pipeline_cache_search(struct anv_pipeline_cache *cache,
+                          const unsigned char *sha1,
+                          const struct brw_stage_prog_data **prog_data,
+                          struct anv_pipeline_bind_map *map)
+{
+   uint32_t kernel;
+
+   pthread_mutex_lock(&cache->mutex);
+
+   kernel = anv_pipeline_cache_search_unlocked(cache, sha1, prog_data, map);
+
+   pthread_mutex_unlock(&cache->mutex);
+
+   return kernel;
 }
 
 static void
@@ -234,6 +251,19 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
                                  struct anv_pipeline_bind_map *map)
 {
    pthread_mutex_lock(&cache->mutex);
+
+   /* Before uploading, check again that another thread didn't upload this
+    * shader while we were compiling it.
+    */
+   if (sha1) {
+      uint32_t cached_kernel =
+         anv_pipeline_cache_search_unlocked(cache, sha1, prog_data, map);
+      if (cached_kernel != NO_KERNEL) {
+         pthread_mutex_unlock(&cache->mutex);
+         return cached_kernel;
+      }
+   }
+
    struct cache_entry *entry;
 
    const uint32_t map_size =
@@ -270,7 +300,8 @@ anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
    map->sampler_to_descriptor = p;
 
    if (sha1 && env_var_as_boolean("ANV_ENABLE_PIPELINE_CACHE", false)) {
-      assert(anv_pipeline_cache_search(cache, sha1, NULL, NULL) == NO_KERNEL);
+      assert(anv_pipeline_cache_search_unlocked(cache, sha1,
+                                                NULL, NULL) == NO_KERNEL);
 
       memcpy(entry->sha1, sha1, sizeof(entry->sha1));
       anv_pipeline_cache_add_entry(cache, entry, state.offset);
