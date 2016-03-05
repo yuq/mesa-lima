@@ -176,6 +176,43 @@ reset_viewport(struct fd_ringbuffer *ring, struct pipe_framebuffer_state *pfb)
 	OUT_RING(ring, A4XX_GRAS_CL_VPORT_YSCALE_0(-half_height));
 }
 
+/* TODO maybe we should just migrate u_blitter for clear and do it in
+ * core (so we get normal draw pass state mgmt and binning).. That should
+ * work well enough for a3xx/a4xx (but maybe not a2xx?)
+ */
+
+static void
+fd4_clear_binning(struct fd_context *ctx, unsigned dirty)
+{
+	struct fd4_context *fd4_ctx = fd4_context(ctx);
+	struct fd_ringbuffer *ring = ctx->binning_ring;
+	struct fd4_emit emit = {
+		.vtx  = &fd4_ctx->solid_vbuf_state,
+		.prog = &ctx->solid_prog,
+		.key = {
+			.binning_pass = true,
+			.half_precision = true,
+		},
+		.dirty = dirty,
+	};
+
+	fd4_emit_state(ctx, ring, &emit);
+	fd4_emit_vertex_bufs(ring, &emit);
+	reset_viewport(ring, &ctx->framebuffer);
+
+	OUT_PKT0(ring, REG_A4XX_PC_PRIM_VTX_CNTL, 2);
+	OUT_RING(ring, A4XX_PC_PRIM_VTX_CNTL_VAROUT(0) |
+			A4XX_PC_PRIM_VTX_CNTL_PROVOKING_VTX_LAST);
+	OUT_RING(ring, A4XX_PC_PRIM_VTX_CNTL2_POLYMODE_FRONT_PTYPE(PC_DRAW_TRIANGLES) |
+			A4XX_PC_PRIM_VTX_CNTL2_POLYMODE_BACK_PTYPE(PC_DRAW_TRIANGLES));
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
+	OUT_RING(ring, 0x00000002);
+
+	fd4_draw(ctx, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
+			DI_SRC_SEL_AUTO_INDEX, 2, 1, INDEX_SIZE_IGN, 0, 0, NULL);
+}
+
 static void
 fd4_clear(struct fd_context *ctx, unsigned buffers,
 		const union pipe_color_union *color, double depth, unsigned stencil)
@@ -197,6 +234,8 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 	dirty &= FD_DIRTY_FRAMEBUFFER | FD_DIRTY_SCISSOR;
 	dirty |= FD_DIRTY_PROG;
 	emit.dirty = dirty;
+
+	fd4_clear_binning(ctx, dirty);
 
 	OUT_PKT0(ring, REG_A4XX_PC_PRIM_VTX_CNTL, 1);
 	OUT_RING(ring, A4XX_PC_PRIM_VTX_CNTL_PROVOKING_VTX_LAST);

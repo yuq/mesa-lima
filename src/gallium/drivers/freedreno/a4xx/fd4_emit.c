@@ -606,7 +606,11 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER)) {
 		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
-		fd4_program_emit(ring, emit, pfb->nr_cbufs, pfb->cbufs);
+		unsigned n = pfb->nr_cbufs;
+		/* if we have depth/stencil, we need at least on MRT: */
+		if (pfb->zsbuf)
+			n = MAX2(1, n);
+		fd4_program_emit(ring, emit, n, pfb->cbufs);
 	}
 
 	if (emit->prog == &ctx->prog) { /* evil hack to deal sanely with clear path */

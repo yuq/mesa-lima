@@ -130,6 +130,19 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 	}
 }
 
+static bool
+use_hw_binning(struct fd_context *ctx)
+{
+	struct fd_gmem_stateobj *gmem = &ctx->gmem;
+	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+
+	/* this seems to be a hw bug.. but this hack fixes piglit fbo-maxsize: */
+	if ((pfb->width > 4096) && (pfb->height > 4096))
+		return false;
+
+	return fd_binning_enabled && ((gmem->nbins_x * gmem->nbins_y) > 2);
+}
+
 /* transfer from gmem to system memory (ie. normal RAM) */
 
 static void
@@ -575,6 +588,70 @@ update_vsc_pipe(struct fd_context *ctx)
 	}
 }
 
+static void
+emit_binning_pass(struct fd_context *ctx)
+{
+	struct fd_gmem_stateobj *gmem = &ctx->gmem;
+	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	struct fd_ringbuffer *ring = ctx->ring;
+	int i;
+
+	uint32_t x1 = gmem->minx;
+	uint32_t y1 = gmem->miny;
+	uint32_t x2 = gmem->minx + gmem->width - 1;
+	uint32_t y2 = gmem->miny + gmem->height - 1;
+
+	OUT_PKT0(ring, REG_A4XX_PC_BINNING_COMMAND, 1);
+	OUT_RING(ring, A4XX_PC_BINNING_COMMAND_BINNING_ENABLE);
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_SC_CONTROL, 1);
+	OUT_RING(ring, A4XX_GRAS_SC_CONTROL_RENDER_MODE(RB_TILING_PASS) |
+			A4XX_GRAS_SC_CONTROL_MSAA_DISABLE |
+			A4XX_GRAS_SC_CONTROL_MSAA_SAMPLES(MSAA_ONE) |
+			A4XX_GRAS_SC_CONTROL_RASTER_MODE(0));
+
+	OUT_PKT0(ring, REG_A4XX_RB_FRAME_BUFFER_DIMENSION, 1);
+	OUT_RING(ring, A4XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
+			A4XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
+
+	/* setup scissor/offset for whole screen: */
+	OUT_PKT0(ring, REG_A4XX_RB_BIN_OFFSET, 1);
+	OUT_RING(ring, A4XX_RB_BIN_OFFSET_X(x1) |
+			A4XX_RB_BIN_OFFSET_Y(y1));
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_SC_SCREEN_SCISSOR_TL, 2);
+	OUT_RING(ring, A4XX_GRAS_SC_SCREEN_SCISSOR_TL_X(x1) |
+			A4XX_GRAS_SC_SCREEN_SCISSOR_TL_Y(y1));
+	OUT_RING(ring, A4XX_GRAS_SC_SCREEN_SCISSOR_BR_X(x2) |
+			A4XX_GRAS_SC_SCREEN_SCISSOR_BR_Y(y2));
+
+	for (i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
+		OUT_PKT0(ring, REG_A4XX_RB_MRT_CONTROL(i), 1);
+		OUT_RING(ring, A4XX_RB_MRT_CONTROL_ROP_CODE(ROP_CLEAR) |
+				A4XX_RB_MRT_CONTROL_COMPONENT_ENABLE(0xf));
+	}
+
+	/* emit IB to binning drawcmds: */
+	ctx->emit_ib(ring, ctx->binning_start, ctx->binning_end);
+
+	fd_reset_wfi(ctx);
+	fd_wfi(ctx, ring);
+
+	/* and then put stuff back the way it was: */
+
+	OUT_PKT0(ring, REG_A4XX_PC_BINNING_COMMAND, 1);
+	OUT_RING(ring, 0x00000000);
+
+	OUT_PKT0(ring, REG_A4XX_GRAS_SC_CONTROL, 1);
+	OUT_RING(ring, A4XX_GRAS_SC_CONTROL_RENDER_MODE(RB_RENDERING_PASS) |
+			A4XX_GRAS_SC_CONTROL_MSAA_DISABLE |
+			A4XX_GRAS_SC_CONTROL_MSAA_SAMPLES(MSAA_ONE) |
+			A4XX_GRAS_SC_CONTROL_RASTER_MODE(0));
+
+	fd_event_write(ctx, ring, CACHE_FLUSH);
+	fd_wfi(ctx, ring);
+}
+
 /* before first tile */
 static void
 fd4_emit_tile_init(struct fd_context *ctx)
@@ -588,16 +665,30 @@ fd4_emit_tile_init(struct fd_context *ctx)
 	OUT_RING(ring, A4XX_VSC_BIN_SIZE_WIDTH(gmem->bin_w) |
 			A4XX_VSC_BIN_SIZE_HEIGHT(gmem->bin_h));
 
+	update_vsc_pipe(ctx);
+
+	if (use_hw_binning(ctx)) {
+		OUT_PKT0(ring, REG_A4XX_RB_MODE_CONTROL, 1);
+		OUT_RING(ring, A4XX_RB_MODE_CONTROL_WIDTH(gmem->bin_w) |
+				A4XX_RB_MODE_CONTROL_HEIGHT(gmem->bin_h));
+
+		OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL, 1);
+		OUT_RING(ring, A4XX_RB_RENDER_CONTROL_BINNING_PASS |
+				A4XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE |
+				0x8);
+
+		/* emit hw binning pass: */
+		emit_binning_pass(ctx);
+
+		patch_draws(ctx, USE_VISIBILITY);
+	} else {
+		patch_draws(ctx, IGNORE_VISIBILITY);
+	}
+
 	OUT_PKT0(ring, REG_A4XX_RB_MODE_CONTROL, 1);
 	OUT_RING(ring, A4XX_RB_MODE_CONTROL_WIDTH(gmem->bin_w) |
 			A4XX_RB_MODE_CONTROL_HEIGHT(gmem->bin_h) |
-			0x00010000);  /* XXX */
-
-	update_vsc_pipe(ctx);
-	patch_draws(ctx, IGNORE_VISIBILITY);
-
-	OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL, 1);
-	OUT_RING(ring, 0x8);
+			A4XX_RB_MODE_CONTROL_ENABLE_GMEM);
 }
 
 /* before mem2gmem */
@@ -659,6 +750,7 @@ fd4_emit_tile_prep(struct fd_context *ctx, struct fd_tile *tile)
 static void
 fd4_emit_tile_renderprep(struct fd_context *ctx, struct fd_tile *tile)
 {
+	struct fd4_context *fd4_ctx = fd4_context(ctx);
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
@@ -667,6 +759,27 @@ fd4_emit_tile_renderprep(struct fd_context *ctx, struct fd_tile *tile)
 	uint32_t y1 = tile->yoff;
 	uint32_t x2 = tile->xoff + tile->bin_w - 1;
 	uint32_t y2 = tile->yoff + tile->bin_h - 1;
+
+	if (use_hw_binning(ctx)) {
+		struct fd_vsc_pipe *pipe = &ctx->pipe[tile->p];
+
+		assert(pipe->w * pipe->h);
+
+		fd_event_write(ctx, ring, HLSQ_FLUSH);
+		fd_wfi(ctx, ring);
+
+		OUT_PKT0(ring, REG_A4XX_PC_VSTREAM_CONTROL, 1);
+		OUT_RING(ring, A4XX_PC_VSTREAM_CONTROL_SIZE(pipe->w * pipe->h) |
+				A4XX_PC_VSTREAM_CONTROL_N(tile->n));
+
+		OUT_PKT3(ring, CP_SET_BIN_DATA, 2);
+		OUT_RELOC(ring, pipe->bo, 0, 0, 0);    /* BIN_DATA_ADDR <- VSC_PIPE[p].DATA_ADDRESS */
+		OUT_RELOC(ring, fd4_ctx->vsc_size_mem, /* BIN_SIZE_ADDR <- VSC_SIZE_ADDRESS + (p * 4) */
+				(tile->p * 4), 0, 0);
+	} else {
+		OUT_PKT0(ring, REG_A4XX_PC_VSTREAM_CONTROL, 1);
+		OUT_RING(ring, 0x00000000);
+	}
 
 	OUT_PKT3(ring, CP_SET_BIN, 3);
 	OUT_RING(ring, 0x00000000);
