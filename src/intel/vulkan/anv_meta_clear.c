@@ -192,7 +192,7 @@ create_pipeline(struct anv_device *device,
              * we need only restore dynamic state was vkCmdSet.
              */
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-            .dynamicStateCount = 9,
+            .dynamicStateCount = 8,
             .pDynamicStates = (VkDynamicState[]) {
                /* Everything except stencil write mask */
                VK_DYNAMIC_STATE_VIEWPORT,
