@@ -279,7 +279,7 @@ control_line:
 ;
 
 control_line_success:
-	HASH_TOKEN DEFINE_TOKEN { } define
+	HASH_TOKEN DEFINE_TOKEN define
 |	HASH_TOKEN UNDEF IDENTIFIER NEWLINE {
 		macro_t *macro;
 		if (strcmp("__LINE__", $3) == 0
