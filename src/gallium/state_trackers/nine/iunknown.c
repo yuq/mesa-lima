@@ -39,6 +39,7 @@ NineUnknown_ctor( struct NineUnknown *This,
         NineUnknown_AddRef(NineUnknown(This->device));
 
     This->vtable = pParams->vtable;
+    This->vtable_internal = pParams->vtable;
     This->guids = pParams->guids;
     This->dtor = pParams->dtor;
 
