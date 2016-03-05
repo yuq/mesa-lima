@@ -266,9 +266,7 @@ control_line:
 		ralloc_asprintf_rewrite_tail (&parser->output, &parser->output_length, "\n");
 	}
 |	control_line_error
-|	HASH_TOKEN LINE {
-		glcpp_parser_resolve_implicit_version(parser);
-	} pp_tokens NEWLINE {
+|	HASH_TOKEN LINE { } pp_tokens NEWLINE {
 
 		if (parser->skip_stack == NULL ||
 		    parser->skip_stack->type == SKIP_NO_SKIP)
@@ -281,12 +279,8 @@ control_line:
 ;
 
 control_line_success:
-	HASH_TOKEN DEFINE_TOKEN {
-		glcpp_parser_resolve_implicit_version(parser);
-	} define
-|	HASH_TOKEN UNDEF {
-		glcpp_parser_resolve_implicit_version(parser);
-	} IDENTIFIER NEWLINE {
+	HASH_TOKEN DEFINE_TOKEN { } define
+|	HASH_TOKEN UNDEF { } IDENTIFIER NEWLINE {
 		macro_t *macro;
 		if (strcmp("__LINE__", $4) == 0
 		    || strcmp("__FILE__", $4) == 0
@@ -302,9 +296,7 @@ control_line_success:
 		}
 		ralloc_free ($4);
 	}
-|	HASH_TOKEN IF {
-		glcpp_parser_resolve_implicit_version(parser);
-	} pp_tokens NEWLINE {
+|	HASH_TOKEN IF { } pp_tokens NEWLINE {
 		/* Be careful to only evaluate the 'if' expression if
 		 * we are not skipping. When we are skipping, we
 		 * simply push a new 0-valued 'if' onto the skip
@@ -335,16 +327,12 @@ control_line_success:
 		}	
 		_glcpp_parser_skip_stack_push_if (parser, & @1, 0);
 	}
-|	HASH_TOKEN IFDEF {
-		glcpp_parser_resolve_implicit_version(parser);
-	} IDENTIFIER junk NEWLINE {
+|	HASH_TOKEN IFDEF { } IDENTIFIER junk NEWLINE {
 		macro_t *macro = hash_table_find (parser->defines, $4);
 		ralloc_free ($4);
 		_glcpp_parser_skip_stack_push_if (parser, & @1, macro != NULL);
 	}
-|	HASH_TOKEN IFNDEF {
-		glcpp_parser_resolve_implicit_version(parser);
-	} IDENTIFIER junk NEWLINE {
+|	HASH_TOKEN IFNDEF { } IDENTIFIER junk NEWLINE {
 		macro_t *macro = hash_table_find (parser->defines, $4);
 		ralloc_free ($4);
 		_glcpp_parser_skip_stack_push_if (parser, & @3, macro == NULL);
