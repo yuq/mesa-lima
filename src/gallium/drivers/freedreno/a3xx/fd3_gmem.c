@@ -931,9 +931,6 @@ fd3_emit_tile_init(struct fd_context *ctx)
 	update_vsc_pipe(ctx);
 
 	if (use_hw_binning(ctx)) {
-		/* mark the end of the binning cmds: */
-		fd_ringmarker_mark(ctx->binning_end);
-
 		/* emit hw binning pass: */
 		emit_binning_pass(ctx);
 
