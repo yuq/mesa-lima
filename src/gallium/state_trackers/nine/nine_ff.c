@@ -251,6 +251,7 @@ static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
  * CONST[100].x___ Viewport 2/width
  * CONST[100]._y__ Viewport 2/height
  * CONST[100].__z_ Viewport 1/(zmax - zmin)
+ * CONST[100].___w Viewport width
  * CONST[101].x___ Viewport x0
  * CONST[101]._y__ Viewport y0
  * CONST[101].__z_ Viewport z0
@@ -337,8 +338,8 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     unsigned i, c;
     unsigned label[32], l = 0;
     unsigned num_r = 8;
-    boolean need_rNrm = key->lighting || key->pointscale || key->passthrough & (1 << NINE_DECLUSAGE_NORMAL);
-    boolean need_rVtx = key->lighting || key->fog_mode;
+    boolean need_rNrm = key->lighting || key->passthrough & (1 << NINE_DECLUSAGE_NORMAL);
+    boolean need_rVtx = key->lighting || key->fog_mode || key->pointscale;
     const unsigned texcoord_sn = get_texcoord_sn(device->screen);
 
     vs->ureg = ureg;
@@ -543,9 +544,14 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
      */
     if (key->vertexpointsize) {
         struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
-        ureg_MAX(ureg, tmp_x, _XXXX(vs->aPsz), _XXXX(cPsz1));
-        ureg_MIN(ureg, oPsz, _X(tmp), _YYYY(cPsz1));
+        ureg_MAX(ureg, tmp_z, _XXXX(vs->aPsz), _XXXX(cPsz1));
+        ureg_MIN(ureg, tmp_z, _Z(tmp), _YYYY(cPsz1));
     } else if (key->pointscale) {
+        struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
+        ureg_MOV(ureg, tmp_z, _ZZZZ(cPsz1));
+    }
+
+    if (key->pointscale) {
         struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
         struct ureg_src cPsz2 = ureg_DECL_constant(ureg, 27);
 
@@ -555,11 +561,14 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_CMP(ureg, tmp_y, ureg_negate(_Y(tmp)), _Y(tmp), ureg_imm1f(ureg, 0.0f));
         ureg_MAD(ureg, tmp_x, _Y(tmp), _YYYY(cPsz2), _XXXX(cPsz2));
         ureg_MAD(ureg, tmp_x, _Y(tmp), _X(tmp), _WWWW(cPsz1));
-        ureg_RCP(ureg, tmp_x, ureg_src(tmp));
-        ureg_MUL(ureg, tmp_x, ureg_src(tmp), _ZZZZ(cPsz1));
+        ureg_RSQ(ureg, tmp_x, _X(tmp));
+        ureg_MUL(ureg, tmp_x, _X(tmp), _Z(tmp));
+        ureg_MUL(ureg, tmp_x, _X(tmp), _WWWW(_CONST(100)));
         ureg_MAX(ureg, tmp_x, _X(tmp), _XXXX(cPsz1));
-        ureg_MIN(ureg, oPsz, _X(tmp), _YYYY(cPsz1));
+        ureg_MIN(ureg, tmp_z, _X(tmp), _YYYY(cPsz1));
     }
+    if (key->vertexpointsize || key->pointscale)
+        ureg_MOV(ureg, oPsz, _Z(tmp));
 
     for (i = 0; i < 8; ++i) {
         struct ureg_dst oTex, input_coord, transformed, t;
@@ -1480,8 +1489,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
     key.passthrough &= ~((1 << NINE_DECLUSAGE_POSITION) | (1 << NINE_DECLUSAGE_PSIZE) |
                          (1 << NINE_DECLUSAGE_TEXCOORD) | (1 << NINE_DECLUSAGE_POSITIONT) |
                          (1 << NINE_DECLUSAGE_TESSFACTOR) | (1 << NINE_DECLUSAGE_SAMPLE));
-    if (!key.vertexpointsize)
-        key.pointscale = !!state->rs[D3DRS_POINTSCALEENABLE];
+    key.pointscale = !!state->rs[D3DRS_POINTSCALEENABLE];
 
     key.lighting = !!state->rs[D3DRS_LIGHTING] &&  state->ff.num_lights_active;
     key.darkness = !!state->rs[D3DRS_LIGHTING] && !state->ff.num_lights_active;
@@ -1836,6 +1844,7 @@ nine_ff_load_viewport_info(struct NineDevice9 *device)
     dst[100].x = 2.0f / (float)(viewport->Width);
     dst[100].y = 2.0f / (float)(viewport->Height);
     dst[100].z = (diffZ == 0.0f) ? 0.0f : (1.0f / diffZ);
+    dst[100].w = (float)(viewport->Width);
     dst[101].x = (float)(viewport->X);
     dst[101].y = (float)(viewport->Y);
     dst[101].z = (float)(viewport->MinZ);
