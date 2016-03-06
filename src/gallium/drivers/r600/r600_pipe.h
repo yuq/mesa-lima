@@ -92,12 +92,6 @@
 #define R600_NUM_HW_STAGES 4
 #define EG_NUM_HW_STAGES 6
 
-#ifdef PIPE_ARCH_BIG_ENDIAN
-#define R600_BIG_ENDIAN 1
-#else
-#define R600_BIG_ENDIAN 0
-#endif
-
 struct r600_context;
 struct r600_bytecode;
 union  r600_shader_key;

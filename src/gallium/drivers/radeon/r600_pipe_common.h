@@ -99,6 +99,12 @@
 #define R600_MAP_BUFFER_ALIGNMENT 64
 #define R600_MAX_VIEWPORTS        16
 
+#ifdef PIPE_ARCH_BIG_ENDIAN
+#define R600_BIG_ENDIAN 1
+#else
+#define R600_BIG_ENDIAN 0
+#endif
+
 struct r600_common_context;
 struct r600_perfcounters;
 struct tgsi_shader_info;
