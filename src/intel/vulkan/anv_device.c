@@ -1387,8 +1387,6 @@ VkResult anv_CreateFence(
    struct anv_batch batch;
    VkResult result;
 
-   const uint32_t fence_size = 128;
-
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
 
    fence = anv_alloc2(&device->alloc, pAllocator, sizeof(*fence), 8,
@@ -1396,12 +1394,10 @@ VkResult anv_CreateFence(
    if (fence == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   result = anv_bo_init_new(&fence->bo, device, fence_size);
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &fence->bo);
    if (result != VK_SUCCESS)
       goto fail;
 
-   fence->bo.map =
-      anv_gem_mmap(device, fence->bo.gem_handle, 0, fence->bo.size, 0);
    batch.next = batch.start = fence->bo.map;
    batch.end = fence->bo.map + fence->bo.size;
    anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
@@ -1457,9 +1453,7 @@ void anv_DestroyFence(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_fence, fence, _fence);
 
-   anv_gem_munmap(fence->bo.map, fence->bo.size);
-   anv_gem_close(device, fence->bo.gem_handle);
-   anv_free2(&device->alloc, pAllocator, fence);
+   anv_bo_pool_free(&device->batch_bo_pool, &fence->bo);
 }
 
 VkResult anv_ResetFences(
