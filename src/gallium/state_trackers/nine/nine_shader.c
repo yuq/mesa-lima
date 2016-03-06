@@ -1149,8 +1149,7 @@ _tx_dst_param(struct shader_translator *tx, const struct sm1_dst_param *param)
             break;
         case 2:
             if (ureg_dst_is_undef(tx->regs.oPts))
-                tx->regs.oPts =
-                    ureg_saturate(ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_PSIZE, 0));
+                tx->regs.oPts = ureg_DECL_temporary(tx->ureg);
             dst = tx->regs.oPts;
             break;
         default:
@@ -2044,8 +2043,10 @@ DECL_SPECIAL(DCL)
             tx->regs.o[sem.reg.idx] = ureg_DECL_output_masked(
                 ureg, tgsi.Name, tgsi.Index, sem.reg.mask, 0, 1);
 
-            if (tgsi.Name == TGSI_SEMANTIC_PSIZE)
+            if (tgsi.Name == TGSI_SEMANTIC_PSIZE) {
+                tx->regs.o[sem.reg.idx] = ureg_DECL_temporary(ureg);
                 tx->regs.oPts = tx->regs.o[sem.reg.idx];
+            }
         }
     } else {
         if (is_input && tx->version.major >= 3) {
@@ -3424,10 +3425,14 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     if (info->position_t)
         ureg_property(tx->ureg, TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION, TRUE);
 
-    ureg_END(tx->ureg);
-
-    if (IS_VS && !ureg_dst_is_undef(tx->regs.oPts))
+    if (IS_VS && !ureg_dst_is_undef(tx->regs.oPts)) {
+        struct ureg_dst oPts = ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_PSIZE, 0);
+        ureg_MAX(tx->ureg, tx->regs.oPts, ureg_src(tx->regs.oPts), ureg_imm1f(tx->ureg, info->point_size_min));
+        ureg_MIN(tx->ureg, oPts, ureg_src(tx->regs.oPts), ureg_imm1f(tx->ureg, info->point_size_max));
         info->point_size = TRUE;
+    }
+
+    ureg_END(tx->ureg);
 
     /* record local constants */
     if (tx->num_lconstf && tx->indirect_const_access) {

@@ -77,8 +77,9 @@
 #define NINE_STATE_FF_OTHER    (1 << 24)
 #define NINE_STATE_FOG_SHADER  (1 << 25)
 #define NINE_STATE_PS1X_SHADER (1 << 26)
-#define NINE_STATE_ALL          0x7ffffff
-#define NINE_STATE_UNHANDLED   (1 << 27)
+#define NINE_STATE_POINTSIZE_SHADER (1 << 27)
+#define NINE_STATE_ALL          0xfffffff
+#define NINE_STATE_UNHANDLED   (1 << 28)
 
 #define NINE_STATE_COMMIT_DSA  (1 << 0)
 #define NINE_STATE_COMMIT_RASTERIZER (1 << 1)
