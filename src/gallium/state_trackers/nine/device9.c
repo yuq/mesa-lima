@@ -1431,14 +1431,6 @@ NineDevice9_UpdateTexture( struct NineDevice9 *This,
         struct NineVolumeTexture9 *dst = NineVolumeTexture9(dstb);
         struct NineVolumeTexture9 *src = NineVolumeTexture9(srcb);
 
-        /* Wine tests say XRGB -> ARGB should actually do something.
-         * For now do this improper conversion, but in the future it
-         * would be better to implement it properly */
-        user_assert(srcb->format == dstb->format ||
-                    (srcb->format == D3DFMT_A8R8G8B8 && dstb->format == D3DFMT_X8R8G8B8) ||
-                    (srcb->format == D3DFMT_X8R8G8B8 && dstb->format == D3DFMT_A8R8G8B8),
-                    D3D_OK);
-
         if (src->dirty_box.width == 0)
             return D3D_OK;
         for (l = 0; l <= last_dst_level; ++l, ++m)
