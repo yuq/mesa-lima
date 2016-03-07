@@ -385,7 +385,7 @@ NineVolume9_UnlockBox( struct NineVolume9 *This )
 
 /* When this function is called, we have already checked
  * The copy regions fit the volumes */
-HRESULT
+void
 NineVolume9_CopyMemToDefault( struct NineVolume9 *This,
                               struct NineVolume9 *From,
                               unsigned dstx, unsigned dsty, unsigned dstz,
@@ -429,7 +429,7 @@ NineVolume9_CopyMemToDefault( struct NineVolume9 *This,
                              PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_RANGE,
                              &dst_box, &transfer);
     if (!map)
-        return D3D_OK;
+        return;
 
     /* Note: if formats are the sames, it will revert
      * to normal memcpy */
@@ -465,7 +465,7 @@ NineVolume9_CopyMemToDefault( struct NineVolume9 *This,
 
     NineVolume9_MarkContainerDirty(This);
 
-    return D3D_OK;
+    return;
 }
 
 HRESULT
