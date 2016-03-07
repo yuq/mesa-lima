@@ -1288,11 +1288,12 @@ NVC0LoweringPass::handleATOM(Instruction *atom)
       sv = SV_LBASE;
       break;
    case FILE_MEMORY_SHARED:
-      if (targ->getChipset() >= NVISA_GK104_CHIPSET) {
-         handleSharedATOMNVE4(atom);
-      } else {
+      // For Fermi/Kepler, we have to use ld lock/st unlock to perform atomic
+      // operations on shared memory. For Maxwell, ATOMS is enough.
+      if (targ->getChipset() < NVISA_GK104_CHIPSET)
          handleSharedATOM(atom);
-      }
+      else if (targ->getChipset() < NVISA_GM107_CHIPSET)
+         handleSharedATOMNVE4(atom);
       return true;
    default:
       assert(atom->src(0).getFile() == FILE_MEMORY_GLOBAL);
@@ -1320,9 +1321,11 @@ NVC0LoweringPass::handleATOM(Instruction *atom)
 bool
 NVC0LoweringPass::handleCasExch(Instruction *cas, bool needCctl)
 {
-   if (cas->src(0).getFile() == FILE_MEMORY_SHARED) {
-      // ATOM_CAS and ATOM_EXCH are handled in handleSharedATOM().
-      return false;
+   if (targ->getChipset() < NVISA_GM107_CHIPSET) {
+      if (cas->src(0).getFile() == FILE_MEMORY_SHARED) {
+         // ATOM_CAS and ATOM_EXCH are handled in handleSharedATOM().
+         return false;
+      }
    }
 
    if (cas->subOp != NV50_IR_SUBOP_ATOM_CAS &&
