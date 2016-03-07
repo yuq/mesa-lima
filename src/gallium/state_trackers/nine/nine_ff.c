@@ -1309,6 +1309,8 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
 
         if (!ureg_src_is_undef(ps.s[s])) {
             unsigned target;
+            struct ureg_src texture_coord = ps.vT[s];
+            struct ureg_dst delta;
             switch (key->ts[s].textarget) {
             case 0: target = TGSI_TEXTURE_1D; break;
             case 1: target = TGSI_TEXTURE_2D; break;
@@ -1317,43 +1319,71 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             /* this is a 2 bit bitfield, do I really need a default case ? */
             }
 
-            /* sample the texture */
-            if (key->ts[s].colorop == D3DTOP_BUMPENVMAP ||
-                key->ts[s].colorop == D3DTOP_BUMPENVMAPLUMINANCE) {
+            /* Modify coordinates */
+            if (s >= 1 &&
+                (key->ts[s-1].colorop == D3DTOP_BUMPENVMAP ||
+                 key->ts[s-1].colorop == D3DTOP_BUMPENVMAPLUMINANCE)) {
+                delta = ureg_DECL_temporary(ureg);
+                /* Du' = D3DTSS_BUMPENVMAT00(stage s-1)*t(s-1)R + D3DTSS_BUMPENVMAT10(stage s-1)*t(s-1)G */
+                ureg_MUL(ureg, ureg_writemask(delta, TGSI_WRITEMASK_X), _X(ps.rTex), _XXXX(_CONST(8 + s - 1)));
+                ureg_MAD(ureg, ureg_writemask(delta, TGSI_WRITEMASK_X), _Y(ps.rTex), _ZZZZ(_CONST(8 + s - 1)), ureg_src(delta));
+                /* Dv' = D3DTSS_BUMPENVMAT01(stage s-1)*t(s-1)R + D3DTSS_BUMPENVMAT11(stage s-1)*t(s-1)G */
+                ureg_MUL(ureg, ureg_writemask(delta, TGSI_WRITEMASK_Y), _X(ps.rTex), _YYYY(_CONST(8 + s - 1)));
+                ureg_MAD(ureg, ureg_writemask(delta, TGSI_WRITEMASK_Y), _Y(ps.rTex), _WWWW(_CONST(8 + s - 1)), ureg_src(delta));
+                texture_coord = ureg_src(ureg_DECL_temporary(ureg));
+                ureg_MOV(ureg, ureg_writemask(ureg_dst(texture_coord), ureg_dst(ps.vT[s]).WriteMask), ps.vT[s]);
+                ureg_ADD(ureg, ureg_writemask(ureg_dst(texture_coord), TGSI_WRITEMASK_XY), texture_coord, ureg_src(delta));
+                /* Prepare luminance multiplier
+                 * t(s)RGBA = t(s)RGBA * clamp[(t(s-1)B * D3DTSS_BUMPENVLSCALE(stage s-1)) + D3DTSS_BUMPENVLOFFSET(stage s-1)] */
+                if (key->ts[s-1].colorop == D3DTOP_BUMPENVMAPLUMINANCE) {
+                    struct ureg_src bumpenvlscale = ((s-1) & 1) ? _ZZZZ(_CONST(16 + (s-1) / 2)) : _XXXX(_CONST(16 + (s-1) / 2));
+                    struct ureg_src bumpenvloffset = ((s-1) & 1) ? _WWWW(_CONST(16 + (s-1) / 2)) : _YYYY(_CONST(16 + (s-1) / 2));
+
+                    ureg_MAD(ureg, ureg_saturate(ureg_writemask(delta, TGSI_WRITEMASK_X)), _Z(ps.rTex), bumpenvlscale, bumpenvloffset);
+                }
             }
             if (key->projected & (3 << (s *2))) {
                 unsigned dim = 1 + ((key->projected >> (2 * s)) & 3);
                 if (dim == 4)
-                    ureg_TXP(ureg, ps.rTex, target, ps.vT[s], ps.s[s]);
+                    ureg_TXP(ureg, ps.rTex, target, texture_coord, ps.s[s]);
                 else {
-                    ureg_RCP(ureg, ureg_writemask(ps.rTmp, TGSI_WRITEMASK_X), ureg_scalar(ps.vT[s], dim-1));
-                    ureg_MUL(ureg, ps.rTmp, _XXXX(ps.rTmpSrc), ps.vT[s]);
+                    ureg_RCP(ureg, ureg_writemask(ps.rTmp, TGSI_WRITEMASK_X), ureg_scalar(texture_coord, dim-1));
+                    ureg_MUL(ureg, ps.rTmp, _XXXX(ps.rTmpSrc), texture_coord);
                     ureg_TEX(ureg, ps.rTex, target, ps.rTmpSrc, ps.s[s]);
                 }
             } else {
-                ureg_TEX(ureg, ps.rTex, target, ps.vT[s], ps.s[s]);
+                ureg_TEX(ureg, ps.rTex, target, texture_coord, ps.s[s]);
             }
+            if (s >= 1 && key->ts[s-1].colorop == D3DTOP_BUMPENVMAPLUMINANCE)
+                ureg_MUL(ureg, ps.rTex, ureg_src(ps.rTex), _X(delta));
         }
 
-        if (s == 0 &&
-            (key->ts[0].resultarg != 0 /* not current */ ||
-             key->ts[0].colorop == D3DTOP_DISABLE ||
-             key->ts[0].alphaop == D3DTOP_DISABLE ||
-             key->ts[0].colorop == D3DTOP_BLENDCURRENTALPHA ||
-             key->ts[0].alphaop == D3DTOP_BLENDCURRENTALPHA ||
-             key->ts[0].colorarg0 == D3DTA_CURRENT ||
-             key->ts[0].colorarg1 == D3DTA_CURRENT ||
-             key->ts[0].colorarg2 == D3DTA_CURRENT ||
-             key->ts[0].alphaarg0 == D3DTA_CURRENT ||
-             key->ts[0].alphaarg1 == D3DTA_CURRENT ||
-             key->ts[0].alphaarg2 == D3DTA_CURRENT)
-           ) {
+        if (((s == 0 && key->ts[0].colorop != D3DTOP_BUMPENVMAP &&
+              key->ts[0].colorop != D3DTOP_BUMPENVMAPLUMINANCE) ||
+             (s == 1 &&
+              (key->ts[0].colorop == D3DTOP_BUMPENVMAP ||
+               key->ts[0].colorop == D3DTOP_BUMPENVMAPLUMINANCE)))&&
+            (key->ts[s].resultarg != 0 /* not current */ ||
+             key->ts[s].colorop == D3DTOP_DISABLE ||
+             key->ts[s].alphaop == D3DTOP_DISABLE ||
+             key->ts[s].colorop == D3DTOP_BLENDCURRENTALPHA ||
+             key->ts[s].alphaop == D3DTOP_BLENDCURRENTALPHA ||
+             key->ts[s].colorarg0 == D3DTA_CURRENT ||
+             key->ts[s].colorarg1 == D3DTA_CURRENT ||
+             key->ts[s].colorarg2 == D3DTA_CURRENT ||
+             key->ts[s].alphaarg0 == D3DTA_CURRENT ||
+             key->ts[s].alphaarg1 == D3DTA_CURRENT ||
+             key->ts[s].alphaarg2 == D3DTA_CURRENT)) {
             /* Initialize D3DTA_CURRENT.
              * (Yes we can do this before the loop but not until
              *  NVE4 has an instruction scheduling pass.)
              */
             ureg_MOV(ureg, ps.rCur, ps.vC[0]);
         }
+
+        if (key->ts[s].colorop == D3DTOP_BUMPENVMAP ||
+            key->ts[s].colorop == D3DTOP_BUMPENVMAPLUMINANCE)
+            continue;
 
         dst = ps_get_ts_dst(&ps, key->ts[s].resultarg ? D3DTA_TEMP : D3DTA_CURRENT);
 
@@ -1816,11 +1846,11 @@ nine_ff_load_ps_params(struct NineDevice9 *device)
         dst[8 + s].z = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVMAT10]);
         dst[8 + s].w = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVMAT11]);
         if (s & 1) {
-            dst[8 + s / 2].z = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLSCALE]);
-            dst[8 + s / 2].w = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLOFFSET]);
+            dst[16 + s / 2].z = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLSCALE]);
+            dst[16 + s / 2].w = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLOFFSET]);
         } else {
-            dst[8 + s / 2].x = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLSCALE]);
-            dst[8 + s / 2].y = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLOFFSET]);
+            dst[16 + s / 2].x = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLSCALE]);
+            dst[16 + s / 2].y = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLOFFSET]);
         }
     }
 
