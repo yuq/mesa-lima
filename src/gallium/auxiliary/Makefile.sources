@@ -354,6 +354,11 @@ VL_WINSYS_SOURCES := \
 	vl/vl_winsys_dri.c \
 	vl/vl_winsys_drm.c
 
+if HAVE_DRI3
+VL_WINSYS_SOURCES += \
+	vl/vl_winsys_dri3.c
+endif
+
 VL_STUB_SOURCES := \
 	vl/vl_stubs.c
 
