@@ -1172,7 +1172,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
         psContext.vY.center = _simd_add_ps(vCenterOffsetsY, _simd_set1_ps((float)yy));
         for(uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
-            simdscalar vZ[MultisampleTraits<sampleCount>::numSamples];
+            simdscalar vZ[MultisampleTraits<sampleCount>::numSamples]{ 0 };
             psContext.vX.UL = _simd_add_ps(vULOffsetsX, _simd_set1_ps((float)xx));
             // set pixel center positions
             psContext.vX.center = _simd_add_ps(vCenterOffsetsX, _simd_set1_ps((float)xx));

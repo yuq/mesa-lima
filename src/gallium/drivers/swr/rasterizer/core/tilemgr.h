@@ -136,14 +136,13 @@ public:
 
 private:
     Arena& mArena;
-    SWR_FORMAT mFormat;
     std::unordered_map<uint32_t, MacroTileQueue> mTiles;
 
     // Any tile that has work queued to it is a dirty tile.
     std::vector<uint32_t> mDirtyTiles;
 
-    OSALIGNLINE(LONG) mWorkItemsProduced;
-    OSALIGNLINE(volatile LONG) mWorkItemsConsumed;
+    OSALIGNLINE(LONG) mWorkItemsProduced { 0 };
+    OSALIGNLINE(volatile LONG) mWorkItemsConsumed { 0 };
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -224,7 +223,7 @@ public:
     void *operator new(size_t size);
     void operator delete (void *p);
 
-    void* mpTaskData;        // The API thread will set this up and the callback task function will interpet this.
+    void* mpTaskData{ nullptr };        // The API thread will set this up and the callback task function will interpet this.
 
     OSALIGNLINE(volatile LONG) mTasksAvailable{ 0 };
     OSALIGNLINE(volatile LONG) mTasksOutstanding{ 0 };

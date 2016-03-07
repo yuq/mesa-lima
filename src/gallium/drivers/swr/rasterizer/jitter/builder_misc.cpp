@@ -1454,6 +1454,8 @@ void __cdecl CallPrint(const char* fmt, ...)
     vsnprintf_s(strBuf, _TRUNCATE, fmt, args);
     OutputDebugString(strBuf);
 #endif
+
+    va_end(args);
 }
 
 Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)

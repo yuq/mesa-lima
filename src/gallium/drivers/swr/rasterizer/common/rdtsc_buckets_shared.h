@@ -64,13 +64,13 @@ struct BUCKET_THREAD
     std::string name;
 
     // id for this thread, assigned by the thread manager
-    uint32_t id;
+    uint32_t id{ 0 };
 
     // root of the bucket hierarchy for this thread
     BUCKET root;
 
     // currently executing bucket somewhere in the hierarchy
-    BUCKET* pCurrent;
+    BUCKET* pCurrent{ nullptr };
 
     // currently executing hierarchy level
     uint32_t level{ 0 };

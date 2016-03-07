@@ -166,7 +166,6 @@ struct JitManager
     FunctionType* mTrinaryFPTy;
     FunctionType* mUnaryIntTy;
     FunctionType* mBinaryIntTy;
-    FunctionType* mTrinaryIntTy;
 
     Type* mSimtFP32Ty;
     Type* mSimtInt32Ty;

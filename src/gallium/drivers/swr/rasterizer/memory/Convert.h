@@ -230,7 +230,7 @@ static void ConvertPixelFromFloat(
     BYTE* pDstPixel,
     const float srcPixel[4])
 {
-    UINT outColor[4];  // typeless bits
+    uint32_t outColor[4] = { 0 };  // typeless bits
 
     // Store component
     for (UINT comp = 0; comp < FormatTraits<DstFormat>::numComps; ++comp)
@@ -392,7 +392,7 @@ INLINE static void ConvertPixelToFloat(
     float dstPixel[4],
     const BYTE* pSrc)
 {
-    UINT srcColor[4];  // typeless bits
+    uint32_t srcColor[4];  // typeless bits
 
     // unpack src pixel
     typename FormatTraits<SrcFormat>::FormatT* pPixel = (typename FormatTraits<SrcFormat>::FormatT*)pSrc;
@@ -421,11 +421,11 @@ INLINE static void ConvertPixelToFloat(
     }
 
     // Convert components
-    for (UINT comp = 0; comp < FormatTraits<SrcFormat>::numComps; ++comp)
+    for (uint32_t comp = 0; comp < FormatTraits<SrcFormat>::numComps; ++comp)
     {
         SWR_TYPE type = FormatTraits<SrcFormat>::GetType(comp);
 
-        UINT src = srcColor[comp];
+        uint32_t src = srcColor[comp];
 
         switch (type)
         {
@@ -486,7 +486,7 @@ INLINE static void ConvertPixelToFloat(
         }
         case SWR_TYPE_UINT:
         {
-            UINT dst = (UINT)src;
+            uint32_t dst = (uint32_t)src;
             dstPixel[FormatTraits<SrcFormat>::swizzle(comp)] = *(float*)&dst;
             break;
         }

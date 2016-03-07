@@ -854,9 +854,9 @@ private:
         return vNumOutPts;
     }
 
-    const uint32_t workerId;
-    const DRIVER_TYPE driverType;
-    DRAW_CONTEXT* pDC;
+    const uint32_t workerId{ 0 };
+    const DRIVER_TYPE driverType{ DX };
+    DRAW_CONTEXT* pDC{ nullptr };
     const API_STATE& state;
     simdscalar clipCodes[NumVertsPerPrim];
 };

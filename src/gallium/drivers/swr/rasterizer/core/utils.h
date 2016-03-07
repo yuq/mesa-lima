@@ -88,7 +88,10 @@ INLINE __m128i  _MM_INSERT_EPI64(__m128i a, INT64 b, const int32_t ndx)
 
 OSALIGNLINE(struct) BBOX
 {
-    int top, bottom, left, right;
+    int top{ 0 };
+    int bottom{ 0 };
+    int left{ 0 };
+    int right{ 0 };
 
     BBOX() {}
     BBOX(int t, int b, int l, int r) : top(t), bottom(b), left(l), right(r) {}
@@ -109,7 +112,10 @@ OSALIGNLINE(struct) BBOX
 
 struct simdBBox
 {
-    simdscalari top, bottom, left, right;
+    simdscalari top;
+    simdscalari bottom;
+    simdscalari left;
+    simdscalari right;
 };
 
 INLINE

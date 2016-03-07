@@ -34,12 +34,12 @@
 
 struct PA_STATE
 {
-    DRAW_CONTEXT *pDC;              // draw context
-    uint8_t* pStreamBase;           // vertex stream
-    uint32_t streamSizeInVerts;     // total size of the input stream in verts
+    DRAW_CONTEXT *pDC{ nullptr };              // draw context
+    uint8_t* pStreamBase{ nullptr };           // vertex stream
+    uint32_t streamSizeInVerts{ 0 };     // total size of the input stream in verts
 
     // The topology the binner will use. In some cases the FE changes the topology from the api state.
-    PRIMITIVE_TOPOLOGY binTopology;
+    PRIMITIVE_TOPOLOGY binTopology{ TOP_UNKNOWN };
 
     PA_STATE() {}
     PA_STATE(DRAW_CONTEXT *in_pDC, uint8_t* in_pStreamBase, uint32_t in_streamSizeInVerts) :
@@ -76,37 +76,37 @@ struct PA_STATE
 // cuts
 struct PA_STATE_OPT : public PA_STATE
 {
-    simdvertex leadingVertex;           // For tri-fan
-    uint32_t numPrims;              // Total number of primitives for draw.
-    uint32_t numPrimsComplete;      // Total number of complete primitives.
+    simdvertex leadingVertex;            // For tri-fan
+    uint32_t numPrims{ 0 };              // Total number of primitives for draw.
+    uint32_t numPrimsComplete{ 0 };      // Total number of complete primitives.
 
-    uint32_t numSimdPrims;          // Number of prims in current simd.
+    uint32_t numSimdPrims{ 0 };          // Number of prims in current simd.
 
-    uint32_t cur;                   // index to current VS output.
-    uint32_t prev;                  // index to prev VS output. Not really needed in the state.
-    uint32_t first;                 // index to first VS output. Used for trifan.
+    uint32_t cur{ 0 };                   // index to current VS output.
+    uint32_t prev{ 0 };                  // index to prev VS output. Not really needed in the state.
+    uint32_t first{ 0 };                 // index to first VS output. Used for trifan.
 
-    uint32_t counter;               // state counter
-    bool reset;                     // reset state
+    uint32_t counter{ 0 };               // state counter
+    bool reset{ false };                 // reset state
 
-    uint32_t primIDIncr;            // how much to increment for each vector (typically vector / {1, 2})
+    uint32_t primIDIncr{ 0 };            // how much to increment for each vector (typically vector / {1, 2})
     simdscalari primID;
 
     typedef bool(*PFN_PA_FUNC)(PA_STATE_OPT& state, uint32_t slot, simdvector verts[]);
     typedef void(*PFN_PA_SINGLE_FUNC)(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
-    PFN_PA_FUNC        pfnPaFunc;        // PA state machine function for assembling 4 triangles.
-    PFN_PA_SINGLE_FUNC pfnPaSingleFunc;  // PA state machine function for assembling single triangle.
-    PFN_PA_FUNC        pfnPaFuncReset;   // initial state to set on reset
+    PFN_PA_FUNC        pfnPaFunc{ nullptr };        // PA state machine function for assembling 4 triangles.
+    PFN_PA_SINGLE_FUNC pfnPaSingleFunc{ nullptr };  // PA state machine function for assembling single triangle.
+    PFN_PA_FUNC        pfnPaFuncReset{ nullptr };   // initial state to set on reset
 
     // state used to advance the PA when Next is called
-    PFN_PA_FUNC        pfnPaNextFunc;
-    uint32_t           nextNumSimdPrims;
-    uint32_t           nextNumPrimsIncrement;
-    bool               nextReset;
-    bool               isStreaming;
+    PFN_PA_FUNC        pfnPaNextFunc{ nullptr };
+    uint32_t           nextNumSimdPrims{ 0 };
+    uint32_t           nextNumPrimsIncrement{ 0 };
+    bool               nextReset{ false };
+    bool               isStreaming{ false };
 
-    simdmask tmpIndices;             // temporary index store for unused virtual function
+    simdmask tmpIndices{ 0 };            // temporary index store for unused virtual function
     
     PA_STATE_OPT() {}
     PA_STATE_OPT(DRAW_CONTEXT* pDC, uint32_t numPrims, uint8_t* pStream, uint32_t streamSizeInVerts,
@@ -333,33 +333,33 @@ INLINE __m128 swizzleLaneN(const simdvector &a, int lane)
 // Cut-aware primitive assembler.
 struct PA_STATE_CUT : public PA_STATE
 {
-    simdmask* pCutIndices;          // cut indices buffer, 1 bit per vertex
-    uint32_t numVerts;              // number of vertices available in buffer store
-    uint32_t numAttribs;            // number of attributes
-    int32_t numRemainingVerts;      // number of verts remaining to be assembled
-    uint32_t numVertsToAssemble;    // total number of verts to assemble for the draw
+    simdmask* pCutIndices{ nullptr };    // cut indices buffer, 1 bit per vertex
+    uint32_t numVerts{ 0 };              // number of vertices available in buffer store
+    uint32_t numAttribs{ 0 };            // number of attributes
+    int32_t numRemainingVerts{ 0 };      // number of verts remaining to be assembled
+    uint32_t numVertsToAssemble{ 0 };    // total number of verts to assemble for the draw
     OSALIGNSIMD(uint32_t) indices[MAX_NUM_VERTS_PER_PRIM][KNOB_SIMD_WIDTH];    // current index buffer for gather
     simdscalari vOffsets[MAX_NUM_VERTS_PER_PRIM];           // byte offsets for currently assembling simd
-    uint32_t numPrimsAssembled;     // number of primitives that are fully assembled
-    uint32_t headVertex;            // current unused vertex slot in vertex buffer store
-    uint32_t tailVertex;            // beginning vertex currently assembling
-    uint32_t curVertex;             // current unprocessed vertex
-    uint32_t startPrimId;           // starting prim id
-    simdscalari vPrimId;            // vector of prim ID
-    bool needOffsets;               // need to compute gather offsets for current SIMD
-    uint32_t vertsPerPrim;
-    simdvertex tmpVertex;               // temporary simdvertex for unimplemented API
-    bool processCutVerts;           // vertex indices with cuts should be processed as normal, otherwise they
-                                    // are ignored.  Fetch shader sends invalid verts on cuts that should be ignored
-                                    // while the GS sends valid verts for every index 
+    uint32_t numPrimsAssembled{ 0 };     // number of primitives that are fully assembled
+    uint32_t headVertex{ 0 };            // current unused vertex slot in vertex buffer store
+    uint32_t tailVertex{ 0 };            // beginning vertex currently assembling
+    uint32_t curVertex{ 0 };             // current unprocessed vertex
+    uint32_t startPrimId{ 0 };           // starting prim id
+    simdscalari vPrimId;                 // vector of prim ID
+    bool needOffsets{ false };           // need to compute gather offsets for current SIMD
+    uint32_t vertsPerPrim{ 0 };
+    simdvertex tmpVertex;                // temporary simdvertex for unimplemented API
+    bool processCutVerts{ false };       // vertex indices with cuts should be processed as normal, otherwise they
+                                         // are ignored.  Fetch shader sends invalid verts on cuts that should be ignored
+                                         // while the GS sends valid verts for every index 
     // Topology state tracking
     uint32_t vert[MAX_NUM_VERTS_PER_PRIM];
-    uint32_t curIndex;
-    bool reverseWinding;            // indicates reverse winding for strips
-    int32_t adjExtraVert;           // extra vert uses for tristrip w/ adj
+    uint32_t curIndex{ 0 };
+    bool reverseWinding{ false };        // indicates reverse winding for strips
+    int32_t adjExtraVert{ 0 };           // extra vert uses for tristrip w/ adj
 
     typedef void(PA_STATE_CUT::* PFN_PA_FUNC)(uint32_t vert, bool finish);
-    PFN_PA_FUNC pfnPa;              // per-topology function that processes a single vert
+    PFN_PA_FUNC pfnPa{ nullptr };        // per-topology function that processes a single vert
 
     PA_STATE_CUT() {}
     PA_STATE_CUT(DRAW_CONTEXT* pDC, uint8_t* in_pStream, uint32_t in_streamSizeInVerts, simdmask* in_pIndices, uint32_t in_numVerts, 
@@ -1199,9 +1199,9 @@ struct PA_FACTORY
 
     PA_STATE_OPT paOpt;
     PA_STATE_CUT paCut;
-    bool cutPA;
+    bool cutPA{ false };
 
-    PRIMITIVE_TOPOLOGY topo;
+    PRIMITIVE_TOPOLOGY topo{ TOP_UNKNOWN };
 
     simdvertex vertexStore[MAX_NUM_VERTS_PER_PRIM];
     simdmask indexStore[MAX_NUM_VERTS_PER_PRIM];
