@@ -1454,6 +1454,7 @@ void anv_DestroyFence(
    ANV_FROM_HANDLE(anv_fence, fence, _fence);
 
    anv_bo_pool_free(&device->batch_bo_pool, &fence->bo);
+   anv_free2(&device->alloc, pAllocator, fence);
 }
 
 VkResult anv_ResetFences(
