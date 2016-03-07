@@ -1271,6 +1271,19 @@ util_format_translate(enum pipe_format dst_format,
                       unsigned src_x, unsigned src_y,
                       unsigned width, unsigned height);
 
+boolean
+util_format_translate_3d(enum pipe_format dst_format,
+                         void *dst, unsigned dst_stride,
+                         unsigned dst_slice_stride,
+                         unsigned dst_x, unsigned dst_y,
+                         unsigned dst_z,
+                         enum pipe_format src_format,
+                         const void *src, unsigned src_stride,
+                         unsigned src_slice_stride,
+                         unsigned src_x, unsigned src_y,
+                         unsigned src_z, unsigned width,
+                         unsigned height, unsigned depth);
+
 /*
  * Swizzle operations.
  */
