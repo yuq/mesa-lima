@@ -853,11 +853,13 @@ anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo)
 }
 
 void
-anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo)
+anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo_in)
 {
-   struct bo_pool_bo_link *link = bo->map;
-   link->bo = *bo;
+   /* Make a copy in case the anv_bo happens to be storred in the BO */
+   struct anv_bo bo = *bo_in;
+   struct bo_pool_bo_link *link = bo.map;
+   link->bo = bo;
 
-   VG(VALGRIND_MEMPOOL_FREE(pool, bo->map));
+   VG(VALGRIND_MEMPOOL_FREE(pool, bo.map));
    anv_ptr_free_list_push(&pool->free_list, link);
 }
