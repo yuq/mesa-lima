@@ -462,7 +462,7 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 #include "freedreno_resource.h"
 
 static void
-emit_user_consts(struct fd_context *ctx, struct ir3_shader_variant *v,
+emit_user_consts(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		struct fd_ringbuffer *ring, struct fd_constbuf_stateobj *constbuf)
 {
 	const unsigned index = 0;     /* user consts are index 0 */
@@ -500,7 +500,7 @@ emit_user_consts(struct fd_context *ctx, struct ir3_shader_variant *v,
 }
 
 static void
-emit_ubos(struct fd_context *ctx, struct ir3_shader_variant *v,
+emit_ubos(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		struct fd_ringbuffer *ring, struct fd_constbuf_stateobj *constbuf)
 {
 	uint32_t offset = v->first_driver_param + IR3_UBOS_OFF;
@@ -529,7 +529,7 @@ emit_ubos(struct fd_context *ctx, struct ir3_shader_variant *v,
 }
 
 static void
-emit_immediates(struct fd_context *ctx, struct ir3_shader_variant *v,
+emit_immediates(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		struct fd_ringbuffer *ring)
 {
 	int size = v->immediates_count;
@@ -553,7 +553,7 @@ emit_immediates(struct fd_context *ctx, struct ir3_shader_variant *v,
 
 /* emit stream-out buffers: */
 static void
-emit_tfbos(struct fd_context *ctx, struct ir3_shader_variant *v,
+emit_tfbos(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		struct fd_ringbuffer *ring)
 {
 	/* streamout addresses after driver-params: */
@@ -584,7 +584,7 @@ emit_tfbos(struct fd_context *ctx, struct ir3_shader_variant *v,
 }
 
 static uint32_t
-max_tf_vtx(struct fd_context *ctx, struct ir3_shader_variant *v)
+max_tf_vtx(struct fd_context *ctx, const struct ir3_shader_variant *v)
 {
 	struct fd_streamout_stateobj *so = &ctx->streamout;
 	struct pipe_stream_output_info *info = &v->shader->stream_output;
@@ -629,7 +629,7 @@ max_tf_vtx(struct fd_context *ctx, struct ir3_shader_variant *v)
 }
 
 void
-ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+ir3_emit_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		struct fd_context *ctx, const struct pipe_draw_info *info, uint32_t dirty)
 {
 	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) {
