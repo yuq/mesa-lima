@@ -22,7 +22,7 @@
  */
 
 /**
- * @file vc4_opt_vpm_writes.c
+ * @file vc4_opt_vpm.c
  *
  * This modifies instructions that generate the value consumed by a VPM write
  * to write directly into the VPM.
