@@ -58,6 +58,6 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
 void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
 
 // Expose FE and BE worker functions to the API thread if single threaded
-void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE, UCHAR numaNode);
+void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE, int numaNode);
 void WorkOnFifoBE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawBE, std::unordered_set<uint32_t> &usedTiles);
 void WorkOnCompute(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawBE);

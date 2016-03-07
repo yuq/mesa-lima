@@ -443,7 +443,7 @@ void WorkOnFifoBE(
     }
 }
 
-void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE, UCHAR numaNode)
+void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE, int numaNode)
 {
     // Try to grab the next DC from the ring
     uint64_t drawEnqueued = GetEnqueuedDraw(pContext);

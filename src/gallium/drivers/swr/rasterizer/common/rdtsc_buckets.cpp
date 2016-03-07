@@ -71,7 +71,7 @@ UINT BucketManager::RegisterBucket(const BUCKET_DESC& desc)
     return (UINT)id;
 }
 
-void BucketManager::PrintBucket(FILE* f, UINT level, UINT64 threadCycles, UINT64 parentCycles, const BUCKET& bucket)
+void BucketManager::PrintBucket(FILE* f, UINT level, uint64_t threadCycles, uint64_t parentCycles, const BUCKET& bucket)
 {
     const char *arrows[] = {
         "",
@@ -90,7 +90,7 @@ void BucketManager::PrintBucket(FILE* f, UINT level, UINT64 threadCycles, UINT64
     float percentParent = (float)((double)bucket.elapsed / (double)parentCycles * 100.0);
 
     // compute average cycle count per invocation
-    UINT64 CPE = bucket.elapsed / bucket.count;
+    uint64_t CPE = bucket.elapsed / bucket.count;
 
     BUCKET_DESC &desc = mBuckets[bucket.id];
 
@@ -129,7 +129,7 @@ void BucketManager::PrintThread(FILE* f, const BUCKET_THREAD& thread)
 
     // compute thread level total cycle counts across all buckets from root
     const BUCKET& root = thread.root;
-    UINT64 totalCycles = 0;
+    uint64_t totalCycles = 0;
     for (const BUCKET& child : root.children)
     {
         totalCycles += child.elapsed;

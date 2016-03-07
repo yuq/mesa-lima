@@ -211,7 +211,7 @@ public:
     }
 
 private:
-    void PrintBucket(FILE* f, UINT level, UINT64 threadCycles, UINT64 parentCycles, const BUCKET& bucket);
+    void PrintBucket(FILE* f, UINT level, uint64_t threadCycles, uint64_t parentCycles, const BUCKET& bucket);
     void PrintThread(FILE* f, const BUCKET_THREAD& thread);
 
     // list of active threads that have registered with this manager
