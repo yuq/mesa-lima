@@ -338,7 +338,8 @@ d3d9_to_pipe_format_checked(struct pipe_screen *screen,
 
     /* bypass_check: Used for D3DPOOL_SCRATCH, which
      * isn't limited to the formats supported by the
-     * device. */
+     * device, and to check we are not using a format
+     * fallback. */
     if (bypass_check || format_check_internal(result))
         return result;
 
@@ -357,6 +358,15 @@ d3d9_to_pipe_format_checked(struct pipe_screen *screen,
         case D3DFMT_D24X8:
             if (format_check_internal(PIPE_FORMAT_Z24X8_UNORM))
                 return PIPE_FORMAT_Z24X8_UNORM;
+        /* Support for X8L8V8U8 bumpenvmap format with lighting bits.
+         * X8L8V8U8 is commonly supported among dx9 cards.
+         * To avoid precision loss, we use PIPE_FORMAT_R32G32B32X32_FLOAT,
+         * however using PIPE_FORMAT_R8G8B8A8_SNORM should be ok */
+        case D3DFMT_X8L8V8U8:
+            if (bindings & PIPE_BIND_RENDER_TARGET)
+                return PIPE_FORMAT_NONE;
+            if (format_check_internal(PIPE_FORMAT_R32G32B32X32_FLOAT))
+                return PIPE_FORMAT_R32G32B32X32_FLOAT;
         default:
             break;
     }
