@@ -105,6 +105,26 @@ NineSurface9_ctor( struct NineSurface9 *This,
     if (pDesc->Usage & D3DUSAGE_DEPTHSTENCIL)
         This->base.info.bind |= PIPE_BIND_DEPTH_STENCIL;
 
+    /* Get true format */
+    This->format_conversion = d3d9_to_pipe_format_checked(This->base.info.screen,
+                                                         pDesc->Format,
+                                                         This->base.info.target,
+                                                         This->base.info.nr_samples,
+                                                         This->base.info.bind,
+                                                         FALSE,
+                                                         TRUE);
+    if (This->base.info.format != This->format_conversion) {
+        This->data_conversion = align_malloc(
+            nine_format_get_level_alloc_size(This->format_conversion,
+                                             pDesc->Width,
+                                             pDesc->Height,
+                                             0), 32);
+        if (!This->data_conversion)
+            return E_OUTOFMEMORY;
+        This->stride_conversion = nine_format_get_stride(This->format_conversion,
+                                                         pDesc->Width);
+    }
+
     /* Ram buffer with no parent. Has to allocate the resource itself */
     if (!pResource && !pContainer) {
         assert(!user_buffer);
@@ -164,6 +184,8 @@ NineSurface9_dtor( struct NineSurface9 *This )
     /* Release system memory when we have to manage it (no parent) */
     if (!This->base.base.container && This->data)
         align_free(This->data);
+    if (This->data_conversion)
+        align_free(This->data_conversion);
     NineResource9_dtor(&This->base);
 }
 
@@ -384,7 +406,12 @@ NineSurface9_LockRect( struct NineSurface9 *This,
 
     user_warn(This->desc.Format == D3DFMT_NULL);
 
-    if (This->data) {
+    if (This->data_conversion) {
+        /* For now we only have uncompressed formats here */
+        pLockedRect->Pitch = This->stride_conversion;
+        pLockedRect->pBits = This->data_conversion + box.y * This->stride_conversion +
+            util_format_get_stride(This->format_conversion, box.x);
+    } else if (This->data) {
         DBG("returning system memory\n");
         /* ATI1 and ATI2 need special handling, because of d3d9 bug.
          * We must advertise to the application as if it is uncompressed
@@ -434,6 +461,37 @@ NineSurface9_UnlockRect( struct NineSurface9 *This )
         This->transfer = NULL;
     }
     --This->lock_count;
+
+    if (This->data_conversion) {
+        struct pipe_transfer *transfer;
+        uint8_t *dst = This->data;
+        struct pipe_box box;
+
+        u_box_origin_2d(This->desc.Width, This->desc.Height, &box);
+
+        if (!dst) {
+            dst = This->pipe->transfer_map(This->pipe,
+                                           This->base.resource,
+                                           This->level,
+                                           PIPE_TRANSFER_WRITE |
+                                           PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE,
+                                           &box, &transfer);
+            if (!dst)
+                return D3D_OK;
+        }
+
+        (void) util_format_translate(This->base.info.format,
+                                     dst, This->data ? This->stride : transfer->stride,
+                                     0, 0,
+                                     This->format_conversion,
+                                     This->data_conversion,
+                                     This->stride_conversion,
+                                     0, 0,
+                                     This->desc.Width, This->desc.Height);
+
+        if (!This->data)
+            pipe_transfer_unmap(This->pipe, transfer);
+    }
     return D3D_OK;
 }
 
@@ -531,6 +589,16 @@ NineSurface9_CopyMemToDefault( struct NineSurface9 *This,
                                  copy_width, copy_height);
 
     pipe_transfer_unmap(pipe, transfer);
+
+    if (This->data_conversion)
+        (void) util_format_translate(This->format_conversion,
+                                     This->data_conversion,
+                                     This->stride_conversion,
+                                     dst_x, dst_y,
+                                     From->base.info.format,
+                                     From->data, From->stride,
+                                     src_x, src_y,
+                                     copy_width, copy_height);
 
     NineSurface9_MarkContainerDirty(This);
 }
