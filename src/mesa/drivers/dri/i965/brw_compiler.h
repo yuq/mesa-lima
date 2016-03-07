@@ -801,6 +801,7 @@ const unsigned *
 brw_compile_tes(const struct brw_compiler *compiler, void *log_data,
                 void *mem_ctx,
                 const struct brw_tes_prog_key *key,
+                const struct brw_vue_map *input_vue_map,
                 struct brw_tes_prog_data *prog_data,
                 const struct nir_shader *shader,
                 struct gl_program *prog,

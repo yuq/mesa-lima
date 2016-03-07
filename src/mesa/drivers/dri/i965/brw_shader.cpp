@@ -1301,6 +1301,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
                 void *log_data,
                 void *mem_ctx,
                 const struct brw_tes_prog_key *key,
+                const struct brw_vue_map *input_vue_map,
                 struct brw_tes_prog_data *prog_data,
                 const nir_shader *src_shader,
                 struct gl_program *prog,
@@ -1315,12 +1316,8 @@ brw_compile_tes(const struct brw_compiler *compiler,
    nir->info->inputs_read = key->inputs_read;
    nir->info->patch_inputs_read = key->patch_inputs_read;
 
-   struct brw_vue_map input_vue_map;
-   brw_compute_tess_vue_map(&input_vue_map, nir->info->inputs_read,
-                            nir->info->patch_inputs_read);
-
    nir = brw_nir_apply_sampler_key(nir, compiler, &key->tex, is_scalar);
-   brw_nir_lower_tes_inputs(nir, &input_vue_map);
+   brw_nir_lower_tes_inputs(nir, input_vue_map);
    brw_nir_lower_vue_outputs(nir, is_scalar);
    nir = brw_postprocess_nir(nir, compiler, is_scalar);
 
@@ -1383,7 +1380,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
    if (unlikely(INTEL_DEBUG & DEBUG_TES)) {
       fprintf(stderr, "TES Input ");
-      brw_print_vue_map(stderr, &input_vue_map);
+      brw_print_vue_map(stderr, input_vue_map);
       fprintf(stderr, "TES Output ");
       brw_print_vue_map(stderr, &prog_data->base.vue_map);
    }
@@ -1391,7 +1388,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
    if (is_scalar) {
       fs_visitor v(compiler, log_data, mem_ctx, (void *) key,
                    &prog_data->base.base, NULL, nir, 8,
-                   shader_time_index, &input_vue_map);
+                   shader_time_index, input_vue_map);
       if (!v.run_tes()) {
          if (error_str)
             *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
