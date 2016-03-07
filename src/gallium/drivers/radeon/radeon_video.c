@@ -258,7 +258,7 @@ int rvid_get_video_param(struct pipe_screen *screen,
 	case PIPE_VIDEO_CAP_MAX_WIDTH:
 		return (rscreen->family < CHIP_TONGA) ? 2048 : 4096;
 	case PIPE_VIDEO_CAP_MAX_HEIGHT:
-		return (rscreen->family < CHIP_TONGA) ? 1152 : 2304;
+		return (rscreen->family < CHIP_TONGA) ? 1152 : 4096;
 	case PIPE_VIDEO_CAP_PREFERED_FORMAT:
 		return PIPE_FORMAT_NV12;
 	case PIPE_VIDEO_CAP_PREFERS_INTERLACED:
