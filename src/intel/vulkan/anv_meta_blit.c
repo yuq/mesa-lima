@@ -440,6 +440,8 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    VkFormat src_format = vk_format_for_size(src->bs);
    VkFormat dst_format = vk_format_for_size(dst->bs);
+   VkImageUsageFlags src_usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+   VkImageUsageFlags dst_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
    for (unsigned r = 0; r < num_rects; ++r) {
 
@@ -472,7 +474,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
       anv_image_info.isl_tiling_flags = 1 << src->tiling;
       image_info.tiling = anv_image_info.isl_tiling_flags == ISL_TILING_LINEAR_BIT ?
                         VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
-      image_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+      image_info.usage = src_usage;
       image_info.format = src_format,
       isl_tiling_get_info(&cmd_buffer->device->isl_dev, src->tiling, src->bs, &tile_info);
       image_info.extent.height = rects[r].height +
@@ -485,7 +487,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
       anv_image_info.isl_tiling_flags = 1 << dst->tiling;
       image_info.tiling = anv_image_info.isl_tiling_flags == ISL_TILING_LINEAR_BIT ?
                         VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
-      image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+      image_info.usage = dst_usage;
       image_info.format = dst_format,
       isl_tiling_get_info(&cmd_buffer->device->isl_dev, dst->tiling, dst->bs, &tile_info);
       image_info.extent.height = rects[r].height +
@@ -533,7 +535,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
 
       struct anv_image_view src_iview;
       anv_image_view_init(&src_iview, cmd_buffer->device,
-         &iview_info, cmd_buffer, img_o, VK_IMAGE_USAGE_SAMPLED_BIT);
+         &iview_info, cmd_buffer, img_o, src_usage);
 
       iview_info.image = dst_image;
       iview_info.format = dst_format;
@@ -548,7 +550,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
                                                 (uint32_t*)&dst_offset_el.y);
       struct anv_image_view dst_iview;
       anv_image_view_init(&dst_iview, cmd_buffer->device,
-         &iview_info, cmd_buffer, img_o, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+         &iview_info, cmd_buffer, img_o, dst_usage);
 
       /* Perform blit */
       meta_emit_blit(cmd_buffer,
