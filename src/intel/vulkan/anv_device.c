@@ -1383,29 +1383,31 @@ VkResult anv_CreateFence(
     VkFence*                                    pFence)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_bo fence_bo;
    struct anv_fence *fence;
    struct anv_batch batch;
    VkResult result;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
 
-   fence = anv_alloc2(&device->alloc, pAllocator, sizeof(*fence), 8,
-                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (fence == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   result = anv_bo_pool_alloc(&device->batch_bo_pool, &fence->bo);
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &fence_bo);
    if (result != VK_SUCCESS)
-      goto fail;
+      return result;
 
-   batch.next = batch.start = fence->bo.map;
+   /* Fences are small.  Just store the CPU data structure in the BO. */
+   fence = fence_bo.map;
+   fence->bo = fence_bo;
+
+   /* Place the batch after the CPU data but on its own cache line. */
+   const uint32_t batch_offset = align_u32(sizeof(*fence), CACHELINE_SIZE);
+   batch.next = batch.start = fence->bo.map + batch_offset;
    batch.end = fence->bo.map + fence->bo.size;
    anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
    anv_batch_emit(&batch, GEN7_MI_NOOP);
 
    if (!device->info.has_llc) {
-      assert(((uintptr_t) fence->bo.map & CACHELINE_MASK) == 0);
-      assert(batch.next - fence->bo.map <= CACHELINE_SIZE);
+      assert(((uintptr_t) batch.start & CACHELINE_MASK) == 0);
+      assert(batch.next - batch.start <= CACHELINE_SIZE);
       __builtin_ia32_mfence();
       __builtin_ia32_clflush(fence->bo.map);
    }
@@ -1421,8 +1423,8 @@ VkResult anv_CreateFence(
 
    fence->execbuf.buffers_ptr = (uintptr_t) fence->exec2_objects;
    fence->execbuf.buffer_count = 1;
-   fence->execbuf.batch_start_offset = 0;
-   fence->execbuf.batch_len = batch.next - fence->bo.map;
+   fence->execbuf.batch_start_offset = batch.start - fence->bo.map;
+   fence->execbuf.batch_len = batch.next - batch.start;
    fence->execbuf.cliprects_ptr = 0;
    fence->execbuf.num_cliprects = 0;
    fence->execbuf.DR1 = 0;
@@ -1438,11 +1440,6 @@ VkResult anv_CreateFence(
    *pFence = anv_fence_to_handle(fence);
 
    return VK_SUCCESS;
-
- fail:
-   anv_free2(&device->alloc, pAllocator, fence);
-
-   return result;
 }
 
 void anv_DestroyFence(
@@ -1453,8 +1450,8 @@ void anv_DestroyFence(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_fence, fence, _fence);
 
+   assert(fence->bo.map == fence);
    anv_bo_pool_free(&device->batch_bo_pool, &fence->bo);
-   anv_free2(&device->alloc, pAllocator, fence);
 }
 
 VkResult anv_ResetFences(
