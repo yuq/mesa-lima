@@ -177,6 +177,7 @@ private:
    void emitAL2P();
    void emitIPA();
    void emitATOM();
+   void emitATOMS();
    void emitCCTL();
 
    void emitPIXLD();
@@ -2374,6 +2375,45 @@ CodeEmitterGM107::emitATOM()
 }
 
 void
+CodeEmitterGM107::emitATOMS()
+{
+   unsigned dType, subOp;
+
+   if (insn->subOp == NV50_IR_SUBOP_ATOM_CAS) {
+      switch (insn->dType) {
+      case TYPE_U32: dType = 0; break;
+      case TYPE_U64: dType = 1; break;
+      default: assert(!"unexpected dType"); dType = 0; break;
+      }
+      subOp = 4;
+
+      emitInsn (0xee000000);
+      emitField(0x34, 1, dType);
+   } else {
+      switch (insn->dType) {
+      case TYPE_U32: dType = 0; break;
+      case TYPE_S32: dType = 1; break;
+      case TYPE_U64: dType = 2; break;
+      case TYPE_S64: dType = 3; break;
+      default: assert(!"unexpected dType"); dType = 0; break;
+      }
+
+      if (insn->subOp == NV50_IR_SUBOP_ATOM_EXCH)
+         subOp = 8;
+      else
+         subOp = insn->subOp;
+
+      emitInsn (0xec000000);
+      emitField(0x1c, 3, dType);
+   }
+
+   emitField(0x34, 4, subOp);
+   emitGPR  (0x14, insn->src(1));
+   emitADDR (0x08, 0x12, 22, 0, insn->src(0));
+   emitGPR  (0x00, insn->def(0));
+}
+
+void
 CodeEmitterGM107::emitCCTL()
 {
    unsigned width;
@@ -2967,7 +3007,10 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       }
       break;
    case OP_ATOM:
-      emitATOM();
+      if (insn->src(0).getFile() == FILE_MEMORY_SHARED)
+         emitATOMS();
+      else
+         emitATOM();
       break;
    case OP_CCTL:
       emitCCTL();
