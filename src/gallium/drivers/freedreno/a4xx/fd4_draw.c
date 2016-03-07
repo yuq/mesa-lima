@@ -156,6 +156,7 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 	emit.key.binning_pass = false;
 	emit.dirty = dirty;
 	emit.vp = NULL;   /* we changed key so need to refetch vp */
+	emit.fp = NULL;
 	draw_impl(ctx, ctx->ring, &emit);
 }
 

@@ -151,14 +151,7 @@ setup_stages(struct fd4_emit *emit, struct stage *s)
 	unsigned i;
 
 	s[VS].v = fd4_emit_get_vp(emit);
-
-	if (emit->key.binning_pass) {
-		/* use dummy stateobj to simplify binning vs non-binning: */
-		static const struct ir3_shader_variant binning_fp = {};
-		s[FS].v = &binning_fp;
-	} else {
-		s[FS].v = fd4_emit_get_fp(emit);
-	}
+	s[FS].v = fd4_emit_get_fp(emit);
 
 	s[HS].v = s[DS].v = s[GS].v = NULL;  /* for now */
 
