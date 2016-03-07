@@ -107,6 +107,26 @@ static const struct nir_shader_compiler_options vector_nir_options = {
     */
    .fdot_replicates = true,
 
+   /* Prior to Gen6, there are no three source operations for SIMD4x2. */
+   .lower_flrp = true,
+
+   .lower_pack_snorm_2x16 = true,
+   .lower_pack_unorm_2x16 = true,
+   .lower_unpack_snorm_2x16 = true,
+   .lower_unpack_unorm_2x16 = true,
+   .lower_extract_byte = true,
+   .lower_extract_word = true,
+};
+
+static const struct nir_shader_compiler_options vector_nir_options_gen6 = {
+   COMMON_OPTIONS,
+
+   /* In the vec4 backend, our dpN instruction replicates its result to all the
+    * components of a vec4.  We would like NIR to give us replicated fdot
+    * instructions because it can optimize better for us.
+    */
+   .fdot_replicates = true,
+
    .lower_pack_snorm_2x16 = true,
    .lower_pack_unorm_2x16 = true,
    .lower_unpack_snorm_2x16 = true,
@@ -159,8 +179,12 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       if (devinfo->gen < 7)
          compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
 
-      compiler->glsl_compiler_options[i].NirOptions =
-         is_scalar ? &scalar_nir_options : &vector_nir_options;
+      if (is_scalar) {
+         compiler->glsl_compiler_options[i].NirOptions = &scalar_nir_options;
+      } else {
+         compiler->glsl_compiler_options[i].NirOptions =
+            devinfo->gen < 6 ? &vector_nir_options : &vector_nir_options_gen6;
+      }
 
       compiler->glsl_compiler_options[i].LowerBufferInterfaceBlocks = true;
    }
