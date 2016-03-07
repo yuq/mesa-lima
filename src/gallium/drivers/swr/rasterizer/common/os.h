@@ -81,7 +81,6 @@ typedef int				INT;
 typedef unsigned int	UINT;
 typedef uint64_t		UINT64;
 typedef void*			HANDLE;
-typedef float			FLOAT;
 typedef int			    LONG;
 typedef unsigned char   UCHAR;
 typedef unsigned int	DWORD;

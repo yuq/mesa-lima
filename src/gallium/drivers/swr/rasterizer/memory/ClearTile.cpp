@@ -33,7 +33,7 @@
 #include "memory/tilingtraits.h"
 #include "memory/Convert.h"
 
-typedef void(*PFN_STORE_TILES_CLEAR)(const FLOAT*, SWR_SURFACE_STATE*, UINT, UINT);
+typedef void(*PFN_STORE_TILES_CLEAR)(const float*, SWR_SURFACE_STATE*, UINT, UINT);
 
 //////////////////////////////////////////////////////////////////////////
 /// Clear Raster Tile Function Tables.
@@ -104,7 +104,7 @@ struct StoreMacroTileClear
     /// @param pDstSurface - Destination surface state
     /// @param x, y - Coordinates to macro tile
     static void StoreClear(
-        const FLOAT *pColor,
+        const float *pColor,
         SWR_SURFACE_STATE* pDstSurface,
         UINT x, UINT y)
     {
@@ -112,7 +112,7 @@ struct StoreMacroTileClear
 
         BYTE dstFormattedColor[16]; // max bpp is 128, so 16 is all we need here for one pixel
 
-        FLOAT srcColor[4];
+        float srcColor[4];
 
         for (UINT comp = 0; comp < FormatTraits<DstFormat>::numComps; ++comp)
         {

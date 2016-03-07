@@ -425,7 +425,7 @@ void SWR_API SwrStoreTiles(
 void SWR_API SwrClearRenderTarget(
     HANDLE hContext,
     uint32_t clearMask,
-    const FLOAT clearColor[4],
+    const float clearColor[4],
     float z,
     BYTE stencil);
 
