@@ -41,11 +41,15 @@ struct NineVolume9
     unsigned level_actual;
 
     uint8_t *data; /* system memory backing */
+    uint8_t *data_conversion; /* for conversions */
 
     D3DVOLUME_DESC desc;
     struct pipe_resource info;
+    enum pipe_format format_conversion;
     unsigned stride;
+    unsigned stride_conversion;
     unsigned layer_stride;
+    unsigned layer_stride_conversion;
 
     struct pipe_transfer *transfer;
     unsigned lock_count;
