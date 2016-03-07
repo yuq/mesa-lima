@@ -37,7 +37,7 @@
  * to SwrSync call.
  */
 static void
-swr_sync_cb(UINT64 userData, UINT64 userData2, UINT64 userData3)
+swr_sync_cb(uint64_t userData, uint64_t userData2, uint64_t userData3)
 {
    struct swr_fence *fence = (struct swr_fence *)userData;
 
@@ -53,7 +53,7 @@ swr_fence_submit(struct swr_context *ctx, struct pipe_fence_handle *fh)
    struct swr_fence *fence = swr_fence(fh);
 
    fence->write++;
-   SwrSync(ctx->swrContext, swr_sync_cb, (UINT64)fence, 0, 0);
+   SwrSync(ctx->swrContext, swr_sync_cb, (uint64_t)fence, 0, 0);
 }
 
 /*
