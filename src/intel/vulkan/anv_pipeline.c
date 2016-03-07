@@ -1113,9 +1113,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
 
    anv_pipeline_init_dynamic_state(pipeline, pCreateInfo);
 
-   if (pCreateInfo->pTessellationState)
-      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO");
-
    pipeline->use_repclear = extra && extra->use_repclear;
 
    /* When we free the pipeline, we detect stages based on the NULL status
@@ -1147,6 +1144,9 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
                               pStages[MESA_SHADER_VERTEX]->pName,
                               pStages[MESA_SHADER_VERTEX]->pSpecializationInfo);
    }
+
+   if (modules[MESA_SHADER_TESS_CTRL] || modules[MESA_SHADER_TESS_EVAL])
+      anv_finishme("no tessellation support");
 
    if (modules[MESA_SHADER_GEOMETRY]) {
       anv_pipeline_compile_gs(pipeline, cache, pCreateInfo,
