@@ -158,6 +158,11 @@ optimizations = [
    # a != 0.0
    (('flt', 0.0, ('fabs', a)), ('fne', a, 0.0)),
 
+   (('fmax',                        ('b2f(is_used_once)', a),           ('b2f', b)),           ('b2f', ('ior', a, b))),
+   (('fmax', ('fneg(is_used_once)', ('b2f(is_used_once)', a)), ('fneg', ('b2f', b))), ('fneg', ('b2f', ('ior', a, b)))),
+   (('fmin',                        ('b2f(is_used_once)', a),           ('b2f', b)),           ('b2f', ('iand', a, b))),
+   (('fmin', ('fneg(is_used_once)', ('b2f(is_used_once)', a)), ('fneg', ('b2f', b))), ('fneg', ('b2f', ('iand', a, b)))),
+
    # ignore this opt when the result is used by a bcsel or if so we can make
    # use of conditional modifiers on supported hardware.
    (('flt(is_not_used_by_conditional)', ('fadd(is_used_once)', a, ('fneg', b)), 0.0), ('flt', a, b)),
