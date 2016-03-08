@@ -198,9 +198,9 @@ anv_free_list_push(union anv_free_list *list, void *map, int32_t offset)
  * means that the bottom 12 bits should all be zero.
  */
 #define PFL_COUNT(x) ((uintptr_t)(x) & 0xfff)
-#define PFL_PTR(x) ((void *)((uintptr_t)(x) & ~0xfff))
+#define PFL_PTR(x) ((void *)((uintptr_t)(x) & ~(uintptr_t)0xfff))
 #define PFL_PACK(ptr, count) ({           \
-   (void *)((uintptr_t)(ptr) | (uintptr_t)((count) & 0xfff)); \
+   (void *)(((uintptr_t)(ptr) & ~(uintptr_t)0xfff) | ((count) & 0xfff)); \
 })
 
 static bool
