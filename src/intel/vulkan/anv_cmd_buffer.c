@@ -736,10 +736,6 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    uint32_t bias, state_offset;
 
    switch (stage) {
-   case  MESA_SHADER_FRAGMENT:
-      map = &cmd_buffer->state.pipeline->bindings[stage];
-      bias = MAX_RTS;
-      break;
    case  MESA_SHADER_COMPUTE:
       map = &cmd_buffer->state.compute_pipeline->bindings[stage];
       bias = 1;
@@ -762,25 +758,6 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
    if (bt_state->map == NULL)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
-
-   if (stage == MESA_SHADER_FRAGMENT) {
-      if (subpass->color_count == 0) {
-         struct anv_state null_surface =
-            anv_cmd_buffer_alloc_null_surface_state(cmd_buffer,
-                                                    cmd_buffer->state.framebuffer);
-         bt_map[0] = null_surface.offset + state_offset;
-      } else {
-         for (uint32_t a = 0; a < subpass->color_count; a++) {
-            const struct anv_image_view *iview =
-               fb->attachments[subpass->color_attachments[a]];
-
-            assert(iview->color_rt_surface_state.alloc_size);
-            bt_map[a] = iview->color_rt_surface_state.offset + state_offset;
-            add_surface_state_reloc(cmd_buffer, iview->color_rt_surface_state,
-                                    iview->bo, iview->offset);
-         }
-      }
-   }
 
    if (stage == MESA_SHADER_COMPUTE &&
        get_cs_prog_data(cmd_buffer->state.compute_pipeline)->uses_num_work_groups) {
@@ -815,13 +792,36 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    uint32_t image = 0;
    for (uint32_t s = 0; s < map->surface_count; s++) {
       struct anv_pipeline_binding *binding = &map->surface_to_descriptor[s];
-      struct anv_descriptor_set *set =
-         cmd_buffer->state.descriptors[binding->set];
-      struct anv_descriptor *desc = &set->descriptors[binding->offset];
 
       struct anv_state surface_state;
       struct anv_bo *bo;
       uint32_t bo_offset;
+
+      if (binding->set == ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS) {
+         /* Color attachment binding */
+         assert(stage == MESA_SHADER_FRAGMENT);
+         if (binding->offset < subpass->color_count) {
+            const struct anv_image_view *iview =
+               fb->attachments[subpass->color_attachments[binding->offset]];
+
+            assert(iview->color_rt_surface_state.alloc_size);
+            surface_state = iview->color_rt_surface_state;
+            add_surface_state_reloc(cmd_buffer, iview->color_rt_surface_state,
+                                    iview->bo, iview->offset);
+         } else {
+            /* Null render target */
+            struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+            surface_state =
+               anv_cmd_buffer_alloc_null_surface_state(cmd_buffer, fb);
+         }
+
+         bt_map[bias + s] = surface_state.offset + state_offset;
+         continue;
+      }
+
+      struct anv_descriptor_set *set =
+         cmd_buffer->state.descriptors[binding->set];
+      struct anv_descriptor *desc = &set->descriptors[binding->offset];
 
       switch (desc->type) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:

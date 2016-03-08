@@ -995,11 +995,16 @@ anv_descriptor_set_destroy(struct anv_device *device,
                            struct anv_descriptor_pool *pool,
                            struct anv_descriptor_set *set);
 
+#define ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS UINT16_MAX
+
 struct anv_pipeline_binding {
-   /* The descriptor set this surface corresponds to */
+   /* The descriptor set this surface corresponds to.  The special value of
+    * ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS indicates that the offset refers
+    * to a color attachment and not a regular descriptor.
+    */
    uint16_t set;
 
-   /* Offset into the descriptor set */
+   /* Offset into the descriptor set or attachment list. */
    uint16_t offset;
 };
 
@@ -1404,9 +1409,11 @@ struct anv_pipeline_bind_map {
    uint32_t surface_count;
    uint32_t sampler_count;
    uint32_t image_count;
+   uint32_t attachment_count;
 
    struct anv_pipeline_binding *                surface_to_descriptor;
    struct anv_pipeline_binding *                sampler_to_descriptor;
+   uint32_t *                                   surface_to_attachment;
 };
 
 struct anv_pipeline {

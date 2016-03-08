@@ -114,9 +114,33 @@ emit_cb_state(struct anv_pipeline *pipeline,
       .AlphaToOneEnable = ms_info && ms_info->alphaToOneEnable,
    };
 
+   /* Default everything to disabled */
+   for (uint32_t i = 0; i < 8; i++) {
+      blend_state.Entry[i].WriteDisableAlpha = true;
+      blend_state.Entry[i].WriteDisableRed = true;
+      blend_state.Entry[i].WriteDisableGreen = true;
+      blend_state.Entry[i].WriteDisableBlue = true;
+   }
+
+   struct anv_pipeline_bind_map *map =
+      &pipeline->bindings[MESA_SHADER_FRAGMENT];
+
    bool has_writeable_rt = false;
-   for (uint32_t i = 0; i < info->attachmentCount; i++) {
-      const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[i];
+   for (unsigned i = 0; i < map->surface_count; i++) {
+      struct anv_pipeline_binding *binding = &map->surface_to_descriptor[i];
+
+      /* All color attachments are at the beginning of the binding table */
+      if (binding->set != ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS)
+         break;
+
+      /* We can have at most 8 attachments */
+      assert(i < 8);
+
+      if (binding->offset >= info->attachmentCount)
+         continue;
+
+      const VkPipelineColorBlendAttachmentState *a =
+         &info->pAttachments[binding->offset];
 
       if (a->srcColorBlendFactor != a->srcAlphaBlendFactor ||
           a->dstColorBlendFactor != a->dstAlphaBlendFactor ||
@@ -163,13 +187,6 @@ emit_cb_state(struct anv_pipeline *pipeline,
          blend_state.Entry[i].SourceAlphaBlendFactor = BLENDFACTOR_ONE;
          blend_state.Entry[i].DestinationAlphaBlendFactor = BLENDFACTOR_ONE;
       }
-   }
-
-   for (uint32_t i = info->attachmentCount; i < 8; i++) {
-      blend_state.Entry[i].WriteDisableAlpha = true;
-      blend_state.Entry[i].WriteDisableRed = true;
-      blend_state.Entry[i].WriteDisableGreen = true;
-      blend_state.Entry[i].WriteDisableBlue = true;
    }
 
    if (info->attachmentCount > 0) {

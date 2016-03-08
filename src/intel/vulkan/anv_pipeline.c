@@ -599,9 +599,6 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
    populate_wm_prog_key(&pipeline->device->info, info, extra, &key);
 
-   if (pipeline->use_repclear)
-      key.nr_color_regions = 1;
-
    if (module->size > 0) {
       anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint, spec_info);
       kernel = anv_pipeline_cache_search(cache, sha1, &stage_prog_data, &map);
@@ -613,7 +610,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       struct anv_pipeline_binding sampler_to_descriptor[256];
 
       map = (struct anv_pipeline_bind_map) {
-         .surface_to_descriptor = surface_to_descriptor,
+         .surface_to_descriptor = surface_to_descriptor + 8,
          .sampler_to_descriptor = sampler_to_descriptor
       };
 
@@ -623,6 +620,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       if (nir == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+      unsigned num_rts = 0;
+      struct anv_pipeline_binding rt_bindings[8];
       nir_function_impl *impl = nir_shader_get_entrypoint(nir)->impl;
       nir_foreach_variable_safe(var, &nir->outputs) {
          if (var->data.location < FRAG_RESULT_DATA0)
@@ -630,13 +629,52 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
          unsigned rt = var->data.location - FRAG_RESULT_DATA0;
          if (rt >= key.nr_color_regions) {
+            /* Out-of-bounds, throw it away */
             var->data.mode = nir_var_local;
             exec_node_remove(&var->node);
             exec_list_push_tail(&impl->locals, &var->node);
+            continue;
          }
+
+         /* Give it a new, compacted, location */
+         var->data.location = FRAG_RESULT_DATA0 + num_rts;
+
+         unsigned array_len =
+            glsl_type_is_array(var->type) ? glsl_get_length(var->type) : 1;
+         assert(num_rts + array_len <= 8);
+
+         for (unsigned i = 0; i < array_len; i++) {
+            rt_bindings[num_rts] = (struct anv_pipeline_binding) {
+               .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
+               .offset = rt + i,
+            };
+         }
+
+         num_rts += array_len;
       }
 
-      anv_fill_binding_table(&prog_data.base, MAX_RTS);
+      if (pipeline->use_repclear) {
+         assert(num_rts == 1);
+         key.nr_color_regions = 1;
+      }
+
+      if (num_rts == 0) {
+         /* If we have no render targets, we need a null render target */
+         rt_bindings[0] = (struct anv_pipeline_binding) {
+            .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
+            .offset = UINT16_MAX,
+         };
+         num_rts = 1;
+      }
+
+      assert(num_rts <= 8);
+      map.surface_to_descriptor -= num_rts;
+      map.surface_count += num_rts;
+      assert(map.surface_count <= 256);
+      memcpy(map.surface_to_descriptor, rt_bindings,
+             num_rts * sizeof(*rt_bindings));
+
+      anv_fill_binding_table(&prog_data.base, num_rts);
 
       void *mem_ctx = ralloc_context(NULL);
 
