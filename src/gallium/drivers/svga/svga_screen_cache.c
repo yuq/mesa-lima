@@ -320,16 +320,16 @@ svga_screen_cache_flush(struct svga_screen *svgascreen,
 
    pipe_mutex_lock(cache->mutex);
 
-   /* Loop over entries in the validated list */
-   curr = cache->validated.next;
+   /* Loop over entries in the invalidated list */
+   curr = cache->invalidated.next;
    next = curr->next;
-   while (curr != &cache->validated) {
+   while (curr != &cache->invalidated) {
       entry = LIST_ENTRY(struct svga_host_surface_cache_entry, curr, head);
 
       assert(entry->handle);
 
       if (sws->surface_is_flushed(sws, entry->handle)) {
-         /* remove entry from LRU list */
+         /* remove entry from the invalidated list */
          LIST_DEL(&entry->head);
 
          svgascreen->sws->fence_reference(svgascreen->sws, &entry->fence, fence);
@@ -340,6 +340,28 @@ svga_screen_cache_flush(struct svga_screen *svgascreen,
          /* Add entry to the hash table bucket */
          bucket = svga_screen_cache_bucket(&entry->key);
          LIST_ADD(&entry->bucket_head, &cache->bucket[bucket]);
+      }
+
+      curr = next;
+      next = curr->next;
+   }
+
+   curr = cache->validated.next;
+   next = curr->next;
+   while (curr != &cache->validated) {
+      entry = LIST_ENTRY(struct svga_host_surface_cache_entry, curr, head);
+
+      assert(entry->handle);
+
+      if (sws->surface_is_flushed(sws, entry->handle)) {
+         /* remove entry from the validated list */
+         LIST_DEL(&entry->head);
+
+         /* it is now safe to invalidate the surface content. */
+         sws->surface_invalidate(sws, entry->handle);
+
+         /* add the entry to the invalidated list */
+         LIST_ADD(&entry->head, &cache->invalidated);
       }
 
       curr = next;
@@ -395,6 +417,8 @@ svga_screen_cache_init(struct svga_screen *svgascreen)
    LIST_INITHEAD(&cache->unused);
 
    LIST_INITHEAD(&cache->validated);
+
+   LIST_INITHEAD(&cache->invalidated);
 
    LIST_INITHEAD(&cache->empty);
    for (i = 0; i < SVGA_HOST_SURFACE_CACHE_SIZE; ++i)
@@ -535,6 +559,11 @@ svga_screen_surface_destroy(struct svga_screen *svgascreen,
     * that case.
     */
    if (SVGA_SURFACE_CACHE_ENABLED && key->cachable) {
+
+      /* Invalidate the surface before putting it into the recycle pool */
+      if (key->format != SVGA3D_BUFFER)
+         sws->surface_invalidate(sws, *p_handle);
+
       svga_screen_cache_add(svgascreen, key, p_handle);
    }
    else {

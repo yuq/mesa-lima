@@ -419,6 +419,14 @@ struct svga_winsys_screen
                          uint32 numMipLevels);
 
    /**
+    * Invalidate the content of this surface
+    */
+   void
+   (*surface_invalidate)(struct svga_winsys_screen *sws,
+                         struct svga_winsys_surface *surface);
+
+
+   /**
     * Buffer management. Buffer attributes are mostly fixed over its lifetime.
     *
     * @param usage bitmask of SVGA_BUFFER_USAGE_* flags.
