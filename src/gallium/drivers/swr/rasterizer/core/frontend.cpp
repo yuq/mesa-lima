@@ -630,6 +630,8 @@ void ProcessStreamIdBuffer(uint32_t stream, uint8_t* pStreamIdBase, uint32_t num
     }
 }
 
+THREAD SWR_GS_CONTEXT tlsGsContext;
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Implements GS stage.
 /// @param pDC - pointer to draw context.
@@ -651,7 +653,6 @@ static void GeometryShaderStage(
 {
     RDTSC_START(FEGeometryShader);
 
-    SWR_GS_CONTEXT gsContext;
     SWR_CONTEXT* pContext = pDC->pContext;
 
     const API_STATE& state = GetApiState(pDC);
@@ -660,9 +661,9 @@ static void GeometryShaderStage(
     SWR_ASSERT(pGsOut != nullptr, "GS output buffer should be initialized");
     SWR_ASSERT(pCutBuffer != nullptr, "GS output cut buffer should be initialized");
 
-    gsContext.pStream = (uint8_t*)pGsOut;
-    gsContext.pCutOrStreamIdBuffer = (uint8_t*)pCutBuffer;
-    gsContext.PrimitiveID = primID;
+    tlsGsContext.pStream = (uint8_t*)pGsOut;
+    tlsGsContext.pCutOrStreamIdBuffer = (uint8_t*)pCutBuffer;
+    tlsGsContext.PrimitiveID = primID;
 
     uint32_t numVertsPerPrim = NumVertsPerPrim(pa.binTopology, true);
     simdvector attrib[MAX_ATTRIBUTES];
@@ -675,7 +676,7 @@ static void GeometryShaderStage(
 
         for (uint32_t i = 0; i < numVertsPerPrim; ++i)
         {
-            gsContext.vert[i].attrib[attribSlot] = attrib[i];
+            tlsGsContext.vert[i].attrib[attribSlot] = attrib[i];
         }
     }
     
@@ -683,7 +684,7 @@ static void GeometryShaderStage(
     pa.Assemble(VERTEX_POSITION_SLOT, attrib);
     for (uint32_t i = 0; i < numVertsPerPrim; ++i)
     {
-        gsContext.vert[i].attrib[VERTEX_POSITION_SLOT] = attrib[i];
+        tlsGsContext.vert[i].attrib[VERTEX_POSITION_SLOT] = attrib[i];
     }
 
     const uint32_t vertexStride = sizeof(simdvertex);
@@ -710,14 +711,14 @@ static void GeometryShaderStage(
 
     for (uint32_t instance = 0; instance < pState->instanceCount; ++instance)
     {
-        gsContext.InstanceID = instance;
-        gsContext.mask = GenerateMask(numInputPrims);
+        tlsGsContext.InstanceID = instance;
+        tlsGsContext.mask = GenerateMask(numInputPrims);
 
         // execute the geometry shader
-        state.pfnGsFunc(GetPrivateState(pDC), &gsContext);
+        state.pfnGsFunc(GetPrivateState(pDC), &tlsGsContext);
 
-        gsContext.pStream += instanceStride;
-        gsContext.pCutOrStreamIdBuffer += cutInstanceStride;
+        tlsGsContext.pStream += instanceStride;
+        tlsGsContext.pCutOrStreamIdBuffer += cutInstanceStride;
     }
 
     // set up new binner and state for the GS output topology
@@ -736,7 +737,7 @@ static void GeometryShaderStage(
     // foreach input prim:
     // - setup a new PA based on the emitted verts for that prim
     // - loop over the new verts, calling PA to assemble each prim
-    uint32_t* pVertexCount = (uint32_t*)&gsContext.vertexCount;
+    uint32_t* pVertexCount = (uint32_t*)&tlsGsContext.vertexCount;
     uint32_t* pPrimitiveId = (uint32_t*)&primID;
 
     uint32_t totalPrimsGenerated = 0;

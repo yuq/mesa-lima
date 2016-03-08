@@ -32,6 +32,9 @@
 #include "core/pa.h"
 #include "rdtsc_core.h"
 
+// Temp storage used by the clipper
+extern THREAD simdvertex tlsTempVertices[7];
+
 enum SWR_CLIPCODES
 {
     // Shift clip codes out of the mantissa to prevent denormalized values when used in float compare.
@@ -818,8 +821,7 @@ private:
     simdscalari ClipPrims(float* pVertices, const simdscalar& vPrimMask, const simdscalar& vClipMask, int numAttribs)
     {
         // temp storage
-        simdvertex tempVertices[7];
-        float* pTempVerts = (float*)&tempVertices[0];
+        float* pTempVerts = (float*)&tlsTempVertices[0];
 
         // zero out num input verts for non-active lanes
         simdscalari vNumInPts = _simd_set1_epi32(NumVertsPerPrim);

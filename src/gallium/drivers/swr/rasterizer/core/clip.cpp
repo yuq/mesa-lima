@@ -31,6 +31,9 @@
 #include "common/os.h"
 #include "core/clip.h"
 
+// Temp storage used by the clipper
+THREAD simdvertex tlsTempVertices[7];
+
 float ComputeInterpFactor(float boundaryCoord0, float boundaryCoord1)
 {
     return (boundaryCoord0 / (boundaryCoord0 - boundaryCoord1));
