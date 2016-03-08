@@ -110,8 +110,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
       struct isl_tile_info tile_info;
 
       anv_image_info.isl_tiling_flags = 1 << src->tiling;
-      image_info.tiling = anv_image_info.isl_tiling_flags ==
-                          ISL_TILING_LINEAR_BIT ?
+      image_info.tiling = src->tiling == ISL_TILING_LINEAR ?
                           VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
       image_info.usage = src_usage;
       image_info.format = src_format,
@@ -125,8 +124,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
                        &cmd_buffer->pool->alloc, &src_image);
 
       anv_image_info.isl_tiling_flags = 1 << dst->tiling;
-      image_info.tiling = anv_image_info.isl_tiling_flags ==
-                          ISL_TILING_LINEAR_BIT ?
+      image_info.tiling = dst->tiling == ISL_TILING_LINEAR ?
                           VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
       image_info.usage = dst_usage;
       image_info.format = dst_format,
