@@ -90,7 +90,7 @@ intrastage_match(ir_variable *a,
  * an array and the producer interface is required to be a non-array.
  * This is used for tessellation control and geometry shader consumers.
  */
-bool
+static bool
 interstage_match(ir_variable *producer,
                  ir_variable *consumer,
                  bool extra_array_level)
