@@ -297,14 +297,15 @@ create_color_pipeline(struct anv_device *device,
       .pAttachments = blend_attachment_state
    };
 
-   /* Disable repclear because we do not want the compiler to replace the
-    * shader. We need the shader to write to the specified color attachment,
-    * but the repclear shader writes to all color attachments.
+   /* Use the repclear shader.  Since the NIR shader we are providing has
+    * exactly one output, that output will get compacted down to binding
+    * table entry 0.  The hard-coded repclear shader is then exactly what
+    * we want regardless of what attachment we are actually clearing.
     */
    return
       create_pipeline(device, samples, vs_nir, fs_nir, &vi_state, &ds_state,
                       &cb_state, &device->meta_state.alloc,
-                      /*use_repclear*/ false, pipeline);
+                      /*use_repclear*/ true, pipeline);
 }
 
 static void
