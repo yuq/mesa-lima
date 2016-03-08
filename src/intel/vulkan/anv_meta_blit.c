@@ -120,7 +120,7 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void
-meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
+anv_meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                struct anv_image *src_image,
                struct anv_image_view *src_iview,
                VkOffset3D src_offset,
@@ -438,7 +438,7 @@ void anv_CmdBlitImage(
          },
          cmd_buffer, 0, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
-      meta_emit_blit(cmd_buffer,
+      anv_meta_emit_blit(cmd_buffer,
                      src_image, &src_iview,
                      pRegions[r].srcOffsets[0], src_extent,
                      dest_image, &dest_iview,

@@ -195,7 +195,7 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
          &iview_info, cmd_buffer, img_o, dst_usage);
 
       /* Perform blit */
-      meta_emit_blit(cmd_buffer,
+      anv_meta_emit_blit(cmd_buffer,
                      anv_image_from_handle(src_image),
                      &src_iview,
                      src_offset_el,
