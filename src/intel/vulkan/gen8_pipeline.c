@@ -189,24 +189,20 @@ emit_cb_state(struct anv_pipeline *pipeline,
       }
    }
 
-   if (info->attachmentCount > 0) {
-      struct GENX(BLEND_STATE_ENTRY) *bs = &blend_state.Entry[0];
+   struct GENX(BLEND_STATE_ENTRY) *bs0 = &blend_state.Entry[0];
 
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_BLEND),
-                     .AlphaToCoverageEnable = blend_state.AlphaToCoverageEnable,
-                     .HasWriteableRT = has_writeable_rt,
-                     .ColorBufferBlendEnable = bs->ColorBufferBlendEnable,
-                     .SourceAlphaBlendFactor = bs->SourceAlphaBlendFactor,
-                     .DestinationAlphaBlendFactor =
-                        bs->DestinationAlphaBlendFactor,
-                     .SourceBlendFactor = bs->SourceBlendFactor,
-                     .DestinationBlendFactor = bs->DestinationBlendFactor,
-                     .AlphaTestEnable = false,
-                     .IndependentAlphaBlendEnable =
-                        blend_state.IndependentAlphaBlendEnable);
-   } else {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_BLEND));
-   }
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_BLEND),
+                  .AlphaToCoverageEnable = blend_state.AlphaToCoverageEnable,
+                  .HasWriteableRT = has_writeable_rt,
+                  .ColorBufferBlendEnable = bs0->ColorBufferBlendEnable,
+                  .SourceAlphaBlendFactor = bs0->SourceAlphaBlendFactor,
+                  .DestinationAlphaBlendFactor =
+                     bs0->DestinationAlphaBlendFactor,
+                  .SourceBlendFactor = bs0->SourceBlendFactor,
+                  .DestinationBlendFactor = bs0->DestinationBlendFactor,
+                  .AlphaTestEnable = false,
+                  .IndependentAlphaBlendEnable =
+                     blend_state.IndependentAlphaBlendEnable);
 
    GENX(BLEND_STATE_pack)(NULL, pipeline->blend_state.map, &blend_state);
    if (!device->info.has_llc)
