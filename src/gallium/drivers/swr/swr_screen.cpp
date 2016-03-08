@@ -537,7 +537,7 @@ swr_texture_layout(struct swr_screen *screen,
    res->swr.pitch = res->row_stride[0];
 
    if (allocate) {
-      res->swr.pBaseAddress = (BYTE *)_aligned_malloc(total_size, 64);
+      res->swr.pBaseAddress = (uint8_t *)_aligned_malloc(total_size, 64);
 
       if (res->has_depth && res->has_stencil) {
          SWR_FORMAT_INFO finfo = GetFormatInfo(res->secondary.format);
@@ -550,7 +550,7 @@ swr_texture_layout(struct swr_screen *screen,
          res->secondary.numSamples = (1 << pt->nr_samples);
          res->secondary.pitch = res->alignedWidth * finfo.Bpp;
 
-         res->secondary.pBaseAddress = (BYTE *)_aligned_malloc(
+         res->secondary.pBaseAddress = (uint8_t *)_aligned_malloc(
             res->alignedHeight * res->secondary.pitch, 64);
       }
    }

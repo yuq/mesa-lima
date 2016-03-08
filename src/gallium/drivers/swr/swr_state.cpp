@@ -1032,12 +1032,12 @@ swr_update_derived(struct swr_context *ctx,
          pDC->num_constantsVS[i] = cb->buffer_size;
          if (cb->buffer)
             pDC->constantVS[i] =
-               (const float *)((const BYTE *)cb->buffer + cb->buffer_offset);
+               (const float *)((const uint8_t *)cb->buffer + cb->buffer_offset);
          else {
             /* Need to copy these constants to scratch space */
             if (cb->user_buffer && cb->buffer_size) {
                const void *ptr =
-                  ((const BYTE *)cb->user_buffer + cb->buffer_offset);
+                  ((const uint8_t *)cb->user_buffer + cb->buffer_offset);
                uint32_t size = AlignUp(cb->buffer_size, 4);
                ptr = swr_copy_to_scratch_space(
                   ctx, &ctx->scratch->vs_constants, ptr, size);
@@ -1057,12 +1057,12 @@ swr_update_derived(struct swr_context *ctx,
          pDC->num_constantsFS[i] = cb->buffer_size;
          if (cb->buffer)
             pDC->constantFS[i] =
-               (const float *)((const BYTE *)cb->buffer + cb->buffer_offset);
+               (const float *)((const uint8_t *)cb->buffer + cb->buffer_offset);
          else {
             /* Need to copy these constants to scratch space */
             if (cb->user_buffer && cb->buffer_size) {
                const void *ptr =
-                  ((const BYTE *)cb->user_buffer + cb->buffer_offset);
+                  ((const uint8_t *)cb->user_buffer + cb->buffer_offset);
                uint32_t size = AlignUp(cb->buffer_size, 4);
                ptr = swr_copy_to_scratch_space(
                   ctx, &ctx->scratch->fs_constants, ptr, size);

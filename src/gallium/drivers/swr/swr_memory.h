@@ -28,14 +28,14 @@ void LoadHotTile(
     SWR_FORMAT dstFormat,
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
     UINT x, UINT y, uint32_t renderTargetArrayIndex,
-    BYTE *pDstHotTile);
+    uint8_t *pDstHotTile);
 
 void StoreHotTile(
     SWR_SURFACE_STATE *pDstSurface,
     SWR_FORMAT srcFormat,
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
     UINT x, UINT y, uint32_t renderTargetArrayIndex,
-    BYTE *pSrcHotTile);
+    uint8_t *pSrcHotTile);
 
 void StoreHotTileClear(
     SWR_SURFACE_STATE *pDstSurface,
@@ -49,7 +49,7 @@ swr_LoadHotTile(HANDLE hPrivateContext,
                 SWR_FORMAT dstFormat,
                 SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
                 UINT x, UINT y,
-                uint32_t renderTargetArrayIndex, BYTE* pDstHotTile)
+                uint32_t renderTargetArrayIndex, uint8_t* pDstHotTile)
 {
    // Grab source surface state from private context
    swr_draw_context *pDC = (swr_draw_context*)hPrivateContext;
@@ -63,7 +63,7 @@ swr_StoreHotTile(HANDLE hPrivateContext,
                  SWR_FORMAT srcFormat,
                  SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
                  UINT x, UINT y,
-                 uint32_t renderTargetArrayIndex, BYTE* pSrcHotTile)
+                 uint32_t renderTargetArrayIndex, uint8_t* pSrcHotTile)
 {
    // Grab destination surface state from private context
    swr_draw_context *pDC = (swr_draw_context*)hPrivateContext;

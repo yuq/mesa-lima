@@ -58,14 +58,14 @@ swr_copy_to_scratch_space(struct swr_context *ctx,
          }
 
          if (!space->base) {
-            space->base = (BYTE *)align_malloc(space->current_size, 4);
+            space->base = (uint8_t *)align_malloc(space->current_size, 4);
             space->head = (void *)space->base;
          }
       }
 
       /* Wrap */
-      if (((BYTE *)space->head + size)
-          >= ((BYTE *)space->base + space->current_size)) {
+      if (((uint8_t *)space->head + size)
+          >= ((uint8_t *)space->base + space->current_size)) {
          /*
           * TODO XXX: Should add a fence on wrap.  Assumption is that
           * current_space >> size, and there are at least MAX_DRAWS_IN_FLIGHT
@@ -78,7 +78,7 @@ swr_copy_to_scratch_space(struct swr_context *ctx,
       }
 
       ptr = space->head;
-      space->head = (BYTE *)space->head + size;
+      space->head = (uint8_t *)space->head + size;
    }
 
    /* Copy user_buffer to scratch */
