@@ -1644,6 +1644,7 @@ nvc0_blitter_destroy(struct nvc0_screen *screen)
       }
    }
 
+   pipe_mutex_destroy(blitter->mutex);
    FREE(blitter);
 }
 
