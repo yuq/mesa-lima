@@ -1097,7 +1097,7 @@ VkResult anv_QueueSubmit(
    struct anv_device *device = queue->device;
    VkResult result = VK_SUCCESS;
 
-   /* We lock around QueueSubmit for two main reasons:
+   /* We lock around QueueSubmit for three main reasons:
     *
     *  1) When a block pool is resized, we create a new gem handle with a
     *     different size and, in the case of surface states, possibly a
@@ -1111,6 +1111,12 @@ VkResult anv_QueueSubmit(
     *     QueueSubmit, this would be extremely difficult to debug if it ever
     *     came up in the wild due to a broken app.  It's better to play it
     *     safe and just lock around QueueSubmit.
+    *
+    *  3)  The anv_cmd_buffer_execbuf function may perform relocations in
+    *      userspace.  Due to the fact that the surface state buffer is shared
+    *      between batches, we can't afford to have that happen from multiple
+    *      threads at the same time.  Even though the user is supposed to
+    *      ensure this doesn't happen, we play it safe as in (2) above.
     *
     * Since the only other things that ever take the device lock such as block
     * pool resize only rarely happen, this will almost never be contended so

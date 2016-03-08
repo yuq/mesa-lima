@@ -32,6 +32,8 @@
 #include "genxml/gen7_pack.h"
 #include "genxml/gen8_pack.h"
 
+#include "util/debug.h"
+
 /** \file anv_batch_chain.c
  *
  * This file contains functions related to anv_cmd_buffer as a data
@@ -1115,6 +1117,108 @@ adjust_relocations_to_state_pool(struct anv_block_pool *pool,
    }
 }
 
+static void
+anv_reloc_list_apply(struct anv_device *device,
+                     struct anv_reloc_list *list,
+                     struct anv_bo *bo,
+                     bool always_relocate)
+{
+   for (size_t i = 0; i < list->num_relocs; i++) {
+      struct anv_bo *target_bo = list->reloc_bos[i];
+      if (list->relocs[i].presumed_offset == target_bo->offset &&
+          !always_relocate)
+         continue;
+
+      void *p = bo->map + list->relocs[i].offset;
+      write_reloc(device, p, target_bo->offset + list->relocs[i].delta, true);
+      list->relocs[i].presumed_offset = target_bo->offset;
+   }
+}
+
+/**
+ * This function applies the relocation for a command buffer and writes the
+ * actual addresses into the buffers as per what we were told by the kernel on
+ * the previous execbuf2 call.  This should be safe to do because, for each
+ * relocated address, we have two cases:
+ *
+ *  1) The target BO is inactive (as seen by the kernel).  In this case, it is
+ *     not in use by the GPU so updating the address is 100% ok.  It won't be
+ *     in-use by the GPU (from our context) again until the next execbuf2
+ *     happens.  If the kernel decides to move it in the next execbuf2, it
+ *     will have to do the relocations itself, but that's ok because it should
+ *     have all of the information needed to do so.
+ *
+ *  2) The target BO is active (as seen by the kernel).  In this case, it
+ *     hasn't moved since the last execbuffer2 call because GTT shuffling
+ *     *only* happens when the BO is idle. (From our perspective, it only
+ *     happens inside the execbuffer2 ioctl, but the shuffling may be
+ *     triggered by another ioctl, with full-ppgtt this is limited to only
+ *     execbuffer2 ioctls on the same context, or memory pressure.)  Since the
+ *     target BO hasn't moved, our anv_bo::offset exactly matches the BO's GTT
+ *     address and the relocated value we are writing into the BO will be the
+ *     same as the value that is already there.
+ *
+ *     There is also a possibility that the target BO is active but the exact
+ *     RENDER_SURFACE_STATE object we are writing the relocation into isn't in
+ *     use.  In this case, the address currently in the RENDER_SURFACE_STATE
+ *     may be stale but it's still safe to write the relocation because that
+ *     particular RENDER_SURFACE_STATE object isn't in-use by the GPU and
+ *     won't be until the next execbuf2 call.
+ *
+ * By doing relocations on the CPU, we can tell the kernel that it doesn't
+ * need to bother.  We want to do this because the surface state buffer is
+ * used by every command buffer so, if the kernel does the relocations, it
+ * will always be busy and the kernel will always stall.  This is also
+ * probably the fastest mechanism for doing relocations since the kernel would
+ * have to make a full copy of all the relocations lists.
+ */
+static bool
+relocate_cmd_buffer(struct anv_cmd_buffer *cmd_buffer,
+                    struct anv_execbuf *exec)
+{
+   static int userspace_relocs = -1;
+   if (userspace_relocs < 0)
+      userspace_relocs = env_var_as_boolean("ANV_USERSPACE_RELOCS", true);
+   if (!userspace_relocs)
+      return false;
+
+   /* First, we have to check to see whether or not we can even do the
+    * relocation.  New buffers which have never been submitted to the kernel
+    * don't have a valid offset so we need to let the kernel do relocations so
+    * that we can get offsets for them.  On future execbuf2 calls, those
+    * buffers will have offsets and we will be able to skip relocating.
+    * Invalid offsets are indicated by anv_bo::offset == (uint64_t)-1.
+    */
+   for (uint32_t i = 0; i < exec->bo_count; i++) {
+      if (exec->bos[i]->offset == (uint64_t)-1)
+         return false;
+   }
+
+   /* Since surface states are shared between command buffers and we don't
+    * know what order they will be submitted to the kernel, we don't know
+    * what address is actually written in the surface state object at any
+    * given time.  The only option is to always relocate them.
+    */
+   anv_reloc_list_apply(cmd_buffer->device, &cmd_buffer->surface_relocs,
+                        &cmd_buffer->device->surface_state_block_pool.bo,
+                        true /* always relocate surface states */);
+
+   /* Since we own all of the batch buffers, we know what values are stored
+    * in the relocated addresses and only have to update them if the offsets
+    * have changed.
+    */
+   struct anv_batch_bo **bbo;
+   u_vector_foreach(bbo, &cmd_buffer->seen_bbos) {
+      anv_reloc_list_apply(cmd_buffer->device,
+                           &(*bbo)->relocs, &(*bbo)->bo, false);
+   }
+
+   for (uint32_t i = 0; i < exec->bo_count; i++)
+      exec->objects[i].offset = exec->bos[i]->offset;
+
+   return true;
+}
+
 VkResult
 anv_cmd_buffer_execbuf(struct anv_device *device,
                        struct anv_cmd_buffer *cmd_buffer)
@@ -1205,14 +1309,45 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       .rsvd2 = 0,
    };
 
-   /* Since surface states are shared between command buffers and we don't
-    * know what order they will be submitted to the kernel, we don't know what
-    * address is actually written in the surface state object at any given
-    * time.  The only option is to set a bogus presumed offset and let
-    * relocations do their job.
-    */
-   for (size_t i = 0; i < cmd_buffer->surface_relocs.num_relocs; i++)
-      cmd_buffer->surface_relocs.relocs[i].presumed_offset = -1;
+   if (relocate_cmd_buffer(cmd_buffer, &execbuf)) {
+      /* If we were able to successfully relocate everything, tell the kernel
+       * that it can skip doing relocations. The requirement for using
+       * NO_RELOC is:
+       *
+       *  1) The addresses written in the objects must match the corresponding
+       *     reloc.presumed_offset which in turn must match the corresponding
+       *     execobject.offset.
+       *
+       *  2) To avoid stalling, execobject.offset should match the current
+       *     address of that object within the active context.
+       *
+       * In order to satisfy all of the invariants that make userspace
+       * relocations to be safe (see relocate_cmd_buffer()), we need to
+       * further ensure that the addresses we use match those used by the
+       * kernel for the most recent execbuf2.
+       *
+       * The kernel may still choose to do relocations anyway if something has
+       * moved in the GTT. In this case, the relocation list still needs to be
+       * valid.  All relocations on the batch buffers are already valid and
+       * kept up-to-date.  For surface state relocations, by applying the
+       * relocations in relocate_cmd_buffer, we ensured that the address in
+       * the RENDER_SURFACE_STATE matches presumed_offset, so it should be
+       * safe for the kernel to relocate them as needed.
+       */
+      execbuf.execbuf.flags |= I915_EXEC_NO_RELOC;
+   } else {
+      /* In the case where we fall back to doing kernel relocations, we need
+       * to ensure that the relocation list is valid.  All relocations on the
+       * batch buffers are already valid and kept up-to-date.  Since surface
+       * states are shared between command buffers and we don't know what
+       * order they will be submitted to the kernel, we don't know what
+       * address is actually written in the surface state object at any given
+       * time.  The only option is to set a bogus presumed offset and let the
+       * kernel relocate them.
+       */
+      for (size_t i = 0; i < cmd_buffer->surface_relocs.num_relocs; i++)
+         cmd_buffer->surface_relocs.relocs[i].presumed_offset = -1;
+   }
 
    VkResult result = anv_device_execbuf(device, &execbuf.execbuf, execbuf.bos);
 
