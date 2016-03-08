@@ -200,7 +200,6 @@ anv_free_list_push(union anv_free_list *list, void *map, int32_t offset)
 #define PFL_COUNT(x) ((uintptr_t)(x) & 0xfff)
 #define PFL_PTR(x) ((void *)((uintptr_t)(x) & ~0xfff))
 #define PFL_PACK(ptr, count) ({           \
-   assert(((uintptr_t)(ptr) & 0xfff) == 0); \
    (void *)((uintptr_t)(ptr) | (uintptr_t)((count) & 0xfff)); \
 })
 
@@ -229,6 +228,12 @@ anv_ptr_free_list_push(void **list, void *elem)
 {
    void *old, *current;
    void **next_ptr = elem;
+
+   /* The pointer-based free list requires that the pointer be
+    * page-aligned.  This is because we use the bottom 12 bits of the
+    * pointer to store a counter to solve the ABA concurrency problem.
+    */
+   assert(((uintptr_t)elem & 0xfff) == 0);
 
    old = *list;
    do {
