@@ -366,27 +366,6 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (pipeline->layout)
       anv_nir_apply_pipeline_layout(pipeline, nir, prog_data, map);
 
-   /* All binding table offsets provided by apply_pipeline_layout() are
-    * relative to the start of the bindint table (plus MAX_RTS for VS).
-    */
-   unsigned bias;
-   switch (stage) {
-   case MESA_SHADER_FRAGMENT:
-      bias = MAX_RTS;
-      break;
-   case MESA_SHADER_COMPUTE:
-      bias = 1;
-      break;
-   default:
-      bias = 0;
-      break;
-   }
-   prog_data->binding_table.size_bytes = 0;
-   prog_data->binding_table.texture_start = bias;
-   prog_data->binding_table.ubo_start = bias;
-   prog_data->binding_table.ssbo_start = bias;
-   prog_data->binding_table.image_start = bias;
-
    /* Finish the optimization and compilation process */
    if (nir->stage == MESA_SHADER_COMPUTE)
       brw_nir_lower_shared(nir);
@@ -397,6 +376,16 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    nir->num_uniforms = prog_data->nr_params * 4;
 
    return nir;
+}
+
+static void
+anv_fill_binding_table(struct brw_stage_prog_data *prog_data, unsigned bias)
+{
+   prog_data->binding_table.size_bytes = 0;
+   prog_data->binding_table.texture_start = bias;
+   prog_data->binding_table.ubo_start = bias;
+   prog_data->binding_table.ssbo_start = bias;
+   prog_data->binding_table.image_start = bias;
 }
 
 static void
@@ -462,6 +451,8 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
                                              &prog_data.base.base, &map);
       if (nir == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      anv_fill_binding_table(&prog_data.base.base, 0);
 
       void *mem_ctx = ralloc_context(NULL);
 
@@ -548,6 +539,8 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
                                              &prog_data.base.base, &map);
       if (nir == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      anv_fill_binding_table(&prog_data.base.base, 0);
 
       void *mem_ctx = ralloc_context(NULL);
 
@@ -642,6 +635,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
             exec_list_push_tail(&impl->locals, &var->node);
          }
       }
+
+      anv_fill_binding_table(&prog_data.base, MAX_RTS);
 
       void *mem_ctx = ralloc_context(NULL);
 
@@ -739,6 +734,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
                                              &prog_data.base, &map);
       if (nir == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      anv_fill_binding_table(&prog_data.base, 1);
 
       prog_data.base.total_shared = nir->num_shared;
 
