@@ -53,6 +53,9 @@ void anv_device_finish_meta_resolve_state(struct anv_device *device);
 VkResult anv_device_init_meta_blit_state(struct anv_device *device);
 void anv_device_finish_meta_blit_state(struct anv_device *device);
 
+VkResult anv_device_init_meta_blit2d_state(struct anv_device *device);
+void anv_device_finish_meta_blit2d_state(struct anv_device *device);
+
 void
 anv_meta_save(struct anv_meta_saved_state *state,
               const struct anv_cmd_buffer *cmd_buffer,
