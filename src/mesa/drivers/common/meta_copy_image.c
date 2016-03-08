@@ -269,6 +269,9 @@ _mesa_meta_CopyImageSubData_uncompressed(struct gl_context *ctx,
    if (status != GL_FRAMEBUFFER_COMPLETE)
       goto meta_end;
 
+   /* Explicitly disable sRGB encoding */
+   ctx->DrawBuffer->Visual.sRGBCapable = false;
+
    /* Since we've bound a new draw framebuffer, we need to update its
     * derived state -- _Xmin, etc -- for BlitFramebuffer's clipping to
     * be correct.
