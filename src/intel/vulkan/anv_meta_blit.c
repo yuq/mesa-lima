@@ -160,7 +160,7 @@ meta_region_extent_el(const VkFormat format,
    };
 }
 
-static void
+void
 meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                struct anv_image *src_image,
                struct anv_image_view *src_iview,
