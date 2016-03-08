@@ -53,6 +53,10 @@ struct amdgpu_winsys_bo {
    /* how many command streams is this bo referenced in? */
    int num_cs_references;
 
+   /* how many command streams, which are being emitted in a separate
+    * thread, is this bo referenced in? */
+   volatile int num_active_ioctls;
+
    /* whether buffer_get_handle or buffer_from_handle was called,
     * it can only transition from false to true
     */

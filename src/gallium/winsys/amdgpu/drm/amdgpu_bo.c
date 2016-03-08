@@ -43,7 +43,20 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
    struct amdgpu_winsys *ws = bo->ws;
+   int64_t abs_timeout;
    int i;
+
+   if (timeout == 0) {
+      if (p_atomic_read(&bo->num_active_ioctls))
+         return false;
+
+   } else {
+      abs_timeout = os_time_get_absolute_timeout(timeout);
+
+      /* Wait if any ioctl is being submitted with this buffer. */
+      if (!os_wait_until_zero_abs_timeout(&bo->num_active_ioctls, abs_timeout))
+         return false;
+   }
 
    if (bo->is_shared) {
       /* We can't use user fences for shared buffers, because user fences
@@ -61,7 +74,6 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
    }
 
    if (timeout == 0) {
-      /* Timeout == 0 is quite simple. */
       pipe_mutex_lock(ws->bo_fence_lock);
       for (i = 0; i < RING_LAST; i++)
          if (bo->fence[i]) {
@@ -80,7 +92,6 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
       struct pipe_fence_handle *fence[RING_LAST] = {};
       bool fence_idle[RING_LAST] = {};
       bool buffer_idle = true;
-      int64_t abs_timeout = os_time_get_absolute_timeout(timeout);
 
       /* Take references to all fences, so that we can wait for them
        * without the lock. */
@@ -209,13 +220,24 @@ static void *amdgpu_bo_map(struct pb_buffer *buf,
             if (cs && amdgpu_bo_is_referenced_by_cs_with_usage(cs, bo,
                                                                RADEON_USAGE_WRITE)) {
                cs->flush_cs(cs->flush_data, 0, NULL);
+            } else {
+               /* Try to avoid busy-waiting in amdgpu_bo_wait. */
+               if (p_atomic_read(&bo->num_active_ioctls))
+                  amdgpu_cs_sync_flush(rcs);
             }
             amdgpu_bo_wait((struct pb_buffer*)bo, PIPE_TIMEOUT_INFINITE,
                            RADEON_USAGE_WRITE);
          } else {
             /* Mapping for write. */
-            if (cs && amdgpu_bo_is_referenced_by_cs(cs, bo))
-               cs->flush_cs(cs->flush_data, 0, NULL);
+            if (cs) {
+               if (amdgpu_bo_is_referenced_by_cs(cs, bo)) {
+                  cs->flush_cs(cs->flush_data, 0, NULL);
+               } else {
+                  /* Try to avoid busy-waiting in amdgpu_bo_wait. */
+                  if (p_atomic_read(&bo->num_active_ioctls))
+                     amdgpu_cs_sync_flush(rcs);
+               }
+            }
 
             amdgpu_bo_wait((struct pb_buffer*)bo, PIPE_TIMEOUT_INFINITE,
                            RADEON_USAGE_READWRITE);

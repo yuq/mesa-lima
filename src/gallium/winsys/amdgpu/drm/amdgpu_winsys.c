@@ -308,6 +308,14 @@ static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
 {
    struct amdgpu_winsys *ws = (struct amdgpu_winsys*)rws;
 
+   if (ws->thread) {
+      ws->kill_thread = 1;
+      pipe_semaphore_signal(&ws->cs_queued);
+      pipe_thread_wait(ws->thread);
+   }
+   pipe_semaphore_destroy(&ws->cs_queue_has_space);
+   pipe_semaphore_destroy(&ws->cs_queued);
+   pipe_mutex_destroy(ws->cs_queue_lock);
    pipe_mutex_destroy(ws->bo_fence_lock);
    pb_cache_deinit(&ws->bo_cache);
    pipe_mutex_destroy(ws->global_bo_list_lock);
@@ -391,6 +399,54 @@ static int compare_dev(void *key1, void *key2)
 {
    return key1 != key2;
 }
+
+void amdgpu_ws_queue_cs(struct amdgpu_winsys *ws, struct amdgpu_cs *cs)
+{
+   pipe_semaphore_wait(&ws->cs_queue_has_space);
+
+   pipe_mutex_lock(ws->cs_queue_lock);
+   assert(ws->num_enqueued_cs < ARRAY_SIZE(ws->cs_queue));
+   ws->cs_queue[ws->num_enqueued_cs++] = cs;
+   pipe_mutex_unlock(ws->cs_queue_lock);
+   pipe_semaphore_signal(&ws->cs_queued);
+}
+
+static PIPE_THREAD_ROUTINE(amdgpu_cs_thread_func, param)
+{
+   struct amdgpu_winsys *ws = (struct amdgpu_winsys *)param;
+   struct amdgpu_cs *cs;
+   unsigned i;
+
+   while (1) {
+      pipe_semaphore_wait(&ws->cs_queued);
+      if (ws->kill_thread)
+         break;
+
+      pipe_mutex_lock(ws->cs_queue_lock);
+      cs = ws->cs_queue[0];
+      for (i = 1; i < ws->num_enqueued_cs; i++)
+         ws->cs_queue[i - 1] = ws->cs_queue[i];
+      ws->cs_queue[--ws->num_enqueued_cs] = NULL;
+      pipe_mutex_unlock(ws->cs_queue_lock);
+
+      pipe_semaphore_signal(&ws->cs_queue_has_space);
+
+      if (cs) {
+         amdgpu_cs_submit_ib(cs);
+         pipe_semaphore_signal(&cs->flush_completed);
+      }
+   }
+   pipe_mutex_lock(ws->cs_queue_lock);
+   for (i = 0; i < ws->num_enqueued_cs; i++) {
+      pipe_semaphore_signal(&ws->cs_queue[i]->flush_completed);
+      ws->cs_queue[i] = NULL;
+   }
+   pipe_mutex_unlock(ws->cs_queue_lock);
+   return 0;
+}
+
+DEBUG_GET_ONCE_BOOL_OPTION(thread, "RADEON_THREAD", TRUE)
+static PIPE_THREAD_ROUTINE(amdgpu_cs_thread_func, param);
 
 static bool amdgpu_winsys_unref(struct radeon_winsys *rws)
 {
@@ -485,7 +541,14 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
 
    LIST_INITHEAD(&ws->global_bo_list);
    pipe_mutex_init(ws->global_bo_list_lock);
+   pipe_mutex_init(ws->cs_queue_lock);
    pipe_mutex_init(ws->bo_fence_lock);
+
+   pipe_semaphore_init(&ws->cs_queue_has_space, ARRAY_SIZE(ws->cs_queue));
+   pipe_semaphore_init(&ws->cs_queued, 0);
+
+   if (sysconf(_SC_NPROCESSORS_ONLN) > 1 && debug_get_option_thread())
+      ws->thread = pipe_thread_create(amdgpu_cs_thread_func, ws);
 
    /* Create the screen at the end. The winsys must be initialized
     * completely.

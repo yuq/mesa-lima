@@ -66,18 +66,7 @@ enum {
    IB_NUM
 };
 
-struct amdgpu_cs {
-   struct amdgpu_ib main; /* must be first because this is inherited */
-   struct amdgpu_ib const_ib; /* optional constant engine IB */
-   struct amdgpu_ib const_preamble_ib;
-   struct amdgpu_ctx *ctx;
-
-   /* Flush CS. */
-   void (*flush_cs)(void *ctx, unsigned flags, struct pipe_fence_handle **fence);
-   void *flush_data;
-
-   /* amdgpu_cs_submit parameters */
-   enum ring_type              ring_type;
+struct amdgpu_cs_context {
    struct amdgpu_cs_request    request;
    struct amdgpu_cs_ib_info    ib[IB_NUM];
 
@@ -94,6 +83,32 @@ struct amdgpu_cs {
    uint64_t                    used_gart;
 
    unsigned                    max_dependencies;
+
+   struct pipe_fence_handle    *fence;
+};
+
+struct amdgpu_cs {
+   struct amdgpu_ib main; /* must be first because this is inherited */
+   struct amdgpu_ib const_ib; /* optional constant engine IB */
+   struct amdgpu_ib const_preamble_ib;
+   struct amdgpu_ctx *ctx;
+   enum ring_type ring_type;
+
+   /* We flip between these two CS. While one is being consumed
+    * by the kernel in another thread, the other one is being filled
+    * by the pipe driver. */
+   struct amdgpu_cs_context csc1;
+   struct amdgpu_cs_context csc2;
+   /* The currently-used CS. */
+   struct amdgpu_cs_context *csc;
+   /* The CS being currently-owned by the other thread. */
+   struct amdgpu_cs_context *cst;
+
+   /* Flush CS. */
+   void (*flush_cs)(void *ctx, unsigned flags, struct pipe_fence_handle **fence);
+   void *flush_data;
+
+   pipe_semaphore flush_completed;
 };
 
 struct amdgpu_fence {
@@ -103,6 +118,9 @@ struct amdgpu_fence {
    struct amdgpu_cs_fence fence;
    uint64_t *user_fence_cpu_address;
 
+   /* If the fence is unknown due to an IB still being submitted
+    * in the other thread. */
+   volatile int submission_in_progress; /* bool (int for atomicity) */
    volatile int signalled;              /* bool (int for atomicity) */
 };
 
@@ -128,7 +146,7 @@ static inline void amdgpu_fence_reference(struct pipe_fence_handle **dst,
    *rdst = rsrc;
 }
 
-int amdgpu_lookup_buffer(struct amdgpu_cs *csc, struct amdgpu_winsys_bo *bo);
+int amdgpu_lookup_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *bo);
 
 static inline struct amdgpu_cs *
 amdgpu_cs(struct radeon_winsys_cs *base)
@@ -142,7 +160,7 @@ amdgpu_bo_is_referenced_by_cs(struct amdgpu_cs *cs,
 {
    int num_refs = bo->num_cs_references;
    return num_refs == bo->ws->num_cs ||
-         (num_refs && amdgpu_lookup_buffer(cs, bo) != -1);
+         (num_refs && amdgpu_lookup_buffer(cs->csc, bo) != -1);
 }
 
 static inline boolean
@@ -155,11 +173,11 @@ amdgpu_bo_is_referenced_by_cs_with_usage(struct amdgpu_cs *cs,
    if (!bo->num_cs_references)
       return FALSE;
 
-   index = amdgpu_lookup_buffer(cs, bo);
+   index = amdgpu_lookup_buffer(cs->csc, bo);
    if (index == -1)
       return FALSE;
 
-   return (cs->buffers[index].usage & usage) != 0;
+   return (cs->csc->buffers[index].usage & usage) != 0;
 }
 
 static inline boolean
@@ -170,6 +188,8 @@ amdgpu_bo_is_referenced_by_any_cs(struct amdgpu_winsys_bo *bo)
 
 bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
                        bool absolute);
+void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs);
 void amdgpu_cs_init_functions(struct amdgpu_winsys *ws);
+void amdgpu_cs_submit_ib(struct amdgpu_cs *cs);
 
 #endif
