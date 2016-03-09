@@ -408,9 +408,10 @@ void ProcessInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t mac
     {
         if (pDesc->attachmentMask & (1 << i))
         {
-            HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, (SWR_RENDERTARGET_ATTACHMENT)i, false);
+            HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTileNoLoad(pContext, pDC, macroTile, (SWR_RENDERTARGET_ATTACHMENT)i);
             if (pHotTile)
             {
+                SWR_ASSERT(pHotTile->state == HOTTILE_INVALID || pHotTile->state == HOTTILE_RESOLVED);
                 pHotTile->state = HOTTILE_INVALID;
             }
         }

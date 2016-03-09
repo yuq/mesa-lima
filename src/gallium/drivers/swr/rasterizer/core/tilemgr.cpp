@@ -186,6 +186,24 @@ HOTTILE* HotTileMgr::GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32
     return &tile.Attachment[attachment];
 }
 
+HOTTILE* HotTileMgr::GetHotTileNoLoad(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID, SWR_RENDERTARGET_ATTACHMENT attachment)
+{
+    uint32_t x, y;
+    MacroTileMgr::getTileIndices(macroID, x, y);
+
+    SWR_ASSERT(x < KNOB_NUM_HOT_TILES_X);
+    SWR_ASSERT(y < KNOB_NUM_HOT_TILES_Y);
+
+    HotTileSet &tile = mHotTiles[x][y];
+    HOTTILE& hotTile = tile.Attachment[attachment];
+    if (hotTile.pBuffer == NULL)
+    {
+        return NULL;
+    }
+
+    return &hotTile;
+}
+
 void HotTileMgr::ClearColorHotTile(const HOTTILE* pHotTile)  // clear a macro tile from float4 clear data.
 {
     // Load clear color into SIMD register...
