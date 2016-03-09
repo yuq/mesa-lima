@@ -70,6 +70,7 @@ struct {
    _Q(LOCAL_LD_TRANSACTIONS,        "local_load_transactions"                 ),
    _Q(LOCAL_ST,                     "local_store"                             ),
    _Q(LOCAL_ST_TRANSACTIONS,        "local_store_transactions"                ),
+   _Q(NOT_PRED_OFF_INST_EXECUTED,   "not_predicated_off_thread_inst_executed" ),
    _Q(PROF_TRIGGER_0,               "prof_trigger_00"                         ),
    _Q(PROF_TRIGGER_1,               "prof_trigger_01"                         ),
    _Q(PROF_TRIGGER_2,               "prof_trigger_02"                         ),
@@ -84,6 +85,7 @@ struct {
    _Q(SHARED_ST_REPLAY,             "shared_store_replay"                     ),
    _Q(SM_CTA_LAUNCHED,              "sm_cta_launched"                         ),
    _Q(THREADS_LAUNCHED,             "threads_launched"                        ),
+   _Q(TH_INST_EXECUTED,             "thread_inst_executed"                    ),
    _Q(TH_INST_EXECUTED_0,           "thread_inst_executed_0"                  ),
    _Q(TH_INST_EXECUTED_1,           "thread_inst_executed_1"                  ),
    _Q(TH_INST_EXECUTED_2,           "thread_inst_executed_2"                  ),
@@ -193,6 +195,49 @@ static const uint64_t nve4_read_hw_sm_counters_code[] =
    0x9400000100c107c5ULL,
    0x9400000140c01f85ULL,
    0x8000000000001de7ULL
+};
+
+static const uint64_t nvf0_read_hw_sm_counters_code[] =
+{
+   /* Same kernel as GK104 */
+   0x0880808080808080ULL,
+   0x86400000109c0022ULL,
+   0x86400000019c0032ULL,
+   0x86400000021c0002ULL,
+   0x86400000029c0006ULL,
+   0x86400000031c000aULL,
+   0x86400000039c000eULL,
+   0x86400000041c0012ULL,
+   0x08ac1080108c8080ULL,
+   0x86400000049c0016ULL,
+   0x86400000051c001aULL,
+   0x86400000059c001eULL,
+   0xdb201c007f9c201eULL,
+   0x64c03c00001c002aULL,
+   0xc00000020a1c3021ULL,
+   0x64c03c00009c002eULL,
+   0x0810a0808010b810ULL,
+   0xc0000001041c3025ULL,
+   0x180000000020003cULL,
+   0xdb201c007f9c243eULL,
+   0xc1c00000301c2021ULL,
+   0xc1c00000081c2431ULL,
+   0xc1c00000021c2435ULL,
+   0xe0800000069c2026ULL,
+   0x08b010b010b010a0ULL,
+   0xe0800000061c2022ULL,
+   0xe4c03c00051c0032ULL,
+   0xe0840000041c282aULL,
+   0xe4c03c00059c0036ULL,
+   0xe08040007f9c2c2eULL,
+   0xe0840000049c3032ULL,
+   0xfe800000001c2800ULL,
+   0x080000b81080b010ULL,
+   0x64c03c00011c0002ULL,
+   0xe08040007f9c3436ULL,
+   0xfe80000020043010ULL,
+   0xfc800000281c3000ULL,
+   0x18000000001c003cULL,
 };
 
 /* For simplicity, we will allocate as many group slots as we allocate counter
@@ -677,6 +722,121 @@ static const struct nvc0_hw_sm_query_cfg *sm30_hw_sm_queries[] =
    &sm30_shared_st,
    &sm30_shared_st_replay,
    &sm30_sm_cta_launched,
+   &sm30_threads_launched,
+   &sm30_uncached_gld_transactions,
+   &sm30_warps_launched,
+};
+
+/* ==== Compute capability 3.5 (GK110/GK208) ==== */
+static const struct nvc0_hw_sm_query_cfg
+sm35_atom_cas_count =
+{
+   .type         = NVC0_HW_SM_QUERY_ATOM_CAS_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, UNK1A, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_atom_count =
+{
+   .type         = NVC0_HW_SM_QUERY_ATOM_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, UNK1A, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_gred_count =
+{
+   .type         = NVC0_HW_SM_QUERY_GRED_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, UNK1A, 0x00000018),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_not_pred_off_inst_executed =
+{
+   .type         = NVC0_HW_SM_QUERY_NOT_PRED_OFF_INST_EXECUTED,
+   .ctr[0]       = _CA(0x003f, B6, UNK14, 0x29062080),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_shared_ld_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_LD_REPLAY,
+   .ctr[0]       = _CB(0xaaaa, LOGOP, UNK13, 0x00000018),
+   .ctr[1]       = _CB(0x8888, LOGOP, REPLAY, 0x00000151),
+   .num_counters = 2,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_shared_st_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_ST_REPLAY,
+   .ctr[0]       = _CB(0xaaaa, LOGOP, UNK13, 0x00000018),
+   .ctr[1]       = _CB(0x8888, LOGOP, REPLAY, 0x000001d1),
+   .num_counters = 2,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_th_inst_executed =
+{
+   .type         = NVC0_HW_SM_QUERY_TH_INST_EXECUTED,
+   .ctr[0]       = _CA(0x003f, B6, UNK11, 0x29062080),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg *sm35_hw_sm_queries[] =
+{
+   &sm30_active_cycles,
+   &sm30_active_warps,
+   &sm35_atom_cas_count,
+   &sm35_atom_count,
+   &sm30_gld_request,
+   &sm30_gld_mem_div_replay,
+   &sm30_gst_transactions,
+   &sm30_gst_mem_div_replay,
+   &sm35_gred_count,
+   &sm30_gst_request,
+   &sm30_inst_executed,
+   &sm30_inst_issued1,
+   &sm30_inst_issued2,
+   &sm30_l1_gld_hit,
+   &sm30_l1_gld_miss,
+   &sm30_l1_gld_transactions,
+   &sm30_l1_gst_transactions,
+   &sm30_l1_local_ld_hit,
+   &sm30_l1_local_ld_miss,
+   &sm30_l1_local_st_hit,
+   &sm30_l1_local_st_miss,
+   &sm30_l1_shared_ld_transactions,
+   &sm30_l1_shared_st_transactions,
+   &sm30_local_ld,
+   &sm30_local_ld_transactions,
+   &sm30_local_st,
+   &sm30_local_st_transactions,
+   &sm35_not_pred_off_inst_executed,
+   &sm30_prof_trigger_0,
+   &sm30_prof_trigger_1,
+   &sm30_prof_trigger_2,
+   &sm30_prof_trigger_3,
+   &sm30_prof_trigger_4,
+   &sm30_prof_trigger_5,
+   &sm30_prof_trigger_6,
+   &sm30_prof_trigger_7,
+   &sm30_shared_ld,
+   &sm35_shared_ld_replay,
+   &sm30_shared_st,
+   &sm35_shared_st_replay,
+   &sm30_sm_cta_launched,
+   &sm35_th_inst_executed,
    &sm30_threads_launched,
    &sm30_uncached_gld_transactions,
    &sm30_warps_launched,
@@ -1180,6 +1340,8 @@ nvc0_hw_sm_get_queries(struct nvc0_screen *screen)
    struct nouveau_device *dev = screen->base.device;
 
    switch (screen->base.class_3d) {
+   case NVF0_3D_CLASS:
+      return sm35_hw_sm_queries;
    case NVE4_3D_CLASS:
       return sm30_hw_sm_queries;
    default:
@@ -1197,6 +1359,8 @@ nvc0_hw_sm_get_num_queries(struct nvc0_screen *screen)
    struct nouveau_device *dev = screen->base.device;
 
    switch (screen->base.class_3d) {
+   case NVF0_3D_CLASS:
+      return ARRAY_SIZE(sm35_hw_sm_queries);
    case NVE4_3D_CLASS:
       return ARRAY_SIZE(sm30_hw_sm_queries);
    default:
@@ -1378,6 +1542,37 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    return true;
 }
 
+static inline struct nvc0_program *
+nvc0_hw_sm_get_program(struct nvc0_screen *screen)
+{
+   struct nvc0_program *prog;
+
+   prog = CALLOC_STRUCT(nvc0_program);
+   if (!prog)
+      return NULL;
+
+   prog->type = PIPE_SHADER_COMPUTE;
+   prog->translated = true;
+   prog->parm_size = 12;
+
+   if (screen->base.class_3d == NVE4_3D_CLASS ||
+       screen->base.class_3d == NVF0_3D_CLASS) {
+      if (screen->base.class_3d == NVE4_3D_CLASS) {
+         prog->code = (uint32_t *)nve4_read_hw_sm_counters_code;
+         prog->code_size = sizeof(nve4_read_hw_sm_counters_code);
+      } else {
+         prog->code = (uint32_t *)nvf0_read_hw_sm_counters_code;
+         prog->code_size = sizeof(nvf0_read_hw_sm_counters_code);
+      }
+      prog->num_gprs = 14;
+   } else {
+      prog->code = (uint32_t *)nvc0_read_hw_sm_counters_code;
+      prog->code_size = sizeof(nvc0_read_hw_sm_counters_code);
+      prog->num_gprs = 12;
+   }
+   return prog;
+}
+
 static void
 nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 {
@@ -1393,22 +1588,8 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    const uint grid[3] = { screen->mp_count, screen->gpc_count, 1 };
    unsigned c, i;
 
-   if (unlikely(!screen->pm.prog)) {
-      struct nvc0_program *prog = CALLOC_STRUCT(nvc0_program);
-      prog->type = PIPE_SHADER_COMPUTE;
-      prog->translated = true;
-      prog->parm_size = 12;
-      if (is_nve4) {
-         prog->code = (uint32_t *)nve4_read_hw_sm_counters_code;
-         prog->code_size = sizeof(nve4_read_hw_sm_counters_code);
-         prog->num_gprs = 14;
-      } else {
-         prog->code = (uint32_t *)nvc0_read_hw_sm_counters_code;
-         prog->code_size = sizeof(nvc0_read_hw_sm_counters_code);
-         prog->num_gprs = 12;
-      }
-      screen->pm.prog = prog;
-   }
+   if (unlikely(!screen->pm.prog))
+      screen->pm.prog = nvc0_hw_sm_get_program(screen);
 
    /* disable all counting */
    PUSH_SPACE(push, 8);
@@ -1665,7 +1846,7 @@ nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
 
    if (id < count) {
       if (screen->compute) {
-         if (screen->base.class_3d <= NVE4_3D_CLASS) {
+         if (screen->base.class_3d <= NVF0_3D_CLASS) {
             const struct nvc0_hw_sm_query_cfg **queries =
                nvc0_hw_sm_get_queries(screen);
 
