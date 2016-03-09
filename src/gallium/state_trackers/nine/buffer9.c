@@ -118,6 +118,8 @@ NineBuffer9_ctor( struct NineBuffer9 *This,
 void
 NineBuffer9_dtor( struct NineBuffer9 *This )
 {
+    DBG("This=%p\n", This);
+
     if (This->maps) {
         while (This->nmaps) {
             NineBuffer9_Unlock(This);

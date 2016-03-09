@@ -175,6 +175,8 @@ NineSurface9_ctor( struct NineSurface9 *This,
 void
 NineSurface9_dtor( struct NineSurface9 *This )
 {
+    DBG("This=%p\n", This);
+
     if (This->transfer)
         NineSurface9_UnlockRect(This);
 
