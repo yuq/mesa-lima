@@ -1046,13 +1046,6 @@ backend_shader::calculate_cfg()
    cfg = new(mem_ctx) cfg_t(&this->instructions);
 }
 
-void
-backend_shader::invalidate_cfg()
-{
-   ralloc_free(this->cfg);
-   this->cfg = NULL;
-}
-
 /**
  * Sets up the starting offsets for the groups of binding table entries
  * commong to all pipeline stages.
