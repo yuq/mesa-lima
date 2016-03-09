@@ -93,7 +93,7 @@ public:
     INLINE volatile uint64_t GetTail() { return mRingTail; }
     INLINE volatile uint64_t GetHead() { return mRingHead; }
 
-private:
+protected:
     T* mpRingBuffer;
     uint32_t mNumEntries;
 

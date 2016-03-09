@@ -64,13 +64,6 @@ HANDLE SwrCreateContext(
     pContext->dcRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
     pContext->dsRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
 
-    pContext->numSubContexts = pCreateInfo->maxSubContexts;
-    if (pContext->numSubContexts > 1)
-    {
-        pContext->subCtxSave = (DRAW_STATE*)_aligned_malloc(sizeof(DRAW_STATE) * pContext->numSubContexts, 64);
-        memset(pContext->subCtxSave, 0, sizeof(DRAW_STATE) * pContext->numSubContexts);
-    }
-
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
         pContext->dcRing[dc].pArena = new Arena();
@@ -123,6 +116,8 @@ HANDLE SwrCreateContext(
     pCreateInfo->pBucketMgr = &gBucketMgr;
 #endif
 
+    pCreateInfo->contextSaveSize = sizeof(API_STATE);
+
     return (HANDLE)pContext;
 }
 
@@ -145,8 +140,6 @@ void SwrDestroyContext(HANDLE hContext)
     {
         _aligned_free(pContext->pScratch[i]);
     }
-
-    _aligned_free(pContext->subCtxSave);
 
     delete(pContext->pHotTileMgr);
 
@@ -314,38 +307,36 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
     return pContext->pCurDrawContext;
 }
 
-void SWR_API SwrSetActiveSubContext(
-    HANDLE hContext,
-    uint32_t subContextIndex)
-{
-    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
-    if (subContextIndex >= pContext->numSubContexts)
-    {
-        return;
-    }
-
-    if (subContextIndex != pContext->curSubCtxId)
-    {
-        // Save and restore draw state
-        DRAW_CONTEXT* pDC = GetDrawContext(pContext);
-        CopyState(
-            pContext->subCtxSave[pContext->curSubCtxId],
-            *(pDC->pState));
-
-        CopyState(
-            *(pDC->pState),
-            pContext->subCtxSave[subContextIndex]);
-
-        pContext->curSubCtxId = subContextIndex;
-    }
-}
-
 API_STATE* GetDrawState(SWR_CONTEXT *pContext)
 {
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
     SWR_ASSERT(pDC->pState != nullptr);
 
     return &pDC->pState->state;
+}
+
+void SWR_API SwrSaveState(
+    HANDLE hContext,
+    void* pOutputStateBlock,
+    size_t memSize)
+{
+    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    auto pSrc = GetDrawState(pContext);
+    SWR_ASSERT(pOutputStateBlock && memSize >= sizeof(*pSrc));
+
+    memcpy(pOutputStateBlock, pSrc, sizeof(*pSrc));
+}
+
+void SWR_API SwrRestoreState(
+    HANDLE hContext,
+    const void* pStateBlock,
+    size_t memSize)
+{
+    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    auto pDst = GetDrawState(pContext);
+    SWR_ASSERT(pStateBlock && memSize >= sizeof(*pDst));
+
+    memcpy(pDst, pStateBlock, sizeof(*pDst));
 }
 
 void SetupDefaultState(SWR_CONTEXT *pContext)

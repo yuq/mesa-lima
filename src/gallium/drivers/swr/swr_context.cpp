@@ -338,7 +338,6 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
    SWR_CREATECONTEXT_INFO createInfo;
    createInfo.driver = GL;
    createInfo.privateStateSize = sizeof(swr_draw_context);
-   createInfo.maxSubContexts = 0;
    createInfo.pfnLoadTile = swr_LoadHotTile;
    createInfo.pfnStoreTile = swr_StoreHotTile;
    createInfo.pfnClearTile = swr_StoreHotTileClear;

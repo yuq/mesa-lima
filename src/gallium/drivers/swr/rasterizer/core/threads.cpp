@@ -688,9 +688,12 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
             numThreads, KNOB_MAX_NUM_THREADS);
     }
 
+    uint32_t numAPIReservedThreads = 1;
+
+
     if (numThreads == 1)
     {
-        // If only 1 worker thread, try to move it to an available
+        // If only 1 worker threads, try to move it to an available
         // HW thread.  If that fails, use the API thread.
         if (numCoresPerNode < numHWCoresPerNode)
         {
@@ -713,8 +716,15 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
     }
     else
     {
-        // Save a HW thread for the API thread.
-        numThreads--;
+        // Save HW threads for the API if we can
+        if (numThreads > numAPIReservedThreads)
+        {
+            numThreads -= numAPIReservedThreads;
+        }
+        else
+        {
+            numAPIReservedThreads = 0;
+        }
     }
 
     pPool->numThreads = numThreads;
@@ -753,9 +763,9 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
                 auto& core = node.cores[c];
                 for (uint32_t t = 0; t < numHyperThreads; ++t)
                 {
-                    if (c == 0 && n == 0 && t == 0)
+                    if (numAPIReservedThreads)
                     {
-                        // Skip core 0, thread0  on node 0 to reserve for API thread
+                        --numAPIReservedThreads;
                         continue;
                     }
 

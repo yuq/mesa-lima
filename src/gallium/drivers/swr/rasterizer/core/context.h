@@ -449,10 +449,6 @@ struct SWR_CONTEXT
 
     uint32_t curStateId;               // Current index to the next available entry in the DS ring.
 
-    DRAW_STATE*   subCtxSave;          // Save area for inactive contexts.
-    uint32_t      curSubCtxId;         // Current index for active state subcontext.
-    uint32_t      numSubContexts;      // Number of available subcontexts
-
     uint32_t NumWorkerThreads;
 
     THREAD_POOL threadPool; // Thread pool associated with this context

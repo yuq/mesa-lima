@@ -21,6 +21,7 @@
 
 # Python source
 KNOBS = [
+
     ['ENABLE_ASSERT_DIALOGS', {
         'type'      : 'bool',
         'default'   : 'true',

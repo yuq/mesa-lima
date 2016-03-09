@@ -90,9 +90,6 @@ struct SWR_CREATECONTEXT_INFO
     // Use SwrGetPrivateContextState() to access private state.
     uint32_t privateStateSize;
 
-    // Each SWR context can have multiple sets of active state
-    uint32_t maxSubContexts;
-
     // Tile manipulation functions
     PFN_LOAD_TILE pfnLoadTile;
     PFN_STORE_TILE pfnStoreTile;
@@ -101,6 +98,9 @@ struct SWR_CREATECONTEXT_INFO
     // Pointer to rdtsc buckets mgr returned to the caller.
     // Only populated when KNOB_ENABLE_RDTSC is set
     BucketManager* pBucketMgr;
+
+    // Output: size required memory passed to for SwrSaveState / SwrRestoreState
+    size_t  contextSaveSize;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -127,12 +127,24 @@ void SWR_API SwrDestroyContext(
     HANDLE hContext);
 
 //////////////////////////////////////////////////////////////////////////
-/// @brief Set currently active state context
-/// @param subContextIndex - value from 0 to
-///     SWR_CREATECONTEXT_INFO.maxSubContexts.  Defaults to 0.
-void SWR_API SwrSetActiveSubContext(
+/// @brief Saves API state associated with hContext
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param pOutputStateBlock - Memory block to receive API state data
+/// @param memSize - Size of memory pointed to by pOutputStateBlock
+void SWR_API SwrSaveState(
     HANDLE hContext,
-    uint32_t subContextIndex);
+    void* pOutputStateBlock,
+    size_t memSize);
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Restores API state to hContext previously saved with SwrSaveState
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param pStateBlock - Memory block to read API state data from
+/// @param memSize - Size of memory pointed to by pStateBlock
+void SWR_API SwrRestoreState(
+    HANDLE hContext,
+    const void* pStateBlock,
+    size_t memSize);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Sync cmd. Executes the callback func when all rendering up to this sync
