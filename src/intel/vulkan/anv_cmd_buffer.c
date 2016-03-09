@@ -130,6 +130,7 @@ anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
    state->descriptors_dirty = 0;
    state->push_constants_dirty = 0;
    state->pipeline = NULL;
+   state->push_constant_stages = 0;
    state->restart_index = UINT32_MAX;
    state->dynamic = default_dynamic_state;
    state->need_query_wa = true;

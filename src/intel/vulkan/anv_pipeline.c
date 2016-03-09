@@ -940,28 +940,6 @@ anv_compute_urb_partition(struct anv_pipeline *pipeline)
    pipeline->urb.start[MESA_SHADER_TESS_EVAL] = push_constant_chunks;
    pipeline->urb.size[MESA_SHADER_TESS_EVAL] = 1;
    pipeline->urb.entries[MESA_SHADER_TESS_EVAL] = 0;
-
-   const unsigned stages =
-      _mesa_bitcount(pipeline->active_stages & VK_SHADER_STAGE_ALL_GRAPHICS);
-   unsigned size_per_stage = stages ? (push_constant_kb / stages) : 0;
-   unsigned used_kb = 0;
-
-   /* Broadwell+ and Haswell gt3 require that the push constant sizes be in
-    * units of 2KB.  Incidentally, these are the same platforms that have
-    * 32KB worth of push constant space.
-    */
-   if (push_constant_kb == 32)
-      size_per_stage &= ~1u;
-
-   for (int i = MESA_SHADER_VERTEX; i < MESA_SHADER_FRAGMENT; i++) {
-      pipeline->urb.push_size[i] =
-         (pipeline->active_stages & (1 << i)) ? size_per_stage : 0;
-      used_kb += pipeline->urb.push_size[i];
-      assert(used_kb <= push_constant_kb);
-   }
-
-   pipeline->urb.push_size[MESA_SHADER_FRAGMENT] =
-      push_constant_kb - used_kb;
 }
 
 static void

@@ -274,6 +274,72 @@ void genX(CmdPipelineBarrier)(
    }
 }
 
+static void
+cmd_buffer_alloc_push_constants(struct anv_cmd_buffer *cmd_buffer)
+{
+   VkShaderStageFlags stages = cmd_buffer->state.pipeline->active_stages;
+
+   /* In order to avoid thrash, we assume that vertex and fragment stages
+    * always exist.  In the rare case where one is missing *and* the other
+    * uses push concstants, this may be suboptimal.  However, avoiding stalls
+    * seems more important.
+    */
+   stages |= VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT;
+
+   if (stages == cmd_buffer->state.push_constant_stages)
+      return;
+
+#if GEN_GEN >= 8
+   const unsigned push_constant_kb = 32;
+#elif GEN_IS_HASWELL
+   const unsigned push_constant_kb = cmd_buffer->device->info.gt == 3 ? 32 : 16;
+#else
+   const unsigned push_constant_kb = 16;
+#endif
+
+   const unsigned num_stages =
+      _mesa_bitcount(stages & VK_SHADER_STAGE_ALL_GRAPHICS);
+   unsigned size_per_stage = push_constant_kb / num_stages;
+
+   /* Broadwell+ and Haswell gt3 require that the push constant sizes be in
+    * units of 2KB.  Incidentally, these are the same platforms that have
+    * 32KB worth of push constant space.
+    */
+   if (push_constant_kb == 32)
+      size_per_stage &= ~1u;
+
+   uint32_t kb_used = 0;
+   for (int i = MESA_SHADER_VERTEX; i < MESA_SHADER_FRAGMENT; i++) {
+      unsigned push_size = (stages & (1 << i)) ? size_per_stage : 0;
+      anv_batch_emit(&cmd_buffer->batch,
+                     GENX(3DSTATE_PUSH_CONSTANT_ALLOC_VS), alloc) {
+         alloc._3DCommandSubOpcode  = 18 + i;
+         alloc.ConstantBufferOffset = (push_size > 0) ? kb_used : 0;
+         alloc.ConstantBufferSize   = push_size;
+      }
+      kb_used += push_size;
+   }
+
+   anv_batch_emit(&cmd_buffer->batch,
+                  GENX(3DSTATE_PUSH_CONSTANT_ALLOC_PS), alloc) {
+      alloc.ConstantBufferOffset = kb_used;
+      alloc.ConstantBufferSize = push_constant_kb - kb_used;
+   }
+
+   cmd_buffer->state.push_constant_stages = stages;
+
+   /* From the BDW PRM for 3DSTATE_PUSH_CONSTANT_ALLOC_VS:
+    *
+    *    "The 3DSTATE_CONSTANT_VS must be reprogrammed prior to
+    *    the next 3DPRIMITIVE command after programming the
+    *    3DSTATE_PUSH_CONSTANT_ALLOC_VS"
+    *
+    * Since 3DSTATE_PUSH_CONSTANT_ALLOC_VS is programmed as part of
+    * pipeline setup, we need to dirty push constants.
+    */
+   cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
+}
+
 static uint32_t
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -384,16 +450,10 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
 
-      /* From the BDW PRM for 3DSTATE_PUSH_CONSTANT_ALLOC_VS:
-       *
-       *    "The 3DSTATE_CONSTANT_VS must be reprogrammed prior to
-       *    the next 3DPRIMITIVE command after programming the
-       *    3DSTATE_PUSH_CONSTANT_ALLOC_VS"
-       *
-       * Since 3DSTATE_PUSH_CONSTANT_ALLOC_VS is programmed as part of
-       * pipeline setup, we need to dirty push constants.
+      /* If the pipeline changed, we may need to re-allocate push constant
+       * space in the URB.
        */
-      cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
+      cmd_buffer_alloc_push_constants(cmd_buffer);
    }
 
 #if GEN_GEN <= 7
