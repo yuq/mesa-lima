@@ -315,6 +315,9 @@ void
 _mesa_get_format_block_size(mesa_format format, GLuint *bw, GLuint *bh)
 {
    const struct gl_format_info *info = _mesa_get_format_info(format);
+   /* Use _mesa_get_format_block_size_3d() for 3D blocks. */
+   assert(info->BlockDepth == 1);
+
    *bw = info->BlockWidth;
    *bh = info->BlockHeight;
 }
