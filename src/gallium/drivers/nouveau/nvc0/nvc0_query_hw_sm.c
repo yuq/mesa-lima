@@ -219,64 +219,472 @@ struct nvc0_hw_sm_query_cfg
    uint8_t norm[2]; /* normalization num,denom */
 };
 
-#define _Q1A(n, f, m, g, s, nu, dn) { NVC0_HW_SM_QUERY_##n, { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, { nu, dn } }
-#define _Q1B(n, f, m, g, s, nu, dn) { NVC0_HW_SM_QUERY_##n, { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, { nu, dn } }
+#define _CA(f, m, g, s) { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, 0, s }
+#define _CB(f, m, g, s) { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, 0, s }
+#define _Q(n, c) [NVE4_HW_SM_QUERY_##n] = c
+
+/* ==== Compute capability 3.0 (GK104:GK110) ==== */
+static const struct nvc0_hw_sm_query_cfg
+sm30_active_cycles =
+{
+   .type         = NVC0_HW_SM_QUERY_ACTIVE_CYCLES,
+   .ctr[0]       = _CB(0x0001, B6, WARP, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_active_warps =
+{
+   .type         = NVC0_HW_SM_QUERY_ACTIVE_WARPS,
+   .ctr[0]       = _CB(0x003f, B6, WARP, 0x31483104),
+   .num_counters = 1,
+   .norm         = { 2, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_atom_cas_count =
+{
+   .type         = NVC0_HW_SM_QUERY_ATOM_CAS_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x000000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_atom_count =
+{
+   .type         = NVC0_HW_SM_QUERY_ATOM_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_branch =
+{
+   .type         = NVC0_HW_SM_QUERY_BRANCH,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_divergent_branch =
+{
+   .type         = NVC0_HW_SM_QUERY_DIVERGENT_BRANCH,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gld_request =
+{
+   .type         = NVC0_HW_SM_QUERY_GLD_REQUEST,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gld_mem_div_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_GLD_MEM_DIV_REPLAY,
+   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gst_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_GST_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, MEM, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gst_mem_div_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_GST_MEM_DIV_REPLAY,
+   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gred_count =
+{
+   .type         = NVC0_HW_SM_QUERY_GRED_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gst_request =
+{
+   .type         = NVC0_HW_SM_QUERY_GST_REQUEST,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_inst_executed =
+{
+   .type         = NVC0_HW_SM_QUERY_INST_EXECUTED,
+   .ctr[0]       = _CA(0x0003, B6, EXEC, 0x00000398),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_inst_issued1 =
+{
+   .type         = NVC0_HW_SM_QUERY_INST_ISSUED1,
+   .ctr[0]       = _CA(0x0001, B6, ISSUE, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_inst_issued2 =
+{
+   .type         = NVC0_HW_SM_QUERY_INST_ISSUED2,
+   .ctr[0]       = _CA(0x0001, B6, ISSUE, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_gld_hit =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_GLD_HIT,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_gld_miss =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_GLD_MISS,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_gld_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_GLD_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, UNK0F, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_gst_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_GST_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, UNK0F, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_local_ld_hit =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_LOCAL_LD_HIT,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_local_ld_miss =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_LOCAL_LD_MISS,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_local_st_hit =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_LOCAL_ST_HIT,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_local_st_miss =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_LOCAL_ST_MISS,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_shared_ld_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_SHARED_LD_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_shared_st_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_SHARED_ST_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_local_ld =
+{
+   .type         = NVC0_HW_SM_QUERY_LOCAL_LD,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_local_ld_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_LOCAL_LD_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_local_st =
+{
+   .type         = NVC0_HW_SM_QUERY_LOCAL_ST,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_local_st_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_LOCAL_ST_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_0 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_0,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_1 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_1,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_2 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_2,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_3 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_3,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_4 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_4,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_5 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_5,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_6 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_6,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000018),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_7 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_7,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x0000001c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_shared_ld =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_LD,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_shared_ld_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_LD_REPLAY,
+   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_shared_st =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_ST,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_shared_st_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_ST_REPLAY,
+   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_sm_cta_launched =
+{
+   .type         = NVC0_HW_SM_QUERY_SM_CTA_LAUNCHED,
+   .ctr[0]       = _CB(0x0001, B6, WARP, 0x0000001c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_threads_launched =
+{
+   .type         = NVC0_HW_SM_QUERY_THREADS_LAUNCHED,
+   .ctr[0]       = _CA(0x003f, B6, LAUNCH, 0x398a4188),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_uncached_gld_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_UNCACHED_GLD_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, MEM, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_warps_launched =
+{
+   .type         = NVC0_HW_SM_QUERY_WARPS_LAUNCHED,
+   .ctr[0]       = _CA(0x0001, B6, LAUNCH, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
 
 /* NOTES:
  * active_warps: bit 0 alternates btw 0 and 1 for odd nr of warps
  * inst_executed etc.: we only count a single warp scheduler
  */
-static const struct nvc0_hw_sm_query_cfg sm30_hw_sm_queries[] =
+static const struct nvc0_hw_sm_query_cfg *sm30_hw_sm_queries[] =
 {
-   _Q1B(ACTIVE_CYCLES, 0x0001, B6, WARP, 0x00000000, 1, 1),
-   _Q1B(ACTIVE_WARPS,  0x003f, B6, WARP, 0x31483104, 2, 1),
-   _Q1A(ATOM_CAS_COUNT, 0x0001, B6, BRANCH, 0x000000004, 1, 1),
-   _Q1A(ATOM_COUNT, 0x0001, B6, BRANCH, 0x00000000, 1, 1),
-   _Q1A(BRANCH,           0x0001, B6, BRANCH, 0x0000000c, 1, 1),
-   _Q1A(DIVERGENT_BRANCH, 0x0001, B6, BRANCH, 0x00000010, 1, 1),
-   _Q1A(GLD_REQUEST, 0x0001, B6, LDST, 0x00000010, 1, 1),
-   _Q1B(GLD_MEM_DIV_REPLAY, 0x0001, B6, REPLAY, 0x00000010, 1, 1),
-   _Q1B(GST_TRANSACTIONS,          0x0001, B6, MEM, 0x00000004, 1, 1),
-   _Q1B(GST_MEM_DIV_REPLAY, 0x0001, B6, REPLAY, 0x00000014, 1, 1),
-   _Q1A(GRED_COUNT, 0x0001, B6, BRANCH, 0x00000008, 1, 1),
-   _Q1A(GST_REQUEST, 0x0001, B6, LDST, 0x00000014, 1, 1),
-   _Q1A(INST_EXECUTED, 0x0003, B6, EXEC,  0x00000398, 1, 1),
-   _Q1A(INST_ISSUED1,  0x0001, B6, ISSUE, 0x00000004, 1, 1),
-   _Q1A(INST_ISSUED2,  0x0001, B6, ISSUE, 0x00000008, 1, 1),
-   _Q1B(L1_GLD_HIT,  0x0001, B6, L1, 0x00000010, 1, 1),
-   _Q1B(L1_GLD_MISS, 0x0001, B6, L1, 0x00000014, 1, 1),
-   _Q1B(L1_GLD_TRANSACTIONS,  0x0001, B6, UNK0F, 0x00000000, 1, 1),
-   _Q1B(L1_GST_TRANSACTIONS,  0x0001, B6, UNK0F, 0x00000004, 1, 1),
-   _Q1B(L1_LOCAL_LD_HIT,   0x0001, B6, L1, 0x00000000, 1, 1),
-   _Q1B(L1_LOCAL_LD_MISS,  0x0001, B6, L1, 0x00000004, 1, 1),
-   _Q1B(L1_LOCAL_ST_HIT,  0x0001, B6, L1, 0x00000008, 1, 1),
-   _Q1B(L1_LOCAL_ST_MISS, 0x0001, B6, L1, 0x0000000c, 1, 1),
-   _Q1B(L1_SHARED_LD_TRANSACTIONS, 0x0001, B6, TRANSACTION, 0x00000008, 1, 1),
-   _Q1B(L1_SHARED_ST_TRANSACTIONS, 0x0001, B6, TRANSACTION, 0x0000000c, 1, 1),
-   _Q1A(LOCAL_LD,    0x0001, B6, LDST, 0x00000008, 1, 1),
-   _Q1B(LOCAL_LD_TRANSACTIONS, 0x0001, B6, TRANSACTION, 0x00000000, 1, 1),
-   _Q1A(LOCAL_ST,    0x0001, B6, LDST, 0x0000000c, 1, 1),
-   _Q1B(LOCAL_ST_TRANSACTIONS, 0x0001, B6, TRANSACTION, 0x00000004, 1, 1),
-   _Q1A(PROF_TRIGGER_0, 0x0001, B6, USER, 0x00000000, 1, 1),
-   _Q1A(PROF_TRIGGER_1, 0x0001, B6, USER, 0x00000004, 1, 1),
-   _Q1A(PROF_TRIGGER_2, 0x0001, B6, USER, 0x00000008, 1, 1),
-   _Q1A(PROF_TRIGGER_3, 0x0001, B6, USER, 0x0000000c, 1, 1),
-   _Q1A(PROF_TRIGGER_4, 0x0001, B6, USER, 0x00000010, 1, 1),
-   _Q1A(PROF_TRIGGER_5, 0x0001, B6, USER, 0x00000014, 1, 1),
-   _Q1A(PROF_TRIGGER_6, 0x0001, B6, USER, 0x00000018, 1, 1),
-   _Q1A(PROF_TRIGGER_7, 0x0001, B6, USER, 0x0000001c, 1, 1),
-   _Q1A(SHARED_LD,   0x0001, B6, LDST, 0x00000000, 1, 1),
-   _Q1B(SHARED_LD_REPLAY, 0x0001, B6, REPLAY, 0x00000008, 1, 1),
-   _Q1A(SHARED_ST,   0x0001, B6, LDST, 0x00000004, 1, 1),
-   _Q1B(SHARED_ST_REPLAY, 0x0001, B6, REPLAY, 0x0000000c, 1, 1),
-   _Q1B(SM_CTA_LAUNCHED,      0x0001, B6, WARP, 0x0000001c, 1, 1),
-   _Q1A(THREADS_LAUNCHED,  0x003f, B6, LAUNCH, 0x398a4188, 1, 1),
-   _Q1B(UNCACHED_GLD_TRANSACTIONS, 0x0001, B6, MEM, 0x00000000, 1, 1),
-   _Q1A(WARPS_LAUNCHED,    0x0001, B6, LAUNCH, 0x00000004, 1, 1),
+   &sm30_active_cycles,
+   &sm30_active_warps,
+   &sm30_atom_cas_count,
+   &sm30_atom_count,
+   &sm30_branch,
+   &sm30_divergent_branch,
+   &sm30_gld_request,
+   &sm30_gld_mem_div_replay,
+   &sm30_gst_transactions,
+   &sm30_gst_mem_div_replay,
+   &sm30_gred_count,
+   &sm30_gst_request,
+   &sm30_inst_executed,
+   &sm30_inst_issued1,
+   &sm30_inst_issued2,
+   &sm30_l1_gld_hit,
+   &sm30_l1_gld_miss,
+   &sm30_l1_gld_transactions,
+   &sm30_l1_gst_transactions,
+   &sm30_l1_local_ld_hit,
+   &sm30_l1_local_ld_miss,
+   &sm30_l1_local_st_hit,
+   &sm30_l1_local_st_miss,
+   &sm30_l1_shared_ld_transactions,
+   &sm30_l1_shared_st_transactions,
+   &sm30_local_ld,
+   &sm30_local_ld_transactions,
+   &sm30_local_st,
+   &sm30_local_st_transactions,
+   &sm30_prof_trigger_0,
+   &sm30_prof_trigger_1,
+   &sm30_prof_trigger_2,
+   &sm30_prof_trigger_3,
+   &sm30_prof_trigger_4,
+   &sm30_prof_trigger_5,
+   &sm30_prof_trigger_6,
+   &sm30_prof_trigger_7,
+   &sm30_shared_ld,
+   &sm30_shared_ld_replay,
+   &sm30_shared_st,
+   &sm30_shared_st_replay,
+   &sm30_sm_cta_launched,
+   &sm30_threads_launched,
+   &sm30_uncached_gld_transactions,
+   &sm30_warps_launched,
 };
 
-#undef _Q1A
-#undef _Q1B
+#undef _Q
+#undef _CA
+#undef _CB
 
 /* === PERFORMANCE MONITORING COUNTERS for NVC0:NVE4 === */
 /* NOTES:
@@ -771,9 +1179,16 @@ nvc0_hw_sm_get_queries(struct nvc0_screen *screen)
 {
    struct nouveau_device *dev = screen->base.device;
 
-   if (dev->chipset == 0xc0 || dev->chipset == 0xc8)
-      return sm20_hw_sm_queries;
-   return sm21_hw_sm_queries;
+   switch (screen->base.class_3d) {
+   case NVE4_3D_CLASS:
+      return sm30_hw_sm_queries;
+   default:
+      if (dev->chipset == 0xc0 || dev->chipset == 0xc8)
+         return sm20_hw_sm_queries;
+      return sm21_hw_sm_queries;
+   }
+   assert(0);
+   return NULL;
 }
 
 unsigned
@@ -795,26 +1210,18 @@ nvc0_hw_sm_get_num_queries(struct nvc0_screen *screen)
 static const struct nvc0_hw_sm_query_cfg *
 nvc0_hw_sm_query_get_cfg(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 {
+   const struct nvc0_hw_sm_query_cfg **queries;
    struct nvc0_screen *screen = nvc0->screen;
    struct nvc0_query *q = &hq->base;
    unsigned num_queries;
    unsigned i;
 
    num_queries = nvc0_hw_sm_get_num_queries(screen);
+   queries = nvc0_hw_sm_get_queries(screen);
 
-   if (screen->base.class_3d >= NVE4_3D_CLASS) {
-      for (i = 0; i < num_queries; i++) {
-         if (NVC0_HW_SM_QUERY(sm30_hw_sm_queries[i].type) == q->type)
-            return &sm30_hw_sm_queries[i];
-      }
-   } else {
-      const struct nvc0_hw_sm_query_cfg **queries =
-          nvc0_hw_sm_get_queries(screen);
-
-      for (i = 0; i < num_queries; i++) {
-         if (NVC0_HW_SM_QUERY(queries[i]->type) == q->type)
-            return queries[i];
-      }
+   for (i = 0; i < num_queries; i++) {
+      if (NVC0_HW_SM_QUERY(queries[i]->type) == q->type)
+         return queries[i];
    }
    assert(0);
    return NULL;
@@ -1258,15 +1665,7 @@ nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
 
    if (id < count) {
       if (screen->compute) {
-         if (screen->base.class_3d == NVE4_3D_CLASS) {
-            const struct nvc0_hw_sm_query_cfg *q = &sm30_hw_sm_queries[id];
-
-            info->name = nvc0_hw_sm_query_get_name(q->type);
-            info->query_type = NVC0_HW_SM_QUERY(q->type);
-            info->group_id = NVC0_HW_SM_QUERY_GROUP;
-            return 1;
-         } else
-         if (screen->base.class_3d < NVE4_3D_CLASS) {
+         if (screen->base.class_3d <= NVE4_3D_CLASS) {
             const struct nvc0_hw_sm_query_cfg **queries =
                nvc0_hw_sm_get_queries(screen);
 
