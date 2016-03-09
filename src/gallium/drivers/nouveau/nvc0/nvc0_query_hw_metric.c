@@ -172,7 +172,7 @@ static const char *nve4_hw_metric_names[] =
    "metric-shared_replay_overhead",
 };
 
-#define _SM(n) NVE4_HW_SM_QUERY(NVE4_HW_SM_QUERY_ ##n)
+#define _SM(n) NVC0_HW_SM_QUERY(NVC0_HW_SM_QUERY_ ##n)
 #define _M(n, c) [NVE4_HW_METRIC_QUERY_##n] = c
 
 /* ==== Compute capability 3.0 (GK104/GK106/GK107) ==== */
