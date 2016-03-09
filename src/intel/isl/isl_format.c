@@ -36,8 +36,7 @@ isl_format_has_sint_channel(enum isl_format fmt)
           fmtl->channels.a.type == ISL_SINT ||
           fmtl->channels.l.type == ISL_SINT ||
           fmtl->channels.i.type == ISL_SINT ||
-          fmtl->channels.p.type == ISL_SINT ||
-          fmtl->channels.g.type == ISL_SINT;
+          fmtl->channels.p.type == ISL_SINT;
 }
 
 enum isl_format
