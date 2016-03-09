@@ -230,16 +230,10 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
    } else
    if (id == NVC0_HW_METRIC_QUERY_GROUP) {
       if (screen->compute) {
-          if (screen->base.class_3d == NVE4_3D_CLASS) {
+          if (screen->base.class_3d <= NVE4_3D_CLASS) {
             info->name = "Performance metrics";
             info->max_active_queries = 1;
-            info->num_queries = NVE4_HW_METRIC_QUERY_COUNT;
-            return 1;
-         } else
-         if (screen->base.class_3d < NVE4_3D_CLASS) {
-            info->name = "Performance metrics";
-            info->max_active_queries = 1;
-            info->num_queries = NVC0_HW_METRIC_QUERY_COUNT;
+            info->num_queries = nvc0_hw_metric_get_num_queries(screen);
             return 1;
          }
       }
