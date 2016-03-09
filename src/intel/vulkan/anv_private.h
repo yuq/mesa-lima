@@ -691,11 +691,6 @@ struct anv_device {
     pthread_mutex_t                             mutex;
 };
 
-VkResult gen7_init_device_state(struct anv_device *device);
-VkResult gen75_init_device_state(struct anv_device *device);
-VkResult gen8_init_device_state(struct anv_device *device);
-VkResult gen9_init_device_state(struct anv_device *device);
-
 void anv_device_get_cache_uuid(void *uuid);
 
 
@@ -1294,54 +1289,13 @@ anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer);
 void gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer);
 void gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer);
 
-void gen7_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
-void gen75_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
-void gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
-void gen9_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
-
 void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
                                      const VkRenderPassBeginInfo *info);
 
-struct anv_state
-gen7_cmd_buffer_alloc_null_surface_state(struct anv_cmd_buffer *cmd_buffer,
-                                         struct anv_framebuffer *fb);
-struct anv_state
-gen75_cmd_buffer_alloc_null_surface_state(struct anv_cmd_buffer *cmd_buffer,
-                                          struct anv_framebuffer *fb);
-struct anv_state
-gen8_cmd_buffer_alloc_null_surface_state(struct anv_cmd_buffer *cmd_buffer,
-                                         struct anv_framebuffer *fb);
-struct anv_state
-gen9_cmd_buffer_alloc_null_surface_state(struct anv_cmd_buffer *cmd_buffer,
-                                         struct anv_framebuffer *fb);
-
-void gen7_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
-                                   struct anv_subpass *subpass);
-void gen75_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
-                                  struct anv_subpass *subpass);
-void gen8_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
-                                   struct anv_subpass *subpass);
-void gen9_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
-                                   struct anv_subpass *subpass);
 void anv_cmd_buffer_set_subpass(struct anv_cmd_buffer *cmd_buffer,
                                   struct anv_subpass *subpass);
-
-void gen7_flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer);
-void gen75_flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer);
-void gen8_flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer);
-void gen9_flush_pipeline_select_3d(struct anv_cmd_buffer *cmd_buffer);
-
-void gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);
-void gen75_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);
-void gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);
-void gen9_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer);
-
-void gen7_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer);
-void gen75_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer);
-void gen8_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer);
-void gen9_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
@@ -1538,62 +1492,6 @@ anv_graphics_pipeline_create(VkDevice device,
                              const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
 
-VkResult
-gen7_graphics_pipeline_create(VkDevice _device,
-                              struct anv_pipeline_cache *cache,
-                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                              const struct anv_graphics_pipeline_create_info *extra,
-                              const VkAllocationCallbacks *alloc,
-                              VkPipeline *pPipeline);
-
-VkResult
-gen75_graphics_pipeline_create(VkDevice _device,
-                               struct anv_pipeline_cache *cache,
-                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                               const struct anv_graphics_pipeline_create_info *extra,
-                               const VkAllocationCallbacks *alloc,
-                               VkPipeline *pPipeline);
-
-VkResult
-gen8_graphics_pipeline_create(VkDevice _device,
-                              struct anv_pipeline_cache *cache,
-                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                              const struct anv_graphics_pipeline_create_info *extra,
-                              const VkAllocationCallbacks *alloc,
-                              VkPipeline *pPipeline);
-VkResult
-gen9_graphics_pipeline_create(VkDevice _device,
-                              struct anv_pipeline_cache *cache,
-                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                              const struct anv_graphics_pipeline_create_info *extra,
-                              const VkAllocationCallbacks *alloc,
-                              VkPipeline *pPipeline);
-VkResult
-gen7_compute_pipeline_create(VkDevice _device,
-                             struct anv_pipeline_cache *cache,
-                             const VkComputePipelineCreateInfo *pCreateInfo,
-                             const VkAllocationCallbacks *alloc,
-                             VkPipeline *pPipeline);
-VkResult
-gen75_compute_pipeline_create(VkDevice _device,
-                              struct anv_pipeline_cache *cache,
-                              const VkComputePipelineCreateInfo *pCreateInfo,
-                              const VkAllocationCallbacks *alloc,
-                              VkPipeline *pPipeline);
-
-VkResult
-gen8_compute_pipeline_create(VkDevice _device,
-                             struct anv_pipeline_cache *cache,
-                             const VkComputePipelineCreateInfo *pCreateInfo,
-                             const VkAllocationCallbacks *alloc,
-                             VkPipeline *pPipeline);
-VkResult
-gen9_compute_pipeline_create(VkDevice _device,
-                             struct anv_pipeline_cache *cache,
-                             const VkComputePipelineCreateInfo *pCreateInfo,
-                             const VkAllocationCallbacks *alloc,
-                             VkPipeline *pPipeline);
-
 struct anv_format_swizzle {
    unsigned r:2;
    unsigned g:2;
@@ -1747,32 +1645,6 @@ void anv_image_view_init(struct anv_image_view *view,
                          uint32_t offset,
                          VkImageUsageFlags usage_mask);
 
-void
-anv_fill_image_surface_state(struct anv_device *device, struct anv_state state,
-                             struct anv_image_view *iview,
-                             const VkImageViewCreateInfo *pCreateInfo,
-                             VkImageUsageFlagBits usage);
-void
-gen7_fill_image_surface_state(struct anv_device *device, void *state_map,
-                              struct anv_image_view *iview,
-                              const VkImageViewCreateInfo *pCreateInfo,
-                              VkImageUsageFlagBits usage);
-void
-gen75_fill_image_surface_state(struct anv_device *device, void *state_map,
-                               struct anv_image_view *iview,
-                               const VkImageViewCreateInfo *pCreateInfo,
-                               VkImageUsageFlagBits usage);
-void
-gen8_fill_image_surface_state(struct anv_device *device, void *state_map,
-                              struct anv_image_view *iview,
-                              const VkImageViewCreateInfo *pCreateInfo,
-                              VkImageUsageFlagBits usage);
-void
-gen9_fill_image_surface_state(struct anv_device *device, void *state_map,
-                              struct anv_image_view *iview,
-                              const VkImageViewCreateInfo *pCreateInfo,
-                              VkImageUsageFlagBits usage);
-
 struct anv_buffer_view {
    enum isl_format format; /**< VkBufferViewCreateInfo::format */
    struct anv_bo *bo;
@@ -1793,19 +1665,6 @@ void anv_fill_buffer_surface_state(struct anv_device *device,
                                    enum isl_format format,
                                    uint32_t offset, uint32_t range,
                                    uint32_t stride);
-
-void gen7_fill_buffer_surface_state(void *state, enum isl_format format,
-                                    uint32_t offset, uint32_t range,
-                                    uint32_t stride);
-void gen75_fill_buffer_surface_state(void *state, enum isl_format format,
-                                     uint32_t offset, uint32_t range,
-                                     uint32_t stride);
-void gen8_fill_buffer_surface_state(void *state, enum isl_format format,
-                                    uint32_t offset, uint32_t range,
-                                    uint32_t stride);
-void gen9_fill_buffer_surface_state(void *state, enum isl_format format,
-                                    uint32_t offset, uint32_t range,
-                                    uint32_t stride);
 
 void anv_image_view_fill_image_param(struct anv_device *device,
                                      struct anv_image_view *view,
@@ -1948,6 +1807,24 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
 ANV_DEFINE_STRUCT_CASTS(anv_common, VkMemoryBarrier)
 ANV_DEFINE_STRUCT_CASTS(anv_common, VkBufferMemoryBarrier)
 ANV_DEFINE_STRUCT_CASTS(anv_common, VkImageMemoryBarrier)
+
+/* Gen-specific function declarations */
+#ifdef genX
+#  include "anv_genX.h"
+#else
+#  define genX(x) gen7_##x
+#  include "anv_genX.h"
+#  undef genX
+#  define genX(x) gen75_##x
+#  include "anv_genX.h"
+#  undef genX
+#  define genX(x) gen8_##x
+#  include "anv_genX.h"
+#  undef genX
+#  define genX(x) gen9_##x
+#  include "anv_genX.h"
+#  undef genX
+#endif
 
 #ifdef __cplusplus
 }
