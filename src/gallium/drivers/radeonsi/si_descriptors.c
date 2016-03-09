@@ -224,6 +224,12 @@ static void si_set_sampler_view(struct si_context *sctx,
 	views->desc.list_dirty = true;
 }
 
+static bool is_compressed_colortex(struct r600_texture *rtex)
+{
+	return rtex->cmask.size || rtex->fmask.size ||
+	       (rtex->dcc_offset && rtex->dirty_level_mask);
+}
+
 static void si_set_sampler_views(struct pipe_context *ctx,
 				 unsigned shader, unsigned start,
                                  unsigned count,
@@ -257,8 +263,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 			} else {
 				samplers->depth_texture_mask &= ~(1 << slot);
 			}
-			if (rtex->cmask.size || rtex->fmask.size ||
-			    (rtex->dcc_offset && rtex->dirty_level_mask)) {
+			if (is_compressed_colortex(rtex)) {
 				samplers->compressed_colortex_mask |= 1 << slot;
 			} else {
 				samplers->compressed_colortex_mask &= ~(1 << slot);
@@ -266,6 +271,27 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		} else {
 			samplers->depth_texture_mask &= ~(1 << slot);
 			samplers->compressed_colortex_mask &= ~(1 << slot);
+		}
+	}
+}
+
+static void
+si_samplers_update_compressed_colortex_mask(struct si_textures_info *samplers)
+{
+	uint64_t mask = samplers->views.desc.enabled_mask;
+
+	while (mask) {
+		int i = u_bit_scan64(&mask);
+		struct pipe_resource *res = samplers->views.views[i]->texture;
+
+		if (res && res->target != PIPE_BUFFER) {
+			struct r600_texture *rtex = (struct r600_texture *)res;
+
+			if (is_compressed_colortex(rtex)) {
+				samplers->compressed_colortex_mask |= 1 << i;
+			} else {
+				samplers->compressed_colortex_mask &= ~(1 << i);
+			}
 		}
 	}
 }
@@ -760,6 +786,19 @@ static void si_desc_reset_buffer_offset(struct pipe_context *ctx,
 	desc[0] = va;
 	desc[1] = (desc[1] & C_008F04_BASE_ADDRESS_HI) |
 		  S_008F04_BASE_ADDRESS_HI(va >> 32);
+}
+
+/* TEXTURE METADATA ENABLE/DISABLE */
+
+/* CMASK can be enabled (for fast clear) and disabled (for texture export)
+ * while the texture is bound, possibly by a different context. In that case,
+ * call this function to update compressed_colortex_masks.
+ */
+void si_update_compressed_colortex_masks(struct si_context *sctx)
+{
+	for (int i = 0; i < SI_NUM_SHADERS; ++i) {
+		si_samplers_update_compressed_colortex_mask(&sctx->samplers[i]);
+	}
 }
 
 /* BUFFER DISCARD/INVALIDATION */

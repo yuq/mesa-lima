@@ -352,8 +352,17 @@ si_decompress_color_textures(struct si_context *sctx,
 
 void si_decompress_textures(struct si_context *sctx)
 {
+	unsigned compressed_colortex_counter;
+
 	if (sctx->blitter->running)
 		return;
+
+	/* Update the compressed_colortex_mask if necessary. */
+	compressed_colortex_counter = p_atomic_read(&sctx->screen->b.compressed_colortex_counter);
+	if (compressed_colortex_counter != sctx->b.last_compressed_colortex_counter) {
+		sctx->b.last_compressed_colortex_counter = compressed_colortex_counter;
+		si_update_compressed_colortex_masks(sctx);
+	}
 
 	/* Flush depth textures which need to be flushed. */
 	for (int i = 0; i < SI_NUM_SHADERS; i++) {
