@@ -525,6 +525,7 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_DRCP:
    case TGSI_OPCODE_DSQRT:
    case TGSI_OPCODE_DMAD:
+   case TGSI_OPCODE_DFMA:
    case TGSI_OPCODE_DFRAC:
    case TGSI_OPCODE_DRSQ:
    case TGSI_OPCODE_DTRUNC:
@@ -624,6 +625,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(SLT, SET);
    NV50_IR_OPCODE_CASE(SGE, SET);
    NV50_IR_OPCODE_CASE(MAD, MAD);
+   NV50_IR_OPCODE_CASE(FMA, FMA);
    NV50_IR_OPCODE_CASE(SUB, SUB);
 
    NV50_IR_OPCODE_CASE(FLR, FLOOR);
@@ -723,6 +725,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(DRCP, RCP);
    NV50_IR_OPCODE_CASE(DSQRT, SQRT);
    NV50_IR_OPCODE_CASE(DMAD, MAD);
+   NV50_IR_OPCODE_CASE(DFMA, FMA);
    NV50_IR_OPCODE_CASE(D2I, CVT);
    NV50_IR_OPCODE_CASE(D2U, CVT);
    NV50_IR_OPCODE_CASE(I2D, CVT);
@@ -2672,6 +2675,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    case TGSI_OPCODE_MAD:
    case TGSI_OPCODE_UMAD:
    case TGSI_OPCODE_SAD:
+   case TGSI_OPCODE_FMA:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
          src0 = fetchSrc(0, c);
          src1 = fetchSrc(1, c);
@@ -3395,6 +3399,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       }
       break;
    case TGSI_OPCODE_DMAD:
+   case TGSI_OPCODE_DFMA:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
          src0 = getSSA(8);
          src1 = getSSA(8);
