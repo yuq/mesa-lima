@@ -663,6 +663,10 @@ _mesa_get_format_base_format(uint32_t format);
 extern void
 _mesa_get_format_block_size(mesa_format format, GLuint *bw, GLuint *bh);
 
+extern void
+_mesa_get_format_block_size_3d(mesa_format format, GLuint *bw,
+                               GLuint *bh, GLuint *bd);
+
 extern mesa_array_format
 _mesa_array_format_flip_channels(mesa_array_format format);
 

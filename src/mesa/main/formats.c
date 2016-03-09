@@ -321,6 +321,27 @@ _mesa_get_format_block_size(mesa_format format, GLuint *bw, GLuint *bh)
 
 
 /**
+ * Return the block size (in pixels) for the given format. Normally
+ * the block size is 1x1x1. But compressed formats will have block
+ * sizes of 4x4x4, 3x3x3 pixels, etc.
+ * \param bw  returns block width in pixels
+ * \param bh  returns block height in pixels
+ * \param bd  returns block depth in pixels
+ */
+void
+_mesa_get_format_block_size_3d(mesa_format format,
+                               GLuint *bw,
+                               GLuint *bh,
+                               GLuint *bd)
+{
+   const struct gl_format_info *info = _mesa_get_format_info(format);
+   *bw = info->BlockWidth;
+   *bh = info->BlockHeight;
+   *bd = info->BlockDepth;
+}
+
+
+/**
  * Returns the an array of four numbers representing the transformation
  * from the RGBA or SZ colorspace to the given format.  For array formats,
  * the i'th RGBA component is given by:
