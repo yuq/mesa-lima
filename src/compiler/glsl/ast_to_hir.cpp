@@ -819,7 +819,7 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
     * if the expression indicating the vertex number is not the identifier
     * `gl_InvocationID`.
     */
-   if (state->stage == MESA_SHADER_TESS_CTRL) {
+   if (state->stage == MESA_SHADER_TESS_CTRL && !lhs->type->is_error()) {
       ir_variable *var = lhs->variable_referenced();
       if (var->data.mode == ir_var_shader_out && !var->data.patch) {
          ir_rvalue *index = find_innermost_array_index(lhs);
