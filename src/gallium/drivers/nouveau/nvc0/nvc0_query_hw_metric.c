@@ -300,6 +300,20 @@ static const struct nvc0_hw_metric_query_cfg *sm30_hw_metric_queries[] =
    &sm30_shared_replay_overhead,
 };
 
+/* ==== Compute capability 3.5 (GK110) ==== */
+static const struct nvc0_hw_metric_query_cfg *sm35_hw_metric_queries[] =
+{
+   &sm30_achieved_occupancy,
+   &sm30_inst_issued,
+   &sm30_inst_per_wrap,
+   &sm30_inst_replay_overhead,
+   &sm30_issued_ipc,
+   &sm30_inst_issued,
+   &sm30_issue_slot_utilization,
+   &sm30_ipc,
+   &sm30_shared_replay_overhead,
+};
+
 #undef _SM
 
 static inline const struct nvc0_hw_metric_query_cfg **
@@ -308,6 +322,8 @@ nvc0_hw_metric_get_queries(struct nvc0_screen *screen)
    struct nouveau_device *dev = screen->base.device;
 
    switch (screen->base.class_3d) {
+   case NVF0_3D_CLASS:
+      return sm35_hw_metric_queries;
    case NVE4_3D_CLASS:
       return sm30_hw_metric_queries;
    default:
@@ -325,6 +341,8 @@ nvc0_hw_metric_get_num_queries(struct nvc0_screen *screen)
    struct nouveau_device *dev = screen->base.device;
 
    switch (screen->base.class_3d) {
+   case NVF0_3D_CLASS:
+      return ARRAY_SIZE(sm35_hw_metric_queries);
    case NVE4_3D_CLASS:
       return ARRAY_SIZE(sm30_hw_metric_queries);
    default:
@@ -558,6 +576,7 @@ nvc0_hw_metric_get_query_result(struct nvc0_context *nvc0,
    }
 
    switch (screen->base.class_3d) {
+   case NVF0_3D_CLASS:
    case NVE4_3D_CLASS:
       value = sm30_hw_metric_calc_result(hq, res64);
       break;
@@ -629,7 +648,7 @@ nvc0_hw_metric_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
 
    if (id < count) {
       if (screen->compute) {
-         if (screen->base.class_3d <= NVE4_3D_CLASS) {
+         if (screen->base.class_3d <= NVF0_3D_CLASS) {
             const struct nvc0_hw_metric_query_cfg **queries =
                nvc0_hw_metric_get_queries(screen);
 
