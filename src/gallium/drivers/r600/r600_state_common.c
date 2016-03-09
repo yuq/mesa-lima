@@ -693,6 +693,26 @@ static void r600_set_sampler_views(struct pipe_context *pipe, unsigned shader,
 	}
 }
 
+static void r600_update_compressed_colortex_mask(struct r600_samplerview_state *views)
+{
+	uint32_t mask = views->enabled_mask;
+
+	while (mask) {
+		unsigned i = u_bit_scan(&mask);
+		struct pipe_resource *res = views->views[i]->base.texture;
+
+		if (res && res->target != PIPE_BUFFER) {
+			struct r600_texture *rtex = (struct r600_texture *)res;
+
+			if (rtex->cmask.size) {
+				views->compressed_colortex_mask |= 1 << i;
+			} else {
+				views->compressed_colortex_mask &= ~(1 << i);
+			}
+		}
+	}
+}
+
 static void r600_set_viewport_states(struct pipe_context *ctx,
                                      unsigned start_slot,
                                      unsigned num_viewports,
@@ -1457,6 +1477,16 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 
 	if (!rctx->blitter->running) {
 		unsigned i;
+		unsigned counter;
+
+		counter = p_atomic_read(&rctx->screen->b.compressed_colortex_counter);
+		if (counter != rctx->b.last_compressed_colortex_counter) {
+			rctx->b.last_compressed_colortex_counter = counter;
+
+			for (i = 0; i < PIPE_SHADER_TYPES; ++i) {
+				r600_update_compressed_colortex_mask(&rctx->samplers[i].views);
+			}
+		}
 
 		/* Decompress textures if needed. */
 		for (i = 0; i < PIPE_SHADER_TYPES; i++) {
