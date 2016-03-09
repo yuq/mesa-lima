@@ -22,14 +22,6 @@
 # Python source
 KNOBS = [
 
-    ['ENABLE_ASSERT_DIALOGS', {
-        'type'      : 'bool',
-        'default'   : 'true',
-        'desc'      : ['Use dialogs when asserts fire.',
-                       'Asserts are only enabled in debug builds'],
-        'category'  : 'debug',
-    }],
-
     ['SINGLE_THREADED', {
         'type'      : 'bool',
         'default'   : 'false',
