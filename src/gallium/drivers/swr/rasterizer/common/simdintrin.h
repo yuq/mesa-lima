@@ -139,6 +139,117 @@ __m256 _simdemu_permute_ps(__m256 a, __m256i b)
     return result;
 }
 
+INLINE
+__m256i _simdemu_srlv_epi32(__m256i vA, __m256i vCount)
+{
+    int32_t aHi, aLow, countHi, countLow;
+    __m128i vAHi = _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(vA), 1));
+    __m128i vALow = _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(vA), 0));
+    __m128i vCountHi = _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(vCount), 1));
+    __m128i vCountLow = _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(vCount), 0));
+
+    aHi = _mm_extract_epi32(vAHi, 0);
+    countHi = _mm_extract_epi32(vCountHi, 0);
+    aHi >>= countHi;
+    vAHi = _mm_insert_epi32(vAHi, aHi, 0);
+
+    aLow = _mm_extract_epi32(vALow, 0);
+    countLow = _mm_extract_epi32(vCountLow, 0);
+    aLow >>= countLow;
+    vALow = _mm_insert_epi32(vALow, aLow, 0);
+
+    aHi = _mm_extract_epi32(vAHi, 1);
+    countHi = _mm_extract_epi32(vCountHi, 1);
+    aHi >>= countHi;
+    vAHi = _mm_insert_epi32(vAHi, aHi, 1);
+
+    aLow = _mm_extract_epi32(vALow, 1);
+    countLow = _mm_extract_epi32(vCountLow, 1);
+    aLow >>= countLow;
+    vALow = _mm_insert_epi32(vALow, aLow, 1);
+
+    aHi = _mm_extract_epi32(vAHi, 2);
+    countHi = _mm_extract_epi32(vCountHi, 2);
+    aHi >>= countHi;
+    vAHi = _mm_insert_epi32(vAHi, aHi, 2);
+
+    aLow = _mm_extract_epi32(vALow, 2);
+    countLow = _mm_extract_epi32(vCountLow, 2);
+    aLow >>= countLow;
+    vALow = _mm_insert_epi32(vALow, aLow, 2);
+
+    aHi = _mm_extract_epi32(vAHi, 3);
+    countHi = _mm_extract_epi32(vCountHi, 3);
+    aHi >>= countHi;
+    vAHi = _mm_insert_epi32(vAHi, aHi, 3);
+
+    aLow = _mm_extract_epi32(vALow, 3);
+    countLow = _mm_extract_epi32(vCountLow, 3);
+    aLow >>= countLow;
+    vALow = _mm_insert_epi32(vALow, aLow, 3);
+
+    __m256i ret = _mm256_set1_epi32(0);
+    ret = _mm256_insertf128_si256(ret, vAHi, 1);
+    ret = _mm256_insertf128_si256(ret, vALow, 0);
+    return ret;
+}
+
+
+INLINE
+__m256i _simdemu_sllv_epi32(__m256i vA, __m256i vCount)
+{
+    int32_t aHi, aLow, countHi, countLow;
+    __m128i vAHi = _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(vA), 1));
+    __m128i vALow = _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(vA), 0));
+    __m128i vCountHi = _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(vCount), 1));
+    __m128i vCountLow = _mm_castps_si128(_mm256_extractf128_ps(_mm256_castsi256_ps(vCount), 0));
+
+    aHi = _mm_extract_epi32(vAHi, 0);
+    countHi = _mm_extract_epi32(vCountHi, 0);
+    aHi <<= countHi;
+    vAHi = _mm_insert_epi32(vAHi, aHi, 0);
+
+    aLow = _mm_extract_epi32(vALow, 0);
+    countLow = _mm_extract_epi32(vCountLow, 0);
+    aLow <<= countLow;
+    vALow = _mm_insert_epi32(vALow, aLow, 0);
+
+    aHi = _mm_extract_epi32(vAHi, 1);
+    countHi = _mm_extract_epi32(vCountHi, 1);
+    aHi <<= countHi;
+    vAHi = _mm_insert_epi32(vAHi, aHi, 1);
+
+    aLow = _mm_extract_epi32(vALow, 1);
+    countLow = _mm_extract_epi32(vCountLow, 1);
+    aLow <<= countLow;
+    vALow = _mm_insert_epi32(vALow, aLow, 1);
+
+    aHi = _mm_extract_epi32(vAHi, 2);
+    countHi = _mm_extract_epi32(vCountHi, 2);
+    aHi <<= countHi;
+    vAHi = _mm_insert_epi32(vAHi, aHi, 2);
+
+    aLow = _mm_extract_epi32(vALow, 2);
+    countLow = _mm_extract_epi32(vCountLow, 2);
+    aLow <<= countLow;
+    vALow = _mm_insert_epi32(vALow, aLow, 2);
+
+    aHi = _mm_extract_epi32(vAHi, 3);
+    countHi = _mm_extract_epi32(vCountHi, 3);
+    aHi <<= countHi;
+    vAHi = _mm_insert_epi32(vAHi, aHi, 3);
+
+    aLow = _mm_extract_epi32(vALow, 3);
+    countLow = _mm_extract_epi32(vCountLow, 3);
+    aLow <<= countLow;
+    vALow = _mm_insert_epi32(vALow, aLow, 3);
+
+    __m256i ret = _mm256_set1_epi32(0);
+    ret = _mm256_insertf128_si256(ret, vAHi, 1);
+    ret = _mm256_insertf128_si256(ret, vALow, 0);
+    return ret;
+}
+
 #define _simd_mul_epi32 _simdemu_mul_epi32
 #define _simd_mullo_epi32 _simdemu_mullo_epi32
 #define _simd_sub_epi32 _simdemu_sub_epi32
@@ -166,6 +277,8 @@ __m256 _simdemu_permute_ps(__m256 a, __m256i b)
 #define _simd_cmpeq_epi16 _simdemu_cmpeq_epi16
 #define _simd_movemask_epi8 _simdemu_movemask_epi8
 #define _simd_permute_ps _simdemu_permute_ps
+#define _simd_srlv_epi32 _simdemu_srlv_epi32
+#define _simd_sllv_epi32 _simdemu_sllv_epi32
 
 SIMD_EMU_EPI(_simdemu_mul_epi32, _mm_mul_epi32)
 SIMD_EMU_EPI(_simdemu_mullo_epi32, _mm_mullo_epi32)
@@ -334,6 +447,8 @@ int _simdemu_movemask_epi8(__m256i a)
 #define _simd_cmpeq_epi16  _mm256_cmpeq_epi16
 #define _simd_movemask_epi8 _mm256_movemask_epi8
 #define _simd_permute_ps _mm256_permutevar8x32_ps
+#define _simd_srlv_epi32 _mm256_srlv_epi32
+#define _simd_sllv_epi32 _mm256_sllv_epi32
 #endif
 
 #define _simd_shuffleps_epi32(vA, vB, imm) _mm256_castps_si256(_mm256_shuffle_ps(_mm256_castsi256_ps(vA), _mm256_castsi256_ps(vB), imm))
