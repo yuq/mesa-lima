@@ -413,6 +413,10 @@
     <field name="Reserved: MBZ" start="222" end="223" type="uint"/>
     <field name="X Offset for UV Plane" start="208" end="221" type="uint"/>
     <field name="Y Offset for UV Plane" start="192" end="205" type="uint"/>
+    <field name="Red Clear Color" start="255" end="255" type="uint" />
+    <field name="Green Clear Color" start="254" end="254" type="uint" />
+    <field name="Blue Clear Color" start="253" end="253" type="uint" />
+    <field name="Alpha Clear Color" start="252" end="252" type="uint" />
     <field name="Shader Channel Select Red" start="249" end="251" type="uint">
       <value name="SCS_ZERO" value="0"/>
       <value name="SCS_ONE" value="1"/>
