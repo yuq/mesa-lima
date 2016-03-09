@@ -4547,3 +4547,41 @@ shuffle_64bit_data_for_32bit_write(const fs_builder &bld,
       bld.MOV(offset(dst, bld, 2 * i + 1), subscript(component_i, dst.type, 1));
    }
 }
+
+fs_reg
+setup_imm_df(const fs_builder &bld, double v)
+{
+   const struct brw_device_info *devinfo = bld.shader->devinfo;
+   assert(devinfo->gen >= 7);
+
+   if (devinfo->gen >= 8)
+      return brw_imm_df(v);
+
+   /* gen7 does not support DF immediates, so we generate a 64-bit constant by
+    * writing the low 32-bit of the constant to suboffset 0 of a VGRF and
+    * the high 32-bit to suboffset 4 and then applying a stride of 0.
+    *
+    * Alternatively, we could also produce a normal VGRF (without stride 0)
+    * by writing to all the channels in the VGRF, however, that would hit the
+    * gen7 bug where we have to split writes that span more than 1 register
+    * into instructions with a width of 4 (otherwise the write to the second
+    * register written runs into an execmask hardware bug) which isn't very
+    * nice.
+    */
+   union {
+      double d;
+      struct {
+         uint32_t i1;
+         uint32_t i2;
+      };
+   } di;
+
+   di.d = v;
+
+   const fs_builder ubld = bld.exec_all().group(1, 0);
+   const fs_reg tmp = ubld.vgrf(BRW_REGISTER_TYPE_UD, 2);
+   ubld.MOV(tmp, brw_imm_ud(di.i1));
+   ubld.MOV(horiz_offset(tmp, 1), brw_imm_ud(di.i2));
+
+   return component(retype(tmp, BRW_REGISTER_TYPE_DF), 0);
+}
