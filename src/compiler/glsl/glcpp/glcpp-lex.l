@@ -320,6 +320,9 @@ HEXADECIMAL_INTEGER	0[xX][0-9a-fA-F]+[uU]?
 
 <HASH>{NEWLINE} {
 	BEGIN INITIAL;
+	yyextra->space_tokens = 0;
+	yylineno++;
+	yycolumn = 0;
 	RETURN_TOKEN_NEVER_SKIP (NEWLINE);
 }
 
