@@ -26,6 +26,20 @@
 #include "isl.h"
 
 bool
+isl_format_has_uint_channel(enum isl_format fmt)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(fmt);
+
+   return fmtl->channels.r.type == ISL_UINT ||
+          fmtl->channels.g.type == ISL_UINT ||
+          fmtl->channels.b.type == ISL_UINT ||
+          fmtl->channels.a.type == ISL_UINT ||
+          fmtl->channels.l.type == ISL_UINT ||
+          fmtl->channels.i.type == ISL_UINT ||
+          fmtl->channels.p.type == ISL_UINT;
+}
+
+bool
 isl_format_has_sint_channel(enum isl_format fmt)
 {
    const struct isl_format_layout *fmtl = isl_format_get_layout(fmt);

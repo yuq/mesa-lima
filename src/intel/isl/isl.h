@@ -826,7 +826,17 @@ isl_format_get_layout(enum isl_format fmt)
 }
 
 bool
+isl_format_has_uint_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+
+bool
 isl_format_has_sint_channel(enum isl_format fmt) ATTRIBUTE_CONST;
+
+static inline bool
+isl_format_has_int_channel(enum isl_format fmt)
+{
+   return isl_format_has_uint_channel(fmt) ||
+          isl_format_has_sint_channel(fmt);
+}
 
 static inline bool
 isl_format_is_compressed(enum isl_format fmt)
