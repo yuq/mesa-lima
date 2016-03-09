@@ -1109,6 +1109,44 @@ vec4_visitor::emit_conversion_to_double(dst_reg dst, src_reg src,
    inst->saturate = saturate;
 }
 
+src_reg
+vec4_visitor::setup_imm_df(double v)
+{
+   assert(devinfo->gen >= 7);
+
+   if (devinfo->gen >= 8)
+      return brw_imm_df(v);
+
+   /* gen7 does not support DF immediates */
+   union {
+      double d;
+      struct {
+         uint32_t i1;
+         uint32_t i2;
+      };
+   } di;
+
+   di.d = v;
+
+   /* Write the low 32-bit of the constant to the X:UD channel and the
+    * high 32-bit to the Y:UD channel to build the constant in a VGRF.
+    * We have to do this twice (offset 0 and offset 1), since a DF VGRF takes
+    * two SIMD8 registers in SIMD4x2 execution. Finally, return a swizzle
+    * XXXX so any access to the VGRF only reads the constant data in these
+    * channels.
+    */
+   const dst_reg tmp =
+      retype(dst_reg(VGRF, alloc.allocate(2)), BRW_REGISTER_TYPE_UD);
+   for (int n = 0; n < 2; n++) {
+      emit(MOV(writemask(offset(tmp, 8, n), WRITEMASK_X), brw_imm_ud(di.i1)))
+         ->force_writemask_all = true;
+      emit(MOV(writemask(offset(tmp, 8, n), WRITEMASK_Y), brw_imm_ud(di.i2)))
+         ->force_writemask_all = true;
+   }
+
+   return swizzle(src_reg(retype(tmp, BRW_REGISTER_TYPE_DF)), BRW_SWIZZLE_XXXX);
+}
+
 void
 vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 {
