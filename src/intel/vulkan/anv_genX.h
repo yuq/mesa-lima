@@ -42,6 +42,7 @@ void genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
 void genX(flush_pipeline_select_3d)(struct anv_cmd_buffer *cmd_buffer);
 
 void genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer);
+void genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer);
 
 void genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer);
 

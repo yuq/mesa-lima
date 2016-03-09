@@ -462,6 +462,8 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
+   cmd_buffer->state.vb_dirty &= ~vb_emit;
+
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_PIPELINE) {
       /* If somebody compiled a pipeline after starting a command buffer the
        * scratch bo may have grown since we started this cmd buffer (and
@@ -520,6 +522,14 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_SCISSOR)
       gen7_cmd_buffer_emit_scissor(cmd_buffer);
+
+   genX(cmd_buffer_flush_dynamic_state)(cmd_buffer);
+}
+
+void
+genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                   ANV_CMD_DIRTY_RENDER_TARGETS |
@@ -622,7 +632,6 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
                      .BufferEndingAddress = { buffer->bo, buffer->offset + buffer->size });
    }
 
-   cmd_buffer->state.vb_dirty &= ~vb_emit;
    cmd_buffer->state.dirty = 0;
 }
 
