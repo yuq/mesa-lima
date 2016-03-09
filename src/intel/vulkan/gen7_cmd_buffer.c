@@ -32,44 +32,6 @@
 #include "genxml/gen_macros.h"
 #include "genxml/genX_pack.h"
 
-static uint32_t
-cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
-{
-   static const uint32_t push_constant_opcodes[] = {
-      [MESA_SHADER_VERTEX]                      = 21,
-      [MESA_SHADER_TESS_CTRL]                   = 25, /* HS */
-      [MESA_SHADER_TESS_EVAL]                   = 26, /* DS */
-      [MESA_SHADER_GEOMETRY]                    = 22,
-      [MESA_SHADER_FRAGMENT]                    = 23,
-      [MESA_SHADER_COMPUTE]                     = 0,
-   };
-
-   VkShaderStageFlags flushed = 0;
-
-   anv_foreach_stage(stage, cmd_buffer->state.push_constants_dirty) {
-      if (stage == MESA_SHADER_COMPUTE)
-         continue;
-
-      struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
-
-      if (state.offset == 0) {
-         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
-                        ._3DCommandSubOpcode = push_constant_opcodes[stage]);
-      } else {
-         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS),
-                        ._3DCommandSubOpcode = push_constant_opcodes[stage],
-                        .ConstantBody = {
-                           .PointerToConstantBuffer0 = { .offset = state.offset },
-                           .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
-                        });
-      }
-   }
-
-   cmd_buffer->state.push_constants_dirty &= ~VK_SHADER_STAGE_ALL_GRAPHICS;
-
-   return flushed;
-}
-
 #if GEN_GEN == 7 && !GEN_IS_HASWELL
 void
 gen7_cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
@@ -344,8 +306,8 @@ emit_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
 #define GEN7_L3CNTLREG2                    0xb020
 #define GEN7_L3CNTLREG3                    0xb024
 
-static void
-config_l3(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
+void
+genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer, bool enable_slm)
 {
    /* References for GL state:
     *
@@ -401,7 +363,7 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
    assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
 
    bool needs_slm = cs_prog_data->base.total_shared > 0;
-   config_l3(cmd_buffer, needs_slm);
+   genX(cmd_buffer_config_l3)(cmd_buffer, needs_slm);
 
    if (cmd_buffer->state.current_pipeline != GPGPU) {
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
@@ -421,109 +383,6 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
    }
 
    cmd_buffer->state.compute_dirty = 0;
-}
-
-void
-genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
-{
-   struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
-   uint32_t *p;
-
-   uint32_t vb_emit = cmd_buffer->state.vb_dirty & pipeline->vb_used;
-
-   assert((pipeline->active_stages & VK_SHADER_STAGE_COMPUTE_BIT) == 0);
-
-   genX(flush_pipeline_select_3d)(cmd_buffer);
-
-   if (vb_emit) {
-      const uint32_t num_buffers = __builtin_popcount(vb_emit);
-      const uint32_t num_dwords = 1 + num_buffers * 4;
-
-      p = anv_batch_emitn(&cmd_buffer->batch, num_dwords,
-                          GENX(3DSTATE_VERTEX_BUFFERS));
-      uint32_t vb, i = 0;
-      for_each_bit(vb, vb_emit) {
-         struct anv_buffer *buffer = cmd_buffer->state.vertex_bindings[vb].buffer;
-         uint32_t offset = cmd_buffer->state.vertex_bindings[vb].offset;
-
-         struct GENX(VERTEX_BUFFER_STATE) state = {
-            .VertexBufferIndex = vb,
-            .BufferAccessType = pipeline->instancing_enable[vb] ? INSTANCEDATA : VERTEXDATA,
-            .VertexBufferMemoryObjectControlState = GENX(MOCS),
-            .AddressModifyEnable = true,
-            .BufferPitch = pipeline->binding_stride[vb],
-            .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
-            .EndAddress = { buffer->bo, buffer->offset + buffer->size - 1},
-            .InstanceDataStepRate = 1
-         };
-
-         GENX(VERTEX_BUFFER_STATE_pack)(&cmd_buffer->batch, &p[1 + i * 4], &state);
-         i++;
-      }
-   }
-
-   cmd_buffer->state.vb_dirty &= ~vb_emit;
-
-   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_PIPELINE) {
-      /* If somebody compiled a pipeline after starting a command buffer the
-       * scratch bo may have grown since we started this cmd buffer (and
-       * emitted STATE_BASE_ADDRESS).  If we're binding that pipeline now,
-       * reemit STATE_BASE_ADDRESS so that we use the bigger scratch bo. */
-      if (cmd_buffer->state.scratch_size < pipeline->total_scratch)
-         gen7_cmd_buffer_emit_state_base_address(cmd_buffer);
-
-      anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
-
-      /* From the BDW PRM for 3DSTATE_PUSH_CONSTANT_ALLOC_VS:
-       *
-       *    "The 3DSTATE_CONSTANT_VS must be reprogrammed prior to
-       *    the next 3DPRIMITIVE command after programming the
-       *    3DSTATE_PUSH_CONSTANT_ALLOC_VS"
-       *
-       * Since 3DSTATE_PUSH_CONSTANT_ALLOC_VS is programmed as part of
-       * pipeline setup, we need to dirty push constants.
-       */
-      cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
-   }
-
-   if (cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_VERTEX_BIT ||
-       cmd_buffer->state.push_constants_dirty & VK_SHADER_STAGE_VERTEX_BIT) {
-      /* From the IVB PRM Vol. 2, Part 1, Section 3.2.1:
-       *
-       *    "A PIPE_CONTROL with Post-Sync Operation set to 1h and a depth
-       *    stall needs to be sent just prior to any 3DSTATE_VS,
-       *    3DSTATE_URB_VS, 3DSTATE_CONSTANT_VS,
-       *    3DSTATE_BINDING_TABLE_POINTER_VS,
-       *    3DSTATE_SAMPLER_STATE_POINTER_VS command.  Only one
-       *    PIPE_CONTROL needs to be sent before any combination of VS
-       *    associated 3DSTATE."
-       */
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL),
-                     .DepthStallEnable = true,
-                     .PostSyncOperation = WriteImmediateData,
-                     .Address = { &cmd_buffer->device->workaround_bo, 0 });
-   }
-
-   uint32_t dirty = 0;
-   if (cmd_buffer->state.descriptors_dirty) {
-      dirty = gen7_cmd_buffer_flush_descriptor_sets(cmd_buffer);
-      gen7_cmd_buffer_emit_descriptor_pointers(cmd_buffer, dirty);
-   }
-
-   if (cmd_buffer->state.push_constants_dirty)
-      cmd_buffer_flush_push_constants(cmd_buffer);
-
-   /* We use the gen8 state here because it only contains the additional
-    * min/max fields and, since they occur at the end of the packet and
-    * don't change the stride, they work on gen7 too.
-    */
-   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
-      gen8_cmd_buffer_emit_viewport(cmd_buffer);
-
-   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_SCISSOR)
-      gen7_cmd_buffer_emit_scissor(cmd_buffer);
-
-   genX(cmd_buffer_flush_dynamic_state)(cmd_buffer);
 }
 
 void
