@@ -608,6 +608,16 @@ struct anv_meta_state {
    } blit;
 
    struct {
+      VkRenderPass render_pass;
+
+      /** Pipeline that copies from a 2D image. */
+      VkPipeline pipeline_2d_src;
+
+      VkPipelineLayout                          pipeline_layout;
+      VkDescriptorSetLayout                     ds_layout;
+   } blit2d;
+
+   struct {
       /** Pipeline [i] resolves an image with 2^(i+1) samples.  */
       VkPipeline                                pipelines[MAX_SAMPLES_LOG2];
 

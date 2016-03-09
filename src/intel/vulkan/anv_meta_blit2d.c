@@ -56,15 +56,12 @@ vk_format_for_size(int bs)
 
 static void
 meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
-               struct anv_image *src_image,
                struct anv_image_view *src_iview,
                VkOffset3D src_offset,
                VkExtent3D src_extent,
-               struct anv_image *dest_image,
                struct anv_image_view *dest_iview,
                VkOffset3D dest_offset,
-               VkExtent3D dest_extent,
-               VkFilter blit_filter)
+               VkExtent3D dest_extent)
 {
    struct anv_device *device = cmd_buffer->device;
 
@@ -72,8 +69,6 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
       float pos[2];
       float tex_coord[3];
    } *vb_data;
-
-   assert(src_image->samples == dest_image->samples);
 
    unsigned vb_size = sizeof(struct anv_vue_header) + 3 * sizeof(*vb_data);
 
@@ -144,8 +139,8 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
    ANV_CALL(CreateSampler)(anv_device_to_handle(device),
       &(VkSamplerCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-         .magFilter = blit_filter,
-         .minFilter = blit_filter,
+         .magFilter = VK_FILTER_NEAREST,
+         .minFilter = VK_FILTER_NEAREST,
       }, &cmd_buffer->pool->alloc, &sampler);
 
    VkDescriptorPool desc_pool;
@@ -170,7 +165,7 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
          .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
          .descriptorPool = desc_pool,
          .descriptorSetCount = 1,
-         .pSetLayouts = &device->meta_state.blit.ds_layout
+         .pSetLayouts = &device->meta_state.blit2d.ds_layout
       }, &set);
 
    anv_UpdateDescriptorSets(anv_device_to_handle(device),
@@ -209,7 +204,7 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
    ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
       &(VkRenderPassBeginInfo) {
          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-         .renderPass = device->meta_state.blit.render_pass,
+         .renderPass = device->meta_state.blit2d.render_pass,
          .framebuffer = fb,
          .renderArea = {
             .offset = { dest_offset.x, dest_offset.y },
@@ -219,21 +214,7 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
          .pClearValues = NULL,
       }, VK_SUBPASS_CONTENTS_INLINE);
 
-   VkPipeline pipeline;
-
-   switch (src_image->type) {
-   case VK_IMAGE_TYPE_1D:
-      pipeline = device->meta_state.blit.pipeline_1d_src;
-      break;
-   case VK_IMAGE_TYPE_2D:
-      pipeline = device->meta_state.blit.pipeline_2d_src;
-      break;
-   case VK_IMAGE_TYPE_3D:
-      pipeline = device->meta_state.blit.pipeline_3d_src;
-      break;
-   default:
-      unreachable(!"bad VkImageType");
-   }
+   VkPipeline pipeline = device->meta_state.blit2d.pipeline_2d_src;
 
    if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(pipeline)) {
       anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
@@ -252,7 +233,7 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
 
    anv_CmdBindDescriptorSets(anv_cmd_buffer_to_handle(cmd_buffer),
                              VK_PIPELINE_BIND_POINT_GRAPHICS,
-                             device->meta_state.blit.pipeline_layout, 0, 1,
+                             device->meta_state.blit2d.pipeline_layout, 0, 1,
                              &set, 0, NULL);
 
    ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer), 3, 1, 0, 0);
@@ -410,16 +391,13 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
          &iview_info, cmd_buffer, img_o, dst_usage);
 
       /* Perform blit */
-      anv_meta_emit_blit(cmd_buffer,
-                     anv_image_from_handle(src_image),
+      meta_emit_blit2d(cmd_buffer,
                      &src_iview,
                      src_offset_el,
                      (VkExtent3D){rects[r].width, rects[r].height, 1},
-                     anv_image_from_handle(dst_image),
                      &dst_iview,
                      dst_offset_el,
-                     (VkExtent3D){rects[r].width, rects[r].height, 1},
-                     VK_FILTER_NEAREST);
+                     (VkExtent3D){rects[r].width, rects[r].height, 1});
 
       anv_DestroyImage(vk_device, src_image, &cmd_buffer->pool->alloc);
       anv_DestroyImage(vk_device, dst_image, &cmd_buffer->pool->alloc);
@@ -511,22 +489,16 @@ void
 anv_device_finish_meta_blit2d_state(struct anv_device *device)
 {
    anv_DestroyRenderPass(anv_device_to_handle(device),
-                         device->meta_state.blit.render_pass,
+                         device->meta_state.blit2d.render_pass,
                          &device->meta_state.alloc);
    anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_1d_src,
-                       &device->meta_state.alloc);
-   anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_2d_src,
-                       &device->meta_state.alloc);
-   anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_3d_src,
+                       device->meta_state.blit2d.pipeline_2d_src,
                        &device->meta_state.alloc);
    anv_DestroyPipelineLayout(anv_device_to_handle(device),
-                             device->meta_state.blit.pipeline_layout,
+                             device->meta_state.blit2d.pipeline_layout,
                              &device->meta_state.alloc);
    anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
-                                  device->meta_state.blit.ds_layout,
+                                  device->meta_state.blit2d.ds_layout,
                                   &device->meta_state.alloc);
 }
 
@@ -564,7 +536,7 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
             .pPreserveAttachments = (uint32_t[]) { 0 },
          },
          .dependencyCount = 0,
-      }, &device->meta_state.alloc, &device->meta_state.blit.render_pass);
+      }, &device->meta_state.alloc, &device->meta_state.blit2d.render_pass);
    if (result != VK_SUCCESS)
       goto fail;
 
@@ -577,16 +549,8 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
       .nir = build_nir_vertex_shader(),
    };
 
-   struct anv_shader_module fs_1d = {
-      .nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_1D),
-   };
-
    struct anv_shader_module fs_2d = {
       .nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_2D),
-   };
-
-   struct anv_shader_module fs_3d = {
-      .nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_3D),
    };
 
    VkPipelineVertexInputStateCreateInfo vi_create_info = {
@@ -646,7 +610,7 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
    result = anv_CreateDescriptorSetLayout(anv_device_to_handle(device),
                                           &ds_layout_info,
                                           &device->meta_state.alloc,
-                                          &device->meta_state.blit.ds_layout);
+                                          &device->meta_state.blit2d.ds_layout);
    if (result != VK_SUCCESS)
       goto fail_render_pass;
 
@@ -654,9 +618,9 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
       &(VkPipelineLayoutCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
          .setLayoutCount = 1,
-         .pSetLayouts = &device->meta_state.blit.ds_layout,
+         .pSetLayouts = &device->meta_state.blit2d.ds_layout,
       },
-      &device->meta_state.alloc, &device->meta_state.blit.pipeline_layout);
+      &device->meta_state.alloc, &device->meta_state.blit2d.pipeline_layout);
    if (result != VK_SUCCESS)
       goto fail_descriptor_set_layout;
 
@@ -731,8 +695,8 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
          },
       },
       .flags = 0,
-      .layout = device->meta_state.blit.pipeline_layout,
-      .renderPass = device->meta_state.blit.render_pass,
+      .layout = device->meta_state.blit2d.pipeline_layout,
+      .renderPass = device->meta_state.blit2d.render_pass,
       .subpass = 0,
    };
 
@@ -745,64 +709,34 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
       .use_rectlist = true
    };
 
-   pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_1d);
-   result = anv_graphics_pipeline_create(anv_device_to_handle(device),
-      VK_NULL_HANDLE,
-      &vk_pipeline_info, &anv_pipeline_info,
-      &device->meta_state.alloc, &device->meta_state.blit.pipeline_1d_src);
-   if (result != VK_SUCCESS)
-      goto fail_pipeline_layout;
-
    pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_2d);
    result = anv_graphics_pipeline_create(anv_device_to_handle(device),
       VK_NULL_HANDLE,
       &vk_pipeline_info, &anv_pipeline_info,
-      &device->meta_state.alloc, &device->meta_state.blit.pipeline_2d_src);
+      &device->meta_state.alloc, &device->meta_state.blit2d.pipeline_2d_src);
    if (result != VK_SUCCESS)
-      goto fail_pipeline_1d;
-
-   pipeline_shader_stages[1].module = anv_shader_module_to_handle(&fs_3d);
-   result = anv_graphics_pipeline_create(anv_device_to_handle(device),
-      VK_NULL_HANDLE,
-      &vk_pipeline_info, &anv_pipeline_info,
-      &device->meta_state.alloc, &device->meta_state.blit.pipeline_3d_src);
-   if (result != VK_SUCCESS)
-      goto fail_pipeline_2d;
+      goto fail_pipeline_layout;
 
    ralloc_free(vs.nir);
-   ralloc_free(fs_1d.nir);
    ralloc_free(fs_2d.nir);
-   ralloc_free(fs_3d.nir);
 
    return VK_SUCCESS;
 
- fail_pipeline_2d:
-   anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_2d_src,
-                       &device->meta_state.alloc);
-
- fail_pipeline_1d:
-   anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline_1d_src,
-                       &device->meta_state.alloc);
-
  fail_pipeline_layout:
    anv_DestroyPipelineLayout(anv_device_to_handle(device),
-                             device->meta_state.blit.pipeline_layout,
+                             device->meta_state.blit2d.pipeline_layout,
                              &device->meta_state.alloc);
  fail_descriptor_set_layout:
    anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
-                                  device->meta_state.blit.ds_layout,
+                                  device->meta_state.blit2d.ds_layout,
                                   &device->meta_state.alloc);
  fail_render_pass:
    anv_DestroyRenderPass(anv_device_to_handle(device),
-                         device->meta_state.blit.render_pass,
+                         device->meta_state.blit2d.render_pass,
                          &device->meta_state.alloc);
 
    ralloc_free(vs.nir);
-   ralloc_free(fs_1d.nir);
    ralloc_free(fs_2d.nir);
-   ralloc_free(fs_3d.nir);
  fail:
    return result;
 }
