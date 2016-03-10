@@ -174,12 +174,14 @@ upload_clip_state(struct brw_context *brw)
    else
       enable = GEN6_CLIP_ENABLE;
 
+   if (!is_drawing_points(brw) && !is_drawing_lines(brw))
+      dw2 |= GEN6_CLIP_XY_TEST;
+
    BEGIN_BATCH(4);
    OUT_BATCH(_3DSTATE_CLIP << 16 | (4 - 2));
    OUT_BATCH(dw1);
    OUT_BATCH(enable |
 	     GEN6_CLIP_MODE_NORMAL |
-	     GEN6_CLIP_XY_TEST |
 	     dw2);
    OUT_BATCH(U_FIXED(0.125, 3) << GEN6_CLIP_MIN_POINT_WIDTH_SHIFT |
              U_FIXED(255.875, 3) << GEN6_CLIP_MAX_POINT_WIDTH_SHIFT |
@@ -195,7 +197,9 @@ const struct brw_tracked_state gen6_clip_state = {
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_FS_PROG_DATA |
+               BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_META_IN_PROGRESS |
+               BRW_NEW_PRIMITIVE |
                BRW_NEW_RASTERIZER_DISCARD,
    },
    .emit = upload_clip_state,
@@ -209,7 +213,9 @@ const struct brw_tracked_state gen7_clip_state = {
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_CONTEXT |
                BRW_NEW_FS_PROG_DATA |
+               BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_META_IN_PROGRESS |
+               BRW_NEW_PRIMITIVE |
                BRW_NEW_RASTERIZER_DISCARD,
    },
    .emit = upload_clip_state,
