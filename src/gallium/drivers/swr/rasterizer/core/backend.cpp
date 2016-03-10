@@ -156,7 +156,7 @@ void ProcessQueryStatsBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTil
 }
 
 template<SWR_FORMAT format>
-void ClearRasterTile(BYTE *pTileBuffer, simdvector &value)
+void ClearRasterTile(uint8_t *pTileBuffer, simdvector &value)
 {
     auto lambda = [&](int comp)
     {
@@ -299,10 +299,10 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
             /// @todo clear data should come in as RGBA32_FLOAT
             DWORD clearData[4];
             float clearFloat[4];
-            clearFloat[0] = ((BYTE*)(&pClear->clearRTColor))[0] / 255.0f;
-            clearFloat[1] = ((BYTE*)(&pClear->clearRTColor))[1] / 255.0f;
-            clearFloat[2] = ((BYTE*)(&pClear->clearRTColor))[2] / 255.0f;
-            clearFloat[3] = ((BYTE*)(&pClear->clearRTColor))[3] / 255.0f;
+            clearFloat[0] = ((uint8_t*)(&pClear->clearRTColor))[0] / 255.0f;
+            clearFloat[1] = ((uint8_t*)(&pClear->clearRTColor))[1] / 255.0f;
+            clearFloat[2] = ((uint8_t*)(&pClear->clearRTColor))[2] / 255.0f;
+            clearFloat[3] = ((uint8_t*)(&pClear->clearRTColor))[3] / 255.0f;
             clearData[0] = *(DWORD*)&clearFloat[0];
             clearData[1] = *(DWORD*)&clearFloat[1];
             clearData[2] = *(DWORD*)&clearFloat[2];
@@ -1428,7 +1428,7 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
 
     coeffs.vRecipDet = _simd_broadcast_ss(&work.recipDet);
 
-    BYTE *pDepthBase = renderBuffers.pDepth, *pStencilBase = renderBuffers.pStencil;
+    uint8_t *pDepthBase = renderBuffers.pDepth, *pStencilBase = renderBuffers.pStencil;
 
     RDTSC_STOP(BESetup, 0, 0);
 

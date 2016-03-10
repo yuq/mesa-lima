@@ -122,7 +122,7 @@ HOTTILE* HotTileMgr::GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32
         if (create)
         {
             uint32_t size = numSamples * mHotTileSize[attachment];
-            hotTile.pBuffer = (BYTE*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
+            hotTile.pBuffer = (uint8_t*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
             hotTile.state = HOTTILE_INVALID;
             hotTile.numSamples = numSamples;
             hotTile.renderTargetArrayIndex = renderTargetArrayIndex;
@@ -145,7 +145,7 @@ HOTTILE* HotTileMgr::GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32
             _aligned_free(hotTile.pBuffer);
 
             uint32_t size = numSamples * mHotTileSize[attachment];
-            hotTile.pBuffer = (BYTE*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
+            hotTile.pBuffer = (uint8_t*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
             hotTile.state = HOTTILE_INVALID;
             hotTile.numSamples = numSamples;
         }

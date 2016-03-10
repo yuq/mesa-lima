@@ -240,7 +240,7 @@ enum HOTTILE_STATE
 
 struct HOTTILE
 {
-    BYTE *pBuffer;
+    uint8_t *pBuffer;
     HOTTILE_STATE state;
     DWORD clearData[4];                 // May need to change based on pfnClearTile implementation.  Reorder for alignment?
     uint32_t numSamples;

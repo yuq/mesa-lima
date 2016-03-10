@@ -227,7 +227,7 @@ static uint16_t Convert32To16Float(float val)
 /// @param srcPixel - Pointer to source pixel (pre-swizzled according to dest).
 template<SWR_FORMAT DstFormat>
 static void ConvertPixelFromFloat(
-    BYTE* pDstPixel,
+    uint8_t* pDstPixel,
     const float srcPixel[4])
 {
     uint32_t outColor[4] = { 0 };  // typeless bits
@@ -390,7 +390,7 @@ static void ConvertPixelFromFloat(
 template<SWR_FORMAT SrcFormat>
 INLINE static void ConvertPixelToFloat(
     float dstPixel[4],
-    const BYTE* pSrc)
+    const uint8_t* pSrc)
 {
     uint32_t srcColor[4];  // typeless bits
 

@@ -53,7 +53,7 @@ typedef void(SWR_API *PFN_CALLBACK_FUNC)(uint64_t data, uint64_t data2, uint64_t
 /// @param pDstHotTile - pointer to the hot tile surface
 typedef void(SWR_API *PFN_LOAD_TILE)(HANDLE hPrivateContext, SWR_FORMAT dstFormat,
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
-    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, BYTE *pDstHotTile);
+    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, uint8_t *pDstHotTile);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Function signature for store hot tiles
@@ -65,7 +65,7 @@ typedef void(SWR_API *PFN_LOAD_TILE)(HANDLE hPrivateContext, SWR_FORMAT dstForma
 /// @param pSrcHotTile - pointer to the hot tile surface
 typedef void(SWR_API *PFN_STORE_TILE)(HANDLE hPrivateContext, SWR_FORMAT srcFormat,
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
-    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, BYTE *pSrcHotTile);
+    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, uint8_t *pSrcHotTile);
 
 /// @brief Function signature for clearing from the hot tiles clear value
 /// @param hPrivateContext - handle to private data
@@ -439,7 +439,7 @@ void SWR_API SwrClearRenderTarget(
     uint32_t clearMask,
     const float clearColor[4],
     float z,
-    BYTE stencil);
+    uint8_t stencil);
 
 void SWR_API SwrSetRastState(
     HANDLE hContext,

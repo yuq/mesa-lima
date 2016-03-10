@@ -111,7 +111,7 @@ struct CLEAR_DESC
     CLEAR_FLAGS flags;
     float clearRTColor[4];  // RGBA_32F
     float clearDepth;   // [0..1]
-    BYTE clearStencil;
+    uint8_t clearStencil;
 };
 
 struct INVALIDATE_TILES_DESC

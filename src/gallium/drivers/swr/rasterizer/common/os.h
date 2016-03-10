@@ -68,7 +68,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <X11/Xmd.h>
 #include <x86intrin.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -171,14 +170,6 @@ unsigned char _bittest(const LONG *a, LONG b)
 
 #define CreateDirectory(name, pSecurity) mkdir(name, 0777)
 
-#if defined(_WIN32)
-static inline
-unsigned int _mm_popcnt_u32(unsigned int v)
-{
-    return __builtin_popcount(v);
-}
-#endif
-
 #define _aligned_free free
 #define InterlockedCompareExchange(Dest, Exchange, Comparand) __sync_val_compare_and_swap(Dest, Comparand, Exchange)
 #define InterlockedExchangeAdd(Addend, Value) __sync_fetch_and_add(Addend, Value)
@@ -198,7 +189,7 @@ unsigned int _mm_popcnt_u32(unsigned int v)
 #endif
 
 // Universal types
-typedef BYTE        KILOBYTE[1024];
+typedef uint8_t     KILOBYTE[1024];
 typedef KILOBYTE    MEGABYTE[1024];
 typedef MEGABYTE    GIGABYTE[1024];
 

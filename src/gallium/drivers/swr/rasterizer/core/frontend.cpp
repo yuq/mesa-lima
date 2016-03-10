@@ -1187,7 +1187,7 @@ void ProcessDraw(
 
         // if the entire index buffer isn't being consumed, set the last index
         // so that fetches < a SIMD wide will be masked off
-        fetchInfo.pLastIndex = (const int32_t*)(((BYTE*)state.indexBuffer.pIndices) + state.indexBuffer.size);
+        fetchInfo.pLastIndex = (const int32_t*)(((uint8_t*)state.indexBuffer.pIndices) + state.indexBuffer.size);
         if (pLastRequestedIndex < fetchInfo.pLastIndex)
         {
             fetchInfo.pLastIndex = pLastRequestedIndex;
@@ -1363,7 +1363,7 @@ void ProcessDraw(
             i += KNOB_SIMD_WIDTH;
             if (IsIndexedT)
             {
-                fetchInfo.pIndices = (int*)((BYTE*)fetchInfo.pIndices + KNOB_SIMD_WIDTH * indexSize);
+                fetchInfo.pIndices = (int*)((uint8_t*)fetchInfo.pIndices + KNOB_SIMD_WIDTH * indexSize);
             }
             else
             {

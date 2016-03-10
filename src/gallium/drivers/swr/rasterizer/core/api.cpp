@@ -1351,7 +1351,7 @@ void SwrClearRenderTarget(
     uint32_t clearMask,
     const float clearColor[4],
     float z,
-    BYTE stencil)
+    uint8_t stencil)
 {
     RDTSC_START(APIClearRenderTarget);
 

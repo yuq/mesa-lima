@@ -54,17 +54,17 @@ struct StoreRasterTileClear
     /// @param pDstSurface - Destination surface state
     /// @param x, y - Coordinates to raster tile.
     INLINE static void StoreClear(
-        const BYTE* dstFormattedColor,
+        const uint8_t* dstFormattedColor,
         UINT dstBytesPerPixel,
         SWR_SURFACE_STATE* pDstSurface,
         UINT x, UINT y) // (x, y) pixel coordinate to start of raster tile.
     {
         // Compute destination address for raster tile.
-        BYTE* pDstTile = (BYTE*)pDstSurface->pBaseAddress +
+        uint8_t* pDstTile = (uint8_t*)pDstSurface->pBaseAddress +
             (y * pDstSurface->pitch) + (x * dstBytesPerPixel);
 
         // start of first row
-        BYTE* pDst = pDstTile;
+        uint8_t* pDst = pDstTile;
         UINT dstBytesPerRow = 0;
 
         // For each raster tile pixel in row 0 (rx, 0)
@@ -110,7 +110,7 @@ struct StoreMacroTileClear
     {
         UINT dstBytesPerPixel = (FormatTraits<DstFormat>::bpp / 8);
 
-        BYTE dstFormattedColor[16]; // max bpp is 128, so 16 is all we need here for one pixel
+        uint8_t dstFormattedColor[16]; // max bpp is 128, so 16 is all we need here for one pixel
 
         float srcColor[4];
 
