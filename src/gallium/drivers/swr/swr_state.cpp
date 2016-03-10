@@ -42,6 +42,7 @@
 #include "swr_tex_sample.h"
 #include "swr_scratch.h"
 #include "swr_shader.h"
+#include "swr_fence.h"
 
 /* These should be pulled out into separate files as necessary
  * Just initializing everything here to get going. */
@@ -629,11 +630,58 @@ swr_set_sample_mask(struct pipe_context *pipe, unsigned sample_mask)
    }
 }
 
+/*
+ * Update resource in-use status
+ * All resources bound to color or depth targets marked as WRITE resources.
+ * VBO Vertex/index buffers and texture views marked as READ resources.
+ */
+void
+swr_update_resource_status(struct pipe_context *pipe,
+                           const struct pipe_draw_info *p_draw_info)
+{
+   struct swr_context *ctx = swr_context(pipe);
+   struct pipe_framebuffer_state *fb = &ctx->framebuffer;
+
+   /* colorbuffer targets */
+   if (fb->nr_cbufs)
+      for (uint32_t i = 0; i < fb->nr_cbufs; ++i)
+         if (fb->cbufs[i])
+            swr_resource_write(pipe, swr_resource(fb->cbufs[i]->texture));
+
+   /* depth/stencil target */
+   if (fb->zsbuf)
+      swr_resource_write(pipe, swr_resource(fb->zsbuf->texture));
+
+   /* VBO vertex buffers */
+   for (uint32_t i = 0; i < ctx->num_vertex_buffers; i++) {
+      struct pipe_vertex_buffer *vb = &ctx->vertex_buffer[i];
+      if (!vb->user_buffer)
+         swr_resource_read(pipe, swr_resource(vb->buffer));
+   }
+
+   /* VBO index buffer */
+   if (p_draw_info && p_draw_info->indexed) {
+      struct pipe_index_buffer *ib = &ctx->index_buffer;
+      if (!ib->user_buffer)
+         swr_resource_read(pipe, swr_resource(ib->buffer));
+   }
+
+   /* texture sampler views */
+   for (uint32_t i = 0; i < PIPE_MAX_SHADER_SAMPLER_VIEWS; i++) {
+      struct pipe_sampler_view *view =
+         ctx->sampler_views[PIPE_SHADER_FRAGMENT][i];
+      if (view)
+         swr_resource_read(pipe, swr_resource(view->texture));
+   }
+}
 
 void
-swr_update_derived(struct swr_context *ctx,
+swr_update_derived(struct pipe_context *pipe,
                    const struct pipe_draw_info *p_draw_info)
 {
+   struct swr_context *ctx = swr_context(pipe);
+   struct swr_screen *screen = swr_screen(ctx->pipe.screen);
+
    /* Any state that requires dirty flags to be re-triggered sets this mask */
    /* For example, user_buffer vertex and index buffers. */
    unsigned post_update_dirty_flags = 0;
@@ -671,17 +719,24 @@ swr_update_derived(struct swr_context *ctx,
       /* Make the attachment updates */
       swr_draw_context *pDC = &ctx->swrDC;
       SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
+      unsigned need_fence = FALSE;
       for (i = 0; i < SWR_NUM_ATTACHMENTS; i++) {
          void *new_base = nullptr;
          if (new_attachment[i])
             new_base = new_attachment[i]->pBaseAddress;
-         
+
          /* StoreTile for changed target */
          if (renderTargets[i].pBaseAddress != new_base) {
             if (renderTargets[i].pBaseAddress) {
+               /* If changing attachment to a new target, mark tiles as
+                * INVALID so they are reloaded from surface.
+                * If detaching attachment, mark tiles as RESOLVED so core
+                * won't try to load from non-existent target. */
                enum SWR_TILE_STATE post_state = (new_attachment[i]
                   ? SWR_TILE_INVALID : SWR_TILE_RESOLVED);
-               swr_store_render_target(ctx, i, post_state);
+               swr_store_render_target(pipe, i, post_state);
+
+               need_fence |= TRUE;
             }
 
             /* Make new attachment */
@@ -692,6 +747,11 @@ swr_update_derived(struct swr_context *ctx,
                   renderTargets[i] = {0};
          }
       }
+
+      /* This fence ensures any attachment changes are resolved before the
+       * next draw */
+      if (need_fence)
+         swr_fence_submit(ctx, screen->flush_fence);
    }
 
    /* Raster state */
@@ -793,8 +853,7 @@ swr_update_derived(struct swr_context *ctx,
       vpm->m32 = state->translate[2];
 
       /* Now that the matrix is calculated, clip the view coords to screen
-       * size.  OpenGL allows for -ve x,y in the viewport.
-       */
+       * size.  OpenGL allows for -ve x,y in the viewport. */
       vp->x = std::max(vp->x, 0.0f);
       vp->y = std::max(vp->y, 0.0f);
       vp->width = std::min(vp->width, (float)fb->width);
@@ -817,7 +876,7 @@ swr_update_derived(struct swr_context *ctx,
       /* vertex buffers */
       SWR_VERTEX_BUFFER_STATE swrVertexBuffers[PIPE_MAX_ATTRIBS];
       for (UINT i = 0; i < ctx->num_vertex_buffers; i++) {
-         pipe_vertex_buffer *vb = &ctx->vertex_buffer[i];
+         struct pipe_vertex_buffer *vb = &ctx->vertex_buffer[i];
 
          pitch = vb->stride;
          if (!vb->user_buffer) {
@@ -871,7 +930,7 @@ swr_update_derived(struct swr_context *ctx,
       /* index buffer, if required (info passed in by swr_draw_vbo) */
       SWR_FORMAT index_type = R32_UINT; /* Default for non-indexed draws */
       if (info.indexed) {
-         pipe_index_buffer *ib = &ctx->index_buffer;
+         struct pipe_index_buffer *ib = &ctx->index_buffer;
 
          pitch = ib->index_size ? ib->index_size : sizeof(uint32_t);
          index_type = swr_convert_index_type(pitch);
@@ -1195,7 +1254,7 @@ swr_update_derived(struct swr_context *ctx,
             if (search != ctx->blendJIT->end()) {
                func = search->second;
             } else {
-               HANDLE hJitMgr = swr_screen(ctx->pipe.screen)->hJitMgr;
+               HANDLE hJitMgr = screen->hJitMgr;
                func = JitCompileBlend(hJitMgr, compileState);
                debug_printf("BLEND shader %p\n", func);
                assert(func && "Error: BlendShader = NULL");
@@ -1253,8 +1312,16 @@ swr_update_derived(struct swr_context *ctx,
 
    SwrSetBackendState(ctx->swrContext, &backendState);
 
+   /* Ensure that any in-progress attachment change StoreTiles finish */
+   if (swr_is_fence_pending(screen->flush_fence))
+      swr_fence_finish(pipe->screen, screen->flush_fence, 0);
+
+   /* Finally, update the in-use status of all resources involved in draw */
+   swr_update_resource_status(pipe, p_draw_info);
+
    ctx->dirty = post_update_dirty_flags;
 }
+
 
 static struct pipe_stream_output_target *
 swr_create_so_target(struct pipe_context *pipe,

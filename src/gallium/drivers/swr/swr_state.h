@@ -76,7 +76,7 @@ struct swr_derived_state {
    SWR_VIEWPORT_MATRIX vpm;
 };
 
-void swr_update_derived(struct swr_context *,
+void swr_update_derived(struct pipe_context *,
                         const struct pipe_draw_info * = nullptr);
 
 /*

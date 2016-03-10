@@ -47,7 +47,7 @@ extern "C" {
 
 /* MSVC case instensitive compare */
 #if defined(PIPE_CC_MSVC)
-   #define strcasecmp lstrcmpiA  
+   #define strcasecmp lstrcmpiA
 #endif
 
 /*
@@ -619,37 +619,34 @@ static void
 swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
 {
    struct swr_screen *screen = swr_screen(p_screen);
-   struct swr_resource *res = swr_resource(pt);
+   struct swr_resource *spr = swr_resource(pt);
+   struct pipe_context *pipe = spr->bound_to_context;
 
-   /*
-    * If this resource is attached to a context it may still be in use, check
-    * dependencies before freeing
-    * XXX TODO: don't use SwrWaitForIdle, use fences and come up with a real
-    * resource manager.
-    * XXX It's happened that we get a swr_destroy prior to freeing the
-    * framebuffer resource.  Don't wait on it.
-    */
-   if (res->bound_to_context && !res->display_target) {
-      struct swr_context *ctx =
-         swr_context((pipe_context *)res->bound_to_context);
-      // XXX, don't SwrWaitForIdle!!! Use a fence.
-      SwrWaitForIdle(ctx->swrContext);
+   /* Only wait on fence if the resource is being used */
+   if (pipe && spr->status) {
+      /* But, if there's no fence pending, submit one.
+       * XXX: Remove once draw timestamps are implmented. */
+      if (!swr_is_fence_pending(screen->flush_fence))
+         swr_fence_submit(swr_context(pipe), screen->flush_fence);
+
+      swr_fence_finish(p_screen, screen->flush_fence, 0);
+      swr_resource_unused(pipe, spr);
    }
 
    /*
     * Free resource primary surface.  If resource is display target, winsys
     * manages the buffer and will free it on displaytarget_destroy.
     */
-   if (res->display_target) {
+   if (spr->display_target) {
       /* display target */
       struct sw_winsys *winsys = screen->winsys;
-      winsys->displaytarget_destroy(winsys, res->display_target);
+      winsys->displaytarget_destroy(winsys, spr->display_target);
    } else
-      _aligned_free(res->swr.pBaseAddress);
+      _aligned_free(spr->swr.pBaseAddress);
 
-   _aligned_free(res->secondary.pBaseAddress);
+   _aligned_free(spr->secondary.pBaseAddress);
 
-   FREE(res);
+   FREE(spr);
 }
 
 
@@ -663,17 +660,19 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
 {
    struct swr_screen *screen = swr_screen(p_screen);
    struct sw_winsys *winsys = screen->winsys;
-   struct swr_resource *res = swr_resource(resource);
+   struct swr_resource *spr = swr_resource(resource);
+   struct pipe_context *pipe = spr->bound_to_context;
 
-   /* Ensure fence set at flush is finished, before reading frame buffer */
-   swr_fence_finish(p_screen, screen->flush_fence, 0);
+   if (pipe) {
+      swr_fence_finish(p_screen, screen->flush_fence, 0);
+      swr_resource_unused(pipe, spr);
+      SwrEndFrame(swr_context(pipe)->swrContext);
+   }
 
-   SwrEndFrame(swr_context((pipe_context *)res->bound_to_context));
-
-   assert(res->display_target);
-   if (res->display_target)
+   debug_assert(spr->display_target);
+   if (spr->display_target)
       winsys->displaytarget_display(
-         winsys, res->display_target, context_private, sub_box);
+         winsys, spr->display_target, context_private, sub_box);
 }
 
 

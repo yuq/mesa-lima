@@ -33,6 +33,8 @@ struct swr_fence {
    uint64_t read;
    uint64_t write;
 
+   unsigned pending;
+
    unsigned id; /* Just for reference */
 };
 
@@ -44,9 +46,9 @@ swr_fence(struct pipe_fence_handle *fence)
 }
 
 static INLINE boolean
-swr_is_fence_done(struct swr_fence *fence)
+swr_is_fence_pending(struct pipe_fence_handle *fence_handle)
 {
-   return (fence->read == fence->write);
+   return swr_fence(fence_handle)->pending;
 }
 
 

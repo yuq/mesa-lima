@@ -91,7 +91,7 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 
    /* Update derived state, pass draw info to update function */
    if (ctx->dirty)
-      swr_update_derived(ctx, info);
+      swr_update_derived(pipe, info);
 
    swr_update_draw_context(ctx);
 
@@ -184,20 +184,14 @@ swr_flush(struct pipe_context *pipe,
 {
    struct swr_context *ctx = swr_context(pipe);
    struct swr_screen *screen = swr_screen(pipe->screen);
+   struct pipe_surface *cb = ctx->framebuffer.cbufs[0];
 
    /* If the current renderTarget is the display surface, store tiles back to
-    * the surface, in
-    * preparation for present (swr_flush_frontbuffer)
-    */
-   struct pipe_surface *cb = ctx->framebuffer.cbufs[0];
-   if (cb && swr_resource(cb->texture)->display_target) {
-      swr_store_render_target(ctx, SWR_ATTACHMENT_COLOR0, SWR_TILE_RESOLVED);
-      swr_resource(cb->texture)->bound_to_context = (void*)pipe;
-   }
-
-   // SwrStoreTiles is asynchronous, always submit the "flush" fence.
-   // flush_frontbuffer needs it.
-   swr_fence_submit(ctx, screen->flush_fence);
+    * the surface, in preparation for present (swr_flush_frontbuffer).
+    * Other renderTargets get stored back when attachment changes or
+    * swr_surface_destroy */
+   if (cb && swr_resource(cb->texture)->display_target)
+      swr_store_dirty_resource(pipe, cb->texture, SWR_TILE_RESOLVED);
 
    if (fence)
       swr_fence_reference(pipe->screen, fence, screen->flush_fence);
@@ -206,23 +200,23 @@ swr_flush(struct pipe_context *pipe,
 void
 swr_finish(struct pipe_context *pipe)
 {
-   struct swr_screen *screen = swr_screen(pipe->screen);
-   struct pipe_fence_handle *fence = NULL;
+   struct pipe_fence_handle *fence = nullptr;
 
    swr_flush(pipe, &fence, 0);
-   swr_fence_finish(&screen->base, fence, 0);
-   swr_fence_reference(&screen->base, &fence, NULL);
+   swr_fence_finish(pipe->screen, fence, 0);
+   swr_fence_reference(pipe->screen, &fence, NULL);
 }
 
 
 /*
- * Store SWR HotTiles back to RenderTarget surface.
+ * Store SWR HotTiles back to renderTarget surface.
  */
 void
-swr_store_render_target(struct swr_context *ctx,
+swr_store_render_target(struct pipe_context *pipe,
                         uint32_t attachment,
                         enum SWR_TILE_STATE post_tile_state)
 {
+   struct swr_context *ctx = swr_context(pipe);
    struct swr_draw_context *pDC = &ctx->swrDC;
    struct SWR_SURFACE_STATE *renderTarget = &pDC->renderTargets[attachment];
 
@@ -262,6 +256,38 @@ swr_store_render_target(struct swr_context *ctx,
    }
 }
 
+void
+swr_store_dirty_resource(struct pipe_context *pipe,
+                         struct pipe_resource *resource,
+                         enum SWR_TILE_STATE post_tile_state)
+{
+   /* Only store resource if it has been written to */
+   if (swr_resource(resource)->status & SWR_RESOURCE_WRITE) {
+      struct swr_context *ctx = swr_context(pipe);
+      struct swr_screen *screen = swr_screen(pipe->screen);
+      struct swr_resource *spr = swr_resource(resource);
+
+      swr_draw_context *pDC = &ctx->swrDC;
+      SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
+      for (uint32_t i = 0; i < SWR_NUM_ATTACHMENTS; i++)
+         if (renderTargets[i].pBaseAddress == spr->swr.pBaseAddress) {
+            swr_store_render_target(pipe, i, post_tile_state);
+
+            /* Mesa thinks depth/stencil are fused, so we'll never get an
+             * explicit resource for stencil.  So, if checking depth, then
+             * also check for stencil. */
+            if (spr->has_stencil && (i == SWR_ATTACHMENT_DEPTH)) {
+               swr_store_render_target(
+                  pipe, SWR_ATTACHMENT_STENCIL, post_tile_state);
+            }
+
+            /* This fence signals StoreTiles completion */
+            swr_fence_submit(ctx, screen->flush_fence);
+
+            break;
+         }
+   }
+}
 
 void
 swr_draw_init(struct pipe_context *pipe)

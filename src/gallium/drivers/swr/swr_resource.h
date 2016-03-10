@@ -29,6 +29,12 @@
 
 struct sw_displaytarget;
 
+enum swr_resource_status {
+   SWR_RESOURCE_UNUSED = 0x0,
+   SWR_RESOURCE_READ = 0x1,
+   SWR_RESOURCE_WRITE = 0x2,
+};
+
 struct swr_resource {
    struct pipe_resource base;
 
@@ -39,7 +45,7 @@ struct swr_resource {
    UINT alignedHeight;
 
    SWR_SURFACE_STATE swr;
-   SWR_SURFACE_STATE secondary; // for faking depth/stencil merged formats
+   SWR_SURFACE_STATE secondary; /* for faking depth/stencil merged formats */
 
    struct sw_displaytarget *display_target;
 
@@ -47,8 +53,10 @@ struct swr_resource {
    unsigned img_stride[PIPE_MAX_TEXTURE_LEVELS];
    unsigned mip_offsets[PIPE_MAX_TEXTURE_LEVELS];
 
-   /* Opaque pointer to swr_context to mark resource in use */
-   void *bound_to_context;
+   enum swr_resource_status status;
+
+   /* pipe_context to which resource is currently bound. */
+   struct pipe_context *bound_to_context;
 };
 
 
@@ -91,7 +99,45 @@ swr_resource_data(struct pipe_resource *resource)
 }
 
 
-void swr_store_render_target(struct swr_context *ctx,
+void swr_store_render_target(struct pipe_context *pipe,
                              uint32_t attachment,
                              enum SWR_TILE_STATE post_tile_state);
+
+void swr_store_dirty_resource(struct pipe_context *pipe,
+                              struct pipe_resource *resource,
+                              enum SWR_TILE_STATE post_tile_state);
+
+void swr_update_resource_status(struct pipe_context *,
+                                const struct pipe_draw_info *);
+
+/*
+ * Functions to indicate a resource's in-use status.
+ */
+static INLINE enum
+swr_resource_status & operator|=(enum swr_resource_status & a,
+                                 enum swr_resource_status  b) {
+   return (enum swr_resource_status &)((int&)a |= (int)b);
+}
+
+static INLINE void
+swr_resource_read(struct pipe_context *pipe, struct swr_resource *resource)
+{
+   resource->status |= SWR_RESOURCE_READ;
+   resource->bound_to_context = pipe;
+}
+
+static INLINE void
+swr_resource_write(struct pipe_context *pipe, struct swr_resource *resource)
+{
+   resource->status |= SWR_RESOURCE_WRITE;
+   resource->bound_to_context = pipe;
+}
+
+static INLINE void
+swr_resource_unused(struct pipe_context *pipe, struct swr_resource *resource)
+{
+   resource->status = SWR_RESOURCE_UNUSED;
+   resource->bound_to_context = nullptr;
+}
+
 #endif

@@ -30,8 +30,9 @@
 #include "swr_fence.h"
 
 #if defined(PIPE_CC_MSVC) // portable thread yield
-   #define sched_yield SwitchToThread  
+   #define sched_yield SwitchToThread
 #endif
+
 /*
  * Fence callback, called by back-end thread on completion of all rendering up
  * to SwrSync call.
@@ -41,7 +42,8 @@ swr_sync_cb(uint64_t userData, uint64_t userData2, uint64_t userData3)
 {
    struct swr_fence *fence = (struct swr_fence *)userData;
 
-   fence->read = fence->write;
+   /* Correct value is in SwrSync data, and not the fence write field. */
+   fence->read = userData2;
 }
 
 /*
@@ -53,7 +55,8 @@ swr_fence_submit(struct swr_context *ctx, struct pipe_fence_handle *fh)
    struct swr_fence *fence = swr_fence(fh);
 
    fence->write++;
-   SwrSync(ctx->swrContext, swr_sync_cb, (uint64_t)fence, 0, 0);
+   fence->pending = TRUE;
+   SwrSync(ctx->swrContext, swr_sync_cb, (uint64_t)fence, fence->write, 0);
 }
 
 /*
@@ -67,7 +70,6 @@ swr_fence_create()
    if (!fence)
       return NULL;
 
-   memset(fence, 0, sizeof(*fence));
    pipe_reference_init(&fence->reference, 1);
    fence->id = fence_id++;
 
@@ -103,6 +105,13 @@ swr_fence_reference(struct pipe_screen *screen,
       swr_fence_destroy(old);
 }
 
+static INLINE boolean
+swr_is_fence_done(struct pipe_fence_handle *fence_handle)
+{
+   struct swr_fence *fence = swr_fence(fence_handle);
+   return (fence->read == fence->write);
+}
+
 /*
  * Wait for the fence to finish.
  */
@@ -111,10 +120,10 @@ swr_fence_finish(struct pipe_screen *screen,
                  struct pipe_fence_handle *fence_handle,
                  uint64_t timeout)
 {
-   struct swr_fence *fence = swr_fence(fence_handle);
-
-   while (!swr_is_fence_done(fence))
+   while (!swr_is_fence_done(fence_handle))
       sched_yield();
+
+   swr_fence(fence_handle)->pending = FALSE;
 
    return TRUE;
 }
@@ -132,12 +141,10 @@ swr_fence_init(struct pipe_screen *p_screen)
 {
    p_screen->fence_reference = swr_fence_reference;
    p_screen->fence_finish = swr_fence_finish;
-
    p_screen->get_timestamp = swr_get_timestamp;
 
-   /*
-    * Create persistant "flush" fence, submitted when swr_flush is called.
-    */
+   /* Create persistant StoreTiles "flush" fence, used to signal completion
+    * of flushing tile state back to resource texture, via StoreTiles. */
    struct swr_screen *screen = swr_screen(p_screen);
    screen->flush_fence = swr_fence_create();
 }

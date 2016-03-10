@@ -36,6 +36,7 @@ extern "C" {
 #include "swr_resource.h"
 #include "swr_scratch.h"
 #include "swr_query.h"
+#include "swr_fence.h"
 
 #include "api.h"
 #include "backend.h"
@@ -85,36 +86,10 @@ swr_surface_destroy(struct pipe_context *pipe, struct pipe_surface *surf)
    assert(surf->texture);
    struct pipe_resource *resource = surf->texture;
 
-   /* If the surface being destroyed is a current render target,
-    * call StoreTiles to resolve the hotTile state then set attachment
-    * to NULL.
-    */
-   if (resource->bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_DEPTH_STENCIL
-                         | PIPE_BIND_DISPLAY_TARGET)) {
-      struct swr_context *ctx = swr_context(pipe);
-      struct swr_resource *spr = swr_resource(resource);
-		swr_draw_context *pDC = &ctx->swrDC;
-		SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
-      for (uint32_t i = 0; i < SWR_NUM_ATTACHMENTS; i++)
-         if (renderTargets[i].pBaseAddress == spr->swr.pBaseAddress) {
-            swr_store_render_target(ctx, i, SWR_TILE_RESOLVED);
+   /* If the resource has been drawn to, store tiles. */
+   swr_store_dirty_resource(pipe, resource, SWR_TILE_RESOLVED);
 
-            /*
-             * Mesa thinks depth/stencil are fused, so we'll never get an
-             * explicit resource for stencil.  So, if checking depth, then
-             * also check for stencil.
-             */
-            if (spr->has_stencil && (i == SWR_ATTACHMENT_DEPTH)) {
-               swr_store_render_target(
-                  ctx, SWR_ATTACHMENT_STENCIL, SWR_TILE_RESOLVED);
-            }
-
-            SwrWaitForIdle(ctx->swrContext);
-            break;
-         }
-   }
-
-   pipe_resource_reference(&surf->texture, NULL);
+   pipe_resource_reference(&resource, NULL);
    FREE(surf);
 }
 
@@ -127,6 +102,7 @@ swr_transfer_map(struct pipe_context *pipe,
                  const struct pipe_box *box,
                  struct pipe_transfer **transfer)
 {
+   struct swr_screen *screen = swr_screen(pipe->screen);
    struct swr_resource *spr = swr_resource(resource);
    struct pipe_transfer *pt;
    enum pipe_format format = resource->format;
@@ -134,30 +110,28 @@ swr_transfer_map(struct pipe_context *pipe,
    assert(resource);
    assert(level <= resource->last_level);
 
-   /*
-    * If mapping any attached rendertarget, store tiles and wait for idle
-    * before giving CPU access to the surface.
-    * (set postStoreTileState to SWR_TILE_INVALID so tiles are reloaded)
-    */
-   if (resource->bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_DEPTH_STENCIL
-                         | PIPE_BIND_DISPLAY_TARGET)) {
-      struct swr_context *ctx = swr_context(pipe);
-      swr_draw_context *pDC = &ctx->swrDC;
-      SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
-      for (uint32_t i = 0; i < SWR_NUM_ATTACHMENTS; i++)
-         if (renderTargets[i].pBaseAddress == spr->swr.pBaseAddress) {
-            swr_store_render_target(ctx, i, SWR_TILE_INVALID);
-            /*
-             * Mesa thinks depth/stencil are fused, so we'll never get an
-             * explicit map for stencil.  So, if mapping depth, then also
-             * store tile for stencil.
-             */
-            if (spr->has_stencil && (i == SWR_ATTACHMENT_DEPTH))
-               swr_store_render_target(
-                  ctx, SWR_ATTACHMENT_STENCIL, SWR_TILE_INVALID);
-            SwrWaitForIdle(ctx->swrContext);
-            break;
+   /* If mapping an attached rendertarget, store tiles to surface and set
+    * postStoreTileState to SWR_TILE_INVALID so tiles get reloaded on next use
+    * and nothing needs to be done at unmap. */
+   swr_store_dirty_resource(pipe, resource, SWR_TILE_INVALID);
+
+   if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
+      /* If resource is in use, finish fence before mapping.
+       * Unless requested not to block, then if not done return NULL map */
+      if (usage & PIPE_TRANSFER_DONTBLOCK) {
+         if (swr_is_fence_pending(screen->flush_fence))
+            return NULL;
+      } else {
+         if (spr->status) {
+            /* But, if there's no fence pending, submit one.
+             * XXX: Remove once draw timestamps are finished. */
+            if (!swr_is_fence_pending(screen->flush_fence))
+               swr_fence_submit(swr_context(pipe), screen->flush_fence);
+
+            swr_fence_finish(pipe->screen, screen->flush_fence, 0);
+            swr_resource_unused(pipe, spr);
          }
+      }
    }
 
    pt = CALLOC_STRUCT(pipe_transfer);
@@ -195,16 +169,7 @@ swr_transfer_unmap(struct pipe_context *pipe, struct pipe_transfer *transfer)
 {
    assert(transfer->resource);
 
-   /*
-    * XXX TODO: use fences and come up with a real resource manager.
-    *
-    * If this resource has been mapped/unmapped, it's probably in use.  Tag it
-    *with this context so
-    * we'll know to check dependencies when it's deleted.
-    */
    struct swr_resource *res = swr_resource(transfer->resource);
-   res->bound_to_context = (void *)pipe;
-
    /* if we're mapping the depth/stencil, copy out stencil */
    if (res->base.format == PIPE_FORMAT_Z24_UNORM_S8_UINT
        && res->has_stencil) {
@@ -234,6 +199,16 @@ swr_resource_copy(struct pipe_context *pipe,
                   unsigned src_level,
                   const struct pipe_box *src_box)
 {
+   struct swr_screen *screen = swr_screen(pipe->screen);
+
+   /* If either the src or dst is a renderTarget, store tiles before copy */
+   swr_store_dirty_resource(pipe, src, SWR_TILE_RESOLVED);
+   swr_store_dirty_resource(pipe, dst, SWR_TILE_RESOLVED);
+
+   swr_fence_finish(pipe->screen, screen->flush_fence, 0);
+   swr_resource_unused(pipe, swr_resource(src));
+   swr_resource_unused(pipe, swr_resource(dst));
+
    if ((dst->target == PIPE_BUFFER && src->target == PIPE_BUFFER)
        || (dst->target != PIPE_BUFFER && src->target != PIPE_BUFFER)) {
       util_resource_copy_region(
@@ -322,6 +297,8 @@ swr_destroy(struct pipe_context *pipe)
    if (ctx->blitter)
       util_blitter_destroy(ctx->blitter);
 
+   /* Idle core before deleting context */
+   SwrWaitForIdle(ctx->swrContext);
    if (ctx->swrContext)
       SwrDestroyContext(ctx->swrContext);
 
@@ -345,7 +322,6 @@ swr_render_condition(struct pipe_context *pipe,
    ctx->render_cond_mode = mode;
    ctx->render_cond_cond = condition;
 }
-
 
 struct pipe_context *
 swr_create_context(struct pipe_screen *screen, void *priv, unsigned flags)
@@ -392,9 +368,8 @@ swr_create_context(struct pipe_screen *screen, void *priv, unsigned flags)
 
    ctx->pipe.blit = swr_blit;
    ctx->blitter = util_blitter_create(&ctx->pipe);
-   if (!ctx->blitter) {
+   if (!ctx->blitter)
       goto fail;
-   }
 
    swr_init_scratch_buffers(ctx);
 

@@ -40,7 +40,7 @@ swr_clear(struct pipe_context *pipe,
       return;
 
    if (ctx->dirty)
-      swr_update_derived(ctx);
+      swr_update_derived(pipe);
 
 /* Update clearMask/targetMask */
 #if 0 /* XXX SWR currently only clears SWR_ATTACHMENT_COLOR0, don't bother   \
@@ -76,7 +76,7 @@ swr_clear(struct pipe_context *pipe,
    vp.height = ctx->framebuffer.height;
    SwrSetViewports(ctx->swrContext, 1, &vp, NULL);
 
-	swr_update_draw_context(ctx);
+   swr_update_draw_context(ctx);
    SwrClearRenderTarget(ctx->swrContext, clearMask, color->f, depth, stencil);
 }
 
