@@ -743,7 +743,9 @@ struct tgsi_dst_register
 struct tgsi_instruction_memory
 {
    unsigned Qualifier : 3;  /* TGSI_MEMORY_ */
-   unsigned Padding   : 29;
+   unsigned Texture   : 8;  /* only for images: TGSI_TEXTURE_ */
+   unsigned Format    : 10; /* only for images: PIPE_FORMAT_ */
+   unsigned Padding   : 11;
 };
 
 #define TGSI_MEMBAR_SHADER_BUFFER (1 << 0)

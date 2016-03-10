@@ -637,6 +637,14 @@ iter_instruction(
          TXT(", ");
          ENM(bit, tgsi_memory_names);
       }
+      if (inst->Memory.Texture) {
+         TXT( ", " );
+         ENM( inst->Memory.Texture, tgsi_texture_names );
+      }
+      if (inst->Memory.Format) {
+         TXT( ", " );
+         TXT( util_format_name(inst->Memory.Format) );
+      }
    }
 
    switch (inst->Instruction.Opcode) {
