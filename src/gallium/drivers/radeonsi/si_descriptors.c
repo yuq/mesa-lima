@@ -185,12 +185,17 @@ static void si_set_sampler_view(struct si_context *sctx,
 				struct si_sampler_views *views,
 				unsigned slot, struct pipe_sampler_view *view)
 {
-	if (views->views[slot] == view)
+	struct si_sampler_view *rview = (struct si_sampler_view*)view;
+
+	if (view && view->texture && view->texture->target != PIPE_BUFFER &&
+	    G_008F28_COMPRESSION_EN(rview->state[6]) &&
+	    ((struct r600_texture*)view->texture)->dcc_offset == 0) {
+		rview->state[6] &= C_008F28_COMPRESSION_EN &
+		                   C_008F28_ALPHA_IS_ON_MSB;
+	} else if (views->views[slot] == view)
 		return;
 
 	if (view) {
-		struct si_sampler_view *rview =
-			(struct si_sampler_view*)view;
 		struct r600_texture *rtex = (struct r600_texture *)view->texture;
 
 		si_sampler_view_add_buffer(sctx, view->texture);

@@ -311,8 +311,6 @@ static void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
 
 	/* Notify all contexts about the change. */
 	r600_dirty_all_framebuffer_states(rscreen);
-
-	/* TODO: re-set all sampler views and images, but how? */
 }
 
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
