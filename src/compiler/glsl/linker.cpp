@@ -3852,7 +3852,8 @@ write_top_level_array_size_and_stride:
  * resource data.
  */
 void
-build_program_resource_list(struct gl_shader_program *shProg)
+build_program_resource_list(struct gl_context *ctx,
+                            struct gl_shader_program *shProg)
 {
    /* Rebuild resource list. */
    if (shProg->ProgramResourceList) {
@@ -3905,6 +3906,17 @@ build_program_resource_list(struct gl_shader_program *shProg)
       for (int i = 0; i < shProg->LinkedTransformFeedback.NumVarying; i++) {
          if (!add_program_resource(shProg, GL_TRANSFORM_FEEDBACK_VARYING,
                                    &shProg->LinkedTransformFeedback.Varyings[i],
+                                   0))
+         return;
+      }
+   }
+
+   /* Add transform feedback buffers. */
+   for (unsigned i = 0; i < ctx->Const.MaxTransformFeedbackBuffers; i++) {
+      if ((shProg->LinkedTransformFeedback.ActiveBuffers >> i) & 1) {
+         shProg->LinkedTransformFeedback.Buffers[i].Binding = i;
+         if (!add_program_resource(shProg, GL_TRANSFORM_FEEDBACK_BUFFER,
+                                   &shProg->LinkedTransformFeedback.Buffers[i],
                                    0))
          return;
       }
