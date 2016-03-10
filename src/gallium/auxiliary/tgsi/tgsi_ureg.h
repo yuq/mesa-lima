@@ -114,6 +114,8 @@ ureg_create_shader( struct ureg_program *,
                     struct pipe_context *pipe,
 		    const struct pipe_stream_output_info *so );
 
+void
+ureg_set_next_shader_processor(struct ureg_program *ureg, unsigned processor);
 
 /* Alternately, return the built token stream and hand ownership of
  * that memory to the caller:

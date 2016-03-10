@@ -101,6 +101,7 @@ struct ureg_program
 {
    unsigned processor;
    bool supports_any_inout_decl_range;
+   int next_shader_processor;
 
    struct {
       unsigned semantic_name;
@@ -1966,6 +1967,16 @@ const struct tgsi_token *ureg_finalize( struct ureg_program *ureg )
 {
    const struct tgsi_token *tokens;
 
+   switch (ureg->processor) {
+   case TGSI_PROCESSOR_VERTEX:
+   case TGSI_PROCESSOR_TESS_EVAL:
+      ureg_property(ureg, TGSI_PROPERTY_NEXT_SHADER,
+                    ureg->next_shader_processor == -1 ?
+                       TGSI_PROCESSOR_FRAGMENT :
+                       ureg->next_shader_processor);
+      break;
+   }
+
    emit_header( ureg );
    emit_decls( ureg );
    copy_instructions( ureg );
@@ -2079,6 +2090,7 @@ ureg_create_with_screen(unsigned processor, struct pipe_screen *screen)
       screen->get_shader_param(screen,
                                util_pipe_shader_from_tgsi_processor(processor),
                                PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE) != 0;
+   ureg->next_shader_processor = -1;
 
    for (i = 0; i < Elements(ureg->properties); i++)
       ureg->properties[i] = ~0;
@@ -2105,6 +2117,13 @@ no_free_temps:
    FREE(ureg);
 no_ureg:
    return NULL;
+}
+
+
+void
+ureg_set_next_shader_processor(struct ureg_program *ureg, unsigned processor)
+{
+   ureg->next_shader_processor = processor;
 }
 
 
