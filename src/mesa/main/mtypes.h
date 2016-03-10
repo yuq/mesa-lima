@@ -1650,6 +1650,8 @@ struct gl_transform_feedback_buffer
 {
    unsigned Binding;
 
+   unsigned NumVaryings;
+
    /**
     * Total number of components stored in each buffer.  This may be used by
     * hardware back-ends to determine the correct stride when interleaving

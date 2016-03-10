@@ -61,6 +61,7 @@ DECL_RESOURCE_FUNC(UBO, gl_uniform_block);
 DECL_RESOURCE_FUNC(UNI, gl_uniform_storage);
 DECL_RESOURCE_FUNC(ATC, gl_active_atomic_buffer);
 DECL_RESOURCE_FUNC(XFV, gl_transform_feedback_varying_info);
+DECL_RESOURCE_FUNC(XFB, gl_transform_feedback_buffer);
 DECL_RESOURCE_FUNC(SUB, gl_subroutine_function);
 
 void GLAPIENTRY
@@ -670,6 +671,7 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
       return RESOURCE_SUB(res)->index;
    case GL_UNIFORM_BLOCK:
    case GL_SHADER_STORAGE_BLOCK:
+   case GL_TRANSFORM_FEEDBACK_BUFFER:
    case GL_TRANSFORM_FEEDBACK_VARYING:
    default:
       return calc_resource_index(shProg, res);
@@ -707,6 +709,7 @@ _mesa_program_resource_find_index(struct gl_shader_program *shProg,
       case GL_UNIFORM_BLOCK:
       case GL_ATOMIC_COUNTER_BUFFER:
       case GL_SHADER_STORAGE_BLOCK:
+      case GL_TRANSFORM_FEEDBACK_BUFFER:
          if (_mesa_program_resource_index(shProg, res) == index)
             return res;
          break;
@@ -1009,7 +1012,8 @@ get_buffer_property(struct gl_shader_program *shProg,
    GET_CURRENT_CONTEXT(ctx);
    if (res->Type != GL_UNIFORM_BLOCK &&
        res->Type != GL_ATOMIC_COUNTER_BUFFER &&
-       res->Type != GL_SHADER_STORAGE_BLOCK)
+       res->Type != GL_SHADER_STORAGE_BLOCK &&
+       res->Type != GL_TRANSFORM_FEEDBACK_BUFFER)
       goto invalid_operation;
 
    if (res->Type == GL_UNIFORM_BLOCK) {
@@ -1110,6 +1114,30 @@ get_buffer_property(struct gl_shader_program *shProg,
          }
          return RESOURCE_ATC(res)->NumUniforms;
       }
+   } else if (res->Type == GL_TRANSFORM_FEEDBACK_BUFFER) {
+      switch (prop) {
+      case GL_BUFFER_BINDING:
+         *val = RESOURCE_XFB(res)->Binding;
+         return 1;
+      case GL_NUM_ACTIVE_VARIABLES:
+         *val = RESOURCE_XFB(res)->NumVaryings;
+         return 1;
+      case GL_ACTIVE_VARIABLES:
+         int i = 0;
+         for ( ; i < shProg->LinkedTransformFeedback.NumVarying; i++) {
+            unsigned index =
+               shProg->LinkedTransformFeedback.Varyings[i].BufferIndex;
+            struct gl_program_resource *buf_res =
+               _mesa_program_resource_find_index(shProg,
+                                                 GL_TRANSFORM_FEEDBACK_BUFFER,
+                                                 index);
+            assert(buf_res);
+            if (res == buf_res) {
+               *val++ = i;
+            }
+         }
+         return RESOURCE_XFB(res)->NumVaryings;
+      }
    }
    assert(!"support for property type not implemented");
 
@@ -1140,6 +1168,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    case GL_NAME_LENGTH:
       switch (res->Type) {
       case GL_ATOMIC_COUNTER_BUFFER:
+      case GL_TRANSFORM_FEEDBACK_BUFFER:
          goto invalid_operation;
       default:
          /* Resource name length + terminator. */
@@ -1326,6 +1355,10 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    case GL_TRANSFORM_FEEDBACK_BUFFER_INDEX:
       VALIDATE_TYPE(GL_TRANSFORM_FEEDBACK_VARYING);
       *val = RESOURCE_XFV(res)->BufferIndex;
+      return 1;
+   case GL_TRANSFORM_FEEDBACK_BUFFER_STRIDE:
+      VALIDATE_TYPE(GL_TRANSFORM_FEEDBACK_BUFFER);
+      *val = RESOURCE_XFB(res)->Stride * 4;
       return 1;
 
    default:

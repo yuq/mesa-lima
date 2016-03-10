@@ -826,6 +826,7 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
    info->Varyings[info->NumVarying].Size = this->size;
    info->Varyings[info->NumVarying].BufferIndex = buffer_index;
    info->NumVarying++;
+   info->Buffers[buffer].NumVaryings++;
 
    return true;
 }
