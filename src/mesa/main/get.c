@@ -384,6 +384,13 @@ static const int extra_ARB_shader_storage_buffer_object_and_geometry_shader[] = 
    EXTRA_END
 };
 
+static const int extra_ARB_shader_image_load_store_shader_storage_buffer_object_es31[] = {
+   EXT(ARB_shader_image_load_store),
+   EXT(ARB_shader_storage_buffer_object),
+   EXTRA_API_ES31,
+   EXTRA_END
+};
+
 static const int extra_ARB_framebuffer_no_attachments_and_geometry_shader[] = {
    EXTRA_EXT_FB_NO_ATTACH_GS,
    EXTRA_END
