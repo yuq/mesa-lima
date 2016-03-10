@@ -757,6 +757,27 @@ static void si_get_draw_start_count(struct si_context *sctx,
 	}
 }
 
+static void si_ce_pre_draw_synchronization(struct si_context *sctx)
+{
+	if (sctx->ce_need_synchronization) {
+		radeon_emit(sctx->ce_ib, PKT3(PKT3_INCREMENT_CE_COUNTER, 0, 0));
+		radeon_emit(sctx->ce_ib, 1);
+
+		radeon_emit(sctx->b.gfx.cs, PKT3(PKT3_WAIT_ON_CE_COUNTER, 0, 0));
+		radeon_emit(sctx->b.gfx.cs, 1);
+	}
+}
+
+static void si_ce_post_draw_synchronization(struct si_context *sctx)
+{
+	if (sctx->ce_need_synchronization) {
+		radeon_emit(sctx->b.gfx.cs, PKT3(PKT3_INCREMENT_DE_COUNTER, 0, 0));
+		radeon_emit(sctx->b.gfx.cs, 0);
+
+		sctx->ce_need_synchronization = false;
+	}
+}
+
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -886,7 +907,12 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	si_emit_scratch_reloc(sctx);
 	si_emit_rasterizer_prim_state(sctx);
 	si_emit_draw_registers(sctx, info);
+
+	si_ce_pre_draw_synchronization(sctx);
+
 	si_emit_draw_packets(sctx, info, &ib);
+
+	si_ce_post_draw_synchronization(sctx);
 
 	if (sctx->trace_buf)
 		si_trace_emit(sctx);
