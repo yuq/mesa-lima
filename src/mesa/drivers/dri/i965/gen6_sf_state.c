@@ -351,8 +351,9 @@ upload_sf_state(struct brw_context *brw)
        unreachable("not reached");
    }
 
-   /* _NEW_SCISSOR */
-   if (ctx->Scissor.EnableFlags)
+   /* _NEW_SCISSOR _NEW_POLYGON BRW_NEW_GEOMETRY_PROGRAM BRW_NEW_PRIMITIVE */
+   if (ctx->Scissor.EnableFlags ||
+       is_drawing_points(brw) || is_drawing_lines(brw))
       dw3 |= GEN6_SF_SCISSOR_ENABLE;
 
    /* _NEW_POLYGON */
