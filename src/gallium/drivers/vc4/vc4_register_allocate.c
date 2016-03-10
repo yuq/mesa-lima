@@ -175,14 +175,9 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
 {
         struct node_to_temp_map map[c->num_temps];
         uint32_t temp_to_node[c->num_temps];
-        uint32_t def[c->num_temps];
-        uint32_t use[c->num_temps];
         uint8_t class_bits[c->num_temps];
         struct qpu_reg *temp_registers = calloc(c->num_temps,
                                                 sizeof(*temp_registers));
-        for (int i = 0; i < ARRAY_SIZE(def); i++)
-                def[i] = ~0;
-        memset(use, 0, sizeof(use));
 
         /* If things aren't ever written (undefined values), just read from
          * r0.
@@ -195,38 +190,12 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
         struct ra_graph *g = ra_alloc_interference_graph(vc4->regs,
                                                          c->num_temps);
 
-        /* Compute the live ranges so we can figure out interference.
-         */
-        uint32_t ip = 0;
-        qir_for_each_inst_inorder(inst, c) {
-                if (inst->dst.file == QFILE_TEMP) {
-                        def[inst->dst.index] = MIN2(ip, def[inst->dst.index]);
-                        use[inst->dst.index] = ip;
-                }
-
-                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
-                        if (inst->src[i].file == QFILE_TEMP)
-                                use[inst->src[i].index] = ip;
-                }
-
-                switch (inst->op) {
-                case QOP_FRAG_Z:
-                case QOP_FRAG_W:
-                        /* The payload registers have values implicitly loaded
-                         * at the start of the program.
-                         */
-                        def[inst->dst.index] = 0;
-                        break;
-                default:
-                        break;
-                }
-
-                ip++;
-        }
+        /* Compute the live ranges so we can figure out interference. */
+        qir_calculate_live_intervals(c);
 
         for (uint32_t i = 0; i < c->num_temps; i++) {
                 map[i].temp = i;
-                map[i].priority = use[i] - def[i];
+                map[i].priority = c->temp_end[i] - c->temp_start[i];
         }
         qsort(map, c->num_temps, sizeof(map[0]), node_to_temp_priority);
         for (uint32_t i = 0; i < c->num_temps; i++) {
@@ -241,7 +210,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                CLASS_BIT_A | CLASS_BIT_B_OR_ACC | CLASS_BIT_R4,
                sizeof(class_bits));
 
-        ip = 0;
+        int ip = 0;
         qir_for_each_inst_inorder(inst, c) {
                 if (qir_writes_r4(inst)) {
                         /* This instruction writes r4 (and optionally moves
@@ -249,7 +218,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                          * stored in r4 across it.
                          */
                         for (int i = 0; i < c->num_temps; i++) {
-                                if (def[i] < ip && use[i] > ip)
+                                if (c->temp_start[i] < ip && c->temp_end[i] > ip)
                                         class_bits[i] &= ~CLASS_BIT_R4;
                         }
                 } else {
@@ -328,7 +297,8 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
 
         for (uint32_t i = 0; i < c->num_temps; i++) {
                 for (uint32_t j = i + 1; j < c->num_temps; j++) {
-                        if (!(def[i] >= use[j] || def[j] >= use[i])) {
+                        if (!(c->temp_start[i] >= c->temp_end[j] ||
+                              c->temp_start[j] >= c->temp_end[i])) {
                                 ra_add_node_interference(g,
                                                          temp_to_node[i],
                                                          temp_to_node[j]);
@@ -349,7 +319,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                 /* If the value's never used, just write to the NOP register
                  * for clarity in debug output.
                  */
-                if (def[i] == use[i])
+                if (c->temp_start[i] == c->temp_end[i])
                         temp_registers[i] = qpu_ra(QPU_W_NOP);
         }
 

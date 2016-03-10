@@ -31,6 +31,7 @@ C_SOURCES := \
 	vc4_opt_vpm.c \
 	vc4_program.c \
 	vc4_qir.c \
+	vc4_qir_live_variables.c \
 	vc4_qir_lower_uniforms.c \
 	vc4_qir_schedule.c \
 	vc4_qir_validate.c \

@@ -153,6 +153,12 @@ bool qpu_inst_is_tlb(uint64_t inst) ATTRIBUTE_CONST;
 int qpu_num_sf_accesses(uint64_t inst) ATTRIBUTE_CONST;
 void qpu_serialize_one_inst(struct vc4_compile *c, uint64_t inst);
 
+static inline enum qpu_cond
+qpu_cond_complement(enum qpu_cond cond)
+{
+        return cond ^ 1;
+}
+
 static inline uint64_t
 qpu_load_imm_f(struct qpu_reg dst, float val)
 {

@@ -224,6 +224,53 @@ qir_writes_r4(struct qinst *inst)
         }
 }
 
+uint8_t
+qir_channels_written(struct qinst *inst)
+{
+        if (qir_is_mul(inst)) {
+                switch (inst->dst.pack) {
+                case QPU_PACK_MUL_NOP:
+                case QPU_PACK_MUL_8888:
+                        return 0xf;
+                case QPU_PACK_MUL_8A:
+                        return 0x1;
+                case QPU_PACK_MUL_8B:
+                        return 0x2;
+                case QPU_PACK_MUL_8C:
+                        return 0x4;
+                case QPU_PACK_MUL_8D:
+                        return 0x8;
+                }
+        } else {
+                switch (inst->dst.pack) {
+                case QPU_PACK_A_NOP:
+                case QPU_PACK_A_8888:
+                case QPU_PACK_A_8888_SAT:
+                case QPU_PACK_A_32_SAT:
+                        return 0xf;
+                case QPU_PACK_A_8A:
+                case QPU_PACK_A_8A_SAT:
+                        return 0x1;
+                case QPU_PACK_A_8B:
+                case QPU_PACK_A_8B_SAT:
+                        return 0x2;
+                case QPU_PACK_A_8C:
+                case QPU_PACK_A_8C_SAT:
+                        return 0x4;
+                case QPU_PACK_A_8D:
+                case QPU_PACK_A_8D_SAT:
+                        return 0x8;
+                case QPU_PACK_A_16A:
+                case QPU_PACK_A_16A_SAT:
+                        return 0x3;
+                case QPU_PACK_A_16B:
+                case QPU_PACK_A_16B_SAT:
+                        return 0xc;
+                }
+        }
+        unreachable("Bad pack field");
+}
+
 static void
 qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
 {
