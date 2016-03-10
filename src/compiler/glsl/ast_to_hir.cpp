@@ -54,6 +54,7 @@
 #include "ast.h"
 #include "compiler/glsl_types.h"
 #include "program/hash_table.h"
+#include "main/macros.h"
 #include "main/shaderobj.h"
 #include "ir.h"
 #include "ir_builder.h"
@@ -6711,13 +6712,14 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                            qual->offset, &xfb_offset)) {
                fields[i].offset = xfb_offset;
                block_xfb_offset = fields[i].offset +
-                  4 * field_type->component_slots();
+                  MAX2(xfb_stride, (int) (4 * field_type->component_slots()));
             }
          } else {
             if (layout && layout->flags.q.explicit_xfb_offset) {
                unsigned align = field_type->is_double() ? 8 : 4;
                fields[i].offset = glsl_align(block_xfb_offset, align);
-               block_xfb_offset += 4 * field_type->component_slots();
+               block_xfb_offset +=
+                  MAX2(xfb_stride, (int) (4 * field_type->component_slots()));
             }
          }
 
