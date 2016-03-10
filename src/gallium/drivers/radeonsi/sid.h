@@ -146,6 +146,12 @@
 #define PKT3_SET_SH_REG                        0x76
 #define PKT3_SET_SH_REG_OFFSET                 0x77
 #define PKT3_SET_UCONFIG_REG                   0x79 /* new for CIK */
+#define PKT3_LOAD_CONST_RAM                    0x80
+#define PKT3_WRITE_CONST_RAM                   0x81
+#define PKT3_DUMP_CONST_RAM                    0x83
+#define PKT3_INCREMENT_CE_COUNTER              0x84
+#define PKT3_INCREMENT_DE_COUNTER              0x85
+#define PKT3_WAIT_ON_CE_COUNTER                0x86
 
 #define PKT_TYPE_S(x)                   (((x) & 0x3) << 30)
 #define PKT_TYPE_G(x)                   (((x) >> 30) & 0x3)
