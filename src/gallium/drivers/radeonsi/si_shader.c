@@ -5897,12 +5897,15 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	struct si_shader *mainp = shader->selector->main_shader_part;
 	int r;
 
-	/* LS and ES are always compiled on demand. */
+	/* LS, ES, VS are compiled on demand if the main part hasn't been
+	 * compiled for that stage.
+	 */
 	if (!mainp ||
 	    (shader->selector->type == PIPE_SHADER_VERTEX &&
-	     (shader->key.vs.as_es || shader->key.vs.as_ls)) ||
+	     (shader->key.vs.as_es != mainp->key.vs.as_es ||
+	      shader->key.vs.as_ls != mainp->key.vs.as_ls)) ||
 	    (shader->selector->type == PIPE_SHADER_TESS_EVAL &&
-	     shader->key.tes.as_es)) {
+	     shader->key.tes.as_es != mainp->key.tes.as_es)) {
 		/* Monolithic shader (compiled as a whole, has many variants,
 		 * may take a long time to compile).
 		 */

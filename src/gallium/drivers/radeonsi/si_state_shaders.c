@@ -1042,6 +1042,31 @@ static int si_shader_select(struct pipe_context *ctx,
 	return si_shader_select_with_key(ctx, state, &key);
 }
 
+static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
+					  union si_shader_key *key)
+{
+	unsigned next_shader = info->properties[TGSI_PROPERTY_NEXT_SHADER];
+
+	switch (info->processor) {
+	case TGSI_PROCESSOR_VERTEX:
+		switch (next_shader) {
+		case TGSI_PROCESSOR_GEOMETRY:
+			key->vs.as_es = 1;
+			break;
+		case TGSI_PROCESSOR_TESS_CTRL:
+		case TGSI_PROCESSOR_TESS_EVAL:
+			key->vs.as_ls = 1;
+			break;
+		}
+		break;
+
+	case TGSI_PROCESSOR_TESS_EVAL:
+		if (next_shader == TGSI_PROCESSOR_GEOMETRY)
+			key->tes.as_es = 1;
+		break;
+	}
+}
+
 static void *si_create_shader_selector(struct pipe_context *ctx,
 				       const struct pipe_shader_state *state)
 {
@@ -1167,6 +1192,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			goto error;
 
 		shader->selector = sel;
+		si_parse_next_shader_property(&sel->info, &shader->key);
 
 		tgsi_binary = si_get_tgsi_binary(sel);
 
@@ -1202,6 +1228,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		union si_shader_key key;
 
 		memset(&key, 0, sizeof(key));
+		si_parse_next_shader_property(&sel->info, &key);
 
 		/* Set reasonable defaults, so that the shader key doesn't
 		 * cause any code to be eliminated.
