@@ -32,6 +32,8 @@
 #include "util/u_format.h"
 #include "util/ralloc.h"
 
+#include <xf86drm.h>
+#include "vc4_drm.h"
 #include "vc4_screen.h"
 #include "vc4_context.h"
 #include "vc4_resource.h"
@@ -502,9 +504,17 @@ vc4_supports_branches(struct vc4_screen *screen)
 {
 #if USE_VC4_SIMULATOR
         return true;
-#else
-        return false;
 #endif
+
+        struct drm_vc4_get_param p = {
+                .param = DRM_VC4_PARAM_SUPPORTS_BRANCHES,
+        };
+        int ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &p);
+
+        if (ret != 0)
+                return false;
+
+        return p.value;
 }
 
 struct pipe_screen *
