@@ -98,7 +98,8 @@ static void si_init_descriptors(struct si_descriptors *desc,
 				unsigned shader_userdata_index,
 				unsigned element_dw_size,
 				unsigned num_elements,
-				const uint32_t *null_descriptor)
+				const uint32_t *null_descriptor,
+				unsigned *ce_offset)
 {
 	int i;
 
@@ -109,6 +110,13 @@ static void si_init_descriptors(struct si_descriptors *desc,
 	desc->num_elements = num_elements;
 	desc->list_dirty = true; /* upload the list before the next draw */
 	desc->shader_userdata_offset = shader_userdata_index * 4;
+
+	if (ce_offset) {
+		desc->ce_offset = *ce_offset;
+
+		/* make sure that ce_offset stays 32 byte aligned */
+		*ce_offset += align(element_dw_size * num_elements * 4, 32);
+	}
 
 	/* Initialize the array to NULL descriptors if the element size is 8. */
 	if (null_descriptor) {
@@ -511,14 +519,15 @@ static void si_init_buffer_resources(struct si_buffer_resources *buffers,
 				     unsigned num_buffers,
 				     unsigned shader_userdata_index,
 				     enum radeon_bo_usage shader_usage,
-				     enum radeon_bo_priority priority)
+				     enum radeon_bo_priority priority,
+				     unsigned *ce_offset)
 {
 	buffers->shader_usage = shader_usage;
 	buffers->priority = priority;
 	buffers->buffers = CALLOC(num_buffers, sizeof(struct pipe_resource*));
 
 	si_init_descriptors(&buffers->desc, shader_userdata_index, 4,
-			    num_buffers, NULL);
+			    num_buffers, NULL, ce_offset);
 }
 
 static void si_release_buffer_resources(struct si_buffer_resources *buffers)
@@ -1326,29 +1335,35 @@ void si_emit_shader_userdata(struct si_context *sctx, struct r600_atom *atom)
 void si_init_all_descriptors(struct si_context *sctx)
 {
 	int i;
+	unsigned ce_offset = 0;
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		si_init_buffer_resources(&sctx->const_buffers[i],
 					 SI_NUM_CONST_BUFFERS, SI_SGPR_CONST_BUFFERS,
-					 RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
+					 RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER,
+					 &ce_offset);
 		si_init_buffer_resources(&sctx->rw_buffers[i],
 					 SI_NUM_RW_BUFFERS, SI_SGPR_RW_BUFFERS,
-					 RADEON_USAGE_READWRITE, RADEON_PRIO_RINGS_STREAMOUT);
+					 RADEON_USAGE_READWRITE, RADEON_PRIO_RINGS_STREAMOUT,
+					 &ce_offset);
 		si_init_buffer_resources(&sctx->shader_buffers[i],
 					 SI_NUM_SHADER_BUFFERS, SI_SGPR_SHADER_BUFFERS,
-					 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RW_BUFFER);
+					 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RW_BUFFER,
+					 &ce_offset);
 
 		si_init_descriptors(&sctx->samplers[i].views.desc,
 				    SI_SGPR_SAMPLERS, 16, SI_NUM_SAMPLERS,
-				    null_texture_descriptor);
+				    null_texture_descriptor, &ce_offset);
 
 		si_init_descriptors(&sctx->images[i].desc,
 				    SI_SGPR_IMAGES, 8, SI_NUM_IMAGES,
-				    null_image_descriptor);
+				    null_image_descriptor, &ce_offset);
 	}
 
 	si_init_descriptors(&sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFERS,
-			    4, SI_NUM_VERTEX_BUFFERS, NULL);
+			    4, SI_NUM_VERTEX_BUFFERS, NULL, NULL);
+
+	assert(ce_offset <= 32768);
 
 	/* Set pipe_context functions. */
 	sctx->b.b.bind_sampler_states = si_bind_sampler_states;

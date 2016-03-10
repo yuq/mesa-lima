@@ -198,6 +198,9 @@ struct si_descriptors {
 	struct r600_resource *buffer;
 	unsigned buffer_offset;
 
+	/* Offset in CE RAM */
+	unsigned ce_offset;
+
 	/* The i-th bit is set if that element is enabled (non-NULL resource). */
 	uint64_t enabled_mask;
 
