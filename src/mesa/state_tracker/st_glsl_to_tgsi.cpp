@@ -6345,7 +6345,7 @@ st_translate_program(
    }
 
    if (program->use_shared_memory)
-      t->shared_memory = ureg_DECL_shared_memory(ureg);
+      t->shared_memory = ureg_DECL_memory(ureg, TGSI_MEMORY_TYPE_SHARED);
 
    for (i = 0; i < program->shader->NumImages; i++) {
       if (program->images_used & (1 << i)) {

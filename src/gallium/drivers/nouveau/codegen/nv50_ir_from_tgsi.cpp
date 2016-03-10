@@ -864,7 +864,7 @@ public:
    std::vector<Resource> resources;
 
    struct MemoryFile {
-      bool shared;
+      uint8_t mem_type; // TGSI_MEMORY_TYPE_*
    };
    std::vector<MemoryFile> memoryFiles;
 
@@ -1222,7 +1222,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       break;
    case TGSI_FILE_MEMORY:
       for (i = first; i <= last; ++i)
-         memoryFiles[i].shared = decl->Declaration.Shared;
+         memoryFiles[i].mem_type = decl->Declaration.MemType;
       break;
    case TGSI_FILE_NULL:
    case TGSI_FILE_TEMPORARY:
@@ -1527,7 +1527,8 @@ Converter::makeSym(uint tgsiFile, int fileIdx, int idx, int c, uint32_t address)
 
    sym->reg.fileIndex = fileIdx;
 
-   if (tgsiFile == TGSI_FILE_MEMORY && code->memoryFiles[fileIdx].shared)
+   if (tgsiFile == TGSI_FILE_MEMORY &&
+       code->memoryFiles[fileIdx].mem_type == TGSI_MEMORY_TYPE_SHARED)
       sym->setFile(FILE_MEMORY_SHARED);
 
    if (idx >= 0) {

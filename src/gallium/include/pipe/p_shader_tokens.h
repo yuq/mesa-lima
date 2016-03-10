@@ -117,6 +117,12 @@ enum tgsi_file_type {
 #define TGSI_CYLINDRICAL_WRAP_Z (1 << 2)
 #define TGSI_CYLINDRICAL_WRAP_W (1 << 3)
 
+#define TGSI_MEMORY_TYPE_GLOBAL        0 /* OpenCL global              */
+#define TGSI_MEMORY_TYPE_SHARED        1 /* OpenCL local / GLSL shared */
+#define TGSI_MEMORY_TYPE_PRIVATE       2 /* OpenCL private             */
+#define TGSI_MEMORY_TYPE_INPUT         3 /* OpenCL kernel input params */
+#define TGSI_MEMORY_TYPE_COUNT         4
+
 struct tgsi_declaration
 {
    unsigned Type        : 4;  /**< TGSI_TOKEN_TYPE_DECLARATION */
@@ -130,8 +136,8 @@ struct tgsi_declaration
    unsigned Local       : 1;  /**< optimize as subroutine local variable? */
    unsigned Array       : 1;  /**< extra array info? */
    unsigned Atomic      : 1;  /**< atomic only? for TGSI_FILE_BUFFER */
-   unsigned Shared      : 1;  /**< shared storage for TGSI_FILE_MEMORY */
-   unsigned Padding     : 4;
+   unsigned MemType     : 2;  /**< TGSI_MEMORY_TYPE_x for TGSI_FILE_MEMORY */
+   unsigned Padding     : 3;
 };
 
 struct tgsi_declaration_range

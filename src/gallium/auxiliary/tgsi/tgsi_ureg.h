@@ -340,7 +340,7 @@ struct ureg_src
 ureg_DECL_buffer(struct ureg_program *ureg, unsigned nr, bool atomic);
 
 struct ureg_src
-ureg_DECL_shared_memory(struct ureg_program *ureg);
+ureg_DECL_memory(struct ureg_program *ureg, unsigned memory_type);
 
 static inline struct ureg_src
 ureg_imm4f( struct ureg_program *ureg,

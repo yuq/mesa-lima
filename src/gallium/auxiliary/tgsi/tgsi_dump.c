@@ -365,8 +365,13 @@ iter_declaration(
    }
 
    if (decl->Declaration.File == TGSI_FILE_MEMORY) {
-      if (decl->Declaration.Shared)
-         TXT(", SHARED");
+      switch (decl->Declaration.MemType) {
+      /* Note: ,GLOBAL is optional / the default */
+      case TGSI_MEMORY_TYPE_GLOBAL:  TXT(", GLOBAL");  break;
+      case TGSI_MEMORY_TYPE_SHARED:  TXT(", SHARED");  break;
+      case TGSI_MEMORY_TYPE_PRIVATE: TXT(", PRIVATE"); break;
+      case TGSI_MEMORY_TYPE_INPUT:   TXT(", INPUT");   break;
+      }
    }
 
    if (decl->Declaration.File == TGSI_FILE_SAMPLER_VIEW) {

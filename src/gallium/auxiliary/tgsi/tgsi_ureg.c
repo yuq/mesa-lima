@@ -191,7 +191,7 @@ struct ureg_program
 
    struct ureg_tokens domain[2];
 
-   bool use_shared_memory;
+   bool use_memory[TGSI_MEMORY_TYPE_COUNT];
 };
 
 static union tgsi_any_token error_tokens[32];
@@ -730,13 +730,14 @@ struct ureg_src ureg_DECL_buffer(struct ureg_program *ureg, unsigned nr,
    return reg;
 }
 
-/* Allocate a shared memory area.
+/* Allocate a memory area.
  */
-struct ureg_src ureg_DECL_shared_memory(struct ureg_program *ureg)
+struct ureg_src ureg_DECL_memory(struct ureg_program *ureg,
+                                 unsigned memory_type)
 {
-   struct ureg_src reg = ureg_src_register(TGSI_FILE_MEMORY, 0);
+   struct ureg_src reg = ureg_src_register(TGSI_FILE_MEMORY, memory_type);
 
-   ureg->use_shared_memory = true;
+   ureg->use_memory[memory_type] = true;
    return reg;
 }
 
@@ -1673,7 +1674,7 @@ emit_decl_buffer(struct ureg_program *ureg,
 }
 
 static void
-emit_decl_shared_memory(struct ureg_program *ureg)
+emit_decl_memory(struct ureg_program *ureg, unsigned memory_type)
 {
    union tgsi_any_token *out = get_tokens(ureg, DOMAIN_DECL, 2);
 
@@ -1682,11 +1683,11 @@ emit_decl_shared_memory(struct ureg_program *ureg)
    out[0].decl.NrTokens = 2;
    out[0].decl.File = TGSI_FILE_MEMORY;
    out[0].decl.UsageMask = TGSI_WRITEMASK_XYZW;
-   out[0].decl.Shared = true;
+   out[0].decl.MemType = memory_type;
 
    out[1].value = 0;
-   out[1].decl_range.First = 0;
-   out[1].decl_range.Last = 0;
+   out[1].decl_range.First = memory_type;
+   out[1].decl_range.Last = memory_type;
 }
 
 static void
@@ -1861,8 +1862,10 @@ static void emit_decls( struct ureg_program *ureg )
       emit_decl_buffer(ureg, ureg->buffer[i].index, ureg->buffer[i].atomic);
    }
 
-   if (ureg->use_shared_memory)
-      emit_decl_shared_memory(ureg);
+   for (i = 0; i < TGSI_MEMORY_TYPE_COUNT; i++) {
+      if (ureg->use_memory[i])
+         emit_decl_memory(ureg, i);
+   }
 
    if (ureg->const_decls.nr_constant_ranges) {
       for (i = 0; i < ureg->const_decls.nr_constant_ranges; i++) {
