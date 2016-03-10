@@ -430,6 +430,36 @@ is_drawing_points(const struct brw_context *brw)
    }
 }
 
+static inline bool
+is_drawing_lines(const struct brw_context *brw)
+{
+   /* Determine if the primitives *reaching the SF* are points */
+   /* _NEW_POLYGON */
+   if (brw->ctx.Polygon.FrontMode == GL_LINE ||
+       brw->ctx.Polygon.BackMode == GL_LINE) {
+      return true;
+   }
+
+   if (brw->geometry_program) {
+      /* BRW_NEW_GEOMETRY_PROGRAM */
+      return brw->geometry_program->OutputType == GL_LINE_STRIP;
+   } else if (brw->tes.prog_data) {
+      /* BRW_NEW_TES_PROG_DATA */
+      return brw->tes.prog_data->output_topology ==
+             BRW_TESS_OUTPUT_TOPOLOGY_LINE;
+   } else {
+      /* BRW_NEW_PRIMITIVE */
+      switch (brw->primitive) {
+      case _3DPRIM_LINELIST:
+      case _3DPRIM_LINESTRIP:
+      case _3DPRIM_LINELOOP:
+         return true;
+      }
+   }
+   return false;
+}
+
+
 #ifdef __cplusplus
 }
 #endif
