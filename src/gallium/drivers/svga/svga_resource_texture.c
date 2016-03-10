@@ -448,6 +448,8 @@ svga_texture_transfer_map(struct pipe_context *pipe,
             ret = readback_image_vgpu9(svga, surf, st->slice, transfer->level);
          }
 
+         svga->hud.num_readbacks++;
+
          assert(ret == PIPE_OK);
          (void) ret;
 

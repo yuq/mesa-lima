@@ -109,6 +109,8 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
             assert(ret == PIPE_OK);
          }
 
+         svga->hud.num_readbacks++;
+
          svga_context_finish(svga);
 
          sbuf->dirty = FALSE;
