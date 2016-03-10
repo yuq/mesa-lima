@@ -2713,6 +2713,35 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 				struct lp_build_tgsi_context *bld_base,
 				struct lp_build_emit_data *emit_data);
 
+/* Prevent optimizations (at least of memory accesses) across the current
+ * point in the program by emitting empty inline assembly that is marked as
+ * having side effects.
+ */
+static void emit_optimization_barrier(struct si_shader_context *ctx)
+{
+	LLVMBuilderRef builder = ctx->radeon_bld.gallivm.builder;
+	LLVMTypeRef ftype = LLVMFunctionType(ctx->voidt, NULL, 0, false);
+	LLVMValueRef inlineasm = LLVMConstInlineAsm(ftype, "", "", true, false);
+	LLVMBuildCall(builder, inlineasm, NULL, 0, "");
+}
+
+static void membar_emit(
+		const struct lp_build_tgsi_action *action,
+		struct lp_build_tgsi_context *bld_base,
+		struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+
+	/* Since memoryBarrier only makes guarantees about atomics and
+	 * coherent image accesses (which bypass TC L1), we do not need to emit
+	 * any special cache handling here.
+	 *
+	 * We do have to prevent LLVM from re-ordering loads across
+	 * the barrier though.
+	 */
+	emit_optimization_barrier(ctx);
+}
+
 static bool tgsi_is_array_sampler(unsigned target)
 {
 	return target == TGSI_TEXTURE_1D_ARRAY ||
@@ -5314,6 +5343,8 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_ATOMIMIN].intr_name = "smin";
 	bld_base->op_actions[TGSI_OPCODE_ATOMIMAX] = tmpl;
 	bld_base->op_actions[TGSI_OPCODE_ATOMIMAX].intr_name = "smax";
+
+	bld_base->op_actions[TGSI_OPCODE_MEMBAR].emit = membar_emit;
 
 	bld_base->op_actions[TGSI_OPCODE_DDX].emit = si_llvm_emit_ddxy;
 	bld_base->op_actions[TGSI_OPCODE_DDY].emit = si_llvm_emit_ddxy;
