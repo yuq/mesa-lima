@@ -1322,6 +1322,12 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       default:
          goto invalid_operation;
       }
+
+   case GL_TRANSFORM_FEEDBACK_BUFFER_INDEX:
+      VALIDATE_TYPE(GL_TRANSFORM_FEEDBACK_VARYING);
+      *val = RESOURCE_XFV(res)->BufferIndex;
+      return 1;
+
    default:
       goto invalid_enum;
    }

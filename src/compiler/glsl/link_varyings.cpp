@@ -725,8 +725,9 @@ tfeedback_decl::get_num_outputs() const
 bool
 tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
                       struct gl_transform_feedback_info *info,
-                      unsigned buffer, const unsigned max_outputs,
-                      bool *explicit_stride, bool has_xfb_qualifiers) const
+                      unsigned buffer, unsigned buffer_index,
+                      const unsigned max_outputs, bool *explicit_stride,
+                      bool has_xfb_qualifiers) const
 {
    assert(!this->next_buffer_separator);
 
@@ -823,6 +824,7 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
                                                          this->orig_name);
    info->Varyings[info->NumVarying].Type = this->type;
    info->Varyings[info->NumVarying].Size = this->size;
+   info->Varyings[info->NumVarying].BufferIndex = buffer_index;
    info->NumVarying++;
 
    return true;
@@ -976,8 +978,8 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
       /* GL_SEPARATE_ATTRIBS */
       for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
          if (!tfeedback_decls[i].store(ctx, prog, &prog->LinkedTransformFeedback,
-                                       num_buffers, num_outputs, NULL,
-                                       has_xfb_qualifiers))
+                                       num_buffers, num_buffers, num_outputs,
+                                       NULL, has_xfb_qualifiers))
             return false;
 
          buffers |= 1 << num_buffers;
@@ -1008,6 +1010,7 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
              buffer != tfeedback_decls[i].get_buffer()) {
             /* we have moved to the next buffer so reset stream id */
             buffer_stream_id = -1;
+            num_buffers++;
          }
 
          if (tfeedback_decls[i].is_next_buffer_separator()) {
@@ -1036,11 +1039,11 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
          } else {
             buffer = num_buffers;
          }
-         buffers |= 1 << num_buffers;
+         buffers |= 1 << buffer;
 
          if (!tfeedback_decls[i].store(ctx, prog,
                                        &prog->LinkedTransformFeedback,
-                                       num_buffers, num_outputs,
+                                       buffer, num_buffers, num_outputs,
                                        explicit_stride, has_xfb_qualifiers))
             return false;
       }

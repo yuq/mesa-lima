@@ -1618,6 +1618,7 @@ struct gl_transform_feedback_varying_info
 {
    char *Name;
    GLenum Type;
+   GLint BufferIndex;
    GLint Size;
    GLint Offset;
 };
