@@ -6370,6 +6370,42 @@ st_translate_program(
                        t->insn[t->labels[i].branch_target]);
    }
 
+   /* Set the next shader stage hint for VS and TES. */
+   switch (procType) {
+   case TGSI_PROCESSOR_VERTEX:
+   case TGSI_PROCESSOR_TESS_EVAL:
+      if (program->shader_program->SeparateShader)
+         break;
+
+      for (i = program->shader->Stage+1; i <= MESA_SHADER_FRAGMENT; i++) {
+         if (program->shader_program->_LinkedShaders[i]) {
+            unsigned next;
+
+            switch (i) {
+            case MESA_SHADER_TESS_CTRL:
+               next = TGSI_PROCESSOR_TESS_CTRL;
+               break;
+            case MESA_SHADER_TESS_EVAL:
+               next = TGSI_PROCESSOR_TESS_EVAL;
+               break;
+            case MESA_SHADER_GEOMETRY:
+               next = TGSI_PROCESSOR_GEOMETRY;
+               break;
+            case MESA_SHADER_FRAGMENT:
+               next = TGSI_PROCESSOR_FRAGMENT;
+               break;
+            default:
+               assert(0);
+               continue;
+            }
+
+            ureg_set_next_shader_processor(ureg, next);
+            break;
+         }
+      }
+      break;
+   }
+
 out:
    if (t) {
       free(t->arrays);
