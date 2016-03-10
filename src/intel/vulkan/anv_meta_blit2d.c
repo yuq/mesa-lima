@@ -541,7 +541,7 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
          {
             .binding = 0,
             .stride = 0,
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+            .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
          },
          {
             .binding = 1,
