@@ -34,6 +34,7 @@
 #define BRW_STATE_H
 
 #include "brw_context.h"
+#include "brw_defines.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -405,6 +406,29 @@ void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);
 /* gen7_l3_state.c */
 void
 gen7_restore_default_l3_config(struct brw_context *brw);
+
+static inline bool
+is_drawing_points(const struct brw_context *brw)
+{
+   /* Determine if the primitives *reaching the SF* are points */
+   /* _NEW_POLYGON */
+   if (brw->ctx.Polygon.FrontMode == GL_POINT ||
+       brw->ctx.Polygon.BackMode == GL_POINT) {
+      return true;
+   }
+
+   if (brw->geometry_program) {
+      /* BRW_NEW_GEOMETRY_PROGRAM */
+      return brw->geometry_program->OutputType == GL_POINTS;
+   } else if (brw->tes.prog_data) {
+      /* BRW_NEW_TES_PROG_DATA */
+      return brw->tes.prog_data->output_topology ==
+             BRW_TESS_OUTPUT_TOPOLOGY_POINT;
+   } else {
+      /* BRW_NEW_PRIMITIVE */
+      return brw->primitive == _3DPRIM_POINTLIST;
+   }
+}
 
 #ifdef __cplusplus
 }

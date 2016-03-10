@@ -147,30 +147,6 @@ get_attr_override(const struct brw_vue_map *vue_map, int urb_entry_read_offset,
 }
 
 
-static bool
-is_drawing_points(const struct brw_context *brw)
-{
-   /* Determine if the primitives *reaching the SF* are points */
-   /* _NEW_POLYGON */
-   if (brw->ctx.Polygon.FrontMode == GL_POINT ||
-       brw->ctx.Polygon.BackMode == GL_POINT) {
-      return true;
-   }
-
-   if (brw->geometry_program) {
-      /* BRW_NEW_GEOMETRY_PROGRAM */
-      return brw->geometry_program->OutputType == GL_POINTS;
-   } else if (brw->tes.prog_data) {
-      /* BRW_NEW_TES_PROG_DATA */
-      return brw->tes.prog_data->output_topology ==
-             BRW_TESS_OUTPUT_TOPOLOGY_POINT;
-   } else {
-      /* BRW_NEW_PRIMITIVE */
-      return brw->primitive == _3DPRIM_POINTLIST;
-   }
-}
-
-
 /**
  * Create the mapping from the FS inputs we produce to the previous pipeline
  * stage (GS or VS) outputs they source from.
