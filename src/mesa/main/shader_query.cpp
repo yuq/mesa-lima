@@ -60,7 +60,7 @@ DECL_RESOURCE_FUNC(VAR, gl_shader_variable);
 DECL_RESOURCE_FUNC(UBO, gl_uniform_block);
 DECL_RESOURCE_FUNC(UNI, gl_uniform_storage);
 DECL_RESOURCE_FUNC(ATC, gl_active_atomic_buffer);
-DECL_RESOURCE_FUNC(XFB, gl_transform_feedback_varying_info);
+DECL_RESOURCE_FUNC(XFV, gl_transform_feedback_varying_info);
 DECL_RESOURCE_FUNC(SUB, gl_subroutine_function);
 
 void GLAPIENTRY
@@ -433,7 +433,7 @@ _mesa_program_resource_name(struct gl_program_resource *res)
    case GL_SHADER_STORAGE_BLOCK:
       return RESOURCE_UBO(res)->Name;
    case GL_TRANSFORM_FEEDBACK_VARYING:
-      return RESOURCE_XFB(res)->Name;
+      return RESOURCE_XFV(res)->Name;
    case GL_PROGRAM_INPUT:
       var = RESOURCE_VAR(res);
       /* Special case gl_VertexIDMESA -> gl_VertexID. */
@@ -473,8 +473,8 @@ _mesa_program_resource_array_size(struct gl_program_resource *res)
 {
    switch (res->Type) {
    case GL_TRANSFORM_FEEDBACK_VARYING:
-      return RESOURCE_XFB(res)->Size > 1 ?
-             RESOURCE_XFB(res)->Size : 0;
+      return RESOURCE_XFV(res)->Size > 1 ?
+             RESOURCE_XFV(res)->Size : 0;
    case GL_PROGRAM_INPUT:
    case GL_PROGRAM_OUTPUT:
       return RESOURCE_VAR(res)->type->length;
@@ -1157,7 +1157,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
          *val = RESOURCE_VAR(res)->type->gl_type;
          return 1;
       case GL_TRANSFORM_FEEDBACK_VARYING:
-         *val = RESOURCE_XFB(res)->Type;
+         *val = RESOURCE_XFV(res)->Type;
          return 1;
       default:
          goto invalid_operation;
@@ -1180,7 +1180,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
          *val = MAX2(_mesa_program_resource_array_size(res), 1);
          return 1;
       case GL_TRANSFORM_FEEDBACK_VARYING:
-         *val = MAX2(RESOURCE_XFB(res)->Size, 1);
+         *val = MAX2(RESOURCE_XFV(res)->Size, 1);
          return 1;
       default:
          goto invalid_operation;
