@@ -3564,7 +3564,6 @@ VOID Lib::OptimizeTileMode(
     // Optimization can only be done on level 0 and samples <= 1
     if ((doOpt == TRUE)                     &&
         (pInOut->mipLevel == 0)             &&
-        (pInOut->flags.display == FALSE)    &&
         (IsPrtTileMode(tileMode) == FALSE)  &&
         (pInOut->flags.prt == FALSE))
     {
@@ -3587,7 +3586,9 @@ VOID Lib::OptimizeTileMode(
 
         if (macroTiledOK)
         {
-            if ((pInOut->flags.opt4Space == TRUE) && (pInOut->numSamples <= 1))
+            if ((pInOut->flags.display == FALSE) &&
+                (pInOut->flags.opt4Space == TRUE) &&
+                (pInOut->numSamples <= 1))
             {
                 // Check if linear mode is optimal
                 if ((pInOut->height == 1) &&
