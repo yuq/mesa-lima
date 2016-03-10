@@ -1527,9 +1527,21 @@ Converter::makeSym(uint tgsiFile, int fileIdx, int idx, int c, uint32_t address)
 
    sym->reg.fileIndex = fileIdx;
 
-   if (tgsiFile == TGSI_FILE_MEMORY &&
-       code->memoryFiles[fileIdx].mem_type == TGSI_MEMORY_TYPE_SHARED)
-      sym->setFile(FILE_MEMORY_SHARED);
+   if (tgsiFile == TGSI_FILE_MEMORY) {
+      switch (code->memoryFiles[fileIdx].mem_type) {
+      case TGSI_MEMORY_TYPE_SHARED:
+         sym->setFile(FILE_MEMORY_SHARED);
+         break;
+      case TGSI_MEMORY_TYPE_INPUT:
+         assert(prog->getType() == Program::TYPE_COMPUTE);
+         assert(idx == -1);
+         sym->setFile(FILE_SHADER_INPUT);
+         address += info->prop.cp.inputOffset;
+         break;
+      default:
+         assert(0); /* TODO: Add support for global and private memory */
+      }
+   }
 
    if (idx >= 0) {
       if (sym->reg.file == FILE_SHADER_INPUT)
