@@ -127,6 +127,8 @@ tgsi_build_declaration(
    unsigned invariant,
    unsigned local,
    unsigned array,
+   unsigned atomic,
+   unsigned shared,
    struct tgsi_header *header )
 {
    struct tgsi_declaration declaration;
@@ -143,6 +145,8 @@ tgsi_build_declaration(
    declaration.Invariant = invariant;
    declaration.Local = local;
    declaration.Array = array;
+   declaration.Atomic = atomic;
+   declaration.Shared = shared;
    header_bodysize_grow( header );
 
    return declaration;
@@ -401,6 +405,8 @@ tgsi_build_full_declaration(
       full_decl->Declaration.Invariant,
       full_decl->Declaration.Local,
       full_decl->Declaration.Array,
+      full_decl->Declaration.Atomic,
+      full_decl->Declaration.Shared,
       header );
 
    if (maxsize <= size)
