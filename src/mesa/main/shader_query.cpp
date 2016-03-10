@@ -1186,9 +1186,17 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
          goto invalid_operation;
       }
    case GL_OFFSET:
-      VALIDATE_TYPE_2(GL_UNIFORM, GL_BUFFER_VARIABLE);
-      *val = RESOURCE_UNI(res)->offset;
-      return 1;
+      switch (res->Type) {
+      case GL_UNIFORM:
+      case GL_BUFFER_VARIABLE:
+         *val = RESOURCE_UNI(res)->offset;
+         return 1;
+      case GL_TRANSFORM_FEEDBACK_VARYING:
+         *val = RESOURCE_XFV(res)->Offset;
+         return 1;
+      default:
+         goto invalid_operation;
+      }
    case GL_BLOCK_INDEX:
       VALIDATE_TYPE_2(GL_UNIFORM, GL_BUFFER_VARIABLE);
       *val = RESOURCE_UNI(res)->block_index;

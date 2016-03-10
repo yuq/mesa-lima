@@ -742,6 +742,7 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
    } else {
       xfb_offset = info->Buffers[buffer].Stride;
    }
+   info->Varyings[info->NumVarying].Offset = xfb_offset * 4;
 
    unsigned location = this->location;
    unsigned location_frac = this->location_frac;
