@@ -60,6 +60,7 @@
 #include "si_shader.h"
 #include "sid.h"
 
+#include "util/u_math.h"
 #include "util/u_memory.h"
 #include "util/u_suballoc.h"
 #include "util/u_upload_mgr.h"
@@ -151,33 +152,86 @@ static bool si_ce_upload(struct si_context *sctx, unsigned ce_offset, unsigned s
 	radeon_emit(sctx->ce_ib, va);
 	radeon_emit(sctx->ce_ib, va >> 32);
 
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, *out_buf,
+	                       RADEON_USAGE_READWRITE, RADEON_PRIO_DESCRIPTORS);
+
 	sctx->ce_need_synchronization = true;
 	return true;
 }
 
+static void si_reinitialize_ce_ram(struct si_context *sctx,
+                            struct si_descriptors *desc)
+{
+	if (desc->buffer) {
+		struct r600_resource *buffer = (struct r600_resource*)desc->buffer;
+		unsigned list_size = desc->num_elements * desc->element_dw_size * 4;
+		uint64_t va = buffer->gpu_address + desc->buffer_offset;
+		struct radeon_winsys_cs *ib = sctx->ce_preamble_ib;
+
+		if (!ib)
+			ib = sctx->ce_ib;
+
+		list_size = align(list_size, 32);
+
+		radeon_emit(ib, PKT3(PKT3_LOAD_CONST_RAM, 3, 0));
+		radeon_emit(ib, va);
+		radeon_emit(ib, va >> 32);
+		radeon_emit(ib, list_size / 4);
+		radeon_emit(ib, desc->ce_offset);
+
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
+		                    RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
+	}
+	desc->ce_ram_dirty = false;
+}
 
 static bool si_upload_descriptors(struct si_context *sctx,
 				  struct si_descriptors *desc)
 {
 	unsigned list_size = desc->num_elements * desc->element_dw_size * 4;
-	void *ptr;
 
 	if (!desc->dirty_mask)
 		return true;
 
-	u_upload_alloc(sctx->b.uploader, 0, list_size, 256,
-		       &desc->buffer_offset,
-		       (struct pipe_resource**)&desc->buffer, &ptr);
-	if (!desc->buffer)
-		return false; /* skip the draw call */
+	if (sctx->ce_ib) {
+		uint32_t const* list = (uint32_t const*)desc->list;
 
-	util_memcpy_cpu_to_le32(ptr, desc->list, list_size);
+		if (desc->ce_ram_dirty)
+			si_reinitialize_ce_ram(sctx, desc);
 
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
-			      RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
+		while(desc->dirty_mask) {
+			int begin, count;
+			u_bit_scan_consecutive_range64(&desc->dirty_mask, &begin,
+			                               &count);
 
-	desc->dirty_mask = 0;
+			begin *= desc->element_dw_size;
+			count *= desc->element_dw_size;
+
+			radeon_emit(sctx->ce_ib,
+			            PKT3(PKT3_WRITE_CONST_RAM, count, 0));
+			radeon_emit(sctx->ce_ib, desc->ce_offset + begin * 4);
+			radeon_emit_array(sctx->ce_ib, list + begin, count);
+		}
+
+		if (!si_ce_upload(sctx, desc->ce_offset, list_size,
+		                           &desc->buffer_offset, &desc->buffer))
+			return false;
+	} else {
+		void *ptr;
+
+		u_upload_alloc(sctx->b.uploader, 0, list_size, 256,
+			&desc->buffer_offset,
+			(struct pipe_resource**)&desc->buffer, &ptr);
+		if (!desc->buffer)
+			return false; /* skip the draw call */
+
+		util_memcpy_cpu_to_le32(ptr, desc->list, list_size);
+
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
+	                            RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
+	}
 	desc->pointer_dirty = true;
+	desc->dirty_mask = 0;
 	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
 	return true;
 }
