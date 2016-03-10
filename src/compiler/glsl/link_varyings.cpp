@@ -722,7 +722,7 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
 
    /* Handle gl_SkipComponents. */
    if (this->skip_components) {
-      info->BufferStride[buffer] += this->skip_components;
+      info->Buffers[buffer].Stride += this->skip_components;
       return true;
    }
 
@@ -734,7 +734,7 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
     *       and the buffer mode is INTERLEAVED_ATTRIBS_EXT.
     */
    if (prog->TransformFeedback.BufferMode == GL_INTERLEAVED_ATTRIBS &&
-       info->BufferStride[buffer] + this->num_components() >
+       info->Buffers[buffer].Stride + this->num_components() >
        ctx->Const.MaxTransformFeedbackInterleavedComponents) {
       linker_error(prog, "The MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS "
                    "limit has been exceeded.");
@@ -752,10 +752,11 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
       info->Outputs[info->NumOutputs].NumComponents = output_size;
       info->Outputs[info->NumOutputs].StreamId = stream_id;
       info->Outputs[info->NumOutputs].OutputBuffer = buffer;
-      info->Outputs[info->NumOutputs].DstOffset = info->BufferStride[buffer];
+      info->Outputs[info->NumOutputs].DstOffset =
+         info->Buffers[buffer].Stride;
       ++info->NumOutputs;
-      info->BufferStride[buffer] += output_size;
-      info->BufferStream[buffer] = this->stream_id;
+      info->Buffers[buffer].Stride += output_size;
+      info->Buffers[buffer].Stream = this->stream_id;
       num_components -= output_size;
       location++;
       location_frac = 0;

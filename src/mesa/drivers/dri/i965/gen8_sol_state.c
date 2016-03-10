@@ -139,13 +139,13 @@ gen8_upload_3dstate_streamout(struct brw_context *brw, bool active,
 
       /* Set buffer pitches; 0 means unbound. */
       if (xfb_obj->Buffers[0])
-         dw3 |= linked_xfb_info->BufferStride[0] * 4;
+         dw3 |= linked_xfb_info->Buffers[0].Stride * 4;
       if (xfb_obj->Buffers[1])
-         dw3 |= (linked_xfb_info->BufferStride[1] * 4) << 16;
+         dw3 |= (linked_xfb_info->Buffers[1].Stride * 4) << 16;
       if (xfb_obj->Buffers[2])
-         dw4 |= linked_xfb_info->BufferStride[2] * 4;
+         dw4 |= linked_xfb_info->Buffers[2].Stride * 4;
       if (xfb_obj->Buffers[3])
-         dw4 |= (linked_xfb_info->BufferStride[3] * 4) << 16;
+         dw4 |= (linked_xfb_info->Buffers[3].Stride * 4) << 16;
    }
 
    BEGIN_BATCH(5);

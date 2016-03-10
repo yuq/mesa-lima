@@ -356,7 +356,7 @@ _mesa_compute_max_transform_feedback_vertices(struct gl_context *ctx,
 
    for (i = 0; i < ctx->Const.MaxTransformFeedbackBuffers; i++) {
       if ((info->ActiveBuffers >> i) & 1) {
-         unsigned stride = info->BufferStride[i];
+         unsigned stride = info->Buffers[i].Stride;
          unsigned max_for_this_buffer;
 
          /* Skip any inactive buffers, which have a stride of 0. */

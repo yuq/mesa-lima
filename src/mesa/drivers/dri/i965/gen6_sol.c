@@ -69,13 +69,13 @@ gen6_update_sol_surfaces(struct brw_context *brw)
                brw, xfb_obj->Buffers[buffer],
                &brw->gs.base.surf_offset[surf_index],
                linked_xfb_info->Outputs[i].NumComponents,
-               linked_xfb_info->BufferStride[buffer], buffer_offset);
+               linked_xfb_info->Buffers[buffer].Stride, buffer_offset);
          } else {
             brw_update_sol_surface(
                brw, xfb_obj->Buffers[buffer],
                &brw->ff_gs.surf_offset[surf_index],
                linked_xfb_info->Outputs[i].NumComponents,
-               linked_xfb_info->BufferStride[buffer], buffer_offset);
+               linked_xfb_info->Buffers[buffer].Stride, buffer_offset);
          }
       } else {
          if (!brw->geometry_program)

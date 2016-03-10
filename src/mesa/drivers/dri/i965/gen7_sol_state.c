@@ -70,7 +70,7 @@ upload_3dstate_so_buffers(struct brw_context *brw)
 	 continue;
       }
 
-      stride = linked_xfb_info->BufferStride[i] * 4;
+      stride = linked_xfb_info->Buffers[i].Stride * 4;
 
       start = xfb_obj->Offset[i];
       assert(start % 4 == 0);

@@ -6861,7 +6861,7 @@ st_translate_stream_output_info(glsl_to_tgsi_visitor *glsl_to_tgsi,
    }
 
    for (i = 0; i < PIPE_MAX_SO_BUFFERS; i++) {
-      so->stride[i] = info->BufferStride[i];
+      so->stride[i] = info->Buffers[i].Stride;
    }
    so->num_outputs = info->NumOutputs;
 }

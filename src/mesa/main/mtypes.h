@@ -1644,6 +1644,24 @@ struct gl_transform_feedback_output
 };
 
 
+struct gl_transform_feedback_buffer
+{
+   unsigned Binding;
+
+   /**
+    * Total number of components stored in each buffer.  This may be used by
+    * hardware back-ends to determine the correct stride when interleaving
+    * multiple transform feedback outputs in the same buffer.
+    */
+   unsigned Stride;
+
+   /**
+    * Which transform feedback stream this buffer binding is associated with.
+    */
+   unsigned Stream;
+};
+
+
 /** Post-link transform feedback info. */
 struct gl_transform_feedback_info
 {
@@ -1661,17 +1679,7 @@ struct gl_transform_feedback_info
    struct gl_transform_feedback_varying_info *Varyings;
    GLint NumVarying;
 
-   /**
-    * Total number of components stored in each buffer.  This may be used by
-    * hardware back-ends to determine the correct stride when interleaving
-    * multiple transform feedback outputs in the same buffer.
-    */
-   unsigned BufferStride[MAX_FEEDBACK_BUFFERS];
-
-   /**
-    * Which transform feedback stream this buffer binding is associated with.
-    */
-   unsigned BufferStream[MAX_FEEDBACK_BUFFERS];
+   struct gl_transform_feedback_buffer Buffers[MAX_FEEDBACK_BUFFERS];
 };
 
 
