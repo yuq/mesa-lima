@@ -80,6 +80,7 @@
 
 struct si_compute;
 struct hash_table;
+struct u_suballocator;
 
 struct si_screen {
 	struct r600_common_screen	b;
@@ -191,9 +192,11 @@ struct si_context {
 	void				*custom_blend_dcc_decompress;
 	void				*pstipple_sampler_state;
 	struct si_screen		*screen;
+
 	struct radeon_winsys_cs		*ce_ib;
 	struct radeon_winsys_cs		*ce_preamble_ib;
 	bool				ce_need_synchronization;
+	struct u_suballocator		*ce_suballocator;
 
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct si_shader_ctx_state	fixed_func_tcs_shader;

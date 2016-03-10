@@ -29,6 +29,7 @@
 #include "radeon/radeon_llvm_emit.h"
 #include "radeon/radeon_uvd.h"
 #include "util/u_memory.h"
+#include "util/u_suballoc.h"
 #include "vl/vl_decoder.h"
 
 /*
@@ -40,6 +41,9 @@ static void si_destroy_context(struct pipe_context *context)
 	int i;
 
 	si_release_all_descriptors(sctx);
+
+	if (sctx->ce_suballocator)
+		u_suballocator_destroy(sctx->ce_suballocator);
 
 	pipe_resource_reference(&sctx->esgs_ring, NULL);
 	pipe_resource_reference(&sctx->gsvs_ring, NULL);
@@ -155,6 +159,13 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 			if (!sctx->ce_preamble_ib)
 				goto fail;
 		}
+
+		sctx->ce_suballocator =
+				u_suballocator_create(&sctx->b.b, 1024 * 1024,
+						      64, PIPE_BIND_CUSTOM,
+						      PIPE_USAGE_DEFAULT, FALSE);
+		if (!sctx->ce_suballocator)
+			goto fail;
 	}
 
 	sctx->b.gfx.flush = si_context_gfx_flush;

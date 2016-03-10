@@ -61,6 +61,7 @@
 #include "sid.h"
 
 #include "util/u_memory.h"
+#include "util/u_suballoc.h"
 #include "util/u_upload_mgr.h"
 
 
@@ -132,6 +133,28 @@ static void si_release_descriptors(struct si_descriptors *desc)
 	pipe_resource_reference((struct pipe_resource**)&desc->buffer, NULL);
 	FREE(desc->list);
 }
+
+static bool si_ce_upload(struct si_context *sctx, unsigned ce_offset, unsigned size,
+			 unsigned *out_offset, struct r600_resource **out_buf) {
+	uint64_t va;
+
+	u_suballocator_alloc(sctx->ce_suballocator, size, out_offset,
+			     (struct pipe_resource**)out_buf);
+	if (!out_buf)
+			return false;
+
+	va = (*out_buf)->gpu_address + *out_offset;
+
+	radeon_emit(sctx->ce_ib, PKT3(PKT3_DUMP_CONST_RAM, 3, 0));
+	radeon_emit(sctx->ce_ib, ce_offset);
+	radeon_emit(sctx->ce_ib, size / 4);
+	radeon_emit(sctx->ce_ib, va);
+	radeon_emit(sctx->ce_ib, va >> 32);
+
+	sctx->ce_need_synchronization = true;
+	return true;
+}
+
 
 static bool si_upload_descriptors(struct si_context *sctx,
 				  struct si_descriptors *desc)
