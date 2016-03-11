@@ -132,6 +132,14 @@ VkResult anv_CreateSwapchainKHR(
    if (result != VK_SUCCESS)
       return result;
 
+   if (pAllocator)
+      swapchain->alloc = *pAllocator;
+   else
+      swapchain->alloc = device->alloc;
+
+   for (unsigned i = 0; i < ARRAY_SIZE(swapchain->fences); i++)
+      swapchain->fences[i] = VK_NULL_HANDLE;
+
    *pSwapchain = anv_swapchain_to_handle(swapchain);
 
    return VK_SUCCESS;
@@ -143,6 +151,11 @@ void anv_DestroySwapchainKHR(
     const VkAllocationCallbacks*                 pAllocator)
 {
    ANV_FROM_HANDLE(anv_swapchain, swapchain, _swapchain);
+
+   for (unsigned i = 0; i < ARRAY_SIZE(swapchain->fences); i++) {
+      if (swapchain->fences[i] != VK_NULL_HANDLE)
+         anv_DestroyFence(device, swapchain->fences[i], pAllocator);
+   }
 
    swapchain->destroy(swapchain, pAllocator);
 }
@@ -185,11 +198,36 @@ VkResult anv_QueuePresentKHR(
 
       assert(swapchain->device == queue->device);
 
+      if (swapchain->fences[0] == VK_NULL_HANDLE) {
+         result = anv_CreateFence(anv_device_to_handle(queue->device),
+            &(VkFenceCreateInfo) {
+               .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+               .flags = 0,
+            }, &swapchain->alloc, &swapchain->fences[0]);
+         if (result != VK_SUCCESS)
+            return result;
+      } else {
+         anv_ResetFences(anv_device_to_handle(queue->device),
+                         1, &swapchain->fences[0]);
+      }
+
+      anv_QueueSubmit(_queue, 0, NULL, swapchain->fences[0]);
+
       result = swapchain->queue_present(swapchain, queue,
                                         pPresentInfo->pImageIndices[i]);
       /* TODO: What if one of them returns OUT_OF_DATE? */
       if (result != VK_SUCCESS)
          return result;
+
+      VkFence last = swapchain->fences[2];
+      swapchain->fences[2] = swapchain->fences[1];
+      swapchain->fences[1] = swapchain->fences[0];
+      swapchain->fences[0] = last;
+
+      if (last != VK_NULL_HANDLE) {
+         anv_WaitForFences(anv_device_to_handle(queue->device),
+                           1, &last, true, 1);
+      }
    }
 
    return VK_SUCCESS;
