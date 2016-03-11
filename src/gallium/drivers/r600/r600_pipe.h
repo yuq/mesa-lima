@@ -28,8 +28,6 @@
 
 #include "radeon/r600_pipe_common.h"
 #include "radeon/r600_cs.h"
-
-#include "r600_llvm.h"
 #include "r600_public.h"
 
 #include "util/u_suballoc.h"
@@ -243,7 +241,6 @@ struct r600_gs_rings_state {
 
 /* This must start from 16. */
 /* features */
-#define DBG_LLVM		(1 << 29)
 #define DBG_NO_CP_DMA		(1 << 30)
 /* shader backend */
 #define DBG_NO_SB		(1 << 21)

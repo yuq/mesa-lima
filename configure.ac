@@ -931,12 +931,6 @@ AC_ARG_ENABLE([xlib-glx],
     [enable_xlib_glx="$enableval"],
     [enable_xlib_glx=no])
 
-AC_ARG_ENABLE([r600-llvm-compiler],
-    [AS_HELP_STRING([--enable-r600-llvm-compiler],
-        [Enable experimental LLVM backend for graphics shaders @<:@default=disabled@:>@])],
-    [enable_r600_llvm="$enableval"],
-    [enable_r600_llvm=no])
-
 AC_ARG_ENABLE([gallium-tests],
     [AS_HELP_STRING([--enable-gallium-tests],
         [Enable optional Gallium tests) @<:@default=disabled@:>@])],
@@ -2238,14 +2232,8 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             gallium_require_drm "Gallium R600"
             gallium_require_drm_loader
-            if test "x$enable_r600_llvm" = xyes -o "x$enable_opencl" = xyes; then
-                radeon_llvm_check "r600g"
-                LLVM_COMPONENTS="${LLVM_COMPONENTS} bitreader asmparser"
-            fi
-            if test "x$enable_r600_llvm" = xyes; then
-                USE_R600_LLVM_COMPILER=yes;
-            fi
             if test "x$enable_opencl" = xyes; then
+                radeon_llvm_check "r600g"
                 LLVM_COMPONENTS="${LLVM_COMPONENTS} bitreader asmparser"
             fi
             ;;
@@ -2416,7 +2404,6 @@ AM_CONDITIONAL(NEED_RADEON_DRM_WINSYS, test "x$HAVE_GALLIUM_R300" = xyes -o \
                                             "x$HAVE_GALLIUM_RADEONSI" = xyes)
 AM_CONDITIONAL(NEED_WINSYS_XLIB, test "x$NEED_WINSYS_XLIB" = xyes)
 AM_CONDITIONAL(NEED_RADEON_LLVM, test x$NEED_RADEON_LLVM = xyes)
-AM_CONDITIONAL(USE_R600_LLVM_COMPILER, test x$USE_R600_LLVM_COMPILER = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_COMPUTE, test x$enable_opencl = xyes)
 AM_CONDITIONAL(HAVE_MESA_LLVM, test x$MESA_LLVM = x1)
 AM_CONDITIONAL(USE_VC4_SIMULATOR, test x$USE_VC4_SIMULATOR = xyes)

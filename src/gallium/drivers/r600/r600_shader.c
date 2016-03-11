@@ -21,7 +21,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "r600_sq.h"
-#include "r600_llvm.h"
 #include "r600_formats.h"
 #include "r600_opcodes.h"
 #include "r600_shader.h"
@@ -194,10 +193,7 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 	/* disable SB for shaders using doubles */
 	use_sb &= !shader->shader.uses_doubles;
 
-	/* Check if the bytecode has already been built.  When using the llvm
-	 * backend, r600_shader_from_tgsi() will take care of building the
-	 * bytecode.
-	 */
+	/* Check if the bytecode has already been built. */
 	if (!shader->shader.bc.bytecode) {
 		r = r600_bytecode_build(&shader->shader.bc);
 		if (r) {
@@ -332,7 +328,6 @@ struct r600_shader_ctx {
 	uint32_t				*literals;
 	uint32_t				nliterals;
 	uint32_t				max_driver_temp_used;
-	boolean use_llvm;
 	/* needed for evergreen interpolation */
 	struct eg_interp		eg_interpolators[6]; // indexed by Persp/Linear * 3 + sample/center/centroid
 	/* evergreen/cayman also store sample mask in face register */
@@ -661,11 +656,9 @@ static int evergreen_interp_input(struct r600_shader_ctx *ctx, int index)
 		ctx->shader->input[index].lds_pos = ctx->shader->nlds++;
 		if (ctx->shader->input[index].interpolate > 0) {
 			evergreen_interp_assign_ij_index(ctx, index);
-			if (!ctx->use_llvm)
-				r = evergreen_interp_alu(ctx, index);
+			r = evergreen_interp_alu(ctx, index);
 		} else {
-			if (!ctx->use_llvm)
-				r = evergreen_interp_flat(ctx, index);
+			r = evergreen_interp_flat(ctx, index);
 		}
 	}
 	return r;
@@ -2936,21 +2929,15 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	int i, j, k, r = 0;
 	int next_param_base = 0, next_clip_base;
 	int max_color_exports = MAX2(key.ps.nr_cbufs, 1);
-	/* Declarations used by llvm code */
-	bool use_llvm = false;
 	bool indirect_gprs;
 	bool ring_outputs = false;
 	bool lds_outputs = false;
 	bool lds_inputs = false;
 	bool pos_emitted = false;
 
-#ifdef R600_USE_LLVM
-	use_llvm = rscreen->b.debug_flags & DBG_LLVM;
-#endif
 	ctx.bc = &shader->bc;
 	ctx.shader = shader;
 	ctx.native_integers = true;
-
 
 	r600_bytecode_init(ctx.bc, rscreen->b.chip_class, rscreen->b.family,
 			   rscreen->has_compressed_msaa_texturing);
@@ -3043,19 +3030,9 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		ctx.file_offset[i] = 0;
 	}
 
-#ifdef R600_USE_LLVM
-	if (use_llvm && ctx.info.indirect_files && (ctx.info.indirect_files & (1 << TGSI_FILE_CONSTANT)) != ctx.info.indirect_files) {
-		fprintf(stderr, "Warning: R600 LLVM backend does not support "
-				"indirect adressing.  Falling back to TGSI "
-				"backend.\n");
-		use_llvm = 0;
-	}
-#endif
 	if (ctx.type == TGSI_PROCESSOR_VERTEX) {
 		ctx.file_offset[TGSI_FILE_INPUT] = 1;
-		if (!use_llvm) {
-			r600_bytecode_add_cfinst(ctx.bc, CF_OP_CALL_FS);
-		}
+		r600_bytecode_add_cfinst(ctx.bc, CF_OP_CALL_FS);
 	}
 	if (ctx.type == TGSI_PROCESSOR_FRAGMENT) {
 		if (ctx.bc->chip_class >= EVERGREEN)
@@ -3085,16 +3062,10 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		if (add_tess_inout)
 			ctx.file_offset[TGSI_FILE_INPUT]+=2;
 	}
-	ctx.use_llvm = use_llvm;
 
-	if (use_llvm) {
-		ctx.file_offset[TGSI_FILE_OUTPUT] =
-			ctx.file_offset[TGSI_FILE_INPUT];
-	} else {
-	   ctx.file_offset[TGSI_FILE_OUTPUT] =
+	ctx.file_offset[TGSI_FILE_OUTPUT] =
 			ctx.file_offset[TGSI_FILE_INPUT] +
 			ctx.info.file_max[TGSI_FILE_INPUT] + 1;
-	}
 	ctx.file_offset[TGSI_FILE_TEMPORARY] = ctx.file_offset[TGSI_FILE_OUTPUT] +
 						ctx.info.file_max[TGSI_FILE_OUTPUT] + 1;
 
@@ -3234,54 +3205,10 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		}
 	}
 
-/* LLVM backend setup */
-#ifdef R600_USE_LLVM
-	if (use_llvm) {
-		struct radeon_llvm_context radeon_llvm_ctx;
-		LLVMModuleRef mod;
-		bool dump = r600_can_dump_shader(&rscreen->b,
-						 tgsi_get_processor_type(tokens));
-		boolean use_kill = false;
-
-		memset(&radeon_llvm_ctx, 0, sizeof(radeon_llvm_ctx));
-		radeon_llvm_ctx.type = ctx.type;
-		radeon_llvm_ctx.two_side = shader->two_side;
-		radeon_llvm_ctx.face_gpr = ctx.face_gpr;
-		radeon_llvm_ctx.inputs_count = ctx.shader->ninput + 1;
-		radeon_llvm_ctx.r600_inputs = ctx.shader->input;
-		radeon_llvm_ctx.r600_outputs = ctx.shader->output;
-		radeon_llvm_ctx.color_buffer_count = max_color_exports;
-		radeon_llvm_ctx.chip_class = ctx.bc->chip_class;
-		radeon_llvm_ctx.fs_color_all = shader->fs_write_all && (rscreen->b.chip_class >= EVERGREEN);
-		radeon_llvm_ctx.stream_outputs = &so;
-		radeon_llvm_ctx.alpha_to_one = key.ps.alpha_to_one;
-		radeon_llvm_ctx.has_compressed_msaa_texturing =
-			ctx.bc->has_compressed_msaa_texturing;
-		mod = r600_tgsi_llvm(&radeon_llvm_ctx, tokens);
-		ctx.shader->has_txq_cube_array_z_comp = radeon_llvm_ctx.has_txq_cube_array_z_comp;
-		ctx.shader->uses_tex_buffers = radeon_llvm_ctx.uses_tex_buffers;
-
-		if (r600_llvm_compile(mod, rscreen->b.family, ctx.bc, &use_kill,
-				      dump, &rctx->b.debug)) {
-			radeon_llvm_dispose(&radeon_llvm_ctx);
-			use_llvm = 0;
-			fprintf(stderr, "R600 LLVM backend failed to compile "
-				"shader.  Falling back to TGSI\n");
-		} else {
-			ctx.file_offset[TGSI_FILE_OUTPUT] =
-					ctx.file_offset[TGSI_FILE_INPUT];
-		}
-		if (use_kill)
-			ctx.shader->uses_kill = use_kill;
-		radeon_llvm_dispose(&radeon_llvm_ctx);
-	}
-#endif
-/* End of LLVM backend setup */
-
 	if (shader->fs_write_all && rscreen->b.chip_class >= EVERGREEN)
 		shader->nr_ps_max_color_exports = 8;
 
-	if (!use_llvm) {
+	if (1) {
 		if (ctx.fragcoord_input >= 0) {
 			if (ctx.bc->chip_class == CAYMAN) {
 				for (j = 0 ; j < 4; j++) {
@@ -3437,8 +3364,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 				alu.dst.write = (j == ochan);
 				if (j == 3)
 					alu.last = 1;
-				if (!use_llvm)
-					r = r600_bytecode_add_alu(ctx.bc, &alu);
+				r = r600_bytecode_add_alu(ctx.bc, &alu);
 				if (r)
 					return r;
 			}
@@ -3446,7 +3372,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	}
 
 	/* Add stream outputs. */
-	if (!use_llvm && so.num_outputs) {
+	if (so.num_outputs) {
 		bool emit = false;
 		if (!lds_outputs && !ring_outputs && ctx.type == TGSI_PROCESSOR_VERTEX)
 			emit = true;
@@ -3709,31 +3635,27 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			}
 		}
 		/* add output to bytecode */
-		if (!use_llvm) {
-			for (i = 0; i < noutput; i++) {
-				r = r600_bytecode_add_output(ctx.bc, &output[i]);
-				if (r)
-					goto out_err;
-			}
+		for (i = 0; i < noutput; i++) {
+			r = r600_bytecode_add_output(ctx.bc, &output[i]);
+			if (r)
+				goto out_err;
 		}
 	}
 
 	/* add program end */
-	if (!use_llvm) {
-		if (ctx.bc->chip_class == CAYMAN)
-			cm_bytecode_add_cf_end(ctx.bc);
-		else {
-			const struct cf_op_info *last = NULL;
+	if (ctx.bc->chip_class == CAYMAN)
+		cm_bytecode_add_cf_end(ctx.bc);
+	else {
+		const struct cf_op_info *last = NULL;
 
-			if (ctx.bc->cf_last)
-				last = r600_isa_cf(ctx.bc->cf_last->op);
+		if (ctx.bc->cf_last)
+			last = r600_isa_cf(ctx.bc->cf_last->op);
 
-			/* alu clause instructions don't have EOP bit, so add NOP */
-			if (!last || last->flags & CF_ALU || ctx.bc->cf_last->op == CF_OP_LOOP_END || ctx.bc->cf_last->op == CF_OP_CALL_FS || ctx.bc->cf_last->op == CF_OP_POP || ctx.bc->cf_last->op == CF_OP_GDS)
-				r600_bytecode_add_cfinst(ctx.bc, CF_OP_NOP);
+		/* alu clause instructions don't have EOP bit, so add NOP */
+		if (!last || last->flags & CF_ALU || ctx.bc->cf_last->op == CF_OP_LOOP_END || ctx.bc->cf_last->op == CF_OP_CALL_FS || ctx.bc->cf_last->op == CF_OP_POP || ctx.bc->cf_last->op == CF_OP_GDS)
+			r600_bytecode_add_cfinst(ctx.bc, CF_OP_NOP);
 
-			ctx.bc->cf_last->end_of_program = 1;
-		}
+		ctx.bc->cf_last->end_of_program = 1;
 	}
 
 	/* check GPR limit - we have 124 = 128 - 4

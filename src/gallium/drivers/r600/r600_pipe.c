@@ -43,9 +43,6 @@
 
 static const struct debug_named_value r600_debug_options[] = {
 	/* features */
-#if defined(R600_USE_LLVM)
-	{ "llvm", DBG_LLVM, "Enable the LLVM shader compiler" },
-#endif
 	{ "nocpdma", DBG_NO_CP_DMA, "Disable CP DMA" },
 
 	/* shader backend */
@@ -620,8 +617,6 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
 		rscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS | DBG_TCS | DBG_TES;
 	if (!debug_get_bool_option("R600_HYPERZ", TRUE))
 		rscreen->b.debug_flags |= DBG_NO_HYPERZ;
-	if (debug_get_bool_option("R600_LLVM", FALSE))
-		rscreen->b.debug_flags |= DBG_LLVM;
 
 	if (rscreen->b.family == CHIP_UNKNOWN) {
 		fprintf(stderr, "r600: Unknown chipset 0x%04X\n", rscreen->b.info.pci_id);
