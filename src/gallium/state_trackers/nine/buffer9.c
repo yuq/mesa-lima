@@ -69,11 +69,37 @@ NineBuffer9_ctor( struct NineBuffer9 *This,
      * can still be read (but slower). */
     info->bind = PIPE_BIND_VERTEX_BUFFER | PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_TRANSFER_READ;
 
-    info->usage = PIPE_USAGE_DEFAULT;
-    if (Usage & D3DUSAGE_DYNAMIC)
-        info->usage = PIPE_USAGE_STREAM;
-    else if (Pool == D3DPOOL_SYSTEMMEM)
+    /* It is hard to find clear information on where to place the buffer in
+     * memory depending on the flag.
+     * MSDN: resources are static, except for those with DYNAMIC, thus why you
+     *   can only use DISCARD on them.
+     * ATI doc: The driver has the liberty it wants for having things static
+     *   or not.
+     *   MANAGED: Ram + uploads to Vram copy at unlock (msdn and nvidia doc say
+     *   at first draw call using the buffer)
+     *   DEFAULT + Usage = 0 => System memory backing for easy read access
+     *   (That doc is very unclear on the details, like whether some copies to
+     *   vram copy are involved or not).
+     *   DEFAULT + WRITEONLY => Vram
+     *   DEFAULT + WRITEONLY + DYNAMIC => Either Vram buffer or GTT_WC, depending on what the driver wants.
+     */
+    if (Pool == D3DPOOL_SYSTEMMEM)
         info->usage = PIPE_USAGE_STAGING;
+    else if (Pool == D3DPOOL_MANAGED)
+        info->usage = PIPE_USAGE_DEFAULT;
+    else if (Usage & D3DUSAGE_DYNAMIC && Usage & D3DUSAGE_WRITEONLY)
+        info->usage = PIPE_USAGE_STREAM;
+    else if (Usage & D3DUSAGE_WRITEONLY)
+        info->usage = PIPE_USAGE_DEFAULT;
+    /* For the remaining two, PIPE_USAGE_STAGING would probably be
+     * a good fit according to the doc. However it seems rather a mistake
+     * from apps to use these (mistakes that do really happen). Try
+     * to put the flags that are the best compromise between the real
+     * behaviour and what buggy apps should get for better performance. */
+    else if (Usage & D3DUSAGE_DYNAMIC)
+        info->usage = PIPE_USAGE_STREAM;
+    else
+        info->usage = PIPE_USAGE_DYNAMIC;
 
     /* if (pDesc->Usage & D3DUSAGE_DONOTCLIP) { } */
     /* if (pDesc->Usage & D3DUSAGE_NONSECURE) { } */
