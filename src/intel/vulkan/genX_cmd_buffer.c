@@ -1128,19 +1128,6 @@ void genX(CmdBeginRenderPass)(
 
    genX(flush_pipeline_select_3d)(cmd_buffer);
 
-   const VkRect2D *render_area = &pRenderPassBegin->renderArea;
-
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DRAWING_RECTANGLE), r) {
-      r.ClippedDrawingRectangleYMin = MAX2(render_area->offset.y, 0);
-      r.ClippedDrawingRectangleXMin = MAX2(render_area->offset.x, 0);
-      r.ClippedDrawingRectangleYMax =
-         render_area->offset.y + render_area->extent.height - 1;
-      r.ClippedDrawingRectangleXMax =
-         render_area->offset.x + render_area->extent.width - 1;
-      r.DrawingRectangleOriginY     = 0;
-      r.DrawingRectangleOriginX     = 0;
-   }
-
    genX(cmd_buffer_set_subpass)(cmd_buffer, pass->subpasses);
    anv_cmd_buffer_clear_subpass(cmd_buffer);
 }

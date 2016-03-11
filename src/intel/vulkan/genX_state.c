@@ -61,6 +61,15 @@ genX(init_device_state)(struct anv_device *device)
    anv_batch_emit(&batch, GENX(3DSTATE_STREAMOUT), so);
    anv_batch_emit(&batch, GENX(3DSTATE_AA_LINE_PARAMETERS), aa);
 
+   anv_batch_emit(&batch, GENX(3DSTATE_DRAWING_RECTANGLE), rect) {
+      rect.ClippedDrawingRectangleYMin = 0;
+      rect.ClippedDrawingRectangleXMin = 0;
+      rect.ClippedDrawingRectangleYMax = UINT16_MAX;
+      rect.ClippedDrawingRectangleXMax = UINT16_MAX;
+      rect.DrawingRectangleOriginY = 0;
+      rect.DrawingRectangleOriginX = 0;
+   }
+
 #if GEN_GEN >= 8
    anv_batch_emit(&batch, GENX(3DSTATE_WM_CHROMAKEY), ck);
 
