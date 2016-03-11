@@ -132,14 +132,6 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
          sizeof(struct anv_vue_header),
       });
 
-   VkSampler sampler;
-   ANV_CALL(CreateSampler)(anv_device_to_handle(device),
-      &(VkSamplerCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-         .magFilter = VK_FILTER_NEAREST,
-         .minFilter = VK_FILTER_NEAREST,
-      }, &cmd_buffer->pool->alloc, &sampler);
-
    VkDescriptorPool desc_pool;
    anv_CreateDescriptorPool(anv_device_to_handle(device),
       &(const VkDescriptorPoolCreateInfo) {
@@ -150,7 +142,7 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
          .poolSizeCount = 1,
          .pPoolSizes = (VkDescriptorPoolSize[]) {
             {
-               .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+               .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                .descriptorCount = 1
             },
          }
@@ -174,10 +166,10 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
             .dstBinding = 0,
             .dstArrayElement = 0,
             .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .pImageInfo = (VkDescriptorImageInfo[]) {
                {
-                  .sampler = sampler,
+                  .sampler = NULL,
                   .imageView = anv_image_view_to_handle(src_iview),
                   .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
                },
@@ -242,8 +234,6 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
     */
    anv_DestroyDescriptorPool(anv_device_to_handle(device),
                              desc_pool, &cmd_buffer->pool->alloc);
-   anv_DestroySampler(anv_device_to_handle(device), sampler,
-                      &cmd_buffer->pool->alloc);
    anv_DestroyFramebuffer(anv_device_to_handle(device), fb,
                           &cmd_buffer->pool->alloc);
 }
@@ -593,7 +583,7 @@ anv_device_init_meta_blit2d_state(struct anv_device *device)
       .pBindings = (VkDescriptorSetLayoutBinding[]) {
          {
             .binding = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = NULL
