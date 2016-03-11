@@ -330,6 +330,22 @@ can_take_stride(fs_inst *inst, unsigned arg, unsigned stride,
    return true;
 }
 
+/**
+ * Check that the register region read by src [src.reg_offset,
+ * src.reg_offset + regs_read] is contained inside the register
+ * region written by dst [dst.reg_offset, dst.reg_offset + regs_written]
+ * Both src and dst must have the same register number and file.
+ */
+static inline bool
+region_contained_in(const fs_reg &src, unsigned regs_read,
+                    const fs_reg &dst, unsigned regs_written)
+{
+   return src.file == dst.file && src.nr == dst.nr &&
+      (src.reg_offset * REG_SIZE + src.subreg_offset >=
+       dst.reg_offset * REG_SIZE + dst.subreg_offset) &&
+      src.reg_offset + regs_read <= dst.reg_offset + regs_written;
+}
+
 bool
 fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
 {
@@ -352,10 +368,8 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    /* Bail if inst is reading a range that isn't contained in the range
     * that entry is writing.
     */
-   if (inst->src[arg].reg_offset < entry->dst.reg_offset ||
-       (inst->src[arg].reg_offset * 32 + inst->src[arg].subreg_offset +
-        inst->regs_read(arg) * inst->src[arg].stride * 32) >
-       (entry->dst.reg_offset + entry->regs_written) * 32)
+   if (!region_contained_in(inst->src[arg], inst->regs_read(arg),
+                            entry->dst, entry->regs_written))
       return false;
 
    /* we can't generally copy-propagate UD negations because we
@@ -520,10 +534,8 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       /* Bail if inst is reading a range that isn't contained in the range
        * that entry is writing.
        */
-      if (inst->src[i].reg_offset < entry->dst.reg_offset ||
-          (inst->src[i].reg_offset * 32 + inst->src[i].subreg_offset +
-           inst->regs_read(i) * inst->src[i].stride * 32) >
-          (entry->dst.reg_offset + entry->regs_written) * 32)
+      if (!region_contained_in(inst->src[i], inst->regs_read(i),
+                               entry->dst, entry->regs_written))
          continue;
 
       fs_reg val = entry->src;
