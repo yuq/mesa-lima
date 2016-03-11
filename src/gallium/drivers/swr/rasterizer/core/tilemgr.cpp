@@ -74,6 +74,11 @@ void MacroTileMgr::enqueue(uint32_t x, uint32_t y, BE_WORK *pWork)
     SWR_ASSERT(x < KNOB_NUM_HOT_TILES_X);
     SWR_ASSERT(y < KNOB_NUM_HOT_TILES_Y);
 
+    if ((x & ~(KNOB_NUM_HOT_TILES_X-1)) | (y & ~(KNOB_NUM_HOT_TILES_Y-1)))
+    {
+        return;
+    }
+
     uint32_t id = TILE_ID(x, y);
 
     MacroTileQueue &tile = mTiles[id];
