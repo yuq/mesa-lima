@@ -3208,24 +3208,9 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	if (shader->fs_write_all && rscreen->b.chip_class >= EVERGREEN)
 		shader->nr_ps_max_color_exports = 8;
 
-	if (1) {
-		if (ctx.fragcoord_input >= 0) {
-			if (ctx.bc->chip_class == CAYMAN) {
-				for (j = 0 ; j < 4; j++) {
-					struct r600_bytecode_alu alu;
-					memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-					alu.op = ALU_OP1_RECIP_IEEE;
-					alu.src[0].sel = shader->input[ctx.fragcoord_input].gpr;
-					alu.src[0].chan = 3;
-
-					alu.dst.sel = shader->input[ctx.fragcoord_input].gpr;
-					alu.dst.chan = j;
-					alu.dst.write = (j == 3);
-					alu.last = 1;
-					if ((r = r600_bytecode_add_alu(ctx.bc, &alu)))
-						return r;
-				}
-			} else {
+	if (ctx.fragcoord_input >= 0) {
+		if (ctx.bc->chip_class == CAYMAN) {
+			for (j = 0 ; j < 4; j++) {
 				struct r600_bytecode_alu alu;
 				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 				alu.op = ALU_OP1_RECIP_IEEE;
@@ -3233,87 +3218,100 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 				alu.src[0].chan = 3;
 
 				alu.dst.sel = shader->input[ctx.fragcoord_input].gpr;
-				alu.dst.chan = 3;
-				alu.dst.write = 1;
+				alu.dst.chan = j;
+				alu.dst.write = (j == 3);
 				alu.last = 1;
 				if ((r = r600_bytecode_add_alu(ctx.bc, &alu)))
 					return r;
 			}
-		}
-
-		if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
+		} else {
 			struct r600_bytecode_alu alu;
-			int r;
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = ALU_OP1_RECIP_IEEE;
+			alu.src[0].sel = shader->input[ctx.fragcoord_input].gpr;
+			alu.src[0].chan = 3;
 
-			/* GS thread with no output workaround - emit a cut at start of GS */
-			if (ctx.bc->chip_class == R600)
-				r600_bytecode_add_cfinst(ctx.bc, CF_OP_CUT_VERTEX);
-
-			for (j = 0; j < 4; j++) {
-				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-				alu.op = ALU_OP1_MOV;
-				alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
-				alu.src[0].value = 0;
-				alu.dst.sel = ctx.gs_export_gpr_tregs[j];
-				alu.dst.write = 1;
-				alu.last = 1;
-				r = r600_bytecode_add_alu(ctx.bc, &alu);
-				if (r)
-					return r;
-			}
-		}
-
-		if (ctx.type == TGSI_PROCESSOR_TESS_CTRL)
-			r600_fetch_tess_io_info(&ctx);
-
-		if (shader->two_side && ctx.colors_used) {
-			if ((r = process_twoside_color_inputs(&ctx)))
+			alu.dst.sel = shader->input[ctx.fragcoord_input].gpr;
+			alu.dst.chan = 3;
+			alu.dst.write = 1;
+			alu.last = 1;
+			if ((r = r600_bytecode_add_alu(ctx.bc, &alu)))
 				return r;
 		}
+	}
 
-		tgsi_parse_init(&ctx.parse, tokens);
-		while (!tgsi_parse_end_of_tokens(&ctx.parse)) {
-			tgsi_parse_token(&ctx.parse);
-			switch (ctx.parse.FullToken.Token.Type) {
-			case TGSI_TOKEN_TYPE_INSTRUCTION:
-				r = tgsi_is_supported(&ctx);
-				if (r)
-					goto out_err;
-				ctx.max_driver_temp_used = 0;
-				/* reserve first tmp for everyone */
-				r600_get_temp(&ctx);
+	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
+		struct r600_bytecode_alu alu;
+		int r;
 
-				opcode = ctx.parse.FullToken.FullInstruction.Instruction.Opcode;
-				if ((r = tgsi_split_constant(&ctx)))
-					goto out_err;
-				if ((r = tgsi_split_literal_constant(&ctx)))
-					goto out_err;
-				if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
-					if ((r = tgsi_split_gs_inputs(&ctx)))
-						goto out_err;
-				} else if (lds_inputs) {
-					if ((r = tgsi_split_lds_inputs(&ctx)))
-						goto out_err;
-				}
-				if (ctx.bc->chip_class == CAYMAN)
-					ctx.inst_info = &cm_shader_tgsi_instruction[opcode];
-				else if (ctx.bc->chip_class >= EVERGREEN)
-					ctx.inst_info = &eg_shader_tgsi_instruction[opcode];
-				else
-					ctx.inst_info = &r600_shader_tgsi_instruction[opcode];
-				r = ctx.inst_info->process(&ctx);
-				if (r)
-					goto out_err;
+		/* GS thread with no output workaround - emit a cut at start of GS */
+		if (ctx.bc->chip_class == R600)
+			r600_bytecode_add_cfinst(ctx.bc, CF_OP_CUT_VERTEX);
 
-				if (ctx.type == TGSI_PROCESSOR_TESS_CTRL) {
-					r = r600_store_tcs_output(&ctx);
-					if (r)
-						goto out_err;
-				}
-				break;
-			default:
-				break;
+		for (j = 0; j < 4; j++) {
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = ALU_OP1_MOV;
+			alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+			alu.src[0].value = 0;
+			alu.dst.sel = ctx.gs_export_gpr_tregs[j];
+			alu.dst.write = 1;
+			alu.last = 1;
+			r = r600_bytecode_add_alu(ctx.bc, &alu);
+			if (r)
+				return r;
+		}
+	}
+
+	if (ctx.type == TGSI_PROCESSOR_TESS_CTRL)
+		r600_fetch_tess_io_info(&ctx);
+
+	if (shader->two_side && ctx.colors_used) {
+		if ((r = process_twoside_color_inputs(&ctx)))
+			return r;
+	}
+
+	tgsi_parse_init(&ctx.parse, tokens);
+	while (!tgsi_parse_end_of_tokens(&ctx.parse)) {
+		tgsi_parse_token(&ctx.parse);
+		switch (ctx.parse.FullToken.Token.Type) {
+		case TGSI_TOKEN_TYPE_INSTRUCTION:
+			r = tgsi_is_supported(&ctx);
+			if (r)
+				goto out_err;
+			ctx.max_driver_temp_used = 0;
+			/* reserve first tmp for everyone */
+			r600_get_temp(&ctx);
+
+			opcode = ctx.parse.FullToken.FullInstruction.Instruction.Opcode;
+			if ((r = tgsi_split_constant(&ctx)))
+				goto out_err;
+			if ((r = tgsi_split_literal_constant(&ctx)))
+				goto out_err;
+			if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
+				if ((r = tgsi_split_gs_inputs(&ctx)))
+					goto out_err;
+			} else if (lds_inputs) {
+				if ((r = tgsi_split_lds_inputs(&ctx)))
+					goto out_err;
 			}
+			if (ctx.bc->chip_class == CAYMAN)
+				ctx.inst_info = &cm_shader_tgsi_instruction[opcode];
+			else if (ctx.bc->chip_class >= EVERGREEN)
+				ctx.inst_info = &eg_shader_tgsi_instruction[opcode];
+			else
+				ctx.inst_info = &r600_shader_tgsi_instruction[opcode];
+			r = ctx.inst_info->process(&ctx);
+			if (r)
+				goto out_err;
+
+			if (ctx.type == TGSI_PROCESSOR_TESS_CTRL) {
+				r = r600_store_tcs_output(&ctx);
+				if (r)
+					goto out_err;
+			}
+			break;
+		default:
+			break;
 		}
 	}
 
