@@ -554,6 +554,7 @@ emit_constbuf_vgpu10(struct svga_context *svga, unsigned shader)
    void *src_map = NULL, *dst_map;
    unsigned offset;
    const struct svga_shader_variant *variant;
+   unsigned alloc_buf_size;
 
    assert(shader == PIPE_SHADER_VERTEX ||
           shader == PIPE_SHADER_GEOMETRY ||
@@ -618,7 +619,16 @@ emit_constbuf_vgpu10(struct svga_context *svga, unsigned shader)
     */
    new_buf_size = align(new_buf_size, 16);
 
-   u_upload_alloc(svga->const0_upload, 0, new_buf_size,
+   /* Constant buffer size in the upload buffer must be in multiples of 256.
+    * In order to maximize the chance of merging the upload buffer chunks
+    * when svga_buffer_add_range() is called,
+    * the allocate buffer size needs to be in multiples of 256 as well.
+    * Otherwise, since there is gap between each dirty range of the upload buffer,
+    * each dirty range will end up in its own UPDATE_GB_IMAGE command.
+    */
+   alloc_buf_size = align(new_buf_size, CONST0_UPLOAD_ALIGNMENT);
+
+   u_upload_alloc(svga->const0_upload, 0, alloc_buf_size,
                   CONST0_UPLOAD_ALIGNMENT, &offset,
                   &dst_buffer, &dst_map);
    if (!dst_map) {
