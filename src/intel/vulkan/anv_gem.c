@@ -32,8 +32,6 @@
 
 #include "anv_private.h"
 
-#define VG_CLEAR(s) VG(memset(&s, 0, sizeof(s)))
-
 static int
 anv_ioctl(int fd, unsigned long request, void *arg)
 {
@@ -54,13 +52,11 @@ anv_ioctl(int fd, unsigned long request, void *arg)
 uint32_t
 anv_gem_create(struct anv_device *device, size_t size)
 {
-   struct drm_i915_gem_create gem_create;
-   int ret;
+   struct drm_i915_gem_create gem_create = {
+      .size = size,
+   };
 
-   VG_CLEAR(gem_create);
-   gem_create.size = size;
-
-   ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_CREATE, &gem_create);
+   int ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_CREATE, &gem_create);
    if (ret != 0) {
       /* FIXME: What do we do if this fails? */
       return 0;
@@ -72,10 +68,10 @@ anv_gem_create(struct anv_device *device, size_t size)
 void
 anv_gem_close(struct anv_device *device, uint32_t gem_handle)
 {
-   struct drm_gem_close close;
+   struct drm_gem_close close = {
+      .handle = gem_handle,
+   };
 
-   VG_CLEAR(close);
-   close.handle = gem_handle;
    anv_ioctl(device->fd, DRM_IOCTL_GEM_CLOSE, &close);
 }
 
@@ -86,17 +82,14 @@ void*
 anv_gem_mmap(struct anv_device *device, uint32_t gem_handle,
              uint64_t offset, uint64_t size, uint32_t flags)
 {
-   struct drm_i915_gem_mmap gem_mmap;
-   int ret;
+   struct drm_i915_gem_mmap gem_mmap = {
+      .handle = gem_handle,
+      .offset = offset,
+      .size = size,
+      .flags = flags,
+   };
 
-   gem_mmap.handle = gem_handle;
-   VG_CLEAR(gem_mmap.pad);
-   gem_mmap.offset = offset;
-   gem_mmap.size = size;
-   VG_CLEAR(gem_mmap.addr_ptr);
-   gem_mmap.flags = flags;
-
-   ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_MMAP, &gem_mmap);
+   int ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_MMAP, &gem_mmap);
    if (ret != 0) {
       /* FIXME: Is NULL the right error return? Cf MAP_INVALID */
       return NULL;
@@ -119,15 +112,13 @@ anv_gem_munmap(void *p, uint64_t size)
 uint32_t
 anv_gem_userptr(struct anv_device *device, void *mem, size_t size)
 {
-   struct drm_i915_gem_userptr userptr;
-   int ret;
+   struct drm_i915_gem_userptr userptr = {
+      .user_ptr = (__u64)((unsigned long) mem),
+      .user_size = size,
+      .flags = 0,
+   };
 
-   VG_CLEAR(userptr);
-   userptr.user_ptr = (__u64)((unsigned long) mem);
-   userptr.user_size = size;
-   userptr.flags = 0;
-
-   ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_USERPTR, &userptr);
+   int ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_USERPTR, &userptr);
    if (ret == -1)
       return 0;
 
@@ -138,11 +129,10 @@ int
 anv_gem_set_caching(struct anv_device *device,
                     uint32_t gem_handle, uint32_t caching)
 {
-   struct drm_i915_gem_caching gem_caching;
-
-   VG_CLEAR(gem_caching);
-   gem_caching.handle = gem_handle;
-   gem_caching.caching = caching;
+   struct drm_i915_gem_caching gem_caching = {
+      .handle = gem_handle,
+      .caching = caching,
+   };
 
    return anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_SET_CACHING, &gem_caching);
 }
@@ -151,12 +141,11 @@ int
 anv_gem_set_domain(struct anv_device *device, uint32_t gem_handle,
                    uint32_t read_domains, uint32_t write_domain)
 {
-   struct drm_i915_gem_set_domain gem_set_domain;
-
-   VG_CLEAR(gem_set_domain);
-   gem_set_domain.handle = gem_handle;
-   gem_set_domain.read_domains = read_domains;
-   gem_set_domain.write_domain = write_domain;
+   struct drm_i915_gem_set_domain gem_set_domain = {
+      .handle = gem_handle,
+      .read_domains = read_domains,
+      .write_domain = write_domain,
+   };
 
    return anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_SET_DOMAIN, &gem_set_domain);
 }
@@ -167,15 +156,13 @@ anv_gem_set_domain(struct anv_device *device, uint32_t gem_handle,
 int
 anv_gem_wait(struct anv_device *device, uint32_t gem_handle, int64_t *timeout_ns)
 {
-   struct drm_i915_gem_wait wait;
-   int ret;
+   struct drm_i915_gem_wait wait = {
+      .bo_handle = gem_handle,
+      .timeout_ns = *timeout_ns,
+      .flags = 0,
+   };
 
-   VG_CLEAR(wait);
-   wait.bo_handle = gem_handle;
-   wait.timeout_ns = *timeout_ns;
-   wait.flags = 0;
-
-   ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_WAIT, &wait);
+   int ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_WAIT, &wait);
    *timeout_ns = wait.timeout_ns;
 
    return ret;
@@ -192,18 +179,17 @@ int
 anv_gem_set_tiling(struct anv_device *device,
                    uint32_t gem_handle, uint32_t stride, uint32_t tiling)
 {
-   struct drm_i915_gem_set_tiling set_tiling;
    int ret;
 
    /* set_tiling overwrites the input on the error path, so we have to open
     * code anv_ioctl.
     */
-
    do {
-      VG_CLEAR(set_tiling);
-      set_tiling.handle = gem_handle;
-      set_tiling.tiling_mode = tiling;
-      set_tiling.stride = stride;
+      struct drm_i915_gem_set_tiling set_tiling = {
+         .handle = gem_handle,
+         .tiling_mode = tiling,
+         .stride = stride,
+      };
 
       ret = ioctl(device->fd, DRM_IOCTL_I915_GEM_SET_TILING, &set_tiling);
    } while (ret == -1 && (errno == EINTR || errno == EAGAIN));
@@ -214,13 +200,14 @@ anv_gem_set_tiling(struct anv_device *device,
 int
 anv_gem_get_param(int fd, uint32_t param)
 {
-   drm_i915_getparam_t gp;
-   int ret, tmp;
+   int tmp;
 
-   VG_CLEAR(gp);
-   gp.param = param;
-   gp.value = &tmp;
-   ret = anv_ioctl(fd, DRM_IOCTL_I915_GETPARAM, &gp);
+   drm_i915_getparam_t gp = {
+      .param = param,
+      .value = &tmp,
+   };
+
+   int ret = anv_ioctl(fd, DRM_IOCTL_I915_GETPARAM, &gp);
    if (ret == 0)
       return tmp;
 
@@ -233,9 +220,9 @@ anv_gem_get_bit6_swizzle(int fd, uint32_t tiling)
    struct drm_gem_close close;
    int ret;
 
-   struct drm_i915_gem_create gem_create;
-   VG_CLEAR(gem_create);
-   gem_create.size = 4096;
+   struct drm_i915_gem_create gem_create = {
+      .size = 4096,
+   };
 
    if (anv_ioctl(fd, DRM_IOCTL_I915_GEM_CREATE, &gem_create)) {
       assert(!"Failed to create GEM BO");
@@ -247,12 +234,12 @@ anv_gem_get_bit6_swizzle(int fd, uint32_t tiling)
    /* set_tiling overwrites the input on the error path, so we have to open
     * code anv_ioctl.
     */
-   struct drm_i915_gem_set_tiling set_tiling;
    do {
-      VG_CLEAR(set_tiling);
-      set_tiling.handle = gem_create.handle;
-      set_tiling.tiling_mode = tiling;
-      set_tiling.stride = tiling == I915_TILING_X ? 512 : 128;
+      struct drm_i915_gem_set_tiling set_tiling = {
+         .handle = gem_create.handle,
+         .tiling_mode = tiling,
+         .stride = tiling == I915_TILING_X ? 512 : 128,
+      };
 
       ret = ioctl(fd, DRM_IOCTL_I915_GEM_SET_TILING, &set_tiling);
    } while (ret == -1 && (errno == EINTR || errno == EAGAIN));
@@ -262,9 +249,9 @@ anv_gem_get_bit6_swizzle(int fd, uint32_t tiling)
       goto close_and_return;
    }
 
-   struct drm_i915_gem_get_tiling get_tiling;
-   VG_CLEAR(get_tiling);
-   get_tiling.handle = gem_create.handle;
+   struct drm_i915_gem_get_tiling get_tiling = {
+      .handle = gem_create.handle,
+   };
 
    if (anv_ioctl(fd, DRM_IOCTL_I915_GEM_GET_TILING, &get_tiling)) {
       assert(!"Failed to get BO tiling");
@@ -275,7 +262,7 @@ anv_gem_get_bit6_swizzle(int fd, uint32_t tiling)
 
 close_and_return:
 
-   VG_CLEAR(close);
+   memset(&close, 0, sizeof(close));
    close.handle = gem_create.handle;
    anv_ioctl(fd, DRM_IOCTL_GEM_CLOSE, &close);
 
@@ -285,12 +272,9 @@ close_and_return:
 int
 anv_gem_create_context(struct anv_device *device)
 {
-   struct drm_i915_gem_context_create create;
-   int ret;
+   struct drm_i915_gem_context_create create = { 0 };
 
-   VG_CLEAR(create);
-
-   ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_CONTEXT_CREATE, &create);
+   int ret = anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_CONTEXT_CREATE, &create);
    if (ret == -1)
       return -1;
 
@@ -300,10 +284,9 @@ anv_gem_create_context(struct anv_device *device)
 int
 anv_gem_destroy_context(struct anv_device *device, int context)
 {
-   struct drm_i915_gem_context_destroy destroy;
-
-   VG_CLEAR(destroy);
-   destroy.ctx_id = context;
+   struct drm_i915_gem_context_destroy destroy = {
+      .ctx_id = context,
+   };
 
    return anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_CONTEXT_DESTROY, &destroy);
 }
@@ -311,11 +294,9 @@ anv_gem_destroy_context(struct anv_device *device, int context)
 int
 anv_gem_get_aperture(int fd, uint64_t *size)
 {
-   struct drm_i915_gem_get_aperture aperture;
-   int ret;
+   struct drm_i915_gem_get_aperture aperture = { 0 };
 
-   VG_CLEAR(aperture);
-   ret = anv_ioctl(fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture);
+   int ret = anv_ioctl(fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture);
    if (ret == -1)
       return -1;
 
@@ -327,14 +308,12 @@ anv_gem_get_aperture(int fd, uint64_t *size)
 int
 anv_gem_handle_to_fd(struct anv_device *device, uint32_t gem_handle)
 {
-   struct drm_prime_handle args;
-   int ret;
+   struct drm_prime_handle args = {
+      .handle = gem_handle,
+      .flags = DRM_CLOEXEC,
+   };
 
-   VG_CLEAR(args);
-   args.handle = gem_handle;
-   args.flags = DRM_CLOEXEC;
-
-   ret = anv_ioctl(device->fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &args);
+   int ret = anv_ioctl(device->fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &args);
    if (ret == -1)
       return -1;
 
@@ -344,13 +323,11 @@ anv_gem_handle_to_fd(struct anv_device *device, uint32_t gem_handle)
 uint32_t
 anv_gem_fd_to_handle(struct anv_device *device, int fd)
 {
-   struct drm_prime_handle args;
-   int ret;
+   struct drm_prime_handle args = {
+      .fd = fd,
+   };
 
-   VG_CLEAR(args);
-   args.fd = fd;
-
-   ret = anv_ioctl(device->fd, DRM_IOCTL_PRIME_FD_TO_HANDLE, &args);
+   int ret = anv_ioctl(device->fd, DRM_IOCTL_PRIME_FD_TO_HANDLE, &args);
    if (ret == -1)
       return 0;
 
