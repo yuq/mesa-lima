@@ -1466,8 +1466,8 @@ populate_consumer_input_sets(void *mem_ctx, exec_list *ir,
          } else if (input_var->get_interface_type() != NULL) {
             char *const iface_field_name =
                ralloc_asprintf(mem_ctx, "%s.%s",
-                               input_var->get_interface_type()->name,
-                               input_var->name);
+                  input_var->get_interface_type()->without_array()->name,
+                  input_var->name);
             hash_table_insert(consumer_interface_inputs, input_var,
                               iface_field_name);
          } else {
@@ -1498,8 +1498,8 @@ get_matching_input(void *mem_ctx,
    } else if (output_var->get_interface_type() != NULL) {
       char *const iface_field_name =
          ralloc_asprintf(mem_ctx, "%s.%s",
-                         output_var->get_interface_type()->name,
-                         output_var->name);
+            output_var->get_interface_type()->without_array()->name,
+            output_var->name);
       input_var =
          (ir_variable *) hash_table_find(consumer_interface_inputs,
                                          iface_field_name);

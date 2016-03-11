@@ -169,7 +169,6 @@ flatten_named_interface_blocks_declarations::run(exec_list *instructions)
                   new(mem_ctx) ir_variable(iface_t->fields.structure[i].type,
                                            var_name,
                                            (ir_variable_mode) var->data.mode);
-               new_var->data.from_named_ifc_block_nonarray = 1;
             } else {
                const glsl_type *new_array_type =
                   process_array_type(var->type, i);
@@ -177,7 +176,6 @@ flatten_named_interface_blocks_declarations::run(exec_list *instructions)
                   new(mem_ctx) ir_variable(new_array_type,
                                            var_name,
                                            (ir_variable_mode) var->data.mode);
-               new_var->data.from_named_ifc_block_array = 1;
             }
             new_var->data.location = iface_t->fields.structure[i].location;
             new_var->data.explicit_location = (new_var->data.location >= 0);
@@ -188,8 +186,9 @@ flatten_named_interface_blocks_declarations::run(exec_list *instructions)
             new_var->data.patch = iface_t->fields.structure[i].patch;
             new_var->data.stream = var->data.stream;
             new_var->data.how_declared = var->data.how_declared;
+            new_var->data.from_named_ifc_block = 1;
 
-            new_var->init_interface_type(iface_t);
+            new_var->init_interface_type(var->type);
             hash_table_insert(interface_namespace, new_var,
                               iface_field_name);
             insert_pos->insert_after(new_var);

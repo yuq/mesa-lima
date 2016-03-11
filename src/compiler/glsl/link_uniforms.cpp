@@ -68,7 +68,7 @@ program_resource_visitor::process(const glsl_type *type, const char *name)
    unsigned packing = type->interface_packing;
 
    recursion(type, &name_copy, strlen(name), false, NULL, packing, false,
-             record_array_count);
+             record_array_count, NULL);
    ralloc_free(name_copy);
 }
 
@@ -76,8 +76,6 @@ void
 program_resource_visitor::process(ir_variable *var)
 {
    unsigned record_array_count = 1;
-   const glsl_type *t = var->type;
-   const glsl_type *t_without_array = var->type->without_array();
    const bool row_major =
       var->data.matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR;
 
@@ -85,80 +83,28 @@ program_resource_visitor::process(ir_variable *var)
       var->get_interface_type()->interface_packing :
       var->type->interface_packing;
 
+   const glsl_type *t =
+      var->data.from_named_ifc_block ? var->get_interface_type() : var->type;
+   const glsl_type *t_without_array = t->without_array();
+
    /* false is always passed for the row_major parameter to the other
     * processing functions because no information is available to do
     * otherwise.  See the warning in linker.h.
     */
-
-   /* Only strdup the name if we actually will need to modify it. */
-   if (var->data.from_named_ifc_block_array) {
-      /* lower_named_interface_blocks created this variable by lowering an
-       * interface block array to an array variable.  For example if the
-       * original source code was:
-       *
-       *     out Blk { vec4 bar } foo[3];
-       *
-       * Then the variable is now:
-       *
-       *     out vec4 bar[3];
-       *
-       * We need to visit each array element using the names constructed like
-       * so:
-       *
-       *     Blk[0].bar
-       *     Blk[1].bar
-       *     Blk[2].bar
-       */
-      assert(t->is_array());
-      const glsl_type *ifc_type = var->get_interface_type();
-      char *name = ralloc_strdup(NULL, ifc_type->name);
-      size_t name_length = strlen(name);
-      for (unsigned i = 0; i < t->length; i++) {
-         size_t new_length = name_length;
-         ralloc_asprintf_rewrite_tail(&name, &new_length, "[%u].%s", i,
-                                      var->name);
-         /* Note: row_major is only meaningful for uniform blocks, and
-          * lowering is only applied to non-uniform interface blocks, so we
-          * can safely pass false for row_major.
-          */
-         recursion(var->type, &name, new_length, row_major, NULL, packing,
-                   false, record_array_count);
-      }
-      ralloc_free(name);
-   } else if (var->data.from_named_ifc_block_nonarray) {
-      /* lower_named_interface_blocks created this variable by lowering a
-       * named interface block (non-array) to an ordinary variable.  For
-       * example if the original source code was:
-       *
-       *     out Blk { vec4 bar } foo;
-       *
-       * Then the variable is now:
-       *
-       *     out vec4 bar;
-       *
-       * We need to visit this variable using the name:
-       *
-       *     Blk.bar
-       */
-      const glsl_type *ifc_type = var->get_interface_type();
-      char *name = ralloc_asprintf(NULL, "%s.%s", ifc_type->name, var->name);
-      /* Note: row_major is only meaningful for uniform blocks, and lowering
-       * is only applied to non-uniform interface blocks, so we can safely
-       * pass false for row_major.
-       */
-      recursion(var->type, &name, strlen(name), row_major, NULL, packing,
-                false, record_array_count);
-      ralloc_free(name);
-   } else if (t_without_array->is_record() ||
+   if (t_without_array->is_record() ||
               (t->is_array() && t->fields.array->is_array())) {
       char *name = ralloc_strdup(NULL, var->name);
       recursion(var->type, &name, strlen(name), row_major, NULL, packing,
-                false, record_array_count);
+                false, record_array_count, NULL);
       ralloc_free(name);
    } else if (t_without_array->is_interface()) {
       char *name = ralloc_strdup(NULL, t_without_array->name);
-      recursion(var->type, &name, strlen(name), row_major, NULL, packing,
-                false, record_array_count);
+      const glsl_struct_field *ifc_member = var->data.from_named_ifc_block ?
+         &t_without_array->
+            fields.structure[t_without_array->field_index(var->name)] : NULL;
+
+      recursion(t, &name, strlen(name), row_major, NULL, packing,
+                false, record_array_count, ifc_member);
       ralloc_free(name);
    } else {
       this->set_record_array_count(record_array_count);
@@ -172,7 +118,8 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
                                     const glsl_type *record_type,
                                     const unsigned packing,
                                     bool last_field,
-                                    unsigned record_array_count)
+                                    unsigned record_array_count,
+                                    const glsl_struct_field *named_ifc_member)
 {
    /* Records need to have each field processed individually.
     *
@@ -180,7 +127,12 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
     * individually, then each field of the resulting array elements processed
     * individually.
     */
-   if (t->is_record() || t->is_interface()) {
+   if (t->is_interface() && named_ifc_member) {
+      ralloc_asprintf_rewrite_tail(name, &name_length, ".%s",
+                                   named_ifc_member->name);
+      recursion(named_ifc_member->type, name, name_length, row_major, NULL,
+                packing, false, record_array_count, NULL);
+   } else if (t->is_record() || t->is_interface()) {
       if (record_type == NULL && t->is_record())
          record_type = t;
 
@@ -223,7 +175,7 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
                    field_row_major,
                    record_type,
                    packing,
-                   (i + 1) == t->length, record_array_count);
+                   (i + 1) == t->length, record_array_count, NULL);
 
          /* Only the first leaf-field of the record gets called with the
           * record type pointer.
@@ -258,7 +210,8 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
          recursion(t->fields.array, name, new_length, row_major,
                    record_type,
                    packing,
-                   (i + 1) == t->length, record_array_count);
+                   (i + 1) == t->length, record_array_count,
+                   named_ifc_member);
 
          /* Only the first leaf-field of the record gets called with the
           * record type pointer.
