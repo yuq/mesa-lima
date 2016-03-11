@@ -733,21 +733,6 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
       xfb_offset = info->Buffers[buffer].Stride;
    }
 
-   /* From GL_EXT_transform_feedback:
-    *   A program will fail to link if:
-    *
-    *     * the total number of components to capture is greater than
-    *       the constant MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS_EXT
-    *       and the buffer mode is INTERLEAVED_ATTRIBS_EXT.
-    */
-   if (prog->TransformFeedback.BufferMode == GL_INTERLEAVED_ATTRIBS &&
-       info->Buffers[buffer].Stride + this->num_components() >
-       ctx->Const.MaxTransformFeedbackInterleavedComponents) {
-      linker_error(prog, "The MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS "
-                   "limit has been exceeded.");
-      return false;
-   }
-
    unsigned location = this->location;
    unsigned location_frac = this->location_frac;
    unsigned num_components = this->num_components();
@@ -787,6 +772,28 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
       }
    } else {
       info->Buffers[buffer].Stride = xfb_offset;
+   }
+
+   /* From GL_EXT_transform_feedback:
+    *   A program will fail to link if:
+    *
+    *     * the total number of components to capture is greater than
+    *       the constant MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS_EXT
+    *       and the buffer mode is INTERLEAVED_ATTRIBS_EXT.
+    *
+    * From GL_ARB_enhanced_layouts:
+    *
+    *   "The resulting stride (implicit or explicit) must be less than or
+    *   equal to the implementation-dependent constant
+    *   gl_MaxTransformFeedbackInterleavedComponents."
+    */
+   if ((prog->TransformFeedback.BufferMode == GL_INTERLEAVED_ATTRIBS ||
+        has_xfb_qualifiers) &&
+       info->Buffers[buffer].Stride >
+       ctx->Const.MaxTransformFeedbackInterleavedComponents) {
+      linker_error(prog, "The MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS "
+                   "limit has been exceeded.");
+      return false;
    }
 
    info->Varyings[info->NumVarying].Name = ralloc_strdup(prog,
