@@ -365,11 +365,7 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
    bool needs_slm = cs_prog_data->base.total_shared > 0;
    genX(cmd_buffer_config_l3)(cmd_buffer, needs_slm);
 
-   if (cmd_buffer->state.current_pipeline != GPGPU) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
-                     .PipelineSelection = GPGPU);
-      cmd_buffer->state.current_pipeline = GPGPU;
-   }
+   genX(flush_pipeline_select_gpgpu)(cmd_buffer);
 
    if (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);

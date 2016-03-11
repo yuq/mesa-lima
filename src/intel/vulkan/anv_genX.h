@@ -40,6 +40,7 @@ void genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
                                   struct anv_subpass *subpass);
 
 void genX(flush_pipeline_select_3d)(struct anv_cmd_buffer *cmd_buffer);
+void genX(flush_pipeline_select_gpgpu)(struct anv_cmd_buffer *cmd_buffer);
 
 void genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer,
                                 bool enable_slm);

@@ -446,28 +446,7 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
    bool needs_slm = cs_prog_data->base.total_shared > 0;
    genX(cmd_buffer_config_l3)(cmd_buffer, needs_slm);
 
-   if (cmd_buffer->state.current_pipeline != GPGPU) {
-#if GEN_GEN < 10
-      /* From the Broadwell PRM, Volume 2a: Instructions, PIPELINE_SELECT:
-       *
-       *   Software must clear the COLOR_CALC_STATE Valid field in
-       *   3DSTATE_CC_STATE_POINTERS command prior to send a PIPELINE_SELECT
-       *   with Pipeline Select set to GPGPU.
-       *
-       * The internal hardware docs recommend the same workaround for Gen9
-       * hardware too.
-       */
-      anv_batch_emit(&cmd_buffer->batch,
-                     GENX(3DSTATE_CC_STATE_POINTERS));
-#endif
-
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPELINE_SELECT),
-#if GEN_GEN >= 9
-                     .MaskBits = 3,
-#endif
-                     .PipelineSelection = GPGPU);
-      cmd_buffer->state.current_pipeline = GPGPU;
-   }
+   genX(flush_pipeline_select_gpgpu)(cmd_buffer);
 
    if (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
