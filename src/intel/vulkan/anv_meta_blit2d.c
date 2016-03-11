@@ -83,11 +83,9 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)(src_offset.x + src_extent.width)
-            / (float)src_iview->extent.width,
-         (float)(src_offset.y + src_extent.height)
-            / (float)src_iview->extent.height,
-         (float)src_offset.z / (float)src_iview->extent.depth,
+         src_offset.x + src_extent.width,
+         src_offset.y + src_extent.height,
+         src_offset.z,
       },
    };
 
@@ -97,10 +95,9 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src_iview->extent.width,
-         (float)(src_offset.y + src_extent.height) /
-            (float)src_iview->extent.height,
-         (float)src_offset.z / (float)src_iview->extent.depth,
+         src_offset.x,
+         src_offset.y + src_extent.height,
+         src_offset.z,
       },
    };
 
@@ -110,9 +107,9 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src_iview->extent.width,
-         (float)src_offset.y / (float)src_iview->extent.height,
-         (float)src_offset.z / (float)src_iview->extent.depth,
+         src_offset.x,
+         src_offset.y,
+         src_offset.z,
       },
    };
 
@@ -438,22 +435,16 @@ static nir_shader *
 build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
 {
    const struct glsl_type *vec4 = glsl_vec4_type();
+   const struct glsl_type *vec3 = glsl_vector_type(GLSL_TYPE_FLOAT, 3);
    nir_builder b;
 
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
-   b.shader->info.name = ralloc_strdup(b.shader, "meta_blit_fs");
+   b.shader->info.name = ralloc_strdup(b.shader, "meta_blit2d_fs");
 
    nir_variable *tex_pos_in = nir_variable_create(b.shader, nir_var_shader_in,
-                                                  vec4, "v_tex_pos");
+                                                  vec3, "v_tex_pos");
    tex_pos_in->data.location = VARYING_SLOT_VAR0;
-
-   /* Swizzle the array index which comes in as Z coordinate into the right
-    * position.
-    */
-   unsigned swz[] = { 0, (tex_dim == GLSL_SAMPLER_DIM_1D ? 2 : 1), 2 };
-   nir_ssa_def *const tex_pos =
-      nir_swizzle(&b, nir_load_var(&b, tex_pos_in), swz,
-                  (tex_dim == GLSL_SAMPLER_DIM_1D ? 2 : 3), false);
+   nir_ssa_def *const tex_pos = nir_f2i(&b, nir_load_var(&b, tex_pos_in));
 
    const struct glsl_type *sampler_type =
       glsl_sampler_type(tex_dim, false, tex_dim != GLSL_SAMPLER_DIM_3D,
@@ -463,16 +454,18 @@ build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
    sampler->data.descriptor_set = 0;
    sampler->data.binding = 0;
 
-   nir_tex_instr *tex = nir_tex_instr_create(b.shader, 1);
+   nir_tex_instr *tex = nir_tex_instr_create(b.shader, 2);
    tex->sampler_dim = tex_dim;
-   tex->op = nir_texop_tex;
+   tex->op = nir_texop_txf;
    tex->src[0].src_type = nir_tex_src_coord;
    tex->src[0].src = nir_src_for_ssa(tex_pos);
+   tex->src[1].src_type = nir_tex_src_lod;
+   tex->src[1].src = nir_src_for_ssa(nir_imm_int(&b, 0));
    tex->dest_type = nir_type_float; /* TODO */
    tex->is_array = glsl_sampler_type_is_array(sampler_type);
    tex->coord_components = tex_pos->num_components;
    tex->texture = nir_deref_var_create(tex, sampler);
-   tex->sampler = nir_deref_var_create(tex, sampler);
+   tex->sampler = NULL;
 
    nir_ssa_dest_init(&tex->instr, &tex->dest, 4, "tex");
    nir_builder_instr_insert(&b, &tex->instr);
