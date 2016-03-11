@@ -363,9 +363,6 @@ static void emit_declaration(
 					ctx->soa.bld_base.base.elem_type, "");
 			}
 		}
-
-		ctx->output_reg_count = MAX2(ctx->output_reg_count,
-							 decl->Range.Last + 1);
 		break;
 	}
 
