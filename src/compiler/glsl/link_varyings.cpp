@@ -849,6 +849,17 @@ parse_tfeedback_decls(struct gl_context *ctx, struct gl_shader_program *prog,
 }
 
 
+static int
+cmp_xfb_offset(const void * x_generic, const void * y_generic)
+{
+   tfeedback_decl *x = (tfeedback_decl *) x_generic;
+   tfeedback_decl *y = (tfeedback_decl *) y_generic;
+
+   if (x->get_buffer() != y->get_buffer())
+      return x->get_buffer() - y->get_buffer();
+   return x->get_offset() - y->get_offset();
+}
+
 /**
  * Store transform feedback location assignments into
  * prog->LinkedTransformFeedback based on the data stored in tfeedback_decls.
@@ -869,6 +880,14 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
 
    memset(&prog->LinkedTransformFeedback, 0,
           sizeof(prog->LinkedTransformFeedback));
+
+   /* The xfb_offset qualifier does not have to be used in increasing order
+    * however some drivers expect to receive the list of transform feedback
+    * declarations in order so sort it now for convenience.
+    */
+   if (has_xfb_qualifiers)
+      qsort(tfeedback_decls, num_tfeedback_decls, sizeof(*tfeedback_decls),
+            cmp_xfb_offset);
 
    prog->LinkedTransformFeedback.Varyings =
       rzalloc_array(prog,
