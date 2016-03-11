@@ -2441,8 +2441,10 @@ fs_visitor::opt_sampler_eot()
     * we have enough space, but it will make sure the dead code eliminator kills
     * the instruction that this will replace.
     */
-   if (tex_inst->header_size != 0)
+   if (tex_inst->header_size != 0) {
+      invalidate_live_intervals();
       return true;
+   }
 
    fs_reg send_header = ibld.vgrf(BRW_REGISTER_TYPE_F,
                                   load_payload->sources + 1);
@@ -2473,6 +2475,7 @@ fs_visitor::opt_sampler_eot()
    tex_inst->insert_before(cfg->blocks[cfg->num_blocks - 1], new_load_payload);
    tex_inst->src[0] = send_header;
 
+   invalidate_live_intervals();
    return true;
 }
 
