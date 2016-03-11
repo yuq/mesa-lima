@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include <X11/xshmfence.h>
 #include <xcb/xcb.h>
 #include <xcb/dri3.h>
 #include <xcb/present.h>
@@ -420,8 +421,9 @@ struct x11_image {
    struct anv_image *                        image;
    struct anv_device_memory *                memory;
    xcb_pixmap_t                              pixmap;
-   xcb_get_geometry_cookie_t                 geom_cookie;
    bool                                      busy;
+   struct xshmfence *                        shm_fence;
+   uint32_t                                  sync_fence;
 };
 
 struct x11_swapchain {
@@ -432,7 +434,12 @@ struct x11_swapchain {
    xcb_gc_t                                     gc;
    VkExtent2D                                   extent;
    uint32_t                                     image_count;
-   uint32_t                                     next_image;
+
+   xcb_present_event_t                          event_id;
+   xcb_special_event_t *                        special_event;
+   uint64_t                                     send_sbc;
+   uint32_t                                     stamp;
+
    struct x11_image                             images[0];
 };
 
@@ -457,36 +464,70 @@ x11_get_images(struct anv_swapchain *anv_chain,
 }
 
 static VkResult
+x11_handle_dri3_present_event(struct x11_swapchain *chain,
+                              xcb_present_generic_event_t *event)
+{
+   switch (event->evtype) {
+   case XCB_PRESENT_CONFIGURE_NOTIFY: {
+      xcb_present_configure_notify_event_t *config = (void *) event;
+
+      if (config->width != chain->extent.width ||
+          config->height != chain->extent.height)
+         return vk_error(VK_ERROR_OUT_OF_DATE_KHR);
+
+      break;
+   }
+
+   case XCB_PRESENT_EVENT_IDLE_NOTIFY: {
+      xcb_present_idle_notify_event_t *idle = (void *) event;
+
+      for (unsigned i = 0; i < chain->image_count; i++) {
+         if (chain->images[i].pixmap == idle->pixmap) {
+            chain->images[i].busy = false;
+            break;
+         }
+      }
+
+      break;
+   }
+
+   case XCB_PRESENT_COMPLETE_NOTIFY:
+   default:
+      break;
+   }
+
+   return VK_SUCCESS;
+}
+
+static VkResult
 x11_acquire_next_image(struct anv_swapchain *anv_chain,
                        uint64_t timeout,
                        VkSemaphore semaphore,
                        uint32_t *image_index)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
-   struct x11_image *image = &chain->images[chain->next_image];
 
-   if (image->busy) {
-      xcb_generic_error_t *err;
-      xcb_get_geometry_reply_t *geom =
-         xcb_get_geometry_reply(chain->conn, image->geom_cookie, &err);
-      if (!geom) {
-         free(err);
-         return vk_error(VK_ERROR_OUT_OF_DATE_KHR);
+   while (1) {
+      for (uint32_t i = 0; i < chain->image_count; i++) {
+         if (!chain->images[i].busy) {
+            /* We found a non-busy image */
+            xshmfence_await(chain->images[i].shm_fence);
+            *image_index = i;
+            return VK_SUCCESS;
+         }
       }
 
-      if (geom->width != chain->extent.width ||
-          geom->height != chain->extent.height) {
-         free(geom);
+      xcb_flush(chain->conn);
+      xcb_generic_event_t *event =
+         xcb_wait_for_special_event(chain->conn, chain->special_event);
+      if (!event)
          return vk_error(VK_ERROR_OUT_OF_DATE_KHR);
-      }
-      free(geom);
 
-      image->busy = false;
+      VkResult result = x11_handle_dri3_present_event(chain, (void *)event);
+      free(event);
+      if (result != VK_SUCCESS)
+         return result;
    }
-
-   *image_index = chain->next_image;
-   chain->next_image = (chain->next_image + 1) % chain->image_count;
-   return VK_SUCCESS;
 }
 
 static VkResult
@@ -499,19 +540,31 @@ x11_queue_present(struct anv_swapchain *anv_chain,
 
    assert(image_index < chain->image_count);
 
-   xcb_void_cookie_t cookie;
+   uint32_t options = XCB_PRESENT_OPTION_NONE;
 
-   cookie = xcb_copy_area(chain->conn,
-                          image->pixmap,
-                          chain->window,
-                          chain->gc,
-                          0, 0,
-                          0, 0,
-                          chain->extent.width,
-                          chain->extent.height);
+   int64_t target_msc = 0;
+   int64_t divisor = 0;
+   int64_t remainder = 0;
+
+   options |= XCB_PRESENT_OPTION_ASYNC;
+
+   xcb_void_cookie_t cookie =
+      xcb_present_pixmap(chain->conn,
+                         chain->window,
+                         image->pixmap,
+                         (uint32_t) chain->send_sbc,
+                         0,                                    /* valid */
+                         0,                                    /* update */
+                         0,                                    /* x_off */
+                         0,                                    /* y_off */
+                         XCB_NONE,                             /* target_crtc */
+                         XCB_NONE,
+                         image->sync_fence,
+                         options,
+                         target_msc,
+                         divisor,
+                         remainder, 0, NULL);
    xcb_discard_reply(chain->conn, cookie.sequence);
-
-   image->geom_cookie = xcb_get_geometry(chain->conn, chain->window);
    image->busy = true;
 
    xcb_flush(chain->conn);
@@ -525,6 +578,7 @@ x11_image_init(struct anv_device *device, struct x11_swapchain *chain,
                const VkAllocationCallbacks* pAllocator,
                struct x11_image *image)
 {
+   xcb_void_cookie_t cookie;
    VkResult result;
 
    VkImage image_h;
@@ -599,7 +653,7 @@ x11_image_init(struct anv_device *device, struct x11_swapchain *chain,
    uint32_t depth = 24;
    image->pixmap = xcb_generate_id(chain->conn);
 
-   xcb_void_cookie_t cookie =
+   cookie =
       xcb_dri3_pixmap_from_buffer_checked(chain->conn,
                                           image->pixmap,
                                           chain->window,
@@ -608,12 +662,34 @@ x11_image_init(struct anv_device *device, struct x11_swapchain *chain,
                                           pCreateInfo->imageExtent.height,
                                           surface->isl.row_pitch,
                                           depth, bpp, fd);
-
-   image->busy = false;
-
    xcb_discard_reply(chain->conn, cookie.sequence);
 
+   int fence_fd = xshmfence_alloc_shm();
+   if (fence_fd < 0)
+      goto fail_pixmap;
+
+   image->shm_fence = xshmfence_map_shm(fence_fd);
+   if (image->shm_fence == NULL)
+      goto fail_shmfence_alloc;
+
+   image->sync_fence = xcb_generate_id(chain->conn);
+   xcb_dri3_fence_from_fd(chain->conn,
+                          image->pixmap,
+                          image->sync_fence,
+                          false,
+                          fence_fd);
+
+   image->busy = false;
+   xshmfence_trigger(image->shm_fence);
+
    return VK_SUCCESS;
+
+fail_shmfence_alloc:
+   close(fence_fd);
+
+fail_pixmap:
+   cookie = xcb_free_pixmap(chain->conn, image->pixmap);
+   xcb_discard_reply(chain->conn, cookie.sequence);
 
 fail_alloc_memory:
    anv_FreeMemory(anv_device_to_handle(chain->base.device),
@@ -631,10 +707,13 @@ x11_image_finish(struct x11_swapchain *chain,
                  const VkAllocationCallbacks* pAllocator,
                  struct x11_image *image)
 {
-   if (image->busy)
-      xcb_discard_reply(chain->conn, image->geom_cookie.sequence);
+   xcb_void_cookie_t cookie;
 
-   xcb_void_cookie_t cookie = xcb_free_pixmap(chain->conn, image->pixmap);
+   cookie = xcb_sync_destroy_fence(chain->conn, image->sync_fence);
+   xcb_discard_reply(chain->conn, cookie.sequence);
+   xshmfence_unmap_shm(image->shm_fence);
+
+   cookie = xcb_free_pixmap(chain->conn, image->pixmap);
    xcb_discard_reply(chain->conn, cookie.sequence);
 
    anv_DestroyImage(anv_device_to_handle(chain->base.device),
@@ -653,6 +732,8 @@ x11_swapchain_destroy(struct anv_swapchain *anv_chain,
    for (uint32_t i = 0; i < chain->image_count; i++)
       x11_image_finish(chain, pAllocator, &chain->images[i]);
 
+   xcb_unregister_for_special_event(chain->conn, chain->special_event);
+
    anv_free2(&chain->base.device->alloc, pAllocator, chain);
 
    return VK_SUCCESS;
@@ -670,9 +751,18 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    xcb_void_cookie_t cookie;
    VkResult result;
 
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
+
    int num_images = pCreateInfo->minImageCount;
 
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
+   /* For true mailbox mode, we need at least 4 images:
+    *  1) One to scan out from
+    *  2) One to have queued for scan-out
+    *  3) One to be currently held by the Wayland compositor
+    *  4) One to render to
+    */
+   if (pCreateInfo->presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+      num_images = MAX2(num_images, 4);
 
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
    chain = anv_alloc2(&device->alloc, pAllocator, size, 8,
@@ -690,13 +780,25 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->window = surface->window;
    chain->extent = pCreateInfo->imageExtent;
    chain->image_count = num_images;
-   chain->next_image = 0;
+
+   chain->event_id = xcb_generate_id(chain->conn);
+   xcb_present_select_input(chain->conn, chain->event_id, chain->window,
+                            XCB_PRESENT_EVENT_MASK_CONFIGURE_NOTIFY |
+                            XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY |
+                            XCB_PRESENT_EVENT_MASK_IDLE_NOTIFY);
+
+   /* Create an XCB event queue to hold present events outside of the usual
+    * application event queue
+    */
+   chain->special_event =
+      xcb_register_for_special_xge(chain->conn, &xcb_present_id,
+                                   chain->event_id, NULL);
 
    chain->gc = xcb_generate_id(chain->conn);
    if (!chain->gc) {
       /* FINISHME: Choose a better error. */
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      goto fail_alloc;
+      goto fail_register;
    }
 
    cookie = xcb_create_gc(chain->conn,
@@ -722,7 +824,9 @@ fail_init_images:
    for (uint32_t j = 0; j < image; j++)
       x11_image_finish(chain, pAllocator, &chain->images[j]);
 
-fail_alloc:
+fail_register:
+   xcb_unregister_for_special_event(chain->conn, chain->special_event);
+
    anv_free2(&device->alloc, pAllocator, chain);
 
    return result;

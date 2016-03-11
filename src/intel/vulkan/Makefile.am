@@ -165,7 +165,8 @@ anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 
 CLEANFILES = $(BUILT_SOURCES)
 
-libvulkan_intel_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
+libvulkan_intel_la_LIBADD = $(WAYLAND_LIBS) \
+	-lxcb -lxcb-dri3 -lxcb-present -lxcb-sync -lxshmfence \
 	$(top_builddir)/src/intel/isl/libisl.la \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	$(top_builddir)/src/mesa/libmesa.la \
