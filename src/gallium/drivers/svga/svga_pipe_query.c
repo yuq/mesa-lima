@@ -737,6 +737,10 @@ svga_create_query(struct pipe_context *pipe,
    case SVGA_QUERY_NUM_SURFACE_VIEWS:
    case SVGA_QUERY_NUM_GENERATE_MIPMAP:
    case SVGA_QUERY_NUM_READBACKS:
+   case SVGA_QUERY_NUM_RESOURCE_UPDATES:
+   case SVGA_QUERY_NUM_BUFFER_UPLOADS:
+   case SVGA_QUERY_NUM_CONST_BUF_UPDATES:
+   case SVGA_QUERY_NUM_CONST_UPDATES:
       break;
    default:
       assert(!"unexpected query type in svga_create_query()");
@@ -810,6 +814,10 @@ svga_destroy_query(struct pipe_context *pipe, struct pipe_query *q)
    case SVGA_QUERY_NUM_SURFACE_VIEWS:
    case SVGA_QUERY_NUM_GENERATE_MIPMAP:
    case SVGA_QUERY_NUM_READBACKS:
+   case SVGA_QUERY_NUM_RESOURCE_UPDATES:
+   case SVGA_QUERY_NUM_BUFFER_UPLOADS:
+   case SVGA_QUERY_NUM_CONST_BUF_UPDATES:
+   case SVGA_QUERY_NUM_CONST_UPDATES:
       /* nothing */
       break;
    default:
@@ -903,6 +911,18 @@ svga_begin_query(struct pipe_context *pipe, struct pipe_query *q)
       break;
    case SVGA_QUERY_NUM_READBACKS:
       sq->begin_count = svga->hud.num_readbacks;
+      break;
+   case SVGA_QUERY_NUM_RESOURCE_UPDATES:
+      sq->begin_count = svga->hud.num_resource_updates;
+      break;
+   case SVGA_QUERY_NUM_BUFFER_UPLOADS:
+      sq->begin_count = svga->hud.num_buffer_uploads;
+      break;
+   case SVGA_QUERY_NUM_CONST_BUF_UPDATES:
+      sq->begin_count = svga->hud.num_const_buf_updates;
+      break;
+   case SVGA_QUERY_NUM_CONST_UPDATES:
+      sq->begin_count = svga->hud.num_const_updates;
       break;
    case SVGA_QUERY_MEMORY_USED:
    case SVGA_QUERY_NUM_SHADERS:
@@ -1010,6 +1030,18 @@ svga_end_query(struct pipe_context *pipe, struct pipe_query *q)
    case SVGA_QUERY_NUM_READBACKS:
       sq->end_count = svga->hud.num_readbacks;
       break;
+   case SVGA_QUERY_NUM_RESOURCE_UPDATES:
+      sq->end_count = svga->hud.num_resource_updates;
+      break;
+   case SVGA_QUERY_NUM_BUFFER_UPLOADS:
+      sq->end_count = svga->hud.num_buffer_uploads;
+      break;
+   case SVGA_QUERY_NUM_CONST_BUF_UPDATES:
+      sq->end_count = svga->hud.num_const_buf_updates;
+      break;
+   case SVGA_QUERY_NUM_CONST_UPDATES:
+      sq->end_count = svga->hud.num_const_updates;
+      break;
    case SVGA_QUERY_MEMORY_USED:
    case SVGA_QUERY_NUM_SHADERS:
    case SVGA_QUERY_NUM_RESOURCES:
@@ -1112,6 +1144,10 @@ svga_get_query_result(struct pipe_context *pipe,
    case SVGA_QUERY_FLUSH_TIME:
    case SVGA_QUERY_SURFACE_WRITE_FLUSHES:
    case SVGA_QUERY_NUM_READBACKS:
+   case SVGA_QUERY_NUM_RESOURCE_UPDATES:
+   case SVGA_QUERY_NUM_BUFFER_UPLOADS:
+   case SVGA_QUERY_NUM_CONST_BUF_UPDATES:
+   case SVGA_QUERY_NUM_CONST_UPDATES:
       vresult->u64 = sq->end_count - sq->begin_count;
       break;
    /* These are running total counters */

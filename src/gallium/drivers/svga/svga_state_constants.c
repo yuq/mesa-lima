@@ -301,6 +301,8 @@ emit_const(struct svga_context *svga, unsigned shader, unsigned i,
          return ret;
 
       memcpy(svga->state.hw_draw.cb[shader][i], value, 4 * sizeof(float));
+
+      svga->hud.num_const_updates++;
    }
 
    return ret;
@@ -420,6 +422,9 @@ emit_const_range(struct svga_context *svga,
                 (j - i) * 4 * sizeof(float));
 
          i = j + 1;
+
+         svga->hud.num_const_updates++;
+
       } else {
          ++i;
       }
@@ -664,6 +669,8 @@ emit_constbuf_vgpu10(struct svga_context *svga, unsigned shader)
 
    pipe_resource_reference(&dst_buffer, NULL);
 
+   svga->hud.num_const_buf_updates++;
+
    return ret;
 }
 
@@ -732,6 +739,8 @@ emit_consts_vgpu10(struct svga_context *svga, unsigned shader)
                                                   size);
       if (ret != PIPE_OK)
          return ret;
+
+      svga->hud.num_const_buf_updates++;
    }
 
    svga->state.hw_draw.enabled_constbufs[shader] = enabled_constbufs;

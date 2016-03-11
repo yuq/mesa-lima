@@ -683,6 +683,8 @@ svga_texture_transfer_unmap(struct pipe_context *pipe,
          ret = update_image_vgpu9(svga, surf, &box, st->slice, transfer->level);
       }
 
+      svga->hud.num_resource_updates++;
+
       assert(ret == PIPE_OK);
       (void) ret;
    }
