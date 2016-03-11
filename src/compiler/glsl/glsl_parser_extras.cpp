@@ -1617,6 +1617,17 @@ set_shader_inout_layout(struct gl_shader *shader,
       assert(!state->fs_early_fragment_tests);
    }
 
+   for (unsigned i = 0; i < MAX_FEEDBACK_BUFFERS; i++) {
+      if (state->out_qualifier->out_xfb_stride[i]) {
+         unsigned xfb_stride;
+         if (state->out_qualifier->out_xfb_stride[i]->
+                process_qualifier_constant(state, "xfb_stride", &xfb_stride,
+                true)) {
+            shader->TransformFeedback.BufferStride[i] = xfb_stride;
+         }
+      }
+   }
+
    switch (shader->Stage) {
    case MESA_SHADER_TESS_CTRL:
       shader->TessCtrl.VerticesOut = 0;

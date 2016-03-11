@@ -930,6 +930,17 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
       unsigned buffer =
          num_tfeedback_decls ? tfeedback_decls[0].get_buffer() : 0;
 
+      /* Apply any xfb_stride global qualifiers */
+      if (has_xfb_qualifiers) {
+         for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
+            if (prog->TransformFeedback.BufferStride[j]) {
+               buffers |= 1 << j;
+               prog->LinkedTransformFeedback.Buffers[j].Stride =
+                  prog->TransformFeedback.BufferStride[j] / 4;
+            }
+         }
+      }
+
       for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
          if (tfeedback_decls[i].is_next_buffer_separator()) {
             num_buffers++;

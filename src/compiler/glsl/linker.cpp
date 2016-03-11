@@ -1584,6 +1584,69 @@ private:
    hash_table *unnamed_interfaces;
 };
 
+/**
+ * Check for conflicting xfb_stride default qualifiers and store buffer stride
+ * for later use.
+ */
+static void
+link_xfb_stride_layout_qualifiers(struct gl_context *ctx,
+                                  struct gl_shader_program *prog,
+			          struct gl_shader *linked_shader,
+			          struct gl_shader **shader_list,
+			          unsigned num_shaders)
+{
+   for (unsigned i = 0; i < MAX_FEEDBACK_BUFFERS; i++) {
+      linked_shader->TransformFeedback.BufferStride[i] = 0;
+   }
+
+   for (unsigned i = 0; i < num_shaders; i++) {
+      struct gl_shader *shader = shader_list[i];
+
+      for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
+         if (shader->TransformFeedback.BufferStride[j]) {
+	    if (linked_shader->TransformFeedback.BufferStride[j] != 0 &&
+                shader->TransformFeedback.BufferStride[j] != 0 &&
+	        linked_shader->TransformFeedback.BufferStride[j] !=
+                   shader->TransformFeedback.BufferStride[j]) {
+	       linker_error(prog,
+                            "intrastage shaders defined with conflicting "
+                            "xfb_stride for buffer %d (%d and %d)\n", j,
+                            linked_shader->TransformFeedback.BufferStride[j],
+			    shader->TransformFeedback.BufferStride[j]);
+	       return;
+	    }
+
+            if (shader->TransformFeedback.BufferStride[j])
+	       linked_shader->TransformFeedback.BufferStride[j] =
+                  shader->TransformFeedback.BufferStride[j];
+         }
+      }
+   }
+
+   for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
+      if (linked_shader->TransformFeedback.BufferStride[j]) {
+         prog->TransformFeedback.BufferStride[j] =
+            linked_shader->TransformFeedback.BufferStride[j];
+
+         /* We will validate doubles at a later stage */
+         if (prog->TransformFeedback.BufferStride[j] % 4) {
+            linker_error(prog, "invalid qualifier xfb_stride=%d must be a "
+                         "multiple of 4 or if its applied to a type that is "
+                         "or contains a double a multiple of 8.",
+                         prog->TransformFeedback.BufferStride[j]);
+            return;
+         }
+
+         if (prog->TransformFeedback.BufferStride[j] / 4 >
+             ctx->Const.MaxTransformFeedbackInterleavedComponents) {
+            linker_error(prog,
+                         "The MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS "
+                         "limit has been exceeded.");
+                  return;
+         }
+      }
+   }
+}
 
 /**
  * Performs the cross-validation of tessellation control shader vertices and
@@ -2101,6 +2164,8 @@ link_intrastage_shaders(void *mem_ctx,
    link_tes_in_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_gs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_cs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
+   link_xfb_stride_layout_qualifiers(ctx, prog, linked, shader_list,
+                                     num_shaders);
 
    populate_symbol_table(linked);
 

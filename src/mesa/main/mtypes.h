@@ -2337,6 +2337,11 @@ struct gl_shader
    bool origin_upper_left;
    bool pixel_center_integer;
 
+   struct {
+      /** Global xfb_stride out qualifier if any */
+      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
+   } TransformFeedback;
+
    /**
     * Tessellation Control shader state from layout qualifiers.
     */
@@ -2674,6 +2679,8 @@ struct gl_shader_program
     */
    struct {
       GLenum BufferMode;
+      /** Global xfb_stride out qualifier if any */
+      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
       GLuint NumVarying;
       GLchar **VaryingNames;  /**< Array [NumVarying] of char * */
    } TransformFeedback;
