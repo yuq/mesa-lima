@@ -65,9 +65,9 @@ NineBuffer9_ctor( struct NineBuffer9 *This,
     info->width0 = Size;
     info->flags = 0;
 
-    info->bind = PIPE_BIND_VERTEX_BUFFER | PIPE_BIND_TRANSFER_WRITE;
-    if (!(Usage & D3DUSAGE_WRITEONLY))
-        info->bind |= PIPE_BIND_TRANSFER_READ;
+    /* Note: WRITEONLY is just tip for resource placement, the resource
+     * can still be read (but slower). */
+    info->bind = PIPE_BIND_VERTEX_BUFFER | PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_TRANSFER_READ;
 
     info->usage = PIPE_USAGE_DEFAULT;
     if (Usage & D3DUSAGE_DYNAMIC)
