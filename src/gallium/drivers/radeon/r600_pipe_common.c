@@ -229,7 +229,7 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 	struct radeon_winsys_cs *cs = rctx->dma.cs;
 
 	if (cs->cdw)
-		rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence, 0);
+		rctx->ws->cs_flush(cs, flags, &rctx->last_sdma_fence);
 	if (fence)
 		rctx->ws->fence_reference(fence, rctx->last_sdma_fence);
 }
@@ -318,7 +318,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	if (rscreen->info.has_sdma && !(rscreen->debug_flags & DBG_NO_ASYNC_DMA)) {
 		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
 						   r600_flush_dma_ring,
-						   rctx, NULL);
+						   rctx);
 		rctx->dma.flush = r600_flush_dma_ring;
 	}
 
@@ -379,7 +379,6 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "tex", DBG_TEX, "Print texture info" },
 	{ "compute", DBG_COMPUTE, "Print compute info" },
 	{ "vm", DBG_VM, "Print virtual addresses when creating resources" },
-	{ "trace_cs", DBG_TRACE_CS, "Trace cs and write rlockup_<csid>.c file with faulty cs" },
 	{ "info", DBG_INFO, "Print driver information" },
 
 	/* shaders */
@@ -893,19 +892,6 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	pipe_mutex_init(rscreen->aux_context_lock);
 	pipe_mutex_init(rscreen->gpu_load_mutex);
 
-	if (((rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 28) ||
-	     rscreen->info.drm_major == 3) &&
-	    (rscreen->debug_flags & DBG_TRACE_CS)) {
-		rscreen->trace_bo = (struct r600_resource*)pipe_buffer_create(&rscreen->b,
-										PIPE_BIND_CUSTOM,
-										PIPE_USAGE_STAGING,
-										4096);
-		if (rscreen->trace_bo) {
-			rscreen->trace_ptr = rscreen->ws->buffer_map(rscreen->trace_bo->buf, NULL,
-									PIPE_TRANSFER_UNSYNCHRONIZED);
-		}
-	}
-
 	if (rscreen->debug_flags & DBG_INFO) {
 		printf("pci_id = 0x%x\n", rscreen->info.pci_id);
 		printf("family = %i (%s)\n", rscreen->info.family,
@@ -950,9 +936,6 @@ void r600_destroy_common_screen(struct r600_common_screen *rscreen)
 	pipe_mutex_destroy(rscreen->gpu_load_mutex);
 	pipe_mutex_destroy(rscreen->aux_context_lock);
 	rscreen->aux_context->destroy(rscreen->aux_context);
-
-	if (rscreen->trace_bo)
-		pipe_resource_reference((struct pipe_resource**)&rscreen->trace_bo, NULL);
 
 	rscreen->ws->destroy(rscreen->ws);
 	FREE(rscreen);

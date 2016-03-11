@@ -168,8 +168,7 @@ radeon_drm_cs_create(struct radeon_winsys_ctx *ctx,
                      enum ring_type ring_type,
                      void (*flush)(void *ctx, unsigned flags,
                                    struct pipe_fence_handle **fence),
-                     void *flush_ctx,
-                     struct pb_buffer *trace_buf)
+                     void *flush_ctx)
 {
     struct radeon_drm_winsys *ws = (struct radeon_drm_winsys*)ctx;
     struct radeon_drm_cs *cs;
@@ -183,7 +182,6 @@ radeon_drm_cs_create(struct radeon_winsys_ctx *ctx,
     cs->ws = ws;
     cs->flush_cs = flush;
     cs->flush_data = flush_ctx;
-    cs->trace_buf = (struct radeon_bo*)trace_buf;
 
     if (!radeon_init_cs_context(&cs->csc1, cs->ws)) {
         FREE(cs);
@@ -439,10 +437,6 @@ void radeon_drm_cs_emit_ioctl_oneshot(struct radeon_drm_cs *cs, struct radeon_cs
         }
     }
 
-    if (cs->trace_buf) {
-        radeon_dump_cs_on_lockup(cs, csc);
-    }
-
     for (i = 0; i < csc->crelocs; i++)
         p_atomic_dec(&csc->relocs_bo[i].bo->num_active_ioctls);
 
@@ -467,8 +461,7 @@ DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", FALSE)
 
 static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
                                 unsigned flags,
-                                struct pipe_fence_handle **fence,
-                                uint32_t cs_trace_id)
+                                struct pipe_fence_handle **fence)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
     struct radeon_cs_context *tmp;
@@ -519,8 +512,6 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
     tmp = cs->csc;
     cs->csc = cs->cst;
     cs->cst = tmp;
-
-    cs->cst->cs_trace_id = cs_trace_id;
 
     /* If the CS is not empty or overflowed, emit it in a separate thread. */
     if (cs->base.cdw && cs->base.cdw <= cs->base.max_dw && !debug_get_option_noop()) {

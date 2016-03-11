@@ -53,7 +53,7 @@ static void r300_flush_and_cleanup(struct r300_context *r300, unsigned flags,
     }
 
     r300->flush_counter++;
-    r300->rws->cs_flush(r300->cs, flags, fence, 0);
+    r300->rws->cs_flush(r300->cs, flags, fence);
     r300->dirty_hw = 0;
 
     /* New kitchen sink, baby. */
@@ -88,11 +88,11 @@ void r300_flush(struct pipe_context *pipe,
              * and we cannot emit an empty CS. Let's write to some reg. */
             CS_LOCALS(r300);
             OUT_CS_REG(RB3D_COLOR_CHANNEL_MASK, 0);
-            r300->rws->cs_flush(r300->cs, flags, fence, 0);
+            r300->rws->cs_flush(r300->cs, flags, fence);
         } else {
             /* Even if hw is not dirty, we should at least reset the CS in case
              * the space checking failed for the first draw operation. */
-            r300->rws->cs_flush(r300->cs, flags, NULL, 0);
+            r300->rws->cs_flush(r300->cs, flags, NULL);
         }
     }
 

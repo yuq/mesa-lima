@@ -118,8 +118,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	}
 
 	/* Flush the CS. */
-	ws->cs_flush(cs, flags, &ctx->last_gfx_fence,
-		     ctx->screen->b.cs_count++);
+	ws->cs_flush(cs, flags, &ctx->last_gfx_fence);
 
 	if (fence)
 		ws->fence_reference(fence, ctx->last_gfx_fence);

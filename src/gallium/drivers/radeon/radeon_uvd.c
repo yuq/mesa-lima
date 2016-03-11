@@ -92,7 +92,7 @@ struct ruvd_decoder {
 /* flush IB to the hardware */
 static void flush(struct ruvd_decoder *dec)
 {
-	dec->ws->cs_flush(dec->cs, RADEON_FLUSH_ASYNC, NULL, 0);
+	dec->ws->cs_flush(dec->cs, RADEON_FLUSH_ASYNC, NULL);
 }
 
 /* add a new set register command to the IB */
@@ -1142,7 +1142,7 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 	dec->stream_handle = rvid_alloc_stream_handle();
 	dec->screen = context->screen;
 	dec->ws = ws;
-	dec->cs = ws->cs_create(rctx->ctx, RING_UVD, NULL, NULL, NULL);
+	dec->cs = ws->cs_create(rctx->ctx, RING_UVD, NULL, NULL);
 	if (!dec->cs) {
 		RVID_ERR("Can't get command submission context.\n");
 		goto error;
