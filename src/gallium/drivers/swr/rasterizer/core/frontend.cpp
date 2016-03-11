@@ -193,35 +193,65 @@ void ProcessStoreTiles(
 /// @param workerId - thread's worker id. Even thread has a unique id.
 /// @param pUserData - Pointer to user data passed back to callback.
 /// @todo This should go away when we switch this to use compute threading.
-void ProcessInvalidateTiles(
+void ProcessDiscardInvalidateTiles(
     SWR_CONTEXT *pContext,
     DRAW_CONTEXT *pDC,
     uint32_t workerId,
     void *pUserData)
 {
     RDTSC_START(FEProcessInvalidateTiles);
-    INVALIDATE_TILES_DESC *pInv = (INVALIDATE_TILES_DESC*)pUserData;
+    DISCARD_INVALIDATE_TILES_DESC *pInv = (DISCARD_INVALIDATE_TILES_DESC*)pUserData;
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
 
-    const API_STATE& state = GetApiState(pDC);
+    SWR_RECT rect;
+
+    if (pInv->rect.top | pInv->rect.bottom | pInv->rect.right | pInv->rect.left)
+    {
+        // Valid rect
+        rect = pInv->rect;
+    }
+    else
+    {
+        // Use viewport dimensions
+        const API_STATE& state = GetApiState(pDC);
+
+        rect.left   = (uint32_t)state.vp[0].x;
+        rect.right  = (uint32_t)(state.vp[0].x + state.vp[0].width);
+        rect.top    = (uint32_t)state.vp[0].y;
+        rect.bottom = (uint32_t)(state.vp[0].y + state.vp[0].height);
+    }
 
     // queue a store to each macro tile
     // compute macro tile bounds for the current render target
     uint32_t macroWidth = KNOB_MACROTILE_X_DIM;
     uint32_t macroHeight = KNOB_MACROTILE_Y_DIM;
 
-    uint32_t numMacroTilesX = ((uint32_t)state.vp[0].width + (uint32_t)state.vp[0].x + (macroWidth - 1)) / macroWidth;
-    uint32_t numMacroTilesY = ((uint32_t)state.vp[0].height + (uint32_t)state.vp[0].y + (macroHeight - 1)) / macroHeight;
+    // Setup region assuming full tiles
+    uint32_t macroTileStartX = (rect.left + (macroWidth - 1)) / macroWidth;
+    uint32_t macroTileStartY = (rect.top + (macroHeight - 1)) / macroHeight;
+
+    uint32_t macroTileEndX = rect.right / macroWidth;
+    uint32_t macroTileEndY = rect.bottom / macroHeight;
+
+    if (pInv->fullTilesOnly == false)
+    {
+        // include partial tiles
+        macroTileStartX = rect.left / macroWidth;
+        macroTileStartY = rect.top / macroHeight;
+
+        macroTileEndX = (rect.right + macroWidth - 1) / macroWidth;
+        macroTileEndY = (rect.bottom + macroHeight - 1) / macroHeight;
+    }
 
     // load tiles
     BE_WORK work;
-    work.type = INVALIDATETILES;
-    work.pfnWork = ProcessInvalidateTilesBE;
-    work.desc.invalidateTiles = *pInv;
+    work.type = DISCARDINVALIDATETILES;
+    work.pfnWork = ProcessDiscardInvalidateTilesBE;
+    work.desc.discardInvalidateTiles = *pInv;
 
-    for (uint32_t x = 0; x < numMacroTilesX; ++x)
+    for (uint32_t x = macroTileStartX; x < macroTileEndX; ++x)
     {
-        for (uint32_t y = 0; y < numMacroTilesY; ++y)
+        for (uint32_t y = macroTileStartY; y < macroTileEndY; ++y)
         {
             pTileMgr->enqueue(x, y, &work);
         }

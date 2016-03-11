@@ -399,20 +399,22 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
 }
 
 
-void ProcessInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
+void ProcessDiscardInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
 {
-    INVALIDATE_TILES_DESC *pDesc = (INVALIDATE_TILES_DESC*)pData;
+    DISCARD_INVALIDATE_TILES_DESC *pDesc = (DISCARD_INVALIDATE_TILES_DESC *)pData;
     SWR_CONTEXT *pContext = pDC->pContext;
+
+    const int numSamples = GetNumSamples(pDC->pState->state.rastState.sampleCount);
 
     for (uint32_t i = 0; i < SWR_NUM_ATTACHMENTS; ++i)
     {
         if (pDesc->attachmentMask & (1 << i))
         {
-            HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTileNoLoad(pContext, pDC, macroTile, (SWR_RENDERTARGET_ATTACHMENT)i);
+            HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTileNoLoad(
+                pContext, pDC, macroTile, (SWR_RENDERTARGET_ATTACHMENT)i, pDesc->createNewTiles, numSamples);
             if (pHotTile)
             {
-                SWR_ASSERT(pHotTile->state == HOTTILE_INVALID || pHotTile->state == HOTTILE_RESOLVED);
-                pHotTile->state = HOTTILE_INVALID;
+                pHotTile->state = (HOTTILE_STATE)pDesc->newTileState;
             }
         }
     }

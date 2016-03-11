@@ -1265,7 +1265,10 @@ void SwrDrawIndexedInstanced(
     DrawIndexedInstance(hContext, topology, numIndices, indexOffset, baseVertex, numInstances, startInstance);
 }
 
-// Attach surfaces to pipeline
+//////////////////////////////////////////////////////////////////////////
+/// @brief SwrInvalidateTiles
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param attachmentMask - The mask specifies which surfaces attached to the hottiles to invalidate.
 void SwrInvalidateTiles(
     HANDLE hContext,
     uint32_t attachmentMask)
@@ -1273,10 +1276,39 @@ void SwrInvalidateTiles(
     SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
+    pDC->FeWork.type = DISCARDINVALIDATETILES;
+    pDC->FeWork.pfnWork = ProcessDiscardInvalidateTiles;
+    pDC->FeWork.desc.discardInvalidateTiles.attachmentMask = attachmentMask;
+    memset(&pDC->FeWork.desc.discardInvalidateTiles.rect, 0, sizeof(SWR_RECT));
+    pDC->FeWork.desc.discardInvalidateTiles.newTileState = SWR_TILE_INVALID;
+    pDC->FeWork.desc.discardInvalidateTiles.createNewTiles = false;
+    pDC->FeWork.desc.discardInvalidateTiles.fullTilesOnly = false;
+
+    //enqueue
+    QueueDraw(pContext);
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief SwrDiscardRect
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param attachmentMask - The mask specifies which surfaces attached to the hottiles to discard.
+/// @param rect - if rect is all zeros, the entire attachment surface will be discarded
+void SwrDiscardRect(
+    HANDLE hContext,
+    uint32_t attachmentMask,
+    SWR_RECT rect)
+{
+    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    DRAW_CONTEXT* pDC = GetDrawContext(pContext);
+
     // Queue a load to the hottile
-    pDC->FeWork.type = INVALIDATETILES;
-    pDC->FeWork.pfnWork = ProcessInvalidateTiles;
-    pDC->FeWork.desc.invalidateTiles.attachmentMask = attachmentMask;
+    pDC->FeWork.type = DISCARDINVALIDATETILES;
+    pDC->FeWork.pfnWork = ProcessDiscardInvalidateTiles;
+    pDC->FeWork.desc.discardInvalidateTiles.attachmentMask = attachmentMask;
+    pDC->FeWork.desc.discardInvalidateTiles.rect = rect;
+    pDC->FeWork.desc.discardInvalidateTiles.newTileState = SWR_TILE_RESOLVED;
+    pDC->FeWork.desc.discardInvalidateTiles.createNewTiles = true;
+    pDC->FeWork.desc.discardInvalidateTiles.fullTilesOnly = true;
 
     //enqueue
     QueueDraw(pContext);

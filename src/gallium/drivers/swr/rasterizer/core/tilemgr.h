@@ -297,7 +297,7 @@ public:
     HOTTILE *GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID, SWR_RENDERTARGET_ATTACHMENT attachment, bool create, uint32_t numSamples = 1,
         uint32_t renderTargetArrayIndex = 0);
 
-    HOTTILE *GetHotTileNoLoad(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID, SWR_RENDERTARGET_ATTACHMENT attachment);
+    HOTTILE *GetHotTileNoLoad(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID, SWR_RENDERTARGET_ATTACHMENT attachment, bool create, uint32_t numSamples = 1);
 
     static void ClearColorHotTile(const HOTTILE* pHotTile);
     static void ClearDepthHotTile(const HOTTILE* pHotTile);

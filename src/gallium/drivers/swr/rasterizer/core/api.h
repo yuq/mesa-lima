@@ -409,6 +409,16 @@ void SWR_API SwrInvalidateTiles(
     uint32_t attachmentMask);
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief SwrDiscardRect
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param attachmentMask - The mask specifies which surfaces attached to the hottiles to discard.
+/// @param rect - if rect is all zeros, the entire attachment surface will be discarded
+void SWR_API SwrDiscardRect(
+    HANDLE hContext,
+    uint32_t attachmentMask,
+    SWR_RECT rect);
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief SwrDispatch
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param threadGroupCountX - Number of thread groups dispatched in X direction

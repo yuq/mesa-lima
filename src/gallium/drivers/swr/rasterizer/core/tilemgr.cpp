@@ -186,7 +186,9 @@ HOTTILE* HotTileMgr::GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32
     return &tile.Attachment[attachment];
 }
 
-HOTTILE* HotTileMgr::GetHotTileNoLoad(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID, SWR_RENDERTARGET_ATTACHMENT attachment)
+HOTTILE* HotTileMgr::GetHotTileNoLoad(
+    SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID,
+    SWR_RENDERTARGET_ATTACHMENT attachment, bool create, uint32_t numSamples)
 {
     uint32_t x, y;
     MacroTileMgr::getTileIndices(macroID, x, y);
@@ -198,7 +200,18 @@ HOTTILE* HotTileMgr::GetHotTileNoLoad(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, 
     HOTTILE& hotTile = tile.Attachment[attachment];
     if (hotTile.pBuffer == NULL)
     {
-        return NULL;
+        if (create)
+        {
+            uint32_t size = numSamples * mHotTileSize[attachment];
+            hotTile.pBuffer = (uint8_t*)_aligned_malloc(size, KNOB_SIMD_WIDTH * 4);
+            hotTile.state = HOTTILE_INVALID;
+            hotTile.numSamples = numSamples;
+            hotTile.renderTargetArrayIndex = 0;
+        }
+        else
+        {
+            return NULL;
+        }
     }
 
     return &hotTile;

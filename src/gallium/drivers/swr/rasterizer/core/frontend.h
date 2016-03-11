@@ -316,7 +316,7 @@ void ProcessDraw(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, vo
 
 void ProcessClear(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 void ProcessStoreTiles(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
-void ProcessInvalidateTiles(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
+void ProcessDiscardInvalidateTiles(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 void ProcessSync(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 void ProcessQueryStats(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 

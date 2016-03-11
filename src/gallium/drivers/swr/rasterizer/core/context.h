@@ -114,9 +114,13 @@ struct CLEAR_DESC
     uint8_t clearStencil;
 };
 
-struct INVALIDATE_TILES_DESC
+struct DISCARD_INVALIDATE_TILES_DESC
 {
     uint32_t attachmentMask;
+    SWR_RECT rect;
+    SWR_TILE_STATE newTileState;
+    bool createNewTiles;
+    bool fullTilesOnly;
 };
 
 struct SYNC_DESC
@@ -152,7 +156,7 @@ enum WORK_TYPE
     SYNC,
     DRAW,
     CLEAR,
-    INVALIDATETILES,
+    DISCARDINVALIDATETILES,
     STORETILES,
     QUERYSTATS,
 };
@@ -166,7 +170,7 @@ struct BE_WORK
         SYNC_DESC sync;
         TRIANGLE_WORK_DESC tri;
         CLEAR_DESC clear;
-        INVALIDATE_TILES_DESC invalidateTiles;
+        DISCARD_INVALIDATE_TILES_DESC discardInvalidateTiles;
         STORE_TILES_DESC storeTiles;
         QUERY_DESC queryStats;
     } desc;
@@ -203,7 +207,7 @@ struct FE_WORK
         SYNC_DESC sync;
         DRAW_WORK draw;
         CLEAR_DESC clear;
-        INVALIDATE_TILES_DESC invalidateTiles;
+        DISCARD_INVALIDATE_TILES_DESC discardInvalidateTiles;
         STORE_TILES_DESC storeTiles;
         QUERY_DESC queryStats;
     } desc;
