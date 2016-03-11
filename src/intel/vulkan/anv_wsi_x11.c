@@ -520,27 +520,138 @@ x11_queue_present(struct anv_swapchain *anv_chain,
 }
 
 static VkResult
+x11_image_init(struct anv_device *device, struct x11_swapchain *chain,
+               const VkSwapchainCreateInfoKHR *pCreateInfo,
+               const VkAllocationCallbacks* pAllocator,
+               struct x11_image *image)
+{
+   VkResult result;
+
+   VkImage image_h;
+   result = anv_image_create(anv_device_to_handle(device),
+      &(struct anv_image_create_info) {
+         .isl_tiling_flags = ISL_TILING_X_BIT,
+         .stride = 0,
+         .vk_info =
+      &(VkImageCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+         .imageType = VK_IMAGE_TYPE_2D,
+         .format = pCreateInfo->imageFormat,
+         .extent = {
+            .width = pCreateInfo->imageExtent.width,
+            .height = pCreateInfo->imageExtent.height,
+            .depth = 1
+         },
+         .mipLevels = 1,
+         .arrayLayers = 1,
+         .samples = 1,
+         /* FIXME: Need a way to use X tiling to allow scanout */
+         .tiling = VK_IMAGE_TILING_OPTIMAL,
+         .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+         .flags = 0,
+      }},
+      NULL,
+      &image_h);
+   if (result != VK_SUCCESS)
+      return result;
+
+   image->image = anv_image_from_handle(image_h);
+   assert(anv_format_is_color(image->image->format));
+
+   VkDeviceMemory memory_h;
+   result = anv_AllocateMemory(anv_device_to_handle(device),
+      &(VkMemoryAllocateInfo) {
+         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+         .allocationSize = image->image->size,
+         .memoryTypeIndex = 0,
+      },
+      NULL /* XXX: pAllocator */,
+      &memory_h);
+   if (result != VK_SUCCESS)
+      goto fail_create_image;
+
+   image->memory = anv_device_memory_from_handle(memory_h);
+   image->memory->bo.is_winsys_bo = true;
+
+   anv_BindImageMemory(VK_NULL_HANDLE, image_h, memory_h, 0);
+
+   struct anv_surface *surface = &image->image->color_surface;
+   assert(surface->isl.tiling == ISL_TILING_X);
+
+   int ret = anv_gem_set_tiling(device, image->memory->bo.gem_handle,
+                                surface->isl.row_pitch, I915_TILING_X);
+   if (ret) {
+      /* FINISHME: Choose a better error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                         "set_tiling failed: %m");
+      goto fail_alloc_memory;
+   }
+
+   int fd = anv_gem_handle_to_fd(device, image->memory->bo.gem_handle);
+   if (fd == -1) {
+      /* FINISHME: Choose a better error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                         "handle_to_fd failed: %m");
+      goto fail_alloc_memory;
+   }
+
+   uint32_t bpp = 32;
+   uint32_t depth = 24;
+   image->pixmap = xcb_generate_id(chain->conn);
+
+   xcb_void_cookie_t cookie =
+      xcb_dri3_pixmap_from_buffer_checked(chain->conn,
+                                          image->pixmap,
+                                          chain->window,
+                                          image->image->size,
+                                          pCreateInfo->imageExtent.width,
+                                          pCreateInfo->imageExtent.height,
+                                          surface->isl.row_pitch,
+                                          depth, bpp, fd);
+
+   image->busy = false;
+
+   xcb_discard_reply(chain->conn, cookie.sequence);
+
+   return VK_SUCCESS;
+
+fail_alloc_memory:
+   anv_FreeMemory(anv_device_to_handle(chain->base.device),
+                  anv_device_memory_to_handle(image->memory), pAllocator);
+
+fail_create_image:
+   anv_DestroyImage(anv_device_to_handle(chain->base.device),
+                    anv_image_to_handle(image->image), pAllocator);
+
+   return result;
+}
+
+static void
+x11_image_finish(struct x11_swapchain *chain,
+                 const VkAllocationCallbacks* pAllocator,
+                 struct x11_image *image)
+{
+   if (image->busy)
+      xcb_discard_reply(chain->conn, image->geom_cookie.sequence);
+
+   xcb_void_cookie_t cookie = xcb_free_pixmap(chain->conn, image->pixmap);
+   xcb_discard_reply(chain->conn, cookie.sequence);
+
+   anv_DestroyImage(anv_device_to_handle(chain->base.device),
+                    anv_image_to_handle(image->image), pAllocator);
+
+   anv_FreeMemory(anv_device_to_handle(chain->base.device),
+                  anv_device_memory_to_handle(image->memory), pAllocator);
+}
+
+static VkResult
 x11_swapchain_destroy(struct anv_swapchain *anv_chain,
                       const VkAllocationCallbacks *pAllocator)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
-   xcb_void_cookie_t cookie;
 
-   for (uint32_t i = 0; i < chain->image_count; i++) {
-      struct x11_image *image = &chain->images[i];
-
-      if (image->busy)
-         xcb_discard_reply(chain->conn, image->geom_cookie.sequence);
-
-      cookie = xcb_free_pixmap(chain->conn, image->pixmap);
-      xcb_discard_reply(chain->conn, cookie.sequence);
-
-      anv_DestroyImage(anv_device_to_handle(chain->base.device),
-                       anv_image_to_handle(image->image), pAllocator);
-
-      anv_FreeMemory(anv_device_to_handle(chain->base.device),
-                     anv_device_memory_to_handle(image->memory), pAllocator);
-   }
+   for (uint32_t i = 0; i < chain->image_count; i++)
+      x11_image_finish(chain, pAllocator, &chain->images[i]);
 
    anv_free2(&chain->base.device->alloc, pAllocator, chain);
 
@@ -581,102 +692,11 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->image_count = num_images;
    chain->next_image = 0;
 
-   for (uint32_t i = 0; i < chain->image_count; i++) {
-      VkDeviceMemory memory_h;
-      VkImage image_h;
-      struct anv_image *image;
-      struct anv_surface *surface;
-      struct anv_device_memory *memory;
-
-      anv_image_create(anv_device_to_handle(device),
-         &(struct anv_image_create_info) {
-            .isl_tiling_flags = ISL_TILING_X_BIT,
-            .stride = 0,
-            .vk_info =
-         &(VkImageCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = pCreateInfo->imageFormat,
-            .extent = {
-               .width = pCreateInfo->imageExtent.width,
-               .height = pCreateInfo->imageExtent.height,
-               .depth = 1
-            },
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = 1,
-            /* FIXME: Need a way to use X tiling to allow scanout */
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-            .flags = 0,
-         }},
-         NULL,
-         &image_h);
-
-      image = anv_image_from_handle(image_h);
-      assert(anv_format_is_color(image->format));
-
-      surface = &image->color_surface;
-
-      anv_AllocateMemory(anv_device_to_handle(device),
-         &(VkMemoryAllocateInfo) {
-            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            .allocationSize = image->size,
-            .memoryTypeIndex = 0,
-         },
-         NULL /* XXX: pAllocator */,
-         &memory_h);
-
-      memory = anv_device_memory_from_handle(memory_h);
-      memory->bo.is_winsys_bo = true;
-
-      anv_BindImageMemory(VK_NULL_HANDLE, anv_image_to_handle(image),
-                          memory_h, 0);
-
-      int ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
-                                   surface->isl.row_pitch, I915_TILING_X);
-      if (ret) {
-         /* FINISHME: Choose a better error. */
-         result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
-                            "set_tiling failed: %m");
-         goto fail;
-      }
-
-      int fd = anv_gem_handle_to_fd(device, memory->bo.gem_handle);
-      if (fd == -1) {
-         /* FINISHME: Choose a better error. */
-         result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
-                            "handle_to_fd failed: %m");
-         goto fail;
-      }
-
-      uint32_t bpp = 32;
-      uint32_t depth = 24;
-      xcb_pixmap_t pixmap = xcb_generate_id(chain->conn);
-
-      cookie =
-         xcb_dri3_pixmap_from_buffer_checked(chain->conn,
-                                             pixmap,
-                                             chain->window,
-                                             image->size,
-                                             pCreateInfo->imageExtent.width,
-                                             pCreateInfo->imageExtent.height,
-                                             surface->isl.row_pitch,
-                                             depth, bpp, fd);
-
-      chain->images[i].image = image;
-      chain->images[i].memory = memory;
-      chain->images[i].pixmap = pixmap;
-      chain->images[i].busy = false;
-
-      xcb_discard_reply(chain->conn, cookie.sequence);
-   }
-
    chain->gc = xcb_generate_id(chain->conn);
    if (!chain->gc) {
       /* FINISHME: Choose a better error. */
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      goto fail;
+      goto fail_alloc;
    }
 
    cookie = xcb_create_gc(chain->conn,
@@ -686,11 +706,25 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                           (uint32_t []) { 0 });
    xcb_discard_reply(chain->conn, cookie.sequence);
 
+   uint32_t image = 0;
+   for (; image < chain->image_count; image++) {
+      result = x11_image_init(device, chain, pCreateInfo, pAllocator,
+                              &chain->images[image]);
+      if (result != VK_SUCCESS)
+         goto fail_init_images;
+   }
+
    *swapchain_out = &chain->base;
 
    return VK_SUCCESS;
 
- fail:
+fail_init_images:
+   for (uint32_t j = 0; j < image; j++)
+      x11_image_finish(chain, pAllocator, &chain->images[j]);
+
+fail_alloc:
+   anv_free2(&device->alloc, pAllocator, chain);
+
    return result;
 }
 
