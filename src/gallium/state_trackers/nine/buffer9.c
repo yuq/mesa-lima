@@ -154,7 +154,7 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
 {
     struct pipe_box box;
     void *data;
-    unsigned usage = d3dlock_buffer_to_pipe_transfer_usage(Flags);
+    unsigned usage;
 
     DBG("This=%p(pipe=%p) OffsetToLock=0x%x, SizeToLock=0x%x, Flags=0x%x\n",
         This, This->base.resource,
@@ -195,6 +195,26 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
         return D3D_OK;
     }
 
+    /* Driver ddi doc: READONLY is never passed to the device. So it can only
+     * have effect on things handled by the driver (MANAGED pool for example).
+     * Msdn doc: DISCARD and NOOVERWRITE are only for DYNAMIC.
+     * ATI doc: You can use DISCARD and NOOVERWRITE without DYNAMIC.
+     * Msdn doc: D3DLOCK_DONOTWAIT is not among the valid flags for buffers.
+     * Our tests: On win 7 nvidia, D3DLOCK_DONOTWAIT does return
+     * D3DERR_WASSTILLDRAWING if the resource is in use, except for DYNAMIC.
+     * Our tests: some apps do use both DISCARD and NOOVERWRITE at the same
+     * time. On windows it seems to return different pointer, thus indicating
+     * DISCARD is taken into account. */
+
+    if (Flags & D3DLOCK_DISCARD)
+        usage = PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
+    else if (Flags & D3DLOCK_NOOVERWRITE)
+        usage = PIPE_TRANSFER_WRITE | PIPE_TRANSFER_UNSYNCHRONIZED;
+    else
+        usage = PIPE_TRANSFER_READ_WRITE;
+    if (Flags & D3DLOCK_DONOTWAIT && !(This->base.usage & D3DUSAGE_DYNAMIC))
+        usage |= PIPE_TRANSFER_DONTBLOCK;
+
     if (This->nmaps == This->maxmaps) {
         struct pipe_transfer **newmaps =
             REALLOC(This->maps, sizeof(struct pipe_transfer *)*This->maxmaps,
@@ -215,7 +235,7 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
             " box.x = %u\n"
             " box.width = %u\n",
             usage, box.x, box.width);
-        /* not sure what to return, msdn suggests this */
+
         if (Flags & D3DLOCK_DONOTWAIT)
             return D3DERR_WASSTILLDRAWING;
         return D3DERR_INVALIDCALL;

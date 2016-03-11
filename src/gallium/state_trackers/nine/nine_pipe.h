@@ -44,33 +44,6 @@ void nine_convert_sampler_state(struct cso_context *, int idx, const DWORD *);
 
 void nine_pipe_context_clear(struct NineDevice9 *);
 
-static inline unsigned d3dlock_buffer_to_pipe_transfer_usage(DWORD Flags)
-{
-    unsigned usage;
-
-    if (Flags & D3DLOCK_DISCARD)
-        usage = PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
-    else
-    if (Flags & D3DLOCK_READONLY)
-        usage = PIPE_TRANSFER_READ;
-    else
-        usage = PIPE_TRANSFER_READ_WRITE;
-
-    if (Flags & D3DLOCK_NOOVERWRITE)
-        usage = (PIPE_TRANSFER_UNSYNCHRONIZED |
-                 PIPE_TRANSFER_DISCARD_RANGE | usage) & ~PIPE_TRANSFER_READ;
-    else
-    if (Flags & D3DLOCK_DONOTWAIT)
-        usage |= PIPE_TRANSFER_DONTBLOCK;
-
-    /*
-    if (Flags & D3DLOCK_NO_DIRTY_UPDATE)
-        usage |= PIPE_TRANSFER_FLUSH_EXPLICIT;
-    */
-
-    return usage;
-}
-
 static inline void
 rect_to_pipe_box(struct pipe_box *dst, const RECT *src)
 {
