@@ -43,6 +43,8 @@
 
 static struct qreg
 ntq_get_src(struct vc4_compile *c, nir_src src, int i);
+static void
+ntq_emit_cf_list(struct vc4_compile *c, struct exec_list *list);
 
 static void
 resize_qreg_array(struct vc4_compile *c,
@@ -1667,10 +1669,98 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
         }
 }
 
+/* Clears (activates) the execute flags for any channels whose jump target
+ * matches this block.
+ */
+static void
+ntq_activate_execute_for_block(struct vc4_compile *c)
+{
+        qir_SF(c, qir_SUB(c,
+                          c->execute,
+                          qir_uniform_ui(c, c->cur_block->index)));
+        qir_MOV_cond(c, QPU_COND_ZS, c->execute, qir_uniform_ui(c, 0));
+}
+
 static void
 ntq_emit_if(struct vc4_compile *c, nir_if *if_stmt)
 {
-        fprintf(stderr, "general IF statements not handled.\n");
+        if (!c->vc4->screen->has_control_flow) {
+                fprintf(stderr,
+                        "IF statement support requires updated kernel.\n");
+                return;
+        }
+
+        nir_cf_node *nir_first_else_node = nir_if_first_else_node(if_stmt);
+        nir_cf_node *nir_last_else_node = nir_if_last_else_node(if_stmt);
+        nir_block *nir_else_block = nir_cf_node_as_block(nir_first_else_node);
+        bool empty_else_block =
+                (nir_first_else_node == nir_last_else_node  &&
+                 exec_list_is_empty(&nir_else_block->instr_list));
+
+        struct qblock *then_block = qir_new_block(c);
+        struct qblock *after_block = qir_new_block(c);
+        struct qblock *else_block;
+        if (empty_else_block)
+                else_block = after_block;
+        else
+                else_block = qir_new_block(c);
+
+        bool was_top_level = false;
+        if (c->execute.file == QFILE_NULL) {
+                c->execute = qir_MOV(c, qir_uniform_ui(c, 0));
+                was_top_level = true;
+        }
+
+        /* Set ZS for executing (execute == 0) and jumping (if->condition ==
+         * 0) channels, and then update execute flags for those to point to
+         * the ELSE block.
+         */
+        qir_SF(c, qir_OR(c,
+                         c->execute,
+                         ntq_get_src(c, if_stmt->condition, 0)));
+        qir_MOV_cond(c, QPU_COND_ZS, c->execute,
+                     qir_uniform_ui(c, else_block->index));
+
+        /* Jump to ELSE if nothing is active for THEN, otherwise fall
+         * through.
+         */
+        qir_SF(c, c->execute);
+        qir_BRANCH(c, QPU_COND_BRANCH_ALL_ZC);
+        qir_link_blocks(c->cur_block, else_block);
+        qir_link_blocks(c->cur_block, then_block);
+
+        /* Process the THEN block. */
+        qir_set_emit_block(c, then_block);
+        ntq_emit_cf_list(c, &if_stmt->then_list);
+
+        if (!empty_else_block) {
+                /* Handle the end of the THEN block.  First, all currently
+                 * active channels update their execute flags to point to
+                 * ENDIF
+                 */
+                qir_SF(c, c->execute);
+                qir_MOV_cond(c, QPU_COND_ZS, c->execute,
+                             qir_uniform_ui(c, after_block->index));
+
+                /* If everything points at ENDIF, then jump there immediately. */
+                qir_SF(c, qir_SUB(c, c->execute, qir_uniform_ui(c, after_block->index)));
+                qir_BRANCH(c, QPU_COND_BRANCH_ALL_ZS);
+                qir_link_blocks(c->cur_block, after_block);
+                qir_link_blocks(c->cur_block, else_block);
+
+                qir_set_emit_block(c, else_block);
+                ntq_activate_execute_for_block(c);
+                ntq_emit_cf_list(c, &if_stmt->else_list);
+        }
+
+        qir_link_blocks(c->cur_block, after_block);
+
+        qir_set_emit_block(c, after_block);
+        if (was_top_level)
+                c->execute = c->undef;
+        else
+                ntq_activate_execute_for_block(c);
+
 }
 
 static void
