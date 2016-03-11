@@ -277,7 +277,8 @@ union tgsi_immediate_data
 #define TGSI_PROPERTY_TES_POINT_MODE         14
 #define TGSI_PROPERTY_NUM_CLIPDIST_ENABLED   15
 #define TGSI_PROPERTY_NUM_CULLDIST_ENABLED   16
-#define TGSI_PROPERTY_COUNT                  17
+#define TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL 17
+#define TGSI_PROPERTY_COUNT                  18
 
 struct tgsi_property {
    unsigned Type         : 4;  /**< TGSI_TOKEN_TYPE_PROPERTY */
