@@ -5190,12 +5190,18 @@ fs_visitor::optimize()
 void
 fs_visitor::fixup_3src_null_dest()
 {
+   bool progress = false;
+
    foreach_block_and_inst_safe (block, fs_inst, inst, cfg) {
       if (inst->is_3src() && inst->dst.is_null()) {
          inst->dst = fs_reg(VGRF, alloc.allocate(dispatch_width / 8),
                             inst->dst.type);
+         progress = true;
       }
    }
+
+   if (progress)
+      invalidate_live_intervals();
 }
 
 void
