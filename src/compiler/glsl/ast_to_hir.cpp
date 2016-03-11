@@ -2585,6 +2585,22 @@ validate_matrix_layout_for_type(struct _mesa_glsl_parse_state *state,
 }
 
 static bool
+validate_xfb_buffer_qualifier(YYLTYPE *loc,
+                              struct _mesa_glsl_parse_state *state,
+                              unsigned xfb_buffer) {
+   if (xfb_buffer >= state->Const.MaxTransformFeedbackBuffers) {
+      _mesa_glsl_error(loc, state,
+                       "invalid xfb_buffer specified %d is larger than "
+                       "MAX_TRANSFORM_FEEDBACK_BUFFERS - 1 (%d).",
+                       xfb_buffer,
+                       state->Const.MaxTransformFeedbackBuffers - 1);
+      return false;
+   }
+
+   return true;
+}
+
+static bool
 validate_stream_qualifier(YYLTYPE *loc, struct _mesa_glsl_parse_state *state,
                           unsigned stream)
 {
@@ -3142,6 +3158,17 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
                                      &qual_stream) &&
           validate_stream_qualifier(loc, state, qual_stream)) {
          var->data.stream = qual_stream;
+      }
+   }
+
+   if (qual->flags.q.out && qual->flags.q.xfb_buffer) {
+      unsigned qual_xfb_buffer;
+      if (process_qualifier_constant(state, loc, "xfb_buffer",
+                                     qual->xfb_buffer, &qual_xfb_buffer) &&
+          validate_xfb_buffer_qualifier(loc, state, qual_xfb_buffer)) {
+         var->data.xfb_buffer = qual_xfb_buffer;
+         if (qual->flags.q.explicit_xfb_buffer)
+            var->data.explicit_xfb_buffer = true;
       }
    }
 
@@ -6257,6 +6284,7 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
                                           ir_variable_mode var_mode,
                                           ast_type_qualifier *layout,
                                           unsigned block_stream,
+                                          unsigned block_xfb_buffer,
                                           unsigned expl_location,
                                           unsigned expl_align)
 {
@@ -6412,6 +6440,26 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          }
       }
 
+      int xfb_buffer;
+      unsigned explicit_xfb_buffer = 0;
+      if (qual->flags.q.explicit_xfb_buffer) {
+         unsigned qual_xfb_buffer;
+         if (process_qualifier_constant(state, &loc, "xfb_buffer",
+                                        qual->xfb_buffer, &qual_xfb_buffer)) {
+            explicit_xfb_buffer = 1;
+            if (qual_xfb_buffer != block_xfb_buffer)
+               _mesa_glsl_error(&loc, state, "xfb_buffer layout qualifier on "
+                                "interface block member does not match "
+                                "the interface block (%u vs %u)",
+                                qual_xfb_buffer, block_xfb_buffer);
+         }
+         xfb_buffer = (int) qual_xfb_buffer;
+      } else {
+         if (layout)
+            explicit_xfb_buffer = layout->flags.q.xfb_buffer;
+         xfb_buffer = (int) block_xfb_buffer;
+      }
+
       if (qual->flags.q.uniform && qual->has_interpolation()) {
          _mesa_glsl_error(&loc, state,
                           "interpolation qualifiers cannot be used "
@@ -6457,6 +6505,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
          fields[i].sample = qual->flags.q.sample ? 1 : 0;
          fields[i].patch = qual->flags.q.patch ? 1 : 0;
          fields[i].precision = qual->precision;
+         fields[i].explicit_xfb_buffer = explicit_xfb_buffer;
+         fields[i].xfb_buffer = xfb_buffer;
 
          if (qual->flags.q.explicit_location) {
             unsigned qual_location;
@@ -6647,6 +6697,7 @@ ast_struct_specifier::hir(exec_list *instructions,
                                                 ir_var_auto,
                                                 layout,
                                                 0, /* for interface only */
+                                                0, /* for interface only */
                                                 expl_location,
                                                 0 /* for interface only */);
 
@@ -6806,6 +6857,13 @@ ast_interface_block::hir(exec_list *instructions,
       return NULL;
    }
 
+   unsigned qual_xfb_buffer;
+   if (!process_qualifier_constant(state, &loc, "xfb_buffer",
+                                   layout.xfb_buffer, &qual_xfb_buffer) ||
+       !validate_xfb_buffer_qualifier(&loc, state, qual_xfb_buffer)) {
+      return NULL;
+   }
+
    unsigned expl_location = 0;
    if (layout.flags.q.explicit_location) {
       if (!process_qualifier_constant(state, &loc, "location",
@@ -6841,6 +6899,7 @@ ast_interface_block::hir(exec_list *instructions,
                                                 var_mode,
                                                 &this->layout,
                                                 qual_stream,
+                                                qual_xfb_buffer,
                                                 expl_location,
                                                 expl_align);
 
@@ -6957,6 +7016,8 @@ ast_interface_block::hir(exec_list *instructions,
                earlier_per_vertex->fields.structure[j].precision;
             fields[i].explicit_xfb_buffer =
                earlier_per_vertex->fields.structure[j].explicit_xfb_buffer;
+            fields[i].xfb_buffer =
+               earlier_per_vertex->fields.structure[j].xfb_buffer;
          }
       }
 
@@ -7208,8 +7269,13 @@ ast_interface_block::hir(exec_list *instructions,
          var->data.patch = fields[i].patch;
          var->data.stream = qual_stream;
          var->data.location = fields[i].location;
+
          if (fields[i].location != -1)
             var->data.explicit_location = true;
+
+         var->data.explicit_xfb_buffer = fields[i].explicit_xfb_buffer;
+         var->data.xfb_buffer = fields[i].xfb_buffer;
+
          var->init_interface_type(block_type);
 
          if (var_mode == ir_var_shader_in || var_mode == ir_var_uniform)
