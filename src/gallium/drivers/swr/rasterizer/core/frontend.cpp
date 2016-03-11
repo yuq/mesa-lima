@@ -243,6 +243,12 @@ void ProcessDiscardInvalidateTiles(
         macroTileEndY = (rect.bottom + macroHeight - 1) / macroHeight;
     }
 
+    SWR_ASSERT(macroTileEndX < KNOB_NUM_HOT_TILES_X);
+    SWR_ASSERT(macroTileEndY < KNOB_NUM_HOT_TILES_Y);
+
+    macroTileEndX = std::min<uint32_t>(macroTileEndX, KNOB_NUM_HOT_TILES_X);
+    macroTileEndY = std::min<uint32_t>(macroTileEndY, KNOB_NUM_HOT_TILES_Y);
+
     // load tiles
     BE_WORK work;
     work.type = DISCARDINVALIDATETILES;
