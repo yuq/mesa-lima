@@ -548,6 +548,8 @@ x11_queue_present(struct anv_swapchain *anv_chain,
 
    options |= XCB_PRESENT_OPTION_ASYNC;
 
+   xshmfence_reset(image->shm_fence);
+
    xcb_void_cookie_t cookie =
       xcb_present_pixmap(chain->conn,
                          chain->window,
