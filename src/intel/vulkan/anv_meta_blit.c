@@ -119,7 +119,7 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
                  (1 << VK_DYNAMIC_STATE_VIEWPORT));
 }
 
-void
+static void
 meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                struct anv_image *src_image,
                struct anv_image_view *src_iview,

@@ -108,17 +108,6 @@ void
 anv_meta_end_blit2d(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_meta_saved_state *save);
 
-void
-meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
-               struct anv_image *src_image,
-               struct anv_image_view *src_iview,
-               VkOffset3D src_offset,
-               VkExtent3D src_extent,
-               struct anv_image *dest_image,
-               struct anv_image_view *dest_iview,
-               VkOffset3D dest_offset,
-               VkExtent3D dest_extent,
-               VkFilter blit_filter);
 #ifdef __cplusplus
 }
 #endif
