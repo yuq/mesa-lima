@@ -1708,7 +1708,8 @@ ntq_emit_cf_list(struct vc4_compile *c, struct exec_list *list)
                         break;
 
                 default:
-                        assert(0);
+                        fprintf(stderr, "Unknown NIR node type\n");
+                        abort();
                 }
         }
 }
