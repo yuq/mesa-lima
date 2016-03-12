@@ -297,8 +297,8 @@ static void r600_texture_disable_cmask(struct r600_common_screen *rscreen,
 	p_atomic_inc(&rscreen->compressed_colortex_counter);
 }
 
-static void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
-				     struct r600_texture *rtex)
+void r600_texture_disable_dcc(struct r600_common_screen *rscreen,
+			      struct r600_texture *rtex)
 {
 	struct r600_common_context *rctx =
 		(struct r600_common_context *)rscreen->aux_context;
