@@ -1694,6 +1694,13 @@ ntq_emit_block(struct vc4_compile *c, nir_block *block)
 }
 
 static void
+ntq_emit_function(struct vc4_compile *c, nir_function_impl *func)
+{
+        fprintf(stderr, "FUNCTIONS not handled.\n");
+        abort();
+}
+
+static void
 ntq_emit_cf_list(struct vc4_compile *c, struct exec_list *list)
 {
         foreach_list_typed(nir_cf_node, node, node, list) {
@@ -1705,6 +1712,10 @@ ntq_emit_cf_list(struct vc4_compile *c, struct exec_list *list)
 
                 case nir_cf_node_if:
                         ntq_emit_if(c, nir_cf_node_as_if(node));
+                        break;
+
+                case nir_cf_node_function:
+                        ntq_emit_function(c, nir_cf_node_as_function(node));
                         break;
 
                 default:
