@@ -3521,6 +3521,42 @@ static void si_texture_barrier(struct pipe_context *ctx)
 			 SI_CONTEXT_FLUSH_AND_INV_CB;
 }
 
+static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+
+	/* Subsequent commands must wait for all shader invocations to
+	 * complete. */
+	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
+
+	if (flags & PIPE_BARRIER_CONSTANT_BUFFER)
+		sctx->b.flags |= SI_CONTEXT_INV_SMEM_L1 |
+				 SI_CONTEXT_INV_VMEM_L1;
+
+	if (flags & (PIPE_BARRIER_VERTEX_BUFFER |
+		     PIPE_BARRIER_SHADER_BUFFER |
+		     PIPE_BARRIER_TEXTURE |
+		     PIPE_BARRIER_IMAGE)) {
+		/* As far as I can tell, L1 contents are written back to L2
+		 * automatically at end of shader, but the contents of other
+		 * L1 caches might still be stale. */
+		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1;
+	}
+
+	if (flags & PIPE_BARRIER_FRAMEBUFFER)
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
+
+	if (flags & (PIPE_BARRIER_MAPPED_BUFFER |
+		     PIPE_BARRIER_FRAMEBUFFER)) {
+		/* Not sure if INV_GLOBAL_L2 is the best thing here.
+		 *
+		 * We need to make sure that TC L1 & L2 are written back to
+		 * memory, because neither CPU accesses nor CB fetches consider
+		 * TC, but there's no need to invalidate any TC cache lines. */
+		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+	}
+}
+
 static void *si_create_blend_custom(struct si_context *sctx, unsigned mode)
 {
 	struct pipe_blend_state blend;
@@ -3601,6 +3637,7 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.set_index_buffer = si_set_index_buffer;
 
 	sctx->b.b.texture_barrier = si_texture_barrier;
+	sctx->b.b.memory_barrier = si_memory_barrier;
 	sctx->b.b.set_polygon_stipple = si_set_polygon_stipple;
 	sctx->b.b.set_min_samples = si_set_min_samples;
 	sctx->b.b.set_tess_state = si_set_tess_state;
