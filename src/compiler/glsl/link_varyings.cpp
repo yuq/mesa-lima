@@ -738,14 +738,26 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
    unsigned num_components = this->num_components();
    while (num_components > 0) {
       unsigned output_size = MIN2(num_components, 4 - location_frac);
-      assert(info->NumOutputs < max_outputs);
-      info->Outputs[info->NumOutputs].ComponentOffset = location_frac;
-      info->Outputs[info->NumOutputs].OutputRegister = location;
-      info->Outputs[info->NumOutputs].NumComponents = output_size;
-      info->Outputs[info->NumOutputs].StreamId = stream_id;
-      info->Outputs[info->NumOutputs].OutputBuffer = buffer;
-      info->Outputs[info->NumOutputs].DstOffset = xfb_offset;
-      ++info->NumOutputs;
+      assert((info->NumOutputs == 0 && max_outputs == 0) ||
+             info->NumOutputs < max_outputs);
+
+      /* From the ARB_enhanced_layouts spec:
+       *
+       *    "If such a block member or variable is not written during a shader
+       *    invocation, the buffer contents at the assigned offset will be
+       *    undefined.  Even if there are no static writes to a variable or
+       *    member that is assigned a transform feedback offset, the space is
+       *    still allocated in the buffer and still affects the stride."
+       */
+      if (this->is_varying_written()) {
+         info->Outputs[info->NumOutputs].ComponentOffset = location_frac;
+         info->Outputs[info->NumOutputs].OutputRegister = location;
+         info->Outputs[info->NumOutputs].NumComponents = output_size;
+         info->Outputs[info->NumOutputs].StreamId = stream_id;
+         info->Outputs[info->NumOutputs].OutputBuffer = buffer;
+         info->Outputs[info->NumOutputs].DstOffset = xfb_offset;
+         ++info->NumOutputs;
+      }
       info->Buffers[buffer].Stream = this->stream_id;
       xfb_offset += output_size;
 
@@ -936,8 +948,10 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                     num_tfeedback_decls);
 
    unsigned num_outputs = 0;
-   for (unsigned i = 0; i < num_tfeedback_decls; ++i)
-      num_outputs += tfeedback_decls[i].get_num_outputs();
+   for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
+      if (tfeedback_decls[i].is_varying_written())
+         num_outputs += tfeedback_decls[i].get_num_outputs();
+   }
 
    prog->LinkedTransformFeedback.Outputs =
       rzalloc_array(prog,

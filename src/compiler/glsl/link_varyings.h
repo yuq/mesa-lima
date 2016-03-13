@@ -108,6 +108,14 @@ public:
       return this->next_buffer_separator;
    }
 
+   bool is_varying_written() const
+   {
+      if (this->next_buffer_separator || this->skip_components)
+         return false;
+
+      return this->matched_candidate->toplevel_var->data.assigned;
+   }
+
    bool is_varying() const
    {
       return !this->next_buffer_separator && !this->skip_components;
