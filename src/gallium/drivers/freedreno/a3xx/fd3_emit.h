@@ -58,10 +58,10 @@ struct fd3_emit {
 	bool rasterflat;
 
 	/* cached to avoid repeated lookups of same variants: */
-	struct ir3_shader_variant *vp, *fp;
+	const struct ir3_shader_variant *vp, *fp;
 };
 
-static inline struct ir3_shader_variant *
+static inline const struct ir3_shader_variant *
 fd3_emit_get_vp(struct fd3_emit *emit)
 {
 	if (!emit->vp) {
@@ -71,7 +71,7 @@ fd3_emit_get_vp(struct fd3_emit *emit)
 	return emit->vp;
 }
 
-static inline struct ir3_shader_variant *
+static inline const struct ir3_shader_variant *
 fd3_emit_get_fp(struct fd3_emit *emit)
 {
 	if (!emit->fp) {

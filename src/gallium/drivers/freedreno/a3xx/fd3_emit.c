@@ -353,7 +353,7 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	int32_t i, j, last = -1;
 	uint32_t total_in = 0;
 	const struct fd_vertex_state *vtx = emit->vtx;
-	struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
+	const struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
 	unsigned vertex_regid = regid(63, 0);
 	unsigned instance_regid = regid(63, 0);
 	unsigned vtxcnt_regid = regid(63, 0);
@@ -478,8 +478,8 @@ void
 fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct fd3_emit *emit)
 {
-	struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
-	struct ir3_shader_variant *fp = fd3_emit_get_fp(emit);
+	const struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
+	const struct ir3_shader_variant *fp = fd3_emit_get_fp(emit);
 	uint32_t dirty = emit->dirty;
 
 	emit_marker(ring, 5);
