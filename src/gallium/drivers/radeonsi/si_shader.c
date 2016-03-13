@@ -2764,12 +2764,41 @@ static bool tgsi_is_array_image(unsigned target)
 }
 
 /**
+ * Given a 256-bit resource descriptor, force the DCC enable bit to off.
+ *
+ * At least on Tonga, executing image stores on images with DCC enabled and
+ * non-trivial can eventually lead to lockups. This can occur when an
+ * application binds an image as read-only but then uses a shader that writes
+ * to it. The OpenGL spec allows almost arbitrarily bad behavior (including
+ * program termination) in this case, but it doesn't cost much to be a bit
+ * nicer: disabling DCC in the shader still leads to undefined results but
+ * avoids the lockup.
+ */
+static LLVMValueRef force_dcc_off(struct si_shader_context *ctx,
+				  LLVMValueRef rsrc)
+{
+	if (ctx->screen->b.chip_class <= CIK) {
+		return rsrc;
+	} else {
+		LLVMBuilderRef builder = ctx->radeon_bld.gallivm.builder;
+		LLVMValueRef i32_6 = LLVMConstInt(ctx->i32, 6, 0);
+		LLVMValueRef i32_C = LLVMConstInt(ctx->i32, C_008F28_COMPRESSION_EN, 0);
+		LLVMValueRef tmp;
+
+		tmp = LLVMBuildExtractElement(builder, rsrc, i32_6, "");
+		tmp = LLVMBuildAnd(builder, tmp, i32_C, "");
+		return LLVMBuildInsertElement(builder, rsrc, tmp, i32_6, "");
+	}
+}
+
+/**
  * Load the resource descriptor for \p image.
  */
 static void
 image_fetch_rsrc(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *image,
+	bool dcc_off,
 	LLVMValueRef *rsrc)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
@@ -2783,11 +2812,15 @@ image_fetch_rsrc(
 		/* Indexing and manual load */
 		LLVMValueRef ind_index;
 		LLVMValueRef rsrc_ptr;
+		LLVMValueRef tmp;
 
 		ind_index = get_indirect_index(ctx, &image->Indirect, image->Register.Index);
 
 		rsrc_ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_IMAGES);
-		*rsrc = build_indexed_load_const(ctx, rsrc_ptr, ind_index);
+		tmp = build_indexed_load_const(ctx, rsrc_ptr, ind_index);
+		if (dcc_off)
+			tmp = force_dcc_off(ctx, tmp);
+		*rsrc = tmp;
 	}
 }
 
@@ -2895,7 +2928,7 @@ static void load_fetch_args(
 
 	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
 
-	image_fetch_rsrc(bld_base, &inst->Src[0], &rsrc);
+	image_fetch_rsrc(bld_base, &inst->Src[0], false, &rsrc);
 	coords = image_fetch_coords(bld_base, inst, 1);
 
 	if (target == TGSI_TEXTURE_BUFFER) {
@@ -2964,7 +2997,6 @@ static void store_fetch_args(
 	emit_data->dst_type = LLVMVoidTypeInContext(gallivm->context);
 
 	image = tgsi_full_src_register_from_dst(&inst->Dst[0]);
-	image_fetch_rsrc(bld_base, &image, &rsrc);
 	coords = image_fetch_coords(bld_base, inst, 0);
 
 	for (chan = 0; chan < 4; ++chan) {
@@ -2973,6 +3005,7 @@ static void store_fetch_args(
 	data = lp_build_gather_values(gallivm, chans, 4);
 
 	if (target == TGSI_TEXTURE_BUFFER) {
+		image_fetch_rsrc(bld_base, &image, false, &rsrc);
 		emit_data->args[0] = data;
 		emit_data->arg_count = 1;
 
@@ -2980,7 +3013,7 @@ static void store_fetch_args(
 	} else {
 		emit_data->args[0] = data;
 		emit_data->args[1] = coords;
-		emit_data->args[2] = rsrc;
+		image_fetch_rsrc(bld_base, &image, true, &emit_data->args[2]);
 		emit_data->args[3] = lp_build_const_int32(gallivm, 15); /* dmask */
 		emit_data->arg_count = 4;
 
@@ -3035,7 +3068,8 @@ static void atomic_fetch_args(
 
 	emit_data->dst_type = bld_base->base.elem_type;
 
-	image_fetch_rsrc(bld_base, &inst->Src[0], &rsrc);
+	image_fetch_rsrc(bld_base, &inst->Src[0], target != TGSI_TEXTURE_BUFFER,
+			 &rsrc);
 	coords = image_fetch_coords(bld_base, inst, 1);
 
 	tmp = lp_build_emit_fetch(bld_base, inst, 2, 0);
@@ -3108,11 +3142,11 @@ static void resq_fetch_args(
 	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
 
 	if (tex_target == TGSI_TEXTURE_BUFFER) {
-		image_fetch_rsrc(bld_base, reg, &emit_data->args[0]);
+		image_fetch_rsrc(bld_base, reg, false, &emit_data->args[0]);
 		emit_data->arg_count = 1;
 	} else {
 		emit_data->args[0] = bld_base->uint_bld.zero; /* mip level */
-		image_fetch_rsrc(bld_base, reg, &emit_data->args[1]);
+		image_fetch_rsrc(bld_base, reg, false, &emit_data->args[1]);
 		emit_data->args[2] = lp_build_const_int32(gallivm, 15); /* dmask */
 		emit_data->args[3] = bld_base->uint_bld.zero; /* unorm */
 		emit_data->args[4] = bld_base->uint_bld.zero; /* r128 */
@@ -4622,6 +4656,7 @@ static void preload_samplers(struct si_shader_context *ctx)
 static void preload_images(struct si_shader_context *ctx)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
+	struct tgsi_shader_info *info = &ctx->shader->selector->info;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	unsigned num_images = bld_base->info->file_max[TGSI_FILE_IMAGE] + 1;
 	LLVMValueRef res_ptr;
@@ -4634,9 +4669,15 @@ static void preload_images(struct si_shader_context *ctx)
 
 	for (i = 0; i < num_images; ++i) {
 		/* Rely on LLVM to shrink the load for buffer resources. */
-		ctx->images[i] =
+		LLVMValueRef rsrc =
 			build_indexed_load_const(ctx, res_ptr,
 						 lp_build_const_int32(gallivm, i));
+
+		if (info->images_writemask & (1 << i) &&
+		    !(info->images_buffers & (1 << i)))
+			rsrc = force_dcc_off(ctx, rsrc);
+
+		ctx->images[i] = rsrc;
 	}
 }
 
