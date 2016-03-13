@@ -897,7 +897,8 @@ is_scheduling_barrier(const fs_inst *inst)
 {
    return inst->opcode == FS_OPCODE_PLACEHOLDER_HALT ||
           inst->is_control_flow() ||
-          inst->has_side_effects();
+          inst->eot ||
+          (inst->has_side_effects() && inst->opcode != FS_OPCODE_FB_WRITE);
 }
 
 void
