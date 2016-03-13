@@ -437,6 +437,7 @@ nv50_switch_pipe_context(struct nv50_context *ctx_to)
       ctx_to->state = ctx_to->screen->save_state;
 
    ctx_to->dirty_3d = ~0;
+   ctx_to->dirty_cp = ~0;
    ctx_to->viewports_dirty = ~0;
    ctx_to->scissors_dirty = ~0;
 
