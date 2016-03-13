@@ -45,6 +45,8 @@ ir3_tgsi_to_nir(const struct tgsi_token *tokens)
 			.lower_flrp = true,
 			.lower_ffract = true,
 			.native_integers = true,
+			.lower_extract_byte = true,
+			.lower_extract_word = true,
 	};
 	return tgsi_to_nir(tokens, &options);
 }
