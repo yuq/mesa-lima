@@ -123,6 +123,10 @@ struct tgsi_shader_info
     */
    unsigned images_writemask;
    /**
+    * Bitmask indicating which declared image is a buffer.
+    */
+   unsigned images_buffers;
+   /**
     * Bitmask indicating which register files are accessed with
     * indirect addressing.  The bits are (1 << TGSI_FILE_x), etc.
     */

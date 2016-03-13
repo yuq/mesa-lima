@@ -427,6 +427,9 @@ scan_declaration(struct tgsi_shader_info *info,
          }
       } else if (file == TGSI_FILE_SAMPLER) {
          info->samplers_declared |= 1 << reg;
+      } else if (file == TGSI_FILE_IMAGE) {
+         if (fulldecl->Image.Resource == TGSI_TEXTURE_BUFFER)
+            info->images_buffers |= 1 << reg;
       }
    }
 }
