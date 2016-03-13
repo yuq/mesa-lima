@@ -360,6 +360,13 @@ enum pipe_flush_flags
 #define PIPE_BARRIER_MAPPED_BUFFER     (1 << 0)
 #define PIPE_BARRIER_SHADER_BUFFER     (1 << 1)
 #define PIPE_BARRIER_QUERY_BUFFER      (1 << 2)
+#define PIPE_BARRIER_VERTEX_BUFFER     (1 << 3)
+#define PIPE_BARRIER_INDEX_BUFFER      (1 << 4)
+#define PIPE_BARRIER_CONSTANT_BUFFER   (1 << 5)
+#define PIPE_BARRIER_INDIRECT_BUFFER   (1 << 6)
+#define PIPE_BARRIER_TEXTURE           (1 << 7)
+#define PIPE_BARRIER_IMAGE             (1 << 8)
+#define PIPE_BARRIER_FRAMEBUFFER       (1 << 9)
 
 /**
  * Resource binding flags -- state tracker must specify in advance all
