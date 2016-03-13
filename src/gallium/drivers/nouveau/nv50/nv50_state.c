@@ -1245,7 +1245,7 @@ nv50_set_global_bindings(struct pipe_context *pipe,
 
    nouveau_bufctx_reset(nv50->bufctx_cp, NV50_BIND_CP_GLOBAL);
 
-   nv50->dirty_cp = NV50_NEW_CP_GLOBALS;
+   nv50->dirty_cp |= NV50_NEW_CP_GLOBALS;
 }
 
 void

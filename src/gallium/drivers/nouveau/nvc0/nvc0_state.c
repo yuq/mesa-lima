@@ -1342,7 +1342,7 @@ nvc0_set_global_bindings(struct pipe_context *pipe,
 
    nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_GLOBAL);
 
-   nvc0->dirty_cp = NVC0_NEW_CP_GLOBALS;
+   nvc0->dirty_cp |= NVC0_NEW_CP_GLOBALS;
 }
 
 void
