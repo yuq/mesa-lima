@@ -929,7 +929,8 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          vtn_var->var->data.explicit_location = true;
       } else {
          assert(vtn_var->members);
-         unsigned length = glsl_get_length(vtn_var->type->type);
+         unsigned length =
+            glsl_get_length(glsl_without_array(vtn_var->type->type));
          for (unsigned i = 0; i < length; i++) {
             vtn_var->members[i]->data.location = location;
             vtn_var->members[i]->data.explicit_location = true;
