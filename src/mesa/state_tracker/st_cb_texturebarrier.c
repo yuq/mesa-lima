@@ -63,15 +63,30 @@ st_MemoryBarrier(struct gl_context *ctx, GLbitfield barriers)
    struct pipe_context *pipe = st_context(ctx)->pipe;
    unsigned flags = 0;
 
+   if (barriers & GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT)
+      flags |= PIPE_BARRIER_VERTEX_BUFFER;
+   if (barriers & GL_ELEMENT_ARRAY_BARRIER_BIT)
+      flags |= PIPE_BARRIER_INDEX_BUFFER;
+   if (barriers & GL_UNIFORM_BARRIER_BIT)
+      flags |= PIPE_BARRIER_CONSTANT_BUFFER;
+   if (barriers & GL_TEXTURE_FETCH_BARRIER_BIT)
+      flags |= PIPE_BARRIER_TEXTURE;
+   if (barriers & GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
+      flags |= PIPE_BARRIER_IMAGE;
+   if (barriers & GL_COMMAND_BARRIER_BIT)
+      flags |= PIPE_BARRIER_INDIRECT_BUFFER;
+   if (barriers & GL_PIXEL_BUFFER_BARRIER_BIT)
+      flags |= PIPE_BARRIER_TEXTURE;
    if (barriers & GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT)
       flags |= PIPE_BARRIER_MAPPED_BUFFER;
+   if (barriers & GL_QUERY_BUFFER_BARRIER_BIT)
+      flags |= PIPE_BARRIER_QUERY_BUFFER;
+   if (barriers & GL_FRAMEBUFFER_BARRIER_BIT)
+      flags |= PIPE_BARRIER_FRAMEBUFFER;
    if (barriers & GL_ATOMIC_COUNTER_BARRIER_BIT)
       flags |= PIPE_BARRIER_SHADER_BUFFER;
    if (barriers & GL_SHADER_STORAGE_BARRIER_BIT)
       flags |= PIPE_BARRIER_SHADER_BUFFER;
-
-   if (barriers & GL_QUERY_BUFFER_BARRIER_BIT)
-      flags |= PIPE_BARRIER_QUERY_BUFFER;
 
    if (flags && pipe->memory_barrier)
       pipe->memory_barrier(pipe, flags);
