@@ -217,11 +217,22 @@ ir_visitor_status
 flatten_named_interface_blocks_declarations::visit_leave(ir_assignment *ir)
 {
    ir_dereference_record *lhs_rec = ir->lhs->as_dereference_record();
+
+   ir_variable *lhs_var =  ir->lhs->variable_referenced();
+   if (lhs_var && lhs_var->get_interface_type()) {
+      lhs_var->data.assigned = 1;
+   }
+
    if (lhs_rec) {
       ir_rvalue *lhs_rec_tmp = lhs_rec;
       handle_rvalue(&lhs_rec_tmp);
       if (lhs_rec_tmp != lhs_rec) {
          ir->set_lhs(lhs_rec_tmp);
+      }
+
+      ir_variable *lhs_var =  lhs_rec_tmp->variable_referenced();
+      if (lhs_var) {
+         lhs_var->data.assigned = 1;
       }
    }
    return rvalue_visit(ir);
