@@ -140,14 +140,7 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 	debug_assert(nr <= ARRAY_SIZE(color_regid));
 
 	vp = fd3_emit_get_vp(emit);
-
-	if (emit->key.binning_pass) {
-		/* use dummy stateobj to simplify binning vs non-binning: */
-		static const struct ir3_shader_variant binning_fp = {};
-		fp = &binning_fp;
-	} else {
-		fp = fd3_emit_get_fp(emit);
-	}
+	fp = fd3_emit_get_fp(emit);
 
 	vsi = &vp->info;
 	fsi = &fp->info;
