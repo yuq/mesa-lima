@@ -2832,14 +2832,18 @@ static void image_append_args(
 		unsigned target,
 		bool atomic)
 {
+	const struct tgsi_full_instruction *inst = emit_data->inst;
 	LLVMValueRef i1false = LLVMConstInt(ctx->i1, 0, 0);
 	LLVMValueRef i1true = LLVMConstInt(ctx->i1, 1, 0);
 
 	emit_data->args[emit_data->arg_count++] = i1false; /* r128 */
 	emit_data->args[emit_data->arg_count++] =
 		tgsi_is_array_image(target) ? i1true : i1false; /* da */
-	if (!atomic)
-		emit_data->args[emit_data->arg_count++] = i1false; /* glc */
+	if (!atomic) {
+		emit_data->args[emit_data->arg_count++] =
+			inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE) ?
+			i1true : i1false; /* glc */
+	}
 	emit_data->args[emit_data->arg_count++] = i1false; /* slc */
 }
 
@@ -2858,8 +2862,10 @@ static void buffer_append_args(
 {
 	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
+	const struct tgsi_full_instruction *inst = emit_data->inst;
 	LLVMTypeRef v2i128 = LLVMVectorType(ctx->i128, 2);
 	LLVMValueRef i1false = LLVMConstInt(ctx->i1, 0, 0);
+	LLVMValueRef i1true = LLVMConstInt(ctx->i1, 1, 0);
 
 	rsrc = LLVMBuildBitCast(gallivm->builder, rsrc, v2i128, "");
 	rsrc = LLVMBuildExtractElement(gallivm->builder, rsrc, bld_base->uint_bld.one, "");
@@ -2868,8 +2874,11 @@ static void buffer_append_args(
 	emit_data->args[emit_data->arg_count++] = rsrc;
 	emit_data->args[emit_data->arg_count++] = index; /* vindex */
 	emit_data->args[emit_data->arg_count++] = bld_base->uint_bld.zero; /* voffset */
-	if (!atomic)
-		emit_data->args[emit_data->arg_count++] = i1false; /* glc */
+	if (!atomic) {
+		emit_data->args[emit_data->arg_count++] =
+			inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE) ?
+			i1true : i1false; /* glc */
+	}
 	emit_data->args[emit_data->arg_count++] = i1false; /* slc */
 }
 
