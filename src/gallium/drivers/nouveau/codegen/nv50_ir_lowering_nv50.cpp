@@ -1203,10 +1203,9 @@ NV50LoweringPreSSA::handleDIV(Instruction *i)
 bool
 NV50LoweringPreSSA::handleSQRT(Instruction *i)
 {
-   Instruction *rsq = bld.mkOp1(OP_RSQ, TYPE_F32,
-                                bld.getSSA(), i->getSrc(0));
-   i->op = OP_MUL;
-   i->setSrc(1, rsq->getDef(0));
+   bld.setPosition(i, true);
+   i->op = OP_RSQ;
+   bld.mkOp1(OP_RCP, i->dType, i->getDef(0), i->getDef(0));
 
    return true;
 }

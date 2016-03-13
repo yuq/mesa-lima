@@ -616,6 +616,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
 
    NV50_IR_OPCODE_CASE(RCP, RCP);
    NV50_IR_OPCODE_CASE(RSQ, RSQ);
+   NV50_IR_OPCODE_CASE(SQRT, SQRT);
 
    NV50_IR_OPCODE_CASE(MUL, MUL);
    NV50_IR_OPCODE_CASE(ADD, ADD);
@@ -2689,6 +2690,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    case TGSI_OPCODE_FLR:
    case TGSI_OPCODE_TRUNC:
    case TGSI_OPCODE_RCP:
+   case TGSI_OPCODE_SQRT:
    case TGSI_OPCODE_IABS:
    case TGSI_OPCODE_INEG:
    case TGSI_OPCODE_NOT:
