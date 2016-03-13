@@ -979,6 +979,12 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
       }
 
       for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
+         if (has_xfb_qualifiers &&
+             buffer != tfeedback_decls[i].get_buffer()) {
+            /* we have moved to the next buffer so reset stream id */
+            buffer_stream_id = -1;
+         }
+
          if (tfeedback_decls[i].is_next_buffer_separator()) {
             num_buffers++;
             buffer_stream_id = -1;
