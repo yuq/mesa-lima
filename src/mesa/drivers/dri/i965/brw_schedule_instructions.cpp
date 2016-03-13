@@ -892,6 +892,14 @@ fs_instruction_scheduler::is_compressed(fs_inst *inst)
    return inst->exec_size == 16;
 }
 
+static bool
+is_scheduling_barrier(const fs_inst *inst)
+{
+   return inst->opcode == FS_OPCODE_PLACEHOLDER_HALT ||
+          inst->is_control_flow() ||
+          inst->has_side_effects();
+}
+
 void
 fs_instruction_scheduler::calculate_deps()
 {
@@ -917,9 +925,7 @@ fs_instruction_scheduler::calculate_deps()
    foreach_in_list(schedule_node, n, &instructions) {
       fs_inst *inst = (fs_inst *)n->inst;
 
-      if (inst->opcode == FS_OPCODE_PLACEHOLDER_HALT ||
-          inst->is_control_flow() ||
-          inst->has_side_effects())
+      if (is_scheduling_barrier(inst))
          add_barrier_deps(n);
 
       /* read-after-write deps. */
@@ -1131,6 +1137,13 @@ fs_instruction_scheduler::calculate_deps()
    }
 }
 
+static bool
+is_scheduling_barrier(const vec4_instruction *inst)
+{
+   return inst->is_control_flow() ||
+          inst->has_side_effects();
+}
+
 void
 vec4_instruction_scheduler::calculate_deps()
 {
@@ -1152,7 +1165,7 @@ vec4_instruction_scheduler::calculate_deps()
    foreach_in_list(schedule_node, n, &instructions) {
       vec4_instruction *inst = (vec4_instruction *)n->inst;
 
-      if (inst->is_control_flow() || inst->has_side_effects())
+      if (is_scheduling_barrier(inst))
          add_barrier_deps(n);
 
       /* read-after-write deps. */
