@@ -118,6 +118,11 @@ struct tgsi_shader_info
    unsigned num_written_culldistance;
    unsigned num_written_clipdistance;
    /**
+    * Bitmask indicating which images are written to (STORE / ATOM*).
+    * Indirect image accesses are not reflected in this mask.
+    */
+   unsigned images_writemask;
+   /**
     * Bitmask indicating which register files are accessed with
     * indirect addressing.  The bits are (1 << TGSI_FILE_x), etc.
     */

@@ -38,6 +38,7 @@
 #include "util/u_math.h"
 #include "util/u_memory.h"
 #include "util/u_prim.h"
+#include "tgsi/tgsi_info.h"
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_util.h"
 #include "tgsi/tgsi_scan.h"
@@ -192,8 +193,14 @@ scan_instruction(struct tgsi_shader_info *info,
          }
       }
 
-      if (is_memory_file(src->Register.File))
+      if (is_memory_file(src->Register.File)) {
          is_mem_inst = true;
+
+         if (src->Register.File == TGSI_FILE_IMAGE &&
+             !src->Register.Indirect &&
+             tgsi_get_opcode_info(fullinst->Instruction.Opcode)->is_store)
+            info->images_writemask |= 1 << src->Register.Index;
+      }
    }
 
    /* check for indirect register writes */
@@ -204,8 +211,15 @@ scan_instruction(struct tgsi_shader_info *info,
          info->indirect_files_written |= (1 << dst->Register.File);
       }
 
-      if (is_memory_file(dst->Register.File))
+      if (is_memory_file(dst->Register.File)) {
+         assert(fullinst->Instruction.Opcode == TGSI_OPCODE_STORE);
+
          is_mem_inst = true;
+
+         if (dst->Register.File == TGSI_FILE_IMAGE &&
+             !dst->Register.Indirect)
+            info->images_writemask |= 1 << dst->Register.Index;
+      }
    }
 
    if (is_mem_inst)
