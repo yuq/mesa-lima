@@ -113,6 +113,16 @@ process_xfb_layout_qualifiers(void *mem_ctx, const gl_shader *sh,
 {
    bool has_xfb_qualifiers = false;
 
+   /* We still need to enable transform feedback mode even if xfb_stride is
+    * only applied to a global out. Also we don't bother to propagate
+    * xfb_stride to interface block members so this will catch that case also.
+    */
+   for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
+      if (sh->TransformFeedback.BufferStride[j]) {
+         has_xfb_qualifiers = true;
+      }
+   }
+
    foreach_in_list(ir_instruction, node, sh->ir) {
       ir_variable *var = node->as_variable();
       if (!var || var->data.mode != ir_var_shader_out)
