@@ -58,10 +58,9 @@ static void
 meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
                struct anv_image_view *src_iview,
                VkOffset3D src_offset,
-               VkExtent3D src_extent,
                struct anv_image_view *dest_iview,
                VkOffset3D dest_offset,
-               VkExtent3D dest_extent)
+               VkExtent3D extent)
 {
    struct anv_device *device = cmd_buffer->device;
 
@@ -79,12 +78,12 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
 
    vb_data[0] = (struct blit_vb_data) {
       .pos = {
-         dest_offset.x + dest_extent.width,
-         dest_offset.y + dest_extent.height,
+         dest_offset.x + extent.width,
+         dest_offset.y + extent.height,
       },
       .tex_coord = {
-         src_offset.x + src_extent.width,
-         src_offset.y + src_extent.height,
+         src_offset.x + extent.width,
+         src_offset.y + extent.height,
          src_offset.z,
       },
    };
@@ -92,11 +91,11 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
    vb_data[1] = (struct blit_vb_data) {
       .pos = {
          dest_offset.x,
-         dest_offset.y + dest_extent.height,
+         dest_offset.y + extent.height,
       },
       .tex_coord = {
          src_offset.x,
-         src_offset.y + src_extent.height,
+         src_offset.y + extent.height,
          src_offset.z,
       },
    };
@@ -197,7 +196,7 @@ meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
          .framebuffer = fb,
          .renderArea = {
             .offset = { dest_offset.x, dest_offset.y },
-            .extent = { dest_extent.width, dest_extent.height },
+            .extent = { extent.width, extent.height },
          },
          .clearValueCount = 0,
          .pClearValues = NULL,
@@ -381,7 +380,6 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
       meta_emit_blit2d(cmd_buffer,
                      &src_iview,
                      src_offset_el,
-                     (VkExtent3D){rects[r].width, rects[r].height, 1},
                      &dst_iview,
                      dst_offset_el,
                      (VkExtent3D){rects[r].width, rects[r].height, 1});
