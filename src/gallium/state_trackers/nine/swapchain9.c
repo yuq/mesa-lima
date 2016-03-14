@@ -79,7 +79,8 @@ NineSwapChain9_ctor( struct NineSwapChain9 *This,
 static D3DWindowBuffer *
 D3DWindowBuffer_create(struct NineSwapChain9 *This,
                        struct pipe_resource *resource,
-                       int depth)
+                       int depth,
+                       int for_frontbuffer_reading)
 {
     D3DWindowBuffer *ret;
     struct winsys_handle whandle;
@@ -88,8 +89,10 @@ D3DWindowBuffer_create(struct NineSwapChain9 *This,
     memset(&whandle, 0, sizeof(whandle));
     whandle.type = DRM_API_HANDLE_TYPE_FD;
     This->screen->resource_get_handle(This->screen, resource, &whandle,
-                                      PIPE_HANDLE_USAGE_EXPLICIT_FLUSH |
-                                      PIPE_HANDLE_USAGE_READ);
+                                      for_frontbuffer_reading ?
+                                          PIPE_HANDLE_USAGE_WRITE :
+                                          PIPE_HANDLE_USAGE_EXPLICIT_FLUSH |
+                                          PIPE_HANDLE_USAGE_READ);
     stride = whandle.stride;
     dmaBufFd = whandle.handle;
     ID3DPresent_NewD3DWindowBufferFromDmaBuf(This->present,
@@ -344,7 +347,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
             resource = This->screen->resource_create(This->screen, &tmplt);
             pipe_resource_reference(&(This->present_buffers[i]), resource);
         }
-        This->present_handles[i] = D3DWindowBuffer_create(This, resource, depth);
+        This->present_handles[i] = D3DWindowBuffer_create(This, resource, depth, false);
         pipe_resource_reference(&resource, NULL);
     }
     if (pParams->EnableAutoDepthStencil) {
@@ -551,7 +554,7 @@ create_present_buffer( struct NineSwapChain9 *This,
         tmplt.bind |= PIPE_BIND_LINEAR;
     *resource = This->screen->resource_create(This->screen, &tmplt);
 
-    *present_handle = D3DWindowBuffer_create(This, *resource, 24);
+    *present_handle = D3DWindowBuffer_create(This, *resource, 24, true);
 }
 
 static void
