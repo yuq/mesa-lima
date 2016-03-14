@@ -204,14 +204,18 @@ NineAdapter9_CheckDeviceType( struct NineAdapter9 *This,
     hr = NineAdapter9_GetScreen(This, DevType, &screen);
     if (FAILED(hr)) { return hr; }
 
+    /* The display format is not handled in Nine. We always present an XRGB8888
+     * buffer (and the display server will eventually do the conversion). We probably
+     * don't need to check for anything for the adapter format support, since if the
+     * display server advertise support, it will likely be able to do the conversion.
+     * We do the approximation that a format is available in the display server if
+     * the format passes with NINE_BIND_BACKBUFFER_FLAGS */
     dfmt = d3d9_to_pipe_format_checked(screen, AdapterFormat, PIPE_TEXTURE_2D,
                                        1,
-                                       PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE, FALSE);
+                                       NINE_BIND_BACKBUFFER_FLAGS, FALSE, FALSE);
     bfmt = d3d9_to_pipe_format_checked(screen, BackBufferFormat, PIPE_TEXTURE_2D,
                                        1,
-                                       PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE, FALSE);
+                                       NINE_BIND_BACKBUFFER_FLAGS, FALSE, FALSE);
     if (dfmt == PIPE_FORMAT_NONE || bfmt == PIPE_FORMAT_NONE) {
         DBG("Unsupported Adapter/BackBufferFormat.\n");
         return D3DERR_NOTAVAILABLE;
@@ -429,11 +433,10 @@ NineAdapter9_CheckDepthStencilMatch( struct NineAdapter9 *This,
     if (FAILED(hr)) { return hr; }
 
     dfmt = d3d9_to_pipe_format_checked(screen, AdapterFormat, PIPE_TEXTURE_2D, 0,
-                                       PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE, FALSE);
+                                       NINE_BIND_BACKBUFFER_FLAGS, FALSE, FALSE);
     bfmt = d3d9_to_pipe_format_checked(screen, RenderTargetFormat,
                                        PIPE_TEXTURE_2D, 0,
-                                       PIPE_BIND_RENDER_TARGET, FALSE, FALSE);
+                                       NINE_BIND_BACKBUFFER_FLAGS, FALSE, FALSE);
     if (RenderTargetFormat == D3DFMT_NULL)
         bfmt = dfmt;
     zsfmt = d3d9_to_pipe_format_checked(screen, DepthStencilFormat,
@@ -473,11 +476,9 @@ NineAdapter9_CheckDeviceFormatConversion( struct NineAdapter9 *This,
     if (FAILED(hr)) { return hr; }
 
     dfmt = d3d9_to_pipe_format_checked(screen, TargetFormat, PIPE_TEXTURE_2D, 1,
-                                       PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE, FALSE);
+                                       NINE_BIND_BACKBUFFER_FLAGS, FALSE, FALSE);
     bfmt = d3d9_to_pipe_format_checked(screen, SourceFormat, PIPE_TEXTURE_2D, 1,
-                                       PIPE_BIND_DISPLAY_TARGET |
-                                       PIPE_BIND_SHARED, FALSE, FALSE);
+                                       NINE_BIND_BACKBUFFER_FLAGS, FALSE, FALSE);
 
     if (dfmt == PIPE_FORMAT_NONE || bfmt == PIPE_FORMAT_NONE) {
         DBG("%s to %s not supported.\n",
