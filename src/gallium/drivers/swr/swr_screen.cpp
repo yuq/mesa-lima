@@ -620,7 +620,7 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
 {
    struct swr_screen *screen = swr_screen(p_screen);
    struct swr_resource *spr = swr_resource(pt);
-   struct pipe_context *pipe = spr->bound_to_context;
+   struct pipe_context *pipe = screen->pipe;
 
    /* Only wait on fence if the resource is being used */
    if (pipe && spr->status) {
@@ -630,7 +630,7 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
          swr_fence_submit(swr_context(pipe), screen->flush_fence);
 
       swr_fence_finish(p_screen, screen->flush_fence, 0);
-      swr_resource_unused(pipe, spr);
+      swr_resource_unused(pt);
    }
 
    /*
@@ -661,11 +661,11 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
    struct swr_screen *screen = swr_screen(p_screen);
    struct sw_winsys *winsys = screen->winsys;
    struct swr_resource *spr = swr_resource(resource);
-   struct pipe_context *pipe = spr->bound_to_context;
+   struct pipe_context *pipe = screen->pipe;
 
    if (pipe) {
       swr_fence_finish(p_screen, screen->flush_fence, 0);
-      swr_resource_unused(pipe, spr);
+      swr_resource_unused(resource);
       SwrEndFrame(swr_context(pipe)->swrContext);
    }
 

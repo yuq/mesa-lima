@@ -32,6 +32,7 @@ struct sw_winsys;
 
 struct swr_screen {
    struct pipe_screen base;
+   struct pipe_context *pipe;
 
    struct pipe_fence_handle *flush_fence;
 

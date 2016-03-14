@@ -129,7 +129,7 @@ swr_transfer_map(struct pipe_context *pipe,
                swr_fence_submit(swr_context(pipe), screen->flush_fence);
 
             swr_fence_finish(pipe->screen, screen->flush_fence, 0);
-            swr_resource_unused(pipe, spr);
+            swr_resource_unused(resource);
          }
       }
    }
@@ -206,8 +206,8 @@ swr_resource_copy(struct pipe_context *pipe,
    swr_store_dirty_resource(pipe, dst, SWR_TILE_RESOLVED);
 
    swr_fence_finish(pipe->screen, screen->flush_fence, 0);
-   swr_resource_unused(pipe, swr_resource(src));
-   swr_resource_unused(pipe, swr_resource(dst));
+   swr_resource_unused(src);
+   swr_resource_unused(dst);
 
    if ((dst->target == PIPE_BUFFER && src->target == PIPE_BUFFER)
        || (dst->target != PIPE_BUFFER && src->target != PIPE_BUFFER)) {
@@ -293,6 +293,7 @@ static void
 swr_destroy(struct pipe_context *pipe)
 {
    struct swr_context *ctx = swr_context(pipe);
+   struct swr_screen *screen = swr_screen(pipe->screen);
 
    if (ctx->blitter)
       util_blitter_destroy(ctx->blitter);
@@ -305,6 +306,9 @@ swr_destroy(struct pipe_context *pipe)
    delete ctx->blendJIT;
 
    swr_destroy_scratch_buffers(ctx);
+
+   assert(screen);
+   screen->pipe = NULL;
 
    FREE(ctx);
 }
@@ -324,9 +328,10 @@ swr_render_condition(struct pipe_context *pipe,
 }
 
 struct pipe_context *
-swr_create_context(struct pipe_screen *screen, void *priv, unsigned flags)
+swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
 {
    struct swr_context *ctx = CALLOC_STRUCT(swr_context);
+   struct swr_screen *screen = swr_screen(p_screen);
    ctx->blendJIT =
       new std::unordered_map<BLEND_COMPILE_STATE, PFN_BLEND_JIT_FUNC>;
 
@@ -347,7 +352,8 @@ swr_create_context(struct pipe_screen *screen, void *priv, unsigned flags)
    if (ctx->swrContext == NULL)
       goto fail;
 
-   ctx->pipe.screen = screen;
+   screen->pipe = &ctx->pipe;
+   ctx->pipe.screen = p_screen;
    ctx->pipe.destroy = swr_destroy;
    ctx->pipe.priv = priv;
    ctx->pipe.create_surface = swr_create_surface;

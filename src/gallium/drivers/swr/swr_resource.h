@@ -54,9 +54,6 @@ struct swr_resource {
    unsigned mip_offsets[PIPE_MAX_TEXTURE_LEVELS];
 
    enum swr_resource_status status;
-
-   /* pipe_context to which resource is currently bound. */
-   struct pipe_context *bound_to_context;
 };
 
 
@@ -120,24 +117,21 @@ swr_resource_status & operator|=(enum swr_resource_status & a,
 }
 
 static INLINE void
-swr_resource_read(struct pipe_context *pipe, struct swr_resource *resource)
+swr_resource_read(struct pipe_resource *resource)
 {
-   resource->status |= SWR_RESOURCE_READ;
-   resource->bound_to_context = pipe;
+   swr_resource(resource)->status |= SWR_RESOURCE_READ;
 }
 
 static INLINE void
-swr_resource_write(struct pipe_context *pipe, struct swr_resource *resource)
+swr_resource_write(struct pipe_resource *resource)
 {
-   resource->status |= SWR_RESOURCE_WRITE;
-   resource->bound_to_context = pipe;
+   swr_resource(resource)->status |= SWR_RESOURCE_WRITE;
 }
 
 static INLINE void
-swr_resource_unused(struct pipe_context *pipe, struct swr_resource *resource)
+swr_resource_unused(struct pipe_resource *resource)
 {
-   resource->status = SWR_RESOURCE_UNUSED;
-   resource->bound_to_context = nullptr;
+   swr_resource(resource)->status = SWR_RESOURCE_UNUSED;
 }
 
 #endif

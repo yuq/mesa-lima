@@ -646,24 +646,24 @@ swr_update_resource_status(struct pipe_context *pipe,
    if (fb->nr_cbufs)
       for (uint32_t i = 0; i < fb->nr_cbufs; ++i)
          if (fb->cbufs[i])
-            swr_resource_write(pipe, swr_resource(fb->cbufs[i]->texture));
+            swr_resource_write(fb->cbufs[i]->texture);
 
    /* depth/stencil target */
    if (fb->zsbuf)
-      swr_resource_write(pipe, swr_resource(fb->zsbuf->texture));
+      swr_resource_write(fb->zsbuf->texture);
 
    /* VBO vertex buffers */
    for (uint32_t i = 0; i < ctx->num_vertex_buffers; i++) {
       struct pipe_vertex_buffer *vb = &ctx->vertex_buffer[i];
       if (!vb->user_buffer)
-         swr_resource_read(pipe, swr_resource(vb->buffer));
+         swr_resource_read(vb->buffer);
    }
 
    /* VBO index buffer */
    if (p_draw_info && p_draw_info->indexed) {
       struct pipe_index_buffer *ib = &ctx->index_buffer;
       if (!ib->user_buffer)
-         swr_resource_read(pipe, swr_resource(ib->buffer));
+         swr_resource_read(ib->buffer);
    }
 
    /* texture sampler views */
@@ -671,7 +671,7 @@ swr_update_resource_status(struct pipe_context *pipe,
       struct pipe_sampler_view *view =
          ctx->sampler_views[PIPE_SHADER_FRAGMENT][i];
       if (view)
-         swr_resource_read(pipe, swr_resource(view->texture));
+         swr_resource_read(view->texture);
    }
 }
 
