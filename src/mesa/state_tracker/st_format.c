@@ -1114,12 +1114,12 @@ static const struct format_mapping format_map[] = {
    },
    {
       { GL_RGB10_A2, 0 },
-      { PIPE_FORMAT_B10G10R10A2_UNORM, PIPE_FORMAT_R10G10B10A2_UNORM,
+      { PIPE_FORMAT_R10G10B10A2_UNORM, PIPE_FORMAT_B10G10R10A2_UNORM,
         DEFAULT_RGBA_FORMATS }
    },
    {
       { 4, GL_RGBA, GL_RGBA8, 0 },
-      { DEFAULT_RGBA_FORMATS }
+      { PIPE_FORMAT_R8G8B8A8_UNORM, DEFAULT_RGBA_FORMATS }
    },
    {
       { GL_BGRA, 0 },
@@ -1127,7 +1127,7 @@ static const struct format_mapping format_map[] = {
    },
    {
       { 3, GL_RGB, GL_RGB8, 0 },
-      { DEFAULT_RGB_FORMATS }
+      { PIPE_FORMAT_R8G8B8X8_UNORM, DEFAULT_RGB_FORMATS }
    },
    {
       { GL_RGB12, GL_RGB16, 0 },
@@ -2022,20 +2022,10 @@ static const struct exact_format_mapping rgbx8888_tbl[] =
    { 0,           0,                              0                          }
 };
 
-static const struct exact_format_mapping rgba1010102_tbl[] =
-{
-   { GL_BGRA,     GL_UNSIGNED_INT_2_10_10_10_REV, PIPE_FORMAT_B10G10R10A2_UNORM },
-   /* No Mesa formats for these Gallium formats:
-   { GL_RGBA,     GL_UNSIGNED_INT_2_10_10_10_REV, PIPE_FORMAT_R10G10B10A2_UNORM },
-   { GL_ABGR_EXT, GL_UNSIGNED_INT_10_10_10_2,     PIPE_FORMAT_R10G10B10A2_UNORM },
-   { GL_ABGR_EXT, GL_UNSIGNED_INT,                PIPE_FORMAT_R10G10B10A2_UNORM },
-   */
-   { 0,           0,                              0                             }
-};
-
 /**
- * If there is an exact pipe_format match for {internalFormat, format, type}
- * return that, otherwise return PIPE_FORMAT_NONE so we can do fuzzy matching.
+ * For unsized/base internal formats, we may choose a convenient effective
+ * internal format for {format, type}. If one exists, return that, otherwise
+ * return PIPE_FORMAT_NONE.
  */
 static enum pipe_format
 find_exact_format(GLint internalFormat, GLenum format, GLenum type)
@@ -2049,16 +2039,11 @@ find_exact_format(GLint internalFormat, GLenum format, GLenum type)
    switch (internalFormat) {
    case 4:
    case GL_RGBA:
-   case GL_RGBA8:
       tbl = rgba8888_tbl;
       break;
    case 3:
    case GL_RGB:
-   case GL_RGB8:
       tbl = rgbx8888_tbl;
-      break;
-   case GL_RGB10_A2:
-      tbl = rgba1010102_tbl;
       break;
    default:
       return PIPE_FORMAT_NONE;
