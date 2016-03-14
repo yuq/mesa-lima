@@ -305,7 +305,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
         tmplt.nr_samples = pParams->MultiSampleType;
         if (!has_present_buffers)
-            tmplt.bind |= PIPE_BIND_SHARED | PIPE_BIND_SCANOUT | PIPE_BIND_DISPLAY_TARGET;
+            tmplt.bind |= NINE_BIND_PRESENTBUFFER_FLAGS;
         tmplt.format = d3d9_to_pipe_format_checked(This->screen,
                                                    pParams->BackBufferFormat,
                                                    PIPE_TEXTURE_2D,
@@ -339,7 +339,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         }
         if (has_present_buffers) {
             tmplt.format = PIPE_FORMAT_B8G8R8X8_UNORM;
-            tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_SHARED | PIPE_BIND_SCANOUT | PIPE_BIND_DISPLAY_TARGET;
+            tmplt.bind = NINE_BIND_PRESENTBUFFER_FLAGS;
             tmplt.nr_samples = 0;
             if (This->actx->linear_framebuffer)
                 tmplt.bind |= PIPE_BIND_LINEAR;
@@ -548,8 +548,8 @@ create_present_buffer( struct NineSwapChain9 *This,
     tmplt.usage = PIPE_USAGE_DEFAULT;
     tmplt.flags = 0;
     tmplt.format = PIPE_FORMAT_B8G8R8X8_UNORM;
-    tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET |
-                 PIPE_BIND_SHARED | PIPE_BIND_SCANOUT | PIPE_BIND_DISPLAY_TARGET;
+    tmplt.bind = NINE_BIND_BACKBUFFER_FLAGS |
+                 NINE_BIND_PRESENTBUFFER_FLAGS;
     tmplt.nr_samples = 0;
     if (This->actx->linear_framebuffer)
         tmplt.bind |= PIPE_BIND_LINEAR;
