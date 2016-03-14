@@ -366,8 +366,6 @@ void anv_CmdBlitImage(
    assert(src_image->samples == 1);
    assert(dest_image->samples == 1);
 
-   anv_finishme("respect VkFilter");
-
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
