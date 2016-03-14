@@ -43,14 +43,14 @@ typedef uint8_t simdmask;
 // simd vector
 OSALIGNSIMD(union) simdvector
 {
-	simdscalar	v[4];
-	struct
-	{
-		simdscalar x, y, z, w;
-	};
+    simdscalar  v[4];
+    struct
+    {
+        simdscalar x, y, z, w;
+    };
 
-	simdscalar& operator[] (const int i) { return v[i]; }
-	const simdscalar& operator[] (const int i) const { return v[i]; }
+    simdscalar& operator[] (const int i) { return v[i]; }
+    const simdscalar& operator[] (const int i) const { return v[i]; }
 };
 
 #if KNOB_SIMD_WIDTH == 8
@@ -59,8 +59,8 @@ OSALIGNSIMD(union) simdvector
 #define _simd_load1_ps _mm256_broadcast_ss
 #define _simd_loadu_ps _mm256_loadu_ps
 #define _simd_setzero_ps _mm256_setzero_ps
-#define _simd_set1_ps	_mm256_set1_ps
-#define _simd_blend_ps	_mm256_blend_ps
+#define _simd_set1_ps   _mm256_set1_ps
+#define _simd_blend_ps  _mm256_blend_ps
 #define _simd_blendv_ps _mm256_blendv_ps
 #define _simd_store_ps _mm256_store_ps
 #define _simd_mul_ps _mm256_mul_ps
@@ -100,18 +100,18 @@ OSALIGNSIMD(union) simdvector
 INLINE \
 __m256i func(__m256i a, __m256i b)\
 {\
-	__m128i aHi = _mm256_extractf128_si256(a, 1);\
-	__m128i bHi = _mm256_extractf128_si256(b, 1);\
-	__m128i aLo = _mm256_castsi256_si128(a);\
-	__m128i bLo = _mm256_castsi256_si128(b);\
+    __m128i aHi = _mm256_extractf128_si256(a, 1);\
+    __m128i bHi = _mm256_extractf128_si256(b, 1);\
+    __m128i aLo = _mm256_castsi256_si128(a);\
+    __m128i bLo = _mm256_castsi256_si128(b);\
 \
-	__m128i subLo = intrin(aLo, bLo);\
-	__m128i subHi = intrin(aHi, bHi);\
+    __m128i subLo = intrin(aLo, bLo);\
+    __m128i subHi = intrin(aHi, bHi);\
 \
-	__m256i result = _mm256_castsi128_si256(subLo);\
-	        result = _mm256_insertf128_si256(result, subHi, 1);\
+    __m256i result = _mm256_castsi128_si256(subLo);\
+            result = _mm256_insertf128_si256(result, subHi, 1);\
 \
-	return result;\
+    return result;\
 }
 
 #if (KNOB_ARCH == KNOB_ARCH_AVX)
@@ -322,25 +322,25 @@ SIMD_EMU_EPI(_simdemu_shuffle_epi8, _mm_shuffle_epi8)
 INLINE
 __m128 _mm_fmaddemu_ps(__m128 a, __m128 b, __m128 c)
 {
-	__m128 res = _mm_mul_ps(a, b);
-	res = _mm_add_ps(res, c);
-	return res;
+    __m128 res = _mm_mul_ps(a, b);
+    res = _mm_add_ps(res, c);
+    return res;
 }
 
 INLINE
 __m256 _mm_fmaddemu256_ps(__m256 a, __m256 b, __m256 c)
 {
-	__m256 res = _mm256_mul_ps(a, b);
-	res = _mm256_add_ps(res, c);
-	return res;
+    __m256 res = _mm256_mul_ps(a, b);
+    res = _mm256_add_ps(res, c);
+    return res;
 }
 
 INLINE
 __m256 _mm_fmsubemu256_ps(__m256 a, __m256 b, __m256 c)
 {
-	__m256 res = _mm256_mul_ps(a, b);
-	res = _mm256_sub_ps(res, c);
-	return res;
+    __m256 res = _mm256_mul_ps(a, b);
+    res = _mm256_sub_ps(res, c);
+    return res;
 }
 
 INLINE
@@ -496,30 +496,30 @@ void _simd_mov(simdscalar &r, unsigned int rlane, simdscalar& s, unsigned int sl
 
 INLINE __m256i _simdemu_slli_epi32(__m256i a, uint32_t i)
 {
-	__m128i aHi = _mm256_extractf128_si256(a, 1);
-	__m128i aLo = _mm256_castsi256_si128(a);
+    __m128i aHi = _mm256_extractf128_si256(a, 1);
+    __m128i aLo = _mm256_castsi256_si128(a);
 
-	__m128i resHi = _mm_slli_epi32(aHi, i);
-	__m128i resLo = _mm_slli_epi32(aLo, i);
+    __m128i resHi = _mm_slli_epi32(aHi, i);
+    __m128i resLo = _mm_slli_epi32(aLo, i);
 
-	__m256i result = _mm256_castsi128_si256(resLo);
-		    result = _mm256_insertf128_si256(result, resHi, 1);
+    __m256i result = _mm256_castsi128_si256(resLo);
+            result = _mm256_insertf128_si256(result, resHi, 1);
 
-	return result;
+    return result;
 }
 
 INLINE __m256i _simdemu_srai_epi32(__m256i a, uint32_t i)
 {
-	__m128i aHi = _mm256_extractf128_si256(a, 1);
-	__m128i aLo = _mm256_castsi256_si128(a);
+    __m128i aHi = _mm256_extractf128_si256(a, 1);
+    __m128i aLo = _mm256_castsi256_si128(a);
 
-	__m128i resHi = _mm_srai_epi32(aHi, i);
-	__m128i resLo = _mm_srai_epi32(aLo, i);
+    __m128i resHi = _mm_srai_epi32(aHi, i);
+    __m128i resLo = _mm_srai_epi32(aLo, i);
 
-	__m256i result = _mm256_castsi128_si256(resLo);
-		    result = _mm256_insertf128_si256(result, resHi, 1);
+    __m256i result = _mm256_castsi128_si256(resLo);
+            result = _mm256_insertf128_si256(result, resHi, 1);
 
-	return result;
+    return result;
 }
 
 INLINE __m256i _simdemu_srli_epi32(__m256i a, uint32_t i)
@@ -539,7 +539,7 @@ INLINE __m256i _simdemu_srli_epi32(__m256i a, uint32_t i)
 INLINE
 void _simdvec_transpose(simdvector &v)
 {
-	SWR_ASSERT(false, "Need to implement 8 wide version");
+    SWR_ASSERT(false, "Need to implement 8 wide version");
 }
 
 #else
@@ -550,132 +550,132 @@ void _simdvec_transpose(simdvector &v)
 INLINE
 void _simdvec_load_ps(simdvector& r, const float *p)
 {
-	r[0] = _simd_set1_ps(p[0]);
-	r[1] = _simd_set1_ps(p[1]);
-	r[2] = _simd_set1_ps(p[2]);
-	r[3] = _simd_set1_ps(p[3]);
+    r[0] = _simd_set1_ps(p[0]);
+    r[1] = _simd_set1_ps(p[1]);
+    r[2] = _simd_set1_ps(p[2]);
+    r[3] = _simd_set1_ps(p[3]);
 }
 
 INLINE
 void _simdvec_mov(simdvector& r, const simdscalar& s)
 {
-	r[0] = s;
-	r[1] = s;
-	r[2] = s;
-	r[3] = s;
+    r[0] = s;
+    r[1] = s;
+    r[2] = s;
+    r[3] = s;
 }
 
 INLINE
 void _simdvec_mov(simdvector& r, const simdvector& v)
 {
-	r[0] = v[0];
-	r[1] = v[1];
-	r[2] = v[2];
-	r[3] = v[3];
+    r[0] = v[0];
+    r[1] = v[1];
+    r[2] = v[2];
+    r[3] = v[3];
 }
 
 // just move a lane from the source simdvector to dest simdvector
 INLINE
 void _simdvec_mov(simdvector &r, unsigned int rlane, simdvector& s, unsigned int slane)
 {
-	_simd_mov(r[0], rlane, s[0], slane);
-	_simd_mov(r[1], rlane, s[1], slane);
-	_simd_mov(r[2], rlane, s[2], slane);
-	_simd_mov(r[3], rlane, s[3], slane);
+    _simd_mov(r[0], rlane, s[0], slane);
+    _simd_mov(r[1], rlane, s[1], slane);
+    _simd_mov(r[2], rlane, s[2], slane);
+    _simd_mov(r[3], rlane, s[3], slane);
 }
 
 INLINE
 void _simdvec_dp3_ps(simdscalar& r, const simdvector& v0, const simdvector& v1)
 {
-	simdscalar tmp;
-	r	= _simd_mul_ps(v0[0], v1[0]);	// (v0.x*v1.x)
+    simdscalar tmp;
+    r   = _simd_mul_ps(v0[0], v1[0]);   // (v0.x*v1.x)
 
-	tmp	= _simd_mul_ps(v0[1], v1[1]);		// (v0.y*v1.y)
-	r	= _simd_add_ps(r, tmp);			// (v0.x*v1.x) + (v0.y*v1.y)
+    tmp = _simd_mul_ps(v0[1], v1[1]);       // (v0.y*v1.y)
+    r   = _simd_add_ps(r, tmp);         // (v0.x*v1.x) + (v0.y*v1.y)
 
-	tmp	= _simd_mul_ps(v0[2], v1[2]);	// (v0.z*v1.z)
-	r	= _simd_add_ps(r, tmp);			// (v0.x*v1.x) + (v0.y*v1.y) + (v0.z*v1.z)
+    tmp = _simd_mul_ps(v0[2], v1[2]);   // (v0.z*v1.z)
+    r   = _simd_add_ps(r, tmp);         // (v0.x*v1.x) + (v0.y*v1.y) + (v0.z*v1.z)
 }
 
 INLINE
 void _simdvec_dp4_ps(simdscalar& r, const simdvector& v0, const simdvector& v1)
 {
-	simdscalar tmp;
-	r	= _simd_mul_ps(v0[0], v1[0]);	// (v0.x*v1.x)
+    simdscalar tmp;
+    r   = _simd_mul_ps(v0[0], v1[0]);   // (v0.x*v1.x)
 
-	tmp	= _simd_mul_ps(v0[1], v1[1]);		// (v0.y*v1.y)
-	r	= _simd_add_ps(r, tmp);			// (v0.x*v1.x) + (v0.y*v1.y)
+    tmp = _simd_mul_ps(v0[1], v1[1]);       // (v0.y*v1.y)
+    r   = _simd_add_ps(r, tmp);         // (v0.x*v1.x) + (v0.y*v1.y)
 
-	tmp	= _simd_mul_ps(v0[2], v1[2]);	// (v0.z*v1.z)
-	r	= _simd_add_ps(r, tmp);			// (v0.x*v1.x) + (v0.y*v1.y) + (v0.z*v1.z)
+    tmp = _simd_mul_ps(v0[2], v1[2]);   // (v0.z*v1.z)
+    r   = _simd_add_ps(r, tmp);         // (v0.x*v1.x) + (v0.y*v1.y) + (v0.z*v1.z)
 
-	tmp	= _simd_mul_ps(v0[3], v1[3]);	// (v0.w*v1.w)
-	r	= _simd_add_ps(r, tmp);			// (v0.x*v1.x) + (v0.y*v1.y) + (v0.z*v1.z)
+    tmp = _simd_mul_ps(v0[3], v1[3]);   // (v0.w*v1.w)
+    r   = _simd_add_ps(r, tmp);         // (v0.x*v1.x) + (v0.y*v1.y) + (v0.z*v1.z)
 }
 
 INLINE
 simdscalar _simdvec_rcp_length_ps(const simdvector& v)
 {
-	simdscalar length;
-	_simdvec_dp4_ps(length, v, v);
-	return _simd_rsqrt_ps(length);
+    simdscalar length;
+    _simdvec_dp4_ps(length, v, v);
+    return _simd_rsqrt_ps(length);
 }
 
 INLINE
 void _simdvec_normalize_ps(simdvector& r, const simdvector& v)
 {
-	simdscalar vecLength;
-	vecLength = _simdvec_rcp_length_ps(v);
+    simdscalar vecLength;
+    vecLength = _simdvec_rcp_length_ps(v);
 
-	r[0] = _simd_mul_ps(v[0], vecLength);
-	r[1] = _simd_mul_ps(v[1], vecLength);
-	r[2] = _simd_mul_ps(v[2], vecLength);
-	r[3] = _simd_mul_ps(v[3], vecLength);
+    r[0] = _simd_mul_ps(v[0], vecLength);
+    r[1] = _simd_mul_ps(v[1], vecLength);
+    r[2] = _simd_mul_ps(v[2], vecLength);
+    r[3] = _simd_mul_ps(v[3], vecLength);
 }
 
 INLINE
 void _simdvec_mul_ps(simdvector& r, const simdvector& v, const simdscalar& s)
 {
-	r[0] = _simd_mul_ps(v[0], s);
-	r[1] = _simd_mul_ps(v[1], s);
-	r[2] = _simd_mul_ps(v[2], s);
-	r[3] = _simd_mul_ps(v[3], s);
+    r[0] = _simd_mul_ps(v[0], s);
+    r[1] = _simd_mul_ps(v[1], s);
+    r[2] = _simd_mul_ps(v[2], s);
+    r[3] = _simd_mul_ps(v[3], s);
 }
 
 INLINE
 void _simdvec_mul_ps(simdvector& r, const simdvector& v0, const simdvector& v1)
 {
-	r[0] = _simd_mul_ps(v0[0], v1[0]);
-	r[1] = _simd_mul_ps(v0[1], v1[1]);
-	r[2] = _simd_mul_ps(v0[2], v1[2]);
-	r[3] = _simd_mul_ps(v0[3], v1[3]);
+    r[0] = _simd_mul_ps(v0[0], v1[0]);
+    r[1] = _simd_mul_ps(v0[1], v1[1]);
+    r[2] = _simd_mul_ps(v0[2], v1[2]);
+    r[3] = _simd_mul_ps(v0[3], v1[3]);
 }
 
 INLINE
 void _simdvec_add_ps(simdvector& r, const simdvector& v0, const simdvector& v1)
 {
-	r[0] = _simd_add_ps(v0[0], v1[0]);
-	r[1] = _simd_add_ps(v0[1], v1[1]);
-	r[2] = _simd_add_ps(v0[2], v1[2]);
-	r[3] = _simd_add_ps(v0[3], v1[3]);
+    r[0] = _simd_add_ps(v0[0], v1[0]);
+    r[1] = _simd_add_ps(v0[1], v1[1]);
+    r[2] = _simd_add_ps(v0[2], v1[2]);
+    r[3] = _simd_add_ps(v0[3], v1[3]);
 }
 
 INLINE
 void _simdvec_min_ps(simdvector& r, const simdvector& v0, const simdscalar& s)
 {
-	r[0] = _simd_min_ps(v0[0], s);
-	r[1] = _simd_min_ps(v0[1], s);
-	r[2] = _simd_min_ps(v0[2], s);
-	r[3] = _simd_min_ps(v0[3], s);
+    r[0] = _simd_min_ps(v0[0], s);
+    r[1] = _simd_min_ps(v0[1], s);
+    r[2] = _simd_min_ps(v0[2], s);
+    r[3] = _simd_min_ps(v0[3], s);
 }
 
 INLINE
 void _simdvec_max_ps(simdvector& r, const simdvector& v0, const simdscalar& s)
 {
-	r[0] = _simd_max_ps(v0[0], s);
-	r[1] = _simd_max_ps(v0[1], s);
-	r[2] = _simd_max_ps(v0[2], s);
-	r[3] = _simd_max_ps(v0[3], s);
+    r[0] = _simd_max_ps(v0[0], s);
+    r[1] = _simd_max_ps(v0[1], s);
+    r[2] = _simd_max_ps(v0[2], s);
+    r[3] = _simd_max_ps(v0[3], s);
 }
 
 // Matrix4x4 * Vector4
@@ -685,65 +685,65 @@ void _simdvec_max_ps(simdvector& r, const simdvector& v0, const simdscalar& s)
 //   outVec.w = (m30 * v.x) + (m31 * v.y) + (m32 * v.z) + (m33 * v.w)
 INLINE
 void _simd_mat4x4_vec4_multiply(
-	simdvector& result,
-	const float *pMatrix,
-	const simdvector& v)
+    simdvector& result,
+    const float *pMatrix,
+    const simdvector& v)
 {
-	simdscalar m;
-	simdscalar r0;
-	simdscalar r1;
+    simdscalar m;
+    simdscalar r0;
+    simdscalar r1;
 
-	m	= _simd_load1_ps(pMatrix + 0*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 3);	// m[row][3]
-	r1	= _simd_mul_ps(m, v[3]);				// (m3 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * v.w)
-	result[0] = r0;
+    m   = _simd_load1_ps(pMatrix + 0*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 3);    // m[row][3]
+    r1  = _simd_mul_ps(m, v[3]);                // (m3 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * v.w)
+    result[0] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 1*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 3);	// m[row][3]
-	r1	= _simd_mul_ps(m, v[3]);				// (m3 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * v.w)
-	result[1] = r0;
+    m   = _simd_load1_ps(pMatrix + 1*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 3);    // m[row][3]
+    r1  = _simd_mul_ps(m, v[3]);                // (m3 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * v.w)
+    result[1] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 2*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 3);	// m[row][3]
-	r1	= _simd_mul_ps(m, v[3]);				// (m3 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * v.w)
-	result[2] = r0;
+    m   = _simd_load1_ps(pMatrix + 2*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 3);    // m[row][3]
+    r1  = _simd_mul_ps(m, v[3]);                // (m3 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * v.w)
+    result[2] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 3*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 3*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 3*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 3*4 + 3);	// m[row][3]
-	r1	= _simd_mul_ps(m, v[3]);				// (m3 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * v.w)
-	result[3] = r0;
+    m   = _simd_load1_ps(pMatrix + 3*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 3*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 3*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 3*4 + 3);    // m[row][3]
+    r1  = _simd_mul_ps(m, v[3]);                // (m3 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * v.w)
+    result[3] = r0;
 }
 
 // Matrix4x4 * Vector3 - Direction Vector where w = 0.
@@ -753,45 +753,45 @@ void _simd_mat4x4_vec4_multiply(
 //   outVec.w = (m30 * v.x) + (m31 * v.y) + (m32 * v.z) + (m33 * 0)
 INLINE
 void _simd_mat3x3_vec3_w0_multiply(
-	simdvector& result,
-	const float *pMatrix,
-	const simdvector& v)
+    simdvector& result,
+    const float *pMatrix,
+    const simdvector& v)
 {
-	simdscalar m;
-	simdscalar r0;
-	simdscalar r1;
+    simdscalar m;
+    simdscalar r0;
+    simdscalar r1;
 
-	m	= _simd_load1_ps(pMatrix + 0*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	result[0] = r0;
+    m   = _simd_load1_ps(pMatrix + 0*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    result[0] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 1*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	result[1] = r0;
+    m   = _simd_load1_ps(pMatrix + 1*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    result[1] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 2*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	result[2] = r0;
+    m   = _simd_load1_ps(pMatrix + 2*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    result[2] = r0;
 
-	result[3] = _simd_setzero_ps();
+    result[3] = _simd_setzero_ps();
 }
 
 // Matrix4x4 * Vector3 - Position vector where w = 1.
@@ -801,108 +801,108 @@ void _simd_mat3x3_vec3_w0_multiply(
 //   outVec.w = (m30 * v.x) + (m31 * v.y) + (m32 * v.z) + (m33 * 1)
 INLINE
 void _simd_mat4x4_vec3_w1_multiply(
-	simdvector& result,
-	const float *pMatrix,
-	const simdvector& v)
+    simdvector& result,
+    const float *pMatrix,
+    const simdvector& v)
 {
-	simdscalar m;
-	simdscalar r0;
-	simdscalar r1;
+    simdscalar m;
+    simdscalar r0;
+    simdscalar r1;
 
-	m	= _simd_load1_ps(pMatrix + 0*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 3);	// m[row][3]
-	r0	= _simd_add_ps(r0, m);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
-	result[0] = r0;
+    m   = _simd_load1_ps(pMatrix + 0*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 3);    // m[row][3]
+    r0  = _simd_add_ps(r0, m);                  // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
+    result[0] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 1*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 3);	// m[row][3]
-	r0	= _simd_add_ps(r0, m);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
-	result[1] = r0;
+    m   = _simd_load1_ps(pMatrix + 1*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 3);    // m[row][3]
+    r0  = _simd_add_ps(r0, m);                  // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
+    result[1] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 2*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 3);	// m[row][3]
-	r0	= _simd_add_ps(r0, m);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
-	result[2] = r0;
+    m   = _simd_load1_ps(pMatrix + 2*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 3);    // m[row][3]
+    r0  = _simd_add_ps(r0, m);                  // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
+    result[2] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 3*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 3*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 3*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 3*4 + 3);	// m[row][3]
-	result[3]	= _simd_add_ps(r0, m);			// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
+    m   = _simd_load1_ps(pMatrix + 3*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 3*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 3*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 3*4 + 3);    // m[row][3]
+    result[3]   = _simd_add_ps(r0, m);          // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
 }
 
 INLINE
 void _simd_mat4x3_vec3_w1_multiply(
-	simdvector& result,
-	const float *pMatrix,
-	const simdvector& v)
+    simdvector& result,
+    const float *pMatrix,
+    const simdvector& v)
 {
-	simdscalar m;
-	simdscalar r0;
-	simdscalar r1;
+    simdscalar m;
+    simdscalar r0;
+    simdscalar r1;
 
-	m	= _simd_load1_ps(pMatrix + 0*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 0*4 + 3);	// m[row][3]
-	r0	= _simd_add_ps(r0, m);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
-	result[0] = r0;
+    m   = _simd_load1_ps(pMatrix + 0*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 0*4 + 3);    // m[row][3]
+    r0  = _simd_add_ps(r0, m);                  // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
+    result[0] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 1*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 1*4 + 3);	// m[row][3]
-	r0	= _simd_add_ps(r0, m);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
-	result[1] = r0;
+    m   = _simd_load1_ps(pMatrix + 1*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 1*4 + 3);    // m[row][3]
+    r0  = _simd_add_ps(r0, m);                  // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
+    result[1] = r0;
 
-	m	= _simd_load1_ps(pMatrix + 2*4 + 0);	// m[row][0]
-	r0	= _simd_mul_ps(m, v[0]);				// (m00 * v.x)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 1);	// m[row][1]
-	r1	= _simd_mul_ps(m, v[1]);				// (m1 * v.y)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 2);	// m[row][2]
-	r1	= _simd_mul_ps(m, v[2]);				// (m2 * v.z)
-	r0	= _simd_add_ps(r0, r1);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
-	m	= _simd_load1_ps(pMatrix + 2*4 + 3);	// m[row][3]
-	r0	= _simd_add_ps(r0, m);					// (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
-	result[2] = r0;
-	result[3] = _simd_set1_ps(1.0f);
+    m   = _simd_load1_ps(pMatrix + 2*4 + 0);    // m[row][0]
+    r0  = _simd_mul_ps(m, v[0]);                // (m00 * v.x)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 1);    // m[row][1]
+    r1  = _simd_mul_ps(m, v[1]);                // (m1 * v.y)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 2);    // m[row][2]
+    r1  = _simd_mul_ps(m, v[2]);                // (m2 * v.z)
+    r0  = _simd_add_ps(r0, r1);                 // (m0 * v.x) + (m1 * v.y) + (m2 * v.z)
+    m   = _simd_load1_ps(pMatrix + 2*4 + 3);    // m[row][3]
+    r0  = _simd_add_ps(r0, m);                  // (m0 * v.x) + (m1 * v.y) + (m2 * v.z) + (m2 * 1)
+    result[2] = r0;
+    result[3] = _simd_set1_ps(1.0f);
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -68,10 +68,10 @@ struct UncheckedFixedVector
         return *this;
     }
 
-    T* begin()	{ return &this->mElements[0]; }
-    T* end()	{ return &this->mElements[0] + this->mSize; }
-    T const* begin() const	{ return &this->mElements[0]; }
-    T const* end() const	{ return &this->mElements[0] + this->mSize; }
+    T* begin()  { return &this->mElements[0]; }
+    T* end()    { return &this->mElements[0] + this->mSize; }
+    T const* begin() const  { return &this->mElements[0]; }
+    T const* end() const    { return &this->mElements[0] + this->mSize; }
 
     friend bool operator==(UncheckedFixedVector const& L, UncheckedFixedVector const& R)
     {
@@ -103,7 +103,7 @@ struct UncheckedFixedVector
     }
     void push_back(T const& t)
     {
-        this->mElements[this->mSize]	= t;
+        this->mElements[this->mSize]    = t;
         ++this->mSize;
     }
     void pop_back()
@@ -136,7 +136,7 @@ struct UncheckedFixedVector
         this->resize(0);
     }
 private:
-    std::size_t	mSize{ 0 };
+    std::size_t    mSize{ 0 };
     T mElements[NUM_ELEMENTS];
 };
 

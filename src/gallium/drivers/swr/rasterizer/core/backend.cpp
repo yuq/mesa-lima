@@ -1211,7 +1211,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             }
             else
             {
-				psContext.activeMask = _simd_set1_epi32(-1);
+                psContext.activeMask = _simd_set1_epi32(-1);
             }
 
             // need to declare enough space for all samples

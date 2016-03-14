@@ -146,7 +146,7 @@ float calcDeterminantInt(const __m128i vA, const __m128i vB)
     //vMul = [A1*B2 - B1*A2]
     vMul = _mm_sub_epi64(vMul, vMul2);
 
-	// According to emmintrin.h __mm_store1_pd(), address must be 16-byte aligned
+    // According to emmintrin.h __mm_store1_pd(), address must be 16-byte aligned
     OSALIGN(int64_t, 16) result;
     _mm_store1_pd((double*)&result, _mm_castsi128_pd(vMul));
 

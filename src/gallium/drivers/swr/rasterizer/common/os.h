@@ -47,8 +47,8 @@
 #define DEBUGBREAK __debugbreak()
 
 #define PRAGMA_WARNING_PUSH_DISABLE(...) \
-	__pragma(warning(push));\
-	__pragma(warning(disable:__VA_ARGS__));
+    __pragma(warning(push));\
+    __pragma(warning(disable:__VA_ARGS__));
 
 #define PRAGMA_WARNING_POP() __pragma(warning(pop))
 
@@ -74,13 +74,13 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-typedef void			VOID;
+typedef void            VOID;
 typedef void*           LPVOID;
-typedef int				INT;
-typedef unsigned int	UINT;
-typedef void*			HANDLE;
-typedef int			    LONG;
-typedef unsigned int	DWORD;
+typedef int             INT;
+typedef unsigned int    UINT;
+typedef void*           HANDLE;
+typedef int             LONG;
+typedef unsigned int    DWORD;
 
 #undef FALSE
 #define FALSE 0
