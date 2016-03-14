@@ -1289,7 +1289,9 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
          if (dst.isIndirect(0))
             indirectTempArrays.insert(dst.getArrayId());
       } else
-      if (dst.getFile() == TGSI_FILE_BUFFER) {
+      if (dst.getFile() == TGSI_FILE_BUFFER ||
+          (dst.getFile() == TGSI_FILE_MEMORY &&
+           memoryFiles[dst.getIndex(0)].mem_type == TGSI_MEMORY_TYPE_GLOBAL)) {
          info->io.globalAccess |= 0x2;
       }
    }
@@ -1300,7 +1302,9 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
          if (src.isIndirect(0))
             indirectTempArrays.insert(src.getArrayId());
       } else
-      if (src.getFile() == TGSI_FILE_BUFFER) {
+      if (src.getFile() == TGSI_FILE_BUFFER ||
+          (src.getFile() == TGSI_FILE_MEMORY &&
+           memoryFiles[src.getIndex(0)].mem_type == TGSI_MEMORY_TYPE_GLOBAL)) {
          info->io.globalAccess |= (insn.getOpcode() == TGSI_OPCODE_LOAD) ?
                0x1 : 0x2;
       } else
@@ -1534,6 +1538,10 @@ Converter::makeSym(uint tgsiFile, int fileIdx, int idx, int c, uint32_t address)
 
    if (tgsiFile == TGSI_FILE_MEMORY) {
       switch (code->memoryFiles[fileIdx].mem_type) {
+      case TGSI_MEMORY_TYPE_GLOBAL:
+         /* No-op this is the default for TGSI_FILE_MEMORY */
+         sym->setFile(FILE_MEMORY_GLOBAL);
+         break;
       case TGSI_MEMORY_TYPE_SHARED:
          sym->setFile(FILE_MEMORY_SHARED);
          break;
