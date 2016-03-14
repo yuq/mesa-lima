@@ -2915,12 +2915,16 @@ static void load_emit(
 		struct lp_build_tgsi_context *bld_base,
 		struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	unsigned target = inst->Memory.Texture;
 	char intrinsic_name[32];
 	char coords_type[8];
+
+	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
+		emit_optimization_barrier(ctx);
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		emit_data->output[emit_data->chan] = lp_build_intrinsic(
