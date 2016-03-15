@@ -188,7 +188,7 @@ nv50_validate_scissor(struct nv50_context *nv50)
    int minx, maxx, miny, maxy, i;
 
    if (!(nv50->dirty_3d &
-         (NV50_NEW_SCISSOR | NV50_NEW_VIEWPORT | NV50_NEW_FRAMEBUFFER)) &&
+         (NV50_NEW_3D_SCISSOR | NV50_NEW_3D_VIEWPORT | NV50_NEW_3D_FRAMEBUFFER)) &&
        nv50->state.scissor == nv50->rast->pipe.scissor)
       return;
 
@@ -197,7 +197,7 @@ nv50_validate_scissor(struct nv50_context *nv50)
 
    nv50->state.scissor = nv50->rast->pipe.scissor;
 
-   if ((nv50->dirty_3d & NV50_NEW_FRAMEBUFFER) && !nv50->state.scissor)
+   if ((nv50->dirty_3d & NV50_NEW_3D_FRAMEBUFFER) && !nv50->state.scissor)
       nv50->scissors_dirty = (1 << NV50_MAX_VIEWPORTS) - 1;
 
    for (i = 0; i < NV50_MAX_VIEWPORTS; i++) {
@@ -290,10 +290,10 @@ nv50_check_program_ucps(struct nv50_context *nv50,
 
    vp->vp.clpd_nr = n;
    if (likely(vp == nv50->vertprog)) {
-      nv50->dirty_3d |= NV50_NEW_VERTPROG;
+      nv50->dirty_3d |= NV50_NEW_3D_VERTPROG;
       nv50_vertprog_validate(nv50);
    } else {
-      nv50->dirty_3d |= NV50_NEW_GMTYPROG;
+      nv50->dirty_3d |= NV50_NEW_3D_GMTYPROG;
       nv50_gmtyprog_validate(nv50);
    }
    nv50_fp_linkage_validate(nv50);
@@ -342,7 +342,7 @@ nv50_validate_clip(struct nv50_context *nv50)
    struct nv50_program *vp;
    uint8_t clip_enable;
 
-   if (nv50->dirty_3d & NV50_NEW_CLIP) {
+   if (nv50->dirty_3d & NV50_NEW_3D_CLIP) {
       BEGIN_NV04(push, NV50_3D(CB_ADDR), 1);
       PUSH_DATA (push, (NV50_CB_AUX_UCP_OFFSET << 8) | NV50_CB_AUX);
       BEGIN_NI04(push, NV50_3D(CB_DATA(0)), PIPE_MAX_CLIP_PLANES * 4);
@@ -445,23 +445,23 @@ nv50_switch_pipe_context(struct nv50_context *ctx_to)
    ctx_to->constbuf_dirty[2] = (1 << NV50_MAX_PIPE_CONSTBUFS) - 1;
 
    if (!ctx_to->vertex)
-      ctx_to->dirty_3d &= ~(NV50_NEW_VERTEX | NV50_NEW_ARRAYS);
+      ctx_to->dirty_3d &= ~(NV50_NEW_3D_VERTEX | NV50_NEW_3D_ARRAYS);
 
    if (!ctx_to->vertprog)
-      ctx_to->dirty_3d &= ~NV50_NEW_VERTPROG;
+      ctx_to->dirty_3d &= ~NV50_NEW_3D_VERTPROG;
    if (!ctx_to->fragprog)
-      ctx_to->dirty_3d &= ~NV50_NEW_FRAGPROG;
+      ctx_to->dirty_3d &= ~NV50_NEW_3D_FRAGPROG;
 
    if (!ctx_to->blend)
-      ctx_to->dirty_3d &= ~NV50_NEW_BLEND;
+      ctx_to->dirty_3d &= ~NV50_NEW_3D_BLEND;
    if (!ctx_to->rast)
 #ifdef NV50_SCISSORS_CLIPPING
-      ctx_to->dirty_3d &= ~(NV50_NEW_RASTERIZER | NV50_NEW_SCISSOR);
+      ctx_to->dirty_3d &= ~(NV50_NEW_3D_RASTERIZER | NV50_NEW_3D_SCISSOR);
 #else
-      ctx_to->dirty_3d &= ~NV50_NEW_RASTERIZER;
+      ctx_to->dirty_3d &= ~NV50_NEW_3D_RASTERIZER;
 #endif
    if (!ctx_to->zsa)
-      ctx_to->dirty_3d &= ~NV50_NEW_ZSA;
+      ctx_to->dirty_3d &= ~NV50_NEW_3D_ZSA;
 
    ctx_to->screen->cur_ctx = ctx_to;
 }
@@ -470,42 +470,42 @@ static struct state_validate {
     void (*func)(struct nv50_context *);
     uint32_t states;
 } validate_list[] = {
-    { nv50_validate_fb,            NV50_NEW_FRAMEBUFFER },
-    { nv50_validate_blend,         NV50_NEW_BLEND },
-    { nv50_validate_zsa,           NV50_NEW_ZSA },
-    { nv50_validate_sample_mask,   NV50_NEW_SAMPLE_MASK },
-    { nv50_validate_rasterizer,    NV50_NEW_RASTERIZER },
-    { nv50_validate_blend_colour,  NV50_NEW_BLEND_COLOUR },
-    { nv50_validate_stencil_ref,   NV50_NEW_STENCIL_REF },
-    { nv50_validate_stipple,       NV50_NEW_STIPPLE },
+    { nv50_validate_fb,            NV50_NEW_3D_FRAMEBUFFER },
+    { nv50_validate_blend,         NV50_NEW_3D_BLEND },
+    { nv50_validate_zsa,           NV50_NEW_3D_ZSA },
+    { nv50_validate_sample_mask,   NV50_NEW_3D_SAMPLE_MASK },
+    { nv50_validate_rasterizer,    NV50_NEW_3D_RASTERIZER },
+    { nv50_validate_blend_colour,  NV50_NEW_3D_BLEND_COLOUR },
+    { nv50_validate_stencil_ref,   NV50_NEW_3D_STENCIL_REF },
+    { nv50_validate_stipple,       NV50_NEW_3D_STIPPLE },
 #ifdef NV50_SCISSORS_CLIPPING
-    { nv50_validate_scissor,       NV50_NEW_SCISSOR | NV50_NEW_VIEWPORT |
-                                   NV50_NEW_RASTERIZER |
-                                   NV50_NEW_FRAMEBUFFER },
+    { nv50_validate_scissor,       NV50_NEW_3D_SCISSOR | NV50_NEW_3D_VIEWPORT |
+                                   NV50_NEW_3D_RASTERIZER |
+                                   NV50_NEW_3D_FRAMEBUFFER },
 #else
-    { nv50_validate_scissor,       NV50_NEW_SCISSOR },
+    { nv50_validate_scissor,       NV50_NEW_3D_SCISSOR },
 #endif
-    { nv50_validate_viewport,      NV50_NEW_VIEWPORT },
-    { nv50_vertprog_validate,      NV50_NEW_VERTPROG },
-    { nv50_gmtyprog_validate,      NV50_NEW_GMTYPROG },
-    { nv50_fragprog_validate,      NV50_NEW_FRAGPROG | NV50_NEW_RASTERIZER |
-                                   NV50_NEW_MIN_SAMPLES },
-    { nv50_fp_linkage_validate,    NV50_NEW_FRAGPROG | NV50_NEW_VERTPROG |
-                                   NV50_NEW_GMTYPROG | NV50_NEW_RASTERIZER },
-    { nv50_gp_linkage_validate,    NV50_NEW_GMTYPROG | NV50_NEW_VERTPROG },
-    { nv50_validate_derived_rs,    NV50_NEW_FRAGPROG | NV50_NEW_RASTERIZER |
-                                   NV50_NEW_VERTPROG | NV50_NEW_GMTYPROG },
-    { nv50_validate_derived_2,     NV50_NEW_ZSA | NV50_NEW_FRAMEBUFFER },
-    { nv50_validate_derived_3,     NV50_NEW_BLEND | NV50_NEW_FRAMEBUFFER },
-    { nv50_validate_clip,          NV50_NEW_CLIP | NV50_NEW_RASTERIZER |
-                                   NV50_NEW_VERTPROG | NV50_NEW_GMTYPROG },
-    { nv50_constbufs_validate,     NV50_NEW_CONSTBUF },
-    { nv50_validate_textures,      NV50_NEW_TEXTURES },
-    { nv50_validate_samplers,      NV50_NEW_SAMPLERS },
-    { nv50_stream_output_validate, NV50_NEW_STRMOUT |
-                                   NV50_NEW_VERTPROG | NV50_NEW_GMTYPROG },
-    { nv50_vertex_arrays_validate, NV50_NEW_VERTEX | NV50_NEW_ARRAYS },
-    { nv50_validate_min_samples,   NV50_NEW_MIN_SAMPLES },
+    { nv50_validate_viewport,      NV50_NEW_3D_VIEWPORT },
+    { nv50_vertprog_validate,      NV50_NEW_3D_VERTPROG },
+    { nv50_gmtyprog_validate,      NV50_NEW_3D_GMTYPROG },
+    { nv50_fragprog_validate,      NV50_NEW_3D_FRAGPROG | NV50_NEW_3D_RASTERIZER |
+                                   NV50_NEW_3D_MIN_SAMPLES },
+    { nv50_fp_linkage_validate,    NV50_NEW_3D_FRAGPROG | NV50_NEW_3D_VERTPROG |
+                                   NV50_NEW_3D_GMTYPROG | NV50_NEW_3D_RASTERIZER },
+    { nv50_gp_linkage_validate,    NV50_NEW_3D_GMTYPROG | NV50_NEW_3D_VERTPROG },
+    { nv50_validate_derived_rs,    NV50_NEW_3D_FRAGPROG | NV50_NEW_3D_RASTERIZER |
+                                   NV50_NEW_3D_VERTPROG | NV50_NEW_3D_GMTYPROG },
+    { nv50_validate_derived_2,     NV50_NEW_3D_ZSA | NV50_NEW_3D_FRAMEBUFFER },
+    { nv50_validate_derived_3,     NV50_NEW_3D_BLEND | NV50_NEW_3D_FRAMEBUFFER },
+    { nv50_validate_clip,          NV50_NEW_3D_CLIP | NV50_NEW_3D_RASTERIZER |
+                                   NV50_NEW_3D_VERTPROG | NV50_NEW_3D_GMTYPROG },
+    { nv50_constbufs_validate,     NV50_NEW_3D_CONSTBUF },
+    { nv50_validate_textures,      NV50_NEW_3D_TEXTURES },
+    { nv50_validate_samplers,      NV50_NEW_3D_SAMPLERS },
+    { nv50_stream_output_validate, NV50_NEW_3D_STRMOUT |
+                                   NV50_NEW_3D_VERTPROG | NV50_NEW_3D_GMTYPROG },
+    { nv50_vertex_arrays_validate, NV50_NEW_3D_VERTEX | NV50_NEW_3D_ARRAYS },
+    { nv50_validate_min_samples,   NV50_NEW_3D_MIN_SAMPLES },
 };
 
 bool

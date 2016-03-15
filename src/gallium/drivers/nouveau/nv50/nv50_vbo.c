@@ -779,9 +779,9 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    nv50->vbo_push_hint = /* the 64 is heuristic */
       !(info->indexed && ((nv50->vb_elt_limit + 64) < info->count));
 
-   if (nv50->vbo_user && !(nv50->dirty_3d & (NV50_NEW_ARRAYS | NV50_NEW_VERTEX))) {
+   if (nv50->vbo_user && !(nv50->dirty_3d & (NV50_NEW_3D_ARRAYS | NV50_NEW_3D_VERTEX))) {
       if (!!nv50->vbo_fifo != nv50->vbo_push_hint)
-         nv50->dirty_3d |= NV50_NEW_ARRAYS;
+         nv50->dirty_3d |= NV50_NEW_3D_ARRAYS;
       else
       if (!nv50->vbo_fifo)
          nv50_update_user_vbufs(nv50);

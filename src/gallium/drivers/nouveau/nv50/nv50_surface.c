@@ -353,7 +353,7 @@ nv50_clear_render_target(struct pipe_context *pipe,
    BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
    PUSH_DATA (push, nv50->cond_condmode);
 
-   nv50->dirty_3d |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
+   nv50->dirty_3d |= NV50_NEW_3D_FRAMEBUFFER | NV50_NEW_3D_SCISSOR;
 }
 
 static void
@@ -436,7 +436,7 @@ nv50_clear_depth_stencil(struct pipe_context *pipe,
    BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
    PUSH_DATA (push, nv50->cond_condmode);
 
-   nv50->dirty_3d |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
+   nv50->dirty_3d |= NV50_NEW_3D_FRAMEBUFFER | NV50_NEW_3D_SCISSOR;
 }
 
 void
@@ -525,7 +525,7 @@ nv50_clear(struct pipe_context *pipe, unsigned buffers,
    uint32_t mode = 0;
 
    /* don't need NEW_BLEND, COLOR_MASK doesn't affect CLEAR_BUFFERS */
-   if (!nv50_state_validate(nv50, NV50_NEW_FRAMEBUFFER))
+   if (!nv50_state_validate(nv50, NV50_NEW_3D_FRAMEBUFFER))
       return;
 
    /* We have to clear ALL of the layers, not up to the min number of layers
@@ -798,7 +798,7 @@ nv50_clear_buffer(struct pipe_context *pipe,
                              data, data_size);
    }
 
-   nv50->dirty_3d |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
+   nv50->dirty_3d |= NV50_NEW_3D_FRAMEBUFFER | NV50_NEW_3D_SCISSOR;
 }
 
 /* =============================== BLIT CODE ===================================
@@ -1259,9 +1259,9 @@ nv50_blitctx_pre_blit(struct nv50_blitctx *ctx)
    nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
 
    nv50->dirty_3d =
-      NV50_NEW_FRAMEBUFFER | NV50_NEW_MIN_SAMPLES |
-      NV50_NEW_VERTPROG | NV50_NEW_FRAGPROG | NV50_NEW_GMTYPROG |
-      NV50_NEW_TEXTURES | NV50_NEW_SAMPLERS;
+      NV50_NEW_3D_FRAMEBUFFER | NV50_NEW_3D_MIN_SAMPLES |
+      NV50_NEW_3D_VERTPROG | NV50_NEW_3D_FRAGPROG | NV50_NEW_3D_GMTYPROG |
+      NV50_NEW_3D_TEXTURES | NV50_NEW_3D_SAMPLERS;
 }
 
 static void
@@ -1306,10 +1306,10 @@ nv50_blitctx_post_blit(struct nv50_blitctx *blit)
    nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
 
    nv50->dirty_3d = blit->saved.dirty_3d |
-      (NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR | NV50_NEW_SAMPLE_MASK |
-       NV50_NEW_RASTERIZER | NV50_NEW_ZSA | NV50_NEW_BLEND |
-       NV50_NEW_TEXTURES | NV50_NEW_SAMPLERS |
-       NV50_NEW_VERTPROG | NV50_NEW_GMTYPROG | NV50_NEW_FRAGPROG);
+      (NV50_NEW_3D_FRAMEBUFFER | NV50_NEW_3D_SCISSOR | NV50_NEW_3D_SAMPLE_MASK |
+       NV50_NEW_3D_RASTERIZER | NV50_NEW_3D_ZSA | NV50_NEW_3D_BLEND |
+       NV50_NEW_3D_TEXTURES | NV50_NEW_3D_SAMPLERS |
+       NV50_NEW_3D_VERTPROG | NV50_NEW_3D_GMTYPROG | NV50_NEW_3D_FRAGPROG);
    nv50->scissors_dirty |= 1;
 
    nv50->base.pipe.set_min_samples(&nv50->base.pipe, blit->saved.min_samples);

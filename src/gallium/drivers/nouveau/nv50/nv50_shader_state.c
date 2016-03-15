@@ -181,7 +181,7 @@ nv50_fragprog_validate(struct nv50_context *nv50)
       fp->fp.force_persample_interp = rast->force_persample_interp;
    }
 
-   if (fp->mem && !(nv50->dirty_3d & (NV50_NEW_FRAGPROG | NV50_NEW_MIN_SAMPLES)))
+   if (fp->mem && !(nv50->dirty_3d & (NV50_NEW_3D_FRAGPROG | NV50_NEW_3D_MIN_SAMPLES)))
       return;
 
    if (!nv50_program_validate(nv50, fp))
@@ -309,7 +309,7 @@ nv50_validate_derived_rs(struct nv50_context *nv50)
       PUSH_DATA (push, !nv50->rast->pipe.rasterizer_discard);
    }
 
-   if (nv50->dirty_3d & NV50_NEW_FRAGPROG)
+   if (nv50->dirty_3d & NV50_NEW_3D_FRAGPROG)
       return;
    psize = nv50->state.semantic_psize & ~NV50_3D_SEMANTIC_PTSZ_PTSZ_EN__MASK;
    color = nv50->state.semantic_color & ~NV50_3D_SEMANTIC_COLOR_CLMP_EN;
@@ -378,9 +378,9 @@ nv50_fp_linkage_validate(struct nv50_context *nv50)
    uint8_t map[64];
    uint8_t so_map[64];
 
-   if (!(nv50->dirty_3d & (NV50_NEW_VERTPROG |
-                           NV50_NEW_FRAGPROG |
-                           NV50_NEW_GMTYPROG))) {
+   if (!(nv50->dirty_3d & (NV50_NEW_3D_VERTPROG |
+                           NV50_NEW_3D_FRAGPROG |
+                           NV50_NEW_3D_GMTYPROG))) {
       uint8_t bfc, ffc;
       ffc = (nv50->state.semantic_color & NV50_3D_SEMANTIC_COLOR_FFC0_ID__MASK);
       bfc = (nv50->state.semantic_color & NV50_3D_SEMANTIC_COLOR_BFC0_ID__MASK)

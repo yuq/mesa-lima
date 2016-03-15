@@ -176,7 +176,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
       for (i = 0; i < nv50->framebuffer.nr_cbufs; ++i) {
          if (nv50->framebuffer.cbufs[i] &&
              nv50->framebuffer.cbufs[i]->texture == res) {
-            nv50->dirty_3d |= NV50_NEW_FRAMEBUFFER;
+            nv50->dirty_3d |= NV50_NEW_3D_FRAMEBUFFER;
             nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
             if (!--ref)
                return ref;
@@ -186,7 +186,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
    if (bind & PIPE_BIND_DEPTH_STENCIL) {
       if (nv50->framebuffer.zsbuf &&
           nv50->framebuffer.zsbuf->texture == res) {
-         nv50->dirty_3d |= NV50_NEW_FRAMEBUFFER;
+         nv50->dirty_3d |= NV50_NEW_3D_FRAMEBUFFER;
          nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
          if (!--ref)
             return ref;
@@ -202,7 +202,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
       assert(nv50->num_vtxbufs <= PIPE_MAX_ATTRIBS);
       for (i = 0; i < nv50->num_vtxbufs; ++i) {
          if (nv50->vtxbuf[i].buffer == res) {
-            nv50->dirty_3d |= NV50_NEW_ARRAYS;
+            nv50->dirty_3d |= NV50_NEW_3D_ARRAYS;
             nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_VERTEX);
             if (!--ref)
                return ref;
@@ -222,7 +222,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
       for (i = 0; i < nv50->num_textures[s]; ++i) {
          if (nv50->textures[s][i] &&
              nv50->textures[s][i]->texture == res) {
-            nv50->dirty_3d |= NV50_NEW_TEXTURES;
+            nv50->dirty_3d |= NV50_NEW_3D_TEXTURES;
             nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
             if (!--ref)
                return ref;
@@ -236,7 +236,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
             continue;
          if (!nv50->constbuf[s][i].user &&
              nv50->constbuf[s][i].u.buf == res) {
-            nv50->dirty_3d |= NV50_NEW_CONSTBUF;
+            nv50->dirty_3d |= NV50_NEW_3D_CONSTBUF;
             nv50->constbuf_dirty[s] |= 1 << i;
             nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_CB(s, i));
             if (!--ref)
