@@ -1,13 +1,28 @@
+# Status of OpenGL extensions in Mesa
 
-Status of OpenGL 3.x features in Mesa
+Here's how to read this file:
 
+all DONE: <driver>, ...
+    All the extensions are done for the given list of drivers.
 
-Note: when an item is marked as "DONE" it means all the core Mesa
-infrastructure is complete but it may be the case that few (if any) drivers
-implement the features.
+DONE
+    The extension is done for Mesa and no implementation is necessary on the
+    driver-side.
 
+DONE ()
+    The extension is done for Mesa and all the drivers in the "all DONE" list.
 
-OpenGL Core and Compatibility context support
+DONE (<driver>, ...)
+    The extension is done for Mesa, all the drivers in the "all DONE" list, and
+    all the drivers in the brackets.
+
+in progress
+    The extension is started but not finished yet.
+
+not started
+    The extension isn't started yet.
+
+# OpenGL Core and Compatibility context support
 
 OpenGL 3.1 and later versions are only supported with the Core profile.
 There are no plans to support GL_ARB_compatibility. The last supported OpenGL
