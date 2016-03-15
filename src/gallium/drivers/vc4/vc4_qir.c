@@ -283,20 +283,11 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
 void
 qir_dump_inst(struct vc4_compile *c, struct qinst *inst)
 {
-        static const char *conditions[] = {
-                [QPU_COND_ALWAYS] = "",
-                [QPU_COND_NEVER] = ".never",
-                [QPU_COND_ZS] = ".zs",
-                [QPU_COND_ZC] = ".zc",
-                [QPU_COND_NS] = ".ns",
-                [QPU_COND_NC] = ".nc",
-                [QPU_COND_CS] = ".cs",
-                [QPU_COND_CC] = ".cc",
-        };
-        fprintf(stderr, "%s%s%s ",
-                qir_get_op_name(inst->op),
-                conditions[inst->cond],
-                inst->sf ? ".sf" : "");
+        fprintf(stderr, "%s", qir_get_op_name(inst->op));
+        vc4_qpu_disasm_cond(stderr, inst->cond);
+        if (inst->sf)
+                fprintf(stderr, ".sf");
+        fprintf(stderr, " ");
 
         qir_print_reg(c, inst->dst, true);
         if (inst->dst.pack) {
