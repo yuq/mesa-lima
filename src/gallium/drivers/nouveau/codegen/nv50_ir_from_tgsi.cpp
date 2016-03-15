@@ -1261,9 +1261,9 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
       info->numBarriers = 1;
 
    if (insn.dstCount()) {
-      if (insn.getDst(0).getFile() == TGSI_FILE_OUTPUT) {
-         Instruction::DstRegister dst = insn.getDst(0);
+      Instruction::DstRegister dst = insn.getDst(0);
 
+      if (dst.getFile() == TGSI_FILE_OUTPUT) {
          if (dst.isIndirect(0))
             for (unsigned i = 0; i < info->numOutputs; ++i)
                info->out[i].mask = 0xf;
@@ -1280,11 +1280,11 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
          if (isEdgeFlagPassthrough(insn))
             info->io.edgeFlagIn = insn.getSrc(0).getIndex(0);
       } else
-      if (insn.getDst(0).getFile() == TGSI_FILE_TEMPORARY) {
-         if (insn.getDst(0).isIndirect(0))
-            indirectTempArrays.insert(insn.getDst(0).getArrayId());
+      if (dst.getFile() == TGSI_FILE_TEMPORARY) {
+         if (dst.isIndirect(0))
+            indirectTempArrays.insert(dst.getArrayId());
       } else
-      if (insn.getDst(0).getFile() == TGSI_FILE_BUFFER) {
+      if (dst.getFile() == TGSI_FILE_BUFFER) {
          info->io.globalAccess |= 0x2;
       }
    }
