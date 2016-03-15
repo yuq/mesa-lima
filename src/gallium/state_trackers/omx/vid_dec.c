@@ -140,7 +140,7 @@ static OMX_ERRORTYPE vid_dec_Constructor(OMX_COMPONENTTYPE *comp, OMX_STRING nam
 
    r = omx_base_filter_Constructor(comp, name);
    if (r)
-	return r;
+      return r;
 
    priv->profile = PIPE_VIDEO_PROFILE_UNKNOWN;
 
@@ -268,7 +268,7 @@ static OMX_ERRORTYPE vid_dec_SetParameter(OMX_HANDLETYPE handle, OMX_INDEXTYPE i
       r = checkHeader(param, sizeof(OMX_PARAM_COMPONENTROLETYPE));
       if (r)
          return r;
- 
+
       if (!strcmp((char *)role->cRole, OMX_VID_DEC_MPEG2_ROLE)) {
          priv->profile = PIPE_VIDEO_PROFILE_MPEG2_MAIN;
       } else if (!strcmp((char *)role->cRole, OMX_VID_DEC_AVC_ROLE)) {
@@ -321,7 +321,7 @@ static OMX_ERRORTYPE vid_dec_GetParameter(OMX_HANDLETYPE handle, OMX_INDEXTYPE i
          strcpy((char *)role->cRole, OMX_VID_DEC_MPEG2_ROLE);
       else if (priv->profile == PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH)
          strcpy((char *)role->cRole, OMX_VID_DEC_AVC_ROLE);
- 
+
       break;
    }
 
@@ -474,7 +474,7 @@ static OMX_ERRORTYPE vid_dec_DecodeBuffer(omx_base_PortType *port, OMX_BUFFERHEA
       if (r)
          return r;
    }
- 
+
    return OMX_ErrorNone;
 }
 
@@ -513,7 +513,7 @@ static void vid_dec_FillOutput(vid_dec_PrivateType *priv, struct pipe_video_buff
 
    box.width = def->nFrameWidth / 2;
    box.height = def->nFrameHeight / 2;
- 
+
    src = priv->pipe->transfer_map(priv->pipe, views[1]->texture, 0,
                                   PIPE_TRANSFER_READ, &box, &transfer);
    util_copy_rect(dst, views[1]->texture->format, def->nStride, 0, 0,

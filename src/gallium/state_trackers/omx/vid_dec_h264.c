@@ -91,7 +91,7 @@ void vid_dec_h264_Init(vid_dec_PrivateType *priv)
    priv->Decode = vid_dec_h264_Decode;
    priv->EndFrame = vid_dec_h264_EndFrame;
    priv->Flush = vid_dec_h264_Flush;
-   
+
    LIST_INITHEAD(&priv->codec_data.h264.dpb_list);
    priv->picture.h264.field_order_cnt[0] = priv->picture.h264.field_order_cnt[1] = INT_MAX;
 }
@@ -829,7 +829,7 @@ static void slice_header(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
          priv->picture.h264.field_order_cnt[0] = expectedPicOrderCnt + priv->codec_data.h264.delta_pic_order_cnt[0];
          priv->picture.h264.field_order_cnt[1] = priv->picture.h264.field_order_cnt[0] +
             sps->offset_for_top_to_bottom_field + priv->codec_data.h264.delta_pic_order_cnt[1];
-         
+
       } else if (!priv->picture.h264.bottom_field_flag)
          priv->picture.h264.field_order_cnt[0] = expectedPicOrderCnt + priv->codec_data.h264.delta_pic_order_cnt[0];
       else
@@ -859,7 +859,7 @@ static void slice_header(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
       if (!priv->picture.h264.field_pic_flag) {
          priv->picture.h264.field_order_cnt[0] = tempPicOrderCnt;
          priv->picture.h264.field_order_cnt[1] = tempPicOrderCnt;
-         
+
       } else if (!priv->picture.h264.bottom_field_flag)
          priv->picture.h264.field_order_cnt[0] = tempPicOrderCnt;
       else
@@ -876,7 +876,7 @@ static void slice_header(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
 
    priv->picture.h264.num_ref_idx_l0_active_minus1 = pps->num_ref_idx_l0_default_active_minus1;
    priv->picture.h264.num_ref_idx_l1_active_minus1 = pps->num_ref_idx_l1_default_active_minus1;
- 
+
    if (slice_type == PIPE_H264_SLICE_TYPE_P ||
        slice_type == PIPE_H264_SLICE_TYPE_SP ||
        slice_type == PIPE_H264_SLICE_TYPE_B) {
