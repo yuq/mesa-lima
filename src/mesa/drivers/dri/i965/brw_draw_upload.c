@@ -37,12 +37,20 @@
 #include "intel_batchbuffer.h"
 #include "intel_buffer_objects.h"
 
-static const GLuint double_types[5] = {
+static const GLuint double_types_float[5] = {
    0,
    BRW_SURFACEFORMAT_R64_FLOAT,
    BRW_SURFACEFORMAT_R64G64_FLOAT,
    BRW_SURFACEFORMAT_R64G64B64_FLOAT,
    BRW_SURFACEFORMAT_R64G64B64A64_FLOAT
+};
+
+static const GLuint double_types_passthru[5] = {
+   0,
+   BRW_SURFACEFORMAT_R64_PASSTHRU,
+   BRW_SURFACEFORMAT_R64G64_PASSTHRU,
+   BRW_SURFACEFORMAT_R64G64B64_PASSTHRU,
+   BRW_SURFACEFORMAT_R64G64B64A64_PASSTHRU
 };
 
 static const GLuint float_types[5] = {
@@ -213,6 +221,22 @@ static const GLuint byte_types_scale[5] = {
    BRW_SURFACEFORMAT_R8G8B8A8_SSCALED
 };
 
+static GLuint
+double_types(struct brw_context *brw,
+             int size,
+             GLboolean doubles)
+{
+   /* From the BDW PRM, Volume 2d, page 588 (VERTEX_ELEMENT_STATE):
+    * "When SourceElementFormat is set to one of the *64*_PASSTHRU formats,
+    * 64-bit components are stored in the URB without any conversion."
+    * Also included on BDW PRM, Volume 7, page 470, table "Source Element
+    * Formats Supported in VF Unit"
+    * Previous PRMs don't include those references.
+    */
+   return (brw->gen >= 8 && doubles
+           ? double_types_passthru[size]
+           : double_types_float[size]);
+}
 
 /**
  * Given vertex array type/size/format/normalized info, return
@@ -245,7 +269,7 @@ brw_get_vertex_surface_type(struct brw_context *brw,
       return BRW_SURFACEFORMAT_R11G11B10_FLOAT;
    } else if (glarray->Normalized) {
       switch (glarray->Type) {
-      case GL_DOUBLE: return double_types[size];
+      case GL_DOUBLE: return double_types(brw, size, glarray->Doubles);
       case GL_FLOAT: return float_types[size];
       case GL_HALF_FLOAT: return half_float_types[size];
       case GL_INT: return int_types_norm[size];
@@ -319,7 +343,7 @@ brw_get_vertex_surface_type(struct brw_context *brw,
       }
       assert(glarray->Format == GL_RGBA); /* sanity check */
       switch (glarray->Type) {
-      case GL_DOUBLE: return double_types[size];
+      case GL_DOUBLE: return double_types(brw, size, glarray->Doubles);
       case GL_FLOAT: return float_types[size];
       case GL_HALF_FLOAT: return half_float_types[size];
       case GL_INT: return int_types_scale[size];
