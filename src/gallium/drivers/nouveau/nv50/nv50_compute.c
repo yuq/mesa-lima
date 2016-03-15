@@ -170,24 +170,25 @@ nv50_compute_validate_globals(struct nv50_context *nv50)
    }
 }
 
+static struct nv50_state_validate
+validate_list_cp[] = {
+   { nv50_compprog_validate,              NV50_NEW_CP_PROGRAM     },
+   { nv50_compute_validate_globals,       NV50_NEW_CP_GLOBALS     },
+};
+
 static bool
-nv50_compute_state_validate(struct nv50_context *nv50)
+nv50_state_validate_cp(struct nv50_context *nv50, uint32_t mask)
 {
-   nv50_compprog_validate(nv50);
-   if (nv50->dirty_cp & NV50_NEW_CP_GLOBALS)
-      nv50_compute_validate_globals(nv50);
+   bool ret;
 
    /* TODO: validate textures, samplers, surfaces */
+   ret = nv50_state_validate(nv50, mask, validate_list_cp,
+                             ARRAY_SIZE(validate_list_cp), &nv50->dirty_cp,
+                             nv50->bufctx_cp);
 
-   nv50_bufctx_fence(nv50->bufctx_cp, false);
-
-   nouveau_pushbuf_bufctx(nv50->base.pushbuf, nv50->bufctx_cp);
-   if (unlikely(nouveau_pushbuf_validate(nv50->base.pushbuf)))
-      return false;
    if (unlikely(nv50->state.flushed))
       nv50_bufctx_fence(nv50->bufctx_cp, true);
-
-   return true;
+   return ret;
 }
 
 static void
@@ -248,7 +249,7 @@ nv50_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    struct nv50_program *cp = nv50->compprog;
    bool ret;
 
-   ret = !nv50_compute_state_validate(nv50);
+   ret = !nv50_state_validate_cp(nv50, ~0);
    if (ret) {
       NOUVEAU_ERR("Failed to launch grid !\n");
       return;
