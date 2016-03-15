@@ -353,7 +353,7 @@ nv50_clear_render_target(struct pipe_context *pipe,
    BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
    PUSH_DATA (push, nv50->cond_condmode);
 
-   nv50->dirty |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
+   nv50->dirty_3d |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
 }
 
 static void
@@ -436,7 +436,7 @@ nv50_clear_depth_stencil(struct pipe_context *pipe,
    BEGIN_NV04(push, NV50_3D(COND_MODE), 1);
    PUSH_DATA (push, nv50->cond_condmode);
 
-   nv50->dirty |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
+   nv50->dirty_3d |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
 }
 
 void
@@ -798,7 +798,7 @@ nv50_clear_buffer(struct pipe_context *pipe,
                              data, data_size);
    }
 
-   nv50->dirty |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
+   nv50->dirty_3d |= NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR;
 }
 
 /* =============================== BLIT CODE ===================================
@@ -834,7 +834,7 @@ struct nv50_blitctx
       struct pipe_sampler_view *texture[2];
       struct nv50_tsc_entry *sampler[2];
       unsigned min_samples;
-      uint32_t dirty;
+      uint32_t dirty_3d;
    } saved;
    struct nv50_rasterizer_stateobj rast;
 };
@@ -1253,12 +1253,12 @@ nv50_blitctx_pre_blit(struct nv50_blitctx *ctx)
 
    nv50->min_samples = 1;
 
-   ctx->saved.dirty = nv50->dirty;
+   ctx->saved.dirty_3d = nv50->dirty_3d;
 
    nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
    nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
 
-   nv50->dirty =
+   nv50->dirty_3d =
       NV50_NEW_FRAMEBUFFER | NV50_NEW_MIN_SAMPLES |
       NV50_NEW_VERTPROG | NV50_NEW_FRAGPROG | NV50_NEW_GMTYPROG |
       NV50_NEW_TEXTURES | NV50_NEW_SAMPLERS;
@@ -1305,7 +1305,7 @@ nv50_blitctx_post_blit(struct nv50_blitctx *blit)
    nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
    nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
 
-   nv50->dirty = blit->saved.dirty |
+   nv50->dirty_3d = blit->saved.dirty_3d |
       (NV50_NEW_FRAMEBUFFER | NV50_NEW_SCISSOR | NV50_NEW_SAMPLE_MASK |
        NV50_NEW_RASTERIZER | NV50_NEW_ZSA | NV50_NEW_BLEND |
        NV50_NEW_TEXTURES | NV50_NEW_SAMPLERS |

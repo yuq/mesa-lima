@@ -115,7 +115,7 @@ struct nv50_context {
    struct nouveau_bufctx *bufctx;
    struct nouveau_bufctx *bufctx_cp;
 
-   uint32_t dirty;
+   uint32_t dirty_3d; /* dirty flags for 3d state */
    uint32_t dirty_cp; /* dirty flags for compute state */
    bool cb_dirty;
 

@@ -314,5 +314,5 @@ nv50_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    PUSH_DATA (push, 0);
 
    /* bind a compute shader clobbers fragment shader state */
-   nv50->dirty |= NV50_NEW_FRAGPROG;
+   nv50->dirty_3d |= NV50_NEW_FRAGPROG;
 }

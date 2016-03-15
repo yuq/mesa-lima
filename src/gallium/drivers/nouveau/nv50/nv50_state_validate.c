@@ -187,7 +187,7 @@ nv50_validate_scissor(struct nv50_context *nv50)
 #ifdef NV50_SCISSORS_CLIPPING
    int minx, maxx, miny, maxy, i;
 
-   if (!(nv50->dirty &
+   if (!(nv50->dirty_3d &
          (NV50_NEW_SCISSOR | NV50_NEW_VIEWPORT | NV50_NEW_FRAMEBUFFER)) &&
        nv50->state.scissor == nv50->rast->pipe.scissor)
       return;
@@ -197,7 +197,7 @@ nv50_validate_scissor(struct nv50_context *nv50)
 
    nv50->state.scissor = nv50->rast->pipe.scissor;
 
-   if ((nv50->dirty & NV50_NEW_FRAMEBUFFER) && !nv50->state.scissor)
+   if ((nv50->dirty_3d & NV50_NEW_FRAMEBUFFER) && !nv50->state.scissor)
       nv50->scissors_dirty = (1 << NV50_MAX_VIEWPORTS) - 1;
 
    for (i = 0; i < NV50_MAX_VIEWPORTS; i++) {
@@ -290,10 +290,10 @@ nv50_check_program_ucps(struct nv50_context *nv50,
 
    vp->vp.clpd_nr = n;
    if (likely(vp == nv50->vertprog)) {
-      nv50->dirty |= NV50_NEW_VERTPROG;
+      nv50->dirty_3d |= NV50_NEW_VERTPROG;
       nv50_vertprog_validate(nv50);
    } else {
-      nv50->dirty |= NV50_NEW_GMTYPROG;
+      nv50->dirty_3d |= NV50_NEW_GMTYPROG;
       nv50_gmtyprog_validate(nv50);
    }
    nv50_fp_linkage_validate(nv50);
@@ -342,7 +342,7 @@ nv50_validate_clip(struct nv50_context *nv50)
    struct nv50_program *vp;
    uint8_t clip_enable;
 
-   if (nv50->dirty & NV50_NEW_CLIP) {
+   if (nv50->dirty_3d & NV50_NEW_CLIP) {
       BEGIN_NV04(push, NV50_3D(CB_ADDR), 1);
       PUSH_DATA (push, (NV50_CB_AUX_UCP_OFFSET << 8) | NV50_CB_AUX);
       BEGIN_NI04(push, NV50_3D(CB_DATA(0)), PIPE_MAX_CLIP_PLANES * 4);
@@ -436,7 +436,7 @@ nv50_switch_pipe_context(struct nv50_context *ctx_to)
    else
       ctx_to->state = ctx_to->screen->save_state;
 
-   ctx_to->dirty = ~0;
+   ctx_to->dirty_3d = ~0;
    ctx_to->viewports_dirty = ~0;
    ctx_to->scissors_dirty = ~0;
 
@@ -445,23 +445,23 @@ nv50_switch_pipe_context(struct nv50_context *ctx_to)
    ctx_to->constbuf_dirty[2] = (1 << NV50_MAX_PIPE_CONSTBUFS) - 1;
 
    if (!ctx_to->vertex)
-      ctx_to->dirty &= ~(NV50_NEW_VERTEX | NV50_NEW_ARRAYS);
+      ctx_to->dirty_3d &= ~(NV50_NEW_VERTEX | NV50_NEW_ARRAYS);
 
    if (!ctx_to->vertprog)
-      ctx_to->dirty &= ~NV50_NEW_VERTPROG;
+      ctx_to->dirty_3d &= ~NV50_NEW_VERTPROG;
    if (!ctx_to->fragprog)
-      ctx_to->dirty &= ~NV50_NEW_FRAGPROG;
+      ctx_to->dirty_3d &= ~NV50_NEW_FRAGPROG;
 
    if (!ctx_to->blend)
-      ctx_to->dirty &= ~NV50_NEW_BLEND;
+      ctx_to->dirty_3d &= ~NV50_NEW_BLEND;
    if (!ctx_to->rast)
 #ifdef NV50_SCISSORS_CLIPPING
-      ctx_to->dirty &= ~(NV50_NEW_RASTERIZER | NV50_NEW_SCISSOR);
+      ctx_to->dirty_3d &= ~(NV50_NEW_RASTERIZER | NV50_NEW_SCISSOR);
 #else
-      ctx_to->dirty &= ~NV50_NEW_RASTERIZER;
+      ctx_to->dirty_3d &= ~NV50_NEW_RASTERIZER;
 #endif
    if (!ctx_to->zsa)
-      ctx_to->dirty &= ~NV50_NEW_ZSA;
+      ctx_to->dirty_3d &= ~NV50_NEW_ZSA;
 
    ctx_to->screen->cur_ctx = ctx_to;
 }
@@ -518,7 +518,7 @@ nv50_state_validate(struct nv50_context *nv50, uint32_t mask)
    if (nv50->screen->cur_ctx != nv50)
       nv50_switch_pipe_context(nv50);
 
-   state_mask = nv50->dirty & mask;
+   state_mask = nv50->dirty_3d & mask;
 
    if (state_mask) {
       for (i = 0; i < ARRAY_SIZE(validate_list); ++i) {
@@ -527,7 +527,7 @@ nv50_state_validate(struct nv50_context *nv50, uint32_t mask)
          if (state_mask & validate->states)
             validate->func(nv50);
       }
-      nv50->dirty &= ~state_mask;
+      nv50->dirty_3d &= ~state_mask;
 
       if (nv50->state.rt_serialize) {
          nv50->state.rt_serialize = false;

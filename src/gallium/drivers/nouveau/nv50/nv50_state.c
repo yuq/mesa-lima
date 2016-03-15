@@ -200,7 +200,7 @@ nv50_blend_state_bind(struct pipe_context *pipe, void *hwcso)
    struct nv50_context *nv50 = nv50_context(pipe);
 
    nv50->blend = hwcso;
-   nv50->dirty |= NV50_NEW_BLEND;
+   nv50->dirty_3d |= NV50_NEW_BLEND;
 }
 
 static void
@@ -337,7 +337,7 @@ nv50_rasterizer_state_bind(struct pipe_context *pipe, void *hwcso)
    struct nv50_context *nv50 = nv50_context(pipe);
 
    nv50->rast = hwcso;
-   nv50->dirty |= NV50_NEW_RASTERIZER;
+   nv50->dirty_3d |= NV50_NEW_RASTERIZER;
 }
 
 static void
@@ -426,7 +426,7 @@ nv50_zsa_state_bind(struct pipe_context *pipe, void *hwcso)
    struct nv50_context *nv50 = nv50_context(pipe);
 
    nv50->zsa = hwcso;
-   nv50->dirty |= NV50_NEW_ZSA;
+   nv50->dirty_3d |= NV50_NEW_ZSA;
 }
 
 static void
@@ -605,7 +605,7 @@ nv50_stage_sampler_states_bind(struct nv50_context *nv50, int s,
 
    nv50->num_samplers[s] = nr;
 
-   nv50->dirty |= NV50_NEW_SAMPLERS;
+   nv50->dirty_3d |= NV50_NEW_SAMPLERS;
 }
 
 static void
@@ -700,7 +700,7 @@ nv50_stage_set_sampler_views(struct nv50_context *nv50, int s,
 
    nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
 
-   nv50->dirty |= NV50_NEW_TEXTURES;
+   nv50->dirty_3d |= NV50_NEW_TEXTURES;
 }
 
 static void
@@ -776,7 +776,7 @@ nv50_vp_state_bind(struct pipe_context *pipe, void *hwcso)
     struct nv50_context *nv50 = nv50_context(pipe);
 
     nv50->vertprog = hwcso;
-    nv50->dirty |= NV50_NEW_VERTPROG;
+    nv50->dirty_3d |= NV50_NEW_VERTPROG;
 }
 
 static void *
@@ -792,7 +792,7 @@ nv50_fp_state_bind(struct pipe_context *pipe, void *hwcso)
     struct nv50_context *nv50 = nv50_context(pipe);
 
     nv50->fragprog = hwcso;
-    nv50->dirty |= NV50_NEW_FRAGPROG;
+    nv50->dirty_3d |= NV50_NEW_FRAGPROG;
 }
 
 static void *
@@ -808,7 +808,7 @@ nv50_gp_state_bind(struct pipe_context *pipe, void *hwcso)
     struct nv50_context *nv50 = nv50_context(pipe);
 
     nv50->gmtyprog = hwcso;
-    nv50->dirty |= NV50_NEW_GMTYPROG;
+    nv50->dirty_3d |= NV50_NEW_GMTYPROG;
 }
 
 static void *
@@ -882,7 +882,7 @@ nv50_set_constant_buffer(struct pipe_context *pipe, uint shader, uint index,
    }
    nv50->constbuf_dirty[s] |= 1 << i;
 
-   nv50->dirty |= NV50_NEW_CONSTBUF;
+   nv50->dirty_3d |= NV50_NEW_CONSTBUF;
 }
 
 /* =============================================================================
@@ -895,7 +895,7 @@ nv50_set_blend_color(struct pipe_context *pipe,
    struct nv50_context *nv50 = nv50_context(pipe);
 
    nv50->blend_colour = *bcol;
-   nv50->dirty |= NV50_NEW_BLEND_COLOUR;
+   nv50->dirty_3d |= NV50_NEW_BLEND_COLOUR;
 }
 
 static void
@@ -905,7 +905,7 @@ nv50_set_stencil_ref(struct pipe_context *pipe,
    struct nv50_context *nv50 = nv50_context(pipe);
 
    nv50->stencil_ref = *sr;
-   nv50->dirty |= NV50_NEW_STENCIL_REF;
+   nv50->dirty_3d |= NV50_NEW_STENCIL_REF;
 }
 
 static void
@@ -916,7 +916,7 @@ nv50_set_clip_state(struct pipe_context *pipe,
 
    memcpy(nv50->clip.ucp, clip->ucp, sizeof(clip->ucp));
 
-   nv50->dirty |= NV50_NEW_CLIP;
+   nv50->dirty_3d |= NV50_NEW_CLIP;
 }
 
 static void
@@ -925,7 +925,7 @@ nv50_set_sample_mask(struct pipe_context *pipe, unsigned sample_mask)
    struct nv50_context *nv50 = nv50_context(pipe);
 
    nv50->sample_mask = sample_mask;
-   nv50->dirty |= NV50_NEW_SAMPLE_MASK;
+   nv50->dirty_3d |= NV50_NEW_SAMPLE_MASK;
 }
 
 static void
@@ -935,7 +935,7 @@ nv50_set_min_samples(struct pipe_context *pipe, unsigned min_samples)
 
    if (nv50->min_samples != min_samples) {
       nv50->min_samples = min_samples;
-      nv50->dirty |= NV50_NEW_MIN_SAMPLES;
+      nv50->dirty_3d |= NV50_NEW_MIN_SAMPLES;
    }
 }
 
@@ -949,7 +949,7 @@ nv50_set_framebuffer_state(struct pipe_context *pipe,
 
    util_copy_framebuffer_state(&nv50->framebuffer, fb);
 
-   nv50->dirty |= NV50_NEW_FRAMEBUFFER;
+   nv50->dirty_3d |= NV50_NEW_FRAMEBUFFER;
 }
 
 static void
@@ -959,7 +959,7 @@ nv50_set_polygon_stipple(struct pipe_context *pipe,
    struct nv50_context *nv50 = nv50_context(pipe);
 
    nv50->stipple = *stipple;
-   nv50->dirty |= NV50_NEW_STIPPLE;
+   nv50->dirty_3d |= NV50_NEW_STIPPLE;
 }
 
 static void
@@ -977,7 +977,7 @@ nv50_set_scissor_states(struct pipe_context *pipe,
          continue;
       nv50->scissors[start_slot + i] = scissor[i];
       nv50->scissors_dirty |= 1 << (start_slot + i);
-      nv50->dirty |= NV50_NEW_SCISSOR;
+      nv50->dirty_3d |= NV50_NEW_SCISSOR;
    }
 }
 
@@ -996,7 +996,7 @@ nv50_set_viewport_states(struct pipe_context *pipe,
          continue;
       nv50->viewports[start_slot + i] = vpt[i];
       nv50->viewports_dirty |= 1 << (start_slot + i);
-      nv50->dirty |= NV50_NEW_VIEWPORT;
+      nv50->dirty_3d |= NV50_NEW_VIEWPORT;
    }
 }
 
@@ -1009,7 +1009,7 @@ nv50_set_vertex_buffers(struct pipe_context *pipe,
    unsigned i;
 
    nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_VERTEX);
-   nv50->dirty |= NV50_NEW_ARRAYS;
+   nv50->dirty_3d |= NV50_NEW_ARRAYS;
 
    util_set_vertex_buffers_count(nv50->vtxbuf, &nv50->num_vtxbufs, vb,
                                  start_slot, count);
@@ -1073,7 +1073,7 @@ nv50_vertex_state_bind(struct pipe_context *pipe, void *hwcso)
    struct nv50_context *nv50 = nv50_context(pipe);
 
    nv50->vertex = hwcso;
-   nv50->dirty |= NV50_NEW_VERTEX;
+   nv50->dirty_3d |= NV50_NEW_VERTEX;
 }
 
 static struct pipe_stream_output_target *
@@ -1181,7 +1181,7 @@ nv50_set_stream_output_targets(struct pipe_context *pipe,
    nv50->num_so_targets = num_targets;
 
    if (nv50->so_targets_dirty)
-      nv50->dirty |= NV50_NEW_STRMOUT;
+      nv50->dirty_3d |= NV50_NEW_STRMOUT;
 }
 
 static void
