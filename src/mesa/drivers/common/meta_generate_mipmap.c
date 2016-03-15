@@ -134,7 +134,7 @@ _mesa_meta_glsl_generate_mipmap_cleanup(struct gl_context *ctx,
    _mesa_reference_sampler_object(ctx, &mipmap->samp_obj, NULL);
    _mesa_reference_framebuffer(&mipmap->fb, NULL);
 
-   _mesa_meta_blit_shader_table_cleanup(&mipmap->shaders);
+   _mesa_meta_blit_shader_table_cleanup(ctx, &mipmap->shaders);
 }
 
 static GLboolean

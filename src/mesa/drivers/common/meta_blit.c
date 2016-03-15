@@ -105,12 +105,12 @@ setup_glsl_msaa_blit_scaled_shader(struct gl_context *ctx,
    }
 
    if (blit->msaa_shaders[shader_index]) {
-      _mesa_UseProgram(blit->msaa_shaders[shader_index]);
+      _mesa_meta_use_program(ctx, blit->msaa_shaders[shader_index]);
       /* Update the uniform values. */
       loc_src_width =
-         _mesa_GetUniformLocation(blit->msaa_shaders[shader_index], "src_width");
+         _mesa_program_resource_location(blit->msaa_shaders[shader_index], GL_UNIFORM, "src_width");
       loc_src_height =
-         _mesa_GetUniformLocation(blit->msaa_shaders[shader_index], "src_height");
+         _mesa_program_resource_location(blit->msaa_shaders[shader_index], GL_UNIFORM, "src_height");
       _mesa_Uniform1f(loc_src_width, src_rb->Width);
       _mesa_Uniform1f(loc_src_height, src_rb->Height);
       return;
@@ -237,9 +237,9 @@ setup_glsl_msaa_blit_scaled_shader(struct gl_context *ctx,
    _mesa_meta_compile_and_link_program(ctx, vs_source, fs_source, name,
                                        &blit->msaa_shaders[shader_index]);
    loc_src_width =
-      _mesa_GetUniformLocation(blit->msaa_shaders[shader_index], "src_width");
+      _mesa_program_resource_location(blit->msaa_shaders[shader_index], GL_UNIFORM, "src_width");
    loc_src_height =
-      _mesa_GetUniformLocation(blit->msaa_shaders[shader_index], "src_height");
+      _mesa_program_resource_location(blit->msaa_shaders[shader_index], GL_UNIFORM, "src_height");
    _mesa_Uniform1f(loc_src_width, src_rb->Width);
    _mesa_Uniform1f(loc_src_height, src_rb->Height);
 
@@ -347,7 +347,7 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
    }
 
    if (blit->msaa_shaders[shader_index]) {
-      _mesa_UseProgram(blit->msaa_shaders[shader_index]);
+      _mesa_meta_use_program(ctx, blit->msaa_shaders[shader_index]);
       return;
    }
 
@@ -1037,8 +1037,8 @@ _mesa_meta_glsl_blit_cleanup(struct gl_context *ctx, struct blit_state *blit)
       _mesa_reference_buffer_object(ctx, &blit->buf_obj, NULL);
    }
 
-   _mesa_meta_blit_shader_table_cleanup(&blit->shaders_with_depth);
-   _mesa_meta_blit_shader_table_cleanup(&blit->shaders_without_depth);
+   _mesa_meta_blit_shader_table_cleanup(ctx, &blit->shaders_with_depth);
+   _mesa_meta_blit_shader_table_cleanup(ctx, &blit->shaders_without_depth);
 
    _mesa_DeleteTextures(1, &blit->depthTex.TexObj);
    blit->depthTex.TexObj = 0;

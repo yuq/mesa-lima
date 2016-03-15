@@ -26,6 +26,7 @@
 #include "main/context.h"
 #include "main/objectlabel.h"
 #include "main/shaderapi.h"
+#include "main/shaderobj.h"
 #include "main/arrayobj.h"
 #include "main/bufferobj.h"
 #include "main/buffers.h"
@@ -61,8 +62,8 @@
 struct brw_fast_clear_state {
    struct gl_buffer_object *buf_obj;
    struct gl_vertex_array_object *array_obj;
+   struct gl_shader_program *shader_prog;
    GLuint vao;
-   GLuint shader_prog;
    GLint color_location;
 };
 
@@ -131,7 +132,7 @@ brw_bind_rep_write_shader(struct brw_context *brw, float *color)
    struct gl_context *ctx = &brw->ctx;
 
    if (clear->shader_prog) {
-      _mesa_UseProgram(clear->shader_prog);
+      _mesa_meta_use_program(ctx, clear->shader_prog);
       _mesa_Uniform4fv(clear->color_location, 1, color);
       return;
    }
@@ -141,9 +142,9 @@ brw_bind_rep_write_shader(struct brw_context *brw, float *color)
                                        &clear->shader_prog);
 
    clear->color_location =
-      _mesa_GetUniformLocation(clear->shader_prog, "color");
+      _mesa_program_resource_location(clear->shader_prog, GL_UNIFORM, "color");
 
-   _mesa_UseProgram(clear->shader_prog);
+   _mesa_meta_use_program(ctx, clear->shader_prog);
    _mesa_Uniform4fv(clear->color_location, 1, color);
 }
 
@@ -160,7 +161,7 @@ brw_meta_fast_clear_free(struct brw_context *brw)
 
    _mesa_DeleteVertexArrays(1, &clear->vao);
    _mesa_reference_buffer_object(&brw->ctx, &clear->buf_obj, NULL);
-   _mesa_DeleteProgram(clear->shader_prog);
+   _mesa_reference_shader_program(&brw->ctx, &clear->shader_prog, NULL);
    free(clear);
 
    if (old_context)
