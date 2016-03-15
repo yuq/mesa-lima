@@ -224,6 +224,22 @@ static const char *qpu_cond[] = {
         [QPU_COND_CC] = ".cc",
 };
 
+static const char *qpu_cond_branch[] = {
+        [QPU_COND_BRANCH_ALL_ZS] = ".all_zs",
+        [QPU_COND_BRANCH_ALL_ZC] = ".all_zc",
+        [QPU_COND_BRANCH_ANY_ZS] = ".any_zs",
+        [QPU_COND_BRANCH_ANY_ZC] = ".any_zc",
+        [QPU_COND_BRANCH_ALL_NS] = ".all_ns",
+        [QPU_COND_BRANCH_ALL_NC] = ".all_nc",
+        [QPU_COND_BRANCH_ANY_NS] = ".any_ns",
+        [QPU_COND_BRANCH_ANY_NC] = ".any_nc",
+        [QPU_COND_BRANCH_ALL_CS] = ".all_cs",
+        [QPU_COND_BRANCH_ALL_CC] = ".all_cc",
+        [QPU_COND_BRANCH_ANY_CS] = ".any_cs",
+        [QPU_COND_BRANCH_ANY_CC] = ".any_cc",
+        [QPU_COND_BRANCH_ALWAYS] = "",
+};
+
 #define DESC(array, index)                                        \
         ((index >= ARRAY_SIZE(array) || !(array)[index]) ?         \
          "???" : (array)[index])
@@ -268,6 +284,12 @@ void
 vc4_qpu_disasm_cond(FILE *out, uint32_t cond)
 {
         fprintf(out, "%s", DESC(qpu_cond, cond));
+}
+
+void
+vc4_qpu_disasm_cond_branch(FILE *out, uint32_t cond)
+{
+        fprintf(out, "%s", DESC(qpu_cond_branch, cond));
 }
 
 static void
@@ -434,7 +456,13 @@ vc4_qpu_disasm(const uint64_t *instructions, int num_instructions)
                 switch (sig) {
                 case QPU_SIG_BRANCH:
                         fprintf(stderr, "branch");
+                        vc4_qpu_disasm_cond_branch(stderr,
+                                                   QPU_GET_FIELD(inst,
+                                                                 QPU_BRANCH_COND));
+
+                        fprintf(stderr, " %d", (uint32_t)inst);
                         break;
+
                 case QPU_SIG_LOAD_IMM:
                         print_load_imm(inst);
                         break;

@@ -143,6 +143,7 @@ uint64_t qpu_m_alu2(enum qpu_op_mul op, struct qpu_reg dst,
                     struct qpu_reg src0, struct qpu_reg src1) ATTRIBUTE_CONST;
 uint64_t qpu_merge_inst(uint64_t a, uint64_t b) ATTRIBUTE_CONST;
 uint64_t qpu_load_imm_ui(struct qpu_reg dst, uint32_t val) ATTRIBUTE_CONST;
+uint64_t qpu_branch(uint32_t cond, uint32_t target) ATTRIBUTE_CONST;
 uint64_t qpu_set_sig(uint64_t inst, uint32_t sig) ATTRIBUTE_CONST;
 uint64_t qpu_set_cond_add(uint64_t inst, uint32_t cond) ATTRIBUTE_CONST;
 uint64_t qpu_set_cond_mul(uint64_t inst, uint32_t cond) ATTRIBUTE_CONST;
@@ -237,5 +238,8 @@ vc4_qpu_validate(uint64_t *insts, uint32_t num_inst);
 
 void
 vc4_qpu_disasm_cond(FILE *out, uint32_t cond);
+
+void
+vc4_qpu_disasm_cond_branch(FILE *out, uint32_t cond);
 
 #endif /* VC4_QPU_H */

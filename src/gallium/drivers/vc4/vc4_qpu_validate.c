@@ -52,6 +52,12 @@ _reads_reg(uint64_t inst, uint32_t r, bool ignore_a, bool ignore_b)
                 { QPU_GET_FIELD(inst, QPU_MUL_B) },
         };
 
+        /* Branches only reference raddr_a (no mux), and we don't use that
+         * feature of branching.
+         */
+        if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_BRANCH)
+                return false;
+
         for (int i = 0; i < ARRAY_SIZE(src_regs); i++) {
                 if (!ignore_a &&
                     src_regs[i].mux == QPU_MUX_A &&
