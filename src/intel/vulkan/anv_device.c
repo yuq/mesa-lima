@@ -1409,7 +1409,7 @@ VkResult anv_CreateFence(
       assert(((uintptr_t) batch.start & CACHELINE_MASK) == 0);
       assert(batch.next - batch.start <= CACHELINE_SIZE);
       __builtin_ia32_mfence();
-      __builtin_ia32_clflush(fence->bo.map);
+      __builtin_ia32_clflush(batch.start);
    }
 
    fence->exec2_objects[0].handle = fence->bo.gem_handle;
