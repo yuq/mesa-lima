@@ -36,24 +36,24 @@ Feature                                                 Status
 GL 3.0, GLSL 1.30 --- all DONE: i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe
 
   glBindFragDataLocation, glGetFragDataLocation         DONE
-  Conditional rendering (GL_NV_conditional_render)      DONE ()
-  Map buffer subranges (GL_ARB_map_buffer_range)        DONE ()
-  Clamping controls (GL_ARB_color_buffer_float)         DONE ()
-  Float textures, renderbuffers (GL_ARB_texture_float)  DONE ()
+  GL_NV_conditional_render (Conditional rendering)      DONE ()
+  GL_ARB_map_buffer_range (Map buffer subranges)        DONE ()
+  GL_ARB_color_buffer_float (Clamping controls)         DONE ()
+  GL_ARB_texture_float (Float textures, renderbuffers)  DONE ()
   GL_EXT_packed_float                                   DONE ()
   GL_EXT_texture_shared_exponent                        DONE ()
-  Float depth buffers (GL_ARB_depth_buffer_float)       DONE ()
-  Framebuffer objects (GL_ARB_framebuffer_object)       DONE ()
+  GL_ARB_depth_buffer_float (Float depth buffers)       DONE ()
+  GL_ARB_framebuffer_object (Framebuffer objects)       DONE ()
   GL_ARB_half_float_pixel                               DONE (all drivers)
   GL_ARB_half_float_vertex                              DONE ()
   GL_EXT_texture_integer                                DONE ()
   GL_EXT_texture_array                                  DONE ()
-  Per-buffer blend and masks (GL_EXT_draw_buffers2)     DONE ()
+  GL_EXT_draw_buffers2 (Per-buffer blend and masks)     DONE ()
   GL_EXT_texture_compression_rgtc                       DONE ()
   GL_ARB_texture_rg                                     DONE ()
-  Transform feedback (GL_EXT_transform_feedback)        DONE ()
-  Vertex array objects (GL_ARB_vertex_array_object)     DONE ()
-  sRGB framebuffer format (GL_EXT_framebuffer_sRGB)     DONE ()
+  GL_EXT_transform_feedback (Transform feedback)        DONE ()
+  GL_ARB_vertex_array_object (Vertex array objects)     DONE ()
+  GL_EXT_framebuffer_sRGB (sRGB framebuffer format)     DONE ()
   glClearBuffer commands                                DONE
   glGetStringi command                                  DONE
   glTexParameterI, glGetTexParameterI commands          DONE
@@ -68,28 +68,28 @@ GL 3.0, GLSL 1.30 --- all DONE: i965, nv50, nvc0, r600, radeonsi, llvmpipe, soft
 GL 3.1, GLSL 1.40 --- all DONE: i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe
 
   Forward compatible context support/deprecations       DONE ()
-  Instanced drawing (GL_ARB_draw_instanced)             DONE ()
-  Buffer copying (GL_ARB_copy_buffer)                   DONE ()
-  Primitive restart (GL_NV_primitive_restart)           DONE ()
+  GL_ARB_draw_instanced (Instanced drawing)             DONE ()
+  GL_ARB_copy_buffer (Buffer copying)                   DONE ()
+  GL_NV_primitive_restart (Primitive restart)           DONE ()
   16 vertex texture image units                         DONE ()
-  Texture buffer objs (GL_ARB_texture_buffer_object)    DONE (for OpenGL 3.1 contexts)
-  Rectangular textures (GL_ARB_texture_rectangle)       DONE ()
-  Uniform buffer objs (GL_ARB_uniform_buffer_object)    DONE ()
-  Signed normalized textures (GL_EXT_texture_snorm)     DONE ()
+  GL_ARB_texture_buffer_object (Texture buffer objs)    DONE (for OpenGL 3.1 contexts)
+  GL_ARB_texture_rectangle (Rectangular textures)       DONE ()
+  GL_ARB_uniform_buffer_object (Uniform buffer objs)    DONE ()
+  GL_EXT_texture_snorm (Signed normalized textures)     DONE ()
 
 
 GL 3.2, GLSL 1.50 --- all DONE: i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe
 
   Core/compatibility profiles                           DONE
   Geometry shaders                                      DONE ()
-  BGRA vertex order (GL_ARB_vertex_array_bgra)          DONE ()
-  Base vertex offset(GL_ARB_draw_elements_base_vertex)  DONE ()
-  Frag shader coord (GL_ARB_fragment_coord_conventions) DONE ()
-  Provoking vertex (GL_ARB_provoking_vertex)            DONE ()
-  Seamless cubemaps (GL_ARB_seamless_cube_map)          DONE ()
-  Multisample textures (GL_ARB_texture_multisample)     DONE ()
-  Frag depth clamp (GL_ARB_depth_clamp)                 DONE ()
-  Fence objects (GL_ARB_sync)                           DONE ()
+  GL_ARB_vertex_array_bgra (BGRA vertex order)          DONE ()
+  GL_ARB_draw_elements_base_vertex (Base vertex offset) DONE ()
+  GL_ARB_fragment_coord_conventions (Frag shader coord) DONE ()
+  GL_ARB_provoking_vertex (Provoking vertex)            DONE ()
+  GL_ARB_seamless_cube_map (Seamless cubemaps)          DONE ()
+  GL_ARB_texture_multisample (Multisample textures)     DONE ()
+  GL_ARB_depth_clamp (Frag depth clamp)                 DONE ()
+  GL_ARB_sync (Fence objects)                           DONE ()
   GLX_ARB_create_context_profile                        DONE
 
 
@@ -237,7 +237,7 @@ GLES3.1, GLSL ES 3.1
   GL_ARB_shading_language_packing                       DONE (all drivers)
   GL_ARB_separate_shader_objects                        DONE (all drivers)
   GL_ARB_stencil_texturing                              DONE (i965/gen8+, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe)
-  Multisample textures (GL_ARB_texture_multisample)     DONE (i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe)
+  GL_ARB_texture_multisample (Multisample textures)     DONE (i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe)
   GL_ARB_texture_storage_multisample                    DONE (all drivers that support GL_ARB_texture_multisample)
   GL_ARB_vertex_attrib_binding                          DONE (all drivers)
   GS5 Enhanced textureGather                            DONE (i965, nvc0, r600, radeonsi)
