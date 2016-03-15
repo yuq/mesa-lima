@@ -98,6 +98,7 @@ struct si_shader_context
 	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef lds;
 	LLVMValueRef *constants[SI_NUM_CONST_BUFFERS];
+	LLVMValueRef shader_buffers[SI_NUM_SHADER_BUFFERS];
 	LLVMValueRef sampler_views[SI_NUM_SAMPLERS];
 	LLVMValueRef sampler_states[SI_NUM_SAMPLERS];
 	LLVMValueRef fmasks[SI_NUM_USER_SAMPLERS];
@@ -4710,6 +4711,21 @@ static void preload_constants(struct si_shader_context *ctx)
 	}
 }
 
+static void preload_shader_buffers(struct si_shader_context *ctx)
+{
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_SHADER_BUFFERS);
+	int buf, maxbuf;
+
+	maxbuf = MIN2(ctx->shader->selector->info.file_max[TGSI_FILE_BUFFER],
+		      SI_NUM_SHADER_BUFFERS - 1);
+	for (buf = 0; buf <= maxbuf; ++buf) {
+		ctx->shader_buffers[buf] =
+			build_indexed_load_const(
+				ctx, ptr, lp_build_const_int32(gallivm, buf));
+	}
+}
+
 static void preload_samplers(struct si_shader_context *ctx)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
@@ -5575,6 +5591,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	create_meta_data(&ctx);
 	create_function(&ctx);
 	preload_constants(&ctx);
+	preload_shader_buffers(&ctx);
 	preload_samplers(&ctx);
 	preload_images(&ctx);
 	preload_streamout_buffers(&ctx);
