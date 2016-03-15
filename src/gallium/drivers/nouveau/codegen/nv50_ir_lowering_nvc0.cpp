@@ -1699,7 +1699,8 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
       }
       addr += prog->driver->prop.cp.gridInfoBase;
       bld.mkLoad(TYPE_U32, i->getDef(0),
-                 bld.mkSymbol(FILE_MEMORY_CONST, 0, TYPE_U32, addr), NULL);
+                 bld.mkSymbol(FILE_MEMORY_CONST, prog->driver->io.auxCBSlot,
+                              TYPE_U32, addr), NULL);
       break;
    case SV_SAMPLE_INDEX:
       // TODO: Properly pass source as an address in the PIX address space

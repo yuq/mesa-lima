@@ -2178,7 +2178,8 @@ Converter::getResourceBase(const int r)
 
    switch (r) {
    case TGSI_RESOURCE_GLOBAL:
-      sym = new_Symbol(prog, nv50_ir::FILE_MEMORY_GLOBAL, 15);
+      sym = new_Symbol(prog, nv50_ir::FILE_MEMORY_GLOBAL,
+                       info->io.auxCBSlot);
       break;
    case TGSI_RESOURCE_LOCAL:
       assert(prog->getType() == Program::TYPE_COMPUTE);
