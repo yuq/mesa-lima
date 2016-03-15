@@ -28,7 +28,7 @@ C_SOURCES := \
 	vc4_opt_cse.c \
 	vc4_opt_dead_code.c \
 	vc4_opt_small_immediates.c \
-	vc4_opt_vpm_writes.c \
+	vc4_opt_vpm.c \
 	vc4_program.c \
 	vc4_qir.c \
 	vc4_qir_lower_uniforms.c \

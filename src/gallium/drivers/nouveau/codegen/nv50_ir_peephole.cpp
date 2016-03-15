@@ -1635,11 +1635,10 @@ AlgebraicOpt::tryADDToMADOrSAD(Instruction *add, operation toOp)
    if (src->getUniqueInsn() && src->getUniqueInsn()->bb != add->bb)
       return false;
 
-   if (src->getInsn()->saturate)
+   if (src->getInsn()->saturate || src->getInsn()->postFactor ||
+       src->getInsn()->dnz)
       return false;
 
-   if (src->getInsn()->postFactor)
-      return false;
    if (toOp == OP_SAD) {
       ImmediateValue imm;
       if (!src->getInsn()->src(2).getImmediate(imm))

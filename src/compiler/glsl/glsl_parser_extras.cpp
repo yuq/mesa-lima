@@ -575,6 +575,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(ARB_gpu_shader_fp64,              true,  false,     ARB_gpu_shader_fp64),
    EXT(ARB_sample_shading,               true,  false,     ARB_sample_shading),
    EXT(ARB_separate_shader_objects,      true,  false,     dummy_true),
+   EXT(ARB_shader_atomic_counter_ops,    true,  false,     ARB_shader_atomic_counter_ops),
    EXT(ARB_shader_atomic_counters,       true,  false,     ARB_shader_atomic_counters),
    EXT(ARB_shader_bit_encoding,          true,  false,     ARB_shader_bit_encoding),
    EXT(ARB_shader_clock,                 true,  false,     ARB_shader_clock),
@@ -926,7 +927,8 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
    block->layout.flags.i |= block_interface_qualifier;
 
    if (state->stage == MESA_SHADER_GEOMETRY &&
-       state->has_explicit_attrib_stream()) {
+       state->has_explicit_attrib_stream() &&
+       block->layout.flags.q.out) {
       /* Assign global layout's stream value. */
       block->layout.flags.q.stream = 1;
       block->layout.flags.q.explicit_stream = 0;

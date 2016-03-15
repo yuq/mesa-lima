@@ -134,7 +134,7 @@ emit_load_store(nir_builder *b, nir_intrinsic_instr *orig_instr,
       nir_intrinsic_instr *store =
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
       store->num_components = orig_instr->num_components;
-      store->const_index[0] = orig_instr->const_index[0]; /* writemask */
+      nir_intrinsic_set_write_mask(store, nir_intrinsic_write_mask(orig_instr));
       store->variables[0] =
          nir_deref_as_var(nir_copy_deref(store, &deref->deref));
       store->src[0] = nir_src_for_ssa(src);

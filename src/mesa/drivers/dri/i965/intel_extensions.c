@@ -196,6 +196,7 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.ARB_half_float_vertex = true;
    ctx->Extensions.ARB_instanced_arrays = true;
    ctx->Extensions.ARB_internalformat_query = true;
+   ctx->Extensions.ARB_internalformat_query2 = true;
    ctx->Extensions.ARB_map_buffer_range = true;
    ctx->Extensions.ARB_occlusion_query = true;
    ctx->Extensions.ARB_occlusion_query2 = true;

@@ -3811,6 +3811,7 @@ struct gl_extensions
    GLboolean ARB_indirect_parameters;
    GLboolean ARB_instanced_arrays;
    GLboolean ARB_internalformat_query;
+   GLboolean ARB_internalformat_query2;
    GLboolean ARB_map_buffer_range;
    GLboolean ARB_occlusion_query;
    GLboolean ARB_occlusion_query2;
@@ -3819,6 +3820,7 @@ struct gl_extensions
    GLboolean ARB_query_buffer_object;
    GLboolean ARB_sample_shading;
    GLboolean ARB_seamless_cube_map;
+   GLboolean ARB_shader_atomic_counter_ops;
    GLboolean ARB_shader_atomic_counters;
    GLboolean ARB_shader_bit_encoding;
    GLboolean ARB_shader_clock;

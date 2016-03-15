@@ -405,11 +405,9 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(KHR_image_pixmap);
    _EGL_CHECK_EXTENSION(KHR_reusable_sync);
    _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
-   _EGL_CHECK_EXTENSION(KHR_vg_parent_image);
    _EGL_CHECK_EXTENSION(KHR_wait_sync);
 
    _EGL_CHECK_EXTENSION(MESA_configless_context);
-   _EGL_CHECK_EXTENSION(MESA_drm_display);
    _EGL_CHECK_EXTENSION(MESA_drm_image);
    _EGL_CHECK_EXTENSION(MESA_image_dma_buf_export);
 
@@ -1198,13 +1196,6 @@ eglGetError(void)
 }
 
 
-static EGLDisplay EGLAPIENTRY
-eglGetDRMDisplayMESA(int fd)
-{
-   _EGLDisplay *dpy = _eglFindDisplay(_EGL_PLATFORM_DRM, (void *) (intptr_t) fd);
-   return _eglGetDisplayHandle(dpy);
-}
-
 /**
  ** EGL 1.2
  **/
@@ -1858,7 +1849,6 @@ eglGetProcAddress(const char *procname)
       { "eglGetPlatformDisplay", (_EGLProc) eglGetPlatformDisplay },
       { "eglCreatePlatformWindowSurface", (_EGLProc) eglCreatePlatformWindowSurface },
       { "eglCreatePlatformPixmapSurface", (_EGLProc) eglCreatePlatformPixmapSurface },
-      { "eglGetDRMDisplayMESA", (_EGLProc) eglGetDRMDisplayMESA },
       { "eglCreateImageKHR", (_EGLProc) eglCreateImageKHR },
       { "eglDestroyImageKHR", (_EGLProc) eglDestroyImage },
       { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },

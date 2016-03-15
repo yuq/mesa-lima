@@ -439,7 +439,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return PIPE_ENDIAN_LITTLE;
 
 	case PIPE_CAP_VENDOR_ID:
-		return 0x1002;
+		return ATI_VENDOR_ID;
 	case PIPE_CAP_DEVICE_ID:
 		return rscreen->b.info.pci_id;
 	case PIPE_CAP_ACCELERATED:
@@ -450,6 +450,14 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return 0;
 	case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
 		return rscreen->b.chip_class >= R700;
+	case PIPE_CAP_PCI_GROUP:
+		return rscreen->b.info.pci_domain;
+	case PIPE_CAP_PCI_BUS:
+		return rscreen->b.info.pci_bus;
+	case PIPE_CAP_PCI_DEVICE:
+		return rscreen->b.info.pci_dev;
+	case PIPE_CAP_PCI_FUNCTION:
+		return rscreen->b.info.pci_func;
 	}
 	return 0;
 }

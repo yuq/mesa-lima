@@ -650,11 +650,9 @@ _mesa_execute_program(struct gl_context * ctx,
                    program->Instructions[inst->BranchTarget].Opcode
                    == OPCODE_ENDIF);
             /* eval condition */
-            if (inst->SrcReg[0].File != PROGRAM_UNDEFINED) {
-               GLfloat a[4];
-               fetch_vector1(&inst->SrcReg[0], machine, a);
-               cond = (a[0] != 0.0F);
-            }
+            GLfloat a[4];
+            fetch_vector1(&inst->SrcReg[0], machine, a);
+            cond = (a[0] != 0.0F);
             if (DEBUG_PROG) {
                printf("IF: %d\n", cond);
             }

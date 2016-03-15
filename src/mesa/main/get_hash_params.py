@@ -126,6 +126,8 @@ descriptor=[
   [ "MAX_TEXTURE_MAX_ANISOTROPY_EXT", "CONTEXT_FLOAT(Const.MaxTextureMaxAnisotropy), extra_EXT_texture_filter_anisotropic" ],
 
 # GL_KHR_debug (GL 4.3)/ GL_ARB_debug_output
+  [ "DEBUG_OUTPUT", "LOC_CUSTOM, TYPE_BOOLEAN, 0, NO_EXTRA" ],
+  [ "DEBUG_OUTPUT_SYNCHRONOUS", "LOC_CUSTOM, TYPE_BOOLEAN, 0, NO_EXTRA" ],
   [ "DEBUG_LOGGED_MESSAGES", "LOC_CUSTOM, TYPE_INT, 0, NO_EXTRA" ],
   [ "DEBUG_NEXT_LOGGED_MESSAGE_LENGTH", "LOC_CUSTOM, TYPE_INT, 0, NO_EXTRA" ],
   [ "MAX_DEBUG_LOGGED_MESSAGES", "CONST(MAX_DEBUG_LOGGED_MESSAGES), NO_EXTRA" ],
@@ -493,9 +495,12 @@ descriptor=[
   [ "MAX_COMBINED_SHADER_STORAGE_BLOCKS", "CONTEXT_INT(Const.MaxCombinedShaderStorageBlocks), extra_ARB_shader_storage_buffer_object_es31" ],
   [ "MAX_SHADER_STORAGE_BLOCK_SIZE", "CONTEXT_INT(Const.MaxShaderStorageBlockSize), extra_ARB_shader_storage_buffer_object_es31" ],
   [ "MAX_SHADER_STORAGE_BUFFER_BINDINGS", "CONTEXT_INT(Const.MaxShaderStorageBufferBindings), extra_ARB_shader_storage_buffer_object_es31" ],
-  [ "MAX_COMBINED_SHADER_OUTPUT_RESOURCES", "CONTEXT_INT(Const.MaxCombinedShaderOutputResources), extra_ARB_shader_storage_buffer_object_es31" ],
   [ "SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT", "CONTEXT_INT(Const.ShaderStorageBufferOffsetAlignment), extra_ARB_shader_storage_buffer_object_es31" ],
   [ "SHADER_STORAGE_BUFFER_BINDING", "LOC_CUSTOM, TYPE_INT, 0, extra_ARB_shader_storage_buffer_object_es31" ],
+
+  # GL_ARB_shader_image_load_store / GL_ARB_shader_storage_buffer_object / GLES 3.1
+  # (MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS in GL_ARB_shader_image_load_store)
+  [ "MAX_COMBINED_SHADER_OUTPUT_RESOURCES", "CONTEXT_INT(Const.MaxCombinedShaderOutputResources), extra_ARB_shader_image_load_store_shader_storage_buffer_object_es31" ],
 ]},
 
 # Enums in OpenGL Core profile and ES 3.1
@@ -773,6 +778,7 @@ descriptor=[
   [ "DEPTH_CLAMP", "CONTEXT_BOOL(Transform.DepthClamp), extra_ARB_depth_clamp" ],
 
 # GL_ATI_fragment_shader
+  [ "FRAGMENT_SHADER_ATI", "CONTEXT_BOOL(ATIFragmentShader.Enabled), extra_ATI_fragment_shader" ],
   [ "NUM_FRAGMENT_REGISTERS_ATI", "CONST(6), extra_ATI_fragment_shader" ],
   [ "NUM_FRAGMENT_CONSTANTS_ATI", "CONST(8), extra_ATI_fragment_shader" ],
   [ "NUM_PASSES_ATI", "CONST(2), extra_ATI_fragment_shader" ],
@@ -838,7 +844,6 @@ descriptor=[
   [ "MAX_PROGRAM_TEXTURE_GATHER_COMPONENTS_ARB", "CONTEXT_INT(Const.MaxProgramTextureGatherComponents), extra_ARB_texture_gather"],
 
 # GL_ARB_shader_image_load_store
-  [ "MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS", "CONTEXT_INT(Const.MaxCombinedShaderOutputResources), extra_ARB_shader_image_load_store" ],
   [ "MAX_IMAGE_SAMPLES", "CONTEXT_INT(Const.MaxImageSamples), extra_ARB_shader_image_load_store" ],
 
 # GL_EXT_polygon_offset_clamp

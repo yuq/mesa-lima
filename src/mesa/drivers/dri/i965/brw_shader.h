@@ -217,7 +217,6 @@ public:
    virtual void dump_instructions(const char *name);
 
    void calculate_cfg();
-   void invalidate_cfg();
 
    virtual void invalidate_live_intervals() = 0;
 };

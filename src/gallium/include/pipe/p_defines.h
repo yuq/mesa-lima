@@ -404,9 +404,9 @@ enum pipe_flush_flags
  * The third flag has been added to be able to force textures to be created
  * in linear mode (no tiling).
  */
-#define PIPE_BIND_SCANOUT     (1 << 18) /*  */
-#define PIPE_BIND_SHARED      (1 << 19) /* get_texture_handle ??? */
-#define PIPE_BIND_LINEAR      (1 << 20)
+#define PIPE_BIND_SCANOUT     (1 << 19) /*  */
+#define PIPE_BIND_SHARED      (1 << 20) /* get_texture_handle ??? */
+#define PIPE_BIND_LINEAR      (1 << 21)
 
 
 /**
@@ -528,6 +528,25 @@ enum pipe_reset_status
    PIPE_UNKNOWN_CONTEXT_RESET = 3
 };
 
+
+/**
+ * resource_get_handle flags.
+ */
+/* Requires pipe_context::flush_resource before external use. */
+#define PIPE_HANDLE_USAGE_EXPLICIT_FLUSH  (1 << 0)
+/* Expected external use of the resource: */
+#define PIPE_HANDLE_USAGE_READ            (1 << 1)
+#define PIPE_HANDLE_USAGE_WRITE           (1 << 2)
+#define PIPE_HANDLE_USAGE_READ_WRITE      (PIPE_HANDLE_USAGE_READ | \
+                                           PIPE_HANDLE_USAGE_WRITE)
+
+/**
+ * pipe_image_view access flags.
+ */
+#define PIPE_IMAGE_ACCESS_READ       (1 << 0)
+#define PIPE_IMAGE_ACCESS_WRITE      (1 << 1)
+#define PIPE_IMAGE_ACCESS_READ_WRITE (PIPE_IMAGE_ACCESS_READ | \
+                                      PIPE_IMAGE_ACCESS_WRITE)
 
 /**
  * Implementation capabilities/limits which are queried through
@@ -658,6 +677,10 @@ enum pipe_cap
    PIPE_CAP_SURFACE_REINTERPRET_BLOCKS,
    PIPE_CAP_QUERY_BUFFER_OBJECT,
    PIPE_CAP_QUERY_MEMORY_INFO,
+   PIPE_CAP_PCI_GROUP,
+   PIPE_CAP_PCI_BUS,
+   PIPE_CAP_PCI_DEVICE,
+   PIPE_CAP_PCI_FUNCTION,
 };
 
 #define PIPE_QUIRK_TEXTURE_BORDER_COLOR_SWIZZLE_NV50 (1 << 0)

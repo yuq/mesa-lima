@@ -35,6 +35,9 @@
 #include "lp_bld.h"
 #include <llvm-c/ExecutionEngine.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct gallivm_state
 {
@@ -81,5 +84,9 @@ lp_set_load_alignment(LLVMValueRef Inst,
 void
 lp_set_store_alignment(LLVMValueRef Inst,
 		       unsigned Align);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !LP_BLD_INIT_H */

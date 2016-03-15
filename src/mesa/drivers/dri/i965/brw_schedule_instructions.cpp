@@ -1057,12 +1057,7 @@ fs_instruction_scheduler::calculate_deps()
    last_accumulator_write = NULL;
    last_fixed_grf_write = NULL;
 
-   exec_node *node;
-   exec_node *prev;
-   for (node = instructions.get_tail(), prev = node->prev;
-        !node->is_head_sentinel();
-        node = prev, prev = node->prev) {
-      schedule_node *n = (schedule_node *)node;
+   foreach_in_list_reverse_safe(schedule_node, n, &instructions) {
       fs_inst *inst = (fs_inst *)n->inst;
 
       /* write-after-read deps. */
@@ -1284,12 +1279,7 @@ vec4_instruction_scheduler::calculate_deps()
    last_accumulator_write = NULL;
    last_fixed_grf_write = NULL;
 
-   exec_node *node;
-   exec_node *prev;
-   for (node = instructions.get_tail(), prev = node->prev;
-        !node->is_head_sentinel();
-        node = prev, prev = node->prev) {
-      schedule_node *n = (schedule_node *)node;
+   foreach_in_list_reverse_safe(schedule_node, n, &instructions) {
       vec4_instruction *inst = (vec4_instruction *)n->inst;
 
       /* write-after-read deps. */

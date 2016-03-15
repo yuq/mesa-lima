@@ -120,8 +120,6 @@ struct si_blend_color {
 struct si_sampler_view {
 	struct pipe_sampler_view	base;
 	struct list_head		list;
-	struct r600_resource		*resource;
-	struct r600_resource		*dcc_buffer;
         /* [0..7] = image descriptor
          * [4..7] = buffer descriptor */
 	uint32_t			state[8];
@@ -197,6 +195,7 @@ struct si_context {
 	void				*custom_blend_resolve;
 	void				*custom_blend_decompress;
 	void				*custom_blend_fastclear;
+	void				*custom_blend_dcc_decompress;
 	void				*pstipple_sampler_state;
 	struct si_screen		*screen;
 	struct pipe_fence_handle	*last_gfx_fence;
@@ -334,10 +333,7 @@ void cik_sdma_copy(struct pipe_context *ctx,
 
 /* si_blit.c */
 void si_init_blit_functions(struct si_context *sctx);
-void si_flush_depth_textures(struct si_context *sctx,
-			     struct si_textures_info *textures);
-void si_decompress_color_textures(struct si_context *sctx,
-				  struct si_textures_info *textures);
+void si_decompress_textures(struct si_context *sctx);
 void si_resource_copy_region(struct pipe_context *ctx,
 			     struct pipe_resource *dst,
 			     unsigned dst_level,

@@ -390,14 +390,8 @@ static unsigned eg_tile_split_rev(unsigned eg_tile_split)
    }
 }
 
-static void amdgpu_bo_get_tiling(struct pb_buffer *_buf,
-                                 enum radeon_bo_layout *microtiled,
-                                 enum radeon_bo_layout *macrotiled,
-                                 unsigned *bankw, unsigned *bankh,
-                                 unsigned *tile_split,
-                                 unsigned *stencil_tile_split,
-                                 unsigned *mtilea,
-                                 bool *scanout)
+static void amdgpu_buffer_get_metadata(struct pb_buffer *_buf,
+                                       struct radeon_bo_metadata *md)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
    struct amdgpu_bo_info info = {0};
@@ -410,61 +404,54 @@ static void amdgpu_bo_get_tiling(struct pb_buffer *_buf,
 
    tiling_flags = info.metadata.tiling_info;
 
-   *microtiled = RADEON_LAYOUT_LINEAR;
-   *macrotiled = RADEON_LAYOUT_LINEAR;
+   md->microtile = RADEON_LAYOUT_LINEAR;
+   md->macrotile = RADEON_LAYOUT_LINEAR;
 
    if (AMDGPU_TILING_GET(tiling_flags, ARRAY_MODE) == 4)  /* 2D_TILED_THIN1 */
-      *macrotiled = RADEON_LAYOUT_TILED;
+      md->macrotile = RADEON_LAYOUT_TILED;
    else if (AMDGPU_TILING_GET(tiling_flags, ARRAY_MODE) == 2) /* 1D_TILED_THIN1 */
-      *microtiled = RADEON_LAYOUT_TILED;
+      md->microtile = RADEON_LAYOUT_TILED;
 
-   if (bankw && tile_split && mtilea && tile_split) {
-      *bankw = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_WIDTH);
-      *bankh = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_HEIGHT);
-      *tile_split = eg_tile_split(AMDGPU_TILING_GET(tiling_flags, TILE_SPLIT));
-      *mtilea = 1 << AMDGPU_TILING_GET(tiling_flags, MACRO_TILE_ASPECT);
-   }
-   if (scanout)
-      *scanout = AMDGPU_TILING_GET(tiling_flags, MICRO_TILE_MODE) == 0; /* DISPLAY */
+   md->bankw = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_WIDTH);
+   md->bankh = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_HEIGHT);
+   md->tile_split = eg_tile_split(AMDGPU_TILING_GET(tiling_flags, TILE_SPLIT));
+   md->mtilea = 1 << AMDGPU_TILING_GET(tiling_flags, MACRO_TILE_ASPECT);
+   md->scanout = AMDGPU_TILING_GET(tiling_flags, MICRO_TILE_MODE) == 0; /* DISPLAY */
+
+   md->size_metadata = info.metadata.size_metadata;
+   memcpy(md->metadata, info.metadata.umd_metadata, sizeof(md->metadata));
 }
 
-static void amdgpu_bo_set_tiling(struct pb_buffer *_buf,
-                                 struct radeon_winsys_cs *rcs,
-                                 enum radeon_bo_layout microtiled,
-                                 enum radeon_bo_layout macrotiled,
-                                 unsigned pipe_config,
-                                 unsigned bankw, unsigned bankh,
-                                 unsigned tile_split,
-                                 unsigned stencil_tile_split,
-                                 unsigned mtilea, unsigned num_banks,
-                                 uint32_t pitch,
-                                 bool scanout)
+static void amdgpu_buffer_set_metadata(struct pb_buffer *_buf,
+                                       struct radeon_bo_metadata *md)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
    struct amdgpu_bo_metadata metadata = {0};
    uint32_t tiling_flags = 0;
 
-   if (macrotiled == RADEON_LAYOUT_TILED)
+   if (md->macrotile == RADEON_LAYOUT_TILED)
       tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 4); /* 2D_TILED_THIN1 */
-   else if (microtiled == RADEON_LAYOUT_TILED)
+   else if (md->microtile == RADEON_LAYOUT_TILED)
       tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 2); /* 1D_TILED_THIN1 */
    else
       tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 1); /* LINEAR_ALIGNED */
 
-   tiling_flags |= AMDGPU_TILING_SET(PIPE_CONFIG, pipe_config);
-   tiling_flags |= AMDGPU_TILING_SET(BANK_WIDTH, util_logbase2(bankw));
-   tiling_flags |= AMDGPU_TILING_SET(BANK_HEIGHT, util_logbase2(bankh));
-   if (tile_split)
-      tiling_flags |= AMDGPU_TILING_SET(TILE_SPLIT, eg_tile_split_rev(tile_split));
-   tiling_flags |= AMDGPU_TILING_SET(MACRO_TILE_ASPECT, util_logbase2(mtilea));
-   tiling_flags |= AMDGPU_TILING_SET(NUM_BANKS, util_logbase2(num_banks)-1);
+   tiling_flags |= AMDGPU_TILING_SET(PIPE_CONFIG, md->pipe_config);
+   tiling_flags |= AMDGPU_TILING_SET(BANK_WIDTH, util_logbase2(md->bankw));
+   tiling_flags |= AMDGPU_TILING_SET(BANK_HEIGHT, util_logbase2(md->bankh));
+   if (md->tile_split)
+      tiling_flags |= AMDGPU_TILING_SET(TILE_SPLIT, eg_tile_split_rev(md->tile_split));
+   tiling_flags |= AMDGPU_TILING_SET(MACRO_TILE_ASPECT, util_logbase2(md->mtilea));
+   tiling_flags |= AMDGPU_TILING_SET(NUM_BANKS, util_logbase2(md->num_banks)-1);
 
-   if (scanout)
+   if (md->scanout)
       tiling_flags |= AMDGPU_TILING_SET(MICRO_TILE_MODE, 0); /* DISPLAY_MICRO_TILING */
    else
       tiling_flags |= AMDGPU_TILING_SET(MICRO_TILE_MODE, 1); /* THIN_MICRO_TILING */
 
    metadata.tiling_info = tiling_flags;
+   metadata.size_metadata = md->size_metadata;
+   memcpy(metadata.umd_metadata, md->metadata, sizeof(md->metadata));
 
    amdgpu_bo_set_metadata(bo->bo, &metadata);
 }
@@ -720,8 +707,8 @@ static uint64_t amdgpu_bo_get_va(struct pb_buffer *buf)
 
 void amdgpu_bo_init_functions(struct amdgpu_winsys *ws)
 {
-   ws->base.buffer_set_tiling = amdgpu_bo_set_tiling;
-   ws->base.buffer_get_tiling = amdgpu_bo_get_tiling;
+   ws->base.buffer_set_metadata = amdgpu_buffer_set_metadata;
+   ws->base.buffer_get_metadata = amdgpu_buffer_get_metadata;
    ws->base.buffer_map = amdgpu_bo_map;
    ws->base.buffer_unmap = amdgpu_bo_unmap;
    ws->base.buffer_wait = amdgpu_bo_wait;

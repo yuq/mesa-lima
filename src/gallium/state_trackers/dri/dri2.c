@@ -354,7 +354,8 @@ dri2_allocate_buffer(__DRIscreen *sPriv,
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
 
    screen->base.screen->resource_get_handle(screen->base.screen,
-         buffer->resource, &whandle);
+         buffer->resource, &whandle,
+         PIPE_HANDLE_USAGE_EXPLICIT_FLUSH | PIPE_HANDLE_USAGE_READ);
 
    buffer->base.attachment = attachment;
    buffer->base.name = whandle.handle;
@@ -539,7 +540,8 @@ dri2_allocate_textures(struct dri_context *ctx,
             whandle.type = DRM_API_HANDLE_TYPE_KMS;
          drawable->textures[statt] =
             screen->base.screen->resource_from_handle(screen->base.screen,
-                  &templ, &whandle);
+                  &templ, &whandle,
+                  PIPE_HANDLE_USAGE_EXPLICIT_FLUSH | PIPE_HANDLE_USAGE_READ);
          assert(drawable->textures[statt]);
       }
    }
@@ -756,7 +758,7 @@ dri2_create_image_from_winsys(__DRIscreen *_screen,
    whandle->stride = pitch * util_format_get_blocksize(pf);
 
    img->texture = screen->base.screen->resource_from_handle(screen->base.screen,
-         &templ, whandle);
+         &templ, whandle, PIPE_HANDLE_USAGE_READ_WRITE);
    if (!img->texture) {
       FREE(img);
       return NULL;
@@ -765,6 +767,7 @@ dri2_create_image_from_winsys(__DRIscreen *_screen,
    img->level = 0;
    img->layer = 0;
    img->dri_format = format;
+   img->use = 0;
    img->loader_private = loaderPrivate;
 
    return img;
@@ -884,6 +887,7 @@ dri2_create_image(__DRIscreen *_screen,
    img->layer = 0;
    img->dri_format = format;
    img->dri_components = 0;
+   img->use = use;
 
    img->loader_private = loaderPrivate;
    return img;
@@ -893,31 +897,38 @@ static GLboolean
 dri2_query_image(__DRIimage *image, int attrib, int *value)
 {
    struct winsys_handle whandle;
+   unsigned usage;
+
+   if (image->use & __DRI_IMAGE_USE_BACKBUFFER)
+      usage = PIPE_HANDLE_USAGE_EXPLICIT_FLUSH | PIPE_HANDLE_USAGE_READ;
+   else
+      usage = PIPE_HANDLE_USAGE_READ_WRITE;
+
    memset(&whandle, 0, sizeof(whandle));
 
    switch (attrib) {
    case __DRI_IMAGE_ATTRIB_STRIDE:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
       image->texture->screen->resource_get_handle(image->texture->screen,
-            image->texture, &whandle);
+            image->texture, &whandle, usage);
       *value = whandle.stride;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_HANDLE:
       whandle.type = DRM_API_HANDLE_TYPE_KMS;
       image->texture->screen->resource_get_handle(image->texture->screen,
-         image->texture, &whandle);
+         image->texture, &whandle, usage);
       *value = whandle.handle;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_NAME:
       whandle.type = DRM_API_HANDLE_TYPE_SHARED;
       image->texture->screen->resource_get_handle(image->texture->screen,
-         image->texture, &whandle);
+         image->texture, &whandle, usage);
       *value = whandle.handle;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_FD:
       whandle.type= DRM_API_HANDLE_TYPE_FD;
       image->texture->screen->resource_get_handle(image->texture->screen,
-         image->texture, &whandle);
+         image->texture, &whandle, usage);
       *value = whandle.handle;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_FORMAT:

@@ -360,6 +360,10 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_STRING_MARKER:
    case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
    case PIPE_CAP_QUERY_MEMORY_INFO:
+   case PIPE_CAP_PCI_GROUP:
+   case PIPE_CAP_PCI_BUS:
+   case PIPE_CAP_PCI_DEVICE:
+   case PIPE_CAP_PCI_FUNCTION:
       return 0;
    case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:
       return 64;
@@ -827,6 +831,12 @@ svga_get_driver_query_info(struct pipe_screen *screen,
             PIPE_DRIVER_QUERY_TYPE_UINT64),
       QUERY("num-bytes-uploaded", SVGA_QUERY_NUM_BYTES_UPLOADED,
             PIPE_DRIVER_QUERY_TYPE_BYTES),
+      QUERY("command-buffer-size", SVGA_QUERY_COMMAND_BUFFER_SIZE,
+            PIPE_DRIVER_QUERY_TYPE_BYTES),
+      QUERY("flush-time", SVGA_QUERY_FLUSH_TIME,
+            PIPE_DRIVER_QUERY_TYPE_MICROSECONDS),
+      QUERY("surface-write-flushes", SVGA_QUERY_SURFACE_WRITE_FLUSHES,
+            PIPE_DRIVER_QUERY_TYPE_UINT64),
 
       /* running total counters */
       QUERY("memory-used", SVGA_QUERY_MEMORY_USED,

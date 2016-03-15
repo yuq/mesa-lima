@@ -274,13 +274,6 @@ public:
    void emit_shader_time_end();
    void emit_shader_time_write(int shader_time_subindex, src_reg value);
 
-   void emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
-                            dst_reg dst, src_reg offset, src_reg src0,
-                            src_reg src1);
-
-   void emit_untyped_surface_read(unsigned surf_index, dst_reg dst,
-                                  src_reg offset);
-
    src_reg get_scratch_offset(bblock_t *block, vec4_instruction *inst,
 			      src_reg *reladdr, int reg_offset);
    void emit_scratch_read(bblock_t *block, vec4_instruction *inst,
@@ -366,6 +359,10 @@ protected:
    virtual void gs_end_primitive();
 
 private:
+   bool vectorize_mov(bblock_t *block, vec4_instruction *inst,
+                      uint8_t imm[4], vec4_instruction *imm_inst[4],
+                      int inst_count, unsigned writemask);
+
    /**
     * If true, then register allocation should fail instead of spilling.
     */

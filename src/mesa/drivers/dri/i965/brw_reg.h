@@ -81,7 +81,9 @@ struct brw_device_info;
 #define BRW_SWIZZLE_ZZZZ      BRW_SWIZZLE4(2,2,2,2)
 #define BRW_SWIZZLE_WWWW      BRW_SWIZZLE4(3,3,3,3)
 #define BRW_SWIZZLE_XYXY      BRW_SWIZZLE4(0,1,0,1)
+#define BRW_SWIZZLE_XZXZ      BRW_SWIZZLE4(0,2,0,2)
 #define BRW_SWIZZLE_YZXW      BRW_SWIZZLE4(1,2,0,3)
+#define BRW_SWIZZLE_YWYW      BRW_SWIZZLE4(1,3,1,3)
 #define BRW_SWIZZLE_ZXYW      BRW_SWIZZLE4(2,0,1,3)
 #define BRW_SWIZZLE_ZWZW      BRW_SWIZZLE4(2,3,2,3)
 #define BRW_SWIZZLE_WZYX      BRW_SWIZZLE4(3,2,1,0)
@@ -221,6 +223,7 @@ enum PACKED brw_reg_type {
 unsigned brw_reg_type_to_hw_type(const struct brw_device_info *devinfo,
                                  enum brw_reg_type type, enum brw_reg_file file);
 const char *brw_reg_type_letters(unsigned brw_reg_type);
+uint32_t brw_swizzle_immediate(enum brw_reg_type type, uint32_t x, unsigned swz);
 
 #define REG_SIZE (8*4)
 
@@ -737,6 +740,22 @@ brw_notification_reg(void)
 }
 
 static inline struct brw_reg
+brw_sr0_reg(void)
+{
+   return brw_reg(BRW_ARCHITECTURE_REGISTER_FILE,
+                  BRW_ARF_STATE,
+                  0,
+                  0,
+                  0,
+                  BRW_REGISTER_TYPE_UD,
+                  BRW_VERTICAL_STRIDE_8,
+                  BRW_WIDTH_8,
+                  BRW_HORIZONTAL_STRIDE_1,
+                  BRW_SWIZZLE_XYZW,
+                  WRITEMASK_XYZW);
+}
+
+static inline struct brw_reg
 brw_acc_reg(unsigned width)
 {
    return brw_vecn_reg(width, BRW_ARCHITECTURE_REGISTER_FILE,
@@ -871,22 +890,15 @@ get_element_d(struct brw_reg reg, unsigned elt)
    return vec1(suboffset(retype(reg, BRW_REGISTER_TYPE_D), elt));
 }
 
-
 static inline struct brw_reg
-brw_swizzle(struct brw_reg reg, unsigned x, unsigned y, unsigned z, unsigned w)
+brw_swizzle(struct brw_reg reg, unsigned swz)
 {
-   assert(reg.file != BRW_IMMEDIATE_VALUE);
+   if (reg.file == BRW_IMMEDIATE_VALUE)
+      reg.ud = brw_swizzle_immediate(reg.type, reg.ud, swz);
+   else
+      reg.swizzle = brw_compose_swizzle(swz, reg.swizzle);
 
-   reg.swizzle = brw_compose_swizzle(BRW_SWIZZLE4(x, y, z, w),
-                                              reg.swizzle);
    return reg;
-}
-
-
-static inline struct brw_reg
-brw_swizzle1(struct brw_reg reg, unsigned x)
-{
-   return brw_swizzle(reg, x, x, x, x);
 }
 
 static inline struct brw_reg

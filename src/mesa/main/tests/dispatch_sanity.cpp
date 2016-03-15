@@ -857,6 +857,9 @@ const struct function common_desktop_functions_possible[] = {
    /* GL_ARB_internalformat_query */
    { "glGetInternalformativ", 30, -1 },
 
+   /* GL_ARB_internalformat_query */
+   { "glGetInternalformati64v", 30, -1 },
+
    /* GL_ARB_multi_bind */
    { "glBindBuffersBase", 44, -1 },
    { "glBindBuffersRange", 44, -1 },
@@ -2355,6 +2358,7 @@ const struct function gles3_functions_possible[] = {
    { "glGetInteger64v", 30, -1 },
    { "glGetIntegeri_v", 30, -1 },
    { "glGetInternalformativ", 30, -1 },
+   { "glGetInternalformati64v", 30, -1 },
    // glGetProgramBinary aliases glGetProgramBinaryOES in GLES 2
    { "glGetQueryiv", 30, -1 },
    { "glGetQueryObjectuiv", 30, -1 },

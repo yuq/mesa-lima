@@ -29,11 +29,11 @@
 #ifndef PIPE_FORMAT_H
 #define PIPE_FORMAT_H
 
+#include "p_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "p_config.h"
 
 /**
  * Formats for textures, surfaces and vertex data

@@ -1273,15 +1273,41 @@ CodeEmitterGK110::emitBAR(const Instruction *i)
    case NV50_IR_SUBOP_BAR_RED_OR:   code[1] |= 0x90; break;
    case NV50_IR_SUBOP_BAR_RED_POPC: code[1] |= 0x10; break;
    default:
-      code[1] |= 0x20;
       assert(i->subOp == NV50_IR_SUBOP_BAR_SYNC);
       break;
    }
 
    emitPredicate(i);
 
-   srcId(i->src(0), 10);
-   srcId(i->src(1), 23);
+   // barrier id
+   if (i->src(0).getFile() == FILE_GPR) {
+      srcId(i->src(0), 10);
+   } else {
+      ImmediateValue *imm = i->getSrc(0)->asImm();
+      assert(imm);
+      code[0] |= imm->reg.data.u32 << 10;
+      code[1] |= 0x8000;
+   }
+
+   // thread count
+   if (i->src(1).getFile() == FILE_GPR) {
+      srcId(i->src(1), 23);
+   } else {
+      ImmediateValue *imm = i->getSrc(0)->asImm();
+      assert(imm);
+      assert(imm->reg.data.u32 <= 0xfff);
+      code[0] |= imm->reg.data.u32 << 23;
+      code[1] |= imm->reg.data.u32 >> 9;
+      code[1] |= 0x4000;
+   }
+
+   if (i->srcExists(2) && (i->predSrc != 2)) {
+      srcId(i->src(2), 32 + 10);
+      if (i->src(2).mod == Modifier(NV50_IR_MOD_NOT))
+         code[1] |= 1 << 13;
+   } else {
+      code[1] |= 7 << 10;
+   }
 }
 
 void CodeEmitterGK110::emitMEMBAR(const Instruction *i)
@@ -1386,7 +1412,7 @@ CodeEmitterGK110::emitVOTE(const Instruction *i)
    defId(i->def(0), 2);
    defId(i->def(1), 48);
    if (i->src(0).mod == Modifier(NV50_IR_MOD_NOT))
-      code[0] |= 1 << 45;
+      code[1] |= 1 << 13;
    srcId(i->src(0), 42);
 }
 

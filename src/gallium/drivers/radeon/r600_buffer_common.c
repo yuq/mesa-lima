@@ -213,6 +213,10 @@ static bool
 r600_invalidate_buffer(struct r600_common_context *rctx,
 		       struct r600_resource *rbuffer)
 {
+	/* Shared buffers can't be reallocated. */
+	if (rbuffer->is_shared)
+		return false;
+
 	/* In AMD_pinned_memory, the user pointer association only gets
 	 * broken when the buffer is explicitly re-allocated.
 	 */
@@ -294,6 +298,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	 * in which case it can be mapped unsynchronized. */
 	if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED) &&
 	    usage & PIPE_TRANSFER_WRITE &&
+	    !rbuffer->is_shared &&
 	    !util_ranges_intersect(&rbuffer->valid_buffer_range, box->x, box->x + box->width)) {
 		usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
 	}
@@ -311,12 +316,17 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		if (r600_invalidate_buffer(rctx, rbuffer)) {
 			/* At this point, the buffer is always idle. */
 			usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
+		} else {
+			/* Fall back to a temporary buffer. */
+			usage |= PIPE_TRANSFER_DISCARD_RANGE;
 		}
 	}
-	else if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
-		 !(usage & PIPE_TRANSFER_UNSYNCHRONIZED) &&
-		 !(rscreen->debug_flags & DBG_NO_DISCARD_RANGE) &&
-		 r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) {
+
+	if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
+	    !(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
+		       PIPE_TRANSFER_PERSISTENT)) &&
+	    !(rscreen->debug_flags & DBG_NO_DISCARD_RANGE) &&
+	    r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) {
 		assert(usage & PIPE_TRANSFER_WRITE);
 
 		/* Check if mapping this buffer would cause waiting for the GPU. */
@@ -341,7 +351,8 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	}
 	/* Using a staging buffer in GTT for larger reads is much faster. */
 	else if ((usage & PIPE_TRANSFER_READ) &&
-		 !(usage & PIPE_TRANSFER_WRITE) &&
+		 !(usage & (PIPE_TRANSFER_WRITE |
+			    PIPE_TRANSFER_PERSISTENT)) &&
 		 rbuffer->domains == RADEON_DOMAIN_VRAM &&
 		 r600_can_dma_copy_buffer(rctx, 0, box->x, box->width)) {
 		struct r600_resource *staging;
@@ -453,6 +464,7 @@ r600_alloc_buffer_struct(struct pipe_screen *screen,
 	rbuffer->b.vtbl = &r600_buffer_vtbl;
 	rbuffer->buf = NULL;
 	rbuffer->TC_L2_dirty = false;
+	rbuffer->is_shared = false;
 	util_range_init(&rbuffer->valid_buffer_range);
 	return rbuffer;
 }

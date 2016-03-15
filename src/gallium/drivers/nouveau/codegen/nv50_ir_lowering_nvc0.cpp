@@ -1778,22 +1778,21 @@ NVC0LoweringPass::handleMOD(Instruction *i)
 bool
 NVC0LoweringPass::handleSQRT(Instruction *i)
 {
-   Value *pred = bld.getSSA(1, FILE_PREDICATE);
-   Value *zero = bld.getSSA();
-   Instruction *rsq;
-
-   bld.mkOp1(OP_MOV, TYPE_U32, zero, bld.mkImm(0));
-   if (i->dType == TYPE_F64)
-      zero = bld.mkOp2v(OP_MERGE, TYPE_U64, bld.getSSA(8), zero, zero);
-   bld.mkCmp(OP_SET, CC_LE, i->dType, pred, i->dType, i->getSrc(0), zero);
-   bld.mkOp1(OP_MOV, i->dType, i->getDef(0), zero)->setPredicate(CC_P, pred);
-   rsq = bld.mkOp1(OP_RSQ, i->dType,
-                   bld.getSSA(typeSizeof(i->dType)), i->getSrc(0));
-   rsq->setPredicate(CC_NOT_P, pred);
-   i->op = OP_MUL;
-   i->setSrc(1, rsq->getDef(0));
-   i->setPredicate(CC_NOT_P, pred);
-
+   if (i->dType == TYPE_F64) {
+      Value *pred = bld.getSSA(1, FILE_PREDICATE);
+      Value *zero = bld.loadImm(NULL, 0.0d);
+      Value *dst = bld.getSSA(8);
+      bld.mkOp1(OP_RSQ, i->dType, dst, i->getSrc(0));
+      bld.mkCmp(OP_SET, CC_LE, i->dType, pred, i->dType, i->getSrc(0), zero);
+      bld.mkOp3(OP_SELP, TYPE_U64, dst, zero, dst, pred);
+      i->op = OP_MUL;
+      i->setSrc(1, dst);
+      // TODO: Handle this properly with a library function
+   } else {
+      bld.setPosition(i, true);
+      i->op = OP_RSQ;
+      bld.mkOp1(OP_RCP, i->dType, i->getDef(0), i->getDef(0));
+   }
 
    return true;
 }

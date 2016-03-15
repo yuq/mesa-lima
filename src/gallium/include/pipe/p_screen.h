@@ -182,10 +182,13 @@ struct pipe_screen {
     * NOTE: in the case of DRM_API_HANDLE_TYPE_FD handles, the caller
     * retains ownership of the FD.  (This is consistent with
     * EGL_EXT_image_dma_buf_import)
+    *
+    * \param usage  A combination of PIPE_HANDLE_USAGE_* flags.
     */
    struct pipe_resource * (*resource_from_handle)(struct pipe_screen *,
 						  const struct pipe_resource *templat,
-						  struct winsys_handle *handle);
+						  struct winsys_handle *handle,
+						  unsigned usage);
 
    /**
     * Create a resource from user memory. This maps the user memory into
@@ -203,10 +206,13 @@ struct pipe_screen {
     * NOTE: in the case of DRM_API_HANDLE_TYPE_FD handles, the caller
     * takes ownership of the FD.  (This is consistent with
     * EGL_MESA_image_dma_buf_export)
+    *
+    * \param usage  A combination of PIPE_HANDLE_USAGE_* flags.
     */
    boolean (*resource_get_handle)(struct pipe_screen *,
 				  struct pipe_resource *tex,
-				  struct winsys_handle *handle);
+				  struct winsys_handle *handle,
+				  unsigned usage);
 
 
    void (*resource_destroy)(struct pipe_screen *,

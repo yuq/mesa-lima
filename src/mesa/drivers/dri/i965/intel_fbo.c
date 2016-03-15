@@ -289,7 +289,7 @@ intel_alloc_private_renderbuffer_storage(struct gl_context * ctx, struct gl_rend
    rb->NumSamples = intel_quantize_num_samples(screen, rb->NumSamples);
    rb->Width = width;
    rb->Height = height;
-   rb->_BaseFormat = _mesa_base_fbo_format(ctx, internalFormat);
+   rb->_BaseFormat = _mesa_get_format_base_format(rb->Format);
 
    intel_miptree_release(&irb->mt);
 

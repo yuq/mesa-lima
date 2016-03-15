@@ -381,6 +381,14 @@ print_var(nir_variable *var, print_state *state)
 }
 
 static void
+print_arg(nir_variable *var, print_state *state)
+{
+   FILE *fp = state->fp;
+   glsl_print_type(var->type, fp);
+   fprintf(fp, " %s", get_var_name(var, state));
+}
+
+static void
 print_deref_var(nir_deref_var *deref, print_state *state)
 {
    print_var(deref->var, state);
@@ -942,14 +950,14 @@ print_function_impl(nir_function_impl *impl, print_state *state)
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_var(impl->params[i], state);
+      print_arg(impl->params[i], state);
    }
 
    if (impl->return_var != NULL) {
       if (impl->num_params != 0)
          fprintf(fp, ", ");
       fprintf(fp, "returning ");
-      print_var(impl->return_var, state);
+      print_arg(impl->return_var, state);
    }
 
    fprintf(fp, "{\n");

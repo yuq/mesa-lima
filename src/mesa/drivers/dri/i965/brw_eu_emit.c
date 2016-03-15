@@ -3402,7 +3402,7 @@ brw_broadcast(struct brw_codegen *p,
           */
          inst = brw_MOV(p,
                         brw_null_reg(),
-                        stride(brw_swizzle1(idx, 0), 0, 4, 1));
+                        stride(brw_swizzle(idx, BRW_SWIZZLE_XXXX), 0, 4, 1));
          brw_inst_set_pred_control(devinfo, inst, BRW_PREDICATE_NONE);
          brw_inst_set_cond_modifier(devinfo, inst, BRW_CONDITIONAL_NZ);
          brw_inst_set_flag_reg_nr(devinfo, inst, 1);

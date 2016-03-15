@@ -68,7 +68,7 @@ OPENCL_VERSION=1
 AC_SUBST([OPENCL_VERSION])
 
 dnl Versions for external dependencies
-LIBDRM_REQUIRED=2.4.60
+LIBDRM_REQUIRED=2.4.66
 LIBDRM_RADEON_REQUIRED=2.4.56
 LIBDRM_AMDGPU_REQUIRED=2.4.63
 LIBDRM_INTEL_REQUIRED=2.4.61
@@ -1737,6 +1737,7 @@ AM_CONDITIONAL(HAVE_ST_XVMC, test "x$enable_xvmc" = xyes)
 if test "x$enable_vdpau" = xyes; then
     PKG_CHECK_MODULES([VDPAU], [vdpau >= $VDPAU_REQUIRED])
     gallium_st="$gallium_st vdpau"
+    DEFINES="$DEFINES -DHAVE_ST_VDPAU"
 fi
 AM_CONDITIONAL(HAVE_ST_VDPAU, test "x$enable_vdpau" = xyes)
 
@@ -2193,6 +2194,16 @@ radeon_llvm_check() {
     fi
 }
 
+swr_llvm_check() {
+    gallium_require_llvm $1
+    if test ${LLVM_VERSION_INT} -lt 306; then
+        AC_MSG_ERROR([LLVM version 3.6 or later required when building $1])
+    fi
+    if test "x$enable_gallium_llvm" != "xyes"; then
+        AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
+    fi
+}
+
 dnl Duplicates in GALLIUM_DRIVERS_DIRS are removed by sorting it after this block
 if test -n "$with_gallium_drivers"; then
     gallium_drivers=`IFS=', '; echo $with_gallium_drivers`
@@ -2264,6 +2275,30 @@ if test -n "$with_gallium_drivers"; then
             if test "x$MESA_LLVM" = x1; then
                 HAVE_GALLIUM_LLVMPIPE=yes
             fi
+            ;;
+        xswr)
+            AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
+            swr_llvm_check "swr"
+
+            AC_MSG_CHECKING([whether $CXX supports AVX/AVX2])
+            AVX_CXXFLAGS="-march=core-avx-i"
+            AVX2_CXXFLAGS="-march=core-avx2"
+
+            AC_LANG_PUSH([C++])
+            save_CXXFLAGS="$CXXFLAGS"
+            CXXFLAGS="$AVX_CXXFLAGS $CXXFLAGS"
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[],
+                              [AC_MSG_ERROR([AVX compiler support not detected])])
+            CXXFLAGS="$save_CXXFLAGS"
+
+            save_CFLAGS="$CXXFLAGS"
+            CXXFLAGS="$AVX2_CXXFLAGS $CXXFLAGS"
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[],
+                              [AC_MSG_ERROR([AVX2 compiler support not detected])])
+            CXXFLAGS="$save_CXXFLAGS"
+            AC_LANG_POP([C++])
+
+            HAVE_GALLIUM_SWR=yes
             ;;
         xvc4)
             HAVE_GALLIUM_VC4=yes
@@ -2354,6 +2389,7 @@ AM_CONDITIONAL(HAVE_GALLIUM_NOUVEAU, test "x$HAVE_GALLIUM_NOUVEAU" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_FREEDRENO, test "x$HAVE_GALLIUM_FREEDRENO" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_SOFTPIPE, test "x$HAVE_GALLIUM_SOFTPIPE" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_LLVMPIPE, test "x$HAVE_GALLIUM_LLVMPIPE" = xyes)
+AM_CONDITIONAL(HAVE_GALLIUM_SWR, test "x$HAVE_GALLIUM_SWR" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_VC4, test "x$HAVE_GALLIUM_VC4" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_VIRGL, test "x$HAVE_GALLIUM_VIRGL" = xyes)
 
@@ -2470,6 +2506,9 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/drivers/rbug/Makefile
 		src/gallium/drivers/softpipe/Makefile
 		src/gallium/drivers/svga/Makefile
+		src/gallium/drivers/swr/Makefile
+		src/gallium/drivers/swr/avx/Makefile
+		src/gallium/drivers/swr/avx2/Makefile
 		src/gallium/drivers/trace/Makefile
 		src/gallium/drivers/vc4/Makefile
 		src/gallium/drivers/virgl/Makefile

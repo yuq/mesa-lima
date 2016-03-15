@@ -309,7 +309,6 @@ nvc0_tfb_validate(struct nvc0_context *nvc0)
 
    if (!(nvc0->dirty_3d & NVC0_NEW_3D_TFB_TARGETS))
       return;
-   nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TFB);
 
    for (b = 0; b < nvc0->num_tfbbufs; ++b) {
       struct nvc0_so_target *targ = nvc0_so_target(nvc0->tfbbuf[b]);

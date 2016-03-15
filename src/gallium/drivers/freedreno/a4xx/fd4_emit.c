@@ -328,7 +328,7 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 	int32_t i, j, last = -1;
 	uint32_t total_in = 0;
 	const struct fd_vertex_state *vtx = emit->vtx;
-	struct ir3_shader_variant *vp = fd4_emit_get_vp(emit);
+	const struct ir3_shader_variant *vp = fd4_emit_get_vp(emit);
 	unsigned vertex_regid = regid(63, 0);
 	unsigned instance_regid = regid(63, 0);
 	unsigned vtxcnt_regid = regid(63, 0);
@@ -460,8 +460,8 @@ void
 fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct fd4_emit *emit)
 {
-	struct ir3_shader_variant *vp = fd4_emit_get_vp(emit);
-	struct ir3_shader_variant *fp = fd4_emit_get_fp(emit);
+	const struct ir3_shader_variant *vp = fd4_emit_get_vp(emit);
+	const struct ir3_shader_variant *fp = fd4_emit_get_fp(emit);
 	uint32_t dirty = emit->dirty;
 
 	emit_marker(ring, 5);
@@ -483,19 +483,6 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A4XX_RB_RENDER_COMPONENTS_RT5(mrt_comp[5]) |
 				A4XX_RB_RENDER_COMPONENTS_RT6(mrt_comp[6]) |
 				A4XX_RB_RENDER_COMPONENTS_RT7(mrt_comp[7]));
-	}
-
-	if ((dirty & (FD_DIRTY_ZSA | FD_DIRTY_PROG)) && !emit->key.binning_pass) {
-		uint32_t val = fd4_zsa_stateobj(ctx->zsa)->rb_render_control;
-
-		/* I suppose if we needed to (which I don't *think* we need
-		 * to), we could emit this for binning pass too.  But we
-		 * would need to keep a different patch-list for binning
-		 * vs render pass.
-		 */
-
-		OUT_PKT0(ring, REG_A4XX_RB_RENDER_CONTROL, 1);
-		OUT_RINGP(ring, val, &fd4_context(ctx)->rbrc_patches);
 	}
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_FRAMEBUFFER)) {
@@ -619,13 +606,17 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER)) {
 		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
-		fd4_program_emit(ring, emit, pfb->nr_cbufs, pfb->cbufs);
+		unsigned n = pfb->nr_cbufs;
+		/* if we have depth/stencil, we need at least on MRT: */
+		if (pfb->zsbuf)
+			n = MAX2(1, n);
+		fd4_program_emit(ring, emit, n, pfb->cbufs);
 	}
 
 	if (emit->prog == &ctx->prog) { /* evil hack to deal sanely with clear path */
-		ir3_emit_consts(vp, ring, emit->info, dirty);
+		ir3_emit_consts(vp, ring, ctx, emit->info, dirty);
 		if (!emit->key.binning_pass)
-			ir3_emit_consts(fp, ring, emit->info, dirty);
+			ir3_emit_consts(fp, ring, ctx, emit->info, dirty);
 		/* mark clean after emitting consts: */
 		ctx->prog.dirty = 0;
 	}

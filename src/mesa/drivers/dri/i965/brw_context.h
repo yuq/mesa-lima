@@ -1341,7 +1341,8 @@ extern void intelInitClearFuncs(struct dd_function_table *functions);
  */
 extern const char *const brw_vendor_string;
 
-extern const char *brw_get_renderer_string(unsigned deviceID);
+extern const char *
+brw_get_renderer_string(const struct intel_screen *intelScreen);
 
 enum {
    DRI_CONF_BO_REUSE_DISABLED,
@@ -1874,6 +1875,11 @@ void brw_emit_post_sync_nonzero_flush(struct brw_context *brw);
 void brw_emit_depth_stall_flushes(struct brw_context *brw);
 void gen7_emit_vs_workaround_flush(struct brw_context *brw);
 void gen7_emit_cs_stall_flush(struct brw_context *brw);
+
+/* brw_queryformat.c */
+void brw_query_internal_format(struct gl_context *ctx, GLenum target,
+                               GLenum internalFormat, GLenum pname,
+                               GLint *params);
 
 #ifdef __cplusplus
 }

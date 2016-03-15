@@ -1482,6 +1482,7 @@ CodeEmitterNVC0::emitBAR(const Instruction *i)
    } else {
       ImmediateValue *imm = i->getSrc(1)->asImm();
       assert(imm);
+      assert(imm->reg.data.u32 <= 0xfff);
       code[0] |= imm->reg.data.u32 << 26;
       code[1] |= imm->reg.data.u32 >> 6;
       code[1] |= 0x4000;

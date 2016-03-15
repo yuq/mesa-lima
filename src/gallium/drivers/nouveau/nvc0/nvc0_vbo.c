@@ -969,7 +969,7 @@ nvc0_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       IMMED_NVC0(push, NVC0_3D(PATCH_VERTICES), nvc0->state.patch_vertices);
    }
 
-   nvc0_state_validate(nvc0, ~0);
+   nvc0_state_validate_3d(nvc0, ~0);
 
    if (nvc0->vertprog->vp.need_draw_parameters) {
       PUSH_SPACE(push, 9);

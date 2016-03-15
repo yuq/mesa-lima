@@ -484,7 +484,7 @@ bool qir_opt_copy_propagation(struct vc4_compile *c);
 bool qir_opt_cse(struct vc4_compile *c);
 bool qir_opt_dead_code(struct vc4_compile *c);
 bool qir_opt_small_immediates(struct vc4_compile *c);
-bool qir_opt_vpm_writes(struct vc4_compile *c);
+bool qir_opt_vpm(struct vc4_compile *c);
 void vc4_nir_lower_blend(struct vc4_compile *c);
 void vc4_nir_lower_io(struct vc4_compile *c);
 nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,

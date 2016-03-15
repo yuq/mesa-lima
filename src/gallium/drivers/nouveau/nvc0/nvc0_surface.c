@@ -693,7 +693,7 @@ nvc0_clear(struct pipe_context *pipe, unsigned buffers,
    uint32_t mode = 0;
 
    /* don't need NEW_BLEND, COLOR_MASK doesn't affect CLEAR_BUFFERS */
-   if (!nvc0_state_validate(nvc0, NVC0_NEW_3D_FRAMEBUFFER))
+   if (!nvc0_state_validate_3d(nvc0, NVC0_NEW_3D_FRAMEBUFFER))
       return;
 
    if (buffers & PIPE_CLEAR_COLOR && fb->nr_cbufs) {
@@ -1195,7 +1195,7 @@ nvc0_blit_3d(struct nvc0_context *nvc0, const struct pipe_blit_info *info)
 
    nvc0_blitctx_prepare_state(blit);
 
-   nvc0_state_validate(nvc0, ~0);
+   nvc0_state_validate_3d(nvc0, ~0);
 
    x_range = (float)info->src.box.width / (float)info->dst.box.width;
    y_range = (float)info->src.box.height / (float)info->dst.box.height;
@@ -1203,8 +1203,8 @@ nvc0_blit_3d(struct nvc0_context *nvc0, const struct pipe_blit_info *info)
    x0 = (float)info->src.box.x - x_range * (float)info->dst.box.x;
    y0 = (float)info->src.box.y - y_range * (float)info->dst.box.y;
 
-   x1 = x0 + 16384.0f * x_range;
-   y1 = y0 + 16384.0f * y_range;
+   x1 = x0 + 32768.0f * x_range;
+   y1 = y0 + 32768.0f * y_range;
 
    x0 *= (float)(1 << nv50_miptree(src)->ms_x);
    x1 *= (float)(1 << nv50_miptree(src)->ms_x);
@@ -1315,14 +1315,14 @@ nvc0_blit_3d(struct nvc0_context *nvc0, const struct pipe_blit_info *info)
       *(vbuf++) = fui(y0);
       *(vbuf++) = fui(z);
 
-      *(vbuf++) = fui(16384 << nv50_miptree(dst)->ms_x);
+      *(vbuf++) = fui(32768 << nv50_miptree(dst)->ms_x);
       *(vbuf++) = fui(0.0f);
       *(vbuf++) = fui(x1);
       *(vbuf++) = fui(y0);
       *(vbuf++) = fui(z);
 
       *(vbuf++) = fui(0.0f);
-      *(vbuf++) = fui(16384 << nv50_miptree(dst)->ms_y);
+      *(vbuf++) = fui(32768 << nv50_miptree(dst)->ms_y);
       *(vbuf++) = fui(x0);
       *(vbuf++) = fui(y1);
       *(vbuf++) = fui(z);
@@ -1644,6 +1644,7 @@ nvc0_blitter_destroy(struct nvc0_screen *screen)
       }
    }
 
+   pipe_mutex_destroy(blitter->mutex);
    FREE(blitter);
 }
 

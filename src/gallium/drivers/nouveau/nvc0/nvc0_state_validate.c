@@ -672,10 +672,8 @@ nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
    ctx_to->screen->cur_ctx = ctx_to;
 }
 
-static struct state_validate {
-    void (*func)(struct nvc0_context *);
-    uint32_t states;
-} validate_list[] = {
+static struct nvc0_state_validate
+validate_list_3d[] = {
     { nvc0_validate_fb,            NVC0_NEW_3D_FRAMEBUFFER },
     { nvc0_validate_blend,         NVC0_NEW_3D_BLEND },
     { nvc0_validate_zsa,           NVC0_NEW_3D_ZSA },
@@ -714,7 +712,9 @@ static struct state_validate {
 };
 
 bool
-nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask)
+nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask,
+                    struct nvc0_state_validate *validate_list, int size,
+                    uint32_t *dirty, struct nouveau_bufctx *bufctx)
 {
    uint32_t state_mask;
    int ret;
@@ -723,26 +723,38 @@ nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask)
    if (nvc0->screen->cur_ctx != nvc0)
       nvc0_switch_pipe_context(nvc0);
 
-   state_mask = nvc0->dirty_3d & mask;
+   state_mask = *dirty & mask;
 
    if (state_mask) {
-      for (i = 0; i < ARRAY_SIZE(validate_list); ++i) {
-         struct state_validate *validate = &validate_list[i];
+      for (i = 0; i < size; ++i) {
+         struct nvc0_state_validate *validate = &validate_list[i];
 
          if (state_mask & validate->states)
             validate->func(nvc0);
       }
-      nvc0->dirty_3d &= ~state_mask;
+      *dirty &= ~state_mask;
 
-      nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, false);
+      nvc0_bufctx_fence(nvc0, bufctx, false);
    }
 
-   nouveau_pushbuf_bufctx(nvc0->base.pushbuf, nvc0->bufctx_3d);
+   nouveau_pushbuf_bufctx(nvc0->base.pushbuf, bufctx);
    ret = nouveau_pushbuf_validate(nvc0->base.pushbuf);
+
+   return !ret;
+}
+
+bool
+nvc0_state_validate_3d(struct nvc0_context *nvc0, uint32_t mask)
+{
+   bool ret;
+
+   ret = nvc0_state_validate(nvc0, mask, validate_list_3d,
+                             ARRAY_SIZE(validate_list_3d), &nvc0->dirty_3d,
+                             nvc0->bufctx_3d);
 
    if (unlikely(nvc0->state.flushed)) {
       nvc0->state.flushed = false;
       nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, true);
    }
-   return !ret;
+   return ret;
 }

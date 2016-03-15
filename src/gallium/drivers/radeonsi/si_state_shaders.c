@@ -1154,6 +1154,9 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		break;
 	}
 
+	if (sel->info.properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL])
+		sel->db_shader_control |= S_02880C_DEPTH_BEFORE_SHADER(1);
+
 	/* Compile the main shader part for use with a prolog and/or epilog. */
 	if (sel->type != PIPE_SHADER_GEOMETRY &&
 	    !sscreen->use_monolithic_shaders) {

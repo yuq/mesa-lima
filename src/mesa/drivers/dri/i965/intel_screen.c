@@ -891,7 +891,7 @@ brw_query_renderer_string(__DRIscreen *psp, int param, const char **value)
       value[0] = brw_vendor_string;
       return 0;
    case __DRI2_RENDERER_DEVICE_ID:
-      value[0] = brw_get_renderer_string(intelScreen->deviceID);
+      value[0] = brw_get_renderer_string(intelScreen);
       return 0;
    default:
       break;
@@ -1082,6 +1082,7 @@ static bool
 intel_init_bufmgr(struct intel_screen *intelScreen)
 {
    __DRIscreen *spriv = intelScreen->driScrnPriv;
+   bool devid_override = getenv("INTEL_DEVID_OVERRIDE") != NULL;
 
    intelScreen->no_hw = getenv("INTEL_NO_HW") != NULL;
 
@@ -1098,6 +1099,25 @@ intel_init_bufmgr(struct intel_screen *intelScreen)
       fprintf(stderr, "[%s: %u] Kernel 2.6.39 required.\n", __func__, __LINE__);
       return false;
    }
+
+   intelScreen->subslice_total = -1;
+   intelScreen->eu_total = -1;
+
+   /* Everything below this is for real hardware only */
+   if (intelScreen->no_hw || devid_override)
+      return true;
+
+   intel_get_param(spriv, I915_PARAM_SUBSLICE_TOTAL,
+                   &intelScreen->subslice_total);
+   intel_get_param(spriv, I915_PARAM_EU_TOTAL, &intelScreen->eu_total);
+
+   /* Without this information, we cannot get the right Braswell brandstrings,
+    * and we have to use conservative numbers for GPGPU on many platforms, but
+    * otherwise, things will just work.
+    */
+   if (intelScreen->subslice_total == -1 || intelScreen->eu_total == -1)
+      _mesa_warning(NULL,
+                    "Kernel 4.1 required to properly query GPU properties.\n");
 
    return true;
 }

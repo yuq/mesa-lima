@@ -231,6 +231,12 @@ struct radeon_winsys_cs {
 };
 
 struct radeon_info {
+    /* PCI info: domain:bus:dev:func */
+    uint32_t                    pci_domain;
+    uint32_t                    pci_bus;
+    uint32_t                    pci_dev;
+    uint32_t                    pci_func;
+
     /* Device info. */
     uint32_t                    pci_id;
     enum radeon_family          family;
@@ -274,6 +280,31 @@ struct radeon_info {
     uint32_t                    si_tile_mode_array[32];
     boolean                     cik_macrotile_mode_array_valid;
     uint32_t                    cik_macrotile_mode_array[16];
+};
+
+/* Tiling info for display code, DRI sharing, and other data. */
+struct radeon_bo_metadata {
+    /* Tiling flags describing the texture layout for display code
+     * and DRI sharing.
+     */
+    enum radeon_bo_layout   microtile;
+    enum radeon_bo_layout   macrotile;
+    unsigned                pipe_config;
+    unsigned                bankw;
+    unsigned                bankh;
+    unsigned                tile_split;
+    unsigned                stencil_tile_split;
+    unsigned                mtilea;
+    unsigned                num_banks;
+    unsigned                stride;
+    bool                    scanout;
+
+    /* Additional metadata associated with the buffer, in bytes.
+     * The maximum size is 64 * 4. This is opaque for the winsys & kernel.
+     * Supported by amdgpu only.
+     */
+    uint32_t                size_metadata;
+    uint32_t                metadata[64];
 };
 
 enum radeon_feature_id {
@@ -454,45 +485,24 @@ struct radeon_winsys {
                         enum radeon_bo_usage usage);
 
     /**
-     * Return tiling flags describing a memory layout of a buffer object.
+     * Return buffer metadata.
+     * (tiling info for display code, DRI sharing, and other data)
      *
      * \param buf       A winsys buffer object to get the flags from.
-     * \param macrotile A pointer to the return value of the microtile flag.
-     * \param microtile A pointer to the return value of the macrotile flag.
-     *
-     * \note microtile and macrotile are not bitmasks!
+     * \param md        Metadata
      */
-    void (*buffer_get_tiling)(struct pb_buffer *buf,
-                              enum radeon_bo_layout *microtile,
-                              enum radeon_bo_layout *macrotile,
-                              unsigned *bankw, unsigned *bankh,
-                              unsigned *tile_split,
-                              unsigned *stencil_tile_split,
-                              unsigned *mtilea,
-                              bool *scanout);
+    void (*buffer_get_metadata)(struct pb_buffer *buf,
+                                struct radeon_bo_metadata *md);
 
     /**
-     * Set tiling flags describing a memory layout of a buffer object.
+     * Set buffer metadata.
+     * (tiling info for display code, DRI sharing, and other data)
      *
      * \param buf       A winsys buffer object to set the flags for.
-     * \param cs        A command stream to flush if the buffer is referenced by it.
-     * \param macrotile A macrotile flag.
-     * \param microtile A microtile flag.
-     * \param stride    A stride of the buffer in bytes, for texturing.
-     *
-     * \note microtile and macrotile are not bitmasks!
+     * \param md        Metadata
      */
-    void (*buffer_set_tiling)(struct pb_buffer *buf,
-                              struct radeon_winsys_cs *rcs,
-                              enum radeon_bo_layout microtile,
-                              enum radeon_bo_layout macrotile,
-                              unsigned pipe_config,
-                              unsigned bankw, unsigned bankh,
-                              unsigned tile_split,
-                              unsigned stencil_tile_split,
-                              unsigned mtilea, unsigned num_banks,
-                              unsigned stride,
-                              bool scanout);
+    void (*buffer_set_metadata)(struct pb_buffer *buf,
+                                struct radeon_bo_metadata *md);
 
     /**
      * Get a winsys buffer from a winsys handle. The internal structure

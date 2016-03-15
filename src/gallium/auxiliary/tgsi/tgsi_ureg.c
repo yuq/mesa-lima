@@ -1242,7 +1242,9 @@ ureg_emit_texture_offset(struct ureg_program *ureg,
 void
 ureg_emit_memory(struct ureg_program *ureg,
                  unsigned extended_token,
-                 unsigned qualifier)
+                 unsigned qualifier,
+                 unsigned texture,
+                 unsigned format)
 {
    union tgsi_any_token *out, *insn;
 
@@ -1253,6 +1255,8 @@ ureg_emit_memory(struct ureg_program *ureg,
 
    out[0].value = 0;
    out[0].insn_memory.Qualifier = qualifier;
+   out[0].insn_memory.Texture = texture;
+   out[0].insn_memory.Format = format;
 }
 
 void
@@ -1413,7 +1417,9 @@ ureg_memory_insn(struct ureg_program *ureg,
                  unsigned nr_dst,
                  const struct ureg_src *src,
                  unsigned nr_src,
-                 unsigned qualifier)
+                 unsigned qualifier,
+                 unsigned texture,
+                 unsigned format)
 {
    struct ureg_emit_insn_result insn;
    unsigned i;
@@ -1430,7 +1436,7 @@ ureg_memory_insn(struct ureg_program *ureg,
                          nr_dst,
                          nr_src);
 
-   ureg_emit_memory(ureg, insn.extended_token, qualifier);
+   ureg_emit_memory(ureg, insn.extended_token, qualifier, texture, format);
 
    for (i = 0; i < nr_dst; i++)
       ureg_emit_dst(ureg, dst[i]);

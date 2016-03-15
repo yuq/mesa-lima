@@ -262,35 +262,29 @@ nvc0_compute_validate_globals(struct nvc0_context *nvc0)
    }
 }
 
+static struct nvc0_state_validate
+validate_list_cp[] = {
+   { nvc0_compprog_validate,              NVC0_NEW_CP_PROGRAM     },
+   { nvc0_compute_validate_constbufs,     NVC0_NEW_CP_CONSTBUF    },
+   { nvc0_compute_validate_driverconst,   NVC0_NEW_CP_DRIVERCONST },
+   { nvc0_compute_validate_buffers,       NVC0_NEW_CP_BUFFERS     },
+   { nvc0_compute_validate_textures,      NVC0_NEW_CP_TEXTURES    },
+   { nvc0_compute_validate_samplers,      NVC0_NEW_CP_SAMPLERS    },
+   { nvc0_compute_validate_globals,       NVC0_NEW_CP_GLOBALS     },
+};
+
 static bool
-nvc0_compute_state_validate(struct nvc0_context *nvc0)
+nvc0_state_validate_cp(struct nvc0_context *nvc0, uint32_t mask)
 {
-   nvc0_compprog_validate(nvc0);
-   if (nvc0->dirty_cp & NVC0_NEW_CP_CONSTBUF)
-      nvc0_compute_validate_constbufs(nvc0);
-   if (nvc0->dirty_cp & NVC0_NEW_CP_DRIVERCONST)
-      nvc0_compute_validate_driverconst(nvc0);
-   if (nvc0->dirty_cp & NVC0_NEW_CP_BUFFERS)
-      nvc0_compute_validate_buffers(nvc0);
-   if (nvc0->dirty_cp & NVC0_NEW_CP_TEXTURES)
-      nvc0_compute_validate_textures(nvc0);
-   if (nvc0->dirty_cp & NVC0_NEW_CP_SAMPLERS)
-      nvc0_compute_validate_samplers(nvc0);
-   if (nvc0->dirty_cp & NVC0_NEW_CP_GLOBALS)
-      nvc0_compute_validate_globals(nvc0);
+   bool ret;
 
-   /* TODO: surfaces */
+   ret = nvc0_state_validate(nvc0, mask, validate_list_cp,
+                             ARRAY_SIZE(validate_list_cp), &nvc0->dirty_cp,
+                             nvc0->bufctx_cp);
 
-   nvc0_bufctx_fence(nvc0, nvc0->bufctx_cp, false);
-
-   nouveau_pushbuf_bufctx(nvc0->base.pushbuf, nvc0->bufctx_cp);
-   if (unlikely(nouveau_pushbuf_validate(nvc0->base.pushbuf)))
-      return false;
    if (unlikely(nvc0->state.flushed))
       nvc0_bufctx_fence(nvc0, nvc0->bufctx_cp, true);
-
-   return true;
-
+   return ret;
 }
 
 static void
@@ -326,7 +320,7 @@ nvc0_launch_grid(struct pipe_context *pipe, const struct pipe_grid_info *info)
    unsigned s;
    int ret;
 
-   ret = !nvc0_compute_state_validate(nvc0);
+   ret = !nvc0_state_validate_cp(nvc0, ~0);
    if (ret) {
       NOUVEAU_ERR("Failed to launch grid !\n");
       return;

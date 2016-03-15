@@ -971,7 +971,8 @@ static void r300_texture_destroy(struct pipe_screen *screen,
 
 boolean r300_resource_get_handle(struct pipe_screen* screen,
                                  struct pipe_resource *texture,
-                                 struct winsys_handle *whandle)
+                                 struct winsys_handle *whandle,
+                                 unsigned usage)
 {
     struct radeon_winsys *rws = r300_screen(screen)->rws;
     struct r300_resource* tex = (struct r300_resource*)texture;
@@ -1005,6 +1006,7 @@ r300_texture_create_object(struct r300_screen *rscreen,
 {
     struct radeon_winsys *rws = rscreen->rws;
     struct r300_resource *tex = NULL;
+    struct radeon_bo_metadata tiling = {};
 
     tex = CALLOC_STRUCT(r300_resource);
     if (!tex) {
@@ -1059,10 +1061,10 @@ r300_texture_create_object(struct r300_screen *rscreen,
                 util_format_is_depth_or_stencil(base->format) ? "depth" : "color");
     }
 
-    rws->buffer_set_tiling(tex->buf, NULL,
-            tex->tex.microtile, tex->tex.macrotile[0],
-            0, 0, 0, 0, 0, 0, 0,
-            tex->tex.stride_in_bytes[0], false);
+    tiling.microtile = tex->tex.microtile;
+    tiling.macrotile = tex->tex.macrotile[0];
+    tiling.stride = tex->tex.stride_in_bytes[0];
+    rws->buffer_set_metadata(tex->buf, &tiling);
 
     return tex;
 
@@ -1097,13 +1099,14 @@ struct pipe_resource *r300_texture_create(struct pipe_screen *screen,
 
 struct pipe_resource *r300_texture_from_handle(struct pipe_screen *screen,
                                                const struct pipe_resource *base,
-                                               struct winsys_handle *whandle)
+                                               struct winsys_handle *whandle,
+                                               unsigned usage)
 {
     struct r300_screen *rscreen = r300_screen(screen);
     struct radeon_winsys *rws = rscreen->rws;
     struct pb_buffer *buffer;
-    enum radeon_bo_layout microtile, macrotile;
     unsigned stride;
+    struct radeon_bo_metadata tiling = {};
 
     /* Support only 2D textures without mipmaps */
     if ((base->target != PIPE_TEXTURE_2D &&
@@ -1117,25 +1120,24 @@ struct pipe_resource *r300_texture_from_handle(struct pipe_screen *screen,
     if (!buffer)
         return NULL;
 
-    rws->buffer_get_tiling(buffer, &microtile, &macrotile, NULL, NULL, NULL,
-                           NULL, NULL, NULL);
+    rws->buffer_get_metadata(buffer, &tiling);
 
     /* Enforce a microtiled zbuffer. */
     if (util_format_is_depth_or_stencil(base->format) &&
-        microtile == RADEON_LAYOUT_LINEAR) {
+        tiling.microtile == RADEON_LAYOUT_LINEAR) {
         switch (util_format_get_blocksize(base->format)) {
             case 4:
-                microtile = RADEON_LAYOUT_TILED;
+                tiling.microtile = RADEON_LAYOUT_TILED;
                 break;
 
             case 2:
-                microtile = RADEON_LAYOUT_SQUARETILED;
+                tiling.microtile = RADEON_LAYOUT_SQUARETILED;
                 break;
         }
     }
 
     return (struct pipe_resource*)
-           r300_texture_create_object(rscreen, base, microtile, macrotile,
+           r300_texture_create_object(rscreen, base, tiling.microtile, tiling.macrotile,
                                       stride, buffer);
 }
 

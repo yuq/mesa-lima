@@ -525,6 +525,7 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_DRCP:
    case TGSI_OPCODE_DSQRT:
    case TGSI_OPCODE_DMAD:
+   case TGSI_OPCODE_DFMA:
    case TGSI_OPCODE_DFRAC:
    case TGSI_OPCODE_DRSQ:
    case TGSI_OPCODE_DTRUNC:
@@ -615,6 +616,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
 
    NV50_IR_OPCODE_CASE(RCP, RCP);
    NV50_IR_OPCODE_CASE(RSQ, RSQ);
+   NV50_IR_OPCODE_CASE(SQRT, SQRT);
 
    NV50_IR_OPCODE_CASE(MUL, MUL);
    NV50_IR_OPCODE_CASE(ADD, ADD);
@@ -624,6 +626,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(SLT, SET);
    NV50_IR_OPCODE_CASE(SGE, SET);
    NV50_IR_OPCODE_CASE(MAD, MAD);
+   NV50_IR_OPCODE_CASE(FMA, FMA);
    NV50_IR_OPCODE_CASE(SUB, SUB);
 
    NV50_IR_OPCODE_CASE(FLR, FLOOR);
@@ -723,6 +726,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(DRCP, RCP);
    NV50_IR_OPCODE_CASE(DSQRT, SQRT);
    NV50_IR_OPCODE_CASE(DMAD, MAD);
+   NV50_IR_OPCODE_CASE(DFMA, FMA);
    NV50_IR_OPCODE_CASE(D2I, CVT);
    NV50_IR_OPCODE_CASE(D2U, CVT);
    NV50_IR_OPCODE_CASE(I2D, CVT);
@@ -1182,10 +1186,6 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
       case TGSI_SEMANTIC_VERTEXID:
          info->io.vertexId = first;
          break;
-      case TGSI_SEMANTIC_SAMPLEID:
-      case TGSI_SEMANTIC_SAMPLEPOS:
-         info->prop.fp.sampleInterp = 1;
-         break;
       case TGSI_SEMANTIC_BASEVERTEX:
       case TGSI_SEMANTIC_BASEINSTANCE:
       case TGSI_SEMANTIC_DRAWID:
@@ -1564,7 +1564,7 @@ Converter::translateInterpMode(const struct nv50_ir_varying *var, operation& op)
    op = (mode == NV50_IR_INTERP_PERSPECTIVE || mode == NV50_IR_INTERP_SC)
       ? OP_PINTERP : OP_LINTERP;
 
-   if (var->centroid || info->prop.fp.sampleInterp)
+   if (var->centroid)
       mode |= NV50_IR_INTERP_CENTROID;
 
    return mode;
@@ -2676,6 +2676,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    case TGSI_OPCODE_MAD:
    case TGSI_OPCODE_UMAD:
    case TGSI_OPCODE_SAD:
+   case TGSI_OPCODE_FMA:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
          src0 = fetchSrc(0, c);
          src1 = fetchSrc(1, c);
@@ -2689,6 +2690,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    case TGSI_OPCODE_FLR:
    case TGSI_OPCODE_TRUNC:
    case TGSI_OPCODE_RCP:
+   case TGSI_OPCODE_SQRT:
    case TGSI_OPCODE_IABS:
    case TGSI_OPCODE_INEG:
    case TGSI_OPCODE_NOT:
@@ -3399,6 +3401,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       }
       break;
    case TGSI_OPCODE_DMAD:
+   case TGSI_OPCODE_DFMA:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
          src0 = getSSA(8);
          src1 = getSSA(8);

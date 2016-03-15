@@ -3206,6 +3206,12 @@ NUM_CULLDIST_ENABLED
 
 How many cull distance scalar outputs are enabled.
 
+FS_EARLY_DEPTH_STENCIL
+""""""""""""""""""""""
+
+Whether depth test, stencil test, and occlusion query should run before
+the fragment shader (regardless of fragment shader side effects). Corresponds
+to GLSL early_fragment_tests.
 
 Texture Sampling and Texture Formats
 ------------------------------------

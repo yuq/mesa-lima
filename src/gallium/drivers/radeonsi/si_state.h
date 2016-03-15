@@ -249,6 +249,7 @@ void si_all_descriptors_begin_new_cs(struct si_context *sctx);
 void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuffer,
 			    const uint8_t *ptr, unsigned size, uint32_t *const_offset);
 void si_shader_change_notify(struct si_context *sctx);
+void si_update_compressed_colortex_masks(struct si_context *sctx);
 void si_emit_shader_userdata(struct si_context *sctx, struct r600_atom *atom);
 
 /* si_state.c */
@@ -263,6 +264,7 @@ boolean si_is_format_supported(struct pipe_screen *screen,
                                unsigned sample_count,
                                unsigned usage);
 void si_init_state_functions(struct si_context *sctx);
+void si_init_screen_state_functions(struct si_screen *sscreen);
 unsigned cik_bank_wh(unsigned bankwh);
 unsigned cik_db_pipe_config(struct si_screen *sscreen, unsigned tile_mode);
 unsigned cik_macro_tile_aspect(unsigned macro_tile_aspect);

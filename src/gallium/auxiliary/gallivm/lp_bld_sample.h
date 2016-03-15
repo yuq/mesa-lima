@@ -42,6 +42,9 @@
 #include "gallivm/lp_bld_type.h"
 #include "gallivm/lp_bld_swizzle.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct pipe_resource;
 struct pipe_sampler_view;
@@ -625,5 +628,8 @@ lp_build_minify(struct lp_build_context *bld,
                 LLVMValueRef level,
                 boolean lod_scalar);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LP_BLD_SAMPLE_H */

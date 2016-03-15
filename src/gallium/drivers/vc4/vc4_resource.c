@@ -523,7 +523,8 @@ fail:
 static struct pipe_resource *
 vc4_resource_from_handle(struct pipe_screen *pscreen,
                          const struct pipe_resource *tmpl,
-                         struct winsys_handle *handle)
+                         struct winsys_handle *handle,
+                         unsigned usage)
 {
         struct vc4_resource *rsc = vc4_resource_setup(pscreen, tmpl);
         struct pipe_resource *prsc = &rsc->base.b;

@@ -150,20 +150,17 @@ static void si_release_sampler_views(struct si_sampler_views *views)
 	si_release_descriptors(&views->desc);
 }
 
-static void si_sampler_view_add_buffers(struct si_context *sctx,
-					struct si_sampler_view *rview)
+static void si_sampler_view_add_buffer(struct si_context *sctx,
+				       struct pipe_resource *resource)
 {
-	if (rview->resource) {
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-			rview->resource, RADEON_USAGE_READ,
-			r600_get_sampler_view_priority(rview->resource));
-	}
+	struct r600_resource *rres = (struct r600_resource*)resource;
 
-	if (rview->dcc_buffer && rview->dcc_buffer != rview->resource) {
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-			rview->dcc_buffer, RADEON_USAGE_READ,
-			RADEON_PRIO_DCC);
-	}
+	if (!resource)
+		return;
+
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, rres,
+				  RADEON_USAGE_READ,
+				  r600_get_sampler_view_priority(rres));
 }
 
 static void si_sampler_views_begin_new_cs(struct si_context *sctx,
@@ -174,10 +171,8 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 	/* Add buffers to the CS. */
 	while (mask) {
 		int i = u_bit_scan64(&mask);
-		struct si_sampler_view *rview =
-			(struct si_sampler_view*)views->views[i];
 
-		si_sampler_view_add_buffers(sctx, rview);
+		si_sampler_view_add_buffer(sctx, views->views[i]->texture);
 	}
 
 	if (!views->desc.buffer)
@@ -190,15 +185,20 @@ static void si_set_sampler_view(struct si_context *sctx,
 				struct si_sampler_views *views,
 				unsigned slot, struct pipe_sampler_view *view)
 {
-	if (views->views[slot] == view)
+	struct si_sampler_view *rview = (struct si_sampler_view*)view;
+
+	if (view && view->texture && view->texture->target != PIPE_BUFFER &&
+	    G_008F28_COMPRESSION_EN(rview->state[6]) &&
+	    ((struct r600_texture*)view->texture)->dcc_offset == 0) {
+		rview->state[6] &= C_008F28_COMPRESSION_EN &
+		                   C_008F28_ALPHA_IS_ON_MSB;
+	} else if (views->views[slot] == view)
 		return;
 
 	if (view) {
-		struct si_sampler_view *rview =
-			(struct si_sampler_view*)view;
-		struct r600_texture *rtex = (struct r600_texture*)view->texture;
+		struct r600_texture *rtex = (struct r600_texture *)view->texture;
 
-		si_sampler_view_add_buffers(sctx, rview);
+		si_sampler_view_add_buffer(sctx, view->texture);
 
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(views->desc.list + slot * 16, rview->state, 8*4);
@@ -227,6 +227,12 @@ static void si_set_sampler_view(struct si_context *sctx,
 	}
 
 	views->desc.list_dirty = true;
+}
+
+static bool is_compressed_colortex(struct r600_texture *rtex)
+{
+	return rtex->cmask.size || rtex->fmask.size ||
+	       (rtex->dcc_offset && rtex->dirty_level_mask);
 }
 
 static void si_set_sampler_views(struct pipe_context *ctx,
@@ -262,8 +268,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 			} else {
 				samplers->depth_texture_mask &= ~(1 << slot);
 			}
-			if (rtex->cmask.size || rtex->fmask.size ||
-			    (rtex->dcc_buffer && rtex->dirty_level_mask)) {
+			if (is_compressed_colortex(rtex)) {
 				samplers->compressed_colortex_mask |= 1 << slot;
 			} else {
 				samplers->compressed_colortex_mask &= ~(1 << slot);
@@ -271,6 +276,27 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		} else {
 			samplers->depth_texture_mask &= ~(1 << slot);
 			samplers->compressed_colortex_mask &= ~(1 << slot);
+		}
+	}
+}
+
+static void
+si_samplers_update_compressed_colortex_mask(struct si_textures_info *samplers)
+{
+	uint64_t mask = samplers->views.desc.enabled_mask;
+
+	while (mask) {
+		int i = u_bit_scan64(&mask);
+		struct pipe_resource *res = samplers->views.views[i]->texture;
+
+		if (res && res->target != PIPE_BUFFER) {
+			struct r600_texture *rtex = (struct r600_texture *)res;
+
+			if (is_compressed_colortex(rtex)) {
+				samplers->compressed_colortex_mask |= 1 << i;
+			} else {
+				samplers->compressed_colortex_mask &= ~(1 << i);
+			}
 		}
 	}
 }
@@ -303,6 +329,7 @@ static void si_bind_sampler_states(struct pipe_context *ctx, unsigned shader,
 		 */
 		if (samplers->views.views[i] &&
 		    samplers->views.views[i]->texture &&
+		    samplers->views.views[i]->texture->target != PIPE_BUFFER &&
 		    ((struct r600_texture*)samplers->views.views[i]->texture)->fmask.size)
 			continue;
 
@@ -765,6 +792,19 @@ static void si_desc_reset_buffer_offset(struct pipe_context *ctx,
 	desc[0] = va;
 	desc[1] = (desc[1] & C_008F04_BASE_ADDRESS_HI) |
 		  S_008F04_BASE_ADDRESS_HI(va >> 32);
+}
+
+/* TEXTURE METADATA ENABLE/DISABLE */
+
+/* CMASK can be enabled (for fast clear) and disabled (for texture export)
+ * while the texture is bound, possibly by a different context. In that case,
+ * call this function to update compressed_colortex_masks.
+ */
+void si_update_compressed_colortex_masks(struct si_context *sctx)
+{
+	for (int i = 0; i < SI_NUM_SHADERS; ++i) {
+		si_samplers_update_compressed_colortex_mask(&sctx->samplers[i]);
+	}
 }
 
 /* BUFFER DISCARD/INVALIDATION */

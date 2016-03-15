@@ -249,7 +249,7 @@ void si_dma_copy(struct pipe_context *ctx,
 	    (rdst->dirty_level_mask | rdst->stencil_dirty_level_mask) & (1 << dst_level) ||
 	    rdst->cmask.size || rdst->fmask.size ||
 	    rsrc->cmask.size || rsrc->fmask.size ||
-	    rdst->dcc_buffer || rsrc->dcc_buffer) {
+	    rdst->dcc_offset || rsrc->dcc_offset) {
 		goto fallback;
 	}
 

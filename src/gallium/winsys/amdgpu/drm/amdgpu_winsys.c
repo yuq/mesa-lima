@@ -93,13 +93,26 @@ static unsigned cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
 }
 
 /* Helper function to do the ioctls needed for setup and init. */
-static boolean do_winsys_init(struct amdgpu_winsys *ws)
+static boolean do_winsys_init(struct amdgpu_winsys *ws, int fd)
 {
    struct amdgpu_buffer_size_alignments alignment_info = {};
    struct amdgpu_heap_info vram, gtt;
    struct drm_amdgpu_info_hw_ip dma = {}, uvd = {}, vce = {};
    uint32_t vce_version = 0, vce_feature = 0;
    int r, i, j;
+   drmDevicePtr devinfo;
+
+   /* Get PCI info. */
+   r = drmGetDevice(fd, &devinfo);
+   if (r) {
+      fprintf(stderr, "amdgpu: drmGetDevice failed.\n");
+      goto fail;
+   }
+   ws->info.pci_domain = devinfo->businfo.pci->domain;
+   ws->info.pci_bus = devinfo->businfo.pci->bus;
+   ws->info.pci_dev = devinfo->businfo.pci->dev;
+   ws->info.pci_func = devinfo->businfo.pci->func;
+   drmFreeDevice(&devinfo);
 
    /* Query hardware and driver information. */
    r = amdgpu_query_gpu_info(ws->dev, &ws->amdinfo);
@@ -437,7 +450,7 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
    ws->info.drm_major = drm_major;
    ws->info.drm_minor = drm_minor;
 
-   if (!do_winsys_init(ws))
+   if (!do_winsys_init(ws, fd))
       goto fail;
 
    /* Create managers. */

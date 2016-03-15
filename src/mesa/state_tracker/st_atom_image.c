@@ -25,6 +25,7 @@
  **************************************************************************/
 
 #include "main/imports.h"
+#include "main/shaderimage.h"
 #include "program/prog_parameter.h"
 #include "program/prog_print.h"
 #include "compiler/glsl/ir_uniform.h"
@@ -48,17 +49,19 @@ st_bind_images(struct st_context *st, struct gl_shader *shader,
 {
    unsigned i;
    struct pipe_image_view images[MAX_IMAGE_UNIFORMS];
-   struct gl_program_constants *c = &st->ctx->Const.Program[shader->Stage];
+   struct gl_program_constants *c;
 
    if (!shader || !st->pipe->set_shader_images)
       return;
+
+   c = &st->ctx->Const.Program[shader->Stage];
 
    for (i = 0; i < shader->NumImages; i++) {
       struct gl_image_unit *u = &st->ctx->ImageUnits[shader->ImageUnits[i]];
       struct st_texture_object *stObj = st_texture_object(u->TexObj);
       struct pipe_image_view *img = &images[i];
 
-      if (!stObj ||
+      if (!_mesa_is_image_unit_valid(st->ctx, u) ||
           !st_finalize_texture(st->ctx, st->pipe, u->TexObj) ||
           !stObj->pt) {
          memset(img, 0, sizeof(*img));
@@ -67,6 +70,21 @@ st_bind_images(struct st_context *st, struct gl_shader *shader,
 
       img->resource = stObj->pt;
       img->format = st_mesa_format_to_pipe_format(st, u->_ActualFormat);
+
+      switch (u->Access) {
+      case GL_READ_ONLY:
+         img->access = PIPE_IMAGE_ACCESS_READ;
+         break;
+      case GL_WRITE_ONLY:
+         img->access = PIPE_IMAGE_ACCESS_WRITE;
+         break;
+      case GL_READ_WRITE:
+         img->access = PIPE_IMAGE_ACCESS_READ_WRITE;
+         break;
+      default:
+         unreachable("bad gl_image_unit::Access");
+      }
+
       if (stObj->pt->target == PIPE_BUFFER) {
          unsigned base, size;
          unsigned f, n;

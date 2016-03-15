@@ -931,9 +931,6 @@ fd3_emit_tile_init(struct fd_context *ctx)
 	update_vsc_pipe(ctx);
 
 	if (use_hw_binning(ctx)) {
-		/* mark the end of the binning cmds: */
-		fd_ringmarker_mark(ctx->binning_end);
-
 		/* emit hw binning pass: */
 		emit_binning_pass(ctx);
 
@@ -1017,8 +1014,8 @@ fd3_emit_tile_renderprep(struct fd_context *ctx, struct fd_tile *tile)
 
 
 		OUT_PKT3(ring, CP_SET_BIN_DATA, 2);
-		OUT_RELOC(ring, pipe->bo, 0, 0, 0);    /* BIN_DATA_ADDR <- VSC_PIPE[p].DATA_ADDRESS */
-		OUT_RELOC(ring, fd3_ctx->vsc_size_mem, /* BIN_SIZE_ADDR <- VSC_SIZE_ADDRESS + (p * 4) */
+		OUT_RELOCW(ring, pipe->bo, 0, 0, 0);    /* BIN_DATA_ADDR <- VSC_PIPE[p].DATA_ADDRESS */
+		OUT_RELOCW(ring, fd3_ctx->vsc_size_mem, /* BIN_SIZE_ADDR <- VSC_SIZE_ADDRESS + (p * 4) */
 				(tile->p * 4), 0, 0);
 	} else {
 		OUT_PKT0(ring, REG_A3XX_PC_VSTREAM_CONTROL, 1);

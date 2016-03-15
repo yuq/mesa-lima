@@ -241,7 +241,6 @@ struct ir3_shader {
 
 	struct ir3_compiler *compiler;
 
-	struct pipe_context *pctx;    /* TODO replace w/ pipe_screen */
 	nir_shader *nir;
 	struct pipe_stream_output_info stream_output;
 
@@ -250,7 +249,7 @@ struct ir3_shader {
 
 void * ir3_shader_assemble(struct ir3_shader_variant *v, uint32_t gpu_id);
 
-struct ir3_shader * ir3_shader_create(struct pipe_context *pctx,
+struct ir3_shader * ir3_shader_create(struct ir3_compiler *compiler,
 		const struct pipe_shader_state *cso, enum shader_t type);
 void ir3_shader_destroy(struct ir3_shader *shader);
 struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
@@ -258,8 +257,9 @@ struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
 void ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin);
 
 struct fd_ringbuffer;
-void ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
-		const struct pipe_draw_info *info, uint32_t dirty);
+struct fd_context;
+void ir3_emit_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		struct fd_context *ctx, const struct pipe_draw_info *info, uint32_t dirty);
 
 static inline const char *
 ir3_shader_stage(struct ir3_shader *shader)

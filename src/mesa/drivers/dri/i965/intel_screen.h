@@ -81,7 +81,17 @@ struct intel_screen
     * I915_PARAM_CMD_PARSER_VERSION parameter
     */
    int cmd_parser_version;
- };
+
+   /**
+    * Number of subslices reported by the I915_PARAM_SUBSLICE_TOTAL parameter
+    */
+   int subslice_total;
+
+   /**
+    * Number of EUs reported by the I915_PARAM_EU_TOTAL parameter
+    */
+   int eu_total;
+};
 
 extern void intelDestroyContext(__DRIcontext * driContextPriv);
 

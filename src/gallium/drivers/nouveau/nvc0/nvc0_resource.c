@@ -19,7 +19,8 @@ nvc0_resource_create(struct pipe_screen *screen,
 static struct pipe_resource *
 nvc0_resource_from_handle(struct pipe_screen * screen,
                           const struct pipe_resource *templ,
-                          struct winsys_handle *whandle)
+                          struct winsys_handle *whandle,
+                          unsigned usage)
 {
    if (templ->target == PIPE_BUFFER) {
       return NULL;

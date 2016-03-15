@@ -68,6 +68,8 @@ static void si_destroy_context(struct pipe_context *context)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_decompress);
 	if (sctx->custom_blend_fastclear)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_fastclear);
+	if (sctx->custom_blend_dcc_decompress)
+		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_dcc_decompress);
 	util_unreference_framebuffer_state(&sctx->framebuffer.state);
 
 	if (sctx->blitter)
@@ -418,7 +420,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return PIPE_ENDIAN_LITTLE;
 
 	case PIPE_CAP_VENDOR_ID:
-		return 0x1002;
+		return ATI_VENDOR_ID;
 	case PIPE_CAP_DEVICE_ID:
 		return sscreen->b.info.pci_id;
 	case PIPE_CAP_ACCELERATED:
@@ -427,6 +429,14 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return sscreen->b.info.vram_size >> 20;
 	case PIPE_CAP_UMA:
 		return 0;
+	case PIPE_CAP_PCI_GROUP:
+		return sscreen->b.info.pci_domain;
+	case PIPE_CAP_PCI_BUS:
+		return sscreen->b.info.pci_bus;
+	case PIPE_CAP_PCI_DEVICE:
+		return sscreen->b.info.pci_dev;
+	case PIPE_CAP_PCI_FUNCTION:
+		return sscreen->b.info.pci_func;
 	}
 	return 0;
 }
@@ -610,6 +620,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->b.b.get_shader_param = si_get_shader_param;
 	sscreen->b.b.is_format_supported = si_is_format_supported;
 	sscreen->b.b.resource_create = r600_resource_create_common;
+
+	si_init_screen_state_functions(sscreen);
 
 	if (!r600_common_screen_init(&sscreen->b, ws) ||
 	    !si_init_gs_info(sscreen) ||

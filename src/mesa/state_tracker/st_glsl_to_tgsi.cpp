@@ -3158,8 +3158,8 @@ void
 glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
 {
    const char *callee = ir->callee->function_name();
-   ir_dereference *deref = static_cast<ir_dereference *>(
-      ir->actual_parameters.get_head());
+   exec_node *param = ir->actual_parameters.get_head();
+   ir_dereference *deref = static_cast<ir_dereference *>(param);
    ir_variable *location = deref->variable_referenced();
 
    st_src_reg buffer(
@@ -3188,17 +3188,56 @@ glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
 
    if (!strcmp("__intrinsic_atomic_read", callee)) {
       inst = emit_asm(ir, TGSI_OPCODE_LOAD, dst, offset);
-      inst->buffer = buffer;
    } else if (!strcmp("__intrinsic_atomic_increment", callee)) {
       inst = emit_asm(ir, TGSI_OPCODE_ATOMUADD, dst, offset,
                       st_src_reg_for_int(1));
-      inst->buffer = buffer;
    } else if (!strcmp("__intrinsic_atomic_predecrement", callee)) {
       inst = emit_asm(ir, TGSI_OPCODE_ATOMUADD, dst, offset,
                       st_src_reg_for_int(-1));
-      inst->buffer = buffer;
       emit_asm(ir, TGSI_OPCODE_ADD, dst, this->result, st_src_reg_for_int(-1));
+   } else {
+      param = param->get_next();
+      ir_rvalue *val = ((ir_instruction *)param)->as_rvalue();
+      val->accept(this);
+
+      st_src_reg data = this->result, data2 = undef_src;
+      unsigned opcode;
+      if (!strcmp("__intrinsic_atomic_add", callee))
+         opcode = TGSI_OPCODE_ATOMUADD;
+      else if (!strcmp("__intrinsic_atomic_min", callee))
+         opcode = TGSI_OPCODE_ATOMIMIN;
+      else if (!strcmp("__intrinsic_atomic_max", callee))
+         opcode = TGSI_OPCODE_ATOMIMAX;
+      else if (!strcmp("__intrinsic_atomic_and", callee))
+         opcode = TGSI_OPCODE_ATOMAND;
+      else if (!strcmp("__intrinsic_atomic_or", callee))
+         opcode = TGSI_OPCODE_ATOMOR;
+      else if (!strcmp("__intrinsic_atomic_xor", callee))
+         opcode = TGSI_OPCODE_ATOMXOR;
+      else if (!strcmp("__intrinsic_atomic_exchange", callee))
+         opcode = TGSI_OPCODE_ATOMXCHG;
+      else if (!strcmp("__intrinsic_atomic_comp_swap", callee)) {
+         opcode = TGSI_OPCODE_ATOMCAS;
+         param = param->get_next();
+         val = ((ir_instruction *)param)->as_rvalue();
+         val->accept(this);
+         data2 = this->result;
+      } else if (!strcmp("__intrinsic_atomic_sub", callee)) {
+         opcode = TGSI_OPCODE_ATOMUADD;
+         st_src_reg res = get_temp(glsl_type::uvec4_type);
+         st_dst_reg dstres = st_dst_reg(res);
+         dstres.writemask = dst.writemask;
+         emit_asm(ir, TGSI_OPCODE_INEG, dstres, data);
+         data = res;
+      } else {
+         assert(!"Unexpected intrinsic");
+         return;
+      }
+
+      inst = emit_asm(ir, opcode, dst, offset, data, data2);
    }
+
+   inst->buffer = buffer;
 }
 
 void
@@ -3577,6 +3616,13 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 
    inst->image_format = st_mesa_format_to_pipe_format(st_context(ctx),
          _mesa_get_shader_image_format(imgvar->data.image_format));
+
+   if (imgvar->data.image_coherent)
+      inst->buffer_access |= TGSI_MEMORY_COHERENT;
+   if (imgvar->data.image_restrict)
+      inst->buffer_access |= TGSI_MEMORY_RESTRICT;
+   if (imgvar->data.image_volatile)
+      inst->buffer_access |= TGSI_MEMORY_VOLATILE;
 }
 
 void
@@ -3591,7 +3637,16 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
    /* Filter out intrinsics */
    if (!strcmp("__intrinsic_atomic_read", callee) ||
        !strcmp("__intrinsic_atomic_increment", callee) ||
-       !strcmp("__intrinsic_atomic_predecrement", callee)) {
+       !strcmp("__intrinsic_atomic_predecrement", callee) ||
+       !strcmp("__intrinsic_atomic_add", callee) ||
+       !strcmp("__intrinsic_atomic_sub", callee) ||
+       !strcmp("__intrinsic_atomic_min", callee) ||
+       !strcmp("__intrinsic_atomic_max", callee) ||
+       !strcmp("__intrinsic_atomic_and", callee) ||
+       !strcmp("__intrinsic_atomic_or", callee) ||
+       !strcmp("__intrinsic_atomic_xor", callee) ||
+       !strcmp("__intrinsic_atomic_exchange", callee) ||
+       !strcmp("__intrinsic_atomic_comp_swap", callee)) {
       visit_atomic_counter_intrinsic(ir);
       return;
    }
@@ -5524,7 +5579,7 @@ compile_tgsi_instruction(struct st_translate *t,
 
    int num_dst;
    int num_src;
-   unsigned tex_target;
+   unsigned tex_target = 0;
 
    num_dst = num_inst_dst_regs(inst);
    num_src = num_inst_src_regs(inst);
@@ -5599,32 +5654,38 @@ compile_tgsi_instruction(struct st_translate *t,
       for (i = num_src - 1; i >= 0; i--)
          src[i + 1] = src[i];
       num_src++;
-      if (inst->buffer.file == PROGRAM_MEMORY)
+      if (inst->buffer.file == PROGRAM_MEMORY) {
          src[0] = t->shared_memory;
-      else if (inst->buffer.file == PROGRAM_BUFFER)
+      } else if (inst->buffer.file == PROGRAM_BUFFER) {
          src[0] = t->buffers[inst->buffer.index];
-      else
+      } else {
          src[0] = t->images[inst->buffer.index];
+         tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
+      }
       if (inst->buffer.reladdr)
          src[0] = ureg_src_indirect(src[0], ureg_src(t->address[2]));
       assert(src[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
-                       inst->buffer_access);
+                       inst->buffer_access,
+                       tex_target, inst->image_format);
       break;
 
    case TGSI_OPCODE_STORE:
-      if (inst->buffer.file == PROGRAM_MEMORY)
+      if (inst->buffer.file == PROGRAM_MEMORY) {
          dst[0] = ureg_dst(t->shared_memory);
-      else if (inst->buffer.file == PROGRAM_BUFFER)
+      } else if (inst->buffer.file == PROGRAM_BUFFER) {
          dst[0] = ureg_dst(t->buffers[inst->buffer.index]);
-      else
+      } else {
          dst[0] = ureg_dst(t->images[inst->buffer.index]);
+         tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
+      }
       dst[0] = ureg_writemask(dst[0], inst->dst[0].writemask);
       if (inst->buffer.reladdr)
          dst[0] = ureg_dst_indirect(dst[0], ureg_src(t->address[2]));
       assert(dst[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
-                       inst->buffer_access);
+                       inst->buffer_access,
+                       tex_target, inst->image_format);
       break;
 
    case TGSI_OPCODE_SCS:
@@ -6060,6 +6121,9 @@ st_translate_program(
    }
 
    if (procType == TGSI_PROCESSOR_FRAGMENT) {
+      if (program->shader->EarlyFragmentTests)
+         ureg_property(ureg, TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL, 1);
+
       if (proginfo->InputsRead & VARYING_BIT_POS) {
           /* Must do this after setting up t->inputs. */
           emit_wpos(st_context(ctx), t, proginfo, ureg,

@@ -1756,6 +1756,7 @@ nv50_blitter_destroy(struct nv50_screen *screen)
       }
    }
 
+   pipe_mutex_destroy(blitter->mutex);
    FREE(blitter);
 }
 

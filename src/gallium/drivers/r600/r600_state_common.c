@@ -645,21 +645,21 @@ static void r600_set_sampler_views(struct pipe_context *pipe, unsigned shader,
 		if (rviews[i]) {
 			struct r600_texture *rtex =
 				(struct r600_texture*)rviews[i]->base.texture;
+			bool is_buffer = rviews[i]->base.texture->target == PIPE_BUFFER;
 
-			if (rviews[i]->base.texture->target != PIPE_BUFFER) {
-				if (rtex->is_depth && !rtex->is_flushing_texture) {
-					dst->views.compressed_depthtex_mask |= 1 << i;
-				} else {
-					dst->views.compressed_depthtex_mask &= ~(1 << i);
-				}
-
-				/* Track compressed colorbuffers. */
-				if (rtex->cmask.size) {
-					dst->views.compressed_colortex_mask |= 1 << i;
-				} else {
-					dst->views.compressed_colortex_mask &= ~(1 << i);
-				}
+			if (!is_buffer && rtex->is_depth && !rtex->is_flushing_texture) {
+				dst->views.compressed_depthtex_mask |= 1 << i;
+			} else {
+				dst->views.compressed_depthtex_mask &= ~(1 << i);
 			}
+
+			/* Track compressed colorbuffers. */
+			if (!is_buffer && rtex->cmask.size) {
+				dst->views.compressed_colortex_mask |= 1 << i;
+			} else {
+				dst->views.compressed_colortex_mask &= ~(1 << i);
+			}
+
 			/* Changing from array to non-arrays textures and vice versa requires
 			 * updating TEX_ARRAY_OVERRIDE in sampler states on R6xx-R7xx. */
 			if (rctx->b.chip_class <= R700 &&
@@ -690,6 +690,26 @@ static void r600_set_sampler_views(struct pipe_context *pipe, unsigned shader,
 	if (dirty_sampler_states_mask) {
 		dst->states.dirty_mask |= dirty_sampler_states_mask;
 		r600_sampler_states_dirty(rctx, &dst->states);
+	}
+}
+
+static void r600_update_compressed_colortex_mask(struct r600_samplerview_state *views)
+{
+	uint32_t mask = views->enabled_mask;
+
+	while (mask) {
+		unsigned i = u_bit_scan(&mask);
+		struct pipe_resource *res = views->views[i]->base.texture;
+
+		if (res && res->target != PIPE_BUFFER) {
+			struct r600_texture *rtex = (struct r600_texture *)res;
+
+			if (rtex->cmask.size) {
+				views->compressed_colortex_mask |= 1 << i;
+			} else {
+				views->compressed_colortex_mask &= ~(1 << i);
+			}
+		}
 	}
 }
 
@@ -1457,6 +1477,16 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 
 	if (!rctx->blitter->running) {
 		unsigned i;
+		unsigned counter;
+
+		counter = p_atomic_read(&rctx->screen->b.compressed_colortex_counter);
+		if (counter != rctx->b.last_compressed_colortex_counter) {
+			rctx->b.last_compressed_colortex_counter = counter;
+
+			for (i = 0; i < PIPE_SHADER_TYPES; ++i) {
+				r600_update_compressed_colortex_mask(&rctx->samplers[i].views);
+			}
+		}
 
 		/* Decompress textures if needed. */
 		for (i = 0; i < PIPE_SHADER_TYPES; i++) {
@@ -1672,7 +1702,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	bool render_cond_bit = rctx->b.render_cond && !rctx->b.render_cond_force_off;
 	uint64_t mask;
-	unsigned num_patches;
+	unsigned num_patches, dirty_fb_counter;
 
 	if (!info.indirect && !info.count && (info.indexed || !info.count_from_stream_output)) {
 		return;
@@ -1686,6 +1716,13 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	/* make sure that the gfx ring is only one active */
 	if (rctx->b.dma.cs && rctx->b.dma.cs->cdw) {
 		rctx->b.dma.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
+	}
+
+	/* Re-emit the framebuffer state if needed. */
+	dirty_fb_counter = p_atomic_read(&rctx->b.screen->dirty_fb_counter);
+	if (dirty_fb_counter != rctx->b.last_dirty_fb_counter) {
+		rctx->b.last_dirty_fb_counter = dirty_fb_counter;
+		r600_mark_atom_dirty(rctx, &rctx->framebuffer.atom);
 	}
 
 	if (!r600_update_derived_state(rctx)) {

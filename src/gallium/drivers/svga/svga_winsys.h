@@ -108,6 +108,12 @@ struct svga_winsys_context
 	      uint32_t nr_bytes, uint32_t nr_relocs );
    
    /**
+    * Returns current size of command buffer, in bytes.
+    */
+   unsigned
+   (*get_command_buffer_size)(struct svga_winsys_context *swc);
+
+   /**
     * Emit a relocation for a host surface.
     * 
     * @param flags bitmask of SVGA_RELOC_* flags

@@ -241,8 +241,9 @@ static void si_blit_decompress_depth_in_place(struct si_context *sctx,
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 }
 
-void si_flush_depth_textures(struct si_context *sctx,
-			     struct si_textures_info *textures)
+static void
+si_flush_depth_textures(struct si_context *sctx,
+			struct si_textures_info *textures)
 {
 	unsigned i;
 	unsigned mask = textures->depth_texture_mask;
@@ -271,17 +272,28 @@ void si_flush_depth_textures(struct si_context *sctx,
 static void si_blit_decompress_color(struct pipe_context *ctx,
 		struct r600_texture *rtex,
 		unsigned first_level, unsigned last_level,
-		unsigned first_layer, unsigned last_layer)
+		unsigned first_layer, unsigned last_layer,
+		bool need_dcc_decompress)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	unsigned layer, level, checked_last_layer, max_layer;
 
-	if (!rtex->dirty_level_mask)
+	if (!rtex->dirty_level_mask && !need_dcc_decompress)
 		return;
 
 	for (level = first_level; level <= last_level; level++) {
-		if (!(rtex->dirty_level_mask & (1 << level)))
+		void* custom_blend;
+
+		if (!(rtex->dirty_level_mask & (1 << level)) && !need_dcc_decompress)
 			continue;
+
+		if (rtex->dcc_offset && need_dcc_decompress) {
+			custom_blend = sctx->custom_blend_dcc_decompress;
+		} else if (rtex->fmask.size) {
+			custom_blend = sctx->custom_blend_decompress;
+		} else {
+			custom_blend = sctx->custom_blend_fastclear;
+		}
 
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
@@ -298,9 +310,7 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 			cbsurf = ctx->create_surface(ctx, &rtex->resource.b.b, &surf_tmpl);
 
 			si_blitter_begin(ctx, SI_DECOMPRESS);
-			util_blitter_custom_color(sctx->blitter, cbsurf,
-				rtex->fmask.size ? sctx->custom_blend_decompress :
-						   sctx->custom_blend_fastclear);
+			util_blitter_custom_color(sctx->blitter, cbsurf, custom_blend);
 			si_blitter_end(ctx);
 
 			pipe_surface_reference(&cbsurf, NULL);
@@ -314,8 +324,9 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 	}
 }
 
-void si_decompress_color_textures(struct si_context *sctx,
-				  struct si_textures_info *textures)
+static void
+si_decompress_color_textures(struct si_context *sctx,
+			     struct si_textures_info *textures)
 {
 	unsigned i;
 	unsigned mask = textures->compressed_colortex_mask;
@@ -330,11 +341,37 @@ void si_decompress_color_textures(struct si_context *sctx,
 		assert(view);
 
 		tex = (struct r600_texture *)view->texture;
-		assert(tex->cmask.size || tex->fmask.size || tex->dcc_buffer);
+		assert(tex->cmask.size || tex->fmask.size || tex->dcc_offset);
 
 		si_blit_decompress_color(&sctx->b.b, tex,
 					 view->u.tex.first_level, view->u.tex.last_level,
-					 0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
+					 0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level),
+					 false);
+	}
+}
+
+void si_decompress_textures(struct si_context *sctx)
+{
+	unsigned compressed_colortex_counter;
+
+	if (sctx->blitter->running)
+		return;
+
+	/* Update the compressed_colortex_mask if necessary. */
+	compressed_colortex_counter = p_atomic_read(&sctx->screen->b.compressed_colortex_counter);
+	if (compressed_colortex_counter != sctx->b.last_compressed_colortex_counter) {
+		sctx->b.last_compressed_colortex_counter = compressed_colortex_counter;
+		si_update_compressed_colortex_masks(sctx);
+	}
+
+	/* Flush depth textures which need to be flushed. */
+	for (int i = 0; i < SI_NUM_SHADERS; i++) {
+		if (sctx->samplers[i].depth_texture_mask) {
+			si_flush_depth_textures(sctx, &sctx->samplers[i]);
+		}
+		if (sctx->samplers[i].compressed_colortex_mask) {
+			si_decompress_color_textures(sctx, &sctx->samplers[i]);
+		}
 	}
 }
 
@@ -483,9 +520,9 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 			si_blit_decompress_depth_in_place(sctx, rtex, true,
 							  level, level,
 							  first_layer, last_layer);
-	} else if (rtex->fmask.size || rtex->cmask.size || rtex->dcc_buffer) {
+	} else if (rtex->fmask.size || rtex->cmask.size || rtex->dcc_offset) {
 		si_blit_decompress_color(ctx, rtex, level, level,
-					 first_layer, last_layer);
+					 first_layer, last_layer, false);
 	}
 }
 
@@ -712,7 +749,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    dst->surface.level[info->dst.level].mode >= RADEON_SURF_MODE_1D &&
 	    !(dst->surface.flags & RADEON_SURF_SCANOUT) &&
 	    (!dst->cmask.size || !dst->dirty_level_mask) && /* dst cannot be fast-cleared */
-	    !dst->dcc_buffer) {
+	    !dst->dcc_offset) {
 		si_blitter_begin(ctx, SI_COLOR_RESOLVE |
 				 (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
 		util_blitter_custom_resolve_color(sctx->blitter,
@@ -761,10 +798,21 @@ static void si_flush_resource(struct pipe_context *ctx,
 
 	assert(res->target != PIPE_BUFFER);
 
-	if (!rtex->is_depth && rtex->cmask.size) {
+	if (!rtex->is_depth && (rtex->cmask.size || rtex->dcc_offset)) {
 		si_blit_decompress_color(ctx, rtex, 0, res->last_level,
-					 0, util_max_layer(res, 0));
+					 0, util_max_layer(res, 0), false);
 	}
+}
+
+static void si_decompress_dcc(struct pipe_context *ctx,
+			      struct r600_texture *rtex)
+{
+	if (!rtex->dcc_offset)
+		return;
+
+	si_blit_decompress_color(ctx, rtex, 0, rtex->resource.b.b.last_level,
+				 0, util_max_layer(&rtex->resource.b.b, 0),
+				 true);
 }
 
 static void si_pipe_clear_buffer(struct pipe_context *ctx,
@@ -836,4 +884,5 @@ void si_init_blit_functions(struct si_context *sctx)
 	sctx->b.b.blit = si_blit;
 	sctx->b.b.flush_resource = si_flush_resource;
 	sctx->b.blit_decompress_depth = si_blit_decompress_depth;
+	sctx->b.decompress_dcc = si_decompress_dcc;
 }

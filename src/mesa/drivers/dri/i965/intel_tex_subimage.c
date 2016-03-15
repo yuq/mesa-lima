@@ -214,7 +214,7 @@ intelTexSubImage(struct gl_context * ctx,
    ok = _mesa_meta_pbo_TexSubImage(ctx, dims, texImage,
                                    xoffset, yoffset, zoffset,
                                    width, height, depth, format, type,
-                                   pixels, false, tex_busy, packing);
+                                   pixels, tex_busy, packing);
    if (ok)
       return;
 

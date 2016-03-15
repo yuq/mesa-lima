@@ -319,6 +319,10 @@ The integer capabilities:
   adjusted appropriately.
 * ``PIPE_CAP_QUERY_BUFFER_OBJECT``: Driver supports
   context::get_query_result_resource callback.
+* ``PIPE_CAP_PCI_GROUP``: Return the PCI segment group number.
+* ``PIPE_CAP_PCI_BUS``: Return the PCI bus number.
+* ``PIPE_CAP_PCI_DEVICE``: Return the PCI device number.
+* ``PIPE_CAP_PCI_FUNCTION``: Return the PCI function number.
 
 
 .. _pipe_capf:

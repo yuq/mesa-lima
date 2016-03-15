@@ -463,8 +463,10 @@ svga_texture_transfer_map(struct pipe_context *pipe,
 	 assert(transfer->usage & PIPE_TRANSFER_WRITE);
 	 if ((transfer->usage & PIPE_TRANSFER_UNSYNCHRONIZED) == 0) {
             svga_surfaces_flush(svga);
-            if (!sws->surface_is_flushed(sws, surf))
+            if (!sws->surface_is_flushed(sws, surf)) {
+               svga->hud.surface_write_flushes++;
                svga_context_flush(svga, NULL);
+            }
 	 }
       }
    }
@@ -1038,7 +1040,12 @@ svga_texture_generate_mipmap(struct pipe_context *pipe,
       return FALSE;
 
    sv = svga_pipe_sampler_view(psv);
-   svga_validate_pipe_sampler_view(svga, sv);
+   ret = svga_validate_pipe_sampler_view(svga, sv);
+   if (ret != PIPE_OK) {
+      svga_context_flush(svga, NULL);
+      ret = svga_validate_pipe_sampler_view(svga, sv);
+      assert(ret == PIPE_OK);
+   }
 
    ret = SVGA3D_vgpu10_GenMips(svga->swc, sv->id, tex->handle);
    if (ret != PIPE_OK) {

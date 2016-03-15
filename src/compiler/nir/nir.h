@@ -2094,8 +2094,8 @@ void nir_index_blocks(nir_function_impl *impl);
 void nir_print_shader(nir_shader *shader, FILE *fp);
 void nir_print_instr(const nir_instr *instr, FILE *fp);
 
-nir_shader *nir_shader_clone(void *mem_ctx, const nir_shader *s);
-nir_function_impl *nir_function_impl_clone(const nir_function_impl *impl);
+nir_shader * nir_shader_clone(void *mem_ctx, const nir_shader *s);
+nir_function_impl *nir_function_impl_clone(const nir_function_impl *fi);
 nir_constant *nir_constant_clone(const nir_constant *c, nir_variable *var);
 
 #ifdef DEBUG

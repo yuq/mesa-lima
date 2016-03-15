@@ -323,6 +323,8 @@ nir_function_impl_create(nir_function *function)
       impl->return_var->type = function->return_type;
       impl->return_var->data.mode = nir_var_param;
       impl->return_var->data.location = -1;
+   } else {
+      impl->return_var = NULL;
    }
 
    return impl;

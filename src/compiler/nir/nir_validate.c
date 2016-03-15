@@ -938,6 +938,7 @@ validate_function_impl(nir_function_impl *impl, validate_state *state)
    assert(impl->num_params == impl->function->num_params);
    for (unsigned i = 0; i < impl->num_params; i++) {
       assert(impl->params[i]->type == impl->function->params[i].type);
+      assert(impl->params[i]->data.mode == nir_var_param);
       assert(impl->params[i]->data.location == i);
       validate_var_decl(impl->params[i], false, state);
    }
@@ -946,6 +947,7 @@ validate_function_impl(nir_function_impl *impl, validate_state *state)
       assert(impl->return_var == NULL);
    } else {
       assert(impl->return_var->type == impl->function->return_type);
+      assert(impl->return_var->data.mode == nir_var_param);
       assert(impl->return_var->data.location == -1);
       validate_var_decl(impl->return_var, false, state);
    }

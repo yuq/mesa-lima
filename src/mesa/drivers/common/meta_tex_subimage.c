@@ -175,7 +175,7 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
                            int xoffset, int yoffset, int zoffset,
                            int width, int height, int depth,
                            GLenum format, GLenum type, const void *pixels,
-                           bool allocate_storage, bool create_pbo,
+                           bool create_pbo,
                            const struct gl_pixelstore_attrib *packing)
 {
    struct gl_buffer_object *pbo = NULL;
@@ -214,19 +214,18 @@ _mesa_meta_pbo_TexSubImage(struct gl_context *ctx, GLuint dims,
     */
    image_height = packing->ImageHeight == 0 ? height : packing->ImageHeight;
 
+   _mesa_meta_begin(ctx, ~(MESA_META_PIXEL_TRANSFER |
+                           MESA_META_PIXEL_STORE));
+
    pbo_tex_image = create_texture_for_pbo(ctx, create_pbo,
                                           GL_PIXEL_UNPACK_BUFFER,
                                           dims, width, height, depth,
                                           format, type, pixels, packing,
                                           &pbo, &pbo_tex);
-   if (!pbo_tex_image)
+   if (!pbo_tex_image) {
+      _mesa_meta_end(ctx);
       return false;
-
-   if (allocate_storage)
-      ctx->Driver.AllocTextureImageBuffer(ctx, tex_image);
-
-   _mesa_meta_begin(ctx, ~(MESA_META_PIXEL_TRANSFER |
-                           MESA_META_PIXEL_STORE));
+   }
 
    readFb = ctx->Driver.NewFramebuffer(ctx, 0xDEADBEEF);
    if (readFb == NULL)
@@ -361,15 +360,18 @@ _mesa_meta_pbo_GetTexSubImage(struct gl_context *ctx, GLuint dims,
     */
    image_height = packing->ImageHeight == 0 ? height : packing->ImageHeight;
 
+   _mesa_meta_begin(ctx, ~(MESA_META_PIXEL_TRANSFER |
+                           MESA_META_PIXEL_STORE));
+
    pbo_tex_image = create_texture_for_pbo(ctx, false, GL_PIXEL_PACK_BUFFER,
                                           dims, width, height, depth,
                                           format, type, pixels, packing,
                                           &pbo, &pbo_tex);
-   if (!pbo_tex_image)
-      return false;
 
-   _mesa_meta_begin(ctx, ~(MESA_META_PIXEL_TRANSFER |
-                           MESA_META_PIXEL_STORE));
+   if (!pbo_tex_image) {
+      _mesa_meta_end(ctx);
+      return false;
+   }
 
    /* GL_CLAMP_FRAGMENT_COLOR doesn't affect ReadPixels and GettexImage */
    if (ctx->Extensions.ARB_color_buffer_float)

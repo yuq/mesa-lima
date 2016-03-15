@@ -421,7 +421,7 @@ static void destroy_globals(struct context *ctx)
 
 static void launch_grid(struct context *ctx, const uint *block_layout,
                         const uint *grid_layout, uint32_t pc,
-                        const void *input)
+                        void *input)
 {
         struct pipe_context *pipe = ctx->pipe;
         struct pipe_grid_info info;

@@ -30,58 +30,86 @@
 #include "nvc0/nve4_compute.xml.h"
 #include "nvc0/nvc0_compute.xml.h"
 
-/* === PERFORMANCE MONITORING COUNTERS for NVE4+ === */
-
 /* NOTE: intentionally using the same names as NV */
-static const char *nve4_hw_sm_query_names[] =
-{
-   /* MP counters */
-   "active_cycles",
-   "active_warps",
-   "atom_cas_count",
-   "atom_count",
-   "branch",
-   "divergent_branch",
-   "gld_request",
-   "global_ld_mem_divergence_replays",
-   "global_store_transaction",
-   "global_st_mem_divergence_replays",
-   "gred_count",
-   "gst_request",
-   "inst_executed",
-   "inst_issued1",
-   "inst_issued2",
-   "l1_global_load_hit",
-   "l1_global_load_miss",
-   "__l1_global_load_transactions",
-   "__l1_global_store_transactions",
-   "l1_local_load_hit",
-   "l1_local_load_miss",
-   "l1_local_store_hit",
-   "l1_local_store_miss",
-   "l1_shared_load_transactions",
-   "l1_shared_store_transactions",
-   "local_load",
-   "local_load_transactions",
-   "local_store",
-   "local_store_transactions",
-   "prof_trigger_00",
-   "prof_trigger_01",
-   "prof_trigger_02",
-   "prof_trigger_03",
-   "prof_trigger_04",
-   "prof_trigger_05",
-   "prof_trigger_06",
-   "prof_trigger_07",
-   "shared_load",
-   "shared_load_replay",
-   "shared_store",
-   "shared_store_replay",
-   "sm_cta_launched",
-   "threads_launched",
-   "uncached_global_load_transaction",
-   "warps_launched",
+#define _Q(t, n) { NVC0_HW_SM_QUERY_##t, n }
+struct {
+   unsigned type;
+   const char *name;
+} nvc0_hw_sm_queries[] = {
+   _Q(ACTIVE_CYCLES,                "active_cycles"                           ),
+   _Q(ACTIVE_WARPS,                 "active_warps"                            ),
+   _Q(ATOM_CAS_COUNT,               "atom_cas_count"                          ),
+   _Q(ATOM_COUNT,                   "atom_count"                              ),
+   _Q(BRANCH,                       "branch"                                  ),
+   _Q(DIVERGENT_BRANCH,             "divergent_branch"                        ),
+   _Q(GLD_REQUEST,                  "gld_request"                             ),
+   _Q(GLD_MEM_DIV_REPLAY,           "global_ld_mem_divergence_replays"        ),
+   _Q(GST_TRANSACTIONS,             "global_store_transaction"                ),
+   _Q(GST_MEM_DIV_REPLAY,           "global_st_mem_divergence_replays"        ),
+   _Q(GRED_COUNT,                   "gred_count"                              ),
+   _Q(GST_REQUEST,                  "gst_request"                             ),
+   _Q(INST_EXECUTED,                "inst_executed"                           ),
+   _Q(INST_ISSUED,                  "inst_issued"                             ),
+   _Q(INST_ISSUED1,                 "inst_issued1"                            ),
+   _Q(INST_ISSUED2,                 "inst_issued2"                            ),
+   _Q(INST_ISSUED1_0,               "inst_issued1_0"                          ),
+   _Q(INST_ISSUED1_1,               "inst_issued1_1"                          ),
+   _Q(INST_ISSUED2_0,               "inst_issued2_0"                          ),
+   _Q(INST_ISSUED2_1,               "inst_issued2_1"                          ),
+   _Q(L1_GLD_HIT,                   "l1_global_load_hit"                      ),
+   _Q(L1_GLD_MISS,                  "l1_global_load_miss"                     ),
+   _Q(L1_GLD_TRANSACTIONS,          "__l1_global_load_transactions"           ),
+   _Q(L1_GST_TRANSACTIONS,          "__l1_global_store_transactions"          ),
+   _Q(L1_LOCAL_LD_HIT,              "l1_local_load_hit"                       ),
+   _Q(L1_LOCAL_LD_MISS,             "l1_local_load_miss"                      ),
+   _Q(L1_LOCAL_ST_HIT,              "l1_local_store_hit"                      ),
+   _Q(L1_LOCAL_ST_MISS,             "l1_local_store_miss"                     ),
+   _Q(L1_SHARED_LD_TRANSACTIONS,    "l1_shared_load_transactions"             ),
+   _Q(L1_SHARED_ST_TRANSACTIONS,    "l1_shared_store_transactions"            ),
+   _Q(LOCAL_LD,                     "local_load"                              ),
+   _Q(LOCAL_LD_TRANSACTIONS,        "local_load_transactions"                 ),
+   _Q(LOCAL_ST,                     "local_store"                             ),
+   _Q(LOCAL_ST_TRANSACTIONS,        "local_store_transactions"                ),
+   _Q(NOT_PRED_OFF_INST_EXECUTED,   "not_predicated_off_thread_inst_executed" ),
+   _Q(PROF_TRIGGER_0,               "prof_trigger_00"                         ),
+   _Q(PROF_TRIGGER_1,               "prof_trigger_01"                         ),
+   _Q(PROF_TRIGGER_2,               "prof_trigger_02"                         ),
+   _Q(PROF_TRIGGER_3,               "prof_trigger_03"                         ),
+   _Q(PROF_TRIGGER_4,               "prof_trigger_04"                         ),
+   _Q(PROF_TRIGGER_5,               "prof_trigger_05"                         ),
+   _Q(PROF_TRIGGER_6,               "prof_trigger_06"                         ),
+   _Q(PROF_TRIGGER_7,               "prof_trigger_07"                         ),
+   _Q(SHARED_LD,                    "shared_load"                             ),
+   _Q(SHARED_LD_REPLAY,             "shared_load_replay"                      ),
+   _Q(SHARED_ST,                    "shared_store"                            ),
+   _Q(SHARED_ST_REPLAY,             "shared_store_replay"                     ),
+   _Q(SM_CTA_LAUNCHED,              "sm_cta_launched"                         ),
+   _Q(THREADS_LAUNCHED,             "threads_launched"                        ),
+   _Q(TH_INST_EXECUTED,             "thread_inst_executed"                    ),
+   _Q(TH_INST_EXECUTED_0,           "thread_inst_executed_0"                  ),
+   _Q(TH_INST_EXECUTED_1,           "thread_inst_executed_1"                  ),
+   _Q(TH_INST_EXECUTED_2,           "thread_inst_executed_2"                  ),
+   _Q(TH_INST_EXECUTED_3,           "thread_inst_executed_3"                  ),
+   _Q(UNCACHED_GLD_TRANSACTIONS,    "uncached_global_load_transaction"        ),
+   _Q(WARPS_LAUNCHED,               "warps_launched"                          ),
 };
+
+#undef _Q
+
+static inline const char *
+nvc0_hw_sm_query_get_name(unsigned query_type)
+{
+   unsigned i;
+
+   for (i = 0; i < ARRAY_SIZE(nvc0_hw_sm_queries); i++) {
+      if (nvc0_hw_sm_queries[i].type == query_type)
+         return nvc0_hw_sm_queries[i].name;
+   }
+   assert(0);
+   return NULL;
+}
+
+/* === PERFORMANCE MONITORING COUNTERS for NVE4+ === */
 
 /* Code to read out MP counters: They are accessible via mmio, too, but let's
  * just avoid mapping registers in userspace. We'd have to know which MPs are
@@ -169,6 +197,49 @@ static const uint64_t nve4_read_hw_sm_counters_code[] =
    0x8000000000001de7ULL
 };
 
+static const uint64_t nvf0_read_hw_sm_counters_code[] =
+{
+   /* Same kernel as GK104 */
+   0x0880808080808080ULL,
+   0x86400000109c0022ULL,
+   0x86400000019c0032ULL,
+   0x86400000021c0002ULL,
+   0x86400000029c0006ULL,
+   0x86400000031c000aULL,
+   0x86400000039c000eULL,
+   0x86400000041c0012ULL,
+   0x08ac1080108c8080ULL,
+   0x86400000049c0016ULL,
+   0x86400000051c001aULL,
+   0x86400000059c001eULL,
+   0xdb201c007f9c201eULL,
+   0x64c03c00001c002aULL,
+   0xc00000020a1c3021ULL,
+   0x64c03c00009c002eULL,
+   0x0810a0808010b810ULL,
+   0xc0000001041c3025ULL,
+   0x180000000020003cULL,
+   0xdb201c007f9c243eULL,
+   0xc1c00000301c2021ULL,
+   0xc1c00000081c2431ULL,
+   0xc1c00000021c2435ULL,
+   0xe0800000069c2026ULL,
+   0x08b010b010b010a0ULL,
+   0xe0800000061c2022ULL,
+   0xe4c03c00051c0032ULL,
+   0xe0840000041c282aULL,
+   0xe4c03c00059c0036ULL,
+   0xe08040007f9c2c2eULL,
+   0xe0840000049c3032ULL,
+   0xfe800000001c2800ULL,
+   0x080000b81080b010ULL,
+   0x64c03c00011c0002ULL,
+   0xe08040007f9c3436ULL,
+   0xfe80000020043010ULL,
+   0xfc800000281c3000ULL,
+   0x18000000001c003cULL,
+};
+
 /* For simplicity, we will allocate as many group slots as we allocate counter
  * slots. This means that a single counter which wants to source from 2 groups
  * will have to be declared as using 2 counter slots. This shouldn't really be
@@ -187,69 +258,593 @@ struct nvc0_hw_sm_counter_cfg
 
 struct nvc0_hw_sm_query_cfg
 {
+   unsigned type;
    struct nvc0_hw_sm_counter_cfg ctr[8];
    uint8_t num_counters;
    uint8_t norm[2]; /* normalization num,denom */
 };
 
-#define _Q1A(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, { nu, dn } }
-#define _Q1B(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, { nu, dn } }
+#define _CA(f, m, g, s) { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, 0, s }
+#define _CB(f, m, g, s) { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, 0, s }
+#define _Q(n, c) [NVE4_HW_SM_QUERY_##n] = c
+
+/* ==== Compute capability 3.0 (GK104:GK110) ==== */
+static const struct nvc0_hw_sm_query_cfg
+sm30_active_cycles =
+{
+   .type         = NVC0_HW_SM_QUERY_ACTIVE_CYCLES,
+   .ctr[0]       = _CB(0x0001, B6, WARP, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_active_warps =
+{
+   .type         = NVC0_HW_SM_QUERY_ACTIVE_WARPS,
+   .ctr[0]       = _CB(0x003f, B6, WARP, 0x31483104),
+   .num_counters = 1,
+   .norm         = { 2, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_atom_cas_count =
+{
+   .type         = NVC0_HW_SM_QUERY_ATOM_CAS_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x000000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_atom_count =
+{
+   .type         = NVC0_HW_SM_QUERY_ATOM_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_branch =
+{
+   .type         = NVC0_HW_SM_QUERY_BRANCH,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_divergent_branch =
+{
+   .type         = NVC0_HW_SM_QUERY_DIVERGENT_BRANCH,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gld_request =
+{
+   .type         = NVC0_HW_SM_QUERY_GLD_REQUEST,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gld_mem_div_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_GLD_MEM_DIV_REPLAY,
+   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gst_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_GST_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, MEM, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gst_mem_div_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_GST_MEM_DIV_REPLAY,
+   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gred_count =
+{
+   .type         = NVC0_HW_SM_QUERY_GRED_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_gst_request =
+{
+   .type         = NVC0_HW_SM_QUERY_GST_REQUEST,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_inst_executed =
+{
+   .type         = NVC0_HW_SM_QUERY_INST_EXECUTED,
+   .ctr[0]       = _CA(0x0003, B6, EXEC, 0x00000398),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_inst_issued1 =
+{
+   .type         = NVC0_HW_SM_QUERY_INST_ISSUED1,
+   .ctr[0]       = _CA(0x0001, B6, ISSUE, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_inst_issued2 =
+{
+   .type         = NVC0_HW_SM_QUERY_INST_ISSUED2,
+   .ctr[0]       = _CA(0x0001, B6, ISSUE, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_gld_hit =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_GLD_HIT,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_gld_miss =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_GLD_MISS,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_gld_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_GLD_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, UNK0F, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_gst_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_GST_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, UNK0F, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_local_ld_hit =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_LOCAL_LD_HIT,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_local_ld_miss =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_LOCAL_LD_MISS,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_local_st_hit =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_LOCAL_ST_HIT,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_local_st_miss =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_LOCAL_ST_MISS,
+   .ctr[0]       = _CB(0x0001, B6, L1, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_shared_ld_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_SHARED_LD_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_l1_shared_st_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_L1_SHARED_ST_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_local_ld =
+{
+   .type         = NVC0_HW_SM_QUERY_LOCAL_LD,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_local_ld_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_LOCAL_LD_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_local_st =
+{
+   .type         = NVC0_HW_SM_QUERY_LOCAL_ST,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_local_st_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_LOCAL_ST_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_0 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_0,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_1 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_1,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_2 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_2,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_3 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_3,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_4 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_4,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_5 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_5,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_6 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_6,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000018),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_prof_trigger_7 =
+{
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_7,
+   .ctr[0]       = _CA(0x0001, B6, USER, 0x0000001c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_shared_ld =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_LD,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_shared_ld_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_LD_REPLAY,
+   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x00000008),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_shared_st =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_ST,
+   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_shared_st_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_ST_REPLAY,
+   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x0000000c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_sm_cta_launched =
+{
+   .type         = NVC0_HW_SM_QUERY_SM_CTA_LAUNCHED,
+   .ctr[0]       = _CB(0x0001, B6, WARP, 0x0000001c),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_threads_launched =
+{
+   .type         = NVC0_HW_SM_QUERY_THREADS_LAUNCHED,
+   .ctr[0]       = _CA(0x003f, B6, LAUNCH, 0x398a4188),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_uncached_gld_transactions =
+{
+   .type         = NVC0_HW_SM_QUERY_UNCACHED_GLD_TRANSACTIONS,
+   .ctr[0]       = _CB(0x0001, B6, MEM, 0x00000000),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm30_warps_launched =
+{
+   .type         = NVC0_HW_SM_QUERY_WARPS_LAUNCHED,
+   .ctr[0]       = _CA(0x0001, B6, LAUNCH, 0x00000004),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
 
 /* NOTES:
  * active_warps: bit 0 alternates btw 0 and 1 for odd nr of warps
  * inst_executed etc.: we only count a single warp scheduler
  */
-static const struct nvc0_hw_sm_query_cfg nve4_hw_sm_queries[] =
+static const struct nvc0_hw_sm_query_cfg *sm30_hw_sm_queries[] =
 {
-   _Q1B(ACTIVE_CYCLES, 0x0001, B6, WARP, 0x00000000, 1, 1),
-   _Q1B(ACTIVE_WARPS,  0x003f, B6, WARP, 0x31483104, 2, 1),
-   _Q1A(ATOM_CAS_COUNT, 0x0001, B6, BRANCH, 0x000000004, 1, 1),
-   _Q1A(ATOM_COUNT, 0x0001, B6, BRANCH, 0x00000000, 1, 1),
-   _Q1A(BRANCH,           0x0001, B6, BRANCH, 0x0000000c, 1, 1),
-   _Q1A(DIVERGENT_BRANCH, 0x0001, B6, BRANCH, 0x00000010, 1, 1),
-   _Q1A(GLD_REQUEST, 0x0001, B6, LDST, 0x00000010, 1, 1),
-   _Q1B(GLD_MEM_DIV_REPLAY, 0x0001, B6, REPLAY, 0x00000010, 1, 1),
-   _Q1B(GST_TRANSACTIONS,          0x0001, B6, MEM, 0x00000004, 1, 1),
-   _Q1B(GST_MEM_DIV_REPLAY, 0x0001, B6, REPLAY, 0x00000014, 1, 1),
-   _Q1A(GRED_COUNT, 0x0001, B6, BRANCH, 0x00000008, 1, 1),
-   _Q1A(GST_REQUEST, 0x0001, B6, LDST, 0x00000014, 1, 1),
-   _Q1A(INST_EXECUTED, 0x0003, B6, EXEC,  0x00000398, 1, 1),
-   _Q1A(INST_ISSUED1,  0x0001, B6, ISSUE, 0x00000004, 1, 1),
-   _Q1A(INST_ISSUED2,  0x0001, B6, ISSUE, 0x00000008, 1, 1),
-   _Q1B(L1_GLD_HIT,  0x0001, B6, L1, 0x00000010, 1, 1),
-   _Q1B(L1_GLD_MISS, 0x0001, B6, L1, 0x00000014, 1, 1),
-   _Q1B(L1_GLD_TRANSACTIONS,  0x0001, B6, UNK0F, 0x00000000, 1, 1),
-   _Q1B(L1_GST_TRANSACTIONS,  0x0001, B6, UNK0F, 0x00000004, 1, 1),
-   _Q1B(L1_LOCAL_LD_HIT,   0x0001, B6, L1, 0x00000000, 1, 1),
-   _Q1B(L1_LOCAL_LD_MISS,  0x0001, B6, L1, 0x00000004, 1, 1),
-   _Q1B(L1_LOCAL_ST_HIT,  0x0001, B6, L1, 0x00000008, 1, 1),
-   _Q1B(L1_LOCAL_ST_MISS, 0x0001, B6, L1, 0x0000000c, 1, 1),
-   _Q1B(L1_SHARED_LD_TRANSACTIONS, 0x0001, B6, TRANSACTION, 0x00000008, 1, 1),
-   _Q1B(L1_SHARED_ST_TRANSACTIONS, 0x0001, B6, TRANSACTION, 0x0000000c, 1, 1),
-   _Q1A(LOCAL_LD,    0x0001, B6, LDST, 0x00000008, 1, 1),
-   _Q1B(LOCAL_LD_TRANSACTIONS, 0x0001, B6, TRANSACTION, 0x00000000, 1, 1),
-   _Q1A(LOCAL_ST,    0x0001, B6, LDST, 0x0000000c, 1, 1),
-   _Q1B(LOCAL_ST_TRANSACTIONS, 0x0001, B6, TRANSACTION, 0x00000004, 1, 1),
-   _Q1A(PROF_TRIGGER_0, 0x0001, B6, USER, 0x00000000, 1, 1),
-   _Q1A(PROF_TRIGGER_1, 0x0001, B6, USER, 0x00000004, 1, 1),
-   _Q1A(PROF_TRIGGER_2, 0x0001, B6, USER, 0x00000008, 1, 1),
-   _Q1A(PROF_TRIGGER_3, 0x0001, B6, USER, 0x0000000c, 1, 1),
-   _Q1A(PROF_TRIGGER_4, 0x0001, B6, USER, 0x00000010, 1, 1),
-   _Q1A(PROF_TRIGGER_5, 0x0001, B6, USER, 0x00000014, 1, 1),
-   _Q1A(PROF_TRIGGER_6, 0x0001, B6, USER, 0x00000018, 1, 1),
-   _Q1A(PROF_TRIGGER_7, 0x0001, B6, USER, 0x0000001c, 1, 1),
-   _Q1A(SHARED_LD,   0x0001, B6, LDST, 0x00000000, 1, 1),
-   _Q1B(SHARED_LD_REPLAY, 0x0001, B6, REPLAY, 0x00000008, 1, 1),
-   _Q1A(SHARED_ST,   0x0001, B6, LDST, 0x00000004, 1, 1),
-   _Q1B(SHARED_ST_REPLAY, 0x0001, B6, REPLAY, 0x0000000c, 1, 1),
-   _Q1B(SM_CTA_LAUNCHED,      0x0001, B6, WARP, 0x0000001c, 1, 1),
-   _Q1A(THREADS_LAUNCHED,  0x003f, B6, LAUNCH, 0x398a4188, 1, 1),
-   _Q1B(UNCACHED_GLD_TRANSACTIONS, 0x0001, B6, MEM, 0x00000000, 1, 1),
-   _Q1A(WARPS_LAUNCHED,    0x0001, B6, LAUNCH, 0x00000004, 1, 1),
+   &sm30_active_cycles,
+   &sm30_active_warps,
+   &sm30_atom_cas_count,
+   &sm30_atom_count,
+   &sm30_branch,
+   &sm30_divergent_branch,
+   &sm30_gld_request,
+   &sm30_gld_mem_div_replay,
+   &sm30_gst_transactions,
+   &sm30_gst_mem_div_replay,
+   &sm30_gred_count,
+   &sm30_gst_request,
+   &sm30_inst_executed,
+   &sm30_inst_issued1,
+   &sm30_inst_issued2,
+   &sm30_l1_gld_hit,
+   &sm30_l1_gld_miss,
+   &sm30_l1_gld_transactions,
+   &sm30_l1_gst_transactions,
+   &sm30_l1_local_ld_hit,
+   &sm30_l1_local_ld_miss,
+   &sm30_l1_local_st_hit,
+   &sm30_l1_local_st_miss,
+   &sm30_l1_shared_ld_transactions,
+   &sm30_l1_shared_st_transactions,
+   &sm30_local_ld,
+   &sm30_local_ld_transactions,
+   &sm30_local_st,
+   &sm30_local_st_transactions,
+   &sm30_prof_trigger_0,
+   &sm30_prof_trigger_1,
+   &sm30_prof_trigger_2,
+   &sm30_prof_trigger_3,
+   &sm30_prof_trigger_4,
+   &sm30_prof_trigger_5,
+   &sm30_prof_trigger_6,
+   &sm30_prof_trigger_7,
+   &sm30_shared_ld,
+   &sm30_shared_ld_replay,
+   &sm30_shared_st,
+   &sm30_shared_st_replay,
+   &sm30_sm_cta_launched,
+   &sm30_threads_launched,
+   &sm30_uncached_gld_transactions,
+   &sm30_warps_launched,
 };
 
-#undef _Q1A
-#undef _Q1B
+/* ==== Compute capability 3.5 (GK110/GK208) ==== */
+static const struct nvc0_hw_sm_query_cfg
+sm35_atom_cas_count =
+{
+   .type         = NVC0_HW_SM_QUERY_ATOM_CAS_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, UNK1A, 0x00000014),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_atom_count =
+{
+   .type         = NVC0_HW_SM_QUERY_ATOM_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, UNK1A, 0x00000010),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_gred_count =
+{
+   .type         = NVC0_HW_SM_QUERY_GRED_COUNT,
+   .ctr[0]       = _CA(0x0001, B6, UNK1A, 0x00000018),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_not_pred_off_inst_executed =
+{
+   .type         = NVC0_HW_SM_QUERY_NOT_PRED_OFF_INST_EXECUTED,
+   .ctr[0]       = _CA(0x003f, B6, UNK14, 0x29062080),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_shared_ld_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_LD_REPLAY,
+   .ctr[0]       = _CB(0xaaaa, LOGOP, UNK13, 0x00000018),
+   .ctr[1]       = _CB(0x8888, LOGOP, REPLAY, 0x00000151),
+   .num_counters = 2,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_shared_st_replay =
+{
+   .type         = NVC0_HW_SM_QUERY_SHARED_ST_REPLAY,
+   .ctr[0]       = _CB(0xaaaa, LOGOP, UNK13, 0x00000018),
+   .ctr[1]       = _CB(0x8888, LOGOP, REPLAY, 0x000001d1),
+   .num_counters = 2,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg
+sm35_th_inst_executed =
+{
+   .type         = NVC0_HW_SM_QUERY_TH_INST_EXECUTED,
+   .ctr[0]       = _CA(0x003f, B6, UNK11, 0x29062080),
+   .num_counters = 1,
+   .norm         = { 1, 1 },
+};
+
+static const struct nvc0_hw_sm_query_cfg *sm35_hw_sm_queries[] =
+{
+   &sm30_active_cycles,
+   &sm30_active_warps,
+   &sm35_atom_cas_count,
+   &sm35_atom_count,
+   &sm30_gld_request,
+   &sm30_gld_mem_div_replay,
+   &sm30_gst_transactions,
+   &sm30_gst_mem_div_replay,
+   &sm35_gred_count,
+   &sm30_gst_request,
+   &sm30_inst_executed,
+   &sm30_inst_issued1,
+   &sm30_inst_issued2,
+   &sm30_l1_gld_hit,
+   &sm30_l1_gld_miss,
+   &sm30_l1_gld_transactions,
+   &sm30_l1_gst_transactions,
+   &sm30_l1_local_ld_hit,
+   &sm30_l1_local_ld_miss,
+   &sm30_l1_local_st_hit,
+   &sm30_l1_local_st_miss,
+   &sm30_l1_shared_ld_transactions,
+   &sm30_l1_shared_st_transactions,
+   &sm30_local_ld,
+   &sm30_local_ld_transactions,
+   &sm30_local_st,
+   &sm30_local_st_transactions,
+   &sm35_not_pred_off_inst_executed,
+   &sm30_prof_trigger_0,
+   &sm30_prof_trigger_1,
+   &sm30_prof_trigger_2,
+   &sm30_prof_trigger_3,
+   &sm30_prof_trigger_4,
+   &sm30_prof_trigger_5,
+   &sm30_prof_trigger_6,
+   &sm30_prof_trigger_7,
+   &sm30_shared_ld,
+   &sm35_shared_ld_replay,
+   &sm30_shared_st,
+   &sm35_shared_st_replay,
+   &sm30_sm_cta_launched,
+   &sm35_th_inst_executed,
+   &sm30_threads_launched,
+   &sm30_uncached_gld_transactions,
+   &sm30_warps_launched,
+};
+
+#undef _Q
+#undef _CA
+#undef _CB
 
 /* === PERFORMANCE MONITORING COUNTERS for NVC0:NVE4 === */
 /* NOTES:
@@ -257,43 +852,6 @@ static const struct nvc0_hw_sm_query_cfg nve4_hw_sm_queries[] =
  *   because there is a context-switch problem that we need to fix.
  *   Results might be wrong sometimes, be careful!
  */
-static const char *nvc0_hw_sm_query_names[] =
-{
-   /* MP counters */
-   "active_cycles",
-   "active_warps",
-   "atom_count",
-   "branch",
-   "divergent_branch",
-   "gld_request",
-   "gred_count",
-   "gst_request",
-   "inst_executed",
-   "inst_issued",
-   "inst_issued1_0",
-   "inst_issued1_1",
-   "inst_issued2_0",
-   "inst_issued2_1",
-   "local_load",
-   "local_store",
-   "prof_trigger_00",
-   "prof_trigger_01",
-   "prof_trigger_02",
-   "prof_trigger_03",
-   "prof_trigger_04",
-   "prof_trigger_05",
-   "prof_trigger_06",
-   "prof_trigger_07",
-   "shared_load",
-   "shared_store",
-   "threads_launched",
-   "thread_inst_executed_0",
-   "thread_inst_executed_1",
-   "thread_inst_executed_2",
-   "thread_inst_executed_3",
-   "warps_launched",
-};
-
 static const uint64_t nvc0_read_hw_sm_counters_code[] =
 {
    /* mov b32 $r8 $tidx
@@ -345,12 +903,12 @@ static const uint64_t nvc0_read_hw_sm_counters_code[] =
 };
 
 #define _C(f, o, g, m, s) { f, NVC0_COMPUTE_MP_PM_OP_MODE_##o, 0, g, m, s }
-#define _Q(n, c) [NVC0_HW_SM_QUERY_##n] = c
 
 /* ==== Compute capability 2.0 (GF100/GF110) ==== */
 static const struct nvc0_hw_sm_query_cfg
 sm20_active_cycles =
 {
+   .type         = NVC0_HW_SM_QUERY_ACTIVE_CYCLES,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x11, 0x000000ff, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -359,6 +917,7 @@ sm20_active_cycles =
 static const struct nvc0_hw_sm_query_cfg
 sm20_active_warps =
 {
+   .type         = NVC0_HW_SM_QUERY_ACTIVE_WARPS,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000010),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000020),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000030),
@@ -372,6 +931,7 @@ sm20_active_warps =
 static const struct nvc0_hw_sm_query_cfg
 sm20_atom_count =
 {
+   .type         = NVC0_HW_SM_QUERY_ATOM_COUNT,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x63, 0x000000ff, 0x00000030),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -380,6 +940,7 @@ sm20_atom_count =
 static const struct nvc0_hw_sm_query_cfg
 sm20_branch =
 {
+   .type         = NVC0_HW_SM_QUERY_BRANCH,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x1a, 0x000000ff, 0x00000000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x1a, 0x000000ff, 0x00000010),
    .num_counters = 2,
@@ -389,6 +950,7 @@ sm20_branch =
 static const struct nvc0_hw_sm_query_cfg
 sm20_divergent_branch =
 {
+   .type         = NVC0_HW_SM_QUERY_DIVERGENT_BRANCH,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x19, 0x000000ff, 0x00000020),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x19, 0x000000ff, 0x00000030),
    .num_counters = 2,
@@ -398,6 +960,7 @@ sm20_divergent_branch =
 static const struct nvc0_hw_sm_query_cfg
 sm20_gld_request =
 {
+   .type         = NVC0_HW_SM_QUERY_GLD_REQUEST,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000030),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -406,6 +969,7 @@ sm20_gld_request =
 static const struct nvc0_hw_sm_query_cfg
 sm20_gred_count =
 {
+   .type         = NVC0_HW_SM_QUERY_GRED_COUNT,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x63, 0x000000ff, 0x00000040),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -414,6 +978,7 @@ sm20_gred_count =
 static const struct nvc0_hw_sm_query_cfg
 sm20_gst_request =
 {
+   .type         = NVC0_HW_SM_QUERY_GST_REQUEST,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000060),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -422,6 +987,7 @@ sm20_gst_request =
 static const struct nvc0_hw_sm_query_cfg
 sm20_inst_executed =
 {
+   .type         = NVC0_HW_SM_QUERY_INST_EXECUTED,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x2d, 0x0000ffff, 0x00001000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x2d, 0x0000ffff, 0x00001010),
    .num_counters = 2,
@@ -431,6 +997,7 @@ sm20_inst_executed =
 static const struct nvc0_hw_sm_query_cfg
 sm20_inst_issued =
 {
+   .type         = NVC0_HW_SM_QUERY_INST_ISSUED,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x27, 0x0000ffff, 0x00007060),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x27, 0x0000ffff, 0x00007070),
    .num_counters = 2,
@@ -440,6 +1007,7 @@ sm20_inst_issued =
 static const struct nvc0_hw_sm_query_cfg
 sm20_local_ld =
 {
+   .type         = NVC0_HW_SM_QUERY_LOCAL_LD,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000020),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -448,6 +1016,7 @@ sm20_local_ld =
 static const struct nvc0_hw_sm_query_cfg
 sm20_local_st =
 {
+   .type         = NVC0_HW_SM_QUERY_LOCAL_ST,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000050),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -456,6 +1025,7 @@ sm20_local_st =
 static const struct nvc0_hw_sm_query_cfg
 sm20_prof_trigger_0 =
 {
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_0,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -464,6 +1034,7 @@ sm20_prof_trigger_0 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_prof_trigger_1 =
 {
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_1,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000010),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -472,6 +1043,7 @@ sm20_prof_trigger_1 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_prof_trigger_2 =
 {
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_2,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000020),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -480,6 +1052,7 @@ sm20_prof_trigger_2 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_prof_trigger_3 =
 {
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_3,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000030),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -488,6 +1061,7 @@ sm20_prof_trigger_3 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_prof_trigger_4 =
 {
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_4,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000040),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -496,6 +1070,7 @@ sm20_prof_trigger_4 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_prof_trigger_5 =
 {
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_5,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000050),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -504,6 +1079,7 @@ sm20_prof_trigger_5 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_prof_trigger_6 =
 {
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_6,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000060),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -512,6 +1088,7 @@ sm20_prof_trigger_6 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_prof_trigger_7 =
 {
+   .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_7,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000070),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -520,6 +1097,7 @@ sm20_prof_trigger_7 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_shared_ld =
 {
+   .type         = NVC0_HW_SM_QUERY_SHARED_LD,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000010),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -528,6 +1106,7 @@ sm20_shared_ld =
 static const struct nvc0_hw_sm_query_cfg
 sm20_shared_st =
 {
+   .type         = NVC0_HW_SM_QUERY_SHARED_ST,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000040),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -536,6 +1115,7 @@ sm20_shared_st =
 static const struct nvc0_hw_sm_query_cfg
 sm20_threads_launched =
 {
+   .type         = NVC0_HW_SM_QUERY_THREADS_LAUNCHED,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000010),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000020),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000030),
@@ -549,6 +1129,7 @@ sm20_threads_launched =
 static const struct nvc0_hw_sm_query_cfg
 sm20_th_inst_executed_0 =
 {
+   .type         = NVC0_HW_SM_QUERY_TH_INST_EXECUTED_0,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x2f, 0x000000ff, 0x00000000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x2f, 0x000000ff, 0x00000010),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0x2f, 0x000000ff, 0x00000020),
@@ -562,6 +1143,7 @@ sm20_th_inst_executed_0 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_th_inst_executed_1 =
 {
+   .type         = NVC0_HW_SM_QUERY_TH_INST_EXECUTED_1,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x30, 0x000000ff, 0x00000000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x30, 0x000000ff, 0x00000010),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0x30, 0x000000ff, 0x00000020),
@@ -575,6 +1157,7 @@ sm20_th_inst_executed_1 =
 static const struct nvc0_hw_sm_query_cfg
 sm20_warps_launched =
 {
+   .type         = NVC0_HW_SM_QUERY_WARPS_LAUNCHED,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -582,44 +1165,39 @@ sm20_warps_launched =
 
 static const struct nvc0_hw_sm_query_cfg *sm20_hw_sm_queries[] =
 {
-   _Q(ACTIVE_CYCLES,       &sm20_active_cycles),
-   _Q(ACTIVE_WARPS,        &sm20_active_warps),
-   _Q(ATOM_COUNT,          &sm20_atom_count),
-   _Q(BRANCH,              &sm20_branch),
-   _Q(DIVERGENT_BRANCH,    &sm20_divergent_branch),
-   _Q(GLD_REQUEST,         &sm20_gld_request),
-   _Q(GRED_COUNT,          &sm20_gred_count),
-   _Q(GST_REQUEST,         &sm20_gst_request),
-   _Q(INST_EXECUTED,       &sm20_inst_executed),
-   _Q(INST_ISSUED,         &sm20_inst_issued),
-   _Q(INST_ISSUED1_0,      NULL),
-   _Q(INST_ISSUED1_1,      NULL),
-   _Q(INST_ISSUED2_0,      NULL),
-   _Q(INST_ISSUED2_1,      NULL),
-   _Q(LOCAL_LD,            &sm20_local_ld),
-   _Q(LOCAL_ST,            &sm20_local_st),
-   _Q(PROF_TRIGGER_0,      &sm20_prof_trigger_0),
-   _Q(PROF_TRIGGER_1,      &sm20_prof_trigger_1),
-   _Q(PROF_TRIGGER_2,      &sm20_prof_trigger_2),
-   _Q(PROF_TRIGGER_3,      &sm20_prof_trigger_3),
-   _Q(PROF_TRIGGER_4,      &sm20_prof_trigger_4),
-   _Q(PROF_TRIGGER_5,      &sm20_prof_trigger_5),
-   _Q(PROF_TRIGGER_6,      &sm20_prof_trigger_6),
-   _Q(PROF_TRIGGER_7,      &sm20_prof_trigger_7),
-   _Q(SHARED_LD,           &sm20_shared_ld),
-   _Q(SHARED_ST,           &sm20_shared_st),
-   _Q(THREADS_LAUNCHED,    &sm20_threads_launched),
-   _Q(TH_INST_EXECUTED_0,  &sm20_th_inst_executed_0),
-   _Q(TH_INST_EXECUTED_1,  &sm20_th_inst_executed_1),
-   _Q(TH_INST_EXECUTED_2,  NULL),
-   _Q(TH_INST_EXECUTED_3,  NULL),
-   _Q(WARPS_LAUNCHED,      &sm20_warps_launched),
+   &sm20_active_cycles,
+   &sm20_active_warps,
+   &sm20_atom_count,
+   &sm20_branch,
+   &sm20_divergent_branch,
+   &sm20_gld_request,
+   &sm20_gred_count,
+   &sm20_gst_request,
+   &sm20_inst_executed,
+   &sm20_inst_issued,
+   &sm20_local_ld,
+   &sm20_local_st,
+   &sm20_prof_trigger_0,
+   &sm20_prof_trigger_1,
+   &sm20_prof_trigger_2,
+   &sm20_prof_trigger_3,
+   &sm20_prof_trigger_4,
+   &sm20_prof_trigger_5,
+   &sm20_prof_trigger_6,
+   &sm20_prof_trigger_7,
+   &sm20_shared_ld,
+   &sm20_shared_st,
+   &sm20_threads_launched,
+   &sm20_th_inst_executed_0,
+   &sm20_th_inst_executed_1,
+   &sm20_warps_launched,
 };
 
 /* ==== Compute capability 2.1 (GF108+ except GF110) ==== */
 static const struct nvc0_hw_sm_query_cfg
 sm21_inst_executed =
 {
+   .type         = NVC0_HW_SM_QUERY_INST_EXECUTED,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x2d, 0x000000ff, 0x00000000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0x2d, 0x000000ff, 0x00000010),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0x2d, 0x000000ff, 0x00000020),
@@ -630,6 +1208,7 @@ sm21_inst_executed =
 static const struct nvc0_hw_sm_query_cfg
 sm21_inst_issued1_0 =
 {
+   .type         = NVC0_HW_SM_QUERY_INST_ISSUED1_0,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000010),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -638,6 +1217,7 @@ sm21_inst_issued1_0 =
 static const struct nvc0_hw_sm_query_cfg
 sm21_inst_issued1_1 =
 {
+   .type         = NVC0_HW_SM_QUERY_INST_ISSUED1_1,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000040),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -646,6 +1226,7 @@ sm21_inst_issued1_1 =
 static const struct nvc0_hw_sm_query_cfg
 sm21_inst_issued2_0 =
 {
+   .type         = NVC0_HW_SM_QUERY_INST_ISSUED2_0,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000020),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -654,6 +1235,7 @@ sm21_inst_issued2_0 =
 static const struct nvc0_hw_sm_query_cfg
 sm21_inst_issued2_1 =
 {
+   .type         = NVC0_HW_SM_QUERY_INST_ISSUED2_1,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000050),
    .num_counters = 1,
    .norm         = { 1, 1 },
@@ -662,6 +1244,7 @@ sm21_inst_issued2_1 =
 static const struct nvc0_hw_sm_query_cfg
 sm21_th_inst_executed_0 =
 {
+   .type         = NVC0_HW_SM_QUERY_TH_INST_EXECUTED_0,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000010),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000020),
@@ -675,6 +1258,7 @@ sm21_th_inst_executed_0 =
 static const struct nvc0_hw_sm_query_cfg
 sm21_th_inst_executed_1 =
 {
+   .type         = NVC0_HW_SM_QUERY_TH_INST_EXECUTED_1,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000010),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000020),
@@ -688,6 +1272,7 @@ sm21_th_inst_executed_1 =
 static const struct nvc0_hw_sm_query_cfg
 sm21_th_inst_executed_2 =
 {
+   .type         = NVC0_HW_SM_QUERY_TH_INST_EXECUTED_2,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000010),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000020),
@@ -701,6 +1286,7 @@ sm21_th_inst_executed_2 =
 static const struct nvc0_hw_sm_query_cfg
 sm21_th_inst_executed_3 =
 {
+   .type         = NVC0_HW_SM_QUERY_TH_INST_EXECUTED_3,
    .ctr[0]       = _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000000),
    .ctr[1]       = _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000010),
    .ctr[2]       = _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000020),
@@ -713,41 +1299,39 @@ sm21_th_inst_executed_3 =
 
 static const struct nvc0_hw_sm_query_cfg *sm21_hw_sm_queries[] =
 {
-   _Q(ACTIVE_CYCLES,       &sm20_active_cycles),
-   _Q(ACTIVE_WARPS,        &sm20_active_warps),
-   _Q(ATOM_COUNT,          &sm20_atom_count),
-   _Q(BRANCH,              &sm20_branch),
-   _Q(DIVERGENT_BRANCH,    &sm20_divergent_branch),
-   _Q(GLD_REQUEST,         &sm20_gld_request),
-   _Q(GRED_COUNT,          &sm20_gred_count),
-   _Q(GST_REQUEST,         &sm20_gst_request),
-   _Q(INST_EXECUTED,       &sm21_inst_executed),
-   _Q(INST_ISSUED,         NULL),
-   _Q(INST_ISSUED1_0,      &sm21_inst_issued1_0),
-   _Q(INST_ISSUED1_1,      &sm21_inst_issued1_1),
-   _Q(INST_ISSUED2_0,      &sm21_inst_issued2_0),
-   _Q(INST_ISSUED2_1,      &sm21_inst_issued2_1),
-   _Q(LOCAL_LD,            &sm20_local_ld),
-   _Q(LOCAL_ST,            &sm20_local_st),
-   _Q(PROF_TRIGGER_0,      &sm20_prof_trigger_0),
-   _Q(PROF_TRIGGER_1,      &sm20_prof_trigger_1),
-   _Q(PROF_TRIGGER_2,      &sm20_prof_trigger_2),
-   _Q(PROF_TRIGGER_3,      &sm20_prof_trigger_3),
-   _Q(PROF_TRIGGER_4,      &sm20_prof_trigger_4),
-   _Q(PROF_TRIGGER_5,      &sm20_prof_trigger_5),
-   _Q(PROF_TRIGGER_6,      &sm20_prof_trigger_6),
-   _Q(PROF_TRIGGER_7,      &sm20_prof_trigger_7),
-   _Q(SHARED_LD,           &sm20_shared_ld),
-   _Q(SHARED_ST,           &sm20_shared_st),
-   _Q(THREADS_LAUNCHED,    &sm20_threads_launched),
-   _Q(TH_INST_EXECUTED_0,  &sm21_th_inst_executed_0),
-   _Q(TH_INST_EXECUTED_1,  &sm21_th_inst_executed_1),
-   _Q(TH_INST_EXECUTED_2,  &sm21_th_inst_executed_2),
-   _Q(TH_INST_EXECUTED_3,  &sm21_th_inst_executed_3),
-   _Q(WARPS_LAUNCHED,      &sm20_warps_launched),
+   &sm20_active_cycles,
+   &sm20_active_warps,
+   &sm20_atom_count,
+   &sm20_branch,
+   &sm20_divergent_branch,
+   &sm20_gld_request,
+   &sm20_gred_count,
+   &sm20_gst_request,
+   &sm21_inst_executed,
+   &sm21_inst_issued1_0,
+   &sm21_inst_issued1_1,
+   &sm21_inst_issued2_0,
+   &sm21_inst_issued2_1,
+   &sm20_local_ld,
+   &sm20_local_st,
+   &sm20_prof_trigger_0,
+   &sm20_prof_trigger_1,
+   &sm20_prof_trigger_2,
+   &sm20_prof_trigger_3,
+   &sm20_prof_trigger_4,
+   &sm20_prof_trigger_5,
+   &sm20_prof_trigger_6,
+   &sm20_prof_trigger_7,
+   &sm20_shared_ld,
+   &sm20_shared_st,
+   &sm20_threads_launched,
+   &sm21_th_inst_executed_0,
+   &sm21_th_inst_executed_1,
+   &sm21_th_inst_executed_2,
+   &sm21_th_inst_executed_3,
+   &sm20_warps_launched,
 };
 
-#undef _Q
 #undef _C
 
 static inline const struct nvc0_hw_sm_query_cfg **
@@ -755,26 +1339,55 @@ nvc0_hw_sm_get_queries(struct nvc0_screen *screen)
 {
    struct nouveau_device *dev = screen->base.device;
 
-   if (dev->chipset == 0xc0 || dev->chipset == 0xc8)
-      return sm20_hw_sm_queries;
-   return sm21_hw_sm_queries;
+   switch (screen->base.class_3d) {
+   case NVF0_3D_CLASS:
+      return sm35_hw_sm_queries;
+   case NVE4_3D_CLASS:
+      return sm30_hw_sm_queries;
+   default:
+      if (dev->chipset == 0xc0 || dev->chipset == 0xc8)
+         return sm20_hw_sm_queries;
+      return sm21_hw_sm_queries;
+   }
+   assert(0);
+   return NULL;
+}
+
+unsigned
+nvc0_hw_sm_get_num_queries(struct nvc0_screen *screen)
+{
+   struct nouveau_device *dev = screen->base.device;
+
+   switch (screen->base.class_3d) {
+   case NVF0_3D_CLASS:
+      return ARRAY_SIZE(sm35_hw_sm_queries);
+   case NVE4_3D_CLASS:
+      return ARRAY_SIZE(sm30_hw_sm_queries);
+   default:
+      if (dev->chipset == 0xc0 || dev->chipset == 0xc8)
+         return ARRAY_SIZE(sm20_hw_sm_queries);
+      return ARRAY_SIZE(sm21_hw_sm_queries);
+   }
+   return 0;
 }
 
 static const struct nvc0_hw_sm_query_cfg *
 nvc0_hw_sm_query_get_cfg(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 {
+   const struct nvc0_hw_sm_query_cfg **queries;
    struct nvc0_screen *screen = nvc0->screen;
    struct nvc0_query *q = &hq->base;
+   unsigned num_queries;
+   unsigned i;
 
-   if (screen->base.class_3d >= NVE4_3D_CLASS)
-      return &nve4_hw_sm_queries[q->type - PIPE_QUERY_DRIVER_SPECIFIC];
+   num_queries = nvc0_hw_sm_get_num_queries(screen);
+   queries = nvc0_hw_sm_get_queries(screen);
 
-   if (q->type >= NVC0_HW_SM_QUERY(0) && q->type <= NVC0_HW_SM_QUERY_LAST) {
-      const struct nvc0_hw_sm_query_cfg **queries =
-         nvc0_hw_sm_get_queries(screen);
-      return queries[q->type - NVC0_HW_SM_QUERY(0)];
+   for (i = 0; i < num_queries; i++) {
+      if (NVC0_HW_SM_QUERY(queries[i]->type) == q->type)
+         return queries[i];
    }
-   debug_printf("invalid query type: %d\n", q->type);
+   assert(0);
    return NULL;
 }
 
@@ -929,6 +1542,37 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    return true;
 }
 
+static inline struct nvc0_program *
+nvc0_hw_sm_get_program(struct nvc0_screen *screen)
+{
+   struct nvc0_program *prog;
+
+   prog = CALLOC_STRUCT(nvc0_program);
+   if (!prog)
+      return NULL;
+
+   prog->type = PIPE_SHADER_COMPUTE;
+   prog->translated = true;
+   prog->parm_size = 12;
+
+   if (screen->base.class_3d == NVE4_3D_CLASS ||
+       screen->base.class_3d == NVF0_3D_CLASS) {
+      if (screen->base.class_3d == NVE4_3D_CLASS) {
+         prog->code = (uint32_t *)nve4_read_hw_sm_counters_code;
+         prog->code_size = sizeof(nve4_read_hw_sm_counters_code);
+      } else {
+         prog->code = (uint32_t *)nvf0_read_hw_sm_counters_code;
+         prog->code_size = sizeof(nvf0_read_hw_sm_counters_code);
+      }
+      prog->num_gprs = 14;
+   } else {
+      prog->code = (uint32_t *)nvc0_read_hw_sm_counters_code;
+      prog->code_size = sizeof(nvc0_read_hw_sm_counters_code);
+      prog->num_gprs = 12;
+   }
+   return prog;
+}
+
 static void
 nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 {
@@ -944,22 +1588,8 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    const uint grid[3] = { screen->mp_count, screen->gpc_count, 1 };
    unsigned c, i;
 
-   if (unlikely(!screen->pm.prog)) {
-      struct nvc0_program *prog = CALLOC_STRUCT(nvc0_program);
-      prog->type = PIPE_SHADER_COMPUTE;
-      prog->translated = true;
-      prog->parm_size = 12;
-      if (is_nve4) {
-         prog->code = (uint32_t *)nve4_read_hw_sm_counters_code;
-         prog->code_size = sizeof(nve4_read_hw_sm_counters_code);
-         prog->num_gprs = 14;
-      } else {
-         prog->code = (uint32_t *)nvc0_read_hw_sm_counters_code;
-         prog->code_size = sizeof(nvc0_read_hw_sm_counters_code);
-         prog->num_gprs = 12;
-      }
-      screen->pm.prog = prog;
-   }
+   if (unlikely(!screen->pm.prog))
+      screen->pm.prog = nvc0_hw_sm_get_program(screen);
 
    /* disable all counting */
    PUSH_SPACE(push, 8);
@@ -1132,8 +1762,7 @@ nvc0_hw_sm_create_query(struct nvc0_context *nvc0, unsigned type)
    if (nvc0->screen->base.drm->version < 0x01000101)
       return NULL;
 
-   if ((type < NVE4_HW_SM_QUERY(0) || type > NVE4_HW_SM_QUERY_LAST) &&
-       (type < NVC0_HW_SM_QUERY(0) || type > NVC0_HW_SM_QUERY_LAST))
+   if (type < NVC0_HW_SM_QUERY(0) || type > NVC0_HW_SM_QUERY_LAST)
       return NULL;
 
    hsq = CALLOC_STRUCT(nvc0_hw_sm_query);
@@ -1201,23 +1830,6 @@ nvc0_hw_sm_create_query(struct nvc0_context *nvc0, unsigned type)
    return hq;
 }
 
-static int
-nvc0_hw_sm_get_next_query_id(const struct nvc0_hw_sm_query_cfg **queries,
-                             unsigned id)
-{
-   unsigned i, next = 0;
-
-   for (i = 0; i < NVC0_HW_SM_QUERY_COUNT; i++) {
-      if (!queries[i]) {
-         next++;
-      } else
-      if (i >= id && queries[id + next]) {
-         break;
-      }
-   }
-   return id + next;
-}
-
 int
 nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
                                  struct pipe_driver_query_info *info)
@@ -1225,21 +1837,8 @@ nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
    int count = 0;
 
    if (screen->base.drm->version >= 0x01000101) {
-      if (screen->compute) {
-         if (screen->base.class_3d == NVE4_3D_CLASS) {
-            count += NVE4_HW_SM_QUERY_COUNT;
-         } else
-         if (screen->base.class_3d < NVE4_3D_CLASS) {
-            const struct nvc0_hw_sm_query_cfg **queries =
-               nvc0_hw_sm_get_queries(screen);
-            unsigned i;
-
-            for (i = 0; i < NVC0_HW_SM_QUERY_COUNT; i++) {
-               if (queries[i])
-                  count++;
-            }
-         }
-      }
+      if (screen->compute)
+         count = nvc0_hw_sm_get_num_queries(screen);
    }
 
    if (!info)
@@ -1247,19 +1846,12 @@ nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
 
    if (id < count) {
       if (screen->compute) {
-         if (screen->base.class_3d == NVE4_3D_CLASS) {
-            info->name = nve4_hw_sm_query_names[id];
-            info->query_type = NVE4_HW_SM_QUERY(id);
-            info->group_id = NVC0_HW_SM_QUERY_GROUP;
-            return 1;
-         } else
-         if (screen->base.class_3d < NVE4_3D_CLASS) {
+         if (screen->base.class_3d <= NVF0_3D_CLASS) {
             const struct nvc0_hw_sm_query_cfg **queries =
                nvc0_hw_sm_get_queries(screen);
 
-            id = nvc0_hw_sm_get_next_query_id(queries, id);
-            info->name = nvc0_hw_sm_query_names[id];
-            info->query_type = NVC0_HW_SM_QUERY(id);
+            info->name = nvc0_hw_sm_query_get_name(queries[id]->type);
+            info->query_type = NVC0_HW_SM_QUERY(queries[id]->type);
             info->group_id = NVC0_HW_SM_QUERY_GROUP;
             return 1;
          }

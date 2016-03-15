@@ -321,6 +321,28 @@ src_reg::equals(const src_reg &r) const
 }
 
 bool
+vec4_visitor::vectorize_mov(bblock_t *block, vec4_instruction *inst,
+                            uint8_t imm[4], vec4_instruction *imm_inst[4],
+                            int inst_count, unsigned writemask)
+{
+   if (inst_count < 2)
+      return false;
+
+   unsigned vf;
+   memcpy(&vf, imm, sizeof(vf));
+   vec4_instruction *mov = MOV(imm_inst[0]->dst, brw_imm_vf(vf));
+   mov->dst.type = BRW_REGISTER_TYPE_F;
+   mov->dst.writemask = writemask;
+   inst->insert_before(block, mov);
+
+   for (int i = 0; i < inst_count; i++) {
+      imm_inst[i]->remove(block);
+   }
+
+   return true;
+}
+
+bool
 vec4_visitor::opt_vector_float()
 {
    bool progress = false;
@@ -328,27 +350,38 @@ vec4_visitor::opt_vector_float()
    int last_reg = -1, last_reg_offset = -1;
    enum brw_reg_file last_reg_file = BAD_FILE;
 
-   int remaining_channels = 0;
-   uint8_t imm[4];
+   uint8_t imm[4] = { 0 };
    int inst_count = 0;
    vec4_instruction *imm_inst[4];
+   unsigned writemask = 0;
 
    foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
       if (last_reg != inst->dst.nr ||
           last_reg_offset != inst->dst.reg_offset ||
           last_reg_file != inst->dst.file) {
+         progress |= vectorize_mov(block, inst, imm, imm_inst, inst_count,
+                                   writemask);
+         inst_count = 0;
+         writemask = 0;
          last_reg = inst->dst.nr;
          last_reg_offset = inst->dst.reg_offset;
          last_reg_file = inst->dst.file;
-         remaining_channels = WRITEMASK_XYZW;
 
-         inst_count = 0;
+         for (int i = 0; i < 4; i++) {
+            imm[i] = 0;
+         }
       }
 
       if (inst->opcode != BRW_OPCODE_MOV ||
           inst->dst.writemask == WRITEMASK_XYZW ||
-          inst->src[0].file != IMM)
+          inst->src[0].file != IMM ||
+          inst->predicate != BRW_PREDICATE_NONE) {
+         progress |= vectorize_mov(block, inst, imm, imm_inst, inst_count,
+                                   writemask);
+         inst_count = 0;
+         last_reg = -1;
          continue;
+      }
 
       int vf = brw_float_to_vf(inst->src[0].f);
       if (vf == -1)
@@ -363,23 +396,8 @@ vec4_visitor::opt_vector_float()
       if ((inst->dst.writemask & WRITEMASK_W) != 0)
          imm[3] = vf;
 
+      writemask |= inst->dst.writemask;
       imm_inst[inst_count++] = inst;
-
-      remaining_channels &= ~inst->dst.writemask;
-      if (remaining_channels == 0) {
-         unsigned vf;
-         memcpy(&vf, imm, sizeof(vf));
-         vec4_instruction *mov = MOV(inst->dst, brw_imm_vf(vf));
-         mov->dst.type = BRW_REGISTER_TYPE_F;
-         mov->dst.writemask = WRITEMASK_XYZW;
-         inst->insert_after(block, mov);
-         last_reg = -1;
-
-         for (int i = 0; i < inst_count; i++) {
-            imm_inst[i]->remove(block);
-         }
-         progress = true;
-      }
    }
 
    if (progress)
@@ -1027,6 +1045,7 @@ vec4_visitor::opt_register_coalesce()
 
          if (is_nop_mov) {
             inst->remove(block);
+            progress = true;
             continue;
          }
       }
