@@ -2925,9 +2925,28 @@ static void image_append_args(
 }
 
 /**
+ * Given a 256 bit resource, extract the top half (which stores the buffer
+ * resource in the case of textures and images).
+ */
+static LLVMValueRef extract_rsrc_top_half(
+		struct si_shader_context *ctx,
+		LLVMValueRef rsrc)
+{
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
+	LLVMTypeRef v2i128 = LLVMVectorType(ctx->i128, 2);
+
+	rsrc = LLVMBuildBitCast(gallivm->builder, rsrc, v2i128, "");
+	rsrc = LLVMBuildExtractElement(gallivm->builder, rsrc, bld_base->uint_bld.one, "");
+	rsrc = LLVMBuildBitCast(gallivm->builder, rsrc, ctx->v4i32, "");
+
+	return rsrc;
+}
+
+/**
  * Append the resource and indexing arguments for buffer intrinsics.
  *
- * \param rsrc the 256 bit resource
+ * \param rsrc the v4i32 buffer resource
  * \param index index into the buffer
  */
 static void buffer_append_args(
@@ -2937,16 +2956,10 @@ static void buffer_append_args(
 		LLVMValueRef index,
 		bool atomic)
 {
-	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
-	LLVMTypeRef v2i128 = LLVMVectorType(ctx->i128, 2);
 	LLVMValueRef i1false = LLVMConstInt(ctx->i1, 0, 0);
 	LLVMValueRef i1true = LLVMConstInt(ctx->i1, 1, 0);
-
-	rsrc = LLVMBuildBitCast(gallivm->builder, rsrc, v2i128, "");
-	rsrc = LLVMBuildExtractElement(gallivm->builder, rsrc, bld_base->uint_bld.one, "");
-	rsrc = LLVMBuildBitCast(gallivm->builder, rsrc, ctx->v4i32, "");
 
 	emit_data->args[emit_data->arg_count++] = rsrc;
 	emit_data->args[emit_data->arg_count++] = index; /* vindex */
@@ -2976,6 +2989,7 @@ static void load_fetch_args(
 	coords = image_fetch_coords(bld_base, inst, 1);
 
 	if (target == TGSI_TEXTURE_BUFFER) {
+		rsrc = extract_rsrc_top_half(ctx, rsrc);
 		buffer_append_args(ctx, emit_data, rsrc, coords, false);
 	} else {
 		emit_data->args[0] = coords;
@@ -3053,6 +3067,7 @@ static void store_fetch_args(
 		emit_data->args[0] = data;
 		emit_data->arg_count = 1;
 
+		rsrc = extract_rsrc_top_half(ctx, rsrc);
 		buffer_append_args(ctx, emit_data, rsrc, coords, false);
 	} else {
 		emit_data->args[0] = data;
@@ -3132,6 +3147,7 @@ static void atomic_fetch_args(
 	emit_data->args[emit_data->arg_count++] = data1;
 
 	if (target == TGSI_TEXTURE_BUFFER) {
+		rsrc = extract_rsrc_top_half(ctx, rsrc);
 		buffer_append_args(ctx, emit_data, rsrc, coords, true);
 	} else {
 		emit_data->args[emit_data->arg_count++] = coords;
