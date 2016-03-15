@@ -110,7 +110,8 @@ brw_bind_rep_write_shader(struct brw_context *brw, float *color)
    const char *vs_source =
       "#extension GL_AMD_vertex_shader_layer : enable\n"
       "#extension GL_ARB_draw_instanced : enable\n"
-      "attribute vec4 position;\n"
+      "#extension GL_ARB_explicit_attrib_location : enable\n"
+      "layout(location = 0) in vec4 position;\n"
       "uniform int layer;\n"
       "void main()\n"
       "{\n"
@@ -144,7 +145,6 @@ brw_bind_rep_write_shader(struct brw_context *brw, float *color)
    _mesa_DeleteShader(fs);
    _mesa_AttachShader(clear->shader_prog, vs);
    _mesa_DeleteShader(vs);
-   _mesa_BindAttribLocation(clear->shader_prog, 0, "position");
    _mesa_ObjectLabel(GL_PROGRAM, clear->shader_prog, -1, "meta repclear");
    _mesa_LinkProgram(clear->shader_prog);
 

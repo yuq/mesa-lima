@@ -168,8 +168,9 @@ setup_glsl_msaa_blit_scaled_shader(struct gl_context *ctx,
 
    static const char vs_source[] =
                                "#version 130\n"
-                               "in vec2 position;\n"
-                               "in vec3 textureCoords;\n"
+                               "#extension GL_ARB_explicit_attrib_location: enable\n"
+                               "layout(location = 0) in vec2 position;\n"
+                               "layout(location = 1) in vec3 textureCoords;\n"
                                "out vec2 texCoords;\n"
                                "flat out int layer;\n"
                                "void main()\n"
@@ -384,8 +385,9 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
 
       vs_source = ralloc_asprintf(mem_ctx,
                                   "#version 130\n"
-                                  "in vec2 position;\n"
-                                  "in %s textureCoords;\n"
+                                  "#extension GL_ARB_explicit_attrib_location: enable\n"
+                                  "layout(location = 0) in vec2 position;\n"
+                                  "layout(location = 1) in %s textureCoords;\n"
                                   "out %s texCoords;\n"
                                   "void main()\n"
                                   "{\n"
@@ -506,8 +508,9 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
 
       vs_source = ralloc_asprintf(mem_ctx,
                                   "#version 130\n"
-                                  "in vec2 position;\n"
-                                  "in %s textureCoords;\n"
+                                  "#extension GL_ARB_explicit_attrib_location: enable\n"
+                                  "layout(location = 0) in vec2 position;\n"
+                                  "layout(location = 1) in %s textureCoords;\n"
                                   "out %s texCoords;\n"
                                   "void main()\n"
                                   "{\n"

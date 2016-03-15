@@ -207,8 +207,6 @@ _mesa_meta_compile_and_link_program(struct gl_context *ctx,
    _mesa_DeleteShader(fs);
    _mesa_AttachShader(*program, vs);
    _mesa_DeleteShader(vs);
-   _mesa_BindAttribLocation(*program, 0, "position");
-   _mesa_BindAttribLocation(*program, 1, "texcoords");
    _mesa_meta_link_program_with_debug(ctx, *program);
 
    _mesa_UseProgram(*program);
@@ -230,19 +228,15 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
 {
    char *vs_source, *fs_source;
    struct blit_shader *shader = choose_blit_shader(target, table);
-   const char *vs_input, *vs_output, *fs_input, *vs_preprocess, *fs_preprocess;
+   const char *fs_input, *vs_preprocess, *fs_preprocess;
    void *mem_ctx;
 
    if (ctx->Const.GLSLVersion < 130) {
       vs_preprocess = "";
-      vs_input = "attribute";
-      vs_output = "varying";
       fs_preprocess = "#extension GL_EXT_texture_array : enable";
       fs_input = "varying";
    } else {
       vs_preprocess = "#version 130";
-      vs_input = "in";
-      vs_output = "out";
       fs_preprocess = "#version 130";
       fs_input = "in";
       shader->func = "texture";
@@ -259,15 +253,16 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
 
    vs_source = ralloc_asprintf(mem_ctx,
                 "%s\n"
-                "%s vec2 position;\n"
-                "%s vec4 textureCoords;\n"
-                "%s vec4 texCoords;\n"
+                "#extension GL_ARB_explicit_attrib_location: enable\n"
+                "layout(location = 0) in vec2 position;\n"
+                "layout(location = 1) in vec4 textureCoords;\n"
+                "out vec4 texCoords;\n"
                 "void main()\n"
                 "{\n"
                 "   texCoords = textureCoords;\n"
                 "   gl_Position = vec4(position, 0.0, 1.0);\n"
                 "}\n",
-                vs_preprocess, vs_input, vs_input, vs_output);
+                vs_preprocess);
 
    fs_source = ralloc_asprintf(mem_ctx,
                 "%s\n"
