@@ -105,6 +105,8 @@ client_state(struct gl_context *ctx, GLenum cap, GLboolean state)
       case GL_POINT_SIZE_ARRAY_OES:
          var = &vao->VertexAttrib[VERT_ATTRIB_POINT_SIZE].Enabled;
          flag = VERT_BIT_POINT_SIZE;
+         FLUSH_VERTICES(ctx, _NEW_PROGRAM);
+         ctx->VertexProgram.PointSizeEnabled = state;
          break;
 
       /* GL_NV_primitive_restart */
