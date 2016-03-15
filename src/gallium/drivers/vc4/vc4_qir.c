@@ -83,6 +83,8 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_TEX_RESULT] = { "tex_result", 1, 0, true },
 
         [QOP_LOAD_IMM] = { "load_imm", 0, 1 },
+
+        [QOP_BRANCH] = { "branch", 0, 0, true },
 };
 
 static const char *
@@ -204,8 +206,12 @@ qir_is_tex(struct qinst *inst)
 bool
 qir_depends_on_flags(struct qinst *inst)
 {
-        return (inst->cond != QPU_COND_ALWAYS &&
-                inst->cond != QPU_COND_NEVER);
+        if (inst->op == QOP_BRANCH) {
+                return inst->cond != QPU_COND_BRANCH_ALWAYS;
+        } else {
+                return (inst->cond != QPU_COND_ALWAYS &&
+                        inst->cond != QPU_COND_NEVER);
+        }
 }
 
 bool
@@ -337,20 +343,26 @@ void
 qir_dump_inst(struct vc4_compile *c, struct qinst *inst)
 {
         fprintf(stderr, "%s", qir_get_op_name(inst->op));
-        vc4_qpu_disasm_cond(stderr, inst->cond);
+        if (inst->op == QOP_BRANCH)
+                vc4_qpu_disasm_cond_branch(stderr, inst->cond);
+        else
+                vc4_qpu_disasm_cond(stderr, inst->cond);
         if (inst->sf)
                 fprintf(stderr, ".sf");
         fprintf(stderr, " ");
 
-        qir_print_reg(c, inst->dst, true);
-        if (inst->dst.pack) {
+        if (inst->op != QOP_BRANCH) {
+                qir_print_reg(c, inst->dst, true);
                 if (inst->dst.pack) {
-                        if (qir_is_mul(inst))
-                                vc4_qpu_disasm_pack_mul(stderr, inst->dst.pack);
-                        else
-                                vc4_qpu_disasm_pack_a(stderr, inst->dst.pack);
+                        if (inst->dst.pack) {
+                                if (qir_is_mul(inst))
+                                        vc4_qpu_disasm_pack_mul(stderr, inst->dst.pack);
+                                else
+                                        vc4_qpu_disasm_pack_a(stderr, inst->dst.pack);
+                        }
                 }
         }
+
         for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                 fprintf(stderr, ", ");
                 qir_print_reg(c, inst->src[i], false);
@@ -411,6 +423,14 @@ qir_dump(struct vc4_compile *c)
                         qir_dump_inst(c, inst);
                         fprintf(stderr, "\n");
                         ip++;
+                }
+                if (block->successors[1]) {
+                        fprintf(stderr, "-> BLOCK %d, %d\n",
+                                block->successors[0]->index,
+                                block->successors[1]->index);
+                } else if (block->successors[0]) {
+                        fprintf(stderr, "-> BLOCK %d\n",
+                                block->successors[0]->index);
                 }
         }
 }

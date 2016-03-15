@@ -446,6 +446,15 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         handle_r4_qpu_write(c, qinst, dst);
                         break;
 
+                case QOP_BRANCH:
+                        /* The branch target will be updated at QPU scheduling
+                         * time.
+                         */
+                        queue(c, (qpu_branch(qinst->cond, 0) |
+                                  QPU_BRANCH_REL));
+                        handled_qinst_cond = true;
+                        break;
+
                 default:
                         assert(qinst->op < ARRAY_SIZE(translate));
                         assert(translate[qinst->op].op != 0); /* NOPs */

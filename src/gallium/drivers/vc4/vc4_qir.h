@@ -156,6 +156,12 @@ enum qop {
         QOP_TEX_RESULT,
 
         QOP_LOAD_IMM,
+
+        /* Jumps to block->successor[0] if the qinst->cond (as a
+         * QPU_COND_BRANCH_*) passes, or block->successor[1] if not.  Note
+         * that block->successor[1] may be unset if the condition is ALWAYS.
+         */
+        QOP_BRANCH,
 };
 
 struct queued_qpu_inst {
@@ -752,6 +758,15 @@ qir_LOAD_IMM(struct vc4_compile *c, uint32_t val)
 {
         return qir_emit_def(c, qir_inst(QOP_LOAD_IMM, c->undef,
                                         qir_reg(QFILE_LOAD_IMM, val), c->undef));
+}
+
+static inline struct qinst *
+qir_BRANCH(struct vc4_compile *c, uint8_t cond)
+{
+        struct qinst *inst = qir_inst(QOP_BRANCH, c->undef, c->undef, c->undef);
+        inst->cond = cond;
+        qir_emit_nondef(c, inst);
+        return inst;
 }
 
 #define qir_for_each_block(block, c)                                    \

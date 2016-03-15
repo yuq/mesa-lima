@@ -388,6 +388,14 @@ choose_instruction(struct schedule_state *state)
         struct schedule_node *chosen = NULL;
 
         list_for_each_entry(struct schedule_node, n, &state->worklist, link) {
+                /* The branches aren't being tracked as dependencies.  Make
+                 * sure that they stay scheduled as the last instruction of
+                 * the block, which is to say the first one we choose to
+                 * schedule.
+                 */
+                if (n->inst->op == QOP_BRANCH)
+                        return n;
+
                 if (!chosen) {
                         chosen = n;
                         continue;
