@@ -53,16 +53,16 @@
 #define NV50_NEW_CP_GLOBALS   (1 << 1)
 
 /* 3d bufctx (during draw_vbo, blit_3d) */
-#define NV50_BIND_FB          0
-#define NV50_BIND_VERTEX      1
-#define NV50_BIND_VERTEX_TMP  2
-#define NV50_BIND_INDEX       3
-#define NV50_BIND_TEXTURES    4
-#define NV50_BIND_CB(s, i)   (5 + 16 * (s) + (i))
-#define NV50_BIND_SO         53
-#define NV50_BIND_SCREEN     54
-#define NV50_BIND_TLS        55
-#define NV50_BIND_3D_COUNT   56
+#define NV50_BIND_3D_FB          0
+#define NV50_BIND_3D_VERTEX      1
+#define NV50_BIND_3D_VERTEX_TMP  2
+#define NV50_BIND_3D_INDEX       3
+#define NV50_BIND_3D_TEXTURES    4
+#define NV50_BIND_3D_CB(s, i)   (5 + 16 * (s) + (i))
+#define NV50_BIND_3D_SO         53
+#define NV50_BIND_3D_SCREEN     54
+#define NV50_BIND_3D_TLS        55
+#define NV50_BIND_3D_COUNT      56
 
 /* compute bufctx (during launch_grid) */
 #define NV50_BIND_CP_GLOBAL   0

@@ -25,7 +25,7 @@ nv50_validate_fb(struct nv50_context *nv50)
    unsigned ms_mode = NV50_3D_MULTISAMPLE_MODE_MS1;
    uint32_t array_size = 0xffff, array_mode = 0;
 
-   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_FB);
 
    BEGIN_NV04(push, NV50_3D(RT_CONTROL), 1);
    PUSH_DATA (push, (076543210 << 4) | fb->nr_cbufs);
@@ -90,7 +90,7 @@ nv50_validate_fb(struct nv50_context *nv50)
       mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
       /* only register for writing, otherwise we'd always serialize here */
-      BCTX_REFN(nv50->bufctx_3d, FB, &mt->base, WR);
+      BCTX_REFN(nv50->bufctx_3d, 3D_FB, &mt->base, WR);
    }
 
    if (fb->zsbuf) {
@@ -118,7 +118,7 @@ nv50_validate_fb(struct nv50_context *nv50)
       mt->base.status |= NOUVEAU_BUFFER_STATUS_GPU_WRITING;
       mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
-      BCTX_REFN(nv50->bufctx_3d, FB, &mt->base, WR);
+      BCTX_REFN(nv50->bufctx_3d, 3D_FB, &mt->base, WR);
    } else {
       BEGIN_NV04(push, NV50_3D(ZETA_ENABLE), 1);
       PUSH_DATA (push, 0);

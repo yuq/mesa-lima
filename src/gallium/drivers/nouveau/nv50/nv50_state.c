@@ -698,7 +698,7 @@ nv50_stage_set_sampler_views(struct nv50_context *nv50, int s,
 
    nv50->num_textures[s] = nr;
 
-   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_TEXTURES);
 
    nv50->dirty_3d |= NV50_NEW_3D_TEXTURES;
 }
@@ -857,7 +857,7 @@ nv50_set_constant_buffer(struct pipe_context *pipe, uint shader, uint index,
       nv50->constbuf[s][i].u.buf = NULL;
    else
    if (nv50->constbuf[s][i].u.buf)
-      nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_CB(s, i));
+      nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_CB(s, i));
 
    pipe_resource_reference(&nv50->constbuf[s][i].u.buf, res);
 
@@ -945,7 +945,7 @@ nv50_set_framebuffer_state(struct pipe_context *pipe,
 {
    struct nv50_context *nv50 = nv50_context(pipe);
 
-   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_FB);
 
    util_copy_framebuffer_state(&nv50->framebuffer, fb);
 
@@ -1008,7 +1008,7 @@ nv50_set_vertex_buffers(struct pipe_context *pipe,
    struct nv50_context *nv50 = nv50_context(pipe);
    unsigned i;
 
-   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_VERTEX);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_VERTEX);
    nv50->dirty_3d |= NV50_NEW_3D_ARRAYS;
 
    util_set_vertex_buffers_count(nv50->vtxbuf, &nv50->num_vtxbufs, vb,
@@ -1051,14 +1051,14 @@ nv50_set_index_buffer(struct pipe_context *pipe,
    struct nv50_context *nv50 = nv50_context(pipe);
 
    if (nv50->idxbuf.buffer)
-      nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_INDEX);
+      nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_INDEX);
 
    if (ib) {
       pipe_resource_reference(&nv50->idxbuf.buffer, ib->buffer);
       nv50->idxbuf.index_size = ib->index_size;
       if (ib->buffer) {
          nv50->idxbuf.offset = ib->offset;
-         BCTX_REFN(nv50->bufctx_3d, INDEX, nv04_resource(ib->buffer), RD);
+         BCTX_REFN(nv50->bufctx_3d, 3D_INDEX, nv04_resource(ib->buffer), RD);
       } else {
          nv50->idxbuf.user_buffer = ib->user_buffer;
       }

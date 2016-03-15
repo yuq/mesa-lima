@@ -299,7 +299,7 @@ nv50_validate_tic(struct nv50_context *nv50, int s)
       res->status &= ~NOUVEAU_BUFFER_STATUS_GPU_WRITING;
       res->status |= NOUVEAU_BUFFER_STATUS_GPU_READING;
 
-      BCTX_REFN(nv50->bufctx_3d, TEXTURES, res, RD);
+      BCTX_REFN(nv50->bufctx_3d, 3D_TEXTURES, res, RD);
 
       BEGIN_NV04(push, NV50_3D(BIND_TIC(s)), 1);
       PUSH_DATA (push, (tic->id << 9) | (i << 1) | 1);

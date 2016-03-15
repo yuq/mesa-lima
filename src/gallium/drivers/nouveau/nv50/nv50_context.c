@@ -177,7 +177,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
          if (nv50->framebuffer.cbufs[i] &&
              nv50->framebuffer.cbufs[i]->texture == res) {
             nv50->dirty_3d |= NV50_NEW_3D_FRAMEBUFFER;
-            nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
+            nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_FB);
             if (!--ref)
                return ref;
          }
@@ -187,7 +187,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
       if (nv50->framebuffer.zsbuf &&
           nv50->framebuffer.zsbuf->texture == res) {
          nv50->dirty_3d |= NV50_NEW_3D_FRAMEBUFFER;
-         nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
+         nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_FB);
          if (!--ref)
             return ref;
       }
@@ -203,7 +203,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
       for (i = 0; i < nv50->num_vtxbufs; ++i) {
          if (nv50->vtxbuf[i].buffer == res) {
             nv50->dirty_3d |= NV50_NEW_3D_ARRAYS;
-            nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_VERTEX);
+            nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_VERTEX);
             if (!--ref)
                return ref;
          }
@@ -211,8 +211,8 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
 
       if (nv50->idxbuf.buffer == res) {
          /* Just rebind to the bufctx as there is no separate dirty bit */
-         nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_INDEX);
-         BCTX_REFN(nv50->bufctx_3d, INDEX, nv04_resource(res), RD);
+         nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_INDEX);
+         BCTX_REFN(nv50->bufctx_3d, 3D_INDEX, nv04_resource(res), RD);
          if (!--ref)
             return ref;
       }
@@ -223,7 +223,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
          if (nv50->textures[s][i] &&
              nv50->textures[s][i]->texture == res) {
             nv50->dirty_3d |= NV50_NEW_3D_TEXTURES;
-            nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
+            nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_TEXTURES);
             if (!--ref)
                return ref;
          }
@@ -238,7 +238,7 @@ nv50_invalidate_resource_storage(struct nouveau_context *ctx,
              nv50->constbuf[s][i].u.buf == res) {
             nv50->dirty_3d |= NV50_NEW_3D_CONSTBUF;
             nv50->constbuf_dirty[s] |= 1 << i;
-            nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_CB(s, i));
+            nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_CB(s, i));
             if (!--ref)
                return ref;
          }
@@ -345,10 +345,10 @@ nv50_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
 
    flags = NOUVEAU_BO_VRAM | NOUVEAU_BO_RD;
 
-   BCTX_REFN_bo(nv50->bufctx_3d, SCREEN, flags, screen->code);
-   BCTX_REFN_bo(nv50->bufctx_3d, SCREEN, flags, screen->uniforms);
-   BCTX_REFN_bo(nv50->bufctx_3d, SCREEN, flags, screen->txc);
-   BCTX_REFN_bo(nv50->bufctx_3d, SCREEN, flags, screen->stack_bo);
+   BCTX_REFN_bo(nv50->bufctx_3d, 3D_SCREEN, flags, screen->code);
+   BCTX_REFN_bo(nv50->bufctx_3d, 3D_SCREEN, flags, screen->uniforms);
+   BCTX_REFN_bo(nv50->bufctx_3d, 3D_SCREEN, flags, screen->txc);
+   BCTX_REFN_bo(nv50->bufctx_3d, 3D_SCREEN, flags, screen->stack_bo);
    if (screen->compute) {
       BCTX_REFN_bo(nv50->bufctx_cp, CP_SCREEN, flags, screen->code);
       BCTX_REFN_bo(nv50->bufctx_cp, CP_SCREEN, flags, screen->txc);
@@ -357,7 +357,7 @@ nv50_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
 
    flags = NOUVEAU_BO_GART | NOUVEAU_BO_WR;
 
-   BCTX_REFN_bo(nv50->bufctx_3d, SCREEN, flags, screen->fence.bo);
+   BCTX_REFN_bo(nv50->bufctx_3d, 3D_SCREEN, flags, screen->fence.bo);
    BCTX_REFN_bo(nv50->bufctx, FENCE, flags, screen->fence.bo);
    if (screen->compute)
       BCTX_REFN_bo(nv50->bufctx_cp, CP_SCREEN, flags, screen->fence.bo);

@@ -1255,8 +1255,8 @@ nv50_blitctx_pre_blit(struct nv50_blitctx *ctx)
 
    ctx->saved.dirty_3d = nv50->dirty_3d;
 
-   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
-   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_FB);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_TEXTURES);
 
    nv50->dirty_3d =
       NV50_NEW_3D_FRAMEBUFFER | NV50_NEW_3D_MIN_SAMPLES |
@@ -1302,8 +1302,8 @@ nv50_blitctx_post_blit(struct nv50_blitctx *blit)
       nv50->base.pipe.render_condition(&nv50->base.pipe, nv50->cond_query,
                                        nv50->cond_cond, nv50->cond_mode);
 
-   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_FB);
-   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TEXTURES);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_FB);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_TEXTURES);
 
    nv50->dirty_3d = blit->saved.dirty_3d |
       (NV50_NEW_3D_FRAMEBUFFER | NV50_NEW_3D_SCISSOR | NV50_NEW_3D_SAMPLE_MASK |

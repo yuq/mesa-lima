@@ -94,7 +94,7 @@ nv50_constbufs_validate(struct nv50_context *nv50)
                BEGIN_NV04(push, NV50_3D(SET_PROGRAM_CB), 1);
                PUSH_DATA (push, (b << 12) | (i << 8) | p | 1);
 
-               BCTX_REFN(nv50->bufctx_3d, CB(s, i), res, RD);
+               BCTX_REFN(nv50->bufctx_3d, 3D_CB(s, i), res, RD);
 
                nv50->cb_dirty = 1; /* Force cache flush for UBO. */
             } else {
@@ -131,14 +131,14 @@ nv50_program_update_context_state(struct nv50_context *nv50,
 
    if (prog && prog->tls_space) {
       if (nv50->state.new_tls_space)
-         nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TLS);
+         nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_TLS);
       if (!nv50->state.tls_required || nv50->state.new_tls_space)
-         BCTX_REFN_bo(nv50->bufctx_3d, TLS, flags, nv50->screen->tls_bo);
+         BCTX_REFN_bo(nv50->bufctx_3d, 3D_TLS, flags, nv50->screen->tls_bo);
       nv50->state.new_tls_space = false;
       nv50->state.tls_required |= 1 << stage;
    } else {
       if (nv50->state.tls_required == (1 << stage))
-         nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_TLS);
+         nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_TLS);
       nv50->state.tls_required &= ~(1 << stage);
    }
 }
@@ -633,7 +633,7 @@ nv50_stream_output_validate(struct nv50_context *nv50)
    BEGIN_NV04(push, NV50_3D(STRMOUT_BUFFERS_CTRL), 1);
    PUSH_DATA (push, ctrl);
 
-   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_SO);
+   nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_SO);
 
    for (i = 0; i < nv50->num_so_targets; ++i) {
       struct nv50_so_target *targ = nv50_so_target(nv50->so_target[i]);
@@ -664,7 +664,7 @@ nv50_stream_output_validate(struct nv50_context *nv50)
          prims = MIN2(prims, limit);
       }
       targ->stride = so->stride[i];
-      BCTX_REFN(nv50->bufctx_3d, SO, buf, WR);
+      BCTX_REFN(nv50->bufctx_3d, 3D_SO, buf, WR);
    }
    if (prims != ~0) {
       BEGIN_NV04(push, NV50_3D(STRMOUT_PRIMITIVE_LIMIT), 1);

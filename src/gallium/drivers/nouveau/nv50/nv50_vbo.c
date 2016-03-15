@@ -230,7 +230,7 @@ nv50_upload_user_buffers(struct nv50_context *nv50,
       addrs[b] = nouveau_scratch_data(&nv50->base, vb->user_buffer, base, size,
                                       &bo);
       if (addrs[b])
-         BCTX_REFN_bo(nv50->bufctx_3d, VERTEX_TMP, NOUVEAU_BO_GART |
+         BCTX_REFN_bo(nv50->bufctx_3d, 3D_VERTEX_TMP, NOUVEAU_BO_GART |
                       NOUVEAU_BO_RD, bo);
    }
    nv50->base.vbo_dirty = true;
@@ -269,7 +269,7 @@ nv50_update_user_vbufs(struct nv50_context *nv50)
          address[b] = nouveau_scratch_data(&nv50->base, vb->user_buffer,
                                            base, size, &bo);
          if (address[b])
-            BCTX_REFN_bo(nv50->bufctx_3d, VERTEX_TMP, bo_flags, bo);
+            BCTX_REFN_bo(nv50->bufctx_3d, 3D_VERTEX_TMP, bo_flags, bo);
       }
 
       BEGIN_NV04(push, NV50_3D(VERTEX_ARRAY_LIMIT_HIGH(i)), 2);
@@ -286,7 +286,7 @@ static inline void
 nv50_release_user_vbufs(struct nv50_context *nv50)
 {
    if (nv50->vbo_user) {
-      nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_VERTEX_TMP);
+      nouveau_bufctx_reset(nv50->bufctx_3d, NV50_BIND_3D_VERTEX_TMP);
       nouveau_scratch_done(&nv50->base);
    }
 }
@@ -394,7 +394,7 @@ nv50_vertex_arrays_validate(struct nv50_context *nv50)
          struct nv04_resource *buf = nv04_resource(vb->buffer);
          if (!(refd & (1 << b))) {
             refd |= 1 << b;
-            BCTX_REFN(nv50->bufctx_3d, VERTEX, buf, RD);
+            BCTX_REFN(nv50->bufctx_3d, 3D_VERTEX, buf, RD);
          }
          address = buf->address + vb->buffer_offset + ve->pipe.src_offset;
          limit = buf->address + buf->base.width0 - 1;
