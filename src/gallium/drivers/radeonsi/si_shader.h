@@ -81,95 +81,97 @@ struct radeon_shader_reloc;
 #define SI_SGPR_CONST_BUFFERS	2
 #define SI_SGPR_SAMPLERS	4  /* images & sampler states interleaved */
 #define SI_SGPR_IMAGES		6
-#define SI_SGPR_VERTEX_BUFFERS	8  /* VS only */
-#define SI_SGPR_BASE_VERTEX	10 /* VS only */
-#define SI_SGPR_START_INSTANCE	11 /* VS only */
-#define SI_SGPR_VS_STATE_BITS	12 /* VS(VS) only */
-#define SI_SGPR_LS_OUT_LAYOUT	12 /* VS(LS) only */
-#define SI_SGPR_TCS_OUT_OFFSETS	8  /* TCS & TES only */
-#define SI_SGPR_TCS_OUT_LAYOUT	9  /* TCS & TES only */
-#define SI_SGPR_TCS_IN_LAYOUT	10 /* TCS only */
-#define SI_SGPR_ALPHA_REF	8  /* PS only */
+#define SI_SGPR_SHADER_BUFFERS	8
+#define SI_SGPR_VERTEX_BUFFERS	10  /* VS only */
+#define SI_SGPR_BASE_VERTEX	12 /* VS only */
+#define SI_SGPR_START_INSTANCE	13 /* VS only */
+#define SI_SGPR_VS_STATE_BITS	14 /* VS(VS) only */
+#define SI_SGPR_LS_OUT_LAYOUT	14 /* VS(LS) only */
+#define SI_SGPR_TCS_OUT_OFFSETS	10 /* TCS & TES only */
+#define SI_SGPR_TCS_OUT_LAYOUT	11 /* TCS & TES only */
+#define SI_SGPR_TCS_IN_LAYOUT	12 /* TCS only */
+#define SI_SGPR_ALPHA_REF	10 /* PS only */
 
-#define SI_VS_NUM_USER_SGPR	13 /* API VS */
-#define SI_ES_NUM_USER_SGPR	12 /* API VS */
-#define SI_LS_NUM_USER_SGPR	13 /* API VS */
-#define SI_TCS_NUM_USER_SGPR	11
-#define SI_TES_NUM_USER_SGPR	10
-#define SI_GS_NUM_USER_SGPR	8
+#define SI_VS_NUM_USER_SGPR	15 /* API VS */
+#define SI_ES_NUM_USER_SGPR	14 /* API VS */
+#define SI_LS_NUM_USER_SGPR	15 /* API VS */
+#define SI_TCS_NUM_USER_SGPR	13
+#define SI_TES_NUM_USER_SGPR	12
+#define SI_GS_NUM_USER_SGPR	10
 #define SI_GSCOPY_NUM_USER_SGPR	4
-#define SI_PS_NUM_USER_SGPR	9
+#define SI_PS_NUM_USER_SGPR	11
 
 /* LLVM function parameter indices */
 #define SI_PARAM_RW_BUFFERS	0
 #define SI_PARAM_CONST_BUFFERS	1
 #define SI_PARAM_SAMPLERS	2
 #define SI_PARAM_IMAGES		3
+#define SI_PARAM_SHADER_BUFFERS	4
 
 /* VS only parameters */
-#define SI_PARAM_VERTEX_BUFFERS	4
-#define SI_PARAM_BASE_VERTEX	5
-#define SI_PARAM_START_INSTANCE	6
+#define SI_PARAM_VERTEX_BUFFERS	5
+#define SI_PARAM_BASE_VERTEX	6
+#define SI_PARAM_START_INSTANCE	7
 /* [0] = clamp vertex color */
-#define SI_PARAM_VS_STATE_BITS	7
+#define SI_PARAM_VS_STATE_BITS	8
 /* the other VS parameters are assigned dynamically */
 
 /* Offsets where TCS outputs and TCS patch outputs live in LDS:
  *   [0:15] = TCS output patch0 offset / 16, max = NUM_PATCHES * 32 * 32
  *   [16:31] = TCS output patch0 offset for per-patch / 16, max = NUM_PATCHES*32*32* + 32*32
  */
-#define SI_PARAM_TCS_OUT_OFFSETS 4 /* for TCS & TES */
+#define SI_PARAM_TCS_OUT_OFFSETS 5 /* for TCS & TES */
 
 /* Layout of TCS outputs / TES inputs:
  *   [0:12] = stride between output patches in dwords, num_outputs * num_vertices * 4, max = 32*32*4
  *   [13:20] = stride between output vertices in dwords = num_inputs * 4, max = 32*4
  *   [26:31] = gl_PatchVerticesIn, max = 32
  */
-#define SI_PARAM_TCS_OUT_LAYOUT	5 /* for TCS & TES */
+#define SI_PARAM_TCS_OUT_LAYOUT	6 /* for TCS & TES */
 
 /* Layout of LS outputs / TCS inputs
  *   [0:12] = stride between patches in dwords = num_inputs * num_vertices * 4, max = 32*32*4
  *   [13:20] = stride between vertices in dwords = num_inputs * 4, max = 32*4
  */
-#define SI_PARAM_TCS_IN_LAYOUT	6 /* TCS only */
-#define SI_PARAM_LS_OUT_LAYOUT	7 /* same value as TCS_IN_LAYOUT, LS only */
+#define SI_PARAM_TCS_IN_LAYOUT	7 /* TCS only */
+#define SI_PARAM_LS_OUT_LAYOUT	8 /* same value as TCS_IN_LAYOUT, LS only */
 
 /* TCS only parameters. */
-#define SI_PARAM_TESS_FACTOR_OFFSET 7
-#define SI_PARAM_PATCH_ID	8
-#define SI_PARAM_REL_IDS	9
+#define SI_PARAM_TESS_FACTOR_OFFSET 8
+#define SI_PARAM_PATCH_ID	9
+#define SI_PARAM_REL_IDS	10
 
 /* GS only parameters */
-#define SI_PARAM_GS2VS_OFFSET	4
-#define SI_PARAM_GS_WAVE_ID	5
-#define SI_PARAM_VTX0_OFFSET	6
-#define SI_PARAM_VTX1_OFFSET	7
-#define SI_PARAM_PRIMITIVE_ID	8
-#define SI_PARAM_VTX2_OFFSET	9
-#define SI_PARAM_VTX3_OFFSET	10
-#define SI_PARAM_VTX4_OFFSET	11
-#define SI_PARAM_VTX5_OFFSET	12
-#define SI_PARAM_GS_INSTANCE_ID	13
+#define SI_PARAM_GS2VS_OFFSET	5
+#define SI_PARAM_GS_WAVE_ID	6
+#define SI_PARAM_VTX0_OFFSET	7
+#define SI_PARAM_VTX1_OFFSET	8
+#define SI_PARAM_PRIMITIVE_ID	9
+#define SI_PARAM_VTX2_OFFSET	10
+#define SI_PARAM_VTX3_OFFSET	11
+#define SI_PARAM_VTX4_OFFSET	12
+#define SI_PARAM_VTX5_OFFSET	13
+#define SI_PARAM_GS_INSTANCE_ID	14
 
 /* PS only parameters */
-#define SI_PARAM_ALPHA_REF		4
-#define SI_PARAM_PRIM_MASK		5
-#define SI_PARAM_PERSP_SAMPLE		6
-#define SI_PARAM_PERSP_CENTER		7
-#define SI_PARAM_PERSP_CENTROID		8
-#define SI_PARAM_PERSP_PULL_MODEL	9
-#define SI_PARAM_LINEAR_SAMPLE		10
-#define SI_PARAM_LINEAR_CENTER		11
-#define SI_PARAM_LINEAR_CENTROID	12
-#define SI_PARAM_LINE_STIPPLE_TEX	13
-#define SI_PARAM_POS_X_FLOAT		14
-#define SI_PARAM_POS_Y_FLOAT		15
-#define SI_PARAM_POS_Z_FLOAT		16
-#define SI_PARAM_POS_W_FLOAT		17
-#define SI_PARAM_FRONT_FACE		18
-#define SI_PARAM_ANCILLARY		19
-#define SI_PARAM_SAMPLE_COVERAGE	20
-#define SI_PARAM_POS_FIXED_PT		21
+#define SI_PARAM_ALPHA_REF		5
+#define SI_PARAM_PRIM_MASK		6
+#define SI_PARAM_PERSP_SAMPLE		7
+#define SI_PARAM_PERSP_CENTER		8
+#define SI_PARAM_PERSP_CENTROID		9
+#define SI_PARAM_PERSP_PULL_MODEL	10
+#define SI_PARAM_LINEAR_SAMPLE		11
+#define SI_PARAM_LINEAR_CENTER		12
+#define SI_PARAM_LINEAR_CENTROID	13
+#define SI_PARAM_LINE_STIPPLE_TEX	14
+#define SI_PARAM_POS_X_FLOAT		15
+#define SI_PARAM_POS_Y_FLOAT		16
+#define SI_PARAM_POS_Z_FLOAT		17
+#define SI_PARAM_POS_W_FLOAT		18
+#define SI_PARAM_FRONT_FACE		19
+#define SI_PARAM_ANCILLARY		20
+#define SI_PARAM_SAMPLE_COVERAGE	21
+#define SI_PARAM_POS_FIXED_PT		22
 
 #define SI_NUM_PARAMS (SI_PARAM_POS_FIXED_PT + 9) /* +8 for COLOR[0..1] */
 
