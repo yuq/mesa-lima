@@ -160,6 +160,10 @@ is_drawing_points(const struct brw_context *brw)
    if (brw->geometry_program) {
       /* BRW_NEW_GEOMETRY_PROGRAM */
       return brw->geometry_program->OutputType == GL_POINTS;
+   } else if (brw->tes.prog_data) {
+      /* BRW_NEW_TES_PROG_DATA */
+      return brw->tes.prog_data->output_topology ==
+             BRW_TESS_OUTPUT_TOPOLOGY_POINT;
    } else {
       /* BRW_NEW_PRIMITIVE */
       return brw->primitive == _3DPRIM_POINTLIST;
@@ -216,8 +220,10 @@ calculate_attr_overrides(const struct brw_context *brw,
     * This is not required on Haswell, as the hardware ignores this state
     * when drawing non-points -- although we do still need to be careful to
     * correctly set the attr overrides.
+    *
+    * _NEW_POLYGON
+    * BRW_NEW_PRIMITIVE | BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_TES_PROG_DATA
     */
-   /* BRW_NEW_PRIMITIVE | BRW_NEW_GEOMETRY_PROGRAM */
    bool drawing_points = is_drawing_points(brw);
 
    /* Initialize all the attr_overrides to 0.  In the loop below we'll modify
@@ -484,6 +490,7 @@ const struct brw_tracked_state gen6_sf_state = {
                BRW_NEW_FS_PROG_DATA |
                BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_PRIMITIVE |
+               BRW_NEW_TES_PROG_DATA |
                BRW_NEW_VUE_MAP_GEOM_OUT,
    },
    .emit = upload_sf_state,
