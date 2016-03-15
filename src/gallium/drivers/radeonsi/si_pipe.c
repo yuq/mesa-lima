@@ -331,6 +331,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 
 	case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
+	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
 		return 4;
 
@@ -354,7 +355,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_DRAW_PARAMETERS:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
-	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_GENERATE_MIPMAP:
 	case PIPE_CAP_STRING_MARKER:
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
@@ -540,7 +540,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
-		return 0;
+		return HAVE_LLVM >= 0x0309 ? SI_NUM_SHADER_BUFFERS : 0;
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 		return HAVE_LLVM >= 0x0309 ? SI_NUM_IMAGES : 0;
 	}
