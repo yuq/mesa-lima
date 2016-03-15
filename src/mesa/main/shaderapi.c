@@ -959,8 +959,8 @@ shader_source(struct gl_shader *sh, const GLchar *source)
 /**
  * Compile a shader.
  */
-static void
-compile_shader(struct gl_context *ctx, struct gl_shader *sh)
+void
+_mesa_compile_shader(struct gl_context *ctx, struct gl_shader *sh)
 {
    if (!sh)
       return;
@@ -1020,8 +1020,8 @@ compile_shader(struct gl_context *ctx, struct gl_shader *sh)
 /**
  * Link a program's shaders.
  */
-static void
-link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
+void
+_mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
    if (!shProg)
       return;
@@ -1264,8 +1264,8 @@ _mesa_CompileShader(GLuint shaderObj)
    GET_CURRENT_CONTEXT(ctx);
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glCompileShader %u\n", shaderObj);
-   compile_shader(ctx,
-                  _mesa_lookup_shader_err(ctx, shaderObj, "glCompileShader"));
+   _mesa_compile_shader(ctx, _mesa_lookup_shader_err(ctx, shaderObj,
+                                                     "glCompileShader"));
 }
 
 
@@ -1512,8 +1512,8 @@ _mesa_LinkProgram(GLuint programObj)
    GET_CURRENT_CONTEXT(ctx);
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glLinkProgram %u\n", programObj);
-   link_program(ctx, _mesa_lookup_shader_program_err(ctx, programObj,
-                                                     "glLinkProgram"));
+   _mesa_link_program(ctx, _mesa_lookup_shader_program_err(ctx, programObj,
+                                                           "glLinkProgram"));
 }
 
 #if defined(HAVE_SHA1)
@@ -2153,7 +2153,7 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
       struct gl_shader *sh = _mesa_lookup_shader(ctx, shader);
 
       _mesa_ShaderSource(shader, count, strings, NULL);
-      compile_shader(ctx, sh);
+      _mesa_compile_shader(ctx, sh);
 
       program = create_shader_program(ctx);
       if (program) {
@@ -2167,7 +2167,7 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 	 get_shaderiv(ctx, shader, GL_COMPILE_STATUS, &compiled);
 	 if (compiled) {
 	    attach_shader(ctx, program, shader);
-	    link_program(ctx, shProg);
+	    _mesa_link_program(ctx, shProg);
 	    detach_shader(ctx, program, shader);
 
 #if 0
