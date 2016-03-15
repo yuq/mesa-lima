@@ -466,10 +466,8 @@ nv50_switch_pipe_context(struct nv50_context *ctx_to)
    ctx_to->screen->cur_ctx = ctx_to;
 }
 
-static struct state_validate {
-    void (*func)(struct nv50_context *);
-    uint32_t states;
-} validate_list[] = {
+static struct nv50_state_validate
+validate_list_3d[] = {
     { nv50_validate_fb,            NV50_NEW_3D_FRAMEBUFFER },
     { nv50_validate_blend,         NV50_NEW_3D_BLEND },
     { nv50_validate_zsa,           NV50_NEW_3D_ZSA },
@@ -509,7 +507,9 @@ static struct state_validate {
 };
 
 bool
-nv50_state_validate(struct nv50_context *nv50, uint32_t mask)
+nv50_state_validate(struct nv50_context *nv50, uint32_t mask,
+                    struct nv50_state_validate *validate_list, int size,
+                    uint32_t *dirty, struct nouveau_bufctx *bufctx)
 {
    uint32_t state_mask;
    int ret;
@@ -518,16 +518,16 @@ nv50_state_validate(struct nv50_context *nv50, uint32_t mask)
    if (nv50->screen->cur_ctx != nv50)
       nv50_switch_pipe_context(nv50);
 
-   state_mask = nv50->dirty_3d & mask;
+   state_mask = *dirty & mask;
 
    if (state_mask) {
-      for (i = 0; i < ARRAY_SIZE(validate_list); ++i) {
-         struct state_validate *validate = &validate_list[i];
+      for (i = 0; i < size; i++) {
+         struct nv50_state_validate *validate = &validate_list[i];
 
          if (state_mask & validate->states)
             validate->func(nv50);
       }
-      nv50->dirty_3d &= ~state_mask;
+      *dirty &= ~state_mask;
 
       if (nv50->state.rt_serialize) {
          nv50->state.rt_serialize = false;
@@ -535,14 +535,26 @@ nv50_state_validate(struct nv50_context *nv50, uint32_t mask)
          PUSH_DATA (nv50->base.pushbuf, 0);
       }
 
-      nv50_bufctx_fence(nv50->bufctx_3d, false);
+      nv50_bufctx_fence(bufctx, false);
    }
-   nouveau_pushbuf_bufctx(nv50->base.pushbuf, nv50->bufctx_3d);
+   nouveau_pushbuf_bufctx(nv50->base.pushbuf, bufctx);
    ret = nouveau_pushbuf_validate(nv50->base.pushbuf);
+
+   return !ret;
+}
+
+bool
+nv50_state_validate_3d(struct nv50_context *nv50, uint32_t mask)
+{
+   bool ret;
+
+   ret = nv50_state_validate(nv50, mask, validate_list_3d,
+                             ARRAY_SIZE(validate_list_3d), &nv50->dirty_3d,
+                             nv50->bufctx_3d);
 
    if (unlikely(nv50->state.flushed)) {
       nv50->state.flushed = false;
       nv50_bufctx_fence(nv50->bufctx_3d, true);
    }
-   return !ret;
+   return ret;
 }

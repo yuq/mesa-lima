@@ -231,7 +231,15 @@ void nv50_stream_output_validate(struct nv50_context *);
 extern void nv50_init_state_functions(struct nv50_context *);
 
 /* nv50_state_validate.c */
-bool nv50_state_validate(struct nv50_context *, uint32_t state_mask);
+struct nv50_state_validate {
+   void (*func)(struct nv50_context *);
+   uint32_t states;
+};
+
+bool nv50_state_validate(struct nv50_context *, uint32_t,
+                         struct nv50_state_validate *, int, uint32_t *,
+                         struct nouveau_bufctx *);
+bool nv50_state_validate_3d(struct nv50_context *, uint32_t);
 
 /* nv50_surface.c */
 extern void nv50_clear(struct pipe_context *, unsigned buffers,
