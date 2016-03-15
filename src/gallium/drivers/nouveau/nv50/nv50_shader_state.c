@@ -29,6 +29,8 @@
 #include "nv50/nv50_context.h"
 #include "nv50/nv50_query_hw.h"
 
+#include "nv50/nv50_compute.xml.h"
+
 void
 nv50_constbufs_validate(struct nv50_context *nv50)
 {
@@ -236,6 +238,19 @@ nv50_gmtyprog_validate(struct nv50_context *nv50)
    nv50_program_update_context_state(nv50, gp, 2);
 
    /* GP_ENABLE is updated in linkage validation */
+}
+
+void
+nv50_compprog_validate(struct nv50_context *nv50)
+{
+   struct nouveau_pushbuf *push = nv50->base.pushbuf;
+   struct nv50_program *cp = nv50->compprog;
+
+   if (cp && !nv50_program_validate(nv50, cp))
+      return;
+
+   BEGIN_NV04(push, NV50_CP(CODE_CB_FLUSH), 1);
+   PUSH_DATA (push, 0);
 }
 
 static void

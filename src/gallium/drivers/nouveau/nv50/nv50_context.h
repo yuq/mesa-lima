@@ -221,6 +221,7 @@ extern struct draw_stage *nv50_draw_render_stage(struct nv50_context *);
 void nv50_vertprog_validate(struct nv50_context *);
 void nv50_gmtyprog_validate(struct nv50_context *);
 void nv50_fragprog_validate(struct nv50_context *);
+void nv50_compprog_validate(struct nv50_context *);
 void nv50_fp_linkage_validate(struct nv50_context *);
 void nv50_gp_linkage_validate(struct nv50_context *);
 void nv50_constbufs_validate(struct nv50_context *);

@@ -155,34 +155,6 @@ nv50_screen_compute_setup(struct nv50_screen *screen,
    return 0;
 }
 
-static bool
-nv50_compute_validate_program(struct nv50_context *nv50)
-{
-   struct nv50_program *prog = nv50->compprog;
-
-   if (prog->mem)
-      return true;
-
-   if (!prog->translated) {
-      prog->translated = nv50_program_translate(
-         prog, nv50->screen->base.device->chipset, &nv50->base.debug);
-      if (!prog->translated)
-         return false;
-   }
-   if (unlikely(!prog->code_size))
-      return false;
-
-   if (likely(prog->code_size)) {
-      if (nv50_program_upload_code(nv50, prog)) {
-         struct nouveau_pushbuf *push = nv50->base.pushbuf;
-         BEGIN_NV04(push, NV50_CP(CODE_CB_FLUSH), 1);
-         PUSH_DATA (push, 0);
-         return true;
-      }
-   }
-   return false;
-}
-
 static void
 nv50_compute_validate_globals(struct nv50_context *nv50)
 {
@@ -201,9 +173,7 @@ nv50_compute_validate_globals(struct nv50_context *nv50)
 static bool
 nv50_compute_state_validate(struct nv50_context *nv50)
 {
-   if (!nv50_compute_validate_program(nv50))
-      return false;
-
+   nv50_compprog_validate(nv50);
    if (nv50->dirty_cp & NV50_NEW_CP_GLOBALS)
       nv50_compute_validate_globals(nv50);
 
