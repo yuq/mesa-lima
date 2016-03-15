@@ -114,8 +114,6 @@ nouveau_codegen(int chipset, int type, struct tgsi_token tokens[],
 
    info.io.auxCBSlot = 15;
    info.io.ucpBase = NV50_CB_AUX_UCP_OFFSET;
-
-   info.io.resInfoCBSlot = 15;
    info.io.suInfoBase = NV50_CB_AUX_TEX_MS_OFFSET;
    info.io.msInfoCBSlot = 15;
    info.io.msInfoBase = NV50_CB_AUX_MS_OFFSET;

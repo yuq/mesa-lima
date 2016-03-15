@@ -600,7 +600,7 @@ NVC0LoweringPass::visit(BasicBlock *bb)
 inline Value *
 NVC0LoweringPass::loadTexHandle(Value *ptr, unsigned int slot)
 {
-   uint8_t b = prog->driver->io.resInfoCBSlot;
+   uint8_t b = prog->driver->io.auxCBSlot;
    uint32_t off = prog->driver->io.texBindBase + slot * 4;
    return bld.
       mkLoadv(TYPE_U32, bld.mkSymbol(FILE_MEMORY_CONST, b, TYPE_U32, off), ptr);
@@ -1205,7 +1205,7 @@ NVC0LoweringPass::handleCasExch(Instruction *cas, bool needCctl)
 inline Value *
 NVC0LoweringPass::loadResInfo32(Value *ptr, uint32_t off)
 {
-   uint8_t b = prog->driver->io.resInfoCBSlot;
+   uint8_t b = prog->driver->io.auxCBSlot;
    off += prog->driver->io.suInfoBase;
    return bld.
       mkLoadv(TYPE_U32, bld.mkSymbol(FILE_MEMORY_CONST, b, TYPE_U32, off), ptr);
@@ -1214,7 +1214,7 @@ NVC0LoweringPass::loadResInfo32(Value *ptr, uint32_t off)
 inline Value *
 NVC0LoweringPass::loadResInfo64(Value *ptr, uint32_t off)
 {
-   uint8_t b = prog->driver->io.resInfoCBSlot;
+   uint8_t b = prog->driver->io.auxCBSlot;
    off += prog->driver->io.suInfoBase;
 
    if (ptr)
@@ -1227,7 +1227,7 @@ NVC0LoweringPass::loadResInfo64(Value *ptr, uint32_t off)
 inline Value *
 NVC0LoweringPass::loadResLength32(Value *ptr, uint32_t off)
 {
-   uint8_t b = prog->driver->io.resInfoCBSlot;
+   uint8_t b = prog->driver->io.auxCBSlot;
    off += prog->driver->io.suInfoBase;
 
    if (ptr)
@@ -1541,7 +1541,7 @@ NVC0LoweringPass::handleSurfaceOpNVE4(TexInstruction *su)
       call->indirect = 1;
       call->absolute = 1;
       call->setSrc(0, bld.mkSymbol(FILE_MEMORY_CONST,
-                                   prog->driver->io.resInfoCBSlot, TYPE_U32,
+                                   prog->driver->io.auxCBSlot, TYPE_U32,
                                    prog->driver->io.suInfoBase + base));
       call->setSrc(1, r[2]);
       call->setSrc(2, r[4]);
@@ -1716,7 +1716,7 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
       bld.mkLoad(TYPE_F32,
                  i->getDef(0),
                  bld.mkSymbol(
-                       FILE_MEMORY_CONST, prog->driver->io.resInfoCBSlot,
+                       FILE_MEMORY_CONST, prog->driver->io.auxCBSlot,
                        TYPE_U32, prog->driver->io.sampleInfoBase +
                        4 * sym->reg.data.sv.index),
                  off);

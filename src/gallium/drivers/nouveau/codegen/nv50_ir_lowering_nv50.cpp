@@ -682,7 +682,7 @@ void NV50LoweringPreSSA::loadTexMsInfo(uint32_t off, Value **ms,
                                        Value **ms_x, Value **ms_y) {
    // This loads the texture-indexed ms setting from the constant buffer
    Value *tmp = new_LValue(func, FILE_GPR);
-   uint8_t b = prog->driver->io.resInfoCBSlot;
+   uint8_t b = prog->driver->io.auxCBSlot;
    off += prog->driver->io.suInfoBase;
    if (prog->getType() > Program::TYPE_VERTEX)
       off += 16 * 2 * 4;
@@ -1174,7 +1174,7 @@ NV50LoweringPreSSA::handleRDSV(Instruction *i)
       bld.mkLoad(TYPE_F32,
                  def,
                  bld.mkSymbol(
-                       FILE_MEMORY_CONST, prog->driver->io.resInfoCBSlot,
+                       FILE_MEMORY_CONST, prog->driver->io.auxCBSlot,
                        TYPE_U32, prog->driver->io.sampleInfoBase + 4 * idx),
                  off);
       break;
