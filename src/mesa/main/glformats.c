@@ -3556,3 +3556,86 @@ _mesa_format_from_format_and_type(GLenum format, GLenum type)
     */
    unreachable("Unsupported format");
 }
+
+/**
+ * Returns true if \p internal_format is a sized internal format that
+ * is marked "Color Renderable" in Table 8.10 of the ES 3.2 specification.
+ */
+bool
+_mesa_is_es3_color_renderable(GLenum internal_format)
+{
+   switch (internal_format) {
+   case GL_R8:
+   case GL_RG8:
+   case GL_RGB8:
+   case GL_RGB565:
+   case GL_RGBA4:
+   case GL_RGB5_A1:
+   case GL_RGBA8:
+   case GL_RGB10_A2:
+   case GL_RGB10_A2UI:
+   case GL_SRGB8_ALPHA8:
+   case GL_R16F:
+   case GL_RG16F:
+   case GL_RGBA16F:
+   case GL_R32F:
+   case GL_RG32F:
+   case GL_RGBA32F:
+   case GL_R11F_G11F_B10F:
+   case GL_R8I:
+   case GL_R8UI:
+   case GL_R16I:
+   case GL_R16UI:
+   case GL_R32I:
+   case GL_R32UI:
+   case GL_RG8I:
+   case GL_RG8UI:
+   case GL_RG16I:
+   case GL_RG16UI:
+   case GL_RG32I:
+   case GL_RG32UI:
+   case GL_RGBA8I:
+   case GL_RGBA8UI:
+   case GL_RGBA16I:
+   case GL_RGBA16UI:
+   case GL_RGBA32I:
+   case GL_RGBA32UI:
+      return true;
+   default:
+      return false;
+   }
+}
+
+/**
+ * Returns true if \p internal_format is a sized internal format that
+ * is marked "Texture Filterable" in Table 8.10 of the ES 3.2 specification.
+ */
+bool
+_mesa_is_es3_texture_filterable(GLenum internal_format)
+{
+   switch (internal_format) {
+   case GL_R8:
+   case GL_R8_SNORM:
+   case GL_RG8:
+   case GL_RG8_SNORM:
+   case GL_RGB8:
+   case GL_RGB8_SNORM:
+   case GL_RGB565:
+   case GL_RGBA4:
+   case GL_RGB5_A1:
+   case GL_RGBA8:
+   case GL_RGBA8_SNORM:
+   case GL_RGB10_A2:
+   case GL_SRGB8:
+   case GL_SRGB8_ALPHA8:
+   case GL_R16F:
+   case GL_RG16F:
+   case GL_RGB16F:
+   case GL_RGBA16F:
+   case GL_R11F_G11F_B10F:
+   case GL_RGB9_E5:
+      return true;
+   default:
+      return false;
+   }
+}
