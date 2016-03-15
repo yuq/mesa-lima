@@ -127,7 +127,6 @@ brw_bind_rep_write_shader(struct brw_context *brw, float *color)
       "   gl_FragColor = color;\n"
       "}\n";
 
-   GLuint vs, fs;
    struct brw_fast_clear_state *clear = brw->fast_clear_state;
    struct gl_context *ctx = &brw->ctx;
 
@@ -137,16 +136,9 @@ brw_bind_rep_write_shader(struct brw_context *brw, float *color)
       return;
    }
 
-   vs = _mesa_meta_compile_shader_with_debug(ctx, GL_VERTEX_SHADER, vs_source);
-   fs = _mesa_meta_compile_shader_with_debug(ctx, GL_FRAGMENT_SHADER, fs_source);
-
-   clear->shader_prog = _mesa_CreateProgram();
-   _mesa_AttachShader(clear->shader_prog, fs);
-   _mesa_DeleteShader(fs);
-   _mesa_AttachShader(clear->shader_prog, vs);
-   _mesa_DeleteShader(vs);
-   _mesa_ObjectLabel(GL_PROGRAM, clear->shader_prog, -1, "meta repclear");
-   _mesa_LinkProgram(clear->shader_prog);
+   _mesa_meta_compile_and_link_program(ctx, vs_source, fs_source,
+                                       "meta repclear",
+                                       &clear->shader_prog);
 
    clear->color_location =
       _mesa_GetUniformLocation(clear->shader_prog, "color");

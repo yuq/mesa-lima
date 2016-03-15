@@ -1537,21 +1537,8 @@ meta_glsl_clear_init(struct gl_context *ctx, struct clear_state *clear)
    if (clear->ShaderProg != 0)
       return;
 
-   vs = _mesa_CreateShader(GL_VERTEX_SHADER);
-   _mesa_ShaderSource(vs, 1, &vs_source, NULL);
-   _mesa_CompileShader(vs);
-
-   fs = _mesa_CreateShader(GL_FRAGMENT_SHADER);
-   _mesa_ShaderSource(fs, 1, &fs_source, NULL);
-   _mesa_CompileShader(fs);
-
-   clear->ShaderProg = _mesa_CreateProgram();
-   _mesa_AttachShader(clear->ShaderProg, fs);
-   _mesa_DeleteShader(fs);
-   _mesa_AttachShader(clear->ShaderProg, vs);
-   _mesa_DeleteShader(vs);
-   _mesa_ObjectLabel(GL_PROGRAM, clear->ShaderProg, -1, "meta clear");
-   _mesa_LinkProgram(clear->ShaderProg);
+   _mesa_meta_compile_and_link_program(ctx, vs_source, fs_source, "meta clear",
+                                       &clear->ShaderProg);
 
    has_integer_textures = _mesa_is_gles3(ctx) ||
       (_mesa_is_desktop_gl(ctx) && ctx->Const.GLSLVersion >= 130);
@@ -1585,26 +1572,15 @@ meta_glsl_clear_init(struct gl_context *ctx, struct clear_state *clear)
                          "   out_color = color;\n"
                          "}\n");
 
-      vs = _mesa_meta_compile_shader_with_debug(ctx, GL_VERTEX_SHADER,
-                                                vs_int_source);
-      fs = _mesa_meta_compile_shader_with_debug(ctx, GL_FRAGMENT_SHADER,
-                                                fs_int_source);
+      _mesa_meta_compile_and_link_program(ctx, vs_int_source, fs_int_source,
+                                          "integer clear",
+                                          &clear->IntegerShaderProg);
       ralloc_free(shader_source_mem_ctx);
-
-      clear->IntegerShaderProg = _mesa_CreateProgram();
-      _mesa_AttachShader(clear->IntegerShaderProg, fs);
-      _mesa_DeleteShader(fs);
-      _mesa_AttachShader(clear->IntegerShaderProg, vs);
-      _mesa_DeleteShader(vs);
 
       /* Note that user-defined out attributes get automatically assigned
        * locations starting from 0, so we don't need to explicitly
        * BindFragDataLocation to 0.
        */
-
-      _mesa_ObjectLabel(GL_PROGRAM, clear->IntegerShaderProg, -1,
-                        "integer clear");
-      _mesa_meta_link_program_with_debug(ctx, clear->IntegerShaderProg);
    }
 }
 
