@@ -327,6 +327,12 @@ struct glsl_type {
    unsigned uniform_locations() const;
 
    /**
+    * Used to count the number of varyings contained in the type ignoring
+    * innermost array elements.
+    */
+   unsigned varying_count() const;
+
+   /**
     * Calculate the number of attribute slots required to hold this type
     *
     * This implements the language rules of GLSL 1.50 for counting the number
