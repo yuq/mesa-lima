@@ -1094,7 +1094,27 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 		}
 	}
 
-	/* Shader images - update TODO */
+	/* Shader images */
+	for (shader = 0; shader < SI_NUM_SHADERS; ++shader) {
+		struct si_images_info *images = &sctx->images[shader];
+		unsigned mask = images->desc.enabled_mask;
+
+		while (mask) {
+			unsigned i = u_bit_scan(&mask);
+
+			if (images->views[i].resource == buf) {
+				si_desc_reset_buffer_offset(
+					ctx, images->desc.list + i * 8 + 4,
+					old_va, buf);
+				images->desc.list_dirty = true;
+
+				radeon_add_to_buffer_list(
+					&sctx->b, &sctx->b.gfx, rbuffer,
+					RADEON_USAGE_READWRITE,
+					RADEON_PRIO_SAMPLER_BUFFER);
+			}
+		}
+	}
 }
 
 /* SHADER USER DATA */
