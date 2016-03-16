@@ -171,7 +171,6 @@ void
 vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 {
         struct qpu_reg *temp_registers = vc4_register_allocate(vc4, c);
-        bool discard = false;
         uint32_t inputs_remaining = c->num_inputs;
         uint32_t vpm_read_fifo_count = 0;
         uint32_t vpm_read_offset = 0;
@@ -375,12 +374,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                          */
                         break;
 
-                case QOP_TLB_DISCARD_SETUP:
-                        discard = true;
-                        queue(c, qpu_a_MOV(src[0], src[0]) | unpack);
-                        *last_inst(c) |= QPU_SF;
-                        break;
-
                 case QOP_TLB_STENCIL_SETUP:
                         assert(!unpack);
                         queue(c, qpu_a_MOV(qpu_ra(QPU_W_TLB_STENCIL_SETUP),
@@ -390,9 +383,8 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QOP_TLB_Z_WRITE:
                         queue(c, qpu_a_MOV(qpu_ra(QPU_W_TLB_Z),
                                            src[0]) | unpack);
-                        if (discard) {
-                                set_last_cond_add(c, QPU_COND_ZS);
-                        }
+                        set_last_cond_add(c, qinst->cond);
+                        handled_qinst_cond = true;
                         break;
 
                 case QOP_TLB_COLOR_READ:
@@ -406,16 +398,14 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 
                 case QOP_TLB_COLOR_WRITE:
                         queue(c, qpu_a_MOV(qpu_tlbc(), src[0]) | unpack);
-                        if (discard) {
-                                set_last_cond_add(c, QPU_COND_ZS);
-                        }
+                        set_last_cond_add(c, qinst->cond);
+                        handled_qinst_cond = true;
                         break;
 
                 case QOP_TLB_COLOR_WRITE_MS:
                         queue(c, qpu_a_MOV(qpu_tlbc_ms(), src[0]));
-                        if (discard) {
-                                set_last_cond_add(c, QPU_COND_ZS);
-                        }
+                        set_last_cond_add(c, qinst->cond);
+                        handled_qinst_cond = true;
                         break;
 
                 case QOP_VARY_ADD_C:
