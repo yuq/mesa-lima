@@ -67,6 +67,7 @@ Value *VRCP(Value *va);
 Value *VPLANEPS(Value* vA, Value* vB, Value* vC, Value* &vX, Value* &vY);
 
 uint32_t IMMED(Value* i);
+int32_t S_IMMED(Value* i);
 
 Value *GEP(Value* ptr, const std::initializer_list<Value*> &indexList);
 Value *GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList);

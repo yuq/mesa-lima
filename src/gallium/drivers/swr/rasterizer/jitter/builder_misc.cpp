@@ -259,6 +259,13 @@ uint32_t Builder::IMMED(Value* v)
     return pValConst->getZExtValue();
 }
 
+int32_t Builder::S_IMMED(Value* v)
+{
+    SWR_ASSERT(isa<ConstantInt>(v));
+    ConstantInt *pValConst = cast<ConstantInt>(v);
+    return pValConst->getSExtValue();
+}
+
 Value *Builder::GEP(Value* ptr, const std::initializer_list<Value*> &indexList)
 {
     std::vector<Value*> indices;
