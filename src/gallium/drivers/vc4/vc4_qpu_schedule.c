@@ -722,21 +722,13 @@ mark_instruction_scheduled(struct list_head *schedule_list,
 }
 
 static uint32_t
-schedule_instructions(struct vc4_compile *c, struct list_head *schedule_list)
+schedule_instructions(struct vc4_compile *c, struct list_head *schedule_list,
+                      enum quniform_contents *orig_uniform_contents,
+                      uint32_t *orig_uniform_data,
+                      uint32_t *next_uniform)
 {
         struct choose_scoreboard scoreboard;
         uint32_t time = 0;
-
-        /* We reorder the uniforms as we schedule instructions, so save the
-         * old data off and replace it.
-         */
-        uint32_t *uniform_data = c->uniform_data;
-        enum quniform_contents *uniform_contents = c->uniform_contents;
-        c->uniform_contents = ralloc_array(c, enum quniform_contents,
-                                           c->num_uniforms);
-        c->uniform_data = ralloc_array(c, uint32_t, c->num_uniforms);
-        c->uniform_array_size = c->num_uniforms;
-        uint32_t next_uniform = 0;
 
         memset(&scoreboard, 0, sizeof(scoreboard));
         scoreboard.last_waddr_a = ~0;
@@ -785,11 +777,11 @@ schedule_instructions(struct vc4_compile *c, struct list_head *schedule_list)
                         mark_instruction_scheduled(schedule_list, time,
                                                    chosen, true);
                         if (chosen->uniform != -1) {
-                                c->uniform_data[next_uniform] =
-                                        uniform_data[chosen->uniform];
-                                c->uniform_contents[next_uniform] =
-                                        uniform_contents[chosen->uniform];
-                                next_uniform++;
+                                c->uniform_data[*next_uniform] =
+                                        orig_uniform_data[chosen->uniform];
+                                c->uniform_contents[*next_uniform] =
+                                        orig_uniform_contents[chosen->uniform];
+                                (*next_uniform)++;
                         }
 
                         merge = choose_instruction_to_schedule(&scoreboard,
@@ -801,11 +793,11 @@ schedule_instructions(struct vc4_compile *c, struct list_head *schedule_list)
                                 inst = qpu_merge_inst(inst, merge->inst->inst);
                                 assert(inst != 0);
                                 if (merge->uniform != -1) {
-                                        c->uniform_data[next_uniform] =
-                                                uniform_data[merge->uniform];
-                                        c->uniform_contents[next_uniform] =
-                                                uniform_contents[merge->uniform];
-                                        next_uniform++;
+                                        c->uniform_data[*next_uniform] =
+                                                orig_uniform_data[merge->uniform];
+                                        c->uniform_contents[*next_uniform] =
+                                                orig_uniform_contents[merge->uniform];
+                                        (*next_uniform)++;
                                 }
 
                                 if (debug) {
@@ -840,47 +832,37 @@ schedule_instructions(struct vc4_compile *c, struct list_head *schedule_list)
                 time++;
         }
 
-        assert(next_uniform == c->num_uniforms);
-
         return time;
 }
 
-uint32_t
-qpu_schedule_instructions(struct vc4_compile *c)
+static uint32_t
+qpu_schedule_instructions_block(struct vc4_compile *c, struct qblock *block,
+                                enum quniform_contents *orig_uniform_contents,
+                                uint32_t *orig_uniform_data,
+                                uint32_t *next_uniform)
 {
         void *mem_ctx = ralloc_context(NULL);
         struct list_head schedule_list;
 
         list_inithead(&schedule_list);
 
-        if (debug) {
-                fprintf(stderr, "Pre-schedule instructions\n");
-                list_for_each_entry(struct queued_qpu_inst, q,
-                                    &c->qpu_inst_list, link) {
-                        vc4_qpu_disasm(&q->inst, 1);
-                        fprintf(stderr, "\n");
-                }
-                fprintf(stderr, "\n");
-        }
-
         /* Wrap each instruction in a scheduler structure. */
-        uint32_t next_uniform = 0;
-        while (!list_empty(&c->qpu_inst_list)) {
+        uint32_t next_sched_uniform = *next_uniform;
+        while (!list_empty(&block->qpu_inst_list)) {
                 struct queued_qpu_inst *inst =
-                        (struct queued_qpu_inst *)c->qpu_inst_list.next;
+                        (struct queued_qpu_inst *)block->qpu_inst_list.next;
                 struct schedule_node *n = rzalloc(mem_ctx, struct schedule_node);
 
                 n->inst = inst;
 
                 if (reads_uniform(inst->inst)) {
-                        n->uniform = next_uniform++;
+                        n->uniform = next_sched_uniform++;
                 } else {
                         n->uniform = -1;
                 }
                 list_del(&inst->link);
                 list_addtail(&n->link, &schedule_list);
         }
-        assert(next_uniform == c->num_uniforms);
 
         calculate_forward_deps(c, &schedule_list);
         calculate_reverse_deps(c, &schedule_list);
@@ -889,15 +871,58 @@ qpu_schedule_instructions(struct vc4_compile *c)
                 compute_delay(n);
         }
 
-        uint32_t cycles = schedule_instructions(c, &schedule_list);
+        uint32_t cycles = schedule_instructions(c, &schedule_list,
+                                                orig_uniform_contents,
+                                                orig_uniform_data,
+                                                next_uniform);
+
+        ralloc_free(mem_ctx);
+
+        return cycles;
+}
+
+uint32_t
+qpu_schedule_instructions(struct vc4_compile *c)
+{
+        /* We reorder the uniforms as we schedule instructions, so save the
+         * old data off and replace it.
+         */
+        uint32_t *uniform_data = c->uniform_data;
+        enum quniform_contents *uniform_contents = c->uniform_contents;
+        c->uniform_contents = ralloc_array(c, enum quniform_contents,
+                                           c->num_uniforms);
+        c->uniform_data = ralloc_array(c, uint32_t, c->num_uniforms);
+        c->uniform_array_size = c->num_uniforms;
+        uint32_t next_uniform = 0;
+
+        if (debug) {
+                fprintf(stderr, "Pre-schedule instructions\n");
+                qir_for_each_block(block, c) {
+                        fprintf(stderr, "BLOCK %d\n", block->index);
+                        list_for_each_entry(struct queued_qpu_inst, q,
+                                            &block->qpu_inst_list, link) {
+                                vc4_qpu_disasm(&q->inst, 1);
+                                fprintf(stderr, "\n");
+                        }
+                }
+                fprintf(stderr, "\n");
+        }
+
+        uint32_t cycles = 0;
+        qir_for_each_block(block, c) {
+                cycles += qpu_schedule_instructions_block(c, block,
+                                                          uniform_contents,
+                                                          uniform_data,
+                                                          &next_uniform);
+        }
+
+        assert(next_uniform == c->num_uniforms);
 
         if (debug) {
                 fprintf(stderr, "Post-schedule instructions\n");
                 vc4_qpu_disasm(c->qpu_insts, c->qpu_inst_count);
                 fprintf(stderr, "\n");
         }
-
-        ralloc_free(mem_ctx);
 
         return cycles;
 }
