@@ -2947,13 +2947,15 @@ static LLVMValueRef extract_rsrc_top_half(
  * Append the resource and indexing arguments for buffer intrinsics.
  *
  * \param rsrc the v4i32 buffer resource
- * \param index index into the buffer
+ * \param index index into the buffer (stride-based)
+ * \param offset byte offset into the buffer
  */
 static void buffer_append_args(
 		struct si_shader_context *ctx,
 		struct lp_build_emit_data *emit_data,
 		LLVMValueRef rsrc,
 		LLVMValueRef index,
+		LLVMValueRef offset,
 		bool atomic)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
@@ -2963,7 +2965,7 @@ static void buffer_append_args(
 
 	emit_data->args[emit_data->arg_count++] = rsrc;
 	emit_data->args[emit_data->arg_count++] = index; /* vindex */
-	emit_data->args[emit_data->arg_count++] = bld_base->uint_bld.zero; /* voffset */
+	emit_data->args[emit_data->arg_count++] = offset; /* voffset */
 	if (!atomic) {
 		emit_data->args[emit_data->arg_count++] =
 			inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE) ?
@@ -2990,7 +2992,8 @@ static void load_fetch_args(
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		rsrc = extract_rsrc_top_half(ctx, rsrc);
-		buffer_append_args(ctx, emit_data, rsrc, coords, false);
+		buffer_append_args(ctx, emit_data, rsrc, coords,
+				   bld_base->uint_bld.zero, false);
 	} else {
 		emit_data->args[0] = coords;
 		emit_data->args[1] = rsrc;
@@ -3068,7 +3071,8 @@ static void store_fetch_args(
 		emit_data->arg_count = 1;
 
 		rsrc = extract_rsrc_top_half(ctx, rsrc);
-		buffer_append_args(ctx, emit_data, rsrc, coords, false);
+		buffer_append_args(ctx, emit_data, rsrc, coords,
+				   bld_base->uint_bld.zero, false);
 	} else {
 		emit_data->args[0] = data;
 		emit_data->args[1] = coords;
@@ -3148,7 +3152,8 @@ static void atomic_fetch_args(
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		rsrc = extract_rsrc_top_half(ctx, rsrc);
-		buffer_append_args(ctx, emit_data, rsrc, coords, true);
+		buffer_append_args(ctx, emit_data, rsrc, coords,
+				   bld_base->uint_bld.zero, true);
 	} else {
 		emit_data->args[emit_data->arg_count++] = coords;
 		emit_data->args[emit_data->arg_count++] = rsrc;
