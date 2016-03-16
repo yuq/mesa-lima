@@ -196,10 +196,13 @@ scan_instruction(struct tgsi_shader_info *info,
       if (is_memory_file(src->Register.File)) {
          is_mem_inst = true;
 
-         if (src->Register.File == TGSI_FILE_IMAGE &&
-             !src->Register.Indirect &&
-             tgsi_get_opcode_info(fullinst->Instruction.Opcode)->is_store)
-            info->images_writemask |= 1 << src->Register.Index;
+         if (tgsi_get_opcode_info(fullinst->Instruction.Opcode)->is_store) {
+            info->writes_memory = TRUE;
+
+            if (src->Register.File == TGSI_FILE_IMAGE &&
+                !src->Register.Indirect)
+               info->images_writemask |= 1 << src->Register.Index;
+         }
       }
    }
 
@@ -215,6 +218,7 @@ scan_instruction(struct tgsi_shader_info *info,
          assert(fullinst->Instruction.Opcode == TGSI_OPCODE_STORE);
 
          is_mem_inst = true;
+         info->writes_memory = TRUE;
 
          if (dst->Register.File == TGSI_FILE_IMAGE &&
              !dst->Register.Indirect)
