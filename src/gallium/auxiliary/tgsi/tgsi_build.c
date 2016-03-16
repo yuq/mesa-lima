@@ -775,6 +775,8 @@ tgsi_default_instruction_memory( void )
    struct tgsi_instruction_memory instruction_memory;
 
    instruction_memory.Qualifier = 0;
+   instruction_memory.Texture = 0;
+   instruction_memory.Format = 0;
    instruction_memory.Padding = 0;
 
    return instruction_memory;
@@ -790,6 +792,8 @@ tgsi_build_instruction_memory(
    struct tgsi_instruction_memory instruction_memory;
 
    instruction_memory.Qualifier = qualifier;
+   instruction_memory.Texture = 0;
+   instruction_memory.Format = 0;
    instruction_memory.Padding = 0;
    instruction->Memory = 1;
 
