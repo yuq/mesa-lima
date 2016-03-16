@@ -2976,7 +2976,6 @@ static void buffer_append_args(
 		LLVMValueRef offset,
 		bool atomic)
 {
-	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	LLVMValueRef i1false = LLVMConstInt(ctx->i1, 0, 0);
 	LLVMValueRef i1true = LLVMConstInt(ctx->i1, 1, 0);
@@ -3000,26 +2999,73 @@ static void load_fetch_args(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	unsigned target = inst->Memory.Texture;
-	LLVMValueRef coords;
 	LLVMValueRef rsrc;
 
 	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
 
-	image_fetch_rsrc(bld_base, &inst->Src[0], false, &rsrc);
-	coords = image_fetch_coords(bld_base, inst, 1);
+	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
+		LLVMBuilderRef builder = gallivm->builder;
+		LLVMValueRef offset;
+		LLVMValueRef tmp;
 
-	if (target == TGSI_TEXTURE_BUFFER) {
-		rsrc = extract_rsrc_top_half(ctx, rsrc);
-		buffer_append_args(ctx, emit_data, rsrc, coords,
-				   bld_base->uint_bld.zero, false);
+		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0]);
+
+		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
+		offset = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+
+		buffer_append_args(ctx, emit_data, rsrc, bld_base->uint_bld.zero,
+				   offset, false);
 	} else {
-		emit_data->args[0] = coords;
-		emit_data->args[1] = rsrc;
-		emit_data->args[2] = lp_build_const_int32(gallivm, 15); /* dmask */
-		emit_data->arg_count = 3;
+		LLVMValueRef coords;
 
-		image_append_args(ctx, emit_data, target, false);
+		image_fetch_rsrc(bld_base, &inst->Src[0], false, &rsrc);
+		coords = image_fetch_coords(bld_base, inst, 1);
+
+		if (target == TGSI_TEXTURE_BUFFER) {
+			rsrc = extract_rsrc_top_half(ctx, rsrc);
+			buffer_append_args(ctx, emit_data, rsrc, coords,
+					bld_base->uint_bld.zero, false);
+		} else {
+			emit_data->args[0] = coords;
+			emit_data->args[1] = rsrc;
+			emit_data->args[2] = lp_build_const_int32(gallivm, 15); /* dmask */
+			emit_data->arg_count = 3;
+
+			image_append_args(ctx, emit_data, target, false);
+		}
 	}
+}
+
+static void load_emit_buffer(struct si_shader_context *ctx,
+			     struct lp_build_emit_data *emit_data)
+{
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	uint writemask = inst->Dst[0].Register.WriteMask;
+	uint count = util_last_bit(writemask);
+	const char *intrinsic_name;
+	LLVMTypeRef dst_type;
+
+	switch (count) {
+	case 1:
+		intrinsic_name = "llvm.amdgcn.buffer.load.f32";
+		dst_type = ctx->f32;
+		break;
+	case 2:
+		intrinsic_name = "llvm.amdgcn.buffer.load.v2f32";
+		dst_type = LLVMVectorType(ctx->f32, 2);
+		break;
+	default: // 3 & 4
+		intrinsic_name = "llvm.amdgcn.buffer.load.v4f32";
+		dst_type = ctx->v4f32;
+		count = 4;
+	}
+
+	emit_data->output[emit_data->chan] = lp_build_intrinsic(
+			builder, intrinsic_name, dst_type,
+			emit_data->args, emit_data->arg_count,
+			LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
 }
 
 static void load_emit(
@@ -3031,18 +3077,23 @@ static void load_emit(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
-	unsigned target = inst->Memory.Texture;
 	char intrinsic_name[32];
 	char coords_type[8];
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
 		emit_optimization_barrier(ctx);
 
-	if (target == TGSI_TEXTURE_BUFFER) {
-		emit_data->output[emit_data->chan] = lp_build_intrinsic(
-			builder, "llvm.amdgcn.buffer.load.format.v4f32", emit_data->dst_type,
-			emit_data->args, emit_data->arg_count,
-			LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
+	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
+		load_emit_buffer(ctx, emit_data);
+		return;
+	}
+
+	if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
+		emit_data->output[emit_data->chan] =
+			lp_build_intrinsic(
+				builder, "llvm.amdgcn.buffer.load.format.v4f32", emit_data->dst_type,
+				emit_data->args, emit_data->arg_count,
+				LLVMReadOnlyAttribute | LLVMNoUnwindAttribute);
 	} else {
 		build_int_type_name(LLVMTypeOf(emit_data->args[0]),
 				    coords_type, sizeof(coords_type));
