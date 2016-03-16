@@ -90,7 +90,7 @@ nir_imm_float(nir_builder *build, float x)
    nir_const_value v;
 
    memset(&v, 0, sizeof(v));
-   v.f[0] = x;
+   v.f32[0] = x;
 
    return nir_build_imm(build, 1, v);
 }
@@ -101,10 +101,10 @@ nir_imm_vec4(nir_builder *build, float x, float y, float z, float w)
    nir_const_value v;
 
    memset(&v, 0, sizeof(v));
-   v.f[0] = x;
-   v.f[1] = y;
-   v.f[2] = z;
-   v.f[3] = w;
+   v.f32[0] = x;
+   v.f32[1] = y;
+   v.f32[2] = z;
+   v.f32[3] = w;
 
    return nir_build_imm(build, 4, v);
 }
@@ -115,7 +115,7 @@ nir_imm_int(nir_builder *build, int x)
    nir_const_value v;
 
    memset(&v, 0, sizeof(v));
-   v.i[0] = x;
+   v.i32[0] = x;
 
    return nir_build_imm(build, 1, v);
 }
@@ -126,10 +126,10 @@ nir_imm_ivec4(nir_builder *build, int x, int y, int z, int w)
    nir_const_value v;
 
    memset(&v, 0, sizeof(v));
-   v.i[0] = x;
-   v.i[1] = y;
-   v.i[2] = z;
-   v.i[3] = w;
+   v.i32[0] = x;
+   v.i32[1] = y;
+   v.i32[2] = z;
+   v.i32[3] = w;
 
    return nir_build_imm(build, 4, v);
 }

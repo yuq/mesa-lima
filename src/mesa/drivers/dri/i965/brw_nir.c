@@ -77,7 +77,7 @@ add_const_offset_to_base_block(nir_block *block, void *closure)
          nir_const_value *const_offset = nir_src_as_const_value(*offset);
 
          if (const_offset) {
-            intrin->const_index[0] += const_offset->u[0];
+            intrin->const_index[0] += const_offset->u32[0];
             b->cursor = nir_before_instr(&intrin->instr);
             nir_instr_rewrite_src(&intrin->instr, offset,
                                   nir_src_for_ssa(nir_imm_int(b, 0)));
@@ -175,7 +175,7 @@ remap_patch_urb_offsets(nir_block *block, void *closure)
          if (vertex) {
             nir_const_value *const_vertex = nir_src_as_const_value(*vertex);
             if (const_vertex) {
-               intrin->const_index[0] += const_vertex->u[0] *
+               intrin->const_index[0] += const_vertex->u32[0] *
                                          state->vue_map->num_per_vertex_slots;
             } else {
                state->b.cursor = nir_before_instr(&intrin->instr);

@@ -22,19 +22,19 @@ def type_add_size(type_, size):
 
 def get_const_field(type_):
     if type_ == "int32":
-        return "i"
+        return "i32"
     if type_ == "uint32":
-        return "u"
+        return "u32"
     if type_ == "int64":
-        return "l"
+        return "i64"
     if type_ == "uint64":
-        return "ul"
+        return "u64"
     if type_ == "bool32":
-        return "b"
+        return "u32"
     if type_ == "float32":
-        return "f"
+        return "f32"
     if type_ == "float64":
-        return "d"
+        return "f64"
     raise Exception(str(type_))
     assert(0)
 
@@ -294,7 +294,7 @@ evaluate_${name}(unsigned num_components, unsigned bit_size,
          struct ${input_types[j]}_vec src${j} = {
          % for k in range(op.input_sizes[j]):
             % if input_types[j] == "bool32":
-               _src[${j}].u[${k}] != 0,
+               _src[${j}].u32[${k}] != 0,
             % else:
                _src[${j}].${get_const_field(input_types[j])}[${k}],
             % endif
@@ -316,7 +316,7 @@ evaluate_${name}(unsigned num_components, unsigned bit_size,
                   ## Avoid unused variable warnings
                   <% continue %>
                % elif input_types[j] == "bool32":
-                  bool src${j} = _src[${j}].u[_i] != 0;
+                  bool src${j} = _src[${j}].u32[_i] != 0;
                % else:
                   ${input_types[j]}_t src${j} =
                      _src[${j}].${get_const_field(input_types[j])}[_i];
@@ -337,7 +337,7 @@ evaluate_${name}(unsigned num_components, unsigned bit_size,
             ## value of dst.
             % if output_type == "bool32":
                ## Sanitize the C value to a proper NIR bool
-               _dst_val.u[_i] = dst ? NIR_TRUE : NIR_FALSE;
+               _dst_val.u32[_i] = dst ? NIR_TRUE : NIR_FALSE;
             % else:
                _dst_val.${get_const_field(output_type)}[_i] = dst;
             % endif
@@ -364,7 +364,7 @@ evaluate_${name}(unsigned num_components, unsigned bit_size,
          % for k in range(op.output_size):
             % if output_type == "bool32":
                ## Sanitize the C value to a proper NIR bool
-               _dst_val.u[${k}] = dst.${"xyzw"[k]} ? NIR_TRUE : NIR_FALSE;
+               _dst_val.u32[${k}] = dst.${"xyzw"[k]} ? NIR_TRUE : NIR_FALSE;
             % else:
                _dst_val.${get_const_field(output_type)}[${k}] = dst.${"xyzw"[k]};
             % endif

@@ -77,9 +77,9 @@ constant_fold_alu_instr(nir_alu_instr *instr, void *mem_ctx)
       for (unsigned j = 0; j < nir_ssa_alu_instr_src_components(instr, i);
            j++) {
          if (load_const->def.bit_size == 64)
-            src[i].ul[j] = load_const->value.ul[instr->src[i].swizzle[j]];
+            src[i].u64[j] = load_const->value.u64[instr->src[i].swizzle[j]];
          else
-            src[i].u[j] = load_const->value.u[instr->src[i].swizzle[j]];
+            src[i].u32[j] = load_const->value.u32[instr->src[i].swizzle[j]];
       }
 
       /* We shouldn't have any source modifiers in the optimization loop. */
@@ -131,7 +131,7 @@ constant_fold_deref(nir_instr *instr, nir_deref_var *deref)
          nir_load_const_instr *indirect =
             nir_instr_as_load_const(arr->indirect.ssa->parent_instr);
 
-         arr->base_offset += indirect->value.u[0];
+         arr->base_offset += indirect->value.u32[0];
 
          /* Clear out the source */
          nir_instr_rewrite_src(instr, &arr->indirect, nir_src_for_ssa(NULL));

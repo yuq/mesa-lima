@@ -49,7 +49,7 @@ lower_load_const_instr_scalar(nir_load_const_instr *lower)
    nir_ssa_def *loads[4];
    for (unsigned i = 0; i < lower->def.num_components; i++) {
       nir_load_const_instr *load_comp = nir_load_const_instr_create(b.shader, 1);
-      load_comp->value.u[0] = lower->value.u[i];
+      load_comp->value.u32[0] = lower->value.u32[i];
       nir_builder_instr_insert(&b, &load_comp->instr);
       loads[i] = &load_comp->def;
    }

@@ -711,7 +711,7 @@ print_load_const_instr(nir_load_const_instr *instr, print_state *state)
        * and then print the float in a comment for readability.
        */
 
-      fprintf(fp, "0x%08x /* %f */", instr->value.u[i], instr->value.f[i]);
+      fprintf(fp, "0x%08x /* %f */", instr->value.u32[i], instr->value.f32[i]);
    }
 
    fprintf(fp, ")");

@@ -183,7 +183,7 @@ vc4_nir_lower_vertex_attr(struct vc4_compile *c, nir_builder *b,
          * with an offset value of 0.
          */
         assert(nir_src_as_const_value(intr->src[0]) &&
-               nir_src_as_const_value(intr->src[0])->u[0] == 0);
+               nir_src_as_const_value(intr->src[0])->u32[0] == 0);
 
         /* Generate dword loads for the VPM values (Since these intrinsics may
          * be reordered, the actual reads will be generated at the top of the
@@ -256,7 +256,7 @@ vc4_nir_lower_fs_input(struct vc4_compile *c, nir_builder *b,
          * with an offset value of 0.
          */
         assert(nir_src_as_const_value(intr->src[0]) &&
-               nir_src_as_const_value(intr->src[0])->u[0] == 0);
+               nir_src_as_const_value(intr->src[0])->u32[0] == 0);
 
         /* Generate scalar loads equivalent to the original VEC4. */
         nir_ssa_def *dests[4];
@@ -339,7 +339,7 @@ vc4_nir_lower_output(struct vc4_compile *c, nir_builder *b,
          * with an offset value of 0.
          */
         assert(nir_src_as_const_value(intr->src[1]) &&
-               nir_src_as_const_value(intr->src[1])->u[0] == 0);
+               nir_src_as_const_value(intr->src[1])->u32[0] == 0);
 
         b->cursor = nir_before_instr(&intr->instr);
 

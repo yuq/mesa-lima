@@ -700,10 +700,10 @@ nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref)
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_INT:
       case GLSL_TYPE_UINT:
-         load->value.u[i] = constant->value.u[matrix_offset + i];
+         load->value.u32[i] = constant->value.u[matrix_offset + i];
          break;
       case GLSL_TYPE_BOOL:
-         load->value.u[i] = constant->value.b[matrix_offset + i] ?
+         load->value.u32[i] = constant->value.b[matrix_offset + i] ?
                              NIR_TRUE : NIR_FALSE;
          break;
       default:

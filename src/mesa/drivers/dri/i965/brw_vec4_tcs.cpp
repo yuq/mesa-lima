@@ -355,7 +355,7 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       nir_const_value *vertex_const = nir_src_as_const_value(instr->src[0]);
       src_reg vertex_index =
-         vertex_const ? src_reg(brw_imm_ud(vertex_const->u[0]))
+         vertex_const ? src_reg(brw_imm_ud(vertex_const->u32[0]))
                       : get_nir_src(instr->src[0], BRW_REGISTER_TYPE_UD, 1);
 
       dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);

@@ -1521,7 +1521,7 @@ ntq_emit_load_const(struct vc4_compile *c, nir_load_const_instr *instr)
 {
         struct qreg *qregs = ntq_init_ssa_def(c, &instr->def);
         for (int i = 0; i < instr->def.num_components; i++)
-                qregs[i] = qir_uniform_ui(c, instr->value.u[i]);
+                qregs[i] = qir_uniform_ui(c, instr->value.u32[i]);
 
         _mesa_hash_table_insert(c->def_ht, &instr->def, qregs);
 }
@@ -1555,7 +1555,7 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 assert(instr->num_components == 1);
                 const_offset = nir_src_as_const_value(instr->src[0]);
                 if (const_offset) {
-                        offset = instr->const_index[0] + const_offset->u[0];
+                        offset = instr->const_index[0] + const_offset->u32[0];
                         assert(offset % 4 == 0);
                         /* We need dwords */
                         offset = offset / 4;
@@ -1586,7 +1586,7 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 const_offset = nir_src_as_const_value(instr->src[0]);
                 assert(const_offset && "vc4 doesn't support indirect inputs");
                 if (instr->const_index[0] >= VC4_NIR_TLB_COLOR_READ_INPUT) {
-                        assert(const_offset->u[0] == 0);
+                        assert(const_offset->u32[0] == 0);
                         /* Reads of the per-sample color need to be done in
                          * order.
                          */
@@ -1600,7 +1600,7 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                         }
                         *dest = c->color_reads[sample_index];
                 } else {
-                        offset = instr->const_index[0] + const_offset->u[0];
+                        offset = instr->const_index[0] + const_offset->u32[0];
                         *dest = c->inputs[offset];
                 }
                 break;
@@ -1608,7 +1608,7 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
         case nir_intrinsic_store_output:
                 const_offset = nir_src_as_const_value(instr->src[1]);
                 assert(const_offset && "vc4 doesn't support indirect outputs");
-                offset = instr->const_index[0] + const_offset->u[0];
+                offset = instr->const_index[0] + const_offset->u32[0];
 
                 /* MSAA color outputs are the only case where we have an
                  * output that's not lowered to being a store of a single 32

@@ -459,7 +459,7 @@ ttn_emit_immediate(struct ttn_compile *c)
    c->next_imm++;
 
    for (i = 0; i < 4; i++)
-      load_const->value.u[i] = tgsi_imm->u[i].Uint;
+      load_const->value.u32[i] = tgsi_imm->u[i].Uint;
 
    nir_builder_instr_insert(b, &load_const->instr);
 }

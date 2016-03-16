@@ -77,13 +77,13 @@ nir_gs_count_vertices(const nir_shader *shader)
                return -1;
 
             if (count == -1)
-               count = val->i[0];
+               count = val->i32[0];
 
             /* We've found contradictory set_vertex_count intrinsics.
              * This can happen if there are early-returns in main() and
              * different paths emit different numbers of vertices.
              */
-            if (count != val->i[0])
+            if (count != val->i32[0])
                return -1;
          }
       }

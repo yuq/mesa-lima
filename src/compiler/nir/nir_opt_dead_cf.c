@@ -228,7 +228,7 @@ dead_cf_block(nir_block *block)
      if (!const_value)
         return false;
 
-      opt_constant_if(following_if, const_value->u[0] != 0);
+      opt_constant_if(following_if, const_value->u32[0] != 0);
       return true;
    }
 

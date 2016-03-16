@@ -161,7 +161,7 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
       switch (nir_op_infos[instr->op].input_types[src]) {
       case nir_type_float:
          for (unsigned i = 0; i < num_components; ++i) {
-            if (load->value.f[new_swizzle[i]] != const_val->data.f)
+            if (load->value.f32[new_swizzle[i]] != const_val->data.f)
                return false;
          }
          return true;
@@ -169,7 +169,7 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
       case nir_type_uint:
       case nir_type_bool:
          for (unsigned i = 0; i < num_components; ++i) {
-            if (load->value.i[new_swizzle[i]] != const_val->data.i)
+            if (load->value.i32[new_swizzle[i]] != const_val->data.i)
                return false;
          }
          return true;
@@ -304,15 +304,15 @@ construct_value(const nir_search_value *value, nir_alu_type type,
       switch (type) {
       case nir_type_float:
          load->def.name = ralloc_asprintf(mem_ctx, "%f", c->data.f);
-         load->value.f[0] = c->data.f;
+         load->value.f32[0] = c->data.f;
          break;
       case nir_type_int:
          load->def.name = ralloc_asprintf(mem_ctx, "%d", c->data.i);
-         load->value.i[0] = c->data.i;
+         load->value.i32[0] = c->data.i;
          break;
       case nir_type_uint:
       case nir_type_bool:
-         load->value.u[0] = c->data.u;
+         load->value.u32[0] = c->data.u;
          break;
       default:
          unreachable("Invalid alu source type");

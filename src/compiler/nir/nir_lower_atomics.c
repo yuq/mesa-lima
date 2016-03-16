@@ -75,7 +75,7 @@ lower_instr(nir_intrinsic_instr *instr,
       state->shader_program->UniformStorage[uniform_loc].opaque[state->shader->stage].index);
 
    nir_load_const_instr *offset_const = nir_load_const_instr_create(mem_ctx, 1);
-   offset_const->value.u[0] = instr->variables[0]->var->data.offset;
+   offset_const->value.u32[0] = instr->variables[0]->var->data.offset;
 
    nir_instr_insert_before(&instr->instr, &offset_const->instr);
 
@@ -90,13 +90,13 @@ lower_instr(nir_intrinsic_instr *instr,
       unsigned child_array_elements = tail->child != NULL ?
          glsl_get_aoa_size(tail->type) : 1;
 
-      offset_const->value.u[0] += deref_array->base_offset *
+      offset_const->value.u32[0] += deref_array->base_offset *
          child_array_elements * ATOMIC_COUNTER_SIZE;
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          nir_load_const_instr *atomic_counter_size =
                nir_load_const_instr_create(mem_ctx, 1);
-         atomic_counter_size->value.u[0] = child_array_elements * ATOMIC_COUNTER_SIZE;
+         atomic_counter_size->value.u32[0] = child_array_elements * ATOMIC_COUNTER_SIZE;
          nir_instr_insert_before(&instr->instr, &atomic_counter_size->instr);
 
          nir_alu_instr *mul = nir_alu_instr_create(mem_ctx, nir_op_imul);

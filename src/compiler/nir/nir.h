@@ -1209,12 +1209,12 @@ nir_tex_instr_src_index(nir_tex_instr *instr, nir_tex_src_type type)
 
 typedef struct {
    union {
-      float f[4];
-      double d[4];
-      int32_t i[4];
-      uint32_t u[4];
-      int64_t l[4];
-      uint64_t ul[4];
+      float f32[4];
+      double f64[4];
+      int32_t i32[4];
+      uint32_t u32[4];
+      int64_t i64[4];
+      uint64_t u64[4];
    };
 } nir_const_value;
 

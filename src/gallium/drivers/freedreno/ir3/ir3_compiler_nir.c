@@ -1017,7 +1017,7 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 
 	const_offset = nir_src_as_const_value(intr->src[1]);
 	if (const_offset) {
-		off += const_offset->u[0];
+		off += const_offset->u32[0];
 	} else {
 		/* For load_ubo_indirect, second src is indirect offset: */
 		src1 = get_src(ctx, &intr->src[1])[0];
@@ -1159,7 +1159,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		idx = nir_intrinsic_base(intr);
 		const_offset = nir_src_as_const_value(intr->src[0]);
 		if (const_offset) {
-			idx += const_offset->u[0];
+			idx += const_offset->u32[0];
 			for (int i = 0; i < intr->num_components; i++) {
 				unsigned n = idx * 4 + i;
 				dst[i] = create_uniform(ctx, n);
@@ -1186,7 +1186,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		idx = nir_intrinsic_base(intr);
 		const_offset = nir_src_as_const_value(intr->src[0]);
 		if (const_offset) {
-			idx += const_offset->u[0];
+			idx += const_offset->u32[0];
 			for (int i = 0; i < intr->num_components; i++) {
 				unsigned n = idx * 4 + i;
 				dst[i] = ctx->ir->inputs[n];
@@ -1213,7 +1213,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		idx = nir_intrinsic_base(intr);
 		const_offset = nir_src_as_const_value(intr->src[1]);
 		compile_assert(ctx, const_offset != NULL);
-		idx += const_offset->u[0];
+		idx += const_offset->u32[0];
 
 		src = get_src(ctx, &intr->src[0]);
 		for (int i = 0; i < intr->num_components; i++) {
@@ -1301,7 +1301,7 @@ emit_load_const(struct ir3_compile *ctx, nir_load_const_instr *instr)
 	struct ir3_instruction **dst = get_dst_ssa(ctx, &instr->def,
 			instr->def.num_components);
 	for (int i = 0; i < instr->def.num_components; i++)
-		dst[i] = create_immed(ctx->block, instr->value.u[i]);
+		dst[i] = create_immed(ctx->block, instr->value.u32[i]);
 }
 
 static void
