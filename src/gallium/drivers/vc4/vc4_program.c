@@ -1693,6 +1693,15 @@ ntq_emit_block(struct vc4_compile *c, nir_block *block)
         }
 }
 
+static void ntq_emit_cf_list(struct vc4_compile *c, struct exec_list *list);
+
+static void
+ntq_emit_loop(struct vc4_compile *c, nir_loop *nloop)
+{
+        fprintf(stderr, "LOOPS not fully handled. Rendering errors likely.\n");
+        ntq_emit_cf_list(c, &nloop->body);
+}
+
 static void
 ntq_emit_function(struct vc4_compile *c, nir_function_impl *func)
 {
@@ -1705,13 +1714,16 @@ ntq_emit_cf_list(struct vc4_compile *c, struct exec_list *list)
 {
         foreach_list_typed(nir_cf_node, node, node, list) {
                 switch (node->type) {
-                        /* case nir_cf_node_loop: */
                 case nir_cf_node_block:
                         ntq_emit_block(c, nir_cf_node_as_block(node));
                         break;
 
                 case nir_cf_node_if:
                         ntq_emit_if(c, nir_cf_node_as_if(node));
+                        break;
+
+                case nir_cf_node_loop:
+                        ntq_emit_loop(c, nir_cf_node_as_loop(node));
                         break;
 
                 case nir_cf_node_function:
