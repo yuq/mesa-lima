@@ -699,17 +699,6 @@ vec4_visitor::opt_algebraic()
             break;
          }
          break;
-      case SHADER_OPCODE_RCP: {
-         vec4_instruction *prev = (vec4_instruction *)inst->prev;
-         if (prev->opcode == SHADER_OPCODE_SQRT) {
-            if (inst->src[0].equals(src_reg(prev->dst))) {
-               inst->opcode = SHADER_OPCODE_RSQ;
-               inst->src[0] = prev->src[0];
-               progress = true;
-            }
-         }
-         break;
-      }
       case SHADER_OPCODE_BROADCAST:
          if (is_uniform(inst->src[0]) ||
              inst->src[1].is_zero()) {
