@@ -983,6 +983,30 @@ void si_update_compressed_colortex_masks(struct si_context *sctx)
 
 /* BUFFER DISCARD/INVALIDATION */
 
+/** Reset descriptors of buffer resources after \p buf has been invalidated. */
+static void si_reset_buffer_resources(struct si_context *sctx,
+				      struct si_buffer_resources *buffers,
+				      struct pipe_resource *buf,
+				      uint64_t old_va)
+{
+	uint64_t mask = buffers->desc.enabled_mask;
+
+	while (mask) {
+		unsigned i = u_bit_scan64(&mask);
+		if (buffers->buffers[i] == buf) {
+			si_desc_reset_buffer_offset(&sctx->b.b,
+						    buffers->desc.list + i*4,
+						    old_va, buf);
+			buffers->desc.list_dirty = true;
+
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+						(struct r600_resource *)buf,
+						buffers->shader_usage,
+						buffers->priority);
+		}
+	}
+}
+
 /* Reallocate a buffer a update all resource bindings where the buffer is
  * bound.
  *
@@ -1056,21 +1080,8 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 
 	/* Constant buffers. */
 	for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
-		struct si_buffer_resources *buffers = &sctx->const_buffers[shader];
-		uint64_t mask = buffers->desc.enabled_mask;
-
-		while (mask) {
-			unsigned i = u_bit_scan64(&mask);
-			if (buffers->buffers[i] == buf) {
-				si_desc_reset_buffer_offset(ctx, buffers->desc.list + i*4,
-							    old_va, buf);
-				buffers->desc.list_dirty = true;
-
-				radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-						      rbuffer, buffers->shader_usage,
-						      buffers->priority);
-			}
-		}
+		si_reset_buffer_resources(sctx, &sctx->const_buffers[shader],
+					  buf, old_va);
 	}
 
 	/* Texture buffers - update virtual addresses in sampler view descriptors. */
