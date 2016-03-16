@@ -794,9 +794,15 @@ static void si_shader_ps(struct si_shader *shader)
 	 * - the shader uses at least 2 VMEM instructions, or
 	 * - the code size is at least 50 2-dword instructions or 100 1-dword
 	 *   instructions.
+	 *
+	 * Shaders with side effects that must execute independently of the
+	 * depth test require LATE_Z.
 	 */
-	if (info->num_memory_instructions >= 2 ||
-	    shader->binary.code_size > 100*4)
+	if (info->writes_memory &&
+	    !info->properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL])
+		shader->z_order = V_02880C_LATE_Z;
+	else if (info->num_memory_instructions >= 2 ||
+	         shader->binary.code_size > 100*4)
 		shader->z_order = V_02880C_EARLY_Z_THEN_RE_Z;
 	else
 		shader->z_order = V_02880C_EARLY_Z_THEN_LATE_Z;
@@ -1181,6 +1187,10 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 
 	if (sel->info.properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL])
 		sel->db_shader_control |= S_02880C_DEPTH_BEFORE_SHADER(1);
+
+	if (sel->info.writes_memory)
+		sel->db_shader_control |= S_02880C_EXEC_ON_HIER_FAIL(1) |
+					  S_02880C_EXEC_ON_NOOP(1);
 
 	/* Compile the main shader part for use with a prolog and/or epilog. */
 	if (sel->type != PIPE_SHADER_GEOMETRY &&
