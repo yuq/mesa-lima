@@ -495,7 +495,8 @@ qir_SF(struct vc4_compile *c, struct qreg src)
             !c->defs[src.index] ||
             last_inst != c->defs[src.index] ||
             qir_is_multi_instruction(last_inst)) {
-                src = qir_MOV(c, src);
+                struct qreg null = { QFILE_NULL, 0 };
+                last_inst = qir_MOV_dest(c, null, src);
                 last_inst = (struct qinst *)c->instructions.prev;
         }
         last_inst->sf = true;
