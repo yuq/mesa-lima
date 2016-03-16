@@ -1021,11 +1021,8 @@ compile_shader(struct gl_context *ctx, struct gl_shader *sh)
  * Link a program's shaders.
  */
 static void
-link_program(struct gl_context *ctx, GLuint program)
+link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
-   struct gl_shader_program *shProg;
-
-   shProg = _mesa_lookup_shader_program_err(ctx, program, "glLinkProgram");
    if (!shProg)
       return;
 
@@ -1515,7 +1512,8 @@ _mesa_LinkProgram(GLuint programObj)
    GET_CURRENT_CONTEXT(ctx);
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glLinkProgram %u\n", programObj);
-   link_program(ctx, programObj);
+   link_program(ctx, _mesa_lookup_shader_program_err(ctx, programObj,
+                                                     "glLinkProgram"));
 }
 
 #if defined(HAVE_SHA1)
@@ -2169,7 +2167,7 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 	 get_shaderiv(ctx, shader, GL_COMPILE_STATUS, &compiled);
 	 if (compiled) {
 	    attach_shader(ctx, program, shader);
-	    link_program(ctx, program);
+	    link_program(ctx, shProg);
 	    detach_shader(ctx, program, shader);
 
 #if 0
