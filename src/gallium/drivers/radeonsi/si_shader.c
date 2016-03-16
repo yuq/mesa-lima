@@ -2776,6 +2776,24 @@ static void membar_emit(
 	emit_optimization_barrier(ctx);
 }
 
+static LLVMValueRef
+shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
+			 const struct tgsi_full_src_register *reg)
+{
+	LLVMValueRef ind_index;
+	LLVMValueRef rsrc_ptr;
+
+	if (!reg->Register.Indirect)
+		return ctx->shader_buffers[reg->Register.Index];
+
+	ind_index = get_bounded_indirect_index(ctx, &reg->Indirect,
+					       reg->Register.Index,
+					       SI_NUM_SHADER_BUFFERS);
+
+	rsrc_ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_SHADER_BUFFERS);
+	return build_indexed_load_const(ctx, rsrc_ptr, ind_index);
+}
+
 static bool tgsi_is_array_sampler(unsigned target)
 {
 	return target == TGSI_TEXTURE_1D_ARRAY ||
@@ -3123,17 +3141,11 @@ static void atomic_fetch_args(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
-	unsigned target = inst->Memory.Texture;
 	LLVMValueRef data1, data2;
-	LLVMValueRef coords;
 	LLVMValueRef rsrc;
 	LLVMValueRef tmp;
 
 	emit_data->dst_type = bld_base->base.elem_type;
-
-	image_fetch_rsrc(bld_base, &inst->Src[0], target != TGSI_TEXTURE_BUFFER,
-			 &rsrc);
-	coords = image_fetch_coords(bld_base, inst, 1);
 
 	tmp = lp_build_emit_fetch(bld_base, inst, 2, 0);
 	data1 = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
@@ -3150,15 +3162,34 @@ static void atomic_fetch_args(
 		emit_data->args[emit_data->arg_count++] = data2;
 	emit_data->args[emit_data->arg_count++] = data1;
 
-	if (target == TGSI_TEXTURE_BUFFER) {
-		rsrc = extract_rsrc_top_half(ctx, rsrc);
-		buffer_append_args(ctx, emit_data, rsrc, coords,
-				   bld_base->uint_bld.zero, true);
-	} else {
-		emit_data->args[emit_data->arg_count++] = coords;
-		emit_data->args[emit_data->arg_count++] = rsrc;
+	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
+		LLVMValueRef offset;
 
-		image_append_args(ctx, emit_data, target, true);
+		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0]);
+
+		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
+		offset = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+
+		buffer_append_args(ctx, emit_data, rsrc, bld_base->uint_bld.zero,
+				   offset, true);
+	} else {
+		unsigned target = inst->Memory.Texture;
+		LLVMValueRef coords;
+
+		image_fetch_rsrc(bld_base, &inst->Src[0],
+				 target != TGSI_TEXTURE_BUFFER, &rsrc);
+		coords = image_fetch_coords(bld_base, inst, 1);
+
+		if (target == TGSI_TEXTURE_BUFFER) {
+			rsrc = extract_rsrc_top_half(ctx, rsrc);
+			buffer_append_args(ctx, emit_data, rsrc, coords,
+					   bld_base->uint_bld.zero, true);
+		} else {
+			emit_data->args[emit_data->arg_count++] = coords;
+			emit_data->args[emit_data->arg_count++] = rsrc;
+
+			image_append_args(ctx, emit_data, target, true);
+		}
 	}
 }
 
@@ -3170,11 +3201,11 @@ static void atomic_emit(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
-	unsigned target = inst->Memory.Texture;
 	char intrinsic_name[40];
 	LLVMValueRef tmp;
 
-	if (target == TGSI_TEXTURE_BUFFER) {
+	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
+	    inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
 		snprintf(intrinsic_name, sizeof(intrinsic_name),
 			 "llvm.amdgcn.buffer.atomic.%s", action->intr_name);
 	} else {
