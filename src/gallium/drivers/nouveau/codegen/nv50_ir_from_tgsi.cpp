@@ -856,12 +856,14 @@ public:
    };
    std::vector<TextureView> textureViews;
 
+   /*
    struct Resource {
       uint8_t target; // TGSI_TEXTURE_*
       bool raw;
       uint8_t slot; // $surface index
    };
    std::vector<Resource> resources;
+   */
 
    struct MemoryFile {
       uint8_t mem_type; // TGSI_MEMORY_TYPE_*
@@ -1419,8 +1421,8 @@ private:
    void handleLIT(Value *dst0[4]);
    void handleUserClipPlanes();
 
-   Symbol *getResourceBase(int r);
-   void getResourceCoords(std::vector<Value *>&, int r, int s);
+   // Symbol *getResourceBase(int r);
+   // void getResourceCoords(std::vector<Value *>&, int r, int s);
 
    void handleLOAD(Value *dst0[4]);
    void handleSTORE();
@@ -2149,6 +2151,7 @@ Converter::handleLIT(Value *dst0[4])
    }
 }
 
+/* Keep this around for now as reference when adding img support
 static inline bool
 isResourceSpecial(const int r)
 {
@@ -2245,6 +2248,7 @@ partitionLoadStore(uint8_t comp[2], uint8_t size[2], uint8_t mask)
    }
    return n + 1;
 }
+*/
 
 // For raw loads, granularity is 4 byte.
 // Usage of the texture read mask on OP_SULDP is not allowed.
@@ -2279,6 +2283,7 @@ Converter::handleLOAD(Value *dst0[4])
       return;
    }
 
+/* Keep this around for now as reference when adding img support
    getResourceCoords(off, r, 1);
 
    if (isResourceRaw(code, r)) {
@@ -2344,6 +2349,7 @@ Converter::handleLOAD(Value *dst0[4])
    FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
       if (dst0[c] != def[c])
          mkMov(dst0[c], def[tgsi.getSrc(0).getSwizzle(c)]);
+*/
 }
 
 // For formatted stores, the write mask on OP_SUSTP can be used.
@@ -2380,6 +2386,7 @@ Converter::handleSTORE()
       return;
    }
 
+/* Keep this around for now as reference when adding img support
    getResourceCoords(off, r, 0);
    src = off;
    const int s = src.size();
@@ -2427,6 +2434,7 @@ Converter::handleSTORE()
       mkTex(OP_SUSTP, getResourceTarget(code, r), code->resources[r].slot, 0,
             dummy, src)->tex.mask = tgsi.getDst(0).getMask();
    }
+*/
 }
 
 // XXX: These only work on resources with the single-component u32/s32 formats.
@@ -2473,7 +2481,7 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
       return;
    }
 
-
+/* Keep this around for now as reference when adding img support
    getResourceCoords(srcv, r, 1);
 
    if (isResourceSpecial(r)) {
@@ -2501,6 +2509,7 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
    for (int c = 0; c < 4; ++c)
       if (dst0[c])
          dst0[c] = dst; // not equal to rDst so handleInstruction will do mkMov
+*/
 }
 
 void
