@@ -488,6 +488,9 @@ qir_SF(struct vc4_compile *c, struct qreg src)
         if (!list_empty(&c->instructions))
                 last_inst = (struct qinst *)c->instructions.prev;
 
+        /* We don't have any way to guess which kind of MOV is implied. */
+        assert(!src.pack);
+
         if (src.file != QFILE_TEMP ||
             !c->defs[src.index] ||
             last_inst != c->defs[src.index] ||
