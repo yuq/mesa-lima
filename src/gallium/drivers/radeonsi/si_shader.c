@@ -3374,14 +3374,17 @@ static void resq_fetch_args(
 		struct lp_build_tgsi_context * bld_base,
 		struct lp_build_emit_data * emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	const struct tgsi_full_src_register *reg = &inst->Src[0];
-	unsigned tex_target = inst->Memory.Texture;
 
 	emit_data->dst_type = LLVMVectorType(bld_base->base.elem_type, 4);
 
-	if (tex_target == TGSI_TEXTURE_BUFFER) {
+	if (reg->Register.File == TGSI_FILE_BUFFER) {
+		emit_data->args[0] = shader_buffer_fetch_rsrc(ctx, reg);
+		emit_data->arg_count = 1;
+	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
 		image_fetch_rsrc(bld_base, reg, false, &emit_data->args[0]);
 		emit_data->arg_count = 1;
 	} else {
@@ -3390,7 +3393,7 @@ static void resq_fetch_args(
 		emit_data->args[2] = lp_build_const_int32(gallivm, 15); /* dmask */
 		emit_data->args[3] = bld_base->uint_bld.zero; /* unorm */
 		emit_data->args[4] = bld_base->uint_bld.zero; /* r128 */
-		emit_data->args[5] = tgsi_is_array_image(tex_target) ?
+		emit_data->args[5] = tgsi_is_array_image(inst->Memory.Texture) ?
 			bld_base->uint_bld.one : bld_base->uint_bld.zero; /* da */
 		emit_data->args[6] = bld_base->uint_bld.zero; /* glc */
 		emit_data->args[7] = bld_base->uint_bld.zero; /* slc */
@@ -3408,10 +3411,12 @@ static void resq_emit(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
-	unsigned target = inst->Memory.Texture;
 	LLVMValueRef out;
 
-	if (target == TGSI_TEXTURE_BUFFER) {
+	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
+		out = LLVMBuildExtractElement(builder, emit_data->args[0],
+					      lp_build_const_int32(gallivm, 2), "");
+	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
 		out = get_buffer_size(bld_base, emit_data->args[0]);
 	} else {
 		out = lp_build_intrinsic(
@@ -3420,7 +3425,7 @@ static void resq_emit(
 			LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 
 		/* Divide the number of layers by 6 to get the number of cubes. */
-		if (target == TGSI_TEXTURE_CUBE_ARRAY) {
+		if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY) {
 			LLVMValueRef imm2 = lp_build_const_int32(gallivm, 2);
 			LLVMValueRef imm6 = lp_build_const_int32(gallivm, 6);
 
