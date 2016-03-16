@@ -297,6 +297,19 @@ st_translate_texture_target(GLuint textarget, GLboolean shadow)
 
 
 /**
+ * Translate a (1 << TEXTURE_x_INDEX) bit into a TGSI_TEXTURE_x enum.
+ */
+static unsigned
+translate_texture_index(GLbitfield texBit, bool shadow)
+{
+   int index = ffs(texBit);
+   assert(index > 0);
+   assert(index - 1 < NUM_TEXTURE_TARGETS);
+   return st_translate_texture_target(index - 1, shadow);
+}
+
+
+/**
  * Create a TGSI ureg_dst register from a Mesa dest register.
  */
 static struct ureg_dst
@@ -1147,7 +1160,16 @@ st_translate_mesa_program(
    /* texture samplers */
    for (i = 0; i < ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits; i++) {
       if (program->SamplersUsed & (1 << i)) {
+         unsigned target =
+            translate_texture_index(program->TexturesUsed[i],
+                                    !!(program->ShadowSamplers & (1 << i)));
          t->samplers[i] = ureg_DECL_sampler( ureg, i );
+         ureg_DECL_sampler_view(ureg, i, target,
+                                TGSI_RETURN_TYPE_FLOAT,
+                                TGSI_RETURN_TYPE_FLOAT,
+                                TGSI_RETURN_TYPE_FLOAT,
+                                TGSI_RETURN_TYPE_FLOAT);
+
       }
    }
 
