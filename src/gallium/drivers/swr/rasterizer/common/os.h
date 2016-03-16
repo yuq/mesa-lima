@@ -73,6 +73,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <stdio.h>
 
 typedef void            VOID;
 typedef void*           LPVOID;
@@ -94,8 +95,11 @@ typedef unsigned int    DWORD;
 #define INLINE __inline
 #endif
 #define DEBUGBREAK asm ("int $3")
+#if !defined(__CYGWIN__)
 #define __cdecl
+#define __stdcall
 #define __declspec(X)
+#endif
 
 #define GCC_VERSION (__GNUC__ * 10000 \
                      + __GNUC_MINOR__ * 100 \
@@ -177,7 +181,6 @@ unsigned char _bittest(const LONG *a, LONG b)
 #define InterlockedDecrement64(Append) __sync_sub_and_fetch(Append, 1)
 #define InterlockedIncrement(Append) __sync_add_and_fetch(Append, 1)
 #define _ReadWriteBarrier() asm volatile("" ::: "memory")
-#define __stdcall
 
 #define PRAGMA_WARNING_PUSH_DISABLE(...)
 #define PRAGMA_WARNING_POP()
