@@ -3115,41 +3115,129 @@ static void store_fetch_args(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
-	struct tgsi_full_src_register image;
-	unsigned target = inst->Memory.Texture;
+	struct tgsi_full_src_register memory;
 	LLVMValueRef chans[4];
 	LLVMValueRef data;
-	LLVMValueRef coords;
 	LLVMValueRef rsrc;
 	unsigned chan;
 
 	emit_data->dst_type = LLVMVoidTypeInContext(gallivm->context);
-
-	image = tgsi_full_src_register_from_dst(&inst->Dst[0]);
-	coords = image_fetch_coords(bld_base, inst, 0);
 
 	for (chan = 0; chan < 4; ++chan) {
 		chans[chan] = lp_build_emit_fetch(bld_base, inst, 1, chan);
 	}
 	data = lp_build_gather_values(gallivm, chans, 4);
 
-	if (target == TGSI_TEXTURE_BUFFER) {
-		image_fetch_rsrc(bld_base, &image, false, &rsrc);
-		emit_data->args[0] = data;
-		emit_data->arg_count = 1;
+	emit_data->args[emit_data->arg_count++] = data;
 
-		rsrc = extract_rsrc_top_half(ctx, rsrc);
-		buffer_append_args(ctx, emit_data, rsrc, coords,
-				   bld_base->uint_bld.zero, false);
+	memory = tgsi_full_src_register_from_dst(&inst->Dst[0]);
+
+	if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER) {
+		LLVMValueRef offset;
+		LLVMValueRef tmp;
+
+		rsrc = shader_buffer_fetch_rsrc(ctx, &memory);
+
+		tmp = lp_build_emit_fetch(bld_base, inst, 0, 0);
+		offset = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
+
+		buffer_append_args(ctx, emit_data, rsrc, bld_base->uint_bld.zero,
+				   offset, false);
 	} else {
-		emit_data->args[0] = data;
-		emit_data->args[1] = coords;
-		image_fetch_rsrc(bld_base, &image, true, &emit_data->args[2]);
-		emit_data->args[3] = lp_build_const_int32(gallivm, 15); /* dmask */
-		emit_data->arg_count = 4;
+		unsigned target = inst->Memory.Texture;
+		LLVMValueRef coords;
 
-		image_append_args(ctx, emit_data, target, false);
+		coords = image_fetch_coords(bld_base, inst, 0);
+
+		if (target == TGSI_TEXTURE_BUFFER) {
+			image_fetch_rsrc(bld_base, &memory, false, &rsrc);
+
+			rsrc = extract_rsrc_top_half(ctx, rsrc);
+			buffer_append_args(ctx, emit_data, rsrc, coords,
+					bld_base->uint_bld.zero, false);
+		} else {
+			emit_data->args[1] = coords;
+			image_fetch_rsrc(bld_base, &memory, true, &emit_data->args[2]);
+			emit_data->args[3] = lp_build_const_int32(gallivm, 15); /* dmask */
+			emit_data->arg_count = 4;
+
+			image_append_args(ctx, emit_data, target, false);
+		}
+	}
+}
+
+static void store_emit_buffer(
+		struct si_shader_context *ctx,
+		struct lp_build_emit_data *emit_data)
+{
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	struct lp_build_context *uint_bld = &ctx->radeon_bld.soa.bld_base.uint_bld;
+	LLVMValueRef base_data = emit_data->args[0];
+	LLVMValueRef base_offset = emit_data->args[3];
+	unsigned writemask = inst->Dst[0].Register.WriteMask;
+
+	while (writemask) {
+		int start, count;
+		const char *intrinsic_name;
+		LLVMValueRef data;
+		LLVMValueRef offset;
+		LLVMValueRef tmp;
+
+		u_bit_scan_consecutive_range(&writemask, &start, &count);
+
+		/* Due to an LLVM limitation, split 3-element writes
+		 * into a 2-element and a 1-element write. */
+		if (count == 3) {
+			writemask |= 1 << (start + 2);
+			count = 2;
+		}
+
+		if (count == 4) {
+			data = base_data;
+			intrinsic_name = "llvm.amdgcn.buffer.store.v4f32";
+		} else if (count == 2) {
+			LLVMTypeRef v2f32 = LLVMVectorType(ctx->f32, 2);
+
+			tmp = LLVMBuildExtractElement(
+				builder, base_data,
+				lp_build_const_int32(gallivm, start), "");
+			data = LLVMBuildInsertElement(
+				builder, LLVMGetUndef(v2f32), tmp,
+				uint_bld->zero, "");
+
+			tmp = LLVMBuildExtractElement(
+				builder, base_data,
+				lp_build_const_int32(gallivm, start + 1), "");
+			data = LLVMBuildInsertElement(
+				builder, data, tmp, uint_bld->one, "");
+
+			intrinsic_name = "llvm.amdgcn.buffer.store.v2f32";
+		} else {
+			assert(count == 1);
+			data = LLVMBuildExtractElement(
+				builder, base_data,
+				lp_build_const_int32(gallivm, start), "");
+			intrinsic_name = "llvm.amdgcn.buffer.store.f32";
+		}
+
+		offset = base_offset;
+		if (start != 0) {
+			offset = LLVMBuildAdd(
+				builder, offset,
+				lp_build_const_int32(gallivm, start * 4), "");
+		}
+
+		emit_data->args[0] = data;
+		emit_data->args[3] = offset;
+
+		lp_build_intrinsic(
+			builder, intrinsic_name, emit_data->dst_type,
+			emit_data->args, emit_data->arg_count,
+			LLVMNoUnwindAttribute);
 	}
 }
 
@@ -3164,6 +3252,11 @@ static void store_emit(
 	unsigned target = inst->Memory.Texture;
 	char intrinsic_name[32];
 	char coords_type[8];
+
+	if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER) {
+		store_emit_buffer(si_shader_context(bld_base), emit_data);
+		return;
+	}
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		emit_data->output[emit_data->chan] = lp_build_intrinsic(
