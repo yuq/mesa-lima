@@ -423,11 +423,12 @@ static void gen7_dump_sampler_state(struct brw_context *brw,
                 GET_BITS(samp[1], 15, 8)
                );
       batch_out(brw, name, offset, i+2, "Border Color\n"); /* FINISHME: gen8+ */
-      batch_out(brw, name, offset, i+3, "Max aniso: RATIO %d:1, TC[XYZ] Address Control: %s|%s|%s\n",
+      batch_out(brw, name, offset, i+3, "Max aniso: RATIO %d:1, TC[XYZ] Address Control: %s|%s|%s, %snormalized coords\n",
                 (GET_FIELD(samp[3], BRW_SAMPLER_MAX_ANISOTROPY) + 1) * 2,
                 sampler_addr_mode[GET_FIELD(samp[3], BRW_SAMPLER_TCX_WRAP_MODE)],
                 sampler_addr_mode[GET_FIELD(samp[3], BRW_SAMPLER_TCY_WRAP_MODE)],
-                sampler_addr_mode[GET_FIELD(samp[3], BRW_SAMPLER_TCZ_WRAP_MODE)]
+                sampler_addr_mode[GET_FIELD(samp[3], BRW_SAMPLER_TCZ_WRAP_MODE)],
+                (samp[3] & GEN7_SAMPLER_NON_NORMALIZED_COORDINATES) ? "non-" : ""
                );
 
       samp += 4;
