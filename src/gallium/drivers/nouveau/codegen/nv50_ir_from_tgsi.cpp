@@ -373,7 +373,7 @@ static nv50_ir::DataFile translateFile(uint file)
    case TGSI_FILE_PREDICATE:       return nv50_ir::FILE_PREDICATE;
    case TGSI_FILE_IMMEDIATE:       return nv50_ir::FILE_IMMEDIATE;
    case TGSI_FILE_SYSTEM_VALUE:    return nv50_ir::FILE_SYSTEM_VALUE;
-   case TGSI_FILE_BUFFER:          return nv50_ir::FILE_MEMORY_GLOBAL;
+   case TGSI_FILE_BUFFER:          return nv50_ir::FILE_MEMORY_BUFFER;
    case TGSI_FILE_MEMORY:          return nv50_ir::FILE_MEMORY_GLOBAL;
    case TGSI_FILE_SAMPLER:
    case TGSI_FILE_NULL:

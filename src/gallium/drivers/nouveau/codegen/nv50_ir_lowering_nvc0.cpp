@@ -1296,13 +1296,14 @@ NVC0LoweringPass::handleATOM(Instruction *atom)
          handleSharedATOMNVE4(atom);
       return true;
    default:
-      assert(atom->src(0).getFile() == FILE_MEMORY_GLOBAL);
+      assert(atom->src(0).getFile() == FILE_MEMORY_BUFFER);
       base = loadBufInfo64(ind, atom->getSrc(0)->reg.fileIndex * 16);
       assert(base->reg.size == 8);
       if (ptr)
          base = bld.mkOp2v(OP_ADD, TYPE_U64, base, base, ptr);
       assert(base->reg.size == 8);
       atom->setIndirect(0, 0, base);
+      atom->getSrc(0)->reg.file = FILE_MEMORY_GLOBAL;
       return true;
    }
    base =
@@ -1889,7 +1890,7 @@ NVC0LoweringPass::handleLDST(Instruction *i)
    } else if (i->src(0).getFile() == FILE_SHADER_OUTPUT) {
       assert(prog->getType() == Program::TYPE_TESSELLATION_CONTROL);
       i->op = OP_VFETCH;
-   } else if (i->src(0).getFile() == FILE_MEMORY_GLOBAL) {
+   } else if (i->src(0).getFile() == FILE_MEMORY_BUFFER) {
       Value *ind = i->getIndirect(0, 1);
       Value *ptr = loadBufInfo64(ind, i->getSrc(0)->reg.fileIndex * 16);
       // XXX come up with a way not to do this for EVERY little access but
@@ -1904,6 +1905,7 @@ NVC0LoweringPass::handleLDST(Instruction *i)
       }
       i->setIndirect(0, 1, NULL);
       i->setIndirect(0, 0, ptr);
+      i->getSrc(0)->reg.file = FILE_MEMORY_GLOBAL;
       bld.mkCmp(OP_SET, CC_GT, TYPE_U32, pred, TYPE_U32, offset, length);
       i->setPredicate(CC_NOT_P, pred);
       if (i->defExists(0)) {
@@ -2241,7 +2243,7 @@ NVC0LoweringPass::visit(Instruction *i)
       break;
    case OP_ATOM:
    {
-      const bool cctl = i->src(0).getFile() == FILE_MEMORY_GLOBAL;
+      const bool cctl = i->src(0).getFile() == FILE_MEMORY_BUFFER;
       handleATOM(i);
       handleCasExch(i, cctl);
    }
