@@ -207,6 +207,8 @@ print_alu_instr(nir_alu_instr *instr, print_state *state)
    print_alu_dest(&instr->dest, state);
 
    fprintf(fp, " = %s", nir_op_infos[instr->op].name);
+   if (instr->exact)
+      fprintf(fp, "!");
    if (instr->dest.saturate)
       fprintf(fp, ".sat");
    fprintf(fp, " ");
