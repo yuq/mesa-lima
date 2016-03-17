@@ -52,6 +52,7 @@ hash_alu(uint32_t hash, const nir_alu_instr *instr)
 {
    hash = HASH(hash, instr->op);
    hash = HASH(hash, instr->dest.dest.ssa.num_components);
+   /* We explicitly don't hash instr->dest.dest.exact */
 
    if (nir_op_infos[instr->op].algebraic_properties & NIR_OP_IS_COMMUTATIVE) {
       assert(nir_op_infos[instr->op].num_inputs == 2);
@@ -266,6 +267,8 @@ nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
        * here */
       if (alu1->dest.dest.ssa.num_components != alu2->dest.dest.ssa.num_components)
          return false;
+
+      /* We explicitly don't hash instr->dest.dest.exact */
 
       if (nir_op_infos[alu1->op].algebraic_properties & NIR_OP_IS_COMMUTATIVE) {
          assert(nir_op_infos[alu1->op].num_inputs == 2);
@@ -496,8 +499,17 @@ nir_instr_set_add_or_rewrite(struct set *instr_set, nir_instr *instr)
    struct set_entry *entry = _mesa_set_search(instr_set, instr);
    if (entry) {
       nir_ssa_def *def = nir_instr_get_dest_ssa_def(instr);
-      nir_ssa_def *new_def =
-         nir_instr_get_dest_ssa_def((nir_instr *) entry->key);
+      nir_instr *match = (nir_instr *) entry->key;
+      nir_ssa_def *new_def = nir_instr_get_dest_ssa_def(match);
+
+      /* It's safe to replace a exact instruction with an inexact one as
+       * long as we make it exact.  If we got here, the two instructions are
+       * exactly identical in every other way so, once we've set the exact
+       * bit, they are the same.
+       */
+      if (instr->type == nir_instr_type_alu && nir_instr_as_alu(instr)->exact)
+         nir_instr_as_alu(match)->exact = true;
+
       nir_ssa_def_rewrite_uses(def, nir_src_for_ssa(new_def));
       return true;
    }
