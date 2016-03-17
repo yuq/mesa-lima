@@ -91,6 +91,10 @@ transform_instr(struct tgsi_transform_context *tctx,
    /* Declare the sampler. */
    tgsi_transform_sampler_decl(tctx, ctx->sampler_index);
 
+   /* Declare the sampler view. */
+   tgsi_transform_sampler_view_decl(tctx, ctx->sampler_index,
+                                    tgsi_tex_target, TGSI_RETURN_TYPE_FLOAT);
+
    /* TEX tmp0, fragment.texcoord[0], texture[0], 2D; */
    tgsi_transform_tex_inst(tctx,
                            TGSI_FILE_TEMPORARY, 0,
