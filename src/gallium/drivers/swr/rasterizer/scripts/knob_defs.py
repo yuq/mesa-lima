@@ -121,7 +121,7 @@ KNOBS = [
 
     ['MAX_DRAWS_IN_FLIGHT', {
         'type'      : 'uint32_t',
-        'default'   : '160',
+        'default'   : '96',
         'desc'      : ['Maximum number of draws outstanding before API thread blocks.'],
         'category'  : 'perf',
     }],
