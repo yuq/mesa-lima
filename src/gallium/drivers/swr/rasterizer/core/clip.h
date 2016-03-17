@@ -357,6 +357,25 @@ public:
             }
         }
 
+        // assemble user clip distances if enabled
+        if (this->state.rastState.clipDistanceMask & 0xf)
+        {
+            pa.Assemble(VERTEX_CLIPCULL_DIST_LO_SLOT, tmpVector);
+            for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
+            {
+                vertices[i].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT] = tmpVector[i];
+            }
+        }
+
+        if (this->state.rastState.clipDistanceMask & 0xf0)
+        {
+            pa.Assemble(VERTEX_CLIPCULL_DIST_HI_SLOT, tmpVector);
+            for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
+            {
+                vertices[i].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT] = tmpVector[i];
+            }
+        }
+
         uint32_t numAttribs = maxSlot + 1;
 
         simdscalari vNumClippedVerts = ClipPrims((float*)&vertices[0], vPrimMask, vClipMask, numAttribs);
@@ -435,6 +454,27 @@ public:
                 for (uint32_t c = 0; c < 4; ++c)
                 {
                     transposedPrims[0].attrib[attribSlot][c] = _simd_mask_i32gather_ps(_mm256_undefined_ps(), (const float*)pBase, vOffsets, vMask, 1);
+                    pBase += sizeof(simdscalar);
+                }
+            }
+
+            // transpose user clip distances if enabled
+            if (this->state.rastState.clipDistanceMask & 0xf)
+            {
+                pBase = (uint8_t*)(&vertices[0].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT]) + sizeof(float) * inputPrim;
+                for (uint32_t c = 0; c < 4; ++c)
+                {
+                    transposedPrims[0].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT][c] = _simd_mask_i32gather_ps(_mm256_undefined_ps(), (const float*)pBase, vOffsets, vMask, 1);
+                    pBase += sizeof(simdscalar);
+                }
+            }
+
+            if (this->state.rastState.clipDistanceMask & 0xf0)
+            {
+                pBase = (uint8_t*)(&vertices[0].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT]) + sizeof(float) * inputPrim;
+                for (uint32_t c = 0; c < 4; ++c)
+                {
+                    transposedPrims[0].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT][c] = _simd_mask_i32gather_ps(_mm256_undefined_ps(), (const float*)pBase, vOffsets, vMask, 1);
                     pBase += sizeof(simdscalar);
                 }
             }
@@ -633,6 +673,31 @@ private:
                 ScatterComponent(pOutVerts, attribSlot, vActiveMask, outIndex, c, vOutAttrib);
             }
         }
+
+        // interpolate clip distance if enabled
+        if (this->state.rastState.clipDistanceMask & 0xf)
+        {
+            uint32_t attribSlot = VERTEX_CLIPCULL_DIST_LO_SLOT;
+            for (uint32_t c = 0; c < 4; ++c)
+            {
+                simdscalar vAttrib0 = GatherComponent(pInVerts, attribSlot, vActiveMask, s, c);
+                simdscalar vAttrib1 = GatherComponent(pInVerts, attribSlot, vActiveMask, p, c);
+                simdscalar vOutAttrib = _simd_fmadd_ps(_simd_sub_ps(vAttrib1, vAttrib0), t, vAttrib0);
+                ScatterComponent(pOutVerts, attribSlot, vActiveMask, outIndex, c, vOutAttrib);
+            }
+        }
+
+        if (this->state.rastState.clipDistanceMask & 0xf0)
+        {
+            uint32_t attribSlot = VERTEX_CLIPCULL_DIST_HI_SLOT;
+            for (uint32_t c = 0; c < 4; ++c)
+            {
+                simdscalar vAttrib0 = GatherComponent(pInVerts, attribSlot, vActiveMask, s, c);
+                simdscalar vAttrib1 = GatherComponent(pInVerts, attribSlot, vActiveMask, p, c);
+                simdscalar vOutAttrib = _simd_fmadd_ps(_simd_sub_ps(vAttrib1, vAttrib0), t, vAttrib0);
+                ScatterComponent(pOutVerts, attribSlot, vActiveMask, outIndex, c, vOutAttrib);
+            }
+        }
     }
 
     template<SWR_CLIPCODES ClippingPlane>
@@ -696,6 +761,27 @@ private:
                 for (uint32_t a = 0; a < numInAttribs; ++a)
                 {
                     uint32_t attribSlot = VERTEX_ATTRIB_START_SLOT + a;
+                    for (uint32_t c = 0; c < 4; ++c)
+                    {
+                        simdscalar vAttrib = GatherComponent(pInVerts, attribSlot, s_in, s, c);
+                        ScatterComponent(pOutVerts, attribSlot, s_in, vOutIndex, c, vAttrib);
+                    }
+                }
+
+                // store clip distance if enabled
+                if (this->state.rastState.clipDistanceMask & 0xf)
+                {
+                    uint32_t attribSlot = VERTEX_CLIPCULL_DIST_LO_SLOT;
+                    for (uint32_t c = 0; c < 4; ++c)
+                    {
+                        simdscalar vAttrib = GatherComponent(pInVerts, attribSlot, s_in, s, c);
+                        ScatterComponent(pOutVerts, attribSlot, s_in, vOutIndex, c, vAttrib);
+                    }
+                }
+
+                if (this->state.rastState.clipDistanceMask & 0xf0)
+                {
+                    uint32_t attribSlot = VERTEX_CLIPCULL_DIST_HI_SLOT;
                     for (uint32_t c = 0; c < 4; ++c)
                     {
                         simdscalar vAttrib = GatherComponent(pInVerts, attribSlot, s_in, s, c);
