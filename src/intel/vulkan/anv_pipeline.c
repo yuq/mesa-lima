@@ -366,10 +366,6 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (pipeline->layout)
       anv_nir_apply_pipeline_layout(pipeline, nir, prog_data, map);
 
-   /* Finish the optimization and compilation process */
-   if (nir->stage == MESA_SHADER_COMPUTE)
-      brw_nir_lower_shared(nir);
-
    /* nir_lower_io will only handle the push constants; we need to set this
     * to the full number of possible uniforms.
     */
@@ -774,8 +770,6 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
       anv_fill_binding_table(&prog_data.base, 1);
-
-      prog_data.base.total_shared = nir->num_shared;
 
       void *mem_ctx = ralloc_context(NULL);
 

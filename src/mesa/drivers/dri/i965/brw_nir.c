@@ -378,7 +378,7 @@ brw_nir_lower_uniforms(nir_shader *nir, bool is_scalar)
 }
 
 void
-brw_nir_lower_shared(nir_shader *nir)
+brw_nir_lower_cs_shared(nir_shader *nir)
 {
    nir_assign_var_locations(&nir->shared, &nir->num_shared,
                             type_size_scalar_bytes);
@@ -577,9 +577,6 @@ brw_create_nir(struct brw_context *brw,
       OPT_V(nir_lower_samplers, shader_prog);
       OPT_V(nir_lower_atomics, shader_prog);
    }
-
-   if (nir->stage == MESA_SHADER_COMPUTE)
-      OPT_V(brw_nir_lower_shared);
 
    return nir;
 }

@@ -485,10 +485,13 @@ generate_gs_svb_write(struct brw_codegen *p,
    bool final_write = inst->sol_final_write;
 
    brw_push_insn_state(p);
+   brw_set_default_exec_size(p, BRW_EXECUTE_4);
    /* Copy Vertex data into M0.x */
    brw_MOV(p, stride(dst, 4, 4, 1),
            stride(retype(src0, BRW_REGISTER_TYPE_UD), 4, 4, 1));
+   brw_pop_insn_state(p);
 
+   brw_push_insn_state(p);
    /* Send SVB Write */
    brw_svb_write(p,
                  final_write ? src1 : brw_null_reg(), /* dest == src1 */
@@ -702,8 +705,10 @@ generate_gs_ff_sync(struct brw_codegen *p,
    brw_MOV(p, get_element_ud(header, 0), get_element_ud(dst, 0));
 
    /* src1 is not an immediate when we use transform feedback */
-   if (src1.file != BRW_IMMEDIATE_VALUE)
+   if (src1.file != BRW_IMMEDIATE_VALUE) {
+      brw_set_default_exec_size(p, BRW_EXECUTE_4);
       brw_MOV(p, brw_vec4_grf(src1.nr, 0), brw_vec4_grf(dst.nr, 1));
+   }
 
    brw_pop_insn_state(p);
 }
@@ -1473,6 +1478,7 @@ generate_code(struct brw_codegen *p,
       assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
       unsigned pre_emit_nr_insn = p->nr_insn;
+      bool fix_exec_size = false;
 
       if (dst.width == BRW_WIDTH_4) {
          /* This happens in attribute fixups for "dual instanced" geometry
@@ -1497,6 +1503,8 @@ generate_code(struct brw_codegen *p,
             if (src[i].file == BRW_GENERAL_REGISTER_FILE)
                src[i] = stride(src[i], 4, 4, 1);
          }
+         brw_set_default_exec_size(p, BRW_EXECUTE_4);
+         fix_exec_size = true;
       }
 
       switch (inst->opcode) {
@@ -1987,6 +1995,9 @@ generate_code(struct brw_codegen *p,
       default:
          unreachable("Unsupported opcode");
       }
+
+      if (fix_exec_size)
+         brw_set_default_exec_size(p, BRW_EXECUTE_8);
 
       if (inst->opcode == VEC4_OPCODE_PACK_BYTES) {
          /* Handled dependency hints in the generator. */

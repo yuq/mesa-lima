@@ -69,7 +69,6 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_RSQ] = { "rsq", 1, 1, false, true },
         [QOP_EXP2] = { "exp2", 1, 2, false, true },
         [QOP_LOG2] = { "log2", 1, 2, false, true },
-        [QOP_TLB_DISCARD_SETUP] = { "discard", 0, 1, true },
         [QOP_TLB_STENCIL_SETUP] = { "tlb_stencil_setup", 0, 1, true },
         [QOP_TLB_Z_WRITE] = { "tlb_z", 0, 1, true },
         [QOP_TLB_COLOR_WRITE] = { "tlb_color", 0, 1, true },
@@ -488,11 +487,15 @@ qir_SF(struct vc4_compile *c, struct qreg src)
         if (!list_empty(&c->instructions))
                 last_inst = (struct qinst *)c->instructions.prev;
 
+        /* We don't have any way to guess which kind of MOV is implied. */
+        assert(!src.pack);
+
         if (src.file != QFILE_TEMP ||
             !c->defs[src.index] ||
             last_inst != c->defs[src.index] ||
             qir_is_multi_instruction(last_inst)) {
-                src = qir_MOV(c, src);
+                struct qreg null = { QFILE_NULL, 0 };
+                last_inst = qir_MOV_dest(c, null, src);
                 last_inst = (struct qinst *)c->instructions.prev;
         }
         last_inst->sf = true;

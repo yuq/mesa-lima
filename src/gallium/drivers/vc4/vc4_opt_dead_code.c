@@ -86,12 +86,8 @@ qir_opt_dead_code(struct vc4_compile *c)
         /* Whether we're eliminating texture setup currently. */
         bool dce_tex = false;
 
-        struct list_head *node, *t;
-        for (node = c->instructions.prev, t = node->prev;
-             &c->instructions != node;
-             node = t, t = t->prev) {
-                struct qinst *inst = (struct qinst *)node;
-
+        list_for_each_entry_safe_rev(struct qinst, inst, &c->instructions,
+                                     link) {
                 if (inst->dst.file == QFILE_TEMP &&
                     !used[inst->dst.index] &&
                     !inst->sf &&

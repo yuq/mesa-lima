@@ -236,11 +236,6 @@ calculate_deps(struct schedule_setup_state *state, struct schedule_node *n)
                 add_write_dep(dir, &state->last_tlb, n);
                 break;
 
-        case QOP_TLB_DISCARD_SETUP:
-                add_write_dep(dir, &state->last_sf, n);
-                add_write_dep(dir, &state->last_tlb, n);
-                break;
-
         default:
                 break;
         }

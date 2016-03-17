@@ -959,12 +959,9 @@ shader_source(struct gl_shader *sh, const GLchar *source)
 /**
  * Compile a shader.
  */
-static void
-compile_shader(struct gl_context *ctx, GLuint shaderObj)
+void
+_mesa_compile_shader(struct gl_context *ctx, struct gl_shader *sh)
 {
-   struct gl_shader *sh;
-
-   sh = _mesa_lookup_shader_err(ctx, shaderObj, "glCompileShader");
    if (!sh)
       return;
 
@@ -1023,12 +1020,9 @@ compile_shader(struct gl_context *ctx, GLuint shaderObj)
 /**
  * Link a program's shaders.
  */
-static void
-link_program(struct gl_context *ctx, GLuint program)
+void
+_mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
-   struct gl_shader_program *shProg;
-
-   shProg = _mesa_lookup_shader_program_err(ctx, program, "glLinkProgram");
    if (!shProg)
       return;
 
@@ -1270,7 +1264,8 @@ _mesa_CompileShader(GLuint shaderObj)
    GET_CURRENT_CONTEXT(ctx);
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glCompileShader %u\n", shaderObj);
-   compile_shader(ctx, shaderObj);
+   _mesa_compile_shader(ctx, _mesa_lookup_shader_err(ctx, shaderObj,
+                                                     "glCompileShader"));
 }
 
 
@@ -1517,7 +1512,8 @@ _mesa_LinkProgram(GLuint programObj)
    GET_CURRENT_CONTEXT(ctx);
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glLinkProgram %u\n", programObj);
-   link_program(ctx, programObj);
+   _mesa_link_program(ctx, _mesa_lookup_shader_program_err(ctx, programObj,
+                                                           "glLinkProgram"));
 }
 
 #if defined(HAVE_SHA1)
@@ -2154,25 +2150,24 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
    }
 
    if (shader) {
-      _mesa_ShaderSource(shader, count, strings, NULL);
+      struct gl_shader *sh = _mesa_lookup_shader(ctx, shader);
 
-      compile_shader(ctx, shader);
+      _mesa_ShaderSource(shader, count, strings, NULL);
+      _mesa_compile_shader(ctx, sh);
 
       program = create_shader_program(ctx);
       if (program) {
 	 struct gl_shader_program *shProg;
-	 struct gl_shader *sh;
 	 GLint compiled = GL_FALSE;
 
 	 shProg = _mesa_lookup_shader_program(ctx, program);
-	 sh = _mesa_lookup_shader(ctx, shader);
 
 	 shProg->SeparateShader = GL_TRUE;
 
 	 get_shaderiv(ctx, shader, GL_COMPILE_STATUS, &compiled);
 	 if (compiled) {
 	    attach_shader(ctx, program, shader);
-	    link_program(ctx, program);
+	    _mesa_link_program(ctx, shProg);
 	    detach_shader(ctx, program, shader);
 
 #if 0

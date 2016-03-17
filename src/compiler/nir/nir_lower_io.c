@@ -361,10 +361,11 @@ nir_lower_io_block(nir_block *block, void *void_state)
          atomic->const_index[0] =
             intrin->variables[0]->var->data.driver_location;
 
-         nir_src_copy(&atomic->src[1], &intrin->src[0], atomic);
-
-         if (intrin->intrinsic == nir_intrinsic_var_atomic_comp_swap)
-            nir_src_copy(&atomic->src[2], &intrin->src[1], atomic);
+         for (unsigned i = 0;
+              i < nir_op_infos[intrin->intrinsic].num_inputs;
+              i++) {
+            nir_src_copy(&atomic->src[i+1], &intrin->src[i], atomic);
+         }
 
          if (intrin->dest.is_ssa) {
             nir_ssa_dest_init(&atomic->instr, &atomic->dest,

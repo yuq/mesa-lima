@@ -1184,8 +1184,11 @@ emit_frag_end(struct vc4_compile *c)
                 color = qir_uniform_ui(c, 0);
         }
 
-        if (c->discard.file != QFILE_NULL)
-                qir_TLB_DISCARD_SETUP(c, c->discard);
+        uint32_t discard_cond = QPU_COND_ALWAYS;
+        if (c->discard.file != QFILE_NULL) {
+                qir_SF(c, c->discard);
+                discard_cond = QPU_COND_ZS;
+        }
 
         if (c->fs_key->stencil_enabled) {
                 qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 0));
@@ -1209,14 +1212,18 @@ emit_frag_end(struct vc4_compile *c)
                 } else {
                         z = qir_FRAG_Z(c);
                 }
-                qir_TLB_Z_WRITE(c, z);
+                struct qinst *inst = qir_TLB_Z_WRITE(c, z);
+                inst->cond = discard_cond;
         }
 
         if (!c->msaa_per_sample_output) {
-                qir_TLB_COLOR_WRITE(c, color);
+                struct qinst *inst = qir_TLB_COLOR_WRITE(c, color);
+                inst->cond = discard_cond;
         } else {
-                for (int i = 0; i < VC4_MAX_SAMPLES; i++)
-                        qir_TLB_COLOR_WRITE_MS(c, c->sample_colors[i]);
+                for (int i = 0; i < VC4_MAX_SAMPLES; i++) {
+                        struct qinst *inst = qir_TLB_COLOR_WRITE_MS(c, c->sample_colors[i]);
+                        inst->cond = discard_cond;
+                }
         }
 }
 

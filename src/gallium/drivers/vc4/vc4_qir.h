@@ -101,7 +101,6 @@ enum qop {
         QOP_LOG2,
         QOP_VW_SETUP,
         QOP_VR_SETUP,
-        QOP_TLB_DISCARD_SETUP,
         QOP_TLB_STENCIL_SETUP,
         QOP_TLB_Z_WRITE,
         QOP_TLB_COLOR_WRITE,
@@ -551,17 +550,23 @@ qir_##name##_dest(struct vc4_compile *c, struct qreg dest,               \
 }
 
 #define QIR_NODST_1(name)                                               \
-static inline void                                                      \
+static inline struct qinst *                                            \
 qir_##name(struct vc4_compile *c, struct qreg a)                        \
 {                                                                       \
-        qir_emit(c, qir_inst(QOP_##name, c->undef, a, c->undef));       \
+        struct qinst *inst = qir_inst(QOP_##name, c->undef,             \
+                                      a, c->undef);                     \
+        qir_emit(c, inst);                                              \
+        return inst;                                                    \
 }
 
 #define QIR_NODST_2(name)                                               \
-static inline void                                                      \
+static inline struct qinst *                                            \
 qir_##name(struct vc4_compile *c, struct qreg a, struct qreg b)         \
 {                                                                       \
-        qir_emit(c, qir_inst(QOP_##name, c->undef, a, b));       \
+        struct qinst *inst = qir_inst(QOP_##name, c->undef,             \
+                                      a, b);                            \
+        qir_emit(c, inst);                                              \
+        return inst;                                                    \
 }
 
 #define QIR_PACK(name)                                                   \
@@ -623,7 +628,6 @@ QIR_ALU0(TLB_COLOR_READ)
 QIR_NODST_1(TLB_COLOR_WRITE)
 QIR_NODST_1(TLB_COLOR_WRITE_MS)
 QIR_NODST_1(TLB_Z_WRITE)
-QIR_NODST_1(TLB_DISCARD_SETUP)
 QIR_NODST_1(TLB_STENCIL_SETUP)
 QIR_NODST_1(MS_MASK)
 

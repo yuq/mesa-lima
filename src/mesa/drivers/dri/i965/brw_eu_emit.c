@@ -202,8 +202,20 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
    /* Generators should set a default exec_size of either 8 (SIMD4x2 or SIMD8)
     * or 16 (SIMD16), as that's normally correct.  However, when dealing with
     * small registers, we automatically reduce it to match the register size.
+    *
+    * In platforms that support fp64 we can emit instructions with a width of
+    * 4 that need two SIMD8 registers and an exec_size of 8 or 16. In these
+    * cases we need to make sure that these instructions have their exec sizes
+    * set properly when they are emitted and we can't rely on this code to fix
+    * it.
     */
-   if (dest.width < BRW_EXECUTE_8)
+   bool fix_exec_size;
+   if (devinfo->gen >= 6)
+      fix_exec_size = dest.width < BRW_EXECUTE_4;
+   else
+      fix_exec_size = dest.width < BRW_EXECUTE_8;
+
+   if (fix_exec_size)
       brw_inst_set_exec_size(devinfo, inst, dest.width);
 }
 
@@ -1229,8 +1241,9 @@ brw_F16TO32(struct brw_codegen *p, struct brw_reg dst, struct brw_reg src)
 void brw_NOP(struct brw_codegen *p)
 {
    brw_inst *insn = next_insn(p, BRW_OPCODE_NOP);
-   brw_set_dest(p, insn, retype(brw_vec4_grf(0,0), BRW_REGISTER_TYPE_UD));
-   brw_set_src0(p, insn, retype(brw_vec4_grf(0,0), BRW_REGISTER_TYPE_UD));
+   brw_inst_set_exec_size(p->devinfo, insn, BRW_EXECUTE_1);
+   brw_set_dest(p, insn, retype(brw_vec1_grf(0,0), BRW_REGISTER_TYPE_UD));
+   brw_set_src0(p, insn, retype(brw_vec1_grf(0,0), BRW_REGISTER_TYPE_UD));
    brw_set_src1(p, insn, brw_imm_ud(0x0));
 }
 
@@ -2562,6 +2575,9 @@ brw_send_indirect_message(struct brw_codegen *p,
       brw_set_src1(p, send, addr);
    }
 
+   if (dst.width < BRW_EXECUTE_8)
+      brw_inst_set_exec_size(devinfo, send, dst.width);
+
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, retype(payload, BRW_REGISTER_TYPE_UD));
    brw_inst_set_sfid(devinfo, send, sfid);
@@ -3330,11 +3346,14 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
          /* Overwrite the destination without and with execution masking to
           * find out which of the channels is active.
           */
+         brw_push_insn_state(p);
+         brw_set_default_exec_size(p, BRW_EXECUTE_4);
          brw_MOV(p, brw_writemask(vec4(dst), WRITEMASK_X),
                  brw_imm_ud(1));
 
          inst = brw_MOV(p, brw_writemask(vec4(dst), WRITEMASK_X),
                         brw_imm_ud(0));
+         brw_pop_insn_state(p);
          brw_inst_set_mask_control(devinfo, inst, BRW_MASK_ENABLE);
       }
    }

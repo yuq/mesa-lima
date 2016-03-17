@@ -121,72 +121,51 @@ _mesa_meta_framebuffer_texture_image(struct gl_context *ctx,
                              level, layer, false, __func__);
 }
 
-GLuint
+struct gl_shader *
 _mesa_meta_compile_shader_with_debug(struct gl_context *ctx, GLenum target,
                                      const GLcharARB *source)
 {
-   GLuint shader;
-   GLint ok, size;
-   GLchar *info;
+   const GLuint name = ~0;
+   struct gl_shader *sh;
 
-   shader = _mesa_CreateShader(target);
-   _mesa_ShaderSource(shader, 1, &source, NULL);
-   _mesa_CompileShader(shader);
+   sh = ctx->Driver.NewShader(ctx, name, target);
+   sh->Source = strdup(source);
+   sh->CompileStatus = false;
+   _mesa_compile_shader(ctx, sh);
 
-   _mesa_GetShaderiv(shader, GL_COMPILE_STATUS, &ok);
-   if (ok)
-      return shader;
+   if (!sh->CompileStatus) {
+      if (sh->InfoLog) {
+         _mesa_problem(ctx,
+                       "meta program compile failed:\n%s\nsource:\n%s\n",
+                       sh->InfoLog, source);
+      }
 
-   _mesa_GetShaderiv(shader, GL_INFO_LOG_LENGTH, &size);
-   if (size == 0) {
-      _mesa_DeleteShader(shader);
-      return 0;
+      _mesa_reference_shader(ctx, &sh, NULL);
    }
 
-   info = malloc(size);
-   if (!info) {
-      _mesa_DeleteShader(shader);
-      return 0;
-   }
-
-   _mesa_GetShaderInfoLog(shader, size, NULL, info);
-   _mesa_problem(ctx,
-		 "meta program compile failed:\n%s\n"
-		 "source:\n%s\n",
-		 info, source);
-
-   free(info);
-   _mesa_DeleteShader(shader);
-
-   return 0;
+   return sh;
 }
 
-GLuint
-_mesa_meta_link_program_with_debug(struct gl_context *ctx, GLuint program)
+void
+_mesa_meta_link_program_with_debug(struct gl_context *ctx,
+                                   struct gl_shader_program *sh_prog)
 {
-   GLint ok, size;
-   GLchar *info;
+   _mesa_link_program(ctx, sh_prog);
 
-   _mesa_LinkProgram(program);
+   if (!sh_prog->LinkStatus) {
+      _mesa_problem(ctx, "meta program link failed:\n%s", sh_prog->InfoLog);
+   }
+}
 
-   _mesa_GetProgramiv(program, GL_LINK_STATUS, &ok);
-   if (ok)
-      return program;
+void
+_mesa_meta_use_program(struct gl_context *ctx,
+                       struct gl_shader_program *sh_prog)
+{
+   /* Attach shader state to the binding point */
+   _mesa_reference_pipeline_object(ctx, &ctx->_Shader, &ctx->Shader);
 
-   _mesa_GetProgramiv(program, GL_INFO_LOG_LENGTH, &size);
-   if (size == 0)
-      return 0;
-
-   info = malloc(size);
-   if (!info)
-      return 0;
-
-   _mesa_GetProgramInfoLog(program, size, NULL, info);
-   _mesa_problem(ctx, "meta program link failed:\n%s", info);
-
-   free(info);
-
-   return 0;
+   /* Update the program */
+   _mesa_use_program(ctx, sh_prog);
 }
 
 void
@@ -194,24 +173,25 @@ _mesa_meta_compile_and_link_program(struct gl_context *ctx,
                                     const char *vs_source,
                                     const char *fs_source,
                                     const char *name,
-                                    GLuint *program)
+                                    struct gl_shader_program **out_sh_prog)
 {
-   GLuint vs = _mesa_meta_compile_shader_with_debug(ctx, GL_VERTEX_SHADER,
-                                                    vs_source);
-   GLuint fs = _mesa_meta_compile_shader_with_debug(ctx, GL_FRAGMENT_SHADER,
-                                                    fs_source);
+   struct gl_shader_program *sh_prog;
+   const GLuint id = ~0;
 
-   *program = _mesa_CreateProgram();
-   _mesa_ObjectLabel(GL_PROGRAM, *program, -1, name);
-   _mesa_AttachShader(*program, fs);
-   _mesa_DeleteShader(fs);
-   _mesa_AttachShader(*program, vs);
-   _mesa_DeleteShader(vs);
-   _mesa_BindAttribLocation(*program, 0, "position");
-   _mesa_BindAttribLocation(*program, 1, "texcoords");
-   _mesa_meta_link_program_with_debug(ctx, *program);
+   sh_prog = _mesa_new_shader_program(id);
+   sh_prog->Label = strdup(name);
+   sh_prog->NumShaders = 2;
+   sh_prog->Shaders = malloc(2 * sizeof(struct gl_shader *));
+   sh_prog->Shaders[0] =
+      _mesa_meta_compile_shader_with_debug(ctx, GL_VERTEX_SHADER, vs_source);
+   sh_prog->Shaders[1] =
+      _mesa_meta_compile_shader_with_debug(ctx, GL_FRAGMENT_SHADER, fs_source);
 
-   _mesa_UseProgram(*program);
+   _mesa_meta_link_program_with_debug(ctx, sh_prog);
+
+   _mesa_meta_use_program(ctx, sh_prog);
+
+   *out_sh_prog = sh_prog;
 }
 
 /**
@@ -230,19 +210,15 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
 {
    char *vs_source, *fs_source;
    struct blit_shader *shader = choose_blit_shader(target, table);
-   const char *vs_input, *vs_output, *fs_input, *vs_preprocess, *fs_preprocess;
+   const char *fs_input, *vs_preprocess, *fs_preprocess;
    void *mem_ctx;
 
    if (ctx->Const.GLSLVersion < 130) {
       vs_preprocess = "";
-      vs_input = "attribute";
-      vs_output = "varying";
       fs_preprocess = "#extension GL_EXT_texture_array : enable";
       fs_input = "varying";
    } else {
       vs_preprocess = "#version 130";
-      vs_input = "in";
-      vs_output = "out";
       fs_preprocess = "#version 130";
       fs_input = "in";
       shader->func = "texture";
@@ -250,8 +226,8 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
 
    assert(shader != NULL);
 
-   if (shader->shader_prog != 0) {
-      _mesa_UseProgram(shader->shader_prog);
+   if (shader->shader_prog != NULL) {
+      _mesa_meta_use_program(ctx, shader->shader_prog);
       return;
    }
 
@@ -259,15 +235,16 @@ _mesa_meta_setup_blit_shader(struct gl_context *ctx,
 
    vs_source = ralloc_asprintf(mem_ctx,
                 "%s\n"
-                "%s vec2 position;\n"
-                "%s vec4 textureCoords;\n"
-                "%s vec4 texCoords;\n"
+                "#extension GL_ARB_explicit_attrib_location: enable\n"
+                "layout(location = 0) in vec2 position;\n"
+                "layout(location = 1) in vec4 textureCoords;\n"
+                "out vec4 texCoords;\n"
                 "void main()\n"
                 "{\n"
                 "   texCoords = textureCoords;\n"
                 "   gl_Position = vec4(position, 0.0, 1.0);\n"
                 "}\n",
-                vs_preprocess, vs_input, vs_input, vs_output);
+                vs_preprocess);
 
    fs_source = ralloc_asprintf(mem_ctx,
                 "%s\n"
@@ -1533,7 +1510,6 @@ meta_glsl_clear_init(struct gl_context *ctx, struct clear_state *clear)
       "{\n"
       "   gl_FragColor = color;\n"
       "}\n";
-   GLuint vs, fs;
    bool has_integer_textures;
 
    _mesa_meta_setup_vertex_objects(ctx, &clear->VAO, &clear->buf_obj, true,
@@ -1542,21 +1518,8 @@ meta_glsl_clear_init(struct gl_context *ctx, struct clear_state *clear)
    if (clear->ShaderProg != 0)
       return;
 
-   vs = _mesa_CreateShader(GL_VERTEX_SHADER);
-   _mesa_ShaderSource(vs, 1, &vs_source, NULL);
-   _mesa_CompileShader(vs);
-
-   fs = _mesa_CreateShader(GL_FRAGMENT_SHADER);
-   _mesa_ShaderSource(fs, 1, &fs_source, NULL);
-   _mesa_CompileShader(fs);
-
-   clear->ShaderProg = _mesa_CreateProgram();
-   _mesa_AttachShader(clear->ShaderProg, fs);
-   _mesa_DeleteShader(fs);
-   _mesa_AttachShader(clear->ShaderProg, vs);
-   _mesa_DeleteShader(vs);
-   _mesa_ObjectLabel(GL_PROGRAM, clear->ShaderProg, -1, "meta clear");
-   _mesa_LinkProgram(clear->ShaderProg);
+   _mesa_meta_compile_and_link_program(ctx, vs_source, fs_source, "meta clear",
+                                       &clear->ShaderProg);
 
    has_integer_textures = _mesa_is_gles3(ctx) ||
       (_mesa_is_desktop_gl(ctx) && ctx->Const.GLSLVersion >= 130);
@@ -1590,26 +1553,15 @@ meta_glsl_clear_init(struct gl_context *ctx, struct clear_state *clear)
                          "   out_color = color;\n"
                          "}\n");
 
-      vs = _mesa_meta_compile_shader_with_debug(ctx, GL_VERTEX_SHADER,
-                                                vs_int_source);
-      fs = _mesa_meta_compile_shader_with_debug(ctx, GL_FRAGMENT_SHADER,
-                                                fs_int_source);
+      _mesa_meta_compile_and_link_program(ctx, vs_int_source, fs_int_source,
+                                          "integer clear",
+                                          &clear->IntegerShaderProg);
       ralloc_free(shader_source_mem_ctx);
-
-      clear->IntegerShaderProg = _mesa_CreateProgram();
-      _mesa_AttachShader(clear->IntegerShaderProg, fs);
-      _mesa_DeleteShader(fs);
-      _mesa_AttachShader(clear->IntegerShaderProg, vs);
-      _mesa_DeleteShader(vs);
 
       /* Note that user-defined out attributes get automatically assigned
        * locations starting from 0, so we don't need to explicitly
        * BindFragDataLocation to 0.
        */
-
-      _mesa_ObjectLabel(GL_PROGRAM, clear->IntegerShaderProg, -1,
-                        "integer clear");
-      _mesa_meta_link_program_with_debug(ctx, clear->IntegerShaderProg);
    }
 }
 
@@ -1621,12 +1573,10 @@ meta_glsl_clear_cleanup(struct gl_context *ctx, struct clear_state *clear)
    _mesa_DeleteVertexArrays(1, &clear->VAO);
    clear->VAO = 0;
    _mesa_reference_buffer_object(ctx, &clear->buf_obj, NULL);
-   _mesa_DeleteProgram(clear->ShaderProg);
-   clear->ShaderProg = 0;
+   _mesa_reference_shader_program(ctx, &clear->ShaderProg, NULL);
 
    if (clear->IntegerShaderProg) {
-      _mesa_DeleteProgram(clear->IntegerShaderProg);
-      clear->IntegerShaderProg = 0;
+      _mesa_reference_shader_program(ctx, &clear->IntegerShaderProg, NULL);
    }
 }
 
@@ -1740,10 +1690,10 @@ meta_clear(struct gl_context *ctx, GLbitfield buffers, bool glsl)
 
    if (fb->_IntegerColor) {
       assert(glsl);
-      _mesa_UseProgram(clear->IntegerShaderProg);
+      _mesa_meta_use_program(ctx, clear->IntegerShaderProg);
       _mesa_Uniform4iv(0, 1, ctx->Color.ClearColor.i);
    } else if (glsl) {
-      _mesa_UseProgram(clear->ShaderProg);
+      _mesa_meta_use_program(ctx, clear->ShaderProg);
       _mesa_Uniform4fv(0, 1, ctx->Color.ClearColor.f);
    }
 
@@ -2704,25 +2654,17 @@ choose_blit_shader(GLenum target, struct blit_shader_table *table)
 }
 
 void
-_mesa_meta_blit_shader_table_cleanup(struct blit_shader_table *table)
+_mesa_meta_blit_shader_table_cleanup(struct gl_context *ctx,
+                                     struct blit_shader_table *table)
 {
-   _mesa_DeleteProgram(table->sampler_1d.shader_prog);
-   _mesa_DeleteProgram(table->sampler_2d.shader_prog);
-   _mesa_DeleteProgram(table->sampler_3d.shader_prog);
-   _mesa_DeleteProgram(table->sampler_rect.shader_prog);
-   _mesa_DeleteProgram(table->sampler_cubemap.shader_prog);
-   _mesa_DeleteProgram(table->sampler_1d_array.shader_prog);
-   _mesa_DeleteProgram(table->sampler_2d_array.shader_prog);
-   _mesa_DeleteProgram(table->sampler_cubemap_array.shader_prog);
-
-   table->sampler_1d.shader_prog = 0;
-   table->sampler_2d.shader_prog = 0;
-   table->sampler_3d.shader_prog = 0;
-   table->sampler_rect.shader_prog = 0;
-   table->sampler_cubemap.shader_prog = 0;
-   table->sampler_1d_array.shader_prog = 0;
-   table->sampler_2d_array.shader_prog = 0;
-   table->sampler_cubemap_array.shader_prog = 0;
+   _mesa_reference_shader_program(ctx, &table->sampler_1d.shader_prog, NULL);
+   _mesa_reference_shader_program(ctx, &table->sampler_2d.shader_prog, NULL);
+   _mesa_reference_shader_program(ctx, &table->sampler_3d.shader_prog, NULL);
+   _mesa_reference_shader_program(ctx, &table->sampler_rect.shader_prog, NULL);
+   _mesa_reference_shader_program(ctx, &table->sampler_cubemap.shader_prog, NULL);
+   _mesa_reference_shader_program(ctx, &table->sampler_1d_array.shader_prog, NULL);
+   _mesa_reference_shader_program(ctx, &table->sampler_2d_array.shader_prog, NULL);
+   _mesa_reference_shader_program(ctx, &table->sampler_cubemap_array.shader_prog, NULL);
 }
 
 /**
