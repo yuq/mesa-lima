@@ -31,6 +31,9 @@ struct exec_list;
 typedef struct nir_builder {
    nir_cursor cursor;
 
+   /* Whether new ALU instructions will be marked "exact" */
+   bool exact;
+
    nir_shader *shader;
    nir_function_impl *impl;
 } nir_builder;
@@ -39,6 +42,7 @@ static inline void
 nir_builder_init(nir_builder *build, nir_function_impl *impl)
 {
    memset(build, 0, sizeof(*build));
+   build->exact = false;
    build->impl = impl;
    build->shader = impl->function->shader;
 }
@@ -50,6 +54,7 @@ nir_builder_init_simple_shader(nir_builder *build, void *mem_ctx,
 {
    build->shader = nir_shader_create(mem_ctx, stage, options);
    nir_function *func = nir_function_create(build->shader, "main");
+   build->exact = false;
    build->impl = nir_function_impl_create(func);
    build->cursor = nir_after_cf_list(&build->impl->body);
 }
@@ -142,6 +147,8 @@ nir_build_alu(nir_builder *build, nir_op op, nir_ssa_def *src0,
    nir_alu_instr *instr = nir_alu_instr_create(build->shader, op);
    if (!instr)
       return NULL;
+
+   instr->exact = build->exact;
 
    instr->src[0].src = nir_src_for_ssa(src0);
    if (src1)
@@ -260,6 +267,7 @@ nir_fmov_alu(nir_builder *build, nir_alu_src src, unsigned num_components)
    nir_alu_instr *mov = nir_alu_instr_create(build->shader, nir_op_fmov);
    nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components,
                      nir_src_bit_size(src.src), NULL);
+   mov->exact = build->exact;
    mov->dest.write_mask = (1 << num_components) - 1;
    mov->src[0] = src;
    nir_builder_instr_insert(build, &mov->instr);
@@ -273,6 +281,7 @@ nir_imov_alu(nir_builder *build, nir_alu_src src, unsigned num_components)
    nir_alu_instr *mov = nir_alu_instr_create(build->shader, nir_op_imov);
    nir_ssa_dest_init(&mov->instr, &mov->dest.dest, num_components,
                      nir_src_bit_size(src.src), NULL);
+   mov->exact = build->exact;
    mov->dest.write_mask = (1 << num_components) - 1;
    mov->src[0] = src;
    nir_builder_instr_insert(build, &mov->instr);
