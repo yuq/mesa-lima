@@ -204,6 +204,11 @@ static const char *ldstSubOpStr[] =
    "", "lock", "unlock"
 };
 
+static const char *subfmOpStr[] =
+{
+   "", "3d"
+};
+
 static const char *DataTypeStr[] =
 {
    "-",
@@ -547,6 +552,10 @@ void Instruction::print() const
       case OP_STORE:
          if (subOp < Elements(ldstSubOpStr))
             PRINT("%s ", ldstSubOpStr[subOp]);
+         break;
+      case OP_SUBFM:
+         if (subOp < Elements(subfmOpStr))
+            PRINT("%s ", subfmOpStr[subOp]);
          break;
       default:
          if (subOp)
