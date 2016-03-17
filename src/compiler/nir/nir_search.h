@@ -83,6 +83,12 @@ typedef struct {
 typedef struct {
    nir_search_value value;
 
+   /* When set on a search expression, the expression will only match an SSA
+    * value that does *not* have the exact bit set.  If unset, the exact bit
+    * on the SSA value is ignored.
+    */
+   bool inexact;
+
    nir_op opcode;
    const nir_search_value *srcs[4];
 } nir_search_expression;

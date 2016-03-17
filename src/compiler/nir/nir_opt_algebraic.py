@@ -34,9 +34,16 @@ d = 'd'
 
 # Written in the form (<search>, <replace>) where <search> is an expression
 # and <replace> is either an expression or a value.  An expression is
-# defined as a tuple of the form (<op>, <src0>, <src1>, <src2>, <src3>)
+# defined as a tuple of the form ([~]<op>, <src0>, <src1>, <src2>, <src3>)
 # where each source is either an expression or a value.  A value can be
 # either a numeric constant or a string representing a variable name.
+#
+# If the opcode in a search expression is prefixed by a '~' character, this
+# indicates that the operation is inexact.  Such operations will only get
+# applied to SSA values that do not have the exact bit set.  This should be
+# used by by any optimizations that are not bit-for-bit exact.  It should not,
+# however, be used for backend-requested lowering operations as those need to
+# happen regardless of precision.
 #
 # Variable names are specified as "[#]name[@type]" where "#" inicates that
 # the given variable will only match constants and the type indicates that

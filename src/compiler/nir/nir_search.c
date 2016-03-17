@@ -238,6 +238,10 @@ match_expression(const nir_search_expression *expr, nir_alu_instr *instr,
    if (instr->op != expr->opcode)
       return false;
 
+   assert(instr->dest.dest.is_ssa);
+   if (expr->inexact && instr->exact)
+      return false;
+
    assert(!instr->dest.saturate);
    assert(nir_op_infos[instr->op].num_inputs > 0);
 
