@@ -2259,8 +2259,9 @@ Converter::handleLOAD(Value *dst0[4])
    int c;
    std::vector<Value *> off, src, ldv, def;
 
-   if (tgsi.getSrc(0).getFile() == TGSI_FILE_BUFFER ||
-       tgsi.getSrc(0).getFile() == TGSI_FILE_MEMORY) {
+   switch (tgsi.getSrc(0).getFile()) {
+   case TGSI_FILE_BUFFER:
+   case TGSI_FILE_MEMORY:
       for (c = 0; c < 4; ++c) {
          if (!dst0[c])
             continue;
@@ -2280,7 +2281,9 @@ Converter::handleLOAD(Value *dst0[4])
          if (tgsi.getSrc(0).isIndirect(0))
             ld->setIndirect(0, 1, fetchSrc(tgsi.getSrc(0).getIndirect(0), 0, 0));
       }
-      return;
+      break;
+   default:
+      assert(!"Unsupported srcFile for LOAD");
    }
 
 /* Keep this around for now as reference when adding img support
@@ -2361,8 +2364,9 @@ Converter::handleSTORE()
    int c;
    std::vector<Value *> off, src, dummy;
 
-   if (tgsi.getDst(0).getFile() == TGSI_FILE_BUFFER ||
-       tgsi.getDst(0).getFile() == TGSI_FILE_MEMORY) {
+   switch (tgsi.getDst(0).getFile()) {
+   case TGSI_FILE_BUFFER:
+   case TGSI_FILE_MEMORY:
       for (c = 0; c < 4; ++c) {
          if (!(tgsi.getDst(0).getMask() & (1 << c)))
             continue;
@@ -2383,7 +2387,9 @@ Converter::handleSTORE()
          if (tgsi.getDst(0).isIndirect(0))
             st->setIndirect(0, 1, fetchSrc(tgsi.getDst(0).getIndirect(0), 0, 0));
       }
-      return;
+      break;
+   default:
+      assert(!"Unsupported dstFile for STORE");
    }
 
 /* Keep this around for now as reference when adding img support
@@ -2449,8 +2455,9 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
    std::vector<Value *> defv;
    LValue *dst = getScratch();
 
-   if (tgsi.getSrc(0).getFile() == TGSI_FILE_BUFFER ||
-       tgsi.getSrc(0).getFile() == TGSI_FILE_MEMORY) {
+   switch (tgsi.getSrc(0).getFile()) {
+   case TGSI_FILE_BUFFER:
+   case TGSI_FILE_MEMORY:
       for (int c = 0; c < 4; ++c) {
          if (!dst0[c])
             continue;
@@ -2478,7 +2485,9 @@ Converter::handleATOM(Value *dst0[4], DataType ty, uint16_t subOp)
       for (int c = 0; c < 4; ++c)
          if (dst0[c])
             dst0[c] = dst; // not equal to rDst so handleInstruction will do mkMov
-      return;
+      break;
+   default:
+      assert(!"Unsupported srcFile for ATOM");
    }
 
 /* Keep this around for now as reference when adding img support
