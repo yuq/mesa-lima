@@ -237,15 +237,6 @@ struct tgsi_declaration_array {
    unsigned Padding : 22;
 };
 
-/*
- * Special resources that don't need to be declared.  They map to the
- * GLOBAL/LOCAL/PRIVATE/INPUT compute memory spaces.
- */
-#define TGSI_RESOURCE_GLOBAL	0x7fff
-#define TGSI_RESOURCE_LOCAL	0x7ffe
-#define TGSI_RESOURCE_PRIVATE	0x7ffd
-#define TGSI_RESOURCE_INPUT	0x7ffc
-
 #define TGSI_IMM_FLOAT32   0
 #define TGSI_IMM_UINT32    1
 #define TGSI_IMM_INT32     2
