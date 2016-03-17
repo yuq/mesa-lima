@@ -1282,6 +1282,36 @@ static void declare_system_value(
 		value = get_primitive_id(&radeon_bld->soa.bld_base, 0);
 		break;
 
+	case TGSI_SEMANTIC_GRID_SIZE:
+		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_GRID_SIZE);
+		break;
+
+	case TGSI_SEMANTIC_BLOCK_SIZE:
+	{
+		LLVMValueRef values[3];
+		unsigned i;
+		unsigned *properties = ctx->shader->selector->info.properties;
+		unsigned sizes[3] = {
+			properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH],
+			properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT],
+			properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH]
+		};
+
+		for (i = 0; i < 3; ++i)
+			values[i] = lp_build_const_int32(gallivm, sizes[i]);
+
+		value = lp_build_gather_values(gallivm, values, 3);
+		break;
+	}
+
+	case TGSI_SEMANTIC_BLOCK_ID:
+		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_BLOCK_ID);
+		break;
+
+	case TGSI_SEMANTIC_THREAD_ID:
+		value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_THREAD_ID);
+		break;
+
 	default:
 		assert(!"unknown system value");
 		return;
@@ -4823,6 +4853,14 @@ static void create_function(struct si_shader_context *ctx)
 		}
 		break;
 
+	case TGSI_PROCESSOR_COMPUTE:
+		params[SI_PARAM_GRID_SIZE] = v3i32;
+		params[SI_PARAM_BLOCK_ID] = v3i32;
+		last_sgpr = SI_PARAM_BLOCK_ID;
+
+		params[SI_PARAM_THREAD_ID] = v3i32;
+		num_params = SI_PARAM_THREAD_ID + 1;
+		break;
 	default:
 		assert(0 && "unimplemented shader");
 		return;
@@ -5600,6 +5638,7 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
+	case PIPE_SHADER_COMPUTE:
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
@@ -5783,6 +5822,8 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			bld_base->emit_epilogue = si_llvm_emit_fs_epilogue;
 		else
 			bld_base->emit_epilogue = si_llvm_return_fs_outputs;
+		break;
+	case TGSI_PROCESSOR_COMPUTE:
 		break;
 	default:
 		assert(!"Unsupported shader type");
