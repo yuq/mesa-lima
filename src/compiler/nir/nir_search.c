@@ -406,7 +406,7 @@ bitsize_tree_filter_down(bitsize_tree *tree, unsigned size)
 
 static nir_alu_src
 construct_value(const nir_search_value *value,
-                unsigned num_components, bitsize_tree *bitsize,
+                unsigned num_components, bitsize_tree *bitsize, bool exact,
                 struct match_state *state,
                 nir_instr *instr, void *mem_ctx)
 {
@@ -420,6 +420,7 @@ construct_value(const nir_search_value *value,
       nir_alu_instr *alu = nir_alu_instr_create(mem_ctx, expr->opcode);
       nir_ssa_dest_init(&alu->instr, &alu->dest.dest, num_components,
                         bitsize->dest_size, NULL);
+      alu->exact = exact;
       alu->dest.write_mask = (1 << num_components) - 1;
       alu->dest.saturate = false;
 
@@ -431,7 +432,7 @@ construct_value(const nir_search_value *value,
             num_components = nir_op_infos[alu->op].input_sizes[i];
 
          alu->src[i] = construct_value(expr->srcs[i],
-                                       num_components, bitsize->srcs[i],
+                                       num_components, bitsize->srcs[i], exact,
                                        state, instr, mem_ctx);
       }
 
@@ -563,8 +564,8 @@ nir_replace_instr(nir_alu_instr *instr, const nir_search_expression *search,
                      instr->dest.dest.ssa.bit_size, NULL);
 
    mov->src[0] = construct_value(replace,
-                                 instr->dest.dest.ssa.num_components,
-                                 tree, &state, &instr->instr, mem_ctx);
+                                 instr->dest.dest.ssa.num_components, tree,
+                                 instr->exact, &state, &instr->instr, mem_ctx);
    nir_instr_insert_before(&instr->instr, &mov->instr);
 
    nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa,
