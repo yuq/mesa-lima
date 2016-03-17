@@ -144,27 +144,6 @@ KNOBS = [
         'category'  : 'perf',
     }],
 
-    ['MAX_FRAC_ODD_TESS_FACTOR', {
-        'type'      : 'float',
-        'default'   : '63.0f',
-        'desc'      : ['(DEBUG) Maximum tessellation factor for fractional-odd partitioning.'],
-        'category'  : 'perf',
-    }],
-
-    ['MAX_FRAC_EVEN_TESS_FACTOR', {
-        'type'      : 'float',
-        'default'   : '64.0f',
-        'desc'      : ['(DEBUG) Maximum tessellation factor for fractional-even partitioning.'],
-        'category'  : 'perf',
-    }],
-
-    ['MAX_INTEGER_TESS_FACTOR', {
-        'type'      : 'uint32_t',
-        'default'   : '64',
-        'desc'      : ['(DEBUG) Maximum tessellation factor for integer partitioning.'],
-        'category'  : 'perf',
-    }],
-
 
     ['BUCKETS_ENABLE_THREADVIZ', {
         'type'      : 'bool',
