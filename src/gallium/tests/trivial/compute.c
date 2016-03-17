@@ -144,6 +144,7 @@ static void init_prog(struct context *ctx, unsigned local_sz,
         struct pipe_context *pipe = ctx->pipe;
         struct tgsi_token prog[1024];
         struct pipe_compute_state cs = {
+                .ir_type = PIPE_SHADER_IR_TGSI,
                 .prog = prog,
                 .req_local_mem = local_sz,
                 .req_private_mem = private_sz,

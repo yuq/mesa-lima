@@ -317,8 +317,10 @@ void trace_dump_compute_state(const struct pipe_compute_state *state)
 
    trace_dump_struct_begin("pipe_compute_state");
 
+   trace_dump_member(uint, state, ir_type);
+
    trace_dump_member_begin("prog");
-   if (state->prog) {
+   if (state->prog && state->ir_type == PIPE_SHADER_IR_TGSI) {
       static char str[64 * 1024];
       tgsi_dump_str(state->prog, 0, str, sizeof(str));
       trace_dump_string(str);

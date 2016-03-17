@@ -1463,6 +1463,7 @@ st_translate_compute_program(struct st_context *st,
    st_translate_program_common(st, &stcp->Base.Base, stcp->glsl_to_tgsi, ureg,
                                TGSI_PROCESSOR_COMPUTE, &prog);
 
+   stcp->tgsi.ir_type = PIPE_SHADER_IR_TGSI;
    stcp->tgsi.prog = prog.tokens;
    stcp->tgsi.req_local_mem = stcp->Base.SharedSize;
    stcp->tgsi.req_private_mem = 0;

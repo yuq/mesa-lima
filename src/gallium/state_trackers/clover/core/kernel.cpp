@@ -223,6 +223,7 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
       if (st)
          _q->pipe->delete_compute_state(_q->pipe, st);
 
+      cs.ir_type = q->device().ir_format();
       cs.prog = &(msec.data[0]);
       cs.req_local_mem = mem_local;
       cs.req_input_mem = input.size();
