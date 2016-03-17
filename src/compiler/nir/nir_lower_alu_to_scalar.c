@@ -82,6 +82,7 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
    assert(instr->dest.write_mask != 0);
 
    b->cursor = nir_before_instr(&instr->instr);
+   b->exact = instr->exact;
 
 #define LOWER_REDUCTION(name, chan, merge) \
    case name##2: \
