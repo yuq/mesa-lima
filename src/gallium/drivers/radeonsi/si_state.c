@@ -3537,18 +3537,28 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 	if (flags & (PIPE_BARRIER_VERTEX_BUFFER |
 		     PIPE_BARRIER_SHADER_BUFFER |
 		     PIPE_BARRIER_TEXTURE |
-		     PIPE_BARRIER_IMAGE)) {
+		     PIPE_BARRIER_IMAGE |
+		     PIPE_BARRIER_STREAMOUT_BUFFER)) {
 		/* As far as I can tell, L1 contents are written back to L2
 		 * automatically at end of shader, but the contents of other
 		 * L1 caches might still be stale. */
 		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1;
 	}
 
+	if (flags & PIPE_BARRIER_INDEX_BUFFER) {
+		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1;
+
+		/* Indices are read through TC L2 since VI. */
+		if (sctx->screen->b.chip_class <= CIK)
+			sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+	}
+
 	if (flags & PIPE_BARRIER_FRAMEBUFFER)
 		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
 
 	if (flags & (PIPE_BARRIER_MAPPED_BUFFER |
-		     PIPE_BARRIER_FRAMEBUFFER)) {
+		     PIPE_BARRIER_FRAMEBUFFER |
+		     PIPE_BARRIER_INDIRECT_BUFFER)) {
 		/* Not sure if INV_GLOBAL_L2 is the best thing here.
 		 *
 		 * We need to make sure that TC L1 & L2 are written back to
