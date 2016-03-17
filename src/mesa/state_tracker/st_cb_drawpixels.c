@@ -142,11 +142,21 @@ get_drawpix_z_stencil_program(struct st_context *st,
       out_color = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
 
       depth_sampler = ureg_DECL_sampler(ureg, 0);
+      ureg_DECL_sampler_view(ureg, 0, TGSI_TEXTURE_2D,
+                             TGSI_RETURN_TYPE_FLOAT,
+                             TGSI_RETURN_TYPE_FLOAT,
+                             TGSI_RETURN_TYPE_FLOAT,
+                             TGSI_RETURN_TYPE_FLOAT);
       out_depth = ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0);
    }
 
    if (write_stencil) {
       stencil_sampler = ureg_DECL_sampler(ureg, 1);
+      ureg_DECL_sampler_view(ureg, 1, TGSI_TEXTURE_2D,
+                             TGSI_RETURN_TYPE_UINT,
+                             TGSI_RETURN_TYPE_UINT,
+                             TGSI_RETURN_TYPE_UINT,
+                             TGSI_RETURN_TYPE_UINT);
       out_stencil = ureg_DECL_output(ureg, TGSI_SEMANTIC_STENCIL, 0);
    }
 

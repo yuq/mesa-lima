@@ -121,12 +121,20 @@ transform_instr(struct tgsi_transform_context *tctx,
    /* Declare the drawpix sampler if it's missing. */
    if (!(ctx->info.samplers_declared & (1 << ctx->drawpix_sampler))) {
       tgsi_transform_sampler_decl(tctx, ctx->drawpix_sampler);
+
+      /* emit sampler view declaration */
+      tgsi_transform_sampler_view_decl(tctx, ctx->drawpix_sampler,
+                                       tgsi_tex_target, TGSI_RETURN_TYPE_FLOAT);
    }
 
    /* Declare the pixel map sampler if it's missing. */
    if (ctx->pixel_maps &&
        !(ctx->info.samplers_declared & (1 << ctx->pixelmap_sampler))) {
       tgsi_transform_sampler_decl(tctx, ctx->pixelmap_sampler);
+
+      /* emit sampler view declaration */
+      tgsi_transform_sampler_view_decl(tctx, ctx->pixelmap_sampler,
+                                       TGSI_TEXTURE_2D, TGSI_RETURN_TYPE_FLOAT);
    }
 
    /* Get initial pixel color from the texture.
@@ -229,7 +237,7 @@ st_get_drawpix_shader(const struct tgsi_token *tokens, bool use_texcoord,
    ctx.tex_target = tex_target;
    tgsi_scan_shader(tokens, &ctx.info);
 
-   newlen = tgsi_num_tokens(tokens) + 30;
+   newlen = tgsi_num_tokens(tokens) + 60;
    newtoks = tgsi_alloc_tokens(newlen);
    if (!newtoks)
       return NULL;
