@@ -168,7 +168,9 @@ brw_nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
       if (add->op != nir_op_fadd)
          continue;
 
-      /* TODO: Maybe bail if this expression is considered "precise"? */
+      assert(add->dest.dest.is_ssa);
+      if (add->exact)
+         continue;
 
       assert(add->src[0].src.is_ssa && add->src[1].src.is_ssa);
 
