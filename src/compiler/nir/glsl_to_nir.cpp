@@ -1051,6 +1051,9 @@ nir_visitor::visit(ir_assignment *ir)
 {
    unsigned num_components = ir->lhs->type->vector_elements;
 
+   b.exact = ir->lhs->variable_referenced()->data.invariant ||
+             ir->lhs->variable_referenced()->data.precise;
+
    if ((ir->rhs->as_dereference() || ir->rhs->as_constant()) &&
        (ir->write_mask == (1 << num_components) - 1 || ir->write_mask == 0)) {
       /* We're doing a plain-as-can-be copy, so emit a copy_var */
