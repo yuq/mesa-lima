@@ -139,6 +139,7 @@ bool lower_tess_level(gl_shader *shader);
 bool lower_vertex_id(gl_shader *shader);
 
 bool lower_subroutine(exec_list *instructions, struct _mesa_glsl_parse_state *state);
+void propagate_invariance(exec_list *instructions);
 
 ir_rvalue *
 compare_index_block(exec_list *instructions, ir_variable *index,

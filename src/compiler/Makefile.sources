@@ -129,6 +129,7 @@ LIBGLSL_FILES = \
 	glsl/opt_tree_grafting.cpp \
 	glsl/opt_vectorize.cpp \
 	glsl/program.h \
+	glsl/propagate_invariance.cpp \
 	glsl/s_expression.cpp \
 	glsl/s_expression.h
 
