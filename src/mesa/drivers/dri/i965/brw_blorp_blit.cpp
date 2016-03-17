@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "main/context.h"
 #include "main/teximage.h"
 #include "main/fbobject.h"
 
@@ -121,6 +122,8 @@ do_blorp_blit(struct brw_context *brw, GLbitfield buffer_bit,
    struct intel_mipmap_tree *src_mt = find_miptree(buffer_bit, src_irb);
    struct intel_mipmap_tree *dst_mt = find_miptree(buffer_bit, dst_irb);
 
+   const bool es3 = _mesa_is_gles3(&brw->ctx);
+
    /* Do the blit */
    brw_blorp_blit_miptrees(brw,
                            src_mt, src_irb->mt_level, src_irb->mt_layer,
@@ -130,7 +133,7 @@ do_blorp_blit(struct brw_context *brw, GLbitfield buffer_bit,
                            srcX0, srcY0, srcX1, srcY1,
                            dstX0, dstY0, dstX1, dstY1,
                            filter, mirror_x, mirror_y,
-                           false, false);
+                           es3, es3);
 
    dst_irb->need_downsample = true;
 }
