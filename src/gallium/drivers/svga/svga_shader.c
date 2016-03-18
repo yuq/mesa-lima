@@ -180,18 +180,18 @@ svga_init_shader_key_common(const struct svga_context *svga, unsigned shader,
          assert(view->texture);
          assert(view->texture->target < (1 << 4)); /* texture_target:4 */
 
-         key->tex[i].texture_target = view->texture->target;
-
          /* 1D/2D array textures with one slice are treated as non-arrays
           * by the SVGA3D device.  Convert the texture type here so that
           * we emit the right TEX/SAMPLE instruction in the shader.
           */
-         if (view->texture->array_size == 1) {
-            if (view->texture->target == PIPE_TEXTURE_1D_ARRAY) {
-               key->tex[i].texture_target = PIPE_TEXTURE_1D;
+         if (view->texture->target == PIPE_TEXTURE_1D_ARRAY ||
+             view->texture->target == PIPE_TEXTURE_2D_ARRAY) {
+            if (view->texture->array_size == 1) {
+               key->tex[i].is_array = 0;
             }
-            else if (view->texture->target == PIPE_TEXTURE_2D_ARRAY) {
-               key->tex[i].texture_target = PIPE_TEXTURE_2D;
+            else {
+               assert(view->texture->array_size > 1);
+               key->tex[i].is_array = 1;
             }
          }
 
@@ -207,8 +207,6 @@ svga_init_shader_key_common(const struct svga_context *svga, unsigned shader,
          key->tex[i].swizzle_g = view->swizzle_g;
          key->tex[i].swizzle_b = view->swizzle_b;
          key->tex[i].swizzle_a = view->swizzle_a;
-
-         key->tex[i].return_type = svga_get_texture_datatype(view->format);
       }
    }
    key->num_textures = svga->curr.num_sampler_views[shader];
