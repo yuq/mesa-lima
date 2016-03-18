@@ -128,11 +128,6 @@ extern GLint
 _mesa_lookup_parameter_index(const struct gl_program_parameter_list *paramList,
                              GLsizei nameLen, const char *name);
 
-extern GLboolean
-_mesa_lookup_parameter_constant(const struct gl_program_parameter_list *list,
-                                const gl_constant_value v[], GLuint vSize,
-                                GLint *posOut, GLuint *swizzleOut);
-
 #ifdef __cplusplus
 }
 #endif
