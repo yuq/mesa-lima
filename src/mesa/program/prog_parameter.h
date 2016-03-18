@@ -34,6 +34,7 @@
 #include "main/mtypes.h"
 #include "prog_statevars.h"
 
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -124,9 +125,23 @@ extern GLint
 _mesa_add_state_reference(struct gl_program_parameter_list *paramList,
                           const gl_state_index stateTokens[STATE_LENGTH]);
 
-extern GLint
+
+static inline GLint
 _mesa_lookup_parameter_index(const struct gl_program_parameter_list *paramList,
-                             GLsizei nameLen, const char *name);
+                             const char *name)
+{
+   if (!paramList)
+      return -1;
+
+   /* name must be null-terminated */
+   for (GLint i = 0; i < (GLint) paramList->NumParameters; i++) {
+      if (paramList->Parameters[i].Name &&
+         strcmp(paramList->Parameters[i].Name, name) == 0)
+         return i;
+   }
+
+   return -1;
+}
 
 #ifdef __cplusplus
 }
