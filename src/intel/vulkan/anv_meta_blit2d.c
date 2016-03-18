@@ -55,6 +55,81 @@ vk_format_for_size(int bs)
 }
 
 static void
+create_iview(struct anv_cmd_buffer *cmd_buffer,
+             struct anv_meta_blit2d_surf *surf,
+             struct anv_meta_blit2d_rect *rect,
+             VkImageUsageFlags usage,
+             VkImage *img,
+             struct anv_image_view *iview)
+{
+   struct isl_tile_info tile_info;
+   isl_tiling_get_info(&cmd_buffer->device->isl_dev,
+                       surf->tiling, surf->bs, &tile_info);
+   const unsigned tile_width_px = tile_info.width > surf->bs ?
+                                  tile_info.width / surf->bs : 1;
+   uint32_t *rect_y = (usage == VK_IMAGE_USAGE_SAMPLED_BIT) ?
+                      &rect->src_y : &rect->dst_y;
+   uint32_t *rect_x = (usage == VK_IMAGE_USAGE_SAMPLED_BIT) ?
+                      &rect->src_x : &rect->dst_x;
+
+   /* Define the shared state among all created image views */
+   const VkImageCreateInfo image_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .imageType = VK_IMAGE_TYPE_2D,
+      .format = vk_format_for_size(surf->bs),
+      .extent = {
+         .width = rect->width + (*rect_x) % tile_width_px,
+         .height = rect->height + (*rect_y) % tile_info.height,
+         .depth = 1,
+      },
+      .mipLevels = 1,
+      .arrayLayers = 1,
+      .samples = 1,
+      .tiling = surf->tiling == ISL_TILING_LINEAR ?
+                VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL,
+      .usage = usage,
+   };
+
+   /* Create the VkImage that is bound to the surface's memory. */
+   anv_image_create(anv_device_to_handle(cmd_buffer->device),
+                    &(struct anv_image_create_info) {
+                       .vk_info = &image_info,
+                       .isl_tiling_flags = 1 << surf->tiling,
+                       .stride = surf->pitch,
+                    }, &cmd_buffer->pool->alloc, img);
+
+   /* We could use a vk call to bind memory, but that would require
+    * creating a dummy memory object etc. so there's really no point.
+    */
+   anv_image_from_handle(*img)->bo = surf->bo;
+   anv_image_from_handle(*img)->offset = surf->base_offset;
+
+   /* Create a VkImageView that starts at the tile aligned offset closest
+    * to the provided x/y offset into the surface.
+    */
+   uint32_t img_o = 0;
+   isl_surf_get_image_intratile_offset_el_xy(&cmd_buffer->device->isl_dev,
+                                             &anv_image_from_handle(*img)->
+                                                color_surface.isl,
+                                             *rect_x, *rect_y,
+                                             &img_o, rect_x, rect_y);
+   anv_image_view_init(iview, cmd_buffer->device,
+                       &(VkImageViewCreateInfo) {
+                          .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                          .image = *img,
+                          .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                          .format = image_info.format,
+                          .subresourceRange = {
+                             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                             .baseMipLevel = 0,
+                             .levelCount = 1,
+                             .baseArrayLayer = 0,
+                             .layerCount = 1
+                          },
+                       }, cmd_buffer, img_o, usage);
+}
+
+static void
 meta_emit_blit2d(struct anv_cmd_buffer *cmd_buffer,
                struct anv_image_view *src_iview,
                VkOffset3D src_offset,
@@ -260,132 +335,27 @@ anv_meta_blit2d(struct anv_cmd_buffer *cmd_buffer,
                 struct anv_meta_blit2d_rect *rects)
 {
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
-   VkFormat src_format = vk_format_for_size(src->bs);
-   VkFormat dst_format = vk_format_for_size(dst->bs);
    VkImageUsageFlags src_usage = VK_IMAGE_USAGE_SAMPLED_BIT;
    VkImageUsageFlags dst_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
    for (unsigned r = 0; r < num_rects; ++r) {
-
-      /* Create VkImages */
-      VkImageCreateInfo image_info = {
-         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-         .imageType = VK_IMAGE_TYPE_2D,
-         .format = 0, /* TEMPLATE */
-         .extent = {
-            .width = 0, /* TEMPLATE */
-            .height = 0, /* TEMPLATE */
-            .depth = 1,
-         },
-         .mipLevels = 1,
-         .arrayLayers = 1,
-         .samples = 1,
-         .tiling = 0, /* TEMPLATE */
-         .usage = 0, /* TEMPLATE */
-      };
-      struct anv_image_create_info anv_image_info = {
-         .vk_info = &image_info,
-         .isl_tiling_flags = 0, /* TEMPLATE */
-      };
-
-      /* The image height is the rect height + src/dst y-offset from the
-       * tile-aligned base address.
-       */
-      struct isl_tile_info tile_info;
-
-      anv_image_info.isl_tiling_flags = 1 << src->tiling;
-      image_info.tiling = src->tiling == ISL_TILING_LINEAR ?
-                          VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
-      image_info.usage = src_usage;
-      image_info.format = src_format,
-      isl_tiling_get_info(&cmd_buffer->device->isl_dev, src->tiling, src->bs,
-                          &tile_info);
-      image_info.extent.height = rects[r].height +
-                                 rects[r].src_y % tile_info.height;
-      image_info.extent.width = src->pitch / src->bs;
-      VkImage src_image;
-      anv_image_create(vk_device, &anv_image_info,
-                       &cmd_buffer->pool->alloc, &src_image);
-
-      anv_image_info.isl_tiling_flags = 1 << dst->tiling;
-      image_info.tiling = dst->tiling == ISL_TILING_LINEAR ?
-                          VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL;
-      image_info.usage = dst_usage;
-      image_info.format = dst_format,
-      isl_tiling_get_info(&cmd_buffer->device->isl_dev, dst->tiling, dst->bs,
-                          &tile_info);
-      image_info.extent.height = rects[r].height +
-                                 rects[r].dst_y % tile_info.height;
-      image_info.extent.width = dst->pitch / dst->bs;
-      VkImage dst_image;
-      anv_image_create(vk_device, &anv_image_info,
-                       &cmd_buffer->pool->alloc, &dst_image);
-
-      /* We could use a vk call to bind memory, but that would require
-      * creating a dummy memory object etc. so there's really no point.
-      */
-      anv_image_from_handle(src_image)->bo = src->bo;
-      anv_image_from_handle(src_image)->offset = src->base_offset;
-      anv_image_from_handle(dst_image)->bo = dst->bo;
-      anv_image_from_handle(dst_image)->offset = dst->base_offset;
-
-      /* Create VkImageViews */
-      VkImageViewCreateInfo iview_info = {
-         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-         .image = 0, /* TEMPLATE */
-         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-         .format = 0, /* TEMPLATE */
-         .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-         },
-      };
-      uint32_t img_o = 0;
-
-      iview_info.image = src_image;
-      iview_info.format = src_format;
-      VkOffset3D src_offset_el = {0};
-      isl_surf_get_image_intratile_offset_el_xy(&cmd_buffer->device->isl_dev,
-                                                &anv_image_from_handle(src_image)->
-                                                   color_surface.isl,
-                                                rects[r].src_x,
-                                                rects[r].src_y,
-                                                &img_o,
-                                                (uint32_t*)&src_offset_el.x,
-                                                (uint32_t*)&src_offset_el.y);
-
+      VkImage src_img;
+      VkImage dst_img;
       struct anv_image_view src_iview;
-      anv_image_view_init(&src_iview, cmd_buffer->device,
-         &iview_info, cmd_buffer, img_o, src_usage);
-
-      iview_info.image = dst_image;
-      iview_info.format = dst_format;
-      VkOffset3D dst_offset_el = {0};
-      isl_surf_get_image_intratile_offset_el_xy(&cmd_buffer->device->isl_dev,
-                                                &anv_image_from_handle(dst_image)->
-                                                   color_surface.isl,
-                                                rects[r].dst_x,
-                                                rects[r].dst_y,
-                                                &img_o,
-                                                (uint32_t*)&dst_offset_el.x,
-                                                (uint32_t*)&dst_offset_el.y);
       struct anv_image_view dst_iview;
-      anv_image_view_init(&dst_iview, cmd_buffer->device,
-         &iview_info, cmd_buffer, img_o, dst_usage);
+      create_iview(cmd_buffer, src, &rects[r], src_usage, &src_img, &src_iview);
+      create_iview(cmd_buffer, dst, &rects[r], dst_usage, &dst_img, &dst_iview);
 
       /* Perform blit */
       meta_emit_blit2d(cmd_buffer,
                      &src_iview,
-                     src_offset_el,
+                     (VkOffset3D){rects[r].src_x, rects[r].src_y, 0},
                      &dst_iview,
-                     dst_offset_el,
+                     (VkOffset3D){rects[r].dst_x, rects[r].dst_y, 0},
                      (VkExtent3D){rects[r].width, rects[r].height, 1});
 
-      anv_DestroyImage(vk_device, src_image, &cmd_buffer->pool->alloc);
-      anv_DestroyImage(vk_device, dst_image, &cmd_buffer->pool->alloc);
+      anv_DestroyImage(vk_device, src_img, &cmd_buffer->pool->alloc);
+      anv_DestroyImage(vk_device, dst_img, &cmd_buffer->pool->alloc);
    }
 }
 
