@@ -146,7 +146,7 @@ GL 4.1, GLSL 4.10 --- all DONE: nvc0, r600, radeonsi
   GL_ARB_viewport_array                                 DONE (i965, nv50, llvmpipe, softpipe)
 
 
-GL 4.2, GLSL 4.20:
+GL 4.2, GLSL 4.20 -- all DONE: radeonsi
 
   GL_ARB_texture_compression_bptc                       DONE (i965, nvc0, r600, radeonsi)
   GL_ARB_compressed_texture_pixel_storage               DONE (all drivers)

@@ -336,7 +336,8 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return 4;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
-		return HAVE_LLVM >= 0x0307 ? 410 : 330;
+		return HAVE_LLVM >= 0x0309 ? 420 :
+		       HAVE_LLVM >= 0x0307 ? 410 : 330;
 
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 		return MIN2(sscreen->b.info.vram_size, 0xFFFFFFFF);
