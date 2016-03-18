@@ -43,6 +43,7 @@ struct tgsi_drawpix_transform {
    unsigned drawpix_sampler;
    unsigned pixelmap_sampler;
    unsigned texcoord_const;
+   unsigned tex_target;
 };
 
 static inline struct tgsi_drawpix_transform *
@@ -72,6 +73,8 @@ transform_instr(struct tgsi_transform_context *tctx,
 		struct tgsi_full_instruction *current_inst)
 {
    struct tgsi_drawpix_transform *ctx = tgsi_drawpix_transform(tctx);
+   const unsigned tgsi_tex_target = ctx->tex_target == PIPE_TEXTURE_2D
+      ? TGSI_TEXTURE_2D : TGSI_TEXTURE_RECT;
    unsigned i, sem_texcoord = ctx->use_texcoord ? TGSI_SEMANTIC_TEXCOORD :
                                                   TGSI_SEMANTIC_GENERIC;
    int texcoord_index = -1;
@@ -131,7 +134,7 @@ transform_instr(struct tgsi_transform_context *tctx,
     */
    tgsi_transform_tex_inst(tctx, TGSI_FILE_TEMPORARY, ctx->color_temp,
                            TGSI_FILE_INPUT, texcoord_index,
-                           TGSI_TEXTURE_2D, ctx->drawpix_sampler);
+                           tgsi_tex_target, ctx->drawpix_sampler);
 
    /* Apply the scale and bias. */
    if (ctx->scale_and_bias) {
@@ -204,11 +207,14 @@ st_get_drawpix_shader(const struct tgsi_token *tokens, bool use_texcoord,
                       bool scale_and_bias, unsigned scale_const,
                       unsigned bias_const, bool pixel_maps,
                       unsigned drawpix_sampler, unsigned pixelmap_sampler,
-                      unsigned texcoord_const)
+                      unsigned texcoord_const, unsigned tex_target)
 {
    struct tgsi_drawpix_transform ctx;
    struct tgsi_token *newtoks;
    int newlen;
+
+   assert(tex_target == PIPE_TEXTURE_2D ||
+          tex_target == PIPE_TEXTURE_RECT);
 
    memset(&ctx, 0, sizeof(ctx));
    ctx.base.transform_instruction = transform_instr;
@@ -220,6 +226,7 @@ st_get_drawpix_shader(const struct tgsi_token *tokens, bool use_texcoord,
    ctx.drawpix_sampler = drawpix_sampler;
    ctx.pixelmap_sampler = pixelmap_sampler;
    ctx.texcoord_const = texcoord_const;
+   ctx.tex_target = tex_target;
    tgsi_scan_shader(tokens, &ctx.info);
 
    newlen = tgsi_num_tokens(tokens) + 30;

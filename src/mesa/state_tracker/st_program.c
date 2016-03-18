@@ -924,7 +924,7 @@ st_create_fp_variant(struct st_context *st,
                                      bias_const, key->pixelMaps,
                                      variant->drawpix_sampler,
                                      variant->pixelmap_sampler,
-                                     texcoord_const);
+                                     texcoord_const, st->internal_target);
 
       if (tokens) {
          if (tgsi.tokens != stfp->tgsi.tokens)
