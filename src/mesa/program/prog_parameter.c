@@ -147,17 +147,17 @@ _mesa_new_parameter_list_sized(unsigned size)
 
       /* alloc arrays */
       p->Parameters = (struct gl_program_parameter *)
-	 calloc(size, sizeof(struct gl_program_parameter));
+         calloc(size, sizeof(struct gl_program_parameter));
 
       p->ParameterValues = (gl_constant_value (*)[4])
          _mesa_align_malloc(size * 4 *sizeof(gl_constant_value), 16);
 
 
       if ((p->Parameters == NULL) || (p->ParameterValues == NULL)) {
-	 free(p->Parameters);
-	 _mesa_align_free(p->ParameterValues);
-	 free(p);
-	 p = NULL;
+         free(p->Parameters);
+         _mesa_align_free(p->ParameterValues);
+         free(p);
+         p = NULL;
       }
    }
 
@@ -284,7 +284,7 @@ _mesa_add_parameter(struct gl_program_parameter_list *paramList,
          else {
             /* silence valgrind */
             for (j = 0; j < 4; j++)
-            	paramList->ParameterValues[oldNum + i][j].f = 0;
+               paramList->ParameterValues[oldNum + i][j].f = 0;
          }
          size -= 4;
       }
@@ -377,8 +377,8 @@ _mesa_add_state_reference(struct gl_program_parameter_list *paramList,
    /* Check if the state reference is already in the list */
    for (index = 0; index < (GLint) paramList->NumParameters; index++) {
       if (!memcmp(paramList->Parameters[index].StateIndexes,
-		  stateTokens, STATE_LENGTH * sizeof(gl_state_index))) {
-	 return index;
+                  stateTokens, STATE_LENGTH * sizeof(gl_state_index))) {
+         return index;
       }
    }
 
