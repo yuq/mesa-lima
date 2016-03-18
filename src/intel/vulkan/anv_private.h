@@ -672,6 +672,7 @@ struct anv_device {
     struct isl_device                           isl_dev;
     int                                         context_id;
     int                                         fd;
+    bool                                        can_chain_batches;
 
     struct anv_bo_pool                          batch_bo_pool;
 
@@ -1192,6 +1193,7 @@ struct anv_cmd_pool {
 enum anv_cmd_buffer_exec_mode {
    ANV_CMD_BUFFER_EXEC_MODE_PRIMARY,
    ANV_CMD_BUFFER_EXEC_MODE_EMIT,
+   ANV_CMD_BUFFER_EXEC_MODE_GROW_AND_EMIT,
    ANV_CMD_BUFFER_EXEC_MODE_CHAIN,
    ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN,
 };

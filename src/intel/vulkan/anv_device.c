@@ -826,6 +826,13 @@ VkResult anv_CreateDevice(
    device->info = *physical_device->info;
    device->isl_dev = physical_device->isl_dev;
 
+   /* On Broadwell and later, we can use batch chaining to more efficiently
+    * implement growing command buffers.  Prior to Haswell, the kernel
+    * command parser gets in the way and we have to fall back to growing
+    * the batch.
+    */
+   device->can_chain_batches = device->info.gen >= 8;
+
    pthread_mutex_init(&device->mutex, NULL);
 
    anv_bo_pool_init(&device->batch_bo_pool, device);

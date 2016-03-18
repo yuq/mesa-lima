@@ -340,6 +340,37 @@ anv_batch_bo_finish(struct anv_batch_bo *bbo, struct anv_batch *batch)
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(batch->start, bbo->length));
 }
 
+static VkResult
+anv_batch_bo_grow(struct anv_cmd_buffer *cmd_buffer, struct anv_batch_bo *bbo,
+                  struct anv_batch *batch, size_t aditional,
+                  size_t batch_padding)
+{
+   assert(batch->start == bbo->bo.map);
+   bbo->length = batch->next - batch->start;
+
+   size_t new_size = bbo->bo.size;
+   while (new_size <= bbo->length + aditional + batch_padding)
+      new_size *= 2;
+
+   if (new_size == bbo->bo.size)
+      return VK_SUCCESS;
+
+   struct anv_bo new_bo;
+   VkResult result = anv_bo_pool_alloc(&cmd_buffer->device->batch_bo_pool,
+                                       &new_bo, new_size);
+   if (result != VK_SUCCESS)
+      return result;
+
+   memcpy(new_bo.map, bbo->bo.map, bbo->length);
+
+   anv_bo_pool_free(&cmd_buffer->device->batch_bo_pool, &bbo->bo);
+
+   bbo->bo = new_bo;
+   anv_batch_bo_continue(bbo, batch, batch_padding);
+
+   return VK_SUCCESS;
+}
+
 static void
 anv_batch_bo_destroy(struct anv_batch_bo *bbo,
                      struct anv_cmd_buffer *cmd_buffer)
@@ -478,6 +509,18 @@ anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
    return VK_SUCCESS;
 }
 
+static VkResult
+anv_cmd_buffer_grow_batch(struct anv_batch *batch, void *_data)
+{
+   struct anv_cmd_buffer *cmd_buffer = _data;
+   struct anv_batch_bo *bbo = anv_cmd_buffer_current_batch_bo(cmd_buffer);
+
+   anv_batch_bo_grow(cmd_buffer, bbo, &cmd_buffer->batch, 4096,
+                     GEN8_MI_BATCH_BUFFER_START_length * 4);
+
+   return VK_SUCCESS;
+}
+
 struct anv_state
 anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t entries, uint32_t *state_offset)
@@ -548,8 +591,13 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    list_addtail(&batch_bo->link, &cmd_buffer->batch_bos);
 
    cmd_buffer->batch.alloc = &cmd_buffer->pool->alloc;
-   cmd_buffer->batch.extend_cb = anv_cmd_buffer_chain_batch;
    cmd_buffer->batch.user_data = cmd_buffer;
+
+   if (cmd_buffer->device->can_chain_batches) {
+      cmd_buffer->batch.extend_cb = anv_cmd_buffer_chain_batch;
+   } else {
+      cmd_buffer->batch.extend_cb = anv_cmd_buffer_grow_batch;
+   }
 
    anv_batch_bo_start(batch_bo, &cmd_buffer->batch,
                       GEN8_MI_BATCH_BUFFER_START_length * 4);
@@ -680,7 +728,9 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
        * determine this statically here so that this stays in sync with the
        * actual ExecuteCommands implementation.
        */
-      if ((cmd_buffer->batch_bos.next == cmd_buffer->batch_bos.prev) &&
+      if (!cmd_buffer->device->can_chain_batches) {
+         cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_GROW_AND_EMIT;
+      } else if ((cmd_buffer->batch_bos.next == cmd_buffer->batch_bos.prev) &&
           (batch_bo->length < ANV_CMD_BUFFER_BATCH_SIZE / 2)) {
          /* If the secondary has exactly one batch buffer in its list *and*
           * that batch buffer is less than half of the maximum size, we're
@@ -728,6 +778,15 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
       anv_batch_emit_batch(&primary->batch, &secondary->batch);
       anv_cmd_buffer_emit_state_base_address(primary);
       break;
+   case ANV_CMD_BUFFER_EXEC_MODE_GROW_AND_EMIT: {
+      struct anv_batch_bo *bbo = anv_cmd_buffer_current_batch_bo(primary);
+      unsigned length = secondary->batch.end - secondary->batch.start;
+      anv_batch_bo_grow(primary, bbo, &primary->batch, length,
+                        GEN8_MI_BATCH_BUFFER_START_length * 4);
+      anv_batch_emit_batch(&primary->batch, &secondary->batch);
+      anv_cmd_buffer_emit_state_base_address(primary);
+      break;
+   }
    case ANV_CMD_BUFFER_EXEC_MODE_CHAIN: {
       struct anv_batch_bo *first_bbo =
          list_first_entry(&secondary->batch_bos, struct anv_batch_bo, link);
