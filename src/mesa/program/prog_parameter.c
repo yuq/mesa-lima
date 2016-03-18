@@ -356,28 +356,6 @@ _mesa_add_typed_unnamed_constant(struct gl_program_parameter_list *paramList,
    return pos;
 }
 
-/**
- * Add a new unnamed constant to the parameter list.  This will be used
- * when a fragment/vertex program contains something like this:
- *    MOV r, { 0, 1, 2, 3 };
- * If swizzleOut is non-null we'll search the parameter list for an
- * existing instance of the constant which matches with a swizzle.
- *
- * \param paramList  the parameter list
- * \param values  four float values
- * \param swizzleOut  returns swizzle mask for accessing the constant
- * \return index/position of the new parameter in the parameter list.
- * \sa _mesa_add_typed_unnamed_constant
- */
-GLint
-_mesa_add_unnamed_constant(struct gl_program_parameter_list *paramList,
-                           const gl_constant_value values[4], GLuint size,
-                           GLuint *swizzleOut)
-{
-   return _mesa_add_typed_unnamed_constant(paramList, values, size, GL_NONE,
-                                           swizzleOut);
-}
-
 
 /**
  * Add a new state reference to the parameter list.
