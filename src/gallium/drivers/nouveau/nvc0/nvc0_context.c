@@ -301,6 +301,23 @@ nvc0_invalidate_resource_storage(struct nouveau_context *ctx,
          }
       }
       }
+
+      for (s = 0; s < 6; ++s) {
+      for (i = 0; i < NVC0_MAX_IMAGES; ++i) {
+         if (nvc0->images[s][i].resource == res) {
+            nvc0->images_dirty[s] |= 1 << i;
+            if (unlikely(s == 5)) {
+               nvc0->dirty_cp |= NVC0_NEW_CP_SURFACES;
+               nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_SUF);
+            } else {
+               nvc0->dirty_3d |= NVC0_NEW_3D_SURFACES;
+               nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_SUF);
+            }
+         }
+         if (!--ref)
+            return ref;
+      }
+      }
    }
 
    return ref;

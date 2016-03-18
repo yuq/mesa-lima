@@ -1232,10 +1232,59 @@ nvc0_set_compute_resources(struct pipe_context *pipe,
 }
 
 static void
-nvc0_set_shader_images(struct pipe_context *pipe, unsigned shader,
-                       unsigned start_slot, unsigned count,
-                       struct pipe_image_view *views)
+nvc0_bind_images_range(struct nvc0_context *nvc0, const unsigned s,
+                       unsigned start, unsigned nr,
+                       struct pipe_image_view *pimages)
 {
+   const unsigned end = start + nr;
+   const unsigned mask = ((1 << nr) - 1) << start;
+   unsigned i;
+
+   assert(s < 6);
+
+   if (pimages) {
+      for (i = start; i < end; ++i) {
+         const unsigned p = i - start;
+         if (pimages[p].resource)
+            nvc0->images_valid[s] |= (1 << i);
+         else
+            nvc0->images_valid[s] &= ~(1 << i);
+
+         nvc0->images[s][i].format = pimages[p].format;
+         nvc0->images[s][i].access = pimages[p].access;
+         if (pimages[p].resource->target == PIPE_BUFFER)
+            nvc0->images[s][i].u.buf = pimages[p].u.buf;
+         else
+            nvc0->images[s][i].u.tex = pimages[p].u.tex;
+
+         pipe_resource_reference(
+               &nvc0->images[s][i].resource, pimages[p].resource);
+      }
+   } else {
+      for (i = start; i < end; ++i)
+         pipe_resource_reference(&nvc0->images[s][i].resource, NULL);
+      nvc0->images_valid[s] &= ~mask;
+   }
+   nvc0->images_dirty[s] |= mask;
+
+   if (s == 5)
+      nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_SUF);
+   else
+      nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_SUF);
+}
+
+static void
+nvc0_set_shader_images(struct pipe_context *pipe, unsigned shader,
+                       unsigned start, unsigned nr,
+                       struct pipe_image_view *images)
+{
+   const unsigned s = nvc0_shader_stage(shader);
+   nvc0_bind_images_range(nvc0_context(pipe), s, start, nr, images);
+
+   if (s == 5)
+      nvc0_context(pipe)->dirty_cp |= NVC0_NEW_CP_SURFACES;
+   else
+      nvc0_context(pipe)->dirty_3d |= NVC0_NEW_3D_SURFACES;
 }
 
 static void

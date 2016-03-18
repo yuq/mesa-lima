@@ -237,6 +237,10 @@ struct nvc0_context {
    uint32_t buffers_dirty[6];
    uint32_t buffers_valid[6];
 
+   struct pipe_image_view images[6][NVC0_MAX_IMAGES];
+   uint16_t images_dirty[6];
+   uint16_t images_valid[6];
+
    struct util_dynarray global_residents;
 };
 

@@ -665,6 +665,7 @@ nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
       ctx_to->textures_dirty[s] = ~0;
       ctx_to->constbuf_dirty[s] = (1 << NVC0_MAX_PIPE_CONSTBUFS) - 1;
       ctx_to->buffers_dirty[s]  = ~0;
+      ctx_to->images_dirty[s]   = ~0;
    }
 
    /* Reset tfb as the shader that owns it may have been deleted. */

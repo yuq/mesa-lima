@@ -23,6 +23,7 @@
 
 #define NVC0_MAX_BUFFERS 32
 
+#define NVC0_MAX_IMAGES 8
 
 struct nvc0_context;
 
