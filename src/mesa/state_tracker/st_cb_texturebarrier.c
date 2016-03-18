@@ -75,14 +75,37 @@ st_MemoryBarrier(struct gl_context *ctx, GLbitfield barriers)
       flags |= PIPE_BARRIER_IMAGE;
    if (barriers & GL_COMMAND_BARRIER_BIT)
       flags |= PIPE_BARRIER_INDIRECT_BUFFER;
-   if (barriers & GL_PIXEL_BUFFER_BARRIER_BIT)
+   if (barriers & GL_PIXEL_BUFFER_BARRIER_BIT) {
+      /* The PBO may be
+       *  (1) bound as a texture for PBO uploads, or
+       *  (2) accessed by the CPU via transfer ops.
+       * For case (2), we assume automatic flushing by the driver.
+       */
       flags |= PIPE_BARRIER_TEXTURE;
+   }
+   /* GL_TEXTURE_UPDATE_BARRIER_BIT:
+    * Texture updates translate to:
+    *  (1) texture transfers to/from the CPU,
+    *  (2) texture as blit destination, or
+    *  (3) texture as framebuffer.
+    * In all cases, we assume the driver does the required flushing
+    * automatically.
+    */
+   /* GL_BUFFER_UPDATE_BARRIER_BIT:
+    * Buffer updates translate to
+    *  (1) buffer transfers to/from the CPU,
+    *  (2) resource copies and clears.
+    * In all cases, we assume the driver does the required flushing
+    * automatically.
+    */
    if (barriers & GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT)
       flags |= PIPE_BARRIER_MAPPED_BUFFER;
    if (barriers & GL_QUERY_BUFFER_BARRIER_BIT)
       flags |= PIPE_BARRIER_QUERY_BUFFER;
    if (barriers & GL_FRAMEBUFFER_BARRIER_BIT)
       flags |= PIPE_BARRIER_FRAMEBUFFER;
+   if (barriers & GL_TRANSFORM_FEEDBACK_BARRIER_BIT)
+      flags |= PIPE_BARRIER_STREAMOUT_BUFFER;
    if (barriers & GL_ATOMIC_COUNTER_BARRIER_BIT)
       flags |= PIPE_BARRIER_SHADER_BUFFER;
    if (barriers & GL_SHADER_STORAGE_BARRIER_BIT)
