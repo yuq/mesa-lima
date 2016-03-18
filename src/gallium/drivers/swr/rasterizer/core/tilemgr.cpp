@@ -60,14 +60,6 @@ MacroTileMgr::MacroTileMgr(Arena& arena) : mArena(arena)
 {
 }
 
-void MacroTileMgr::initialize()
-{
-    mWorkItemsProduced = 0;
-    mWorkItemsConsumed = 0;
-
-    mDirtyTiles.clear();
-}
-
 void MacroTileMgr::enqueue(uint32_t x, uint32_t y, BE_WORK *pWork)
 {
     // Should not enqueue more then what we have backing for in the hot tile manager.

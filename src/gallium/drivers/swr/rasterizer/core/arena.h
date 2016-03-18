@@ -34,24 +34,133 @@
 
 #include <mutex>
 
-class Arena
+class DefaultAllocator
 {
 public:
-    Arena();
-   ~Arena();
+    void* AllocateAligned(size_t size, size_t align)
+    {
+        void* p = _aligned_malloc(size, align);
+        return p;
+    }
+    void  Free(void* pMem)
+    {
+        _aligned_free(pMem);
+    }
+};
 
-    void        Init();
+template<typename T = DefaultAllocator>
+class TArena
+{
+public:
+    TArena(T& in_allocator)  : m_allocator(in_allocator) {}
+    TArena()                 : m_allocator(m_defAllocator) {}
+    ~TArena()
+    {
+        Reset(true);
+    }
 
-    void*       AllocAligned(size_t size, size_t  align);
-    void*       Alloc(size_t  size);
+    void* AllocAligned(size_t size, size_t  align)
+    {
+        if (m_pCurBlock)
+        {
+            ArenaBlock* pCurBlock = m_pCurBlock;
+            pCurBlock->offset = AlignUp(pCurBlock->offset, align);
 
-    void*       AllocAlignedSync(size_t size, size_t align);
-    void*       AllocSync(size_t size);
+            if ((pCurBlock->offset + size) <= pCurBlock->blockSize)
+            {
+                void* pMem = PtrAdd(pCurBlock->pMem, pCurBlock->offset);
+                pCurBlock->offset += size;
+                m_size += size;
+                return pMem;
+            }
 
-    void        Reset(bool removeAll = false);
-    size_t      Size() { return m_size; }
+            // Not enough memory in this block, fall through to allocate
+            // a new block
+        }
+
+        static const size_t ArenaBlockSize = 1024 * 1024;
+        size_t blockSize = std::max(m_size + ArenaBlockSize, std::max(size, ArenaBlockSize));
+
+        // Add in one BLOCK_ALIGN unit to store ArenaBlock in.
+        blockSize = AlignUp(blockSize + BLOCK_ALIGN, BLOCK_ALIGN);
+
+        void *pMem = m_allocator.AllocateAligned(blockSize, BLOCK_ALIGN);    // Arena blocks are always simd byte aligned.
+        SWR_ASSERT(pMem != nullptr);
+
+        ArenaBlock* pNewBlock = new (pMem) ArenaBlock();
+
+        if (pNewBlock != nullptr)
+        {
+            pNewBlock->pNext = m_pCurBlock;
+
+            m_pCurBlock = pNewBlock;
+            m_pCurBlock->pMem = PtrAdd(pMem, BLOCK_ALIGN);
+            m_pCurBlock->blockSize = blockSize - BLOCK_ALIGN;
+
+        }
+
+        return AllocAligned(size, align);
+    }
+
+    void* Alloc(size_t  size)
+    {
+        return AllocAligned(size, 1);
+    }
+
+    void* AllocAlignedSync(size_t size, size_t align)
+    {
+        void* pAlloc = nullptr;
+
+        std::unique_lock<std::mutex> l(m_mutex);
+        pAlloc = AllocAligned(size, align);
+
+        return pAlloc;
+    }
+
+    void* AllocSync(size_t size)
+    {
+        void* pAlloc = nullptr;
+
+        std::unique_lock<std::mutex> l(m_mutex);
+        pAlloc = Alloc(size);
+
+        return pAlloc;
+    }
+
+    void Reset(bool removeAll = false)
+    {
+        if (m_pCurBlock)
+        {
+            m_pCurBlock->offset = 0;
+
+            ArenaBlock *pUsedBlocks = m_pCurBlock->pNext;
+            m_pCurBlock->pNext = nullptr;
+            while (pUsedBlocks)
+            {
+                ArenaBlock* pBlock = pUsedBlocks;
+                pUsedBlocks = pBlock->pNext;
+
+                m_allocator.Free(pBlock);
+            }
+
+            if (removeAll)
+            {
+                m_allocator.Free(m_pCurBlock);
+                m_pCurBlock = nullptr;
+            }
+        }
+
+        m_size = 0;
+    }
+
+    size_t Size() const { return m_size; }
 
 private:
+
+    static const size_t BLOCK_ALIGN = KNOB_SIMD_WIDTH * 4;
+
+    DefaultAllocator    m_defAllocator;
+    T&                  m_allocator;
 
     struct ArenaBlock
     {
@@ -60,10 +169,13 @@ private:
         size_t      offset      = 0;
         ArenaBlock* pNext       = nullptr;
     };
+    static_assert(sizeof(ArenaBlock) <= BLOCK_ALIGN, "Increase BLOCK_ALIGN size");
 
     ArenaBlock*     m_pCurBlock = nullptr;
     size_t          m_size      = 0;
 
     /// @note Mutex is only used by sync allocation functions.
-    std::mutex*     m_pMutex;
+    std::mutex      m_mutex;
 };
+
+typedef TArena<> Arena;

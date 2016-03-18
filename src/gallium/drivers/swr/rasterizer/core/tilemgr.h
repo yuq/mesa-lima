@@ -113,7 +113,14 @@ public:
         }
     }
 
-    void initialize();
+    INLINE void initialize()
+    {
+        mWorkItemsProduced = 0;
+        mWorkItemsConsumed = 0;
+
+        mDirtyTiles.clear();
+    }
+
     INLINE std::vector<uint32_t>& getDirtyTiles() { return mDirtyTiles; }
     INLINE MacroTileQueue& getMacroTileQueue(uint32_t id) { return mTiles[id]; }
     void markTileComplete(uint32_t id);
