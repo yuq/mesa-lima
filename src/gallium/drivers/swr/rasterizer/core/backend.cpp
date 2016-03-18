@@ -1410,9 +1410,11 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
     RDTSC_START(BESetup);
 
     static const SWR_MULTISAMPLE_COUNT sampleCount = (SWR_MULTISAMPLE_COUNT)sampleCountT;
+
     SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);
     const BACKEND_FUNCS& backendFuncs = pDC->pState->backendFuncs;
+    const SWR_RASTSTATE& rastState = pDC->pState->state.rastState;
 
     // broadcast scalars
     BarycentricCoeffs coeffs;
@@ -1451,7 +1453,8 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
             while (_BitScanForward(&sample, sampleMask))
             {
                 sampleMask &= ~(1 << sample);
-                if (work.coverageMask[sample] & MASK)
+                simdmask coverageMask = work.coverageMask[sample] & MASK;
+                if (coverageMask)
                 {
                     RDTSC_START(BEBarycentric);
                     // calculate per sample positions
@@ -1465,7 +1468,14 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
 
                     RDTSC_STOP(BEBarycentric, 0, 0);
 
-                    simdscalar vCoverageMask = vMask(work.coverageMask[sample] & MASK);
+                    // interpolate user clip distance if available
+                    if (rastState.clipDistanceMask)
+                    {
+                        coverageMask &= ~ComputeUserClipMask(rastState.clipDistanceMask, work.pUserClipBuffer,
+                            psContext.vI.sample, psContext.vJ.sample);
+                    }
+
+                    simdscalar vCoverageMask = vMask(coverageMask);
                     simdscalar stencilPassMask = vCoverageMask;
 
                     // offset depth/stencil buffers current sample
