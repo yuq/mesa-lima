@@ -1191,6 +1191,7 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
          "FRAG\n"
          "DCL IN[0], GENERIC[0], LINEAR\n"
          "DCL SAMP[0]\n"
+         "DCL SVIEW[0], RECT, FLOAT\n"
          "DCL OUT[0], COLOR[0]\n"
          "DCL TEMP[0]\n"
 
