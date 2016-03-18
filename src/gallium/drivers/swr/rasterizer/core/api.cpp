@@ -189,7 +189,7 @@ void QueueWork(SWR_CONTEXT *pContext)
 
         if (IsDraw)
         {
-            std::unordered_set<uint32_t> lockedTiles;
+            static TileSet lockedTiles;
             uint64_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
             WorkOnFifoFE(pContext, 0, curDraw[0], 0);
             WorkOnFifoBE(pContext, 0, curDraw[1], lockedTiles);

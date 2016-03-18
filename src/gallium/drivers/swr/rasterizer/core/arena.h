@@ -33,6 +33,9 @@
 #pragma once
 
 #include <mutex>
+#include <algorithm>
+#include <atomic>
+#include "core/utils.h"
 
 class DefaultAllocator
 {
@@ -48,7 +51,7 @@ public:
     }
 };
 
-template<typename T = DefaultAllocator>
+template<typename MutexT = std::mutex, typename T = DefaultAllocator>
 class TArena
 {
 public:
@@ -79,7 +82,7 @@ public:
         }
 
         static const size_t ArenaBlockSize = 1024 * 1024;
-        size_t blockSize = std::max(m_size + ArenaBlockSize, std::max(size, ArenaBlockSize));
+        size_t blockSize = std::max<size_t>(m_size + ArenaBlockSize, std::max(size, ArenaBlockSize));
 
         // Add in one BLOCK_ALIGN unit to store ArenaBlock in.
         blockSize = AlignUp(blockSize + BLOCK_ALIGN, BLOCK_ALIGN);
@@ -111,8 +114,9 @@ public:
     {
         void* pAlloc = nullptr;
 
-        std::unique_lock<std::mutex> l(m_mutex);
+        m_mutex.lock();
         pAlloc = AllocAligned(size, align);
+        m_mutex.unlock();
 
         return pAlloc;
     }
@@ -121,8 +125,9 @@ public:
     {
         void* pAlloc = nullptr;
 
-        std::unique_lock<std::mutex> l(m_mutex);
+        m_mutex.lock();
         pAlloc = Alloc(size);
+        m_mutex.unlock();
 
         return pAlloc;
     }
@@ -175,7 +180,96 @@ private:
     size_t          m_size      = 0;
 
     /// @note Mutex is only used by sync allocation functions.
-    std::mutex      m_mutex;
+    MutexT          m_mutex;
 };
 
 typedef TArena<> Arena;
+
+struct NullMutex
+{
+    void lock() {}
+    void unlock() {}
+};
+
+// Ref counted Arena for ArenaAllocator
+// NOT THREAD SAFE!!
+struct RefArena : TArena<NullMutex>
+{
+    uint32_t AddRef() { return ++m_refCount; }
+    uint32_t Release() { if (--m_refCount) { return m_refCount; } delete this; return 0; }
+
+    void* allocate(std::size_t n)
+    {
+        ++m_numAllocations;
+        return Alloc(n);
+    }
+
+    void deallocate(void* p) { --m_numAllocations; }
+    void clear() { SWR_ASSERT(0 == m_numAllocations); Reset(); }
+
+private:
+    uint32_t m_refCount = 0;
+    uint32_t m_numAllocations = 0;
+};
+
+#if 0 // THIS DOESN'T WORK!!!
+// Arena based replacement for std::allocator
+template <typename T>
+struct ArenaAllocator
+{
+    typedef T value_type;
+    ArenaAllocator()
+    {
+        m_pArena = new RefArena();
+        m_pArena->AddRef();
+    }
+    ~ArenaAllocator()
+    {
+        m_pArena->Release(); m_pArena = nullptr;
+    }
+    ArenaAllocator(const ArenaAllocator& copy)
+    {
+        m_pArena = const_cast<RefArena*>(copy.m_pArena); m_pArena->AddRef();
+    }
+
+
+    template <class U> ArenaAllocator(const ArenaAllocator<U>& copy)
+    {
+        m_pArena = const_cast<RefArena*>(copy.m_pArena); m_pArena->AddRef();
+    }
+    T* allocate(std::size_t n)
+    {
+#if defined(_DEBUG)
+        char buf[32];
+        sprintf_s(buf, "Alloc: %lld\n", n);
+        OutputDebugStringA(buf);
+#endif
+        void* p = m_pArena->allocate(n * sizeof(T));
+        return static_cast<T*>(p);
+    }
+    void deallocate(T* p, std::size_t n)
+    {
+#if defined(_DEBUG)
+        char buf[32];
+        sprintf_s(buf, "Dealloc: %lld\n", n);
+        OutputDebugStringA(buf);
+#endif
+        m_pArena->deallocate(p);
+    }
+    void clear() { m_pArena->clear(); }
+
+    RefArena* m_pArena = nullptr;
+};
+
+template <class T, class U>
+bool operator== (const ArenaAllocator<T>&, const ArenaAllocator<U>&)
+{
+    return true;
+}
+
+template <class T, class U>
+bool operator!= (const ArenaAllocator<T>&, const ArenaAllocator<U>&)
+{
+    return false;
+}
+#endif

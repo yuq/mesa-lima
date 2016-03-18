@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <thread>
 #include <algorithm>
-#include <unordered_set>
 #include <float.h>
 #include <vector>
 #include <utility>
@@ -345,7 +344,7 @@ void WorkOnFifoBE(
     SWR_CONTEXT *pContext,
     uint32_t workerId,
     uint64_t &curDrawBE,
-    std::unordered_set<uint32_t>& lockedTiles)
+    TileSet& lockedTiles)
 {
     // Find the first incomplete draw that has pending work. If no such draw is found then
     // return. FindFirstIncompleteDraw is responsible for incrementing the curDrawBE.
@@ -550,7 +549,7 @@ DWORD workerThreadMain(LPVOID pData)
 
     // Track tiles locked by other threads. If we try to lock a macrotile and find its already
     // locked then we'll add it to this list so that we don't try and lock it again.
-    std::unordered_set<uint32_t> lockedTiles;
+    TileSet lockedTiles;
 
     // each worker has the ability to work on any of the queued draws as long as certain
     // conditions are met. the data associated

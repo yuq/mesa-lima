@@ -27,6 +27,11 @@
 ******************************************************************************/
 #if defined(_WIN32)
 
+#if defined(NOMINMAX)
+// GDI Plus requires non-std min / max macros be defined :(
+#undef NOMINMAX
+#endif
+
 #include<Windows.h>
 #include <Gdiplus.h>
 #include <Gdiplusheaders.h>
